@@ -6,7 +6,10 @@ function sendBeacon(data) {
 	// populate the data object with relevant infos.
 	navigator.geolocation.getCurrentPosition(
 		(position) => {
-			d.geolocation = `latitude: ${position.coords.latitude} - longitude: ${position.coords.longitude}`;
+			d.geolocation = {
+				latitude: position.coords.latitude,
+				longitude: position.coords.longitude,
+			};
 		},
 		(err) => {
 			console.log(`cannot get the geolocation: ${err}`);
@@ -18,6 +21,7 @@ function sendBeacon(data) {
 	d.browser = navigator.userAgent;
 	d.os = navigator.userAgentData.platform;
 	d.isMobile = navigator.userAgentData.mobile;
+	d.url = window.location.href;
 
 	console.log(d);
 
@@ -36,7 +40,9 @@ function sendBeacon(data) {
 window.addEventListener(
 	'load',
 	(e) => {
-		sendBeacon({});
+		sendBeacon({
+			event: 'visit',
+		});
 	},
 	false
 );
@@ -48,6 +54,8 @@ for (let a of anchors) {
 		(e) => {
 			sendBeacon({
 				target: e.currentTarget.href,
+				text: e.currentTarget.textContent,
+				event: 'click',
 			});
 		},
 		false
