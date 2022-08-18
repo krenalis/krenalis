@@ -16,11 +16,15 @@ function sendBeacon(data) {
 		}
 	);
 	d.referrer = document.referrer;
-	d.connection = navigator.connection.type == undefined ? '' : navigator.connection.type;
+	if (navigator.connection) {
+		d.connection = navigator.connection.type == undefined ? '' : navigator.connection.type;
+	}
 	d.language = navigator.language;
 	d.browser = navigator.userAgent;
-	d.os = navigator.userAgentData.platform;
-	d.isMobile = navigator.userAgentData.mobile;
+	if (navigator.userAgentData) {
+		d.os = navigator.userAgentData.platform;
+		d.isMobile = navigator.userAgentData.mobile;
+	}
 	d.url = window.location.href;
 
 	console.log(d);
