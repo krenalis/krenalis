@@ -9,10 +9,13 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"log"
 	"net/http"
 	"net/http/cgi"
 	"os"
+	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -45,21 +48,57 @@ func main() {
 	defer db.Close()
 
 	// Serve the request as CGI.
-	err = cgi.Serve(newServer())
+	err = cgi.Serve(newServer(db))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 }
 
-type Server struct{}
+type Server struct {
+	db *sql.DB
+}
 
-func newServer() *Server {
-
-	return &Server{}
+func newServer(db *sql.DB) *Server {
+	return &Server{db: db}
 }
 
 // ServeHTTP serves the POST requests.
 func (server *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// ...
+
+	if r.Method != "POST" {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	rpath := r.URL.Path
+	rpath = strings.TrimSuffix(rpath, "/")
+	switch {
+	case strings.HasSuffix(rpath, "log-event"):
+		var event *Event
+		err := json.NewDecoder(r.Body).Decode(event)
+		if err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+		err = server.logEvent(event)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			log.Printf("[error] cannot log event: %s", err)
+			return
+		}
+	default:
+		http.NotFound(w, r)
+		return
+	}
+}
+
+// logEvent logs the given event on the database.
+func (server *Server) logEvent(e *Event) error {
+	_, err := server.db.Exec("INSERT INTO `events` (`timestamp`) VALUES (?)", e.Timestamp)
+	return err
+}
+
+type Event struct {
+	Timestamp time.Time
 }
