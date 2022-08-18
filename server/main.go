@@ -74,7 +74,7 @@ func (server *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rpath := r.URL.Path
 	rpath = strings.TrimSuffix(rpath, "/")
 	switch {
-	case strings.HasSuffix(rpath, "log-event"):
+	case strings.HasSuffix(rpath, "/log-event"):
 		var event *Event
 		err := json.NewDecoder(r.Body).Decode(event)
 		if err != nil {
