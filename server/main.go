@@ -76,7 +76,7 @@ func (server *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case strings.HasSuffix(rpath, "/log-event"):
 		var event *Event
-		err := json.NewDecoder(r.Body).Decode(event)
+		err := json.NewDecoder(r.Body).Decode(&event)
 		if err != nil {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
