@@ -96,10 +96,10 @@ func (server *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // logEvent logs the given event on the database.
 func (server *Server) logEvent(e *Event) error {
 	query := "INSERT INTO `events`\n" +
-		"(`timestamp`, `language`, `browser`, `url`, `referrer`, `target`, `event`)\n" +
+		"(`timestamp`, `language`, `browser`, `url`, `referrer`, `target`, `event`, `text`)\n" +
 		"VALUES\n" +
-		"(?, ?, ?, ?, ?, ?, ?)"
-	_, err := server.db.Exec(query, e.Timestamp, e.Language, e.Browser, e.URL, e.Referrer, e.Target, e.Event)
+		"(?, ?, ?, ?, ?, ?, ?, ?)"
+	_, err := server.db.Exec(query, e.Timestamp, e.Language, e.Browser, e.URL, e.Referrer, e.Target, e.Event, e.Text)
 	return err
 }
 
@@ -111,4 +111,5 @@ type Event struct {
 	Referrer  string // "https://example.com"
 	Target    string // "https://example.com"
 	Event     string // "visit", "click", ...
+	Text      string // "Add to cart"
 }
