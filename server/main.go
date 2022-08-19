@@ -104,13 +104,13 @@ func (server *Server) logEvent(e *Event) error {
 }
 
 type Event struct {
-	Timestamp time.Time
-	Language  string // "it-IT"
 	Browser   string
-	URL       string // "https://example.com"
+	Event     string // "visit", "click", ...
+	Language  string // "it-IT"
 	Referrer  string // "https://example.com"
 	Target    string // "https://example.com"
-	Event     string // "visit", "click", ...
 	Text      string // "Add to cart"
+	Timestamp time.Time
 	Title     string // "Product X"
+	URL       string // "https://example.com"
 }
