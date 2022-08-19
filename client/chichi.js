@@ -1,9 +1,15 @@
 let endpoint = 'https://localhost:2020/chichi.cgi/log-event';
 
 function sendBeacon(data) {
-	let d = data !== null ? data : {};
+	let d = data == null ? {} : data;
 
 	// populate the data object with relevant infos.
+	let session = localStorage.getItem('chichi-session');
+	if (session == null) {
+		session = makeid(8);
+		localStorage.setItem('chichi-session', session);
+	}
+	d.session = session;
 	navigator.geolocation.getCurrentPosition(
 		(position) => {
 			d.geolocation = {
@@ -12,14 +18,14 @@ function sendBeacon(data) {
 			};
 		},
 		(err) => {
-			console.log(`cannot get the geolocation: ${err}`);
+			console.log(`cannot get the geolocation: ${err.message}`);
 		}
 	);
 	let date = new Date();
 	d.timestamp = date.toISOString();
 	d.referrer = document.referrer;
 	if (navigator.connection) {
-		d.connection = navigator.connection.type == undefined ? '' : navigator.connection.type;
+		d.connection = navigator.connection.type == null ? '' : navigator.connection.type;
 	}
 	d.language = navigator.language;
 	d.browser = navigator.userAgent;
@@ -37,7 +43,7 @@ function sendBeacon(data) {
 	try {
 		json = JSON.stringify(d);
 	} catch (err) {
-		console.error(`cannot parse ${d}`);
+		console.error(`cannot parse Chichi's data`);
 	}
 
 	// send the JSON.
@@ -67,4 +73,14 @@ for (let a of anchors) {
 		},
 		false
 	);
+}
+
+function makeid(length) {
+	let result = '';
+	let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	let charactersLength = characters.length;
+	for (let i = 0; i < length; i++) {
+		result += characters.charAt(Math.floor(Math.random() * charactersLength));
+	}
+	return result;
 }
