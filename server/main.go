@@ -95,10 +95,19 @@ func (server *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // logEvent logs the given event on the database.
 func (server *Server) logEvent(e *Event) error {
-	_, err := server.db.Exec("INSERT INTO `events` (`timestamp`) VALUES (?)", e.Timestamp)
+	query := "INSERT INTO `events`\n" +
+		"(`timestamp`, `language`, `browser`, `referrer`, `target`, `event`)\n" +
+		"VALUES\n" +
+		"(?, ?, ?, ?, ?, ?)"
+	_, err := server.db.Exec(query, e.Timestamp, e.Language, e.Browser, e.Referrer, e.Target, e.Event)
 	return err
 }
 
 type Event struct {
 	Timestamp time.Time
+	Language  string // "it-IT"
+	Browser   string
+	Referrer  string // "https://example.com"
+	Target    string // "https://example.com"
+	Event     string // "visit", "click", ...
 }
