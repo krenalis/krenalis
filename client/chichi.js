@@ -27,6 +27,7 @@ function sendBeacon(data) {
 		d.os = navigator.userAgentData.platform;
 		d.isMobile = navigator.userAgentData.mobile;
 	}
+	d.title = document.title;
 	d.url = window.location.href;
 
 	console.log(d);
