@@ -177,11 +177,16 @@ func (server *Server) runQuery(query string) ([][]any, error) {
 		}
 		row := make([]any, len(sqlRow))
 		for i, pr := range sqlRow {
-			value, err := pr.(interface{ Value() (driver.Value, error) }).Value()
-			if err != nil {
-				panic(err)
+			switch v := pr.(type) {
+			case interface{ Value() (driver.Value, error) }:
+				value, err := v.Value()
+				if err != nil {
+					panic(err)
+				}
+				row[i] = value
+			case *time.Time:
+				row[i] = (*v).String()
 			}
-			row[i] = value
 		}
 		result = append(result, row)
 	}
