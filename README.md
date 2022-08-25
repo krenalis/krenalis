@@ -13,5 +13,8 @@ go build -tags osusergo,netgo -trimpath -o chichi
 
 ## How to run
 
-Launch the server executing `chichi` and visit the URL
+Add a configuration file `app.ini` (see `app.example.ini`) in the same directory of
+the `chichi` executable, as well as a `cert.pem` and `key.pem` certificate files.
+
+Then, launch the server executing `chichi` and visit the URL
 https://localhost:9090/admin/public/.
