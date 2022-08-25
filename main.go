@@ -52,21 +52,18 @@ func HandleESBuild(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	result := api.Build(api.BuildOptions{
-		Bundle:      true,
-		EntryPoints: []string{file},
-		// Format:      api.FormatESModule,
-		Format:  api.FormatESModule,
-		JSXMode: api.JSXModeAutomatic,
-		Loader: map[string]api.Loader{
-			".js": api.LoaderJSX,
-		},
-		// MinifyIdentifiers: true,
-		// MinifySyntax:      true,
-		// MinifyWhitespace:  true,
-		Target: api.ES2018,
-		// TreeShaking: api.TreeShakingTrue,
-		Write:  false,
-		Outdir: "out",
+		Bundle:            true,
+		EntryPoints:       []string{file},
+		Format:            api.FormatESModule,
+		JSXMode:           api.JSXModeAutomatic,
+		Loader:            map[string]api.Loader{".js": api.LoaderJSX},
+		MinifyIdentifiers: true,
+		MinifySyntax:      true,
+		MinifyWhitespace:  true,
+		Outdir:            "out",
+		Target:            api.ES2018,
+		TreeShaking:       api.TreeShakingTrue,
+		Write:             false,
 	})
 	if result.Errors != nil || result.Warnings != nil {
 		printMessages := func(messages []api.Message) {
