@@ -13,4 +13,5 @@ go build -tags osusergo,netgo -trimpath -o chichi
 
 ## How to run
 
-Launch the server executing `chichi` and visit the path `/admin/public/index.html`.
+Launch the server executing `chichi` and visit the URL
+https://localhost:9090/admin/public/.

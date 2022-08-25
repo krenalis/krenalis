@@ -190,7 +190,7 @@ export class Table extends LitElement {
 	async firstUpdated() {
 		if (!this.query) return;
 		try {
-			let res = await fetch('https://localhost:2020/chichi.cgi/run-query', {
+			let res = await fetch('https://localhost:9090/run-query', {
 				method: 'POST',
 				body: JSON.stringify(this.query),
 			});
