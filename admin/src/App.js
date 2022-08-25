@@ -66,7 +66,7 @@ function App() {
 				<o2b-table
 					title="Ultimi Eventi"
 					description="Gli ultimi eventi registrati sulla tua web app"
-					query="SELECT * FROM `events` LIMIT 5"
+					query="SELECT * FROM `events` ORDER BY `timestamp` DESC LIMIT 5;"
 					columns={JSON.stringify(columns)}
 				></o2b-table>
 			</div>
