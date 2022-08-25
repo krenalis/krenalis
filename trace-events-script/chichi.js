@@ -1,4 +1,4 @@
-let endpoint = 'https://localhost:2020/chichi.cgi/log-event';
+let endpoint = 'https://localhost:9090/log-event';
 
 function sendBeacon(data) {
 	let d = data == null ? {} : data;
