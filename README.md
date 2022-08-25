@@ -8,7 +8,7 @@
 ## How to compile the server
 
 ```bash
-go build -tags osusergo,netgo -trimpath -o chichi
+go build -tags osusergo,netgo -trimpath
 ```
 
 ## How to run
