@@ -8,12 +8,15 @@
 package main
 
 import (
+	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/ClickHouse/clickhouse-go/v2"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -34,17 +37,44 @@ func main() {
 		log.Printf("[error] cannot read configuration file: %s", err)
 		return
 	}
-	// Open a connection to the database.
-	db, err := sql.Open("mysql", settings.DB.Username+":"+settings.DB.Password+"@"+settings.DB.Address+"/"+settings.DB.Database+
+	// Open a connection to the MySQL database.
+	mySQLDB, err := sql.Open("mysql", settings.MySQL.Username+":"+settings.MySQL.Password+"@"+settings.MySQL.Address+"/"+settings.MySQL.Database+
 		"?clientFoundRows=true&charset=utf8mb4,utf8&parseTime=true&allowOldPasswords=true")
 	if err != nil {
-		log.Printf("[error] cannot connect to the database: %v", err)
-		return
+		log.Fatalf("[error] cannot connect to the database: %s", err)
 	}
-	defer db.Close()
+	defer mySQLDB.Close()
+	err = mySQLDB.Ping()
+	if err != nil {
+		log.Fatalf("[error] cannot ping MySQL server: %s", err)
+	}
+	log.Printf("[info] successfully connected to the MySQL server")
+
+	// Open a connection to the ClickHouse database.
+	clickHouseConn, err := clickhouse.Open(&clickhouse.Options{
+		Addr: []string{settings.ClickHouse.Address},
+		Auth: clickhouse.Auth{
+			Database: settings.ClickHouse.Database,
+			Username: settings.ClickHouse.Username,
+			Password: settings.ClickHouse.Password,
+		},
+	})
+	if err != nil {
+		log.Fatalf("[error] cannot connect to the database: %s", err)
+	}
+	clickHouseCtx := clickhouse.Context(context.Background(), clickhouse.WithSettings(clickhouse.Settings{
+		"max_block_size": 10,
+	}), clickhouse.WithProgress(func(p *clickhouse.Progress) {
+		fmt.Println("progress: ", p)
+	}))
+	err = clickHouseConn.Ping(clickHouseCtx)
+	if err != nil {
+		log.Fatalf("[error] cannot ping ClickHouse server: %s", err)
+	}
+	log.Printf("[info] successfully connected to the ClickHouse server")
 
 	// Run the server.
-	server := newServer(db)
+	server := newServer(mySQLDB, clickHouseConn, clickHouseCtx)
 	http.HandleFunc("/admin/src/", server.serveWithESBuild)
 	http.HandleFunc("/log-event", server.serveLogEvent)
 	http.HandleFunc("/run-query", server.serveRunQuery)

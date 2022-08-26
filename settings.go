@@ -10,7 +10,13 @@ package main
 import "gopkg.in/gcfg.v1"
 
 type Settings struct {
-	DB struct {
+	MySQL struct {
+		Address  string
+		Username string
+		Password string
+		Database string
+	}
+	ClickHouse struct {
 		Address  string
 		Username string
 		Password string

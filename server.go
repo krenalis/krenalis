@@ -8,9 +8,11 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"path"
@@ -18,15 +20,18 @@ import (
 	"strings"
 	"time"
 
+	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/evanw/esbuild/pkg/api"
 )
 
 type Server struct {
-	db *sql.DB
+	mySQLDB        *sql.DB
+	clickHouseConn chDriver.Conn
+	clickHouseCtx  context.Context
 }
 
-func newServer(db *sql.DB) *Server {
-	return &Server{db: db}
+func newServer(mySQLDB *sql.DB, clickHouseConn chDriver.Conn, clickHouseCtx context.Context) *Server {
+	return &Server{mySQLDB: mySQLDB, clickHouseConn: clickHouseConn, clickHouseCtx: clickHouseCtx}
 }
 
 func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
@@ -39,8 +44,8 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 	query := "INSERT INTO `events`\n" +
 		"(`timestamp`, `language`, `browser`, `url`, `referrer`, `target`, `event`, `text`, `title`, `session`)\n" +
 		"VALUES\n" +
-		"(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	_, err = server.db.Exec(query, event.Timestamp, event.Language, event.Browser, event.URL, event.Referrer, event.Target, event.Event, event.Text, event.Title, event.Session)
+		"($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
+	err = server.clickHouseConn.Exec(server.clickHouseCtx, query, event.Timestamp, event.Language, event.Browser, event.URL, event.Referrer, event.Target, event.Event, event.Text, event.Title, event.Session)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("[error] cannot log event: %s", err)
@@ -66,51 +71,26 @@ func (server *Server) serveRunQuery(w http.ResponseWriter, r *http.Request) {
 
 // runQuery runs the given query and returns its results as a [][]any.
 func (server *Server) runQuery(query string) ([][]any, error) {
-	rows, err := server.db.Query(query)
+	rows, err := server.clickHouseConn.Query(server.clickHouseCtx, query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	columnTypes, err := rows.ColumnTypes()
-	if err != nil {
-		return nil, err
-	}
+	columnTypes := rows.ColumnTypes()
 	columnsLen := len(columnTypes)
 	result := [][]any{}
 	for rows.Next() {
 		sqlRow := make([]any, columnsLen)
 		for j, column := range columnTypes {
 			switch column.DatabaseTypeName() {
-			case "TINYINT", "INT":
-				if _, nullable := column.Nullable(); nullable {
-					var value sql.NullInt64
-					sqlRow[j] = &value
-				} else {
-					var value int
-					sqlRow[j] = &value
-				}
-			case "BIGINT":
-				if _, nullable := column.Nullable(); nullable {
-					var value sql.NullInt64
-					sqlRow[j] = &value
-				} else {
-					var value int64
-					sqlRow[j] = &value
-				}
-			case "DATE":
+			case "DateTime":
 				var value time.Time
 				sqlRow[j] = &value
-			case "DATETIME":
-				var value time.Time
+			case "String":
+				var value string
 				sqlRow[j] = &value
 			default:
-				if _, nullable := column.Nullable(); nullable {
-					var value sql.NullString
-					sqlRow[j] = &value
-				} else {
-					var value string
-					sqlRow[j] = &value
-				}
+				panic(fmt.Sprintf("BUG: handling of database type %q not implemented", column.DatabaseTypeName()))
 			}
 		}
 		err := rows.Scan(sqlRow...)
@@ -128,6 +108,10 @@ func (server *Server) runQuery(query string) ([][]any, error) {
 				row[i] = value
 			case *time.Time:
 				row[i] = (*v).String()
+			case *string:
+				row[i] = *v
+			default:
+				panic("unexpected")
 			}
 		}
 		result = append(result, row)
