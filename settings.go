@@ -10,6 +10,9 @@ package main
 import "gopkg.in/gcfg.v1"
 
 type Settings struct {
+	Main struct {
+		PrintESBuildWarningsOnStderr bool
+	}
 	MySQL struct {
 		Address  string
 		Username string

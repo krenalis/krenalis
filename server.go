@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -25,13 +26,14 @@ import (
 )
 
 type Server struct {
+	settings       *Settings
 	mySQLDB        *sql.DB
 	clickHouseConn chDriver.Conn
 	clickHouseCtx  context.Context
 }
 
-func newServer(mySQLDB *sql.DB, clickHouseConn chDriver.Conn, clickHouseCtx context.Context) *Server {
-	return &Server{mySQLDB: mySQLDB, clickHouseConn: clickHouseConn, clickHouseCtx: clickHouseCtx}
+func newServer(settings *Settings, mySQLDB *sql.DB, clickHouseConn chDriver.Conn, clickHouseCtx context.Context) *Server {
+	return &Server{settings: settings, mySQLDB: mySQLDB, clickHouseConn: clickHouseConn, clickHouseCtx: clickHouseCtx}
 }
 
 func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
@@ -148,18 +150,23 @@ func (server *Server) serveWithESBuild(w http.ResponseWriter, r *http.Request) {
 		TreeShaking:       api.TreeShakingTrue,
 		Write:             false,
 	})
-	if result.Errors != nil || result.Warnings != nil {
-		printMessages := func(messages []api.Message) {
-			for _, msg := range messages {
-				log.Printf(" -> %v", msg)
-			}
-			log.Fatal("errors/warnings when executing esbuild, cannot proceed")
+
+	// Handle errors and warnings.
+	if result.Errors != nil {
+		for _, msg := range result.Errors {
+			log.Printf("[error] ESBuild error: %v", msg)
 		}
-		if result.Errors != nil {
-			printMessages(result.Errors)
-		}
-		printMessages(result.Warnings)
+		log.Fatal("[error] errors while executing ESbuild, cannot proceed")
 	}
+	if result.Warnings != nil {
+		for _, msg := range result.Warnings {
+			log.Printf("[warning] ESBuild warning: %v", msg)
+			if server.settings.Main.PrintESBuildWarningsOnStderr {
+				fmt.Fprintf(os.Stderr, "[warning] ESBuild warning: %v", msg)
+			}
+		}
+	}
+
 	base := path.Base(r.URL.Path)
 	for _, out := range result.OutputFiles {
 		if strings.HasSuffix(out.Path, base) {

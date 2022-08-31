@@ -70,7 +70,7 @@ func main() {
 	log.Printf("[info] successfully connected to the ClickHouse server")
 
 	// Run the server.
-	server := newServer(mySQLDB, clickHouseConn, clickHouseCtx)
+	server := newServer(settings, mySQLDB, clickHouseConn, clickHouseCtx)
 	http.HandleFunc("/admin/src/", server.serveWithESBuild)
 	http.HandleFunc("/api/update-results", server.serveUpdateResults)
 	http.HandleFunc("/log-event", server.serveLogEvent)
