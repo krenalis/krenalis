@@ -62,6 +62,10 @@ let columns = [
 function App() {
 	return (
 		<div className="App">
+			<h2>Altre pagine</h2>
+			<ul>
+				<li><a href="visualization">Query editor</a></li>
+			</ul>
 			<div className="page">
 				<o2b-table
 					title="Ultimi Eventi"
