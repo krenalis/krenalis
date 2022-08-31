@@ -156,7 +156,9 @@ func (server *Server) serveWithESBuild(w http.ResponseWriter, r *http.Request) {
 		for _, msg := range result.Errors {
 			log.Printf("[error] ESBuild error: %v", msg)
 		}
-		log.Fatal("[error] errors while executing ESbuild, cannot proceed")
+		log.Printf("[error] errors while executing ESbuild, cannot serve %q", r.URL.Path)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 	if result.Warnings != nil {
 		for _, msg := range result.Warnings {
