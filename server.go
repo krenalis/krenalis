@@ -14,28 +14,38 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/evanw/esbuild/pkg/api"
 )
 
+const maxEventsQueueLength = 10000
+const flushQueueTimeout = 1 // Interval (in seconds) to flush the queue.
+
 type Server struct {
-	settings       *Settings
-	mySQLDB        *sql.DB
-	clickHouseConn chDriver.Conn
-	clickHouseCtx  context.Context
+	settings         *Settings
+	mySQLDB          *sql.DB
+	clickHouseConn   chDriver.Conn
+	clickHouseCtx    context.Context
+	eventsQueue      []*Event
+	eventsQueueMutex sync.Mutex
 }
 
 func newServer(settings *Settings, mySQLDB *sql.DB, clickHouseConn chDriver.Conn, clickHouseCtx context.Context) *Server {
-	return &Server{settings: settings, mySQLDB: mySQLDB, clickHouseConn: clickHouseConn, clickHouseCtx: clickHouseCtx}
+	s := &Server{settings: settings, mySQLDB: mySQLDB, clickHouseConn: clickHouseConn, clickHouseCtx: clickHouseCtx}
+	s.timeoutFlusher()
+	return s
 }
 
+// serveLogEvent receives an event via HTTP and enqueues it.
 func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 	var event *Event
 	err := json.NewDecoder(r.Body).Decode(&event)
@@ -43,14 +53,66 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
-	query := "INSERT INTO `events`\n" +
-		"(`timestamp`, `language`, `browser`, `url`, `referrer`, `target`, `event`, `text`, `title`, `session`)\n" +
-		"VALUES\n" +
-		"($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
-	err = server.clickHouseConn.Exec(server.clickHouseCtx, query, event.Timestamp, event.Language, event.Browser, event.URL, event.Referrer, event.Target, event.Event, event.Text, event.Title, event.Session)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot log event: %s", err)
+	server.eventsQueueMutex.Lock()
+	server.eventsQueue = append(server.eventsQueue, event)
+	var toFlush []*Event
+	if len(server.eventsQueue) == maxEventsQueueLength {
+		toFlush = server.eventsQueue
+		server.eventsQueue = nil
+	}
+	server.eventsQueueMutex.Unlock()
+	if toFlush != nil {
+		go server.flushEvents(toFlush)
+	}
+}
+
+// timeoutFlusher launches a goroutine that flushes the events queue every
+// flushQueueTimeout seconds
+func (server *Server) timeoutFlusher() {
+	ticker := time.NewTicker(flushQueueTimeout * time.Second)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				server.eventsQueueMutex.Lock()
+				toFlush := server.eventsQueue
+				server.eventsQueue = nil
+				server.eventsQueueMutex.Unlock()
+				go server.flushEvents(toFlush)
+			}
+		}
+	}()
+}
+
+// flushEvents writes a batch of events to ClickHouse.
+func (server *Server) flushEvents(events []*Event) {
+	if len(events) == 0 {
+		return
+	}
+	log.Printf("[info] flushing %d events", len(events))
+RETRY:
+	for {
+		batch, err := server.clickHouseConn.PrepareBatch(server.clickHouseCtx, "INSERT INTO `events`\n"+
+			"(`timestamp`, `language`, `browser`, `url`, `referrer`, `target`, `event`, `text`, `title`, `session`)")
+		if err != nil {
+			log.Printf("[error] cannot log events: %s", err)
+			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
+			continue
+		}
+		for _, event := range events {
+			err := batch.Append(event.Timestamp, event.Language, event.Browser, event.URL, event.Referrer, event.Target, event.Event, event.Text, event.Title, event.Session)
+			if err != nil {
+				log.Printf("[error] cannot log events: %s", err)
+				time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
+				continue RETRY
+			}
+		}
+		err = batch.Send()
+		if err != nil {
+			log.Printf("[error] cannot log events: %s", err)
+			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
+			continue
+		}
 		return
 	}
 }
