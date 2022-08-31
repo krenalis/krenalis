@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="index.css">
+    <title>Visualization</title>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/default.min.css">
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.3.3/dist/echarts.min.js"></script>
+</head>
+
+<body>
+
+    <div class="row">
+        <div class="column">
+            <h2>Editor</h2>
+            <div id="editor" oninput="editorChange()">{
+    "GraphOn": "PageView",
+    "GroupBy": "Month",
+    "DateRange": "Past12Months"
+}
+</div>
+            <br>
+            <input type="checkbox" id="autoUpdateResults"><label for="autoUpdateResults">Automatically update results on
+                editor change (use with caution!)</label>
+            <h3>Documentation</h3>
+            <pre><code class="language-json">
+{
+    "GraphOn": "PageView" | "Click",
+    "Filters": [{
+        "Column": &lt;a column&gt;,
+        "Comparison": "Equal" | "NotEqual",
+        "Target": &lt;a value&gt;, 
+    }, ...]
+    "GroupBy": &lt;a column&gt; | "Day" | "Month",
+    "DateRange": "Today" | "Yesterday" | "Past7Days" | "Past12Months"
+}
+
+columns = "timestamp" | "browser" | "language" | "referrer" | "session" |
+          "target" | "text" | "title" | "url"
+                        </code></pre>
+            <h2>Examples</h2>
+            <div id="examples"></div>
+            <br>
+
+        </div>
+        <div class="column">
+            <h2>Results</h2>
+            <p class="error" id="updateResultsError" style="display:none;"></p>
+            <button onclick="updateResults()" id="updateResults">Update results</button>
+
+            <label for="graphType">Graph type: </label>
+            <select id="graphType" onchange="updateResults()">
+                <option value="bar">Bar</option>
+                <option value="line">Line</option>
+            </select>
+
+            <script>
+
+            </script>
+            <br>
+            <br>
+
+            <div id="chart" style="width: 100%;height:400px;"></div>
+            <pre><code id="query" class="language-sql"></code></pre>
+            <div id="result"></div>
+
+        </div>
+    </div>
+
+    <br>
+
+    <script src="index.js"></script>
+    <script src="examples.js"></script>
+    <script src="chart.js"></script>
+
+    <script>hljs.highlightAll();</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.9.6/ace.js" type="text/javascript"
+        charset="utf-8"></script>
+    <script>
+        var editor = ace.edit("editor");
+        editor.setTheme("ace/theme/github");
+        editor.session.setMode("ace/mode/json");
+    </script>
+
+    <script>updateResults()</script>
+
+</body>
+
+</html>

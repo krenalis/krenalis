@@ -89,6 +89,12 @@ func (server *Server) runQuery(query string) ([][]any, error) {
 			case "String":
 				var value string
 				sqlRow[j] = &value
+			case "UInt8":
+				var value uint8
+				sqlRow[j] = &value
+			case "UInt64":
+				var value uint64
+				sqlRow[j] = &value
 			default:
 				panic(fmt.Sprintf("BUG: handling of database type %q not implemented", column.DatabaseTypeName()))
 			}
@@ -109,6 +115,10 @@ func (server *Server) runQuery(query string) ([][]any, error) {
 			case *time.Time:
 				row[i] = (*v).String()
 			case *string:
+				row[i] = *v
+			case *uint8:
+				row[i] = *v
+			case *uint64:
 				row[i] = *v
 			default:
 				panic("unexpected")

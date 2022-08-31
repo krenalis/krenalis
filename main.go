@@ -10,7 +10,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -62,11 +61,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("[error] cannot connect to the database: %s", err)
 	}
-	clickHouseCtx := clickhouse.Context(context.Background(), clickhouse.WithSettings(clickhouse.Settings{
-		"max_block_size": 10,
-	}), clickhouse.WithProgress(func(p *clickhouse.Progress) {
-		fmt.Println("progress: ", p)
-	}))
+	clickHouseCtx := context.Background()
 	err = clickHouseConn.Ping(clickHouseCtx)
 	if err != nil {
 		log.Fatalf("[error] cannot ping ClickHouse server: %s", err)
@@ -76,6 +71,7 @@ func main() {
 	// Run the server.
 	server := newServer(mySQLDB, clickHouseConn, clickHouseCtx)
 	http.HandleFunc("/admin/src/", server.serveWithESBuild)
+	http.HandleFunc("/api/update-results", server.serveUpdateResults)
 	http.HandleFunc("/log-event", server.serveLogEvent)
 	http.HandleFunc("/run-query", server.serveRunQuery)
 	http.Handle("/", http.FileServer(http.Dir("./")))
