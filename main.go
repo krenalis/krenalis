@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	_ "time/tzdata" // workaround for clickhouse-go issue #162
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	_ "github.com/go-sql-driver/mysql"
