@@ -234,7 +234,15 @@ func (server *Server) serveWithESBuild(w http.ResponseWriter, r *http.Request) {
 	base := path.Base(r.URL.Path)
 	for _, out := range result.OutputFiles {
 		if strings.HasSuffix(out.Path, base) {
-			w.Header().Add("Content-Type", "text/javascript")
+			switch filepath.Ext(base) {
+			case ".js":
+				w.Header().Add("Content-Type", "text/javascript")
+			case ".css":
+				w.Header().Add("Content-Type", "text/css")
+			default:
+				log.Printf("[error] cannot determine Content-Type for %q", base)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			}
 			w.Write(out.Contents)
 			return
 		}
