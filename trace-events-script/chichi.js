@@ -1,15 +1,17 @@
 let endpoint = 'https://localhost:9090/log-event';
 
+let property = '1234567890'
+
 function sendBeacon(data) {
 	let d = data == null ? {} : data;
 
 	// populate the data object with relevant infos.
-	let session = localStorage.getItem('chichi-session');
-	if (session == null) {
-		session = makeid(8);
-		localStorage.setItem('chichi-session', session);
+	let user = localStorage.getItem('chichi-user');
+	if (user == null) {
+		user = makeid();
+		localStorage.setItem('chichi-user', user);
 	}
-	d.session = session;
+	d.user = user;
 	navigator.geolocation.getCurrentPosition(
 		(position) => {
 			d.geolocation = {
@@ -75,12 +77,8 @@ for (let a of anchors) {
 	);
 }
 
-function makeid(length) {
-	let result = '';
-	let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-	let charactersLength = characters.length;
-	for (let i = 0; i < length; i++) {
-		result += characters.charAt(Math.floor(Math.random() * charactersLength));
-	}
-	return result;
+function makeid() {
+	let array = new Uint8Array(20);
+	self.crypto.getRandomValues(array);
+	return btoa(String.fromCharCode.apply(null, array));
 }

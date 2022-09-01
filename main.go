@@ -83,11 +83,12 @@ func main() {
 }
 
 type Event struct {
+	Property  string
 	Browser   string
 	Event     string // "visit", "click", ...
 	Language  string // "it-IT"
 	Referrer  string // "https://example.com"
-	Session   string
+	User      string
 	Target    string // "https://example.com"
 	Text      string // "Add to cart"
 	Timestamp time.Time
