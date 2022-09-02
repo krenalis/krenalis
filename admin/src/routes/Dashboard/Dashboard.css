@@ -15,7 +15,7 @@
 
 .Dashboard .editor {
     display: grid;
-    column-gap: 90px;
+    column-gap: 60px;
     row-gap: 30px;
     justify-content: center;
     grid-template-columns: 2fr 1fr;
