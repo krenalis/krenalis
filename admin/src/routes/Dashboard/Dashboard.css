@@ -20,8 +20,7 @@
     justify-content: center;
     grid-template-columns: 2fr 1fr;
     grid-template-areas:
-        "textarea docs"
-        "textarea examples";
+        "textarea side"
 }
 
 .Dashboard .editor .title {
@@ -81,16 +80,32 @@
     background-color: var(--bg-primary)!important;
     border-radius: 10px;
     padding: 30px!important;
+    overflow-x: hidden!important;
+    line-height: 1.5;
 }
 
-.Dashboard .editor .documentation {
-    grid-area: docs;
+.Dashboard .editor .textarea .query-columns {
+    display: grid;
+    background-color: var(--bg-primary);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.Dashboard .editor .textarea .query-columns .head-cell, .Dashboard .editor .textarea .query-columns .cell {
+    padding: 8px 15px;
+}
+
+.Dashboard .editor .textarea .query-columns .head-cell {
+    font-weight: 700;
+}
+
+.Dashboard .editor .side {
+    grid-area: side;
+}
+
+.Dashboard .editor .side .documentation {
     border-radius: 10px;
     margin: 0;
     height: 100%;
     background-color: transparent!important;
-}
-
-.Dashboard .editor .suggestions {
-    grid-area: examples;
 }

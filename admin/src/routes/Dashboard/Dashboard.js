@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import AceEditor from 'react-ace';
-import { BarChart, YAxis, XAxis, Tooltip, Bar } from 'recharts'
+import { CartesianGrid, BarChart, YAxis, XAxis, Tooltip, Bar } from 'recharts'
 import 'ace-builds/src-noconflict/mode-json';
 import 'ace-builds/src-noconflict/theme-github';
 import SyntaxHighlighter from 'react-syntax-highlighter';
@@ -21,19 +21,18 @@ export default class Dashboard extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            jsonQuery: {
-                Graph: ['Count', 'Pageview'],
-                GroupBy: ['Month'],
-                DateRange: 'Past12Months',
-            },
+            jsonQuery: suggestionsData[0].jsonQuery,
             autoUpdate: false,
             isSlideOverOpen: false,
+            columns: [],
+            chartData: [],
         }
         this.aceRef = React.createRef();
     }
 
     async componentDidMount() {
-        let [data, error] = await getChartData(this.state.jsonQuery);
+        let queryObj = JSON.parse(this.state.jsonQuery);
+        let [data, error] = await getChartData(queryObj);
         if (error !== null) {
             this.setState({ 'statusMessage': error })
             return;
@@ -42,8 +41,9 @@ export default class Dashboard extends Component {
     }
 
     runQuery = async () => {
-        let jsonQuery = JSON.parse(this.aceRef.current.editor.getValue());
-        let [data, error] = await getChartData(jsonQuery);
+        let jsonQuery = this.aceRef.current.editor.getValue()
+        let queryObj = JSON.parse(jsonQuery);
+        let [data, error] = await getChartData(queryObj);
         if (error !== null) {
             this.setState({ 'jsonQuery': jsonQuery, 'statusMessage': error })
             return;
@@ -52,7 +52,8 @@ export default class Dashboard extends Component {
     }
 
     applySuggestion = async (jsonQuery) => {
-        let [data, error] = await getChartData(jsonQuery);
+        let queryObj = JSON.parse(jsonQuery);
+        let [data, error] = await getChartData(queryObj);
         if (error !== null) {
             this.setState({ 'jsonQuery': jsonQuery, 'statusMessage': error })
             return;
@@ -66,8 +67,9 @@ export default class Dashboard extends Component {
 
     autoUpdateQuery = async () => {
         if (!this.state.autoUpdate) return;
-        let jsonQuery = JSON.parse(this.aceRef.current.editor.getValue());
-        let [data, error] = await getChartData(jsonQuery);
+        let jsonQuery = this.aceRef.current.editor.getValue()
+        let queryObj = JSON.parse(jsonQuery);
+        let [data, error] = await getChartData(queryObj);
         if (error !== null) {
             this.setState({ 'jsonQuery': jsonQuery, 'statusMessage': error })
             return;
@@ -86,12 +88,18 @@ export default class Dashboard extends Component {
     render() {
         let suggestions = [];
         for (let s of suggestionsData) suggestions.push(<QuerySuggestion description={s.description} query={s.jsonQuery} onClick={this.applySuggestion} />);
+        let columnsCells = [];
+        for (let c of this.state.columns) columnsCells.push(<div className='head-cell'>{c}</div>)
+        for (let entry of this.state.chartData) {
+            for (let v in entry) columnsCells.push(<div className='cell'>{entry[v]}</div>)
+        }
         return (
-            <div className='Dashboard'>
+            <div className='Dashboard' >
                 <div className='content'>
 
                     <div className='chart'>
                         <BarChart width={1500} height={250} data={this.state.chartData}>
+                            <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey='name' />
                             <YAxis />
                             <Tooltip />
@@ -118,40 +126,45 @@ export default class Dashboard extends Component {
 
                             <AceEditor
                                 ref={this.aceRef}
-                                placeholder='Insert your JSON query'
                                 mode='json'
                                 theme='github'
                                 onChange={this.autoUpdateQuery}
+                                debounceChangePeriod={500}
                                 fontSize={16}
                                 showPrintMargin={true}
                                 showGutter={true}
+                                showInvisibles={true}
                                 highlightActiveLine={true}
-                                value={JSON.stringify(this.state.jsonQuery, null, 2)}
+                                value={this.state.jsonQuery}
                                 setOptions={{
+                                    copyWithEmptySelection: true,
                                     showLineNumbers: true,
-                                    tabSize: 2,
-                                    useWorker: false
+                                    useWorker: false,
                                 }} />
 
-                            <div className="sql-query">
+                            <div className='sql-query'>
                                 <SyntaxHighlighter wrapLongLines={true} language='sql' style={github}>
                                     {this.state.sqlQuery}
                                 </SyntaxHighlighter>
                             </div>
 
-                            <div className="columns">{this.state.columns}</div>
+                            <div className='query-columns' style={{ gridTemplateColumns: `repeat(${this.state.columns.length}, 1fr)` }}>{columnsCells}</div>
 
                         </div>
 
-                        <Accordion className='documentation' title={'Documentazione'}>
-                            <SyntaxHighlighter className='documentation' language='json' style={github}>
-                                {docsData}
-                            </SyntaxHighlighter>
-                        </Accordion>
+                        <div className="side">
 
-                        <div className='suggestions'>
-                            <h1 className='title'>Suggerimenti</h1>
-                            {suggestions}
+                            <Accordion className='documentation' title={'Documentazione'}>
+                                <SyntaxHighlighter className='documentation' language='json' style={github}>
+                                    {docsData}
+                                </SyntaxHighlighter>
+                            </Accordion>
+
+                            <div className='suggestions'>
+                                <h1 className='title'>Suggerimenti</h1>
+                                {suggestions}
+                            </div>
+
                         </div>
 
                     </div>
