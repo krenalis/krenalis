@@ -1,0 +1,16 @@
+.Accordion .title {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.Accordion .title i {
+    position: relative;
+    top: 3px;
+}
+
+.Accordion .accordion-content {
+    margin-top: 10px;
+}

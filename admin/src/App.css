@@ -2,6 +2,7 @@
 	--bg-primary: #ffffff;
 	--bg-secondary: #f3f4f6;
 	--bg-dark: #131313;
+	--bg-overlay: #1313136e;
 	--bg-error: #fee2e2;
 	--color-primary: #4f46e5;
 	--color-error: #dc2626;
@@ -57,4 +58,5 @@ body {
 .btn.secondary {
 	background-color: var(--bg-secondary);
     color: var(--color-primary);
+	padding: 10px 30px;
 }

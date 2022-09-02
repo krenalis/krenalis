@@ -8,46 +8,56 @@ import { github } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import getChartData from '../../utils/getChartData';
 import { suggestionsData } from '../../utils/suggestionsData';
 import QuerySuggestion from '../../components/QuerySuggestion/QuerySuggestion';
+import { docsData } from '../../utils/docsData';
+import { additionalNotesData } from '../../utils/additionalNotesData';
 import StatusMessage from '../../components/StatusMessage/StatusMessage';
+import Accordion from '../../components/Accordion/Accordion';
 import './Dashboard.css'
+import FloatingButton from '../../components/FloatingButton/FloatingButton';
+import SlideOver from '../../components/SlideOver/SlideOver';
 
 export default class Dashboard extends Component {
 
     constructor(props) {
         super(props);
         this.state = {
-            jsonQuery: { 'GraphOn': 'PageView', 'GroupBy': 'Month', 'DateRange': 'Past12Months' },
+            jsonQuery: {
+                Graph: ['Count', 'Pageview'],
+                GroupBy: ['Month'],
+                DateRange: 'Past12Months',
+            },
             autoUpdate: false,
+            isSlideOverOpen: false,
         }
         this.aceRef = React.createRef();
     }
 
     async componentDidMount() {
-        let [chartData, error] = await getChartData(this.state.jsonQuery);
+        let [data, error] = await getChartData(this.state.jsonQuery);
         if (error !== null) {
             this.setState({ 'statusMessage': error })
             return;
         }
-        this.setState({ 'chartData': chartData });
+        this.setState({ 'chartData': data.chartData, 'columns': data.columns, 'sqlQuery': data.sqlQuery });
     }
 
     runQuery = async () => {
-        let query = JSON.parse(this.aceRef.current.editor.getValue());
-        let [chartData, error] = await getChartData(query);
+        let jsonQuery = JSON.parse(this.aceRef.current.editor.getValue());
+        let [data, error] = await getChartData(jsonQuery);
         if (error !== null) {
-            this.setState({ 'jsonQuery': query, 'statusMessage': error })
+            this.setState({ 'jsonQuery': jsonQuery, 'statusMessage': error })
             return;
         }
-        this.setState({ 'jsonQuery': query, 'chartData': chartData, 'statusMessage': '' });
+        this.setState({ 'jsonQuery': jsonQuery, 'chartData': data.chartData, 'columns': data.columns, 'sqlQuery': data.sqlQuery, 'statusMessage': '' });
     }
 
-    applySuggestion = async (query) => {
-        let [chartData, error] = await getChartData(query);
+    applySuggestion = async (jsonQuery) => {
+        let [data, error] = await getChartData(jsonQuery);
         if (error !== null) {
-            this.setState({ 'jsonQuery': query, 'statusMessage': error })
+            this.setState({ 'jsonQuery': jsonQuery, 'statusMessage': error })
             return;
         }
-        this.setState({ 'jsonQuery': query, 'chartData': chartData, 'statusMessage': '' });
+        this.setState({ 'jsonQuery': jsonQuery, 'chartData': data.chartData, 'columns': data.columns, 'sqlQuery': data.sqlQuery, 'statusMessage': '' });
     }
 
     toggleAutoUpdate = () => {
@@ -56,43 +66,32 @@ export default class Dashboard extends Component {
 
     autoUpdateQuery = async () => {
         if (!this.state.autoUpdate) return;
-        let query = JSON.parse(this.aceRef.current.editor.getValue());
-        let [chartData, error] = await getChartData(query);
+        let jsonQuery = JSON.parse(this.aceRef.current.editor.getValue());
+        let [data, error] = await getChartData(jsonQuery);
         if (error !== null) {
-            this.setState({ 'jsonQuery': query, 'statusMessage': error })
+            this.setState({ 'jsonQuery': jsonQuery, 'statusMessage': error })
             return;
         }
-        this.setState({ 'jsonQuery': query, 'chartData': chartData, 'statusMessage': '' });
+        this.setState({ 'jsonQuery': jsonQuery, 'chartData': data.chartData, 'columns': data.columns, 'sqlQuery': data.sqlQuery, 'statusMessage': '' });
     }
 
     closeStatusMessage = () => {
         this.setState({ 'statusMessage': '' });
     }
 
+    toggleSlideOver = () => {
+        this.setState({ 'isSlideOverOpen': !this.state.isSlideOverOpen })
+    }
+
     render() {
-        let doc = `{
-            "GraphOn": "PageView" | "Click",
-            "Filters": [{
-                "Column": <a column>,
-                "Comparison": "Equal" | "NotEqual",
-                "Target": <a value>, 
-            }, ...],
-            "GroupBy": <a column> | "Day" | "Month",
-            "DateRange": "Today" | "Yesterday" 
-                        | "Past7Days" | "Past12Months"
-        }
-        
-        columns = "timestamp" | "browser" | "language" 
-                    | "referrer" | "session" | "target" | "text" | "title" | "url"
-        `;
         let suggestions = [];
-        for (let s of suggestionsData) suggestions.push(<QuerySuggestion description={s.description} query={s.query} onClick={this.applySuggestion} />);
+        for (let s of suggestionsData) suggestions.push(<QuerySuggestion description={s.description} query={s.jsonQuery} onClick={this.applySuggestion} />);
         return (
             <div className='Dashboard'>
                 <div className='content'>
 
                     <div className='chart'>
-                        <BarChart width={1200} height={250} data={this.state.chartData}>
+                        <BarChart width={1500} height={250} data={this.state.chartData}>
                             <XAxis dataKey='name' />
                             <YAxis />
                             <Tooltip />
@@ -104,14 +103,14 @@ export default class Dashboard extends Component {
 
                     <div className='editor'>
 
-                        <div className="textarea">
+                        <div className='textarea'>
 
-                            <div className="controls">
-                                <div className="autoapply">
-                                    <input type="checkbox" checked={this.state.autoUpdate} onChange={this.toggleAutoUpdate} name="autoapply" id="autoapply" />
-                                    <label htmlFor="autoapply">Aggiorna automaticamente</label>
+                            <div className='controls'>
+                                <div className='autoapply'>
+                                    <input type='checkbox' checked={this.state.autoUpdate} onChange={this.toggleAutoUpdate} name='autoapply' id='autoapply' />
+                                    <label htmlFor='autoapply'>Aggiorna automaticamente</label>
                                 </div>
-                                <div className="btn" onClick={this.runQuery}>
+                                <div className='btn' onClick={this.runQuery}>
                                     <i className='material-symbols-outlined'>bolt</i>
                                     Run query
                                 </div>
@@ -134,21 +133,34 @@ export default class Dashboard extends Component {
                                     useWorker: false
                                 }} />
 
+                            <div className="sql-query">
+                                <SyntaxHighlighter wrapLongLines={true} language='sql' style={github}>
+                                    {this.state.sqlQuery}
+                                </SyntaxHighlighter>
+                            </div>
+
+                            <div className="columns">{this.state.columns}</div>
+
                         </div>
 
-                        <div className="documentation">
-                            <div className="title">Documentazione</div>
-                            <SyntaxHighlighter className="documentation" language="json" style={github}>
-                                {doc}
+                        <Accordion className='documentation' title={'Documentazione'}>
+                            <SyntaxHighlighter className='documentation' language='json' style={github}>
+                                {docsData}
                             </SyntaxHighlighter>
-                        </div>
+                        </Accordion>
 
                         <div className='suggestions'>
-                            <h1 className="title">Suggerimenti</h1>
+                            <h1 className='title'>Suggerimenti</h1>
                             {suggestions}
                         </div>
 
                     </div>
+
+                    <FloatingButton icon={'speaker_notes'} onClick={this.toggleSlideOver} />
+
+                    <SlideOver onClose={this.toggleSlideOver} title={'Note aggiuntive'} isOpen={this.state.isSlideOverOpen ? true : false}>
+                        {additionalNotesData}
+                    </SlideOver>
 
                 </div>
             </div>

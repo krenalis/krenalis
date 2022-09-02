@@ -6,7 +6,6 @@
     top: 0;
     left: 0;
     z-index: 20;
-    box-shadow: 2px 0 6px 1px var(--shadow-primary);
     padding: 20px 0 40px 0;
     display: flex;
     flex-flow: column;

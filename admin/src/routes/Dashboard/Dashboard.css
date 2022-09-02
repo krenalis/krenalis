@@ -4,8 +4,9 @@
 }
 
 .Dashboard .content {
-    max-width: 1200px;
+    max-width: 1500px;
     margin: auto;
+    padding-bottom: 50px;
 }
 
 .Dashboard .chart {
@@ -17,7 +18,7 @@
     column-gap: 90px;
     row-gap: 30px;
     justify-content: center;
-    grid-template-columns: 1.3fr 1fr;
+    grid-template-columns: 2fr 1fr;
     grid-template-areas:
         "textarea docs"
         "textarea examples";
@@ -68,13 +69,18 @@
 
 .Dashboard .editor .textarea .ace_editor {
     width: unset!important;
-    height: 100%!important;
     border-radius: 10px;
     font-family: monospace;
 }
 
 .Dashboard .editor .textarea .ace_editor * {
     font-family: monospace;
+}
+
+.Dashboard .editor .textarea .sql-query pre {
+    background-color: var(--bg-primary)!important;
+    border-radius: 10px;
+    padding: 30px!important;
 }
 
 .Dashboard .editor .documentation {
