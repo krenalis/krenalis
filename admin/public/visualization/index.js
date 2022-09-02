@@ -42,6 +42,14 @@ function updateResults() {
         // Create the table.
         let table = document.createElement("table");
         table.className = "results";
+        let columnNames = xhr.getResponseHeader("X-Columns").split("|");
+        let header = document.createElement("tr");
+        for (let i = 0; i < columnNames.length; i++) {
+            let th = document.createElement("th");
+            th.innerHTML = columnNames[i];
+            header.appendChild(th);
+        }
+        table.appendChild(header);
         for (let i = 0; i < result.length; i++) {
             let row = document.createElement("tr");
             for (j = 0; j < result[i].length; j++) {

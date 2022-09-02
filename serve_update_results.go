@@ -9,6 +9,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -29,7 +30,7 @@ func (server *Server) serveUpdateResults(w http.ResponseWriter, r *http.Request)
 	defer r.Body.Close()
 
 	// Generate the SQL query from the JSON query.
-	query, err := jsonQueryToSQLQuery(jsonQuery)
+	query, columns, err := jsonQueryToSQLQuery(jsonQuery)
 	if err != nil {
 		w.Header().Add("X-Error", err.Error())
 		http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -48,14 +49,17 @@ func (server *Server) serveUpdateResults(w http.ResponseWriter, r *http.Request)
 	// Send the results to the client.
 	w.Header().Add("Content-Type", "application/json")
 	w.Header().Add("X-Query", query)
+	w.Header().Add("X-Columns", strings.Join(columns, "|"))
 	_ = json.NewEncoder(w).Encode(result)
 }
 
 type JSONQuery struct {
-	GraphOn   string
+	Graph     []string
 	Filters   []JSONQueryFilter
-	GroupBy   string
+	GroupBy   []string
 	DateRange string
+	DateFrom  string
+	DateTo    string
 }
 
 type JSONQueryFilter struct {
@@ -64,37 +68,49 @@ type JSONQueryFilter struct {
 	Target     string
 }
 
-// jsonQueryToSQLQuery converts a JSON query into a SQL query.
-func jsonQueryToSQLQuery(jq JSONQuery) (string, error) {
+// jsonQueryToSQLQuery converts a JSON query into a SQL query. Also returns the
+// columns.
+func jsonQueryToSQLQuery(jq JSONQuery) (string, []string, error) {
 
-	columns := []string{}
-	wheres := []string{}
+	var (
+		columns  []string
+		wheres   []string
+		groupBys []string
+	)
 
-	switch jq.GraphOn {
-	case "PageView":
-		wheres = append(wheres, "`event` = 'view'")
-	case "Click":
-		wheres = append(wheres, "`event` = 'click'")
-	default:
-		return "", fmt.Errorf("%q not supported", jq.GraphOn)
-	}
-
+	// Filters.
 	for _, filter := range jq.Filters {
+		if filter.Comparison == "Contains" {
+			where := fmt.Sprintf("ilike(`%s`, '%%%s%%')", filter.Column, filter.Target)
+			wheres = append(wheres, where)
+			continue
+		}
 		where := filter.Column
 		switch filter.Comparison {
 		case "Equal":
 			where += " = "
 		case "NotEqual":
 			where += " <> "
+		case "GreaterThan":
+			where += "> "
+		case "GreaterEqualThan":
+			where += ">= "
+		case "LessThan":
+			where += "> "
+		case "LessEqualThan":
+			where += "> "
 		default:
-			return "", fmt.Errorf("%q not supported", filter.Comparison)
+			return "", nil, fmt.Errorf("%q not supported", filter.Comparison)
 		}
 		where += " " + filter.Target
 		wheres = append(wheres, where)
 	}
 
-	// dateRange
-	{
+	// DateRange, DateFrom and DateTo.
+	if jq.DateRange != "" && (jq.DateFrom != "" || jq.DateTo != "") {
+		return "", nil, fmt.Errorf("cannot have both 'DateRange' and 'DateFrom'/'DateTo'")
+	}
+	if jq.DateRange != "" {
 		var from, to time.Time
 		now := time.Now()
 		midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -106,12 +122,14 @@ func jsonQueryToSQLQuery(jq JSONQuery) (string, error) {
 			from = time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, now.Location()) // TODO(Gianluca): check if "now.Day()-1" is correct.
 		case "Past7Days":
 			from = time.Date(now.Year(), now.Month(), now.Day()-7, 0, 0, 0, 0, now.Location())
+		case "Past31Days":
+			from = time.Date(now.Year(), now.Month(), now.Day()-31, 0, 0, 0, 0, now.Location())
 		case "Past12Months":
 			from = time.Date(now.Year()-1, now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 		case "":
 			// Nothing to do.
 		default:
-			return "", fmt.Errorf("date range %q not supported", jq.DateRange)
+			return "", nil, fmt.Errorf("date range %q not supported", jq.DateRange)
 		}
 		if to != (time.Time{}) {
 			wheres = append(wheres, "`timestamp` <= "+timeToClickHouseDate(to))
@@ -120,26 +138,77 @@ func jsonQueryToSQLQuery(jq JSONQuery) (string, error) {
 			wheres = append(wheres, "`timestamp` >= "+timeToClickHouseDate(from))
 		}
 	}
-
-	where := " WHERE " + strings.Join(wheres, " AND ")
-
-	var groupBy string
-	switch jq.GroupBy {
-	case "":
-		// Nothing to do.
-	case "Day":
-		groupBy = "GROUP BY toDayOfMonth(`timestamp`)"
-		columns = []string{"toDayOfMonth(`timestamp`)", "COUNT(toDayOfMonth(`timestamp`))"}
-	case "Month":
-		groupBy = "GROUP BY toMonth(`timestamp`)"
-		columns = []string{"toMonth(`timestamp`)", "COUNT(toMonth(`timestamp`))"}
-	default:
-		groupBy = fmt.Sprintf("GROUP BY `%s`", jq.GroupBy)
-		columns = []string{jq.GroupBy, "COUNT(" + jq.GroupBy + ")"}
+	if jq.DateFrom != "" {
+		wheres = append(wheres, "`timestamp` >= '"+jq.DateFrom+"'")
+	}
+	if jq.DateTo != "" {
+		wheres = append(wheres, "`timestamp` <= '"+jq.DateTo+"'")
 	}
 
-	query := "SELECT " + strings.Join(columns, ", ") + " FROM `chichi`.`events` " + where + " " + groupBy
-	return query, nil
+	// GroupBy.
+	for _, groupBy := range jq.GroupBy {
+		switch groupBy {
+		case "Day":
+			groupBys = append(groupBys, "toDayOfMonth(`timestamp`)")
+			columns = append(columns, "toDayOfMonth(`timestamp`)")
+		case "Month":
+			groupBys = append(groupBys, "toMonth(`timestamp`)")
+			columns = append(columns, "toMonth(`timestamp`)")
+		case "Year":
+			groupBys = append(groupBys, "toYear(`timestamp`)")
+			columns = append(columns, "toYear(`timestamp`)")
+		case "":
+			return "", nil, fmt.Errorf("field GroupBy is mandatory")
+		default:
+			groupBys = append(groupBys, fmt.Sprintf("`%s`", groupBy))
+			columns = append(columns, groupBy)
+		}
+	}
+
+	// Graph.
+	if len(jq.Graph) == 0 {
+		return "", nil, errors.New("field Graph cannot be empty")
+	}
+	switch jq.Graph[0] {
+	case "Count":
+		if len(jq.Graph) != 2 {
+			return "", nil, errors.New("graph 'Count' requires one parameter")
+		}
+		columns = append(columns, "COUNT(*)")
+		switch jq.Graph[1] {
+		case "Pageview":
+			wheres = append(wheres, "`event` = 'view'")
+		case "Click":
+			wheres = append(wheres, "`event` = 'click'")
+		default:
+			return "", nil, fmt.Errorf("%q not supported", jq.Graph[1])
+		}
+	case "Count Unique":
+		if len(jq.Graph) != 2 {
+			return "", nil, errors.New("graph 'Number of Sessions' requires one parameter")
+		}
+		columns = append(columns, "COUNT(DISTINCT `session`)")
+		switch jq.Graph[1] {
+		case "Pageview":
+			wheres = append(wheres, "`event` = 'view'")
+		case "Click":
+			wheres = append(wheres, "`event` = 'click'")
+		default:
+			return "", nil, fmt.Errorf("%q not supported", jq.Graph[1])
+		}
+	default:
+		return "", nil, fmt.Errorf("graph type %q not supported", jq.Graph[0])
+	}
+
+	query := "SELECT " + strings.Join(columns, ", ") +
+		" FROM `chichi`.`events` " +
+		" WHERE " + strings.Join(wheres, " AND ")
+
+	if len(groupBys) > 0 {
+		query += " " + " GROUP BY " + strings.Join(groupBys, ", ")
+	}
+
+	return query, columns, nil
 }
 
 // timeToClickHouseDate represents t in a datetime string compatible with

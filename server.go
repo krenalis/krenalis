@@ -216,6 +216,9 @@ func (server *Server) runQuery(query string) ([][]any, error) {
 			case "UInt8":
 				var value uint8
 				sqlRow[j] = &value
+			case "UInt16":
+				var value uint16
+				sqlRow[j] = &value
 			case "UInt64":
 				var value uint64
 				sqlRow[j] = &value
@@ -241,6 +244,8 @@ func (server *Server) runQuery(query string) ([][]any, error) {
 			case *string:
 				row[i] = *v
 			case *uint8:
+				row[i] = *v
+			case *uint16:
 				row[i] = *v
 			case *uint64:
 				row[i] = *v
