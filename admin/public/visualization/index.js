@@ -1,7 +1,7 @@
 function updateResults() {
 
     const xhr = new XMLHttpRequest();
-    const url = "https://localhost:9090/api/update-results"
+    const url = "https://localhost:9090/api/visualization"
 
     xhr.onload = function () {
         if (this.status != 200) {

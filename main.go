@@ -72,7 +72,7 @@ func main() {
 	// Run the server.
 	server := newServer(settings, mySQLDB, clickHouseConn, clickHouseCtx)
 	http.HandleFunc("/admin/src/", server.serveWithESBuild)
-	http.HandleFunc("/api/update-results", server.serveUpdateResults)
+	http.HandleFunc("/api/visualization", server.serveVisualization)
 	http.HandleFunc("/log-event", server.serveLogEvent)
 	http.HandleFunc("/run-query", server.serveRunQuery)
 	http.Handle("/", http.FileServer(http.Dir("./")))

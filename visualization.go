@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-func (server *Server) serveUpdateResults(w http.ResponseWriter, r *http.Request) {
+func (server *Server) serveVisualization(w http.ResponseWriter, r *http.Request) {
 
 	// Parse the request.
 	var jsonQuery JSONQuery
