@@ -125,7 +125,7 @@ func jsonQueryToSQLQuery(jq JSONQuery) (string, []string, error) {
 			from = midnight
 		case "Yesterday":
 			to = midnight
-			from = time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, now.Location()) // TODO(Gianluca): check if "now.Day()-1" is correct.
+			from = time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, now.Location())
 		case "Past7Days":
 			from = time.Date(now.Year(), now.Month(), now.Day()-7, 0, 0, 0, 0, now.Location())
 		case "Past31Days":
