@@ -90,14 +90,14 @@ export default class Dashboard extends Component {
         let suggestions = [];
         for (let s of suggestionsData) suggestions.push(<QuerySuggestion description={s.description} query={s.jsonQuery} onClick={this.applySuggestion} />);
         let columnsCells = [];
-        for (let c of this.state.columns) columnsCells.push(<div className='head-cell'>{c}</div>)
+        for (let c of this.state.columns) columnsCells.push(<div className='head-cell'>{c}</div>);
         for (let entry of this.state.chartData) {
-            for (let v in entry) columnsCells.push(<div className='cell'>{entry[v]}</div>)
+            for (let v in entry) columnsCells.push(<div className='cell'>{entry[v]}</div>);
         }
         let chartOptions = [];
-        let chartTypes = ['bar', 'line']
+        let chartTypes = ['bar', 'line', 'area', 'pie'];
         for (let type of chartTypes) {
-            chartOptions.push(<option value={type} selected={type === this.state.chartType ? true : false}>{type}</option>)
+            chartOptions.push(<option value={type} selected={type === this.state.chartType ? true : false}>{type}</option>);
         }
         return (
             <div className='Dashboard' >
