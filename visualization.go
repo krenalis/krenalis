@@ -86,8 +86,13 @@ func jsonQueryToSQLQuery(jq JSONQuery) (string, []string, error) {
 
 	// Filters.
 	for _, filter := range jq.Filters {
-		if filter.Comparison == "Contains" {
+		switch filter.Comparison {
+		case "Contains":
 			where := fmt.Sprintf("ilike(`%s`, '%%%s%%')", filter.Column, filter.Target)
+			wheres = append(wheres, where)
+			continue
+		case "NotContains":
+			where := fmt.Sprintf("not ilike(`%s`, '%%%s%%')", filter.Column, filter.Target)
 			wheres = append(wheres, where)
 			continue
 		}

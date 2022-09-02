@@ -7,7 +7,7 @@ export let docsData = `{
             "Column": <a column>,
             "Comparison": "Equal" | "NotEqual" | "GreaterThan" 
             | "GreaterThanEqual" | "LessThan" | "LessThanEqual" 
-            | "Contains",
+            | "Contains", "NotContains",
             "Target": <a value>, 
     }, ...]
 
