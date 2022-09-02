@@ -3,7 +3,7 @@
 ![](https://static.wikia.nocookie.net/dragonballaf/images/c/c3/Chichi_foto8.jpg/revision/latest?cb=20120616090846&path-prefix=it)
 
 - [How to compile the server](#how-to-compile-the-server)
-- [Install React](#install-react)
+- [Install React and other dependencies](#install-react-and-other-dependencies)
 - [How to run](#how-to-run)
 
 ## How to compile the server
@@ -12,16 +12,12 @@
 go build -tags osusergo,netgo -trimpath
 ```
 
-## Install React
-
-TODO: revise this steps:
+## Install React and other dependencies
 
 ```
 cd admin
-npm install react
+npm install
 ```
-
-**NOTE**: you may also need to install other node modules, which are listed in the log file when Esbuild tries to compile the sources.
 
 It is recommended to add the `/admin/node_modules/` directory your local `.gitignore` file.
 
