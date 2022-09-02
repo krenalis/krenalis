@@ -9,8 +9,19 @@
     padding-bottom: 50px;
 }
 
-.Dashboard .chart {
-    margin-bottom: 30px;
+.Dashboard .chart-section {
+    position: relative;
+    margin-bottom: 50px;
+}
+
+.Dashboard .chart-section select {
+    right: 25px;
+    position: absolute;
+    bottom: -20px;
+    border-radius: 5px;
+    background: transparent;
+    border: 0px;
+    color: var(--color-primary);
 }
 
 .Dashboard .editor {

@@ -1,6 +1,5 @@
 import React, { Component } from 'react'
 import AceEditor from 'react-ace';
-import { CartesianGrid, BarChart, YAxis, XAxis, Tooltip, Bar } from 'recharts'
 import 'ace-builds/src-noconflict/mode-json';
 import 'ace-builds/src-noconflict/theme-github';
 import SyntaxHighlighter from 'react-syntax-highlighter';
@@ -10,6 +9,7 @@ import { suggestionsData } from '../../utils/suggestionsData';
 import QuerySuggestion from '../../components/QuerySuggestion/QuerySuggestion';
 import { docsData } from '../../utils/docsData';
 import { additionalNotesData } from '../../utils/additionalNotesData';
+import Chart from '../../components/Chart/Chart';
 import StatusMessage from '../../components/StatusMessage/StatusMessage';
 import Accordion from '../../components/Accordion/Accordion';
 import './Dashboard.css'
@@ -26,6 +26,7 @@ export default class Dashboard extends Component {
             isSlideOverOpen: false,
             columns: [],
             chartData: [],
+            chartType: 'line',
         }
         this.aceRef = React.createRef();
     }
@@ -93,18 +94,23 @@ export default class Dashboard extends Component {
         for (let entry of this.state.chartData) {
             for (let v in entry) columnsCells.push(<div className='cell'>{entry[v]}</div>)
         }
+        let chartOptions = [];
+        let chartTypes = ['bar', 'line']
+        for (let type of chartTypes) {
+            chartOptions.push(<option value={type} selected={type === this.state.chartType ? true : false}>{type}</option>)
+        }
         return (
             <div className='Dashboard' >
                 <div className='content'>
 
-                    <div className='chart'>
-                        <BarChart width={1500} height={250} data={this.state.chartData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey='name' />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar dataKey='p' fill='var(--color-primary)' />
-                        </BarChart>
+                    <div className="chart-section">
+
+                        <Chart data={this.state.chartData} type={this.state.chartType} width={1500} height={250} />
+
+                        <select name="chart-type" id="chart-type" onChange={(e) => { this.setState({ 'chartType': e.currentTarget.value }) }}>
+                            {chartOptions}
+                        </select>
+
                     </div>
 
                     {this.state.statusMessage && this.state.statusMessage !== '' && <StatusMessage onClose={this.closeStatusMessage} text={this.state.statusMessage} />}
