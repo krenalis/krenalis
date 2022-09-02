@@ -22,19 +22,20 @@ function updateResults() {
         }
         document.getElementById("updateResultsError").innerHTML = "";
         document.getElementById("updateResultsError").style.display = "none";
-        let result = JSON.parse(xhr.responseText);
+        let response = JSON.parse(xhr.responseText);
 
         // Update the query.
-        document.getElementById("query").innerHTML = xhr.getResponseHeader("X-Query");
+        document.getElementById("query").innerHTML = response.Query;
         hljs.highlightAll();
 
         // Update the graph.
+        let data = response.Data;
         (function () {
             let xValues = [];
             let yValues = [];
-            for (let i = 0; i < result.length; i++) {
-                xValues.push(result[i][0]);
-                yValues.push(result[i][1]);
+            for (let i = 0; i < data.length; i++) {
+                xValues.push(data[i][0]);
+                yValues.push(data[i][1]);
             }
             updateChart(xValues, yValues);
         })()
@@ -42,7 +43,7 @@ function updateResults() {
         // Create the table.
         let table = document.createElement("table");
         table.className = "results";
-        let columnNames = xhr.getResponseHeader("X-Columns").split("|");
+        let columnNames = response.Columns;
         let header = document.createElement("tr");
         for (let i = 0; i < columnNames.length; i++) {
             let th = document.createElement("th");
@@ -50,11 +51,11 @@ function updateResults() {
             header.appendChild(th);
         }
         table.appendChild(header);
-        for (let i = 0; i < result.length; i++) {
+        for (let i = 0; i < data.length; i++) {
             let row = document.createElement("tr");
-            for (j = 0; j < result[i].length; j++) {
+            for (j = 0; j < data[i].length; j++) {
                 let cell = document.createElement("td");
-                cell.innerHTML = result[i][j];
+                cell.innerHTML = data[i][j];
                 row.appendChild(cell);
             }
             table.appendChild(row);

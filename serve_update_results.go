@@ -38,7 +38,7 @@ func (server *Server) serveUpdateResults(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Run the SQL query.
-	result, err := server.runQuery(query)
+	data, err := server.runQuery(query)
 	if err != nil {
 		w.Header().Add("X-Error", err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -48,9 +48,15 @@ func (server *Server) serveUpdateResults(w http.ResponseWriter, r *http.Request)
 
 	// Send the results to the client.
 	w.Header().Add("Content-Type", "application/json")
-	w.Header().Add("X-Query", query)
-	w.Header().Add("X-Columns", strings.Join(columns, "|"))
-	_ = json.NewEncoder(w).Encode(result)
+	var response struct {
+		Columns []string
+		Data    [][]any
+		Query   string
+	}
+	response.Columns = columns
+	response.Data = data
+	response.Query = query
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 type JSONQuery struct {
