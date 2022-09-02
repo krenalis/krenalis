@@ -193,7 +193,7 @@ func jsonQueryToSQLQuery(jq JSONQuery) (string, []string, error) {
 		if len(jq.Graph) != 2 {
 			return "", nil, errors.New("graph 'Number of Sessions' requires one parameter")
 		}
-		columns = append(columns, "COUNT(DISTINCT `session`)")
+		columns = append(columns, "COUNT(DISTINCT `user`)")
 		switch jq.Graph[1] {
 		case "Pageview":
 			wheres = append(wheres, "`event` = 'view'")
