@@ -1,0 +1,33 @@
+.StatusMessage {
+    background-color: var(--bg-error);
+    border-radius: 5px;
+    margin-bottom: 50px;
+    padding: 20px 30px;
+    display: flex;
+    justify-content: space-between;
+    gap: 30px;
+}
+
+.StatusMessage .text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    color: var(--text-primary);
+}
+
+.StatusMessage .text .error {
+    color: var(--color-error);
+    font-size: 30px;
+}
+
+.StatusMessage .action {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+.StatusMessage .action > * {
+    cursor: pointer;
+}

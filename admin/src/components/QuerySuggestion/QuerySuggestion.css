@@ -1,0 +1,15 @@
+.example {
+    background-color: var(--bg-primary);
+    padding: 15px 25px;
+    border-radius: 5px;
+    display: grid;
+    grid-template-columns: 1fr max-content;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.example .description {
+    opacity: .7;
+}

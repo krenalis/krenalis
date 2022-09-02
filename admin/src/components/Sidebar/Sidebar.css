@@ -1,0 +1,24 @@
+.Sidebar {
+    background-color: var(--bg-dark);
+    width:120px;
+    height: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 20;
+    box-shadow: 2px 0 6px 1px var(--shadow-primary);
+    padding: 20px 0 40px 0;
+    display: flex;
+    flex-flow: column;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.Sidebar .Items {
+    margin-top: 30px;
+    height: 100%;
+    display: flex;
+    flex-flow: column;
+    justify-content: space-between;
+    align-items: center;
+}

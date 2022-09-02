@@ -1,0 +1,45 @@
+.Home {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+}
+
+.Home .content {
+    padding: 50px 120px;
+    border-radius: 5px;
+    position: relative;
+    transform: translateY(-50%);
+}
+
+.Home .content .title {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.Home .content .title h1 {
+    font-size: 30px;
+    margin-bottom: -10px;
+    color: var(--text-primary);
+}
+
+.Home .content .title p {
+    opacity: .8;
+}
+
+.Home .buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 25px;
+}
+
+.Home .buttons .btn.vanilla {
+	background-color: #eab308;
+}
+
+.Home .buttons .btn.react {
+	background-color: #06b6d4;
+}
