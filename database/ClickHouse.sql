@@ -20,7 +20,7 @@ CREATE TABLE `events` (
     `target`,
     `text`,
     `title`,
-    `url`
+    `url`,
     `user`
   )
 ) ENGINE = MergeTree;
