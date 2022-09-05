@@ -2,7 +2,7 @@ CREATE TABLE `customers` (
   `id` INT(10) NOT NULL AUTO_INCREMENT ,
   `name` VARCHAR(45) NOT NULL DEFAULT '',
   `email` VARCHAR(120) NOT NULL DEFAULT '',
-  `password` VARCHAR(45) NOT NULL DEFAULT '',
+  `password` VARCHAR(60) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`));
 
 CREATE TABLE `properties` (
