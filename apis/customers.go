@@ -35,7 +35,7 @@ var ErrAuthenticationFailed = errors.New("authentication failed")
 
 // Authenticate authenticates a customer given its email and password. If the
 // authentication fails, it returns the ErrAuthenticationFailed error.
-func (c *Customers) Authenticate(email, password string) (int, error) {
+func (this *Customers) Authenticate(email, password string) (int, error) {
 	if !emailRegExp.MatchString(email) {
 		return 0, ErrEmailInvalid
 	}
@@ -44,7 +44,7 @@ func (c *Customers) Authenticate(email, password string) (int, error) {
 	}
 	var id int
 	var hashedPassword []byte
-	err := c.myDB.QueryRow("SELECT `id`, `password`\nFROM `customers`\nWHERE `email` = ?").Scan(&id, &hashedPassword)
+	err := this.myDB.QueryRow("SELECT `id`, `password`\nFROM `customers`\nWHERE `email` = ?").Scan(&id, &hashedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, ErrAuthenticationFailed
@@ -59,9 +59,9 @@ func (c *Customers) Authenticate(email, password string) (int, error) {
 }
 
 // Count returns the total number of customers.
-func (c *Customers) Count() (int, error) {
+func (this *Customers) Count() (int, error) {
 	var count int
-	err := c.myDB.QueryRow("SELECT COUNT(*)\nFROM `customers`").Scan(&count)
+	err := this.myDB.QueryRow("SELECT COUNT(*)\nFROM `customers`").Scan(&count)
 	return count, err
 }
 
@@ -69,7 +69,7 @@ func (c *Customers) Count() (int, error) {
 // identifier. If the email is not valid it panics with error
 // ErrEmailInvalid and if the password is not valid it panics with
 // error ErrPasswordInvalid.
-func (c *Customers) Create(email, password string) (int, error) {
+func (this *Customers) Create(email, password string) (int, error) {
 	if !emailRegExp.MatchString(email) {
 		return 0, ErrEmailInvalid
 	}
@@ -80,7 +80,7 @@ func (c *Customers) Create(email, password string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	result, err := c.myDB.Exec("INSERT INTO `customers` SET `email` = ?, `password` = ?", email, string(hashedPassword))
+	result, err := this.myDB.Exec("INSERT INTO `customers` SET `email` = ?, `password` = ?", email, string(hashedPassword))
 	if err != nil {
 		return 0, err
 	}
@@ -89,7 +89,7 @@ func (c *Customers) Create(email, password string) (int, error) {
 }
 
 // Delete deletes the customers with the given identifiers.
-func (c *Customers) Delete(ids []int) error {
+func (this *Customers) Delete(ids []int) error {
 	if len(ids) == 0 {
 		panic("apis: empty customers to delete")
 	}
@@ -98,12 +98,12 @@ func (c *Customers) Delete(ids []int) error {
 			panic("apis: invalid customer identifier to delete")
 		}
 	}
-	_, err := c.myDB.Exec("DELETE FROM `customers` WHERE `id` IN " + sql.Quote(ids))
+	_, err := this.myDB.Exec("DELETE FROM `customers` WHERE `id` IN " + sql.Quote(ids))
 	return err
 }
 
 // Find returns the customers in the given order limited by limit and first.
-func (c *Customers) Find(order string, limit, first int) ([]*Customer, error) {
+func (this *Customers) Find(order string, limit, first int) ([]*Customer, error) {
 	if order != "name" && order != "email" {
 		panic("apis: invalid customers order")
 	}
@@ -116,7 +116,7 @@ func (c *Customers) Find(order string, limit, first int) ([]*Customer, error) {
 	}
 	stmt += sql.LimitFirstStatement(limit, first)
 	customers := make([]*Customer, 0, 0)
-	err := c.myDB.QueryScan(stmt, func(rows *sql.Rows) error {
+	err := this.myDB.QueryScan(stmt, func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
 			var customer Customer
@@ -134,12 +134,12 @@ func (c *Customers) Find(order string, limit, first int) ([]*Customer, error) {
 }
 
 // Get returns the customer with identifier id. If it does not exist, returns nil.
-func (c *Customers) Get(id int) (*Customer, error) {
+func (this *Customers) Get(id int) (*Customer, error) {
 	if id < 1 {
 		panic("apis: invalid customer identifier")
 	}
 	customer := Customer{ID: id}
-	err := c.myDB.QueryRow("SELECT `name`, `email`\nFROM `customers`\nWHERE `id` = ?", id).Scan(&customer.Name, &customer.Email)
+	err := this.myDB.QueryRow("SELECT `name`, `email`\nFROM `customers`\nWHERE `id` = ?", id).Scan(&customer.Name, &customer.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
