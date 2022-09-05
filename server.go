@@ -78,10 +78,10 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 
 	hasDomain := map[string]bool{}
 	{
-		rows, err := server.mySQLDB.Query("SELECT `domain` FROM `properties_domains` WHERE `property` = ?", event.Property)
+		rows, err := server.mySQLDB.Query("SELECT `domain` FROM `domains` WHERE `property` = ?", event.Property)
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("[error] queriyng `properties_domains`: %s", err)
+			log.Printf("[error] queriyng `domains`: %s", err)
 			return
 		}
 		defer rows.Close()
@@ -90,14 +90,14 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 			var err = rows.Scan(&domain)
 			if err != nil {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				log.Printf("[error] cannot scan `properties_domains`: %s", err)
+				log.Printf("[error] cannot scan `domains`: %s", err)
 				return
 			}
 			hasDomain[domain] = true
 		}
 		if err = rows.Err(); err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("[error] cannot scan `properties_domains`: %s", err)
+			log.Printf("[error] cannot scan `domains`: %s", err)
 			return
 		}
 	}
