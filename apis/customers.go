@@ -98,7 +98,10 @@ func (this *Customers) Delete(ids []int) error {
 			panic("apis: invalid customer identifier to delete")
 		}
 	}
-	_, err := this.myDB.Exec("DELETE FROM `customers` WHERE `id` IN " + sql.Quote(ids))
+	_, err := this.myDB.Exec("DELETE `c`, `p`, `d`\n" +
+		"FROM `customers` AS `c`\n" +
+		"LEFT JOIN `proprieties` AS `p` ON `p`.`customer` = `c`.`id`\n" +
+		"LEFT JOIN `domains` AS `d` ON `d`.`property` = `p`.`id`")
 	return err
 }
 

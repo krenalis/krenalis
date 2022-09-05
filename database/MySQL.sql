@@ -6,14 +6,14 @@ CREATE TABLE `customers` (
   PRIMARY KEY (`id`));
 
 CREATE TABLE `properties` (
-  `code` CHAR(10) NOT NULL,
+  `id` CHAR(10) NOT NULL,
   `customer` INT(10) NOT NULL,
-  PRIMARY KEY (`code`));
+  PRIMARY KEY (`id`));
 
-CREATE TABLE `properties_domains` (
+CREATE TABLE `domains` (
   `property` CHAR(10) NOT NULL,
-  `domain` VARCHAR(255) NOT NULL,
-  PRIMARY KEY (`property`, `domain`));
+  `name` VARCHAR(255) NOT NULL,
+  PRIMARY KEY (`property`, `name`));
 
 /* default customer and properties */
 INSERT INTO `customers` (`name`,`email`,`password`) VALUES ('ACME inc','acme@open2b.com','foopass');

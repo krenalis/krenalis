@@ -29,6 +29,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 	hasBeenCalled = true
 	apis := &APIs{myDB: myDB, chDB: chDB}
 	apis.Customers = &Customers{apis}
+	apis.initSchema()
 	return apis
 }
 
@@ -43,6 +44,26 @@ func (apis *APIs) API(customer int) *API {
 	api := &API{myDB: apis.myDB, chDB: apis.chDB, customer: customer}
 	api.Properties = &Properties{API: api}
 	api.Properties.SmartEvents = &SmartEvents{api.Properties}
-	api.Properties.Domains = &Domains{api.Properties}
 	return api
+}
+
+func (apis *APIs) initSchema() {
+
+	apis.myDB.Scheme("Customers", "customers", struct {
+		id       int
+		name     string
+		email    string
+		password string
+	}{})
+
+	apis.myDB.Scheme("Domains", "domains", struct {
+		property string
+		name     string
+	}{})
+
+	apis.myDB.Scheme("Properties", "properties", struct {
+		id       string
+		customer int
+	}{})
+
 }
