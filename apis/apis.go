@@ -8,7 +8,7 @@
 package apis
 
 import (
-	"database/sql"
+	"chichi/pkg/open2b/sql"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )

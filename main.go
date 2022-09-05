@@ -9,12 +9,13 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"log"
 	"net/http"
 	"os"
 	"time"
 	_ "time/tzdata" // workaround for clickhouse-go issue #162
+
+	"chichi/pkg/open2b/sql"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	_ "github.com/go-sql-driver/mysql"
@@ -38,8 +39,12 @@ func main() {
 		return
 	}
 	// Open a connection to the MySQL database.
-	mySQLDB, err := sql.Open("mysql", settings.MySQL.Username+":"+settings.MySQL.Password+"@"+settings.MySQL.Address+"/"+settings.MySQL.Database+
-		"?clientFoundRows=true&charset=utf8mb4,utf8&parseTime=true&allowOldPasswords=true")
+	mySQLDB, err := sql.Open(map[string]string{
+		"Username": settings.MySQL.Username,
+		"Password": settings.MySQL.Password,
+		"Address":  settings.MySQL.Address,
+		"Database": settings.MySQL.Database,
+	})
 	if err != nil {
 		log.Fatalf("[error] cannot connect to the database: %s", err)
 	}
