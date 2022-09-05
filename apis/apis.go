@@ -44,6 +44,7 @@ func (apis *APIs) API(customer int) *API {
 	api := &API{myDB: apis.myDB, chDB: apis.chDB, customer: customer}
 	api.Properties = &Properties{API: api}
 	api.Properties.SmartEvents = &SmartEvents{api.Properties}
+	api.Properties.Visualization = &Visualization{api.Properties}
 	return api
 }
 

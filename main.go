@@ -15,6 +15,8 @@ import (
 	"time"
 	_ "time/tzdata" // workaround for clickhouse-go issue #162
 
+	"chichi/admin"
+	"chichi/apis"
 	"chichi/pkg/open2b/sql"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -74,13 +76,14 @@ func main() {
 	}
 	log.Printf("[info] successfully connected to the ClickHouse server")
 
+	apis := apis.New(mySQLDB, clickHouseConn)
+	admin := admin.New(apis)
+
 	// Run the server.
 	server := newServer(settings, mySQLDB, clickHouseConn, clickHouseCtx)
-	http.HandleFunc("/admin/src/", server.serveWithESBuild)
-	http.HandleFunc("/api/visualization", server.serveVisualization)
+
+	http.HandleFunc("/admin/", admin.ServeHTTP)
 	http.HandleFunc("/log-event", server.serveLogEvent)
-	http.HandleFunc("/run-query", server.serveRunQuery)
-	http.Handle("/", http.FileServer(http.Dir("./")))
 	err = http.ListenAndServeTLS(":9090", "cert.pem", "key.pem", nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)

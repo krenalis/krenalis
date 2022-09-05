@@ -1,6 +1,6 @@
 import call from './call.js'
 
-const url = 'https://localhost:9090/api/visualization'
+const url = 'https://localhost:9090/admin/api/visualization'
 
 export default async function getChardData(query) {
     let [res, error] = await call(url, query);

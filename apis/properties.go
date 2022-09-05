@@ -22,7 +22,8 @@ import (
 
 type Properties struct {
 	*API
-	SmartEvents *SmartEvents
+	SmartEvents   *SmartEvents
+	Visualization *Visualization
 }
 
 type Property struct {

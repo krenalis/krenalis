@@ -9,24 +9,18 @@ package main
 
 import (
 	"context"
-	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
 	"chichi/pkg/open2b/sql"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
-	"github.com/evanw/esbuild/pkg/api"
 )
 
 const maxEventsQueueLength = 10000
@@ -176,142 +170,4 @@ RETRY:
 		}
 		return
 	}
-}
-
-func (server *Server) serveRunQuery(w http.ResponseWriter, r *http.Request) {
-	var query string
-	err := json.NewDecoder(r.Body).Decode(&query)
-	if err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-	result, err := server.runQuery(query)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot log event: %s", err)
-		return
-	}
-	_ = json.NewEncoder(w).Encode(result)
-}
-
-// runQuery runs the given query and returns its results as a [][]any.
-func (server *Server) runQuery(query string) ([][]any, error) {
-	rows, err := server.clickHouseConn.Query(server.clickHouseCtx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	columnTypes := rows.ColumnTypes()
-	columnsLen := len(columnTypes)
-	result := [][]any{}
-	for rows.Next() {
-		sqlRow := make([]any, columnsLen)
-		for j, column := range columnTypes {
-			switch column.DatabaseTypeName() {
-			case "DateTime":
-				var value time.Time
-				sqlRow[j] = &value
-			case "String":
-				var value string
-				sqlRow[j] = &value
-			case "UInt8":
-				var value uint8
-				sqlRow[j] = &value
-			case "UInt16":
-				var value uint16
-				sqlRow[j] = &value
-			case "UInt64":
-				var value uint64
-				sqlRow[j] = &value
-			default:
-				panic(fmt.Sprintf("BUG: handling of database type %q not implemented", column.DatabaseTypeName()))
-			}
-		}
-		err := rows.Scan(sqlRow...)
-		if err != nil {
-			return nil, err
-		}
-		row := make([]any, len(sqlRow))
-		for i, pr := range sqlRow {
-			switch v := pr.(type) {
-			case interface{ Value() (driver.Value, error) }:
-				value, err := v.Value()
-				if err != nil {
-					panic(err)
-				}
-				row[i] = value
-			case *time.Time:
-				row[i] = (*v).String()
-			case *string:
-				row[i] = *v
-			case *uint8:
-				row[i] = *v
-			case *uint16:
-				row[i] = *v
-			case *uint64:
-				row[i] = *v
-			default:
-				panic("unexpected")
-			}
-		}
-		result = append(result, row)
-	}
-	return result, nil
-}
-
-func (server *Server) serveWithESBuild(w http.ResponseWriter, r *http.Request) {
-	file, err := filepath.Abs("admin/src/index.js")
-	if err != nil {
-		panic(err)
-	}
-	result := api.Build(api.BuildOptions{
-		Bundle:            true,
-		EntryPoints:       []string{file},
-		Format:            api.FormatESModule,
-		JSXMode:           api.JSXModeAutomatic,
-		Loader:            map[string]api.Loader{".js": api.LoaderJSX},
-		MinifyIdentifiers: true,
-		MinifySyntax:      true,
-		MinifyWhitespace:  true,
-		Outdir:            "out",
-		Target:            api.ES2018,
-		TreeShaking:       api.TreeShakingTrue,
-		Write:             false,
-	})
-
-	// Handle errors and warnings.
-	if result.Errors != nil {
-		for _, msg := range result.Errors {
-			log.Printf("[error] ESBuild error: %v", msg)
-		}
-		log.Printf("[error] errors while executing ESbuild, cannot serve %q", r.URL.Path)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	if result.Warnings != nil {
-		for _, msg := range result.Warnings {
-			log.Printf("[warning] ESBuild warning: %v", msg)
-			if server.settings.Main.PrintESBuildWarningsOnStderr {
-				fmt.Fprintf(os.Stderr, "[warning] ESBuild warning: %v", msg)
-			}
-		}
-	}
-
-	base := path.Base(r.URL.Path)
-	for _, out := range result.OutputFiles {
-		if strings.HasSuffix(out.Path, base) {
-			switch filepath.Ext(base) {
-			case ".js":
-				w.Header().Add("Content-Type", "text/javascript")
-			case ".css":
-				w.Header().Add("Content-Type", "text/css")
-			default:
-				log.Printf("[error] cannot determine Content-Type for %q", base)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			}
-			w.Write(out.Contents)
-			return
-		}
-	}
-	http.NotFound(w, r)
 }
