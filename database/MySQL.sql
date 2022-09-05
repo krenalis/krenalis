@@ -16,5 +16,5 @@ CREATE TABLE `domains` (
   PRIMARY KEY (`property`, `name`));
 
 /* default customer and properties */
-INSERT INTO `customers` (`name`,`email`,`password`) VALUES ('ACME inc','acme@open2b.com','foopass');
+INSERT INTO `customers` (`name`,`email`,`password`) VALUES ('ACME inc','acme@open2b.com','$2a$10$rlHZ0RUyMMeMQxDlAK6S2.sL7Y8Z8IafRsagpdYyadZrKpLJWH94K'); /* Password: foopass */
 INSERT INTO `properties` VALUES ('1234567890',1);
