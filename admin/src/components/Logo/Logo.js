@@ -7,7 +7,7 @@ export default class Logo extends Component {
         return (
             <div className='Logo'>
                 <div className='image'>C</div>
-                <Link to=''></Link>
+                <Link to='dashboard'></Link>
             </div>
         )
     }

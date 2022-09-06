@@ -13,13 +13,11 @@ export default class Sidebar extends Component {
                 <Logo />
                 <div className="Items">
                     <div className='Top'>
-                        <SidebarItem link='' icon='home' title='' />
-                        <SidebarItem href='/admin/public/visualization' icon='dashboard' title='' />
                         <SidebarItem link='dashboard' icon='space_dashboard' title='' />
                     </div>
                     <div className='Bottom'>
-                        <SidebarItem link='' icon='settings' title='' />
-                        <SidebarItem link='' icon='logout' title='' />
+                        <SidebarItem link='dashboard' icon='settings' title='' />
+                        <SidebarItem link='dashboard' icon='logout' title='' />
                     </div>
                 </div>
             </div>

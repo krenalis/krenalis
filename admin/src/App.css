@@ -8,13 +8,18 @@
 	--color-error: #dc2626;
 	--text-primary: #222222;
 	--text-onaccent: #ffffff;
+	--border-primary: #cacaca;
 	--shadow-primary: #eeeeee;
 }
 
 *, *::before, *::after {
 	box-sizing: border-box;
-	font-family: 'Lato', sans-serif;
+	font-family: 'Inter', sans-serif;
 	font-size: 16px;
+}
+
+h1 {
+	font-size: 28px;
 }
 
 img, picture, video, canvas, svg {

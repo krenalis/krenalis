@@ -1,0 +1,66 @@
+.Login {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.Login .container {
+    transform: translateY(-50%);
+    width: 500px;
+}
+
+.Login .container .heading {
+    text-align: center;
+}
+
+.Login .container .StatusMessage {
+    margin-bottom: 20px;
+}
+
+.Login .container .form {
+    display: flex;
+    flex-flow: column;
+}
+
+.Login .container .form input[type="text"],
+.Login .container .form input[type="password"] {
+    background-color: var(--bg-primary);
+    border-radius: 0;
+    padding: 12px 20px;
+    border: 1px solid var(--border-primary);
+}
+
+.Login .container .form input[type="text"] {
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom: 0;
+}
+
+.Login .container .form input[type="password"] {
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+.Login .container .form .note {
+    margin: 10px 10px 0px 10px;
+    font-size: 13px!important;
+    opacity: .9;
+    text-align: center;
+}
+
+.Login .container .form .note span {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.Login .container .form input[type="submit"] {
+    margin-top: 20px;
+    background-color: var(--color-primary);
+    color: var(--text-onaccent);
+    border: 0;
+    border-radius: 5px;
+    padding: 10px;
+    cursor: pointer;
+}

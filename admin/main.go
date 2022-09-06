@@ -26,41 +26,56 @@ func New(apis *apis.APIs) *admin {
 func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rpath := r.URL.Path[6:]
 
-	if rpath == "/login/" {
-		return
-		// TODO(@Andrea): implement login
-	}
-
+	// check the session cookie.
+	var isLoggedIn bool
 	cookie, err := r.Cookie("session")
-	if err != nil {
-		if err == http.ErrNoCookie {
-			w.WriteHeader(http.StatusForbidden)
-			return
+	if err == nil {
+		isLoggedIn = true
+	}
+
+	var customerID int
+	var API *apis.API
+	if isLoggedIn {
+		// get the customer id
+		customerID, err = strconv.Atoi(cookie.Value)
+		if err != nil {
+			log.Print(err)
 		}
-		log.Print(err)
-	}
 
-	// get the customer id
-	customerID, err := strconv.Atoi(cookie.Value)
-	if err != nil {
-		log.Print(err)
+		// instantiate the customer API
+		API = admin.apis.API(customerID)
 	}
-
-	// istantiate the customer api
-	API := admin.apis.API(customerID)
 	_ = API
 
-	if strings.HasPrefix(rpath, "/public/") {
+	// handle requests to login page.
+	if rpath == "/" {
+		if isLoggedIn {
+			http.Redirect(w, r, "/admin/dashboard", http.StatusTemporaryRedirect)
+			return
+		}
+		if r.Method == "POST" {
+			admin.login(w, r)
+			return
+		}
 		http.ServeFile(w, r, "./admin/public/index.html")
+		return
 	}
 
 	if strings.HasPrefix(rpath, "/src/") {
 		admin.serveWithESBuild(w, r)
+		return
+	}
+
+	if !isLoggedIn {
+		http.Redirect(w, r, "/admin/", http.StatusTemporaryRedirect)
 	}
 
 	if rpath == "/api/visualization" {
 		admin.serveExecuteQuery(w, r)
+		return
 	}
+
+	http.ServeFile(w, r, "./admin/public/index.html")
 
 }
 
@@ -148,4 +163,33 @@ func (admin *admin) serveExecuteQuery(w http.ResponseWriter, r *http.Request) {
 	response.Data = data
 	response.Query = query
 	_ = json.NewEncoder(w).Encode(response)
+}
+
+func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
+	loginData := struct {
+		Email    string
+		Password string
+	}{}
+	dec := json.NewDecoder(r.Body)
+	err := dec.Decode(&loginData)
+	if err != nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	enc := json.NewEncoder(w)
+	customerID, err := admin.apis.Customers.Authenticate(loginData.Email, loginData.Password)
+	if err != nil {
+		if err == apis.ErrAuthenticationFailed {
+			enc.Encode([]any{0, "AuthenticationFailedError"})
+			return
+		}
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		log.Printf("[error] cannot log customer: %s", err)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{Name: "session", Value: strconv.Itoa(customerID), Path: "/"})
+	w.WriteHeader(http.StatusOK)
+	enc.Encode([]any{customerID, nil})
 }

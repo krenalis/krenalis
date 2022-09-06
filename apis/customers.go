@@ -46,7 +46,7 @@ func (this *Customers) Authenticate(email, password string) (int, error) {
 	}
 	var id int
 	var hashedPassword []byte
-	err := this.myDB.QueryRow("SELECT `id`, `password`\nFROM `customers`\nWHERE `email` = ?").Scan(&id, &hashedPassword)
+	err := this.myDB.QueryRow("SELECT `id`, `password`\nFROM `customers`\nWHERE `email` = ?", email).Scan(&id, &hashedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, ErrAuthenticationFailed
