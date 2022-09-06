@@ -56,7 +56,7 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	row := server.mySQLDB.QueryRow("SELECT 1 FROM `properties` WHERE `code` = ?", event.Property)
+	row := server.mySQLDB.QueryRow("SELECT 1 FROM `properties` WHERE `id` = ?", event.Property)
 	exists := false
 	err = row.Scan(&exists)
 	if err != nil {
@@ -78,7 +78,7 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 
 	hasDomain := map[string]bool{}
 	{
-		rows, err := server.mySQLDB.Query("SELECT `domain` FROM `domains` WHERE `property` = ?", event.Property)
+		rows, err := server.mySQLDB.Query("SELECT `name` FROM `domains` WHERE `property` = ?", event.Property)
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			log.Printf("[error] queriyng `domains`: %s", err)

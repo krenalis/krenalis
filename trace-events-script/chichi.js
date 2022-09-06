@@ -12,6 +12,7 @@ function sendBeacon(data) {
 		localStorage.setItem('chichi-user', user);
 	}
 	d.user = user;
+	d.property = property;
 	navigator.geolocation.getCurrentPosition(
 		(position) => {
 			d.geolocation = {
