@@ -14,13 +14,16 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/netip"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
 	"chichi/pkg/open2b/sql"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/open2b/nuts/ipset"
 )
 
 const maxEventsQueueLength = 10000
@@ -56,9 +59,9 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	row := server.mySQLDB.QueryRow("SELECT 1 FROM `properties` WHERE `id` = ?", event.Property)
-	exists := false
-	err = row.Scan(&exists)
+	row := server.mySQLDB.QueryRow("SELECT `customer` FROM `properties` WHERE `id` = ?", event.Property)
+	var customer string
+	err = row.Scan(&customer)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -67,6 +70,33 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("[error] queriyng `properties`: %s", err)
 		return
+	}
+
+	// Check if the request IP is internal for the customer.
+	var internalIPs string
+	err = server.mySQLDB.QueryRow("SELECT `internalIPs` FROM `customers` WHERE `id` = ?", customer).Scan(&internalIPs)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		log.Printf("[error] queriyng `customers`: %s", err)
+		return
+	}
+	if internalIPs != "" {
+		set := ipset.New()
+		for _, ip := range strings.Fields(internalIPs) {
+			set.Add(ip)
+		}
+		addr, err := netip.ParseAddrPort(r.RemoteAddr)
+		if err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+		if set.Has(addr.Addr().String()) {
+			return
+		}
 	}
 
 	// Check if the event is from a domain enabled for the property.

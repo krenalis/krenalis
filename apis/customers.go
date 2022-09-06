@@ -10,6 +10,7 @@ package apis
 import (
 	"errors"
 	"regexp"
+	"strings"
 
 	"chichi/pkg/open2b/sql"
 
@@ -22,9 +23,10 @@ type Customers struct {
 
 // Customer represents a customer.
 type Customer struct {
-	ID    int
-	Name  string
-	Email string
+	ID          int
+	Name        string
+	Email       string
+	InternalIPs []string
 }
 
 var emailRegExp = regexp.MustCompile(`^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`)
@@ -142,12 +144,14 @@ func (this *Customers) Get(id int) (*Customer, error) {
 		panic("apis: invalid customer identifier")
 	}
 	customer := Customer{ID: id}
-	err := this.myDB.QueryRow("SELECT `name`, `email`\nFROM `customers`\nWHERE `id` = ?", id).Scan(&customer.Name, &customer.Email)
+	var ips string
+	err := this.myDB.QueryRow("SELECT `name`, `email`, `internalIPs`\nFROM `customers`\nWHERE `id` = ?", id).Scan(&customer.Name, &customer.Email, &ips)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
 	}
+	customer.InternalIPs = strings.Fields(ips)
 	return &customer, nil
 }

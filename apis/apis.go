@@ -51,10 +51,11 @@ func (apis *APIs) API(customer int) *API {
 func (apis *APIs) initSchema() {
 
 	apis.myDB.Scheme("Customers", "customers", struct {
-		id       int
-		name     string
-		email    string
-		password string
+		id          int
+		name        string
+		email       string
+		password    string
+		internalIPs string
 	}{})
 
 	apis.myDB.Scheme("Domains", "domains", struct {

@@ -3,6 +3,7 @@ CREATE TABLE `customers` (
   `name` VARCHAR(45) NOT NULL DEFAULT '',
   `email` VARCHAR(120) NOT NULL DEFAULT '',
   `password` VARCHAR(60) CHARACTER SET ascii NOT NULL DEFAULT '',
+  `internalIPs` VARCHAR(160) CHARACTER SET ascii NOT NULL DEFAULT '',
   PRIMARY KEY (`id`));
 
 CREATE TABLE `properties` (
