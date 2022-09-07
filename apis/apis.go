@@ -34,18 +34,13 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 }
 
 type API struct {
-	Properties *Properties
-	myDB       *sql.DB
-	chDB       chDriver.Conn
-	customer   int
+	myDB     *sql.DB
+	chDB     chDriver.Conn
+	customer int
 }
 
 func (apis *APIs) API(customer int) *API {
-	api := &API{myDB: apis.myDB, chDB: apis.chDB, customer: customer}
-	api.Properties = &Properties{API: api}
-	api.Properties.SmartEvents = &SmartEvents{api.Properties}
-	api.Properties.Visualization = &Visualization{api.Properties}
-	return api
+	return &API{myDB: apis.myDB, chDB: apis.chDB, customer: customer}
 }
 
 func (apis *APIs) initSchema() {
@@ -68,4 +63,25 @@ func (apis *APIs) initSchema() {
 		customer int
 	}{})
 
+	apis.myDB.Scheme("SmartEvents", "smart_events", struct {
+		property string
+		id       int
+		name     string
+		event    string
+		pages    string
+		buttons  string
+	}{})
+
+}
+
+// Property returns an instance of Properties which operates on the given
+// property.
+func (api *API) Property(property string) *Properties {
+	properties := &Properties{
+		API: api,
+		id:  property,
+	}
+	properties.SmartEvents = &SmartEvents{properties}
+	properties.Visualization = &Visualization{properties}
+	return properties
 }

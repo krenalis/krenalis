@@ -24,6 +24,7 @@ type Properties struct {
 	*API
 	SmartEvents   *SmartEvents
 	Visualization *Visualization
+	id            string
 }
 
 type Property struct {

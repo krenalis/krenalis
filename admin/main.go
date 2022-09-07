@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/evanw/esbuild/pkg/api"
 )
@@ -45,7 +46,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// instantiate the customer API
 		API = admin.apis.API(customerID)
 	}
-	_ = API
 
 	// handle requests to login page.
 	if rpath == "/" {
@@ -73,6 +73,105 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if rpath == "/api/visualization" {
 		admin.serveExecuteQuery(w, r)
 		return
+	}
+
+	if strings.HasPrefix(rpath, "/properties/") {
+
+		rpath := rpath[len("/properties"):]
+
+		// Read the property ID from the headers.
+		propertyID := r.Header.Get("X-Property")
+		if utf8.RuneCountInString(propertyID) != 10 {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+		}
+
+		// TODO(Gianluca): check if the property belongs to the customer.
+
+		property := API.Property(propertyID)
+
+		// Serve the Smart Event APIs.
+		switch rpath {
+		case "/smart-events.create":
+			var event apis.SmartEventToCreate
+			err := json.NewDecoder(r.Body).Decode(&event)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			defer r.Body.Close()
+			id, err := property.SmartEvents.Create(event)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(id)
+			return
+
+		case "/smart-events.delete":
+			var eventIDs []int
+			err := json.NewDecoder(r.Body).Decode(&eventIDs)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			defer r.Body.Close()
+			err = property.SmartEvents.Delete(eventIDs)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			return
+
+		case "/smart-events.find":
+			smartEvents, err := property.SmartEvents.Find()
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(smartEvents)
+			return
+
+		case "/smart-events.get":
+			var id int
+			err := json.NewDecoder(r.Body).Decode(&id)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			defer r.Body.Close()
+			smartEvents, err := property.SmartEvents.Get(id)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(smartEvents)
+			return
+
+		case "/smart-events.update":
+			var req struct {
+				ID         int
+				SmartEvent apis.SmartEventToUpdate
+			}
+			err := json.NewDecoder(r.Body).Decode(&req)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			defer r.Body.Close()
+			err = property.SmartEvents.Update(req.ID, req.SmartEvent)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			return
+
+		}
+
 	}
 
 	http.ServeFile(w, r, "./admin/public/index.html")
@@ -146,9 +245,11 @@ func (admin *admin) serveExecuteQuery(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	columns, data, query, err := admin.apis.API(0).Properties.Visualization.ExecuteQuery(context.TODO(), jsonQuery)
+	// TODO(Gianluca): fix this:
+	columns, data, query, err := admin.apis.API(0).Property("1234567890").Visualization.ExecuteQuery(context.TODO(), jsonQuery)
 	if err != nil {
 		log.Printf("[error] cannot execute query: %s", err)
+		w.Header().Add("X-Error", err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 

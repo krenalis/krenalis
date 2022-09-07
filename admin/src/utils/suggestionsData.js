@@ -14,14 +14,14 @@ export let suggestionsData = [
     "GroupBy": ["Day"],
     "Filters": [
         {
-            "Column": "language",
-            "Comparison": "Equal",
-            "Target": "'it'"
+            "Field": "language",
+            "Operator": "Equal",
+            "": "'it'"
         },
         {
-            "Column": "browser",
-            "Comparison": "Contains",
-            "Target": "firefox"
+            "Field": "browser",
+            "Operator": "Contains",
+            "": "firefox"
         }
     ],
     "DateRange": "Past7Days"
@@ -34,9 +34,9 @@ export let suggestionsData = [
     "GroupBy": ["Day"],
     "Filters": [
         {
-            "Column": "language",
-            "Comparison": "NotEqual",
-            "Target": "'it'"
+            "Field": "language",
+            "Operator": "NotEqual",
+            "": "'it'"
         }
     ],
     "DateRange": "Past7Days"
@@ -79,13 +79,41 @@ export let suggestionsData = [
     "Graph": ["Count Unique", "Click"],
     "Filters": [
         {
-            "Column": "target",
-            "Comparison": "Contains",
-            "Target": "Login"
+            "Field": "target",
+            "Operator": "Contains",
+            "": "Login"
         }
     ],
     "DateRange": "Past31Days",
     "GroupBy": ["referrer"]
 }`,
+    },
+    {
+        description: "Count of unique clicks on Login button (by channel) within last 31 days, using a Smart Event",
+        jsonQuery: JSON.stringify({
+            "Graph": [
+                "Count Unique",
+                "Smart Event",
+                "Click on Login Button"
+            ],
+            "DateRange": "Past31Days",
+            "GroupBy": [
+                "referrer"
+            ]
+        }, null, 2),
+    },
+    {
+        description: "Most viewed Nissan Cars in the past 12 months",
+        jsonQuery: JSON.stringify({
+            "Graph": [
+                "Count",
+                "Smart Event",
+                "View Nissan Car"
+            ],
+            "DateRange": "Past12Months",
+            "GroupBy": [
+                "url"
+            ]
+        }, null, 2),
     },
 ];

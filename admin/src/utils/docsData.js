@@ -1,7 +1,7 @@
 export let docsData = `{
     "Graph":
-            { "Count", "Pageview" | "Click" } |
-            { "Count Unique", "Pageview" | "Click" },
+            { "Count", "Pageview" | "Click" | { "SmartEvent", <Smart Event name> } } |
+            { "Count Unique", "Pageview" | "Click" | { "SmartEvent", <Smart Event name> } },
 
     "Filters": [{
             "Column": <a column>,

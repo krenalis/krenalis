@@ -19,3 +19,13 @@ CREATE TABLE `domains` (
 /* default customer and properties */
 INSERT INTO `customers` (`name`,`email`,`password`) VALUES ('ACME inc','acme@open2b.com','$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC'); /* Password: foopass2 */
 INSERT INTO `properties` VALUES ('1234567890',1);
+
+CREATE TABLE `smart_events` (
+  `property` CHAR(10) NOT NULL,
+  `id` INT(10) NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL DEFAULT '',
+  `event` VARCHAR(50) NOT NULL DEFAULT '',
+  `pages` TEXT NOT NULL DEFAULT '',
+  `buttons` TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`)
+);

@@ -14,16 +14,20 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"chichi/pkg/open2b/sql"
+	o2bsql "chichi/pkg/open2b/sql"
 )
 
 type Visualization struct {
 	*Properties
 }
 
+// ExecuteQuery executes the given JSON query.
 func (visualization *Visualization) ExecuteQuery(ctx context.Context, jsonQuery JSONQuery) (columns []string, data [][]any, query string, err error) {
 
 	// Generate the SQL query from the JSON query.
-	query, columns, err = jsonQueryToSQLQuery(jsonQuery)
+	query, columns, err = visualization.jsonQueryToSQLQuery(jsonQuery)
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -35,27 +39,27 @@ func (visualization *Visualization) ExecuteQuery(ctx context.Context, jsonQuery 
 	}
 
 	return columns, data, query, nil
-
 }
 
 type JSONQuery struct {
 	Graph     []string
-	Filters   []JSONQueryFilter
+	Filters   []Condition
 	GroupBy   []string
 	DateRange string
 	DateFrom  string
 	DateTo    string
 }
 
-type JSONQueryFilter struct {
-	Column     string
-	Comparison string
-	Target     string
+type Condition struct {
+	Field    string
+	Operator string
+	Value    string
+	Domain   string `json:",omitempty"`
 }
 
 // jsonQueryToSQLQuery converts a JSON query into a SQL query. Also returns the
 // columns.
-func jsonQueryToSQLQuery(jq JSONQuery) (string, []string, error) {
+func (visualization *Visualization) jsonQueryToSQLQuery(jq JSONQuery) (string, []string, error) {
 
 	var (
 		columns  []string
@@ -65,35 +69,7 @@ func jsonQueryToSQLQuery(jq JSONQuery) (string, []string, error) {
 
 	// Filters.
 	for _, filter := range jq.Filters {
-		switch filter.Comparison {
-		case "Contains":
-			where := fmt.Sprintf("ilike(`%s`, '%%%s%%')", filter.Column, filter.Target)
-			wheres = append(wheres, where)
-			continue
-		case "NotContains":
-			where := fmt.Sprintf("not ilike(`%s`, '%%%s%%')", filter.Column, filter.Target)
-			wheres = append(wheres, where)
-			continue
-		}
-		where := filter.Column
-		switch filter.Comparison {
-		case "Equal":
-			where += " = "
-		case "NotEqual":
-			where += " <> "
-		case "GreaterThan":
-			where += "> "
-		case "GreaterEqualThan":
-			where += ">= "
-		case "LessThan":
-			where += "> "
-		case "LessEqualThan":
-			where += "> "
-		default:
-			return "", nil, fmt.Errorf("%q not supported", filter.Comparison)
-		}
-		where += " " + filter.Target
-		wheres = append(wheres, where)
+		wheres = append(wheres, conditionToSQL(filter))
 	}
 
 	// DateRange, DateFrom and DateTo.
@@ -161,8 +137,8 @@ func jsonQueryToSQLQuery(jq JSONQuery) (string, []string, error) {
 	}
 	switch jq.Graph[0] {
 	case "Count":
-		if len(jq.Graph) != 2 {
-			return "", nil, errors.New("graph 'Count' requires one parameter")
+		if len(jq.Graph) <= 1 {
+			return "", nil, errors.New("graph 'Count' requires at least parameter")
 		}
 		columns = append(columns, "COUNT(*)")
 		switch jq.Graph[1] {
@@ -170,12 +146,21 @@ func jsonQueryToSQLQuery(jq JSONQuery) (string, []string, error) {
 			wheres = append(wheres, "`event` = 'view'")
 		case "Click":
 			wheres = append(wheres, "`event` = 'click'")
+		case "Smart Event":
+			where, ok, err := visualization.smartEvent(jq.Graph[2])
+			if err != nil {
+				return "", nil, err
+			}
+			if !ok {
+				return "", nil, fmt.Errorf("the Smart Event %q does not exist", jq.Graph[2])
+			}
+			wheres = append(wheres, where)
 		default:
 			return "", nil, fmt.Errorf("%q not supported", jq.Graph[1])
 		}
 	case "Count Unique":
-		if len(jq.Graph) != 2 {
-			return "", nil, errors.New("graph 'Number of Sessions' requires one parameter")
+		if len(jq.Graph) <= 1 {
+			return "", nil, errors.New("graph 'Count Unique' requires at least one parameter")
 		}
 		columns = append(columns, "COUNT(DISTINCT `user`)")
 		switch jq.Graph[1] {
@@ -183,6 +168,15 @@ func jsonQueryToSQLQuery(jq JSONQuery) (string, []string, error) {
 			wheres = append(wheres, "`event` = 'view'")
 		case "Click":
 			wheres = append(wheres, "`event` = 'click'")
+		case "Smart Event":
+			where, ok, err := visualization.smartEvent(jq.Graph[2])
+			if err != nil {
+				return "", nil, err
+			}
+			if !ok {
+				return "", nil, fmt.Errorf("the Smart Event %q does not exist", jq.Graph[2])
+			}
+			wheres = append(wheres, where)
 		default:
 			return "", nil, fmt.Errorf("%q not supported", jq.Graph[1])
 		}
@@ -205,6 +199,125 @@ func jsonQueryToSQLQuery(jq JSONQuery) (string, []string, error) {
 // ClickHouse.
 func timeToClickHouseDate(t time.Time) string {
 	return "'" + t.Format("2006-01-02 15:04:05") + "'"
+}
+
+// smartEvent returns the 'WHERE' expression relative to the Smart Event with
+// the given name.
+//
+// If such name does not correspond to any Smart Event, this function returns
+// false.
+func (visualization *Visualization) smartEvent(which any) (string, bool, error) {
+	smartEvents, err := visualization.SmartEvents.Find()
+	if err != nil {
+		return "", false, err
+	}
+	var smartEventName string
+	var smartEventID int
+	switch which := which.(type) {
+	case string:
+		smartEventName = which
+	case int:
+		smartEventID = which
+	default:
+		panic(fmt.Sprintf("unexpected type %T", which))
+	}
+	var smartEvent SmartEvent
+	for _, event := range smartEvents {
+		if (smartEventID > 0 && event.ID == smartEventID) ||
+			(smartEventName != "" && event.Name == smartEventName) {
+			smartEvent = event
+			break
+		}
+	}
+	if smartEvent.ID == 0 { // not found.
+		return "", false, nil
+	}
+	where := smartEventToBooleanExpression(smartEvent)
+	return where, true, nil
+}
+
+// smartEventToBooleanExpression returns the SQL boolean expression
+// corresponding to the given Smart Event.
+func smartEventToBooleanExpression(event SmartEvent) string {
+	where := &strings.Builder{}
+	switch event.Event {
+	case "click":
+		where.WriteString("`event` = 'click'")
+	case "view":
+		where.WriteString("`event` = 'view'")
+	default:
+		panic(fmt.Sprintf("unexpected %q", event.Event))
+	}
+	if len(event.Pages) > 0 {
+		where.WriteString(" AND (")
+		for i, page := range event.Pages {
+			if i > 0 {
+				where.WriteString(" OR ")
+			}
+			where.WriteString("(")
+			where.WriteString(conditionToSQL(page))
+			if page.Domain != "" {
+				where.WriteString(" AND `url` = " + o2bsql.Quote(page.Domain))
+			}
+			where.WriteString(")")
+		}
+		where.WriteString(")")
+	}
+	if len(event.Buttons) > 0 {
+		where.WriteString(" AND (")
+		for i, button := range event.Buttons {
+			if i > 0 {
+				where.WriteString(" OR ")
+			}
+			where.WriteString("(" + conditionToSQL(button))
+			if button.Domain != "" {
+				where.WriteString(" AND `url` = " + o2bsql.Quote(button.Domain))
+			}
+			where.WriteString(")")
+		}
+		where.WriteString(")")
+	}
+	return where.String()
+}
+
+// conditionToSQL returns an SQL expression corresponding to the given
+// Condition.
+func conditionToSQL(condition Condition) string {
+	// TODO(Gianluca): escape/check every value before putting it into the SQL.
+	quotedField := sql.QuoteColumn(condition.Field)
+	quotedValue := sql.Quote(condition.Value)
+	switch condition.Operator {
+	case "StartsWith":
+		return fmt.Sprintf("ilike(%s, '%s%%')", quotedField, condition.Value)
+	case "EndsWith":
+		return fmt.Sprintf("ilike(%s, '%%%s')", quotedField, condition.Value)
+	case "Contains":
+		return fmt.Sprintf("ilike(%s, '%%%s%%')", quotedField, condition.Value)
+	case "NotContains":
+		return fmt.Sprintf("not ilike(%s, '%%%s%%')", quotedField, condition.Value)
+	}
+	where := quotedField
+	switch condition.Operator {
+	case "Equal":
+		where += " = "
+	case "NotEqual":
+		where += " <> "
+	case "GreaterThan":
+		where += "> "
+	case "GreaterEqualThan":
+		where += ">= "
+	case "LessThan":
+		where += "> "
+	case "LessEqualThan":
+		where += "> "
+	default:
+		panic(fmt.Errorf("%q not supported", condition.Operator))
+	}
+	where += " " + quotedValue
+	if condition.Domain != "" {
+		where += fmt.Sprintf(" AND `url` = %s", sql.Quote(condition.Domain))
+	}
+	return where
 }
 
 // runQuery runs the given query and returns its results as a [][]any.
