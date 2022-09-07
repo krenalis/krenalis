@@ -40,7 +40,7 @@ go build -tags osusergo,netgo -trimpath
 
 ### Run and open the browser
 
-Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/admin/public/.
+Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/admin/.
 
 ## Checklist before commit
 
