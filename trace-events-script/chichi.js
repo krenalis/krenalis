@@ -31,7 +31,6 @@ function sendBeacon(data) {
 		d.connection = navigator.connection.type == null ? '' : navigator.connection.type;
 	}
 	d.language = navigator.language;
-	d.browser = navigator.userAgent;
 	if (navigator.userAgentData) {
 		d.os = navigator.userAgentData.platform;
 		d.isMobile = navigator.userAgentData.mobile;

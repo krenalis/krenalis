@@ -91,17 +91,21 @@ func main() {
 }
 
 type Event struct {
-	Property  string
-	Browser   string
-	Event     string // "visit", "click", ...
-	Language  string // "it-IT"
-	Referrer  string // "https://example.com"
-	User      string
-	Target    string // "https://example.com"
-	Text      string // "Add to cart"
-	Timestamp time.Time
-	Title     string // "Product X"
-	URL       string // "https://example.com"
-	Country   string
-	City      string
+	Property       string
+	OSName         string
+	OSVersion      string
+	BrowserName    string
+	BrowserVersion string
+	DeviceType     string
+	Event          string // "visit", "click", ...
+	Language       string // "it-IT"
+	Referrer       string // "https://example.com"
+	User           string
+	Target         string // "https://example.com"
+	Text           string // "Add to cart"
+	Timestamp      time.Time
+	Title          string // "Product X"
+	URL            string // "https://example.com"
+	Country        string
+	City           string
 }

@@ -27,6 +27,7 @@ import (
 	"chichi/pkg/open2b/sql"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/mssola/user_agent"
 	"github.com/open2b/nuts"
 	"github.com/open2b/nuts/culture"
 	"github.com/open2b/nuts/ipset"
@@ -86,10 +87,6 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 
 	// Validate the event.
 	if culture.Locale(event.Language) == nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-	if utf8.RuneCountInString(event.Browser) > 64000 {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
@@ -219,6 +216,35 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		geoDB.Close()
 	}
 
+	// Enrich the event with user agent info.
+	ua := user_agent.New(r.Header.Get("User-Agent"))
+	osInfo := ua.OSInfo()
+	switch osInfo.Name {
+	case "Android", "Windows", "iOS", "MacOS", "Linux", "ChromeOS":
+		event.OSName = osInfo.Name
+	default:
+		event.OSName = "Other"
+	}
+	if utf8.RuneCountInString(event.OSVersion) <= 10 {
+		event.OSVersion = osInfo.Version
+	}
+	if name, version := ua.Browser(); utf8.RuneCountInString(name) <= 20 {
+		event.BrowserName = name
+		if utf8.RuneCountInString(version) <= 20 {
+			event.BrowserVersion = version
+		}
+	} else {
+		event.BrowserName = "Other"
+	}
+	event.DeviceType = "desktop"
+	if ua.Mobile() {
+		if h := strings.ToLower(r.Header.Get("User-Agent")); strings.Contains(h, "ipad") {
+			event.DeviceType = "tablet"
+		} else {
+			event.DeviceType = "mobile"
+		}
+	}
+
 	server.eventsQueueMutex.Lock()
 	server.eventsQueue = append(server.eventsQueue, event)
 	var toFlush []*Event
@@ -259,15 +285,16 @@ func (server *Server) flushEvents(events []*Event) {
 RETRY:
 	for {
 		batch, err := server.clickHouseConn.PrepareBatch(server.clickHouseCtx, "INSERT INTO `events`\n"+
-			"(`property`, `timestamp`, `language`, `browser`, `url`, `referrer`, `target`, `event`, `text`, `title`, "+
-			"`user`, `country`, `city`)")
+			"(`property`, `timestamp`, `language`, `osName`, `osVersion`, `browserName`, `browserVersion`, `deviceType`, "+
+			"`url`, `referrer`, `target`, `event`, `text`, `title`, `user`, `country`, `city`)")
 		if err != nil {
 			log.Printf("[error] cannot log events: %s", err)
 			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
 			continue
 		}
 		for _, event := range events {
-			err := batch.Append(event.Property, event.Timestamp, event.Language, event.Browser, event.URL,
+			err := batch.Append(event.Property, event.Timestamp, event.Language, event.OSName, event.OSVersion,
+				event.BrowserName, event.BrowserVersion, event.DeviceType, event.URL,
 				event.Referrer, event.Target, event.Event, event.Text, event.Title, event.User, event.Country, event.City)
 			if err != nil {
 				log.Printf("[error] cannot log events: %s", err)
