@@ -133,7 +133,7 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		if requestIP.String() == "127.0.0.1" {
+		if ip := requestIP.String(); ip == "127.0.0.1" || ip == "::1" {
 			requestIP = net.ParseIP(testGEOIP)
 		}
 	}
