@@ -199,6 +199,7 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Enrich the event with country and city.
 	geoDB, err := geoip2.Open(geoLite2Path)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		fmt.Printf("cannot read the %s database: %s", geoLite2Path, err)
