@@ -10,6 +10,7 @@ require (
 	github.com/open2b/scriggo v0.56.1
 	github.com/oschwald/geoip2-golang v1.8.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	golang.org/x/text v0.3.7
 	gopkg.in/gcfg.v1 v1.2.3
 )
 

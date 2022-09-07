@@ -9,6 +9,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,12 +22,16 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"chichi/pkg/open2b/sql"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/open2b/nuts"
+	"github.com/open2b/nuts/culture"
 	"github.com/open2b/nuts/ipset"
 	"github.com/oschwald/geoip2-golang"
+	"golang.org/x/text/unicode/norm"
 )
 
 const (
@@ -54,7 +59,7 @@ func newServer(settings *Settings, mySQLDB *sql.DB, clickHouseConn chDriver.Conn
 // serveLogEvent receives an event via HTTP and enqueues it.
 func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 	var event *Event
-	err := json.NewDecoder(r.Body).Decode(&event)
+	err := json.NewDecoder(norm.NFC.Reader(r.Body)).Decode(&event)
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
@@ -76,6 +81,42 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("[error] queriyng `properties`: %s", err)
+		return
+	}
+
+	// Validate the event.
+	if culture.Locale(event.Language) == nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+	if utf8.RuneCountInString(event.Browser) > 64000 {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+	if _, err := url.Parse(event.URL); err != nil || utf8.RuneCountInString(event.URL) > 2048 {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+	if _, err := url.Parse(event.Referrer); err != nil || utf8.RuneCountInString(event.Referrer) > 2048 {
+		event.Referrer = ""
+	}
+	if _, err := url.Parse(event.Target); err != nil || utf8.RuneCountInString(event.Target) > 2048 {
+		event.Target = ""
+	}
+	if event.Event != "visit" && event.Event != "click" {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+	if utf8.RuneCountInString(event.Text) > 120 {
+		event.Text = nuts.Truncate(event.Text, 120)
+		return
+	}
+	if utf8.RuneCountInString(event.Title) > 120 {
+		event.Title = nuts.Truncate(event.Title, 120)
+		return
+	}
+	if _, err := base64.StdEncoding.DecodeString(event.User); err != nil || len(event.User) != 28 {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
 
