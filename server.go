@@ -238,7 +238,7 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	event.DeviceType = "desktop"
 	if ua.Mobile() {
-		if h := strings.ToLower(r.Header.Get("User-Agent")); strings.Contains(h, "ipad") {
+		if h := strings.ToLower(r.Header.Get("User-Agent")); strings.Contains(h, "ipad") || strings.Contains(h, "tablet") {
 			event.DeviceType = "tablet"
 		} else {
 			event.DeviceType = "mobile"
