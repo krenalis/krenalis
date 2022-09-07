@@ -10,6 +10,8 @@ CREATE TABLE `events` (
   `title` String,
   `url` String,
   `user` String,
+  `country` String,
+  `city` String,
   PRIMARY KEY (
     `property`,
     `timestamp`,

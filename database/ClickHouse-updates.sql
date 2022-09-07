@@ -35,3 +35,6 @@ CREATE TABLE `events` (
 INSERT INTO `events`
     SELECT '1234567890', `timestamp`, `browser`, `event`, `language`, `referrer`, `target`, `text`, `title`, `url`, `session`
     FROM `events_old`;
+
+ALTER TABLE `events` ADD COLUMN `country` String;
+ALTER TABLE `events` ADD COLUMN `city` String;

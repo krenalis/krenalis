@@ -8,6 +8,7 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/open2b/nuts v1.5.3
 	github.com/open2b/scriggo v0.56.1
+	github.com/oschwald/geoip2-golang v1.8.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	gopkg.in/gcfg.v1 v1.2.3
 )
@@ -19,6 +20,7 @@ require (
 	github.com/go-faster/errors v0.6.1 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
+	github.com/oschwald/maxminddb-golang v1.10.0 // indirect
 	github.com/paulmach/orb v0.7.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

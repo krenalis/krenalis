@@ -102,4 +102,6 @@ type Event struct {
 	Timestamp time.Time
 	Title     string // "Product X"
 	URL       string // "https://example.com"
+	Country   string
+	City      string
 }
