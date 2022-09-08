@@ -185,7 +185,7 @@ func (visualization *Visualization) jsonQueryToSQLQuery(jq JSONQuery) (string, [
 	}
 
 	query := "SELECT " + strings.Join(columns, ", ") +
-		" FROM `chichi`.`events` " +
+		" FROM `events` " +
 		" WHERE " + strings.Join(wheres, " AND ")
 
 	if len(groupBys) > 0 {
