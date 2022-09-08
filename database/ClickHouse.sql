@@ -20,7 +20,7 @@ CREATE TABLE events
     `domain` String,
     `path` String,
     `queryString` String,
-    `user` String,
+    `user` UInt64,
     `country` String,
     `city` String
 )
