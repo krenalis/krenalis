@@ -1,5 +1,5 @@
 CREATE TABLE `customers` (
-  `id` INT(10) NOT NULL AUTO_INCREMENT ,
+  `id` INT NOT NULL AUTO_INCREMENT ,
   `name` VARCHAR(45) NOT NULL DEFAULT '',
   `email` VARCHAR(120) NOT NULL DEFAULT '',
   `password` VARCHAR(60) CHARACTER SET ascii NOT NULL DEFAULT '',
@@ -8,7 +8,7 @@ CREATE TABLE `customers` (
 
 CREATE TABLE `properties` (
   `id` CHAR(10) NOT NULL,
-  `customer` INT(10) NOT NULL,
+  `customer` INT NOT NULL,
   PRIMARY KEY (`id`));
 
 CREATE TABLE `domains` (
@@ -22,7 +22,7 @@ INSERT INTO `properties` VALUES ('1234567890',1);
 
 CREATE TABLE `smart_events` (
   `property` CHAR(10) NOT NULL,
-  `id` INT(10) NOT NULL AUTO_INCREMENT,
+  `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NOT NULL DEFAULT '',
   `event` VARCHAR(50) NOT NULL DEFAULT '',
   `pages` TEXT NOT NULL DEFAULT '',
@@ -35,13 +35,13 @@ INSERT INTO `smart_events` VALUES ('ABCDEFGHIJ',1,'View Nissan Car','view','[{\"
 CREATE TABLE `devices` (
   `property` char(10) CHARACTER SET ascii DEFAULT '',
   `id` char(28) CHARACTER SET ascii NOT NULL,
-  `user` int(10) unsigned DEFAULT NULL,
+  `user` int unsigned DEFAULT NULL,
   PRIMARY KEY (`property`, `id`)
 );
 
 CREATE TABLE `users` (
   `property` char(10) NOT NULL,
-  `id` int(10) unsigned NOT NULL,
+  `id` int unsigned NOT NULL,
   `device` char(28) CHARACTER SET ascii DEFAULT NULL,
   PRIMARY KEY (`property`,`id`)
 );

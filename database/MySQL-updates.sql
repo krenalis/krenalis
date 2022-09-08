@@ -31,3 +31,9 @@ CREATE TABLE `users` (
   `device` char(28) CHARACTER SET ascii DEFAULT NULL,
   PRIMARY KEY (`property`,`id`)
 );
+
+ALTER TABLE `customers` MODIFY COLUMN `id` INT NOT NULL AUTO_INCREMENT;
+ALTER TABLE `properties` MODIFY COLUMN `customer` INT NOT NULL;
+ALTER TABLE `smart_events` MODIFY COLUMN `id` INT NOT NULL AUTO_INCREMENT;
+ALTER TABLE `devices` MODIFY COLUMN `user` int unsigned DEFAULT NULL;
+ALTER TABLE `users` MODIFY COLUMN `id` int unsigned NOT NULL;
