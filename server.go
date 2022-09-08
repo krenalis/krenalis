@@ -247,7 +247,7 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Enrich the event with the domain, path and queryString.
+	// Enrich the event with the domain, path and query string.
 	event.Domain = url.Host
 	event.Path = strings.TrimLeft(strings.TrimRight(url.Path, "/"), "/")
 	event.QueryString = url.RawQuery
