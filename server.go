@@ -9,9 +9,7 @@ package main
 
 import (
 	"context"
-	crand "crypto/rand"
 	"encoding/base64"
-	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -86,38 +84,6 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get the user or create it if it does not exist.
-	var user uint64
-	err = server.mySQLDB.QueryRow("SELECT `id` FROM `users` WHERE `property` = ? AND `device` = ?", event.Property, event.Device).Scan(&user)
-	if err != nil && err != sql.ErrNoRows {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] queriyng `users`: %s", err)
-		return
-	}
-	if err == sql.ErrNoRows {
-		err = server.mySQLDB.QueryRow("SELECT `user` FROM `devices` WHERE `property` = ? AND `id` = ?", event.Property, event.Device).Scan(&user)
-		if err != nil && err != sql.ErrNoRows {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("[error] queriyng `devices`: %s", err)
-			return
-		}
-		if err == sql.ErrNoRows {
-			user, err = makeUserID()
-			if err != nil {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				log.Printf("[error] cannot generate a random user id: %s", err)
-				return
-			}
-			_, err = server.mySQLDB.Exec("INSERT INTO `users` SET `property` = ?, `id` = ?, `device` = ?", event.Property, user, event.Device)
-			if err != nil {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				log.Printf("[error] cannot add a new user: %s", err)
-				return
-			}
-		}
-	}
-	event.User = user
-
 	// Validate the event.
 	locale := culture.Locale(event.Language)
 	if locale == nil {
@@ -147,7 +113,7 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		event.Title = nuts.Truncate(event.Title, 120)
 		return
 	}
-	if _, err := base64.StdEncoding.DecodeString(event.Device); err != nil || len(event.Device) != 28 {
+	if _, err := base64.StdEncoding.DecodeString(event.User); err != nil || len(event.User) != 28 {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
@@ -365,14 +331,4 @@ func isValidPropertyID(id string) bool {
 		}
 	}
 	return true
-}
-
-// makeUserID returns a new random user identifier.
-func makeUserID() (uint64, error) {
-	b := make([]byte, 8)
-	_, err := crand.Read(b)
-	if err != nil {
-		return 0, err
-	}
-	return binary.LittleEndian.Uint64(b), nil
 }

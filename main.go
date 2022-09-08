@@ -92,8 +92,6 @@ func main() {
 
 type Event struct {
 	Property       string
-	Device         string
-	User           uint64
 	OSName         string
 	OSVersion      string
 	BrowserName    string
@@ -102,6 +100,7 @@ type Event struct {
 	Event          string // "visit", "click", ...
 	Language       string // "it-IT"
 	Referrer       string // "https://example.com"
+	User           string
 	Target         string // "https://example.com"
 	Text           string // "Add to cart"
 	Timestamp      time.Time
