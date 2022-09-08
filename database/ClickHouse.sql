@@ -13,7 +13,9 @@ CREATE TABLE `events`
     `target` String,
     `text` String,
     `title` String,
-    `url` String,
+    `domain` String,
+    `path` String,
+    `queryString` String,
     `user` String,
     `country` String,
     `city` String

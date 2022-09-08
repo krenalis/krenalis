@@ -111,9 +111,7 @@ export let suggestionsData = [
                 "View Nissan Car"
             ],
             "DateRange": "Past12Months",
-            "GroupBy": [
-                "url"
-            ]
+            "GroupBy": ["path"]
         }, null, 2),
     },
 ];

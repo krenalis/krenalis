@@ -247,6 +247,11 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Enrich the event with the domain, path and queryString.
+	event.Domain = url.Host
+	event.Path = strings.TrimLeft(strings.TrimRight(url.Path, "/"), "/")
+	event.QueryString = url.RawQuery
+
 	server.eventsQueueMutex.Lock()
 	server.eventsQueue = append(server.eventsQueue, event)
 	var toFlush []*Event
@@ -288,7 +293,7 @@ RETRY:
 	for {
 		batch, err := server.clickHouseConn.PrepareBatch(server.clickHouseCtx, "INSERT INTO `events`\n"+
 			"(`property`, `timestamp`, `language`, `osName`, `osVersion`, `browserName`, `browserVersion`, `deviceType`, "+
-			"`url`, `referrer`, `target`, `event`, `text`, `title`, `user`, `country`, `city`)")
+			"`referrer`, `target`, `event`, `text`, `domain`, `path`, `queryString`, `title`, `user`, `country`, `city`)")
 		if err != nil {
 			log.Printf("[error] cannot log events: %s", err)
 			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
@@ -296,8 +301,9 @@ RETRY:
 		}
 		for _, event := range events {
 			err := batch.Append(event.Property, event.Timestamp, event.Language, event.OSName, event.OSVersion,
-				event.BrowserName, event.BrowserVersion, event.DeviceType, event.URL,
-				event.Referrer, event.Target, event.Event, event.Text, event.Title, event.User, event.Country, event.City)
+				event.BrowserName, event.BrowserVersion, event.DeviceType,
+				event.Referrer, event.Target, event.Event, event.Text, event.Domain,
+				event.Path, event.QueryString, event.Title, event.User, event.Country, event.City)
 			if err != nil {
 				log.Printf("[error] cannot log events: %s", err)
 				time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)

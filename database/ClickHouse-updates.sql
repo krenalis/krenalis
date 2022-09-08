@@ -64,3 +64,8 @@ ENGINE = MergeTree
 PRIMARY KEY (timestamp, event, property)
 ORDER BY (timestamp, event, property)
 SETTINGS index_granularity = 8192;
+
+ALTER TABLE `events` ADD COLUMN `domain` String AFTER `url`;
+ALTER TABLE `events` ADD COLUMN `path` String AFTER `domain`;
+ALTER TABLE `events` ADD COLUMN `queryString` String AFTER `path`;
+ALTER TABLE `events` DROP COLUMN `url`;

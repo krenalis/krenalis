@@ -105,7 +105,10 @@ type Event struct {
 	Text           string // "Add to cart"
 	Timestamp      time.Time
 	Title          string // "Product X"
-	URL            string // "https://example.com"
+	URL            string // "https://example.com/product/x/y?x=10"
+	Domain         string // "example.com"
+	Path           string // "product/x/y"
+	QueryString    string // "x=10"
 	Country        string
 	City           string
 }

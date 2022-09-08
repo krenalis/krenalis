@@ -257,7 +257,7 @@ func smartEventToBooleanExpression(event SmartEvent) string {
 			where.WriteString("(")
 			where.WriteString(conditionToSQL(page))
 			if page.Domain != "" {
-				where.WriteString(" AND `url` = " + o2bsql.Quote(page.Domain))
+				where.WriteString(" AND `domain` = " + o2bsql.Quote(page.Domain))
 			}
 			where.WriteString(")")
 		}
@@ -271,7 +271,7 @@ func smartEventToBooleanExpression(event SmartEvent) string {
 			}
 			where.WriteString("(" + conditionToSQL(button))
 			if button.Domain != "" {
-				where.WriteString(" AND `url` = " + o2bsql.Quote(button.Domain))
+				where.WriteString(" AND `domain` = " + o2bsql.Quote(button.Domain))
 			}
 			where.WriteString(")")
 		}
@@ -315,7 +315,7 @@ func conditionToSQL(condition Condition) string {
 	}
 	where += " " + quotedValue
 	if condition.Domain != "" {
-		where += fmt.Sprintf(" AND `url` = %s", sql.Quote(condition.Domain))
+		where += fmt.Sprintf(" AND `domain` = %s", sql.Quote(condition.Domain))
 	}
 	return where
 }
