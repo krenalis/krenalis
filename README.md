@@ -49,6 +49,7 @@ Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit http
 3. These features **currently work** and consequentially should be tested:
   * The login page at https://localhost:9090/admin/
   * Every example in the dashboard (https://localhost:9090/admin/dashboard) should work (note that not every example returns a set of results, it depends on the data on the database)
+  * The insertion of events using the `trace-events-script/chichi.js` script.
 
 ## Documentation of APIs
 
