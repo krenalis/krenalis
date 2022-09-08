@@ -212,8 +212,8 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		event.Country = city.Country.IsoCode
-		event.City = city.City.Names["en"]
+		event.country = city.Country.IsoCode
+		event.city = city.City.Names["en"]
 		geoDB.Close()
 	}
 
@@ -222,34 +222,34 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 	osInfo := ua.OSInfo()
 	switch osInfo.Name {
 	case "Android", "Windows", "iOS", "MacOS", "Linux", "ChromeOS":
-		event.OSName = osInfo.Name
+		event.osName = osInfo.Name
 	default:
-		event.OSName = "Other"
+		event.osName = "Other"
 	}
-	if utf8.RuneCountInString(event.OSVersion) <= 10 {
-		event.OSVersion = osInfo.Version
+	if utf8.RuneCountInString(event.osVersion) <= 10 {
+		event.osVersion = osInfo.Version
 	}
 	if name, version := ua.Browser(); utf8.RuneCountInString(name) <= 20 {
-		event.BrowserName = name
+		event.browserName = name
 		if utf8.RuneCountInString(version) <= 20 {
-			event.BrowserVersion = version
+			event.browserVersion = version
 		}
 	} else {
-		event.BrowserName = "Other"
+		event.browserName = "Other"
 	}
-	event.DeviceType = "desktop"
+	event.deviceType = "desktop"
 	if ua.Mobile() {
 		if h := strings.ToLower(r.Header.Get("User-Agent")); strings.Contains(h, "ipad") || strings.Contains(h, "tablet") {
-			event.DeviceType = "tablet"
+			event.deviceType = "tablet"
 		} else {
-			event.DeviceType = "mobile"
+			event.deviceType = "mobile"
 		}
 	}
 
 	// Enrich the event with the domain, path and query string.
-	event.Domain = url.Host
-	event.Path = strings.TrimLeft(strings.TrimRight(url.Path, "/"), "/")
-	event.QueryString = url.RawQuery
+	event.domain = url.Host
+	event.path = strings.TrimLeft(strings.TrimRight(url.Path, "/"), "/")
+	event.queryString = url.RawQuery
 
 	server.eventsQueueMutex.Lock()
 	server.eventsQueue = append(server.eventsQueue, event)
@@ -299,10 +299,10 @@ RETRY:
 			continue
 		}
 		for _, event := range events {
-			err := batch.Append(event.Property, event.Timestamp, event.Language, event.OSName, event.OSVersion,
-				event.BrowserName, event.BrowserVersion, event.DeviceType,
-				event.Referrer, event.Target, event.Event, event.Text, event.Domain,
-				event.Path, event.QueryString, event.Title, event.User, event.Country, event.City)
+			err := batch.Append(event.Property, event.Timestamp, event.Language, event.osName, event.osVersion,
+				event.browserName, event.browserVersion, event.deviceType,
+				event.Referrer, event.Target, event.Event, event.Text, event.domain,
+				event.path, event.queryString, event.Title, event.User, event.country, event.city)
 			if err != nil {
 				log.Printf("[error] cannot log events: %s", err)
 				time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)

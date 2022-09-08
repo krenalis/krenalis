@@ -92,11 +92,11 @@ func main() {
 
 type Event struct {
 	Property       string
-	OSName         string
-	OSVersion      string
-	BrowserName    string
-	BrowserVersion string
-	DeviceType     string
+	osName         string
+	osVersion      string
+	browserName    string
+	browserVersion string
+	deviceType     string
 	Event          string // "visit", "click", ...
 	Language       string // "it-IT"
 	Referrer       string // "https://example.com"
@@ -106,9 +106,9 @@ type Event struct {
 	Timestamp      time.Time
 	Title          string // "Product X"
 	URL            string // "https://example.com/product/x/y?x=10"
-	Domain         string // "example.com"
-	Path           string // "product/x/y"
-	QueryString    string // "x=10"
-	Country        string
-	City           string
+	domain         string // "example.com"
+	path           string // "product/x/y"
+	queryString    string // "x=10"
+	country        string
+	city           string
 }
