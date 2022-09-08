@@ -86,10 +86,12 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate the event.
-	if culture.Locale(event.Language) == nil {
+	locale := culture.Locale(event.Language)
+	if locale == nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
+	event.Language = locale.LanguageCode()
 	if _, err := url.Parse(event.URL); err != nil || utf8.RuneCountInString(event.URL) > 2048 {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
