@@ -53,6 +53,12 @@ func (apis *APIs) initSchema() {
 		internalIPs string
 	}{})
 
+	apis.myDB.Scheme("Devices", "devices", struct {
+		property string
+		id       string
+		user     int
+	}{})
+
 	apis.myDB.Scheme("Domains", "domains", struct {
 		property string
 		name     string
@@ -70,6 +76,12 @@ func (apis *APIs) initSchema() {
 		event    string
 		pages    string
 		buttons  string
+	}{})
+
+	apis.myDB.Scheme("Users", "users", struct {
+		property string
+		id       int
+		device   string
 	}{})
 
 }
