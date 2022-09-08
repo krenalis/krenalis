@@ -66,12 +66,11 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check property existence.
-	if event.Property == "" {
+	// Validate the property and verify it exists.
+	if !isValidPropertyID(event.Property) {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
-
 	row := server.mySQLDB.QueryRow("SELECT `customer` FROM `properties` WHERE `id` = ?", event.Property)
 	var customer string
 	err = row.Scan(&customer)
@@ -318,4 +317,18 @@ RETRY:
 		}
 		return
 	}
+}
+
+// isValidPropertyID reports whether id is a valid property identifier.
+func isValidPropertyID(id string) bool {
+	if len(id) != 10 || id == "0000000000" {
+		return false
+	}
+	for i := 0; i < 10; i++ {
+		var c = id[i]
+		if c < '0' || ('9' < c && c < 'A') || 'Z' < c {
+			return false
+		}
+	}
+	return true
 }
