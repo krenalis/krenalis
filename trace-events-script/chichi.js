@@ -6,12 +6,12 @@ function sendBeacon(data) {
 	let d = data == null ? {} : data;
 
 	// populate the data object with relevant infos.
-	let user = localStorage.getItem('chichi-user');
-	if (user == null) {
-		user = makeid();
-		localStorage.setItem('chichi-user', user);
+	let device = localStorage.getItem('chichi-device');
+	if (device == null) {
+		device = makeid();
+		localStorage.setItem('chichi-device', device);
 	}
-	d.user = user;
+	d.device = device;
 	d.property = property;
 	navigator.geolocation.getCurrentPosition(
 		(position) => {

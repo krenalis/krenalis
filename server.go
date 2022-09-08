@@ -9,7 +9,9 @@ package main
 
 import (
 	"context"
+	crand "crypto/rand"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -84,6 +86,36 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get the user or create it if it does not exist.
+	err = server.mySQLDB.QueryRow("SELECT `id` FROM `users` WHERE `property` = ? AND `device` = ?", event.Property, event.Device).Scan(&event.user)
+	if err != nil && err != sql.ErrNoRows {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		log.Printf("[error] queriyng `users`: %s", err)
+		return
+	}
+	if err == sql.ErrNoRows {
+		err = server.mySQLDB.QueryRow("SELECT `user` FROM `devices` WHERE `property` = ? AND `id` = ?", event.Property, event.Device).Scan(&event.user)
+		if err != nil && err != sql.ErrNoRows {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			log.Printf("[error] queriyng `devices`: %s", err)
+			return
+		}
+		if err == sql.ErrNoRows {
+			event.user, err = makeUserID()
+			if err != nil {
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				log.Printf("[error] cannot generate a random user id: %s", err)
+				return
+			}
+			_, err = server.mySQLDB.Exec("INSERT INTO `users` SET `property` = ?, `id` = ?, `device` = ?", event.Property, event.user, event.Device)
+			if err != nil {
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				log.Printf("[error] cannot add a new user: %s", err)
+				return
+			}
+		}
+	}
+
 	// Validate the event.
 	locale := culture.Locale(event.Language)
 	if locale == nil {
@@ -113,7 +145,7 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		event.Title = nuts.Truncate(event.Title, 120)
 		return
 	}
-	if _, err := base64.StdEncoding.DecodeString(event.User); err != nil || len(event.User) != 28 {
+	if _, err := base64.StdEncoding.DecodeString(event.Device); err != nil || len(event.Device) != 28 {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
@@ -302,7 +334,7 @@ RETRY:
 			err := batch.Append(event.Property, event.Timestamp, event.Language, event.osName, event.osVersion,
 				event.browserName, event.browserVersion, event.deviceType,
 				event.Referrer, event.Target, event.Event, event.Text, event.domain,
-				event.path, event.queryString, event.Title, event.User, event.country, event.city)
+				event.path, event.queryString, event.Title, event.user, event.country, event.city)
 			if err != nil {
 				log.Printf("[error] cannot log events: %s", err)
 				time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
@@ -331,4 +363,14 @@ func isValidPropertyID(id string) bool {
 		}
 	}
 	return true
+}
+
+// makeUserID returns a new random user identifier.
+func makeUserID() (uint32, error) {
+	b := make([]byte, 4)
+	_, err := crand.Read(b)
+	if err != nil {
+		return 0, err
+	}
+	return binary.LittleEndian.Uint32(b), nil
 }

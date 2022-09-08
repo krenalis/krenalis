@@ -69,3 +69,6 @@ ALTER TABLE `events` ADD COLUMN `domain` String AFTER `url`;
 ALTER TABLE `events` ADD COLUMN `path` String AFTER `domain`;
 ALTER TABLE `events` ADD COLUMN `queryString` String AFTER `path`;
 ALTER TABLE `events` DROP COLUMN `url`;
+
+ALTER TABLE `events` UPDATE `user` = '0' WHERE TRUE;
+ALTER TABLE `events` MODIFY COLUMN `user` UInt32;
