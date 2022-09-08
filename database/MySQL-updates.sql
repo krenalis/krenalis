@@ -17,3 +17,18 @@ CREATE TABLE `smart_events` (
   PRIMARY KEY (`id`)
 );
 INSERT INTO `smart_events` VALUES ('ABCDEFGHIJ',1,'View Nissan Car','view','[{\"Field\":\"url\",\"Operator\":\"StartsWith\",\"Value\":\"/cars/Nissan/\"},{\"Field\":\"url\",\"Operator\":\"StartsWith\",\"Value\":\"/auto/Nissan/\"}]','null'),('1234567890',38,'View Nissan Car','click','[{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"cars/nissan/\",\"Domain\":\"english.example.com\"},{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"auto/nissan/\",\"Domain\":\"italian.example.com\"}]','null'),('1234567890',39,'Configure a Nissan Car','click','[{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"cars/nissan/\",\"Domain\":\"english.example.com\"},{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"auto/nissan/\",\"Domain\":\"italian.example.com\"}]','[{\"Field\":\"text\",\"Operator\":\"Equals\",\"Value\":\"Configure your car\",\"Domain\":\"english.example.com\"},{\"Field\":\"text\",\"Operator\":\"Equals\",\"Value\":\"Configura la tua auto\",\"Domain\":\"italian.example.com\"}]'),('1234567890',40,'Click on Login Button','click','null','[{\"Field\":\"text\",\"Operator\":\"Contains\",\"Value\":\"Log in\"}]');
+
+CREATE TABLE `devices` (
+  `property` char(10) CHARACTER SET ascii DEFAULT NULL,
+  `id` char(28) CHARACTER SET ascii NOT NULL,
+  `user` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`property`, `id`)
+);
+
+CREATE TABLE `users` (
+  `property` char(10) NOT NULL,
+  `id` int(10) unsigned NOT NULL,
+  `device` char(28) CHARACTER SET ascii DEFAULT NULL,
+  KEY `externalID` (`externalID`),
+  PRIMARY KEY (`property`,`id`)
+);
