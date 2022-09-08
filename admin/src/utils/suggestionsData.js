@@ -19,7 +19,7 @@ export let suggestionsData = [
             "": "'it'"
         },
         {
-            "Field": "browser",
+            "Field": "browserName",
             "Operator": "Contains",
             "": "firefox"
         }
