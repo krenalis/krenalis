@@ -14,7 +14,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/fs"
 	"log"
 	"math/rand"
@@ -44,6 +43,10 @@ const (
 	testGEOIP            = "79.9.108.176"
 )
 
+// errBadRequest is returned from the _serveLogEvent function to return a Bad
+// Request response to the client.
+var errBadRequest = errors.New("bad request")
+
 type Server struct {
 	settings         *Settings
 	mySQLDB          *sql.DB
@@ -59,59 +62,58 @@ func newServer(settings *Settings, mySQLDB *sql.DB, clickHouseConn chDriver.Conn
 	return s
 }
 
-// serveLogEvent receives an event via HTTP and enqueues it.
 func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
+	err := server._serveLogEvent(w, r)
+	if err != nil {
+		if err == errBadRequest {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+		} else {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			log.Printf("[error] cannot receive event: %s", err)
+		}
+	}
+}
+
+// serveLogEvent receives an event via HTTP and enqueues it.
+func (server *Server) _serveLogEvent(w http.ResponseWriter, r *http.Request) error {
 	var event *Event
 	err := json.NewDecoder(norm.NFC.Reader(r.Body)).Decode(&event)
 	if err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
+		return errBadRequest
 	}
 
 	// Validate the property and verify it exists.
 	if !isValidPropertyID(event.Property) {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
+		return errBadRequest
 	}
 	row := server.mySQLDB.QueryRow("SELECT `customer` FROM `properties` WHERE `id` = ?", event.Property)
 	var customer string
 	err = row.Scan(&customer)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return
+			err = errBadRequest
 		}
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] queriyng `properties`: %s", err)
-		return
+		return err
 	}
 
 	// Get the user or create it if it does not exist.
 	err = server.mySQLDB.QueryRow("SELECT `id` FROM `users` WHERE `property` = ? AND `device` = ?", event.Property, event.Device).Scan(&event.user)
 	if err != nil && err != sql.ErrNoRows {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] queriyng `users`: %s", err)
-		return
+		return err
 	}
 	if err == sql.ErrNoRows {
 		err = server.mySQLDB.QueryRow("SELECT `user` FROM `devices` WHERE `property` = ? AND `id` = ?", event.Property, event.Device).Scan(&event.user)
 		if err != nil && err != sql.ErrNoRows {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("[error] queriyng `devices`: %s", err)
-			return
+			return err
 		}
 		if err == sql.ErrNoRows {
 			event.user, err = makeUserID()
 			if err != nil {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				log.Printf("[error] cannot generate a random user id: %s", err)
-				return
+				return err
 			}
 			_, err = server.mySQLDB.Exec("INSERT INTO `users` SET `property` = ?, `id` = ?, `device` = ?", event.Property, event.user, event.Device)
 			if err != nil {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				log.Printf("[error] cannot add a new user: %s", err)
-				return
+				return err
 			}
 		}
 	}
@@ -119,13 +121,11 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 	// Validate the event.
 	locale := culture.Locale(event.Language)
 	if locale == nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
+		return errBadRequest
 	}
 	event.Language = locale.LanguageCode()
 	if _, err := url.Parse(event.URL); err != nil || utf8.RuneCountInString(event.URL) > 2048 {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
+		return errBadRequest
 	}
 	if _, err := url.Parse(event.Referrer); err != nil || utf8.RuneCountInString(event.Referrer) > 2048 {
 		event.Referrer = ""
@@ -134,8 +134,7 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		event.Target = ""
 	}
 	if event.Event != "visit" && event.Event != "click" {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
+		return errBadRequest
 	}
 	if utf8.RuneCountInString(event.Text) > 120 {
 		event.Text = nuts.Truncate(event.Text, 120)
@@ -144,8 +143,7 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 		event.Title = nuts.Truncate(event.Title, 120)
 	}
 	if _, err := base64.StdEncoding.DecodeString(event.Device); err != nil || len(event.Device) != 28 {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
+		return errBadRequest
 	}
 
 	// Get the request IP.
@@ -153,13 +151,11 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 	{
 		host, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return
+			return errBadRequest
 		}
 		requestIP = net.ParseIP(host)
 		if requestIP == nil {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return
+			return errBadRequest
 		}
 		if ip := requestIP.String(); ip == "127.0.0.1" || ip == "::1" {
 			requestIP = net.ParseIP(testGEOIP)
@@ -171,12 +167,9 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 	err = server.mySQLDB.QueryRow("SELECT `internalIPs` FROM `customers` WHERE `id` = ?", customer).Scan(&internalIPs)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return
+			err = errBadRequest
 		}
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] queriyng `customers`: %s", err)
-		return
+		return err
 	}
 	if internalIPs != "" {
 		set := ipset.New()
@@ -184,63 +177,50 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 			set.Add(ip)
 		}
 		if set.Has(requestIP.String()) {
-			return
+			return nil
 		}
 	}
 
 	// Check if the event is from a domain enabled for the property.
 	url, err := url.Parse(event.URL)
 	if err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
+		return errBadRequest
 	}
 
 	hasDomain := map[string]bool{}
 	{
 		rows, err := server.mySQLDB.Query("SELECT `name` FROM `domains` WHERE `property` = ?", event.Property)
 		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("[error] queriyng `domains`: %s", err)
-			return
+			return err
 		}
 		defer rows.Close()
 		var domain string
 		for rows.Next() {
 			var err = rows.Scan(&domain)
 			if err != nil {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				log.Printf("[error] cannot scan `domains`: %s", err)
-				return
+				return err
 			}
 			hasDomain[domain] = true
 		}
 		if err = rows.Err(); err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("[error] cannot scan `domains`: %s", err)
-			return
+			return err
 		}
 	}
 
 	if len(hasDomain) > 0 && !hasDomain[url.Host] {
-		fmt.Printf("unexpected domain %q for property %q, discarding", url.Host, event.Property)
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
+		return errBadRequest
 	}
 
 	// Enrich the event with country and city.
 	geoDB, err := geoip2.Open(geoLite2Path)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		fmt.Printf("cannot read the %s database: %s", geoLite2Path, err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
+		return err
 	}
 	if !errors.Is(err, fs.ErrNotExist) {
 		defer geoDB.Close()
 		city, err := geoDB.City(requestIP)
 		if err != nil {
-			fmt.Printf("cannot read the city from the %s database: %s", geoLite2Path, err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
+			return err
 		}
 		event.country = city.Country.IsoCode
 		event.city = city.City.Names["en"]
@@ -292,6 +272,8 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 	if toFlush != nil {
 		go server.flushEvents(toFlush)
 	}
+
+	return nil
 }
 
 // timeoutFlusher launches a goroutine that flushes the events queue every
