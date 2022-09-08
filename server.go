@@ -139,11 +139,9 @@ func (server *Server) serveLogEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	if utf8.RuneCountInString(event.Text) > 120 {
 		event.Text = nuts.Truncate(event.Text, 120)
-		return
 	}
 	if utf8.RuneCountInString(event.Title) > 120 {
 		event.Title = nuts.Truncate(event.Title, 120)
-		return
 	}
 	if _, err := base64.StdEncoding.DecodeString(event.Device); err != nil || len(event.Device) != 28 {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
