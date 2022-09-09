@@ -160,3 +160,6 @@ CREATE TABLE events
 ENGINE = MergeTree
 PRIMARY KEY (`property`, `date`, `user`, `timestamp`)
 SETTINGS index_granularity = 8192;
+
+ALTER TABLE `events` MODIFY COLUMN `language` FixedString(2);
+ALTER TABLE `events` MODIFY COLUMN `country` FixedString(2);

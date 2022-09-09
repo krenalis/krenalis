@@ -13,7 +13,7 @@ CREATE TABLE events
     `browserVersion` String,
     `deviceType` Enum8('desktop' = 1, 'tablet' = 2, 'mobile' = 3),
     `event` Enum8('pageview' = 1, 'click' = 2),
-    `language` String,
+    `language` FixedString(2),
     `referrer` String,
     `target` String,
     `text` String,
@@ -22,7 +22,7 @@ CREATE TABLE events
     `path` String,
     `queryString` String,
     `user` UInt32,
-    `country` String,
+    `country` FixedString(2),
     `city` String
 )
 ENGINE = MergeTree
