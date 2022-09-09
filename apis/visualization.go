@@ -10,7 +10,6 @@ package apis
 import (
 	"context"
 	"database/sql/driver"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -22,17 +21,20 @@ type Visualization struct {
 	*Properties
 }
 
-// ExecuteQuery executes the given JSON query.
-func (visualization *Visualization) ExecuteQuery(ctx context.Context, jsonQuery JSONQuery) (columns []string, data [][]any, query string, err error) {
+// ExecuteJSONQuery executes the given JSON query.
+// Returns the columns of the executed query, the query results (as a [][]any)
+// and the query itself as a string.
+// If the given JSON query is invalid, returns an InvalidJSONQueryError error.
+func (visualization *Visualization) ExecuteJSONQuery(ctx context.Context, jsonQuery JSONQuery) (columns []string, data [][]any, query string, err error) {
 
 	// Generate the SQL query from the JSON query.
-	query, columns, err = visualization.jsonQueryToSQLQuery(jsonQuery)
+	query, columns, err = visualization.jsonQueryToSQL(jsonQuery)
 	if err != nil {
 		return nil, nil, "", err
 	}
 
-	// Run the SQL query.
-	data, err = visualization.runQuery(ctx, query)
+	// Run the SQL query on ClickHouse.
+	data, err = visualization.runClickHouseQuery(ctx, query)
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -56,9 +58,22 @@ type Condition struct {
 	Domain   string `json:",omitempty"`
 }
 
-// jsonQueryToSQLQuery converts a JSON query into a SQL query. Also returns the
-// columns.
-func (visualization *Visualization) jsonQueryToSQLQuery(jq JSONQuery) (string, []string, error) {
+// invalidJSONQuery returns an InvalidJSONQueryError error.
+func invalidJSONQuery(format string, a ...any) error {
+	return InvalidJSONQueryError(fmt.Sprintf(format, a...))
+}
+
+// InvalidJSONQueryError is an error that occurs in case of an invalid JSON
+// query.
+type InvalidJSONQueryError string
+
+func (err InvalidJSONQueryError) Error() string {
+	return fmt.Sprintf("invalid JSON query: %s", string(err))
+}
+
+// jsonQueryToSQL converts a JSON query into a SQL query. Also returns the
+// columns. If the JSON query is not valid, returns an InvalidJSONQueryError.
+func (visualization *Visualization) jsonQueryToSQL(jq JSONQuery) (string, []string, error) {
 
 	var (
 		columns  []string
@@ -68,12 +83,16 @@ func (visualization *Visualization) jsonQueryToSQLQuery(jq JSONQuery) (string, [
 
 	// Filters.
 	for _, filter := range jq.Filters {
-		wheres = append(wheres, conditionToSQL(filter))
+		where, err := conditionToSQL(filter)
+		if err != nil {
+			return "", nil, err
+		}
+		wheres = append(wheres, where)
 	}
 
 	// DateRange, DateFrom and DateTo.
 	if jq.DateRange != "" && (jq.DateFrom != "" || jq.DateTo != "") {
-		return "", nil, fmt.Errorf("cannot have both 'DateRange' and 'DateFrom'/'DateTo'")
+		return "", nil, invalidJSONQuery("cannot have both 'DateRange' and 'DateFrom'/'DateTo'")
 	}
 	if jq.DateRange != "" {
 		var from, to time.Time
@@ -94,7 +113,7 @@ func (visualization *Visualization) jsonQueryToSQLQuery(jq JSONQuery) (string, [
 		case "":
 			// Nothing to do.
 		default:
-			return "", nil, fmt.Errorf("date range %q not supported", jq.DateRange)
+			return "", nil, invalidJSONQuery("date range %q not supported", jq.DateRange)
 		}
 		if to != (time.Time{}) {
 			wheres = append(wheres, "`timestamp` <= "+timeToClickHouseDate(to))
@@ -123,21 +142,22 @@ func (visualization *Visualization) jsonQueryToSQLQuery(jq JSONQuery) (string, [
 			groupBys = append(groupBys, "toYear(`timestamp`)")
 			columns = append(columns, "toYear(`timestamp`)")
 		case "":
-			return "", nil, fmt.Errorf("field GroupBy is mandatory")
+			return "", nil, invalidJSONQuery("field GroupBy is mandatory")
 		default:
-			groupBys = append(groupBys, fmt.Sprintf("`%s`", groupBy))
-			columns = append(columns, groupBy)
+			quotedColumn := sql.QuoteColumn(groupBy)
+			groupBys = append(groupBys, quotedColumn)
+			columns = append(columns, quotedColumn)
 		}
 	}
 
 	// Graph.
 	if len(jq.Graph) == 0 {
-		return "", nil, errors.New("field Graph cannot be empty")
+		return "", nil, invalidJSONQuery("field Graph cannot be empty")
 	}
 	switch jq.Graph[0] {
 	case "Count":
 		if len(jq.Graph) <= 1 {
-			return "", nil, errors.New("graph 'Count' requires at least parameter")
+			return "", nil, invalidJSONQuery("graph 'Count' requires at least parameter")
 		}
 		columns = append(columns, "COUNT(*)")
 		switch jq.Graph[1] {
@@ -146,20 +166,20 @@ func (visualization *Visualization) jsonQueryToSQLQuery(jq JSONQuery) (string, [
 		case "Click":
 			wheres = append(wheres, "`event` = 'click'")
 		case "Smart Event":
-			where, ok, err := visualization.smartEvent(jq.Graph[2])
+			where, ok, err := visualization.smartEventToSQL(jq.Graph[2])
 			if err != nil {
 				return "", nil, err
 			}
 			if !ok {
-				return "", nil, fmt.Errorf("the Smart Event %q does not exist", jq.Graph[2])
+				return "", nil, invalidJSONQuery("the Smart Event %q does not exist", jq.Graph[2])
 			}
 			wheres = append(wheres, where)
 		default:
-			return "", nil, fmt.Errorf("%q not supported", jq.Graph[1])
+			return "", nil, invalidJSONQuery("%q not supported", jq.Graph[1])
 		}
 	case "Count Unique":
 		if len(jq.Graph) <= 1 {
-			return "", nil, errors.New("graph 'Count Unique' requires at least one parameter")
+			return "", nil, invalidJSONQuery("graph 'Count Unique' requires at least one parameter")
 		}
 		columns = append(columns, "COUNT(DISTINCT `user`)")
 		switch jq.Graph[1] {
@@ -168,19 +188,19 @@ func (visualization *Visualization) jsonQueryToSQLQuery(jq JSONQuery) (string, [
 		case "Click":
 			wheres = append(wheres, "`event` = 'click'")
 		case "Smart Event":
-			where, ok, err := visualization.smartEvent(jq.Graph[2])
+			where, ok, err := visualization.smartEventToSQL(jq.Graph[2])
 			if err != nil {
 				return "", nil, err
 			}
 			if !ok {
-				return "", nil, fmt.Errorf("the Smart Event %q does not exist", jq.Graph[2])
+				return "", nil, invalidJSONQuery("the Smart Event %q does not exist", jq.Graph[2])
 			}
 			wheres = append(wheres, where)
 		default:
-			return "", nil, fmt.Errorf("%q not supported", jq.Graph[1])
+			return "", nil, invalidJSONQuery("%q not supported", jq.Graph[1])
 		}
 	default:
-		return "", nil, fmt.Errorf("graph type %q not supported", jq.Graph[0])
+		return "", nil, invalidJSONQuery("graph type %q not supported", jq.Graph[0])
 	}
 
 	query := "SELECT " + strings.Join(columns, ", ") +
@@ -200,12 +220,12 @@ func timeToClickHouseDate(t time.Time) string {
 	return "'" + t.Format("2006-01-02 15:04:05") + "'"
 }
 
-// smartEvent returns the 'WHERE' expression relative to the Smart Event with
-// the given name.
+// smartEventToSQL returns the SQL 'WHERE' expression relative to a Smart Event,
+// which can be identified both by its identifier (which is an int) or by its
+// name (which is a string).
 //
-// If such name does not correspond to any Smart Event, this function returns
-// false.
-func (visualization *Visualization) smartEvent(which any) (string, bool, error) {
+// If the Smart Event cannot be found, this method returns "", false and nil.
+func (visualization *Visualization) smartEventToSQL(which any) (string, bool, error) {
 	smartEvents, err := visualization.SmartEvents.Find()
 	if err != nil {
 		return "", false, err
@@ -231,30 +251,27 @@ func (visualization *Visualization) smartEvent(which any) (string, bool, error) 
 	if smartEvent.ID == 0 { // not found.
 		return "", false, nil
 	}
-	where := smartEventToBooleanExpression(smartEvent)
-	return where, true, nil
-}
-
-// smartEventToBooleanExpression returns the SQL boolean expression
-// corresponding to the given Smart Event.
-func smartEventToBooleanExpression(event SmartEvent) string {
 	where := &strings.Builder{}
-	switch event.Event {
+	switch smartEvent.Event {
 	case "click":
 		where.WriteString("`event` = 'click'")
 	case "pageview":
 		where.WriteString("`event` = 'pageview'")
 	default:
-		panic(fmt.Sprintf("unexpected %q", event.Event))
+		panic(fmt.Sprintf("unexpected %q", smartEvent.Event))
 	}
-	if len(event.Pages) > 0 {
+	if len(smartEvent.Pages) > 0 {
 		where.WriteString(" AND (")
-		for i, page := range event.Pages {
+		for i, page := range smartEvent.Pages {
 			if i > 0 {
 				where.WriteString(" OR ")
 			}
 			where.WriteString("(")
-			where.WriteString(conditionToSQL(page))
+			cond, err := conditionToSQL(page)
+			if err != nil {
+				panic(fmt.Sprintf("Smart Event contains an invalid condition: %s", err))
+			}
+			where.WriteString(cond)
 			if page.Domain != "" {
 				where.WriteString(" AND `domain` = " + sql.Quote(page.Domain))
 			}
@@ -262,13 +279,17 @@ func smartEventToBooleanExpression(event SmartEvent) string {
 		}
 		where.WriteString(")")
 	}
-	if len(event.Buttons) > 0 {
+	if len(smartEvent.Buttons) > 0 {
 		where.WriteString(" AND (")
-		for i, button := range event.Buttons {
+		for i, button := range smartEvent.Buttons {
 			if i > 0 {
 				where.WriteString(" OR ")
 			}
-			where.WriteString("(" + conditionToSQL(button))
+			cond, err := conditionToSQL(button)
+			if err != nil {
+				panic(fmt.Sprintf("Smart Event contains an invalid condition: %s", err))
+			}
+			where.WriteString("(" + cond)
 			if button.Domain != "" {
 				where.WriteString(" AND `domain` = " + sql.Quote(button.Domain))
 			}
@@ -276,24 +297,22 @@ func smartEventToBooleanExpression(event SmartEvent) string {
 		}
 		where.WriteString(")")
 	}
-	return where.String()
+	return where.String(), true, nil
 }
 
 // conditionToSQL returns an SQL expression corresponding to the given
-// Condition.
-func conditionToSQL(condition Condition) string {
-	// TODO(Gianluca): escape/check every value before putting it into the SQL.
+// Condition. Returns an InvalidJSONQueryError in case of an invalid condition.
+func conditionToSQL(condition Condition) (string, error) {
 	quotedField := sql.QuoteColumn(condition.Field)
-	quotedValue := sql.Quote(condition.Value)
 	switch condition.Operator {
 	case "StartsWith":
-		return fmt.Sprintf("ilike(%s, '%s%%')", quotedField, condition.Value)
+		return fmt.Sprintf("ilike(%s, '%s%%')", quotedField, condition.Value), nil
 	case "EndsWith":
-		return fmt.Sprintf("ilike(%s, '%%%s')", quotedField, condition.Value)
+		return fmt.Sprintf("ilike(%s, '%%%s')", quotedField, condition.Value), nil
 	case "Contains":
-		return fmt.Sprintf("ilike(%s, '%%%s%%')", quotedField, condition.Value)
+		return fmt.Sprintf("ilike(%s, '%%%s%%')", quotedField, condition.Value), nil
 	case "NotContains":
-		return fmt.Sprintf("not ilike(%s, '%%%s%%')", quotedField, condition.Value)
+		return fmt.Sprintf("not ilike(%s, '%%%s%%')", quotedField, condition.Value), nil
 	}
 	where := quotedField
 	switch condition.Operator {
@@ -310,17 +329,18 @@ func conditionToSQL(condition Condition) string {
 	case "LessEqualThan":
 		where += "> "
 	default:
-		panic(fmt.Errorf("%q not supported", condition.Operator))
+		return "", invalidJSONQuery("operator %q not supported", condition.Operator)
 	}
-	where += " " + quotedValue
+	where += " " + sql.Quote(condition.Value)
 	if condition.Domain != "" {
 		where += fmt.Sprintf(" AND `domain` = %s", sql.Quote(condition.Domain))
 	}
-	return where
+	return where, nil
 }
 
-// runQuery runs the given query and returns its results as a [][]any.
-func (visualization *Visualization) runQuery(ctx context.Context, query string) ([][]any, error) {
+// runClickHouseQuery runs the given query on the ClickHouse database and
+// returns its results as a [][]any.
+func (visualization *Visualization) runClickHouseQuery(ctx context.Context, query string) ([][]any, error) {
 	rows, err := visualization.chDB.Query(ctx, query)
 	if err != nil {
 		return nil, err

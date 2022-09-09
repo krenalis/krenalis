@@ -247,7 +247,7 @@ func (admin *admin) serveExecuteQuery(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// TODO(Gianluca): fix this:
-	columns, data, query, err := admin.apis.API(0).Property(1).Visualization.ExecuteQuery(context.TODO(), jsonQuery)
+	columns, data, query, err := admin.apis.API(0).Property(1).Visualization.ExecuteJSONQuery(context.TODO(), jsonQuery)
 	if err != nil {
 		log.Printf("[error] cannot execute query: %s", err)
 		w.Header().Add("X-Error", err.Error())
