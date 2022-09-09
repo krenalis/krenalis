@@ -7,7 +7,7 @@ CREATE TABLE events
     `property` UInt32,
     `date` Date,
     `timestamp` DateTime,
-    `osName` Enum8('Android' = 1, 'Windows' = 2, 'iOS' = 3, 'MacOS' = 4, 'Linux' = 5, 'ChromeOS' = 6, 'Other' = 7),
+    `osName` Enum8('Other' = 0, 'Android' = 1, 'Windows' = 2, 'iOS' = 3, 'MacOS' = 4, 'Linux' = 5, 'ChromeOS' = 6),
     `osVersion` String,
     `browserName` String,
     `browserVersion` String,

@@ -163,3 +163,5 @@ SETTINGS index_granularity = 8192;
 
 ALTER TABLE `events` MODIFY COLUMN `language` FixedString(2);
 ALTER TABLE `events` MODIFY COLUMN `country` FixedString(2);
+
+ALTER TABLE `events` MODIFY COLUMN `osName` Enum8('Other' = 0, 'Android' = 1, 'Windows' = 2, 'iOS' = 3, 'MacOS' = 4, 'Linux' = 5, 'ChromeOS' = 6);
