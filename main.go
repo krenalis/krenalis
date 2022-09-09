@@ -98,7 +98,7 @@ type Event struct {
 	browserName    string
 	browserVersion string
 	deviceType     string
-	Event          string // "visit", "click", ...
+	Event          string // "pageview", "click", ...
 	Language       string // "it-IT"
 	Referrer       string // "https://example.com"
 	user           uint32

@@ -25,7 +25,7 @@ type (
 	SmartEventToCreate struct {
 		Name    string
 		Event   string
-		Pages   []Condition // for both "view" and "click"
+		Pages   []Condition // for both "pageview" and "click"
 		Buttons []Condition // only for "click"
 	}
 	SmartEventToUpdate = SmartEventToCreate
@@ -33,7 +33,7 @@ type (
 		ID      int
 		Name    string
 		Event   string
-		Pages   []Condition // for both "view" and "click"
+		Pages   []Condition // for both "pageview" and "click"
 		Buttons []Condition // only for "click"
 	}
 )
@@ -55,9 +55,9 @@ func (smartEvents *SmartEvents) Create(smartEvent SmartEventToCreate) (int64, er
 
 	// Do some validations.
 	switch smartEvent.Event {
-	case "view":
+	case "pageview":
 		if smartEvent.Buttons != nil {
-			return 0, InvalidSmartEventError("apis: Buttons must be 'null' when 'Event' is 'view")
+			return 0, InvalidSmartEventError("apis: Buttons must be 'null' when 'Event' is 'pageview")
 		}
 	case "click":
 	default:

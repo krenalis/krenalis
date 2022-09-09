@@ -143,7 +143,7 @@ func (visualization *Visualization) jsonQueryToSQLQuery(jq JSONQuery) (string, [
 		columns = append(columns, "COUNT(*)")
 		switch jq.Graph[1] {
 		case "Pageview":
-			wheres = append(wheres, "`event` = 'view'")
+			wheres = append(wheres, "`event` = 'pageview'")
 		case "Click":
 			wheres = append(wheres, "`event` = 'click'")
 		case "Smart Event":
@@ -165,7 +165,7 @@ func (visualization *Visualization) jsonQueryToSQLQuery(jq JSONQuery) (string, [
 		columns = append(columns, "COUNT(DISTINCT `user`)")
 		switch jq.Graph[1] {
 		case "Pageview":
-			wheres = append(wheres, "`event` = 'view'")
+			wheres = append(wheres, "`event` = 'pageview'")
 		case "Click":
 			wheres = append(wheres, "`event` = 'click'")
 		case "Smart Event":
@@ -243,8 +243,8 @@ func smartEventToBooleanExpression(event SmartEvent) string {
 	switch event.Event {
 	case "click":
 		where.WriteString("`event` = 'click'")
-	case "view":
-		where.WriteString("`event` = 'view'")
+	case "pageview":
+		where.WriteString("`event` = 'pageview'")
 	default:
 		panic(fmt.Sprintf("unexpected %q", event.Event))
 	}

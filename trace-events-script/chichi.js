@@ -56,7 +56,7 @@ window.addEventListener(
 	'load',
 	(e) => {
 		sendBeacon({
-			event: 'visit',
+			event: 'pageview',
 		});
 	},
 	false

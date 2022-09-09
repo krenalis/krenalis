@@ -133,7 +133,7 @@ func (server *Server) _serveLogEvent(w http.ResponseWriter, r *http.Request) err
 	if _, err := url.Parse(event.Target); err != nil || utf8.RuneCountInString(event.Target) > 2048 {
 		event.Target = ""
 	}
-	if event.Event != "visit" && event.Event != "click" {
+	if event.Event != "pageview" && event.Event != "click" {
 		return errBadRequest
 	}
 	if utf8.RuneCountInString(event.Text) > 120 {
