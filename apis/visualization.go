@@ -320,9 +320,9 @@ func conditionToSQL(condition Condition) (string, error) {
 	quotedField := sql.QuoteColumn(condition.Field)
 	switch condition.Operator {
 	case "StartsWith":
-		return fmt.Sprintf("ilike(%s, '%s%%')", quotedField, condition.Value), nil
+		return fmt.Sprintf("startsWith(%s, '%s')", quotedField, condition.Value), nil
 	case "EndsWith":
-		return fmt.Sprintf("ilike(%s, '%%%s')", quotedField, condition.Value), nil
+		return fmt.Sprintf("endsWith(%s, '%s')", quotedField, condition.Value), nil
 	case "Contains":
 		return fmt.Sprintf("ilike(%s, '%%%s%%')", quotedField, condition.Value), nil
 	case "NotContains":
