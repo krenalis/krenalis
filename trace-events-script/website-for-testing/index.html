@@ -4,18 +4,82 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="chichi.css">
     <title>Chichi</title>
+
+    <!-- Chichi tracking script -->
+    <script data-isChichi data-property="1234567890" src="../chichi.js"></script>
+
 </head>
 <body>
     
-    <div class="links">
-        <a href="https://dragonball.fandom.com/it/wiki/Son_Gohan" target=”_blank”>Son Gohan</a>
-        <a href="https://dragonball.fandom.com/it/wiki/Chichi" target=”_blank”>Chichi</a>
-        <a href="https://dragonball.fandom.com/it/wiki/Son_Goten" target=”_blank”>Son Goten</a>
-    </div>
+    <div class="content">
+        <div class="title"><h1>Click to generate events</h1></div>
+        <div class="element-grid">
 
-    <script src="../chichi.js"></script>
+            <!-- ANCHORS -->
+            <p>Anchors</p>
+            <div class="el">
+                <div class="label">Simple anchor</div>
+                <a href="/chichi" target=”_blank”>Chichi</a>
+            </div>
+            <div class="el">
+                <div class="label">Simple anchor</div>
+                <a href="/goku" target=”_blank”>Goku</a>
+            </div>
+            <div class="el">
+                <div class="label">Simple anchor</div>
+                <a href="/majin-bu" target=”_blank”>Majin Bu</a>
+            </div>
+            <div class="el">
+                <div class="label">Simple anchor</div>
+                <a href="/cell" target=”_blank”>Cell</a>
+            </div>
+
+            <!-- BUTTONS -->
+            <p>Buttons</p>
+            <div class="el">
+                <div class="label">Simple button</div>
+                <button>Broly</button>
+            </div>
+            <form class="el" target="_blank">
+                <div class="label">Inside form</div>
+                <button type="submit">Freezer</button>
+            </form>
+            <form class="el" target="_blank" action="/trunks" id="trunks-form">
+                <div class="label">Inside form with form attribute</div>
+                <button type="submit" form="trunks-form">Trunks</button>
+            </form>
+            <form class="el" target="_blank" action="/bulma">
+                <div class="label">Inside form with formaction attribute</div>
+                <button type="submit" formaction="/bulma2">Bulma</button>
+            </form>
+
+            <!-- INPUT OF TYPE SUBMIT -->
+            <p>Input of type submit</p>
+            <div class="el">
+                <div class="label">Simple input</div>
+                <input type="submit" value="Gohan">
+            </div>
+            <form class="el" target="_blank" action="/vegeta">
+                <div class="label">Inside form</div>
+                <input type="submit" value="Vegeta">
+            </form>
+            <form class="el" target="_blank" action="/crilin" id="crilin-form">
+                <div class="label">Inside form with form attribute</div>
+                <input type="submit" value="Crilin" form="crilin-form">
+            </form>
+            <form class="el" target="_blank" action="/mr-satan">
+                <div class="label">Inside form with formaction attribute</div>
+                <input type="submit" value="Mr. Satan" formaction="/mr-satan2">
+            </form>
+
+        </div>
+    </div>
 
 </body>
 </html>
