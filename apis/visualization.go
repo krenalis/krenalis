@@ -25,6 +25,9 @@ type Visualization struct {
 // Returns the columns of the executed query, the query results (as a [][]any)
 // and the query itself as a string.
 // If the given JSON query is invalid, returns an InvalidJSONQueryError error.
+// If the JSON query refers to a Smart Event which cannot be found (for example
+// it does not exist or it does not belong to the current property), a
+// SmartEventNotFoundError error is returned.
 func (visualization *Visualization) ExecuteJSONQuery(ctx context.Context, jsonQuery JSONQuery) (columns []string, data [][]any, query string, err error) {
 
 	// Generate the SQL query from the JSON query.
@@ -71,8 +74,19 @@ func (err InvalidJSONQueryError) Error() string {
 	return fmt.Sprintf("invalid JSON query: %s", string(err))
 }
 
+// SmartEventNotFoundError is an error representing a Smart Event which has not
+// been found.
+type SmartEventNotFoundError string
+
+func (err SmartEventNotFoundError) Error() string {
+	return fmt.Sprintf("Smart Event %q not found", string(err))
+}
+
 // jsonQueryToSQL converts a JSON query into a SQL query. Also returns the
 // columns. If the JSON query is not valid, returns an InvalidJSONQueryError.
+// If the JSON query refers to a Smart Event which cannot be found (for example
+// it does not exist or it does not belong to the current property), a
+// SmartEventNotFoundError error is returned.
 func (visualization *Visualization) jsonQueryToSQL(jq JSONQuery) (string, []string, error) {
 
 	var (
@@ -171,7 +185,7 @@ func (visualization *Visualization) jsonQueryToSQL(jq JSONQuery) (string, []stri
 				return "", nil, err
 			}
 			if !ok {
-				return "", nil, invalidJSONQuery("the Smart Event %q does not exist", jq.Graph[2])
+				return "", nil, SmartEventNotFoundError(jq.Graph[2])
 			}
 			wheres = append(wheres, where)
 		default:
@@ -193,7 +207,7 @@ func (visualization *Visualization) jsonQueryToSQL(jq JSONQuery) (string, []stri
 				return "", nil, err
 			}
 			if !ok {
-				return "", nil, invalidJSONQuery("the Smart Event %q does not exist", jq.Graph[2])
+				return "", nil, SmartEventNotFoundError(jq.Graph[2])
 			}
 			wheres = append(wheres, where)
 		default:

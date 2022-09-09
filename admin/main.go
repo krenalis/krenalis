@@ -249,9 +249,17 @@ func (admin *admin) serveExecuteQuery(w http.ResponseWriter, r *http.Request) {
 	// TODO(Gianluca): fix this:
 	columns, data, query, err := admin.apis.API(0).Property(1).Visualization.ExecuteJSONQuery(context.TODO(), jsonQuery)
 	if err != nil {
-		log.Printf("[error] cannot execute query: %s", err)
-		w.Header().Add("X-Error", err.Error())
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		switch err.(type) {
+		case apis.InvalidJSONQueryError, apis.SmartEventNotFoundError:
+			w.Header().Add("X-Error", err.Error())
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		default:
+			log.Printf("[error] cannot execute query: %s", err)
+			w.Header().Add("X-Error", err.Error())
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	// Send the results to the client.
