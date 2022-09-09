@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"chichi/pkg/open2b/sql"
-	o2bsql "chichi/pkg/open2b/sql"
 )
 
 type Visualization struct {
@@ -257,7 +256,7 @@ func smartEventToBooleanExpression(event SmartEvent) string {
 			where.WriteString("(")
 			where.WriteString(conditionToSQL(page))
 			if page.Domain != "" {
-				where.WriteString(" AND `domain` = " + o2bsql.Quote(page.Domain))
+				where.WriteString(" AND `domain` = " + sql.Quote(page.Domain))
 			}
 			where.WriteString(")")
 		}
@@ -271,7 +270,7 @@ func smartEventToBooleanExpression(event SmartEvent) string {
 			}
 			where.WriteString("(" + conditionToSQL(button))
 			if button.Domain != "" {
-				where.WriteString(" AND `domain` = " + o2bsql.Quote(button.Domain))
+				where.WriteString(" AND `domain` = " + sql.Quote(button.Domain))
 			}
 			where.WriteString(")")
 		}
