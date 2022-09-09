@@ -16,12 +16,12 @@ export let suggestionsData = [
         {
             "Field": "language",
             "Operator": "Equal",
-            "": "'it'"
+            "Value": "it"
         },
         {
             "Field": "browserName",
             "Operator": "Contains",
-            "": "firefox"
+            "Value": "firefox"
         }
     ],
     "DateRange": "Past7Days"
@@ -36,7 +36,7 @@ export let suggestionsData = [
         {
             "Field": "language",
             "Operator": "NotEqual",
-            "": "'it'"
+            "Value": "it"
         }
     ],
     "DateRange": "Past7Days"
@@ -81,7 +81,7 @@ export let suggestionsData = [
         {
             "Field": "target",
             "Operator": "Contains",
-            "": "Login"
+            "Value": "Login"
         }
     ],
     "DateRange": "Past31Days",
