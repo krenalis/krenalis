@@ -26,6 +26,5 @@ CREATE TABLE events
     `city` String
 )
 ENGINE = MergeTree
-PRIMARY KEY (timestamp, event, property)
-ORDER BY (timestamp, event, property)
+PRIMARY KEY (`property`, `date`, `user`, `timestamp`)
 SETTINGS index_granularity = 8192;
