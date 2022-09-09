@@ -54,23 +54,24 @@ func (apis *APIs) initSchema() {
 	}{})
 
 	apis.myDB.Scheme("Devices", "devices", struct {
-		property string
+		property int
 		id       string
 		user     int
 	}{})
 
 	apis.myDB.Scheme("Domains", "domains", struct {
-		property string
+		property int
 		name     string
 	}{})
 
 	apis.myDB.Scheme("Properties", "properties", struct {
-		id       string
+		id       int
+		code     string
 		customer int
 	}{})
 
 	apis.myDB.Scheme("SmartEvents", "smart_events", struct {
-		property string
+		property int
 		id       int
 		name     string
 		event    string
@@ -79,7 +80,7 @@ func (apis *APIs) initSchema() {
 	}{})
 
 	apis.myDB.Scheme("Users", "users", struct {
-		property string
+		property int
 		id       int
 		device   string
 	}{})
@@ -88,7 +89,7 @@ func (apis *APIs) initSchema() {
 
 // Property returns an instance of Properties which operates on the given
 // property.
-func (api *API) Property(property string) *Properties {
+func (api *API) Property(property int) *Properties {
 	properties := &Properties{
 		API: api,
 		id:  property,

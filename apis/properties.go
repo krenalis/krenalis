@@ -24,11 +24,12 @@ type Properties struct {
 	*API
 	SmartEvents   *SmartEvents
 	Visualization *Visualization
-	id            string
+	id            int
 }
 
 type Property struct {
-	ID      string
+	ID      int
+	Code    string
 	Domains []string
 }
 
@@ -39,8 +40,8 @@ var ErrDomainNameNotValid = errors.New("domain name is not valid")
 // Create creates a new property for the current customer and returns its
 // identifier. If the customer does not exist anymore, it returns the
 // ErrCustomerNotFound error.
-func (this *Properties) Create() (string, error) {
-	var id string
+func (this *Properties) Create() (int, error) {
+	var id int
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		exists, err := tx.Table("Customers").Exists(sql.Where{"id": this.customer})
 		if err != nil {
@@ -51,11 +52,11 @@ func (this *Properties) Create() (string, error) {
 		}
 		var tries = 0
 		for tries < 10 {
-			id, err = generatePropertyID()
+			code, err := generatePropertyCode()
 			if err != nil {
 				return err
 			}
-			_, err = tx.Table("Properties").Add(map[string]any{"id": id, "customer": this.customer}, nil)
+			id, err = tx.Table("Properties").Add(map[string]any{"code": code, "customer": this.customer}, nil)
 			if err != nil {
 				if err2, ok := err.(*mysql.MySQLError); ok && err2.Number == 1062 {
 					tries++
@@ -70,7 +71,7 @@ func (this *Properties) Create() (string, error) {
 		return nil
 	})
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 	return id, nil
 }
@@ -81,8 +82,8 @@ func (this *Properties) Create() (string, error) {
 // If domain is not a valid domain name, it returns the ErrDomainNameNotValid
 // error. If the property does not exist, or it does not belong to the current
 // customer, it returns the ErrPropertyNotFound error.
-func (this *Properties) AddDomain(id string, domain string) error {
-	if !isValidPropertyID(id) {
+func (this *Properties) AddDomain(id int, domain string) error {
+	if id < 1 {
 		panic("apis: invalid property identifier")
 	}
 	if !isValidDomainName(domain) {
@@ -108,12 +109,12 @@ func (this *Properties) AddDomain(id string, domain string) error {
 
 // Delete deletes the properties with the given identifiers of the current
 // customer. It does not return an error if the customer does not exist.
-func (this *Properties) Delete(ids []string) error {
+func (this *Properties) Delete(ids []int) error {
 	if len(ids) == 0 {
 		panic("apis: empty properties")
 	}
 	for _, id := range ids {
-		if !isValidPropertyID(id) {
+		if id < 1 {
 			panic("apis: invalid property identifier")
 		}
 	}
@@ -126,12 +127,13 @@ func (this *Properties) Delete(ids []string) error {
 // Find returns all the properties of the customer.
 func (this *Properties) Find() ([]*Property, error) {
 	properties := make([]*Property, 0, 0)
-	stmt := "SELECT `id`, `domain`\nFROM `properties`\nLEFT JOIN `domains` ON `property` = `id`\nWHERE `customer` = ?\nORDER BY `id`, `domain`"
+	stmt := "SELECT `id`, `code`, `domain`\nFROM `properties`\nLEFT JOIN `domains` ON `property` = `id`\nWHERE `customer` = ?\nORDER BY `id`, `domain`"
 	err := this.myDB.QueryScan(stmt, func(rows *sql.Rows) error {
-		var id, domain string
+		var id int
+		var code, domain string
 	Rows:
 		for rows.Next() {
-			if err := rows.Scan(&id, &domain); err != nil {
+			if err := rows.Scan(&id, &code, &domain); err != nil {
 				return err
 			}
 			for _, property := range properties {
@@ -140,7 +142,7 @@ func (this *Properties) Find() ([]*Property, error) {
 					continue Rows
 				}
 			}
-			property := &Property{ID: id}
+			property := &Property{ID: id, Code: code}
 			if domain != "" {
 				property.Domains = []string{domain}
 			}
@@ -156,24 +158,29 @@ func (this *Properties) Find() ([]*Property, error) {
 
 // Get returns the property, of the current customer, with the given
 // identifier. If the customer or the property do not exist, it returns nil.
-func (this *Properties) Get(id string) (*Property, error) {
-	if !isValidPropertyID(id) {
+func (this *Properties) Get(id int) (*Property, error) {
+	if id < 1 {
 		panic("apis: invalid property identifier")
 	}
-	property := Property{ID: id}
-	stmt := "SELECT `domain`\nFROM `properties`\nLEFT JOIN `domains` ON `property` = `id`\nWHERE `customer` = ? AND `id` = ?"
+	property := Property{}
+	stmt := "SELECT `code`, `domain`\nFROM `properties`\nLEFT JOIN `domains` ON `property` = `id`\nWHERE `customer` = ? AND `id` = ?"
 	err := this.myDB.QueryScan(stmt, func(rows *sql.Rows) error {
-		var domain string
+		var code, domain string
 		for rows.Next() {
-			if err := rows.Scan(&domain); err != nil {
+			if err := rows.Scan(&code, &domain); err != nil {
 				return err
 			}
+			property.ID = id
+			property.Code = code
 			if domain == "" {
 				property.Domains = []string{}
-			} else if property.Domains == nil {
-				property.Domains = []string{domain}
 			} else {
-				property.Domains = append(property.Domains)
+				property.Code = code
+				if property.Domains == nil {
+					property.Domains = []string{domain}
+				} else {
+					property.Domains = append(property.Domains)
+				}
 			}
 		}
 		return nil
@@ -181,7 +188,7 @@ func (this *Properties) Get(id string) (*Property, error) {
 	if err != nil {
 		return nil, err
 	}
-	if property.Domains == nil {
+	if property.ID == 0 {
 		return nil, nil
 	}
 	return &property, nil
@@ -194,8 +201,8 @@ func (this *Properties) Get(id string) (*Property, error) {
 // If domain is not a valid domain name, it returns the ErrDomainNameNotValid
 // error. If the property does not exist, or it does not belong to the current
 // customer, it returns the ErrPropertyNotFound error.
-func (this *Properties) RemoveDomain(id string, domain string) error {
-	if !isValidPropertyID(id) {
+func (this *Properties) RemoveDomain(id int, domain string) error {
+	if id < 1 {
 		panic("apis: invalid property identifier")
 	}
 	if !isValidDomainName(domain) {
@@ -219,8 +226,8 @@ func (this *Properties) RemoveDomain(id string, domain string) error {
 	return err
 }
 
-// generatePropertyID generates a property identifier.
-func generatePropertyID() (string, error) {
+// generatePropertyCode generates a property code.
+func generatePropertyCode() (string, error) {
 	var id uint64
 	for id == 0 {
 		i, err := rand.Int(rand.Reader, big.NewInt(3656158440062975))
@@ -269,19 +276,5 @@ func isValidDomainName(domain string) bool {
 		}
 	}
 
-	return true
-}
-
-// isValidPropertyID reports whether id is a valid property identifier.
-func isValidPropertyID(id string) bool {
-	if len(id) != 10 || id == "0000000000" {
-		return false
-	}
-	for i := 0; i < 10; i++ {
-		var c = id[i]
-		if c < '0' || ('9' < c && c < 'A') || 'Z' < c {
-			return false
-		}
-	}
 	return true
 }

@@ -86,9 +86,8 @@ func (server *Server) _serveLogEvent(w http.ResponseWriter, r *http.Request) err
 	if !isValidPropertyID(event.Property) {
 		return errBadRequest
 	}
-	row := server.mySQLDB.QueryRow("SELECT `customer` FROM `properties` WHERE `id` = ?", event.Property)
 	var customer int
-	err = row.Scan(&customer)
+	err = server.mySQLDB.QueryRow("SELECT `id`, `customer` FROM `properties` WHERE `code` = ?", event.Property).Scan(&event.property, &customer)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			err = errBadRequest
@@ -97,12 +96,12 @@ func (server *Server) _serveLogEvent(w http.ResponseWriter, r *http.Request) err
 	}
 
 	// Get the user or create it if it does not exist.
-	err = server.mySQLDB.QueryRow("SELECT `id` FROM `users` WHERE `property` = ? AND `device` = ?", event.Property, event.Device).Scan(&event.user)
+	err = server.mySQLDB.QueryRow("SELECT `id` FROM `users` WHERE `property` = ? AND `device` = ?", event.property, event.Device).Scan(&event.user)
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
 	if err == sql.ErrNoRows {
-		err = server.mySQLDB.QueryRow("SELECT `user` FROM `devices` WHERE `property` = ? AND `id` = ?", event.Property, event.Device).Scan(&event.user)
+		err = server.mySQLDB.QueryRow("SELECT `user` FROM `devices` WHERE `property` = ? AND `id` = ?", event.property, event.Device).Scan(&event.user)
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}
@@ -111,7 +110,7 @@ func (server *Server) _serveLogEvent(w http.ResponseWriter, r *http.Request) err
 			if err != nil {
 				return err
 			}
-			_, err = server.mySQLDB.Exec("INSERT INTO `users` SET `property` = ?, `id` = ?, `device` = ?", event.Property, event.user, event.Device)
+			_, err = server.mySQLDB.Exec("INSERT INTO `users` SET `property` = ?, `id` = ?, `device` = ?", event.property, event.user, event.Device)
 			if err != nil {
 				return err
 			}
@@ -189,7 +188,7 @@ func (server *Server) _serveLogEvent(w http.ResponseWriter, r *http.Request) err
 
 	hasDomain := map[string]bool{}
 	{
-		rows, err := server.mySQLDB.Query("SELECT `name` FROM `domains` WHERE `property` = ?", event.Property)
+		rows, err := server.mySQLDB.Query("SELECT `name` FROM `domains` WHERE `property` = ?", event.property)
 		if err != nil {
 			return err
 		}
@@ -315,7 +314,7 @@ RETRY:
 			continue
 		}
 		for _, event := range events {
-			err := batch.Append(event.Property, event.date, event.timestamp, event.Language, event.osName,
+			err := batch.Append(event.property, event.date, event.timestamp, event.Language, event.osName,
 				event.osVersion, event.browserName, event.browserVersion, event.deviceType, event.Referrer,
 				event.Target, event.Event, event.Text, event.domain, event.path, event.queryString, event.Title,
 				event.user, event.country, event.city)

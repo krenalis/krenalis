@@ -43,3 +43,24 @@ INSERT INTO `smart_events` VALUES ('ABCDEFGHIJ',1,'View Nissan Car','pageview','
 
 TRUNCATE TABLE `smart_events`;
 INSERT INTO `smart_events` VALUES ('1234567890',50,'View Nissan Car','pageview','[{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"cars/nissan/\",\"Domain\":\"english.example.com\"},{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"auto/nissan/\",\"Domain\":\"italian.example.com\"}]','null'),('1234567890',51,'Configure a Nissan Car','click','[{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"cars/nissan/\",\"Domain\":\"english.example.com\"},{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"auto/nissan/\",\"Domain\":\"italian.example.com\"}]','[{\"Field\":\"text\",\"Operator\":\"Equals\",\"Value\":\"Configure your car\",\"Domain\":\"english.example.com\"},{\"Field\":\"text\",\"Operator\":\"Equals\",\"Value\":\"Configura la tua auto\",\"Domain\":\"italian.example.com\"}]'),('1234567890',52,'Click on Login Button','click','null','[{\"Field\":\"text\",\"Operator\":\"Contains\",\"Value\":\"Log in\"}]');
+
+ALTER TABLE `properties`
+  DROP PRIMARY KEY,
+  CHANGE COLUMN `id` `code` CHAR(10) CHARACTER SET ascii NOT NULL,
+  ADD COLUMN `id` INT unsigned NOT NULL AUTO_INCREMENT FIRST,
+  ADD UNIQUE KEY `code` (`code`),
+  ADD KEY `customer` (`customer`),
+  ADD PRIMARY KEY (`id`);
+
+TRUNCATE `domains`;
+ALTER TABLE `domains` MODIFY COLUMN `property` INT UNSIGNED NOT NULL;
+
+TRUNCATE TABLE `smart_events`;
+ALTER TABLE `smart_events` MODIFY COLUMN `property` INT unsigned NOT NULL;
+INSERT INTO `smart_events` VALUES (1,50,'View Nissan Car','pageview','[{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"cars/nissan/\",\"Domain\":\"english.example.com\"},{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"auto/nissan/\",\"Domain\":\"italian.example.com\"}]','null'),(1,51,'Configure a Nissan Car','click','[{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"cars/nissan/\",\"Domain\":\"english.example.com\"},{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"auto/nissan/\",\"Domain\":\"italian.example.com\"}]','[{\"Field\":\"text\",\"Operator\":\"Equals\",\"Value\":\"Configure your car\",\"Domain\":\"english.example.com\"},{\"Field\":\"text\",\"Operator\":\"Equals\",\"Value\":\"Configura la tua auto\",\"Domain\":\"italian.example.com\"}]'),(1,52,'Click on Login Button','click','null','[{\"Field\":\"text\",\"Operator\":\"Contains\",\"Value\":\"Log in\"}]');
+
+TRUNCATE TABLE `devices`;
+ALTER TABLE `devices` MODIFY COLUMN `property` INT unsigned NOT NULL;
+
+TRUNCATE TABLE `users`;
+ALTER TABLE `users` MODIFY COLUMN `property` INT unsigned NOT NULL;

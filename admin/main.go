@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 
 	"chichi/apis"
 
@@ -81,8 +80,8 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rpath := rpath[len("/properties"):]
 
 		// Read the property ID from the headers.
-		propertyID := r.Header.Get("X-Property")
-		if utf8.RuneCountInString(propertyID) != 10 {
+		propertyID, _ := strconv.Atoi(r.Header.Get("X-Property"))
+		if propertyID < 1 {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
@@ -248,7 +247,7 @@ func (admin *admin) serveExecuteQuery(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// TODO(Gianluca): fix this:
-	columns, data, query, err := admin.apis.API(0).Property("1234567890").Visualization.ExecuteQuery(context.TODO(), jsonQuery)
+	columns, data, query, err := admin.apis.API(0).Property(1).Visualization.ExecuteQuery(context.TODO(), jsonQuery)
 	if err != nil {
 		log.Printf("[error] cannot execute query: %s", err)
 		w.Header().Add("X-Error", err.Error())

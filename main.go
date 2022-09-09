@@ -91,6 +91,7 @@ func main() {
 
 type Event struct {
 	Property       string
+	property       uint32
 	Device         string
 	osName         string
 	osVersion      string

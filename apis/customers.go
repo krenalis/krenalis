@@ -26,6 +26,7 @@ type Customer struct {
 	ID          int
 	Name        string
 	Email       string
+	Properties  []int
 	InternalIPs []string
 }
 
