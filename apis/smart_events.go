@@ -21,22 +21,22 @@ type SmartEvents struct {
 	*Properties
 }
 
-type (
-	SmartEventToCreate struct {
-		Name    string
-		Event   string
-		Pages   []Condition // for both "pageview" and "click"
-		Buttons []Condition // only for "click"
-	}
-	SmartEventToUpdate = SmartEventToCreate
-	SmartEvent         struct {
-		ID      int
-		Name    string
-		Event   string
-		Pages   []Condition // for both "pageview" and "click"
-		Buttons []Condition // only for "click"
-	}
-)
+type SmartEventToCreate struct {
+	Name    string
+	Event   string
+	Pages   []Condition // for both "pageview" and "click"
+	Buttons []Condition // only for "click"
+}
+
+type SmartEventToUpdate = SmartEventToCreate
+
+type SmartEvent struct {
+	ID      int
+	Name    string
+	Event   string
+	Pages   []Condition // for both "pageview" and "click"
+	Buttons []Condition // only for "click"
+}
 
 type InvalidSmartEventError string
 
