@@ -105,6 +105,7 @@ type Event struct {
 	Target         string // "https://example.com"
 	Text           string // "Add to cart"
 	Timestamp      time.Time
+	date           string
 	Title          string // "Product X"
 	URL            string // "https://example.com/product/x/y?x=10"
 	domain         string // "example.com"

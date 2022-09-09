@@ -72,3 +72,6 @@ ALTER TABLE `events` DROP COLUMN `url`;
 
 ALTER TABLE `events` UPDATE `user` = '0' WHERE TRUE;
 ALTER TABLE `events` MODIFY COLUMN `user` UInt32;
+
+ALTER TABLE `events` ADD COLUMN `date` Date AFTER `property`;
+ALTER TABLE `events` UPDATE `date` = toDate(`timestamp`) WHERE TRUE;

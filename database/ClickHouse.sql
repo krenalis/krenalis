@@ -5,6 +5,7 @@
 CREATE TABLE events
 (
     `property` String,
+    `date` Date,
     `timestamp` DateTime,
     `osName` Enum8('Android' = 1, 'Windows' = 2, 'iOS' = 3, 'MacOS' = 4, 'Linux' = 5, 'ChromeOS' = 6, 'Other' = 7),
     `osVersion` String,

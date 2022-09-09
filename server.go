@@ -211,6 +211,9 @@ func (server *Server) _serveLogEvent(w http.ResponseWriter, r *http.Request) err
 		return errBadRequest
 	}
 
+	// Enrich the event with the date.
+	event.date = event.Timestamp.Format("2006-01-02")
+
 	// Enrich the event with country and city.
 	geoDB, err := geoip2.Open(geoLite2Path)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -303,7 +306,7 @@ func (server *Server) flushEvents(events []*Event) {
 RETRY:
 	for {
 		batch, err := server.clickHouseConn.PrepareBatch(server.clickHouseCtx, "INSERT INTO `events`\n"+
-			"(`property`, `timestamp`, `language`, `osName`, `osVersion`, `browserName`, `browserVersion`, `deviceType`, "+
+			"(`property`, `date`,  `timestamp`, `language`, `osName`, `osVersion`, `browserName`, `browserVersion`, `deviceType`, "+
 			"`referrer`, `target`, `event`, `text`, `domain`, `path`, `queryString`, `title`, `user`, `country`, `city`)")
 		if err != nil {
 			log.Printf("[error] cannot log events: %s", err)
@@ -311,10 +314,10 @@ RETRY:
 			continue
 		}
 		for _, event := range events {
-			err := batch.Append(event.Property, event.Timestamp, event.Language, event.osName, event.osVersion,
-				event.browserName, event.browserVersion, event.deviceType,
-				event.Referrer, event.Target, event.Event, event.Text, event.domain,
-				event.path, event.queryString, event.Title, event.user, event.country, event.city)
+			err := batch.Append(event.Property, event.date, event.Timestamp, event.Language, event.osName,
+				event.osVersion, event.browserName, event.browserVersion, event.deviceType, event.Referrer,
+				event.Target, event.Event, event.Text, event.domain, event.path, event.queryString, event.Title,
+				event.user, event.country, event.city)
 			if err != nil {
 				log.Printf("[error] cannot log events: %s", err)
 				time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
