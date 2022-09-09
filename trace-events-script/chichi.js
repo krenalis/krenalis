@@ -24,8 +24,6 @@ function sendBeacon(data) {
 			console.log(`cannot get the geolocation: ${err.message}`);
 		}
 	);
-	let date = new Date();
-	d.timestamp = date.toISOString();
 	d.referrer = document.referrer;
 	if (navigator.connection) {
 		d.connection = navigator.connection.type == null ? '' : navigator.connection.type;

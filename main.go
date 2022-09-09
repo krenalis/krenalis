@@ -12,7 +12,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 	_ "time/tzdata" // workaround for clickhouse-go issue #162
 
 	"chichi/admin"
@@ -104,7 +103,7 @@ type Event struct {
 	user           uint32
 	Target         string // "https://example.com"
 	Text           string // "Add to cart"
-	Timestamp      time.Time
+	timestamp      string
 	date           string
 	Title          string // "Product X"
 	URL            string // "https://example.com/product/x/y?x=10"

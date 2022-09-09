@@ -211,8 +211,9 @@ func (server *Server) _serveLogEvent(w http.ResponseWriter, r *http.Request) err
 		return errBadRequest
 	}
 
-	// Enrich the event with the date.
-	event.date = event.Timestamp.Format("2006-01-02")
+	// Enrich the event with dates.
+	event.timestamp = time.Now().UTC().Format("2006-01-02 15:04:05")
+	event.date = event.timestamp[0:10]
 
 	// Enrich the event with country and city.
 	geoDB, err := geoip2.Open(geoLite2Path)
@@ -314,7 +315,7 @@ RETRY:
 			continue
 		}
 		for _, event := range events {
-			err := batch.Append(event.Property, event.date, event.Timestamp, event.Language, event.osName,
+			err := batch.Append(event.Property, event.date, event.timestamp, event.Language, event.osName,
 				event.osVersion, event.browserName, event.browserVersion, event.deviceType, event.Referrer,
 				event.Target, event.Event, event.Text, event.domain, event.path, event.queryString, event.Title,
 				event.user, event.country, event.city)
