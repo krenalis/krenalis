@@ -83,6 +83,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		propertyID := r.Header.Get("X-Property")
 		if utf8.RuneCountInString(propertyID) != 10 {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
 		}
 
 		// TODO(Gianluca): check if the property belongs to the customer.
