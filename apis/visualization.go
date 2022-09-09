@@ -341,7 +341,7 @@ func conditionToSQL(condition Condition) (string, error) {
 	case "LessThan":
 		where += "> "
 	case "LessEqualThan":
-		where += "> "
+		where += "<= "
 	default:
 		return "", invalidJSONQuery("operator %q not supported", condition.Operator)
 	}
