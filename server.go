@@ -87,7 +87,7 @@ func (server *Server) _serveLogEvent(w http.ResponseWriter, r *http.Request) err
 		return errBadRequest
 	}
 	row := server.mySQLDB.QueryRow("SELECT `customer` FROM `properties` WHERE `id` = ?", event.Property)
-	var customer string
+	var customer int
 	err = row.Scan(&customer)
 	if err != nil {
 		if err == sql.ErrNoRows {
