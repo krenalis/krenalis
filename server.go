@@ -244,7 +244,16 @@ func (server *Server) _serveLogEvent(w http.ResponseWriter, r *http.Request) err
 	}
 	if name, version := ua.Browser(); utf8.RuneCountInString(name) <= 20 {
 		event.browserName = name
-		if utf8.RuneCountInString(version) <= 20 {
+		if strings.Contains(version, ".") {
+			parts := strings.SplitN(version, ".", 3)
+			if len(parts) == 3 {
+				version = parts[0] + "." + parts[1]
+			}
+			if utf8.RuneCountInString(version) > 10 {
+				version = parts[0]
+			}
+		}
+		if utf8.RuneCountInString(version) <= 10 {
 			event.browserVersion = version
 		}
 	} else {
