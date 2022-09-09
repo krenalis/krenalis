@@ -95,7 +95,8 @@ type Event struct {
 	Device         string
 	osName         string
 	osVersion      string
-	browserName    string
+	browser        string
+	browserOther   string
 	browserVersion string
 	deviceType     string
 	Event          string // "pageview", "click", ...

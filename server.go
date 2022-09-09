@@ -242,22 +242,39 @@ func (server *Server) _serveLogEvent(w http.ResponseWriter, r *http.Request) err
 	if utf8.RuneCountInString(event.osVersion) <= 10 {
 		event.osVersion = osInfo.Version
 	}
-	if name, version := ua.Browser(); utf8.RuneCountInString(name) <= 20 {
-		event.browserName = name
-		if strings.Contains(version, ".") {
-			parts := strings.SplitN(version, ".", 3)
+	browserName, browserVersion := ua.Browser()
+	switch browserName {
+	default:
+		event.browser = "Other"
+		if len(browserName) <= 25 {
+			event.browserOther = browserName
+		}
+	case "Chrome":
+		event.browser = "Chrome"
+	case "Safari":
+		event.browser = "Safari"
+	case "Edge":
+		event.browser = "Edge"
+	case "Firefox":
+		event.browser = "Firefox"
+	case "Samsung Internet":
+		event.browser = "Samsung Internet"
+	case "Opera":
+		event.browser = "Opera"
+	}
+	if event.browser != "Other" || event.browserOther != "" {
+		if strings.Contains(browserVersion, ".") {
+			parts := strings.SplitN(browserVersion, ".", 3)
 			if len(parts) == 3 {
-				version = parts[0] + "." + parts[1]
+				browserVersion = parts[0] + "." + parts[1]
 			}
-			if utf8.RuneCountInString(version) > 10 {
-				version = parts[0]
+			if utf8.RuneCountInString(browserVersion) > 10 {
+				browserVersion = parts[0]
 			}
 		}
-		if utf8.RuneCountInString(version) <= 10 {
-			event.browserVersion = version
+		if utf8.RuneCountInString(browserVersion) <= 10 {
+			event.browserVersion = browserVersion
 		}
-	} else {
-		event.browserName = "Other"
 	}
 	event.deviceType = "desktop"
 	if ua.Mobile() {
@@ -315,8 +332,9 @@ func (server *Server) flushEvents(events []*Event) {
 RETRY:
 	for {
 		batch, err := server.clickHouseConn.PrepareBatch(server.clickHouseCtx, "INSERT INTO `events`\n"+
-			"(`property`, `date`,  `timestamp`, `language`, `osName`, `osVersion`, `browserName`, `browserVersion`, `deviceType`, "+
-			"`referrer`, `target`, `event`, `text`, `domain`, `path`, `queryString`, `title`, `user`, `country`, `city`)")
+			"(`property`, `date`,  `timestamp`, `language`, `osName`, `osVersion`, `browser`, `browserOther`, "+
+			"`browserVersion`, `deviceType`, "+"`referrer`, `target`, `event`, `text`, `domain`, `path`, "+
+			"`queryString`, `title`, `user`, `country`, `city`)")
 		if err != nil {
 			log.Printf("[error] cannot log events: %s", err)
 			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
@@ -324,9 +342,9 @@ RETRY:
 		}
 		for _, event := range events {
 			err := batch.Append(event.property, event.date, event.timestamp, event.Language, event.osName,
-				event.osVersion, event.browserName, event.browserVersion, event.deviceType, event.Referrer,
-				event.Target, event.Event, event.Text, event.domain, event.path, event.queryString, event.Title,
-				event.user, event.country, event.city)
+				event.osVersion, event.browser, event.browserOther, event.browserVersion, event.deviceType,
+				event.Referrer, event.Target, event.Event, event.Text, event.domain, event.path, event.queryString,
+				event.Title, event.user, event.country, event.city)
 			if err != nil {
 				log.Printf("[error] cannot log events: %s", err)
 				time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)

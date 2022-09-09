@@ -19,9 +19,9 @@ export let suggestionsData = [
             "Value": "it"
         },
         {
-            "Field": "browserName",
-            "Operator": "Contains",
-            "Value": "firefox"
+            "Field": "browser",
+            "Operator": "Equal",
+            "Value": "Firefox"
         }
     ],
     "DateRange": "Past7Days"
