@@ -194,3 +194,5 @@ CREATE TABLE events
 ENGINE = MergeTree
 PRIMARY KEY (`property`, `date`, `user`, `timestamp`)
 SETTINGS index_granularity = 8192;
+
+ALTER TABLE `events` MODIFY COLUMN `osName` Enum8('Other' = 0, 'Android' = 1, 'Windows' = 2, 'iOS' = 3, 'MacOS' = 4, 'Linux' = 5, 'Chrome OS' = 6);
