@@ -11,6 +11,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -51,56 +52,15 @@ func (err DomainNotAllowedError) Error() string {
 }
 
 // Create creates a new Smart Event.
+// If the Smart Event is not valid, returns InvalidSmartEventError.
+// If the Smart Event refers to a domain not allowed for this property, returns
+// a DomainNotAllowedError error.
 func (smartEvents *SmartEvents) Create(smartEvent SmartEventToCreate) (int64, error) {
 
-	// Do some validations.
-	switch smartEvent.Event {
-	case "pageview":
-		if smartEvent.Buttons != nil {
-			return 0, InvalidSmartEventError("apis: Buttons must be 'null' when 'Event' is 'pageview")
-		}
-	case "click":
-	default:
-		panic(fmt.Sprintf("apis: unsupported event type %q", smartEvent.Event))
-	}
-	err := validateConditions(smartEvent.Pages)
+	// Validate the Smart Event.
+	err := smartEvents.validateSmartEvent(smartEvent)
 	if err != nil {
 		return 0, err
-	}
-
-	// If one of the conditions has a domain, then every other condition must
-	// have the domain.
-	var haveDomains bool
-	if len(smartEvent.Pages) > 0 {
-		haveDomains = smartEvent.Pages[0].Domain != ""
-		for _, page := range smartEvent.Pages[1:] {
-			if haveDomains != (page.Domain != "") {
-				return 0, InvalidSmartEventError("cannot have both conditions with domain and no domains")
-			}
-		}
-	}
-	if len(smartEvent.Buttons) > 0 {
-		for _, button := range smartEvent.Buttons[1:] {
-			if haveDomains != (button.Domain != "") {
-				return 0, InvalidSmartEventError("cannot have both conditions with domain and no domains")
-			}
-		}
-	}
-
-	// Collect the domains used in the conditions.
-	var domains map[string]bool
-	if haveDomains {
-		domains = map[string]bool{}
-	}
-	for _, cond := range smartEvent.Pages {
-		if cond.Domain != "" {
-			domains[cond.Domain] = true
-		}
-	}
-	for _, cond := range smartEvent.Buttons {
-		if cond.Domain != "" {
-			domains[cond.Domain] = true
-		}
 	}
 
 	// Serialize the Smart Event to create and write it to the database.
@@ -124,12 +84,13 @@ func (smartEvents *SmartEvents) Create(smartEvent SmartEventToCreate) (int64, er
 		for _, row := range rows {
 			allowedDomains[row["name"].(string)] = true
 		}
-		for domain := range domains {
+		// Check if the domains are allowed.
+		for _, domain := range listSmartEventsDomains(smartEvent) {
 			if !allowedDomains[domain] {
 				return DomainNotAllowedError(domain)
 			}
 		}
-
+		// Write the Smart Event on the database.
 		query := "INSERT INTO `smart_events` (`property`, `name`, `event`, `pages`, `buttons`) VALUES (?, ?, ?, ?, ?)"
 		result, err := smartEvents.myDB.Exec(query, smartEvents.Properties.id, name, event, rawPages, rawButtons)
 		if err != nil {
@@ -216,26 +177,109 @@ func (smartEvents *SmartEvents) Get(id int) (SmartEvent, error) {
 	return deserializeSmartEvent(id, name, event, rawPages, rawButtons)
 }
 
+// Update updates the Smart Event with the given ID.
+// If the Smart Event is not valid, returns InvalidSmartEventError.
+// If the Smart Event refers to a domain not allowed for this property, returns
+// a DomainNotAllowedError error.
 func (smartEvents *SmartEvents) Update(id int, event SmartEventToUpdate) error {
+
+	// Check if the ID is syntactically valid.
 	if id <= 0 {
 		panic("apis: id must be > 0")
 	}
+
+	// Validate the Smart Event.
+	err := smartEvents.validateSmartEvent(event)
+	if err != nil {
+		return err
+	}
+
+	// Serialize the Smart Event to update and write it to the database.
 	_, _, rawPages, rawButtons, err := serializeSmartEvent(event)
 	if err != nil {
 		return err
 	}
+
 	toUpdate := map[string]any{
 		"name":    event.Name,
 		"event":   event.Event,
 		"pages":   rawPages,
 		"buttons": rawButtons,
 	}
-	_, err = smartEvents.myDB.Table("SmartEvents").Update(toUpdate, o2bsql.Where{
-		"id":       id,
-		"property": smartEvents.Properties.id,
+	err = smartEvents.myDB.Transaction(func(tx *o2bsql.Tx) error {
+		// Retrieve the list of rows for the current property.
+		rows, err := tx.Table("Domains").Select(
+			o2bsql.Columns{"name"},
+			o2bsql.Where{"property": smartEvents.Properties.id},
+			nil, 0, 0,
+		).Rows()
+		if err != nil {
+			return fmt.Errorf("cannot retrieve the list of domains: %s", err)
+		}
+		allowedDomains := map[string]bool{}
+		for _, row := range rows {
+			allowedDomains[row["name"].(string)] = true
+		}
+		// Check if the domains are allowed.
+		for _, domain := range listSmartEventsDomains(event) {
+			if !allowedDomains[domain] {
+				return DomainNotAllowedError(domain)
+			}
+		}
+		// Write the Smart Event on the database.
+		_, err = smartEvents.myDB.Table("SmartEvents").Update(toUpdate, o2bsql.Where{
+			"id":       id,
+			"property": smartEvents.Properties.id,
+		})
+		return err
 	})
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+// validateSmartEvent validates the given Smart Event. If the validation fails,
+// returns an InvalidSmartEventError error.
+func (smartEvents *SmartEvents) validateSmartEvent(smartEvent SmartEventToCreate) error {
+	switch smartEvent.Event {
+	case "pageview":
+		if smartEvent.Buttons != nil {
+			return InvalidSmartEventError("apis: Buttons must be 'null' when 'Event' is 'pageview")
+		}
+	case "click":
+	default:
+		return InvalidSmartEventError(fmt.Sprintf("apis: unsupported event type %q", smartEvent.Event))
+	}
+	for _, cond := range smartEvent.Pages {
+		_, err := conditionToSQL(cond)
+		if err != nil {
+			return InvalidSmartEventError(err.Error())
+		}
+	}
+	for _, cond := range smartEvent.Buttons {
+		_, err := conditionToSQL(cond)
+		if err != nil {
+			return InvalidSmartEventError(err.Error())
+		}
+	}
+	// If one of the conditions has a domain, then every other condition must
+	// have the domain.
+	var haveDomains bool
+	if len(smartEvent.Pages) > 0 {
+		haveDomains = smartEvent.Pages[0].Domain != ""
+		for _, page := range smartEvent.Pages[1:] {
+			if haveDomains != (page.Domain != "") {
+				return InvalidSmartEventError("cannot have both conditions with domain and no domains")
+			}
+		}
+	}
+	if len(smartEvent.Buttons) > 0 {
+		for _, button := range smartEvent.Buttons[1:] {
+			if haveDomains != (button.Domain != "") {
+				return InvalidSmartEventError("cannot have both conditions with domain and no domains")
+			}
+		}
 	}
 	return nil
 }
@@ -276,21 +320,25 @@ func serializeSmartEvent(smartEvent SmartEventToCreate) (name, event string, raw
 	return smartEvent.Name, smartEvent.Event, string(rawPagesBytes), string(rawButtonsBytes), nil
 }
 
-// validateCondition validate the given conditions, returning error if one of
-// them it's not valid.
-// Returns nil or an InvalidSmartEventError.
-func validateConditions(conditions []Condition) error {
-	// TODO(Gianluca): add more validations here.
-	for _, cond := range conditions {
-		if cond.Field == "" {
-			return InvalidSmartEventError("field 'Field' cannot be empty")
-		}
-		if cond.Operator == "" {
-			return InvalidSmartEventError("field 'Operator' cannot be empty")
-		}
-		if cond.Value == "" {
-			return InvalidSmartEventError("field 'Value' cannot be empty")
+// listSmartEventsDomains lists the domains for this Smart Event.
+func listSmartEventsDomains(smartEvent SmartEventToCreate) []string {
+	domainsSet := map[string]bool{}
+	for _, cond := range smartEvent.Pages {
+		if cond.Domain != "" {
+			domainsSet[cond.Domain] = true
 		}
 	}
-	return nil
+	for _, cond := range smartEvent.Buttons {
+		if cond.Domain != "" {
+			domainsSet[cond.Domain] = true
+		}
+	}
+	domains := make([]string, len(domainsSet))
+	i := 0
+	for k := range domainsSet {
+		domains[i] = k
+		i++
+	}
+	sort.Strings(domains)
+	return domains
 }

@@ -102,9 +102,16 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			defer r.Body.Close()
 			id, err := property.SmartEvents.Create(event)
 			if err != nil {
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
+				switch err.(type) {
+				case apis.DomainNotAllowedError,
+					apis.InvalidSmartEventError:
+					http.Error(w, fmt.Sprintf("Bad Request: %s", err), http.StatusBadRequest)
+					return
+				default:
+					log.Printf("[error] %v", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
 			}
 			_ = json.NewEncoder(w).Encode(id)
 			return
@@ -165,9 +172,16 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			defer r.Body.Close()
 			err = property.SmartEvents.Update(req.ID, req.SmartEvent)
 			if err != nil {
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
+				switch err.(type) {
+				case apis.DomainNotAllowedError,
+					apis.InvalidSmartEventError:
+					http.Error(w, fmt.Sprintf("Bad Request: %s", err), http.StatusBadRequest)
+					return
+				default:
+					log.Printf("[error] %v", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
 			}
 			return
 
