@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"chichi/pkg/open2b/clickhouse"
 	"chichi/pkg/open2b/sql"
 )
 
@@ -161,7 +162,7 @@ func (visualization *Visualization) jsonQueryToSQL(jq JSONQuery) (string, []stri
 			if !isValidColumnInQuery(groupBy) {
 				return "", nil, invalidJSONQuery("cannot group by %q", groupBy)
 			}
-			quotedColumn := sql.QuoteColumn(groupBy)
+			quotedColumn := clickhouse.QuoteColumn(groupBy)
 			groupBys = append(groupBys, quotedColumn)
 			columns = append(columns, quotedColumn)
 		}
@@ -323,7 +324,7 @@ func conditionToSQL(condition Condition) (string, error) {
 	if !isValidColumnInQuery(condition.Field) {
 		return "", invalidJSONQuery("invalid field %q", condition.Field)
 	}
-	quotedField := sql.QuoteColumn(condition.Field)
+	quotedField := clickhouse.QuoteColumn(condition.Field)
 	switch condition.Operator {
 	case "StartsWith":
 		return fmt.Sprintf("startsWith(%s, '%s')", quotedField, condition.Value), nil
