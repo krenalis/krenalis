@@ -1,7 +1,7 @@
 (() => {
 	
 	// set DEBUG to true if you are running Chichi's server on localhost.
-	const DEBUG = false;
+	const DEBUG = true;
 
 	if (navigator == null) {
 		console.error(`[ChichiError] cannot run Chichi: browser doesn't support the Navigator interface`);
