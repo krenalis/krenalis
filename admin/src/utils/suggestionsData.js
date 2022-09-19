@@ -43,12 +43,12 @@ export let suggestionsData = [
 }`,
     },
     {
-        description: "Page viewed from 2021/08/03 to 12:34 of 01/01/2022",
+        description: "Page viewed from 2021/08/03 to 01/01/2022",
         jsonQuery: `{
     "Graph": ["Count", "Pageview"],
     "GroupBy": ["Year"],
-    "DateFrom": "2021-08-03 00:00:00",
-    "DateTo": "2022-01-01 12:34:00"
+    "DateFrom": "2021-08-03",
+    "DateTo": "2022-01-01"
 }`,
     },
     {

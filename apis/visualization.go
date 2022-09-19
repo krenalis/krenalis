@@ -130,31 +130,31 @@ func (visualization *Visualization) jsonQueryToSQL(jq JSONQuery) (string, []stri
 			return "", nil, invalidJSONQuery("date range %q not supported", jq.DateRange)
 		}
 		if to != (time.Time{}) {
-			wheres = append(wheres, "`timestamp` <= "+timeToClickHouseDate(to))
+			wheres = append(wheres, "`date` <= "+timeToClickHouseDate(to))
 		}
 		if from != (time.Time{}) {
-			wheres = append(wheres, "`timestamp` >= "+timeToClickHouseDate(from))
+			wheres = append(wheres, "`date` >= "+timeToClickHouseDate(from))
 		}
 	}
 	if jq.DateFrom != "" {
-		wheres = append(wheres, "`timestamp` >= '"+jq.DateFrom+"'")
+		wheres = append(wheres, "`date` >= '"+jq.DateFrom+"'")
 	}
 	if jq.DateTo != "" {
-		wheres = append(wheres, "`timestamp` <= '"+jq.DateTo+"'")
+		wheres = append(wheres, "`date` <= '"+jq.DateTo+"'")
 	}
 
 	// GroupBy.
 	for _, groupBy := range jq.GroupBy {
 		switch groupBy {
 		case "Day":
-			groupBys = append(groupBys, "toDayOfMonth(`timestamp`)")
-			columns = append(columns, "toDayOfMonth(`timestamp`)")
+			groupBys = append(groupBys, "toDayOfMonth(`date`)")
+			columns = append(columns, "toDayOfMonth(`date`)")
 		case "Month":
-			groupBys = append(groupBys, "toMonth(`timestamp`)")
-			columns = append(columns, "toMonth(`timestamp`)")
+			groupBys = append(groupBys, "toMonth(`date`)")
+			columns = append(columns, "toMonth(`date`)")
 		case "Year":
-			groupBys = append(groupBys, "toYear(`timestamp`)")
-			columns = append(columns, "toYear(`timestamp`)")
+			groupBys = append(groupBys, "toYear(`date`)")
+			columns = append(columns, "toYear(`date`)")
 		case "":
 			return "", nil, invalidJSONQuery("field GroupBy is mandatory")
 		default:
@@ -228,10 +228,10 @@ func (visualization *Visualization) jsonQueryToSQL(jq JSONQuery) (string, []stri
 	return query, columns, nil
 }
 
-// timeToClickHouseDate represents t in a datetime string compatible with
+// timeToClickHouseDate represents t in a date string compatible with
 // ClickHouse.
 func timeToClickHouseDate(t time.Time) string {
-	return "'" + t.Format("2006-01-02 15:04:05") + "'"
+	return "'" + t.Format("2006-01-02") + "'"
 }
 
 // smartEventToSQL returns the SQL 'WHERE' expression relative to a Smart Event,
