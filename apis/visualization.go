@@ -158,6 +158,9 @@ func (visualization *Visualization) jsonQueryToSQL(jq JSONQuery) (string, []stri
 		case "":
 			return "", nil, invalidJSONQuery("field GroupBy is mandatory")
 		default:
+			if !isValidColumnInQuery(groupBy) {
+				return "", nil, invalidJSONQuery("cannot group by %q", groupBy)
+			}
 			quotedColumn := sql.QuoteColumn(groupBy)
 			groupBys = append(groupBys, quotedColumn)
 			columns = append(columns, quotedColumn)
@@ -317,6 +320,9 @@ func (visualization *Visualization) smartEventToSQL(which any) (string, bool, er
 // conditionToSQL returns an SQL expression corresponding to the given
 // Condition. Returns an InvalidJSONQueryError in case of an invalid condition.
 func conditionToSQL(condition Condition) (string, error) {
+	if !isValidColumnInQuery(condition.Field) {
+		return "", invalidJSONQuery("invalid field %q", condition.Field)
+	}
 	quotedField := sql.QuoteColumn(condition.Field)
 	switch condition.Operator {
 	case "StartsWith":
@@ -419,4 +425,35 @@ func (visualization *Visualization) runClickHouseQuery(ctx context.Context, quer
 		result = append(result, row)
 	}
 	return result, nil
+}
+
+// isValidColumnInQuery reports whether column is a valid column name that can
+// be used in a SQL query.
+func isValidColumnInQuery(column string) bool {
+	switch column {
+	case
+		`date`,
+		`timestamp`,
+		`osName`,
+		`osVersion`,
+		`browser`,
+		`browserOther`,
+		`browserVersion`,
+		`deviceType`,
+		`event`,
+		`language`,
+		`referrer`,
+		`target`,
+		`text`,
+		`title`,
+		`domain`,
+		`path`,
+		`queryString`,
+		`user`,
+		`country`,
+		`city`:
+		return true
+	default:
+		return false
+	}
 }
