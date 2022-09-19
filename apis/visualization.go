@@ -370,6 +370,9 @@ func (visualization *Visualization) runClickHouseQuery(ctx context.Context, quer
 			case "DateTime":
 				var value time.Time
 				sqlRow[j] = &value
+			case "FixedString(2)":
+				var value string
+				sqlRow[j] = &value
 			case "String":
 				var value string
 				sqlRow[j] = &value
