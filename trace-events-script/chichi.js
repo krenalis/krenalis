@@ -1,4 +1,7 @@
 (() => {
+	
+	// set DEBUG to true if you are running Chichi's server on localhost.
+	const DEBUG = false;
 
 	if (navigator == null) {
 		console.error(`[ChichiError] cannot run Chichi: browser doesn't support the Navigator interface`);
@@ -6,7 +9,7 @@
 	}
 
 	let script = document.querySelector('script[data-isChichi]');
-	let endpoint = script.src;
+	let endpoint = DEBUG ? 'https://localhost:9090/log-event' : script.src; // TODO(@Andrea): replace the last segment of script.src with 'log-event'
 	let property = script.dataset.property;
 
 	// immediately send the pageView event.
