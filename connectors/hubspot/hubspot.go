@@ -23,6 +23,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -91,12 +92,12 @@ func (c *Connector) ServeWebhook(ctx context.Context, w http.ResponseWriter, r *
 			ident.Group = strconv.Itoa(req.ObjectId)
 			connectors.UpdateGroup(ident, req.OccurredAt, connectors.Properties{
 				req.PropertyName: req.PropertyValue,
-			})
+			}, nil)
 		case "contact.propertyChange":
 			ident.User = strconv.Itoa(req.ObjectId)
 			connectors.UpdateUser(ident, req.OccurredAt, connectors.Properties{
 				req.PropertyName: req.PropertyValue,
-			})
+			}, nil)
 		case "company.creation":
 			ident.Group = strconv.Itoa(req.ObjectId)
 			connectors.CreateGroup(ident, req.OccurredAt, connectors.Properties{
@@ -206,7 +207,7 @@ func (c *Connector) SyncUsers(ctx context.Context, token, cursor string, propert
 		}
 		for _, obj := range objects {
 			ident := connectors.Identity{User: obj.ID}
-			connectors.UpdateUser(ident, obj.LastModifiedDate, obj.Properties)
+			connectors.UpdateUser(ident, obj.LastModifiedDate, obj.Properties, nil)
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
 		connectors.SetCursor(strconv.FormatInt(fromDate, 10))
@@ -223,6 +224,8 @@ func (c *Connector) SyncGroups(ctx context.Context, token, cursor string, proper
 		return err
 	}
 
+	var ids []string
+
 	it, err := c.newIterator(ctx, token, "Company", fromDate, properties, 100)
 	if err != nil {
 		return err
@@ -236,14 +239,55 @@ func (c *Connector) SyncGroups(ctx context.Context, token, cursor string, proper
 			break
 		}
 		for _, obj := range objects {
+			contacts, err := c.companyContacts(ctx, token, obj.ID)
+			if err != nil {
+				return err
+			}
 			ident := connectors.Identity{Group: obj.ID}
-			connectors.UpdateGroup(ident, obj.LastModifiedDate, obj.Properties)
+			connectors.UpdateGroup(ident, obj.LastModifiedDate, obj.Properties, contacts)
+			ids = append(ids, obj.ID)
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
 		connectors.SetCursor(strconv.FormatInt(fromDate, 10))
 	}
 
 	return nil
+}
+
+// companyContacts returns the contacts of the given company.
+func (c *Connector) companyContacts(ctx context.Context, token, company string) ([]string, error) {
+	contacts := []string{}
+	path := "/objects/companies/" + url.PathEscape(company) + "/associations/Contact"
+	after := ""
+	for {
+		var response struct {
+			Results []struct {
+				ID string
+			}
+			Paging struct {
+				Next struct {
+					After string
+				}
+			}
+		}
+		requestURL := path
+		if after != "" {
+			requestURL += "?after=" + url.QueryEscape(after)
+		}
+		err := c.call(ctx, token, "GET", requestURL, nil, 200, &response)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, result := range response.Results {
+			contacts = append(contacts, result.ID)
+		}
+		after = response.Paging.Next.After
+		if after == "" {
+			break
+		}
+	}
+	return contacts, nil
 }
 
 type iter struct {

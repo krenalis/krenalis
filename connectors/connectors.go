@@ -67,11 +67,11 @@ func SetCursor(cursor string) {
 	return
 }
 
-func UpdateGroup(ident Identity, updateTime int64, properties map[string]string) {
+func UpdateGroup(ident Identity, updateTime int64, properties map[string]string, users []string) {
 	return
 }
 
-func UpdateUser(ident Identity, updateTime int64, properties map[string]string) {
+func UpdateUser(ident Identity, updateTime int64, properties map[string]string, groups []string) {
 	return
 }
 
