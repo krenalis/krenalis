@@ -14,9 +14,10 @@ import (
 )
 
 type Connecter interface {
+	Groups(ctx context.Context, account, cursor string, properties []string) error
 	Properties(ctx context.Context, account string) ([]Property, error)
 	ServeWebhook(ctx context.Context, w http.ResponseWriter, r *http.Request) error
-	Groups(ctx context.Context, account, cursor string, properties []string) error
+	SetUsers(ctx context.Context, token string, users []User) error
 	Users(ctx context.Context, account, cursor string, properties []string) error
 }
 

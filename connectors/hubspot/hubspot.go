@@ -175,14 +175,31 @@ func (c *Connector) Properties(ctx context.Context, token string) ([]connectors.
 	return properties, nil
 }
 
-// SyncTo synchronizes companies and contacts modified starting from fromDate.
-func (c *Connector) SyncTo(ctx context.Context, token, users []connectors.User) error {
+// SetUsers sets the users.
+// It requires the "crm.objects.contacts.write" scope.
+func (c *Connector) SetUsers(ctx context.Context, token string, users []connectors.User) error {
 
-	//for _, user := range users {
-	//	c.call(token, "POST", "/objects/contacts/batch/update")
-	//}
+	var body bytes.Buffer
+	body.WriteString(`{"inputs":[`)
 
-	return nil
+	for i, user := range users {
+		if i > 0 {
+			body.WriteString(`,`)
+		}
+		id, _ := json.Marshal(user.ID)
+		body.WriteString(`{"id":`)
+		body.Write(id)
+		body.WriteString(`,"properties":`)
+		err := json.NewEncoder(&body).Encode(user.Properties)
+		if err != nil {
+			return err
+		}
+		body.WriteString(`}`)
+	}
+
+	body.WriteString(`]}`)
+
+	return c.call(ctx, token, "POST", "/objects/contacts/batch/update", &body, 200, nil)
 }
 
 // Users returns the users starting from the given cursor.

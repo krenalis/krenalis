@@ -37,6 +37,18 @@ func TestSync(t *testing.T) {
 	}
 }
 
+func TestSetUsers(t *testing.T) {
+	c := connectors.Connector("HubSpot", clientSecret)
+	user := connectors.User{
+		ID:         "1",
+		Properties: connectors.Properties{"email": "info@open2b.com"},
+	}
+	err := c.SetUsers(context.Background(), token, []connectors.User{user})
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func TestProperties(t *testing.T) {
 	c := connectors.Connector("HubSpot", clientSecret)
 	properties, err := c.Properties(context.Background(), token)
