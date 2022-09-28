@@ -185,8 +185,8 @@ func (c *Connector) SyncTo(ctx context.Context, token, users []connectors.User) 
 	return nil
 }
 
-// SyncUsers synchronizes contacts.
-func (c *Connector) SyncUsers(ctx context.Context, token, cursor string, properties []string) error {
+// Users returns the users starting from the given cursor.
+func (c *Connector) Users(ctx context.Context, token, cursor string, properties []string) error {
 
 	fromDate, err := parseCursor(cursor)
 	if err != nil {
@@ -216,8 +216,8 @@ func (c *Connector) SyncUsers(ctx context.Context, token, cursor string, propert
 	return nil
 }
 
-// SyncGroups synchronizes companies.
-func (c *Connector) SyncGroups(ctx context.Context, token, cursor string, properties []string) error {
+// Groups returns the groups starting from the given cursor.
+func (c *Connector) Groups(ctx context.Context, token, cursor string, properties []string) error {
 
 	fromDate, err := parseCursor(cursor)
 	if err != nil {

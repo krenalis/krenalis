@@ -16,8 +16,8 @@ import (
 type Connecter interface {
 	Properties(ctx context.Context, account string) ([]Property, error)
 	ServeWebhook(ctx context.Context, w http.ResponseWriter, r *http.Request) error
-	SyncGroups(ctx context.Context, account, cursor string, properties []string) error
-	SyncUsers(ctx context.Context, account, cursor string, properties []string) error
+	Groups(ctx context.Context, account, cursor string, properties []string) error
+	Users(ctx context.Context, account, cursor string, properties []string) error
 }
 
 type Properties map[string]string
