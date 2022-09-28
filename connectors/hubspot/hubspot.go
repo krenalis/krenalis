@@ -169,7 +169,7 @@ func (c *Connector) Properties(ctx context.Context, token string) ([]connectors.
 			Type  string
 		}
 	}
-	err := c.call(token, "GET", "/properties/contact", nil, 200, &response)
+	err := c.call(ctx, token, "GET", "/properties/contact", nil, 200, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -300,6 +300,7 @@ func (c *Connector) SyncGroups(ctx context.Context, token, cursor string, proper
 
 type iter struct {
 	*Connector
+	Context     context.Context
 	Token       string
 	Type        string
 	Path        string
@@ -335,6 +336,7 @@ func (c *Connector) newIterator(ctx context.Context, token, typ string, fromDate
 
 	it := iter{
 		Connector:   c,
+		Context:     ctx,
 		Token:       token,
 		Type:        typ,
 		Path:        path,
@@ -402,7 +404,7 @@ func (it *iter) Next() ([]object, error) {
 		}
 	}
 
-	err := it.call(it.Token, "POST", it.Path, &it.Body, 200, &response)
+	err := it.call(it.Context, it.Token, "POST", it.Path, &it.Body, 200, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -437,7 +439,7 @@ func (it *iter) Next() ([]object, error) {
 // ListObjects returns objects.
 // Requires the "crm.objects.contacts.read" scope for contacts and the
 // "crm.objects.companies.read" for companies.
-func (c *Connector) ListObjects(token, typ string, limit int, after string, properties []string) ([]connectors.Properties, string, error) {
+func (c *Connector) ListObjects(ctx context.Context, token, typ string, limit int, after string, properties []string) ([]connectors.Properties, string, error) {
 	var path string
 	switch typ {
 	case "Company":
@@ -473,7 +475,7 @@ func (c *Connector) ListObjects(token, typ string, limit int, after string, prop
 			}
 		}
 	}
-	err := c.call(token, "GET", path, nil, 200, &response)
+	err := c.call(ctx, token, "GET", path, nil, 200, &response)
 	if err != nil {
 		return nil, "", err
 	}
@@ -484,9 +486,9 @@ func (c *Connector) ListObjects(token, typ string, limit int, after string, prop
 	return objects, response.Paging.Next.After, nil
 }
 
-func (c *Connector) call(token, method, path string, body io.Reader, expectedStatus int, response any) error {
+func (c *Connector) call(ctx context.Context, token, method, path string, body io.Reader, expectedStatus int, response any) error {
 
-	req, err := http.NewRequest(method, "https://api.hubapi.com/crm/v3/"+path[1:], body)
+	req, err := http.NewRequestWithContext(ctx, method, "https://api.hubapi.com/crm/v3/"+path[1:], body)
 	if err != nil {
 		return err
 	}
