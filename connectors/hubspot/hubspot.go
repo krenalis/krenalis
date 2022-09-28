@@ -16,10 +16,8 @@ import (
 	"io"
 	"math"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -434,56 +432,6 @@ func (it *iter) Next() ([]object, error) {
 	it.FromDate = objects[len(objects)-1].LastModifiedDate + 1
 
 	return objects, nil
-}
-
-// ListObjects returns objects.
-// Requires the "crm.objects.contacts.read" scope for contacts and the
-// "crm.objects.companies.read" for companies.
-func (c *Connector) ListObjects(ctx context.Context, token, typ string, limit int, after string, properties []string) ([]connectors.Properties, string, error) {
-	var path string
-	switch typ {
-	case "Company":
-		path = "/objects/companies"
-	case "Contact":
-		path = "/objects/contacts"
-	default:
-		return nil, "", errors.New("invalid type")
-	}
-	if limit <= 0 || limit > math.MaxInt32 {
-		return nil, "", errors.New("invalid limit value")
-	}
-	query := url.Values{}
-	if limit != 10 {
-		query.Add("limit", strconv.Itoa(limit))
-	}
-	if after != "" {
-		query.Add("after", after)
-	}
-	if len(properties) > 0 {
-		query.Add("properties", strings.Join(properties, ","))
-	}
-	if len(query) > 0 {
-		path += "?" + query.Encode()
-	}
-	var response struct {
-		Results []struct {
-			Properties map[string]string
-		}
-		Paging struct {
-			Next struct {
-				After string
-			}
-		}
-	}
-	err := c.call(ctx, token, "GET", path, nil, 200, &response)
-	if err != nil {
-		return nil, "", err
-	}
-	objects := make([]connectors.Properties, len(response.Results))
-	for i, result := range response.Results {
-		objects[i] = result.Properties
-	}
-	return objects, response.Paging.Next.After, nil
 }
 
 func (c *Connector) call(ctx context.Context, token, method, path string, body io.Reader, expectedStatus int, response any) error {
