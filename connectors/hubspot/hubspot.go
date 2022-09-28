@@ -112,45 +112,6 @@ func (c *Connector) ServeWebhook(ctx context.Context, w http.ResponseWriter, r *
 	return nil
 }
 
-// isValidWebhook reports whether the webhook is valid.
-func isValidWebhook(clientSecret string, r *http.Request) bool {
-	// The HTTP method must be POST.
-	if r.Method != "POST" {
-		return false
-	}
-	// The timestamp cannot be older than 5 minutes.
-	timestamp, _ := strconv.ParseInt(r.Header.Get("X-HubSpot-Request-Timestamp"), 10, 64)
-	if timestamp < time.Now().UTC().Add(-5*time.Minute).UnixMilli() {
-		return false
-	}
-	// Read the signature.
-	signature, err := base64.StdEncoding.DecodeString(r.Header.Get("X-HubSpot-Signature-v3"))
-	if err != nil {
-		return false
-	}
-	// Read the body.
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		return false
-	}
-	_ = r.Body.Close()
-	// The body must be UTF-8 encoded.
-	if !utf8.Valid(body) {
-		return false
-	}
-	r.Body = io.NopCloser(bytes.NewReader(body))
-	// Compute the HMAC SHA-256 signature.
-	mac := hmac.New(sha256.New, []byte(clientSecret))
-	_, _ = io.WriteString(mac, "POST")
-	_, _ = io.WriteString(mac, "https://")
-	_, _ = io.WriteString(mac, r.URL.Host)
-	_, _ = io.WriteString(mac, r.RequestURI)
-	_, _ = mac.Write(body)
-	_, _ = io.WriteString(mac, r.Header.Get("X-HubSpot-Request-Timestamp"))
-	// The signature of the request must be the same as the computed signature.
-	return hmac.Equal(signature, mac.Sum(nil))
-}
-
 // Properties returns all contact and company properties.
 func (c *Connector) Properties(ctx context.Context, token string) ([]connectors.Property, error) {
 
@@ -204,24 +165,6 @@ func (c *Connector) Properties(ctx context.Context, token string) ([]connectors.
 	}
 
 	return properties, nil
-}
-
-// parseCursor parses a cursor and returns the last modified date.
-func parseCursor(cursor string) (int64, error) {
-	if cursor == "" {
-		return 0, nil
-	}
-	fromDate, err := strconv.ParseInt(cursor, 10, 64)
-	if err != nil || fromDate < 0 {
-		return 0, fmt.Errorf("invalid cursor: %q", cursor)
-	}
-	return fromDate, nil
-}
-
-// serializeCursor serialize a cursor with the object type and the last
-// modified date.
-func serializeCursor(companyFromDate, contactFromDate int64) string {
-	return strconv.FormatInt(companyFromDate, 10) + "/" + strconv.FormatInt(contactFromDate, 10)
 }
 
 // SyncTo synchronizes companies and contacts modified starting from fromDate.
@@ -482,4 +425,61 @@ func (c *Connector) call(ctx context.Context, token, method, path string, body i
 	}
 
 	return nil
+}
+
+// isValidWebhook reports whether the webhook is valid.
+func isValidWebhook(clientSecret string, r *http.Request) bool {
+	// The HTTP method must be POST.
+	if r.Method != "POST" {
+		return false
+	}
+	// The timestamp cannot be older than 5 minutes.
+	timestamp, _ := strconv.ParseInt(r.Header.Get("X-HubSpot-Request-Timestamp"), 10, 64)
+	if timestamp < time.Now().UTC().Add(-5*time.Minute).UnixMilli() {
+		return false
+	}
+	// Read the signature.
+	signature, err := base64.StdEncoding.DecodeString(r.Header.Get("X-HubSpot-Signature-v3"))
+	if err != nil {
+		return false
+	}
+	// Read the body.
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return false
+	}
+	_ = r.Body.Close()
+	// The body must be UTF-8 encoded.
+	if !utf8.Valid(body) {
+		return false
+	}
+	r.Body = io.NopCloser(bytes.NewReader(body))
+	// Compute the HMAC SHA-256 signature.
+	mac := hmac.New(sha256.New, []byte(clientSecret))
+	_, _ = io.WriteString(mac, "POST")
+	_, _ = io.WriteString(mac, "https://")
+	_, _ = io.WriteString(mac, r.URL.Host)
+	_, _ = io.WriteString(mac, r.RequestURI)
+	_, _ = mac.Write(body)
+	_, _ = io.WriteString(mac, r.Header.Get("X-HubSpot-Request-Timestamp"))
+	// The signature of the request must be the same as the computed signature.
+	return hmac.Equal(signature, mac.Sum(nil))
+}
+
+// parseCursor parses a cursor and returns the last modified date.
+func parseCursor(cursor string) (int64, error) {
+	if cursor == "" {
+		return 0, nil
+	}
+	fromDate, err := strconv.ParseInt(cursor, 10, 64)
+	if err != nil || fromDate < 0 {
+		return 0, fmt.Errorf("invalid cursor: %q", cursor)
+	}
+	return fromDate, nil
+}
+
+// serializeCursor serialize a cursor with the object type and the last
+// modified date.
+func serializeCursor(companyFromDate, contactFromDate int64) string {
+	return strconv.FormatInt(companyFromDate, 10) + "/" + strconv.FormatInt(contactFromDate, 10)
 }
