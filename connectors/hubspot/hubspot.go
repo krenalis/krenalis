@@ -242,8 +242,6 @@ func (c *Connector) Groups(token, cursor string, properties []string) error {
 		return err
 	}
 
-	var ids []string
-
 	it, err := c.newIterator(token, "Company", fromDate, properties, 100)
 	if err != nil {
 		return err
@@ -263,7 +261,6 @@ func (c *Connector) Groups(token, cursor string, properties []string) error {
 			}
 			ident := connectors.Identity{Group: obj.ID}
 			connectors.UpdateGroup(ident, obj.LastModifiedDate, obj.Properties, contacts)
-			ids = append(ids, obj.ID)
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
 		connectors.SetCursor(strconv.FormatInt(fromDate, 10))
