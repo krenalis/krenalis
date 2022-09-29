@@ -54,6 +54,7 @@ func (err *hubspotError) Error() string {
 
 type Connector struct {
 	ClientSecret string
+	Context      context.Context
 }
 
 func init() {
@@ -62,7 +63,7 @@ func init() {
 
 // ServeWebhook serves a webhook request.
 // See https://developers.hubspot.com/docs/api/webhooks.
-func (c *Connector) ServeWebhook(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func (c *Connector) ServeWebhook(w http.ResponseWriter, r *http.Request) error {
 
 	w.Header().Set("Content-Type", "text/plain")
 
@@ -121,7 +122,7 @@ func (c *Connector) ServeWebhook(ctx context.Context, w http.ResponseWriter, r *
 }
 
 // Properties returns all contact and company properties.
-func (c *Connector) Properties(ctx context.Context, token string) ([]connectors.Property, error) {
+func (c *Connector) Properties(token string) ([]connectors.Property, error) {
 
 	var response struct {
 		Results []struct {
@@ -136,7 +137,7 @@ func (c *Connector) Properties(ctx context.Context, token string) ([]connectors.
 			Type  string
 		}
 	}
-	err := c.call(ctx, token, "GET", "/properties/contact", nil, 200, &response)
+	err := c.call(token, "GET", "/properties/contact", nil, 200, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +178,7 @@ func (c *Connector) Properties(ctx context.Context, token string) ([]connectors.
 
 // SetUsers sets the users.
 // It requires the "crm.objects.contacts.write" scope.
-func (c *Connector) SetUsers(ctx context.Context, token string, users []connectors.User) error {
+func (c *Connector) SetUsers(token string, users []connectors.User) error {
 
 	var body bytes.Buffer
 	body.WriteString(`{"inputs":[`)
@@ -199,18 +200,18 @@ func (c *Connector) SetUsers(ctx context.Context, token string, users []connecto
 
 	body.WriteString(`]}`)
 
-	return c.call(ctx, token, "POST", "/objects/contacts/batch/update", &body, 200, nil)
+	return c.call(token, "POST", "/objects/contacts/batch/update", &body, 200, nil)
 }
 
 // Users returns the users starting from the given cursor.
-func (c *Connector) Users(ctx context.Context, token, cursor string, properties []string) error {
+func (c *Connector) Users(token, cursor string, properties []string) error {
 
 	fromDate, err := parseCursor(cursor)
 	if err != nil {
 		return err
 	}
 
-	it, err := c.newIterator(ctx, token, "Contact", fromDate, properties, 100)
+	it, err := c.newIterator(token, "Contact", fromDate, properties, 100)
 	if err != nil {
 		return err
 	}
@@ -234,7 +235,7 @@ func (c *Connector) Users(ctx context.Context, token, cursor string, properties 
 }
 
 // Groups returns the groups starting from the given cursor.
-func (c *Connector) Groups(ctx context.Context, token, cursor string, properties []string) error {
+func (c *Connector) Groups(token, cursor string, properties []string) error {
 
 	fromDate, err := parseCursor(cursor)
 	if err != nil {
@@ -243,7 +244,7 @@ func (c *Connector) Groups(ctx context.Context, token, cursor string, properties
 
 	var ids []string
 
-	it, err := c.newIterator(ctx, token, "Company", fromDate, properties, 100)
+	it, err := c.newIterator(token, "Company", fromDate, properties, 100)
 	if err != nil {
 		return err
 	}
@@ -256,7 +257,7 @@ func (c *Connector) Groups(ctx context.Context, token, cursor string, properties
 			break
 		}
 		for _, obj := range objects {
-			contacts, err := c.companyContacts(ctx, token, obj.ID)
+			contacts, err := c.companyContacts(token, obj.ID)
 			if err != nil {
 				return err
 			}
@@ -272,7 +273,7 @@ func (c *Connector) Groups(ctx context.Context, token, cursor string, properties
 }
 
 // companyContacts returns the contacts of the given company.
-func (c *Connector) companyContacts(ctx context.Context, token, company string) ([]string, error) {
+func (c *Connector) companyContacts(token, company string) ([]string, error) {
 	contacts := []string{}
 	path := "/objects/companies/" + url.PathEscape(company) + "/associations/Contact"
 	after := ""
@@ -291,7 +292,7 @@ func (c *Connector) companyContacts(ctx context.Context, token, company string) 
 		if after != "" {
 			requestURL += "?after=" + url.QueryEscape(after)
 		}
-		err := c.call(ctx, token, "GET", requestURL, nil, 200, &response)
+		err := c.call(token, "GET", requestURL, nil, 200, &response)
 		if err != nil {
 			return nil, err
 		}
@@ -309,7 +310,6 @@ func (c *Connector) companyContacts(ctx context.Context, token, company string) 
 
 type iter struct {
 	*Connector
-	Context     context.Context
 	Token       string
 	Type        string
 	Path        string
@@ -325,7 +325,7 @@ type iter struct {
 // be "Company" or "Contact".
 // Requires the "crm.objects.contacts.read" scope for contacts and the
 // "crm.objects.companies.read" for companies.
-func (c *Connector) newIterator(ctx context.Context, token, typ string, fromDate int64, properties []string, limit int) (*iter, error) {
+func (c *Connector) newIterator(token, typ string, fromDate int64, properties []string, limit int) (*iter, error) {
 
 	var path string
 	switch typ {
@@ -345,7 +345,6 @@ func (c *Connector) newIterator(ctx context.Context, token, typ string, fromDate
 
 	it := iter{
 		Connector:   c,
-		Context:     ctx,
 		Token:       token,
 		Type:        typ,
 		Path:        path,
@@ -413,7 +412,7 @@ func (it *iter) Next() ([]object, error) {
 		}
 	}
 
-	err := it.call(it.Context, it.Token, "POST", it.Path, &it.Body, 200, &response)
+	err := it.call(it.Token, "POST", it.Path, &it.Body, 200, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -445,9 +444,9 @@ func (it *iter) Next() ([]object, error) {
 	return objects, nil
 }
 
-func (c *Connector) call(ctx context.Context, token, method, path string, body io.Reader, expectedStatus int, response any) error {
+func (c *Connector) call(token, method, path string, body io.Reader, expectedStatus int, response any) error {
 
-	req, err := http.NewRequestWithContext(ctx, method, "https://api.hubapi.com/crm/v3/"+path[1:], body)
+	req, err := http.NewRequestWithContext(c.Context, method, "https://api.hubapi.com/crm/v3/"+path[1:], body)
 	if err != nil {
 		return err
 	}

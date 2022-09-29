@@ -26,32 +26,32 @@ func init() {
 }
 
 func TestSync(t *testing.T) {
-	c := connectors.Connector("HubSpot", clientSecret)
-	err := c.Users(context.Background(), token, "", []string{"email"})
+	c := connectors.Connector(context.Background(), "HubSpot", clientSecret)
+	err := c.Users(token, "", []string{"email"})
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = c.Groups(context.Background(), token, "", []string{"domain"})
+	err = c.Groups(token, "", []string{"domain"})
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func TestSetUsers(t *testing.T) {
-	c := connectors.Connector("HubSpot", clientSecret)
+	c := connectors.Connector(context.Background(), "HubSpot", clientSecret)
 	user := connectors.User{
 		ID:         "1",
 		Properties: connectors.Properties{"email": "info@open2b.com"},
 	}
-	err := c.SetUsers(context.Background(), token, []connectors.User{user})
+	err := c.SetUsers(token, []connectors.User{user})
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func TestProperties(t *testing.T) {
-	c := connectors.Connector("HubSpot", clientSecret)
-	properties, err := c.Properties(context.Background(), token)
+	c := connectors.Connector(context.Background(), "HubSpot", clientSecret)
+	properties, err := c.Properties(token)
 	if err != nil {
 		log.Fatal(err)
 	}
