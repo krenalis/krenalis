@@ -121,8 +121,8 @@ func (c *Connector) ServeWebhook(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// Properties returns all contact and company properties.
-func (c *Connector) Properties(token string) ([]connectors.Property, error) {
+// Properties returns all user and group properties.
+func (c *Connector) Properties(token string) ([]connectors.Property, []connectors.Property, error) {
 
 	var response struct {
 		Results []struct {
@@ -139,7 +139,7 @@ func (c *Connector) Properties(token string) ([]connectors.Property, error) {
 	}
 	err := c.call(token, "GET", "/properties/contact", nil, 200, &response)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	properties := make([]connectors.Property, 0)
@@ -173,7 +173,7 @@ func (c *Connector) Properties(token string) ([]connectors.Property, error) {
 		properties = append(properties, property)
 	}
 
-	return properties, nil
+	return properties, nil, nil
 }
 
 // SetUsers sets the users.

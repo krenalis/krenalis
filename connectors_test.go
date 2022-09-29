@@ -51,10 +51,12 @@ func TestSetUsers(t *testing.T) {
 
 func TestProperties(t *testing.T) {
 	c := connectors.Connector(context.Background(), "HubSpot", clientSecret)
-	properties, err := c.Properties(token)
+	userProperties, groupProperties, err := c.Properties(token)
 	if err != nil {
 		log.Fatal(err)
 	}
-	v, _ := json.Marshal(properties)
-	fmt.Printf("\n\nproperties:\n%s\n", v)
+	v, _ := json.Marshal(userProperties)
+	fmt.Printf("\n\nuser properties:\n%s\n", v)
+	v, _ = json.Marshal(groupProperties)
+	fmt.Printf("\n\ngroup properties:\n%s\n", v)
 }

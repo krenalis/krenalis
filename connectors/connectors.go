@@ -19,8 +19,8 @@ type Connecter interface {
 	// Groups returns the groups starting from the given cursor.
 	Groups(account, cursor string, properties []string) error
 
-	// Properties returns all contact and company properties.
-	Properties(account string) ([]Property, error)
+	// Properties returns all user and group properties.
+	Properties(account string) ([]Property, []Property, error)
 
 	// ServeWebhook serves a webhook request.
 	ServeWebhook(w http.ResponseWriter, r *http.Request) error
