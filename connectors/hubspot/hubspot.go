@@ -228,7 +228,7 @@ func (c *Connector) Users(token, cursor string, properties []string) error {
 			connectors.UpdateUser(ident, obj.LastModifiedDate, obj.Properties, nil)
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
-		connectors.SetCursor(strconv.FormatInt(fromDate, 10))
+		connectors.SetCursor(serializeCursor(fromDate))
 	}
 
 	return nil
@@ -545,8 +545,7 @@ func parseCursor(cursor string) (int64, error) {
 	return fromDate, nil
 }
 
-// serializeCursor serialize a cursor with the object type and the last
-// modified date.
-func serializeCursor(companyFromDate, contactFromDate int64) string {
-	return strconv.FormatInt(companyFromDate, 10) + "/" + strconv.FormatInt(contactFromDate, 10)
+// serializeCursor serialize a cursor.
+func serializeCursor(fromDate int64) string {
+	return strconv.FormatInt(fromDate, 10)
 }
