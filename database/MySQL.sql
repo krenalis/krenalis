@@ -48,3 +48,11 @@ CREATE TABLE `users` (
   `device` char(28) CHARACTER SET ascii DEFAULT NULL,
   PRIMARY KEY (`property`,`id`)
 );
+
+CREATE TABLE `schemas` (
+  `account` INT NOT NULL,
+  `user_schema` TEXT NOT NULL DEFAULT '',
+  `group_schema` TEXT NOT NULL DEFAULT '',
+  `event_schema` TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (`account`)
+);

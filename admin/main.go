@@ -75,6 +75,48 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Serve the schemas APIs.
+	if strings.HasPrefix(rpath, "/schemas/") {
+		rpath := rpath[len("/schemas"):]
+		switch rpath {
+		case "/get":
+			var request struct {
+				SchemaName string
+			}
+			err := json.NewDecoder(r.Body).Decode(&request)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			schema, err := admin.apis.Schemas.Get(customerID, request.SchemaName)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(schema)
+		case "/update":
+			var request struct {
+				SchemaName string
+				Schema     string
+			}
+			err := json.NewDecoder(r.Body).Decode(&request)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			err = admin.apis.Schemas.Update(customerID, request.SchemaName, request.Schema)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+		default:
+			http.NotFound(w, r)
+		}
+		return
+	}
+
 	if strings.HasPrefix(rpath, "/properties/") {
 
 		rpath := rpath[len("/properties"):]

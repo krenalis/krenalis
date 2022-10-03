@@ -64,3 +64,11 @@ ALTER TABLE `devices` MODIFY COLUMN `property` INT unsigned NOT NULL;
 
 TRUNCATE TABLE `users`;
 ALTER TABLE `users` MODIFY COLUMN `property` INT unsigned NOT NULL;
+
+CREATE TABLE `schemas` (
+  `account` INT NOT NULL,
+  `user_schema` TEXT NOT NULL DEFAULT '',
+  `group_schema` TEXT NOT NULL DEFAULT '',
+  `event_schema` TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (`account`)
+);

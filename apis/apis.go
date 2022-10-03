@@ -15,6 +15,7 @@ import (
 
 type APIs struct {
 	Customers *Customers
+	Schemas   *Schemas
 	myDB      *sql.DB
 	chDB      chDriver.Conn
 }
@@ -29,6 +30,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 	hasBeenCalled = true
 	apis := &APIs{myDB: myDB, chDB: chDB}
 	apis.Customers = &Customers{apis}
+	apis.Schemas = &Schemas{apis}
 	apis.initSchema()
 	return apis
 }
@@ -68,6 +70,13 @@ func (apis *APIs) initSchema() {
 		id       int
 		code     string
 		customer int
+	}{})
+
+	apis.myDB.Scheme("Schemas", "schemas", struct {
+		account      int
+		user_schema  string
+		group_schema string
+		event_schema string
 	}{})
 
 	apis.myDB.Scheme("SmartEvents", "smart_events", struct {
