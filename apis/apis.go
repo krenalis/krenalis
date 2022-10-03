@@ -14,10 +14,11 @@ import (
 )
 
 type APIs struct {
-	Customers *Customers
-	Schemas   *Schemas
-	myDB      *sql.DB
-	chDB      chDriver.Conn
+	Customers       *Customers
+	Schemas         *Schemas
+	Transformations *Transformations
+	myDB            *sql.DB
+	chDB            chDriver.Conn
 }
 
 var hasBeenCalled bool
@@ -31,6 +32,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 	apis := &APIs{myDB: myDB, chDB: chDB}
 	apis.Customers = &Customers{apis}
 	apis.Schemas = &Schemas{apis}
+	apis.Transformations = &Transformations{apis}
 	apis.initSchema()
 	return apis
 }
