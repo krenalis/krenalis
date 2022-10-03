@@ -72,3 +72,25 @@ CREATE TABLE `schemas` (
   `event_schema` TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (`account`)
 );
+
+CREATE TABLE `connectors` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(200) NOT NULL DEFAULT '',
+  `oauth_url` VARCHAR(500) NOT NULL DEFAULT '',
+  `logo_url` VARCHAR(500) NOT NULL DEFAULT '',
+  `client_id` VARCHAR(500) NOT NULL DEFAULT '',
+  `client_secret` VARCHAR(500) NOT NULL DEFAULT '',
+  `token_endpoint` VARCHAR(500) NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`)
+);
+
+INSERT INTO `connectors` (`id`, `name`, `oauth_url`, `logo_url`, `client_id`, `client_secret`, `token_endpoint`) VALUES ('1', 'Hubspot', 'https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read', 'https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/168_Hubspot_logo_logos-512.png', 'cef1005a-72be-4047-a301-ef6057588325', '136e50df-5b89-478f-bf01-4a71547fa668', 'https://api.hubapi.com/oauth/v1/token');
+
+CREATE TABLE `account_connectors` (
+  `account` INT NOT NULL,
+  `connector` INT NOT NULL,
+  `access_token` VARCHAR(500) NOT NULL DEFAULT '',
+  `refresh_token` VARCHAR(500) NOT NULL DEFAULT '',
+  `access_token_expiration_timestamp` TIMESTAMP NOT NULL,
+  PRIMARY KEY (`account`, `connector`)
+);

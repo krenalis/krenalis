@@ -14,6 +14,8 @@ export default class Sidebar extends Component {
                 <div className="Items">
                     <div className='Top'>
                         <SidebarItem link='dashboard' icon='space_dashboard' title='' />
+                        <SidebarItem link='connectors' icon='list_alt' title='' />
+                        <SidebarItem link='account/connectors' icon='account_circle' title='' />
                     </div>
                     <div className='Bottom'>
                         <SidebarItem link='dashboard' icon='settings' title='' />

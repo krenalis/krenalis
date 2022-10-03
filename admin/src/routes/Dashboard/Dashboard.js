@@ -167,7 +167,7 @@ export default class Dashboard extends Component {
                             </Accordion>
 
                             <div className='suggestions'>
-                                <h1 className='title'>Suggerimenti</h1>
+                                <div className='title'>Suggerimenti</div>
                                 {suggestions}
                             </div>
 

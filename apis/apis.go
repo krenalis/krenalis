@@ -14,11 +14,12 @@ import (
 )
 
 type APIs struct {
+	myDB            *sql.DB
+	chDB            chDriver.Conn
+	Connectors      *Connectors
 	Customers       *Customers
 	Schemas         *Schemas
 	Transformations *Transformations
-	myDB            *sql.DB
-	chDB            chDriver.Conn
 }
 
 var hasBeenCalled bool
@@ -30,6 +31,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 	}
 	hasBeenCalled = true
 	apis := &APIs{myDB: myDB, chDB: chDB}
+	apis.Connectors = &Connectors{apis}
 	apis.Customers = &Customers{apis}
 	apis.Schemas = &Schemas{apis}
 	apis.Transformations = &Transformations{apis}
@@ -94,6 +96,14 @@ func (apis *APIs) initSchema() {
 		property int
 		id       int
 		device   string
+	}{})
+
+	apis.myDB.Scheme("AccountConnectors", "account_connectors", struct {
+		account                           int
+		connector                         int
+		access_token                      string
+		refresh_token                     string
+		access_token_expiration_timestamp string
 	}{})
 
 }
