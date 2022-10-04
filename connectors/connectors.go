@@ -55,10 +55,14 @@ type User struct {
 	Properties Properties
 }
 
+// Identity is an identity on the app.
 type Identity struct {
+	// Account identifies the account on the app.
 	Account string
-	Group   string
-	User    string
+	// Group identifies the group on the app.
+	Group string
+	// User identifies the user on the app.
+	User string
 }
 
 type Conf struct {
