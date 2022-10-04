@@ -27,6 +27,7 @@ export default class Dashboard extends Component {
             columns: [],
             chartData: [],
             chartType: 'line',
+            statusMessage: null,
         }
         this.aceRef = React.createRef();
     }
@@ -35,31 +36,31 @@ export default class Dashboard extends Component {
         let queryObj = JSON.parse(this.state.jsonQuery);
         let [data, error] = await getChartData(queryObj);
         if (error !== null) {
-            this.setState({ 'statusMessage': error })
+            this.setState({ 'statusMessage': {type: 'error', text: error} });
             return;
         }
         this.setState({ 'chartData': data.chartData, 'columns': data.columns, 'sqlQuery': data.sqlQuery });
     }
 
     runQuery = async () => {
-        let jsonQuery = this.aceRef.current.editor.getValue()
+        let jsonQuery = this.aceRef.current.editor.getValue();
         let queryObj = JSON.parse(jsonQuery);
         let [data, error] = await getChartData(queryObj);
         if (error !== null) {
-            this.setState({ 'jsonQuery': jsonQuery, 'statusMessage': error })
+            this.setState({ 'jsonQuery': jsonQuery, 'statusMessage': {type: 'error', text: error} });
             return;
         }
-        this.setState({ 'jsonQuery': jsonQuery, 'chartData': data.chartData, 'columns': data.columns, 'sqlQuery': data.sqlQuery, 'statusMessage': '' });
+        this.setState({ 'jsonQuery': jsonQuery, 'chartData': data.chartData, 'columns': data.columns, 'sqlQuery': data.sqlQuery, 'statusMessage': null });
     }
 
     applySuggestion = async (jsonQuery) => {
         let queryObj = JSON.parse(jsonQuery);
         let [data, error] = await getChartData(queryObj);
         if (error !== null) {
-            this.setState({ 'jsonQuery': jsonQuery, 'statusMessage': error })
+            this.setState({ 'jsonQuery': jsonQuery, 'statusMessage': {type: 'error', text: error} });
             return;
         }
-        this.setState({ 'jsonQuery': jsonQuery, 'chartData': data.chartData, 'columns': data.columns, 'sqlQuery': data.sqlQuery, 'statusMessage': '' });
+        this.setState({ 'jsonQuery': jsonQuery, 'chartData': data.chartData, 'columns': data.columns, 'sqlQuery': data.sqlQuery, 'statusMessage': null });
     }
 
     toggleAutoUpdate = () => {
@@ -68,22 +69,22 @@ export default class Dashboard extends Component {
 
     autoUpdateQuery = async () => {
         if (!this.state.autoUpdate) return;
-        let jsonQuery = this.aceRef.current.editor.getValue()
+        let jsonQuery = this.aceRef.current.editor.getValue();
         let queryObj = JSON.parse(jsonQuery);
         let [data, error] = await getChartData(queryObj);
         if (error !== null) {
-            this.setState({ 'jsonQuery': jsonQuery, 'statusMessage': error })
+            this.setState({ 'jsonQuery': jsonQuery, 'statusMessage': {type: 'error', text: error} })
             return;
         }
-        this.setState({ 'jsonQuery': jsonQuery, 'chartData': data.chartData, 'columns': data.columns, 'sqlQuery': data.sqlQuery, 'statusMessage': '' });
+        this.setState({ 'jsonQuery': jsonQuery, 'chartData': data.chartData, 'columns': data.columns, 'sqlQuery': data.sqlQuery, 'statusMessage': null });
     }
 
     closeStatusMessage = () => {
-        this.setState({ 'statusMessage': '' });
+        this.setState({ 'statusMessage': null });
     }
 
     toggleSlideOver = () => {
-        this.setState({ 'isSlideOverOpen': !this.state.isSlideOverOpen })
+        this.setState({ 'isSlideOverOpen': !this.state.isSlideOverOpen });
     }
 
     render() {
@@ -113,7 +114,7 @@ export default class Dashboard extends Component {
 
                     </div>
 
-                    {this.state.statusMessage && this.state.statusMessage !== '' && <StatusMessage onClose={this.closeStatusMessage} text={this.state.statusMessage} />}
+                    {this.state.statusMessage && <StatusMessage onClose={this.closeStatusMessage} message={this.state.statusMessage} />}
 
                     <div className='editor'>
 

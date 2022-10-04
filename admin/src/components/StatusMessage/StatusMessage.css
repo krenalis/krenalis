@@ -1,11 +1,42 @@
 .StatusMessage {
-    background-color: var(--bg-error);
     border-radius: 5px;
-    margin-bottom: 50px;
+    margin: 30px 0;
     padding: 20px 30px;
     display: flex;
     justify-content: space-between;
     gap: 30px;
+}
+
+.StatusMessage.error {
+    background-color: var(--bg-error);
+}
+
+.StatusMessage.error .text {
+    color: var(--color-error);
+}
+
+.StatusMessage.success {
+    background-color: var(--bg-success);
+}
+
+.StatusMessage.success .text {
+    color: var(--color-success);
+}
+
+.StatusMessage.warning {
+    background-color: var(--bg-warning);
+}
+
+.StatusMessage.warning .text {
+    color: var(--color-warning);
+}
+
+.StatusMessage.info {
+    background-color: var(--bg-neutral);
+}
+
+.StatusMessage.info .text {
+    color: var(--color-neutral);
 }
 
 .StatusMessage .text {
@@ -14,11 +45,6 @@
     justify-content: center;
     gap: 15px;
     color: var(--text-primary);
-}
-
-.StatusMessage .text .error {
-    color: var(--color-error);
-    font-size: 30px;
 }
 
 .StatusMessage .action {

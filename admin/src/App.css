@@ -3,9 +3,15 @@
 	--bg-secondary: #f3f4f6;
 	--bg-dark: #131313;
 	--bg-overlay: #1313136e;
-	--bg-error: #fee2e2;
+	--bg-error: #fef2f2;
+	--bg-success: #ecfdf5;
+	--bg-warning: #fffbeb;
+	--bg-neutral: #fafafa;
 	--color-primary: #4f46e5;
 	--color-error: #dc2626;
+	--color-success: #059669;
+	--color-warning: #d97706;
+	--color-neutral: #52525b;
 	--text-primary: #222222;
 	--text-onaccent: #ffffff;
 	--border-primary: #cacaca;
@@ -17,6 +23,7 @@
 	box-sizing: border-box;
 	font-family: 'Inter', sans-serif;
 	font-size: 16px;
+	outline-color: var(--color-primary);
 }
 
 h1 {
@@ -69,4 +76,24 @@ body {
 
 .title {
 	font-size: 23px;
+}
+
+/* || Monaco editor icons */
+
+.codicon {
+    font-family: "codicon"!important;
+}
+
+.codicon::before {
+    font-family: "codicon"!important;
+}
+
+
+/* || Forms */
+
+select {
+	padding: 0 30px;
+    border-radius: 5px;
+    border: 0;
+	box-shadow: 0px 0px 3px 1px var(--shadow-primary);
 }
