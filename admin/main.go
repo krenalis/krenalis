@@ -119,7 +119,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		switch rpath {
 		case "/get":
 			var req struct {
-				Account   int
 				Connector int
 			}
 			err := json.NewDecoder(r.Body).Decode(&req)
@@ -127,7 +126,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			transf, err := admin.apis.Transformations.Get(req.Account, req.Connector)
+			transf, err := admin.apis.Transformations.Get(accountID, req.Connector)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -136,7 +135,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(transf)
 		case "/update":
 			var req struct {
-				Account        int
 				Connector      int
 				Transformation string
 			}
@@ -146,7 +144,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			err = admin.apis.Transformations.Update(
-				req.Account, req.Connector,
+				accountID, req.Connector,
 				apis.Transformation(req.Transformation))
 			if err != nil {
 				log.Printf("[error] %v", err)
@@ -154,6 +152,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+		return
 	}
 
 	// Serve the schemas APIs.

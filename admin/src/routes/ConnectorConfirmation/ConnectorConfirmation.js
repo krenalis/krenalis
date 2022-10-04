@@ -22,7 +22,7 @@ export default class ConnectorConfirmation extends Component {
 			});
 			connector = await res.json();
 		} catch (err) {
-			console.error(`error while calling 'connectors/get': ${err}`);
+			console.error(`error while calling 'connectors/get': ${err.message}`);
 		}
 		this.setState({ connector: connector });
 	}

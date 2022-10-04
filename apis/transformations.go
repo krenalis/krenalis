@@ -43,7 +43,7 @@ func (transformation *Transformations) Update(account, connector int, transform 
 	// TODO(Gianluca): revise table name and column names after the merging of
 	// the PR of @retini on OAuth.
 	_, err := transformation.APIs.myDB.Table("AccountConnectors").Update(
-		sql.Set{"transformation": transform},
+		sql.Set{"transformation": string(transform)},
 		sql.Where{"account": account, "connector": connector},
 	)
 	if err != nil {

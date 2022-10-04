@@ -6,7 +6,7 @@ export default async function call(url, json) {
     try {
         res = body ? await fetch(url, { method: 'POST', body: body }) : await fetch(url);
     } catch (err) {
-        return [null, `error while fetching ${url}: ${err}`];
+        return [null, `error while fetching ${url}: ${err.message}`];
     }
 
     if (res.status !== 200) {
@@ -32,7 +32,7 @@ export default async function call(url, json) {
     try {
         data = await res.json();
     } catch (err) {
-        return [null, `error while parsing json response from ${url}: ${err}`];
+        return [null, `error while parsing json response from ${url}: ${err.message}`];
     }
 
     return [data, null];

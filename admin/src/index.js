@@ -9,6 +9,7 @@ import ConnectorsList from './routes/ConnectorsList/ConnectorsList'
 import ConnectorConfirmation from './routes/ConnectorConfirmation/ConnectorConfirmation'
 import AccountConnectors from './routes/AccountConnectors/AccountConnectors';
 import SchemaSettings from './routes/SchemaSettings/SchemaSettings';
+import AccountConnector from './routes/AccountConnector/AccountConnector';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -20,6 +21,7 @@ root.render(
           <Route path='dashboard' element={<Dashboard />} />
           <Route path='connectors/confirmation/:id' element={<ConnectorConfirmation />} />
           <Route path='connectors' element={<ConnectorsList />} />
+          <Route path='account/connectors/:id' element={<AccountConnector />} />
           <Route path='account/connectors' element={<AccountConnectors />} />
           <Route path='schema' element={<SchemaSettings />} />
         </Route>

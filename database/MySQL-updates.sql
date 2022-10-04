@@ -110,3 +110,5 @@ ALTER TABLE `connectors_raw_users_data`
 	CHANGE COLUMN `connector` `connector` INT NOT NULL FIRST,
 	DROP PRIMARY KEY,
 	ADD PRIMARY KEY (`connector`, `account`, `user`);
+
+ALTER TABLE `account_connectors` ADD COLUMN `transformation` TEXT NOT NULL DEFAULT '' AFTER `access_token_expiration_timestamp`;

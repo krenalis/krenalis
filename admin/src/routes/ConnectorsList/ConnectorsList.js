@@ -17,7 +17,7 @@ export default class ConnectorsList extends Component {
 			let res = await fetch('/admin/connectors/find');
 			connectors = await res.json();
 		} catch (err) {
-			console.error(`error while calling 'connectors/find': ${err}`);
+			console.error(`error while calling 'connectors/find': ${err.message}`);
 		}
 		this.setState({ connectors: connectors });
 	}

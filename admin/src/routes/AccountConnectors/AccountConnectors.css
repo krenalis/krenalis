@@ -19,7 +19,6 @@
 
 .AccountConnectors .ConnectorEntry {
     margin: 0 auto 15px auto;
-    cursor: default;
 }
 
 .AccountConnectors .ConnectorEntry:last-child {

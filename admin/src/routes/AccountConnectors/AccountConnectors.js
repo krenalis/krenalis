@@ -17,7 +17,7 @@ export default class AccountConnectors extends Component {
 			let res = await fetch('/admin/connectors/findInstalledConnectors');
 			connectors = await res.json();
 		} catch (err) {
-			console.error(`error while calling 'connectors/findInstalledConnectors': ${err}`);
+			console.error(`error while calling 'connectors/findInstalledConnectors': ${err.message}`);
 		}
 		this.setState({connectors: connectors});
 	}
@@ -31,7 +31,7 @@ export default class AccountConnectors extends Component {
 				body: JSON.stringify([id]),
 			});
 		} catch (err) {
-			console.error(`error while calling 'connectors/delete': ${err}`);
+			console.error(`error while calling 'connectors/delete': ${err.message}`);
 		}
 		if (res.status === 200) {
 			let clone = this.state.connectors.slice();
@@ -43,6 +43,11 @@ export default class AccountConnectors extends Component {
 
 	}
 
+	handleConnectorClick = (e, id) => {
+		window.location = `/admin/account/connectors/${id}`;
+		return;
+	}
+
     render() {
         return (
 			<div className="AccountConnectors">
@@ -50,7 +55,7 @@ export default class AccountConnectors extends Component {
 					<div className="title">Your connectors</div>
 					<div className="connectors">
 						{this.state.connectors.length > 0 ? this.state.connectors.map((c) => {
-							return <ConnectorsEntry key={c.ID} id={c.ID} name={c.Name} logoUrl={c.LogoURL} onRemove={(e) => {this.removeConnector(e, c.ID)}} />
+							return <ConnectorsEntry onClick={(e) => {this.handleConnectorClick(e, c.ID)}} key={c.ID} id={c.ID} name={c.Name} logoUrl={c.LogoURL} onRemove={(e) => {this.removeConnector(e, c.ID)}} />
 						}) : `You don't have any connectors installed yet`}
 					</div>
 				</div>
