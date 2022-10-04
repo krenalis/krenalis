@@ -59,6 +59,12 @@ func (apis *APIs) initSchema() {
 		internalIPs string
 	}{})
 
+	apis.myDB.Scheme("ConnectorsRawUserData", "connectors_raw_users_data", struct {
+		account   int
+		connector int
+		data      string
+	}{})
+
 	apis.myDB.Scheme("Devices", "devices", struct {
 		property int
 		id       string

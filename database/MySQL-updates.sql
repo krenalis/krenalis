@@ -94,3 +94,10 @@ CREATE TABLE `account_connectors` (
   `access_token_expiration_timestamp` TIMESTAMP NOT NULL,
   PRIMARY KEY (`account`, `connector`)
 );
+
+CREATE TABLE `connectors_raw_users_data` (
+  `account` int NOT NULL,
+  `connector` int NOT NULL,
+  `data` text NOT NULL,
+  PRIMARY KEY (`account`,`connector`)
+);

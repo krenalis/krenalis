@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"chichi/apis"
+	"chichi/connectors"
 
 	"github.com/evanw/esbuild/pkg/api"
 )
@@ -79,6 +80,36 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if rpath == "/api/visualization" {
 		admin.serveExecuteQuery(w, r)
+		return
+	}
+
+	// Handle the "/import-raw-user-data-from-connector" endpoint.
+	if strings.HasPrefix(rpath, "/import-raw-user-data-from-connector") {
+		var req struct {
+			Account       int
+			Connector     int
+			ConnectorName string
+		}
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+		accessToken, err := admin.getConnectorAccessToken(req.Account, req.Connector, false)
+		if err != nil {
+			log.Printf("[error] cannot retrieve access token: %s", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		connector := connectors.Connector(context.TODO(), req.ConnectorName, accessToken)
+		// TODO(Gianluca): this call to "Users" is just a stub. Add the correct
+		// parameters.
+		err = connector.Users("", "", []string{"firstName"})
+		if err != nil {
+			log.Printf("[error] %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 

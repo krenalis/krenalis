@@ -9,8 +9,11 @@ package connectors
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"reflect"
+
+	"chichi/pkg/open2b/sql"
 )
 
 // Connecter is the interface implemented by the connectors.
@@ -62,6 +65,9 @@ type Conf struct {
 	ClientSecret string
 }
 
+// TODO(Gianluca): this should be removed, it's just for prototyping:
+var MySQLDB *sql.DB
+
 var connectors = map[string]any{}
 
 func RegisterConnector(name string, value any) {
@@ -85,7 +91,24 @@ func UpdateGroup(ident Identity, updateTime int64, properties map[string]string,
 }
 
 func UpdateUser(ident Identity, updateTime int64, properties map[string]string, groups []string) {
-	return
+	// TODO(Gianluca): use the correct user. Where should we take it?
+	connector := 1
+	data, err := json.Marshal(properties)
+	if err != nil {
+		// TODO(Gianluca): improve error handling here.
+		panic(err)
+	}
+	_, err = MySQLDB.Table("ConnectorsRawUserData").Add(
+		map[string]any{
+			"account":   ident.Account,
+			"connector": connector,
+			"data":      string(data),
+		},
+		nil, // TODO(Gianluca): pass the correct value to the "onDuplicate" parameter.
+	)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func CreateGroup(ident Identity, creationTime int64, properties map[string]string) {
