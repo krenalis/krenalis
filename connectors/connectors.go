@@ -20,7 +20,7 @@ import (
 type Connecter interface {
 
 	// Groups returns the groups starting from the given cursor.
-	Groups(account, cursor string, properties []string) error
+	Groups(account, cursor string) error
 
 	// Properties returns all user and group properties.
 	Properties(account string) ([]Property, []Property, error)
@@ -32,7 +32,7 @@ type Connecter interface {
 	SetUsers(token string, users []User) error
 
 	// Users returns the users starting from the given cursor.
-	Users(account, cursor string, properties []string) error
+	Users(account, cursor string) error
 }
 
 type Properties map[string]string

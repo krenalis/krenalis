@@ -104,7 +104,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		connector := connectors.Connector(context.TODO(), req.ConnectorName, accessToken)
 		// TODO(Gianluca): this call to "Users" is just a stub. Add the correct
 		// parameters.
-		err = connector.Users("", "", []string{"firstName"})
+		err = connector.Users("", "")
 		if err != nil {
 			log.Printf("[error] %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)

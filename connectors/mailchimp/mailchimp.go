@@ -24,7 +24,7 @@ func init() {
 }
 
 // Groups returns the groups starting from the given cursor.
-func (c *Connector) Groups(account, cursor string, properties []string) error {
+func (c *Connector) Groups(account, cursor string) error {
 	return nil
 }
 
@@ -44,6 +44,6 @@ func (c *Connector) SetUsers(token string, users []connectors.User) error {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *Connector) Users(account, cursor string, properties []string) error {
+func (c *Connector) Users(account, cursor string) error {
 	return nil
 }

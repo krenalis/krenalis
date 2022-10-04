@@ -204,14 +204,14 @@ func (c *Connector) SetUsers(token string, users []connectors.User) error {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *Connector) Users(token, cursor string, properties []string) error {
+func (c *Connector) Users(token, cursor string) error {
 
 	fromDate, err := parseCursor(cursor)
 	if err != nil {
 		return err
 	}
 
-	it, err := c.newIterator(token, "Contact", fromDate, properties, 100)
+	it, err := c.newIterator(token, "Contact", fromDate, 100)
 	if err != nil {
 		return err
 	}
@@ -235,14 +235,14 @@ func (c *Connector) Users(token, cursor string, properties []string) error {
 }
 
 // Groups returns the groups starting from the given cursor.
-func (c *Connector) Groups(token, cursor string, properties []string) error {
+func (c *Connector) Groups(token, cursor string) error {
 
 	fromDate, err := parseCursor(cursor)
 	if err != nil {
 		return err
 	}
 
-	it, err := c.newIterator(token, "Company", fromDate, properties, 100)
+	it, err := c.newIterator(token, "Company", fromDate, 100)
 	if err != nil {
 		return err
 	}
@@ -307,22 +307,20 @@ func (c *Connector) companyContacts(token, company string) ([]string, error) {
 
 type iter struct {
 	*Connector
-	Token       string
-	Type        string
-	Path        string
-	FromDate    int64
-	Limit       int
-	Properties  []string
-	HasProperty map[string]bool
-	Body        bytes.Buffer
-	Terminated  bool
+	Token      string
+	Type       string
+	Path       string
+	FromDate   int64
+	Limit      int
+	Body       bytes.Buffer
+	Terminated bool
 }
 
 // newIterator returns an iterator to iterates on objects of type typ. typ can
 // be "Company" or "Contact".
 // Requires the "crm.objects.contacts.read" scope for contacts and the
 // "crm.objects.companies.read" for companies.
-func (c *Connector) newIterator(token, typ string, fromDate int64, properties []string, limit int) (*iter, error) {
+func (c *Connector) newIterator(token, typ string, fromDate int64, limit int) (*iter, error) {
 
 	var path string
 	switch typ {
@@ -336,22 +334,14 @@ func (c *Connector) newIterator(token, typ string, fromDate int64, properties []
 	if limit < 0 || limit > math.MaxInt32 {
 		return nil, errors.New("invalid limit")
 	}
-	if len(properties) == 0 {
-		return nil, errors.New("properties cannot be empty")
-	}
 
 	it := iter{
-		Connector:   c,
-		Token:       token,
-		Type:        typ,
-		Path:        path,
-		FromDate:    fromDate,
-		Limit:       limit,
-		Properties:  properties,
-		HasProperty: map[string]bool{},
-	}
-	for _, p := range properties {
-		it.HasProperty[p] = true
+		Connector: c,
+		Token:     token,
+		Type:      typ,
+		Path:      path,
+		FromDate:  fromDate,
+		Limit:     limit,
 	}
 
 	return &it, nil
@@ -379,16 +369,7 @@ func (it *iter) Next() ([]object, error) {
 	it.Body.WriteString(`{"filterGroups":[{"filters":[{"value":"`)
 	it.Body.WriteString(strconv.FormatInt(it.FromDate, 10))
 	it.Body.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
-		`]}],"sorts":["` + propertyName + `"],"properties":[`)
-	for i, property := range it.Properties {
-		if i > 0 {
-			it.Body.WriteString(`,`)
-		}
-		it.Body.WriteString(`"`)
-		it.Body.WriteString(property)
-		it.Body.WriteString(`"`)
-	}
-	it.Body.WriteString(`]`)
+		`]}],"sorts":["` + propertyName + `"]`)
 	if it.Limit != 0 {
 		it.Body.WriteString(`,"limit":`)
 		it.Body.WriteString(strconv.Itoa(it.Limit))
@@ -423,11 +404,6 @@ func (it *iter) Next() ([]object, error) {
 		date, err := time.Parse(time.RFC3339, result.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("invalid updateAt returned by HubSpot: %q", date)
-		}
-		for p := range result.Properties {
-			if !it.HasProperty[p] {
-				delete(result.Properties, p)
-			}
 		}
 		objects[i] = object{
 			ID:               result.ID,

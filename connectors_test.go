@@ -27,11 +27,11 @@ func init() {
 
 func TestSync(t *testing.T) {
 	c := connectors.Connector(context.Background(), "HubSpot", clientSecret)
-	err := c.Users(token, "", []string{"email"})
+	err := c.Users(token, "")
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = c.Groups(token, "", []string{"domain"})
+	err = c.Groups(token, "")
 	if err != nil {
 		log.Fatal(err)
 	}
