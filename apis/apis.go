@@ -19,6 +19,7 @@ type APIs struct {
 	Connectors      *Connectors
 	Customers       *Customers
 	Schemas         *Schemas
+	Properties      *Properties
 	Transformations *Transformations
 }
 
@@ -34,6 +35,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 	apis.Connectors = &Connectors{apis}
 	apis.Customers = &Customers{apis}
 	apis.Schemas = &Schemas{apis}
+	apis.Properties = &Properties{apis}
 	apis.Transformations = &Transformations{apis}
 	apis.initSchema()
 	return apis

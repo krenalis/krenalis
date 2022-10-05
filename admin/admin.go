@@ -83,6 +83,18 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Handle the "/user-schema-properties" endpoint.
+	if strings.HasPrefix(rpath, "/user-schema-properties") {
+		propertyNames, err := admin.apis.Properties.UserSchemaProperties(accountID)
+		if err != nil {
+			log.Printf("[error] cannot retrieve properties: %s", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(propertyNames)
+		return
+	}
+
 	// Handle the "/import-raw-user-data-from-connector" endpoint.
 	if strings.HasPrefix(rpath, "/import-raw-user-data-from-connector") {
 		var req struct {
