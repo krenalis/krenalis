@@ -19,7 +19,7 @@ import (
 )
 
 type SmartEvents struct {
-	*Properties
+	*DeprecatedProperties
 }
 
 type SmartEventToCreate struct {
@@ -74,7 +74,7 @@ func (smartEvents *SmartEvents) Create(smartEvent SmartEventToCreate) (int64, er
 		// Retrieve the list of rows for the current property.
 		rows, err := tx.Table("Domains").Select(
 			o2bsql.Columns{"name"},
-			o2bsql.Where{"property": smartEvents.Properties.id},
+			o2bsql.Where{"property": smartEvents.DeprecatedProperties.id},
 			nil, 0, 0,
 		).Rows()
 		if err != nil {
@@ -92,7 +92,7 @@ func (smartEvents *SmartEvents) Create(smartEvent SmartEventToCreate) (int64, er
 		}
 		// Write the Smart Event on the database.
 		query := "INSERT INTO `smart_events` (`property`, `name`, `event`, `pages`, `buttons`) VALUES (?, ?, ?, ?, ?)"
-		result, err := smartEvents.myDB.Exec(query, smartEvents.Properties.id, name, event, rawPages, rawButtons)
+		result, err := smartEvents.myDB.Exec(query, smartEvents.DeprecatedProperties.id, name, event, rawPages, rawButtons)
 		if err != nil {
 			return err
 		}
@@ -124,14 +124,14 @@ func (smartEvents *SmartEvents) Delete(ids []int) error {
 	}
 	in.WriteString(")")
 	query := "DELETE FROM `smart_events` WHERE `id` IN " + in.String() + "AND `property` = ?"
-	_, err := smartEvents.myDB.Exec(query, smartEvents.Properties.id)
+	_, err := smartEvents.myDB.Exec(query, smartEvents.DeprecatedProperties.id)
 	return err
 }
 
 // Find finds the Smart Events.
 func (smartEvents *SmartEvents) Find() ([]SmartEvent, error) {
 	query := "SELECT `id`, `name`, `event`, `pages`, `buttons` FROM `smart_events` WHERE `property` = ? ORDER BY `id`"
-	rows, err := smartEvents.myDB.Query(query, smartEvents.Properties.id)
+	rows, err := smartEvents.myDB.Query(query, smartEvents.DeprecatedProperties.id)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func (smartEvents *SmartEvents) Get(id int) (SmartEvent, error) {
 		panic("apis: id must be > 0")
 	}
 	query := "SELECT `name`, `event`, `pages`, `buttons` FROM `smart_events` WHERE `id` = ? AND `property` = ?"
-	row := smartEvents.myDB.QueryRow(query, id, smartEvents.Properties.id)
+	row := smartEvents.myDB.QueryRow(query, id, smartEvents.DeprecatedProperties.id)
 	var name, event string
 	var rawPages, rawButtons string
 	err := row.Scan(&name, &event, &rawPages, &rawButtons)
@@ -210,7 +210,7 @@ func (smartEvents *SmartEvents) Update(id int, event SmartEventToUpdate) error {
 		// Retrieve the list of rows for the current property.
 		rows, err := tx.Table("Domains").Select(
 			o2bsql.Columns{"name"},
-			o2bsql.Where{"property": smartEvents.Properties.id},
+			o2bsql.Where{"property": smartEvents.DeprecatedProperties.id},
 			nil, 0, 0,
 		).Rows()
 		if err != nil {
@@ -229,7 +229,7 @@ func (smartEvents *SmartEvents) Update(id int, event SmartEventToUpdate) error {
 		// Write the Smart Event on the database.
 		_, err = smartEvents.myDB.Table("SmartEvents").Update(toUpdate, o2bsql.Where{
 			"id":       id,
-			"property": smartEvents.Properties.id,
+			"property": smartEvents.DeprecatedProperties.id,
 		})
 		return err
 	})

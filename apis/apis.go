@@ -114,10 +114,10 @@ func (apis *APIs) initSchema() {
 
 }
 
-// Property returns an instance of Properties which operates on the given
-// property.
-func (api *API) Property(property int) *Properties {
-	properties := &Properties{
+// DeprecatedProperty returns an instance of DeprecatedProperties which operates
+// on the given property.
+func (api *API) DeprecatedProperty(property int) *DeprecatedProperties {
+	properties := &DeprecatedProperties{
 		API: api,
 		id:  property,
 	}

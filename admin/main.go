@@ -268,7 +268,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// TODO(Gianluca): check if the property belongs to the customer.
 
-		property := API.Property(propertyID)
+		deprecatedProperty := API.DeprecatedProperty(propertyID)
 
 		// Serve the Smart Event APIs.
 		switch rpath {
@@ -280,7 +280,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			id, err := property.SmartEvents.Create(event)
+			id, err := deprecatedProperty.SmartEvents.Create(event)
 			if err != nil {
 				switch err.(type) {
 				case apis.DomainNotAllowedError,
@@ -304,7 +304,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			err = property.SmartEvents.Delete(eventIDs)
+			err = deprecatedProperty.SmartEvents.Delete(eventIDs)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -313,7 +313,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 
 		case "/smart-events.find":
-			smartEvents, err := property.SmartEvents.Find()
+			smartEvents, err := deprecatedProperty.SmartEvents.Find()
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -330,7 +330,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			smartEvents, err := property.SmartEvents.Get(id)
+			smartEvents, err := deprecatedProperty.SmartEvents.Get(id)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -350,7 +350,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			err = property.SmartEvents.Update(req.ID, req.SmartEvent)
+			err = deprecatedProperty.SmartEvents.Update(req.ID, req.SmartEvent)
 			if err != nil {
 				switch err.(type) {
 				case apis.DomainNotAllowedError,
@@ -441,7 +441,7 @@ func (admin *admin) serveExecuteQuery(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// TODO(Gianluca): fix this:
-	columns, data, query, err := admin.apis.API(0).Property(1).Visualization.ExecuteJSONQuery(context.TODO(), jsonQuery)
+	columns, data, query, err := admin.apis.API(0).DeprecatedProperty(1).Visualization.ExecuteJSONQuery(context.TODO(), jsonQuery)
 	if err != nil {
 		switch err.(type) {
 		case apis.InvalidJSONQueryError, apis.SmartEventNotFoundError:

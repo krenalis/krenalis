@@ -20,14 +20,14 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-type Properties struct {
+type DeprecatedProperties struct {
 	*API
 	SmartEvents   *SmartEvents
 	Visualization *Visualization
 	id            int
 }
 
-type Property struct {
+type DeprecatedProperty struct {
 	ID      int
 	Code    string
 	Domains []string
@@ -40,7 +40,7 @@ var ErrDomainNameNotValid = errors.New("domain name is not valid")
 // Create creates a new property for the current customer and returns its
 // identifier. If the customer does not exist anymore, it returns the
 // ErrCustomerNotFound error.
-func (this *Properties) Create() (int, error) {
+func (this *DeprecatedProperties) Create() (int, error) {
 	var id int
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		exists, err := tx.Table("Customers").Exists(sql.Where{"id": this.customer})
@@ -82,7 +82,7 @@ func (this *Properties) Create() (int, error) {
 // If domain is not a valid domain name, it returns the ErrDomainNameNotValid
 // error. If the property does not exist, or it does not belong to the current
 // customer, it returns the ErrPropertyNotFound error.
-func (this *Properties) AddDomain(id int, domain string) error {
+func (this *DeprecatedProperties) AddDomain(id int, domain string) error {
 	if id < 1 {
 		panic("apis: invalid property identifier")
 	}
@@ -109,7 +109,7 @@ func (this *Properties) AddDomain(id int, domain string) error {
 
 // Delete deletes the properties with the given identifiers of the current
 // customer. It does not return an error if the customer does not exist.
-func (this *Properties) Delete(ids []int) error {
+func (this *DeprecatedProperties) Delete(ids []int) error {
 	if len(ids) == 0 {
 		panic("apis: empty properties")
 	}
@@ -125,8 +125,8 @@ func (this *Properties) Delete(ids []int) error {
 }
 
 // Find returns all the properties of the customer.
-func (this *Properties) Find() ([]*Property, error) {
-	properties := make([]*Property, 0, 0)
+func (this *DeprecatedProperties) Find() ([]*DeprecatedProperty, error) {
+	properties := make([]*DeprecatedProperty, 0, 0)
 	stmt := "SELECT `id`, `code`, `domain`\nFROM `properties`\nLEFT JOIN `domains` ON `property` = `id`\nWHERE `customer` = ?\nORDER BY `id`, `domain`"
 	err := this.myDB.QueryScan(stmt, func(rows *sql.Rows) error {
 		var id int
@@ -142,7 +142,7 @@ func (this *Properties) Find() ([]*Property, error) {
 					continue Rows
 				}
 			}
-			property := &Property{ID: id, Code: code}
+			property := &DeprecatedProperty{ID: id, Code: code}
 			if domain != "" {
 				property.Domains = []string{domain}
 			}
@@ -158,11 +158,11 @@ func (this *Properties) Find() ([]*Property, error) {
 
 // Get returns the property, of the current customer, with the given
 // identifier. If the customer or the property do not exist, it returns nil.
-func (this *Properties) Get(id int) (*Property, error) {
+func (this *DeprecatedProperties) Get(id int) (*DeprecatedProperty, error) {
 	if id < 1 {
 		panic("apis: invalid property identifier")
 	}
-	property := Property{}
+	property := DeprecatedProperty{}
 	stmt := "SELECT `code`, `domain`\nFROM `properties`\nLEFT JOIN `domains` ON `property` = `id`\nWHERE `customer` = ? AND `id` = ?"
 	err := this.myDB.QueryScan(stmt, func(rows *sql.Rows) error {
 		var code, domain string
@@ -201,7 +201,7 @@ func (this *Properties) Get(id int) (*Property, error) {
 // If domain is not a valid domain name, it returns the ErrDomainNameNotValid
 // error. If the property does not exist, or it does not belong to the current
 // customer, it returns the ErrPropertyNotFound error.
-func (this *Properties) RemoveDomain(id int, domain string) error {
+func (this *DeprecatedProperties) RemoveDomain(id int, domain string) error {
 	if id < 1 {
 		panic("apis: invalid property identifier")
 	}

@@ -19,7 +19,7 @@ import (
 )
 
 type Visualization struct {
-	*Properties
+	*DeprecatedProperties
 }
 
 // ExecuteJSONQuery executes the given JSON query.
