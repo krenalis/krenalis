@@ -21,6 +21,8 @@ type Schema string
 
 // Get gets the schema with the given name, relative to the given account. name
 // can be "user", "group" or "event".
+// If the schema with the given name for the account does not exist, this method
+// returns an empty schema.
 func (schemas *Schemas) Get(account int, name string) (Schema, error) {
 	var column string
 	switch name {
@@ -37,7 +39,8 @@ func (schemas *Schemas) Get(account int, name string) (Schema, error) {
 	if err != nil {
 		return "", err
 	}
-	return Schema(row[column].(string)), nil
+	schema, _ := row[column].(string)
+	return Schema(schema), nil
 }
 
 // Update updates the schema with the given name, relative to the given account.
