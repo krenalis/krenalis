@@ -111,20 +111,21 @@ func UpdateGroup(ident Identity, updateTime int64, properties map[string]string,
 }
 
 func UpdateUser(ident Identity, updateTime int64, properties map[string]string, groups []string) {
-	// TODO(Gianluca): use the correct user. Where should we take it?
+	// TODO(Gianluca): use the correct connector and account. Where should we
+	// take them?
 	connector := 1
+	account := 1
 	data, err := json.Marshal(properties)
 	if err != nil {
-		// TODO(Gianluca): improve error handling here.
 		panic(err)
 	}
 	_, err = MySQLDB.Table("ConnectorsRawUserData").Add(
 		map[string]any{
-			"account":   ident.Account,
+			"account":   account,
 			"connector": connector,
 			"data":      string(data),
 		},
-		nil, // TODO(Gianluca): pass the correct value to the "onDuplicate" parameter.
+		sql.Set{"data": string(data)},
 	)
 	if err != nil {
 		panic(err)
