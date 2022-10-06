@@ -87,7 +87,23 @@ func Connector(ctx context.Context, name string, clientSecret string) Connecter 
 }
 
 func SetCursor(cursor string) {
-	return
+	// TODO(Gianluca): use the correct connector and account. Where should we
+	// take it?
+	account := 1
+	connector := 1
+	_, err := MySQLDB.Table("AccountConnectors").Add(
+		map[string]any{
+			"account":     account,
+			"connector":   connector,
+			"user_cursor": cursor,
+		},
+		sql.Set{
+			"user_cursor": cursor,
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func UpdateGroup(ident Identity, updateTime int64, properties map[string]string, users []string) {

@@ -77,6 +77,7 @@ CREATE TABLE `account_connectors` (
   `refresh_token` VARCHAR(500) NOT NULL DEFAULT '',
   `access_token_expiration_timestamp` TIMESTAMP NOT NULL,
   `transformation` TEXT NOT NULL DEFAULT '',
+  `user_cursor` VARCHAR(500) NOT NULL DEFAULT '',
   PRIMARY KEY (`account`, `connector`)
 );
 

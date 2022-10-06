@@ -112,6 +112,8 @@ func (apis *APIs) initSchema() {
 		access_token                      string
 		refresh_token                     string
 		access_token_expiration_timestamp string
+		transformation                    string
+		user_cursor                       string
 	}{})
 
 }

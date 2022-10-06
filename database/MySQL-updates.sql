@@ -112,3 +112,6 @@ ALTER TABLE `connectors_raw_users_data`
 	ADD PRIMARY KEY (`connector`, `account`, `user`);
 
 ALTER TABLE `account_connectors` ADD COLUMN `transformation` TEXT NOT NULL DEFAULT '' AFTER `access_token_expiration_timestamp`;
+
+ALTER TABLE `account_connectors` 
+  ADD COLUMN `user_cursor` VARCHAR(500) NOT NULL DEFAULT '' AFTER `transformation`;
