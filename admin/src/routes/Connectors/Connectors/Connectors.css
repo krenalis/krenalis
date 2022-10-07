@@ -1,0 +1,26 @@
+.Connectors {
+    min-height: 100vh;
+    padding-top: 50px;
+}
+
+.Connectors .content {
+    max-width: 800px;
+    margin: auto;
+    padding: 50px 0;
+}
+
+.Connectors .content .title {
+    font-weight: 600;
+}
+
+.Connectors .connectors {
+    margin-top: 20px;
+}
+
+.Connectors .ConnectorItem {
+    margin: 0 auto 15px auto;
+}
+
+.Connectors .ConnectorItem:last-child {
+    margin-bottom: 0;
+}

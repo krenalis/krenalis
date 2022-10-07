@@ -1,4 +1,5 @@
 import React, { Component } from 'react'
+
 import './StatusMessage.css'
 
 export default class StatusMessage extends Component {

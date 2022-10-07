@@ -1,0 +1,64 @@
+.AccountConnector {
+    min-height: 100vh;
+    padding-top: 50px;
+}
+
+.AccountConnector .content {
+    max-width: 1500px;
+    margin: auto;
+    padding: 50px 0;
+    display: grid;
+    grid-template-columns: 1fr 3fr 1fr;
+    grid-template-areas: 
+        "title title title"
+        "status status status"
+        "externalprops editor internalprops"
+        "save save save";
+    gap: 30px;
+}
+
+.AccountConnector .content h1 {
+    grid-area: title;
+    text-align: center;
+}
+
+.AccountConnector .content .StatusMessage {
+    grid-area: status;
+}
+
+.AccountConnector .content .properties.ext {
+    grid-area: externalprops;
+}
+
+.AccountConnector .content .editor-wrapper {
+    grid-area: editor;
+    width: 100%;
+    height: 600px;
+}
+
+.AccountConnector .content .properties.int {
+    grid-area: internalprops;
+}
+
+.AccountConnector .content .properties .title {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 21px;
+    font-weight: 600;
+}
+
+.AccountConnector .content .properties .property {
+    color: var(--text-primary);
+    opacity: .7;
+    background-color: var(--bg-primary);
+    padding: 13px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    box-shadow: 0px 0px 3px 1px var(--shadow-primary);
+}
+
+.AccountConnector .content .Button {
+    grid-area: save;
+    max-width: fit-content;
+    margin: auto;
+}

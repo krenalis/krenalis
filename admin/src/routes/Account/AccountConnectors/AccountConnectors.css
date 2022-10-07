@@ -1,0 +1,34 @@
+.AccountConnectors {
+    min-height: 100vh;
+    padding-top: 50px;
+}
+
+.AccountConnectors > .content {
+    max-width: 800px;
+    margin: auto;
+    padding: 50px 0;
+}
+
+.AccountConnectors .content .title {
+    font-weight: 600;
+}
+
+.AccountConnectors .connectors {
+    margin-top: 20px;
+}
+
+.AccountConnectors .AccountConnectorItem {
+    margin: 0 auto 15px auto;
+}
+
+.AccountConnectors .AccountConnectorItem:last-child {
+    margin-bottom: 0;
+}
+
+.AccountConnectors .Dialog .buttons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+}

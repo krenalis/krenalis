@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
-import './SidebarItem.css';
 
-// TODO(@Andrea): this item should resize based on the sidebar 'isOpen' state.
+import './SidebarItem.css';
 
 export default class SidebarItem extends Component {
     render() {

@@ -53,7 +53,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// handle requests to login page.
 	if rpath == "/" {
 		if isLoggedIn {
-			http.Redirect(w, r, "/admin/dashboard", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, "/admin/connectors", http.StatusTemporaryRedirect)
 			return
 		}
 		if r.Method == "POST" {
@@ -118,7 +118,8 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Handle the "/import-raw-user-data-from-connector" endpoint.
 	if strings.HasPrefix(rpath, "/import-raw-user-data-from-connector") {
 		var req struct {
-			Connector int
+			Connector   int
+			ResetCursor bool
 		}
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {

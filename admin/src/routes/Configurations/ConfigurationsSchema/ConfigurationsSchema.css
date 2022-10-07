@@ -1,0 +1,33 @@
+.ConfigurationsSchema {
+    min-height: 100vh;
+    padding-top: 50px;
+}
+
+.ConfigurationsSchema .content {
+    max-width: 1500px;
+    margin: auto;
+    padding: 50px 0;
+}
+
+.ConfigurationsSchema .content .title {
+    font-weight: 600;
+}
+
+.ConfigurationsSchema .content .bar {
+    display: flex;
+    justify-content: space-between;
+    margin: 40px 0;
+}
+
+.ConfigurationsSchema .content .bar .btn {
+    margin: unset;
+}
+
+.ConfigurationsSchema .content .editor-wrapper {
+    width: 100%;
+    height: 600px;
+}
+
+.ConfigurationsSchema .content .editor-wrapper .monaco-editor-background {
+    background-color: transparent;
+}

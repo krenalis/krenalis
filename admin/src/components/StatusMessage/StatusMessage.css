@@ -8,27 +8,27 @@
 }
 
 .StatusMessage.error {
-    background-color: var(--bg-error);
+    background-color: var(--bg-red);
 }
 
 .StatusMessage.error .text {
-    color: var(--color-error);
+    color: var(--color-red);
 }
 
 .StatusMessage.success {
-    background-color: var(--bg-success);
+    background-color: var(--bg-green);
 }
 
 .StatusMessage.success .text {
-    color: var(--color-success);
+    color: var(--color-green);
 }
 
 .StatusMessage.warning {
-    background-color: var(--bg-warning);
+    background-color: var(--bg-yellow);
 }
 
 .StatusMessage.warning .text {
-    color: var(--color-warning);
+    color: var(--color-yellow);
 }
 
 .StatusMessage.info {

@@ -1,33 +1,38 @@
 :root {
 	--bg-primary: #ffffff;
-	--bg-secondary: #f3f4f6;
+	--bg-secondary: #fafafa;
 	--bg-dark: #131313;
-	--bg-overlay: #1313136e;
-	--bg-error: #fef2f2;
-	--bg-success: #ecfdf5;
-	--bg-warning: #fffbeb;
-	--bg-neutral: #fafafa;
-	--color-primary: #4f46e5;
-	--color-error: #dc2626;
-	--color-success: #059669;
-	--color-warning: #d97706;
+	--bg-overlay: #17171747;
+	--bg-accent: #c7d2fe;
+	--bg-red: #fef2f2;
+	--bg-green: #ecfdf5;
+	--bg-yellow: #fffbeb;
+	--bg-neutral: #e5e5e5;
+	--color-accent: #4f46e5;
+	--color-red: #dc2626;
+	--color-green: #059669;
+	--color-yellow: #d97706;
 	--color-neutral: #52525b;
 	--text-primary: #222222;
+	--text-lighter: #787878;
 	--text-onaccent: #ffffff;
 	--border-primary: #cacaca;
-	--shadow-primary: #e7e7e7;
-	--red: #dc2626;
+	--shadow-primary: #f5f5f5;
 }
 
 *, *::before, *::after {
+	font-family: 'Inter', sans-serif; /* TODO(@Andrea): change to ? */
 	box-sizing: border-box;
-	font-family: 'Inter', sans-serif;
-	font-size: 16px;
-	outline-color: var(--color-primary);
+	outline-color: var(--color-accent);
+}
+
+h1, h1, h3, h4, h5, h6 {
+	font-family: 'Inter'!important; /* TODO(@Andrea): change to Interstate or Futura */
+	font-weight: 400;
 }
 
 h1 {
-	font-size: 28px;
+	font-size: 25px;
 }
 
 img, picture, video, canvas, svg {
@@ -54,30 +59,6 @@ body {
     min-height: 100vh;
 }
 
-/* || buttons */
-
-.btn {
-    background-color: var(--color-primary);
-    color: var(--text-onaccent);
-    text-decoration: none;
-    padding: 15px 25px;
-    border-radius: 5px;
-    display: block;
-    width: fit-content;
-    margin: auto;
-	cursor: pointer;
-}
-
-.btn.secondary {
-	background-color: var(--bg-secondary);
-    color: var(--color-primary);
-	padding: 10px 30px;
-}
-
-.title {
-	font-size: 23px;
-}
-
 /* || Monaco editor icons */
 
 .codicon {
@@ -92,8 +73,9 @@ body {
 /* || Forms */
 
 select {
-	padding: 0 30px;
+    padding: 15px;
     border-radius: 5px;
-    border: 0;
-	box-shadow: 0px 0px 3px 1px var(--shadow-primary);
+    background-color: transparent;
+    box-shadow: 1px 1px 5px 0 var(--shadow-primary);
+    border: 1px solid var(--border-primary);
 }

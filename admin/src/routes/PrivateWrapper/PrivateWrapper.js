@@ -1,12 +1,13 @@
 import React, { Component } from 'react'
 import { Outlet } from 'react-router-dom'
-import Sidebar from '../../components/Sidebar/Sidebar'
+
 import './PrivateWrapper.css'
+import Sidebar from '../../components/Sidebar/Sidebar'
 
 export default class PrivateWrapper extends Component {
     render() {
         return (
-            <div>
+            <div className='PrivateWrapper'>
                 <Sidebar />
                 <Outlet />
             </div>

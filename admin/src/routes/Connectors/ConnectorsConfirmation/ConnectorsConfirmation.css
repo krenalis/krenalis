@@ -1,0 +1,36 @@
+.ConnectorsConfirmation {
+    min-height: 100vh;
+    padding-top: 50px;
+}
+
+.ConnectorsConfirmation .content {
+    max-width: 800px;
+    margin: auto;
+    padding: 50px 0;
+    text-align: center;
+}
+
+.ConnectorsConfirmation .logo {
+    width: fit-content;
+    margin: auto;
+}
+
+.ConnectorsConfirmation .logo img {
+    max-width: 100px;
+    height: auto;
+    margin: auto;
+}
+
+.ConnectorsConfirmation .title {
+    margin-top: 20px;
+}
+
+.ConnectorsConfirmation .confirmation {
+    margin-top: 10px;
+}
+
+.ConnectorsConfirmation .btn {
+    margin-top: 20px;
+    display: block;
+    color: var(--color-accent);
+}

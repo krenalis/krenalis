@@ -1,7 +1,8 @@
 import React, { Component } from 'react'
 import { Navigate } from 'react-router-dom'
-import StatusMessage from '../../components/StatusMessage/StatusMessage';
+
 import './Login.css'
+import StatusMessage from '../../components/StatusMessage/StatusMessage';
 
 export default class Login extends Component {
     constructor(props) {
@@ -46,7 +47,7 @@ export default class Login extends Component {
 
     render() {
         if (this.state.isLoggedIn) {
-            return <Navigate to='dashboard' />
+            return <Navigate to='connectors' />
         } else {
             return (
                 <div className='Login'>
