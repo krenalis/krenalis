@@ -16,7 +16,6 @@ import (
 
 	"chichi/admin"
 	"chichi/apis"
-	"chichi/connectors"
 	"chichi/pkg/open2b/sql"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -56,9 +55,6 @@ func main() {
 		log.Fatalf("[error] cannot ping MySQL server: %s", err)
 	}
 	log.Printf("[info] successfully connected to the MySQL server")
-
-	// TODO(Gianluca): this should be removed, it's just for prototyping:
-	connectors.MySQLDB = mySQLDB
 
 	// Open a connection to the ClickHouse database.
 	clickHouseConn, err := clickhouse.Open(&clickhouse.Options{

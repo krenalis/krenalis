@@ -9,11 +9,8 @@ package connectors
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"reflect"
-
-	"chichi/pkg/open2b/sql"
 )
 
 // Connecter is the interface implemented by the connectors.
@@ -33,6 +30,17 @@ type Connecter interface {
 
 	// Users returns the users starting from the given cursor.
 	Users(account, cursor string) error
+}
+
+// Firehose is the interface implemented by a Firehose.
+type Firehose interface {
+	CreateGroup(ident Identity, creationTime int64, properties map[string]string)
+	CreateUser(ident Identity, creationTime int64, properties map[string]string)
+	DeleteGroup(ident Identity)
+	DeleteUser(ident Identity)
+	SetCursor(cursor string)
+	UpdateGroup(ident Identity, updateTime int64, properties map[string]string, users []string)
+	UpdateUser(ident Identity, updateTime int64, properties map[string]string, groups []string)
 }
 
 type Properties map[string]string
@@ -69,81 +77,17 @@ type Conf struct {
 	ClientSecret string
 }
 
-// TODO(Gianluca): this should be removed, it's just for prototyping:
-var MySQLDB *sql.DB
-
 var connectors = map[string]any{}
 
 func RegisterConnector(name string, value any) {
 	connectors[name] = value
 }
 
-func Connector(ctx context.Context, name string, clientSecret string) Connecter {
+func Connector(ctx context.Context, name string, clientSecret string, fh Firehose) Connecter {
 	t := reflect.TypeOf(connectors[name])
 	v := reflect.New(t.Elem())
 	reflect.Indirect(v).FieldByName("ClientSecret").Set(reflect.ValueOf(clientSecret))
 	reflect.Indirect(v).FieldByName("Context").Set(reflect.ValueOf(ctx))
+	reflect.Indirect(v).FieldByName("Firehose").Set(reflect.ValueOf(fh))
 	return v.Interface().(Connecter)
-}
-
-func SetCursor(cursor string) {
-	// TODO(Gianluca): use the correct connector and account. Where should we
-	// take it?
-	account := 1
-	connector := 1
-	_, err := MySQLDB.Table("AccountConnectors").Add(
-		map[string]any{
-			"account":     account,
-			"connector":   connector,
-			"user_cursor": cursor,
-		},
-		sql.Set{
-			"user_cursor": cursor,
-		},
-	)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func UpdateGroup(ident Identity, updateTime int64, properties map[string]string, users []string) {
-	return
-}
-
-func UpdateUser(ident Identity, updateTime int64, properties map[string]string, groups []string) {
-	// TODO(Gianluca): use the correct connector and account. Where should we
-	// take them?
-	connector := 1
-	account := 1
-	data, err := json.Marshal(properties)
-	if err != nil {
-		panic(err)
-	}
-	_, err = MySQLDB.Table("ConnectorsRawUserData").Add(
-		map[string]any{
-			"account":   account,
-			"connector": connector,
-			"data":      string(data),
-		},
-		sql.Set{"data": string(data)},
-	)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func CreateGroup(ident Identity, creationTime int64, properties map[string]string) {
-	return
-}
-
-func CreateUser(ident Identity, creationTime int64, properties map[string]string) {
-	return
-}
-
-func DeleteGroup(ident Identity) {
-	return
-}
-
-func DeleteUser(ident Identity) {
-	return
 }

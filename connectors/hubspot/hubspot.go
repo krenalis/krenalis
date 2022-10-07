@@ -53,6 +53,7 @@ func (err *hubspotError) Error() string {
 }
 
 type Connector struct {
+	Firehose     connectors.Firehose
 	ClientSecret string
 	Context      context.Context
 }
@@ -91,30 +92,30 @@ func (c *Connector) ServeWebhook(w http.ResponseWriter, r *http.Request) error {
 		switch req.SubscriptionType {
 		case "company.propertyChange":
 			ident.Group = strconv.Itoa(req.ObjectId)
-			connectors.UpdateGroup(ident, req.OccurredAt, connectors.Properties{
+			c.Firehose.UpdateGroup(ident, req.OccurredAt, connectors.Properties{
 				req.PropertyName: req.PropertyValue,
 			}, nil)
 		case "contact.propertyChange":
 			ident.User = strconv.Itoa(req.ObjectId)
-			connectors.UpdateUser(ident, req.OccurredAt, connectors.Properties{
+			c.Firehose.UpdateUser(ident, req.OccurredAt, connectors.Properties{
 				req.PropertyName: req.PropertyValue,
 			}, nil)
 		case "company.creation":
 			ident.Group = strconv.Itoa(req.ObjectId)
-			connectors.CreateGroup(ident, req.OccurredAt, connectors.Properties{
+			c.Firehose.CreateGroup(ident, req.OccurredAt, connectors.Properties{
 				req.PropertyName: req.PropertyValue,
 			})
 		case "contact.creation":
 			ident.User = strconv.Itoa(req.ObjectId)
-			connectors.CreateUser(ident, req.OccurredAt, connectors.Properties{
+			c.Firehose.CreateUser(ident, req.OccurredAt, connectors.Properties{
 				req.PropertyName: req.PropertyValue,
 			})
 		case "company.deletion":
 			ident.Group = strconv.Itoa(req.ObjectId)
-			connectors.DeleteGroup(ident)
+			c.Firehose.DeleteGroup(ident)
 		case "contact.deletion":
 			ident.User = strconv.Itoa(req.ObjectId)
-			connectors.DeleteUser(ident)
+			c.Firehose.DeleteUser(ident)
 		}
 	}
 
@@ -225,10 +226,10 @@ func (c *Connector) Users(token, cursor string) error {
 		}
 		for _, obj := range objects {
 			ident := connectors.Identity{User: obj.ID}
-			connectors.UpdateUser(ident, obj.LastModifiedDate, obj.Properties, nil)
+			c.Firehose.UpdateUser(ident, obj.LastModifiedDate, obj.Properties, nil)
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
-		connectors.SetCursor(serializeCursor(fromDate))
+		c.Firehose.SetCursor(serializeCursor(fromDate))
 	}
 
 	return nil
@@ -260,10 +261,10 @@ func (c *Connector) Groups(token, cursor string) error {
 				return err
 			}
 			ident := connectors.Identity{Group: obj.ID}
-			connectors.UpdateGroup(ident, obj.LastModifiedDate, obj.Properties, contacts)
+			c.Firehose.UpdateGroup(ident, obj.LastModifiedDate, obj.Properties, contacts)
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
-		connectors.SetCursor(strconv.FormatInt(fromDate, 10))
+		c.Firehose.SetCursor(strconv.FormatInt(fromDate, 10))
 	}
 
 	return nil

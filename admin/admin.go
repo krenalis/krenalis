@@ -151,7 +151,8 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// Retrieve the instance of the connector.
-		connector := connectors.Connector(context.Background(), name, conn.ClientSecret)
+		fh := admin.apis.NewFirehose(req.Connector, accountID)
+		connector := connectors.Connector(context.Background(), name, conn.ClientSecret, fh)
 		// Retrieve the cursor, if necessary.
 		var cursor string
 		if req.ResetCursor {
@@ -777,7 +778,8 @@ func (admin *admin) connectorProperties(account, connector int) ([]connectors.Pr
 	if err != nil {
 		return nil, err
 	}
-	conn := connectors.Connector(context.Background(), name, c.ClientSecret)
+	fh := admin.apis.NewFirehose(connector, account)
+	conn := connectors.Connector(context.Background(), name, c.ClientSecret, fh)
 	// Retrieve the access token.
 	accessToken, err := admin.getConnectorAccessToken(account, connector, false)
 	if err != nil {
