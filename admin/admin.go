@@ -98,22 +98,33 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Handle the "/import-raw-user-data-from-connector" endpoint.
 	if strings.HasPrefix(rpath, "/import-raw-user-data-from-connector") {
 		var req struct {
-			Account       int
-			Connector     int
-			ConnectorName string
+			Connector int
 		}
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		accessToken, err := admin.getConnectorAccessToken(req.Account, req.Connector, false)
+		accessToken, err := admin.getConnectorAccessToken(accountID, req.Connector, false)
 		if err != nil {
 			log.Printf("[error] cannot retrieve access token: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		connector := connectors.Connector(context.TODO(), req.ConnectorName, accessToken)
+		// Retrieve the connector's name.
+		name, err := admin.connectorName(req.Connector)
+		if err != nil {
+			log.Printf("[error] cannot retrieve connector's name: %s", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		if name == "" {
+			http.Error(w, "Bad Request: connector not found", http.StatusBadRequest)
+			return
+		}
+		// Retrieve the instance of the connector.
+		connector := connectors.Connector(context.Background(), name, accessToken)
+		// Retrieve the cursor.
 		cursor, err := admin.apis.Cursors.UserCursor(accountID, req.Connector)
 		if err != nil {
 			log.Printf("[error] cannot retrieve cursor: %s", err)
@@ -705,4 +716,17 @@ func (admin *admin) getConnectorAccessToken(accountID, connectorID int, forceRef
 	}
 
 	return respData.Access_token, nil
+}
+
+// connectorName returns the name of the connector with the given ID.
+// If the ID does not correspond to any connector, returns "" and nil.
+func (admin *admin) connectorName(id int) (string, error) {
+	connector, err := admin.apis.Connectors.Get(id)
+	if err != nil {
+		return "", err
+	}
+	if connector == nil {
+		return "", nil
+	}
+	return connector.Name, nil
 }
