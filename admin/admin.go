@@ -114,9 +114,13 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		connector := connectors.Connector(context.TODO(), req.ConnectorName, accessToken)
-		// TODO(Gianluca): this call to "Users" is just a stub. Add the correct
-		// parameters.
-		err = connector.Users("", "")
+		cursor, err := admin.apis.Cursors.UserCursor(accountID, req.Connector)
+		if err != nil {
+			log.Printf("[error] cannot retrieve cursor: %s", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		err = connector.Users("", cursor) // TODO(Gianluca): remove the account argument.
 		if err != nil {
 			log.Printf("[error] %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
