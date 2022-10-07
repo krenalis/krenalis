@@ -772,12 +772,19 @@ func (admin *admin) connectorProperties(account, connector int) ([]connectors.Pr
 	if err != nil {
 		return nil, err
 	}
+	// Retrieve the client secret.
+	c, err := admin.apis.Connectors.Get(connector)
+	if err != nil {
+		return nil, err
+	}
+	conn := connectors.Connector(context.Background(), name, c.ClientSecret)
+	// Retrieve the access token.
 	accessToken, err := admin.getConnectorAccessToken(account, connector, false)
 	if err != nil {
 		return nil, err
 	}
-	conn := connectors.Connector(context.Background(), name, accessToken)
-	properties, _, err := conn.Properties("") // TODO(Gianluca): remove the "account" argument.
+	// Retrieve the properties.
+	properties, _, err := conn.Properties(accessToken) // TODO(Gianluca): remove the "account" argument.
 	if err != nil {
 		return nil, err
 	}
