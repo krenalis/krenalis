@@ -143,8 +143,15 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request: connector not found", http.StatusBadRequest)
 			return
 		}
+		// Retrieve the client secret.
+		conn, err := admin.apis.Connectors.Get(req.Connector)
+		if err != nil {
+			log.Printf("[error] cannot retrieve client secret: %s", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 		// Retrieve the instance of the connector.
-		connector := connectors.Connector(context.Background(), name, accessToken)
+		connector := connectors.Connector(context.Background(), name, conn.ClientSecret)
 		// Retrieve the cursor.
 		cursor, err := admin.apis.Cursors.UserCursor(accountID, req.Connector)
 		if err != nil {
@@ -152,7 +159,8 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		err = connector.Users("", cursor) // TODO(Gianluca): remove the account argument.
+		// Retrieve the users.
+		err = connector.Users(accessToken, cursor) // TODO(Gianluca): remove the account argument.
 		if err != nil {
 			log.Printf("[error] %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
