@@ -115,3 +115,5 @@ ALTER TABLE `account_connectors` ADD COLUMN `transformation` TEXT NOT NULL DEFAU
 
 ALTER TABLE `account_connectors` 
   ADD COLUMN `user_cursor` VARCHAR(500) NOT NULL DEFAULT '' AFTER `transformation`;
+
+UPDATE `connectors` SET `name` = 'HubSpot' WHERE (`id` = '1');
