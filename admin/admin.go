@@ -152,12 +152,17 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		// Retrieve the instance of the connector.
 		connector := connectors.Connector(context.Background(), name, conn.ClientSecret)
-		// Retrieve the cursor.
-		cursor, err := admin.apis.Cursors.UserCursor(accountID, req.Connector)
-		if err != nil {
-			log.Printf("[error] cannot retrieve cursor: %s", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
+		// Retrieve the cursor, if necessary.
+		var cursor string
+		if req.ResetCursor {
+			cursor = ""
+		} else {
+			cursor, err = admin.apis.Cursors.UserCursor(accountID, req.Connector)
+			if err != nil {
+				log.Printf("[error] cannot retrieve cursor: %s", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
 		}
 		// Retrieve the users.
 		err = connector.Users(accessToken, cursor) // TODO(Gianluca): remove the account argument.
