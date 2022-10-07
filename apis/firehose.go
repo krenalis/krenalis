@@ -46,6 +46,10 @@ func (fh *Firehose) SetCursor(cursor string) {
 	}
 }
 
+func (fh *Firehose) ApplyConfig(conf map[string]any) {
+	return
+}
+
 func (fh *Firehose) UpdateGroup(ident connectors.Identity, updateTime int64, properties map[string]string, users []string) {
 	return
 }

@@ -16,6 +16,9 @@ import (
 // Connecter is the interface implemented by the connectors.
 type Connecter interface {
 
+	// ApplyConfig applies the configuration config.
+	ApplyConfig(account string, config map[string]any) error
+
 	// Groups returns the groups starting from the given cursor.
 	Groups(account, cursor string) error
 
