@@ -95,6 +95,26 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Handle the "/connectors-properties" endpoint.
+	if strings.HasPrefix(rpath, "/connectors-properties") {
+		var req struct {
+			Connector int
+		}
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+		properties, err := admin.connectorProperties(accountID, req.Connector)
+		if err != nil {
+			log.Printf("[error] cannot retrieve properties: %s", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(properties)
+		return
+	}
+
 	// Handle the "/import-raw-user-data-from-connector" endpoint.
 	if strings.HasPrefix(rpath, "/import-raw-user-data-from-connector") {
 		var req struct {
@@ -729,4 +749,23 @@ func (admin *admin) connectorName(id int) (string, error) {
 		return "", nil
 	}
 	return connector.Name, nil
+}
+
+// connectorProperties returns the properties for the installed connector for
+// the given account.
+func (admin *admin) connectorProperties(account, connector int) ([]connectors.Property, error) {
+	name, err := admin.connectorName(connector)
+	if err != nil {
+		return nil, err
+	}
+	accessToken, err := admin.getConnectorAccessToken(account, connector, false)
+	if err != nil {
+		return nil, err
+	}
+	conn := connectors.Connector(context.Background(), name, accessToken)
+	properties, _, err := conn.Properties("") // TODO(Gianluca): remove the "account" argument.
+	if err != nil {
+		return nil, err
+	}
+	return properties, nil
 }
