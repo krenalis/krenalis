@@ -11,13 +11,13 @@ export default async function call(url, value) {
         let error;
         switch (res.status) {
             case 500:
-                error = 'internal Server Error';
+                error = 'Internal Server Error';
                 break;
             case 400:
-                error = 'bad Request';
+                error = 'Bad Request';
                 break;
             default:
-                error = "unknown Server Error";
+                error = "Unknown Server Error";
                 break;
         }
         return [null, error];
