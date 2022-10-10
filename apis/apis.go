@@ -8,10 +8,20 @@
 package apis
 
 import (
+	"context"
+	"errors"
+	"log"
+	"net/http"
+	"regexp"
+	"strconv"
+
+	"chichi/connectors"
 	"chichi/pkg/open2b/sql"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
+
+var webhookPathReg = regexp.MustCompile(`^/webhook/(\d+)/`)
 
 type APIs struct {
 	myDB            *sql.DB
@@ -51,6 +61,51 @@ type API struct {
 
 func (apis *APIs) API(customer int) *API {
 	return &API{myDB: apis.myDB, chDB: apis.chDB, customer: customer}
+}
+
+// Errors returned to and handled by the ServeWebhook method.
+var errBadRequest = errors.New("bad request")
+var errNotFound = errors.New("not found")
+
+// ServeWebhook serves a webhook request. The request path starts with
+// "/webhook/{connector}/" where {connector} is a connector identifier.
+func (apis *APIs) ServeWebhook(w http.ResponseWriter, r *http.Request) {
+	err := apis.serveWebhook(w, r)
+	if err != nil {
+		if err == errBadRequest {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+		log.Printf("cannot serve webhook: %s", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+	return
+}
+
+func (apis *APIs) serveWebhook(w http.ResponseWriter, r *http.Request) error {
+	m := webhookPathReg.FindStringSubmatch(r.URL.Path)
+	if m == nil {
+		return errBadRequest
+	}
+	connID, _ := strconv.Atoi(m[1])
+	if connID <= 0 {
+		return errBadRequest
+	}
+	conn, err := apis.Connectors.Get(connID)
+	if err != nil {
+		return err
+	}
+	if conn == nil {
+		return errNotFound
+	}
+	fh := apis.NewFirehose(connID, 1)
+	connector := connectors.Connector(context.Background(), conn.Name, conn.ClientSecret, fh)
+	err = connector.ServeWebhook(w, r)
+	if err != nil {
+		log.Printf("cannot serve webhook: %s", err)
+		return nil
+	}
+	return nil
 }
 
 func (apis *APIs) initSchema() {
