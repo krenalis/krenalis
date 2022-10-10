@@ -9,9 +9,14 @@ package connectors
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"reflect"
 )
+
+// ErrWebhookUnauthorized is returned by the ServeWebhook method if the
+// request was not authorized.
+var ErrWebhookUnauthorized = errors.New("webhook unauthorized")
 
 // Connecter is the interface implemented by the connectors.
 type Connecter interface {
@@ -26,7 +31,8 @@ type Connecter interface {
 	Properties(account string) ([]Property, []Property, error)
 
 	// ServeWebhook serves a webhook request.
-	ServeWebhook(w http.ResponseWriter, r *http.Request) error
+	// It returns the ErrWebhookUnauthorized error is the request was not authorized.
+	ServeWebhook(r *http.Request) error
 
 	// SetUsers sets the given users.
 	SetUsers(token string, users []User) error

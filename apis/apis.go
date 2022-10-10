@@ -70,23 +70,27 @@ var errNotFound = errors.New("not found")
 // ServeWebhook serves a webhook request. The request path starts with
 // "/webhook/{connector}/" where {connector} is a connector identifier.
 func (apis *APIs) ServeWebhook(w http.ResponseWriter, r *http.Request) {
-	err := apis.serveWebhook(w, r)
+	err := apis.serveWebhook(r)
 	if err != nil {
-		if err == errBadRequest {
+		switch err {
+		case errBadRequest:
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
-		}
-		if err == errNotFound {
+		case errNotFound:
 			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		case connectors.ErrWebhookUnauthorized:
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 		log.Printf("cannot serve webhook: %s", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 	return
 }
 
-func (apis *APIs) serveWebhook(w http.ResponseWriter, r *http.Request) error {
+func (apis *APIs) serveWebhook(r *http.Request) error {
 	m := webhookPathReg.FindStringSubmatch(r.URL.Path)
 	if m == nil {
 		return errBadRequest
@@ -104,12 +108,7 @@ func (apis *APIs) serveWebhook(w http.ResponseWriter, r *http.Request) error {
 	}
 	fh := apis.NewFirehose(connID, 1)
 	connector := connectors.Connector(context.Background(), conn.Name, conn.ClientSecret, fh)
-	err = connector.ServeWebhook(w, r)
-	if err != nil {
-		log.Printf("cannot serve webhook: %s", err)
-		return nil
-	}
-	return nil
+	return connector.ServeWebhook(r)
 }
 
 func (apis *APIs) initSchema() {

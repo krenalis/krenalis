@@ -68,15 +68,14 @@ func (c *Connector) ApplyConfig(account string, config map[string]any) error {
 }
 
 // ServeWebhook serves a webhook request.
+// It returns the ErrWebhookUnauthorized error is the request was not
+// authorized.
 // See https://developers.hubspot.com/docs/api/webhooks.
-func (c *Connector) ServeWebhook(w http.ResponseWriter, r *http.Request) error {
-
-	w.Header().Set("Content-Type", "text/plain")
+func (c *Connector) ServeWebhook(r *http.Request) error {
 
 	// Check if the webhook is valid.
 	if !isValidWebhook(c.ClientSecret, r) {
-		w.WriteHeader(http.StatusUnauthorized)
-		return nil
+		return connectors.ErrWebhookUnauthorized
 	}
 
 	// Read the requests.
