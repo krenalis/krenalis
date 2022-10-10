@@ -7,6 +7,7 @@
   - [Configure and add certificates](#configure-and-add-certificates)
   - [Compile the server](#compile-the-server)
   - [Run and open the browser](#run-and-open-the-browser)
+  - [Expose on the Internet](#expose-on-the-internet-optional)
 - [Checklist before commit](#checklist-before-commit)
 - [Documentation of APIs](#documentation-of-apis)
   - [/admin/api/smart-events.create](#adminapismart-eventscreate)
@@ -41,6 +42,14 @@ go build -tags osusergo,netgo -trimpath
 ### Run and open the browser
 
 Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/admin/.
+
+### Expose on the Internet (optional)
+
+1. Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/)
+2. Check that it is installed correctly: `cloudflared --version`
+3. Run cloudflared: `cloudflared tunnel --url https://localhost:9090`
+4. Make a note of the URL listed in the standard output (example:  https://xxxxxxx.trycloudflare.com)
+5. Open the URL in a browser
 
 ## Checklist before commit
 
