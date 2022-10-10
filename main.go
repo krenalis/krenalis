@@ -71,9 +71,10 @@ func main() {
 	clickHouseCtx := context.Background()
 	err = clickHouseConn.Ping(clickHouseCtx)
 	if err != nil {
-		log.Fatalf("[error] cannot ping ClickHouse server: %s", err)
+		log.Printf("[warning] cannot ping ClickHouse server: %s", err)
+	} else {
+		log.Printf("[info] successfully connected to the ClickHouse server")
 	}
-	log.Printf("[info] successfully connected to the ClickHouse server")
 
 	apis := apis.New(mySQLDB, clickHouseConn)
 	admin := admin.New(apis)
