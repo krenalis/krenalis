@@ -504,7 +504,7 @@ func isValidWebhook(clientSecret string, r *http.Request) bool {
 	mac := hmac.New(sha256.New, []byte(clientSecret))
 	_, _ = io.WriteString(mac, "POST")
 	_, _ = io.WriteString(mac, "https://")
-	_, _ = io.WriteString(mac, r.URL.Host)
+	_, _ = io.WriteString(mac, r.Host)
 	_, _ = io.WriteString(mac, r.RequestURI)
 	_, _ = mac.Write(body)
 	_, _ = io.WriteString(mac, r.Header.Get("X-HubSpot-Request-Timestamp"))
