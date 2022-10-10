@@ -474,6 +474,7 @@ func (c *Connector) call(token, method, path string, body io.Reader, expectedSta
 }
 
 // isValidWebhook reports whether the webhook is valid.
+// https://developers.hubspot.com/docs/api/webhooks/validating-requests.
 func isValidWebhook(clientSecret string, r *http.Request) bool {
 	// The HTTP method must be POST.
 	if r.Method != "POST" {
