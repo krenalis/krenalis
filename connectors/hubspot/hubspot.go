@@ -62,6 +62,11 @@ func init() {
 	connectors.RegisterConnector("HubSpot", (*Connector)(nil))
 }
 
+// ApplyConfig applies the configuration config.
+func (c *Connector) ApplyConfig(account string, config map[string]any) error {
+	return c.ApplyConfig(account, config)
+}
+
 // ServeWebhook serves a webhook request.
 // See https://developers.hubspot.com/docs/api/webhooks.
 func (c *Connector) ServeWebhook(w http.ResponseWriter, r *http.Request) error {
