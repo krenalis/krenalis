@@ -76,6 +76,10 @@ func (apis *APIs) ServeWebhook(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
+		if err == errNotFound {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
 		log.Printf("cannot serve webhook: %s", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
