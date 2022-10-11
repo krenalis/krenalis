@@ -62,3 +62,7 @@
     max-width: fit-content;
     margin: auto;
 }
+
+.AccountConnector .content .documentationExample {
+    font-family: monospace;
+}

@@ -100,6 +100,25 @@ export default class AccountConnector extends Component {
                 </div>
                 <Button theme="primary" icon="save" text="Save" onClick={this.handleSaving} />
             </div>
+            <div className="content">
+                <h1>Documentation</h1>
+                <p>A transformation function which can be used with the default schema is the following:</p>
+                <pre><code class="documentationExample">
+                {`func(input map[string]any) (map[string]any, error) {
+    out := map[string]any{}
+    if firstName, ok := input["firstname"]; ok {
+        out["FirstName"] = firstName
+    }
+    if lastName, ok := input["lastname"]; ok {
+        out["LastName"] = lastName
+    }
+    if email, ok := input["email"]; ok {
+        out["Email"] = email
+    }
+    return out, nil
+}`}
+                </code></pre>
+            </div>
         </div>
         )
     }
