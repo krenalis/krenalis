@@ -354,7 +354,7 @@ func (c *Connector) newIterator(token, typ string, fromDate int64, limit int) (*
 
 type object struct {
 	ID               string
-	Properties       map[string]string
+	Properties       map[string]any
 	LastModifiedDate int64
 }
 
@@ -384,7 +384,7 @@ func (it *iter) Next() ([]object, error) {
 	var response struct {
 		Results []struct {
 			ID         string
-			Properties map[string]string
+			Properties map[string]any
 			UpdatedAt  string
 			Archived   bool
 		}

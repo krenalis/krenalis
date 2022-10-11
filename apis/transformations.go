@@ -19,7 +19,7 @@ type Transformations struct {
 // properties to obtain the golden record field values. In fact, this is a
 // source code of a Go function with the given sign:
 //
-// func Transform(in map[string]any) map[string]any
+// func Transform(in map[string]any) (map[string]any, error)
 type Transformation string
 
 // Get gets the transformation relative to the given installed connector, which

@@ -117,3 +117,10 @@ ALTER TABLE `account_connectors`
   ADD COLUMN `user_cursor` VARCHAR(500) NOT NULL DEFAULT '' AFTER `transformation`;
 
 UPDATE `connectors` SET `name` = 'HubSpot' WHERE (`id` = '1');
+
+CREATE TABLE `warehouse_users` (
+  `Email` VARCHAR(500) NOT NULL DEFAULT '',
+  `FirstName` VARCHAR(500) NOT NULL DEFAULT '',
+  `LastName` VARCHAR(500) NOT NULL DEFAULT '',
+  PRIMARY KEY (`Email`)
+);

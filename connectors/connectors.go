@@ -43,16 +43,16 @@ type Connecter interface {
 
 // Firehose is the interface implemented by a Firehose.
 type Firehose interface {
-	CreateGroup(ident Identity, creationTime int64, properties map[string]string)
-	CreateUser(ident Identity, creationTime int64, properties map[string]string)
+	CreateGroup(ident Identity, creationTime int64, properties map[string]any)
+	CreateUser(ident Identity, creationTime int64, properties map[string]any)
 	DeleteGroup(ident Identity)
 	DeleteUser(ident Identity)
 	SetCursor(cursor string)
-	UpdateGroup(ident Identity, updateTime int64, properties map[string]string, users []string)
-	UpdateUser(ident Identity, updateTime int64, properties map[string]string, groups []string)
+	UpdateGroup(ident Identity, updateTime int64, properties map[string]any, users []string)
+	UpdateUser(ident Identity, updateTime int64, properties map[string]any, groups []string)
 }
 
-type Properties map[string]string
+type Properties map[string]any
 
 type Property struct {
 	Name    string
