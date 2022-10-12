@@ -14,7 +14,7 @@ import (
 )
 
 func ListEnabledConnectors() {
-	resp, err := call("connectors/findInstalledConnectors", nil)
+	resp, err := call("admin/connectors/findInstalledConnectors", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -25,7 +25,7 @@ func ListEnabledConnectors() {
 }
 
 func ListConnectorProperties(connector int) {
-	resp, err := call("connectors-properties", map[string]any{"Connector": connector})
+	resp, err := call("admin/connectors-properties", map[string]any{"Connector": connector})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func ImportUsersFromConnector(connector int, resetCursor bool) {
 		"Connector":   connector,
 		"ResetCursor": resetCursor,
 	}
-	resp, err := call("import-raw-user-data-from-connector", body)
+	resp, err := call("admin/import-raw-user-data-from-connector", body)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func GetTransformation(connector int) {
 	body := map[string]any{
 		"Connector": connector,
 	}
-	resp, err := call("transformations/get", body)
+	resp, err := call("admin/transformations/get", body)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func UpdateTransformation(connector int, transformation []byte) {
 		"Connector":      connector,
 		"Transformation": string(transformation),
 	}
-	resp, err := call("transformations/update", body)
+	resp, err := call("admin/transformations/update", body)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func UpdateTransformation(connector int, transformation []byte) {
 }
 
 func ListUsers() {
-	resp, err := call("list-users", nil)
+	resp, err := call("admin/list-users", nil)
 	if err != nil {
 		log.Fatal(err)
 	}

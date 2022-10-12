@@ -12,7 +12,7 @@ Put inside the directory `chichi-cli` of this repository a YAML file named
 
 ```yaml
 apis:
-  URL: https://localhost:9090/admin
+  URL: https://localhost:9090
 
 account: 1
 ```
