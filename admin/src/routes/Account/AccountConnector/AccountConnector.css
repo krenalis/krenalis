@@ -35,6 +35,10 @@
     height: 600px;
 }
 
+.AccountConnector .content .editor-wrapper > section *  {
+    font-family: monospace!important;
+}
+
 .AccountConnector .content .editor-wrapper .Button {
     margin-top: 50px;
 }
@@ -59,6 +63,7 @@
     border-radius: 5px;
     box-shadow: 0px 0px 3px 1px var(--shadow-primary);
     overflow-wrap: anywhere;
+    font-family: monospace!important;
 }
 
 .AccountConnector .content .Button {
