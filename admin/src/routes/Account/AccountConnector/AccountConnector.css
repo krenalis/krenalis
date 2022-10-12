@@ -8,12 +8,11 @@
     margin: auto;
     padding: 50px 0;
     display: grid;
-    grid-template-columns: 1fr 3fr 1fr;
+    grid-template-columns: 1fr 2fr 1fr;
     grid-template-areas: 
         "title title title"
         "status status status"
-        "externalprops editor internalprops"
-        "save save save";
+        "externalprops editor internalprops";
     gap: 30px;
 }
 
@@ -36,6 +35,10 @@
     height: 600px;
 }
 
+.AccountConnector .content .editor-wrapper .Button {
+    margin-top: 50px;
+}
+
 .AccountConnector .content .properties.int {
     grid-area: internalprops;
 }
@@ -55,6 +58,7 @@
     margin-bottom: 15px;
     border-radius: 5px;
     box-shadow: 0px 0px 3px 1px var(--shadow-primary);
+    overflow-wrap: anywhere;
 }
 
 .AccountConnector .content .Button {

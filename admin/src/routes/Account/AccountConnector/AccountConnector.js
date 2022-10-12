@@ -14,8 +14,8 @@ export default class AccountConnector extends Component {
         this.state = {
             'statusMessage': null,
             'transformationFunc': '',
-            'connectorsProperties': ['last_name', 'first_name', 'phone_number', 'email', 'age'],
-            'internalProperties': [],
+            'connectorProperties': [],
+            'schemaProperties': [],
         }
     }
 
@@ -32,14 +32,25 @@ export default class AccountConnector extends Component {
 		}
 		this.setState({transformationFunc: transformationFunc});
 
-        // get the properties.
-        let properties;
-        [properties, err] = await call('/admin/user-schema-properties')
+        // get the user schema properties.
+        let schemaProperties;
+        [schemaProperties, err] = await call('/admin/user-schema-properties')
         if (err !== null) {
 			this.setState({status: {type: 'error', text: err}});
 			return;
 		}
-        this.setState({internalProperties: properties});
+        this.setState({schemaProperties: schemaProperties});
+
+        // get the connector properties.
+        let cp;
+        [cp, err] = await call('/admin/connectors-properties', {Connector: connectorID});
+        if (err !== null) {
+			this.setState({status: {type: 'error', text: err}});
+			return;
+		}
+        let connectorProperties = [];
+        for (let p of cp) connectorProperties.push(p.Name);
+        this.setState({connectorProperties: connectorProperties});
     }
   
     // TODO(@Andrea): how to set debounce?
@@ -70,15 +81,15 @@ export default class AccountConnector extends Component {
     }
 
     render() {
-		let externalProperties = [];
-        externalProperties.push(<div className="title">Connector</div>)
-        for (let p of this.state.connectorsProperties) {
-            externalProperties.push(<div className="property">{p}</div>)
+		let connectorProperties = [];
+        connectorProperties.push(<div className="title">Connector</div>)
+        for (let p of this.state.connectorProperties) {
+            connectorProperties.push(<div className="property">{p}</div>)
         }
-        let internalProperties = [];
-        internalProperties.push(<div className="title">Golden record</div>)
-        for (let p of this.state.internalProperties) {
-            internalProperties.push(<div className="property">{p}</div>)
+        let schemaProperties = [];
+        schemaProperties.push(<div className="title">Golden record</div>)
+        for (let p of this.state.schemaProperties) {
+            schemaProperties.push(<div className="property">{p}</div>)
         }
         return (
         <div className="AccountConnector">
@@ -86,7 +97,7 @@ export default class AccountConnector extends Component {
                 {this.state.statusMessage && <StatusMessage onClose={() => {this.setState({statusMessage: null})}} message={this.state.statusMessage} />}
                 <h1>Map connector's properties to your golden record</h1>
                 <div className="properties ext">
-                    {externalProperties}
+                    {connectorProperties}
                 </div>
                 <div className="editor-wrapper">
                     <Editor
@@ -94,11 +105,11 @@ export default class AccountConnector extends Component {
                         defaultLanguage="go"
                         defaultValue={this.state.transformationFunc}
                     />
+                    <Button theme="primary" icon="save" text="Save" onClick={this.handleSaving} />
                 </div>
                 <div className="properties int">
-                    {internalProperties}
+                    {schemaProperties}
                 </div>
-                <Button theme="primary" icon="save" text="Save" onClick={this.handleSaving} />
             </div>
             <div className="content">
                 <h1>Documentation</h1>
