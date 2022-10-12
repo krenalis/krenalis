@@ -32,6 +32,7 @@ type APIs struct {
 	Schemas         *Schemas
 	Properties      *Properties
 	Transformations *Transformations
+	Users           *Users
 }
 
 var hasBeenCalled bool
@@ -49,6 +50,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 	apis.Schemas = &Schemas{apis}
 	apis.Properties = &Properties{apis}
 	apis.Transformations = &Transformations{apis}
+	apis.Users = &Users{apis}
 	apis.initSchema()
 	return apis
 }

@@ -8,6 +8,7 @@
   - [Compile the server](#compile-the-server)
   - [Run and open the browser](#run-and-open-the-browser)
   - [Expose on the Internet (optional)](#expose-on-the-internet-optional)
+- [Interact with Chichi using `chichi-cli`](#interact-with-chichi-using-chichi-cli)
 - [Checklist before commit](#checklist-before-commit)
 
 ## How to execute Chichi
@@ -38,6 +39,7 @@ go build -tags osusergo,netgo -trimpath
 
 Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/admin/.
 
+
 ### Expose on the Internet (optional)
 
 1. Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/)
@@ -45,6 +47,11 @@ Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit http
 3. Run cloudflared: `cloudflared tunnel --url https://localhost:9090`
 4. Make a note of the URL listed in the standard output (example:  https://xxxxxxx.trycloudflare.com)
 5. Open the URL in a browser
+
+## Interact with Chichi using `chichi-cli`
+
+Refer to the [documentation of the chichi-cli tool](chichi-cli/README.md).
+
 
 ## Checklist before commit
 
