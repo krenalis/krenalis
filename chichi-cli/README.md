@@ -1,7 +1,7 @@
 # chichi-cli
 
 - [Configuration](#configuration)
-- [How to run](#how-to-run)
+- [How to compile](#how-to-compile)
 - [Usage](#usage)
   - [Implemented subcommands](#implemented-subcommands)
 
@@ -17,13 +17,13 @@ apis:
 account: 1
 ```
 
-## How to run
+## How to compile
 
 From your terminal:
 
 ```
 cd chichi-cli
-go run main.go
+go build
 ```
 
 ## Usage
@@ -32,28 +32,28 @@ go run main.go
 the section below.
 
 ```
-chichi connectors [list-enabled]
-chichi connectors list-available
-chichi connectors import <connector ID>
-chichi connectors reimport <connector ID>
-chichi connectors properties <connector ID>
+chichi-cli connectors [list-enabled]
+chichi-cli connectors list-available
+chichi-cli connectors import <connector ID>
+chichi-cli connectors reimport <connector ID>
+chichi-cli connectors properties <connector ID>
 
-chichi transformations show <connector ID>
-chichi transformations update <connector ID> { <filename> | - }
+chichi-cli transformations show <connector ID>
+chichi-cli transformations update <connector ID> { <filename> | - }
 
-chichi schemas show { user | group | event }
-chichi schemas update { user | group | event } { <filename> | - }
-chichi schemas properties { user | group | event }
+chichi-cli schemas show { user | group | event }
+chichi-cli schemas update { user | group | event } { <filename> | - }
+chichi-cli schemas properties { user | group | event }
 
-chichi users [list]
+chichi-cli users [list]
 ```
 
 ### Implemented subcommands
 
-- [x] `chichi connectors [list-enabled]`
-- [x] `chichi connectors import <connector ID>`
-- [x] `chichi connectors reimport <connector ID>`
-- [x] `chichi connectors properties <connector ID>`
-- [x] `chichi transformations show <connector ID>`
-- [x] `chichi transformations update <connector ID> { <filename> | - }`
-- [x] `chichi users [list]`
+- [x] `chichi-cli connectors [list-enabled]`
+- [x] `chichi-cli connectors import <connector ID>`
+- [x] `chichi-cli connectors reimport <connector ID>`
+- [x] `chichi-cli connectors properties <connector ID>`
+- [x] `chichi-cli transformations show <connector ID>`
+- [x] `chichi-cli transformations update <connector ID> { <filename> | - }`
+- [x] `chichi-cli users [list]`
