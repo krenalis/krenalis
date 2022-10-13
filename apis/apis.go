@@ -258,6 +258,15 @@ func (apis *APIs) initSchema() {
 		internalIPs string
 	}{})
 
+	apis.myDB.Scheme("Connectors", "connectors", struct {
+		id            int
+		oauthURL      string
+		logoURL       string
+		clientID      string
+		clientSecret  string
+		tokenEndpoint string
+	}{})
+
 	apis.myDB.Scheme("DataSourcesProperties", "data_sources_properties", struct {
 		account   int
 		connector int
