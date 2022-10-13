@@ -9,6 +9,7 @@ package apis
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -65,10 +66,12 @@ func (apis *APIs) API(customer int) *API {
 	return &API{myDB: apis.myDB, chDB: apis.chDB, customer: customer}
 }
 
-var importRegexp = regexp.MustCompile(`/apis/connectors/(\d+)/(re)?import`)
+var importRegexp = regexp.MustCompile(`/apis/connectors/(\d+)/((re)?import|properties)`)
 
 // ServeHTTP servers the API methods from HTTP.
 func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "application/json")
 
 	m := importRegexp.FindStringSubmatch(r.URL.Path)
 	if m != nil {
@@ -77,14 +80,23 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		all := m[2] == "re"
-		err := apis.Connectors.Import(id, all)
+		var err error
+		if m[2] == "properties" {
+			var properties []*ConnectorProperty
+			properties, err = apis.Connectors.Properties(id)
+			if err == nil {
+				_ = json.NewEncoder(w).Encode(properties)
+			}
+		} else {
+			all := m[3] == "re"
+			err = apis.Connectors.Import(id, all)
+		}
 		if err != nil {
 			if err == ErrConnectorNotFound {
 				http.Error(w, "Not Found", http.StatusNotFound)
 				return
 			}
-			log.Printf("[error] call to the Import method of the connector %d failed: %s", id, err)
+			log.Printf("[error] call to %q failed: %s", r.URL.Path, err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
 		return
@@ -150,6 +162,16 @@ func (apis *APIs) initSchema() {
 		email       string
 		password    string
 		internalIPs string
+	}{})
+
+	apis.myDB.Scheme("ConnectorsProperties", "connectors_properties", struct {
+		account   int
+		connector int
+		name      string
+		typ       string `sql:"type"`
+		label     string
+		options   string
+		position  int
 	}{})
 
 	apis.myDB.Scheme("ConnectorsRawUserData", "connectors_raw_users_data", struct {

@@ -90,14 +90,20 @@ func callAdmin(method string, body any) (any, error) {
 	return v, nil
 }
 
-// callAPI calls the given method on the Chichi APIs, passing body in the
+// callAPI calls the given path on the Chichi APIs, passing body in the
 // request (which is serialized in JSON). It deserializes the response in the
 // response argument if not nil.
-func callAPI(method string, body io.Reader, response any) error {
+func callAPI(method string, path string, body io.Reader, response any) error {
 
 	// Some initial validation.
-	if strings.HasPrefix(method, "/") {
-		panic("method should not begin with /")
+	if method != "GET" && method != "POST" {
+		panic("method must be GET or POST")
+	}
+	if method == "GET" && body != nil {
+		panic("body must be nil for the GET method")
+	}
+	if strings.HasPrefix(path, "/") {
+		panic("path should not begin with /")
 	}
 	if !initialized {
 		panic("package 'chichiapis' not initialized")
@@ -111,7 +117,7 @@ func callAPI(method string, body io.Reader, response any) error {
 	}
 
 	// Call the APIs.
-	url := chichiAPIs.url + method
+	url := chichiAPIs.url + path
 	jsonBody := &bytes.Buffer{}
 	if body != nil {
 		err := json.NewEncoder(jsonBody).Encode(body)
@@ -119,7 +125,7 @@ func callAPI(method string, body io.Reader, response any) error {
 			return err
 		}
 	}
-	req, err := http.NewRequest("POST", url, jsonBody)
+	req, err := http.NewRequest(method, url, jsonBody)
 	if err != nil {
 		return err
 	}

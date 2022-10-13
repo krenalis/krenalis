@@ -81,6 +81,17 @@ CREATE TABLE `account_connectors` (
   PRIMARY KEY (`account`, `connector`)
 );
 
+CREATE TABLE `connectors_properties` (
+  `account` INT NOT NULL,
+  `connector` INT NOT NULL,
+  `name` VARCHAR(100) NOT NULL DEFAULT '',
+  `type` VARCHAR(100) NOT NULL DEFAULT '',
+  `label` VARCHAR(100) NOT NULL DEFAULT '',
+  `options` TEXT NOT NULL DEFAULT '',
+  `position` INT NOT NULL,
+  PRIMARY KEY (`account`, `connector`, `name`)
+);
+
 CREATE TABLE `connectors_raw_users_data` (
   `connector` int NOT NULL,
   `account` int NOT NULL,

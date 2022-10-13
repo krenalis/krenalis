@@ -124,3 +124,14 @@ CREATE TABLE `warehouse_users` (
   `LastName` VARCHAR(500) NOT NULL DEFAULT '',
   PRIMARY KEY (`Email`)
 );
+
+CREATE TABLE `connectors_properties` (
+  `account` INT NOT NULL,
+  `connector` INT NOT NULL,
+  `name` VARCHAR(100) NOT NULL DEFAULT '',
+  `type` VARCHAR(100) NOT NULL DEFAULT '',
+  `label` VARCHAR(100) NOT NULL DEFAULT '',
+  `options` TEXT NOT NULL DEFAULT '',
+  `position` INT NOT NULL,
+  PRIMARY KEY (`account`, `connector`, `name`)
+);

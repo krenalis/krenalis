@@ -25,14 +25,21 @@ func ListEnabledConnectors() {
 	}
 }
 
+// Property represents a connector property.
+type Property struct {
+	Name  string
+	Type  string
+	Label string
+}
+
 func ListConnectorProperties(connector int) {
-	resp, err := callAdmin("admin/connectors-properties", map[string]any{"Connector": connector})
+	var properties []*Property
+	err := callAPI("GET", "apis/connectors/"+strconv.Itoa(connector)+"/properties", nil, &properties)
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, property := range resp.([]any) {
-		p := property.(map[string]any)
-		fmt.Printf("%-50s %-40s %s\n", p["Label"], p["Name"], p["Type"])
+	for _, property := range properties {
+		fmt.Printf("%-50s %-40s %s\n", property.Label, property.Name, property.Type)
 	}
 }
 
@@ -43,7 +50,7 @@ func ImportUsersFromConnector(connector int, reimport bool) {
 	} else {
 		path += "/import"
 	}
-	err := callAPI(path, nil, nil)
+	err := callAPI("POST", path, nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

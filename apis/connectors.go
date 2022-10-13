@@ -112,6 +112,78 @@ func (this *Connectors) Import(id int, reimport bool) error {
 	return nil
 }
 
+// PropertyType represents the type of a property.
+type PropertyType string
+
+// ConnectorPropertyOption represents an option of a connector property.
+type ConnectorPropertyOption struct {
+	Label string
+	Value string
+}
+
+// ConnectorProperty represents a connector property.
+type ConnectorProperty struct {
+	Name    string
+	Type    PropertyType
+	Label   string
+	Options []ConnectorPropertyOption
+}
+
+// Properties returns the properties of the connector with identifier id.
+// Returns the ErrConnectorNotFound error if the connector does not exist.
+func (this *Connectors) Properties(id int) ([]*ConnectorProperty, error) {
+
+	if id <= 0 {
+		return nil, errors.New("invalid connector identifier")
+	}
+
+	var account = 1 // TODO(marco)
+
+	var properties []*ConnectorProperty
+
+	stmt := "SELECT `name`, `type`, `label`, `options`\n" +
+		"FROM `connectors_properties`\n" +
+		"WHERE `account` = ? AND `connector` = ?\n" +
+		"ORDER BY `position`"
+
+	err := this.myDB.QueryScan(stmt, account, id, func(rows *sql.Rows) error {
+		var err error
+		for rows.Next() {
+			var property ConnectorProperty
+			var options []byte
+			if err = rows.Scan(&property.Name, &property.Type, &property.Label, &options); err != nil {
+				return err
+			}
+			if len(options) > 0 {
+				property.Options = []ConnectorPropertyOption{}
+				err := json.Unmarshal(options, &property.Options)
+				if err != nil {
+					return fmt.Errorf("malformed options for connector %d", id)
+				}
+			}
+			properties = append(properties, &property)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if properties == nil {
+		var exists bool
+		err := this.myDB.QueryRow("SELECT TRUE FROM `account_connectors`\nWHERE `account` = ? AND `connector` = ?", account, id).Scan(&exists)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				err = ErrConnectorNotFound
+			}
+			return nil, err
+		}
+		properties = []*ConnectorProperty{}
+	}
+
+	return properties, nil
+}
+
 func (this *Connectors) Get(id int) (*Connector, error) {
 	connector := Connector{ID: id}
 	err := this.myDB.QueryRow("SELECT `name`, `oauth_url`, `logo_url`, `client_id`, `client_secret`, `token_endpoint`\nFROM `connectors`\nWHERE `id` = ?", id).
@@ -190,11 +262,15 @@ func (this *Connectors) SaveAccountConnector(accountID int, connectorID int, acc
 }
 
 func (this *Connectors) DeleteAccountConnector(accountID int, ids []int) error {
-	_, err := this.myDB.Table("AccountConnectors").Delete(sql.Where{"account": accountID, "connector": ids})
-	if err != nil {
+	where := sql.Where{"account": accountID, "connector": ids}
+	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+		_, err := this.myDB.Table("AccountConnectors").Delete(where)
+		if err == nil {
+			_, err = this.myDB.Table("ConnectorsProperties").Delete(where)
+		}
 		return err
-	}
-	return nil
+	})
+	return err
 }
 
 // refreshOAuthToken refreshes the OAuth token and returns it.

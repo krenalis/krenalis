@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"chichi/apis"
-	"chichi/connectors"
 
 	"github.com/evanw/esbuild/pkg/api"
 )
@@ -124,7 +123,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		properties, err := admin.connectorProperties(accountID, req.Connector)
+		properties, err := admin.apis.Connectors.Properties(req.Connector)
 		if err != nil {
 			log.Printf("[error] cannot retrieve properties: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -745,31 +744,4 @@ func (admin *admin) connectorName(id int) (string, error) {
 		return "", nil
 	}
 	return connector.Name, nil
-}
-
-// connectorProperties returns the properties for the installed connector for
-// the given account.
-func (admin *admin) connectorProperties(account, connector int) ([]connectors.Property, error) {
-	name, err := admin.connectorName(connector)
-	if err != nil {
-		return nil, err
-	}
-	// Retrieve the client secret.
-	c, err := admin.apis.Connectors.Get(connector)
-	if err != nil {
-		return nil, err
-	}
-	fh := admin.apis.NewFirehose(connector, account)
-	conn := connectors.Connector(context.Background(), name, c.ClientSecret, fh)
-	// Retrieve the access token.
-	accessToken, err := admin.getConnectorAccessToken(account, connector, false)
-	if err != nil {
-		return nil, err
-	}
-	// Retrieve the properties.
-	properties, _, err := conn.Properties(accessToken) // TODO(Gianluca): remove the "account" argument.
-	if err != nil {
-		return nil, err
-	}
-	return properties, nil
 }
