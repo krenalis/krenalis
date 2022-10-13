@@ -32,11 +32,12 @@ go build
 the section below.
 
 ```
-chichi-cli connectors [list-enabled]
-chichi-cli connectors list-available
-chichi-cli connectors import <connector ID>
-chichi-cli connectors reimport <connector ID>
-chichi-cli connectors properties <connector ID>
+chichi-cli connectors
+
+chichi-cli data-sources
+chichi-cli data-sources import <connector ID>
+chichi-cli data-sources reimport <connector ID>
+chichi-cli data-sources properties <connector ID>
 
 chichi-cli transformations show <connector ID>
 chichi-cli transformations update <connector ID> { <filename> | - }
@@ -50,10 +51,10 @@ chichi-cli users [list]
 
 ### Implemented subcommands
 
-- [x] `chichi-cli connectors [list-enabled]`
-- [x] `chichi-cli connectors import <connector ID>`
-- [x] `chichi-cli connectors reimport <connector ID>`
-- [x] `chichi-cli connectors properties <connector ID>`
+- [x] `chichi-cli data-sources`
+- [x] `chichi-cli data-sources import <connector ID>`
+- [x] `chichi-cli data-sources reimport <connector ID>`
+- [x] `chichi-cli data-sources properties <connector ID>`
 - [x] `chichi-cli transformations show <connector ID>`
 - [x] `chichi-cli transformations update <connector ID> { <filename> | - }`
 - [x] `chichi-cli users [list]`
