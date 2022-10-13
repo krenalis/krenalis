@@ -9,8 +9,10 @@ package apis
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
+	"unicode/utf8"
 
 	"chichi/pkg/open2b/sql"
 )
@@ -57,6 +59,9 @@ func (this *Schemas) Update(name, schema string) error {
 		column = "eventSchema"
 	default:
 		return fmt.Errorf("invalid schema name %q", name)
+	}
+	if !utf8.ValidString(schema) {
+		return errors.New("invalid schema")
 	}
 	_, err := this.myDB.Table("Schemas").Update(sql.Set{column: schema}, sql.Where{"account": this.account})
 	return err
