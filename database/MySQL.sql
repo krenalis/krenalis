@@ -1,3 +1,4 @@
+
 CREATE TABLE `accounts` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(45) NOT NULL DEFAULT '',
@@ -6,56 +7,7 @@ CREATE TABLE `accounts` (
   `internalIPs` VARCHAR(160) CHARACTER SET ascii NOT NULL DEFAULT '',
   PRIMARY KEY (`id`));
 
-CREATE TABLE `properties` (
-  `id` INT unsigned NOT NULL AUTO_INCREMENT,
-  `code` CHAR(10) CHARACTER SET ascii NOT NULL,
-  `account` INT NOT NULL,
-  UNIQUE KEY `code` (`code`),
-  KEY `account` (`account`),
-  PRIMARY KEY (`id`));
-
-CREATE TABLE `domains` (
-  `property` INT unsigned NOT NULL,
-  `name` VARCHAR(255) NOT NULL,
-  PRIMARY KEY (`property`, `name`));
-
-/* default account and properties */
 INSERT INTO `accounts` (`name`,`email`,`password`) VALUES ('ACME inc','acme@open2b.com','$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC'); /* Password: foopass2 */
-INSERT INTO `properties` VALUES (1,'1234567890',1);
-
-CREATE TABLE `smart_events` (
-  `property` INT unsigned NOT NULL,
-  `id` INT NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(255) NOT NULL DEFAULT '',
-  `event` VARCHAR(50) NOT NULL DEFAULT '',
-  `pages` TEXT NOT NULL,
-  `buttons` TEXT NOT NULL,
-  PRIMARY KEY (`id`)
-);
-
-INSERT INTO `smart_events` VALUES (1,50,'View Nissan Car','pageview','[{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"cars/nissan/\",\"Domain\":\"english.example.com\"},{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"auto/nissan/\",\"Domain\":\"italian.example.com\"}]','null'),(1,51,'Configure a Nissan Car','click','[{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"cars/nissan/\",\"Domain\":\"english.example.com\"},{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"auto/nissan/\",\"Domain\":\"italian.example.com\"}]','[{\"Field\":\"text\",\"Operator\":\"Equals\",\"Value\":\"Configure your car\",\"Domain\":\"english.example.com\"},{\"Field\":\"text\",\"Operator\":\"Equals\",\"Value\":\"Configura la tua auto\",\"Domain\":\"italian.example.com\"}]'),(1,52,'Click on Login Button','click','null','[{\"Field\":\"text\",\"Operator\":\"Contains\",\"Value\":\"Log in\"}]');
-
-CREATE TABLE `devices` (
-  `property` INT unsigned NOT NULL,
-  `id` char(28) CHARACTER SET ascii NOT NULL,
-  `user` int unsigned DEFAULT NULL,
-  PRIMARY KEY (`property`, `id`)
-);
-
-CREATE TABLE `users` (
-  `property` INT unsigned NOT NULL,
-  `id` int unsigned NOT NULL,
-  `device` char(28) CHARACTER SET ascii DEFAULT NULL,
-  PRIMARY KEY (`property`,`id`)
-);
-
-CREATE TABLE `schemas` (
-  `account` INT NOT NULL,
-  `userSchema` TEXT NOT NULL,
-  `groupSchema` TEXT NOT NULL,
-  `eventSchema` TEXT NOT NULL,
-  PRIMARY KEY (`account`)
-);
 
 CREATE TABLE `connectors` (
   `id` INT NOT NULL AUTO_INCREMENT,
@@ -101,7 +53,56 @@ CREATE TABLE `data_sources_raw_users_data` (
   PRIMARY KEY (`connector`,`account`,`user`)
 );
 
+CREATE TABLE `devices` (
+  `property` INT unsigned NOT NULL,
+  `id` char(28) CHARACTER SET ascii NOT NULL,
+  `user` int unsigned DEFAULT NULL,
+  PRIMARY KEY (`property`, `id`)
+);
+
+CREATE TABLE `domains` (
+  `property` INT unsigned NOT NULL,
+  `name` VARCHAR(255) NOT NULL,
+  PRIMARY KEY (`property`, `name`));
+
+CREATE TABLE `properties` (
+  `id` INT unsigned NOT NULL AUTO_INCREMENT,
+  `code` CHAR(10) CHARACTER SET ascii NOT NULL,
+  `account` INT NOT NULL,
+  UNIQUE KEY `code` (`code`),
+  KEY `account` (`account`),
+  PRIMARY KEY (`id`));
+
+INSERT INTO `properties` VALUES (1,'1234567890',1);
+
+CREATE TABLE `schemas` (
+  `account` INT NOT NULL,
+  `userSchema` TEXT NOT NULL,
+  `groupSchema` TEXT NOT NULL,
+  `eventSchema` TEXT NOT NULL,
+  PRIMARY KEY (`account`)
+);
+
 INSERT INTO `schemas` (`account`, `userSchema`, `groupSchema`) VALUES ('1', '{\n    \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n    \"$id\": \"https://example.com/product.schema.json\",\n    \"description\": \"Schema di uno user\",\n    \"self\": {\n        \"vendor\": \"com.example\",\n        \"name\": \"schema_1\",\n        \"format\": \"jsonschema\",\n        \"version\": \"1-0-0\"\n    },\n    \"type\": \"object\",\n    \"properties\": {\n        \"FirstName\": {\n            \"title\": \"First name\",\n            \"description\": \"First of the user\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        },\n        \"LastName\": {\n          \"title\": \"Last name\",\n            \"description\": \"Last name of the user\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        },\n        \"Email\": {\n            \"title\": \"Email address\",\n            \"description\": \"Email address of the user\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        }\n    },\n    \"additionalProperties\": false\n}', '{\n    \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n    \"$id\": \"https://example.com/product.schema.json\",\n    \"description\": \"Schema di un gruppo\",\n    \"self\": {\n        \"vendor\": \"com.example\",\n        \"name\": \"schema_1\",\n        \"format\": \"jsonschema\",\n        \"version\": \"1-0-0\"\n    },\n    \"type\": \"object\",\n    \"properties\": {\n        \"Name\": {\n            \"title\": \"Group name\",\n            \"description\": \"Name of the group\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        },\n    },\n    \"additionalProperties\": false\n}');
+
+CREATE TABLE `smart_events` (
+  `property` INT unsigned NOT NULL,
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL DEFAULT '',
+  `event` VARCHAR(50) NOT NULL DEFAULT '',
+  `pages` TEXT NOT NULL,
+  `buttons` TEXT NOT NULL,
+  PRIMARY KEY (`id`)
+);
+
+INSERT INTO `smart_events` VALUES (1,50,'View Nissan Car','pageview','[{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"cars/nissan/\",\"Domain\":\"english.example.com\"},{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"auto/nissan/\",\"Domain\":\"italian.example.com\"}]','null'),(1,51,'Configure a Nissan Car','click','[{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"cars/nissan/\",\"Domain\":\"english.example.com\"},{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"auto/nissan/\",\"Domain\":\"italian.example.com\"}]','[{\"Field\":\"text\",\"Operator\":\"Equals\",\"Value\":\"Configure your car\",\"Domain\":\"english.example.com\"},{\"Field\":\"text\",\"Operator\":\"Equals\",\"Value\":\"Configura la tua auto\",\"Domain\":\"italian.example.com\"}]'),(1,52,'Click on Login Button','click','null','[{\"Field\":\"text\",\"Operator\":\"Contains\",\"Value\":\"Log in\"}]');
+
+CREATE TABLE `users` (
+  `property` INT unsigned NOT NULL,
+  `id` int unsigned NOT NULL,
+  `device` char(28) CHARACTER SET ascii DEFAULT NULL,
+  PRIMARY KEY (`property`,`id`)
+);
 
 CREATE TABLE `warehouse_users` (
   `Email` VARCHAR(500) NOT NULL DEFAULT '',
