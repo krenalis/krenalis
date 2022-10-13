@@ -20,7 +20,7 @@ CREATE TABLE `domains` (
   PRIMARY KEY (`property`, `name`));
 
 /* default account and properties */
-INSERT INTO `account` (`name`,`email`,`password`) VALUES ('ACME inc','acme@open2b.com','$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC'); /* Password: foopass2 */
+INSERT INTO `accounts` (`name`,`email`,`password`) VALUES ('ACME inc','acme@open2b.com','$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC'); /* Password: foopass2 */
 INSERT INTO `properties` VALUES (1,'1234567890',1);
 
 CREATE TABLE `smart_events` (
