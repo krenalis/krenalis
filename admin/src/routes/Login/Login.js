@@ -18,13 +18,13 @@ export default class Login extends Component {
     handleLogin = async (e) => {
         e.preventDefault();
         this.setState({ statusMessage: '' })
-        let customerID, error;
+        let accountID, error;
         try {
             let res = await fetch('/admin/', {
                 method: 'POST',
                 body: JSON.stringify({ email: this.state.email, password: this.state.password })
             });
-            [customerID, error] = await res.json();
+            [accountID, error] = await res.json();
         } catch (err) {
             this.setState({ 'statusMessage': 'Something went wrong, check your connection and try again' });
             return;
@@ -33,7 +33,7 @@ export default class Login extends Component {
             this.setState({ 'statusMessage': 'Your email or password are incorrect' });
             return;
         }
-        console.log(customerID);
+        console.log(accountID);
         this.setState({ 'isLoggedIn': true });
     }
 

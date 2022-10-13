@@ -305,7 +305,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// TODO(Gianluca): check if the property belongs to the customer.
+		// TODO(Gianluca): check if the property belongs to the account.
 
 		deprecatedProperty := API.DeprecatedProperty(propertyID)
 
@@ -521,20 +521,20 @@ func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	enc := json.NewEncoder(w)
-	customerID, err := admin.apis.Customers.Authenticate(loginData.Email, loginData.Password)
+	accountID, err := admin.apis.Accounts.Authenticate(loginData.Email, loginData.Password)
 	if err != nil {
 		if err == apis.ErrAuthenticationFailed {
 			enc.Encode([]any{0, "AuthenticationFailedError"})
 			return
 		}
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot log customer: %s", err)
+		log.Printf("[error] cannot log account: %s", err)
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{Name: "session", Value: strconv.Itoa(customerID), Path: "/"})
+	http.SetCookie(w, &http.Cookie{Name: "session", Value: strconv.Itoa(accountID), Path: "/"})
 	w.WriteHeader(http.StatusOK)
-	enc.Encode([]any{customerID, nil})
+	enc.Encode([]any{accountID, nil})
 }
 
 // TODO(@Andrea): redirect to error screens with useful messages instead of

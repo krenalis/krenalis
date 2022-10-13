@@ -28,9 +28,9 @@ var webhookPathReg = regexp.MustCompile(`^/webhook/(\d+)/`)
 type APIs struct {
 	myDB       *sql.DB
 	chDB       chDriver.Conn
+	Accounts   *Accounts
 	Connectors *Connectors
 	Cursors    *Cursors
-	Customers  *Customers
 	Schemas    *Schemas
 	Properties *Properties
 	Users      *Users
@@ -47,7 +47,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 	apis := &APIs{myDB: myDB, chDB: chDB}
 	apis.Connectors = &Connectors{apis}
 	apis.Cursors = &Cursors{apis}
-	apis.Customers = &Customers{apis}
+	apis.Accounts = &Accounts{apis}
 	apis.Schemas = &Schemas{apis}
 	apis.Properties = &Properties{apis}
 	apis.Users = &Users{apis}
@@ -56,13 +56,13 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 }
 
 type API struct {
-	myDB     *sql.DB
-	chDB     chDriver.Conn
-	customer int
+	myDB    *sql.DB
+	chDB    chDriver.Conn
+	account int
 }
 
-func (apis *APIs) API(customer int) *API {
-	return &API{myDB: apis.myDB, chDB: apis.chDB, customer: customer}
+func (apis *APIs) API(account int) *API {
+	return &API{myDB: apis.myDB, chDB: apis.chDB, account: account}
 }
 
 var importRegexp = regexp.MustCompile(`/apis/connectors/(\d+)/((re)?import|properties|transformation)`)
@@ -170,7 +170,7 @@ func (apis *APIs) serveWebhook(r *http.Request) error {
 
 func (apis *APIs) initSchema() {
 
-	apis.myDB.Scheme("Customers", "customers", struct {
+	apis.myDB.Scheme("Accounts", "accounts", struct {
 		id          int
 		name        string
 		email       string
@@ -206,9 +206,9 @@ func (apis *APIs) initSchema() {
 	}{})
 
 	apis.myDB.Scheme("Properties", "properties", struct {
-		id       int
-		code     string
-		customer int
+		id      int
+		code    string
+		account int
 	}{})
 
 	apis.myDB.Scheme("Schemas", "schemas", struct {

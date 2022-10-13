@@ -33,22 +33,22 @@ type DeprecatedProperty struct {
 	Domains []string
 }
 
-var ErrCustomerNotFound = errors.New("customer does not exist")
+var ErrAccountNotFound = errors.New("account does not exist")
 var ErrPropertyNotFound = errors.New("property does not exist")
 var ErrDomainNameNotValid = errors.New("domain name is not valid")
 
-// Create creates a new property for the current customer and returns its
-// identifier. If the customer does not exist anymore, it returns the
-// ErrCustomerNotFound error.
+// Create creates a new property for the current account and returns its
+// identifier. If the account does not exist anymore, it returns the
+// ErrAccountNotFound error.
 func (this *DeprecatedProperties) Create() (int, error) {
 	var id int
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		exists, err := tx.Table("Customers").Exists(sql.Where{"id": this.customer})
+		exists, err := tx.Table("Accounts").Exists(sql.Where{"id": this.account})
 		if err != nil {
 			return err
 		}
 		if !exists {
-			return ErrCustomerNotFound
+			return ErrAccountNotFound
 		}
 		var tries = 0
 		for tries < 10 {
@@ -56,7 +56,7 @@ func (this *DeprecatedProperties) Create() (int, error) {
 			if err != nil {
 				return err
 			}
-			id, err = tx.Table("Properties").Add(map[string]any{"code": code, "customer": this.customer}, nil)
+			id, err = tx.Table("Properties").Add(map[string]any{"code": code, "account": this.account}, nil)
 			if err != nil {
 				if err2, ok := err.(*mysql.MySQLError); ok && err2.Number == 1062 {
 					tries++
@@ -81,7 +81,7 @@ func (this *DeprecatedProperties) Create() (int, error) {
 //
 // If domain is not a valid domain name, it returns the ErrDomainNameNotValid
 // error. If the property does not exist, or it does not belong to the current
-// customer, it returns the ErrPropertyNotFound error.
+// account, it returns the ErrPropertyNotFound error.
 func (this *DeprecatedProperties) AddDomain(id int, domain string) error {
 	if id < 1 {
 		panic("apis: invalid property identifier")
@@ -90,15 +90,15 @@ func (this *DeprecatedProperties) AddDomain(id int, domain string) error {
 		return ErrDomainNameNotValid
 	}
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		var customer int
-		err := tx.QueryRow("SELECT `customer` FROM `properties` WHERE `id` = ?", id).Scan(&customer)
+		var account int
+		err := tx.QueryRow("SELECT `account` FROM `properties` WHERE `id` = ?", id).Scan(&account)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ErrPropertyNotFound
 			}
 			return err
 		}
-		if customer != this.customer {
+		if account != this.account {
 			return ErrPropertyNotFound
 		}
 		_, err = tx.Table("Domains").Add(map[string]any{"property": id, "domain": domain}, sql.Ignore)
@@ -108,7 +108,7 @@ func (this *DeprecatedProperties) AddDomain(id int, domain string) error {
 }
 
 // Delete deletes the properties with the given identifiers of the current
-// customer. It does not return an error if the customer does not exist.
+// account. It does not return an error if the account does not exist.
 func (this *DeprecatedProperties) Delete(ids []int) error {
 	if len(ids) == 0 {
 		panic("apis: empty properties")
@@ -120,14 +120,14 @@ func (this *DeprecatedProperties) Delete(ids []int) error {
 	}
 	_, err := this.myDB.Exec("DELETE `p`, `d`\n"+
 		"FROM `properties` AS `p` LEFT JOIN `domains` AS `d` ON `p`.`id` = `d`.`property`\n"+
-		"WHERE `customer` = ? AND `p`.`id` IN "+sql.Quote(ids), this.customer)
+		"WHERE `account` = ? AND `p`.`id` IN "+sql.Quote(ids), this.account)
 	return err
 }
 
-// Find returns all the properties of the customer.
+// Find returns all the properties of the account.
 func (this *DeprecatedProperties) Find() ([]*DeprecatedProperty, error) {
 	properties := make([]*DeprecatedProperty, 0, 0)
-	stmt := "SELECT `id`, `code`, `domain`\nFROM `properties`\nLEFT JOIN `domains` ON `property` = `id`\nWHERE `customer` = ?\nORDER BY `id`, `domain`"
+	stmt := "SELECT `id`, `code`, `domain`\nFROM `properties`\nLEFT JOIN `domains` ON `property` = `id`\nWHERE `account` = ?\nORDER BY `id`, `domain`"
 	err := this.myDB.QueryScan(stmt, func(rows *sql.Rows) error {
 		var id int
 		var code, domain string
@@ -156,14 +156,14 @@ func (this *DeprecatedProperties) Find() ([]*DeprecatedProperty, error) {
 	return properties, nil
 }
 
-// Get returns the property, of the current customer, with the given
-// identifier. If the customer or the property do not exist, it returns nil.
+// Get returns the property, of the current account, with the given
+// identifier. If the account or the property do not exist, it returns nil.
 func (this *DeprecatedProperties) Get(id int) (*DeprecatedProperty, error) {
 	if id < 1 {
 		panic("apis: invalid property identifier")
 	}
 	property := DeprecatedProperty{}
-	stmt := "SELECT `code`, `domain`\nFROM `properties`\nLEFT JOIN `domains` ON `property` = `id`\nWHERE `customer` = ? AND `id` = ?"
+	stmt := "SELECT `code`, `domain`\nFROM `properties`\nLEFT JOIN `domains` ON `property` = `id`\nWHERE `account` = ? AND `id` = ?"
 	err := this.myDB.QueryScan(stmt, func(rows *sql.Rows) error {
 		var code, domain string
 		for rows.Next() {
@@ -200,7 +200,7 @@ func (this *DeprecatedProperties) Get(id int) (*DeprecatedProperty, error) {
 //
 // If domain is not a valid domain name, it returns the ErrDomainNameNotValid
 // error. If the property does not exist, or it does not belong to the current
-// customer, it returns the ErrPropertyNotFound error.
+// account, it returns the ErrPropertyNotFound error.
 func (this *DeprecatedProperties) RemoveDomain(id int, domain string) error {
 	if id < 1 {
 		panic("apis: invalid property identifier")
@@ -209,15 +209,15 @@ func (this *DeprecatedProperties) RemoveDomain(id int, domain string) error {
 		return ErrDomainNameNotValid
 	}
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		var customer int
-		err := tx.QueryRow("SELECT `customer` FROM `properties` WHERE `id` = ?", id).Scan(&customer)
+		var account int
+		err := tx.QueryRow("SELECT `account` FROM `properties` WHERE `id` = ?", id).Scan(&account)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ErrPropertyNotFound
 			}
 			return err
 		}
-		if customer != this.customer {
+		if account != this.account {
 			return ErrPropertyNotFound
 		}
 		_, err = tx.Table("Domains").Delete(sql.Where{"property": id, "domain": domain})

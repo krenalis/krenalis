@@ -1,4 +1,4 @@
-CREATE TABLE `customers` (
+CREATE TABLE `accounts` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(45) NOT NULL DEFAULT '',
   `email` VARCHAR(120) NOT NULL DEFAULT '',
@@ -9,9 +9,9 @@ CREATE TABLE `customers` (
 CREATE TABLE `properties` (
   `id` INT unsigned NOT NULL AUTO_INCREMENT,
   `code` CHAR(10) CHARACTER SET ascii NOT NULL,
-  `customer` INT NOT NULL,
+  `account` INT NOT NULL,
   UNIQUE KEY `code` (`code`),
-  KEY `customer` (`customer`),
+  KEY `account` (`account`),
   PRIMARY KEY (`id`));
 
 CREATE TABLE `domains` (
@@ -19,8 +19,8 @@ CREATE TABLE `domains` (
   `name` VARCHAR(255) NOT NULL,
   PRIMARY KEY (`property`, `name`));
 
-/* default customer and properties */
-INSERT INTO `customers` (`name`,`email`,`password`) VALUES ('ACME inc','acme@open2b.com','$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC'); /* Password: foopass2 */
+/* default account and properties */
+INSERT INTO `account` (`name`,`email`,`password`) VALUES ('ACME inc','acme@open2b.com','$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC'); /* Password: foopass2 */
 INSERT INTO `properties` VALUES (1,'1234567890',1);
 
 CREATE TABLE `smart_events` (

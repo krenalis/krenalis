@@ -86,8 +86,8 @@ func (server *Server) _serveLogEvent(w http.ResponseWriter, r *http.Request) err
 	if !isValidPropertyID(event.Property) {
 		return errBadRequest
 	}
-	var customer int
-	err = server.mySQLDB.QueryRow("SELECT `id`, `customer` FROM `properties` WHERE `code` = ?", event.Property).Scan(&event.property, &customer)
+	var account int
+	err = server.mySQLDB.QueryRow("SELECT `id`, `account` FROM `properties` WHERE `code` = ?", event.Property).Scan(&event.property, &account)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			err = errBadRequest
@@ -161,9 +161,9 @@ func (server *Server) _serveLogEvent(w http.ResponseWriter, r *http.Request) err
 		}
 	}
 
-	// Check if the request IP is internal for the customer.
+	// Check if the request IP is internal for the account.
 	var internalIPs string
-	err = server.mySQLDB.QueryRow("SELECT `internalIPs` FROM `customers` WHERE `id` = ?", customer).Scan(&internalIPs)
+	err = server.mySQLDB.QueryRow("SELECT `internalIPs` FROM `accounts` WHERE `id` = ?", account).Scan(&internalIPs)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			err = errBadRequest

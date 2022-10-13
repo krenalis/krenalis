@@ -135,3 +135,9 @@ CREATE TABLE `connectors_properties` (
   `position` INT NOT NULL,
   PRIMARY KEY (`account`, `connector`, `name`)
 );
+
+ALTER TABLE `properties`
+    CHANGE COLUMN `customer` `account` INT NOT NULL,
+    RENAME KEY `customer` TO `account`;
+
+RENAME TABLE `customers` TO `accounts`;

@@ -1,6 +1,6 @@
 /* 
   Add property and user fields to events table.
-  If events must be kept create a customer/property in the sql db and assign all
+  If events must be kept create a account/property in the sql db and assign all
   the events to the property using the following SQL.
   Or just drop the old table and create the new one.
 */
