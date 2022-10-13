@@ -35,8 +35,8 @@ type DataSources struct {
 // token.
 func (this *DataSources) Install(connector int, refreshToken string) error {
 	_, err := this.myDB.Exec("INSERT INTO `data_sources`\n"+
-		"SET `account` = ?, `connector` = ?, `refresh_token` = ?\n"+
-		"ON DUPLICATE KEY UPDATE `access_token` = '', `refresh_token` = ?, `access_token_expiration_timestamp` = ''",
+		"SET `account` = ?, `connector` = ?, `refreshToken` = ?\n"+
+		"ON DUPLICATE KEY UPDATE `accessToken` = '', `refreshToken` = ?, `accessTokenExpirationTimestamp` = ''",
 		this.account, connector, refreshToken, refreshToken)
 	return err
 }
@@ -58,7 +58,7 @@ func (this *DataSources) Import(connector int, reimport bool) error {
 	var name, clientSecret, accessToken, refreshToken, cursor string
 	var expiration time.Time
 	err := this.myDB.QueryRow(
-		"SELECT `name`, `client_secret`, `access_token`, `refresh_token`, `access_token_expiration_timestamp`, `user_cursor`\n"+
+		"SELECT `name`, `clientSecret`, `accessToken`, `refreshToken`, `accessTokenExpirationTimestamp`, `userCursor`\n"+
 			"FROM `connectors`\n"+
 			"INNER JOIN `data_sources` ON `connector` = `id`\n"+
 			"WHERE `id` = ? AND `account` = ?", connector, this.account).
@@ -202,7 +202,7 @@ func (this *DataSources) List() ([]*DataSource, error) {
 		stringifiedIDs = append(stringifiedIDs, strconv.Itoa(id))
 	}
 
-	err = this.myDB.QueryScan(fmt.Sprintf("SELECT `id`, `name`, `oauth_url`, `logo_url`\nFROM `connectors` WHERE id IN (%s)", strings.Join(stringifiedIDs, ", ")), func(rows *sql.Rows) error {
+	err = this.myDB.QueryScan(fmt.Sprintf("SELECT `id`, `name`, `oauthURL`, `logoURL`\nFROM `connectors` WHERE id IN (%s)", strings.Join(stringifiedIDs, ", ")), func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
 			var source DataSource
@@ -223,7 +223,7 @@ func (this *DataSources) List() ([]*DataSource, error) {
 func (this *DataSources) Get(connector int) (string, string, *time.Time, error) {
 	var accessToken, refreshToken string
 	var expiration time.Time
-	err := this.myDB.QueryRow("SELECT `access_token`, `refresh_token`, `access_token_expiration_timestamp`\nFROM `data_sources`\nWHERE `account` = ? AND `connector` = ?", this.account, connector).
+	err := this.myDB.QueryRow("SELECT `accessToken`, `refreshToken`, `accessTokenExpirationTimestamp`\nFROM `data_sources`\nWHERE `account` = ? AND `connector` = ?", this.account, connector).
 		Scan(&accessToken, &refreshToken, &expiration)
 	if err != nil {
 		return "", "", nil, err
@@ -300,7 +300,7 @@ func (this *DataSources) refreshOAuthToken(connector int) (string, error) {
 
 	var clientID, clientSecret, refreshToken, tokenEndpoint string
 	err := this.myDB.QueryRow(
-		"SELECT `client_id`, `client_secret`, `refresh_token`, `token_endpoint`\n"+
+		"SELECT `clientID`, `clientSecret`, `refreshToken`, `tokenEndpoint`\n"+
 			"FROM `connectors`\n"+
 			"INNER JOIN `data_sources` ON `connector` = `id`\n"+
 			"WHERE `id` = ? AND `account` = ?", connector, this.account).Scan(&clientID, &clientSecret, &refreshToken, &tokenEndpoint)
@@ -368,7 +368,7 @@ func (this *DataSources) refreshOAuthToken(connector int) (string, error) {
 
 	_, err = this.myDB.Exec(
 		"UPDATE `data_sources`\n"+
-			"SET `access_token` = ?, `refresh_token` = ?, `access_token_expiration_timestamp` = ?\n"+
+			"SET `accessToken` = ?, `refreshToken` = ?, `accessTokenExpirationTimestamp` = ?\n"+
 			"WHERE `account` = ? AND `connector` = ?",
 		response.AccessToken, response.RefreshToken, expiration, this.account, connector)
 	if err != nil {

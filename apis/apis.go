@@ -186,7 +186,7 @@ type Connector struct {
 // Connector returns the connector with the given identifier.
 func (apis *APIs) Connector(id int) (*Connector, error) {
 	connector := Connector{ID: id}
-	err := apis.myDB.QueryRow("SELECT `name`, `oauth_url`, `logo_url`, `client_id`, `client_secret`, `token_endpoint`\nFROM `connectors`\nWHERE `id` = ?", id).
+	err := apis.myDB.QueryRow("SELECT `name`, `oauthURL`, `logoURL`, `clientID`, `clientSecret`, `tokenEndpoint`\nFROM `connectors`\nWHERE `id` = ?", id).
 		Scan(&connector.Name, &connector.OauthURL, &connector.LogoURL, &connector.ClientID, &connector.ClientSecret, &connector.TokenEndpoint)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -200,7 +200,7 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 // Connectors returns all connectors.
 func (apis *APIs) Connectors() ([]*Connector, error) {
 	connectors := []*Connector{}
-	err := apis.myDB.QueryScan("SELECT `id`, `name`, `oauth_url`, `logo_url`\nFROM `connectors`", func(rows *sql.Rows) error {
+	err := apis.myDB.QueryScan("SELECT `id`, `name`, `oauthURL`, `logoURL`\nFROM `connectors`", func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
 			var connector Connector
@@ -292,10 +292,10 @@ func (apis *APIs) initSchema() {
 	}{})
 
 	apis.myDB.Scheme("Schemas", "schemas", struct {
-		account      int
-		user_schema  string
-		group_schema string
-		event_schema string
+		account     int
+		userSchema  string
+		groupSchema string
+		eventSchema string
 	}{})
 
 	apis.myDB.Scheme("SmartEvents", "smart_events", struct {
@@ -314,13 +314,13 @@ func (apis *APIs) initSchema() {
 	}{})
 
 	apis.myDB.Scheme("DataSources", "data_sources", struct {
-		account                           int
-		connector                         int
-		access_token                      string
-		refresh_token                     string
-		access_token_expiration_timestamp string
-		transformation                    string
-		user_cursor                       string
+		account                        int
+		connector                      int
+		accessToken                    string
+		refreshToken                   string
+		accessTokenExpirationTimestamp string
+		transformation                 string
+		userCursor                     string
 	}{})
 
 }

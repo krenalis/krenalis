@@ -40,12 +40,12 @@ func (api *API) newFirehose(connector int) *firehose {
 func (fh *firehose) SetCursor(cursor string) {
 	_, err := fh.api.myDB.Table("DataSources").Add(
 		map[string]any{
-			"account":     fh.api.account,
-			"connector":   fh.connector,
-			"user_cursor": cursor,
+			"account":    fh.api.account,
+			"connector":  fh.connector,
+			"userCursor": cursor,
 		},
 		sql.Set{
-			"user_cursor": cursor,
+			"userCursor": cursor,
 		},
 	)
 	if err != nil {

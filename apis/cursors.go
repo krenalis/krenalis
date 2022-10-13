@@ -18,11 +18,11 @@ type Cursors struct {
 func (cursors *Cursors) UserCursor(account, connector int) (string, error) {
 	row, err := cursors.myDB.Table("DataSources").Get(
 		sql.Where{"account": account, "connector": connector},
-		[]any{"user_cursor"},
+		[]any{"userCursor"},
 	)
 	if err != nil {
 		return "", err
 	}
-	cursor, _ := row["user_cursor"].(string)
+	cursor, _ := row["userCursor"].(string)
 	return cursor, nil
 }

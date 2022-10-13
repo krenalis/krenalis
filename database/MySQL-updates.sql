@@ -145,3 +145,21 @@ RENAME TABLE `customers` TO `accounts`;
 RENAME TABLE `data_sources` TO `data_sources`;
 RENAME TABLE `data_sources_properties` TO `data_sources_properties`;
 RENAME TABLE `data_sources_raw_users_data` TO `data_sources_raw_users_data`;
+
+ALTER TABLE `connectors`
+    RENAME COLUMN `oauth_url` TO `oauthURL`,
+    RENAME COLUMN `logo_url` TO `logoURL`,
+    RENAME COLUMN `client_id` TO `clientID`,
+    RENAME COLUMN `client_secret` TO `clientSecret`,
+    RENAME COLUMN `token_endpoint` TO `tokenEndpoint`;
+
+ALTER TABLE `schemas`
+    RENAME COLUMN `user_schema` TO `userSchema`,
+    RENAME COLUMN `group_schema` TO `groupSchema`,
+    RENAME COLUMN `event_schema` TO `eventSchema`;
+
+ALTER TABLE `data_sources`
+    RENAME COLUMN `access_token` TO `accessToken`,
+    RENAME COLUMN `refresh_token` TO `refreshToken`,
+    RENAME COLUMN `access_token_expiration_timestamp` TO `accessTokenExpirationTimestamp`,
+    RENAME COLUMN `user_cursor` TO `userCursor`;

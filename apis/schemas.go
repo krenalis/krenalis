@@ -27,11 +27,11 @@ func (schemas *Schemas) Get(account int, name string) (Schema, error) {
 	var column string
 	switch name {
 	case "user":
-		column = "user_schema"
+		column = "userSchema"
 	case "group":
-		column = "group_schema"
+		column = "groupSchema"
 	case "event":
-		column = "event_schema"
+		column = "eventSchema"
 	default:
 		return "", fmt.Errorf("invalid schema name %q", name)
 	}
@@ -49,11 +49,11 @@ func (schemas *Schemas) Update(account int, name, schema string) error {
 	var column string
 	switch name {
 	case "user":
-		column = "user_schema"
+		column = "userSchema"
 	case "group":
-		column = "group_schema"
+		column = "groupSchema"
 	case "event":
-		column = "event_schema"
+		column = "eventSchema"
 	default:
 		return fmt.Errorf("invalid schema name %q", name)
 	}

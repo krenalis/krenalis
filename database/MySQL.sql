@@ -51,33 +51,33 @@ CREATE TABLE `users` (
 
 CREATE TABLE `schemas` (
   `account` INT NOT NULL,
-  `user_schema` TEXT NOT NULL DEFAULT '',
-  `group_schema` TEXT NOT NULL DEFAULT '',
-  `event_schema` TEXT NOT NULL DEFAULT '',
+  `userSchema` TEXT NOT NULL DEFAULT '',
+  `groupSchema` TEXT NOT NULL DEFAULT '',
+  `eventSchema` TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (`account`)
 );
 
 CREATE TABLE `connectors` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(200) NOT NULL DEFAULT '',
-  `oauth_url` VARCHAR(500) NOT NULL DEFAULT '',
-  `logo_url` VARCHAR(500) NOT NULL DEFAULT '',
-  `client_id` VARCHAR(500) NOT NULL DEFAULT '',
-  `client_secret` VARCHAR(500) NOT NULL DEFAULT '',
-  `token_endpoint` VARCHAR(500) NOT NULL DEFAULT '',
+  `oauthURL` VARCHAR(500) NOT NULL DEFAULT '',
+  `logoURL` VARCHAR(500) NOT NULL DEFAULT '',
+  `clientID` VARCHAR(500) NOT NULL DEFAULT '',
+  `clientSecret` VARCHAR(500) NOT NULL DEFAULT '',
+  `tokenEndpoint` VARCHAR(500) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`)
 );
 
-INSERT INTO `connectors` (`id`, `name`, `oauth_url`, `logo_url`, `client_id`, `client_secret`, `token_endpoint`) VALUES ('1', 'HubSpot', 'https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read', 'https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/168_Hubspot_logo_logos-512.png', 'cef1005a-72be-4047-a301-ef6057588325', '136e50df-5b89-478f-bf01-4a71547fa668', 'https://api.hubapi.com/oauth/v1/token');
+INSERT INTO `connectors` (`id`, `name`, `oauthURL`, `logoURL`, `clientID`, `clientSecret`, `tokenEndpoint`) VALUES ('1', 'HubSpot', 'https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read', 'https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/168_Hubspot_logo_logos-512.png', 'cef1005a-72be-4047-a301-ef6057588325', '136e50df-5b89-478f-bf01-4a71547fa668', 'https://api.hubapi.com/oauth/v1/token');
 
 CREATE TABLE `data_sources` (
   `account` INT NOT NULL,
   `connector` INT NOT NULL,
-  `access_token` VARCHAR(500) NOT NULL DEFAULT '',
-  `refresh_token` VARCHAR(500) NOT NULL DEFAULT '',
-  `access_token_expiration_timestamp` TIMESTAMP NOT NULL,
+  `accessToken` VARCHAR(500) NOT NULL DEFAULT '',
+  `refreshToken` VARCHAR(500) NOT NULL DEFAULT '',
+  `accessTokenExpirationTimestamp` TIMESTAMP NOT NULL,
   `transformation` TEXT NOT NULL DEFAULT '',
-  `user_cursor` VARCHAR(500) NOT NULL DEFAULT '',
+  `userCursor` VARCHAR(500) NOT NULL DEFAULT '',
   PRIMARY KEY (`account`, `connector`)
 );
 
@@ -101,7 +101,7 @@ CREATE TABLE `data_sources_raw_users_data` (
   PRIMARY KEY (`connector`,`account`,`user`)
 );
 
-INSERT INTO `schemas` (`account`, `user_schema`, `group_schema`) VALUES ('1', '{\n    \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n    \"$id\": \"https://example.com/product.schema.json\",\n    \"description\": \"Schema di uno user\",\n    \"self\": {\n        \"vendor\": \"com.example\",\n        \"name\": \"schema_1\",\n        \"format\": \"jsonschema\",\n        \"version\": \"1-0-0\"\n    },\n    \"type\": \"object\",\n    \"properties\": {\n        \"FirstName\": {\n            \"title\": \"First name\",\n            \"description\": \"First of the user\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        },\n        \"LastName\": {\n          \"title\": \"Last name\",\n            \"description\": \"Last name of the user\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        },\n        \"Email\": {\n            \"title\": \"Email address\",\n            \"description\": \"Email address of the user\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        }\n    },\n    \"additionalProperties\": false\n}', '{\n    \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n    \"$id\": \"https://example.com/product.schema.json\",\n    \"description\": \"Schema di un gruppo\",\n    \"self\": {\n        \"vendor\": \"com.example\",\n        \"name\": \"schema_1\",\n        \"format\": \"jsonschema\",\n        \"version\": \"1-0-0\"\n    },\n    \"type\": \"object\",\n    \"properties\": {\n        \"Name\": {\n            \"title\": \"Group name\",\n            \"description\": \"Name of the group\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        },\n    },\n    \"additionalProperties\": false\n}');
+INSERT INTO `schemas` (`account`, `userSchema`, `groupSchema`) VALUES ('1', '{\n    \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n    \"$id\": \"https://example.com/product.schema.json\",\n    \"description\": \"Schema di uno user\",\n    \"self\": {\n        \"vendor\": \"com.example\",\n        \"name\": \"schema_1\",\n        \"format\": \"jsonschema\",\n        \"version\": \"1-0-0\"\n    },\n    \"type\": \"object\",\n    \"properties\": {\n        \"FirstName\": {\n            \"title\": \"First name\",\n            \"description\": \"First of the user\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        },\n        \"LastName\": {\n          \"title\": \"Last name\",\n            \"description\": \"Last name of the user\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        },\n        \"Email\": {\n            \"title\": \"Email address\",\n            \"description\": \"Email address of the user\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        }\n    },\n    \"additionalProperties\": false\n}', '{\n    \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n    \"$id\": \"https://example.com/product.schema.json\",\n    \"description\": \"Schema di un gruppo\",\n    \"self\": {\n        \"vendor\": \"com.example\",\n        \"name\": \"schema_1\",\n        \"format\": \"jsonschema\",\n        \"version\": \"1-0-0\"\n    },\n    \"type\": \"object\",\n    \"properties\": {\n        \"Name\": {\n            \"title\": \"Group name\",\n            \"description\": \"Name of the group\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        },\n    },\n    \"additionalProperties\": false\n}');
 
 CREATE TABLE `warehouse_users` (
   `Email` VARCHAR(500) NOT NULL DEFAULT '',
