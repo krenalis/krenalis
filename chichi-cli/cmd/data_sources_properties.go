@@ -16,21 +16,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var importCmd = &cobra.Command{
-	Use:   "import connector_id",
-	Short: "Import data from a connector",
-	Long:  `Import data from a connector, starting from the last import.`,
+var propertiesCmd = &cobra.Command{
+	Use:   "properties connector_id",
+	Short: "List data source properties",
 	Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 		connector, _ := strconv.Atoi(args[0])
 		if connector <= 0 {
 			log.Fatalf("invalid connector ID %q", args[0])
 		}
-		chichiapis.ImportUsersFromConnector(connector, false)
+		chichiapis.ListDataSourcesProperties(connector)
 	},
 }
 
 func init() {
-	connectorsCmd.AddCommand(importCmd)
-	importCmd.Flags().IntP("connector-ID", "c", 0, "ID of the connector")
+	dataSourcesCmd.AddCommand(propertiesCmd)
 }

@@ -54,20 +54,20 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 }
 
 type API struct {
-	account    int
-	apis       *APIs
-	myDB       *sql.DB
-	chDB       chDriver.Conn
-	Connectors *Connectors
+	account     int
+	apis        *APIs
+	myDB        *sql.DB
+	chDB        chDriver.Conn
+	DataSources *DataSources
 }
 
 func (apis *APIs) API(account int) *API {
 	api := &API{account: account, apis: apis, myDB: apis.myDB, chDB: apis.chDB}
-	api.Connectors = &Connectors{api}
+	api.DataSources = &DataSources{api}
 	return api
 }
 
-var importRegexp = regexp.MustCompile(`/apis/connectors/(\d+)/((re)?import|properties|transformation)`)
+var importRegexp = regexp.MustCompile(`/apis/data-sources/(\d+)/((re)?import|properties|transformation)`)
 
 // ServeHTTP servers the API methods from HTTP.
 func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -92,15 +92,15 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var err error
 		switch m[2] {
 		case "properties":
-			var properties []*ConnectorProperty
-			properties, err = api.Connectors.Properties(id)
+			var properties []*DataSourceProperty
+			properties, err = api.DataSources.Properties(id)
 			if err == nil {
 				_ = json.NewEncoder(w).Encode(properties)
 			}
 		case "transformation":
 			if r.Method == "GET" {
 				var transformation string
-				transformation, err = api.Connectors.TransformationFunc(id)
+				transformation, err = api.DataSources.TransformationFunc(id)
 				if err == nil {
 					w.Header().Set("Content-Type", "text/plain")
 					_, _ = io.WriteString(w, transformation)
@@ -109,11 +109,11 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			} else {
 				var transformation []byte
 				transformation, err = io.ReadAll(r.Body)
-				err = api.Connectors.SetTransformationFunc(id, string(transformation))
+				err = api.DataSources.SetTransformationFunc(id, string(transformation))
 			}
 		default:
 			all := m[3] == "re"
-			err = api.Connectors.Import(id, all)
+			err = api.DataSources.Import(id, all)
 		}
 		if err != nil {
 			if err == ErrConnectorNotFound {
@@ -243,7 +243,7 @@ func (apis *APIs) initSchema() {
 		internalIPs string
 	}{})
 
-	apis.myDB.Scheme("ConnectorsProperties", "connectors_properties", struct {
+	apis.myDB.Scheme("DataSourcesProperties", "data_sources_properties", struct {
 		account   int
 		connector int
 		name      string
@@ -253,7 +253,7 @@ func (apis *APIs) initSchema() {
 		position  int
 	}{})
 
-	apis.myDB.Scheme("ConnectorsRawUserData", "connectors_raw_users_data", struct {
+	apis.myDB.Scheme("DataSourcesRawUserData", "data_sources_raw_users_data", struct {
 		account   int
 		connector int
 		data      string
@@ -298,7 +298,7 @@ func (apis *APIs) initSchema() {
 		device   string
 	}{})
 
-	apis.myDB.Scheme("AccountConnectors", "account_connectors", struct {
+	apis.myDB.Scheme("DataSources", "data_sources", struct {
 		account                           int
 		connector                         int
 		access_token                      string

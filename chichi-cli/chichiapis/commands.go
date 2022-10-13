@@ -16,7 +16,7 @@ import (
 	"strconv"
 )
 
-func ListEnabledConnectors() {
+func ListDataSources() {
 	resp, err := callAdmin("admin/connectors/findInstalledConnectors", nil)
 	if err != nil {
 		log.Fatal(err)
@@ -27,16 +27,16 @@ func ListEnabledConnectors() {
 	}
 }
 
-// Property represents a connector property.
+// Property represents a data source property.
 type Property struct {
 	Name  string
 	Type  string
 	Label string
 }
 
-func ListConnectorProperties(connector int) {
+func ListDataSourcesProperties(connector int) {
 	var properties []*Property
-	err := callAPI("GET", "apis/connectors/"+strconv.Itoa(connector)+"/properties", nil, &properties)
+	err := callAPI("GET", "apis/data-sources/"+strconv.Itoa(connector)+"/properties", nil, &properties)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,8 +45,8 @@ func ListConnectorProperties(connector int) {
 	}
 }
 
-func ImportUsersFromConnector(connector int, reimport bool) {
-	path := "apis/connectors/" + strconv.Itoa(connector)
+func ImportUsersFromDataSource(connector int, reimport bool) {
+	path := "apis/data-sources/" + strconv.Itoa(connector)
 	if reimport {
 		path += "/reimport"
 	} else {
@@ -61,7 +61,7 @@ func ImportUsersFromConnector(connector int, reimport bool) {
 
 func GetTransformation(connector int) {
 	var transformation []byte
-	err := callAPI("GET", "apis/connectors/"+strconv.Itoa(connector)+"/transformation", nil, &transformation)
+	err := callAPI("GET", "apis/data-sources/"+strconv.Itoa(connector)+"/transformation", nil, &transformation)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func GetTransformation(connector int) {
 
 func UpdateTransformation(connector int, transformation []byte) {
 	body := bytes.NewReader(transformation)
-	err := callAPI("POST", "apis/connectors/"+strconv.Itoa(connector)+"/transformation", body, nil)
+	err := callAPI("POST", "apis/data-sources/"+strconv.Itoa(connector)+"/transformation", body, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

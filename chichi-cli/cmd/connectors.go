@@ -8,16 +8,11 @@
 package cmd
 
 import (
-	"chichi-cli/chichiapis"
-
 	"github.com/spf13/cobra"
 )
 
 var connectorsCmd = &cobra.Command{
 	Use: "connectors",
-	Run: func(cmd *cobra.Command, args []string) {
-		chichiapis.ListEnabledConnectors()
-	},
 }
 
 func init() {

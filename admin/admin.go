@@ -122,7 +122,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		properties, err := api.Connectors.Properties(req.Connector)
+		properties, err := api.DataSources.Properties(req.Connector)
 		if err != nil {
 			log.Printf("[error] cannot retrieve properties: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -143,7 +143,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		err = api.Connectors.Import(req.Connector, req.ResetCursor)
+		err = api.DataSources.Import(req.Connector, req.ResetCursor)
 		if err != nil {
 			log.Printf("[error] %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -166,7 +166,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			transf, err := api.Connectors.TransformationFunc(req.Connector)
+			transf, err := api.DataSources.TransformationFunc(req.Connector)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -183,7 +183,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = api.Connectors.SetTransformationFunc(req.Connector, req.Transformation)
+			err = api.DataSources.SetTransformationFunc(req.Connector, req.Transformation)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -242,7 +242,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		switch rpath {
 		case "/find":
-			cns, err := api.Connectors.List()
+			cns, err := admin.apis.Connectors()
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -251,7 +251,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(cns)
 			return
 		case "/findInstalledConnectors":
-			cns, err := api.Connectors.List()
+			cns, err := api.DataSources.List()
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -284,7 +284,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			err = api.Connectors.Uninstall(ids[0])
+			err = api.DataSources.Uninstall(ids[0])
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -616,7 +616,7 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 	}
 	resp.Body.Close()
 
-	err = api.Connectors.Install(connectorID, respData.Refresh_token)
+	err = api.DataSources.Install(connectorID, respData.Refresh_token)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("[error] cannot install connector %d: %s", connectorID, err)

@@ -16,7 +16,7 @@ type Cursors struct {
 // UserCursor returns the user cursor for the given account and connector.
 // If the cursor is not defined, returns the empty string and nil.
 func (cursors *Cursors) UserCursor(account, connector int) (string, error) {
-	row, err := cursors.myDB.Table("AccountConnectors").Get(
+	row, err := cursors.myDB.Table("DataSources").Get(
 		sql.Where{"account": account, "connector": connector},
 		[]any{"user_cursor"},
 	)

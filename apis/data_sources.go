@@ -25,18 +25,19 @@ import (
 	"chichi/pkg/open2b/sql"
 )
 
-type Connectors struct {
+type DataSources struct {
 	*API
 }
 
-// Install installs a connector given its identifier and the OAuth refresh
-// token. If the connector is already installed it does not install it but
-// updates its refresh token and removes the access token.
-func (this *Connectors) Install(id int, refreshToken string) error {
-	_, err := this.myDB.Exec("INSERT INTO `account_connectors`\n"+
+// Install installs a data source given its connector and the OAuth refresh
+// token. If the data source is already installed for the given connector, it
+// does not install it but updates its refresh token and removes the access
+// token.
+func (this *DataSources) Install(connector int, refreshToken string) error {
+	_, err := this.myDB.Exec("INSERT INTO `data_sources`\n"+
 		"SET `account` = ?, `connector` = ?, `refresh_token` = ?\n"+
 		"ON DUPLICATE KEY UPDATE `access_token` = '', `refresh_token` = ?, `access_token_expiration_timestamp` = ''",
-		this.account, id, refreshToken, refreshToken)
+		this.account, connector, refreshToken, refreshToken)
 	return err
 }
 
@@ -44,13 +45,13 @@ var ErrConnectorNotFound = errors.New("connector does not exist")
 
 var ErrCannotGetConnectorAccessToken = fmt.Errorf("cannot get access token")
 
-// Import starts the import of the users from the connector with identifier id.
-// If reimport is false it imports the users from the current cursor, otherwise
-// imports all users.
+// Import starts the import of the users from the data source with the given
+// connector. If reimport is false it imports the users from the current
+// cursor, otherwise imports all users.
 // Returns the ErrConnectorNotFound error if the connector does not exist.
-func (this *Connectors) Import(id int, reimport bool) error {
+func (this *DataSources) Import(connector int, reimport bool) error {
 
-	if id <= 0 {
+	if connector <= 0 {
 		return errors.New("invalid connector identifier")
 	}
 
@@ -59,8 +60,8 @@ func (this *Connectors) Import(id int, reimport bool) error {
 	err := this.myDB.QueryRow(
 		"SELECT `name`, `client_secret`, `access_token`, `refresh_token`, `access_token_expiration_timestamp`, `user_cursor`\n"+
 			"FROM `connectors`\n"+
-			"INNER JOIN `account_connectors` ON `connector` = `id`\n"+
-			"WHERE `id` = ? AND `account` = ?", id, this.account).
+			"INNER JOIN `data_sources` ON `connector` = `id`\n"+
+			"WHERE `id` = ? AND `account` = ?", connector, this.account).
 		Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &cursor)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -75,19 +76,19 @@ func (this *Connectors) Import(id int, reimport bool) error {
 	accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
 
 	if accessToken == "" || accessTokenExpired {
-		accessToken, err = this.refreshOAuthToken(id)
+		accessToken, err = this.refreshOAuthToken(connector)
 		if err != nil {
 			return err
 		}
 	}
 
-	fh := this.newFirehose(id)
-	connector := connectors.Connector(context.Background(), name, clientSecret, fh)
+	fh := this.newFirehose(connector)
+	conn := connectors.Connector(context.Background(), name, clientSecret, fh)
 
 	go func() {
-		err := connector.Users(accessToken, cursor)
+		err := conn.Users(accessToken, cursor)
 		if err != nil {
-			log.Printf("[error] call to the Users method of the connector %d failed: %s", id, err)
+			log.Printf("[error] call to the Users method of the connector %d failed: %s", connector, err)
 		}
 	}()
 
@@ -97,48 +98,49 @@ func (this *Connectors) Import(id int, reimport bool) error {
 // PropertyType represents the type of a property.
 type PropertyType string
 
-// ConnectorPropertyOption represents an option of a connector property.
-type ConnectorPropertyOption struct {
+// DataSourcePropertyOption represents an option of a data source property.
+type DataSourcePropertyOption struct {
 	Label string
 	Value string
 }
 
-// ConnectorProperty represents a connector property.
-type ConnectorProperty struct {
+// DataSourceProperty represents a connector property.
+type DataSourceProperty struct {
 	Name    string
 	Type    PropertyType
 	Label   string
-	Options []ConnectorPropertyOption
+	Options []DataSourcePropertyOption
 }
 
-// Properties returns the properties of the connector with identifier id.
+// Properties returns the properties of the data source with the given
+// connector.
 // Returns the ErrConnectorNotFound error if the connector does not exist.
-func (this *Connectors) Properties(id int) ([]*ConnectorProperty, error) {
+func (this *DataSources) Properties(connector int) ([]*DataSourceProperty, error) {
 
-	if id <= 0 {
+	if connector <= 0 {
 		return nil, errors.New("invalid connector identifier")
 	}
 
-	var properties []*ConnectorProperty
+	var properties []*DataSourceProperty
 
 	stmt := "SELECT `name`, `type`, `label`, `options`\n" +
-		"FROM `connectors_properties`\n" +
+		"FROM `data_sources_properties`\n" +
 		"WHERE `account` = ? AND `connector` = ?\n" +
 		"ORDER BY `position`"
 
-	err := this.myDB.QueryScan(stmt, this.account, id, func(rows *sql.Rows) error {
+	err := this.myDB.QueryScan(stmt, this.account, connector, func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
-			var property ConnectorProperty
+			var property DataSourceProperty
 			var options []byte
 			if err = rows.Scan(&property.Name, &property.Type, &property.Label, &options); err != nil {
 				return err
 			}
 			if len(options) > 0 {
-				property.Options = []ConnectorPropertyOption{}
+				property.Options = []DataSourcePropertyOption{}
 				err := json.Unmarshal(options, &property.Options)
 				if err != nil {
-					return fmt.Errorf("malformed options for connector %d", id)
+					return fmt.Errorf("malformed options for connector %d", connector)
 				}
 			}
 			properties = append(properties, &property)
@@ -151,23 +153,31 @@ func (this *Connectors) Properties(id int) ([]*ConnectorProperty, error) {
 
 	if properties == nil {
 		var exists bool
-		err := this.myDB.QueryRow("SELECT TRUE FROM `account_connectors`\nWHERE `account` = ? AND `connector` = ?", this.account, id).Scan(&exists)
+		err := this.myDB.QueryRow("SELECT TRUE FROM `data_sources`\nWHERE `account` = ? AND `connector` = ?", this.account, connector).Scan(&exists)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				err = ErrConnectorNotFound
 			}
 			return nil, err
 		}
-		properties = []*ConnectorProperty{}
+		properties = []*DataSourceProperty{}
 	}
 
 	return properties, nil
 }
 
-// List returns all connectors.
-func (this *Connectors) List() ([]*Connector, error) {
+// DataSource represents a data source.
+type DataSource struct {
+	ID       int
+	Name     string
+	OauthURL string
+	LogoURL  string
+}
+
+// List returns all data sources.
+func (this *DataSources) List() ([]*DataSource, error) {
 	ids := make([]int, 0, 0)
-	err := this.myDB.QueryScan("SELECT `connector`\nFROM `account_connectors`\nWHERE account = ?", this.account, func(rows *sql.Rows) error {
+	err := this.myDB.QueryScan("SELECT `connector`\nFROM `data_sources`\nWHERE account = ?", this.account, func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
 			var id int
@@ -182,9 +192,9 @@ func (this *Connectors) List() ([]*Connector, error) {
 		return nil, err
 	}
 
-	connectors := make([]*Connector, 0, 0)
+	sources := make([]*DataSource, 0, 0)
 	if len(ids) == 0 {
-		return connectors, nil
+		return sources, nil
 	}
 
 	stringifiedIDs := make([]string, 0, 0)
@@ -195,25 +205,25 @@ func (this *Connectors) List() ([]*Connector, error) {
 	err = this.myDB.QueryScan(fmt.Sprintf("SELECT `id`, `name`, `oauth_url`, `logo_url`\nFROM `connectors` WHERE id IN (%s)", strings.Join(stringifiedIDs, ", ")), func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
-			var connector Connector
-			if err = rows.Scan(&connector.ID, &connector.Name, &connector.OauthURL, &connector.LogoURL); err != nil {
+			var source DataSource
+			if err = rows.Scan(&source.ID, &source.Name, &source.OauthURL, &source.LogoURL); err != nil {
 				return err
 			}
-			connectors = append(connectors, &connector)
+			sources = append(sources, &source)
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return connectors, nil
+	return sources, nil
 }
 
-// Get returns the connector with the given identifier.
-func (this *Connectors) Get(id int) (string, string, *time.Time, error) {
+// Get returns the data source with the given connector.
+func (this *DataSources) Get(connector int) (string, string, *time.Time, error) {
 	var accessToken, refreshToken string
 	var expiration time.Time
-	err := this.myDB.QueryRow("SELECT `access_token`, `refresh_token`, `access_token_expiration_timestamp`\nFROM `account_connectors`\nWHERE `account` = ? AND `connector` = ?", this.account, id).
+	err := this.myDB.QueryRow("SELECT `access_token`, `refresh_token`, `access_token_expiration_timestamp`\nFROM `data_sources`\nWHERE `account` = ? AND `connector` = ?", this.account, connector).
 		Scan(&accessToken, &refreshToken, &expiration)
 	if err != nil {
 		return "", "", nil, err
@@ -221,34 +231,34 @@ func (this *Connectors) Get(id int) (string, string, *time.Time, error) {
 	return accessToken, refreshToken, &expiration, nil
 }
 
-// Uninstall uninstalls the connector with the given identifier.
+// Uninstall uninstalls the data source with the given connector.
 // If the connector does not exist, it does nothing.
-func (this *Connectors) Uninstall(id int) error {
-	if id <= 0 {
+func (this *DataSources) Uninstall(connector int) error {
+	if connector <= 0 {
 		return errors.New("invalid connector identifier")
 	}
-	where := sql.Where{"account": this.account, "connector": id}
+	where := sql.Where{"account": this.account, "connector": connector}
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		_, err := this.myDB.Table("AccountConnectors").Delete(where)
+		_, err := this.myDB.Table("DataSources").Delete(where)
 		if err == nil {
-			_, err = this.myDB.Table("ConnectorsProperties").Delete(where)
+			_, err = this.myDB.Table("DataSourcesProperties").Delete(where)
 		}
 		return err
 	})
 	return err
 }
 
-// TransformationFunc returns the transformation function of the connector with
-// identifier id.
+// TransformationFunc returns the transformation function of the data source
+// with the given connector.
 // Returns the ErrConnectorNotFound error if the connector does not exist or is
 // not installed.
-func (this *Connectors) TransformationFunc(id int) (string, error) {
-	if id <= 0 {
+func (this *DataSources) TransformationFunc(connector int) (string, error) {
+	if connector <= 0 {
 		return "", errors.New("invalid connector identifier")
 	}
 	// TODO(Gianluca): revise table name and column names after the merging of
 	// the PR of @retini on OAuth.
-	row, err := this.myDB.Table("AccountConnectors").Get(sql.Where{"account": this.account, "connector": id}, []any{"transformation"})
+	row, err := this.myDB.Table("DataSources").Get(sql.Where{"account": this.account, "connector": connector}, []any{"transformation"})
 	if err != nil {
 		return "", err
 	}
@@ -258,12 +268,12 @@ func (this *Connectors) TransformationFunc(id int) (string, error) {
 	return row["transformation"].(string), nil
 }
 
-// SetTransformationFunc sets the transformation function of the connector with
-// identifier id.
+// SetTransformationFunc sets the transformation function of the data source
+// with the given connector.
 // Returns the ErrConnectorNotFound error if the connector does not exist or is
 // not installed.
-func (this *Connectors) SetTransformationFunc(id int, fn string) error {
-	if id <= 0 {
+func (this *DataSources) SetTransformationFunc(connector int, fn string) error {
+	if connector <= 0 {
 		return errors.New("invalid connector identifier")
 	}
 	if !utf8.ValidString(fn) {
@@ -271,9 +281,9 @@ func (this *Connectors) SetTransformationFunc(id int, fn string) error {
 	}
 	// TODO(Gianluca): revise table name and column names after the merging of
 	// the PR of @retini on OAuth.
-	affected, err := this.myDB.Table("AccountConnectors").Update(
+	affected, err := this.myDB.Table("DataSources").Update(
 		sql.Set{"transformation": fn},
-		sql.Where{"account": this.account, "connector": id})
+		sql.Where{"account": this.account, "connector": connector})
 	if err != nil {
 		return err
 	}
@@ -283,16 +293,17 @@ func (this *Connectors) SetTransformationFunc(id int, fn string) error {
 	return nil
 }
 
-// refreshOAuthToken refreshes the OAuth token and returns it.
+// refreshOAuthToken refreshes the OAuth token of the data source with the
+// given connector and returns it.
 // Returns the ErrConnectorNotFound error if the connector does not exist.
-func (this *Connectors) refreshOAuthToken(id int) (string, error) {
+func (this *DataSources) refreshOAuthToken(connector int) (string, error) {
 
 	var clientID, clientSecret, refreshToken, tokenEndpoint string
 	err := this.myDB.QueryRow(
 		"SELECT `client_id`, `client_secret`, `refresh_token`, `token_endpoint`\n"+
 			"FROM `connectors`\n"+
-			"INNER JOIN `account_connectors` ON `connector` = `id`\n"+
-			"WHERE `id` = ? AND `account` = ?", id, this.account).Scan(&clientID, &clientSecret, &refreshToken, &tokenEndpoint)
+			"INNER JOIN `data_sources` ON `connector` = `id`\n"+
+			"WHERE `id` = ? AND `account` = ?", connector, this.account).Scan(&clientID, &clientSecret, &refreshToken, &tokenEndpoint)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", ErrConnectorNotFound
@@ -356,10 +367,10 @@ func (this *Connectors) refreshOAuthToken(id int) (string, error) {
 	expiration := time.Now().UTC().Add(time.Duration(response.ExpiresIn) * time.Second) // TODO(marco): ExpiresIn should be relative to response time?
 
 	_, err = this.myDB.Exec(
-		"UPDATE `account_connectors`\n"+
+		"UPDATE `data_sources`\n"+
 			"SET `access_token` = ?, `refresh_token` = ?, `access_token_expiration_timestamp` = ?\n"+
 			"WHERE `account` = ? AND `connector` = ?",
-		response.AccessToken, response.RefreshToken, expiration, this.account, id)
+		response.AccessToken, response.RefreshToken, expiration, this.account, connector)
 	if err != nil {
 		return "", err
 	}

@@ -38,7 +38,7 @@ func (api *API) newFirehose(connector int) *firehose {
 }
 
 func (fh *firehose) SetCursor(cursor string) {
-	_, err := fh.api.myDB.Table("AccountConnectors").Add(
+	_, err := fh.api.myDB.Table("DataSources").Add(
 		map[string]any{
 			"account":     fh.api.account,
 			"connector":   fh.connector,
@@ -66,7 +66,7 @@ func (fh *firehose) UpdateUser(ident connectors.Identity, updateTime int64, prop
 	if err != nil {
 		panic(err)
 	}
-	_, err = fh.api.myDB.Table("ConnectorsRawUserData").Add(
+	_, err = fh.api.myDB.Table("DataSourcesRawUserData").Add(
 		map[string]any{
 			"account":   fh.api.account,
 			"connector": fh.connector,
@@ -134,7 +134,7 @@ func (fh *firehose) DeleteUser(ident connectors.Identity) {
 // transformProperties transforms the incoming properties using the
 // transformation function specified for the current connector.
 func (fh *firehose) transformProperties(incoming map[string]any) (map[string]any, error) {
-	transformationSource, err := fh.api.Connectors.TransformationFunc(fh.connector)
+	transformationSource, err := fh.api.DataSources.TransformationFunc(fh.connector)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve transformation from DB: %s", err)
 	}

@@ -13,13 +13,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var listEnabledCmd = &cobra.Command{
-	Use: "list-enabled",
+var dataSourcesCmd = &cobra.Command{
+	Use: "data-sources",
 	Run: func(cmd *cobra.Command, args []string) {
-		chichiapis.ListEnabledConnectors()
+		chichiapis.ListDataSources()
 	},
 }
 
 func init() {
-	connectorsCmd.AddCommand(listEnabledCmd)
+	rootCmd.AddCommand(dataSourcesCmd)
 }
