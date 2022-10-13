@@ -29,7 +29,6 @@ type APIs struct {
 	myDB       *sql.DB
 	chDB       chDriver.Conn
 	Accounts   *Accounts
-	Cursors    *Cursors
 	Schemas    *Schemas
 	Properties *Properties
 	Users      *Users
@@ -44,7 +43,6 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 	}
 	hasBeenCalled = true
 	apis := &APIs{myDB: myDB, chDB: chDB}
-	apis.Cursors = &Cursors{apis}
 	apis.Accounts = &Accounts{apis}
 	apis.Schemas = &Schemas{apis}
 	apis.Properties = &Properties{apis}
