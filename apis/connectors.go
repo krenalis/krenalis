@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"chichi/connectors"
 	"chichi/pkg/open2b/sql"
@@ -287,6 +288,9 @@ func (this *Connectors) Uninstall(id int) error {
 // Returns the ErrConnectorNotFound error if the connector does not exist or is
 // not installed.
 func (this *Connectors) TransformationFunc(id int) (string, error) {
+	if id <= 0 {
+		return "", errors.New("invalid connector identifier")
+	}
 	var account = 1 // TODO(marco)
 	// TODO(Gianluca): revise table name and column names after the merging of
 	// the PR of @retini on OAuth.
@@ -305,6 +309,12 @@ func (this *Connectors) TransformationFunc(id int) (string, error) {
 // Returns the ErrConnectorNotFound error if the connector does not exist or is
 // not installed.
 func (this *Connectors) SetTransformationFunc(id int, fn string) error {
+	if id <= 0 {
+		return errors.New("invalid connector identifier")
+	}
+	if !utf8.ValidString(fn) {
+		return errors.New("invalid transformation function")
+	}
 	var account = 1 // TODO(marco)
 	// TODO(Gianluca): revise table name and column names after the merging of
 	// the PR of @retini on OAuth.
