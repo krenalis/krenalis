@@ -145,47 +145,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		accessToken, err := admin.getConnectorAccessToken(accountID, req.Connector, false)
-		if err != nil {
-			log.Printf("[error] cannot retrieve access token: %s", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		// Retrieve the connector's name.
-		name, err := admin.connectorName(req.Connector)
-		if err != nil {
-			log.Printf("[error] cannot retrieve connector's name: %s", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		if name == "" {
-			http.Error(w, "Bad Request: connector not found", http.StatusBadRequest)
-			return
-		}
-		// Retrieve the client secret.
-		conn, err := admin.apis.Connectors.Get(req.Connector)
-		if err != nil {
-			log.Printf("[error] cannot retrieve client secret: %s", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		// Retrieve the instance of the connector.
-		fh := admin.apis.NewFirehose(req.Connector, accountID)
-		connector := connectors.Connector(context.Background(), name, conn.ClientSecret, fh)
-		// Retrieve the cursor, if necessary.
-		var cursor string
-		if req.ResetCursor {
-			cursor = ""
-		} else {
-			cursor, err = admin.apis.Cursors.UserCursor(accountID, req.Connector)
-			if err != nil {
-				log.Printf("[error] cannot retrieve cursor: %s", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-		}
-		// Retrieve the users.
-		err = connector.Users(accessToken, cursor) // TODO(Gianluca): remove the account argument.
+		err = admin.apis.Connectors.Import(req.Connector, req.ResetCursor)
 		if err != nil {
 			log.Printf("[error] %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)

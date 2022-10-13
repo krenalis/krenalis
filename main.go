@@ -84,6 +84,7 @@ func main() {
 
 	http.HandleFunc("/admin/", admin.ServeHTTP)
 	http.HandleFunc("/log-event", server.serveLogEvent)
+	http.HandleFunc("/apis/", apis.ServeHTTP)
 	http.HandleFunc("/webhook/", apis.ServeWebhook)
 	err = http.ListenAndServeTLS(":9090", "cert.pem", "key.pem", nil)
 	if err != nil {

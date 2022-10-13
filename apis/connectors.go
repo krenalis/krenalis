@@ -8,11 +8,19 @@
 package apis
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
+	"chichi/connectors"
 	"chichi/pkg/open2b/sql"
 )
 
@@ -47,6 +55,61 @@ func (this *Connectors) Find() ([]*Connector, error) {
 		return nil, err
 	}
 	return connectors, nil
+}
+
+var ErrConnectorNotFound = errors.New("connector does not exist")
+
+var ErrCannotGetConnectorAccessToken = fmt.Errorf("cannot get access token")
+
+// Import starts the import of the users from the connector with identifier id.
+// If reimport is false it imports the users from the current cursor, otherwise
+// imports all users.
+// Returns the ErrConnectorNotFound error if the connector does not exist.
+func (this *Connectors) Import(id int, reimport bool) error {
+
+	if id <= 0 {
+		return errors.New("invalid connector identifier")
+	}
+
+	var account = 1 // TODO(marco)
+
+	var name, clientSecret, accessToken, refreshToken, cursor string
+	var expiration time.Time
+	err := this.myDB.QueryRow(
+		"SELECT `name`, `client_secret`, `access_token`, `refresh_token`, `access_token_expiration_timestamp`, `user_cursor`\n"+
+			"FROM `connectors`\n"+
+			"INNER JOIN `account_connectors` ON `connector` = `id`\n"+
+			"WHERE `id` = ? AND `account` = ?", id, account).Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &cursor)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrConnectorNotFound
+		}
+		return err
+	}
+	if reimport {
+		cursor = ""
+	}
+
+	accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
+
+	if accessToken == "" || accessTokenExpired {
+		accessToken, err = this.refreshOAuthToken(id)
+		if err != nil {
+			return err
+		}
+	}
+
+	fh := this.NewFirehose(id, account)
+	connector := connectors.Connector(context.Background(), name, clientSecret, fh)
+
+	go func() {
+		err := connector.Users(accessToken, cursor)
+		if err != nil {
+			log.Printf("[error] call to the Users method of the connector %d failed: %s", id, err)
+		}
+	}()
+
+	return nil
 }
 
 func (this *Connectors) Get(id int) (*Connector, error) {
@@ -132,4 +195,90 @@ func (this *Connectors) DeleteAccountConnector(accountID int, ids []int) error {
 		return err
 	}
 	return nil
+}
+
+// refreshOAuthToken refreshes the OAuth token and returns it.
+// Returns the ErrConnectorNotFound error if the connector does not exist.
+func (this *Connectors) refreshOAuthToken(id int) (string, error) {
+
+	var account = 1 // TODO(marco)
+
+	var clientID, clientSecret, refreshToken, tokenEndpoint string
+	err := this.myDB.QueryRow(
+		"SELECT `client_id`, `client_secret`, `refresh_token`, `token_endpoint`\n"+
+			"FROM `connectors`\n"+
+			"INNER JOIN `account_connectors` ON `connector` = `id`\n"+
+			"WHERE `id` = ? AND `account` = 1", id).Scan(&clientID, &clientSecret, &refreshToken, &tokenEndpoint)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", ErrConnectorNotFound
+		}
+		return "", err
+	}
+
+	data := url.Values{}
+	data.Set("grant_type", "refresh_token")
+	data.Set("client_id", clientID)
+	data.Set("client_secret", clientSecret)
+	data.Set("redirect_uri", "https://localhost:9090/admin/oauth/authorize")
+	data.Set("refresh_token", refreshToken)
+
+	req, err := http.NewRequest("POST", tokenEndpoint, strings.NewReader(data.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	res, err := http.DefaultTransport.RoundTrip(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		_, _ = io.Copy(io.Discard, res.Body)
+		_ = res.Body.Close()
+	}()
+
+	if res.StatusCode != http.StatusOK {
+		if res.StatusCode == http.StatusBadRequest {
+			errData := struct {
+				status string
+			}{}
+			err = json.NewDecoder(res.Body).Decode(&errData)
+			if err != nil {
+				return "", err
+			}
+			// TODO(@Andrea): check the status returned by services different
+			// from Hubspot.
+			if errData.status == "BAD_REFRESH_TOKEN" {
+				return "", ErrCannotGetConnectorAccessToken
+			}
+		}
+		return "", fmt.Errorf("unexpected status %d returned by connector while trying to get a new access token via refresh token", res.StatusCode)
+	}
+
+	response := struct {
+		TokenType    string `json:"token_type"`
+		RefreshToken string `json:"refresh_token"`
+		AccessToken  string `json:"access_token"`
+		ExpiresIn    int    `json:"expires_in"`
+	}{}
+	dec := json.NewDecoder(res.Body)
+	err = dec.Decode(&response)
+	if err != nil {
+		return "", err
+	}
+
+	// Convert expires_in into a timestamp.
+	expiration := time.Now().UTC().Add(time.Duration(response.ExpiresIn) * time.Second) // TODO(marco): ExpiresIn should be relative to response time?
+
+	_, err = this.myDB.Exec(
+		"UPDATE `account_connectors`\n"+
+			"SET `access_token` = ?, `refresh_token` = ?, `access_token_expiration_timestamp` = ?\n"+
+			"WHERE `account` = ? AND `connector` = ?",
+		response.AccessToken, response.RefreshToken, expiration, account, id)
+	if err != nil {
+		return "", err
+	}
+
+	return response.AccessToken, nil
 }

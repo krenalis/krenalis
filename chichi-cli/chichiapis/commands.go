@@ -11,10 +11,11 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strconv"
 )
 
 func ListEnabledConnectors() {
-	resp, err := call("admin/connectors/findInstalledConnectors", nil)
+	resp, err := callAdmin("admin/connectors/findInstalledConnectors", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -25,7 +26,7 @@ func ListEnabledConnectors() {
 }
 
 func ListConnectorProperties(connector int) {
-	resp, err := call("admin/connectors-properties", map[string]any{"Connector": connector})
+	resp, err := callAdmin("admin/connectors-properties", map[string]any{"Connector": connector})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,23 +36,25 @@ func ListConnectorProperties(connector int) {
 	}
 }
 
-func ImportUsersFromConnector(connector int, resetCursor bool) {
-	body := map[string]any{
-		"Connector":   connector,
-		"ResetCursor": resetCursor,
+func ImportUsersFromConnector(connector int, reimport bool) {
+	path := "apis/connectors/" + strconv.Itoa(connector)
+	if reimport {
+		path += "/reimport"
+	} else {
+		path += "/import"
 	}
-	resp, err := call("admin/import-raw-user-data-from-connector", body)
+	err := callAPI(path, nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(resp.(map[string]any)["status"])
+	return
 }
 
 func GetTransformation(connector int) {
 	body := map[string]any{
 		"Connector": connector,
 	}
-	resp, err := call("admin/transformations/get", body)
+	resp, err := callAdmin("admin/transformations/get", body)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,7 +66,7 @@ func UpdateTransformation(connector int, transformation []byte) {
 		"Connector":      connector,
 		"Transformation": string(transformation),
 	}
-	resp, err := call("admin/transformations/update", body)
+	resp, err := callAdmin("admin/transformations/update", body)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,7 +74,7 @@ func UpdateTransformation(connector int, transformation []byte) {
 }
 
 func ListUsers() {
-	resp, err := call("admin/list-users", nil)
+	resp, err := callAdmin("admin/list-users", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
