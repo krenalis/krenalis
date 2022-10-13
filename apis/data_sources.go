@@ -26,7 +26,7 @@ import (
 )
 
 type DataSources struct {
-	*API
+	*RestrictedAPI
 }
 
 var ErrConnectorNotFound = errors.New("connector does not exist")

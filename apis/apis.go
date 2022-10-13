@@ -51,7 +51,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 	return apis
 }
 
-type API struct {
+type RestrictedAPI struct {
 	account     int
 	apis        *APIs
 	myDB        *sql.DB
@@ -59,8 +59,8 @@ type API struct {
 	DataSources *DataSources
 }
 
-func (apis *APIs) API(account int) *API {
-	api := &API{account: account, apis: apis, myDB: apis.myDB, chDB: apis.chDB}
+func (apis *APIs) RestrictedAPI(account int) *RestrictedAPI {
+	api := &RestrictedAPI{account: account, apis: apis, myDB: apis.myDB, chDB: apis.chDB}
 	api.DataSources = &DataSources{api}
 	return api
 }
@@ -78,7 +78,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
-	api := apis.API(account)
+	api := apis.RestrictedAPI(account)
 
 	m := importRegexp.FindStringSubmatch(r.URL.Path)
 	if m == nil {
@@ -334,10 +334,10 @@ func (apis *APIs) initSchema() {
 
 // DeprecatedProperty returns an instance of DeprecatedProperties which operates
 // on the given property.
-func (api *API) DeprecatedProperty(property int) *DeprecatedProperties {
+func (api *RestrictedAPI) DeprecatedProperty(property int) *DeprecatedProperties {
 	properties := &DeprecatedProperties{
-		API: api,
-		id:  property,
+		RestrictedAPI: api,
+		id:            property,
 	}
 	properties.SmartEvents = &SmartEvents{properties}
 	properties.Visualization = &Visualization{properties}
