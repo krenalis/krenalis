@@ -16,14 +16,20 @@ import (
 	"strconv"
 )
 
+// DataSource represents a data source.
+type DataSource struct {
+	ID   int
+	Name string
+}
+
 func ListDataSources() {
-	resp, err := callAdmin("admin/connectors/findInstalledConnectors", nil)
+	var sources []*DataSource
+	err := callAPI("GET", "apis/data-sources/", nil, &sources)
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, connector := range resp.([]any) {
-		c := connector.(map[string]any)
-		fmt.Printf("%-10v %s\n", c["ID"], c["Name"])
+	for _, source := range sources {
+		fmt.Printf("%-10v %s\n", source.ID, source.Name)
 	}
 }
 

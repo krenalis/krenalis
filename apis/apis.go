@@ -67,7 +67,7 @@ func (apis *APIs) API(account int) *API {
 	return api
 }
 
-var importRegexp = regexp.MustCompile(`/apis/data-sources/(\d+)/((re)?import|properties|transformation)`)
+var importRegexp = regexp.MustCompile(`/apis/data-sources/((\d+)/((re)?import|properties|transformation))?`)
 
 // ServeHTTP servers the API methods from HTTP.
 func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -83,14 +83,29 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	api := apis.API(account)
 
 	m := importRegexp.FindStringSubmatch(r.URL.Path)
-	if m != nil {
-		id, _ := strconv.Atoi(m[1])
+	if m == nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+	var err error
+	if m[1] == "" {
+		if r.Method != "GET" {
+			w.Header().Set("Allow", "GET")
+			http.Error(w, "Method Not Allowed", 405)
+			return
+		}
+		var sources []*DataSource
+		sources, err = api.DataSources.List()
+		if err == nil {
+			_ = json.NewEncoder(w).Encode(sources)
+		}
+	} else {
+		id, _ := strconv.Atoi(m[2])
 		if id <= 0 {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		var err error
-		switch m[2] {
+		switch m[3] {
 		case "properties":
 			var properties []*DataSourceProperty
 			properties, err = api.DataSources.Properties(id)
@@ -111,22 +126,22 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				transformation, err = io.ReadAll(r.Body)
 				err = api.DataSources.SetTransformationFunc(id, string(transformation))
 			}
-		default:
-			all := m[3] == "re"
+		case "import":
+			all := m[4] == "re"
 			err = api.DataSources.Import(id, all)
+		default:
+			panic("unexpected path")
 		}
-		if err != nil {
-			if err == ErrConnectorNotFound {
-				http.Error(w, "Not Found", http.StatusNotFound)
-				return
-			}
-			log.Printf("[error] call to %q failed: %s", r.URL.Path, err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+	if err != nil {
+		if err == ErrConnectorNotFound {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
 		}
-		return
+		log.Printf("[error] call to %q failed: %s", r.URL.Path, err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 
-	http.Error(w, "Bad Request", http.StatusBadRequest)
 	return
 }
 
