@@ -29,21 +29,45 @@ type DataSources struct {
 	*API
 }
 
-// Install installs a data source given its connector and the OAuth refresh
-// token. If the data source is already installed for the given connector, it
-// does not install it but updates its refresh token and removes the access
-// token.
-func (this *DataSources) Install(connector int, refreshToken string) error {
-	_, err := this.myDB.Exec("INSERT INTO `data_sources`\n"+
-		"SET `account` = ?, `connector` = ?, `refreshToken` = ?\n"+
-		"ON DUPLICATE KEY UPDATE `accessToken` = '', `refreshToken` = ?, `accessTokenExpirationTimestamp` = ''",
-		this.account, connector, refreshToken, refreshToken)
-	return err
+var ErrConnectorNotFound = errors.New("connector does not exist")
+var ErrCannotGetConnectorAccessToken = fmt.Errorf("cannot get access token")
+
+// DataSource represents a data source.
+type DataSource struct {
+	ID       int
+	Name     string
+	OauthURL string
+	LogoURL  string
 }
 
-var ErrConnectorNotFound = errors.New("connector does not exist")
+// PropertyType represents the type of a property.
+type PropertyType string
 
-var ErrCannotGetConnectorAccessToken = fmt.Errorf("cannot get access token")
+// DataSourcePropertyOption represents an option of a data source property.
+type DataSourcePropertyOption struct {
+	Label string
+	Value string
+}
+
+// DataSourceProperty represents a connector property.
+type DataSourceProperty struct {
+	Name    string
+	Type    PropertyType
+	Label   string
+	Options []DataSourcePropertyOption
+}
+
+// Get returns the data source with the given connector.
+func (this *DataSources) Get(connector int) (string, string, *time.Time, error) {
+	var accessToken, refreshToken string
+	var expiration time.Time
+	err := this.myDB.QueryRow("SELECT `accessToken`, `refreshToken`, `accessTokenExpirationTimestamp`\nFROM `data_sources`\nWHERE `account` = ? AND `connector` = ?", this.account, connector).
+		Scan(&accessToken, &refreshToken, &expiration)
+	if err != nil {
+		return "", "", nil, err
+	}
+	return accessToken, refreshToken, &expiration, nil
+}
 
 // Import starts the import of the users from the data source with the given
 // connector. If reimport is false it imports the users from the current
@@ -95,21 +119,61 @@ func (this *DataSources) Import(connector int, reimport bool) error {
 	return nil
 }
 
-// PropertyType represents the type of a property.
-type PropertyType string
-
-// DataSourcePropertyOption represents an option of a data source property.
-type DataSourcePropertyOption struct {
-	Label string
-	Value string
+// Install installs a data source given its connector and the OAuth refresh
+// token. If the data source is already installed for the given connector, it
+// does not install it but updates its refresh token and removes the access
+// token.
+func (this *DataSources) Install(connector int, refreshToken string) error {
+	_, err := this.myDB.Exec("INSERT INTO `data_sources`\n"+
+		"SET `account` = ?, `connector` = ?, `refreshToken` = ?\n"+
+		"ON DUPLICATE KEY UPDATE `accessToken` = '', `refreshToken` = ?, `accessTokenExpirationTimestamp` = ''",
+		this.account, connector, refreshToken, refreshToken)
+	return err
 }
 
-// DataSourceProperty represents a connector property.
-type DataSourceProperty struct {
-	Name    string
-	Type    PropertyType
-	Label   string
-	Options []DataSourcePropertyOption
+// List returns all data sources.
+func (this *DataSources) List() ([]*DataSource, error) {
+	ids := make([]int, 0, 0)
+	err := this.myDB.QueryScan("SELECT `connector`\nFROM `data_sources`\nWHERE account = ?", this.account, func(rows *sql.Rows) error {
+		var err error
+		for rows.Next() {
+			var id int
+			if err = rows.Scan(&id); err != nil {
+				return err
+			}
+			ids = append(ids, id)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	sources := make([]*DataSource, 0, 0)
+	if len(ids) == 0 {
+		return sources, nil
+	}
+
+	stringifiedIDs := make([]string, 0, 0)
+	for _, id := range ids {
+		stringifiedIDs = append(stringifiedIDs, strconv.Itoa(id))
+	}
+
+	err = this.myDB.QueryScan(fmt.Sprintf("SELECT `id`, `name`, `oauthURL`, `logoURL`\nFROM `connectors` WHERE id IN (%s)", strings.Join(stringifiedIDs, ", ")), func(rows *sql.Rows) error {
+		var err error
+		for rows.Next() {
+			var source DataSource
+			if err = rows.Scan(&source.ID, &source.Name, &source.OauthURL, &source.LogoURL); err != nil {
+				return err
+			}
+			sources = append(sources, &source)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return sources, nil
 }
 
 // Properties returns the properties of the data source with the given
@@ -166,108 +230,6 @@ func (this *DataSources) Properties(connector int) ([]*DataSourceProperty, error
 	return properties, nil
 }
 
-// DataSource represents a data source.
-type DataSource struct {
-	ID       int
-	Name     string
-	OauthURL string
-	LogoURL  string
-}
-
-// List returns all data sources.
-func (this *DataSources) List() ([]*DataSource, error) {
-	ids := make([]int, 0, 0)
-	err := this.myDB.QueryScan("SELECT `connector`\nFROM `data_sources`\nWHERE account = ?", this.account, func(rows *sql.Rows) error {
-		var err error
-		for rows.Next() {
-			var id int
-			if err = rows.Scan(&id); err != nil {
-				return err
-			}
-			ids = append(ids, id)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	sources := make([]*DataSource, 0, 0)
-	if len(ids) == 0 {
-		return sources, nil
-	}
-
-	stringifiedIDs := make([]string, 0, 0)
-	for _, id := range ids {
-		stringifiedIDs = append(stringifiedIDs, strconv.Itoa(id))
-	}
-
-	err = this.myDB.QueryScan(fmt.Sprintf("SELECT `id`, `name`, `oauthURL`, `logoURL`\nFROM `connectors` WHERE id IN (%s)", strings.Join(stringifiedIDs, ", ")), func(rows *sql.Rows) error {
-		var err error
-		for rows.Next() {
-			var source DataSource
-			if err = rows.Scan(&source.ID, &source.Name, &source.OauthURL, &source.LogoURL); err != nil {
-				return err
-			}
-			sources = append(sources, &source)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return sources, nil
-}
-
-// Get returns the data source with the given connector.
-func (this *DataSources) Get(connector int) (string, string, *time.Time, error) {
-	var accessToken, refreshToken string
-	var expiration time.Time
-	err := this.myDB.QueryRow("SELECT `accessToken`, `refreshToken`, `accessTokenExpirationTimestamp`\nFROM `data_sources`\nWHERE `account` = ? AND `connector` = ?", this.account, connector).
-		Scan(&accessToken, &refreshToken, &expiration)
-	if err != nil {
-		return "", "", nil, err
-	}
-	return accessToken, refreshToken, &expiration, nil
-}
-
-// Uninstall uninstalls the data source with the given connector.
-// If the connector does not exist, it does nothing.
-func (this *DataSources) Uninstall(connector int) error {
-	if connector <= 0 {
-		return errors.New("invalid connector identifier")
-	}
-	where := sql.Where{"account": this.account, "connector": connector}
-	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		_, err := this.myDB.Table("DataSources").Delete(where)
-		if err == nil {
-			_, err = this.myDB.Table("DataSourcesProperties").Delete(where)
-		}
-		return err
-	})
-	return err
-}
-
-// TransformationFunc returns the transformation function of the data source
-// with the given connector.
-// Returns the ErrConnectorNotFound error if the connector does not exist or is
-// not installed.
-func (this *DataSources) TransformationFunc(connector int) (string, error) {
-	if connector <= 0 {
-		return "", errors.New("invalid connector identifier")
-	}
-	// TODO(Gianluca): revise table name and column names after the merging of
-	// the PR of @retini on OAuth.
-	row, err := this.myDB.Table("DataSources").Get(sql.Where{"account": this.account, "connector": connector}, []any{"transformation"})
-	if err != nil {
-		return "", err
-	}
-	if row == nil {
-		return "", ErrConnectorNotFound
-	}
-	return row["transformation"].(string), nil
-}
-
 // SetTransformationFunc sets the transformation function of the data source
 // with the given connector.
 // Returns the ErrConnectorNotFound error if the connector does not exist or is
@@ -291,6 +253,43 @@ func (this *DataSources) SetTransformationFunc(connector int, fn string) error {
 		return ErrConnectorNotFound
 	}
 	return nil
+}
+
+// TransformationFunc returns the transformation function of the data source
+// with the given connector.
+// Returns the ErrConnectorNotFound error if the connector does not exist or is
+// not installed.
+func (this *DataSources) TransformationFunc(connector int) (string, error) {
+	if connector <= 0 {
+		return "", errors.New("invalid connector identifier")
+	}
+	// TODO(Gianluca): revise table name and column names after the merging of
+	// the PR of @retini on OAuth.
+	row, err := this.myDB.Table("DataSources").Get(sql.Where{"account": this.account, "connector": connector}, []any{"transformation"})
+	if err != nil {
+		return "", err
+	}
+	if row == nil {
+		return "", ErrConnectorNotFound
+	}
+	return row["transformation"].(string), nil
+}
+
+// Uninstall uninstalls the data source with the given connector.
+// If the connector does not exist, it does nothing.
+func (this *DataSources) Uninstall(connector int) error {
+	if connector <= 0 {
+		return errors.New("invalid connector identifier")
+	}
+	where := sql.Where{"account": this.account, "connector": connector}
+	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+		_, err := this.myDB.Table("DataSources").Delete(where)
+		if err == nil {
+			_, err = this.myDB.Table("DataSourcesProperties").Delete(where)
+		}
+		return err
+	})
+	return err
 }
 
 // refreshOAuthToken refreshes the OAuth token of the data source with the
