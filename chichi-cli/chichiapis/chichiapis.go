@@ -118,14 +118,7 @@ func callAPI(method string, path string, body io.Reader, response any) error {
 
 	// Call the APIs.
 	url := chichiAPIs.url + path
-	jsonBody := &bytes.Buffer{}
-	if body != nil {
-		err := json.NewEncoder(jsonBody).Encode(body)
-		if err != nil {
-			return err
-		}
-	}
-	req, err := http.NewRequest(method, url, jsonBody)
+	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return err
 	}
@@ -146,9 +139,26 @@ func callAPI(method string, path string, body io.Reader, response any) error {
 
 	// Return the result.
 	if response != nil {
-		err = json.NewDecoder(resp.Body).Decode(&response)
-		if err != nil {
-			return fmt.Errorf("cannot decode JSON response from %q: %s", url, err)
+		if resp.Header.Get("Content-Type") == "application/json" {
+			// Read a JSON response.
+			err = json.NewDecoder(resp.Body).Decode(&response)
+			if err != nil {
+				return fmt.Errorf("cannot decode JSON response from %q: %s", url, err)
+			}
+		} else {
+			// Read a plain text response.
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return fmt.Errorf("cannot read response body from %q: %s", url, err)
+			}
+			switch response := response.(type) {
+			case *string:
+				*response = string(body)
+			case *[]byte:
+				*response = body
+			default:
+				return fmt.Errorf("cannot decode the response body into a %T value", response)
+			}
 		}
 	}
 

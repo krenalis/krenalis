@@ -8,11 +8,12 @@
 package cmd
 
 import (
-	"chichi-cli/chichiapis"
 	"io"
 	"log"
 	"os"
 	"strconv"
+
+	"chichi-cli/chichiapis"
 
 	"github.com/spf13/cobra"
 )

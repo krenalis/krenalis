@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"regexp"
@@ -64,7 +65,7 @@ func (apis *APIs) API(customer int) *API {
 	return &API{myDB: apis.myDB, chDB: apis.chDB, customer: customer}
 }
 
-var importRegexp = regexp.MustCompile(`/apis/connectors/(\d+)/((re)?import|properties)`)
+var importRegexp = regexp.MustCompile(`/apis/connectors/(\d+)/((re)?import|properties|transformation)`)
 
 // ServeHTTP servers the API methods from HTTP.
 func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -79,13 +80,28 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var err error
-		if m[2] == "properties" {
+		switch m[2] {
+		case "properties":
 			var properties []*ConnectorProperty
 			properties, err = apis.Connectors.Properties(id)
 			if err == nil {
 				_ = json.NewEncoder(w).Encode(properties)
 			}
-		} else {
+		case "transformation":
+			if r.Method == "GET" {
+				var transformation string
+				transformation, err = apis.Connectors.TransformationFunc(id)
+				if err == nil {
+					w.Header().Set("Content-Type", "text/plain")
+					_, _ = io.WriteString(w, transformation)
+					return
+				}
+			} else {
+				var transformation []byte
+				transformation, err = io.ReadAll(r.Body)
+				err = apis.Connectors.SetTransformationFunc(id, string(transformation))
+			}
+		default:
 			all := m[3] == "re"
 			err = apis.Connectors.Import(id, all)
 		}

@@ -8,8 +8,10 @@
 package chichiapis
 
 import (
+	"bytes"
 	"fmt"
 	"log"
+	"os"
 	"sort"
 	"strconv"
 )
@@ -58,26 +60,20 @@ func ImportUsersFromConnector(connector int, reimport bool) {
 }
 
 func GetTransformation(connector int) {
-	body := map[string]any{
-		"Connector": connector,
-	}
-	resp, err := callAdmin("admin/transformations/get", body)
+	var transformation []byte
+	err := callAPI("GET", "apis/connectors/"+strconv.Itoa(connector)+"/transformation", nil, &transformation)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(resp)
+	_, _ = os.Stdout.Write(transformation)
 }
 
 func UpdateTransformation(connector int, transformation []byte) {
-	body := map[string]any{
-		"Connector":      connector,
-		"Transformation": string(transformation),
-	}
-	resp, err := callAdmin("admin/transformations/update", body)
+	body := bytes.NewReader(transformation)
+	err := callAPI("POST", "apis/connectors/"+strconv.Itoa(connector)+"/transformation", body, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(resp)
 }
 
 func ListUsers() {
