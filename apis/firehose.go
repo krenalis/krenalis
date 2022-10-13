@@ -21,26 +21,26 @@ import (
 	"github.com/open2b/scriggo/native"
 )
 
-// Firehose is the Firehose API used by the connectors.
-type Firehose struct {
+// firehose is the firehose API used by the connectors.
+type firehose struct {
 	connector int
-	account   int
-	APIs      *APIs
+	api       *API
+	apis      *APIs
 }
 
-// NewFirehose returns a new Firehose for the given connector and account.
-func (apis *APIs) NewFirehose(connector, account int) *Firehose {
-	return &Firehose{
+// newFirehose returns a new firehose for the given connector and account.
+func (api *API) newFirehose(connector int) *firehose {
+	return &firehose{
 		connector: connector,
-		account:   account,
-		APIs:      apis,
+		api:       api,
+		apis:      api.apis,
 	}
 }
 
-func (fh *Firehose) SetCursor(cursor string) {
-	_, err := fh.APIs.myDB.Table("AccountConnectors").Add(
+func (fh *firehose) SetCursor(cursor string) {
+	_, err := fh.api.myDB.Table("AccountConnectors").Add(
 		map[string]any{
-			"account":     fh.account,
+			"account":     fh.api.account,
 			"connector":   fh.connector,
 			"user_cursor": cursor,
 		},
@@ -53,22 +53,22 @@ func (fh *Firehose) SetCursor(cursor string) {
 	}
 }
 
-func (fh *Firehose) ApplyConfig(conf map[string]any) {
+func (fh *firehose) ApplyConfig(conf map[string]any) {
 	return
 }
 
-func (fh *Firehose) UpdateGroup(ident connectors.Identity, updateTime int64, properties map[string]any, users []string) {
+func (fh *firehose) UpdateGroup(ident connectors.Identity, updateTime int64, properties map[string]any, users []string) {
 	return
 }
 
-func (fh *Firehose) UpdateUser(ident connectors.Identity, updateTime int64, properties map[string]any, groups []string) {
+func (fh *firehose) UpdateUser(ident connectors.Identity, updateTime int64, properties map[string]any, groups []string) {
 	data, err := json.Marshal(properties)
 	if err != nil {
 		panic(err)
 	}
-	_, err = fh.APIs.myDB.Table("ConnectorsRawUserData").Add(
+	_, err = fh.api.myDB.Table("ConnectorsRawUserData").Add(
 		map[string]any{
-			"account":   fh.account,
+			"account":   fh.api.account,
 			"connector": fh.connector,
 			"data":      string(data),
 		},
@@ -108,33 +108,33 @@ func (fh *Firehose) UpdateUser(ident connectors.Identity, updateTime int64, prop
 		for _, column := range columns {
 			values = append(values, goldenRecordData[column])
 		}
-		_, err := fh.APIs.myDB.Exec(query, append(values, values...)...)
+		_, err := fh.api.myDB.Exec(query, append(values, values...)...)
 		if err != nil {
 			panic(fmt.Sprintf("cannot write data to database: %s", err))
 		}
 	}
 }
 
-func (fh *Firehose) CreateGroup(ident connectors.Identity, creationTime int64, properties map[string]any) {
+func (fh *firehose) CreateGroup(ident connectors.Identity, creationTime int64, properties map[string]any) {
 	return
 }
 
-func (fh *Firehose) CreateUser(ident connectors.Identity, creationTime int64, properties map[string]any) {
+func (fh *firehose) CreateUser(ident connectors.Identity, creationTime int64, properties map[string]any) {
 	return
 }
 
-func (fh *Firehose) DeleteGroup(ident connectors.Identity) {
+func (fh *firehose) DeleteGroup(ident connectors.Identity) {
 	return
 }
 
-func (fh *Firehose) DeleteUser(ident connectors.Identity) {
+func (fh *firehose) DeleteUser(ident connectors.Identity) {
 	return
 }
 
 // transformProperties transforms the incoming properties using the
 // transformation function specified for the current connector.
-func (fh *Firehose) transformProperties(incoming map[string]any) (map[string]any, error) {
-	transformationSource, err := fh.APIs.Connectors.TransformationFunc(fh.connector)
+func (fh *firehose) transformProperties(incoming map[string]any) (map[string]any, error) {
+	transformationSource, err := fh.api.Connectors.TransformationFunc(fh.connector)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve transformation from DB: %s", err)
 	}

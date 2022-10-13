@@ -122,6 +122,7 @@ func callAPI(method string, path string, body io.Reader, response any) error {
 	if err != nil {
 		return err
 	}
+	req.Header.Set("X-Account", "1")
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("cannot POST on %q: %s", url, err)

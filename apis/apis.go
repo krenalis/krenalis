@@ -29,7 +29,6 @@ type APIs struct {
 	myDB       *sql.DB
 	chDB       chDriver.Conn
 	Accounts   *Accounts
-	Connectors *Connectors
 	Cursors    *Cursors
 	Schemas    *Schemas
 	Properties *Properties
@@ -45,7 +44,6 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 	}
 	hasBeenCalled = true
 	apis := &APIs{myDB: myDB, chDB: chDB}
-	apis.Connectors = &Connectors{apis}
 	apis.Cursors = &Cursors{apis}
 	apis.Accounts = &Accounts{apis}
 	apis.Schemas = &Schemas{apis}
@@ -56,13 +54,17 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 }
 
 type API struct {
-	myDB    *sql.DB
-	chDB    chDriver.Conn
-	account int
+	account    int
+	apis       *APIs
+	myDB       *sql.DB
+	chDB       chDriver.Conn
+	Connectors *Connectors
 }
 
 func (apis *APIs) API(account int) *API {
-	return &API{myDB: apis.myDB, chDB: apis.chDB, account: account}
+	api := &API{account: account, apis: apis, myDB: apis.myDB, chDB: apis.chDB}
+	api.Connectors = &Connectors{api}
+	return api
 }
 
 var importRegexp = regexp.MustCompile(`/apis/connectors/(\d+)/((re)?import|properties|transformation)`)
@@ -71,6 +73,14 @@ var importRegexp = regexp.MustCompile(`/apis/connectors/(\d+)/((re)?import|prope
 func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
+
+	// Read the account.
+	account, _ := strconv.Atoi(r.Header.Get("X-Account"))
+	if account <= 0 {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+	api := apis.API(account)
 
 	m := importRegexp.FindStringSubmatch(r.URL.Path)
 	if m != nil {
@@ -83,14 +93,14 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		switch m[2] {
 		case "properties":
 			var properties []*ConnectorProperty
-			properties, err = apis.Connectors.Properties(id)
+			properties, err = api.Connectors.Properties(id)
 			if err == nil {
 				_ = json.NewEncoder(w).Encode(properties)
 			}
 		case "transformation":
 			if r.Method == "GET" {
 				var transformation string
-				transformation, err = apis.Connectors.TransformationFunc(id)
+				transformation, err = api.Connectors.TransformationFunc(id)
 				if err == nil {
 					w.Header().Set("Content-Type", "text/plain")
 					_, _ = io.WriteString(w, transformation)
@@ -99,11 +109,11 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			} else {
 				var transformation []byte
 				transformation, err = io.ReadAll(r.Body)
-				err = apis.Connectors.SetTransformationFunc(id, string(transformation))
+				err = api.Connectors.SetTransformationFunc(id, string(transformation))
 			}
 		default:
 			all := m[3] == "re"
-			err = apis.Connectors.Import(id, all)
+			err = api.Connectors.Import(id, all)
 		}
 		if err != nil {
 			if err == ErrConnectorNotFound {
@@ -147,6 +157,61 @@ func (apis *APIs) ServeWebhook(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// Connector represents a connector.
+type Connector struct {
+	ID            int
+	Name          string
+	OauthURL      string
+	LogoURL       string
+	ClientID      string
+	ClientSecret  string
+	TokenEndpoint string
+}
+
+// Connector returns the connector with the given identifier.
+func (apis *APIs) Connector(id int) (*Connector, error) {
+	connector := Connector{ID: id}
+	err := apis.myDB.QueryRow("SELECT `name`, `oauth_url`, `logo_url`, `client_id`, `client_secret`, `token_endpoint`\nFROM `connectors`\nWHERE `id` = ?", id).
+		Scan(&connector.Name, &connector.OauthURL, &connector.LogoURL, &connector.ClientID, &connector.ClientSecret, &connector.TokenEndpoint)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &connector, nil
+}
+
+// Connectors returns all connectors.
+func (apis *APIs) Connectors() ([]*Connector, error) {
+	connectors := []*Connector{}
+	err := apis.myDB.QueryScan("SELECT `id`, `name`, `oauth_url`, `logo_url`\nFROM `connectors`", func(rows *sql.Rows) error {
+		var err error
+		for rows.Next() {
+			var connector Connector
+			if err = rows.Scan(&connector.ID, &connector.Name, &connector.OauthURL, &connector.LogoURL); err != nil {
+				return err
+			}
+			connectors = append(connectors, &connector)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return connectors, nil
+}
+
+// newFirehose returns a new firehose for the given connector.
+// The returned firehouse does not have an assigned account. Use the
+// api.newFirehose method to get a firehouse with an assigned account.
+func (apis *APIs) newFirehose(connector int) *firehose {
+	return &firehose{
+		connector: connector,
+		apis:      apis,
+	}
+}
+
 func (apis *APIs) serveWebhook(r *http.Request) error {
 	m := webhookPathReg.FindStringSubmatch(r.URL.Path)
 	if m == nil {
@@ -156,14 +221,14 @@ func (apis *APIs) serveWebhook(r *http.Request) error {
 	if connID <= 0 {
 		return errBadRequest
 	}
-	conn, err := apis.Connectors.Get(connID)
+	conn, err := apis.Connector(connID)
 	if err != nil {
 		return err
 	}
 	if conn == nil {
 		return errNotFound
 	}
-	fh := apis.NewFirehose(connID, 1)
+	fh := apis.newFirehose(connID)
 	connector := connectors.Connector(context.Background(), conn.Name, conn.ClientSecret, fh)
 	return connector.ServeWebhook(r)
 }

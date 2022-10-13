@@ -43,7 +43,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var accountID int
-	var API *apis.API
+	var api *apis.API
 	if isLoggedIn {
 		// get the account id
 		accountID, err = strconv.Atoi(cookie.Value)
@@ -52,7 +52,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// instantiate the account API
-		API = admin.apis.API(accountID)
+		api = admin.apis.API(accountID)
 	}
 
 	// handle requests to login page.
@@ -122,7 +122,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		properties, err := admin.apis.Connectors.Properties(req.Connector)
+		properties, err := api.Connectors.Properties(req.Connector)
 		if err != nil {
 			log.Printf("[error] cannot retrieve properties: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -143,7 +143,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		err = admin.apis.Connectors.Import(req.Connector, req.ResetCursor)
+		err = api.Connectors.Import(req.Connector, req.ResetCursor)
 		if err != nil {
 			log.Printf("[error] %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -166,7 +166,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			transf, err := admin.apis.Connectors.TransformationFunc(req.Connector)
+			transf, err := api.Connectors.TransformationFunc(req.Connector)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -183,7 +183,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = admin.apis.Connectors.SetTransformationFunc(req.Connector, req.Transformation)
+			err = api.Connectors.SetTransformationFunc(req.Connector, req.Transformation)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -242,7 +242,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		switch rpath {
 		case "/find":
-			cns, err := admin.apis.Connectors.Find()
+			cns, err := api.Connectors.List()
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -251,7 +251,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(cns)
 			return
 		case "/findInstalledConnectors":
-			cns, err := admin.apis.Connectors.FindAccountConnectors(accountID)
+			cns, err := api.Connectors.List()
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -267,7 +267,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			cn, err := admin.apis.Connectors.Get(id)
+			cn, err := admin.apis.Connector(id)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -284,7 +284,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			err = admin.apis.Connectors.Uninstall(ids[0])
+			err = api.Connectors.Uninstall(ids[0])
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -307,7 +307,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// TODO(Gianluca): check if the property belongs to the account.
 
-		deprecatedProperty := API.DeprecatedProperty(propertyID)
+		deprecatedProperty := api.DeprecatedProperty(propertyID)
 
 		// Serve the Smart Event APIs.
 		switch rpath {
@@ -541,6 +541,8 @@ func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
 // sending generic internal server errors.
 func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, accountID int) {
 
+	api := admin.apis.API(1) // TODO(marco): what is the account?
+
 	// get the ID of the connector.
 	cookie, err := r.Cookie("install-connector")
 	if err != nil {
@@ -565,7 +567,7 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 	}
 
 	// retrieve the connector.
-	connector, err := admin.apis.Connectors.Get(connectorID)
+	connector, err := admin.apis.Connector(connectorID)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("[error] cannot install connector %d: %s", accountID, err)
@@ -614,7 +616,7 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 	}
 	resp.Body.Close()
 
-	err = admin.apis.Connectors.Install(connectorID, respData.Refresh_token)
+	err = api.Connectors.Install(connectorID, respData.Refresh_token)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("[error] cannot install connector %d: %s", connectorID, err)
@@ -640,7 +642,7 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 // connectorName returns the name of the connector with the given ID.
 // If the ID does not correspond to any connector, returns "" and nil.
 func (admin *admin) connectorName(id int) (string, error) {
-	connector, err := admin.apis.Connectors.Get(id)
+	connector, err := admin.apis.Connector(id)
 	if err != nil {
 		return "", err
 	}
