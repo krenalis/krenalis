@@ -28,8 +28,8 @@ CREATE TABLE `smart_events` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NOT NULL DEFAULT '',
   `event` VARCHAR(50) NOT NULL DEFAULT '',
-  `pages` TEXT NOT NULL DEFAULT '',
-  `buttons` TEXT NOT NULL DEFAULT '',
+  `pages` TEXT NOT NULL,
+  `buttons` TEXT NOT NULL,
   PRIMARY KEY (`id`)
 );
 
@@ -51,9 +51,9 @@ CREATE TABLE `users` (
 
 CREATE TABLE `schemas` (
   `account` INT NOT NULL,
-  `userSchema` TEXT NOT NULL DEFAULT '',
-  `groupSchema` TEXT NOT NULL DEFAULT '',
-  `eventSchema` TEXT NOT NULL DEFAULT '',
+  `userSchema` TEXT NOT NULL,
+  `groupSchema` TEXT NOT NULL,
+  `eventSchema` TEXT NOT NULL,
   PRIMARY KEY (`account`)
 );
 
@@ -76,7 +76,7 @@ CREATE TABLE `data_sources` (
   `accessToken` VARCHAR(500) NOT NULL DEFAULT '',
   `refreshToken` VARCHAR(500) NOT NULL DEFAULT '',
   `accessTokenExpirationTimestamp` TIMESTAMP NOT NULL,
-  `transformation` TEXT NOT NULL DEFAULT '',
+  `transformation` TEXT NOT NULL,
   `userCursor` VARCHAR(500) NOT NULL DEFAULT '',
   PRIMARY KEY (`account`, `connector`)
 );
@@ -87,7 +87,7 @@ CREATE TABLE `data_sources_properties` (
   `name` VARCHAR(100) NOT NULL DEFAULT '',
   `type` VARCHAR(100) NOT NULL DEFAULT '',
   `label` VARCHAR(100) NOT NULL DEFAULT '',
-  `options` TEXT NOT NULL DEFAULT '',
+  `options` TEXT NOT NULL,
   `position` INT NOT NULL,
   PRIMARY KEY (`account`, `connector`, `name`)
 );
