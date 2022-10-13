@@ -267,6 +267,16 @@ func (apis *APIs) initSchema() {
 		tokenEndpoint string
 	}{})
 
+	apis.myDB.Scheme("DataSources", "data_sources", struct {
+		account                        int
+		connector                      int
+		accessToken                    string
+		refreshToken                   string
+		accessTokenExpirationTimestamp string
+		transformation                 string
+		userCursor                     string
+	}{})
+
 	apis.myDB.Scheme("DataSourcesProperties", "data_sources_properties", struct {
 		account   int
 		connector int
@@ -320,16 +330,6 @@ func (apis *APIs) initSchema() {
 		property int
 		id       int
 		device   string
-	}{})
-
-	apis.myDB.Scheme("DataSources", "data_sources", struct {
-		account                        int
-		connector                      int
-		accessToken                    string
-		refreshToken                   string
-		accessTokenExpirationTimestamp string
-		transformation                 string
-		userCursor                     string
 	}{})
 
 }
