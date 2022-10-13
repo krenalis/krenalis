@@ -134,7 +134,7 @@ func (fh *Firehose) DeleteUser(ident connectors.Identity) {
 // transformProperties transforms the incoming properties using the
 // transformation function specified for the current connector.
 func (fh *Firehose) transformProperties(incoming map[string]any) (map[string]any, error) {
-	transformationSource, err := fh.APIs.Transformations.Get(fh.account, fh.connector)
+	transformationSource, err := fh.APIs.Connectors.TransformationFunc(fh.connector)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve transformation from DB: %s", err)
 	}

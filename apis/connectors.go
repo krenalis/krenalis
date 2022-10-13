@@ -282,6 +282,44 @@ func (this *Connectors) Uninstall(id int) error {
 	return err
 }
 
+// TransformationFunc returns the transformation function of the connector with
+// identifier id.
+// Returns the ErrConnectorNotFound error if the connector does not exist or is
+// not installed.
+func (this *Connectors) TransformationFunc(id int) (string, error) {
+	var account = 1 // TODO(marco)
+	// TODO(Gianluca): revise table name and column names after the merging of
+	// the PR of @retini on OAuth.
+	row, err := this.myDB.Table("AccountConnectors").Get(sql.Where{"account": account, "connector": id}, []any{"transformation"})
+	if err != nil {
+		return "", err
+	}
+	if row == nil {
+		return "", ErrConnectorNotFound
+	}
+	return row["transformation"].(string), nil
+}
+
+// SetTransformationFunc sets the transformation function of the connector with
+// identifier id.
+// Returns the ErrConnectorNotFound error if the connector does not exist or is
+// not installed.
+func (this *Connectors) SetTransformationFunc(id int, fn string) error {
+	var account = 1 // TODO(marco)
+	// TODO(Gianluca): revise table name and column names after the merging of
+	// the PR of @retini on OAuth.
+	affected, err := this.myDB.Table("AccountConnectors").Update(
+		sql.Set{"transformation": fn},
+		sql.Where{"account": account, "connector": id})
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return ErrConnectorNotFound
+	}
+	return nil
+}
+
 // refreshOAuthToken refreshes the OAuth token and returns it.
 // Returns the ErrConnectorNotFound error if the connector does not exist.
 func (this *Connectors) refreshOAuthToken(id int) (string, error) {

@@ -166,7 +166,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			transf, err := admin.apis.Transformations.Get(accountID, req.Connector)
+			transf, err := admin.apis.Connectors.TransformationFunc(req.Connector)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -183,9 +183,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = admin.apis.Transformations.Update(
-				accountID, req.Connector,
-				apis.Transformation(req.Transformation))
+			err = admin.apis.Connectors.SetTransformationFunc(req.Connector, req.Transformation)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)

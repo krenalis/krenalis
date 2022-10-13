@@ -25,15 +25,14 @@ import (
 var webhookPathReg = regexp.MustCompile(`^/webhook/(\d+)/`)
 
 type APIs struct {
-	myDB            *sql.DB
-	chDB            chDriver.Conn
-	Connectors      *Connectors
-	Cursors         *Cursors
-	Customers       *Customers
-	Schemas         *Schemas
-	Properties      *Properties
-	Transformations *Transformations
-	Users           *Users
+	myDB       *sql.DB
+	chDB       chDriver.Conn
+	Connectors *Connectors
+	Cursors    *Cursors
+	Customers  *Customers
+	Schemas    *Schemas
+	Properties *Properties
+	Users      *Users
 }
 
 var hasBeenCalled bool
@@ -50,7 +49,6 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 	apis.Customers = &Customers{apis}
 	apis.Schemas = &Schemas{apis}
 	apis.Properties = &Properties{apis}
-	apis.Transformations = &Transformations{apis}
 	apis.Users = &Users{apis}
 	apis.initSchema()
 	return apis
