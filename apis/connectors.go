@@ -264,16 +264,14 @@ func (this *Connectors) GetAccountConnector(accountID int, connectorID int) (str
 	return accessToken, refreshToken, &expiration, nil
 }
 
-// Uninstall uninstalls the connectors with the given identifiers.
-// For not existent connectors, it doesn't return an error.
-func (this *Connectors) Uninstall(ids []int) error {
-	for _, id := range ids {
-		if id <= 0 {
-			return errors.New("invalid connector identifier")
-		}
+// Uninstall uninstalls the connector with the given identifier.
+// If the connector does not exist, it does nothing.
+func (this *Connectors) Uninstall(id int) error {
+	if id <= 0 {
+		return errors.New("invalid connector identifier")
 	}
 	var account = 1 // TODO(marco)
-	where := sql.Where{"account": account, "connector": ids}
+	where := sql.Where{"account": account, "connector": id}
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		_, err := this.myDB.Table("AccountConnectors").Delete(where)
 		if err == nil {

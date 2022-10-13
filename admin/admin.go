@@ -286,7 +286,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			err = admin.apis.Connectors.Uninstall(ids)
+			err = admin.apis.Connectors.Uninstall(ids[0])
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
