@@ -78,7 +78,7 @@ export default class AccountConnectors extends Component {
 			return (
 				<div className="AccountConnectors">
 					<div class='content'>
-						<h1>Your installed connectors</h1>
+						<h1>Data Sources</h1>
 						{this.state.status && <StatusMessage onClose={() => {this.setState({status: null})}} message={this.state.status} />}
 						<div className="connectors">
 							{

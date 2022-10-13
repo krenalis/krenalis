@@ -33,7 +33,8 @@ export default class Connectors extends Component {
         return (
 			<div className="Connectors">
 				<div class='content'>
-					<h1>Click on a connector to add it</h1>
+					<h1>Connectors</h1>
+					<div>Click on a connector to add a data source from the connector</div>
 					<div className="connectors">
 						 {this.state.connectors.map((c) => {
 							return <ConnectorItem key={c.ID} name={c.Name} logoUrl={c.LogoURL} onClick={(e) => {this.installConnector(e, c.ID, c.OauthURL)}} />

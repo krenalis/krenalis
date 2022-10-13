@@ -82,7 +82,7 @@ export default class AccountConnector extends Component {
 
     render() {
 		let connectorProperties = [];
-        connectorProperties.push(<div className="title">Connector</div>)
+        connectorProperties.push(<div className="title">Data source</div>)
         for (let p of this.state.connectorProperties) {
             connectorProperties.push(<div className="property">{p}</div>)
         }
@@ -95,7 +95,7 @@ export default class AccountConnector extends Component {
         <div className="AccountConnector">
             <div className="content">
                 {this.state.statusMessage && <StatusMessage onClose={() => {this.setState({statusMessage: null})}} message={this.state.statusMessage} />}
-                <h1>Map connector's properties to your golden record</h1>
+                <h1>Map data source's properties to the golden record</h1>
                 <div className="properties ext">
                     {connectorProperties}
                 </div>
