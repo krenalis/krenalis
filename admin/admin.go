@@ -18,7 +18,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"chichi/apis"
 
@@ -606,10 +605,7 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 	}
 
 	respData := struct {
-		Token_type    string
 		Refresh_token string
-		Access_token  string
-		Expires_in    int
 	}{}
 	dec := json.NewDecoder(resp.Body)
 	err = dec.Decode(&respData)
@@ -620,11 +616,7 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 	}
 	resp.Body.Close()
 
-	// convert expires_in into a timestamp.
-	t := time.Now()
-	expiration := t.Add(time.Second * time.Duration(respData.Expires_in))
-
-	err = admin.apis.Connectors.SaveAccountConnector(accountID, connectorID, respData.Access_token, respData.Refresh_token, expiration)
+	err = admin.apis.Connectors.Install(connectorID, respData.Refresh_token)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("[error] cannot install connector %d: %s", connectorID, err)

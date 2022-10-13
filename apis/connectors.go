@@ -57,6 +57,18 @@ func (this *Connectors) Find() ([]*Connector, error) {
 	return connectors, nil
 }
 
+// Install installs a connector given its identifier and the OAuth refresh
+// token. If the connector is already installed it does not install it but
+// updates its refresh token and removes the access token.
+func (this *Connectors) Install(id int, refreshToken string) error {
+	var account = 1 // TODO(marco)
+	_, err := this.myDB.Exec("INSERT INTO `account_connectors`\n"+
+		"SET `account` = ?, `connector` = ?, `refresh_token` = ?\n"+
+		"ON DUPLICATE KEY UPDATE `access_token` = '', `refresh_token` = ?, `access_token_expiration_timestamp` = ''",
+		account, id, refreshToken, refreshToken)
+	return err
+}
+
 var ErrConnectorNotFound = errors.New("connector does not exist")
 
 var ErrCannotGetConnectorAccessToken = fmt.Errorf("cannot get access token")
@@ -250,15 +262,6 @@ func (this *Connectors) GetAccountConnector(accountID int, connectorID int) (str
 		return "", "", nil, err
 	}
 	return accessToken, refreshToken, &expiration, nil
-}
-
-func (this *Connectors) SaveAccountConnector(accountID int, connectorID int, accessToken string, refreshToken string, expiration time.Time) error {
-	_, err := this.myDB.Exec("INSERT INTO `account_connectors` SET `account` = ?, `connector` = ?, `access_token` = ?, `refresh_token` = ?, `access_token_expiration_timestamp` = ?\nON DUPLICATE KEY UPDATE `access_token` = ?, `refresh_token` = ?, `access_token_expiration_timestamp` = ?",
-		accountID, connectorID, accessToken, refreshToken, expiration, accessToken, refreshToken, expiration)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (this *Connectors) DeleteAccountConnector(accountID int, ids []int) error {
