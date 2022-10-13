@@ -8,22 +8,23 @@
 package apis
 
 import (
+	"encoding/json"
 	"fmt"
+	"sort"
 
 	"chichi/pkg/open2b/sql"
 )
 
 type Schemas struct {
-	*APIs
+	*RestrictedAPI
 }
 
 type Schema string
 
-// Get gets the schema with the given name, relative to the given account. name
-// can be "user", "group" or "event".
-// If the schema with the given name for the account does not exist, this method
+// Get gets the schema with the given name. name can be "user", "group" o
+// "event". If the schema with the given name does not exist, this method
 // returns an empty schema.
-func (schemas *Schemas) Get(account int, name string) (Schema, error) {
+func (this *Schemas) Get(name string) (Schema, error) {
 	var column string
 	switch name {
 	case "user":
@@ -35,7 +36,7 @@ func (schemas *Schemas) Get(account int, name string) (Schema, error) {
 	default:
 		return "", fmt.Errorf("invalid schema name %q", name)
 	}
-	row, err := schemas.APIs.myDB.Table("Schemas").Get(sql.Where{"account": account}, []any{column})
+	row, err := this.myDB.Table("Schemas").Get(sql.Where{"account": this.account}, []any{column})
 	if err != nil {
 		return "", err
 	}
@@ -43,9 +44,9 @@ func (schemas *Schemas) Get(account int, name string) (Schema, error) {
 	return Schema(schema), nil
 }
 
-// Update updates the schema with the given name, relative to the given account.
-// name can be "user", "group" or "event".
-func (schemas *Schemas) Update(account int, name, schema string) error {
+// Update updates the schema with the given name. name can be "user", "group"
+// or "event".
+func (this *Schemas) Update(name, schema string) error {
 	var column string
 	switch name {
 	case "user":
@@ -57,9 +58,30 @@ func (schemas *Schemas) Update(account int, name, schema string) error {
 	default:
 		return fmt.Errorf("invalid schema name %q", name)
 	}
-	_, err := schemas.APIs.myDB.Table("Schemas").Update(sql.Set{column: schema}, sql.Where{"account": account})
+	_, err := this.myDB.Table("Schemas").Update(sql.Set{column: schema}, sql.Where{"account": this.account})
+	return err
+}
+
+// UserProperties returns the name of the properties of the user schema.
+//
+// TODO(Gianluca): return properties with the same ordering of the schema,
+// instead of sorting them alphabetically.
+func (this *Schemas) UserProperties() ([]string, error) {
+	schema, err := this.Schemas.Get("user")
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	var v struct {
+		Properties map[string]any
+	}
+	err = json.Unmarshal([]byte(schema), &v)
+	if err != nil {
+		return nil, err
+	}
+	props := make([]string, 0, len(v.Properties))
+	for name := range v.Properties {
+		props = append(props, name)
+	}
+	sort.Strings(props)
+	return props, nil
 }

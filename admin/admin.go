@@ -102,7 +102,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Handle the "/user-schema-properties" endpoint.
 	if strings.HasPrefix(rpath, "/user-schema-properties") {
-		propertyNames, err := admin.apis.Properties.UserSchemaProperties(accountID)
+		propertyNames, err := api.Schemas.UserProperties()
 		if err != nil {
 			log.Printf("[error] cannot retrieve properties: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -207,7 +207,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			schema, err := admin.apis.Schemas.Get(accountID, request.SchemaName)
+			schema, err := api.Schemas.Get(request.SchemaName)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -224,7 +224,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = admin.apis.Schemas.Update(accountID, request.SchemaName, request.Schema)
+			err = api.Schemas.Update(request.SchemaName, request.Schema)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
