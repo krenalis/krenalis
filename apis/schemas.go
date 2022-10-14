@@ -18,7 +18,7 @@ import (
 )
 
 type Schemas struct {
-	*RestrictedAPI
+	*AccountAPI
 }
 
 type Schema string

@@ -47,7 +47,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 	return apis
 }
 
-type RestrictedAPI struct {
+type AccountAPI struct {
 	account     int
 	apis        *APIs
 	myDB        *sql.DB
@@ -56,8 +56,9 @@ type RestrictedAPI struct {
 	Schemas     *Schemas
 }
 
-func (apis *APIs) RestrictedAPI(account int) *RestrictedAPI {
-	api := &RestrictedAPI{account: account, apis: apis, myDB: apis.myDB, chDB: apis.chDB}
+// AsAccount returns an API restricted to the given account.
+func (apis *APIs) AsAccount(account int) *AccountAPI {
+	api := &AccountAPI{account: account, apis: apis, myDB: apis.myDB, chDB: apis.chDB}
 	api.DataSources = &DataSources{api}
 	api.Schemas = &Schemas{api}
 	return api
@@ -76,7 +77,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
-	api := apis.RestrictedAPI(account)
+	api := apis.AsAccount(account)
 
 	m := importRegexp.FindStringSubmatch(r.URL.Path)
 	if m == nil {
@@ -332,10 +333,10 @@ func (apis *APIs) initSchema() {
 
 // DeprecatedProperty returns an instance of DeprecatedProperties which operates
 // on the given property.
-func (api *RestrictedAPI) DeprecatedProperty(property int) *DeprecatedProperties {
+func (api *AccountAPI) DeprecatedProperty(property int) *DeprecatedProperties {
 	properties := &DeprecatedProperties{
-		RestrictedAPI: api,
-		id:            property,
+		AccountAPI: api,
+		id:         property,
 	}
 	properties.SmartEvents = &SmartEvents{properties}
 	properties.Visualization = &Visualization{properties}

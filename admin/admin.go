@@ -43,7 +43,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var accountID int
-	var api *apis.RestrictedAPI
+	var api *apis.AccountAPI
 	if isLoggedIn {
 		// get the account id
 		accountID, err = strconv.Atoi(cookie.Value)
@@ -52,7 +52,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// instantiate the account API
-		api = admin.apis.RestrictedAPI(accountID)
+		api = admin.apis.AsAccount(accountID)
 	}
 
 	// handle requests to login page.
@@ -480,7 +480,7 @@ func (admin *admin) serveExecuteQuery(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// TODO(Gianluca): fix this:
-	columns, data, query, err := admin.apis.RestrictedAPI(0).DeprecatedProperty(1).Visualization.ExecuteJSONQuery(context.TODO(), jsonQuery)
+	columns, data, query, err := admin.apis.AsAccount(0).DeprecatedProperty(1).Visualization.ExecuteJSONQuery(context.TODO(), jsonQuery)
 	if err != nil {
 		switch err.(type) {
 		case apis.InvalidJSONQueryError, apis.SmartEventNotFoundError:
@@ -541,7 +541,7 @@ func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
 // sending generic internal server errors.
 func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, accountID int) {
 
-	api := admin.apis.RestrictedAPI(1) // TODO(marco): what is the account?
+	api := admin.apis.AsAccount(1) // TODO(marco): what is the account?
 
 	// get the ID of the connector.
 	cookie, err := r.Cookie("install-connector")

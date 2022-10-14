@@ -24,12 +24,12 @@ import (
 // firehose is the firehose API used by the connectors.
 type firehose struct {
 	connector int
-	api       *RestrictedAPI
+	api       *AccountAPI
 	apis      *APIs
 }
 
 // newFirehose returns a new firehose for the given connector and account.
-func (api *RestrictedAPI) newFirehose(connector int) *firehose {
+func (api *AccountAPI) newFirehose(connector int) *firehose {
 	return &firehose{
 		connector: connector,
 		api:       api,

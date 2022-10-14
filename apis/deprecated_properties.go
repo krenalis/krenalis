@@ -21,7 +21,7 @@ import (
 )
 
 type DeprecatedProperties struct {
-	*RestrictedAPI
+	*AccountAPI
 	SmartEvents   *SmartEvents
 	Visualization *Visualization
 	id            int
