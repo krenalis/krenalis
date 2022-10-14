@@ -30,7 +30,7 @@ CREATE TABLE `data_sources` (
   `accessTokenExpirationTimestamp` TIMESTAMP NOT NULL,
   `transformation` TEXT NOT NULL,
   `userCursor` VARCHAR(500) NOT NULL DEFAULT '',
-  PRIMARY KEY (`account`, `connector`)
+  PRIMARY KEY (`workspace`, `connector`)
 );
 
 CREATE TABLE `data_sources_properties` (
