@@ -44,6 +44,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var accountID int
 	var api *apis.AccountAPI
+	var ws *apis.WorkspaceAPI
 	if isLoggedIn {
 		// get the account id
 		accountID, err = strconv.Atoi(cookie.Value)
@@ -53,6 +54,9 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// instantiate the account API
 		api = admin.apis.AsAccount(accountID)
+
+		// get the workspace
+		ws = api.AsWorkspace(1) // TODO(marco)
 	}
 
 	// handle requests to login page.
@@ -102,7 +106,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Handle the "/user-schema-properties" endpoint.
 	if strings.HasPrefix(rpath, "/user-schema-properties") {
-		propertyNames, err := api.Schemas.UserProperties()
+		propertyNames, err := ws.Schemas.UserProperties()
 		if err != nil {
 			log.Printf("[error] cannot retrieve properties: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -122,7 +126,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		properties, err := api.DataSources.Properties(req.Connector)
+		properties, err := ws.DataSources.Properties(req.Connector)
 		if err != nil {
 			log.Printf("[error] cannot retrieve properties: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -143,7 +147,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		err = api.DataSources.Import(req.Connector, req.ResetCursor)
+		err = ws.DataSources.Import(req.Connector, req.ResetCursor)
 		if err != nil {
 			log.Printf("[error] %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -166,7 +170,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			transf, err := api.DataSources.TransformationFunc(req.Connector)
+			transf, err := ws.DataSources.TransformationFunc(req.Connector)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -183,7 +187,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = api.DataSources.SetTransformationFunc(req.Connector, req.Transformation)
+			err = ws.DataSources.SetTransformationFunc(req.Connector, req.Transformation)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -207,7 +211,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			schema, err := api.Schemas.Get(request.SchemaName)
+			schema, err := ws.Schemas.Get(request.SchemaName)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -224,7 +228,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = api.Schemas.Update(request.SchemaName, request.Schema)
+			err = ws.Schemas.Update(request.SchemaName, request.Schema)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -251,7 +255,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(cns)
 			return
 		case "/findInstalledConnectors":
-			cns, err := api.DataSources.List()
+			cns, err := ws.DataSources.List()
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -284,7 +288,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			err = api.DataSources.Uninstall(ids[0])
+			err = ws.DataSources.Uninstall(ids[0])
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -542,6 +546,7 @@ func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
 func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, accountID int) {
 
 	api := admin.apis.AsAccount(1) // TODO(marco): what is the account?
+	ws := api.AsWorkspace(1)       // TODO(marco): what is the workspace?
 
 	// get the ID of the connector.
 	cookie, err := r.Cookie("install-connector")
@@ -616,7 +621,7 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 	}
 	resp.Body.Close()
 
-	err = api.DataSources.Install(connectorID, respData.Refresh_token)
+	err = ws.DataSources.Install(connectorID, respData.Refresh_token)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("[error] cannot install connector %d: %s", connectorID, err)

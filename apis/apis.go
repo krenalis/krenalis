@@ -48,20 +48,33 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 }
 
 type AccountAPI struct {
-	account     int
-	apis        *APIs
+	account int
+	apis    *APIs
+	myDB    *sql.DB
+	chDB    chDriver.Conn
+}
+
+// AsAccount returns an API restricted to the given account.
+func (apis *APIs) AsAccount(account int) *AccountAPI {
+	api := &AccountAPI{account: account, apis: apis, myDB: apis.myDB, chDB: apis.chDB}
+	return api
+}
+
+type WorkspaceAPI struct {
+	workspace   int
+	api         *AccountAPI
 	myDB        *sql.DB
 	chDB        chDriver.Conn
 	DataSources *DataSources
 	Schemas     *Schemas
 }
 
-// AsAccount returns an API restricted to the given account.
-func (apis *APIs) AsAccount(account int) *AccountAPI {
-	api := &AccountAPI{account: account, apis: apis, myDB: apis.myDB, chDB: apis.chDB}
-	api.DataSources = &DataSources{api}
-	api.Schemas = &Schemas{api}
-	return api
+// AsWorkspace returns an API restricted to the given workspace.
+func (api *AccountAPI) AsWorkspace(workspace int) *WorkspaceAPI {
+	ws := &WorkspaceAPI{workspace: workspace, api: api, myDB: api.myDB, chDB: api.chDB}
+	ws.DataSources = &DataSources{ws}
+	ws.Schemas = &Schemas{ws}
+	return ws
 }
 
 var importRegexp = regexp.MustCompile(`/apis/data-sources/((\d+)/((re)?import|properties|transformation))?`)
@@ -71,20 +84,33 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	// Read the account.
-	account, _ := strconv.Atoi(r.Header.Get("X-Account"))
-	if account <= 0 {
+	// Read the workspace.
+	workspace, _ := strconv.Atoi(r.Header.Get("X-Workspace"))
+	if workspace <= 0 {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
+	// Read the account.
+	var account int
+	err := apis.myDB.QueryRow("SELECT `account` FROM `workspaces` WHERE `id` = ?", workspace).Scan(&account)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+		log.Printf("[error] %s", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	api := apis.AsAccount(account)
+	ws := api.AsWorkspace(workspace)
 
 	m := importRegexp.FindStringSubmatch(r.URL.Path)
 	if m == nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
-	var err error
 	if m[1] == "" {
 		if r.Method != "GET" {
 			w.Header().Set("Allow", "GET")
@@ -92,7 +118,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var sources []*DataSource
-		sources, err = api.DataSources.List()
+		sources, err = ws.DataSources.List()
 		if err == nil {
 			_ = json.NewEncoder(w).Encode(sources)
 		}
@@ -105,14 +131,14 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		switch m[3] {
 		case "properties":
 			var properties []*DataSourceProperty
-			properties, err = api.DataSources.Properties(id)
+			properties, err = ws.DataSources.Properties(id)
 			if err == nil {
 				_ = json.NewEncoder(w).Encode(properties)
 			}
 		case "transformation":
 			if r.Method == "GET" {
 				var transformation string
-				transformation, err = api.DataSources.TransformationFunc(id)
+				transformation, err = ws.DataSources.TransformationFunc(id)
 				if err == nil {
 					w.Header().Set("Content-Type", "text/plain")
 					_, _ = io.WriteString(w, transformation)
@@ -121,11 +147,11 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			} else {
 				var transformation []byte
 				transformation, err = io.ReadAll(r.Body)
-				err = api.DataSources.SetTransformationFunc(id, string(transformation))
+				err = ws.DataSources.SetTransformationFunc(id, string(transformation))
 			}
 		case "import":
 			all := m[4] == "re"
-			err = api.DataSources.Import(id, all)
+			err = ws.DataSources.Import(id, all)
 		default:
 			panic("unexpected path")
 		}

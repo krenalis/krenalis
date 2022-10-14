@@ -26,7 +26,7 @@ import (
 )
 
 type DataSources struct {
-	*AccountAPI
+	*WorkspaceAPI
 }
 
 var ErrConnectorNotFound = errors.New("connector does not exist")
@@ -61,7 +61,7 @@ type DataSourceProperty struct {
 func (this *DataSources) Get(connector int) (string, string, *time.Time, error) {
 	var accessToken, refreshToken string
 	var expiration time.Time
-	err := this.myDB.QueryRow("SELECT `accessToken`, `refreshToken`, `accessTokenExpirationTimestamp`\nFROM `data_sources`\nWHERE `account` = ? AND `connector` = ?", this.account, connector).
+	err := this.myDB.QueryRow("SELECT `accessToken`, `refreshToken`, `accessTokenExpirationTimestamp`\nFROM `data_sources`\nWHERE `workspace` = ? AND `connector` = ?", this.workspace, connector).
 		Scan(&accessToken, &refreshToken, &expiration)
 	if err != nil {
 		return "", "", nil, err
@@ -85,7 +85,7 @@ func (this *DataSources) Import(connector int, reimport bool) error {
 		"SELECT `name`, `clientSecret`, `accessToken`, `refreshToken`, `accessTokenExpirationTimestamp`, `userCursor`\n"+
 			"FROM `connectors`\n"+
 			"INNER JOIN `data_sources` ON `connector` = `id`\n"+
-			"WHERE `id` = ? AND `account` = ?", connector, this.account).
+			"WHERE `id` = ? AND `workspace` = ?", connector, this.workspace).
 		Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &cursor)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -125,16 +125,16 @@ func (this *DataSources) Import(connector int, reimport bool) error {
 // token.
 func (this *DataSources) Install(connector int, refreshToken string) error {
 	_, err := this.myDB.Exec("INSERT INTO `data_sources`\n"+
-		"SET `account` = ?, `connector` = ?, `refreshToken` = ?\n"+
+		"SET `workspace` = ?, `connector` = ?, `refreshToken` = ?\n"+
 		"ON DUPLICATE KEY UPDATE `accessToken` = '', `refreshToken` = ?, `accessTokenExpirationTimestamp` = ''",
-		this.account, connector, refreshToken, refreshToken)
+		this.workspace, connector, refreshToken, refreshToken)
 	return err
 }
 
 // List returns all data sources.
 func (this *DataSources) List() ([]*DataSource, error) {
 	ids := make([]int, 0, 0)
-	err := this.myDB.QueryScan("SELECT `connector`\nFROM `data_sources`\nWHERE account = ?", this.account, func(rows *sql.Rows) error {
+	err := this.myDB.QueryScan("SELECT `connector`\nFROM `data_sources`\nWHERE `workspace` = ?", this.workspace, func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
 			var id int
@@ -189,10 +189,10 @@ func (this *DataSources) Properties(connector int) ([]*DataSourceProperty, error
 
 	stmt := "SELECT `name`, `type`, `label`, `options`\n" +
 		"FROM `data_sources_properties`\n" +
-		"WHERE `account` = ? AND `connector` = ?\n" +
+		"WHERE `workspace` = ? AND `connector` = ?\n" +
 		"ORDER BY `position`"
 
-	err := this.myDB.QueryScan(stmt, this.account, connector, func(rows *sql.Rows) error {
+	err := this.myDB.QueryScan(stmt, this.workspace, connector, func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
 			var property DataSourceProperty
@@ -217,7 +217,7 @@ func (this *DataSources) Properties(connector int) ([]*DataSourceProperty, error
 
 	if properties == nil {
 		var exists bool
-		err := this.myDB.QueryRow("SELECT TRUE FROM `data_sources`\nWHERE `account` = ? AND `connector` = ?", this.account, connector).Scan(&exists)
+		err := this.myDB.QueryRow("SELECT TRUE FROM `data_sources`\nWHERE `workspace` = ? AND `connector` = ?", this.workspace, connector).Scan(&exists)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				err = ErrConnectorNotFound
@@ -245,7 +245,7 @@ func (this *DataSources) SetTransformationFunc(connector int, fn string) error {
 	// the PR of @retini on OAuth.
 	affected, err := this.myDB.Table("DataSources").Update(
 		sql.Set{"transformation": fn},
-		sql.Where{"account": this.account, "connector": connector})
+		sql.Where{"workspace": this.workspace, "connector": connector})
 	if err != nil {
 		return err
 	}
@@ -265,7 +265,7 @@ func (this *DataSources) TransformationFunc(connector int) (string, error) {
 	}
 	// TODO(Gianluca): revise table name and column names after the merging of
 	// the PR of @retini on OAuth.
-	row, err := this.myDB.Table("DataSources").Get(sql.Where{"account": this.account, "connector": connector}, []any{"transformation"})
+	row, err := this.myDB.Table("DataSources").Get(sql.Where{"workspace": this.workspace, "connector": connector}, []any{"transformation"})
 	if err != nil {
 		return "", err
 	}
@@ -281,7 +281,7 @@ func (this *DataSources) Uninstall(connector int) error {
 	if connector <= 0 {
 		return errors.New("invalid connector identifier")
 	}
-	where := sql.Where{"account": this.account, "connector": connector}
+	where := sql.Where{"workspace": this.workspace, "connector": connector}
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		_, err := this.myDB.Table("DataSources").Delete(where)
 		if err == nil {
@@ -302,7 +302,7 @@ func (this *DataSources) refreshOAuthToken(connector int) (string, error) {
 		"SELECT `clientID`, `clientSecret`, `refreshToken`, `tokenEndpoint`\n"+
 			"FROM `connectors`\n"+
 			"INNER JOIN `data_sources` ON `connector` = `id`\n"+
-			"WHERE `id` = ? AND `account` = ?", connector, this.account).Scan(&clientID, &clientSecret, &refreshToken, &tokenEndpoint)
+			"WHERE `id` = ? AND `workspace` = ?", connector, this.workspace).Scan(&clientID, &clientSecret, &refreshToken, &tokenEndpoint)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", ErrConnectorNotFound
@@ -368,8 +368,8 @@ func (this *DataSources) refreshOAuthToken(connector int) (string, error) {
 	_, err = this.myDB.Exec(
 		"UPDATE `data_sources`\n"+
 			"SET `accessToken` = ?, `refreshToken` = ?, `accessTokenExpirationTimestamp` = ?\n"+
-			"WHERE `account` = ? AND `connector` = ?",
-		response.AccessToken, response.RefreshToken, expiration, this.account, connector)
+			"WHERE `workspace` = ? AND `connector` = ?",
+		response.AccessToken, response.RefreshToken, expiration, this.workspace, connector)
 	if err != nil {
 		return "", err
 	}

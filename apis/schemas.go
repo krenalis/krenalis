@@ -18,7 +18,7 @@ import (
 )
 
 type Schemas struct {
-	*AccountAPI
+	*WorkspaceAPI
 }
 
 type Schema string
@@ -38,7 +38,7 @@ func (this *Schemas) Get(name string) (Schema, error) {
 	default:
 		return "", fmt.Errorf("invalid schema name %q", name)
 	}
-	row, err := this.myDB.Table("Schemas").Get(sql.Where{"account": this.account}, []any{column})
+	row, err := this.myDB.Table("Schemas").Get(sql.Where{"workspace": this.workspace}, []any{column})
 	if err != nil {
 		return "", err
 	}
@@ -63,7 +63,7 @@ func (this *Schemas) Update(name, schema string) error {
 	if !utf8.ValidString(schema) {
 		return errors.New("invalid schema")
 	}
-	_, err := this.myDB.Table("Schemas").Update(sql.Set{column: schema}, sql.Where{"account": this.account})
+	_, err := this.myDB.Table("Schemas").Update(sql.Set{column: schema}, sql.Where{"account": this.api.account})
 	return err
 }
 

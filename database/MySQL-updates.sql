@@ -163,3 +163,32 @@ ALTER TABLE `data_sources`
     RENAME COLUMN `refresh_token` TO `refreshToken`,
     RENAME COLUMN `access_token_expiration_timestamp` TO `accessTokenExpirationTimestamp`,
     RENAME COLUMN `user_cursor` TO `userCursor`;
+
+CREATE TABLE `workspaces` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `account` INT NOT NULL,
+  `name` VARCHAR(100) NOT NULL,
+  PRIMARY KEY (`id`)
+);
+
+INSERT INTO `workspaces` (`id`, `account`, `name`) VALUES (1, 1, 'Workspace');
+
+ALTER TABLE `data_sources`
+    CHANGE `account` `workspace` INT NOT NULL,
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (`workspace` , `connector`);
+
+ALTER TABLE `data_sources_properties`
+    CHANGE `account` `workspace` INT NOT NULL,
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (`workspace`, `connector`, `name`);
+
+ALTER TABLE `data_sources_raw_users_data`
+    CHANGE `account` `workspace` INT NOT NULL,
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (`connector`,`workspace`,`user`);
+
+ALTER TABLE `schemas`
+    CHANGE `account` `workspace` INT NOT NULL,
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (`workspace`);

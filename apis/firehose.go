@@ -24,23 +24,23 @@ import (
 // firehose is the firehose API used by the connectors.
 type firehose struct {
 	connector int
-	api       *AccountAPI
+	ws        *WorkspaceAPI
 	apis      *APIs
 }
 
 // newFirehose returns a new firehose for the given connector and account.
-func (api *AccountAPI) newFirehose(connector int) *firehose {
+func (ws *WorkspaceAPI) newFirehose(connector int) *firehose {
 	return &firehose{
 		connector: connector,
-		api:       api,
-		apis:      api.apis,
+		ws:        ws,
+		apis:      ws.api.apis,
 	}
 }
 
 func (fh *firehose) SetCursor(cursor string) {
-	_, err := fh.api.myDB.Table("DataSources").Add(
+	_, err := fh.ws.myDB.Table("DataSources").Add(
 		map[string]any{
-			"account":    fh.api.account,
+			"workspace":  fh.ws.workspace,
 			"connector":  fh.connector,
 			"userCursor": cursor,
 		},
@@ -66,9 +66,9 @@ func (fh *firehose) UpdateUser(ident connectors.Identity, updateTime int64, prop
 	if err != nil {
 		panic(err)
 	}
-	_, err = fh.api.myDB.Table("DataSourcesRawUserData").Add(
+	_, err = fh.ws.myDB.Table("DataSourcesRawUserData").Add(
 		map[string]any{
-			"account":   fh.api.account,
+			"workspace": fh.ws.workspace,
 			"connector": fh.connector,
 			"data":      string(data),
 		},
@@ -108,7 +108,7 @@ func (fh *firehose) UpdateUser(ident connectors.Identity, updateTime int64, prop
 		for _, column := range columns {
 			values = append(values, goldenRecordData[column])
 		}
-		_, err := fh.api.myDB.Exec(query, append(values, values...)...)
+		_, err := fh.ws.myDB.Exec(query, append(values, values...)...)
 		if err != nil {
 			panic(fmt.Sprintf("cannot write data to database: %s", err))
 		}
@@ -134,7 +134,7 @@ func (fh *firehose) DeleteUser(ident connectors.Identity) {
 // transformProperties transforms the incoming properties using the
 // transformation function specified for the current connector.
 func (fh *firehose) transformProperties(incoming map[string]any) (map[string]any, error) {
-	transformationSource, err := fh.api.DataSources.TransformationFunc(fh.connector)
+	transformationSource, err := fh.ws.DataSources.TransformationFunc(fh.connector)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve transformation from DB: %s", err)
 	}

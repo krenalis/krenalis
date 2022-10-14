@@ -14,7 +14,7 @@ Put inside the directory `chichi-cli` of this repository a YAML file named
 apis:
   URL: https://localhost:9090
 
-account: 1
+workspace: 1
 ```
 
 ## How to compile

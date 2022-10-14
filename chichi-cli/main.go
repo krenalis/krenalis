@@ -32,8 +32,8 @@ func main() {
 	if !strings.HasSuffix(url, "/") {
 		url += "/"
 	}
-	accountID := viper.GetInt("account")
-	chichiapis.Init(url, accountID)
+	workspaceID := viper.GetInt("workspace")
+	chichiapis.Init(url, workspaceID)
 
 	cmd.Execute()
 }

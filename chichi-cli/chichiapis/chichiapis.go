@@ -19,21 +19,21 @@ import (
 )
 
 var chichiAPIs struct {
-	url       string
-	accountID int
+	url         string
+	workspaceID int
 }
 
 var initialized bool
 
 // Init initializes this package to connect to the Chichi APIs. url is the URL
-// of the APIs, while accountID is the ID of the account which interacts with
-// the APIs. This method should be called only once.
-func Init(url string, accountID int) {
+// of the APIs, while workspaceID is the ID of the workspace which interacts
+// with the APIs. This method should be called only once.
+func Init(url string, workspaceID int) {
 	if initialized {
 		panic("already initialized")
 	}
 	chichiAPIs.url = url
-	chichiAPIs.accountID = accountID
+	chichiAPIs.workspaceID = workspaceID
 	initialized = true
 }
 
@@ -68,7 +68,7 @@ func callAdmin(method string, body any) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Cookie", "session="+strconv.Itoa(chichiAPIs.accountID))
+	req.Header.Set("Cookie", "session="+strconv.Itoa(chichiAPIs.workspaceID))
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("cannot POST on %q: %s", url, err)
@@ -122,7 +122,7 @@ func callAPI(method string, path string, body io.Reader, response any) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("X-Account", "1")
+	req.Header.Set("X-Workspace", "1")
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("cannot POST on %q: %s", url, err)
