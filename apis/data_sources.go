@@ -58,8 +58,8 @@ type DataSourceProperty struct {
 }
 
 // Add adds a data source given its connector and the OAuth refresh and access
-// tokens. If the data source already exists for the given connector and
-// connected account, it updates the data source.
+// tokens of the resource. If the data source already exists for the given
+// connector and resource, it updates the data source.
 func (this *DataSources) Add(connector int, refreshToken, accessToken string) error {
 	conn, err := this.api.apis.Connector(connector)
 	if err != nil {
