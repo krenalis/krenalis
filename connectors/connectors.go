@@ -30,6 +30,9 @@ type Connecter interface {
 	// Properties returns all user and group properties.
 	Properties(account string) ([]Property, []Property, error)
 
+	// Resource returns the resource from a client token.
+	Resource(token string) (string, error)
+
 	// ServeWebhook serves a webhook request.
 	// It returns the ErrWebhookUnauthorized error is the request was not authorized.
 	ServeWebhook(r *http.Request) error

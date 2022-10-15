@@ -142,7 +142,7 @@ func (c *Connector) Properties(token string) ([]connectors.Property, []connector
 			Type  string
 		}
 	}
-	err := c.call(token, "GET", "/properties/contact", nil, 200, &response)
+	err := c.call(token, "GET", "/crm/v3/properties/contact", nil, 200, &response)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -181,6 +181,21 @@ func (c *Connector) Properties(token string) ([]connectors.Property, []connector
 	return properties, nil, nil
 }
 
+// Resource returns the resource from a client token.
+func (c *Connector) Resource(token string) (string, error) {
+	var res struct {
+		PortalId int
+	}
+	err := c.call(token, "GET", "/account-info/v3/details", nil, 200, &res)
+	if err != nil {
+		return "", err
+	}
+	if res.PortalId <= 0 {
+		return "", fmt.Errorf("connector HubSpot has returned an invalid resource (portalId): %d", res.PortalId)
+	}
+	return strconv.Itoa(res.PortalId), nil
+}
+
 // SetUsers sets the users.
 // It requires the "crm.objects.contacts.write" scope.
 func (c *Connector) SetUsers(token string, users []connectors.User) error {
@@ -205,7 +220,7 @@ func (c *Connector) SetUsers(token string, users []connectors.User) error {
 
 	body.WriteString(`]}`)
 
-	return c.call(token, "POST", "/objects/contacts/batch/update", &body, 200, nil)
+	return c.call(token, "POST", "/crm/v3/objects/contacts/batch/update", &body, 200, nil)
 }
 
 // Users returns the users starting from the given cursor.
@@ -277,7 +292,7 @@ func (c *Connector) Groups(token, cursor string) error {
 // companyContacts returns the contacts of the given company.
 func (c *Connector) companyContacts(token, company string) ([]string, error) {
 	contacts := []string{}
-	path := "/objects/companies/" + url.PathEscape(company) + "/associations/Contact"
+	path := "/crm/v3/objects/companies/" + url.PathEscape(company) + "/associations/Contact"
 	after := ""
 	for {
 		var response struct {
@@ -327,12 +342,12 @@ type iter struct {
 // "crm.objects.companies.read" for companies.
 func (c *Connector) newIterator(token, typ string, fromDate int64, limit int) (*iter, error) {
 
-	var path string
+	path := "/crm/v3/"
 	switch typ {
 	case "Company":
-		path = "/objects/companies/search"
+		path += "objects/companies/search"
 	case "Contact":
-		path = "/objects/contacts/search"
+		path += "objects/contacts/search"
 	default:
 		return nil, errors.New("invalid type")
 	}
@@ -424,7 +439,7 @@ func (it *iter) Next() ([]object, error) {
 
 func (c *Connector) call(token, method, path string, body io.Reader, expectedStatus int, response any) error {
 
-	req, err := http.NewRequestWithContext(c.Context, method, "https://api.hubapi.com/crm/v3/"+path[1:], body)
+	req, err := http.NewRequestWithContext(c.Context, method, "https://api.hubapi.com/"+path[1:], body)
 	if err != nil {
 		return err
 	}

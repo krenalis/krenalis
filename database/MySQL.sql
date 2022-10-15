@@ -22,12 +22,19 @@ CREATE TABLE `connectors` (
 
 INSERT INTO `connectors` (`id`, `name`, `oauthURL`, `logoURL`, `clientID`, `clientSecret`, `tokenEndpoint`) VALUES ('1', 'HubSpot', 'https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read', 'https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/168_Hubspot_logo_logos-512.png', 'cef1005a-72be-4047-a301-ef6057588325', '136e50df-5b89-478f-bf01-4a71547fa668', 'https://api.hubapi.com/oauth/v1/token');
 
-CREATE TABLE `data_sources` (
-  `workspace` INT NOT NULL,
+CREATE TABLE `connectors_resources` (
   `connector` INT NOT NULL,
+  `resource` VARCHAR(100) NOT NULL DEFAULT '',
   `accessToken` VARCHAR(500) NOT NULL DEFAULT '',
   `refreshToken` VARCHAR(500) NOT NULL DEFAULT '',
   `accessTokenExpirationTimestamp` TIMESTAMP NOT NULL,
+  PRIMARY KEY (`connector`, `resource`),
+);
+
+CREATE TABLE `data_sources` (
+  `workspace` INT NOT NULL,
+  `connector` INT NOT NULL,
+  `resource` VARCHAR(100) NOT NULL DEFAULT '',
   `transformation` TEXT NOT NULL,
   `userCursor` VARCHAR(500) NOT NULL DEFAULT '',
   PRIMARY KEY (`workspace`, `connector`)

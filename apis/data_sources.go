@@ -57,6 +57,40 @@ type DataSourceProperty struct {
 	Options []DataSourcePropertyOption
 }
 
+// Add adds a data source given its connector and the OAuth refresh and access
+// tokens. If the data source already exists for the given connector and
+// connected account, it updates the data source.
+func (this *DataSources) Add(connector int, refreshToken, accessToken string) error {
+	conn, err := this.api.apis.Connector(connector)
+	if err != nil {
+		return err
+	}
+	if conn == nil {
+		return ErrConnectorNotFound
+	}
+	fh := this.api.apis.newFirehose(connector)
+	c := connectors.Connector(context.Background(), conn.Name, conn.ClientSecret, fh)
+	resource, err := c.Resource(accessToken)
+	if err != nil {
+		return err
+	}
+	err = this.myDB.Transaction(func(tx *sql.Tx) error {
+		_, err = this.myDB.Exec("INSERT INTO `connectors_resources`\n"+
+			"SET `connector` = ?, `resource` = ?, `refreshToken` = ?\n"+
+			"ON DUPLICATE KEY UPDATE `refreshToken` = ?",
+			connector, resource, refreshToken, refreshToken)
+		if err != nil {
+			return err
+		}
+		_, err = this.myDB.Exec("INSERT IGNORE INTO `data_sources`\n"+
+			"SET `workspace` = ?, `connector` = ?, `resource` = ?\n"+
+			"ON DUPLICATE KEY UPDATE `resource` = ?",
+			this.workspace, connector, resource, resource)
+		return err
+	})
+	return err
+}
+
 // Get returns the data source with the given connector.
 func (this *DataSources) Get(connector int) (string, string, *time.Time, error) {
 	var accessToken, refreshToken string
@@ -82,10 +116,11 @@ func (this *DataSources) Import(connector int, reimport bool) error {
 	var name, clientSecret, accessToken, refreshToken, cursor string
 	var expiration time.Time
 	err := this.myDB.QueryRow(
-		"SELECT `name`, `clientSecret`, `accessToken`, `refreshToken`, `accessTokenExpirationTimestamp`, `userCursor`\n"+
-			"FROM `connectors`\n"+
-			"INNER JOIN `data_sources` ON `connector` = `id`\n"+
-			"WHERE `id` = ? AND `workspace` = ?", connector, this.workspace).
+		"SELECT `c`.`name`, `c`.`clientSecret`, `cr`.`accessToken`, `cr`.`refreshToken`, `cr`.`accessTokenExpirationTimestamp`, `ds`.`userCursor`\n"+
+			"FROM `data_sources` AS `ds`\n"+
+			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
+			"INNER JOIN `connectors_resources` AS `cr` ON `cr`.`connector` = `ds`.`connector` AND `cr`.`resource` = `ds`.`resource`\n"+
+			"WHERE `ds`.`workspace` = ? AND `ds`.`connector` = ?", this.workspace, connector).
 		Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &cursor)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -117,18 +152,6 @@ func (this *DataSources) Import(connector int, reimport bool) error {
 	}()
 
 	return nil
-}
-
-// Install installs a data source given its connector and the OAuth refresh
-// token. If the data source is already installed for the given connector, it
-// does not install it but updates its refresh token and removes the access
-// token.
-func (this *DataSources) Install(connector int, refreshToken string) error {
-	_, err := this.myDB.Exec("INSERT INTO `data_sources`\n"+
-		"SET `workspace` = ?, `connector` = ?, `refreshToken` = ?\n"+
-		"ON DUPLICATE KEY UPDATE `accessToken` = '', `refreshToken` = ?, `accessTokenExpirationTimestamp` = ''",
-		this.workspace, connector, refreshToken, refreshToken)
-	return err
 }
 
 // List returns all data sources.
@@ -297,12 +320,14 @@ func (this *DataSources) Uninstall(connector int) error {
 // Returns the ErrConnectorNotFound error if the connector does not exist.
 func (this *DataSources) refreshOAuthToken(connector int) (string, error) {
 
-	var clientID, clientSecret, refreshToken, tokenEndpoint string
+	var clientID, clientSecret, tokenEndpoint, resource, refreshToken string
 	err := this.myDB.QueryRow(
-		"SELECT `clientID`, `clientSecret`, `refreshToken`, `tokenEndpoint`\n"+
-			"FROM `connectors`\n"+
-			"INNER JOIN `data_sources` ON `connector` = `id`\n"+
-			"WHERE `id` = ? AND `workspace` = ?", connector, this.workspace).Scan(&clientID, &clientSecret, &refreshToken, &tokenEndpoint)
+		"SELECT `c`.`clientID`, `c`.`clientSecret`, `c`.`tokenEndpoint`, `cr`.`resource`, `cr`.`refreshToken`\n"+
+			"FROM `data_sources` AS `ds`\n"+
+			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
+			"INNER JOIN `connectors_resources` AS `cr` ON `cr`.`connector` = `ds`.`connector` AND `cr`.`resource` = `ds`.`resource`\n"+
+			"WHERE `ds`.`workspace` = ? AND `ds`.`connector` = ?", this.workspace, connector).
+		Scan(&clientID, &clientSecret, &tokenEndpoint, &resource, &refreshToken)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", ErrConnectorNotFound
@@ -366,10 +391,10 @@ func (this *DataSources) refreshOAuthToken(connector int) (string, error) {
 	expiration := time.Now().UTC().Add(time.Duration(response.ExpiresIn) * time.Second) // TODO(marco): ExpiresIn should be relative to response time?
 
 	_, err = this.myDB.Exec(
-		"UPDATE `data_sources`\n"+
+		"UPDATE `connectors_resources`\n"+
 			"SET `accessToken` = ?, `refreshToken` = ?, `accessTokenExpirationTimestamp` = ?\n"+
-			"WHERE `workspace` = ? AND `connector` = ?",
-		response.AccessToken, response.RefreshToken, expiration, this.workspace, connector)
+			"WHERE `connector` = ? AND `resource` = ?",
+		response.AccessToken, response.RefreshToken, expiration, connector, resource)
 	if err != nil {
 		return "", err
 	}

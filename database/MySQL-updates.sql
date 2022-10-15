@@ -192,3 +192,19 @@ ALTER TABLE `schemas`
     CHANGE `account` `workspace` INT NOT NULL,
     DROP PRIMARY KEY,
     ADD PRIMARY KEY (`workspace`);
+
+CREATE TABLE `connectors_resources` (
+  `connector` INT NOT NULL,
+  `resource` VARCHAR(100) NOT NULL DEFAULT '',
+  `accessToken` VARCHAR(500) NOT NULL DEFAULT '',
+  `refreshToken` VARCHAR(500) NOT NULL DEFAULT '',
+  `accessTokenExpirationTimestamp` TIMESTAMP NOT NULL,
+  PRIMARY KEY (`connector`, `resource`),
+);
+
+ALTER TABLE `data_sources` (
+    ADD COLUMN `resource` VARCHAR(100) NOT NULL DEFAULT '' AFTER `workspace`,
+    DROP COLUMN `accessToken`,
+    DROP COLUMN `refreshToken`,
+    DROP COLUMN `accessTokenExpirationTimestamp`,
+);

@@ -611,6 +611,7 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 
 	respData := struct {
 		Refresh_token string
+		Access_token  string
 	}{}
 	dec := json.NewDecoder(resp.Body)
 	err = dec.Decode(&respData)
@@ -621,7 +622,7 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 	}
 	resp.Body.Close()
 
-	err = ws.DataSources.Install(connectorID, respData.Refresh_token)
+	err = ws.DataSources.Add(connectorID, respData.Refresh_token, respData.Access_token)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("[error] cannot install connector %d: %s", connectorID, err)
