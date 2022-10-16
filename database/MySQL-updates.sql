@@ -213,3 +213,9 @@ ALTER TABLE `data_sources_raw_users_data`
     CHANGE `connector` `connector` int NOT NULL AFTER `workspace`,
     DROP PRIMARY KEY,
     ADD PRIMARY KEY (`workspace`, `connector`, `user`);
+
+ALTER TABLE `data_sources_raw_users_data`
+    ADD COLUMN `resource`  varchar(100) NOT NULL DEFAULT '' AFTER `connector`,
+    DROP COLUMN `internalUserID`,
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (`workspace`, `connector`, `resource`, `user`);
