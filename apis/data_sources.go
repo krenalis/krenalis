@@ -75,7 +75,7 @@ func (this *DataSources) Add(connector int, refreshToken, accessToken string) er
 		return err
 	}
 	err = this.myDB.Transaction(func(tx *sql.Tx) error {
-		_, err = this.myDB.Exec("INSERT INTO `connectors_resources`\n"+
+		_, err = this.myDB.Exec("INSERT INTO `resources`\n"+
 			"SET `connector` = ?, `resource` = ?, `refreshToken` = ?\n"+
 			"ON DUPLICATE KEY UPDATE `refreshToken` = ?",
 			connector, resource, refreshToken, refreshToken)
@@ -116,10 +116,10 @@ func (this *DataSources) Import(connector int, reimport bool) error {
 	var name, clientSecret, accessToken, refreshToken, resource, cursor string
 	var expiration time.Time
 	err := this.myDB.QueryRow(
-		"SELECT `c`.`name`, `c`.`clientSecret`, `cr`.`accessToken`, `cr`.`refreshToken`, `cr`.`accessTokenExpirationTimestamp`, `ds`.`resource`, `ds`.`userCursor`\n"+
+		"SELECT `c`.`name`, `c`.`clientSecret`, `r`.`accessToken`, `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `ds`.`resource`, `ds`.`userCursor`\n"+
 			"FROM `data_sources` AS `ds`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
-			"INNER JOIN `connectors_resources` AS `cr` ON `cr`.`connector` = `ds`.`connector` AND `cr`.`resource` = `ds`.`resource`\n"+
+			"INNER JOIN `resources` AS `r` ON `r`.`connector` = `ds`.`connector` AND `r`.`resource` = `ds`.`resource`\n"+
 			"WHERE `ds`.`workspace` = ? AND `ds`.`connector` = ?", this.workspace, connector).
 		Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &resource, &cursor)
 	if err != nil {
@@ -209,10 +209,11 @@ func (this *DataSources) Properties(connector int) ([]*DataSourceProperty, error
 
 	var properties []*DataSourceProperty
 
-	stmt := "SELECT `name`, `type`, `label`, `options`\n" +
-		"FROM `data_sources_properties`\n" +
-		"WHERE `workspace` = ? AND `connector` = ?\n" +
-		"ORDER BY `position`"
+	stmt := "SELECT `p`.`name`, `p`.`type`, `p`.`label`, `p`.`options`\n" +
+		"FROM `resources_properties` AS `p`\n" +
+		"INNER JOIN `data_sources` AS `s` ON `s`.`connector` = `p`.`connector` AND `s`.`resource` = `p`.`resource`" +
+		"WHERE `s`.`workspace` = ? AND `p`.`connector` = ? \n" +
+		"ORDER BY `p`.`position`"
 
 	err := this.myDB.QueryScan(stmt, this.workspace, connector, func(rows *sql.Rows) error {
 		var err error
@@ -331,10 +332,10 @@ func (this *DataSources) refreshOAuthToken(connector int) (string, error) {
 
 	var clientID, clientSecret, tokenEndpoint, resource, refreshToken string
 	err := this.myDB.QueryRow(
-		"SELECT `c`.`clientID`, `c`.`clientSecret`, `c`.`tokenEndpoint`, `cr`.`resource`, `cr`.`refreshToken`\n"+
+		"SELECT `c`.`clientID`, `c`.`clientSecret`, `c`.`tokenEndpoint`, `r`.`resource`, `r`.`refreshToken`\n"+
 			"FROM `data_sources` AS `ds`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
-			"INNER JOIN `connectors_resources` AS `cr` ON `cr`.`connector` = `ds`.`connector` AND `cr`.`resource` = `ds`.`resource`\n"+
+			"INNER JOIN `resources` AS `r` ON `r`.`connector` = `ds`.`connector` AND `r`.`resource` = `ds`.`resource`\n"+
 			"WHERE `ds`.`workspace` = ? AND `ds`.`connector` = ?", this.workspace, connector).
 		Scan(&clientID, &clientSecret, &tokenEndpoint, &resource, &refreshToken)
 	if err != nil {
@@ -400,7 +401,7 @@ func (this *DataSources) refreshOAuthToken(connector int) (string, error) {
 	expiration := time.Now().UTC().Add(time.Duration(response.ExpiresIn) * time.Second) // TODO(marco): ExpiresIn should be relative to response time?
 
 	_, err = this.myDB.Exec(
-		"UPDATE `connectors_resources`\n"+
+		"UPDATE `resources`\n"+
 			"SET `accessToken` = ?, `refreshToken` = ?, `accessTokenExpirationTimestamp` = ?\n"+
 			"WHERE `connector` = ? AND `resource` = ?",
 		response.AccessToken, response.RefreshToken, expiration, connector, resource)

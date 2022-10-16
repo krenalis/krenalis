@@ -296,16 +296,6 @@ func (apis *APIs) initSchema() {
 		userCursor                     string
 	}{})
 
-	apis.myDB.Scheme("DataSourcesProperties", "data_sources_properties", struct {
-		account   int
-		connector int
-		name      string
-		typ       string `sql:"type"`
-		label     string
-		options   string
-		position  int
-	}{})
-
 	apis.myDB.Scheme("DataSourcesRawUserData", "data_sources_raw_users_data", struct {
 		account   int
 		connector int
@@ -327,6 +317,16 @@ func (apis *APIs) initSchema() {
 		id      int
 		code    string
 		account int
+	}{})
+
+	apis.myDB.Scheme("ResourcesProperties", "resources_properties", struct {
+		connector int
+		resource  string
+		name      string
+		typ       string `sql:"type"`
+		label     string
+		options   string
+		position  int
 	}{})
 
 	apis.myDB.Scheme("Schemas", "schemas", struct {

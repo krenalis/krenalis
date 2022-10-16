@@ -219,3 +219,12 @@ ALTER TABLE `data_sources_raw_users_data`
     DROP COLUMN `internalUserID`,
     DROP PRIMARY KEY,
     ADD PRIMARY KEY (`workspace`, `connector`, `resource`, `user`);
+
+RENAME TABLE `connectors_resources` TO `resources`;
+RENAME TABLE `data_sources_properties` TO `resources_properties`;
+
+ALTER TABLE `resources_properties`
+    DROP PRIMARY KEY,
+    DROP COLUMN `workspace`,
+    ADD COLUMN `resource` VARCHAR(100) NOT NULL DEFAULT '' AFTER `connector`,
+    ADD PRIMARY KEY (`connector`, `resource`, `name`);
