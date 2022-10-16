@@ -29,7 +29,7 @@ type Connecter interface {
 	ApplyConfig(ctx context.Context, config map[string]any) error
 
 	// Groups returns the groups starting from the given cursor.
-	Groups(ctx context.Context, cursor string) error
+	Groups(ctx context.Context, cursor string, properties []string) error
 
 	// Properties returns all user and group properties.
 	Properties(ctx context.Context) ([]Property, []Property, error)
@@ -45,7 +45,7 @@ type Connecter interface {
 	SetUsers(ctx context.Context, users []User) error
 
 	// Users returns the users starting from the given cursor.
-	Users(ctx context.Context, cursor string) error
+	Users(ctx context.Context, cursor string, properties []string) error
 }
 
 // Firehose is the interface implemented by a Firehose.

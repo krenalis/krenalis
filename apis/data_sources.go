@@ -141,10 +141,27 @@ func (this *DataSources) Import(connector int, reimport bool) error {
 		}
 	}
 
+	var properties []string
+	err = this.myDB.QueryScan("SELECT `name`\nFROM `resources_properties`\nWHERE `connector` = ? AND `resource` = ?",
+		connector, resource, func(rows *sql.Rows) error {
+			var err error
+			for rows.Next() {
+				var name string
+				if err = rows.Scan(&name); err != nil {
+					return err
+				}
+				properties = append(properties, name)
+			}
+			return nil
+		})
+	if err != nil {
+		return err
+	}
+
 	go func() {
 		conn := connectors.Connector(name, clientSecret)
 		ctx := this.newConnectorContext(context.Background(), connector, resource, accessToken)
-		err := conn.Users(ctx, cursor)
+		err := conn.Users(ctx, cursor, properties)
 		if err != nil {
 			log.Printf("[error] call to the Users method of the connector %d failed: %s", connector, err)
 		}
