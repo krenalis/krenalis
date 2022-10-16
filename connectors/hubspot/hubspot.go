@@ -268,8 +268,7 @@ func (c *Connector) Users(ctx context.Context, cursor string) error {
 			break
 		}
 		for _, obj := range objects {
-			ident := connectors.Identity{User: obj.ID}
-			c.Firehose.UpdateUser(ident, time.UnixMilli(obj.LastModifiedDate).UTC(), obj.Properties, nil)
+			c.Firehose.SetUser(obj.ID, time.UnixMilli(obj.LastModifiedDate).UTC(), obj.Properties)
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
 		c.Firehose.SetCursor(serializeCursor(fromDate))
@@ -301,12 +300,12 @@ func (c *Connector) Groups(ctx context.Context, cursor string) error {
 			break
 		}
 		for _, obj := range objects {
+			c.Firehose.SetGroup(obj.ID, time.UnixMilli(obj.LastModifiedDate).UTC(), obj.Properties)
 			contacts, err := c.companyContacts(obj.ID)
 			if err != nil {
 				return err
 			}
-			ident := connectors.Identity{Group: obj.ID}
-			c.Firehose.UpdateGroup(ident, time.UnixMilli(obj.LastModifiedDate).UTC(), obj.Properties, contacts)
+			c.Firehose.SetGroupUsers(obj.ID, contacts)
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
 		c.Firehose.SetCursor(strconv.FormatInt(fromDate, 10))

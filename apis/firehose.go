@@ -16,8 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"chichi/connectors"
-
 	"github.com/open2b/scriggo"
 	"github.com/open2b/scriggo/native"
 )
@@ -62,11 +60,15 @@ func (fh *firehose) ApplyConfig(conf map[string]any) {
 	return
 }
 
-func (fh *firehose) UpdateGroup(ident connectors.Identity, updateTime time.Time, properties map[string]any, users []string) {
+func (fh *firehose) SetGroup(group string, updateTime time.Time, properties map[string]any) {
 	return
 }
 
-func (fh *firehose) UpdateUser(ident connectors.Identity, updateTime time.Time, properties map[string]any, groups []string) {
+func (fh *firehose) SetGroupUsers(group string, users []string) {
+	return
+}
+
+func (fh *firehose) SetUser(user string, updateTime time.Time, properties map[string]any) {
 	data, err := json.Marshal(properties)
 	if err != nil {
 		fh.setError(err)
@@ -75,7 +77,7 @@ func (fh *firehose) UpdateUser(ident connectors.Identity, updateTime time.Time, 
 	_, err = fh.sources.myDB.Exec("INSERT INTO `data_sources_raw_users_data`\n"+
 		"SET `workspace` = ?, `connector` = ?, `user` = ?, `data` = ?\n"+
 		"ON DUPLICATE KEY UPDATE `data` = ?",
-		fh.sources.workspace, fh.connector, ident.User, data, data)
+		fh.sources.workspace, fh.connector, user, data, data)
 	if err != nil {
 		fh.setError(err)
 		return
@@ -118,6 +120,10 @@ func (fh *firehose) UpdateUser(ident connectors.Identity, updateTime time.Time, 
 			return
 		}
 	}
+}
+
+func (fh *firehose) SetUserGroups(user string, groups []string) {
+	return
 }
 
 // transformProperties transforms the incoming properties using the

@@ -52,8 +52,10 @@ type Connecter interface {
 type Firehose interface {
 	ApplyConfig(config map[string]any)
 	SetCursor(cursor string)
-	UpdateGroup(ident Identity, updateTime time.Time, properties map[string]any, users []string)
-	UpdateUser(ident Identity, updateTime time.Time, properties map[string]any, groups []string)
+	SetGroup(group string, updateTime time.Time, properties map[string]any)
+	SetGroupUsers(group string, users []string)
+	SetUser(user string, updateTime time.Time, properties map[string]any)
+	SetUserGroups(user string, groups []string)
 }
 
 type EventType int
@@ -94,14 +96,6 @@ type User struct {
 	ID         string
 	Groups     []string
 	Properties Properties
-}
-
-// Identity is an identity on the app.
-type Identity struct {
-	// Group identifies the group on the app.
-	Group string
-	// User identifies the user on the app.
-	User string
 }
 
 type Conf struct {
