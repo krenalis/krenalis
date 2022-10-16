@@ -286,7 +286,7 @@ func (apis *APIs) initSchema() {
 		userCursor                     string
 	}{})
 
-	apis.myDB.Scheme("DataSourcesRawUserData", "data_sources_raw_users_data", struct {
+	apis.myDB.Scheme("DataSourcesUsers", "data_sources_users", struct {
 		account   int
 		connector int
 		data      string

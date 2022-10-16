@@ -31,7 +31,7 @@ CREATE TABLE `data_sources` (
   PRIMARY KEY (`workspace`, `connector`)
 );
 
-CREATE TABLE `data_sources_raw_users_data` (
+CREATE TABLE `data_sources_users` (
   `workspace` int NOT NULL,
   `connector` int NOT NULL,
   `resource`  varchar(100) NOT NULL DEFAULT '',

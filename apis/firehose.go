@@ -76,7 +76,7 @@ func (fh *firehose) SetUser(user string, updateTime time.Time, properties map[st
 		fh.setError(err)
 		return
 	}
-	_, err = fh.sources.myDB.Exec("INSERT INTO `data_sources_raw_users_data`\n"+
+	_, err = fh.sources.myDB.Exec("INSERT INTO `data_sources_users`\n"+
 		"SET `workspace` = ?, `connector` = ?, `resource` = ?, `user` = ?, `data` = ?\n"+
 		"ON DUPLICATE KEY UPDATE `data` = ?",
 		fh.sources.workspace, fh.connector, fh.resource, user, data, data)

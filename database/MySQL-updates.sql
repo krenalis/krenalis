@@ -239,3 +239,5 @@ SET `w`.`userSchema` = `s`.`userSchema`, `w`.`groupSchema` = `s`.`groupSchema`, 
 WHERE `s`.`workspace` = `w`.`id`;
 
 DROP TABLE `schemas`;
+
+RENAME TABLE `data_sources_raw_users_data` TO `data_sources_users`;
