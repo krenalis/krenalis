@@ -182,6 +182,10 @@ func (c *Connector) Properties(ctx context.Context) ([]connectors.Property, []co
 
 	properties := make([]connectors.Property, 0)
 	for _, r := range response.Results {
+		switch r.Name {
+		case "createdate", "lastmodifieddate", "hs_object_id":
+			continue
+		}
 		property := connectors.Property{
 			Name:  r.Name,
 			Label: r.Label,
@@ -459,6 +463,9 @@ func (it *iter) next() ([]object, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid updateAt returned by HubSpot: %q", date)
 		}
+		delete(result.Properties, "createdate")
+		delete(result.Properties, "lastmodifieddate")
+		delete(result.Properties, "hs_object_id")
 		objects[i] = object{
 			ID:               result.ID,
 			Properties:       result.Properties,
