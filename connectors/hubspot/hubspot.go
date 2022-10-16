@@ -182,9 +182,6 @@ func (c *Connector) Properties(ctx context.Context) ([]connectors.Property, []co
 
 	properties := make([]connectors.Property, 0)
 	for _, r := range response.Results {
-		if r.Hidden {
-			continue
-		}
 		property := connectors.Property{
 			Name:  r.Name,
 			Label: r.Label,
