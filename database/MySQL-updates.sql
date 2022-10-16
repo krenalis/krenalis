@@ -228,3 +228,14 @@ ALTER TABLE `resources_properties`
     DROP COLUMN `workspace`,
     ADD COLUMN `resource` VARCHAR(100) NOT NULL DEFAULT '' AFTER `connector`,
     ADD PRIMARY KEY (`connector`, `resource`, `name`);
+
+ALTER TABLE `workspaces`
+    ADD COLUMN `userSchema` TEXT NOT NULL AFTER `name`,
+    ADD COLUMN `groupSchema` TEXT NOT NULL AFTER `userSchema`,
+    ADD COLUMN `eventSchema` TEXT NOT NULL AFTER `groupSchema`;
+
+UPDATE `workspaces` AS `w`, `schemas` AS `s`
+SET `w`.`userSchema` = `s`.`userSchema`, `w`.`groupSchema` = `s`.`groupSchema`, `w`.`eventSchema` = `s`.`eventSchema`
+WHERE `s`.`workspace` = `w`.`id`;
+
+DROP TABLE `schemas`;

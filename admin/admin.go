@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -106,13 +107,27 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Handle the "/user-schema-properties" endpoint.
 	if strings.HasPrefix(rpath, "/user-schema-properties") {
-		propertyNames, err := ws.Schemas.UserProperties()
+		schema, err := ws.Schema("user")
 		if err != nil {
-			log.Printf("[error] cannot retrieve properties: %s", err)
+			log.Printf("[error] cannot retrieve user schema: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(propertyNames)
+		var v struct {
+			Properties map[string]any
+		}
+		err = json.Unmarshal([]byte(schema), &v)
+		if err != nil {
+			log.Printf("[error] cannot unmarshal user schema: %s", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		props := make([]string, 0, len(v.Properties))
+		for name := range v.Properties {
+			props = append(props, name)
+		}
+		sort.Strings(props)
+		_ = json.NewEncoder(w).Encode(props)
 		return
 	}
 
@@ -211,7 +226,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			schema, err := ws.Schemas.Get(request.SchemaName)
+			schema, err := ws.Schema(request.SchemaName)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -228,7 +243,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = ws.Schemas.Update(request.SchemaName, request.Schema)
+			err = ws.SetSchema(request.SchemaName, request.Schema)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)

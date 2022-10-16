@@ -60,20 +60,10 @@ func (apis *APIs) AsAccount(account int) *AccountAPI {
 	return api
 }
 
-type WorkspaceAPI struct {
-	workspace   int
-	api         *AccountAPI
-	myDB        *sql.DB
-	chDB        chDriver.Conn
-	DataSources *DataSources
-	Schemas     *Schemas
-}
-
 // AsWorkspace returns an API restricted to the given workspace.
 func (api *AccountAPI) AsWorkspace(workspace int) *WorkspaceAPI {
 	ws := &WorkspaceAPI{workspace: workspace, api: api, myDB: api.myDB, chDB: api.chDB}
 	ws.DataSources = &DataSources{ws}
-	ws.Schemas = &Schemas{ws}
 	return ws
 }
 
@@ -329,13 +319,6 @@ func (apis *APIs) initSchema() {
 		position  int
 	}{})
 
-	apis.myDB.Scheme("Schemas", "schemas", struct {
-		account     int
-		userSchema  string
-		groupSchema string
-		eventSchema string
-	}{})
-
 	apis.myDB.Scheme("SmartEvents", "smart_events", struct {
 		property int
 		id       int
@@ -349,6 +332,15 @@ func (apis *APIs) initSchema() {
 		property int
 		id       int
 		device   string
+	}{})
+
+	apis.myDB.Scheme("Workspaces", "workspaces", struct {
+		id          int
+		account     int
+		name        string
+		userSchema  string
+		groupSchema string
+		eventSchema string
 	}{})
 
 }
