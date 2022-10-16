@@ -36,7 +36,7 @@ type Connecter interface {
 
 	// ReceiveWebhook receives a webhook request and returns its events.
 	// It returns the ErrWebhookUnauthorized error is the request was not authorized.
-	ReceiveWebhook(ctx context.Context, r *http.Request) ([]*Event, error)
+	ReceiveWebhook(ctx context.Context, r *http.Request) ([]Event, error)
 
 	// Resource returns the resource.
 	Resource(ctx context.Context) (string, error)
@@ -50,35 +50,116 @@ type Connecter interface {
 
 // Firehose is the interface implemented by a Firehose.
 type Firehose interface {
+
+	// ApplyConfig applies the given configuration to the data source.
 	ApplyConfig(config map[string]any)
+
+	// ReceiveEvent receives the given event for the data source.
+	// The event.Resource field must be empty.
+	ReceiveEvent(event Event)
+
+	// SetCursor sets the given cursor for the data source.
 	SetCursor(cursor string)
-	SetGroup(group string, updateTime time.Time, properties map[string]any)
+
+	// SetGroup sets the properties of the given group. timestamp is the last
+	// update time of the properties. If a property value has the
+	// TimestampedValue type, the Timestamp field represents the timestamp of
+	// the property.
+	SetGroup(group string, timestamp time.Time, properties map[string]any)
+
+	// SetGroupUsers sets the users of a group.
 	SetGroupUsers(group string, users []string)
-	SetUser(user string, updateTime time.Time, properties map[string]any)
+
+	// SetUser sets the properties of the given user. timestamp is the last
+	// update time of the properties. If a property value has the
+	// TimestampedValue type, the Timestamp field represents the timestamp of
+	// the property.
+	SetUser(user string, timestamp time.Time, properties map[string]any)
+
+	// SetUserGroups sets the groups of a user.
 	SetUserGroups(user string, groups []string)
 }
 
-type EventType int
+type Event interface {
+	event()
+}
 
-const (
-	UserChanged EventType = iota
-	GroupChanged
-	UserCreated
-	GroupCreated
-	UserDeleted
-	GroupDeleted
-)
+type UserChangeEvent struct {
+	Timestamp time.Time
+	Resource  string
+	User      string
+}
 
-type Event struct {
-	Type       EventType
-	Time       time.Time
+func (ev UserChangeEvent) event() {}
+
+type UserCreateEvent struct {
+	Timestamp  time.Time
 	Resource   string
-	Group      string
 	User       string
 	Properties Properties
 }
 
+func (ev UserCreateEvent) event() {}
+
+type UserDeleteEvent struct {
+	Timestamp time.Time
+	Resource  string
+	User      string
+}
+
+func (ev UserDeleteEvent) event() {}
+
+type UserPropertyChangeEvent struct {
+	Timestamp time.Time
+	Resource  string
+	User      string
+	Name      string
+	Value     any
+}
+
+func (ev UserPropertyChangeEvent) event() {}
+
+type GroupChangeEvent struct {
+	Timestamp time.Time
+	Resource  string
+	Group     string
+}
+
+func (ev GroupChangeEvent) event() {}
+
+type GroupCreateEvent struct {
+	Timestamp  time.Time
+	Resource   string
+	Group      string
+	Properties Properties
+}
+
+func (ev *GroupCreateEvent) event() {}
+
+type GroupDeleteEvent struct {
+	Timestamp time.Time
+	Resource  string
+	Group     string
+}
+
+func (ev GroupDeleteEvent) event() {}
+
+type GroupPropertyChangeEvent struct {
+	Timestamp time.Time
+	Resource  string
+	Group     string
+	Name      string
+	Value     any
+}
+
+func (ev GroupPropertyChangeEvent) event() {}
+
 type Properties map[string]any
+
+type TimestampedValue struct {
+	Timestamp time.Time
+	Value     any
+}
 
 type Property struct {
 	Name    string

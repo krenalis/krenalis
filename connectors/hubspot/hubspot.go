@@ -76,7 +76,7 @@ func (c *Connector) ApplyConfig(ctx context.Context, config map[string]any) erro
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized.
 // See https://developers.hubspot.com/docs/api/webhooks.
-func (c *Connector) ReceiveWebhook(ctx context.Context, r *http.Request) ([]*connectors.Event, error) {
+func (c *Connector) ReceiveWebhook(ctx context.Context, r *http.Request) ([]connectors.Event, error) {
 
 	c.setContext(ctx)
 
@@ -85,7 +85,7 @@ func (c *Connector) ReceiveWebhook(ctx context.Context, r *http.Request) ([]*con
 		return nil, connectors.ErrWebhookUnauthorized
 	}
 
-	var events []*connectors.Event
+	var events []connectors.Event
 
 	// Read the requests.
 	var requests []struct {
@@ -101,43 +101,57 @@ func (c *Connector) ReceiveWebhook(ctx context.Context, r *http.Request) ([]*con
 		return nil, err
 	}
 	for _, req := range requests {
-		event := connectors.Event{
-			Time:     time.UnixMilli(req.OccurredAt).UTC(),
-			Resource: strconv.Itoa(req.PortalId),
-		}
+		var event connectors.Event
+		timestamp := time.UnixMilli(req.OccurredAt).UTC()
+		resource := strconv.Itoa(req.PortalId)
 		switch req.SubscriptionType {
 		case "company.propertyChange":
-			event.Type = connectors.GroupChanged
-			event.Group = strconv.Itoa(req.ObjectId)
-			event.Properties = connectors.Properties{
-				req.PropertyName: req.PropertyValue,
+			event = connectors.GroupPropertyChangeEvent{
+				Timestamp: timestamp,
+				Resource:  resource,
+				Group:     strconv.Itoa(req.ObjectId),
+				Name:      req.PropertyName,
+				Value:     req.PropertyValue,
 			}
 		case "contact.propertyChange":
-			event.Type = connectors.UserChanged
-			event.User = strconv.Itoa(req.ObjectId)
-			event.Properties = connectors.Properties{
-				req.PropertyName: req.PropertyValue,
+			event = connectors.UserPropertyChangeEvent{
+				Timestamp: timestamp,
+				Resource:  resource,
+				User:      strconv.Itoa(req.ObjectId),
+				Name:      req.PropertyName,
+				Value:     req.PropertyValue,
 			}
 		case "company.creation":
-			event.Type = connectors.GroupCreated
-			event.Group = strconv.Itoa(req.ObjectId)
-			event.Properties = connectors.Properties{
-				req.PropertyName: req.PropertyValue,
+			event = connectors.UserPropertyChangeEvent{
+				Timestamp: timestamp,
+				Resource:  resource,
+				User:      strconv.Itoa(req.ObjectId),
+				Name:      req.PropertyName,
+				Value:     req.PropertyValue,
 			}
 		case "contact.creation":
-			event.Type = connectors.UserCreated
-			event.User = strconv.Itoa(req.ObjectId)
-			event.Properties = connectors.Properties{
-				req.PropertyName: req.PropertyValue,
+			event = connectors.UserCreateEvent{
+				Timestamp: timestamp,
+				Resource:  resource,
+				User:      strconv.Itoa(req.ObjectId),
+				Properties: connectors.Properties{
+					req.PropertyName: req.PropertyValue,
+				},
 			}
 		case "company.deletion":
-			event.Type = connectors.GroupDeleted
-			event.Group = strconv.Itoa(req.ObjectId)
+			event = connectors.GroupDeleteEvent{
+				Timestamp: timestamp,
+				Resource:  resource,
+				Group:     strconv.Itoa(req.ObjectId),
+			}
 		case "contact.deletion":
-			event.Type = connectors.UserDeleted
-			event.User = strconv.Itoa(req.ObjectId)
+			event = connectors.UserDeleteEvent{
+				Timestamp: timestamp,
+				Resource:  resource,
+				User:      strconv.Itoa(req.ObjectId),
+			}
 		}
-		events = append(events, &event)
+		events = append(events, event)
 	}
 
 	return events, nil

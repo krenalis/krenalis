@@ -16,9 +16,14 @@ import (
 	"strings"
 	"time"
 
+	"chichi/connectors"
+
 	"github.com/open2b/scriggo"
 	"github.com/open2b/scriggo/native"
 )
+
+// Make sure it implements the Firehose interface.
+var _ connectors.Firehose = &firehose{}
 
 // firehose is the Firehose API used by the connectors.
 type firehose struct {
@@ -30,10 +35,11 @@ type firehose struct {
 	err       error
 }
 
-// setError sets fh.err and cancels the context.
-func (fh *firehose) setError(err error) {
-	fh.err = err
-	fh.cancel()
+func (fh *firehose) ApplyConfig(conf map[string]any) {
+	return
+}
+
+func (fh *firehose) ReceiveEvent(event connectors.Event) {
 	return
 }
 
@@ -53,10 +59,6 @@ func (fh *firehose) SetCursor(cursor string) {
 	if affected == 0 {
 		fh.cancel()
 	}
-	return
-}
-
-func (fh *firehose) ApplyConfig(conf map[string]any) {
 	return
 }
 
@@ -123,6 +125,13 @@ func (fh *firehose) SetUser(user string, updateTime time.Time, properties map[st
 }
 
 func (fh *firehose) SetUserGroups(user string, groups []string) {
+	return
+}
+
+// setError sets fh.err and cancels the context.
+func (fh *firehose) setError(err error) {
+	fh.err = err
+	fh.cancel()
 	return
 }
 
