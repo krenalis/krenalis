@@ -77,7 +77,7 @@ func (api *AccountAPI) AsWorkspace(workspace int) *WorkspaceAPI {
 	return ws
 }
 
-var importRegexp = regexp.MustCompile(`/apis/data-sources/((\d+)/((re)?import|properties|transformation))?`)
+var importRegexp = regexp.MustCompile(`/apis/data-sources/((\d+)/(import|reimport|properties|transformation))?`)
 
 // ServeHTTP servers the API methods from HTTP.
 func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -149,9 +149,9 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				transformation, err = io.ReadAll(r.Body)
 				err = ws.DataSources.SetTransformationFunc(id, string(transformation))
 			}
-		case "import":
-			all := m[4] == "re"
-			err = ws.DataSources.Import(id, all)
+		case "import", "reimport":
+			reimport := m[3] == "reimport"
+			err = ws.DataSources.Import(id, reimport)
 		default:
 			panic("unexpected path")
 		}
@@ -175,7 +175,7 @@ var errNotFound = errors.New("not found")
 // ServeWebhook serves a webhook request. The request path starts with
 // "/webhook/{connector}/" where {connector} is a connector identifier.
 func (apis *APIs) ServeWebhook(w http.ResponseWriter, r *http.Request) {
-	err := apis.serveWebhook(r)
+	err := apis.receiveWebhook(r)
 	if err != nil {
 		switch err {
 		case errBadRequest:
@@ -240,17 +240,8 @@ func (apis *APIs) Connectors() ([]*Connector, error) {
 	return connectors, nil
 }
 
-// newFirehose returns a new firehose for the given connector.
-// The returned firehouse does not have an assigned account. Use the
-// api.newFirehose method to get a firehouse with an assigned account.
-func (apis *APIs) newFirehose(connector int) *firehose {
-	return &firehose{
-		connector: connector,
-		apis:      apis,
-	}
-}
-
-func (apis *APIs) serveWebhook(r *http.Request) error {
+// receiveWebhook receives a webhook.
+func (apis *APIs) receiveWebhook(r *http.Request) error {
 	m := webhookPathReg.FindStringSubmatch(r.URL.Path)
 	if m == nil {
 		return errBadRequest
@@ -266,9 +257,14 @@ func (apis *APIs) serveWebhook(r *http.Request) error {
 	if conn == nil {
 		return errNotFound
 	}
-	fh := apis.newFirehose(connID)
-	connector := connectors.Connector(context.Background(), conn.Name, conn.ClientSecret, fh)
-	return connector.ServeWebhook(r)
+	connector := connectors.Connector(conn.Name, conn.ClientSecret)
+	events, err := connector.ReceiveWebhook(context.Background(), r)
+	if err != nil {
+		return err
+	}
+	// TODO(marco) store the events
+	_ = events
+	return nil
 }
 
 func (apis *APIs) initSchema() {

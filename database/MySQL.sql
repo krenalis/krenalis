@@ -52,12 +52,12 @@ CREATE TABLE `data_sources_properties` (
 );
 
 CREATE TABLE `data_sources_raw_users_data` (
-  `connector` int NOT NULL,
   `workspace` int NOT NULL,
+  `connector` int NOT NULL,
   `user` varchar(45) NOT NULL DEFAULT '',
   `data` text NOT NULL,
   `internalUserID` int NOT NULL,
-  PRIMARY KEY (`connector`,`workspace`,`user`)
+  PRIMARY KEY (`workspace`, `connector`, `user`)
 );
 
 CREATE TABLE `devices` (

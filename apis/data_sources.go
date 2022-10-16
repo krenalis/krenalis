@@ -68,9 +68,9 @@ func (this *DataSources) Add(connector int, refreshToken, accessToken string) er
 	if conn == nil {
 		return ErrConnectorNotFound
 	}
-	fh := this.api.apis.newFirehose(connector)
-	c := connectors.Connector(context.Background(), conn.Name, conn.ClientSecret, fh)
-	resource, err := c.Resource(accessToken)
+	c := connectors.Connector(conn.Name, conn.ClientSecret)
+	ctx := context.WithValue(context.Background(), connectors.AccessTokenContextKey{}, accessToken)
+	resource, err := c.Resource(ctx)
 	if err != nil {
 		return err
 	}
@@ -113,15 +113,15 @@ func (this *DataSources) Import(connector int, reimport bool) error {
 		return errors.New("invalid connector identifier")
 	}
 
-	var name, clientSecret, accessToken, refreshToken, cursor string
+	var name, clientSecret, accessToken, refreshToken, resource, cursor string
 	var expiration time.Time
 	err := this.myDB.QueryRow(
-		"SELECT `c`.`name`, `c`.`clientSecret`, `cr`.`accessToken`, `cr`.`refreshToken`, `cr`.`accessTokenExpirationTimestamp`, `ds`.`userCursor`\n"+
+		"SELECT `c`.`name`, `c`.`clientSecret`, `cr`.`accessToken`, `cr`.`refreshToken`, `cr`.`accessTokenExpirationTimestamp`, `ds`.`resource`, `ds`.`userCursor`\n"+
 			"FROM `data_sources` AS `ds`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
 			"INNER JOIN `connectors_resources` AS `cr` ON `cr`.`connector` = `ds`.`connector` AND `cr`.`resource` = `ds`.`resource`\n"+
 			"WHERE `ds`.`workspace` = ? AND `ds`.`connector` = ?", this.workspace, connector).
-		Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &cursor)
+		Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &resource, &cursor)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrConnectorNotFound
@@ -141,11 +141,10 @@ func (this *DataSources) Import(connector int, reimport bool) error {
 		}
 	}
 
-	fh := this.newFirehose(connector)
-	conn := connectors.Connector(context.Background(), name, clientSecret, fh)
-
 	go func() {
-		err := conn.Users(accessToken, cursor)
+		conn := connectors.Connector(name, clientSecret)
+		ctx := this.newConnectorContext(context.Background(), connector, resource, accessToken)
+		err := conn.Users(ctx, cursor)
 		if err != nil {
 			log.Printf("[error] call to the Users method of the connector %d failed: %s", connector, err)
 		}
@@ -313,6 +312,16 @@ func (this *DataSources) Uninstall(connector int) error {
 		return err
 	})
 	return err
+}
+
+// newConnectorContext returns a context with a Firehose used to call a
+// connector method.
+func (this *DataSources) newConnectorContext(ctx context.Context, connector int, resource, accessToken string) context.Context {
+	fh := &firehose{sources: this, connector: connector, resource: resource}
+	fh.context, fh.cancel = context.WithCancel(ctx)
+	fh.context = context.WithValue(fh.context, connectors.AccessTokenContextKey{}, accessToken)
+	fh.context = context.WithValue(fh.context, connectors.FirehoseContextKey{}, fh)
+	return fh.context
 }
 
 // refreshOAuthToken refreshes the OAuth token of the data source with the

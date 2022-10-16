@@ -34,6 +34,9 @@ import (
 	"github.com/open2b/nuts/capture"
 )
 
+// Make sure it implements the Connector interface.
+var _ connectors.Connecter = &Connector{}
+
 var Debug = false
 
 type hubspotError struct {
@@ -55,6 +58,7 @@ func (err *hubspotError) Error() string {
 type Connector struct {
 	Firehose     connectors.Firehose
 	ClientSecret string
+	AccessToken  string
 	Context      context.Context
 }
 
@@ -63,20 +67,25 @@ func init() {
 }
 
 // ApplyConfig applies the configuration config.
-func (c *Connector) ApplyConfig(account string, config map[string]any) error {
-	return c.ApplyConfig(account, config)
+func (c *Connector) ApplyConfig(ctx context.Context, config map[string]any) error {
+	c.Firehose.ApplyConfig(config)
+	return nil
 }
 
-// ServeWebhook serves a webhook request.
+// ReceiveWebhook receives a webhook request and returns its events.
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized.
 // See https://developers.hubspot.com/docs/api/webhooks.
-func (c *Connector) ServeWebhook(r *http.Request) error {
+func (c *Connector) ReceiveWebhook(ctx context.Context, r *http.Request) ([]*connectors.Event, error) {
+
+	c.setContext(ctx)
 
 	// Check if the webhook is valid.
 	if !isValidWebhook(c.ClientSecret, r) {
-		return connectors.ErrWebhookUnauthorized
+		return nil, connectors.ErrWebhookUnauthorized
 	}
+
+	var events []*connectors.Event
 
 	// Read the requests.
 	var requests []struct {
@@ -89,45 +98,55 @@ func (c *Connector) ServeWebhook(r *http.Request) error {
 	}
 	err := json.NewDecoder(r.Body).Decode(&requests)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, req := range requests {
-		ident := connectors.Identity{Account: strconv.Itoa(req.PortalId)}
+		event := connectors.Event{
+			Time:     time.UnixMilli(req.OccurredAt).UTC(),
+			Resource: strconv.Itoa(req.PortalId),
+		}
 		switch req.SubscriptionType {
 		case "company.propertyChange":
-			ident.Group = strconv.Itoa(req.ObjectId)
-			c.Firehose.UpdateGroup(ident, req.OccurredAt, connectors.Properties{
+			event.Type = connectors.GroupChanged
+			event.Group = strconv.Itoa(req.ObjectId)
+			event.Properties = connectors.Properties{
 				req.PropertyName: req.PropertyValue,
-			}, nil)
+			}
 		case "contact.propertyChange":
-			ident.User = strconv.Itoa(req.ObjectId)
-			c.Firehose.UpdateUser(ident, req.OccurredAt, connectors.Properties{
+			event.Type = connectors.UserChanged
+			event.User = strconv.Itoa(req.ObjectId)
+			event.Properties = connectors.Properties{
 				req.PropertyName: req.PropertyValue,
-			}, nil)
+			}
 		case "company.creation":
-			ident.Group = strconv.Itoa(req.ObjectId)
-			c.Firehose.CreateGroup(ident, req.OccurredAt, connectors.Properties{
+			event.Type = connectors.GroupCreated
+			event.Group = strconv.Itoa(req.ObjectId)
+			event.Properties = connectors.Properties{
 				req.PropertyName: req.PropertyValue,
-			})
+			}
 		case "contact.creation":
-			ident.User = strconv.Itoa(req.ObjectId)
-			c.Firehose.CreateUser(ident, req.OccurredAt, connectors.Properties{
+			event.Type = connectors.UserCreated
+			event.User = strconv.Itoa(req.ObjectId)
+			event.Properties = connectors.Properties{
 				req.PropertyName: req.PropertyValue,
-			})
+			}
 		case "company.deletion":
-			ident.Group = strconv.Itoa(req.ObjectId)
-			c.Firehose.DeleteGroup(ident)
+			event.Type = connectors.GroupDeleted
+			event.Group = strconv.Itoa(req.ObjectId)
 		case "contact.deletion":
-			ident.User = strconv.Itoa(req.ObjectId)
-			c.Firehose.DeleteUser(ident)
+			event.Type = connectors.UserDeleted
+			event.User = strconv.Itoa(req.ObjectId)
 		}
+		events = append(events, &event)
 	}
 
-	return nil
+	return events, nil
 }
 
 // Properties returns all user and group properties.
-func (c *Connector) Properties(token string) ([]connectors.Property, []connectors.Property, error) {
+func (c *Connector) Properties(ctx context.Context) ([]connectors.Property, []connectors.Property, error) {
+
+	c.setContext(ctx)
 
 	var response struct {
 		Results []struct {
@@ -142,7 +161,7 @@ func (c *Connector) Properties(token string) ([]connectors.Property, []connector
 			Type  string
 		}
 	}
-	err := c.call(token, "GET", "/crm/v3/properties/contact", nil, 200, &response)
+	err := c.call("GET", "/crm/v3/properties/contact", nil, 200, &response)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -182,11 +201,12 @@ func (c *Connector) Properties(token string) ([]connectors.Property, []connector
 }
 
 // Resource returns the resource from a client token.
-func (c *Connector) Resource(token string) (string, error) {
+func (c *Connector) Resource(ctx context.Context) (string, error) {
+	c.setContext(ctx)
 	var res struct {
 		PortalId int
 	}
-	err := c.call(token, "GET", "/account-info/v3/details", nil, 200, &res)
+	err := c.call("GET", "/account-info/v3/details", nil, 200, &res)
 	if err != nil {
 		return "", err
 	}
@@ -198,7 +218,9 @@ func (c *Connector) Resource(token string) (string, error) {
 
 // SetUsers sets the users.
 // It requires the "crm.objects.contacts.write" scope.
-func (c *Connector) SetUsers(token string, users []connectors.User) error {
+func (c *Connector) SetUsers(ctx context.Context, users []connectors.User) error {
+
+	c.setContext(ctx)
 
 	var body bytes.Buffer
 	body.WriteString(`{"inputs":[`)
@@ -220,32 +242,34 @@ func (c *Connector) SetUsers(token string, users []connectors.User) error {
 
 	body.WriteString(`]}`)
 
-	return c.call(token, "POST", "/crm/v3/objects/contacts/batch/update", &body, 200, nil)
+	return c.call("POST", "/crm/v3/objects/contacts/batch/update", &body, 200, nil)
 }
 
 // Users returns the users starting from the given cursor.
-func (c *Connector) Users(token, cursor string) error {
+func (c *Connector) Users(ctx context.Context, cursor string) error {
+
+	c.setContext(ctx)
 
 	fromDate, err := parseCursor(cursor)
 	if err != nil {
 		return err
 	}
 
-	it, err := c.newIterator(token, "Contact", fromDate, 100)
+	it, err := c.newIterator("Contact", fromDate, 100)
 	if err != nil {
 		return err
 	}
 	for {
-		objects, err := it.Next()
+		objects, err := it.next()
 		if err != nil {
 			return err
 		}
-		if objects == nil {
+		if len(objects) == 0 {
 			break
 		}
 		for _, obj := range objects {
 			ident := connectors.Identity{User: obj.ID}
-			c.Firehose.UpdateUser(ident, obj.LastModifiedDate, obj.Properties, nil)
+			c.Firehose.UpdateUser(ident, time.UnixMilli(obj.LastModifiedDate).UTC(), obj.Properties, nil)
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
 		c.Firehose.SetCursor(serializeCursor(fromDate))
@@ -255,19 +279,21 @@ func (c *Connector) Users(token, cursor string) error {
 }
 
 // Groups returns the groups starting from the given cursor.
-func (c *Connector) Groups(token, cursor string) error {
+func (c *Connector) Groups(ctx context.Context, cursor string) error {
+
+	c.setContext(ctx)
 
 	fromDate, err := parseCursor(cursor)
 	if err != nil {
 		return err
 	}
 
-	it, err := c.newIterator(token, "Company", fromDate, 100)
+	it, err := c.newIterator("Company", fromDate, 100)
 	if err != nil {
 		return err
 	}
 	for {
-		objects, err := it.Next()
+		objects, err := it.next()
 		if err != nil {
 			return err
 		}
@@ -275,12 +301,12 @@ func (c *Connector) Groups(token, cursor string) error {
 			break
 		}
 		for _, obj := range objects {
-			contacts, err := c.companyContacts(token, obj.ID)
+			contacts, err := c.companyContacts(obj.ID)
 			if err != nil {
 				return err
 			}
 			ident := connectors.Identity{Group: obj.ID}
-			c.Firehose.UpdateGroup(ident, obj.LastModifiedDate, obj.Properties, contacts)
+			c.Firehose.UpdateGroup(ident, time.UnixMilli(obj.LastModifiedDate).UTC(), obj.Properties, contacts)
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
 		c.Firehose.SetCursor(strconv.FormatInt(fromDate, 10))
@@ -290,7 +316,7 @@ func (c *Connector) Groups(token, cursor string) error {
 }
 
 // companyContacts returns the contacts of the given company.
-func (c *Connector) companyContacts(token, company string) ([]string, error) {
+func (c *Connector) companyContacts(company string) ([]string, error) {
 	contacts := []string{}
 	path := "/crm/v3/objects/companies/" + url.PathEscape(company) + "/associations/Contact"
 	after := ""
@@ -309,7 +335,7 @@ func (c *Connector) companyContacts(token, company string) ([]string, error) {
 		if after != "" {
 			requestURL += "?after=" + url.QueryEscape(after)
 		}
-		err := c.call(token, "GET", requestURL, nil, 200, &response)
+		err := c.call("GET", requestURL, nil, 200, &response)
 		if err != nil {
 			return nil, err
 		}
@@ -327,7 +353,6 @@ func (c *Connector) companyContacts(token, company string) ([]string, error) {
 
 type iter struct {
 	*Connector
-	Token      string
 	Type       string
 	Path       string
 	FromDate   int64
@@ -340,7 +365,7 @@ type iter struct {
 // be "Company" or "Contact".
 // Requires the "crm.objects.contacts.read" scope for contacts and the
 // "crm.objects.companies.read" for companies.
-func (c *Connector) newIterator(token, typ string, fromDate int64, limit int) (*iter, error) {
+func (c *Connector) newIterator(typ string, fromDate int64, limit int) (*iter, error) {
 
 	path := "/crm/v3/"
 	switch typ {
@@ -357,7 +382,6 @@ func (c *Connector) newIterator(token, typ string, fromDate int64, limit int) (*
 
 	it := iter{
 		Connector: c,
-		Token:     token,
 		Type:      typ,
 		Path:      path,
 		FromDate:  fromDate,
@@ -373,8 +397,8 @@ type object struct {
 	LastModifiedDate int64
 }
 
-// Next returns the next objects or nil if there are no objects.
-func (it *iter) Next() ([]object, error) {
+// next returns the next objects or nil if there are no objects.
+func (it *iter) next() ([]object, error) {
 
 	if it.Terminated {
 		return nil, nil
@@ -410,7 +434,7 @@ func (it *iter) Next() ([]object, error) {
 		}
 	}
 
-	err := it.call(it.Token, "POST", it.Path, &it.Body, 200, &response)
+	err := it.call("POST", it.Path, &it.Body, 200, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -437,14 +461,14 @@ func (it *iter) Next() ([]object, error) {
 	return objects, nil
 }
 
-func (c *Connector) call(token, method, path string, body io.Reader, expectedStatus int, response any) error {
+func (c *Connector) call(method, path string, body io.Reader, expectedStatus int, response any) error {
 
 	req, err := http.NewRequestWithContext(c.Context, method, "https://api.hubapi.com/"+path[1:], body)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 	req.Header.Set("Content-Type", "application/json")
 
 	var dump *bufio.Writer
@@ -485,6 +509,13 @@ func (c *Connector) call(token, method, path string, body io.Reader, expectedSta
 	}
 
 	return nil
+}
+
+// setContext sets ctx as the context for c.
+func (c *Connector) setContext(ctx context.Context) {
+	c.Context = ctx
+	c.AccessToken, _ = ctx.Value(connectors.AccessTokenContextKey{}).(string)
+	c.Firehose, _ = ctx.Value(connectors.FirehoseContextKey{}).(connectors.Firehose)
 }
 
 // isValidWebhook reports whether the webhook is valid.

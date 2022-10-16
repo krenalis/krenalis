@@ -8,78 +8,82 @@
 package apis
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"sort"
 	"strings"
+	"time"
 
 	"chichi/connectors"
-	"chichi/pkg/open2b/sql"
 
 	"github.com/open2b/scriggo"
 	"github.com/open2b/scriggo/native"
 )
 
-// firehose is the firehose API used by the connectors.
+// firehose is the Firehose API used by the connectors.
 type firehose struct {
+	sources   *DataSources
 	connector int
-	ws        *WorkspaceAPI
-	apis      *APIs
+	resource  string
+	context   context.Context
+	cancel    context.CancelFunc
+	err       error
 }
 
-// newFirehose returns a new firehose for the given connector and account.
-func (ws *WorkspaceAPI) newFirehose(connector int) *firehose {
-	return &firehose{
-		connector: connector,
-		ws:        ws,
-		apis:      ws.api.apis,
-	}
+// setError sets fh.err and cancels the context.
+func (fh *firehose) setError(err error) {
+	fh.err = err
+	fh.cancel()
+	return
 }
 
+// SetCursor sets the user cursor.
 func (fh *firehose) SetCursor(cursor string) {
-	_, err := fh.ws.myDB.Table("DataSources").Add(
-		map[string]any{
-			"workspace":  fh.ws.workspace,
-			"connector":  fh.connector,
-			"userCursor": cursor,
-		},
-		sql.Set{
-			"userCursor": cursor,
-		},
-	)
+	result, err := fh.sources.myDB.Exec("UPDATE `data_sources`\nSET `userCursor` = ?\nWHERE `workspace` = ? AND `connector` = ?",
+		cursor, fh.sources.workspace, fh.connector)
 	if err != nil {
-		panic(err)
+		fh.setError(err)
+		return
 	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		fh.setError(err)
+		return
+	}
+	if affected == 0 {
+		fh.cancel()
+	}
+	return
 }
 
 func (fh *firehose) ApplyConfig(conf map[string]any) {
 	return
 }
 
-func (fh *firehose) UpdateGroup(ident connectors.Identity, updateTime int64, properties map[string]any, users []string) {
+func (fh *firehose) UpdateGroup(ident connectors.Identity, updateTime time.Time, properties map[string]any, users []string) {
 	return
 }
 
-func (fh *firehose) UpdateUser(ident connectors.Identity, updateTime int64, properties map[string]any, groups []string) {
+func (fh *firehose) UpdateUser(ident connectors.Identity, updateTime time.Time, properties map[string]any, groups []string) {
 	data, err := json.Marshal(properties)
 	if err != nil {
-		panic(err)
+		fh.setError(err)
+		return
 	}
-	_, err = fh.ws.myDB.Table("DataSourcesRawUserData").Add(
-		map[string]any{
-			"workspace": fh.ws.workspace,
-			"connector": fh.connector,
-			"data":      string(data),
-		},
-		sql.Set{"data": string(data)},
-	)
+	_, err = fh.sources.myDB.Exec("INSERT INTO `data_sources_raw_users_data`\n"+
+		"SET `workspace` = ?, `connector` = ?, `user` = ?, `data` = ?\n"+
+		"ON DUPLICATE KEY UPDATE `data` = ?",
+		fh.sources.workspace, fh.connector, ident.User, data, data)
 	if err != nil {
-		panic(err)
+		fh.setError(err)
+		return
 	}
 	goldenRecordData, err := fh.transformProperties(properties)
 	if err != nil {
-		panic(fmt.Sprintf("cannot transform input properties to output properties: %s", err))
+		fh.setError(fmt.Errorf("cannot transform input properties to output properties: %s", err))
+		return
 	}
 	// Serialize the data to the Golden Record.
 	{
@@ -108,40 +112,25 @@ func (fh *firehose) UpdateUser(ident connectors.Identity, updateTime int64, prop
 		for _, column := range columns {
 			values = append(values, goldenRecordData[column])
 		}
-		_, err := fh.ws.myDB.Exec(query, append(values, values...)...)
+		_, err = fh.sources.myDB.Exec(query, append(values, values...)...)
 		if err != nil {
-			panic(fmt.Sprintf("cannot write data to database: %s", err))
+			fh.setError(fmt.Errorf("cannot write data to database: %s", err))
+			return
 		}
 	}
-}
-
-func (fh *firehose) CreateGroup(ident connectors.Identity, creationTime int64, properties map[string]any) {
-	return
-}
-
-func (fh *firehose) CreateUser(ident connectors.Identity, creationTime int64, properties map[string]any) {
-	return
-}
-
-func (fh *firehose) DeleteGroup(ident connectors.Identity) {
-	return
-}
-
-func (fh *firehose) DeleteUser(ident connectors.Identity) {
-	return
 }
 
 // transformProperties transforms the incoming properties using the
 // transformation function specified for the current connector.
 func (fh *firehose) transformProperties(incoming map[string]any) (map[string]any, error) {
-	transformationSource, err := fh.ws.DataSources.TransformationFunc(fh.connector)
+	transformationSource, err := fh.sources.TransformationFunc(fh.connector)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve transformation from DB: %s", err)
 	}
 	fullSourceCode := strings.Replace(
 		`{% Transform = {{ transformationFunction }} %}`,
 		"{{ transformationFunction }}",
-		string(transformationSource),
+		transformationSource,
 		1,
 	)
 	opts := &scriggo.BuildOptions{

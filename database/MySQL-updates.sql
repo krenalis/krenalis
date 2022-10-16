@@ -186,7 +186,7 @@ ALTER TABLE `data_sources_properties`
 ALTER TABLE `data_sources_raw_users_data`
     CHANGE `account` `workspace` INT NOT NULL,
     DROP PRIMARY KEY,
-    ADD PRIMARY KEY (`connector`,`workspace`,`user`);
+    ADD PRIMARY KEY (`connector`, `workspace`, `user`);
 
 ALTER TABLE `schemas`
     CHANGE `account` `workspace` INT NOT NULL,
@@ -208,3 +208,8 @@ ALTER TABLE `data_sources` (
     DROP COLUMN `refreshToken`,
     DROP COLUMN `accessTokenExpirationTimestamp`,
 );
+
+ALTER TABLE `data_sources_raw_users_data`
+    CHANGE `connector` `connector` int NOT NULL AFTER `workspace`,
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (`workspace`, `connector`, `user`);
