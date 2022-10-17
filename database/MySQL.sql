@@ -31,6 +31,17 @@ CREATE TABLE `data_sources` (
   PRIMARY KEY (`workspace`, `connector`)
 );
 
+CREATE TABLE `data_sources_properties` (
+  `workspace` INT NOT NULL,
+  `connector` INT NOT NULL,
+  `name` VARCHAR(100) NOT NULL DEFAULT '',
+  `type` VARCHAR(100) NOT NULL DEFAULT '',
+  `label` VARCHAR(100) NOT NULL DEFAULT '',
+  `options` TEXT NOT NULL,
+  `position` INT NOT NULL,
+  PRIMARY KEY (`workspace`, `connector`, `name`)
+);
+
 CREATE TABLE `data_sources_users` (
   `workspace` int NOT NULL,
   `connector` int NOT NULL,
@@ -68,17 +79,6 @@ CREATE TABLE `resources` (
   `refreshToken` VARCHAR(500) NOT NULL DEFAULT '',
   `accessTokenExpirationTimestamp` TIMESTAMP NOT NULL,
   PRIMARY KEY (`connector`, `resource`),
-);
-
-CREATE TABLE `resources_properties` (
-  `connector` INT NOT NULL,
-  `resource` VARCHAR(100) NOT NULL DEFAULT '',
-  `name` VARCHAR(100) NOT NULL DEFAULT '',
-  `type` VARCHAR(100) NOT NULL DEFAULT '',
-  `label` VARCHAR(100) NOT NULL DEFAULT '',
-  `options` TEXT NOT NULL,
-  `position` INT NOT NULL,
-  PRIMARY KEY (`connector`, `resource`, `name`)
 );
 
 CREATE TABLE `smart_events` (

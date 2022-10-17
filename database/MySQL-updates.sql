@@ -246,3 +246,13 @@ ALTER TABLE `data_sources_users`
     DROP PRIMARY KEY,
     DROP COLUMN `resource`,
     ADD PRIMARY KEY (`workspace`, `connector`, `user`);
+
+RENAME TABLE `resources_properties` TO `data_sources_properties`;
+
+ALTER TABLE `data_sources_properties`
+    DROP PRIMARY KEY,
+    ADD COLUMN `workspace` INT NOT NULL FIRST,
+    DROP COLUMN `resource`,
+    ADD PRIMARY KEY (`workspace`, `connector`, `name`);
+
+UPDATE `data_sources_properties` SET `workspace` = 1;

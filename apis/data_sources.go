@@ -142,8 +142,8 @@ func (this *DataSources) Import(connector int, reimport bool) error {
 	}
 
 	var properties []string
-	err = this.myDB.QueryScan("SELECT `name`\nFROM `resources_properties`\nWHERE `connector` = ? AND `resource` = ?",
-		connector, resource, func(rows *sql.Rows) error {
+	err = this.myDB.QueryScan("SELECT `name`\nFROM `data_sources_properties`\nWHERE `workspace` = ? AND `connector` = ?",
+		this.workspace, connector, func(rows *sql.Rows) error {
 			var err error
 			for rows.Next() {
 				var name string
@@ -226,11 +226,10 @@ func (this *DataSources) Properties(connector int) ([]*DataSourceProperty, error
 
 	var properties []*DataSourceProperty
 
-	stmt := "SELECT `p`.`name`, `p`.`type`, `p`.`label`, `p`.`options`\n" +
-		"FROM `resources_properties` AS `p`\n" +
-		"INNER JOIN `data_sources` AS `s` ON `s`.`connector` = `p`.`connector` AND `s`.`resource` = `p`.`resource`" +
-		"WHERE `s`.`workspace` = ? AND `p`.`connector` = ? \n" +
-		"ORDER BY `p`.`position`"
+	stmt := "SELECT `name`, `type`, `label`, `options`\n" +
+		"FROM `data_sources_properties`\n" +
+		"WHERE `workspace` = ? AND `connector` = ?\n" +
+		"ORDER BY `position`"
 
 	err := this.myDB.QueryScan(stmt, this.workspace, connector, func(rows *sql.Rows) error {
 		var err error
@@ -326,6 +325,7 @@ func (this *DataSources) Uninstall(connector int) error {
 		_, err := this.myDB.Table("DataSources").Delete(where)
 		if err == nil {
 			_, err = this.myDB.Table("DataSourcesProperties").Delete(where)
+			_, err = this.myDB.Table("DataSourcesUsers").Delete(where)
 		}
 		return err
 	})
