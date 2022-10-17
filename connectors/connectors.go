@@ -134,7 +134,7 @@ type GroupCreateEvent struct {
 	Properties Properties
 }
 
-func (ev *GroupCreateEvent) event() {}
+func (ev GroupCreateEvent) event() {}
 
 type GroupDeleteEvent struct {
 	Timestamp time.Time

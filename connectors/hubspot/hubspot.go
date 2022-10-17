@@ -122,12 +122,10 @@ func (c *Connector) ReceiveWebhook(ctx context.Context, r *http.Request) ([]conn
 				Value:     req.PropertyValue,
 			}
 		case "company.creation":
-			event = connectors.UserPropertyChangeEvent{
+			event = connectors.GroupCreateEvent{
 				Timestamp: timestamp,
 				Resource:  resource,
-				User:      strconv.Itoa(req.ObjectId),
-				Name:      req.PropertyName,
-				Value:     req.PropertyValue,
+				Group:     strconv.Itoa(req.ObjectId),
 			}
 		case "contact.creation":
 			event = connectors.UserCreateEvent{
