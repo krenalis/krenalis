@@ -67,6 +67,101 @@ func init() {
 	connectors.RegisterConnector("HubSpot", (*Connector)(nil))
 }
 
+// Groups returns the groups starting from the given cursor.
+func (c *Connector) Groups(ctx context.Context, cursor string, properties []string) error {
+
+	c.setContext(ctx)
+
+	fromDate, err := parseCursor(cursor)
+	if err != nil {
+		return err
+	}
+
+	it, err := c.newIterator("Company", properties, fromDate, 100)
+	if err != nil {
+		return err
+	}
+	for {
+		objects, err := it.next()
+		if err != nil {
+			return err
+		}
+		if objects == nil {
+			break
+		}
+		for _, obj := range objects {
+			c.Firehose.SetGroup(obj.ID, time.UnixMilli(obj.LastModifiedDate).UTC(), obj.Properties)
+			contacts, err := c.companyContacts(obj.ID)
+			if err != nil {
+				return err
+			}
+			c.Firehose.SetGroupUsers(obj.ID, contacts)
+		}
+		fromDate = objects[len(objects)-1].LastModifiedDate
+		c.Firehose.SetCursor(strconv.FormatInt(fromDate, 10))
+	}
+
+	return nil
+}
+
+// Properties returns all user and group properties.
+func (c *Connector) Properties(ctx context.Context) ([]connectors.Property, []connectors.Property, error) {
+
+	c.setContext(ctx)
+
+	var response struct {
+		Results []struct {
+			Hidden  bool
+			Name    string
+			Options []struct {
+				Label  string
+				Value  string
+				Hidden bool
+			}
+			Label string
+			Type  string
+		}
+	}
+	err := c.call("GET", "/crm/v3/properties/contact", nil, 200, &response)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	properties := make([]connectors.Property, 0)
+	for _, r := range response.Results {
+		switch r.Name {
+		case "createdate", "lastmodifieddate", "hs_object_id":
+			continue
+		}
+		property := connectors.Property{
+			Name:  r.Name,
+			Label: r.Label,
+			Type:  r.Type,
+		}
+		var n int
+		for _, option := range r.Options {
+			if !option.Hidden {
+				n++
+			}
+		}
+		if n > 0 {
+			property.Options = make([]connectors.PropertyOption, 0, n)
+			for _, option := range r.Options {
+				if option.Hidden {
+					continue
+				}
+				property.Options = append(property.Options, connectors.PropertyOption{
+					Label: option.Label,
+					Value: option.Value,
+				})
+			}
+		}
+		properties = append(properties, property)
+	}
+
+	return properties, nil, nil
+}
+
 // ReceiveWebhook receives a webhook request and returns its events.
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized.
@@ -150,64 +245,6 @@ func (c *Connector) ReceiveWebhook(ctx context.Context, r *http.Request) ([]conn
 	return events, nil
 }
 
-// Properties returns all user and group properties.
-func (c *Connector) Properties(ctx context.Context) ([]connectors.Property, []connectors.Property, error) {
-
-	c.setContext(ctx)
-
-	var response struct {
-		Results []struct {
-			Hidden  bool
-			Name    string
-			Options []struct {
-				Label  string
-				Value  string
-				Hidden bool
-			}
-			Label string
-			Type  string
-		}
-	}
-	err := c.call("GET", "/crm/v3/properties/contact", nil, 200, &response)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	properties := make([]connectors.Property, 0)
-	for _, r := range response.Results {
-		switch r.Name {
-		case "createdate", "lastmodifieddate", "hs_object_id":
-			continue
-		}
-		property := connectors.Property{
-			Name:  r.Name,
-			Label: r.Label,
-			Type:  r.Type,
-		}
-		var n int
-		for _, option := range r.Options {
-			if !option.Hidden {
-				n++
-			}
-		}
-		if n > 0 {
-			property.Options = make([]connectors.PropertyOption, 0, n)
-			for _, option := range r.Options {
-				if option.Hidden {
-					continue
-				}
-				property.Options = append(property.Options, connectors.PropertyOption{
-					Label: option.Label,
-					Value: option.Value,
-				})
-			}
-		}
-		properties = append(properties, property)
-	}
-
-	return properties, nil, nil
-}
-
 // Resource returns the resource from a client token.
 func (c *Connector) Resource(ctx context.Context) (string, error) {
 	c.setContext(ctx)
@@ -285,43 +322,6 @@ func (c *Connector) Users(ctx context.Context, cursor string, properties []strin
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
 		c.Firehose.SetCursor(serializeCursor(fromDate))
-	}
-
-	return nil
-}
-
-// Groups returns the groups starting from the given cursor.
-func (c *Connector) Groups(ctx context.Context, cursor string, properties []string) error {
-
-	c.setContext(ctx)
-
-	fromDate, err := parseCursor(cursor)
-	if err != nil {
-		return err
-	}
-
-	it, err := c.newIterator("Company", properties, fromDate, 100)
-	if err != nil {
-		return err
-	}
-	for {
-		objects, err := it.next()
-		if err != nil {
-			return err
-		}
-		if objects == nil {
-			break
-		}
-		for _, obj := range objects {
-			c.Firehose.SetGroup(obj.ID, time.UnixMilli(obj.LastModifiedDate).UTC(), obj.Properties)
-			contacts, err := c.companyContacts(obj.ID)
-			if err != nil {
-				return err
-			}
-			c.Firehose.SetGroupUsers(obj.ID, contacts)
-		}
-		fromDate = objects[len(objects)-1].LastModifiedDate
-		c.Firehose.SetCursor(strconv.FormatInt(fromDate, 10))
 	}
 
 	return nil
