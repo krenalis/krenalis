@@ -34,10 +34,9 @@ CREATE TABLE `data_sources` (
 CREATE TABLE `data_sources_users` (
   `workspace` int NOT NULL,
   `connector` int NOT NULL,
-  `resource`  varchar(100) NOT NULL DEFAULT '',
   `user` varchar(45) NOT NULL DEFAULT '',
   `data` text NOT NULL,
-  PRIMARY KEY (`workspace`, `connector`, `resource`, `user`)
+  PRIMARY KEY (`workspace`, `connector`, `user`)
 );
 
 CREATE TABLE `devices` (

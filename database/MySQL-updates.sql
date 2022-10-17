@@ -241,3 +241,8 @@ WHERE `s`.`workspace` = `w`.`id`;
 DROP TABLE `schemas`;
 
 RENAME TABLE `data_sources_raw_users_data` TO `data_sources_users`;
+
+ALTER TABLE `data_sources_users`
+    DROP PRIMARY KEY,
+    DROP COLUMN `resource`,
+    ADD PRIMARY KEY (`workspace`, `connector`, `user`);

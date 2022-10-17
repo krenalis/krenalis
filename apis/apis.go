@@ -287,8 +287,9 @@ func (apis *APIs) initSchema() {
 	}{})
 
 	apis.myDB.Scheme("DataSourcesUsers", "data_sources_users", struct {
-		account   int
+		workspace int
 		connector int
+		user      string
 		data      string
 	}{})
 
