@@ -17,6 +17,7 @@ CREATE TABLE `connectors` (
   `clientID` VARCHAR(500) NOT NULL DEFAULT '',
   `clientSecret` VARCHAR(500) NOT NULL DEFAULT '',
   `tokenEndpoint` VARCHAR(500) NOT NULL DEFAULT '',
+  `webhooksPer` ENUM('Connector', 'Resource', 'DataSource') NOT NULL DEFAULT 'Connector',
   PRIMARY KEY (`id`)
 );
 

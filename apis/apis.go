@@ -194,13 +194,14 @@ type Connector struct {
 	ClientID      string
 	ClientSecret  string
 	TokenEndpoint string
+	WebhooksPer   string
 }
 
 // Connector returns the connector with the given identifier.
 func (apis *APIs) Connector(id int) (*Connector, error) {
 	connector := Connector{ID: id}
-	err := apis.myDB.QueryRow("SELECT `name`, `oauthURL`, `logoURL`, `clientID`, `clientSecret`, `tokenEndpoint`\nFROM `connectors`\nWHERE `id` = ?", id).
-		Scan(&connector.Name, &connector.OauthURL, &connector.LogoURL, &connector.ClientID, &connector.ClientSecret, &connector.TokenEndpoint)
+	err := apis.myDB.QueryRow("SELECT `name`, `oauthURL`, `logoURL`, `clientID`, `clientSecret`, `tokenEndpoint`, `webhooksPer`\nFROM `connectors`\nWHERE `id` = ?", id).
+		Scan(&connector.Name, &connector.OauthURL, &connector.LogoURL, &connector.ClientID, &connector.ClientSecret, &connector.TokenEndpoint, &connector.WebhooksPer)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -274,6 +275,7 @@ func (apis *APIs) initSchema() {
 		clientID      string
 		clientSecret  string
 		tokenEndpoint string
+		webhooksPer   string
 	}{})
 
 	apis.myDB.Scheme("DataSources", "data_sources", struct {

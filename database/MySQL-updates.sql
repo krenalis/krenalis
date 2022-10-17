@@ -256,3 +256,6 @@ ALTER TABLE `data_sources_properties`
     ADD PRIMARY KEY (`workspace`, `connector`, `name`);
 
 UPDATE `data_sources_properties` SET `workspace` = 1;
+
+ALTER TABLE `connectors`
+    ADD COLUMN `webhooksPer` ENUM('Connector', 'Resource', 'DataSource') NOT NULL DEFAULT 'Connector' AFTER `tokenEndpoint`;
