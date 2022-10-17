@@ -77,7 +77,7 @@ func (fh *firehose) SetSettings(settings []byte) error {
 		return errors.New("settings is not valid UTF-8")
 	}
 	if utf8.RuneCount(settings) > maxSettingsLen {
-		return fmt.Errorf("settings is longer that %d runes", maxSettingsLen)
+		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 	}
 	_, err := fh.sources.myDB.Exec("UPDATE `data_sources`\nSET `settings` = ?\nWHERE `workspace` = ? AND `connector` = ?",
 		settings, fh.sources.workspace, fh.connector)
