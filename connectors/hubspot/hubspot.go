@@ -224,6 +224,11 @@ func (c *Connector) Resource(ctx context.Context) (string, error) {
 	return strconv.Itoa(res.PortalId), nil
 }
 
+// ServeUserInterface serves the connector's user interface.
+func (c *Connector) ServeUserInterface(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
 // SetUsers sets the users.
 // It requires the "crm.objects.contacts.write" scope.
 func (c *Connector) SetUsers(ctx context.Context, users []connectors.User) error {

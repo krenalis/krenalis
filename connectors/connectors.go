@@ -39,6 +39,16 @@ type Connecter interface {
 	// Resource returns the resource.
 	Resource(ctx context.Context) (string, error)
 
+	// ServeUserInterface serves the connector's user interface.
+	// To get the context, call the r.Context method.
+	//
+	// It is not necessary to drain and close the body of r because it is done
+	// automatically on return.
+	//
+	// If it returns an error, the w.WriteHeader is automatically called with
+	// http.StatusInternalServerError as argument.
+	ServeUserInterface(w http.ResponseWriter, r *http.Request) error
+
 	// SetUsers sets the given users.
 	SetUsers(ctx context.Context, users []User) error
 

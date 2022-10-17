@@ -258,6 +258,48 @@ func (this *DataSources) Properties(connector int) ([]*DataSourceProperty, error
 	return properties, nil
 }
 
+// ServeUserInterface serves the user interface for the data source with the
+// given connector.
+// Returns the ErrConnectorNotFound error if the connector does not exist or is
+// not installed.
+func (this *DataSources) ServeUserInterface(connector int, w http.ResponseWriter, r *http.Request) error {
+
+	// TODO(marco) The following code is duplicated in the Import method.
+	var name, clientSecret, accessToken, refreshToken, resource, cursor string
+	var settings []byte
+	var expiration time.Time
+	err := this.myDB.QueryRow(
+		"SELECT `c`.`name`, `c`.`clientSecret`, `r`.`accessToken`, `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `ds`.`resource`, `ds`.`userCursor`, `ds`.`settings`\n"+
+			"FROM `data_sources` AS `ds`\n"+
+			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
+			"INNER JOIN `resources` AS `r` ON `r`.`connector` = `ds`.`connector` AND `r`.`resource` = `ds`.`resource`\n"+
+			"WHERE `ds`.`workspace` = ? AND `ds`.`connector` = ?", this.workspace, connector).
+		Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &resource, &cursor, &settings)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrConnectorNotFound
+		}
+		return err
+	}
+
+	accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
+
+	if accessToken == "" || accessTokenExpired {
+		accessToken, err = this.refreshOAuthToken(connector)
+		if err != nil {
+			return err
+		}
+	}
+
+	conn := connectors.Connector(name, clientSecret)
+	ctx := this.newConnectorContext(r.Context(), connector, resource, accessToken, settings)
+	r.Clone(ctx)
+	r.Header.Del("Cookie") // remove the cookies from the request.
+	conn.ServeUserInterface(w, r)
+
+	return nil
+}
+
 // SetTransformationFunc sets the transformation function of the data source
 // with the given connector.
 // Returns the ErrConnectorNotFound error if the connector does not exist or is
