@@ -10,11 +10,14 @@ package apis
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"chichi/connectors"
 
@@ -25,6 +28,8 @@ import (
 // Make sure it implements the Firehose interface.
 var _ connectors.Firehose = &firehose{}
 
+const maxSettingsLen = 10_000 // Maximum length of settings in runes.
+
 // firehose is the Firehose API used by the connectors.
 type firehose struct {
 	sources   *DataSources
@@ -33,10 +38,6 @@ type firehose struct {
 	context   context.Context
 	cancel    context.CancelFunc
 	err       error
-}
-
-func (fh *firehose) ApplyConfig(conf map[string]any) {
-	return
 }
 
 func (fh *firehose) ReceiveEvent(event connectors.Event) {
@@ -68,6 +69,23 @@ func (fh *firehose) SetGroup(group string, updateTime time.Time, properties map[
 
 func (fh *firehose) SetGroupUsers(group string, users []string) {
 	return
+}
+
+// SetSettings sets the given settings of the data source.
+func (fh *firehose) SetSettings(settings []byte) error {
+	if !utf8.Valid(settings) {
+		return errors.New("settings is not valid UTF-8")
+	}
+	if utf8.RuneCount(settings) > maxSettingsLen {
+		return fmt.Errorf("settings is longer that %d runes", maxSettingsLen)
+	}
+	_, err := fh.sources.myDB.Exec("UPDATE `data_sources`\nSET `settings` = ?\nWHERE `workspace` = ? AND `connector` = ?",
+		settings, fh.sources.workspace, fh.connector)
+	if err != nil {
+		log.Printf("[error] %s", err)
+		return errors.New("cannot set settings")
+	}
+	return nil
 }
 
 func (fh *firehose) SetUser(user string, updateTime time.Time, properties map[string]any) {

@@ -286,6 +286,7 @@ func (apis *APIs) initSchema() {
 		accessTokenExpirationTimestamp string
 		transformation                 string
 		userCursor                     string
+		settings                       string
 	}{})
 
 	apis.myDB.Scheme("DataSourcesProperties", "data_sources_properties", struct {

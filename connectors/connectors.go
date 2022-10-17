@@ -20,13 +20,11 @@ import (
 var ErrWebhookUnauthorized = errors.New("webhook unauthorized")
 
 type AccessTokenContextKey struct{}
+type SettingsContextKey struct{}
 type FirehoseContextKey struct{}
 
 // Connecter is the interface implemented by the connectors.
 type Connecter interface {
-
-	// ApplyConfig applies the configuration config.
-	ApplyConfig(ctx context.Context, config map[string]any) error
 
 	// Groups returns the groups starting from the given cursor.
 	Groups(ctx context.Context, cursor string, properties []string) error
@@ -51,9 +49,6 @@ type Connecter interface {
 // Firehose is the interface implemented by a Firehose.
 type Firehose interface {
 
-	// ApplyConfig applies the given configuration to the data source.
-	ApplyConfig(config map[string]any)
-
 	// ReceiveEvent receives the given event for the data source.
 	// The event.Resource field must be empty.
 	ReceiveEvent(event Event)
@@ -69,6 +64,9 @@ type Firehose interface {
 
 	// SetGroupUsers sets the users of a group.
 	SetGroupUsers(group string, users []string)
+
+	// SetSettings sets the given settings of the data source.
+	SetSettings(settings []byte) error
 
 	// SetUser sets the properties of the given user. timestamp is the last
 	// update time of the properties. If a property value has the

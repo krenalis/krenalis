@@ -59,17 +59,12 @@ type Connector struct {
 	Firehose     connectors.Firehose
 	ClientSecret string
 	AccessToken  string
+	Settings     []byte
 	Context      context.Context
 }
 
 func init() {
 	connectors.RegisterConnector("HubSpot", (*Connector)(nil))
-}
-
-// ApplyConfig applies the configuration config.
-func (c *Connector) ApplyConfig(ctx context.Context, config map[string]any) error {
-	c.Firehose.ApplyConfig(config)
-	return nil
 }
 
 // ReceiveWebhook receives a webhook request and returns its events.
@@ -538,6 +533,7 @@ func (c *Connector) call(method, path string, body io.Reader, expectedStatus int
 func (c *Connector) setContext(ctx context.Context) {
 	c.Context = ctx
 	c.AccessToken, _ = ctx.Value(connectors.AccessTokenContextKey{}).(string)
+	c.Settings, _ = ctx.Value(connectors.SettingsContextKey{}).([]byte)
 	c.Firehose, _ = ctx.Value(connectors.FirehoseContextKey{}).(connectors.Firehose)
 }
 

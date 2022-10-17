@@ -102,14 +102,15 @@ func (this *DataSources) Import(connector int, reimport bool) error {
 	}
 
 	var name, clientSecret, accessToken, refreshToken, resource, cursor string
+	var settings []byte
 	var expiration time.Time
 	err := this.myDB.QueryRow(
-		"SELECT `c`.`name`, `c`.`clientSecret`, `r`.`accessToken`, `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `ds`.`resource`, `ds`.`userCursor`\n"+
+		"SELECT `c`.`name`, `c`.`clientSecret`, `r`.`accessToken`, `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `ds`.`resource`, `ds`.`userCursor`, `ds`.`settings`\n"+
 			"FROM `data_sources` AS `ds`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
 			"INNER JOIN `resources` AS `r` ON `r`.`connector` = `ds`.`connector` AND `r`.`resource` = `ds`.`resource`\n"+
 			"WHERE `ds`.`workspace` = ? AND `ds`.`connector` = ?", this.workspace, connector).
-		Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &resource, &cursor)
+		Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &resource, &cursor, &settings)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrConnectorNotFound
@@ -148,7 +149,7 @@ func (this *DataSources) Import(connector int, reimport bool) error {
 
 	go func() {
 		conn := connectors.Connector(name, clientSecret)
-		ctx := this.newConnectorContext(context.Background(), connector, resource, accessToken)
+		ctx := this.newConnectorContext(context.Background(), connector, resource, accessToken, settings)
 		err := conn.Users(ctx, cursor, properties)
 		if err != nil {
 			log.Printf("[error] call to the Users method of the connector %d failed: %s", connector, err)
@@ -322,10 +323,11 @@ func (this *DataSources) Uninstall(connector int) error {
 
 // newConnectorContext returns a context with a Firehose used to call a
 // connector method.
-func (this *DataSources) newConnectorContext(ctx context.Context, connector int, resource, accessToken string) context.Context {
+func (this *DataSources) newConnectorContext(ctx context.Context, connector int, resource, accessToken string, settings []byte) context.Context {
 	fh := &firehose{sources: this, connector: connector, resource: resource}
 	fh.context, fh.cancel = context.WithCancel(ctx)
 	fh.context = context.WithValue(fh.context, connectors.AccessTokenContextKey{}, accessToken)
+	fh.context = context.WithValue(fh.context, connectors.SettingsContextKey{}, settings)
 	fh.context = context.WithValue(fh.context, connectors.FirehoseContextKey{}, fh)
 	return fh.context
 }

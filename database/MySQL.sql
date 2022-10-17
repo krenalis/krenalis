@@ -29,6 +29,7 @@ CREATE TABLE `data_sources` (
   `resource` VARCHAR(100) NOT NULL DEFAULT '',
   `transformation` TEXT NOT NULL,
   `userCursor` VARCHAR(500) NOT NULL DEFAULT '',
+  `settings` VARCHAR(10000) NOT NULL DEFAULT '',
   PRIMARY KEY (`workspace`, `connector`)
 );
 
