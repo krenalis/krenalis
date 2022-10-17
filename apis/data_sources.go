@@ -91,18 +91,6 @@ func (this *DataSources) Add(connector int, refreshToken, accessToken string) er
 	return err
 }
 
-// Get returns the data source with the given connector.
-func (this *DataSources) Get(connector int) (string, string, *time.Time, error) {
-	var accessToken, refreshToken string
-	var expiration time.Time
-	err := this.myDB.QueryRow("SELECT `accessToken`, `refreshToken`, `accessTokenExpirationTimestamp`\nFROM `data_sources`\nWHERE `workspace` = ? AND `connector` = ?", this.workspace, connector).
-		Scan(&accessToken, &refreshToken, &expiration)
-	if err != nil {
-		return "", "", nil, err
-	}
-	return accessToken, refreshToken, &expiration, nil
-}
-
 // Import starts the import of the users from the data source with the given
 // connector. If reimport is false it imports the users from the current
 // cursor, otherwise imports all users.
