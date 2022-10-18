@@ -11,11 +11,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
+	"time"
 
 	"chichi/connectors"
 	"chichi/pkg/open2b/sql"
@@ -147,7 +151,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if err != nil {
-		if err == ErrConnectorNotFound {
+		if err == ErrDataSourceNotFound {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
@@ -256,6 +260,92 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	// TODO(marco) store the events
 	_ = events
 	return nil
+}
+
+// refreshOAuthToken refreshes the access token of the given connector and
+// resource.
+// Returns the ErrResourceNotFound error if the resource does not exist.
+func (apis *APIs) refreshOAuthToken(connector int, resource string) (string, error) {
+
+	var clientID, clientSecret, tokenEndpoint, refreshToken string
+	err := apis.myDB.QueryRow(
+		"SELECT `c`.`clientID`, `c`.`clientSecret`, `c`.`tokenEndpoint`, `r`.`refreshToken`\n"+
+			"FROM `resources` AS `r`\n"+
+			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `r`.`connector`\n"+
+			"WHERE `r`.`connector` = ? AND `r`.`resource` = ?", connector, resource).
+		Scan(&clientID, &clientSecret, &tokenEndpoint, &refreshToken)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", ErrResourceNotFound
+		}
+		return "", err
+	}
+
+	data := url.Values{}
+	data.Set("grant_type", "refresh_token")
+	data.Set("client_id", clientID)
+	data.Set("client_secret", clientSecret)
+	data.Set("redirect_uri", "https://localhost:9090/admin/oauth/authorize")
+	data.Set("refresh_token", refreshToken)
+
+	req, err := http.NewRequest("POST", tokenEndpoint, strings.NewReader(data.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	res, err := http.DefaultTransport.RoundTrip(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		_, _ = io.Copy(io.Discard, res.Body)
+		_ = res.Body.Close()
+	}()
+
+	if res.StatusCode != http.StatusOK {
+		if res.StatusCode == http.StatusBadRequest {
+			errData := struct {
+				status string
+			}{}
+			err = json.NewDecoder(res.Body).Decode(&errData)
+			if err != nil {
+				return "", err
+			}
+			// TODO(@Andrea): check the status returned by services different
+			// from Hubspot.
+			if errData.status == "BAD_REFRESH_TOKEN" {
+				return "", ErrCannotGetConnectorAccessToken
+			}
+		}
+		return "", fmt.Errorf("unexpected status %d returned by connector while trying to get a new access token via refresh token", res.StatusCode)
+	}
+
+	response := struct {
+		TokenType    string `json:"token_type"`
+		RefreshToken string `json:"refresh_token"`
+		AccessToken  string `json:"access_token"`
+		ExpiresIn    int    `json:"expires_in"`
+	}{}
+	dec := json.NewDecoder(res.Body)
+	err = dec.Decode(&response)
+	if err != nil {
+		return "", err
+	}
+
+	// Convert expires_in into a timestamp.
+	expiration := time.Now().UTC().Add(time.Duration(response.ExpiresIn) * time.Second) // TODO(marco): ExpiresIn should be relative to response time?
+
+	_, err = apis.myDB.Exec(
+		"UPDATE `resources`\n"+
+			"SET `accessToken` = ?, `refreshToken` = ?, `accessTokenExpirationTimestamp` = ?\n"+
+			"WHERE `connector` = ? AND `resource` = ?",
+		response.AccessToken, response.RefreshToken, expiration, connector, resource)
+	if err != nil {
+		return "", err
+	}
+
+	return response.AccessToken, nil
 }
 
 func (apis *APIs) initSchema() {

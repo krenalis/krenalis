@@ -90,7 +90,7 @@ export default class AccountConnectors extends Component {
 											onDeleteClick={() => {this.handleDelete(c.ID)}} />
 									}) 
 								:
-									<div className="empty">You don't have any connectors installed yet</div>
+									<div className="empty">You don't have any data source installed yet</div>
 							}
 						</div>
 					</div>

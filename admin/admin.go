@@ -84,7 +84,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strings.HasPrefix(rpath, "/oauth/authorize") {
-		admin.installConnector(w, r, accountID)
+		admin.addDataSource(w, r, accountID)
 		return
 	}
 
@@ -303,7 +303,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			err = ws.DataSources.Uninstall(ids[0])
+			err = ws.DataSources.Delete(ids[0])
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -558,7 +558,7 @@ func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
 
 // TODO(@Andrea): redirect to error screens with useful messages instead of
 // sending generic internal server errors.
-func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, accountID int) {
+func (admin *admin) addDataSource(w http.ResponseWriter, r *http.Request, accountID int) {
 
 	api := admin.apis.AsAccount(1) // TODO(marco): what is the account?
 	ws := api.AsWorkspace(1)       // TODO(marco): what is the workspace?
@@ -567,14 +567,14 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 	cookie, err := r.Cookie("install-connector")
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
-		log.Print("[error] cannot install connector: the request has not the cookie containing the connector ID")
+		log.Print("[error] cannot add data source: the request has not the cookie containing the connector ID")
 		return
 	}
 
 	connectorID, err := strconv.Atoi(cookie.Value)
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
-		log.Print("[error] cannot install connector: the connector ID contained in the cookie cannot be converted to int")
+		log.Print("[error] cannot add data source: the connector ID contained in the cookie cannot be converted to int")
 		return
 	}
 
@@ -582,7 +582,7 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 	oauthCode := r.URL.Query().Get("code")
 	if oauthCode == "" {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
-		log.Printf("[error] cannot install connector %d: the redirect URI does not contain the oauth code", accountID)
+		log.Printf("[error] cannot add data source %d: the redirect URI does not contain the oauth code", accountID)
 		return
 	}
 
@@ -590,7 +590,7 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 	connector, err := admin.apis.Connector(connectorID)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot install connector %d: %s", accountID, err)
+		log.Printf("[error] cannot add data source for connector %d: %s", connectorID, err)
 		return
 	}
 
@@ -605,7 +605,7 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot install connector %d: %s", connectorID, err)
+		log.Printf("[error] cannot add data source for connector %d: %s", connectorID, err)
 		return
 	}
 
@@ -613,14 +613,14 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 	resp, err := client.Do(req)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot install connector %d: %s", connectorID, err)
+		log.Printf("[error] cannot data source for connector %d: %s", connectorID, err)
 		return
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		err := fmt.Errorf("unexpected status %d returned by connector %d while trying to get an access token via oauth code", resp.StatusCode, connectorID)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot install connector %d: %s", connectorID, err)
+		log.Printf("[error] cannot add data source for connector %d: %s", connectorID, err)
 		return
 	}
 
@@ -632,15 +632,15 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 	err = dec.Decode(&respData)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot install connector %d: %s", connectorID, err)
+		log.Printf("[error] cannot add data source for connector %d: %s", connectorID, err)
 		return
 	}
 	resp.Body.Close()
 
-	err = ws.DataSources.Add(connectorID, respData.Refresh_token, respData.Access_token)
+	_, err = ws.DataSources.Add(connectorID, respData.Refresh_token, respData.Access_token)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot install connector %d: %s", connectorID, err)
+		log.Printf("[error] cannot add data source for connector %d: %s", connectorID, err)
 		return
 	}
 
@@ -658,17 +658,4 @@ func (admin *admin) installConnector(w http.ResponseWriter, r *http.Request, acc
 	http.Redirect(w, r, "/admin/connectors/confirmation/"+strconv.Itoa(connectorID), http.StatusTemporaryRedirect)
 
 	return
-}
-
-// connectorName returns the name of the connector with the given ID.
-// If the ID does not correspond to any connector, returns "" and nil.
-func (admin *admin) connectorName(id int) (string, error) {
-	connector, err := admin.apis.Connector(id)
-	if err != nil {
-		return "", err
-	}
-	if connector == nil {
-		return "", nil
-	}
-	return connector.Name, nil
 }

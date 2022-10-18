@@ -12,12 +12,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"net/url"
-	"strconv"
-	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -30,6 +26,8 @@ type DataSources struct {
 }
 
 var ErrConnectorNotFound = errors.New("connector does not exist")
+var ErrDataSourceNotFound = errors.New("data source does not exist")
+var ErrResourceNotFound = errors.New("resource does not exist")
 var ErrCannotGetConnectorAccessToken = fmt.Errorf("cannot get access token")
 
 // DataSource represents a data source.
@@ -58,22 +56,24 @@ type DataSourceProperty struct {
 }
 
 // Add adds a data source given its connector and the OAuth refresh and access
-// tokens of the resource. If the data source already exists for the given
-// connector and resource, it updates the data source.
-func (this *DataSources) Add(connector int, refreshToken, accessToken string) error {
+// tokens of the resource and returns its identifier.
+// If the data source already exists for the given connector and resource, it
+// updates the data source.
+func (this *DataSources) Add(connector int, refreshToken, accessToken string) (int, error) {
 	conn, err := this.api.apis.Connector(connector)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if conn == nil {
-		return ErrConnectorNotFound
+		return 0, ErrConnectorNotFound
 	}
 	c := connectors.Connector(conn.Name, conn.ClientSecret)
 	ctx := context.WithValue(context.Background(), connectors.AccessTokenContextKey{}, accessToken)
 	resource, err := c.Resource(ctx)
 	if err != nil {
-		return err
+		return 0, err
 	}
+	var id int64
 	err = this.myDB.Transaction(func(tx *sql.Tx) error {
 		_, err = this.myDB.Exec("INSERT INTO `resources`\n"+
 			"SET `connector` = ?, `resource` = ?, `refreshToken` = ?\n"+
@@ -82,38 +82,42 @@ func (this *DataSources) Add(connector int, refreshToken, accessToken string) er
 		if err != nil {
 			return err
 		}
-		_, err = this.myDB.Exec("INSERT IGNORE INTO `data_sources`\n"+
-			"SET `workspace` = ?, `connector` = ?, `resource` = ?\n"+
-			"ON DUPLICATE KEY UPDATE `resource` = ?",
-			this.workspace, connector, resource, resource)
+		result, err := this.myDB.Exec("INSERT INTO `data_sources`\n"+
+			"SET `workspace` = ?, `connector` = ?, `resource` = ?",
+			this.workspace, connector, resource)
+		if err != nil {
+			return err
+		}
+		id, err = result.LastInsertId()
 		return err
 	})
-	return err
+	return int(id), err
 }
 
 // Import starts the import of the users from the data source with the given
-// connector. If reimport is false it imports the users from the current
+// identifier. If reimport is false it imports the users from the current
 // cursor, otherwise imports all users.
-// Returns the ErrConnectorNotFound error if the connector does not exist.
-func (this *DataSources) Import(connector int, reimport bool) error {
+// Returns the ErrDataSourceNotFound error if the data source does not exist.
+func (this *DataSources) Import(id int, reimport bool) error {
 
-	if connector <= 0 {
-		return errors.New("invalid connector identifier")
+	if id <= 0 {
+		return errors.New("invalid data source identifier")
 	}
 
 	var name, clientSecret, accessToken, refreshToken, resource, cursor string
+	var connector int
 	var settings []byte
 	var expiration time.Time
 	err := this.myDB.QueryRow(
-		"SELECT `c`.`name`, `c`.`clientSecret`, `r`.`accessToken`, `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `ds`.`resource`, `ds`.`userCursor`, `ds`.`settings`\n"+
+		"SELECT `c`.`name`, `c`.`clientSecret`, `r`.`accessToken`, `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `ds`.`connector`, `ds`.`resource`, `ds`.`userCursor`, `ds`.`settings`\n"+
 			"FROM `data_sources` AS `ds`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
 			"INNER JOIN `resources` AS `r` ON `r`.`connector` = `ds`.`connector` AND `r`.`resource` = `ds`.`resource`\n"+
-			"WHERE `ds`.`workspace` = ? AND `ds`.`connector` = ?", this.workspace, connector).
-		Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &resource, &cursor, &settings)
+			"WHERE `ds`.`id` = ? AND `ds`.`workspace` = ?", id, this.workspace).
+		Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &connector, &resource, &cursor, &settings)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return ErrConnectorNotFound
+			return ErrDataSourceNotFound
 		}
 		return err
 	}
@@ -124,35 +128,34 @@ func (this *DataSources) Import(connector int, reimport bool) error {
 	accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
 
 	if accessToken == "" || accessTokenExpired {
-		accessToken, err = this.refreshOAuthToken(connector)
+		accessToken, err = this.api.apis.refreshOAuthToken(connector, resource)
 		if err != nil {
 			return err
 		}
 	}
 
 	var properties []string
-	err = this.myDB.QueryScan("SELECT `name`\nFROM `data_sources_properties`\nWHERE `workspace` = ? AND `connector` = ?",
-		this.workspace, connector, func(rows *sql.Rows) error {
-			var err error
-			for rows.Next() {
-				var name string
-				if err = rows.Scan(&name); err != nil {
-					return err
-				}
-				properties = append(properties, name)
+	err = this.myDB.QueryScan("SELECT `name`\nFROM `data_sources_properties`\nWHERE `source` = ?", id, func(rows *sql.Rows) error {
+		var err error
+		for rows.Next() {
+			var name string
+			if err = rows.Scan(&name); err != nil {
+				return err
 			}
-			return nil
-		})
+			properties = append(properties, name)
+		}
+		return nil
+	})
 	if err != nil {
 		return err
 	}
 
 	go func() {
 		conn := connectors.Connector(name, clientSecret)
-		ctx := this.newConnectorContext(context.Background(), connector, resource, accessToken, settings)
+		ctx := this.newConnectorContext(context.Background(), id, resource, accessToken, settings)
 		err := conn.Users(ctx, cursor, properties)
 		if err != nil {
-			log.Printf("[error] call to the Users method of the connector %d failed: %s", connector, err)
+			log.Printf("[error] call to the Users method of the data source %d failed: %s", id, err)
 		}
 	}()
 
@@ -161,33 +164,11 @@ func (this *DataSources) Import(connector int, reimport bool) error {
 
 // List returns all data sources.
 func (this *DataSources) List() ([]*DataSource, error) {
-	ids := make([]int, 0, 0)
-	err := this.myDB.QueryScan("SELECT `connector`\nFROM `data_sources`\nWHERE `workspace` = ?", this.workspace, func(rows *sql.Rows) error {
-		var err error
-		for rows.Next() {
-			var id int
-			if err = rows.Scan(&id); err != nil {
-				return err
-			}
-			ids = append(ids, id)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	sources := make([]*DataSource, 0, 0)
-	if len(ids) == 0 {
-		return sources, nil
-	}
-
-	stringifiedIDs := make([]string, 0, 0)
-	for _, id := range ids {
-		stringifiedIDs = append(stringifiedIDs, strconv.Itoa(id))
-	}
-
-	err = this.myDB.QueryScan(fmt.Sprintf("SELECT `id`, `name`, `oauthURL`, `logoURL`\nFROM `connectors` WHERE id IN (%s)", strings.Join(stringifiedIDs, ", ")), func(rows *sql.Rows) error {
+	sources := []*DataSource{}
+	err := this.myDB.QueryScan("SELECT `ds`.`id`, `c`.`name`, `c`.`oauthURL`, `c`.`logoURL`\n"+
+		"FROM `data_sources` as `ds`\n"+
+		"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
+		"WHERE `workspace` = ?", this.workspace, func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
 			var source DataSource
@@ -205,22 +186,23 @@ func (this *DataSources) List() ([]*DataSource, error) {
 }
 
 // Properties returns the properties of the data source with the given
-// connector.
-// Returns the ErrConnectorNotFound error if the connector does not exist.
-func (this *DataSources) Properties(connector int) ([]*DataSourceProperty, error) {
+// identifier.
+// Returns the ErrDataSourceNotFound error if the data source does not exist.
+func (this *DataSources) Properties(id int) ([]*DataSourceProperty, error) {
 
-	if connector <= 0 {
-		return nil, errors.New("invalid connector identifier")
+	if id <= 0 {
+		return nil, errors.New("invalid data source identifier")
 	}
 
 	var properties []*DataSourceProperty
 
 	stmt := "SELECT `name`, `type`, `label`, `options`\n" +
 		"FROM `data_sources_properties`\n" +
-		"WHERE `workspace` = ? AND `connector` = ?\n" +
+		"INNER JOIN `data_sources` ON `id` = `source`\n" +
+		"WHERE `source` = ? AND `workspace` = ?\n" +
 		"ORDER BY `position`"
 
-	err := this.myDB.QueryScan(stmt, this.workspace, connector, func(rows *sql.Rows) error {
+	err := this.myDB.QueryScan(stmt, id, this.workspace, func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
 			var property DataSourceProperty
@@ -232,7 +214,7 @@ func (this *DataSources) Properties(connector int) ([]*DataSourceProperty, error
 				property.Options = []DataSourcePropertyOption{}
 				err := json.Unmarshal(options, &property.Options)
 				if err != nil {
-					return fmt.Errorf("malformed options for connector %d", connector)
+					return fmt.Errorf("malformed options for data source %d", id)
 				}
 			}
 			properties = append(properties, &property)
@@ -245,10 +227,10 @@ func (this *DataSources) Properties(connector int) ([]*DataSourceProperty, error
 
 	if properties == nil {
 		var exists bool
-		err := this.myDB.QueryRow("SELECT TRUE FROM `data_sources`\nWHERE `workspace` = ? AND `connector` = ?", this.workspace, connector).Scan(&exists)
+		err := this.myDB.QueryRow("SELECT TRUE FROM `data_sources`\nWHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&exists)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				err = ErrConnectorNotFound
+				err = ErrDataSourceNotFound
 			}
 			return nil, err
 		}
@@ -259,25 +241,25 @@ func (this *DataSources) Properties(connector int) ([]*DataSourceProperty, error
 }
 
 // ServeUserInterface serves the user interface for the data source with the
-// given connector.
-// Returns the ErrConnectorNotFound error if the connector does not exist or is
-// not installed.
-func (this *DataSources) ServeUserInterface(connector int, w http.ResponseWriter, r *http.Request) error {
+// given identifier.
+// Returns the ErrDataSourceNotFound error if the data source does not exist.
+func (this *DataSources) ServeUserInterface(id int, w http.ResponseWriter, r *http.Request) error {
 
 	// TODO(marco) The following code is duplicated in the Import method.
 	var name, clientSecret, accessToken, refreshToken, resource, cursor string
+	var connector int
 	var settings []byte
 	var expiration time.Time
 	err := this.myDB.QueryRow(
-		"SELECT `c`.`name`, `c`.`clientSecret`, `r`.`accessToken`, `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `ds`.`resource`, `ds`.`userCursor`, `ds`.`settings`\n"+
+		"SELECT `c`.`name`, `c`.`clientSecret`, `r`.`accessToken`, `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `ds`.`connector`, `ds`.`resource`, `ds`.`userCursor`, `ds`.`settings`\n"+
 			"FROM `data_sources` AS `ds`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
 			"INNER JOIN `resources` AS `r` ON `r`.`connector` = `ds`.`connector` AND `r`.`resource` = `ds`.`resource`\n"+
-			"WHERE `ds`.`workspace` = ? AND `ds`.`connector` = ?", this.workspace, connector).
-		Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &resource, &cursor, &settings)
+			"WHERE `ds`.`id` = ? AND `ds`.`workspace` = ?", id, this.workspace).
+		Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &connector, &resource, &cursor, &settings)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return ErrConnectorNotFound
+			return ErrDataSourceNotFound
 		}
 		return err
 	}
@@ -285,28 +267,30 @@ func (this *DataSources) ServeUserInterface(connector int, w http.ResponseWriter
 	accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
 
 	if accessToken == "" || accessTokenExpired {
-		accessToken, err = this.refreshOAuthToken(connector)
+		accessToken, err = this.api.apis.refreshOAuthToken(connector, resource)
 		if err != nil {
 			return err
 		}
 	}
 
 	conn := connectors.Connector(name, clientSecret)
-	ctx := this.newConnectorContext(r.Context(), connector, resource, accessToken, settings)
+	ctx := this.newConnectorContext(r.Context(), id, resource, accessToken, settings)
 	r.Clone(ctx)
 	r.Header.Del("Cookie") // remove the cookies from the request.
-	conn.ServeUserInterface(w, r)
+	err = conn.ServeUserInterface(w, r)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
 // SetTransformationFunc sets the transformation function of the data source
-// with the given connector.
-// Returns the ErrConnectorNotFound error if the connector does not exist or is
-// not installed.
-func (this *DataSources) SetTransformationFunc(connector int, fn string) error {
-	if connector <= 0 {
-		return errors.New("invalid connector identifier")
+// with the given identifier.
+// Returns the ErrDataSourceNotFound error if the data source does not exist.
+func (this *DataSources) SetTransformationFunc(id int, fn string) error {
+	if id <= 0 {
+		return errors.New("invalid data source identifier")
 	}
 	if !utf8.ValidString(fn) {
 		return errors.New("invalid transformation function")
@@ -315,49 +299,62 @@ func (this *DataSources) SetTransformationFunc(connector int, fn string) error {
 	// the PR of @retini on OAuth.
 	affected, err := this.myDB.Table("DataSources").Update(
 		sql.Set{"transformation": fn},
-		sql.Where{"workspace": this.workspace, "connector": connector})
+		sql.Where{"id": id, "workspace": this.workspace})
 	if err != nil {
 		return err
 	}
 	if affected == 0 {
-		return ErrConnectorNotFound
+		return ErrDataSourceNotFound
 	}
 	return nil
 }
 
 // TransformationFunc returns the transformation function of the data source
-// with the given connector.
-// Returns the ErrConnectorNotFound error if the connector does not exist or is
-// not installed.
-func (this *DataSources) TransformationFunc(connector int) (string, error) {
-	if connector <= 0 {
-		return "", errors.New("invalid connector identifier")
+// with the given identifier.
+// Returns the ErrDataSourceNotFound error if the data source does not exist.
+func (this *DataSources) TransformationFunc(id int) (string, error) {
+	if id <= 0 {
+		return "", errors.New("invalid data source identifier")
 	}
 	// TODO(Gianluca): revise table name and column names after the merging of
 	// the PR of @retini on OAuth.
-	row, err := this.myDB.Table("DataSources").Get(sql.Where{"workspace": this.workspace, "connector": connector}, []any{"transformation"})
+	row, err := this.myDB.Table("DataSources").Get(sql.Where{"id": id, "workspace": this.workspace}, []any{"transformation"})
 	if err != nil {
 		return "", err
 	}
 	if row == nil {
-		return "", ErrConnectorNotFound
+		return "", ErrDataSourceNotFound
 	}
 	return row["transformation"].(string), nil
 }
 
-// Uninstall uninstalls the data source with the given connector.
-// If the connector does not exist, it does nothing.
-func (this *DataSources) Uninstall(connector int) error {
-	if connector <= 0 {
-		return errors.New("invalid connector identifier")
+// Delete deletes the data source with the given identifier.
+// If the data source does not exist, it does nothing.
+func (this *DataSources) Delete(id int) error {
+	if id <= 0 {
+		return errors.New("invalid data source identifier")
 	}
-	where := sql.Where{"workspace": this.workspace, "connector": connector}
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		_, err := this.myDB.Table("DataSources").Delete(where)
-		if err == nil {
-			_, err = this.myDB.Table("DataSourcesProperties").Delete(where)
-			_, err = this.myDB.Table("DataSourcesUsers").Delete(where)
+		source, err := this.myDB.Table("DataSources").Get(
+			sql.Where{"id": id, "workspace": this.workspace},
+			sql.Columns{"connector", "resource"})
+		if err != nil {
+			return err
 		}
+		if source == nil {
+			return nil
+		}
+		_, err = tx.Table("DataSources").Delete(sql.Where{"id": id})
+		if err != nil {
+			return err
+		}
+		_, err = tx.Table("DataSourcesProperties").Delete(sql.Where{"source": id})
+		_, err = tx.Table("DataSourcesUsers").Delete(sql.Where{"source": id})
+		// Delete the resource of the deleted data source if it has no other data sources.
+		_, err = tx.Exec("DELETE `r`\n"+
+			"FROM `resources` AS `r`\n"+
+			"LEFT JOIN `data_sources` AS `s` ON `s`.`resource` = `r`.`resource`\n"+
+			"WHERE `r`.`connector` = ? AND `r`.`resource` = ? AND `s`.`id` IS NULL", source["connector"], source["resource"])
 		return err
 	})
 	return err
@@ -365,98 +362,11 @@ func (this *DataSources) Uninstall(connector int) error {
 
 // newConnectorContext returns a context with a Firehose used to call a
 // connector method.
-func (this *DataSources) newConnectorContext(ctx context.Context, connector int, resource, accessToken string, settings []byte) context.Context {
-	fh := &firehose{sources: this, connector: connector, resource: resource}
+func (this *DataSources) newConnectorContext(ctx context.Context, source int, resource, accessToken string, settings []byte) context.Context {
+	fh := &firehose{sources: this, source: source, resource: resource}
 	fh.context, fh.cancel = context.WithCancel(ctx)
 	fh.context = context.WithValue(fh.context, connectors.AccessTokenContextKey{}, accessToken)
 	fh.context = context.WithValue(fh.context, connectors.SettingsContextKey{}, settings)
 	fh.context = context.WithValue(fh.context, connectors.FirehoseContextKey{}, fh)
 	return fh.context
-}
-
-// refreshOAuthToken refreshes the OAuth token of the data source with the
-// given connector and returns it.
-// Returns the ErrConnectorNotFound error if the connector does not exist.
-func (this *DataSources) refreshOAuthToken(connector int) (string, error) {
-
-	var clientID, clientSecret, tokenEndpoint, resource, refreshToken string
-	err := this.myDB.QueryRow(
-		"SELECT `c`.`clientID`, `c`.`clientSecret`, `c`.`tokenEndpoint`, `r`.`resource`, `r`.`refreshToken`\n"+
-			"FROM `data_sources` AS `ds`\n"+
-			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
-			"INNER JOIN `resources` AS `r` ON `r`.`connector` = `ds`.`connector` AND `r`.`resource` = `ds`.`resource`\n"+
-			"WHERE `ds`.`workspace` = ? AND `ds`.`connector` = ?", this.workspace, connector).
-		Scan(&clientID, &clientSecret, &tokenEndpoint, &resource, &refreshToken)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return "", ErrConnectorNotFound
-		}
-		return "", err
-	}
-
-	data := url.Values{}
-	data.Set("grant_type", "refresh_token")
-	data.Set("client_id", clientID)
-	data.Set("client_secret", clientSecret)
-	data.Set("redirect_uri", "https://localhost:9090/admin/oauth/authorize")
-	data.Set("refresh_token", refreshToken)
-
-	req, err := http.NewRequest("POST", tokenEndpoint, strings.NewReader(data.Encode()))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	res, err := http.DefaultTransport.RoundTrip(req)
-	if err != nil {
-		return "", err
-	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, res.Body)
-		_ = res.Body.Close()
-	}()
-
-	if res.StatusCode != http.StatusOK {
-		if res.StatusCode == http.StatusBadRequest {
-			errData := struct {
-				status string
-			}{}
-			err = json.NewDecoder(res.Body).Decode(&errData)
-			if err != nil {
-				return "", err
-			}
-			// TODO(@Andrea): check the status returned by services different
-			// from Hubspot.
-			if errData.status == "BAD_REFRESH_TOKEN" {
-				return "", ErrCannotGetConnectorAccessToken
-			}
-		}
-		return "", fmt.Errorf("unexpected status %d returned by connector while trying to get a new access token via refresh token", res.StatusCode)
-	}
-
-	response := struct {
-		TokenType    string `json:"token_type"`
-		RefreshToken string `json:"refresh_token"`
-		AccessToken  string `json:"access_token"`
-		ExpiresIn    int    `json:"expires_in"`
-	}{}
-	dec := json.NewDecoder(res.Body)
-	err = dec.Decode(&response)
-	if err != nil {
-		return "", err
-	}
-
-	// Convert expires_in into a timestamp.
-	expiration := time.Now().UTC().Add(time.Duration(response.ExpiresIn) * time.Second) // TODO(marco): ExpiresIn should be relative to response time?
-
-	_, err = this.myDB.Exec(
-		"UPDATE `resources`\n"+
-			"SET `accessToken` = ?, `refreshToken` = ?, `accessTokenExpirationTimestamp` = ?\n"+
-			"WHERE `connector` = ? AND `resource` = ?",
-		response.AccessToken, response.RefreshToken, expiration, connector, resource)
-	if err != nil {
-		return "", err
-	}
-
-	return response.AccessToken, nil
 }

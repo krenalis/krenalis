@@ -32,12 +32,12 @@ const maxSettingsLen = 10_000 // Maximum length of settings in runes.
 
 // firehose is the Firehose API used by the connectors.
 type firehose struct {
-	sources   *DataSources
-	connector int
-	resource  string
-	context   context.Context
-	cancel    context.CancelFunc
-	err       error
+	sources  *DataSources
+	source   int
+	resource string
+	context  context.Context
+	cancel   context.CancelFunc
+	err      error
 }
 
 func (fh *firehose) ReceiveEvent(event connectors.Event) {
@@ -46,8 +46,7 @@ func (fh *firehose) ReceiveEvent(event connectors.Event) {
 
 // SetCursor sets the user cursor.
 func (fh *firehose) SetCursor(cursor string) {
-	result, err := fh.sources.myDB.Exec("UPDATE `data_sources`\nSET `userCursor` = ?\nWHERE `workspace` = ? AND `connector` = ?",
-		cursor, fh.sources.workspace, fh.connector)
+	result, err := fh.sources.myDB.Exec("UPDATE `data_sources`\nSET `userCursor` = ?\nWHERE `id` = ?", cursor, fh.source)
 	if err != nil {
 		fh.setError(err)
 		return
@@ -79,8 +78,7 @@ func (fh *firehose) SetSettings(settings []byte) error {
 	if utf8.RuneCount(settings) > maxSettingsLen {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 	}
-	_, err := fh.sources.myDB.Exec("UPDATE `data_sources`\nSET `settings` = ?\nWHERE `workspace` = ? AND `connector` = ?",
-		settings, fh.sources.workspace, fh.connector)
+	_, err := fh.sources.myDB.Exec("UPDATE `data_sources`\nSET `settings` = ?\nWHERE `id` = ?", settings, fh.source)
 	if err != nil {
 		log.Printf("[error] %s", err)
 		return errors.New("cannot set settings")
@@ -95,9 +93,9 @@ func (fh *firehose) SetUser(user string, updateTime time.Time, properties map[st
 		return
 	}
 	_, err = fh.sources.myDB.Exec("INSERT INTO `data_sources_users`\n"+
-		"SET `workspace` = ?, `connector` = ?, `user` = ?, `data` = ?\n"+
+		"SET `source` = ?, `user` = ?, `data` = ?\n"+
 		"ON DUPLICATE KEY UPDATE `data` = ?",
-		fh.sources.workspace, fh.connector, user, data, data)
+		fh.source, user, data, data)
 	if err != nil {
 		fh.setError(err)
 		return
@@ -156,7 +154,7 @@ func (fh *firehose) setError(err error) {
 // transformProperties transforms the incoming properties using the
 // transformation function specified for the current connector.
 func (fh *firehose) transformProperties(incoming map[string]any) (map[string]any, error) {
-	transformationSource, err := fh.sources.TransformationFunc(fh.connector)
+	transformationSource, err := fh.sources.TransformationFunc(fh.source)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve transformation from DB: %s", err)
 	}

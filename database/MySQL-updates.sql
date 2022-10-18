@@ -262,3 +262,22 @@ ALTER TABLE `connectors`
 
 ALTER TABLE `data_sources`
     ADD COLUMN `settings` VARCHAR(10000) NOT NULL DEFAULT '' AFTER `userCursor`;
+
+ALTER TABLE `data_sources`
+    ADD COLUMN `id` INT NOT NULL AUTO_INCREMENT FIRST,
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `data_sources_properties`
+    DROP PRIMARY KEY,
+    DROP COLUMN `connector`,
+    DROP COLUMN `workspace`,
+    ADD COLUMN `source` INT NOT NULL,
+    ADD PRIMARY KEY (`source` , `name`);
+
+ALTER TABLE `data_sources_users`
+    DROP PRIMARY KEY,
+    DROP COLUMN `connector`,
+    DROP COLUMN `workspace`,
+    ADD COLUMN `source` INT NOT NULL,
+    ADD PRIMARY KEY (`source` , `user`);
