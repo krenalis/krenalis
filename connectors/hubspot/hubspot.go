@@ -262,9 +262,7 @@ func (c *Connector) Resource(ctx context.Context) (string, error) {
 }
 
 // ServeUserInterface serves the connector's user interface.
-func (c *Connector) ServeUserInterface(w http.ResponseWriter, r *http.Request) error {
-	return nil
-}
+func (c *Connector) ServeUserInterface(w http.ResponseWriter, r *http.Request) {}
 
 // SetUsers sets the users.
 // It requires the "crm.objects.contacts.write" scope.
