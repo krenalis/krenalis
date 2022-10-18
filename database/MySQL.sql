@@ -80,7 +80,7 @@ CREATE TABLE `resources` (
   `accessToken` VARCHAR(500) NOT NULL DEFAULT '',
   `refreshToken` VARCHAR(500) NOT NULL DEFAULT '',
   `accessTokenExpirationTimestamp` TIMESTAMP NOT NULL,
-  PRIMARY KEY (`connector`, `resource`),
+  PRIMARY KEY (`connector`, `resource`)
 );
 
 CREATE TABLE `smart_events` (
