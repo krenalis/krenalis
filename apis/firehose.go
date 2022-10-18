@@ -14,7 +14,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -32,12 +34,14 @@ const maxSettingsLen = 10_000 // Maximum length of settings in runes.
 
 // firehose is the Firehose API used by the connectors.
 type firehose struct {
-	sources  *DataSources
-	source   int
-	resource string
-	context  context.Context
-	cancel   context.CancelFunc
-	err      error
+	sources     *DataSources
+	source      int
+	resource    string
+	connector   int
+	context     context.Context
+	cancel      context.CancelFunc
+	webhooksPer string
+	err         error
 }
 
 func (fh *firehose) ReceiveEvent(event connectors.Event) {
@@ -142,6 +146,20 @@ func (fh *firehose) SetUser(user string, updateTime time.Time, properties map[st
 
 func (fh *firehose) SetUserGroups(user string, groups []string) {
 	return
+}
+
+// WebhookURL returns the URL of the webhook.
+func (fh *firehose) WebhookURL() string {
+	u := "https://localhost:9090/webhook/" + strconv.Itoa(fh.connector) + "/"
+	switch fh.webhooksPer {
+	case "Connector":
+		return u
+	case "resource":
+		return u + url.PathEscape(fh.resource) + "/"
+	case "DataSource":
+		return u + strconv.Itoa(fh.source) + "/"
+	}
+	panic("unexpected webhookPer value")
 }
 
 // setError sets fh.err and cancels the context.

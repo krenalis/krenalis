@@ -104,17 +104,18 @@ func (this *DataSources) Import(id int, reimport bool) error {
 		return errors.New("invalid data source identifier")
 	}
 
-	var name, clientSecret, accessToken, refreshToken, resource, cursor string
+	var name, clientSecret, webhooksPer, accessToken, refreshToken, resource, cursor string
 	var connector int
 	var settings []byte
 	var expiration time.Time
 	err := this.myDB.QueryRow(
-		"SELECT `c`.`name`, `c`.`clientSecret`, `r`.`accessToken`, `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `ds`.`connector`, `ds`.`resource`, `ds`.`userCursor`, `ds`.`settings`\n"+
+		"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`accessToken`, `r`.`refreshToken`,"+
+			" `r`.`accessTokenExpirationTimestamp`, `ds`.`connector`, `ds`.`resource`, `ds`.`userCursor`, `ds`.`settings`\n"+
 			"FROM `data_sources` AS `ds`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
 			"INNER JOIN `resources` AS `r` ON `r`.`connector` = `ds`.`connector` AND `r`.`resource` = `ds`.`resource`\n"+
 			"WHERE `ds`.`id` = ? AND `ds`.`workspace` = ?", id, this.workspace).
-		Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &connector, &resource, &cursor, &settings)
+		Scan(&name, &clientSecret, &webhooksPer, &accessToken, &refreshToken, &expiration, &connector, &resource, &cursor, &settings)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrDataSourceNotFound
@@ -152,7 +153,7 @@ func (this *DataSources) Import(id int, reimport bool) error {
 
 	go func() {
 		conn := connectors.Connector(name, clientSecret)
-		ctx := this.newConnectorContext(context.Background(), id, resource, accessToken, settings)
+		ctx := this.newConnectorContext(context.Background(), id, connector, resource, accessToken, webhooksPer, settings)
 		err := conn.Users(ctx, cursor, properties)
 		if err != nil {
 			log.Printf("[error] call to the Users method of the data source %d failed: %s", id, err)
@@ -246,17 +247,18 @@ func (this *DataSources) Properties(id int) ([]*DataSourceProperty, error) {
 func (this *DataSources) ServeUserInterface(id int, w http.ResponseWriter, r *http.Request) error {
 
 	// TODO(marco) The following code is duplicated in the Import method.
-	var name, clientSecret, accessToken, refreshToken, resource, cursor string
+	var name, clientSecret, webhooksPer, accessToken, refreshToken, resource, cursor string
 	var connector int
 	var settings []byte
 	var expiration time.Time
 	err := this.myDB.QueryRow(
-		"SELECT `c`.`name`, `c`.`clientSecret`, `r`.`accessToken`, `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `ds`.`connector`, `ds`.`resource`, `ds`.`userCursor`, `ds`.`settings`\n"+
+		"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`accessToken`, `r`.`refreshToken`,"+
+			" `r`.`accessTokenExpirationTimestamp`, `ds`.`connector`, `ds`.`resource`, `ds`.`userCursor`, `ds`.`settings`\n"+
 			"FROM `data_sources` AS `ds`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
 			"INNER JOIN `resources` AS `r` ON `r`.`connector` = `ds`.`connector` AND `r`.`resource` = `ds`.`resource`\n"+
 			"WHERE `ds`.`id` = ? AND `ds`.`workspace` = ?", id, this.workspace).
-		Scan(&name, &clientSecret, &accessToken, &refreshToken, &expiration, &connector, &resource, &cursor, &settings)
+		Scan(&name, &clientSecret, &webhooksPer, &accessToken, &refreshToken, &expiration, &connector, &resource, &cursor, &settings)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrDataSourceNotFound
@@ -274,7 +276,7 @@ func (this *DataSources) ServeUserInterface(id int, w http.ResponseWriter, r *ht
 	}
 
 	conn := connectors.Connector(name, clientSecret)
-	ctx := this.newConnectorContext(r.Context(), id, resource, accessToken, settings)
+	ctx := this.newConnectorContext(r.Context(), id, connector, resource, accessToken, webhooksPer, settings)
 	r.Clone(ctx)
 	r.Header.Del("Cookie") // remove the cookies from the request.
 	conn.ServeUserInterface(w, r)
@@ -359,9 +361,10 @@ func (this *DataSources) Delete(id int) error {
 
 // newConnectorContext returns a context with a Firehose used to call a
 // connector method.
-func (this *DataSources) newConnectorContext(ctx context.Context, source int, resource, accessToken string, settings []byte) context.Context {
-	fh := &firehose{sources: this, source: source, resource: resource}
+func (this *DataSources) newConnectorContext(ctx context.Context, source, connector int, resource, accessToken, webhooksPer string, settings []byte) context.Context {
+	fh := &firehose{sources: this, source: source, resource: resource, connector: connector, webhooksPer: webhooksPer}
 	fh.context, fh.cancel = context.WithCancel(ctx)
+	fh.context = context.WithValue(fh.context, connectors.ResourceContextKey{}, resource)
 	fh.context = context.WithValue(fh.context, connectors.AccessTokenContextKey{}, accessToken)
 	fh.context = context.WithValue(fh.context, connectors.SettingsContextKey{}, settings)
 	fh.context = context.WithValue(fh.context, connectors.FirehoseContextKey{}, fh)

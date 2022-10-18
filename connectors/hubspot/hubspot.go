@@ -56,11 +56,12 @@ func (err *hubspotError) Error() string {
 }
 
 type Connector struct {
-	Firehose     connectors.Firehose
 	ClientSecret string
-	AccessToken  string
-	Settings     []byte
-	Context      context.Context
+	firehose     connectors.Firehose
+	resource     string
+	accessToken  string
+	settings     []byte
+	context      context.Context
 }
 
 func init() {
@@ -90,15 +91,15 @@ func (c *Connector) Groups(ctx context.Context, cursor string, properties []stri
 			break
 		}
 		for _, obj := range objects {
-			c.Firehose.SetGroup(obj.ID, time.UnixMilli(obj.LastModifiedDate).UTC(), obj.Properties)
+			c.firehose.SetGroup(obj.ID, time.UnixMilli(obj.LastModifiedDate).UTC(), obj.Properties)
 			contacts, err := c.companyContacts(obj.ID)
 			if err != nil {
 				return err
 			}
-			c.Firehose.SetGroupUsers(obj.ID, contacts)
+			c.firehose.SetGroupUsers(obj.ID, contacts)
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
-		c.Firehose.SetCursor(strconv.FormatInt(fromDate, 10))
+		c.firehose.SetCursor(strconv.FormatInt(fromDate, 10))
 	}
 
 	return nil
@@ -316,10 +317,10 @@ func (c *Connector) Users(ctx context.Context, cursor string, properties []strin
 			break
 		}
 		for _, obj := range objects {
-			c.Firehose.SetUser(obj.ID, time.UnixMilli(obj.LastModifiedDate).UTC(), obj.Properties)
+			c.firehose.SetUser(obj.ID, time.UnixMilli(obj.LastModifiedDate).UTC(), obj.Properties)
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
-		c.Firehose.SetCursor(serializeCursor(fromDate))
+		c.firehose.SetCursor(serializeCursor(fromDate))
 	}
 
 	return nil
@@ -484,12 +485,12 @@ func (it *iter) next() ([]object, error) {
 
 func (c *Connector) call(method, path string, body io.Reader, expectedStatus int, response any) error {
 
-	req, err := http.NewRequestWithContext(c.Context, method, "https://api.hubapi.com/"+path[1:], body)
+	req, err := http.NewRequestWithContext(c.context, method, "https://api.hubapi.com/"+path[1:], body)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Authorization", "Bearer "+c.accessToken)
 	req.Header.Set("Content-Type", "application/json")
 
 	var dump *bufio.Writer
@@ -534,10 +535,11 @@ func (c *Connector) call(method, path string, body io.Reader, expectedStatus int
 
 // setContext sets ctx as the context for c.
 func (c *Connector) setContext(ctx context.Context) {
-	c.Context = ctx
-	c.AccessToken, _ = ctx.Value(connectors.AccessTokenContextKey{}).(string)
-	c.Settings, _ = ctx.Value(connectors.SettingsContextKey{}).([]byte)
-	c.Firehose, _ = ctx.Value(connectors.FirehoseContextKey{}).(connectors.Firehose)
+	c.context = ctx
+	c.resource, _ = ctx.Value(connectors.ResourceContextKey{}).(string)
+	c.accessToken, _ = ctx.Value(connectors.AccessTokenContextKey{}).(string)
+	c.settings, _ = ctx.Value(connectors.SettingsContextKey{}).([]byte)
+	c.firehose, _ = ctx.Value(connectors.FirehoseContextKey{}).(connectors.Firehose)
 }
 
 // isValidWebhook reports whether the webhook is valid.

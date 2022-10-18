@@ -20,8 +20,9 @@ import (
 var ErrWebhookUnauthorized = errors.New("webhook unauthorized")
 
 type AccessTokenContextKey struct{}
-type SettingsContextKey struct{}
 type FirehoseContextKey struct{}
+type ResourceContextKey struct{}
+type SettingsContextKey struct{}
 
 // Connecter is the interface implemented by the connectors.
 type Connecter interface {
@@ -80,6 +81,9 @@ type Firehose interface {
 
 	// SetUserGroups sets the groups of a user.
 	SetUserGroups(user string, groups []string)
+
+	// WebhookURL returns the URL of the webhook.
+	WebhookURL() string
 }
 
 type Event interface {
