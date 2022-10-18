@@ -277,10 +277,7 @@ func (this *DataSources) ServeUserInterface(id int, w http.ResponseWriter, r *ht
 	ctx := this.newConnectorContext(r.Context(), id, resource, accessToken, settings)
 	r.Clone(ctx)
 	r.Header.Del("Cookie") // remove the cookies from the request.
-	err = conn.ServeUserInterface(w, r)
-	if err != nil {
-		return err
-	}
+	conn.ServeUserInterface(w, r)
 
 	return nil
 }
