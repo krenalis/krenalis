@@ -8,7 +8,7 @@
 package cmd
 
 import (
-	"fmt"
+	"chichi-cli/chichiapis"
 
 	"github.com/spf13/cobra"
 )
@@ -16,7 +16,7 @@ import (
 var usersCmd = &cobra.Command{
 	Use: "users",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("users called")
+		chichiapis.ListUsers()
 	},
 }
 
