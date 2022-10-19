@@ -8,9 +8,7 @@
 package apis
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -21,13 +19,10 @@ import (
 	"strings"
 	"time"
 
-	"chichi/connectors"
 	"chichi/pkg/open2b/sql"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
-
-var webhookPathReg = regexp.MustCompile(`^/webhook/(\d+)/`)
 
 type APIs struct {
 	myDB     *sql.DB
@@ -162,33 +157,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-// Errors returned to and handled by the ServeWebhook method.
-var errBadRequest = errors.New("bad request")
-var errNotFound = errors.New("not found")
-
-// ServeWebhook serves a webhook request. The request path starts with
-// "/webhook/{connector}/" where {connector} is a connector identifier.
-func (apis *APIs) ServeWebhook(w http.ResponseWriter, r *http.Request) {
-	err := apis.receiveWebhook(r)
-	if err != nil {
-		switch err {
-		case errBadRequest:
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return
-		case errNotFound:
-			http.Error(w, "Not Found", http.StatusNotFound)
-			return
-		case connectors.ErrWebhookUnauthorized:
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		log.Printf("cannot serve webhook: %s", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	return
-}
-
 // Connector represents a connector.
 type Connector struct {
 	ID            int
@@ -233,33 +201,6 @@ func (apis *APIs) Connectors() ([]*Connector, error) {
 		return nil, err
 	}
 	return connectors, nil
-}
-
-// receiveWebhook receives a webhook.
-func (apis *APIs) receiveWebhook(r *http.Request) error {
-	m := webhookPathReg.FindStringSubmatch(r.URL.Path)
-	if m == nil {
-		return errBadRequest
-	}
-	connID, _ := strconv.Atoi(m[1])
-	if connID <= 0 {
-		return errBadRequest
-	}
-	conn, err := apis.Connector(connID)
-	if err != nil {
-		return err
-	}
-	if conn == nil {
-		return errNotFound
-	}
-	connector := connectors.Connector(conn.Name, conn.ClientSecret)
-	events, err := connector.ReceiveWebhook(context.Background(), r)
-	if err != nil {
-		return err
-	}
-	// TODO(marco) store the events
-	_ = events
-	return nil
 }
 
 // refreshOAuthToken refreshes the access token of the given connector and
