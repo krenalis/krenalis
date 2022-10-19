@@ -294,8 +294,6 @@ func (this *DataSources) SetTransformationFunc(id int, fn string) error {
 	if !utf8.ValidString(fn) {
 		return errors.New("invalid transformation function")
 	}
-	// TODO(Gianluca): revise table name and column names after the merging of
-	// the PR of @retini on OAuth.
 	affected, err := this.myDB.Table("DataSources").Update(
 		sql.Set{"transformation": fn},
 		sql.Where{"id": id, "workspace": this.workspace})
@@ -315,8 +313,6 @@ func (this *DataSources) TransformationFunc(id int) (string, error) {
 	if id <= 0 {
 		return "", errors.New("invalid data source identifier")
 	}
-	// TODO(Gianluca): revise table name and column names after the merging of
-	// the PR of @retini on OAuth.
 	row, err := this.myDB.Table("DataSources").Get(sql.Where{"id": id, "workspace": this.workspace}, []any{"transformation"})
 	if err != nil {
 		return "", err
