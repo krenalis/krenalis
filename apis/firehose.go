@@ -155,7 +155,7 @@ func (fh *firehose) WebhookURL() string {
 	case "Connector":
 		return u + "c/" + strconv.Itoa(fh.connector) + "/"
 	case "Resource":
-		return u + "r/" + url.PathEscape(fh.resource) + "/"
+		return u + "r/" + strconv.Itoa(fh.connector) + "-" + url.PathEscape(fh.resource) + "/"
 	case "DataSource":
 		return u + "s/" + strconv.Itoa(fh.source) + "/"
 	}
