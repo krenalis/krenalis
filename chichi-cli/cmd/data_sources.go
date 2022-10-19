@@ -14,7 +14,8 @@ import (
 )
 
 var dataSourcesCmd = &cobra.Command{
-	Use: "data-sources",
+	Use:   "data-sources",
+	Short: "Interact with data sources",
 	Run: func(cmd *cobra.Command, args []string) {
 		chichiapis.ListDataSources()
 	},

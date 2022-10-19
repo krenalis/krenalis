@@ -14,7 +14,8 @@ import (
 )
 
 var usersCmd = &cobra.Command{
-	Use: "users",
+	Use:   "users",
+	Short: "List the users' Golden Records",
 	Run: func(cmd *cobra.Command, args []string) {
 		chichiapis.ListUsers()
 	},

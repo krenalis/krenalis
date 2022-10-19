@@ -12,7 +12,8 @@ import (
 )
 
 var transformationsCmd = &cobra.Command{
-	Use: "transformations",
+	Use:   "transformations",
+	Short: "Interact with transformation functions",
 }
 
 func init() {
