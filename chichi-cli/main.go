@@ -20,6 +20,7 @@ import (
 func main() {
 
 	viper.AddConfigPath(".")
+	viper.AddConfigPath("$HOME/.config/chichi-cli")
 	viper.SetConfigName("chichi-cli")
 
 	err := viper.ReadInConfig()

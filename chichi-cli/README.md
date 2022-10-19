@@ -2,6 +2,7 @@
 
 - [Configuration](#configuration)
 - [How to compile](#how-to-compile)
+- [Alternative: install `chichi-cli` (tested on Linux only)](#alternative-install-chichi-cli-tested-on-linux-only)
 - [Usage](#usage)
   - [Implemented subcommands](#implemented-subcommands)
 
@@ -25,6 +26,15 @@ From your terminal:
 cd chichi-cli
 go build
 ```
+
+## Alternative: install `chichi-cli` (tested on Linux only)
+
+You can install `chichi-cli` and invoke it from the command line.
+To do so:
+
+1. Add the configuration above to the directory `$HOME/.config/chichi-cli`, in a file called `chichi-cli.yaml`
+2. Enter the directory `chichi-cli` of this repository
+3. Run `go install`
 
 ## Usage
 
