@@ -10,4 +10,7 @@
 
 package admin
 
-import _ "chichi/connectors/hubspot"
+import (
+	_ "chichi/connectors/dummy"
+	_ "chichi/connectors/hubspot"
+)
