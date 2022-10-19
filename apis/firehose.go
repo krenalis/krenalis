@@ -150,14 +150,14 @@ func (fh *firehose) SetUserGroups(user string, groups []string) {
 
 // WebhookURL returns the URL of the webhook.
 func (fh *firehose) WebhookURL() string {
-	u := "https://localhost:9090/webhook/" + strconv.Itoa(fh.connector) + "/"
+	u := "https://localhost:9090/webhook/"
 	switch fh.webhooksPer {
 	case "Connector":
-		return u
-	case "resource":
-		return u + url.PathEscape(fh.resource) + "/"
+		return u + "c/" + strconv.Itoa(fh.connector) + "/"
+	case "Resource":
+		return u + "r/" + url.PathEscape(fh.resource) + "/"
 	case "DataSource":
-		return u + strconv.Itoa(fh.source) + "/"
+		return u + "s/" + strconv.Itoa(fh.source) + "/"
 	}
 	panic("unexpected webhookPer value")
 }
