@@ -44,6 +44,13 @@ CREATE TABLE `data_sources_properties` (
   PRIMARY KEY (`source`, `name`)
 );
 
+CREATE TABLE `data_sources_stats` (
+    `source` INT NOT NULL,
+    `timeSlot` INT NOT NULL,
+    `usersIn` INT NOT NULL,
+    PRIMARY KEY (`source`, `timeSlot`)
+);
+
 CREATE TABLE `data_sources_users` (
   `source` int NOT NULL,
   `user` varchar(45) NOT NULL DEFAULT '',

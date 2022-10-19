@@ -328,6 +328,13 @@ func (fh *firehose) usersForDataSource(source int) ([]map[string]any, []map[stri
 	return users, allTimestamps, nil
 }
 
+// statsTimeSlot returns the stats time slot for the time t.
+// t must be a UTC time.
+func statsTimeSlot(t time.Time) int {
+	epoc := int(t.Unix())
+	return epoc / (60 * 60)
+}
+
 // writeDataSourceUsers writes the given data user users to the database.
 func (fh *firehose) writeDataSourceUsers(user string, props map[string]any, timestamps map[string]time.Time) error {
 	data, err := json.Marshal(props)
@@ -342,6 +349,13 @@ func (fh *firehose) writeDataSourceUsers(user string, props map[string]any, time
 		"SET `source` = ?, `user` = ?, `data` = ?, `timestamps` = ?\n"+
 		"ON DUPLICATE KEY UPDATE `data` = ?, `timestamps` = ?",
 		fh.source, user, data, jsonTimestamps, data, jsonTimestamps)
+	if err != nil {
+		return err
+	}
+	_, err = fh.sources.myDB.Exec("INSERT INTO `data_sources_stats`\n"+
+		"SET `source` = ?, `timeSlot` = ?, `usersIn` = 1\n"+
+		"ON DUPLICATE KEY UPDATE `usersIn` = `usersIn` + 1",
+		fh.source, statsTimeSlot(time.Now()))
 	return err
 }
 

@@ -306,6 +306,39 @@ func (this *DataSources) SetTransformationFunc(id int, fn string) error {
 	return nil
 }
 
+// DataSourcesStats represents the statistics on a data source for the last 24
+// hours.
+type DataSourcesStats struct {
+	UsersIn [24]int // ingested users per hour
+}
+
+// Stats returns statistics on the data source with identifier id for the last
+// 24 hours.
+func (this *DataSources) Stats(id int) (*DataSourcesStats, error) {
+	now := time.Now().UTC()
+	toSlot := statsTimeSlot(now)
+	fromSlot := toSlot - 23
+	stats := &DataSourcesStats{
+		UsersIn: [24]int{},
+	}
+	query := "SELECT `timeSlot`, `usersIn`\nFROM `data_sources_stats`\nWHERE `source` = ? AND `timeSlot` BETWEEN ? AND ?"
+	err := this.myDB.QueryScan(query, id, fromSlot, toSlot, func(rows *sql.Rows) error {
+		var err error
+		var slot, usersIn int
+		for rows.Next() {
+			if err = rows.Scan(&slot, &usersIn); err != nil {
+				return err
+			}
+			stats.UsersIn[slot-fromSlot] = usersIn
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return stats, nil
+}
+
 // TransformationFunc returns the transformation function of the data source
 // with the given identifier.
 // Returns the ErrDataSourceNotFound error if the data source does not exist.
