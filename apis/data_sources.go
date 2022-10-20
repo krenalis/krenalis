@@ -117,7 +117,7 @@ func (this *DataSources) Delete(id int) error {
 		return errors.New("invalid data source identifier")
 	}
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		source, err := this.myDB.Table("DataSources").Get(
+		source, err := tx.Table("DataSources").Get(
 			sql.Where{"id": id, "workspace": this.workspace},
 			sql.Columns{"resource"})
 		if err != nil {
