@@ -27,7 +27,7 @@ func init() {
 	connectors.RegisterConnector("Dummy", (*Connector)(nil))
 }
 
-func (c *Connector) Groups(ctx context.Context, cursor string, properties []string) error {
+func (c *Connector) Groups(ctx context.Context, cursor string, properties [][]string) error {
 	panic("not implemented")
 }
 
@@ -77,7 +77,7 @@ func (c *Connector) SetUsers(ctx context.Context, users []connectors.User) error
 	panic("not implemented")
 }
 
-func (c *Connector) Users(ctx context.Context, cursor string, properties []string) error {
+func (c *Connector) Users(ctx context.Context, cursor string, properties [][]string) error {
 	c.setContext(ctx)
 	for _, user := range users {
 		c.Firehose.SetUser(user.ID, now, user.Properties)

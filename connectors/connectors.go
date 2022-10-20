@@ -28,7 +28,7 @@ type SettingsContextKey struct{}
 type Connecter interface {
 
 	// Groups returns the groups starting from the given cursor.
-	Groups(ctx context.Context, cursor string, properties []string) error
+	Groups(ctx context.Context, cursor string, properties [][]string) error
 
 	// Properties returns all user and group properties.
 	Properties(ctx context.Context) ([]Property, []Property, error)
@@ -48,7 +48,7 @@ type Connecter interface {
 	SetUsers(ctx context.Context, users []User) error
 
 	// Users returns the users starting from the given cursor.
-	Users(ctx context.Context, cursor string, properties []string) error
+	Users(ctx context.Context, cursor string, properties [][]string) error
 }
 
 // Firehose is the interface implemented by a Firehose.
@@ -168,10 +168,11 @@ type TimestampedValue struct {
 }
 
 type Property struct {
-	Name    string
-	Options []PropertyOption
-	Label   string
-	Type    string
+	Name       string           `json:"name,omitempty"`
+	Options    []PropertyOption `json:"options,omitempty"`
+	Label      string           `json:"label,omitempty"`
+	Type       string           `json:"type,omitempty"`
+	Properties []Property       `json:"properties,omitempty"`
 }
 
 type PropertyOption struct {

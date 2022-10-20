@@ -31,17 +31,9 @@ CREATE TABLE `data_sources` (
   `transformation` TEXT NOT NULL,
   `userCursor` VARCHAR(500) NOT NULL DEFAULT '',
   `settings` VARCHAR(10000) NOT NULL DEFAULT '',
+  `properties` MEDIUMTEXT NOT NULL,
+  `usedProperties` MEDIUMTEXT NOT NULL,
   PRIMARY KEY (`id`)
-);
-
-CREATE TABLE `data_sources_properties` (
-  `source` INT NOT NULL,
-  `name` VARCHAR(100) NOT NULL DEFAULT '',
-  `type` VARCHAR(100) NOT NULL DEFAULT '',
-  `label` VARCHAR(100) NOT NULL DEFAULT '',
-  `options` TEXT NOT NULL,
-  `position` INT NOT NULL,
-  PRIMARY KEY (`source`, `name`)
 );
 
 CREATE TABLE `data_sources_stats` (

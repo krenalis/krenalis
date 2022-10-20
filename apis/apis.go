@@ -119,7 +119,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		switch m[3] {
 		case "properties":
-			var properties []*DataSourceProperty
+			var properties []DataSourceProperty
 			properties, err = ws.DataSources.Properties(id)
 			if err == nil {
 				_ = json.NewEncoder(w).Encode(properties)
@@ -318,16 +318,8 @@ func (apis *APIs) initSchema() {
 		transformation                 string
 		userCursor                     string
 		settings                       string
-	}{})
-
-	apis.myDB.Scheme("DataSourcesProperties", "data_sources_properties", struct {
-		workspace int
-		connector int
-		name      string
-		typ       string `sql:"type"`
-		label     string
-		options   string
-		position  int
+		properties                     string
+		usedProperties                 string
 	}{})
 
 	apis.myDB.Scheme("DataSourcesUsers", "data_sources_users", struct {

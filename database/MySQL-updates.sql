@@ -311,3 +311,9 @@ INNER JOIN `resources` AS `r` ON `r`. `code` = `s`.`resourceCode`
 SET `s`.`resource` = `r`.`id`
 
 ALTER TABLE `data_sources` DROP COLUMN `resourceCode`;
+
+ALTER TABLE `data_sources`
+    ADD COLUMN `properties` MEDIUMTEXT NOT NULL,
+    ADD COLUMN `usedProperties` MEDIUMTEXT NOT NULL;
+
+DROP TABLE `data_sources_properties`;

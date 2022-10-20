@@ -30,6 +30,8 @@ var ErrDataSourceNotFound = errors.New("data source does not exist")
 var ErrResourceNotFound = errors.New("resource does not exist")
 var ErrCannotGetConnectorAccessToken = fmt.Errorf("cannot get access token")
 
+const rawPropertiesMaxSize = 16_777_215 // maximum size in runes of the 'property' column of the 'data_sources' table.
+
 // DataSource represents a data source.
 type DataSource struct {
 	ID       int
@@ -47,12 +49,13 @@ type DataSourcePropertyOption struct {
 	Value string
 }
 
-// DataSourceProperty represents a connector property.
+// DataSourceProperty represents a data source property.
 type DataSourceProperty struct {
-	Name    string
-	Type    PropertyType
-	Label   string
-	Options []DataSourcePropertyOption
+	Name       string
+	Type       PropertyType
+	Label      string
+	Options    []DataSourcePropertyOption
+	Properties []DataSourceProperty
 }
 
 // Add adds a data source given its connector and the OAuth refresh and access
@@ -141,7 +144,6 @@ func (this *DataSources) Delete(id int) error {
 		if err != nil {
 			return err
 		}
-		_, err = tx.Table("DataSourcesProperties").Delete(sql.Where{"source": id})
 		_, err = tx.Table("DataSourcesUsers").Delete(sql.Where{"source": id})
 		// Delete the resource of the deleted data source if it has no other data sources.
 		_, err = tx.Exec("DELETE `r`\n"+
@@ -165,18 +167,18 @@ func (this *DataSources) Import(id int, reimport bool) error {
 
 	var name, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
 	var connector, resource int
-	var settings []byte
+	var settings, rawUsedProperties []byte
 	var expiration time.Time
 	err := this.myDB.QueryRow(
 		"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
 			" `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `s`.`connector`,"+
-			" `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
+			" `s`.`resource`, `s`.`userCursor`, `s`.`settings`, `s`.`usedProperties`\n"+
 			"FROM `data_sources` AS `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
 			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
 		&name, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration, &connector,
-		&resource, &cursor, &settings)
+		&resource, &cursor, &settings, &rawUsedProperties)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrDataSourceNotFound
@@ -186,6 +188,11 @@ func (this *DataSources) Import(id int, reimport bool) error {
 	if reimport {
 		cursor = ""
 	}
+	var properties [][]string
+	err = json.Unmarshal(rawUsedProperties, &properties)
+	if err != nil {
+		return fmt.Errorf("cannon unmarshal used properties of data source %d: %s", id, err)
+	}
 
 	accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
 
@@ -194,22 +201,6 @@ func (this *DataSources) Import(id int, reimport bool) error {
 		if err != nil {
 			return err
 		}
-	}
-
-	var properties []string
-	err = this.myDB.QueryScan("SELECT `name`\nFROM `data_sources_properties`\nWHERE `source` = ?", id, func(rows *sql.Rows) error {
-		var err error
-		for rows.Next() {
-			var name string
-			if err = rows.Scan(&name); err != nil {
-				return err
-			}
-			properties = append(properties, name)
-		}
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
 	go func() {
@@ -251,55 +242,20 @@ func (this *DataSources) List() ([]*DataSource, error) {
 // Properties returns the properties of the data source with the given
 // identifier.
 // Returns the ErrDataSourceNotFound error if the data source does not exist.
-func (this *DataSources) Properties(id int) ([]*DataSourceProperty, error) {
-
+func (this *DataSources) Properties(id int) ([]DataSourceProperty, error) {
 	if id <= 0 {
 		return nil, errors.New("invalid data source identifier")
 	}
-
-	var properties []*DataSourceProperty
-
-	stmt := "SELECT `name`, `type`, `label`, `options`\n" +
-		"FROM `data_sources_properties`\n" +
-		"INNER JOIN `data_sources` ON `id` = `source`\n" +
-		"WHERE `source` = ? AND `workspace` = ?\n" +
-		"ORDER BY `position`"
-
-	err := this.myDB.QueryScan(stmt, id, this.workspace, func(rows *sql.Rows) error {
-		var err error
-		for rows.Next() {
-			var property DataSourceProperty
-			var options []byte
-			if err = rows.Scan(&property.Name, &property.Type, &property.Label, &options); err != nil {
-				return err
-			}
-			if len(options) > 0 {
-				property.Options = []DataSourcePropertyOption{}
-				err := json.Unmarshal(options, &property.Options)
-				if err != nil {
-					return fmt.Errorf("malformed options for data source %d", id)
-				}
-			}
-			properties = append(properties, &property)
-		}
-		return nil
-	})
+	var rawProperties []byte
+	err := this.myDB.QueryRow("SELECT `properties` FROM `data_sources` WHERE `id` = ?", id).Scan(&rawProperties)
 	if err != nil {
 		return nil, err
 	}
-
-	if properties == nil {
-		var exists bool
-		err := this.myDB.QueryRow("SELECT TRUE FROM `data_sources`\nWHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&exists)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				err = ErrDataSourceNotFound
-			}
-			return nil, err
-		}
-		properties = []*DataSourceProperty{}
+	var properties []DataSourceProperty
+	err = json.Unmarshal(rawProperties, &properties)
+	if err != nil {
+		return nil, err
 	}
-
 	return properties, nil
 }
 
@@ -308,7 +264,7 @@ func (this *DataSources) Properties(id int) ([]*DataSourceProperty, error) {
 // Returns the ErrDataSourceNotFound error if the data source does not exist.
 func (this *DataSources) ServeUserInterface(id int, w http.ResponseWriter, r *http.Request) error {
 
-	// TODO(marco) The following code is duplicated in the Import method.
+	// TODO(marco) The following code is duplicated in the Import method (apart from the 'usedProperties' column).
 	var name, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
 	var connector, resource int
 	var settings []byte
@@ -477,19 +433,15 @@ func (this *DataSources) reloadProperties(id int) error {
 	if err != nil {
 		return err
 	}
-
-	rows := make([][]any, len(properties))
-	for i, p := range properties {
-		rows[i] = []any{id, p.Name, p.Type, p.Label, i}
+	rawProperties, err := json.Marshal(properties)
+	if err != nil {
+		return fmt.Errorf("cannot marshal the properties returned by the connector %d: %s", connector, err)
 	}
-	err = this.myDB.Transaction(func(tx *sql.Tx) error {
-		_, err := tx.Exec("DELETE FROM `data_sources_properties` WHERE `source` = ?", id)
-		if err != nil {
-			return err
-		}
-		_, err = tx.Table("DataSourcesProperties").Insert([]string{"source", "name", "type", "label", "position"}, rows, nil)
-		return err
-	})
+	if utf8.RuneCount(rawProperties) > rawPropertiesMaxSize {
+		return fmt.Errorf("cannot marshal the properties returned by the connector %d: it's too large", connector)
+	}
+
+	_, err = this.myDB.Exec("UPDATE `data_sources` SET `properties` = ? WHERE `id` = ?", rawProperties, id)
 
 	return err
 }

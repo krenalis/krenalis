@@ -69,7 +69,7 @@ func init() {
 }
 
 // Groups returns the groups starting from the given cursor.
-func (c *Connector) Groups(ctx context.Context, cursor string, properties []string) error {
+func (c *Connector) Groups(ctx context.Context, cursor string, properties [][]string) error {
 
 	c.setContext(ctx)
 
@@ -295,7 +295,7 @@ func (c *Connector) SetUsers(ctx context.Context, users []connectors.User) error
 }
 
 // Users returns the users starting from the given cursor.
-func (c *Connector) Users(ctx context.Context, cursor string, properties []string) error {
+func (c *Connector) Users(ctx context.Context, cursor string, properties [][]string) error {
 
 	c.setContext(ctx)
 
@@ -377,7 +377,7 @@ type iter struct {
 // be "Company" or "Contact".
 // Requires the "crm.objects.contacts.read" scope for contacts and the
 // "crm.objects.companies.read" for companies.
-func (c *Connector) newIterator(typ string, properties []string, fromDate int64, limit int) (*iter, error) {
+func (c *Connector) newIterator(typ string, properties [][]string, fromDate int64, limit int) (*iter, error) {
 
 	path := "/crm/v3/"
 	switch typ {
@@ -388,21 +388,27 @@ func (c *Connector) newIterator(typ string, properties []string, fromDate int64,
 	default:
 		return nil, errors.New("invalid type")
 	}
-	props, err := json.Marshal(properties)
-	if err != nil {
-		return nil, err
-	}
 	if limit < 0 || limit > math.MaxInt32 {
 		return nil, errors.New("invalid limit")
 	}
 
 	it := iter{
-		Connector:  c,
-		Type:       typ,
-		Path:       path,
-		Properties: props,
-		FromDate:   fromDate,
-		Limit:      limit,
+		Connector: c,
+		Type:      typ,
+		Path:      path,
+		FromDate:  fromDate,
+		Limit:     limit,
+	}
+
+	// Marshal the properties.
+	props := make([]string, len(properties))
+	for i, p := range properties {
+		props[i] = p[0]
+	}
+	var err error
+	it.Properties, err = json.Marshal(props)
+	if err != nil {
+		return nil, err
 	}
 
 	return &it, nil
