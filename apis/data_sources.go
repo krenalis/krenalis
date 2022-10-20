@@ -110,6 +110,38 @@ func (this *DataSources) Add(connector int, refreshToken, accessToken string) (i
 	return int(id), err
 }
 
+// Delete deletes the data source with the given identifier.
+// If the data source does not exist, it does nothing.
+func (this *DataSources) Delete(id int) error {
+	if id <= 0 {
+		return errors.New("invalid data source identifier")
+	}
+	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+		source, err := this.myDB.Table("DataSources").Get(
+			sql.Where{"id": id, "workspace": this.workspace},
+			sql.Columns{"resource"})
+		if err != nil {
+			return err
+		}
+		if source == nil {
+			return nil
+		}
+		_, err = tx.Table("DataSources").Delete(sql.Where{"id": id})
+		if err != nil {
+			return err
+		}
+		_, err = tx.Table("DataSourcesProperties").Delete(sql.Where{"source": id})
+		_, err = tx.Table("DataSourcesUsers").Delete(sql.Where{"source": id})
+		// Delete the resource of the deleted data source if it has no other data sources.
+		_, err = tx.Exec("DELETE `r`\n"+
+			"FROM `resources` AS `r`\n"+
+			"LEFT JOIN `data_sources` AS `s` ON `s`.`resource` = `r`.`id`\n"+
+			"WHERE `r`.`id` = ? AND `s`.`resource` IS NULL", source["resource"])
+		return err
+	})
+	return err
+}
+
 // Import starts the import of the users from the data source with the given
 // identifier. If reimport is false it imports the users from the current
 // cursor, otherwise imports all users.
@@ -375,38 +407,6 @@ func (this *DataSources) TransformationFunc(id int) (string, error) {
 		return "", ErrDataSourceNotFound
 	}
 	return row["transformation"].(string), nil
-}
-
-// Delete deletes the data source with the given identifier.
-// If the data source does not exist, it does nothing.
-func (this *DataSources) Delete(id int) error {
-	if id <= 0 {
-		return errors.New("invalid data source identifier")
-	}
-	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		source, err := this.myDB.Table("DataSources").Get(
-			sql.Where{"id": id, "workspace": this.workspace},
-			sql.Columns{"resource"})
-		if err != nil {
-			return err
-		}
-		if source == nil {
-			return nil
-		}
-		_, err = tx.Table("DataSources").Delete(sql.Where{"id": id})
-		if err != nil {
-			return err
-		}
-		_, err = tx.Table("DataSourcesProperties").Delete(sql.Where{"source": id})
-		_, err = tx.Table("DataSourcesUsers").Delete(sql.Where{"source": id})
-		// Delete the resource of the deleted data source if it has no other data sources.
-		_, err = tx.Exec("DELETE `r`\n"+
-			"FROM `resources` AS `r`\n"+
-			"LEFT JOIN `data_sources` AS `s` ON `s`.`resource` = `r`.`id`\n"+
-			"WHERE `r`.`id` = ? AND `s`.`resource` IS NULL", source["resource"])
-		return err
-	})
-	return err
 }
 
 // newConnectorContext returns a context with a Firehose used to call a
