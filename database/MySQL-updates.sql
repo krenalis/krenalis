@@ -283,7 +283,7 @@ ALTER TABLE `data_sources_users`
     ADD PRIMARY KEY (`source` , `user`);
 
 ALTER TABLE `data_sources_users` 
-  ADD COLUMN `timestamps` TEXT NOT NULL DEFAULT '' AFTER `data`;
+    ADD COLUMN `timestamps` TEXT NOT NULL DEFAULT '' AFTER `data`;
 
 TRUNCATE TABLE `connectors`;
 INSERT INTO `connectors` VALUES (1,'HubSpot','https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read','https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/168_Hubspot_logo_logos-512.png','cef1005a-72be-4047-a301-ef6057588325','136e50df-5b89-478f-bf01-4a71547fa668','https://api.hubapi.com/oauth/v1/token','Connector'),(2,'Dummy','https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read','https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/168_Hubspot_logo_logos-512.png','cef1005a-72be-4047-a301-ef6057588325','136e50df-5b89-478f-bf01-4a71547fa668','https://api.hubapi.com/oauth/v1/token','Connector');
@@ -295,3 +295,19 @@ CREATE TABLE `data_sources_stats` (
     PRIMARY KEY (`source`, `timeSlot`)
 );
 
+ALTER TABLE `resources`
+    DROP PRIMARY KEY,
+    ADD COLUMN `id` INT NOT NULL AUTO_INCREMENT FIRST,
+    RENAME COLUMN `resource` TO `code`,
+    KEY `connector` (`connector`),
+    ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `data_sources`
+    RENAME COLUMN `resource` TO `resourceCode`,
+    ADD COLUMN `resource` INT NOT NULL AFTER `resourceCode`;
+
+UPDATE `data_sources` AS `s`
+INNER JOIN `resources` AS `r` ON `r`. `code` = `s`.`resourceCode`
+SET `s`.`resource` = `r`.`id`
+
+ALTER TABLE `data_sources` DROP COLUMN `resourceCode`;

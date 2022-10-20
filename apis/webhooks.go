@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"chichi/connectors"
@@ -61,7 +60,6 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	}
 	ctx := context.Background()
 	var connector int
-	var resource string
 	var source int
 	var webhookPer string
 	switch m[1] {
@@ -72,23 +70,20 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		}
 		webhookPer = "Connector"
 	case "r":
-		c, r, ok := strings.Cut(m[2], "-")
-		if !ok || r == "" {
+		r, _ := strconv.Atoi(m[2])
+		if r <= 0 {
 			return errBadRequest
 		}
-		connector, _ = strconv.Atoi(c)
-		if connector <= 0 {
-			return errBadRequest
-		}
-		err := apis.myDB.QueryRow("SELECT `resource` FROM `resources` WHERE `connector` = ? AND `resource` = ?",
-			c, r).Scan(&resource)
-		if err != nil && err != sql.ErrNoRows {
+		var resourceCode string
+		err := apis.myDB.QueryRow("SELECT `connector`, `code` FROM `resources` WHERE `id` = ?", r).
+			Scan(&connector, &resourceCode)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return errNotFound
+			}
 			return err
 		}
-		if r != resource {
-			return errNotFound
-		}
-		ctx = context.WithValue(ctx, connectors.ResourceContextKey{}, resource)
+		ctx = context.WithValue(ctx, connectors.ResourceContextKey{}, resourceCode)
 		webhookPer = "Resource"
 	case "s":
 		source, _ = strconv.Atoi(m[2])
@@ -96,13 +91,16 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 			return errBadRequest
 		}
 		var rawSettings []byte
-		var accessToken, refreshToken string
+		var resource int
+		var resourceCode, accessToken, refreshToken string
 		var expiration time.Time
 		err := apis.myDB.QueryRow(
-			"SELECT `s`.`connector`, `s`.`resource`, `s`.`settings`, `r`.`accessToken`, `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`\n"+
+			"SELECT `s`.`connector`, `s`.`resource`, `s`.`settings`, `r`.`code`, `r`.`accessToken`, `r`.`refreshToken`,"+
+				" `r`.`accessTokenExpirationTimestamp`\n"+
 				"FROM `data_sources` AS `s`\n"+
-				"INNER JOIN `resources` AS `r` ON `r`.`connector` = `s`.`connector` AND `r`.`resource` = `s`.`resource`\n"+
-				"WHERE `s`.`id` = ?", source).Scan(&connector, &resource, &rawSettings, &accessToken, &refreshToken, &expiration)
+				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
+				"WHERE `s`.`id` = ?", source).
+			Scan(&connector, &resource, &rawSettings, &resourceCode, &accessToken, &refreshToken, &expiration)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return errNotFound
@@ -111,7 +109,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		}
 		accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
 		if accessToken == "" || accessTokenExpired {
-			accessToken, err = apis.refreshOAuthToken(connector, resource)
+			accessToken, err = apis.refreshOAuthToken(resource)
 			if err != nil {
 				return err
 			}
@@ -123,7 +121,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 				return errors.New("cannot unmarshal data source settings")
 			}
 		}
-		ctx = context.WithValue(ctx, connectors.ResourceContextKey{}, resource)
+		ctx = context.WithValue(ctx, connectors.ResourceContextKey{}, resourceCode)
 		ctx = context.WithValue(ctx, connectors.AccessTokenContextKey{}, accessToken)
 		ctx = context.WithValue(ctx, connectors.SettingsContextKey{}, settings)
 		webhookPer = "DataSource"

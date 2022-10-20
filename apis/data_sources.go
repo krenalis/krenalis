@@ -69,21 +69,37 @@ func (this *DataSources) Add(connector int, refreshToken, accessToken string) (i
 	}
 	c := connectors.Connector(conn.Name, conn.ClientSecret)
 	ctx := context.WithValue(context.Background(), connectors.AccessTokenContextKey{}, accessToken)
-	resource, err := c.Resource(ctx)
+	resourceCode, err := c.Resource(ctx)
 	if err != nil {
 		return 0, err
 	}
 	var id int64
 	err = this.myDB.Transaction(func(tx *sql.Tx) error {
-		_, err = tx.Exec("INSERT INTO `resources`\n"+
-			"SET `connector` = ?, `resource` = ?, `refreshToken` = ?\n"+
-			"ON DUPLICATE KEY UPDATE `refreshToken` = ?",
-			connector, resource, refreshToken, refreshToken)
+		var resource int
+		var currentRefreshToken string
+		err := tx.QueryRow("SELECT `id`, `refreshToken` FROM `resources` WHERE `connector` = ? AND `code` = ?",
+			connector, resourceCode).Scan(&resource, &currentRefreshToken)
+		if err != nil {
+			if err != sql.ErrNoRows {
+				return err
+			}
+			err = nil
+		}
+		if resource == 0 {
+			result, err := tx.Exec("INSERT INTO `resources` SET `connector` = ?, `code` = ?, `refreshToken` = ?",
+				connector, resourceCode, refreshToken)
+			if err != nil {
+				return err
+			}
+			resourceID, err := result.LastInsertId()
+			resource = int(resourceID)
+		} else if refreshToken != currentRefreshToken {
+			_, err = tx.Exec("UPDATE `resources` SET `refreshToken` = ? WHERE `id` = ?", refreshToken, resource)
+		}
 		if err != nil {
 			return err
 		}
-		result, err := tx.Exec("INSERT INTO `data_sources`\n"+
-			"SET `workspace` = ?, `connector` = ?, `resource` = ?",
+		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `connector` = ?, `resource` = ?",
 			this.workspace, connector, resource)
 		if err != nil {
 			return err
@@ -104,18 +120,20 @@ func (this *DataSources) Import(id int, reimport bool) error {
 		return errors.New("invalid data source identifier")
 	}
 
-	var name, clientSecret, webhooksPer, accessToken, refreshToken, resource, cursor string
-	var connector int
+	var name, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
+	var connector, resource int
 	var settings []byte
 	var expiration time.Time
 	err := this.myDB.QueryRow(
-		"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`accessToken`, `r`.`refreshToken`,"+
-			" `r`.`accessTokenExpirationTimestamp`, `ds`.`connector`, `ds`.`resource`, `ds`.`userCursor`, `ds`.`settings`\n"+
-			"FROM `data_sources` AS `ds`\n"+
-			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
-			"INNER JOIN `resources` AS `r` ON `r`.`connector` = `ds`.`connector` AND `r`.`resource` = `ds`.`resource`\n"+
-			"WHERE `ds`.`id` = ? AND `ds`.`workspace` = ?", id, this.workspace).
-		Scan(&name, &clientSecret, &webhooksPer, &accessToken, &refreshToken, &expiration, &connector, &resource, &cursor, &settings)
+		"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
+			" `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `s`.`connector`,"+
+			" `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
+			"FROM `data_sources` AS `s`\n"+
+			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+			"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
+			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
+		&name, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration, &connector,
+		&resource, &cursor, &settings)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrDataSourceNotFound
@@ -129,7 +147,7 @@ func (this *DataSources) Import(id int, reimport bool) error {
 	accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
 
 	if accessToken == "" || accessTokenExpired {
-		accessToken, err = this.api.apis.refreshOAuthToken(connector, resource)
+		accessToken, err = this.api.apis.refreshOAuthToken(resource)
 		if err != nil {
 			return err
 		}
@@ -153,7 +171,8 @@ func (this *DataSources) Import(id int, reimport bool) error {
 
 	go func() {
 		conn := connectors.Connector(name, clientSecret)
-		ctx := this.newConnectorContext(context.Background(), id, connector, resource, accessToken, webhooksPer, settings)
+		ctx := this.newConnectorContext(context.Background(), id, resource, connector, resourceCode, accessToken,
+			webhooksPer, settings)
 		err := conn.Users(ctx, cursor, properties)
 		if err != nil {
 			log.Printf("[error] call to the Users method of the data source %d failed: %s", id, err)
@@ -247,18 +266,20 @@ func (this *DataSources) Properties(id int) ([]*DataSourceProperty, error) {
 func (this *DataSources) ServeUserInterface(id int, w http.ResponseWriter, r *http.Request) error {
 
 	// TODO(marco) The following code is duplicated in the Import method.
-	var name, clientSecret, webhooksPer, accessToken, refreshToken, resource, cursor string
-	var connector int
+	var name, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
+	var connector, resource int
 	var settings []byte
 	var expiration time.Time
 	err := this.myDB.QueryRow(
-		"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`accessToken`, `r`.`refreshToken`,"+
-			" `r`.`accessTokenExpirationTimestamp`, `ds`.`connector`, `ds`.`resource`, `ds`.`userCursor`, `ds`.`settings`\n"+
-			"FROM `data_sources` AS `ds`\n"+
-			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
-			"INNER JOIN `resources` AS `r` ON `r`.`connector` = `ds`.`connector` AND `r`.`resource` = `ds`.`resource`\n"+
-			"WHERE `ds`.`id` = ? AND `ds`.`workspace` = ?", id, this.workspace).
-		Scan(&name, &clientSecret, &webhooksPer, &accessToken, &refreshToken, &expiration, &connector, &resource, &cursor, &settings)
+		"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
+			" `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `s`.`connector`,"+
+			" `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
+			"FROM `data_sources` AS `s`\n"+
+			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+			"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
+			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
+		&name, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration, &connector,
+		&resource, &cursor, &settings)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrDataSourceNotFound
@@ -269,14 +290,14 @@ func (this *DataSources) ServeUserInterface(id int, w http.ResponseWriter, r *ht
 	accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
 
 	if accessToken == "" || accessTokenExpired {
-		accessToken, err = this.api.apis.refreshOAuthToken(connector, resource)
+		accessToken, err = this.api.apis.refreshOAuthToken(resource)
 		if err != nil {
 			return err
 		}
 	}
 
 	conn := connectors.Connector(name, clientSecret)
-	ctx := this.newConnectorContext(r.Context(), id, connector, resource, accessToken, webhooksPer, settings)
+	ctx := this.newConnectorContext(r.Context(), id, resource, connector, resourceCode, accessToken, webhooksPer, settings)
 	r.Clone(ctx)
 	r.Header.Del("Cookie") // remove the cookies from the request.
 	conn.ServeUserInterface(w, r)
@@ -365,7 +386,7 @@ func (this *DataSources) Delete(id int) error {
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		source, err := this.myDB.Table("DataSources").Get(
 			sql.Where{"id": id, "workspace": this.workspace},
-			sql.Columns{"connector", "resource"})
+			sql.Columns{"resource"})
 		if err != nil {
 			return err
 		}
@@ -381,8 +402,8 @@ func (this *DataSources) Delete(id int) error {
 		// Delete the resource of the deleted data source if it has no other data sources.
 		_, err = tx.Exec("DELETE `r`\n"+
 			"FROM `resources` AS `r`\n"+
-			"LEFT JOIN `data_sources` AS `s` ON `s`.`resource` = `r`.`resource`\n"+
-			"WHERE `r`.`connector` = ? AND `r`.`resource` = ? AND `s`.`id` IS NULL", source["connector"], source["resource"])
+			"LEFT JOIN `data_sources` AS `s` ON `s`.`resource` = `r`.`id`\n"+
+			"WHERE `r`.`id` = ? AND `s`.`resource` IS NULL", source["resource"])
 		return err
 	})
 	return err
@@ -390,12 +411,15 @@ func (this *DataSources) Delete(id int) error {
 
 // newConnectorContext returns a context with a Firehose used to call a
 // connector method.
-func (this *DataSources) newConnectorContext(ctx context.Context, source, connector int, resource, accessToken, webhooksPer string, settings []byte) context.Context {
+func (this *DataSources) newConnectorContext(ctx context.Context, source, resource, connector int, resourceCode,
+	accessToken, webhooksPer string, settings []byte) context.Context {
+
 	fh := &firehose{sources: this, source: source, resource: resource, connector: connector, webhooksPer: webhooksPer}
 	fh.context, fh.cancel = context.WithCancel(ctx)
-	fh.context = context.WithValue(fh.context, connectors.ResourceContextKey{}, resource)
+	fh.context = context.WithValue(fh.context, connectors.ResourceContextKey{}, resourceCode)
 	fh.context = context.WithValue(fh.context, connectors.AccessTokenContextKey{}, accessToken)
 	fh.context = context.WithValue(fh.context, connectors.SettingsContextKey{}, settings)
 	fh.context = context.WithValue(fh.context, connectors.FirehoseContextKey{}, fh)
+
 	return fh.context
 }

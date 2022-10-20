@@ -27,7 +27,7 @@ CREATE TABLE `data_sources` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `workspace` INT NOT NULL,
   `connector` INT NOT NULL,
-  `resource` VARCHAR(100) NOT NULL DEFAULT '',
+  `resource` INT NOT NULL,
   `transformation` TEXT NOT NULL,
   `userCursor` VARCHAR(500) NOT NULL DEFAULT '',
   `settings` VARCHAR(10000) NOT NULL DEFAULT '',
@@ -82,12 +82,14 @@ CREATE TABLE `properties` (
 INSERT INTO `properties` VALUES (1,'1234567890',1);
 
 CREATE TABLE `resources` (
+  `id` INT NOT NULL AUTO_INCREMENT,
   `connector` INT NOT NULL,
-  `resource` VARCHAR(100) NOT NULL DEFAULT '',
+  `code` VARCHAR(100) NOT NULL DEFAULT '',
   `accessToken` VARCHAR(500) NOT NULL DEFAULT '',
   `refreshToken` VARCHAR(500) NOT NULL DEFAULT '',
   `accessTokenExpirationTimestamp` TIMESTAMP NOT NULL,
-  PRIMARY KEY (`connector`, `resource`)
+  KEY `connector` (`connector`),
+  PRIMARY KEY (`id`)
 );
 
 CREATE TABLE `smart_events` (

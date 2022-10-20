@@ -203,17 +203,17 @@ func (apis *APIs) Connectors() ([]*Connector, error) {
 	return connectors, nil
 }
 
-// refreshOAuthToken refreshes the access token of the given connector and
-// resource.
+// refreshOAuthToken refreshes the access token of the resource with identifier
+// id.
 // Returns the ErrResourceNotFound error if the resource does not exist.
-func (apis *APIs) refreshOAuthToken(connector int, resource string) (string, error) {
+func (apis *APIs) refreshOAuthToken(resource int) (string, error) {
 
 	var clientID, clientSecret, tokenEndpoint, refreshToken string
 	err := apis.myDB.QueryRow(
 		"SELECT `c`.`clientID`, `c`.`clientSecret`, `c`.`tokenEndpoint`, `r`.`refreshToken`\n"+
 			"FROM `resources` AS `r`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `r`.`connector`\n"+
-			"WHERE `r`.`connector` = ? AND `r`.`resource` = ?", connector, resource).
+			"WHERE `r`.`id` = ?", resource).
 		Scan(&clientID, &clientSecret, &tokenEndpoint, &refreshToken)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -280,8 +280,8 @@ func (apis *APIs) refreshOAuthToken(connector int, resource string) (string, err
 	_, err = apis.myDB.Exec(
 		"UPDATE `resources`\n"+
 			"SET `accessToken` = ?, `refreshToken` = ?, `accessTokenExpirationTimestamp` = ?\n"+
-			"WHERE `connector` = ? AND `resource` = ?",
-		response.AccessToken, response.RefreshToken, expiration, connector, resource)
+			"WHERE `id` = ?",
+		response.AccessToken, response.RefreshToken, expiration, resource)
 	if err != nil {
 		return "", err
 	}

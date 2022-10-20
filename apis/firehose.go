@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/url"
 	"reflect"
 	"sort"
 	"strconv"
@@ -37,7 +36,7 @@ const maxSettingsLen = 10_000 // Maximum length of settings in runes.
 type firehose struct {
 	sources     *DataSources
 	source      int
-	resource    string
+	resource    int
 	connector   int
 	context     context.Context
 	cancel      context.CancelFunc
@@ -200,7 +199,7 @@ func (fh *firehose) WebhookURL() string {
 	case "Connector":
 		return u + "c/" + strconv.Itoa(fh.connector) + "/"
 	case "Resource":
-		return u + "r/" + strconv.Itoa(fh.connector) + "-" + url.PathEscape(fh.resource) + "/"
+		return u + "r/" + strconv.Itoa(fh.resource) + "/"
 	case "DataSource":
 		return u + "s/" + strconv.Itoa(fh.source) + "/"
 	}
