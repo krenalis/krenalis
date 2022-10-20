@@ -1,0 +1,40 @@
+.Card {
+    background-color: var(--bg-primary);
+    padding: 50px;
+    border-radius: var(--radius);
+    box-shadow: var(--sl-shadow-small);
+    text-align: center;
+}
+
+.Card .logo > img {
+    max-height: 70px;
+    width: auto;
+    padding: 5px;
+    margin: 0 auto 30px auto;
+}
+
+.Card .logo > .unknownLogo {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    margin: 0 auto 30px auto;
+}
+
+.Card .name {
+    font-weight: 600;
+}
+
+.Card .description {
+    margin-top: 10px;
+    font-size: 15px;
+    opacity: .9;
+}
+
+.Card .body {
+    margin-top: 30px;
+}

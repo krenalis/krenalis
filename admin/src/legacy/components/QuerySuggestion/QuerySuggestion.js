@@ -1,7 +1,7 @@
-import React, { Component } from 'react'
+import React from 'react'
 import './QuerySuggestion.css'
 
-export default class QueryExample extends Component {
+export default class QueryExample extends React.Component {
     render() {
         return (
             <div className="example">

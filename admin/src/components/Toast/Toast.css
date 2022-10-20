@@ -1,0 +1,37 @@
+.sl-toast-stack {
+    top: unset;
+    bottom: 0;
+}
+
+.sl-toast-stack sl-alert::part(base) {
+    color: var(--text-onaccent);
+    border: 0;
+}
+
+.sl-toast-stack sl-alert::part(icon) {
+    color: var(--text-onaccent);
+}
+
+.sl-toast-stack sl-alert::part(close-button__base) {
+    color: var(--text-onaccent);
+}
+
+.sl-toast-stack sl-alert[variant="neutral"]::part(base) {
+    background-color: var(--sl-color-neutral-600);
+}
+
+.sl-toast-stack sl-alert[variant="primary"]::part(base) {
+    background-color: var(--sl-color-primary-600);
+}
+
+.sl-toast-stack sl-alert[variant="success"]::part(base) {
+    background-color: var(--sl-color-success-600);
+}
+
+.sl-toast-stack sl-alert[variant="danger"]::part(base) {
+    background-color: var(--sl-color-danger-600);
+}
+
+.sl-toast-stack sl-alert[variant="warning"]::part(base) {
+    background-color: var(--sl-color-warning-600);
+}

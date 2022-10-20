@@ -1,28 +1,47 @@
-import React, { Component } from 'react';
-import { Link } from 'react-router-dom';
-
+import React from 'react';
 import './Sidebar.css';
-import SidebarItem from '../SidebarItem/SidebarItem';
+import { NavLink, Navigate } from 'react-router-dom';
+import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react';
 
-export default class Sidebar extends Component {
+export default class Sidebar extends React.Component {
+    
+    constructor(props) {
+        super(props);
+        this.state = {
+            'isLoggedOut': false,
+        };
+    }
+
+    handleLogout = () => {
+        document.cookie = 'session=; Max-Age=-99999999; Path=/';  
+        this.setState({isLoggedOut: true});
+    }
+    
     render() {
-        return (
-            <div className='Sidebar'>
-                <div className='logo'>
-                    <div className='image'>C</div>
-                    <Link to='connectors'></Link>
-                </div>
-                <div className="Items">
-                    <div className='Top'>
-                        <SidebarItem link='connectors' icon='list_alt' title='' />
-                        <SidebarItem link='account/connectors' icon='account_circle' title='' />
-                        <SidebarItem link='configurations/schema' icon='tune' title='' />
+        if (this.state.isLoggedOut) {
+            return <Navigate to='/admin' />
+        } else {
+            return (
+                <div className='Sidebar'>
+                    <div className='Items'>
+                        <div className='Top'>
+                            <SlButton variant='text'>
+                                <SlIcon name='plugin' />
+                                <NavLink to='/admin/connectors'></NavLink>
+                            </SlButton>
+                            <SlButton variant='text'>
+                                <SlIcon name='person-circle' />
+                                <NavLink to='/admin/account/sources'></NavLink>
+                            </SlButton>
+                        </div>
+                        <div className='Bottom'>
+                            <SlButton variant='text' onClick={this.handleLogout}>
+                                <SlIcon name='box-arrow-left' />
+                            </SlButton>
+                        </div>
                     </div>
-                    <div className='Bottom'>
-                        <SidebarItem link='/admin/' icon='logout' title='' /> {/* TODO(@Andrea): return redirect to logout page where the cookie is removed */}
-                    </div>
                 </div>
-            </div>
-        )
+            )
+        }
     }
 }

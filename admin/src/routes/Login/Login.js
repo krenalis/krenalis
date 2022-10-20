@@ -1,53 +1,44 @@
-import React, { Component } from 'react'
-import { Navigate } from 'react-router-dom'
+import React from 'react';
+import './Login.css';
+import Alert from '../../components/Alert/Alert';
+import call from '../../utils/call';
+import { Navigate } from 'react-router-dom';
+import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react';
 
-import './Login.css'
-import StatusMessage from '../../components/StatusMessage/StatusMessage';
-
-export default class Login extends Component {
+export default class Login extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
             'email': '',
-            'password': '',
             'isLoggedIn': false,
-            'statusMessage': '',
-        }
+            'password': '',
+            'status': null,
+        };
     }
 
-    handleLogin = async (e) => {
-        e.preventDefault();
-        this.setState({ statusMessage: '' })
-        let accountID, error;
-        try {
-            let res = await fetch('/admin/', {
-                method: 'POST',
-                body: JSON.stringify({ email: this.state.email, password: this.state.password })
-            });
-            [accountID, error] = await res.json();
-        } catch (err) {
-            this.setState({ 'statusMessage': 'Something went wrong, check your connection and try again' });
+    handleLogin = async () => {
+        this.setState({ status: null });
+        let [, err] = await call('/admin/', { email: this.state.email, password: this.state.password });
+        if (err !== null) {
+            if (err === 'AuthenticationFailedError') {
+                this.setState({status: {variant:'danger', icon:'lock', text:'Your email or password are incorrect'}});
+                return;
+            }
+            this.setState({status: {variant:'danger', icon:'exclamation-octagon', text:err}});
             return;
-        }
-        if (error === 'AuthenticationFailedError') {
-            this.setState({ 'statusMessage': 'Your email or password are incorrect' });
-            return;
-        }
-        console.log(accountID);
+        }    
         this.setState({ 'isLoggedIn': true });
     }
 
     onInputChange = (e) => {
         let name = e.currentTarget.name;
         let value = e.currentTarget.value;
-        this.setState({
-            [name]: value,
-        });
+        this.setState({[name]: value,});
     }
 
     render() {
         if (this.state.isLoggedIn) {
-            return <Navigate to='connectors' />
+            return <Navigate to='account/sources' />
         } else {
             return (
                 <div className='Login'>
@@ -55,12 +46,15 @@ export default class Login extends Component {
                         <div className='heading'>
                             <h1>Sign-in to your account</h1>
                         </div>
-                        {this.state.statusMessage !== '' ? <StatusMessage text={this.state.statusMessage} onClose={() => { this.setState({ 'statusMessage': '' }) }} /> : ''}
+                        {this.state.status && <Alert status={this.state.status} />}
                         <form className='form' onSubmit={this.handleLogin}>
                             <input type='text' onChange={this.onInputChange} name='email' value={this.state.text} placeholder='Your email' />
                             <input type='password' onChange={this.onInputChange} name='password' value={this.state.password} placeholder='Your password' />
-                            <div className="note"><span>Note:</span> sign in with email <span>acme@open2b.com</span> and password <span>foopass2</span></div>
-                            <input type='submit' value='Sign in' />
+                            <div className='note'><span>Note:</span> sign in with email <span>acme@open2b.com</span> and password <span>foopass2</span></div>
+                            <SlButton className='loginButton' variant='primary' onClick={this.handleLogin}>
+                                <SlIcon slot='suffix' name='box-arrow-in-right' />
+                                Login
+                            </SlButton>
                         </form>
                     </div>
                 </div>

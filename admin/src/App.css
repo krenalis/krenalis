@@ -1,38 +1,65 @@
 :root {
-	--bg-primary: #ffffff;
-	--bg-secondary: #fafafa;
-	--bg-dark: #131313;
+	--bg-primary: var(--sl-color-neutral-0);
+	--bg-gray: var(--sl-color-neutral-50);
+	--bg-dark: var(--sl-color-neutral-900);
+	--bg-crystal: hsl(0deg 0% 98% / 50%);
+	--bg-transparent: #ffffff10;
+	--bg-editor: #1e1e1e;
 	--bg-overlay: #17171747;
-	--bg-accent: #c7d2fe;
-	--bg-red: #fef2f2;
-	--bg-green: #ecfdf5;
-	--bg-yellow: #fffbeb;
-	--bg-neutral: #e5e5e5;
-	--color-accent: #4f46e5;
-	--color-red: #dc2626;
-	--color-green: #059669;
-	--color-yellow: #d97706;
-	--color-neutral: #52525b;
-	--text-primary: #222222;
-	--text-lighter: #787878;
-	--text-onaccent: #ffffff;
-	--border-primary: #cacaca;
-	--shadow-primary: #f5f5f5;
+	--text-primary: var(--sl-color-neutral-900);
+	--text-onaccent: var(--sl-color-neutral-0);
+	--text-gray: var(--sl-color-neutral-400);
+	--border-primary: var(--sl-color-neutral-200);
+	--radius: 20px;
+	
+	/* set shoelace primary colors */
+	--sl-color-primary-50: var(--sl-color-indigo-50)!important;
+	--sl-color-primary-100: var(--sl-color-indigo-100)!important;
+	--sl-color-primary-200: var(--sl-color-indigo-200)!important;
+	--sl-color-primary-300: var(--sl-color-indigo-300)!important;
+	--sl-color-primary-400: var(--sl-color-indigo-400)!important;
+	--sl-color-primary-500: var(--sl-color-indigo-500)!important;
+	--sl-color-primary-600: var(--sl-color-indigo-600)!important;
+	--sl-color-primary-700: var(--sl-color-indigo-700)!important;
+	--sl-color-primary-800: var(--sl-color-indigo-800)!important;
+	--sl-color-primary-900: var(--sl-color-indigo-900)!important;
+	--sl-color-primary-950: var(--sl-color-indigo-950)!important;
+
+	/* assign shoelace primary colors */
+	--color-primary-50: var(--sl-color-primary-50);
+	--color-primary-100: var(--sl-color-primary-100);
+	--color-primary-200: var(--sl-color-primary-200);
+	--color-primary-300: var(--sl-color-primary-300);
+	--color-primary-400: var(--sl-color-primary-400);
+	--color-primary-500: var(--sl-color-primary-500);
+	--color-primary-600: var(--sl-color-primary-600);
+	--color-primary-700: var(--sl-color-primary-700);
+	--color-primary-800: var(--sl-color-primary-800);
+	--color-primary-900: var(--sl-color-primary-900);
+	--color-primary-950: var(--sl-color-primary-950);
 }
 
 *, *::before, *::after {
-	font-family: 'Inter', sans-serif; /* TODO(@Andrea): change to ? */
+	font-family: 'Inter', sans-serif;
 	box-sizing: border-box;
-	outline-color: var(--color-accent);
+	outline-color: var(--color-primary-500);
 }
 
 h1, h1, h3, h4, h5, h6 {
-	font-family: 'Inter'!important; /* TODO(@Andrea): change to Interstate or Futura */
+	font-family: 'Inter', sans-serif!important; /* TODO(@Andrea): change to Interstate */
 	font-weight: 400;
+}
+
+a {
+	text-decoration: none;
 }
 
 h1 {
 	font-size: 25px;
+}
+
+code {
+	font-family: monospace;
 }
 
 img, picture, video, canvas, svg {
@@ -46,20 +73,47 @@ body {
 	padding: 0;
 }
 
-.material-symbols-outlined {
-	font-variation-settings:
-		'FILL' 0,
-		'wght' 400,
-		'GRAD' 0,
-		'opsz' 48;
-}
-
 .App {
-    background-color: var(--bg-secondary);
+    background-color: var(--bg-gray);
     min-height: 100vh;
 }
 
-/* || Monaco editor icons */
+/* || buttons and links */
+
+sl-button {
+	position: relative;
+}
+
+sl-button > a {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+}
+
+sl-button[variant="primary"] > a,
+sl-button[variant="neutral"] > a,
+sl-button[variant="danger"] > a,
+sl-button[variant="success"] > a,
+sl-button[variant="warning"] > a {
+	color: var(--text-onaccent);
+}
+
+sl-breadcrumb-item {
+	position: relative;
+}
+
+sl-breadcrumb-item > a {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: calc(100% - 14px);
+	height: 100%;
+}
+
+
+/* || icons */
 
 .codicon {
     font-family: "codicon"!important;
@@ -69,13 +123,15 @@ body {
     font-family: "codicon"!important;
 }
 
-
 /* || Forms */
 
-select {
-    padding: 15px;
-    border-radius: 5px;
-    background-color: transparent;
-    box-shadow: 1px 1px 5px 0 var(--shadow-primary);
-    border: 1px solid var(--border-primary);
+sl-select::part(control) {
+	padding: 15px 0;
+	min-width: 150px;
+}
+
+/* || Panels */
+
+sl-dialog::part(panel) {
+	border-radius: 20px;
 }

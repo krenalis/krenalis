@@ -1,0 +1,22 @@
+.NotFound .content {
+    max-width: 700px;
+    margin: 0 auto 0 auto;
+    padding-top: 150px;
+}
+
+.NotFound .content .box {
+    padding: 70px 30px;
+    text-align: center;
+}
+
+.NotFound .content .box .title {
+    font-size: 120px;
+    font-weight: 600;
+    color: var(--color-primary-600);
+    text-shadow: 1px 1px 2px var(--text-primary);
+}
+
+.NotFound .content .box .description {
+    font-size: 18px;
+    margin-top: 10px;
+}

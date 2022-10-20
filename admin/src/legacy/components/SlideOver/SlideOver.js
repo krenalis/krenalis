@@ -1,7 +1,7 @@
-import React, { Component } from 'react'
+import React from 'react'
 import './SlideOver.css'
 
-export default class SlideOver extends Component {
+export default class SlideOver extends React.Component {
     render() {
         return (
             this.props.isOpen ?

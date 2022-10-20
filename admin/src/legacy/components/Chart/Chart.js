@@ -1,8 +1,8 @@
-import React, { Component } from 'react'
+import React from 'react'
 import { CartesianGrid, AreaChart, PieChart, Pie, Area, Legend, LineChart, Line, BarChart, YAxis, XAxis, Tooltip, Bar } from 'recharts'
 import './Chart.css'
 
-export default class Chart extends Component {
+export default class Chart extends React.Component {
     render() {
         let chart;
         switch (this.props.type) {

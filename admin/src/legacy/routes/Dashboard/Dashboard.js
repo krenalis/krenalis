@@ -1,4 +1,4 @@
-import React, { Component } from 'react'
+import React from 'react'
 import AceEditor from 'react-ace';
 import 'ace-builds/src-noconflict/mode-json';
 import 'ace-builds/src-noconflict/theme-github';
@@ -10,13 +10,13 @@ import QuerySuggestion from '../../components/QuerySuggestion/QuerySuggestion';
 import { docsData } from '../../utils/docsData';
 import { additionalNotesData } from '../../utils/additionalNotesData';
 import Chart from '../../components/Chart/Chart';
-import StatusMessage from '../../../components/StatusMessage/StatusMessage';
+import Alert from '../../../components/Alert/Alert';
 import Accordion from '../../components/Accordion/Accordion';
 import './Dashboard.css'
 import FloatingButton from '../../components/FloatingButton/FloatingButton';
 import SlideOver from '../../components/SlideOver/SlideOver';
 
-export default class Dashboard extends Component {
+export default class Dashboard extends React.Component {
 
     constructor(props) {
         super(props);

@@ -1,0 +1,37 @@
+.AccountSchemas {
+    min-height: 100vh;
+}
+
+.AccountSchemas .content {
+    max-width: 1500px;
+    margin: auto;
+    padding: 50px 0;
+    margin-top: -220px;
+}
+
+.AccountSchemas .content .title {
+    font-weight: 600;
+}
+
+.AccountSchemas .content .bar {
+    display: flex;
+    justify-content: space-between;
+    margin: 40px 0;
+    align-items: baseline;
+}
+
+.AccountSchemas .content .bar .saveButton {
+    width: 200px;
+}
+
+.AccountSchemas .content .editorWrapper {
+    width: 100%;
+    height: 600px;
+    padding: 30px;
+    background-color: var(--bg-editor);
+    border-radius: var(--radius);
+}
+
+.AccountSchemas .content .editorWrapper *  {
+    font-family: monospace!important;
+}

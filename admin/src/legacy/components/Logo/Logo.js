@@ -1,8 +1,8 @@
-import React, { Component } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import './Logo.css';
 
-export default class Logo extends Component {
+export default class Logo extends React.Component {
     render() {
         return (
             <div className='Logo'>

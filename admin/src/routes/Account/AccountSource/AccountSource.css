@@ -1,0 +1,97 @@
+.AccountSource {
+    min-height: 100vh;
+}
+
+.AccountSource .content {
+    max-width: 1600px;
+    margin: auto;
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    grid-template-areas: 
+        "title title title"
+        "sourceProperties editor schemaProperties"
+        "sourceProperties saveButton schemaProperties"
+        "sourceProperties documentation schemaProperties";
+    gap: 30px;
+    margin-top: -200px;
+}
+
+.AccountSource .content > .title {
+    grid-area: title;
+    font-size: 23px;
+    font-weight: 600;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    align-items: center;
+    color: var(--text-onaccent);
+    margin-bottom: 20px;
+}
+
+.AccountSource .content .title .littleLogo {
+    max-width: 35px;
+}
+
+.AccountSource .content .properties .title {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-onaccent);
+}
+
+.AccountSource .content .properties .property {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    padding: 15px 25px;
+    margin-bottom: 15px;
+    border-radius: var(--radius);
+    box-shadow: var(--sl-shadow-x-small);
+    overflow-wrap: anywhere;
+    font-family: monospace!important;
+}
+
+.AccountSource .content .properties.sourceProperties {
+    grid-area: sourceProperties;
+}
+
+.AccountSource .content .editorWrapper {
+    grid-area: editor;
+    width: 100%;
+    height: 600px;
+    padding: 30px;
+    border-radius: var(--radius);
+    background-color: var(--bg-editor);
+}
+
+.AccountSource .content .editorWrapper *  {
+    font-family: monospace!important;
+}
+
+.AccountSource .content .editorWrapper .Button {
+    margin-top: 50px;
+}
+
+.AccountSource .content .editorWrapper .documentation {
+    margin-top: 30px;
+}
+
+.AccountSource .content .properties.schemaProperties {
+    grid-area: schemaProperties;
+}
+
+.AccountSource .content .saveButton {
+    grid-area: saveButton;
+    width: 200px;
+    margin: auto;
+}
+
+.AccountSource .content .documentation {
+    grid-area: documentation;
+    border-radius: var(--radius);
+    padding: 20px 50px;
+    background-color: var(--bg-primary);
+    box-shadow: var(--sl-shadow-small);
+    margin-bottom: 30px;
+}

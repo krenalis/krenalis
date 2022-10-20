@@ -1,7 +1,7 @@
-import React, { Component } from 'react'
+import React from 'react'
 import './Accordion.css'
 
-export default class Accordion extends Component {
+export default class Accordion extends React.Component {
     constructor(props) {
         super(props);
         this.state = {

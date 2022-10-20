@@ -556,15 +556,13 @@ func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
 	enc.Encode([]any{accountID, nil})
 }
 
-// TODO(@Andrea): redirect to error screens with useful messages instead of
-// sending generic internal server errors.
 func (admin *admin) addDataSource(w http.ResponseWriter, r *http.Request, accountID int) {
 
 	api := admin.apis.AsAccount(1) // TODO(marco): what is the account?
 	ws := api.AsWorkspace(1)       // TODO(marco): what is the workspace?
 
 	// get the ID of the connector.
-	cookie, err := r.Cookie("install-connector")
+	cookie, err := r.Cookie("add-source")
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		log.Print("[error] cannot add data source: the request has not the cookie containing the connector ID")
@@ -644,9 +642,9 @@ func (admin *admin) addDataSource(w http.ResponseWriter, r *http.Request, accoun
 		return
 	}
 
-	// remove the "install-connector" cookie.
+	// remove the "add-source" cookie.
 	c := &http.Cookie{
-		Name:     "install-connector",
+		Name:     "add-source",
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
@@ -655,7 +653,7 @@ func (admin *admin) addDataSource(w http.ResponseWriter, r *http.Request, accoun
 	http.SetCookie(w, c)
 
 	// redirect to confirmation page.
-	http.Redirect(w, r, "/admin/connectors/confirmation/"+strconv.Itoa(connectorID), http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/admin/connectors/added/"+strconv.Itoa(connectorID), http.StatusTemporaryRedirect)
 
 	return
 }

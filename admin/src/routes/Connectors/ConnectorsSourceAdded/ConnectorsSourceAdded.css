@@ -1,0 +1,53 @@
+.ConnectorsSourceAdded {
+    min-height: 100vh;
+}
+
+.ConnectorsSourceAdded .content {
+    max-width: 700px;
+    margin: auto;
+    text-align: center;
+    margin-top: -180px;
+}
+
+.ConnectorsSourceAdded .addedSource {
+    box-shadow: var(--sl-shadow-small);
+    padding: 50px;
+    background-color: var(--bg-primary);
+    text-align: center;
+    border-radius: var(--radius);
+}
+
+.ConnectorsSourceAdded .addedSource .logo {
+    width: fit-content;
+    margin: auto;
+}
+
+.ConnectorsSourceAdded .addedSource .logo img {
+    max-width: 70px;
+    height: auto;
+    margin: auto;
+}
+
+.ConnectorsSourceAdded .title {
+    margin-top: 30px;
+    font-weight: 600;
+    font-size: 18px;
+}
+
+.ConnectorsSourceAdded .description {
+    margin-top: 10px;
+}
+
+.ConnectorsSourceAdded .link {
+    margin-top: 20px;
+}
+
+.ConnectorsSourceAdded a {
+    font-weight: 600;
+}
+
+.ConnectorsSourceAdded a,
+.ConnectorsSourceAdded sl-icon {
+    color: var(--color-primary);
+    font-weight: 600;
+}
