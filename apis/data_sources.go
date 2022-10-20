@@ -75,14 +75,14 @@ func (this *DataSources) Add(connector int, refreshToken, accessToken string) (i
 	}
 	var id int64
 	err = this.myDB.Transaction(func(tx *sql.Tx) error {
-		_, err = this.myDB.Exec("INSERT INTO `resources`\n"+
+		_, err = tx.Exec("INSERT INTO `resources`\n"+
 			"SET `connector` = ?, `resource` = ?, `refreshToken` = ?\n"+
 			"ON DUPLICATE KEY UPDATE `refreshToken` = ?",
 			connector, resource, refreshToken, refreshToken)
 		if err != nil {
 			return err
 		}
-		result, err := this.myDB.Exec("INSERT INTO `data_sources`\n"+
+		result, err := tx.Exec("INSERT INTO `data_sources`\n"+
 			"SET `workspace` = ?, `connector` = ?, `resource` = ?",
 			this.workspace, connector, resource)
 		if err != nil {
