@@ -107,6 +107,17 @@ func (this *DataSources) Add(connector int, refreshToken, accessToken string) (i
 		id, err = result.LastInsertId()
 		return err
 	})
+	if err != nil {
+		return 0, err
+	}
+
+	go func() {
+		err := this.reloadProperties(int(id))
+		if err != nil {
+			log.Printf("[error] cannot reload properties for data source %d: %s", id, err)
+		}
+	}()
+
 	return int(id), err
 }
 
@@ -422,4 +433,63 @@ func (this *DataSources) newConnectorContext(ctx context.Context, source, resour
 	fh.context = context.WithValue(fh.context, connectors.FirehoseContextKey{}, fh)
 
 	return fh.context
+}
+
+// reloadProperties reloads the properties of the data source with identifier
+// id.
+func (this *DataSources) reloadProperties(id int) error {
+
+	// TODO(marco) The following code is duplicated in the Import method.
+	var name, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
+	var connector, resource int
+	var settings []byte
+	var expiration time.Time
+	err := this.myDB.QueryRow(
+		"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
+			" `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `s`.`connector`,"+
+			" `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
+			"FROM `data_sources` AS `s`\n"+
+			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+			"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
+			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
+		&name, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration, &connector,
+		&resource, &cursor, &settings)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrDataSourceNotFound
+		}
+		return err
+	}
+
+	accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
+
+	if accessToken == "" || accessTokenExpired {
+		accessToken, err = this.api.apis.refreshOAuthToken(resource)
+		if err != nil {
+			return err
+		}
+	}
+
+	conn := connectors.Connector(name, clientSecret)
+	ctx := this.newConnectorContext(context.Background(), id, resource, connector, resourceCode, accessToken,
+		webhooksPer, settings)
+	properties, _, err := conn.Properties(ctx)
+	if err != nil {
+		return err
+	}
+
+	rows := make([][]any, len(properties))
+	for i, p := range properties {
+		rows[i] = []any{id, p.Name, p.Type, p.Label, i}
+	}
+	err = this.myDB.Transaction(func(tx *sql.Tx) error {
+		_, err := tx.Exec("DELETE FROM `data_sources_properties` WHERE `source` = ?", id)
+		if err != nil {
+			return err
+		}
+		_, err = tx.Table("DataSourcesProperties").Insert([]string{"source", "name", "type", "label", "position"}, rows, nil)
+		return err
+	})
+
+	return err
 }
