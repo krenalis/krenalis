@@ -34,7 +34,7 @@ import (
 	"github.com/open2b/nuts/capture"
 )
 
-// Make sure it implements the Connector interface.
+// Make sure it implements the AppConnector interface.
 var _ connectors.AppConnecter = &Connector{}
 
 var Debug = false

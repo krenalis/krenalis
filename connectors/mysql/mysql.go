@@ -22,7 +22,7 @@ import (
 // This package is the MySQL connector.
 // (https://dev.mysql.com/doc/refman/8.0/en/)
 
-// Make sure it implements the Connector interface.
+// Make sure it implements the DatabaseConnector interface.
 var _ connectors.DatabaseConnecter = &Connector{}
 
 type Connector struct {

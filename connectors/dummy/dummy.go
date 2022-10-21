@@ -15,7 +15,7 @@ import (
 	"chichi/connectors"
 )
 
-// Make sure it implements the Connector interface.
+// Make sure it implements the AppConnector interface.
 var _ connectors.AppConnecter = &Connector{}
 
 type Connector struct {
