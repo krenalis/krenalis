@@ -14,7 +14,7 @@
 }
 
 .Card .logo > .unknownLogo {
-    background-color: var(--bg-secondary);
+    background-color: var(--bg-gray);
     color: var(--text-primary);
     width: 60px;
     height: 60px;
@@ -23,6 +23,7 @@
     justify-content: center;
     border-radius: var(--radius);
     margin: 0 auto 30px auto;
+    font-size: 22px;
 }
 
 .Card .name {
