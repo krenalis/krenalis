@@ -583,7 +583,7 @@ func (admin *admin) addDataSource(w http.ResponseWriter, r *http.Request, accoun
 	oauthCode := r.URL.Query().Get("code")
 	if oauthCode == "" {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
-		log.Printf("[error] cannot add data source %d: the redirect URI does not contain the oauth code", accountID)
+		log.Printf("[error] cannot add data source for connector %d: the redirect URI does not contain the oauth code", connectorID)
 		return
 	}
 
