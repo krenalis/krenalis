@@ -24,8 +24,8 @@ type FirehoseContextKey struct{}
 type ResourceContextKey struct{}
 type SettingsContextKey struct{}
 
-// Connecter is the interface implemented by the connectors.
-type Connecter interface {
+// AppConnecter is the interface implemented by app connectors.
+type AppConnecter interface {
 
 	// Groups returns the groups starting from the given cursor.
 	Groups(ctx context.Context, cursor string, properties [][]string) error
@@ -49,6 +49,16 @@ type Connecter interface {
 
 	// Users returns the users starting from the given cursor.
 	Users(ctx context.Context, cursor string, properties [][]string) error
+}
+
+// DatabaseConnecter is the interface implemented by database connectors.
+type DatabaseConnecter interface {
+
+	// Query executes the given query and returns the resulting rows.
+	Query(ctx context.Context, query string) ([]Column, Rows, error)
+
+	// ServeUserInterface serves the connector's user interface.
+	ServeUserInterface(w http.ResponseWriter, r *http.Request)
 }
 
 // Firehose is the interface implemented by a Firehose.
@@ -186,8 +196,16 @@ type User struct {
 	Properties Properties
 }
 
-type Conf struct {
-	ClientSecret string
+type Rows interface {
+	Close() error
+	Err() error
+	Next() bool
+	Scan(dest ...any) error
+}
+
+type Column struct {
+	Name string
+	Type string
 }
 
 var connectors = map[string]any{}
@@ -196,9 +214,15 @@ func RegisterConnector(name string, value any) {
 	connectors[name] = value
 }
 
-func Connector(name string, clientSecret string) Connecter {
+func AppConnector(name string, clientSecret string) AppConnecter {
 	t := reflect.TypeOf(connectors[name])
 	v := reflect.New(t.Elem())
 	reflect.Indirect(v).FieldByName("ClientSecret").Set(reflect.ValueOf(clientSecret))
-	return v.Interface().(Connecter)
+	return v.Interface().(AppConnecter)
+}
+
+func DatabaseConnector(name string) DatabaseConnecter {
+	t := reflect.TypeOf(connectors[name])
+	v := reflect.New(t.Elem())
+	return v.Interface().(DatabaseConnecter)
 }

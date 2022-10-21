@@ -12,12 +12,13 @@ INSERT INTO `accounts` (`name`,`email`,`password`) VALUES ('ACME inc','acme@open
 CREATE TABLE `connectors` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(200) NOT NULL DEFAULT '',
+  `type` ENUM('App', 'Database') DEFAULT 'App',
   `oauthURL` VARCHAR(500) NOT NULL DEFAULT '',
   `logoURL` VARCHAR(500) NOT NULL DEFAULT '',
   `clientID` VARCHAR(500) NOT NULL DEFAULT '',
   `clientSecret` VARCHAR(500) NOT NULL DEFAULT '',
   `tokenEndpoint` VARCHAR(500) NOT NULL DEFAULT '',
-  `webhooksPer` ENUM('Connector', 'Resource', 'DataSource') NOT NULL DEFAULT 'Connector',
+  `webhooksPer` ENUM('None', 'Connector', 'Resource', 'DataSource') NOT NULL DEFAULT 'None',
   PRIMARY KEY (`id`)
 );
 
@@ -33,6 +34,7 @@ CREATE TABLE `data_sources` (
   `settings` VARCHAR(10000) NOT NULL DEFAULT '',
   `properties` MEDIUMTEXT NOT NULL,
   `usedProperties` MEDIUMTEXT NOT NULL,
+  `usersQuery` MEDIUMTEXT NOT NULL,
   PRIMARY KEY (`id`)
 );
 

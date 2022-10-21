@@ -193,10 +193,13 @@ func (fh *firehose) SetUserGroups(user string, groups []string) {
 }
 
 // WebhookURL returns the URL of the webhook.
+// If the connector does not support webhooks, it returns an empty string.
 func (fh *firehose) WebhookURL() string {
 	u := "https://localhost:9090/webhook/"
 	switch fh.webhooksPer {
-	case "Connector":
+	case "None":
+		return ""
+	case "AppConnector":
 		return u + "c/" + strconv.Itoa(fh.connector) + "/"
 	case "Resource":
 		return u + "r/" + strconv.Itoa(fh.resource) + "/"

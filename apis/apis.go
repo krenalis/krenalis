@@ -161,6 +161,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 type Connector struct {
 	ID            int
 	Name          string
+	Type          string
 	OauthURL      string
 	LogoURL       string
 	ClientID      string
@@ -172,8 +173,10 @@ type Connector struct {
 // Connector returns the connector with the given identifier.
 func (apis *APIs) Connector(id int) (*Connector, error) {
 	connector := Connector{ID: id}
-	err := apis.myDB.QueryRow("SELECT `name`, `oauthURL`, `logoURL`, `clientID`, `clientSecret`, `tokenEndpoint`, `webhooksPer`\nFROM `connectors`\nWHERE `id` = ?", id).
-		Scan(&connector.Name, &connector.OauthURL, &connector.LogoURL, &connector.ClientID, &connector.ClientSecret, &connector.TokenEndpoint, &connector.WebhooksPer)
+	err := apis.myDB.QueryRow("SELECT `name`, `type`, `oauthURL`, `logoURL`, `clientID`, `clientSecret`,"+
+		" `tokenEndpoint`, `webhooksPer`\nFROM `connectors`\nWHERE `id` = ?", id).Scan(
+		&connector.Name, &connector.Type, &connector.OauthURL, &connector.LogoURL, &connector.ClientID,
+		&connector.ClientSecret, &connector.TokenEndpoint, &connector.WebhooksPer)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -186,11 +189,11 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 // Connectors returns all connectors.
 func (apis *APIs) Connectors() ([]*Connector, error) {
 	connectors := []*Connector{}
-	err := apis.myDB.QueryScan("SELECT `id`, `name`, `oauthURL`, `logoURL`\nFROM `connectors`", func(rows *sql.Rows) error {
+	err := apis.myDB.QueryScan("SELECT `id`, `name`, `type`, `oauthURL`, `logoURL`\nFROM `connectors`", func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
 			var connector Connector
-			if err = rows.Scan(&connector.ID, &connector.Name, &connector.OauthURL, &connector.LogoURL); err != nil {
+			if err = rows.Scan(&connector.ID, &connector.Name, &connector.Type, &connector.OauthURL, &connector.LogoURL); err != nil {
 				return err
 			}
 			connectors = append(connectors, &connector)

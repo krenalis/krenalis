@@ -14,6 +14,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -26,16 +28,22 @@ type DataSources struct {
 }
 
 var ErrConnectorNotFound = errors.New("connector does not exist")
+var ErrInvalidConnectorType = errors.New("connector has an invalid type")
 var ErrDataSourceNotFound = errors.New("data source does not exist")
 var ErrResourceNotFound = errors.New("resource does not exist")
-var ErrCannotGetConnectorAccessToken = fmt.Errorf("cannot get access token")
+var ErrCannotGetConnectorAccessToken = errors.New("cannot get access token")
+var ErrNoLimitPlaceholderInQuery = errors.New("there is no 'limit' placeholder in query")
 
-const rawPropertiesMaxSize = 16_777_215 // maximum size in runes of the 'property' column of the 'data_sources' table.
+const (
+	rawPropertiesMaxSize = 16_777_215 // maximum size in runes of the 'property' column of the 'data_sources' table.
+	queryMaxSize         = 16_777_215 // maximum size in runes of a data source query.
+)
 
 // DataSource represents a data source.
 type DataSource struct {
 	ID       int
 	Name     string
+	Type     string
 	OauthURL string
 	LogoURL  string
 }
@@ -58,10 +66,11 @@ type DataSourceProperty struct {
 	Properties []DataSourceProperty
 }
 
-// Add adds a data source given its connector and the OAuth refresh and access
-// tokens of the resource and returns its identifier.
+// Add adds a data source given its connector and the OAuth refresh and
+// access tokens of the resource and returns its identifier.
 // If the data source already exists for the given connector and resource, it
-// updates the data source.
+// updates the data source. If the connector is not an app, it returns the
+// ErrInvalidConnectorType error.
 func (this *DataSources) Add(connector int, refreshToken, accessToken string) (int, error) {
 	conn, err := this.api.apis.Connector(connector)
 	if err != nil {
@@ -70,7 +79,11 @@ func (this *DataSources) Add(connector int, refreshToken, accessToken string) (i
 	if conn == nil {
 		return 0, ErrConnectorNotFound
 	}
-	c := connectors.Connector(conn.Name, conn.ClientSecret)
+	if conn.Type != "App" {
+		return this.AddDatabase(connector) // TODO
+		//return 0, ErrInvalidConnectorType
+	}
+	c := connectors.AppConnector(conn.Name, conn.ClientSecret)
 	ctx := context.WithValue(context.Background(), connectors.AccessTokenContextKey{}, accessToken)
 	resourceCode, err := c.Resource(ctx)
 	if err != nil {
@@ -122,6 +135,35 @@ func (this *DataSources) Add(connector int, refreshToken, accessToken string) (i
 	}()
 
 	return int(id), err
+}
+
+// AddDatabase adds a data source given its database connector and returns its
+// identifier.
+// If the data source already exists for the given connector and resource, it
+// updates the data source. If the connector is not a database, it returns the
+// ErrInvalidConnectorType error.
+func (this *DataSources) AddDatabase(connector int) (int, error) {
+	var id int64
+	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+		var connectorType string
+		err := tx.QueryRow("SELECT `type` FROM `connectors` WHERE `id` = ?", connector).Scan(&connectorType)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return ErrConnectorNotFound
+			}
+			return err
+		}
+		if connectorType != "Database" {
+			return ErrInvalidConnectorType
+		}
+		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `connector` = ?", this.workspace, connector)
+		id, err = result.LastInsertId()
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+	return int(id), nil
 }
 
 // Delete deletes the data source with the given identifier.
@@ -204,8 +246,8 @@ func (this *DataSources) Import(id int, reimport bool) error {
 	}
 
 	go func() {
-		conn := connectors.Connector(name, clientSecret)
-		ctx := this.newConnectorContext(context.Background(), id, resource, connector, resourceCode, accessToken,
+		conn := connectors.AppConnector(name, clientSecret)
+		ctx := this.newAppConnectorContext(context.Background(), id, resource, connector, resourceCode, accessToken,
 			webhooksPer, settings)
 		err := conn.Users(ctx, cursor, properties)
 		if err != nil {
@@ -219,14 +261,14 @@ func (this *DataSources) Import(id int, reimport bool) error {
 // List returns all data sources.
 func (this *DataSources) List() ([]*DataSource, error) {
 	sources := []*DataSource{}
-	err := this.myDB.QueryScan("SELECT `ds`.`id`, `c`.`name`, `c`.`oauthURL`, `c`.`logoURL`\n"+
+	err := this.myDB.QueryScan("SELECT `ds`.`id`, `c`.`name`, `c`.`type`, `c`.`oauthURL`, `c`.`logoURL`\n"+
 		"FROM `data_sources` as `ds`\n"+
 		"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
 		"WHERE `workspace` = ?", this.workspace, func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
 			var source DataSource
-			if err = rows.Scan(&source.ID, &source.Name, &source.OauthURL, &source.LogoURL); err != nil {
+			if err = rows.Scan(&source.ID, &source.Name, &source.Type, &source.OauthURL, &source.LogoURL); err != nil {
 				return err
 			}
 			sources = append(sources, &source)
@@ -266,6 +308,92 @@ func (this *DataSources) Properties(id int) ([]DataSourceProperty, [][]string, e
 	return properties, usedProperties, nil
 }
 
+// Column represents a column of a database data source.
+type Column struct {
+	Name string
+	Type string
+}
+
+// Query executes the given query on the data source with identifier id and
+// returns the resulting columns and rows. limit can be between 1 and 100.
+// It returns the ErrDataSourceNotFound error if the data source does not
+// exist. It returns the ErrInvalidConnectorType error if the connector of the
+// data source is not a database.
+func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]string, error) {
+
+	if utf8.RuneCountInString(query) > queryMaxSize {
+		return nil, nil, errors.New("query is too long")
+	}
+	if limit < 1 || limit > 100 {
+		return nil, nil, errors.New("invalid limit")
+	}
+
+	var connector int
+	var connectorName, connectorType string
+	var settings []byte
+	err := this.myDB.QueryRow(
+		"SELECT `s`.`connector`, `s`.`settings`, `c`.`name`, `c`.`type`\n"+
+			"FROM `data_sources` AS `s`\n"+
+			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
+		&connector, &settings, &connectorName, &connectorType)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil, ErrDataSourceNotFound
+		}
+		return nil, nil, err
+	}
+	if connectorType != "Database" {
+		return nil, nil, ErrInvalidConnectorType
+	}
+
+	// Execute the query.
+	query, err = this.compileQueryWithLimit(query, limit)
+	if err != nil {
+		return nil, nil, err
+	}
+	conn := connectors.DatabaseConnector(connectorName)
+	ctx := this.newDatabaseConnectorContext(context.Background(), id, connector, settings)
+	rawColumns, rawRows, err := conn.Query(ctx, query)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Fill the columns.
+	columns := make([]Column, len(rawColumns))
+	for i, c := range rawColumns {
+		columns[i].Name = c.Name
+		columns[i].Type = c.Type
+	}
+
+	// Fill the rows.
+	var rows [][]string
+	values := make([]any, len(columns))
+	for i := range values {
+		var value string
+		values[i] = &value
+	}
+	for rawRows.Next() {
+		if err := rawRows.Scan(values...); err != nil {
+			return nil, nil, err
+		}
+		row := make([]string, len(rawColumns))
+		for i, v := range values {
+			row[i] = *(v.(*string))
+		}
+		rows = append(rows, row)
+	}
+	err = rawRows.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+	if rows == nil {
+		rows = [][]string{}
+	}
+
+	return columns, rows, nil
+}
+
 // ServeUserInterface serves the user interface for the data source with the
 // given identifier.
 // Returns the ErrDataSourceNotFound error if the data source does not exist.
@@ -302,8 +430,8 @@ func (this *DataSources) ServeUserInterface(id int, w http.ResponseWriter, r *ht
 		}
 	}
 
-	conn := connectors.Connector(name, clientSecret)
-	ctx := this.newConnectorContext(r.Context(), id, resource, connector, resourceCode, accessToken, webhooksPer, settings)
+	conn := connectors.AppConnector(name, clientSecret)
+	ctx := this.newAppConnectorContext(r.Context(), id, resource, connector, resourceCode, accessToken, webhooksPer, settings)
 	r.Clone(ctx)
 	r.Header.Del("Cookie") // remove the cookies from the request.
 	conn.ServeUserInterface(w, r)
@@ -330,6 +458,12 @@ func (this *DataSources) SetTransformationFunc(id int, fn string) error {
 	if affected == 0 {
 		return ErrDataSourceNotFound
 	}
+	return nil
+}
+
+// SetUsersQuery sets the users query of the data source with identifier id.
+// If the query is too long, it returns a ErrQueryTooLong error.
+func (this *DataSources) SetUsersQuery(id int, query string) error {
 	return nil
 }
 
@@ -383,9 +517,9 @@ func (this *DataSources) TransformationFunc(id int) (string, error) {
 	return row["transformation"].(string), nil
 }
 
-// newConnectorContext returns a context with a Firehose used to call a
+// newAppConnectorContext returns a context with a Firehose used to call an app
 // connector method.
-func (this *DataSources) newConnectorContext(ctx context.Context, source, resource, connector int, resourceCode,
+func (this *DataSources) newAppConnectorContext(ctx context.Context, source, resource, connector int, resourceCode,
 	accessToken, webhooksPer string, settings []byte) context.Context {
 
 	fh := &firehose{sources: this, source: source, resource: resource, connector: connector, webhooksPer: webhooksPer}
@@ -398,25 +532,37 @@ func (this *DataSources) newConnectorContext(ctx context.Context, source, resour
 	return fh.context
 }
 
+// newDatabaseConnectorContext returns a context with a Firehose used to call a
+// database connector method.
+func (this *DataSources) newDatabaseConnectorContext(ctx context.Context, source, connector int, settings []byte) context.Context {
+
+	fh := &firehose{sources: this, source: source, connector: connector, webhooksPer: "None"}
+	fh.context, fh.cancel = context.WithCancel(ctx)
+	fh.context = context.WithValue(fh.context, connectors.SettingsContextKey{}, settings)
+	fh.context = context.WithValue(fh.context, connectors.FirehoseContextKey{}, fh)
+
+	return fh.context
+}
+
 // reloadProperties reloads the properties of the data source with identifier
 // id.
 func (this *DataSources) reloadProperties(id int) error {
 
 	// TODO(marco) The following code is duplicated in the Import method.
-	var name, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
+	var name, typ, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor, usersQuery string
 	var connector, resource int
 	var settings []byte
-	var expiration time.Time
+	var expiration *time.Time
 	err := this.myDB.QueryRow(
-		"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
-			" `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `s`.`connector`,"+
-			" `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
+		"SELECT `c`.`name`, `c`.`type`, `c`.`clientSecret`, `c`.`webhooksPer`, IFNULL(`r`.`code`, ''), IFNULL(`r`.`accessToken`, ''),"+
+			" IFNULL(`r`.`refreshToken`, ''), `r`.`accessTokenExpirationTimestamp`, `s`.`connector`,"+
+			" `s`.`resource`, `s`.`userCursor`, `s`.`settings`, `s`.`usersQuery`\n"+
 			"FROM `data_sources` AS `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-			"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
+			"LEFT JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
 			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
-		&name, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration, &connector,
-		&resource, &cursor, &settings)
+		&name, &typ, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration, &connector,
+		&resource, &cursor, &settings, &usersQuery)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrDataSourceNotFound
@@ -424,22 +570,53 @@ func (this *DataSources) reloadProperties(id int) error {
 		return err
 	}
 
-	accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
+	var properties []connectors.Property
 
-	if accessToken == "" || accessTokenExpired {
-		accessToken, err = this.api.apis.refreshOAuthToken(resource)
+	switch typ {
+	case "App":
+
+		accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(*expiration)
+
+		if accessToken == "" || accessTokenExpired {
+			accessToken, err = this.api.apis.refreshOAuthToken(resource)
+			if err != nil {
+				return err
+			}
+		}
+
+		conn := connectors.AppConnector(name, clientSecret)
+		ctx := this.newAppConnectorContext(context.Background(), id, resource, connector, resourceCode, accessToken,
+			webhooksPer, settings)
+		properties, _, err = conn.Properties(ctx)
 		if err != nil {
 			return err
 		}
+
+	case "Database":
+
+		usersQuery, err = this.compileQueryWithLimit(usersQuery, 0)
+		if err != nil {
+			return err
+		}
+
+		conn := connectors.DatabaseConnector(name)
+		ctx := this.newDatabaseConnectorContext(context.Background(), id, connector, settings)
+		columns, rows, err := conn.Query(ctx, usersQuery)
+		if err != nil {
+			return err
+		}
+		err = rows.Close()
+		if err != nil {
+			return err
+		}
+		properties = make([]connectors.Property, len(columns))
+		for i := 0; i < len(properties); i++ {
+			properties[i].Name = columns[i].Name
+			properties[i].Type = columns[i].Type
+		}
+
 	}
 
-	conn := connectors.Connector(name, clientSecret)
-	ctx := this.newConnectorContext(context.Background(), id, resource, connector, resourceCode, accessToken,
-		webhooksPer, settings)
-	properties, _, err := conn.Properties(ctx)
-	if err != nil {
-		return err
-	}
 	rawProperties, err := json.Marshal(properties)
 	if err != nil {
 		return fmt.Errorf("cannot marshal the properties returned by the connector %d: %s", connector, err)
@@ -451,4 +628,13 @@ func (this *DataSources) reloadProperties(id int) error {
 	_, err = this.myDB.Exec("UPDATE `data_sources` SET `properties` = ? WHERE `id` = ?", rawProperties, id)
 
 	return err
+}
+
+// compileQuery compiles the given query and returns it. If the query does not
+// contain the limit placeholder it returns the ErrNoLimitPlaceholderInQuery error.
+func (this *DataSources) compileQueryWithLimit(query string, limit int) (string, error) {
+	if strings.Contains(query, ":limit") {
+		return "", ErrNoLimitPlaceholderInQuery
+	}
+	return strings.ReplaceAll(query, ":limit", strconv.Itoa(limit)), nil
 }

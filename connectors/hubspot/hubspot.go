@@ -35,7 +35,7 @@ import (
 )
 
 // Make sure it implements the Connector interface.
-var _ connectors.Connecter = &Connector{}
+var _ connectors.AppConnecter = &Connector{}
 
 var Debug = false
 

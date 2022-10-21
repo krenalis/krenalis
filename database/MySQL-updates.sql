@@ -317,3 +317,10 @@ ALTER TABLE `data_sources`
     ADD COLUMN `usedProperties` MEDIUMTEXT NOT NULL;
 
 DROP TABLE `data_sources_properties`;
+
+ALTER TABLE `connectors`
+    ADD COLUMN `type` ENUM('App', 'Database') DEFAULT 'App' AFTER `name`,
+    CHANGE COLUMN `webhooksPer` `webhooksPer` ENUM('None', 'Connector', 'Resource', 'DataSource') NOT NULL DEFAULT 'None';
+
+ALTER TABLE `data_sources`
+    ADD COLUMN `usersQuery` MEDIUMTEXT NOT NULL AFTER `usedProperties`;

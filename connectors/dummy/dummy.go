@@ -16,7 +16,7 @@ import (
 )
 
 // Make sure it implements the Connector interface.
-var _ connectors.Connecter = &Connector{}
+var _ connectors.AppConnecter = &Connector{}
 
 type Connector struct {
 	Firehose     connectors.Firehose

@@ -10,4 +10,5 @@ package admin
 import (
 	_ "chichi/connectors/dummy"
 	_ "chichi/connectors/hubspot"
+	_ "chichi/connectors/mysql"
 )
