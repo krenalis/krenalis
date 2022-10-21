@@ -42,8 +42,8 @@ If webhookPer is "DataSource":
 
 ## ServeUserInterface
 
-* AccessToken
-* Resource
+* AccessToken (no for databases)
+* Resource    (no for databases)
 * Firehose
 * Settings
 
