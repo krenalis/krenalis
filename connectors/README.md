@@ -13,6 +13,11 @@
 * Firehose
 * Settings
 
+## Query
+
+* Firehose
+* Settings
+
 ## ReceiveWebhook
 
 If webhookPer is "Connector":
