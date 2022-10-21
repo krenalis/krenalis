@@ -295,14 +295,22 @@ func (this *DataSources) Properties(id int) ([]DataSourceProperty, [][]string, e
 		return nil, nil, err
 	}
 	var properties []DataSourceProperty
-	err = json.Unmarshal(rawProperties, &properties)
-	if err != nil {
-		return nil, nil, errors.New("cannot unmarshal data source properties")
+	if len(rawProperties) > 0 {
+		err = json.Unmarshal(rawProperties, &properties)
+		if err != nil {
+			return nil, nil, errors.New("cannot unmarshal data source properties")
+		}
+	} else {
+		properties = []DataSourceProperty{}
 	}
 	var usedProperties [][]string
-	err = json.Unmarshal(rawUsedProperties, &usedProperties)
-	if err != nil {
-		return nil, nil, errors.New("cannot unmarshal data source used properties")
+	if len(rawUsedProperties) > 0 {
+		err = json.Unmarshal(rawUsedProperties, &usedProperties)
+		if err != nil {
+			return nil, nil, errors.New("cannot unmarshal data source used properties")
+		}
+	} else {
+		usedProperties = [][]string{}
 	}
 
 	return properties, usedProperties, nil
