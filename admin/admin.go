@@ -141,13 +141,16 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		properties, err := ws.DataSources.Properties(req.Connector)
+		properties, usedProperties, err := ws.DataSources.Properties(req.Connector)
 		if err != nil {
 			log.Printf("[error] cannot retrieve properties: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(properties)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"Properties":     properties,
+			"UsedProperties": usedProperties,
+		})
 		return
 	}
 

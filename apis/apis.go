@@ -120,7 +120,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		switch m[3] {
 		case "properties":
 			var properties []DataSourceProperty
-			properties, err = ws.DataSources.Properties(id)
+			properties, _, err = ws.DataSources.Properties(id)
 			if err == nil {
 				_ = json.NewEncoder(w).Encode(properties)
 			}

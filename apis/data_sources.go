@@ -239,24 +239,31 @@ func (this *DataSources) List() ([]*DataSource, error) {
 	return sources, nil
 }
 
-// Properties returns the properties of the data source with the given
-// identifier.
+// Properties returns the properties and the used properties of the data source
+// with the given identifier.
 // Returns the ErrDataSourceNotFound error if the data source does not exist.
-func (this *DataSources) Properties(id int) ([]DataSourceProperty, error) {
+func (this *DataSources) Properties(id int) ([]DataSourceProperty, [][]string, error) {
 	if id <= 0 {
-		return nil, errors.New("invalid data source identifier")
+		return nil, nil, errors.New("invalid data source identifier")
 	}
-	var rawProperties []byte
-	err := this.myDB.QueryRow("SELECT `properties` FROM `data_sources` WHERE `id` = ?", id).Scan(&rawProperties)
+	var rawProperties, rawUsedProperties []byte
+	err := this.myDB.QueryRow("SELECT `properties`, `usedProperties` FROM `data_sources` WHERE `id` = ?", id).
+		Scan(&rawProperties, &rawUsedProperties)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var properties []DataSourceProperty
 	err = json.Unmarshal(rawProperties, &properties)
 	if err != nil {
-		return nil, err
+		return nil, nil, errors.New("cannot unmarshal data source properties")
 	}
-	return properties, nil
+	var usedProperties [][]string
+	err = json.Unmarshal(rawUsedProperties, &usedProperties)
+	if err != nil {
+		return nil, nil, errors.New("cannot unmarshal data source used properties")
+	}
+
+	return properties, usedProperties, nil
 }
 
 // ServeUserInterface serves the user interface for the data source with the

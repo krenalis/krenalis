@@ -74,7 +74,7 @@ export default class AccountSource extends React.Component {
             return;
         }
         let sourceProperties = [];
-        for (let p of sp) sourceProperties.push(p.Name);
+        for (let p of sp.Properties) sourceProperties.push(p.Name);
         this.setState({ sourceProperties: sourceProperties });
     }
 
