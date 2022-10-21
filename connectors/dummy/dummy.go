@@ -32,7 +32,12 @@ func (c *Connector) Groups(ctx context.Context, cursor string, properties [][]st
 }
 
 func (c *Connector) Properties(ctx context.Context) ([]connectors.Property, []connectors.Property, error) {
-	panic("not implemented")
+	userProps := []connectors.Property{
+		{Name: "first_name", Type: "string"},
+		{Name: "last_name", Type: "string"},
+		{Name: "email", Type: "string"},
+	}
+	return userProps, nil, nil
 }
 
 func (c *Connector) ReceiveWebhook(ctx context.Context, r *http.Request) ([]connectors.Event, error) {
