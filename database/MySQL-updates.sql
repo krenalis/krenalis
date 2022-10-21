@@ -324,3 +324,6 @@ ALTER TABLE `connectors`
 
 ALTER TABLE `data_sources`
     ADD COLUMN `usersQuery` MEDIUMTEXT NOT NULL AFTER `usedProperties`;
+
+INSERT INTO `connectors` VALUES (`name`, `type`, `logoURL`)
+    ('MySQL','Database','https://cdn4.iconfinder.com/data/icons/logos-3/181/MySQL-512.png');
