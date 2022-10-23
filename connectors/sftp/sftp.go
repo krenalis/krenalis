@@ -25,11 +25,11 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// Make sure it implements the StorageConnection interface.
-var _ connectors.StorageConnection = &connection{}
+// Make sure it implements the StreamConnection interface.
+var _ connectors.StreamConnection = &connection{}
 
 func init() {
-	connectors.RegisterStorageConnector("SFTP", New)
+	connectors.RegisterStreamConnector("SFTP", New)
 }
 
 type connection struct {
@@ -47,7 +47,7 @@ type settings struct {
 }
 
 // New returns a new SFTP connection.
-func New(ctx context.Context, conf *connectors.StorageConfig) (connectors.StorageConnection, error) {
+func New(ctx context.Context, conf *connectors.StreamConfig) (connectors.StreamConnection, error) {
 	c := connection{ctx: ctx}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

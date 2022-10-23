@@ -18,12 +18,12 @@ var (
 	connectors   = struct {
 		apps      map[string]AppConnectionFunc
 		databases map[string]DatabaseConnectionFunc
-		storages  map[string]StorageConnectionFunc
+		streams   map[string]StreamConnectionFunc
 		files     map[string]FileConnectionFunc
 	}{
 		apps:      make(map[string]AppConnectionFunc),
 		databases: make(map[string]DatabaseConnectionFunc),
-		storages:  make(map[string]StorageConnectionFunc),
+		streams:   make(map[string]StreamConnectionFunc),
 		files:     make(map[string]FileConnectionFunc),
 	}
 )

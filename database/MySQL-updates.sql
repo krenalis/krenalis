@@ -330,3 +330,6 @@ INSERT INTO `connectors` VALUES (`name`, `type`, `logoURL`)
 
 ALTER TABLE `connectors`
     CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'Storage', 'File') DEFAULT 'App';
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'File', 'Stream') DEFAULT 'App';
