@@ -313,16 +313,16 @@ func (apis *APIs) initSchema() {
 	}{})
 
 	apis.myDB.Scheme("DataSources", "data_sources", struct {
-		account                        int
-		connector                      int
-		accessToken                    string
-		refreshToken                   string
-		accessTokenExpirationTimestamp string
-		transformation                 string
-		userCursor                     string
-		settings                       string
-		properties                     string
-		usedProperties                 string
+		id             int
+		workspace      int
+		connector      int
+		resource       string
+		transformation string
+		userCursor     string
+		settings       string
+		properties     string
+		usedProperties string
+		usersQuery     string
 	}{})
 
 	apis.myDB.Scheme("DataSourcesUsers", "data_sources_users", struct {
