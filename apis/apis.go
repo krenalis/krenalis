@@ -332,6 +332,12 @@ func (apis *APIs) initSchema() {
 		data      string
 	}{})
 
+	apis.myDB.Scheme("DataSourcesStats", "data_sources_stats", struct {
+		source   int
+		timeSlot int
+		usersIn  int
+	}{})
+
 	apis.myDB.Scheme("Devices", "devices", struct {
 		property int
 		id       string
