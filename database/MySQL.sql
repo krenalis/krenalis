@@ -12,7 +12,7 @@ INSERT INTO `accounts` (`name`,`email`,`password`) VALUES ('ACME inc','acme@open
 CREATE TABLE `connectors` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(200) NOT NULL DEFAULT '',
-  `type` ENUM('App', 'Database') DEFAULT 'App',
+  `type` ENUM('App', 'Database', 'Storage', 'File') DEFAULT 'App',
   `oauthURL` VARCHAR(500) NOT NULL DEFAULT '',
   `logoURL` VARCHAR(500) NOT NULL DEFAULT '',
   `clientID` VARCHAR(500) NOT NULL DEFAULT '',

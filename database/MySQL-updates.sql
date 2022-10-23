@@ -327,3 +327,6 @@ ALTER TABLE `data_sources`
 
 INSERT INTO `connectors` VALUES (`name`, `type`, `logoURL`)
     ('MySQL','Database','https://cdn4.iconfinder.com/data/icons/logos-3/181/MySQL-512.png');
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'Storage', 'File') DEFAULT 'App';
