@@ -28,12 +28,12 @@ type StorageConnectionFunc func(context.Context, *StorageConfig) (StorageConnect
 // fn is nil, it panics.
 func RegisterStorageConnector(name string, fn StorageConnectionFunc) {
 	if fn == nil {
-		panic("connectors: Register new storage function is nil")
+		panic("connectors: RegisterStorageConnector function is nil")
 	}
 	connectorsMu.Lock()
 	defer connectorsMu.Unlock()
 	if _, dup := connectors.storages[name]; dup {
-		panic("connectors: Register called twice for storage connector " + name)
+		panic("connectors: RegisterStorageConnector called twice for connector " + name)
 	}
 	connectors.storages[name] = fn
 }

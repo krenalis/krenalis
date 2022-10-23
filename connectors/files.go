@@ -27,12 +27,12 @@ type FileConnectionFunc func(context.Context, *FileConfig) (FileConnection, erro
 // it panics.
 func RegisterFileConnector(name string, fn FileConnectionFunc) {
 	if fn == nil {
-		panic("connectors: Register new file function is nil")
+		panic("connectors: RegisterFileConnector function is nil")
 	}
 	connectorsMu.Lock()
 	defer connectorsMu.Unlock()
 	if _, dup := connectors.files[name]; dup {
-		panic("connectors: Register called twice for file connector " + name)
+		panic("connectors: RegisterFileConnector called twice for connector " + name)
 	}
 	connectors.files[name] = fn
 

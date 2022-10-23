@@ -27,12 +27,12 @@ type DatabaseConnectionFunc func(context.Context, *DatabaseConfig) (DatabaseConn
 // name or if fn is nil, it panics.
 func RegisterDatabaseConnector(name string, f DatabaseConnectionFunc) {
 	if f == nil {
-		panic("connectors: Register new database function is nil")
+		panic("connectors: RegisterDatabaseConnector function is nil")
 	}
 	connectorsMu.Lock()
 	defer connectorsMu.Unlock()
 	if _, dup := connectors.databases[name]; dup {
-		panic("connectors: Register called twice for database connector " + name)
+		panic("connectors: RegisterDatabaseConnector called twice for connector " + name)
 	}
 	connectors.databases[name] = f
 }

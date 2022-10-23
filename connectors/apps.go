@@ -35,12 +35,12 @@ type AppConnectionFunc func(context.Context, *AppConfig) (AppConnection, error)
 // it panics.
 func RegisterAppConnector(name string, f AppConnectionFunc) {
 	if f == nil {
-		panic("connectors: Register new app function is nil")
+		panic("connectors: RegisterAppConnector function is nil")
 	}
 	connectorsMu.Lock()
 	defer connectorsMu.Unlock()
 	if _, dup := connectors.apps[name]; dup {
-		panic("connectors: Register called twice for app connector " + name)
+		panic("connectors: RegisterAppConnector called twice for connector " + name)
 	}
 	connectors.apps[name] = f
 }
