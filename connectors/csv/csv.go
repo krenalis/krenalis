@@ -22,13 +22,13 @@ import (
 )
 
 // Make sure it implements the FileConnector interface.
-var _ connectors.FileConnection = &Connection{}
+var _ connectors.FileConnection = &connection{}
 
 func init() {
 	connectors.RegisterFileConnector("CSV", New)
 }
 
-type Connection struct {
+type connection struct {
 	ctx      context.Context
 	settings *settings
 }
@@ -44,7 +44,7 @@ type settings struct {
 
 // New returns a new CSV connection.
 func New(ctx context.Context, conf *connectors.FileConfig) (connectors.FileConnection, error) {
-	c := Connection{ctx: ctx}
+	c := connection{ctx: ctx}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -55,7 +55,7 @@ func New(ctx context.Context, conf *connectors.FileConfig) (connectors.FileConne
 }
 
 // Read reads the records from r and calls put for each record read.
-func (c *Connection) Read(r io.Reader, put func(record []string) error) error {
+func (c *connection) Read(r io.Reader, put func(record []string) error) error {
 	v := csv.NewReader(r)
 	v.Comma = c.settings.Comma
 	v.Comment = c.settings.Comment
@@ -79,7 +79,7 @@ func (c *Connection) Read(r io.Reader, put func(record []string) error) error {
 }
 
 // Write writes the records read from get into w.
-func (c *Connection) Write(w io.Writer, get func() ([]string, error)) error {
+func (c *connection) Write(w io.Writer, get func() ([]string, error)) error {
 	v := csv.NewWriter(w)
 	v.Comma = c.settings.Comma
 	v.UseCRLF = c.settings.UseCRLF
@@ -100,4 +100,4 @@ func (c *Connection) Write(w io.Writer, get func() ([]string, error)) error {
 }
 
 // ServeUserInterface serves the connector's user interface.
-func (c *Connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {}
+func (c *connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {}

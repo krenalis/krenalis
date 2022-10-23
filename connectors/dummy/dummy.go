@@ -16,31 +16,31 @@ import (
 )
 
 // Make sure it implements the AppConnection interface.
-var _ connectors.AppConnection = &Connection{}
+var _ connectors.AppConnection = &connection{}
 
 func init() {
 	connectors.RegisterAppConnector("Dummy", New)
 }
 
-type Connection struct {
+type connection struct {
 	firehose     connectors.Firehose
 	clientSecret string
 }
 
 // New returns a new Dummy connection.
 func New(ctx context.Context, conf *connectors.AppConfig) (connectors.AppConnection, error) {
-	c := Connection{
+	c := connection{
 		firehose:     conf.Firehose,
 		clientSecret: conf.ClientSecret,
 	}
 	return &c, nil
 }
 
-func (c *Connection) Groups(cursor string, properties [][]string) error {
+func (c *connection) Groups(cursor string, properties [][]string) error {
 	panic("not implemented")
 }
 
-func (c *Connection) Properties() ([]connectors.Property, []connectors.Property, error) {
+func (c *connection) Properties() ([]connectors.Property, []connectors.Property, error) {
 	userProps := []connectors.Property{
 		{Name: "first_name", Type: "string"},
 		{Name: "last_name", Type: "string"},
@@ -49,15 +49,15 @@ func (c *Connection) Properties() ([]connectors.Property, []connectors.Property,
 	return userProps, nil, nil
 }
 
-func (c *Connection) ReceiveWebhook(r *http.Request) ([]connectors.Event, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connectors.Event, error) {
 	panic("not implemented")
 }
 
-func (c *Connection) Resource() (string, error) {
+func (c *connection) Resource() (string, error) {
 	return "dummy-resource", nil
 }
 
-func (c *Connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {
+func (c *connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {
 	panic("not implemented")
 }
 
@@ -87,11 +87,11 @@ var users = []user{
 	},
 }
 
-func (c *Connection) SetUsers(users []connectors.User) error {
+func (c *connection) SetUsers(users []connectors.User) error {
 	panic("not implemented")
 }
 
-func (c *Connection) Users(cursor string, properties [][]string) error {
+func (c *connection) Users(cursor string, properties [][]string) error {
 	for _, user := range users {
 		c.firehose.SetUser(user.ID, now, user.Properties)
 	}

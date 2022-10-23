@@ -35,7 +35,7 @@ import (
 )
 
 // Make sure it implements the AppConnection interface.
-var _ connectors.AppConnection = &Connection{}
+var _ connectors.AppConnection = &connection{}
 
 var Debug = false
 
@@ -43,7 +43,7 @@ func init() {
 	connectors.RegisterAppConnector("HubSpot", New)
 }
 
-type Connection struct {
+type connection struct {
 	ctx          context.Context
 	clientSecret string
 	firehose     connectors.Firehose
@@ -54,7 +54,7 @@ type Connection struct {
 
 // New returns a new Hubspot connection.
 func New(ctx context.Context, conf *connectors.AppConfig) (connectors.AppConnection, error) {
-	c := Connection{
+	c := connection{
 		ctx:          ctx,
 		firehose:     conf.Firehose,
 		clientSecret: conf.ClientSecret,
@@ -65,7 +65,7 @@ func New(ctx context.Context, conf *connectors.AppConfig) (connectors.AppConnect
 }
 
 // Groups returns the groups starting from the given cursor.
-func (c *Connection) Groups(cursor string, properties [][]string) error {
+func (c *connection) Groups(cursor string, properties [][]string) error {
 
 	fromDate, err := parseCursor(cursor)
 	if err != nil {
@@ -100,7 +100,7 @@ func (c *Connection) Groups(cursor string, properties [][]string) error {
 }
 
 // Properties returns all user and group properties.
-func (c *Connection) Properties() ([]connectors.Property, []connectors.Property, error) {
+func (c *connection) Properties() ([]connectors.Property, []connectors.Property, error) {
 
 	var response struct {
 		Results []struct {
@@ -159,7 +159,7 @@ func (c *Connection) Properties() ([]connectors.Property, []connectors.Property,
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized.
 // See https://developers.hubspot.com/docs/api/webhooks.
-func (c *Connection) ReceiveWebhook(r *http.Request) ([]connectors.Event, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connectors.Event, error) {
 
 	// Check if the webhook is valid.
 	if !isValidWebhook(c.clientSecret, r) {
@@ -237,7 +237,7 @@ func (c *Connection) ReceiveWebhook(r *http.Request) ([]connectors.Event, error)
 }
 
 // Resource returns the resource from a client token.
-func (c *Connection) Resource() (string, error) {
+func (c *connection) Resource() (string, error) {
 	var res struct {
 		PortalId int
 	}
@@ -252,11 +252,11 @@ func (c *Connection) Resource() (string, error) {
 }
 
 // ServeUserInterface serves the connector's user interface.
-func (c *Connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {}
+func (c *connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {}
 
 // SetUsers sets the users.
 // It requires the "crm.objects.contacts.write" scope.
-func (c *Connection) SetUsers(users []connectors.User) error {
+func (c *connection) SetUsers(users []connectors.User) error {
 
 	var body bytes.Buffer
 	body.WriteString(`{"inputs":[`)
@@ -282,7 +282,7 @@ func (c *Connection) SetUsers(users []connectors.User) error {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *Connection) Users(cursor string, properties [][]string) error {
+func (c *connection) Users(cursor string, properties [][]string) error {
 
 	fromDate, err := parseCursor(cursor)
 	if err != nil {
@@ -312,7 +312,7 @@ func (c *Connection) Users(cursor string, properties [][]string) error {
 }
 
 // companyContacts returns the contacts of the given company.
-func (c *Connection) companyContacts(company string) ([]string, error) {
+func (c *connection) companyContacts(company string) ([]string, error) {
 	contacts := []string{}
 	path := "/crm/v3/objects/companies/" + url.PathEscape(company) + "/associations/Contact"
 	after := ""
@@ -348,7 +348,7 @@ func (c *Connection) companyContacts(company string) ([]string, error) {
 }
 
 type iter struct {
-	*Connection
+	*connection
 	Type       string
 	Path       string
 	Properties []byte
@@ -362,7 +362,7 @@ type iter struct {
 // be "Company" or "Contact".
 // Requires the "crm.objects.contacts.read" scope for contacts and the
 // "crm.objects.companies.read" for companies.
-func (c *Connection) newIterator(typ string, properties [][]string, fromDate int64, limit int) (*iter, error) {
+func (c *connection) newIterator(typ string, properties [][]string, fromDate int64, limit int) (*iter, error) {
 
 	path := "/crm/v3/"
 	switch typ {
@@ -378,7 +378,7 @@ func (c *Connection) newIterator(typ string, properties [][]string, fromDate int
 	}
 
 	it := iter{
-		Connection: c,
+		connection: c,
 		Type:       typ,
 		Path:       path,
 		FromDate:   fromDate,
@@ -474,7 +474,7 @@ func (it *iter) next() ([]object, error) {
 	return objects, nil
 }
 
-func (c *Connection) call(method, path string, body io.Reader, expectedStatus int, response any) error {
+func (c *connection) call(method, path string, body io.Reader, expectedStatus int, response any) error {
 
 	req, err := http.NewRequestWithContext(c.ctx, method, "https://api.hubapi.com/"+path[1:], body)
 	if err != nil {

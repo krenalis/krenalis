@@ -23,7 +23,7 @@ import (
 // (https://dev.mysql.com/doc/refman/8.0/en/)
 
 // Make sure it implements the DatabaseConnection interface.
-var _ connectors.DatabaseConnection = &Connection{}
+var _ connectors.DatabaseConnection = &connection{}
 
 func init() {
 	connectors.RegisterDatabaseConnector("MySQL", New)
@@ -31,7 +31,7 @@ func init() {
 
 // New returns a new MySQL connection.
 func New(ctx context.Context, conf *connectors.DatabaseConfig) (connectors.DatabaseConnection, error) {
-	c := Connection{ctx: ctx}
+	c := connection{ctx: ctx}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -41,13 +41,13 @@ func New(ctx context.Context, conf *connectors.DatabaseConfig) (connectors.Datab
 	return &c, nil
 }
 
-type Connection struct {
+type connection struct {
 	ctx      context.Context
 	settings *settings
 }
 
 // Query executes the given query and returns the resulting rows.
-func (c *Connection) Query(query string) ([]connectors.Column, connectors.Rows, error) {
+func (c *connection) Query(query string) ([]connectors.Column, connectors.Rows, error) {
 	db, err := sql.Open("mysql", c.settings.dsn())
 	if err != nil {
 		return nil, nil, err
@@ -72,7 +72,7 @@ func (c *Connection) Query(query string) ([]connectors.Column, connectors.Rows, 
 }
 
 // ServeUserInterface serves the connector's user interface.
-func (c *Connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {
+func (c *connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
