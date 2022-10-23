@@ -22,29 +22,38 @@ import (
 // This package is the MySQL connector.
 // (https://dev.mysql.com/doc/refman/8.0/en/)
 
-// Make sure it implements the DatabaseConnector interface.
-var _ connectors.DatabaseConnecter = &Connector{}
-
-type Connector struct {
-	Settings *settings
-}
+// Make sure it implements the DatabaseConnection interface.
+var _ connectors.DatabaseConnection = &Connection{}
 
 func init() {
-	connectors.RegisterConnector("MySQL", (*Connector)(nil))
+	connectors.RegisterDatabaseConnector("MySQL", New)
+}
+
+// New returns a new MySQL connection.
+func New(ctx context.Context, conf *connectors.DatabaseConfig) (connectors.DatabaseConnection, error) {
+	c := Connection{ctx: ctx}
+	if len(conf.Settings) > 0 {
+		err := json.Unmarshal(conf.Settings, &c.settings)
+		if err != nil {
+			return nil, errors.New("cannot unmarshal settings of MySQL connection")
+		}
+	}
+	return &c, nil
+}
+
+type Connection struct {
+	ctx      context.Context
+	settings *settings
 }
 
 // Query executes the given query and returns the resulting rows.
-func (c *Connector) Query(ctx context.Context, query string) ([]connectors.Column, connectors.Rows, error) {
-	err := c.setContext(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	db, err := sql.Open("mysql", c.Settings.dsn())
+func (c *Connection) Query(query string) ([]connectors.Column, connectors.Rows, error) {
+	db, err := sql.Open("mysql", c.settings.dsn())
 	if err != nil {
 		return nil, nil, err
 	}
 	db.SetMaxIdleConns(0)
-	rows, err := db.QueryContext(ctx, query)
+	rows, err := db.QueryContext(c.ctx, query)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -63,7 +72,7 @@ func (c *Connector) Query(ctx context.Context, query string) ([]connectors.Colum
 }
 
 // ServeUserInterface serves the connector's user interface.
-func (c *Connector) ServeUserInterface(w http.ResponseWriter, r *http.Request) {
+func (c *Connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
@@ -83,16 +92,4 @@ func (s *settings) dsn() string {
 	c.AllowOldPasswords = true
 	c.ParseTime = true
 	return c.FormatDSN()
-}
-
-// setContext sets ctx as the context for c.
-func (c *Connector) setContext(ctx context.Context) error {
-	settings, _ := ctx.Value(connectors.SettingsContextKey{}).([]byte)
-	if len(settings) > 0 {
-		err := json.Unmarshal(settings, &c.Settings)
-		if err != nil {
-			return errors.New("cannot unmarshal settings of the MySQL connector")
-		}
-	}
-	return nil
 }

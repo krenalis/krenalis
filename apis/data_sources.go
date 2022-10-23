@@ -83,9 +83,14 @@ func (this *DataSources) Add(connector int, refreshToken, accessToken string) (i
 		return this.AddDatabase(connector) // TODO
 		//return 0, ErrInvalidConnectorType
 	}
-	c := connectors.AppConnector(conn.Name, conn.ClientSecret)
-	ctx := context.WithValue(context.Background(), connectors.AccessTokenContextKey{}, accessToken)
-	resourceCode, err := c.Resource(ctx)
+	c, err := connectors.NewAppConnection(context.Background(), conn.Name, &connectors.AppConfig{
+		ClientSecret: conn.ClientSecret,
+		AccessToken:  accessToken,
+	})
+	if err != nil {
+		return 0, err
+	}
+	resourceCode, err := c.Resource()
 	if err != nil {
 		return 0, err
 	}
@@ -187,7 +192,6 @@ func (this *DataSources) Delete(id int) error {
 			return err
 		}
 		_, err = tx.Table("DataSourcesUsers").Delete(sql.Where{"source": id})
-		_, err = tx.Table("DataSourcesStats").Delete(sql.Where{"source": id})
 		// Delete the resource of the deleted data source if it has no other data sources.
 		_, err = tx.Exec("DELETE `r`\n"+
 			"FROM `resources` AS `r`\n"+
@@ -247,10 +251,19 @@ func (this *DataSources) Import(id int, reimport bool) error {
 	}
 
 	go func() {
-		conn := connectors.AppConnector(name, clientSecret)
-		ctx := this.newAppConnectorContext(context.Background(), id, resource, connector, resourceCode, accessToken,
-			webhooksPer, settings)
-		err := conn.Users(ctx, cursor, properties)
+		fh := this.newFirehose(context.Background(), id, connector, resource, webhooksPer)
+		c, err := connectors.NewAppConnection(fh.ctx, name, &connectors.AppConfig{
+			Settings:     settings,
+			Firehose:     fh,
+			ClientSecret: clientSecret,
+			Resource:     resourceCode,
+			AccessToken:  accessToken,
+		})
+		if err != nil {
+			log.Printf("[error] cannot connect to the connector %d of the data source %d: %s", connector, id, err)
+			return
+		}
+		err = c.Users(cursor, properties)
 		if err != nil {
 			log.Printf("[error] call to the Users method of the data source %d failed: %s", id, err)
 		}
@@ -361,9 +374,15 @@ func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]s
 	if err != nil {
 		return nil, nil, err
 	}
-	conn := connectors.DatabaseConnector(connectorName)
-	ctx := this.newDatabaseConnectorContext(context.Background(), id, connector, settings)
-	rawColumns, rawRows, err := conn.Query(ctx, query)
+	fh := this.newFirehose(context.Background(), id, connector, 0, "")
+	c, err := connectors.NewDatabaseConnection(fh.ctx, connectorName, &connectors.DatabaseConfig{
+		Settings: settings,
+		Firehose: fh,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	rawColumns, rawRows, err := c.Query(query)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -439,11 +458,19 @@ func (this *DataSources) ServeUserInterface(id int, w http.ResponseWriter, r *ht
 		}
 	}
 
-	conn := connectors.AppConnector(name, clientSecret)
-	ctx := this.newAppConnectorContext(r.Context(), id, resource, connector, resourceCode, accessToken, webhooksPer, settings)
-	r.Clone(ctx)
+	fh := this.newFirehose(r.Context(), id, connector, resource, webhooksPer)
+	c, err := connectors.NewAppConnection(fh.ctx, name, &connectors.AppConfig{
+		Settings:     settings,
+		Firehose:     fh,
+		ClientSecret: clientSecret,
+		Resource:     resourceCode,
+		AccessToken:  accessToken,
+	})
+	if err != nil {
+		return err
+	}
 	r.Header.Del("Cookie") // remove the cookies from the request.
-	conn.ServeUserInterface(w, r)
+	c.ServeUserInterface(w, r)
 
 	return nil
 }
@@ -526,31 +553,11 @@ func (this *DataSources) TransformationFunc(id int) (string, error) {
 	return row["transformation"].(string), nil
 }
 
-// newAppConnectorContext returns a context with a Firehose used to call an app
-// connector method.
-func (this *DataSources) newAppConnectorContext(ctx context.Context, source, resource, connector int, resourceCode,
-	accessToken, webhooksPer string, settings []byte) context.Context {
-
+// newFirehose returns a new Firehose used to call a connection method.
+func (this *DataSources) newFirehose(ctx context.Context, source, connector, resource int, webhooksPer string) *firehose {
 	fh := &firehose{sources: this, source: source, resource: resource, connector: connector, webhooksPer: webhooksPer}
-	fh.context, fh.cancel = context.WithCancel(ctx)
-	fh.context = context.WithValue(fh.context, connectors.ResourceContextKey{}, resourceCode)
-	fh.context = context.WithValue(fh.context, connectors.AccessTokenContextKey{}, accessToken)
-	fh.context = context.WithValue(fh.context, connectors.SettingsContextKey{}, settings)
-	fh.context = context.WithValue(fh.context, connectors.FirehoseContextKey{}, fh)
-
-	return fh.context
-}
-
-// newDatabaseConnectorContext returns a context with a Firehose used to call a
-// database connector method.
-func (this *DataSources) newDatabaseConnectorContext(ctx context.Context, source, connector int, settings []byte) context.Context {
-
-	fh := &firehose{sources: this, source: source, connector: connector, webhooksPer: "None"}
-	fh.context, fh.cancel = context.WithCancel(ctx)
-	fh.context = context.WithValue(fh.context, connectors.SettingsContextKey{}, settings)
-	fh.context = context.WithValue(fh.context, connectors.FirehoseContextKey{}, fh)
-
-	return fh.context
+	fh.ctx, fh.cancel = context.WithCancel(ctx)
+	return fh
 }
 
 // reloadProperties reloads the properties of the data source with identifier
@@ -592,11 +599,18 @@ func (this *DataSources) reloadProperties(id int) error {
 				return err
 			}
 		}
-
-		conn := connectors.AppConnector(name, clientSecret)
-		ctx := this.newAppConnectorContext(context.Background(), id, resource, connector, resourceCode, accessToken,
-			webhooksPer, settings)
-		properties, _, err = conn.Properties(ctx)
+		fh := this.newFirehose(context.Background(), id, connector, resource, webhooksPer)
+		c, err := connectors.NewAppConnection(fh.ctx, name, &connectors.AppConfig{
+			Settings:     settings,
+			Firehose:     fh,
+			ClientSecret: clientSecret,
+			Resource:     resourceCode,
+			AccessToken:  accessToken,
+		})
+		if err != nil {
+			return err
+		}
+		properties, _, err = c.Properties()
 		if err != nil {
 			return err
 		}
@@ -607,10 +621,15 @@ func (this *DataSources) reloadProperties(id int) error {
 		if err != nil {
 			return err
 		}
-
-		conn := connectors.DatabaseConnector(name)
-		ctx := this.newDatabaseConnectorContext(context.Background(), id, connector, settings)
-		columns, rows, err := conn.Query(ctx, usersQuery)
+		fh := this.newFirehose(context.Background(), id, connector, 0, "")
+		c, err := connectors.NewDatabaseConnection(fh.ctx, name, &connectors.DatabaseConfig{
+			Settings: settings,
+			Firehose: fh,
+		})
+		if err != nil {
+			return err
+		}
+		columns, rows, err := c.Query(usersQuery)
 		if err != nil {
 			return err
 		}

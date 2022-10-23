@@ -8,54 +8,24 @@
 package connectors
 
 import (
-	"context"
-	"errors"
 	"net/http"
-	"reflect"
+	"sync"
 	"time"
 )
 
-// ErrWebhookUnauthorized is returned by the ReceiveWebhook method if the
-// request was not authorized.
-var ErrWebhookUnauthorized = errors.New("webhook unauthorized")
+var (
+	connectorsMu sync.RWMutex
+	connectors   = struct {
+		apps      map[string]AppConnectionFunc
+		databases map[string]DatabaseConnectionFunc
+	}{
+		apps:      make(map[string]AppConnectionFunc),
+		databases: make(map[string]DatabaseConnectionFunc),
+	}
+)
 
-type AccessTokenContextKey struct{}
-type FirehoseContextKey struct{}
-type ResourceContextKey struct{}
-type SettingsContextKey struct{}
-
-// AppConnecter is the interface implemented by app connectors.
-type AppConnecter interface {
-
-	// Groups returns the groups starting from the given cursor.
-	Groups(ctx context.Context, cursor string, properties [][]string) error
-
-	// Properties returns all user and group properties.
-	Properties(ctx context.Context) ([]Property, []Property, error)
-
-	// ReceiveWebhook receives a webhook request and returns its events.
-	// It returns the ErrWebhookUnauthorized error is the request was not authorized.
-	ReceiveWebhook(ctx context.Context, r *http.Request) ([]Event, error)
-
-	// Resource returns the resource.
-	Resource(ctx context.Context) (string, error)
-
-	// ServeUserInterface serves the connector's user interface.
-	// To get the context, call the r.Context method.
-	ServeUserInterface(w http.ResponseWriter, r *http.Request)
-
-	// SetUsers sets the given users.
-	SetUsers(ctx context.Context, users []User) error
-
-	// Users returns the users starting from the given cursor.
-	Users(ctx context.Context, cursor string, properties [][]string) error
-}
-
-// DatabaseConnecter is the interface implemented by database connectors.
-type DatabaseConnecter interface {
-
-	// Query executes the given query and returns the resulting rows.
-	Query(ctx context.Context, query string) ([]Column, Rows, error)
+// Connection is the interface implemented by connections.
+type Connection interface {
 
 	// ServeUserInterface serves the connector's user interface.
 	ServeUserInterface(w http.ResponseWriter, r *http.Request)
@@ -194,35 +164,4 @@ type User struct {
 	ID         string
 	Groups     []string
 	Properties Properties
-}
-
-type Rows interface {
-	Close() error
-	Err() error
-	Next() bool
-	Scan(dest ...any) error
-}
-
-type Column struct {
-	Name string
-	Type string
-}
-
-var connectors = map[string]any{}
-
-func RegisterConnector(name string, value any) {
-	connectors[name] = value
-}
-
-func AppConnector(name string, clientSecret string) AppConnecter {
-	t := reflect.TypeOf(connectors[name])
-	v := reflect.New(t.Elem())
-	reflect.Indirect(v).FieldByName("ClientSecret").Set(reflect.ValueOf(clientSecret))
-	return v.Interface().(AppConnecter)
-}
-
-func DatabaseConnector(name string) DatabaseConnecter {
-	t := reflect.TypeOf(connectors[name])
-	v := reflect.New(t.Elem())
-	return v.Interface().(DatabaseConnecter)
 }

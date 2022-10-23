@@ -38,7 +38,7 @@ type firehose struct {
 	source      int
 	resource    int
 	connector   int
-	context     context.Context
+	ctx         context.Context
 	cancel      context.CancelFunc
 	webhooksPer string
 	err         error

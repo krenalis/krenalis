@@ -15,23 +15,32 @@ import (
 	"chichi/connectors"
 )
 
-// Make sure it implements the AppConnector interface.
-var _ connectors.AppConnecter = &Connector{}
-
-type Connector struct {
-	Firehose     connectors.Firehose
-	ClientSecret string
-}
+// Make sure it implements the AppConnection interface.
+var _ connectors.AppConnection = &Connection{}
 
 func init() {
-	connectors.RegisterConnector("Dummy", (*Connector)(nil))
+	connectors.RegisterAppConnector("Dummy", New)
 }
 
-func (c *Connector) Groups(ctx context.Context, cursor string, properties [][]string) error {
+type Connection struct {
+	firehose     connectors.Firehose
+	clientSecret string
+}
+
+// New returns a new Dummy connection.
+func New(ctx context.Context, conf *connectors.AppConfig) (connectors.AppConnection, error) {
+	c := Connection{
+		firehose:     conf.Firehose,
+		clientSecret: conf.ClientSecret,
+	}
+	return &c, nil
+}
+
+func (c *Connection) Groups(cursor string, properties [][]string) error {
 	panic("not implemented")
 }
 
-func (c *Connector) Properties(ctx context.Context) ([]connectors.Property, []connectors.Property, error) {
+func (c *Connection) Properties() ([]connectors.Property, []connectors.Property, error) {
 	userProps := []connectors.Property{
 		{Name: "first_name", Type: "string"},
 		{Name: "last_name", Type: "string"},
@@ -40,15 +49,15 @@ func (c *Connector) Properties(ctx context.Context) ([]connectors.Property, []co
 	return userProps, nil, nil
 }
 
-func (c *Connector) ReceiveWebhook(ctx context.Context, r *http.Request) ([]connectors.Event, error) {
+func (c *Connection) ReceiveWebhook(r *http.Request) ([]connectors.Event, error) {
 	panic("not implemented")
 }
 
-func (c *Connector) Resource(ctx context.Context) (string, error) {
+func (c *Connection) Resource() (string, error) {
 	return "dummy-resource", nil
 }
 
-func (c *Connector) ServeUserInterface(w http.ResponseWriter, r *http.Request) {
+func (c *Connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {
 	panic("not implemented")
 }
 
@@ -78,19 +87,13 @@ var users = []user{
 	},
 }
 
-func (c *Connector) SetUsers(ctx context.Context, users []connectors.User) error {
+func (c *Connection) SetUsers(users []connectors.User) error {
 	panic("not implemented")
 }
 
-func (c *Connector) Users(ctx context.Context, cursor string, properties [][]string) error {
-	c.setContext(ctx)
+func (c *Connection) Users(cursor string, properties [][]string) error {
 	for _, user := range users {
-		c.Firehose.SetUser(user.ID, now, user.Properties)
+		c.firehose.SetUser(user.ID, now, user.Properties)
 	}
 	return nil
-}
-
-// setContext sets ctx as the context for c.
-func (c *Connector) setContext(ctx context.Context) {
-	c.Firehose, _ = ctx.Value(connectors.FirehoseContextKey{}).(connectors.Firehose)
 }

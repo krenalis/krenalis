@@ -34,44 +34,38 @@ import (
 	"github.com/open2b/nuts/capture"
 )
 
-// Make sure it implements the AppConnector interface.
-var _ connectors.AppConnecter = &Connector{}
+// Make sure it implements the AppConnection interface.
+var _ connectors.AppConnection = &Connection{}
 
 var Debug = false
 
-type hubspotError struct {
-	statusCode int
-	Status     string
-	Message    string
-	Errors     []struct {
-		Message string
-		In      string
-	}
-	Category      string
-	CorrelationId string
+func init() {
+	connectors.RegisterAppConnector("HubSpot", New)
 }
 
-func (err *hubspotError) Error() string {
-	return fmt.Sprintf("unexpected error from HubSpot: (%d) %s", err.statusCode, err.Message)
-}
-
-type Connector struct {
-	ClientSecret string
+type Connection struct {
+	ctx          context.Context
+	clientSecret string
 	firehose     connectors.Firehose
 	resource     string
 	accessToken  string
 	settings     []byte
-	context      context.Context
 }
 
-func init() {
-	connectors.RegisterConnector("HubSpot", (*Connector)(nil))
+// New returns a new Hubspot connection.
+func New(ctx context.Context, conf *connectors.AppConfig) (connectors.AppConnection, error) {
+	c := Connection{
+		ctx:          ctx,
+		firehose:     conf.Firehose,
+		clientSecret: conf.ClientSecret,
+		resource:     conf.Resource,
+		accessToken:  conf.AccessToken,
+	}
+	return &c, nil
 }
 
 // Groups returns the groups starting from the given cursor.
-func (c *Connector) Groups(ctx context.Context, cursor string, properties [][]string) error {
-
-	c.setContext(ctx)
+func (c *Connection) Groups(cursor string, properties [][]string) error {
 
 	fromDate, err := parseCursor(cursor)
 	if err != nil {
@@ -106,9 +100,7 @@ func (c *Connector) Groups(ctx context.Context, cursor string, properties [][]st
 }
 
 // Properties returns all user and group properties.
-func (c *Connector) Properties(ctx context.Context) ([]connectors.Property, []connectors.Property, error) {
-
-	c.setContext(ctx)
+func (c *Connection) Properties() ([]connectors.Property, []connectors.Property, error) {
 
 	var response struct {
 		Results []struct {
@@ -167,12 +159,10 @@ func (c *Connector) Properties(ctx context.Context) ([]connectors.Property, []co
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized.
 // See https://developers.hubspot.com/docs/api/webhooks.
-func (c *Connector) ReceiveWebhook(ctx context.Context, r *http.Request) ([]connectors.Event, error) {
-
-	c.setContext(ctx)
+func (c *Connection) ReceiveWebhook(r *http.Request) ([]connectors.Event, error) {
 
 	// Check if the webhook is valid.
-	if !isValidWebhook(c.ClientSecret, r) {
+	if !isValidWebhook(c.clientSecret, r) {
 		return nil, connectors.ErrWebhookUnauthorized
 	}
 
@@ -247,8 +237,7 @@ func (c *Connector) ReceiveWebhook(ctx context.Context, r *http.Request) ([]conn
 }
 
 // Resource returns the resource from a client token.
-func (c *Connector) Resource(ctx context.Context) (string, error) {
-	c.setContext(ctx)
+func (c *Connection) Resource() (string, error) {
 	var res struct {
 		PortalId int
 	}
@@ -263,13 +252,11 @@ func (c *Connector) Resource(ctx context.Context) (string, error) {
 }
 
 // ServeUserInterface serves the connector's user interface.
-func (c *Connector) ServeUserInterface(w http.ResponseWriter, r *http.Request) {}
+func (c *Connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {}
 
 // SetUsers sets the users.
 // It requires the "crm.objects.contacts.write" scope.
-func (c *Connector) SetUsers(ctx context.Context, users []connectors.User) error {
-
-	c.setContext(ctx)
+func (c *Connection) SetUsers(users []connectors.User) error {
 
 	var body bytes.Buffer
 	body.WriteString(`{"inputs":[`)
@@ -295,9 +282,7 @@ func (c *Connector) SetUsers(ctx context.Context, users []connectors.User) error
 }
 
 // Users returns the users starting from the given cursor.
-func (c *Connector) Users(ctx context.Context, cursor string, properties [][]string) error {
-
-	c.setContext(ctx)
+func (c *Connection) Users(cursor string, properties [][]string) error {
 
 	fromDate, err := parseCursor(cursor)
 	if err != nil {
@@ -327,7 +312,7 @@ func (c *Connector) Users(ctx context.Context, cursor string, properties [][]str
 }
 
 // companyContacts returns the contacts of the given company.
-func (c *Connector) companyContacts(company string) ([]string, error) {
+func (c *Connection) companyContacts(company string) ([]string, error) {
 	contacts := []string{}
 	path := "/crm/v3/objects/companies/" + url.PathEscape(company) + "/associations/Contact"
 	after := ""
@@ -363,7 +348,7 @@ func (c *Connector) companyContacts(company string) ([]string, error) {
 }
 
 type iter struct {
-	*Connector
+	*Connection
 	Type       string
 	Path       string
 	Properties []byte
@@ -377,7 +362,7 @@ type iter struct {
 // be "Company" or "Contact".
 // Requires the "crm.objects.contacts.read" scope for contacts and the
 // "crm.objects.companies.read" for companies.
-func (c *Connector) newIterator(typ string, properties [][]string, fromDate int64, limit int) (*iter, error) {
+func (c *Connection) newIterator(typ string, properties [][]string, fromDate int64, limit int) (*iter, error) {
 
 	path := "/crm/v3/"
 	switch typ {
@@ -393,11 +378,11 @@ func (c *Connector) newIterator(typ string, properties [][]string, fromDate int6
 	}
 
 	it := iter{
-		Connector: c,
-		Type:      typ,
-		Path:      path,
-		FromDate:  fromDate,
-		Limit:     limit,
+		Connection: c,
+		Type:       typ,
+		Path:       path,
+		FromDate:   fromDate,
+		Limit:      limit,
 	}
 
 	// Marshal the properties.
@@ -489,9 +474,9 @@ func (it *iter) next() ([]object, error) {
 	return objects, nil
 }
 
-func (c *Connector) call(method, path string, body io.Reader, expectedStatus int, response any) error {
+func (c *Connection) call(method, path string, body io.Reader, expectedStatus int, response any) error {
 
-	req, err := http.NewRequestWithContext(c.context, method, "https://api.hubapi.com/"+path[1:], body)
+	req, err := http.NewRequestWithContext(c.ctx, method, "https://api.hubapi.com/"+path[1:], body)
 	if err != nil {
 		return err
 	}
@@ -537,15 +522,6 @@ func (c *Connector) call(method, path string, body io.Reader, expectedStatus int
 	}
 
 	return nil
-}
-
-// setContext sets ctx as the context for c.
-func (c *Connector) setContext(ctx context.Context) {
-	c.context = ctx
-	c.resource, _ = ctx.Value(connectors.ResourceContextKey{}).(string)
-	c.accessToken, _ = ctx.Value(connectors.AccessTokenContextKey{}).(string)
-	c.settings, _ = ctx.Value(connectors.SettingsContextKey{}).([]byte)
-	c.firehose, _ = ctx.Value(connectors.FirehoseContextKey{}).(connectors.Firehose)
 }
 
 // isValidWebhook reports whether the webhook is valid.
@@ -603,4 +579,20 @@ func parseCursor(cursor string) (int64, error) {
 // serializeCursor serialize a cursor.
 func serializeCursor(fromDate int64) string {
 	return strconv.FormatInt(fromDate, 10)
+}
+
+type hubspotError struct {
+	statusCode int
+	Status     string
+	Message    string
+	Errors     []struct {
+		Message string
+		In      string
+	}
+	Category      string
+	CorrelationId string
+}
+
+func (err *hubspotError) Error() string {
+	return fmt.Sprintf("unexpected error from HubSpot: (%d) %s", err.statusCode, err.Message)
 }

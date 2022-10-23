@@ -57,10 +57,10 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	if m == nil {
 		return errBadRequest
 	}
-	ctx := context.Background()
 	var connector int
 	var source int
 	var webhookPer string
+	var conf connectors.AppConfig
 	switch m[1] {
 	case "c":
 		connector, _ = strconv.Atoi(m[2])
@@ -73,25 +73,22 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		if r <= 0 {
 			return errBadRequest
 		}
-		var resourceCode string
 		err := apis.myDB.QueryRow("SELECT `connector`, `code` FROM `resources` WHERE `id` = ?", r).
-			Scan(&connector, &resourceCode)
+			Scan(&connector, &conf.Resource)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return errNotFound
 			}
 			return err
 		}
-		ctx = context.WithValue(ctx, connectors.ResourceContextKey{}, resourceCode)
 		webhookPer = "Resource"
 	case "s":
 		source, _ = strconv.Atoi(m[2])
 		if source <= 0 {
 			return errBadRequest
 		}
-		var settings []byte
 		var resource int
-		var resourceCode, accessToken, refreshToken string
+		var refreshToken string
 		var expiration time.Time
 		err := apis.myDB.QueryRow(
 			"SELECT `s`.`connector`, `s`.`resource`, `s`.`settings`, `r`.`code`, `r`.`accessToken`, `r`.`refreshToken`,"+
@@ -99,7 +96,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 				"FROM `data_sources` AS `s`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
 				"WHERE `s`.`id` = ?", source).
-			Scan(&connector, &resource, &settings, &resourceCode, &accessToken, &refreshToken, &expiration)
+			Scan(&connector, &resource, &conf.Settings, &conf.Resource, &conf.AccessToken, &refreshToken, &expiration)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return errNotFound
@@ -107,15 +104,12 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 			return err
 		}
 		accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
-		if accessToken == "" || accessTokenExpired {
-			accessToken, err = apis.refreshOAuthToken(resource)
+		if conf.AccessToken == "" || accessTokenExpired {
+			conf.AccessToken, err = apis.refreshOAuthToken(resource)
 			if err != nil {
 				return err
 			}
 		}
-		ctx = context.WithValue(ctx, connectors.ResourceContextKey{}, resourceCode)
-		ctx = context.WithValue(ctx, connectors.AccessTokenContextKey{}, accessToken)
-		ctx = context.WithValue(ctx, connectors.SettingsContextKey{}, settings)
 		webhookPer = "DataSource"
 	}
 	conn, err := apis.Connector(connector)
@@ -128,8 +122,11 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	if conn.WebhooksPer != webhookPer {
 		return errBadRequest
 	}
-	c := connectors.AppConnector(conn.Name, conn.ClientSecret)
-	events, err := c.ReceiveWebhook(ctx, r)
+	c, err := connectors.NewAppConnection(context.Background(), conn.Name, &conf)
+	if err != nil {
+		return err
+	}
+	events, err := c.ReceiveWebhook(r)
 	if err != nil {
 		return err
 	}
