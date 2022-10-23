@@ -9,7 +9,6 @@ package apis
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -90,7 +89,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		if source <= 0 {
 			return errBadRequest
 		}
-		var rawSettings []byte
+		var settings []byte
 		var resource int
 		var resourceCode, accessToken, refreshToken string
 		var expiration time.Time
@@ -100,7 +99,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 				"FROM `data_sources` AS `s`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
 				"WHERE `s`.`id` = ?", source).
-			Scan(&connector, &resource, &rawSettings, &resourceCode, &accessToken, &refreshToken, &expiration)
+			Scan(&connector, &resource, &settings, &resourceCode, &accessToken, &refreshToken, &expiration)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return errNotFound
@@ -112,13 +111,6 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 			accessToken, err = apis.refreshOAuthToken(resource)
 			if err != nil {
 				return err
-			}
-		}
-		settings := map[string]any{}
-		if len(rawSettings) > 0 {
-			err = json.Unmarshal(rawSettings, &settings)
-			if err != nil {
-				return errors.New("cannot unmarshal data source settings")
 			}
 		}
 		ctx = context.WithValue(ctx, connectors.ResourceContextKey{}, resourceCode)
