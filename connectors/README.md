@@ -1,66 +1,101 @@
 
-## Groups
+## Connection
 
-* AccessToken
+### ServeUserInterface
+
+* Settings
+* Firehose
+* ClientSecret (only for app connections)
+* Resource     (only for app connections)
+* AccessToken  (only for app connections)
+
+## AppConnection
+
+### Groups
+
+* Settings
+* Firehose
+* ClientSecret
 * Resource
-* Firehose
-* Settings
-
-## Properties
-
 * AccessToken
+
+### Properties
+
+* Settings
+* Firehose
+* ClientSecret
 * Resource
-* Firehose
-* Settings
+* AccessToken
 
-## Query
-
-* Firehose
-* Settings
-
-## ReceiveWebhook
+### ReceiveWebhook
 
 If webhookPer is "Connector":
 
-* AccessToken
+* ClientSecret
 
 If webhookPer is "Resource":
 
-* AccessToken
+* ClientSecret
 * Resource
+* AccessToken
 
 If webhookPer is "DataSource":
 
-* AccessToken
+* Settings
+* Firehose
+* ClientSecret
 * Resource
-* Firehose
-* Settings
-
-## Resource
-
 * AccessToken
 
-## ServeUserInterface
+### Resource
 
-* AccessToken (no for databases)
-* Resource    (no for databases)
-* Firehose
-* Settings
-
-## SetUsers
-
+* ClientSecret
 * AccessToken
+
+### SetUsers
+
+* Settings
+* Firehose
+* ClientSecret
 * Resource
-* Firehose
-* Settings
-
-## Users
-
 * AccessToken
-* Resource
-* Firehose
+
+### Users
+
 * Settings
+* Firehose
+* ClientSecret
+* Resource
+* AccessToken
 
+## DatabaseConnection
 
+### Query
 
+* Settings
+* Firehose
+
+## StorageConnection
+
+### Reader
+
+* Settings
+* Firehose
+
+### Writer
+
+* Settings
+* Firehose
+
+## FileConnection
+
+### Read
+
+* Settings
+* Firehose
+
+### Write
+
+* Settings
+* Firehose
 
