@@ -67,7 +67,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		if connector <= 0 {
 			return errBadRequest
 		}
-		webhookPer = "AppConnector"
+		webhookPer = "Connector"
 	case "r":
 		r, _ := strconv.Atoi(m[2])
 		if r <= 0 {

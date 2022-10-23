@@ -199,7 +199,7 @@ func (fh *firehose) WebhookURL() string {
 	switch fh.webhooksPer {
 	case "None":
 		return ""
-	case "AppConnector":
+	case "Connector":
 		return u + "c/" + strconv.Itoa(fh.connector) + "/"
 	case "Resource":
 		return u + "r/" + strconv.Itoa(fh.resource) + "/"
