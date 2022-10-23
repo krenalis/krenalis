@@ -2,7 +2,16 @@ module chichi
 
 go 1.19
 
+replace (
+	chichi/connectors/dummy => ./connectors/dummy
+	chichi/connectors/hubspot => ./connectors/hubspot
+	chichi/connectors/mysql => ./connectors/mysql
+)
+
 require (
+	chichi/connectors/dummy v0.0.0-00010101000000-000000000000
+	chichi/connectors/hubspot v0.0.0-00010101000000-000000000000
+	chichi/connectors/mysql v0.0.0-00010101000000-000000000000
 	github.com/ClickHouse/clickhouse-go/v2 v2.3.0
 	github.com/evanw/esbuild v0.15.5
 	github.com/go-sql-driver/mysql v1.6.0
