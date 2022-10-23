@@ -52,7 +52,7 @@ func New(ctx context.Context, conf *connectors.StorageConfig) (connectors.Storag
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of CSV connection")
+			return nil, errors.New("cannot unmarshal settings of SFTP connection")
 		}
 	}
 	return &c, nil
