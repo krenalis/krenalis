@@ -544,8 +544,33 @@ func (this *DataSources) SetTransformationFunc(id int, fn string) error {
 }
 
 // SetUsersQuery sets the users query of the data source with identifier id.
-// If the query is too long, it returns a ErrQueryTooLong error.
+// If the data source does not exist, it returns a ErrDataSourceNotFound error.
+// If the query is not UTF-8 encoded or is too long, it panics.
 func (this *DataSources) SetUsersQuery(id int, query string) error {
+
+	if utf8.ValidString(query) {
+		return errors.New("query is not UTF-8 encoded")
+	}
+	if utf8.RuneCountInString(query) > queryMaxSize {
+		return fmt.Errorf("query is longer than %d", queryMaxSize)
+	}
+	if strings.Contains(query, ":limit") {
+		return errors.New("query does not contain the placeholder \":limit\"")
+	}
+
+	result, err := this.myDB.Exec("UPDATE `data_sources` SET `usersQuery` = ? WHERE `id` = ? AND `workspace` = ?",
+		query, id, this.workspace)
+	if err != nil {
+		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return ErrDataSourceNotFound
+	}
+
 	return nil
 }
 
