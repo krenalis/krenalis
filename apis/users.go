@@ -23,7 +23,7 @@ func (users *Users) Find() ([]map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	var allUsers []map[string]any
+	allUsers := []map[string]any{}
 	for rows.Next() {
 		slice := make([]any, len(columnTypes))
 		for i, typ := range columnTypes {
