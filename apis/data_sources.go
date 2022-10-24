@@ -66,15 +66,12 @@ type DataSourceProperty struct {
 	Properties []DataSourceProperty
 }
 
-// Add adds a data source given its connector. If the connector is an app
-// connector that support OAuth, refreshToken is the refresh token and
-// accessToken is the access token.
-//
+// Add adds a data source given its connector and the OAuth refresh and
+// access tokens of the resource and returns its identifier.
 // If the data source already exists for the given connector and resource, it
-// updates the data source. If the connector does not exist, it returns a
-// ErrConnectorNotFound error.
+// updates the data source. If the connector is not an app, it returns the
+// ErrInvalidConnectorType error.
 func (this *DataSources) Add(connector int, refreshToken, accessToken string) (int, error) {
-
 	conn, err := this.api.apis.Connector(connector)
 	if err != nil {
 		return 0, err
@@ -82,91 +79,96 @@ func (this *DataSources) Add(connector int, refreshToken, accessToken string) (i
 	if conn == nil {
 		return 0, ErrConnectorNotFound
 	}
-
-	var id int64
-
-	switch conn.Type {
-	case "App":
-
-		c, err := connectors.NewAppConnection(context.Background(), conn.Name, &connectors.AppConfig{
-			ClientSecret: conn.ClientSecret,
-			AccessToken:  accessToken,
-		})
-		if err != nil {
-			return 0, err
-		}
-		resourceCode, err := c.Resource()
-		if err != nil {
-			return 0, err
-		}
-		err = this.myDB.Transaction(func(tx *sql.Tx) error {
-			var resource int
-			var currentRefreshToken string
-			err := tx.QueryRow("SELECT `id`, `refreshToken` FROM `resources` WHERE `connector` = ? AND `code` = ?",
-				connector, resourceCode).Scan(&resource, &currentRefreshToken)
-			if err != nil {
-				if err != sql.ErrNoRows {
-					return err
-				}
-				err = nil
-			}
-			if resource == 0 {
-				result, err := tx.Exec("INSERT INTO `resources` SET `connector` = ?, `code` = ?, `refreshToken` = ?",
-					connector, resourceCode, refreshToken)
-				if err != nil {
-					return err
-				}
-				resourceID, err := result.LastInsertId()
-				resource = int(resourceID)
-			} else if refreshToken != currentRefreshToken {
-				_, err = tx.Exec("UPDATE `resources` SET `refreshToken` = ? WHERE `id` = ?", refreshToken, resource)
-			}
-			if err != nil {
-				return err
-			}
-			result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `connector` = ?, `resource` = ?",
-				this.workspace, connector, resource)
-			if err != nil {
-				return err
-			}
-			id, err = result.LastInsertId()
-			return err
-		})
-		if err != nil {
-			return 0, err
-		}
-
-		go func() {
-			err := this.reloadProperties(int(id))
-			if err != nil {
-				log.Printf("[error] cannot reload properties for data source %d: %s", id, err)
-			}
-		}()
-
-	case "Database":
-
-		err := this.myDB.Transaction(func(tx *sql.Tx) error {
-			var connectorType string
-			err := tx.QueryRow("SELECT `type` FROM `connectors` WHERE `id` = ?", connector).Scan(&connectorType)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					return ErrConnectorNotFound
-				}
-				return err
-			}
-			if connectorType != "Database" {
-				return ErrInvalidConnectorType
-			}
-			result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `connector` = ?", this.workspace, connector)
-			id, err = result.LastInsertId()
-			return err
-		})
-		if err != nil {
-			return 0, err
-		}
-
+	if conn.Type != "App" {
+		return this.AddDatabase(connector) // TODO
+		//return 0, ErrInvalidConnectorType
 	}
+	c, err := connectors.NewAppConnection(context.Background(), conn.Name, &connectors.AppConfig{
+		ClientSecret: conn.ClientSecret,
+		AccessToken:  accessToken,
+	})
+	if err != nil {
+		return 0, err
+	}
+	resourceCode, err := c.Resource()
+	if err != nil {
+		return 0, err
+	}
+	var id int64
+	err = this.myDB.Transaction(func(tx *sql.Tx) error {
+		var resource int
+		var currentRefreshToken string
+		err := tx.QueryRow("SELECT `id`, `refreshToken` FROM `resources` WHERE `connector` = ? AND `code` = ?",
+			connector, resourceCode).Scan(&resource, &currentRefreshToken)
+		if err != nil {
+			if err != sql.ErrNoRows {
+				return err
+			}
+			err = nil
+		}
+		if resource == 0 {
+			result, err := tx.Exec("INSERT INTO `resources` SET `connector` = ?, `code` = ?, `refreshToken` = ?",
+				connector, resourceCode, refreshToken)
+			if err != nil {
+				return err
+			}
+			resourceID, err := result.LastInsertId()
+			resource = int(resourceID)
+		} else if refreshToken != currentRefreshToken {
+			_, err = tx.Exec("UPDATE `resources` SET `refreshToken` = ? WHERE `id` = ?", refreshToken, resource)
+		}
+		if err != nil {
+			return err
+		}
+		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `connector` = ?, `resource` = ?",
+			this.workspace, connector, resource)
+		if err != nil {
+			return err
+		}
+		id, err = result.LastInsertId()
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	go func() {
+		err := this.reloadProperties(int(id))
+		if err != nil {
+			log.Printf("[error] cannot reload properties for data source %d: %s", id, err)
+		}
+	}()
+
 	return int(id), err
+}
+
+// AddDatabase adds a data source given its database connector and returns its
+// identifier.
+// If the data source already exists for the given connector and resource, it
+// updates the data source. If the connector is not a database, it returns the
+// ErrInvalidConnectorType error.
+func (this *DataSources) AddDatabase(connector int) (int, error) {
+	var id int64
+	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+		var connectorType string
+		err := tx.QueryRow("SELECT `type` FROM `connectors` WHERE `id` = ?", connector).Scan(&connectorType)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return ErrConnectorNotFound
+			}
+			return err
+		}
+		if connectorType != "Database" {
+			return ErrInvalidConnectorType
+		}
+		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `connector` = ?", this.workspace, connector)
+		id, err = result.LastInsertId()
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+	return int(id), nil
 }
 
 // Delete deletes the data source with the given identifier.
