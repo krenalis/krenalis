@@ -32,5 +32,4 @@ var importCmd = &cobra.Command{
 
 func init() {
 	dataSourcesCmd.AddCommand(importCmd)
-	importCmd.Flags().IntP("connector-ID", "c", 0, "ID of the connector")
 }
