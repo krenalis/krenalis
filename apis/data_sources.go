@@ -548,13 +548,13 @@ func (this *DataSources) SetTransformationFunc(id int, fn string) error {
 // If the query is not UTF-8 encoded or is too long, it panics.
 func (this *DataSources) SetUsersQuery(id int, query string) error {
 
-	if utf8.ValidString(query) {
+	if !utf8.ValidString(query) {
 		return errors.New("query is not UTF-8 encoded")
 	}
 	if utf8.RuneCountInString(query) > queryMaxSize {
 		return fmt.Errorf("query is longer than %d", queryMaxSize)
 	}
-	if strings.Contains(query, ":limit") {
+	if !strings.Contains(query, ":limit") {
 		return errors.New("query does not contain the placeholder \":limit\"")
 	}
 
