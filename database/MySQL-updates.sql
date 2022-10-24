@@ -347,3 +347,11 @@ WHERE `c`.`id` = `s`.`connector`;
 ALTER TABLE `data_sources`
     CHANGE COLUMN `settings` `settings` TEXT NOT,
     ADD COLUMN `streamSettings` TEXT NOT NULL AFTER `settings`;
+
+ALTER TABLE `warehouse_users` 
+    ADD COLUMN `id` INT UNSIGNED NOT NULL AUTO_INCREMENT FIRST,
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `data_sources_users`
+    ADD COLUMN `goldenRecord` INT UNSIGNED NOT NULL;

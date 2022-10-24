@@ -56,6 +56,7 @@ CREATE TABLE `data_sources_users` (
   `user` varchar(45) NOT NULL DEFAULT '',
   `data` text NOT NULL,
   `timestamps` text NOT NULL DEFAULT '',
+  `goldenRecord` int unsigned NOT NULL,
   PRIMARY KEY (`source`, `user`)
 );
 
@@ -112,10 +113,11 @@ CREATE TABLE `users` (
 );
 
 CREATE TABLE `warehouse_users` (
+  `id` INT unsigned NOT NULL AUTO_INCREMENT,
   `Email` VARCHAR(500) NOT NULL DEFAULT '',
   `FirstName` VARCHAR(500) NOT NULL DEFAULT '',
   `LastName` VARCHAR(500) NOT NULL DEFAULT '',
-  PRIMARY KEY (`Email`)
+  PRIMARY KEY (`id`)
 );
 
 CREATE TABLE `workspaces` (

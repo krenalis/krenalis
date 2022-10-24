@@ -15,7 +15,6 @@ import (
 	"io"
 	"log"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -127,43 +126,52 @@ func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[str
 		fh.setError(fmt.Errorf("cannot retrieve transformation from DB: %s", err))
 		return
 	}
+
+	// Apply the transformation to the current entity.
 	candidateData, candidateTimestamps, err := fh.transformProperties(transformationSource, properties, timestamps)
 	if err != nil {
 		fh.setError(fmt.Errorf("cannot transform input properties to output properties: %s", err))
 		return
 	}
+	email, _ := candidateData["Email"].(string)
+	if email == "" {
+		fh.setError(fmt.Errorf("expecting 'Email' to be a non-empty string, got %#v (of type %T)", candidateData["Email"], candidateData["Email"]))
+		return
+	}
 
-	// Determine which properties should be updated, basing on the last update
-	// timestamp.
-	sources, err := fh.listAllTransformations()
+	ids := identitySolver{fh}
+
+	// Resolve the entity.
+	goldenRecordID, err := ids.ResolveEntity(fh.source, user, email)
 	if err != nil {
 		fh.setError(err)
 		return
 	}
+
+	// Retrieve the entities which are the same user.
+	sameEntities, err := ids.LookupSameEntities(fh.source, user)
+	if err != nil {
+		fh.setError(err)
+		return
+	}
+
+	sources, err := fh.listTransformations(keys(sameEntities))
+	if err != nil {
+		fh.setError(err)
+		return
+	}
+dataSourcesLoop:
 	for source, transfSource := range sources {
-		if source == fh.source {
-			// Skip the current source.
-			continue
-		}
-		users, timestamps, err := fh.usersForDataSource(source)
-		if err != nil {
-			fh.setError(err)
-			return
-		}
-		for i := range users {
-			outProps, outTimestamps, err := fh.transformProperties(transfSource, users[i], timestamps[i])
+		for _, user := range sameEntities[source] {
+			userData, err := fh.userData(source, user)
 			if err != nil {
 				fh.setError(err)
 				return
 			}
-			isSameUser, err := fh.sameUser(outProps, candidateData)
+			outProps, outTimestamps, err := fh.transformProperties(transfSource, userData.Data, userData.Timestamps)
 			if err != nil {
 				fh.setError(err)
 				return
-			}
-			if !isSameUser {
-				// This is another user, so it can be skipped.
-				continue
 			}
 			for prop := range outProps {
 				if _, ok := candidateData[prop]; !ok {
@@ -171,11 +179,19 @@ func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[str
 					// Record, so it can be skipped.
 					continue
 				}
-				if candidateTimestamps[prop].After(outTimestamps[prop]) {
+				candidateTimestamp, ok := candidateTimestamps[prop]
+				if !ok {
+					fh.setError(fmt.Errorf("missing timestamp for prop %q", prop))
+					return
+				}
+				if candidateTimestamp.After(outTimestamps[prop]) {
 					// This property must be updated.
 				} else {
 					delete(candidateData, prop)
-					log.Printf("[info] property %q is already up-to-date", prop)
+					if len(candidateData) == 0 {
+						// Avoid useless iterations.
+						break dataSourcesLoop
+					}
 				}
 			}
 		}
@@ -183,7 +199,7 @@ func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[str
 
 	// Write the data to the Golden Record.
 	if len(candidateData) > 0 {
-		err := fh.writeToGoldenRecord(candidateData)
+		err = fh.writeToGoldenRecord(goldenRecordID, candidateData)
 		if err != nil {
 			fh.setError(err)
 			return
@@ -191,6 +207,34 @@ func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[str
 		log.Printf("[info] properties for user %q written to the Golden Record", candidateData["Email"])
 	}
 
+}
+
+type dataSourceUserData struct {
+	Data       map[string]any
+	Timestamps map[string]time.Time
+}
+
+// userData returns the data associated to the user from the given source.
+func (fh *firehose) userData(source int, user string) (dataSourceUserData, error) {
+	var userData dataSourceUserData
+	row := fh.sources.myDB.QueryRow(
+		"SELECT `data`, `timestamps` FROM `data_sources_users` WHERE `source` = ? AND `user` = ?",
+		source, user)
+	var rawData []byte
+	var rawTimestamps []byte
+	err := row.Scan(&rawData, &rawTimestamps)
+	if err != nil {
+		return dataSourceUserData{}, err
+	}
+	err = json.Unmarshal(rawData, &userData.Data)
+	if err != nil {
+		return dataSourceUserData{}, err
+	}
+	err = json.Unmarshal(rawTimestamps, &userData.Timestamps)
+	if err != nil {
+		return dataSourceUserData{}, err
+	}
+	return userData, nil
 }
 
 func (fh *firehose) SetUserGroups(user string, groups []string) {
@@ -274,10 +318,23 @@ func (fh *firehose) transformProperties(transformationSource string, incoming ma
 	return data, updateTimeOut, nil
 }
 
-// listAllTransformations returns a mapping between the data source IDs and
-// their corresponding transformation functions.
-func (fh *firehose) listAllTransformations() (map[int]string, error) {
-	rows, err := fh.sources.myDB.Query("SELECT `id`, `transformation` FROM `data_sources`")
+// listTransformations lists the transformations for the given data sources,
+// returning a mapping from the data source ID to its corresponding
+// transformation function.
+func (fh *firehose) listTransformations(sources []int) (map[int]string, error) {
+	if len(sources) == 0 {
+		return map[int]string{}, nil
+	}
+	query := &strings.Builder{}
+	query.WriteString("SELECT `id`, `transformation` FROM `data_sources` WHERE `id` IN (")
+	for i, source := range sources {
+		if i > 0 {
+			query.WriteString(", ")
+		}
+		query.WriteString(strconv.Itoa(source))
+	}
+	query.WriteString(")")
+	rows, err := fh.sources.myDB.Query(query.String())
 	if err != nil {
 		return nil, err
 	}
@@ -296,43 +353,6 @@ func (fh *firehose) listAllTransformations() (map[int]string, error) {
 		return nil, err
 	}
 	return transformations, nil
-}
-
-// usersForDataSource returns every user and timestamps for the given data
-// source.
-func (fh *firehose) usersForDataSource(source int) ([]map[string]any, []map[string]time.Time, error) {
-	rows, err := fh.sources.myDB.Query("SELECT `data`, `timestamps` FROM `data_sources_users` WHERE `source` = ?", source)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer rows.Close()
-	var users []map[string]any
-	var allTimestamps []map[string]time.Time
-	for rows.Next() {
-		var rawData, rawTimestamps []byte
-		err := rows.Scan(&rawData, &rawTimestamps)
-		if err != nil {
-			return nil, nil, err
-		}
-		// Deserialize the user data.
-		var data map[string]any
-		err = json.Unmarshal(rawData, &data)
-		if err != nil {
-			return nil, nil, err
-		}
-		users = append(users, data)
-		// Deserialize the timestamps.
-		var ts map[string]time.Time
-		err = json.Unmarshal(rawTimestamps, &ts)
-		if err != nil {
-			return nil, nil, err
-		}
-		allTimestamps = append(allTimestamps, ts)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, nil, err
-	}
-	return users, allTimestamps, nil
 }
 
 // statsTimeSlot returns the stats time slot for the time t.
@@ -367,56 +387,33 @@ func (fh *firehose) writeDataSourceUsers(user string, props map[string]any, time
 }
 
 // writeToGoldenRecord writes the given properties to the Golden Record.
-func (fh *firehose) writeToGoldenRecord(props map[string]any) error {
-	columns := make([]string, len(props))
+func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
+
+	query := &strings.Builder{}
+	query.WriteString("UPDATE `warehouse_users` SET\n")
+	var values []any
 	i := 0
-	for column := range props {
-		columns[i] = column
+	for prop, value := range props {
+		if i > 0 {
+			query.WriteString(", ")
+		}
+		query.WriteString("`" + prop + "` = ?\n")
+		values = append(values, value)
 		i++
 	}
-	sort.Strings(columns)
-	query := "INSERT INTO `warehouse_users` (" + strings.Join(columns, ", ") + ") VALUES ("
-	for i := range columns {
-		if i > 0 {
-			query += ","
-		}
-		query += "?"
-	}
-	query += ") ON DUPLICATE KEY UPDATE "
-	for i := range columns {
-		if i > 0 {
-			query += ", "
-		}
-		query += columns[i] + " = ?"
-	}
-	values := []any{}
-	for _, column := range columns {
-		values = append(values, props[column])
-	}
-	_, err := fh.sources.myDB.Exec(query, append(values, values...)...)
+	query.WriteString("\nWHERE `id` = ?")
+	values = append(values, id)
+	_, err := fh.sources.myDB.Exec(query.String(), values...)
 	if err != nil {
-		return fmt.Errorf("cannot write data to database: %s", err)
+		return fmt.Errorf("cannot write data Golden Record: %s", err)
 	}
 	return nil
 }
 
-// sameUser reports whether the given properties refer to the same user.
-// Note that the properties should be the result of the transformation
-// functions.
-func (fh *firehose) sameUser(props1, props2 map[string]any) (bool, error) {
-	email1, ok := props1["Email"]
-	if !ok {
-		return false, fmt.Errorf("user has no 'Email' (%#v)", props1)
+func keys[K comparable, V any](m map[K]V) []K {
+	keys := make([]K, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
 	}
-	if email1 == "" {
-		return false, fmt.Errorf("user has empty 'Email' (%#v)", props1)
-	}
-	email2, ok := props2["Email"]
-	if !ok {
-		return false, fmt.Errorf("user has no 'Email' (%#v)", props2)
-	}
-	if email2 == "" {
-		return false, fmt.Errorf("user has empty 'Email' (%#v)", props2)
-	}
-	return email1 == email2, nil
+	return keys
 }
