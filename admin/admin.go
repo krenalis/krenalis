@@ -10,7 +10,9 @@ package admin
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -83,8 +85,20 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/admin/", http.StatusTemporaryRedirect)
 	}
 
+	if strings.HasPrefix(rpath, "/add-data-source") {
+		err = admin.serveAddDataSource(w, r, accountID)
+		if err != nil {
+			log.Printf("[error] %s", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
+		return
+	}
 	if strings.HasPrefix(rpath, "/oauth/authorize") {
-		admin.addDataSource(w, r, accountID)
+		err = admin.serveAddOAuthDataSource(w, r, accountID)
+		if err != nil {
+			log.Printf("[error] %s", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -559,104 +573,131 @@ func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
 	enc.Encode([]any{accountID, nil})
 }
 
-func (admin *admin) addDataSource(w http.ResponseWriter, r *http.Request, accountID int) {
+// serveAddDataSource serves a request to add a data source and responds with
+// the data source identifier.
+func (admin *admin) serveAddDataSource(w http.ResponseWriter, r *http.Request, accountID int) error {
+
+	defer func() {
+		_, _ = io.Copy(io.Discard, r.Body)
+		_ = r.Body.Close()
+	}()
 
 	api := admin.apis.AsAccount(accountID)
 	ws := api.AsWorkspace(1) // TODO(marco): what is the workspace?
 
-	// get the ID of the connector.
+	source := struct {
+		Type      string
+		Connector int
+		Stream    int
+	}{}
+	err := json.NewDecoder(r.Body).Decode(&source)
+	if err != nil {
+		return err
+	}
+
+	var id int
+
+	switch source.Type {
+	case "App":
+		id, err = ws.DataSources.AddApp(source.Connector, "", "")
+	case "Database":
+		id, err = ws.DataSources.AddDatabase(source.Connector)
+	case "FileStream":
+		id, err = ws.DataSources.AddFileStream(source.Connector, source.Stream)
+	}
+	if err != nil {
+		return err
+	}
+
+	_ = json.NewEncoder(w).Encode(map[string]int{"id": id})
+
+	return nil
+}
+
+// serveAddOAuthDataSource serves a request to add a data source authorized
+// with OAuth and redirect to the confirmation page.
+func (admin *admin) serveAddOAuthDataSource(w http.ResponseWriter, r *http.Request, accountID int) error {
+
+	api := admin.apis.AsAccount(accountID)
+	ws := api.AsWorkspace(1) // TODO(marco): what is the workspace?
+
+	// Get the connector's identifier.
 	cookie, err := r.Cookie("add-source")
 	if err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		log.Print("[error] cannot add data source: the request has not the cookie containing the connector ID")
-		return
+		return errors.New("missing connector cookie")
 	}
+	defer func() {
+		// Remove the "add-source" cookie.
+		c := &http.Cookie{
+			Name:     "add-source",
+			Value:    "",
+			Path:     "/",
+			MaxAge:   -1,
+			HttpOnly: true,
+		}
+		http.SetCookie(w, c)
+	}()
 
 	connectorID, err := strconv.Atoi(cookie.Value)
 	if err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		log.Print("[error] cannot add data source: the connector ID contained in the cookie cannot be converted to int")
-		return
+		return errors.New("invalid connector identifier")
 	}
 
-	// get the code from the query string.
+	// Get the OAuth code.
 	oauthCode := r.URL.Query().Get("code")
 	if oauthCode == "" {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		log.Printf("[error] cannot add data source for connector %d: the redirect URI does not contain the oauth code", connectorID)
-		return
+		return errors.New("missing OAuth code from redirect URL")
 	}
 
-	// retrieve the connector.
 	connector, err := admin.apis.Connector(connectorID)
 	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot add data source for connector %d: %s", connectorID, err)
-		return
+		return err
 	}
 
-	data := url.Values{}
-	data.Set("grant_type", "authorization_code")
-	data.Set("client_id", connector.ClientID)
-	data.Set("client_secret", connector.ClientSecret)
-	data.Set("redirect_uri", "https://localhost:9090/admin/oauth/authorize")
-	data.Set("code", oauthCode)
+	// Retrieve the refresh and access tokens.
+	body := url.Values{}
+	body.Set("grant_type", "authorization_code")
+	body.Set("client_id", connector.ClientID)
+	body.Set("client_secret", connector.ClientSecret)
+	body.Set("redirect_uri", "https://localhost:9090/admin/oauth/authorize")
+	body.Set("code", oauthCode)
 
-	req, err := http.NewRequest(http.MethodPost, connector.TokenEndpoint, strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", connector.TokenEndpoint, strings.NewReader(body.Encode()))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot add data source for connector %d: %s", connectorID, err)
-		return
+		return err
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot data source for connector %d: %s", connectorID, err)
-		return
+		return fmt.Errorf("cannot retrieve the refresh and access tokens from connector %s: %s", connector.Name, err)
+	}
+	defer func() {
+		_, _ = io.Copy(io.Discard, r.Body)
+		_ = r.Body.Close()
+	}()
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("cannot retrieve the refresh and access tokens from connector %s: server responded with status %d", connector.Name, resp.StatusCode)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		err := fmt.Errorf("unexpected status %d returned by connector %d while trying to get an access token via oauth code", resp.StatusCode, connectorID)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot add data source for connector %d: %s", connectorID, err)
-		return
-	}
-
-	respData := struct {
-		Refresh_token string
-		Access_token  string
+	tokens := struct {
+		Refresh string `json:"refresh_token"`
+		Access  string `json:"access_token"`
 	}{}
-	dec := json.NewDecoder(resp.Body)
-	err = dec.Decode(&respData)
+	err = json.NewDecoder(resp.Body).Decode(&tokens)
 	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot add data source for connector %d: %s", connectorID, err)
-		return
+		return fmt.Errorf("cannot decode response from %s OAuth server: %s", connector.Name, err)
 	}
-	resp.Body.Close()
 
-	_, err = ws.DataSources.Add(connectorID, respData.Refresh_token, respData.Access_token)
+	// Add the data source.
+	_, err = ws.DataSources.AddApp(connectorID, tokens.Refresh, tokens.Access)
 	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot add data source for connector %d: %s", connectorID, err)
-		return
+		return err
 	}
 
-	// remove the "add-source" cookie.
-	c := &http.Cookie{
-		Name:     "add-source",
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-	}
-	http.SetCookie(w, c)
-
-	// redirect to confirmation page.
+	// Redirect to confirmation page.
 	http.Redirect(w, r, "/admin/connectors/added/"+strconv.Itoa(connectorID), http.StatusTemporaryRedirect)
 
-	return
+	return nil
 }

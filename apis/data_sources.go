@@ -66,12 +66,13 @@ type DataSourceProperty struct {
 	Properties []DataSourceProperty
 }
 
-// Add adds a data source given its connector and the OAuth refresh and
-// access tokens of the resource and returns its identifier.
-// If the data source already exists for the given connector and resource, it
-// updates the data source. If the connector is not an app, it returns the
-// ErrInvalidConnectorType error.
-func (this *DataSources) Add(connector int, refreshToken, accessToken string) (int, error) {
+// AddApp adds an app data source given its connector and the OAuth refresh and
+// access tokens and returns its identifier.
+//
+// If the connector does not exist, it returns the ErrConnectorNotFound error.
+// If the connector is not an app, it returns the ErrInvalidConnectorType
+// error.
+func (this *DataSources) AddApp(connector int, refreshToken, accessToken string) (int, error) {
 	conn, err := this.api.apis.Connector(connector)
 	if err != nil {
 		return 0, err
@@ -80,8 +81,7 @@ func (this *DataSources) Add(connector int, refreshToken, accessToken string) (i
 		return 0, ErrConnectorNotFound
 	}
 	if conn.Type != "App" {
-		return this.AddDatabase(connector) // TODO
-		//return 0, ErrInvalidConnectorType
+		return 0, ErrInvalidConnectorType
 	}
 	c, err := connectors.NewAppConnection(context.Background(), conn.Name, &connectors.AppConfig{
 		ClientSecret: conn.ClientSecret,
@@ -142,11 +142,12 @@ func (this *DataSources) Add(connector int, refreshToken, accessToken string) (i
 	return int(id), err
 }
 
-// AddDatabase adds a data source given its database connector and returns its
-// identifier.
-// If the data source already exists for the given connector and resource, it
-// updates the data source. If the connector is not a database, it returns the
-// ErrInvalidConnectorType error.
+// AddDatabase adds a database data source given its database connector and
+// returns its identifier.
+//
+// If the connector does not exist, it returns the ErrConnectorNotFound error.
+// If the connector is not a database, it returns the ErrInvalidConnectorType
+// error.
 func (this *DataSources) AddDatabase(connector int) (int, error) {
 	var id int64
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
@@ -162,6 +163,54 @@ func (this *DataSources) AddDatabase(connector int) (int, error) {
 			return ErrInvalidConnectorType
 		}
 		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `connector` = ?", this.workspace, connector)
+		id, err = result.LastInsertId()
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+	return int(id), nil
+}
+
+// AddFileStream adds a file-stream data source given its file and stream
+// connectors and returns its identifier.
+//
+// If a connector does not exist, it returns the ErrConnectorNotFound error. If
+// the connectors are not a file and a stream respectively, it returns the
+// ErrInvalidConnectorType error.
+func (this *DataSources) AddFileStream(fileConnector, streamConnector int) (int, error) {
+	var id int64
+	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+		var connectorType string
+		stmt, err := tx.Prepare("SELECT `type` FROM `connectors` WHERE `id` = ?")
+		if err != nil {
+			return err
+		}
+		// Check the file connector.
+		err = stmt.QueryRow(fileConnector).Scan(&connectorType)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return ErrConnectorNotFound
+			}
+			return err
+		}
+		if connectorType != "File" {
+			return ErrInvalidConnectorType
+		}
+		// Check the stream connector.
+		err = stmt.QueryRow(streamConnector).Scan(&connectorType)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return ErrConnectorNotFound
+			}
+			return err
+		}
+		if connectorType != "Stream" {
+			return ErrInvalidConnectorType
+		}
+		// Add the data source.
+		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `connector` = ? AND `stream` = ?",
+			this.workspace, fileConnector, streamConnector)
 		id, err = result.LastInsertId()
 		return err
 	})
