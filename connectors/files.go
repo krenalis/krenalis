@@ -13,14 +13,8 @@ import (
 	"io"
 )
 
-// FileConfig represents the configuration of a file connection.
-type FileConfig struct {
-	Settings []byte
-	Firehose Firehose
-}
-
 // FileConnectionFunc represents functions that create new file connections.
-type FileConnectionFunc func(context.Context, *FileConfig) (FileConnection, error)
+type FileConnectionFunc func(context.Context, []byte, Firehose) (FileConnection, error)
 
 // RegisterFileConnector makes a file connector available by the provided name.
 // If RegisterFileConnector is called twice with the same name or if fn is nil,
@@ -51,12 +45,12 @@ type FileConnection interface {
 
 // NewFileConnection returns a new file connection for the file connector with
 // the given name.
-func NewFileConnection(ctx context.Context, name string, conf *FileConfig) (FileConnection, error) {
+func NewFileConnection(ctx context.Context, name string, settings []byte, fh Firehose) (FileConnection, error) {
 	connectorsMu.Lock()
 	defer connectorsMu.Unlock()
 	f, ok := connectors.files[name]
 	if !ok {
 		return nil, fmt.Errorf("connectors: unknown file connector %q (forgotten import?)", name)
 	}
-	return f(ctx, conf)
+	return f(ctx, settings, fh)
 }

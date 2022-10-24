@@ -47,10 +47,10 @@ type settings struct {
 }
 
 // New returns a new SFTP connection.
-func New(ctx context.Context, conf *connectors.StreamConfig) (connectors.StreamConnection, error) {
+func New(ctx context.Context, settings []byte, fh connectors.Firehose) (connectors.StreamConnection, error) {
 	c := connection{ctx: ctx}
-	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+	if len(settings) > 0 {
+		err := json.Unmarshal(settings, &c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of SFTP connection")
 		}

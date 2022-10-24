@@ -12,15 +12,9 @@ import (
 	"fmt"
 )
 
-// DatabaseConfig represents the configuration of a database connection.
-type DatabaseConfig struct {
-	Settings []byte
-	Firehose Firehose
-}
-
 // DatabaseConnectionFunc represents functions that create new database
 // connections.
-type DatabaseConnectionFunc func(context.Context, *DatabaseConfig) (DatabaseConnection, error)
+type DatabaseConnectionFunc func(context.Context, []byte, Firehose) (DatabaseConnection, error)
 
 // RegisterDatabaseConnector makes a database connector available by the
 // provided name. If RegisterDatabaseConnector is called twice with the same
@@ -62,12 +56,12 @@ type Column struct {
 
 // NewDatabaseConnection returns a new database connection for the database
 // connector with the given name.
-func NewDatabaseConnection(ctx context.Context, name string, conf *DatabaseConfig) (DatabaseConnection, error) {
+func NewDatabaseConnection(ctx context.Context, name string, settings []byte, fh Firehose) (DatabaseConnection, error) {
 	connectorsMu.Lock()
 	defer connectorsMu.Unlock()
 	f, ok := connectors.databases[name]
 	if !ok {
 		return nil, fmt.Errorf("connectors: unknown database connector %q (forgotten import?)", name)
 	}
-	return f(ctx, conf)
+	return f(ctx, settings, fh)
 }

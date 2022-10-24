@@ -13,15 +13,9 @@ import (
 	"io"
 )
 
-// StreamConfig represents the configuration of a stream connection.
-type StreamConfig struct {
-	Settings []byte
-	Firehose Firehose
-}
-
 // StreamConnectionFunc represents functions that create new stream
 // connections.
-type StreamConnectionFunc func(context.Context, *StreamConfig) (StreamConnection, error)
+type StreamConnectionFunc func(context.Context, []byte, Firehose) (StreamConnection, error)
 
 // RegisterStreamConnector makes a stream connector available by the provided
 // name. If RegisterStreamConnector is called twice with the same name or if fn
@@ -51,12 +45,12 @@ type StreamConnection interface {
 
 // NewStreamConnection returns a new stream connection for the stream connector
 // with the given name.
-func NewStreamConnection(ctx context.Context, name string, conf *StreamConfig) (StreamConnection, error) {
+func NewStreamConnection(ctx context.Context, name string, settings []byte, fh Firehose) (StreamConnection, error) {
 	connectorsMu.Lock()
 	defer connectorsMu.Unlock()
 	f, ok := connectors.streams[name]
 	if !ok {
 		return nil, fmt.Errorf("connectors: unknown stream connector %q (forgotten import?)", name)
 	}
-	return f(ctx, conf)
+	return f(ctx, settings, fh)
 }

@@ -424,10 +424,7 @@ func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]s
 		return nil, nil, err
 	}
 	fh := this.newFirehose(context.Background(), id, connector, 0, "")
-	c, err := connectors.NewDatabaseConnection(fh.ctx, connectorName, &connectors.DatabaseConfig{
-		Settings: settings,
-		Firehose: fh,
-	})
+	c, err := connectors.NewDatabaseConnection(fh.ctx, connectorName, settings, fh)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -671,10 +668,7 @@ func (this *DataSources) reloadProperties(id int) error {
 			return err
 		}
 		fh := this.newFirehose(context.Background(), id, connector, 0, "")
-		c, err := connectors.NewDatabaseConnection(fh.ctx, name, &connectors.DatabaseConfig{
-			Settings: settings,
-			Firehose: fh,
-		})
+		c, err := connectors.NewDatabaseConnection(fh.ctx, name, settings, fh)
 		if err != nil {
 			return err
 		}
