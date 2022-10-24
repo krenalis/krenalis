@@ -120,7 +120,7 @@ func (this *DataSources) AddApp(connector int, refreshToken, accessToken string)
 		if err != nil {
 			return err
 		}
-		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `connector` = ?, `resource` = ?",
+		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `type` = 'App', `connector` = ?, `resource` = ?",
 			this.workspace, connector, resource)
 		if err != nil {
 			return err
@@ -162,7 +162,8 @@ func (this *DataSources) AddDatabase(connector int) (int, error) {
 		if connectorType != "Database" {
 			return ErrInvalidConnectorType
 		}
-		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `connector` = ?", this.workspace, connector)
+		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `type` = 'Database', `connector` = ?",
+			this.workspace, connector)
 		id, err = result.LastInsertId()
 		return err
 	})
@@ -209,7 +210,7 @@ func (this *DataSources) AddFileStream(fileConnector, streamConnector int) (int,
 			return ErrInvalidConnectorType
 		}
 		// Add the data source.
-		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `connector` = ? AND `stream` = ?",
+		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `type` = 'FileStream', `connector` = ? AND `stream` = ?",
 			this.workspace, fileConnector, streamConnector)
 		id, err = result.LastInsertId()
 		return err
