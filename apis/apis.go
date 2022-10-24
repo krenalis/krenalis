@@ -316,6 +316,7 @@ func (apis *APIs) initSchema() {
 		id             int
 		workspace      int
 		connector      int
+		stream         int
 		resource       string
 		transformation string
 		userCursor     string

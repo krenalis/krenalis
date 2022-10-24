@@ -31,6 +31,7 @@ CREATE TABLE `data_sources` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `workspace` INT NOT NULL,
   `connector` INT NOT NULL,
+  `stream` INT NOT NULL,
   `resource` INT NOT NULL,
   `transformation` TEXT NOT NULL,
   `userCursor` VARCHAR(500) NOT NULL DEFAULT '',

@@ -333,3 +333,6 @@ ALTER TABLE `connectors`
 
 ALTER TABLE `connectors`
     CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'File', 'Stream') DEFAULT 'App';
+
+ALTER TABLE `data_sources`
+    ADD COLUMN `stream` INT NOT NULL AFTER `connector`;
