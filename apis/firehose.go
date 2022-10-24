@@ -34,14 +34,15 @@ const maxSettingsLen = 10_000 // Maximum length of settings in runes.
 
 // firehose is the Firehose API used by the connectors.
 type firehose struct {
-	sources     *DataSources
-	source      int
-	resource    int
-	connector   int
-	ctx         context.Context
-	cancel      context.CancelFunc
-	webhooksPer string
-	err         error
+	sources       *DataSources
+	source        int
+	resource      int
+	connector     int
+	connectorType string
+	ctx           context.Context
+	cancel        context.CancelFunc
+	webhooksPer   string
+	err           error
 }
 
 func (fh *firehose) ReceiveEvent(event connectors.Event) {

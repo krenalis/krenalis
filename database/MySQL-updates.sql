@@ -336,3 +336,14 @@ ALTER TABLE `connectors`
 
 ALTER TABLE `data_sources`
     ADD COLUMN `stream` INT NOT NULL AFTER `connector`;
+
+ALTER TABLE `data_sources`
+    ADD COLUMN `type` ENUM('App', 'Database', 'FileStream') DEFAULT 'App' AFTER `workspace`;
+
+UPDATE `data_sources` AS `s`, `connectors` AS `c`
+SET `s`.`type` = IF(`s`.`stream` = 0, `c`.`type`, 'FileStream')
+WHERE `c`.`id` = `s`.`connector`;
+
+ALTER TABLE `data_sources`
+    CHANGE COLUMN `settings` `settings` TEXT NOT,
+    ADD COLUMN `streamSettings` TEXT NOT NULL AFTER `settings`;
