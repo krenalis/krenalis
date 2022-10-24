@@ -1,5 +1,15 @@
 go 1.19
 
-use ./
+use .
 
 use ./chichi-cli
+
+use ./connectors/csv
+
+use ./connectors/dummy
+
+use ./connectors/hubspot
+
+use ./connectors/mysql
+
+use ./connectors/sftp
