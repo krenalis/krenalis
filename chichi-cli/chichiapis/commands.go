@@ -106,7 +106,7 @@ func ListUsers() {
 	fmt.Printf("\n")
 	for _, user := range users {
 		for _, column := range columns {
-			fmt.Printf("%-30s", user.(map[string]any)[column])
+			fmt.Printf("%-30v", user.(map[string]any)[column])
 		}
 		fmt.Printf("\n")
 	}
