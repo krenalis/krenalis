@@ -345,7 +345,7 @@ SET `s`.`type` = IF(`s`.`stream` = 0, `c`.`type`, 'FileStream')
 WHERE `c`.`id` = `s`.`connector`;
 
 ALTER TABLE `data_sources`
-    CHANGE COLUMN `settings` `settings` TEXT NOT,
+    CHANGE COLUMN `settings` `settings` TEXT NOT NULL,
     ADD COLUMN `streamSettings` TEXT NOT NULL AFTER `settings`;
 
 ALTER TABLE `warehouse_users` 
