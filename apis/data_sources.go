@@ -545,8 +545,12 @@ func (this *DataSources) SetTransformationFunc(id int, fn string) error {
 }
 
 // SetUsersQuery sets the users query of the data source with identifier id.
-// If the data source does not exist, it returns a ErrDataSourceNotFound error.
-// If the query is not UTF-8 encoded or is too long, it panics.
+// query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
+// must contain the ':limit' placeholder.
+//
+// It returns the ErrDataSourceNotFound error if the data source does not
+// exist and the ErrInvalidConnectorType error if the data source is not a
+// database.
 func (this *DataSources) SetUsersQuery(id int, query string) error {
 
 	if !utf8.ValidString(query) {
@@ -559,7 +563,7 @@ func (this *DataSources) SetUsersQuery(id int, query string) error {
 		return errors.New("query does not contain the placeholder \":limit\"")
 	}
 
-	result, err := this.myDB.Exec("UPDATE `data_sources` SET `usersQuery` = ? WHERE `id` = ? AND `workspace` = ?",
+	result, err := this.myDB.Exec("UPDATE `data_sources` SET `usersQuery` = ? WHERE `id` = ? AND `workspace` = ? AND `type` = 'Database'",
 		query, id, this.workspace)
 	if err != nil {
 		return err
@@ -569,6 +573,15 @@ func (this *DataSources) SetUsersQuery(id int, query string) error {
 		return err
 	}
 	if affected == 0 {
+		var exists bool
+		err = this.myDB.QueryRow("SELECT TRUE FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
+			id, this.workspace).Scan(&exists)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return ErrInvalidConnectorType
+		}
 		return ErrDataSourceNotFound
 	}
 
