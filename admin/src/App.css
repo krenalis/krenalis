@@ -135,3 +135,7 @@ sl-select::part(control) {
 sl-dialog::part(panel) {
 	border-radius: 20px;
 }
+
+sl-dialog::part(base) {
+	padding-left: 100px;
+}

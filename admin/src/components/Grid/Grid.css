@@ -1,0 +1,8 @@
+.Grid {
+    display: grid;
+    gap: 20px;
+}
+
+.Grid .headCell {
+    font-weight: 600;
+}

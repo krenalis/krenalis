@@ -4,6 +4,9 @@
     border-radius: var(--radius);
     box-shadow: var(--sl-shadow-small);
     text-align: center;
+    display: flex;
+    flex-flow: column;
+    justify-content: space-between;
 }
 
 .Card .logo > img {
@@ -28,6 +31,10 @@
 
 .Card .name {
     font-weight: 600;
+}
+
+.Card .type {
+    margin-top: 10px;
 }
 
 .Card .description {

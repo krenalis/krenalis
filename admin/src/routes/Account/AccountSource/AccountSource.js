@@ -99,7 +99,7 @@ export default class AccountSource extends React.Component {
                     <div className='content'>
                         <Toast reactRef={this.toast} status={this.state.status} />
                         <div className='title'>
-                            <img className='littleLogo' src={this.state.source.LogoURL} alt={`${this.state.source.Name}'s logo`} />
+                            {this.state.source.LogoURL !== '' && <img className='littleLogo' src={this.state.source.LogoURL} alt={`${this.state.source.Name}'s logo`} />}
                             <div className='text'>Map {this.state.source.Name}'s properties to your golden record</div>
                         </div>
                         <div className='properties sourceProperties'>
@@ -110,7 +110,7 @@ export default class AccountSource extends React.Component {
                         </div>
                         <div className='editorWrapper'>
                             <Editor
-                                onChange={(value, e) => { this.setState({ transformationFunc: value }) }}
+                                onChange={(value) => { this.setState({ transformationFunc: value }) }}
                                 defaultLanguage='go'
                                 value={this.state.transformationFunc}
                                 theme='vs-dark'

@@ -42,7 +42,8 @@
     grid-template-columns: 1fr 1fr;
     grid-template-areas: 
         "import import"
-        "configure remove";
+        "configure remove"
+        "editSQL editSQL";
     row-gap: 15px;
     gap: 10px;
 }
@@ -59,6 +60,10 @@
     grid-area: remove;
 }
 
+.AccountSources .Card .buttons .editSQLButton {
+    grid-area: editSQL;
+}
+
 .AccountSources .addSourceBox {
     background-color: var(--bg-crystal);
     backdrop-filter: blur(33px);
@@ -71,6 +76,7 @@
     justify-content: center;
     position: relative;
     box-shadow: var(--sl-shadow-small);
+    min-height: 380px;
 }
 
 .AccountSources .addSourceBox sl-icon {

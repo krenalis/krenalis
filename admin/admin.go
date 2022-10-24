@@ -327,6 +327,46 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			return
+		case "/preview-query":
+			defer r.Body.Close()
+			var req struct {
+				DataSource int
+				Query      string
+				Limit      int
+			}
+			err := json.NewDecoder(r.Body).Decode(&req)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			columns, rows, err := ws.DataSources.Query(req.DataSource, req.Query, req.Limit)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"Columns": columns, "Rows": rows})
+			return
+		case "/set-users-query":
+			defer r.Body.Close()
+			var req struct {
+				DataSource int
+				Query      string
+			}
+			err := json.NewDecoder(r.Body).Decode(&req)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			err = ws.DataSources.SetUsersQuery(req.DataSource, req.Query)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			return
 		}
 	}
 

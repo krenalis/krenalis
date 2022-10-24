@@ -1,0 +1,56 @@
+.AccountSourceSQL {
+    min-height: 100vh;
+}
+
+.AccountSourceSQL .content {
+    max-width: 1000px;
+    margin: auto;
+    margin-top: -200px;
+}
+
+.AccountSourceSQL .content > .title {
+    font-size: 23px;
+    font-weight: 600;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    align-items: center;
+    color: var(--text-onaccent);
+    margin-bottom: 20px;
+}
+
+.AccountSourceSQL .content .title .littleLogo {
+    max-width: 35px;
+}
+
+.AccountSourceSQL .content .editorWrapper {
+    grid-area: editor;
+    width: 100%;
+    height: 600px;
+    padding: 30px;
+    border-radius: var(--radius);
+    background-color: var(--bg-editor);
+}
+
+.AccountSourceSQL .content .editorWrapper *  {
+    font-family: monospace!important;
+}
+
+.AccountSourceSQL .content .buttons {
+    display: flex;
+    justify-content: space-around;
+    margin: 50px 0;
+}
+
+.AccountSourceSQL .content .buttons .previewButton {
+    min-width: 200px;
+}
+
+.AccountSourceSQL .content .buttons .saveButton { 
+    min-width: 200px;
+}
+
+.AccountSourceSQL sl-dialog .Grid {
+    padding: 0 30px 30px 30px;
+}

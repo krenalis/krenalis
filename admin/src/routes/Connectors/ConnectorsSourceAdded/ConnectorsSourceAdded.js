@@ -35,7 +35,13 @@ export default class ConnectorsSourceAdded extends React.Component {
 				<div className='content'>
 					<Toast reactRef={this.toast} status={this.state.status} />
 					<div className='addedSource'>
-						<div className='logo'><img src={this.state.connector.LogoURL} alt={`${this.state.connector.Name}'s logo`} /></div>
+						<div className='logo'>
+							{
+								this.state.connector.LogoURL === '' ?
+								<div class='unknownLogo'>?</div> :
+								<img alt={`${this.state.connector.Name}'s logo`} src={this.state.connector.LogoURL} />
+							}
+						</div>
 						<div className='title'>{this.state.connector.Name} has been added</div>
 						<div className='description'>You have succesfully added a new data source from {this.state.connector.Name}'s connector</div>
 					</div>

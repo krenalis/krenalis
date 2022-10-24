@@ -28,6 +28,19 @@
     margin: auto;
 }
 
+.ConnectorsSourceAdded .addedSource .logo .unknownLogo {
+    background-color: var(--bg-gray);
+    color: var(--text-primary);
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    margin: 0 auto 30px auto;
+    font-size: 22px;
+}
+
 .ConnectorsSourceAdded .title {
     margin-top: 30px;
     font-weight: 600;
