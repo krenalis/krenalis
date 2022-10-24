@@ -561,8 +561,8 @@ func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
 
 func (admin *admin) addDataSource(w http.ResponseWriter, r *http.Request, accountID int) {
 
-	api := admin.apis.AsAccount(1) // TODO(marco): what is the account?
-	ws := api.AsWorkspace(1)       // TODO(marco): what is the workspace?
+	api := admin.apis.AsAccount(accountID)
+	ws := api.AsWorkspace(1) // TODO(marco): what is the workspace?
 
 	// get the ID of the connector.
 	cookie, err := r.Cookie("add-source")
