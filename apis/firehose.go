@@ -83,7 +83,11 @@ func (fh *firehose) SetSettings(settings []byte) error {
 	if utf8.RuneCount(settings) > maxSettingsLen {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 	}
-	_, err := fh.sources.myDB.Exec("UPDATE `data_sources`\nSET `settings` = ?\nWHERE `id` = ?", settings, fh.source)
+	settingsColumn := "`settings`"
+	if fh.connectorType == "Stream" {
+		settingsColumn = "`streamSettings`"
+	}
+	_, err := fh.sources.myDB.Exec("UPDATE `data_sources`\nSET "+settingsColumn+" = ?\nWHERE `id` = ?", settings, fh.source)
 	if err != nil {
 		log.Printf("[error] %s", err)
 		return errors.New("cannot set settings")
