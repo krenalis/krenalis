@@ -126,6 +126,10 @@ func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[str
 		fh.setError(fmt.Errorf("cannot retrieve transformation from DB: %s", err))
 		return
 	}
+	if source.TransformationFunc == "" {
+		fh.setError(fmt.Errorf("no transformation function for data source %d", source.ID))
+		return
+	}
 
 	// Apply the transformation to the current entity.
 	candidateData, candidateTimestamps, err := fh.transformProperties(source.TransformationFunc, properties, timestamps)
