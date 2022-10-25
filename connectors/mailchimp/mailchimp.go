@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"chichi/connectors"
+
 	"github.com/open2b/nuts/capture"
 )
 
@@ -112,8 +113,8 @@ func (c *connection) Properties() ([]connectors.Property, []connectors.Property,
 		case "radio", "dropdown":
 			for _, choice := range mf.Options.Choices {
 				mergeFields[i].Options = append(mergeFields[i].Options, connectors.PropertyOption{
-					choice,
-					choice,
+					Label: choice,
+					Value: choice,
 				})
 			}
 		}
