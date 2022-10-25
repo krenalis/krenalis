@@ -55,5 +55,7 @@ Refer to the [documentation of the chichi-cli tool](chichi-cli/README.md).
 
 ## Checklist before commit
 
-1. The `go.sum` and `go.mod` files must be cleared by `go mod tidy`
-2. The entire project must be formatted with `go fmt ./...`
+1. Every module in the project should have the `go.sum` and `go.mod` files cleared
+   and updated by `go mod tidy`
+2. Every module in the project must be formatted with `go fmt ./...`
+3. Every module in the project must be validated with `go vet ./...`
