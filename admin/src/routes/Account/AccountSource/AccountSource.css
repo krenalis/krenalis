@@ -78,13 +78,12 @@
 }
 
 .AccountSource .content .saveButton {
-    grid-area: saveButton;
     width: 200px;
-    margin: auto;
+    margin: 70px auto 0 auto;
+    display: block;
 }
 
 .AccountSource .content .documentation {
-    grid-area: documentation;
     border-radius: var(--radius);
     padding: 20px 50px;
     background-color: var(--bg-primary);

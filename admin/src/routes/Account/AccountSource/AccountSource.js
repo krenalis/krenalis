@@ -101,21 +101,22 @@ export default class AccountSource extends React.Component {
                                 value={this.state.transformationFunc}
                                 theme='vs-dark'
                             />
+                            <SlButton className='saveButton' variant='primary' size='large' onClick={this.handleSaving}>
+                                <SlIcon slot='prefix' name='save' />
+                                Save
+                            </SlButton>
+                            <div className='documentation'>
+                                <p>A transformation function which can be used with the default schema:</p>
+                                <pre><code class='transformationFunc'>{transformationFuncExample}</code></pre>
+                            </div>
                         </div>
-                        <SlButton className='saveButton' variant='primary' size='large' onClick={this.handleSaving}>
-                            <SlIcon slot='prefix' name='save' />
-                            Save
-                        </SlButton>
                         <div className='properties schemaProperties'>
                             <div className='title'>Golden record properties</div>
                             {this.state.schemaProperties.map((p, index) => {
                                 return <div key={index} className='property'>{p}</div>
                             })}
                         </div>
-                        <div className='documentation'>
-                            <p>A transformation function which can be used with the default schema:</p>
-                            <pre><code class='transformationFunc'>{transformationFuncExample}</code></pre>
-                        </div>
+                        
                     </div>
                 </div>
             )
