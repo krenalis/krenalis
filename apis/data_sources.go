@@ -274,6 +274,9 @@ func (this *DataSources) Delete(id int) error {
 			return err
 		}
 		_, err = tx.Table("DataSourcesUsers").Delete(sql.Where{"source": id})
+		if err != nil {
+			return err
+		}
 		// Delete the resource of the deleted data source if it has no other data sources.
 		_, err = tx.Exec("DELETE `r`\n"+
 			"FROM `resources` AS `r`\n"+
