@@ -219,6 +219,9 @@ func (this *DataSources) AddFileStream(fileConnector, streamConnector int) (int,
 		// Add the data source.
 		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `type` = 'FileStream', `connector` = ? AND `stream` = ?",
 			this.workspace, fileConnector, streamConnector)
+		if err != nil {
+			return err
+		}
 		id, err = result.LastInsertId()
 		return err
 	})
