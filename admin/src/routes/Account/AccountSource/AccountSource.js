@@ -94,13 +94,15 @@ export default class AccountSource extends React.Component {
                                 return <div key={index} className='property'>{p}</div>
                             })}
                         </div>
-                        <div className='editorWrapper'>
-                            <Editor
-                                onChange={(value) => { this.setState({ transformationFunc: value }) }}
-                                defaultLanguage='go'
-                                value={this.state.transformationFunc}
-                                theme='vs-dark'
-                            />
+                        <div className="editor">
+                            <div className='editorWrapper'>
+                                <Editor
+                                    onChange={(value) => { this.setState({ transformationFunc: value }) }}
+                                    defaultLanguage='go'
+                                    value={this.state.transformationFunc}
+                                    theme='vs-dark'
+                                />
+                            </div>
                             <SlButton className='saveButton' variant='primary' size='large' onClick={this.handleSaving}>
                                 <SlIcon slot='prefix' name='save' />
                                 Save

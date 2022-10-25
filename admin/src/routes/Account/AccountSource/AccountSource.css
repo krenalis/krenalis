@@ -56,8 +56,11 @@
     grid-area: sourceProperties;
 }
 
-.AccountSource .content .editorWrapper {
+.AccountSource .content .editor {
     grid-area: editor;
+}
+
+.AccountSource .content .editorWrapper {
     width: 100%;
     height: 600px;
     padding: 30px;
@@ -79,7 +82,7 @@
 
 .AccountSource .content .saveButton {
     width: 200px;
-    margin: 70px auto 0 auto;
+    margin: 30px auto;
     display: block;
 }
 
