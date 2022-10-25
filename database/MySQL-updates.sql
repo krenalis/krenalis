@@ -366,3 +366,7 @@ ALTER TABLE `connectors`
 
 ALTER TABLE `resources`
     CHANGE COLUMN `accessTokenExpirationTimestamp` `accessTokenExpirationTime` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00';
+
+INSERT INTO `connectors` (`name`,`type`,`logoURL`) VALUES
+    ('CSV','File','https://cdn3.iconfinder.com/data/icons/cad-database-presentation-spreadsheet-vector-fil-2/512/19-512.png'),
+    ('SFTP','Stream','https://cdn2.iconfinder.com/data/icons/whcompare-servers-web-hosting/50/sftp-512.png');
