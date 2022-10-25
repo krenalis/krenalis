@@ -36,11 +36,11 @@ func RegisterStreamConnector(name string, fn StreamConnectionFunc) {
 type StreamConnection interface {
 	Connection
 
-	// Reader returns a Reader that reads from the given path.
-	Reader(path string) (io.ReadCloser, error)
+	// Reader returns a Reader.
+	Reader() (io.ReadCloser, error)
 
-	// Writer returns a Writer that writes to the given path.
-	Writer(path string) (io.WriteCloser, error)
+	// Writer returns a Writer.
+	Writer() (io.WriteCloser, error)
 }
 
 // NewStreamConnection returns a new stream connection for the stream connector

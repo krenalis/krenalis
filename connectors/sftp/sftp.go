@@ -44,6 +44,7 @@ type settings struct {
 	Port     int
 	Username string
 	Password string
+	Path     string
 }
 
 // New returns a new SFTP connection.
@@ -59,12 +60,12 @@ func New(ctx context.Context, settings []byte, fh connectors.Firehose) (connecto
 }
 
 // Reader returns a Reader that read from the given path.
-func (c *connection) Reader(path string) (io.ReadCloser, error) {
+func (c *connection) Reader() (io.ReadCloser, error) {
 	err := c.openConnection()
 	if err != nil {
 		return nil, err
 	}
-	f, err := c.sftp.Open(path)
+	f, err := c.sftp.Open(c.settings.Path)
 	if err != nil {
 		_ = c.closeConnection()
 		return nil, err
@@ -76,12 +77,12 @@ func (c *connection) Reader(path string) (io.ReadCloser, error) {
 func (c *connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {}
 
 // Writer returns a Writer that writes to the given path.
-func (c *connection) Writer(path string) (io.WriteCloser, error) {
+func (c *connection) Writer() (io.WriteCloser, error) {
 	err := c.openConnection()
 	if err != nil {
 		return nil, err
 	}
-	f, err := c.sftp.OpenFile(path, os.O_RDONLY|os.O_CREATE|os.O_TRUNC)
+	f, err := c.sftp.OpenFile(c.settings.Path, os.O_RDONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
 		_ = c.closeConnection()
 		return nil, err
