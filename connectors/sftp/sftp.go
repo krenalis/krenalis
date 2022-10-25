@@ -42,7 +42,7 @@ type connection struct {
 type settings struct {
 	Host     string
 	Port     int
-	User     string
+	Username string
 	Password string
 }
 
@@ -128,10 +128,11 @@ func (w writer) Write(p []byte) (int, error) {
 // openConnection opens the connection.
 func (c *connection) openConnection() error {
 	sshConfig := &ssh.ClientConfig{
-		User: c.settings.User,
+		User: c.settings.Username,
 		Auth: []ssh.AuthMethod{
 			ssh.Password(c.settings.Password),
 		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO(marco) don't use in production
 	}
 	addr := c.settings.Host + ":" + strconv.Itoa(c.settings.Port)
 	sshClient, err := ssh.Dial("tcp", addr, sshConfig)
