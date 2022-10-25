@@ -37,7 +37,7 @@ export default class AccountSourceSQL extends React.Component {
             this.setState({notFound: true});
             return;
         }
-        this.setState({ source: source });
+        this.setState({ source: source, query: source.UsersQuery });
     }
 
     handlePreview = async () => {
