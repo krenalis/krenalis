@@ -30,6 +30,7 @@ type DataSources struct {
 var ErrConnectorNotFound = errors.New("connector does not exist")
 var ErrInvalidConnectorType = errors.New("connector has an invalid type")
 var ErrDataSourceNotFound = errors.New("data source does not exist")
+var ErrDataSourceDisabled = errors.New("data source is disabled")
 var ErrResourceNotFound = errors.New("resource does not exist")
 var ErrCannotGetConnectorAccessToken = errors.New("cannot get access token")
 
@@ -295,17 +296,34 @@ func (this *DataSources) Delete(id int) error {
 // identifier. If reimport is false it imports the users from the current
 // cursor, otherwise imports all users.
 // Returns the ErrDataSourceNotFound error if the data source does not exist.
+// Returns the ErrDataSourceDisabled error if the data source does not have a
+// transformation function associated to it.
 func (this *DataSources) Import(id int, reimport bool) error {
 
 	if id <= 0 {
 		return errors.New("invalid data source identifier")
 	}
 
+	// If the data source has no transformation functions associated to it,
+	// return a ErrDataSourceDisabled error.
+	var hasTransformation bool
+	err := this.myDB.QueryRow(
+		"SELECT `transformation` <> '' AS `hasTransformation` FROM `data_sources` WHERE `id` = ?",
+		id).Scan(&hasTransformation)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrDataSourceNotFound
+		}
+	}
+	if !hasTransformation {
+		return ErrDataSourceDisabled
+	}
+
 	var name, connectorType, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
 	var connector, resource int
 	var settings, rawUsedProperties []byte
 	var expiration time.Time
-	err := this.myDB.QueryRow(
+	err = this.myDB.QueryRow(
 		"SELECT `c`.`name`, `c`.`type`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
 			" `r`.`refreshToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
 			" `s`.`resource`, `s`.`userCursor`, `s`.`settings`, `s`.`usedProperties`\n"+
@@ -586,9 +604,15 @@ func (this *DataSources) SetTransformationFunc(id int, fn string) error {
 	if id <= 0 {
 		return errors.New("invalid data source identifier")
 	}
+	// Validate the transf. function.
 	if !utf8.ValidString(fn) {
 		return errors.New("invalid transformation function")
 	}
+	_, err := buildTransfFunc(fn)
+	if err != nil {
+		return fmt.Errorf("invalid transformation function: %s", err)
+	}
+	// Write the transf. function to the database.
 	affected, err := this.myDB.Table("DataSources").Update(
 		sql.Set{"transformation": fn},
 		sql.Where{"id": id, "workspace": this.workspace})

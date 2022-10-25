@@ -174,7 +174,7 @@ dataSourcesLoop:
 			}
 			outProps, outTimestamps, err := fh.transformProperties(transfSource, userData.Data, userData.Timestamps)
 			if err != nil {
-				fh.setError(err)
+				fh.setError(fmt.Errorf("cannot transform properties for data source %d: %s", source, err))
 				return
 			}
 			for prop := range outProps {
@@ -280,42 +280,13 @@ type TransformationFuncType = func(
 )
 
 // transformProperties transforms the incoming properties using the
-// transformation function specified for the current connector.
+// transformation function specified for the current data source.
 func (fh *firehose) transformProperties(transformationSource string, incoming map[string]any, timestamps map[string]time.Time) (map[string]any, map[string]time.Time, error) {
-	fullSourceCode := strings.Replace(
-		`{% import time "time" %}
-		{% Transform = {{ transformationFunction }} %}`,
-		"{{ transformationFunction }}",
-		transformationSource,
-		1,
-	)
-	opts := &scriggo.BuildOptions{
-		Globals: native.Declarations{
-			"Transform": (*TransformationFuncType)(nil),
-		},
-		Packages: native.Packages{
-			"time": native.Package{
-				Name: "time",
-				Declarations: native.Declarations{
-					"Time": reflect.TypeOf(time.Time{}),
-				},
-			},
-		},
-	}
-	fs := scriggo.Files{"main.txt": []byte(fullSourceCode)}
-	template, err := scriggo.BuildTemplate(fs, "main.txt", opts)
+	fn, err := buildTransfFunc(transformationSource)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("cannot build transformation function: %s", err)
 	}
-	transform := TransformationFuncType(nil)
-	vars := map[string]interface{}{
-		"Transform": &transform,
-	}
-	err = template.Run(io.Discard, vars, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	data, updateTimeOut, err := transform(incoming, timestamps)
+	data, updateTimeOut, err := fn(incoming, timestamps)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -330,7 +301,8 @@ func (fh *firehose) listTransformations(sources []int) (map[int]string, error) {
 		return map[int]string{}, nil
 	}
 	query := &strings.Builder{}
-	query.WriteString("SELECT `id`, `transformation` FROM `data_sources` WHERE `id` IN (")
+	query.WriteString("SELECT `id`, `transformation` FROM `data_sources`\n" +
+		"WHERE `transformation` <> '' AND `id` IN (")
 	for i, source := range sources {
 		if i > 0 {
 			query.WriteString(", ")
@@ -420,4 +392,40 @@ func keys[K comparable, V any](m map[K]V) []K {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+// buildTransfFunc builds a transformation function from its source code and
+// returns it.
+func buildTransfFunc(source string) (TransformationFuncType, error) {
+	if source == "" {
+		return nil, errors.New("transformation function source cannot be empty")
+	}
+	src := `{% import time "time" %}{% Fn = ` + source + ` %}`
+	opts := &scriggo.BuildOptions{
+		Globals: native.Declarations{
+			"Fn": (*TransformationFuncType)(nil),
+		},
+		Packages: native.Packages{
+			"time": native.Package{
+				Name: "time",
+				Declarations: native.Declarations{
+					"Time": reflect.TypeOf(time.Time{}),
+				},
+			},
+		},
+	}
+	fs := scriggo.Files{"transform.txt": []byte(src)}
+	template, err := scriggo.BuildTemplate(fs, "transform.txt", opts)
+	if err != nil {
+		return nil, err
+	}
+	var fn TransformationFuncType
+	vars := map[string]interface{}{
+		"Fn": &fn,
+	}
+	err = template.Run(io.Discard, vars, nil)
+	if err != nil {
+		return nil, err
+	}
+	return fn, nil
 }
