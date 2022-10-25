@@ -32,7 +32,6 @@ var ErrInvalidConnectorType = errors.New("connector has an invalid type")
 var ErrDataSourceNotFound = errors.New("data source does not exist")
 var ErrResourceNotFound = errors.New("resource does not exist")
 var ErrCannotGetConnectorAccessToken = errors.New("cannot get access token")
-var ErrNoLimitPlaceholderInQuery = errors.New("there is no 'limit' placeholder in query")
 
 const (
 	rawPropertiesMaxSize = 16_777_215 // maximum size in runes of the 'property' column of the 'data_sources' table.
@@ -387,14 +386,24 @@ type Column struct {
 }
 
 // Query executes the given query on the data source with identifier id and
-// returns the resulting columns and rows. limit can be between 1 and 100.
+// returns the resulting columns and rows.
+//
+// query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
+// must contain the ':limit' placeholder. limit must be between 1 and 100.
+//
 // It returns the ErrDataSourceNotFound error if the data source does not
-// exist. It returns the ErrInvalidConnectorType error if the connector of the
-// data source is not a database.
+// exist and the ErrInvalidConnectorType error if the data source is not a
+// database.
 func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]string, error) {
 
+	if !utf8.ValidString(query) {
+		return nil, nil, errors.New("query is not UTF-8 encoded")
+	}
 	if utf8.RuneCountInString(query) > queryMaxSize {
-		return nil, nil, errors.New("query is too long")
+		return nil, nil, fmt.Errorf("query is longer than %d", queryMaxSize)
+	}
+	if !strings.Contains(query, ":limit") {
+		return nil, nil, errors.New("query does not contain the placeholder \":limit\"")
 	}
 	if limit < 1 || limit > 100 {
 		return nil, nil, errors.New("invalid limit")
@@ -828,8 +837,5 @@ func (this *DataSources) reloadProperties(id int) error {
 // compileQuery compiles the given query and returns it. If the query does not
 // contain the limit placeholder it returns the ErrNoLimitPlaceholderInQuery error.
 func (this *DataSources) compileQueryWithLimit(query string, limit int) (string, error) {
-	if !strings.Contains(query, ":limit") {
-		return "", ErrNoLimitPlaceholderInQuery
-	}
 	return strings.ReplaceAll(query, ":limit", strconv.Itoa(limit)), nil
 }
