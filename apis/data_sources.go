@@ -396,6 +396,10 @@ type Column struct {
 // database.
 func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]string, error) {
 
+	if id <= 0 {
+		return nil, nil, errors.New("invalid data source identifier")
+	}
+
 	if !utf8.ValidString(query) {
 		return nil, nil, errors.New("query is not UTF-8 encoded")
 	}
@@ -483,6 +487,10 @@ func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]s
 // Returns the ErrDataSourceNotFound error if the data source does not exist.
 func (this *DataSources) ServeUserInterface(id int, w http.ResponseWriter, r *http.Request) error {
 
+	if id <= 0 {
+		return errors.New("invalid data source identifier")
+	}
+
 	// TODO(marco) The following code is duplicated in the Import method (apart from the 'usedProperties' column).
 	var connectorName, connectorType, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
 	var connector, resource int
@@ -562,6 +570,10 @@ func (this *DataSources) SetTransformationFunc(id int, fn string) error {
 // database.
 func (this *DataSources) SetUsersQuery(id int, query string) error {
 
+	if id <= 0 {
+		return errors.New("invalid data source identifier")
+	}
+
 	if !utf8.ValidString(query) {
 		return errors.New("query is not UTF-8 encoded")
 	}
@@ -606,6 +618,9 @@ type DataSourcesStats struct {
 // Stats returns statistics on the data source with identifier id for the last
 // 24 hours.
 func (this *DataSources) Stats(id int) (*DataSourcesStats, error) {
+	if id <= 0 {
+		return nil, errors.New("invalid data source identifier")
+	}
 	now := time.Now().UTC()
 	toSlot := statsTimeSlot(now)
 	fromSlot := toSlot - 23
@@ -667,6 +682,10 @@ var ErrRecordStop = errors.New("stop record")
 // id. If the data source does not exist it returns the ErrDataSourceNotFound
 // error.
 func (this *DataSources) reloadProperties(id int) error {
+
+	if id <= 0 {
+		return errors.New("invalid data source identifier")
+	}
 
 	var typ string
 	err := this.myDB.QueryRow("SELECT `type` FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
