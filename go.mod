@@ -6,6 +6,7 @@ replace (
 	chichi/connectors/csv => ./connectors/csv
 	chichi/connectors/dummy => ./connectors/dummy
 	chichi/connectors/hubspot => ./connectors/hubspot
+	chichi/connectors/mailchimp => ./connectors/mailchimp
 	chichi/connectors/mysql => ./connectors/mysql
 	chichi/connectors/sftp => ./connectors/sftp
 )
@@ -14,6 +15,7 @@ require (
 	chichi/connectors/csv v0.0.0-00010101000000-000000000000
 	chichi/connectors/dummy v0.0.0-00010101000000-000000000000
 	chichi/connectors/hubspot v0.0.0-00010101000000-000000000000
+	chichi/connectors/mailchimp v0.0.0-00010101000000-000000000000
 	chichi/connectors/mysql v0.0.0-00010101000000-000000000000
 	chichi/connectors/sftp v0.0.0-00010101000000-000000000000
 	github.com/ClickHouse/clickhouse-go/v2 v2.3.0
