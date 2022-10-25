@@ -126,11 +126,11 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		case "transformation":
 			if r.Method == "GET" {
-				var transformation string
-				transformation, err = ws.DataSources.TransformationFunc(id)
+				var source *DataSourceInfo
+				source, err = ws.DataSources.Get(id)
 				if err == nil {
 					w.Header().Set("Content-Type", "text/plain")
-					_, _ = io.WriteString(w, transformation)
+					_, _ = io.WriteString(w, source.TransformationFunc)
 					return
 				}
 			} else {

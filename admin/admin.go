@@ -202,13 +202,13 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			transf, err := ws.DataSources.TransformationFunc(req.Connector)
+			source, err := ws.DataSources.Get(req.Connector)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
-			_ = json.NewEncoder(w).Encode(transf)
+			_ = json.NewEncoder(w).Encode(source.TransformationFunc)
 		case "/update":
 			var req struct {
 				Connector      int

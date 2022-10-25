@@ -121,14 +121,14 @@ func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[str
 
 	// Apply the transformation of this data-source to the properties and
 	// timestamps.
-	transformationSource, err := fh.sources.TransformationFunc(fh.source)
+	source, err := fh.sources.Get(fh.source)
 	if err != nil {
 		fh.setError(fmt.Errorf("cannot retrieve transformation from DB: %s", err))
 		return
 	}
 
 	// Apply the transformation to the current entity.
-	candidateData, candidateTimestamps, err := fh.transformProperties(transformationSource, properties, timestamps)
+	candidateData, candidateTimestamps, err := fh.transformProperties(source.TransformationFunc, properties, timestamps)
 	if err != nil {
 		fh.setError(fmt.Errorf("cannot transform input properties to output properties: %s", err))
 		return

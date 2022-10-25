@@ -47,6 +47,14 @@ type DataSource struct {
 	LogoURL  string
 }
 
+// DataSourceInfo represents a data source.
+type DataSourceInfo struct {
+	ID                 int
+	Type               string
+	TransformationFunc string
+	UsersQuery         string // only for databases.
+}
+
 // PropertyType represents the type of a property.
 type PropertyType string
 
@@ -218,6 +226,23 @@ func (this *DataSources) AddFileStream(fileConnector, streamConnector int) (int,
 		return 0, err
 	}
 	return int(id), nil
+}
+
+// Get returns the data source with identifier id. If the data source does not
+// exist, it returns the ErrDataSourceNotFound error.
+func (this *DataSources) Get(id int) (*DataSourceInfo, error) {
+	if id <= 0 {
+		return nil, errors.New("invalid data source identifier")
+	}
+	s := DataSourceInfo{ID: id}
+	err := this.myDB.QueryRow("SELECT `type`, `transformation`, `usersQuery`\nFROM `data_sources`\nWHERE `id` = ? AND `workspace` = ?",
+		id, this.workspace).Scan(&s.Type, &s.TransformationFunc, &s.UsersQuery)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrDataSourceNotFound
+		}
+	}
+	return &s, nil
 }
 
 // Delete deletes the data source with the given identifier.
@@ -643,23 +668,6 @@ func (this *DataSources) Stats(id int) (*DataSourcesStats, error) {
 		return nil, err
 	}
 	return stats, nil
-}
-
-// TransformationFunc returns the transformation function of the data source
-// with the given identifier.
-// Returns the ErrDataSourceNotFound error if the data source does not exist.
-func (this *DataSources) TransformationFunc(id int) (string, error) {
-	if id <= 0 {
-		return "", errors.New("invalid data source identifier")
-	}
-	row, err := this.myDB.Table("DataSources").Get(sql.Where{"id": id, "workspace": this.workspace}, []any{"transformation"})
-	if err != nil {
-		return "", err
-	}
-	if row == nil {
-		return "", ErrDataSourceNotFound
-	}
-	return row["transformation"].(string), nil
 }
 
 // newFirehose returns a new Firehose used to call a connection method.
