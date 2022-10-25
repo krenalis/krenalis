@@ -27,7 +27,6 @@ export default async function call(url, value) {
     try {
         data = await res.json();
     } catch (err) {
-        if (err.message === 'Unexpected end of JSON input') return [null, null];
         return [null, `error while parsing json response from ${url}: ${err.message}`];
     }
 

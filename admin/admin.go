@@ -269,6 +269,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 		default:
 			http.NotFound(w, r)
 		}
@@ -318,6 +319,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 			return
 		case "/preview-query":
 			defer r.Body.Close()
@@ -358,6 +360,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 			return
 		}
 	}
