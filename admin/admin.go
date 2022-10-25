@@ -21,11 +21,14 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"chichi/apis"
 
 	"github.com/evanw/esbuild/pkg/api"
 )
+
+const oneHundredYears = time.Hour * 24 * 365 * 100
 
 type admin struct {
 	apis *apis.APIs
@@ -659,7 +662,7 @@ func (admin *admin) serveAddDataSource(w http.ResponseWriter, r *http.Request, a
 
 	switch source.Type {
 	case "App":
-		id, err = ws.DataSources.AddApp(source.Connector, "", "")
+		id, err = ws.DataSources.AddApp(source.Connector, "", "", "")
 	case "Database":
 		id, err = ws.DataSources.AddDatabase(source.Connector)
 	case "FileStream":
@@ -742,16 +745,38 @@ func (admin *admin) serveAddOAuthDataSource(w http.ResponseWriter, r *http.Reque
 	}
 
 	tokens := struct {
-		Refresh string `json:"refresh_token"`
-		Access  string `json:"access_token"`
+		// TODO(carlo): add Scope field and validate it
+		AccessToken  string       `json:"access_token"`
+		TokenType    string       `json:"token_type"` // TODO(carlo): validate the value
+		ExpiresIn    *json.Number `json:"expires_in"` // TODO(carlo): validate the value
+		RefreshToken string       `json:"refresh_token"`
 	}{}
 	err = json.NewDecoder(resp.Body).Decode(&tokens)
 	if err != nil {
 		return fmt.Errorf("cannot decode response from %s OAuth server: %s", connector.Name, err)
 	}
 
-	// Add the data source.
-	_, err = ws.DataSources.AddApp(connectorID, tokens.Refresh, tokens.Access)
+	// TODO(carlo): compute the token type to use
+
+	// Compute the access token expire time.
+	expireDate := time.Now()
+	if connector.ForcedExpiresIn != "" {
+		switch connector.ForcedExpiresIn {
+		case "never":
+			expireDate = expireDate.Add(oneHundredYears)
+		default:
+			seconds, _ := strconv.ParseInt(connector.ForcedExpiresIn, 10, 64)
+			expireDate = expireDate.Add(time.Duration(seconds) * time.Second)
+		}
+	} else if tokens.ExpiresIn != nil {
+		seconds, _ := tokens.ExpiresIn.Int64()
+		expireDate = expireDate.Add(time.Duration(seconds) * time.Second)
+	} else if connector.DefaultExpiresIn != 0 {
+		expireDate = expireDate.Add(time.Duration(connector.DefaultExpiresIn) * time.Second)
+	}
+
+	_, err = ws.DataSources.AddApp(connectorID, tokens.RefreshToken, tokens.AccessToken, expireDate.Format("2006-01-02 15:04:05"))
+
 	if err != nil {
 		return err
 	}

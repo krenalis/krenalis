@@ -159,24 +159,29 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Connector represents a connector.
 type Connector struct {
-	ID            int
-	Name          string
-	Type          string
-	OauthURL      string
-	LogoURL       string
-	ClientID      string
-	ClientSecret  string
-	TokenEndpoint string
-	WebhooksPer   string
+	ID               int
+	Name             string
+	Type             string
+	OauthURL         string
+	LogoURL          string
+	ClientID         string
+	ClientSecret     string
+	TokenEndpoint    string
+	WebhooksPer      string
+	DefaultTokenType string
+	DefaultExpiresIn int
+	ForcedExpiresIn  string
 }
 
 // Connector returns the connector with the given identifier.
 func (apis *APIs) Connector(id int) (*Connector, error) {
 	connector := Connector{ID: id}
-	err := apis.myDB.QueryRow("SELECT `name`, `type`, `oauthURL`, `logoURL`, `clientID`, `clientSecret`,"+
-		" `tokenEndpoint`, `webhooksPer`\nFROM `connectors`\nWHERE `id` = ?", id).Scan(
-		&connector.Name, &connector.Type, &connector.OauthURL, &connector.LogoURL, &connector.ClientID,
-		&connector.ClientSecret, &connector.TokenEndpoint, &connector.WebhooksPer)
+	err := apis.myDB.QueryRow(
+		"SELECT `name`, `type`, `oauthURL`, `logoURL`, `clientID`, `clientSecret`,"+
+			" `tokenEndpoint`, `webhooksPer`, `defaultTokenType`, `defaultExpiresIn`, `forcedExpiresIn`\n"+
+			"FROM `connectors`\nWHERE `id` = ?", id).
+		Scan(&connector.Name, &connector.Type, &connector.OauthURL, &connector.LogoURL, &connector.ClientID, &connector.ClientSecret,
+			&connector.TokenEndpoint, &connector.WebhooksPer, &connector.DefaultTokenType, &connector.DefaultExpiresIn, &connector.ForcedExpiresIn)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -282,7 +287,7 @@ func (apis *APIs) refreshOAuthToken(resource int) (string, error) {
 
 	_, err = apis.myDB.Exec(
 		"UPDATE `resources`\n"+
-			"SET `accessToken` = ?, `refreshToken` = ?, `accessTokenExpirationTimestamp` = ?\n"+
+			"SET `accessToken` = ?, `refreshToken` = ?, `accessTokenExpirationTime` = ?\n"+
 			"WHERE `id` = ?",
 		response.AccessToken, response.RefreshToken, expiration, resource)
 	if err != nil {

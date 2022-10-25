@@ -299,7 +299,7 @@ ALTER TABLE `resources`
     DROP PRIMARY KEY,
     ADD COLUMN `id` INT NOT NULL AUTO_INCREMENT FIRST,
     RENAME COLUMN `resource` TO `code`,
-    KEY `connector` (`connector`),
+    ADD KEY `connector` (`connector`),
     ADD PRIMARY KEY (`id`);
 
 ALTER TABLE `data_sources`
@@ -308,7 +308,7 @@ ALTER TABLE `data_sources`
 
 UPDATE `data_sources` AS `s`
 INNER JOIN `resources` AS `r` ON `r`. `code` = `s`.`resourceCode`
-SET `s`.`resource` = `r`.`id`
+SET `s`.`resource` = `r`.`id`;
 
 ALTER TABLE `data_sources` DROP COLUMN `resourceCode`;
 
@@ -355,3 +355,14 @@ ALTER TABLE `warehouse_users`
 
 ALTER TABLE `data_sources_users`
     ADD COLUMN `goldenRecord` INT UNSIGNED NOT NULL;
+
+INSERT INTO `connectors` (`name`, `type`, `oauthURL`, `logoURL`, `clientID`, `clientSecret`, `tokenEndpoint`, `webhooksPer`, `defaultTokenType`, `defaultExpiresIn`, `forcedExpiresIn`)
+VALUES ('Mailchimp', 'App', 'https://login.mailchimp.com/oauth2/authorize?response_type=code&client_id=631597222767&redirect_uri=https://127.0.0.1:9090/admin/oauth/authorize', 'https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/mailchimp-512.png', '631597222767', '90c2d1a1383de35e5ecca5a73f0e2c19e751056d0e3cdd81ac', 'https://login.mailchimp.com/oauth2/token', 'DataSource', 'bearer', '0', 'never');
+
+ALTER TABLE `connectors`
+    ADD COLUMN `defaultTokenType` VARCHAR(10) NOT NULL DEFAULT 'bearer' AFTER `webhooksPer`,
+    ADD COLUMN `defaultExpiresIn` INT NOT NULL DEFAULT '0' AFTER `defaultTokenType`,
+    ADD COLUMN `forcedExpiresIn` VARCHAR(10) NOT NULL DEFAULT '' AFTER `defaultExpiresIn`;
+
+ALTER TABLE `resources`
+    CHANGE COLUMN `accessTokenExpirationTimestamp` `accessTokenExpirationTime` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00';

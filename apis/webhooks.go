@@ -92,7 +92,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		var expiration time.Time
 		err := apis.myDB.QueryRow(
 			"SELECT `s`.`connector`, `s`.`resource`, `s`.`settings`, `r`.`code`, `r`.`accessToken`, `r`.`refreshToken`,"+
-				" `r`.`accessTokenExpirationTimestamp`\n"+
+				" `r`.`accessTokenExpirationTime`\n"+
 				"FROM `data_sources` AS `s`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
 				"WHERE `s`.`id` = ?", source).

@@ -19,13 +19,17 @@ CREATE TABLE `connectors` (
   `clientSecret` VARCHAR(500) NOT NULL DEFAULT '',
   `tokenEndpoint` VARCHAR(500) NOT NULL DEFAULT '',
   `webhooksPer` ENUM('None', 'Connector', 'Resource', 'DataSource') NOT NULL DEFAULT 'None',
+  `defaultTokenType` VARCHAR(10) NOT NULL DEFAULT 'bearer',
+  `defaultExpiresIn` INT NOT NULL DEFAULT '0',
+  `forcedExpiresIn` VARCHAR(10) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`)
 );
 
 INSERT INTO `connectors` VALUES
-  (1,'HubSpot','App','https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read','https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/168_Hubspot_logo_logos-512.png','cef1005a-72be-4047-a301-ef6057588325','136e50df-5b89-478f-bf01-4a71547fa668','https://api.hubapi.com/oauth/v1/token','Connector'),
-  (2,'MySQL','Database','','https://cdn4.iconfinder.com/data/icons/logos-3/181/MySQL-512.png','','','','None'),
-  (3,'Dummy','App','https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read','','cef1005a-72be-4047-a301-ef6057588325','136e50df-5b89-478f-bf01-4a71547fa668','https://api.hubapi.com/oauth/v1/token','Connector');
+  (1,'HubSpot','App','https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read','https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/168_Hubspot_logo_logos-512.png','cef1005a-72be-4047-a301-ef6057588325','136e50df-5b89-478f-bf01-4a71547fa668','https://api.hubapi.com/oauth/v1/token','Connector','bearer', '0', ''),
+  (2,'MySQL','Database','','https://cdn4.iconfinder.com/data/icons/logos-3/181/MySQL-512.png','','','','None','',0,''),
+  (3,'Dummy','App','https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read','','cef1005a-72be-4047-a301-ef6057588325','136e50df-5b89-478f-bf01-4a71547fa668','https://api.hubapi.com/oauth/v1/token','Connector','bearer', '0', ''),
+  (4,'Mailchimp', 'App', 'https://login.mailchimp.com/oauth2/authorize?response_type=code&client_id=631597222767&redirect_uri=https://127.0.0.1:9090/admin/oauth/authorize', 'https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/mailchimp-512.png', '631597222767', '90c2d1a1383de35e5ecca5a73f0e2c19e751056d0e3cdd81ac', 'https://login.mailchimp.com/oauth2/token', 'DataSource', 'bearer', '0', 'never');
 
 CREATE TABLE `data_sources` (
   `id` INT NOT NULL AUTO_INCREMENT,
@@ -88,7 +92,7 @@ CREATE TABLE `resources` (
   `code` VARCHAR(100) NOT NULL DEFAULT '',
   `accessToken` VARCHAR(500) NOT NULL DEFAULT '',
   `refreshToken` VARCHAR(500) NOT NULL DEFAULT '',
-  `accessTokenExpirationTimestamp` TIMESTAMP NOT NULL,
+  `accessTokenExpirationTime` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',
   KEY `connector` (`connector`),
   PRIMARY KEY (`id`)
 );

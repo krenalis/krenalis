@@ -81,7 +81,7 @@ type DataSourceProperty struct {
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
 // If the connector is not an app, it returns the ErrInvalidConnectorType
 // error.
-func (this *DataSources) AddApp(connector int, refreshToken, accessToken string) (int, error) {
+func (this *DataSources) AddApp(connector int, refreshToken, accessToken, accessTokenExpirationTime string) (int, error) {
 	conn, err := this.api.apis.Connector(connector)
 	if err != nil {
 		return 0, err
@@ -116,16 +116,20 @@ func (this *DataSources) AddApp(connector int, refreshToken, accessToken string)
 			err = nil
 		}
 		if resource == 0 {
-			result, err := tx.Exec("INSERT INTO `resources` SET `connector` = ?, `code` = ?, `refreshToken` = ?",
-				connector, resourceCode, refreshToken)
+			result, err := tx.Exec("INSERT INTO `resources` "+
+				"SET `connector` = ?, `code` = ?, `accessToken` = ?, `refreshToken` = ?, `accessTokenExpirationTime` = ?",
+				connector, resourceCode, accessToken, refreshToken, accessTokenExpirationTime)
 			if err != nil {
 				return err
 			}
 			resourceID, err := result.LastInsertId()
 			resource = int(resourceID)
 		} else if refreshToken != currentRefreshToken {
-			_, err = tx.Exec("UPDATE `resources` SET `refreshToken` = ? WHERE `id` = ?", refreshToken, resource)
+			_, err = tx.Exec("UPDATE `resources` "+
+				"SET `accessToken` = ?, `refreshToken` = ?, `accessTokenExpirationTime` = ? WHERE `id` = ?",
+				accessToken, refreshToken, accessTokenExpirationTime, resource)
 		}
+
 		if err != nil {
 			return err
 		}
@@ -303,7 +307,7 @@ func (this *DataSources) Import(id int, reimport bool) error {
 	var expiration time.Time
 	err := this.myDB.QueryRow(
 		"SELECT `c`.`name`, `c`.`type`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
-			" `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `s`.`connector`,"+
+			" `r`.`refreshToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
 			" `s`.`resource`, `s`.`userCursor`, `s`.`settings`, `s`.`usedProperties`\n"+
 			"FROM `data_sources` AS `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
@@ -323,7 +327,7 @@ func (this *DataSources) Import(id int, reimport bool) error {
 	var properties [][]string
 	err = json.Unmarshal(rawUsedProperties, &properties)
 	if err != nil {
-		return fmt.Errorf("cannon unmarshal used properties of data source %d: %s", id, err)
+		return fmt.Errorf("cannot unmarshal used properties of data source %d: %s", id, err)
 	}
 
 	accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
@@ -534,7 +538,7 @@ func (this *DataSources) ServeUserInterface(id int, w http.ResponseWriter, r *ht
 	var expiration time.Time
 	err := this.myDB.QueryRow(
 		"SELECT `c`.`name`, `c`.`type`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
-			" `r`.`refreshToken`, `r`.`accessTokenExpirationTimestamp`, `s`.`connector`,"+
+			" `r`.`refreshToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
 			" `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
 			"FROM `data_sources` AS `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
@@ -728,7 +732,7 @@ func (this *DataSources) reloadProperties(id int) error {
 		var expiration *time.Time
 		err = this.myDB.QueryRow(
 			"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, IFNULL(`r`.`code`, ''), IFNULL(`r`.`accessToken`, ''),"+
-				" IFNULL(`r`.`refreshToken`, ''), `r`.`accessTokenExpirationTimestamp`, `s`.`connector`,"+
+				" IFNULL(`r`.`refreshToken`, ''), `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
 				" `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
 				"FROM `data_sources` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
