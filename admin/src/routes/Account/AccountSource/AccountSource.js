@@ -28,42 +28,18 @@ export default class AccountSource extends React.Component {
         let err;
 
         // get the source.
-        let sources;
-        [sources, err] = await call('/admin/connectors/findInstalledConnectors');
+        let source;
+        [source, err] = await call('/admin/data-sources/get', this.sourceID);
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();
             return;
-        }
-        let source;
-        for (let s of sources) {
-            if (s.ID === this.sourceID) source = s;
         }
         if (source == null) {
             this.setState({notFound: true});
             return;
         }
-        this.setState({ source: source });
-
-        // get the transformation function.
-        let transformationFunc;
-        [transformationFunc, err] = await call('/admin/transformations/get', { Connector: this.sourceID });
-        if (err !== null) {
-            this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
-            this.toast.current.toast();
-            return;
-        }
-        this.setState({ transformationFunc: transformationFunc });
-
-        // get the user schema properties.
-        let schemaProperties;
-        [schemaProperties, err] = await call('/admin/user-schema-properties');
-        if (err !== null) {
-            this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
-            this.toast.current.toast();
-            return;
-        }
-        this.setState({ schemaProperties: schemaProperties });
+        this.setState({ source: source, transformationFunc: source.TransformationFunc });
 
         // get the source properties.
         let sp;
@@ -76,6 +52,16 @@ export default class AccountSource extends React.Component {
         let sourceProperties = [];
         for (let p of sp.Properties) sourceProperties.push(p.Name);
         this.setState({ sourceProperties: sourceProperties });
+
+        // get the user schema properties.
+        let schemaProperties;
+        [schemaProperties, err] = await call('/admin/user-schema-properties');
+        if (err !== null) {
+            this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
+            this.toast.current.toast();
+            return;
+        }
+        this.setState({ schemaProperties: schemaProperties });
     }
 
     handleSaving = async (e) => {

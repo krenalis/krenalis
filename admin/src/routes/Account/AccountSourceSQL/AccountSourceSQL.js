@@ -27,15 +27,11 @@ export default class AccountSourceSQL extends React.Component {
     }
     
     componentDidMount = async () => {
-        let [sources, err] = await call('/admin/connectors/findInstalledConnectors');
+        let [source, err] = await call('/admin/data-sources/get', this.sourceID);
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();
             return;
-        }
-        let source;
-        for (let s of sources) {
-            if (s.ID === this.sourceID) source = s;
         }
         if (source == null) {
             this.setState({notFound: true});
@@ -56,7 +52,7 @@ export default class AccountSourceSQL extends React.Component {
             return;
         }
 
-        let [table, err] = await call('/admin/connectors/preview-query', {DataSource: this.state.source.ID, Query: this.state.query, Limit: this.state.limit});
+        let [table, err] = await call('/admin/data-sources/preview-query', {DataSource: this.state.source.ID, Query: this.state.query, Limit: this.state.limit});
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();
@@ -89,7 +85,7 @@ export default class AccountSourceSQL extends React.Component {
             return;
         }
 
-        let [, err] = await call('/admin/connectors/set-users-query', {DataSource: this.state.source.ID, Query: this.state.query});
+        let [, err] = await call('/admin/data-sources/set-users-query', {DataSource: this.state.source.ID, Query: this.state.query});
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();

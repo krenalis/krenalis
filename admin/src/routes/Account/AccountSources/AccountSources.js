@@ -21,7 +21,7 @@ export default class AccountSources extends React.Component {
 	}
 
 	componentDidMount = async () => {
-		let [sources, err] = await call('/admin/connectors/findInstalledConnectors');
+		let [sources, err] = await call('/admin/data-sources/find');
 		if (err !== null) {
 			this.setState({status: {variant:'danger', icon:'exclamation-octagon', text:err}});
 			this.toast.current.toast();
@@ -54,7 +54,7 @@ export default class AccountSources extends React.Component {
 
 	handleDelete = async (id) => {
 		this.setState({status: null});
-		let [, err] = await call('/admin/connectors/delete', [id]);
+		let [, err] = await call('/admin/data-sources/delete', [id]);
 		if (err !== null) {
 			this.setState({status: {variant:'danger', icon:'exclamation-octagon', text:err}});
 			this.toast.current.toast();

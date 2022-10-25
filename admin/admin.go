@@ -272,21 +272,10 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.HasPrefix(rpath, "/connectors/") {
-
-		rpath := rpath[len("/connectors"):]
-
+	if strings.HasPrefix(rpath, "/data-sources/") {
+		rpath := rpath[len("/data-sources"):]
 		switch rpath {
 		case "/find":
-			cns, err := admin.apis.Connectors()
-			if err != nil {
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			_ = json.NewEncoder(w).Encode(cns)
-			return
-		case "/findInstalledConnectors":
 			cns, err := ws.DataSources.List()
 			if err != nil {
 				log.Printf("[error] %v", err)
@@ -303,13 +292,13 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			cn, err := admin.apis.Connector(id)
+			ds, err := ws.DataSources.Get(id)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"ID": cn.ID, "Name": cn.Name, "LogoURL": cn.LogoURL, "OauthUrl": cn.OauthURL})
+			_ = json.NewEncoder(w).Encode(ds)
 			return
 		case "/delete":
 			var ids []int
@@ -366,6 +355,37 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			return
+		}
+	}
+
+	if strings.HasPrefix(rpath, "/connectors/") {
+		rpath := rpath[len("/connectors"):]
+		switch rpath {
+		case "/find":
+			cns, err := admin.apis.Connectors()
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(cns)
+			return
+		case "/get":
+			var id int
+			err := json.NewDecoder(r.Body).Decode(&id)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			defer r.Body.Close()
+			cn, err := admin.apis.Connector(id)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"ID": cn.ID, "Name": cn.Name, "LogoURL": cn.LogoURL, "OauthUrl": cn.OauthURL})
 			return
 		}
 	}
