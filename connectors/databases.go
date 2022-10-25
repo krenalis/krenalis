@@ -19,8 +19,8 @@ type DatabaseConnectionFunc func(context.Context, []byte, Firehose) (DatabaseCon
 // RegisterDatabaseConnector makes a database connector available by the
 // provided name. If RegisterDatabaseConnector is called twice with the same
 // name or if fn is nil, it panics.
-func RegisterDatabaseConnector(name string, f DatabaseConnectionFunc) {
-	if f == nil {
+func RegisterDatabaseConnector(name string, fn DatabaseConnectionFunc) {
+	if fn == nil {
 		panic("connectors: RegisterDatabaseConnector function is nil")
 	}
 	connectorsMu.Lock()
@@ -28,7 +28,7 @@ func RegisterDatabaseConnector(name string, f DatabaseConnectionFunc) {
 	if _, dup := connectors.databases[name]; dup {
 		panic("connectors: RegisterDatabaseConnector called twice for connector " + name)
 	}
-	connectors.databases[name] = f
+	connectors.databases[name] = fn
 }
 
 // DatabaseConnection is the interface implemented by database connections.

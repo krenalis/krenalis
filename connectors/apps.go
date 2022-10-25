@@ -33,8 +33,8 @@ type AppConnectionFunc func(context.Context, *AppConfig) (AppConnection, error)
 // RegisterAppConnector makes an app connector available by the provided name.
 // If RegisterAppConnector is called twice with the same name or if fn is nil,
 // it panics.
-func RegisterAppConnector(name string, f AppConnectionFunc) {
-	if f == nil {
+func RegisterAppConnector(name string, fn AppConnectionFunc) {
+	if fn == nil {
 		panic("connectors: RegisterAppConnector function is nil")
 	}
 	connectorsMu.Lock()
@@ -42,7 +42,7 @@ func RegisterAppConnector(name string, f AppConnectionFunc) {
 	if _, dup := connectors.apps[name]; dup {
 		panic("connectors: RegisterAppConnector called twice for connector " + name)
 	}
-	connectors.apps[name] = f
+	connectors.apps[name] = fn
 }
 
 // AppConnection is the interface implemented by app connections.
