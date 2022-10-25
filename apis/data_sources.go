@@ -51,6 +51,8 @@ type DataSource struct {
 type DataSourceInfo struct {
 	ID                 int
 	Type               string
+	Name               string
+	LogoURL            string
 	TransformationFunc string
 	UsersQuery         string // only for databases.
 }
@@ -238,8 +240,11 @@ func (this *DataSources) Get(id int) (*DataSourceInfo, error) {
 		return nil, errors.New("invalid data source identifier")
 	}
 	s := DataSourceInfo{ID: id}
-	err := this.myDB.QueryRow("SELECT `type`, `transformation`, `usersQuery`\nFROM `data_sources`\nWHERE `id` = ? AND `workspace` = ?",
-		id, this.workspace).Scan(&s.Type, &s.TransformationFunc, &s.UsersQuery)
+	err := this.myDB.QueryRow("SELECT `s`.`type`, `c`.`name`, `c`.`logoURL`, `s`.`transformation`, `s`.`usersQuery`\n"+
+		"FROM `data_sources` AS `s`\n"+
+		"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+		"WHERE `s`.`id` = ? AND `s`.`workspace` = ?",
+		id, this.workspace).Scan(&s.Type, &s.Name, &s.LogoURL, &s.TransformationFunc, &s.UsersQuery)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrDataSourceNotFound
