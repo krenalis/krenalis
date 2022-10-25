@@ -59,7 +59,7 @@ func New(ctx context.Context, settings []byte, fh connectors.Firehose) (connecto
 	return &c, nil
 }
 
-// Reader returns a Reader that read from the given path.
+// Reader returns a Reader.
 func (c *connection) Reader() (io.ReadCloser, error) {
 	err := c.openConnection()
 	if err != nil {
@@ -76,7 +76,7 @@ func (c *connection) Reader() (io.ReadCloser, error) {
 // ServeUserInterface serves the connector's user interface.
 func (c *connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {}
 
-// Writer returns a Writer that writes to the given path.
+// Writer returns a Writer.
 func (c *connection) Writer() (io.WriteCloser, error) {
 	err := c.openConnection()
 	if err != nil {
