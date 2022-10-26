@@ -58,7 +58,7 @@ func init() {
 	connectors.RegisterAppConnector("Mailchimp", New)
 }
 
-// New returns a new Hubspot connection.
+// New returns a new Mailchimp connection.
 func New(ctx context.Context, conf *connectors.AppConfig) (connectors.AppConnection, error) {
 	c := connection{
 		ctx:         ctx,
