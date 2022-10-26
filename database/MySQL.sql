@@ -31,7 +31,8 @@ INSERT INTO `connectors` VALUES
   (3,'Dummy','App','https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read','','cef1005a-72be-4047-a301-ef6057588325','136e50df-5b89-478f-bf01-4a71547fa668','https://api.hubapi.com/oauth/v1/token','Connector','bearer', '0', ''),
   (4,'Mailchimp', 'App', 'https://login.mailchimp.com/oauth2/authorize?response_type=code&client_id=631597222767&redirect_uri=https://127.0.0.1:9090/admin/oauth/authorize', 'https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/mailchimp-512.png', '631597222767', '90c2d1a1383de35e5ecca5a73f0e2c19e751056d0e3cdd81ac', 'https://login.mailchimp.com/oauth2/token', 'DataSource', 'bearer', '0', 'never'),
   (5,'CSV','File','','https://cdn3.iconfinder.com/data/icons/cad-database-presentation-spreadsheet-vector-fil-2/512/19-512.png','','','','None','bearer','0',''),
-  (6,'SFTP','Stream','','https://cdn2.iconfinder.com/data/icons/whcompare-servers-web-hosting/50/sftp-512.png','','','','None','bearer','0','');
+  (6,'SFTP','Stream','','https://cdn2.iconfinder.com/data/icons/whcompare-servers-web-hosting/50/sftp-512.png','','','','None','bearer','0',''),
+  (7,'HTTP','Stream','','https://cdn4.iconfinder.com/data/icons/application-windows-3/32/HTTP-500.png','','','','None','bearer','0','');
 
 CREATE TABLE `data_sources` (
   `id` INT NOT NULL AUTO_INCREMENT,
