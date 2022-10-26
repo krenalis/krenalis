@@ -60,6 +60,7 @@ func New(ctx context.Context, settings []byte, fh connectors.Firehose) (connecto
 }
 
 // Reader returns a Reader.
+// Callers should always call the Close method on it.
 func (c *connection) Reader() (io.ReadCloser, error) {
 	err := c.openConnection()
 	if err != nil {
@@ -77,6 +78,7 @@ func (c *connection) Reader() (io.ReadCloser, error) {
 func (c *connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {}
 
 // Writer returns a Writer.
+// Callers should always call the Close method on it.
 func (c *connection) Writer() (io.WriteCloser, error) {
 	err := c.openConnection()
 	if err != nil {

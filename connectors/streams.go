@@ -37,9 +37,11 @@ type StreamConnection interface {
 	Connection
 
 	// Reader returns a Reader.
+	// Callers should always call the Close method on it.
 	Reader() (io.ReadCloser, error)
 
 	// Writer returns a Writer.
+	// Callers should always call the Close method on it.
 	Writer() (io.WriteCloser, error)
 }
 
