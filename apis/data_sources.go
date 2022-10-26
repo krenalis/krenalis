@@ -908,8 +908,8 @@ func (this *DataSources) reloadProperties(id int) error {
 	return err
 }
 
-// compileQuery compiles the given query and returns it. If the query does not
-// contain the limit placeholder it returns the ErrNoLimitPlaceholderInQuery error.
+// compileQueryWithLimit compiles the given query, replacing the ':limit'
+// placeholder with limit, and returns it.
 func (this *DataSources) compileQueryWithLimit(query string, limit int) (string, error) {
 	return strings.ReplaceAll(query, ":limit", strconv.Itoa(limit)), nil
 }
