@@ -3,6 +3,7 @@
 <img src="https://static.wikia.nocookie.net/dragonballaf/images/c/c3/Chichi_foto8.jpg/revision/latest?cb=20120616090846&path-prefix=it" width=260px/>
 
 - [Before commit](#before-commit)
+  - [Troubleshooting](#troubleshooting)
 - [How to execute Chichi](#how-to-execute-chichi)
   - [Install React and other dependencies](#install-react-and-other-dependencies)
   - [Configure and add certificates](#configure-and-add-certificates)
@@ -18,6 +19,17 @@ From the root of this repository, run:
 ```
 go run commit/commit.go
 ```
+
+### Troubleshooting
+
+If the command above returns an error in the form:
+
+```
+pattern ./...: main module (chichi) does not contain package chichi/connectors/mysql
+```
+
+that may mean that the file `go.work` at the top of this repository has not been
+updated to use a given module.
 
 ## How to execute Chichi
 
