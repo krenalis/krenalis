@@ -864,6 +864,7 @@ func (this *DataSources) reloadProperties(id int) error {
 		if err != nil {
 			return err
 		}
+		defer r.Close()
 
 		// Connect to the file connector and read only the first record.
 		fh = this.newFirehose(context.Background(), id, streamConnector, 0, "File", "")
@@ -879,6 +880,13 @@ func (this *DataSources) reloadProperties(id int) error {
 		if err != nil && err != ErrRecordStop {
 			return err
 		}
+
+		// Close the stream.
+		err = r.Close()
+		if err != nil {
+			return err
+		}
+
 		properties = make([]connectors.Property, len(columns))
 		for i := 0; i < len(properties); i++ {
 			properties[i].Name = columns[i]
