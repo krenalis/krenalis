@@ -86,6 +86,10 @@ func (c *connection) Write(w io.Writer, get func() ([]string, error)) error {
 	for {
 		record, err := get()
 		if err == io.EOF {
+			v.Flush()
+			if err := v.Error(); err != nil {
+				return err
+			}
 			break
 		}
 		if err != nil {
