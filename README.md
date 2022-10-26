@@ -2,6 +2,7 @@
 
 <img src="https://static.wikia.nocookie.net/dragonballaf/images/c/c3/Chichi_foto8.jpg/revision/latest?cb=20120616090846&path-prefix=it" width=260px/>
 
+- [Before commit](#before-commit)
 - [How to execute Chichi](#how-to-execute-chichi)
   - [Install React and other dependencies](#install-react-and-other-dependencies)
   - [Configure and add certificates](#configure-and-add-certificates)
@@ -9,7 +10,14 @@
   - [Run and open the browser](#run-and-open-the-browser)
   - [Expose on the Internet (optional)](#expose-on-the-internet-optional)
 - [Interact with Chichi using `chichi-cli`](#interact-with-chichi-using-chichi-cli)
-- [Checklist before commit](#checklist-before-commit)
+
+## Before commit
+
+From the root of this repository, run:
+
+```
+go run commit/commit.go
+```
 
 ## How to execute Chichi
 
@@ -39,7 +47,6 @@ go build -tags osusergo,netgo -trimpath
 
 Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/admin/.
 
-
 ### Expose on the Internet (optional)
 
 1. Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/)
@@ -52,10 +59,3 @@ Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit http
 
 Refer to the [documentation of the chichi-cli tool](chichi-cli/README.md).
 
-
-## Checklist before commit
-
-1. Every module in the project should have the `go.sum` and `go.mod` files cleared
-   and updated by `go mod tidy`
-2. Every module in the project must be formatted with `go fmt ./...`
-3. Every module in the project must be validated with `go vet ./...`
