@@ -15,7 +15,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"net/http"
 	"strconv"
 
 	"chichi/connectors"
@@ -119,5 +118,7 @@ func (c *connection) Write(w io.Writer, get func() ([]string, error)) error {
 	return err
 }
 
-// ServeUserInterface serves the connector's user interface.
-func (c *connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {}
+// ServeUI serves the connector's user interface.
+func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI, error) {
+	return nil, nil
+}

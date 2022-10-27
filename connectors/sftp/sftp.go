@@ -15,7 +15,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"net/http"
 	"os"
 	"strconv"
 	"time"
@@ -81,8 +80,10 @@ func (c *connection) Reader() (io.ReadCloser, time.Time, error) {
 	return reader{c, f}, ts, nil
 }
 
-// ServeUserInterface serves the connector's user interface.
-func (c *connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {}
+// ServeUI serves the connector's user interface.
+func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI, error) {
+	return nil, nil
+}
 
 // Write writes the data read from p.
 func (c *connection) Write(r io.Reader) error {

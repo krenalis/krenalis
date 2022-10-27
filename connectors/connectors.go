@@ -8,7 +8,6 @@
 package connectors
 
 import (
-	"net/http"
 	"sync"
 	"time"
 )
@@ -28,11 +27,13 @@ var (
 	}
 )
 
+type SettingsUI struct{} // TODO
+
 // Connection is the interface implemented by connections.
 type Connection interface {
 
-	// ServeUserInterface serves the connector's user interface.
-	ServeUserInterface(w http.ResponseWriter, r *http.Request)
+	// ServeUI serves the connector's user interface.
+	ServeUI(event string, form []byte) (*SettingsUI, error)
 }
 
 // Firehose is the interface implemented by a Firehose.

@@ -360,9 +360,9 @@ func (c *connection) Resource() (string, error) {
 	return resource, nil
 }
 
-// ServeUserInterface serves the connector's user interface.
-// To get the context, call the r.Context method.
-func (c *connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {
+// ServeUI serves the connector's user interface.
+func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI, error) {
+
 	if c.settings.List != "" {
 		// TODO: list has been chosen, and cannot be modified
 	}
@@ -459,7 +459,8 @@ func (c *connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) 
 	// }
 	//
 	// connectors.ApplyConfig(config)
-	// return nil
+
+	return nil, nil
 }
 
 type batchOperation struct {

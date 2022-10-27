@@ -12,7 +12,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"net/http"
 
 	"chichi/connectors"
 
@@ -71,9 +70,9 @@ func (c *connection) Query(query string) ([]connectors.Column, connectors.Rows, 
 	return columns, rows, nil
 }
 
-// ServeUserInterface serves the connector's user interface.
-func (c *connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {
-	return
+// ServeUI serves the connector's user interface.
+func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI, error) {
+	return nil, nil
 }
 
 type settings struct {

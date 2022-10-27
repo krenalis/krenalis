@@ -251,8 +251,10 @@ func (c *connection) Resource() (string, error) {
 	return strconv.Itoa(res.PortalId), nil
 }
 
-// ServeUserInterface serves the connector's user interface.
-func (c *connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {}
+// ServeUI serves the connector's user interface.
+func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI, error) {
+	return nil, nil
+}
 
 // SetUsers sets the users.
 // It requires the "crm.objects.contacts.write" scope.

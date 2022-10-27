@@ -768,7 +768,10 @@ func (this *DataSources) ServeUserInterface(id int, w http.ResponseWriter, r *ht
 		return err
 	}
 	r.Header.Del("Cookie") // remove the cookies from the request.
-	c.ServeUserInterface(w, r)
+
+	_ = c
+
+	// TODO: call the API.
 
 	return nil
 }

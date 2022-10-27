@@ -57,8 +57,9 @@ func (c *connection) Resource() (string, error) {
 	return "dummy-resource", nil
 }
 
-func (c *connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {
-	panic("not implemented")
+// ServeUI serves the connector's user interface.
+func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI, error) {
+	return nil, nil
 }
 
 type user struct {
