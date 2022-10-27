@@ -293,8 +293,9 @@ func (this *DataSources) Delete(id int) error {
 }
 
 // Import starts the import of the users from the data source with the given
-// identifier. If reimport is false it imports the users from the current
-// cursor, otherwise imports all users.
+// identifier. For app data sources, if reimport is false, it imports the
+// users from the current cursor, otherwise imports all users.
+//
 // Returns the ErrDataSourceNotFound error if the data source does not exist.
 // Returns the ErrDataSourceDisabled error if the data source does not have a
 // transformation function associated to it.
@@ -304,77 +305,252 @@ func (this *DataSources) Import(id int, reimport bool) error {
 		return errors.New("invalid data source identifier")
 	}
 
-	// If the data source has no transformation functions associated to it,
-	// return a ErrDataSourceDisabled error.
+	// Check that the data source exists and has a transformation.
+	var typ string
 	var hasTransformation bool
-	err := this.myDB.QueryRow(
-		"SELECT `transformation` <> '' AS `hasTransformation` FROM `data_sources` WHERE `id` = ?",
-		id).Scan(&hasTransformation)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return ErrDataSourceNotFound
-		}
-	}
-	if !hasTransformation {
-		return ErrDataSourceDisabled
-	}
-
-	var name, connectorType, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
-	var connector, resource int
-	var settings, rawUsedProperties []byte
-	var expiration time.Time
-	err = this.myDB.QueryRow(
-		"SELECT `c`.`name`, `c`.`type`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
-			" `r`.`refreshToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
-			" `s`.`resource`, `s`.`userCursor`, `s`.`settings`, `s`.`usedProperties`\n"+
-			"FROM `data_sources` AS `s`\n"+
-			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-			"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
-			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
-		&name, &connectorType, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration, &connector,
-		&resource, &cursor, &settings, &rawUsedProperties)
+	err := this.myDB.QueryRow("SELECT `type`, `transformation` <> '' FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
+		id, this.workspace).Scan(&typ, &hasTransformation)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrDataSourceNotFound
 		}
 		return err
 	}
-	if reimport {
-		cursor = ""
-	}
-	var properties [][]string
-	err = json.Unmarshal(rawUsedProperties, &properties)
-	if err != nil {
-		return fmt.Errorf("cannot unmarshal used properties of data source %d: %s", id, err)
+	if !hasTransformation {
+		return ErrDataSourceDisabled
 	}
 
-	accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
+	const noColumn = -1
 
-	if accessToken == "" || accessTokenExpired {
-		accessToken, err = this.api.apis.refreshOAuthToken(resource)
+	switch typ {
+	case "App":
+
+		var name, connectorType, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
+		var connector, resource int
+		var settings, rawUsedProperties []byte
+		var expiration time.Time
+		err = this.myDB.QueryRow(
+			"SELECT `c`.`name`, `c`.`type`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
+				" `r`.`refreshToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
+				" `s`.`resource`, `s`.`userCursor`, `s`.`settings`, `s`.`usedProperties`\n"+
+				"FROM `data_sources` AS `s`\n"+
+				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
+				"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
+			&name, &connectorType, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration, &connector,
+			&resource, &cursor, &settings, &rawUsedProperties)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return ErrDataSourceNotFound
+			}
+			return err
+		}
+		if reimport {
+			cursor = ""
+		}
+		var properties [][]string
+		err = json.Unmarshal(rawUsedProperties, &properties)
+		if err != nil {
+			return fmt.Errorf("cannot unmarshal used properties of data source %d: %s", id, err)
+		}
+
+		accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
+
+		if accessToken == "" || accessTokenExpired {
+			accessToken, err = this.api.apis.refreshOAuthToken(resource)
+			if err != nil {
+				return err
+			}
+		}
+
+		go func() {
+			fh := this.newFirehose(context.Background(), id, connector, resource, connectorType, webhooksPer)
+			c, err := connectors.NewAppConnection(fh.ctx, name, &connectors.AppConfig{
+				Settings:     settings,
+				Firehose:     fh,
+				ClientSecret: clientSecret,
+				Resource:     resourceCode,
+				AccessToken:  accessToken,
+			})
+			if err != nil {
+				log.Printf("[error] cannot connect to the connector %d of the data source %d: %s", connector, id, err)
+				return
+			}
+			err = c.Users(cursor, properties)
+			if err != nil {
+				log.Printf("[error] call to the Users method of the data source %d failed: %s", id, err)
+			}
+		}()
+
+	case "Database":
+
+		var connectorName, identityColumn, timestampColumn, usersQuery string
+		var connector int
+		var settings []byte
+		err = this.myDB.QueryRow(
+			"SELECT `c`.`name`, `s`.`connector`, `s`.`identityColumn`, `s`.`timestampColumn`, `s`.`settings`, `s`.`usersQuery`\n"+
+				"FROM `data_sources` AS `s`\n"+
+				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &identityColumn, &timestampColumn, &settings, &usersQuery)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return ErrDataSourceNotFound
+			}
+			return err
+		}
+
+		usersQuery, err := this.compileQueryWithoutLimit(usersQuery)
 		if err != nil {
 			return err
 		}
-	}
+		fh := this.newFirehose(context.Background(), id, connector, 0, "Database", "")
+		c, err := connectors.NewDatabaseConnection(fh.ctx, connectorName, settings, fh)
+		if err != nil {
+			return err
+		}
+		columns, rows, err := c.Query(usersQuery)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		identityIndex := noColumn
+		timestampIndex := noColumn
+		for i, c := range columns {
+			switch c.Name {
+			case identityColumn:
+				identityIndex = i
+			case timestampColumn:
+				timestampIndex = i
+			}
+		}
+		if identityIndex == noColumn {
+			return fmt.Errorf("missing identity column %q", identityColumn)
+		}
+		if timestampColumn != "" && timestampIndex == noColumn {
+			return fmt.Errorf("missing timestamp column %q", timestampColumn)
+		}
+		var now time.Time
+		if timestampIndex == noColumn {
+			now = time.Now().UTC()
+		}
+		row := make([]any, len(columns))
+		for rows.Next() {
+			for i := range row {
+				var v string
+				row[i] = &v
+			}
+			if err = rows.Scan(row...); err != nil {
+				return err
+			}
+			identity := row[identityIndex].(*string)
+			var ts time.Time
+			if timestampIndex == noColumn {
+				ts = now
+			} else {
+				ts = row[timestampIndex].(time.Time)
+			}
+			user := map[string]any{}
+			for i, c := range columns {
+				v := row[i].(*string)
+				user[c.Name] = *v
+			}
+			fh.SetUser(*identity, ts, user)
+		}
+		if err = rows.Err(); err != nil {
+			return err
+		}
 
-	go func() {
-		fh := this.newFirehose(context.Background(), id, connector, resource, connectorType, webhooksPer)
-		c, err := connectors.NewAppConnection(fh.ctx, name, &connectors.AppConfig{
-			Settings:     settings,
-			Firehose:     fh,
-			ClientSecret: clientSecret,
-			Resource:     resourceCode,
-			AccessToken:  accessToken,
+	case "FileStream":
+
+		var fileConnectorName, streamConnectorName, identityColumn, timestampColumn string
+		var fileConnector, streamConnector int
+		var fileSettings, streamSettings []byte
+		err = this.myDB.QueryRow(
+			"SELECT `c1`.`name`, `c2`.`name`, `s`.`connector`, `s`.`stream`, `s`.`identityColumn`,"+
+				" `s`.`timestampColumn`, `s`.`settings`, `s`.`streamSettings`\n"+
+				"FROM `data_sources` AS `s`\n"+
+				"INNER JOIN `connectors` AS `c1` ON `c1`.`id` = `s`.`connector`\n"+
+				"INNER JOIN `connectors` AS `c2` ON `c2`.`id` = `s`.`stream`\n"+
+				"WHERE `s`.`id` = ?", id).Scan(&fileConnectorName, &streamConnectorName, &fileConnector,
+			&streamConnector, &identityColumn, &timestampColumn, &fileSettings, &streamSettings)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return ErrDataSourceNotFound
+			}
+			return err
+		}
+
+		// Connect to the stream connector.
+		fh := this.newFirehose(context.Background(), id, streamConnector, 0, "Stream", "")
+		stream, err := connectors.NewStreamConnection(fh.ctx, streamConnectorName, streamSettings, fh)
+		if err != nil {
+			return err
+		}
+		r, timestamp, err := stream.Reader()
+		if err != nil {
+			return err
+		}
+		defer r.Close()
+
+		// Connect to the file connector.
+		fh = this.newFirehose(context.Background(), id, streamConnector, 0, "File", "")
+		file, err := connectors.NewFileConnection(fh.ctx, fileConnectorName, fileSettings, fh)
+		if err != nil {
+			return err
+		}
+
+		// Read the records.
+		var columns []string
+		identityIndex := noColumn
+		timestampIndex := noColumn
+
+		err = file.Read(r, func(record []string) error {
+			if columns == nil {
+				for i, name := range record {
+					switch name {
+					case identityColumn:
+						identityIndex = i
+					case timestampColumn:
+						timestampIndex = i
+					}
+				}
+				if identityIndex == noColumn {
+					return fmt.Errorf("missing identity column %q", identityColumn)
+				}
+				if timestampColumn != "" && timestampIndex == noColumn {
+					return fmt.Errorf("missing timestamp column %q", timestampColumn)
+				}
+				columns = record
+				return nil
+			}
+			if len(record) != len(columns) {
+				return errors.New("connector %q has returned records with different lengths")
+			}
+			user := map[string]any{}
+			for i, c := range columns {
+				user[c] = record[i]
+			}
+			ts := timestamp
+			if timestampIndex != noColumn {
+				ts, err := time.Parse("2006-01-02 15:04:05", record[timestampIndex])
+				if err != nil {
+					return fmt.Errorf("invalid timestamp column value: %s", ts)
+				}
+			}
+			fh.SetUser(record[identityIndex], ts, user)
+			return nil
 		})
 		if err != nil {
-			log.Printf("[error] cannot connect to the connector %d of the data source %d: %s", connector, id, err)
-			return
+			return err
 		}
-		err = c.Users(cursor, properties)
+
+		// Close the stream.
+		err = r.Close()
 		if err != nil {
-			log.Printf("[error] call to the Users method of the data source %d failed: %s", id, err)
+			return err
 		}
-	}()
+
+	}
 
 	return nil
 }
@@ -912,4 +1088,24 @@ func (this *DataSources) reloadProperties(id int) error {
 // placeholder with limit, and returns it.
 func (this *DataSources) compileQueryWithLimit(query string, limit int) (string, error) {
 	return strings.ReplaceAll(query, ":limit", strconv.Itoa(limit)), nil
+}
+
+// compileQueryWithoutLimit compiles the given query, removing the ':limit'
+// placeholder, and returns it.
+func (this *DataSources) compileQueryWithoutLimit(query string) (string, error) {
+	p := strings.Index(query, ":limit")
+	if p == -1 {
+		return "", errors.New("missing ':limit' placeholder in query")
+	}
+	s1 := strings.Index(query[:p], "[[")
+	if s1 == -1 {
+		return "", errors.New("missing '[[' in query")
+	}
+	n := len(":limit")
+	s2 := strings.Index(query[p+n:], "]]")
+	if s2 == -1 {
+		return "", errors.New("missing ']]' in query")
+	}
+	s2 += p + n + 2
+	return query[:s1] + query[s2:], nil
 }

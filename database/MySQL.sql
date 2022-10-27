@@ -45,6 +45,8 @@ CREATE TABLE `data_sources` (
   `resource` INT NOT NULL,
   `transformation` TEXT NOT NULL,
   `userCursor` VARCHAR(500) NOT NULL DEFAULT '',
+  `identityColumn` VARCHAR(100) NOT NULL DEFAULT '',
+  `timestampColumn` VARCHAR(100) NOT NULL DEFAULT '',
   `settings` TEXT NOT NULL,
   `streamSettings` TEXT NOT NULL,
   `properties` MEDIUMTEXT NOT NULL,

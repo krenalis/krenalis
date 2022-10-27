@@ -318,18 +318,20 @@ func (apis *APIs) initSchema() {
 	}{})
 
 	apis.myDB.Scheme("DataSources", "data_sources", struct {
-		id             int
-		workspace      int
-		typ            int `sql:"type"`
-		connector      int
-		stream         int
-		resource       string
-		transformation string
-		userCursor     string
-		settings       string
-		properties     string
-		usedProperties string
-		usersQuery     string
+		id              int
+		workspace       int
+		typ             int `sql:"type"`
+		connector       int
+		stream          int
+		resource        string
+		transformation  string
+		userCursor      string
+		identityColumn  string
+		timestampColumn string
+		settings        string
+		properties      string
+		usedProperties  string
+		usersQuery      string
 	}{})
 
 	apis.myDB.Scheme("DataSourcesUsers", "data_sources_users", struct {

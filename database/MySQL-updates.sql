@@ -374,7 +374,6 @@ INSERT INTO `connectors` (`name`,`type`,`logoURL`) VALUES
 INSERT INTO `connectors` (`name`,`type`,`logoURL`) VALUES
     ('HTTP','Stream','https://cdn4.iconfinder.com/data/icons/application-windows-3/32/HTTP-500.png');
 
-
 UPDATE `connectors`
 SET `logoURL` = 'https://cdn4.iconfinder.com/data/icons/application-windows-3/32/HTTP-512.png'
 WHERE `name` = 'HTTP';
@@ -384,3 +383,7 @@ INSERT INTO `connectors` (`name`,`type`,`logoURL`) VALUES
 
 INSERT INTO `connectors` (`name`,`type`,`logoURL`) VALUES
     ('S3','Stream','https://cdn2.iconfinder.com/data/icons/amazon-aws-stencils/100/Storage__Content_Delivery_Amazon_S3-512.png');
+
+ALTER TABLE `data_sources`
+    ADD COLUMN `identityColumn` VARCHAR(100) NOT NULL DEFAULT '' AFTER `userCursor`,
+    ADD COLUMN `timestampColumn` VARCHAR(100) NOT NULL DEFAULT '' AFTER `identityColumn`;
