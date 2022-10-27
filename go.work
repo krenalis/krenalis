@@ -10,5 +10,6 @@ use (
 	./connectors/hubspot
 	./connectors/mailchimp
 	./connectors/mysql
+	./connectors/s3
 	./connectors/sftp
 )

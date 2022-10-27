@@ -382,3 +382,5 @@ WHERE `name` = 'HTTP';
 INSERT INTO `connectors` (`name`,`type`,`logoURL`) VALUES
     ('Excel','File','https://cdn0.iconfinder.com/data/icons/logos-microsoft-office-365/128/Microsoft_Office-02-512.png');
 
+INSERT INTO `connectors` (`name`,`type`,`logoURL`) VALUES
+    ('S3','Stream','https://cdn2.iconfinder.com/data/icons/amazon-aws-stencils/100/Storage__Content_Delivery_Amazon_S3-512.png');
