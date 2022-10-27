@@ -867,7 +867,7 @@ func (this *DataSources) reloadProperties(id int) error {
 		defer r.Close()
 
 		// Connect to the file connector and read only the first record.
-		fh = this.newFirehose(context.Background(), id, streamConnector, 0, "File", "")
+		fh = this.newFirehose(fh.ctx, id, streamConnector, 0, "File", "")
 		file, err := connectors.NewFileConnection(fh.ctx, fileConnectorName, fileSettings, fh)
 		if err != nil {
 			return err
