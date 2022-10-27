@@ -59,8 +59,8 @@ func New(ctx context.Context, settings []byte, fh connectors.Firehose) (connecto
 	return &c, nil
 }
 
-// Reader returns a Reader.
-// Callers should always call the Close method on it.
+// Reader returns a ReadCloser from which to read the data.
+// It is the caller's responsibility to close the returned reader.
 func (c *connection) Reader() (io.ReadCloser, error) {
 	err := c.openConnection()
 	if err != nil {
@@ -77,19 +77,27 @@ func (c *connection) Reader() (io.ReadCloser, error) {
 // ServeUserInterface serves the connector's user interface.
 func (c *connection) ServeUserInterface(w http.ResponseWriter, r *http.Request) {}
 
-// Writer returns a Writer.
-// Callers should always call the Close method on it.
-func (c *connection) Writer() (io.WriteCloser, error) {
+// Write writes the data read from p.
+func (c *connection) Write(r io.Reader) error {
 	err := c.openConnection()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	f, err := c.sftp.OpenFile(c.settings.Path, os.O_RDONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
 		_ = c.closeConnection()
-		return nil, err
+		return err
 	}
-	return writer{c, f}, nil
+	_, err = io.Copy(f, r)
+	err2 := f.Close()
+	err3 := c.closeConnection()
+	if err != nil {
+		return err
+	}
+	if err2 != nil {
+		return err2
+	}
+	return err3
 }
 
 type reader struct {
@@ -108,24 +116,6 @@ func (r reader) Close() error {
 
 func (r reader) Read(p []byte) (int, error) {
 	return r.fi.Read(p)
-}
-
-type writer struct {
-	c  *connection
-	fi *sftp.File
-}
-
-func (w writer) Close() error {
-	err := w.fi.Close()
-	err2 := w.c.closeConnection()
-	if err != nil {
-		return err
-	}
-	return err2
-}
-
-func (w writer) Write(p []byte) (int, error) {
-	return w.fi.Write(p)
 }
 
 // openConnection opens the connection.

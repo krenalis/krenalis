@@ -36,13 +36,12 @@ func RegisterStreamConnector(name string, fn StreamConnectionFunc) {
 type StreamConnection interface {
 	Connection
 
-	// Reader returns a Reader.
-	// Callers should always call the Close method on it.
+	// Reader returns a ReadCloser from which to read the data.
+	// It is the caller's responsibility to close the returned reader.
 	Reader() (io.ReadCloser, error)
 
-	// Writer returns a Writer.
-	// Callers should always call the Close method on it.
-	Writer() (io.WriteCloser, error)
+	// Write writes the data read from p.
+	Write(p io.Reader) error
 }
 
 // NewStreamConnection returns a new stream connection for the stream connector
