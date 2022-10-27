@@ -374,6 +374,11 @@ INSERT INTO `connectors` (`name`,`type`,`logoURL`) VALUES
 INSERT INTO `connectors` (`name`,`type`,`logoURL`) VALUES
     ('HTTP','Stream','https://cdn4.iconfinder.com/data/icons/application-windows-3/32/HTTP-500.png');
 
+
 UPDATE `connectors`
 SET `logoURL` = 'https://cdn4.iconfinder.com/data/icons/application-windows-3/32/HTTP-512.png'
 WHERE `name` = 'HTTP';
+
+INSERT INTO `connectors` (`name`,`type`,`logoURL`) VALUES
+    ('Excel','File','https://cdn0.iconfinder.com/data/icons/logos-microsoft-office-365/128/Microsoft_Office-02-512.png');
+

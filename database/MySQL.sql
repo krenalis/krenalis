@@ -33,6 +33,7 @@ INSERT INTO `connectors` VALUES
   (5,'CSV','File','','https://cdn3.iconfinder.com/data/icons/cad-database-presentation-spreadsheet-vector-fil-2/512/19-512.png','','','','None','bearer','0',''),
   (6,'SFTP','Stream','','https://cdn2.iconfinder.com/data/icons/whcompare-servers-web-hosting/50/sftp-512.png','','','','None','bearer','0',''),
   (7,'HTTP','Stream','','https://cdn4.iconfinder.com/data/icons/application-windows-3/32/HTTP-512.png','','','','None','bearer','0','');
+  (8,'Excel','File','','https://cdn0.iconfinder.com/data/icons/logos-microsoft-office-365/128/Microsoft_Office-02-512.png','','','','None','bearer','0','');
 
 CREATE TABLE `data_sources` (
   `id` INT NOT NULL AUTO_INCREMENT,

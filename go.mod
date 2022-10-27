@@ -5,6 +5,7 @@ go 1.19
 replace (
 	chichi/connectors/csv => ./connectors/csv
 	chichi/connectors/dummy => ./connectors/dummy
+	chichi/connectors/excel => ./connectors/excel
 	chichi/connectors/http => ./connectors/http
 	chichi/connectors/hubspot => ./connectors/hubspot
 	chichi/connectors/mailchimp => ./connectors/mailchimp
@@ -15,6 +16,7 @@ replace (
 require (
 	chichi/connectors/csv v0.0.0-00010101000000-000000000000
 	chichi/connectors/dummy v0.0.0-00010101000000-000000000000
+	chichi/connectors/excel v0.0.0-00010101000000-000000000000
 	chichi/connectors/http v0.0.0-00010101000000-000000000000
 	chichi/connectors/hubspot v0.0.0-00010101000000-000000000000
 	chichi/connectors/mailchimp v0.0.0-00010101000000-000000000000
@@ -40,15 +42,22 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/kr/fs v0.1.0 // indirect
+	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/oschwald/maxminddb-golang v1.10.0 // indirect
 	github.com/paulmach/orb v0.7.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/sftp v1.13.5 // indirect
+	github.com/richardlehane/mscfb v1.0.4 // indirect
+	github.com/richardlehane/msoleps v1.0.3 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
+	github.com/xuri/efp v0.0.0-20220603152613-6918739fd470 // indirect
+	github.com/xuri/excelize/v2 v2.6.1 // indirect
+	github.com/xuri/nfp v0.0.0-20220409054826-5e722a1d9e22 // indirect
 	go.opentelemetry.io/otel v1.9.0 // indirect
 	go.opentelemetry.io/otel/trace v1.9.0 // indirect
+	golang.org/x/net v0.1.0 // indirect
 	golang.org/x/sys v0.1.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )

@@ -5,6 +5,7 @@ use (
 	./chichi-cli
 	./connectors/csv
 	./connectors/dummy
+	./connectors/excel
 	./connectors/http
 	./connectors/hubspot
 	./connectors/mailchimp
