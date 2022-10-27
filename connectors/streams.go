@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 )
 
 // StreamConnectionFunc represents functions that create new stream
@@ -36,9 +37,9 @@ func RegisterStreamConnector(name string, fn StreamConnectionFunc) {
 type StreamConnection interface {
 	Connection
 
-	// Reader returns a ReadCloser from which to read the data.
+	// Reader returns a ReadCloser from which to read the data and its last update time.
 	// It is the caller's responsibility to close the returned reader.
-	Reader() (io.ReadCloser, error)
+	Reader() (io.ReadCloser, time.Time, error)
 
 	// Write writes the data read from p.
 	Write(p io.Reader) error

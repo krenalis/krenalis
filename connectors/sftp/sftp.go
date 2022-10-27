@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"chichi/connectors"
 
@@ -59,19 +60,25 @@ func New(ctx context.Context, settings []byte, fh connectors.Firehose) (connecto
 	return &c, nil
 }
 
-// Reader returns a ReadCloser from which to read the data.
+// Reader returns a ReadCloser from which to read the data and its last update
+// time.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Reader() (io.ReadCloser, error) {
+func (c *connection) Reader() (io.ReadCloser, time.Time, error) {
 	err := c.openConnection()
 	if err != nil {
-		return nil, err
+		return nil, time.Time{}, err
 	}
 	f, err := c.sftp.Open(c.settings.Path)
 	if err != nil {
 		_ = c.closeConnection()
-		return nil, err
+		return nil, time.Time{}, err
 	}
-	return reader{c, f}, nil
+	st, err := f.Stat()
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	ts := st.ModTime().UTC()
+	return reader{c, f}, ts, nil
 }
 
 // ServeUserInterface serves the connector's user interface.

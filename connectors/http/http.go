@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"chichi/connectors"
 )
@@ -51,23 +52,25 @@ func New(ctx context.Context, settings []byte, fh connectors.Firehose) (connecto
 	return &c, nil
 }
 
-// Reader returns a ReadCloser from which to read the data.
+// Reader returns a ReadCloser from which to read the data and its last update
+// time.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Reader() (io.ReadCloser, error) {
+func (c *connection) Reader() (io.ReadCloser, time.Time, error) {
 	req, err := http.NewRequestWithContext(c.ctx, "GET", c.settings.URL, nil)
 	if err != nil {
-		return nil, err
+		return nil, time.Time{}, err
 	}
 	res, err := http.DefaultTransport.RoundTrip(req)
 	if err != nil {
-		return nil, err
+		return nil, time.Time{}, err
 	}
 	if res.StatusCode != 200 {
 		_, _ = io.Copy(io.Discard, res.Body)
 		_ = res.Body.Close()
-		return nil, fmt.Errorf("server responded with status: %s", res.Status)
+		return nil, time.Time{}, fmt.Errorf("server responded with status: %s", res.Status)
 	}
-	return res.Body, nil
+	ts, _ := time.Parse(time.RFC1123, res.Header.Get("Last-Modified"))
+	return res.Body, ts, nil
 }
 
 // ServeUserInterface serves the connector's user interface.

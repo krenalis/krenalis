@@ -860,7 +860,7 @@ func (this *DataSources) reloadProperties(id int) error {
 		if err != nil {
 			return err
 		}
-		r, err := stream.Reader()
+		r, _, err := stream.Reader()
 		if err != nil {
 			return err
 		}
