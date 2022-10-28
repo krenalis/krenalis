@@ -22,6 +22,7 @@ require (
 	chichi/connectors/hubspot v0.0.0-00010101000000-000000000000
 	chichi/connectors/mailchimp v0.0.0-00010101000000-000000000000
 	chichi/connectors/mysql v0.0.0-00010101000000-000000000000
+	chichi/connectors/s3 v0.0.0-00010101000000-000000000000
 	chichi/connectors/sftp v0.0.0-00010101000000-000000000000
 	github.com/ClickHouse/clickhouse-go/v2 v2.3.0
 	github.com/evanw/esbuild v0.15.5
@@ -36,7 +37,6 @@ require (
 )
 
 require (
-	chichi/connectors/s3 v0.0.0-00010101000000-000000000000 // indirect
 	github.com/ClickHouse/ch-go v0.47.3 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.17.1 // indirect
