@@ -14,7 +14,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +21,7 @@ import (
 	"chichi/pkg/open2b/sql"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/go-chi/chi/v5"
 )
 
 type APIs struct {
@@ -63,10 +63,9 @@ func (apis *APIs) AsAccount(account int) *AccountAPI {
 func (api *AccountAPI) AsWorkspace(workspace int) *WorkspaceAPI {
 	ws := &WorkspaceAPI{workspace: workspace, api: api, myDB: api.myDB, chDB: api.chDB}
 	ws.DataSources = &DataSources{ws}
+	ws.Transformations = &Transformations{ws}
 	return ws
 }
-
-var importRegexp = regexp.MustCompile(`/apis/data-sources/((\d+)/(import|reimport|properties|transformation))?`)
 
 // ServeHTTP servers the API methods from HTTP.
 func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -95,66 +94,134 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	api := apis.AsAccount(account)
 	ws := api.AsWorkspace(workspace)
 
-	m := importRegexp.FindStringSubmatch(r.URL.Path)
-	if m == nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-	if m[1] == "" {
-		if r.Method != "GET" {
-			w.Header().Set("Allow", "GET")
-			http.Error(w, "Method Not Allowed", 405)
-			return
-		}
-		var sources []*DataSource
-		sources, err = ws.DataSources.List()
-		if err == nil {
-			_ = json.NewEncoder(w).Encode(sources)
-		}
-	} else {
-		id, _ := strconv.Atoi(m[2])
-		if id <= 0 {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return
-		}
-		switch m[3] {
-		case "properties":
-			var properties []DataSourceProperty
-			properties, _, err = ws.DataSources.Properties(id)
-			if err == nil {
-				_ = json.NewEncoder(w).Encode(properties)
+	router := chi.NewRouter()
+	router.Route("/apis/data-sources", func(router chi.Router) {
+		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			var sources []*DataSource
+			sources, err = ws.DataSources.List()
+			if err != nil {
+				log.Printf("[error] %s", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
 			}
-		case "transformation":
-			if r.Method == "GET" {
-				var source *DataSourceInfo
-				source, err = ws.DataSources.Get(id)
-				if err == nil {
-					w.Header().Set("Content-Type", "text/plain")
-					_, _ = io.WriteString(w, source.TransformationFunc)
+			_ = json.NewEncoder(w).Encode(sources)
+		})
+		router.Route("/{dataSourceID}", func(router chi.Router) {
+			router.Get("/properties", func(w http.ResponseWriter, r *http.Request) {
+				dsID, _ := strconv.Atoi(chi.URLParam(r, "dataSourceID"))
+				if dsID <= 0 {
+					http.Error(w, "Bad Request: invalid data source ID", http.StatusBadRequest)
 					return
 				}
-			} else {
-				var transformation []byte
-				transformation, err = io.ReadAll(r.Body)
-				err = ws.DataSources.SetTransformationFunc(id, string(transformation))
+				var properties []DataSourceProperty
+				properties, _, err = ws.DataSources.Properties(dsID)
+				if err != nil {
+					if err == ErrDataSourceNotFound {
+						http.Error(w, "Not Found", http.StatusNotFound)
+					} else {
+						log.Printf("[error] %s", err)
+						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					}
+					return
+				}
+				_ = json.NewEncoder(w).Encode(properties)
+			})
+			router.Post("/import", func(w http.ResponseWriter, r *http.Request) {
+				dsID, _ := strconv.Atoi(chi.URLParam(r, "dataSourceID"))
+				if dsID <= 0 {
+					http.Error(w, "Bad Request: invalid data source ID", http.StatusBadRequest)
+					return
+				}
+				err = ws.DataSources.Import(dsID, false)
+				if err != nil {
+					if err == ErrDataSourceNotFound {
+						http.Error(w, "Not Found", http.StatusNotFound)
+					} else {
+						log.Printf("[error] %s", err)
+						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					}
+					return
+				}
+			})
+			router.Post("/reimport", func(w http.ResponseWriter, r *http.Request) {
+				dsID, _ := strconv.Atoi(chi.URLParam(r, "dataSourceID"))
+				if dsID <= 0 {
+					http.Error(w, "Bad Request: invalid data source ID", http.StatusBadRequest)
+					return
+				}
+				err = ws.DataSources.Import(dsID, true)
+				if err != nil {
+					if err == ErrDataSourceNotFound {
+						http.Error(w, "Not Found", http.StatusNotFound)
+					} else {
+						log.Printf("[error] %s", err)
+						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					}
+					return
+				}
+			})
+			router.Get("/transformations", func(w http.ResponseWriter, r *http.Request) {
+				dsID, _ := strconv.Atoi(chi.URLParam(r, "dataSourceID"))
+				if dsID <= 0 {
+					http.Error(w, "Bad Request: invalid data source ID", http.StatusBadRequest)
+					return
+				}
+				transformations, err := ws.DataSources.Transformations.List(dsID)
+				if err != nil {
+					if err == ErrDataSourceNotFound {
+						http.Error(w, "Not Found", http.StatusNotFound)
+					} else {
+						log.Printf("[error] %s", err)
+						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					}
+					return
+				}
+				_ = json.NewEncoder(w).Encode(transformations)
+			})
+		})
+	})
+	router.Route("/apis/transformations", func(router chi.Router) {
+		router.Put("/", func(w http.ResponseWriter, r *http.Request) {
+			var req TransformationToCreate
+			err := json.NewDecoder(r.Body).Decode(&req)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
 			}
-		case "import", "reimport":
-			reimport := m[3] == "reimport"
-			err = ws.DataSources.Import(id, reimport)
-		default:
-			panic("unexpected path")
-		}
-	}
-	if err != nil {
-		if err == ErrDataSourceNotFound {
-			http.Error(w, "Not Found", http.StatusNotFound)
-			return
-		}
-		log.Printf("[error] call to %q failed: %s", r.URL.Path, err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	}
+			tID, err := ws.DataSources.Transformations.Create(req)
+			if err != nil {
+				if err == ErrDataSourceNotFound {
+					http.Error(w, "Not Found", http.StatusNotFound)
+				} else {
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				}
+				return
+			}
+			_ = json.NewEncoder(w).Encode(tID)
+		})
+		router.Patch("/{transformationID}", func(w http.ResponseWriter, r *http.Request) {
+			tID, _ := strconv.Atoi(chi.URLParam(r, "transformationID"))
+			if tID <= 0 {
+				http.Error(w, "Bad Request: invalid transformation ID", http.StatusBadRequest)
+				return
+			}
+			var req TransformationToUpdate
+			err := json.NewDecoder(r.Body).Decode(&req)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			err = ws.DataSources.Transformations.Update(tID, req)
+			if err != nil {
+				log.Printf("[error] %s", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			}
+		})
+	})
 
-	return
+	router.ServeHTTP(w, r)
+
 }
 
 // Connector represents a connector.
@@ -371,6 +438,18 @@ func (apis *APIs) initSchema() {
 		event    string
 		pages    string
 		buttons  string
+	}{})
+
+	apis.myDB.Scheme("Transformations", "transformations", struct {
+		id               int
+		goldenRecordName string
+		sourceCode       string
+	}{})
+
+	apis.myDB.Scheme("TransformationsConnections", "transformations_connections", struct {
+		dataSource     int
+		property       string
+		transformation int
 	}{})
 
 	apis.myDB.Scheme("Users", "users", struct {

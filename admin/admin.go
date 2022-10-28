@@ -192,47 +192,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Serve the transformation APIs.
-	if strings.HasPrefix(rpath, "/transformations/") {
-		rpath := rpath[len("/transformations"):]
-		switch rpath {
-		case "/get":
-			var req struct {
-				Connector int
-			}
-			err := json.NewDecoder(r.Body).Decode(&req)
-			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-			source, err := ws.DataSources.Get(req.Connector)
-			if err != nil {
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			_ = json.NewEncoder(w).Encode(source.TransformationFunc)
-		case "/update":
-			var req struct {
-				Connector      int
-				Transformation string
-			}
-			err := json.NewDecoder(r.Body).Decode(&req)
-			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-			err = ws.DataSources.SetTransformationFunc(req.Connector, req.Transformation)
-			if err != nil {
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			_, _ = fmt.Fprint(w, `{"status":"ok"}`)
-		}
-		return
-	}
-
 	// Serve the schemas APIs.
 	if strings.HasPrefix(rpath, "/schemas/") {
 		rpath := rpath[len("/schemas"):]

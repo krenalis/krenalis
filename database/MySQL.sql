@@ -43,7 +43,6 @@ CREATE TABLE `data_sources` (
   `connector` INT NOT NULL,
   `stream` INT NOT NULL,
   `resource` INT NOT NULL,
-  `transformation` TEXT NOT NULL,
   `userCursor` VARCHAR(500) NOT NULL DEFAULT '',
   `identityColumn` VARCHAR(100) NOT NULL DEFAULT '',
   `timestampColumn` VARCHAR(100) NOT NULL DEFAULT '',
@@ -53,6 +52,20 @@ CREATE TABLE `data_sources` (
   `usedProperties` MEDIUMTEXT NOT NULL,
   `usersQuery` MEDIUMTEXT NOT NULL,
   PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `transformations` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `goldenRecordName` VARCHAR(100) NOT NULL DEFAULT '',
+  `sourceCode` TEXT NOT NULL,
+  PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `transformations_connections` (
+  `dataSource` INT NOT NULL,
+  `property` VARCHAR(50) NOT NULL DEFAULT '',
+  `transformation` INT,
+  PRIMARY KEY (`dataSource`, `property`, `transformation`)
 );
 
 CREATE TABLE `data_sources_stats` (

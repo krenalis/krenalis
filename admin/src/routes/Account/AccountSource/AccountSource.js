@@ -86,7 +86,7 @@ export default class AccountSource extends React.Component {
                         <Toast reactRef={this.toast} status={this.state.status} />
                         <div className='title'>
                             {this.state.source.LogoURL !== '' && <img className='littleLogo' src={this.state.source.LogoURL} alt={`${this.state.source.Name}'s logo`} />}
-                            <div className='text'>Map {this.state.source.Name}'s properties to your golden record</div>
+                            <div className='text'>(obsolete page) Map {this.state.source.Name}'s properties to your golden record</div>
                         </div>
                         <div className='properties sourceProperties'>
                             <div className='title'>Source properties</div>
@@ -103,9 +103,9 @@ export default class AccountSource extends React.Component {
                                     theme='vs-dark'
                                 />
                             </div>
-                            <SlButton className='saveButton' variant='primary' size='large' onClick={this.handleSaving}>
+                            <SlButton className='saveButton' disabled variant='primary' size='large' onClick={this.handleSaving}>
                                 <SlIcon slot='prefix' name='save' />
-                                Save
+                                Save (obsolete)
                             </SlButton>
                             <div className='documentation'>
                                 <p>A transformation function which can be used with the default schema:</p>

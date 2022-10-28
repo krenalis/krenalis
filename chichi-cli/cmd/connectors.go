@@ -13,6 +13,9 @@ import (
 
 var connectorsCmd = &cobra.Command{
 	Use: "connectors",
+	Run: func(cmd *cobra.Command, args []string) {
+		panic("TODO: not implemented")
+	},
 }
 
 func init() {

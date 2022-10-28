@@ -50,12 +50,11 @@ type DataSource struct {
 
 // DataSourceInfo represents a data source.
 type DataSourceInfo struct {
-	ID                 int
-	Type               string
-	Name               string
-	LogoURL            string
-	TransformationFunc string
-	UsersQuery         string // only for databases.
+	ID         int
+	Type       string
+	Name       string
+	LogoURL    string
+	UsersQuery string // only for databases.
 }
 
 // PropertyType represents the type of a property.
@@ -245,11 +244,11 @@ func (this *DataSources) Get(id int) (*DataSourceInfo, error) {
 		return nil, errors.New("invalid data source identifier")
 	}
 	s := DataSourceInfo{ID: id}
-	err := this.myDB.QueryRow("SELECT `s`.`type`, `c`.`name`, `c`.`logoURL`, `s`.`transformation`, `s`.`usersQuery`\n"+
+	err := this.myDB.QueryRow("SELECT `s`.`type`, `c`.`name`, `c`.`logoURL`, `s`.`usersQuery`\n"+
 		"FROM `data_sources` AS `s`\n"+
 		"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 		"WHERE `s`.`id` = ? AND `s`.`workspace` = ?",
-		id, this.workspace).Scan(&s.Type, &s.Name, &s.LogoURL, &s.TransformationFunc, &s.UsersQuery)
+		id, this.workspace).Scan(&s.Type, &s.Name, &s.LogoURL, &s.UsersQuery)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrDataSourceNotFound
@@ -297,7 +296,7 @@ func (this *DataSources) Delete(id int) error {
 // users from the current cursor, otherwise imports all users.
 //
 // Returns the ErrDataSourceNotFound error if the data source does not exist.
-// Returns the ErrDataSourceDisabled error if the data source does not have a
+// Returns the ErrDataSourceDisabled error if the data source does not have any
 // transformation function associated to it.
 func (this *DataSources) Import(id int, reimport bool) error {
 
@@ -307,16 +306,22 @@ func (this *DataSources) Import(id int, reimport bool) error {
 
 	// Check that the data source exists and has a transformation.
 	var typ string
-	var hasTransformation bool
-	err := this.myDB.QueryRow("SELECT `type`, `transformation` <> '' FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
-		id, this.workspace).Scan(&typ, &hasTransformation)
+	err := this.myDB.QueryRow("SELECT `type` FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
+		id, this.workspace).Scan(&typ)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrDataSourceNotFound
 		}
 		return err
 	}
-	if !hasTransformation {
+
+	// Check that the data source has at least one transformation associated to
+	// it.
+	transformations, err := this.Transformations.List(id)
+	if err != nil {
+		return fmt.Errorf("cannot list transformations for %d: %s", id, err)
+	}
+	if len(transformations) == 0 {
 		return ErrDataSourceDisabled
 	}
 
@@ -773,34 +778,6 @@ func (this *DataSources) ServeUserInterface(id int, w http.ResponseWriter, r *ht
 
 	// TODO: call the API.
 
-	return nil
-}
-
-// SetTransformationFunc sets the transformation function of the data source
-// with the given identifier.
-// Returns the ErrDataSourceNotFound error if the data source does not exist.
-func (this *DataSources) SetTransformationFunc(id int, fn string) error {
-	if id <= 0 {
-		return errors.New("invalid data source identifier")
-	}
-	// Validate the transf. function.
-	if !utf8.ValidString(fn) {
-		return errors.New("invalid transformation function")
-	}
-	_, err := buildTransfFunc(fn)
-	if err != nil {
-		return fmt.Errorf("invalid transformation function: %s", err)
-	}
-	// Write the transf. function to the database.
-	affected, err := this.myDB.Table("DataSources").Update(
-		sql.Set{"transformation": fn},
-		sql.Where{"id": id, "workspace": this.workspace})
-	if err != nil {
-		return err
-	}
-	if affected == 0 {
-		return ErrDataSourceNotFound
-	}
 	return nil
 }
 

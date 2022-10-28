@@ -11,6 +11,7 @@
   - [Run and open the browser](#run-and-open-the-browser)
   - [Expose on the Internet (optional)](#expose-on-the-internet-optional)
 - [Interact with Chichi using `chichi-cli`](#interact-with-chichi-using-chichi-cli)
+- [APIs](#apis)
 
 ## Before commit
 
@@ -71,3 +72,6 @@ Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit http
 
 Refer to the [documentation of the chichi-cli tool](chichi-cli/README.md).
 
+## APIs
+
+See [apis](apis) for a documentation of the APIs.

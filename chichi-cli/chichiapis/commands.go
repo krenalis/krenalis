@@ -11,9 +11,10 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"os"
 	"sort"
 	"strconv"
+
+	"chichi/apis"
 )
 
 // DataSource represents a data source.
@@ -65,13 +66,16 @@ func ImportUsersFromDataSource(connector int, reimport bool) {
 	return
 }
 
-func GetTransformation(connector int) {
-	var transformation []byte
-	err := callAPI("GET", "apis/data-sources/"+strconv.Itoa(connector)+"/transformation", nil, &transformation)
+func GetTransformations(data_source int) {
+	var transformations []apis.Transformation
+	err := callAPI("GET", "apis/data-sources/"+strconv.Itoa(data_source)+"/transformations", nil, &transformations)
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, _ = os.Stdout.Write(transformation)
+	fmt.Printf("%-4s %-15s %s\n", "ID", "GR Property", "Input props")
+	for _, t := range transformations {
+		fmt.Printf("%-4d %-15s %v\n", t.ID, t.GRProperty, t.InputProperties)
+	}
 }
 
 func UpdateTransformation(connector int, transformation []byte) {

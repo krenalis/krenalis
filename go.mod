@@ -26,6 +26,7 @@ require (
 	chichi/connectors/sftp v0.0.0-00010101000000-000000000000
 	github.com/ClickHouse/clickhouse-go/v2 v2.3.0
 	github.com/evanw/esbuild v0.15.5
+	github.com/go-chi/chi/v5 v5.0.7
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/mssola/user_agent v0.5.3
 	github.com/open2b/nuts v1.5.3

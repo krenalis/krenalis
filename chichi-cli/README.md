@@ -4,7 +4,7 @@
 - [How to compile](#how-to-compile)
 - [Alternative: install `chichi-cli` (tested on Linux only)](#alternative-install-chichi-cli-tested-on-linux-only)
 - [Usage](#usage)
-  - [Implemented subcommands](#implemented-subcommands)
+  - [Not implemented subcommands](#not-implemented-subcommands)
 
 ## Configuration
 
@@ -42,15 +42,16 @@ To do so:
 the section below.
 
 ```
-chichi-cli connectors
-
 chichi-cli data-sources
-chichi-cli data-sources import <connector ID>
-chichi-cli data-sources reimport <connector ID>
-chichi-cli data-sources properties <connector ID>
+chichi-cli data-sources import <data source ID>
+chichi-cli data-sources reimport <data source ID>
+chichi-cli data-sources properties <data source ID>
 
-chichi-cli transformations show <connector ID>
-chichi-cli transformations update <connector ID> { <filename> | - }
+chichi-cli transformations list <data source ID>
+chichi-cli transformations get-source <transformation ID>
+chichi-cli transformations update-source <transformation ID> { <filename> | - }
+chichi-cli transformations get-connections <transformation ID>
+chichi-cli transformations update-connections <transformation ID>
 
 chichi-cli schemas show { user | group | event }
 chichi-cli schemas update { user | group | event } { <filename> | - }
@@ -59,12 +60,13 @@ chichi-cli schemas properties { user | group | event }
 chichi-cli users [list]
 ```
 
-### Implemented subcommands
+### Not implemented subcommands
 
-- [x] `chichi-cli data-sources`
-- [x] `chichi-cli data-sources import <connector ID>`
-- [x] `chichi-cli data-sources reimport <connector ID>`
-- [x] `chichi-cli data-sources properties <connector ID>`
-- [x] `chichi-cli transformations show <connector ID>`
-- [x] `chichi-cli transformations update <connector ID> { <filename> | - }`
-- [x] `chichi-cli users [list]`
+Note that these subcommands are still not implemented:
+
+- `chichi-cli connectors`
+- `chichi-cli schemas` and related subcommands
+- `chichi-cli transformations get-source`
+- `chichi-cli transformations update-source`
+- `chichi-cli transformations get-connections`
+- `chichi-cli transformations update-connections`

@@ -18,11 +18,12 @@ import (
 )
 
 type WorkspaceAPI struct {
-	workspace   int
-	api         *AccountAPI
-	myDB        *sql.DB
-	chDB        chDriver.Conn
-	DataSources *DataSources
+	workspace       int
+	api             *AccountAPI
+	myDB            *sql.DB
+	chDB            chDriver.Conn
+	DataSources     *DataSources
+	Transformations *Transformations
 }
 
 type Schema string

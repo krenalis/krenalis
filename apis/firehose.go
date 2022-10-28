@@ -12,18 +12,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"chichi/connectors"
-
-	"github.com/open2b/scriggo"
-	"github.com/open2b/scriggo/native"
 )
 
 // Make sure it implements the Firehose interface.
@@ -119,24 +114,44 @@ func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[str
 		return
 	}
 
-	// Apply the transformation of this data-source to the properties and
-	// timestamps.
-	source, err := fh.sources.Get(fh.source)
+	// Retrieve the transformations for this source.
+	transformations, err := fh.sources.Transformations.List(fh.source)
 	if err != nil {
-		fh.setError(fmt.Errorf("cannot retrieve transformation from DB: %s", err))
-		return
-	}
-	if source.TransformationFunc == "" {
-		fh.setError(fmt.Errorf("no transformation function for data source %d", source.ID))
+		fh.setError(fmt.Errorf("cannot list transformations for %d: %s", fh.source, err))
 		return
 	}
 
-	// Apply the transformation to the current entity.
-	candidateData, candidateTimestamps, err := fh.transformProperties(source.TransformationFunc, properties, timestamps)
-	if err != nil {
-		fh.setError(fmt.Errorf("cannot transform input properties to output properties: %s", err))
-		return
+	// Applying the transformations, calculate the Golden Record properties and
+	// their relative timestamps for this user in this data source.
+	candidateData := map[string]any{}
+	candidateTimestamps := map[string]time.Time{}
+	for _, t := range transformations {
+		props := map[string]any{}
+		for _, ip := range t.InputProperties {
+			props[ip.Name] = properties[ip.Name]
+		}
+		// Build the transformation function.
+		fn, err := buildTransfFunc(t.SourceCode)
+		if err != nil {
+			fh.setError(fmt.Errorf("cannot build transformation function: %s", err))
+			return
+		}
+		// Apply the transformation function.
+		grProp, ok, err := fn(props)
+		if err != nil {
+			fh.setError(fmt.Errorf("error while calling transformation function %d: %s", t.ID, err))
+			return
+		}
+		if err != nil {
+			fh.setError(fmt.Errorf("cannot transform properties to %q with transformation %d: %s", t.GRProperty, t.ID, err))
+			return
+		}
+		if ok {
+			candidateData[t.GRProperty] = grProp
+			candidateTimestamps[t.GRProperty] = mostRecentTimestamp(timestamps, t.InputProperties)
+		}
 	}
+
 	email, _ := candidateData["Email"].(string)
 	if email == "" {
 		fh.setError(fmt.Errorf("expecting 'Email' to be a non-empty string, got %#v (of type %T)", candidateData["Email"], candidateData["Email"]))
@@ -145,7 +160,7 @@ func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[str
 
 	ids := identitySolver{fh}
 
-	// Resolve the entity.
+	// Resolve the entity of this user.
 	goldenRecordID, err := ids.ResolveEntity(fh.source, user, email)
 	if err != nil {
 		fh.setError(err)
@@ -155,47 +170,37 @@ func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[str
 	// Retrieve the entities which are the same user.
 	sameEntities, err := ids.LookupSameEntities(fh.source, user)
 	if err != nil {
-		fh.setError(err)
+		fh.setError(fmt.Errorf("cannot lookup same entities for user %q: %s", user, err))
 		return
 	}
 
-	sources, err := fh.listTransformations(keys(sameEntities))
+	// Retrieve the transformation functions for the entities that match with
+	// the current user.
+	otherTransformations, err := fh.listTransformations(keys(sameEntities))
 	if err != nil {
-		fh.setError(err)
+		fh.setError(fmt.Errorf("cannot retrieve transformations for other entities: %s", err))
 		return
 	}
-dataSourcesLoop:
-	for source, transfSource := range sources {
-		for _, user := range sameEntities[source] {
-			userData, err := fh.userData(source, user)
+
+	// Discard any incoming Golden Record property which is older than the
+	// existent properties.
+transfLoop:
+	for _, t := range otherTransformations {
+		// For the data source of this transformation, determine the timestamps
+		// relative to the users which refers to the same identity.
+		for _, u := range sameEntities[t.DataSource] {
+			entityData, err := fh.entityData(t.DataSource, u)
 			if err != nil {
 				fh.setError(err)
 				return
 			}
-			outProps, outTimestamps, err := fh.transformProperties(transfSource, userData.Data, userData.Timestamps)
-			if err != nil {
-				fh.setError(fmt.Errorf("cannot transform properties for data source %d: %s", source, err))
-				return
-			}
-			for prop := range outProps {
-				if _, ok := candidateData[prop]; !ok {
-					// This prop is not candidate to be updated on the Golden
-					// Record, so it can be skipped.
-					continue
-				}
-				candidateTimestamp, ok := candidateTimestamps[prop]
-				if !ok {
-					fh.setError(fmt.Errorf("missing timestamp for prop %q", prop))
-					return
-				}
-				if candidateTimestamp.After(outTimestamps[prop]) {
-					// This property must be updated.
-				} else {
-					delete(candidateData, prop)
-					if len(candidateData) == 0 {
-						// Avoid useless iterations.
-						break dataSourcesLoop
-					}
+			ts := mostRecentTimestamp(entityData.Timestamps, t.InputProperties)
+			if ts.After(candidateTimestamps[t.GRProperty]) {
+				// Don't update this Golden Record property.
+				delete(candidateData, t.GRProperty)
+				if len(candidateData) == 0 {
+					// Avoid useless iterations.
+					break transfLoop
 				}
 			}
 		}
@@ -213,14 +218,14 @@ dataSourcesLoop:
 
 }
 
-type dataSourceUserData struct {
+type dataSourceEntityData struct {
 	Data       map[string]any
 	Timestamps map[string]time.Time
 }
 
-// userData returns the data associated to the user from the given source.
-func (fh *firehose) userData(source int, user string) (dataSourceUserData, error) {
-	var userData dataSourceUserData
+// entityData returns the data associated to the entity from the given source.
+func (fh *firehose) entityData(source int, user string) (dataSourceEntityData, error) {
+	var entityData dataSourceEntityData
 	row := fh.sources.myDB.QueryRow(
 		"SELECT `data`, `timestamps` FROM `data_sources_users` WHERE `source` = ? AND `user` = ?",
 		source, user)
@@ -228,17 +233,17 @@ func (fh *firehose) userData(source int, user string) (dataSourceUserData, error
 	var rawTimestamps []byte
 	err := row.Scan(&rawData, &rawTimestamps)
 	if err != nil {
-		return dataSourceUserData{}, err
+		return dataSourceEntityData{}, err
 	}
-	err = json.Unmarshal(rawData, &userData.Data)
+	err = json.Unmarshal(rawData, &entityData.Data)
 	if err != nil {
-		return dataSourceUserData{}, err
+		return dataSourceEntityData{}, err
 	}
-	err = json.Unmarshal(rawTimestamps, &userData.Timestamps)
+	err = json.Unmarshal(rawTimestamps, &entityData.Timestamps)
 	if err != nil {
-		return dataSourceUserData{}, err
+		return dataSourceEntityData{}, err
 	}
-	return userData, nil
+	return entityData, nil
 }
 
 func (fh *firehose) SetUserGroups(user string, groups []string) {
@@ -267,68 +272,6 @@ func (fh *firehose) setError(err error) {
 	fh.err = err
 	fh.cancel()
 	log.Printf("[error] firehose error: %s", err)
-}
-
-// TransformationFuncType is the type of a transformation function.
-type TransformationFuncType = func(
-	dataIn map[string]any,
-	timestampsIn map[string]time.Time,
-) (
-	dataOut map[string]any,
-	timestampsOut map[string]time.Time,
-	err error,
-)
-
-// transformProperties transforms the incoming properties using the
-// transformation function specified for the current data source.
-func (fh *firehose) transformProperties(transformationSource string, incoming map[string]any, timestamps map[string]time.Time) (map[string]any, map[string]time.Time, error) {
-	fn, err := buildTransfFunc(transformationSource)
-	if err != nil {
-		return nil, nil, fmt.Errorf("cannot build transformation function: %s", err)
-	}
-	data, updateTimeOut, err := fn(incoming, timestamps)
-	if err != nil {
-		return nil, nil, err
-	}
-	return data, updateTimeOut, nil
-}
-
-// listTransformations lists the transformations for the given data sources,
-// returning a mapping from the data source ID to its corresponding
-// transformation function.
-func (fh *firehose) listTransformations(sources []int) (map[int]string, error) {
-	if len(sources) == 0 {
-		return map[int]string{}, nil
-	}
-	query := &strings.Builder{}
-	query.WriteString("SELECT `id`, `transformation` FROM `data_sources`\n" +
-		"WHERE `transformation` <> '' AND `id` IN (")
-	for i, source := range sources {
-		if i > 0 {
-			query.WriteString(", ")
-		}
-		query.WriteString(strconv.Itoa(source))
-	}
-	query.WriteString(")")
-	rows, err := fh.sources.myDB.Query(query.String())
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	transformations := map[int]string{}
-	for rows.Next() {
-		var id int
-		var transformation string
-		err := rows.Scan(&id, &transformation)
-		if err != nil {
-			return nil, err
-		}
-		transformations[id] = transformation
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return transformations, nil
 }
 
 // statsTimeSlot returns the stats time slot for the time t.
@@ -394,38 +337,39 @@ func keys[K comparable, V any](m map[K]V) []K {
 	return keys
 }
 
-// buildTransfFunc builds a transformation function from its source code and
-// returns it.
-func buildTransfFunc(source string) (TransformationFuncType, error) {
-	if source == "" {
-		return nil, errors.New("transformation function source cannot be empty")
+// listTransformations lists the transformations for the given data sources.
+func (fh *firehose) listTransformations(dataSources []int) ([]Transformation, error) {
+	var transformations []Transformation
+	for _, ds := range dataSources {
+		ts, err := fh.sources.Transformations.List(ds)
+		if err != nil {
+			return nil, err
+		}
+		for _, t := range ts {
+			add := true
+			for _, t2 := range transformations {
+				if t.ID == t2.ID {
+					add = false
+					break
+				}
+			}
+			if add {
+				transformations = append(transformations, t)
+			}
+		}
 	}
-	src := `{% import time "time" %}{% Fn = ` + source + ` %}`
-	opts := &scriggo.BuildOptions{
-		Globals: native.Declarations{
-			"Fn": (*TransformationFuncType)(nil),
-		},
-		Packages: native.Packages{
-			"time": native.Package{
-				Name: "time",
-				Declarations: native.Declarations{
-					"Time": reflect.TypeOf(time.Time{}),
-				},
-			},
-		},
+	return transformations, nil
+}
+
+// mostRecentTimestamp returns the most recent timestamp referred by a property.
+// If the are no timestamps or properties, returns 'time.Time{}'.
+func mostRecentTimestamp(timestamps map[string]time.Time, props []InputProperty) time.Time {
+	var recent time.Time
+	for _, p := range props {
+		t := timestamps[p.Name]
+		if t.After(recent) {
+			recent = t
+		}
 	}
-	fs := scriggo.Files{"transform.txt": []byte(src)}
-	template, err := scriggo.BuildTemplate(fs, "transform.txt", opts)
-	if err != nil {
-		return nil, err
-	}
-	var fn TransformationFuncType
-	vars := map[string]interface{}{
-		"Fn": &fn,
-	}
-	err = template.Run(io.Discard, vars, nil)
-	if err != nil {
-		return nil, err
-	}
-	return fn, nil
+	return recent
 }

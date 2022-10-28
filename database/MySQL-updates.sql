@@ -387,3 +387,20 @@ INSERT INTO `connectors` (`name`,`type`,`logoURL`) VALUES
 ALTER TABLE `data_sources`
     ADD COLUMN `identityColumn` VARCHAR(100) NOT NULL DEFAULT '' AFTER `userCursor`,
     ADD COLUMN `timestampColumn` VARCHAR(100) NOT NULL DEFAULT '' AFTER `identityColumn`;
+
+ALTER TABLE `data_sources` 
+    DROP COLUMN `transformation`;
+
+CREATE TABLE `transformations` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `goldenRecordName` VARCHAR(100) NOT NULL DEFAULT '',
+  `sourceCode` TEXT NOT NULL,
+  PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `transformations_connections` (
+  `dataSource` INT NOT NULL,
+  `property` VARCHAR(50) NOT NULL DEFAULT '',
+  `transformation` INT,
+  PRIMARY KEY (`dataSource`, `property`, `transformation`)
+);
