@@ -91,7 +91,7 @@ func (c *connection) Write(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	f, err := c.sftp.OpenFile(c.settings.Path, os.O_RDONLY|os.O_CREATE|os.O_TRUNC)
+	f, err := c.sftp.OpenFile(c.settings.Path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
 		_ = c.closeConnection()
 		return err
