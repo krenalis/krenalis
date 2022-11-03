@@ -43,7 +43,6 @@ export default class AccountSourceSettings extends React.Component {
             return;
         }
         let form = {};
-        console.log(settings.Components);
         for (let c of settings.Components) { form[c.Name] = c.Value; }
         this.setState({ settings: settings, form: form});
     }
@@ -55,15 +54,20 @@ export default class AccountSourceSettings extends React.Component {
     }
 
     onActionClick = async (event) => {
-        let [res, err] = await call('/admin/connectors/ui-event', {datasource: this.sourceID, event: event, form: this.state.form});
+        let [settings, err] = await call('/admin/connectors/ui-event', {datasource: this.sourceID, event: event, form: this.state.form});
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();
             return;
         }
-        this.setState({ status: { variant: 'success', icon: 'check2-circle', text: res == null ? 'Success' : res } });
-        this.toast.current.toast();
-        return;
+        if (settings == null) {
+            this.setState({ status: { variant: 'success', icon: 'check2-circle', text: 'Success' } });
+            this.toast.current.toast();
+            return;
+        }
+        let form = {};
+        for (let c of settings.Components) { form[c.Name] = c.Value; }
+        this.setState({ settings: settings, form: form});
     }
     
     render() {
