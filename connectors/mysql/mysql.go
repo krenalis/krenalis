@@ -12,8 +12,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"chichi/apis"
+	"chichi/apis/types"
 	"chichi/connector"
 
 	"github.com/go-sql-driver/mysql"
@@ -61,13 +63,19 @@ func (c *connection) Query(query string) ([]connector.Column, connector.Rows, er
 	}
 	columnTypes, err := rows.ColumnTypes()
 	if err != nil {
+		_ = rows.Close()
 		return nil, nil, err
 	}
 	columns := make([]connector.Column, len(columnTypes))
 	for i, c := range columnTypes {
+		typ, err := propertyType(c)
+		if err != nil {
+			_ = rows.Close()
+			return nil, nil, err
+		}
 		columns[i] = connector.Column{
 			Name: c.Name(),
-			Type: c.DatabaseTypeName(),
+			Type: typ,
 		}
 	}
 	return columns, rows, nil
@@ -122,4 +130,73 @@ func (s *settings) dsn() string {
 	c.AllowOldPasswords = true
 	c.ParseTime = true
 	return c.FormatDSN()
+}
+
+// propertyType returns the property type of the column type t.
+func propertyType(t *sql.ColumnType) (types.Type, error) {
+	switch t.DatabaseTypeName() {
+	case "BIT":
+		return types.Boolean(), nil
+	case "TEXT", "BLOB":
+		return types.Text(types.Chars(65535)), nil
+	case "DATE":
+		return types.Date(), nil
+	case "DATETIME":
+		return types.DateTime(), nil
+	case "DECIMAL":
+		precision, scale, ok := t.DecimalSize()
+		if !ok {
+			return types.Type{}, errors.New("cannot get decimal size")
+		}
+		return types.Decimal(int(precision), int(scale)), nil
+	case "DOUBLE":
+		return types.Double(), nil
+	case "ENUM", "SET":
+		return types.Text(), nil
+	case "FLOAT":
+		return types.Real(), nil
+	case "GEOMETRY":
+		return types.Type{}, errors.New("MySQL geometry type is not supported")
+	case "UNSIGNED MEDIUMINT":
+		return types.UnsignedMediumInt(), nil
+	case "MEDIUMINT":
+		return types.MediumInt(), nil
+	case "JSON":
+		return types.JSON(), nil
+	case "UNSIGNED INT":
+		return types.UnsignedInt(), nil
+	case "INT":
+		return types.Int(), nil
+	case "LONGTEXT", "LONGBLOB":
+		return types.Text(types.Chars(4294967295)), nil
+	case "UNSIGNED BIGINT":
+		return types.UnsignedBigInt(), nil
+	case "BIGINT":
+		return types.BigInt(), nil
+	case "MEDIUMTEXT", "MEDIUMBLOB":
+		return types.Text(types.Chars(16777216)), nil
+	case "UNSIGNED SMALLINT":
+		return types.UnsignedSmallInt(), nil
+	case "SMALLINT":
+		return types.SmallInt(), nil
+	case "VARCHAR", "CHAR", "VARBINARY", "BINARY":
+		length, ok := t.Length()
+		if !ok {
+			return types.Type{}, errors.New("cannot get length")
+		}
+		return types.Text(types.Chars(length)), nil
+	case "TIME":
+		return types.Time(), nil
+	case "TIMESTAMP":
+		return types.DateTime(), nil
+	case "UNSIGNED TINYINT":
+		return types.UnsignedTinyInt(), nil
+	case "TINYINT":
+		return types.TinyInt(), nil
+	case "TINYTEXT", "TINYBLOB":
+		return types.Text(types.Chars(255)), nil
+	case "YEAR":
+		return types.Year(), nil
+	}
+	return types.Type{}, fmt.Errorf("unknown MySQL type: %s", t.DatabaseTypeName())
 }

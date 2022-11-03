@@ -9,6 +9,8 @@ package connector
 
 import (
 	"context"
+
+	"chichi/apis/types"
 )
 
 // DatabaseConnectionFunc represents functions that create new database
@@ -35,5 +37,5 @@ type Rows interface {
 // Column represents a column returned by a database query.
 type Column struct {
 	Name string
-	Type string
+	Type types.Type
 }

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"chichi/apis"
+	"chichi/apis/types"
 	"chichi/connector"
 
 	"github.com/open2b/nuts/capture"
@@ -106,11 +107,11 @@ func (c *connection) Properties() ([]connector.Property, []connector.Property, e
 		mergeFields[i] = connector.Property{
 			Name:  mf.Tag,
 			Label: mf.Name,
-			Type:  "string",
+			Type:  types.Text(),
 		}
 		switch mf.Type {
 		case "address":
-			mergeFields[i].Type = "JSON"
+			mergeFields[i].Type = types.JSON()
 		case "radio", "dropdown":
 			for _, choice := range mf.Options.Choices {
 				mergeFields[i].Options = append(mergeFields[i].Options, connector.PropertyOption{
@@ -125,124 +126,124 @@ func (c *connection) Properties() ([]connector.Property, []connector.Property, e
 		{
 			Name:  "ConsentsToOneToOneMessaging",
 			Label: "Consents to OneToOne messaging",
-			Type:  "bool",
+			Type:  types.Boolean(),
 		}, {
 			Name:  "ContactID",
 			Label: "Contact ID",
-			Type:  "string",
+			Type:  types.Text(),
 		}, {
 			Name:  "EmailAddress",
 			Label: "Email address",
-			Type:  "string",
+			Type:  types.Text(),
 		}, {
 			Name:  "EmailClient",
 			Label: "Email client",
-			Type:  "string",
+			Type:  types.Text(),
 		}, {
 			Name:  "EmailType",
 			Label: "Email type",
-			Type:  "string",
+			Type:  types.Text(),
 		}, {
 			Name:  "FullName",
 			Label: "Full name",
-			Type:  "string",
+			Type:  types.Text(),
 		}, {
 			Name:  "ID",
 			Label: "ID",
-			Type:  "string",
+			Type:  types.Text(),
 		}, {
 			Name:  "Interests",
 			Label: "Interests",
-			Type:  "JSON",
+			Type:  types.JSON(),
 		}, {
 			Name:  "IPOpt",
 			Label: "Opt-in IP address",
-			Type:  "string",
+			Type:  types.Text(),
 		}, {
 			Name:  "IPSignup",
 			Label: "Sign up IP address",
-			Type:  "string",
+			Type:  types.Text(),
 		}, {
 			Name:  "Language",
 			Label: "Subscriber's language",
-			Type:  "string",
+			Type:  types.Text(),
 		}, {
 			Name:  "LastChanged",
 			Label: "Time of the last update",
-			Type:  "dateTime",
+			Type:  types.DateTime(),
 		}, {
 			Name:  "LastNote",
 			Label: "Last Note",
-			Type:  "JSON",
+			Type:  types.JSON(),
 			Properties: []connector.Property{
 				{
 					Name:  "note_id",
 					Label: "ID",
-					Type:  "int",
+					Type:  types.Int(),
 				},
 				{
 					Name:  "created_at",
 					Label: "Created at",
-					Type:  "dateTime",
+					Type:  types.DateTime(),
 				},
 				{
 					Name:  "created_by",
 					Label: "Created by",
-					Type:  "string",
+					Type:  types.Text(),
 				},
 				{
 					Name:  "note",
 					Label: "Note content",
-					Type:  "string",
+					Type:  types.Text(),
 				},
 			},
 		}, {
 			Name:  "ListID",
 			Label: "List ID",
-			Type:  "string",
+			Type:  types.Text(),
 		}, {
 			Name:  "Location",
 			Label: "Location",
-			Type:  "JSON",
+			Type:  types.JSON(),
 			Properties: []connector.Property{
 				{
 					Name:  "latitude",
 					Label: "Latitude",
-					Type:  "int",
+					Type:  types.Int(),
 				}, {
 					Name:  "longitude",
 					Label: "Longitude",
-					Type:  "int",
+					Type:  types.Int(),
 				}, {
 					Name:  "gmtoff",
 					Label: "Time difference in hours from GMT",
-					Type:  "int",
+					Type:  types.Int(),
 				}, {
 					Name:  "dstoff",
 					Label: "Daylight saving time offset",
-					Type:  "int",
+					Type:  types.Int(),
 				}, {
 					Name:  "country_code",
 					Label: "Country code",
-					Type:  "string",
+					Type:  types.Text(),
 				}, {
 					Name:  "timezone",
 					Label: "Time zone",
-					Type:  "string",
+					Type:  types.Text(),
 				}, {
 					Name:  "region",
 					Label: "Region",
-					Type:  "string",
+					Type:  types.Text(),
 				},
 			},
 		}, {
 			Name:  "MarketingPermissions",
 			Label: "Marketing permissions",
-			Type:  "JSON",
+			Type:  types.JSON(),
 		}, {
 			Name:  "MemberRating",
 			Label: "Member rating",
-			Type:  "int",
+			Type:  types.Int(),
 		}, {
 			Name:       "MergeFields",
 			Label:      "Merge fields",
@@ -250,64 +251,64 @@ func (c *connection) Properties() ([]connector.Property, []connector.Property, e
 		}, {
 			Name:  "Source",
 			Label: "Source",
-			Type:  "string",
+			Type:  types.Text(),
 		}, {
 			Name:  "Stats",
 			Label: "Stats",
-			Type:  "JSON",
+			Type:  types.JSON(),
 			Properties: []connector.Property{
 				{
 					Name:  "avg_open_rate",
 					Label: "Open rate",
-					Type:  "int",
+					Type:  types.Int(),
 				},
 				{
 					Name:  "avg_click_rate",
 					Label: "Click rate",
-					Type:  "int",
+					Type:  types.Int(),
 				},
 				{
 					Name:  "ecommerce_data",
 					Label: "Ecommerce data",
-					Type:  "JSON",
+					Type:  types.JSON(),
 				},
 			},
 		}, {
 			Name:  "Status",
 			Label: "Status",
-			Type:  "string",
+			Type:  types.Text(),
 		}, {
 			Name:  "Tags",
 			Label: "Tags",
-			Type:  "JSON",
+			Type:  types.JSON(),
 		}, {
 			Name:  "TagsCount",
 			Label: "Tags count",
-			Type:  "int",
+			Type:  types.Int(),
 		}, {
 			Name:  "TimestampOpt",
 			Label: "Opt-in time",
-			Type:  "dateTime",
+			Type:  types.DateTime(),
 		}, {
 			Name:  "TimestampSignup",
 			Label: "Sign up time",
-			Type:  "dateTime",
+			Type:  types.DateTime(),
 		}, {
 			Name:  "UniqueEmailID",
 			Label: "Unique email ID",
-			Type:  "string",
+			Type:  types.Text(),
 		}, {
 			Name:  "UnsubscribeReason",
 			Label: "Unsubscribe reason",
-			Type:  "string",
+			Type:  types.Text(),
 		}, {
 			Name:  "WebID",
 			Label: "Web ID",
-			Type:  "int",
+			Type:  types.Int(),
 		}, {
 			Name:  "Vip",
 			Label: "VIP status",
-			Type:  "bool",
+			Type:  types.Boolean(),
 		},
 	}, nil, nil
 }

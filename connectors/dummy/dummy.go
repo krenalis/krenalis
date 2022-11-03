@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"chichi/apis"
+	"chichi/apis/types"
 	"chichi/connector"
 )
 
@@ -43,9 +44,9 @@ func (c *connection) Groups(cursor string, properties [][]string) error {
 
 func (c *connection) Properties() ([]connector.Property, []connector.Property, error) {
 	userProps := []connector.Property{
-		{Name: "first_name", Type: "string"},
-		{Name: "last_name", Type: "string"},
-		{Name: "email", Type: "string"},
+		{Name: "first_name", Type: types.Text()},
+		{Name: "last_name", Type: types.Text()},
+		{Name: "email", Type: types.Text()},
 	}
 	return userProps, nil, nil
 }

@@ -9,6 +9,8 @@ package connector
 
 import (
 	"time"
+
+	"chichi/apis/types"
 )
 
 // Connection is the interface implemented by connections.
@@ -138,7 +140,7 @@ type Property struct {
 	Name       string           `json:"name,omitempty"`
 	Options    []PropertyOption `json:"options,omitempty"`
 	Label      string           `json:"label,omitempty"`
-	Type       string           `json:"type,omitempty"`
+	Type       types.Type       `json:"type,omitempty"`
 	Properties []Property       `json:"properties,omitempty"`
 }
 

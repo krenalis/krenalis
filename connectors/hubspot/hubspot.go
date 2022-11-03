@@ -30,6 +30,7 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis"
+	"chichi/apis/types"
 	"chichi/connector"
 
 	"github.com/open2b/nuts/capture"
@@ -127,10 +128,14 @@ func (c *connection) Properties() ([]connector.Property, []connector.Property, e
 		case "createdate", "lastmodifieddate", "hs_object_id":
 			continue
 		}
+		typ, err := propertyType(r.Type)
+		if err != nil {
+			return nil, nil, err
+		}
 		property := connector.Property{
 			Name:  r.Name,
 			Label: r.Label,
-			Type:  r.Type,
+			Type:  typ,
 		}
 		var n int
 		for _, option := range r.Options {
@@ -598,4 +603,24 @@ type hubspotError struct {
 
 func (err *hubspotError) Error() string {
 	return fmt.Sprintf("unexpected error from HubSpot: (%d) %s", err.statusCode, err.Message)
+}
+
+// propertyType returns the property type of the HubSpot property type t.
+// (https://developers.hubspot.com/docs/api/crm/properties#property-type-and-fieldtype-values).
+func propertyType(t string) (types.Type, error) {
+	switch t {
+	case "bool":
+		return types.Boolean(), nil
+	case "enumeration":
+		return types.Text(), nil
+	case "date":
+		return types.Date(), nil
+	case "dateTime":
+		return types.DateTime(), nil
+	case "string":
+		return types.Text(types.Chars(65536)), nil
+	case "number":
+		return types.Decimal(types.MaxDecimalPrecision-1, 1), nil
+	}
+	return types.Type{}, fmt.Errorf("unknown HubSpot type: %s", t)
 }

@@ -18,6 +18,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/types"
 	_connector "chichi/connector"
 	"chichi/pkg/open2b/sql"
 )
@@ -620,7 +621,7 @@ func (this *DataSources) Properties(id int) ([]DataSourceProperty, [][]string, e
 // Column represents a column of a database data source.
 type Column struct {
 	Name string
-	Type string
+	Type types.Type
 }
 
 // Query executes the given query on the data source with identifier id and
@@ -1088,7 +1089,7 @@ func (this *DataSources) reloadProperties(id int) error {
 		properties = make([]_connector.Property, len(columns))
 		for i := 0; i < len(properties); i++ {
 			properties[i].Name = columns[i]
-			properties[i].Type = "string"
+			properties[i].Type = types.Text()
 		}
 
 	}
