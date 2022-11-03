@@ -12,23 +12,24 @@ import (
 	"net/http"
 	"time"
 
-	"chichi/connectors"
+	"chichi/apis"
+	"chichi/connector"
 )
 
 // Make sure it implements the AppConnection interface.
-var _ connectors.AppConnection = &connection{}
+var _ connector.AppConnection = &connection{}
 
 func init() {
-	connectors.RegisterAppConnector("Dummy", New)
+	apis.RegisterAppConnector("Dummy", New)
 }
 
 type connection struct {
-	firehose     connectors.Firehose
+	firehose     connector.Firehose
 	clientSecret string
 }
 
 // New returns a new Dummy connection.
-func New(ctx context.Context, conf *connectors.AppConfig) (connectors.AppConnection, error) {
+func New(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
 	c := connection{
 		firehose:     conf.Firehose,
 		clientSecret: conf.ClientSecret,
@@ -40,8 +41,8 @@ func (c *connection) Groups(cursor string, properties [][]string) error {
 	panic("not implemented")
 }
 
-func (c *connection) Properties() ([]connectors.Property, []connectors.Property, error) {
-	userProps := []connectors.Property{
+func (c *connection) Properties() ([]connector.Property, []connector.Property, error) {
+	userProps := []connector.Property{
 		{Name: "first_name", Type: "string"},
 		{Name: "last_name", Type: "string"},
 		{Name: "email", Type: "string"},
@@ -49,7 +50,7 @@ func (c *connection) Properties() ([]connectors.Property, []connectors.Property,
 	return userProps, nil, nil
 }
 
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connectors.Event, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) {
 	panic("not implemented")
 }
 
@@ -58,7 +59,7 @@ func (c *connection) Resource() (string, error) {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI, error) {
+func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
 	return nil, nil
 }
 
@@ -74,21 +75,21 @@ var users = []user{
 		ID: "1",
 		Properties: map[string]any{
 			"first_name": "Mario",
-			"last_name":  connectors.TimestampedValue{Value: "Rossi", Timestamp: now.Add(5 * time.Second)},
-			"email":      connectors.TimestampedValue{Value: "mariorossi@example.com", Timestamp: now.Add(1 * time.Second)},
+			"last_name":  connector.TimestampedValue{Value: "Rossi", Timestamp: now.Add(5 * time.Second)},
+			"email":      connector.TimestampedValue{Value: "mariorossi@example.com", Timestamp: now.Add(1 * time.Second)},
 		},
 	},
 	{
 		ID: "2",
 		Properties: map[string]any{
 			"first_name": "Luigi",
-			"last_name":  connectors.TimestampedValue{Value: "Verdi", Timestamp: now.Add(7 * time.Second)},
-			"email":      connectors.TimestampedValue{Value: "luigiverdi@example.com", Timestamp: now.Add(3 * time.Second)},
+			"last_name":  connector.TimestampedValue{Value: "Verdi", Timestamp: now.Add(7 * time.Second)},
+			"email":      connector.TimestampedValue{Value: "luigiverdi@example.com", Timestamp: now.Add(3 * time.Second)},
 		},
 	},
 }
 
-func (c *connection) SetUsers(users []connectors.User) error {
+func (c *connection) SetUsers(users []connector.User) error {
 	panic("not implemented")
 }
 

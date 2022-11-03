@@ -22,7 +22,8 @@ import (
 	"strings"
 	"time"
 
-	"chichi/connectors"
+	"chichi/apis"
+	"chichi/connector"
 
 	"github.com/open2b/nuts/capture"
 )
@@ -45,7 +46,7 @@ type connection struct {
 	ClientSecret string
 	accessToken  string
 	ctx          context.Context
-	firehose     connectors.Firehose
+	firehose     connector.Firehose
 	settings     settings
 }
 
@@ -55,11 +56,11 @@ type settings struct {
 }
 
 func init() {
-	connectors.RegisterAppConnector("Mailchimp", New)
+	apis.RegisterAppConnector("Mailchimp", New)
 }
 
 // New returns a new Mailchimp connection.
-func New(ctx context.Context, conf *connectors.AppConfig) (connectors.AppConnection, error) {
+func New(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
 	c := connection{
 		ctx:         ctx,
 		firehose:    conf.Firehose,
@@ -80,7 +81,7 @@ func (c *connection) Groups(cursor string, properties [][]string) error {
 }
 
 // Properties returns all user properties.
-func (c *connection) Properties() ([]connectors.Property, []connectors.Property, error) {
+func (c *connection) Properties() ([]connector.Property, []connector.Property, error) {
 	params := url.Values{
 		"fields": []string{"merge_fields.options.choices,merge_fields.name,merge_fields.tag,merge_fields.type"},
 	}
@@ -100,9 +101,9 @@ func (c *connection) Properties() ([]connectors.Property, []connectors.Property,
 	}
 
 	// Merge fields
-	mergeFields := make([]connectors.Property, len(res.MergeFields))
+	mergeFields := make([]connector.Property, len(res.MergeFields))
 	for i, mf := range res.MergeFields {
-		mergeFields[i] = connectors.Property{
+		mergeFields[i] = connector.Property{
 			Name:  mf.Tag,
 			Label: mf.Name,
 			Type:  "string",
@@ -112,7 +113,7 @@ func (c *connection) Properties() ([]connectors.Property, []connectors.Property,
 			mergeFields[i].Type = "JSON"
 		case "radio", "dropdown":
 			for _, choice := range mf.Options.Choices {
-				mergeFields[i].Options = append(mergeFields[i].Options, connectors.PropertyOption{
+				mergeFields[i].Options = append(mergeFields[i].Options, connector.PropertyOption{
 					Label: choice,
 					Value: choice,
 				})
@@ -120,7 +121,7 @@ func (c *connection) Properties() ([]connectors.Property, []connectors.Property,
 		}
 	}
 
-	return []connectors.Property{
+	return []connector.Property{
 		{
 			Name:  "ConsentsToOneToOneMessaging",
 			Label: "Consents to OneToOne messaging",
@@ -173,7 +174,7 @@ func (c *connection) Properties() ([]connectors.Property, []connectors.Property,
 			Name:  "LastNote",
 			Label: "Last Note",
 			Type:  "JSON",
-			Properties: []connectors.Property{
+			Properties: []connector.Property{
 				{
 					Name:  "note_id",
 					Label: "ID",
@@ -203,7 +204,7 @@ func (c *connection) Properties() ([]connectors.Property, []connectors.Property,
 			Name:  "Location",
 			Label: "Location",
 			Type:  "JSON",
-			Properties: []connectors.Property{
+			Properties: []connector.Property{
 				{
 					Name:  "latitude",
 					Label: "Latitude",
@@ -254,7 +255,7 @@ func (c *connection) Properties() ([]connectors.Property, []connectors.Property,
 			Name:  "Stats",
 			Label: "Stats",
 			Type:  "JSON",
-			Properties: []connectors.Property{
+			Properties: []connector.Property{
 				{
 					Name:  "avg_open_rate",
 					Label: "Open rate",
@@ -313,7 +314,7 @@ func (c *connection) Properties() ([]connectors.Property, []connectors.Property,
 
 // ReceiveWebhook receives a webhook request and returns its events.
 // It returns the ErrWebhookUnauthorized error is the request was not authorized.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connectors.Event, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) {
 	err := r.ParseForm()
 	if err != nil {
 		return nil, err
@@ -326,24 +327,24 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connectors.Event, error)
 	user := r.Form.Get("data[id]")
 
 	// TODO(carlo): subscribe and unsubscribe events are important and should be handled as separate event types.
-	var events = make([]connectors.Event, 1)
+	var events = make([]connector.Event, 1)
 	switch r.Form.Get("type") {
 	case "subscribe":
 		// User subscribed.
-		events[0] = connectors.UserCreateEvent{
+		events[0] = connector.UserCreateEvent{
 			Timestamp: timestamp,
 			User:      user,
 		}
 	case "unsubscribe", "profile", "upemail":
 		// User profile updated.
-		events[0] = connectors.UserChangeEvent{
+		events[0] = connector.UserChangeEvent{
 			Timestamp: timestamp,
 			User:      user,
 		}
 	case "cleaned":
 		// User profile deleted.
 		// TODO(carlo): couldn't trigger this webhook, so the effective content is unknown.
-		events[0] = connectors.UserDeleteEvent{
+		events[0] = connector.UserDeleteEvent{
 			Timestamp: timestamp,
 			User:      user,
 		}
@@ -361,7 +362,7 @@ func (c *connection) Resource() (string, error) {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI, error) {
+func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
 
 	if c.settings.List != "" {
 		// TODO: list has been chosen, and cannot be modified
@@ -400,7 +401,7 @@ func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI,
 	// 	}
 	// }
 	// if !foundList {
-	// 	return &connectors.ConfigError{"List": "list does not exist"}
+	// 	return &connector.ConfigError{"List": "list does not exist"}
 	// }
 	//
 	// // Read webhooks for each list and remove the ones that are not for the current one.
@@ -458,7 +459,7 @@ func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI,
 	// 	}
 	// }
 	//
-	// connectors.ApplyConfig(config)
+	// connector.ApplyConfig(config)
 
 	return nil, nil
 }
@@ -477,7 +478,7 @@ type batchResponse struct {
 }
 
 // SetUsers sets the given users.
-func (c *connection) SetUsers(users []connectors.User) error {
+func (c *connection) SetUsers(users []connector.User) error {
 
 	var r struct {
 		Operations []batchOperation `json:"operations"`
@@ -951,9 +952,9 @@ func (m *Member) Properties() map[string]any {
 // // setContext sets ctx as the context for c.
 // func (c *connection) setContext(ctx context.Context) error {
 // 	c.ctx = ctx
-// 	c.accessToken, _ = ctx.Value(connectors.AccessTokenContextKey{}).(string)
-// 	c.firehose, _ = ctx.Value(connectors.FirehoseContextKey{}).(connectors.Firehose)
-// 	if s, ok := ctx.Value(connectors.SettingsContextKey{}).([]byte); ok && len(s) > 0 {
+// 	c.accessToken, _ = ctx.Value(connector.AccessTokenContextKey{}).(string)
+// 	c.firehose, _ = ctx.Value(connector.FirehoseContextKey{}).(connector.Firehose)
+// 	if s, ok := ctx.Value(connector.SettingsContextKey{}).([]byte); ok && len(s) > 0 {
 // 		return json.Unmarshal(s, &c.settings)
 // 	}
 // 	return nil

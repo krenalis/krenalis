@@ -5,12 +5,11 @@
 // Copyright (c) 2002-2022 Open2b
 //
 
-package connectors
+package connector
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 )
 
@@ -29,21 +28,6 @@ type AppConfig struct {
 
 // AppConnectionFunc represents functions that create new app connections.
 type AppConnectionFunc func(context.Context, *AppConfig) (AppConnection, error)
-
-// RegisterAppConnector makes an app connector available by the provided name.
-// If RegisterAppConnector is called twice with the same name or if fn is nil,
-// it panics.
-func RegisterAppConnector(name string, fn AppConnectionFunc) {
-	if fn == nil {
-		panic("connectors: RegisterAppConnector function is nil")
-	}
-	connectorsMu.Lock()
-	defer connectorsMu.Unlock()
-	if _, dup := connectors.apps[name]; dup {
-		panic("connectors: RegisterAppConnector called twice for connector " + name)
-	}
-	connectors.apps[name] = fn
-}
 
 // AppConnection is the interface implemented by app connections.
 type AppConnection interface {
@@ -67,16 +51,4 @@ type AppConnection interface {
 
 	// Users returns the users starting from the given cursor.
 	Users(cursor string, properties [][]string) error
-}
-
-// NewAppConnection returns a new app connection for the app connector with the
-// given name.
-func NewAppConnection(ctx context.Context, name string, conf *AppConfig) (AppConnection, error) {
-	connectorsMu.Lock()
-	defer connectorsMu.Unlock()
-	f, ok := connectors.apps[name]
-	if !ok {
-		return nil, fmt.Errorf("connectors: unknown app connector %q (forgotten import?)", name)
-	}
-	return f(ctx, conf)
 }

@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"time"
 
-	"chichi/connectors"
+	_connector "chichi/connector"
 	"chichi/pkg/open2b/sql"
 )
 
@@ -38,7 +38,7 @@ func (apis *APIs) ServeWebhook(w http.ResponseWriter, r *http.Request) {
 		case errNotFound:
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
-		case connectors.ErrWebhookUnauthorized:
+		case _connector.ErrWebhookUnauthorized:
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -60,7 +60,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	var connector int
 	var source int
 	var webhookPer string
-	var conf connectors.AppConfig
+	var conf _connector.AppConfig
 	switch m[1] {
 	case "c":
 		connector, _ = strconv.Atoi(m[2])
@@ -122,7 +122,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	if conn.WebhooksPer != webhookPer {
 		return errBadRequest
 	}
-	c, err := connectors.NewAppConnection(context.Background(), conn.Name, &conf)
+	c, err := newAppConnection(context.Background(), conn.Name, &conf)
 	if err != nil {
 		return err
 	}

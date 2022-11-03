@@ -5,7 +5,7 @@
 // Copyright (c) 2002-2022 Open2b
 //
 
-package admin
+package main
 
 import (
 	_ "chichi/connectors/csv"

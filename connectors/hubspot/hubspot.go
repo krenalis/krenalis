@@ -29,31 +29,32 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/connectors"
+	"chichi/apis"
+	"chichi/connector"
 
 	"github.com/open2b/nuts/capture"
 )
 
 // Make sure it implements the AppConnection interface.
-var _ connectors.AppConnection = &connection{}
+var _ connector.AppConnection = &connection{}
 
 var Debug = false
 
 func init() {
-	connectors.RegisterAppConnector("HubSpot", New)
+	apis.RegisterAppConnector("HubSpot", New)
 }
 
 type connection struct {
 	ctx          context.Context
 	clientSecret string
-	firehose     connectors.Firehose
+	firehose     connector.Firehose
 	resource     string
 	accessToken  string
 	settings     []byte
 }
 
 // New returns a new Hubspot connection.
-func New(ctx context.Context, conf *connectors.AppConfig) (connectors.AppConnection, error) {
+func New(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
 	c := connection{
 		ctx:          ctx,
 		firehose:     conf.Firehose,
@@ -100,7 +101,7 @@ func (c *connection) Groups(cursor string, properties [][]string) error {
 }
 
 // Properties returns all user and group properties.
-func (c *connection) Properties() ([]connectors.Property, []connectors.Property, error) {
+func (c *connection) Properties() ([]connector.Property, []connector.Property, error) {
 
 	var response struct {
 		Results []struct {
@@ -120,13 +121,13 @@ func (c *connection) Properties() ([]connectors.Property, []connectors.Property,
 		return nil, nil, err
 	}
 
-	properties := make([]connectors.Property, 0)
+	properties := make([]connector.Property, 0)
 	for _, r := range response.Results {
 		switch r.Name {
 		case "createdate", "lastmodifieddate", "hs_object_id":
 			continue
 		}
-		property := connectors.Property{
+		property := connector.Property{
 			Name:  r.Name,
 			Label: r.Label,
 			Type:  r.Type,
@@ -138,12 +139,12 @@ func (c *connection) Properties() ([]connectors.Property, []connectors.Property,
 			}
 		}
 		if n > 0 {
-			property.Options = make([]connectors.PropertyOption, 0, n)
+			property.Options = make([]connector.PropertyOption, 0, n)
 			for _, option := range r.Options {
 				if option.Hidden {
 					continue
 				}
-				property.Options = append(property.Options, connectors.PropertyOption{
+				property.Options = append(property.Options, connector.PropertyOption{
 					Label: option.Label,
 					Value: option.Value,
 				})
@@ -159,14 +160,14 @@ func (c *connection) Properties() ([]connectors.Property, []connectors.Property,
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized.
 // See https://developers.hubspot.com/docs/api/webhooks.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connectors.Event, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) {
 
 	// Check if the webhook is valid.
 	if !isValidWebhook(c.clientSecret, r) {
-		return nil, connectors.ErrWebhookUnauthorized
+		return nil, connector.ErrWebhookUnauthorized
 	}
 
-	var events []connectors.Event
+	var events []connector.Event
 
 	// Read the requests.
 	var requests []struct {
@@ -182,12 +183,12 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connectors.Event, error)
 		return nil, err
 	}
 	for _, req := range requests {
-		var event connectors.Event
+		var event connector.Event
 		timestamp := time.UnixMilli(req.OccurredAt).UTC()
 		resource := strconv.Itoa(req.PortalId)
 		switch req.SubscriptionType {
 		case "company.propertyChange":
-			event = connectors.GroupPropertyChangeEvent{
+			event = connector.GroupPropertyChangeEvent{
 				Timestamp: timestamp,
 				Resource:  resource,
 				Group:     strconv.Itoa(req.ObjectId),
@@ -195,7 +196,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connectors.Event, error)
 				Value:     req.PropertyValue,
 			}
 		case "contact.propertyChange":
-			event = connectors.UserPropertyChangeEvent{
+			event = connector.UserPropertyChangeEvent{
 				Timestamp: timestamp,
 				Resource:  resource,
 				User:      strconv.Itoa(req.ObjectId),
@@ -203,28 +204,28 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connectors.Event, error)
 				Value:     req.PropertyValue,
 			}
 		case "company.creation":
-			event = connectors.GroupCreateEvent{
+			event = connector.GroupCreateEvent{
 				Timestamp: timestamp,
 				Resource:  resource,
 				Group:     strconv.Itoa(req.ObjectId),
 			}
 		case "contact.creation":
-			event = connectors.UserCreateEvent{
+			event = connector.UserCreateEvent{
 				Timestamp: timestamp,
 				Resource:  resource,
 				User:      strconv.Itoa(req.ObjectId),
-				Properties: connectors.Properties{
+				Properties: connector.Properties{
 					req.PropertyName: req.PropertyValue,
 				},
 			}
 		case "company.deletion":
-			event = connectors.GroupDeleteEvent{
+			event = connector.GroupDeleteEvent{
 				Timestamp: timestamp,
 				Resource:  resource,
 				Group:     strconv.Itoa(req.ObjectId),
 			}
 		case "contact.deletion":
-			event = connectors.UserDeleteEvent{
+			event = connector.UserDeleteEvent{
 				Timestamp: timestamp,
 				Resource:  resource,
 				User:      strconv.Itoa(req.ObjectId),
@@ -252,13 +253,13 @@ func (c *connection) Resource() (string, error) {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI, error) {
+func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
 	return nil, nil
 }
 
 // SetUsers sets the users.
 // It requires the "crm.objects.contacts.write" scope.
-func (c *connection) SetUsers(users []connectors.User) error {
+func (c *connection) SetUsers(users []connector.User) error {
 
 	var body bytes.Buffer
 	body.WriteString(`{"inputs":[`)

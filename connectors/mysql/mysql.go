@@ -13,7 +13,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	"chichi/connectors"
+	"chichi/apis"
+	"chichi/connector"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -22,14 +23,14 @@ import (
 // (https://dev.mysql.com/doc/refman/8.0/en/)
 
 // Make sure it implements the DatabaseConnection interface.
-var _ connectors.DatabaseConnection = &connection{}
+var _ connector.DatabaseConnection = &connection{}
 
 func init() {
-	connectors.RegisterDatabaseConnector("MySQL", New)
+	apis.RegisterDatabaseConnector("MySQL", New)
 }
 
 // New returns a new MySQL connection.
-func New(ctx context.Context, settings []byte, fh connectors.Firehose) (connectors.DatabaseConnection, error) {
+func New(ctx context.Context, settings []byte, fh connector.Firehose) (connector.DatabaseConnection, error) {
 	c := connection{ctx: ctx}
 	if len(settings) > 0 {
 		err := json.Unmarshal(settings, &c.settings)
@@ -44,11 +45,11 @@ func New(ctx context.Context, settings []byte, fh connectors.Firehose) (connecto
 type connection struct {
 	ctx      context.Context
 	settings *settings
-	firehose connectors.Firehose
+	firehose connector.Firehose
 }
 
 // Query executes the given query and returns the resulting rows.
-func (c *connection) Query(query string) ([]connectors.Column, connectors.Rows, error) {
+func (c *connection) Query(query string) ([]connector.Column, connector.Rows, error) {
 	db, err := sql.Open("mysql", c.settings.dsn())
 	if err != nil {
 		return nil, nil, err
@@ -62,9 +63,9 @@ func (c *connection) Query(query string) ([]connectors.Column, connectors.Rows, 
 	if err != nil {
 		return nil, nil, err
 	}
-	columns := make([]connectors.Column, len(columnTypes))
+	columns := make([]connector.Column, len(columnTypes))
 	for i, c := range columnTypes {
-		columns[i] = connectors.Column{
+		columns[i] = connector.Column{
 			Name: c.Name(),
 			Type: c.DatabaseTypeName(),
 		}
@@ -73,24 +74,24 @@ func (c *connection) Query(query string) ([]connectors.Column, connectors.Rows, 
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI, error) {
+func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
 
 	settings := settings{}
 	if c.settings != nil {
 		settings = *c.settings
 	}
 
-	Components := []connectors.Component{
-		&connectors.Input{Name: "host", Value: settings.Host, Label: "Host", Placeholder: "DB host", Type: "text"},
-		&connectors.Input{Name: "username", Value: settings.Username, Label: "Username", Placeholder: "DB username", Type: "text"},
-		&connectors.Input{Name: "password", Value: settings.Password, Label: "Password", Placeholder: "DB password", Type: "password"},
-		&connectors.Input{Name: "port", Value: settings.Port, Label: "Port", Placeholder: "DB port", Type: "number", MaxLength: 5},
-		&connectors.Input{Name: "database", Value: settings.Database, Label: "Database name", Placeholder: "DB name", Type: "text"},
+	Components := []connector.Component{
+		&connector.Input{Name: "host", Value: settings.Host, Label: "Host", Placeholder: "DB host", Type: "text"},
+		&connector.Input{Name: "username", Value: settings.Username, Label: "Username", Placeholder: "DB username", Type: "text"},
+		&connector.Input{Name: "password", Value: settings.Password, Label: "Password", Placeholder: "DB password", Type: "password"},
+		&connector.Input{Name: "port", Value: settings.Port, Label: "Port", Placeholder: "DB port", Type: "number", MaxLength: 5},
+		&connector.Input{Name: "database", Value: settings.Database, Label: "Database name", Placeholder: "DB name", Type: "text"},
 	}
 
-	UI := connectors.SettingsUI{
+	UI := connector.SettingsUI{
 		Components: Components,
-		Actions: []connectors.Action{
+		Actions: []connector.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}

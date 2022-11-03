@@ -18,11 +18,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/connectors"
+	"chichi/connector"
 )
 
 // Make sure it implements the Firehose interface.
-var _ connectors.Firehose = &firehose{}
+var _ connector.Firehose = &firehose{}
 
 const maxSettingsLen = 10_000 // Maximum length of settings in runes.
 
@@ -39,7 +39,7 @@ type firehose struct {
 	err           error
 }
 
-func (fh *firehose) ReceiveEvent(event connectors.Event) {
+func (fh *firehose) ReceiveEvent(event connector.Event) {
 	return
 }
 
@@ -96,7 +96,7 @@ func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[str
 	{
 		props := make(map[string]any, len(properties))
 		for name, v := range properties {
-			if tv, ok := v.(connectors.TimestampedValue); ok {
+			if tv, ok := v.(connector.TimestampedValue); ok {
 				props[name] = tv.Value
 				timestamps[name] = tv.Timestamp
 			} else {

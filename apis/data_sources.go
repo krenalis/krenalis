@@ -18,7 +18,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/connectors"
+	_connector "chichi/connector"
 	"chichi/pkg/open2b/sql"
 )
 
@@ -91,7 +91,7 @@ func (this *DataSources) AddApp(connector int, refreshToken, accessToken, access
 	if conn.Type != "App" {
 		return 0, ErrInvalidConnectorType
 	}
-	c, err := connectors.NewAppConnection(context.Background(), conn.Name, &connectors.AppConfig{
+	c, err := newAppConnection(context.Background(), conn.Name, &_connector.AppConfig{
 		ClientSecret: conn.ClientSecret,
 		AccessToken:  accessToken,
 	})
@@ -369,7 +369,7 @@ func (this *DataSources) Import(id int, reimport bool) error {
 
 		go func() {
 			fh := this.newFirehose(context.Background(), id, connector, resource, connectorType, webhooksPer)
-			c, err := connectors.NewAppConnection(fh.ctx, name, &connectors.AppConfig{
+			c, err := newAppConnection(fh.ctx, name, &_connector.AppConfig{
 				Settings:     settings,
 				Firehose:     fh,
 				ClientSecret: clientSecret,
@@ -408,7 +408,7 @@ func (this *DataSources) Import(id int, reimport bool) error {
 			return err
 		}
 		fh := this.newFirehose(context.Background(), id, connector, 0, "Database", "")
-		c, err := connectors.NewDatabaseConnection(fh.ctx, connectorName, settings, fh)
+		c, err := newDatabaseConnection(fh.ctx, connectorName, settings, fh)
 		if err != nil {
 			return err
 		}
@@ -486,7 +486,7 @@ func (this *DataSources) Import(id int, reimport bool) error {
 
 		// Connect to the stream connector.
 		fh := this.newFirehose(context.Background(), id, streamConnector, 0, "Stream", "")
-		stream, err := connectors.NewStreamConnection(fh.ctx, streamConnectorName, streamSettings, fh)
+		stream, err := newStreamConnection(fh.ctx, streamConnectorName, streamSettings, fh)
 		if err != nil {
 			return err
 		}
@@ -498,7 +498,7 @@ func (this *DataSources) Import(id int, reimport bool) error {
 
 		// Connect to the file connector.
 		fh = this.newFirehose(context.Background(), id, streamConnector, 0, "File", "")
-		file, err := connectors.NewFileConnection(fh.ctx, fileConnectorName, fileSettings, fh)
+		file, err := newFileConnection(fh.ctx, fileConnectorName, fileSettings, fh)
 		if err != nil {
 			return err
 		}
@@ -676,7 +676,7 @@ func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]s
 		return nil, nil, err
 	}
 	fh := this.newFirehose(context.Background(), id, connector, 0, connectorType, "")
-	c, err := connectors.NewDatabaseConnection(fh.ctx, connectorName, settings, fh)
+	c, err := newDatabaseConnection(fh.ctx, connectorName, settings, fh)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -739,7 +739,7 @@ func (this *DataSources) ServeUI(id int, event string, form []byte) ([]byte, err
 		return nil, err
 	}
 
-	var connection connectors.Connection
+	var connection _connector.Connection
 
 	switch typ {
 	case "App":
@@ -774,7 +774,7 @@ func (this *DataSources) ServeUI(id int, event string, form []byte) ([]byte, err
 		}
 
 		fh := this.newFirehose(context.Background(), id, connector, resource, connectorType, webhooksPer)
-		connection, err = connectors.NewAppConnection(fh.ctx, connectorName, &connectors.AppConfig{
+		connection, err = newAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
 			Settings:     settings,
 			Firehose:     fh,
 			ClientSecret: clientSecret,
@@ -803,11 +803,11 @@ func (this *DataSources) ServeUI(id int, event string, form []byte) ([]byte, err
 
 		switch typ {
 		case "Database":
-			connection, err = connectors.NewDatabaseConnection(fh.ctx, connectorName, settings, fh)
+			connection, err = newDatabaseConnection(fh.ctx, connectorName, settings, fh)
 		case "File":
-			connection, err = connectors.NewFileConnection(fh.ctx, connectorName, settings, fh)
+			connection, err = newFileConnection(fh.ctx, connectorName, settings, fh)
 		case "Stream":
-			connection, err = connectors.NewStreamConnection(fh.ctx, connectorName, settings, fh)
+			connection, err = newStreamConnection(fh.ctx, connectorName, settings, fh)
 		}
 
 	}
@@ -942,7 +942,7 @@ func (this *DataSources) reloadProperties(id int) error {
 		return err
 	}
 
-	var properties []connectors.Property
+	var properties []_connector.Property
 
 	switch typ {
 	case "App":
@@ -978,7 +978,7 @@ func (this *DataSources) reloadProperties(id int) error {
 			}
 		}
 		fh := this.newFirehose(context.Background(), id, connector, resource, "App", webhooksPer)
-		c, err := connectors.NewAppConnection(fh.ctx, connectorName, &connectors.AppConfig{
+		c, err := newAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
 			Settings:     settings,
 			Firehose:     fh,
 			ClientSecret: clientSecret,
@@ -1015,7 +1015,7 @@ func (this *DataSources) reloadProperties(id int) error {
 			return err
 		}
 		fh := this.newFirehose(context.Background(), id, connector, 0, "Database", "")
-		c, err := connectors.NewDatabaseConnection(fh.ctx, connectorName, settings, fh)
+		c, err := newDatabaseConnection(fh.ctx, connectorName, settings, fh)
 		if err != nil {
 			return err
 		}
@@ -1027,7 +1027,7 @@ func (this *DataSources) reloadProperties(id int) error {
 		if err != nil {
 			return err
 		}
-		properties = make([]connectors.Property, len(columns))
+		properties = make([]_connector.Property, len(columns))
 		for i := 0; i < len(properties); i++ {
 			properties[i].Name = columns[i].Name
 			properties[i].Type = columns[i].Type
@@ -1054,7 +1054,7 @@ func (this *DataSources) reloadProperties(id int) error {
 
 		// Connect to the stream connector.
 		fh := this.newFirehose(context.Background(), id, streamConnector, 0, "Stream", "")
-		stream, err := connectors.NewStreamConnection(fh.ctx, streamConnectorName, streamSettings, fh)
+		stream, err := newStreamConnection(fh.ctx, streamConnectorName, streamSettings, fh)
 		if err != nil {
 			return err
 		}
@@ -1066,7 +1066,7 @@ func (this *DataSources) reloadProperties(id int) error {
 
 		// Connect to the file connector and read only the first record.
 		fh = this.newFirehose(fh.ctx, id, streamConnector, 0, "File", "")
-		file, err := connectors.NewFileConnection(fh.ctx, fileConnectorName, fileSettings, fh)
+		file, err := newFileConnection(fh.ctx, fileConnectorName, fileSettings, fh)
 		if err != nil {
 			return err
 		}
@@ -1085,7 +1085,7 @@ func (this *DataSources) reloadProperties(id int) error {
 			return err
 		}
 
-		properties = make([]connectors.Property, len(columns))
+		properties = make([]_connector.Property, len(columns))
 		for i := 0; i < len(properties); i++ {
 			properties[i].Name = columns[i]
 			properties[i].Type = "string"

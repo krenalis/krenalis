@@ -5,26 +5,10 @@
 // Copyright (c) 2002-2022 Open2b
 //
 
-package connectors
+package connector
 
 import (
-	"sync"
 	"time"
-)
-
-var (
-	connectorsMu sync.RWMutex
-	connectors   = struct {
-		apps      map[string]AppConnectionFunc
-		databases map[string]DatabaseConnectionFunc
-		streams   map[string]StreamConnectionFunc
-		files     map[string]FileConnectionFunc
-	}{
-		apps:      make(map[string]AppConnectionFunc),
-		databases: make(map[string]DatabaseConnectionFunc),
-		streams:   make(map[string]StreamConnectionFunc),
-		files:     make(map[string]FileConnectionFunc),
-	}
 )
 
 // Connection is the interface implemented by connections.

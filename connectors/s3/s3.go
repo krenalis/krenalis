@@ -17,7 +17,8 @@ import (
 	"io"
 	"time"
 
-	"chichi/connectors"
+	"chichi/apis"
+	"chichi/connector"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -26,10 +27,10 @@ import (
 )
 
 // Make sure it implements the StreamConnection interface.
-var _ connectors.StreamConnection = &connection{}
+var _ connector.StreamConnection = &connection{}
 
 func init() {
-	connectors.RegisterStreamConnector("S3", New)
+	apis.RegisterStreamConnector("S3", New)
 }
 
 type connection struct {
@@ -47,7 +48,7 @@ type settings struct {
 }
 
 // New returns a new S3 connection.
-func New(ctx context.Context, settings []byte, fh connectors.Firehose) (connectors.StreamConnection, error) {
+func New(ctx context.Context, settings []byte, fh connector.Firehose) (connector.StreamConnection, error) {
 	c := connection{ctx: ctx}
 	if len(settings) > 0 {
 		err := json.Unmarshal(settings, &c.settings)
@@ -80,7 +81,7 @@ func (c *connection) Reader() (io.ReadCloser, time.Time, error) {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI, error) {
+func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
 	return nil, nil
 }
 

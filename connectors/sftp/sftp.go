@@ -19,17 +19,18 @@ import (
 	"strconv"
 	"time"
 
-	"chichi/connectors"
+	"chichi/apis"
+	"chichi/connector"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
 // Make sure it implements the StreamConnection interface.
-var _ connectors.StreamConnection = &connection{}
+var _ connector.StreamConnection = &connection{}
 
 func init() {
-	connectors.RegisterStreamConnector("SFTP", New)
+	apis.RegisterStreamConnector("SFTP", New)
 }
 
 type connection struct {
@@ -48,7 +49,7 @@ type settings struct {
 }
 
 // New returns a new SFTP connection.
-func New(ctx context.Context, settings []byte, fh connectors.Firehose) (connectors.StreamConnection, error) {
+func New(ctx context.Context, settings []byte, fh connector.Firehose) (connector.StreamConnection, error) {
 	c := connection{ctx: ctx}
 	if len(settings) > 0 {
 		err := json.Unmarshal(settings, &c.settings)
@@ -81,7 +82,7 @@ func (c *connection) Reader() (io.ReadCloser, time.Time, error) {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI, error) {
+func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
 	return nil, nil
 }
 

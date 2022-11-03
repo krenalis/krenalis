@@ -17,16 +17,17 @@ import (
 	"io"
 	"strconv"
 
-	"chichi/connectors"
+	"chichi/apis"
+	"chichi/connector"
 
 	"github.com/xuri/excelize/v2"
 )
 
 // Make sure it implements the FileConnector interface.
-var _ connectors.FileConnection = &connection{}
+var _ connector.FileConnection = &connection{}
 
 func init() {
-	connectors.RegisterFileConnector("Excel", New)
+	apis.RegisterFileConnector("Excel", New)
 }
 
 type connection struct {
@@ -39,7 +40,7 @@ type settings struct {
 }
 
 // New returns a new Excel connection.
-func New(ctx context.Context, settings []byte, fh connectors.Firehose) (connectors.FileConnection, error) {
+func New(ctx context.Context, settings []byte, fh connector.Firehose) (connector.FileConnection, error) {
 	c := connection{ctx: ctx}
 	if len(settings) > 0 {
 		err := json.Unmarshal(settings, &c.settings)
@@ -119,6 +120,6 @@ func (c *connection) Write(w io.Writer, get func() ([]string, error)) error {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI, error) {
+func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
 	return nil, nil
 }
