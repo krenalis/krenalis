@@ -15,7 +15,7 @@ export default class AccountSourceSettings extends React.Component {
         this.sourceID = Number(String(window.location).split('/').at(-2));
         this.state = {
             source: {},
-            settings: {Components:[], Actions:[]},
+            settings: {Components:null, Actions:null},
             form:{},
             notFound: false,
         };
@@ -43,7 +43,9 @@ export default class AccountSourceSettings extends React.Component {
             return;
         }
         let form = {};
-        for (let c of settings.Components) { form[c.Name] = c.Value; }
+        if (settings.Components != null) {
+            for (let c of settings.Components) { form[c.Name] = c.Value; }
+        }
         this.setState({ settings: settings, form: form});
     }
 
@@ -66,7 +68,9 @@ export default class AccountSourceSettings extends React.Component {
             return;
         }
         let form = {};
-        for (let c of settings.Components) { form[c.Name] = c.Value; }
+        if (settings.Components != null) {
+            for (let c of settings.Components) { form[c.Name] = c.Value; }
+        }
         this.setState({ settings: settings, form: form});
     }
     
@@ -85,10 +89,10 @@ export default class AccountSourceSettings extends React.Component {
                         </div>
                         <div className="settings">
                             <div className="components">
-                                {this.state.settings.Components.map((c, i) => renderConnectorComponent(c, this.onComponentChange))}
+                                {this.state.settings.Components != null && this.state.settings.Components.map((c, i) => renderConnectorComponent(c, this.onComponentChange))}
                             </div>
                             <div className="actions">
-                                {this.state.settings.Actions.map((a, i) => <SlButton variant={a.Variant} onClick={ async () => { await this.onActionClick(a.Event) }}>{a.Text}</SlButton>)}
+                                {this.state.settings.Actions != null && this.state.settings.Actions.map((a, i) => <SlButton variant={a.Variant} onClick={ async () => { await this.onActionClick(a.Event) }}>{a.Text}</SlButton>)}
                             </div>
                         </div>
                     </div>
