@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"unicode/utf8"
 
 	"chichi/apis"
 	"chichi/connector"
@@ -31,11 +32,12 @@ func init() {
 type connection struct {
 	ctx      context.Context
 	settings *settings
+	firehose connector.Firehose
 }
 
 type settings struct {
-	Comma            rune
-	Comment          rune
+	Comma            string
+	Comment          string
 	FieldsPerRecord  int
 	LazyQuotes       bool
 	TrimLeadingSpace bool
@@ -51,14 +53,17 @@ func New(ctx context.Context, settings []byte, fh connector.Firehose) (connector
 			return nil, errors.New("cannot unmarshal settings of CSV connection")
 		}
 	}
+	c.firehose = fh
 	return &c, nil
 }
 
 // Read reads the records from r and calls put for each record read.
 func (c *connection) Read(r io.Reader, put func(record []string) error) error {
 	v := csv.NewReader(r)
-	v.Comma = c.settings.Comma
-	v.Comment = c.settings.Comment
+	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
+	if c.settings.Comment != "" {
+		v.Comment, _ = utf8.DecodeRuneInString(c.settings.Comment)
+	}
 	v.FieldsPerRecord = c.settings.FieldsPerRecord
 	v.LazyQuotes = c.settings.LazyQuotes
 	v.TrimLeadingSpace = c.settings.TrimLeadingSpace
@@ -81,7 +86,7 @@ func (c *connection) Read(r io.Reader, put func(record []string) error) error {
 // Write writes the records read from get into w.
 func (c *connection) Write(w io.Writer, get func() ([]string, error)) error {
 	v := csv.NewWriter(w)
-	v.Comma = c.settings.Comma
+	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
 	v.UseCRLF = c.settings.UseCRLF
 	for {
 		record, err := get()
@@ -105,5 +110,61 @@ func (c *connection) Write(w io.Writer, get func() ([]string, error)) error {
 
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
-	return nil, nil
+
+	var s settings
+
+	if event == "save" {
+		// Save the settings.
+		err := json.Unmarshal(form, &s)
+		if err != nil {
+			return nil, err
+		}
+		// Validate Comma.
+		if utf8.RuneCountInString(s.Comma) != 1 {
+			return nil, connector.UIErrorf("comma must be a single character")
+		}
+		if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
+			return nil, connector.UIErrorf("comma cannot be \\r, \\n, or the Unicode replacement character")
+		}
+		// Validate Comment.
+		if c := s.Comment; c != "" {
+			if utf8.RuneCountInString(s.Comment) != 1 {
+				return nil, connector.UIErrorf("comment, if provided, must be a single character")
+			}
+			if c == "\n" || c == "\r" || c == "\uFFFD" {
+				return nil, connector.UIErrorf("comment cannot be \\r, \\n, or the Unicode replacement character")
+			} else if c == s.Comma {
+				return nil, connector.UIErrorf("comment cannot be equal to the comma")
+			}
+		}
+		// Validate FieldsPerRecord.
+		if f := s.FieldsPerRecord; f < 0 || f > 1000 {
+			return nil, connector.UIErrorf("fields per record, if provided, must be in range [0,1000]")
+		}
+		b, err := json.Marshal(&s)
+		if err != nil {
+			return nil, err
+		}
+		return nil, c.firehose.SetSettings(b)
+	}
+
+	if c.settings != nil {
+		s = *c.settings
+	}
+
+	ui := &connector.SettingsUI{
+		Components: []connector.Component{
+			&connector.Input{Name: "comma", Value: s.Comma, Label: "Comma", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
+			&connector.Input{Name: "comment", Value: s.Comment, Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1},
+			&connector.Input{Name: "fieldsPerRecord", Value: s.FieldsPerRecord, Label: "Fields per record", Placeholder: "", Type: "number"},
+			&connector.Checkbox{Name: "trimLeadingSpace", Value: s.TrimLeadingSpace, Label: "Trim leading space"},
+			&connector.Checkbox{Name: "useCRLF", Value: s.UseCRLF, Label: "Use CRLF"},
+		},
+		Actions: []connector.Action{
+			{Event: "save", Text: "Save", Variant: "primary"},
+		},
+	}
+
+	return ui, nil
+
 }
