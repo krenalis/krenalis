@@ -130,6 +130,16 @@ func (kv *KeyValue) component() {}
 
 func (kv *KeyValue) MarshalJSON() ([]byte, error) { return marshalComponent(kv, "KeyValue") }
 
+type Text struct {
+	Name  string
+	Value string
+	Label string
+}
+
+func (txt *Text) component() {}
+
+func (txt *Text) MarshalJSON() ([]byte, error) { return marshalComponent(txt, "Text") }
+
 type Action struct {
 	Event   string
 	Text    string

@@ -1,0 +1,8 @@
+.ConnectorText .label {
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.ConnectorText .value {
+    opacity: .7;
+}

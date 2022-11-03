@@ -7,6 +7,7 @@ import ConnectorColorPicker from "./ConnectorColorPicker/ConnectorColorPicker";
 import ConnectorRadios from "./ConnectorRadios/ConnectorRadios";
 import ConnectorRange from "./ConnectorRange/ConnectorRange";
 import ConnectorSwitch from "./ConnectorSwitch/ConnectorSwitch";
+import ConnectorText from "./ConnectorText/ConnectorText";
 
 export let renderConnectorComponent = (c, onChange, value) => {
     let component;
@@ -101,6 +102,12 @@ export let renderConnectorComponent = (c, onChange, value) => {
                 valueComponent={c.ValueComponent} 
                 valueLabel={c.ValueLabel}
                 onChange={onChange}
+            />
+            break;
+        case 'Text':
+            component = <ConnectorText
+                value={c.Value}
+                label={c.Label}
             />
             break;
         default:
