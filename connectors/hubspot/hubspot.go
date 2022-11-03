@@ -611,16 +611,16 @@ func propertyType(t string) (types.Type, error) {
 	switch t {
 	case "bool":
 		return types.Boolean(), nil
-	case "enumeration":
-		return types.Text(), nil
 	case "date":
 		return types.Date(), nil
 	case "datetime":
 		return types.DateTime(), nil
-	case "string":
-		return types.Text(types.Chars(65536)), nil
+	case "enumeration":
+		return types.Text(), nil
 	case "number":
 		return types.Decimal(types.MaxDecimalPrecision-1, 1), nil
+	case "string", "phone_number":
+		return types.Text(types.Chars(65536)), nil
 	}
 	return types.Type{}, fmt.Errorf("unknown HubSpot type: %s", t)
 }
