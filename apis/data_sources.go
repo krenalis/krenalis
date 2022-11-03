@@ -805,7 +805,7 @@ func (this *DataSources) ServeUI(id int, event string, form []byte) ([]byte, err
 		switch typ {
 		case "Database":
 			connection, err = newDatabaseConnection(fh.ctx, connectorName, settings, fh)
-		case "File":
+		case "FileStream":
 			connection, err = newFileConnection(fh.ctx, connectorName, settings, fh)
 		case "Stream":
 			connection, err = newStreamConnection(fh.ctx, connectorName, settings, fh)
