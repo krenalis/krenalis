@@ -1,5 +1,5 @@
 import React from 'react';
-import './AccountSource.css';
+import './AccountSourceProperties.css';
 import NotFound from '../../NotFound/NotFound';
 import Toast from '../../../components/Toast/Toast';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
@@ -13,7 +13,7 @@ export default class AccountSource extends React.Component {
     constructor(props) {
         super(props);
         this.toast = React.createRef();
-        this.sourceID = Number(String(window.location).split('/').pop());
+        this.sourceID = Number(String(window.location).split('/').at(-2));
         this.state = {
             'source': {},
             'sourceProperties': [],
@@ -80,7 +80,7 @@ export default class AccountSource extends React.Component {
             return <NotFound />
         } else {
             return (
-                <div className='AccountSource'>
+                <div className='AccountSourceProperties'>
                     <Breadcrumbs breadcrumbs={[{ Name: 'Your data sources', Link: '/admin/account/sources' }, { Name: `${this.state.source.Name}'s configuration` }]} />
                     <div className='content'>
                         <Toast reactRef={this.toast} status={this.state.status} />

@@ -37,12 +37,14 @@ func New(ctx context.Context, settings []byte, fh connectors.Firehose) (connecto
 			return nil, errors.New("cannot unmarshal settings of MySQL connection")
 		}
 	}
+	c.firehose = fh
 	return &c, nil
 }
 
 type connection struct {
 	ctx      context.Context
 	settings *settings
+	firehose connectors.Firehose
 }
 
 // Query executes the given query and returns the resulting rows.
@@ -72,7 +74,35 @@ func (c *connection) Query(query string) ([]connectors.Column, connectors.Rows, 
 
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, form []byte) (*connectors.SettingsUI, error) {
-	return nil, nil
+
+	settings := settings{}
+	if c.settings != nil {
+		settings = *c.settings
+	}
+
+	Components := []connectors.Component{
+		&connectors.Input{Name: "host", Value: settings.Host, Label: "Host", Placeholder: "DB host", Type: "text"},
+		&connectors.Input{Name: "username", Value: settings.Username, Label: "Username", Placeholder: "DB username", Type: "text"},
+		&connectors.Input{Name: "password", Value: settings.Password, Label: "Password", Placeholder: "DB password", Type: "password"},
+		&connectors.Input{Name: "port", Value: settings.Port, Label: "Port", Placeholder: "DB port", Type: "number", MaxLength: 5},
+		&connectors.Input{Name: "database", Value: settings.Database, Label: "Database name", Placeholder: "DB name", Type: "text"},
+	}
+
+	UI := connectors.SettingsUI{
+		Components: Components,
+		Actions: []connectors.Action{
+			{Event: "save", Text: "Save", Variant: "primary"},
+		},
+	}
+	switch event {
+	case "load":
+		return &UI, nil
+	case "save":
+		err := c.firehose.SetSettings(form)
+		return nil, err
+	default:
+		return nil, nil
+	}
 }
 
 type settings struct {

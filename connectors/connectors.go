@@ -27,8 +27,6 @@ var (
 	}
 )
 
-type SettingsUI struct{} // TODO
-
 // Connection is the interface implemented by connections.
 type Connection interface {
 

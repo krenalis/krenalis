@@ -22,6 +22,7 @@
 
 .AccountSourceSQL .content .title .littleLogo {
     max-width: 35px;
+    margin-left: -35px;
 }
 
 .AccountSourceSQL .content .editorWrapper {

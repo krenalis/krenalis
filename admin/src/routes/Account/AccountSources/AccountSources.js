@@ -53,7 +53,6 @@ export default class AccountSources extends React.Component {
 	}
 
 	handleDelete = async (id) => {
-		this.setState({status: null});
 		let [, err] = await call('/admin/data-sources/delete', [id]);
 		if (err !== null) {
 			this.setState({status: {variant:'danger', icon:'exclamation-octagon', text:err}});
@@ -65,6 +64,16 @@ export default class AccountSources extends React.Component {
 			return d.ID !== id;
 		});
 		this.setState({sources: sources});
+	}
+
+	handleSettings = async (id) => {
+		let [settingsUI, err] = await call('/admin/connectors/settings-ui', id);
+		if (err !== null) {
+			this.setState({status: {variant:'danger', icon:'exclamation-octagon', text:err}});
+			this.toast.current.toast();
+			return;
+		}
+		console.log(settingsUI);
 	}
 
 	render() {
@@ -95,9 +104,9 @@ export default class AccountSources extends React.Component {
 											Import
 										</SlButton>
 										<SlButton className='configureButton' variant='neutral'>
-											<SlIcon slot='suffix' name='sliders2' />
-											Configure
-											<NavLink to={`${s.ID}`}></NavLink>
+											<SlIcon slot='suffix' name='shuffle' />
+											Properties
+											<NavLink to={`${s.ID}/properties`}></NavLink>
 										</SlButton>
 										<SlButton className='removeButton' variant='danger' onClick={() => {this.handleDelete(s.ID)}}>
 											<SlIcon slot='suffix' name='trash3' />
@@ -105,12 +114,17 @@ export default class AccountSources extends React.Component {
 										</SlButton>
 										{
 											s.Type === 'Database' && 
-											<SlButton className='editSQLButton' variant='primary'>
+											<SlButton className='editSQLButton' variant='neutral'>
 												<SlIcon slot='suffix' name='filetype-sql' />
 												Edit SQL
 												<NavLink to={`${s.ID}/sql`}></NavLink>
 											</SlButton>
 										}
+										<SlButton className='settingsButton' variant='neutral'>
+											<SlIcon slot='suffix' name='gear' />
+											Settings
+											<NavLink to={`${s.ID}/settings`}></NavLink>
+										</SlButton>
 									</div>
 								</Card>
 							) 

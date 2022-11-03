@@ -130,6 +130,11 @@ sl-select::part(control) {
 	min-width: 150px;
 }
 
+::part(form-control-label) {
+    font-weight: 600;
+    padding-bottom: 5px;
+}
+
 /* || Panels */
 
 sl-dialog::part(panel) {

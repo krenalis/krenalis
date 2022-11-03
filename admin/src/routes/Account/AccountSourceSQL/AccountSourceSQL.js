@@ -51,14 +51,12 @@ export default class AccountSourceSQL extends React.Component {
             this.toast.current.toast();
             return;
         }
-
         let [table, err] = await call('/admin/data-sources/preview-query', {DataSource: this.state.source.ID, Query: this.state.query, Limit: this.state.limit});
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();
             return;
         }
-
         if (table.Columns.length === 0) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: 'Your query did not return any columns'} });
             this.toast.current.toast();
@@ -69,7 +67,6 @@ export default class AccountSourceSQL extends React.Component {
             this.toast.current.toast();
             return;
         }
-
         this.setState({table: table});
     }
 
@@ -84,14 +81,12 @@ export default class AccountSourceSQL extends React.Component {
             this.toast.current.toast();
             return;
         }
-
         let [, err] = await call('/admin/data-sources/set-users-query', {DataSource: this.state.source.ID, Query: this.state.query});
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();
             return;
         }
-
         this.setState({ status: { variant: 'success', icon: 'check2-circle', text: 'Your query has been saved succesfully' } });
         this.toast.current.toast();
     }

@@ -1,6 +1,7 @@
 .AccountSources .content {
     max-width: 1200px;
     margin: -100px auto 0 auto;
+    padding-bottom: 50px;
 }
 
 .AccountSources h1 {
@@ -42,8 +43,9 @@
     grid-template-columns: 1fr 1fr;
     grid-template-areas: 
         "import import"
-        "configure remove"
-        "editSQL editSQL";
+        "configure settings"
+        "editSQL editSQL"
+        "remove remove";
     row-gap: 15px;
     gap: 10px;
 }
@@ -62,6 +64,10 @@
 
 .AccountSources .Card .buttons .editSQLButton {
     grid-area: editSQL;
+}
+
+.AccountSources .Card .buttons .settingsButton {
+    grid-area: settings;
 }
 
 .AccountSources .addSourceBox {

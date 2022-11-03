@@ -13,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -721,64 +720,107 @@ func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]s
 	return columns, rows, nil
 }
 
-// ServeUserInterface serves the user interface for the data source with the
+// ServeUI serves the user interface for the data source with the
 // given identifier.
 // Returns the ErrDataSourceNotFound error if the data source does not exist.
-func (this *DataSources) ServeUserInterface(id int, w http.ResponseWriter, r *http.Request) error {
+func (this *DataSources) ServeUI(id int, event string, form []byte) ([]byte, error) {
 
 	if id <= 0 {
-		return errors.New("invalid data source identifier")
+		return nil, errors.New("invalid data source identifier")
 	}
 
-	// TODO(marco) The following code is duplicated in the Import method (apart from the 'usedProperties' column).
-	var connectorName, connectorType, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
-	var connector, resource int
-	var settings []byte
-	var expiration time.Time
-	err := this.myDB.QueryRow(
-		"SELECT `c`.`name`, `c`.`type`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
-			" `r`.`refreshToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
-			" `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
-			"FROM `data_sources` AS `s`\n"+
-			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-			"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
-			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
-		&connectorName, &connectorType, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken,
-		&expiration, &connector, &resource, &cursor, &settings)
+	var typ string
+	err := this.myDB.QueryRow("SELECT `type` FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
+		id, this.workspace).Scan(&typ)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return ErrDataSourceNotFound
+			return nil, ErrDataSourceNotFound
 		}
-		return err
+		return nil, err
 	}
 
-	accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
+	var connection connectors.Connection
 
-	if accessToken == "" || accessTokenExpired {
-		accessToken, err = this.api.apis.refreshOAuthToken(resource)
+	switch typ {
+	case "App":
+
+		var connectorName, connectorType, clientSecret, webhooksPer, resourceCode, accessToken string
+		var connector, resource int
+		var settings []byte
+		var expiration time.Time
+		err = this.myDB.QueryRow(
+			"SELECT `c`.`name`, `c`.`type`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
+				" `r`.`accessTokenExpirationTime`, `s`.`connector`, `s`.`resource`, `s`.`settings`\n"+
+				"FROM `data_sources` AS `s`\n"+
+				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
+				"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
+			&connectorName, &connectorType, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &expiration,
+			&connector, &resource, &settings)
 		if err != nil {
-			return err
+			if err == sql.ErrNoRows {
+				return nil, ErrDataSourceNotFound
+			}
+			return nil, err
 		}
-	}
 
-	fh := this.newFirehose(r.Context(), id, connector, resource, connectorType, webhooksPer)
-	c, err := connectors.NewAppConnection(fh.ctx, connectorName, &connectors.AppConfig{
-		Settings:     settings,
-		Firehose:     fh,
-		ClientSecret: clientSecret,
-		Resource:     resourceCode,
-		AccessToken:  accessToken,
-	})
+		accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
+
+		if accessToken == "" || accessTokenExpired {
+			accessToken, err = this.api.apis.refreshOAuthToken(resource)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		fh := this.newFirehose(context.Background(), id, connector, resource, connectorType, webhooksPer)
+		connection, err = connectors.NewAppConnection(fh.ctx, connectorName, &connectors.AppConfig{
+			Settings:     settings,
+			Firehose:     fh,
+			ClientSecret: clientSecret,
+			Resource:     resourceCode,
+			AccessToken:  accessToken,
+		})
+
+	default:
+
+		var connectorName string
+		var connector int
+		var settings []byte
+		err = this.myDB.QueryRow(
+			"SELECT `c`.`name`, `s`.`connector`, `s`.`settings`\n"+
+				"FROM `data_sources` AS `s`\n"+
+				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &settings)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, ErrDataSourceNotFound
+			}
+			return nil, err
+		}
+
+		fh := this.newFirehose(context.Background(), id, connector, 0, typ, "")
+
+		switch typ {
+		case "Database":
+			connection, err = connectors.NewDatabaseConnection(fh.ctx, connectorName, settings, fh)
+		case "File":
+			connection, err = connectors.NewFileConnection(fh.ctx, connectorName, settings, fh)
+		case "Stream":
+			connection, err = connectors.NewStreamConnection(fh.ctx, connectorName, settings, fh)
+		}
+
+	}
 	if err != nil {
-		return err
+		return nil, err
 	}
-	r.Header.Del("Cookie") // remove the cookies from the request.
 
-	_ = c
+	ui, err := connection.ServeUI(event, form)
+	if err != nil {
+		return nil, err
+	}
 
-	// TODO: call the API.
-
-	return nil
+	return json.Marshal(ui)
 }
 
 // SetUsersQuery sets the users query of the data source with identifier id.

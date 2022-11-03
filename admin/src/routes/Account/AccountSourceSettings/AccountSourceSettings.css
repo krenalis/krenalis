@@ -1,0 +1,45 @@
+.AccountSourceSettings .content {
+    max-width: 800px;
+    margin: -200px auto auto;
+    padding-bottom: 30px;
+}
+
+.AccountSourceSettings .content > .title {
+    font-size: 23px;
+    font-weight: 600;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    align-items: center;
+    color: var(--text-onaccent);
+    margin-bottom: 20px;
+}
+
+.AccountSourceSettings .content .title .littleLogo {
+    max-width: 35px;
+    margin-left: -35px;
+}
+
+.AccountSourceSettings .settings {
+    box-shadow: var(--sl-shadow-small);
+    border-radius: var(--radius);
+    padding: 70px;
+    background-color: var(--bg-primary);
+}
+
+.AccountSourceSettings .settings .components > * {
+    margin-bottom: 30px;
+}
+
+.AccountSourceSettings .settings .actions {
+    margin-top: 70px;
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+}
+
+.AccountSourceSettings .settings .actions sl-button {
+    min-width: 150px;
+}
+

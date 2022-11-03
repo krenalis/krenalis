@@ -352,6 +352,54 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{"ID": cn.ID, "Name": cn.Name, "LogoURL": cn.LogoURL, "OauthUrl": cn.OauthURL})
 			return
+		case "/ui":
+			var datasource int
+			err := json.NewDecoder(r.Body).Decode(&datasource)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			defer r.Body.Close()
+			UI, err := ws.DataSources.ServeUI(datasource, "load", nil)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			w.Header().Add("Content-Type", "application/json")
+			_, err = w.Write(UI)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			return
+		case "/ui-event":
+			var req struct {
+				Datasource int
+				Event      string
+				Form       json.RawMessage
+			}
+			err := json.NewDecoder(r.Body).Decode(&req)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			defer r.Body.Close()
+			UI, err := ws.DataSources.ServeUI(req.Datasource, req.Event, req.Form)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			w.Header().Add("Content-Type", "application/json")
+			_, err = w.Write(UI)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			return
 		}
 	}
 
