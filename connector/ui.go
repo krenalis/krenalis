@@ -158,5 +158,5 @@ func (err UIError) Error() string {
 // UIErrorf formats according to a format specifier and returns a UIError
 // value.
 func UIErrorf(format string, a ...any) UIError {
-	return UIError{err: fmt.Errorf(format, a)}
+	return UIError{err: fmt.Errorf(format, a...)}
 }
