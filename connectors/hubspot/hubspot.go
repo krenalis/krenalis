@@ -615,7 +615,7 @@ func propertyType(t string) (types.Type, error) {
 		return types.Text(), nil
 	case "date":
 		return types.Date(), nil
-	case "dateTime":
+	case "datetime":
 		return types.DateTime(), nil
 	case "string":
 		return types.Text(types.Chars(65536)), nil
