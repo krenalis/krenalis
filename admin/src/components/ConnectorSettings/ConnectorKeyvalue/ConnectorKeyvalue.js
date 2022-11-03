@@ -1,5 +1,5 @@
 import React from 'react';
-import './ConnectorKeyValue.css';
+import './ConnectorKeyvalue.css';
 import { renderConnectorComponent } from '../renderConnectorComponent';
 import { SlIcon } from '@shoelace-style/shoelace/dist/react';
 
