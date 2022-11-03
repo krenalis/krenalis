@@ -84,34 +84,48 @@ func (c *connection) Query(query string) ([]connector.Column, connector.Rows, er
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
 
-	settings := settings{}
-	if c.settings != nil {
-		settings = *c.settings
+	var settings settings
+
+	switch event {
+	case "load":
+		// Load the UI.
+		if c.settings != nil {
+			settings = *c.settings
+		}
+	case "test", "save":
+		// Test the connection and save the settings if required.
+		err := json.Unmarshal(form, &settings)
+		if err != nil {
+			return nil, err
+		}
+		err = testConnection(c.ctx, &settings)
+		if err != nil {
+			return nil, connector.UIErrorf("connection failed: %s", err)
+		}
+		if event == "save" {
+			err = c.firehose.SetSettings(form)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return nil, nil
 	}
 
-	Components := []connector.Component{
-		&connector.Input{Name: "host", Value: settings.Host, Label: "Host", Placeholder: "DB host", Type: "text"},
-		&connector.Input{Name: "username", Value: settings.Username, Label: "Username", Placeholder: "DB username", Type: "text"},
-		&connector.Input{Name: "password", Value: settings.Password, Label: "Password", Placeholder: "DB password", Type: "password"},
-		&connector.Input{Name: "port", Value: settings.Port, Label: "Port", Placeholder: "DB port", Type: "number", MaxLength: 5},
-		&connector.Input{Name: "database", Value: settings.Database, Label: "Database name", Placeholder: "DB name", Type: "text"},
-	}
-
-	UI := connector.SettingsUI{
-		Components: Components,
+	ui := &connector.SettingsUI{
+		Components: []connector.Component{
+			&connector.Input{Name: "host", Value: settings.Host, Label: "Host", Placeholder: "DB host", Type: "text"},
+			&connector.Input{Name: "username", Value: settings.Username, Label: "Username", Placeholder: "DB username", Type: "text"},
+			&connector.Input{Name: "password", Value: settings.Password, Label: "Password", Placeholder: "DB password", Type: "password"},
+			&connector.Input{Name: "port", Value: settings.Port, Label: "Port", Placeholder: "DB port", Type: "number", MaxLength: 5},
+			&connector.Input{Name: "database", Value: settings.Database, Label: "Database name", Placeholder: "DB name", Type: "text"},
+		},
 		Actions: []connector.Action{
+			{Event: "test", Text: "Test Connection", Variant: "primary"},
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
-	switch event {
-	case "load":
-		return &UI, nil
-	case "save":
-		err := c.firehose.SetSettings(form)
-		return nil, err
-	default:
-		return nil, nil
-	}
+
+	return ui, nil
 }
 
 type settings struct {
@@ -130,6 +144,18 @@ func (s *settings) dsn() string {
 	c.AllowOldPasswords = true
 	c.ParseTime = true
 	return c.FormatDSN()
+}
+
+// testConnection tests a connection with the given settings.
+// Returns an error if the connection cannot be established.
+func testConnection(ctx context.Context, settings *settings) error {
+	db, err := sql.Open("mysql", settings.dsn())
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	db.SetMaxIdleConns(0)
+	return db.PingContext(ctx)
 }
 
 // propertyType returns the property type of the column type t.

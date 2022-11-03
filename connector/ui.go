@@ -2,6 +2,7 @@ package connector
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -133,4 +134,19 @@ type Action struct {
 	Event   string
 	Text    string
 	Variant string // primary|neutral|danger|warning|success
+}
+
+// UIError represents an error to be displayed in the UI.
+type UIError struct {
+	err error
+}
+
+func (err UIError) Error() string {
+	return err.err.Error()
+}
+
+// UIErrorf formats according to a format specifier and returns a UIError
+// value.
+func UIErrorf(format string, a ...any) UIError {
+	return UIError{err: fmt.Errorf(format, a)}
 }
