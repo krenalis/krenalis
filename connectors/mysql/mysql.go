@@ -103,7 +103,11 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 			return nil, connector.UIErrorf("connection failed: %s", err)
 		}
 		if event == "save" {
-			err = c.firehose.SetSettings(form)
+			s, err := json.Marshal(&settings)
+			if err != nil {
+				return nil, err
+			}
+			err = c.firehose.SetSettings(s)
 			if err != nil {
 				return nil, err
 			}
