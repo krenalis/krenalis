@@ -84,44 +84,41 @@ func (c *connection) Query(query string) ([]connector.Column, connector.Rows, er
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
 
-	var settings settings
+	var s settings
 
 	switch event {
 	case "load":
 		// Load the UI.
 		if c.settings != nil {
-			settings = *c.settings
+			s = *c.settings
 		}
 	case "test", "save":
 		// Test the connection and save the settings if required.
-		err := json.Unmarshal(form, &settings)
+		err := json.Unmarshal(form, &s)
 		if err != nil {
 			return nil, err
 		}
-		err = testConnection(c.ctx, &settings)
+		err = testConnection(c.ctx, &s)
 		if err != nil {
 			return nil, connector.UIErrorf("connection failed: %s", err)
 		}
-		if event == "save" {
-			s, err := json.Marshal(&settings)
-			if err != nil {
-				return nil, err
-			}
-			err = c.firehose.SetSettings(s)
-			if err != nil {
-				return nil, err
-			}
+		if event == "test" {
+			return nil, nil
 		}
-		return nil, nil
+		b, err := json.Marshal(&s)
+		if err != nil {
+			return nil, err
+		}
+		return nil, c.firehose.SetSettings(b)
 	}
 
 	ui := &connector.SettingsUI{
 		Components: []connector.Component{
-			&connector.Input{Name: "host", Value: settings.Host, Label: "Host", Placeholder: "DB host", Type: "text"},
-			&connector.Input{Name: "username", Value: settings.Username, Label: "Username", Placeholder: "DB username", Type: "text"},
-			&connector.Input{Name: "password", Value: settings.Password, Label: "Password", Placeholder: "DB password", Type: "password"},
-			&connector.Input{Name: "port", Value: settings.Port, Label: "Port", Placeholder: "DB port", Type: "number", MaxLength: 5},
-			&connector.Input{Name: "database", Value: settings.Database, Label: "Database name", Placeholder: "DB name", Type: "text"},
+			&connector.Input{Name: "host", Value: s.Host, Label: "Host", Placeholder: "DB host", Type: "text"},
+			&connector.Input{Name: "username", Value: s.Username, Label: "Username", Placeholder: "DB username", Type: "text"},
+			&connector.Input{Name: "password", Value: s.Password, Label: "Password", Placeholder: "DB password", Type: "password"},
+			&connector.Input{Name: "port", Value: s.Port, Label: "Port", Placeholder: "DB port", Type: "number", MaxLength: 5},
+			&connector.Input{Name: "database", Value: s.Database, Label: "Database name", Placeholder: "DB name", Type: "text"},
 		},
 		Actions: []connector.Action{
 			{Event: "test", Text: "Test Connection", Variant: "primary"},
