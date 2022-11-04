@@ -1,4 +1,11 @@
-package connector
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2002-2022 Open2b
+//
+
+package ui
 
 import (
 	"encoding/json"
@@ -11,9 +18,9 @@ import (
 // does not exist.
 var ErrEventNotExist = errors.New("event does not exist")
 
-type SettingsUI struct {
-	Components []Component
-	Actions    []Action
+type Form struct {
+	Fields  []Component
+	Actions []Action
 }
 
 type Component interface {
@@ -151,17 +158,16 @@ type Action struct {
 	Variant string // primary|neutral|danger|warning|success
 }
 
-// UIError represents an error to be displayed in the UI.
-type UIError struct {
+// Error represents an error to be displayed in the UI.
+type Error struct {
 	err error
 }
 
-func (err UIError) Error() string {
+func (err Error) Error() string {
 	return err.err.Error()
 }
 
-// UIErrorf formats according to a format specifier and returns a UIError
-// value.
-func UIErrorf(format string, a ...any) UIError {
-	return UIError{err: fmt.Errorf(format, a...)}
+// Errorf formats according to a format specifier and returns an Error value.
+func Errorf(format string, a ...any) Error {
+	return Error{err: fmt.Errorf(format, a...)}
 }

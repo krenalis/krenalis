@@ -15,6 +15,7 @@ import (
 	"chichi/apis"
 	"chichi/apis/types"
 	"chichi/connector"
+	"chichi/connector/ui"
 )
 
 // Make sure it implements the AppConnection interface.
@@ -60,8 +61,8 @@ func (c *connection) Resource() (string, error) {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
-	return nil, connector.ErrEventNotExist
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
+	return nil, ui.ErrEventNotExist
 }
 
 type user struct {

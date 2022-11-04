@@ -28,6 +28,7 @@ import (
 	"chichi/apis"
 	"chichi/apis/types"
 	"chichi/connector"
+	"chichi/connector/ui"
 
 	"github.com/open2b/nuts/capture"
 )
@@ -396,7 +397,7 @@ func (c *connection) Resource() (string, error) {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 
 	lists, err := c.getLists()
 	if err != nil {
@@ -411,33 +412,33 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 			}
 		}
 		if listName == "" {
-			return nil, connector.UIErrorf("List %q does not exists", c.settings.List)
+			return nil, ui.Errorf("List %q does not exists", c.settings.List)
 		}
-		return &connector.SettingsUI{
-			Components: []connector.Component{
-				&connector.Text{Name: "", Label: "Connected list", Value: listName},
+		return &ui.Form{
+			Fields: []ui.Component{
+				&ui.Text{Name: "", Label: "Connected list", Value: listName},
 			},
 		}, nil
 	}
 
 	switch event {
 	case "load":
-		options := []connector.Option{}
+		options := []ui.Option{}
 		for _, l := range lists {
-			options = append(options, connector.Option{
+			options = append(options, ui.Option{
 				Text:  l.Name,
 				Value: l.ID,
 			})
 		}
-		return &connector.SettingsUI{
-			Components: []connector.Component{
-				&connector.Select{Name: "list", Value: nil, Label: "List", Placeholder: "", Options: options},
+		return &ui.Form{
+			Fields: []ui.Component{
+				&ui.Select{Name: "list", Value: nil, Label: "List", Placeholder: "", Options: options},
 			},
-			Actions: []connector.Action{{Event: "save", Text: "Save", Variant: "primary"}},
+			Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},
 		}, nil
 	case "save":
 		var s map[string]string
-		err := json.Unmarshal(form, &s)
+		err := json.Unmarshal(values, &s)
 		if err != nil {
 			return nil, err
 		}
@@ -453,7 +454,7 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 			}
 		}
 		if listName == "" {
-			return nil, connector.UIErrorf("List %q does not exists", lst)
+			return nil, ui.Errorf("List %q does not exists", lst)
 		}
 
 		// Check if the list already a webhook already set.
@@ -508,13 +509,13 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 			return nil, err
 		}
 
-		return &connector.SettingsUI{
-			Components: []connector.Component{
-				&connector.Text{Name: "", Label: "Connected list", Value: listName},
+		return &ui.Form{
+			Fields: []ui.Component{
+				&ui.Text{Name: "", Label: "Connected list", Value: listName},
 			},
 		}, nil
 	default:
-		return nil, connector.ErrEventNotExist
+		return nil, ui.ErrEventNotExist
 	}
 
 }

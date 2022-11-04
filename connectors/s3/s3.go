@@ -22,6 +22,7 @@ import (
 
 	"chichi/apis"
 	"chichi/connector"
+	"chichi/connector/ui"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -88,52 +89,52 @@ func (c *connection) Reader() (io.ReadCloser, time.Time, error) {
 var bucketReg = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]+$`)
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 
 	var s settings
 
 	switch event {
 	case "load":
-		// Load the UI.
+		// Load the Form.
 		if c.settings != nil {
 			s = *c.settings
 		}
 	case "save":
 		// Save the settings.
-		err := json.Unmarshal(form, &s)
+		err := json.Unmarshal(values, &s)
 		if err != nil {
 			return nil, err
 		}
 		// Validate SecretAccessKey.
 		if n := len(s.SecretAccessKey); n != 20 {
-			return nil, connector.UIErrorf("access key id must be 20 characters long")
+			return nil, ui.Errorf("access key id must be 20 characters long")
 		}
 		// Validate AccessKeyID.
 		if n := len(s.AccessKeyID); n < 50 || n > 200 {
-			return nil, connector.UIErrorf("secret access key length must be in range [50,200]")
+			return nil, ui.Errorf("secret access key length must be in range [50,200]")
 		}
 		// Validate Region.
 		const regions = "us-east-1 us-east-2 us-west-1 us-west-2 af-south-1 ap-east-1 ap-southeast-3 ap-south-1 " +
 			"ap-northeast-1 ap-northeast-2 ap-northeast-3 ap-southeast-1 ap-southeast-2 ca-central-1 eu-central-1 " +
 			"eu-west-1 eu-west-2 eu-west-3 eu-south-1 eu-north-1 me-south-1 me-central-1 sa-east-1"
 		if !strings.Contains(regions, s.Region+" ") || !strings.HasSuffix(regions, " "+s.Region) {
-			return nil, connector.UIErrorf("region is not valid")
+			return nil, ui.Errorf("region is not valid")
 		}
 		// Validate Bucket.
 		if n := len(s.Bucket); n < 3 || n > 63 {
-			return nil, connector.UIErrorf("bucket length must be in range [3,63]")
+			return nil, ui.Errorf("bucket length must be in range [3,63]")
 		}
 		if !bucketReg.MatchString(s.Bucket) || strings.Contains(s.Bucket, "..") ||
 			strings.HasPrefix(s.Bucket, "xn--") || strings.HasSuffix(s.Bucket, "-s3alias") {
-			return nil, connector.UIErrorf("bucket value is not allowed")
+			return nil, ui.Errorf("bucket value is not allowed")
 		}
 		// Validate ObjectKey.
 		if n := len(s.ObjectKey); n == 0 || n > 1024 {
-			return nil, connector.UIErrorf("object key length in bytes must be in range [1,1024]")
+			return nil, ui.Errorf("object key length in bytes must be in range [1,1024]")
 		}
 		// Validate ContentType.
 		if n := utf8.RuneCountInString(s.ContentType); n < 3 || n > 100 {
-			return nil, connector.UIErrorf("content type length must be in range [3,100]")
+			return nil, ui.Errorf("content type length must be in range [3,100]")
 		}
 		b, err := json.Marshal(&s)
 		if err != nil {
@@ -141,14 +142,14 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 		}
 		return nil, c.firehose.SetSettings(b)
 	default:
-		return nil, connector.ErrEventNotExist
+		return nil, ui.ErrEventNotExist
 	}
 
-	ui := &connector.SettingsUI{
-		Components: []connector.Component{
-			&connector.Input{Name: "accessKeyID", Value: s.AccessKeyID, Label: "Access Key ID", Placeholder: "Access Key ID", Type: "text", MinLength: 20, MaxLength: 20},
-			&connector.Input{Name: "secretAccessKey", Value: s.SecretAccessKey, Label: "Secret Access Key", Placeholder: "Secret Access Key", Type: "password", MinLength: 50, MaxLength: 200},
-			&connector.Select{Name: "region", Value: s.Region, Label: "Region", Placeholder: "Region", Options: []connector.Option{
+	form := &ui.Form{
+		Fields: []ui.Component{
+			&ui.Input{Name: "accessKeyID", Value: s.AccessKeyID, Label: "Access Key ID", Placeholder: "Access Key ID", Type: "text", MinLength: 20, MaxLength: 20},
+			&ui.Input{Name: "secretAccessKey", Value: s.SecretAccessKey, Label: "Secret Access Key", Placeholder: "Secret Access Key", Type: "password", MinLength: 50, MaxLength: 200},
+			&ui.Select{Name: "region", Value: s.Region, Label: "Region", Placeholder: "Region", Options: []ui.Option{
 				{Text: "US East (N. Virginia) us-east-1", Value: "us-east-1"},
 				{Text: "US East (Ohio) us-east-2", Value: "us-east-2"},
 				{Text: "US West (N. California) us-west-1", Value: "us-west-1"},
@@ -173,16 +174,16 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 				{Text: "Middle East (UAE) me-central-1", Value: "me-central-1"},
 				{Text: "South America (São Paulo) me-central-1", Value: "sa-east-1"},
 			}},
-			&connector.Input{Name: "bucket", Value: s.Bucket, Label: "Bucket Name", Placeholder: "bucket", Type: "text", MinLength: 3, MaxLength: 63},
-			&connector.Input{Name: "objectKey", Value: s.ObjectKey, Label: "Object Key", Placeholder: "users.csv", Type: "text", MinLength: 1, MaxLength: 1024},
-			&connector.Input{Name: "contentType", Value: s.ContentType, Label: "Content Type", Placeholder: "text/csv", Type: "text", MinLength: 3, MaxLength: 100},
+			&ui.Input{Name: "bucket", Value: s.Bucket, Label: "Bucket Name", Placeholder: "bucket", Type: "text", MinLength: 3, MaxLength: 63},
+			&ui.Input{Name: "objectKey", Value: s.ObjectKey, Label: "Object Key", Placeholder: "users.csv", Type: "text", MinLength: 1, MaxLength: 1024},
+			&ui.Input{Name: "contentType", Value: s.ContentType, Label: "Content Type", Placeholder: "text/csv", Type: "text", MinLength: 3, MaxLength: 100},
 		},
-		Actions: []connector.Action{
+		Actions: []ui.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return ui, nil
+	return form, nil
 }
 
 // Write writes the data read from p.

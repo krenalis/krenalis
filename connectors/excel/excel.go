@@ -21,6 +21,7 @@ import (
 
 	"chichi/apis"
 	"chichi/connector"
+	"chichi/connector/ui"
 
 	"github.com/xuri/excelize/v2"
 )
@@ -124,25 +125,25 @@ func (c *connection) Write(w io.Writer, get func() ([]string, error)) error {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 
 	var s settings
 
 	switch event {
 	case "load":
-		// Load the UI.
+		// Load the Form.
 		if c.settings != nil {
 			s = *c.settings
 		}
 	case "save":
 		// Save the settings.
-		err := json.Unmarshal(form, &s)
+		err := json.Unmarshal(values, &s)
 		if err != nil {
 			return nil, err
 		}
 		// Validate SheetName.
 		if name := s.SheetName; name == "" || utf8.RuneCountInString(name) > 31 || strings.ContainsAny(name, ":\\/?*[]") {
-			return nil, connector.UIErrorf("sheet name cannot be longer than 31 characters and cannot contain :, \\, /, ?, *, [ and ]")
+			return nil, ui.Errorf("sheet name cannot be longer than 31 characters and cannot contain :, \\, /, ?, *, [ and ]")
 		}
 		b, err := json.Marshal(&s)
 		if err != nil {
@@ -150,17 +151,17 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 		}
 		return nil, c.firehose.SetSettings(b)
 	default:
-		return nil, connector.ErrEventNotExist
+		return nil, ui.ErrEventNotExist
 	}
 
-	ui := &connector.SettingsUI{
-		Components: []connector.Component{
-			&connector.Input{Name: "sheetName", Value: s.SheetName, Label: "Sheet name", Placeholder: "Sheet 1", Type: "text", MinLength: 1, MaxLength: 31},
+	form := &ui.Form{
+		Fields: []ui.Component{
+			&ui.Input{Name: "sheetName", Value: s.SheetName, Label: "Sheet name", Placeholder: "Sheet 1", Type: "text", MinLength: 1, MaxLength: 31},
 		},
-		Actions: []connector.Action{
+		Actions: []ui.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return ui, nil
+	return form, nil
 }

@@ -11,13 +11,14 @@ import (
 	"time"
 
 	"chichi/apis/types"
+	"chichi/connector/ui"
 )
 
 // Connection is the interface implemented by connections.
 type Connection interface {
 
 	// ServeUI serves the connector's user interface.
-	ServeUI(event string, form []byte) (*SettingsUI, error)
+	ServeUI(event string, values []byte) (*ui.Form, error)
 }
 
 // Firehose is the interface implemented by a Firehose.

@@ -18,6 +18,7 @@ import (
 	"chichi/apis"
 	"chichi/apis/types"
 	"chichi/connector"
+	"chichi/connector/ui"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -83,7 +84,7 @@ func (c *connection) Query(query string) ([]connector.Column, connector.Rows, er
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 
 	var s settings
 
@@ -97,33 +98,33 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 		}
 	case "test", "save":
 		// Test the connection and save the settings if required.
-		err := json.Unmarshal(form, &s)
+		err := json.Unmarshal(values, &s)
 		if err != nil {
 			return nil, err
 		}
 		// Validate Host.
 		if n := len(s.Host); n == 0 || n > 253 {
-			return nil, connector.UIErrorf("host length in bytes must be in range [1,253]")
+			return nil, ui.Errorf("host length in bytes must be in range [1,253]")
 		}
 		// Validate Port.
 		if s.Port < 1 || s.Port > 65536 {
-			return nil, connector.UIErrorf("port must be in range [1,65536]")
+			return nil, ui.Errorf("port must be in range [1,65536]")
 		}
 		// Validate Username.
 		if n := utf8.RuneCountInString(s.Username); n < 1 || n > 16 {
-			return nil, connector.UIErrorf("username length must be in range [1,16]")
+			return nil, ui.Errorf("username length must be in range [1,16]")
 		}
 		// Validate Password.
 		if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
-			return nil, connector.UIErrorf("password length must be in range [1,200]")
+			return nil, ui.Errorf("password length must be in range [1,200]")
 		}
 		// Validate Database.
 		if n := utf8.RuneCountInString(s.Database); n < 1 || n > 64 {
-			return nil, connector.UIErrorf("path length must be in range [1,64]")
+			return nil, ui.Errorf("path length must be in range [1,64]")
 		}
 		err = testConnection(c.ctx, &s)
 		if err != nil {
-			return nil, connector.UIErrorf("connection failed: %s", err)
+			return nil, ui.Errorf("connection failed: %s", err)
 		}
 		if event == "test" {
 			return nil, nil
@@ -134,24 +135,24 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 		}
 		return nil, c.firehose.SetSettings(b)
 	default:
-		return nil, connector.ErrEventNotExist
+		return nil, ui.ErrEventNotExist
 	}
 
-	ui := &connector.SettingsUI{
-		Components: []connector.Component{
-			&connector.Input{Name: "host", Value: s.Host, Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&connector.Input{Name: "port", Value: s.Port, Label: "Port", Placeholder: "3306", Type: "number", MinLength: 1, MaxLength: 5},
-			&connector.Input{Name: "username", Value: s.Username, Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 16},
-			&connector.Input{Name: "password", Value: s.Password, Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
-			&connector.Input{Name: "database", Value: s.Database, Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
+	form := &ui.Form{
+		Fields: []ui.Component{
+			&ui.Input{Name: "host", Value: s.Host, Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&ui.Input{Name: "port", Value: s.Port, Label: "Port", Placeholder: "3306", Type: "number", MinLength: 1, MaxLength: 5},
+			&ui.Input{Name: "username", Value: s.Username, Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 16},
+			&ui.Input{Name: "password", Value: s.Password, Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
+			&ui.Input{Name: "database", Value: s.Database, Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
 		},
-		Actions: []connector.Action{
+		Actions: []ui.Action{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return ui, nil
+	return form, nil
 }
 
 type settings struct {

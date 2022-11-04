@@ -43,8 +43,8 @@ export default class AccountSourceSettings extends React.Component {
             return;
         }
         let form = {};
-        if (settings.Components != null) {
-            for (let c of settings.Components) { form[c.Name] = c.Value; }
+        if (settings.Fields != null) {
+            for (let f of settings.Fields) { form[f.Name] = f.Value; }
         }
         this.setState({ settings: settings, form: form});
     }
@@ -89,7 +89,7 @@ export default class AccountSourceSettings extends React.Component {
                         </div>
                         <div className="settings">
                             <div className="components">
-                                {this.state.settings.Components != null && this.state.settings.Components.map((c, i) => renderConnectorComponent(c, this.onComponentChange))}
+                                {this.state.settings.Fields != null && this.state.settings.Fields.map((c, i) => renderConnectorComponent(c, this.onComponentChange))}
                             </div>
                             <div className="actions">
                                 {this.state.settings.Actions != null && this.state.settings.Actions.map((a, i) => <SlButton variant={a.Variant} onClick={ async () => { await this.onActionClick(a.Event) }}>{a.Text}</SlButton>)}

@@ -24,6 +24,7 @@ import (
 
 	"chichi/apis"
 	"chichi/connector"
+	"chichi/connector/ui"
 )
 
 // Make sure it implements the StreamConnection interface.
@@ -80,14 +81,14 @@ func (c *connection) Reader() (io.ReadCloser, time.Time, error) {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 
 	var s settings
 	var headers map[string]any
 
 	switch event {
 	case "load":
-		// Load the UI.
+		// Load the Form.
 		if c.settings != nil {
 			s = *c.settings
 			for k, v := range s.Headers {
@@ -96,32 +97,32 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 		}
 	case "save":
 		// Save the settings.
-		err := json.Unmarshal(form, &s)
+		err := json.Unmarshal(values, &s)
 		if err != nil {
 			return nil, err
 		}
 		// Validate URL.
 		if n := utf8.RuneCountInString(s.URL); n < 10 || n > 1000 {
-			return nil, connector.UIErrorf("URL length must be in range [10,1000]")
+			return nil, ui.Errorf("URL length must be in range [10,1000]")
 		}
 		if !strings.HasPrefix(s.URL, "http://") && !strings.HasPrefix(s.URL, "https://") {
-			return nil, connector.UIErrorf("schema of URL must be http or https")
+			return nil, ui.Errorf("schema of URL must be http or https")
 		}
 		_, err = url.Parse(s.URL)
 		if err != nil {
-			return nil, connector.UIErrorf("URL is not a valid URL")
+			return nil, ui.Errorf("URL is not a valid URL")
 		}
 		// Validate ContentType.
 		if n := utf8.RuneCountInString(s.ContentType); n < 3 || n > 100 {
-			return nil, connector.UIErrorf("content type length must be in range [3,100]")
+			return nil, ui.Errorf("content type length must be in range [3,100]")
 		}
 		// Validate Headers.
 		for k, v := range s.Headers {
 			if n := utf8.RuneCountInString(k); n == 0 || n > 100 {
-				return nil, connector.UIErrorf("header key length must be in range [1,100]")
+				return nil, ui.Errorf("header key length must be in range [1,100]")
 			}
 			if n := utf8.RuneCountInString(v); n == 0 || n > 10000 {
-				return nil, connector.UIErrorf("header value length must be in range [1,10000]")
+				return nil, ui.Errorf("header value length must be in range [1,10000]")
 			}
 		}
 		b, err := json.Marshal(&s)
@@ -130,24 +131,24 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 		}
 		return nil, c.firehose.SetSettings(b)
 	default:
-		return nil, connector.ErrEventNotExist
+		return nil, ui.ErrEventNotExist
 	}
 
-	ui := &connector.SettingsUI{
-		Components: []connector.Component{
-			&connector.Input{Name: "url", Value: s.URL, Label: "URL", Placeholder: "https://example.com", Type: "url", MinLength: 10, MaxLength: 1000},
-			&connector.Input{Name: "contentType", Value: s.ContentType, Label: "Content type", Placeholder: "text/plain", Type: "text", MinLength: 3, MaxLength: 100},
-			&connector.KeyValue{Name: "headers", Value: headers, Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
-				KeyComponent:   &connector.Input{Label: "Key", Placeholder: "Key", Type: "text", MinLength: 1, MaxLength: 100},
-				ValueComponent: &connector.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
+	form := &ui.Form{
+		Fields: []ui.Component{
+			&ui.Input{Name: "url", Value: s.URL, Label: "URL", Placeholder: "https://example.com", Type: "url", MinLength: 10, MaxLength: 1000},
+			&ui.Input{Name: "contentType", Value: s.ContentType, Label: "Content type", Placeholder: "text/plain", Type: "text", MinLength: 3, MaxLength: 100},
+			&ui.KeyValue{Name: "headers", Value: headers, Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
+				KeyComponent:   &ui.Input{Label: "Key", Placeholder: "Key", Type: "text", MinLength: 1, MaxLength: 100},
+				ValueComponent: &ui.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
 			},
 		},
-		Actions: []connector.Action{
+		Actions: []ui.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
 
-	return ui, nil
+	return form, nil
 }
 
 // Write writes the data read from p.
