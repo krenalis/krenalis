@@ -113,7 +113,15 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 
 	var s settings
 
-	if event == "save" {
+	switch event {
+	case "load":
+		// Load the UI.
+		if c.settings == nil {
+			s.Comma = ","
+		} else {
+			s = *c.settings
+		}
+	case "save":
 		// Save the settings.
 		err := json.Unmarshal(form, &s)
 		if err != nil {
@@ -147,10 +155,6 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 			return nil, err
 		}
 		return nil, c.firehose.SetSettings(b)
-	}
-
-	if c.settings != nil {
-		s = *c.settings
 	}
 
 	ui := &connector.SettingsUI{

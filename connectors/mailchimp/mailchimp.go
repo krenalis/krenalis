@@ -513,9 +513,10 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 				&connector.Text{Name: "", Label: "Connected list", Value: listName},
 			},
 		}, nil
+	default:
+		return nil, errors.New("unknown event")
 	}
 
-	return nil, nil
 }
 
 type batchOperation struct {

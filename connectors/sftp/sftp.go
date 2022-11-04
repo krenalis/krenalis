@@ -90,7 +90,9 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 	switch event {
 	case "load":
 		// Load the UI.
-		if c.settings != nil {
+		if c.settings == nil {
+			s.Port = 22
+		} else {
 			s = *c.settings
 		}
 	case "test", "save":
@@ -131,12 +133,8 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 			return nil, err
 		}
 		return nil, c.firehose.SetSettings(b)
-	}
-
-	if c.settings == nil {
-		s.Port = 22
-	} else {
-		s = *c.settings
+	default:
+		return nil, errors.New("unknown event")
 	}
 
 	ui := &connector.SettingsUI{

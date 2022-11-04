@@ -89,9 +89,16 @@ var bucketReg = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]+$`)
 
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
+
 	var s settings
 
-	if event == "save" {
+	switch event {
+	case "load":
+		// Load the UI.
+		if c.settings != nil {
+			s = *c.settings
+		}
+	case "save":
 		// Save the settings.
 		err := json.Unmarshal(form, &s)
 		if err != nil {
@@ -133,10 +140,8 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 			return nil, err
 		}
 		return nil, c.firehose.SetSettings(b)
-	}
-
-	if c.settings != nil {
-		s = *c.settings
+	default:
+		return nil, errors.New("unknown event")
 	}
 
 	ui := &connector.SettingsUI{
