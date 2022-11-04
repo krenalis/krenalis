@@ -259,7 +259,7 @@ func (c *connection) Resource() (string, error) {
 
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
-	return nil, nil
+	return nil, connector.ErrEventNotExist
 }
 
 // SetUsers sets the users.

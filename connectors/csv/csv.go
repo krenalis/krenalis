@@ -155,6 +155,8 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 			return nil, err
 		}
 		return nil, c.firehose.SetSettings(b)
+	default:
+		return nil, connector.ErrEventNotExist
 	}
 
 	ui := &connector.SettingsUI{

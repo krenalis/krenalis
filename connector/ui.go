@@ -2,9 +2,14 @@ package connector
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 )
+
+// ErrEventNotExist values are returned by the ServeUI methods when the event
+// does not exist.
+var ErrEventNotExist = errors.New("event does not exist")
 
 type SettingsUI struct {
 	Components []Component

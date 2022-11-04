@@ -134,7 +134,7 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 		}
 		return nil, c.firehose.SetSettings(b)
 	default:
-		return nil, errors.New("unknown event")
+		return nil, connector.ErrEventNotExist
 	}
 
 	ui := &connector.SettingsUI{

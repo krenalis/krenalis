@@ -514,7 +514,7 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 			},
 		}, nil
 	default:
-		return nil, errors.New("unknown event")
+		return nil, connector.ErrEventNotExist
 	}
 
 }
