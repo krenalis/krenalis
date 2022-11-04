@@ -268,6 +268,11 @@ func Text(lengths ...Length) Type {
 	return t
 }
 
+// MarshalJSON marshals t into JSON.
+func (t Type) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + t.Base().String() + `"`), nil
+}
+
 // WithKind returns the type t but with kind k.
 // Panics if k is not a kind.
 func (t Type) WithKind(k Kind) Type {
