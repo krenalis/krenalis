@@ -360,14 +360,18 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			UI, err := ws.DataSources.ServeUI(datasource, "load", nil)
+			form, err := ws.DataSources.ServeUI(datasource, "load", nil)
 			if err != nil {
+				if err == apis.ErrUIEventNotExist {
+					http.Error(w, "Bad Request", http.StatusBadRequest)
+					return
+				}
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
 			w.Header().Add("Content-Type", "application/json")
-			_, err = w.Write(UI)
+			_, err = w.Write(form)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -386,14 +390,18 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			UI, err := ws.DataSources.ServeUI(req.Datasource, req.Event, req.Form)
+			form, err := ws.DataSources.ServeUI(req.Datasource, req.Event, req.Form)
 			if err != nil {
+				if err == apis.ErrUIEventNotExist {
+					http.Error(w, "Bad Request", http.StatusBadRequest)
+					return
+				}
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
 			w.Header().Add("Content-Type", "application/json")
-			_, err = w.Write(UI)
+			_, err = w.Write(form)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)

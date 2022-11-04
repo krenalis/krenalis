@@ -20,6 +20,7 @@ import (
 
 	"chichi/apis/types"
 	_connector "chichi/connector"
+	"chichi/connector/ui"
 	"chichi/pkg/open2b/sql"
 )
 
@@ -27,12 +28,15 @@ type DataSources struct {
 	*WorkspaceAPI
 }
 
-var ErrConnectorNotFound = errors.New("connector does not exist")
-var ErrInvalidConnectorType = errors.New("connector has an invalid type")
-var ErrDataSourceNotFound = errors.New("data source does not exist")
-var ErrDataSourceDisabled = errors.New("data source is disabled")
-var ErrResourceNotFound = errors.New("resource does not exist")
-var ErrCannotGetConnectorAccessToken = errors.New("cannot get access token")
+var (
+	ErrConnectorNotFound             = errors.New("connector does not exist")
+	ErrInvalidConnectorType          = errors.New("connector has an invalid type")
+	ErrDataSourceNotFound            = errors.New("data source does not exist")
+	ErrDataSourceDisabled            = errors.New("data source is disabled")
+	ErrResourceNotFound              = errors.New("resource does not exist")
+	ErrCannotGetConnectorAccessToken = errors.New("cannot get access token")
+	ErrUIEventNotExist               = errors.New("UI event does not exist")
+)
 
 const (
 	rawPropertiesMaxSize = 16_777_215 // maximum size in runes of the 'property' column of the 'data_sources' table.
@@ -721,10 +725,11 @@ func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]s
 	return columns, rows, nil
 }
 
-// ServeUI serves the user interface for the data source with the
-// given identifier.
-// Returns the ErrDataSourceNotFound error if the data source does not exist.
-func (this *DataSources) ServeUI(id int, event string, form []byte) ([]byte, error) {
+// ServeUI serves the user interface for the data source with identifier id.
+// event is the event and values contains the form values in JSON format.
+// Returns the ErrDataSourceNotFound error if the data source does not exist
+// and the ErrUIEventNotExist error if the event does not exist.
+func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, error) {
 
 	if id <= 0 {
 		return nil, errors.New("invalid data source identifier")
@@ -816,12 +821,15 @@ func (this *DataSources) ServeUI(id int, event string, form []byte) ([]byte, err
 		return nil, err
 	}
 
-	ui, err := connection.ServeUI(event, form)
+	form, err := connection.ServeUI(event, values)
 	if err != nil {
+		if err == ui.ErrEventNotExist {
+			err = ErrUIEventNotExist
+		}
 		return nil, err
 	}
 
-	return json.Marshal(ui)
+	return json.Marshal(form)
 }
 
 // SetUsersQuery sets the users query of the data source with identifier id.
