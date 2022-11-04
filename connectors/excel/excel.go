@@ -16,6 +16,8 @@ import (
 	"errors"
 	"io"
 	"strconv"
+	"strings"
+	"unicode/utf8"
 
 	"chichi/apis"
 	"chichi/connector"
@@ -33,6 +35,7 @@ func init() {
 type connection struct {
 	ctx      context.Context
 	settings *settings
+	firehose connector.Firehose
 }
 
 type settings struct {
@@ -48,6 +51,7 @@ func New(ctx context.Context, settings []byte, fh connector.Firehose) (connector
 			return nil, errors.New("cannot unmarshal settings of Excel connection")
 		}
 	}
+	c.firehose = fh
 	return &c, nil
 }
 
@@ -121,5 +125,38 @@ func (c *connection) Write(w io.Writer, get func() ([]string, error)) error {
 
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
-	return nil, nil
+
+	var s settings
+
+	if event == "save" {
+		// Save the settings.
+		err := json.Unmarshal(form, &s)
+		if err != nil {
+			return nil, err
+		}
+		// Validate SheetName.
+		if name := s.SheetName; name == "" || utf8.RuneCountInString(name) > 31 || strings.ContainsAny(name, ":\\/?*[]") {
+			return nil, connector.UIErrorf("sheet name cannot be longer than 31 characters and cannot contain :, \\, /, ?, *, [ and ]")
+		}
+		b, err := json.Marshal(&s)
+		if err != nil {
+			return nil, err
+		}
+		return nil, c.firehose.SetSettings(b)
+	}
+
+	if c.settings != nil {
+		s = *c.settings
+	}
+
+	ui := &connector.SettingsUI{
+		Components: []connector.Component{
+			&connector.Input{Name: "sheetName", Value: s.SheetName, Label: "Sheet name", Placeholder: "Sheet 1", Type: "text", MinLength: 1, MaxLength: 31},
+		},
+		Actions: []connector.Action{
+			{Event: "save", Text: "Save", Variant: "primary"},
+		},
+	}
+
+	return ui, nil
 }
