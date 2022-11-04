@@ -11,16 +11,19 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"chichi/apis"
 	"chichi/apis/types"
@@ -52,8 +55,9 @@ type connection struct {
 }
 
 type settings struct {
-	List       string
-	DataCenter string
+	List          string
+	DataCenter    string
+	WebhookSecret string
 }
 
 func init() {
@@ -69,6 +73,20 @@ func New(ctx context.Context, conf *connector.AppConfig) (connector.AppConnectio
 	}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var err error
+		c.settings.DataCenter, _, err = c.getMetadata()
+		if err != nil {
+			return nil, err
+		}
+		s, err := json.Marshal(c.settings)
+		if err != nil {
+			return nil, err
+		}
+		err = c.firehose.SetSettings(s)
 		if err != nil {
 			return nil, err
 		}
@@ -316,6 +334,21 @@ func (c *connection) Properties() ([]connector.Property, []connector.Property, e
 // ReceiveWebhook receives a webhook request and returns its events.
 // It returns the ErrWebhookUnauthorized error is the request was not authorized.
 func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) {
+
+	if c.settings.WebhookSecret == "" {
+		// Webhooks are not set up.
+		if r.Method == "GET" && r.Header.Get("User-Agent") == "MailChimp.com WebHook Validator" {
+			// Setup call from Mailchimp.
+			return nil, nil
+		}
+		return nil, errors.New("unexpected webhook")
+	}
+
+	if r.URL.Query().Get("secret") != c.settings.WebhookSecret {
+		// The webhook is not authenticated.
+		return nil, errors.New("unauthorized webhook")
+	}
+
 	err := r.ParseForm()
 	if err != nil {
 		return nil, err
@@ -365,102 +398,122 @@ func (c *connection) Resource() (string, error) {
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
 
-	if c.settings.List != "" {
-		// TODO: list has been chosen, and cannot be modified
-	}
-	var err error
-	if c.settings.DataCenter == "" {
-		c.settings.DataCenter, _, err = c.getMetadata()
-		if err != nil {
-			// TODO: handle error
-		}
-		s, err := json.Marshal(c.settings)
-		if err != nil {
-			// TODO: handle error
-		}
-		c.firehose.SetSettings(s)
-	}
-
-	// TODO(carlo): implement the interface to obtain the settings (datacenter and list to use)
 	lists, err := c.getLists()
 	if err != nil {
-		// TODO: handle error
+		return nil, err
 	}
-	_ = lists
-	// list := config["List"].(string)
-	//
-	// lists, err := c.getLists()
-	// if err != nil {
-	// 	return err
-	// }
-	//
-	// foundList := false
-	// for _, l := range lists {
-	// 	if l.ID == list {
-	// 		foundList = true
-	// 		break
-	// 	}
-	// }
-	// if !foundList {
-	// 	return &connector.ConfigError{"List": "list does not exist"}
-	// }
-	//
-	// // Read webhooks for each list and remove the ones that are not for the current one.
-	// hasWebhook := false
-	// for _, l := range lists {
-	// 	hooks, err := c.getWebhooks(l.ID)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	for _, wh := range hooks {
-	// 		if l.ID == list {
-	// 			// Check if the webhook is the correct one.
-	// 			if strings.HasPrefix(wh.URL, c.WebhookBase) {
-	// 				if hasWebhook {
-	// 					// A webhook was already found, this must be removed.
-	// 					err := c.deleteWebhook(l.ID, wh.ID)
-	// 					if err != nil {
-	// 						return err
-	// 					}
-	// 					continue
-	// 				}
-	// 				if wh.Events.Cleaned &&
-	// 					wh.Events.Profile &&
-	// 					wh.Events.Subscribe &&
-	// 					wh.Events.Unsubscribe &&
-	// 					wh.Events.Upemail &&
-	// 					!wh.Events.Campaign {
-	// 					// The correct webhook is already set.
-	// 					hasWebhook = true
-	// 					continue
-	// 				}
-	// 				// Update the webhook to the correct settings.
-	// 				err := c.setWebhook(l.ID, wh.ID)
-	// 				if err != nil {
-	// 					return err
-	// 				}
-	// 				hasWebhook = true
-	// 			}
-	// 		} else {
-	// 			// Delete the webhook if they were set from the connector.
-	// 			if strings.HasPrefix(wh.URL, c.WebhookBase) {
-	// 				err := c.deleteWebhook(l.ID, wh.ID)
-	// 				if err != nil {
-	// 					return err
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }
-	//
-	// if !hasWebhook {
-	// 	err := c.setWebhook(list, "")
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-	//
-	// connector.ApplyConfig(config)
+
+	if c.settings.List != "" {
+		listName := ""
+		for _, l := range lists {
+			if l.ID == c.settings.List {
+				listName = l.Name
+			}
+		}
+		if listName == "" {
+			return nil, connector.UIErrorf("List %q does not exists", c.settings.List)
+		}
+		return &connector.SettingsUI{
+			Components: []connector.Component{
+				&connector.Text{Name: "", Label: "Connected list", Value: listName},
+			},
+		}, nil
+	}
+
+	switch event {
+	case "load":
+		options := []connector.Option{}
+		for _, l := range lists {
+			options = append(options, connector.Option{
+				Text:  l.Name,
+				Value: l.ID,
+			})
+		}
+		return &connector.SettingsUI{
+			Components: []connector.Component{
+				&connector.Select{Name: "list", Value: nil, Label: "List", Placeholder: "", Options: options},
+			},
+			Actions: []connector.Action{{Event: "save", Text: "Save", Variant: "primary"}},
+		}, nil
+	case "save":
+		var s map[string]string
+		err := json.Unmarshal(form, &s)
+		if err != nil {
+			return nil, err
+		}
+
+		lst := s["list"]
+
+		// Init webhooks
+		listName := ""
+		for _, l := range lists {
+			if l.ID == lst {
+				listName = l.Name
+				break
+			}
+		}
+		if listName == "" {
+			return nil, connector.UIErrorf("List %q does not exists", lst)
+		}
+
+		// Check if the list already a webhook already set.
+		webhookBase := c.firehose.WebhookURL()
+		hasWebhook := false
+		secret := ""
+		hooks, err := c.getWebhooks(lst)
+		if err != nil {
+			return nil, err
+		}
+		for _, wh := range hooks {
+			// Check if the webhook has already been set up for the current data source.
+			if strings.HasPrefix(wh.URL, webhookBase) {
+				u, err := url.Parse(wh.URL)
+				if err != nil {
+					return nil, err
+				}
+				secret = u.Query().Get("secret")
+				if wh.Events.Cleaned &&
+					wh.Events.Profile &&
+					wh.Events.Subscribe &&
+					wh.Events.Unsubscribe &&
+					wh.Events.Upemail &&
+					!wh.Events.Campaign {
+					// The correct webhook is already set.
+					hasWebhook = true
+					break
+				}
+				// Update the webhook to the correct settings.
+				_, err = c.setWebhook(lst, wh.ID)
+				if err != nil {
+					return nil, err
+				}
+				hasWebhook = true
+			}
+		}
+		if !hasWebhook {
+			// Create a webhook.
+			secret, err = c.setWebhook(lst, "")
+			if err != nil {
+				return nil, err
+			}
+		}
+		c.settings.WebhookSecret = secret
+		c.settings.List = lst
+		newSettings, err := json.Marshal(c.settings)
+		if err != nil {
+			return nil, err
+		}
+		err = c.firehose.SetSettings(newSettings)
+		if err != nil {
+			return nil, err
+		}
+
+		return &connector.SettingsUI{
+			Components: []connector.Component{
+				&connector.Text{Name: "", Label: "Connected list", Value: listName},
+			},
+		}, nil
+	}
 
 	return nil, nil
 }
@@ -736,7 +789,7 @@ type list struct {
 // getLists returns all the lists.
 func (c *connection) getLists() ([]list, error) {
 	var params = url.Values{
-		"fields":     []string{"lists.name", "lists.id"},
+		"fields":     []string{"lists.name,lists.id"},
 		"count":      []string{"1000"},
 		"sort_field": []string{"date_created"},
 		"sort_dir":   []string{"ASC"},
@@ -792,27 +845,30 @@ func (c *connection) deleteWebhook(webhook string) error {
 	return nil
 }
 
-// getWebhooks returns all the webhooks.
-func (c *connection) getWebhooks() ([]webhook, error) {
+// getWebhooks returns all the webhooks for the list.
+func (c *connection) getWebhooks(list string) ([]webhook, error) {
 	var response struct {
 		Webhooks []webhook
 	}
-	err := c.call("GET", "/lists/"+c.settings.List+"/webhooks", nil, nil, 200, &response)
+	err := c.call("GET", "/lists/"+list+"/webhooks", nil, nil, 200, &response)
 	if err != nil {
 		return nil, err
 	}
 	return response.Webhooks, nil
 }
 
-// setWebhook creates or updates a webhook.
-func (c *connection) setWebhook(webhook string) error {
-	webhookURL := c.firehose.WebhookURL()
-
+// setWebhook creates or updates a webhook for the list.
+// Returns the secret for the webhook if the webhook has been created, otherwise
+// returns an empty string.
+func (c *connection) setWebhook(list, webhook string) (string, error) {
 	method := "POST"
-	path := "/lists/" + c.settings.List + "/webhooks"
+	path := "/lists/" + list + "/webhooks"
 	bodyContent := `{"events":{"subscribe":true,"unsubscribe":true,"profile":true,"cleaned":true,"upemail":true,"campaign":false},` +
 		`"sources":{"user":true,"admin":true,"api":true}`
+	var secret string
 	if webhook == "" {
+		secret = randomString(20)
+		webhookURL := c.firehose.WebhookURL() + "?secret=" + secret
 		bodyContent += `,"url":"` + webhookURL + `"}`
 	} else {
 		method = "PATCH"
@@ -821,10 +877,9 @@ func (c *connection) setWebhook(webhook string) error {
 	}
 	err := c.call(method, path, nil, bytes.NewBuffer([]byte(bodyContent)), 200, nil)
 	if err != nil {
-		return err
+		return "", err
 	}
-
-	return nil
+	return secret, nil
 }
 
 // parseCursor parses a cursor and returns the last modified datetime and offset.
@@ -987,4 +1042,21 @@ func (c *connection) getMetadata() (string, string, error) {
 		return "", "", err
 	}
 	return r.DC, strconv.Itoa(r.UserID), nil
+}
+
+// randomString returns a random string.
+func randomString(length int) string {
+	g := big.NewInt(0)
+	max := big.NewInt(130)
+	bs := make([]byte, length)
+	for i, _ := range bs {
+		g, _ = rand.Int(rand.Reader, max)
+		r := rune(g.Int64())
+		for !unicode.IsNumber(r) && !unicode.IsLetter(r) {
+			g, _ = rand.Int(rand.Reader, max)
+			r = rune(g.Int64())
+		}
+		bs[i] = byte(g.Int64())
+	}
+	return string(bs)
 }
