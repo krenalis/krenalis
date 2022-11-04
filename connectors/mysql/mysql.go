@@ -54,10 +54,11 @@ type connection struct {
 
 // Query executes the given query and returns the resulting rows.
 func (c *connection) Query(query string) ([]connector.Column, connector.Rows, error) {
-	db, err := sql.Open("mysql", c.settings.dsn())
+	mysqlConnector, err := mysql.NewConnector(c.settings.config())
 	if err != nil {
 		return nil, nil, err
 	}
+	db := sql.OpenDB(mysqlConnector)
 	db.SetMaxIdleConns(0)
 	rows, err := db.QueryContext(c.ctx, query)
 	if err != nil {
@@ -163,23 +164,24 @@ type settings struct {
 	Database string
 }
 
-func (s *settings) dsn() string {
+func (s *settings) config() *mysql.Config {
 	c := mysql.NewConfig()
 	c.User = s.Username
 	c.Passwd = s.Password
 	c.DBName = s.Database
 	c.AllowOldPasswords = true
 	c.ParseTime = true
-	return c.FormatDSN()
+	return c
 }
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
 func testConnection(ctx context.Context, settings *settings) error {
-	db, err := sql.Open("mysql", settings.dsn())
+	mysqlConnector, err := mysql.NewConnector(settings.config())
 	if err != nil {
 		return err
 	}
+	db := sql.OpenDB(mysqlConnector)
 	defer db.Close()
 	db.SetMaxIdleConns(0)
 	return db.PingContext(ctx)
