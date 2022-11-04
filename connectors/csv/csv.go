@@ -128,12 +128,13 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 		}
 		// Validate Comment.
 		if c := s.Comment; c != "" {
-			if utf8.RuneCountInString(s.Comment) != 1 {
+			if utf8.RuneCountInString(c) != 1 {
 				return nil, connector.UIErrorf("comment, if provided, must be a single character")
 			}
 			if c == "\n" || c == "\r" || c == "\uFFFD" {
 				return nil, connector.UIErrorf("comment cannot be \\r, \\n, or the Unicode replacement character")
-			} else if c == s.Comma {
+			}
+			if c == s.Comma {
 				return nil, connector.UIErrorf("comment cannot be equal to the comma")
 			}
 		}
