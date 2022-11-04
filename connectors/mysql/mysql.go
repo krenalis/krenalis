@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"unicode/utf8"
 
 	"chichi/apis"
 	"chichi/apis/types"
@@ -89,7 +90,9 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 	switch event {
 	case "load":
 		// Load the UI.
-		if c.settings != nil {
+		if c.settings == nil {
+			s.Port = 3306
+		} else {
 			s = *c.settings
 		}
 	case "test", "save":
@@ -97,6 +100,26 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 		err := json.Unmarshal(form, &s)
 		if err != nil {
 			return nil, err
+		}
+		// Validate Host.
+		if n := len(s.Host); n == 0 || n > 253 {
+			return nil, connector.UIErrorf("host length in bytes must be in range [1,253]")
+		}
+		// Validate Port.
+		if s.Port < 1 || s.Port > 65536 {
+			return nil, connector.UIErrorf("port must be in range [1,65536]")
+		}
+		// Validate Username.
+		if n := utf8.RuneCountInString(s.Username); n < 1 || n > 16 {
+			return nil, connector.UIErrorf("username length must be in range [1,16]")
+		}
+		// Validate Password.
+		if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
+			return nil, connector.UIErrorf("password length must be in range [1,200]")
+		}
+		// Validate Database.
+		if n := utf8.RuneCountInString(s.Database); n < 1 || n > 64 {
+			return nil, connector.UIErrorf("path length must be in range [1,64]")
 		}
 		err = testConnection(c.ctx, &s)
 		if err != nil {
@@ -110,18 +133,20 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 			return nil, err
 		}
 		return nil, c.firehose.SetSettings(b)
+	default:
+		return nil, errors.New("unknown event")
 	}
 
 	ui := &connector.SettingsUI{
 		Components: []connector.Component{
-			&connector.Input{Name: "host", Value: s.Host, Label: "Host", Placeholder: "DB host", Type: "text"},
-			&connector.Input{Name: "username", Value: s.Username, Label: "Username", Placeholder: "DB username", Type: "text"},
-			&connector.Input{Name: "password", Value: s.Password, Label: "Password", Placeholder: "DB password", Type: "password"},
-			&connector.Input{Name: "port", Value: s.Port, Label: "Port", Placeholder: "DB port", Type: "number", MaxLength: 5},
-			&connector.Input{Name: "database", Value: s.Database, Label: "Database name", Placeholder: "DB name", Type: "text"},
+			&connector.Input{Name: "host", Value: s.Host, Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&connector.Input{Name: "port", Value: s.Port, Label: "Port", Placeholder: "3306", Type: "number", MinLength: 1, MaxLength: 5},
+			&connector.Input{Name: "username", Value: s.Username, Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 16},
+			&connector.Input{Name: "password", Value: s.Password, Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
+			&connector.Input{Name: "database", Value: s.Database, Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
 		},
 		Actions: []connector.Action{
-			{Event: "test", Text: "Test Connection", Variant: "primary"},
+			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}
@@ -131,9 +156,9 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 
 type settings struct {
 	Host     string
+	Port     int
 	Username string
 	Password string
-	Port     int
 	Database string
 }
 
