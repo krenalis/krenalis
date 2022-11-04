@@ -17,7 +17,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"chichi/apis"
 	"chichi/connector"
@@ -33,12 +36,13 @@ func init() {
 type connection struct {
 	ctx      context.Context
 	settings *settings
+	firehose connector.Firehose
 }
 
 type settings struct {
 	URL         string
 	ContentType string
-	Headers     http.Header
+	Headers     map[string]string
 }
 
 // New returns a new HTTP connection.
@@ -50,6 +54,7 @@ func New(ctx context.Context, settings []byte, fh connector.Firehose) (connector
 			return nil, errors.New("cannot unmarshal settings of HTTP connection")
 		}
 	}
+	c.firehose = fh
 	return &c, nil
 }
 
@@ -76,7 +81,70 @@ func (c *connection) Reader() (io.ReadCloser, time.Time, error) {
 
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, error) {
-	return nil, nil
+
+	var s settings
+
+	if event == "save" {
+		// Save the settings.
+		err := json.Unmarshal(form, &s)
+		if err != nil {
+			return nil, err
+		}
+		// Validate URL.
+		if n := utf8.RuneCountInString(s.URL); n < 10 || n > 1000 {
+			return nil, connector.UIErrorf("URL length must be in range [10,1000]")
+		}
+		if !strings.HasPrefix(s.URL, "http://") && !strings.HasPrefix(s.URL, "https://") {
+			return nil, connector.UIErrorf("schema of URL must be http or https")
+		}
+		_, err = url.Parse(s.URL)
+		if err != nil {
+			return nil, connector.UIErrorf("URL is not a valid URL")
+		}
+		// Validate ContentType.
+		if n := utf8.RuneCountInString(s.ContentType); n == 0 || n > 100 {
+			return nil, connector.UIErrorf("content type length must be in range [3,100]")
+		}
+		// Validate Headers.
+		for k, v := range s.Headers {
+			if n := utf8.RuneCountInString(k); n == 0 || n > 100 {
+				return nil, connector.UIErrorf("header key length must be in range [1,100]")
+			}
+			if n := utf8.RuneCountInString(v); n == 0 || n > 10000 {
+				return nil, connector.UIErrorf("header value length must be in range [1,10000]")
+			}
+		}
+		b, err := json.Marshal(&s)
+		if err != nil {
+			return nil, err
+		}
+		return nil, c.firehose.SetSettings(b)
+	}
+
+	if c.settings != nil {
+		s = *c.settings
+	}
+
+	var headers map[string]any
+	for k, v := range s.Headers {
+		headers[k] = v
+	}
+
+	ui := &connector.SettingsUI{
+		Components: []connector.Component{
+			&connector.Input{Name: "url", Value: s.URL, Label: "URL", Placeholder: "https://example.com", Type: "url", MinLength: 10, MaxLength: 1000},
+			&connector.Input{Name: "contentType", Value: s.ContentType, Label: "Content type", Placeholder: "text/plain", Type: "text", MinLength: 3, MaxLength: 100},
+			&connector.KeyValue{Name: "headers", Value: headers, Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
+				KeyComponent:   &connector.Input{Label: "Key", Placeholder: "Key", Type: "text", MinLength: 1, MaxLength: 100},
+				ValueComponent: &connector.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
+			},
+		},
+		Actions: []connector.Action{
+			{Event: "save", Text: "Save", Variant: "primary"},
+		},
+	}
+
+	return ui, nil
 }
 
 // Write writes the data read from p.
@@ -88,8 +156,8 @@ func (c *connection) Write(p io.Reader) error {
 	if c.settings.ContentType != "" {
 		req.Header.Set("Content-Type", c.settings.ContentType)
 	}
-	for name, values := range c.settings.Headers {
-		req.Header[name] = values
+	for name, value := range c.settings.Headers {
+		req.Header[name] = []string{value}
 	}
 	res, err := http.DefaultTransport.RoundTrip(req)
 	if err != nil {
