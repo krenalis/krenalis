@@ -167,5 +167,4 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 	}
 
 	return ui, nil
-
 }
