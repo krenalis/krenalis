@@ -102,7 +102,7 @@ func (c *connection) ServeUI(event string, form []byte) (*connector.SettingsUI, 
 			return nil, connector.UIErrorf("URL is not a valid URL")
 		}
 		// Validate ContentType.
-		if n := utf8.RuneCountInString(s.ContentType); n == 0 || n > 100 {
+		if n := utf8.RuneCountInString(s.ContentType); n < 3 || n > 100 {
 			return nil, connector.UIErrorf("content type length must be in range [3,100]")
 		}
 		// Validate Headers.
