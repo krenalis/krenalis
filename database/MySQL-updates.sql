@@ -404,3 +404,6 @@ CREATE TABLE `transformations_connections` (
   `transformation` INT,
   PRIMARY KEY (`dataSource`, `property`, `transformation`)
 );
+
+INSERT INTO `connectors` (`name`, `type`, `logoURL`) VALUES
+    ('PostgreSQL','Database','https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/postgresql-512.png');

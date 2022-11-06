@@ -10,6 +10,7 @@ use (
 	./connectors/hubspot
 	./connectors/mailchimp
 	./connectors/mysql
+	./connectors/postgresql
 	./connectors/s3
 	./connectors/sftp
 )

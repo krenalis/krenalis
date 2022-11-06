@@ -10,6 +10,7 @@ replace (
 	chichi/connectors/hubspot => ./connectors/hubspot
 	chichi/connectors/mailchimp => ./connectors/mailchimp
 	chichi/connectors/mysql => ./connectors/mysql
+	chichi/connectors/postgresql => ./connectors/postgresql
 	chichi/connectors/s3 => ./connectors/s3
 	chichi/connectors/sftp => ./connectors/sftp
 )
@@ -22,6 +23,7 @@ require (
 	chichi/connectors/hubspot v0.0.0-00010101000000-000000000000
 	chichi/connectors/mailchimp v0.0.0-00010101000000-000000000000
 	chichi/connectors/mysql v0.0.0-00010101000000-000000000000
+	chichi/connectors/postgresql v0.0.0-00010101000000-000000000000
 	chichi/connectors/s3 v0.0.0-00010101000000-000000000000
 	chichi/connectors/sftp v0.0.0-00010101000000-000000000000
 	github.com/ClickHouse/clickhouse-go/v2 v2.3.0
@@ -61,6 +63,9 @@ require (
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.6.1 // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
+	github.com/jackc/pgx/v5 v5.0.4 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect

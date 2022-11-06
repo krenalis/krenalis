@@ -15,6 +15,7 @@ import (
 	_ "chichi/connectors/hubspot"
 	_ "chichi/connectors/mailchimp"
 	_ "chichi/connectors/mysql"
+	_ "chichi/connectors/postgresql"
 	_ "chichi/connectors/s3"
 	_ "chichi/connectors/sftp"
 )
