@@ -37,6 +37,7 @@ const (
 	TDate
 	TTime
 	TYear
+	TUUID
 	TJSON
 	TText
 )
@@ -60,6 +61,7 @@ var baseName = []string{
 	"Date",
 	"Time",
 	"Year",
+	"UUID",
 	"JSON",
 	"Text",
 }
@@ -233,6 +235,11 @@ func Time() Type {
 // Year returns the Year type.
 func Year() Type {
 	return Type{b: TYear}
+}
+
+// UUID returns the UUID type.
+func UUID() Type {
+	return Type{b: TUUID}
 }
 
 // JSON returns the JSON type.
