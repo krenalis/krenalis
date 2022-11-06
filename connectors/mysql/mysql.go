@@ -226,8 +226,6 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		return types.Text(), nil
 	case "FLOAT":
 		return types.Real(), nil
-	case "GEOMETRY":
-		return types.Type{}, errors.New("MySQL geometry type is not supported")
 	case "UNSIGNED MEDIUMINT":
 		return types.UnsignedMediumInt(), nil
 	case "MEDIUMINT":
@@ -275,5 +273,5 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "YEAR":
 		return types.Year(), nil
 	}
-	return types.Type{}, fmt.Errorf("unknown MySQL type: %s", t.DatabaseTypeName())
+	return types.Type{}, fmt.Errorf("MySQL type %q is not supported", t.DatabaseTypeName())
 }
