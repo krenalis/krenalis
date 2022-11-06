@@ -137,7 +137,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		}
 		// Validate Database.
 		if n := utf8.RuneCountInString(s.Database); n < 1 || n > 64 {
-			return nil, ui.Errorf("path length must be in range [1,64]")
+			return nil, ui.Errorf("database length must be in range [1,64]")
 		}
 		err = testConnection(c.ctx, &s)
 		if err != nil {
