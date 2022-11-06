@@ -75,11 +75,13 @@ func (c *connection) Query(query string) ([]connector.Column, connector.Rows, er
 	db.SetMaxIdleConns(0)
 	rows, err := db.QueryContext(c.ctx, query)
 	if err != nil {
+		_ = db.Close()
 		return nil, nil, err
 	}
 	columnTypes, err := rows.ColumnTypes()
 	if err != nil {
 		_ = rows.Close()
+		_ = db.Close()
 		return nil, nil, err
 	}
 	columns := make([]connector.Column, len(columnTypes))
@@ -87,6 +89,7 @@ func (c *connection) Query(query string) ([]connector.Column, connector.Rows, er
 		typ, err := propertyType(c)
 		if err != nil {
 			_ = rows.Close()
+			_ = db.Close()
 			return nil, nil, err
 		}
 		columns[i] = connector.Column{
