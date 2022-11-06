@@ -12,6 +12,7 @@ package http
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,6 +27,9 @@ import (
 	"chichi/connector"
 	"chichi/connector/ui"
 )
+
+// Connector icon.
+var icon []byte
 
 // Make sure it implements the StreamConnection interface.
 var _ connector.StreamConnection = &connection{}
@@ -57,6 +61,15 @@ func New(ctx context.Context, settings []byte, fh connector.Firehose) (connector
 	}
 	c.firehose = fh
 	return &c, nil
+}
+
+// Connector returns the connector.
+func (c *connection) Connector() *connector.Connector {
+	return &connector.Connector{
+		Name: "HTTP",
+		Type: connector.TypeStream,
+		Icon: icon,
+	}
 }
 
 // Reader returns a ReadCloser from which to read the data and its last update

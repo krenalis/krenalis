@@ -39,6 +39,14 @@ func New(ctx context.Context, conf *connector.AppConfig) (connector.AppConnectio
 	return &c, nil
 }
 
+// Connector returns information about the connector.
+func (c *connection) Connector() *connector.Connector {
+	return &connector.Connector{
+		Name: "Dummy",
+		Type: connector.TypeApp,
+	}
+}
+
 func (c *connection) Groups(cursor string, properties [][]string) error {
 	panic("not implemented")
 }

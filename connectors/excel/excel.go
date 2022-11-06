@@ -12,6 +12,7 @@ package excel
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"io"
@@ -25,6 +26,9 @@ import (
 
 	"github.com/xuri/excelize/v2"
 )
+
+// Connector icon.
+var icon []byte
 
 // Make sure it implements the FileConnector interface.
 var _ connector.FileConnection = &connection{}
@@ -54,6 +58,15 @@ func New(ctx context.Context, settings []byte, fh connector.Firehose) (connector
 	}
 	c.firehose = fh
 	return &c, nil
+}
+
+// Connector returns the connector.
+func (c *connection) Connector() *connector.Connector {
+	return &connector.Connector{
+		Name: "Excel",
+		Type: connector.TypeFile,
+		Icon: icon,
+	}
 }
 
 // Read reads the records from r and calls put for each record read.

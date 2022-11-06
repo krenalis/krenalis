@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,6 +33,9 @@ import (
 
 	"github.com/open2b/nuts/capture"
 )
+
+// Connector icon.
+var icon []byte
 
 var Debug = true
 
@@ -93,6 +97,20 @@ func New(ctx context.Context, conf *connector.AppConfig) (connector.AppConnectio
 		}
 	}
 	return &c, nil
+}
+
+// Connector returns the connector.
+func (c *connection) Connector() *connector.Connector {
+	return &connector.Connector{
+		Name: "Mailchimp",
+		Type: connector.TypeApp,
+		Icon: icon,
+		OAuth: connector.OAuth{
+			URL:             "https://login.mailchimp.com/oauth2/authorize?response_type=code",
+			ForcedExpiresIn: "never",
+		},
+		WebhooksPer: connector.WebhooksPerDataSource,
+	}
 }
 
 // Groups returns the groups starting from the given cursor.

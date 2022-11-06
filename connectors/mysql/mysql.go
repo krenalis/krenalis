@@ -7,9 +7,13 @@
 
 package mysql
 
+// This package is the MySQL connector.
+// (https://dev.mysql.com/doc/refman/8.0/en/)
+
 import (
 	"context"
 	"database/sql"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,8 +27,8 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-// This package is the MySQL connector.
-// (https://dev.mysql.com/doc/refman/8.0/en/)
+// Connector icon.
+var icon []byte
 
 // Make sure it implements the DatabaseConnection interface.
 var _ connector.DatabaseConnection = &connection{}
@@ -50,6 +54,15 @@ type connection struct {
 	ctx      context.Context
 	settings *settings
 	firehose connector.Firehose
+}
+
+// Connector returns the connector.
+func (c *connection) Connector() *connector.Connector {
+	return &connector.Connector{
+		Name: "MySQL",
+		Type: connector.TypeDatabase,
+		Icon: icon,
+	}
 }
 
 // Query executes the given query and returns the resulting rows.

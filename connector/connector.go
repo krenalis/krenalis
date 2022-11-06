@@ -14,8 +14,50 @@ import (
 	"chichi/connector/ui"
 )
 
+// Connector represents a connector.
+type Connector struct {
+	Name        string      // name
+	Type        Type        // type
+	Icon        []byte      // icon in SVG format
+	OAuth       OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
+	WebhooksPer WebhooksPer // indicates if webhooks are per connector, resource or data source
+}
+
+// Type represents a connector type.
+type Type int
+
+const (
+	TypeApp Type = iota + 1
+	TypeDatabase
+	TypeFile
+	TypeStream
+)
+
+// OAuth represents the connector OAuth 2.0 info.
+type OAuth struct {
+	URL              string
+	Scope            string
+	DefaultTokenType string
+	DefaultExpiresIn int
+	ForcedExpiresIn  string
+}
+
+// WebhooksPer values indicates if webhooks are per connector, resource or data
+// source.
+type WebhooksPer int
+
+const (
+	WebhooksPerNone WebhooksPer = iota
+	WebhooksPerConnector
+	WebhooksPerResource
+	WebhooksPerDataSource
+)
+
 // Connection is the interface implemented by connections.
 type Connection interface {
+
+	// Connector returns the connector.
+	Connector() *Connector
 
 	// ServeUI serves the connector's user interface.
 	ServeUI(event string, values []byte) (*ui.Form, error)

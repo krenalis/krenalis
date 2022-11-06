@@ -12,6 +12,7 @@ package sftp
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"io"
@@ -27,6 +28,9 @@ import (
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
+
+// Connector icon.
+var icon []byte
 
 // Make sure it implements the StreamConnection interface.
 var _ connector.StreamConnection = &connection{}
@@ -60,6 +64,15 @@ func New(ctx context.Context, settings []byte, fh connector.Firehose) (connector
 	}
 	c.firehose = fh
 	return &c, nil
+}
+
+// Connector returns the connector.
+func (c *connection) Connector() *connector.Connector {
+	return &connector.Connector{
+		Name: "SFTP",
+		Type: connector.TypeStream,
+		Icon: icon,
+	}
 }
 
 // Reader returns a ReadCloser from which to read the data and its last update

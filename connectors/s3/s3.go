@@ -12,6 +12,7 @@ package s3
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"io"
@@ -29,6 +30,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
+
+// Connector icon.
+var icon []byte
 
 // Make sure it implements the StreamConnection interface.
 var _ connector.StreamConnection = &connection{}
@@ -63,6 +67,15 @@ func New(ctx context.Context, settings []byte, fh connector.Firehose) (connector
 	}
 	c.firehose = fh
 	return &c, nil
+}
+
+// Connector returns the connector.
+func (c *connection) Connector() *connector.Connector {
+	return &connector.Connector{
+		Name: "S3",
+		Type: connector.TypeStream,
+		Icon: icon,
+	}
 }
 
 // Reader returns a ReadCloser from which to read the data and its last update
