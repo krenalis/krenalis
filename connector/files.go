@@ -19,6 +19,9 @@ type FileConnectionFunc func(context.Context, []byte, Firehose) (FileConnection,
 type FileConnection interface {
 	Connection
 
+	// ContentType returns the content type of the data to write.
+	ContentType() string
+
 	// Read reads the records from r and calls put for each record read.
 	Read(r io.Reader, put func(record []string) error) error
 

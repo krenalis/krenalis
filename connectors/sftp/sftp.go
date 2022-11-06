@@ -169,7 +169,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 }
 
 // Write writes the data read from p.
-func (c *connection) Write(r io.Reader) error {
+func (c *connection) Write(r io.Reader, _ string) error {
 	sshClient, sftpClient, err := openConnection(c.settings)
 	if err != nil {
 		return err

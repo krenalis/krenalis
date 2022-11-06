@@ -69,6 +69,11 @@ func (c *connection) Connector() *connector.Connector {
 	}
 }
 
+// ContentType returns the content type of the data to write.
+func (c *connection) ContentType() string {
+	return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+}
+
 // Read reads the records from r and calls put for each record read.
 func (c *connection) Read(r io.Reader, put func(record []string) error) error {
 	f, err := excelize.OpenReader(r, excelize.Options{

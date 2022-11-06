@@ -45,9 +45,8 @@ type connection struct {
 }
 
 type settings struct {
-	URL         string
-	ContentType string
-	Headers     map[string]string
+	URL     string
+	Headers map[string]string
 }
 
 // New returns a new HTTP connection.
@@ -125,10 +124,6 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		if err != nil {
 			return nil, ui.Errorf("URL is not a valid URL")
 		}
-		// Validate ContentType.
-		if n := utf8.RuneCountInString(s.ContentType); n < 3 || n > 100 {
-			return nil, ui.Errorf("content type length must be in range [3,100]")
-		}
 		// Validate Headers.
 		for k, v := range s.Headers {
 			if n := utf8.RuneCountInString(k); n == 0 || n > 100 {
@@ -150,7 +145,6 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 	form := &ui.Form{
 		Fields: []ui.Component{
 			&ui.Input{Name: "url", Value: s.URL, Label: "URL", Placeholder: "https://example.com", Type: "url", MinLength: 10, MaxLength: 1000},
-			&ui.Input{Name: "contentType", Value: s.ContentType, Label: "Content type", Placeholder: "text/plain", Type: "text", MinLength: 3, MaxLength: 100},
 			&ui.KeyValue{Name: "headers", Value: headers, Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
 				KeyComponent:   &ui.Input{Label: "Key", Placeholder: "Key", Type: "text", MinLength: 1, MaxLength: 100},
 				ValueComponent: &ui.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
@@ -164,15 +158,13 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 	return form, nil
 }
 
-// Write writes the data read from p.
-func (c *connection) Write(p io.Reader) error {
+// Write writes the data read from p. contentType is the data's content type.
+func (c *connection) Write(p io.Reader, contentType string) error {
 	req, err := http.NewRequestWithContext(c.ctx, "POST", c.settings.URL, p)
 	if err != nil {
 		return err
 	}
-	if c.settings.ContentType != "" {
-		req.Header.Set("Content-Type", c.settings.ContentType)
-	}
+	req.Header.Set("Content-Type", contentType)
 	for name, value := range c.settings.Headers {
 		req.Header[name] = []string{value}
 	}

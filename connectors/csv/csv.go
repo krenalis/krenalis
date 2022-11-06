@@ -71,6 +71,11 @@ func (c *connection) Connector() *connector.Connector {
 	}
 }
 
+// ContentType returns the content type of the data to write.
+func (c *connection) ContentType() string {
+	return "text/csv; charset=UTF-8"
+}
+
 // Read reads the records from r and calls put for each record read.
 func (c *connection) Read(r io.Reader, put func(record []string) error) error {
 	v := csv.NewReader(r)

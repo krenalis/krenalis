@@ -19,7 +19,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"chichi/apis"
 	"chichi/connector"
@@ -53,7 +52,6 @@ type settings struct {
 	Region          string
 	Bucket          string
 	ObjectKey       string
-	ContentType     string
 }
 
 // New returns a new S3 connection.
@@ -145,10 +143,6 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		if n := len(s.ObjectKey); n == 0 || n > 1024 {
 			return nil, ui.Errorf("object key length in bytes must be in range [1,1024]")
 		}
-		// Validate ContentType.
-		if n := utf8.RuneCountInString(s.ContentType); n < 3 || n > 100 {
-			return nil, ui.Errorf("content type length must be in range [3,100]")
-		}
 		b, err := json.Marshal(&s)
 		if err != nil {
 			return nil, err
@@ -189,7 +183,6 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 			}},
 			&ui.Input{Name: "bucket", Value: s.Bucket, Label: "Bucket Name", Placeholder: "bucket", Type: "text", MinLength: 3, MaxLength: 63},
 			&ui.Input{Name: "objectKey", Value: s.ObjectKey, Label: "Object Key", Placeholder: "users.csv", Type: "text", MinLength: 1, MaxLength: 1024},
-			&ui.Input{Name: "contentType", Value: s.ContentType, Label: "Content Type", Placeholder: "text/csv", Type: "text", MinLength: 3, MaxLength: 100},
 		},
 		Actions: []ui.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
@@ -199,14 +192,14 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 	return form, nil
 }
 
-// Write writes the data read from p.
-func (c *connection) Write(p io.Reader) error {
+// Write writes the data read from p. contentType is the data's content type.
+func (c *connection) Write(p io.Reader, contentType string) error {
 	client := c.client()
 	_, err := client.PutObject(c.ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(c.settings.Bucket),
 		Key:         aws.String(c.settings.ObjectKey),
 		Body:        p,
-		ContentType: &c.settings.ContentType,
+		ContentType: &contentType,
 	})
 	return err
 }

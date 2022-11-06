@@ -25,6 +25,6 @@ type StreamConnection interface {
 	// It is the caller's responsibility to close the returned reader.
 	Reader() (io.ReadCloser, time.Time, error)
 
-	// Write writes the data read from p.
-	Write(p io.Reader) error
+	// Write writes the data read from p. contentType is the data's content type.
+	Write(p io.Reader, contentType string) error
 }
