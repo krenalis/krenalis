@@ -129,41 +129,49 @@ func (c *connection) Read(r io.Reader) error {
 	return nil
 }
 
-// Write writes the records read from get into w.
-func (c *connection) Write(w io.Writer, get func() ([]string, error)) error {
+// Write writes the records to w.
+func (c *connection) Write(w io.Writer) error {
+
 	f := excelize.NewFile()
+	defer f.Close()
 	sw, err := f.NewStreamWriter(c.settings.SheetName)
 	if err != nil {
 		return err
 	}
-	var row []any
-	i := 1
-	for {
-		record, err := get()
+
+	// Write the column names.
+	columns := c.firehose.Columns()
+	record := make([]any, len(columns))
+	for i, c := range columns {
+		record[i] = c.Name
+	}
+	err = sw.SetRow("A1", record)
+	if err != nil {
+		return err
+	}
+
+	// Write the records.
+	for i := 2; ; i++ {
+		record, err := c.firehose.Record()
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
 			return err
 		}
-		if row == nil {
-			row = make([]any, len(record))
-		}
-		for i, v := range record {
-			row[i] = v
-		}
 		axis := "A" + strconv.Itoa(i)
-		err = sw.SetRow(axis, row)
+		err = sw.SetRow(axis, record)
 		if err != nil {
 			return err
 		}
-		i++
 	}
+
 	err = sw.Flush()
 	if err != nil {
 		return err
 	}
 	_, err = f.WriteTo(w)
+
 	return err
 }
 

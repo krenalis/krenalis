@@ -25,7 +25,6 @@ type FileConnection interface {
 	// Read reads the records from r.
 	Read(r io.Reader) error
 
-	// Write writes the records read from get into w.
-	// get should return io.EOF when there are no more records.
-	Write(w io.Writer, get func() ([]string, error)) error
+	// Write writes the records to w.
+	Write(w io.Writer) error
 }

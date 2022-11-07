@@ -116,13 +116,27 @@ func (c *connection) Read(r io.Reader) error {
 	return nil
 }
 
-// Write writes the records read from get into w.
-func (c *connection) Write(w io.Writer, get func() ([]string, error)) error {
+// Write writes the records to w.
+func (c *connection) Write(w io.Writer) error {
+
 	v := csv.NewWriter(w)
 	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
 	v.UseCRLF = c.settings.UseCRLF
+
+	// Write the column names.
+	columns := c.firehose.Columns()
+	record := make([]string, len(columns))
+	for i, c := range columns {
+		record[i] = c.Name
+	}
+	err := v.Write(record)
+	if err != nil {
+		return err
+	}
+
+	// Write the records.
 	for {
-		record, err := get()
+		record, err = c.firehose.RecordString()
 		if err == io.EOF {
 			v.Flush()
 			if err := v.Error(); err != nil {
@@ -138,6 +152,7 @@ func (c *connection) Write(w io.Writer, get func() ([]string, error)) error {
 			return err
 		}
 	}
+
 	return nil
 }
 

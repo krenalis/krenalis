@@ -72,6 +72,18 @@ func (fh *firehose) setStopAfterColumns() {
 	fh.stopAfterColumns = true
 }
 
+func (fh *firehose) Columns() []connector.Column {
+	return fh.columns
+}
+
+func (fh *firehose) Record() ([]any, error) {
+	return nil, nil // TODO(marco)
+}
+
+func (fh *firehose) RecordString() ([]string, error) {
+	return nil, nil // TODO(marco)
+}
+
 func (fh *firehose) SetColumns(columns []connector.Column) error {
 	for i, c := range columns {
 		switch c.Name {

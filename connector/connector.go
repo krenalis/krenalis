@@ -66,6 +66,9 @@ type Connection interface {
 // Firehose is the interface implemented by a Firehose.
 type Firehose interface {
 
+	// Columns returns the columns for a File connection.
+	Columns() []Column
+
 	// PutRecord puts a record of a File connection as a slice of any.
 	PutRecord(record []any)
 
@@ -75,6 +78,14 @@ type Firehose interface {
 	// ReceiveEvent receives the given event for the data source.
 	// The event.Resource field must be empty.
 	ReceiveEvent(event Event)
+
+	// Record returns a record, as a slice of any, for a File connection.
+	// It returns nil and io.EOF if there are no more records.
+	Record() ([]any, error)
+
+	// RecordString returns a record, as a string slice, for a File connection.
+	// It returns nil and io.EOF if there are no more records.
+	RecordString() ([]string, error)
 
 	// SetColumns sets the columns of a File connection.
 	SetColumns(columns []Column) error
