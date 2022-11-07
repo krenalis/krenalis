@@ -17,9 +17,11 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 	"unicode/utf8"
 
 	"chichi/apis"
+	"chichi/apis/types"
 	"chichi/connector"
 	"chichi/connector/ui"
 )
@@ -76,8 +78,8 @@ func (c *connection) ContentType() string {
 	return "text/csv; charset=UTF-8"
 }
 
-// Read reads the records from r and calls put for each record read.
-func (c *connection) Read(r io.Reader, put func(record []string) error) error {
+// Read reads the records from r.
+func (c *connection) Read(r io.Reader) error {
 	v := csv.NewReader(r)
 	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
 	if c.settings.Comment != "" {
@@ -86,6 +88,7 @@ func (c *connection) Read(r io.Reader, put func(record []string) error) error {
 	v.FieldsPerRecord = c.settings.FieldsPerRecord
 	v.LazyQuotes = c.settings.LazyQuotes
 	v.TrimLeadingSpace = c.settings.TrimLeadingSpace
+	var first bool
 	for {
 		record, err := v.Read()
 		if err == io.EOF {
@@ -94,10 +97,21 @@ func (c *connection) Read(r io.Reader, put func(record []string) error) error {
 		if err != nil {
 			return err
 		}
-		err = put(record)
-		if err != nil {
-			return err
+		// Set the columns.
+		if first {
+			columns := make([]connector.Column, len(record))
+			for i, c := range columns {
+				c.Name = "column" + strconv.Itoa(i+1)
+				c.Type = types.Text()
+			}
+			err = c.firehose.SetColumns(columns)
+			if err != nil {
+				return err
+			}
+			first = false
 		}
+		// Put the record.
+		c.firehose.PutRecordString(record)
 	}
 	return nil
 }

@@ -22,8 +22,8 @@ type FileConnection interface {
 	// ContentType returns the content type of the data to write.
 	ContentType() string
 
-	// Read reads the records from r and calls put for each record read.
-	Read(r io.Reader, put func(record []string) error) error
+	// Read reads the records from r.
+	Read(r io.Reader) error
 
 	// Write writes the records read from get into w.
 	// get should return io.EOF when there are no more records.

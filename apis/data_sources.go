@@ -503,52 +503,16 @@ func (this *DataSources) Import(id int, reimport bool) error {
 
 		// Connect to the file connector.
 		fh = this.newFirehose(context.Background(), id, streamConnector, 0, "File", "")
+		fh.setIdentityColumn(identityColumn)
+		fh.setTimestampColumn(timestampColumn)
+		fh.setTimestamp(timestamp)
 		file, err := newFileConnection(fh.ctx, fileConnectorName, fileSettings, fh)
 		if err != nil {
 			return err
 		}
 
 		// Read the records.
-		var columns []string
-		identityIndex := noColumn
-		timestampIndex := noColumn
-
-		err = file.Read(r, func(record []string) error {
-			if columns == nil {
-				for i, name := range record {
-					switch name {
-					case identityColumn:
-						identityIndex = i
-					case timestampColumn:
-						timestampIndex = i
-					}
-				}
-				if identityIndex == noColumn {
-					return fmt.Errorf("missing identity column %q", identityColumn)
-				}
-				if timestampColumn != "" && timestampIndex == noColumn {
-					return fmt.Errorf("missing timestamp column %q", timestampColumn)
-				}
-				columns = record
-				return nil
-			}
-			if len(record) != len(columns) {
-				return errors.New("connector %q has returned records with different lengths")
-			}
-			user := map[string]any{}
-			for i, c := range columns {
-				user[c] = record[i]
-			}
-			ts := timestamp
-			if timestampIndex != noColumn {
-				ts, err := time.Parse("2006-01-02 15:04:05", record[timestampIndex])
-				if err != nil {
-					return fmt.Errorf("invalid timestamp column value: %s", ts)
-				}
-			}
-			fh.SetUser(record[identityIndex], ts, user)
-			return nil
-		})
+		err = file.Read(r)
 		if err != nil {
 			return err
 		}
@@ -1073,17 +1037,14 @@ func (this *DataSources) reloadProperties(id int) error {
 		}
 		defer r.Close()
 
-		// Connect to the file connector and read only the first record.
+		// Connect to the file connector and read only the columns.
 		fh = this.newFirehose(fh.ctx, id, streamConnector, 0, "File", "")
+		fh.setStopAfterColumns()
 		file, err := newFileConnection(fh.ctx, fileConnectorName, fileSettings, fh)
 		if err != nil {
 			return err
 		}
-		var columns []string
-		err = file.Read(r, func(record []string) error {
-			columns = record
-			return ErrRecordStop
-		})
+		err = file.Read(r)
 		if err != nil && err != ErrRecordStop {
 			return err
 		}
@@ -1094,12 +1055,11 @@ func (this *DataSources) reloadProperties(id int) error {
 			return err
 		}
 
-		properties = make([]_connector.Property, len(columns))
+		properties = make([]_connector.Property, len(fh.columns))
 		for i := 0; i < len(properties); i++ {
-			properties[i].Name = columns[i]
-			properties[i].Type = types.Text()
+			properties[i].Name = fh.columns[i].Name
+			properties[i].Type = fh.columns[i].Type
 		}
-
 	}
 
 	rawProperties, err := json.Marshal(properties)

@@ -15,12 +15,14 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	"chichi/apis"
+	"chichi/apis/types"
 	"chichi/connector"
 	"chichi/connector/ui"
 
@@ -74,8 +76,8 @@ func (c *connection) ContentType() string {
 	return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 }
 
-// Read reads the records from r and calls put for each record read.
-func (c *connection) Read(r io.Reader, put func(record []string) error) error {
+// Read reads the records from r.
+func (c *connection) Read(r io.Reader) error {
 	f, err := excelize.OpenReader(r, excelize.Options{
 		RawCellValue: true,
 	})
@@ -91,17 +93,40 @@ func (c *connection) Read(r io.Reader, put func(record []string) error) error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
+	var first bool
 	for rows.Next() {
 		row, err := rows.Columns()
 		if err != nil {
 			return err
 		}
-		err = put(row)
-		if err != nil {
-			return err
+		// Set the columns.
+		if first {
+			columns := make([]connector.Column, len(row))
+			for i, c := range columns {
+				// Set the column name.
+				c.Name = "column" + strconv.Itoa(i+1)
+				// Set the column type.
+				axis, err := excelize.CoordinatesToCellName(i+1, 1)
+				if err != nil {
+					return err
+				}
+				t, err := f.GetCellType(sheetName, axis)
+				if err != nil {
+					return err
+				}
+				c.Type, err = columnType(t)
+				if err != nil {
+					return err
+				}
+			}
+			c.firehose.SetColumns(columns)
+			first = false
 		}
+		// Put the record.
+		c.firehose.PutRecordString(row)
 	}
-	return rows.Close()
+	return nil
 }
 
 // Write writes the records read from get into w.
@@ -182,4 +207,20 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 	}
 
 	return form, nil
+}
+
+// columnType returns the column type from the Excel column type t.
+func columnType(t excelize.CellType) (types.Type, error) {
+	switch t {
+	case excelize.CellTypeBool:
+		return types.Boolean(), nil
+	case excelize.CellTypeDate:
+		return types.Date(), nil
+	case excelize.CellTypeNumber:
+		return types.Decimal(0, 0), nil
+	case excelize.CellTypeUnset, excelize.CellTypeError, excelize.CellTypeString:
+		return types.Text(), nil
+	default:
+		return types.Type{}, fmt.Errorf("unexpected Excel type %d", t)
+	}
 }

@@ -66,9 +66,18 @@ type Connection interface {
 // Firehose is the interface implemented by a Firehose.
 type Firehose interface {
 
+	// PutRecord puts a record of a File connection as a slice of any.
+	PutRecord(record []any)
+
+	// PutRecordString puts a record of a File connection as a string slice.
+	PutRecordString(record []string)
+
 	// ReceiveEvent receives the given event for the data source.
 	// The event.Resource field must be empty.
 	ReceiveEvent(event Event)
+
+	// SetColumns sets the columns of a File connection.
+	SetColumns(columns []Column) error
 
 	// SetCursor sets the given cursor for the data source.
 	SetCursor(cursor string)
