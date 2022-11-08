@@ -75,6 +75,9 @@ type Firehose interface {
 	// PutRecordString puts a record of a File connection as a string slice.
 	PutRecordString(record []string)
 
+	// PutRecordMap puts a record of a File connection as a map.
+	PutRecordMap(record map[string]any)
+
 	// ReceiveEvent receives the given event for the data source.
 	// The event.Resource field must be empty.
 	ReceiveEvent(event Event)

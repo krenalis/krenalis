@@ -35,7 +35,8 @@ INSERT INTO `connectors` VALUES
   (7,'HTTP','Stream','','https://cdn4.iconfinder.com/data/icons/application-windows-3/32/HTTP-512.png','','','','None','bearer','0',''),
   (8,'Excel','File','','https://cdn0.iconfinder.com/data/icons/logos-microsoft-office-365/128/Microsoft_Office-02-512.png','','','','None','bearer','0',''),
   (9,'S3','Stream','','https://cdn2.iconfinder.com/data/icons/amazon-aws-stencils/100/Storage__Content_Delivery_Amazon_S3-512.png','','','','None','bearer','0',''),
-  (10,'PostgreSQL','Database','','https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/postgresql-512.png','','','','None','bearer','0','');
+  (10,'PostgreSQL','Database','','https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/postgresql-512.png','','','','None','bearer','0',''),
+  (11,'Parquet','File','','','','','','None','bearer','0','');
 
 CREATE TABLE `data_sources` (
   `id` INT NOT NULL AUTO_INCREMENT,

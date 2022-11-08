@@ -1,0 +1,333 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2022 Open2b
+//
+
+package parquet
+
+// This package is the Parquet connector.
+// (https://github.com/apache/parquet-format)
+
+import (
+	"chichi/apis"
+	"chichi/apis/types"
+	"chichi/connector"
+	"chichi/connector/ui"
+	"context"
+	_ "embed"
+	"encoding/binary"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"time"
+
+	"github.com/fraugster/parquet-go"
+	"github.com/fraugster/parquet-go/parquet"
+)
+
+// Connector icon.
+var icon []byte
+
+// Make sure it implements the FileConnector interface.
+var _ connector.FileConnection = &connection{}
+
+func init() {
+	apis.RegisterFileConnector("Parquet", New)
+}
+
+type connection struct {
+	ctx      context.Context
+	settings *settings
+	firehose connector.Firehose
+}
+
+type settings struct {
+	Comma            string
+	Comment          string
+	FieldsPerRecord  int
+	LazyQuotes       bool
+	TrimLeadingSpace bool
+	UseCRLF          bool
+}
+
+// New returns a new Parquet connection.
+func New(ctx context.Context, settings []byte, fh connector.Firehose) (connector.FileConnection, error) {
+	c := connection{ctx: ctx}
+	if len(settings) > 0 {
+		err := json.Unmarshal(settings, &c.settings)
+		if err != nil {
+			return nil, errors.New("cannot unmarshal settings of Parquet connection")
+		}
+	}
+	c.firehose = fh
+	return &c, nil
+}
+
+// Connector returns the connector.
+func (c *connection) Connector() *connector.Connector {
+	return &connector.Connector{
+		Name: "Parquet",
+		Type: connector.TypeFile,
+		Icon: icon,
+	}
+}
+
+// ContentType returns the content type of the data to write.
+func (c *connection) ContentType() string {
+	return "application/octet-stream"
+}
+
+// Read reads the records from r.
+func (c *connection) Read(r io.Reader) error {
+
+	// Copy data read from r to a temporary file.
+	dir := os.TempDir()
+	fi, err := os.CreateTemp(dir, "")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = fi.Close()
+		_ = os.Remove(filepath.Join(dir, fi.Name()))
+	}()
+	_, err = io.Copy(fi, r)
+	if err != nil {
+		return err
+	}
+	_, err = fi.Seek(io.SeekStart, 0)
+	if err != nil {
+		return err
+	}
+
+	fr, err := goparquet.NewFileReaderWithOptions(fi, goparquet.WithReaderContext(c.ctx))
+	if err != nil {
+		return err
+	}
+
+	// Read the columns.
+	var int96Columns []string
+	parquetColumns := fr.Columns()
+	columns := make([]connector.Column, len(parquetColumns))
+	for i, c := range parquetColumns {
+		element := c.Element()
+		columns[i].Name = strings.Join(c.Path(), ".")
+		columns[i].Type, err = propertyType(element)
+		if err != nil {
+			return err
+		}
+		if *element.Type == parquet.Type_INT96 {
+			int96Columns = append(int96Columns, columns[i].Name)
+		}
+	}
+	err = c.firehose.SetColumns(columns)
+	if err != nil {
+		return err
+	}
+
+	// Read the records.
+	for {
+		record, err := fr.NextRow()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+		// Convert int96 type values from []byte to time.Time.
+		for _, name := range int96Columns {
+			record[name], err = convertInt96(record[name])
+			if err != nil {
+				return fmt.Errorf("cannot convert value of column %q: %s", name, err)
+			}
+		}
+		// Put the record.
+		c.firehose.PutRecordMap(record)
+	}
+
+	return nil
+}
+
+// Write writes the records read from get into w.
+func (c *connection) Write(w io.Writer) error {
+	// TODO(marco)
+	return nil
+}
+
+// ServeUI serves the connector's user interface.
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
+	return nil, ui.ErrEventNotExist
+}
+
+// propertyType returns the property type of a Parquet column.
+// (https://github.com/apache/parquet-format/blob/master/LogicalTypes.md)
+func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
+
+	if elem.Type == nil {
+		return types.Type{}, errors.New("unexpected Parquet nil type")
+	}
+
+	// Physical types.
+	switch *elem.Type {
+	case parquet.Type_BOOLEAN:
+		return types.Boolean(), nil
+	case parquet.Type_FLOAT:
+		return types.Real(), nil
+	case parquet.Type_DOUBLE:
+		return types.Double(), nil
+	}
+
+	// Logical types.
+	// (https://github.com/apache/parquet-format/blob/master/LogicalTypes.md)
+	if lt := elem.LogicalType; lt != nil {
+		if lt.STRING != nil {
+			return types.Text(), nil
+		}
+		if lt.ENUM != nil {
+			return types.Text(), nil
+		}
+		if d := lt.DECIMAL; d != nil {
+			if 0 < d.Precision && d.Precision <= types.MaxDecimalPrecision &&
+				d.Scale <= types.MaxDecimalScale && d.Scale <= d.Precision {
+				return types.Decimal(int(d.Precision), int(d.Scale)), nil
+			}
+			return types.Decimal(0, 0), nil
+		}
+		if lt.DATE != nil {
+			return types.Date(), nil
+		}
+		if lt.TIMESTAMP != nil {
+			return types.DateTime(), nil
+		}
+		if lt.TIME != nil {
+			return types.Time(), nil // TODO(marco) add unit of measure
+		}
+		if lt.INTEGER != nil {
+			if lt.INTEGER.IsSigned {
+				switch lt.INTEGER.BitWidth {
+				case 8:
+					return types.TinyInt(), nil
+				case 16:
+					return types.SmallInt(), nil
+				case 32:
+					return types.Int(), nil
+				case 64:
+					return types.BigInt(), nil
+				}
+				return types.Type{}, fmt.Errorf("unexpected Parquet bitWidth value: %d", lt.INTEGER.BitWidth)
+			}
+			switch lt.INTEGER.BitWidth {
+			case 8:
+				return types.UnsignedTinyInt(), nil
+			case 16:
+				return types.UnsignedSmallInt(), nil
+			case 32:
+				return types.UnsignedInt(), nil
+			case 64:
+				return types.UnsignedBigInt(), nil
+			}
+			return types.Type{}, fmt.Errorf("unexpected Parquet bitWidth value: %d", lt.INTEGER.BitWidth)
+		}
+		if lt.JSON != nil || lt.BSON != nil {
+			return types.JSON(), nil
+		}
+		if lt.UUID != nil {
+			return types.UUID(), nil
+		}
+		return types.Type{}, fmt.Errorf("unsupported logical Parquet type %q", lt)
+	}
+
+	// Converted types.
+	if ct := elem.ConvertedType; ct != nil {
+		switch *ct {
+		case parquet.ConvertedType_UTF8, parquet.ConvertedType_ENUM:
+			return types.Text(), nil
+		case parquet.ConvertedType_INT_8:
+			return types.TinyInt(), nil
+		case parquet.ConvertedType_INT_16:
+			return types.SmallInt(), nil
+		case parquet.ConvertedType_INT_32:
+			return types.Int(), nil
+		case parquet.ConvertedType_INT_64:
+			return types.BigInt(), nil
+		case parquet.ConvertedType_UINT_8:
+			return types.UnsignedTinyInt(), nil
+		case parquet.ConvertedType_UINT_16:
+			return types.UnsignedSmallInt(), nil
+		case parquet.ConvertedType_UINT_32:
+			return types.UnsignedInt(), nil
+		case parquet.ConvertedType_UINT_64:
+			return types.UnsignedBigInt(), nil
+		case parquet.ConvertedType_JSON, parquet.ConvertedType_BSON:
+			return types.JSON(), nil
+		case parquet.ConvertedType_DECIMAL:
+			if elem.Precision != nil && *elem.Precision <= types.MaxDecimalPrecision &&
+				elem.Scale != nil && *elem.Scale <= types.MaxDecimalScale && *elem.Scale <= *elem.Precision {
+				return types.Decimal(int(*elem.Precision), int(*elem.Scale)), nil
+			}
+			return types.Decimal(0, 0), nil
+		case parquet.ConvertedType_DATE:
+			return types.Date(), nil
+		case parquet.ConvertedType_TIMESTAMP_MICROS, parquet.ConvertedType_TIMESTAMP_MILLIS:
+			return types.DateTime(), nil
+		case parquet.ConvertedType_TIME_MICROS, parquet.ConvertedType_TIME_MILLIS:
+			return types.Time(), nil // TODO(marco) add unit of measure
+		}
+		return types.Type{}, fmt.Errorf("unsupported converted Parquet type %q", *ct)
+	}
+
+	// Physical types.
+	switch *elem.Type {
+	case parquet.Type_INT32:
+		return types.Int(), nil
+	case parquet.Type_INT64:
+		return types.BigInt(), nil
+	case parquet.Type_INT96:
+		return types.DateTime(), nil
+	case parquet.Type_BYTE_ARRAY, parquet.Type_FIXED_LEN_BYTE_ARRAY:
+		return types.Text(), nil
+	}
+
+	return types.Type{}, fmt.Errorf("unsupported Parquet type %q", *elem.Type)
+}
+
+// Convert an int96 type value to a time.Time value.
+// v must be a byte array with length in range [8,96].
+// See https://stackoverflow.com/questions/53103762.
+func convertInt96(v any) (time.Time, error) {
+	r := reflect.ValueOf(v)
+	t := r.Type()
+	// Validate the argument.
+	if t.Kind() != reflect.Array || t.Elem().Kind() != reflect.Uint8 {
+		return time.Time{}, fmt.Errorf("unexpected value type %q, expecting byte array", r)
+	}
+	if l := t.Len(); l < 8 || l > 96 {
+		return time.Time{}, fmt.Errorf("unexpected byte array length %d", l)
+	}
+	// Convert the array to a slice value.
+	ra := reflect.New(t).Elem()
+	ra.Set(r)
+	p := ra.Slice(0, t.Len()).Interface().([]byte)
+	// Convert the byte slice to a time.Time value.
+	// The following code was taken from https://stackoverflow.com/a/53133964
+	// and was written by https://stackoverflow.com/users/1912391/zaky.
+	nano, dt := binary.LittleEndian.Uint64(p[:8]), binary.LittleEndian.Uint32(p[8:])
+	l := dt + 68569
+	n := 4 * l / 146097
+	l = l - (146097*n+3)/4
+	i := 4000 * (l + 1) / 1461001
+	l = l - 1461*i/4 + 31
+	j := 80 * l / 2447
+	k := l - 2447*j/80
+	l = j / 11
+	j = j + 2 - 12*l
+	i = 100*(n-49) + i + l
+	tm := time.Date(int(i), time.Month(j), int(k), 0, 0, 0, 0, time.UTC)
+	return tm.Add(time.Duration(nano)), nil
+}

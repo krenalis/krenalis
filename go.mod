@@ -10,6 +10,7 @@ replace (
 	chichi/connectors/hubspot => ./connectors/hubspot
 	chichi/connectors/mailchimp => ./connectors/mailchimp
 	chichi/connectors/mysql => ./connectors/mysql
+	chichi/connectors/parquet => ./connectors/parquet
 	chichi/connectors/postgresql => ./connectors/postgresql
 	chichi/connectors/s3 => ./connectors/s3
 	chichi/connectors/sftp => ./connectors/sftp
@@ -23,6 +24,7 @@ require (
 	chichi/connectors/hubspot v0.0.0-00010101000000-000000000000
 	chichi/connectors/mailchimp v0.0.0-00010101000000-000000000000
 	chichi/connectors/mysql v0.0.0-00010101000000-000000000000
+	chichi/connectors/parquet v0.0.0-00010101000000-000000000000
 	chichi/connectors/postgresql v0.0.0-00010101000000-000000000000
 	chichi/connectors/s3 v0.0.0-00010101000000-000000000000
 	chichi/connectors/sftp v0.0.0-00010101000000-000000000000
@@ -42,6 +44,7 @@ require (
 require (
 	github.com/ClickHouse/ch-go v0.47.3 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
+	github.com/apache/thrift v0.16.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.17.1 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.9 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.17.10 // indirect
@@ -60,8 +63,10 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.13.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.17.1 // indirect
 	github.com/aws/smithy-go v1.13.4 // indirect
+	github.com/fraugster/parquet-go v0.12.0 // indirect
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.6.1 // indirect
+	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect

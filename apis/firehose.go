@@ -80,6 +80,10 @@ func (fh *firehose) Record() ([]any, error) {
 	return nil, nil // TODO(marco)
 }
 
+func (fh *firehose) RecordMap() (map[string]any, error) {
+	return nil, nil // TODO(marco)
+}
+
 func (fh *firehose) RecordString() ([]string, error) {
 	return nil, nil // TODO(marco)
 }
@@ -125,6 +129,20 @@ func (fh *firehose) PutRecord(record []any) {
 	}
 	user := fmt.Sprintf("%s", record[fh.identityIndex])
 	fh.SetUser(user, ts, properties)
+	return
+}
+
+func (fh *firehose) PutRecordMap(record map[string]any) {
+	ts := fh.timestamp
+	if fh.timestampIndex != noColumn {
+		ts, err := time.Parse("2006-01-02 15:04:05", record[fh.timestampColumn].(string))
+		if err != nil {
+			err = fmt.Errorf("invalid timestamp column value: %s", ts)
+			return
+		}
+	}
+	user := fmt.Sprintf("%s", record[fh.identityColumn])
+	fh.SetUser(user, ts, record)
 	return
 }
 
