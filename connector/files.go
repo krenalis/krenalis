@@ -9,8 +9,46 @@ package connector
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 )
+
+var (
+	ErrNoColumns                = errors.New("file does not contain columns")
+	ErrEmptyColumnName          = errors.New("file contains an empty column name")
+	ErrInvalidEncodedColumnName = errors.New("file contains a column name with an invalid UTF-8 encoding")
+)
+
+// A SameColumnNameError error is returned by the FileConnector.Read method when
+// two columns have the same name.
+type SameColumnNameError struct {
+	Name string
+}
+
+func (err SameColumnNameError) Error() string {
+	return fmt.Sprintf("there are two columns with the same name: %s", err.Name)
+}
+
+// A MissingIdentityColumnError error is returned by the FileConnector.Read method when
+// the identity column is missing.
+type MissingIdentityColumnError struct {
+	Column string
+}
+
+func (err MissingIdentityColumnError) Error() string {
+	return fmt.Sprintf("identity column is missing: %s", err.Column)
+}
+
+// A MissingTimestampColumnError error is returned by the FileConnector.Read method when
+// the timestamp column is missing.
+type MissingTimestampColumnError struct {
+	Column string
+}
+
+func (err MissingTimestampColumnError) Error() string {
+	return fmt.Sprintf("timestamp column is missing: %s", err.Column)
+}
 
 // FileConnectionFunc represents functions that create new file connections.
 type FileConnectionFunc func(context.Context, []byte, Firehose) (FileConnection, error)

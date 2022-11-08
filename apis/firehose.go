@@ -330,6 +330,17 @@ func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
 	return nil
 }
 
+// newRecordWriter returns a new record writer.
+func (fh *firehose) newRecordWriter(identityColumn, timestampColumn string, timestamp time.Time, onlyColumns bool) *recordWriter {
+	return &recordWriter{
+		fh:              fh,
+		onlyColumns:     onlyColumns,
+		identityColumn:  identityColumn,
+		timestampColumn: timestampColumn,
+		timestamp:       timestamp,
+	}
+}
+
 // recordWriter implements the connector.RecordWriter interface.
 type recordWriter struct {
 	fh              *firehose
@@ -342,34 +353,35 @@ type recordWriter struct {
 	timestamp       time.Time
 }
 
-// newRecordWriter returns a new record writer.
-func (fh *firehose) newRecordWriter(identityColumn, timestampColumn string, timestamp time.Time, onlyColumns bool) *recordWriter {
-	return &recordWriter{
-		fh:              fh,
-		onlyColumns:     onlyColumns,
-		identityColumn:  identityColumn,
-		timestampColumn: timestampColumn,
-		identityIndex:   noColumn,
-		timestampIndex:  noColumn,
-		timestamp:       timestamp,
-	}
-}
-
 // Columns receives the columns.
 func (rw *recordWriter) Columns(columns []connector.Column) error {
+	if len(columns) == 0 {
+		return connector.ErrNoColumns
+	}
+	index := make(map[string]int, len(columns))
 	for i, c := range columns {
-		switch c.Name {
-		case rw.identityColumn:
-			rw.identityIndex = i
-		case rw.timestampColumn:
-			rw.timestampIndex = i
+		if c.Name == "" {
+			return connector.ErrEmptyColumnName
+		}
+		if !utf8.ValidString(c.Name) {
+			return connector.ErrInvalidEncodedColumnName
+		}
+		if _, ok := index[c.Name]; ok {
+			return connector.SameColumnNameError{Name: c.Name}
+		}
+		index[c.Name] = i
+		if !c.Type.Valid() {
+			return fmt.Errorf("connector %d returned an invalid type", rw.fh.connector)
 		}
 	}
-	if rw.identityIndex == noColumn {
-		return fmt.Errorf("missing identity column %q", rw.identityColumn)
+	var ok bool
+	if rw.identityIndex, ok = index[rw.identityColumn]; !ok {
+		return connector.MissingIdentityColumnError{Column: rw.identityColumn}
 	}
-	if rw.timestampColumn != "" && rw.timestampIndex == noColumn {
-		return fmt.Errorf("missing timestamp column %q", rw.timestampColumn)
+	if rw.timestampColumn != "" {
+		if rw.timestampIndex, ok = index[rw.identityColumn]; !ok {
+			return connector.MissingTimestampColumnError{Column: rw.timestampColumn}
+		}
 	}
 	rw.columns = columns
 	if rw.onlyColumns {
