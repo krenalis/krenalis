@@ -20,12 +20,12 @@ var (
 	connectors   = struct {
 		apps      map[string]connector.AppConnectionFunc
 		databases map[string]connector.DatabaseConnectionFunc
-		streams   map[string]connector.StreamConnectionFunc
+		storage   map[string]connector.StorageConnectionFunc
 		files     map[string]connector.FileConnectionFunc
 	}{
 		apps:      make(map[string]connector.AppConnectionFunc),
 		databases: make(map[string]connector.DatabaseConnectionFunc),
-		streams:   make(map[string]connector.StreamConnectionFunc),
+		storage:   make(map[string]connector.StorageConnectionFunc),
 		files:     make(map[string]connector.FileConnectionFunc),
 	}
 )
@@ -75,19 +75,19 @@ func RegisterFileConnector(name string, fn connector.FileConnectionFunc) {
 	connectors.files[name] = fn
 }
 
-// RegisterStreamConnector makes a stream connector available by the provided
-// name. If RegisterStreamConnector is called twice with the same name or if fn
-// is nil, it panics.
-func RegisterStreamConnector(name string, fn connector.StreamConnectionFunc) {
+// RegisterStorageConnector makes a storage connector available by the provided
+// name. If RegisterStorageConnector is called twice with the same name or if
+// fn is nil, it panics.
+func RegisterStorageConnector(name string, fn connector.StorageConnectionFunc) {
 	if fn == nil {
-		panic("apis: RegisterStreamConnector function is nil")
+		panic("apis: RegisterStorageConnector function is nil")
 	}
 	connectorsMu.Lock()
 	defer connectorsMu.Unlock()
-	if _, dup := connectors.streams[name]; dup {
-		panic("apis: RegisterStreamConnector called twice for connector " + name)
+	if _, dup := connectors.storage[name]; dup {
+		panic("apis: RegisterStorageConnector called twice for connector " + name)
 	}
-	connectors.streams[name] = fn
+	connectors.storage[name] = fn
 }
 
 // newAppConnection returns a new app connection for the app connector with the
@@ -126,14 +126,14 @@ func newFileConnection(ctx context.Context, name string, conf *connector.FileCon
 	return f(ctx, conf)
 }
 
-// newStreamConnection returns a new stream connection for the stream connector
-// with the given name.
-func newStreamConnection(ctx context.Context, name string, conf *connector.StreamConfig) (connector.StreamConnection, error) {
+// newStorageConnection returns a new storage connection for the storage
+// connector with the given name.
+func newStorageConnection(ctx context.Context, name string, conf *connector.StorageConfig) (connector.StorageConnection, error) {
 	connectorsMu.Lock()
 	defer connectorsMu.Unlock()
-	f, ok := connectors.streams[name]
+	f, ok := connectors.storage[name]
 	if !ok {
-		return nil, fmt.Errorf("apis: unknown stream connector %q (forgotten import?)", name)
+		return nil, fmt.Errorf("apis: unknown storage connector %q (forgotten import?)", name)
 	}
 	return f(ctx, conf)
 }

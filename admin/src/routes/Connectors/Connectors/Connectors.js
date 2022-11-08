@@ -32,7 +32,7 @@ export default class Connectors extends React.Component {
 	addSource = async (id, type, oauthURL, e) => {
 		e.currentTarget.setAttribute('loading', '');
 		if (oauthURL === '') {
-			let [, err] = await call('/admin/add-data-source', {Type: type, Connector: id, Stream: 0});
+			let [, err] = await call('/admin/add-data-source', {Type: type, Connector: id, Storage: 0});
 			if (err != null) {
 				this.setState({status: {variant:'danger', icon:'exclamation-octagon', text:err}});
 				e.currentTarget.removeAttribute('loading');

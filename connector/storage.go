@@ -13,19 +13,19 @@ import (
 	"time"
 )
 
-// StreamConfig represents the configuration of a stream connection.
-type StreamConfig struct {
+// StorageConfig represents the configuration of a storage connection.
+type StorageConfig struct {
 	Direction Direction
 	Settings  []byte
 	Firehose  Firehose
 }
 
-// StreamConnectionFunc represents functions that create new stream
+// StorageConnectionFunc represents functions that create new storage
 // connections.
-type StreamConnectionFunc func(context.Context, *StreamConfig) (StreamConnection, error)
+type StorageConnectionFunc func(context.Context, *StorageConfig) (StorageConnection, error)
 
-// StreamConnection is the interface implemented by stream connections.
-type StreamConnection interface {
+// StorageConnection is the interface implemented by storage connections.
+type StorageConnection interface {
 	Connection
 
 	// Reader returns a ReadCloser from which to read the data and its last update time.

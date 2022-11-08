@@ -228,11 +228,11 @@ func (this *DataSources) AddDatabase(dir Direction, connector int) (int, error) 
 	return int(id), nil
 }
 
-// AddFileStream adds a file-stream data source given its direction, file and
-// stream connectors and returns its identifier.
+// AddFileStorage adds a file-storage data source given its direction, file and
+// storage connectors and returns its identifier.
 //
 // If a connector does not exist, it returns the ErrConnectorNotFound error.
-func (this *DataSources) AddFileStream(dir Direction, fileConnector, streamConnector int) (int, error) {
+func (this *DataSources) AddFileStorage(dir Direction, fileConnector, storageConnector int) (int, error) {
 	if dir != SourceDir && dir != DestDir {
 		return 0, errors.New("invalid direction")
 	}
@@ -254,21 +254,21 @@ func (this *DataSources) AddFileStream(dir Direction, fileConnector, streamConne
 		if connectorType != "File" {
 			return errors.New("fileConnector is not a file connector")
 		}
-		// Check the stream connector.
-		err = stmt.QueryRow(streamConnector).Scan(&connectorType)
+		// Check the storage connector.
+		err = stmt.QueryRow(storageConnector).Scan(&connectorType)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ErrConnectorNotFound
 			}
 			return err
 		}
-		if connectorType != "Stream" {
-			return errors.New("streamConnector is not a stream connector")
+		if connectorType != "Storage" {
+			return errors.New("storageConnector is not a storage connector")
 		}
 		// Add the data source.
 		result, err := tx.Exec("INSERT INTO `data_sources`\n"+
-			"SET `workspace` = ?, `type` = 'FileStream', `direction` = ?, `connector` = ? AND `stream` = ?",
-			this.workspace, dir.String(), fileConnector, streamConnector)
+			"SET `workspace` = ?, `type` = 'FileStorage', `direction` = ?, `connector` = ? AND `storage` = ?",
+			this.workspace, dir.String(), fileConnector, storageConnector)
 		if err != nil {
 			return err
 		}
@@ -522,19 +522,19 @@ func (this *DataSources) Import(id int, reimport bool) error {
 			return err
 		}
 
-	case "FileStream":
+	case "FileStorage":
 
-		var fileConnectorName, streamConnectorName, identityColumn, timestampColumn string
-		var fileConnector, streamConnector int
-		var fileSettings, streamSettings []byte
+		var fileConnectorName, storageConnectorName, identityColumn, timestampColumn string
+		var fileConnector, storageConnector int
+		var fileSettings, storageSettings []byte
 		err = this.myDB.QueryRow(
-			"SELECT `c1`.`name`, `c2`.`name`, `s`.`connector`, `s`.`stream`, `s`.`identityColumn`,"+
-				" `s`.`timestampColumn`, `s`.`settings`, `s`.`streamSettings`\n"+
+			"SELECT `c1`.`name`, `c2`.`name`, `s`.`connector`, `s`.`storage`, `s`.`identityColumn`,"+
+				" `s`.`timestampColumn`, `s`.`settings`, `s`.`storageSettings`\n"+
 				"FROM `data_sources` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c1` ON `c1`.`id` = `s`.`connector`\n"+
-				"INNER JOIN `connectors` AS `c2` ON `c2`.`id` = `s`.`stream`\n"+
-				"WHERE `s`.`id` = ?", id).Scan(&fileConnectorName, &streamConnectorName, &fileConnector,
-			&streamConnector, &identityColumn, &timestampColumn, &fileSettings, &streamSettings)
+				"INNER JOIN `connectors` AS `c2` ON `c2`.`id` = `s`.`storage`\n"+
+				"WHERE `s`.`id` = ?", id).Scan(&fileConnectorName, &storageConnectorName, &fileConnector,
+			&storageConnector, &identityColumn, &timestampColumn, &fileSettings, &storageSettings)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ErrDataSourceNotFound
@@ -542,24 +542,24 @@ func (this *DataSources) Import(id int, reimport bool) error {
 			return err
 		}
 
-		// Connect to the stream connector.
-		fh := this.newFirehose(context.Background(), id, streamConnector, 0, "Stream", direction, "")
-		stream, err := newStreamConnection(fh.ctx, streamConnectorName, &_connector.StreamConfig{
+		// Connect to the storage connector.
+		fh := this.newFirehose(context.Background(), id, storageConnector, 0, "Storage", direction, "")
+		storage, err := newStorageConnection(fh.ctx, storageConnectorName, &_connector.StorageConfig{
 			Direction: direction,
-			Settings:  streamSettings,
+			Settings:  storageSettings,
 			Firehose:  fh,
 		})
 		if err != nil {
 			return err
 		}
-		r, timestamp, err := stream.Reader()
+		r, timestamp, err := storage.Reader()
 		if err != nil {
 			return err
 		}
 		defer r.Close()
 
 		// Connect to the file connector.
-		fh = this.newFirehose(context.Background(), id, streamConnector, 0, "File", direction, "")
+		fh = this.newFirehose(context.Background(), id, storageConnector, 0, "File", direction, "")
 		file, err := newFileConnection(fh.ctx, fileConnectorName, &_connector.FileConfig{
 			Direction: direction,
 			Settings:  fileSettings,
@@ -576,7 +576,7 @@ func (this *DataSources) Import(id int, reimport bool) error {
 			return err
 		}
 
-		// Close the stream.
+		// Close the storage.
 		err = r.Close()
 		if err != nil {
 			return err
@@ -850,14 +850,14 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 				Settings:  settings,
 				Firehose:  fh,
 			})
-		case "FileStream":
+		case "FileStorage":
 			connection, err = newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 				Direction: direction,
 				Settings:  settings,
 				Firehose:  fh,
 			})
-		case "Stream":
-			connection, err = newStreamConnection(fh.ctx, connectorName, &_connector.StreamConfig{
+		case "Storage":
+			connection, err = newStorageConnection(fh.ctx, connectorName, &_connector.StorageConfig{
 				Direction: direction,
 				Settings:  settings,
 				Firehose:  fh,
@@ -1102,19 +1102,19 @@ func (this *DataSources) reloadProperties(id int) error {
 			properties[i].Type = columns[i].Type
 		}
 
-	case "FileStream":
+	case "FileStorage":
 
-		var fileConnectorName, streamConnectorName, identityColumn, timestampColumn string
-		var fileConnector, streamConnector int
-		var fileSettings, streamSettings []byte
+		var fileConnectorName, storageConnectorName, identityColumn, timestampColumn string
+		var fileConnector, storageConnector int
+		var fileSettings, storageSettings []byte
 		err = this.myDB.QueryRow(
-			"SELECT `c1`.`name`, `c2`.`name`, `s`.`connector`, `s`.`stream`, `s`.`identityColumn`,"+
-				" `s`.`timestampColumn`, `s`.`settings`, `s`.`streamSettings`\n"+
+			"SELECT `c1`.`name`, `c2`.`name`, `s`.`connector`, `s`.`storage`, `s`.`identityColumn`,"+
+				" `s`.`timestampColumn`, `s`.`settings`, `s`.`storageSettings`\n"+
 				"FROM `data_sources` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c1` ON `c1`.`id` = `s`.`connector`\n"+
-				"INNER JOIN `connectors` AS `c2` ON `c2`.`id` = `s`.`stream`\n"+
-				"WHERE `s`.`id` = ?", id).Scan(&fileConnectorName, &streamConnectorName, &fileConnector,
-			&streamConnector, &identityColumn, &timestampColumn, &fileSettings, &streamSettings)
+				"INNER JOIN `connectors` AS `c2` ON `c2`.`id` = `s`.`storage`\n"+
+				"WHERE `s`.`id` = ?", id).Scan(&fileConnectorName, &storageConnectorName, &fileConnector,
+			&storageConnector, &identityColumn, &timestampColumn, &fileSettings, &storageSettings)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ErrDataSourceNotFound
@@ -1122,24 +1122,24 @@ func (this *DataSources) reloadProperties(id int) error {
 			return err
 		}
 
-		// Connect to the stream connector.
-		fh := this.newFirehose(context.Background(), id, streamConnector, 0, "Stream", direction, "")
-		stream, err := newStreamConnection(fh.ctx, streamConnectorName, &_connector.StreamConfig{
+		// Connect to the storage connector.
+		fh := this.newFirehose(context.Background(), id, storageConnector, 0, "Storage", direction, "")
+		storage, err := newStorageConnection(fh.ctx, storageConnectorName, &_connector.StorageConfig{
 			Direction: direction,
-			Settings:  streamSettings,
+			Settings:  storageSettings,
 			Firehose:  fh,
 		})
 		if err != nil {
 			return err
 		}
-		r, _, err := stream.Reader()
+		r, _, err := storage.Reader()
 		if err != nil {
 			return err
 		}
 		defer r.Close()
 
 		// Connect to the file connector and read only the columns.
-		fh = this.newFirehose(fh.ctx, id, streamConnector, 0, "File", direction, "")
+		fh = this.newFirehose(fh.ctx, id, storageConnector, 0, "File", direction, "")
 		file, err := newFileConnection(fh.ctx, fileConnectorName, &_connector.FileConfig{
 			Direction: direction,
 			Settings:  fileSettings,
@@ -1154,7 +1154,7 @@ func (this *DataSources) reloadProperties(id int) error {
 			return err
 		}
 
-		// Close the stream.
+		// Close the storage.
 		err = r.Close()
 		if err != nil {
 			return err

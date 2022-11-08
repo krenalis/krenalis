@@ -80,8 +80,8 @@ func (fh *firehose) SetSettings(settings []byte) error {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 	}
 	settingsColumn := "`settings`"
-	if fh.connectorType == "Stream" {
-		settingsColumn = "`streamSettings`"
+	if fh.connectorType == "Storage" {
+		settingsColumn = "`storageSettings`"
 	}
 	_, err := fh.sources.myDB.Exec("UPDATE `data_sources`\nSET "+settingsColumn+" = ?\nWHERE `id` = ?", settings, fh.source)
 	if err != nil {

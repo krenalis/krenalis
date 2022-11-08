@@ -31,11 +31,11 @@ import (
 // Connector icon.
 var icon []byte
 
-// Make sure it implements the StreamConnection interface.
-var _ connector.StreamConnection = &connection{}
+// Make sure it implements the StorageConnection interface.
+var _ connector.StorageConnection = &connection{}
 
 func init() {
-	apis.RegisterStreamConnector("HTTP", New)
+	apis.RegisterStorageConnector("HTTP", New)
 }
 
 type connection struct {
@@ -50,7 +50,7 @@ type settings struct {
 }
 
 // New returns a new HTTP connection.
-func New(ctx context.Context, conf *connector.StreamConfig) (connector.StreamConnection, error) {
+func New(ctx context.Context, conf *connector.StorageConfig) (connector.StorageConnection, error) {
 	c := connection{ctx: ctx}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -66,7 +66,7 @@ func New(ctx context.Context, conf *connector.StreamConfig) (connector.StreamCon
 func (c *connection) Connector() *connector.Connector {
 	return &connector.Connector{
 		Name: "HTTP",
-		Type: connector.TypeStream,
+		Type: connector.TypeStorage,
 		Icon: icon,
 	}
 }

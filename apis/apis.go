@@ -389,7 +389,7 @@ func (apis *APIs) initSchema() {
 		workspace       int
 		typ             int `sql:"type"`
 		connector       int
-		stream          int
+		storage         int
 		resource        string
 		transformation  string
 		userCursor      string

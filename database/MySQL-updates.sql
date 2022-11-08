@@ -412,3 +412,21 @@ INSERT INTO `connectors` (`name`, `type`) VALUES ('Parquet','File');
 
 ALTER TABLE `data_sources`
     ADD column `direction` ENUM('Source', 'Destination') DEFAULT 'Source' AFTER `type`;
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'File', 'Stream', 'Storage') DEFAULT 'App';
+
+UPDATE `connectors` SET `type` = 'Storage' WHERE `type` = 'Stream';
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'File', 'Storage') DEFAULT 'App';
+
+ALTER TABLE `data_sources`
+    CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'FileStream', 'FileStorage') DEFAULT 'App',
+    CHANGE COLUMN `stream` `storage` INT NOT NULL,
+    CHANGE COLUMN `streamSettings` `storageSettings` TEXT NOT NULL;
+
+UPDATE `data_sources` SET `type` = 'FileStorage' WHERE `type` = 'FileStream';
+
+ALTER TABLE `data_sources`
+    CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'FileStorage') DEFAULT 'App';

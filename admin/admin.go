@@ -669,7 +669,7 @@ func (admin *admin) serveAddDataSource(w http.ResponseWriter, r *http.Request, a
 	source := struct {
 		Type      string
 		Connector int
-		Stream    int
+		Storage   int
 	}{}
 	err := json.NewDecoder(r.Body).Decode(&source)
 	if err != nil {
@@ -683,8 +683,8 @@ func (admin *admin) serveAddDataSource(w http.ResponseWriter, r *http.Request, a
 		id, err = ws.DataSources.AddApp(apis.SourceDir, source.Connector, "", "", "")
 	case "Database":
 		id, err = ws.DataSources.AddDatabase(apis.SourceDir, source.Connector)
-	case "FileStream":
-		id, err = ws.DataSources.AddFileStream(apis.SourceDir, source.Connector, source.Stream)
+	case "FileStorage":
+		id, err = ws.DataSources.AddFileStorage(apis.SourceDir, source.Connector, source.Storage)
 	}
 	if err != nil {
 		return err
