@@ -15,8 +15,9 @@ import (
 
 // DatabaseConfig represents the configuration of a database connection.
 type DatabaseConfig struct {
-	Settings []byte
-	Firehose Firehose
+	Direction Direction
+	Settings  []byte
+	Firehose  Firehose
 }
 
 // DatabaseConnectionFunc represents functions that create new database

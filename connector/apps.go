@@ -19,6 +19,7 @@ var ErrWebhookUnauthorized = errors.New("webhook unauthorized")
 
 // AppConfig represents the configuration of an app connection.
 type AppConfig struct {
+	Direction    Direction
 	Settings     []byte
 	Firehose     Firehose
 	ClientSecret string

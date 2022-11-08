@@ -18,6 +18,15 @@ import (
 // does not exist.
 var ErrEventNotExist = errors.New("event does not exist")
 
+// Direction represents the direction of a connection.
+type Direction int
+
+const (
+	BothDir   Direction = iota // both
+	SourceDir                  // source
+	DestDir                    // destination
+)
+
 type Form struct {
 	Fields  []Component
 	Actions []Action
@@ -56,6 +65,7 @@ type Input struct {
 	Rows        int // if bigger than 1, the corresponding component is a textarea.
 	MinLength   int
 	MaxLength   int
+	Direction   Direction
 }
 
 func (i *Input) component() {}
@@ -68,6 +78,7 @@ type Select struct {
 	Label       string
 	Placeholder string
 	Options     []Option
+	Direction   Direction
 }
 
 func (s *Select) component() {}
@@ -75,9 +86,10 @@ func (s *Select) component() {}
 func (s *Select) MarshalJSON() ([]byte, error) { return marshalComponent(s, "Select") }
 
 type Checkbox struct {
-	Name  string
-	Value bool
-	Label string
+	Name      string
+	Value     bool
+	Label     string
+	Direction Direction
 }
 
 func (ck *Checkbox) component() {}
@@ -85,9 +97,10 @@ func (ck *Checkbox) component() {}
 func (ck *Checkbox) MarshalJSON() ([]byte, error) { return marshalComponent(ck, "Checkbox") }
 
 type ColorPicker struct {
-	Name  string
-	Value string
-	Label string
+	Name      string
+	Value     string
+	Label     string
+	Direction Direction
 }
 
 func (cp *ColorPicker) component() {}
@@ -95,10 +108,11 @@ func (cp *ColorPicker) component() {}
 func (cp *ColorPicker) MarshalJSON() ([]byte, error) { return marshalComponent(cp, "ColorPicker") }
 
 type Radios struct {
-	Name    string
-	Value   any
-	Label   string
-	Options []Option
+	Name      string
+	Value     any
+	Label     string
+	Options   []Option
+	Direction Direction
 }
 
 func (rd *Radios) component() {}
@@ -106,12 +120,13 @@ func (rd *Radios) component() {}
 func (rd *Radios) MarshalJSON() ([]byte, error) { return marshalComponent(rd, "Radios") }
 
 type Range struct {
-	Name  string
-	Value int
-	Label string
-	Min   int
-	Max   int
-	Step  int
+	Name      string
+	Value     int
+	Label     string
+	Min       int
+	Max       int
+	Step      int
+	Direction Direction
 }
 
 func (r *Range) component() {}
@@ -119,9 +134,10 @@ func (r *Range) component() {}
 func (r *Range) MarshalJSON() ([]byte, error) { return marshalComponent(r, "Range") }
 
 type Switch struct {
-	Name  string
-	Value bool
-	Label string
+	Name      string
+	Value     bool
+	Label     string
+	Direction Direction
 }
 
 func (s *Switch) component() {}
@@ -136,6 +152,7 @@ type KeyValue struct {
 	KeyComponent   Component
 	ValueLabel     string
 	ValueComponent Component
+	Direction      Direction
 }
 
 func (kv *KeyValue) component() {}
@@ -143,9 +160,10 @@ func (kv *KeyValue) component() {}
 func (kv *KeyValue) MarshalJSON() ([]byte, error) { return marshalComponent(kv, "KeyValue") }
 
 type Text struct {
-	Name  string
-	Value string
-	Label string
+	Name      string
+	Value     string
+	Label     string
+	Direction Direction
 }
 
 func (txt *Text) component() {}
@@ -153,9 +171,10 @@ func (txt *Text) component() {}
 func (txt *Text) MarshalJSON() ([]byte, error) { return marshalComponent(txt, "Text") }
 
 type Action struct {
-	Event   string
-	Text    string
-	Variant string // primary|neutral|danger|warning|success
+	Event     string
+	Text      string
+	Variant   string // primary|neutral|danger|warning|success
+	Direction Direction
 }
 
 // Error represents an error to be displayed in the UI.

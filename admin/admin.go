@@ -680,11 +680,11 @@ func (admin *admin) serveAddDataSource(w http.ResponseWriter, r *http.Request, a
 
 	switch source.Type {
 	case "App":
-		id, err = ws.DataSources.AddApp(source.Connector, "", "", "")
+		id, err = ws.DataSources.AddApp(apis.SourceDir, source.Connector, "", "", "")
 	case "Database":
-		id, err = ws.DataSources.AddDatabase(source.Connector)
+		id, err = ws.DataSources.AddDatabase(apis.SourceDir, source.Connector)
 	case "FileStream":
-		id, err = ws.DataSources.AddFileStream(source.Connector, source.Stream)
+		id, err = ws.DataSources.AddFileStream(apis.SourceDir, source.Connector, source.Stream)
 	}
 	if err != nil {
 		return err
@@ -793,7 +793,8 @@ func (admin *admin) serveAddOAuthDataSource(w http.ResponseWriter, r *http.Reque
 		expireDate = expireDate.Add(time.Duration(connector.DefaultExpiresIn) * time.Second)
 	}
 
-	_, err = ws.DataSources.AddApp(connectorID, tokens.RefreshToken, tokens.AccessToken, expireDate.Format("2006-01-02 15:04:05"))
+	_, err = ws.DataSources.AddApp(apis.SourceDir, connectorID, tokens.RefreshToken, tokens.AccessToken,
+		expireDate.Format("2006-01-02 15:04:05"))
 
 	if err != nil {
 		return err

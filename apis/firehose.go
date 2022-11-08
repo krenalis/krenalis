@@ -34,6 +34,7 @@ type firehose struct {
 	resource      int
 	connector     int
 	connectorType string
+	direction     connector.Direction
 	ctx           context.Context
 	cancel        context.CancelFunc
 	webhooksPer   string

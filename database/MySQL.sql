@@ -42,6 +42,7 @@ CREATE TABLE `data_sources` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `workspace` INT NOT NULL,
   `type` ENUM('App', 'Database', 'FileStream') DEFAULT 'App',
+  `direction` ENUM('Source', 'Destination') DEFAULT 'Source',
   `connector` INT NOT NULL,
   `stream` INT NOT NULL,
   `resource` INT NOT NULL,

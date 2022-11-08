@@ -52,8 +52,9 @@ func (err MissingTimestampColumnError) Error() string {
 
 // FileConfig represents the configuration of a file connection.
 type FileConfig struct {
-	Settings []byte
-	Firehose Firehose
+	Direction Direction
+	Settings  []byte
+	Firehose  Firehose
 }
 
 // FileConnectionFunc represents functions that create new file connections.

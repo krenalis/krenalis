@@ -43,19 +43,53 @@ const (
 	queryMaxSize         = 16_777_215 // maximum size in runes of a data source query.
 )
 
+// Direction represents a data source direction.
+type Direction int
+
+const (
+	SourceDir Direction = iota + 1 // source
+	DestDir                        // destination
+)
+
+// String returns the string representation of dir.
+// It panics if dir is not a valid Direction value.
+func (dir Direction) String() string {
+	switch dir {
+	case SourceDir:
+		return "Source"
+	case DestDir:
+		return "Destination"
+	}
+	panic("invalid direction")
+}
+
+// dirByName returns a direction by its name.
+// It panics if a direction called name does not exist.
+func dirByName(name string) Direction {
+	switch name {
+	case "Source":
+		return SourceDir
+	case "Destination":
+		return DestDir
+	}
+	panic("invalid direction name")
+}
+
 // DataSource represents a data source.
 type DataSource struct {
-	ID       int
-	Name     string
-	Type     string
-	OauthURL string
-	LogoURL  string
+	ID        int
+	Name      string
+	Type      string
+	Direction Direction
+	OauthURL  string
+	LogoURL   string
 }
 
 // DataSourceInfo represents a data source.
 type DataSourceInfo struct {
 	ID         int
 	Type       string
+	Direction  Direction
 	Name       string
 	LogoURL    string
 	UsersQuery string // only for databases.
@@ -79,13 +113,17 @@ type DataSourceProperty struct {
 	Properties []DataSourceProperty
 }
 
-// AddApp adds an app data source given its connector and the OAuth refresh and
-// access tokens and returns its identifier.
+// AddApp adds an app data source given its direction, connector, OAuth refresh
+// and access tokens and returns its identifier.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
 // If the connector is not an app, it returns the ErrInvalidConnectorType
 // error.
-func (this *DataSources) AddApp(connector int, refreshToken, accessToken, accessTokenExpirationTime string) (int, error) {
+func (this *DataSources) AddApp(dir Direction, connector int, refreshToken, accessToken, accessTokenExpirationTime string) (int, error) {
+	if dir != SourceDir && dir != DestDir {
+		return 0, errors.New("invalid direction")
+	}
+	direction := _connector.Direction(dir)
 	conn, err := this.api.apis.Connector(connector)
 	if err != nil {
 		return 0, err
@@ -97,6 +135,7 @@ func (this *DataSources) AddApp(connector int, refreshToken, accessToken, access
 		return 0, ErrInvalidConnectorType
 	}
 	c, err := newAppConnection(context.Background(), conn.Name, &_connector.AppConfig{
+		Direction:    direction,
 		ClientSecret: conn.ClientSecret,
 		AccessToken:  accessToken,
 	})
@@ -133,12 +172,12 @@ func (this *DataSources) AddApp(connector int, refreshToken, accessToken, access
 				"SET `accessToken` = ?, `refreshToken` = ?, `accessTokenExpirationTime` = ? WHERE `id` = ?",
 				accessToken, refreshToken, accessTokenExpirationTime, resource)
 		}
-
 		if err != nil {
 			return err
 		}
-		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `type` = 'App', `connector` = ?, `resource` = ?",
-			this.workspace, connector, resource)
+		result, err := tx.Exec("INSERT INTO `data_sources`\n"+
+			"SET `workspace` = ?, `type` = 'App', `direction` = ?, `connector` = ?, `resource` = ?",
+			this.workspace, direction.String(), connector, resource)
 		if err != nil {
 			return err
 		}
@@ -159,13 +198,16 @@ func (this *DataSources) AddApp(connector int, refreshToken, accessToken, access
 	return int(id), err
 }
 
-// AddDatabase adds a database data source given its database connector and
-// returns its identifier.
+// AddDatabase adds a database data source given its direction, database
+// connector and returns its identifier.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
 // If the connector is not a database, it returns the ErrInvalidConnectorType
 // error.
-func (this *DataSources) AddDatabase(connector int) (int, error) {
+func (this *DataSources) AddDatabase(dir Direction, connector int) (int, error) {
+	if dir != SourceDir && dir != DestDir {
+		return 0, errors.New("invalid direction")
+	}
 	var id int64
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		var connectorType string
@@ -179,8 +221,9 @@ func (this *DataSources) AddDatabase(connector int) (int, error) {
 		if connectorType != "Database" {
 			return ErrInvalidConnectorType
 		}
-		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `type` = 'Database', `connector` = ?",
-			this.workspace, connector)
+		result, err := tx.Exec("INSERT INTO `data_sources`\n"+
+			"SET `workspace` = ?, `type` = 'Database', `direction` = ?, `connector` = ?",
+			this.workspace, dir.String(), connector)
 		id, err = result.LastInsertId()
 		return err
 	})
@@ -190,13 +233,16 @@ func (this *DataSources) AddDatabase(connector int) (int, error) {
 	return int(id), nil
 }
 
-// AddFileStream adds a file-stream data source given its file and stream
-// connectors and returns its identifier.
+// AddFileStream adds a file-stream data source given its direction, file and
+// stream connectors and returns its identifier.
 //
 // If a connector does not exist, it returns the ErrConnectorNotFound error. If
 // the connectors are not a file and a stream respectively, it returns the
 // ErrInvalidConnectorType error.
-func (this *DataSources) AddFileStream(fileConnector, streamConnector int) (int, error) {
+func (this *DataSources) AddFileStream(dir Direction, fileConnector, streamConnector int) (int, error) {
+	if dir != SourceDir && dir != DestDir {
+		return 0, errors.New("invalid direction")
+	}
 	var id int64
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		var connectorType string
@@ -227,8 +273,9 @@ func (this *DataSources) AddFileStream(fileConnector, streamConnector int) (int,
 			return ErrInvalidConnectorType
 		}
 		// Add the data source.
-		result, err := tx.Exec("INSERT INTO `data_sources` SET `workspace` = ?, `type` = 'FileStream', `connector` = ? AND `stream` = ?",
-			this.workspace, fileConnector, streamConnector)
+		result, err := tx.Exec("INSERT INTO `data_sources`\n"+
+			"SET `workspace` = ?, `type` = 'FileStream', `direction` = ?, `connector` = ? AND `stream` = ?",
+			this.workspace, dir.String(), fileConnector, streamConnector)
 		if err != nil {
 			return err
 		}
@@ -248,16 +295,18 @@ func (this *DataSources) Get(id int) (*DataSourceInfo, error) {
 		return nil, errors.New("invalid data source identifier")
 	}
 	s := DataSourceInfo{ID: id}
-	err := this.myDB.QueryRow("SELECT `s`.`type`, `c`.`name`, `c`.`logoURL`, `s`.`usersQuery`\n"+
+	var dir string
+	err := this.myDB.QueryRow("SELECT `s`.`type`, `s`.`direction`, `c`.`name`, `c`.`logoURL`, `s`.`usersQuery`\n"+
 		"FROM `data_sources` AS `s`\n"+
 		"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 		"WHERE `s`.`id` = ? AND `s`.`workspace` = ?",
-		id, this.workspace).Scan(&s.Type, &s.Name, &s.LogoURL, &s.UsersQuery)
+		id, this.workspace).Scan(&s.Type, &dir, &s.Name, &s.LogoURL, &s.UsersQuery)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrDataSourceNotFound
 		}
 	}
+	s.Direction = dirByName(dir)
 	return &s, nil
 }
 
@@ -299,6 +348,7 @@ func (this *DataSources) Delete(id int) error {
 // identifier. For app data sources, if reimport is false, it imports the
 // users from the current cursor, otherwise imports all users.
 //
+// Returns an error if the data source is not a source.
 // Returns the ErrDataSourceNotFound error if the data source does not exist.
 // Returns the ErrDataSourceDisabled error if the data source does not have any
 // transformation function associated to it.
@@ -308,16 +358,21 @@ func (this *DataSources) Import(id int, reimport bool) error {
 		return errors.New("invalid data source identifier")
 	}
 
-	// Check that the data source exists and has a transformation.
-	var typ string
-	err := this.myDB.QueryRow("SELECT `type` FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
-		id, this.workspace).Scan(&typ)
+	// Check that the data source exists, is a source and has a transformation.
+	var typ, dir string
+	err := this.myDB.QueryRow("SELECT `type`, `direction` FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
+		id, this.workspace).Scan(&typ, &dir)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrDataSourceNotFound
 		}
 		return err
 	}
+
+	if dir != "Source" {
+		return errors.New("cannot import from a destination")
+	}
+	const direction = _connector.SourceDir
 
 	// Check that the data source has at least one transformation associated to
 	// it.
@@ -373,8 +428,9 @@ func (this *DataSources) Import(id int, reimport bool) error {
 		}
 
 		go func() {
-			fh := this.newFirehose(context.Background(), id, connector, resource, connectorType, webhooksPer)
+			fh := this.newFirehose(context.Background(), id, connector, resource, connectorType, direction, webhooksPer)
 			c, err := newAppConnection(fh.ctx, name, &_connector.AppConfig{
+				Direction:    direction,
 				Settings:     settings,
 				Firehose:     fh,
 				ClientSecret: clientSecret,
@@ -412,10 +468,11 @@ func (this *DataSources) Import(id int, reimport bool) error {
 		if err != nil {
 			return err
 		}
-		fh := this.newFirehose(context.Background(), id, connector, 0, "Database", "")
+		fh := this.newFirehose(context.Background(), id, connector, 0, "Database", direction, "")
 		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
-			Settings: settings,
-			Firehose: fh,
+			Direction: direction,
+			Settings:  settings,
+			Firehose:  fh,
 		})
 		if err != nil {
 			return err
@@ -493,10 +550,11 @@ func (this *DataSources) Import(id int, reimport bool) error {
 		}
 
 		// Connect to the stream connector.
-		fh := this.newFirehose(context.Background(), id, streamConnector, 0, "Stream", "")
+		fh := this.newFirehose(context.Background(), id, streamConnector, 0, "Stream", direction, "")
 		stream, err := newStreamConnection(fh.ctx, streamConnectorName, &_connector.StreamConfig{
-			Settings: streamSettings,
-			Firehose: fh,
+			Direction: direction,
+			Settings:  streamSettings,
+			Firehose:  fh,
 		})
 		if err != nil {
 			return err
@@ -508,10 +566,11 @@ func (this *DataSources) Import(id int, reimport bool) error {
 		defer r.Close()
 
 		// Connect to the file connector.
-		fh = this.newFirehose(context.Background(), id, streamConnector, 0, "File", "")
+		fh = this.newFirehose(context.Background(), id, streamConnector, 0, "File", direction, "")
 		file, err := newFileConnection(fh.ctx, fileConnectorName, &_connector.FileConfig{
-			Settings: fileSettings,
-			Firehose: fh,
+			Direction: direction,
+			Settings:  fileSettings,
+			Firehose:  fh,
 		})
 		if err != nil {
 			return err
@@ -538,16 +597,18 @@ func (this *DataSources) Import(id int, reimport bool) error {
 // List returns all data sources.
 func (this *DataSources) List() ([]*DataSource, error) {
 	sources := []*DataSource{}
-	err := this.myDB.QueryScan("SELECT `ds`.`id`, `c`.`name`, `c`.`type`, `c`.`oauthURL`, `c`.`logoURL`\n"+
-		"FROM `data_sources` as `ds`\n"+
-		"INNER JOIN `connectors` AS `c` ON `c`.`id` = `ds`.`connector`\n"+
-		"WHERE `workspace` = ?", this.workspace, func(rows *sql.Rows) error {
+	err := this.myDB.QueryScan("SELECT `s`.`id`, `s`.`direction`, `c`.`name`, `c`.`type`, `c`.`oauthURL`, `c`.`logoURL`\n"+
+		"FROM `data_sources` as `s`\n"+
+		"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+		"WHERE `s`.`workspace` = ?", this.workspace, func(rows *sql.Rows) error {
 		var err error
+		var dir string
 		for rows.Next() {
 			var source DataSource
-			if err = rows.Scan(&source.ID, &source.Name, &source.Type, &source.OauthURL, &source.LogoURL); err != nil {
+			if err = rows.Scan(&source.ID, &dir, &source.Name, &source.Type, &source.OauthURL, &source.LogoURL); err != nil {
 				return err
 			}
+			source.Direction = dirByName(dir)
 			sources = append(sources, &source)
 		}
 		return nil
@@ -605,6 +666,7 @@ type Column struct {
 // query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
 // must contain the ':limit' placeholder. limit must be between 1 and 100.
 //
+// It returns an error if the data source is not a source.
 // It returns the ErrDataSourceNotFound error if the data source does not
 // exist and the ErrInvalidConnectorType error if the data source is not a
 // database.
@@ -628,14 +690,14 @@ func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]s
 	}
 
 	var connector int
-	var connectorName, connectorType string
+	var dir, connectorName, connectorType string
 	var settings []byte
 	err := this.myDB.QueryRow(
-		"SELECT `s`.`connector`, `s`.`settings`, `c`.`name`, `c`.`type`\n"+
+		"SELECT `s`.`direction`, `s`.`connector`, `s`.`settings`, `c`.`name`, `c`.`type`\n"+
 			"FROM `data_sources` AS `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
-		&connector, &settings, &connectorName, &connectorType)
+		&dir, &connector, &settings, &connectorName, &connectorType)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil, ErrDataSourceNotFound
@@ -645,16 +707,21 @@ func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]s
 	if connectorType != "Database" {
 		return nil, nil, ErrInvalidConnectorType
 	}
+	if dir != "Source" {
+		return nil, nil, errors.New("cannot query a destination")
+	}
+	const direction = _connector.SourceDir
 
 	// Execute the query.
 	query, err = this.compileQueryWithLimit(query, limit)
 	if err != nil {
 		return nil, nil, err
 	}
-	fh := this.newFirehose(context.Background(), id, connector, 0, connectorType, "")
+	fh := this.newFirehose(context.Background(), id, connector, 0, connectorType, direction, "")
 	c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
-		Settings: settings,
-		Firehose: fh,
+		Direction: direction,
+		Settings:  settings,
+		Firehose:  fh,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -709,8 +776,8 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 		return nil, errors.New("invalid data source identifier")
 	}
 
-	var typ string
-	err := this.myDB.QueryRow("SELECT `type` FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
+	var typ, dir string
+	err := this.myDB.QueryRow("SELECT `type`, `direction` FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
 		id, this.workspace).Scan(&typ)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -718,6 +785,8 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 		}
 		return nil, err
 	}
+
+	direction := _connector.Direction(dirByName(dir))
 
 	var connection _connector.Connection
 
@@ -753,8 +822,9 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 			}
 		}
 
-		fh := this.newFirehose(context.Background(), id, connector, resource, connectorType, webhooksPer)
+		fh := this.newFirehose(context.Background(), id, connector, resource, connectorType, direction, webhooksPer)
 		connection, err = newAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
+			Direction:    direction,
 			Settings:     settings,
 			Firehose:     fh,
 			ClientSecret: clientSecret,
@@ -779,23 +849,26 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 			return nil, err
 		}
 
-		fh := this.newFirehose(context.Background(), id, connector, 0, typ, "")
+		fh := this.newFirehose(context.Background(), id, connector, 0, typ, direction, "")
 
 		switch typ {
 		case "Database":
 			connection, err = newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
-				Settings: settings,
-				Firehose: fh,
+				Direction: direction,
+				Settings:  settings,
+				Firehose:  fh,
 			})
 		case "FileStream":
 			connection, err = newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
-				Settings: settings,
-				Firehose: fh,
+				Direction: direction,
+				Settings:  settings,
+				Firehose:  fh,
 			})
 		case "Stream":
 			connection, err = newStreamConnection(fh.ctx, connectorName, &_connector.StreamConfig{
-				Settings: settings,
-				Firehose: fh,
+				Direction: direction,
+				Settings:  settings,
+				Firehose:  fh,
 			})
 		}
 
@@ -819,6 +892,7 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 // query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
 // must contain the ':limit' placeholder.
 //
+// It returns an error if the data source is not a source.
 // It returns the ErrDataSourceNotFound error if the data source does not
 // exist and the ErrInvalidConnectorType error if the data source is not a
 // database.
@@ -838,7 +912,8 @@ func (this *DataSources) SetUsersQuery(id int, query string) error {
 		return errors.New("query does not contain the placeholder \":limit\"")
 	}
 
-	result, err := this.myDB.Exec("UPDATE `data_sources` SET `usersQuery` = ? WHERE `id` = ? AND `workspace` = ? AND `type` = 'Database'",
+	result, err := this.myDB.Exec("UPDATE `data_sources`\nSET `usersQuery` = ?\n"+
+		"WHERE `id` = ? AND `workspace` = ? AND `type` = 'Database' AND `direction` = 'Source'",
 		query, id, this.workspace)
 	if err != nil {
 		return err
@@ -848,14 +923,17 @@ func (this *DataSources) SetUsersQuery(id int, query string) error {
 		return err
 	}
 	if affected == 0 {
-		var exists bool
-		err = this.myDB.QueryRow("SELECT TRUE FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
-			id, this.workspace).Scan(&exists)
+		var typ, dir string
+		err = this.myDB.QueryRow("SELECT `type`, `direction` FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
+			id, this.workspace).Scan(&typ, &dir)
 		if err != nil {
 			return err
 		}
-		if exists {
+		if typ != "Database" {
 			return ErrInvalidConnectorType
+		}
+		if dir != "Source" {
+			return errors.New("cannot set the query for a destination")
 		}
 		return ErrDataSourceNotFound
 	}
@@ -900,13 +978,14 @@ func (this *DataSources) Stats(id int) (*DataSourcesStats, error) {
 }
 
 // newFirehose returns a new Firehose used to call a connection method.
-func (this *DataSources) newFirehose(ctx context.Context, source, connector, resource int, connectorType, webhooksPer string) *firehose {
+func (this *DataSources) newFirehose(ctx context.Context, source, connector, resource int, connectorType string, direction _connector.Direction, webhooksPer string) *firehose {
 	fh := &firehose{
 		sources:       this,
 		source:        source,
 		resource:      resource,
 		connector:     connector,
 		connectorType: connectorType,
+		direction:     direction,
 		webhooksPer:   webhooksPer,
 	}
 	fh.ctx, fh.cancel = context.WithCancel(ctx)
@@ -924,15 +1003,17 @@ func (this *DataSources) reloadProperties(id int) error {
 		return errors.New("invalid data source identifier")
 	}
 
-	var typ string
-	err := this.myDB.QueryRow("SELECT `type` FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
-		id, this.workspace).Scan(&typ)
+	var typ, dir string
+	err := this.myDB.QueryRow("SELECT `type`, `direction` FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
+		id, this.workspace).Scan(&typ, &dir)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrDataSourceNotFound
 		}
 		return err
 	}
+
+	direction := _connector.Direction(dirByName(dir))
 
 	var properties []_connector.Property
 
@@ -969,8 +1050,9 @@ func (this *DataSources) reloadProperties(id int) error {
 				return err
 			}
 		}
-		fh := this.newFirehose(context.Background(), id, connector, resource, "App", webhooksPer)
+		fh := this.newFirehose(context.Background(), id, connector, resource, "App", direction, webhooksPer)
 		c, err := newAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
+			Direction:    direction,
 			Settings:     settings,
 			Firehose:     fh,
 			ClientSecret: clientSecret,
@@ -1006,10 +1088,11 @@ func (this *DataSources) reloadProperties(id int) error {
 		if err != nil {
 			return err
 		}
-		fh := this.newFirehose(context.Background(), id, connector, 0, "Database", "")
+		fh := this.newFirehose(context.Background(), id, connector, 0, "Database", direction, "")
 		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
-			Settings: settings,
-			Firehose: fh,
+			Direction: direction,
+			Settings:  settings,
+			Firehose:  fh,
 		})
 		if err != nil {
 			return err
@@ -1049,10 +1132,11 @@ func (this *DataSources) reloadProperties(id int) error {
 		}
 
 		// Connect to the stream connector.
-		fh := this.newFirehose(context.Background(), id, streamConnector, 0, "Stream", "")
+		fh := this.newFirehose(context.Background(), id, streamConnector, 0, "Stream", direction, "")
 		stream, err := newStreamConnection(fh.ctx, streamConnectorName, &_connector.StreamConfig{
-			Settings: streamSettings,
-			Firehose: fh,
+			Direction: direction,
+			Settings:  streamSettings,
+			Firehose:  fh,
 		})
 		if err != nil {
 			return err
@@ -1064,10 +1148,11 @@ func (this *DataSources) reloadProperties(id int) error {
 		defer r.Close()
 
 		// Connect to the file connector and read only the columns.
-		fh = this.newFirehose(fh.ctx, id, streamConnector, 0, "File", "")
+		fh = this.newFirehose(fh.ctx, id, streamConnector, 0, "File", direction, "")
 		file, err := newFileConnection(fh.ctx, fileConnectorName, &_connector.FileConfig{
-			Settings: fileSettings,
-			Firehose: fh,
+			Direction: direction,
+			Settings:  fileSettings,
+			Firehose:  fh,
 		})
 		if err != nil {
 			return err

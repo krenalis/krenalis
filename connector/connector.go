@@ -71,6 +71,26 @@ const (
 	WebhooksPerDataSource
 )
 
+// Direction represents the direction of a connection.
+type Direction int
+
+const (
+	SourceDir Direction = iota + 1 // source
+	DestDir                        // destination
+)
+
+// String returns the string representation of dir.
+// It panics if dir is not a valid Direction value.
+func (dir Direction) String() string {
+	switch dir {
+	case SourceDir:
+		return "Source"
+	case DestDir:
+		return "Destination"
+	}
+	panic("invalid direction")
+}
+
 // Connection is the interface implemented by connections.
 type Connection interface {
 

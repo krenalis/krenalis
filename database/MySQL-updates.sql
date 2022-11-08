@@ -409,3 +409,6 @@ INSERT INTO `connectors` (`name`, `type`, `logoURL`) VALUES
     ('PostgreSQL','Database','https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/postgresql-512.png');
 
 INSERT INTO `connectors` (`name`, `type`) VALUES ('Parquet','File');
+
+ALTER TABLE `data_sources`
+    ADD column `direction` ENUM('Source', 'Destination') DEFAULT 'Source' AFTER `type`;

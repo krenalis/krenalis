@@ -15,8 +15,9 @@ import (
 
 // StreamConfig represents the configuration of a stream connection.
 type StreamConfig struct {
-	Settings []byte
-	Firehose Firehose
+	Direction Direction
+	Settings  []byte
+	Firehose  Firehose
 }
 
 // StreamConnectionFunc represents functions that create new stream

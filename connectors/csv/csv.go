@@ -38,6 +38,7 @@ func init() {
 
 type connection struct {
 	ctx      context.Context
+	dir      connector.Direction
 	settings *settings
 	firehose connector.Firehose
 }
@@ -53,7 +54,7 @@ type settings struct {
 
 // New returns a new CSV connection.
 func New(ctx context.Context, conf *connector.FileConfig) (connector.FileConnection, error) {
-	c := connection{ctx: ctx}
+	c := connection{ctx: ctx, dir: conf.Direction}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -186,21 +187,27 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
 			return nil, ui.Errorf("comma cannot be \\r, \\n, or the Unicode replacement character")
 		}
-		// Validate Comment.
-		if c := s.Comment; c != "" {
-			if utf8.RuneCountInString(c) != 1 {
-				return nil, ui.Errorf("comment, if provided, must be a single character")
+		if c.dir == connector.SourceDir {
+			// Validate Comment.
+			if c := s.Comment; c != "" {
+				if utf8.RuneCountInString(c) != 1 {
+					return nil, ui.Errorf("comment, if provided, must be a single character")
+				}
+				if c == "\n" || c == "\r" || c == "\uFFFD" {
+					return nil, ui.Errorf("comment cannot be \\r, \\n, or the Unicode replacement character")
+				}
+				if c == s.Comma {
+					return nil, ui.Errorf("comment cannot be equal to the comma")
+				}
 			}
-			if c == "\n" || c == "\r" || c == "\uFFFD" {
-				return nil, ui.Errorf("comment cannot be \\r, \\n, or the Unicode replacement character")
+			// Validate FieldsPerRecord.
+			if f := s.FieldsPerRecord; f < 0 || f > 1000 {
+				return nil, ui.Errorf("fields per record, if provided, must be in range [0,1000]")
 			}
-			if c == s.Comma {
-				return nil, ui.Errorf("comment cannot be equal to the comma")
-			}
-		}
-		// Validate FieldsPerRecord.
-		if f := s.FieldsPerRecord; f < 0 || f > 1000 {
-			return nil, ui.Errorf("fields per record, if provided, must be in range [0,1000]")
+		} else {
+			s.Comment = ""
+			s.FieldsPerRecord = 0
+			s.TrimLeadingSpace = false
 		}
 		b, err := json.Marshal(&s)
 		if err != nil {
@@ -214,9 +221,9 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 	form := &ui.Form{
 		Fields: []ui.Component{
 			&ui.Input{Name: "comma", Value: s.Comma, Label: "Comma", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
-			&ui.Input{Name: "comment", Value: s.Comment, Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1},
-			&ui.Input{Name: "fieldsPerRecord", Value: s.FieldsPerRecord, Label: "Fields per record", Placeholder: "", Type: "number"},
-			&ui.Checkbox{Name: "trimLeadingSpace", Value: s.TrimLeadingSpace, Label: "Trim leading space"},
+			&ui.Input{Name: "comment", Value: s.Comment, Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Direction: ui.SourceDir},
+			&ui.Input{Name: "fieldsPerRecord", Value: s.FieldsPerRecord, Label: "Fields per record", Placeholder: "", Type: "number", Direction: ui.SourceDir},
+			&ui.Checkbox{Name: "trimLeadingSpace", Value: s.TrimLeadingSpace, Label: "Trim leading space", Direction: ui.SourceDir},
 			&ui.Checkbox{Name: "useCRLF", Value: s.UseCRLF, Label: "Use CRLF"},
 		},
 		Actions: []ui.Action{
