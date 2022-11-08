@@ -373,7 +373,7 @@ func (rw *recordWriter) Columns(columns []connector.Column) error {
 	}
 	rw.columns = columns
 	if rw.onlyColumns {
-		return ErrRecordStop
+		return errRecordStop
 	}
 	return nil
 }

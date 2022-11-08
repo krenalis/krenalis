@@ -892,7 +892,7 @@ func (this *DataSources) newFirehose(ctx context.Context, source, connector, res
 	return fh
 }
 
-var ErrRecordStop = errors.New("stop record")
+var errRecordStop = errors.New("stop record")
 
 // reloadProperties reloads the properties of the data source with identifier
 // id. If the data source does not exist it returns the ErrDataSourceNotFound
@@ -1044,7 +1044,7 @@ func (this *DataSources) reloadProperties(id int) error {
 		}
 		records := fh.newRecordWriter(identityColumn, timestampColumn, time.Time{}, true)
 		err = file.Read(r, records)
-		if err != nil && err != ErrRecordStop {
+		if err != nil && err != errRecordStop {
 			return err
 		}
 
