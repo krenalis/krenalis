@@ -125,11 +125,14 @@ func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 			return err
 		}
 		if *element.Type == parquet.Type_INT96 {
-			int96Columns = append(int96Columns, columns[i].Name)
+			int96Columns = append(int96Columns, name)
 		}
 	}
 	// Write the columns.
-	records.Columns(columns)
+	err = records.Columns(columns)
+	if err != nil {
+		return err
+	}
 
 	for {
 		// Read a record.
@@ -148,7 +151,10 @@ func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 			}
 		}
 		// Write the record.
-		records.RecordMap(record)
+		err = records.RecordMap(record)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
