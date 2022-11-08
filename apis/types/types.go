@@ -369,6 +369,11 @@ func (t Type) String() string {
 	return s
 }
 
+// Valid indicates if t is valid.
+func (t Type) Valid() bool {
+	return t.b != 0
+}
+
 // Length represents a Text length.
 type Length interface {
 	length() int
