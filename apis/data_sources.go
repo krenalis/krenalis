@@ -770,7 +770,7 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 
 	var typ, dir string
 	err := this.myDB.QueryRow("SELECT `type`, `direction` FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
-		id, this.workspace).Scan(&typ)
+		id, this.workspace).Scan(&typ, &dir)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrDataSourceNotFound
