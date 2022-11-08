@@ -30,7 +30,6 @@ type DataSources struct {
 
 var (
 	ErrConnectorNotFound             = errors.New("connector does not exist")
-	ErrInvalidConnectorType          = errors.New("connector has an invalid type")
 	ErrDataSourceNotFound            = errors.New("data source does not exist")
 	ErrDataSourceDisabled            = errors.New("data source is disabled")
 	ErrResourceNotFound              = errors.New("resource does not exist")
@@ -113,12 +112,10 @@ type DataSourceProperty struct {
 	Properties []DataSourceProperty
 }
 
-// AddApp adds an app data source given its direction, connector, OAuth refresh
-// and access tokens and returns its identifier.
+// AddApp adds an app data source given its direction, app connector, OAuth
+// refresh and access tokens and returns its identifier.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
-// If the connector is not an app, it returns the ErrInvalidConnectorType
-// error.
 func (this *DataSources) AddApp(dir Direction, connector int, refreshToken, accessToken, accessTokenExpirationTime string) (int, error) {
 	if dir != SourceDir && dir != DestDir {
 		return 0, errors.New("invalid direction")
@@ -132,7 +129,7 @@ func (this *DataSources) AddApp(dir Direction, connector int, refreshToken, acce
 		return 0, ErrConnectorNotFound
 	}
 	if conn.Type != "App" {
-		return 0, ErrInvalidConnectorType
+		return 0, errors.New("connector is not an app connector")
 	}
 	c, err := newAppConnection(context.Background(), conn.Name, &_connector.AppConfig{
 		Direction:    direction,
@@ -202,8 +199,6 @@ func (this *DataSources) AddApp(dir Direction, connector int, refreshToken, acce
 // connector and returns its identifier.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
-// If the connector is not a database, it returns the ErrInvalidConnectorType
-// error.
 func (this *DataSources) AddDatabase(dir Direction, connector int) (int, error) {
 	if dir != SourceDir && dir != DestDir {
 		return 0, errors.New("invalid direction")
@@ -219,7 +214,7 @@ func (this *DataSources) AddDatabase(dir Direction, connector int) (int, error) 
 			return err
 		}
 		if connectorType != "Database" {
-			return ErrInvalidConnectorType
+			return errors.New("connector is not a database connector")
 		}
 		result, err := tx.Exec("INSERT INTO `data_sources`\n"+
 			"SET `workspace` = ?, `type` = 'Database', `direction` = ?, `connector` = ?",
@@ -236,9 +231,7 @@ func (this *DataSources) AddDatabase(dir Direction, connector int) (int, error) 
 // AddFileStream adds a file-stream data source given its direction, file and
 // stream connectors and returns its identifier.
 //
-// If a connector does not exist, it returns the ErrConnectorNotFound error. If
-// the connectors are not a file and a stream respectively, it returns the
-// ErrInvalidConnectorType error.
+// If a connector does not exist, it returns the ErrConnectorNotFound error.
 func (this *DataSources) AddFileStream(dir Direction, fileConnector, streamConnector int) (int, error) {
 	if dir != SourceDir && dir != DestDir {
 		return 0, errors.New("invalid direction")
@@ -259,7 +252,7 @@ func (this *DataSources) AddFileStream(dir Direction, fileConnector, streamConne
 			return err
 		}
 		if connectorType != "File" {
-			return ErrInvalidConnectorType
+			return errors.New("fileConnector is not a file connector")
 		}
 		// Check the stream connector.
 		err = stmt.QueryRow(streamConnector).Scan(&connectorType)
@@ -270,7 +263,7 @@ func (this *DataSources) AddFileStream(dir Direction, fileConnector, streamConne
 			return err
 		}
 		if connectorType != "Stream" {
-			return ErrInvalidConnectorType
+			return errors.New("streamConnector is not a stream connector")
 		}
 		// Add the data source.
 		result, err := tx.Exec("INSERT INTO `data_sources`\n"+
@@ -666,10 +659,9 @@ type Column struct {
 // query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
 // must contain the ':limit' placeholder. limit must be between 1 and 100.
 //
-// It returns an error if the data source is not a source.
+// It returns an error if the data source is not a source database.
 // It returns the ErrDataSourceNotFound error if the data source does not
-// exist and the ErrInvalidConnectorType error if the data source is not a
-// database.
+// exist.
 func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]string, error) {
 
 	if id <= 0 {
@@ -705,10 +697,10 @@ func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]s
 		return nil, nil, err
 	}
 	if connectorType != "Database" {
-		return nil, nil, ErrInvalidConnectorType
+		return nil, nil, errors.New("data source is not a database")
 	}
 	if dir != "Source" {
-		return nil, nil, errors.New("cannot query a destination")
+		return nil, nil, errors.New("data source is not a source")
 	}
 	const direction = _connector.SourceDir
 
@@ -892,10 +884,9 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 // query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
 // must contain the ':limit' placeholder.
 //
-// It returns an error if the data source is not a source.
+// It returns an error if the data source is not a source database.
 // It returns the ErrDataSourceNotFound error if the data source does not
-// exist and the ErrInvalidConnectorType error if the data source is not a
-// database.
+// exist.
 func (this *DataSources) SetUsersQuery(id int, query string) error {
 
 	if id <= 0 {
@@ -930,10 +921,10 @@ func (this *DataSources) SetUsersQuery(id int, query string) error {
 			return err
 		}
 		if typ != "Database" {
-			return ErrInvalidConnectorType
+			return errors.New("data source is not a database")
 		}
 		if dir != "Source" {
-			return errors.New("cannot set the query for a destination")
+			return errors.New("data source is not a source")
 		}
 		return ErrDataSourceNotFound
 	}
