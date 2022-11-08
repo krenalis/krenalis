@@ -13,9 +13,15 @@ import (
 	"time"
 )
 
+// StreamConfig represents the configuration of a stream connection.
+type StreamConfig struct {
+	Settings []byte
+	Firehose Firehose
+}
+
 // StreamConnectionFunc represents functions that create new stream
 // connections.
-type StreamConnectionFunc func(context.Context, []byte, Firehose) (StreamConnection, error)
+type StreamConnectionFunc func(context.Context, *StreamConfig) (StreamConnection, error)
 
 // StreamConnection is the interface implemented by stream connections.
 type StreamConnection interface {

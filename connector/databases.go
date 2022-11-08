@@ -13,9 +13,15 @@ import (
 	"chichi/apis/types"
 )
 
+// DatabaseConfig represents the configuration of a database connection.
+type DatabaseConfig struct {
+	Settings []byte
+	Firehose Firehose
+}
+
 // DatabaseConnectionFunc represents functions that create new database
 // connections.
-type DatabaseConnectionFunc func(context.Context, []byte, Firehose) (DatabaseConnection, error)
+type DatabaseConnectionFunc func(context.Context, *DatabaseConfig) (DatabaseConnection, error)
 
 // DatabaseConnection is the interface implemented by database connections.
 type DatabaseConnection interface {

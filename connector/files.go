@@ -50,8 +50,14 @@ func (err MissingTimestampColumnError) Error() string {
 	return fmt.Sprintf("timestamp column is missing: %s", err.Column)
 }
 
+// FileConfig represents the configuration of a file connection.
+type FileConfig struct {
+	Settings []byte
+	Firehose Firehose
+}
+
 // FileConnectionFunc represents functions that create new file connections.
-type FileConnectionFunc func(context.Context, []byte, Firehose) (FileConnection, error)
+type FileConnectionFunc func(context.Context, *FileConfig) (FileConnection, error)
 
 // FileConnection is the interface implemented by file connections.
 type FileConnection interface {

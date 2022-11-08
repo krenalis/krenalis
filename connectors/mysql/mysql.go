@@ -37,15 +37,15 @@ func init() {
 }
 
 // New returns a new MySQL connection.
-func New(ctx context.Context, settings []byte, fh connector.Firehose) (connector.DatabaseConnection, error) {
+func New(ctx context.Context, conf *connector.DatabaseConfig) (connector.DatabaseConnection, error) {
 	c := connection{ctx: ctx}
-	if len(settings) > 0 {
-		err := json.Unmarshal(settings, &c.settings)
+	if len(conf.Settings) > 0 {
+		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of MySQL connection")
 		}
 	}
-	c.firehose = fh
+	c.firehose = conf.Firehose
 	return &c, nil
 }
 

@@ -50,15 +50,15 @@ type settings struct {
 }
 
 // New returns a new HTTP connection.
-func New(ctx context.Context, settings []byte, fh connector.Firehose) (connector.StreamConnection, error) {
+func New(ctx context.Context, conf *connector.StreamConfig) (connector.StreamConnection, error) {
 	c := connection{ctx: ctx}
-	if len(settings) > 0 {
-		err := json.Unmarshal(settings, &c.settings)
+	if len(conf.Settings) > 0 {
+		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of HTTP connection")
 		}
 	}
-	c.firehose = fh
+	c.firehose = conf.Firehose
 	return &c, nil
 }
 

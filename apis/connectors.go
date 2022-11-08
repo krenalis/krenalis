@@ -104,36 +104,36 @@ func newAppConnection(ctx context.Context, name string, conf *connector.AppConfi
 
 // newDatabaseConnection returns a new database connection for the database
 // connector with the given name.
-func newDatabaseConnection(ctx context.Context, name string, settings []byte, fh connector.Firehose) (connector.DatabaseConnection, error) {
+func newDatabaseConnection(ctx context.Context, name string, conf *connector.DatabaseConfig) (connector.DatabaseConnection, error) {
 	connectorsMu.Lock()
 	defer connectorsMu.Unlock()
 	f, ok := connectors.databases[name]
 	if !ok {
 		return nil, fmt.Errorf("apis: unknown database connector %q (forgotten import?)", name)
 	}
-	return f(ctx, settings, fh)
+	return f(ctx, conf)
 }
 
 // newFileConnection returns a new file connection for the file connector with
 // the given name.
-func newFileConnection(ctx context.Context, name string, settings []byte, fh connector.Firehose) (connector.FileConnection, error) {
+func newFileConnection(ctx context.Context, name string, conf *connector.FileConfig) (connector.FileConnection, error) {
 	connectorsMu.Lock()
 	defer connectorsMu.Unlock()
 	f, ok := connectors.files[name]
 	if !ok {
 		return nil, fmt.Errorf("apis: unknown file connector %q (forgotten import?)", name)
 	}
-	return f(ctx, settings, fh)
+	return f(ctx, conf)
 }
 
 // newStreamConnection returns a new stream connection for the stream connector
 // with the given name.
-func newStreamConnection(ctx context.Context, name string, settings []byte, fh connector.Firehose) (connector.StreamConnection, error) {
+func newStreamConnection(ctx context.Context, name string, conf *connector.StreamConfig) (connector.StreamConnection, error) {
 	connectorsMu.Lock()
 	defer connectorsMu.Unlock()
 	f, ok := connectors.streams[name]
 	if !ok {
 		return nil, fmt.Errorf("apis: unknown stream connector %q (forgotten import?)", name)
 	}
-	return f(ctx, settings, fh)
+	return f(ctx, conf)
 }

@@ -413,7 +413,10 @@ func (this *DataSources) Import(id int, reimport bool) error {
 			return err
 		}
 		fh := this.newFirehose(context.Background(), id, connector, 0, "Database", "")
-		c, err := newDatabaseConnection(fh.ctx, connectorName, settings, fh)
+		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
+			Settings: settings,
+			Firehose: fh,
+		})
 		if err != nil {
 			return err
 		}
@@ -491,7 +494,10 @@ func (this *DataSources) Import(id int, reimport bool) error {
 
 		// Connect to the stream connector.
 		fh := this.newFirehose(context.Background(), id, streamConnector, 0, "Stream", "")
-		stream, err := newStreamConnection(fh.ctx, streamConnectorName, streamSettings, fh)
+		stream, err := newStreamConnection(fh.ctx, streamConnectorName, &_connector.StreamConfig{
+			Settings: streamSettings,
+			Firehose: fh,
+		})
 		if err != nil {
 			return err
 		}
@@ -503,7 +509,10 @@ func (this *DataSources) Import(id int, reimport bool) error {
 
 		// Connect to the file connector.
 		fh = this.newFirehose(context.Background(), id, streamConnector, 0, "File", "")
-		file, err := newFileConnection(fh.ctx, fileConnectorName, fileSettings, fh)
+		file, err := newFileConnection(fh.ctx, fileConnectorName, &_connector.FileConfig{
+			Settings: fileSettings,
+			Firehose: fh,
+		})
 		if err != nil {
 			return err
 		}
@@ -643,7 +652,10 @@ func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]s
 		return nil, nil, err
 	}
 	fh := this.newFirehose(context.Background(), id, connector, 0, connectorType, "")
-	c, err := newDatabaseConnection(fh.ctx, connectorName, settings, fh)
+	c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
+		Settings: settings,
+		Firehose: fh,
+	})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -771,11 +783,20 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 
 		switch typ {
 		case "Database":
-			connection, err = newDatabaseConnection(fh.ctx, connectorName, settings, fh)
+			connection, err = newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
+				Settings: settings,
+				Firehose: fh,
+			})
 		case "FileStream":
-			connection, err = newFileConnection(fh.ctx, connectorName, settings, fh)
+			connection, err = newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
+				Settings: settings,
+				Firehose: fh,
+			})
 		case "Stream":
-			connection, err = newStreamConnection(fh.ctx, connectorName, settings, fh)
+			connection, err = newStreamConnection(fh.ctx, connectorName, &_connector.StreamConfig{
+				Settings: settings,
+				Firehose: fh,
+			})
 		}
 
 	}
@@ -986,7 +1007,10 @@ func (this *DataSources) reloadProperties(id int) error {
 			return err
 		}
 		fh := this.newFirehose(context.Background(), id, connector, 0, "Database", "")
-		c, err := newDatabaseConnection(fh.ctx, connectorName, settings, fh)
+		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
+			Settings: settings,
+			Firehose: fh,
+		})
 		if err != nil {
 			return err
 		}
@@ -1026,7 +1050,10 @@ func (this *DataSources) reloadProperties(id int) error {
 
 		// Connect to the stream connector.
 		fh := this.newFirehose(context.Background(), id, streamConnector, 0, "Stream", "")
-		stream, err := newStreamConnection(fh.ctx, streamConnectorName, streamSettings, fh)
+		stream, err := newStreamConnection(fh.ctx, streamConnectorName, &_connector.StreamConfig{
+			Settings: streamSettings,
+			Firehose: fh,
+		})
 		if err != nil {
 			return err
 		}
@@ -1038,7 +1065,10 @@ func (this *DataSources) reloadProperties(id int) error {
 
 		// Connect to the file connector and read only the columns.
 		fh = this.newFirehose(fh.ctx, id, streamConnector, 0, "File", "")
-		file, err := newFileConnection(fh.ctx, fileConnectorName, fileSettings, fh)
+		file, err := newFileConnection(fh.ctx, fileConnectorName, &_connector.FileConfig{
+			Settings: fileSettings,
+			Firehose: fh,
+		})
 		if err != nil {
 			return err
 		}
