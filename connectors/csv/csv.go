@@ -79,7 +79,7 @@ func (c *connection) ContentType() string {
 	return "text/csv; charset=UTF-8"
 }
 
-// Read reads the records from r and write them to records.
+// Read reads the records from r and writes them to records.
 func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 	v := csv.NewReader(r)
 	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)

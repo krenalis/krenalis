@@ -75,7 +75,7 @@ func (c *connection) ContentType() string {
 	return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 }
 
-// Read reads the records from r and write them to records.
+// Read reads the records from r and writes them to records.
 func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 	f, err := excelize.OpenReader(r, excelize.Options{
 		RawCellValue: true,

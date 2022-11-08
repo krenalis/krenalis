@@ -85,7 +85,7 @@ func (c *connection) ContentType() string {
 	return "application/octet-stream"
 }
 
-// Read reads the records from r and write them to records.
+// Read reads the records from r and writes them to records.
 func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 
 	// Copy data read from r to a temporary file.

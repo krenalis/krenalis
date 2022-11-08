@@ -67,7 +67,7 @@ type FileConnection interface {
 	// ContentType returns the content type of the data to write.
 	ContentType() string
 
-	// Read reads the records from r and write them to records.
+	// Read reads the records from r and writes them to records.
 	Read(r io.Reader, records RecordWriter) error
 
 	// Write writes to w the records read from records.
