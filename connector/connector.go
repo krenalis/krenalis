@@ -8,11 +8,29 @@
 package connector
 
 import (
+	"fmt"
 	"time"
 
 	"chichi/apis/types"
 	"chichi/connector/ui"
 )
+
+// A NotSupportedTypeError error is returned by FileConnector.Read and
+// DatabaseConnector.Query methods when a column type is not supported.
+type NotSupportedTypeError struct {
+	Column string
+	Type   string
+}
+
+// NewNotSupportedTypeError returns a NotSupportedTypeError error for the
+// given column and type.
+func NewNotSupportedTypeError(column, typ string) error {
+	return NotSupportedTypeError{Column: column, Type: typ}
+}
+
+func (err NotSupportedTypeError) Error() string {
+	return fmt.Sprintf("type %s of the column %q is not supported", err.Type, err.Column)
+}
 
 // Connector represents a connector.
 type Connector struct {

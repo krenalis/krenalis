@@ -15,7 +15,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -116,7 +115,7 @@ func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 				if err != nil {
 					return err
 				}
-				c.Type, err = columnType(t)
+				c.Type, err = columnType(c.Name, t)
 				if err != nil {
 					return err
 				}
@@ -224,8 +223,8 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 	return form, nil
 }
 
-// columnType returns the column type from the Excel column type t.
-func columnType(t excelize.CellType) (types.Type, error) {
+// columnType returns the column type from an Excel column.
+func columnType(c string, t excelize.CellType) (types.Type, error) {
 	switch t {
 	case excelize.CellTypeBool:
 		return types.Boolean(), nil
@@ -236,6 +235,6 @@ func columnType(t excelize.CellType) (types.Type, error) {
 	case excelize.CellTypeUnset, excelize.CellTypeError, excelize.CellTypeString:
 		return types.Text(), nil
 	default:
-		return types.Type{}, fmt.Errorf("unexpected Excel type %d", t)
+		return types.Type{}, connector.NewNotSupportedTypeError(c, strconv.Itoa(int(t)))
 	}
 }

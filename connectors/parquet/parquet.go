@@ -117,9 +117,10 @@ func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 	parquetColumns := fr.Columns()
 	columns := make([]connector.Column, len(parquetColumns))
 	for i, c := range parquetColumns {
+		name := strings.Join(c.Path(), ".")
 		element := c.Element()
-		columns[i].Name = strings.Join(c.Path(), ".")
-		columns[i].Type, err = propertyType(element)
+		columns[i].Name = name
+		columns[i].Type, err = propertyType(name, element)
 		if err != nil {
 			return err
 		}
@@ -164,9 +165,10 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 	return nil, ui.ErrEventNotExist
 }
 
-// propertyType returns the property type of a Parquet column.
+// propertyType returns the property type of the Parquet column with the given
+// name and type.
 // (https://github.com/apache/parquet-format/blob/master/LogicalTypes.md)
-func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
+func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error) {
 
 	if elem.Type == nil {
 		return types.Type{}, errors.New("unexpected Parquet nil type")
@@ -293,7 +295,7 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 		return types.Text(), nil
 	}
 
-	return types.Type{}, fmt.Errorf("unsupported Parquet type %q", *elem.Type)
+	return types.Type{}, connector.NewNotSupportedTypeError(column, (*elem.Type).String())
 }
 
 // Convert an int96 type value to a time.Time value.

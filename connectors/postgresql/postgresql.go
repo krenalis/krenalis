@@ -248,5 +248,5 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "UUID":
 		return types.UUID(), nil
 	}
-	return types.Type{}, fmt.Errorf("PostreSQL type %q is not supported", t.DatabaseTypeName())
+	return types.Type{}, connector.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
 }

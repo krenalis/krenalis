@@ -16,7 +16,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"unicode/utf8"
 
 	"chichi/apis"
@@ -203,7 +202,7 @@ func testConnection(ctx context.Context, settings *settings) error {
 	return db.PingContext(ctx)
 }
 
-// propertyType returns the property type of the column type t.
+// propertyType returns the property type of the column with name c and type t.
 func propertyType(t *sql.ColumnType) (types.Type, error) {
 	switch t.DatabaseTypeName() {
 	case "BIT":
@@ -273,5 +272,5 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "YEAR":
 		return types.Year(), nil
 	}
-	return types.Type{}, fmt.Errorf("MySQL type %q is not supported", t.DatabaseTypeName())
+	return types.Type{}, connector.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
 }

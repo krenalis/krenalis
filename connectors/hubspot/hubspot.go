@@ -147,7 +147,7 @@ func (c *connection) Properties() ([]connector.Property, []connector.Property, e
 		case "createdate", "lastmodifieddate", "hs_object_id":
 			continue
 		}
-		typ, err := propertyType(r.Type)
+		typ, err := propertyType(r.Name, r.Type)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -624,9 +624,9 @@ func (err *hubspotError) Error() string {
 	return fmt.Sprintf("unexpected error from HubSpot: (%d) %s", err.statusCode, err.Message)
 }
 
-// propertyType returns the property type of the HubSpot property type t.
+// propertyType returns the property type of the HubSpot property type t with name c.
 // (https://developers.hubspot.com/docs/api/crm/properties#property-type-and-fieldtype-values).
-func propertyType(t string) (types.Type, error) {
+func propertyType(c, t string) (types.Type, error) {
 	switch t {
 	case "bool":
 		return types.Boolean(), nil
@@ -641,5 +641,5 @@ func propertyType(t string) (types.Type, error) {
 	case "string", "phone_number":
 		return types.Text(types.Chars(65536)), nil
 	}
-	return types.Type{}, fmt.Errorf("unknown HubSpot type: %s", t)
+	return types.Type{}, connector.NewNotSupportedTypeError(c, t)
 }
