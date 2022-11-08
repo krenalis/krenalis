@@ -76,8 +76,8 @@ func (c *connection) ContentType() string {
 	return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 }
 
-// Read reads the records from r.
-func (c *connection) Read(r io.Reader) error {
+// Read reads the records from r and write them to records.
+func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 	f, err := excelize.OpenReader(r, excelize.Options{
 		RawCellValue: true,
 	})
@@ -96,17 +96,18 @@ func (c *connection) Read(r io.Reader) error {
 	defer rows.Close()
 	var first bool
 	for rows.Next() {
-		row, err := rows.Columns()
+		// Read a record.
+		record, err := rows.Columns()
 		if err != nil {
 			return err
 		}
-		// Set the columns.
+		// Writes the columns.
 		if first {
-			columns := make([]connector.Column, len(row))
+			columns := make([]connector.Column, len(record))
 			for i, c := range columns {
-				// Set the column name.
+				// Set the name.
 				c.Name = "column" + strconv.Itoa(i+1)
-				// Set the column type.
+				// Set the type.
 				axis, err := excelize.CoordinatesToCellName(i+1, 1)
 				if err != nil {
 					return err
@@ -120,17 +121,23 @@ func (c *connection) Read(r io.Reader) error {
 					return err
 				}
 			}
-			c.firehose.SetColumns(columns)
+			err = records.Columns(columns)
+			if err != nil {
+				return err
+			}
 			first = false
 		}
-		// Put the record.
-		c.firehose.PutRecordString(row)
+		// Write the record.
+		err = records.RecordString(record)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-// Write writes the records to w.
-func (c *connection) Write(w io.Writer) error {
+// Write writes to w the records read from records.
+func (c *connection) Write(w io.Writer, records connector.RecordReader) error {
 
 	f := excelize.NewFile()
 	defer f.Close()
@@ -140,7 +147,7 @@ func (c *connection) Write(w io.Writer) error {
 	}
 
 	// Write the column names.
-	columns := c.firehose.Columns()
+	columns := records.Columns()
 	record := make([]any, len(columns))
 	for i, c := range columns {
 		record[i] = c.Name
@@ -152,7 +159,7 @@ func (c *connection) Write(w io.Writer) error {
 
 	// Write the records.
 	for i := 2; ; i++ {
-		record, err := c.firehose.Record()
+		record, err := records.Record()
 		if err != nil {
 			if err == io.EOF {
 				break

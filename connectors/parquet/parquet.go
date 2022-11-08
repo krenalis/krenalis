@@ -11,10 +11,6 @@ package parquet
 // (https://github.com/apache/parquet-format)
 
 import (
-	"chichi/apis"
-	"chichi/apis/types"
-	"chichi/connector"
-	"chichi/connector/ui"
 	"context"
 	_ "embed"
 	"encoding/binary"
@@ -27,6 +23,11 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"chichi/apis"
+	"chichi/apis/types"
+	"chichi/connector"
+	"chichi/connector/ui"
 
 	"github.com/fraugster/parquet-go"
 	"github.com/fraugster/parquet-go/parquet"
@@ -84,8 +85,8 @@ func (c *connection) ContentType() string {
 	return "application/octet-stream"
 }
 
-// Read reads the records from r.
-func (c *connection) Read(r io.Reader) error {
+// Read reads the records from r and write them to records.
+func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 
 	// Copy data read from r to a temporary file.
 	dir := os.TempDir()
@@ -126,13 +127,11 @@ func (c *connection) Read(r io.Reader) error {
 			int96Columns = append(int96Columns, columns[i].Name)
 		}
 	}
-	err = c.firehose.SetColumns(columns)
-	if err != nil {
-		return err
-	}
+	// Write the columns.
+	records.Columns(columns)
 
-	// Read the records.
 	for {
+		// Read a record.
 		record, err := fr.NextRow()
 		if err != nil {
 			if err == io.EOF {
@@ -147,15 +146,15 @@ func (c *connection) Read(r io.Reader) error {
 				return fmt.Errorf("cannot convert value of column %q: %s", name, err)
 			}
 		}
-		// Put the record.
-		c.firehose.PutRecordMap(record)
+		// Write the record.
+		records.RecordMap(record)
 	}
 
 	return nil
 }
 
-// Write writes the records read from get into w.
-func (c *connection) Write(w io.Writer) error {
+// Write writes to w the records read from records.
+func (c *connection) Write(w io.Writer, records connector.RecordReader) error {
 	// TODO(marco)
 	return nil
 }

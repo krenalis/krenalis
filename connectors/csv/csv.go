@@ -78,8 +78,8 @@ func (c *connection) ContentType() string {
 	return "text/csv; charset=UTF-8"
 }
 
-// Read reads the records from r.
-func (c *connection) Read(r io.Reader) error {
+// Read reads the records from r and write them to records.
+func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 	v := csv.NewReader(r)
 	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
 	if c.settings.Comment != "" {
@@ -90,6 +90,7 @@ func (c *connection) Read(r io.Reader) error {
 	v.TrimLeadingSpace = c.settings.TrimLeadingSpace
 	var first bool
 	for {
+		// Read a record.
 		record, err := v.Read()
 		if err == io.EOF {
 			break
@@ -97,34 +98,37 @@ func (c *connection) Read(r io.Reader) error {
 		if err != nil {
 			return err
 		}
-		// Set the columns.
+		// Write the columns.
 		if first {
 			columns := make([]connector.Column, len(record))
 			for i, c := range columns {
 				c.Name = "column" + strconv.Itoa(i+1)
 				c.Type = types.Text()
 			}
-			err = c.firehose.SetColumns(columns)
+			err = records.Columns(columns)
 			if err != nil {
 				return err
 			}
 			first = false
 		}
-		// Put the record.
-		c.firehose.PutRecordString(record)
+		// Write the record.
+		err = records.RecordString(record)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-// Write writes the records to w.
-func (c *connection) Write(w io.Writer) error {
+// Write writes to w the records read from records.
+func (c *connection) Write(w io.Writer, records connector.RecordReader) error {
 
 	v := csv.NewWriter(w)
 	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
 	v.UseCRLF = c.settings.UseCRLF
 
 	// Write the column names.
-	columns := c.firehose.Columns()
+	columns := records.Columns()
 	record := make([]string, len(columns))
 	for i, c := range columns {
 		record[i] = c.Name
@@ -136,7 +140,7 @@ func (c *connection) Write(w io.Writer) error {
 
 	// Write the records.
 	for {
-		record, err = c.firehose.RecordString()
+		record, err = records.RecordString()
 		if err == io.EOF {
 			v.Flush()
 			if err := v.Error(); err != nil {

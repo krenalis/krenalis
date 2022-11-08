@@ -29,143 +29,15 @@ const maxSettingsLen = 10_000 // Maximum length of settings in runes.
 
 // firehose is the Firehose API used by the connectors.
 type firehose struct {
-	sources          *DataSources
-	source           int
-	resource         int
-	connector        int
-	connectorType    string
-	ctx              context.Context
-	cancel           context.CancelFunc
-	webhooksPer      string
-	columns          []connector.Column
-	identityColumn   string
-	identityIndex    int
-	timestampColumn  string
-	timestampIndex   int
-	timestamp        time.Time
-	stopAfterColumns bool
-	err              error
-}
-
-// setIdentityColumn sets the name of the identity column used by File
-// connectors.
-func (fh *firehose) setIdentityColumn(column string) {
-	fh.identityIndex = noColumn
-	fh.identityColumn = column
-}
-
-// setTimestampColumn sets the name of the timestamp column used by File
-// connectors.
-func (fh *firehose) setTimestampColumn(column string) {
-	fh.timestampIndex = noColumn
-	fh.timestampColumn = column
-}
-
-// setTimestampColumn sets the timestamp used by File connectors.
-func (fh *firehose) setTimestamp(ts time.Time) {
-	fh.timestamp = ts
-}
-
-// setStopAfterColumns stops a File connector Read method, returning the
-// ErrRecordStop error from a SetColumns call.
-func (fh *firehose) setStopAfterColumns() {
-	fh.stopAfterColumns = true
-}
-
-func (fh *firehose) Columns() []connector.Column {
-	return fh.columns
-}
-
-func (fh *firehose) Record() ([]any, error) {
-	return nil, nil // TODO(marco)
-}
-
-func (fh *firehose) RecordMap() (map[string]any, error) {
-	return nil, nil // TODO(marco)
-}
-
-func (fh *firehose) RecordString() ([]string, error) {
-	return nil, nil // TODO(marco)
-}
-
-func (fh *firehose) SetColumns(columns []connector.Column) error {
-	for i, c := range columns {
-		switch c.Name {
-		case fh.identityColumn:
-			fh.identityIndex = i
-		case fh.timestampColumn:
-			fh.timestampIndex = i
-		}
-	}
-	if fh.identityIndex == noColumn {
-		return fmt.Errorf("missing identity column %q", fh.identityColumn)
-	}
-	if fh.timestampColumn != "" && fh.timestampIndex == noColumn {
-		return fmt.Errorf("missing timestamp column %q", fh.timestampColumn)
-	}
-	fh.columns = columns
-	if fh.stopAfterColumns {
-		return ErrRecordStop
-	}
-	return nil
-}
-
-func (fh *firehose) PutRecord(record []any) {
-	if len(record) != len(fh.columns) {
-		fh.err = errors.New("connector %q has returned records with different lengths")
-		return
-	}
-	properties := map[string]any{}
-	for i, c := range fh.columns {
-		properties[c.Name] = record[i]
-	}
-	ts := fh.timestamp
-	if fh.timestampIndex != noColumn {
-		ts, err := time.Parse("2006-01-02 15:04:05", record[fh.timestampIndex].(string))
-		if err != nil {
-			err = fmt.Errorf("invalid timestamp column value: %s", ts)
-			return
-		}
-	}
-	user := fmt.Sprintf("%s", record[fh.identityIndex])
-	fh.SetUser(user, ts, properties)
-	return
-}
-
-func (fh *firehose) PutRecordMap(record map[string]any) {
-	ts := fh.timestamp
-	if fh.timestampIndex != noColumn {
-		ts, err := time.Parse("2006-01-02 15:04:05", record[fh.timestampColumn].(string))
-		if err != nil {
-			err = fmt.Errorf("invalid timestamp column value: %s", ts)
-			return
-		}
-	}
-	user := fmt.Sprintf("%s", record[fh.identityColumn])
-	fh.SetUser(user, ts, record)
-	return
-}
-
-func (fh *firehose) PutRecordString(record []string) {
-	if len(record) != len(fh.columns) {
-		fh.err = errors.New("connector %q has returned records with different lengths")
-		return
-	}
-	properties := map[string]any{}
-	for i, c := range fh.columns {
-		properties[c.Name] = record[i]
-	}
-	ts := fh.timestamp
-	if fh.timestampIndex != noColumn {
-		ts, err := time.Parse("2006-01-02 15:04:05", record[fh.timestampIndex])
-		if err != nil {
-			err = fmt.Errorf("invalid timestamp column value: %s", ts)
-			return
-		}
-	}
-	user := fmt.Sprintf("%s", record[fh.identityIndex])
-	fh.SetUser(user, ts, properties)
-	return
+	sources       *DataSources
+	source        int
+	resource      int
+	connector     int
+	connectorType string
+	ctx           context.Context
+	cancel        context.CancelFunc
+	webhooksPer   string
+	err           error
 }
 
 func (fh *firehose) ReceiveEvent(event connector.Event) {
@@ -455,6 +327,110 @@ func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
 	if err != nil {
 		return fmt.Errorf("cannot write data Golden Record: %s", err)
 	}
+	return nil
+}
+
+// recordWriter implements the connector.RecordWriter interface.
+type recordWriter struct {
+	fh              *firehose
+	onlyColumns     bool
+	columns         []connector.Column
+	identityColumn  string
+	timestampColumn string
+	identityIndex   int
+	timestampIndex  int
+	timestamp       time.Time
+}
+
+// newRecordWriter returns a new record writer.
+func (fh *firehose) newRecordWriter(identityColumn, timestampColumn string, timestamp time.Time, onlyColumns bool) *recordWriter {
+	return &recordWriter{
+		fh:              fh,
+		onlyColumns:     onlyColumns,
+		identityColumn:  identityColumn,
+		timestampColumn: timestampColumn,
+		identityIndex:   noColumn,
+		timestampIndex:  noColumn,
+		timestamp:       timestamp,
+	}
+}
+
+// Columns receives the columns.
+func (rw *recordWriter) Columns(columns []connector.Column) error {
+	for i, c := range columns {
+		switch c.Name {
+		case rw.identityColumn:
+			rw.identityIndex = i
+		case rw.timestampColumn:
+			rw.timestampIndex = i
+		}
+	}
+	if rw.identityIndex == noColumn {
+		return fmt.Errorf("missing identity column %q", rw.identityColumn)
+	}
+	if rw.timestampColumn != "" && rw.timestampIndex == noColumn {
+		return fmt.Errorf("missing timestamp column %q", rw.timestampColumn)
+	}
+	rw.columns = columns
+	if rw.onlyColumns {
+		return ErrRecordStop
+	}
+	return nil
+}
+
+// Record receives a record and calls the SetUser of the Firehose.
+func (rw *recordWriter) Record(record []any) error {
+	if len(record) != len(rw.columns) {
+		return errors.New("connector %q has returned records with different lengths")
+	}
+	properties := map[string]any{}
+	for i, c := range rw.columns {
+		properties[c.Name] = record[i]
+	}
+	ts := rw.timestamp
+	if rw.timestampIndex != noColumn {
+		ts, err := time.Parse("2006-01-02 15:04:05", record[rw.timestampIndex].(string))
+		if err != nil {
+			return fmt.Errorf("invalid timestamp column value: %s", ts)
+		}
+	}
+	user := fmt.Sprintf("%s", record[rw.identityIndex])
+	rw.fh.SetUser(user, ts, properties)
+	return nil
+}
+
+// RecordMap receives a record and calls the SetUser of the Firehose.
+func (rw *recordWriter) RecordMap(record map[string]any) error {
+	ts := rw.timestamp
+	if rw.timestampIndex != noColumn {
+		ts, err := time.Parse("2006-01-02 15:04:05", record[rw.timestampColumn].(string))
+		if err != nil {
+			return fmt.Errorf("invalid timestamp column value: %s", ts)
+		}
+	}
+	user := fmt.Sprintf("%s", record[rw.identityColumn])
+	rw.fh.SetUser(user, ts, record)
+	return nil
+}
+
+// RecordString receives a record and calls the SetUser of the Firehose.
+func (rw *recordWriter) RecordString(record []string) error {
+	if len(record) != len(rw.columns) {
+		return errors.New("connector %q has returned records with different lengths")
+	}
+	properties := map[string]any{}
+	for i, c := range rw.columns {
+		properties[c.Name] = record[i]
+	}
+	ts := rw.timestamp
+	if rw.timestampIndex != noColumn {
+		ts, err := time.Parse("2006-01-02 15:04:05", record[rw.timestampIndex])
+		if err != nil {
+			return fmt.Errorf("invalid timestamp column value: %s", ts)
+		}
+	}
+	user := fmt.Sprintf("%s", record[rw.identityIndex])
+	rw.fh.SetUser(user, ts, properties)
 	return nil
 }
 

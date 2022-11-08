@@ -503,16 +503,14 @@ func (this *DataSources) Import(id int, reimport bool) error {
 
 		// Connect to the file connector.
 		fh = this.newFirehose(context.Background(), id, streamConnector, 0, "File", "")
-		fh.setIdentityColumn(identityColumn)
-		fh.setTimestampColumn(timestampColumn)
-		fh.setTimestamp(timestamp)
 		file, err := newFileConnection(fh.ctx, fileConnectorName, fileSettings, fh)
 		if err != nil {
 			return err
 		}
 
 		// Read the records.
-		err = file.Read(r)
+		records := fh.newRecordWriter(identityColumn, timestampColumn, timestamp, false)
+		err = file.Read(r, records)
 		if err != nil {
 			return err
 		}
@@ -1008,16 +1006,17 @@ func (this *DataSources) reloadProperties(id int) error {
 
 	case "FileStream":
 
-		var fileConnectorName, streamConnectorName string
+		var fileConnectorName, streamConnectorName, identityColumn, timestampColumn string
 		var fileConnector, streamConnector int
 		var fileSettings, streamSettings []byte
 		err = this.myDB.QueryRow(
-			"SELECT `c1`.`name`, `c2`.`name`, `s`.`connector`, `s`.`stream`, `s`.`settings`, `s`.`streamSettings`\n"+
+			"SELECT `c1`.`name`, `c2`.`name`, `s`.`connector`, `s`.`stream`, `s`.`identityColumn`,"+
+				" `s`.`timestampColumn`, `s`.`settings`, `s`.`streamSettings`\n"+
 				"FROM `data_sources` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c1` ON `c1`.`id` = `s`.`connector`\n"+
 				"INNER JOIN `connectors` AS `c2` ON `c2`.`id` = `s`.`stream`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(&fileConnectorName, &streamConnectorName, &fileConnector,
-			&streamConnector, &fileSettings, &streamSettings)
+			&streamConnector, &identityColumn, &timestampColumn, &fileSettings, &streamSettings)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ErrDataSourceNotFound
@@ -1039,12 +1038,12 @@ func (this *DataSources) reloadProperties(id int) error {
 
 		// Connect to the file connector and read only the columns.
 		fh = this.newFirehose(fh.ctx, id, streamConnector, 0, "File", "")
-		fh.setStopAfterColumns()
 		file, err := newFileConnection(fh.ctx, fileConnectorName, fileSettings, fh)
 		if err != nil {
 			return err
 		}
-		err = file.Read(r)
+		records := fh.newRecordWriter(identityColumn, timestampColumn, time.Time{}, true)
+		err = file.Read(r, records)
 		if err != nil && err != ErrRecordStop {
 			return err
 		}
@@ -1055,10 +1054,10 @@ func (this *DataSources) reloadProperties(id int) error {
 			return err
 		}
 
-		properties = make([]_connector.Property, len(fh.columns))
+		properties = make([]_connector.Property, len(records.columns))
 		for i := 0; i < len(properties); i++ {
-			properties[i].Name = fh.columns[i].Name
-			properties[i].Type = fh.columns[i].Type
+			properties[i].Name = records.columns[i].Name
+			properties[i].Type = records.columns[i].Type
 		}
 	}
 
