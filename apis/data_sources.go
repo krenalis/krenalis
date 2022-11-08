@@ -29,12 +29,10 @@ type DataSources struct {
 }
 
 var (
-	ErrConnectorNotFound             = errors.New("connector does not exist")
-	ErrDataSourceNotFound            = errors.New("data source does not exist")
-	ErrDataSourceDisabled            = errors.New("data source is disabled")
-	ErrResourceNotFound              = errors.New("resource does not exist")
-	ErrCannotGetConnectorAccessToken = errors.New("cannot get access token")
-	ErrUIEventNotExist               = errors.New("UI event does not exist")
+	ErrConnectorNotFound  = errors.New("connector does not exist")
+	ErrDataSourceNotFound = errors.New("data source does not exist")
+	ErrDataSourceDisabled = errors.New("data source is disabled")
+	ErrUIEventNotExist    = errors.New("UI event does not exist")
 )
 
 const (

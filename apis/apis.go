@@ -9,6 +9,7 @@ package apis
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -22,6 +23,11 @@ import (
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/go-chi/chi/v5"
+)
+
+var (
+	ErrResourceNotFound              = errors.New("resource does not exist")
+	ErrCannotGetConnectorAccessToken = errors.New("cannot get access token")
 )
 
 type APIs struct {
