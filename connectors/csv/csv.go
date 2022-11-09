@@ -55,14 +55,13 @@ type settings struct {
 
 // New returns a new CSV connection.
 func New(ctx context.Context, conf *connector.FileConfig) (connector.FileConnection, error) {
-	c := connection{ctx: ctx, dir: conf.Direction}
+	c := connection{ctx: ctx, dir: conf.Direction, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of CSV connection")
 		}
 	}
-	c.firehose = conf.Firehose
 	return &c, nil
 }
 
