@@ -212,8 +212,7 @@ func (c *connection) Write(files connector.FileWriter, records connector.RecordR
 }
 
 // propertyType returns the property type of the Parquet column with the given
-// name and type.
-// (https://github.com/apache/parquet-format/blob/master/LogicalTypes.md)
+// name and type (https://github.com/apache/parquet-format).
 func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error) {
 
 	if elem.Type == nil {
