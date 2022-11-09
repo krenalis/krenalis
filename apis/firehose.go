@@ -347,9 +347,11 @@ type recordWriter struct {
 	identityIndex   int
 	timestampIndex  int
 	timestamp       time.Time
+	setUserCalled   bool
 }
 
-// Columns receives the columns.
+// Columns sets the columns of the records.
+// Columns must be called before Record, RecordMap and RecordString.
 func (rw *recordWriter) Columns(columns []connector.Column) error {
 	if len(columns) == 0 {
 		return connector.ErrNoColumns
@@ -388,6 +390,9 @@ func (rw *recordWriter) Columns(columns []connector.Column) error {
 
 // Record receives a record and calls the SetUser of the Firehose.
 func (rw *recordWriter) Record(record []any) error {
+	if rw.columns == nil {
+		return fmt.Errorf("connector %d did not call the Columns method before calling Record", rw.fh.connector)
+	}
 	if len(record) != len(rw.columns) {
 		return errors.New("connector %q has returned records with different lengths")
 	}
@@ -404,11 +409,15 @@ func (rw *recordWriter) Record(record []any) error {
 	}
 	user := fmt.Sprintf("%s", record[rw.identityIndex])
 	rw.fh.SetUser(user, ts, properties)
+	rw.setUserCalled = true
 	return nil
 }
 
 // RecordMap receives a record and calls the SetUser of the Firehose.
 func (rw *recordWriter) RecordMap(record map[string]any) error {
+	if rw.columns == nil {
+		return fmt.Errorf("connector %d did not call the Columns method before calling RecordMap", rw.fh.connector)
+	}
 	ts := rw.timestamp
 	if rw.timestampIndex != noColumn {
 		ts, err := time.Parse("2006-01-02 15:04:05", record[rw.timestampColumn].(string))
@@ -418,11 +427,15 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 	}
 	user := fmt.Sprintf("%s", record[rw.identityColumn])
 	rw.fh.SetUser(user, ts, record)
+	rw.setUserCalled = true
 	return nil
 }
 
 // RecordString receives a record and calls the SetUser of the Firehose.
 func (rw *recordWriter) RecordString(record []string) error {
+	if rw.columns == nil {
+		return fmt.Errorf("connector %d did not call the Columns method before calling RecordString", rw.fh.connector)
+	}
 	if len(record) != len(rw.columns) {
 		return errors.New("connector %q has returned records with different lengths")
 	}
@@ -439,13 +452,19 @@ func (rw *recordWriter) RecordString(record []string) error {
 	}
 	user := fmt.Sprintf("%s", record[rw.identityIndex])
 	rw.fh.SetUser(user, ts, properties)
+	rw.setUserCalled = true
 	return nil
 }
 
 // Timestamp sets the last modified time for all records.
 // If ts is zero time, it means that the timestamp is unknown.
-func (rw *recordWriter) Timestamp(ts time.Time) {
+// Timestamp can be called before Record, RecordMap and RecordString.
+func (rw *recordWriter) Timestamp(ts time.Time) error {
+	if rw.setUserCalled {
+		return fmt.Errorf("connector %d fa called the Timestamp method after a record method", rw.fh.connector)
+	}
 	rw.timestamp = ts
+	return nil
 }
 
 func keys[K comparable, V any](m map[K]V) []K {

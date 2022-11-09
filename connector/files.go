@@ -110,7 +110,7 @@ type RecordReader interface {
 type RecordWriter interface {
 
 	// Columns sets the columns of the records.
-	// It must be called before calling the other methods.
+	// Columns must be called before Record, RecordMap and RecordString.
 	Columns([]Column) error
 
 	// Record writes a record as a slice of any.
@@ -124,5 +124,6 @@ type RecordWriter interface {
 
 	// Timestamp sets the last modified time for all records.
 	// If ts is zero time, it means that the timestamp is unknown.
-	Timestamp(ts time.Time)
+	// Timestamp can be called before Record, RecordMap and RecordString.
+	Timestamp(ts time.Time) error
 }

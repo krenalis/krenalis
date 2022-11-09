@@ -85,7 +85,9 @@ func (c *connection) Read(files connector.FileReader, records connector.RecordWr
 	}
 	defer r.Close()
 
-	records.Timestamp(timestamp)
+	if err = records.Timestamp(timestamp); err != nil {
+		return err
+	}
 
 	// Copy data read from r to a temporary file.
 	dir := os.TempDir()

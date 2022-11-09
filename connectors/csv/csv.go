@@ -84,8 +84,9 @@ func (c *connection) Read(files connector.FileReader, records connector.RecordWr
 	}
 	defer r.Close()
 
-	// Set the timestamp.
-	records.Timestamp(timestamp)
+	if err = records.Timestamp(timestamp); err != nil {
+		return err
+	}
 
 	// Create a CSV reader.
 	v := csv.NewReader(r)

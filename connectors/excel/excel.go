@@ -80,7 +80,9 @@ func (c *connection) Read(files connector.FileReader, records connector.RecordWr
 	}
 	defer r.Close()
 
-	records.Timestamp(timestamp)
+	if err = records.Timestamp(timestamp); err != nil {
+		return err
+	}
 
 	f, err := excelize.OpenReader(r, excelize.Options{
 		RawCellValue: true,
