@@ -118,6 +118,9 @@ func (this *DataSources) AddApp(dir Direction, connector int, refreshToken, acce
 	if dir != SourceDir && dir != DestDir {
 		return 0, errors.New("invalid direction")
 	}
+	if connector <= 0 {
+		return 0, errors.New("invalid connector")
+	}
 	direction := _connector.Direction(dir)
 	conn, err := this.api.apis.Connector(connector)
 	if err != nil {
@@ -201,6 +204,9 @@ func (this *DataSources) AddDatabase(dir Direction, connector int) (int, error) 
 	if dir != SourceDir && dir != DestDir {
 		return 0, errors.New("invalid direction")
 	}
+	if connector <= 0 {
+		return 0, errors.New("invalid connector")
+	}
 	var id int64
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		var connectorType string
@@ -233,6 +239,12 @@ func (this *DataSources) AddDatabase(dir Direction, connector int) (int, error) 
 func (this *DataSources) AddFileStorage(dir Direction, fileConnector, storageConnector int) (int, error) {
 	if dir != SourceDir && dir != DestDir {
 		return 0, errors.New("invalid direction")
+	}
+	if fileConnector <= 0 {
+		return 0, errors.New("invalid file connector")
+	}
+	if storageConnector <= 0 {
+		return 0, errors.New("invalid storage connector")
 	}
 	var id int64
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
