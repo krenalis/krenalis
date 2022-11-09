@@ -77,20 +77,11 @@ func (c *connection) Connector() *connector.Connector {
 // and its last update time.
 // It is the caller's responsibility to close the returned reader.
 func (c *connection) Reader(path string) (io.ReadCloser, time.Time, error) {
-	if path == "" {
-		return nil, time.Time{}, fmt.Errorf("path cannot be empty")
+	u, err := c.requestURL(path)
+	if err != nil {
+		return nil, time.Time{}, err
 	}
-	up, err := url.Parse(path)
-	if err != nil || up.Scheme != "" || up.Host != "" {
-		return nil, time.Time{}, fmt.Errorf("path is not an URL path: %s", err)
-	}
-	u := url.URL{
-		Scheme:   "https",
-		Host:     net.JoinHostPort(c.settings.Host, strconv.Itoa(c.settings.Port)),
-		Path:     up.Path,
-		RawQuery: up.RawQuery,
-	}
-	req, err := http.NewRequestWithContext(c.ctx, "GET", u.String(), nil)
+	req, err := http.NewRequestWithContext(c.ctx, "GET", u, nil)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -173,13 +164,12 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 
 // Write writes the data read from p into the file with the given path.
 // contentType is the file's content type.
-func (c *connection) Write(p io.Reader, path, contentType string) error {
-	u := url.URL{
-		Scheme: "https",
-		Host:   net.JoinHostPort(c.settings.Host, strconv.Itoa(c.settings.Port)),
-		Path:   path,
+func (c *connection) Write(r io.Reader, path, contentType string) error {
+	u, err := c.requestURL(path)
+	if err != nil {
+		return err
 	}
-	req, err := http.NewRequestWithContext(c.ctx, "POST", u.String(), p)
+	req, err := http.NewRequestWithContext(c.ctx, "POST", u, r)
 	if err != nil {
 		return err
 	}
@@ -191,10 +181,28 @@ func (c *connection) Write(p io.Reader, path, contentType string) error {
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
 	_, _ = io.Copy(io.Discard, res.Body)
-	_ = res.Body.Close()
 	if res.StatusCode != 200 {
 		return fmt.Errorf("server responded with status: %s", res.Status)
 	}
 	return nil
+}
+
+// requestURL returns a request URL given the path.
+func (c *connection) requestURL(path string) (string, error) {
+	if path == "" {
+		return "", fmt.Errorf("path cannot be empty")
+	}
+	p, err := url.Parse(path)
+	if err != nil || p.Scheme != "" || p.Host != "" {
+		return "", fmt.Errorf("path is not an URL path: %s", err)
+	}
+	u := url.URL{
+		Scheme:   "https",
+		Host:     net.JoinHostPort(c.settings.Host, strconv.Itoa(c.settings.Port)),
+		Path:     p.Path,
+		RawQuery: p.RawQuery,
+	}
+	return u.String(), nil
 }
