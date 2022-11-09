@@ -145,6 +145,56 @@ func (c *connection) Read(files connector.FileReader, records connector.RecordWr
 	return nil
 }
 
+// ServeUI serves the connector's user interface.
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
+
+	var s settings
+
+	switch event {
+	case "load":
+		// Load the Form.
+		if c.settings != nil {
+			s = *c.settings
+		}
+	case "save":
+		// Save the settings.
+		err := json.Unmarshal(values, &s)
+		if err != nil {
+			return nil, err
+		}
+		// Validate Path.
+		if s.Path == "" {
+			return nil, ui.Errorf("path cannot be empty")
+		}
+		if utf8.RuneCountInString(s.Path) > 1000 {
+			return nil, ui.Errorf("path cannot be longer that 1000 characters")
+		}
+		// Validate SheetName.
+		if name := s.SheetName; name == "" || utf8.RuneCountInString(name) > 31 || strings.ContainsAny(name, ":\\/?*[]") {
+			return nil, ui.Errorf("sheet name cannot be longer than 31 characters and cannot contain :, \\, /, ?, *, [ and ]")
+		}
+		b, err := json.Marshal(&s)
+		if err != nil {
+			return nil, err
+		}
+		return nil, c.firehose.SetSettings(b)
+	default:
+		return nil, ui.ErrEventNotExist
+	}
+
+	form := &ui.Form{
+		Fields: []ui.Component{
+			&ui.Input{Name: "path", Value: s.Path, Label: "Path", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1000},
+			&ui.Input{Name: "sheetName", Value: s.SheetName, Label: "Sheet name", Placeholder: "Sheet 1", Type: "text", MinLength: 1, MaxLength: 31},
+		},
+		Actions: []ui.Action{
+			{Event: "save", Text: "Save", Variant: "primary"},
+		},
+	}
+
+	return form, nil
+}
+
 // Write writes to files the records read from records.
 func (c *connection) Write(files connector.FileWriter, records connector.RecordReader) error {
 
@@ -200,56 +250,6 @@ func (c *connection) Write(files connector.FileWriter, records connector.RecordR
 	err = w.Close()
 
 	return err
-}
-
-// ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
-
-	var s settings
-
-	switch event {
-	case "load":
-		// Load the Form.
-		if c.settings != nil {
-			s = *c.settings
-		}
-	case "save":
-		// Save the settings.
-		err := json.Unmarshal(values, &s)
-		if err != nil {
-			return nil, err
-		}
-		// Validate Path.
-		if s.Path == "" {
-			return nil, ui.Errorf("path cannot be empty")
-		}
-		if utf8.RuneCountInString(s.Path) > 1000 {
-			return nil, ui.Errorf("path cannot be longer that 1000 characters")
-		}
-		// Validate SheetName.
-		if name := s.SheetName; name == "" || utf8.RuneCountInString(name) > 31 || strings.ContainsAny(name, ":\\/?*[]") {
-			return nil, ui.Errorf("sheet name cannot be longer than 31 characters and cannot contain :, \\, /, ?, *, [ and ]")
-		}
-		b, err := json.Marshal(&s)
-		if err != nil {
-			return nil, err
-		}
-		return nil, c.firehose.SetSettings(b)
-	default:
-		return nil, ui.ErrEventNotExist
-	}
-
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "path", Value: s.Path, Label: "Path", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1000},
-			&ui.Input{Name: "sheetName", Value: s.SheetName, Label: "Sheet name", Placeholder: "Sheet 1", Type: "text", MinLength: 1, MaxLength: 31},
-		},
-		Actions: []ui.Action{
-			{Event: "save", Text: "Save", Variant: "primary"},
-		},
-	}
-
-	return form, nil
 }
 
 // columnType returns the column type from an Excel column.

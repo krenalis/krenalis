@@ -131,54 +131,6 @@ func (c *connection) Read(files connector.FileReader, records connector.RecordWr
 	return nil
 }
 
-// Write writes to files the records read from records.
-func (c *connection) Write(files connector.FileWriter, records connector.RecordReader) error {
-
-	w, err := files.Writer(c.settings.Path, "text/csv; charset=UTF-8")
-	if err != nil {
-		return err
-	}
-	defer w.Close()
-
-	v := csv.NewWriter(w)
-	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
-	v.UseCRLF = c.settings.UseCRLF
-
-	// Write the column names.
-	columns := records.Columns()
-	record := make([]string, len(columns))
-	for i, c := range columns {
-		record[i] = c.Name
-	}
-	err = v.Write(record)
-	if err != nil {
-		return err
-	}
-
-	// Write the records.
-	for {
-		record, err = records.RecordString()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		err = v.Write(record)
-		if err != nil {
-			return err
-		}
-	}
-
-	v.Flush()
-	if err := v.Error(); err != nil {
-		return err
-	}
-	err = w.Close()
-
-	return err
-}
-
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 
@@ -258,4 +210,52 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 	}
 
 	return form, nil
+}
+
+// Write writes to files the records read from records.
+func (c *connection) Write(files connector.FileWriter, records connector.RecordReader) error {
+
+	w, err := files.Writer(c.settings.Path, "text/csv; charset=UTF-8")
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+
+	v := csv.NewWriter(w)
+	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
+	v.UseCRLF = c.settings.UseCRLF
+
+	// Write the column names.
+	columns := records.Columns()
+	record := make([]string, len(columns))
+	for i, c := range columns {
+		record[i] = c.Name
+	}
+	err = v.Write(record)
+	if err != nil {
+		return err
+	}
+
+	// Write the records.
+	for {
+		record, err = records.RecordString()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		err = v.Write(record)
+		if err != nil {
+			return err
+		}
+	}
+
+	v.Flush()
+	if err := v.Error(); err != nil {
+		return err
+	}
+	err = w.Close()
+
+	return err
 }
