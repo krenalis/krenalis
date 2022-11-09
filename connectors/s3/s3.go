@@ -116,13 +116,13 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		if err != nil {
 			return nil, err
 		}
-		// Validate SecretAccessKey.
-		if n := len(s.SecretAccessKey); n != 20 {
-			return nil, ui.Errorf("access key id must be 20 characters long")
-		}
 		// Validate AccessKeyID.
-		if n := len(s.AccessKeyID); n < 50 || n > 200 {
-			return nil, ui.Errorf("secret access key length must be in range [50,200]")
+		if n := len(s.AccessKeyID); n != 20 {
+			return nil, ui.Errorf("access key id must be 20 bytes long")
+		}
+		// Validate SecretAccessKey.
+		if n := len(s.SecretAccessKey); n < 40 || n > 200 {
+			return nil, ui.Errorf("secret access key length in bytes must be in range [40,200]")
 		}
 		// Validate Region.
 		const regions = "us-east-1 us-east-2 us-west-1 us-west-2 af-south-1 ap-east-1 ap-southeast-3 ap-south-1 " +
@@ -155,7 +155,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 	form := &ui.Form{
 		Fields: []ui.Component{
 			&ui.Input{Name: "accessKeyID", Value: s.AccessKeyID, Label: "Access Key ID", Placeholder: "Access Key ID", Type: "text", MinLength: 20, MaxLength: 20},
-			&ui.Input{Name: "secretAccessKey", Value: s.SecretAccessKey, Label: "Secret Access Key", Placeholder: "Secret Access Key", Type: "password", MinLength: 50, MaxLength: 200},
+			&ui.Input{Name: "secretAccessKey", Value: s.SecretAccessKey, Label: "Secret Access Key", Placeholder: "Secret Access Key", Type: "password", MinLength: 40, MaxLength: 200},
 			&ui.Select{Name: "region", Value: s.Region, Label: "Region", Placeholder: "Region", Options: []ui.Option{
 				{Text: "US East (N. Virginia) us-east-1", Value: "us-east-1"},
 				{Text: "US East (Ohio) us-east-2", Value: "us-east-2"},
