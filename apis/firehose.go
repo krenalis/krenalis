@@ -481,7 +481,7 @@ func (fh *firehose) listTransformations(dataSources []int) ([]Transformation, er
 }
 
 // mostRecentTimestamp returns the most recent timestamp referred by a property.
-// If the are no timestamps or properties, returns 'time.Time{}'.
+// If there are no timestamps or properties, returns 'time.Time{}'.
 func mostRecentTimestamp(timestamps map[string]time.Time, props []InputProperty) time.Time {
 	var recent time.Time
 	for _, p := range props {
