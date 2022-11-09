@@ -16,33 +16,33 @@ const (
 	MaxDecimalScale     = 38 // Maximum scale for a Decimal type
 )
 
-type BaseType int8
+type PhysicalType int8
 
 const (
-	TBoolean BaseType = 1 + iota
-	TInt
-	TTinyInt
-	TSmallInt
-	TMediumInt
-	TBigInt
-	TUnsignedInt
-	TUnsignedTinyInt
-	TUnsignedSmallInt
-	TUnsignedMediumInt
-	TUnsignedBigInt
-	TReal
-	TDouble
-	TDecimal
-	TDateTime
-	TDate
-	TTime
-	TYear
-	TUUID
-	TJSON
-	TText
+	PtBoolean PhysicalType = 1 + iota
+	PtInt
+	PtTinyInt
+	PtSmallInt
+	PtMediumInt
+	PtBigInt
+	PtUnsignedInt
+	PtUnsignedTinyInt
+	PtUnsignedSmallInt
+	PtUnsignedMediumInt
+	PtUnsignedBigInt
+	PtReal
+	PtDouble
+	PtDecimal
+	PtDateTime
+	PtDate
+	PtTime
+	PtYear
+	PtUUID
+	PtJSON
+	PtText
 )
 
-var baseName = []string{
+var physicalName = []string{
 	"Boolean",
 	"Int",
 	"TinyInt",
@@ -66,38 +66,38 @@ var baseName = []string{
 	"Text",
 }
 
-// String returns the name of b. Panics if b is not a base type.
-func (b BaseType) String() string {
-	if b < 1 || int(b) > len(baseName) {
-		panic("invalid base type")
+// String returns the name of pt. Panics if pt is not a physical type.
+func (pt PhysicalType) String() string {
+	if pt < 1 || int(pt) > len(physicalName) {
+		panic("invalid physical type")
 	}
-	return baseName[b-1]
+	return physicalName[pt-1]
 }
 
-// Kind represents a kind.
-type Kind int8
+// LogicalType represents a logical type.
+type LogicalType int8
 
 const (
-	PersonFirstName Kind = 1 + iota
-	PersonMiddleName
-	PersonLastName
-	PersonFullName
-	PersonEmail
-	PersonLanguage
-	PersonTimeZone
-	PersonBirthDate
+	LtPersonFirstName LogicalType = 1 + iota
+	LtPersonMiddleName
+	LtPersonLastName
+	LtPersonFullName
+	LtPersonEmail
+	LtPersonLanguage
+	LtPersonTimeZone
+	LtPersonBirthDate
 
-	LocationAddress
-	LocationStreet1
-	LocationStreet2
-	LocationStreet3
-	LocationCity
-	LocationPostalCode
-	LocationStateProv
-	LocationCountry
+	LtLocationAddress
+	LtLocationStreet1
+	LtLocationStreet2
+	LtLocationStreet3
+	LtLocationCity
+	LtLocationPostalCode
+	LtLocationStateProv
+	LtLocationCountry
 )
 
-var kindName = []string{
+var logicalName = []string{
 	// Person
 	"Person.FirstName",
 	"Person.MiddleName",
@@ -118,85 +118,85 @@ var kindName = []string{
 	"Location.Country",
 }
 
-// String returns the name of k. Panics if k is not a kind.
-func (k Kind) String() string {
-	if k < 1 || int(k) > len(kindName) {
-		panic("invalid kind")
+// String returns the name of lt. Panics if lt is not a logical type.
+func (lt LogicalType) String() string {
+	if lt < 1 || int(lt) > len(logicalName) {
+		panic("invalid logical type")
 	}
-	return kindName[k-1]
+	return logicalName[lt-1]
 }
 
 // Type represents a type.
 type Type struct {
-	b BaseType
-	k Kind
-	p int // precision of a Decimal type or length in bytes of a Text type.
-	s int // scale of a Decimal type or length in characters of a Text type.
+	pt PhysicalType
+	lt LogicalType
+	p  int // precision of a Decimal type or length in bytes of a Text type.
+	s  int // scale of a Decimal type or length in characters of a Text type.
 }
 
 // Boolean returns the Boolean type.
 func Boolean() Type {
-	return Type{b: TBoolean}
+	return Type{pt: PtBoolean}
 }
 
 // Int returns the Int type.
 func Int() Type {
-	return Type{b: TInt}
+	return Type{pt: PtInt}
 }
 
 // TinyInt returns the TinyInt type.
 func TinyInt() Type {
-	return Type{b: TTinyInt}
+	return Type{pt: PtTinyInt}
 }
 
 // SmallInt returns the SmallInt type.
 func SmallInt() Type {
-	return Type{b: TSmallInt}
+	return Type{pt: PtSmallInt}
 }
 
 // MediumInt returns the MediumInt type.
 func MediumInt() Type {
-	return Type{b: TMediumInt}
+	return Type{pt: PtMediumInt}
 }
 
 // BigInt returns the BigInt type.
 func BigInt() Type {
-	return Type{b: TBigInt}
+	return Type{pt: PtBigInt}
 }
 
 // UnsignedInt returns the UnsignedInt type.
 func UnsignedInt() Type {
-	return Type{b: TUnsignedInt}
+	return Type{pt: PtUnsignedInt}
 }
 
 // UnsignedTinyInt returns the UnsignedTinyInt type.
 func UnsignedTinyInt() Type {
-	return Type{b: TUnsignedTinyInt}
+	return Type{pt: PtUnsignedTinyInt}
 }
 
 // UnsignedSmallInt returns the UnsignedSmallInt type.
 func UnsignedSmallInt() Type {
-	return Type{b: TUnsignedSmallInt}
+	return Type{pt: PtUnsignedSmallInt}
 }
 
 // UnsignedMediumInt returns the UnsignedMediumInt type.
 func UnsignedMediumInt() Type {
-	return Type{b: TUnsignedMediumInt}
+	return Type{pt: PtUnsignedMediumInt}
 }
 
 // UnsignedBigInt returns the UnsignedBigInt type.
 func UnsignedBigInt() Type {
-	return Type{b: TUnsignedBigInt}
+	return Type{pt: PtUnsignedBigInt}
 }
 
 // Real returns the Real type.
 func Real() Type {
-	return Type{b: TReal}
+	return Type{pt: PtReal}
 }
 
 // Double returns the Double type.
 func Double() Type {
-	return Type{b: TDouble}
+	return Type{pt: PtDouble}
 }
 
 // Decimal returns the Decimal type with the given precision and scale.
@@ -206,7 +206,7 @@ func Double() Type {
 // precision and scale.
 func Decimal(precision, scale int) Type {
 	if precision == 0 && scale == 0 {
-		return Type{b: TDecimal}
+		return Type{pt: PtDecimal}
 	}
 	if precision < 1 || precision > MaxDecimalPrecision {
 		panic("invalid decimal precision")
@@ -214,44 +214,44 @@ func Decimal(precision, scale int) Type {
 	if scale < 0 || scale > MaxDecimalScale || scale > precision {
 		panic("invalid decimal scale")
 	}
-	return Type{b: TDecimal, p: precision, s: scale}
+	return Type{pt: PtDecimal, p: precision, s: scale}
 }
 
 // DateTime returns the DateTime type.
 func DateTime() Type {
-	return Type{b: TDateTime}
+	return Type{pt: PtDateTime}
 }
 
 // Date returns the Date type.
 func Date() Type {
-	return Type{b: TDate}
+	return Type{pt: PtDate}
 }
 
 // Time returns the Time type.
 func Time() Type {
-	return Type{b: TTime}
+	return Type{pt: PtTime}
 }
 
 // Year returns the Year type.
 func Year() Type {
-	return Type{b: TYear}
+	return Type{pt: PtYear}
 }
 
 // UUID returns the UUID type.
 func UUID() Type {
-	return Type{b: TUUID}
+	return Type{pt: PtUUID}
 }
 
 // JSON returns the JSON type.
 func JSON() Type {
-	return Type{b: TJSON}
+	return Type{pt: PtJSON}
 }
 
 // Text returns the Text type with the given lengths.
 // Panics if a length is not greater than zero and panics if there is more than
 // one length in bytes or more than one length in characters.
 func Text(lengths ...Length) Type {
-	t := Type{b: TText}
+	t := Type{pt: PtText}
 	for _, length := range lengths {
 		switch l := length.(type) {
 		case Bytes:
@@ -277,35 +277,35 @@ func Text(lengths ...Length) Type {
 
 // MarshalJSON marshals t into JSON.
 func (t Type) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + t.Base().String() + `"`), nil
+	return []byte(`"` + t.PhysicalType().String() + `"`), nil
 }
 
-// WithKind returns the type t but with kind k.
-// Panics if k is not a kind.
-func (t Type) WithKind(k Kind) Type {
-	if k < 1 || int(k) > len(kindName) {
-		panic("invalid kind")
+// WithLogicalType returns the type t but with the logical type lt.
+// Panics if lt is not a logical type.
+func (t Type) WithLogicalType(lt LogicalType) Type {
+	if lt < 1 || int(lt) > len(logicalName) {
+		panic("invalid logical type")
 	}
-	t.k = k
+	t.lt = lt
 	return t
 }
 
-// Base returns the base type of t.
-func (t Type) Base() BaseType {
-	return t.b
+// PhysicalType returns the physical type of t.
+func (t Type) PhysicalType() PhysicalType {
+	return t.pt
 }
 
-// Kind returns the kind of t and true.
-// If t has not a kind, it returns false.
-func (t Type) Kind() (Kind, bool) {
-	return t.k, t.k > 0
+// LogicalType returns the logical type of t and true.
+// If t has no logical type, it returns false.
+func (t Type) LogicalType() (LogicalType, bool) {
+	return t.lt, t.lt > 0
 }
 
 // ByteLen returns the maximum length in bytes of a Text type.
 // Returns 0 if there is no limit in bytes.
 // Panics if t is not a Text type.
 func (t Type) ByteLen() int {
-	if t.b != TText {
+	if t.pt != PtText {
 		panic("cannot get byte length of a non-text type")
 	}
 	return t.p
@@ -315,7 +315,7 @@ func (t Type) ByteLen() int {
 // Returns 0 if there is no limit in characters.
 // Panics if t is not a Text type.
 func (t Type) CharLen() int {
-	if t.b != TText {
+	if t.pt != PtText {
 		panic("cannot get character length of a non-text type")
 	}
 	return t.s
@@ -324,7 +324,7 @@ func (t Type) CharLen() int {
 // Precision returns the precision of a Decimal type.
 // Panics if t is not a Decimal type.
 func (t Type) Precision() int {
-	if t.b != TDecimal {
+	if t.pt != PtDecimal {
 		panic("cannot get precision of a non-decimal type")
 	}
 	return t.p
@@ -333,7 +333,7 @@ func (t Type) Precision() int {
 // Scale returns the scale of a Decimal type.
 // Panics if t is not a Decimal type.
 func (t Type) Scale() int {
-	if t.b != TDecimal {
+	if t.pt != PtDecimal {
 		panic("cannot get scale of a non-decimal type")
 	}
 	return t.s
@@ -342,13 +342,13 @@ func (t Type) Scale() int {
 // String returns a string representation of t.
 // Panics if t is not a valid type.
 func (t Type) String() string {
-	s := t.b.String()
-	switch t.b {
-	case TDecimal:
+	s := t.pt.String()
+	switch t.pt {
+	case PtDecimal:
 		if t.p > 0 {
 			s += "(" + strconv.Itoa(t.p) + "," + strconv.Itoa(t.s) + ")"
 		}
-	case TText:
+	case PtText:
 		if t.p > 0 || t.s > 0 {
 			s += "("
 			if t.p > 0 {
@@ -363,15 +363,15 @@ func (t Type) String() string {
 			s += ")"
 		}
 	}
-	if t.k > 0 {
-		s += " [" + t.k.String() + "]"
+	if t.lt > 0 {
+		s += " [" + t.lt.String() + "]"
 	}
 	return s
 }
 
 // Valid indicates if t is valid.
 func (t Type) Valid() bool {
-	return t.b != 0
+	return t.pt != 0
 }
 
 // Length represents a Text length.
