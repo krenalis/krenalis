@@ -461,7 +461,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 // Timestamp can be called before Record, RecordMap and RecordString.
 func (rw *recordWriter) Timestamp(ts time.Time) error {
 	if rw.setUserCalled {
-		return fmt.Errorf("connector %d fa called the Timestamp method after a record method", rw.fh.connector)
+		return fmt.Errorf("connector %d called the Timestamp method after a record method", rw.fh.connector)
 	}
 	rw.timestamp = ts
 	return nil
