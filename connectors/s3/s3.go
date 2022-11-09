@@ -51,7 +51,6 @@ type settings struct {
 	SecretAccessKey string
 	Region          string
 	Bucket          string
-	ObjectKey       string
 }
 
 // New returns a new S3 connection.
@@ -76,14 +75,20 @@ func (c *connection) Connector() *connector.Connector {
 	}
 }
 
-// Reader returns a ReadCloser from which to read the data and its last update
-// time.
+// Reader returns a ReadCloser from which to read the file with the given path
+// and its last update time.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Reader() (io.ReadCloser, time.Time, error) {
+func (c *connection) Reader(path string) (io.ReadCloser, time.Time, error) {
+	if path == "" {
+		return nil, time.Time{}, ui.Errorf("object key is empty")
+	}
+	if len(path) > 1024 {
+		return nil, time.Time{}, ui.Errorf("object key cannot be longer than 1024 bytes")
+	}
 	client := c.client()
 	res, err := client.GetObject(c.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(c.settings.Bucket),
-		Key:    aws.String(c.settings.ObjectKey),
+		Key:    aws.String(path),
 	})
 	if err != nil {
 		return nil, time.Time{}, err
@@ -139,10 +144,6 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 			strings.HasPrefix(s.Bucket, "xn--") || strings.HasSuffix(s.Bucket, "-s3alias") {
 			return nil, ui.Errorf("bucket value is not allowed")
 		}
-		// Validate ObjectKey.
-		if n := len(s.ObjectKey); n == 0 || n > 1024 {
-			return nil, ui.Errorf("object key length in bytes must be in range [1,1024]")
-		}
 		b, err := json.Marshal(&s)
 		if err != nil {
 			return nil, err
@@ -182,7 +183,6 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 				{Text: "South America (São Paulo) me-central-1", Value: "sa-east-1"},
 			}},
 			&ui.Input{Name: "bucket", Value: s.Bucket, Label: "Bucket Name", Placeholder: "bucket", Type: "text", MinLength: 3, MaxLength: 63},
-			&ui.Input{Name: "objectKey", Value: s.ObjectKey, Label: "Object Key", Placeholder: "users.csv", Type: "text", MinLength: 1, MaxLength: 1024},
 		},
 		Actions: []ui.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
@@ -192,12 +192,19 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 	return form, nil
 }
 
-// Write writes the data read from p. contentType is the data's content type.
-func (c *connection) Write(p io.Reader, contentType string) error {
+// Write writes the data read from p into the file with the given path.
+// contentType is the file's content type.
+func (c *connection) Write(p io.Reader, path, contentType string) error {
+	if path == "" {
+		return ui.Errorf("object key is empty")
+	}
+	if len(path) > 1024 {
+		return ui.Errorf("object key cannot be longer than 1024 bytes")
+	}
 	client := c.client()
 	_, err := client.PutObject(c.ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(c.settings.Bucket),
-		Key:         aws.String(c.settings.ObjectKey),
+		Key:         aws.String(path),
 		Body:        p,
 		ContentType: &contentType,
 	})

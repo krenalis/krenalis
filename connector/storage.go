@@ -28,10 +28,12 @@ type StorageConnectionFunc func(context.Context, *StorageConfig) (StorageConnect
 type StorageConnection interface {
 	Connection
 
-	// Reader returns a ReadCloser from which to read the data and its last update time.
+	// Reader returns a ReadCloser from which to read the file with the given path
+	// and its last update time.
 	// It is the caller's responsibility to close the returned reader.
-	Reader() (io.ReadCloser, time.Time, error)
+	Reader(path string) (io.ReadCloser, time.Time, error)
 
-	// Write writes the data read from p. contentType is the data's content type.
-	Write(p io.Reader, contentType string) error
+	// Write writes the data read from p into the file with the given path.
+	// contentType is the file's content type.
+	Write(p io.Reader, path, contentType string) error
 }

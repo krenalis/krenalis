@@ -41,7 +41,7 @@ INSERT INTO `connectors` VALUES
 CREATE TABLE `data_sources` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `workspace` INT NOT NULL,
-  `type` ENUM('App', 'Database', 'FileStorage') DEFAULT 'App',
+  `type` ENUM('App', 'Database', 'File', 'Storage') DEFAULT 'App',
   `direction` ENUM('Source', 'Destination') DEFAULT 'Source',
   `connector` INT NOT NULL,
   `storage` INT NOT NULL,
@@ -50,7 +50,6 @@ CREATE TABLE `data_sources` (
   `identityColumn` VARCHAR(100) NOT NULL DEFAULT '',
   `timestampColumn` VARCHAR(100) NOT NULL DEFAULT '',
   `settings` TEXT NOT NULL,
-  `storageSettings` TEXT NOT NULL,
   `properties` MEDIUMTEXT NOT NULL,
   `usedProperties` MEDIUMTEXT NOT NULL,
   `usersQuery` MEDIUMTEXT NOT NULL,

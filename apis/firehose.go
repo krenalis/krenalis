@@ -79,11 +79,7 @@ func (fh *firehose) SetSettings(settings []byte) error {
 	if utf8.RuneCount(settings) > maxSettingsLen {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 	}
-	settingsColumn := "`settings`"
-	if fh.connectorType == "Storage" {
-		settingsColumn = "`storageSettings`"
-	}
-	_, err := fh.sources.myDB.Exec("UPDATE `data_sources`\nSET "+settingsColumn+" = ?\nWHERE `id` = ?", settings, fh.source)
+	_, err := fh.sources.myDB.Exec("UPDATE `data_sources` SET `settings` = ? WHERE `id` = ?", settings, fh.source)
 	if err != nil {
 		log.Printf("[error] %s", err)
 		return errors.New("cannot set settings")
@@ -332,13 +328,12 @@ func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
 }
 
 // newRecordWriter returns a new record writer.
-func (fh *firehose) newRecordWriter(identityColumn, timestampColumn string, timestamp time.Time, onlyColumns bool) *recordWriter {
+func (fh *firehose) newRecordWriter(identityColumn, timestampColumn string, onlyColumns bool) *recordWriter {
 	return &recordWriter{
 		fh:              fh,
 		onlyColumns:     onlyColumns,
 		identityColumn:  identityColumn,
 		timestampColumn: timestampColumn,
-		timestamp:       timestamp,
 	}
 }
 
@@ -445,6 +440,12 @@ func (rw *recordWriter) RecordString(record []string) error {
 	user := fmt.Sprintf("%s", record[rw.identityIndex])
 	rw.fh.SetUser(user, ts, properties)
 	return nil
+}
+
+// Timestamp sets the last modified time for all records.
+// If ts is zero time, it means that the timestamp is unknown.
+func (rw *recordWriter) Timestamp(ts time.Time) {
+	rw.timestamp = ts
 }
 
 func keys[K comparable, V any](m map[K]V) []K {

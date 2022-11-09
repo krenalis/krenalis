@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"strconv"
 	"strings"
@@ -29,10 +30,13 @@ type DataSources struct {
 }
 
 var (
-	ErrConnectorNotFound  = errors.New("connector does not exist")
-	ErrDataSourceNotFound = errors.New("data source does not exist")
-	ErrDataSourceDisabled = errors.New("data source is disabled")
-	ErrUIEventNotExist    = errors.New("UI event does not exist")
+	ErrConnectorNotFound        = errors.New("connector does not exist")
+	ErrDataSourceNotFound       = errors.New("data source does not exist")
+	ErrDataSourceDisabled       = errors.New("data source is disabled")
+	ErrFileHasNoStorage         = errors.New("file data source has not a storage")
+	ErrStorageNotFound          = errors.New("storage does not exist")
+	ErrStorageHasConnectedFiles = errors.New("storage has connected files")
+	ErrUIEventNotExist          = errors.New("UI event does not exist")
 )
 
 const (
@@ -77,7 +81,8 @@ type DataSource struct {
 	ID        int
 	Name      string
 	Type      string
-	Direction Direction
+	Direction string
+	Storage   int // zero if the data source is not a file or does not have a storage
 	OauthURL  string
 	LogoURL   string
 }
@@ -86,7 +91,8 @@ type DataSource struct {
 type DataSourceInfo struct {
 	ID         int
 	Type       string
-	Direction  Direction
+	Direction  string
+	Storage    int // zero if the data source is not a file or does not have a storage
 	Name       string
 	LogoURL    string
 	UsersQuery string // only for databases.
@@ -232,53 +238,96 @@ func (this *DataSources) AddDatabase(dir Direction, connector int) (int, error) 
 	return int(id), nil
 }
 
-// AddFileStorage adds a file-storage data source given its direction, file and
-// storage connectors and returns its identifier.
+// AddFile adds a file data source given its direction, connector and storage
+// data source and returns its identifier. If storage is 0, the file data
+// source does not have a storage, otherwise storage must have direction dir.
 //
-// If a connector does not exist, it returns the ErrConnectorNotFound error.
-func (this *DataSources) AddFileStorage(dir Direction, fileConnector, storageConnector int) (int, error) {
+// If the connector does not exist, it returns the ErrConnectorNotFound error.
+// If the storage does not exist, it returns the ErrStorageNotFound error.
+func (this *DataSources) AddFile(dir Direction, connector, storage int) (int, error) {
 	if dir != SourceDir && dir != DestDir {
 		return 0, errors.New("invalid direction")
 	}
-	if fileConnector <= 0 {
-		return 0, errors.New("invalid file connector")
+	if connector <= 0 {
+		return 0, errors.New("invalid connector")
 	}
-	if storageConnector <= 0 {
-		return 0, errors.New("invalid storage connector")
+	if storage < 0 {
+		return 0, errors.New("invalid storage")
 	}
+	direction := dir.String()
 	var id int64
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		var connectorType string
-		stmt, err := tx.Prepare("SELECT `type` FROM `connectors` WHERE `id` = ?")
-		if err != nil {
-			return err
-		}
-		// Check the file connector.
-		err = stmt.QueryRow(fileConnector).Scan(&connectorType)
+		var typ string
+		err := tx.QueryRow("SELECT `type` FROM `connectors` WHERE `id` = ?").Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ErrConnectorNotFound
 			}
 			return err
 		}
-		if connectorType != "File" {
-			return errors.New("fileConnector is not a file connector")
+		if typ != "File" {
+			return errors.New("connector is not a file connector")
 		}
-		// Check the storage connector.
-		err = stmt.QueryRow(storageConnector).Scan(&connectorType)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return ErrConnectorNotFound
+		if storage > 0 {
+			// Check the storage.
+			var storageDir string
+			err = tx.QueryRow("SELECT `type`, `direction` FROM `data_sources` WHERE `id` = ?").Scan(&typ, &storageDir)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					return ErrStorageNotFound
+				}
+				return err
 			}
-			return err
+			if typ != "Storage" {
+				return errors.New("storage is not a storage data source")
+			}
+			if storageDir != direction {
+				if direction == "Source" {
+					return errors.New("storage is not a source")
+				}
+				return errors.New("storage is not a destination")
+			}
 		}
-		if connectorType != "Storage" {
-			return errors.New("storageConnector is not a storage connector")
-		}
-		// Add the data source.
 		result, err := tx.Exec("INSERT INTO `data_sources`\n"+
-			"SET `workspace` = ?, `type` = 'FileStorage', `direction` = ?, `connector` = ? AND `storage` = ?",
-			this.workspace, dir.String(), fileConnector, storageConnector)
+			"SET `workspace` = ?, `type` = 'File', `direction` = ?, `connector` = ? AND `storage` = ?",
+			this.workspace, direction, connector, storage)
+		if err != nil {
+			return err
+		}
+		id, err = result.LastInsertId()
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+	return int(id), nil
+}
+
+// AddStorage adds a storage data source given its direction and connector and
+// returns its identifier.
+//
+// If the connector does not exist, it returns the ErrConnectorNotFound error.
+func (this *DataSources) AddStorage(dir Direction, connector int) (int, error) {
+	if dir != SourceDir && dir != DestDir {
+		return 0, errors.New("invalid direction")
+	}
+	direction := dir.String()
+	var id int64
+	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+		var typ string
+		err := tx.QueryRow("SELECT `type` FROM `connectors` WHERE `id` = ?").Scan(&typ)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return ErrConnectorNotFound
+			}
+			return err
+		}
+		if typ != "Storage" {
+			return errors.New("connector is not a storage connector")
+		}
+		result, err := tx.Exec("INSERT INTO `data_sources`\n"+
+			"SET `workspace` = ?, `type` = 'Storage', `direction` = ?, `connector` = ?",
+			this.workspace, direction, connector)
 		if err != nil {
 			return err
 		}
@@ -298,23 +347,24 @@ func (this *DataSources) Get(id int) (*DataSourceInfo, error) {
 		return nil, errors.New("invalid data source identifier")
 	}
 	s := DataSourceInfo{ID: id}
-	var dir string
 	err := this.myDB.QueryRow("SELECT `s`.`type`, `s`.`direction`, `c`.`name`, `c`.`logoURL`, `s`.`usersQuery`\n"+
 		"FROM `data_sources` AS `s`\n"+
 		"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 		"WHERE `s`.`id` = ? AND `s`.`workspace` = ?",
-		id, this.workspace).Scan(&s.Type, &dir, &s.Name, &s.LogoURL, &s.UsersQuery)
+		id, this.workspace).Scan(&s.Type, &s.Direction, &s.Name, &s.LogoURL, &s.UsersQuery)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrDataSourceNotFound
 		}
 	}
-	s.Direction = dirByName(dir)
 	return &s, nil
 }
 
 // Delete deletes the data source with the given identifier.
 // If the data source does not exist, it does nothing.
+//
+// If the data source is a storage and has connected files, it returns the
+// ErrStorageHasConnectedFiles error.
 func (this *DataSources) Delete(id int) error {
 	if id <= 0 {
 		return errors.New("invalid data source identifier")
@@ -322,12 +372,21 @@ func (this *DataSources) Delete(id int) error {
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		source, err := tx.Table("DataSources").Get(
 			sql.Where{"id": id, "workspace": this.workspace},
-			sql.Columns{"resource"})
+			sql.Columns{"type", "resource"})
 		if err != nil {
 			return err
 		}
 		if source == nil {
 			return nil
+		}
+		if source["type"] == "Storage" {
+			hasFiles, err := tx.Table("DataSources").Exists(sql.Where{"workspace": this.workspace, "storage": id})
+			if err != nil {
+				return err
+			}
+			if hasFiles {
+				return ErrStorageHasConnectedFiles
+			}
 		}
 		_, err = tx.Table("DataSources").Delete(sql.Where{"id": id})
 		if err != nil {
@@ -348,13 +407,15 @@ func (this *DataSources) Delete(id int) error {
 }
 
 // Import starts the import of the users from the data source with the given
-// identifier. For app data sources, if reimport is false, it imports the
-// users from the current cursor, otherwise imports all users.
+// identifier. If the data source is an app and reimport is false, it imports
+// the users from the current cursor, otherwise imports all users. The data
+// source must be a source and cannot be a storage.
 //
-// Returns an error if the data source is not a source.
 // Returns the ErrDataSourceNotFound error if the data source does not exist.
 // Returns the ErrDataSourceDisabled error if the data source does not have any
 // transformation function associated to it.
+// Returns the ErrFileHasNoStorage error if the data source is a file and does
+// not have a storage.
 func (this *DataSources) Import(id int, reimport bool) error {
 
 	if id <= 0 {
@@ -371,8 +432,10 @@ func (this *DataSources) Import(id int, reimport bool) error {
 		}
 		return err
 	}
-
-	if dir != "Source" {
+	if typ == "Storage" {
+		return errors.New("cannot import from a storage")
+	}
+	if dir == "Destination" {
 		return errors.New("cannot import from a destination")
 	}
 	const direction = _connector.SourceDir
@@ -532,47 +595,63 @@ func (this *DataSources) Import(id int, reimport bool) error {
 			return err
 		}
 
-	case "FileStorage":
+	case "File":
 
-		var fileConnectorName, storageConnectorName, identityColumn, timestampColumn string
-		var fileConnector, storageConnector int
-		var fileSettings, storageSettings []byte
+		var connectorName, identityColumn, timestampColumn string
+		var connector, storage int
+		var settings []byte
 		err = this.myDB.QueryRow(
-			"SELECT `c1`.`name`, `c2`.`name`, `s`.`connector`, `s`.`storage`, `s`.`identityColumn`,"+
-				" `s`.`timestampColumn`, `s`.`settings`, `s`.`storageSettings`\n"+
+			"SELECT `c`.`name`, `s`.`connector`, `s`.`storage`, `s`.`identityColumn`, `s`.`timestampColumn`, `s`.`settings`\n"+
 				"FROM `data_sources` AS `s`\n"+
-				"INNER JOIN `connectors` AS `c1` ON `c1`.`id` = `s`.`connector`\n"+
-				"INNER JOIN `connectors` AS `c2` ON `c2`.`id` = `s`.`storage`\n"+
-				"WHERE `s`.`id` = ?", id).Scan(&fileConnectorName, &storageConnectorName, &fileConnector,
-			&storageConnector, &identityColumn, &timestampColumn, &fileSettings, &storageSettings)
+				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &storage, &identityColumn, &timestampColumn, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ErrDataSourceNotFound
 			}
 			return err
 		}
+		if storage == 0 {
+			return ErrFileHasNoStorage
+		}
 
-		// Connect to the storage connector.
-		fh := this.newFirehose(context.Background(), id, storageConnector, 0, "Storage", direction, "")
-		storage, err := newStorageConnection(fh.ctx, storageConnectorName, &_connector.StorageConfig{
-			Direction: direction,
-			Settings:  storageSettings,
-			Firehose:  fh,
-		})
-		if err != nil {
-			return err
+		var ctx = context.Background()
+
+		// Get the file reader.
+		var files *fileReader
+		{
+			var connectorName string
+			var connector int
+			var settings []byte
+			err = this.myDB.QueryRow(
+				"SELECT `c`.`name`, `s`.`connector`, `s`.`settings`\n"+
+					"FROM `data_sources` AS `s`\n"+
+					"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+					"WHERE `s`.`id` = ?", storage).Scan(&connectorName, &connector, &settings)
+			if err != nil {
+				if err != sql.ErrNoRows {
+					return ErrFileHasNoStorage
+				}
+				return err
+			}
+			fh := this.newFirehose(ctx, storage, connector, 0, "Storage", direction, "")
+			ctx = fh.ctx
+			c, err := newStorageConnection(ctx, connectorName, &_connector.StorageConfig{
+				Direction: direction,
+				Settings:  settings,
+				Firehose:  fh,
+			})
+			if err != nil {
+				return err
+			}
+			files = newFileReader(c)
 		}
-		r, timestamp, err := storage.Reader()
-		if err != nil {
-			return err
-		}
-		defer r.Close()
 
 		// Connect to the file connector.
-		fh = this.newFirehose(context.Background(), id, storageConnector, 0, "File", direction, "")
-		file, err := newFileConnection(fh.ctx, fileConnectorName, &_connector.FileConfig{
+		fh := this.newFirehose(ctx, id, connector, 0, "File", direction, "")
+		file, err := newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 			Direction: direction,
-			Settings:  fileSettings,
+			Settings:  settings,
 			Firehose:  fh,
 		})
 		if err != nil {
@@ -580,14 +659,8 @@ func (this *DataSources) Import(id int, reimport bool) error {
 		}
 
 		// Read the records.
-		records := fh.newRecordWriter(identityColumn, timestampColumn, timestamp, false)
-		err = file.Read(r, records)
-		if err != nil {
-			return err
-		}
-
-		// Close the storage.
-		err = r.Close()
+		records := fh.newRecordWriter(identityColumn, timestampColumn, false)
+		err = file.Read(files, records)
 		if err != nil {
 			return err
 		}
@@ -600,22 +673,22 @@ func (this *DataSources) Import(id int, reimport bool) error {
 // List returns all data sources.
 func (this *DataSources) List() ([]*DataSource, error) {
 	sources := []*DataSource{}
-	err := this.myDB.QueryScan("SELECT `s`.`id`, `s`.`direction`, `c`.`name`, `c`.`type`, `c`.`oauthURL`, `c`.`logoURL`\n"+
-		"FROM `data_sources` as `s`\n"+
-		"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-		"WHERE `s`.`workspace` = ?", this.workspace, func(rows *sql.Rows) error {
-		var err error
-		var dir string
-		for rows.Next() {
-			var source DataSource
-			if err = rows.Scan(&source.ID, &dir, &source.Name, &source.Type, &source.OauthURL, &source.LogoURL); err != nil {
-				return err
+	err := this.myDB.QueryScan(
+		"SELECT `s`.`id`, `s`.`type`, `s`.`direction`, `s`.`storage`, `c`.`name`, `c`.`oauthURL`, `c`.`logoURL`\n"+
+			"FROM `data_sources` as `s`\n"+
+			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+			"WHERE `s`.`workspace` = ?", this.workspace, func(rows *sql.Rows) error {
+			var err error
+			for rows.Next() {
+				var source DataSource
+				if err = rows.Scan(&source.ID, &source.Type, &source.Direction, &source.Storage, &source.Name,
+					&source.OauthURL, &source.LogoURL); err != nil {
+					return err
+				}
+				sources = append(sources, &source)
 			}
-			source.Direction = dirByName(dir)
-			sources = append(sources, &source)
-		}
-		return nil
-	})
+			return nil
+		})
 	if err != nil {
 		return nil, err
 	}
@@ -623,18 +696,22 @@ func (this *DataSources) List() ([]*DataSource, error) {
 }
 
 // Properties returns the properties and the used properties of the data source
-// with the given identifier.
+// with the given identifier. The data source cannot be a storage.
 // Returns the ErrDataSourceNotFound error if the data source does not exist.
 func (this *DataSources) Properties(id int) ([]DataSourceProperty, [][]string, error) {
 	if id <= 0 {
 		return nil, nil, errors.New("invalid data source identifier")
 	}
+	var typ string
 	var rawProperties, rawUsedProperties []byte
-	err := this.myDB.QueryRow("SELECT `properties`, `usedProperties`\n"+
+	err := this.myDB.QueryRow("SELECT `type`, `properties`, `usedProperties`\n"+
 		"FROM `data_sources`\n"+
-		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&rawProperties, &rawUsedProperties)
+		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&typ, &rawProperties, &rawUsedProperties)
 	if err != nil {
 		return nil, nil, err
+	}
+	if typ == "Storage" {
+		return nil, nil, errors.New("cannot read properties from a storage")
 	}
 	var properties []DataSourceProperty
 	if len(rawProperties) > 0 {
@@ -664,13 +741,13 @@ type Column struct {
 	Type types.Type
 }
 
-// Query executes the given query on the data source with identifier id and
-// returns the resulting columns and rows.
+// Query executes the given query on the database data source with identifier
+// id and returns the resulting columns and rows.
 //
 // query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
 // must contain the ':limit' placeholder. limit must be between 1 and 100.
 //
-// It returns an error if the data source is not a source database.
+// It returns an error if the data source is a destination.
 // It returns the ErrDataSourceNotFound error if the data source does not
 // exist.
 func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]string, error) {
@@ -693,21 +770,21 @@ func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]s
 	}
 
 	var connector int
-	var dir, connectorName, connectorType string
+	var typ, dir, connectorName string
 	var settings []byte
 	err := this.myDB.QueryRow(
-		"SELECT `s`.`direction`, `s`.`connector`, `s`.`settings`, `c`.`name`, `c`.`type`\n"+
+		"SELECT `s`.`type`, `s`.`direction`, `s`.`connector`, `s`.`settings`, `c`.`name`\n"+
 			"FROM `data_sources` AS `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
-		&dir, &connector, &settings, &connectorName, &connectorType)
+		&typ, &dir, &connector, &settings, &connectorName)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil, ErrDataSourceNotFound
 		}
 		return nil, nil, err
 	}
-	if connectorType != "Database" {
+	if typ != "Database" {
 		return nil, nil, errors.New("data source is not a database")
 	}
 	if dir != "Source" {
@@ -720,7 +797,7 @@ func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]s
 	if err != nil {
 		return nil, nil, err
 	}
-	fh := this.newFirehose(context.Background(), id, connector, 0, connectorType, direction, "")
+	fh := this.newFirehose(context.Background(), id, connector, 0, typ, direction, "")
 	c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 		Direction: direction,
 		Settings:  settings,
@@ -861,7 +938,7 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 				Settings:  settings,
 				Firehose:  fh,
 			})
-		case "FileStorage":
+		case "File":
 			connection, err = newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 				Direction: direction,
 				Settings:  settings,
@@ -891,11 +968,11 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 	return json.Marshal(form)
 }
 
-// SetUsersQuery sets the users query of the data source with identifier id.
-// query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
-// must contain the ':limit' placeholder.
+// SetUsersQuery sets the users query of the database data source with
+// identifier id. query must be UTF-8 encoded, it cannot be longer than
+// 16,777,215 runes and must contain the ':limit' placeholder.
 //
-// It returns an error if the data source is not a source database.
+// It returns an error if the data source is a destination.
 // It returns the ErrDataSourceNotFound error if the data source does not
 // exist.
 func (this *DataSources) SetUsersQuery(id int, query string) error {
@@ -997,7 +1074,9 @@ func (this *DataSources) newFirehose(ctx context.Context, source, connector, res
 var errRecordStop = errors.New("stop record")
 
 // reloadProperties reloads the properties of the data source with identifier
-// id. If the data source does not exist it returns the ErrDataSourceNotFound
+// id. The data source cannot be a storage.
+//
+// If the data source does not exist it returns the ErrDataSourceNotFound
 // error.
 func (this *DataSources) reloadProperties(id int) error {
 
@@ -1013,6 +1092,9 @@ func (this *DataSources) reloadProperties(id int) error {
 			return ErrDataSourceNotFound
 		}
 		return err
+	}
+	if typ == "Storage" {
+		return errors.New("cannot reload properties of a storage")
 	}
 
 	direction := _connector.Direction(dirByName(dir))
@@ -1113,61 +1195,73 @@ func (this *DataSources) reloadProperties(id int) error {
 			properties[i].Type = columns[i].Type
 		}
 
-	case "FileStorage":
+	case "File":
 
-		var fileConnectorName, storageConnectorName, identityColumn, timestampColumn string
-		var fileConnector, storageConnector int
-		var fileSettings, storageSettings []byte
+		var connectorName, identityColumn, timestampColumn string
+		var connector, storage int
+		var settings []byte
 		err = this.myDB.QueryRow(
-			"SELECT `c1`.`name`, `c2`.`name`, `s`.`connector`, `s`.`storage`, `s`.`identityColumn`,"+
-				" `s`.`timestampColumn`, `s`.`settings`, `s`.`storageSettings`\n"+
+			"SELECT `c`.`name`, `s`.`connector`, `s`.`storage`, `s`.`identityColumn`, `s`.`timestampColumn`, `s`.`settings`\n"+
 				"FROM `data_sources` AS `s`\n"+
-				"INNER JOIN `connectors` AS `c1` ON `c1`.`id` = `s`.`connector`\n"+
-				"INNER JOIN `connectors` AS `c2` ON `c2`.`id` = `s`.`storage`\n"+
-				"WHERE `s`.`id` = ?", id).Scan(&fileConnectorName, &storageConnectorName, &fileConnector,
-			&storageConnector, &identityColumn, &timestampColumn, &fileSettings, &storageSettings)
+				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &storage, &identityColumn, &timestampColumn, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ErrDataSourceNotFound
 			}
 			return err
 		}
+		if storage == 0 {
+			return ErrFileHasNoStorage
+		}
 
-		// Connect to the storage connector.
-		fh := this.newFirehose(context.Background(), id, storageConnector, 0, "Storage", direction, "")
-		storage, err := newStorageConnection(fh.ctx, storageConnectorName, &_connector.StorageConfig{
-			Direction: direction,
-			Settings:  storageSettings,
-			Firehose:  fh,
-		})
-		if err != nil {
-			return err
+		var ctx = context.Background()
+
+		// Get the file reader.
+		var files *fileReader
+		{
+			var connectorName string
+			var connector int
+			var settings []byte
+			err = this.myDB.QueryRow(
+				"SELECT `c`.`name`, `s`.`connector`, `s`.`settings`\n"+
+					"FROM `data_sources` AS `s`\n"+
+					"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+					"WHERE `s`.`id` = ?", storage).Scan(&connectorName, &connector, &settings)
+			if err != nil {
+				if err != sql.ErrNoRows {
+					return ErrFileHasNoStorage
+				}
+				return err
+			}
+			fh := this.newFirehose(ctx, storage, connector, 0, "Storage", direction, "")
+			ctx = fh.ctx
+			c, err := newStorageConnection(ctx, connectorName, &_connector.StorageConfig{
+				Direction: direction,
+				Settings:  settings,
+				Firehose:  fh,
+			})
+			if err != nil {
+				return err
+			}
+			files = newFileReader(c)
 		}
-		r, _, err := storage.Reader()
-		if err != nil {
-			return err
-		}
-		defer r.Close()
 
 		// Connect to the file connector and read only the columns.
-		fh = this.newFirehose(fh.ctx, id, storageConnector, 0, "File", direction, "")
-		file, err := newFileConnection(fh.ctx, fileConnectorName, &_connector.FileConfig{
+		fh := this.newFirehose(ctx, id, connector, 0, "File", direction, "")
+		file, err := newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 			Direction: direction,
-			Settings:  fileSettings,
+			Settings:  settings,
 			Firehose:  fh,
 		})
 		if err != nil {
 			return err
 		}
-		records := fh.newRecordWriter(identityColumn, timestampColumn, time.Time{}, true)
-		err = file.Read(r, records)
-		if err != nil && err != errRecordStop {
-			return err
-		}
 
-		// Close the storage.
-		err = r.Close()
-		if err != nil {
+		// Read only the columns.
+		records := fh.newRecordWriter(identityColumn, timestampColumn, true)
+		err = file.Read(files, records)
+		if err != nil && err != errRecordStop {
 			return err
 		}
 
@@ -1215,4 +1309,21 @@ func (this *DataSources) compileQueryWithoutLimit(query string) (string, error) 
 	}
 	s2 += p + n + 2
 	return query[:s1] + query[s2:], nil
+}
+
+// fileReader implements the connector.FileReader interface.
+type fileReader struct {
+	s _connector.StorageConnection
+}
+
+// newFileReader returns a new file reader for the given storage.
+func newFileReader(storage _connector.StorageConnection) *fileReader {
+	return &fileReader{s: storage}
+}
+
+// Reader returns a ReadCloser from which to read the file at the given
+// path and its last update time.
+// It is the caller's responsibility to close the returned reader.
+func (files *fileReader) Reader(path string) (io.ReadCloser, time.Time, error) {
+	return files.s.Reader(path)
 }

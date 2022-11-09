@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 )
 
 var (
@@ -64,14 +65,29 @@ type FileConnectionFunc func(context.Context, *FileConfig) (FileConnection, erro
 type FileConnection interface {
 	Connection
 
-	// ContentType returns the content type of the data to write.
-	ContentType() string
+	// Read reads the records from files and writes them to records.
+	Read(files FileReader, records RecordWriter) error
 
-	// Read reads the records from r and writes them to records.
-	Read(r io.Reader, records RecordWriter) error
+	// Write writes to files the records read from records.
+	Write(files FileWriter, records RecordReader) error
+}
 
-	// Write writes to w the records read from records.
-	Write(w io.Writer, records RecordReader) error
+// A FileReader interface is used by file connections to read files.
+type FileReader interface {
+
+	// Reader returns a ReadCloser from which to read the file at the given
+	// path and its last update time.
+	// It is the caller's responsibility to close the returned reader.
+	Reader(path string) (io.ReadCloser, time.Time, error)
+}
+
+// A FileWriter interface is used by file connections to write files.
+type FileWriter interface {
+
+	// Writer returns a Writer that writes to the file with the given path.
+	// contentType is the file's content type.
+	// It is the caller's responsibility to close the returned writer.
+	Writer(path, contentType string) (io.WriteCloser, error)
 }
 
 // A RecordReader interface is used by file connections to read the records to
@@ -105,4 +121,8 @@ type RecordWriter interface {
 
 	// RecordString writes a record as a string slice.
 	RecordString([]string) error
+
+	// Timestamp sets the last modified time for all records.
+	// If ts is zero time, it means that the timestamp is unknown.
+	Timestamp(ts time.Time)
 }

@@ -50,7 +50,6 @@ type settings struct {
 	Port     int
 	Username string
 	Password string
-	Path     string
 }
 
 // New returns a new SFTP connection.
@@ -75,15 +74,18 @@ func (c *connection) Connector() *connector.Connector {
 	}
 }
 
-// Reader returns a ReadCloser from which to read the data and its last update
-// time.
+// Reader returns a ReadCloser from which to read the file with the given path
+// and its last update time.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Reader() (io.ReadCloser, time.Time, error) {
+func (c *connection) Reader(path string) (io.ReadCloser, time.Time, error) {
+	if path == "" {
+		return nil, time.Time{}, ui.Errorf("path is empty")
+	}
 	sshClient, sftpClient, err := openConnection(c.settings)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	f, err := sftpClient.Open(c.settings.Path)
+	f, err := sftpClient.Open(path)
 	if err != nil {
 		_ = closeConnection(sshClient, sftpClient)
 		return nil, time.Time{}, err
@@ -131,10 +133,6 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
 			return nil, ui.Errorf("password length must be in range [1,200]")
 		}
-		// Validate Path.
-		if n := utf8.RuneCountInString(s.Path); n < 1 || n > 1000 {
-			return nil, ui.Errorf("path length must be in range [1,1000]")
-		}
 		err = testConnection(&s)
 		if err != nil {
 			return nil, ui.Errorf("connection failed: %s", err)
@@ -157,7 +155,6 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 			&ui.Input{Name: "port", Value: s.Port, Label: "Port", Placeholder: "22", Type: "number", MinLength: 1, MaxLength: 5},
 			&ui.Input{Name: "username", Value: s.Username, Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 200},
 			&ui.Input{Name: "password", Value: s.Password, Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
-			&ui.Input{Name: "path", Value: s.Path, Label: "Path", Placeholder: "users.csv", Type: "text", MinLength: 1, MaxLength: 1000},
 		},
 		Actions: []ui.Action{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
@@ -168,13 +165,16 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 	return form, nil
 }
 
-// Write writes the data read from p.
-func (c *connection) Write(r io.Reader, _ string) error {
+// Write writes the data read from p into the file with the given path.
+func (c *connection) Write(r io.Reader, path, _ string) error {
+	if path == "" {
+		return ui.Errorf("path is empty")
+	}
 	sshClient, sftpClient, err := openConnection(c.settings)
 	if err != nil {
 		return err
 	}
-	f, err := sftpClient.OpenFile(c.settings.Path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+	f, err := sftpClient.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
 		_ = closeConnection(sshClient, sftpClient)
 		return err

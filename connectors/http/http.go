@@ -17,9 +17,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
-	"strings"
+	"strconv"
 	"time"
 	"unicode/utf8"
 
@@ -45,7 +46,8 @@ type connection struct {
 }
 
 type settings struct {
-	URL     string
+	Host    string
+	Port    int
 	Headers map[string]string
 }
 
@@ -71,11 +73,24 @@ func (c *connection) Connector() *connector.Connector {
 	}
 }
 
-// Reader returns a ReadCloser from which to read the data and its last update
-// time.
+// Reader returns a ReadCloser from which to read the file with the given path
+// and its last update time.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Reader() (io.ReadCloser, time.Time, error) {
-	req, err := http.NewRequestWithContext(c.ctx, "GET", c.settings.URL, nil)
+func (c *connection) Reader(path string) (io.ReadCloser, time.Time, error) {
+	if path == "" {
+		return nil, time.Time{}, fmt.Errorf("path cannot be empty")
+	}
+	up, err := url.Parse(path)
+	if err != nil || up.Scheme != "" || up.Host != "" {
+		return nil, time.Time{}, fmt.Errorf("path is not an URL path: %s", err)
+	}
+	u := url.URL{
+		Scheme:   "https",
+		Host:     net.JoinHostPort(c.settings.Host, strconv.Itoa(c.settings.Port)),
+		Path:     up.Path,
+		RawQuery: up.RawQuery,
+	}
+	req, err := http.NewRequestWithContext(c.ctx, "GET", u.String(), nil)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -113,16 +128,13 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		if err != nil {
 			return nil, err
 		}
-		// Validate URL.
-		if n := utf8.RuneCountInString(s.URL); n < 10 || n > 1000 {
-			return nil, ui.Errorf("URL length must be in range [10,1000]")
+		// Validate Host.
+		if n := len(s.Host); n == 0 || n > 253 {
+			return nil, ui.Errorf("host length in bytes must be in range [1,253]")
 		}
-		if !strings.HasPrefix(s.URL, "http://") && !strings.HasPrefix(s.URL, "https://") {
-			return nil, ui.Errorf("schema of URL must be http or https")
-		}
-		_, err = url.Parse(s.URL)
-		if err != nil {
-			return nil, ui.Errorf("URL is not a valid URL")
+		// Validate Port.
+		if s.Port < 1 || s.Port > 65536 {
+			return nil, ui.Errorf("port must be in range [1,65536]")
 		}
 		// Validate Headers.
 		for k, v := range s.Headers {
@@ -144,7 +156,8 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 
 	form := &ui.Form{
 		Fields: []ui.Component{
-			&ui.Input{Name: "url", Value: s.URL, Label: "URL", Placeholder: "https://example.com", Type: "url", MinLength: 10, MaxLength: 1000},
+			&ui.Input{Name: "host", Value: s.Host, Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&ui.Input{Name: "port", Value: s.Port, Label: "Port", Placeholder: "443", Type: "number", MinLength: 1, MaxLength: 5},
 			&ui.KeyValue{Name: "headers", Value: headers, Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
 				KeyComponent:   &ui.Input{Label: "Key", Placeholder: "Key", Type: "text", MinLength: 1, MaxLength: 100},
 				ValueComponent: &ui.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
@@ -158,9 +171,15 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 	return form, nil
 }
 
-// Write writes the data read from p. contentType is the data's content type.
-func (c *connection) Write(p io.Reader, contentType string) error {
-	req, err := http.NewRequestWithContext(c.ctx, "POST", c.settings.URL, p)
+// Write writes the data read from p into the file with the given path.
+// contentType is the file's content type.
+func (c *connection) Write(p io.Reader, path, contentType string) error {
+	u := url.URL{
+		Scheme: "https",
+		Host:   net.JoinHostPort(c.settings.Host, strconv.Itoa(c.settings.Port)),
+		Path:   path,
+	}
+	req, err := http.NewRequestWithContext(c.ctx, "POST", u.String(), p)
 	if err != nil {
 		return err
 	}

@@ -99,15 +99,23 @@ export default class AccountSources extends React.Component {
 							return(
 								<Card key={s.ID} name={s.Name} logoURL={s.LogoURL} type={s.Type}>
 									<div className='buttons'>
-										<SlButton className='importButton' variant='primary' onClick={() => {this.setState({askImportConfirmation: s.ID})}}>
-											<SlIcon slot='suffix' name='cloud-download' />
-											Import
-										</SlButton>
-										<SlButton className='configureButton' variant='neutral'>
-											<SlIcon slot='suffix' name='shuffle' />
-											Properties
-											<NavLink to={`${s.ID}/properties`}></NavLink>
-										</SlButton>
+										{
+											s.Type !== 'Storage' &&
+											<SlButton className='importButton' variant='primary' onClick={() => {
+												this.setState({askImportConfirmation: s.ID})
+											}}>
+												<SlIcon slot='suffix' name='cloud-download'/>
+												Import
+											</SlButton>
+										}
+										{
+											s.Type !== 'Storage' &&
+											<SlButton className='configureButton' variant='neutral'>
+												<SlIcon slot='suffix' name='shuffle'/>
+												Properties
+												<NavLink to={`${s.ID}/properties`}></NavLink>
+											</SlButton>
+										}
 										<SlButton className='removeButton' variant='danger' onClick={() => {this.handleDelete(s.ID)}}>
 											<SlIcon slot='suffix' name='trash3' />
 											Remove
@@ -115,9 +123,9 @@ export default class AccountSources extends React.Component {
 										{
 											s.Type === 'Database' && 
 											<SlButton className='editSQLButton' variant='neutral'>
-												<SlIcon slot='suffix' name='filetype-sql' />
-												Edit SQL
-												<NavLink to={`${s.ID}/sql`}></NavLink>
+											<SlIcon slot='suffix' name='filetype-sql' />
+											Edit SQL
+											<NavLink to={`${s.ID}/sql`}></NavLink>
 											</SlButton>
 										}
 										<SlButton className='settingsButton' variant='neutral'>

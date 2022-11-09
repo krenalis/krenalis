@@ -44,6 +44,7 @@ type connection struct {
 }
 
 type settings struct {
+	Path             string
 	Comma            string
 	Comment          string
 	FieldsPerRecord  int
@@ -74,13 +75,19 @@ func (c *connection) Connector() *connector.Connector {
 	}
 }
 
-// ContentType returns the content type of the data to write.
-func (c *connection) ContentType() string {
-	return "text/csv; charset=UTF-8"
-}
+// Read reads the records from files and writes them to records.
+func (c *connection) Read(files connector.FileReader, records connector.RecordWriter) error {
 
-// Read reads the records from r and writes them to records.
-func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
+	r, timestamp, err := files.Reader(c.settings.Path)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	// Set the timestamp.
+	records.Timestamp(timestamp)
+
+	// Create a CSV reader.
 	v := csv.NewReader(r)
 	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
 	if c.settings.Comment != "" {
@@ -89,6 +96,7 @@ func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 	v.FieldsPerRecord = c.settings.FieldsPerRecord
 	v.LazyQuotes = c.settings.LazyQuotes
 	v.TrimLeadingSpace = c.settings.TrimLeadingSpace
+
 	var first bool
 	for {
 		// Read a record.
@@ -118,11 +126,18 @@ func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
-// Write writes to w the records read from records.
-func (c *connection) Write(w io.Writer, records connector.RecordReader) error {
+// Write writes to files the records read from records.
+func (c *connection) Write(files connector.FileWriter, records connector.RecordReader) error {
+
+	w, err := files.Writer(c.settings.Path, "text/csv; charset=UTF-8")
+	if err != nil {
+		return err
+	}
+	defer w.Close()
 
 	v := csv.NewWriter(w)
 	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
@@ -134,7 +149,7 @@ func (c *connection) Write(w io.Writer, records connector.RecordReader) error {
 	for i, c := range columns {
 		record[i] = c.Name
 	}
-	err := v.Write(record)
+	err = v.Write(record)
 	if err != nil {
 		return err
 	}
@@ -143,10 +158,6 @@ func (c *connection) Write(w io.Writer, records connector.RecordReader) error {
 	for {
 		record, err = records.RecordString()
 		if err == io.EOF {
-			v.Flush()
-			if err := v.Error(); err != nil {
-				return err
-			}
 			break
 		}
 		if err != nil {
@@ -158,7 +169,13 @@ func (c *connection) Write(w io.Writer, records connector.RecordReader) error {
 		}
 	}
 
-	return nil
+	v.Flush()
+	if err := v.Error(); err != nil {
+		return err
+	}
+	err = w.Close()
+
+	return err
 }
 
 // ServeUI serves the connector's user interface.
@@ -179,6 +196,13 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		err := json.Unmarshal(values, &s)
 		if err != nil {
 			return nil, err
+		}
+		// Validate Path.
+		if s.Path == "" {
+			return nil, ui.Errorf("path cannot be empty")
+		}
+		if utf8.RuneCountInString(s.Path) > 1000 {
+			return nil, ui.Errorf("path cannot be longer that 1000 characters")
 		}
 		// Validate Comma.
 		if utf8.RuneCountInString(s.Comma) != 1 {
@@ -220,6 +244,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 
 	form := &ui.Form{
 		Fields: []ui.Component{
+			&ui.Input{Name: "path", Value: s.Path, Label: "Path", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1000},
 			&ui.Input{Name: "comma", Value: s.Comma, Label: "Comma", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
 			&ui.Input{Name: "comment", Value: s.Comment, Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Direction: ui.SourceDir},
 			&ui.Input{Name: "fieldsPerRecord", Value: s.FieldsPerRecord, Label: "Fields per record", Placeholder: "", Type: "number", Direction: ui.SourceDir},

@@ -14,6 +14,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -22,6 +23,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"chichi/apis"
 	"chichi/apis/types"
@@ -44,12 +46,24 @@ func init() {
 
 type connection struct {
 	ctx      context.Context
+	settings *settings
 	firehose connector.Firehose
+}
+
+type settings struct {
+	Path string
 }
 
 // New returns a new Parquet connection.
 func New(ctx context.Context, conf *connector.FileConfig) (connector.FileConnection, error) {
-	c := connection{ctx: ctx, firehose: conf.Firehose}
+	c := connection{ctx: ctx}
+	if len(conf.Settings) > 0 {
+		err := json.Unmarshal(conf.Settings, &c.settings)
+		if err != nil {
+			return nil, errors.New("cannot unmarshal settings of Excel connection")
+		}
+	}
+	c.firehose = conf.Firehose
 	return &c, nil
 }
 
@@ -62,13 +76,16 @@ func (c *connection) Connector() *connector.Connector {
 	}
 }
 
-// ContentType returns the content type of the data to write.
-func (c *connection) ContentType() string {
-	return "application/octet-stream"
-}
+// Read reads the records from files and writes them to records.
+func (c *connection) Read(files connector.FileReader, records connector.RecordWriter) error {
 
-// Read reads the records from r and writes them to records.
-func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
+	r, timestamp, err := files.Reader(c.settings.Path)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	records.Timestamp(timestamp)
 
 	// Copy data read from r to a temporary file.
 	dir := os.TempDir()
@@ -84,6 +101,7 @@ func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 	if err != nil {
 		return err
 	}
+	_ = r.Close()
 	_, err = fi.Seek(io.SeekStart, 0)
 	if err != nil {
 		return err
@@ -142,15 +160,54 @@ func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 	return nil
 }
 
-// Write writes to w the records read from records.
-func (c *connection) Write(w io.Writer, records connector.RecordReader) error {
-	// TODO(marco)
-	return nil
-}
-
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
-	return nil, ui.ErrEventNotExist
+	var s settings
+
+	switch event {
+	case "load":
+		// Load the Form.
+		if c.settings != nil {
+			s = *c.settings
+		}
+	case "save":
+		// Save the settings.
+		err := json.Unmarshal(values, &s)
+		if err != nil {
+			return nil, err
+		}
+		// Validate Path.
+		if s.Path == "" {
+			return nil, ui.Errorf("path cannot be empty")
+		}
+		if utf8.RuneCountInString(s.Path) > 1000 {
+			return nil, ui.Errorf("path cannot be longer that 1000")
+		}
+		b, err := json.Marshal(&s)
+		if err != nil {
+			return nil, err
+		}
+		return nil, c.firehose.SetSettings(b)
+	default:
+		return nil, ui.ErrEventNotExist
+	}
+
+	form := &ui.Form{
+		Fields: []ui.Component{
+			&ui.Input{Name: "path", Value: s.Path, Label: "Path", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1000},
+		},
+		Actions: []ui.Action{
+			{Event: "save", Text: "Save", Variant: "primary"},
+		},
+	}
+
+	return form, nil
+}
+
+// Write writes to files the records read from records.
+func (c *connection) Write(files connector.FileWriter, records connector.RecordReader) error {
+	// TODO(marco)
+	return nil
 }
 
 // propertyType returns the property type of the Parquet column with the given

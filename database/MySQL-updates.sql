@@ -411,7 +411,7 @@ INSERT INTO `connectors` (`name`, `type`, `logoURL`) VALUES
 INSERT INTO `connectors` (`name`, `type`) VALUES ('Parquet','File');
 
 ALTER TABLE `data_sources`
-    ADD column `direction` ENUM('Source', 'Destination') DEFAULT 'Source' AFTER `type`;
+    ADD COLUMN `direction` ENUM('Source', 'Destination') DEFAULT 'Source' AFTER `type`;
 
 ALTER TABLE `connectors`
     CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'File', 'Stream', 'Storage') DEFAULT 'App';
@@ -430,3 +430,12 @@ UPDATE `data_sources` SET `type` = 'FileStorage' WHERE `type` = 'FileStream';
 
 ALTER TABLE `data_sources`
     CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'FileStorage') DEFAULT 'App';
+
+ALTER TABLE `data_sources`
+    CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'File', 'FileStorage') DEFAULT 'App',
+    DROP COLUMN `storageSettings`;
+
+UPDATE `data_sources` SET `type` = 'File' WHERE `type` = 'FileStorage';
+
+ALTER TABLE `data_sources`
+    CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'File', 'Storage') DEFAULT 'App';

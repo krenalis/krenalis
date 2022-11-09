@@ -683,8 +683,10 @@ func (admin *admin) serveAddDataSource(w http.ResponseWriter, r *http.Request, a
 		id, err = ws.DataSources.AddApp(apis.SourceDir, source.Connector, "", "", "")
 	case "Database":
 		id, err = ws.DataSources.AddDatabase(apis.SourceDir, source.Connector)
-	case "FileStorage":
-		id, err = ws.DataSources.AddFileStorage(apis.SourceDir, source.Connector, source.Storage)
+	case "File":
+		id, err = ws.DataSources.AddFile(apis.SourceDir, source.Connector, source.Storage)
+	case "Storage":
+		id, err = ws.DataSources.AddStorage(apis.SourceDir, source.Connector)
 	}
 	if err != nil {
 		return err
