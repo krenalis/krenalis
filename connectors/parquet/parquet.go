@@ -14,7 +14,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -45,29 +44,12 @@ func init() {
 
 type connection struct {
 	ctx      context.Context
-	settings *settings
 	firehose connector.Firehose
-}
-
-type settings struct {
-	Comma            string
-	Comment          string
-	FieldsPerRecord  int
-	LazyQuotes       bool
-	TrimLeadingSpace bool
-	UseCRLF          bool
 }
 
 // New returns a new Parquet connection.
 func New(ctx context.Context, conf *connector.FileConfig) (connector.FileConnection, error) {
-	c := connection{ctx: ctx}
-	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Parquet connection")
-		}
-	}
-	c.firehose = conf.Firehose
+	c := connection{ctx: ctx, firehose: conf.Firehose}
 	return &c, nil
 }
 
