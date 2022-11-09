@@ -630,8 +630,9 @@ func (this *DataSources) Properties(id int) ([]DataSourceProperty, [][]string, e
 		return nil, nil, errors.New("invalid data source identifier")
 	}
 	var rawProperties, rawUsedProperties []byte
-	err := this.myDB.QueryRow("SELECT `properties`, `usedProperties` FROM `data_sources` WHERE `id` = ?", id).
-		Scan(&rawProperties, &rawUsedProperties)
+	err := this.myDB.QueryRow("SELECT `properties`, `usedProperties`\n"+
+		"FROM `data_sources`\n"+
+		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&rawProperties, &rawUsedProperties)
 	if err != nil {
 		return nil, nil, err
 	}
