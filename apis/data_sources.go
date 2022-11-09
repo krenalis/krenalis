@@ -403,7 +403,7 @@ func (this *DataSources) Import(id int, reimport bool) error {
 				"FROM `data_sources` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
-				"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
+				"WHERE `s`.`id` = ?", id).Scan(
 			&name, &connectorType, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration, &connector,
 			&resource, &cursor, &settings, &rawUsedProperties)
 		if err != nil {
@@ -805,7 +805,7 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 				"FROM `data_sources` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
-				"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
+				"WHERE `s`.`id` = ?", id).Scan(
 			&connectorName, &connectorType, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &expiration,
 			&connector, &resource, &settings)
 		if err != nil {
