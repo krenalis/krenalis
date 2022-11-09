@@ -56,7 +56,6 @@ type connection struct {
 	firehose     connector.Firehose
 	resource     string
 	accessToken  string
-	settings     []byte
 }
 
 // New returns a new Hubspot connection.
