@@ -183,7 +183,7 @@ func (c *connection) Write(r io.Reader, path, contentType string) error {
 	}
 	defer res.Body.Close()
 	_, _ = io.Copy(io.Discard, res.Body)
-	if res.StatusCode != 200 {
+	if c := res.StatusCode; c != 200 && c != 201 {
 		return fmt.Errorf("server responded with status: %s", res.Status)
 	}
 	return nil
