@@ -87,7 +87,7 @@ export default class AccountSourceSQL extends React.Component {
             this.toast.current.toast();
             return;
         }
-        this.setState({ status: { variant: 'success', icon: 'check2-circle', text: 'Your query has been saved succesfully' } });
+        this.setState({ status: { variant: 'success', icon: 'check2-circle', text: 'Your query has been successfully saved' } });
         this.toast.current.toast();
     }
 
