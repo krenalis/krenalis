@@ -43,7 +43,7 @@ export default class ConnectorsSourceAdded extends React.Component {
 							}
 						</div>
 						<div className='title'>{this.state.connector.Name} has been added</div>
-						<div className='description'>You have succesfully added a new data source from {this.state.connector.Name}'s connector</div>
+						<div className='description'>You have successfully added a new data source from {this.state.connector.Name}'s connector</div>
 					</div>
 					<SlButton className='link' variant='text' size='medium'>
 						<SlIcon slot='suffix' name='arrow-right-circle' />

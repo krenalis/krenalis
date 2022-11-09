@@ -48,7 +48,7 @@ export default class AccountSources extends React.Component {
 			this.toast.current.toast();
 			return;
 		}
-		this.setState({status: {variant:'success', icon:'check2-circle', text:'Your import has been completed succesfully'}, askImportConfirmation: 0});
+		this.setState({status: {variant:'success', icon:'check2-circle', text:'Your import has been completed successfully'}, askImportConfirmation: 0});
 		this.toast.current.toast();
 	}
 

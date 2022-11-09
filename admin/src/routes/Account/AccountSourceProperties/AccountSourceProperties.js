@@ -71,7 +71,7 @@ export default class AccountSource extends React.Component {
             this.toast.current.toast();
             return;
         }
-        this.setState({ status: { variant: 'success', icon: 'check2-circle', text: 'Your transformation function has been saved succesfully' } });
+        this.setState({ status: { variant: 'success', icon: 'check2-circle', text: 'Your transformation function has been saved successfully' } });
         this.toast.current.toast();
     }
 

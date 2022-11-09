@@ -54,7 +54,7 @@ export default class AccountSchemas extends React.Component {
 			this.toast.current.toast();
 			return;
 		}
-		this.setState({status: {variant:'success', icon:'check2-circle', text:'Your schema has been saved succesfully'}, originalSchema: this.state.newSchema});
+		this.setState({status: {variant:'success', icon:'check2-circle', text:'Your schema has been saved successfully'}, originalSchema: this.state.newSchema});
 		this.toast.current.toast();
 	}
 
