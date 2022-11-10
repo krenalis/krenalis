@@ -258,7 +258,7 @@ func (this *Connections) AddFile(dir Direction, connector, storage int) (int, er
 	var id int64
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		var typ string
-		err := tx.QueryRow("SELECT `type` FROM `connectors` WHERE `id` = ?").Scan(&typ)
+		err := tx.QueryRow("SELECT `type` FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ErrConnectorNotFound
@@ -271,7 +271,7 @@ func (this *Connections) AddFile(dir Direction, connector, storage int) (int, er
 		if storage > 0 {
 			// Check the storage.
 			var storageDir string
-			err = tx.QueryRow("SELECT `type`, `direction` FROM `connections` WHERE `id` = ?").Scan(&typ, &storageDir)
+			err = tx.QueryRow("SELECT `type`, `direction` FROM `connections` WHERE `id` = ?", storage).Scan(&typ, &storageDir)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return ErrStorageNotFound
@@ -315,7 +315,7 @@ func (this *Connections) AddStorage(dir Direction, connector int) (int, error) {
 	var id int64
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		var typ string
-		err := tx.QueryRow("SELECT `type` FROM `connectors` WHERE `id` = ?").Scan(&typ)
+		err := tx.QueryRow("SELECT `type` FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ErrConnectorNotFound
