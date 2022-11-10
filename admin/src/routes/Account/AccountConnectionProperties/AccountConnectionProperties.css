@@ -1,22 +1,22 @@
-.AccountSourceProperties {
+.AccountConnectionProperties {
     min-height: 100vh;
 }
 
-.AccountSourceProperties .content {
+.AccountConnectionProperties .content {
     max-width: 1600px;
     margin: auto;
     display: grid;
     grid-template-columns: 1fr 2fr 1fr;
     grid-template-areas: 
         "title title title"
-        "sourceProperties editor schemaProperties"
-        "sourceProperties saveButton schemaProperties"
-        "sourceProperties documentation schemaProperties";
+        "connectionProperties editor schemaProperties"
+        "connectionProperties saveButton schemaProperties"
+        "connectionProperties documentation schemaProperties";
     gap: 30px;
     margin-top: -200px;
 }
 
-.AccountSourceProperties .content > .title {
+.AccountConnectionProperties .content > .title {
     grid-area: title;
     font-size: 23px;
     font-weight: 600;
@@ -29,12 +29,12 @@
     margin-bottom: 20px;
 }
 
-.AccountSourceProperties .content .title .littleLogo {
+.AccountConnectionProperties .content .title .littleLogo {
     max-width: 35px;
     margin-left: -35px;
 }
 
-.AccountSourceProperties .content .properties .title {
+.AccountConnectionProperties .content .properties .title {
     text-align: center;
     margin-bottom: 20px;
     font-size: 18px;
@@ -42,7 +42,7 @@
     color: var(--text-onaccent);
 }
 
-.AccountSourceProperties .content .properties .property {
+.AccountConnectionProperties .content .properties .property {
     background-color: var(--bg-primary);
     color: var(--text-primary);
     padding: 15px 25px;
@@ -53,15 +53,15 @@
     font-family: monospace!important;
 }
 
-.AccountSourceProperties .content .properties.sourceProperties {
-    grid-area: sourceProperties;
+.AccountConnectionProperties .content .properties.connectionProperties {
+    grid-area: connectionProperties;
 }
 
-.AccountSourceProperties .content .editor {
+.AccountConnectionProperties .content .editor {
     grid-area: editor;
 }
 
-.AccountSourceProperties .content .editorWrapper {
+.AccountConnectionProperties .content .editorWrapper {
     width: 100%;
     height: 600px;
     padding: 30px;
@@ -69,25 +69,25 @@
     background-color: var(--bg-editor);
 }
 
-.AccountSourceProperties .content .editorWrapper *  {
+.AccountConnectionProperties .content .editorWrapper *  {
     font-family: monospace!important;
 }
 
-.AccountSourceProperties .content .editorWrapper .documentation {
+.AccountConnectionProperties .content .editorWrapper .documentation {
     margin-top: 30px;
 }
 
-.AccountSourceProperties .content .properties.schemaProperties {
+.AccountConnectionProperties .content .properties.schemaProperties {
     grid-area: schemaProperties;
 }
 
-.AccountSourceProperties .content .saveButton {
+.AccountConnectionProperties .content .saveButton {
     width: 200px;
     margin: 30px auto;
     display: block;
 }
 
-.AccountSourceProperties .content .documentation {
+.AccountConnectionProperties .content .documentation {
     border-radius: var(--radius);
     padding: 20px 50px;
     background-color: var(--bg-primary);

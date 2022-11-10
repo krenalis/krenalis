@@ -25,26 +25,26 @@ import (
 	"chichi/pkg/open2b/sql"
 )
 
-type DataSources struct {
+type Connections struct {
 	*WorkspaceAPI
 }
 
 var (
 	ErrConnectorNotFound        = errors.New("connector does not exist")
-	ErrDataSourceNotFound       = errors.New("data source does not exist")
-	ErrDataSourceDisabled       = errors.New("data source is disabled")
-	ErrFileHasNoStorage         = errors.New("file data source has not a storage")
+	ErrConnectionNotFound       = errors.New("connection does not exist")
+	ErrConnectionDisabled       = errors.New("connection is disabled")
+	ErrFileHasNoStorage         = errors.New("file connection has not a storage")
 	ErrStorageNotFound          = errors.New("storage does not exist")
 	ErrStorageHasConnectedFiles = errors.New("storage has connected files")
 	ErrUIEventNotExist          = errors.New("UI event does not exist")
 )
 
 const (
-	rawPropertiesMaxSize = 16_777_215 // maximum size in runes of the 'property' column of the 'data_sources' table.
-	queryMaxSize         = 16_777_215 // maximum size in runes of a data source query.
+	rawPropertiesMaxSize = 16_777_215 // maximum size in runes of the 'property' column of the 'connections' table.
+	queryMaxSize         = 16_777_215 // maximum size in runes of a connection query.
 )
 
-// Direction represents a data source direction.
+// Direction represents a connection direction.
 type Direction int
 
 const (
@@ -76,23 +76,23 @@ func dirByName(name string) Direction {
 	panic("invalid direction name")
 }
 
-// DataSource represents a data source.
-type DataSource struct {
+// Connection represents a connection.
+type Connection struct {
 	ID        int
 	Name      string
 	Type      string
 	Direction string
-	Storage   int // zero if the data source is not a file or does not have a storage
+	Storage   int // zero if the connection is not a file or does not have a storage
 	OauthURL  string
 	LogoURL   string
 }
 
-// DataSourceInfo represents a data source.
-type DataSourceInfo struct {
+// ConnectionInfo represents a connection.
+type ConnectionInfo struct {
 	ID         int
 	Type       string
 	Direction  string
-	Storage    int // zero if the data source is not a file or does not have a storage
+	Storage    int // zero if the connection is not a file or does not have a storage
 	Name       string
 	LogoURL    string
 	UsersQuery string // only for databases.
@@ -101,26 +101,26 @@ type DataSourceInfo struct {
 // PropertyType represents the type of a property.
 type PropertyType string
 
-// DataSourcePropertyOption represents an option of a data source property.
-type DataSourcePropertyOption struct {
+// ConnectionPropertyOption represents an option of a connection property.
+type ConnectionPropertyOption struct {
 	Label string
 	Value string
 }
 
-// DataSourceProperty represents a data source property.
-type DataSourceProperty struct {
+// ConnectionProperty represents a connection property.
+type ConnectionProperty struct {
 	Name       string
 	Type       PropertyType
 	Label      string
-	Options    []DataSourcePropertyOption
-	Properties []DataSourceProperty
+	Options    []ConnectionPropertyOption
+	Properties []ConnectionProperty
 }
 
-// AddApp adds an app data source given its direction, app connector, OAuth
+// AddApp adds an app connection given its direction, app connector, OAuth
 // refresh and access tokens and returns its identifier.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
-func (this *DataSources) AddApp(dir Direction, connector int, refreshToken, accessToken, accessTokenExpirationTime string) (int, error) {
+func (this *Connections) AddApp(dir Direction, connector int, refreshToken, accessToken, accessTokenExpirationTime string) (int, error) {
 	if dir != SourceDir && dir != DestDir {
 		return 0, errors.New("invalid direction")
 	}
@@ -179,7 +179,7 @@ func (this *DataSources) AddApp(dir Direction, connector int, refreshToken, acce
 		if err != nil {
 			return err
 		}
-		result, err := tx.Exec("INSERT INTO `data_sources`\n"+
+		result, err := tx.Exec("INSERT INTO `connections`\n"+
 			"SET `workspace` = ?, `type` = 'App', `direction` = ?, `connector` = ?, `resource` = ?",
 			this.workspace, direction.String(), connector, resource)
 		if err != nil {
@@ -195,18 +195,18 @@ func (this *DataSources) AddApp(dir Direction, connector int, refreshToken, acce
 	go func() {
 		err := this.reloadProperties(int(id))
 		if err != nil {
-			log.Printf("[error] cannot reload properties for data source %d: %s", id, err)
+			log.Printf("[error] cannot reload properties for connection %d: %s", id, err)
 		}
 	}()
 
 	return int(id), err
 }
 
-// AddDatabase adds a database data source given its direction, database
+// AddDatabase adds a database connection given its direction, database
 // connector and returns its identifier.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
-func (this *DataSources) AddDatabase(dir Direction, connector int) (int, error) {
+func (this *Connections) AddDatabase(dir Direction, connector int) (int, error) {
 	if dir != SourceDir && dir != DestDir {
 		return 0, errors.New("invalid direction")
 	}
@@ -226,7 +226,7 @@ func (this *DataSources) AddDatabase(dir Direction, connector int) (int, error) 
 		if connectorType != "Database" {
 			return errors.New("connector is not a database connector")
 		}
-		result, err := tx.Exec("INSERT INTO `data_sources`\n"+
+		result, err := tx.Exec("INSERT INTO `connections`\n"+
 			"SET `workspace` = ?, `type` = 'Database', `direction` = ?, `connector` = ?",
 			this.workspace, dir.String(), connector)
 		id, err = result.LastInsertId()
@@ -238,13 +238,13 @@ func (this *DataSources) AddDatabase(dir Direction, connector int) (int, error) 
 	return int(id), nil
 }
 
-// AddFile adds a file data source given its direction, connector and storage
-// data source and returns its identifier. If storage is 0, the file data
-// source does not have a storage, otherwise storage must have direction dir.
+// AddFile adds a file connection given its direction, connector and storage
+// connection and returns its identifier. If storage is 0, the file connection
+// does not have a storage, otherwise storage must have direction dir.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
 // If the storage does not exist, it returns the ErrStorageNotFound error.
-func (this *DataSources) AddFile(dir Direction, connector, storage int) (int, error) {
+func (this *Connections) AddFile(dir Direction, connector, storage int) (int, error) {
 	if dir != SourceDir && dir != DestDir {
 		return 0, errors.New("invalid direction")
 	}
@@ -271,7 +271,7 @@ func (this *DataSources) AddFile(dir Direction, connector, storage int) (int, er
 		if storage > 0 {
 			// Check the storage.
 			var storageDir string
-			err = tx.QueryRow("SELECT `type`, `direction` FROM `data_sources` WHERE `id` = ?").Scan(&typ, &storageDir)
+			err = tx.QueryRow("SELECT `type`, `direction` FROM `connections` WHERE `id` = ?").Scan(&typ, &storageDir)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return ErrStorageNotFound
@@ -279,7 +279,7 @@ func (this *DataSources) AddFile(dir Direction, connector, storage int) (int, er
 				return err
 			}
 			if typ != "Storage" {
-				return errors.New("storage is not a storage data source")
+				return errors.New("storage is not a storage connection")
 			}
 			if storageDir != direction {
 				if direction == "Source" {
@@ -288,7 +288,7 @@ func (this *DataSources) AddFile(dir Direction, connector, storage int) (int, er
 				return errors.New("storage is not a destination")
 			}
 		}
-		result, err := tx.Exec("INSERT INTO `data_sources`\n"+
+		result, err := tx.Exec("INSERT INTO `connections`\n"+
 			"SET `workspace` = ?, `type` = 'File', `direction` = ?, `connector` = ? AND `storage` = ?",
 			this.workspace, direction, connector, storage)
 		if err != nil {
@@ -303,11 +303,11 @@ func (this *DataSources) AddFile(dir Direction, connector, storage int) (int, er
 	return int(id), nil
 }
 
-// AddStorage adds a storage data source given its direction and connector and
+// AddStorage adds a storage connection given its direction and connector and
 // returns its identifier.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
-func (this *DataSources) AddStorage(dir Direction, connector int) (int, error) {
+func (this *Connections) AddStorage(dir Direction, connector int) (int, error) {
 	if dir != SourceDir && dir != DestDir {
 		return 0, errors.New("invalid direction")
 	}
@@ -325,7 +325,7 @@ func (this *DataSources) AddStorage(dir Direction, connector int) (int, error) {
 		if typ != "Storage" {
 			return errors.New("connector is not a storage connector")
 		}
-		result, err := tx.Exec("INSERT INTO `data_sources`\n"+
+		result, err := tx.Exec("INSERT INTO `connections`\n"+
 			"SET `workspace` = ?, `type` = 'Storage', `direction` = ?, `connector` = ?",
 			this.workspace, direction, connector)
 		if err != nil {
@@ -340,47 +340,47 @@ func (this *DataSources) AddStorage(dir Direction, connector int) (int, error) {
 	return int(id), nil
 }
 
-// Get returns the data source with identifier id. If the data source does not
-// exist, it returns the ErrDataSourceNotFound error.
-func (this *DataSources) Get(id int) (*DataSourceInfo, error) {
+// Get returns the connection with identifier id. If the connection does not
+// exist, it returns the ErrConnectionNotFound error.
+func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 	if id <= 0 {
-		return nil, errors.New("invalid data source identifier")
+		return nil, errors.New("invalid connection identifier")
 	}
-	s := DataSourceInfo{ID: id}
+	s := ConnectionInfo{ID: id}
 	err := this.myDB.QueryRow("SELECT `s`.`type`, `s`.`direction`, `c`.`name`, `c`.`logoURL`, `s`.`usersQuery`\n"+
-		"FROM `data_sources` AS `s`\n"+
+		"FROM `connections` AS `s`\n"+
 		"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 		"WHERE `s`.`id` = ? AND `s`.`workspace` = ?",
 		id, this.workspace).Scan(&s.Type, &s.Direction, &s.Name, &s.LogoURL, &s.UsersQuery)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, ErrDataSourceNotFound
+			return nil, ErrConnectionNotFound
 		}
 	}
 	return &s, nil
 }
 
-// Delete deletes the data source with the given identifier.
-// If the data source does not exist, it does nothing.
+// Delete deletes the connection with the given identifier.
+// If the connection does not exist, it does nothing.
 //
-// If the data source is a storage and has connected files, it returns the
+// If the connection is a storage and has connected files, it returns the
 // ErrStorageHasConnectedFiles error.
-func (this *DataSources) Delete(id int) error {
+func (this *Connections) Delete(id int) error {
 	if id <= 0 {
-		return errors.New("invalid data source identifier")
+		return errors.New("invalid connection identifier")
 	}
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		source, err := tx.Table("DataSources").Get(
+		connection, err := tx.Table("Connections").Get(
 			sql.Where{"id": id, "workspace": this.workspace},
 			sql.Columns{"type", "resource"})
 		if err != nil {
 			return err
 		}
-		if source == nil {
+		if connection == nil {
 			return nil
 		}
-		if source["type"] == "Storage" {
-			hasFiles, err := tx.Table("DataSources").Exists(sql.Where{"workspace": this.workspace, "storage": id})
+		if connection["type"] == "Storage" {
+			hasFiles, err := tx.Table("Connections").Exists(sql.Where{"workspace": this.workspace, "storage": id})
 			if err != nil {
 				return err
 			}
@@ -388,47 +388,47 @@ func (this *DataSources) Delete(id int) error {
 				return ErrStorageHasConnectedFiles
 			}
 		}
-		_, err = tx.Table("DataSources").Delete(sql.Where{"id": id})
+		_, err = tx.Table("Connections").Delete(sql.Where{"id": id})
 		if err != nil {
 			return err
 		}
-		_, err = tx.Table("DataSourcesUsers").Delete(sql.Where{"source": id})
+		_, err = tx.Table("ConnectionsUsers").Delete(sql.Where{"connection": id})
 		if err != nil {
 			return err
 		}
-		// Delete the resource of the deleted data source if it has no other data sources.
+		// Delete the resource of the deleted connection if it has no other connections.
 		_, err = tx.Exec("DELETE `r`\n"+
 			"FROM `resources` AS `r`\n"+
-			"LEFT JOIN `data_sources` AS `s` ON `s`.`resource` = `r`.`id`\n"+
-			"WHERE `r`.`id` = ? AND `s`.`resource` IS NULL", source["resource"])
+			"LEFT JOIN `connections` AS `s` ON `s`.`resource` = `r`.`id`\n"+
+			"WHERE `r`.`id` = ? AND `s`.`resource` IS NULL", connection["resource"])
 		return err
 	})
 	return err
 }
 
-// Import starts the import of the users from the data source with the given
-// identifier. If the data source is an app and reimport is false, it imports
-// the users from the current cursor, otherwise imports all users. The data
-// source must be a source and cannot be a storage.
+// Import starts the import of the users from the connection with the given
+// identifier. If the connection is an app and reimport is false, it imports
+// the users from the current cursor, otherwise imports all users. The
+// connection must be a source and cannot be a storage.
 //
-// Returns the ErrDataSourceNotFound error if the data source does not exist.
-// Returns the ErrDataSourceDisabled error if the data source does not have any
+// Returns the ErrConnectionNotFound error if the connection does not exist.
+// Returns the ErrConnectionDisabled error if the connection does not have any
 // transformation function associated to it.
-// Returns the ErrFileHasNoStorage error if the data source is a file and does
+// Returns the ErrFileHasNoStorage error if the connection is a file and does
 // not have a storage.
-func (this *DataSources) Import(id int, reimport bool) error {
+func (this *Connections) Import(id int, reimport bool) error {
 
 	if id <= 0 {
-		return errors.New("invalid data source identifier")
+		return errors.New("invalid connection identifier")
 	}
 
-	// Check that the data source exists, is a source and has a transformation.
+	// Check that the connection exists, is a source and has a transformation.
 	var typ, dir string
-	err := this.myDB.QueryRow("SELECT `type`, `direction` FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
+	err := this.myDB.QueryRow("SELECT `type`, `direction` FROM `connections` WHERE `id` = ? AND `workspace` = ?",
 		id, this.workspace).Scan(&typ, &dir)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return ErrDataSourceNotFound
+			return ErrConnectionNotFound
 		}
 		return err
 	}
@@ -440,14 +440,13 @@ func (this *DataSources) Import(id int, reimport bool) error {
 	}
 	const direction = _connector.SourceDir
 
-	// Check that the data source has at least one transformation associated to
-	// it.
+	// Check that the connection has at least one transformation associated to it.
 	transformations, err := this.Transformations.List(id)
 	if err != nil {
 		return fmt.Errorf("cannot list transformations for %d: %s", id, err)
 	}
 	if len(transformations) == 0 {
-		return ErrDataSourceDisabled
+		return ErrConnectionDisabled
 	}
 
 	const noColumn = -1
@@ -463,7 +462,7 @@ func (this *DataSources) Import(id int, reimport bool) error {
 			"SELECT `c`.`name`, `c`.`type`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
 				" `r`.`refreshToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
 				" `s`.`resource`, `s`.`userCursor`, `s`.`settings`, `s`.`usedProperties`\n"+
-				"FROM `data_sources` AS `s`\n"+
+				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(
@@ -471,7 +470,7 @@ func (this *DataSources) Import(id int, reimport bool) error {
 			&resource, &cursor, &settings, &rawUsedProperties)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrDataSourceNotFound
+				return ErrConnectionNotFound
 			}
 			return err
 		}
@@ -481,7 +480,7 @@ func (this *DataSources) Import(id int, reimport bool) error {
 		var properties [][]string
 		err = json.Unmarshal(rawUsedProperties, &properties)
 		if err != nil {
-			return fmt.Errorf("cannot unmarshal used properties of data source %d: %s", id, err)
+			return fmt.Errorf("cannot unmarshal used properties of connection %d: %s", id, err)
 		}
 
 		accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
@@ -504,12 +503,12 @@ func (this *DataSources) Import(id int, reimport bool) error {
 				AccessToken:  accessToken,
 			})
 			if err != nil {
-				log.Printf("[error] cannot connect to the connector %d of the data source %d: %s", connector, id, err)
+				log.Printf("[error] cannot connect to the connector %d of the connection %d: %s", connector, id, err)
 				return
 			}
 			err = c.Users(cursor, properties)
 			if err != nil {
-				log.Printf("[error] call to the Users method of the data source %d failed: %s", id, err)
+				log.Printf("[error] call to the Users method of the connection %d failed: %s", id, err)
 			}
 		}()
 
@@ -520,12 +519,12 @@ func (this *DataSources) Import(id int, reimport bool) error {
 		var settings []byte
 		err = this.myDB.QueryRow(
 			"SELECT `c`.`name`, `s`.`connector`, `s`.`identityColumn`, `s`.`timestampColumn`, `s`.`settings`, `s`.`usersQuery`\n"+
-				"FROM `data_sources` AS `s`\n"+
+				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &identityColumn, &timestampColumn, &settings, &usersQuery)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrDataSourceNotFound
+				return ErrConnectionNotFound
 			}
 			return err
 		}
@@ -602,12 +601,12 @@ func (this *DataSources) Import(id int, reimport bool) error {
 		var settings []byte
 		err = this.myDB.QueryRow(
 			"SELECT `c`.`name`, `s`.`connector`, `s`.`storage`, `s`.`identityColumn`, `s`.`timestampColumn`, `s`.`settings`\n"+
-				"FROM `data_sources` AS `s`\n"+
+				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &storage, &identityColumn, &timestampColumn, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrDataSourceNotFound
+				return ErrConnectionNotFound
 			}
 			return err
 		}
@@ -625,7 +624,7 @@ func (this *DataSources) Import(id int, reimport bool) error {
 			var settings []byte
 			err = this.myDB.QueryRow(
 				"SELECT `c`.`name`, `s`.`connector`, `s`.`settings`\n"+
-					"FROM `data_sources` AS `s`\n"+
+					"FROM `connections` AS `s`\n"+
 					"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 					"WHERE `s`.`id` = ?", storage).Scan(&connectorName, &connector, &settings)
 			if err != nil {
@@ -670,22 +669,22 @@ func (this *DataSources) Import(id int, reimport bool) error {
 	return nil
 }
 
-// List returns all data sources.
-func (this *DataSources) List() ([]*DataSource, error) {
-	sources := []*DataSource{}
+// List returns all connections.
+func (this *Connections) List() ([]*Connection, error) {
+	sources := []*Connection{}
 	err := this.myDB.QueryScan(
 		"SELECT `s`.`id`, `s`.`type`, `s`.`direction`, `s`.`storage`, `c`.`name`, `c`.`oauthURL`, `c`.`logoURL`\n"+
-			"FROM `data_sources` as `s`\n"+
+			"FROM `connections` as `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`workspace` = ?", this.workspace, func(rows *sql.Rows) error {
 			var err error
 			for rows.Next() {
-				var source DataSource
-				if err = rows.Scan(&source.ID, &source.Type, &source.Direction, &source.Storage, &source.Name,
-					&source.OauthURL, &source.LogoURL); err != nil {
+				var c Connection
+				if err = rows.Scan(&c.ID, &c.Type, &c.Direction, &c.Storage, &c.Name,
+					&c.OauthURL, &c.LogoURL); err != nil {
 					return err
 				}
-				sources = append(sources, &source)
+				sources = append(sources, &c)
 			}
 			return nil
 		})
@@ -695,17 +694,17 @@ func (this *DataSources) List() ([]*DataSource, error) {
 	return sources, nil
 }
 
-// Properties returns the properties and the used properties of the data source
-// with the given identifier. The data source cannot be a storage.
-// Returns the ErrDataSourceNotFound error if the data source does not exist.
-func (this *DataSources) Properties(id int) ([]DataSourceProperty, [][]string, error) {
+// Properties returns the properties and the used properties of the connection
+// with the given identifier. The connection cannot be a storage.
+// Returns the ErrConnectionNotFound error if the connection does not exist.
+func (this *Connections) Properties(id int) ([]ConnectionProperty, [][]string, error) {
 	if id <= 0 {
-		return nil, nil, errors.New("invalid data source identifier")
+		return nil, nil, errors.New("invalid connection identifier")
 	}
 	var typ string
 	var rawProperties, rawUsedProperties []byte
 	err := this.myDB.QueryRow("SELECT `type`, `properties`, `usedProperties`\n"+
-		"FROM `data_sources`\n"+
+		"FROM `connections`\n"+
 		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&typ, &rawProperties, &rawUsedProperties)
 	if err != nil {
 		return nil, nil, err
@@ -713,20 +712,20 @@ func (this *DataSources) Properties(id int) ([]DataSourceProperty, [][]string, e
 	if typ == "Storage" {
 		return nil, nil, errors.New("cannot read properties from a storage")
 	}
-	var properties []DataSourceProperty
+	var properties []ConnectionProperty
 	if len(rawProperties) > 0 {
 		err = json.Unmarshal(rawProperties, &properties)
 		if err != nil {
-			return nil, nil, errors.New("cannot unmarshal data source properties")
+			return nil, nil, errors.New("cannot unmarshal connection properties")
 		}
 	} else {
-		properties = []DataSourceProperty{}
+		properties = []ConnectionProperty{}
 	}
 	var usedProperties [][]string
 	if len(rawUsedProperties) > 0 {
 		err = json.Unmarshal(rawUsedProperties, &usedProperties)
 		if err != nil {
-			return nil, nil, errors.New("cannot unmarshal data source used properties")
+			return nil, nil, errors.New("cannot unmarshal connection used properties")
 		}
 	} else {
 		usedProperties = [][]string{}
@@ -735,25 +734,24 @@ func (this *DataSources) Properties(id int) ([]DataSourceProperty, [][]string, e
 	return properties, usedProperties, nil
 }
 
-// Column represents a column of a database data source.
+// Column represents a column of a database connection.
 type Column struct {
 	Name string
 	Type types.Type
 }
 
-// Query executes the given query on the database data source with identifier
+// Query executes the given query on the database connection with identifier
 // id and returns the resulting columns and rows.
 //
 // query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
 // must contain the ':limit' placeholder. limit must be between 1 and 100.
 //
-// It returns an error if the data source is a destination.
-// It returns the ErrDataSourceNotFound error if the data source does not
-// exist.
-func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]string, error) {
+// It returns an error if the connection is a destination.
+// It returns the ErrConnectionNotFound error if the connection does not exist.
+func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]string, error) {
 
 	if id <= 0 {
-		return nil, nil, errors.New("invalid data source identifier")
+		return nil, nil, errors.New("invalid connection identifier")
 	}
 
 	if !utf8.ValidString(query) {
@@ -774,21 +772,21 @@ func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]s
 	var settings []byte
 	err := this.myDB.QueryRow(
 		"SELECT `s`.`type`, `s`.`direction`, `s`.`connector`, `s`.`settings`, `c`.`name`\n"+
-			"FROM `data_sources` AS `s`\n"+
+			"FROM `connections` AS `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
 		&typ, &dir, &connector, &settings, &connectorName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil, ErrDataSourceNotFound
+			return nil, nil, ErrConnectionNotFound
 		}
 		return nil, nil, err
 	}
 	if typ != "Database" {
-		return nil, nil, errors.New("data source is not a database")
+		return nil, nil, errors.New("connection is not a database")
 	}
 	if dir != "Source" {
-		return nil, nil, errors.New("data source is not a source")
+		return nil, nil, errors.New("connection is not a source")
 	}
 	const direction = _connector.SourceDir
 
@@ -846,22 +844,22 @@ func (this *DataSources) Query(id int, query string, limit int) ([]Column, [][]s
 	return columns, rows, nil
 }
 
-// ServeUI serves the user interface for the data source with identifier id.
+// ServeUI serves the user interface for the connection with identifier id.
 // event is the event and values contains the form values in JSON format.
-// Returns the ErrDataSourceNotFound error if the data source does not exist
-// and the ErrUIEventNotExist error if the event does not exist.
-func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, error) {
+// Returns the ErrConnectionNotFound error if the connection does not exist and
+// the ErrUIEventNotExist error if the event does not exist.
+func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, error) {
 
 	if id <= 0 {
-		return nil, errors.New("invalid data source identifier")
+		return nil, errors.New("invalid connection identifier")
 	}
 
 	var typ, dir string
-	err := this.myDB.QueryRow("SELECT `type`, `direction` FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
+	err := this.myDB.QueryRow("SELECT `type`, `direction` FROM `connections` WHERE `id` = ? AND `workspace` = ?",
 		id, this.workspace).Scan(&typ, &dir)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, ErrDataSourceNotFound
+			return nil, ErrConnectionNotFound
 		}
 		return nil, err
 	}
@@ -880,7 +878,7 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 		err = this.myDB.QueryRow(
 			"SELECT `c`.`name`, `c`.`type`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
 				" `r`.`accessTokenExpirationTime`, `s`.`connector`, `s`.`resource`, `s`.`settings`\n"+
-				"FROM `data_sources` AS `s`\n"+
+				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(
@@ -888,7 +886,7 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 			&connector, &resource, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return nil, ErrDataSourceNotFound
+				return nil, ErrConnectionNotFound
 			}
 			return nil, err
 		}
@@ -919,12 +917,12 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 		var settings []byte
 		err = this.myDB.QueryRow(
 			"SELECT `c`.`name`, `s`.`connector`, `s`.`settings`\n"+
-				"FROM `data_sources` AS `s`\n"+
+				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return nil, ErrDataSourceNotFound
+				return nil, ErrConnectionNotFound
 			}
 			return nil, err
 		}
@@ -968,17 +966,16 @@ func (this *DataSources) ServeUI(id int, event string, values []byte) ([]byte, e
 	return json.Marshal(form)
 }
 
-// SetUsersQuery sets the users query of the database data source with
+// SetUsersQuery sets the users query of the database connection with
 // identifier id. query must be UTF-8 encoded, it cannot be longer than
 // 16,777,215 runes and must contain the ':limit' placeholder.
 //
-// It returns an error if the data source is a destination.
-// It returns the ErrDataSourceNotFound error if the data source does not
-// exist.
-func (this *DataSources) SetUsersQuery(id int, query string) error {
+// It returns an error if the connection is a destination.
+// It returns the ErrConnectionNotFound error if the connection does not exist.
+func (this *Connections) SetUsersQuery(id int, query string) error {
 
 	if id <= 0 {
-		return errors.New("invalid data source identifier")
+		return errors.New("invalid connection identifier")
 	}
 
 	if !utf8.ValidString(query) {
@@ -991,7 +988,7 @@ func (this *DataSources) SetUsersQuery(id int, query string) error {
 		return errors.New("query does not contain the placeholder \":limit\"")
 	}
 
-	result, err := this.myDB.Exec("UPDATE `data_sources`\nSET `usersQuery` = ?\n"+
+	result, err := this.myDB.Exec("UPDATE `connections`\nSET `usersQuery` = ?\n"+
 		"WHERE `id` = ? AND `workspace` = ? AND `type` = 'Database' AND `direction` = 'Source'",
 		query, id, this.workspace)
 	if err != nil {
@@ -1003,42 +1000,42 @@ func (this *DataSources) SetUsersQuery(id int, query string) error {
 	}
 	if affected == 0 {
 		var typ, dir string
-		err = this.myDB.QueryRow("SELECT `type`, `direction` FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
+		err = this.myDB.QueryRow("SELECT `type`, `direction` FROM `connections` WHERE `id` = ? AND `workspace` = ?",
 			id, this.workspace).Scan(&typ, &dir)
 		if err != nil {
 			return err
 		}
 		if typ != "Database" {
-			return errors.New("data source is not a database")
+			return errors.New("connection is not a database")
 		}
 		if dir != "Source" {
-			return errors.New("data source is not a source")
+			return errors.New("connection is not a source")
 		}
-		return ErrDataSourceNotFound
+		return ErrConnectionNotFound
 	}
 
 	return nil
 }
 
-// DataSourcesStats represents the statistics on a data source for the last 24
+// ConnectionsStats represents the statistics on a connection for the last 24
 // hours.
-type DataSourcesStats struct {
+type ConnectionsStats struct {
 	UsersIn [24]int // ingested users per hour
 }
 
-// Stats returns statistics on the data source with identifier id for the last
+// Stats returns statistics on the connection with identifier id for the last
 // 24 hours.
-func (this *DataSources) Stats(id int) (*DataSourcesStats, error) {
+func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 	if id <= 0 {
-		return nil, errors.New("invalid data source identifier")
+		return nil, errors.New("invalid connection identifier")
 	}
 	now := time.Now().UTC()
 	toSlot := statsTimeSlot(now)
 	fromSlot := toSlot - 23
-	stats := &DataSourcesStats{
+	stats := &ConnectionsStats{
 		UsersIn: [24]int{},
 	}
-	query := "SELECT `timeSlot`, `usersIn`\nFROM `data_sources_stats`\nWHERE `source` = ? AND `timeSlot` BETWEEN ? AND ?"
+	query := "SELECT `timeSlot`, `usersIn`\nFROM `connections_stats`\nWHERE `connection` = ? AND `timeSlot` BETWEEN ? AND ?"
 	err := this.myDB.QueryScan(query, id, fromSlot, toSlot, func(rows *sql.Rows) error {
 		var err error
 		var slot, usersIn int
@@ -1057,10 +1054,10 @@ func (this *DataSources) Stats(id int) (*DataSourcesStats, error) {
 }
 
 // newFirehose returns a new Firehose used to call a connection method.
-func (this *DataSources) newFirehose(ctx context.Context, source, connector, resource int, connectorType string, direction _connector.Direction, webhooksPer string) *firehose {
+func (this *Connections) newFirehose(ctx context.Context, connection, connector, resource int, connectorType string, direction _connector.Direction, webhooksPer string) *firehose {
 	fh := &firehose{
-		sources:       this,
-		source:        source,
+		connections:   this,
+		connection:    connection,
 		resource:      resource,
 		connector:     connector,
 		connectorType: connectorType,
@@ -1073,23 +1070,22 @@ func (this *DataSources) newFirehose(ctx context.Context, source, connector, res
 
 var errRecordStop = errors.New("stop record")
 
-// reloadProperties reloads the properties of the data source with identifier
-// id. The data source cannot be a storage.
+// reloadProperties reloads the properties of the connection with identifier id.
+// The connection cannot be a storage.
 //
-// If the data source does not exist it returns the ErrDataSourceNotFound
-// error.
-func (this *DataSources) reloadProperties(id int) error {
+// If the connection does not exist it returns the ErrConnectionNotFound error.
+func (this *Connections) reloadProperties(id int) error {
 
 	if id <= 0 {
-		return errors.New("invalid data source identifier")
+		return errors.New("invalid connection identifier")
 	}
 
 	var typ, dir string
-	err := this.myDB.QueryRow("SELECT `type`, `direction` FROM `data_sources` WHERE `id` = ? AND `workspace` = ?",
+	err := this.myDB.QueryRow("SELECT `type`, `direction` FROM `connections` WHERE `id` = ? AND `workspace` = ?",
 		id, this.workspace).Scan(&typ, &dir)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return ErrDataSourceNotFound
+			return ErrConnectionNotFound
 		}
 		return err
 	}
@@ -1113,7 +1109,7 @@ func (this *DataSources) reloadProperties(id int) error {
 			"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, IFNULL(`r`.`code`, ''), IFNULL(`r`.`accessToken`, ''),"+
 				" IFNULL(`r`.`refreshToken`, ''), `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
 				" `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
-				"FROM `data_sources` AS `s`\n"+
+				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"LEFT JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(
@@ -1121,7 +1117,7 @@ func (this *DataSources) reloadProperties(id int) error {
 			&connector, &resource, &cursor, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrDataSourceNotFound
+				return ErrConnectionNotFound
 			}
 			return err
 		}
@@ -1158,12 +1154,12 @@ func (this *DataSources) reloadProperties(id int) error {
 		var settings []byte
 		err = this.myDB.QueryRow(
 			"SELECT `c`.`name`, `s`.`connector`, `s`.`settings`, `s`.`usersQuery`\n"+
-				"FROM `data_sources` AS `s`\n"+
+				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &settings, &usersQuery)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrDataSourceNotFound
+				return ErrConnectionNotFound
 			}
 			return err
 		}
@@ -1202,12 +1198,12 @@ func (this *DataSources) reloadProperties(id int) error {
 		var settings []byte
 		err = this.myDB.QueryRow(
 			"SELECT `c`.`name`, `s`.`connector`, `s`.`storage`, `s`.`identityColumn`, `s`.`timestampColumn`, `s`.`settings`\n"+
-				"FROM `data_sources` AS `s`\n"+
+				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &storage, &identityColumn, &timestampColumn, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrDataSourceNotFound
+				return ErrConnectionNotFound
 			}
 			return err
 		}
@@ -1225,7 +1221,7 @@ func (this *DataSources) reloadProperties(id int) error {
 			var settings []byte
 			err = this.myDB.QueryRow(
 				"SELECT `c`.`name`, `s`.`connector`, `s`.`settings`\n"+
-					"FROM `data_sources` AS `s`\n"+
+					"FROM `connections` AS `s`\n"+
 					"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 					"WHERE `s`.`id` = ?", storage).Scan(&connectorName, &connector, &settings)
 			if err != nil {
@@ -1274,26 +1270,26 @@ func (this *DataSources) reloadProperties(id int) error {
 
 	rawProperties, err := json.Marshal(properties)
 	if err != nil {
-		return fmt.Errorf("cannot marshal the properties of the data source %d : %s", id, err)
+		return fmt.Errorf("cannot marshal the properties of the connection %d : %s", id, err)
 	}
 	if utf8.RuneCount(rawProperties) > rawPropertiesMaxSize {
-		return fmt.Errorf("cannot marshal the properties of the data source %d: data is too large", id)
+		return fmt.Errorf("cannot marshal the properties of the connection %d: data is too large", id)
 	}
 
-	_, err = this.myDB.Exec("UPDATE `data_sources` SET `properties` = ? WHERE `id` = ?", rawProperties, id)
+	_, err = this.myDB.Exec("UPDATE `connections` SET `properties` = ? WHERE `id` = ?", rawProperties, id)
 
 	return err
 }
 
 // compileQueryWithLimit compiles the given query, replacing the ':limit'
 // placeholder with limit, and returns it.
-func (this *DataSources) compileQueryWithLimit(query string, limit int) (string, error) {
+func (this *Connections) compileQueryWithLimit(query string, limit int) (string, error) {
 	return strings.ReplaceAll(query, ":limit", strconv.Itoa(limit)), nil
 }
 
 // compileQueryWithoutLimit compiles the given query, removing the ':limit'
 // placeholder, and returns it.
-func (this *DataSources) compileQueryWithoutLimit(query string) (string, error) {
+func (this *Connections) compileQueryWithoutLimit(query string) (string, error) {
 	p := strings.Index(query, ":limit")
 	if p == -1 {
 		return "", errors.New("missing ':limit' placeholder in query")

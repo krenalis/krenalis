@@ -1,12 +1,12 @@
 import React from 'react';
-import './ConnectorsSourceAdded.css';
+import './ConnectorsConnectionAdded.css';
 import Toast from '../../../components/Toast/Toast';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import call from '../../../utils/call';
 import { NavLink } from 'react-router-dom';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react';
 
-export default class ConnectorsSourceAdded extends React.Component {
+export default class ConnectorsConnectionAdded extends React.Component {
 
 	constructor(props) {
 		super(props);
@@ -30,11 +30,11 @@ export default class ConnectorsSourceAdded extends React.Component {
   
   	render() {
 		return (
-			<div className='ConnectorsSourceAdded'>
-				<Breadcrumbs breadcrumbs={[{ Name: 'Add a data source', Link: '/admin/connectors' }, { Name: `${this.state.connector.Name}'s data source added` }]} />
+			<div className='ConnectorsConnectionAdded'>
+				<Breadcrumbs breadcrumbs={[{ Name: 'Add a connection', Link: '/admin/connectors' }, { Name: `${this.state.connector.Name}'s connection added` }]} />
 				<div className='content'>
 					<Toast reactRef={this.toast} status={this.state.status} />
-					<div className='addedSource'>
+					<div className='addedConnection'>
 						<div className='logo'>
 							{
 								this.state.connector.LogoURL === '' ?
@@ -43,12 +43,12 @@ export default class ConnectorsSourceAdded extends React.Component {
 							}
 						</div>
 						<div className='title'>{this.state.connector.Name} has been added</div>
-						<div className='description'>You have successfully added a new data source from {this.state.connector.Name}'s connector</div>
+						<div className='description'>You have successfully added a new connection from {this.state.connector.Name}'s connector</div>
 					</div>
 					<SlButton className='link' variant='text' size='medium'>
 						<SlIcon slot='suffix' name='arrow-right-circle' />
-						See all your data sources
-						<NavLink to='/admin/account/sources'></NavLink>
+						See all your connections
+						<NavLink to='/admin/account/connections'></NavLink>
 					</SlButton>
 				</div>
 			</div>

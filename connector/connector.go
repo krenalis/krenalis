@@ -38,7 +38,7 @@ type Connector struct {
 	Type        Type        // type
 	Icon        []byte      // icon in SVG format
 	OAuth       OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
-	WebhooksPer WebhooksPer // indicates if webhooks are per connector, resource or data source
+	WebhooksPer WebhooksPer // indicates if webhooks are per connector, resource or connection
 }
 
 // Type represents a connector type.
@@ -60,15 +60,15 @@ type OAuth struct {
 	ForcedExpiresIn  string
 }
 
-// WebhooksPer values indicates if webhooks are per connector, resource or data
-// source.
+// WebhooksPer values indicates if webhooks are per connector, resource or
+// connection.
 type WebhooksPer int
 
 const (
 	WebhooksPerNone WebhooksPer = iota
 	WebhooksPerConnector
 	WebhooksPerResource
-	WebhooksPerDataSource
+	WebhooksPerConnection
 )
 
 // Direction represents the direction of a connection.
@@ -104,11 +104,11 @@ type Connection interface {
 // Firehose is the interface implemented by a Firehose.
 type Firehose interface {
 
-	// ReceiveEvent receives the given event for the data source.
+	// ReceiveEvent receives the given event for the connection.
 	// The event.Resource field must be empty.
 	ReceiveEvent(event Event)
 
-	// SetCursor sets the given cursor for the data source.
+	// SetCursor sets the given cursor for the connection.
 	SetCursor(cursor string)
 
 	// SetGroup sets the properties of the given group. timestamp is the last
@@ -120,7 +120,7 @@ type Firehose interface {
 	// SetGroupUsers sets the users of a group.
 	SetGroupUsers(group string, users []string)
 
-	// SetSettings sets the given settings of the data source.
+	// SetSettings sets the given settings of the connection.
 	SetSettings(settings []byte) error
 
 	// SetUser sets the properties of the given user. timestamp is the last

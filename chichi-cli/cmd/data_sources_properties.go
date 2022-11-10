@@ -17,18 +17,18 @@ import (
 )
 
 var propertiesCmd = &cobra.Command{
-	Use:   "properties connector_id",
-	Short: "List data source properties",
+	Use:   "properties connection_id",
+	Short: "List connection properties",
 	Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
-		connector, _ := strconv.Atoi(args[0])
-		if connector <= 0 {
-			log.Fatalf("invalid connector ID %q", args[0])
+		connection, _ := strconv.Atoi(args[0])
+		if connection <= 0 {
+			log.Fatalf("invalid connection ID %q", args[0])
 		}
-		chichiapis.ListDataSourcesProperties(connector)
+		chichiapis.ListConnectionsProperties(connection)
 	},
 }
 
 func init() {
-	dataSourcesCmd.AddCommand(propertiesCmd)
+	connectionsCmd.AddCommand(propertiesCmd)
 }

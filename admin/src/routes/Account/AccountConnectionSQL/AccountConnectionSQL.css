@@ -1,14 +1,14 @@
-.AccountSourceSQL {
+.AccountConnectionSQL {
     min-height: 100vh;
 }
 
-.AccountSourceSQL .content {
+.AccountConnectionSQL .content {
     max-width: 1000px;
     margin: auto;
     margin-top: -200px;
 }
 
-.AccountSourceSQL .content > .title {
+.AccountConnectionSQL .content > .title {
     font-size: 23px;
     font-weight: 600;
     text-align: center;
@@ -20,12 +20,12 @@
     margin-bottom: 20px;
 }
 
-.AccountSourceSQL .content .title .littleLogo {
+.AccountConnectionSQL .content .title .littleLogo {
     max-width: 35px;
     margin-left: -35px;
 }
 
-.AccountSourceSQL .content .editorWrapper {
+.AccountConnectionSQL .content .editorWrapper {
     grid-area: editor;
     width: 100%;
     height: 600px;
@@ -34,24 +34,24 @@
     background-color: var(--bg-editor);
 }
 
-.AccountSourceSQL .content .editorWrapper *  {
+.AccountConnectionSQL .content .editorWrapper *  {
     font-family: monospace!important;
 }
 
-.AccountSourceSQL .content .buttons {
+.AccountConnectionSQL .content .buttons {
     display: flex;
     justify-content: space-around;
     margin: 50px 0;
 }
 
-.AccountSourceSQL .content .buttons .previewButton {
+.AccountConnectionSQL .content .buttons .previewButton {
     min-width: 200px;
 }
 
-.AccountSourceSQL .content .buttons .saveButton { 
+.AccountConnectionSQL .content .buttons .saveButton {
     min-width: 200px;
 }
 
-.AccountSourceSQL sl-dialog .Grid {
+.AccountConnectionSQL sl-dialog .Grid {
     padding: 0 30px 30px 30px;
 }

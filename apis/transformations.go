@@ -24,9 +24,9 @@ type Transformations struct {
 type Transformation struct {
 	ID         int
 	SourceCode string
-	// DataSource is the data source for this transformation; it matches the
-	// data source of every input property.
-	DataSource      int
+	// Connection is the connection for this transformation; it matches the
+	// connection of every input property.
+	Connection      int
 	InputProperties []InputProperty
 	// GRProperty is the Golden Record property.
 	GRProperty string
@@ -41,7 +41,7 @@ type TransformationToCreate struct {
 type TransformationToUpdate = TransformationToCreate
 
 type InputProperty struct {
-	DataSource int
+	Connection int
 	Name       string
 }
 
@@ -62,7 +62,7 @@ func (this *Transformations) Create(t TransformationToCreate) (int, error) {
 		}
 		for _, prop := range t.InputProperties {
 			_, err := tx.Table("TransformationsConnections").Add(map[string]any{
-				"dataSource":     prop.DataSource,
+				"connection":     prop.Connection,
 				"property":       prop.Name,
 				"transformation": id,
 			}, nil)
@@ -98,7 +98,7 @@ func (this *Transformations) Update(id int, t TransformationToUpdate) error {
 		}
 		for _, prop := range t.InputProperties {
 			_, err := tx.Table("TransformationsConnections").Add(map[string]any{
-				"dataSource":     prop.DataSource,
+				"connection":     prop.Connection,
 				"property":       prop.Name,
 				"transformation": id,
 			}, nil)
@@ -114,16 +114,16 @@ func (this *Transformations) Update(id int, t TransformationToUpdate) error {
 	return nil
 }
 
-// List lists the transformations for the given data source.
-func (this *Transformations) List(dataSource int) ([]Transformation, error) {
+// List lists the transformations for the given connection.
+func (this *Transformations) List(connection int) ([]Transformation, error) {
 	var transformations []Transformation
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		var transfIDs []int
 		transfProps := map[int][]InputProperty{}
 		rows, err := tx.Table("TransformationsConnections").Select(
 			[]any{"property", "transformation"},
-			sql.Where{"dataSource": dataSource},
-			[]any{"dataSource", "property"},
+			sql.Where{"connection": connection},
+			[]any{"connection", "property"},
 			0, 0,
 		).Rows()
 		if err != nil {
@@ -133,7 +133,7 @@ func (this *Transformations) List(dataSource int) ([]Transformation, error) {
 			tID := row["transformation"].(int)
 			transfIDs = append(transfIDs, tID)
 			transfProps[tID] = append(transfProps[tID], InputProperty{
-				DataSource: dataSource,
+				Connection: connection,
 				Name:       row["property"].(string),
 			})
 		}
@@ -154,7 +154,7 @@ func (this *Transformations) List(dataSource int) ([]Transformation, error) {
 			transformations = append(transformations, Transformation{
 				ID:              id,
 				SourceCode:      row["sourceCode"].(string),
-				DataSource:      dataSource,
+				Connection:      connection,
 				InputProperties: transfProps[id],
 				GRProperty:      row["goldenRecordName"].(string),
 			})
@@ -175,10 +175,10 @@ func (this *Transformations) validate(t TransformationToCreate) error {
 	if len(t.InputProperties) == 0 {
 		return errors.New("should have at least one input property")
 	}
-	ds := t.InputProperties[0].DataSource
+	c := t.InputProperties[0].Connection
 	for _, p := range t.InputProperties[1:] {
-		if p.DataSource != ds {
-			return errors.New("every input property should refer to the same data source")
+		if p.Connection != c {
+			return errors.New("every input property should refer to the same connection")
 		}
 	}
 	if t.GRProperty == "" {

@@ -1,5 +1,5 @@
 import React from 'react';
-import './AccountSourceProperties.css';
+import './AccountConnectionProperties.css';
 import NotFound from '../../NotFound/NotFound';
 import Toast from '../../../components/Toast/Toast';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
@@ -8,15 +8,15 @@ import { transformationFuncExample } from '../../../utils/docs/transformationFun
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react';
 import Editor from '@monaco-editor/react';
 
-export default class AccountSource extends React.Component {
+export default class AccountConnection extends React.Component {
 
     constructor(props) {
         super(props);
         this.toast = React.createRef();
-        this.sourceID = Number(String(window.location).split('/').at(-2));
+        this.connectionID = Number(String(window.location).split('/').at(-2));
         this.state = {
-            'source': {},
-            'sourceProperties': [],
+            'connection': {},
+            'connectionProperties': [],
             'schemaProperties': [],
             'status': null,
             'transformationFunc': '',
@@ -27,31 +27,31 @@ export default class AccountSource extends React.Component {
     async componentDidMount() {
         let err;
 
-        // get the source.
-        let source;
-        [source, err] = await call('/admin/data-sources/get', this.sourceID);
+        // get the connection.
+        let connection;
+        [connection, err] = await call('/admin/connections/get', this.connectionID);
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();
             return;
         }
-        if (source == null) {
+        if (connection == null) {
             this.setState({notFound: true});
             return;
         }
-        this.setState({ source: source, transformationFunc: source.TransformationFunc });
+        this.setState({ connection: connection, transformationFunc: connection.TransformationFunc });
 
-        // get the source properties.
-        let sp;
-        [sp, err] = await call('/admin/connectors-properties', { Connector: this.sourceID });
+        // get the connection properties.
+        let c;
+        [c, err] = await call('/admin/connectors-properties', { Connector: this.connectionID });
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();
             return;
         }
-        let sourceProperties = [];
-        for (let p of sp.Properties) sourceProperties.push(p.Name);
-        this.setState({ sourceProperties: sourceProperties });
+        let connectionProperties = [];
+        for (let p of c.Properties) connectionProperties.push(p.Name);
+        this.setState({ connectionProperties: connectionProperties });
 
         // get the user schema properties.
         let schemaProperties;
@@ -65,7 +65,7 @@ export default class AccountSource extends React.Component {
     }
 
     handleSaving = async (e) => {
-        let [, err] = await call('/admin/transformations/update', { Connector: this.sourceID, Transformation: this.state.transformationFunc });
+        let [, err] = await call('/admin/transformations/update', { Connector: this.connectionID, Transformation: this.state.transformationFunc });
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();
@@ -80,17 +80,17 @@ export default class AccountSource extends React.Component {
             return <NotFound />
         } else {
             return (
-                <div className='AccountSourceProperties'>
-                    <Breadcrumbs breadcrumbs={[{ Name: 'Your data sources', Link: '/admin/account/sources' }, { Name: `${this.state.source.Name}'s configuration` }]} />
+                <div className='AccountConnectionProperties'>
+                    <Breadcrumbs breadcrumbs={[{ Name: 'Your connections', Link: '/admin/account/connections' }, { Name: `${this.state.connection.Name}'s configuration` }]} />
                     <div className='content'>
                         <Toast reactRef={this.toast} status={this.state.status} />
                         <div className='title'>
-                            {this.state.source.LogoURL !== '' && <img className='littleLogo' src={this.state.source.LogoURL} alt={`${this.state.source.Name}'s logo`} />}
-                            <div className='text'>(obsolete page) Map {this.state.source.Name}'s properties to your golden record</div>
+                            {this.state.connection.LogoURL !== '' && <img className='littleLogo' src={this.state.connection.LogoURL} alt={`${this.state.connection.Name}'s logo`} />}
+                            <div className='text'>(obsolete page) Map {this.state.connection.Name}'s properties to your golden record</div>
                         </div>
-                        <div className='properties sourceProperties'>
-                            <div className='title'>Source properties</div>
-                            {this.state.sourceProperties.map((p, index) => {
+                        <div className='properties connectionProperties'>
+                            <div className='title'>Connection properties</div>
+                            {this.state.connectionProperties.map((p, index) => {
                                 return <div key={index} className='property'>{p}</div>
                             })}
                         </div>

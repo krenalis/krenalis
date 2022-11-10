@@ -1,5 +1,5 @@
 import React from 'react';
-import './AccountSources.css';
+import './AccountConnections.css';
 import Toast from '../../../components/Toast/Toast';
 import Navigation from '../../../components/Navigation/Navigation';
 import Card from '../../../components/Card/Card';
@@ -7,7 +7,7 @@ import call from '../../../utils/call';
 import { NavLink } from 'react-router-dom';
 import { SlButton, SlIcon, SlDialog, SlSelect, SlMenuItem } from '@shoelace-style/shoelace/dist/react';
 
-export default class AccountSources extends React.Component {
+export default class AccountConnections extends React.Component {
 
 	constructor(props) {
 		super(props);
@@ -15,19 +15,19 @@ export default class AccountSources extends React.Component {
 		this.state = {
 			'askImportConfirmation': 0,
 			'resetCursor': false,
-			'sources': [],
+			'connections': [],
 			'status': null,
 		};
 	}
 
 	componentDidMount = async () => {
-		let [sources, err] = await call('/admin/data-sources/find');
+		let [connections, err] = await call('/admin/connections/find');
 		if (err !== null) {
 			this.setState({status: {variant:'danger', icon:'exclamation-octagon', text:err}});
 			this.toast.current.toast();
 			return;
 		}
-		this.setState({sources: sources});
+		this.setState({connections: connections});
 	}
 
 	handleResetCursorChange = (e) => {
@@ -53,17 +53,17 @@ export default class AccountSources extends React.Component {
 	}
 
 	handleDelete = async (id) => {
-		let [, err] = await call('/admin/data-sources/delete', [id]);
+		let [, err] = await call('/admin/connections/delete', [id]);
 		if (err !== null) {
 			this.setState({status: {variant:'danger', icon:'exclamation-octagon', text:err}});
 			this.toast.current.toast();
 			return;
 		}
-		let clone = this.state.sources.slice();
-		let sources = clone.filter((d) => {
+		let clone = this.state.connections.slice();
+		let connections = clone.filter((d) => {
 			return d.ID !== id;
 		});
-		this.setState({sources: sources});
+		this.setState({connections: connections});
 	}
 
 	handleSettings = async (id) => {
@@ -78,24 +78,24 @@ export default class AccountSources extends React.Component {
 
 	render() {
 		return (
-			<div className='AccountSources'>
-				<Navigation navItems={[{name: 'Your data sources', link:'/admin/account/sources', selected: true}, {name: 'Your schemas', link:'/admin/account/schemas', selected: false}]}/>
+			<div className='AccountConnections'>
+				<Navigation navItems={[{name: 'Your connections', link:'/admin/account/connections', selected: true}, {name: 'Your schemas', link:'/admin/account/schemas', selected: false}]}/>
 				<div class='content'>
 					<Toast reactRef={this.toast} status={this.state.status} />
-					{this.state.sources.length === 0 ?
-						<div className='noSource'>
+					{this.state.connections.length === 0 ?
+						<div className='noConnection'>
 							<sl-icon name='plugin'></sl-icon>
-							<div className='title'>No data source</div>
-							<div className='description'>Get started by installing a new data source</div>
+							<div className='title'>No connection</div>
+							<div className='description'>Get started by installing a new connection</div>
 							<SlButton className='installButton' variant='primary'>
 								<SlIcon slot='suffix' name='plus-circle-dotted' />
-								Add a new data source
+								Add a new connection
 								<NavLink to='/admin/connectors'></NavLink>
 							</SlButton>
 						</div>
 					:							
-					<div className='sources'>
-						{this.state.sources.map((s) => {
+					<div className='connections'>
+						{this.state.connections.map((s) => {
 							return(
 								<Card key={s.ID} name={s.Name} logoURL={s.LogoURL} type={s.Type}>
 									<div className='buttons'>
@@ -137,9 +137,9 @@ export default class AccountSources extends React.Component {
 								</Card>
 							) 
 						})}
-						<div className='addSourceBox'>
+						<div className='addConnectionBox'>
 							<sl-icon name='plugin'></sl-icon>
-							<div className='text'>Add a new data source</div>
+							<div className='text'>Add a new connection</div>
 							<NavLink to='/admin/connectors'></NavLink>
 						</div>
 					</div>

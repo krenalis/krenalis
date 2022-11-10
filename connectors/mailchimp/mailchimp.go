@@ -109,7 +109,7 @@ func (c *connection) Connector() *connector.Connector {
 			URL:             "https://login.mailchimp.com/oauth2/authorize?response_type=code",
 			ForcedExpiresIn: "never",
 		},
-		WebhooksPer: connector.WebhooksPerDataSource,
+		WebhooksPer: connector.WebhooksPerConnection,
 	}
 }
 
@@ -484,7 +484,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 			return nil, err
 		}
 		for _, wh := range hooks {
-			// Check if the webhook has already been set up for the current data source.
+			// Check if the webhook has already been set up for the current connection.
 			if strings.HasPrefix(wh.URL, webhookBase) {
 				u, err := url.Parse(wh.URL)
 				if err != nil {

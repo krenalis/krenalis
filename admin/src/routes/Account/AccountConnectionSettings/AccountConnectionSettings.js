@@ -1,5 +1,5 @@
 import React from 'react';
-import './AccountSourceSettings.css';
+import './AccountConnectionSettings.css';
 import NotFound from '../../NotFound/NotFound';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Toast from '../../../components/Toast/Toast';
@@ -7,14 +7,14 @@ import call from '../../../utils/call';
 import { renderConnectorComponent } from '../../../components/ConnectorSettings/renderConnectorComponent';
 import { SlButton } from '@shoelace-style/shoelace/dist/react';
 
-export default class AccountSourceSettings extends React.Component {
+export default class AccountConnectionSettings extends React.Component {
     
     constructor(props) {
         super(props);
         this.toast = React.createRef();
-        this.sourceID = Number(String(window.location).split('/').at(-2));
+        this.connectionID = Number(String(window.location).split('/').at(-2));
         this.state = {
-            source: {},
+            connection: {},
             settings: {Components:null, Actions:null},
             form:{},
             notFound: false,
@@ -22,21 +22,21 @@ export default class AccountSourceSettings extends React.Component {
     }
 
     componentDidMount = async () => {
-        let err, source, settings;
+        let err, connection, settings;
 
-        [source, err] = await call('/admin/data-sources/get', this.sourceID);
+        [connection, err] = await call('/admin/connections/get', this.connectionID);
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();
             return;
         }
-        if (source == null) {
+        if (connection == null) {
             this.setState({notFound: true});
             return;
         }
-        this.setState({ source: source});
+        this.setState({ connection: connection});
 
-        [settings, err] = await call('/admin/connectors/ui', this.sourceID);
+        [settings, err] = await call('/admin/connectors/ui', this.connectionID);
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();
@@ -56,7 +56,7 @@ export default class AccountSourceSettings extends React.Component {
     }
 
     onActionClick = async (event) => {
-        let [settings, err] = await call('/admin/connectors/ui-event', {datasource: this.sourceID, event: event, form: this.state.form});
+        let [settings, err] = await call('/admin/connectors/ui-event', {connection: this.connectionID, event: event, form: this.state.form});
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();
@@ -79,13 +79,13 @@ export default class AccountSourceSettings extends React.Component {
             return <NotFound />
         } else {
             return (
-                <div className="AccountSourceSettings">
-                    <Breadcrumbs breadcrumbs={[{ Name: 'Your data sources', Link: '/admin/account/sources' }, { Name: `${this.state.source.Name}'s settings` }]} />
+                <div className="AccountConnectionSettings">
+                    <Breadcrumbs breadcrumbs={[{ Name: 'Your connections', Link: '/admin/account/connections' }, { Name: `${this.state.connection.Name}'s settings` }]} />
                     <div className="content">
                         <Toast reactRef={this.toast} status={this.state.status} />
                         <div className='title'>
-                            {this.state.source.LogoURL !== '' && <img className='littleLogo' src={this.state.source.LogoURL} alt={`${this.state.source.Name}'s logo`} />}
-                            <div className='text'>Configure {this.state.source.Name}</div>
+                            {this.state.connection.LogoURL !== '' && <img className='littleLogo' src={this.state.connection.LogoURL} alt={`${this.state.connection.Name}'s logo`} />}
+                            <div className='text'>Configure {this.state.connection.Name}</div>
                         </div>
                         <div className="settings">
                             <div className="components">

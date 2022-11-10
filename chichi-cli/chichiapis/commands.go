@@ -17,33 +17,33 @@ import (
 	"chichi/apis"
 )
 
-// DataSource represents a data source.
-type DataSource struct {
+// Connection represents a connection.
+type Connection struct {
 	ID   int
 	Name string
 }
 
-func ListDataSources() {
-	var sources []*DataSource
-	err := callAPI("GET", "apis/data-sources/", nil, &sources)
+func ListConnections() {
+	var connections []*Connection
+	err := callAPI("GET", "apis/connections/", nil, &connections)
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, source := range sources {
-		fmt.Printf("%-10v %s\n", source.ID, source.Name)
+	for _, connection := range connections {
+		fmt.Printf("%-10v %s\n", connection.ID, connection.Name)
 	}
 }
 
-// Property represents a data source property.
+// Property represents a connection property.
 type Property struct {
 	Name  string
 	Type  string
 	Label string
 }
 
-func ListDataSourcesProperties(connector int) {
+func ListConnectionsProperties(connection int) {
 	var properties []*Property
-	err := callAPI("GET", "apis/data-sources/"+strconv.Itoa(connector)+"/properties", nil, &properties)
+	err := callAPI("GET", "apis/connections/"+strconv.Itoa(connection)+"/properties", nil, &properties)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,8 +52,8 @@ func ListDataSourcesProperties(connector int) {
 	}
 }
 
-func ImportUsersFromDataSource(connector int, reimport bool) {
-	path := "apis/data-sources/" + strconv.Itoa(connector)
+func ImportUsersFromConnection(connection int, reimport bool) {
+	path := "apis/connections/" + strconv.Itoa(connection)
 	if reimport {
 		path += "/reimport"
 	} else {
@@ -66,9 +66,9 @@ func ImportUsersFromDataSource(connector int, reimport bool) {
 	return
 }
 
-func GetTransformations(data_source int) {
+func GetTransformations(connection int) {
 	var transformations []apis.Transformation
-	err := callAPI("GET", "apis/data-sources/"+strconv.Itoa(data_source)+"/transformations", nil, &transformations)
+	err := callAPI("GET", "apis/connections/"+strconv.Itoa(connection)+"/transformations", nil, &transformations)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,9 +78,9 @@ func GetTransformations(data_source int) {
 	}
 }
 
-func UpdateTransformation(connector int, transformation []byte) {
+func UpdateTransformation(connection int, transformation []byte) {
 	body := bytes.NewReader(transformation)
-	err := callAPI("POST", "apis/data-sources/"+strconv.Itoa(connector)+"/transformation", body, nil)
+	err := callAPI("POST", "apis/connections/"+strconv.Itoa(connection)+"/transformation", body, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

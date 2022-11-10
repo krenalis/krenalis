@@ -88,8 +88,8 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/admin/", http.StatusTemporaryRedirect)
 	}
 
-	if strings.HasPrefix(rpath, "/add-data-source") {
-		err = admin.serveAddDataSource(w, r, accountID)
+	if strings.HasPrefix(rpath, "/add-connection") {
+		err = admin.serveAddConnection(w, r, accountID)
 		if err != nil {
 			log.Printf("[error] %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -97,7 +97,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasPrefix(rpath, "/oauth/authorize") {
-		err = admin.serveAddOAuthDataSource(w, r, accountID)
+		err = admin.serveAddOAuthConnection(w, r, accountID)
 		if err != nil {
 			log.Printf("[error] %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -158,7 +158,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		properties, usedProperties, err := ws.DataSources.Properties(req.Connector)
+		properties, usedProperties, err := ws.Connections.Properties(req.Connector)
 		if err != nil {
 			log.Printf("[error] cannot retrieve properties: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -182,7 +182,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		err = ws.DataSources.Import(req.Connector, req.ResetCursor)
+		err = ws.Connections.Import(req.Connector, req.ResetCursor)
 		if err != nil {
 			log.Printf("[error] %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -235,11 +235,11 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.HasPrefix(rpath, "/data-sources/") {
-		rpath := rpath[len("/data-sources"):]
+	if strings.HasPrefix(rpath, "/connections/") {
+		rpath := rpath[len("/connections"):]
 		switch rpath {
 		case "/find":
-			cns, err := ws.DataSources.List()
+			cns, err := ws.Connections.List()
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -255,7 +255,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			ds, err := ws.DataSources.Get(id)
+			ds, err := ws.Connections.Get(id)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -272,7 +272,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			err = ws.DataSources.Delete(ids[0])
+			err = ws.Connections.Delete(ids[0])
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -283,7 +283,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "/preview-query":
 			defer r.Body.Close()
 			var req struct {
-				DataSource int
+				Connection int
 				Query      string
 				Limit      int
 			}
@@ -293,7 +293,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			columns, rows, err := ws.DataSources.Query(req.DataSource, req.Query, req.Limit)
+			columns, rows, err := ws.Connections.Query(req.Connection, req.Query, req.Limit)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -304,7 +304,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "/set-users-query":
 			defer r.Body.Close()
 			var req struct {
-				DataSource int
+				Connection int
 				Query      string
 			}
 			err := json.NewDecoder(r.Body).Decode(&req)
@@ -313,7 +313,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = ws.DataSources.SetUsersQuery(req.DataSource, req.Query)
+			err = ws.Connections.SetUsersQuery(req.Connection, req.Query)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -353,14 +353,14 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(map[string]any{"ID": cn.ID, "Name": cn.Name, "LogoURL": cn.LogoURL, "OauthUrl": cn.OauthURL})
 			return
 		case "/ui":
-			var datasource int
-			err := json.NewDecoder(r.Body).Decode(&datasource)
+			var connection int
+			err := json.NewDecoder(r.Body).Decode(&connection)
 			if err != nil {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
 			defer r.Body.Close()
-			form, err := ws.DataSources.ServeUI(datasource, "load", nil)
+			form, err := ws.Connections.ServeUI(connection, "load", nil)
 			if err != nil {
 				if err == apis.ErrUIEventNotExist {
 					http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -380,7 +380,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		case "/ui-event":
 			var req struct {
-				Datasource int
+				Connection int
 				Event      string
 				Form       json.RawMessage
 			}
@@ -390,7 +390,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			form, err := ws.DataSources.ServeUI(req.Datasource, req.Event, req.Form)
+			form, err := ws.Connections.ServeUI(req.Connection, req.Event, req.Form)
 			if err != nil {
 				if err == apis.ErrUIEventNotExist {
 					http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -654,9 +654,9 @@ func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
 	enc.Encode([]any{accountID, nil})
 }
 
-// serveAddDataSource serves a request to add a data source and responds with
-// the data source identifier.
-func (admin *admin) serveAddDataSource(w http.ResponseWriter, r *http.Request, accountID int) error {
+// serveAddConnection serves a request to add a connection and responds with
+// the connection identifier.
+func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, accountID int) error {
 
 	defer func() {
 		_, _ = io.Copy(io.Discard, r.Body)
@@ -666,27 +666,27 @@ func (admin *admin) serveAddDataSource(w http.ResponseWriter, r *http.Request, a
 	api := admin.apis.AsAccount(accountID)
 	ws := api.AsWorkspace(1) // TODO(marco): what is the workspace?
 
-	source := struct {
+	connection := struct {
 		Type      string
 		Connector int
 		Storage   int
 	}{}
-	err := json.NewDecoder(r.Body).Decode(&source)
+	err := json.NewDecoder(r.Body).Decode(&connection)
 	if err != nil {
 		return err
 	}
 
 	var id int
 
-	switch source.Type {
+	switch connection.Type {
 	case "App":
-		id, err = ws.DataSources.AddApp(apis.SourceDir, source.Connector, "", "", "")
+		id, err = ws.Connections.AddApp(apis.SourceDir, connection.Connector, "", "", "")
 	case "Database":
-		id, err = ws.DataSources.AddDatabase(apis.SourceDir, source.Connector)
+		id, err = ws.Connections.AddDatabase(apis.SourceDir, connection.Connector)
 	case "File":
-		id, err = ws.DataSources.AddFile(apis.SourceDir, source.Connector, source.Storage)
+		id, err = ws.Connections.AddFile(apis.SourceDir, connection.Connector, connection.Storage)
 	case "Storage":
-		id, err = ws.DataSources.AddStorage(apis.SourceDir, source.Connector)
+		id, err = ws.Connections.AddStorage(apis.SourceDir, connection.Connector)
 	}
 	if err != nil {
 		return err
@@ -697,22 +697,22 @@ func (admin *admin) serveAddDataSource(w http.ResponseWriter, r *http.Request, a
 	return nil
 }
 
-// serveAddOAuthDataSource serves a request to add a data source authorized
-// with OAuth and redirect to the confirmation page.
-func (admin *admin) serveAddOAuthDataSource(w http.ResponseWriter, r *http.Request, accountID int) error {
+// serveAddOAuthConnection serves a request to add a connection authorized with
+// OAuth and redirect to the confirmation page.
+func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Request, accountID int) error {
 
 	api := admin.apis.AsAccount(accountID)
 	ws := api.AsWorkspace(1) // TODO(marco): what is the workspace?
 
 	// Get the connector's identifier.
-	cookie, err := r.Cookie("add-source")
+	cookie, err := r.Cookie("add-connection")
 	if err != nil {
 		return errors.New("missing connector cookie")
 	}
 	defer func() {
-		// Remove the "add-source" cookie.
+		// Remove the "add-connection" cookie.
 		c := &http.Cookie{
-			Name:     "add-source",
+			Name:     "add-connection",
 			Value:    "",
 			Path:     "/",
 			MaxAge:   -1,
@@ -795,7 +795,7 @@ func (admin *admin) serveAddOAuthDataSource(w http.ResponseWriter, r *http.Reque
 		expireDate = expireDate.Add(time.Duration(connector.DefaultExpiresIn) * time.Second)
 	}
 
-	_, err = ws.DataSources.AddApp(apis.SourceDir, connectorID, tokens.RefreshToken, tokens.AccessToken,
+	_, err = ws.Connections.AddApp(apis.SourceDir, connectorID, tokens.RefreshToken, tokens.AccessToken,
 		expireDate.Format("2006-01-02 15:04:05"))
 
 	if err != nil {

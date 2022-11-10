@@ -42,12 +42,12 @@ To do so:
 the section below.
 
 ```
-chichi-cli data-sources
-chichi-cli data-sources import <data source ID>
-chichi-cli data-sources reimport <data source ID>
-chichi-cli data-sources properties <data source ID>
+chichi-cli connections
+chichi-cli connections import <connection ID>
+chichi-cli connections reimport <connection ID>
+chichi-cli connections properties <connection ID>
 
-chichi-cli transformations list <data source ID>
+chichi-cli transformations list <connection ID>
 chichi-cli transformations get-source <transformation ID>
 chichi-cli transformations update-source <transformation ID> { <filename> | - }
 chichi-cli transformations get-connections <transformation ID>

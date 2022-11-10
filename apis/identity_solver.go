@@ -17,10 +17,10 @@ type identitySolver struct {
 	*firehose
 }
 
-// ResolveEntity resolves the user entity, from the given source, matching on
-// their email.
-func (ids *identitySolver) ResolveEntity(source int, user string, email string) (int, error) {
-	goldenRecordID, ok, err := ids.entityToIdentity(source, user)
+// ResolveEntity resolves the user entity, from the given connection, matching
+// on their email.
+func (ids *identitySolver) ResolveEntity(connection int, user string, email string) (int, error) {
+	goldenRecordID, ok, err := ids.entityToIdentity(connection, user)
 	if err != nil {
 		return 0, fmt.Errorf("cannot determine identity from entity: %s", err)
 	}
@@ -28,7 +28,7 @@ func (ids *identitySolver) ResolveEntity(source int, user string, email string) 
 		return goldenRecordID, nil // already resolved.
 	}
 	// Lookup a Golden Record with this email.
-	row := ids.sources.myDB.QueryRow("SELECT `id` from `warehouse_users` where `Email` = ?", email)
+	row := ids.connections.myDB.QueryRow("SELECT `id` from `warehouse_users` where `Email` = ?", email)
 	err = row.Scan(&goldenRecordID)
 	if err != nil {
 		if err != sql.ErrNoRows {
@@ -40,15 +40,15 @@ func (ids *identitySolver) ResolveEntity(source int, user string, email string) 
 		}
 	}
 	// Update the relations.
-	_, err = ids.sources.myDB.Exec(
-		"UPDATE `data_sources_users` SET `goldenRecord` = ? WHERE `source` = ? AND `user` = ?",
-		goldenRecordID, source, user,
+	_, err = ids.connections.myDB.Exec(
+		"UPDATE `connections_users` SET `goldenRecord` = ? WHERE `connection` = ? AND `user` = ?",
+		goldenRecordID, connection, user,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("cannot update relation between entity and identity: %s", err)
 	}
 	// Clean orphan Golden Records.
-	_, err = ids.sources.myDB.Exec("DELETE FROM `warehouse_users` WHERE `id` NOT IN (SELECT `goldenRecord` FROM `data_sources_users`)")
+	_, err = ids.connections.myDB.Exec("DELETE FROM `warehouse_users` WHERE `id` NOT IN (SELECT `goldenRecord` FROM `connections_users`)")
 	if err != nil {
 		return 0, fmt.Errorf("cannot clean orphan Golden Records: %s", err)
 	}
@@ -58,7 +58,7 @@ func (ids *identitySolver) ResolveEntity(source int, user string, email string) 
 
 // createIdentity creates a new identity.
 func (ids *identitySolver) createIdentity() (int, error) {
-	result, err := ids.sources.myDB.Exec("INSERT INTO `warehouse_users` () VALUES()")
+	result, err := ids.connections.myDB.Exec("INSERT INTO `warehouse_users` () VALUES()")
 	if err != nil {
 		return 0, err
 	}
@@ -73,9 +73,9 @@ func (ids *identitySolver) createIdentity() (int, error) {
 
 // entityToIdentity maps an entity to the corresponding Golden Record identity,
 // if found, otherwise returns 0, false and nil.
-func (ids *identitySolver) entityToIdentity(source int, user string) (int, bool, error) {
-	query := "SELECT `goldenRecord` FROM `data_sources_users` WHERE `source` = ? AND `user` = ?"
-	row := ids.sources.myDB.QueryRow(query, source, user)
+func (ids *identitySolver) entityToIdentity(connection int, user string) (int, bool, error) {
+	query := "SELECT `goldenRecord` FROM `connections_users` WHERE `connection` = ? AND `user` = ?"
+	row := ids.connections.myDB.QueryRow(query, connection, user)
 	var goldenRecord int
 	err := row.Scan(&goldenRecord)
 	if err != nil {
@@ -88,26 +88,26 @@ func (ids *identitySolver) entityToIdentity(source int, user string) (int, bool,
 }
 
 // LookupSameEntities returns the entities which correspond to the Golden
-// Record's identity, in the form of a map from source to the list of users
-// associated to that source.
-func (ids *identitySolver) LookupSameEntities(source int, user string) (map[int][]string, error) {
-	query := "SELECT `source`, `user` FROM `data_sources_users`\n" +
-		"WHERE `source` <> ? AND `user` <> ? AND `goldenRecord` = \n" +
-		"(SELECT `goldenRecord` FROM `data_sources_users` WHERE `source` = ? AND `user` = ?)"
-	rows, err := ids.sources.myDB.Query(query, source, user, source, user)
+// Record's identity, in the form of a map from connection to the list of users
+// associated to that connection.
+func (ids *identitySolver) LookupSameEntities(connection int, user string) (map[int][]string, error) {
+	query := "SELECT `connection`, `user` FROM `connections_users`\n" +
+		"WHERE `connection` <> ? AND `user` <> ? AND `goldenRecord` = \n" +
+		"(SELECT `goldenRecord` FROM `connections_users` WHERE `connection` = ? AND `user` = ?)"
+	rows, err := ids.connections.myDB.Query(query, connection, user, connection, user)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	sameEntities := map[int][]string{}
 	for rows.Next() {
-		var source int
+		var connection int
 		var user string
-		err := rows.Scan(&source, &user)
+		err := rows.Scan(&connection, &user)
 		if err != nil {
 			return nil, err
 		}
-		sameEntities[source] = append(sameEntities[source], user)
+		sameEntities[connection] = append(sameEntities[connection], user)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

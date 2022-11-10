@@ -439,3 +439,32 @@ UPDATE `data_sources` SET `type` = 'File' WHERE `type` = 'FileStorage';
 
 ALTER TABLE `data_sources`
     CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'File', 'Storage') DEFAULT 'App';
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `webhooksPer` `webhooksPer` ENUM('None', 'Connector', 'Resource', 'DataSource', 'Connection') NOT NULL DEFAULT 'None';
+
+UPDATE `connectors` SET `webhooksPer` = 'Connection' WHERE `webhooksPer` = 'DataSource';
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `webhooksPer` `webhooksPer` ENUM('None', 'Connector', 'Resource', 'Connection') NOT NULL DEFAULT 'None';
+
+RENAME TABLE `data_sources` TO `connections`;
+
+ALTER TABLE `transformations_connections`
+    CHANGE COLUMN `dataSource` `connection` INT NOT NULL,
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (`connection`, `property`, `transformation`);
+
+RENAME TABLE `data_sources_stats` TO `connections_stats`;
+
+ALTER TABLE `connections_stats`
+    CHANGE COLUMN `source` `connection` INT NOT NULL,
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (`connection`, `timeSlot`);
+
+RENAME TABLE `data_sources_users` TO `connections_users`;
+
+ALTER TABLE `connections_users`
+    CHANGE COLUMN `source` `connection` int NOT NULL,
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (`connection`, `user`);

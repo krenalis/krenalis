@@ -38,7 +38,7 @@ export default class Login extends React.Component {
 
     render() {
         if (this.state.isLoggedIn) {
-            return <Navigate to='account/sources' />
+            return <Navigate to='account/connections' />
         } else {
             return (
                 <div className='Login'>

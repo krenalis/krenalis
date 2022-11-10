@@ -29,8 +29,8 @@ const maxSettingsLen = 10_000 // Maximum length of settings in runes.
 
 // firehose is the Firehose API used by the connectors.
 type firehose struct {
-	sources       *DataSources
-	source        int
+	connections   *Connections
+	connection    int
 	resource      int
 	connector     int
 	connectorType string
@@ -47,7 +47,7 @@ func (fh *firehose) ReceiveEvent(event connector.Event) {
 
 // SetCursor sets the user cursor.
 func (fh *firehose) SetCursor(cursor string) {
-	result, err := fh.sources.myDB.Exec("UPDATE `data_sources`\nSET `userCursor` = ?\nWHERE `id` = ?", cursor, fh.source)
+	result, err := fh.connections.myDB.Exec("UPDATE `connections`\nSET `userCursor` = ?\nWHERE `id` = ?", cursor, fh.connection)
 	if err != nil {
 		fh.setError(err)
 		return
@@ -71,7 +71,7 @@ func (fh *firehose) SetGroupUsers(group string, users []string) {
 	return
 }
 
-// SetSettings sets the given settings of the data source.
+// SetSettings sets the given settings of the connection.
 func (fh *firehose) SetSettings(settings []byte) error {
 	if !utf8.Valid(settings) {
 		return errors.New("settings is not valid UTF-8")
@@ -79,7 +79,7 @@ func (fh *firehose) SetSettings(settings []byte) error {
 	if utf8.RuneCount(settings) > maxSettingsLen {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 	}
-	_, err := fh.sources.myDB.Exec("UPDATE `data_sources` SET `settings` = ? WHERE `id` = ?", settings, fh.source)
+	_, err := fh.connections.myDB.Exec("UPDATE `connections` SET `settings` = ? WHERE `id` = ?", settings, fh.connection)
 	if err != nil {
 		log.Printf("[error] %s", err)
 		return errors.New("cannot set settings")
@@ -112,15 +112,15 @@ func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[str
 		return
 	}
 
-	// Retrieve the transformations for this source.
-	transformations, err := fh.sources.Transformations.List(fh.source)
+	// Retrieve the transformations for this connection.
+	transformations, err := fh.connections.Transformations.List(fh.connection)
 	if err != nil {
-		fh.setError(fmt.Errorf("cannot list transformations for %d: %s", fh.source, err))
+		fh.setError(fmt.Errorf("cannot list transformations for %d: %s", fh.connection, err))
 		return
 	}
 
 	// Applying the transformations, calculate the Golden Record properties and
-	// their relative timestamps for this user in this data source.
+	// their relative timestamps for this user in this connection.
 	candidateData := map[string]any{}
 	candidateTimestamps := map[string]time.Time{}
 	for _, t := range transformations {
@@ -159,14 +159,14 @@ func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[str
 	ids := identitySolver{fh}
 
 	// Resolve the entity of this user.
-	goldenRecordID, err := ids.ResolveEntity(fh.source, user, email)
+	goldenRecordID, err := ids.ResolveEntity(fh.connection, user, email)
 	if err != nil {
 		fh.setError(err)
 		return
 	}
 
 	// Retrieve the entities which are the same user.
-	sameEntities, err := ids.LookupSameEntities(fh.source, user)
+	sameEntities, err := ids.LookupSameEntities(fh.connection, user)
 	if err != nil {
 		fh.setError(fmt.Errorf("cannot lookup same entities for user %q: %s", user, err))
 		return
@@ -184,10 +184,10 @@ func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[str
 	// existent properties.
 transfLoop:
 	for _, t := range otherTransformations {
-		// For the data source of this transformation, determine the timestamps
+		// For the connection of this transformation, determine the timestamps
 		// relative to the users which refers to the same identity.
-		for _, u := range sameEntities[t.DataSource] {
-			entityData, err := fh.entityData(t.DataSource, u)
+		for _, u := range sameEntities[t.Connection] {
+			entityData, err := fh.entityData(t.Connection, u)
 			if err != nil {
 				fh.setError(err)
 				return
@@ -221,12 +221,13 @@ type dataSourceEntityData struct {
 	Timestamps map[string]time.Time
 }
 
-// entityData returns the data associated to the entity from the given source.
-func (fh *firehose) entityData(source int, user string) (dataSourceEntityData, error) {
+// entityData returns the data associated to the entity from the given
+// connection.
+func (fh *firehose) entityData(connection int, user string) (dataSourceEntityData, error) {
 	var entityData dataSourceEntityData
-	row := fh.sources.myDB.QueryRow(
-		"SELECT `data`, `timestamps` FROM `data_sources_users` WHERE `source` = ? AND `user` = ?",
-		source, user)
+	row := fh.connections.myDB.QueryRow(
+		"SELECT `data`, `timestamps` FROM `connections_users` WHERE `connection` = ? AND `user` = ?",
+		connection, user)
 	var rawData []byte
 	var rawTimestamps []byte
 	err := row.Scan(&rawData, &rawTimestamps)
@@ -259,8 +260,8 @@ func (fh *firehose) WebhookURL() string {
 		return u + "c/" + strconv.Itoa(fh.connector) + "/"
 	case "Resource":
 		return u + "r/" + strconv.Itoa(fh.resource) + "/"
-	case "DataSource":
-		return u + "s/" + strconv.Itoa(fh.source) + "/"
+	case "Connection":
+		return u + "s/" + strconv.Itoa(fh.connection) + "/"
 	}
 	panic("unexpected webhookPer value")
 }
@@ -289,17 +290,17 @@ func (fh *firehose) writeDataSourceUsers(user string, props map[string]any, time
 	if err != nil {
 		return err
 	}
-	_, err = fh.sources.myDB.Exec("INSERT INTO `data_sources_users`\n"+
-		"SET `source` = ?, `user` = ?, `data` = ?, `timestamps` = ?\n"+
+	_, err = fh.connections.myDB.Exec("INSERT INTO `connections_users`\n"+
+		"SET `connection` = ?, `user` = ?, `data` = ?, `timestamps` = ?\n"+
 		"ON DUPLICATE KEY UPDATE `data` = ?, `timestamps` = ?",
-		fh.source, user, data, jsonTimestamps, data, jsonTimestamps)
+		fh.connection, user, data, jsonTimestamps, data, jsonTimestamps)
 	if err != nil {
 		return err
 	}
-	_, err = fh.sources.myDB.Exec("INSERT INTO `data_sources_stats`\n"+
-		"SET `source` = ?, `timeSlot` = ?, `usersIn` = 1\n"+
+	_, err = fh.connections.myDB.Exec("INSERT INTO `connections_stats`\n"+
+		"SET `connection` = ?, `timeSlot` = ?, `usersIn` = 1\n"+
 		"ON DUPLICATE KEY UPDATE `usersIn` = `usersIn` + 1",
-		fh.source, statsTimeSlot(time.Now()))
+		fh.connection, statsTimeSlot(time.Now()))
 	return err
 }
 
@@ -320,7 +321,7 @@ func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
 	}
 	query.WriteString("\nWHERE `id` = ?")
 	values = append(values, id)
-	_, err := fh.sources.myDB.Exec(query.String(), values...)
+	_, err := fh.connections.myDB.Exec(query.String(), values...)
 	if err != nil {
 		return fmt.Errorf("cannot write data Golden Record: %s", err)
 	}
@@ -475,11 +476,11 @@ func keys[K comparable, V any](m map[K]V) []K {
 	return keys
 }
 
-// listTransformations lists the transformations for the given data sources.
-func (fh *firehose) listTransformations(dataSources []int) ([]Transformation, error) {
+// listTransformations lists the transformations for the given connections.
+func (fh *firehose) listTransformations(connections []int) ([]Transformation, error) {
 	var transformations []Transformation
-	for _, ds := range dataSources {
-		ts, err := fh.sources.Transformations.List(ds)
+	for _, c := range connections {
+		ts, err := fh.connections.Transformations.List(c)
 		if err != nil {
 			return nil, err
 		}

@@ -14,7 +14,7 @@ export default class Connectors extends React.Component {
 		this.toast = React.createRef();
 		this.state = {
 			connectors: [],
-			goToSourceAdded: 0,
+			goToConnectionAdded: 0,
 			status: null,
 		};
 	}
@@ -29,32 +29,32 @@ export default class Connectors extends React.Component {
 		this.setState({ connectors: connectors });
 	}
 
-	addSource = async (id, type, oauthURL, e) => {
+	addConnection = async (id, type, oauthURL, e) => {
 		e.currentTarget.setAttribute('loading', '');
 		if (oauthURL === '') {
-			let [, err] = await call('/admin/add-data-source', {Type: type, Connector: id, Storage: 0});
+			let [, err] = await call('/admin/add-connection', {Type: type, Connector: id, Storage: 0});
 			if (err != null) {
 				this.setState({status: {variant:'danger', icon:'exclamation-octagon', text:err}});
 				e.currentTarget.removeAttribute('loading');
 				this.toast.current.toast();
 				return;
 			}
-			this.setState({goToSourceAdded: id});
+			this.setState({goToConnectionAdded: id});
 			return;
 		}
 		// install with Oauth.
-		document.cookie = `add-source=${id};path=/`;
+		document.cookie = `add-connection=${id};path=/`;
 		window.location = oauthURL;
 		return;
 	}
 
 	render() {
-		if (this.state.goToSourceAdded !== 0) {
-			return <Navigate to={`added/${this.state.goToSourceAdded}`} />
+		if (this.state.goToConnectionAdded !== 0) {
+			return <Navigate to={`added/${this.state.goToConnectionAdded}`} />
 		} else {
 			return (
 				<div className='Connectors'>
-				<Navigation navItems={[{name: 'Add a data source', link:'/admin/connectors', selected: true}]}/>
+				<Navigation navItems={[{name: 'Add a connection', link:'/admin/connectors', selected: true}]}/>
 					<div class='content'>
 						<Toast reactRef={this.toast} status={this.state.status} />
 						<div className='connectors'>
@@ -62,7 +62,7 @@ export default class Connectors extends React.Component {
 								return(
 									<Card key={c.ID} name={c.Name} logoURL={c.LogoURL} type={c.Type}>
 										<SlTooltip content={`Add ${c.Name}`}>
-											<SlButton size='medium' variant='primary' onClick={async (e) => {await this.addSource(c.ID, c.Type, c.OauthURL, e)}} circle>
+											<SlButton size='medium' variant='primary' onClick={async (e) => {await this.addConnection(c.ID, c.Type, c.OauthURL, e)}} circle>
 												<SlIcon name='plus' />
 											</SlButton>
 										</SlTooltip>

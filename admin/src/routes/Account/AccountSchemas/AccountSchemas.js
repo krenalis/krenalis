@@ -61,7 +61,7 @@ export default class AccountSchemas extends React.Component {
 	render() {
 		return (
 			<div className='AccountSchemas'>
-				<Navigation navItems={[{name: 'Your data sources', link:'/admin/account/sources', selected: false}, {name: 'Your schemas', link:'/admin/account/schemas', selected: true}]}/>
+				<Navigation navItems={[{name: 'Your connections', link:'/admin/account/connections', selected: false}, {name: 'Your schemas', link:'/admin/account/schemas', selected: true}]}/>
 				<div className='content'>
 					<Toast reactRef={this.toast} status={this.state.status} />
 					<div className='bar'>

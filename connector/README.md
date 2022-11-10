@@ -39,7 +39,7 @@ If webhookPer is "Resource":
 * Resource
 * AccessToken
 
-If webhookPer is "DataSource":
+If webhookPer is "Connection":
 
 * Settings
 * Firehose

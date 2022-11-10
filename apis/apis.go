@@ -68,7 +68,7 @@ func (apis *APIs) AsAccount(account int) *AccountAPI {
 // AsWorkspace returns an API restricted to the given workspace.
 func (api *AccountAPI) AsWorkspace(workspace int) *WorkspaceAPI {
 	ws := &WorkspaceAPI{workspace: workspace, api: api, myDB: api.myDB, chDB: api.chDB}
-	ws.DataSources = &DataSources{ws}
+	ws.Connections = &Connections{ws}
 	ws.Transformations = &Transformations{ws}
 	return ws
 }
@@ -101,28 +101,28 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ws := api.AsWorkspace(workspace)
 
 	router := chi.NewRouter()
-	router.Route("/apis/data-sources", func(router chi.Router) {
+	router.Route("/apis/connections", func(router chi.Router) {
 		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			var sources []*DataSource
-			sources, err = ws.DataSources.List()
+			var connections []*Connection
+			connections, err = ws.Connections.List()
 			if err != nil {
 				log.Printf("[error] %s", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
-			_ = json.NewEncoder(w).Encode(sources)
+			_ = json.NewEncoder(w).Encode(connections)
 		})
 		router.Route("/{dataSourceID}", func(router chi.Router) {
 			router.Get("/properties", func(w http.ResponseWriter, r *http.Request) {
 				dsID, _ := strconv.Atoi(chi.URLParam(r, "dataSourceID"))
 				if dsID <= 0 {
-					http.Error(w, "Bad Request: invalid data source ID", http.StatusBadRequest)
+					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				var properties []DataSourceProperty
-				properties, _, err = ws.DataSources.Properties(dsID)
+				var properties []ConnectionProperty
+				properties, _, err = ws.Connections.Properties(dsID)
 				if err != nil {
-					if err == ErrDataSourceNotFound {
+					if err == ErrConnectionNotFound {
 						http.Error(w, "Not Found", http.StatusNotFound)
 					} else {
 						log.Printf("[error] %s", err)
@@ -135,12 +135,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			router.Post("/import", func(w http.ResponseWriter, r *http.Request) {
 				dsID, _ := strconv.Atoi(chi.URLParam(r, "dataSourceID"))
 				if dsID <= 0 {
-					http.Error(w, "Bad Request: invalid data source ID", http.StatusBadRequest)
+					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				err = ws.DataSources.Import(dsID, false)
+				err = ws.Connections.Import(dsID, false)
 				if err != nil {
-					if err == ErrDataSourceNotFound {
+					if err == ErrConnectionNotFound {
 						http.Error(w, "Not Found", http.StatusNotFound)
 					} else {
 						log.Printf("[error] %s", err)
@@ -152,12 +152,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			router.Post("/reimport", func(w http.ResponseWriter, r *http.Request) {
 				dsID, _ := strconv.Atoi(chi.URLParam(r, "dataSourceID"))
 				if dsID <= 0 {
-					http.Error(w, "Bad Request: invalid data source ID", http.StatusBadRequest)
+					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				err = ws.DataSources.Import(dsID, true)
+				err = ws.Connections.Import(dsID, true)
 				if err != nil {
-					if err == ErrDataSourceNotFound {
+					if err == ErrConnectionNotFound {
 						http.Error(w, "Not Found", http.StatusNotFound)
 					} else {
 						log.Printf("[error] %s", err)
@@ -169,12 +169,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			router.Get("/transformations", func(w http.ResponseWriter, r *http.Request) {
 				dsID, _ := strconv.Atoi(chi.URLParam(r, "dataSourceID"))
 				if dsID <= 0 {
-					http.Error(w, "Bad Request: invalid data source ID", http.StatusBadRequest)
+					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				transformations, err := ws.DataSources.Transformations.List(dsID)
+				transformations, err := ws.Connections.Transformations.List(dsID)
 				if err != nil {
-					if err == ErrDataSourceNotFound {
+					if err == ErrConnectionNotFound {
 						http.Error(w, "Not Found", http.StatusNotFound)
 					} else {
 						log.Printf("[error] %s", err)
@@ -194,9 +194,9 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			tID, err := ws.DataSources.Transformations.Create(req)
+			tID, err := ws.Connections.Transformations.Create(req)
 			if err != nil {
-				if err == ErrDataSourceNotFound {
+				if err == ErrConnectionNotFound {
 					http.Error(w, "Not Found", http.StatusNotFound)
 				} else {
 					log.Printf("[error] %s", err)
@@ -218,7 +218,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = ws.DataSources.Transformations.Update(tID, req)
+			err = ws.Connections.Transformations.Update(tID, req)
 			if err != nil {
 				log.Printf("[error] %s", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -380,17 +380,7 @@ func (apis *APIs) initSchema() {
 		internalIPs string
 	}{})
 
-	apis.myDB.Scheme("Connectors", "connectors", struct {
-		id            int
-		oauthURL      string
-		logoURL       string
-		clientID      string
-		clientSecret  string
-		tokenEndpoint string
-		webhooksPer   string
-	}{})
-
-	apis.myDB.Scheme("DataSources", "data_sources", struct {
+	apis.myDB.Scheme("Connections", "connections", struct {
 		id              int
 		workspace       int
 		typ             int `sql:"type"`
@@ -407,17 +397,27 @@ func (apis *APIs) initSchema() {
 		usersQuery      string
 	}{})
 
-	apis.myDB.Scheme("DataSourcesUsers", "data_sources_users", struct {
+	apis.myDB.Scheme("Connectors", "connectors", struct {
+		id            int
+		oauthURL      string
+		logoURL       string
+		clientID      string
+		clientSecret  string
+		tokenEndpoint string
+		webhooksPer   string
+	}{})
+
+	apis.myDB.Scheme("ConnectionsUsers", "connections_users", struct {
 		workspace int
 		connector int
 		user      string
 		data      string
 	}{})
 
-	apis.myDB.Scheme("DataSourcesStats", "data_sources_stats", struct {
-		source   int
-		timeSlot int
-		usersIn  int
+	apis.myDB.Scheme("ConnectionsStats", "connections_stats", struct {
+		connection int
+		timeSlot   int
+		usersIn    int
 	}{})
 
 	apis.myDB.Scheme("Devices", "devices", struct {

@@ -31,7 +31,7 @@ export default class Sidebar extends React.Component {
                             </SlButton>
                             <SlButton variant='text'>
                                 <SlIcon name='person-circle' />
-                                <NavLink to='/admin/account/sources'></NavLink>
+                                <NavLink to='/admin/account/connections'></NavLink>
                             </SlButton>
                         </div>
                         <div className='Bottom'>

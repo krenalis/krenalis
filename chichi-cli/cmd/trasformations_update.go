@@ -19,12 +19,12 @@ import (
 )
 
 var updateCmd = &cobra.Command{
-	Use:  "update connector_id [filename | -]",
+	Use:  "update connection_id [filename | -]",
 	Args: cobra.MatchAll(cobra.ExactArgs(2), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
-		connector, _ := strconv.Atoi(args[0])
-		if connector <= 0 {
-			log.Fatalf("invalid connector ID %q", args[0])
+		connection, _ := strconv.Atoi(args[0])
+		if connection <= 0 {
+			log.Fatalf("invalid connection ID %q", args[0])
 		}
 		source := args[1]
 		var transformation []byte
@@ -41,7 +41,7 @@ var updateCmd = &cobra.Command{
 				log.Fatalf("cannot read from file: %s", err)
 			}
 		}
-		chichiapis.UpdateTransformation(connector, transformation)
+		chichiapis.UpdateTransformation(connection, transformation)
 	},
 }
 

@@ -1,9 +1,9 @@
 This file contains documentation for the REST APIs of Chichi.
 
-GET    /apis/data-sources                       List the data sources
-GET    /apis/data-sources/{id}/properties       List the properties of a data source
-GET    /apis/data-sources/{id}/transformations  List the transformations of a data source
-POST   /apis/data-sources/{id}/import           Import from a data source
-POST   /apis/data-sources/{id}/reimport         Import from a data source
-PUT    /apis/transformations/                   Create a new transformation
-PATCH  /apis/transformations/{id}               Update a transformation
+GET    /apis/connections                       List the connections
+GET    /apis/connections/{id}/properties       List the properties of a connection
+GET    /apis/connections/{id}/transformations  List the transformations of a connection
+POST   /apis/connections/{id}/import           Import from a connection
+POST   /apis/connections/{id}/reimport         Import from a connection
+PUT    /apis/transformations/                  Create a new transformation
+PATCH  /apis/transformations/{id}              Update a transformation

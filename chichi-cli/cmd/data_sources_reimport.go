@@ -18,18 +18,18 @@ import (
 
 var reimportCmd = &cobra.Command{
 	Use:   "reimport connector_id",
-	Short: "Re-import data from a data source",
-	Long:  `Re-import data from a data source, starting from the beginning.`,
+	Short: "Re-import data from a connection",
+	Long:  `Re-import data from a connection, starting from the beginning.`,
 	Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
-		connector, _ := strconv.Atoi(args[0])
-		if connector <= 0 {
-			log.Fatalf("invalid connector ID %q", args[0])
+		connection, _ := strconv.Atoi(args[0])
+		if connection <= 0 {
+			log.Fatalf("invalid connection ID %q", args[0])
 		}
-		chichiapis.ImportUsersFromDataSource(connector, true)
+		chichiapis.ImportUsersFromConnection(connection, true)
 	},
 }
 
 func init() {
-	dataSourcesCmd.AddCommand(reimportCmd)
+	connectionsCmd.AddCommand(reimportCmd)
 }

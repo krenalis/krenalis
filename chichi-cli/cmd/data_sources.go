@@ -13,14 +13,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var dataSourcesCmd = &cobra.Command{
-	Use:   "data-sources",
-	Short: "Interact with data sources",
+var connectionsCmd = &cobra.Command{
+	Use:   "connections",
+	Short: "Interact with connections",
 	Run: func(cmd *cobra.Command, args []string) {
-		chichiapis.ListDataSources()
+		chichiapis.ListConnections()
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(dataSourcesCmd)
+	rootCmd.AddCommand(connectionsCmd)
 }

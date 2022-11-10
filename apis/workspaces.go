@@ -22,7 +22,7 @@ type WorkspaceAPI struct {
 	api             *AccountAPI
 	myDB            *sql.DB
 	chDB            chDriver.Conn
-	DataSources     *DataSources
+	Connections     *Connections
 	Transformations *Transformations
 }
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import './AccountSourceSQL.css';
+import './AccountConnectionSQL.css';
 import NotFound from '../../NotFound/NotFound';
 import Toast from '../../../components/Toast/Toast';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
@@ -10,14 +10,14 @@ import Editor from '@monaco-editor/react';
 
 const queryMaxSize = 16777215;
 
-export default class AccountSourceSQL extends React.Component {
+export default class AccountConnectionSQL extends React.Component {
     
     constructor(props) {
         super(props);
         this.toast = React.createRef();
-        this.sourceID = Number(String(window.location).split('/').at(-2));
+        this.connectionID = Number(String(window.location).split('/').at(-2));
         this.state = {
-            'source': {},
+            'connection': {},
             'status': null,
             'notFound': false,
             'query': '',
@@ -27,17 +27,17 @@ export default class AccountSourceSQL extends React.Component {
     }
     
     componentDidMount = async () => {
-        let [source, err] = await call('/admin/data-sources/get', this.sourceID);
+        let [connection, err] = await call('/admin/connections/get', this.connectionID);
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();
             return;
         }
-        if (source == null) {
+        if (connection == null) {
             this.setState({notFound: true});
             return;
         }
-        this.setState({ source: source, query: source.UsersQuery });
+        this.setState({ connection: connection, query: connection.UsersQuery });
     }
 
     handlePreview = async () => {
@@ -51,7 +51,7 @@ export default class AccountSourceSQL extends React.Component {
             this.toast.current.toast();
             return;
         }
-        let [table, err] = await call('/admin/data-sources/preview-query', {DataSource: this.state.source.ID, Query: this.state.query, Limit: this.state.limit});
+        let [table, err] = await call('/admin/connections/preview-query', {Connection: this.state.connection.ID, Query: this.state.query, Limit: this.state.limit});
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();
@@ -81,7 +81,7 @@ export default class AccountSourceSQL extends React.Component {
             this.toast.current.toast();
             return;
         }
-        let [, err] = await call('/admin/data-sources/set-users-query', {DataSource: this.state.source.ID, Query: this.state.query});
+        let [, err] = await call('/admin/connections/set-users-query', {Connection: this.state.connection.ID, Query: this.state.query});
         if (err !== null) {
             this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
             this.toast.current.toast();
@@ -96,13 +96,13 @@ export default class AccountSourceSQL extends React.Component {
             return <NotFound />
         } else {
             return (
-                <div className='AccountSourceSQL'>
-                    <Breadcrumbs breadcrumbs={[{ Name: 'Your data sources', Link: '/admin/account/sources' }, { Name: `${this.state.source.Name}'s SQL query configuration` }]} />
+                <div className='AccountConnectionSQL'>
+                    <Breadcrumbs breadcrumbs={[{ Name: 'Your connections', Link: '/admin/account/connections' }, { Name: `${this.state.connection.Name}'s SQL query configuration` }]} />
                     <div className='content'>
                         <Toast reactRef={this.toast} status={this.state.status} />
                         <div className='title'>
-                            {this.state.source.LogoURL !== '' && <img className='littleLogo' src={this.state.source.LogoURL} alt={`${this.state.source.Name}'s logo`} />}
-                            <div className='text'>Configure your {this.state.source.Name} SQL query</div>
+                            {this.state.connection.LogoURL !== '' && <img className='littleLogo' src={this.state.connection.LogoURL} alt={`${this.state.connection.Name}'s logo`} />}
+                            <div className='text'>Configure your {this.state.connection.Name} SQL query</div>
                         </div>
                         <div className='editorWrapper'>
                             <Editor

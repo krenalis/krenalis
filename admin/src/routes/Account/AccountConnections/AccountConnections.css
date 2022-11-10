@@ -1,15 +1,15 @@
-.AccountSources .content {
+.AccountConnections .content {
     max-width: 1200px;
     margin: -100px auto 0 auto;
     padding-bottom: 50px;
 }
 
-.AccountSources h1 {
+.AccountConnections h1 {
     text-align: center;
     margin-bottom: 30px;
 }
 
-.AccountSources .noSource {
+.AccountConnections .noConnection {
     box-shadow: var(--sl-shadow-small);
     border-radius: var(--radius);
     padding: 70px 30px;
@@ -17,28 +17,28 @@
     text-align: center;
 }
 
-.AccountSources .noSource > sl-icon {
+.AccountConnections .noConnection > sl-icon {
     font-size: 50px;
     opacity: .7;
 }
 
-.AccountSources .noSource .title {
+.AccountConnections .noConnection .title {
     font-size: 18px;
     margin-top: 20px;
     font-weight: 600;
 }
 
-.AccountSources .noSource .description {
+.AccountConnections .noConnection .description {
     margin: 10px 0 40px 0;
 }
 
-.AccountSources .sources {
+.AccountConnections .connections {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 30px;
 }
 
-.AccountSources .Card .buttons {
+.AccountConnections .Card .buttons {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-areas: 
@@ -50,27 +50,27 @@
     gap: 10px;
 }
 
-.AccountSources .Card .buttons .importButton {
+.AccountConnections .Card .buttons .importButton {
     grid-area: import;
 }
 
-.AccountSources .Card .buttons .configureButton {
+.AccountConnections .Card .buttons .configureButton {
     grid-area: configure;
 }
 
-.AccountSources .Card .buttons .removeButton {
+.AccountConnections .Card .buttons .removeButton {
     grid-area: remove;
 }
 
-.AccountSources .Card .buttons .editSQLButton {
+.AccountConnections .Card .buttons .editSQLButton {
     grid-area: editSQL;
 }
 
-.AccountSources .Card .buttons .settingsButton {
+.AccountConnections .Card .buttons .settingsButton {
     grid-area: settings;
 }
 
-.AccountSources .addSourceBox {
+.AccountConnections .addConnectionBox {
     background-color: var(--bg-crystal);
     backdrop-filter: blur(33px);
     background-blend-mode: overlay;
@@ -85,18 +85,18 @@
     min-height: 380px;
 }
 
-.AccountSources .addSourceBox sl-icon {
+.AccountConnections .addConnectionBox sl-icon {
     font-size: 50px;
     opacity: .7;
 }
 
-.AccountSources .addSourceBox .text {
+.AccountConnections .addConnectionBox .text {
     margin-top: 20px;
     opacity: .7;
     font-weight: 600;
 }
 
-.AccountSources .addSourceBox > a { 
+.AccountConnections .addConnectionBox > a {
     position: absolute;
     left: 0;
     top: 0;
@@ -104,23 +104,23 @@
     height: 100%;
 }
 
-.AccountSources sl-dialog::part(body) {
+.AccountConnections sl-dialog::part(body) {
     text-align: center;
     padding-bottom: 60px;
     padding-top: 0;
 }
 
-.AccountSources sl-dialog .dialogTitle {
+.AccountConnections sl-dialog .dialogTitle {
     font-size: 21px;
     margin-bottom: 30px;
 }
 
-.AccountSources sl-dialog sl-select {
+.AccountConnections sl-dialog sl-select {
     max-width: 400px;
     margin: 0 auto 30px auto;
 }
 
-.AccountSources sl-dialog .buttons {
+.AccountConnections sl-dialog .buttons {
     display: flex;
     align-items: center;
     justify-content: center;

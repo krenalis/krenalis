@@ -58,7 +58,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		return errBadRequest
 	}
 	var connector int
-	var source int
+	var connection int
 	var webhookPer string
 	var conf _connector.AppConfig
 	switch m[1] {
@@ -83,8 +83,8 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		}
 		webhookPer = "Resource"
 	case "s":
-		source, _ = strconv.Atoi(m[2])
-		if source <= 0 {
+		connection, _ = strconv.Atoi(m[2])
+		if connection <= 0 {
 			return errBadRequest
 		}
 		var resource int
@@ -93,9 +93,9 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		err := apis.myDB.QueryRow(
 			"SELECT `s`.`connector`, `s`.`resource`, `s`.`settings`, `r`.`code`, `r`.`accessToken`, `r`.`refreshToken`,"+
 				" `r`.`accessTokenExpirationTime`\n"+
-				"FROM `data_sources` AS `s`\n"+
+				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
-				"WHERE `s`.`id` = ?", source).
+				"WHERE `s`.`id` = ?", connection).
 			Scan(&connector, &resource, &conf.Settings, &conf.Resource, &conf.AccessToken, &refreshToken, &expiration)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -110,7 +110,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 				return err
 			}
 		}
-		webhookPer = "DataSource"
+		webhookPer = "Connection"
 	}
 	conn, err := apis.Connector(connector)
 	if err != nil {

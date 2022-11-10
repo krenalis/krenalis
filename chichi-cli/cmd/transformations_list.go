@@ -16,14 +16,14 @@ import (
 )
 
 var transformationsShowCmd = &cobra.Command{
-	Use:  "list <data source ID>",
+	Use:  "list <connection ID>",
 	Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
-		data_source, _ := strconv.Atoi(args[0])
-		if data_source <= 0 {
-			log.Fatalf("invalid data source ID %q", args[0])
+		connection, _ := strconv.Atoi(args[0])
+		if connection <= 0 {
+			log.Fatalf("invalid connection ID %q", args[0])
 		}
-		chichiapis.GetTransformations(data_source)
+		chichiapis.GetTransformations(connection)
 	},
 }
 
