@@ -385,6 +385,7 @@ func (apis *APIs) initSchema() {
 		workspace       int
 		typ             int `sql:"type"`
 		connector       int
+		direction       int
 		storage         int
 		resource        string
 		transformation  string

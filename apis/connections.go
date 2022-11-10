@@ -64,24 +64,12 @@ func (dir Direction) String() string {
 	panic("invalid direction")
 }
 
-// dirByName returns a direction by its name.
-// It panics if a direction called name does not exist.
-func dirByName(name string) Direction {
-	switch name {
-	case "Source":
-		return SourceDir
-	case "Destination":
-		return DestDir
-	}
-	panic("invalid direction name")
-}
-
 // Connection represents a connection.
 type Connection struct {
 	ID        int
 	Name      string
 	Type      string
-	Direction string
+	Direction Direction
 	Storage   int // zero if the connection is not a file or does not have a storage
 	OauthURL  string
 	LogoURL   string
@@ -91,7 +79,7 @@ type Connection struct {
 type ConnectionInfo struct {
 	ID         int
 	Type       string
-	Direction  string
+	Direction  Direction
 	Storage    int // zero if the connection is not a file or does not have a storage
 	Name       string
 	LogoURL    string
@@ -127,7 +115,6 @@ func (this *Connections) AddApp(dir Direction, connector int, refreshToken, acce
 	if connector <= 0 {
 		return 0, errors.New("invalid connector")
 	}
-	direction := _connector.Direction(dir)
 	conn, err := this.api.apis.Connector(connector)
 	if err != nil {
 		return 0, err
@@ -138,6 +125,7 @@ func (this *Connections) AddApp(dir Direction, connector int, refreshToken, acce
 	if conn.Type != "App" {
 		return 0, errors.New("connector is not an app connector")
 	}
+	direction := _connector.Direction(dir)
 	c, err := newAppConnection(context.Background(), conn.Name, &_connector.AppConfig{
 		Direction:    direction,
 		ClientSecret: conn.ClientSecret,
@@ -181,7 +169,7 @@ func (this *Connections) AddApp(dir Direction, connector int, refreshToken, acce
 		}
 		result, err := tx.Exec("INSERT INTO `connections`\n"+
 			"SET `workspace` = ?, `type` = 'App', `direction` = ?, `connector` = ?, `resource` = ?",
-			this.workspace, direction.String(), connector, resource)
+			this.workspace, dir, connector, resource)
 		if err != nil {
 			return err
 		}
@@ -228,7 +216,7 @@ func (this *Connections) AddDatabase(dir Direction, connector int) (int, error) 
 		}
 		result, err := tx.Exec("INSERT INTO `connections`\n"+
 			"SET `workspace` = ?, `type` = 'Database', `direction` = ?, `connector` = ?",
-			this.workspace, dir.String(), connector)
+			this.workspace, dir, connector)
 		id, err = result.LastInsertId()
 		return err
 	})
@@ -254,7 +242,6 @@ func (this *Connections) AddFile(dir Direction, connector, storage int) (int, er
 	if storage < 0 {
 		return 0, errors.New("invalid storage")
 	}
-	direction := dir.String()
 	var id int64
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		var typ string
@@ -270,8 +257,8 @@ func (this *Connections) AddFile(dir Direction, connector, storage int) (int, er
 		}
 		if storage > 0 {
 			// Check the storage.
-			var storageDir string
-			err = tx.QueryRow("SELECT `type`, `direction` FROM `connections` WHERE `id` = ?", storage).Scan(&typ, &storageDir)
+			var storageDir Direction
+			err = tx.QueryRow("SELECT `type`, CAST(`direction` AS UNSIGNED) FROM `connections` WHERE `id` = ?", storage).Scan(&typ, &storageDir)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return ErrStorageNotFound
@@ -281,8 +268,8 @@ func (this *Connections) AddFile(dir Direction, connector, storage int) (int, er
 			if typ != "Storage" {
 				return errors.New("storage is not a storage connection")
 			}
-			if storageDir != direction {
-				if direction == "Source" {
+			if storageDir != dir {
+				if dir == SourceDir {
 					return errors.New("storage is not a source")
 				}
 				return errors.New("storage is not a destination")
@@ -290,7 +277,7 @@ func (this *Connections) AddFile(dir Direction, connector, storage int) (int, er
 		}
 		result, err := tx.Exec("INSERT INTO `connections`\n"+
 			"SET `workspace` = ?, `type` = 'File', `direction` = ?, `connector` = ? AND `storage` = ?",
-			this.workspace, direction, connector, storage)
+			this.workspace, dir, connector, storage)
 		if err != nil {
 			return err
 		}
@@ -314,7 +301,6 @@ func (this *Connections) AddStorage(dir Direction, connector int) (int, error) {
 	if connector <= 0 {
 		return 0, errors.New("invalid connector")
 	}
-	direction := dir.String()
 	var id int64
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		var typ string
@@ -330,7 +316,7 @@ func (this *Connections) AddStorage(dir Direction, connector int) (int, error) {
 		}
 		result, err := tx.Exec("INSERT INTO `connections`\n"+
 			"SET `workspace` = ?, `type` = 'Storage', `direction` = ?, `connector` = ?",
-			this.workspace, direction, connector)
+			this.workspace, dir, connector)
 		if err != nil {
 			return err
 		}
@@ -350,10 +336,11 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 		return nil, errors.New("invalid connection identifier")
 	}
 	s := ConnectionInfo{ID: id}
-	err := this.myDB.QueryRow("SELECT `s`.`type`, `s`.`direction`, `c`.`name`, `c`.`logoURL`, `s`.`usersQuery`\n"+
-		"FROM `connections` AS `s`\n"+
-		"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-		"WHERE `s`.`id` = ? AND `s`.`workspace` = ?",
+	err := this.myDB.QueryRow(
+		"SELECT `s`.`type`, CAST(`s`.`direction` AS UNSIGNED), `c`.`name`, `c`.`logoURL`, `s`.`usersQuery`\n"+
+			"FROM `connections` AS `s`\n"+
+			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?",
 		id, this.workspace).Scan(&s.Type, &s.Direction, &s.Name, &s.LogoURL, &s.UsersQuery)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -426,8 +413,11 @@ func (this *Connections) Import(id int, reimport bool) error {
 	}
 
 	// Check that the connection exists, is a source and has a transformation.
-	var typ, dir string
-	err := this.myDB.QueryRow("SELECT `type`, `direction` FROM `connections` WHERE `id` = ? AND `workspace` = ?",
+	var typ string
+	var dir Direction
+	err := this.myDB.QueryRow("SELECT `type`, CAST(`direction` AS UNSIGNED)\n"+
+		"FROM `connections`"+
+		"WHERE `id` = ? AND `workspace` = ?",
 		id, this.workspace).Scan(&typ, &dir)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -438,10 +428,9 @@ func (this *Connections) Import(id int, reimport bool) error {
 	if typ == "Storage" {
 		return errors.New("cannot import from a storage")
 	}
-	if dir == "Destination" {
+	if dir == DestDir {
 		return errors.New("cannot import from a destination")
 	}
-	const direction = _connector.SourceDir
 
 	// Check that the connection has at least one transformation associated to it.
 	transformations, err := this.Transformations.List(id)
@@ -453,6 +442,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 	}
 
 	const noColumn = -1
+	const direction = _connector.SourceDir
 
 	switch typ {
 	case "App":
@@ -676,7 +666,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 func (this *Connections) List() ([]*Connection, error) {
 	sources := []*Connection{}
 	err := this.myDB.QueryScan(
-		"SELECT `s`.`id`, `s`.`type`, `s`.`direction`, `s`.`storage`, `c`.`name`, `c`.`oauthURL`, `c`.`logoURL`\n"+
+		"SELECT `s`.`id`, `s`.`type`, CAST(`s`.`direction` AS UNSIGNED), `s`.`storage`, `c`.`name`, `c`.`oauthURL`, `c`.`logoURL`\n"+
 			"FROM `connections` as `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`workspace` = ?", this.workspace, func(rows *sql.Rows) error {
@@ -770,11 +760,12 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 		return nil, nil, errors.New("invalid limit")
 	}
 
+	var typ, connectorName string
+	var dir Direction
 	var connector int
-	var typ, dir, connectorName string
 	var settings []byte
 	err := this.myDB.QueryRow(
-		"SELECT `s`.`type`, `s`.`direction`, `s`.`connector`, `s`.`settings`, `c`.`name`\n"+
+		"SELECT `s`.`type`, CAST(`s`.`direction` AS UNSIGNED), `s`.`connector`, `s`.`settings`, `c`.`name`\n"+
 			"FROM `connections` AS `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
@@ -788,7 +779,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 	if typ != "Database" {
 		return nil, nil, errors.New("connection is not a database")
 	}
-	if dir != "Source" {
+	if dir != SourceDir {
 		return nil, nil, errors.New("connection is not a source")
 	}
 	const direction = _connector.SourceDir
@@ -857,8 +848,9 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		return nil, errors.New("invalid connection identifier")
 	}
 
-	var typ, dir string
-	err := this.myDB.QueryRow("SELECT `type`, `direction` FROM `connections` WHERE `id` = ? AND `workspace` = ?",
+	var typ string
+	var dir Direction
+	err := this.myDB.QueryRow("SELECT `type`, CAST(`direction` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
 		id, this.workspace).Scan(&typ, &dir)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -867,7 +859,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		return nil, err
 	}
 
-	direction := _connector.Direction(dirByName(dir))
+	direction := _connector.Direction(dir)
 
 	var connection _connector.Connection
 
@@ -1002,8 +994,9 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 		return err
 	}
 	if affected == 0 {
-		var typ, dir string
-		err = this.myDB.QueryRow("SELECT `type`, `direction` FROM `connections` WHERE `id` = ? AND `workspace` = ?",
+		var typ string
+		var dir Direction
+		err = this.myDB.QueryRow("SELECT `type`, CAST(`direction` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
 			id, this.workspace).Scan(&typ, &dir)
 		if err != nil {
 			return err
@@ -1011,7 +1004,7 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 		if typ != "Database" {
 			return errors.New("connection is not a database")
 		}
-		if dir != "Source" {
+		if dir != SourceDir {
 			return errors.New("connection is not a source")
 		}
 		return ErrConnectionNotFound
@@ -1083,8 +1076,9 @@ func (this *Connections) reloadProperties(id int) error {
 		return errors.New("invalid connection identifier")
 	}
 
-	var typ, dir string
-	err := this.myDB.QueryRow("SELECT `type`, `direction` FROM `connections` WHERE `id` = ? AND `workspace` = ?",
+	var typ string
+	var dir Direction
+	err := this.myDB.QueryRow("SELECT `type`, CAST(`direction` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
 		id, this.workspace).Scan(&typ, &dir)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -1096,7 +1090,7 @@ func (this *Connections) reloadProperties(id int) error {
 		return errors.New("cannot reload properties of a storage")
 	}
 
-	direction := _connector.Direction(dirByName(dir))
+	direction := _connector.Direction(dir)
 
 	var properties []_connector.Property
 
