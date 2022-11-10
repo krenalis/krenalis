@@ -18,6 +18,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/transformations"
 	"chichi/connector"
 )
 
@@ -113,38 +114,32 @@ func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[str
 	}
 
 	// Retrieve the transformations for this connection.
-	transformations, err := fh.connections.Transformations.List(fh.connection)
+	connectionsTransformations, err := fh.connections.Transformations.List(fh.connection)
 	if err != nil {
 		fh.setError(fmt.Errorf("cannot list transformations for %d: %s", fh.connection, err))
 		return
 	}
 
+	// Create a pool of transformation VMs.
+	pool := transformations.NewPool()
+
 	// Applying the transformations, calculate the Golden Record properties and
 	// their relative timestamps for this user in this connection.
 	candidateData := map[string]any{}
 	candidateTimestamps := map[string]time.Time{}
-	for _, t := range transformations {
+	for _, t := range connectionsTransformations {
 		props := map[string]any{}
 		for _, ip := range t.InputProperties {
 			props[ip.Name] = properties[ip.Name]
 		}
-		// Build the transformation function.
-		fn, err := buildTransfFunc(t.SourceCode)
-		if err != nil {
-			fh.setError(fmt.Errorf("cannot build transformation function: %s", err))
-			return
-		}
+
 		// Apply the transformation function.
-		grProp, ok, err := fn(props)
+		grProp, err := pool.Run(context.Background(), t.SourceCode, props)
 		if err != nil {
 			fh.setError(fmt.Errorf("error while calling transformation function %d: %s", t.ID, err))
 			return
 		}
-		if err != nil {
-			fh.setError(fmt.Errorf("cannot transform properties to %q with transformation %d: %s", t.GRProperty, t.ID, err))
-			return
-		}
-		if ok {
+		if grProp != nil {
 			candidateData[t.GRProperty] = grProp
 			candidateTimestamps[t.GRProperty] = mostRecentTimestamp(timestamps, t.InputProperties)
 		}

@@ -10,11 +10,6 @@ package apis
 import (
 	"chichi/pkg/open2b/sql"
 	"errors"
-	"fmt"
-	"io"
-
-	"github.com/open2b/scriggo"
-	"github.com/open2b/scriggo/native"
 )
 
 type Transformations struct {
@@ -168,10 +163,7 @@ func (this *Transformations) List(connection int) ([]Transformation, error) {
 }
 
 func (this *Transformations) validate(t TransformationToCreate) error {
-	_, err := buildTransfFunc(t.SourceCode)
-	if err != nil {
-		return fmt.Errorf("source code is invalid: %s", err)
-	}
+	// TODO(Gianluca): validate the Python function here.
 	if len(t.InputProperties) == 0 {
 		return errors.New("should have at least one input property")
 	}
@@ -185,35 +177,4 @@ func (this *Transformations) validate(t TransformationToCreate) error {
 		return errors.New("output property is mandatory")
 	}
 	return nil
-}
-
-// TransformationFuncType is the type of a transformation function.
-type TransformationFuncType = func(props map[string]any) (prop any, ok bool, err error)
-
-// buildTransfFunc builds a transformation function from its source code and
-// returns it.
-func buildTransfFunc(source string) (TransformationFuncType, error) {
-	if source == "" {
-		return nil, errors.New("transformation function source cannot be empty")
-	}
-	src := `{% Fn = ` + source + ` %}`
-	opts := &scriggo.BuildOptions{
-		Globals: native.Declarations{
-			"Fn": (*TransformationFuncType)(nil),
-		},
-	}
-	fs := scriggo.Files{"transform.txt": []byte(src)}
-	template, err := scriggo.BuildTemplate(fs, "transform.txt", opts)
-	if err != nil {
-		return nil, err
-	}
-	var fn TransformationFuncType
-	vars := map[string]interface{}{
-		"Fn": &fn,
-	}
-	err = template.Run(io.Discard, vars, nil)
-	if err != nil {
-		return nil, err
-	}
-	return fn, nil
 }
