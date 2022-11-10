@@ -112,9 +112,9 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			_ = json.NewEncoder(w).Encode(connections)
 		})
-		router.Route("/{dataSourceID}", func(router chi.Router) {
+		router.Route("/{connectionID}", func(router chi.Router) {
 			router.Get("/properties", func(w http.ResponseWriter, r *http.Request) {
-				dsID, _ := strconv.Atoi(chi.URLParam(r, "dataSourceID"))
+				dsID, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				if dsID <= 0 {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
@@ -133,7 +133,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				_ = json.NewEncoder(w).Encode(properties)
 			})
 			router.Post("/import", func(w http.ResponseWriter, r *http.Request) {
-				dsID, _ := strconv.Atoi(chi.URLParam(r, "dataSourceID"))
+				dsID, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				if dsID <= 0 {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
@@ -150,7 +150,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			})
 			router.Post("/reimport", func(w http.ResponseWriter, r *http.Request) {
-				dsID, _ := strconv.Atoi(chi.URLParam(r, "dataSourceID"))
+				dsID, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				if dsID <= 0 {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
@@ -167,7 +167,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			})
 			router.Get("/transformations", func(w http.ResponseWriter, r *http.Request) {
-				dsID, _ := strconv.Atoi(chi.URLParam(r, "dataSourceID"))
+				dsID, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				if dsID <= 0 {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
@@ -453,7 +453,7 @@ func (apis *APIs) initSchema() {
 	}{})
 
 	apis.myDB.Scheme("TransformationsConnections", "transformations_connections", struct {
-		dataSource     int
+		connection     int
 		property       string
 		transformation int
 	}{})

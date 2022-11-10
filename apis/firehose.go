@@ -106,7 +106,7 @@ func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[str
 	}
 
 	// Serialize the properties and the timestamps to the database.
-	err := fh.writeDataSourceUsers(user, properties, timestamps)
+	err := fh.writeConnectionUsers(user, properties, timestamps)
 	if err != nil {
 		fh.setError(err)
 		return
@@ -216,15 +216,15 @@ transfLoop:
 
 }
 
-type dataSourceEntityData struct {
+type connectionEntityData struct {
 	Data       map[string]any
 	Timestamps map[string]time.Time
 }
 
 // entityData returns the data associated to the entity from the given
 // connection.
-func (fh *firehose) entityData(connection int, user string) (dataSourceEntityData, error) {
-	var entityData dataSourceEntityData
+func (fh *firehose) entityData(connection int, user string) (connectionEntityData, error) {
+	var entityData connectionEntityData
 	row := fh.connections.myDB.QueryRow(
 		"SELECT `data`, `timestamps` FROM `connections_users` WHERE `connection` = ? AND `user` = ?",
 		connection, user)
@@ -232,15 +232,15 @@ func (fh *firehose) entityData(connection int, user string) (dataSourceEntityDat
 	var rawTimestamps []byte
 	err := row.Scan(&rawData, &rawTimestamps)
 	if err != nil {
-		return dataSourceEntityData{}, err
+		return connectionEntityData{}, err
 	}
 	err = json.Unmarshal(rawData, &entityData.Data)
 	if err != nil {
-		return dataSourceEntityData{}, err
+		return connectionEntityData{}, err
 	}
 	err = json.Unmarshal(rawTimestamps, &entityData.Timestamps)
 	if err != nil {
-		return dataSourceEntityData{}, err
+		return connectionEntityData{}, err
 	}
 	return entityData, nil
 }
@@ -280,8 +280,8 @@ func statsTimeSlot(t time.Time) int {
 	return epoc / (60 * 60)
 }
 
-// writeDataSourceUsers writes the given data user users to the database.
-func (fh *firehose) writeDataSourceUsers(user string, props map[string]any, timestamps map[string]time.Time) error {
+// writeConnectionUsers writes the given connection users to the database.
+func (fh *firehose) writeConnectionUsers(user string, props map[string]any, timestamps map[string]time.Time) error {
 	data, err := json.Marshal(props)
 	if err != nil {
 		return err
