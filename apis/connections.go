@@ -751,8 +751,8 @@ type Column struct {
 //
 // It returns an error if the connection is a destination.
 // It returns the ErrConnectionNotFound error if the connection does not exist
-// and returns a DatabaseQueryError error if there is a syntax error in the
-// query.
+// and returns a DatabaseQueryError error if an error occurred while executing
+// the query.
 func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]string, error) {
 
 	if id <= 0 {
