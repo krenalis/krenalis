@@ -219,15 +219,15 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "DATE":
 		return types.Date(), nil
 	case "FLOAT4":
-		return types.Real(), nil
+		return types.Float32(), nil
 	case "FLOAT8":
-		return types.Double(), nil
+		return types.Float(), nil
 	case "INT2":
-		return types.SmallInt(), nil
+		return types.Int16(), nil
 	case "INT4":
 		return types.Int(), nil
 	case "INT8":
-		return types.BigInt(), nil
+		return types.Int64(), nil
 	case "JSON", "JSONB":
 		return types.JSON(), nil
 	case "NUMERIC":

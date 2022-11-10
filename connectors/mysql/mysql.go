@@ -219,33 +219,33 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		}
 		return types.Decimal(int(precision), int(scale)), nil
 	case "DOUBLE":
-		return types.Double(), nil
+		return types.Float(), nil
 	case "ENUM", "SET":
 		return types.Text(), nil
 	case "FLOAT":
-		return types.Real(), nil
+		return types.Float32(), nil
 	case "UNSIGNED MEDIUMINT":
-		return types.UnsignedMediumInt(), nil
+		return types.UInt24(), nil
 	case "MEDIUMINT":
-		return types.MediumInt(), nil
+		return types.Int24(), nil
 	case "JSON":
 		return types.JSON(), nil
 	case "UNSIGNED INT":
-		return types.UnsignedInt(), nil
+		return types.UInt(), nil
 	case "INT":
 		return types.Int(), nil
 	case "LONGTEXT", "LONGBLOB":
 		return types.Text(types.Bytes(4294967295)), nil
 	case "UNSIGNED BIGINT":
-		return types.UnsignedBigInt(), nil
+		return types.UInt64(), nil
 	case "BIGINT":
-		return types.BigInt(), nil
+		return types.Int64(), nil
 	case "MEDIUMTEXT", "MEDIUMBLOB":
 		return types.Text(types.Bytes(16777216)), nil
 	case "UNSIGNED SMALLINT":
-		return types.UnsignedSmallInt(), nil
+		return types.UInt16(), nil
 	case "SMALLINT":
-		return types.SmallInt(), nil
+		return types.Int16(), nil
 	case "VARCHAR", "CHAR":
 		length, ok := t.Length()
 		if !ok {
@@ -263,9 +263,9 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "TIMESTAMP":
 		return types.DateTime(), nil
 	case "UNSIGNED TINYINT":
-		return types.UnsignedTinyInt(), nil
+		return types.UInt8(), nil
 	case "TINYINT":
-		return types.TinyInt(), nil
+		return types.Int8(), nil
 	case "TINYTEXT", "TINYBLOB":
 		return types.Text(types.Bytes(255)), nil
 	case "YEAR":

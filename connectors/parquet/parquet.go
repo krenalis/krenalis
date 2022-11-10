@@ -224,9 +224,9 @@ func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error
 	case parquet.Type_BOOLEAN:
 		return types.Boolean(), nil
 	case parquet.Type_FLOAT:
-		return types.Real(), nil
+		return types.Float32(), nil
 	case parquet.Type_DOUBLE:
-		return types.Double(), nil
+		return types.Float(), nil
 	}
 
 	// Logical types.
@@ -258,25 +258,25 @@ func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error
 			if lt.INTEGER.IsSigned {
 				switch lt.INTEGER.BitWidth {
 				case 8:
-					return types.TinyInt(), nil
+					return types.Int8(), nil
 				case 16:
-					return types.SmallInt(), nil
+					return types.Int16(), nil
 				case 32:
 					return types.Int(), nil
 				case 64:
-					return types.BigInt(), nil
+					return types.Int64(), nil
 				}
 				return types.Type{}, fmt.Errorf("unexpected Parquet bitWidth value: %d", lt.INTEGER.BitWidth)
 			}
 			switch lt.INTEGER.BitWidth {
 			case 8:
-				return types.UnsignedTinyInt(), nil
+				return types.UInt8(), nil
 			case 16:
-				return types.UnsignedSmallInt(), nil
+				return types.UInt16(), nil
 			case 32:
-				return types.UnsignedInt(), nil
+				return types.UInt(), nil
 			case 64:
-				return types.UnsignedBigInt(), nil
+				return types.UInt64(), nil
 			}
 			return types.Type{}, fmt.Errorf("unexpected Parquet bitWidth value: %d", lt.INTEGER.BitWidth)
 		}
@@ -295,21 +295,21 @@ func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error
 		case parquet.ConvertedType_UTF8, parquet.ConvertedType_ENUM:
 			return types.Text(), nil
 		case parquet.ConvertedType_INT_8:
-			return types.TinyInt(), nil
+			return types.Int8(), nil
 		case parquet.ConvertedType_INT_16:
-			return types.SmallInt(), nil
+			return types.Int16(), nil
 		case parquet.ConvertedType_INT_32:
 			return types.Int(), nil
 		case parquet.ConvertedType_INT_64:
-			return types.BigInt(), nil
+			return types.Int64(), nil
 		case parquet.ConvertedType_UINT_8:
-			return types.UnsignedTinyInt(), nil
+			return types.UInt8(), nil
 		case parquet.ConvertedType_UINT_16:
-			return types.UnsignedSmallInt(), nil
+			return types.UInt16(), nil
 		case parquet.ConvertedType_UINT_32:
-			return types.UnsignedInt(), nil
+			return types.UInt(), nil
 		case parquet.ConvertedType_UINT_64:
-			return types.UnsignedBigInt(), nil
+			return types.UInt64(), nil
 		case parquet.ConvertedType_JSON, parquet.ConvertedType_BSON:
 			return types.JSON(), nil
 		case parquet.ConvertedType_DECIMAL:
@@ -333,7 +333,7 @@ func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error
 	case parquet.Type_INT32:
 		return types.Int(), nil
 	case parquet.Type_INT64:
-		return types.BigInt(), nil
+		return types.Int64(), nil
 	case parquet.Type_INT96:
 		return types.DateTime(), nil
 	case parquet.Type_BYTE_ARRAY, parquet.Type_FIXED_LEN_BYTE_ARRAY:

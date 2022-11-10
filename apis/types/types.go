@@ -21,17 +21,17 @@ type PhysicalType int8
 const (
 	PtBoolean PhysicalType = 1 + iota
 	PtInt
-	PtTinyInt
-	PtSmallInt
-	PtMediumInt
-	PtBigInt
-	PtUnsignedInt
-	PtUnsignedTinyInt
-	PtUnsignedSmallInt
-	PtUnsignedMediumInt
-	PtUnsignedBigInt
-	PtReal
-	PtDouble
+	PtInt8
+	PtInt16
+	PtInt24
+	PtInt64
+	PtUInt
+	PtUInt8
+	PtUInt16
+	PtUInt24
+	PtUInt64
+	PtFloat
+	PtFloat32
 	PtDecimal
 	PtDateTime
 	PtDate
@@ -45,17 +45,17 @@ const (
 var physicalName = []string{
 	"Boolean",
 	"Int",
-	"TinyInt",
-	"SmallInt",
-	"MediumInt",
-	"BigInt",
-	"UnsignedInt",
-	"UnsignedTinyInt",
-	"UnsignedSmallInt",
-	"UnsignedMediumInt",
-	"UnsignedBigInt",
-	"Real",
-	"Double",
+	"Int8",
+	"Int16",
+	"Int24",
+	"Int64",
+	"UInt",
+	"UInt8",
+	"UInt16",
+	"UInt24",
+	"UInt64",
+	"Float",
+	"Float32",
 	"Decimal",
 	"DateTime",
 	"Date",
@@ -144,59 +144,59 @@ func Int() Type {
 	return Type{pt: PtInt}
 }
 
-// TinyInt returns the TinyInt type.
-func TinyInt() Type {
-	return Type{pt: PtTinyInt}
+// Int8 returns the Int8 type.
+func Int8() Type {
+	return Type{pt: PtInt8}
 }
 
-// SmallInt returns the SmallInt type.
-func SmallInt() Type {
-	return Type{pt: PtSmallInt}
+// Int16 returns the Int16 type.
+func Int16() Type {
+	return Type{pt: PtInt16}
 }
 
-// MediumInt returns the MediumInt type.
-func MediumInt() Type {
-	return Type{pt: PtMediumInt}
+// Int24 returns the Int24 type.
+func Int24() Type {
+	return Type{pt: PtInt24}
 }
 
-// BigInt returns the BigInt type.
-func BigInt() Type {
-	return Type{pt: PtBigInt}
+// Int64 returns the Int64 type.
+func Int64() Type {
+	return Type{pt: PtInt64}
 }
 
-// UnsignedInt returns the UnsignedInt type.
-func UnsignedInt() Type {
-	return Type{pt: PtUnsignedInt}
+// UInt returns the UInt type.
+func UInt() Type {
+	return Type{pt: PtUInt}
 }
 
-// UnsignedTinyInt returns the UnsignedTinyInt type.
-func UnsignedTinyInt() Type {
-	return Type{pt: PtUnsignedTinyInt}
+// UInt8 returns the UInt8 type.
+func UInt8() Type {
+	return Type{pt: PtUInt8}
 }
 
-// UnsignedSmallInt returns the UnsignedSmallInt type.
-func UnsignedSmallInt() Type {
-	return Type{pt: PtUnsignedSmallInt}
+// UInt16 returns the UInt16 type.
+func UInt16() Type {
+	return Type{pt: PtUInt16}
 }
 
-// UnsignedMediumInt returns the UnsignedMediumInt type.
-func UnsignedMediumInt() Type {
-	return Type{pt: PtUnsignedMediumInt}
+// UInt24 returns the UInt24 type.
+func UInt24() Type {
+	return Type{pt: PtUInt24}
 }
 
-// UnsignedBigInt returns the UnsignedBigInt type.
-func UnsignedBigInt() Type {
-	return Type{pt: PtUnsignedBigInt}
+// UInt64 returns the UInt64 type.
+func UInt64() Type {
+	return Type{pt: PtUInt64}
 }
 
-// Real returns the Real type.
-func Real() Type {
-	return Type{pt: PtReal}
+// Float returns the Float type.
+func Float() Type {
+	return Type{pt: PtFloat}
 }
 
-// Double returns the Double type.
-func Double() Type {
-	return Type{pt: PtDouble}
+// Float32 returns the Float32 type.
+func Float32() Type {
+	return Type{pt: PtFloat32}
 }
 
 // Decimal returns the Decimal type with the given precision and scale.
