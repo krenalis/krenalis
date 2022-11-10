@@ -295,6 +295,10 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			columns, rows, err := ws.Connections.Query(req.Connection, req.Query, req.Limit)
 			if err != nil {
+				if err, ok := err.(apis.DatabaseQueryError); ok {
+					_ = json.NewEncoder(w).Encode(map[string]any{"Error": err.Message})
+					return
+				}
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return

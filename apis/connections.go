@@ -44,6 +44,16 @@ const (
 	queryMaxSize         = 16_777_215 // maximum size in runes of a connection query.
 )
 
+// A DatabaseQueryError error is returned from a database connector if an error
+// occurs when executing a query.
+type DatabaseQueryError struct {
+	Message string
+}
+
+func (err DatabaseQueryError) Error() string {
+	return err.Message
+}
+
 // Direction represents a connection direction.
 type Direction int
 
@@ -740,7 +750,9 @@ type Column struct {
 // must contain the ':limit' placeholder. limit must be between 1 and 100.
 //
 // It returns an error if the connection is a destination.
-// It returns the ErrConnectionNotFound error if the connection does not exist.
+// It returns the ErrConnectionNotFound error if the connection does not exist
+// and returns a DatabaseQueryError error if there is a syntax error in the
+// query.
 func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]string, error) {
 
 	if id <= 0 {
@@ -800,6 +812,9 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 	}
 	rawColumns, rawRows, err := c.Query(query)
 	if err != nil {
+		if err, ok := err.(_connector.DatabaseQueryError); ok {
+			return nil, nil, DatabaseQueryError{Message: err.Message}
+		}
 		return nil, nil, err
 	}
 

@@ -13,6 +13,16 @@ import (
 	"chichi/apis/types"
 )
 
+// A DatabaseQueryError error is returned from a database connector if an error
+// occurs when executing a query.
+type DatabaseQueryError struct {
+	Message string
+}
+
+func (err DatabaseQueryError) Error() string {
+	return err.Message
+}
+
 // DatabaseConfig represents the configuration of a database connection.
 type DatabaseConfig struct {
 	Direction Direction
