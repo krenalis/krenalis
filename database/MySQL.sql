@@ -12,7 +12,7 @@ INSERT INTO `accounts` (`name`,`email`,`password`) VALUES ('ACME inc','acme@open
 CREATE TABLE `connectors` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(200) NOT NULL DEFAULT '',
-  `type` ENUM('App', 'Database', 'File', 'Storage') DEFAULT 'App',
+  `type` ENUM('App', 'Database', 'File', 'Storage') NOT NULL DEFAULT 'App',
   `oauthURL` VARCHAR(500) NOT NULL DEFAULT '',
   `logoURL` VARCHAR(500) NOT NULL DEFAULT '',
   `clientID` VARCHAR(500) NOT NULL DEFAULT '',
@@ -41,8 +41,8 @@ INSERT INTO `connectors` VALUES
 CREATE TABLE `connections` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `workspace` INT NOT NULL,
-  `type` ENUM('App', 'Database', 'File', 'Storage') DEFAULT 'App',
-  `direction` ENUM('Source', 'Destination') DEFAULT 'Source',
+  `type` ENUM('App', 'Database', 'File', 'Storage') NOT NULL DEFAULT 'App',
+  `direction` ENUM('Source', 'Destination') NOT NULL DEFAULT 'Source',
   `connector` INT NOT NULL,
   `storage` INT NOT NULL,
   `resource` INT NOT NULL,

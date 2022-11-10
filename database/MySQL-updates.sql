@@ -468,3 +468,10 @@ ALTER TABLE `connections_users`
     CHANGE COLUMN `source` `connection` int NOT NULL,
     DROP PRIMARY KEY,
     ADD PRIMARY KEY (`connection`, `user`);
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'File', 'Storage') NOT NULL DEFAULT 'App';
+
+ALTER TABLE `connections`
+    CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'File', 'Storage') NOT NULL DEFAULT 'App',
+    CHANGE COLUMN `direction` `direction` ENUM('Source', 'Destination') NOT NULL DEFAULT 'Source';
