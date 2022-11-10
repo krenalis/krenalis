@@ -311,6 +311,9 @@ func (this *Connections) AddStorage(dir Direction, connector int) (int, error) {
 	if dir != SourceDir && dir != DestDir {
 		return 0, errors.New("invalid direction")
 	}
+	if connector <= 0 {
+		return 0, errors.New("invalid connector")
+	}
 	direction := dir.String()
 	var id int64
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
