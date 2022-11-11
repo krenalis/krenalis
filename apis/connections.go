@@ -76,6 +76,12 @@ func (role ConnectionRole) String() string {
 	panic("invalid connection role")
 }
 
+// MarshalJSON implements the json.Marshaler interface.
+// It panics if role is not a valid ConnectionRole value.
+func (role ConnectionRole) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + role.String() + `"`), nil
+}
+
 // Connection represents a connection.
 type Connection struct {
 	ID       int
