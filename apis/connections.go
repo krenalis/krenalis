@@ -470,7 +470,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 		var settings, rawUsedProperties []byte
 		var expiration time.Time
 		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
+			"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
 				" `r`.`refreshToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
 				" `s`.`resource`, `s`.`userCursor`, `s`.`settings`, `s`.`usedProperties`\n"+
 				"FROM `connections` AS `s`\n"+
