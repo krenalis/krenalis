@@ -8,12 +8,14 @@
 package apis
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -973,7 +975,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		return nil, err
 	}
 
-	return json.Marshal(form)
+	return marshalUIForm(form, direction)
 }
 
 // SetUsersQuery sets the users query of the database connection with
@@ -1334,4 +1336,54 @@ func newFileReader(storage _connector.StorageConnection) *fileReader {
 // It is the caller's responsibility to close the returned reader.
 func (files *fileReader) Reader(path string) (io.ReadCloser, time.Time, error) {
 	return files.s.Reader(path)
+}
+
+// marshalUIForm marshals form with direction dir in JSON format.
+func marshalUIForm(form *ui.Form, dir _connector.Direction) ([]byte, error) {
+
+	if form == nil {
+		return []byte("null"), nil
+	}
+
+	var b bytes.Buffer
+	dec := json.NewEncoder(&b)
+
+	b.WriteString(`{"Fields":[`)
+
+	for i, field := range form.Fields {
+		rv := reflect.ValueOf(field).Elem()
+		rt := rv.Type()
+		d := ui.Direction(rv.FieldByName("Direction").Int())
+		if d != ui.BothDir && _connector.Direction(d) != dir {
+			continue
+		}
+		if i > 0 {
+			b.WriteString(`,`)
+		}
+		b.WriteString(`{"ComponentType":"`)
+		b.WriteString(rt.Name())
+		b.WriteString(`"`)
+		for j := 0; j < rt.NumField(); j++ {
+			if rt.Field(j).Name == "Destination" {
+				continue
+			}
+			b.WriteString(`,"`)
+			b.WriteString(rt.Field(j).Name)
+			b.WriteString(`":`)
+			err := dec.Encode(rv.Field(j).Interface())
+			if err != nil {
+				return nil, err
+			}
+		}
+		b.WriteString(`}`)
+	}
+
+	b.WriteString(`],"Actions":`)
+	err := dec.Encode(form.Actions)
+	if err != nil {
+		return nil, err
+	}
+	b.WriteString(`}`)
+
+	return b.Bytes(), nil
 }

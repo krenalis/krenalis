@@ -8,10 +8,8 @@
 package ui
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
 )
 
 // ErrEventNotExist values are returned by the ServeUI methods when the event
@@ -34,21 +32,6 @@ type Form struct {
 
 type Component interface {
 	component()
-	json.Marshaler
-}
-
-func marshalComponent(c Component, componentType string) ([]byte, error) {
-	obj := map[string]any{}
-	rv := reflect.ValueOf(c).Elem()
-	typ := rv.Type()
-	for i := 0; i < typ.NumField(); i++ {
-		obj[typ.Field(i).Name] = rv.Field(i).Interface()
-	}
-	if _, ok := obj["ComponentType"]; ok {
-		panic("BUG: field Type already defined")
-	}
-	obj["ComponentType"] = componentType
-	return json.Marshal(obj)
 }
 
 type Option struct {
@@ -70,8 +53,6 @@ type Input struct {
 
 func (i *Input) component() {}
 
-func (i *Input) MarshalJSON() ([]byte, error) { return marshalComponent(i, "Input") }
-
 type Select struct {
 	Name        string
 	Value       any
@@ -83,8 +64,6 @@ type Select struct {
 
 func (s *Select) component() {}
 
-func (s *Select) MarshalJSON() ([]byte, error) { return marshalComponent(s, "Select") }
-
 type Checkbox struct {
 	Name      string
 	Value     bool
@@ -93,8 +72,6 @@ type Checkbox struct {
 }
 
 func (ck *Checkbox) component() {}
-
-func (ck *Checkbox) MarshalJSON() ([]byte, error) { return marshalComponent(ck, "Checkbox") }
 
 type ColorPicker struct {
 	Name      string
@@ -105,8 +82,6 @@ type ColorPicker struct {
 
 func (cp *ColorPicker) component() {}
 
-func (cp *ColorPicker) MarshalJSON() ([]byte, error) { return marshalComponent(cp, "ColorPicker") }
-
 type Radios struct {
 	Name      string
 	Value     any
@@ -116,8 +91,6 @@ type Radios struct {
 }
 
 func (rd *Radios) component() {}
-
-func (rd *Radios) MarshalJSON() ([]byte, error) { return marshalComponent(rd, "Radios") }
 
 type Range struct {
 	Name      string
@@ -131,8 +104,6 @@ type Range struct {
 
 func (r *Range) component() {}
 
-func (r *Range) MarshalJSON() ([]byte, error) { return marshalComponent(r, "Range") }
-
 type Switch struct {
 	Name      string
 	Value     bool
@@ -141,8 +112,6 @@ type Switch struct {
 }
 
 func (s *Switch) component() {}
-
-func (s *Switch) MarshalJSON() ([]byte, error) { return marshalComponent(s, "Switch") }
 
 type KeyValue struct {
 	Name           string
@@ -157,8 +126,6 @@ type KeyValue struct {
 
 func (kv *KeyValue) component() {}
 
-func (kv *KeyValue) MarshalJSON() ([]byte, error) { return marshalComponent(kv, "KeyValue") }
-
 type Text struct {
 	Name      string
 	Value     string
@@ -167,8 +134,6 @@ type Text struct {
 }
 
 func (txt *Text) component() {}
-
-func (txt *Text) MarshalJSON() ([]byte, error) { return marshalComponent(txt, "Text") }
 
 type Action struct {
 	Event     string
