@@ -56,24 +56,24 @@ func (err *DatabaseQueryError) Error() string {
 	return err.Message
 }
 
-// Role represents a connection role.
-type Role int
+// ConnectionRole represents a connection role.
+type ConnectionRole int
 
 const (
-	SourceRole      Role = iota + 1 // source
-	DestinationRole                 // destination
+	SourceRole      ConnectionRole = iota + 1 // source
+	DestinationRole                           // destination
 )
 
 // String returns the string representation of role.
-// It panics if role is not a valid Role value.
-func (role Role) String() string {
+// It panics if role is not a valid ConnectionRole value.
+func (role ConnectionRole) String() string {
 	switch role {
 	case SourceRole:
 		return "Source"
 	case DestinationRole:
 		return "Destination"
 	}
-	panic("invalid role")
+	panic("invalid connection role")
 }
 
 // Connection represents a connection.
@@ -81,7 +81,7 @@ type Connection struct {
 	ID       int
 	Name     string
 	Type     string
-	Role     Role
+	Role     ConnectionRole
 	Storage  int // zero if the connection is not a file or does not have a storage
 	OauthURL string
 	LogoURL  string
@@ -91,7 +91,7 @@ type Connection struct {
 type ConnectionInfo struct {
 	ID         int
 	Type       string
-	Role       Role
+	Role       ConnectionRole
 	Storage    int // zero if the connection is not a file or does not have a storage
 	Name       string
 	LogoURL    string
@@ -120,7 +120,7 @@ type ConnectionProperty struct {
 // and access tokens and returns its identifier.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
-func (this *Connections) AddApp(role Role, connector int, refreshToken, accessToken, accessTokenExpirationTime string) (int, error) {
+func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken, accessToken, accessTokenExpirationTime string) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
@@ -205,7 +205,7 @@ func (this *Connections) AddApp(role Role, connector int, refreshToken, accessTo
 // and returns its identifier.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
-func (this *Connections) AddDatabase(role Role, connector int) (int, error) {
+func (this *Connections) AddDatabase(role ConnectionRole, connector int) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
@@ -243,7 +243,7 @@ func (this *Connections) AddDatabase(role Role, connector int) (int, error) {
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
 // If the storage does not exist, it returns the ErrStorageNotFound error.
-func (this *Connections) AddFile(role Role, connector, storage int) (int, error) {
+func (this *Connections) AddFile(role ConnectionRole, connector, storage int) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
@@ -268,7 +268,7 @@ func (this *Connections) AddFile(role Role, connector, storage int) (int, error)
 		}
 		if storage > 0 {
 			// Check the storage.
-			var storageRole Role
+			var storageRole ConnectionRole
 			err = tx.QueryRow("SELECT `type`, CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ?", storage).Scan(&typ, &storageRole)
 			if err != nil {
 				if err == sql.ErrNoRows {
@@ -305,7 +305,7 @@ func (this *Connections) AddFile(role Role, connector, storage int) (int, error)
 // returns its identifier.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
-func (this *Connections) AddStorage(role Role, connector int) (int, error) {
+func (this *Connections) AddStorage(role ConnectionRole, connector int) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
@@ -425,7 +425,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 
 	// Check that the connection exists, is a source and has a transformation.
 	var typ string
-	var role Role
+	var role ConnectionRole
 	err := this.myDB.QueryRow("SELECT `type`, CAST(`role` AS UNSIGNED)\n"+
 		"FROM `connections`"+
 		"WHERE `id` = ? AND `workspace` = ?",
@@ -774,7 +774,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 	}
 
 	var typ, connectorName string
-	var role Role
+	var role ConnectionRole
 	var connector int
 	var settings []byte
 	err := this.myDB.QueryRow(
@@ -865,7 +865,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 	}
 
 	var typ string
-	var role Role
+	var role ConnectionRole
 	err := this.myDB.QueryRow("SELECT `type`, CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
 		id, this.workspace).Scan(&typ, &role)
 	if err != nil {
@@ -1011,7 +1011,7 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 	}
 	if affected == 0 {
 		var typ string
-		var role Role
+		var role ConnectionRole
 		err = this.myDB.QueryRow("SELECT `type`, CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
 			id, this.workspace).Scan(&typ, &role)
 		if err != nil {
@@ -1093,7 +1093,7 @@ func (this *Connections) reloadProperties(id int) error {
 	}
 
 	var typ string
-	var role Role
+	var role ConnectionRole
 	err := this.myDB.QueryRow("SELECT `type`, CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
 		id, this.workspace).Scan(&typ, &role)
 	if err != nil {
@@ -1338,7 +1338,7 @@ func (files *fileReader) Reader(path string) (io.ReadCloser, time.Time, error) {
 }
 
 // marshalUIForm marshals form with given role in JSON format.
-func marshalUIForm(form *ui.Form, role Role) ([]byte, error) {
+func marshalUIForm(form *ui.Form, role ConnectionRole) ([]byte, error) {
 
 	if form == nil {
 		return []byte("null"), nil
@@ -1352,7 +1352,7 @@ func marshalUIForm(form *ui.Form, role Role) ([]byte, error) {
 	for i, field := range form.Fields {
 		rv := reflect.ValueOf(field).Elem()
 		rt := rv.Type()
-		if r := ui.Role(rv.FieldByName("Role").Int()); r != ui.BothRole && Role(r) != role {
+		if r := ui.Role(rv.FieldByName("Role").Int()); r != ui.BothRole && ConnectionRole(r) != role {
 			continue
 		}
 		if i > 0 {
