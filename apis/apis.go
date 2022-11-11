@@ -430,14 +430,10 @@ func (apis *APIs) initSchema() {
 		usersQuery      string
 	}{})
 
-	apis.myDB.Scheme("Connectors", "connectors", struct {
-		id            int
-		oauthURL      string
-		logoURL       string
-		clientID      string
-		clientSecret  string
-		tokenEndpoint string
-		webhooksPer   string
+	apis.myDB.Scheme("ConnectionsStats", "connections_stats", struct {
+		connection int
+		timeSlot   int
+		usersIn    int
 	}{})
 
 	apis.myDB.Scheme("ConnectionsUsers", "connections_users", struct {
@@ -447,10 +443,14 @@ func (apis *APIs) initSchema() {
 		data      string
 	}{})
 
-	apis.myDB.Scheme("ConnectionsStats", "connections_stats", struct {
-		connection int
-		timeSlot   int
-		usersIn    int
+	apis.myDB.Scheme("Connectors", "connectors", struct {
+		id            int
+		oauthURL      string
+		logoURL       string
+		clientID      string
+		clientSecret  string
+		tokenEndpoint string
+		webhooksPer   string
 	}{})
 
 	apis.myDB.Scheme("Devices", "devices", struct {
