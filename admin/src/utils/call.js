@@ -30,7 +30,7 @@ export default async function call(url, value) {
         return [null, `error while parsing json response from ${url}: ${err.message}`];
     }
 
-    if ( typeof data === 'object' && 'Error' in data ) {
+    if ( data != null && typeof data === 'object' && 'Error' in data ) {
         return [null, data.Error];
     }
 
