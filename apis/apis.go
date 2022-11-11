@@ -230,11 +230,43 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// ConnectorType represents a connector type.
+type ConnectorType int
+
+const (
+	AppType      ConnectorType = iota + 1 // app
+	DatabaseType                          // database
+	FileType                              // file
+	StorageType                           // storage
+)
+
+// String returns the string representation of typ.
+// It panics if typ is not a valid ConnectorType value.
+func (typ ConnectorType) String() string {
+	switch typ {
+	case AppType:
+		return "App"
+	case DatabaseType:
+		return "Database"
+	case FileType:
+		return "File"
+	case StorageType:
+		return "Storage"
+	}
+	panic("invalid connector type")
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+// It panics if typ is not a valid ConnectorType value.
+func (typ ConnectorType) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + typ.String() + `"`), nil
+}
+
 // Connector represents a connector.
 type Connector struct {
 	ID               int
 	Name             string
-	Type             string
+	Type             ConnectorType
 	OauthURL         string
 	LogoURL          string
 	ClientID         string
@@ -250,7 +282,7 @@ type Connector struct {
 func (apis *APIs) Connector(id int) (*Connector, error) {
 	connector := Connector{ID: id}
 	err := apis.myDB.QueryRow(
-		"SELECT `name`, `type`, `oauthURL`, `logoURL`, `clientID`, `clientSecret`,"+
+		"SELECT `name`, CAST(`type` AS UNSIGNED), `oauthURL`, `logoURL`, `clientID`, `clientSecret`,"+
 			" `tokenEndpoint`, `webhooksPer`, `defaultTokenType`, `defaultExpiresIn`, `forcedExpiresIn`\n"+
 			"FROM `connectors`\nWHERE `id` = ?", id).
 		Scan(&connector.Name, &connector.Type, &connector.OauthURL, &connector.LogoURL, &connector.ClientID, &connector.ClientSecret,
@@ -267,7 +299,7 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 // Connectors returns all connectors.
 func (apis *APIs) Connectors() ([]*Connector, error) {
 	connectors := []*Connector{}
-	err := apis.myDB.QueryScan("SELECT `id`, `name`, `type`, `oauthURL`, `logoURL`\nFROM `connectors`", func(rows *sql.Rows) error {
+	err := apis.myDB.QueryScan("SELECT `id`, `name`, CAST(`type` AS UNSIGNED), `oauthURL`, `logoURL`\nFROM `connectors`", func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
 			var connector Connector

@@ -34,7 +34,7 @@ type firehose struct {
 	connection    int
 	resource      int
 	connector     int
-	connectorType string
+	connectorType ConnectorType
 	role          connector.Role
 	ctx           context.Context
 	cancel        context.CancelFunc

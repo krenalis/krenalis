@@ -80,7 +80,7 @@ func (role ConnectionRole) String() string {
 type Connection struct {
 	ID       int
 	Name     string
-	Type     string
+	Type     ConnectorType
 	Role     ConnectionRole
 	Storage  int // zero if the connection is not a file or does not have a storage
 	OauthURL string
@@ -90,7 +90,7 @@ type Connection struct {
 // ConnectionInfo represents a connection.
 type ConnectionInfo struct {
 	ID         int
-	Type       string
+	Type       ConnectorType
 	Role       ConnectionRole
 	Storage    int // zero if the connection is not a file or does not have a storage
 	Name       string
@@ -134,7 +134,7 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken
 	if conn == nil {
 		return 0, ErrConnectorNotFound
 	}
-	if conn.Type != "App" {
+	if conn.Type != AppType {
 		return 0, errors.New("connector is not an app connector")
 	}
 	c, err := newAppConnection(context.Background(), conn.Name, &_connector.AppConfig{
@@ -214,15 +214,15 @@ func (this *Connections) AddDatabase(role ConnectionRole, connector int) (int, e
 	}
 	var id int64
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		var connectorType string
-		err := tx.QueryRow("SELECT `type` FROM `connectors` WHERE `id` = ?", connector).Scan(&connectorType)
+		var connectorType ConnectorType
+		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&connectorType)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ErrConnectorNotFound
 			}
 			return err
 		}
-		if connectorType != "Database" {
+		if connectorType != DatabaseType {
 			return errors.New("connector is not a database connector")
 		}
 		result, err := tx.Exec("INSERT INTO `connections`\n"+
@@ -255,28 +255,29 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int) (i
 	}
 	var id int64
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		var typ string
-		err := tx.QueryRow("SELECT `type` FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
+		var typ ConnectorType
+		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ErrConnectorNotFound
 			}
 			return err
 		}
-		if typ != "File" {
+		if typ != FileType {
 			return errors.New("connector is not a file connector")
 		}
 		if storage > 0 {
 			// Check the storage.
 			var storageRole ConnectionRole
-			err = tx.QueryRow("SELECT `type`, CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ?", storage).Scan(&typ, &storageRole)
+			err = tx.QueryRow("SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ?",
+				storage).Scan(&typ, &storageRole)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return ErrStorageNotFound
 				}
 				return err
 			}
-			if typ != "Storage" {
+			if typ != StorageType {
 				return errors.New("storage is not a storage connection")
 			}
 			if storageRole != role {
@@ -314,15 +315,15 @@ func (this *Connections) AddStorage(role ConnectionRole, connector int) (int, er
 	}
 	var id int64
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		var typ string
-		err := tx.QueryRow("SELECT `type` FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
+		var typ ConnectorType
+		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ErrConnectorNotFound
 			}
 			return err
 		}
-		if typ != "Storage" {
+		if typ != StorageType {
 			return errors.New("connector is not a storage connector")
 		}
 		result, err := tx.Exec("INSERT INTO `connections`\n"+
@@ -348,7 +349,7 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 	}
 	s := ConnectionInfo{ID: id}
 	err := this.myDB.QueryRow(
-		"SELECT `s`.`type`, CAST(`s`.`role` AS UNSIGNED), `c`.`name`, `c`.`logoURL`, `s`.`usersQuery`\n"+
+		"SELECT CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `c`.`name`, `c`.`logoURL`, `s`.`usersQuery`\n"+
 			"FROM `connections` AS `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?",
@@ -373,14 +374,14 @@ func (this *Connections) Delete(id int) error {
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		connection, err := tx.Table("Connections").Get(
 			sql.Where{"id": id, "workspace": this.workspace},
-			sql.Columns{"type", "resource"})
+			sql.Columns{"CAST(`type` AS UNSIGNED)", "resource"})
 		if err != nil {
 			return err
 		}
 		if connection == nil {
 			return nil
 		}
-		if connection["type"] == "Storage" {
+		if connection["type"] == StorageType {
 			hasFiles, err := tx.Table("Connections").Exists(sql.Where{"workspace": this.workspace, "storage": id})
 			if err != nil {
 				return err
@@ -424,9 +425,9 @@ func (this *Connections) Import(id int, reimport bool) error {
 	}
 
 	// Check that the connection exists, is a source and has a transformation.
-	var typ string
+	var typ ConnectorType
 	var role ConnectionRole
-	err := this.myDB.QueryRow("SELECT `type`, CAST(`role` AS UNSIGNED)\n"+
+	err := this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED)\n"+
 		"FROM `connections`"+
 		"WHERE `id` = ? AND `workspace` = ?",
 		id, this.workspace).Scan(&typ, &role)
@@ -436,7 +437,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 		}
 		return err
 	}
-	if typ == "Storage" {
+	if typ == StorageType {
 		return errors.New("cannot import from a storage")
 	}
 	if role == DestinationRole {
@@ -456,21 +457,21 @@ func (this *Connections) Import(id int, reimport bool) error {
 	const cRole = _connector.SourceRole
 
 	switch typ {
-	case "App":
+	case AppType:
 
-		var name, connectorType, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
+		var name, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
 		var connector, resource int
 		var settings, rawUsedProperties []byte
 		var expiration time.Time
 		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`type`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
+			"SELECT `c`.`name`, c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
 				" `r`.`refreshToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
 				" `s`.`resource`, `s`.`userCursor`, `s`.`settings`, `s`.`usedProperties`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(
-			&name, &connectorType, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration, &connector,
+			&name, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration, &connector,
 			&resource, &cursor, &settings, &rawUsedProperties)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -497,7 +498,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 		}
 
 		go func() {
-			fh := this.newFirehose(context.Background(), id, connector, resource, connectorType, cRole, webhooksPer)
+			fh := this.newFirehose(context.Background(), id, connector, resource, typ, cRole, webhooksPer)
 			c, err := newAppConnection(fh.ctx, name, &_connector.AppConfig{
 				Role:         cRole,
 				Settings:     settings,
@@ -516,7 +517,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 			}
 		}()
 
-	case "Database":
+	case DatabaseType:
 
 		var connectorName, identityColumn, timestampColumn, usersQuery string
 		var connector int
@@ -537,7 +538,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 		if err != nil {
 			return err
 		}
-		fh := this.newFirehose(context.Background(), id, connector, 0, "Database", cRole, "")
+		fh := this.newFirehose(context.Background(), id, connector, 0, DatabaseType, cRole, "")
 		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 			Role:     cRole,
 			Settings: settings,
@@ -598,7 +599,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 			return err
 		}
 
-	case "File":
+	case FileType:
 
 		var connectorName, identityColumn, timestampColumn string
 		var connector, storage int
@@ -637,7 +638,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 				}
 				return err
 			}
-			fh := this.newFirehose(ctx, storage, connector, 0, "Storage", cRole, "")
+			fh := this.newFirehose(ctx, storage, connector, 0, StorageType, cRole, "")
 			ctx = fh.ctx
 			c, err := newStorageConnection(ctx, connectorName, &_connector.StorageConfig{
 				Role:     cRole,
@@ -651,7 +652,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 		}
 
 		// Connect to the file connector.
-		fh := this.newFirehose(ctx, id, connector, 0, "File", cRole, "")
+		fh := this.newFirehose(ctx, id, connector, 0, FileType, cRole, "")
 		file, err := newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 			Role:     cRole,
 			Settings: settings,
@@ -677,7 +678,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 func (this *Connections) List() ([]*Connection, error) {
 	sources := []*Connection{}
 	err := this.myDB.QueryScan(
-		"SELECT `s`.`id`, `s`.`type`, CAST(`s`.`role` AS UNSIGNED), `s`.`storage`, `c`.`name`, `c`.`oauthURL`, `c`.`logoURL`\n"+
+		"SELECT `s`.`id`, CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `s`.`storage`, `c`.`name`, `c`.`oauthURL`, `c`.`logoURL`\n"+
 			"FROM `connections` as `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`workspace` = ?", this.workspace, func(rows *sql.Rows) error {
@@ -705,15 +706,15 @@ func (this *Connections) Properties(id int) ([]ConnectionProperty, [][]string, e
 	if id <= 0 {
 		return nil, nil, errors.New("invalid connection identifier")
 	}
-	var typ string
+	var typ ConnectorType
 	var rawProperties, rawUsedProperties []byte
-	err := this.myDB.QueryRow("SELECT `type`, `properties`, `usedProperties`\n"+
+	err := this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), `properties`, `usedProperties`\n"+
 		"FROM `connections`\n"+
 		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&typ, &rawProperties, &rawUsedProperties)
 	if err != nil {
 		return nil, nil, err
 	}
-	if typ == "Storage" {
+	if typ == StorageType {
 		return nil, nil, errors.New("cannot read properties from a storage")
 	}
 	var properties []ConnectionProperty
@@ -773,12 +774,13 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 		return nil, nil, errors.New("invalid limit")
 	}
 
-	var typ, connectorName string
+	var typ ConnectorType
+	var connectorName string
 	var role ConnectionRole
 	var connector int
 	var settings []byte
 	err := this.myDB.QueryRow(
-		"SELECT `s`.`type`, CAST(`s`.`role` AS UNSIGNED), `s`.`connector`, `s`.`settings`, `c`.`name`\n"+
+		"SELECT CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `s`.`connector`, `s`.`settings`, `c`.`name`\n"+
 			"FROM `connections` AS `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
@@ -789,7 +791,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 		}
 		return nil, nil, err
 	}
-	if typ != "Database" {
+	if typ != DatabaseType {
 		return nil, nil, errors.New("connection is not a database")
 	}
 	if role != SourceRole {
@@ -864,9 +866,9 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		return nil, errors.New("invalid connection identifier")
 	}
 
-	var typ string
+	var typ ConnectorType
 	var role ConnectionRole
-	err := this.myDB.QueryRow("SELECT `type`, CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
+	err := this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
 		id, this.workspace).Scan(&typ, &role)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -880,20 +882,20 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 	var connection _connector.Connection
 
 	switch typ {
-	case "App":
+	case AppType:
 
-		var connectorName, connectorType, clientSecret, webhooksPer, resourceCode, accessToken string
+		var connectorName, clientSecret, webhooksPer, resourceCode, accessToken string
 		var connector, resource int
 		var settings []byte
 		var expiration time.Time
 		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`type`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
+			"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
 				" `r`.`accessTokenExpirationTime`, `s`.`connector`, `s`.`resource`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(
-			&connectorName, &connectorType, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &expiration,
+			&connectorName, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &expiration,
 			&connector, &resource, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -911,7 +913,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 			}
 		}
 
-		fh := this.newFirehose(context.Background(), id, connector, resource, connectorType, cRole, webhooksPer)
+		fh := this.newFirehose(context.Background(), id, connector, resource, typ, cRole, webhooksPer)
 		connection, err = newAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
 			Role:         cRole,
 			Settings:     settings,
@@ -941,19 +943,19 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		fh := this.newFirehose(context.Background(), id, connector, 0, typ, cRole, "")
 
 		switch typ {
-		case "Database":
+		case DatabaseType:
 			connection, err = newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 				Role:     cRole,
 				Settings: settings,
 				Firehose: fh,
 			})
-		case "File":
+		case FileType:
 			connection, err = newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 				Role:     cRole,
 				Settings: settings,
 				Firehose: fh,
 			})
-		case "Storage":
+		case StorageType:
 			connection, err = newStorageConnection(fh.ctx, connectorName, &_connector.StorageConfig{
 				Role:     cRole,
 				Settings: settings,
@@ -1010,14 +1012,14 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 		return err
 	}
 	if affected == 0 {
-		var typ string
+		var typ ConnectorType
 		var role ConnectionRole
-		err = this.myDB.QueryRow("SELECT `type`, CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
+		err = this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
 			id, this.workspace).Scan(&typ, &role)
 		if err != nil {
 			return err
 		}
-		if typ != "Database" {
+		if typ != DatabaseType {
 			return errors.New("connection is not a database")
 		}
 		if role != SourceRole {
@@ -1066,13 +1068,13 @@ func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 }
 
 // newFirehose returns a new Firehose used to call a connection method.
-func (this *Connections) newFirehose(ctx context.Context, connection, connector, resource int, connectorType string, role _connector.Role, webhooksPer string) *firehose {
+func (this *Connections) newFirehose(ctx context.Context, connection, connector, resource int, typ ConnectorType, role _connector.Role, webhooksPer string) *firehose {
 	fh := &firehose{
 		connections:   this,
 		connection:    connection,
 		resource:      resource,
 		connector:     connector,
-		connectorType: connectorType,
+		connectorType: typ,
 		role:          role,
 		webhooksPer:   webhooksPer,
 	}
@@ -1092,9 +1094,9 @@ func (this *Connections) reloadProperties(id int) error {
 		return errors.New("invalid connection identifier")
 	}
 
-	var typ string
+	var typ ConnectorType
 	var role ConnectionRole
-	err := this.myDB.QueryRow("SELECT `type`, CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
+	err := this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
 		id, this.workspace).Scan(&typ, &role)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -1102,7 +1104,7 @@ func (this *Connections) reloadProperties(id int) error {
 		}
 		return err
 	}
-	if typ == "Storage" {
+	if typ == StorageType {
 		return errors.New("cannot reload properties of a storage")
 	}
 
@@ -1111,7 +1113,7 @@ func (this *Connections) reloadProperties(id int) error {
 	var properties []_connector.Property
 
 	switch typ {
-	case "App":
+	case AppType:
 
 		// TODO(marco) The following code is duplicated in the Import method.
 		var connectorName, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
@@ -1143,7 +1145,7 @@ func (this *Connections) reloadProperties(id int) error {
 				return err
 			}
 		}
-		fh := this.newFirehose(context.Background(), id, connector, resource, "App", cRole, webhooksPer)
+		fh := this.newFirehose(context.Background(), id, connector, resource, AppType, cRole, webhooksPer)
 		c, err := newAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
 			Role:         cRole,
 			Settings:     settings,
@@ -1160,7 +1162,7 @@ func (this *Connections) reloadProperties(id int) error {
 			return err
 		}
 
-	case "Database":
+	case DatabaseType:
 
 		var connectorName, usersQuery string
 		var connector int
@@ -1181,7 +1183,7 @@ func (this *Connections) reloadProperties(id int) error {
 		if err != nil {
 			return err
 		}
-		fh := this.newFirehose(context.Background(), id, connector, 0, "Database", cRole, "")
+		fh := this.newFirehose(context.Background(), id, connector, 0, DatabaseType, cRole, "")
 		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 			Role:     cRole,
 			Settings: settings,
@@ -1204,7 +1206,7 @@ func (this *Connections) reloadProperties(id int) error {
 			properties[i].Type = columns[i].Type
 		}
 
-	case "File":
+	case FileType:
 
 		var connectorName, identityColumn, timestampColumn string
 		var connector, storage int
@@ -1243,7 +1245,7 @@ func (this *Connections) reloadProperties(id int) error {
 				}
 				return err
 			}
-			fh := this.newFirehose(ctx, storage, connector, 0, "Storage", cRole, "")
+			fh := this.newFirehose(ctx, storage, connector, 0, StorageType, cRole, "")
 			ctx = fh.ctx
 			c, err := newStorageConnection(ctx, connectorName, &_connector.StorageConfig{
 				Role:     cRole,
@@ -1257,7 +1259,7 @@ func (this *Connections) reloadProperties(id int) error {
 		}
 
 		// Connect to the file connector and read only the columns.
-		fh := this.newFirehose(ctx, id, connector, 0, "File", cRole, "")
+		fh := this.newFirehose(ctx, id, connector, 0, FileType, cRole, "")
 		file, err := newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 			Role:     cRole,
 			Settings: settings,
