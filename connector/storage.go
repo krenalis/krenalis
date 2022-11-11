@@ -15,9 +15,9 @@ import (
 
 // StorageConfig represents the configuration of a storage connection.
 type StorageConfig struct {
-	Direction Direction
-	Settings  []byte
-	Firehose  Firehose
+	Role     Role
+	Settings []byte
+	Firehose Firehose
 }
 
 // StorageConnectionFunc represents functions that create new storage

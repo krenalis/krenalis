@@ -42,7 +42,7 @@ CREATE TABLE `connections` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `workspace` INT NOT NULL,
   `type` ENUM('App', 'Database', 'File', 'Storage') NOT NULL DEFAULT 'App',
-  `direction` ENUM('Source', 'Destination') NOT NULL DEFAULT 'Source',
+  `role` ENUM('Source', 'Destination') NOT NULL DEFAULT 'Source',
   `connector` INT NOT NULL,
   `storage` INT NOT NULL,
   `resource` INT NOT NULL,

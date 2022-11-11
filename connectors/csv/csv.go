@@ -38,7 +38,7 @@ func init() {
 
 type connection struct {
 	ctx      context.Context
-	dir      connector.Direction
+	role     connector.Role
 	settings *settings
 	firehose connector.Firehose
 }
@@ -55,7 +55,7 @@ type settings struct {
 
 // New returns a new CSV connection.
 func New(ctx context.Context, conf *connector.FileConfig) (connector.FileConnection, error) {
-	c := connection{ctx: ctx, dir: conf.Direction, firehose: conf.Firehose}
+	c := connection{ctx: ctx, role: conf.Role, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -163,7 +163,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
 			return nil, ui.Errorf("comma cannot be \\r, \\n, or the Unicode replacement character")
 		}
-		if c.dir == connector.SourceDir {
+		if c.role == connector.SourceRole {
 			// Validate Comment.
 			if c := s.Comment; c != "" {
 				if utf8.RuneCountInString(c) != 1 {
@@ -198,9 +198,9 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		Fields: []ui.Component{
 			&ui.Input{Name: "path", Value: s.Path, Label: "Path", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1000},
 			&ui.Input{Name: "comma", Value: s.Comma, Label: "Comma", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
-			&ui.Input{Name: "comment", Value: s.Comment, Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Direction: ui.SourceDir},
-			&ui.Input{Name: "fieldsPerRecord", Value: s.FieldsPerRecord, Label: "Fields per record", Placeholder: "", Type: "number", Direction: ui.SourceDir},
-			&ui.Checkbox{Name: "trimLeadingSpace", Value: s.TrimLeadingSpace, Label: "Trim leading space", Direction: ui.SourceDir},
+			&ui.Input{Name: "comment", Value: s.Comment, Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Role: ui.SourceRole},
+			&ui.Input{Name: "fieldsPerRecord", Value: s.FieldsPerRecord, Label: "Fields per record", Placeholder: "", Type: "number", Role: ui.SourceRole},
+			&ui.Checkbox{Name: "trimLeadingSpace", Value: s.TrimLeadingSpace, Label: "Trim leading space", Role: ui.SourceRole},
 			&ui.Checkbox{Name: "useCRLF", Value: s.UseCRLF, Label: "Use CRLF"},
 		},
 		Actions: []ui.Action{

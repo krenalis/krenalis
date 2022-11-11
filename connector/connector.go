@@ -71,24 +71,24 @@ const (
 	WebhooksPerConnection
 )
 
-// Direction represents the direction of a connection.
-type Direction int
+// Role represents the role of a connection.
+type Role int
 
 const (
-	SourceDir Direction = iota + 1 // source
-	DestDir                        // destination
+	SourceRole      Role = iota + 1 // source
+	DestinationRole                 // destination
 )
 
-// String returns the string representation of dir.
-// It panics if dir is not a valid Direction value.
-func (dir Direction) String() string {
-	switch dir {
-	case SourceDir:
+// String returns the string representation of role.
+// It panics if role is not a valid Role value.
+func (role Role) String() string {
+	switch role {
+	case SourceRole:
 		return "Source"
-	case DestDir:
+	case DestinationRole:
 		return "Destination"
 	}
-	panic("invalid direction")
+	panic("invalid role")
 }
 
 // Connection is the interface implemented by connections.

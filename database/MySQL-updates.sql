@@ -475,3 +475,6 @@ ALTER TABLE `connectors`
 ALTER TABLE `connections`
     CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'File', 'Storage') NOT NULL DEFAULT 'App',
     CHANGE COLUMN `direction` `direction` ENUM('Source', 'Destination') NOT NULL DEFAULT 'Source';
+
+ALTER TABLE `connections`
+    CHANGE COLUMN `direction` `role` ENUM('Source', 'Destination') NOT NULL DEFAULT 'Source';

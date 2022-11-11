@@ -684,13 +684,13 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 
 	switch connection.Type {
 	case "App":
-		id, err = ws.Connections.AddApp(apis.SourceDir, connection.Connector, "", "", "")
+		id, err = ws.Connections.AddApp(apis.SourceRole, connection.Connector, "", "", "")
 	case "Database":
-		id, err = ws.Connections.AddDatabase(apis.SourceDir, connection.Connector)
+		id, err = ws.Connections.AddDatabase(apis.SourceRole, connection.Connector)
 	case "File":
-		id, err = ws.Connections.AddFile(apis.SourceDir, connection.Connector, connection.Storage)
+		id, err = ws.Connections.AddFile(apis.SourceRole, connection.Connector, connection.Storage)
 	case "Storage":
-		id, err = ws.Connections.AddStorage(apis.SourceDir, connection.Connector)
+		id, err = ws.Connections.AddStorage(apis.SourceRole, connection.Connector)
 	}
 	if err != nil {
 		return err
@@ -799,7 +799,7 @@ func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Reque
 		expireDate = expireDate.Add(time.Duration(connector.DefaultExpiresIn) * time.Second)
 	}
 
-	_, err = ws.Connections.AddApp(apis.SourceDir, connectorID, tokens.RefreshToken, tokens.AccessToken,
+	_, err = ws.Connections.AddApp(apis.SourceRole, connectorID, tokens.RefreshToken, tokens.AccessToken,
 		expireDate.Format("2006-01-02 15:04:05"))
 
 	if err != nil {

@@ -56,42 +56,42 @@ func (err *DatabaseQueryError) Error() string {
 	return err.Message
 }
 
-// Direction represents a connection direction.
-type Direction int
+// Role represents a connection role.
+type Role int
 
 const (
-	SourceDir Direction = iota + 1 // source
-	DestDir                        // destination
+	SourceRole      Role = iota + 1 // source
+	DestinationRole                 // destination
 )
 
-// String returns the string representation of dir.
-// It panics if dir is not a valid Direction value.
-func (dir Direction) String() string {
-	switch dir {
-	case SourceDir:
+// String returns the string representation of role.
+// It panics if role is not a valid Role value.
+func (role Role) String() string {
+	switch role {
+	case SourceRole:
 		return "Source"
-	case DestDir:
+	case DestinationRole:
 		return "Destination"
 	}
-	panic("invalid direction")
+	panic("invalid role")
 }
 
 // Connection represents a connection.
 type Connection struct {
-	ID        int
-	Name      string
-	Type      string
-	Direction Direction
-	Storage   int // zero if the connection is not a file or does not have a storage
-	OauthURL  string
-	LogoURL   string
+	ID       int
+	Name     string
+	Type     string
+	Role     Role
+	Storage  int // zero if the connection is not a file or does not have a storage
+	OauthURL string
+	LogoURL  string
 }
 
 // ConnectionInfo represents a connection.
 type ConnectionInfo struct {
 	ID         int
 	Type       string
-	Direction  Direction
+	Role       Role
 	Storage    int // zero if the connection is not a file or does not have a storage
 	Name       string
 	LogoURL    string
@@ -116,13 +116,13 @@ type ConnectionProperty struct {
 	Properties []ConnectionProperty
 }
 
-// AddApp adds an app connection given its direction, app connector, OAuth
-// refresh and access tokens and returns its identifier.
+// AddApp adds an app connection given its role, app connector, OAuth refresh
+// and access tokens and returns its identifier.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
-func (this *Connections) AddApp(dir Direction, connector int, refreshToken, accessToken, accessTokenExpirationTime string) (int, error) {
-	if dir != SourceDir && dir != DestDir {
-		return 0, errors.New("invalid direction")
+func (this *Connections) AddApp(role Role, connector int, refreshToken, accessToken, accessTokenExpirationTime string) (int, error) {
+	if role != SourceRole && role != DestinationRole {
+		return 0, errors.New("invalid role")
 	}
 	if connector <= 0 {
 		return 0, errors.New("invalid connector")
@@ -137,9 +137,8 @@ func (this *Connections) AddApp(dir Direction, connector int, refreshToken, acce
 	if conn.Type != "App" {
 		return 0, errors.New("connector is not an app connector")
 	}
-	direction := _connector.Direction(dir)
 	c, err := newAppConnection(context.Background(), conn.Name, &_connector.AppConfig{
-		Direction:    direction,
+		Role:         _connector.Role(role),
 		ClientSecret: conn.ClientSecret,
 		AccessToken:  accessToken,
 	})
@@ -180,8 +179,8 @@ func (this *Connections) AddApp(dir Direction, connector int, refreshToken, acce
 			return err
 		}
 		result, err := tx.Exec("INSERT INTO `connections`\n"+
-			"SET `workspace` = ?, `type` = 'App', `direction` = ?, `connector` = ?, `resource` = ?",
-			this.workspace, dir, connector, resource)
+			"SET `workspace` = ?, `type` = 'App', `role` = ?, `connector` = ?, `resource` = ?",
+			this.workspace, role, connector, resource)
 		if err != nil {
 			return err
 		}
@@ -202,13 +201,13 @@ func (this *Connections) AddApp(dir Direction, connector int, refreshToken, acce
 	return int(id), err
 }
 
-// AddDatabase adds a database connection given its direction, database
-// connector and returns its identifier.
+// AddDatabase adds a database connection given its role, database connector
+// and returns its identifier.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
-func (this *Connections) AddDatabase(dir Direction, connector int) (int, error) {
-	if dir != SourceDir && dir != DestDir {
-		return 0, errors.New("invalid direction")
+func (this *Connections) AddDatabase(role Role, connector int) (int, error) {
+	if role != SourceRole && role != DestinationRole {
+		return 0, errors.New("invalid role")
 	}
 	if connector <= 0 {
 		return 0, errors.New("invalid connector")
@@ -227,8 +226,8 @@ func (this *Connections) AddDatabase(dir Direction, connector int) (int, error) 
 			return errors.New("connector is not a database connector")
 		}
 		result, err := tx.Exec("INSERT INTO `connections`\n"+
-			"SET `workspace` = ?, `type` = 'Database', `direction` = ?, `connector` = ?",
-			this.workspace, dir, connector)
+			"SET `workspace` = ?, `type` = 'Database', `role` = ?, `connector` = ?",
+			this.workspace, role, connector)
 		id, err = result.LastInsertId()
 		return err
 	})
@@ -238,15 +237,15 @@ func (this *Connections) AddDatabase(dir Direction, connector int) (int, error) 
 	return int(id), nil
 }
 
-// AddFile adds a file connection given its direction, connector and storage
+// AddFile adds a file connection given its role, connector and storage
 // connection and returns its identifier. If storage is 0, the file connection
-// does not have a storage, otherwise storage must have direction dir.
+// does not have a storage, otherwise storage must have the given role.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
 // If the storage does not exist, it returns the ErrStorageNotFound error.
-func (this *Connections) AddFile(dir Direction, connector, storage int) (int, error) {
-	if dir != SourceDir && dir != DestDir {
-		return 0, errors.New("invalid direction")
+func (this *Connections) AddFile(role Role, connector, storage int) (int, error) {
+	if role != SourceRole && role != DestinationRole {
+		return 0, errors.New("invalid role")
 	}
 	if connector <= 0 {
 		return 0, errors.New("invalid connector")
@@ -269,8 +268,8 @@ func (this *Connections) AddFile(dir Direction, connector, storage int) (int, er
 		}
 		if storage > 0 {
 			// Check the storage.
-			var storageDir Direction
-			err = tx.QueryRow("SELECT `type`, CAST(`direction` AS UNSIGNED) FROM `connections` WHERE `id` = ?", storage).Scan(&typ, &storageDir)
+			var storageRole Role
+			err = tx.QueryRow("SELECT `type`, CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ?", storage).Scan(&typ, &storageRole)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return ErrStorageNotFound
@@ -280,16 +279,16 @@ func (this *Connections) AddFile(dir Direction, connector, storage int) (int, er
 			if typ != "Storage" {
 				return errors.New("storage is not a storage connection")
 			}
-			if storageDir != dir {
-				if dir == SourceDir {
+			if storageRole != role {
+				if role == SourceRole {
 					return errors.New("storage is not a source")
 				}
 				return errors.New("storage is not a destination")
 			}
 		}
 		result, err := tx.Exec("INSERT INTO `connections`\n"+
-			"SET `workspace` = ?, `type` = 'File', `direction` = ?, `connector` = ? AND `storage` = ?",
-			this.workspace, dir, connector, storage)
+			"SET `workspace` = ?, `type` = 'File', `role` = ?, `connector` = ? AND `storage` = ?",
+			this.workspace, role, connector, storage)
 		if err != nil {
 			return err
 		}
@@ -302,13 +301,13 @@ func (this *Connections) AddFile(dir Direction, connector, storage int) (int, er
 	return int(id), nil
 }
 
-// AddStorage adds a storage connection given its direction and connector and
+// AddStorage adds a storage connection given its role and connector and
 // returns its identifier.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
-func (this *Connections) AddStorage(dir Direction, connector int) (int, error) {
-	if dir != SourceDir && dir != DestDir {
-		return 0, errors.New("invalid direction")
+func (this *Connections) AddStorage(role Role, connector int) (int, error) {
+	if role != SourceRole && role != DestinationRole {
+		return 0, errors.New("invalid role")
 	}
 	if connector <= 0 {
 		return 0, errors.New("invalid connector")
@@ -327,8 +326,8 @@ func (this *Connections) AddStorage(dir Direction, connector int) (int, error) {
 			return errors.New("connector is not a storage connector")
 		}
 		result, err := tx.Exec("INSERT INTO `connections`\n"+
-			"SET `workspace` = ?, `type` = 'Storage', `direction` = ?, `connector` = ?",
-			this.workspace, dir, connector)
+			"SET `workspace` = ?, `type` = 'Storage', `role` = ?, `connector` = ?",
+			this.workspace, role, connector)
 		if err != nil {
 			return err
 		}
@@ -349,11 +348,11 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 	}
 	s := ConnectionInfo{ID: id}
 	err := this.myDB.QueryRow(
-		"SELECT `s`.`type`, CAST(`s`.`direction` AS UNSIGNED), `c`.`name`, `c`.`logoURL`, `s`.`usersQuery`\n"+
+		"SELECT `s`.`type`, CAST(`s`.`role` AS UNSIGNED), `c`.`name`, `c`.`logoURL`, `s`.`usersQuery`\n"+
 			"FROM `connections` AS `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?",
-		id, this.workspace).Scan(&s.Type, &s.Direction, &s.Name, &s.LogoURL, &s.UsersQuery)
+		id, this.workspace).Scan(&s.Type, &s.Role, &s.Name, &s.LogoURL, &s.UsersQuery)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrConnectionNotFound
@@ -426,11 +425,11 @@ func (this *Connections) Import(id int, reimport bool) error {
 
 	// Check that the connection exists, is a source and has a transformation.
 	var typ string
-	var dir Direction
-	err := this.myDB.QueryRow("SELECT `type`, CAST(`direction` AS UNSIGNED)\n"+
+	var role Role
+	err := this.myDB.QueryRow("SELECT `type`, CAST(`role` AS UNSIGNED)\n"+
 		"FROM `connections`"+
 		"WHERE `id` = ? AND `workspace` = ?",
-		id, this.workspace).Scan(&typ, &dir)
+		id, this.workspace).Scan(&typ, &role)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrConnectionNotFound
@@ -440,7 +439,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 	if typ == "Storage" {
 		return errors.New("cannot import from a storage")
 	}
-	if dir == DestDir {
+	if role == DestinationRole {
 		return errors.New("cannot import from a destination")
 	}
 
@@ -454,7 +453,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 	}
 
 	const noColumn = -1
-	const direction = _connector.SourceDir
+	const cRole = _connector.SourceRole
 
 	switch typ {
 	case "App":
@@ -498,9 +497,9 @@ func (this *Connections) Import(id int, reimport bool) error {
 		}
 
 		go func() {
-			fh := this.newFirehose(context.Background(), id, connector, resource, connectorType, direction, webhooksPer)
+			fh := this.newFirehose(context.Background(), id, connector, resource, connectorType, cRole, webhooksPer)
 			c, err := newAppConnection(fh.ctx, name, &_connector.AppConfig{
-				Direction:    direction,
+				Role:         cRole,
 				Settings:     settings,
 				Firehose:     fh,
 				ClientSecret: clientSecret,
@@ -538,11 +537,11 @@ func (this *Connections) Import(id int, reimport bool) error {
 		if err != nil {
 			return err
 		}
-		fh := this.newFirehose(context.Background(), id, connector, 0, "Database", direction, "")
+		fh := this.newFirehose(context.Background(), id, connector, 0, "Database", cRole, "")
 		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
-			Direction: direction,
-			Settings:  settings,
-			Firehose:  fh,
+			Role:     cRole,
+			Settings: settings,
+			Firehose: fh,
 		})
 		if err != nil {
 			return err
@@ -638,12 +637,12 @@ func (this *Connections) Import(id int, reimport bool) error {
 				}
 				return err
 			}
-			fh := this.newFirehose(ctx, storage, connector, 0, "Storage", direction, "")
+			fh := this.newFirehose(ctx, storage, connector, 0, "Storage", cRole, "")
 			ctx = fh.ctx
 			c, err := newStorageConnection(ctx, connectorName, &_connector.StorageConfig{
-				Direction: direction,
-				Settings:  settings,
-				Firehose:  fh,
+				Role:     cRole,
+				Settings: settings,
+				Firehose: fh,
 			})
 			if err != nil {
 				return err
@@ -652,11 +651,11 @@ func (this *Connections) Import(id int, reimport bool) error {
 		}
 
 		// Connect to the file connector.
-		fh := this.newFirehose(ctx, id, connector, 0, "File", direction, "")
+		fh := this.newFirehose(ctx, id, connector, 0, "File", cRole, "")
 		file, err := newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
-			Direction: direction,
-			Settings:  settings,
-			Firehose:  fh,
+			Role:     cRole,
+			Settings: settings,
+			Firehose: fh,
 		})
 		if err != nil {
 			return err
@@ -678,14 +677,14 @@ func (this *Connections) Import(id int, reimport bool) error {
 func (this *Connections) List() ([]*Connection, error) {
 	sources := []*Connection{}
 	err := this.myDB.QueryScan(
-		"SELECT `s`.`id`, `s`.`type`, CAST(`s`.`direction` AS UNSIGNED), `s`.`storage`, `c`.`name`, `c`.`oauthURL`, `c`.`logoURL`\n"+
+		"SELECT `s`.`id`, `s`.`type`, CAST(`s`.`role` AS UNSIGNED), `s`.`storage`, `c`.`name`, `c`.`oauthURL`, `c`.`logoURL`\n"+
 			"FROM `connections` as `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`workspace` = ?", this.workspace, func(rows *sql.Rows) error {
 			var err error
 			for rows.Next() {
 				var c Connection
-				if err = rows.Scan(&c.ID, &c.Type, &c.Direction, &c.Storage, &c.Name,
+				if err = rows.Scan(&c.ID, &c.Type, &c.Role, &c.Storage, &c.Name,
 					&c.OauthURL, &c.LogoURL); err != nil {
 					return err
 				}
@@ -775,15 +774,15 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 	}
 
 	var typ, connectorName string
-	var dir Direction
+	var role Role
 	var connector int
 	var settings []byte
 	err := this.myDB.QueryRow(
-		"SELECT `s`.`type`, CAST(`s`.`direction` AS UNSIGNED), `s`.`connector`, `s`.`settings`, `c`.`name`\n"+
+		"SELECT `s`.`type`, CAST(`s`.`role` AS UNSIGNED), `s`.`connector`, `s`.`settings`, `c`.`name`\n"+
 			"FROM `connections` AS `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
-		&typ, &dir, &connector, &settings, &connectorName)
+		&typ, &role, &connector, &settings, &connectorName)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil, ErrConnectionNotFound
@@ -793,21 +792,21 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 	if typ != "Database" {
 		return nil, nil, errors.New("connection is not a database")
 	}
-	if dir != SourceDir {
+	if role != SourceRole {
 		return nil, nil, errors.New("connection is not a source")
 	}
-	const direction = _connector.SourceDir
+	const cRole = _connector.SourceRole
 
 	// Execute the query.
 	query, err = this.compileQueryWithLimit(query, limit)
 	if err != nil {
 		return nil, nil, err
 	}
-	fh := this.newFirehose(context.Background(), id, connector, 0, typ, direction, "")
+	fh := this.newFirehose(context.Background(), id, connector, 0, typ, cRole, "")
 	c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
-		Direction: direction,
-		Settings:  settings,
-		Firehose:  fh,
+		Role:     cRole,
+		Settings: settings,
+		Firehose: fh,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -866,9 +865,9 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 	}
 
 	var typ string
-	var dir Direction
-	err := this.myDB.QueryRow("SELECT `type`, CAST(`direction` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
-		id, this.workspace).Scan(&typ, &dir)
+	var role Role
+	err := this.myDB.QueryRow("SELECT `type`, CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
+		id, this.workspace).Scan(&typ, &role)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrConnectionNotFound
@@ -876,7 +875,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		return nil, err
 	}
 
-	direction := _connector.Direction(dir)
+	cRole := _connector.Role(role)
 
 	var connection _connector.Connection
 
@@ -912,9 +911,9 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 			}
 		}
 
-		fh := this.newFirehose(context.Background(), id, connector, resource, connectorType, direction, webhooksPer)
+		fh := this.newFirehose(context.Background(), id, connector, resource, connectorType, cRole, webhooksPer)
 		connection, err = newAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
-			Direction:    direction,
+			Role:         cRole,
 			Settings:     settings,
 			Firehose:     fh,
 			ClientSecret: clientSecret,
@@ -939,26 +938,26 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 			return nil, err
 		}
 
-		fh := this.newFirehose(context.Background(), id, connector, 0, typ, direction, "")
+		fh := this.newFirehose(context.Background(), id, connector, 0, typ, cRole, "")
 
 		switch typ {
 		case "Database":
 			connection, err = newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
-				Direction: direction,
-				Settings:  settings,
-				Firehose:  fh,
+				Role:     cRole,
+				Settings: settings,
+				Firehose: fh,
 			})
 		case "File":
 			connection, err = newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
-				Direction: direction,
-				Settings:  settings,
-				Firehose:  fh,
+				Role:     cRole,
+				Settings: settings,
+				Firehose: fh,
 			})
 		case "Storage":
 			connection, err = newStorageConnection(fh.ctx, connectorName, &_connector.StorageConfig{
-				Direction: direction,
-				Settings:  settings,
-				Firehose:  fh,
+				Role:     cRole,
+				Settings: settings,
+				Firehose: fh,
 			})
 		}
 
@@ -975,7 +974,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		return nil, err
 	}
 
-	return marshalUIForm(form, direction)
+	return marshalUIForm(form, role)
 }
 
 // SetUsersQuery sets the users query of the database connection with
@@ -1001,7 +1000,7 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 	}
 
 	result, err := this.myDB.Exec("UPDATE `connections`\nSET `usersQuery` = ?\n"+
-		"WHERE `id` = ? AND `workspace` = ? AND `type` = 'Database' AND `direction` = 'Source'",
+		"WHERE `id` = ? AND `workspace` = ? AND `type` = 'Database' AND `role` = 'Source'",
 		query, id, this.workspace)
 	if err != nil {
 		return err
@@ -1012,16 +1011,16 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 	}
 	if affected == 0 {
 		var typ string
-		var dir Direction
-		err = this.myDB.QueryRow("SELECT `type`, CAST(`direction` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
-			id, this.workspace).Scan(&typ, &dir)
+		var role Role
+		err = this.myDB.QueryRow("SELECT `type`, CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
+			id, this.workspace).Scan(&typ, &role)
 		if err != nil {
 			return err
 		}
 		if typ != "Database" {
 			return errors.New("connection is not a database")
 		}
-		if dir != SourceDir {
+		if role != SourceRole {
 			return errors.New("connection is not a source")
 		}
 		return ErrConnectionNotFound
@@ -1067,14 +1066,14 @@ func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 }
 
 // newFirehose returns a new Firehose used to call a connection method.
-func (this *Connections) newFirehose(ctx context.Context, connection, connector, resource int, connectorType string, direction _connector.Direction, webhooksPer string) *firehose {
+func (this *Connections) newFirehose(ctx context.Context, connection, connector, resource int, connectorType string, role _connector.Role, webhooksPer string) *firehose {
 	fh := &firehose{
 		connections:   this,
 		connection:    connection,
 		resource:      resource,
 		connector:     connector,
 		connectorType: connectorType,
-		direction:     direction,
+		role:          role,
 		webhooksPer:   webhooksPer,
 	}
 	fh.ctx, fh.cancel = context.WithCancel(ctx)
@@ -1094,9 +1093,9 @@ func (this *Connections) reloadProperties(id int) error {
 	}
 
 	var typ string
-	var dir Direction
-	err := this.myDB.QueryRow("SELECT `type`, CAST(`direction` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
-		id, this.workspace).Scan(&typ, &dir)
+	var role Role
+	err := this.myDB.QueryRow("SELECT `type`, CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
+		id, this.workspace).Scan(&typ, &role)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrConnectionNotFound
@@ -1107,7 +1106,7 @@ func (this *Connections) reloadProperties(id int) error {
 		return errors.New("cannot reload properties of a storage")
 	}
 
-	direction := _connector.Direction(dir)
+	cRole := _connector.Role(role)
 
 	var properties []_connector.Property
 
@@ -1144,9 +1143,9 @@ func (this *Connections) reloadProperties(id int) error {
 				return err
 			}
 		}
-		fh := this.newFirehose(context.Background(), id, connector, resource, "App", direction, webhooksPer)
+		fh := this.newFirehose(context.Background(), id, connector, resource, "App", cRole, webhooksPer)
 		c, err := newAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
-			Direction:    direction,
+			Role:         cRole,
 			Settings:     settings,
 			Firehose:     fh,
 			ClientSecret: clientSecret,
@@ -1182,11 +1181,11 @@ func (this *Connections) reloadProperties(id int) error {
 		if err != nil {
 			return err
 		}
-		fh := this.newFirehose(context.Background(), id, connector, 0, "Database", direction, "")
+		fh := this.newFirehose(context.Background(), id, connector, 0, "Database", cRole, "")
 		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
-			Direction: direction,
-			Settings:  settings,
-			Firehose:  fh,
+			Role:     cRole,
+			Settings: settings,
+			Firehose: fh,
 		})
 		if err != nil {
 			return err
@@ -1244,12 +1243,12 @@ func (this *Connections) reloadProperties(id int) error {
 				}
 				return err
 			}
-			fh := this.newFirehose(ctx, storage, connector, 0, "Storage", direction, "")
+			fh := this.newFirehose(ctx, storage, connector, 0, "Storage", cRole, "")
 			ctx = fh.ctx
 			c, err := newStorageConnection(ctx, connectorName, &_connector.StorageConfig{
-				Direction: direction,
-				Settings:  settings,
-				Firehose:  fh,
+				Role:     cRole,
+				Settings: settings,
+				Firehose: fh,
 			})
 			if err != nil {
 				return err
@@ -1258,11 +1257,11 @@ func (this *Connections) reloadProperties(id int) error {
 		}
 
 		// Connect to the file connector and read only the columns.
-		fh := this.newFirehose(ctx, id, connector, 0, "File", direction, "")
+		fh := this.newFirehose(ctx, id, connector, 0, "File", cRole, "")
 		file, err := newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
-			Direction: direction,
-			Settings:  settings,
-			Firehose:  fh,
+			Role:     cRole,
+			Settings: settings,
+			Firehose: fh,
 		})
 		if err != nil {
 			return err
@@ -1338,8 +1337,8 @@ func (files *fileReader) Reader(path string) (io.ReadCloser, time.Time, error) {
 	return files.s.Reader(path)
 }
 
-// marshalUIForm marshals form with direction dir in JSON format.
-func marshalUIForm(form *ui.Form, dir _connector.Direction) ([]byte, error) {
+// marshalUIForm marshals form with given role in JSON format.
+func marshalUIForm(form *ui.Form, role Role) ([]byte, error) {
 
 	if form == nil {
 		return []byte("null"), nil
@@ -1353,8 +1352,7 @@ func marshalUIForm(form *ui.Form, dir _connector.Direction) ([]byte, error) {
 	for i, field := range form.Fields {
 		rv := reflect.ValueOf(field).Elem()
 		rt := rv.Type()
-		d := ui.Direction(rv.FieldByName("Direction").Int())
-		if d != ui.BothDir && _connector.Direction(d) != dir {
+		if r := ui.Role(rv.FieldByName("Role").Int()); r != ui.BothRole && Role(r) != role {
 			continue
 		}
 		if i > 0 {
