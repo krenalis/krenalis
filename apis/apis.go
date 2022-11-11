@@ -430,6 +430,15 @@ func (apis *APIs) initSchema() {
 		usersQuery      string
 	}{})
 
+	apis.myDB.Scheme("ConnectionsImports", "connections_imports", struct {
+		id         int
+		connection int
+		storage    int
+		startTime  time.Time
+		endTime    time.Time
+		error      string
+	}{})
+
 	apis.myDB.Scheme("ConnectionsStats", "connections_stats", struct {
 		connection int
 		timeSlot   int

@@ -478,3 +478,12 @@ ALTER TABLE `connections`
 
 ALTER TABLE `connections`
     CHANGE COLUMN `direction` `role` ENUM('Source', 'Destination') NOT NULL DEFAULT 'Source';
+
+CREATE TABLE `connections_imports` (
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `connection` INT NOT NULL,
+    `storage` INT NOT NULL,
+    `startTime` DATETIME NOT NULL,
+    `endTime` DATETIME NOT NULL,
+    `error` VARCHAR(1000) NOT NULL DEFAULT '',
+)

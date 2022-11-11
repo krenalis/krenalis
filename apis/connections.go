@@ -424,7 +424,7 @@ func (this *Connections) Delete(id int) error {
 // transformation function associated to it.
 // Returns the ErrFileHasNoStorage error if the connection is a file and does
 // not have a storage.
-func (this *Connections) Import(id int, reimport bool) error {
+func (this *Connections) Import(id int, reimport bool) (err error) {
 
 	if id <= 0 {
 		return errors.New("invalid connection identifier")
@@ -433,10 +433,10 @@ func (this *Connections) Import(id int, reimport bool) error {
 	// Check that the connection exists, is a source and has a transformation.
 	var typ ConnectorType
 	var role ConnectionRole
-	err := this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED)\n"+
+	var storage int
+	err = this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED), `storage`\n"+
 		"FROM `connections`"+
-		"WHERE `id` = ? AND `workspace` = ?",
-		id, this.workspace).Scan(&typ, &role)
+		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&typ, &role, &storage)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrConnectionNotFound
@@ -449,6 +449,9 @@ func (this *Connections) Import(id int, reimport bool) error {
 	if role == DestinationRole {
 		return errors.New("cannot import from a destination")
 	}
+	if typ == FileType && storage == 0 {
+		return ErrFileHasNoStorage
+	}
 
 	// Check that the connection has at least one transformation associated to it.
 	transformations, err := this.Transformations.List(id)
@@ -459,8 +462,41 @@ func (this *Connections) Import(id int, reimport bool) error {
 		return ErrConnectionDisabled
 	}
 
+	// Track the import in the database.
+	importID, err := this.myDB.Table("ConnectionsImports").Add(sql.Set{
+		"connection": id,
+		"storage":    storage,
+		"startTime":  time.Now().UTC(),
+	}, nil)
+	if err != nil {
+		return err
+	}
+
+	// Start the import.
+	go func() {
+		err = this.startImport(id, typ, reimport)
+		var errorMsg string
+		if err != nil {
+			errorMsg = abbreviate(err.Error(), 1000)
+		}
+		_, err2 := this.myDB.Table("ConnectionsImports").Update(
+			sql.Set{"endTime": time.Now().UTC(), "error": errorMsg},
+			sql.Where{"id": importID})
+		if err2 != nil {
+			log.Printf("[error] cannot update the end of import %d into the database: %s", importID, err2)
+		}
+	}()
+
+	return nil
+}
+
+// startImport starts an import for the connection with identifier id and type
+// typ. It is called by the Import method in its own goroutine.
+// The returned error is stored in the databases with the import.
+func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) error {
+
 	const noColumn = -1
-	const cRole = _connector.SourceRole
+	const role = _connector.SourceRole
 
 	switch typ {
 	case AppType:
@@ -469,7 +505,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 		var connector, resource int
 		var settings, rawUsedProperties []byte
 		var expiration time.Time
-		err = this.myDB.QueryRow(
+		err := this.myDB.QueryRow(
 			"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
 				" `r`.`refreshToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
 				" `s`.`resource`, `s`.`userCursor`, `s`.`settings`, `s`.`usedProperties`\n"+
@@ -481,7 +517,7 @@ func (this *Connections) Import(id int, reimport bool) error {
 			&resource, &cursor, &settings, &rawUsedProperties)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrConnectionNotFound
+				return errors.New("connection does not exist anymore")
 			}
 			return err
 		}
@@ -503,50 +539,47 @@ func (this *Connections) Import(id int, reimport bool) error {
 			}
 		}
 
-		go func() {
-			fh := this.newFirehose(context.Background(), id, connector, resource, typ, cRole, webhooksPer)
-			c, err := newAppConnection(fh.ctx, name, &_connector.AppConfig{
-				Role:         cRole,
-				Settings:     settings,
-				Firehose:     fh,
-				ClientSecret: clientSecret,
-				Resource:     resourceCode,
-				AccessToken:  accessToken,
-			})
-			if err != nil {
-				log.Printf("[error] cannot connect to the connector %d of the connection %d: %s", connector, id, err)
-				return
-			}
-			err = c.Users(cursor, properties)
-			if err != nil {
-				log.Printf("[error] call to the Users method of the connection %d failed: %s", id, err)
-			}
-		}()
+		fh := this.newFirehose(context.Background(), id, connector, resource, typ, role, webhooksPer)
+		c, err := newAppConnection(fh.ctx, name, &_connector.AppConfig{
+			Role:         role,
+			Settings:     settings,
+			Firehose:     fh,
+			ClientSecret: clientSecret,
+			Resource:     resourceCode,
+			AccessToken:  accessToken,
+		})
+		if err != nil {
+			return fmt.Errorf("cannot connect to the connector %d of the connection %d: %s", connector, id, err)
+		}
+		c.Users(cursor, properties)
+		if err != nil {
+			return fmt.Errorf("call to the Users method of the connection %d failed: %s", id, err)
+		}
 
 	case DatabaseType:
 
 		var connectorName, identityColumn, timestampColumn, usersQuery string
 		var connector int
 		var settings []byte
-		err = this.myDB.QueryRow(
+		err := this.myDB.QueryRow(
 			"SELECT `c`.`name`, `s`.`connector`, `s`.`identityColumn`, `s`.`timestampColumn`, `s`.`settings`, `s`.`usersQuery`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &identityColumn, &timestampColumn, &settings, &usersQuery)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrConnectionNotFound
+				return errors.New("connection does not exist anymore")
 			}
 			return err
 		}
 
-		usersQuery, err := this.compileQueryWithoutLimit(usersQuery)
+		usersQuery, err = this.compileQueryWithoutLimit(usersQuery)
 		if err != nil {
 			return err
 		}
-		fh := this.newFirehose(context.Background(), id, connector, 0, DatabaseType, cRole, "")
+		fh := this.newFirehose(context.Background(), id, connector, 0, DatabaseType, role, "")
 		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
-			Role:     cRole,
+			Role:     role,
 			Settings: settings,
 			Firehose: fh,
 		})
@@ -610,19 +643,19 @@ func (this *Connections) Import(id int, reimport bool) error {
 		var connectorName, identityColumn, timestampColumn string
 		var connector, storage int
 		var settings []byte
-		err = this.myDB.QueryRow(
+		err := this.myDB.QueryRow(
 			"SELECT `c`.`name`, `s`.`connector`, `s`.`storage`, `s`.`identityColumn`, `s`.`timestampColumn`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &storage, &identityColumn, &timestampColumn, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrConnectionNotFound
+				return errors.New("connection does not exist anymore")
 			}
 			return err
 		}
 		if storage == 0 {
-			return ErrFileHasNoStorage
+			return errors.New("connector has no more a storage")
 		}
 
 		var ctx = context.Background()
@@ -640,14 +673,14 @@ func (this *Connections) Import(id int, reimport bool) error {
 					"WHERE `s`.`id` = ?", storage).Scan(&connectorName, &connector, &settings)
 			if err != nil {
 				if err != sql.ErrNoRows {
-					return ErrFileHasNoStorage
+					return errors.New("connector has no more a storage")
 				}
 				return err
 			}
-			fh := this.newFirehose(ctx, storage, connector, 0, StorageType, cRole, "")
+			fh := this.newFirehose(ctx, storage, connector, 0, StorageType, role, "")
 			ctx = fh.ctx
 			c, err := newStorageConnection(ctx, connectorName, &_connector.StorageConfig{
-				Role:     cRole,
+				Role:     role,
 				Settings: settings,
 				Firehose: fh,
 			})
@@ -658,9 +691,9 @@ func (this *Connections) Import(id int, reimport bool) error {
 		}
 
 		// Connect to the file connector.
-		fh := this.newFirehose(ctx, id, connector, 0, FileType, cRole, "")
+		fh := this.newFirehose(ctx, id, connector, 0, FileType, role, "")
 		file, err := newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
-			Role:     cRole,
+			Role:     role,
 			Settings: settings,
 			Firehose: fh,
 		})
@@ -1392,4 +1425,40 @@ func marshalUIForm(form *ui.Form, role ConnectionRole) ([]byte, error) {
 	b.WriteString(`}`)
 
 	return b.Bytes(), nil
+}
+
+// abbreviate abbreviates s to almost n runes. If s is longer than n runes,
+// the abbreviated string terminates with "...".
+func abbreviate(s string, n int) string {
+	const spaces = " \n\r\t\f" // https://infra.spec.whatwg.org/#ascii-whitespace
+	s = strings.TrimRight(s, spaces)
+	if len(s) <= n {
+		return s
+	}
+	if n < 3 {
+		return ""
+	}
+	p := 0
+	n2 := 0
+	for i := range s {
+		switch p {
+		case n - 2:
+			n2 = i
+		case n:
+			break
+		}
+		p++
+	}
+	if p < n {
+		return s
+	}
+	if p = strings.LastIndexAny(s[:n2], spaces); p > 0 {
+		s = strings.TrimRight(s[:p], spaces)
+	} else {
+		s = ""
+	}
+	if l := len(s) - 1; l >= 0 && (s[l] == '.' || s[l] == ',') {
+		s = s[:l]
+	}
+	return s + "..."
 }

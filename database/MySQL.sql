@@ -56,6 +56,16 @@ CREATE TABLE `connections` (
   PRIMARY KEY (`id`)
 );
 
+CREATE TABLE `connections_imports` (
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `connection` INT NOT NULL,
+    `storage` INT NOT NULL,
+    `startTime` DATETIME NOT NULL,
+    `endTime` DATETIME NOT NULL,
+    `error` VARCHAR(1000) NOT NULL DEFAULT '',
+    PRIMARY KEY(`id`)
+)
+
 CREATE TABLE `transformations` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `goldenRecordName` VARCHAR(100) NOT NULL DEFAULT '',
