@@ -50,7 +50,7 @@ type DatabaseQueryError struct {
 	Message string
 }
 
-func (err DatabaseQueryError) Error() string {
+func (err *DatabaseQueryError) Error() string {
 	return err.Message
 }
 
@@ -812,8 +812,8 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 	}
 	rawColumns, rawRows, err := c.Query(query)
 	if err != nil {
-		if err, ok := err.(_connector.DatabaseQueryError); ok {
-			return nil, nil, DatabaseQueryError{Message: err.Message}
+		if err, ok := err.(*_connector.DatabaseQueryError); ok {
+			return nil, nil, &DatabaseQueryError{Message: err.Message}
 		}
 		return nil, nil, err
 	}

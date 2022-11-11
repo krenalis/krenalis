@@ -75,7 +75,7 @@ func (c *connection) Query(query string) ([]connector.Column, connector.Rows, er
 	if err != nil {
 		_ = db.Close()
 		if err, ok := err.(*mysql.MySQLError); ok {
-			return nil, nil, connector.DatabaseQueryError{Message: err.Message}
+			return nil, nil, connector.NewDatabaseQueryError(err.Message)
 		}
 		return nil, nil, err
 	}

@@ -19,8 +19,12 @@ type DatabaseQueryError struct {
 	Message string
 }
 
-func (err DatabaseQueryError) Error() string {
+func (err *DatabaseQueryError) Error() string {
 	return err.Message
+}
+
+func NewDatabaseQueryError(msg string) error {
+	return &DatabaseQueryError{Message: msg}
 }
 
 // DatabaseConfig represents the configuration of a database connection.
