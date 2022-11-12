@@ -37,7 +37,7 @@ import (
 // Connector icon.
 var icon []byte
 
-// Make sure it implements the FileConnector interface.
+// Make sure it implements the FileConnection interface.
 var _ connector.FileConnection = &connection{}
 
 func init() {
