@@ -103,7 +103,7 @@ func New(ctx context.Context, conf *connector.AppConfig) (connector.AppConnectio
 func (c *connection) Connector() *connector.Connector {
 	return &connector.Connector{
 		Name: "Mailchimp",
-		Type: connector.TypeApp,
+		Type: connector.AppType,
 		Icon: icon,
 		OAuth: connector.OAuth{
 			URL:             "https://login.mailchimp.com/oauth2/authorize?response_type=code",

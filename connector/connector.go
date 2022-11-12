@@ -45,10 +45,10 @@ type Connector struct {
 type Type int
 
 const (
-	TypeApp Type = iota + 1
-	TypeDatabase
-	TypeFile
-	TypeStorage
+	AppType Type = iota + 1
+	DatabaseType
+	FileType
+	StorageType
 )
 
 // OAuth represents the connector OAuth 2.0 info.

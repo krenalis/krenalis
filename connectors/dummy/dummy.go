@@ -43,7 +43,7 @@ func New(ctx context.Context, conf *connector.AppConfig) (connector.AppConnectio
 func (c *connection) Connector() *connector.Connector {
 	return &connector.Connector{
 		Name: "Dummy",
-		Type: connector.TypeApp,
+		Type: connector.AppType,
 	}
 }
 

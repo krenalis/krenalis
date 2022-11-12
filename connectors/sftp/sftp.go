@@ -68,7 +68,7 @@ func New(ctx context.Context, conf *connector.StorageConfig) (connector.StorageC
 func (c *connection) Connector() *connector.Connector {
 	return &connector.Connector{
 		Name: "SFTP",
-		Type: connector.TypeStorage,
+		Type: connector.StorageType,
 		Icon: icon,
 	}
 }

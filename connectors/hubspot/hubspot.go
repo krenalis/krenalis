@@ -74,7 +74,7 @@ func New(ctx context.Context, conf *connector.AppConfig) (connector.AppConnectio
 func (c *connection) Connector() *connector.Connector {
 	return &connector.Connector{
 		Name: "HubSpot",
-		Type: connector.TypeApp,
+		Type: connector.AppType,
 		Icon: icon,
 		OAuth: connector.OAuth{
 			URL:   "https://app-eu1.hubspot.com/oauth/authorize",

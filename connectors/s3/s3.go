@@ -69,7 +69,7 @@ func New(ctx context.Context, conf *connector.StorageConfig) (connector.StorageC
 func (c *connection) Connector() *connector.Connector {
 	return &connector.Connector{
 		Name: "S3",
-		Type: connector.TypeStorage,
+		Type: connector.StorageType,
 		Icon: icon,
 	}
 }

@@ -65,7 +65,7 @@ func New(ctx context.Context, conf *connector.FileConfig) (connector.FileConnect
 func (c *connection) Connector() *connector.Connector {
 	return &connector.Connector{
 		Name: "Excel",
-		Type: connector.TypeFile,
+		Type: connector.FileType,
 		Icon: icon,
 	}
 }

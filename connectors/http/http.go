@@ -67,7 +67,7 @@ func New(ctx context.Context, conf *connector.StorageConfig) (connector.StorageC
 func (c *connection) Connector() *connector.Connector {
 	return &connector.Connector{
 		Name: "HTTP",
-		Type: connector.TypeStorage,
+		Type: connector.StorageType,
 		Icon: icon,
 	}
 }

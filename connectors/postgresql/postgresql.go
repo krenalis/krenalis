@@ -63,7 +63,7 @@ type connection struct {
 func (c *connection) Connector() *connector.Connector {
 	return &connector.Connector{
 		Name: "PostgreSQL",
-		Type: connector.TypeDatabase,
+		Type: connector.DatabaseType,
 		Icon: icon,
 	}
 }

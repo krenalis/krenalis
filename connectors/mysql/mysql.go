@@ -58,7 +58,7 @@ type connection struct {
 func (c *connection) Connector() *connector.Connector {
 	return &connector.Connector{
 		Name: "MySQL",
-		Type: connector.TypeDatabase,
+		Type: connector.DatabaseType,
 		Icon: icon,
 	}
 }
