@@ -64,7 +64,7 @@ CREATE TABLE `connections_imports` (
     `endTime` DATETIME NOT NULL,
     `error` VARCHAR(1000) NOT NULL DEFAULT '',
     PRIMARY KEY(`id`)
-)
+);
 
 CREATE TABLE `transformations` (
   `id` INT NOT NULL AUTO_INCREMENT,
