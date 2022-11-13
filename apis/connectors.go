@@ -20,12 +20,12 @@ var (
 	connectors   = struct {
 		apps      map[string]connector.AppConnectionFunc
 		databases map[string]connector.DatabaseConnectionFunc
-		storage   map[string]connector.StorageConnectionFunc
+		storages  map[string]connector.StorageConnectionFunc
 		files     map[string]connector.FileConnectionFunc
 	}{
 		apps:      make(map[string]connector.AppConnectionFunc),
 		databases: make(map[string]connector.DatabaseConnectionFunc),
-		storage:   make(map[string]connector.StorageConnectionFunc),
+		storages:  make(map[string]connector.StorageConnectionFunc),
 		files:     make(map[string]connector.FileConnectionFunc),
 	}
 )
@@ -84,10 +84,10 @@ func RegisterStorageConnector(name string, fn connector.StorageConnectionFunc) {
 	}
 	connectorsMu.Lock()
 	defer connectorsMu.Unlock()
-	if _, dup := connectors.storage[name]; dup {
+	if _, dup := connectors.storages[name]; dup {
 		panic("apis: RegisterStorageConnector called twice for connector " + name)
 	}
-	connectors.storage[name] = fn
+	connectors.storages[name] = fn
 }
 
 // newAppConnection returns a new app connection for the app connector with the
@@ -131,7 +131,7 @@ func newFileConnection(ctx context.Context, name string, conf *connector.FileCon
 func newStorageConnection(ctx context.Context, name string, conf *connector.StorageConfig) (connector.StorageConnection, error) {
 	connectorsMu.Lock()
 	defer connectorsMu.Unlock()
-	f, ok := connectors.storage[name]
+	f, ok := connectors.storages[name]
 	if !ok {
 		return nil, fmt.Errorf("apis: unknown storage connector %q (forgotten import?)", name)
 	}
