@@ -446,10 +446,11 @@ func (apis *APIs) initSchema() {
 	}{})
 
 	apis.myDB.Scheme("ConnectionsUsers", "connections_users", struct {
-		workspace int
-		connector int
-		user      string
-		data      string
+		connection   int
+		user         string
+		data         string
+		timestamps   string
+		goldenRecord int
 	}{})
 
 	apis.myDB.Scheme("Connectors", "connectors", struct {
