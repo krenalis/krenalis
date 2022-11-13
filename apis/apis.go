@@ -454,13 +454,18 @@ func (apis *APIs) initSchema() {
 	}{})
 
 	apis.myDB.Scheme("Connectors", "connectors", struct {
-		id            int
-		oauthURL      string
-		logoURL       string
-		clientID      string
-		clientSecret  string
-		tokenEndpoint string
-		webhooksPer   WebhooksPer
+		id               int
+		name             string
+		typ              int `sql:"type"`
+		oauthURL         string
+		logoURL          string
+		clientID         string
+		clientSecret     string
+		tokenEndpoint    string
+		webhooksPer      WebhooksPer
+		defaultTokenType string
+		defaultExpiresIn int
+		forcedExpiresIn  string
 	}{})
 
 	apis.myDB.Scheme("Devices", "devices", struct {
