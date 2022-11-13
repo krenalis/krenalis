@@ -14,6 +14,7 @@ replace (
 	chichi/connectors/postgresql => ./connectors/postgresql
 	chichi/connectors/s3 => ./connectors/s3
 	chichi/connectors/sftp => ./connectors/sftp
+	chichi/connectors/website => ./connectors/website
 )
 
 require (
@@ -28,6 +29,7 @@ require (
 	chichi/connectors/postgresql v0.0.0-00010101000000-000000000000
 	chichi/connectors/s3 v0.0.0-00010101000000-000000000000
 	chichi/connectors/sftp v0.0.0-00010101000000-000000000000
+	chichi/connectors/website v0.0.0-00010101000000-000000000000
 	github.com/ClickHouse/clickhouse-go/v2 v2.3.0
 	github.com/evanw/esbuild v0.15.13
 	github.com/go-chi/chi/v5 v5.0.7

@@ -36,7 +36,8 @@ INSERT INTO `connectors` VALUES
   (8,'Excel','File','','https://cdn0.iconfinder.com/data/icons/logos-microsoft-office-365/128/Microsoft_Office-02-512.png','','','','None','bearer','0',''),
   (9,'S3','Storage','','https://cdn2.iconfinder.com/data/icons/amazon-aws-stencils/100/Storage__Content_Delivery_Amazon_S3-512.png','','','','None','bearer','0',''),
   (10,'PostgreSQL','Database','','https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/postgresql-512.png','','','','None','bearer','0',''),
-  (11,'Parquet','File','','','','','','None','bearer','0','');
+  (11,'Parquet','File','','','','','','None','bearer','0',''),
+  (12,'Website','Website','','https://cdn2.iconfinder.com/data/icons/free-simple-line-mix/48/22-Website-512.png','','','','None','bearer','0','');
 
 CREATE TABLE `connections` (
   `id` INT NOT NULL,

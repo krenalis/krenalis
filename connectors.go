@@ -19,4 +19,5 @@ import (
 	_ "chichi/connectors/postgresql"
 	_ "chichi/connectors/s3"
 	_ "chichi/connectors/sftp"
+	_ "chichi/connectors/website"
 )
