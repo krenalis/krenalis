@@ -1156,6 +1156,9 @@ func (this *Connections) reloadProperties(id int) error {
 	if typ == StorageType {
 		return errors.New("cannot reload properties of a storage")
 	}
+	if role == DestinationRole {
+		return errors.New("cannot import from a destination")
+	}
 
 	cRole := _connector.Role(role)
 
