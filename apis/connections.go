@@ -400,6 +400,14 @@ func (this *Connections) Delete(id int) error {
 		if err != nil {
 			return err
 		}
+		_, err = tx.Table("ConnectionsImports").Delete(sql.Where{"connection": id})
+		if err != nil {
+			return err
+		}
+		_, err = tx.Table("ConnectionsStats").Delete(sql.Where{"connection": id})
+		if err != nil {
+			return err
+		}
 		_, err = tx.Table("ConnectionsUsers").Delete(sql.Where{"connection": id})
 		if err != nil {
 			return err
