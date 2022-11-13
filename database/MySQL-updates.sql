@@ -488,3 +488,11 @@ CREATE TABLE `connections_imports` (
     `error` VARCHAR(1000) NOT NULL DEFAULT '',
     PRIMARY KEY (`id`)
 );
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `webhooksPer` `webhooksPer` ENUM('None', 'Connector', 'Resource', 'Connection', 'Source') NOT NULL DEFAULT 'None';
+
+UPDATE `connectors` SET `webhooksPer` = 'Source' WHERE `webhooksPer` = 'Connection';
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `webhooksPer` `webhooksPer` ENUM('None', 'Connector', 'Resource', 'Source') NOT NULL DEFAULT 'None';

@@ -110,7 +110,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 				return err
 			}
 		}
-		webhookPer = "Connection"
+		webhookPer = "Source"
 	}
 	conn, err := apis.Connector(connector)
 	if err != nil {

@@ -255,7 +255,7 @@ func (fh *firehose) WebhookURL() string {
 		return u + "c/" + strconv.Itoa(fh.connector) + "/"
 	case "Resource":
 		return u + "r/" + strconv.Itoa(fh.resource) + "/"
-	case "Connection":
+	case "Source":
 		return u + "s/" + strconv.Itoa(fh.connection) + "/"
 	}
 	panic("unexpected webhookPer value")

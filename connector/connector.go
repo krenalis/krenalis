@@ -61,14 +61,14 @@ type OAuth struct {
 }
 
 // WebhooksPer values indicates if webhooks are per connector, resource or
-// connection.
+// source.
 type WebhooksPer int
 
 const (
 	WebhooksPerNone WebhooksPer = iota
 	WebhooksPerConnector
 	WebhooksPerResource
-	WebhooksPerConnection
+	WebhooksPerSource
 )
 
 // Role represents the role of a connection.

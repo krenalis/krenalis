@@ -109,7 +109,7 @@ func (c *connection) Connector() *connector.Connector {
 			URL:             "https://login.mailchimp.com/oauth2/authorize?response_type=code",
 			ForcedExpiresIn: "never",
 		},
-		WebhooksPer: connector.WebhooksPerConnection,
+		WebhooksPer: connector.WebhooksPerSource,
 	}
 }
 
