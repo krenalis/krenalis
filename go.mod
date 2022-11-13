@@ -32,6 +32,7 @@ require (
 	github.com/evanw/esbuild v0.15.13
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/go-sql-driver/mysql v1.6.0
+	github.com/jxskiss/base62 v1.1.0
 	github.com/mssola/user_agent v0.5.3
 	github.com/open2b/nuts v1.5.3
 	github.com/open2b/scriggo v0.56.1

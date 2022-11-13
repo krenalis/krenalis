@@ -12,7 +12,7 @@ INSERT INTO `accounts` (`name`,`email`,`password`) VALUES ('ACME inc','acme@open
 CREATE TABLE `connectors` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(200) NOT NULL DEFAULT '',
-  `type` ENUM('App', 'Database', 'File', 'Storage') NOT NULL DEFAULT 'App',
+  `type` ENUM('App', 'Database', 'File', 'Mobile', 'Server', 'Storage', 'Website') NOT NULL DEFAULT 'App',
   `oauthURL` VARCHAR(500) NOT NULL DEFAULT '',
   `logoURL` VARCHAR(500) NOT NULL DEFAULT '',
   `clientID` VARCHAR(500) NOT NULL DEFAULT '',
@@ -39,13 +39,14 @@ INSERT INTO `connectors` VALUES
   (11,'Parquet','File','','','','','','None','bearer','0','');
 
 CREATE TABLE `connections` (
-  `id` INT NOT NULL AUTO_INCREMENT,
+  `id` INT NOT NULL,
   `workspace` INT NOT NULL,
-  `type` ENUM('App', 'Database', 'File', 'Storage') NOT NULL DEFAULT 'App',
+  `type` ENUM('App', 'Database', 'File', 'Mobile', 'Server', 'Storage', 'Website') NOT NULL DEFAULT 'App',
   `role` ENUM('Source', 'Destination') NOT NULL DEFAULT 'Source',
   `connector` INT NOT NULL,
   `storage` INT NOT NULL,
   `resource` INT NOT NULL,
+  `websiteHost` varchar(261) CHARACTER SET ascii NOT NULL DEFAULT '',
   `userCursor` VARCHAR(500) NOT NULL DEFAULT '',
   `identityColumn` VARCHAR(100) NOT NULL DEFAULT '',
   `timestampColumn` VARCHAR(100) NOT NULL DEFAULT '',
@@ -64,6 +65,13 @@ CREATE TABLE `connections_imports` (
     `endTime` DATETIME NOT NULL,
     `error` VARCHAR(1000) NOT NULL DEFAULT '',
     PRIMARY KEY(`id`)
+);
+
+CREATE TABLE `connections_api_keys` (
+    `connection` INT NOT NULL,
+    `position` TINYINT UNSIGNED NOT NULL,
+    `key` CHAR(32) CHARACTER SET ascii NOT NULL,
+    PRIMARY KEY(`connection`, `position`)
 );
 
 CREATE TABLE `transformations` (

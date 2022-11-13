@@ -230,38 +230,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// ConnectorType represents a connector type.
-type ConnectorType int
-
-const (
-	AppType      ConnectorType = iota + 1 // app
-	DatabaseType                          // database
-	FileType                              // file
-	StorageType                           // storage
-)
-
-// String returns the string representation of typ.
-// It panics if typ is not a valid ConnectorType value.
-func (typ ConnectorType) String() string {
-	switch typ {
-	case AppType:
-		return "App"
-	case DatabaseType:
-		return "Database"
-	case FileType:
-		return "File"
-	case StorageType:
-		return "Storage"
-	}
-	panic("invalid connector type")
-}
-
-// MarshalJSON implements the json.Marshaler interface.
-// It panics if typ is not a valid ConnectorType value.
-func (typ ConnectorType) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + typ.String() + `"`), nil
-}
-
 // Connector represents a connector.
 type Connector struct {
 	ID               int
@@ -420,6 +388,7 @@ func (apis *APIs) initSchema() {
 		connector       int
 		storage         int
 		resource        string
+		websiteHost     string
 		userCursor      string
 		identityColumn  string
 		timestampColumn string

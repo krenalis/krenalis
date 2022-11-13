@@ -48,7 +48,10 @@ const (
 	AppType Type = iota + 1
 	DatabaseType
 	FileType
+	MobileType
+	ServerType
 	StorageType
+	WebsiteType
 )
 
 // OAuth represents the connector OAuth 2.0 info.

@@ -496,3 +496,18 @@ UPDATE `connectors` SET `webhooksPer` = 'Source' WHERE `webhooksPer` = 'Connecti
 
 ALTER TABLE `connectors`
     CHANGE COLUMN `webhooksPer` `webhooksPer` ENUM('None', 'Connector', 'Resource', 'Source') NOT NULL DEFAULT 'None';
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'File', 'Mobile', 'Server', 'Storage', 'Website') NOT NULL DEFAULT 'App';
+
+ALTER TABLE `connections`
+    CHANGE COLUMN `id` `id` INT NOT NULL,
+    CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'File', 'Mobile', 'Server', 'Storage', 'Website') NOT NULL DEFAULT 'App',
+    ADD COLUMN `websiteHost` varchar(261) CHARACTER SET ascii NOT NULL DEFAULT '' AFTER `resource`;
+
+CREATE TABLE `connections_api_keys` (
+    `connection` INT NOT NULL,
+    `position` TINYINT UNSIGNED NOT NULL,
+    `key` CHAR(32) CHARACTER SET ascii NOT NULL,
+    PRIMARY KEY(`connection`, `position`)
+);

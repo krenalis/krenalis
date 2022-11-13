@@ -10,11 +10,14 @@ package apis
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"math"
+	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
@@ -25,6 +28,8 @@ import (
 	_connector "chichi/connector"
 	"chichi/connector/ui"
 	"chichi/pkg/open2b/sql"
+
+	"github.com/jxskiss/base62"
 )
 
 type Connections struct {
@@ -155,7 +160,7 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken
 	if err != nil {
 		return 0, err
 	}
-	var id int64
+	var id int
 	err = this.myDB.Transaction(func(tx *sql.Tx) error {
 		var resource int
 		var currentRefreshToken string
@@ -184,13 +189,13 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken
 		if err != nil {
 			return err
 		}
-		result, err := tx.Exec("INSERT INTO `connections`\n"+
-			"SET `workspace` = ?, `type` = 'App', `role` = ?, `connector` = ?, `resource` = ?",
-			this.workspace, role, connector, resource)
+		id, err = generateConnectionID()
 		if err != nil {
 			return err
 		}
-		id, err = result.LastInsertId()
+		_, err = tx.Exec("INSERT INTO `connections`\n"+
+			"SET `id` = ?, `workspace` = ?, `type` = 'App', `role` = ?, `connector` = ?, `resource` = ?",
+			id, this.workspace, role, connector, resource)
 		return err
 	})
 	if err != nil {
@@ -198,13 +203,13 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken
 	}
 
 	go func() {
-		err := this.reloadProperties(int(id))
+		err := this.reloadProperties(id)
 		if err != nil {
 			log.Printf("[error] cannot reload properties for connection %d: %s", id, err)
 		}
 	}()
 
-	return int(id), err
+	return id, err
 }
 
 // AddDatabase adds a database connection given its role, database connector
@@ -218,7 +223,7 @@ func (this *Connections) AddDatabase(role ConnectionRole, connector int) (int, e
 	if connector <= 0 {
 		return 0, errors.New("invalid connector")
 	}
-	var id int64
+	var id int
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		var connectorType ConnectorType
 		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&connectorType)
@@ -231,16 +236,19 @@ func (this *Connections) AddDatabase(role ConnectionRole, connector int) (int, e
 		if connectorType != DatabaseType {
 			return errors.New("connector is not a database connector")
 		}
-		result, err := tx.Exec("INSERT INTO `connections`\n"+
-			"SET `workspace` = ?, `type` = 'Database', `role` = ?, `connector` = ?",
-			this.workspace, role, connector)
-		id, err = result.LastInsertId()
+		id, err = generateConnectionID()
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec("INSERT INTO `connections`\n"+
+			"SET `id` = ?, `workspace` = ?, `type` = 'Database', `role` = ?, `connector` = ?",
+			id, this.workspace, role, connector)
 		return err
 	})
 	if err != nil {
 		return 0, err
 	}
-	return int(id), nil
+	return id, nil
 }
 
 // AddFile adds a file connection given its role, connector and storage
@@ -259,7 +267,7 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int) (i
 	if storage < 0 {
 		return 0, errors.New("invalid storage")
 	}
-	var id int64
+	var id int
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		var typ ConnectorType
 		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
@@ -293,19 +301,113 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int) (i
 				return errors.New("storage is not a destination")
 			}
 		}
-		result, err := tx.Exec("INSERT INTO `connections`\n"+
-			"SET `workspace` = ?, `type` = 'File', `role` = ?, `connector` = ? AND `storage` = ?",
-			this.workspace, role, connector, storage)
+		id, err = generateConnectionID()
 		if err != nil {
 			return err
 		}
-		id, err = result.LastInsertId()
+		_, err = tx.Exec("INSERT INTO `connections`\n"+
+			"SET `id` = ?, `workspace` = ?, `type` = 'File', `role` = ?, `connector` = ? AND `storage` = ?",
+			id, this.workspace, role, connector, storage)
 		return err
 	})
 	if err != nil {
 		return 0, err
 	}
-	return int(id), nil
+	return id, nil
+}
+
+// AddServer adds a server connection given its role and server connector.
+//
+// If the connector does not exist, it returns the ErrConnectorNotFound error.
+func (this *Connections) AddServer(role ConnectionRole, connector int) (int, error) {
+	if role != SourceRole && role != DestinationRole {
+		return 0, errors.New("invalid role")
+	}
+	if connector <= 0 {
+		return 0, errors.New("invalid connector")
+	}
+	// Generate the API key.
+	key, err := generateAPIKey()
+	if err != nil {
+		return 0, err
+	}
+	var id int
+	err = this.myDB.Transaction(func(tx *sql.Tx) error {
+		var typ ConnectorType
+		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return ErrConnectorNotFound
+			}
+			return err
+		}
+		if typ != ServerType {
+			return errors.New("connector is not an server connector")
+		}
+		id, err = generateConnectionID()
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec("INSERT INTO `connections`\n"+
+			"SET `id` = ?, `workspace` = ?, `type` = 'Server', `role` = ?, `connector`  = ?",
+			id, this.workspace, role, connector)
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec("INSERT INTO `connections_keys` (`connection`, `position`, `key`) VALUE (?, 0, ?)", id, key)
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+// AddMobile adds a mobile connection given its role and mobile connector.
+//
+// If the connector does not exist, it returns the ErrConnectorNotFound error.
+func (this *Connections) AddMobile(role ConnectionRole, connector int) (int, error) {
+	if role != SourceRole && role != DestinationRole {
+		return 0, errors.New("invalid role")
+	}
+	if connector <= 0 {
+		return 0, errors.New("invalid connector")
+	}
+	// Generate the API key.
+	key, err := generateAPIKey()
+	if err != nil {
+		return 0, err
+	}
+	var id int
+	err = this.myDB.Transaction(func(tx *sql.Tx) error {
+		var typ ConnectorType
+		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return ErrConnectorNotFound
+			}
+			return err
+		}
+		if typ != MobileType {
+			return errors.New("connector is not a mobile connector")
+		}
+		id, err = generateConnectionID()
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec("INSERT INTO `connections`\n"+
+			"SET `id` = ?, `workspace` = ?, `type` = 'Server', `role` = ?, `connector` = ?",
+			id, this.workspace, role, connector)
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec("INSERT INTO `connections_keys` (`connection`, `position`, `key`) VALUE (?, 0, ?)", id, key)
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 // AddStorage adds a storage connection given its role and connector and
@@ -319,7 +421,7 @@ func (this *Connections) AddStorage(role ConnectionRole, connector int) (int, er
 	if connector <= 0 {
 		return 0, errors.New("invalid connector")
 	}
-	var id int64
+	var id int
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		var typ ConnectorType
 		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
@@ -332,19 +434,76 @@ func (this *Connections) AddStorage(role ConnectionRole, connector int) (int, er
 		if typ != StorageType {
 			return errors.New("connector is not a storage connector")
 		}
-		result, err := tx.Exec("INSERT INTO `connections`\n"+
-			"SET `workspace` = ?, `type` = 'Storage', `role` = ?, `connector` = ?",
-			this.workspace, role, connector)
+		id, err = generateConnectionID()
 		if err != nil {
 			return err
 		}
-		id, err = result.LastInsertId()
+		_, err = tx.Exec("INSERT INTO `connections`\n"+
+			"SET `id` = ?, `workspace` = ?, `type` = 'Storage', `role` = ?, `connector` = ?",
+			id, this.workspace, role, connector)
 		return err
 	})
 	if err != nil {
 		return 0, err
 	}
-	return int(id), nil
+	return id, nil
+}
+
+// AddWebsite adds a website connection given its role, website connector and
+// website host and returns its identifier. host may be of the form
+// "host:port".
+//
+// If the connector does not exist, it returns the ErrConnectorNotFound error.
+func (this *Connections) AddWebsite(role ConnectionRole, connector int, host string) (int, error) {
+	if role != SourceRole && role != DestinationRole {
+		return 0, errors.New("invalid role")
+	}
+	if connector <= 0 {
+		return 0, errors.New("invalid connector")
+	}
+	if h, p, found := strings.Cut(host, ":"); h == "" || len(host) > 255 {
+		return 0, errors.New("invalid website host")
+	} else if found {
+		if port, _ := strconv.Atoi(p); port <= 0 || port > 65535 {
+			return 0, errors.New("invalid website host")
+		}
+	}
+	// Generate the API key.
+	key, err := generateAPIKey()
+	if err != nil {
+		return 0, err
+	}
+	var id int
+	err = this.myDB.Transaction(func(tx *sql.Tx) error {
+		var typ ConnectorType
+		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return ErrConnectorNotFound
+			}
+			return err
+		}
+		// Validate the type.
+		if typ != WebsiteType {
+			return errors.New("connector is not an website connector")
+		}
+		id, err = generateConnectionID()
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec("INSERT INTO `connections`\n"+
+			"SET `id` = ?, `workspace` = ?, `type` = 'Website', `role` = ?, `connector` = ?, `websiteHost` = ?",
+			id, this.workspace, role, connector, host)
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec("INSERT INTO `connections_keys` (`connection`, `position`, `key`) VALUE (?, 0, ?)", id, key)
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 // Get returns the connection with identifier id. If the connection does not
@@ -425,7 +584,7 @@ func (this *Connections) Delete(id int) error {
 // Import starts the import of the users from the connection with the given
 // identifier. If the connection is an app and reimport is false, it imports
 // the users from the current cursor, otherwise imports all users. The
-// connection must be a source and cannot be a storage.
+// connection must be a source app, database or file connection.
 //
 // Returns the ErrConnectionNotFound error if the connection does not exist.
 // Returns the ErrConnectionDisabled error if the connection does not have any
@@ -438,7 +597,7 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 		return errors.New("invalid connection identifier")
 	}
 
-	// Check that the connection exists, is a source and has a transformation.
+	// Check that the connection exists, has an allowed type and is a source.
 	var typ ConnectorType
 	var role ConnectionRole
 	var storage int
@@ -451,14 +610,17 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 		}
 		return err
 	}
-	if typ == StorageType {
-		return errors.New("cannot import from a storage")
+	switch typ {
+	case AppType, DatabaseType:
+	case FileType:
+		if storage == 0 {
+			return ErrFileHasNoStorage
+		}
+	default:
+		return fmt.Errorf("cannot import from a %s connection", strings.ToLower(typ.String()))
 	}
 	if role == DestinationRole {
 		return errors.New("cannot import from a destination")
-	}
-	if typ == FileType && storage == 0 {
-		return ErrFileHasNoStorage
 	}
 
 	// Check that the connection has at least one transformation associated to it.
@@ -748,7 +910,9 @@ func (this *Connections) List() ([]*Connection, error) {
 }
 
 // Properties returns the properties and the used properties of the connection
-// with the given identifier. The connection cannot be a storage.
+// with the given identifier. The connection must be an app, database of file
+// connection.
+//
 // Returns the ErrConnectionNotFound error if the connection does not exist.
 func (this *Connections) Properties(id int) ([]ConnectionProperty, [][]string, error) {
 	if id <= 0 {
@@ -1004,8 +1168,26 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 				Settings: settings,
 				Firehose: fh,
 			})
+		case MobileType:
+			connection, err = newMobileConnection(fh.ctx, connectorName, &_connector.MobileConfig{
+				Role:     cRole,
+				Settings: settings,
+				Firehose: fh,
+			})
+		case ServerType:
+			connection, err = newServerConnection(fh.ctx, connectorName, &_connector.ServerConfig{
+				Role:     cRole,
+				Settings: settings,
+				Firehose: fh,
+			})
 		case StorageType:
 			connection, err = newStorageConnection(fh.ctx, connectorName, &_connector.StorageConfig{
+				Role:     cRole,
+				Settings: settings,
+				Firehose: fh,
+			})
+		case WebsiteType:
+			connection, err = newWebsiteConnection(fh.ctx, connectorName, &_connector.WebsiteConfig{
 				Role:     cRole,
 				Settings: settings,
 				Firehose: fh,
@@ -1134,7 +1316,7 @@ func (this *Connections) newFirehose(ctx context.Context, connection, connector,
 var errRecordStop = errors.New("stop record")
 
 // reloadProperties reloads the properties of the connection with identifier id.
-// The connection cannot be a storage.
+// The connection must be a source app, database or file.
 //
 // If the connection does not exist it returns the ErrConnectionNotFound error.
 func (this *Connections) reloadProperties(id int) error {
@@ -1145,16 +1327,24 @@ func (this *Connections) reloadProperties(id int) error {
 
 	var typ ConnectorType
 	var role ConnectionRole
-	err := this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
-		id, this.workspace).Scan(&typ, &role)
+	var storage int
+	err := this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED), `storage`\n"+
+		"FROM `connections`\n"+
+		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace, &storage).Scan(&typ, &role)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrConnectionNotFound
 		}
 		return err
 	}
-	if typ == StorageType {
-		return errors.New("cannot reload properties of a storage")
+	switch typ {
+	case AppType, DatabaseType:
+	case FileType:
+		if storage == 0 {
+			return ErrFileHasNoStorage
+		}
+	default:
+		return fmt.Errorf("cannot import properties from a %s connection", strings.ToLower(typ.String()))
 	}
 	if role == DestinationRole {
 		return errors.New("cannot import from a destination")
@@ -1390,6 +1580,27 @@ func newFileReader(storage _connector.StorageConnection) *fileReader {
 // It is the caller's responsibility to close the returned reader.
 func (files *fileReader) Reader(path string) (io.ReadCloser, time.Time, error) {
 	return files.s.Reader(path)
+}
+
+var maxInt32 = big.NewInt(math.MaxInt32)
+
+// generateConnectionID generates a connection ID in [1, maxInt32].
+func generateConnectionID() (int, error) {
+	n, err := rand.Int(rand.Reader, maxInt32)
+	if err != nil {
+		return 0, err
+	}
+	return int(n.Int64()) + 1, nil
+}
+
+// generateAPIKey generates an API key.
+func generateAPIKey() (string, error) {
+	key := make([]byte, 24)
+	_, err := rand.Read(key)
+	if err != nil {
+		return "", errors.New("cannot generate an API key")
+	}
+	return base62.EncodeToString(key)[0:32], nil
 }
 
 // marshalUIForm marshals form with given role in JSON format.
