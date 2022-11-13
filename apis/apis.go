@@ -398,6 +398,12 @@ func (apis *APIs) initSchema() {
 		usersQuery      string
 	}{})
 
+	apis.myDB.Scheme("ConnectionsKeys", "connections_keys", struct {
+		connection int
+		position   int
+		key        string
+	}{})
+
 	apis.myDB.Scheme("ConnectionsImports", "connections_imports", struct {
 		id         int
 		connection int

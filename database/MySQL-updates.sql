@@ -511,3 +511,5 @@ CREATE TABLE `connections_api_keys` (
     `key` CHAR(32) CHARACTER SET ascii NOT NULL,
     PRIMARY KEY(`connection`, `position`)
 );
+
+RENAME TABLE `connections_api_keys` TO `connections_keys`;

@@ -68,7 +68,7 @@ CREATE TABLE `connections_imports` (
     PRIMARY KEY(`id`)
 );
 
-CREATE TABLE `connections_api_keys` (
+CREATE TABLE `connections_keys` (
     `connection` INT NOT NULL,
     `position` TINYINT UNSIGNED NOT NULL,
     `key` CHAR(32) CHARACTER SET ascii NOT NULL,
