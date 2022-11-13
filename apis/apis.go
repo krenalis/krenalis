@@ -416,11 +416,10 @@ func (apis *APIs) initSchema() {
 		id              int
 		workspace       int
 		typ             int `sql:"type"`
-		connector       int
 		role            int
+		connector       int
 		storage         int
 		resource        string
-		transformation  string
 		userCursor      string
 		identityColumn  string
 		timestampColumn string
