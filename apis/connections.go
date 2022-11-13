@@ -509,12 +509,13 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 	switch typ {
 	case AppType:
 
-		var name, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
+		var name, clientSecret, resourceCode, accessToken, refreshToken, cursor string
+		var webhooksPer WebhooksPer
 		var connector, resource int
 		var settings, rawUsedProperties []byte
 		var expiration time.Time
 		err := this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
+			"SELECT `c`.`name`, `c`.`clientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), `r`.`code`, `r`.`accessToken`,"+
 				" `r`.`refreshToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
 				" `s`.`resource`, `s`.`userCursor`, `s`.`settings`, `s`.`usedProperties`\n"+
 				"FROM `connections` AS `s`\n"+
@@ -585,7 +586,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		if err != nil {
 			return err
 		}
-		fh := this.newFirehose(context.Background(), id, connector, 0, DatabaseType, role, "")
+		fh := this.newFirehose(context.Background(), id, connector, 0, DatabaseType, role, WebhooksPerNone)
 		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 			Role:     role,
 			Settings: settings,
@@ -685,7 +686,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 				}
 				return err
 			}
-			fh := this.newFirehose(ctx, storage, connector, 0, StorageType, role, "")
+			fh := this.newFirehose(ctx, storage, connector, 0, StorageType, role, WebhooksPerNone)
 			ctx = fh.ctx
 			c, err := newStorageConnection(ctx, connectorName, &_connector.StorageConfig{
 				Role:     role,
@@ -699,7 +700,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		}
 
 		// Connect to the file connector.
-		fh := this.newFirehose(ctx, id, connector, 0, FileType, role, "")
+		fh := this.newFirehose(ctx, id, connector, 0, FileType, role, WebhooksPerNone)
 		file, err := newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 			Role:     role,
 			Settings: settings,
@@ -851,7 +852,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 	if err != nil {
 		return nil, nil, err
 	}
-	fh := this.newFirehose(context.Background(), id, connector, 0, typ, cRole, "")
+	fh := this.newFirehose(context.Background(), id, connector, 0, typ, cRole, WebhooksPerNone)
 	c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 		Role:     cRole,
 		Settings: settings,
@@ -931,13 +932,14 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 	switch typ {
 	case AppType:
 
-		var connectorName, clientSecret, webhooksPer, resourceCode, accessToken string
+		var connectorName, clientSecret, resourceCode, accessToken string
+		var webhooksPer WebhooksPer
 		var connector, resource int
 		var settings []byte
 		var expiration time.Time
 		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, `r`.`code`, `r`.`accessToken`,"+
-				" `r`.`accessTokenExpirationTime`, `s`.`connector`, `s`.`resource`, `s`.`settings`\n"+
+			"SELECT `c`.`name`, `c`.`clientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), `r`.`code`, "+
+				" `r`.`accessToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`, `s`.`resource`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
@@ -987,7 +989,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 			return nil, err
 		}
 
-		fh := this.newFirehose(context.Background(), id, connector, 0, typ, cRole, "")
+		fh := this.newFirehose(context.Background(), id, connector, 0, typ, cRole, WebhooksPerNone)
 
 		switch typ {
 		case DatabaseType:
@@ -1115,7 +1117,7 @@ func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 }
 
 // newFirehose returns a new Firehose used to call a connection method.
-func (this *Connections) newFirehose(ctx context.Context, connection, connector, resource int, typ ConnectorType, role _connector.Role, webhooksPer string) *firehose {
+func (this *Connections) newFirehose(ctx context.Context, connection, connector, resource int, typ ConnectorType, role _connector.Role, webhooksPer WebhooksPer) *firehose {
 	fh := &firehose{
 		connections:   this,
 		connection:    connection,
@@ -1163,14 +1165,15 @@ func (this *Connections) reloadProperties(id int) error {
 	case AppType:
 
 		// TODO(marco) The following code is duplicated in the Import method.
-		var connectorName, clientSecret, webhooksPer, resourceCode, accessToken, refreshToken, cursor string
+		var connectorName, clientSecret, resourceCode, accessToken, refreshToken, cursor string
+		var webhooksPer WebhooksPer
 		var connector, resource int
 		var settings []byte
 		var expiration *time.Time
 		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`clientSecret`, `c`.`webhooksPer`, IFNULL(`r`.`code`, ''), IFNULL(`r`.`accessToken`, ''),"+
-				" IFNULL(`r`.`refreshToken`, ''), `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
-				" `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
+			"SELECT `c`.`name`, `c`.`clientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), IFNULL(`r`.`code`, ''), "+
+				" IFNULL(`r`.`accessToken`, ''), IFNULL(`r`.`refreshToken`, ''), `r`.`accessTokenExpirationTime`, "+
+				" `s`.`connector`, `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"LEFT JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
@@ -1230,7 +1233,7 @@ func (this *Connections) reloadProperties(id int) error {
 		if err != nil {
 			return err
 		}
-		fh := this.newFirehose(context.Background(), id, connector, 0, DatabaseType, cRole, "")
+		fh := this.newFirehose(context.Background(), id, connector, 0, DatabaseType, cRole, WebhooksPerNone)
 		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 			Role:     cRole,
 			Settings: settings,
@@ -1292,7 +1295,7 @@ func (this *Connections) reloadProperties(id int) error {
 				}
 				return err
 			}
-			fh := this.newFirehose(ctx, storage, connector, 0, StorageType, cRole, "")
+			fh := this.newFirehose(ctx, storage, connector, 0, StorageType, cRole, WebhooksPerNone)
 			ctx = fh.ctx
 			c, err := newStorageConnection(ctx, connectorName, &_connector.StorageConfig{
 				Role:     cRole,
@@ -1306,7 +1309,7 @@ func (this *Connections) reloadProperties(id int) error {
 		}
 
 		// Connect to the file connector and read only the columns.
-		fh := this.newFirehose(ctx, id, connector, 0, FileType, cRole, "")
+		fh := this.newFirehose(ctx, id, connector, 0, FileType, cRole, WebhooksPerNone)
 		file, err := newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 			Role:     cRole,
 			Settings: settings,

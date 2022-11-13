@@ -20,6 +20,39 @@ import (
 	"chichi/pkg/open2b/sql"
 )
 
+// WebhooksPer values indicates if webhooks are per connector, resource or
+// source.
+type WebhooksPer int
+
+const (
+	WebhooksPerNone WebhooksPer = iota
+	WebhooksPerConnector
+	WebhooksPerResource
+	WebhooksPerSource
+)
+
+// String returns the string representation of w.
+// It panics if w is not a valid WebhooksPer value.
+func (w WebhooksPer) String() string {
+	switch w {
+	case WebhooksPerNone:
+		return "None"
+	case WebhooksPerConnector:
+		return "Connector"
+	case WebhooksPerResource:
+		return "Resource"
+	case WebhooksPerSource:
+		return "Source"
+	}
+	panic("invalid webhookPer value")
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+// It panics if w is not a valid WebhooksPer value.
+func (w WebhooksPer) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + w.String() + `"`), nil
+}
+
 // Errors returned to and handled by the ServeWebhook method.
 var (
 	errBadRequest = errors.New("bad request")
@@ -59,7 +92,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	}
 	var connector int
 	var connection int
-	var webhookPer string
+	var webhookPer WebhooksPer
 	var conf _connector.AppConfig
 	switch m[1] {
 	case "c":
@@ -67,7 +100,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		if connector <= 0 {
 			return errBadRequest
 		}
-		webhookPer = "Connector"
+		webhookPer = WebhooksPerConnector
 	case "r":
 		r, _ := strconv.Atoi(m[2])
 		if r <= 0 {
@@ -81,7 +114,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 			}
 			return err
 		}
-		webhookPer = "Resource"
+		webhookPer = WebhooksPerResource
 	case "s":
 		connection, _ = strconv.Atoi(m[2])
 		if connection <= 0 {
@@ -110,7 +143,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 				return err
 			}
 		}
-		webhookPer = "Source"
+		webhookPer = WebhooksPerSource
 	}
 	conn, err := apis.Connector(connector)
 	if err != nil {

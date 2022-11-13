@@ -38,7 +38,7 @@ type firehose struct {
 	role          connector.Role
 	ctx           context.Context
 	cancel        context.CancelFunc
-	webhooksPer   string
+	webhooksPer   WebhooksPer
 	err           error
 }
 
@@ -249,13 +249,13 @@ func (fh *firehose) SetUserGroups(user string, groups []string) {
 func (fh *firehose) WebhookURL() string {
 	u := "https://localhost:9090/webhook/"
 	switch fh.webhooksPer {
-	case "None":
+	case WebhooksPerNone:
 		return ""
-	case "Connector":
+	case WebhooksPerConnector:
 		return u + "c/" + strconv.Itoa(fh.connector) + "/"
-	case "Resource":
+	case WebhooksPerResource:
 		return u + "r/" + strconv.Itoa(fh.resource) + "/"
-	case "Source":
+	case WebhooksPerSource:
 		return u + "s/" + strconv.Itoa(fh.connection) + "/"
 	}
 	panic("unexpected webhookPer value")

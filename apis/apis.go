@@ -272,7 +272,7 @@ type Connector struct {
 	ClientID         string
 	ClientSecret     string
 	TokenEndpoint    string
-	WebhooksPer      string
+	WebhooksPer      WebhooksPer
 	DefaultTokenType string
 	DefaultExpiresIn int
 	ForcedExpiresIn  string
@@ -283,7 +283,7 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 	connector := Connector{ID: id}
 	err := apis.myDB.QueryRow(
 		"SELECT `name`, CAST(`type` AS UNSIGNED), `oauthURL`, `logoURL`, `clientID`, `clientSecret`,"+
-			" `tokenEndpoint`, `webhooksPer`, `defaultTokenType`, `defaultExpiresIn`, `forcedExpiresIn`\n"+
+			" `tokenEndpoint`, CAST(`webhooksPer` AS UNSIGNED), `defaultTokenType`, `defaultExpiresIn`, `forcedExpiresIn`\n"+
 			"FROM `connectors`\nWHERE `id` = ?", id).
 		Scan(&connector.Name, &connector.Type, &connector.OauthURL, &connector.LogoURL, &connector.ClientID, &connector.ClientSecret,
 			&connector.TokenEndpoint, &connector.WebhooksPer, &connector.DefaultTokenType, &connector.DefaultExpiresIn, &connector.ForcedExpiresIn)
@@ -460,7 +460,7 @@ func (apis *APIs) initSchema() {
 		clientID      string
 		clientSecret  string
 		tokenEndpoint string
-		webhooksPer   string
+		webhooksPer   WebhooksPer
 	}{})
 
 	apis.myDB.Scheme("Devices", "devices", struct {
