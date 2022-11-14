@@ -230,64 +230,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// Connector represents a connector.
-type Connector struct {
-	ID          int
-	Name        string
-	Type        ConnectorType
-	LogoURL     string
-	WebhooksPer WebhooksPer
-	OAuth       struct {
-		URL              string
-		ClientID         string
-		ClientSecret     string
-		TokenEndpoint    string
-		DefaultTokenType string
-		DefaultExpiresIn int
-		ForcedExpiresIn  string
-	}
-}
-
-// Connector returns the connector with the given identifier.
-func (apis *APIs) Connector(id int) (*Connector, error) {
-	connector := Connector{ID: id}
-	err := apis.myDB.QueryRow(
-		"SELECT `name`, CAST(`type` AS UNSIGNED), `oAuthURL`, `logoURL`, `oAuthClientID`, `oAuthClientSecret`,"+
-			" `oAuthTokenEndpoint`, CAST(`webhooksPer` AS UNSIGNED), `oAuthDefaultTokenType`, `oAuthDefaultExpiresIn`,"+
-			" `oAuthDefaultExpiresIn`\n"+
-			"FROM `connectors`\nWHERE `id` = ?", id).
-		Scan(&connector.Name, &connector.Type, &connector.OAuth.URL, &connector.LogoURL, &connector.OAuth.ClientID,
-			&connector.OAuth.ClientSecret, &connector.OAuth.TokenEndpoint, &connector.WebhooksPer,
-			&connector.OAuth.DefaultTokenType, &connector.OAuth.DefaultExpiresIn, &connector.OAuth.ForcedExpiresIn)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &connector, nil
-}
-
-// Connectors returns all connectors.
-func (apis *APIs) Connectors() ([]*Connector, error) {
-	connectors := []*Connector{}
-	err := apis.myDB.QueryScan("SELECT `id`, `name`, CAST(`type` AS UNSIGNED), `oAuthURL`, `logoURL`\nFROM `connectors`", func(rows *sql.Rows) error {
-		var err error
-		for rows.Next() {
-			var connector Connector
-			if err = rows.Scan(&connector.ID, &connector.Name, &connector.Type, &connector.OAuth.URL, &connector.LogoURL); err != nil {
-				return err
-			}
-			connectors = append(connectors, &connector)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return connectors, nil
-}
-
 // refreshOAuthToken refreshes the access token of the resource with identifier
 // id.
 // Returns the ErrResourceNotFound error if the resource does not exist.
