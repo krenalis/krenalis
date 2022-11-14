@@ -530,3 +530,6 @@ ALTER TABLE `resources`
     CHANGE COLUMN `accessToken` `oAuthAccessToken` VARCHAR(500) NOT NULL DEFAULT '',
     CHANGE COLUMN `refreshToken` `oAuthRefreshToken` VARCHAR(500) NOT NULL DEFAULT '',
     CHANGE COLUMN `accessTokenExpirationTime` `oAuthExpiresIn` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00';
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `oAuthDefaultTokenType` `oAuthDefaultTokenType` VARCHAR(10) NOT NULL DEFAULT '';
