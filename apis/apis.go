@@ -250,8 +250,9 @@ type Connector struct {
 func (apis *APIs) Connector(id int) (*Connector, error) {
 	connector := Connector{ID: id}
 	err := apis.myDB.QueryRow(
-		"SELECT `name`, CAST(`type` AS UNSIGNED), `oAuthURL`, `logoURL`, `clientID`, `clientSecret`,"+
-			" `tokenEndpoint`, CAST(`webhooksPer` AS UNSIGNED), `defaultTokenType`, `defaultExpiresIn`, `forcedExpiresIn`\n"+
+		"SELECT `name`, CAST(`type` AS UNSIGNED), `oAuthURL`, `logoURL`, `oAuthClientID`, `oAuthClientSecret`,"+
+			" `oAuthTokenEndpoint`, CAST(`webhooksPer` AS UNSIGNED), `oAuthDefaultTokenType`, `oAuthDefaultExpiresIn`,"+
+			" `oAuthDefaultExpiresIn`\n"+
 			"FROM `connectors`\nWHERE `id` = ?", id).
 		Scan(&connector.Name, &connector.Type, &connector.OAuthURL, &connector.LogoURL, &connector.ClientID, &connector.ClientSecret,
 			&connector.TokenEndpoint, &connector.WebhooksPer, &connector.DefaultTokenType, &connector.DefaultExpiresIn, &connector.ForcedExpiresIn)
@@ -291,7 +292,7 @@ func (apis *APIs) refreshOAuthToken(resource int) (string, error) {
 
 	var clientID, clientSecret, tokenEndpoint, refreshToken string
 	err := apis.myDB.QueryRow(
-		"SELECT `c`.`clientID`, `c`.`clientSecret`, `c`.`tokenEndpoint`, `r`.`refreshToken`\n"+
+		"SELECT `c`.`oAuthClientID`, `c`.`oAuthClientSecret`, `c`.`oAuthTokenEndpoint`, `r`.`refreshToken`\n"+
 			"FROM `resources` AS `r`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `r`.`connector`\n"+
 			"WHERE `r`.`id` = ?", resource).
@@ -428,18 +429,18 @@ func (apis *APIs) initSchema() {
 	}{})
 
 	apis.myDB.Scheme("Connectors", "connectors", struct {
-		id               int
-		name             string
-		typ              int `sql:"type"`
-		oAuthURL         string
-		logoURL          string
-		clientID         string
-		clientSecret     string
-		tokenEndpoint    string
-		webhooksPer      WebhooksPer
-		defaultTokenType string
-		defaultExpiresIn int
-		forcedExpiresIn  string
+		id                    int
+		name                  string
+		typ                   int `sql:"type"`
+		logoURL               string
+		webhooksPer           WebhooksPer
+		oAuthURL              string
+		oAuthClientID         string
+		oAuthClientSecret     string
+		oAuthTokenEndpoint    string
+		oAuthDefaultTokenType string
+		oAuthDefaultExpiresIn int
+		oAuthForcedExpiresIn  string
 	}{})
 
 	apis.myDB.Scheme("Devices", "devices", struct {

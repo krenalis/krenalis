@@ -516,3 +516,12 @@ RENAME TABLE `connections_api_keys` TO `connections_keys`;
 
 ALTER TABLE `connectors`
     CHANGE COLUMN `oauthURL` `oAuthURL` VARCHAR(500) NOT NULL DEFAULT '';
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `oAuthURL` `oAuthURL` VARCHAR(500) NOT NULL DEFAULT '' AFTER `webhooksPer`,
+    CHANGE COLUMN `clientID` `oAuthClientID` VARCHAR(500) NOT NULL DEFAULT '' AFTER `oAuthURL`,
+    CHANGE COLUMN `clientSecret` `oAuthClientSecret` VARCHAR(500) NOT NULL DEFAULT '' AFTER `oAuthClientID`,
+    CHANGE COLUMN `tokenEndpoint` `oAuthTokenEndpoint` VARCHAR(500) NOT NULL DEFAULT '' AFTER `oAuthClientSecret`,
+    CHANGE COLUMN `defaultTokenType` `oAuthDefaultTokenType` VARCHAR(10) NOT NULL DEFAULT 'bearer' AFTER `oAuthTokenEndpoint`,
+    CHANGE COLUMN `defaultExpiresIn` `oAuthDefaultExpiresIn` INT NOT NULL DEFAULT '0' AFTER `oAuthDefaultTokenType`,
+    CHANGE COLUMN `forcedExpiresIn` `oAuthForcedExpiresIn` VARCHAR(10) NOT NULL DEFAULT '' AFTER `oAuthDefaultExpiresIn`;

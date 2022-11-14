@@ -681,8 +681,8 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		var settings, rawUsedProperties []byte
 		var expiration time.Time
 		err := this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`clientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), `r`.`code`, `r`.`accessToken`,"+
-				" `r`.`refreshToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
+			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), `r`.`code`,"+
+				" `r`.`accessToken`, `r`.`refreshToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
 				" `s`.`resource`, `s`.`userCursor`, `s`.`settings`, `s`.`usedProperties`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
@@ -1106,7 +1106,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		var settings []byte
 		var expiration time.Time
 		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`clientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), `r`.`code`, "+
+			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), `r`.`code`, "+
 				" `r`.`accessToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`, `s`.`resource`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
@@ -1368,7 +1368,7 @@ func (this *Connections) reloadProperties(id int) error {
 		var settings []byte
 		var expiration *time.Time
 		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`clientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), IFNULL(`r`.`code`, ''), "+
+			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), IFNULL(`r`.`code`, ''), "+
 				" IFNULL(`r`.`accessToken`, ''), IFNULL(`r`.`refreshToken`, ''), `r`.`accessTokenExpirationTime`, "+
 				" `s`.`connector`, `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+

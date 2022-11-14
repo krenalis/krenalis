@@ -13,15 +13,15 @@ CREATE TABLE `connectors` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(200) NOT NULL DEFAULT '',
   `type` ENUM('App', 'Database', 'File', 'Mobile', 'Server', 'Storage', 'Website') NOT NULL DEFAULT 'App',
-  `oAuthURL` VARCHAR(500) NOT NULL DEFAULT '',
   `logoURL` VARCHAR(500) NOT NULL DEFAULT '',
-  `clientID` VARCHAR(500) NOT NULL DEFAULT '',
-  `clientSecret` VARCHAR(500) NOT NULL DEFAULT '',
-  `tokenEndpoint` VARCHAR(500) NOT NULL DEFAULT '',
   `webhooksPer` ENUM('None', 'Connector', 'Resource', 'Source') NOT NULL DEFAULT 'None',
-  `defaultTokenType` VARCHAR(10) NOT NULL DEFAULT 'bearer',
-  `defaultExpiresIn` INT NOT NULL DEFAULT '0',
-  `forcedExpiresIn` VARCHAR(10) NOT NULL DEFAULT '',
+  `oAuthURL` VARCHAR(500) NOT NULL DEFAULT '',
+  `oAuthClientID` VARCHAR(500) NOT NULL DEFAULT '',
+  `oAuthClientSecret` VARCHAR(500) NOT NULL DEFAULT '',
+  `oAuthTokenEndpoint` VARCHAR(500) NOT NULL DEFAULT '',
+  `oAuthDefaultTokenType` VARCHAR(10) NOT NULL DEFAULT 'bearer',
+  `oAuthDefaultExpiresIn` INT NOT NULL DEFAULT '0',
+  `oAuthForcedExpiresIn` VARCHAR(10) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`)
 );
 
