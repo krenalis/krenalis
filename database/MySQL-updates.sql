@@ -525,3 +525,8 @@ ALTER TABLE `connectors`
     CHANGE COLUMN `defaultTokenType` `oAuthDefaultTokenType` VARCHAR(10) NOT NULL DEFAULT 'bearer' AFTER `oAuthTokenEndpoint`,
     CHANGE COLUMN `defaultExpiresIn` `oAuthDefaultExpiresIn` INT NOT NULL DEFAULT '0' AFTER `oAuthDefaultTokenType`,
     CHANGE COLUMN `forcedExpiresIn` `oAuthForcedExpiresIn` VARCHAR(10) NOT NULL DEFAULT '' AFTER `oAuthDefaultExpiresIn`;
+
+ALTER TABLE `resources`
+    CHANGE COLUMN `accessToken` `oAuthAccessToken` VARCHAR(500) NOT NULL DEFAULT '',
+    CHANGE COLUMN `refreshToken` `oAuthRefreshToken` VARCHAR(500) NOT NULL DEFAULT '',
+    CHANGE COLUMN `accessTokenExpirationTime` `oAuthExpiresIn` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00';

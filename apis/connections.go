@@ -131,7 +131,7 @@ type ConnectionProperty struct {
 // and access tokens and returns its identifier.
 //
 // If the connector does not exist, it returns the ErrConnectorNotFound error.
-func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken, accessToken, accessTokenExpirationTime string) (int, error) {
+func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken, accessToken, expiresIn string) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
@@ -164,7 +164,7 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken
 	err = this.myDB.Transaction(func(tx *sql.Tx) error {
 		var resource int
 		var currentRefreshToken string
-		err := tx.QueryRow("SELECT `id`, `refreshToken` FROM `resources` WHERE `connector` = ? AND `code` = ?",
+		err := tx.QueryRow("SELECT `id`, `oAuthRefreshToken` FROM `resources` WHERE `connector` = ? AND `code` = ?",
 			connector, resourceCode).Scan(&resource, &currentRefreshToken)
 		if err != nil {
 			if err != sql.ErrNoRows {
@@ -174,8 +174,8 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken
 		}
 		if resource == 0 {
 			result, err := tx.Exec("INSERT INTO `resources` "+
-				"SET `connector` = ?, `code` = ?, `accessToken` = ?, `refreshToken` = ?, `accessTokenExpirationTime` = ?",
-				connector, resourceCode, accessToken, refreshToken, accessTokenExpirationTime)
+				"SET `connector` = ?, `code` = ?, `oAuthAccessToken` = ?, `oAuthRefreshToken` = ?, `oAuthExpiresIn` = ?",
+				connector, resourceCode, accessToken, refreshToken, expiresIn)
 			if err != nil {
 				return err
 			}
@@ -183,8 +183,8 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken
 			resource = int(resourceID)
 		} else if refreshToken != currentRefreshToken {
 			_, err = tx.Exec("UPDATE `resources` "+
-				"SET `accessToken` = ?, `refreshToken` = ?, `accessTokenExpirationTime` = ? WHERE `id` = ?",
-				accessToken, refreshToken, accessTokenExpirationTime, resource)
+				"SET `oAuthAccessToken` = ?, `oAuthRefreshToken` = ?, `oAuthExpiresIn` = ? WHERE `id` = ?",
+				accessToken, refreshToken, expiresIn, resource)
 		}
 		if err != nil {
 			return err
@@ -682,7 +682,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		var expiration time.Time
 		err := this.myDB.QueryRow(
 			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), `r`.`code`,"+
-				" `r`.`accessToken`, `r`.`refreshToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`,"+
+				" `r`.`oAuthAccessToken`, `r`.`oAuthRefreshToken`, `r`.`oAuthExpiresIn`, `s`.`connector`,"+
 				" `s`.`resource`, `s`.`userCursor`, `s`.`settings`, `s`.`usedProperties`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
@@ -1107,7 +1107,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		var expiration time.Time
 		err = this.myDB.QueryRow(
 			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), `r`.`code`, "+
-				" `r`.`accessToken`, `r`.`accessTokenExpirationTime`, `s`.`connector`, `s`.`resource`, `s`.`settings`\n"+
+				" `r`.`oAuthAccessToken`, `r`.`oAuthExpiresIn`, `s`.`connector`, `s`.`resource`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
@@ -1369,7 +1369,7 @@ func (this *Connections) reloadProperties(id int) error {
 		var expiration *time.Time
 		err = this.myDB.QueryRow(
 			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), IFNULL(`r`.`code`, ''), "+
-				" IFNULL(`r`.`accessToken`, ''), IFNULL(`r`.`refreshToken`, ''), `r`.`accessTokenExpirationTime`, "+
+				" IFNULL(`r`.`oAuthAccessToken`, ''), IFNULL(`r`.`oAuthRefreshToken`, ''), `r`.`oAuthExpiresIn`, "+
 				" `s`.`connector`, `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+

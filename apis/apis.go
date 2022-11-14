@@ -237,7 +237,7 @@ func (apis *APIs) refreshOAuthToken(resource int) (string, error) {
 
 	var clientID, clientSecret, tokenEndpoint, refreshToken string
 	err := apis.myDB.QueryRow(
-		"SELECT `c`.`oAuthClientID`, `c`.`oAuthClientSecret`, `c`.`oAuthTokenEndpoint`, `r`.`refreshToken`\n"+
+		"SELECT `c`.`oAuthClientID`, `c`.`oAuthClientSecret`, `c`.`oAuthTokenEndpoint`, `r`.`oAuthRefreshToken`\n"+
 			"FROM `resources` AS `r`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `r`.`connector`\n"+
 			"WHERE `r`.`id` = ?", resource).
@@ -302,13 +302,13 @@ func (apis *APIs) refreshOAuthToken(resource int) (string, error) {
 	}
 
 	// Convert expires_in into a timestamp.
-	expiration := time.Now().UTC().Add(time.Duration(response.ExpiresIn) * time.Second) // TODO(marco): ExpiresIn should be relative to response time?
+	expiresIn := time.Now().UTC().Add(time.Duration(response.ExpiresIn) * time.Second) // TODO(marco): ExpiresIn should be relative to response time?
 
 	_, err = apis.myDB.Exec(
 		"UPDATE `resources`\n"+
-			"SET `accessToken` = ?, `refreshToken` = ?, `accessTokenExpirationTime` = ?\n"+
+			"SET `oAuthAccessToken` = ?, `oAuthRefreshToken` = ?, `oAuthExpiresIn` = ?\n"+
 			"WHERE `id` = ?",
-		response.AccessToken, response.RefreshToken, expiration, resource)
+		response.AccessToken, response.RefreshToken, expiresIn, resource)
 	if err != nil {
 		return "", err
 	}

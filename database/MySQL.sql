@@ -131,9 +131,9 @@ CREATE TABLE `resources` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `connector` INT NOT NULL,
   `code` VARCHAR(100) NOT NULL DEFAULT '',
-  `accessToken` VARCHAR(500) NOT NULL DEFAULT '',
-  `refreshToken` VARCHAR(500) NOT NULL DEFAULT '',
-  `accessTokenExpirationTime` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `oAuthAccessToken` VARCHAR(500) NOT NULL DEFAULT '',
+  `oAuthRefreshToken` VARCHAR(500) NOT NULL DEFAULT '',
+  `oAuthExpiresIn` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',
   KEY `connector` (`connector`),
   PRIMARY KEY (`id`)
 );
