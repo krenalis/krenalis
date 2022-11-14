@@ -541,3 +541,7 @@ UPDATE `connectors` SET `oAuthForcedExpiresIn` = '0' WHERE `oAuthForcedExpiresIn
 
 ALTER TABLE `connectors`
     CHANGE COLUMN `oAuthForcedExpiresIn` `oAuthForcedExpiresIn` INT NOT NULL DEFAULT 0;
+
+ALTER TABLE `connections_keys`
+    CHANGE COLUMN `key` `key` CHAR(32) CHARSET ascii COLLATE ascii_bin NOT NULL,
+    ADD KEY `key` (`key`);

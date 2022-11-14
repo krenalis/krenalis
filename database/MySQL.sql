@@ -71,7 +71,8 @@ CREATE TABLE `connections_imports` (
 CREATE TABLE `connections_keys` (
     `connection` INT NOT NULL,
     `position` TINYINT UNSIGNED NOT NULL,
-    `key` CHAR(32) CHARACTER SET ascii NOT NULL,
+    `key` CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    KEY `key` (`key`),
     PRIMARY KEY(`connection`, `position`)
 );
 
