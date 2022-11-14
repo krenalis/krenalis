@@ -71,7 +71,7 @@ type Connector struct {
 		TokenEndpoint    string
 		DefaultTokenType string
 		DefaultExpiresIn int
-		ForcedExpiresIn  string
+		ForcedExpiresIn  int
 	}
 }
 

@@ -784,14 +784,8 @@ func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Reque
 
 	// Compute the access token expire time.
 	expireDate := time.Now()
-	if connector.OAuth.ForcedExpiresIn != "" {
-		switch connector.OAuth.ForcedExpiresIn {
-		case "never":
-			expireDate = expireDate.Add(oneHundredYears)
-		default:
-			seconds, _ := strconv.ParseInt(connector.OAuth.ForcedExpiresIn, 10, 64)
-			expireDate = expireDate.Add(time.Duration(seconds) * time.Second)
-		}
+	if connector.OAuth.ForcedExpiresIn > 0 {
+		expireDate = expireDate.Add(time.Duration(connector.OAuth.ForcedExpiresIn) * time.Second)
 	} else if tokens.ExpiresIn != nil {
 		seconds, _ := tokens.ExpiresIn.Int64()
 		expireDate = expireDate.Add(time.Duration(seconds) * time.Second)

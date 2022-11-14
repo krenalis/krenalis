@@ -535,3 +535,9 @@ ALTER TABLE `connectors`
     CHANGE COLUMN `oAuthDefaultTokenType` `oAuthDefaultTokenType` VARCHAR(10) NOT NULL DEFAULT '';
 
 UPDATE `connectors` SET `oAuthDefaultTokenType` = '';
+
+UPDATE `connectors` SET `oAuthForcedExpiresIn` = '2147483647' WHERE `oAuthForcedExpiresIn` = 'never';
+UPDATE `connectors` SET `oAuthForcedExpiresIn` = '0' WHERE `oAuthForcedExpiresIn` = '';
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `oAuthForcedExpiresIn` `oAuthForcedExpiresIn` INT NOT NULL DEFAULT 0;
