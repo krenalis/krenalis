@@ -533,3 +533,5 @@ ALTER TABLE `resources`
 
 ALTER TABLE `connectors`
     CHANGE COLUMN `oAuthDefaultTokenType` `oAuthDefaultTokenType` VARCHAR(10) NOT NULL DEFAULT '';
+
+UPDATE `connectors` SET `oAuthDefaultTokenType` = '';
