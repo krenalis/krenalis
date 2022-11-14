@@ -150,7 +150,7 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken
 	}
 	c, err := newAppConnection(context.Background(), conn.Name, &_connector.AppConfig{
 		Role:         _connector.Role(role),
-		ClientSecret: conn.ClientSecret,
+		ClientSecret: conn.OAuth.ClientSecret,
 		AccessToken:  accessToken,
 	})
 	if err != nil {

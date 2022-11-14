@@ -232,18 +232,20 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Connector represents a connector.
 type Connector struct {
-	ID               int
-	Name             string
-	Type             ConnectorType
-	OAuthURL         string
-	LogoURL          string
-	ClientID         string
-	ClientSecret     string
-	TokenEndpoint    string
-	WebhooksPer      WebhooksPer
-	DefaultTokenType string
-	DefaultExpiresIn int
-	ForcedExpiresIn  string
+	ID          int
+	Name        string
+	Type        ConnectorType
+	LogoURL     string
+	WebhooksPer WebhooksPer
+	OAuth       struct {
+		URL              string
+		ClientID         string
+		ClientSecret     string
+		TokenEndpoint    string
+		DefaultTokenType string
+		DefaultExpiresIn int
+		ForcedExpiresIn  string
+	}
 }
 
 // Connector returns the connector with the given identifier.
@@ -254,8 +256,9 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 			" `oAuthTokenEndpoint`, CAST(`webhooksPer` AS UNSIGNED), `oAuthDefaultTokenType`, `oAuthDefaultExpiresIn`,"+
 			" `oAuthDefaultExpiresIn`\n"+
 			"FROM `connectors`\nWHERE `id` = ?", id).
-		Scan(&connector.Name, &connector.Type, &connector.OAuthURL, &connector.LogoURL, &connector.ClientID, &connector.ClientSecret,
-			&connector.TokenEndpoint, &connector.WebhooksPer, &connector.DefaultTokenType, &connector.DefaultExpiresIn, &connector.ForcedExpiresIn)
+		Scan(&connector.Name, &connector.Type, &connector.OAuth.URL, &connector.LogoURL, &connector.OAuth.ClientID,
+			&connector.OAuth.ClientSecret, &connector.OAuth.TokenEndpoint, &connector.WebhooksPer,
+			&connector.OAuth.DefaultTokenType, &connector.OAuth.DefaultExpiresIn, &connector.OAuth.ForcedExpiresIn)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -272,7 +275,7 @@ func (apis *APIs) Connectors() ([]*Connector, error) {
 		var err error
 		for rows.Next() {
 			var connector Connector
-			if err = rows.Scan(&connector.ID, &connector.Name, &connector.Type, &connector.OAuthURL, &connector.LogoURL); err != nil {
+			if err = rows.Scan(&connector.ID, &connector.Name, &connector.Type, &connector.OAuth.URL, &connector.LogoURL); err != nil {
 				return err
 			}
 			connectors = append(connectors, &connector)

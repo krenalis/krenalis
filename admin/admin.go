@@ -354,7 +354,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"ID": cn.ID, "Name": cn.Name, "LogoURL": cn.LogoURL, "OAuthURL": cn.OAuthURL})
+			_ = json.NewEncoder(w).Encode(map[string]any{"ID": cn.ID, "Name": cn.Name, "LogoURL": cn.LogoURL, "OAuthURL": cn.OAuth.URL})
 			return
 		case "/ui":
 			var connection int
@@ -744,12 +744,12 @@ func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Reque
 	// Retrieve the refresh and access tokens.
 	body := url.Values{}
 	body.Set("grant_type", "authorization_code")
-	body.Set("client_id", connector.ClientID)
-	body.Set("client_secret", connector.ClientSecret)
+	body.Set("client_id", connector.OAuth.ClientID)
+	body.Set("client_secret", connector.OAuth.ClientSecret)
 	body.Set("redirect_uri", "https://localhost:9090/admin/oauth/authorize")
 	body.Set("code", oauthCode)
 
-	req, err := http.NewRequest("POST", connector.TokenEndpoint, strings.NewReader(body.Encode()))
+	req, err := http.NewRequest("POST", connector.OAuth.TokenEndpoint, strings.NewReader(body.Encode()))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	if err != nil {
 		return err
@@ -784,19 +784,19 @@ func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Reque
 
 	// Compute the access token expire time.
 	expireDate := time.Now()
-	if connector.ForcedExpiresIn != "" {
-		switch connector.ForcedExpiresIn {
+	if connector.OAuth.ForcedExpiresIn != "" {
+		switch connector.OAuth.ForcedExpiresIn {
 		case "never":
 			expireDate = expireDate.Add(oneHundredYears)
 		default:
-			seconds, _ := strconv.ParseInt(connector.ForcedExpiresIn, 10, 64)
+			seconds, _ := strconv.ParseInt(connector.OAuth.ForcedExpiresIn, 10, 64)
 			expireDate = expireDate.Add(time.Duration(seconds) * time.Second)
 		}
 	} else if tokens.ExpiresIn != nil {
 		seconds, _ := tokens.ExpiresIn.Int64()
 		expireDate = expireDate.Add(time.Duration(seconds) * time.Second)
-	} else if connector.DefaultExpiresIn != 0 {
-		expireDate = expireDate.Add(time.Duration(connector.DefaultExpiresIn) * time.Second)
+	} else if connector.OAuth.DefaultExpiresIn != 0 {
+		expireDate = expireDate.Add(time.Duration(connector.OAuth.DefaultExpiresIn) * time.Second)
 	}
 
 	_, err = ws.Connections.AddApp(apis.SourceRole, connectorID, tokens.RefreshToken, tokens.AccessToken,

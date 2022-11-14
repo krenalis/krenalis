@@ -42,7 +42,7 @@ export default class Connectors extends React.Component {
 			this.setState({goToConnectionAdded: id});
 			return;
 		}
-		// install with Oauth.
+		// install with OAuth.
 		document.cookie = `add-connection=${id};path=/`;
 		window.location = oAuthURL;
 		return;
@@ -62,7 +62,7 @@ export default class Connectors extends React.Component {
 								return(
 									<Card key={c.ID} name={c.Name} logoURL={c.LogoURL} type={c.Type}>
 										<SlTooltip content={`Add ${c.Name}`}>
-											<SlButton size='medium' variant='primary' onClick={async (e) => {await this.addConnection(c.ID, c.Type, c.OAuthURL, e)}} circle>
+											<SlButton size='medium' variant='primary' onClick={async (e) => {await this.addConnection(c.ID, c.Type, c.OAuth.URL, e)}} circle>
 												<SlIcon name='plus' />
 											</SlButton>
 										</SlTooltip>
