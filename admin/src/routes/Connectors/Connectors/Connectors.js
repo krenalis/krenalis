@@ -29,9 +29,9 @@ export default class Connectors extends React.Component {
 		this.setState({ connectors: connectors });
 	}
 
-	addConnection = async (id, type, oauthURL, e) => {
+	addConnection = async (id, type, oAuthURL, e) => {
 		e.currentTarget.setAttribute('loading', '');
-		if (oauthURL === '') {
+		if (oAuthURL === '') {
 			let [, err] = await call('/admin/add-connection', {Type: type, Connector: id, Storage: 0});
 			if (err != null) {
 				this.setState({status: {variant:'danger', icon:'exclamation-octagon', text:err}});
@@ -44,7 +44,7 @@ export default class Connectors extends React.Component {
 		}
 		// install with Oauth.
 		document.cookie = `add-connection=${id};path=/`;
-		window.location = oauthURL;
+		window.location = oAuthURL;
 		return;
 	}
 
@@ -62,7 +62,7 @@ export default class Connectors extends React.Component {
 								return(
 									<Card key={c.ID} name={c.Name} logoURL={c.LogoURL} type={c.Type}>
 										<SlTooltip content={`Add ${c.Name}`}>
-											<SlButton size='medium' variant='primary' onClick={async (e) => {await this.addConnection(c.ID, c.Type, c.OauthURL, e)}} circle>
+											<SlButton size='medium' variant='primary' onClick={async (e) => {await this.addConnection(c.ID, c.Type, c.OAuthURL, e)}} circle>
 												<SlIcon name='plus' />
 											</SlButton>
 										</SlTooltip>

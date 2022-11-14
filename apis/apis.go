@@ -235,7 +235,7 @@ type Connector struct {
 	ID               int
 	Name             string
 	Type             ConnectorType
-	OauthURL         string
+	OAuthURL         string
 	LogoURL          string
 	ClientID         string
 	ClientSecret     string
@@ -250,10 +250,10 @@ type Connector struct {
 func (apis *APIs) Connector(id int) (*Connector, error) {
 	connector := Connector{ID: id}
 	err := apis.myDB.QueryRow(
-		"SELECT `name`, CAST(`type` AS UNSIGNED), `oauthURL`, `logoURL`, `clientID`, `clientSecret`,"+
+		"SELECT `name`, CAST(`type` AS UNSIGNED), `oAuthURL`, `logoURL`, `clientID`, `clientSecret`,"+
 			" `tokenEndpoint`, CAST(`webhooksPer` AS UNSIGNED), `defaultTokenType`, `defaultExpiresIn`, `forcedExpiresIn`\n"+
 			"FROM `connectors`\nWHERE `id` = ?", id).
-		Scan(&connector.Name, &connector.Type, &connector.OauthURL, &connector.LogoURL, &connector.ClientID, &connector.ClientSecret,
+		Scan(&connector.Name, &connector.Type, &connector.OAuthURL, &connector.LogoURL, &connector.ClientID, &connector.ClientSecret,
 			&connector.TokenEndpoint, &connector.WebhooksPer, &connector.DefaultTokenType, &connector.DefaultExpiresIn, &connector.ForcedExpiresIn)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -267,11 +267,11 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 // Connectors returns all connectors.
 func (apis *APIs) Connectors() ([]*Connector, error) {
 	connectors := []*Connector{}
-	err := apis.myDB.QueryScan("SELECT `id`, `name`, CAST(`type` AS UNSIGNED), `oauthURL`, `logoURL`\nFROM `connectors`", func(rows *sql.Rows) error {
+	err := apis.myDB.QueryScan("SELECT `id`, `name`, CAST(`type` AS UNSIGNED), `oAuthURL`, `logoURL`\nFROM `connectors`", func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
 			var connector Connector
-			if err = rows.Scan(&connector.ID, &connector.Name, &connector.Type, &connector.OauthURL, &connector.LogoURL); err != nil {
+			if err = rows.Scan(&connector.ID, &connector.Name, &connector.Type, &connector.OAuthURL, &connector.LogoURL); err != nil {
 				return err
 			}
 			connectors = append(connectors, &connector)
@@ -431,7 +431,7 @@ func (apis *APIs) initSchema() {
 		id               int
 		name             string
 		typ              int `sql:"type"`
-		oauthURL         string
+		oAuthURL         string
 		logoURL          string
 		clientID         string
 		clientSecret     string

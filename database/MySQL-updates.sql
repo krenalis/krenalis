@@ -513,3 +513,6 @@ CREATE TABLE `connections_api_keys` (
 );
 
 RENAME TABLE `connections_api_keys` TO `connections_keys`;
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `oauthURL` `oAuthURL` VARCHAR(500) NOT NULL DEFAULT '';

@@ -94,7 +94,7 @@ type Connection struct {
 	Type     ConnectorType
 	Role     ConnectionRole
 	Storage  int // zero if the connection is not a file or does not have a storage
-	OauthURL string
+	OAuthURL string
 	LogoURL  string
 }
 
@@ -892,7 +892,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 func (this *Connections) List() ([]*Connection, error) {
 	sources := []*Connection{}
 	err := this.myDB.QueryScan(
-		"SELECT `s`.`id`, CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `s`.`storage`, `c`.`name`, `c`.`oauthURL`, `c`.`logoURL`\n"+
+		"SELECT `s`.`id`, CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `s`.`storage`, `c`.`name`, `c`.`oAuthURL`, `c`.`logoURL`\n"+
 			"FROM `connections` as `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`workspace` = ?", this.workspace, func(rows *sql.Rows) error {
@@ -900,7 +900,7 @@ func (this *Connections) List() ([]*Connection, error) {
 			for rows.Next() {
 				var c Connection
 				if err = rows.Scan(&c.ID, &c.Type, &c.Role, &c.Storage, &c.Name,
-					&c.OauthURL, &c.LogoURL); err != nil {
+					&c.OAuthURL, &c.LogoURL); err != nil {
 					return err
 				}
 				sources = append(sources, &c)

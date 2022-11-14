@@ -13,7 +13,7 @@ CREATE TABLE `connectors` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(200) NOT NULL DEFAULT '',
   `type` ENUM('App', 'Database', 'File', 'Mobile', 'Server', 'Storage', 'Website') NOT NULL DEFAULT 'App',
-  `oauthURL` VARCHAR(500) NOT NULL DEFAULT '',
+  `oAuthURL` VARCHAR(500) NOT NULL DEFAULT '',
   `logoURL` VARCHAR(500) NOT NULL DEFAULT '',
   `clientID` VARCHAR(500) NOT NULL DEFAULT '',
   `clientSecret` VARCHAR(500) NOT NULL DEFAULT '',
