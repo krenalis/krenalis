@@ -16,15 +16,14 @@ import (
 	"errors"
 	"io/fs"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis"
 	"chichi/pkg/open2b/sql"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -37,10 +36,8 @@ import (
 )
 
 const (
-	maxEventsQueueLength = 10000
-	flushQueueTimeout    = 1 // Interval (in seconds) to flush the queue.
-	geoLite2Path         = "GeoLite2-City.mmdb"
-	testGEOIP            = "79.9.108.176"
+	geoLite2Path = "GeoLite2-City.mmdb"
+	testGEOIP    = "79.9.108.176"
 )
 
 // errBadRequest is returned from the _serveLogEvent function to return a Bad
@@ -48,17 +45,15 @@ const (
 var errBadRequest = errors.New("bad request")
 
 type Server struct {
-	settings         *Settings
-	mySQLDB          *sql.DB
-	clickHouseConn   chDriver.Conn
-	clickHouseCtx    context.Context
-	eventsQueue      []*Event
-	eventsQueueMutex sync.Mutex
+	apis           *apis.APIs
+	settings       *Settings
+	mySQLDB        *sql.DB
+	clickHouseConn chDriver.Conn
+	clickHouseCtx  context.Context
 }
 
-func newServer(settings *Settings, mySQLDB *sql.DB, clickHouseConn chDriver.Conn, clickHouseCtx context.Context) *Server {
-	s := &Server{settings: settings, mySQLDB: mySQLDB, clickHouseConn: clickHouseConn, clickHouseCtx: clickHouseCtx}
-	s.timeoutFlusher()
+func newServer(apis *apis.APIs, settings *Settings, mySQLDB *sql.DB, clickHouseConn chDriver.Conn, clickHouseCtx context.Context) *Server {
+	s := &Server{apis: apis, settings: settings, mySQLDB: mySQLDB, clickHouseConn: clickHouseConn, clickHouseCtx: clickHouseCtx}
 	return s
 }
 
@@ -290,75 +285,33 @@ func (server *Server) _serveLogEvent(w http.ResponseWriter, r *http.Request) err
 	event.path = strings.TrimLeft(strings.TrimRight(url.Path, "/"), "/")
 	event.queryString = url.RawQuery
 
-	server.eventsQueueMutex.Lock()
-	server.eventsQueue = append(server.eventsQueue, event)
-	var toFlush []*Event
-	if len(server.eventsQueue) == maxEventsQueueLength {
-		toFlush = server.eventsQueue
-		server.eventsQueue = nil
+	ev := apis.Event{
+		Property:       event.property,
+		Date:           event.date,
+		Timestamp:      event.timestamp,
+		Language:       event.Language,
+		OSName:         event.osName,
+		OSVersion:      event.osVersion,
+		Browser:        event.browser,
+		BrowserOther:   event.browserOther,
+		BrowserVersion: event.browserVersion,
+		DeviceType:     event.deviceType,
+		Referrer:       event.Referrer,
+		Target:         event.Target,
+		Event:          event.Event,
+		Text:           event.Text,
+		Domain:         event.domain,
+		Path:           event.path,
+		QueryString:    event.queryString,
+		Title:          event.Title,
+		User:           event.user,
+		Country:        event.country,
+		City:           event.city,
 	}
-	server.eventsQueueMutex.Unlock()
-	if toFlush != nil {
-		go server.flushEvents(toFlush)
-	}
+
+	server.apis.AddEvent(&ev)
 
 	return nil
-}
-
-// timeoutFlusher launches a goroutine that flushes the events queue every
-// flushQueueTimeout seconds
-func (server *Server) timeoutFlusher() {
-	ticker := time.NewTicker(flushQueueTimeout * time.Second)
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				server.eventsQueueMutex.Lock()
-				toFlush := server.eventsQueue
-				server.eventsQueue = nil
-				server.eventsQueueMutex.Unlock()
-				go server.flushEvents(toFlush)
-			}
-		}
-	}()
-}
-
-// flushEvents writes a batch of events to ClickHouse.
-func (server *Server) flushEvents(events []*Event) {
-	if len(events) == 0 {
-		return
-	}
-	log.Printf("[info] flushing %d events", len(events))
-RETRY:
-	for {
-		batch, err := server.clickHouseConn.PrepareBatch(server.clickHouseCtx, "INSERT INTO `events`\n"+
-			"(`property`, `date`,  `timestamp`, `language`, `osName`, `osVersion`, `browser`, `browserOther`, "+
-			"`browserVersion`, `deviceType`, "+"`referrer`, `target`, `event`, `text`, `domain`, `path`, "+
-			"`queryString`, `title`, `user`, `country`, `city`)")
-		if err != nil {
-			log.Printf("[error] cannot log events: %s", err)
-			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
-			continue
-		}
-		for _, event := range events {
-			err := batch.Append(event.property, event.date, event.timestamp, event.Language, event.osName,
-				event.osVersion, event.browser, event.browserOther, event.browserVersion, event.deviceType,
-				event.Referrer, event.Target, event.Event, event.Text, event.domain, event.path, event.queryString,
-				event.Title, event.user, event.country, event.city)
-			if err != nil {
-				log.Printf("[error] cannot log events: %s", err)
-				time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
-				continue RETRY
-			}
-		}
-		err = batch.Send()
-		if err != nil {
-			log.Printf("[error] cannot log events: %s", err)
-			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
-			continue
-		}
-		return
-	}
 }
 
 // isValidPropertyID reports whether id is a valid property identifier.

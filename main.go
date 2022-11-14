@@ -80,7 +80,7 @@ func main() {
 	admin := admin.New(apis)
 
 	// Run the server.
-	server := newServer(settings, mySQLDB, clickHouseConn, clickHouseCtx)
+	server := newServer(apis, settings, mySQLDB, clickHouseConn, clickHouseCtx)
 
 	http.HandleFunc("/admin/", admin.ServeHTTP)
 	http.HandleFunc("/log-event", server.serveLogEvent)

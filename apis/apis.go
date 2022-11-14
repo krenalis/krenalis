@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"chichi/pkg/open2b/sql"
@@ -35,6 +36,9 @@ type APIs struct {
 	chDB     chDriver.Conn
 	Accounts *Accounts
 	Users    *Users
+
+	eventsQueue      []*Event
+	eventsQueueMutex sync.Mutex
 }
 
 var hasBeenCalled bool
@@ -49,6 +53,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 	apis.Accounts = &Accounts{apis}
 	apis.Users = &Users{apis}
 	apis.initSchema()
+	apis.startEventFlusher()
 	return apis
 }
 

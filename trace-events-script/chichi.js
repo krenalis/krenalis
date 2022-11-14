@@ -35,6 +35,7 @@
 				localStorage.setItem('chichi-device', device);
 			}
 		}
+		d.device = device;
 
 		d.referrer = document.referrer;
 
