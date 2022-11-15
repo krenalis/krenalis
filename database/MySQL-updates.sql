@@ -551,4 +551,17 @@ ALTER TABLE `users`
 
 ALTER TABLE `users`
     DROP PRIMARY KEY,
-    ADD PRIMARY KEY (`source`,`id`);
+    ADD PRIMARY KEY (`source`, `id`);
+
+ALTER TABLE `devices`
+    CHANGE COLUMN `property` `source` INT NOT NULL,
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (`source`, `id`);
+
+ALTER TABLE `domains`
+    CHANGE COLUMN `property` `source` INT NOT NULL,
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (`source`, `name`);
+
+ALTER TABLE `smart_events`
+    CHANGE COLUMN `property` `source` INT NOT NULL;

@@ -107,16 +107,16 @@ CREATE TABLE `connections_users` (
 );
 
 CREATE TABLE `devices` (
-  `property` INT unsigned NOT NULL,
+  `source` INT NOT NULL,
   `id` char(28) CHARACTER SET ascii NOT NULL,
   `user` int unsigned DEFAULT NULL,
-  PRIMARY KEY (`property`, `id`)
+  PRIMARY KEY (`source`, `id`)
 );
 
 CREATE TABLE `domains` (
-  `property` INT unsigned NOT NULL,
+  `source` INT NOT NULL,
   `name` VARCHAR(255) NOT NULL,
-  PRIMARY KEY (`property`, `name`));
+  PRIMARY KEY (`source`, `name`));
 
 CREATE TABLE `properties` (
   `id` INT unsigned NOT NULL AUTO_INCREMENT,
@@ -140,7 +140,7 @@ CREATE TABLE `resources` (
 );
 
 CREATE TABLE `smart_events` (
-  `property` INT unsigned NOT NULL,
+  `source` INT NOT NULL,
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NOT NULL DEFAULT '',
   `event` VARCHAR(50) NOT NULL DEFAULT '',
