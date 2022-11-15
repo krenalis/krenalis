@@ -306,7 +306,7 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int) (i
 			return err
 		}
 		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `type` = 'File', `role` = ?, `connector` = ? AND `storage` = ?",
+			"SET `id` = ?, `workspace` = ?, `type` = 'File', `role` = ?, `connector` = ?, `storage` = ?",
 			id, this.workspace, role, connector, storage)
 		return err
 	})
