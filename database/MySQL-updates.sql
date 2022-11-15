@@ -548,3 +548,7 @@ ALTER TABLE `connections_keys`
 
 ALTER TABLE `users`
     CHANGE COLUMN `property` `source` INT NOT NULL;
+
+ALTER TABLE `users`
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (`source`,`id`);

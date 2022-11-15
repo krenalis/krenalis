@@ -155,7 +155,7 @@ CREATE TABLE `users` (
   `source` INT NOT NULL,
   `id` int unsigned NOT NULL,
   `device` char(28) CHARACTER SET ascii DEFAULT NULL,
-  PRIMARY KEY (`property`,`id`)
+  PRIMARY KEY (`source`,`id`)
 );
 
 CREATE TABLE `warehouse_users` (
