@@ -193,7 +193,7 @@ func (apis *APIs) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		err = apis.myDB.QueryRow("SELECT `c`.`id`, CAST(`c`.`type` AS UNSIGNED)\n"+
 			"FROM `connections_keys` AS `k`\n"+
 			"INNER JOIN `connections` AS `c` ON `k`.`connection` = `c`.`id`\n"+
-			"WHERE `c`.`type` IN ('Mobile', 'Server') AND `k`.`role` = 'Source' AND `k`.`key` = ?", key).
+			"WHERE `c`.`type` IN ('Mobile', 'Server') AND `c`.`role` = 'Source' AND `k`.`key` = ?", key).
 			Scan(&connection, &typ)
 	}
 	if err != nil {
