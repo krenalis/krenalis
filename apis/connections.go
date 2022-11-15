@@ -36,20 +36,29 @@ type Connections struct {
 	*WorkspaceAPI
 }
 
-var (
-	ErrConnectorNotFound        = errors.New("connector does not exist")
-	ErrConnectionNotFound       = errors.New("connection does not exist")
-	ErrConnectionDisabled       = errors.New("connection is disabled")
-	ErrFileHasNoStorage         = errors.New("file connection has not a storage")
-	ErrStorageNotFound          = errors.New("storage does not exist")
-	ErrStorageHasConnectedFiles = errors.New("storage has connected files")
-	ErrUIEventNotExist          = errors.New("UI event does not exist")
-)
-
 const (
 	rawPropertiesMaxSize = 16_777_215 // maximum size in runes of the 'property' column of the 'connections' table.
 	queryMaxSize         = 16_777_215 // maximum size in runes of a connection query.
 )
+
+var (
+	ErrConnectionDisabled       = errors.New("connection is disabled")
+	ErrFileHasNoStorage         = errors.New("file connection has not a storage")
+	ErrStorageHasConnectedFiles = errors.New("storage has connected files")
+	ErrUIEventNotExist          = errors.New("UI event does not exist")
+)
+
+// A ConnectionNotFoundError error indicates that a connection does not exist.
+type ConnectionNotFoundError struct {
+	Type ConnectorType
+}
+
+func (err ConnectionNotFoundError) Error() string {
+	if err.Type == 0 {
+		return "connection does not exist"
+	}
+	return fmt.Sprintf("%s connection does not exist", strings.ToLower(err.Type.String()))
+}
 
 // A DatabaseQueryError error is returned from a database connector if an error
 // occurs when executing a query.
@@ -130,7 +139,7 @@ type ConnectionProperty struct {
 // AddApp adds an app connection given its role, app connector, OAuth refresh
 // and access tokens and returns its identifier.
 //
-// If the connector does not exist, it returns the ErrConnectorNotFound error.
+// If the connector does not exist, it returns a ConnectorNotFoundError error.
 func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken, accessToken, expiresIn string) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
@@ -143,7 +152,7 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken
 		return 0, err
 	}
 	if conn == nil {
-		return 0, ErrConnectorNotFound
+		return 0, ConnectorNotFoundError{AppType}
 	}
 	if conn.Type != AppType {
 		return 0, errors.New("connector is not an app connector")
@@ -215,7 +224,7 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken
 // AddDatabase adds a database connection given its role, database connector
 // and returns its identifier.
 //
-// If the connector does not exist, it returns the ErrConnectorNotFound error.
+// If the connector does not exist, it returns a ConnectorNotFoundError error.
 func (this *Connections) AddDatabase(role ConnectionRole, connector int) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
@@ -229,7 +238,7 @@ func (this *Connections) AddDatabase(role ConnectionRole, connector int) (int, e
 		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&connectorType)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrConnectorNotFound
+				return ConnectorNotFoundError{DatabaseType}
 			}
 			return err
 		}
@@ -255,8 +264,8 @@ func (this *Connections) AddDatabase(role ConnectionRole, connector int) (int, e
 // connection and returns its identifier. If storage is 0, the file connection
 // does not have a storage, otherwise storage must have the given role.
 //
-// If the connector does not exist, it returns the ErrConnectorNotFound error.
-// If the storage does not exist, it returns the ErrStorageNotFound error.
+// If the connector does not exist, it returns a ConnectorNotFoundError error.
+// If the storage does not exist, it returns a ConnectionNotFound error.
 func (this *Connections) AddFile(role ConnectionRole, connector, storage int) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
@@ -273,7 +282,7 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int) (i
 		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrConnectorNotFound
+				return ConnectorNotFoundError{FileType}
 			}
 			return err
 		}
@@ -287,7 +296,7 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int) (i
 				storage).Scan(&typ, &storageRole)
 			if err != nil {
 				if err == sql.ErrNoRows {
-					return ErrStorageNotFound
+					return ConnectionNotFoundError{StorageType}
 				}
 				return err
 			}
@@ -318,7 +327,7 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int) (i
 
 // AddServer adds a server connection given its role and server connector.
 //
-// If the connector does not exist, it returns the ErrConnectorNotFound error.
+// If the connector does not exist, it returns a ConnectorNotFoundError error.
 func (this *Connections) AddServer(role ConnectionRole, connector int) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
@@ -337,7 +346,7 @@ func (this *Connections) AddServer(role ConnectionRole, connector int) (int, err
 		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrConnectorNotFound
+				return ConnectorNotFoundError{ServerType}
 			}
 			return err
 		}
@@ -365,7 +374,7 @@ func (this *Connections) AddServer(role ConnectionRole, connector int) (int, err
 
 // AddMobile adds a mobile connection given its role and mobile connector.
 //
-// If the connector does not exist, it returns the ErrConnectorNotFound error.
+// If the connector does not exist, it returns a ConnectorNotFoundError error.
 func (this *Connections) AddMobile(role ConnectionRole, connector int) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
@@ -384,7 +393,7 @@ func (this *Connections) AddMobile(role ConnectionRole, connector int) (int, err
 		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrConnectorNotFound
+				return ConnectorNotFoundError{MobileType}
 			}
 			return err
 		}
@@ -413,7 +422,7 @@ func (this *Connections) AddMobile(role ConnectionRole, connector int) (int, err
 // AddStorage adds a storage connection given its role and connector and
 // returns its identifier.
 //
-// If the connector does not exist, it returns the ErrConnectorNotFound error.
+// If the connector does not exist, it returns a ConnectorNotFoundError error.
 func (this *Connections) AddStorage(role ConnectionRole, connector int) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
@@ -427,7 +436,7 @@ func (this *Connections) AddStorage(role ConnectionRole, connector int) (int, er
 		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrConnectorNotFound
+				return ConnectorNotFoundError{StorageType}
 			}
 			return err
 		}
@@ -453,7 +462,7 @@ func (this *Connections) AddStorage(role ConnectionRole, connector int) (int, er
 // website host and returns its identifier. host may be of the form
 // "host:port".
 //
-// If the connector does not exist, it returns the ErrConnectorNotFound error.
+// If the connector does not exist, it returns a ConnectorNotFoundError error.
 func (this *Connections) AddWebsite(role ConnectionRole, connector int, host string) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
@@ -479,7 +488,7 @@ func (this *Connections) AddWebsite(role ConnectionRole, connector int, host str
 		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrConnectorNotFound
+				return ConnectorNotFoundError{WebsiteType}
 			}
 			return err
 		}
@@ -507,7 +516,7 @@ func (this *Connections) AddWebsite(role ConnectionRole, connector int, host str
 }
 
 // Get returns the connection with identifier id. If the connection does not
-// exist, it returns the ErrConnectionNotFound error.
+// exist, it returns a ConnectionNotFoundError error.
 func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 	if id <= 0 {
 		return nil, errors.New("invalid connection identifier")
@@ -521,7 +530,7 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 		id, this.workspace).Scan(&s.Type, &s.Role, &s.Name, &s.LogoURL, &s.UsersQuery)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, ErrConnectionNotFound
+			return nil, ConnectionNotFoundError{}
 		}
 	}
 	return &s, nil
@@ -590,7 +599,7 @@ func (this *Connections) Delete(id int) error {
 // the users from the current cursor, otherwise imports all users. The
 // connection must be a source app, database or file connection.
 //
-// Returns the ErrConnectionNotFound error if the connection does not exist.
+// Returns a ConnectionNotFoundError error if the connection does not exist.
 // Returns the ErrConnectionDisabled error if the connection does not have any
 // transformation function associated to it.
 // Returns the ErrFileHasNoStorage error if the connection is a file and does
@@ -610,7 +619,7 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&typ, &role, &storage)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return ErrConnectionNotFound
+			return ConnectionNotFoundError{}
 		}
 		return err
 	}
@@ -917,7 +926,7 @@ func (this *Connections) List() ([]*Connection, error) {
 // with the given identifier. The connection must be an app, database of file
 // connection.
 //
-// Returns the ErrConnectionNotFound error if the connection does not exist.
+// Returns a ConnectionNotFoundError error if the connection does not exist.
 func (this *Connections) Properties(id int) ([]ConnectionProperty, [][]string, error) {
 	if id <= 0 {
 		return nil, nil, errors.New("invalid connection identifier")
@@ -968,7 +977,7 @@ type Column struct {
 // must contain the ':limit' placeholder. limit must be between 1 and 100.
 //
 // It returns an error if the connection is a destination.
-// It returns the ErrConnectionNotFound error if the connection does not exist
+// It returns a ConnectionNotFoundError error if the connection does not exist
 // and returns a DatabaseQueryError error if an error occurred while executing
 // the query.
 func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]string, error) {
@@ -1003,7 +1012,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 		&typ, &role, &connector, &settings, &connectorName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil, ErrConnectionNotFound
+			return nil, nil, ConnectionNotFoundError{}
 		}
 		return nil, nil, err
 	}
@@ -1074,7 +1083,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 
 // ServeUI serves the user interface for the connection with identifier id.
 // event is the event and values contains the form values in JSON format.
-// Returns the ErrConnectionNotFound error if the connection does not exist and
+// Returns a ConnectionNotFoundError error if the connection does not exist and
 // the ErrUIEventNotExist error if the event does not exist.
 func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, error) {
 
@@ -1088,7 +1097,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		id, this.workspace).Scan(&typ, &role)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, ErrConnectionNotFound
+			return nil, ConnectionNotFoundError{}
 		}
 		return nil, err
 	}
@@ -1116,7 +1125,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 			&connector, &resource, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return nil, ErrConnectionNotFound
+				return nil, ConnectionNotFoundError{}
 			}
 			return nil, err
 		}
@@ -1152,7 +1161,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return nil, ErrConnectionNotFound
+				return nil, ConnectionNotFoundError{}
 			}
 			return nil, err
 		}
@@ -1219,7 +1228,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 // 16,777,215 runes and must contain the ':limit' placeholder.
 //
 // It returns an error if the connection is a destination.
-// It returns the ErrConnectionNotFound error if the connection does not exist.
+// It returns a ConnectionNotFoundError error if the connection does not exist.
 func (this *Connections) SetUsersQuery(id int, query string) error {
 
 	if id <= 0 {
@@ -1260,7 +1269,7 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 		if role != SourceRole {
 			return errors.New("connection is not a source")
 		}
-		return ErrConnectionNotFound
+		return ConnectionNotFoundError{DatabaseType}
 	}
 
 	return nil
@@ -1322,7 +1331,7 @@ var errRecordStop = errors.New("stop record")
 // reloadProperties reloads the properties of the connection with identifier id.
 // The connection must be a source app, database or file.
 //
-// If the connection does not exist it returns the ErrConnectionNotFound error.
+// If the connection does not exist it returns a ConnectionNotFoundError error.
 func (this *Connections) reloadProperties(id int) error {
 
 	if id <= 0 {
@@ -1337,7 +1346,7 @@ func (this *Connections) reloadProperties(id int) error {
 		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace, &storage).Scan(&typ, &role)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return ErrConnectionNotFound
+			return ConnectionNotFoundError{}
 		}
 		return err
 	}
@@ -1379,7 +1388,7 @@ func (this *Connections) reloadProperties(id int) error {
 			&connector, &resource, &cursor, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrConnectionNotFound
+				return ConnectionNotFoundError{}
 			}
 			return err
 		}
@@ -1421,7 +1430,7 @@ func (this *Connections) reloadProperties(id int) error {
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &settings, &usersQuery)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrConnectionNotFound
+				return ConnectionNotFoundError{}
 			}
 			return err
 		}
@@ -1465,7 +1474,7 @@ func (this *Connections) reloadProperties(id int) error {
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &storage, &identityColumn, &timestampColumn, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return ErrConnectionNotFound
+				return ConnectionNotFoundError{}
 			}
 			return err
 		}

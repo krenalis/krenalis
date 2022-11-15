@@ -143,7 +143,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				var properties []ConnectionProperty
 				properties, _, err = ws.Connections.Properties(dsID)
 				if err != nil {
-					if err == ErrConnectionNotFound {
+					if _, ok := err.(ConnectionNotFoundError); ok {
 						http.Error(w, "Not Found", http.StatusNotFound)
 					} else {
 						log.Printf("[error] %s", err)
@@ -161,7 +161,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				err = ws.Connections.Import(dsID, false)
 				if err != nil {
-					if err == ErrConnectionNotFound {
+					if _, ok := err.(ConnectionNotFoundError); ok {
 						http.Error(w, "Not Found", http.StatusNotFound)
 					} else {
 						log.Printf("[error] %s", err)
@@ -178,7 +178,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				err = ws.Connections.Import(dsID, true)
 				if err != nil {
-					if err == ErrConnectionNotFound {
+					if _, ok := err.(ConnectionNotFoundError); ok {
 						http.Error(w, "Not Found", http.StatusNotFound)
 					} else {
 						log.Printf("[error] %s", err)
@@ -195,7 +195,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				transformations, err := ws.Connections.Transformations.List(dsID)
 				if err != nil {
-					if err == ErrConnectionNotFound {
+					if _, ok := err.(ConnectionNotFoundError); ok {
 						http.Error(w, "Not Found", http.StatusNotFound)
 					} else {
 						log.Printf("[error] %s", err)
@@ -217,7 +217,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			tID, err := ws.Connections.Transformations.Create(req)
 			if err != nil {
-				if err == ErrConnectionNotFound {
+				if _, ok := err.(ConnectionNotFoundError); ok {
 					http.Error(w, "Not Found", http.StatusNotFound)
 				} else {
 					log.Printf("[error] %s", err)

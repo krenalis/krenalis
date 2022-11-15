@@ -10,6 +10,7 @@ package apis
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"chichi/connector"
@@ -55,6 +56,18 @@ func (typ ConnectorType) String() string {
 // It panics if typ is not a valid ConnectorType value.
 func (typ ConnectorType) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + typ.String() + `"`), nil
+}
+
+// A ConnectorNotFoundError error indicates that a connector does not exist.
+type ConnectorNotFoundError struct {
+	Type ConnectorType
+}
+
+func (err ConnectorNotFoundError) Error() string {
+	if err.Type == 0 {
+		return "connector does not exist"
+	}
+	return fmt.Sprintf("%s connector does not exist", strings.ToLower(err.Type.String()))
 }
 
 // Connector represents a connector.
