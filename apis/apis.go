@@ -81,6 +81,22 @@ func (api *AccountAPI) AsWorkspace(workspace int) *WorkspaceAPI {
 // ServeHTTP servers the API methods from HTTP.
 func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
+	if strings.HasPrefix(r.URL.Path, "/api/v1/events") {
+		err := apis.serveEvents(w, r)
+		if err != nil {
+			switch err {
+			case errBadRequest:
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+			case errUnauthorized:
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			default:
+				log.Printf("[error] %s", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			}
+		}
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 
 	// Read the workspace.

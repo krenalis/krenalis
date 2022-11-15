@@ -60,6 +60,12 @@ go build -tags osusergo,netgo -trimpath
 
 Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/admin/.
 
+#### How test events
+
+1. Add a Website source with host `localhost:9090`
+2. Copy the source identifier into the `data-source` attribute of the script in the `trace-events-script/website-for-testing/index.html` file
+3. Visit https://localhost:9090/trace-events-script/website-for-testing/
+
 ### Expose on the Internet (optional)
 
 1. Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/)

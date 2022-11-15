@@ -545,3 +545,6 @@ ALTER TABLE `connectors`
 ALTER TABLE `connections_keys`
     CHANGE COLUMN `key` `key` CHAR(32) CHARSET ascii COLLATE ascii_bin NOT NULL,
     ADD KEY `key` (`key`);
+
+ALTER TABLE `users`
+    CHANGE COLUMN `property` `source` INT NOT NULL;

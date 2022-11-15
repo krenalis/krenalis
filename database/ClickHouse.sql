@@ -4,7 +4,7 @@
 
 CREATE TABLE events
 (
-    `property` UInt32,
+    `source` Int32,
     `date` Date,
     `timestamp` DateTime,
     `osName` Enum8('Other' = 0, 'Android' = 1, 'Windows' = 2, 'iOS' = 3, 'MacOS' = 4, 'Linux' = 5, 'Chrome OS' = 6),
@@ -27,5 +27,5 @@ CREATE TABLE events
     `city` String
 )
 ENGINE = MergeTree
-PRIMARY KEY (`property`, `date`, `user`, `timestamp`)
+PRIMARY KEY (`source`, `date`, `user`, `timestamp`)
 SETTINGS index_granularity = 8192;

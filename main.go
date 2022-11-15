@@ -79,42 +79,12 @@ func main() {
 	apis := apis.New(mySQLDB, clickHouseConn)
 	admin := admin.New(apis)
 
-	// Run the server.
-	server := newServer(apis, settings, mySQLDB, clickHouseConn, clickHouseCtx)
-
 	http.HandleFunc("/admin/", admin.ServeHTTP)
-	http.HandleFunc("/log-event", server.serveLogEvent)
 	http.HandleFunc("/api/", apis.ServeHTTP)
 	http.HandleFunc("/webhook/", apis.ServeWebhook)
+	http.Handle("/trace-events-script/", http.FileServer(http.Dir(".")))
 	err = http.ListenAndServeTLS(":9090", "cert.pem", "key.pem", nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
-}
-
-type Event struct {
-	Property       string
-	property       uint32
-	Device         string
-	osName         string
-	osVersion      string
-	browser        string
-	browserOther   string
-	browserVersion string
-	deviceType     string
-	Event          string // "pageview", "click", ...
-	Language       string // "it-IT"
-	Referrer       string // "https://example.com"
-	user           uint32
-	Target         string // "https://example.com"
-	Text           string // "Add to cart"
-	timestamp      string
-	date           string
-	Title          string // "Product X"
-	URL            string // "https://example.com/product/x/y?x=10"
-	domain         string // "example.com"
-	path           string // "product/x/y"
-	queryString    string // "x=10"
-	country        string
-	city           string
 }

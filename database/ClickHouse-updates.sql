@@ -196,3 +196,32 @@ PRIMARY KEY (`property`, `date`, `user`, `timestamp`)
 SETTINGS index_granularity = 8192;
 
 ALTER TABLE `events` MODIFY COLUMN `osName` Enum8('Other' = 0, 'Android' = 1, 'Windows' = 2, 'iOS' = 3, 'MacOS' = 4, 'Linux' = 5, 'Chrome OS' = 6);
+
+DROP TABLE `events`;
+CREATE TABLE events
+(
+    `source` Int32,
+    `date` Date,
+    `timestamp` DateTime,
+    `osName` Enum8('Other' = 0, 'Android' = 1, 'Windows' = 2, 'iOS' = 3, 'MacOS' = 4, 'Linux' = 5, 'Chrome OS' = 6),
+    `osVersion` String,
+    `browser` Enum8('Other' = 0, 'Chrome' = 1, 'Safari' = 2, 'Edge' = 3, 'Firefox' = 4, 'Samsung Internet' = 5, 'Opera' = 6),
+    `browserOther` String,
+    `browserVersion` String,
+    `deviceType` Enum8('desktop' = 1, 'tablet' = 2, 'mobile' = 3),
+    `event` Enum8('pageview' = 1, 'click' = 2),
+    `language` FixedString(2),
+    `referrer` String,
+    `target` String,
+    `text` String,
+    `title` String,
+    `domain` String,
+    `path` String,
+    `queryString` String,
+    `user` UInt32,
+    `country` FixedString(2),
+    `city` String
+)
+ENGINE = MergeTree
+PRIMARY KEY (`source`, `date`, `user`, `timestamp`)
+SETTINGS index_granularity = 8192;

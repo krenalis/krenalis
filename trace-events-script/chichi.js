@@ -9,8 +9,8 @@
 	}
 
 	let script = document.querySelector('script[data-isChichi]');
-	let endpoint = DEBUG ? 'https://localhost:9090/log-event' : script.src; // TODO(@Andrea): replace the last segment of script.src with 'log-event'
-	let property = script.dataset.property;
+	let endpoint = DEBUG ? 'https://localhost:9090/api/v1/events' : script.src; // TODO(@Andrea): replace the last segment of script.src with 'log-event'
+	let source = script.dataset.source;
 
 	// immediately send the pageView event.
 	sendEvent({ event: 'pageview' });
@@ -24,8 +24,6 @@
 
 	function sendEvent(data) {
 		let d = data == null ? {} : data;
-
-		d.property = property;
 
 		let device;
 		if (isStorageAvailable('localStorage')) {
@@ -59,11 +57,18 @@
 		}
 
 		// send the JSON.
-		try {
-			n.sendBeacon(endpoint, json);
-		} catch (err) {
+		fetch(endpoint, {
+			method: 'POST',
+			cache: 'no-cache',
+			headers: {
+				'Content-Type': 'application/json',
+				'Authorization': 'Basic '+btoa(source+':')
+			},
+			redirect: 'error',
+			body: json
+		}).catch(function (err) {
 			console.error(`[ChichiError] cannot send '${d.event}' event: ${err.message}`)
-		}
+		});
 	}
 
 	function sendClickEvent(e) {
