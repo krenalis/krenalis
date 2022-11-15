@@ -106,7 +106,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ws := api.AsWorkspace(workspace)
 
 	router := chi.NewRouter()
-	router.Route("/apis/connections", func(router chi.Router) {
+	router.Route("/api/connections", func(router chi.Router) {
 		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			var connections []*Connection
 			connections, err = ws.Connections.List()
@@ -191,7 +191,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 		})
 	})
-	router.Route("/apis/transformations", func(router chi.Router) {
+	router.Route("/api/transformations", func(router chi.Router) {
 		router.Put("/", func(w http.ResponseWriter, r *http.Request) {
 			var req TransformationToCreate
 			err := json.NewDecoder(r.Body).Decode(&req)
