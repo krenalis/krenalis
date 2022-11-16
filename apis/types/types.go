@@ -301,24 +301,24 @@ func (t Type) LogicalType() (LogicalType, bool) {
 	return t.lt, t.lt > 0
 }
 
-// ByteLen returns the maximum length in bytes of a Text type.
-// Returns 0 if there is no limit in bytes.
+// ByteLen returns the maximum length in bytes of a Text type and true.
+// If t has no maximum length in bytes, it returns 0 and false.
 // Panics if t is not a Text type.
-func (t Type) ByteLen() int {
+func (t Type) ByteLen() (int, bool) {
 	if t.pt != PtText {
 		panic("cannot get byte length of a non-text type")
 	}
-	return t.p
+	return t.p, t.p > 0
 }
 
-// CharLen returns the maximum length in characters of a Text type.
-// Returns 0 if there is no limit in characters.
+// CharLen returns the maximum length in characters of a Text type and true.
+// If t has no maximum length in characters, it returns 0 and false.
 // Panics if t is not a Text type.
-func (t Type) CharLen() int {
+func (t Type) CharLen() (int, bool) {
 	if t.pt != PtText {
 		panic("cannot get character length of a non-text type")
 	}
-	return t.s
+	return t.s, t.s > 0
 }
 
 // Precision returns the precision of a Decimal type.
