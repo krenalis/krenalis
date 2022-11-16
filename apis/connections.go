@@ -1205,6 +1205,62 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 	return marshalUIForm(form, role)
 }
 
+// SetFileStorage sets the storage of the file connection with identifier file.
+// storage is the storage connection. The file and the storage must have the
+// same role. As a special case, the current storage of the file is removed if
+// the storage argument is 0.
+//
+// It returns a ConnectionNotFound error if the file or storage does not exist.
+func (this *Connections) SetFileStorage(file, storage int) error {
+	if file <= 0 {
+		return errors.New("invalid file connection identifier")
+	}
+	if storage < 0 {
+		return errors.New("invalid storage connection identifier")
+	}
+	if file == storage {
+		return errors.New("file and storage cannot be the same connection")
+	}
+	if storage == 0 {
+		result, err := this.myDB.Exec("UPDATE `connections` SET `storage` = 0 WHERE `id` = ?", file)
+		if err != nil {
+			return err
+		}
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if affected == 0 {
+			return ConnectionNotFoundError{FileType}
+		}
+		return nil
+	}
+	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+		var fileRole, storageRole ConnectionRole
+		err := tx.QueryRow("SELECT\n"+
+			"\t(SELECT IFNULL(`role`, 0) FROM `connections` WHERE `id` = ?),\n"+
+			"\t(SELECT IFNULL(`role`, 0) FROM `connections` WHERE `id` = ?)", file, storage).Scan(&fileRole, &storageRole)
+		if err != nil {
+			return err
+		}
+		if fileRole == 0 {
+			return ConnectionNotFoundError{FileType}
+		}
+		if storageRole == 0 {
+			return ConnectionNotFoundError{StorageType}
+		}
+		if fileRole != storageRole {
+			if fileRole == SourceRole {
+				return errors.New("storage connection is not a source")
+			}
+			return errors.New("storage connection is not a destination")
+		}
+		_, err = tx.Exec("UPDATE `connections` SET `storage` = ? WHERE `id` = ?", storage, file)
+		return err
+	})
+	return err
+}
+
 // SetUsersQuery sets the users query of the database connection with
 // identifier id. query must be UTF-8 encoded, it cannot be longer than
 // 16,777,215 runes and must contain the ':limit' placeholder.
