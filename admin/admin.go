@@ -192,6 +192,27 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Serve the saving of transformations.
+	if strings.HasPrefix(rpath, "/transformations/save") {
+		var req struct {
+			Connection      int
+			Transformations []apis.TransformationToUpdate
+		}
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+		err = ws.Transformations.SaveAll(req.Connection, req.Transformations)
+		if err != nil {
+			log.Printf("[error] cannot update transformations: %s", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		_, _ = fmt.Fprint(w, `{"status":"ok"}`)
+		return
+	}
+
 	// Serve the schemas APIs.
 	if strings.HasPrefix(rpath, "/schemas/") {
 		rpath := rpath[len("/schemas"):]
@@ -324,6 +345,37 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+			return
+		case "/get-used-properties":
+			defer r.Body.Close()
+			var id int
+			err := json.NewDecoder(r.Body).Decode(&id)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			transformations, err := ws.Transformations.List(id)
+			properties := []apis.InputProperty{}
+			for _, t := range transformations {
+				for _, p := range t.InputProperties {
+					isDuplicate := false
+					for _, pr := range properties {
+						if p.Name == pr.Name {
+							isDuplicate = true
+						}
+					}
+					if !isDuplicate {
+						properties = append(properties, p)
+					}
+				}
+			}
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(properties)
 			return
 		}
 	}

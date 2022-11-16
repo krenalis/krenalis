@@ -8,8 +8,10 @@
 package apis
 
 import (
-	"chichi/pkg/open2b/sql"
 	"errors"
+	"fmt"
+
+	"chichi/pkg/open2b/sql"
 )
 
 type Transformations struct {
@@ -40,6 +42,31 @@ type InputProperty struct {
 	Name       string
 }
 
+// createTransformation creates the transformation t on the tx SQL transaction.
+// If the transformation is created successfully, its ID is returned.
+func createTransformation(tx *sql.Tx, t TransformationToCreate) (int, error) {
+	id, err := tx.Table("Transformations").Add(map[string]any{
+		"sourceCode":       t.SourceCode,
+		"goldenRecordName": t.GRProperty,
+	}, nil)
+	if err != nil {
+		return 0, err
+	}
+	for _, prop := range t.InputProperties {
+		_, err := tx.Table("TransformationsConnections").Add(map[string]any{
+			"connection":     prop.Connection,
+			"property":       prop.Name,
+			"transformation": id,
+		}, nil)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return id, nil
+}
+
+// Create creates the transformation t. If the transformation is created
+// successfully, its ID is returned.
 func (this *Transformations) Create(t TransformationToCreate) (int, error) {
 	err := this.validate(t)
 	if err != nil {
@@ -48,22 +75,9 @@ func (this *Transformations) Create(t TransformationToCreate) (int, error) {
 	var id int
 	err = this.myDB.Transaction(func(tx *sql.Tx) error {
 		var err error
-		id, err = tx.Table("Transformations").Add(map[string]any{
-			"sourceCode":       t.SourceCode,
-			"goldenRecordName": t.GRProperty,
-		}, nil)
+		id, err = createTransformation(tx, t)
 		if err != nil {
 			return err
-		}
-		for _, prop := range t.InputProperties {
-			_, err := tx.Table("TransformationsConnections").Add(map[string]any{
-				"connection":     prop.Connection,
-				"property":       prop.Name,
-				"transformation": id,
-			}, nil)
-			if err != nil {
-				return err
-			}
 		}
 		return nil
 	})
@@ -107,6 +121,53 @@ func (this *Transformations) Update(id int, t TransformationToUpdate) error {
 		return err
 	}
 	return nil
+}
+
+// SaveAll saves all the transformations for the given connection.
+func (this *Transformations) SaveAll(connection int, transformations []TransformationToUpdate) error {
+
+	// Validate all the transformations.
+	for _, t := range transformations {
+		err := this.validate(t)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+
+		// Retrieve the IDs of the transformations to delete.
+		rows, err := tx.Table("TransformationsConnections").Select(
+			[]any{"transformation"}, sql.Where{"connection": connection}, nil, 0, 0).Rows()
+		if err != nil {
+			return err
+		}
+		toDelete := make([]int, 0, len(rows))
+		for _, row := range rows {
+			toDelete = append(toDelete, row["transformation"].(int))
+		}
+
+		// Delete the transformations and their connections.
+		_, err = tx.Table("Transformations").Delete(sql.Where{"id": toDelete})
+		if err != nil {
+			return fmt.Errorf("cannot delete transformations: %s", err)
+		}
+		_, err = tx.Table("TransformationsConnections").Delete(sql.Where{"connection": connection})
+		if err != nil {
+			return fmt.Errorf("cannot delete connections: %s", err)
+		}
+
+		// Create the transformations.
+		for _, t := range transformations {
+			_, err = createTransformation(tx, t)
+			if err != nil {
+				return fmt.Errorf("cannot create transformation: %s", err)
+			}
+		}
+
+		return nil
+	})
+	return err
 }
 
 // List lists the transformations for the given connection.
