@@ -98,9 +98,6 @@
 
 .AccountConnectionProperties .content .properties {
     height: 100%;
-    display: flex;
-    flex-flow: column;
-    justify-content: space-evenly;
 }
 
 .AccountConnectionProperties .content .properties .title {
@@ -148,11 +145,9 @@
 
 .AccountConnectionProperties .content .transformations {
     grid-area: transformations;
-    display: flex;
-    flex-flow: column;
-    justify-content: start;
-    align-items: center;
-    row-gap: 50px;
+    text-align: center;
+    /* TODO(@Andrea): remove this workaround after issue #134 of 'react-xarrows' is solved */
+    min-height: calc(100vh + 1px);
 }
 
 .AccountConnectionProperties .content .transformations .saveButton {
@@ -169,6 +164,7 @@
     justify-content: center;
     align-items: center;
     box-shadow: var(--sl-shadow-small);
+    margin: 30px auto;
 }
 
 .AccountConnectionProperties .content .transformations .transformation sl-icon-button.addTransformationFunction::part(base) {
