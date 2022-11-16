@@ -9,6 +9,7 @@ package apis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -90,6 +91,9 @@ type Connector struct {
 
 // Connector returns the connector with the given identifier.
 func (apis *APIs) Connector(id int) (*Connector, error) {
+	if id <= 0 || id > maxInt32 {
+		return nil, errors.New("invalid connector identifier")
+	}
 	connector := Connector{ID: id}
 	err := apis.myDB.QueryRow(
 		"SELECT `name`, CAST(`type` AS UNSIGNED), `oAuthURL`, `logoURL`, `oAuthClientID`, `oAuthClientSecret`,"+
