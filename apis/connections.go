@@ -37,6 +37,7 @@ type Connections struct {
 }
 
 const (
+	maxInt32             = math.MaxInt32
 	rawPropertiesMaxSize = 16_777_215 // maximum size in runes of the 'property' column of the 'connections' table.
 	queryMaxSize         = 16_777_215 // maximum size in runes of a connection query.
 )
@@ -144,7 +145,7 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
-	if connector <= 0 {
+	if connector <= 0 || connector > maxInt32 {
 		return 0, errors.New("invalid connector")
 	}
 	conn, err := this.api.apis.Connector(connector)
@@ -229,7 +230,7 @@ func (this *Connections) AddDatabase(role ConnectionRole, connector int) (int, e
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
-	if connector <= 0 {
+	if connector <= 0 || connector > maxInt32 {
 		return 0, errors.New("invalid connector")
 	}
 	var id int
@@ -270,10 +271,10 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int) (i
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
-	if connector <= 0 {
+	if connector <= 0 || connector > maxInt32 {
 		return 0, errors.New("invalid connector")
 	}
-	if storage < 0 {
+	if storage < 0 || storage > maxInt32 {
 		return 0, errors.New("invalid storage")
 	}
 	var id int
@@ -332,7 +333,7 @@ func (this *Connections) AddServer(role ConnectionRole, connector int) (int, err
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
-	if connector <= 0 {
+	if connector <= 0 || connector > maxInt32 {
 		return 0, errors.New("invalid connector")
 	}
 	// Generate the API key.
@@ -379,7 +380,7 @@ func (this *Connections) AddMobile(role ConnectionRole, connector int) (int, err
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
-	if connector <= 0 {
+	if connector <= 0 || connector > maxInt32 {
 		return 0, errors.New("invalid connector")
 	}
 	var id int
@@ -418,7 +419,7 @@ func (this *Connections) AddStorage(role ConnectionRole, connector int) (int, er
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
-	if connector <= 0 {
+	if connector <= 0 || connector > maxInt32 {
 		return 0, errors.New("invalid connector")
 	}
 	var id int
@@ -458,7 +459,7 @@ func (this *Connections) AddWebsite(role ConnectionRole, connector int, host str
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
-	if connector <= 0 {
+	if connector <= 0 || connector > maxInt32 {
 		return 0, errors.New("invalid connector")
 	}
 	if h, p, found := strings.Cut(host, ":"); h == "" || len(host) > 255 {
@@ -500,7 +501,7 @@ func (this *Connections) AddWebsite(role ConnectionRole, connector int, host str
 // Get returns the connection with identifier id. If the connection does not
 // exist, it returns a ConnectionNotFoundError error.
 func (this *Connections) Get(id int) (*ConnectionInfo, error) {
-	if id <= 0 {
+	if id <= 0 || id > maxInt32 {
 		return nil, errors.New("invalid connection identifier")
 	}
 	s := ConnectionInfo{ID: id}
@@ -524,7 +525,7 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 // If the connection is a storage and has connected files, it returns the
 // ErrStorageHasConnectedFiles error.
 func (this *Connections) Delete(id int) error {
-	if id <= 0 {
+	if id <= 0 || id > maxInt32 {
 		return errors.New("invalid connection identifier")
 	}
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
@@ -588,7 +589,7 @@ func (this *Connections) Delete(id int) error {
 // not have a storage.
 func (this *Connections) Import(id int, reimport bool) (err error) {
 
-	if id <= 0 {
+	if id <= 0 || id > maxInt32 {
 		return errors.New("invalid connection identifier")
 	}
 
@@ -910,7 +911,7 @@ func (this *Connections) List() ([]*Connection, error) {
 //
 // Returns a ConnectionNotFoundError error if the connection does not exist.
 func (this *Connections) Properties(id int) ([]ConnectionProperty, [][]string, error) {
-	if id <= 0 {
+	if id <= 0 || id > maxInt32 {
 		return nil, nil, errors.New("invalid connection identifier")
 	}
 	var typ ConnectorType
@@ -964,7 +965,7 @@ type Column struct {
 // the query.
 func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]string, error) {
 
-	if id <= 0 {
+	if id <= 0 || id > maxInt32 {
 		return nil, nil, errors.New("invalid connection identifier")
 	}
 
@@ -1069,7 +1070,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 // the ErrUIEventNotExist error if the event does not exist.
 func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, error) {
 
-	if id <= 0 {
+	if id <= 0 || id > maxInt32 {
 		return nil, errors.New("invalid connection identifier")
 	}
 
@@ -1212,10 +1213,10 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 //
 // It returns a ConnectionNotFound error if the file or storage does not exist.
 func (this *Connections) SetFileStorage(file, storage int) error {
-	if file <= 0 {
+	if file <= 0 || file > maxInt32 {
 		return errors.New("invalid file connection identifier")
 	}
-	if storage < 0 {
+	if storage < 0 || storage > maxInt32 {
 		return errors.New("invalid storage connection identifier")
 	}
 	if file == storage {
@@ -1269,7 +1270,7 @@ func (this *Connections) SetFileStorage(file, storage int) error {
 // It returns a ConnectionNotFoundError error if the connection does not exist.
 func (this *Connections) SetUsersQuery(id int, query string) error {
 
-	if id <= 0 {
+	if id <= 0 || id > maxInt32 {
 		return errors.New("invalid connection identifier")
 	}
 
@@ -1322,7 +1323,7 @@ type ConnectionsStats struct {
 // Stats returns statistics on the connection with identifier id for the last
 // 24 hours.
 func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
-	if id <= 0 {
+	if id <= 0 || id > maxInt32 {
 		return nil, errors.New("invalid connection identifier")
 	}
 	now := time.Now().UTC()
@@ -1372,7 +1373,7 @@ var errRecordStop = errors.New("stop record")
 // If the connection does not exist it returns a ConnectionNotFoundError error.
 func (this *Connections) reloadProperties(id int) error {
 
-	if id <= 0 {
+	if id <= 0 || id > maxInt32 {
 		return errors.New("invalid connection identifier")
 	}
 
@@ -1633,11 +1634,11 @@ func (files *fileReader) Reader(path string) (io.ReadCloser, time.Time, error) {
 	return files.s.Reader(path)
 }
 
-var maxInt32 = big.NewInt(math.MaxInt32)
+var bigMaxInt32 = big.NewInt(math.MaxInt32)
 
 // generateConnectionID generates a connection ID in [1, maxInt32].
 func generateConnectionID() (int, error) {
-	n, err := rand.Int(rand.Reader, maxInt32)
+	n, err := rand.Int(rand.Reader, bigMaxInt32)
 	if err != nil {
 		return 0, err
 	}
