@@ -382,13 +382,8 @@ func (this *Connections) AddMobile(role ConnectionRole, connector int) (int, err
 	if connector <= 0 {
 		return 0, errors.New("invalid connector")
 	}
-	// Generate the API key.
-	key, err := generateAPIKey()
-	if err != nil {
-		return 0, err
-	}
 	var id int
-	err = this.myDB.Transaction(func(tx *sql.Tx) error {
+	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		var typ ConnectorType
 		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
 		if err != nil {
@@ -407,10 +402,6 @@ func (this *Connections) AddMobile(role ConnectionRole, connector int) (int, err
 		_, err = tx.Exec("INSERT INTO `connections`\n"+
 			"SET `id` = ?, `workspace` = ?, `type` = 'Server', `role` = ?, `connector` = ?",
 			id, this.workspace, role, connector)
-		if err != nil {
-			return err
-		}
-		_, err = tx.Exec("INSERT INTO `connections_keys` (`connection`, `position`, `key`) VALUE (?, 0, ?)", id, key)
 		return err
 	})
 	if err != nil {
@@ -477,13 +468,8 @@ func (this *Connections) AddWebsite(role ConnectionRole, connector int, host str
 			return 0, errors.New("invalid website host")
 		}
 	}
-	// Generate the API key.
-	key, err := generateAPIKey()
-	if err != nil {
-		return 0, err
-	}
 	var id int
-	err = this.myDB.Transaction(func(tx *sql.Tx) error {
+	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		var typ ConnectorType
 		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
 		if err != nil {
@@ -503,10 +489,6 @@ func (this *Connections) AddWebsite(role ConnectionRole, connector int, host str
 		_, err = tx.Exec("INSERT INTO `connections`\n"+
 			"SET `id` = ?, `workspace` = ?, `type` = 'Website', `role` = ?, `connector` = ?, `websiteHost` = ?",
 			id, this.workspace, role, connector, host)
-		if err != nil {
-			return err
-		}
-		_, err = tx.Exec("INSERT INTO `connections_keys` (`connection`, `position`, `key`) VALUE (?, 0, ?)", id, key)
 		return err
 	})
 	if err != nil {

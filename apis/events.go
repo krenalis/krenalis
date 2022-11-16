@@ -17,6 +17,7 @@ import (
 	"io"
 	"io/fs"
 	"log"
+	"math"
 	"math/rand"
 	"mime"
 	"net"
@@ -164,44 +165,47 @@ func (apis *APIs) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Authenticate the request.
-	conn, key, ok := r.BasicAuth()
-	if !ok || conn != "" && key != "" {
+	src, key, ok := r.BasicAuth()
+	if !ok || src == "" && key == "" {
+		return errUnauthorized
+	}
+	source, _ := strconv.Atoi(src)
+	if source <= 0 || source > math.MaxInt32 {
 		return errUnauthorized
 	}
 
-	var connection int
 	var typ ConnectorType
 	var websiteHost string
-
-	if key == "" {
-		// Website request.
-		connection, _ = strconv.Atoi(conn)
-		if connection <= 0 {
-			return errUnauthorized
-		}
-		err = apis.myDB.QueryRow("SELECT `websiteHost`\n"+
-			"FROM `connections`\n"+
-			"WHERE `id` = ? AND `type` = 'Website' AND `role` = 'Source'", connection).
-			Scan(&websiteHost)
-		typ = WebsiteType
-	} else {
-		// Mobile or server request.
-		if !isWellFormedConnectorKey(key) {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return nil
-		}
-		err = apis.myDB.QueryRow("SELECT `c`.`id`, CAST(`c`.`type` AS UNSIGNED)\n"+
-			"FROM `connections_keys` AS `k`\n"+
-			"INNER JOIN `connections` AS `c` ON `k`.`connection` = `c`.`id`\n"+
-			"WHERE `c`.`type` IN ('Mobile', 'Server') AND `c`.`role` = 'Source' AND `k`.`key` = ?", key).
-			Scan(&connection, &typ)
-	}
+	err = apis.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), `websiteHost`\n"+
+		"FROM `connections`\n"+
+		"WHERE `id` = ? AND `type` IN ('Mobile', 'Website') AND `role` = 'Source'", source).
+		Scan(&typ, &websiteHost)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return nil
+			return errUnauthorized
 		}
 		return err
+	}
+
+	// If there is the key, the request is sent by a server.
+	var serverRequest bool
+	if key != "" {
+		if !isWellFormedConnectorKey(key) {
+			return errUnauthorized
+		}
+		var server int
+		err = apis.myDB.QueryRow("SELECT `c`.`id`\n"+
+			"FROM `connections_keys` AS `k`\n"+
+			"INNER JOIN `connections` AS `c` ON `k`.`connection` = `c`.`id`\n"+
+			"WHERE `c`.`type` = 'Server' AND `c`.`role` = 'Source' AND `k`.`key` = ?", key).Scan(&server)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return nil
+			}
+			return err
+		}
+		serverRequest = true
 	}
 
 	// Decode the event.
@@ -212,7 +216,7 @@ func (apis *APIs) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Source.
-	event.source = int32(connection)
+	event.source = int32(source)
 
 	// Device.
 	if _, err := base64.StdEncoding.DecodeString(event.Device); err != nil || len(event.Device) != 28 {
@@ -220,10 +224,9 @@ func (apis *APIs) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Event.
-	switch typ {
-	case MobileType:
+	if typ == MobileType {
 		// TODO(marco)
-	case ServerType, WebsiteType:
+	} else {
 		if e := event.Event; e != "pageview" && e != "click" {
 			return errBadRequest
 		}
@@ -255,12 +258,12 @@ func (apis *APIs) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Get the user or create it if it does not exist.
-	err = apis.myDB.QueryRow("SELECT `id` FROM `users` WHERE `source` = ? AND `device` = ?", connection, event.Device).Scan(&event.user)
+	err = apis.myDB.QueryRow("SELECT `id` FROM `users` WHERE `source` = ? AND `device` = ?", source, event.Device).Scan(&event.user)
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
 	if err == sql.ErrNoRows {
-		err = apis.myDB.QueryRow("SELECT `user` FROM `devices` WHERE `source` = ? AND `id` = ?", connection, event.Device).Scan(&event.user)
+		err = apis.myDB.QueryRow("SELECT `user` FROM `devices` WHERE `source` = ? AND `id` = ?", source, event.Device).Scan(&event.user)
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}
@@ -269,7 +272,7 @@ func (apis *APIs) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return err
 			}
-			_, err = apis.myDB.Exec("INSERT INTO `users` SET `source` = ?, `id` = ?, `device` = ?", connection, event.user, event.Device)
+			_, err = apis.myDB.Exec("INSERT INTO `users` SET `source` = ?, `id` = ?, `device` = ?", source, event.user, event.Device)
 			if err != nil {
 				return err
 			}
@@ -281,15 +284,19 @@ func (apis *APIs) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		event.Text = abbreviate(event.Text, 120)
 	}
 
-	// Title
+	// Title.
 	if utf8.RuneCountInString(event.Title) > 120 {
 		event.Title = abbreviate(event.Title, 120)
 	}
 
 	// IP.
 	var ip string
-	switch typ {
-	case MobileType, WebsiteType:
+	if serverRequest {
+		if event.IP == "" {
+			return errBadRequest
+		}
+		ip = event.IP
+	} else {
 		if event.IP != "" {
 			return errBadRequest
 		}
@@ -297,11 +304,6 @@ func (apis *APIs) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return errBadRequest
 		}
-	case ServerType:
-		if event.IP == "" {
-			return errBadRequest
-		}
-		ip = event.IP
 	}
 	requestIP := net.ParseIP(ip)
 	if requestIP == nil {
@@ -312,17 +314,14 @@ func (apis *APIs) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// URL.
-	switch typ {
-	case MobileType:
+	if typ == MobileType {
 		if event.URL != "" {
 			return errBadRequest
 		}
-	case WebsiteType:
+	} else {
 		if event.URL == "" {
 			return errBadRequest
 		}
-	}
-	if event.URL != "" {
 		if utf8.RuneCountInString(event.URL) > 2048 {
 			return errBadRequest
 		}
@@ -336,11 +335,7 @@ func (apis *APIs) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		if u.Host != websiteHost {
 			return errBadRequest
 		}
-		if typ == WebsiteType {
-			event.domain, _, _ = strings.Cut(websiteHost, ":")
-		} else {
-			event.domain, _, _ = strings.Cut(u.Host, ":")
-		}
+		event.domain, _, _ = strings.Cut(u.Host, ":")
 		event.path = strings.TrimLeft(strings.TrimRight(u.Path, "/"), "/")
 		event.queryString = u.RawQuery
 	}
@@ -353,13 +348,12 @@ func (apis *APIs) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return errBadRequest
 		}
-		switch typ {
-		case MobileType, WebsiteType:
-			if t.Add(-15*time.Minute).Before(now) || t.After(now) {
+		if serverRequest {
+			if t.After(now) {
 				event.Timestamp = now.Format(dateTimeLayout)
 			}
-		case ServerType:
-			if t.After(now) {
+		} else {
+			if t.Add(-15*time.Minute).Before(now) || t.After(now) {
 				event.Timestamp = now.Format(dateTimeLayout)
 			}
 		}
@@ -367,7 +361,7 @@ func (apis *APIs) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	event.date = event.Timestamp[0:10]
 
 	// Country and city.
-	if typ == MobileType || typ == WebsiteType {
+	if !serverRequest {
 		if event.Country != "" {
 			return errBadRequest
 		}
@@ -397,21 +391,15 @@ func (apis *APIs) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// UserAgent, DeviceType.
-	var userAgent string
-	switch typ {
-	case MobileType:
+	if typ == MobileType {
 		if event.UserAgent != "" {
 			return errBadRequest
 		}
 		if dt := event.DeviceType; dt != "" && !isDeviceType(dt) {
 			return errBadRequest
 		}
-	case ServerType:
-		userAgent = event.UserAgent
-	case WebsiteType:
-		userAgent = r.Header.Get("User-Agent")
-	}
-	if userAgent != "" {
+	} else {
+		userAgent := r.Header.Get("User-Agent")
 		ua := user_agent.New(userAgent)
 		osInfo := ua.OSInfo()
 		switch osInfo.Name {
@@ -469,7 +457,7 @@ func (apis *APIs) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Add the event.
-	apis.AddEvent(connection, &event)
+	apis.AddEvent(source, &event)
 
 	return nil
 }
