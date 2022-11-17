@@ -148,13 +148,15 @@ func (this *Transformations) SaveAll(connection int, transformations []Transform
 		}
 
 		// Delete the transformations and their connections.
-		_, err = tx.Table("Transformations").Delete(sql.Where{"id": toDelete})
-		if err != nil {
-			return fmt.Errorf("cannot delete transformations: %s", err)
-		}
-		_, err = tx.Table("TransformationsConnections").Delete(sql.Where{"connection": connection})
-		if err != nil {
-			return fmt.Errorf("cannot delete connections: %s", err)
+		if len(toDelete) > 0 {
+			_, err := tx.Table("Transformations").Delete(sql.Where{"id": toDelete})
+			if err != nil {
+				return fmt.Errorf("cannot delete transformations: %s", err)
+			}
+			_, err = tx.Table("TransformationsConnections").Delete(sql.Where{"connection": connection})
+			if err != nil {
+				return fmt.Errorf("cannot delete connections: %s", err)
+			}
 		}
 
 		// Create the transformations.
