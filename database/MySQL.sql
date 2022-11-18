@@ -25,7 +25,7 @@ CREATE TABLE `connectors` (
   PRIMARY KEY (`id`)
 );
 
-INSERT INTO `connectors2` (`name`, `type`, `logoURL`, `webhooksPer`, `oAuthURL`, `oAuthClientID`, `oAuthClientSecret`, `oAuthTokenEndpoint`, `oAuthForcedExpiresIn`) VALUES
+INSERT INTO `connectors` (`name`, `type`, `logoURL`, `webhooksPer`, `oAuthURL`, `oAuthClientID`, `oAuthClientSecret`, `oAuthTokenEndpoint`, `oAuthForcedExpiresIn`) VALUES
     ('HubSpot','App','https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/168_Hubspot_logo_logos-512.png','Connector','https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read','cef1005a-72be-4047-a301-ef6057588325','136e50df-5b89-478f-bf01-4a71547fa668','https://api.hubapi.com/oauth/v1/token',0),
     ('MySQL','Database','https://cdn4.iconfinder.com/data/icons/logos-3/181/MySQL-512.png','None','','','','',0),
     ('Dummy','App','','Connector','https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read','cef1005a-72be-4047-a301-ef6057588325','136e50df-5b89-478f-bf01-4a71547fa668','https://api.hubapi.com/oauth/v1/token',0),
