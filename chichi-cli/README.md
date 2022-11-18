@@ -4,7 +4,7 @@
 - [How to compile](#how-to-compile)
 - [Alternative: install `chichi-cli` (tested on Linux only)](#alternative-install-chichi-cli-tested-on-linux-only)
 - [Usage](#usage)
-  - [Not implemented subcommands](#not-implemented-subcommands)
+- [Commands which may be implemented in the future](#commands-which-may-be-implemented-in-the-future)
 
 ## Configuration
 
@@ -38,34 +38,32 @@ To do so:
 
 ## Usage
 
-**NOTE**: some of the commands above may be still not implemented. Please refer to
-the section below.
+Run:
 
 ```
-chichi-cli connections
-chichi-cli connections import <connection ID>
-chichi-cli connections reimport <connection ID>
-chichi-cli connections properties <connection ID>
-
-chichi-cli transformations list <connection ID>
-chichi-cli transformations get-source <transformation ID>
-chichi-cli transformations update-source <transformation ID> { <filename> | - }
-chichi-cli transformations get-connections <transformation ID>
-chichi-cli transformations update-connections <transformation ID>
-
-chichi-cli schemas show { user | group | event }
-chichi-cli schemas update { user | group | event } { <filename> | - }
-chichi-cli schemas properties { user | group | event }
-
-chichi-cli users [list]
+chichi-cli help
 ```
 
-### Not implemented subcommands
+to get an overview of available subcommands. You can then run:
+
+```
+chichi-cli help <subcommand>
+```
+
+to get information about a specific subcommand, for example:
+
+```
+chichi-cli help connections
+```
+
+## Commands which may be implemented in the future
 
 Note that these subcommands are still not implemented:
 
 - `chichi-cli connectors`
-- `chichi-cli schemas` and related subcommands
+- `chichi-cli schemas show { user | group | event }`
+- `chichi-cli schemas update { user | group | event } { <filename> | - }`
+- `chichi-cli schemas properties { user | group | event }`
 - `chichi-cli transformations get-source`
 - `chichi-cli transformations update-source`
 - `chichi-cli transformations get-connections`
