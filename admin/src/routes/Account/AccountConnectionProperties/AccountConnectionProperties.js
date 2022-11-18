@@ -5,6 +5,7 @@ import Toast from '../../../components/Toast/Toast';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import call from '../../../utils/call';
 import { showError } from '../../../utils/status';
+import { defaultTransformationFunction } from '../../../utils/docs/defaultTransformationFunction';
 import { SlButton, SlIcon, SlDialog, SlTooltip, SlIconButton, SlInput } from '@shoelace-style/shoelace/dist/react';
 import Editor from '@monaco-editor/react';
 import Xarrow from 'react-xarrows';
@@ -319,6 +320,19 @@ export default class AccountConnectionProperties extends React.Component {
 													defaultLanguage='python'
 													value={t.SourceCode}
 													theme='vs-light'
+													defaultValue={(() => {
+														let f = defaultTransformationFunction;
+														if (t.InputProperties.length > 0) {
+															let prs = '';
+															t.InputProperties.forEach((p, i) => {
+																if (i === 0) prs += `user['${p.Name}']`;
+																else prs += ` + user['${p.Name}']`;
+															});
+															let i = f.indexOf('return');
+															f = f.substring(0, i + 7) + prs;
+														}
+														return f;
+													})()}
 												/>
 											</div>
 											<SlButton
