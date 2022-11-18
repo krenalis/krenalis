@@ -98,7 +98,7 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 	err := apis.myDB.QueryRow(
 		"SELECT `name`, CAST(`type` AS UNSIGNED), `oAuthURL`, `logoURL`, `oAuthClientID`, `oAuthClientSecret`,"+
 			" `oAuthTokenEndpoint`, CAST(`webhooksPer` AS UNSIGNED), `oAuthDefaultTokenType`, `oAuthDefaultExpiresIn`,"+
-			" `oAuthDefaultExpiresIn`\n"+
+			" `oAuthForcedExpiresIn`\n"+
 			"FROM `connectors`\nWHERE `id` = ?", id).
 		Scan(&connector.Name, &connector.Type, &connector.OAuth.URL, &connector.LogoURL, &connector.OAuth.ClientID,
 			&connector.OAuth.ClientSecret, &connector.OAuth.TokenEndpoint, &connector.WebhooksPer,
