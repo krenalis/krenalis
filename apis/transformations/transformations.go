@@ -58,15 +58,13 @@ func (t *Transformations) Run(ctx context.Context, code string, params map[strin
 
 	// Inject code around the function code and run it.
 	src := &bytes.Buffer{}
-	src.WriteString("import json\n\n")
-	src.WriteString(`params = json.loads("""`)
+	src.WriteString(code)
+	src.WriteString("\nimport json\n\nprint(json.dumps(transform(json.loads(" + `"""` + "\n")
 	err = json.NewEncoder(src).Encode(params)
 	if err != nil {
 		return nil, fmt.Errorf("cannot encode parameters: %s", err)
 	}
-	src.WriteString(`""")` + "\n\n")
-	src.WriteString(code)
-	src.WriteString("\n\nprint(json.dumps(transform(params)))")
+	src.WriteString(`"""))))`)
 	err = vm.RunSourceCode(src.Bytes())
 	if err != nil {
 		log.Printf("this is the source code that failed:\n\n%s", src.String())
