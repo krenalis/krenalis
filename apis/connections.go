@@ -673,7 +673,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		var settings []byte
 		var expiration time.Time
 		err := this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), `r`.`code`,"+
+			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, `c`.`webhooksPer` - 1, `r`.`code`,"+
 				" `r`.`oAuthAccessToken`, `r`.`oAuthRefreshToken`, `r`.`oAuthExpiresIn`, `s`.`connector`,"+
 				" `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
@@ -1114,7 +1114,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		var settings []byte
 		var expiration time.Time
 		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), `r`.`code`, "+
+			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, `c`.`webhooksPer` - 1, `r`.`code`, "+
 				" `r`.`oAuthAccessToken`, `r`.`oAuthExpiresIn`, `s`.`connector`, `s`.`resource`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
@@ -1432,7 +1432,7 @@ func (this *Connections) reloadProperties(id int) error {
 		var settings []byte
 		var expiration *time.Time
 		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), IFNULL(`r`.`code`, ''), "+
+			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, `c`.`webhooksPer` - 1, IFNULL(`r`.`code`, ''), "+
 				" IFNULL(`r`.`oAuthAccessToken`, ''), IFNULL(`r`.`oAuthRefreshToken`, ''), `r`.`oAuthExpiresIn`, "+
 				" `s`.`connector`, `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
