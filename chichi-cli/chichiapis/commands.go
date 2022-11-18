@@ -8,7 +8,6 @@
 package chichiapis
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"sort"
@@ -25,7 +24,7 @@ type Connection struct {
 
 func ListConnections() {
 	var connections []*Connection
-	err := callAPI("GET", "apis/connections/", nil, &connections)
+	err := callAPI("GET", "api/connections/", nil, &connections)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,7 +42,7 @@ type Property struct {
 
 func ListConnectionsProperties(connection int) {
 	var properties []*Property
-	err := callAPI("GET", "apis/connections/"+strconv.Itoa(connection)+"/properties", nil, &properties)
+	err := callAPI("GET", "api/connections/"+strconv.Itoa(connection)+"/properties", nil, &properties)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,7 +52,7 @@ func ListConnectionsProperties(connection int) {
 }
 
 func ImportUsersFromConnection(connection int, reimport bool) {
-	path := "apis/connections/" + strconv.Itoa(connection)
+	path := "api/connections/" + strconv.Itoa(connection)
 	if reimport {
 		path += "/reimport"
 	} else {
@@ -68,21 +67,13 @@ func ImportUsersFromConnection(connection int, reimport bool) {
 
 func GetTransformations(connection int) {
 	var transformations []apis.Transformation
-	err := callAPI("GET", "apis/connections/"+strconv.Itoa(connection)+"/transformations", nil, &transformations)
+	err := callAPI("GET", "api/connections/"+strconv.Itoa(connection)+"/transformations", nil, &transformations)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("%-4s %-15s %s\n", "ID", "GR Property", "Input props")
 	for _, t := range transformations {
 		fmt.Printf("%-4d %-15s %v\n", t.ID, t.GRProperty, t.InputProperties)
-	}
-}
-
-func UpdateTransformation(connection int, transformation []byte) {
-	body := bytes.NewReader(transformation)
-	err := callAPI("POST", "apis/connections/"+strconv.Itoa(connection)+"/transformation", body, nil)
-	if err != nil {
-		log.Fatal(err)
 	}
 }
 
