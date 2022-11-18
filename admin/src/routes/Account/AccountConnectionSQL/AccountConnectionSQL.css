@@ -31,7 +31,7 @@
     height: 600px;
     padding: 30px;
     border-radius: var(--radius);
-    background-color: var(--bg-editor);
+    background-color: var(--bg-primary);
 }
 
 .AccountConnectionSQL .content .editorWrapper *  {

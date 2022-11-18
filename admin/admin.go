@@ -726,23 +726,35 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 		Type      string
 		Connector int
 		Storage   int
+		Role      string
 	}{}
 	err := json.NewDecoder(r.Body).Decode(&connection)
 	if err != nil {
 		return err
 	}
 
+	var role apis.ConnectionRole
+	switch connection.Role {
+	case "Source":
+		role = apis.SourceRole
+	case "Destination":
+		role = apis.DestinationRole
+	default:
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return nil
+	}
+
 	var id int
 
 	switch connection.Type {
 	case "App":
-		id, err = ws.Connections.AddApp(apis.SourceRole, connection.Connector, "", "", "")
+		id, err = ws.Connections.AddApp(role, connection.Connector, "", "", "")
 	case "Database":
-		id, err = ws.Connections.AddDatabase(apis.SourceRole, connection.Connector)
+		id, err = ws.Connections.AddDatabase(role, connection.Connector)
 	case "File":
-		id, err = ws.Connections.AddFile(apis.SourceRole, connection.Connector, connection.Storage)
+		id, err = ws.Connections.AddFile(role, connection.Connector, connection.Storage)
 	case "Storage":
-		id, err = ws.Connections.AddStorage(apis.SourceRole, connection.Connector)
+		id, err = ws.Connections.AddStorage(role, connection.Connector)
 	}
 	if err != nil {
 		return err
@@ -761,23 +773,45 @@ func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Reque
 	ws := api.AsWorkspace(1) // TODO(marco): what is the workspace?
 
 	// Get the connector's identifier.
-	cookie, err := r.Cookie("add-connection")
+	idCookie, err := r.Cookie("add-connection")
 	if err != nil {
 		return errors.New("missing connector cookie")
 	}
+
+	// Get the role of the connection to add.
+	roleCookie, err := r.Cookie("role")
+	if err != nil {
+		return errors.New("missing role cookie")
+	}
+	var role apis.ConnectionRole
+	switch roleCookie.Value {
+	case "Source":
+		role = apis.SourceRole
+	case "Destination":
+		role = apis.DestinationRole
+	default:
+		return errors.New("unknown value in role cookie")
+	}
+
 	defer func() {
-		// Remove the "add-connection" cookie.
-		c := &http.Cookie{
+		// Remove the cookies.
+		http.SetCookie(w, &http.Cookie{
 			Name:     "add-connection",
 			Value:    "",
 			Path:     "/",
 			MaxAge:   -1,
 			HttpOnly: true,
-		}
-		http.SetCookie(w, c)
+		})
+		http.SetCookie(w, &http.Cookie{
+			Name:     "role",
+			Value:    "",
+			Path:     "/",
+			MaxAge:   -1,
+			HttpOnly: true,
+		})
 	}()
 
-	connectorID, err := strconv.Atoi(cookie.Value)
+	connectorID, err := strconv.Atoi(idCookie.Value)
 	if err != nil {
 		return errors.New("invalid connector identifier")
 	}
@@ -845,7 +879,7 @@ func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Reque
 		expireDate = expireDate.Add(time.Duration(connector.OAuth.DefaultExpiresIn) * time.Second)
 	}
 
-	_, err = ws.Connections.AddApp(apis.SourceRole, connectorID, tokens.RefreshToken, tokens.AccessToken,
+	_, err = ws.Connections.AddApp(role, connectorID, tokens.RefreshToken, tokens.AccessToken,
 		expireDate.Format("2006-01-02 15:04:05"))
 
 	if err != nil {

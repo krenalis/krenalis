@@ -73,7 +73,7 @@ body {
 	padding: 0;
 }
 
-.App {
+#root > .App {
     background-color: var(--bg-gray);
     min-height: 100vh;
 }
