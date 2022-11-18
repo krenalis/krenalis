@@ -29,17 +29,17 @@
 
 ### ReceiveWebhook
 
-If webhookPer is "Connector":
+If webhooksPer is "Connector":
 
 * ClientSecret
 
-If webhookPer is "Resource":
+If webhooksPer is "Resource":
 
 * ClientSecret
 * Resource
 * AccessToken
 
-If webhookPer is "Connection":
+If webhooksPer is "Connection":
 
 * Settings
 * Firehose

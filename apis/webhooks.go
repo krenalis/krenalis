@@ -44,7 +44,7 @@ func (w WebhooksPer) String() string {
 	case WebhooksPerSource:
 		return "Source"
 	}
-	panic("invalid webhookPer value")
+	panic("invalid webhooksPer value")
 }
 
 // MarshalJSON implements the json.Marshaler interface.
@@ -92,7 +92,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	}
 	var connector int
 	var connection int
-	var webhookPer WebhooksPer
+	var webhooksPer WebhooksPer
 	var conf _connector.AppConfig
 	switch m[1] {
 	case "c":
@@ -100,7 +100,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		if connector <= 0 {
 			return errBadRequest
 		}
-		webhookPer = WebhooksPerConnector
+		webhooksPer = WebhooksPerConnector
 	case "r":
 		r, _ := strconv.Atoi(m[2])
 		if r <= 0 {
@@ -114,7 +114,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 			}
 			return err
 		}
-		webhookPer = WebhooksPerResource
+		webhooksPer = WebhooksPerResource
 	case "s":
 		connection, _ = strconv.Atoi(m[2])
 		if connection <= 0 {
@@ -143,7 +143,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 				return err
 			}
 		}
-		webhookPer = WebhooksPerSource
+		webhooksPer = WebhooksPerSource
 	}
 	conn, err := apis.Connector(connector)
 	if err != nil {
@@ -152,7 +152,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	if conn == nil {
 		return errNotFound
 	}
-	if conn.WebhooksPer != webhookPer {
+	if conn.WebhooksPer != webhooksPer {
 		return errBadRequest
 	}
 	c, err := newAppConnection(context.Background(), conn.Name, &conf)

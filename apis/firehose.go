@@ -258,7 +258,7 @@ func (fh *firehose) WebhookURL() string {
 	case WebhooksPerSource:
 		return u + "s/" + strconv.Itoa(fh.connection) + "/"
 	}
-	panic("unexpected webhookPer value")
+	panic("unexpected webhooksPer value")
 }
 
 // setError sets fh.err and cancels the context.
