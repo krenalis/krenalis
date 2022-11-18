@@ -28,8 +28,8 @@ func NewPool() *Transformations {
 
 const stackSize = 10 * 1024 * 1024
 
-// Run runs the Python code, passing to it the given parameters and returning
-// the resulting value.
+// Run runs the Python code, passing to it the given user and returning the
+// resulting value.
 //
 // In particular, the code must be the source code of a Python function named
 // 'transform' which takes a single parameter of type 'dict' with string as keys
@@ -38,15 +38,15 @@ const stackSize = 10 * 1024 * 1024
 //
 // For example, code may be:
 //
-//	def transform(params):
-//	    return params["firstname"]
+//	def transform(user):
+//	    return user["firstname"]
 //
 // type annotations may be optionally provided (they serve just as documentation
 // and will be ignored when interpreting the code):
 //
-//	def transform(params: dict) -> str:
-//	    return params["firstname"]
-func (t *Transformations) Run(ctx context.Context, code string, params map[string]any) (any, error) {
+//	def transform(user: dict) -> str:
+//	    return user["firstname"]
+func (t *Transformations) Run(ctx context.Context, code string, user map[string]any) (any, error) {
 
 	// Initialize a new MicroPython VM that writes the stdout to a buffer.
 	stdout := &bytes.Buffer{}
@@ -60,7 +60,7 @@ func (t *Transformations) Run(ctx context.Context, code string, params map[strin
 	src := &bytes.Buffer{}
 	src.WriteString(code)
 	src.WriteString("\nimport json\n\nprint(json.dumps(transform(json.loads(" + `"""` + "\n")
-	err = json.NewEncoder(src).Encode(params)
+	err = json.NewEncoder(src).Encode(user)
 	if err != nil {
 		return nil, fmt.Errorf("cannot encode parameters: %s", err)
 	}
