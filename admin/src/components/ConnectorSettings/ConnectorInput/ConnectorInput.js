@@ -3,16 +3,15 @@ import './ConnectorInput';
 import { SlInput } from '@shoelace-style/shoelace/dist/react';
 
 export default class ConnectorInput extends React.Component {
-
-	state = {value: this.props.value}
+	state = { value: this.props.value };
 
 	onInputChange = (e) => {
 		let value;
 		if (this.props.type === 'number') value = Number(e.currentTarget.value);
 		else value = e.currentTarget.value;
-		this.setState({value: value});
+		this.setState({ value: value });
 		this.props.onChange(this.props.name, value, e);
-	}
+	};
 
 	render() {
 		return (
@@ -29,6 +28,6 @@ export default class ConnectorInput extends React.Component {
 					onSlChange={this.onInputChange}
 				/>
 			</div>
-		)
+		);
 	}
 }

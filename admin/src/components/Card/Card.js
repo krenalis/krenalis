@@ -9,16 +9,22 @@ export default class Card extends React.Component {
 			<div className='Card'>
 				<div className='top'>
 					<div className='logo'>
-						{this.props.logoURL === '' ? <div class='unknownLogo'>?</div> : <img alt={`${this.props.name}'s logo`} src={this.props.logoURL} />}
+						{this.props.logoURL === '' ? (
+							<div class='unknownLogo'>?</div>
+						) : (
+							<img alt={`${this.props.name}'s logo`} src={this.props.logoURL} />
+						)}
 					</div>
 					<div className='name'>{this.props.name}</div>
-					{this.props.type && <SlBadge className='type' variant='neutral'>{this.props.type}</SlBadge>}
+					{this.props.type && (
+						<SlBadge className='type' variant='neutral'>
+							{this.props.type}
+						</SlBadge>
+					)}
 					<div className='description'>Lorem ipsum dolor, sit amet consectetur adipisicing elit</div>
 				</div>
-				<div className='body'>
-					{this.props.children}
-				</div>
+				<div className='body'>{this.props.children}</div>
 			</div>
-		)
+		);
 	}
 }

@@ -1,14 +1,14 @@
 .FloatingButton {
-    position: fixed;
-    bottom: 50px;
-    right: 50px;
-    background-color: var(--color-primary);
-    border-radius: 100%;
-    color: var(--text-onaccent);
-    width: 80px;
-    height: 80px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
+	position: fixed;
+	bottom: 50px;
+	right: 50px;
+	background-color: var(--color-primary);
+	border-radius: 100%;
+	color: var(--text-onaccent);
+	width: 80px;
+	height: 80px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	cursor: pointer;
 }

@@ -1,128 +1,128 @@
 .AccountConnections .content {
-    max-width: 1200px;
-    margin: -100px auto 0 auto;
-    padding-bottom: 50px;
+	max-width: 1200px;
+	margin: -100px auto 0 auto;
+	padding-bottom: 50px;
 }
 
 .AccountConnections h1 {
-    text-align: center;
-    margin-bottom: 30px;
+	text-align: center;
+	margin-bottom: 30px;
 }
 
 .AccountConnections .noConnection {
-    box-shadow: var(--sl-shadow-small);
-    border-radius: var(--radius);
-    padding: 70px 30px;
-    background-color: var(--bg-primary);
-    text-align: center;
+	box-shadow: var(--sl-shadow-small);
+	border-radius: var(--radius);
+	padding: 70px 30px;
+	background-color: var(--bg-primary);
+	text-align: center;
 }
 
 .AccountConnections .noConnection > sl-icon {
-    font-size: 50px;
-    opacity: .7;
+	font-size: 50px;
+	opacity: 0.7;
 }
 
 .AccountConnections .noConnection .title {
-    font-size: 18px;
-    margin-top: 20px;
-    font-weight: 600;
+	font-size: 18px;
+	margin-top: 20px;
+	font-weight: 600;
 }
 
 .AccountConnections .noConnection .description {
-    margin: 10px 0 40px 0;
+	margin: 10px 0 40px 0;
 }
 
 .AccountConnections .connections {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 30px;
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	gap: 30px;
 }
 
 .AccountConnections .Card .buttons {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-areas: 
-        "import import"
-        "configure settings"
-        "editSQL editSQL"
-        "remove remove";
-    row-gap: 15px;
-    gap: 10px;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	grid-template-areas:
+		'import import'
+		'configure settings'
+		'editSQL editSQL'
+		'remove remove';
+	row-gap: 15px;
+	gap: 10px;
 }
 
 .AccountConnections .Card .buttons .importButton {
-    grid-area: import;
+	grid-area: import;
 }
 
 .AccountConnections .Card .buttons .configureButton {
-    grid-area: configure;
+	grid-area: configure;
 }
 
 .AccountConnections .Card .buttons .removeButton {
-    grid-area: remove;
+	grid-area: remove;
 }
 
 .AccountConnections .Card .buttons .editSQLButton {
-    grid-area: editSQL;
+	grid-area: editSQL;
 }
 
 .AccountConnections .Card .buttons .settingsButton {
-    grid-area: settings;
+	grid-area: settings;
 }
 
 .AccountConnections .addConnectionBox {
-    background-color: var(--bg-crystal);
-    backdrop-filter: blur(33px);
-    background-blend-mode: overlay;
-    border: 2px dashed var(--border-primary);
-    border-radius: var(--radius);
-    display: flex;
-    flex-flow: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    box-shadow: var(--sl-shadow-small);
-    min-height: 380px;
+	background-color: var(--bg-crystal);
+	backdrop-filter: blur(33px);
+	background-blend-mode: overlay;
+	border: 2px dashed var(--border-primary);
+	border-radius: var(--radius);
+	display: flex;
+	flex-flow: column;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	box-shadow: var(--sl-shadow-small);
+	min-height: 380px;
 }
 
 .AccountConnections .addConnectionBox sl-icon {
-    font-size: 50px;
-    opacity: .7;
+	font-size: 50px;
+	opacity: 0.7;
 }
 
 .AccountConnections .addConnectionBox .text {
-    margin-top: 20px;
-    opacity: .7;
-    font-weight: 600;
+	margin-top: 20px;
+	opacity: 0.7;
+	font-weight: 600;
 }
 
 .AccountConnections .addConnectionBox > a {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
 }
 
 .AccountConnections sl-dialog::part(body) {
-    text-align: center;
-    padding-bottom: 60px;
-    padding-top: 0;
+	text-align: center;
+	padding-bottom: 60px;
+	padding-top: 0;
 }
 
 .AccountConnections sl-dialog .dialogTitle {
-    font-size: 21px;
-    margin-bottom: 30px;
+	font-size: 21px;
+	margin-bottom: 30px;
 }
 
 .AccountConnections sl-dialog sl-select {
-    max-width: 400px;
-    margin: 0 auto 30px auto;
+	max-width: 400px;
+	margin: 0 auto 30px auto;
 }
 
 .AccountConnections sl-dialog .buttons {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 15px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 15px;
 }

@@ -41,7 +41,9 @@ export default class AccountConnectionSQL extends React.Component {
 
 	handlePreview = async () => {
 		if (this.state.query.length > queryMaxSize) {
-			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: 'You query is too long' } });
+			this.setState({
+				status: { variant: 'danger', icon: 'exclamation-octagon', text: 'You query is too long' },
+			});
 			this.toast.current.toast();
 			return;
 		}
@@ -68,7 +70,11 @@ export default class AccountConnectionSQL extends React.Component {
 		}
 		if (table.Columns.length === 0) {
 			this.setState({
-				status: { variant: 'danger', icon: 'exclamation-octagon', text: 'Your query did not return any columns' },
+				status: {
+					variant: 'danger',
+					icon: 'exclamation-octagon',
+					text: 'Your query did not return any columns',
+				},
 			});
 			this.toast.current.toast();
 			return;
@@ -85,7 +91,9 @@ export default class AccountConnectionSQL extends React.Component {
 
 	saveQuery = async () => {
 		if (this.state.query.length > queryMaxSize) {
-			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: 'You query is too long' } });
+			this.setState({
+				status: { variant: 'danger', icon: 'exclamation-octagon', text: 'You query is too long' },
+			});
 			this.toast.current.toast();
 			return;
 		}
@@ -150,7 +158,12 @@ export default class AccountConnectionSQL extends React.Component {
 							/>
 						</div>
 						<div className='buttons'>
-							<SlButton className='previewButton' variant='neutral' size='large' onClick={this.handlePreview}>
+							<SlButton
+								className='previewButton'
+								variant='neutral'
+								size='large'
+								onClick={this.handlePreview}
+							>
 								<SlIcon slot='prefix' name='eye' />
 								Preview
 							</SlButton>

@@ -1,64 +1,64 @@
 .Login {
-    min-height: 100vh;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+	min-height: 100vh;
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 
 .Login .container {
-    transform: translateY(-50%);
-    width: 500px;
+	transform: translateY(-50%);
+	width: 500px;
 }
 
 .Login .container .heading {
-    text-align: center;
+	text-align: center;
 }
 
 .Login .container .heading h1 {
-    font-weight: 600;
+	font-weight: 600;
 }
 
 .Login .container sl-alert {
-    margin: 20px 0;
+	margin: 20px 0;
 }
 
 .Login .container .form {
-    display: flex;
-    flex-flow: column;
+	display: flex;
+	flex-flow: column;
 }
 
-.Login .container .form input[type="text"],
-.Login .container .form input[type="password"] {
-    background-color: var(--bg-primary);
-    border-radius: 0;
-    padding: 12px 20px;
-    border: 1px solid var(--border-primary);
+.Login .container .form input[type='text'],
+.Login .container .form input[type='password'] {
+	background-color: var(--bg-primary);
+	border-radius: 0;
+	padding: 12px 20px;
+	border: 1px solid var(--border-primary);
 }
 
-.Login .container .form input[type="text"] {
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
-    border-bottom: 0;
+.Login .container .form input[type='text'] {
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
+	border-bottom: 0;
 }
 
-.Login .container .form input[type="password"] {
-    border-bottom-left-radius: 5px;
-    border-bottom-right-radius: 5px;
+.Login .container .form input[type='password'] {
+	border-bottom-left-radius: 5px;
+	border-bottom-right-radius: 5px;
 }
 
 .Login .container .form .note {
-    margin: 10px 10px 0px 10px;
-    font-size: 13px!important;
-    opacity: .9;
-    text-align: center;
+	margin: 10px 10px 0px 10px;
+	font-size: 13px !important;
+	opacity: 0.9;
+	text-align: center;
 }
 
 .Login .container .form .note span {
-    font-size: 13px;
-    font-weight: 600;
+	font-size: 13px;
+	font-weight: 600;
 }
 
 .Login .container .form .loginButton {
-    margin-top: 30px;
+	margin-top: 30px;
 }

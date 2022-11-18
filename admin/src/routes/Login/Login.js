@@ -21,7 +21,9 @@ export default class Login extends React.Component {
 		let [, err] = await call('/admin/', { email: this.state.email, password: this.state.password });
 		if (err !== null) {
 			if (err === 'AuthenticationFailedError') {
-				this.setState({ status: { variant: 'danger', icon: 'lock', text: 'Your email or password are incorrect' } });
+				this.setState({
+					status: { variant: 'danger', icon: 'lock', text: 'Your email or password are incorrect' },
+				});
 				return;
 			}
 			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
@@ -63,7 +65,8 @@ export default class Login extends React.Component {
 								placeholder='Your password'
 							/>
 							<div className='note'>
-								<span>Note:</span> sign in with email <span>acme@open2b.com</span> and password <span>foopass2</span>
+								<span>Note:</span> sign in with email <span>acme@open2b.com</span> and password{' '}
+								<span>foopass2</span>
 							</div>
 							<SlButton className='loginButton' variant='primary' onClick={this.handleLogin}>
 								<SlIcon slot='suffix' name='box-arrow-in-right' />

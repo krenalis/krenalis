@@ -1,57 +1,57 @@
 .AccountConnectionSQL {
-    min-height: 100vh;
+	min-height: 100vh;
 }
 
 .AccountConnectionSQL .content {
-    max-width: 1000px;
-    margin: auto;
-    margin-top: -200px;
+	max-width: 1000px;
+	margin: auto;
+	margin-top: -200px;
 }
 
 .AccountConnectionSQL .content > .title {
-    font-size: 23px;
-    font-weight: 600;
-    text-align: center;
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    align-items: center;
-    color: var(--text-onaccent);
-    margin-bottom: 20px;
+	font-size: 23px;
+	font-weight: 600;
+	text-align: center;
+	display: flex;
+	justify-content: center;
+	gap: 10px;
+	align-items: center;
+	color: var(--text-onaccent);
+	margin-bottom: 20px;
 }
 
 .AccountConnectionSQL .content .title .littleLogo {
-    max-width: 35px;
-    margin-left: -35px;
+	max-width: 35px;
+	margin-left: -35px;
 }
 
 .AccountConnectionSQL .content .editorWrapper {
-    grid-area: editor;
-    width: 100%;
-    height: 600px;
-    padding: 30px;
-    border-radius: var(--radius);
-    background-color: var(--bg-primary);
+	grid-area: editor;
+	width: 100%;
+	height: 600px;
+	padding: 30px;
+	border-radius: var(--radius);
+	background-color: var(--bg-primary);
 }
 
-.AccountConnectionSQL .content .editorWrapper *  {
-    font-family: monospace!important;
+.AccountConnectionSQL .content .editorWrapper * {
+	font-family: monospace !important;
 }
 
 .AccountConnectionSQL .content .buttons {
-    display: flex;
-    justify-content: space-around;
-    margin: 50px 0;
+	display: flex;
+	justify-content: space-around;
+	margin: 50px 0;
 }
 
 .AccountConnectionSQL .content .buttons .previewButton {
-    min-width: 200px;
+	min-width: 200px;
 }
 
 .AccountConnectionSQL .content .buttons .saveButton {
-    min-width: 200px;
+	min-width: 200px;
 }
 
 .AccountConnectionSQL sl-dialog .Grid {
-    padding: 0 30px 30px 30px;
+	padding: 0 30px 30px 30px;
 }

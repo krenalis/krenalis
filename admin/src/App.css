@@ -11,19 +11,19 @@
 	--text-gray: var(--sl-color-neutral-400);
 	--border-primary: var(--sl-color-neutral-200);
 	--radius: 20px;
-	
+
 	/* set shoelace primary colors */
-	--sl-color-primary-50: var(--sl-color-indigo-50)!important;
-	--sl-color-primary-100: var(--sl-color-indigo-100)!important;
-	--sl-color-primary-200: var(--sl-color-indigo-200)!important;
-	--sl-color-primary-300: var(--sl-color-indigo-300)!important;
-	--sl-color-primary-400: var(--sl-color-indigo-400)!important;
-	--sl-color-primary-500: var(--sl-color-indigo-500)!important;
-	--sl-color-primary-600: var(--sl-color-indigo-600)!important;
-	--sl-color-primary-700: var(--sl-color-indigo-700)!important;
-	--sl-color-primary-800: var(--sl-color-indigo-800)!important;
-	--sl-color-primary-900: var(--sl-color-indigo-900)!important;
-	--sl-color-primary-950: var(--sl-color-indigo-950)!important;
+	--sl-color-primary-50: var(--sl-color-indigo-50) !important;
+	--sl-color-primary-100: var(--sl-color-indigo-100) !important;
+	--sl-color-primary-200: var(--sl-color-indigo-200) !important;
+	--sl-color-primary-300: var(--sl-color-indigo-300) !important;
+	--sl-color-primary-400: var(--sl-color-indigo-400) !important;
+	--sl-color-primary-500: var(--sl-color-indigo-500) !important;
+	--sl-color-primary-600: var(--sl-color-indigo-600) !important;
+	--sl-color-primary-700: var(--sl-color-indigo-700) !important;
+	--sl-color-primary-800: var(--sl-color-indigo-800) !important;
+	--sl-color-primary-900: var(--sl-color-indigo-900) !important;
+	--sl-color-primary-950: var(--sl-color-indigo-950) !important;
 
 	/* assign shoelace primary colors */
 	--color-primary-50: var(--sl-color-primary-50);
@@ -39,14 +39,21 @@
 	--color-primary-950: var(--sl-color-primary-950);
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
 	font-family: 'Inter', sans-serif;
 	box-sizing: border-box;
 	outline-color: var(--color-primary-500);
 }
 
-h1, h1, h3, h4, h5, h6 {
-	font-family: 'Inter', sans-serif!important; /* TODO(@Andrea): change to Interstate */
+h1,
+h1,
+h3,
+h4,
+h5,
+h6 {
+	font-family: 'Inter', sans-serif !important; /* TODO(@Andrea): change to Interstate */
 	font-weight: 400;
 }
 
@@ -62,7 +69,11 @@ code {
 	font-family: monospace;
 }
 
-img, picture, video, canvas, svg {
+img,
+picture,
+video,
+canvas,
+svg {
 	display: block;
 	max-width: 100%;
 	height: auto;
@@ -74,8 +85,8 @@ body {
 }
 
 #root > .App {
-    background-color: var(--bg-gray);
-    min-height: 100vh;
+	background-color: var(--bg-gray);
+	min-height: 100vh;
 }
 
 /* || buttons and links */
@@ -92,11 +103,11 @@ sl-button > a {
 	height: 100%;
 }
 
-sl-button[variant="primary"] > a,
-sl-button[variant="neutral"] > a,
-sl-button[variant="danger"] > a,
-sl-button[variant="success"] > a,
-sl-button[variant="warning"] > a {
+sl-button[variant='primary'] > a,
+sl-button[variant='neutral'] > a,
+sl-button[variant='danger'] > a,
+sl-button[variant='success'] > a,
+sl-button[variant='warning'] > a {
 	color: var(--text-onaccent);
 }
 
@@ -112,15 +123,14 @@ sl-breadcrumb-item > a {
 	height: 100%;
 }
 
-
 /* || icons */
 
 .codicon {
-    font-family: "codicon"!important;
+	font-family: 'codicon' !important;
 }
 
 .codicon::before {
-    font-family: "codicon"!important;
+	font-family: 'codicon' !important;
 }
 
 /* || Forms */
@@ -131,8 +141,8 @@ sl-select::part(control) {
 }
 
 ::part(form-control-label) {
-    font-weight: 600;
-    padding-bottom: 5px;
+	font-weight: 600;
+	padding-bottom: 5px;
 }
 
 /* || Panels */

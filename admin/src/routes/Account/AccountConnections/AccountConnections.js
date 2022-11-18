@@ -40,7 +40,10 @@ export default class AccountConnections extends React.Component {
 		button.setAttribute('loading', '');
 		let id = this.state.askImportConfirmation;
 		let resetCursor = this.state.resetCursor;
-		let [, err] = await call('/admin/import-raw-user-data-from-connector', { Connector: id, ResetCursor: resetCursor });
+		let [, err] = await call('/admin/import-raw-user-data-from-connector', {
+			Connector: id,
+			ResetCursor: resetCursor,
+		});
 		button.removeAttribute('loading');
 		if (err !== null) {
 			this.setState({

@@ -25,4 +25,4 @@ export let docsData = `{
 columns = "date" | "browser" | "language" | "referrer" 
 | "session" | "target" | "text" | "title" | "url"
 
-// Dates should have the form: "YYYY-MM-DD"`
+// Dates should have the form: "YYYY-MM-DD"`;

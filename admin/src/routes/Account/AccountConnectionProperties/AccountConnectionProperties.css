@@ -1,6 +1,6 @@
 .AccountConnectionProperties {
-    min-height: 100vh;
-    position: relative;
+	min-height: 100vh;
+	position: relative;
 }
 
 .AccountConnectionProperties.selectedProperty .title,
@@ -11,276 +11,280 @@
 .AccountConnectionProperties.selectedProperty .arrows .arrow,
 .AccountConnectionProperties.selectedProperty .transformations .saveButton,
 .AccountConnectionProperties.selectedProperty .transformations .addTransformation {
-    opacity: .2;
+	opacity: 0.2;
 }
 
 .AccountConnectionProperties.selectedProperty .properties .property.selected {
-    opacity: 1;
-    background-color: var(--color-primary-600);
-    color: var(--text-onaccent);
-    cursor: default;
+	opacity: 1;
+	background-color: var(--color-primary-600);
+	color: var(--text-onaccent);
+	cursor: default;
 }
 
 .AccountConnectionProperties.selectedProperty .arrows .arrow.selected {
-    opacity: 1;
+	opacity: 1;
 }
 
 .AccountConnectionProperties.selectedProperty .arrows .arrow.selected > div > div {
-    width: 25px!important;
-    height: 25px!important;
-    border-radius: 100%!important;
-    display: flex!important;
-    justify-content: center!important;
-    align-items: center!important;
-    background-color: var(--color-primary-500)!important;
-    color: var(--text-onaccent)!important;
-    font-size: 21px!important;
-    cursor: pointer!important;
+	width: 25px !important;
+	height: 25px !important;
+	border-radius: 100% !important;
+	display: flex !important;
+	justify-content: center !important;
+	align-items: center !important;
+	background-color: var(--color-primary-500) !important;
+	color: var(--text-onaccent) !important;
+	font-size: 21px !important;
+	cursor: pointer !important;
 }
 
 .AccountConnectionProperties.selectedProperty .transformations .transformation {
-    transition: transform .5s;
+	transition: transform 0.5s;
 }
 
 .AccountConnectionProperties.selectedProperty .transformations .transformation:hover {
-    transform: scale(1.05);
+	transform: scale(1.05);
 }
 
 .AccountConnectionProperties.selectedProperty .transformations .transformation * {
-    cursor: pointer!important;
+	cursor: pointer !important;
 }
 
 .AccountConnectionProperties.selectedProperty .properties.leftProperties .property.selected sl-icon-button {
-    visibility: hidden;
+	visibility: hidden;
 }
 
 .AccountConnectionProperties .content {
-    max-width: 1600px;
-    margin: auto;
-    display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
-    grid-template-areas: 
-        "head head head"
-        "leftProperties transformations rightProperties";
-    gap: 30px;
-    margin-top: -200px;
-    padding-bottom: 30px;
-    align-items: center;
+	max-width: 1600px;
+	margin: auto;
+	display: grid;
+	grid-template-columns: 1fr 2fr 1fr;
+	grid-template-areas:
+		'head head head'
+		'leftProperties transformations rightProperties';
+	gap: 30px;
+	margin-top: -200px;
+	padding-bottom: 30px;
+	align-items: center;
 }
 
 .AccountConnectionProperties .content > .head {
-    grid-area: head;
-    margin-bottom: 10px;
+	grid-area: head;
+	margin-bottom: 10px;
 }
 
 .AccountConnectionProperties .content > .head > .title {
-    font-size: 23px;
-    font-weight: 600;
-    text-align: center;
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    align-items: center;
-    color: var(--text-onaccent);
-    margin-bottom: 20px;
+	font-size: 23px;
+	font-weight: 600;
+	text-align: center;
+	display: flex;
+	justify-content: center;
+	gap: 10px;
+	align-items: center;
+	color: var(--text-onaccent);
+	margin-bottom: 20px;
 }
 
 .AccountConnectionProperties .content > .head > .title .littleLogo {
-    max-width: 35px;
-    margin-left: -35px;
+	max-width: 35px;
+	margin-left: -35px;
 }
 
 .AccountConnectionProperties .content > .head .saveButton {
-    display: block;
-    margin: auto;
-    width: 200px;
+	display: block;
+	margin: auto;
+	width: 200px;
 }
 
 .AccountConnectionProperties .content .properties {
-    height: 100%;
+	height: 100%;
 }
 
 .AccountConnectionProperties .content .properties .title {
-    text-align: center;
-    margin-bottom: 20px;
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text-onaccent);
+	text-align: center;
+	margin-bottom: 20px;
+	font-size: 18px;
+	font-weight: 600;
+	color: var(--text-onaccent);
 }
 
 .AccountConnectionProperties .content .properties .property {
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-    padding: 15px 25px;
-    margin-bottom: 15px;
-    border-radius: var(--radius);
-    box-shadow: var(--sl-shadow-x-small);
-    overflow-wrap: anywhere;
-    font-size: 14px;
+	background-color: var(--bg-primary);
+	color: var(--text-primary);
+	padding: 15px 25px;
+	margin-bottom: 15px;
+	border-radius: var(--radius);
+	box-shadow: var(--sl-shadow-x-small);
+	overflow-wrap: anywhere;
+	font-size: 14px;
 }
 
 .AccountConnectionProperties .content .properties.leftProperties {
-    grid-area: leftProperties;
+	grid-area: leftProperties;
 }
 
 .AccountConnectionProperties .content .properties.leftProperties .addProperty {
-    display: block;
-    margin: auto;
-    width: 200px;
-    margin: 0 auto;
-    margin-bottom: 30px;
+	display: block;
+	margin: auto;
+	width: 200px;
+	margin: 0 auto;
+	margin-bottom: 30px;
 }
 
 .AccountConnectionProperties .content .properties .property {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+	cursor: pointer;
 }
 
 .AccountConnectionProperties .content .properties.leftProperties .property sl-icon-button::part(base) {
-    padding: 0;
+	padding: 0;
 }
 
 .AccountConnectionProperties .content .transformations {
-    grid-area: transformations;
-    text-align: center;
-    /* TODO(@Andrea): remove this workaround after issue #134 of 'react-xarrows' is solved */
-    min-height: calc(100vh + 1px);
+	grid-area: transformations;
+	text-align: center;
+	/* TODO(@Andrea): remove this workaround after issue #134 of 'react-xarrows' is solved */
+	min-height: calc(100vh + 1px);
 }
 
 .AccountConnectionProperties .content .transformations .saveButton {
-    width: 200px;
+	width: 200px;
 }
 
 .AccountConnectionProperties .content .transformations .transformation {
-    position: relative;
-    background-color: var(--bg-primary);
-    border-radius: 100%;
-    width: 50px;
-    height: 50px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    box-shadow: var(--sl-shadow-small);
-    margin: 30px auto;
+	position: relative;
+	background-color: var(--bg-primary);
+	border-radius: 100%;
+	width: 50px;
+	height: 50px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	box-shadow: var(--sl-shadow-small);
+	margin: 30px auto;
 }
 
-.AccountConnectionProperties .content .transformations .transformation sl-icon-button.addTransformationFunction::part(base) {
-    color: var(--color-primary-500);
-    font-size: 21px;
+.AccountConnectionProperties
+	.content
+	.transformations
+	.transformation
+	sl-icon-button.addTransformationFunction::part(base) {
+	color: var(--color-primary-500);
+	font-size: 21px;
 }
 
 .AccountConnectionProperties .content .transformations .editorWrapper ~ div {
-    width: 100%;
+	width: 100%;
 }
 
 .AccountConnectionProperties .content .transformations .editorWrapper {
-    width: 100%;
-    height: 200px;
-    padding: 15px;
-    border-radius: var(--radius);
-    background-color: var(--bg-primary);
+	width: 100%;
+	height: 200px;
+	padding: 15px;
+	border-radius: var(--radius);
+	background-color: var(--bg-primary);
 }
 
-.AccountConnectionProperties .content .transformations .editorWrapper *  {
-    font-family: monospace!important;
+.AccountConnectionProperties .content .transformations .editorWrapper * {
+	font-family: monospace !important;
 }
 
 .AccountConnectionProperties .content .transformations .addTransformation::part(base) {
-    width: 40px;
-    height: 40px;
-    border-radius: 100%;
-    position: relative;
+	width: 40px;
+	height: 40px;
+	border-radius: 100%;
+	position: relative;
 }
 
 .AccountConnectionProperties .content .transformations .addTransformation sl-icon {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 20px;
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	font-size: 20px;
 }
 
 .AccountConnectionProperties .content .transformations sl-dialog .removeTransformation {
-    min-width: 150px;
-    opacity: .8;
+	min-width: 150px;
+	opacity: 0.8;
 }
 
 .AccountConnectionProperties .content .transformations sl-dialog .removeTransformation:hover {
-    opacity: 1;
+	opacity: 1;
 }
 
 .AccountConnectionProperties .content .properties.rightProperties {
-    grid-area: rightProperties;
+	grid-area: rightProperties;
 }
 
 .AccountConnectionProperties .arrows {
-    position: relative;
+	position: relative;
 }
 
 .AccountConnectionProperties .arrows .arrow > div {
-    width: 100%;
+	width: 100%;
 }
 
 .AccountConnectionProperties > sl-dialog::part(panel) {
-    height: 400px;
-    padding: 5px 0px 30px 10px;
+	height: 400px;
+	padding: 5px 0px 30px 10px;
 }
 
 .AccountConnectionProperties > sl-dialog .properties {
-    margin-top: 20px;
+	margin-top: 20px;
 }
 
 .AccountConnectionProperties > sl-dialog .properties .property {
-    display: flex;
-    justify-content: space-between;
-    padding: 5px 0;
-    align-items: center;
-    height: 35px;
+	display: flex;
+	justify-content: space-between;
+	padding: 5px 0;
+	align-items: center;
+	height: 35px;
 }
 
 .AccountConnectionProperties > sl-dialog .properties .property.used {
-    opacity: .5;
-    text-decoration: line-through;
+	opacity: 0.5;
+	text-decoration: line-through;
 }
 
 .AccountConnectionProperties > sl-dialog .properties .property.used sl-icon-button {
-    display: none;
+	display: none;
 }
 
-.AccountConnectionProperties > sl-dialog .properties .property:first-child { 
-    padding-top: 0;
+.AccountConnectionProperties > sl-dialog .properties .property:first-child {
+	padding-top: 0;
 }
 
-.AccountConnectionProperties > sl-dialog .properties .property:last-child { 
-    padding-bottom: 0;
+.AccountConnectionProperties > sl-dialog .properties .property:last-child {
+	padding-bottom: 0;
 }
 
 .AccountConnectionProperties .selectedPropertyMessage {
-    position: fixed;
-    top: 0;
-    left: 100px;
-    width: calc(100% - 100px);
-    height: 70px;
-    z-index: 10;
-    background-color: var(--bg-primary);
-    justify-content: center;
-    align-items: center;
-    display: flex;
-    font-size: 17px;
-    box-shadow: var(--sl-shadow-small);
-    padding: 0 150px;
+	position: fixed;
+	top: 0;
+	left: 100px;
+	width: calc(100% - 100px);
+	height: 70px;
+	z-index: 10;
+	background-color: var(--bg-primary);
+	justify-content: center;
+	align-items: center;
+	display: flex;
+	font-size: 17px;
+	box-shadow: var(--sl-shadow-small);
+	padding: 0 150px;
 }
 
 .AccountConnectionProperties .selectedPropertyMessage span {
-    color: var(--color-primary-600);
-    font-weight: 600;
+	color: var(--color-primary-600);
+	font-weight: 600;
 }
 
 .AccountConnectionProperties .selectedPropertyMessage .removeSelectedProperty {
-    position: absolute;
-    right: 40px;
-    min-width: 180px;
+	position: absolute;
+	right: 40px;
+	min-width: 180px;
 }

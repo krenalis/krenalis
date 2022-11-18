@@ -4,17 +4,16 @@ import { SlBreadcrumb, SlBreadcrumbItem } from '@shoelace-style/shoelace/dist/re
 import { NavLink } from 'react-router-dom';
 
 export default class Breadcrumbs extends React.Component {
-  render() {
-    return (
-        <SlBreadcrumb className='Breadcrumbs'>
-            {this.props.breadcrumbs.map((b) =>  (
-                    <SlBreadcrumbItem>
-                        {b.Name}
-                        {b.Link && <NavLink to={b.Link}></NavLink>}
-                    </SlBreadcrumbItem>
-                )
-            )}
-        </SlBreadcrumb>
-    )
-  }
+	render() {
+		return (
+			<SlBreadcrumb className='Breadcrumbs'>
+				{this.props.breadcrumbs.map((b) => (
+					<SlBreadcrumbItem>
+						{b.Name}
+						{b.Link && <NavLink to={b.Link}></NavLink>}
+					</SlBreadcrumbItem>
+				))}
+			</SlBreadcrumb>
+		);
+	}
 }

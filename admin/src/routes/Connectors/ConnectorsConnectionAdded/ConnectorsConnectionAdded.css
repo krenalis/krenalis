@@ -1,66 +1,66 @@
 .ConnectorsConnectionAdded {
-    min-height: 100vh;
+	min-height: 100vh;
 }
 
 .ConnectorsConnectionAdded .content {
-    max-width: 700px;
-    margin: auto;
-    text-align: center;
-    margin-top: -180px;
+	max-width: 700px;
+	margin: auto;
+	text-align: center;
+	margin-top: -180px;
 }
 
 .ConnectorsConnectionAdded .addedConnection {
-    box-shadow: var(--sl-shadow-small);
-    padding: 50px;
-    background-color: var(--bg-primary);
-    text-align: center;
-    border-radius: var(--radius);
+	box-shadow: var(--sl-shadow-small);
+	padding: 50px;
+	background-color: var(--bg-primary);
+	text-align: center;
+	border-radius: var(--radius);
 }
 
 .ConnectorsConnectionAdded .addedConnection .logo {
-    width: fit-content;
-    margin: auto;
+	width: fit-content;
+	margin: auto;
 }
 
 .ConnectorsConnectionAdded .addedConnection .logo img {
-    max-width: 70px;
-    height: auto;
-    margin: auto;
+	max-width: 70px;
+	height: auto;
+	margin: auto;
 }
 
 .ConnectorsConnectionAdded .addedConnection .logo .unknownLogo {
-    background-color: var(--bg-gray);
-    color: var(--text-primary);
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius);
-    margin: 0 auto 30px auto;
-    font-size: 22px;
+	background-color: var(--bg-gray);
+	color: var(--text-primary);
+	width: 60px;
+	height: 60px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius);
+	margin: 0 auto 30px auto;
+	font-size: 22px;
 }
 
 .ConnectorsConnectionAdded .title {
-    margin-top: 30px;
-    font-weight: 600;
-    font-size: 18px;
+	margin-top: 30px;
+	font-weight: 600;
+	font-size: 18px;
 }
 
 .ConnectorsConnectionAdded .description {
-    margin-top: 10px;
+	margin-top: 10px;
 }
 
 .ConnectorsConnectionAdded .link {
-    margin-top: 20px;
+	margin-top: 20px;
 }
 
 .ConnectorsConnectionAdded a {
-    font-weight: 600;
+	font-weight: 600;
 }
 
 .ConnectorsConnectionAdded a,
 .ConnectorsConnectionAdded sl-icon {
-    color: var(--color-primary);
-    font-weight: 600;
+	color: var(--color-primary);
+	font-weight: 600;
 }

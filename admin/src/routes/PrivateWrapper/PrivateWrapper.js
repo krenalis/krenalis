@@ -1,16 +1,16 @@
-import React from 'react'
-import { Outlet } from 'react-router-dom'
+import React from 'react';
+import { Outlet } from 'react-router-dom';
 
-import './PrivateWrapper.css'
-import Sidebar from '../../components/Sidebar/Sidebar'
+import './PrivateWrapper.css';
+import Sidebar from '../../components/Sidebar/Sidebar';
 
 export default class PrivateWrapper extends React.Component {
-    render() {
-        return (
-            <div className='PrivateWrapper'>
-                <Sidebar />
-                <Outlet />
-            </div>
-        )
-    }
+	render() {
+		return (
+			<div className='PrivateWrapper'>
+				<Sidebar />
+				<Outlet />
+			</div>
+		);
+	}
 }

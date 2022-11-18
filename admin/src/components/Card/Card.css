@@ -1,48 +1,48 @@
 .Card {
-    background-color: var(--bg-primary);
-    padding: 50px;
-    border-radius: var(--radius);
-    box-shadow: var(--sl-shadow-small);
-    text-align: center;
-    display: flex;
-    flex-flow: column;
-    justify-content: space-between;
+	background-color: var(--bg-primary);
+	padding: 50px;
+	border-radius: var(--radius);
+	box-shadow: var(--sl-shadow-small);
+	text-align: center;
+	display: flex;
+	flex-flow: column;
+	justify-content: space-between;
 }
 
 .Card .logo > img {
-    max-height: 70px;
-    width: auto;
-    padding: 5px;
-    margin: 0 auto 30px auto;
+	max-height: 70px;
+	width: auto;
+	padding: 5px;
+	margin: 0 auto 30px auto;
 }
 
 .Card .logo > .unknownLogo {
-    background-color: var(--bg-gray);
-    color: var(--text-primary);
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius);
-    margin: 0 auto 30px auto;
-    font-size: 22px;
+	background-color: var(--bg-gray);
+	color: var(--text-primary);
+	width: 60px;
+	height: 60px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius);
+	margin: 0 auto 30px auto;
+	font-size: 22px;
 }
 
 .Card .name {
-    font-weight: 600;
+	font-weight: 600;
 }
 
 .Card .type {
-    margin-top: 10px;
+	margin-top: 10px;
 }
 
 .Card .description {
-    margin-top: 10px;
-    font-size: 15px;
-    opacity: .9;
+	margin-top: 10px;
+	font-size: 15px;
+	opacity: 0.9;
 }
 
 .Card .body {
-    margin-top: 30px;
+	margin-top: 30px;
 }

@@ -189,7 +189,11 @@ export default class AccountConnectionProperties extends React.Component {
 			return;
 		}
 		this.setState({
-			status: { variant: 'success', icon: 'check2-circle', text: 'Your transformations have been successfully saved' },
+			status: {
+				variant: 'success',
+				icon: 'check2-circle',
+				text: 'Your transformations have been successfully saved',
+			},
 		});
 		this.toast.current.toast();
 	};
@@ -238,7 +242,11 @@ export default class AccountConnectionProperties extends React.Component {
 					<div className='head'>
 						<div className='title'>
 							{connection.LogoURL !== '' && (
-								<img className='littleLogo' src={connection.LogoURL} alt={`${connection.Name}'s logo`} />
+								<img
+									className='littleLogo'
+									src={connection.LogoURL}
+									alt={`${connection.Name}'s logo`}
+								/>
 							)}
 							<div className='text'>Map {connection.Name} properties to your golden record</div>
 						</div>
@@ -329,7 +337,11 @@ export default class AccountConnectionProperties extends React.Component {
 							);
 						})}
 						<SlTooltip content='Add a transformation'>
-							<SlButton className='addTransformation' variant='primary' onClick={this.onAddTransformation}>
+							<SlButton
+								className='addTransformation'
+								variant='primary'
+								onClick={this.onAddTransformation}
+							>
 								<SlIcon name='plus'></SlIcon>
 							</SlButton>
 						</SlTooltip>
@@ -437,11 +449,17 @@ export default class AccountConnectionProperties extends React.Component {
 									<div
 										key={p.Name}
 										className={`property${
-											this.state.leftProperties.find((lp) => lp.Name === p.Name) != null ? ' used' : ''
+											this.state.leftProperties.find((lp) => lp.Name === p.Name) != null
+												? ' used'
+												: ''
 										}`}
 									>
 										<div>{p.Name}</div>
-										<SlIconButton name='plus-circle' label='Add property' onClick={(e) => this.onAddProperty(p.Name)} />
+										<SlIconButton
+											name='plus-circle'
+											label='Add property'
+											onClick={(e) => this.onAddProperty(p.Name)}
+										/>
 									</div>
 								);
 							}

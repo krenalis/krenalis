@@ -1,121 +1,121 @@
 .Dashboard {
-    min-height: 100vh;
-    padding-top: 50px;
+	min-height: 100vh;
+	padding-top: 50px;
 }
 
 .Dashboard .content {
-    max-width: 1500px;
-    margin: auto;
-    padding-bottom: 50px;
+	max-width: 1500px;
+	margin: auto;
+	padding-bottom: 50px;
 }
 
 .Dashboard .chart-section {
-    position: relative;
-    margin-bottom: 50px;
+	position: relative;
+	margin-bottom: 50px;
 }
 
 .Dashboard .chart-section select {
-    right: 25px;
-    position: absolute;
-    bottom: -20px;
-    border-radius: 5px;
-    background: transparent;
-    border: 0px;
-    color: var(--color-accent);
+	right: 25px;
+	position: absolute;
+	bottom: -20px;
+	border-radius: 5px;
+	background: transparent;
+	border: 0px;
+	color: var(--color-accent);
 }
 
 .Dashboard .editor {
-    display: grid;
-    column-gap: 60px;
-    row-gap: 30px;
-    justify-content: center;
-    grid-template-columns: 2fr 1fr;
-    grid-template-areas:
-        "textarea side"
+	display: grid;
+	column-gap: 60px;
+	row-gap: 30px;
+	justify-content: center;
+	grid-template-columns: 2fr 1fr;
+	grid-template-areas: 'textarea side';
 }
 
 .Dashboard .editor .textarea {
-    grid-area: textarea;
-    display: flex;
-    flex-flow: column;
+	grid-area: textarea;
+	display: flex;
+	flex-flow: column;
 }
 
 .Dashboard .editor .textarea .controls {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    align-items: center;
-    gap: 20px;
-    margin-bottom: 20px;
+	display: flex;
+	justify-content: space-between;
+	width: 100%;
+	align-items: center;
+	gap: 20px;
+	margin-bottom: 20px;
 }
 
 .Dashboard .editor .textarea .controls .autoapply {
-    display: flex;
-    gap: 5px;
-    align-items: center;
+	display: flex;
+	gap: 5px;
+	align-items: center;
 }
 
 .Dashboard .editor .textarea .controls .autoapply label {
-    cursor: pointer;
-    user-select: none;
+	cursor: pointer;
+	user-select: none;
 }
 
 .Dashboard .editor .textarea .controls .btn {
-    margin: unset;
-    padding: 10px 30px 10px 22px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+	margin: unset;
+	padding: 10px 30px 10px 22px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 
 .Dashboard .editor .textarea .controls .btn i {
-    font-size: 20px;
+	font-size: 20px;
 }
 
 .Dashboard .editor .textarea .ace_editor {
-    width: unset!important;
-    border-radius: 10px;
-    font-family: monospace;
+	width: unset !important;
+	border-radius: 10px;
+	font-family: monospace;
 }
 
 .Dashboard .editor .textarea .ace_editor * {
-    font-family: monospace;
+	font-family: monospace;
 }
 
 .Dashboard .editor .textarea .sql-query pre {
-    background-color: var(--bg-primary)!important;
-    border-radius: 10px;
-    padding: 30px!important;
-    overflow-x: hidden!important;
-    line-height: 1.5;
+	background-color: var(--bg-primary) !important;
+	border-radius: 10px;
+	padding: 30px !important;
+	overflow-x: hidden !important;
+	line-height: 1.5;
 }
 
 .Dashboard .editor .textarea .query-columns {
-    display: grid;
-    background-color: var(--bg-primary);
-    border-radius: 10px;
-    padding: 20px;
+	display: grid;
+	background-color: var(--bg-primary);
+	border-radius: 10px;
+	padding: 20px;
 }
 
-.Dashboard .editor .textarea .query-columns .head-cell, .Dashboard .editor .textarea .query-columns .cell {
-    padding: 8px 15px;
+.Dashboard .editor .textarea .query-columns .head-cell,
+.Dashboard .editor .textarea .query-columns .cell {
+	padding: 8px 15px;
 }
 
 .Dashboard .editor .textarea .query-columns .head-cell {
-    font-weight: 700;
+	font-weight: 700;
 }
 
 .Dashboard .editor .side {
-    grid-area: side;
+	grid-area: side;
 }
 
 .Dashboard .editor .side .documentation {
-    border-radius: 10px;
-    margin: 0;
-    height: 100%;
-    background-color: transparent!important;
+	border-radius: 10px;
+	margin: 0;
+	height: 100%;
+	background-color: transparent !important;
 }
 
 .Dashboard .editor .side .suggestions {
-    margin-top: 20px;
+	margin-top: 20px;
 }

@@ -1,46 +1,46 @@
 .Connectors {
-    min-height: 100vh;
+	min-height: 100vh;
 }
 
 .Connectors .content {
-    max-width: 1200px;
-    margin: auto;
-    margin-top: -100px;
-    padding-bottom: 30px;
+	max-width: 1200px;
+	margin: auto;
+	margin-top: -100px;
+	padding-bottom: 30px;
 }
 
 .Connectors h1 {
-    text-align: center;
-    margin-bottom: 30px;
+	text-align: center;
+	margin-bottom: 30px;
 }
 
 .Connectors .connectors {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 30px;
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	gap: 30px;
 }
 
 .Connectors sl-dialog::part(body) {
-    padding: 10px 30px 20px 30px;
-}   
+	padding: 10px 30px 20px 30px;
+}
 
 .Connectors sl-dialog .no-storage {
-    text-align: center;
-    padding-bottom: 15px;
+	text-align: center;
+	padding-bottom: 15px;
 }
 
 .Connectors sl-dialog .storage {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 15px;
 }
 
 .Connectors sl-dialog .storage sl-button::part(base) {
-    border-radius: 100%;
-    width: 35px;
-    height: 35px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+	border-radius: 100%;
+	width: 35px;
+	height: 35px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }

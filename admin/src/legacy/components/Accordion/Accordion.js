@@ -1,24 +1,28 @@
-import React from 'react'
-import './Accordion.css'
+import React from 'react';
+import './Accordion.css';
 
 export default class Accordion extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            'isOpen': false,
-        }
-    }
+	constructor(props) {
+		super(props);
+		this.state = {
+			isOpen: false,
+		};
+	}
 
-    render() {
-        return (
-            <div className="Accordion">
-                <div className="title" onClick={() => { this.setState({ 'isOpen': !this.state.isOpen }) }}>
-                    {this.props.title}
-                    <i className="material-symbols-outlined">{this.state.isOpen ? 'expand_less' : 'expand_more'}</i>
-                </div>
-                {this.state.isOpen ? <div className="accordion-content">{this.props.children}</div> : ''}
-            </div>
-
-        )
-    }
+	render() {
+		return (
+			<div className='Accordion'>
+				<div
+					className='title'
+					onClick={() => {
+						this.setState({ isOpen: !this.state.isOpen });
+					}}
+				>
+					{this.props.title}
+					<i className='material-symbols-outlined'>{this.state.isOpen ? 'expand_less' : 'expand_more'}</i>
+				</div>
+				{this.state.isOpen ? <div className='accordion-content'>{this.props.children}</div> : ''}
+			</div>
+		);
+	}
 }
