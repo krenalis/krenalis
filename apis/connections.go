@@ -670,18 +670,18 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		var name, clientSecret, resourceCode, accessToken, refreshToken, cursor string
 		var webhooksPer WebhooksPer
 		var connector, resource int
-		var settings, rawUsedProperties []byte
+		var settings []byte
 		var expiration time.Time
 		err := this.myDB.QueryRow(
 			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, CAST(`c`.`webhooksPer` AS UNSIGNED), `r`.`code`,"+
 				" `r`.`oAuthAccessToken`, `r`.`oAuthRefreshToken`, `r`.`oAuthExpiresIn`, `s`.`connector`,"+
-				" `s`.`resource`, `s`.`userCursor`, `s`.`settings`, `s`.`usedProperties`\n"+
+				" `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(
 			&name, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration, &connector,
-			&resource, &cursor, &settings, &rawUsedProperties)
+			&resource, &cursor, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return errors.New("connection does not exist anymore")
@@ -691,10 +691,26 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		if reimport {
 			cursor = ""
 		}
+
+		// Read the used properties from the transformations of this connection.
 		var properties [][]string
-		err = json.Unmarshal(rawUsedProperties, &properties)
+		rows, err := this.myDB.Query(
+			"SELECT `property` FROM `transformations_connections`\n"+
+				"WHERE `connection` = ?", id)
 		if err != nil {
-			return fmt.Errorf("cannot unmarshal used properties of connection %d: %s", id, err)
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var prop string
+			err = rows.Scan(&prop)
+			if err != nil {
+				return err
+			}
+			properties = append(properties, []string{prop})
+		}
+		if err := rows.Err(); err != nil {
+			return err
 		}
 
 		accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
