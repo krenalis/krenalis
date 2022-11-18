@@ -1382,7 +1382,7 @@ func (this *Connections) reloadProperties(id int) error {
 	var storage int
 	err := this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED), `storage`\n"+
 		"FROM `connections`\n"+
-		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace, &storage).Scan(&typ, &role)
+		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&typ, &role, &storage)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ConnectionNotFoundError{}
