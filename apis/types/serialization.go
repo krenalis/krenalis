@@ -31,20 +31,20 @@ func (t Type) MarshalJSON() ([]byte, error) {
 	case PtDecimal:
 		if t.p > 0 {
 			b.WriteString(`,"precision":`)
-			b.WriteString(strconv.Itoa(t.p))
+			b.WriteString(strconv.Itoa(int(t.p)))
 		}
 		if t.s > 0 {
 			b.WriteString(`,"scale":`)
-			b.WriteString(strconv.Itoa(t.s))
+			b.WriteString(strconv.Itoa(int(t.s)))
 		}
 	case PtText:
 		if t.p > 0 {
 			b.WriteString(`,"byteLen":`)
-			b.WriteString(strconv.Itoa(t.p))
+			b.WriteString(strconv.Itoa(int(t.p)))
 		}
 		if t.s > 0 {
 			b.WriteString(`,"charLen":`)
-			b.WriteString(strconv.Itoa(t.s))
+			b.WriteString(strconv.Itoa(int(t.s)))
 		}
 		switch vl := t.vl.(type) {
 		case *regexp.Regexp:
@@ -245,7 +245,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return t, errors.New("invalid length in bytes")
 			}
 			byteLen, _ = strconv.Atoi(string(n))
-			if byteLen <= 0 {
+			if byteLen <= 0 || byteLen > MaxTextLen {
 				return t, errors.New("invalid length in bytes")
 			}
 		case "charLen":
@@ -254,7 +254,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return t, errors.New("invalid length in characters")
 			}
 			charLen, _ = strconv.Atoi(string(n))
-			if charLen <= 0 {
+			if charLen <= 0 || charLen > MaxTextLen {
 				return t, errors.New("invalid length in characters")
 			}
 		case "properties":
@@ -373,19 +373,19 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if t.pt != PtText {
 			return Type{}, errors.New("unexpected length in bytes for no Text type")
 		}
-		t.p = byteLen
+		t.p = int32(byteLen)
 	}
 	if charLen > 0 {
 		if t.pt != PtText {
 			return Type{}, errors.New("unexpected length in characters for no Text type")
 		}
-		t.s = charLen
+		t.s = int32(charLen)
 	}
 	if precision > 0 {
 		if t.pt != PtDecimal {
 			return Type{}, errors.New("unexpected precision for no Decimal type")
 		}
-		t.p = precision
+		t.p = int32(precision)
 	}
 	if scale > 0 {
 		if t.pt != PtDecimal {
@@ -397,7 +397,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			}
 			return Type{}, errors.New("precision cannot not be less than scale")
 		}
-		t.s = scale
+		t.s = int32(scale)
 	}
 	if items.pt == 0 {
 		if t.pt == PtArray {

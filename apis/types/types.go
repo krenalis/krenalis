@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	MaxDecimalPrecision = 76 // Maximum precision for a Decimal type
-	MaxDecimalScale     = 38 // Maximum scale for a Decimal type
+	MaxDecimalPrecision = 76        // Maximum precision for a Decimal type
+	MaxDecimalScale     = 38        // Maximum scale for a Decimal type
+	MaxTextLen          = 1<<31 - 1 // Maximum length in bytes and characters for a Text type
 )
 
 type PhysicalType int8
@@ -152,12 +153,16 @@ type Type struct {
 	pt PhysicalType
 	lt LogicalType
 
-	// *regexp.Regexp value (for Text), []string with the values (for Text),
-	// []Property (for Object) or Type of items (for Array).
-	vl any
+	p int32 // precision of a Decimal type or length in bytes of a Text type.
+	s int32 // scale of a Decimal type or length in characters of a Text type.
 
-	p int // precision of a Decimal type or length in bytes of a Text type.
-	s int // scale of a Decimal type or length in characters of a Text type.
+	// vl can contain one of
+	//   - *regexp.Regexp value of a Text
+	//   - []string with the values of a Text
+	//   - []Property of an Object
+	//   - Type of the items of an Array
+	//
+	vl any
 }
 
 // Array returns an Array type with items of type t.
@@ -260,7 +265,7 @@ func Decimal(precision, scale int) Type {
 	if scale < 0 || scale > MaxDecimalScale || scale > precision {
 		panic("invalid decimal scale")
 	}
-	return Type{pt: PtDecimal, p: precision, s: scale}
+	return Type{pt: PtDecimal, p: int32(precision), s: int32(scale)}
 }
 
 // DateTime returns the DateTime type.
@@ -304,18 +309,18 @@ func Text(lengths ...Length) Type {
 			if t.p > 0 {
 				panic("repeated length in bytes")
 			}
-			if l <= 0 {
+			if l <= 0 || l > MaxTextLen {
 				panic("invalid text length")
 			}
-			t.p = int(l)
+			t.p = int32(l)
 		case Chars:
 			if t.s > 0 {
 				panic("repeated length in characters")
 			}
-			if l <= 0 {
+			if l <= 0 || l > MaxTextLen {
 				panic("invalid text length")
 			}
-			t.s = int(l)
+			t.s = int32(l)
 		}
 	}
 	return t
@@ -446,7 +451,7 @@ func (t Type) ByteLen() (int, bool) {
 	if t.pt != PtText {
 		panic("cannot get byte length of a non-text type")
 	}
-	return t.p, t.p > 0
+	return int(t.p), t.p > 0
 }
 
 // CharLen returns the maximum length in characters of a Text type and true.
@@ -456,7 +461,7 @@ func (t Type) CharLen() (int, bool) {
 	if t.pt != PtText {
 		panic("cannot get character length of a non-text type")
 	}
-	return t.s, t.s > 0
+	return int(t.s), t.s > 0
 }
 
 // Precision returns the precision of a Decimal type.
@@ -465,7 +470,7 @@ func (t Type) Precision() int {
 	if t.pt != PtDecimal {
 		panic("cannot get precision of a non-decimal type")
 	}
-	return t.p
+	return int(t.p)
 }
 
 // Scale returns the scale of a Decimal type.
@@ -474,7 +479,7 @@ func (t Type) Scale() int {
 	if t.pt != PtDecimal {
 		panic("cannot get scale of a non-decimal type")
 	}
-	return t.s
+	return int(t.s)
 }
 
 // String returns a string representation of t.
@@ -484,19 +489,19 @@ func (t Type) String() string {
 	switch t.pt {
 	case PtDecimal:
 		if t.p > 0 {
-			s += "(" + strconv.Itoa(t.p) + "," + strconv.Itoa(t.s) + ")"
+			s += "(" + strconv.Itoa(int(t.p)) + "," + strconv.Itoa(int(t.s)) + ")"
 		}
 	case PtText:
 		if t.p > 0 || t.s > 0 {
 			s += "("
 			if t.p > 0 {
-				s += strconv.Itoa(t.p) + " bytes"
+				s += strconv.Itoa(int(t.p)) + " bytes"
 			}
 			if t.s > 0 {
 				if t.p > 0 {
 					s += ","
 				}
-				s += strconv.Itoa(t.s) + " chars"
+				s += strconv.Itoa(int(t.p)) + " chars"
 			}
 			s += ")"
 		}
