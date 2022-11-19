@@ -565,3 +565,46 @@ ALTER TABLE `domains`
 
 ALTER TABLE `smart_events`
     CHANGE COLUMN `property` `source` INT NOT NULL;
+
+TRUNCATE TABLE `workspaces`;
+
+INSERT INTO `workspaces` (`id`, `account`, `name`, `userSchema`, `groupSchema`, `eventSchema`)
+VALUES (1, 1, 'Workspace', '[
+    {
+        "name" : "FirstName",
+        "label": "First name",
+        "description": "First name of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    },
+    {
+        "name" : "LastName",
+        "label": "Last name",
+        "description": "Last name of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    },
+    {
+        "name" : "Email",
+        "label": "Email address",
+        "description": "Email address of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    }
+]', '[
+    {
+        "name" : "Name",
+        "label": "Group name",
+        "description": "Name of the group",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    }
+]', '');

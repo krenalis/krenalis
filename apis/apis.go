@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"chichi/apis/types"
 	"chichi/pkg/open2b/sql"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -140,7 +141,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				var properties []ConnectionProperty
+				var properties []types.Property
 				properties, _, err = ws.Connections.Properties(dsID)
 				if err != nil {
 					if _, ok := err.(ConnectionNotFoundError); ok {

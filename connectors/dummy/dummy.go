@@ -51,8 +51,8 @@ func (c *connection) Groups(cursor string, properties [][]string) error {
 	panic("not implemented")
 }
 
-func (c *connection) Properties() ([]connector.Property, []connector.Property, error) {
-	userProps := []connector.Property{
+func (c *connection) Properties() ([]types.Property, []types.Property, error) {
+	userProps := []types.Property{
 		{Name: "first_name", Type: types.Text()},
 		{Name: "last_name", Type: types.Text()},
 		{Name: "email", Type: types.Text()},

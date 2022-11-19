@@ -8,6 +8,7 @@
 package types
 
 import (
+	"regexp"
 	"strconv"
 )
 
@@ -40,6 +41,8 @@ const (
 	PtUUID
 	PtJSON
 	PtText
+	PtArray
+	PtObject
 )
 
 var physicalName = []string{
@@ -64,11 +67,21 @@ var physicalName = []string{
 	"UUID",
 	"JSON",
 	"Text",
+	"Array",
+	"Object",
+}
+
+func isPhysicalType(pt PhysicalType) bool {
+	return 1 <= pt && int(pt) <= len(physicalName)
+}
+
+func isLogicalType(lt LogicalType) bool {
+	return 1 <= lt && int(lt) <= len(logicalName)
 }
 
 // String returns the name of pt. Panics if pt is not a physical type.
 func (pt PhysicalType) String() string {
-	if pt < 1 || int(pt) > len(physicalName) {
+	if !isPhysicalType(pt) {
 		panic("invalid physical type")
 	}
 	return physicalName[pt-1]
@@ -120,18 +133,51 @@ var logicalName = []string{
 
 // String returns the name of lt. Panics if lt is not a logical type.
 func (lt LogicalType) String() string {
-	if lt < 1 || int(lt) > len(logicalName) {
+	if !isLogicalType(lt) {
 		panic("invalid logical type")
 	}
 	return logicalName[lt-1]
+}
+
+// Property represents an object property.
+type Property struct {
+	Name        string `json:"name"`
+	Label       string `json:"label,omitempty"`
+	Description string `json:"description,omitempty"`
+	Type        Type   `json:"type"`
 }
 
 // Type represents a type.
 type Type struct {
 	pt PhysicalType
 	lt LogicalType
-	p  int // precision of a Decimal type or length in bytes of a Text type.
-	s  int // scale of a Decimal type or length in characters of a Text type.
+
+	// *regexp.Regexp value (for Text), []string with the values (for Text),
+	// []Property (for Object) or Type of items (for Array).
+	vl any
+
+	p int // precision of a Decimal type or length in bytes of a Text type.
+	s int // scale of a Decimal type or length in characters of a Text type.
+}
+
+// Array returns an Array type with items of type t.
+func Array(t Type) Type {
+	return Type{pt: PtArray, vl: t}
+}
+
+// Object returns an Object type with the given properties.
+func Object(properties []Property) Type {
+	if len(properties) == 0 {
+		panic("no property in object")
+	}
+	pr := make([]Property, len(properties))
+	for i, property := range properties {
+		if property.Name == "" {
+			panic("empty property name")
+		}
+		pr[i] = property
+	}
+	return Type{pt: PtObject, vl: pr}
 }
 
 // Boolean returns the Boolean type.
@@ -200,8 +246,8 @@ func Float32() Type {
 }
 
 // Decimal returns the Decimal type with the given precision and scale.
-// Panics if precision is not in range [1,MaxDecimalPrecision] and if scale is
-// not in range [0,MaxDecimalScale] and if it is greater that precision.
+// Panics if precision is not in range [1,MaxDecimalPrecision] or if scale is
+// not in range [0,MaxDecimalScale] or if it is greater that precision.
 // As a special case if both precision and scale are zero, the type has no
 // precision and scale.
 func Decimal(precision, scale int) Type {
@@ -275,15 +321,10 @@ func Text(lengths ...Length) Type {
 	return t
 }
 
-// MarshalJSON marshals t into JSON.
-func (t Type) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + t.PhysicalType().String() + `"`), nil
-}
-
 // WithLogicalType returns the type t but with the logical type lt.
 // Panics if lt is not a logical type.
 func (t Type) WithLogicalType(lt LogicalType) Type {
-	if lt < 1 || int(lt) > len(logicalName) {
+	if !isLogicalType(lt) {
 		panic("invalid logical type")
 	}
 	t.lt = lt
@@ -295,10 +336,107 @@ func (t Type) PhysicalType() PhysicalType {
 	return t.pt
 }
 
+// Item returns the type of the item of an Array type.
+// Panics if t is not an Array type.
+func (t Type) Item() Type {
+	if t.pt != PtArray {
+		panic("cannot get the item type of a no-array type")
+	}
+	return t.vl.(Type)
+}
+
+// WithValues returns t but with the given values.
+// Panics if t is not a Text type, if values is empty, or if t has a regular
+// expression.
+func (t Type) WithValues(values []string) Type {
+	if t.pt != PtText {
+		panic("cannot limit values for a no Text type")
+	}
+	if len(values) == 0 {
+		panic("cannot limit to any value")
+	}
+	if _, ok := t.vl.(*regexp.Regexp); ok {
+		panic("cannot set values when there is a regular expression")
+	}
+	vl := make([]string, len(values))
+	copy(vl, values)
+	t.vl = vl
+	return t
+}
+
+// Values returns the values of t. Returns nil if t has no values.
+// Panics if t is not a Text type.
+func (t Type) Values() []string {
+	if t.pt != PtText {
+		panic("cannot get values for a no Text type")
+	}
+	if vl, ok := t.vl.([]string); ok {
+		values := make([]string, len(vl))
+		copy(values, vl)
+		return values
+	}
+	return nil
+}
+
+// Properties is an iterator to iterate over the properties of an object.
+type Properties struct {
+	pr []Property
+}
+
+// Next returns the next property of the iterator.
+// If there are no more properties, it returns Property{} and false.
+func (si *Properties) Next() (Property, bool) {
+	if si.pr == nil {
+		panic("next on a ended iterator")
+	}
+	if len(si.pr) == 0 {
+		si.pr = nil
+		return Property{}, false
+	}
+	p := si.pr[0]
+	si.pr = si.pr[1:]
+	return p, true
+}
+
+// Properties returns an iterator to iterate over the properties of an Object
+// type. Panics if t is not an Object type.
+func (t Type) Properties() *Properties {
+	if t.pt != PtObject {
+		panic("cannot get the properties of a no-array type")
+	}
+	return &Properties{t.vl.([]Property)}
+}
+
 // LogicalType returns the logical type of t and true.
 // If t has no logical type, it returns false.
 func (t Type) LogicalType() (LogicalType, bool) {
 	return t.lt, t.lt > 0
+}
+
+// Regexp returns the regular expression of t. If t has no regular expression,
+// it returns an empty string. Panics if t is not a Text type.
+func (t Type) Regexp() string {
+	if t.pt != PtText {
+		panic("cannot return regular expression for a no Text type")
+	}
+	if re, ok := t.vl.(*regexp.Regexp); ok {
+		return re.String()
+	}
+	return ""
+}
+
+// WithRegexp returns t with the regular expression re.
+// Panics if t is not a Text type, if re cannot be parsed, or if t has any
+// values.
+func (t Type) WithRegexp(re string) Type {
+	if t.pt != PtText {
+		panic("cannot limit to regular expression for a no Text type")
+	}
+	if _, ok := t.vl.([]string); ok {
+		panic("cannot limit to regular expression if there are values")
+	}
+	t.vl = regexp.MustCompile(re)
+	return t
 }
 
 // ByteLen returns the maximum length in bytes of a Text type and true.

@@ -18,12 +18,12 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"chichi/apis"
+	"chichi/apis/types"
 
 	"github.com/evanw/esbuild/pkg/api"
 )
@@ -130,21 +130,18 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		var v struct {
-			Properties map[string]any
-		}
-		err = json.Unmarshal([]byte(schema), &v)
+		var properties []types.Property
+		err = json.Unmarshal([]byte(schema), &properties)
 		if err != nil {
 			log.Printf("[error] cannot unmarshal user schema: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		props := make([]string, 0, len(v.Properties))
-		for name := range v.Properties {
-			props = append(props, name)
+		names := make([]string, len(properties))
+		for i, field := range properties {
+			names[i] = field.Name
 		}
-		sort.Strings(props)
-		_ = json.NewEncoder(w).Encode(props)
+		_ = json.NewEncoder(w).Encode(names)
 		return
 	}
 
@@ -164,8 +161,12 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
+		props := make([]map[string]string, len(properties))
+		for i, p := range properties {
+			props[i] = map[string]string{"Name": p.Name}
+		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"Properties":     properties,
+			"Properties":     props,
 			"UsedProperties": usedProperties,
 		})
 		return

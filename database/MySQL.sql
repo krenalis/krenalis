@@ -176,4 +176,43 @@ CREATE TABLE `workspaces` (
   PRIMARY KEY (`id`)
 );
 
-INSERT INTO `workspaces` (`id`, `account`, `name`, `userSchema`, `groupSchema`) VALUES ('1', '1', 'Workspace', '{\n    \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n    \"$id\": \"https://example.com/product.schema.json\",\n    \"description\": \"Schema di uno user\",\n    \"self\": {\n        \"vendor\": \"com.example\",\n        \"name\": \"schema_1\",\n        \"format\": \"jsonschema\",\n        \"version\": \"1-0-0\"\n    },\n    \"type\": \"object\",\n    \"properties\": {\n        \"FirstName\": {\n            \"title\": \"First name\",\n            \"description\": \"First of the user\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        },\n        \"LastName\": {\n          \"title\": \"Last name\",\n            \"description\": \"Last name of the user\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        },\n        \"Email\": {\n            \"title\": \"Email address\",\n            \"description\": \"Email address of the user\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        }\n    },\n    \"additionalProperties\": false\n}', '{\n    \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n    \"$id\": \"https://example.com/product.schema.json\",\n    \"description\": \"Schema di un gruppo\",\n    \"self\": {\n        \"vendor\": \"com.example\",\n        \"name\": \"schema_1\",\n        \"format\": \"jsonschema\",\n        \"version\": \"1-0-0\"\n    },\n    \"type\": \"object\",\n    \"properties\": {\n        \"Name\": {\n            \"title\": \"Group name\",\n            \"description\": \"Name of the group\",\n            \"type\": [\n                \"string\",\n                \"null\"\n            ],\n            \"maxLength\": 300\n        },\n    },\n    \"additionalProperties\": false\n}');
+INSERT INTO `workspaces` (`id`, `account`, `name`, `userSchema`, `groupSchema`, `eventSchema`)
+VALUES (1, 1, 'Workspace', '[
+    {
+        "name" : "FirstName",
+        "label": "First name",
+        "description": "First name of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    },
+    {
+        "name" : "LastName",
+        "label": "Last name",
+        "description": "Last name of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    },
+    {
+        "name" : "Email",
+        "label": "Email address",
+        "description": "Email address of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    }
+]', '[
+    {
+        "name" : "Name",
+        "label": "Group name",
+        "description": "Name of the group",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    }
+]', '');

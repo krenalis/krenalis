@@ -11,6 +11,8 @@ import (
 	"context"
 	"errors"
 	"net/http"
+
+	"chichi/apis/types"
 )
 
 // ErrWebhookUnauthorized is returned by the ReceiveWebhook method if the
@@ -38,7 +40,7 @@ type AppConnection interface {
 	Groups(cursor string, properties [][]string) error
 
 	// Properties returns all user and group properties.
-	Properties() ([]Property, []Property, error)
+	Properties() ([]types.Property, []types.Property, error)
 
 	// ReceiveWebhook receives a webhook request and returns its events.
 	// It returns the ErrWebhookUnauthorized error is the request was not authorized.

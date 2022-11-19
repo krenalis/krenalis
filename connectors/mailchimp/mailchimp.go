@@ -119,7 +119,7 @@ func (c *connection) Groups(cursor string, properties [][]string) error {
 }
 
 // Properties returns all user properties.
-func (c *connection) Properties() ([]connector.Property, []connector.Property, error) {
+func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 	params := url.Values{
 		"fields": []string{"merge_fields.options.choices,merge_fields.name,merge_fields.tag,merge_fields.type"},
 	}
@@ -138,10 +138,10 @@ func (c *connection) Properties() ([]connector.Property, []connector.Property, e
 		return nil, nil, err
 	}
 
-	// Merge fields
-	mergeFields := make([]connector.Property, len(res.MergeFields))
+	// Merge fields.
+	mergeFields := make([]types.Property, len(res.MergeFields))
 	for i, mf := range res.MergeFields {
-		mergeFields[i] = connector.Property{
+		field := types.Property{
 			Name:  mf.Tag,
 			Label: mf.Name,
 			Type:  types.Text(),
@@ -150,16 +150,14 @@ func (c *connection) Properties() ([]connector.Property, []connector.Property, e
 		case "address":
 			mergeFields[i].Type = types.JSON()
 		case "radio", "dropdown":
-			for _, choice := range mf.Options.Choices {
-				mergeFields[i].Options = append(mergeFields[i].Options, connector.PropertyOption{
-					Label: choice,
-					Value: choice,
-				})
-			}
+			field.Type = types.Text().WithValues(mf.Options.Choices)
+		default:
+			field.Type = types.Text()
 		}
+		mergeFields[i] = field
 	}
 
-	return []connector.Property{
+	return []types.Property{
 		{
 			Name:  "ConsentsToOneToOneMessaging",
 			Label: "Consents to OneToOne messaging",
@@ -211,29 +209,25 @@ func (c *connection) Properties() ([]connector.Property, []connector.Property, e
 		}, {
 			Name:  "LastNote",
 			Label: "Last Note",
-			Type:  types.JSON(),
-			Properties: []connector.Property{
+			Type: types.Object([]types.Property{
 				{
 					Name:  "note_id",
 					Label: "ID",
 					Type:  types.Int(),
-				},
-				{
+				}, {
 					Name:  "created_at",
 					Label: "Created at",
 					Type:  types.DateTime(),
-				},
-				{
+				}, {
 					Name:  "created_by",
 					Label: "Created by",
 					Type:  types.Text(),
-				},
-				{
+				}, {
 					Name:  "note",
 					Label: "Note content",
 					Type:  types.Text(),
 				},
-			},
+			}),
 		}, {
 			Name:  "ListID",
 			Label: "List ID",
@@ -241,8 +235,7 @@ func (c *connection) Properties() ([]connector.Property, []connector.Property, e
 		}, {
 			Name:  "Location",
 			Label: "Location",
-			Type:  types.JSON(),
-			Properties: []connector.Property{
+			Type: types.Object([]types.Property{
 				{
 					Name:  "latitude",
 					Label: "Latitude",
@@ -272,7 +265,7 @@ func (c *connection) Properties() ([]connector.Property, []connector.Property, e
 					Label: "Region",
 					Type:  types.Text(),
 				},
-			},
+			}),
 		}, {
 			Name:  "MarketingPermissions",
 			Label: "Marketing permissions",
@@ -281,35 +274,34 @@ func (c *connection) Properties() ([]connector.Property, []connector.Property, e
 			Name:  "MemberRating",
 			Label: "Member rating",
 			Type:  types.Int(),
-		}, {
-			Name:       "MergeFields",
-			Label:      "Merge fields",
-			Properties: mergeFields,
-		}, {
+		},
+		{
+			Name:  "MergeFields",
+			Label: "Merge fields",
+			Type:  types.Object(mergeFields),
+		},
+		{
 			Name:  "Source",
 			Label: "Source",
 			Type:  types.Text(),
 		}, {
 			Name:  "Stats",
 			Label: "Stats",
-			Type:  types.JSON(),
-			Properties: []connector.Property{
+			Type: types.Object([]types.Property{
 				{
 					Name:  "avg_open_rate",
 					Label: "Open rate",
 					Type:  types.Int(),
-				},
-				{
+				}, {
 					Name:  "avg_click_rate",
 					Label: "Click rate",
 					Type:  types.Int(),
-				},
-				{
+				}, {
 					Name:  "ecommerce_data",
 					Label: "Ecommerce data",
 					Type:  types.JSON(),
 				},
-			},
+			}),
 		}, {
 			Name:  "Status",
 			Label: "Status",

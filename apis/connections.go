@@ -119,24 +119,6 @@ type ConnectionInfo struct {
 	UsersQuery string // only for databases.
 }
 
-// PropertyType represents the type of a property.
-type PropertyType string
-
-// ConnectionPropertyOption represents an option of a connection property.
-type ConnectionPropertyOption struct {
-	Label string
-	Value string
-}
-
-// ConnectionProperty represents a connection property.
-type ConnectionProperty struct {
-	Name       string
-	Type       PropertyType
-	Label      string
-	Options    []ConnectionPropertyOption
-	Properties []ConnectionProperty
-}
-
 // AddApp adds an app connection given its role, app connector, OAuth refresh
 // and access tokens and returns its identifier.
 //
@@ -926,7 +908,7 @@ func (this *Connections) List() ([]*Connection, error) {
 // connection.
 //
 // Returns a ConnectionNotFoundError error if the connection does not exist.
-func (this *Connections) Properties(id int) ([]ConnectionProperty, [][]string, error) {
+func (this *Connections) Properties(id int) ([]types.Property, [][]string, error) {
 	if id <= 0 || id > maxInt32 {
 		return nil, nil, errors.New("invalid connection identifier")
 	}
@@ -941,14 +923,14 @@ func (this *Connections) Properties(id int) ([]ConnectionProperty, [][]string, e
 	if typ == StorageType {
 		return nil, nil, errors.New("cannot read properties from a storage")
 	}
-	var properties []ConnectionProperty
+	var properties []types.Property
 	if len(rawProperties) > 0 {
 		err = json.Unmarshal(rawProperties, &properties)
 		if err != nil {
-			return nil, nil, errors.New("cannot unmarshal connection properties")
+			return nil, nil, fmt.Errorf("cannot unmarshal connection properties: %s", err)
 		}
 	} else {
-		properties = []ConnectionProperty{}
+		properties = []types.Property{}
 	}
 	var usedProperties [][]string
 	if len(rawUsedProperties) > 0 {
@@ -1420,7 +1402,7 @@ func (this *Connections) reloadProperties(id int) error {
 
 	cRole := _connector.Role(role)
 
-	var properties []_connector.Property
+	var properties []types.Property
 
 	switch typ {
 	case AppType:
@@ -1511,7 +1493,7 @@ func (this *Connections) reloadProperties(id int) error {
 		if err != nil {
 			return err
 		}
-		properties = make([]_connector.Property, len(columns))
+		properties = make([]types.Property, len(columns))
 		for i := 0; i < len(properties); i++ {
 			properties[i].Name = columns[i].Name
 			properties[i].Type = columns[i].Type
@@ -1587,7 +1569,7 @@ func (this *Connections) reloadProperties(id int) error {
 			return err
 		}
 
-		properties = make([]_connector.Property, len(records.columns))
+		properties = make([]types.Property, len(records.columns))
 		for i := 0; i < len(properties); i++ {
 			properties[i].Name = records.columns[i].Name
 			properties[i].Type = records.columns[i].Type

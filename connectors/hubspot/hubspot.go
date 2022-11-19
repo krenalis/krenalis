@@ -120,7 +120,7 @@ func (c *connection) Groups(cursor string, properties [][]string) error {
 }
 
 // Properties returns all user and group properties.
-func (c *connection) Properties() ([]connector.Property, []connector.Property, error) {
+func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 
 	var response struct {
 		Results []struct {
@@ -140,7 +140,7 @@ func (c *connection) Properties() ([]connector.Property, []connector.Property, e
 		return nil, nil, err
 	}
 
-	properties := make([]connector.Property, 0)
+	properties := make([]types.Property, 0)
 	for _, r := range response.Results {
 		switch r.Name {
 		case "createdate", "lastmodifieddate", "hs_object_id":
@@ -150,27 +150,28 @@ func (c *connection) Properties() ([]connector.Property, []connector.Property, e
 		if err != nil {
 			return nil, nil, err
 		}
-		property := connector.Property{
+		property := types.Property{
 			Name:  r.Name,
 			Label: r.Label,
 			Type:  typ,
 		}
-		var n int
-		for _, option := range r.Options {
-			if !option.Hidden {
-				n++
-			}
-		}
-		if n > 0 {
-			property.Options = make([]connector.PropertyOption, 0, n)
+		if typ.PhysicalType() == types.PtText {
+			var n int
 			for _, option := range r.Options {
-				if option.Hidden {
-					continue
+				if !option.Hidden {
+					n++
 				}
-				property.Options = append(property.Options, connector.PropertyOption{
-					Label: option.Label,
-					Value: option.Value,
-				})
+			}
+			if n > 0 {
+				values := make([]string, 0, n)
+				for _, option := range r.Options {
+					if option.Hidden {
+						continue
+					}
+					values = append(values, option.Value)
+				}
+
+				property.Type = property.Type.WithValues(values)
 			}
 		}
 		properties = append(properties, property)
