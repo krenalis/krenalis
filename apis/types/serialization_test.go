@@ -34,8 +34,8 @@ func TestSerialization(t *testing.T) {
 			Data: `{"name":"Text","byteLen":80,"charLen":100}`,
 			Type: Text(Chars(100), Bytes(80)),
 		}, {
-			Data: `{"name":"Text","values":["a","b"]}`,
-			Type: Text().WithValues([]string{"a", "b"}),
+			Data: `{"name":"Text","enum":["a","b"]}`,
+			Type: Text().WithEnum([]string{"a", "b"}),
 		}, {
 			Data: `{"name":"Decimal"}`,
 			Type: Decimal(0, 0),
@@ -151,18 +151,18 @@ func equalTypes(t1, t2 Type) error {
 			}
 		case []string:
 			if t2.vl == nil {
-				return errors.New("expected values, got nil")
+				return errors.New("expected enum, got nil")
 			}
 			vl2, ok := t2.vl.([]string)
 			if !ok {
-				return fmt.Errorf("expected values, got %T value", t2.vl)
+				return fmt.Errorf("expected enum, got %T value", t2.vl)
 			}
 			if len(vl1) != len(vl2) {
-				return fmt.Errorf("expected %d values, got %d", len(vl1), len(vl2))
+				return fmt.Errorf("expected %d enum values, got %d", len(vl1), len(vl2))
 			}
 			for i, v1 := range vl1 {
 				if v2 := vl2[i]; v1 != v2 {
-					return fmt.Errorf("expected values element %q, got %q", v1, v2)
+					return fmt.Errorf("expected enum value %q, got %q", v1, v2)
 				}
 			}
 		}

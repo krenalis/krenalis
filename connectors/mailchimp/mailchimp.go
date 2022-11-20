@@ -150,7 +150,7 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 		case "address":
 			mergeFields[i].Type = types.JSON()
 		case "radio", "dropdown":
-			field.Type = types.Text().WithValues(mf.Options.Choices)
+			field.Type = types.Text().WithEnum(mf.Options.Choices)
 		default:
 			field.Type = types.Text()
 		}

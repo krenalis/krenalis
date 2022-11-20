@@ -171,7 +171,7 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 					values = append(values, option.Value)
 				}
 
-				property.Type = property.Type.WithValues(values)
+				property.Type = property.Type.WithEnum(values)
 			}
 		}
 		properties = append(properties, property)

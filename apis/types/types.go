@@ -195,7 +195,7 @@ type Type struct {
 
 	// vl can contain one of
 	//   - *regexp.Regexp value of a Text
-	//   - []string with the values of a Text
+	//   - []string with the enum values of a Text
 	//   - []Property of an Object
 	//   - Type of the items of an Array
 	//
@@ -407,23 +407,23 @@ func (t Type) PhysicalType() PhysicalType {
 // Panics if t is not an Array type.
 func (t Type) Item() Type {
 	if t.pt != PtArray {
-		panic("cannot get the item type of a no-array type")
+		panic("cannot get the item type of a non-Array type")
 	}
 	return t.vl.(Type)
 }
 
-// WithValues returns t but with the given values.
+// WithEnum returns t but with a fixed set of values. t must be a Text type.
 // Panics if t is not a Text type, if values is empty, or if t has a regular
 // expression.
-func (t Type) WithValues(values []string) Type {
+func (t Type) WithEnum(values []string) Type {
 	if t.pt != PtText {
-		panic("cannot limit values for a no Text type")
+		panic("cannot set enum for a non-Text type")
 	}
 	if len(values) == 0 {
-		panic("cannot limit to any value")
+		panic("enum is empty")
 	}
 	if _, ok := t.vl.(*regexp.Regexp); ok {
-		panic("cannot set values when there is a regular expression")
+		panic("cannot set enum when there is a regular expression")
 	}
 	vl := make([]string, len(values))
 	copy(vl, values)
@@ -431,11 +431,11 @@ func (t Type) WithValues(values []string) Type {
 	return t
 }
 
-// Values returns the values of t. Returns nil if t has no values.
+// Enum returns the enum values of t. Returns nil if t has no enum.
 // Panics if t is not a Text type.
-func (t Type) Values() []string {
+func (t Type) Enum() []string {
 	if t.pt != PtText {
-		panic("cannot get values for a no Text type")
+		panic("cannot get enum for a non-Text type")
 	}
 	if vl, ok := t.vl.([]string); ok {
 		values := make([]string, len(vl))
@@ -450,7 +450,7 @@ func (t Type) Values() []string {
 // is not in [min,MaxArrayLen].
 func (t Type) WithLen(min, max int) Type {
 	if t.pt != PtArray {
-		panic("cannot set the length of a no Array type")
+		panic("cannot set the length of a non-Array type")
 	}
 	if min < 0 || min > MaxArrayLen {
 		panic("invalid minimum length")
@@ -468,7 +468,7 @@ func (t Type) WithLen(min, max int) Type {
 // Panics if t is not an Array or the item type is Array or Object.
 func (t Type) WithUnique(on bool) Type {
 	if t.pt != PtArray {
-		panic("cannot set unique of a no Array type")
+		panic("cannot set unique of a non-Array type")
 	}
 	if pt := t.vl.(Type).pt; pt == PtArray || pt == PtObject {
 		panic("cannot set unique for items of type Array and Object")
@@ -490,7 +490,7 @@ func (t Type) Custom() string {
 // type. Panics if t is not an Object type.
 func (t Type) Properties() *Properties {
 	if t.pt != PtObject {
-		panic("cannot get the properties of a no-array type")
+		panic("cannot get the properties of a non-Array type")
 	}
 	return &Properties{t.vl.([]Property)}
 }
@@ -505,7 +505,7 @@ func (t Type) LogicalType() (LogicalType, bool) {
 // it returns an empty string. Panics if t is not a Text type.
 func (t Type) Regexp() string {
 	if t.pt != PtText {
-		panic("cannot return regular expression for a no Text type")
+		panic("cannot return regular expression for a non-Text type")
 	}
 	if re, ok := t.vl.(*regexp.Regexp); ok {
 		return re.String()
@@ -518,10 +518,10 @@ func (t Type) Regexp() string {
 // values.
 func (t Type) WithRegexp(re string) Type {
 	if t.pt != PtText {
-		panic("cannot limit to regular expression for a no Text type")
+		panic("cannot set regular expression for a non-Text type")
 	}
 	if _, ok := t.vl.([]string); ok {
-		panic("cannot limit to regular expression if there are values")
+		panic("cannot set regular expression if there is enum")
 	}
 	t.vl = regexp.MustCompile(re)
 	return t
@@ -532,7 +532,7 @@ func (t Type) WithRegexp(re string) Type {
 // Panics if t is not a Text type.
 func (t Type) ByteLen() (int, bool) {
 	if t.pt != PtText {
-		panic("cannot get byte length of a non-text type")
+		panic("cannot get byte length of a non-Text type")
 	}
 	return int(t.p), t.p > 0
 }
@@ -542,7 +542,7 @@ func (t Type) ByteLen() (int, bool) {
 // Panics if t is not a Text type.
 func (t Type) CharLen() (int, bool) {
 	if t.pt != PtText {
-		panic("cannot get character length of a non-text type")
+		panic("cannot get character length of a non-Text type")
 	}
 	return int(t.s), t.s > 0
 }
@@ -551,7 +551,7 @@ func (t Type) CharLen() (int, bool) {
 // Panics if t is not a Decimal type.
 func (t Type) Precision() int {
 	if t.pt != PtDecimal {
-		panic("cannot get precision of a non-decimal type")
+		panic("cannot get precision of a non-Decimal type")
 	}
 	return int(t.p)
 }
@@ -560,7 +560,7 @@ func (t Type) Precision() int {
 // Panics if t is not a Decimal type.
 func (t Type) Scale() int {
 	if t.pt != PtDecimal {
-		panic("cannot get scale of a non-decimal type")
+		panic("cannot get scale of a non-Decimal type")
 	}
 	return int(t.s)
 }

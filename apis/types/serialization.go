@@ -135,7 +135,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 			b.WriteString(vl.String())
 			b.WriteString(`"`)
 		case []string:
-			b.WriteString(`,"values":[`)
+			b.WriteString(`,"enum":[`)
 			for i, v := range vl {
 				if i > 0 {
 					b.WriteByte(',')
@@ -219,7 +219,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	var lt LogicalType
 	var precision, scale, byteLen, charLen int
 	var re *regexp.Regexp
-	var values []string
+	var enum []string
 	var itemsType Type
 	var minItems, maxItems = 0, MaxArrayLen
 	var uniqueItems bool
@@ -273,8 +273,8 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 			if re != nil {
 				return Type{}, errors.New("repeated 'regexp' key")
 			}
-			if values != nil {
-				return Type{}, errors.New("regular expression cannot be provided if values are provided")
+			if enum != nil {
+				return Type{}, errors.New("regular expression cannot be provided if enum is provided")
 			}
 			if expr, ok := tok.(string); ok {
 				re, err = regexp.Compile(expr)
@@ -282,17 +282,17 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 			if re == nil {
 				return Type{}, errors.New("invalid regular expression")
 			}
-		case "values":
-			if values != nil {
-				return Type{}, errors.New("repeated 'values' key")
+		case "enum":
+			if enum != nil {
+				return Type{}, errors.New(`repeated "enum" key`)
 			}
 			if re != nil {
-				return Type{}, errors.New("values cannot be provided if regular expression is provided")
+				return Type{}, errors.New("enum cannot be provided if regular expression is provided")
 			}
 			if d, ok := tok.(json.Delim); !ok || d != '[' {
-				return Type{}, errors.New("invalid values")
+				return Type{}, errors.New("invalid enum")
 			}
-		Values:
+		Enum:
 			for {
 				tok, err = dec.Token()
 				if err != nil {
@@ -300,15 +300,15 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				}
 				switch v := tok.(type) {
 				case string:
-					values = append(values, v)
+					enum = append(enum, v)
 				case json.Delim:
-					break Values
+					break Enum
 				default:
-					return Type{}, errors.New("invalid value in values")
+					return Type{}, errors.New("invalid value in enum")
 				}
 			}
-			if len(values) == 0 {
-				return Type{}, errors.New("invalid empty values")
+			if len(enum) == 0 {
+				return Type{}, errors.New("invalid empty enum")
 			}
 		case "precision":
 			if precision > 0 {
@@ -444,37 +444,37 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	}
 	if re != nil {
 		if pt != PtText {
-			return Type{}, errors.New("unexpected regular expression for no Text type")
+			return Type{}, errors.New("unexpected regular expression for non-Text type")
 		}
 		t.vl = re
 	}
-	if values != nil {
+	if enum != nil {
 		if pt != PtText {
-			return Type{}, errors.New("unexpected values for no Text type")
+			return Type{}, errors.New("unexpected enum for non-Text type")
 		}
-		t.vl = values
+		t.vl = enum
 	}
 	if byteLen > 0 {
 		if pt != PtText {
-			return Type{}, errors.New("unexpected length in bytes for no Text type")
+			return Type{}, errors.New("unexpected length in bytes for non-Text type")
 		}
 		t.p = int32(byteLen)
 	}
 	if charLen > 0 {
 		if pt != PtText {
-			return Type{}, errors.New("unexpected length in characters for no Text type")
+			return Type{}, errors.New("unexpected length in characters for non-Text type")
 		}
 		t.s = int32(charLen)
 	}
 	if precision > 0 {
 		if pt != PtDecimal {
-			return Type{}, errors.New("unexpected precision for no Decimal type")
+			return Type{}, errors.New("unexpected precision for non-Decimal type")
 		}
 		t.p = int32(precision)
 	}
 	if scale > 0 {
 		if pt != PtDecimal {
-			return Type{}, errors.New("unexpected scale for no Decimal type")
+			return Type{}, errors.New("unexpected scale for non-Decimal type")
 		}
 		if precision < scale {
 			if precision == 0 {
@@ -496,13 +496,13 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	}
 	if minItems > 0 {
 		if pt != PtArray {
-			return Type{}, errors.New("unexpected minItems for no Array type")
+			return Type{}, errors.New("unexpected minItems for non-Array type")
 		}
 		t.p = int32(minItems)
 	}
 	if maxItems < MaxArrayLen {
 		if pt != PtArray {
-			return Type{}, errors.New("unexpected maxItems for no Array type")
+			return Type{}, errors.New("unexpected maxItems for non-Array type")
 		}
 		if maxItems < minItems {
 			return Type{}, errors.New("maxItems must be greater or equal to minItems")
@@ -526,7 +526,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		}
 	} else {
 		if pt != PtObject {
-			return Type{}, errors.New("unexpected properties for no Object type")
+			return Type{}, errors.New("unexpected properties for non-Object type")
 		}
 		t.vl = properties
 	}
