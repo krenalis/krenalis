@@ -72,20 +72,28 @@ var physicalName = []string{
 	"Object",
 }
 
-func isPhysicalType(pt PhysicalType) bool {
-	return 1 <= pt && int(pt) <= len(physicalName)
-}
-
-func isLogicalType(lt LogicalType) bool {
-	return 1 <= lt && int(lt) <= len(logicalName)
-}
-
 // String returns the name of pt. Panics if pt is not a physical type.
 func (pt PhysicalType) String() string {
-	if !isPhysicalType(pt) {
+	if !pt.Valid() {
 		panic("invalid physical type")
 	}
 	return physicalName[pt-1]
+}
+
+// Valid reports whether pt is a valid physical type.
+func (pt PhysicalType) Valid() bool {
+	return 1 <= pt && int(pt) <= len(physicalName)
+}
+
+// PhysicalTypeByName returns a physical type by its name. The second return
+// parameter reports whether a physical type with the given name exists.
+func PhysicalTypeByName(name string) (PhysicalType, bool) {
+	for i, n := range physicalName {
+		if n == name {
+			return PhysicalType(i + 1), true
+		}
+	}
+	return 0, false
 }
 
 // LogicalType represents a logical type.
@@ -134,18 +142,34 @@ var logicalName = []string{
 
 // String returns the name of lt. Panics if lt is not a logical type.
 func (lt LogicalType) String() string {
-	if !isLogicalType(lt) {
+	if !lt.Valid() {
 		panic("invalid logical type")
 	}
 	return logicalName[lt-1]
 }
 
+// Valid reports whether lt is a valid logical type.
+func (lt LogicalType) Valid() bool {
+	return 1 <= lt && int(lt) <= len(logicalName)
+}
+
+// LogicalTypeByName returns a logical type by its name. The second return
+// parameter reports whether a logical type with the given name exists.
+func LogicalTypeByName(name string) (LogicalType, bool) {
+	for i, n := range logicalName {
+		if n == name {
+			return LogicalType(i + 1), true
+		}
+	}
+	return 0, false
+}
+
 // Property represents an object property.
 type Property struct {
-	Name        string `json:"name"`
-	Label       string `json:"label,omitempty"`
-	Description string `json:"description,omitempty"`
-	Type        Type   `json:"type"`
+	Name        string
+	Label       string
+	Description string
+	Type        Type
 }
 
 // Type represents a type.
@@ -163,6 +187,9 @@ type Type struct {
 	//   - Type of the items of an Array
 	//
 	vl any
+
+	// custom type. Empty for non-custom types.
+	custom string
 }
 
 // Array returns an Array type with items of type t.
@@ -326,10 +353,26 @@ func Text(lengths ...Length) Type {
 	return t
 }
 
+// AsCustom returns t as a custom type called name.
+// Panics if t is not valid, or t is already a custom type or name is empty.
+func (t Type) AsCustom(name string) Type {
+	if !t.Valid() {
+		panic("type is not valid")
+	}
+	if t.custom != "" {
+		panic("type is already a custom type")
+	}
+	if name == "" {
+		panic("custom type name is empty")
+	}
+	t.custom = name
+	return t
+}
+
 // WithLogicalType returns the type t but with the logical type lt.
 // Panics if lt is not a logical type.
 func (t Type) WithLogicalType(lt LogicalType) Type {
-	if !isLogicalType(lt) {
+	if !lt.Valid() {
 		panic("invalid logical type")
 	}
 	t.lt = lt
@@ -383,24 +426,13 @@ func (t Type) Values() []string {
 	return nil
 }
 
-// Properties is an iterator to iterate over the properties of an object.
-type Properties struct {
-	pr []Property
-}
-
-// Next returns the next property of the iterator.
-// If there are no more properties, it returns Property{} and false.
-func (si *Properties) Next() (Property, bool) {
-	if si.pr == nil {
-		panic("next on a ended iterator")
+// Custom returns the custom name of t. If t is not a custom type it returns an empty
+// string. Panics if t is not a valid type.
+func (t Type) Custom() string {
+	if !t.Valid() {
+		panic("type is not valid")
 	}
-	if len(si.pr) == 0 {
-		si.pr = nil
-		return Property{}, false
-	}
-	p := si.pr[0]
-	si.pr = si.pr[1:]
-	return p, true
+	return t.custom
 }
 
 // Properties returns an iterator to iterate over the properties of an Object
@@ -515,6 +547,26 @@ func (t Type) String() string {
 // Valid indicates if t is valid.
 func (t Type) Valid() bool {
 	return t.pt != 0
+}
+
+// Properties is an iterator to iterate over the properties of an object.
+type Properties struct {
+	pr []Property
+}
+
+// Next returns the next property of the iterator.
+// If there are no more properties, it returns Property{} and false.
+func (si *Properties) Next() (Property, bool) {
+	if si.pr == nil {
+		panic("next on a ended iterator")
+	}
+	if len(si.pr) == 0 {
+		si.pr = nil
+		return Property{}, false
+	}
+	p := si.pr[0]
+	si.pr = si.pr[1:]
+	return p, true
 }
 
 // Length represents a Text length.

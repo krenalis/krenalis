@@ -14,11 +14,93 @@ import (
 	"io"
 	"regexp"
 	"strconv"
+	"strings"
 )
+
+// Resolver resolves a custom type name to its type. If a custom type with the
+// given name does not exist, it returns a ErrCustomTypeNotExist error.
+type Resolver func(name string) (Type, error)
+
+// A ErrCustomTypeNotExist error is returned by a Resolver function when the
+// custom type to resolve does not exist.
+var ErrCustomTypeNotExist = errors.New("custom type does not exist")
+
+// MarshalType marshals t into JSON.
+func MarshalType(t Type) ([]byte, error) {
+	var b bytes.Buffer
+	marshalType(&b, t)
+	return b.Bytes(), nil
+}
+
+// UnmarshalType parses the JSON-encoded data and returns the decoded type.
+func UnmarshalType(data []byte, resolve Resolver) (Type, error) {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	t, err := unmarshalType(dec, resolve)
+	if err == io.EOF {
+		err = io.ErrUnexpectedEOF
+	}
+	return t, err
+}
 
 // MarshalJSON marshals t into JSON.
 func (t Type) MarshalJSON() ([]byte, error) {
 	var b bytes.Buffer
+	marshalType(&b, t)
+	return b.Bytes(), nil
+}
+
+// UnmarshalJSON parses the JSON-encoded data and stores the result in the type
+// pointed by t.
+func (t *Type) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	t2, err := unmarshalType(dec, nil)
+	if err != nil {
+		return err
+	}
+	*t = t2
+	return nil
+}
+
+// MarshalJSON marshals property p into JSON.
+func (p Property) MarshalJSON() ([]byte, error) {
+	if !p.Type.Valid() {
+		return nil, errors.New("property type is not valid")
+	}
+	var b bytes.Buffer
+	marshalProperty(&b, p)
+	return b.Bytes(), nil
+}
+
+// UnmarshalJSON parses the JSON-encoded data and stores the result in the
+// property pointed by p.
+func (p *Property) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	// Read delimiter '{'.
+	tok, err := dec.Token()
+	if err != nil {
+		return err
+	}
+	if d, ok := tok.(json.Delim); !ok || d != '{' {
+		return errors.New("invalid property syntax")
+	}
+	// Read the property.
+	p2, err := unmarshalProperty(dec, nil)
+	if err != nil {
+		return err
+	}
+	*p = p2
+	return nil
+}
+
+// marshalType marshals t as JSON and writes it to b.
+func marshalType(b *bytes.Buffer, t Type) {
+	if t.custom != "" {
+		marshalString(b, t.custom)
+		return
+	}
 	b.WriteString(`{"name":"`)
 	b.WriteString(t.pt.String())
 	b.WriteString(`"`)
@@ -52,79 +134,77 @@ func (t Type) MarshalJSON() ([]byte, error) {
 			b.WriteString(vl.String())
 			b.WriteString(`"`)
 		case []string:
-			b.WriteString(`,"values":`)
-			values, err := json.Marshal(vl)
-			if err != nil {
-				return nil, err
+			b.WriteString(`,"values":[`)
+			for i, v := range vl {
+				if i > 0 {
+					b.WriteByte(',')
+				}
+				marshalString(b, v)
 			}
-			b.Write(values)
+			b.WriteByte(']')
 		}
 	case PtArray:
 		b.WriteString(`,"items":`)
-		p, err := t.vl.(Type).MarshalJSON()
-		if err != nil {
-			return nil, err
-		}
-		b.Write(p)
+		marshalType(b, t.vl.(Type))
 	case PtObject:
 		b.WriteString(`,"properties":[`)
 		properties := t.vl.([]Property)
-		for i, field := range properties {
+		for i, p := range properties {
 			if i > 0 {
 				b.WriteString(",")
 			}
-			p, err := json.Marshal(field)
-			if err != nil {
-				return nil, err
-			}
-			b.Write(p)
+			marshalProperty(b, p)
 		}
 		b.WriteString("]")
 	}
 	b.WriteString(`}`)
-	return b.Bytes(), nil
-}
-
-// UnmarshalJSON parses the JSON-encoded data and returns the decoded type.
-func UnmarshalJSON(data []byte) (Type, error) {
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	t, err := unmarshalType(dec)
-	if err == io.EOF {
-		err = io.ErrUnexpectedEOF
-	}
-	return t, err
-}
-
-// UnmarshalJSON parses the JSON-encoded data and stores the result in the type
-// pointed by t.
-func (t *Type) UnmarshalJSON(data []byte) error {
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	t2, err := unmarshalType(dec)
-	if err != nil {
-		return err
-	}
-	*t = t2
-	return nil
 }
 
 // unmarshalType reads the JSON tokens from dec and returns the decoded type.
-func unmarshalType(dec *json.Decoder) (Type, error) {
+// For custom types, it calls the resolve function to resolve the type custom
+// name to its type.
+func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 
-	var t Type
-
-	// Read delimiter '{'.
+	// Read a type custom or delimiter '{'.
 	tok, err := dec.Token()
 	if err != nil {
-		return t, err
-	}
-	delim, ok := tok.(json.Delim)
-	if !ok || delim != '{' {
-		return t, errors.New("invalid type syntax")
+		return Type{}, err
 	}
 
-	// Unmarshal any other type.
+	// Resolve custom type.
+	if name, ok := tok.(string); ok {
+		if name == "" {
+			return Type{}, errors.New("empty custom type name")
+		}
+		if resolve == nil {
+			return Type{}, errors.New("unknown custom type")
+		}
+		t, err := resolve(name)
+		if err != nil {
+			if err == ErrCustomTypeNotExist {
+				return Type{}, errors.New("unknown custom type")
+			}
+			return Type{}, err
+		}
+		if !t.Valid() {
+			return Type{}, errors.New("resolve has returned an invalid type")
+		}
+		if t.custom == "" {
+			return Type{}, errors.New("resolve has returned a non-custom type")
+		}
+		if t.custom != name {
+			return Type{}, errors.New("resolve has not returned the named custom type")
+		}
+		return t, nil
+	}
+
+	delim, ok := tok.(json.Delim)
+	if !ok || delim != '{' {
+		return Type{}, errors.New("invalid type syntax")
+	}
+
+	var pt PhysicalType
+	var lt LogicalType
 	var precision, scale, byteLen, charLen int
 	var re *regexp.Regexp
 	var values []string
@@ -137,7 +217,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		// Read the key or the delimiter '}'.
 		tok, err = dec.Token()
 		if err != nil {
-			return t, err
+			return Type{}, err
 		}
 		if _, ok = tok.(json.Delim); ok {
 			break
@@ -145,9 +225,9 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		key := tok.(string)
 
 		if key == "items" {
-			items, err = unmarshalType(dec)
+			items, err = unmarshalType(dec, resolve)
 			if err != nil {
-				return t, err
+				return Type{}, err
 			}
 			continue
 		}
@@ -155,56 +235,54 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		// Read the value.
 		tok, err = dec.Token()
 		if err != nil {
-			return t, err
+			return Type{}, err
 		}
 
 		switch key {
 		case "name":
-			if name, ok := tok.(string); ok {
-				for i, n := range physicalName {
-					if n == name {
-						t.pt = PhysicalType(i + 1)
-						break
-					}
-				}
+			if pt.Valid() {
+				return Type{}, errors.New("repeated 'name' key")
 			}
-			if t.pt == 0 {
-				return t, errors.New("invalid physical type")
+			pt, ok = PhysicalTypeByName(tok.(string))
+			if !ok {
+				return Type{}, errors.New("invalid physical type")
 			}
 		case "logical":
-			if name, ok := tok.(string); ok {
-				for i, n := range logicalName {
-					if n == name {
-						t.lt = LogicalType(i + 1)
-						break
-					}
-				}
+			if lt.Valid() {
+				return Type{}, errors.New("repeated 'logical' key")
 			}
-			if t.lt == 0 {
-				return t, errors.New("invalid logical type")
+			lt, ok = LogicalTypeByName(tok.(string))
+			if !ok {
+				return Type{}, errors.New("invalid logical type")
 			}
 		case "regexp":
+			if re != nil {
+				return Type{}, errors.New("repeated 'regexp' key")
+			}
+			if values != nil {
+				return Type{}, errors.New("regular expression cannot be provided if values are provided")
+			}
 			if expr, ok := tok.(string); ok {
 				re, err = regexp.Compile(expr)
 			}
 			if re == nil {
-				return t, errors.New("invalid regular expression")
-			}
-			if values != nil {
-				return t, errors.New("regular expression cannot be provided if values is provided")
+				return Type{}, errors.New("invalid regular expression")
 			}
 		case "values":
-			if d, ok := tok.(json.Delim); !ok || d != '[' {
-				return t, errors.New("invalid values")
-			}
 			if values != nil {
-				return t, errors.New("repeated 'values' key")
+				return Type{}, errors.New("repeated 'values' key")
+			}
+			if re != nil {
+				return Type{}, errors.New("values cannot be provided if regular expression is provided")
+			}
+			if d, ok := tok.(json.Delim); !ok || d != '[' {
+				return Type{}, errors.New("invalid values")
 			}
 		Values:
 			for {
 				tok, err = dec.Token()
 				if err != nil {
-					return t, err
+					return Type{}, err
 				}
 				switch v := tok.(type) {
 				case string:
@@ -212,150 +290,103 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				case json.Delim:
 					break Values
 				default:
-					return t, errors.New("invalid value in values")
+					return Type{}, errors.New("invalid value in values")
 				}
 			}
 			if len(values) == 0 {
-				return t, errors.New("invalid empty values")
-			}
-			if re != nil {
-				return t, errors.New("values cannot be provided if regular expression is provided")
+				return Type{}, errors.New("invalid empty values")
 			}
 		case "precision":
+			if precision > 0 {
+				return Type{}, errors.New("repeated 'precision' key")
+			}
 			n, ok := tok.(json.Number)
 			if !ok {
-				return t, errors.New("invalid precision")
+				return Type{}, errors.New("invalid precision")
 			}
 			precision, _ = strconv.Atoi(string(n))
 			if precision <= 0 || precision > MaxDecimalPrecision {
-				return t, errors.New("invalid precision")
+				return Type{}, errors.New("invalid precision")
 			}
 		case "scale":
+			if scale > 0 {
+				return Type{}, errors.New("repeated 'scale' key")
+			}
 			n, ok := tok.(json.Number)
 			if !ok {
-				return t, errors.New("invalid scale")
+				return Type{}, errors.New("invalid scale")
 			}
 			scale, _ = strconv.Atoi(string(n))
 			if scale <= 0 || scale > MaxDecimalScale {
-				return t, errors.New("invalid scale")
+				return Type{}, errors.New("invalid scale")
 			}
 		case "byteLen":
+			if byteLen > 0 {
+				return Type{}, errors.New("repeated 'byteLen' key")
+			}
 			n, ok := tok.(json.Number)
 			if !ok {
-				return t, errors.New("invalid length in bytes")
+				return Type{}, errors.New("invalid length in bytes")
 			}
 			byteLen, _ = strconv.Atoi(string(n))
 			if byteLen <= 0 || byteLen > MaxTextLen {
-				return t, errors.New("invalid length in bytes")
+				return Type{}, errors.New("invalid length in bytes")
 			}
 		case "charLen":
+			if charLen > 0 {
+				return Type{}, errors.New("repeated 'charLen' key")
+			}
 			n, ok := tok.(json.Number)
 			if !ok {
-				return t, errors.New("invalid length in characters")
+				return Type{}, errors.New("invalid length in characters")
 			}
 			charLen, _ = strconv.Atoi(string(n))
 			if charLen <= 0 || charLen > MaxTextLen {
-				return t, errors.New("invalid length in characters")
+				return Type{}, errors.New("invalid length in characters")
 			}
 		case "properties":
-			if d, ok := tok.(json.Delim); !ok || d != '[' {
-				return t, errors.New("invalid properties")
+			if properties != nil {
+				return Type{}, errors.New("repeated 'properties' key")
 			}
-		Properties:
+			if d, ok := tok.(json.Delim); !ok || d != '[' {
+				return Type{}, errors.New("invalid properties")
+			}
 			for {
-				var property Property
-
 				// Read delimiter '{' or ']'.
-				tok, err = dec.Token()
+				tok, err := dec.Token()
 				if err != nil {
-					return t, err
+					return Type{}, err
 				}
-				delim, ok = tok.(json.Delim)
-				if !ok {
-					return t, errors.New("invalid struct syntax")
+				d, ok := tok.(json.Delim)
+				if !ok || d != '{' && d != ']' {
+					return Type{}, errors.New("invalid property syntax")
 				}
-				if delim == ']' {
-					break Properties
+				if d == ']' {
+					break
 				}
-				if delim != '{' {
-					return t, errors.New("invalid struct syntax")
+				property, err := unmarshalProperty(dec, resolve)
+				if err != nil {
+					return Type{}, err
 				}
-
-				// Read property keys and values.
-				for {
-
-					// Read a key or delimiter '}'.
-					tok, err = dec.Token()
-					if err != nil {
-						return t, err
-					}
-					if _, ok := tok.(json.Delim); ok {
-						break
-					}
-					key := tok.(string)
-
-					if key == "type" {
-						property.Type, err = unmarshalType(dec)
-						if err != nil {
-							return t, err
-						}
-						continue
-					}
-
-					// Read the value.
-					tok, err = dec.Token()
-					if err != nil {
-						return t, err
-					}
-
-					switch key {
-					case "name":
-						property.Name, ok = tok.(string)
-						if !ok {
-							return t, errors.New("unexpected value for property name")
-						}
-						if property.Name == "" {
-							return t, errors.New("unexpected empty property name")
-						}
-					case "label":
-						property.Label, ok = tok.(string)
-						if !ok {
-							return t, errors.New("unexpected value for property label")
-						}
-						if property.Label == "" {
-							return t, errors.New("unexpected empty property label")
-						}
-					case "description":
-						property.Description, ok = tok.(string)
-						if !ok {
-							return t, errors.New("unexpected value for property description")
-						}
-						if property.Description == "" {
-							return t, errors.New("unexpected empty property description")
-						}
-					default:
-						return t, errors.New("unknown property key")
-					}
-
-				}
-
-				if property.Name == "" {
-					return t, errors.New("missing property name")
-				}
-				if property.Type.pt == 0 {
-					return t, errors.New("missing property type")
-				}
-
 				properties = append(properties, property)
 			}
+			if properties == nil {
+				return Type{}, errors.New("invalid empty properties")
+			}
 		default:
-			return t, errors.New("unknown key")
+			return Type{}, errors.New("unknown key")
 		}
 
 	}
 
-	if t.pt == 0 {
+	var t Type
+
+	if !pt.Valid() {
 		return Type{}, errors.New("missing physical type")
+	}
+	t.pt = pt
+	if lt.Valid() {
+		t.lt = lt
 	}
 	if re != nil {
 		if t.pt != PtText {
@@ -399,15 +430,15 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 		t.s = int32(scale)
 	}
-	if items.pt == 0 {
-		if t.pt == PtArray {
-			return Type{}, errors.New("missing array items type")
-		}
-	} else {
+	if items.Valid() {
 		if t.pt != PtArray {
 			return Type{}, errors.New("unexpected items for no Array type")
 		}
 		t.vl = items
+	} else {
+		if t.pt == PtArray {
+			return Type{}, errors.New("missing array items type")
+		}
 	}
 	if properties == nil {
 		if t.pt == PtObject {
@@ -421,4 +452,143 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	}
 
 	return t, nil
+}
+
+// marshalProperty marshals p as JSON and writes it to b.
+func marshalProperty(b *bytes.Buffer, p Property) {
+	b.WriteString(`{"name":`)
+	marshalString(b, p.Name)
+	if p.Label != "" {
+		b.WriteString(`,"label":"`)
+		marshalString(b, p.Label)
+	}
+	if p.Description != "" {
+		b.WriteString(`,"description":"`)
+		marshalString(b, p.Description)
+	}
+	b.WriteString(`,"type":`)
+	marshalType(b, p.Type)
+	b.WriteByte('}')
+}
+
+// unmarshalProperty reads the JSON tokens from dec, which must have already
+// read the token '{', and returns the decoded property. For custom types, it
+// calls the resolve function to resolve the type custom name to its type.
+func unmarshalProperty(dec *json.Decoder, resolve Resolver) (Property, error) {
+
+	var p Property
+
+	// Read property keys and values.
+	for {
+
+		// Read a key or delimiter '}'.
+		tok, err := dec.Token()
+		if err != nil {
+			return Property{}, err
+		}
+		if _, ok := tok.(json.Delim); ok {
+			break
+		}
+		key := tok.(string)
+
+		if key == "type" {
+			if p.Type.Valid() {
+				return Property{}, errors.New("repeated 'type' key")
+			}
+			p.Type, err = unmarshalType(dec, resolve)
+			if err != nil {
+				return Property{}, err
+			}
+			continue
+		}
+
+		// Read the value.
+		tok, err = dec.Token()
+		if err != nil {
+			return Property{}, err
+		}
+
+		var ok bool
+
+		switch key {
+		case "name":
+			if p.Name != "" {
+				return Property{}, errors.New("repeated 'name' key")
+			}
+			p.Name, ok = tok.(string)
+			if !ok {
+				return Property{}, errors.New("unexpected value for property name")
+			}
+			if p.Name == "" {
+				return Property{}, errors.New("unexpected empty property name")
+			}
+		case "label":
+			if p.Label != "" {
+				return Property{}, errors.New("repeated 'label' key")
+			}
+			p.Label, ok = tok.(string)
+			if !ok {
+				return Property{}, errors.New("unexpected value for property label")
+			}
+			if p.Label == "" {
+				return Property{}, errors.New("unexpected empty property label")
+			}
+		case "description":
+			if p.Description != "" {
+				return Property{}, errors.New("repeated 'description' key")
+			}
+			p.Description, ok = tok.(string)
+			if !ok {
+				return Property{}, errors.New("unexpected value for property description")
+			}
+			if p.Description == "" {
+				return Property{}, errors.New("unexpected empty property description")
+			}
+		default:
+			return Property{}, errors.New("unknown property key")
+		}
+
+	}
+
+	if p.Name == "" {
+		return Property{}, errors.New("missing property name")
+	}
+	if !p.Type.Valid() {
+		return Property{}, errors.New("missing property type")
+	}
+
+	return p, nil
+}
+
+// marshalString marshals s as a JSON string and writes it to b.
+func marshalString(b *bytes.Buffer, s string) {
+	b.WriteByte('"')
+	for len(s) > 0 {
+		i := strings.IndexAny(s, "&'<>\"\r")
+		if i == -1 {
+			b.WriteString(s)
+			break
+		}
+		if i > 0 {
+			b.WriteString(s[:i])
+		}
+		var esc string
+		switch s[i] {
+		case '&':
+			esc = "&amp;"
+		case '\'':
+			esc = "&#39;"
+		case '<':
+			esc = "&lt;"
+		case '>':
+			esc = "&gt;"
+		case '"':
+			esc = "&#34;"
+		case '\r':
+			esc = "&#13;"
+		}
+		b.WriteString(esc)
+		s = s[i+1:]
+	}
+	b.WriteByte('"')
 }

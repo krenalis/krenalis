@@ -17,8 +17,9 @@ import (
 func TestSerialization(t *testing.T) {
 
 	tests := []struct {
-		Data string
-		Type Type
+		Data    string
+		Type    Type
+		Resolve Resolver
 	}{
 		{
 			Data: `{"name":"Text"}`,
@@ -50,13 +51,22 @@ func TestSerialization(t *testing.T) {
 		}, {
 			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"}},{"name":"size","type":{"name":"Decimal"}}]}`,
 			Type: Object([]Property{{Name: "email", Type: Text()}, {Name: "size", Type: Decimal(0, 0)}}),
+		}, {
+			Data: `{"name":"Object","properties":[{"name":"email","type":"Email"}]}`,
+			Type: Object([]Property{{Name: "email", Type: Text(Chars(120)).WithRegexp(`@`).AsCustom("Email")}}),
+			Resolve: func(name string) (Type, error) {
+				if name != "Email" {
+					return Type{}, ErrCustomTypeNotExist
+				}
+				return Text(Chars(120)).WithRegexp(`@`).AsCustom("Email"), nil
+			},
 		},
 	}
 
 	for _, test := range tests {
-		got, err := UnmarshalJSON([]byte(test.Data))
+		got, err := UnmarshalType([]byte(test.Data), test.Resolve)
 		if err != nil {
-			t.Errorf("cannot unmarshalType %q: %s", test.Data, err)
+			t.Errorf("cannot unmarshal type %q: %s", test.Data, err)
 			continue
 		}
 		if err = equalTypes(test.Type, got); err != nil {
@@ -79,7 +89,7 @@ func TestSerialization(t *testing.T) {
 func equalTypes(t1, t2 Type) error {
 	// Physical type.
 	if t1.pt != t2.pt {
-		if !isPhysicalType(t2.pt) {
+		if !t2.pt.Valid() {
 			return fmt.Errorf("unknows physical type %d", t2.pt)
 		}
 		return fmt.Errorf("expected physical type %s, got %s", t1.pt, t2.pt)
@@ -89,7 +99,7 @@ func equalTypes(t1, t2 Type) error {
 		if t2.lt == 0 {
 			return fmt.Errorf("expected logical type %s, got no logical type", t1.pt)
 		}
-		if !isLogicalType(t2.lt) {
+		if !t2.lt.Valid() {
 			return fmt.Errorf("unknows logical type %d", t2.pt)
 		}
 		return fmt.Errorf("expected logical type %s, got %s", t1.pt, t2.pt)
@@ -187,6 +197,15 @@ func equalTypes(t1, t2 Type) error {
 				return err
 			}
 		}
+	}
+	if t1.custom != t2.custom {
+		if t1.custom == "" {
+			return fmt.Errorf("expected non-custom type, got custom type %q", t2.custom)
+		}
+		if t2.custom == "" {
+			return fmt.Errorf("expected custom type %q, got non-custom type", t1.custom)
+		}
+		return fmt.Errorf("expected custom type %q, got custom type %q", t1.custom, t2.custom)
 	}
 	return nil
 }
