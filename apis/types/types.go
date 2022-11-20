@@ -198,6 +198,7 @@ func Array(t Type) Type {
 }
 
 // Object returns an Object type with the given properties.
+// Panics if properties is empty, or if a property name is empty or repeated.
 func Object(properties []Property) Type {
 	if len(properties) == 0 {
 		panic("no property in object")
@@ -206,6 +207,11 @@ func Object(properties []Property) Type {
 	for i, property := range properties {
 		if property.Name == "" {
 			panic("empty property name")
+		}
+		for _, p := range pr[:i] {
+			if property.Name == p.Name {
+				panic("property name is repeated")
+			}
 		}
 		pr[i] = property
 	}

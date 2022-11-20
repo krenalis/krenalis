@@ -368,6 +368,11 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				if err != nil {
 					return Type{}, err
 				}
+				for _, p := range properties {
+					if property.Name == p.Name {
+						return Type{}, errors.New("property name is repeated")
+					}
+				}
 				properties = append(properties, property)
 			}
 			if properties == nil {
