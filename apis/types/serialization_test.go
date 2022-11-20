@@ -49,8 +49,8 @@ func TestSerialization(t *testing.T) {
 			Data: `{"name":"Array","items":{"name":"Text"}}`,
 			Type: Array(Text()),
 		}, {
-			Data: `{"name":"Array","minItems":2,"maxItems":8,"items":{"name":"Decimal"}}`,
-			Type: Array(Decimal(0, 0)).WithLen(2, 8),
+			Data: `{"name":"Array","minItems":2,"maxItems":8,"uniqueItems":true,"items":{"name":"Decimal"}}`,
+			Type: Array(Decimal(0, 0)).WithLen(2, 8).WithUnique(true),
 		}, {
 			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"}},{"name":"size","type":{"name":"Decimal"}}]}`,
 			Type: Object([]Property{{Name: "email", Type: Text()}, {Name: "size", Type: Decimal(0, 0)}}),
@@ -167,8 +167,14 @@ func equalTypes(t1, t2 Type) error {
 			}
 		}
 	}
-	// Array items type.
+	// unique items and items type.
 	if t1.pt == PtArray {
+		if t1.unique != t2.unique {
+			if t1.unique {
+				return errors.New("expected unique items, got non-unique")
+			}
+			return errors.New("expected non-unique items, got unique")
+		}
 		if t2.vl == nil {
 			return errors.New("expected array items type, got nil")
 		}

@@ -152,6 +152,9 @@ func marshalType(b *bytes.Buffer, t Type) {
 			b.WriteString(`,"maxItems":`)
 			b.WriteString(strconv.Itoa(int(t.s)))
 		}
+		if t.unique {
+			b.WriteString(`,"uniqueItems":true`)
+		}
 		b.WriteString(`,"items":`)
 		marshalType(b, t.vl.(Type))
 	case PtObject:
@@ -218,6 +221,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	var values []string
 	var items Type
 	var minItems, maxItems = 0, MaxArrayLen
+	var uniqueItems bool
 	var properties []Property
 
 	// Read type keys and values.
@@ -377,6 +381,14 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 			if maxItems < 0 || maxItems >= MaxArrayLen {
 				return Type{}, errors.New("invalid maximum items")
 			}
+		case "uniqueItems":
+			if uniqueItems == true {
+				return Type{}, errors.New("repeated 'uniqueItems' key")
+			}
+			uniqueItems, ok = tok.(bool)
+			if !ok || !uniqueItems {
+				return Type{}, errors.New("invalid unique items")
+			}
 		case "properties":
 			if properties != nil {
 				return Type{}, errors.New("repeated 'properties' key")
@@ -427,37 +439,37 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		t.lt = lt
 	}
 	if re != nil {
-		if t.pt != PtText {
+		if pt != PtText {
 			return Type{}, errors.New("unexpected regular expression for no Text type")
 		}
 		t.vl = re
 	}
 	if values != nil {
-		if t.pt != PtText {
+		if pt != PtText {
 			return Type{}, errors.New("unexpected values for no Text type")
 		}
 		t.vl = values
 	}
 	if byteLen > 0 {
-		if t.pt != PtText {
+		if pt != PtText {
 			return Type{}, errors.New("unexpected length in bytes for no Text type")
 		}
 		t.p = int32(byteLen)
 	}
 	if charLen > 0 {
-		if t.pt != PtText {
+		if pt != PtText {
 			return Type{}, errors.New("unexpected length in characters for no Text type")
 		}
 		t.s = int32(charLen)
 	}
 	if precision > 0 {
-		if t.pt != PtDecimal {
+		if pt != PtDecimal {
 			return Type{}, errors.New("unexpected precision for no Decimal type")
 		}
 		t.p = int32(precision)
 	}
 	if scale > 0 {
-		if t.pt != PtDecimal {
+		if pt != PtDecimal {
 			return Type{}, errors.New("unexpected scale for no Decimal type")
 		}
 		if precision < scale {
@@ -469,23 +481,23 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		t.s = int32(scale)
 	}
 	if items.Valid() {
-		if t.pt != PtArray {
+		if pt != PtArray {
 			return Type{}, errors.New("unexpected items for no Array type")
 		}
 		t.vl = items
 	} else {
-		if t.pt == PtArray {
+		if pt == PtArray {
 			return Type{}, errors.New("missing array items type")
 		}
 	}
 	if minItems > 0 {
-		if t.pt != PtArray {
+		if pt != PtArray {
 			return Type{}, errors.New("unexpected minItems for no Array type")
 		}
 		t.p = int32(minItems)
 	}
 	if maxItems < MaxArrayLen {
-		if t.pt != PtArray {
+		if pt != PtArray {
 			return Type{}, errors.New("unexpected maxItems for no Array type")
 		}
 		if maxItems < minItems {
@@ -495,12 +507,21 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	if pt == PtArray {
 		t.s = int32(maxItems)
 	}
+	if uniqueItems {
+		if pt != PtArray {
+			return Type{}, errors.New("unexpected uniqueItems for no Array type")
+		}
+		if pt := t.vl.(Type).pt; pt == PtArray || pt == PtObject {
+			return Type{}, errors.New("unexpected uniqueItems for items with type Array or Object")
+		}
+		t.unique = uniqueItems
+	}
 	if properties == nil {
-		if t.pt == PtObject {
+		if pt == PtObject {
 			return Type{}, errors.New("missing object properties")
 		}
 	} else {
-		if t.pt != PtObject {
+		if pt != PtObject {
 			return Type{}, errors.New("unexpected properties for no Object type")
 		}
 		t.vl = properties

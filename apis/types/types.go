@@ -178,6 +178,9 @@ type Type struct {
 	pt PhysicalType
 	lt LogicalType
 
+	// u reports whether the items of an Array must be unique.
+	unique bool
+
 	// p represents
 	//   - precision of a Decimal type
 	//   - length in bytes of a Text type
@@ -457,6 +460,20 @@ func (t Type) WithLen(min, max int) Type {
 	}
 	t.p = int32(min)
 	t.s = int32(max)
+	return t
+}
+
+// WithUnique returns the type t but with unique items. t must be an Array and
+// the item type cannot be Array and Object.
+// Panics if t is not an Array or the item type is Array or Object.
+func (t Type) WithUnique(on bool) Type {
+	if t.pt != PtArray {
+		panic("cannot set unique of a no Array type")
+	}
+	if pt := t.vl.(Type).pt; pt == PtArray || pt == PtObject {
+		panic("cannot set unique for items of type Array and Object")
+	}
+	t.unique = on
 	return t
 }
 
