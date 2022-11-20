@@ -46,10 +46,10 @@ func TestSerialization(t *testing.T) {
 			Data: `{"name":"Decimal","precision":10,"scale":8}`,
 			Type: Decimal(10, 8),
 		}, {
-			Data: `{"name":"Array","items":{"name":"Text"}}`,
+			Data: `{"name":"Array","itemsType":{"name":"Text"}}`,
 			Type: Array(Text()),
 		}, {
-			Data: `{"name":"Array","minItems":2,"maxItems":8,"uniqueItems":true,"items":{"name":"Decimal"}}`,
+			Data: `{"name":"Array","minItems":2,"maxItems":8,"uniqueItems":true,"itemsType":{"name":"Decimal"}}`,
 			Type: Array(Decimal(0, 0)).WithLen(2, 8).WithUnique(true),
 		}, {
 			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"}},{"name":"size","type":{"name":"Decimal"}}]}`,
@@ -176,7 +176,7 @@ func equalTypes(t1, t2 Type) error {
 			return errors.New("expected non-unique items, got unique")
 		}
 		if t2.vl == nil {
-			return errors.New("expected array items type, got nil")
+			return errors.New("expected items type, got nil")
 		}
 		if err := equalTypes(t1.vl.(Type), t2.vl.(Type)); err != nil {
 			return err

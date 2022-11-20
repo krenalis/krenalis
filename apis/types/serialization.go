@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"regexp"
 	"strconv"
@@ -155,7 +156,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 		if t.unique {
 			b.WriteString(`,"uniqueItems":true`)
 		}
-		b.WriteString(`,"items":`)
+		b.WriteString(`,"itemsType":`)
 		marshalType(b, t.vl.(Type))
 	case PtObject:
 		b.WriteString(`,"properties":[`)
@@ -219,7 +220,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	var precision, scale, byteLen, charLen int
 	var re *regexp.Regexp
 	var values []string
-	var items Type
+	var itemsType Type
 	var minItems, maxItems = 0, MaxArrayLen
 	var uniqueItems bool
 	var properties []Property
@@ -237,8 +238,8 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		}
 		key := tok.(string)
 
-		if key == "items" {
-			items, err = unmarshalType(dec, resolve)
+		if key == "itemsType" {
+			itemsType, err = unmarshalType(dec, resolve)
 			if err != nil {
 				return Type{}, err
 			}
@@ -424,7 +425,10 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				return Type{}, errors.New("invalid empty properties")
 			}
 		default:
-			return Type{}, errors.New("unknown key")
+			if key == "items" {
+				return Type{}, fmt.Errorf(`unknown key %q (maybe "itemsType"?)`, key)
+			}
+			return Type{}, fmt.Errorf("unknown key %q", key)
 		}
 
 	}
@@ -480,14 +484,14 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		}
 		t.s = int32(scale)
 	}
-	if items.Valid() {
+	if itemsType.Valid() {
 		if pt != PtArray {
-			return Type{}, errors.New("unexpected items for no Array type")
+			return Type{}, errors.New("unexpected items type for non-Array type")
 		}
-		t.vl = items
+		t.vl = itemsType
 	} else {
 		if pt == PtArray {
-			return Type{}, errors.New("missing array items type")
+			return Type{}, errors.New("missing items type")
 		}
 	}
 	if minItems > 0 {
