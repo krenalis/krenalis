@@ -49,6 +49,9 @@ func TestSerialization(t *testing.T) {
 			Data: `{"name":"Array","items":{"name":"Text"}}`,
 			Type: Array(Text()),
 		}, {
+			Data: `{"name":"Array","minItems":2,"maxItems":8,"items":{"name":"Decimal"}}`,
+			Type: Array(Decimal(0, 0)).WithLen(2, 8),
+		}, {
 			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"}},{"name":"size","type":{"name":"Decimal"}}]}`,
 			Type: Object([]Property{{Name: "email", Type: Text()}, {Name: "size", Type: Decimal(0, 0)}}),
 		}, {
@@ -104,23 +107,27 @@ func equalTypes(t1, t2 Type) error {
 		}
 		return fmt.Errorf("expected logical type %s, got %s", t1.pt, t2.pt)
 	}
-	// Precision or byte length.
+	// Precision, byte length or items minimum length.
 	if t1.p != t2.p {
 		switch t1.pt {
 		case PtDecimal:
 			return fmt.Errorf("expected precision %d, got %d", t1.p, t2.p)
 		case PtText:
 			return fmt.Errorf("expected byte length %d, got %d", t1.p, t2.p)
+		case PtArray:
+			return fmt.Errorf("expected items minimum length %d, got %d", t1.p, t2.p)
 		}
 		return fmt.Errorf("expected p == 0, got %d", t2.p)
 	}
-	// Scale or character length.
+	// Scale, character length or items maximum length.
 	if t1.s != t2.s {
 		switch t1.pt {
 		case PtDecimal:
 			return fmt.Errorf("expected scale %d, got %d", t1.s, t2.s)
 		case PtText:
 			return fmt.Errorf("expected character length %d, got %d", t1.s, t2.s)
+		case PtArray:
+			return fmt.Errorf("expected items maximum length %d, got %d", t1.s, t2.s)
 		}
 		return fmt.Errorf("expected s == 0, got %d", t2.s)
 	}

@@ -144,6 +144,14 @@ func marshalType(b *bytes.Buffer, t Type) {
 			b.WriteByte(']')
 		}
 	case PtArray:
+		if t.p > 0 {
+			b.WriteString(`,"minItems":`)
+			b.WriteString(strconv.Itoa(int(t.p)))
+		}
+		if t.s < MaxArrayLen {
+			b.WriteString(`,"maxItems":`)
+			b.WriteString(strconv.Itoa(int(t.s)))
+		}
 		b.WriteString(`,"items":`)
 		marshalType(b, t.vl.(Type))
 	case PtObject:
@@ -209,6 +217,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	var re *regexp.Regexp
 	var values []string
 	var items Type
+	var minItems, maxItems = 0, MaxArrayLen
 	var properties []Property
 
 	// Read type keys and values.
@@ -344,6 +353,30 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 			if charLen <= 0 || charLen > MaxTextLen {
 				return Type{}, errors.New("invalid length in characters")
 			}
+		case "minItems":
+			if minItems > 0 {
+				return Type{}, errors.New("repeated 'minItems' key")
+			}
+			n, ok := tok.(json.Number)
+			if !ok {
+				return Type{}, errors.New("invalid minimum items")
+			}
+			minItems, _ = strconv.Atoi(string(n))
+			if minItems <= 0 || minItems > MaxArrayLen {
+				return Type{}, errors.New("invalid minimum items")
+			}
+		case "maxItems":
+			if maxItems < MaxArrayLen {
+				return Type{}, errors.New("repeated 'maxItems' key")
+			}
+			n, ok := tok.(json.Number)
+			if !ok {
+				return Type{}, errors.New("invalid maximum items")
+			}
+			maxItems, _ = strconv.Atoi(string(n))
+			if maxItems < 0 || maxItems >= MaxArrayLen {
+				return Type{}, errors.New("invalid maximum items")
+			}
 		case "properties":
 			if properties != nil {
 				return Type{}, errors.New("repeated 'properties' key")
@@ -444,6 +477,23 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		if t.pt == PtArray {
 			return Type{}, errors.New("missing array items type")
 		}
+	}
+	if minItems > 0 {
+		if t.pt != PtArray {
+			return Type{}, errors.New("unexpected minItems for no Array type")
+		}
+		t.p = int32(minItems)
+	}
+	if maxItems < MaxArrayLen {
+		if t.pt != PtArray {
+			return Type{}, errors.New("unexpected maxItems for no Array type")
+		}
+		if maxItems < minItems {
+			return Type{}, errors.New("maxItems must be greater or equal to minItems")
+		}
+	}
+	if pt == PtArray {
+		t.s = int32(maxItems)
 	}
 	if properties == nil {
 		if t.pt == PtObject {

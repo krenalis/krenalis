@@ -13,6 +13,7 @@ import (
 )
 
 const (
+	MaxArrayLen         = 1<<24 - 1 // Maximum length of an Array type
 	MaxDecimalPrecision = 76        // Maximum precision for a Decimal type
 	MaxDecimalScale     = 38        // Maximum scale for a Decimal type
 	MaxTextLen          = 1<<31 - 1 // Maximum length in bytes and characters for a Text type
@@ -177,8 +178,17 @@ type Type struct {
 	pt PhysicalType
 	lt LogicalType
 
-	p int32 // precision of a Decimal type or length in bytes of a Text type.
-	s int32 // scale of a Decimal type or length in characters of a Text type.
+	// p represents
+	//   - precision of a Decimal type
+	//   - length in bytes of a Text type
+	//   - minimum length of an Array type
+	p int32
+
+	// s represents
+	//   - scale of a Decimal type
+	//   - length in characters of a Text type
+	//   - maximum length of an Array type
+	s int32
 
 	// vl can contain one of
 	//   - *regexp.Regexp value of a Text
@@ -194,7 +204,7 @@ type Type struct {
 
 // Array returns an Array type with items of type t.
 func Array(t Type) Type {
-	return Type{pt: PtArray, vl: t}
+	return Type{pt: PtArray, s: MaxArrayLen, vl: t}
 }
 
 // Object returns an Object type with the given properties.
@@ -430,6 +440,24 @@ func (t Type) Values() []string {
 		return values
 	}
 	return nil
+}
+
+// WithLen returns the type t but with length in [min,max]. t must be an Array.
+// Panics if t is not an Array type, or min is not in [0,MaxArrayLen], or max
+// is not in [min,MaxArrayLen].
+func (t Type) WithLen(min, max int) Type {
+	if t.pt != PtArray {
+		panic("cannot set the length of a no Array type")
+	}
+	if min < 0 || min > MaxArrayLen {
+		panic("invalid minimum length")
+	}
+	if max < min || max > MaxArrayLen {
+		panic("invalid maximum length")
+	}
+	t.p = int32(min)
+	t.s = int32(max)
+	return t
 }
 
 // Custom returns the custom name of t. If t is not a custom type it returns an empty
