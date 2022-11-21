@@ -558,9 +558,9 @@ func (t Type) WithUintRange(min, max uint64) Type {
 	return t
 }
 
-// UintRange returns the minimum and maximum value for t. t must be an UInt,
+// UIntRange returns the minimum and maximum value for t. t must be an UInt,
 // UInt8, UInt16, UInt24 or UInt64, otherwise it panics.
-func (t Type) UintRange() (min, max uint64) {
+func (t Type) UIntRange() (min, max uint64) {
 	if t.pt < PtUInt || t.pt > PtUInt64 {
 		panic("type is not an UInt, UInt8, Int16, UInt24 or UInt64 type")
 	}
