@@ -783,16 +783,15 @@ func (t Type) Regexp() *regexp.Regexp {
 }
 
 // WithRegexp returns t with the regular expression re.
-// Panics if t is not a Text type, if re cannot be parsed, or if t has any
-// values.
-func (t Type) WithRegexp(re string) Type {
+// Panics if t is not a Text type or if t has any values.
+func (t Type) WithRegexp(re *regexp.Regexp) Type {
 	if t.pt != PtText {
 		panic("cannot set regular expression for a non-Text type")
 	}
 	if _, ok := t.vl.([]string); ok {
 		panic("cannot set regular expression if there is enum")
 	}
-	t.vl = regexp.MustCompile(re)
+	t.vl = re
 	return t
 }
 

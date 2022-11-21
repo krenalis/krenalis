@@ -76,12 +76,12 @@ func TestSerialization(t *testing.T) {
 			Type: Object([]Property{{Name: "email", Type: Text()}, {Name: "size", Type: Decimal(0, 0)}}),
 		}, {
 			Data: `{"name":"Object","properties":[{"name":"email","type":"Email"}]}`,
-			Type: Object([]Property{{Name: "email", Type: Text(Chars(120)).WithRegexp(`@`).AsCustom("Email")}}),
+			Type: Object([]Property{{Name: "email", Type: Text(Chars(120)).WithRegexp(regexp.MustCompile(`@`)).AsCustom("Email")}}),
 			Resolve: func(name string) (Type, error) {
 				if name != "Email" {
 					return Type{}, ErrCustomTypeNotExist
 				}
-				return Text(Chars(120)).WithRegexp(`@`).AsCustom("Email"), nil
+				return Text(Chars(120)).WithRegexp(regexp.MustCompile(`@`)).AsCustom("Email"), nil
 			},
 		},
 	}
