@@ -773,15 +773,13 @@ func (t Type) LogicalType() (LogicalType, bool) {
 }
 
 // Regexp returns the regular expression of t. If t has no regular expression,
-// it returns an empty string. Panics if t is not a Text type.
-func (t Type) Regexp() string {
+// it returns nil. Panics if t is not a Text type.
+func (t Type) Regexp() *regexp.Regexp {
 	if t.pt != PtText {
 		panic("cannot return regular expression for a non-Text type")
 	}
-	if re, ok := t.vl.(*regexp.Regexp); ok {
-		return re.String()
-	}
-	return ""
+	re, _ := t.vl.(*regexp.Regexp)
+	return re
 }
 
 // WithRegexp returns t with the regular expression re.
