@@ -8,15 +8,52 @@
 package types
 
 import (
+	"fmt"
+	"math"
 	"regexp"
 	"strconv"
+
+	"github.com/shopspring/decimal"
+)
+
+// one is the decimal.Decimal 1.
+var one = decimal.New(1, 0)
+
+var (
+	minInt  = [...]int64{MinInt, MinInt8, MinInt16, MinInt24, MinInt64}
+	maxInt  = [...]int64{MaxInt, MaxInt8, MaxInt16, MaxInt24, MaxInt64}
+	maxUInt = [...]uint64{MaxUInt, MaxUInt8, MaxUInt16, MaxUInt24, MaxUInt64}
+)
+
+var (
+	MaxDecimal = decimal.New(1, MaxDecimalPrecision).Sub(one)
+	MinDecimal = MaxDecimal.Neg()
 )
 
 const (
-	MaxArrayLen         = 1<<24 - 1 // Maximum length of an Array type
-	MaxDecimalPrecision = 76        // Maximum precision for a Decimal type
-	MaxDecimalScale     = 38        // Maximum scale for a Decimal type
-	MaxTextLen          = 1<<31 - 1 // Maximum length in bytes and characters for a Text type
+	MaxArrayLen         = MaxInt24 // Maximum length of an Array type
+	MaxDecimalPrecision = 76       // Maximum precision for a Decimal type
+	MaxDecimalScale     = 38       // Maximum scale for a Decimal type
+	MaxTextLen          = MaxInt   // Maximum length in bytes and characters for a Text type
+
+	MaxInt    = math.MaxInt32
+	MaxInt16  = math.MaxInt16
+	MaxInt24  = 1<<23 - 1
+	MaxInt64  = math.MaxInt64
+	MaxInt8   = math.MaxInt8
+	MaxUInt   = math.MaxUint
+	MaxUInt16 = math.MaxUint16
+	MaxUInt24 = 1<<24 - 1
+	MaxUInt64 = math.MaxUint64
+	MaxUInt8  = math.MaxUint8
+	MinInt    = math.MinInt32
+	MinInt16  = math.MinInt16
+	MinInt24  = -1 << 23
+	MinInt64  = math.MinInt64
+	MinInt8   = math.MinInt8
+
+	MaxFloat   = math.MaxFloat64
+	MaxFloat32 = math.MaxFloat32
 )
 
 type PhysicalType int8
@@ -194,11 +231,14 @@ type Type struct {
 	s int32
 
 	// vl can contain one of
-	//   - *regexp.Regexp value of a Text
-	//   - []string with the enum values of a Text
-	//   - []Property of an Object
-	//   - Type of the items of an Array
-	//
+	//   - intRange value for Int, Int8, Int16, Int24 and Int64
+	//   - uintRange value for UInt, UInt8, UInt16, UInt24 and UInt64
+	//   - floatRange value for Float and Float32
+	//   - decimalRange value for Decimal
+	//   - *regexp.Regexp value for Text
+	//   - []string with the enum values for Text
+	//   - []Property for Object
+	//   - Type of the items for Array
 	vl any
 
 	// custom type. Empty for non-custom types.
@@ -401,6 +441,193 @@ func (t Type) WithLogicalType(lt LogicalType) Type {
 // PhysicalType returns the physical type of t.
 func (t Type) PhysicalType() PhysicalType {
 	return t.pt
+}
+
+// Types used to represent number ranges.
+type intRange struct{ min, max int64 }
+type uintRange struct{ min, max uint64 }
+type floatRange struct {
+	min, max   float64
+	minS, maxS string
+}
+type decimalRange struct{ min, max decimal.Decimal }
+
+// WithIntRange returns t but with values in [min,max]. t must be an Int, Int8,
+// Int16, Int24 or Int64 type. min cannot be greater than max. min and max must
+// be within the range of values of t.
+// It panics it previous restrictions are not met.
+func (t Type) WithIntRange(min, max int64) Type {
+	if t.pt < PtInt || t.pt > PtInt64 {
+		panic("type is not an Int, Int8, Int16, Int24 or Int64 type")
+	}
+	Min, Max := minInt[t.pt-PtInt], maxInt[t.pt-PtInt]
+	if min == Min && max == Max {
+		return t
+	}
+	if min < Min || min > Max {
+		panic(fmt.Sprintf("min is not in range [%d,%d]", Min, Max))
+	}
+	if max < min {
+		panic("max cannot be less than min")
+	}
+	if max > Max {
+		panic(fmt.Sprintf("max cannot be greater than %d", Max))
+	}
+	t.vl = intRange{min, max}
+	return t
+}
+
+// IntRange returns the minimum and maximum value for t. t must be ab Int,
+// Int8, Int16, Int24 or Int64 type, otherwise it panics.
+func (t Type) IntRange() (min, max int64) {
+	if t.pt < PtInt || t.pt > PtInt64 {
+		panic("type is not an Int, Int8, Int16, Int24 or Int64 type")
+	}
+	if i, ok := t.vl.(intRange); ok {
+		return i.min, i.max
+	}
+	return minInt[t.pt-PtInt], maxInt[t.pt-PtInt]
+}
+
+// WithUintRange returns t but with values in [min,max]. t must be a UInt,
+// UInt8, UInt16, UInt24 or UInt64 type. min cannot be greater than max.
+// min and max must be within the range of values of t.
+// It panics it previous restrictions are not met.
+func (t Type) WithUintRange(min, max uint64) Type {
+	if t.pt < PtUInt || t.pt > PtUInt64 {
+		panic("type is not a UInt, UInt8, Int16, UInt24 or UInt64 type")
+	}
+	Max := maxUInt[t.pt-PtInt]
+	if min == 0 && max == Max {
+		return t
+	}
+	if min > Max {
+		panic(fmt.Sprintf("min is not in range [0,%d]", Max))
+	}
+	if max < min {
+		panic("max cannot be less than min")
+	}
+	if max > Max {
+		panic(fmt.Sprintf("max cannot be greater than %d", Max))
+	}
+	t.vl = uintRange{min, max}
+	return t
+}
+
+// UintRange returns the minimum and maximum value for t. t must be an UInt,
+// UInt8, UInt16, UInt24 or UInt64, otherwise it panics.
+func (t Type) UintRange() (min, max uint64) {
+	if t.pt < PtUInt || t.pt > PtUInt64 {
+		panic("type is not an UInt, UInt8, Int16, UInt24 or UInt64 type")
+	}
+	if i, ok := t.vl.(uintRange); ok {
+		return i.min, i.max
+	}
+	return 0, maxUInt[t.pt-PtInt]
+}
+
+// WithFloatRange returns t but with values in [min,max]. t must be a Float or
+// Float32 type. min cannot be greater than max.min and max cannot be NaN and
+// ±Inf. It panics if previous restrictions are not met.
+func (t Type) WithFloatRange(min, max float64) Type {
+	if t.pt != PtFloat && t.pt != PtFloat32 {
+		panic("type is not a Float or Float32 type")
+	}
+	if math.IsNaN(min) || math.IsNaN(max) {
+		panic("min and max cannot be NaN")
+	}
+	if math.IsInf(min, 0) || math.IsInf(max, 0) {
+		panic("min and max cannot be Inf")
+	}
+	Max := MaxFloat
+	if t.pt == PtFloat32 {
+		Max = MaxFloat32
+	}
+	if min == -Max && max == Max {
+		return t
+	}
+	if min < -Max || min > Max {
+		panic(fmt.Sprintf("min is not in range [%f,%f]", -Max, Max))
+	}
+	if max < min {
+		panic("max cannot be less than min")
+	}
+	if max > Max {
+		panic(fmt.Sprintf("max cannot be greater than %f", Max))
+	}
+	var minS, maxS string
+	if t.pt == PtFloat32 {
+		min, max = float64(float32(min)), float64(float32(max))
+		if min != -MaxFloat32 {
+			minS = decimal.NewFromFloat32(float32(min)).String()
+		}
+		if max != MaxFloat32 {
+			maxS = decimal.NewFromFloat32(float32(max)).String()
+		}
+	} else {
+		if min != -MaxFloat {
+			minS = decimal.NewFromFloat(min).String()
+		}
+		if max != MaxFloat {
+			maxS = decimal.NewFromFloat(max).String()
+		}
+	}
+	t.vl = floatRange{min: min, max: max, minS: minS, maxS: maxS}
+	return t
+}
+
+// FloatRange returns the minimum and maximum value of t. t must be a Float or
+// Float32 type, otherwise it panics.
+func (t Type) FloatRange() (min, max float64) {
+	if t.pt != PtFloat && t.pt != PtFloat32 {
+		panic("type is not a Float or Float32 type")
+	}
+	if f, ok := t.vl.(floatRange); ok {
+		return f.min, f.max
+	}
+	if t.pt == PtFloat32 {
+		return -MaxFloat32, MaxFloat32
+	}
+	return -MaxFloat, MaxFloat
+}
+
+// WithDecimalRange returns t but with values in [min,max]. t must be a Decimal
+// type, otherwise it panics.
+func (t Type) WithDecimalRange(min, max decimal.Decimal) Type {
+	if t.pt != PtDecimal {
+		panic("type is not a Decimal type")
+	}
+	Max := MaxDecimal
+	if t.p != 0 || t.s != 0 {
+		Max = decimal.New(1, t.p).Sub(one)
+		if t.s != 0 {
+			Max = Max.Shift(-t.s)
+		}
+	}
+	Min := Max.Neg()
+	if min.Equal(Min) && max.Equal(Max) {
+		return t
+	}
+	if min.LessThan(Min) || min.GreaterThan(Max) {
+		panic(fmt.Sprintf("min must be in range [%s,%s]", Min, Max))
+	}
+	if max.LessThan(min) || max.GreaterThan(Max) {
+		panic(fmt.Sprintf("max must be in range [%s,%s]", min, Max))
+	}
+	t.vl = decimalRange{min, max}
+	return t
+}
+
+// DecimalRange returns the minimum and maximum value for t. t must be a
+// Decimal type, otherwise it panics.
+func (t Type) DecimalRange() (min, max decimal.Decimal) {
+	if t.pt != PtDecimal {
+		panic("type is not a Decimal type")
+	}
+	if d, ok := t.vl.(decimalRange); ok {
+		return d.min, d.max
+	}
+	return MinDecimal, MaxDecimal
 }
 
 // Item returns the type of the item of an Array type.

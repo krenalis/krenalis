@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"regexp"
 	"testing"
+
+	"github.com/shopspring/decimal"
 )
 
 func TestSerialization(t *testing.T) {
@@ -37,8 +39,23 @@ func TestSerialization(t *testing.T) {
 			Data: `{"name":"Text","enum":["a","b"]}`,
 			Type: Text().WithEnum([]string{"a", "b"}),
 		}, {
+			Data: `{"name":"Int8","minimum":10}`,
+			Type: Int8().WithIntRange(10, MaxInt8),
+		}, {
+			Data: `{"name":"Float","minimum":-3.9936173,"maximum":8.00002312}`,
+			Type: Float().WithFloatRange(-3.9936173, 8.00002312),
+		}, {
+			Data: `{"name":"Float32","minimum":3.99,"maximum":5.31}`,
+			Type: Float32().WithFloatRange(3.99, 5.31),
+		}, {
 			Data: `{"name":"Decimal"}`,
 			Type: Decimal(0, 0),
+		}, {
+			Data: `{"name":"Decimal","minimum":-3.9936173,"maximum":8.00002312}`,
+			Type: Decimal(0, 0).WithDecimalRange(
+				decimal.RequireFromString("-3.9936173"),
+				decimal.RequireFromString("8.00002312"),
+			),
 		}, {
 			Data: `{"name":"Decimal","precision":10}`,
 			Type: Decimal(10, 0),
@@ -106,6 +123,27 @@ func equalTypes(t1, t2 Type) error {
 			return fmt.Errorf("unknows logical type %d", t2.pt)
 		}
 		return fmt.Errorf("expected logical type %s, got %s", t1.pt, t2.pt)
+	}
+	// Minimum and maximum.
+	if PtInt <= t1.pt && t1.pt <= PtFloat32 {
+		if t1.vl != t2.vl {
+			if t1.vl == nil {
+				return fmt.Errorf("expected no range, got %v", t2.vl)
+			} else if t2.vl == nil {
+				return fmt.Errorf("expected range %v, got no range", t1.vl)
+			} else {
+				return fmt.Errorf("expected range %v, got %v", t1.vl, t2.vl)
+			}
+		}
+	} else if t1.pt == PtDecimal {
+		if vl1, ok := t1.vl.(decimalRange); ok {
+			vl2, ok := t2.vl.(decimalRange)
+			if !ok || !vl1.min.Equal(vl2.min) || !vl1.max.Equal(vl2.max) {
+				return fmt.Errorf("expected range %v, got range %v", t1.vl, t2.vl)
+			}
+		} else if t2.vl != nil {
+			return fmt.Errorf("expected no-range, got range %v", t2.vl)
+		}
 	}
 	// Precision, byte length or items minimum length.
 	if t1.p != t2.p {

@@ -39,6 +39,7 @@ require (
 	github.com/open2b/nuts v1.5.3
 	github.com/open2b/scriggo v0.56.1
 	github.com/oschwald/geoip2-golang v1.8.0
+	github.com/shopspring/decimal v1.3.1
 	github.com/tetratelabs/wazero v1.0.0-pre.3
 	golang.org/x/crypto v0.1.0
 	golang.org/x/text v0.4.0
@@ -86,7 +87,6 @@ require (
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.3 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
-	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/xuri/efp v0.0.0-20220603152613-6918739fd470 // indirect
 	github.com/xuri/excelize/v2 v2.6.1 // indirect
 	github.com/xuri/nfp v0.0.0-20220409054826-5e722a1d9e22 // indirect

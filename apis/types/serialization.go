@@ -16,6 +16,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/shopspring/decimal"
 )
 
 // Resolver resolves a custom type name to its type. If a custom type with the
@@ -111,7 +113,54 @@ func marshalType(b *bytes.Buffer, t Type) {
 		b.WriteString(`"`)
 	}
 	switch t.pt {
+	case PtInt, PtInt8, PtInt16, PtInt24, PtInt64:
+		if i, ok := t.vl.(intRange); ok {
+			if i.min > minInt[t.pt-PtInt] {
+				b.WriteString(`,"minimum":`)
+				b.WriteString(strconv.FormatInt(i.min, 10))
+			}
+			if i.max < maxInt[t.pt-PtInt] {
+				b.WriteString(`,"maximum":`)
+				b.WriteString(strconv.FormatInt(i.max, 10))
+			}
+		}
+	case PtUInt, PtUInt8, PtUInt16, PtUInt24, PtUInt64:
+		if i, ok := t.vl.(uintRange); ok {
+			if i.min > 0 {
+				b.WriteString(`,"minimum":`)
+				b.WriteString(strconv.FormatUint(i.min, 10))
+			}
+			if i.max < maxUInt[t.pt-PtUInt] {
+				b.WriteString(`,"maximum":`)
+				b.WriteString(strconv.FormatUint(i.max, 10))
+			}
+		}
+	case PtFloat, PtFloat32:
+		Max := MaxFloat
+		if t.pt == PtFloat32 {
+			Max = MaxFloat32
+		}
+		if f, ok := t.vl.(floatRange); ok {
+			if f.min > -Max {
+				b.WriteString(`,"minimum":`)
+				b.WriteString(f.minS)
+			}
+			if f.max < Max {
+				b.WriteString(`,"maximum":`)
+				b.WriteString(f.maxS)
+			}
+		}
 	case PtDecimal:
+		if d, ok := t.vl.(decimalRange); ok {
+			if d.min.GreaterThan(MinDecimal) {
+				b.WriteString(`,"minimum":`)
+				b.WriteString(d.min.String())
+			}
+			if d.max.LessThan(MaxDecimal) {
+				b.WriteString(`,"maximum":`)
+				b.WriteString(d.max.String())
+			}
+		}
 		if t.p > 0 {
 			b.WriteString(`,"precision":`)
 			b.WriteString(strconv.Itoa(int(t.p)))
@@ -215,8 +264,11 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		return Type{}, errors.New("invalid type syntax")
 	}
 
+	var hasScale, hasMinItems, hasUniqueItems bool
+
 	var pt PhysicalType
 	var lt LogicalType
+	var minimum, maximum json.Number
 	var precision, scale, byteLen, charLen int
 	var re *regexp.Regexp
 	var enum []string
@@ -268,6 +320,22 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 			lt, ok = LogicalTypeByName(tok.(string))
 			if !ok {
 				return Type{}, errors.New("invalid logical type")
+			}
+		case "minimum":
+			if minimum != "" {
+				return Type{}, errors.New("repeated 'minimum' key")
+			}
+			minimum, ok = tok.(json.Number)
+			if !ok {
+				return Type{}, errors.New("invalid minimum")
+			}
+		case "maximum":
+			if maximum != "" {
+				return Type{}, errors.New("repeated 'maximum' key")
+			}
+			maximum, ok = tok.(json.Number)
+			if !ok {
+				return Type{}, errors.New("invalid maximum")
 			}
 		case "regexp":
 			if re != nil {
@@ -323,7 +391,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				return Type{}, errors.New("invalid precision")
 			}
 		case "scale":
-			if scale > 0 {
+			if hasScale {
 				return Type{}, errors.New("repeated 'scale' key")
 			}
 			n, ok := tok.(json.Number)
@@ -331,9 +399,10 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				return Type{}, errors.New("invalid scale")
 			}
 			scale, _ = strconv.Atoi(string(n))
-			if scale <= 0 || scale > MaxDecimalScale {
+			if scale < 0 || scale > MaxDecimalScale {
 				return Type{}, errors.New("invalid scale")
 			}
+			hasScale = true
 		case "byteLen":
 			if byteLen > 0 {
 				return Type{}, errors.New("repeated 'byteLen' key")
@@ -359,7 +428,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				return Type{}, errors.New("invalid length in characters")
 			}
 		case "minItems":
-			if minItems > 0 {
+			if hasMinItems {
 				return Type{}, errors.New("repeated 'minItems' key")
 			}
 			n, ok := tok.(json.Number)
@@ -367,9 +436,10 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				return Type{}, errors.New("invalid minimum items")
 			}
 			minItems, _ = strconv.Atoi(string(n))
-			if minItems <= 0 || minItems > MaxArrayLen {
+			if minItems < 0 || minItems > MaxArrayLen {
 				return Type{}, errors.New("invalid minimum items")
 			}
+			hasMinItems = true
 		case "maxItems":
 			if maxItems < MaxArrayLen {
 				return Type{}, errors.New("repeated 'maxItems' key")
@@ -383,13 +453,14 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				return Type{}, errors.New("invalid maximum items")
 			}
 		case "uniqueItems":
-			if uniqueItems == true {
+			if hasUniqueItems {
 				return Type{}, errors.New("repeated 'uniqueItems' key")
 			}
 			uniqueItems, ok = tok.(bool)
-			if !ok || !uniqueItems {
+			if !ok {
 				return Type{}, errors.New("invalid unique items")
 			}
+			hasUniqueItems = true
 		case "properties":
 			if properties != nil {
 				return Type{}, errors.New("repeated 'properties' key")
@@ -442,6 +513,177 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	if lt.Valid() {
 		t.lt = lt
 	}
+	if minimum != "" {
+		switch t.pt {
+		case PtInt, PtInt8, PtInt16, PtInt24, PtInt64:
+			min, err := minimum.Int64()
+			if err != nil {
+				return Type{}, errors.New("invalid value for minimum")
+			}
+			Min, Max := minInt[t.pt-PtInt], maxInt[t.pt-PtInt]
+			if min < Min || min > Max {
+				return Type{}, errors.New("invalid value for minimum")
+			}
+			if min > Min {
+				t.vl = intRange{min, Max}
+			}
+		case PtUInt, PtUInt8, PtUInt16, PtUInt24, PtUInt64:
+			min, err := strconv.ParseUint(string(minimum), 10, 64)
+			if err != nil {
+				return Type{}, errors.New("invalid value for minimum")
+			}
+			Max := maxUInt[t.pt-PtInt]
+			if min < 0 || min > Max {
+				return Type{}, errors.New("invalid value for minimum")
+			}
+			if min > 0 {
+				t.vl = uintRange{min, Max}
+			}
+		case PtFloat:
+			min, err := minimum.Float64()
+			if err != nil {
+				return Type{}, errors.New("invalid value for minimum")
+			}
+			if min < -MaxFloat || min > MaxFloat {
+				return Type{}, errors.New("invalid value for minimum")
+			}
+			if min > -MaxFloat {
+				minS := decimal.NewFromFloat(min).String()
+				t.vl = floatRange{min: min, max: MaxFloat, minS: minS}
+			}
+		case PtFloat32:
+			min, err := strconv.ParseFloat(string(minimum), 32)
+			if err != nil {
+				return Type{}, errors.New("invalid value for minimum")
+			}
+			if min < -MaxFloat32 || min > MaxFloat32 {
+				return Type{}, errors.New("invalid value for minimum")
+			}
+			minS := decimal.NewFromFloat32(float32(min)).String()
+			t.vl = floatRange{min: min, max: MaxFloat32, minS: minS}
+		case PtDecimal:
+			min, err := decimal.NewFromString(string(minimum))
+			if err != nil {
+				return Type{}, errors.New("invalid value for minimum")
+			}
+			if min.LessThan(MinDecimal) || min.GreaterThan(MaxDecimal) {
+				return Type{}, errors.New("invalid value for minimum")
+			}
+			if min.GreaterThan(MinDecimal) {
+				t.vl = decimalRange{min, MaxDecimal}
+			}
+		default:
+			return Type{}, errors.New("unexpected minimum for non-number type")
+		}
+	}
+	if maximum != "" {
+		switch t.pt {
+		case PtInt, PtInt8, PtInt16, PtInt24, PtInt64:
+			max, err := maximum.Int64()
+			if err != nil {
+				return Type{}, errors.New("invalid value for maximum")
+			}
+			Min, Max := minInt[t.pt-PtInt], maxInt[t.pt-PtInt]
+			if max < Min || max > Max {
+				return Type{}, errors.New("invalid value for maximum")
+			}
+			if max < Max {
+				if i, ok := t.vl.(intRange); ok {
+					if max < i.min {
+						return Type{}, errors.New("maximum cannot be less than minimum")
+					}
+					i.max = max
+					t.vl = i
+				} else {
+					t.vl = intRange{Min, max}
+				}
+			}
+		case PtUInt, PtUInt8, PtUInt16, PtUInt24, PtUInt64:
+			max, err := strconv.ParseUint(string(maximum), 10, 64)
+			if err != nil {
+				return Type{}, errors.New("invalid value for maximum")
+			}
+			Max := maxUInt[t.pt-PtInt]
+			if max < 0 || max > Max {
+				return Type{}, errors.New("invalid value for maximum")
+			}
+			if max < Max {
+				if f, ok := t.vl.(uintRange); ok {
+					if max < f.min {
+						return Type{}, errors.New("maximum cannot be less than minimum")
+					}
+					f.max = max
+					t.vl = f
+				} else {
+					t.vl = uintRange{0, max}
+				}
+			}
+		case PtFloat:
+			max, err := maximum.Float64()
+			if err != nil {
+				return Type{}, errors.New("invalid value for maximum")
+			}
+			if max < -MaxFloat || max > MaxFloat {
+				return Type{}, errors.New("invalid value for maximum")
+			}
+			if max < MaxFloat {
+				maxS := decimal.NewFromFloat(max).String()
+				if f, ok := t.vl.(floatRange); ok {
+					if max < f.min {
+						return Type{}, errors.New("maximum cannot be less than minimum")
+					}
+					f.max = max
+					f.maxS = maxS
+					t.vl = f
+				} else {
+					t.vl = floatRange{min: -MaxFloat, max: max, maxS: maxS}
+				}
+			}
+		case PtFloat32:
+			max, err := strconv.ParseFloat(string(maximum), 32)
+			if err != nil {
+				return Type{}, errors.New("invalid value for maximum")
+			}
+			max = float64(float32(max))
+			if max < -MaxFloat32 || max > MaxFloat32 {
+				return Type{}, errors.New("invalid value for maximum")
+			}
+			if max < MaxFloat32 {
+				maxS := decimal.NewFromFloat32(float32(max)).String()
+				if f, ok := t.vl.(floatRange); ok {
+					if max < f.min {
+						return Type{}, errors.New("maximum cannot be less than minimum")
+					}
+					f.max = max
+					f.maxS = maxS
+					t.vl = f
+				} else {
+					t.vl = floatRange{min: -MaxFloat32, max: max, maxS: maxS}
+				}
+			}
+		case PtDecimal:
+			max, err := decimal.NewFromString(string(maximum))
+			if err != nil {
+				return Type{}, errors.New("invalid value for maximum")
+			}
+			if max.LessThan(MinDecimal) || max.GreaterThan(MaxDecimal) {
+				return Type{}, errors.New("invalid value for maximum")
+			}
+			if max.LessThan(MaxDecimal) {
+				if d, ok := t.vl.(decimalRange); ok {
+					if max.LessThan(d.min) {
+						return Type{}, errors.New("maximum cannot be less than minimum")
+					}
+					d.max = max
+					t.vl = d
+				} else {
+					t.vl = decimalRange{min: MinDecimal, max: max}
+				}
+			}
+		default:
+			return Type{}, errors.New("unexpected maximum for non-number type")
+		}
+	}
 	if re != nil {
 		if pt != PtText {
 			return Type{}, errors.New("unexpected regular expression for non-Text type")
@@ -472,15 +714,15 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		}
 		t.p = int32(precision)
 	}
-	if scale > 0 {
+	if hasScale {
 		if pt != PtDecimal {
 			return Type{}, errors.New("unexpected scale for non-Decimal type")
 		}
+		if precision == 0 {
+			return Type{}, errors.New("scale also requires precision")
+		}
 		if precision < scale {
-			if precision == 0 {
-				return Type{}, errors.New("with scale, precision is required")
-			}
-			return Type{}, errors.New("precision cannot not be less than scale")
+			return Type{}, errors.New("scale cannot be greater tha precision")
 		}
 		t.s = int32(scale)
 	}
@@ -494,7 +736,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 			return Type{}, errors.New("missing items type")
 		}
 	}
-	if minItems > 0 {
+	if hasMinItems {
 		if pt != PtArray {
 			return Type{}, errors.New("unexpected minItems for non-Array type")
 		}
@@ -511,7 +753,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	if pt == PtArray {
 		t.s = int32(maxItems)
 	}
-	if uniqueItems {
+	if hasUniqueItems {
 		if pt != PtArray {
 			return Type{}, errors.New("unexpected uniqueItems for no Array type")
 		}
