@@ -36,6 +36,8 @@ func MarshalType(t Type) ([]byte, error) {
 }
 
 // UnmarshalType parses the JSON-encoded data and returns the decoded type.
+// For custom types, it calls the resolve function, if not nil, to resolve the
+// type custom name to its type.
 func UnmarshalType(data []byte, resolve Resolver) (Type, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.UseNumber()
@@ -225,8 +227,8 @@ func marshalType(b *bytes.Buffer, t Type) {
 }
 
 // unmarshalType reads the JSON tokens from dec and returns the decoded type.
-// For custom types, it calls the resolve function to resolve the type custom
-// name to its type.
+// For custom types, it calls the resolve function, if not nil, to resolve the
+// type custom name to its type.
 func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 
 	// Read a type custom or delimiter '{'.
@@ -816,8 +818,9 @@ func marshalProperty(b *bytes.Buffer, p Property) {
 }
 
 // unmarshalProperty reads the JSON tokens from dec, which must have already
-// read the token '{', and returns the decoded property. For custom types, it
-// calls the resolve function to resolve the type custom name to its type.
+// read the token '{', and returns the decoded property.
+// For custom types, it calls the resolve function, if not nil, to resolve the
+// type custom name to its type.
 func unmarshalProperty(dec *json.Decoder, resolve Resolver) (Property, error) {
 
 	var p Property

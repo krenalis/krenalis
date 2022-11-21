@@ -674,9 +674,9 @@ func (t Type) DecimalRange() (min, max decimal.Decimal) {
 	return MinDecimal, MaxDecimal
 }
 
-// Item returns the type of the item of an Array type.
+// ItemType returns the type of the item of an Array type.
 // Panics if t is not an Array type.
-func (t Type) Item() Type {
+func (t Type) ItemType() Type {
 	if t.pt != PtArray {
 		panic("cannot get the item type of a non-Array type")
 	}
