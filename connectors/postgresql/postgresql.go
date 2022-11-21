@@ -221,7 +221,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		}
 		return types.Text(types.Chars(length)), nil
 	case "DATE":
-		return types.Date(), nil
+		return types.Date(""), nil // TODO(marco) set the layout
 	case "FLOAT4":
 		return types.Float32(), nil
 	case "FLOAT8":
@@ -245,9 +245,9 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		}
 		return types.Decimal(int(precision), int(scale)), nil
 	case "TIME":
-		return types.Time(), nil
+		return types.Time(""), nil // TODO(marco) set the layout
 	case "TIMESTAMP", "TIMESTAMPTZ":
-		return types.DateTime(), nil
+		return types.DateTime(""), nil // TODO(marco) set the layout
 	case "UUID":
 		return types.UUID(), nil
 	}

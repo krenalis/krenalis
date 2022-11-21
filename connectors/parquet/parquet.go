@@ -246,13 +246,13 @@ func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error
 			return types.Decimal(0, 0), nil
 		}
 		if lt.DATE != nil {
-			return types.Date(), nil
+			return types.DateTime(""), nil // TODO(marco) set the layout
 		}
 		if lt.TIMESTAMP != nil {
-			return types.DateTime(), nil
+			return types.DateTime(""), nil // TODO(marco) set the layout
 		}
 		if lt.TIME != nil {
-			return types.Time(), nil // TODO(marco) add unit of measure
+			return types.Time(""), nil // TODO(marco) add unit of measure
 		}
 		if lt.INTEGER != nil {
 			if lt.INTEGER.IsSigned {
@@ -319,11 +319,11 @@ func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error
 			}
 			return types.Decimal(0, 0), nil
 		case parquet.ConvertedType_DATE:
-			return types.Date(), nil
+			return types.Date(""), nil // TODO(marco) set the layout
 		case parquet.ConvertedType_TIMESTAMP_MICROS, parquet.ConvertedType_TIMESTAMP_MILLIS:
-			return types.DateTime(), nil
+			return types.DateTime(""), nil // TODO(marco) set the layout
 		case parquet.ConvertedType_TIME_MICROS, parquet.ConvertedType_TIME_MILLIS:
-			return types.Time(), nil // TODO(marco) add unit of measure
+			return types.Time(""), nil // // TODO(marco) set the layout
 		}
 		return types.Type{}, fmt.Errorf("unsupported converted Parquet type %q", *ct)
 	}
@@ -335,7 +335,7 @@ func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error
 	case parquet.Type_INT64:
 		return types.Int64(), nil
 	case parquet.Type_INT96:
-		return types.DateTime(), nil
+		return types.DateTime(""), nil // TODO(marco) set the layout
 	case parquet.Type_BYTE_ARRAY, parquet.Type_FIXED_LEN_BYTE_ARRAY:
 		return types.Text(), nil
 	}

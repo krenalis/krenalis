@@ -257,7 +257,7 @@ func columnType(c string, t excelize.CellType) (types.Type, error) {
 	case excelize.CellTypeBool:
 		return types.Boolean(), nil
 	case excelize.CellTypeDate:
-		return types.Date(), nil
+		return types.Date(""), nil // TODO(marco) set the layout
 	case excelize.CellTypeNumber:
 		return types.Decimal(0, 0), nil
 	case excelize.CellTypeUnset, excelize.CellTypeError, excelize.CellTypeString:

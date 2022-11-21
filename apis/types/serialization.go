@@ -169,6 +169,9 @@ func marshalType(b *bytes.Buffer, t Type) {
 			b.WriteString(`,"scale":`)
 			b.WriteString(strconv.Itoa(int(t.s)))
 		}
+	case PtDateTime, PtDate, PtTime:
+		b.WriteString(`,"layout":`)
+		marshalString(b, t.vl.(string))
 	case PtText:
 		if t.p > 0 {
 			b.WriteString(`,"byteLen":`)
@@ -264,7 +267,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		return Type{}, errors.New("invalid type syntax")
 	}
 
-	var hasScale, hasMinItems, hasUniqueItems bool
+	var hasScale, hasLayout, hasMinItems, hasUniqueItems bool
 
 	var pt PhysicalType
 	var lt LogicalType
@@ -272,6 +275,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	var precision, scale, byteLen, charLen int
 	var re *regexp.Regexp
 	var enum []string
+	var layout string
 	var itemsType Type
 	var minItems, maxItems = 0, MaxArrayLen
 	var uniqueItems bool
@@ -403,6 +407,14 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				return Type{}, errors.New("invalid scale")
 			}
 			hasScale = true
+		case "layout":
+			if hasLayout {
+				return Type{}, errors.New("repeated 'layout' key")
+			}
+			layout, ok = tok.(string)
+			if !ok {
+				return Type{}, errors.New("invalid layout")
+			}
 		case "byteLen":
 			if byteLen > 0 {
 				return Type{}, errors.New("repeated 'byteLen' key")
@@ -695,6 +707,12 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 			return Type{}, errors.New("unexpected enum for non-Text type")
 		}
 		t.vl = enum
+	}
+	if hasLayout {
+		if pt != PtDateTime && pt != PtDate && pt != PtTime {
+			return Type{}, errors.New("unexpected layout for non-time type")
+		}
+		t.vl = layout
 	}
 	if byteLen > 0 {
 		if pt != PtText {

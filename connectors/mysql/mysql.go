@@ -16,6 +16,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
+	"time"
 	"unicode/utf8"
 
 	"chichi/apis"
@@ -212,9 +213,9 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "TEXT", "BLOB":
 		return types.Text(types.Bytes(65535)), nil
 	case "DATE":
-		return types.Date(), nil
+		return types.Date("2006-01-02"), nil
 	case "DATETIME":
-		return types.DateTime(), nil
+		return types.DateTime(time.RFC3339), nil
 	case "DECIMAL":
 		precision, scale, ok := t.DecimalSize()
 		if !ok {
@@ -262,9 +263,9 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		}
 		return types.Text(types.Bytes(length)), nil
 	case "TIME":
-		return types.Time(), nil
+		return types.Text(types.Bytes(10)), nil
 	case "TIMESTAMP":
-		return types.DateTime(), nil
+		return types.DateTime(time.RFC3339), nil
 	case "UNSIGNED TINYINT":
 		return types.UInt8(), nil
 	case "TINYINT":

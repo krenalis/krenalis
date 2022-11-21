@@ -205,7 +205,7 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 		}, {
 			Name:  "LastChanged",
 			Label: "Time of the last update",
-			Type:  types.DateTime(),
+			Type:  types.DateTime(time.RFC3339),
 		}, {
 			Name:  "LastNote",
 			Label: "Last Note",
@@ -217,7 +217,7 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 				}, {
 					Name:  "created_at",
 					Label: "Created at",
-					Type:  types.DateTime(),
+					Type:  types.DateTime(time.RFC3339),
 				}, {
 					Name:  "created_by",
 					Label: "Created by",
@@ -317,11 +317,11 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 		}, {
 			Name:  "TimestampOpt",
 			Label: "Opt-in time",
-			Type:  types.DateTime(),
+			Type:  types.DateTime(time.RFC3339),
 		}, {
 			Name:  "TimestampSignup",
 			Label: "Sign up time",
-			Type:  types.DateTime(),
+			Type:  types.DateTime(time.RFC3339),
 		}, {
 			Name:  "UniqueEmailID",
 			Label: "Unique email ID",

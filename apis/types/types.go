@@ -30,11 +30,21 @@ var (
 	MinDecimal = MaxDecimal.Neg()
 )
 
+// Time layouts.
+const (
+	Nanoseconds  = "ns"
+	Microseconds = "us"
+	Milliseconds = "ms"
+	Seconds      = "s"
+)
+
 const (
 	MaxArrayLen         = MaxInt24 // Maximum length of an Array type
 	MaxDecimalPrecision = 76       // Maximum precision for a Decimal type
 	MaxDecimalScale     = 38       // Maximum scale for a Decimal type
 	MaxTextLen          = MaxInt   // Maximum length in bytes and characters for a Text type
+	MaxYear             = 9999     // Maximum year for DataTime, Date and Year types
+	MinYear             = 1        // Minimum year for DataTime, Date and Year types
 
 	MaxInt    = math.MaxInt32
 	MaxInt16  = math.MaxInt16
@@ -259,6 +269,7 @@ type Type struct {
 	//   - uintRange value for UInt, UInt8, UInt16, UInt24 and UInt64
 	//   - floatRange value for Float and Float32
 	//   - decimalRange value for Decimal
+	//   - string value representing a layout for DateTime, Date and Time
 	//   - *regexp.Regexp value for Text
 	//   - []string with the enum values for Text
 	//   - []Property for Object
@@ -378,19 +389,19 @@ func Decimal(precision, scale int) Type {
 	return Type{pt: PtDecimal, p: int32(precision), s: int32(scale)}
 }
 
-// DateTime returns the DateTime type.
-func DateTime() Type {
-	return Type{pt: PtDateTime}
+// DateTime returns the DateTime type with the given layout.
+func DateTime(layout string) Type {
+	return Type{pt: PtDateTime, vl: layout}
 }
 
-// Date returns the Date type.
-func Date() Type {
-	return Type{pt: PtDate}
+// Date returns the Date type with the given layout.
+func Date(layout string) Type {
+	return Type{pt: PtDate, vl: layout}
 }
 
-// Time returns the Time type.
-func Time() Type {
-	return Type{pt: PtTime}
+// Time returns the Time type with the given layout.
+func Time(layout string) Type {
+	return Type{pt: PtTime, vl: layout}
 }
 
 // Year returns the Year type.
@@ -450,6 +461,15 @@ func (t Type) AsCustom(name string) Type {
 	}
 	t.custom = name
 	return t
+}
+
+// TimeLayout returns the time layout of DateTime, Date and Time types.
+// Panics if t is not a DateTime, Date or Time type.
+func (t Type) TimeLayout() string {
+	if t.pt != PtDateTime && t.pt != PtTime {
+		panic("cannot get time layout of a non-time type")
+	}
+	return t.vl.(string)
 }
 
 // WithLogicalType returns the type t but with the logical type lt.
