@@ -202,11 +202,35 @@ func LogicalTypeByName(name string) (LogicalType, bool) {
 	return 0, false
 }
 
+// Role represents the role of a property.
+type Role int
+
+const (
+	BothRole        Role = iota // both
+	SourceRole                  // source
+	DestinationRole             // destination
+)
+
+// String returns the string representation of role.
+// It panics if role is not a valid Role value.
+func (role Role) String() string {
+	switch role {
+	case BothRole:
+		return "Both"
+	case SourceRole:
+		return "Source"
+	case DestinationRole:
+		return "Destination"
+	}
+	panic("invalid role")
+}
+
 // Property represents an object property.
 type Property struct {
 	Name        string
 	Label       string
 	Description string
+	Role        Role
 	Type        Type
 }
 

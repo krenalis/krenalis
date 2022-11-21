@@ -781,12 +781,16 @@ func marshalProperty(b *bytes.Buffer, p Property) {
 	b.WriteString(`{"name":`)
 	marshalString(b, p.Name)
 	if p.Label != "" {
-		b.WriteString(`,"label":"`)
+		b.WriteString(`,"label":`)
 		marshalString(b, p.Label)
 	}
 	if p.Description != "" {
-		b.WriteString(`,"description":"`)
+		b.WriteString(`,"description":`)
 		marshalString(b, p.Description)
+	}
+	if p.Role != BothRole {
+		b.WriteString(`,"role":`)
+		b.WriteString(p.Role.String())
 	}
 	b.WriteString(`,"type":`)
 	marshalType(b, p.Type)
@@ -831,6 +835,7 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver) (Property, error) {
 		}
 
 		var ok bool
+		var hasLabel, hasDestination, hasRole bool
 
 		switch key {
 		case "name":
@@ -845,27 +850,38 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver) (Property, error) {
 				return Property{}, errors.New("unexpected empty property name")
 			}
 		case "label":
-			if p.Label != "" {
+			if hasLabel {
 				return Property{}, errors.New("repeated 'label' key")
 			}
 			p.Label, ok = tok.(string)
 			if !ok {
 				return Property{}, errors.New("unexpected value for property label")
 			}
-			if p.Label == "" {
-				return Property{}, errors.New("unexpected empty property label")
-			}
+			hasLabel = true
 		case "description":
-			if p.Description != "" {
+			if hasDestination {
 				return Property{}, errors.New("repeated 'description' key")
 			}
 			p.Description, ok = tok.(string)
 			if !ok {
 				return Property{}, errors.New("unexpected value for property description")
 			}
-			if p.Description == "" {
-				return Property{}, errors.New("unexpected empty property description")
+			hasDestination = true
+		case "role":
+			if hasRole {
+				return Property{}, errors.New("repeated 'role' key")
 			}
+			role, _ := tok.(string)
+			switch role {
+			case "both":
+			case "source":
+				p.Role = SourceRole
+			case "destination":
+				p.Role = DestinationRole
+			default:
+				return Property{}, errors.New("unexpected value for property role")
+			}
+			hasRole = true
 		default:
 			return Property{}, errors.New("unknown property key")
 		}
