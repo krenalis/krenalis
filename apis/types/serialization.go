@@ -272,7 +272,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		return Type{}, errors.New("invalid type syntax")
 	}
 
-	var hasNull, hasScale, hasLayout, hasMinItems, hasUniqueItems bool
+	var hasNull, hasScale, hasLayout, hasMinItems, hasMaxItems, hasUniqueItems bool
 
 	var pt PhysicalType
 	var lt LogicalType
@@ -460,25 +460,26 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 			}
 			n, ok := tok.(json.Number)
 			if !ok {
-				return Type{}, errors.New("invalid minimum items")
+				return Type{}, errors.New("invalid min items")
 			}
 			minItems, _ = strconv.Atoi(string(n))
 			if minItems < 0 || minItems > MaxItems {
-				return Type{}, errors.New("invalid minimum items")
+				return Type{}, errors.New("invalid min items")
 			}
 			hasMinItems = true
 		case "maxItems":
-			if maxItems < MaxItems {
+			if hasMaxItems {
 				return Type{}, errors.New("repeated 'maxItems' key")
 			}
 			n, ok := tok.(json.Number)
 			if !ok {
-				return Type{}, errors.New("invalid maximum items")
+				return Type{}, errors.New("invalid max items")
 			}
 			maxItems, _ = strconv.Atoi(string(n))
-			if maxItems < 0 || maxItems >= MaxItems {
-				return Type{}, errors.New("invalid maximum items")
+			if maxItems < 0 || maxItems > MaxItems {
+				return Type{}, errors.New("invalid max items")
 			}
+			hasMaxItems = true
 		case "uniqueItems":
 			if hasUniqueItems {
 				return Type{}, errors.New("repeated 'uniqueItems' key")
