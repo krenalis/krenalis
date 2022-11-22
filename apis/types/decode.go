@@ -63,6 +63,12 @@ func decode(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error)
 		if err != nil {
 			return nil, err
 		}
+		if tok == nil {
+			if t.null {
+				return nil, nil
+			}
+			return nil, errors.New("null not allowed")
+		}
 	}
 	switch t.pt {
 	case PtBoolean:
@@ -280,6 +286,13 @@ func decode(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error)
 			}
 			if d, ok := tok.(json.Delim); ok && d == ']' {
 				return items, nil
+			}
+			if tok == nil {
+				if it.null {
+					items = append(items, nil)
+					continue
+				}
+				return nil, errors.New("null item not allowed")
 			}
 			item, err := decode(dec, tok, it, strict)
 			if err != nil {

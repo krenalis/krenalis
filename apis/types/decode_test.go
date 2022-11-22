@@ -26,6 +26,11 @@ func TestDecode(t *testing.T) {
 		Value   any
 	}{
 		{
+			Data:  `null`,
+			Type:  Text().WithNull(),
+			Value: nil,
+		},
+		{
 			Data:  `1`,
 			Type:  Int(),
 			Value: 1,

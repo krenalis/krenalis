@@ -27,6 +27,9 @@ func TestSerialization(t *testing.T) {
 			Data: `{"name":"Text"}`,
 			Type: Text(),
 		}, {
+			Data: `{"name":"Text","null":true}`,
+			Type: Text().WithNull(),
+		}, {
 			Data: `{"name":"Text","charLen":10}`,
 			Type: Text(Chars(10)),
 		}, {
@@ -68,6 +71,9 @@ func TestSerialization(t *testing.T) {
 		}, {
 			Data: `{"name":"Array","itemsType":{"name":"Text"}}`,
 			Type: Array(Text()),
+		}, {
+			Data: `{"name":"Array","itemsType":{"name":"Int","null":true}}`,
+			Type: Array(Int().WithNull()),
 		}, {
 			Data: `{"name":"Array","minItems":2,"maxItems":8,"uniqueItems":true,"itemsType":{"name":"Decimal"}}`,
 			Type: Array(Decimal(0, 0)).WithLen(2, 8).WithUnique(true),
@@ -126,6 +132,13 @@ func equalTypes(t1, t2 Type) error {
 			return fmt.Errorf("unknows logical type %d", t2.pt)
 		}
 		return fmt.Errorf("expected logical type %s, got %s", t1.pt, t2.pt)
+	}
+	// Null.
+	if t1.null != t2.null {
+		if t1.null {
+			return errors.New("expected null allowed, got not allowed")
+		}
+		return errors.New("expected null not allowed, got allowed")
 	}
 	// Minimum and maximum.
 	if PtInt <= t1.pt && t1.pt <= PtFloat32 {

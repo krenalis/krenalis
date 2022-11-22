@@ -249,8 +249,8 @@ type Type struct {
 	pt PhysicalType
 	lt LogicalType
 
-	// u reports whether the items of an Array must be unique.
-	unique bool
+	null   bool // null reports whether null values are allowed.
+	unique bool // unique reports whether the items of an Array must be unique.
 
 	// p represents
 	//   - precision of a Decimal type
@@ -750,6 +750,25 @@ func (t Type) WithUnique(on bool) Type {
 	}
 	t.unique = on
 	return t
+}
+
+// WithNull returns the type t but with null values allowed.
+// Panics if t is not a valid type.
+func (t Type) WithNull() Type {
+	if !t.Valid() {
+		panic("type is not valid")
+	}
+	t.null = true
+	return t
+}
+
+// Null reports whether null values are allowed.
+// Panics if t is not a valid type.
+func (t Type) Null() bool {
+	if !t.Valid() {
+		panic("type is not valid")
+	}
+	return t.null
 }
 
 // Custom returns the custom name of t. If t is not a custom type it returns an empty
