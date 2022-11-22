@@ -39,9 +39,9 @@ const (
 )
 
 const (
-	MaxArrayLen         = MaxInt24 // Maximum length of an Array type
 	MaxDecimalPrecision = 76       // Maximum precision for a Decimal type
 	MaxDecimalScale     = 38       // Maximum scale for a Decimal type
+	MaxItems            = MaxInt24 // Maximum number of items of an Array type
 	MaxTextLen          = MaxInt   // Maximum length in bytes and characters for a Text type
 	MaxYear             = 9999     // Maximum year for DataTime, Date and Year types
 	MinYear             = 1        // Minimum year for DataTime, Date and Year types
@@ -423,7 +423,7 @@ func Text(lengths ...Length) Type {
 
 // Array returns an Array type with items of type t.
 func Array(t Type) Type {
-	return Type{pt: PtArray, s: MaxArrayLen, vl: t}
+	return Type{pt: PtArray, s: MaxItems, vl: t}
 }
 
 // Object returns an Object type with the given properties.
@@ -758,11 +758,11 @@ func (t Type) Scale() int {
 	return int(t.s)
 }
 
-// TimeLayout returns the time layout of DateTime, Date and Time types.
+// Layout returns the layout of DateTime, Date and Time types.
 // Panics if t is not a DateTime, Date or Time type.
-func (t Type) TimeLayout() string {
+func (t Type) Layout() string {
 	if t.pt != PtDateTime && t.pt != PtDate && t.pt != PtTime {
-		panic("cannot get time layout of a non-time type")
+		panic("cannot get layout of a non-time type")
 	}
 	return t.vl.(string)
 }
@@ -798,13 +798,17 @@ func (t Type) Regexp() *regexp.Regexp {
 }
 
 // WithRegexp returns t with the regular expression re.
-// Panics if t is not a Text type or if t has any values.
+// Panics if t is not a Text type, or t has already a regular expression or
+// has enum.
 func (t Type) WithRegexp(re *regexp.Regexp) Type {
 	if t.pt != PtText {
 		panic("cannot set regular expression for a non-Text type")
 	}
-	if _, ok := t.vl.([]string); ok {
-		panic("cannot set regular expression if there is enum")
+	switch t.vl.(type) {
+	case []string:
+		panic("cannot set regular expression when t has an enum")
+	case *regexp.Regexp:
+		panic("t already has a regular expression")
 	}
 	t.vl = re
 	return t
@@ -826,61 +830,101 @@ func (t Type) Enum() []string {
 		panic("cannot get enum for a non-Text type")
 	}
 	if vl, ok := t.vl.([]string); ok {
-		values := make([]string, len(vl))
-		copy(values, vl)
-		return values
+		enum := make([]string, len(vl))
+		copy(enum, vl)
+		return enum
 	}
 	return nil
 }
 
-// WithEnum returns t but with a fixed set of values. t must be a Text type.
-// Panics if t is not a Text type, if values is empty, or if t has a regular
-// expression.
-func (t Type) WithEnum(values []string) Type {
+// WithEnum returns t but with an enum. t must be a Text type.
+// Panics if t is not a Text type, or enum is empty, or t already has an enum
+// or a regular expression.
+func (t Type) WithEnum(enum []string) Type {
 	if t.pt != PtText {
 		panic("cannot set enum for a non-Text type")
 	}
-	if len(values) == 0 {
+	if len(enum) == 0 {
 		panic("enum is empty")
 	}
-	if _, ok := t.vl.(*regexp.Regexp); ok {
-		panic("cannot set enum when there is a regular expression")
+	switch t.vl.(type) {
+	case []string:
+		panic("t already has an enum")
+	case *regexp.Regexp:
+		panic("cannot set enum when t has a regular expression")
 	}
-	vl := make([]string, len(values))
-	copy(vl, values)
+	vl := make([]string, len(enum))
+	copy(vl, enum)
 	t.vl = vl
 	return t
 }
 
-// WithLen returns the type t but with length in [min,max]. t must be an Array.
-// Panics if t is not an Array type, or min is not in [0,MaxArrayLen], or max
-// is not in [min,MaxArrayLen].
-func (t Type) WithLen(min, max int) Type {
+// MinItems returns the minimum number of items of t. t must be an Array,
+// otherwise it panics.
+func (t Type) MinItems() int {
 	if t.pt != PtArray {
-		panic("cannot set the length of a non-Array type")
+		panic("cannot get the minimum number of items of a non-Array type")
 	}
-	if min < 0 || min > MaxArrayLen {
-		panic("invalid minimum length")
+	return int(t.p)
+}
+
+// WithMinItems returns t but with the minimum number of items sets to min.
+// t must be an Array. Panics if t is not an Array type or min is not in
+// [0,max] where max is the maximum number of items of t.
+func (t Type) WithMinItems(min int) Type {
+	if t.pt != PtArray {
+		panic("cannot set the minimum number of items for a non-Array type")
 	}
-	if max < min || max > MaxArrayLen {
-		panic("invalid maximum length")
+	if min < 0 || min > int(t.s) {
+		panic(fmt.Sprintf("minimum number of items not in [0,%d]", t.s))
 	}
 	t.p = int32(min)
+	return t
+}
+
+// MaxItems returns the maximum number of items of t. t must be an Array,
+// otherwise it panics.
+func (t Type) MaxItems() int {
+	if t.pt != PtArray {
+		panic("cannot get the maximum number of items of a non-Array type")
+	}
+	return int(t.s)
+}
+
+// WithMaxItems returns t but with the maximum number of items sets to max.
+// t must be an Array. Panics if t is not an Array type or max is not in
+// [min,MaxItems] where min is the minimum number of items of t.
+func (t Type) WithMaxItems(max int) Type {
+	if t.pt != PtArray {
+		panic("cannot set the maximum number of items for a non-Array type")
+	}
+	if max < int(t.p) || max > MaxItems {
+		panic(fmt.Sprintf("maximum number of items not in [%d,%d]", t.p, MaxItems))
+	}
 	t.s = int32(max)
 	return t
 }
 
+// Unique reports whether the items of t are unique.
+// Panics if t is not an Array.
+func (t Type) Unique() bool {
+	if t.pt != PtArray {
+		panic("cannot get unique of a non-Array type")
+	}
+	return t.unique
+}
+
 // WithUnique returns the type t but with unique items. t must be an Array and
-// the item type cannot be Array and Object.
-// Panics if t is not an Array or the item type is Array or Object.
-func (t Type) WithUnique(on bool) Type {
+// its items type cannot be Array or Object.
+// Panics if t is not an Array or the items type is Array or Object.
+func (t Type) WithUnique() Type {
 	if t.pt != PtArray {
 		panic("cannot set unique of a non-Array type")
 	}
 	if pt := t.vl.(Type).pt; pt == PtArray || pt == PtObject {
-		panic("cannot set unique for items of type Array and Object")
+		panic("cannot set unique for an Array with items of type Array or Object")
 	}
-	t.unique = on
+	t.unique = true
 	return t
 }
 
@@ -888,28 +932,28 @@ func (t Type) WithUnique(on bool) Type {
 // type. Panics if t is not an Object type.
 func (t Type) Properties() *Properties {
 	if t.pt != PtObject {
-		panic("cannot get the properties of a non-Array type")
+		panic("cannot get the properties of a non-Object type")
 	}
 	return &Properties{t.vl.([]Property)}
 }
 
-// Properties is an iterator to iterate over the properties of an object.
+// Properties is an iterator to iterate over the properties of an Object.
 type Properties struct {
 	pr []Property
 }
 
-// Next returns the next property of the iterator.
+// Next returns the next property of iter.
 // If there are no more properties, it returns Property{} and false.
-func (si *Properties) Next() (Property, bool) {
-	if si.pr == nil {
-		panic("next on a ended iterator")
+func (iter *Properties) Next() (Property, bool) {
+	if iter.pr == nil {
+		panic("Next on an ended iterator")
 	}
-	if len(si.pr) == 0 {
-		si.pr = nil
+	if len(iter.pr) == 0 {
+		iter.pr = nil
 		return Property{}, false
 	}
-	p := si.pr[0]
-	si.pr = si.pr[1:]
+	p := iter.pr[0]
+	iter.pr = iter.pr[1:]
 	return p, true
 }
 

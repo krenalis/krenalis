@@ -206,7 +206,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 			b.WriteString(`,"minItems":`)
 			b.WriteString(strconv.Itoa(int(t.p)))
 		}
-		if t.s < MaxArrayLen {
+		if t.s < MaxItems {
 			b.WriteString(`,"maxItems":`)
 			b.WriteString(strconv.Itoa(int(t.s)))
 		}
@@ -283,7 +283,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	var enum []string
 	var layout string
 	var itemsType Type
-	var minItems, maxItems = 0, MaxArrayLen
+	var minItems, maxItems = 0, MaxItems
 	var uniqueItems bool
 	var properties []Property
 
@@ -463,12 +463,12 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				return Type{}, errors.New("invalid minimum items")
 			}
 			minItems, _ = strconv.Atoi(string(n))
-			if minItems < 0 || minItems > MaxArrayLen {
+			if minItems < 0 || minItems > MaxItems {
 				return Type{}, errors.New("invalid minimum items")
 			}
 			hasMinItems = true
 		case "maxItems":
-			if maxItems < MaxArrayLen {
+			if maxItems < MaxItems {
 				return Type{}, errors.New("repeated 'maxItems' key")
 			}
 			n, ok := tok.(json.Number)
@@ -476,7 +476,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				return Type{}, errors.New("invalid maximum items")
 			}
 			maxItems, _ = strconv.Atoi(string(n))
-			if maxItems < 0 || maxItems >= MaxArrayLen {
+			if maxItems < 0 || maxItems >= MaxItems {
 				return Type{}, errors.New("invalid maximum items")
 			}
 		case "uniqueItems":
@@ -776,7 +776,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		}
 		t.p = int32(minItems)
 	}
-	if maxItems < MaxArrayLen {
+	if maxItems < MaxItems {
 		if pt != PtArray {
 			return Type{}, errors.New("unexpected maxItems for non-Array type")
 		}

@@ -76,7 +76,7 @@ func TestSerialization(t *testing.T) {
 			Type: Array(Int().WithNull()),
 		}, {
 			Data: `{"name":"Array","minItems":2,"maxItems":8,"uniqueItems":true,"itemsType":{"name":"Decimal"}}`,
-			Type: Array(Decimal(0, 0)).WithLen(2, 8).WithUnique(true),
+			Type: Array(Decimal(0, 0)).WithMinItems(2).WithMaxItems(8).WithUnique(),
 		}, {
 			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"}},{"name":"size","type":{"name":"Decimal"}}]}`,
 			Type: Object([]Property{{Name: "email", Type: Text()}, {Name: "size", Type: Decimal(0, 0)}}),

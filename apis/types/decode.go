@@ -135,7 +135,7 @@ func decode(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error)
 		return d, nil
 	case PtDateTime:
 		var tm time.Time
-		layout := t.TimeLayout()
+		layout := t.Layout()
 		switch layout {
 		case Nanoseconds, Microseconds, Milliseconds, Seconds:
 			var s string
@@ -179,7 +179,7 @@ func decode(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error)
 		if !ok {
 			return nil, errors.New("not a Date value")
 		}
-		tm, err := time.Parse(t.TimeLayout(), s)
+		tm, err := time.Parse(t.Layout(), s)
 		if err != nil {
 			return nil, errors.New("not a Date value")
 		}
@@ -190,7 +190,7 @@ func decode(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error)
 		return tm, nil
 	case PtTime:
 		var tm int
-		layout := t.TimeLayout()
+		layout := t.Layout()
 		switch layout {
 		case Nanoseconds, Microseconds, Milliseconds, Seconds:
 			var s string
