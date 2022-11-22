@@ -451,6 +451,90 @@ func Object(properties []Property) Type {
 	return Type{pt: PtObject, vl: pr}
 }
 
+// Valid indicates if t is valid.
+func (t Type) Valid() bool {
+	return t.pt != 0
+}
+
+// String returns a string representation of t.
+// Panics if t is not a valid type.
+func (t Type) String() string {
+	s := t.pt.String()
+	switch t.pt {
+	case PtDecimal:
+		if t.p > 0 {
+			s += "(" + strconv.Itoa(int(t.p)) + "," + strconv.Itoa(int(t.s)) + ")"
+		}
+	case PtText:
+		if t.p > 0 || t.s > 0 {
+			s += "("
+			if t.p > 0 {
+				s += strconv.Itoa(int(t.p)) + " bytes"
+			}
+			if t.s > 0 {
+				if t.p > 0 {
+					s += ","
+				}
+				s += strconv.Itoa(int(t.p)) + " chars"
+			}
+			s += ")"
+		}
+	}
+	if t.lt > 0 {
+		s += " [" + t.lt.String() + "]"
+	}
+	return s
+}
+
+// PhysicalType returns the physical type of t.
+func (t Type) PhysicalType() PhysicalType {
+	return t.pt
+}
+
+// LogicalType returns the logical type of t and true.
+// If t has no logical type, it returns false.
+func (t Type) LogicalType() (LogicalType, bool) {
+	return t.lt, t.lt > 0
+}
+
+// WithLogicalType returns the type t but with the logical type lt.
+// Panics if lt is not a logical type.
+func (t Type) WithLogicalType(lt LogicalType) Type {
+	if !lt.Valid() {
+		panic("invalid logical type")
+	}
+	t.lt = lt
+	return t
+}
+
+// Null reports whether null values are allowed.
+// Panics if t is not a valid type.
+func (t Type) Null() bool {
+	if !t.Valid() {
+		panic("type is not valid")
+	}
+	return t.null
+}
+
+// WithNull returns the type t but with null values allowed.
+// Panics if t is not a valid type.
+func (t Type) WithNull() Type {
+	if !t.Valid() {
+		panic("type is not valid")
+	}
+	t.null = true
+	return t
+}
+
+// Custom returns the custom name of t. If t is not a custom type it returns an empty
+// string. Panics if t is not a valid type.
+func (t Type) Custom() string {
+	if !t.Valid() {
+		panic("type is not valid")
+	}
+	return t.custom
+}
+
 // AsCustom returns t as a custom type called name.
 // Panics if t is not valid, or t is already a custom type or name is empty.
 func (t Type) AsCustom(name string) Type {
@@ -467,38 +551,19 @@ func (t Type) AsCustom(name string) Type {
 	return t
 }
 
-// TimeLayout returns the time layout of DateTime, Date and Time types.
-// Panics if t is not a DateTime, Date or Time type.
-func (t Type) TimeLayout() string {
-	if t.pt != PtDateTime && t.pt != PtDate && t.pt != PtTime {
-		panic("cannot get time layout of a non-time type")
-	}
-	return t.vl.(string)
-}
-
-// WithLogicalType returns the type t but with the logical type lt.
-// Panics if lt is not a logical type.
-func (t Type) WithLogicalType(lt LogicalType) Type {
-	if !lt.Valid() {
-		panic("invalid logical type")
-	}
-	t.lt = lt
-	return t
-}
-
-// PhysicalType returns the physical type of t.
-func (t Type) PhysicalType() PhysicalType {
-	return t.pt
-}
-
-// Types used to represent number ranges.
 type intRange struct{ min, max int64 }
-type uintRange struct{ min, max uint64 }
-type floatRange struct {
-	min, max   float64
-	minS, maxS string
+
+// IntRange returns the minimum and maximum value for t. t must be ab Int,
+// Int8, Int16, Int24 or Int64 type, otherwise it panics.
+func (t Type) IntRange() (min, max int64) {
+	if t.pt < PtInt || t.pt > PtInt64 {
+		panic("type is not an Int, Int8, Int16, Int24 or Int64 type")
+	}
+	if i, ok := t.vl.(intRange); ok {
+		return i.min, i.max
+	}
+	return minInt[t.pt-PtInt], maxInt[t.pt-PtInt]
 }
-type decimalRange struct{ min, max decimal.Decimal }
 
 // WithIntRange returns t but with values in [min,max]. t must be an Int, Int8,
 // Int16, Int24 or Int64 type. min cannot be greater than max. min and max must
@@ -525,16 +590,18 @@ func (t Type) WithIntRange(min, max int64) Type {
 	return t
 }
 
-// IntRange returns the minimum and maximum value for t. t must be ab Int,
-// Int8, Int16, Int24 or Int64 type, otherwise it panics.
-func (t Type) IntRange() (min, max int64) {
-	if t.pt < PtInt || t.pt > PtInt64 {
-		panic("type is not an Int, Int8, Int16, Int24 or Int64 type")
+type uintRange struct{ min, max uint64 }
+
+// UIntRange returns the minimum and maximum value for t. t must be an UInt,
+// UInt8, UInt16, UInt24 or UInt64, otherwise it panics.
+func (t Type) UIntRange() (min, max uint64) {
+	if t.pt < PtUInt || t.pt > PtUInt64 {
+		panic("type is not an UInt, UInt8, Int16, UInt24 or UInt64 type")
 	}
-	if i, ok := t.vl.(intRange); ok {
+	if i, ok := t.vl.(uintRange); ok {
 		return i.min, i.max
 	}
-	return minInt[t.pt-PtInt], maxInt[t.pt-PtInt]
+	return 0, maxUInt[t.pt-PtInt]
 }
 
 // WithUintRange returns t but with values in [min,max]. t must be a UInt,
@@ -562,16 +629,24 @@ func (t Type) WithUintRange(min, max uint64) Type {
 	return t
 }
 
-// UIntRange returns the minimum and maximum value for t. t must be an UInt,
-// UInt8, UInt16, UInt24 or UInt64, otherwise it panics.
-func (t Type) UIntRange() (min, max uint64) {
-	if t.pt < PtUInt || t.pt > PtUInt64 {
-		panic("type is not an UInt, UInt8, Int16, UInt24 or UInt64 type")
+type floatRange struct {
+	min, max   float64
+	minS, maxS string
+}
+
+// FloatRange returns the minimum and maximum value of t. t must be a Float or
+// Float32 type, otherwise it panics.
+func (t Type) FloatRange() (min, max float64) {
+	if t.pt != PtFloat && t.pt != PtFloat32 {
+		panic("type is not a Float or Float32 type")
 	}
-	if i, ok := t.vl.(uintRange); ok {
-		return i.min, i.max
+	if f, ok := t.vl.(floatRange); ok {
+		return f.min, f.max
 	}
-	return 0, maxUInt[t.pt-PtInt]
+	if t.pt == PtFloat32 {
+		return -MaxFloat32, MaxFloat32
+	}
+	return -MaxFloat, MaxFloat
 }
 
 // WithFloatRange returns t but with values in [min,max]. t must be a Float or
@@ -624,19 +699,18 @@ func (t Type) WithFloatRange(min, max float64) Type {
 	return t
 }
 
-// FloatRange returns the minimum and maximum value of t. t must be a Float or
-// Float32 type, otherwise it panics.
-func (t Type) FloatRange() (min, max float64) {
-	if t.pt != PtFloat && t.pt != PtFloat32 {
-		panic("type is not a Float or Float32 type")
+type decimalRange struct{ min, max decimal.Decimal }
+
+// DecimalRange returns the minimum and maximum value for t. t must be a
+// Decimal type, otherwise it panics.
+func (t Type) DecimalRange() (min, max decimal.Decimal) {
+	if t.pt != PtDecimal {
+		panic("type is not a Decimal type")
 	}
-	if f, ok := t.vl.(floatRange); ok {
-		return f.min, f.max
+	if d, ok := t.vl.(decimalRange); ok {
+		return d.min, d.max
 	}
-	if t.pt == PtFloat32 {
-		return -MaxFloat32, MaxFloat32
-	}
-	return -MaxFloat, MaxFloat
+	return MinDecimal, MaxDecimal
 }
 
 // WithDecimalRange returns t but with values in [min,max]. t must be a Decimal
@@ -666,16 +740,74 @@ func (t Type) WithDecimalRange(min, max decimal.Decimal) Type {
 	return t
 }
 
-// DecimalRange returns the minimum and maximum value for t. t must be a
-// Decimal type, otherwise it panics.
-func (t Type) DecimalRange() (min, max decimal.Decimal) {
+// Precision returns the precision of a Decimal type.
+// Panics if t is not a Decimal type.
+func (t Type) Precision() int {
 	if t.pt != PtDecimal {
-		panic("type is not a Decimal type")
+		panic("cannot get precision of a non-Decimal type")
 	}
-	if d, ok := t.vl.(decimalRange); ok {
-		return d.min, d.max
+	return int(t.p)
+}
+
+// Scale returns the scale of a Decimal type.
+// Panics if t is not a Decimal type.
+func (t Type) Scale() int {
+	if t.pt != PtDecimal {
+		panic("cannot get scale of a non-Decimal type")
 	}
-	return MinDecimal, MaxDecimal
+	return int(t.s)
+}
+
+// TimeLayout returns the time layout of DateTime, Date and Time types.
+// Panics if t is not a DateTime, Date or Time type.
+func (t Type) TimeLayout() string {
+	if t.pt != PtDateTime && t.pt != PtDate && t.pt != PtTime {
+		panic("cannot get time layout of a non-time type")
+	}
+	return t.vl.(string)
+}
+
+// ByteLen returns the maximum length in bytes of a Text type and true.
+// If t has no maximum length in bytes, it returns 0 and false.
+// Panics if t is not a Text type.
+func (t Type) ByteLen() (int, bool) {
+	if t.pt != PtText {
+		panic("cannot get byte length of a non-Text type")
+	}
+	return int(t.p), t.p > 0
+}
+
+// CharLen returns the maximum length in characters of a Text type and true.
+// If t has no maximum length in characters, it returns 0 and false.
+// Panics if t is not a Text type.
+func (t Type) CharLen() (int, bool) {
+	if t.pt != PtText {
+		panic("cannot get character length of a non-Text type")
+	}
+	return int(t.s), t.s > 0
+}
+
+// Regexp returns the regular expression of t. If t has no regular expression,
+// it returns nil. Panics if t is not a Text type.
+func (t Type) Regexp() *regexp.Regexp {
+	if t.pt != PtText {
+		panic("cannot return regular expression for a non-Text type")
+	}
+	re, _ := t.vl.(*regexp.Regexp)
+	return re
+}
+
+// WithRegexp returns t with the regular expression re.
+// Panics if t is not a Text type or if t has any values.
+func (t Type) WithRegexp(re *regexp.Regexp) Type {
+	if t.pt != PtText {
+		panic("cannot set regular expression for a non-Text type")
+	}
+	if _, ok := t.vl.([]string); ok {
+		panic("cannot set regular expression if there is enum")
+	}
+	t.vl = re
+	return t
 }
 
 // ItemType returns the type of the item of an Array type.
@@ -685,6 +817,20 @@ func (t Type) ItemType() Type {
 		panic("cannot get the item type of a non-Array type")
 	}
 	return t.vl.(Type)
+}
+
+// Enum returns the enum values of t. Returns nil if t has no enum.
+// Panics if t is not a Text type.
+func (t Type) Enum() []string {
+	if t.pt != PtText {
+		panic("cannot get enum for a non-Text type")
+	}
+	if vl, ok := t.vl.([]string); ok {
+		values := make([]string, len(vl))
+		copy(values, vl)
+		return values
+	}
+	return nil
 }
 
 // WithEnum returns t but with a fixed set of values. t must be a Text type.
@@ -704,20 +850,6 @@ func (t Type) WithEnum(values []string) Type {
 	copy(vl, values)
 	t.vl = vl
 	return t
-}
-
-// Enum returns the enum values of t. Returns nil if t has no enum.
-// Panics if t is not a Text type.
-func (t Type) Enum() []string {
-	if t.pt != PtText {
-		panic("cannot get enum for a non-Text type")
-	}
-	if vl, ok := t.vl.([]string); ok {
-		values := make([]string, len(vl))
-		copy(values, vl)
-		return values
-	}
-	return nil
 }
 
 // WithLen returns the type t but with length in [min,max]. t must be an Array.
@@ -752,34 +884,6 @@ func (t Type) WithUnique(on bool) Type {
 	return t
 }
 
-// WithNull returns the type t but with null values allowed.
-// Panics if t is not a valid type.
-func (t Type) WithNull() Type {
-	if !t.Valid() {
-		panic("type is not valid")
-	}
-	t.null = true
-	return t
-}
-
-// Null reports whether null values are allowed.
-// Panics if t is not a valid type.
-func (t Type) Null() bool {
-	if !t.Valid() {
-		panic("type is not valid")
-	}
-	return t.null
-}
-
-// Custom returns the custom name of t. If t is not a custom type it returns an empty
-// string. Panics if t is not a valid type.
-func (t Type) Custom() string {
-	if !t.Valid() {
-		panic("type is not valid")
-	}
-	return t.custom
-}
-
 // Properties returns an iterator to iterate over the properties of an Object
 // type. Panics if t is not an Object type.
 func (t Type) Properties() *Properties {
@@ -787,108 +891,6 @@ func (t Type) Properties() *Properties {
 		panic("cannot get the properties of a non-Array type")
 	}
 	return &Properties{t.vl.([]Property)}
-}
-
-// LogicalType returns the logical type of t and true.
-// If t has no logical type, it returns false.
-func (t Type) LogicalType() (LogicalType, bool) {
-	return t.lt, t.lt > 0
-}
-
-// Regexp returns the regular expression of t. If t has no regular expression,
-// it returns nil. Panics if t is not a Text type.
-func (t Type) Regexp() *regexp.Regexp {
-	if t.pt != PtText {
-		panic("cannot return regular expression for a non-Text type")
-	}
-	re, _ := t.vl.(*regexp.Regexp)
-	return re
-}
-
-// WithRegexp returns t with the regular expression re.
-// Panics if t is not a Text type or if t has any values.
-func (t Type) WithRegexp(re *regexp.Regexp) Type {
-	if t.pt != PtText {
-		panic("cannot set regular expression for a non-Text type")
-	}
-	if _, ok := t.vl.([]string); ok {
-		panic("cannot set regular expression if there is enum")
-	}
-	t.vl = re
-	return t
-}
-
-// ByteLen returns the maximum length in bytes of a Text type and true.
-// If t has no maximum length in bytes, it returns 0 and false.
-// Panics if t is not a Text type.
-func (t Type) ByteLen() (int, bool) {
-	if t.pt != PtText {
-		panic("cannot get byte length of a non-Text type")
-	}
-	return int(t.p), t.p > 0
-}
-
-// CharLen returns the maximum length in characters of a Text type and true.
-// If t has no maximum length in characters, it returns 0 and false.
-// Panics if t is not a Text type.
-func (t Type) CharLen() (int, bool) {
-	if t.pt != PtText {
-		panic("cannot get character length of a non-Text type")
-	}
-	return int(t.s), t.s > 0
-}
-
-// Precision returns the precision of a Decimal type.
-// Panics if t is not a Decimal type.
-func (t Type) Precision() int {
-	if t.pt != PtDecimal {
-		panic("cannot get precision of a non-Decimal type")
-	}
-	return int(t.p)
-}
-
-// Scale returns the scale of a Decimal type.
-// Panics if t is not a Decimal type.
-func (t Type) Scale() int {
-	if t.pt != PtDecimal {
-		panic("cannot get scale of a non-Decimal type")
-	}
-	return int(t.s)
-}
-
-// String returns a string representation of t.
-// Panics if t is not a valid type.
-func (t Type) String() string {
-	s := t.pt.String()
-	switch t.pt {
-	case PtDecimal:
-		if t.p > 0 {
-			s += "(" + strconv.Itoa(int(t.p)) + "," + strconv.Itoa(int(t.s)) + ")"
-		}
-	case PtText:
-		if t.p > 0 || t.s > 0 {
-			s += "("
-			if t.p > 0 {
-				s += strconv.Itoa(int(t.p)) + " bytes"
-			}
-			if t.s > 0 {
-				if t.p > 0 {
-					s += ","
-				}
-				s += strconv.Itoa(int(t.p)) + " chars"
-			}
-			s += ")"
-		}
-	}
-	if t.lt > 0 {
-		s += " [" + t.lt.String() + "]"
-	}
-	return s
-}
-
-// Valid indicates if t is valid.
-func (t Type) Valid() bool {
-	return t.pt != 0
 }
 
 // Properties is an iterator to iterate over the properties of an object.
