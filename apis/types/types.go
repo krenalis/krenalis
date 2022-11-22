@@ -280,36 +280,6 @@ type Type struct {
 	custom string
 }
 
-// Array returns an Array type with items of type t.
-func Array(t Type) Type {
-	return Type{pt: PtArray, s: MaxArrayLen, vl: t}
-}
-
-// Object returns an Object type with the given properties.
-// Panics if properties is empty, or if a property name is empty or repeated
-// or if a property type is not valid.
-func Object(properties []Property) Type {
-	if len(properties) == 0 {
-		panic("no property in object")
-	}
-	pr := make([]Property, len(properties))
-	for i, property := range properties {
-		if property.Name == "" {
-			panic("empty property name")
-		}
-		if !property.Type.Valid() {
-			panic("invalid property type")
-		}
-		for _, p := range pr[:i] {
-			if property.Name == p.Name {
-				panic("property name is repeated")
-			}
-		}
-		pr[i] = property
-	}
-	return Type{pt: PtObject, vl: pr}
-}
-
 // Boolean returns the Boolean type.
 func Boolean() Type {
 	return Type{pt: PtBoolean}
@@ -449,6 +419,36 @@ func Text(lengths ...Length) Type {
 		}
 	}
 	return t
+}
+
+// Array returns an Array type with items of type t.
+func Array(t Type) Type {
+	return Type{pt: PtArray, s: MaxArrayLen, vl: t}
+}
+
+// Object returns an Object type with the given properties.
+// Panics if properties is empty, or if a property name is empty or repeated
+// or if a property type is not valid.
+func Object(properties []Property) Type {
+	if len(properties) == 0 {
+		panic("no property in object")
+	}
+	pr := make([]Property, len(properties))
+	for i, property := range properties {
+		if property.Name == "" {
+			panic("empty property name")
+		}
+		if !property.Type.Valid() {
+			panic("invalid property type")
+		}
+		for _, p := range pr[:i] {
+			if property.Name == p.Name {
+				panic("property name is repeated")
+			}
+		}
+		pr[i] = property
+	}
+	return Type{pt: PtObject, vl: pr}
 }
 
 // AsCustom returns t as a custom type called name.
