@@ -285,7 +285,7 @@ func decode(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error)
 				return nil, err
 			}
 			if d, ok := tok.(json.Delim); ok && d == ']' {
-				return items, nil
+				break
 			}
 			if tok == nil {
 				if it.null {
@@ -300,6 +300,16 @@ func decode(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error)
 			}
 			items = append(items, item)
 		}
+		if len(items) < int(t.p) {
+			return nil, fmt.Errorf("array contains less than %d items", t.p)
+		}
+		if len(items) > int(t.s) {
+			return nil, fmt.Errorf("array contains more than %d items", t.s)
+		}
+		if t.unique && !unique(items, it) {
+			return nil, errors.New("an array item is repeated")
+		}
+		return items, nil
 	case PtObject:
 		if d, ok := tok.(json.Delim); !ok || d != '{' {
 			return nil, errors.New("not an object value")
@@ -356,4 +366,39 @@ func decode(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error)
 	}
 
 	return nil, nil
+}
+
+// unique reports whether items, with the same type t, contain unique values.
+func unique(items []any, t Type) bool {
+	n := len(items)
+	if n < 2 {
+		return true
+	}
+	if t.pt == PtDecimal {
+		for i, a := range items[:n-1] {
+			a, ok := a.(decimal.Decimal)
+			if ok {
+				for _, b := range items[i+1:] {
+					if b != nil && !a.Equals(b.(decimal.Decimal)) {
+						return false
+					}
+				}
+			} else {
+				for _, b := range items[i+1:] {
+					if b == nil {
+						return false
+					}
+				}
+			}
+		}
+		return true
+	}
+	for i, a := range items[:n-1] {
+		for _, b := range items[i+1:] {
+			if a == b {
+				return false
+			}
+		}
+	}
+	return true
 }
