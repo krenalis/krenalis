@@ -23,25 +23,39 @@ import (
 // maxTime is the maximum value for a Time value.
 const maxTime = 24 * 60 * 60 * 1000
 
-// DecodeValue decodes a JSON-encoded data read from r, validates it according
-// to the given type and returns the decoded value.
-func DecodeValue(r io.Reader, t Type) (any, error) {
+// Decode decodes a JSON-encoded data read from r, validates it according
+// to the given Object type and returns the decoded value.
+func Decode(r io.Reader, t Type) (map[string]any, error) {
+	if t.pt != PtObject {
+		return nil, errors.New("t is not an Object type")
+	}
 	dec := json.NewDecoder(r)
 	dec.UseNumber()
-	return decode(dec, nil, t, false)
+	v, err := decode(dec, nil, t, false)
+	if err != nil {
+		return nil, err
+	}
+	return v.(map[string]any), nil
 }
 
-// DecodeValueStrict is like DecodeValue but returns an error if a property is
-// missing.
-func DecodeValueStrict(r io.Reader, t Type) (any, error) {
+// DecodeStrict is like Decode but returns an error if a property is missing.
+func DecodeStrict(r io.Reader, t Type) (any, error) {
+	if t.pt != PtObject {
+		return nil, errors.New("t is not an Object type")
+	}
 	dec := json.NewDecoder(r)
 	dec.UseNumber()
-	return decode(dec, nil, t, true)
+	v, err := decode(dec, nil, t, true)
+	if err != nil {
+		return nil, err
+	}
+	return v.(map[string]any), nil
 }
 
 // decode decodes a JSON-encoded value, read from dec, validates it according
 // to the given type and returns the decoded value. If strict is true, it
 // returns an error if a property is missing.
+// If tok is not nil, it does not read the first token from dec but uses tok.
 func decode(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error) {
 	var err error
 	if tok == nil {

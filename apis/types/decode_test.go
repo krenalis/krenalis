@@ -8,6 +8,7 @@
 package types
 
 import (
+	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
@@ -16,7 +17,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func TestDecodeValue(t *testing.T) {
+func TestDecode(t *testing.T) {
 
 	tests := []struct {
 		Data    string
@@ -138,7 +139,9 @@ func TestDecodeValue(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := DecodeValue(strings.NewReader(test.Data), test.Type)
+		dec := json.NewDecoder(strings.NewReader(test.Data))
+		dec.UseNumber()
+		got, err := decode(dec, nil, test.Type, false)
 		if err != nil {
 			t.Errorf("cannot decode '%s': %s", test.Data, err)
 			continue
