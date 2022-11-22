@@ -466,7 +466,7 @@ func (t Type) AsCustom(name string) Type {
 // TimeLayout returns the time layout of DateTime, Date and Time types.
 // Panics if t is not a DateTime, Date or Time type.
 func (t Type) TimeLayout() string {
-	if t.pt != PtDateTime && t.pt != PtTime {
+	if t.pt != PtDateTime && t.pt != PtDate && t.pt != PtTime {
 		panic("cannot get time layout of a non-time type")
 	}
 	return t.vl.(string)
