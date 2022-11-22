@@ -797,7 +797,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 				v := row[i].(*string)
 				user[c.Name] = *v
 			}
-			fh.SetUser(*identity, ts, user)
+			fh.SetUser(*identity, user, ts, nil)
 		}
 		if err = rows.Err(); err != nil {
 			return err

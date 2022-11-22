@@ -105,7 +105,7 @@ func (c *connection) Groups(cursor string, properties [][]string) error {
 			break
 		}
 		for _, obj := range objects {
-			c.firehose.SetGroup(obj.ID, time.UnixMilli(obj.LastModifiedDate).UTC(), obj.Properties)
+			c.firehose.SetGroup(obj.ID, obj.Properties, time.UnixMilli(obj.LastModifiedDate).UTC(), nil)
 			contacts, err := c.companyContacts(obj.ID)
 			if err != nil {
 				return err
@@ -329,7 +329,7 @@ func (c *connection) Users(cursor string, properties [][]string) error {
 			break
 		}
 		for _, obj := range objects {
-			c.firehose.SetUser(obj.ID, time.UnixMilli(obj.LastModifiedDate).UTC(), obj.Properties)
+			c.firehose.SetUser(obj.ID, obj.Properties, time.UnixMilli(obj.LastModifiedDate).UTC(), nil)
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
 		c.firehose.SetCursor(serializeCursor(fromDate))

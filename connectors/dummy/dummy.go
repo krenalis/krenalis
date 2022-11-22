@@ -85,17 +85,28 @@ var users = []user{
 		ID: "1",
 		Properties: map[string]any{
 			"first_name": "Mario",
-			"last_name":  connector.TimestampedValue{Value: "Rossi", Timestamp: now.Add(5 * time.Second)},
-			"email":      connector.TimestampedValue{Value: "mariorossi@example.com", Timestamp: now.Add(1 * time.Second)},
+			"last_name":  "Rossi",
+			"email":      "mariorossi@example.com",
 		},
 	},
 	{
 		ID: "2",
 		Properties: map[string]any{
 			"first_name": "Luigi",
-			"last_name":  connector.TimestampedValue{Value: "Verdi", Timestamp: now.Add(7 * time.Second)},
-			"email":      connector.TimestampedValue{Value: "luigiverdi@example.com", Timestamp: now.Add(3 * time.Second)},
+			"last_name":  "Verdi",
+			"email":      "luigiverdi@example.com",
 		},
+	},
+}
+
+var timestamps = map[string]map[string]time.Time{
+	"1": {
+		"last_name": now.Add(5 * time.Second),
+		"email":     now.Add(1 * time.Second),
+	},
+	"2": {
+		"last_name": now.Add(7 * time.Second),
+		"email":     now.Add(3 * time.Second),
 	},
 }
 
@@ -105,7 +116,7 @@ func (c *connection) SetUsers(users []connector.User) error {
 
 func (c *connection) Users(cursor string, properties [][]string) error {
 	for _, user := range users {
-		c.firehose.SetUser(user.ID, now, user.Properties)
+		c.firehose.SetUser(user.ID, user.Properties, now, timestamps[user.ID])
 	}
 	return nil
 }

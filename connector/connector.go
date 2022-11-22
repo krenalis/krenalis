@@ -114,11 +114,10 @@ type Firehose interface {
 	// SetCursor sets the given cursor for the connection.
 	SetCursor(cursor string)
 
-	// SetGroup sets the properties of the given group. timestamp is the last
-	// update time of the properties. If a property value has the
-	// TimestampedValue type, the Timestamp field represents the timestamp of
-	// the property.
-	SetGroup(group string, timestamp time.Time, properties map[string]any)
+	// SetGroup sets the properties of the given group. The last update time of
+	// a property is the time in timestamps with the property name as key.
+	// If no such key exists, the last update time is timestamp.
+	SetGroup(group string, properties map[string]any, timestamp time.Time, timestamps map[string]time.Time)
 
 	// SetGroupUsers sets the users of a group.
 	SetGroupUsers(group string, users []string)
@@ -126,11 +125,10 @@ type Firehose interface {
 	// SetSettings sets the given settings of the connection.
 	SetSettings(settings []byte) error
 
-	// SetUser sets the properties of the given user. timestamp is the last
-	// update time of the properties. If a property value has the
-	// TimestampedValue type, the Timestamp field represents the timestamp of
-	// the property.
-	SetUser(user string, timestamp time.Time, properties map[string]any)
+	// SetUser sets the properties of the given user. The last update time of a
+	// property is the time in timestamps with the property name as key. If no
+	// such key exists, the last update time is timestamp.
+	SetUser(user string, properties map[string]any, timestamp time.Time, timestamps map[string]time.Time)
 
 	// SetUserGroups sets the groups of a user.
 	SetUserGroups(user string, groups []string)
@@ -214,11 +212,6 @@ type GroupPropertyChangeEvent struct {
 func (ev GroupPropertyChangeEvent) event() {}
 
 type Properties map[string]any
-
-type TimestampedValue struct {
-	Timestamp time.Time
-	Value     any
-}
 
 type Property struct {
 	Name       string           `json:"name,omitempty"`

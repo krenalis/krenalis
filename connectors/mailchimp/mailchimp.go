@@ -630,7 +630,7 @@ func (c *connection) Users(cursor string, properties [][]string) error {
 			return err
 		}
 		for _, m := range response.Members {
-			c.firehose.SetUser(m.ID, m.LastChanged, m.Properties())
+			c.firehose.SetUser(m.ID, m.Properties(), m.LastChanged, nil)
 		}
 		done := offset+len(response.Members) >= response.TotalItems
 		if len(response.Members) > 0 {

@@ -64,7 +64,7 @@ func (fh *firehose) SetCursor(cursor string) {
 	return
 }
 
-func (fh *firehose) SetGroup(group string, timestamp time.Time, properties map[string]any) {
+func (fh *firehose) SetGroup(group string, properties map[string]any, timestamp time.Time, timestamps map[string]time.Time) {
 	return
 }
 
@@ -88,22 +88,12 @@ func (fh *firehose) SetSettings(settings []byte) error {
 	return nil
 }
 
-func (fh *firehose) SetUser(user string, timestamp time.Time, properties map[string]any) {
+func (fh *firehose) SetUser(user string, properties map[string]any, timestamp time.Time, timestamps map[string]time.Time) {
 
-	// Normalize the properties and the timestamps.
-	timestamps := make(map[string]time.Time, len(properties))
-	{
-		props := make(map[string]any, len(properties))
-		for name, v := range properties {
-			if tv, ok := v.(connector.TimestampedValue); ok {
-				props[name] = tv.Value
-				timestamps[name] = tv.Timestamp
-			} else {
-				props[name] = v
-				timestamps[name] = timestamp
-			}
+	for name := range properties {
+		if _, ok := timestamps[name]; !ok {
+			timestamps[name] = timestamp
 		}
-		properties = props
 	}
 
 	// Serialize the properties and the timestamps to the database.
@@ -405,7 +395,7 @@ func (rw *recordWriter) Record(record []any) error {
 		}
 	}
 	user := fmt.Sprintf("%s", record[rw.identityIndex])
-	rw.fh.SetUser(user, ts, properties)
+	rw.fh.SetUser(user, properties, ts, nil)
 	rw.setUserCalled = true
 	return nil
 }
@@ -424,7 +414,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		}
 	}
 	user := fmt.Sprintf("%s", record[rw.identityColumn])
-	rw.fh.SetUser(user, ts, record)
+	rw.fh.SetUser(user, record, ts, nil)
 	rw.setUserCalled = true
 	return nil
 }
@@ -450,7 +440,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 		}
 	}
 	user := fmt.Sprintf("%s", record[rw.identityIndex])
-	rw.fh.SetUser(user, ts, properties)
+	rw.fh.SetUser(user, properties, ts, nil)
 	rw.setUserCalled = true
 	return nil
 }
