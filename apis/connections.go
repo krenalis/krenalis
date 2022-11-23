@@ -1595,7 +1595,7 @@ func (this *Connections) reloadProperties(id int) error {
 	var b bytes.Buffer
 	enc := json.NewEncoder(&b)
 	enc.SetEscapeHTML(false)
-	err = enc.Encode(properties)
+	err = enc.Encode(propertiesByRole(role, properties))
 	if err != nil {
 		return fmt.Errorf("cannot marshal the properties of the connection %d : %s", id, err)
 	}
@@ -1681,6 +1681,29 @@ func (this *Connections) compileQueryWithoutLimit(query string) (string, error) 
 	}
 	s2 += p + n + 2
 	return query[:s1] + query[s2:], nil
+}
+
+// propertiesByRole returns the properties compatible with role.
+// May return properties if all properties are compatible.
+func propertiesByRole(role ConnectionRole, properties []types.Property) []types.Property {
+	var props []types.Property
+	start := 0
+	for i, p := range properties {
+		if p.Role == types.BothRole || p.Role == types.Role(role) {
+			continue
+		}
+		if start < i {
+			props = append(props, properties[start:i]...)
+		}
+		start = i + 1
+	}
+	if props == nil {
+		return properties
+	}
+	if start < len(properties) {
+		props = append(props, properties[start:]...)
+	}
+	return props
 }
 
 // fileReader implements the connector.FileReader interface.
