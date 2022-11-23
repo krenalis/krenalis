@@ -1591,10 +1591,15 @@ func (this *Connections) reloadProperties(id int) error {
 		}
 	}
 
-	rawProperties, err := json.Marshal(properties)
+	// Serialize the properties.
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	err = enc.Encode(properties)
 	if err != nil {
 		return fmt.Errorf("cannot marshal the properties of the connection %d : %s", id, err)
 	}
+	rawProperties := b.Bytes()
 	if utf8.RuneCount(rawProperties) > rawPropertiesMaxSize {
 		return fmt.Errorf("cannot marshal the properties of the connection %d: data is too large", id)
 	}
