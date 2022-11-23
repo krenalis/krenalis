@@ -625,7 +625,12 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 		err = this.startImport(id, typ, reimport)
 		var errorMsg string
 		if err != nil {
-			errorMsg = abbreviate(err.Error(), 1000)
+			if e, ok := err.(importError); ok {
+				errorMsg = abbreviate(e.Error(), 1000)
+			} else {
+				log.Printf("[error] cannot do import %d: %s", importID, err)
+				errorMsg = "an internal error has occurred"
+			}
 		}
 		_, err2 := this.myDB.Table("ConnectionsImports").Update(
 			sql.Set{"endTime": time.Now().UTC(), "error": errorMsg},
@@ -636,6 +641,15 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 	}()
 
 	return nil
+}
+
+// importError represents a non-internal error during import.
+type importError struct {
+	err error
+}
+
+func (err importError) Error() string {
+	return err.err.Error()
 }
 
 // startImport starts an import for the connection with identifier id and type
@@ -666,7 +680,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			&resource, &cursor, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return errors.New("connection does not exist anymore")
+				return nil
 			}
 			return err
 		}
@@ -700,7 +714,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		if accessToken == "" || accessTokenExpired {
 			accessToken, err = this.api.apis.refreshOAuthToken(resource)
 			if err != nil {
-				return err
+				return importError{err}
 			}
 		}
 
@@ -714,11 +728,11 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			AccessToken:  accessToken,
 		})
 		if err != nil {
-			return fmt.Errorf("cannot connect to the connector %d of the connection %d: %s", connector, id, err)
+			return importError{fmt.Errorf("cannot connect to the connector: %s", err)}
 		}
 		err = c.Users(cursor, properties)
 		if err != nil {
-			return fmt.Errorf("call to the Users method of the connection %d failed: %s", id, err)
+			return importError{fmt.Errorf("cannot get users from the connector: %s", err)}
 		}
 
 	case DatabaseType:
@@ -733,14 +747,14 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &identityColumn, &timestampColumn, &settings, &usersQuery)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return errors.New("connection does not exist anymore")
+				return nil
 			}
 			return err
 		}
 
 		usersQuery, err = this.compileQueryWithoutLimit(usersQuery)
 		if err != nil {
-			return err
+			return importError{err}
 		}
 		fh := this.newFirehose(context.Background(), id, connector, 0, DatabaseType, role, WebhooksPerNone)
 		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
@@ -749,10 +763,13 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			Firehose: fh,
 		})
 		if err != nil {
-			return err
+			return importError{fmt.Errorf("cannot connect to the connector: %s", err)}
 		}
 		columns, rows, err := c.Query(usersQuery)
 		if err != nil {
+			if err, ok := err.(*_connector.DatabaseQueryError); ok {
+				return importError{err}
+			}
 			return err
 		}
 		defer rows.Close()
@@ -767,10 +784,10 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			}
 		}
 		if identityIndex == noColumn {
-			return fmt.Errorf("missing identity column %q", identityColumn)
+			return importError{fmt.Errorf("missing identity column %q", identityColumn)}
 		}
 		if timestampColumn != "" && timestampIndex == noColumn {
-			return fmt.Errorf("missing timestamp column %q", timestampColumn)
+			return importError{fmt.Errorf("missing timestamp column %q", timestampColumn)}
 		}
 		var now time.Time
 		if timestampIndex == noColumn {
@@ -783,7 +800,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 				row[i] = &v
 			}
 			if err = rows.Scan(row...); err != nil {
-				return err
+				return importError{fmt.Errorf("cannot read users from database: %s", err)}
 			}
 			identity := row[identityIndex].(*string)
 			var ts time.Time
@@ -800,7 +817,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			fh.SetUser(*identity, user, ts, nil)
 		}
 		if err = rows.Err(); err != nil {
-			return err
+			return importError{fmt.Errorf("an error accurred closing the database: %s", err)}
 		}
 
 	case FileType:
@@ -815,12 +832,12 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &storage, &identityColumn, &timestampColumn, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return errors.New("connection does not exist anymore")
+				return nil
 			}
 			return err
 		}
 		if storage == 0 {
-			return errors.New("connector has no more a storage")
+			return importError{errors.New("connector has no more a storage")}
 		}
 
 		var ctx = context.Background()
@@ -838,7 +855,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 					"WHERE `s`.`id` = ?", storage).Scan(&connectorName, &connector, &settings)
 			if err != nil {
 				if err != sql.ErrNoRows {
-					return errors.New("connector has no more a storage")
+					return nil
 				}
 				return err
 			}
@@ -850,7 +867,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 				Firehose: fh,
 			})
 			if err != nil {
-				return err
+				return importError{fmt.Errorf("cannot connect to the storage connector: %s", err)}
 			}
 			files = newFileReader(c)
 		}
@@ -863,14 +880,14 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			Firehose: fh,
 		})
 		if err != nil {
-			return err
+			return importError{fmt.Errorf("cannot connect to the file connector: %s", err)}
 		}
 
 		// Read the records.
 		records := fh.newRecordWriter(identityColumn, timestampColumn, false)
 		err = file.Read(files, records)
 		if err != nil {
-			return err
+			return importError{fmt.Errorf("cannot read the file: %s", err)}
 		}
 
 	}
