@@ -153,7 +153,7 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 		property := types.Property{
 			Name:  r.Name,
 			Label: r.Label,
-			Type:  typ,
+			Type:  typ.WithNull(), // TODO(marco): check if null is required for all properties
 		}
 		if typ.PhysicalType() == types.PtText {
 			var n int
