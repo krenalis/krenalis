@@ -133,6 +133,7 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 			}
 			Label       string
 			Description string
+			Calculated  bool
 			Type        string
 		}
 	}
@@ -156,6 +157,9 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 			Label:       r.Label,
 			Description: r.Description,
 			Type:        typ.WithNull(), // TODO(marco): check if null is required for all properties
+		}
+		if r.Calculated {
+			property.Role = types.SourceRole
 		}
 		if typ.PhysicalType() == types.PtText {
 			var n int
