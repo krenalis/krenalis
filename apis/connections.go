@@ -716,7 +716,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		if err != nil {
 			return fmt.Errorf("cannot connect to the connector %d of the connection %d: %s", connector, id, err)
 		}
-		c.Users(cursor, properties)
+		err = c.Users(cursor, properties)
 		if err != nil {
 			return fmt.Errorf("call to the Users method of the connection %d failed: %s", id, err)
 		}
