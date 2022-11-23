@@ -18,6 +18,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/shopspring/decimal"
+	"golang.org/x/text/unicode/norm"
 )
 
 // Resolver resolves a custom type name to its type. If a custom type with the
@@ -39,7 +40,7 @@ func MarshalType(t Type) ([]byte, error) {
 // For custom types, it calls the resolve function, if not nil, to resolve the
 // type custom name to its type.
 func UnmarshalType(data []byte, resolve Resolver) (Type, error) {
-	dec := json.NewDecoder(bytes.NewReader(data))
+	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
 	dec.UseNumber()
 	t, err := unmarshalType(dec, resolve)
 	if err == io.EOF {
@@ -58,7 +59,7 @@ func (t Type) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON parses the JSON-encoded data and stores the result in the type
 // pointed by t.
 func (t *Type) UnmarshalJSON(data []byte) error {
-	dec := json.NewDecoder(bytes.NewReader(data))
+	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
 	dec.UseNumber()
 	t2, err := unmarshalType(dec, nil)
 	if err != nil {

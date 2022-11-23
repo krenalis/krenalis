@@ -12,8 +12,10 @@ import (
 	"math"
 	"regexp"
 	"strconv"
+	"unicode/utf8"
 
 	"github.com/shopspring/decimal"
+	"golang.org/x/text/unicode/norm"
 )
 
 // one is the decimal.Decimal 1.
@@ -364,18 +366,21 @@ func Decimal(precision, scale int) Type {
 }
 
 // DateTime returns the DateTime type with the given layout.
+// It panics if layout is not a valid UTF-8-encoded string.
 func DateTime(layout string) Type {
-	return Type{pt: PtDateTime, vl: layout}
+	return Type{pt: PtDateTime, vl: normalizedUTF8(layout)}
 }
 
 // Date returns the Date type with the given layout.
+// It panics if layout is not a valid UTF-8-encoded string.
 func Date(layout string) Type {
-	return Type{pt: PtDate, vl: layout}
+	return Type{pt: PtDate, vl: normalizedUTF8(layout)}
 }
 
 // Time returns the Time type with the given layout.
+// It panics if layout is not a valid UTF-8-encoded string.
 func Time(layout string) Type {
-	return Type{pt: PtTime, vl: layout}
+	return Type{pt: PtTime, vl: normalizedUTF8(layout)}
 }
 
 // Year returns the Year type.
@@ -427,8 +432,9 @@ func Array(t Type) Type {
 }
 
 // Object returns an Object type with the given properties.
-// Panics if properties is empty, or if a property name is empty or repeated
-// or if a property type is not valid.
+// Panics if properties is empty, or if a property name is empty or repeated,
+// or if a property string field is not UTF-8 encoded or if a property type is
+// not valid.
 func Object(properties []Property) Type {
 	if len(properties) == 0 {
 		panic("no property in object")
@@ -438,6 +444,9 @@ func Object(properties []Property) Type {
 		if property.Name == "" {
 			panic("empty property name")
 		}
+		property.Name = normalizedUTF8(property.Name)
+		property.Label = normalizedUTF8(property.Label)
+		property.Description = normalizedUTF8(property.Description)
 		if !property.Type.Valid() {
 			panic("invalid property type")
 		}
@@ -536,7 +545,8 @@ func (t Type) Custom() string {
 }
 
 // AsCustom returns t as a custom type called name.
-// Panics if t is not valid, or t is already a custom type or name is empty.
+// Panics if t is not valid, or t is already a custom type, or name is empty or
+// is not valid UTF-8.
 func (t Type) AsCustom(name string) Type {
 	if !t.Valid() {
 		panic("type is not valid")
@@ -547,7 +557,7 @@ func (t Type) AsCustom(name string) Type {
 	if name == "" {
 		panic("custom type name is empty")
 	}
-	t.custom = name
+	t.custom = normalizedUTF8(name)
 	return t
 }
 
@@ -838,8 +848,8 @@ func (t Type) Enum() []string {
 }
 
 // WithEnum returns t but with an enum. t must be a Text type.
-// Panics if t is not a Text type, or enum is empty, or t already has an enum
-// or a regular expression.
+// Panics if t is not a Text type, or enum is empty or contains an invalid
+// UTF-8 string, or t already has an enum or a regular expression.
 func (t Type) WithEnum(enum []string) Type {
 	if t.pt != PtText {
 		panic("cannot set enum for a non-Text type")
@@ -854,7 +864,9 @@ func (t Type) WithEnum(enum []string) Type {
 		panic("cannot set enum when t has a regular expression")
 	}
 	vl := make([]string, len(enum))
-	copy(vl, enum)
+	for i, s := range enum {
+		vl[i] = normalizedUTF8(s)
+	}
 	t.vl = vl
 	return t
 }
@@ -971,3 +983,12 @@ func (l Chars) length() int { return int(l) }
 type Bytes int
 
 func (l Bytes) length() int { return int(l) }
+
+// normalizedUTF8 returns s as a normalized UTF-8 encoded string.
+// Panics if s is not a valid UTF-8 encoded string.
+func normalizedUTF8(s string) string {
+	if !utf8.ValidString(s) {
+		panic("invalid UTF-8 encoding")
+	}
+	return norm.NFC.String(s)
+}

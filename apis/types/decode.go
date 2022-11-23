@@ -8,28 +8,29 @@
 package types
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"strconv"
 	"time"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
+	"golang.org/x/text/unicode/norm"
 )
 
 // maxTime is the maximum value for a Time value.
 const maxTime = 24 * 60 * 60 * 1000
 
-// Decode decodes a JSON-encoded data read from r, validates it according
-// to the given Object type and returns the decoded value.
-func Decode(r io.Reader, t Type) (map[string]any, error) {
+// Decode decodes a JSON-encoded data, validates it according to t, that must
+// be an Object, and returns the decoded value.
+func Decode(data []byte, t Type) (map[string]any, error) {
 	if t.pt != PtObject {
 		return nil, errors.New("t is not an Object type")
 	}
-	dec := json.NewDecoder(r)
+	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
 	dec.UseNumber()
 	v, err := decode(dec, nil, t, false)
 	if err != nil {
@@ -39,11 +40,11 @@ func Decode(r io.Reader, t Type) (map[string]any, error) {
 }
 
 // DecodeStrict is like Decode but returns an error if a property is missing.
-func DecodeStrict(r io.Reader, t Type) (any, error) {
+func DecodeStrict(data []byte, t Type) (any, error) {
 	if t.pt != PtObject {
 		return nil, errors.New("t is not an Object type")
 	}
-	dec := json.NewDecoder(r)
+	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
 	dec.UseNumber()
 	v, err := decode(dec, nil, t, true)
 	if err != nil {
