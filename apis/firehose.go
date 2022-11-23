@@ -90,6 +90,9 @@ func (fh *firehose) SetSettings(settings []byte) error {
 
 func (fh *firehose) SetUser(user string, properties map[string]any, timestamp time.Time, timestamps map[string]time.Time) {
 
+	if timestamps == nil {
+		timestamps = map[string]time.Time{}
+	}
 	for name := range properties {
 		if _, ok := timestamps[name]; !ok {
 			timestamps[name] = timestamp
