@@ -8,6 +8,7 @@
 package apis
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -19,6 +20,7 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/transformations"
+	"chichi/apis/types"
 	"chichi/connector"
 )
 
@@ -39,6 +41,7 @@ type firehose struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
 	webhooksPer   WebhooksPer
+	userSchema    types.Type
 	err           error
 }
 
@@ -90,6 +93,23 @@ func (fh *firehose) SetSettings(settings []byte) error {
 
 func (fh *firehose) SetUser(user string, properties map[string]any, timestamp time.Time, timestamps map[string]time.Time) {
 
+	// Validate the properties.
+	if !fh.userSchema.Valid() {
+		fh.setError(errors.New("SetUser called on a Firehose without a user schema"))
+		return
+	}
+	b, err := json.Marshal(properties)
+	if err != nil {
+		fh.setError(err)
+		return
+	}
+	properties, err = types.Decode(bytes.NewReader(b), fh.userSchema)
+	if err != nil {
+		fh.setError(fmt.Errorf("user schema validation failed: %s", err))
+		return
+	}
+
+	// Set the timestamps.
 	if timestamps == nil {
 		timestamps = map[string]time.Time{}
 	}
@@ -100,7 +120,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	}
 
 	// Serialize the properties and the timestamps to the database.
-	err := fh.writeConnectionUsers(user, properties, timestamps)
+	err = fh.writeConnectionUsers(user, properties, timestamps)
 	if err != nil {
 		fh.setError(err)
 		return

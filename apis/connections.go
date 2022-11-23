@@ -688,25 +688,10 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			cursor = ""
 		}
 
-		// Read the used properties from the transformations of this connection.
-		var properties [][]string
-		rows, err := this.myDB.Query(
-			"SELECT `property` FROM `transformations_connections`\n"+
-				"WHERE `connection` = ?", id)
+		// Read the user schema and the properties to read.
+		schema, properties, err := this.userSchema(id)
 		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var prop string
-			err = rows.Scan(&prop)
-			if err != nil {
-				return err
-			}
-			properties = append(properties, []string{prop})
-		}
-		if err := rows.Err(); err != nil {
-			return err
+			return fmt.Errorf("cannot read user schema: %s", err)
 		}
 
 		accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
@@ -718,7 +703,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			}
 		}
 
-		fh := this.newFirehose(context.Background(), id, connector, resource, typ, role, webhooksPer)
+		fh := this.newFirehose(context.Background(), id, connector, resource, schema, typ, role, webhooksPer)
 		c, err := newAppConnection(fh.ctx, name, &_connector.AppConfig{
 			Role:         role,
 			Settings:     settings,
@@ -730,7 +715,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		if err != nil {
 			return importError{fmt.Errorf("cannot connect to the connector: %s", err)}
 		}
-		err = c.Users(cursor, properties)
+		err = c.Users(cursor, [][]string{properties})
 		if err != nil {
 			return importError{fmt.Errorf("cannot get users from the connector: %s", err)}
 		}
@@ -752,11 +737,17 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			return err
 		}
 
+		// Read the user schema.
+		schema, _, err := this.userSchema(id)
+		if err != nil {
+			return fmt.Errorf("cannot read user schema: %s", err)
+		}
+
 		usersQuery, err = this.compileQueryWithoutLimit(usersQuery)
 		if err != nil {
 			return importError{err}
 		}
-		fh := this.newFirehose(context.Background(), id, connector, 0, DatabaseType, role, WebhooksPerNone)
+		fh := this.newFirehose(context.Background(), id, connector, 0, schema, DatabaseType, role, WebhooksPerNone)
 		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 			Role:     role,
 			Settings: settings,
@@ -840,6 +831,12 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			return importError{errors.New("connector has no more a storage")}
 		}
 
+		// Read the user schema.
+		schema, _, err := this.userSchema(id)
+		if err != nil {
+			return fmt.Errorf("cannot read user schema: %s", err)
+		}
+
 		var ctx = context.Background()
 
 		// Get the file reader.
@@ -859,7 +856,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 				}
 				return err
 			}
-			fh := this.newFirehose(ctx, storage, connector, 0, StorageType, role, WebhooksPerNone)
+			fh := this.newFirehose(ctx, storage, connector, 0, schema, StorageType, role, WebhooksPerNone)
 			ctx = fh.ctx
 			c, err := newStorageConnection(ctx, connectorName, &_connector.StorageConfig{
 				Role:     role,
@@ -873,7 +870,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		}
 
 		// Connect to the file connector.
-		fh := this.newFirehose(ctx, id, connector, 0, FileType, role, WebhooksPerNone)
+		fh := this.newFirehose(ctx, id, connector, 0, types.Type{}, FileType, role, WebhooksPerNone)
 		file, err := newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 			Role:     role,
 			Settings: settings,
@@ -1027,7 +1024,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 	if err != nil {
 		return nil, nil, err
 	}
-	fh := this.newFirehose(context.Background(), id, connector, 0, typ, cRole, WebhooksPerNone)
+	fh := this.newFirehose(context.Background(), id, connector, 0, types.Type{}, typ, cRole, WebhooksPerNone)
 	c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 		Role:     cRole,
 		Settings: settings,
@@ -1137,7 +1134,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 			}
 		}
 
-		fh := this.newFirehose(context.Background(), id, connector, resource, typ, cRole, webhooksPer)
+		fh := this.newFirehose(context.Background(), id, connector, resource, types.Type{}, typ, cRole, webhooksPer)
 		connection, err = newAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
 			Role:         cRole,
 			Settings:     settings,
@@ -1164,7 +1161,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 			return nil, err
 		}
 
-		fh := this.newFirehose(context.Background(), id, connector, 0, typ, cRole, WebhooksPerNone)
+		fh := this.newFirehose(context.Background(), id, connector, 0, types.Type{}, typ, cRole, WebhooksPerNone)
 
 		switch typ {
 		case DatabaseType:
@@ -1366,7 +1363,7 @@ func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 }
 
 // newFirehose returns a new Firehose used to call a connection method.
-func (this *Connections) newFirehose(ctx context.Context, connection, connector, resource int, typ ConnectorType, role _connector.Role, webhooksPer WebhooksPer) *firehose {
+func (this *Connections) newFirehose(ctx context.Context, connection, connector, resource int, userSchema types.Type, typ ConnectorType, role _connector.Role, webhooksPer WebhooksPer) *firehose {
 	fh := &firehose{
 		connections:   this,
 		connection:    connection,
@@ -1375,6 +1372,7 @@ func (this *Connections) newFirehose(ctx context.Context, connection, connector,
 		connectorType: typ,
 		role:          role,
 		webhooksPer:   webhooksPer,
+		userSchema:    userSchema,
 	}
 	fh.ctx, fh.cancel = context.WithCancel(ctx)
 	return fh
@@ -1455,7 +1453,7 @@ func (this *Connections) reloadProperties(id int) error {
 				return err
 			}
 		}
-		fh := this.newFirehose(context.Background(), id, connector, resource, AppType, cRole, webhooksPer)
+		fh := this.newFirehose(context.Background(), id, connector, resource, types.Type{}, AppType, cRole, webhooksPer)
 		c, err := newAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
 			Role:         cRole,
 			Settings:     settings,
@@ -1493,7 +1491,7 @@ func (this *Connections) reloadProperties(id int) error {
 		if err != nil {
 			return err
 		}
-		fh := this.newFirehose(context.Background(), id, connector, 0, DatabaseType, cRole, WebhooksPerNone)
+		fh := this.newFirehose(context.Background(), id, connector, 0, types.Type{}, DatabaseType, cRole, WebhooksPerNone)
 		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 			Role:     cRole,
 			Settings: settings,
@@ -1555,7 +1553,7 @@ func (this *Connections) reloadProperties(id int) error {
 				}
 				return err
 			}
-			fh := this.newFirehose(ctx, storage, connector, 0, StorageType, cRole, WebhooksPerNone)
+			fh := this.newFirehose(ctx, storage, connector, 0, types.Type{}, StorageType, cRole, WebhooksPerNone)
 			ctx = fh.ctx
 			c, err := newStorageConnection(ctx, connectorName, &_connector.StorageConfig{
 				Role:     cRole,
@@ -1569,7 +1567,7 @@ func (this *Connections) reloadProperties(id int) error {
 		}
 
 		// Connect to the file connector and read only the columns.
-		fh := this.newFirehose(ctx, id, connector, 0, FileType, cRole, WebhooksPerNone)
+		fh := this.newFirehose(ctx, id, connector, 0, types.Type{}, FileType, cRole, WebhooksPerNone)
 		file, err := newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 			Role:     cRole,
 			Settings: settings,
@@ -1604,6 +1602,54 @@ func (this *Connections) reloadProperties(id int) error {
 	_, err = this.myDB.Exec("UPDATE `connections` SET `properties` = ? WHERE `id` = ?", rawProperties, id)
 
 	return err
+}
+
+// userSchema returns the user schema and the names of the used properties of
+// the connection with identifier id.
+func (this *Connections) userSchema(id int) (schema types.Type, names []string, err error) {
+
+	// Read the names of the used properties from the transformations of this connection.
+	var usedNames []string
+	query := "SELECT `property` FROM `transformations_connections` WHERE `connection` = ?"
+	err = this.myDB.QueryScan(query, id, func(rows *sql.Rows) error {
+		var name string
+		for rows.Next() {
+			if err := rows.Scan(&name); err != nil {
+				return err
+			}
+			usedNames = append(usedNames, name)
+		}
+		return nil
+	})
+	if err != nil {
+		return
+	}
+
+	// Read all properties.
+	var allSchema []types.Property
+	var properties []byte
+	err = this.myDB.QueryRow("SELECT `properties` FROM `connections` WHERE `id` = ?", id).Scan(&properties)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(properties, &allSchema)
+	if err != nil {
+		return
+	}
+
+	// Create a schema with only the properties used.
+	useName := map[string]bool{}
+	for _, name := range usedNames {
+		useName[name] = true
+	}
+	usedProperties := make([]types.Property, 0, len(usedNames))
+	for _, property := range allSchema {
+		if useName[property.Name] {
+			usedProperties = append(usedProperties, property)
+		}
+	}
+
+	return types.Object(usedProperties), usedNames, nil
 }
 
 // compileQueryWithLimit compiles the given query, replacing the ':limit'
