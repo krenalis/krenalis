@@ -131,8 +131,9 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 				Value  string
 				Hidden bool
 			}
-			Label string
-			Type  string
+			Label       string
+			Description string
+			Type        string
 		}
 	}
 	err := c.call("GET", "/crm/v3/properties/contact", nil, 200, &response)
@@ -151,9 +152,10 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 			return nil, nil, err
 		}
 		property := types.Property{
-			Name:  r.Name,
-			Label: r.Label,
-			Type:  typ.WithNull(), // TODO(marco): check if null is required for all properties
+			Name:        r.Name,
+			Label:       r.Label,
+			Description: r.Description,
+			Type:        typ.WithNull(), // TODO(marco): check if null is required for all properties
 		}
 		if typ.PhysicalType() == types.PtText {
 			var n int
