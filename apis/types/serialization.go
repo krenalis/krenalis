@@ -15,7 +15,7 @@ import (
 	"io"
 	"regexp"
 	"strconv"
-	"strings"
+	"unicode/utf8"
 
 	"github.com/shopspring/decimal"
 )
@@ -74,7 +74,32 @@ func (p Property) MarshalJSON() ([]byte, error) {
 		return nil, errors.New("property type is not valid")
 	}
 	var b bytes.Buffer
-	marshalProperty(&b, p)
+	b.WriteString(`{"name":`)
+	err := marshalString(&b, p.Name)
+	if err != nil {
+		return nil, err
+	}
+	if p.Label != "" {
+		b.WriteString(`,"label":`)
+		err = marshalString(&b, p.Label)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if p.Description != "" {
+		b.WriteString(`,"description":`)
+		err = marshalString(&b, p.Description)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if p.Role != BothRole {
+		b.WriteString(`,"role":`)
+		b.WriteString(p.Role.String())
+	}
+	b.WriteString(`,"type":`)
+	marshalType(&b, p.Type)
+	b.WriteByte('}')
 	return b.Bytes(), nil
 }
 
@@ -222,7 +247,23 @@ func marshalType(b *bytes.Buffer, t Type) {
 			if i > 0 {
 				b.WriteString(",")
 			}
-			marshalProperty(b, p)
+			b.WriteString(`{"name":`)
+			_ = marshalString(b, p.Name)
+			if p.Label != "" {
+				b.WriteString(`,"label":`)
+				_ = marshalString(b, p.Label)
+			}
+			if p.Description != "" {
+				b.WriteString(`,"description":`)
+				_ = marshalString(b, p.Description)
+			}
+			if p.Role != BothRole {
+				b.WriteString(`,"role":`)
+				b.WriteString(p.Role.String())
+			}
+			b.WriteString(`,"type":`)
+			marshalType(b, p.Type)
+			b.WriteByte('}')
 		}
 		b.WriteString("]")
 	}
@@ -811,27 +852,6 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	return t, nil
 }
 
-// marshalProperty marshals p as JSON and writes it to b.
-func marshalProperty(b *bytes.Buffer, p Property) {
-	b.WriteString(`{"name":`)
-	marshalString(b, p.Name)
-	if p.Label != "" {
-		b.WriteString(`,"label":`)
-		marshalString(b, p.Label)
-	}
-	if p.Description != "" {
-		b.WriteString(`,"description":`)
-		marshalString(b, p.Description)
-	}
-	if p.Role != BothRole {
-		b.WriteString(`,"role":`)
-		b.WriteString(p.Role.String())
-	}
-	b.WriteString(`,"type":`)
-	marshalType(b, p.Type)
-	b.WriteByte('}')
-}
-
 // unmarshalProperty reads the JSON tokens from dec, which must have already
 // read the token '{', and returns the decoded property.
 // For custom types, it calls the resolve function, if not nil, to resolve the
@@ -934,35 +954,65 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver) (Property, error) {
 	return p, nil
 }
 
+const hex = "0123456789abcdef"
+
 // marshalString marshals s as a JSON string and writes it to b.
-func marshalString(b *bytes.Buffer, s string) {
+//
+// This code is derived from the (*encodeState).string method of the json
+// standard package that is copyright The Go Authors.
+func marshalString(b *bytes.Buffer, s string) error {
 	b.WriteByte('"')
-	for len(s) > 0 {
-		i := strings.IndexAny(s, "&'<>\"\r")
-		if i == -1 {
-			b.WriteString(s)
-			break
+	start := 0
+	for i := 0; i < len(s); {
+		c := s[i]
+		if c < utf8.RuneSelf {
+			if c > 31 && c != '"' && c != '\\' {
+				i++
+				continue
+			}
+			if start < i {
+				b.WriteString(s[start:i])
+			}
+			b.WriteByte('\\')
+			switch c {
+			case '"', '\\':
+				b.WriteByte(c)
+			case '\n':
+				b.WriteByte('n')
+			case '\r':
+				b.WriteByte('r')
+			case '\t':
+				b.WriteByte('t')
+			default:
+				b.WriteString(`u00`)
+				b.WriteByte(hex[c>>4])
+				b.WriteByte(hex[c&0xF])
+			}
+			i++
+			start = i
+			continue
 		}
-		if i > 0 {
-			b.WriteString(s[:i])
+		r, size := utf8.DecodeRuneInString(s[i:])
+		if r == utf8.RuneError && size == 1 {
+			return errors.New("invalid UTF-8 encoding")
 		}
-		var esc string
-		switch s[i] {
-		case '&':
-			esc = "&amp;"
-		case '\'':
-			esc = "&#39;"
-		case '<':
-			esc = "&lt;"
-		case '>':
-			esc = "&gt;"
-		case '"':
-			esc = "&#34;"
-		case '\r':
-			esc = "&#13;"
+		// U+2028 is LINE SEPARATOR.
+		// U+2029 is PARAGRAPH SEPARATOR.
+		if r == '\u2028' || r == '\u2029' {
+			if start < i {
+				b.WriteString(s[start:i])
+			}
+			b.WriteString(`\u202`)
+			b.WriteByte(hex[c&0xF])
+			i += size
+			start = i
+			continue
 		}
-		b.WriteString(esc)
-		s = s[i+1:]
+		i += size
+	}
+	if start < len(s) {
+		b.WriteString(s[start:])
 	}
 	b.WriteByte('"')
+	return nil
 }
