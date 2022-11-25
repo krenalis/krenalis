@@ -85,7 +85,7 @@ func (c *connection) Connector() *connector.Connector {
 }
 
 // Groups returns the groups starting from the given cursor.
-func (c *connection) Groups(cursor string, properties [][]string) error {
+func (c *connection) Groups(cursor string, properties []connector.PropertyPath) error {
 
 	fromDate, err := parseCursor(cursor)
 	if err != nil {
@@ -320,7 +320,7 @@ func (c *connection) SetUsers(users []connector.User) error {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(cursor string, properties [][]string) error {
+func (c *connection) Users(cursor string, properties []connector.PropertyPath) error {
 
 	fromDate, err := parseCursor(cursor)
 	if err != nil {
@@ -400,7 +400,7 @@ type iter struct {
 // be "Company" or "Contact".
 // Requires the "crm.objects.contacts.read" scope for contacts and the
 // "crm.objects.companies.read" for companies.
-func (c *connection) newIterator(typ string, properties [][]string, fromDate int64, limit int) (*iter, error) {
+func (c *connection) newIterator(typ string, properties []connector.PropertyPath, fromDate int64, limit int) (*iter, error) {
 
 	path := "/crm/v3/"
 	switch typ {

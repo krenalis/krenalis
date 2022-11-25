@@ -1611,11 +1611,11 @@ func (this *Connections) reloadProperties(id int) error {
 	return err
 }
 
-// userSchema returns the user schema and the names of the mapped properties of
+// userSchema returns the user schema and the paths of the mapped properties of
 // the connection with identifier id.
 //
 // If the connection does not exist it returns a ConnectionNotFoundError error.
-func (this *Connections) userSchema(id int) (types.Schema, [][]string, error) {
+func (this *Connections) userSchema(id int) (types.Schema, []_connector.PropertyPath, error) {
 
 	// Read the schema.
 	var rawSchema []byte
@@ -1632,8 +1632,8 @@ func (this *Connections) userSchema(id int) (types.Schema, [][]string, error) {
 		return types.Schema{}, nil, fmt.Errorf("cannot unmarshal schema of connection %d", id)
 	}
 
-	// Read the names of the used properties from the transformations of this connection.
-	var names [][]string
+	// Read the paths of the mapped properties from the transformations of this connection.
+	var paths []_connector.PropertyPath
 	err = this.myDB.QueryScan(
 		"SELECT `property` FROM `transformations_connections` WHERE `connection` = ?", id, func(rows *sql.Rows) error {
 			var name string
@@ -1641,7 +1641,7 @@ func (this *Connections) userSchema(id int) (types.Schema, [][]string, error) {
 				if err := rows.Scan(&name); err != nil {
 					return err
 				}
-				names = append(names, []string{name})
+				paths = append(paths, []string{name})
 			}
 			return nil
 		})
@@ -1653,11 +1653,11 @@ func (this *Connections) userSchema(id int) (types.Schema, [][]string, error) {
 	}
 
 	// Create a schema with only the properties mapped.
-	mapped := make(map[string]struct{}, len(names))
-	for _, name := range names {
-		mapped[name[0]] = struct{}{}
+	mapped := make(map[string]struct{}, len(paths))
+	for _, p := range paths {
+		mapped[p[0]] = struct{}{}
 	}
-	mappedProperties := make([]types.Property, 0, len(names))
+	mappedProperties := make([]types.Property, 0, len(paths))
 	for _, property := range schema.Properties() {
 		if _, ok := mapped[property.Name]; ok {
 			mappedProperties = append(mappedProperties, property)
@@ -1670,7 +1670,7 @@ func (this *Connections) userSchema(id int) (types.Schema, [][]string, error) {
 		}
 	}
 
-	return schema, names, nil
+	return schema, paths, nil
 }
 
 // compileQueryWithLimit compiles the given query, replacing the ':limit'

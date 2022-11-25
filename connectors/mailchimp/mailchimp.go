@@ -114,7 +114,7 @@ func (c *connection) Connector() *connector.Connector {
 }
 
 // Groups returns the groups starting from the given cursor.
-func (c *connection) Groups(cursor string, properties [][]string) error {
+func (c *connection) Groups(cursor string, properties []connector.PropertyPath) error {
 	return nil
 }
 
@@ -602,7 +602,7 @@ func (c *connection) SetUsers(users []connector.User) error {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(cursor string, properties [][]string) error {
+func (c *connection) Users(cursor string, properties []connector.PropertyPath) error {
 
 	path := "/lists/" + c.settings.List + "/members"
 	params := url.Values{
@@ -657,7 +657,7 @@ func (c *connection) Users(cursor string, properties [][]string) error {
 
 // serializeProperties serializes the properties in the Mailchimp "fields"
 // parameter format
-func serializeProperties(properties [][]string) string {
+func serializeProperties(properties []connector.PropertyPath) string {
 	var hasID, hasLastChange bool
 	for _, p := range properties {
 		realName := ""

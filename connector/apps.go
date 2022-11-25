@@ -19,6 +19,9 @@ import (
 // request was not authorized.
 var ErrWebhookUnauthorized = errors.New("webhook unauthorized")
 
+// PropertyPath represents a property path.
+type PropertyPath []string
+
 // AppConfig represents the configuration of an app connection.
 type AppConfig struct {
 	Role         Role
@@ -37,7 +40,7 @@ type AppConnection interface {
 	Connection
 
 	// Groups returns the groups starting from the given cursor.
-	Groups(cursor string, properties [][]string) error
+	Groups(cursor string, properties []PropertyPath) error
 
 	// ReceiveWebhook receives a webhook request and returns its events.
 	// It returns the ErrWebhookUnauthorized error is the request was not authorized.
@@ -53,5 +56,5 @@ type AppConnection interface {
 	SetUsers(users []User) error
 
 	// Users returns the users starting from the given cursor.
-	Users(cursor string, properties [][]string) error
+	Users(cursor string, properties []PropertyPath) error
 }

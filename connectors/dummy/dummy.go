@@ -47,7 +47,7 @@ func (c *connection) Connector() *connector.Connector {
 	}
 }
 
-func (c *connection) Groups(cursor string, properties [][]string) error {
+func (c *connection) Groups(cursor string, properties []connector.PropertyPath) error {
 	panic("not implemented")
 }
 
@@ -114,7 +114,7 @@ func (c *connection) SetUsers(users []connector.User) error {
 	panic("not implemented")
 }
 
-func (c *connection) Users(cursor string, properties [][]string) error {
+func (c *connection) Users(cursor string, properties []connector.PropertyPath) error {
 	for _, user := range users {
 		c.firehose.SetUser(user.ID, user.Properties, now, timestamps[user.ID])
 	}
