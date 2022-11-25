@@ -9,7 +9,6 @@ package types
 
 import (
 	"errors"
-	"unicode/utf8"
 )
 
 var errInvalidSchemaSyntax = errors.New("invalid schema syntax")
@@ -49,9 +48,6 @@ func SchemaOf(properties []Property) (Schema, error) {
 	for i, property := range properties {
 		if property.Name == "" {
 			return Schema{}, errors.New("empty property name")
-		}
-		if !utf8.ValidString(property.Name) {
-			return Schema{}, errors.New("property name is not UTF-8 encoded")
 		}
 		normalizedName := normalizedUTF8(property.Name)
 		for _, p := range ps[:i] {
