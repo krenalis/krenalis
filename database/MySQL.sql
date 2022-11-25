@@ -53,7 +53,6 @@ CREATE TABLE `connections` (
   `timestampColumn` VARCHAR(100) NOT NULL DEFAULT '',
   `settings` TEXT NOT NULL,
   `schema` MEDIUMTEXT NOT NULL,
-  `usedProperties` MEDIUMTEXT NOT NULL,
   `usersQuery` MEDIUMTEXT NOT NULL,
   PRIMARY KEY (`id`)
 );

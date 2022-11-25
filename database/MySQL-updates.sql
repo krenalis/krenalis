@@ -654,3 +654,5 @@ VALUES (1, 1, 'Workspace', '{ "properties": [
         }
     }
 ] }', '');
+
+ALTER TABLE `connections` DROP COLUMN `usedProperties`;

@@ -366,8 +366,7 @@ func (apis *APIs) initSchema() {
 		identityColumn  string
 		timestampColumn string
 		settings        string
-		properties      string
-		usedProperties  string
+		schema          string
 		usersQuery      string
 	}{})
 
