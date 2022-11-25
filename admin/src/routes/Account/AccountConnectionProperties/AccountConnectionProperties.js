@@ -98,7 +98,12 @@ export default class AccountConnectionProperties extends React.Component {
 		let trs = this.state.transformations;
 		let transformations = [];
 		for (let t of trs) {
-			t.InputProperties = t.InputProperties.filter((p) => p.Name !== name);
+			if (t.InputProperties.findIndex((p) => p.Name === name) !== -1) {
+				let oldDefaultTransformation = this.computeDefaultTransformationFunction(t);
+				t.InputProperties = t.InputProperties.filter((p) => p.Name !== name);
+				if (t.SourceCode === '' || t.SourceCode === oldDefaultTransformation)
+					t.SourceCode = this.computeDefaultTransformationFunction(t);
+			}
 			transformations.push(t);
 		}
 		this.setState({ leftProperties: leftProperties, transformations: transformations });
@@ -106,19 +111,22 @@ export default class AccountConnectionProperties extends React.Component {
 
 	onAddTransformation = () => {
 		let transformations = this.state.transformations;
-		transformations.push({
+		let t = {
 			ID: this.state.newTransformationID,
-			SourceCode: '',
 			InputProperties: [],
 			GRProperty: '',
-		});
+		};
+		t.SourceCode = this.computeDefaultTransformationFunction(t);
+		transformations.push(t);
 		this.setState({ transformations: transformations, newTransformationID: this.state.newTransformationID + 1 });
 	};
 
 	onChangeTransformation = (id, value) => {
 		let transformations = this.state.transformations;
+		let t = transformations.find((t) => t.ID === id);
+		t.SourceCode = value === '' ? this.computeDefaultTransformationFunction(t) : value;
 		let i = transformations.findIndex((t) => t.ID === id);
-		transformations[i].SourceCode = value;
+		transformations[i] = t;
 		this.setState({ transformations: transformations });
 	};
 
@@ -134,8 +142,11 @@ export default class AccountConnectionProperties extends React.Component {
 		for (let t of trs) {
 			if (t.ID === transformationID) {
 				if (prop.column === 'left') {
-					if (t.InputProperties.find((p) => p.Name === prop.name) == null) {
+					if (t.InputProperties.findIndex((p) => p.Name === prop.name) === -1) {
+						let oldDefaultTransformation = this.computeDefaultTransformationFunction(t);
 						t.InputProperties.push({ Connection: this.connectionID, Name: prop.name });
+						if (t.SourceCode === '' || t.SourceCode === oldDefaultTransformation)
+							t.SourceCode = this.computeDefaultTransformationFunction(t);
 					}
 				}
 				if (prop.column === 'right') {
@@ -197,6 +208,20 @@ export default class AccountConnectionProperties extends React.Component {
 			},
 		});
 		this.toast.current.toast();
+	};
+
+	computeDefaultTransformationFunction = (t) => {
+		let f = defaultTransformationFunction;
+		if (t.InputProperties.length > 0) {
+			let prs = '';
+			t.InputProperties.forEach((p, i) => {
+				if (i === 0) prs += `user['${p.Name}']`;
+				else prs += ` + user['${p.Name}']`;
+			});
+			let i = f.indexOf('return');
+			f = f.substring(0, i + 7) + prs;
+		}
+		return f;
 	};
 
 	isSelectedProperty = (name, column) => {
@@ -320,19 +345,6 @@ export default class AccountConnectionProperties extends React.Component {
 													defaultLanguage='python'
 													value={t.SourceCode}
 													theme='vs-light'
-													defaultValue={(() => {
-														let f = defaultTransformationFunction;
-														if (t.InputProperties.length > 0) {
-															let prs = '';
-															t.InputProperties.forEach((p, i) => {
-																if (i === 0) prs += `user['${p.Name}']`;
-																else prs += ` + user['${p.Name}']`;
-															});
-															let i = f.indexOf('return');
-															f = f.substring(0, i + 7) + prs;
-														}
-														return f;
-													})()}
 												/>
 											</div>
 											<SlButton
