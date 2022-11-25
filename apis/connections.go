@@ -715,7 +715,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		if err != nil {
 			return importError{fmt.Errorf("cannot connect to the connector: %s", err)}
 		}
-		err = c.Users(cursor, [][]string{properties})
+		err = c.Users(cursor, properties)
 		if err != nil {
 			return importError{fmt.Errorf("cannot get users from the connector: %s", err)}
 		}
@@ -1611,10 +1611,10 @@ func (this *Connections) reloadProperties(id int) error {
 
 // userSchema returns the user schema and the names of the used properties of
 // the connection with identifier id.
-func (this *Connections) userSchema(id int) (schema types.Type, names []string, err error) {
+func (this *Connections) userSchema(id int) (schema types.Type, names [][]string, err error) {
 
 	// Read the names of the used properties from the transformations of this connection.
-	var usedNames []string
+	var usedNames [][]string
 	query := "SELECT `property` FROM `transformations_connections` WHERE `connection` = ?"
 	err = this.myDB.QueryScan(query, id, func(rows *sql.Rows) error {
 		var name string
@@ -1622,7 +1622,7 @@ func (this *Connections) userSchema(id int) (schema types.Type, names []string, 
 			if err := rows.Scan(&name); err != nil {
 				return err
 			}
-			usedNames = append(usedNames, name)
+			usedNames = append(usedNames, []string{name})
 		}
 		return nil
 	})
@@ -1645,7 +1645,7 @@ func (this *Connections) userSchema(id int) (schema types.Type, names []string, 
 	// Create a schema with only the properties used.
 	useName := map[string]bool{}
 	for _, name := range usedNames {
-		useName[name] = true
+		useName[name[0]] = true
 	}
 	usedProperties := make([]types.Property, 0, len(usedNames))
 	for _, property := range allSchema {
