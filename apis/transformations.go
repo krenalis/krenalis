@@ -10,6 +10,7 @@ package apis
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"chichi/pkg/open2b/sql"
 )
@@ -67,6 +68,9 @@ func createTransformation(tx *sql.Tx, t TransformationToCreate) (int, error) {
 
 // Create creates the transformation t. If the transformation is created
 // successfully, its ID is returned.
+//
+// The transformation function must have at least one non-empty input property,
+// a not-empty source code and a not-empty output property.
 func (this *Transformations) Create(t TransformationToCreate) (int, error) {
 	err := this.validate(t)
 	if err != nil {
@@ -87,6 +91,10 @@ func (this *Transformations) Create(t TransformationToCreate) (int, error) {
 	return id, nil
 }
 
+// Update updates the transformation function with the given ID.
+//
+// The updated transformation function must have at least one non-empty input
+// property, a not-empty source code and a not-empty output property.
 func (this *Transformations) Update(id int, t TransformationToUpdate) error {
 	err := this.validate(t)
 	if err != nil {
@@ -124,6 +132,8 @@ func (this *Transformations) Update(id int, t TransformationToUpdate) error {
 }
 
 // SaveAll saves all the transformations for the given connection.
+// Every transformation function must have at least one non-empty input
+// property, a not-empty source code and a not-empty output property.
 func (this *Transformations) SaveAll(connection int, transformations []TransformationToUpdate) error {
 
 	// Validate all the transformations.
@@ -226,6 +236,9 @@ func (this *Transformations) List(connection int) ([]Transformation, error) {
 }
 
 func (this *Transformations) validate(t TransformationToCreate) error {
+	if strings.TrimSpace(t.SourceCode) == "" {
+		return errors.New("transformation function cannot be empty")
+	}
 	// TODO(Gianluca): validate the Python function here.
 	if len(t.InputProperties) == 0 {
 		return errors.New("should have at least one input property")
