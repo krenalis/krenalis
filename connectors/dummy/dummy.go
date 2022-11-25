@@ -51,6 +51,14 @@ func (c *connection) Groups(cursor string, properties []connector.PropertyPath) 
 	panic("not implemented")
 }
 
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) {
+	panic("not implemented")
+}
+
+func (c *connection) Resource() (string, error) {
+	return "dummy-resource", nil
+}
+
 func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 	userSchema := types.MustSchemaOf([]types.Property{
 		{Name: "first_name", Type: types.Text()},
@@ -58,14 +66,6 @@ func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 		{Name: "email", Type: types.Text()},
 	})
 	return userSchema, types.Schema{}, nil
-}
-
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) {
-	panic("not implemented")
-}
-
-func (c *connection) Resource() (string, error) {
-	return "dummy-resource", nil
 }
 
 // ServeUI serves the connector's user interface.

@@ -118,6 +118,70 @@ func (c *connection) Groups(cursor string, properties []connector.PropertyPath) 
 	return nil
 }
 
+// ReceiveWebhook receives a webhook request and returns its events.
+// It returns the ErrWebhookUnauthorized error is the request was not authorized.
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) {
+
+	if c.settings.WebhookSecret == "" {
+		// Webhooks are not set up.
+		if r.Method == "GET" && r.Header.Get("User-Agent") == "MailChimp.com WebHook Validator" {
+			// Setup call from Mailchimp.
+			return nil, nil
+		}
+		return nil, errors.New("unexpected webhook")
+	}
+
+	if r.URL.Query().Get("secret") != c.settings.WebhookSecret {
+		// The webhook is not authenticated.
+		return nil, errors.New("unauthorized webhook")
+	}
+
+	err := r.ParseForm()
+	if err != nil {
+		return nil, err
+	}
+
+	timestamp, err := time.Parse("2006-01-02 15:04:05", r.Form.Get("fired_at"))
+	if err != nil {
+		return nil, err
+	}
+	user := r.Form.Get("data[id]")
+
+	// TODO(carlo): subscribe and unsubscribe events are important and should be handled as separate event types.
+	var events = make([]connector.Event, 1)
+	switch r.Form.Get("type") {
+	case "subscribe":
+		// User subscribed.
+		events[0] = connector.UserCreateEvent{
+			Timestamp: timestamp,
+			User:      user,
+		}
+	case "unsubscribe", "profile", "upemail":
+		// User profile updated.
+		events[0] = connector.UserChangeEvent{
+			Timestamp: timestamp,
+			User:      user,
+		}
+	case "cleaned":
+		// User profile deleted.
+		// TODO(carlo): couldn't trigger this webhook, so the effective content is unknown.
+		events[0] = connector.UserDeleteEvent{
+			Timestamp: timestamp,
+			User:      user,
+		}
+	}
+	return events, nil
+}
+
+// Resource returns the resource from a client token.
+func (c *connection) Resource() (string, error) {
+	_, resource, err := c.getMetadata()
+	if err != nil {
+		return "", err
+	}
+	return resource, nil
+}
+
 // Schemas returns user and group schemas.
 func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 	params := url.Values{
@@ -345,70 +409,6 @@ func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 	}
 
 	return schema, types.Schema{}, nil
-}
-
-// ReceiveWebhook receives a webhook request and returns its events.
-// It returns the ErrWebhookUnauthorized error is the request was not authorized.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) {
-
-	if c.settings.WebhookSecret == "" {
-		// Webhooks are not set up.
-		if r.Method == "GET" && r.Header.Get("User-Agent") == "MailChimp.com WebHook Validator" {
-			// Setup call from Mailchimp.
-			return nil, nil
-		}
-		return nil, errors.New("unexpected webhook")
-	}
-
-	if r.URL.Query().Get("secret") != c.settings.WebhookSecret {
-		// The webhook is not authenticated.
-		return nil, errors.New("unauthorized webhook")
-	}
-
-	err := r.ParseForm()
-	if err != nil {
-		return nil, err
-	}
-
-	timestamp, err := time.Parse("2006-01-02 15:04:05", r.Form.Get("fired_at"))
-	if err != nil {
-		return nil, err
-	}
-	user := r.Form.Get("data[id]")
-
-	// TODO(carlo): subscribe and unsubscribe events are important and should be handled as separate event types.
-	var events = make([]connector.Event, 1)
-	switch r.Form.Get("type") {
-	case "subscribe":
-		// User subscribed.
-		events[0] = connector.UserCreateEvent{
-			Timestamp: timestamp,
-			User:      user,
-		}
-	case "unsubscribe", "profile", "upemail":
-		// User profile updated.
-		events[0] = connector.UserChangeEvent{
-			Timestamp: timestamp,
-			User:      user,
-		}
-	case "cleaned":
-		// User profile deleted.
-		// TODO(carlo): couldn't trigger this webhook, so the effective content is unknown.
-		events[0] = connector.UserDeleteEvent{
-			Timestamp: timestamp,
-			User:      user,
-		}
-	}
-	return events, nil
-}
-
-// Resource returns the resource from a client token.
-func (c *connection) Resource() (string, error) {
-	_, resource, err := c.getMetadata()
-	if err != nil {
-		return "", err
-	}
-	return resource, nil
 }
 
 // ServeUI serves the connector's user interface.

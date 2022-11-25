@@ -119,78 +119,6 @@ func (c *connection) Groups(cursor string, properties []connector.PropertyPath) 
 	return nil
 }
 
-// Schemas returns user and group schemas.
-func (c *connection) Schemas() (types.Schema, types.Schema, error) {
-
-	var response struct {
-		Results []struct {
-			Hidden  bool
-			Name    string
-			Options []struct {
-				Label  string
-				Value  string
-				Hidden bool
-			}
-			Label       string
-			Description string
-			Calculated  bool
-			Type        string
-		}
-	}
-	err := c.call("GET", "/crm/v3/properties/contact", nil, 200, &response)
-	if err != nil {
-		return types.Schema{}, types.Schema{}, err
-	}
-
-	properties := []types.Property{}
-	for _, r := range response.Results {
-		switch r.Name {
-		case "createdate", "lastmodifieddate", "hs_object_id":
-			continue
-		}
-		typ, err := propertyType(r.Name, r.Type)
-		if err != nil {
-			return types.Schema{}, types.Schema{}, err
-		}
-		property := types.Property{
-			Name:        r.Name,
-			Label:       r.Label,
-			Description: r.Description,
-			Type:        typ.WithNull(), // TODO(marco): check if null is required for all properties
-		}
-		if r.Calculated {
-			property.Role = types.SourceRole
-		}
-		if typ.PhysicalType() == types.PtText {
-			var n int
-			for _, option := range r.Options {
-				if !option.Hidden {
-					n++
-				}
-			}
-			if n > 0 {
-				values := make([]string, 0, n)
-				for _, option := range r.Options {
-					if option.Hidden {
-						continue
-					}
-					values = append(values, option.Value)
-				}
-
-				property.Type = property.Type.WithEnum(values)
-			}
-		}
-		properties = append(properties, property)
-	}
-
-	schema, err := types.SchemaOf(properties)
-	if err != nil {
-		return types.Schema{}, types.Schema{}, fmt.Errorf("cannot create schema from properties: %s", err)
-	}
-
-	return schema, types.Schema{}, nil
-}
-
 // ReceiveWebhook receives a webhook request and returns its events.
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized.
@@ -285,6 +213,78 @@ func (c *connection) Resource() (string, error) {
 		return "", fmt.Errorf("connector HubSpot has returned an invalid resource (portalId): %d", res.PortalId)
 	}
 	return strconv.Itoa(res.PortalId), nil
+}
+
+// Schemas returns user and group schemas.
+func (c *connection) Schemas() (types.Schema, types.Schema, error) {
+
+	var response struct {
+		Results []struct {
+			Hidden  bool
+			Name    string
+			Options []struct {
+				Label  string
+				Value  string
+				Hidden bool
+			}
+			Label       string
+			Description string
+			Calculated  bool
+			Type        string
+		}
+	}
+	err := c.call("GET", "/crm/v3/properties/contact", nil, 200, &response)
+	if err != nil {
+		return types.Schema{}, types.Schema{}, err
+	}
+
+	properties := []types.Property{}
+	for _, r := range response.Results {
+		switch r.Name {
+		case "createdate", "lastmodifieddate", "hs_object_id":
+			continue
+		}
+		typ, err := propertyType(r.Name, r.Type)
+		if err != nil {
+			return types.Schema{}, types.Schema{}, err
+		}
+		property := types.Property{
+			Name:        r.Name,
+			Label:       r.Label,
+			Description: r.Description,
+			Type:        typ.WithNull(), // TODO(marco): check if null is required for all properties
+		}
+		if r.Calculated {
+			property.Role = types.SourceRole
+		}
+		if typ.PhysicalType() == types.PtText {
+			var n int
+			for _, option := range r.Options {
+				if !option.Hidden {
+					n++
+				}
+			}
+			if n > 0 {
+				values := make([]string, 0, n)
+				for _, option := range r.Options {
+					if option.Hidden {
+						continue
+					}
+					values = append(values, option.Value)
+				}
+
+				property.Type = property.Type.WithEnum(values)
+			}
+		}
+		properties = append(properties, property)
+	}
+
+	schema, err := types.SchemaOf(properties)
+	if err != nil {
+		return types.Schema{}, types.Schema{}, fmt.Errorf("cannot create schema from properties: %s", err)
+	}
+
+	return schema, types.Schema{}, nil
 }
 
 // ServeUI serves the connector's user interface.
