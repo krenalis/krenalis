@@ -608,3 +608,49 @@ VALUES (1, 1, 'Workspace', '[
         }
     }
 ]', '');
+
+ALTER TABLE `connections`
+    CHANGE COLUMN `properties` `schema` MEDIUMTEXT NOT NULL;
+
+TRUNCATE TABLE `workspaces`;
+
+INSERT INTO `workspaces` (`id`, `account`, `name`, `userSchema`, `groupSchema`, `eventSchema`)
+VALUES (1, 1, 'Workspace', '{ "properties": [
+    {
+        "name" : "FirstName",
+        "label": "First name",
+        "description": "First name of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    },
+    {
+        "name" : "LastName",
+        "label": "Last name",
+        "description": "Last name of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    },
+    {
+        "name" : "Email",
+        "label": "Email address",
+        "description": "Email address of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    }
+] }', '{ "properties": [
+    {
+        "name" : "Name",
+        "label": "Group name",
+        "description": "Name of the group",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    }
+] }', '');

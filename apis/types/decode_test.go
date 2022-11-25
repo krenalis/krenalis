@@ -102,7 +102,7 @@ func TestDecode(t *testing.T) {
 		},
 		{
 			Data: `{"first_name":"John Smith","values":[3, 8, 1],"address":{"city":"Venice","country":"IT"}}`,
-			Type: Object([]Property{
+			Type: Object([]ObjectProperty{
 				{
 					Name:        "first_name",
 					Label:       "First name",
@@ -117,7 +117,7 @@ func TestDecode(t *testing.T) {
 				{
 					Name:  "address",
 					Label: "address",
-					Type: Object([]Property{
+					Type: Object([]ObjectProperty{
 						{
 							Name:        "city",
 							Label:       "City",
@@ -146,7 +146,7 @@ func TestDecode(t *testing.T) {
 	for _, test := range tests {
 		dec := json.NewDecoder(strings.NewReader(test.Data))
 		dec.UseNumber()
-		got, err := decode(dec, nil, test.Type, false)
+		got, err := decodeByType(dec, nil, test.Type, false)
 		if err != nil {
 			t.Errorf("cannot decode '%s': %s", test.Data, err)
 			continue

@@ -141,8 +141,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				var properties []types.Property
-				properties, _, err = ws.Connections.Properties(dsID)
+				schema, err := ws.Connections.Schema(dsID)
 				if err != nil {
 					if _, ok := err.(ConnectionNotFoundError); ok {
 						http.Error(w, "Not Found", http.StatusNotFound)
@@ -151,6 +150,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					}
 					return
+				}
+				var properties []types.Property
+				if schema.Valid() {
+					properties = schema.Properties()
+				} else {
+					properties = []types.Property{}
 				}
 				_ = json.NewEncoder(w).Encode(properties)
 			})

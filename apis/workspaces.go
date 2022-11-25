@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"unicode/utf8"
 
+	"chichi/apis/types"
 	"chichi/pkg/open2b/sql"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -26,12 +27,10 @@ type WorkspaceAPI struct {
 	Transformations *Transformations
 }
 
-type Schema string
-
 // Schema returns the schema with the given name. name can be "user", "group"
 // or "event". If the schema with the given name does not exist, it returns an
-// empty schema.
-func (ws *WorkspaceAPI) Schema(name string) (Schema, error) {
+// invalid schema.
+func (ws *WorkspaceAPI) Schema(name string) (types.Schema, error) {
 	var column string
 	switch name {
 	case "user":
@@ -41,14 +40,24 @@ func (ws *WorkspaceAPI) Schema(name string) (Schema, error) {
 	case "event":
 		column = "eventSchema"
 	default:
-		return "", fmt.Errorf("invalid schema name %q", name)
+		return types.Schema{}, fmt.Errorf("invalid schema name %q", name)
 	}
-	row, err := ws.myDB.Table("Workspaces").Get(sql.Where{"id": ws.workspace}, []any{column})
+	var rawSchema []byte
+	err := ws.myDB.QueryRow("SELECT `"+column+"` FROM `workspaces` WHERE `id` = ?", ws.workspace).Scan(&rawSchema)
 	if err != nil {
-		return "", err
+		if err == sql.ErrNoRows {
+			return types.Schema{}, errors.New("workspace does not exist anymore")
+		}
+		return types.Schema{}, err
 	}
-	schema, _ := row[column].(string)
-	return Schema(schema), nil
+	if len(rawSchema) == 0 {
+		return types.Schema{}, nil
+	}
+	schema, err := types.UnmarshalSchema(rawSchema, nil)
+	if err != nil {
+		return types.Schema{}, fmt.Errorf("cannot unmarshal schema of workspace %d: %s", ws.workspace, err)
+	}
+	return schema, nil
 }
 
 // SetSchema sets the schema with the given name. name can be "user", "group"

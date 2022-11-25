@@ -24,40 +24,103 @@ import (
 // maxTime is the maximum value for a Time value.
 const maxTime = 24 * 60 * 60 * 1000
 
-// Decode decodes a JSON-encoded data, validates it according to t, that must
-// be an Object, and returns the decoded value.
-func Decode(data []byte, t Type) (map[string]any, error) {
-	if t.pt != PtObject {
-		return nil, errors.New("t is not an Object type")
+// Decode decodes a JSON-encoded data, validates it according to schema and
+// returns the decoded value.
+// Panics is schema is not valid.
+func Decode(data []byte, schema Schema) (map[string]any, error) {
+	if !schema.Valid() {
+		return nil, errors.New("schema is not valid")
 	}
 	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
 	dec.UseNumber()
-	v, err := decode(dec, nil, t, false)
+	v, err := decodeBySchema(dec, schema, false)
 	if err != nil {
 		return nil, err
 	}
 	return v.(map[string]any), nil
 }
 
-// DecodeStrict is like Decode but returns an error if a property is missing.
-func DecodeStrict(data []byte, t Type) (any, error) {
-	if t.pt != PtObject {
-		return nil, errors.New("t is not an Object type")
+// DecodeStrict is like Decode but returns an error if a property of the schema
+// or a property of an object is missing.
+func DecodeStrict(data []byte, schema Schema) (any, error) {
+	if !schema.Valid() {
+		return nil, errors.New("schema is not valid")
 	}
 	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
 	dec.UseNumber()
-	v, err := decode(dec, nil, t, true)
+	v, err := decodeBySchema(dec, schema, true)
 	if err != nil {
 		return nil, err
 	}
 	return v.(map[string]any), nil
 }
 
-// decode decodes a JSON-encoded value, read from dec, validates it according
-// to the given type and returns the decoded value. If strict is true, it
+// decodeBySchema decodes a JSON-encoded value, read from dec, validates it
+// according to schema and returns the decoded value. If strict is true, it
 // returns an error if a property is missing.
+func decodeBySchema(dec *json.Decoder, schema Schema, strict bool) (any, error) {
+	tok, err := dec.Token()
+	if err != nil {
+		return nil, err
+	}
+	if tok != json.Delim('{') {
+		return nil, errors.New("not a JSON object")
+	}
+	propertyByName := map[string]Property{}
+	for _, p := range schema.properties {
+		propertyByName[p.Name] = p
+	}
+	object := map[string]any{}
+	for {
+		tok, err = dec.Token()
+		if err != nil {
+			return nil, err
+		}
+		name, ok := tok.(string)
+		if !ok {
+			break
+		}
+		if name == "" {
+			return nil, errors.New("invalid empty property name")
+		}
+		if p, ok := propertyByName[name]; ok {
+			object[name], err = decodeByType(dec, nil, p.Type, strict)
+			if err != nil {
+				return nil, err
+			}
+			continue
+		}
+		if strict {
+			return nil, fmt.Errorf("missing property %q", name)
+		}
+		// Skip the property.
+		depth := 0
+		for {
+			tok, err = dec.Token()
+			if err != nil {
+				return nil, err
+			}
+			if d, ok := tok.(json.Delim); ok {
+				switch d {
+				case '{', '[':
+					depth++
+				case '}', ']':
+					depth--
+				}
+			}
+			if depth == 0 {
+				break
+			}
+		}
+	}
+	return object, nil
+}
+
+// decodeByType decodes a JSON-encoded value, read from dec, validates it
+// according to t and returns the decoded value. If strict is true, it returns
+// an error if an object property is missing.
 // If tok is not nil, it does not read the first token from dec but uses tok.
-func decode(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error) {
+func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error) {
 	var err error
 	if tok == nil {
 		tok, err = dec.Token()
@@ -274,7 +337,7 @@ func decode(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error)
 		}
 		return s, nil
 	case PtArray:
-		if d, ok := tok.(json.Delim); !ok || d != '[' {
+		if tok != json.Delim('[') {
 			return nil, errors.New("not an array value")
 		}
 		it := t.ItemType()
@@ -285,7 +348,7 @@ func decode(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error)
 			if err != nil {
 				return nil, err
 			}
-			if d, ok := tok.(json.Delim); ok && d == ']' {
+			if tok == json.Delim(']') {
 				break
 			}
 			if tok == nil {
@@ -295,7 +358,7 @@ func decode(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error)
 				}
 				return nil, errors.New("null item not allowed")
 			}
-			item, err := decode(dec, tok, it, strict)
+			item, err := decodeByType(dec, tok, it, strict)
 			if err != nil {
 				return nil, err
 			}
@@ -312,15 +375,14 @@ func decode(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error)
 		}
 		return items, nil
 	case PtObject:
-		if d, ok := tok.(json.Delim); !ok || d != '{' {
-			return nil, errors.New("not an object value")
+		if tok != json.Delim('{') {
+			return nil, errors.New("not a JSON object")
 		}
-		propertyByName := map[string]Property{}
-		for _, p := range t.vl.([]Property) {
+		propertyByName := map[string]ObjectProperty{}
+		for _, p := range t.vl.([]ObjectProperty) {
 			propertyByName[p.Name] = p
 		}
 		object := map[string]any{}
-	Property:
 		for {
 			tok, err = dec.Token()
 			if err != nil {
@@ -328,45 +390,46 @@ func decode(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error)
 			}
 			name, ok := tok.(string)
 			if !ok {
-				return object, nil
+				break
 			}
 			if name == "" {
-				return nil, errors.New("unexpected empty property name")
+				return nil, errors.New("invalid empty property name")
 			}
-			p, ok := propertyByName[name]
-			if !ok {
-				if strict {
-					return nil, fmt.Errorf("missing property %q", name)
+			if p, ok := propertyByName[name]; ok {
+				object[name], err = decodeByType(dec, nil, p.Type, strict)
+				if err != nil {
+					return nil, err
 				}
-				// Skip the property.
-				depth := 0
-				for {
-					tok, err = dec.Token()
-					if err != nil {
-						return nil, err
-					}
-					if d, ok := tok.(json.Delim); ok {
-						switch d {
-						case '{', '[':
-							depth++
-						case '}', ']':
-							depth--
-						}
-					}
-					if depth == 0 {
-						continue Property
+				continue
+			}
+			if strict {
+				return nil, fmt.Errorf("missing property %q", name)
+			}
+			// Skip the property.
+			depth := 0
+			for {
+				tok, err = dec.Token()
+				if err != nil {
+					return nil, err
+				}
+				if d, ok := tok.(json.Delim); ok {
+					switch d {
+					case '{', '[':
+						depth++
+					case '}', ']':
+						depth--
 					}
 				}
+				if depth == 0 {
+					break
+				}
 			}
-			value, err := decode(dec, nil, p.Type, strict)
-			if err != nil {
-				return nil, err
-			}
-			object[name] = value
 		}
+		return object, nil
+	default:
+		panic(fmt.Sprintf("unexpected type %d", t.pt))
 	}
 
-	return nil, nil
 }
 
 // unique reports whether items, with the same type t, contain unique values.

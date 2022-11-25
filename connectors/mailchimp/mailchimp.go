@@ -118,8 +118,8 @@ func (c *connection) Groups(cursor string, properties [][]string) error {
 	return nil
 }
 
-// Properties returns all user properties.
-func (c *connection) Properties() ([]types.Property, []types.Property, error) {
+// Schemas returns user and group schemas.
+func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 	params := url.Values{
 		"fields": []string{"merge_fields.options.choices,merge_fields.name,merge_fields.tag,merge_fields.type"},
 	}
@@ -135,13 +135,13 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 	}{}
 	err := c.call("GET", "/lists/"+c.settings.List+"/merge-fields", params, nil, 200, &res)
 	if err != nil {
-		return nil, nil, err
+		return types.Schema{}, types.Schema{}, err
 	}
 
 	// Merge fields.
-	mergeFields := make([]types.Property, len(res.MergeFields))
+	mergeFields := make([]types.ObjectProperty, len(res.MergeFields))
 	for i, mf := range res.MergeFields {
-		field := types.Property{
+		field := types.ObjectProperty{
 			Name:  mf.Tag,
 			Label: mf.Name,
 			Type:  types.Text(),
@@ -157,7 +157,7 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 		mergeFields[i] = field
 	}
 
-	return []types.Property{
+	schema, err := types.SchemaOf([]types.Property{
 		{
 			Name:  "ConsentsToOneToOneMessaging",
 			Label: "Consents to OneToOne messaging",
@@ -209,7 +209,7 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 		}, {
 			Name:  "LastNote",
 			Label: "Last Note",
-			Type: types.Object([]types.Property{
+			Type: types.Object([]types.ObjectProperty{
 				{
 					Name:  "note_id",
 					Label: "ID",
@@ -235,7 +235,7 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 		}, {
 			Name:  "Location",
 			Label: "Location",
-			Type: types.Object([]types.Property{
+			Type: types.Object([]types.ObjectProperty{
 				{
 					Name:  "latitude",
 					Label: "Latitude",
@@ -287,7 +287,7 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 		}, {
 			Name:  "Stats",
 			Label: "Stats",
-			Type: types.Object([]types.Property{
+			Type: types.Object([]types.ObjectProperty{
 				{
 					Name:  "avg_open_rate",
 					Label: "Open rate",
@@ -339,7 +339,12 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 			Label: "VIP status",
 			Type:  types.Boolean(),
 		},
-	}, nil, nil
+	})
+	if err != nil {
+		return types.Schema{}, types.Schema{}, fmt.Errorf("cannot create schema from properties: %s", err)
+	}
+
+	return schema, types.Schema{}, nil
 }
 
 // ReceiveWebhook receives a webhook request and returns its events.

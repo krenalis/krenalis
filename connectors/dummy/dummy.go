@@ -51,13 +51,13 @@ func (c *connection) Groups(cursor string, properties [][]string) error {
 	panic("not implemented")
 }
 
-func (c *connection) Properties() ([]types.Property, []types.Property, error) {
-	userProps := []types.Property{
+func (c *connection) Schemas() (types.Schema, types.Schema, error) {
+	userSchema := types.MustSchemaOf([]types.Property{
 		{Name: "first_name", Type: types.Text()},
 		{Name: "last_name", Type: types.Text()},
 		{Name: "email", Type: types.Text()},
-	}
-	return userProps, nil, nil
+	})
+	return userSchema, types.Schema{}, nil
 }
 
 func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) {

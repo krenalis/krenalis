@@ -119,8 +119,8 @@ func (c *connection) Groups(cursor string, properties [][]string) error {
 	return nil
 }
 
-// Properties returns all user and group properties.
-func (c *connection) Properties() ([]types.Property, []types.Property, error) {
+// Schemas returns user and group schemas.
+func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 
 	var response struct {
 		Results []struct {
@@ -139,10 +139,10 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 	}
 	err := c.call("GET", "/crm/v3/properties/contact", nil, 200, &response)
 	if err != nil {
-		return nil, nil, err
+		return types.Schema{}, types.Schema{}, err
 	}
 
-	properties := make([]types.Property, 0)
+	properties := []types.Property{}
 	for _, r := range response.Results {
 		switch r.Name {
 		case "createdate", "lastmodifieddate", "hs_object_id":
@@ -150,7 +150,7 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 		}
 		typ, err := propertyType(r.Name, r.Type)
 		if err != nil {
-			return nil, nil, err
+			return types.Schema{}, types.Schema{}, err
 		}
 		property := types.Property{
 			Name:        r.Name,
@@ -183,7 +183,12 @@ func (c *connection) Properties() ([]types.Property, []types.Property, error) {
 		properties = append(properties, property)
 	}
 
-	return properties, nil, nil
+	schema, err := types.SchemaOf(properties)
+	if err != nil {
+		return types.Schema{}, types.Schema{}, fmt.Errorf("cannot create schema from properties: %s", err)
+	}
+
+	return schema, types.Schema{}, nil
 }
 
 // ReceiveWebhook receives a webhook request and returns its events.

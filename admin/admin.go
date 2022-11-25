@@ -23,12 +23,9 @@ import (
 	"time"
 
 	"chichi/apis"
-	"chichi/apis/types"
 
 	"github.com/evanw/esbuild/pkg/api"
 )
-
-const oneHundredYears = time.Hour * 24 * 365 * 100
 
 type admin struct {
 	apis *apis.APIs
@@ -130,18 +127,11 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		var properties []types.Property
-		err = json.Unmarshal([]byte(schema), &properties)
-		if err != nil {
-			log.Printf("[error] cannot unmarshal user schema: %s", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		if !schema.Valid() {
+			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
-		names := make([]string, len(properties))
-		for i, field := range properties {
-			names[i] = field.Name
-		}
-		_ = json.NewEncoder(w).Encode(names)
+		_ = json.NewEncoder(w).Encode(schema.PropertiesNames())
 		return
 	}
 
@@ -155,20 +145,21 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		properties, usedProperties, err := ws.Connections.Properties(req.Connector)
+		schema, err := ws.Connections.Schema(req.Connector)
 		if err != nil {
-			log.Printf("[error] cannot retrieve properties: %s", err)
+			log.Printf("[error] cannot retrieve schema: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		props := make([]map[string]string, len(properties))
-		for i, p := range properties {
-			props[i] = map[string]string{"Name": p.Name}
+		var names []string
+		if schema.Valid() {
+			names = schema.PropertiesNames()
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"Properties":     props,
-			"UsedProperties": usedProperties,
-		})
+		properties := make([]map[string]string, len(names))
+		for i, name := range names {
+			properties[i] = map[string]string{"Name": name}
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"Properties": properties})
 		return
 	}
 

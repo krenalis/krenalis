@@ -40,7 +40,7 @@ type firehose struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
 	webhooksPer   WebhooksPer
-	userSchema    types.Type
+	userSchema    types.Schema
 	err           error
 }
 

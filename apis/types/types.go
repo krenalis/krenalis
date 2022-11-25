@@ -237,12 +237,11 @@ func (role Role) String() string {
 	panic("invalid role")
 }
 
-// Property represents an object property.
-type Property struct {
+// ObjectProperty represents an object property.
+type ObjectProperty struct {
 	Name        string
 	Label       string
 	Description string
-	Role        Role
 	Type        Type
 }
 
@@ -274,7 +273,7 @@ type Type struct {
 	//   - string value representing a layout for DateTime, Date and Time
 	//   - *regexp.Regexp value for Text
 	//   - []string with the enum values for Text
-	//   - []Property for Object
+	//   - []ObjectProperty for Object
 	//   - Type of the items for Array
 	vl any
 
@@ -435,11 +434,11 @@ func Array(t Type) Type {
 // Panics if properties is empty, or if a property name is empty or repeated,
 // or if a property string field is not UTF-8 encoded or if a property type is
 // not valid.
-func Object(properties []Property) Type {
+func Object(properties []ObjectProperty) Type {
 	if len(properties) == 0 {
 		panic("no property in object")
 	}
-	pr := make([]Property, len(properties))
+	pr := make([]ObjectProperty, len(properties))
 	for i, property := range properties {
 		if property.Name == "" {
 			panic("empty property name")
@@ -946,23 +945,23 @@ func (t Type) Properties() *Properties {
 	if t.pt != PtObject {
 		panic("cannot get the properties of a non-Object type")
 	}
-	return &Properties{t.vl.([]Property)}
+	return &Properties{t.vl.([]ObjectProperty)}
 }
 
 // Properties is an iterator to iterate over the properties of an Object.
 type Properties struct {
-	pr []Property
+	pr []ObjectProperty
 }
 
 // Next returns the next property of iter.
-// If there are no more properties, it returns Property{} and false.
-func (iter *Properties) Next() (Property, bool) {
+// If there are no more properties, it returns ObjectProperty{} and false.
+func (iter *Properties) Next() (ObjectProperty, bool) {
 	if iter.pr == nil {
 		panic("Next on an ended iterator")
 	}
 	if len(iter.pr) == 0 {
 		iter.pr = nil
-		return Property{}, false
+		return ObjectProperty{}, false
 	}
 	p := iter.pr[0]
 	iter.pr = iter.pr[1:]

@@ -37,9 +37,9 @@ type Connections struct {
 }
 
 const (
-	maxInt32             = math.MaxInt32
-	rawPropertiesMaxSize = 16_777_215 // maximum size in runes of the 'property' column of the 'connections' table.
-	queryMaxSize         = 16_777_215 // maximum size in runes of a connection query.
+	maxInt32         = math.MaxInt32
+	rawSchemaMaxSize = 16_777_215 // maximum size in runes of the 'schema' column of the 'connections' table.
+	queryMaxSize     = 16_777_215 // maximum size in runes of a connection query.
 )
 
 var (
@@ -870,7 +870,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		}
 
 		// Connect to the file connector.
-		fh := this.newFirehose(ctx, id, connector, 0, types.Type{}, FileType, role, WebhooksPerNone)
+		fh := this.newFirehose(ctx, id, connector, 0, types.Schema{}, FileType, role, WebhooksPerNone)
 		file, err := newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 			Role:     role,
 			Settings: settings,
@@ -917,46 +917,37 @@ func (this *Connections) List() ([]*Connection, error) {
 	return sources, nil
 }
 
-// Properties returns the properties and the used properties of the connection
-// with the given identifier. The connection must be an app, database of file
-// connection.
+// Schema returns the schema of the connection with identifier id. The
+// connection must be an app, database of file connection. If the
+// connection does not have a schema, it returns an invalid schema.
 //
 // Returns a ConnectionNotFoundError error if the connection does not exist.
-func (this *Connections) Properties(id int) ([]types.Property, [][]string, error) {
+func (this *Connections) Schema(id int) (types.Schema, error) {
 	if id <= 0 || id > maxInt32 {
-		return nil, nil, errors.New("invalid connection identifier")
+		return types.Schema{}, errors.New("invalid connection identifier")
 	}
 	var typ ConnectorType
-	var rawProperties, rawUsedProperties []byte
-	err := this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), `properties`, `usedProperties`\n"+
+	var rawSchema []byte
+	err := this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), `schema`\n"+
 		"FROM `connections`\n"+
-		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&typ, &rawProperties, &rawUsedProperties)
+		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&typ, &rawSchema)
 	if err != nil {
-		return nil, nil, err
+		if err == sql.ErrNoRows {
+			return types.Schema{}, ConnectionNotFoundError{}
+		}
+		return types.Schema{}, err
 	}
 	if typ == StorageType {
-		return nil, nil, errors.New("cannot read properties from a storage")
+		return types.Schema{}, errors.New("cannot read properties from a storage")
 	}
-	var properties []types.Property
-	if len(rawProperties) > 0 {
-		err = json.Unmarshal(rawProperties, &properties)
-		if err != nil {
-			return nil, nil, fmt.Errorf("cannot unmarshal connection properties: %s", err)
-		}
-	} else {
-		properties = []types.Property{}
+	if len(rawSchema) == 0 {
+		return types.Schema{}, nil
 	}
-	var usedProperties [][]string
-	if len(rawUsedProperties) > 0 {
-		err = json.Unmarshal(rawUsedProperties, &usedProperties)
-		if err != nil {
-			return nil, nil, errors.New("cannot unmarshal connection used properties")
-		}
-	} else {
-		usedProperties = [][]string{}
+	schema, err := types.UnmarshalSchema(rawSchema, nil)
+	if err != nil {
+		return types.Schema{}, fmt.Errorf("cannot unmarshal schema of connection %d: %s", id, err)
 	}
-
-	return properties, usedProperties, nil
+	return schema, nil
 }
 
 // Column represents a column of a database connection.
@@ -1024,7 +1015,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 	if err != nil {
 		return nil, nil, err
 	}
-	fh := this.newFirehose(context.Background(), id, connector, 0, types.Type{}, typ, cRole, WebhooksPerNone)
+	fh := this.newFirehose(context.Background(), id, connector, 0, types.Schema{}, typ, cRole, WebhooksPerNone)
 	c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 		Role:     cRole,
 		Settings: settings,
@@ -1134,7 +1125,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 			}
 		}
 
-		fh := this.newFirehose(context.Background(), id, connector, resource, types.Type{}, typ, cRole, webhooksPer)
+		fh := this.newFirehose(context.Background(), id, connector, resource, types.Schema{}, typ, cRole, webhooksPer)
 		connection, err = newAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
 			Role:         cRole,
 			Settings:     settings,
@@ -1161,7 +1152,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 			return nil, err
 		}
 
-		fh := this.newFirehose(context.Background(), id, connector, 0, types.Type{}, typ, cRole, WebhooksPerNone)
+		fh := this.newFirehose(context.Background(), id, connector, 0, types.Schema{}, typ, cRole, WebhooksPerNone)
 
 		switch typ {
 		case DatabaseType:
@@ -1363,7 +1354,7 @@ func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 }
 
 // newFirehose returns a new Firehose used to call a connection method.
-func (this *Connections) newFirehose(ctx context.Context, connection, connector, resource int, userSchema types.Type, typ ConnectorType, role _connector.Role, webhooksPer WebhooksPer) *firehose {
+func (this *Connections) newFirehose(ctx context.Context, connection, connector, resource int, userSchema types.Schema, typ ConnectorType, role _connector.Role, webhooksPer WebhooksPer) *firehose {
 	fh := &firehose{
 		connections:   this,
 		connection:    connection,
@@ -1417,7 +1408,7 @@ func (this *Connections) reloadProperties(id int) error {
 
 	cRole := _connector.Role(role)
 
-	var properties []types.Property
+	var schema types.Schema
 
 	switch typ {
 	case AppType:
@@ -1453,7 +1444,8 @@ func (this *Connections) reloadProperties(id int) error {
 				return err
 			}
 		}
-		fh := this.newFirehose(context.Background(), id, connector, resource, types.Type{}, AppType, cRole, webhooksPer)
+
+		fh := this.newFirehose(context.Background(), id, connector, resource, types.Schema{}, AppType, cRole, webhooksPer)
 		c, err := newAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
 			Role:         cRole,
 			Settings:     settings,
@@ -1465,9 +1457,16 @@ func (this *Connections) reloadProperties(id int) error {
 		if err != nil {
 			return err
 		}
-		properties, _, err = c.Properties()
+		schema, _, err = c.Schemas()
 		if err != nil {
 			return err
+		}
+		if !schema.Valid() {
+			return fmt.Errorf("connection %d returned an invalid schema", id)
+		}
+		schema = schema.AsRole(types.Role(role))
+		if !schema.Valid() {
+			return errors.New("connection has returned a schema without source properties")
 		}
 
 	case DatabaseType:
@@ -1491,7 +1490,7 @@ func (this *Connections) reloadProperties(id int) error {
 		if err != nil {
 			return err
 		}
-		fh := this.newFirehose(context.Background(), id, connector, 0, types.Type{}, DatabaseType, cRole, WebhooksPerNone)
+		fh := this.newFirehose(context.Background(), id, connector, 0, types.Schema{}, DatabaseType, cRole, WebhooksPerNone)
 		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 			Role:     cRole,
 			Settings: settings,
@@ -1508,10 +1507,14 @@ func (this *Connections) reloadProperties(id int) error {
 		if err != nil {
 			return err
 		}
-		properties = make([]types.Property, len(columns))
-		for i := 0; i < len(properties); i++ {
-			properties[i].Name = columns[i].Name
-			properties[i].Type = columns[i].Type
+		properties := make([]types.Property, len(columns))
+		for i, col := range columns {
+			properties[i].Name = col.Name
+			properties[i].Type = col.Type
+		}
+		schema, err = types.SchemaOf(properties)
+		if err != nil {
+			return fmt.Errorf("connection %d returned an invalid column: %s", id, err)
 		}
 
 	case FileType:
@@ -1553,7 +1556,7 @@ func (this *Connections) reloadProperties(id int) error {
 				}
 				return err
 			}
-			fh := this.newFirehose(ctx, storage, connector, 0, types.Type{}, StorageType, cRole, WebhooksPerNone)
+			fh := this.newFirehose(ctx, storage, connector, 0, types.Schema{}, StorageType, cRole, WebhooksPerNone)
 			ctx = fh.ctx
 			c, err := newStorageConnection(ctx, connectorName, &_connector.StorageConfig{
 				Role:     cRole,
@@ -1567,7 +1570,7 @@ func (this *Connections) reloadProperties(id int) error {
 		}
 
 		// Connect to the file connector and read only the columns.
-		fh := this.newFirehose(ctx, id, connector, 0, types.Type{}, FileType, cRole, WebhooksPerNone)
+		fh := this.newFirehose(ctx, id, connector, 0, types.Schema{}, FileType, cRole, WebhooksPerNone)
 		file, err := newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 			Role:     cRole,
 			Settings: settings,
@@ -1583,78 +1586,91 @@ func (this *Connections) reloadProperties(id int) error {
 		if err != nil && err != errRecordStop {
 			return err
 		}
-
-		properties = make([]types.Property, len(records.columns))
-		for i := 0; i < len(properties); i++ {
-			properties[i].Name = records.columns[i].Name
-			properties[i].Type = records.columns[i].Type
+		properties := make([]types.Property, len(records.columns))
+		for i, col := range records.columns {
+			properties[i].Name = col.Name
+			properties[i].Type = col.Type
 		}
+		schema, err = types.SchemaOf(properties)
+		if err != nil {
+			return fmt.Errorf("connection %d returned an invalid column: %s", id, err)
+		}
+
 	}
 
-	// Serialize the properties.
-	var b bytes.Buffer
-	enc := json.NewEncoder(&b)
-	enc.SetEscapeHTML(false)
-	err = enc.Encode(propertiesByRole(role, properties))
+	// Update the schema.
+	rawSchema, err := schema.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("cannot marshal the properties of the connection %d : %s", id, err)
+		return fmt.Errorf("cannot marshal schema of connection %d: %s", id, err)
 	}
-	rawProperties := b.Bytes()
-	if utf8.RuneCount(rawProperties) > rawPropertiesMaxSize {
-		return fmt.Errorf("cannot marshal the properties of the connection %d: data is too large", id)
+	if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
+		return fmt.Errorf("cannot marshal schema of the connection %d: data is too large", id)
 	}
-
-	_, err = this.myDB.Exec("UPDATE `connections` SET `properties` = ? WHERE `id` = ?", rawProperties, id)
+	_, err = this.myDB.Exec("UPDATE `connections` SET `schema` = ? WHERE `id` = ?", rawSchema, id)
 
 	return err
 }
 
-// userSchema returns the user schema and the names of the used properties of
+// userSchema returns the user schema and the names of the mapped properties of
 // the connection with identifier id.
-func (this *Connections) userSchema(id int) (schema types.Type, names [][]string, err error) {
+//
+// If the connection does not exist it returns a ConnectionNotFoundError error.
+func (this *Connections) userSchema(id int) (types.Schema, [][]string, error) {
+
+	// Read the schema.
+	var rawSchema []byte
+	err := this.myDB.QueryRow("SELECT `schema` FROM `connections` WHERE `workspace` = ? AND `id` = ?",
+		this.workspace, id).Scan(&rawSchema)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return types.Schema{}, nil, ConnectionNotFoundError{}
+		}
+		return types.Schema{}, nil, err
+	}
+	schema, err := types.UnmarshalSchema(rawSchema, nil)
+	if err != nil {
+		return types.Schema{}, nil, fmt.Errorf("cannot unmarshal schema of connection %d", id)
+	}
 
 	// Read the names of the used properties from the transformations of this connection.
-	var usedNames [][]string
-	query := "SELECT `property` FROM `transformations_connections` WHERE `connection` = ?"
-	err = this.myDB.QueryScan(query, id, func(rows *sql.Rows) error {
-		var name string
-		for rows.Next() {
-			if err := rows.Scan(&name); err != nil {
-				return err
+	var names [][]string
+	err = this.myDB.QueryScan(
+		"SELECT `property` FROM `transformations_connections` WHERE `connection` = ?", id, func(rows *sql.Rows) error {
+			var name string
+			for rows.Next() {
+				if err := rows.Scan(&name); err != nil {
+					return err
+				}
+				names = append(names, []string{name})
 			}
-			usedNames = append(usedNames, []string{name})
+			return nil
+		})
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return types.Schema{}, nil, ConnectionNotFoundError{}
 		}
-		return nil
-	})
-	if err != nil {
-		return
+		return types.Schema{}, nil, err
 	}
 
-	// Read all properties.
-	var allSchema []types.Property
-	var properties []byte
-	err = this.myDB.QueryRow("SELECT `properties` FROM `connections` WHERE `id` = ?", id).Scan(&properties)
-	if err != nil {
-		return
+	// Create a schema with only the properties mapped.
+	mapped := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		mapped[name[0]] = struct{}{}
 	}
-	err = json.Unmarshal(properties, &allSchema)
-	if err != nil {
-		return
+	mappedProperties := make([]types.Property, 0, len(names))
+	for _, property := range schema.Properties() {
+		if _, ok := mapped[property.Name]; ok {
+			mappedProperties = append(mappedProperties, property)
+		}
 	}
-
-	// Create a schema with only the properties used.
-	useName := map[string]bool{}
-	for _, name := range usedNames {
-		useName[name[0]] = true
-	}
-	usedProperties := make([]types.Property, 0, len(usedNames))
-	for _, property := range allSchema {
-		if useName[property.Name] {
-			usedProperties = append(usedProperties, property)
+	if mappedProperties != nil {
+		schema, err = types.SchemaOf(mappedProperties)
+		if err != nil {
+			return types.Schema{}, nil, fmt.Errorf("cannot create a new schema from the schema of connection %d: %s", id, err)
 		}
 	}
 
-	return types.Object(usedProperties), usedNames, nil
+	return schema, names, nil
 }
 
 // compileQueryWithLimit compiles the given query, replacing the ':limit'
@@ -1681,29 +1697,6 @@ func (this *Connections) compileQueryWithoutLimit(query string) (string, error) 
 	}
 	s2 += p + n + 2
 	return query[:s1] + query[s2:], nil
-}
-
-// propertiesByRole returns the properties compatible with role.
-// May return properties if all properties are compatible.
-func propertiesByRole(role ConnectionRole, properties []types.Property) []types.Property {
-	var props []types.Property
-	start := 0
-	for i, p := range properties {
-		if p.Role == types.BothRole || p.Role == types.Role(role) {
-			continue
-		}
-		if start < i {
-			props = append(props, properties[start:i]...)
-		}
-		start = i + 1
-	}
-	if props == nil {
-		return properties
-	}
-	if start < len(properties) {
-		props = append(props, properties[start:]...)
-	}
-	return props
 }
 
 // fileReader implements the connector.FileReader interface.

@@ -52,7 +52,7 @@ CREATE TABLE `connections` (
   `identityColumn` VARCHAR(100) NOT NULL DEFAULT '',
   `timestampColumn` VARCHAR(100) NOT NULL DEFAULT '',
   `settings` TEXT NOT NULL,
-  `properties` MEDIUMTEXT NOT NULL,
+  `schema` MEDIUMTEXT NOT NULL,
   `usedProperties` MEDIUMTEXT NOT NULL,
   `usersQuery` MEDIUMTEXT NOT NULL,
   PRIMARY KEY (`id`)
@@ -177,7 +177,7 @@ CREATE TABLE `workspaces` (
 );
 
 INSERT INTO `workspaces` (`id`, `account`, `name`, `userSchema`, `groupSchema`, `eventSchema`)
-VALUES (1, 1, 'Workspace', '[
+VALUES (1, 1, 'Workspace', '{ "properties": [
     {
         "name" : "FirstName",
         "label": "First name",
@@ -205,7 +205,7 @@ VALUES (1, 1, 'Workspace', '[
             "charLen": 300
         }
     }
-]', '[
+] }', '{ "properties": [
     {
         "name" : "Name",
         "label": "Group name",
@@ -215,4 +215,4 @@ VALUES (1, 1, 'Workspace', '[
             "charLen": 300
         }
     }
-]', '');
+] }', '');

@@ -39,15 +39,15 @@ type AppConnection interface {
 	// Groups returns the groups starting from the given cursor.
 	Groups(cursor string, properties [][]string) error
 
-	// Properties returns all user and group properties.
-	Properties() ([]types.Property, []types.Property, error)
-
 	// ReceiveWebhook receives a webhook request and returns its events.
 	// It returns the ErrWebhookUnauthorized error is the request was not authorized.
 	ReceiveWebhook(r *http.Request) ([]Event, error)
 
 	// Resource returns the resource.
 	Resource() (string, error)
+
+	// Schemas returns user and group schemas.
+	Schemas() (types.Schema, types.Schema, error)
 
 	// SetUsers sets the given users.
 	SetUsers(users []User) error
