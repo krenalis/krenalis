@@ -73,7 +73,7 @@ func TestSchemaSerialization(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := ParseSchema([]byte(test.Data), test.Resolve)
+		got, err := ParseSchema(test.Data, test.Resolve)
 		if err != nil && !test.Err {
 			t.Errorf("cannot unmarshal schema %q: %s", test.Data, err)
 			continue
@@ -172,7 +172,7 @@ func TestTypeSerialization(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := ParseType([]byte(test.Data), test.Resolve)
+		got, err := ParseType(test.Data, test.Resolve)
 		if err != nil {
 			t.Errorf("cannot unmarshal type %q: %s", test.Data, err)
 			continue

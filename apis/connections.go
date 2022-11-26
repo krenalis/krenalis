@@ -927,7 +927,7 @@ func (this *Connections) Schema(id int) (types.Schema, error) {
 		return types.Schema{}, errors.New("invalid connection identifier")
 	}
 	var typ ConnectorType
-	var rawSchema []byte
+	var rawSchema string
 	err := this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), `schema`\n"+
 		"FROM `connections`\n"+
 		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&typ, &rawSchema)
@@ -1618,7 +1618,7 @@ func (this *Connections) reloadProperties(id int) error {
 func (this *Connections) userSchema(id int) (types.Schema, []_connector.PropertyPath, error) {
 
 	// Read the schema.
-	var rawSchema []byte
+	var rawSchema string
 	err := this.myDB.QueryRow("SELECT `schema` FROM `connections` WHERE `workspace` = ? AND `id` = ?",
 		this.workspace, id).Scan(&rawSchema)
 	if err != nil {

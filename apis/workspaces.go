@@ -42,7 +42,7 @@ func (ws *WorkspaceAPI) Schema(name string) (types.Schema, error) {
 	default:
 		return types.Schema{}, fmt.Errorf("invalid schema name %q", name)
 	}
-	var rawSchema []byte
+	var rawSchema string
 	err := ws.myDB.QueryRow("SELECT `"+column+"` FROM `workspaces` WHERE `id` = ?", ws.workspace).Scan(&rawSchema)
 	if err != nil {
 		if err == sql.ErrNoRows {

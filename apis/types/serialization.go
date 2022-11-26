@@ -15,6 +15,7 @@ import (
 	"io"
 	"regexp"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/shopspring/decimal"
@@ -79,8 +80,8 @@ func (schema Schema) MarshalJSON() ([]byte, error) {
 }
 
 // ParseSchema parses the JSON-encoded data and returns the decoded schema.
-func ParseSchema(data []byte, resolve Resolver) (Schema, error) {
-	dec := json.NewDecoder(bytes.NewReader(data))
+func ParseSchema(data string, resolve Resolver) (Schema, error) {
+	dec := json.NewDecoder(strings.NewReader(data))
 	dec.UseNumber()
 	// Read delimiter '{'.
 	tok, err := dec.Token()
@@ -176,8 +177,8 @@ func MarshalType(t Type) ([]byte, error) {
 // ParseType parses the JSON-encoded data and returns the decoded type. For
 // custom types, it calls the resolve function, if not nil, to resolve the type
 // custom name to its type.
-func ParseType(data []byte, resolve Resolver) (Type, error) {
-	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
+func ParseType(data string, resolve Resolver) (Type, error) {
+	dec := json.NewDecoder(strings.NewReader(norm.NFC.String(data)))
 	dec.UseNumber()
 	t, err := unmarshalType(dec, resolve)
 	if err == io.EOF {
