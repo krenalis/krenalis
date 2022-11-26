@@ -8,6 +8,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"regexp"
@@ -577,8 +578,8 @@ func (t Type) Custom() string {
 }
 
 // AsCustom returns t as a custom type called name.
-// Panics if t is not valid, or t is already a custom type, or name is empty or
-// is not valid UTF-8.
+// Panics if t is not valid, or t is already a custom type, or name is not
+// valid custom name.
 func (t Type) AsCustom(name string) Type {
 	if !t.Valid() {
 		panic("type is not valid")
@@ -589,7 +590,10 @@ func (t Type) AsCustom(name string) Type {
 	if name == "" {
 		panic("custom type name is empty")
 	}
-	t.custom = normalizedUTF8(name)
+	if err := validCustomTypeName(name); err != nil {
+		panic(err)
+	}
+	t.custom = name
 	return t
 }
 
@@ -1046,4 +1050,22 @@ func normalizedUTF8(s string) string {
 		panic("invalid UTF-8 encoding")
 	}
 	return norm.NFC.String(s)
+}
+
+// validCustomTypeName verifies that name is a valid custom type name.
+//
+// A custom type name must:
+//   - start with [A-Za-z_]
+//   - subsequently contain only [A-Za-z0-9_]
+func validCustomTypeName(name string) error {
+	if name == "" {
+		return errors.New("custom type name is empty")
+	}
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if !('a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
+			return errors.New("invalid custom type name")
+		}
+	}
+	return nil
 }

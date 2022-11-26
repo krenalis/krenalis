@@ -48,6 +48,7 @@ func TestSchemaSerialization(t *testing.T) {
 		{Data: `{"properties":[{"name":"first_name","aliases":["first_name"],type":{"name":"Text"}}]}`, Err: true},
 		{Data: `{"properties":[{"name":"first_name","aliases":["f1"],type":{"name":"Text"}}]}`, Err: true},
 		{Data: `{"properties":[{"name":"first_name","aliases":["name","name"],type":{"name":"Text"}}]}`, Err: true},
+		{Data: `{"properties":[{"name":"email",type":"custom type"}]}`, Err: true},
 		{
 			Data:   `{"properties":[{"name":"first_name","role":"destination","type":{"name":"Text"}}]}`,
 			Schema: MustSchemaOf([]Property{{Name: "first_name", Role: DestinationRole, Type: Text()}}),

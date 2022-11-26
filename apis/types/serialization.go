@@ -399,8 +399,8 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 
 	// Resolve custom type.
 	if name, ok := tok.(string); ok {
-		if name == "" {
-			return Type{}, errors.New("empty custom type name")
+		if err = validCustomTypeName(name); err != nil {
+			return Type{}, err
 		}
 		if resolve == nil {
 			return Type{}, errors.New("unknown custom type")
