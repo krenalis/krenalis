@@ -53,7 +53,7 @@ func (ws *WorkspaceAPI) Schema(name string) (types.Schema, error) {
 	if len(rawSchema) == 0 {
 		return types.Schema{}, nil
 	}
-	schema, err := types.UnmarshalSchema(rawSchema, nil)
+	schema, err := types.ParseSchema(rawSchema, nil)
 	if err != nil {
 		return types.Schema{}, fmt.Errorf("cannot unmarshal schema of workspace %d: %s", ws.workspace, err)
 	}

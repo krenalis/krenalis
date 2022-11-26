@@ -78,8 +78,8 @@ func (schema Schema) MarshalJSON() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// UnmarshalSchema parses the JSON-encoded data and returns the decoded schema.
-func UnmarshalSchema(data []byte, resolve Resolver) (Schema, error) {
+// ParseSchema parses the JSON-encoded data and returns the decoded schema.
+func ParseSchema(data []byte, resolve Resolver) (Schema, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.UseNumber()
 	// Read delimiter '{'.
@@ -173,10 +173,10 @@ func MarshalType(t Type) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// UnmarshalType parses the JSON-encoded data and returns the decoded type.
-// For custom types, it calls the resolve function, if not nil, to resolve the
-// type custom name to its type.
-func UnmarshalType(data []byte, resolve Resolver) (Type, error) {
+// ParseType parses the JSON-encoded data and returns the decoded type. For
+// custom types, it calls the resolve function, if not nil, to resolve the type
+// custom name to its type.
+func ParseType(data []byte, resolve Resolver) (Type, error) {
 	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
 	dec.UseNumber()
 	t, err := unmarshalType(dec, resolve)

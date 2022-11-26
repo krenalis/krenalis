@@ -943,7 +943,7 @@ func (this *Connections) Schema(id int) (types.Schema, error) {
 	if len(rawSchema) == 0 {
 		return types.Schema{}, nil
 	}
-	schema, err := types.UnmarshalSchema(rawSchema, nil)
+	schema, err := types.ParseSchema(rawSchema, nil)
 	if err != nil {
 		return types.Schema{}, fmt.Errorf("cannot unmarshal schema of connection %d: %s", id, err)
 	}
@@ -1627,7 +1627,7 @@ func (this *Connections) userSchema(id int) (types.Schema, []_connector.Property
 		}
 		return types.Schema{}, nil, err
 	}
-	schema, err := types.UnmarshalSchema(rawSchema, nil)
+	schema, err := types.ParseSchema(rawSchema, nil)
 	if err != nil {
 		return types.Schema{}, nil, fmt.Errorf("cannot unmarshal schema of connection %d", id)
 	}
