@@ -49,26 +49,25 @@ func SchemaOf(properties []Property) (Schema, error) {
 	exists := make(map[string]struct{}, len(properties))
 	ps := make([]Property, len(properties))
 	for i, property := range properties {
-		if property.Name == "" {
-			return Schema{}, errors.New("empty property name")
+		if err := validPropertyName(property.Name, false); err != nil {
+			return Schema{}, err
 		}
-		normalizedName := normalizedUTF8(property.Name)
-		if _, ok := exists[normalizedName]; ok {
+		if _, ok := exists[property.Name]; ok {
 			return Schema{}, errors.New("property name is repeated")
 		}
-		exists[normalizedName] = struct{}{}
+		exists[property.Name] = struct{}{}
 		var aliases []string
 		if len(property.Aliases) > 0 {
 			aliases = make([]string, len(property.Aliases))
 			for i, alias := range property.Aliases {
-				if alias == "" {
-					return Schema{}, errors.New("empty property alias")
+				if err := validPropertyName(alias, true); err != nil {
+					return Schema{}, err
 				}
-				aliases[i] = normalizedUTF8(alias)
-				if _, ok := exists[aliases[i]]; ok {
+				if _, ok := exists[alias]; ok {
 					return Schema{}, errors.New("property alias already named")
 				}
-				exists[aliases[i]] = struct{}{}
+				aliases[i] = alias
+				exists[alias] = struct{}{}
 			}
 			sort.Strings(aliases)
 		}
@@ -79,7 +78,7 @@ func SchemaOf(properties []Property) (Schema, error) {
 			return Schema{}, errors.New("invalid property type")
 		}
 		ps[i] = Property{
-			Name:        normalizedName,
+			Name:        property.Name,
 			Aliases:     aliases,
 			Label:       normalizedUTF8(property.Label),
 			Description: normalizedUTF8(property.Description),
@@ -152,4 +151,31 @@ func (schema Schema) PropertiesNames() []string {
 // Valid reports whether schema is valid.
 func (schema Schema) Valid() bool {
 	return schema.properties != nil
+}
+
+// validPropertyName verifies that name is a valid property name. If name
+// refers to an alias, alias should be true.
+//
+// A property name must:
+//   - start with [A-Za-z_]
+//   - subsequently contain only [A-Za-z0-9_]
+func validPropertyName(name string, alias bool) error {
+	if name == "" {
+		n := "name"
+		if alias {
+			n = "alias"
+		}
+		return errors.New("empty property " + n)
+	}
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if !('a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
+			n := "name"
+			if alias {
+				n = "alias"
+			}
+			return errors.New("invalid property " + n)
+		}
+	}
+	return nil
 }

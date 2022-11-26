@@ -83,9 +83,6 @@ func decodeBySchema(dec *json.Decoder, schema Schema, strict bool) (any, error) 
 		if !ok {
 			break
 		}
-		if name == "" {
-			return nil, errors.New("invalid empty property name")
-		}
 		if p, ok := propertyByName[name]; ok {
 			object[p.Name], err = decodeByType(dec, nil, p.Type, strict)
 			if err != nil {
@@ -93,8 +90,11 @@ func decodeBySchema(dec *json.Decoder, schema Schema, strict bool) (any, error) 
 			}
 			continue
 		}
+		if err = validPropertyName(name, false); err != nil {
+			return nil, err
+		}
 		if strict {
-			return nil, fmt.Errorf("missing property %q", name)
+			return nil, fmt.Errorf("unknow property name %q", name)
 		}
 		// Skip the property.
 		depth := 0
@@ -398,9 +398,6 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 			if !ok {
 				break
 			}
-			if name == "" {
-				return nil, errors.New("invalid empty property name")
-			}
 			if p, ok := propertyByName[name]; ok {
 				object[p.Name], err = decodeByType(dec, nil, p.Type, strict)
 				if err != nil {
@@ -408,8 +405,11 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 				}
 				continue
 			}
+			if err = validPropertyName(name, false); err != nil {
+				return nil, err
+			}
 			if strict {
-				return nil, fmt.Errorf("missing property %q", name)
+				return nil, fmt.Errorf("unknow property name %q", name)
 			}
 			// Skip the property.
 			depth := 0

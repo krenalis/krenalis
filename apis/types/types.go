@@ -443,26 +443,25 @@ func Object(properties []ObjectProperty) Type {
 	exists := make(map[string]struct{}, len(properties))
 	ps := make([]ObjectProperty, len(properties))
 	for i, property := range properties {
-		if property.Name == "" {
-			panic("empty property name")
+		if err := validPropertyName(property.Name, false); err != nil {
+			panic(err.Error())
 		}
-		normalizedName := normalizedUTF8(property.Name)
-		if _, ok := exists[normalizedName]; ok {
+		if _, ok := exists[property.Name]; ok {
 			panic("property name is repeated")
 		}
-		exists[normalizedName] = struct{}{}
+		exists[property.Name] = struct{}{}
 		var aliases []string
 		if len(property.Aliases) > 0 {
 			aliases = make([]string, len(property.Aliases))
 			for i, alias := range property.Aliases {
-				if alias == "" {
-					panic("empty property alias")
+				if err := validPropertyName(alias, true); err != nil {
+					panic(err.Error())
 				}
-				aliases[i] = normalizedUTF8(alias)
-				if _, ok := exists[aliases[i]]; ok {
+				if _, ok := exists[alias]; ok {
 					panic("property alias already named")
 				}
-				exists[aliases[i]] = struct{}{}
+				aliases[i] = alias
+				exists[alias] = struct{}{}
 			}
 			sort.Strings(aliases)
 		}
@@ -470,7 +469,7 @@ func Object(properties []ObjectProperty) Type {
 			panic("invalid property type")
 		}
 		ps[i] = ObjectProperty{
-			Name:        normalizedName,
+			Name:        property.Name,
 			Aliases:     aliases,
 			Label:       normalizedUTF8(property.Label),
 			Description: normalizedUTF8(property.Description),

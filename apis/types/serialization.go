@@ -41,15 +41,18 @@ func (schema Schema) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			b.WriteString(",")
 		}
-		b.WriteString(`{"name":`)
-		_ = marshalString(&b, p.Name)
+		b.WriteString(`{"name":"`)
+		b.WriteString(p.Name)
+		b.WriteByte('"')
 		if p.Aliases != nil {
 			b.WriteString(`,"aliases":[`)
 			for i, alias := range p.Aliases {
 				if i > 0 {
 					b.WriteByte(',')
 				}
-				_ = marshalString(&b, alias)
+				b.WriteByte('"')
+				b.WriteString(alias)
+				b.WriteByte('"')
 			}
 			b.WriteByte(']')
 		}
@@ -330,7 +333,21 @@ func marshalType(b *bytes.Buffer, t Type) {
 				b.WriteString(",")
 			}
 			b.WriteString(`{"name":`)
-			_ = marshalString(b, p.Name)
+			b.WriteByte('"')
+			b.WriteString(p.Name)
+			b.WriteByte('"')
+			if p.Aliases != nil {
+				b.WriteString(`,"aliases":[`)
+				for i, alias := range p.Aliases {
+					if i > 0 {
+						b.WriteByte(',')
+					}
+					b.WriteByte('"')
+					b.WriteString(alias)
+					b.WriteByte('"')
+				}
+				b.WriteByte(']')
+			}
 			if p.Label != "" {
 				b.WriteString(`,"label":`)
 				_ = marshalString(b, p.Label)
@@ -994,8 +1011,8 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Obje
 			if !ok {
 				return ObjectProperty{}, 0, errors.New("unexpected value for property name")
 			}
-			if p.Name == "" {
-				return ObjectProperty{}, 0, errors.New("unexpected empty property name")
+			if err = validPropertyName(p.Name, false); err != nil {
+				return ObjectProperty{}, 0, err
 			}
 		case "aliases":
 			if p.Aliases != nil {
@@ -1011,9 +1028,12 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Obje
 				if err != nil {
 					return ObjectProperty{}, 0, err
 				}
-				switch v := tok.(type) {
+				switch alias := tok.(type) {
 				case string:
-					p.Aliases = append(p.Aliases, v)
+					if err = validPropertyName(alias, true); err != nil {
+						return ObjectProperty{}, 0, err
+					}
+					p.Aliases = append(p.Aliases, alias)
 				case json.Delim:
 					break Aliases
 				default:
