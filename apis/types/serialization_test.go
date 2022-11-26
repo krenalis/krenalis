@@ -148,13 +148,13 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"DateTime","layout":"2006-01-02T15:04"}`,
 			Type: DateTime("2006-01-02T15:04"),
 		}, {
-			Data: `{"name":"Array","itemsType":{"name":"Text"}}`,
+			Data: `{"name":"Array","itemType":{"name":"Text"}}`,
 			Type: Array(Text()),
 		}, {
-			Data: `{"name":"Array","itemsType":{"name":"Int","null":true}}`,
+			Data: `{"name":"Array","itemType":{"name":"Int","null":true}}`,
 			Type: Array(Int().WithNull()),
 		}, {
-			Data: `{"name":"Array","minItems":2,"maxItems":8,"uniqueItems":true,"itemsType":{"name":"Decimal"}}`,
+			Data: `{"name":"Array","minItems":2,"maxItems":8,"uniqueItems":true,"itemType":{"name":"Decimal"}}`,
 			Type: Array(Decimal(0, 0)).WithMinItems(2).WithMaxItems(8).WithUnique(),
 		}, {
 			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"}},{"name":"size","type":{"name":"Decimal"}}]}`,
@@ -338,7 +338,7 @@ func equalTypes(t1, t2 Type) error {
 			}
 		}
 	}
-	// unique items and items type.
+	// unique items and item type.
 	if t1.pt == PtArray {
 		if t1.unique != t2.unique {
 			if t1.unique {
@@ -347,7 +347,7 @@ func equalTypes(t1, t2 Type) error {
 			return errors.New("expected non-unique items, got unique")
 		}
 		if t2.vl == nil {
-			return errors.New("expected items type, got nil")
+			return errors.New("expected item type, got nil")
 		}
 		if err := equalTypes(t1.vl.(Type), t2.vl.(Type)); err != nil {
 			return err

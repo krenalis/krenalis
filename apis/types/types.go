@@ -965,8 +965,8 @@ func (t Type) Unique() bool {
 }
 
 // WithUnique returns the type t but with unique items. t must be an Array and
-// its items type cannot be Array or Object.
-// Panics if t is not an Array or the items type is Array or Object.
+// its item type cannot be Array or Object.
+// Panics if t is not an Array or the item type is Array or Object.
 func (t Type) WithUnique() Type {
 	if t.pt != PtArray {
 		panic("cannot set unique of a non-Array type")
