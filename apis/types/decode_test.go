@@ -41,6 +41,26 @@ func TestDecode(t *testing.T) {
 			Value: 5,
 		},
 		{
+			Data:  `-12`,
+			Type:  Int8().WithIntRange(-12, 5),
+			Value: -12,
+		},
+		{
+			Data:  `127`,
+			Type:  Int8(),
+			Value: 127,
+		},
+		{
+			Data:  `-128`,
+			Type:  Int8(),
+			Value: -128,
+		},
+		{
+			Data:  `255`,
+			Type:  UInt8(),
+			Value: uint(255),
+		},
+		{
 			Data:  `3.14`,
 			Type:  Float(),
 			Value: 3.14,

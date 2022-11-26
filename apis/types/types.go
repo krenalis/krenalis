@@ -256,20 +256,24 @@ type Type struct {
 	unique bool // unique reports whether the items of an Array must be unique.
 
 	// p represents
+	//   - minimum value of Int, Int8, In16 and Int24 types
+	//   - minimum value, as uint32(p), of UInt, UInt8, UIn16 and UInt24 types
 	//   - precision of a Decimal type
 	//   - length in bytes of a Text type
 	//   - minimum length of an Array type
 	p int32
 
 	// s represents
-	//   - scale of a Decimal type
-	//   - length in characters of a Text type
-	//   - maximum length of an Array type
+	//   - maximum value for Int, Int8, In16 and Int24
+	//   - maximum value, as uint32(s), for UInt, UInt8, UIn16 and UInt24
+	//   - scale for Decimal
+	//   - length in characters for Text
+	//   - maximum length for Array
 	s int32
 
 	// vl can contain one of
-	//   - intRange value for Int, Int8, Int16, Int24 and Int64
-	//   - uintRange value for UInt, UInt8, UInt16, UInt24 and UInt64
+	//   - intRange value for Int64
+	//   - uintRange value for UInt64
 	//   - floatRange value for Float and Float32
 	//   - decimalRange value for Decimal
 	//   - string value representing a layout for DateTime, Date and Time
@@ -290,22 +294,22 @@ func Boolean() Type {
 
 // Int returns the Int type.
 func Int() Type {
-	return Type{pt: PtInt}
+	return Type{pt: PtInt, p: MinInt, s: MaxInt}
 }
 
 // Int8 returns the Int8 type.
 func Int8() Type {
-	return Type{pt: PtInt8}
+	return Type{pt: PtInt8, p: MinInt8, s: MaxInt8}
 }
 
 // Int16 returns the Int16 type.
 func Int16() Type {
-	return Type{pt: PtInt16}
+	return Type{pt: PtInt16, p: MinInt16, s: MaxInt16}
 }
 
 // Int24 returns the Int24 type.
 func Int24() Type {
-	return Type{pt: PtInt24}
+	return Type{pt: PtInt24, p: MinInt24, s: MaxInt24}
 }
 
 // Int64 returns the Int64 type.
@@ -315,22 +319,23 @@ func Int64() Type {
 
 // UInt returns the UInt type.
 func UInt() Type {
-	return Type{pt: PtUInt}
+	s := MaxUInt
+	return Type{pt: PtUInt, s: int32(s)}
 }
 
 // UInt8 returns the UInt8 type.
 func UInt8() Type {
-	return Type{pt: PtUInt8}
+	return Type{pt: PtUInt8, s: int32(MaxUInt8)}
 }
 
 // UInt16 returns the UInt16 type.
 func UInt16() Type {
-	return Type{pt: PtUInt16}
+	return Type{pt: PtUInt16, s: int32(MaxUInt16)}
 }
 
 // UInt24 returns the UInt24 type.
 func UInt24() Type {
-	return Type{pt: PtUInt24}
+	return Type{pt: PtUInt24, s: int32(MaxUInt24)}
 }
 
 // UInt64 returns the UInt64 type.
@@ -588,10 +593,13 @@ func (t Type) IntRange() (min, max int64) {
 	if t.pt < PtInt || t.pt > PtInt64 {
 		panic("type is not an Int, Int8, Int16, Int24 or Int64 type")
 	}
+	if t.pt != PtInt64 {
+		return int64(t.p), int64(t.s)
+	}
 	if i, ok := t.vl.(intRange); ok {
 		return i.min, i.max
 	}
-	return minInt[t.pt-PtInt], maxInt[t.pt-PtInt]
+	return MinInt64, MaxInt64
 }
 
 // WithIntRange returns t but with values in [min,max]. t must be an Int, Int8,
@@ -615,7 +623,11 @@ func (t Type) WithIntRange(min, max int64) Type {
 	if max > Max {
 		panic(fmt.Sprintf("max cannot be greater than %d", Max))
 	}
-	t.vl = intRange{min, max}
+	if t.pt == PtInt64 {
+		t.vl = intRange{min, max}
+	} else {
+		t.p, t.s = int32(min), int32(max)
+	}
 	return t
 }
 
@@ -627,10 +639,13 @@ func (t Type) UIntRange() (min, max uint64) {
 	if t.pt < PtUInt || t.pt > PtUInt64 {
 		panic("type is not an UInt, UInt8, Int16, UInt24 or UInt64 type")
 	}
+	if t.pt != PtInt64 {
+		return uint64(t.p), uint64(t.s)
+	}
 	if i, ok := t.vl.(uintRange); ok {
 		return i.min, i.max
 	}
-	return 0, maxUInt[t.pt-PtInt]
+	return 0, MaxUInt64
 }
 
 // WithUintRange returns t but with values in [min,max]. t must be a UInt,
@@ -654,7 +669,11 @@ func (t Type) WithUintRange(min, max uint64) Type {
 	if max > Max {
 		panic(fmt.Sprintf("max cannot be greater than %d", Max))
 	}
-	t.vl = uintRange{min, max}
+	if t.pt == PtInt64 {
+		t.vl = uintRange{min, max}
+	} else {
+		t.p, t.s = int32(min), int32(max)
+	}
 	return t
 }
 

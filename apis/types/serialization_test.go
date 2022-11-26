@@ -249,7 +249,16 @@ func equalTypes(t1, t2 Type) error {
 		return errors.New("expected null not allowed, got allowed")
 	}
 	// Minimum and maximum.
-	if PtInt <= t1.pt && t1.pt <= PtFloat32 {
+	switch t1.pt {
+	case PtInt, PtInt8, PtInt16, PtInt24:
+		if t1.p != t2.p || t1.s != t2.s {
+			return fmt.Errorf("expected range [%d,%d], got [%d,%d]", t1.p, t1.s, t2.p, t2.s)
+		}
+	case PtUInt, PtUInt8, PtUInt16, PtUInt24:
+		if t1.p != t2.p || t1.s != t2.s {
+			return fmt.Errorf("expected range [%d,%d], got [%d,%d]", uint32(t1.p), uint32(t1.s), uint32(t2.p), uint32(t2.s))
+		}
+	case PtInt64, PtUInt64, PtFloat, PtFloat32:
 		if t1.vl != t2.vl {
 			if t1.vl == nil {
 				return fmt.Errorf("expected no range, got %v", t2.vl)
@@ -259,7 +268,7 @@ func equalTypes(t1, t2 Type) error {
 				return fmt.Errorf("expected range %v, got %v", t1.vl, t2.vl)
 			}
 		}
-	} else if t1.pt == PtDecimal {
+	case PtDecimal:
 		if vl1, ok := t1.vl.(decimalRange); ok {
 			vl2, ok := t2.vl.(decimalRange)
 			if !ok || !vl1.min.Equal(vl2.min) || !vl1.max.Equal(vl2.max) {

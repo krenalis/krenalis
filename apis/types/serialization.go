@@ -228,24 +228,42 @@ func marshalType(b *bytes.Buffer, t Type) {
 		b.WriteString(`,"null":true`)
 	}
 	switch t.pt {
-	case PtInt, PtInt8, PtInt16, PtInt24, PtInt64:
+	case PtInt, PtInt8, PtInt16, PtInt24:
+		if min := int64(t.p); min > minInt[t.pt-PtInt] {
+			b.WriteString(`,"minimum":`)
+			b.WriteString(strconv.FormatInt(min, 10))
+		}
+		if max := int64(t.s); max < maxInt[t.pt-PtInt] {
+			b.WriteString(`,"maximum":`)
+			b.WriteString(strconv.FormatInt(max, 10))
+		}
+	case PtInt64:
 		if i, ok := t.vl.(intRange); ok {
-			if i.min > minInt[t.pt-PtInt] {
+			if i.min > MinInt64 {
 				b.WriteString(`,"minimum":`)
 				b.WriteString(strconv.FormatInt(i.min, 10))
 			}
-			if i.max < maxInt[t.pt-PtInt] {
+			if i.max < MaxInt64 {
 				b.WriteString(`,"maximum":`)
 				b.WriteString(strconv.FormatInt(i.max, 10))
 			}
 		}
-	case PtUInt, PtUInt8, PtUInt16, PtUInt24, PtUInt64:
+	case PtUInt, PtUInt8, PtUInt16, PtUInt24:
+		if min := uint64(t.p); min > 0 {
+			b.WriteString(`,"minimum":`)
+			b.WriteString(strconv.FormatUint(min, 10))
+		}
+		if max := uint64(t.s); max < maxUInt[t.pt-PtUInt] {
+			b.WriteString(`,"maximum":`)
+			b.WriteString(strconv.FormatUint(max, 10))
+		}
+	case PtUInt64:
 		if i, ok := t.vl.(uintRange); ok {
 			if i.min > 0 {
 				b.WriteString(`,"minimum":`)
 				b.WriteString(strconv.FormatUint(i.min, 10))
 			}
-			if i.max < maxUInt[t.pt-PtUInt] {
+			if i.max < MaxUInt64 {
 				b.WriteString(`,"maximum":`)
 				b.WriteString(strconv.FormatUint(i.max, 10))
 			}
@@ -689,7 +707,11 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		t.lt = lt
 	}
 	t.null = null
-	if minimum != "" {
+	if minimum == "" {
+		if PtInt <= t.pt && t.pt <= PtInt24 || PtUInt <= t.pt && t.pt <= PtUInt24 {
+			t.p = int32(minInt[t.pt-PtInt])
+		}
+	} else {
 		switch t.pt {
 		case PtInt, PtInt8, PtInt16, PtInt24, PtInt64:
 			min, err := minimum.Int64()
@@ -701,7 +723,11 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				return Type{}, errors.New("invalid value for minimum")
 			}
 			if min > Min {
-				t.vl = intRange{min, Max}
+				if t.pt == PtInt64 {
+					t.vl = intRange{min, Max}
+				} else {
+					t.p = int32(min)
+				}
 			}
 		case PtUInt, PtUInt8, PtUInt16, PtUInt24, PtUInt64:
 			min, err := strconv.ParseUint(string(minimum), 10, 64)
@@ -713,7 +739,11 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				return Type{}, errors.New("invalid value for minimum")
 			}
 			if min > 0 {
-				t.vl = uintRange{min, Max}
+				if t.pt == PtInt64 {
+					t.vl = uintRange{min, Max}
+				} else {
+					t.p = int32(min)
+				}
 			}
 		case PtFloat:
 			min, err := minimum.Float64()
@@ -752,7 +782,11 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 			return Type{}, errors.New("unexpected minimum for non-number type")
 		}
 	}
-	if maximum != "" {
+	if maximum == "" {
+		if PtInt <= t.pt && t.pt <= PtInt24 || PtUInt <= t.pt && t.pt <= PtUInt24 {
+			t.s = int32(maxInt[t.pt-PtInt])
+		}
+	} else {
 		switch t.pt {
 		case PtInt, PtInt8, PtInt16, PtInt24, PtInt64:
 			max, err := maximum.Int64()
@@ -764,14 +798,21 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				return Type{}, errors.New("invalid value for maximum")
 			}
 			if max < Max {
-				if i, ok := t.vl.(intRange); ok {
-					if max < i.min {
+				if t.pt == PtInt64 {
+					if i, ok := t.vl.(intRange); ok {
+						if max < i.min {
+							return Type{}, errors.New("maximum cannot be less than minimum")
+						}
+						i.max = max
+						t.vl = i
+					} else {
+						t.vl = intRange{Min, max}
+					}
+				} else {
+					if min := int64(t.p); max < min {
 						return Type{}, errors.New("maximum cannot be less than minimum")
 					}
-					i.max = max
-					t.vl = i
-				} else {
-					t.vl = intRange{Min, max}
+					t.s = int32(max)
 				}
 			}
 		case PtUInt, PtUInt8, PtUInt16, PtUInt24, PtUInt64:
@@ -784,14 +825,21 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				return Type{}, errors.New("invalid value for maximum")
 			}
 			if max < Max {
-				if f, ok := t.vl.(uintRange); ok {
-					if max < f.min {
+				if t.pt == PtInt64 {
+					if f, ok := t.vl.(uintRange); ok {
+						if max < f.min {
+							return Type{}, errors.New("maximum cannot be less than minimum")
+						}
+						f.max = max
+						t.vl = f
+					} else {
+						t.vl = uintRange{0, max}
+					}
+				} else {
+					if min := uint64(t.p); max < min {
 						return Type{}, errors.New("maximum cannot be less than minimum")
 					}
-					f.max = max
-					t.vl = f
-				} else {
-					t.vl = uintRange{0, max}
+					t.s = int32(max)
 				}
 			}
 		case PtFloat:
