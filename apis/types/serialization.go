@@ -379,6 +379,9 @@ func marshalType(b *bytes.Buffer, t Type) {
 			b.WriteByte('}')
 		}
 		b.WriteString("]")
+	case PtMap:
+		b.WriteString(`,"valueType":`)
+		marshalType(b, t.vl.(Type))
 	}
 	b.WriteString(`}`)
 }
@@ -439,6 +442,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	var minItems, maxItems = 0, MaxItems
 	var uniqueItems bool
 	var properties []ObjectProperty
+	var valueType Type
 
 	var ok bool
 
@@ -455,8 +459,15 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		}
 		key := tok.(string)
 
-		if key == "itemType" {
+		switch key {
+		case "itemType":
 			itemType, err = unmarshalType(dec, resolve)
+			if err != nil {
+				return Type{}, err
+			}
+			continue
+		case "valueType":
+			valueType, err = unmarshalType(dec, resolve)
 			if err != nil {
 				return Type{}, err
 			}
@@ -1002,6 +1013,16 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 			return Type{}, errors.New("unexpected properties for non-Object type")
 		}
 		t.vl = properties
+	}
+	if valueType.Valid() {
+		if pt != PtMap {
+			return Type{}, errors.New("unexpected value type for non-Map type")
+		}
+		t.vl = valueType
+	} else {
+		if pt == PtMap {
+			return Type{}, errors.New("missing value type")
+		}
 	}
 
 	return t, nil

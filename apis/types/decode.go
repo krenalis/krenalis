@@ -432,6 +432,31 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 			}
 		}
 		return object, nil
+	case PtMap:
+		if tok != json.Delim('{') {
+			return nil, errors.New("not a JSON object")
+		}
+		vt := t.ValueType()
+		values := map[string]any{}
+		for {
+			tok, err = dec.Token()
+			if err != nil {
+				return nil, err
+			}
+			key, ok := tok.(string)
+			if !ok {
+				break
+			}
+			key = norm.NFC.String(key)
+			if _, ok := values[key]; ok {
+				return nil, errors.New("repeated map key")
+			}
+			values[key], err = decodeByType(dec, nil, vt, strict)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return values, nil
 	default:
 		panic(fmt.Sprintf("unexpected type %d", t.pt))
 	}

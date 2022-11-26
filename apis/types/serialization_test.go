@@ -65,6 +65,10 @@ func TestSchemaSerialization(t *testing.T) {
 			Data:   `{"properties":[{"name":"phone","aliases":["Phone","phone_number"],"type":{"name":"Text"}}]}`,
 			Schema: MustSchemaOf([]Property{{Name: "phone", Aliases: []string{"Phone", "phone_number"}, Type: Text()}}),
 		},
+		{
+			Data:   `{"properties":[{"name":"values","type":{"name":"Map","valueType":{"name":"Text"}}}]}`,
+			Schema: MustSchemaOf([]Property{{Name: "values", Type: Map(Text())}}),
+		},
 	}
 
 	for _, test := range tests {
@@ -338,7 +342,7 @@ func equalTypes(t1, t2 Type) error {
 			}
 		}
 	}
-	// unique items and item type.
+	// Unique items and item type.
 	if t1.pt == PtArray {
 		if t1.unique != t2.unique {
 			if t1.unique {
@@ -382,6 +386,16 @@ func equalTypes(t1, t2 Type) error {
 			}
 		}
 	}
+	// Value type.
+	if t1.pt == PtMap {
+		if t2.vl == nil {
+			return errors.New("expected value type, got nil")
+		}
+		if err := equalTypes(t1.vl.(Type), t2.vl.(Type)); err != nil {
+			return err
+		}
+	}
+	// Custom.
 	if t1.custom != t2.custom {
 		if t1.custom == "" {
 			return fmt.Errorf("expected non-custom type, got custom type %q", t2.custom)

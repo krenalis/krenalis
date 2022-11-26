@@ -162,6 +162,11 @@ func TestDecode(t *testing.T) {
 				},
 			},
 		},
+		{
+			Data:  `{"first":1,"second":2}`,
+			Type:  Map(Int()),
+			Value: map[string]any{"first": 1, "second": 2},
+		},
 	}
 
 	for _, test := range tests {

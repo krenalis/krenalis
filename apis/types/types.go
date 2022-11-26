@@ -95,6 +95,7 @@ const (
 	PtText
 	PtArray
 	PtObject
+	PtMap
 )
 
 var physicalName = []string{
@@ -121,6 +122,7 @@ var physicalName = []string{
 	"Text",
 	"Array",
 	"Object",
+	"Map",
 }
 
 // String returns the name of pt. Panics if pt is not a physical type.
@@ -280,7 +282,8 @@ type Type struct {
 	//   - *regexp.Regexp value for Text
 	//   - []string with the enum values for Text
 	//   - []ObjectProperty for Object
-	//   - Type of the items for Array
+	//   - Type of the item for Array
+	//   - Type of the value for Map
 	vl any
 
 	// custom type. Empty for non-custom types.
@@ -482,6 +485,11 @@ func Object(properties []ObjectProperty) Type {
 		}
 	}
 	return Type{pt: PtObject, vl: ps}
+}
+
+// Map returns a Map type with value type t.
+func Map(t Type) Type {
+	return Type{pt: PtMap, vl: t}
 }
 
 // Valid indicates if t is valid.
@@ -1005,6 +1013,15 @@ func (iter *Properties) Next() (ObjectProperty, bool) {
 	p := iter.pr[0]
 	iter.pr = iter.pr[1:]
 	return p, true
+}
+
+// ValueType returns the type of the value of a Map type.
+// Panics if t is not a Map type.
+func (t Type) ValueType() Type {
+	if t.pt != PtMap {
+		panic("cannot get the value type of a non-Map type")
+	}
+	return t.vl.(Type)
 }
 
 // Length represents a Text length.
