@@ -8,7 +8,6 @@
 package types
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"regexp"
@@ -596,8 +595,8 @@ func (t Type) AsCustom(name string) Type {
 	if name == "" {
 		panic("custom type name is empty")
 	}
-	if err := validCustomTypeName(name); err != nil {
-		panic(err)
+	if !IsValidCustomTypeName(name) {
+		panic("custom type name is not valid")
 	}
 	t.custom = name
 	return t
@@ -1058,20 +1057,19 @@ func normalizedUTF8(s string) string {
 	return norm.NFC.String(s)
 }
 
-// validCustomTypeName verifies that name is a valid custom type name.
-//
+// IsValidCustomTypeName reports whether name is a valid custom type name.
 // A custom type name must:
 //   - start with [A-Za-z_]
 //   - subsequently contain only [A-Za-z0-9_]
-func validCustomTypeName(name string) error {
+func IsValidCustomTypeName(name string) bool {
 	if name == "" {
-		return errors.New("custom type name is empty")
+		return false
 	}
 	for i := 0; i < len(name); i++ {
 		c := name[i]
 		if !('a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return errors.New("invalid custom type name")
+			return false
 		}
 	}
-	return nil
+	return true
 }
