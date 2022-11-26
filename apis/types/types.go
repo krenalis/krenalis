@@ -54,7 +54,7 @@ const (
 	MaxInt24  = 1<<23 - 1
 	MaxInt64  = math.MaxInt64
 	MaxInt8   = math.MaxInt8
-	MaxUInt   = math.MaxUint
+	MaxUInt   = math.MaxUint32
 	MaxUInt16 = math.MaxUint16
 	MaxUInt24 = 1<<24 - 1
 	MaxUInt64 = math.MaxUint64
