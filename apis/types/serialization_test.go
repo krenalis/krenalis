@@ -43,6 +43,8 @@ func TestSchemaSerialization(t *testing.T) {
 		{Data: `{"properties":[{"name":"first_name","role":"unknown","type":{"name":"Text"}}]}`, Err: true},
 		{Data: `{"properties":[{"name":"first_name","type":{"name":"Date"}}]}`, Err: true},
 		{Data: `{"properties":[{"name":"first_name","type":{"name":"Date","layout":""}}]}`, Err: true},
+		{Data: `{"properties":[{"name":"first_name","aliases":["first_name"],type":{"name":"Text"}}]}`, Err: true},
+		{Data: `{"properties":[{"name":"first_name","aliases":["name","name"],type":{"name":"Text"}}]}`, Err: true},
 		{
 			Data:   `{"properties":[{"name":"first_name","role":"destination","type":{"name":"Text"}}]}`,
 			Schema: MustSchemaOf([]Property{{Name: "first_name", Role: DestinationRole, Type: Text()}}),
@@ -55,6 +57,10 @@ func TestSchemaSerialization(t *testing.T) {
 			Data:    `{"properties":[{"name":"email","type":"Email"}]}`,
 			Schema:  MustSchemaOf([]Property{{Name: "email", Type: Text(Chars(120)).WithRegexp(regexp.MustCompile(`@`)).AsCustom("Email")}}),
 			Resolve: resolve,
+		},
+		{
+			Data:   `{"properties":[{"name":"phone","aliases":["Phone","phone_number"],"type":{"name":"Text"}}]}`,
+			Schema: MustSchemaOf([]Property{{Name: "phone", Aliases: []string{"Phone", "phone_number"}, Type: Text()}}),
 		},
 	}
 

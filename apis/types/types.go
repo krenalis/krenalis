@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"sort"
 	"strconv"
 	"unicode/utf8"
 
@@ -240,6 +241,7 @@ func (role Role) String() string {
 // ObjectProperty represents an object property.
 type ObjectProperty struct {
 	Name        string
+	Aliases     []string
 	Label       string
 	Description string
 	Type        Type
@@ -431,32 +433,51 @@ func Array(t Type) Type {
 }
 
 // Object returns an Object type with the given properties.
-// Panics if properties is empty, or if a property name is empty or repeated,
-// or if a property string field is not UTF-8 encoded or if a property type is
-// not valid.
+// Panics if properties is empty, or if a property name pr alias is empty or
+// repeated, or if a property string field is not UTF-8 encoded or if a
+// property type is not valid.
 func Object(properties []ObjectProperty) Type {
 	if len(properties) == 0 {
 		panic("no property in object")
 	}
-	pr := make([]ObjectProperty, len(properties))
+	exists := make(map[string]struct{}, len(properties))
+	ps := make([]ObjectProperty, len(properties))
 	for i, property := range properties {
 		if property.Name == "" {
 			panic("empty property name")
 		}
-		property.Name = normalizedUTF8(property.Name)
-		property.Label = normalizedUTF8(property.Label)
-		property.Description = normalizedUTF8(property.Description)
+		normalizedName := normalizedUTF8(property.Name)
+		if _, ok := exists[normalizedName]; ok {
+			panic("property name is repeated")
+		}
+		exists[normalizedName] = struct{}{}
+		var aliases []string
+		if len(property.Aliases) > 0 {
+			aliases = make([]string, len(property.Aliases))
+			for i, alias := range property.Aliases {
+				if alias == "" {
+					panic("empty property alias")
+				}
+				aliases[i] = normalizedUTF8(alias)
+				if _, ok := exists[aliases[i]]; ok {
+					panic("property alias already named")
+				}
+				exists[aliases[i]] = struct{}{}
+			}
+			sort.Strings(aliases)
+		}
 		if !property.Type.Valid() {
 			panic("invalid property type")
 		}
-		for _, p := range pr[:i] {
-			if property.Name == p.Name {
-				panic("property name is repeated")
-			}
+		ps[i] = ObjectProperty{
+			Name:        normalizedName,
+			Aliases:     aliases,
+			Label:       normalizedUTF8(property.Label),
+			Description: normalizedUTF8(property.Description),
+			Type:        property.Type,
 		}
-		pr[i] = property
 	}
-	return Type{pt: PtObject, vl: pr}
+	return Type{pt: PtObject, vl: ps}
 }
 
 // Valid indicates if t is valid.

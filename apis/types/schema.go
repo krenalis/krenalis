@@ -9,6 +9,7 @@ package types
 
 import (
 	"errors"
+	"sort"
 )
 
 var errInvalidSchemaSyntax = errors.New("invalid schema syntax")
@@ -21,6 +22,7 @@ type Schema struct {
 // Property represents a schema property.
 type Property struct {
 	Name        string
+	Aliases     []string
 	Label       string
 	Description string
 	Role        Role
@@ -37,23 +39,38 @@ func MustSchemaOf(properties []Property) Schema {
 }
 
 // SchemaOf returns a new schema with the given properties.
-// It returns an error if properties is empty, or if a property name is empty
-// or repeated, or if a property string field is not UTF-8 encoded, or if a
-// property type and role are not valid.
+// It returns an error if properties is empty, or if a property name or alias
+// is empty or repeated, or if a property string field is not UTF-8 encoded, or
+// if a property type and role are not valid.
 func SchemaOf(properties []Property) (Schema, error) {
 	if len(properties) == 0 {
 		return Schema{}, errors.New("no property in schema")
 	}
+	exists := make(map[string]struct{}, len(properties))
 	ps := make([]Property, len(properties))
 	for i, property := range properties {
 		if property.Name == "" {
 			return Schema{}, errors.New("empty property name")
 		}
 		normalizedName := normalizedUTF8(property.Name)
-		for _, p := range ps[:i] {
-			if p.Name == normalizedName {
-				return Schema{}, errors.New("property name is repeated")
+		if _, ok := exists[normalizedName]; ok {
+			return Schema{}, errors.New("property name is repeated")
+		}
+		exists[normalizedName] = struct{}{}
+		var aliases []string
+		if len(property.Aliases) > 0 {
+			aliases = make([]string, len(property.Aliases))
+			for i, alias := range property.Aliases {
+				if alias == "" {
+					return Schema{}, errors.New("empty property alias")
+				}
+				aliases[i] = normalizedUTF8(alias)
+				if _, ok := exists[aliases[i]]; ok {
+					return Schema{}, errors.New("property alias already named")
+				}
+				exists[aliases[i]] = struct{}{}
 			}
+			sort.Strings(aliases)
 		}
 		if property.Role < BothRole || property.Role > DestinationRole {
 			return Schema{}, errors.New("invalid property role")
@@ -63,6 +80,7 @@ func SchemaOf(properties []Property) (Schema, error) {
 		}
 		ps[i] = Property{
 			Name:        normalizedName,
+			Aliases:     aliases,
 			Label:       normalizedUTF8(property.Label),
 			Description: normalizedUTF8(property.Description),
 			Role:        property.Role,

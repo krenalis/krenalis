@@ -69,6 +69,9 @@ func decodeBySchema(dec *json.Decoder, schema Schema, strict bool) (any, error) 
 	propertyByName := map[string]Property{}
 	for _, p := range schema.properties {
 		propertyByName[p.Name] = p
+		for _, alias := range p.Aliases {
+			propertyByName[alias] = p
+		}
 	}
 	object := map[string]any{}
 	for {
@@ -84,7 +87,7 @@ func decodeBySchema(dec *json.Decoder, schema Schema, strict bool) (any, error) 
 			return nil, errors.New("invalid empty property name")
 		}
 		if p, ok := propertyByName[name]; ok {
-			object[name], err = decodeByType(dec, nil, p.Type, strict)
+			object[p.Name], err = decodeByType(dec, nil, p.Type, strict)
 			if err != nil {
 				return nil, err
 			}
@@ -381,6 +384,9 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 		propertyByName := map[string]ObjectProperty{}
 		for _, p := range t.vl.([]ObjectProperty) {
 			propertyByName[p.Name] = p
+			for _, alias := range p.Aliases {
+				propertyByName[alias] = p
+			}
 		}
 		object := map[string]any{}
 		for {
@@ -396,7 +402,7 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 				return nil, errors.New("invalid empty property name")
 			}
 			if p, ok := propertyByName[name]; ok {
-				object[name], err = decodeByType(dec, nil, p.Type, strict)
+				object[p.Name], err = decodeByType(dec, nil, p.Type, strict)
 				if err != nil {
 					return nil, err
 				}

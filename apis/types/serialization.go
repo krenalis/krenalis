@@ -43,6 +43,16 @@ func (schema Schema) MarshalJSON() ([]byte, error) {
 		}
 		b.WriteString(`{"name":`)
 		_ = marshalString(&b, p.Name)
+		if p.Aliases != nil {
+			b.WriteString(`,"aliases":[`)
+			for i, alias := range p.Aliases {
+				if i > 0 {
+					b.WriteByte(',')
+				}
+				_ = marshalString(&b, alias)
+			}
+			b.WriteByte(']')
+		}
 		if p.Label != "" {
 			b.WriteString(`,"label":`)
 			_ = marshalString(&b, p.Label)
@@ -96,6 +106,7 @@ func UnmarshalSchema(data []byte, resolve Resolver) (Schema, error) {
 	if tok != json.Delim('[') {
 		return Schema{}, errInvalidSchemaSyntax
 	}
+	exists := map[string]struct{}{}
 	var properties []Property
 	for {
 		// Read delimiter '{' or ']'.
@@ -115,13 +126,19 @@ func UnmarshalSchema(data []byte, resolve Resolver) (Schema, error) {
 		if err != nil {
 			return Schema{}, err
 		}
-		for _, p := range properties {
-			if property.Name == p.Name {
-				return Schema{}, errors.New("property name is repeated")
+		if _, ok := exists[property.Name]; ok {
+			return Schema{}, errors.New("repeated property name")
+		}
+		exists[property.Name] = struct{}{}
+		for _, alias := range property.Aliases {
+			if _, ok := exists[alias]; ok {
+				return Schema{}, errors.New("property alias already named")
 			}
+			exists[alias] = struct{}{}
 		}
 		properties = append(properties, Property{
 			Name:        property.Name,
+			Aliases:     property.Aliases,
 			Label:       property.Label,
 			Description: property.Description,
 			Role:        role,
@@ -603,6 +620,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 			if tok != json.Delim('[') {
 				return Type{}, errors.New("invalid properties")
 			}
+			exists := map[string]struct{}{}
 			for {
 				// Read delimiter '{' or ']'.
 				tok, err := dec.Token()
@@ -620,10 +638,15 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				if err != nil {
 					return Type{}, err
 				}
-				for _, p := range properties {
-					if property.Name == p.Name {
-						return Type{}, errors.New("property name is repeated")
+				if _, ok := exists[property.Name]; ok {
+					return Type{}, errors.New("repeated property name")
+				}
+				exists[property.Name] = struct{}{}
+				for _, alias := range property.Aliases {
+					if _, ok := exists[alias]; ok {
+						return Type{}, errors.New("property alias already named")
 					}
+					exists[alias] = struct{}{}
 				}
 				properties = append(properties, property)
 			}
@@ -973,6 +996,32 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Obje
 			}
 			if p.Name == "" {
 				return ObjectProperty{}, 0, errors.New("unexpected empty property name")
+			}
+		case "aliases":
+			if p.Aliases != nil {
+				return ObjectProperty{}, 0, errors.New("repeated 'aliases' key")
+			}
+			p.Aliases = []string{}
+			if tok != json.Delim('[') {
+				return ObjectProperty{}, 0, errors.New("invalid aliases")
+			}
+		Aliases:
+			for {
+				tok, err = dec.Token()
+				if err != nil {
+					return ObjectProperty{}, 0, err
+				}
+				switch v := tok.(type) {
+				case string:
+					p.Aliases = append(p.Aliases, v)
+				case json.Delim:
+					break Aliases
+				default:
+					return ObjectProperty{}, 0, errors.New("invalid value in aliases")
+				}
+			}
+			if len(p.Aliases) == 0 {
+				return ObjectProperty{}, 0, errors.New("invalid empty aliases")
 			}
 		case "label":
 			if hasLabel {
