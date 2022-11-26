@@ -452,8 +452,11 @@ func Object(properties []ObjectProperty) Type {
 	exists := make(map[string]struct{}, len(properties))
 	ps := make([]ObjectProperty, len(properties))
 	for i, property := range properties {
-		if err := validPropertyName(property.Name, false); err != nil {
-			panic(err.Error())
+		if property.Name == "" {
+			panic("property name is empty")
+		}
+		if !IsValidPropertyName(property.Name) {
+			panic("invalid property name")
 		}
 		if _, ok := exists[property.Name]; ok {
 			panic("property name is repeated")
@@ -463,8 +466,11 @@ func Object(properties []ObjectProperty) Type {
 		if len(property.Aliases) > 0 {
 			aliases = make([]string, len(property.Aliases))
 			for i, alias := range property.Aliases {
-				if err := validPropertyName(alias, true); err != nil {
-					panic(err.Error())
+				if alias == "" {
+					panic("property alias is empty")
+				}
+				if !IsValidPropertyName(alias) {
+					panic("invalid property alias")
 				}
 				if _, ok := exists[alias]; ok {
 					panic("property alias already named")

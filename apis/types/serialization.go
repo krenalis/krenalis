@@ -1081,8 +1081,11 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Obje
 			if !ok {
 				return ObjectProperty{}, 0, errors.New("unexpected value for property name")
 			}
-			if err = validPropertyName(p.Name, false); err != nil {
-				return ObjectProperty{}, 0, err
+			if p.Name == "" {
+				return ObjectProperty{}, 0, errors.New("property name is empty")
+			}
+			if !IsValidPropertyName(p.Name) {
+				return ObjectProperty{}, 0, errors.New("invalid property name")
 			}
 		case "aliases":
 			if p.Aliases != nil {
@@ -1100,8 +1103,11 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Obje
 				}
 				switch alias := tok.(type) {
 				case string:
-					if err = validPropertyName(alias, true); err != nil {
-						return ObjectProperty{}, 0, err
+					if alias == "" {
+						return ObjectProperty{}, 0, errors.New("property alias is empty")
+					}
+					if !IsValidPropertyName(alias) {
+						return ObjectProperty{}, 0, errors.New("invalid property alias")
 					}
 					p.Aliases = append(p.Aliases, alias)
 				case json.Delim:

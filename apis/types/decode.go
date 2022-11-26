@@ -90,8 +90,11 @@ func decodeBySchema(dec *json.Decoder, schema Schema, strict bool) (any, error) 
 			}
 			continue
 		}
-		if err = validPropertyName(name, false); err != nil {
-			return nil, err
+		if name == "" {
+			return nil, errors.New("property name is empty")
+		}
+		if !IsValidPropertyName(name) {
+			return nil, errors.New("invalid property name")
 		}
 		if strict {
 			return nil, fmt.Errorf("unknow property name %q", name)
@@ -405,8 +408,11 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 				}
 				continue
 			}
-			if err = validPropertyName(name, false); err != nil {
-				return nil, err
+			if name == "" {
+				return nil, errors.New("property name is empty")
+			}
+			if !IsValidPropertyName(name) {
+				return nil, errors.New("invalid property name")
 			}
 			if strict {
 				return nil, fmt.Errorf("unknow property name %q", name)

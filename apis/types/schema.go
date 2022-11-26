@@ -49,8 +49,11 @@ func SchemaOf(properties []Property) (Schema, error) {
 	exists := make(map[string]struct{}, len(properties))
 	ps := make([]Property, len(properties))
 	for i, property := range properties {
-		if err := validPropertyName(property.Name, false); err != nil {
-			return Schema{}, err
+		if property.Name == "" {
+			return Schema{}, errors.New("property name is empty")
+		}
+		if !IsValidPropertyName(property.Name) {
+			return Schema{}, errors.New("invalid property name")
 		}
 		if _, ok := exists[property.Name]; ok {
 			return Schema{}, errors.New("property name is repeated")
@@ -60,8 +63,11 @@ func SchemaOf(properties []Property) (Schema, error) {
 		if len(property.Aliases) > 0 {
 			aliases = make([]string, len(property.Aliases))
 			for i, alias := range property.Aliases {
-				if err := validPropertyName(alias, true); err != nil {
-					return Schema{}, err
+				if alias == "" {
+					return Schema{}, errors.New("property alias is empty")
+				}
+				if !IsValidPropertyName(alias) {
+					return Schema{}, errors.New("invalid property alias")
 				}
 				if _, ok := exists[alias]; ok {
 					return Schema{}, errors.New("property alias already named")
@@ -153,29 +159,19 @@ func (schema Schema) Valid() bool {
 	return schema.properties != nil
 }
 
-// validPropertyName verifies that name is a valid property name. If name
-// refers to an alias, alias should be true.
-//
+// IsValidPropertyName reports whether name is a valid property name.
 // A property name must:
 //   - start with [A-Za-z_]
 //   - subsequently contain only [A-Za-z0-9_]
-func validPropertyName(name string, alias bool) error {
+func IsValidPropertyName(name string) bool {
 	if name == "" {
-		n := "name"
-		if alias {
-			n = "alias"
-		}
-		return errors.New("empty property " + n)
+		return false
 	}
 	for i := 0; i < len(name); i++ {
 		c := name[i]
 		if !('a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			n := "name"
-			if alias {
-				n = "alias"
-			}
-			return errors.New("invalid property " + n)
+			return false
 		}
 	}
-	return nil
+	return true
 }
