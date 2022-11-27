@@ -334,7 +334,7 @@ func (this *Connections) AddServer(role ConnectionRole, connector int) (int, err
 			return err
 		}
 		if typ != ServerType {
-			return errors.New("connector is not an server connector")
+			return errors.New("connector is not a server connector")
 		}
 		id, err = generateConnectionID()
 		if err != nil {
