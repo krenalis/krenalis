@@ -1,0 +1,300 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2022 Open2b
+//
+
+package kafka
+
+// This package is the Kafka connector.
+// (https://kafka.apache.org/documentation/)
+
+import (
+	"context"
+	"crypto/tls"
+	_ "embed"
+	"encoding/json"
+	"errors"
+	"net"
+	"strconv"
+	"time"
+
+	"chichi/apis"
+	"chichi/connector"
+	"chichi/connector/ui"
+
+	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/pkg/sasl/plain"
+)
+
+// Connector icon.
+var icon []byte
+
+// Make sure it implements the EventStreamConnection interface.
+var _ connector.EventStreamConnection = &connection{}
+
+func init() {
+	apis.RegisterEventStreamConnector("Kafka", New)
+}
+
+// New returns a new Kafka connection.
+func New(ctx context.Context, conf *connector.EventStreamConfig) (connector.EventStreamConnection, error) {
+	c := connection{ctx: ctx, firehose: conf.Firehose}
+	if len(conf.Settings) > 0 {
+		err := json.Unmarshal(conf.Settings, &c.settings)
+		if err != nil {
+			return nil, errors.New("cannot unmarshal settings of Kafka connection")
+		}
+	}
+	return &c, nil
+}
+
+type connection struct {
+	ctx      context.Context
+	settings *settings
+	firehose connector.Firehose
+	client   *kgo.Client
+	iter     *fetchesRecordIter
+}
+
+// Connector returns the connector.
+func (c *connection) Connector() *connector.Connector {
+	return &connector.Connector{
+		Name: "Kafka",
+		Type: connector.EventStreamType,
+		Icon: icon,
+	}
+}
+
+// Close closes the stream.
+// A call to Receive or Send opens the stream if it is closed.
+func (c *connection) Close() error {
+	if c.client != nil {
+		c.client.Close()
+		c.client = nil
+	}
+	return nil
+}
+
+// Commit commits a received event.
+// Caller does not retain the slice after Commit has been called.
+func (c *connection) Commit(ctx context.Context, event []byte) error {
+	// TODO(marco) To be implemented
+	return nil
+}
+
+// Receive receives an event from the stream.
+//
+// Caller does not modify the event data, even temporarily, and event is
+// not retained after the Commit method has been called.
+func (c *connection) Receive(ctx context.Context) ([]byte, error) {
+	if c.client == nil {
+		cl, err := kgo.NewClient(c.settings.opts()...)
+		if err != nil {
+			return nil, err
+		}
+		c.client = cl
+	}
+	if c.iter == nil {
+		c.iter = &fetchesRecordIter{}
+	}
+	if c.iter.Done() {
+		c.iter.fetches = c.client.PollFetches(ctx)
+	}
+	record, err := c.iter.Next()
+	if err != nil {
+		return nil, err
+	}
+	return record.Value, nil
+}
+
+// Send sends an event to the stream.
+//
+// Send must not modify the event data, even temporarily, and implementations
+// must not retain event.
+func (c *connection) Send(ctx context.Context, event []byte) error {
+	// TODO(marco) To be implemented
+	return nil
+}
+
+// ServeUI serves the connector's user interface.
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
+
+	var s settings
+
+	switch event {
+	case "load":
+		// Load the UI.
+		if c.settings == nil {
+			s.Port = 9092
+		} else {
+			s = *c.settings
+		}
+	case "test", "save":
+		// Test the connection and save the settings if required.
+		err := json.Unmarshal(values, &s)
+		if err != nil {
+			return nil, err
+		}
+		// Validate Host.
+		if n := len(s.Host); n == 0 || n > 253 {
+			return nil, ui.Errorf("host length in bytes must be in range [1,253]")
+		}
+		// Validate Port.
+		if s.Port < 1 || s.Port > 65536 {
+			return nil, ui.Errorf("port must be in range [1,65536]")
+		}
+		// Validate Topic.
+		if n := len(s.Topic); n == 0 || n > 255 {
+			return nil, ui.Errorf("topic length must be in range [1,255]")
+		}
+		if !validTopicName(s.Topic) {
+			return nil, ui.Errorf("topic name can contain only [A-Za-z0-9_.-]")
+		}
+		err = testConnection(c.ctx, &s)
+		if err != nil {
+			return nil, ui.Errorf("connection failed: %s", err)
+		}
+		if event == "test" {
+			return nil, nil
+		}
+		b, err := json.Marshal(&s)
+		if err != nil {
+			return nil, err
+		}
+		return nil, c.firehose.SetSettings(b)
+	default:
+		return nil, ui.ErrEventNotExist
+	}
+
+	form := &ui.Form{
+		Fields: []ui.Component{
+			&ui.Input{Name: "host", Value: s.Host, Label: "Host", Placeholder: "kafka.example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&ui.Input{Name: "port", Value: s.Port, Label: "Port", Placeholder: "9092", Type: "number", MinLength: 1, MaxLength: 5},
+			&ui.Input{Name: "username", Value: s.Username, Label: "Username", Placeholder: "username", Type: "text", MinLength: 1},
+			&ui.Input{Name: "password", Value: s.Password, Label: "Password", Placeholder: "password", Type: "password", MinLength: 1},
+			&ui.Input{Name: "topic", Value: s.Topic, Label: "Topic", Placeholder: "topic-name", Type: "text", MinLength: 1, MaxLength: 255},
+		},
+		Actions: []ui.Action{
+			{Event: "test", Text: "Test Connection", Variant: "neutral"},
+			{Event: "save", Text: "Save", Variant: "primary"},
+		},
+	}
+
+	return form, nil
+}
+
+type settings struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	Topic    string
+}
+
+// opts returns s as options to configure a client.
+func (s *settings) opts() []kgo.Opt {
+	auth := plain.Auth{
+		User: s.Username,
+		Pass: s.Password,
+	}
+	tlsDialer := &tls.Dialer{NetDialer: &net.Dialer{Timeout: 5 * time.Second}}
+	opts := []kgo.Opt{
+		kgo.SASL(auth.AsMechanism()),
+		kgo.SeedBrokers(net.JoinHostPort(s.Host, strconv.Itoa(s.Port))),
+		kgo.ConsumeTopics(s.Topic),
+		kgo.Dialer(tlsDialer.DialContext),
+	}
+	return opts
+}
+
+// testConnection tests a connection with the given settings.
+// Returns an error if the connection cannot be established.
+func testConnection(ctx context.Context, settings *settings) error {
+	cl, err := kgo.NewClient(settings.opts()...)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+	return cl.Ping(ctx)
+}
+
+// validTopicName reports whether a topic name is valid.
+func validTopicName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9' || c == '_' || c == '.' || c == '-') {
+			return false
+		}
+	}
+	return true
+}
+
+// fetchesRecordIter iterates over records in a fetch.
+//
+// This code is the same code as kgo.FetchesRecordIter (Copyright 2020, Travis
+// Bischel) but reworked to return partition errors.
+type fetchesRecordIter struct {
+	fetches []kgo.Fetch
+	ti      int // index to current topic in fetches[0]
+	pi      int // index to current partition in current topic
+	ri      int // index to current record in current partition
+}
+
+// Done returns whether there are any more records to iterate over.
+func (i *fetchesRecordIter) Done() bool {
+	return len(i.fetches) == 0
+}
+
+// Next returns the next record from a fetch or an error if an error occurred
+// while fetching a partition.
+//
+// Next is like the (*kgo.FetchesRecordIter).Next method but if a partition has
+// an error it returns the error.
+func (i *fetchesRecordIter) Next() (*kgo.Record, error) {
+	partition := i.fetches[0].Topics[i.ti].Partitions[i.pi]
+	if partition.Err != nil {
+		i.pi++
+		i.ri = 0
+		i.prepareNext()
+		return nil, partition.Err
+	}
+	record := partition.Records[i.ri]
+	i.ri++
+	i.prepareNext()
+	return record, nil
+}
+
+func (i *fetchesRecordIter) prepareNext() {
+beforeFetch0:
+	if len(i.fetches) == 0 {
+		return
+	}
+
+	fetch0 := &i.fetches[0]
+beforeTopic:
+	if i.ti >= len(fetch0.Topics) {
+		i.fetches = i.fetches[1:]
+		i.ti = 0
+		goto beforeFetch0
+	}
+
+	topic := &fetch0.Topics[i.ti]
+beforePartition:
+	if i.pi >= len(topic.Partitions) {
+		i.ti++
+		i.pi = 0
+		goto beforeTopic
+	}
+
+	partition := &topic.Partitions[i.pi]
+	if i.ri >= len(partition.Records) {
+		i.pi++
+		i.ri = 0
+		goto beforePartition
+	}
+}

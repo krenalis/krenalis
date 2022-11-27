@@ -13,6 +13,7 @@ import (
 	_ "chichi/connectors/excel"
 	_ "chichi/connectors/http"
 	_ "chichi/connectors/hubspot"
+	_ "chichi/connectors/kafka"
 	_ "chichi/connectors/mailchimp"
 	_ "chichi/connectors/mysql"
 	_ "chichi/connectors/parquet"

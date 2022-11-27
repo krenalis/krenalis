@@ -8,6 +8,7 @@ replace (
 	chichi/connectors/excel => ./connectors/excel
 	chichi/connectors/http => ./connectors/http
 	chichi/connectors/hubspot => ./connectors/hubspot
+	chichi/connectors/kafka => ./connectors/kafka
 	chichi/connectors/mailchimp => ./connectors/mailchimp
 	chichi/connectors/mysql => ./connectors/mysql
 	chichi/connectors/parquet => ./connectors/parquet
@@ -23,6 +24,7 @@ require (
 	chichi/connectors/excel v0.0.0-00010101000000-000000000000
 	chichi/connectors/http v0.0.0-00010101000000-000000000000
 	chichi/connectors/hubspot v0.0.0-00010101000000-000000000000
+	chichi/connectors/kafka v0.0.0-00010101000000-000000000000
 	chichi/connectors/mailchimp v0.0.0-00010101000000-000000000000
 	chichi/connectors/mysql v0.0.0-00010101000000-000000000000
 	chichi/connectors/parquet v0.0.0-00010101000000-000000000000
@@ -89,6 +91,8 @@ require (
 	github.com/richardlehane/msoleps v1.0.3 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
+	github.com/twmb/franz-go v1.10.0 // indirect
+	github.com/twmb/franz-go/pkg/kmsg v1.2.0 // indirect
 	github.com/xuri/efp v0.0.0-20220603152613-6918739fd470 // indirect
 	github.com/xuri/excelize/v2 v2.6.1 // indirect
 	github.com/xuri/nfp v0.0.0-20220409054826-5e722a1d9e22 // indirect

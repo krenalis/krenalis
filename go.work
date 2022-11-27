@@ -8,6 +8,7 @@ use (
 	./connectors/excel
 	./connectors/http
 	./connectors/hubspot
+	./connectors/kafka
 	./connectors/mailchimp
 	./connectors/mysql
 	./connectors/parquet
