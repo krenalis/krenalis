@@ -719,6 +719,7 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 		Connector int
 		Storage   int
 		Role      string
+		Host      string
 	}{}
 	err := json.NewDecoder(r.Body).Decode(&connection)
 	if err != nil {
@@ -745,8 +746,14 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 		id, err = ws.Connections.AddDatabase(role, connection.Connector)
 	case "File":
 		id, err = ws.Connections.AddFile(role, connection.Connector, connection.Storage)
+	case "Mobile":
+		id, err = ws.Connections.AddMobile(role, connection.Connector)
+	case "Server":
+		id, err = ws.Connections.AddServer(role, connection.Connector)
 	case "Storage":
 		id, err = ws.Connections.AddStorage(role, connection.Connector)
+	case "Website":
+		id, err = ws.Connections.AddWebsite(role, connection.Connector, connection.Host)
 	}
 	if err != nil {
 		return err
