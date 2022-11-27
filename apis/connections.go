@@ -341,7 +341,7 @@ func (this *Connections) AddServer(role ConnectionRole, connector int) (int, err
 			return err
 		}
 		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `type` = 'Server', `role` = ?, `connector`  = ?",
+			"SET `id` = ?, `workspace` = ?, `type` = 'Server', `role` = ?, `connector` = ?",
 			id, this.workspace, role, connector)
 		if err != nil {
 			return err
