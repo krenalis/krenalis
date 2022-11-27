@@ -87,6 +87,24 @@ If webhooksPer is "Connection":
 * Settings
 * Firehose
 
+## EventStreamConnection
+
+### Close
+
+* Settings
+
+### Commit
+
+* Settings
+
+### Send
+
+* Settings
+
+### Receive
+
+* Settings
+
 ## FileConnection
 
 ### Read

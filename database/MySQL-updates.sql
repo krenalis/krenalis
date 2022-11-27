@@ -656,3 +656,9 @@ VALUES (1, 1, 'Workspace', '{ "properties": [
 ] }', '');
 
 ALTER TABLE `connections` DROP COLUMN `usedProperties`;
+
+ALTER TABLE `connections`
+  CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'EventStream', 'File', 'Mobile', 'Server', 'Storage', 'Website') NOT NULL DEFAULT 'App';
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'EventStream', 'File', 'Mobile', 'Server', 'Storage', 'Website') NOT NULL DEFAULT 'App';

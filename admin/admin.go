@@ -744,6 +744,8 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 		id, err = ws.Connections.AddApp(role, connection.Connector, "", "", "")
 	case "Database":
 		id, err = ws.Connections.AddDatabase(role, connection.Connector)
+	case "EventStream":
+		id, err = ws.Connections.AddEventStream(role, connection.Connector)
 	case "File":
 		id, err = ws.Connections.AddFile(role, connection.Connector, connection.Storage)
 	case "Mobile":

@@ -12,7 +12,7 @@ INSERT INTO `accounts` (`name`,`email`,`password`) VALUES ('ACME inc','acme@open
 CREATE TABLE `connectors` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(200) NOT NULL DEFAULT '',
-  `type` ENUM('App', 'Database', 'File', 'Mobile', 'Server', 'Storage', 'Website') NOT NULL DEFAULT 'App',
+  `type` ENUM('App', 'Database', 'EventStream', 'File', 'Mobile', 'Server', 'Storage', 'Website') NOT NULL DEFAULT 'App',
   `logoURL` VARCHAR(500) NOT NULL DEFAULT '',
   `webhooksPer` ENUM('None', 'Connector', 'Resource', 'Source') NOT NULL DEFAULT 'None',
   `oAuthURL` VARCHAR(500) NOT NULL DEFAULT '',
@@ -37,12 +37,13 @@ INSERT INTO `connectors` (`name`, `type`, `logoURL`, `webhooksPer`, `oAuthURL`, 
     ('S3','Storage','https://cdn2.iconfinder.com/data/icons/amazon-aws-stencils/100/Storage__Content_Delivery_Amazon_S3-512.png','None','','','','',0),
     ('PostgreSQL','Database','https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/postgresql-512.png','None','','','','',0),
     ('Parquet','File','','None','','','','',0),
-    ('Website','Website','https://cdn2.iconfinder.com/data/icons/free-simple-line-mix/48/22-Website-512.png','None','','','','',0);
+    ('Website','Website','https://cdn2.iconfinder.com/data/icons/free-simple-line-mix/48/22-Website-512.png','None','','','','',0),
+    ('Kafka','EventStream','https://cdn.icon-icons.com/icons2/2248/PNG/512/apache_kafka_icon_138937.png','None','','','','',0);
 
 CREATE TABLE `connections` (
   `id` INT NOT NULL,
   `workspace` INT NOT NULL,
-  `type` ENUM('App', 'Database', 'File', 'Mobile', 'Server', 'Storage', 'Website') NOT NULL DEFAULT 'App',
+  `type` ENUM('App', 'Database', 'EventStream', 'File', 'Mobile', 'Server', 'Storage', 'Website') NOT NULL DEFAULT 'App',
   `role` ENUM('Source', 'Destination') NOT NULL DEFAULT 'Source',
   `connector` INT NOT NULL,
   `storage` INT NOT NULL,

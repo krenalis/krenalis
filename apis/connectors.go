@@ -24,6 +24,7 @@ type ConnectorType int
 const (
 	AppType ConnectorType = iota + 1
 	DatabaseType
+	EventStreamType
 	FileType
 	MobileType
 	ServerType
@@ -39,6 +40,8 @@ func (typ ConnectorType) String() string {
 		return "App"
 	case DatabaseType:
 		return "Database"
+	case EventStreamType:
+		return "Event Stream"
 	case FileType:
 		return "File"
 	case MobileType:
@@ -135,21 +138,23 @@ func (apis *APIs) Connectors() ([]*Connector, error) {
 var (
 	connectorsMu sync.RWMutex
 	connectors   = struct {
-		apps      map[string]connector.AppConnectionFunc
-		databases map[string]connector.DatabaseConnectionFunc
-		files     map[string]connector.FileConnectionFunc
-		mobiles   map[string]connector.MobileConnectionFunc
-		servers   map[string]connector.ServerConnectionFunc
-		storages  map[string]connector.StorageConnectionFunc
-		websites  map[string]connector.WebsiteConnectionFunc
+		apps        map[string]connector.AppConnectionFunc
+		databases   map[string]connector.DatabaseConnectionFunc
+		eventStream map[string]connector.EventStreamConnectionFunc
+		files       map[string]connector.FileConnectionFunc
+		mobiles     map[string]connector.MobileConnectionFunc
+		servers     map[string]connector.ServerConnectionFunc
+		storages    map[string]connector.StorageConnectionFunc
+		websites    map[string]connector.WebsiteConnectionFunc
 	}{
-		apps:      make(map[string]connector.AppConnectionFunc),
-		databases: make(map[string]connector.DatabaseConnectionFunc),
-		files:     make(map[string]connector.FileConnectionFunc),
-		mobiles:   make(map[string]connector.MobileConnectionFunc),
-		servers:   make(map[string]connector.ServerConnectionFunc),
-		storages:  make(map[string]connector.StorageConnectionFunc),
-		websites:  make(map[string]connector.WebsiteConnectionFunc),
+		apps:        make(map[string]connector.AppConnectionFunc),
+		databases:   make(map[string]connector.DatabaseConnectionFunc),
+		eventStream: make(map[string]connector.EventStreamConnectionFunc),
+		files:       make(map[string]connector.FileConnectionFunc),
+		mobiles:     make(map[string]connector.MobileConnectionFunc),
+		servers:     make(map[string]connector.ServerConnectionFunc),
+		storages:    make(map[string]connector.StorageConnectionFunc),
+		websites:    make(map[string]connector.WebsiteConnectionFunc),
 	}
 )
 
@@ -181,6 +186,21 @@ func RegisterDatabaseConnector(name string, fn connector.DatabaseConnectionFunc)
 		panic("apis: RegisterDatabaseConnector called twice for connector " + name)
 	}
 	connectors.databases[name] = fn
+}
+
+// RegisterEventStreamConnector makes an event stream connector available by
+// the provided name. If RegisterEventStreamConnector is called twice with the
+// same name or if fn is nil, it panics.
+func RegisterEventStreamConnector(name string, fn connector.EventStreamConnectionFunc) {
+	if fn == nil {
+		panic("apis: RegisterEventStreamConnector function is nil")
+	}
+	connectorsMu.Lock()
+	defer connectorsMu.Unlock()
+	if _, dup := connectors.files[name]; dup {
+		panic("apis: RegisterEventStreamConnector called twice for connector " + name)
+	}
+	connectors.eventStream[name] = fn
 }
 
 // RegisterFileConnector makes a file connector available by the provided name.
@@ -278,6 +298,18 @@ func newDatabaseConnection(ctx context.Context, name string, conf *connector.Dat
 	f, ok := connectors.databases[name]
 	if !ok {
 		return nil, fmt.Errorf("apis: unknown database connector %q (forgotten import?)", name)
+	}
+	return f(ctx, conf)
+}
+
+// newEventStreamConnection returns a new event stream connection for the event
+// stream connector with the given name.
+func newEventStreamConnection(ctx context.Context, name string, conf *connector.EventStreamConfig) (connector.EventStreamConnection, error) {
+	connectorsMu.Lock()
+	defer connectorsMu.Unlock()
+	f, ok := connectors.eventStream[name]
+	if !ok {
+		return nil, fmt.Errorf("apis: unknown event stream connector %q (forgotten import?)", name)
 	}
 	return f(ctx, conf)
 }

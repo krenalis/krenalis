@@ -308,6 +308,45 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int) (i
 	return id, nil
 }
 
+// AddEventStream adds an event stream connection given its role and event
+// stream connector.
+//
+// If the connector does not exist, it returns a ConnectorNotFoundError error.
+func (this *Connections) AddEventStream(role ConnectionRole, connector int) (int, error) {
+	if role != SourceRole && role != DestinationRole {
+		return 0, errors.New("invalid role")
+	}
+	if connector <= 0 || connector > maxInt32 {
+		return 0, errors.New("invalid connector")
+	}
+	var id int
+	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+		var typ ConnectorType
+		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return ConnectorNotFoundError{EventStreamType}
+			}
+			return err
+		}
+		if typ != EventStreamType {
+			return errors.New("connector is not an event stream connector")
+		}
+		id, err = generateConnectionID()
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec("INSERT INTO `connections`\n"+
+			"SET `id` = ?, `workspace` = ?, `type` = 'EventStream', `role` = ?, `connector` = ?",
+			id, this.workspace, role, connector)
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
 // AddServer adds a server connection given its role and server connector.
 //
 // If the connector does not exist, it returns a ConnectorNotFoundError error.
@@ -589,7 +628,7 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 		return err
 	}
 	switch typ {
-	case AppType, DatabaseType:
+	case AppType, DatabaseType, EventStreamType:
 	case FileType:
 		if storage == 0 {
 			return ErrFileHasNoStorage
@@ -602,12 +641,14 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 	}
 
 	// Check that the connection has at least one transformation associated to it.
-	transformations, err := this.Transformations.List(id)
-	if err != nil {
-		return fmt.Errorf("cannot list transformations for %d: %s", id, err)
-	}
-	if len(transformations) == 0 {
-		return ErrConnectionDisabled
+	if typ != EventStreamType {
+		transformations, err := this.Transformations.List(id)
+		if err != nil {
+			return fmt.Errorf("cannot list transformations for %d: %s", id, err)
+		}
+		if len(transformations) == 0 {
+			return ErrConnectionDisabled
+		}
 	}
 
 	// Track the import in the database.
@@ -810,6 +851,36 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		if err = rows.Err(); err != nil {
 			return importError{fmt.Errorf("an error accurred closing the database: %s", err)}
 		}
+
+	case EventStreamType:
+
+		var connectorName string
+		var settings []byte
+		err := this.myDB.QueryRow(
+			"SELECT `c`.`name`, `s`.`settings`\n"+
+				"FROM `connections` AS `s`\n"+
+				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &settings)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil
+			}
+			return err
+		}
+
+		c, err := newEventStreamConnection(context.Background(), connectorName, &_connector.EventStreamConfig{
+			Role:     role,
+			Settings: settings,
+		})
+		if err != nil {
+			return importError{fmt.Errorf("cannot connect to the connector: %s", err)}
+		}
+		defer c.Close()
+		event, err := c.Receive(context.Background())
+		if err != nil {
+			return err
+		}
+		log.Printf("received event: %s", event)
 
 	case FileType:
 
@@ -1157,6 +1228,12 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		switch typ {
 		case DatabaseType:
 			connection, err = newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
+				Role:     cRole,
+				Settings: settings,
+				Firehose: fh,
+			})
+		case EventStreamType:
+			connection, err = newEventStreamConnection(fh.ctx, connectorName, &_connector.EventStreamConfig{
 				Role:     cRole,
 				Settings: settings,
 				Firehose: fh,
