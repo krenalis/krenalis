@@ -662,3 +662,6 @@ ALTER TABLE `connections`
 
 ALTER TABLE `connectors`
     CHANGE COLUMN `type` `type` ENUM('App', 'Database', 'EventStream', 'File', 'Mobile', 'Server', 'Storage', 'Website') NOT NULL DEFAULT 'App';
+
+INSERT INTO `connectors` (`name`, `type`, `logoURL`) VALUES
+    ('Kafka','EventStream','https://cdn.icon-icons.com/icons2/2248/PNG/512/apache_kafka_icon_138937.png');
