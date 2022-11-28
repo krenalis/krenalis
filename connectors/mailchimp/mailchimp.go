@@ -65,11 +65,11 @@ type settings struct {
 }
 
 func init() {
-	connector.RegisterApp("Mailchimp", New)
+	connector.RegisterApp("Mailchimp", newConnection)
 }
 
-// New returns a new Mailchimp connection.
-func New(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
+// newConnection returns a new Mailchimp connection.
+func newConnection(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
 	c := connection{
 		ctx:         ctx,
 		firehose:    conf.Firehose,

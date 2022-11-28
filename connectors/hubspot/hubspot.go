@@ -46,7 +46,7 @@ var _ connector.AppConnection = &connection{}
 var Debug = false
 
 func init() {
-	connector.RegisterApp("HubSpot", New)
+	connector.RegisterApp("HubSpot", newConnection)
 }
 
 type connection struct {
@@ -57,8 +57,8 @@ type connection struct {
 	accessToken  string
 }
 
-// New returns a new Hubspot connection.
-func New(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
+// newConnection returns a new Hubspot connection.
+func newConnection(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
 	c := connection{
 		ctx:          ctx,
 		firehose:     conf.Firehose,

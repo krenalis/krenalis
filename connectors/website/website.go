@@ -24,13 +24,13 @@ var icon []byte
 var _ connector.WebsiteConnection = &connection{}
 
 func init() {
-	connector.RegisterWebsite("Website", New)
+	connector.RegisterWebsite("Website", newConnection)
 }
 
 type connection struct{}
 
-// New returns a new website connection.
-func New(context.Context, *connector.WebsiteConfig) (connector.WebsiteConnection, error) {
+// newConnection returns a new website connection.
+func newConnection(context.Context, *connector.WebsiteConfig) (connector.WebsiteConnection, error) {
 	return &connection{}, nil
 }
 

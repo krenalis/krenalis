@@ -36,7 +36,7 @@ var icon []byte
 var _ connector.StorageConnection = &connection{}
 
 func init() {
-	connector.RegisterStorage("S3", New)
+	connector.RegisterStorage("S3", newConnection)
 }
 
 type connection struct {
@@ -52,8 +52,8 @@ type settings struct {
 	Bucket          string
 }
 
-// New returns a new S3 connection.
-func New(ctx context.Context, conf *connector.StorageConfig) (connector.StorageConnection, error) {
+// newConnection returns a new S3 connection.
+func newConnection(ctx context.Context, conf *connector.StorageConfig) (connector.StorageConnection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

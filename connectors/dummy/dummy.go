@@ -21,7 +21,7 @@ import (
 var _ connector.AppConnection = &connection{}
 
 func init() {
-	connector.RegisterApp("Dummy", New)
+	connector.RegisterApp("Dummy", newConnection)
 }
 
 type connection struct {
@@ -29,8 +29,8 @@ type connection struct {
 	clientSecret string
 }
 
-// New returns a new Dummy connection.
-func New(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
+// newConnection returns a new Dummy connection.
+func newConnection(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
 	c := connection{
 		firehose:     conf.Firehose,
 		clientSecret: conf.ClientSecret,

@@ -34,11 +34,11 @@ var icon []byte
 var _ connector.EventStreamConnection = &connection{}
 
 func init() {
-	connector.RegisterEventStream("Kafka", New)
+	connector.RegisterEventStream("Kafka", newConnection)
 }
 
-// New returns a new Kafka connection.
-func New(ctx context.Context, conf *connector.EventStreamConfig) (connector.EventStreamConnection, error) {
+// newConnection returns a new Kafka connection.
+func newConnection(ctx context.Context, conf *connector.EventStreamConfig) (connector.EventStreamConnection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
