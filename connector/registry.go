@@ -158,8 +158,8 @@ func RegisterWebsite(name string, fn WebsiteConnectionFunc) {
 // given name.
 func NewAppConnection(ctx context.Context, name string, conf *AppConfig) (AppConnection, error) {
 	registryMu.Lock()
-	defer registryMu.Unlock()
 	f, ok := registry.apps[name]
+	registryMu.Unlock()
 	if !ok {
 		return nil, fmt.Errorf("connector: unknown app connector %q (forgotten import?)", name)
 	}
@@ -170,8 +170,8 @@ func NewAppConnection(ctx context.Context, name string, conf *AppConfig) (AppCon
 // connector with the given name.
 func NewDatabaseConnection(ctx context.Context, name string, conf *DatabaseConfig) (DatabaseConnection, error) {
 	registryMu.Lock()
-	defer registryMu.Unlock()
 	f, ok := registry.databases[name]
+	registryMu.Unlock()
 	if !ok {
 		return nil, fmt.Errorf("connector: unknown database connector %q (forgotten import?)", name)
 	}
@@ -182,8 +182,8 @@ func NewDatabaseConnection(ctx context.Context, name string, conf *DatabaseConfi
 // stream connector with the given name.
 func NewEventStreamConnection(ctx context.Context, name string, conf *EventStreamConfig) (EventStreamConnection, error) {
 	registryMu.Lock()
-	defer registryMu.Unlock()
 	f, ok := registry.eventStream[name]
+	registryMu.Unlock()
 	if !ok {
 		return nil, fmt.Errorf("connector: unknown event stream connector %q (forgotten import?)", name)
 	}
@@ -194,8 +194,8 @@ func NewEventStreamConnection(ctx context.Context, name string, conf *EventStrea
 // the given name.
 func NewFileConnection(ctx context.Context, name string, conf *FileConfig) (FileConnection, error) {
 	registryMu.Lock()
-	defer registryMu.Unlock()
 	f, ok := registry.files[name]
+	registryMu.Unlock()
 	if !ok {
 		return nil, fmt.Errorf("connector: unknown file connector %q (forgotten import?)", name)
 	}
@@ -206,8 +206,8 @@ func NewFileConnection(ctx context.Context, name string, conf *FileConfig) (File
 // with the given name.
 func NewMobileConnection(ctx context.Context, name string, conf *MobileConfig) (MobileConnection, error) {
 	registryMu.Lock()
-	defer registryMu.Unlock()
 	f, ok := registry.mobiles[name]
+	registryMu.Unlock()
 	if !ok {
 		return nil, fmt.Errorf("connector: unknown mobile connector %q (forgotten import?)", name)
 	}
@@ -218,8 +218,8 @@ func NewMobileConnection(ctx context.Context, name string, conf *MobileConfig) (
 // with the given name.
 func NewServerConnection(ctx context.Context, name string, conf *ServerConfig) (ServerConnection, error) {
 	registryMu.Lock()
-	defer registryMu.Unlock()
 	f, ok := registry.servers[name]
+	registryMu.Unlock()
 	if !ok {
 		return nil, fmt.Errorf("connector: unknown server connector %q (forgotten import?)", name)
 	}
@@ -230,8 +230,8 @@ func NewServerConnection(ctx context.Context, name string, conf *ServerConfig) (
 // connector with the given name.
 func NewStorageConnection(ctx context.Context, name string, conf *StorageConfig) (StorageConnection, error) {
 	registryMu.Lock()
-	defer registryMu.Unlock()
 	f, ok := registry.storages[name]
+	registryMu.Unlock()
 	if !ok {
 		return nil, fmt.Errorf("connector: unknown storage connector %q (forgotten import?)", name)
 	}
@@ -242,8 +242,8 @@ func NewStorageConnection(ctx context.Context, name string, conf *StorageConfig)
 // connector with the given name.
 func NewWebsiteConnection(ctx context.Context, name string, conf *WebsiteConfig) (WebsiteConnection, error) {
 	registryMu.Lock()
-	defer registryMu.Unlock()
 	f, ok := registry.websites[name]
+	registryMu.Unlock()
 	if !ok {
 		return nil, fmt.Errorf("connector: unknown website connector %q (forgotten import?)", name)
 	}
