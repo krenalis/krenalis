@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"time"
 
-	"chichi/apis"
 	"chichi/connector"
 	"chichi/connector/ui"
 
@@ -35,7 +34,7 @@ var icon []byte
 var _ connector.EventStreamConnection = &connection{}
 
 func init() {
-	apis.RegisterEventStreamConnector("Kafka", New)
+	connector.RegisterEventStream("Kafka", New)
 }
 
 // New returns a new Kafka connection.

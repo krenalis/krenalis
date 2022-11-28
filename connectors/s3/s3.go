@@ -20,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"chichi/apis"
 	"chichi/connector"
 	"chichi/connector/ui"
 
@@ -37,7 +36,7 @@ var icon []byte
 var _ connector.StorageConnection = &connection{}
 
 func init() {
-	apis.RegisterStorageConnector("S3", New)
+	connector.RegisterStorage("S3", New)
 }
 
 type connection struct {

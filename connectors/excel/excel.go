@@ -20,7 +20,6 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"chichi/apis"
 	"chichi/apis/types"
 	"chichi/connector"
 	"chichi/connector/ui"
@@ -35,7 +34,7 @@ var icon []byte
 var _ connector.FileConnection = &connection{}
 
 func init() {
-	apis.RegisterFileConnector("Excel", New)
+	connector.RegisterFile("Excel", New)
 }
 
 type connection struct {

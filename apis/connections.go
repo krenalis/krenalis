@@ -140,7 +140,7 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken
 	if conn.Type != AppType {
 		return 0, errors.New("connector is not an app connector")
 	}
-	c, err := newAppConnection(context.Background(), conn.Name, &_connector.AppConfig{
+	c, err := _connector.NewAppConnection(context.Background(), conn.Name, &_connector.AppConfig{
 		Role:         _connector.Role(role),
 		ClientSecret: conn.OAuth.ClientSecret,
 		AccessToken:  accessToken,
@@ -745,7 +745,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		}
 
 		fh := this.newFirehose(context.Background(), id, connector, resource, schema, typ, role, webhooksPer)
-		c, err := newAppConnection(fh.ctx, name, &_connector.AppConfig{
+		c, err := _connector.NewAppConnection(fh.ctx, name, &_connector.AppConfig{
 			Role:         role,
 			Settings:     settings,
 			Firehose:     fh,
@@ -789,7 +789,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			return importError{err}
 		}
 		fh := this.newFirehose(context.Background(), id, connector, 0, schema, DatabaseType, role, WebhooksPerNone)
-		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
+		c, err := _connector.NewDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 			Role:     role,
 			Settings: settings,
 			Firehose: fh,
@@ -868,7 +868,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			return err
 		}
 
-		c, err := newEventStreamConnection(context.Background(), connectorName, &_connector.EventStreamConfig{
+		c, err := _connector.NewEventStreamConnection(context.Background(), connectorName, &_connector.EventStreamConfig{
 			Role:     role,
 			Settings: settings,
 		})
@@ -929,7 +929,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			}
 			fh := this.newFirehose(ctx, storage, connector, 0, schema, StorageType, role, WebhooksPerNone)
 			ctx = fh.ctx
-			c, err := newStorageConnection(ctx, connectorName, &_connector.StorageConfig{
+			c, err := _connector.NewStorageConnection(ctx, connectorName, &_connector.StorageConfig{
 				Role:     role,
 				Settings: settings,
 				Firehose: fh,
@@ -942,7 +942,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 
 		// Connect to the file connector.
 		fh := this.newFirehose(ctx, id, connector, 0, types.Schema{}, FileType, role, WebhooksPerNone)
-		file, err := newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
+		file, err := _connector.NewFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 			Role:     role,
 			Settings: settings,
 			Firehose: fh,
@@ -1087,7 +1087,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 		return nil, nil, err
 	}
 	fh := this.newFirehose(context.Background(), id, connector, 0, types.Schema{}, typ, cRole, WebhooksPerNone)
-	c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
+	c, err := _connector.NewDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 		Role:     cRole,
 		Settings: settings,
 		Firehose: fh,
@@ -1197,7 +1197,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		}
 
 		fh := this.newFirehose(context.Background(), id, connector, resource, types.Schema{}, typ, cRole, webhooksPer)
-		connection, err = newAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
+		connection, err = _connector.NewAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
 			Role:         cRole,
 			Settings:     settings,
 			Firehose:     fh,
@@ -1227,43 +1227,43 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 
 		switch typ {
 		case DatabaseType:
-			connection, err = newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
+			connection, err = _connector.NewDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 				Role:     cRole,
 				Settings: settings,
 				Firehose: fh,
 			})
 		case EventStreamType:
-			connection, err = newEventStreamConnection(fh.ctx, connectorName, &_connector.EventStreamConfig{
+			connection, err = _connector.NewEventStreamConnection(fh.ctx, connectorName, &_connector.EventStreamConfig{
 				Role:     cRole,
 				Settings: settings,
 				Firehose: fh,
 			})
 		case FileType:
-			connection, err = newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
+			connection, err = _connector.NewFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 				Role:     cRole,
 				Settings: settings,
 				Firehose: fh,
 			})
 		case MobileType:
-			connection, err = newMobileConnection(fh.ctx, connectorName, &_connector.MobileConfig{
+			connection, err = _connector.NewMobileConnection(fh.ctx, connectorName, &_connector.MobileConfig{
 				Role:     cRole,
 				Settings: settings,
 				Firehose: fh,
 			})
 		case ServerType:
-			connection, err = newServerConnection(fh.ctx, connectorName, &_connector.ServerConfig{
+			connection, err = _connector.NewServerConnection(fh.ctx, connectorName, &_connector.ServerConfig{
 				Role:     cRole,
 				Settings: settings,
 				Firehose: fh,
 			})
 		case StorageType:
-			connection, err = newStorageConnection(fh.ctx, connectorName, &_connector.StorageConfig{
+			connection, err = _connector.NewStorageConnection(fh.ctx, connectorName, &_connector.StorageConfig{
 				Role:     cRole,
 				Settings: settings,
 				Firehose: fh,
 			})
 		case WebsiteType:
-			connection, err = newWebsiteConnection(fh.ctx, connectorName, &_connector.WebsiteConfig{
+			connection, err = _connector.NewWebsiteConnection(fh.ctx, connectorName, &_connector.WebsiteConfig{
 				Role:     cRole,
 				Settings: settings,
 				Firehose: fh,
@@ -1523,7 +1523,7 @@ func (this *Connections) reloadProperties(id int) error {
 		}
 
 		fh := this.newFirehose(context.Background(), id, connector, resource, types.Schema{}, AppType, cRole, webhooksPer)
-		c, err := newAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
+		c, err := _connector.NewAppConnection(fh.ctx, connectorName, &_connector.AppConfig{
 			Role:         cRole,
 			Settings:     settings,
 			Firehose:     fh,
@@ -1568,7 +1568,7 @@ func (this *Connections) reloadProperties(id int) error {
 			return err
 		}
 		fh := this.newFirehose(context.Background(), id, connector, 0, types.Schema{}, DatabaseType, cRole, WebhooksPerNone)
-		c, err := newDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
+		c, err := _connector.NewDatabaseConnection(fh.ctx, connectorName, &_connector.DatabaseConfig{
 			Role:     cRole,
 			Settings: settings,
 			Firehose: fh,
@@ -1635,7 +1635,7 @@ func (this *Connections) reloadProperties(id int) error {
 			}
 			fh := this.newFirehose(ctx, storage, connector, 0, types.Schema{}, StorageType, cRole, WebhooksPerNone)
 			ctx = fh.ctx
-			c, err := newStorageConnection(ctx, connectorName, &_connector.StorageConfig{
+			c, err := _connector.NewStorageConnection(ctx, connectorName, &_connector.StorageConfig{
 				Role:     cRole,
 				Settings: settings,
 				Firehose: fh,
@@ -1648,7 +1648,7 @@ func (this *Connections) reloadProperties(id int) error {
 
 		// Connect to the file connector and read only the columns.
 		fh := this.newFirehose(ctx, id, connector, 0, types.Schema{}, FileType, cRole, WebhooksPerNone)
-		file, err := newFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
+		file, err := _connector.NewFileConnection(fh.ctx, connectorName, &_connector.FileConfig{
 			Role:     cRole,
 			Settings: settings,
 			Firehose: fh,

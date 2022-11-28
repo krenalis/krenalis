@@ -22,7 +22,6 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	"chichi/apis"
 	"chichi/apis/types"
 	"chichi/connector"
 	"chichi/connector/ui"
@@ -38,7 +37,7 @@ var icon []byte
 var _ connector.DatabaseConnection = &connection{}
 
 func init() {
-	apis.RegisterDatabaseConnector("PostgreSQL", New)
+	connector.RegisterDatabase("PostgreSQL", New)
 }
 
 // New returns a new PostgreSQL connection.

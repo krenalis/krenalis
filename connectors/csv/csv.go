@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	"chichi/apis"
 	"chichi/apis/types"
 	"chichi/connector"
 	"chichi/connector/ui"
@@ -33,7 +32,7 @@ var icon []byte
 var _ connector.FileConnection = &connection{}
 
 func init() {
-	apis.RegisterFileConnector("CSV", New)
+	connector.RegisterFile("CSV", New)
 }
 
 type connection struct {

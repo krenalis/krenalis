@@ -30,7 +30,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/apis"
 	"chichi/apis/types"
 	"chichi/connector"
 	"chichi/connector/ui"
@@ -47,7 +46,7 @@ var _ connector.AppConnection = &connection{}
 var Debug = false
 
 func init() {
-	apis.RegisterAppConnector("HubSpot", New)
+	connector.RegisterApp("HubSpot", New)
 }
 
 type connection struct {

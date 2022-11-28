@@ -19,7 +19,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/apis"
 	"chichi/apis/types"
 	"chichi/connector"
 	"chichi/connector/ui"
@@ -34,7 +33,7 @@ var icon []byte
 var _ connector.DatabaseConnection = &connection{}
 
 func init() {
-	apis.RegisterDatabaseConnector("MySQL", New)
+	connector.RegisterDatabase("MySQL", New)
 }
 
 // New returns a new MySQL connection.

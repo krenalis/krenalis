@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"time"
 
-	"chichi/apis"
 	"chichi/apis/types"
 	"chichi/connector"
 	"chichi/connector/ui"
@@ -22,7 +21,7 @@ import (
 var _ connector.AppConnection = &connection{}
 
 func init() {
-	apis.RegisterAppConnector("Dummy", New)
+	connector.RegisterApp("Dummy", New)
 }
 
 type connection struct {

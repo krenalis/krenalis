@@ -25,7 +25,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/apis"
 	"chichi/apis/types"
 	"chichi/connector"
 	"chichi/connector/ui"
@@ -41,7 +40,7 @@ var icon []byte
 var _ connector.FileConnection = &connection{}
 
 func init() {
-	apis.RegisterFileConnector("Parquet", New)
+	connector.RegisterFile("Parquet", New)
 }
 
 type connection struct {

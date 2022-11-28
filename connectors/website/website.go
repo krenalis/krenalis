@@ -13,7 +13,6 @@ import (
 	"context"
 	_ "embed"
 
-	"chichi/apis"
 	"chichi/connector"
 	"chichi/connector/ui"
 )
@@ -25,7 +24,7 @@ var icon []byte
 var _ connector.WebsiteConnection = &connection{}
 
 func init() {
-	apis.RegisterWebsiteConnector("Website", New)
+	connector.RegisterWebsite("Website", New)
 }
 
 type connection struct{}

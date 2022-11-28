@@ -26,7 +26,6 @@ import (
 	"time"
 	"unicode"
 
-	"chichi/apis"
 	"chichi/apis/types"
 	"chichi/connector"
 	"chichi/connector/ui"
@@ -66,7 +65,7 @@ type settings struct {
 }
 
 func init() {
-	apis.RegisterAppConnector("Mailchimp", New)
+	connector.RegisterApp("Mailchimp", New)
 }
 
 // New returns a new Mailchimp connection.
