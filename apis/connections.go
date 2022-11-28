@@ -849,7 +849,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			fh.SetUser(*identity, user, ts, nil)
 		}
 		if err = rows.Err(); err != nil {
-			return importError{fmt.Errorf("an error accurred closing the database: %s", err)}
+			return importError{fmt.Errorf("an error occurred closing the database: %s", err)}
 		}
 
 	case EventStreamType:
