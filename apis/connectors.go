@@ -38,7 +38,7 @@ func (typ ConnectorType) String() string {
 	case DatabaseType:
 		return "Database"
 	case EventStreamType:
-		return "Event Stream"
+		return "EventStream"
 	case FileType:
 		return "File"
 	case MobileType:
