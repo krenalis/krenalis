@@ -2,7 +2,7 @@ module kafka
 
 go 1.19
 
-require github.com/twmb/franz-go v1.10.0
+require github.com/twmb/franz-go v1.10.1
 
 require (
 	github.com/klauspost/compress v1.15.12 // indirect
