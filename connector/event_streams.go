@@ -39,7 +39,7 @@ type EventStreamConnection interface {
 	Close() error
 
 	// Receive receives an event from the stream. Callers call the ack function to
-	// notify when and if the event has been consumed. Connector resend the event
+	// notify when and if the event has been consumed. Connector resends the event
 	// if the event has not been consumed.
 	//
 	// Caller do not modify the event data, even temporarily, and event is not
