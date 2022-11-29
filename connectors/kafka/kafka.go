@@ -76,44 +76,69 @@ func (c *connection) Close() error {
 	return nil
 }
 
-// Commit commits a received event.
-// Caller does not retain the slice after Commit has been called.
-func (c *connection) Commit(ctx context.Context, event []byte) error {
-	// TODO(marco) To be implemented
-	return nil
-}
-
-// Receive receives an event from the stream.
+// Receive receives an event from the stream. Callers call the ack function to
+// notify when and if the event has been consumed. Connector resend the event
+// if the event has not been consumed.
 //
-// Caller does not modify the event data, even temporarily, and event is
-// not retained after the Commit method has been called.
-func (c *connection) Receive(ctx context.Context) ([]byte, error) {
+// Caller do not modify the event data, even temporarily, and event is not
+// retained after the ack function has been called.
+func (c *connection) Receive() ([]byte, func(bool), error) {
+	// Create a client.
 	if c.client == nil {
 		cl, err := kgo.NewClient(c.settings.opts()...)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		c.client = cl
 	}
+	// Fetch the event.
 	if c.iter == nil {
 		c.iter = &fetchesRecordIter{}
 	}
 	if c.iter.Done() {
-		c.iter.fetches = c.client.PollFetches(ctx)
+		c.iter.fetches = c.client.PollFetches(c.ctx)
 	}
 	record, err := c.iter.Next()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return record.Value, nil
+	ack := func(consumed bool) {
+		if consumed {
+			_ = c.client.CommitRecords(c.ctx, record)
+		}
+	}
+	return record.Value, ack, nil
 }
 
-// Send sends an event to the stream.
+// Send sends an event to the stream. If ack is not null, connector calls ack
+// when the event has been stored or when an error occurred.
 //
-// Send must not modify the event data, even temporarily, and implementations
-// must not retain event.
-func (c *connection) Send(ctx context.Context, event []byte) error {
-	// TODO(marco) To be implemented
+// Send can modify the event data, but event is not retained after the ack
+// function has been called.
+func (c *connection) Send(event []byte, options connector.SendOptions, ack func(err error)) error {
+	// Create a client.
+	if c.client == nil {
+		cl, err := kgo.NewClient(c.settings.opts()...)
+		if err != nil {
+			return err
+		}
+		c.client = cl
+	}
+	// Send the event.
+	var key []byte
+	if options.OrderKey != "" {
+		key = []byte(options.OrderKey)
+	}
+	record := &kgo.Record{
+		Key:   key,
+		Value: event,
+		Topic: c.settings.Topic,
+	}
+	var promise func(*kgo.Record, error)
+	if ack != nil {
+		promise = func(r *kgo.Record, err error) { ack(err) }
+	}
+	c.client.Produce(c.ctx, record, promise)
 	return nil
 }
 

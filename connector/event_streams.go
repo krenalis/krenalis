@@ -21,6 +21,14 @@ type EventStreamConfig struct {
 // connections.
 type EventStreamConnectionFunc func(context.Context, *EventStreamConfig) (EventStreamConnection, error)
 
+// SendOptions are the send options.
+type SendOptions struct {
+
+	// OrderKey, if not empty, ensures that all events with the same order key
+	// are received in the order they were sent to the stream.
+	OrderKey string
+}
+
 // EventStreamConnection is the interface implemented by event stream
 // connections.
 type EventStreamConnection interface {
@@ -30,19 +38,18 @@ type EventStreamConnection interface {
 	// A call to Receive or Send opens the stream if it is closed.
 	Close() error
 
-	// Commit commits a received event.
-	// Caller does not retain the slice after Commit has been called.
-	Commit(ctx context.Context, event []byte) error
-
-	// Receive receives an event from the stream.
+	// Receive receives an event from the stream. Callers call the ack function to
+	// notify when and if the event has been consumed. Connector resend the event
+	// if the event has not been consumed.
 	//
-	// Caller does not modify the event data, even temporarily, and event is
-	// not retained after the Commit method has been called.
-	Receive(ctx context.Context) (event []byte, err error)
+	// Caller do not modify the event data, even temporarily, and event is not
+	// retained after the ack function has been called.
+	Receive() (event []byte, ack func(consumed bool), err error)
 
-	// Send sends an event to the stream.
+	// Send sends an event to the stream. If ack is not null, connector calls ack
+	// when the event has been stored or when an error occurred.
 	//
-	// Send must not modify the event data, even temporarily, and implementations
-	// must not retain event.
-	Send(ctx context.Context, event []byte) error
+	// Send can modify the event data, but event is not retained after the ack
+	// function has been called.
+	Send(event []byte, options SendOptions, ack func(err error)) error
 }

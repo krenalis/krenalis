@@ -876,10 +876,11 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			return importError{fmt.Errorf("cannot connect to the connector: %s", err)}
 		}
 		defer c.Close()
-		event, err := c.Receive(context.Background())
+		event, ack, err := c.Receive()
 		if err != nil {
 			return err
 		}
+		ack(true)
 		log.Printf("received event: %s", event)
 
 	case FileType:
