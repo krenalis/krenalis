@@ -1391,6 +1391,14 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 		return ConnectionNotFoundError{DatabaseType}
 	}
 
+	// Reload the connection properties.
+	go func() {
+		err := this.reloadProperties(id)
+		if err != nil {
+			log.Printf("[error] cannot reload properties for connection %d: %s", id, err)
+		}
+	}()
+
 	return nil
 }
 
