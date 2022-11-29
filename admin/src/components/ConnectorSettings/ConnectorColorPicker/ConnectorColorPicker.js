@@ -1,6 +1,6 @@
 import React from 'react';
 import './ConnectorColorPicker.css';
-import { SlColorPicker } from '@shoelace-style/shoelace/dist/react';
+import { SlColorPicker } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class ConnectorColorPicker extends React.Component {
 	state = { value: this.props.value };

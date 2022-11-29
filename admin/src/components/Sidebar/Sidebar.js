@@ -1,7 +1,7 @@
 import React from 'react';
 import './Sidebar.css';
 import { NavLink, Navigate } from 'react-router-dom';
-import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react';
+import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class Sidebar extends React.Component {
 	constructor(props) {

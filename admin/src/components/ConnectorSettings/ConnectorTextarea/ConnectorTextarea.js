@@ -1,6 +1,6 @@
 import React from 'react';
 import './ConnectorTextarea';
-import { SlTextarea } from '@shoelace-style/shoelace/dist/react';
+import { SlTextarea } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class ConnectorTextarea extends React.Component {
 	state = { value: this.props.value };

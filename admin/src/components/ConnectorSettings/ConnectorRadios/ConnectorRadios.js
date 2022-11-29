@@ -1,6 +1,6 @@
 import React from 'react';
 import './ConnectorRadios.css';
-import { SlRadio, SlRadioGroup } from '@shoelace-style/shoelace/dist/react';
+import { SlRadio, SlRadioGroup } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class ConnectorRadios extends React.Component {
 	state = { value: this.props.value };

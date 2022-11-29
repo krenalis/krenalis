@@ -5,7 +5,7 @@ import Navigation from '../../../components/Navigation/Navigation';
 import Card from '../../../components/Card/Card';
 import Toast from '../../../components/Toast/Toast';
 import { Navigate } from 'react-router-dom';
-import { SlButton, SlDialog, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react';
+import { SlButton, SlDialog, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class Connectors extends React.Component {
 	constructor(props) {

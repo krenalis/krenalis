@@ -1,6 +1,6 @@
 import React from 'react';
 import './ConnectorCheckbox.css';
-import { SlCheckbox } from '@shoelace-style/shoelace/dist/react';
+import { SlCheckbox } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class ConnectorCheckbox extends React.Component {
 	state = { value: this.props.value };

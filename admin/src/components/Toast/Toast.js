@@ -1,6 +1,6 @@
 import React from 'react';
 import './Toast.css';
-import { SlAlert, SlIcon } from '@shoelace-style/shoelace/dist/react';
+import { SlAlert, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class Alert extends React.Component {
 	render() {

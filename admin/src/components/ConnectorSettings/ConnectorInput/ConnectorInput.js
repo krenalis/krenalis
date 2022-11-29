@@ -1,6 +1,6 @@
 import React from 'react';
 import './ConnectorInput';
-import { SlInput } from '@shoelace-style/shoelace/dist/react';
+import { SlInput } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class ConnectorInput extends React.Component {
 	state = { value: this.props.value };

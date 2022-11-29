@@ -5,7 +5,7 @@ import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Toast from '../../../components/Toast/Toast';
 import call from '../../../utils/call';
 import { renderConnectorComponent } from '../../../components/ConnectorSettings/renderConnectorComponent';
-import { SlButton } from '@shoelace-style/shoelace/dist/react';
+import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class AccountConnectionSettings extends React.Component {
 	constructor(props) {

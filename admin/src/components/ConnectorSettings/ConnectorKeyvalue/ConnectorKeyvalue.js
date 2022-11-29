@@ -1,7 +1,7 @@
 import React from 'react';
 import './ConnectorKeyvalue.css';
 import { renderConnectorComponent } from '../renderConnectorComponent';
-import { SlIcon } from '@shoelace-style/shoelace/dist/react';
+import { SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class ConnectorKeyValue extends React.Component {
 	constructor(props) {

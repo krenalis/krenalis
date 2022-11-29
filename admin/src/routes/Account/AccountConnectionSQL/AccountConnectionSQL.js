@@ -5,7 +5,7 @@ import Toast from '../../../components/Toast/Toast';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Grid from '../../../components/Grid/Grid';
 import call from '../../../utils/call';
-import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react';
+import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
 import Editor from '@monaco-editor/react';
 
 const queryMaxSize = 16777215;

@@ -1,6 +1,6 @@
 import React from 'react';
 import './Card.css';
-import { SlBadge } from '@shoelace-style/shoelace/dist/react';
+import { SlBadge } from '@shoelace-style/shoelace/dist/react/index.js';
 
 // TODO (@Andrea): implement description as a prop to replace 'lorem ipsum' hardcoded text.
 export default class Card extends React.Component {

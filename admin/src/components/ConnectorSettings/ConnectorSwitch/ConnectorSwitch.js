@@ -1,6 +1,6 @@
 import React from 'react';
 import './ConnectorSwitch.css';
-import { SlSwitch } from '@shoelace-style/shoelace/dist/react';
+import { SlSwitch } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class ConnectorSwitch extends React.Component {
 	state = { value: this.props.value };

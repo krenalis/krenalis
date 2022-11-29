@@ -1,6 +1,6 @@
 import React from 'react';
 import './ConnectorSelect.css';
-import { SlSelect, SlMenuItem } from '@shoelace-style/shoelace/dist/react';
+import { SlSelect, SlMenuItem } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class ConnectorSelect extends React.Component {
 	state = { value: this.props.value };

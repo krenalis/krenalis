@@ -1,7 +1,7 @@
 import React from 'react';
 import './Navigation.css';
 import { NavLink } from 'react-router-dom';
-import { SlSelect, SlMenuItem, SlAvatar } from '@shoelace-style/shoelace/dist/react';
+import { SlSelect, SlMenuItem, SlAvatar } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class Navigation extends React.Component {
 	render() {

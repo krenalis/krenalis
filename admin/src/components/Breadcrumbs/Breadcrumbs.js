@@ -1,6 +1,6 @@
 import React from 'react';
 import './Breadcrumbs.css';
-import { SlBreadcrumb, SlBreadcrumbItem } from '@shoelace-style/shoelace/dist/react';
+import { SlBreadcrumb, SlBreadcrumbItem } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NavLink } from 'react-router-dom';
 
 export default class Breadcrumbs extends React.Component {

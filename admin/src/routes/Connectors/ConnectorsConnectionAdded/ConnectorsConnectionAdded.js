@@ -4,7 +4,7 @@ import Toast from '../../../components/Toast/Toast';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import call from '../../../utils/call';
 import { NavLink } from 'react-router-dom';
-import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react';
+import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class ConnectorsConnectionAdded extends React.Component {
 	constructor(props) {

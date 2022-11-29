@@ -1,5 +1,5 @@
 import React from 'react';
-import { SlRange } from '@shoelace-style/shoelace/dist/react';
+import { SlRange } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class ConnectorRange extends React.Component {
 	state = { value: this.props.value };

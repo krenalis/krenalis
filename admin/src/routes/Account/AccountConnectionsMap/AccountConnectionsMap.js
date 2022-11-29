@@ -3,7 +3,7 @@ import './AccountConnectionsMap.css';
 import Toast from '../../../components/Toast/Toast';
 import Navigation from '../../../components/Navigation/Navigation';
 import call from '../../../utils/call';
-import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react';
+import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NavLink } from 'react-router-dom';
 import Xarrow from 'react-xarrows';
 

@@ -3,7 +3,7 @@ import './AccountSchemas.css';
 import Toast from '../../../components/Toast/Toast';
 import Navigation from '../../../components/Navigation/Navigation';
 import call from '../../../utils/call';
-import { SlButton, SlIcon, SlSelect, SlMenuItem } from '@shoelace-style/shoelace/dist/react';
+import { SlButton, SlIcon, SlSelect, SlMenuItem } from '@shoelace-style/shoelace/dist/react/index.js';
 import { DiffEditor } from '@monaco-editor/react';
 
 export default class AccountSchemas extends React.Component {
