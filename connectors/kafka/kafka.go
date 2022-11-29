@@ -110,7 +110,7 @@ func (c *connection) Receive() ([]byte, func(bool), error) {
 	return record.Value, ack, nil
 }
 
-// Send sends an event to the stream. If ack is not null, connector calls ack
+// Send sends an event to the stream. If ack is not nil, connector calls ack
 // when the event has been stored or when an error occurred.
 //
 // Send can modify the event data, but event is not retained after the ack
