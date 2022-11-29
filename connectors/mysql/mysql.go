@@ -252,13 +252,13 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "VARCHAR", "CHAR":
 		length, ok := t.Length()
 		if !ok {
-			return types.Type{}, errors.New("cannot get length")
+			return types.Text(), nil
 		}
 		return types.Text(types.Chars(length)), nil
 	case "VARBINARY", "BINARY":
 		length, ok := t.Length()
 		if !ok {
-			return types.Type{}, errors.New("cannot get length")
+			return types.Text(), nil
 		}
 		return types.Text(types.Bytes(length)), nil
 	case "TIME":
