@@ -49,7 +49,7 @@ export default class AccountConnectionsMap extends React.Component {
 								return (
 									<div className='file' id={`file-${f.ID}`}>
 										<div className='littleLogo'>
-											<img src={f.LogoURL} alt={`${f.Name}'s logo`} />
+											<img src={f.LogoURL} rel='noreferrer' alt={`${f.Name}'s logo`} />
 										</div>
 										{f.Name}
 									</div>
@@ -58,7 +58,7 @@ export default class AccountConnectionsMap extends React.Component {
 						</div>
 						<div className='storage' id={`storage-${c.ID}`}>
 							<div className='littleLogo'>
-								<img src={c.LogoURL} alt={`${c.Name}'s logo`} />
+								<img src={c.LogoURL} rel='noreferrer' alt={`${c.Name}'s logo`} />
 							</div>
 							{c.Name}
 						</div>
@@ -71,8 +71,8 @@ export default class AccountConnectionsMap extends React.Component {
 										startAnchor={c.Role === 'Source' ? 'right' : 'left'}
 										endAnchor={c.Role === 'Source' ? 'left' : 'right'}
 										showHead={false}
-										color='#a5b4fc'
-										strokeWidth={1}
+										color='#e4e4e7'
+										strokeWidth={2}
 									/>
 								</div>
 							);
@@ -83,7 +83,7 @@ export default class AccountConnectionsMap extends React.Component {
 				connection = (
 					<div className='connection' id={`${c.Role.toLowerCase()}-${c.ID}`}>
 						<div className='littleLogo'>
-							<img src={c.LogoURL} alt={`${c.Name}'s logo`} />
+							<img src={c.LogoURL} rel='noreferrer' alt={`${c.Name}'s logo`} />
 						</div>
 						{c.Name}
 					</div>
@@ -123,6 +123,16 @@ export default class AccountConnectionsMap extends React.Component {
 							<div className='centralLogo' id='centralLogo'>
 								Chichi
 							</div>
+							<div className='databases'>
+								<div className='database users' id='usersDatabase'>
+									<SlIcon name='database' />
+									<div className='name'>Users</div>
+								</div>
+								<div className='database events' id='eventsDatabase'>
+									<SlIcon name='database' />
+									<div className='name'>Events</div>
+								</div>
+							</div>
 						</div>
 						<div className='destinations'>{this.renderConnections(this.state.destinations)}</div>
 					</div>
@@ -138,8 +148,8 @@ export default class AccountConnectionsMap extends React.Component {
 										startAnchor='right'
 										endAnchor='left'
 										showHead={false}
-										color='#a5b4fc'
-										strokeWidth={1}
+										color='#e4e4e7'
+										strokeWidth={2}
 									/>
 								</div>
 							);
@@ -155,13 +165,35 @@ export default class AccountConnectionsMap extends React.Component {
 										startAnchor='right'
 										endAnchor='left'
 										showHead={false}
-										color='#a5b4fc'
-										strokeWidth={1}
+										color='#e4e4e7'
+										strokeWidth={2}
 									/>
 								</div>
 							);
 						}
 					})}
+					<div className='arrow'>
+						<Xarrow
+							start='centralLogo'
+							end='usersDatabase'
+							startAnchor='bottom'
+							endAnchor='top'
+							showHead={false}
+							color='#e4e4e7'
+							strokeWidth={2}
+						/>
+					</div>
+					<div className='arrow'>
+						<Xarrow
+							start='centralLogo'
+							end='eventsDatabase'
+							startAnchor='bottom'
+							endAnchor='top'
+							showHead={false}
+							color='#e4e4e7'
+							strokeWidth={2}
+						/>
+					</div>
 				</div>
 			</div>
 		);

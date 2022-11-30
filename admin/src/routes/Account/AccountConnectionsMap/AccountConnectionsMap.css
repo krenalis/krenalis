@@ -22,7 +22,7 @@
 	grid-template-columns: 1fr 1fr 1fr;
 	grid-template-areas: 'sources main destinations';
 	gap: 80px;
-	align-items: center;
+	align-items: start;
 }
 
 .AccountConnectionsMap .map .sources {
@@ -61,6 +61,34 @@
 	100% {
 		box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);
 	}
+}
+
+.AccountConnectionsMap .map .main .databases {
+	margin-top: 100px;
+	display: flex;
+	align-items: start;
+	justify-content: center;
+	gap: 100px;
+}
+
+.AccountConnectionsMap .map .main .databases .database {
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-flow: column;
+    background-color: transparent;
+	padding-top: 5px;
+}
+
+.AccountConnectionsMap .map .main .databases .database sl-icon {
+	font-size: 60px;
+	margin-bottom: 15px;
+	color: var(--sl-color-gray-600);
+}
+
+.AccountConnectionsMap .map .main .databases .database .name {
+	font-size: 18px;
 }
 
 .AccountConnectionsMap .map .destinations {

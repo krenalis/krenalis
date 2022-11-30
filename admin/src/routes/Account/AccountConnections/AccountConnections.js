@@ -13,9 +13,11 @@ export default class AccountConnections extends React.Component {
 		this.toast = React.createRef();
 		this.state = {
 			askImportConfirmation: 0,
+			connectionToRemove: 0,
 			resetCursor: false,
 			connections: [],
 			status: null,
+			showImports: null,
 		};
 	}
 
@@ -54,16 +56,24 @@ export default class AccountConnections extends React.Component {
 			return;
 		}
 		this.setState({
-			status: { variant: 'success', icon: 'check2-circle', text: 'Your import has been completed successfully' },
+			status: { variant: 'primary', icon: 'cloud-download', text: 'Your import has been started' },
 			askImportConfirmation: 0,
 		});
 		this.toast.current.toast();
 	};
 
-	handleDelete = async (id) => {
+	handleDelete = async (connection) => {
+		this.setState({ connectionToRemove: connection });
+	};
+
+	handleDeleteConfirmation = async () => {
+		let id = this.state.connectionToRemove.ID;
 		let [, err] = await call('/admin/connections/delete', [id]);
 		if (err !== null) {
-			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
+			this.setState({
+				status: { variant: 'danger', icon: 'exclamation-octagon', text: err },
+				connectionToRemove: 0,
+			});
 			this.toast.current.toast();
 			return;
 		}
@@ -71,17 +81,17 @@ export default class AccountConnections extends React.Component {
 		let connections = clone.filter((d) => {
 			return d.ID !== id;
 		});
-		this.setState({ connections: connections });
+		this.setState({ connections: connections, connectionToRemove: 0 });
 	};
 
-	handleSettings = async (id) => {
-		let [settingsUI, err] = await call('/admin/connectors/settings-ui', id);
+	handleShowImports = async (connection) => {
+		let [imports, err] = await call('/admin/connections/imports', connection.ID);
 		if (err !== null) {
 			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
 			this.toast.current.toast();
 			return;
 		}
-		console.log(settingsUI);
+		this.setState({ showImports: { connection: connection, imports: imports } });
 	};
 
 	render() {
@@ -109,50 +119,70 @@ export default class AccountConnections extends React.Component {
 						</div>
 					) : (
 						<div className='connections'>
-							{this.state.connections.map((s) => {
+							{this.state.connections.map((c) => {
 								return (
-									<Card key={s.ID} name={s.Name} logoURL={s.LogoURL} type={s.Type}>
+									<Card key={c.ID} name={c.Name} role={c.Role} logoURL={c.LogoURL} type={c.Type}>
 										<div className='buttons'>
-											{s.Type !== 'Storage' && (
-												<SlButton
-													className='importButton'
-													variant='primary'
-													onClick={() => {
-														this.setState({ askImportConfirmation: s.ID });
-													}}
-												>
-													<SlIcon slot='suffix' name='cloud-download' />
-													Import
-												</SlButton>
-											)}
-											{s.Type !== 'Storage' && (
+											{(c.Type === 'App' ||
+												c.Type === 'Database' ||
+												c.Type === 'EventStream' ||
+												c.Type === 'File') &&
+												c.Role === 'Source' && (
+													<SlButton
+														className='importButton'
+														variant='primary'
+														onClick={() => {
+															this.setState({ askImportConfirmation: c.ID });
+														}}
+													>
+														<SlIcon slot='suffix' name='cloud-download' />
+														Import
+													</SlButton>
+												)}
+											{(c.Type === 'App' ||
+												c.Type === 'Database' ||
+												c.Type === 'EventStream' ||
+												c.Type === 'File') &&
+												c.Role === 'Source' && (
+													<SlButton
+														className='showImportsButton'
+														variant='neutral'
+														onClick={() => {
+															this.handleShowImports(c);
+														}}
+													>
+														<SlIcon slot='suffix' name='eye' />
+														See imports
+													</SlButton>
+												)}
+											<SlButton className='settingsButton' variant='neutral'>
+												<SlIcon slot='suffix' name='gear' />
+												Settings
+												<NavLink to={`${c.ID}/settings`}></NavLink>
+											</SlButton>
+											{c.Type !== 'Storage' && (
 												<SlButton className='configureButton' variant='neutral'>
 													<SlIcon slot='suffix' name='shuffle' />
 													Properties
-													<NavLink to={`${s.ID}/properties`}></NavLink>
+													<NavLink to={`${c.ID}/properties`}></NavLink>
+												</SlButton>
+											)}
+											{c.Type === 'Database' && (
+												<SlButton className='editSQLButton' variant='neutral'>
+													<SlIcon slot='suffix' name='filetype-sql' />
+													Edit SQL
+													<NavLink to={`${c.ID}/sql`}></NavLink>
 												</SlButton>
 											)}
 											<SlButton
 												className='removeButton'
 												variant='danger'
 												onClick={() => {
-													this.handleDelete(s.ID);
+													this.handleDelete(c);
 												}}
 											>
 												<SlIcon slot='suffix' name='trash3' />
 												Remove
-											</SlButton>
-											{s.Type === 'Database' && (
-												<SlButton className='editSQLButton' variant='neutral'>
-													<SlIcon slot='suffix' name='filetype-sql' />
-													Edit SQL
-													<NavLink to={`${s.ID}/sql`}></NavLink>
-												</SlButton>
-											)}
-											<SlButton className='settingsButton' variant='neutral'>
-												<SlIcon slot='suffix' name='gear' />
-												Settings
-												<NavLink to={`${s.ID}/settings`}></NavLink>
 											</SlButton>
 										</div>
 									</Card>
@@ -166,7 +196,11 @@ export default class AccountConnections extends React.Component {
 						</div>
 					)}
 				</div>
-				<SlDialog open={this.state.askImportConfirmation !== 0} style={{ '--width': '600px' }}>
+				<SlDialog
+					open={this.state.askImportConfirmation !== 0}
+					style={{ '--width': '600px' }}
+					onSlAfterHide={() => this.setState({ askImportConfirmation: 0 })}
+				>
 					<div className='dialogTitle'>Where do you want your import to start?</div>
 					<SlSelect
 						placeholder='Select one'
@@ -189,6 +223,64 @@ export default class AccountConnections extends React.Component {
 						<SlButton variant='primary' onClick={this.handleImportConfirmation}>
 							<SlIcon slot='suffix' name='cloud-download' />
 							Start import
+						</SlButton>
+					</div>
+				</SlDialog>
+				{this.state.showImports && (
+					<SlDialog
+						className='importsListDialog'
+						open={true}
+						onSlAfterHide={() => this.setState({ showImports: null })}
+						style={{ '--width': '1000px' }}
+						label={`${this.state.showImports.connection.Name}'s imports`}
+					>
+						{this.state.showImports.imports.length > 0 ? (
+							<div className='importTable'>
+								<div className='row head'>
+									<div class='id'>ID</div>
+									<div class='startTime'>Start time</div>
+									<div class='endTime'>End time</div>
+									<div class='error'>Error</div>
+								</div>
+								{this.state.showImports.imports.map((i) => (
+									<div className={`row ${i.Error !== '' ? 'failed' : 'successfull'}`} key={i.ID}>
+										<div class='id'>{i.ID}</div>
+										<div class='startTime'>{i.StartTime}</div>
+										<div class='endTime'>{i.EndTime}</div>
+										<div class='error'>{i.Error === '' ? '-' : i.Error}</div>
+									</div>
+								))}
+							</div>
+						) : (
+							<div className='noImports'>
+								No import has been performed from the {this.state.showImports.connection.Name}{' '}
+								connection
+							</div>
+						)}
+					</SlDialog>
+				)}
+				<SlDialog
+					className='removeDialog'
+					open={this.state.connectionToRemove !== 0}
+					style={{ '--width': '600px' }}
+					onSlAfterHide={() => this.setState({ connectionToRemove: 0 })}
+				>
+					<div className='removeQuestion'>
+						Are you sure you want to remove <span>{this.state.connectionToRemove.Name}</span>?
+					</div>
+					<div className='buttons'>
+						<SlButton
+							variant='neutral'
+							onClick={() => {
+								this.setState({ connectionToRemove: 0 });
+							}}
+						>
+							<SlIcon slot='suffix' name='x-lg' />
+							Cancel
+						</SlButton>
+						<SlButton variant='danger' onClick={this.handleDeleteConfirmation}>
+							<SlIcon slot='suffix' name='trash3' />
+							Remove
 						</SlButton>
 					</div>
 				</SlDialog>

@@ -12,13 +12,18 @@ export default class Card extends React.Component {
 						{this.props.logoURL === '' ? (
 							<div class='unknownLogo'>?</div>
 						) : (
-							<img alt={`${this.props.name}'s logo`} src={this.props.logoURL} />
+							<img alt={`${this.props.name}'s logo`} rel='noreferrer' src={this.props.logoURL} />
 						)}
 					</div>
 					<div className='name'>{this.props.name}</div>
 					{this.props.type && (
 						<SlBadge className='type' variant='neutral'>
 							{this.props.type}
+						</SlBadge>
+					)}
+					{this.props.role && (
+						<SlBadge className='role' variant='neutral'>
+							{this.props.role}
 						</SlBadge>
 					)}
 					<div className='description'>Lorem ipsum dolor, sit amet consectetur adipisicing elit</div>

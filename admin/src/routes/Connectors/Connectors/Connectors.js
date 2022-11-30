@@ -5,7 +5,8 @@ import Navigation from '../../../components/Navigation/Navigation';
 import Card from '../../../components/Card/Card';
 import Toast from '../../../components/Toast/Toast';
 import { Navigate } from 'react-router-dom';
-import { SlButton, SlDialog, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
+
+import { SlButton, SlDialog, SlIcon, SlTooltip, SlInput } from '@shoelace-style/shoelace/dist/react/index.js';
 
 export default class Connectors extends React.Component {
 	constructor(props) {
@@ -18,7 +19,10 @@ export default class Connectors extends React.Component {
 			connectorToAdd: null,
 			goToConnectionAdded: 0,
 			showStorage: false,
+			askWebsiteInformations: false,
 			status: null,
+			websitePort: '',
+			websiteHost: '',
 		};
 	}
 
@@ -32,11 +36,12 @@ export default class Connectors extends React.Component {
 		this.setState({ connectors: connectors });
 	};
 
-	installConnection = async (c, s) => {
+	installConnection = async (c, s, host) => {
 		let role = this.connectionRole == null || this.connectionRole === '' ? 'Source' : this.connectionRole;
-		let body = { Type: c.Type, Connector: c.ID, Storage: 0, Role: role };
+		let body = { Type: c.Type, Connector: c.ID, Storage: 0, Role: role, Host: '' };
 		if (c.OAuth.URL === '') {
-			if (c.Type === 'File') body.Storage = s; // TODO: QUESTO NON È IL CONNETTORE MA UNA CONNECTION CHE ESISTE !! !!
+			if (c.Type === 'File') body.Storage = s;
+			if (c.Type === 'Website') body.Host = host;
 			let [, err] = await call('/admin/add-connection', body);
 			if (err != null) {
 				this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
@@ -69,12 +74,22 @@ export default class Connectors extends React.Component {
 			this.setState({ storageConnections: storageConnections, showStorage: true });
 			return;
 		}
+		if (c.Type === 'Website') {
+			this.setState({ askWebsiteInformations: true });
+			return;
+		}
 		await this.installConnection(c);
 	};
 
 	addFileConnection = async (storageID) => {
 		let c = this.state.connectorToAdd;
 		await this.installConnection(c, storageID);
+	};
+
+	addWebsiteConnection = async () => {
+		let c = this.state.connectorToAdd;
+		await this.installConnection(c, 0, this.state.websiteHost + ':' + this.state.websitePort);
+		this.setState({ askWebsiteInformations: false });
 	};
 
 	render() {
@@ -118,14 +133,14 @@ export default class Connectors extends React.Component {
 						{this.state.storageConnections.length === 0 ? (
 							<div className='no-storage'>No storage available</div>
 						) : (
-							this.state.storageConnections.map((c) => {
+							this.state.storageConnections.map((s) => {
 								return (
 									<div className='storage'>
-										<div className='name'>{c.Name}</div>
+										<div className='name'>{s.Name}</div>
 										<SlButton
 											variant='primary'
 											onClick={async () => {
-												await this.addFileConnection(c.ID);
+												await this.addFileConnection(s.ID);
 											}}
 											className='addStorage'
 										>
@@ -135,6 +150,36 @@ export default class Connectors extends React.Component {
 								);
 							})
 						)}
+					</SlDialog>
+					<SlDialog
+						label='Website informations'
+						open={this.state.askWebsiteInformations}
+						onSlAfterHide={() => {
+							this.setState({ askWebsiteInformations: false, connectorToAdd: null });
+						}}
+						style={{ '--width': '600px' }}
+					>
+						<div className='websiteInfo'>
+							<SlInput
+								label='Host'
+								className='hostInput'
+								onSlChange={(e) => {
+									this.setState({ websiteHost: e.currentTarget.value });
+								}}
+								value={this.state.websiteHost}
+							/>
+							<SlInput
+								label='Port'
+								className='portInput'
+								onSlChange={(e) => {
+									this.setState({ websitePort: e.currentTarget.value });
+								}}
+								value={this.state.websitePort}
+							/>
+							<SlButton className='addWebsite' variant='primary' onClick={this.addWebsiteConnection}>
+								Add website
+							</SlButton>
+						</div>
 					</SlDialog>
 				</div>
 			);

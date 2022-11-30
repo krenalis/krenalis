@@ -87,7 +87,12 @@ export default class AccountSchemas extends React.Component {
 							<SlMenuItem value='group'>Group</SlMenuItem>
 							<SlMenuItem value='event'>Event</SlMenuItem>
 						</SlSelect>
-						<SlButton className='saveButton' variant='default' onClick={this.handleSchemaSaving}>
+						<SlButton
+							className='saveButton'
+							variant='primary'
+							size='large'
+							onClick={this.handleSchemaSaving}
+						>
 							<SlIcon slot='prefix' name='save' />
 							Save
 						</SlButton>

@@ -1,20 +1,19 @@
 export default async function call(url, value) {
-	let body, res;
-	if (value) body = JSON.stringify(value);
+	let request = {
+		method: 'GET',
+		headers: {
+			'X-Workspace': 1,
+		},
+	};
+
+	if (value) {
+		request.method = 'POST';
+		request.body = JSON.stringify(value);
+	}
+
+	let res;
 	try {
-		res = body
-			? await fetch(url, {
-					method: 'POST',
-					body: body,
-					headers: {
-						'X-Workspace': 1,
-					},
-			  })
-			: await fetch(url, {
-					headers: {
-						'X-Workspace': 1,
-					},
-			  });
+		res = await fetch(url, request);
 	} catch (err) {
 		return [null, `error while fetching ${url}: ${err.message}`];
 	}
@@ -33,6 +32,11 @@ export default async function call(url, value) {
 				break;
 		}
 		return [null, error];
+	}
+
+	let contentType = res.headers.get('content-type');
+	if (!contentType || contentType.indexOf('application/json') === -1) {
+		return [null, null];
 	}
 
 	let data;

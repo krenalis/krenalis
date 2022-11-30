@@ -8,6 +8,7 @@
 package admin
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -115,6 +116,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
+		w.Header().Add("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(users)
 		return
 	}
@@ -131,6 +133,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
+		w.Header().Add("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(schema.PropertiesNames())
 		return
 	}
@@ -159,6 +162,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		for i, name := range names {
 			properties[i] = map[string]string{"Name": name}
 		}
+		w.Header().Add("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{"Properties": properties})
 		return
 	}
@@ -180,7 +184,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		_, _ = fmt.Fprint(w, `{"status":"ok"}`)
 		return
 	}
 
@@ -201,7 +204,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		_, _ = fmt.Fprint(w, `{"status":"ok"}`)
 		return
 	}
 
@@ -224,7 +226,11 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
-			_ = json.NewEncoder(w).Encode(schema)
+			w.Header().Add("Content-Type", "application/json")
+			var b bytes.Buffer
+			_ = json.NewEncoder(&b).Encode(schema)
+			_ = json.NewEncoder(w).Encode(b.String())
+
 		case "/update":
 			var request struct {
 				SchemaName string
@@ -241,7 +247,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
-			_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 		default:
 			http.NotFound(w, r)
 		}
@@ -258,6 +263,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(cns)
 			return
 		case "/get":
@@ -274,6 +280,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(ds)
 			return
 		case "/delete":
@@ -291,7 +298,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
-			_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 			return
 		case "/preview-query":
 			defer r.Body.Close()
@@ -316,6 +322,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{"Columns": columns, "Rows": rows})
 			return
 		case "/set-users-query":
@@ -336,7 +343,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
-			_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 			return
 		case "/get-used-properties":
 			defer r.Body.Close()
@@ -367,7 +373,26 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(properties)
+			return
+		case "/imports":
+			defer r.Body.Close()
+			var id int
+			err := json.NewDecoder(r.Body).Decode(&id)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			imports, err := ws.Connections.Imports(id)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			w.Header().Add("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(imports)
 			return
 		}
 	}
@@ -382,6 +407,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(cns)
 			return
 		case "/get":
@@ -398,6 +424,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{"ID": cn.ID, "Name": cn.Name, "LogoURL": cn.LogoURL, "OAuthURL": cn.OAuth.URL})
 			return
 		case "/ui":
@@ -497,6 +524,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
+			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(id)
 			return
 
@@ -523,6 +551,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(smartEvents)
 			return
 
@@ -540,6 +569,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(smartEvents)
 			return
 

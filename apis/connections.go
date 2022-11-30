@@ -980,6 +980,65 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 	return nil
 }
 
+// Import represents a connection import.
+type Import struct {
+	ID        int
+	StartTime time.Time
+	EndTime   time.Time
+	Error     string
+}
+
+// Imports returns all the imports of the source connection with identifier id.
+// The connection must be an app, database, event stream or file connection.
+// Returns a ConnectionNotFoundError error if the connection does not exist.
+func (this *Connections) Imports(id int) ([]*Import, error) {
+	if id <= 0 || id > maxInt32 {
+		return nil, errors.New("invalid connection identifier")
+	}
+	imports := []*Import{}
+	err := this.myDB.QueryScan(
+		"SELECT `i`.`id`, `i`.`startTime`, `i`.`endTime`, `i`.`error`\n"+
+			"FROM `connections_imports` AS `i`\n"+
+			"INNER JOIN `connections` AS `c` ON `i`.`connection` = `c`.`id`\n"+
+			"WHERE `c`.`workspace` = ? AND `i`.`connection` = ?\n"+
+			"ORDER BY `i`.`id` DESC", this.workspace, id, func(rows *sql.Rows) error {
+			var err error
+			for rows.Next() {
+				var imp Import
+				if err = rows.Scan(&imp.ID, &imp.StartTime, &imp.EndTime, &imp.Error); err != nil {
+					return err
+				}
+				imports = append(imports, &imp)
+			}
+			return nil
+		})
+	if err != nil {
+		return nil, err
+	}
+	if len(imports) == 0 {
+		var typ ConnectorType
+		var role ConnectionRole
+		err = this.myDB.QueryRow(
+			"SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
+			id, this.workspace).Scan(&typ, &role)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, ConnectionNotFoundError{}
+			}
+			return nil, err
+		}
+		switch typ {
+		case AppType, DatabaseType, EventStreamType, FileType:
+		default:
+			return nil, fmt.Errorf("%s connections cannot have imports", strings.ToLower(typ.String()))
+		}
+		if role == DestinationRole {
+			return nil, errors.New("destination connections cannot have imports")
+		}
+	}
+	return imports, nil
+}
+
 // List returns all connections.
 func (this *Connections) List() ([]*Connection, error) {
 	sources := []*Connection{}

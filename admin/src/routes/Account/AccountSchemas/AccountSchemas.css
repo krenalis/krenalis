@@ -20,6 +20,19 @@
 	align-items: baseline;
 }
 
+.AccountSchemas .content .bar sl-select {
+	width: fit-content;
+	min-width: 250px;
+	max-width: 350px;
+	border: 0;
+}
+
+.AccountSchemas .content .bar sl-select::part(control) {
+	background-color: var(--bg-transparent);
+	color: var(--text-onaccent);
+	border: 0;
+}
+
 .AccountSchemas .content .bar .saveButton {
 	width: 200px;
 }

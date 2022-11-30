@@ -38,36 +38,13 @@
 	gap: 30px;
 }
 
-.AccountConnections .Card .buttons {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	grid-template-areas:
-		'import import'
-		'configure settings'
-		'editSQL editSQL'
-		'remove remove';
-	row-gap: 15px;
-	gap: 10px;
+.AccountConnections .Card .buttons sl-button {
+	display: block;
+	margin-bottom: 3px;	
 }
 
-.AccountConnections .Card .buttons .importButton {
-	grid-area: import;
-}
-
-.AccountConnections .Card .buttons .configureButton {
-	grid-area: configure;
-}
-
-.AccountConnections .Card .buttons .removeButton {
-	grid-area: remove;
-}
-
-.AccountConnections .Card .buttons .editSQLButton {
-	grid-area: editSQL;
-}
-
-.AccountConnections .Card .buttons .settingsButton {
-	grid-area: settings;
+.AccountConnections .Card .buttons sl-button:last-of-type {
+	margin-bottom: 0;
 }
 
 .AccountConnections .addConnectionBox {
@@ -125,4 +102,38 @@
 	align-items: center;
 	justify-content: center;
 	gap: 15px;
+}
+
+.AccountConnections sl-dialog.importsListDialog::part(body) {
+    padding: 10px 50px 40px 50px;
+}
+
+.AccountConnections sl-dialog.importsListDialog .importTable .row {
+	display: grid;
+	grid-template-columns: .3fr 1fr 1fr 1fr;
+}
+
+.AccountConnections sl-dialog.importsListDialog .importTable .row > div {
+	padding: 15px;
+}
+
+.AccountConnections sl-dialog.importsListDialog .importTable .row.head > div {
+	font-weight: 600;
+}
+
+.AccountConnections sl-dialog.importsListDialog .importTable .row.successfull > div {
+	background-color: var(--sl-color-green-50);
+}
+
+.AccountConnections sl-dialog.importsListDialog .importTable .row.failed > div {
+	background-color: var(--sl-color-red-50);
+}
+
+.AccountConnections sl-dialog.removeDialog .removeQuestion {
+	font-size: 18px;
+	margin-bottom: 30px;
+}
+
+.AccountConnections sl-dialog.removeDialog .removeQuestion span {
+	font-weight: 600;
 }
