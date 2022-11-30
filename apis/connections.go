@@ -789,7 +789,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			return fmt.Errorf("cannot read user schema: %s", err)
 		}
 
-		usersQuery, err = this.compileQueryWithoutLimit(usersQuery)
+		usersQuery, err = this.compileQuery(usersQuery, noQueryLimit)
 		if err != nil {
 			return importError{err}
 		}
@@ -1096,7 +1096,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 	const cRole = _connector.SourceRole
 
 	// Execute the query.
-	query, err = this.compileQueryWithLimit(query, limit)
+	query, err = this.compileQuery(query, limit)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1585,7 +1585,7 @@ func (this *Connections) reloadProperties(id int) error {
 			return err
 		}
 
-		usersQuery, err := this.compileQueryWithLimit(usersQuery, 0)
+		usersQuery, err := this.compileQuery(usersQuery, 0)
 		if err != nil {
 			return err
 		}
@@ -1772,15 +1772,12 @@ func (this *Connections) userSchema(id int) (types.Schema, []_connector.Property
 	return schema, paths, nil
 }
 
-// compileQueryWithLimit compiles the given query, replacing the ':limit'
-// placeholder with limit, and returns it.
-func (this *Connections) compileQueryWithLimit(query string, limit int) (string, error) {
-	return strings.ReplaceAll(query, ":limit", strconv.Itoa(limit)), nil
-}
+const noQueryLimit = -1
 
-// compileQueryWithoutLimit compiles the given query, removing the ':limit'
-// placeholder, and returns it.
-func (this *Connections) compileQueryWithoutLimit(query string) (string, error) {
+// compileQuery compiles the given query and returns it. If limit is
+// noQueryLimit removes the ':limit' placeholder (along with '[[' and ']]');
+// otherwise, replaces the placeholders with limit.
+func (this *Connections) compileQuery(query string, limit int) (string, error) {
 	p := strings.Index(query, ":limit")
 	if p == -1 {
 		return "", errors.New("missing ':limit' placeholder in query")
@@ -1795,7 +1792,10 @@ func (this *Connections) compileQueryWithoutLimit(query string) (string, error) 
 		return "", errors.New("missing ']]' in query")
 	}
 	s2 += p + n + 2
-	return query[:s1] + query[s2:], nil
+	if limit == noQueryLimit {
+		return query[:s1] + query[s2:], nil
+	}
+	return query[:s1] + strings.ReplaceAll(query[s1+2:s2-2], ":limit", strconv.Itoa(limit)) + query[s2:], nil
 }
 
 // fileReader implements the connector.FileReader interface.
