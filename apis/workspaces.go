@@ -77,6 +77,6 @@ func (ws *WorkspaceAPI) SetSchema(name, schema string) error {
 	if !utf8.ValidString(schema) {
 		return errors.New("invalid schema")
 	}
-	_, err := ws.myDB.Table("Workspaces").Update(sql.Set{column: schema}, sql.Where{"workspace": ws.workspace})
+	_, err := ws.myDB.Table("Workspaces").Update(sql.Set{column: schema}, sql.Where{"id": ws.workspace})
 	return err
 }
