@@ -97,7 +97,7 @@ func (c *connection) Reader(path string) (io.ReadCloser, time.Time, error) {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	var s settings
 
@@ -113,38 +113,38 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		// Test the connection and save the settings if required.
 		err := json.Unmarshal(values, &s)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		// Validate Host.
 		if n := len(s.Host); n == 0 || n > 253 {
-			return nil, ui.Errorf("host length in bytes must be in range [1,253]")
+			return nil, nil, ui.Errorf("host length in bytes must be in range [1,253]")
 		}
 		// Validate Port.
 		if s.Port < 1 || s.Port > 65536 {
-			return nil, ui.Errorf("port must be in range [1,65536]")
+			return nil, nil, ui.Errorf("port must be in range [1,65536]")
 		}
 		// Validate Username.
 		if n := utf8.RuneCountInString(s.Username); n < 1 || n > 200 {
-			return nil, ui.Errorf("username length must be in range [1,200]")
+			return nil, nil, ui.Errorf("username length must be in range [1,200]")
 		}
 		// Validate Password.
 		if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
-			return nil, ui.Errorf("password length must be in range [1,200]")
+			return nil, nil, ui.Errorf("password length must be in range [1,200]")
 		}
 		err = testConnection(&s)
 		if err != nil {
-			return nil, ui.Errorf("connection failed: %s", err)
+			return nil, nil, ui.Errorf("connection failed: %s", err)
 		}
 		if event == "test" {
-			return nil, nil
+			return nil, nil, nil
 		}
 		b, err := json.Marshal(&s)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return nil, c.firehose.SetSettings(b)
+		return nil, nil, c.firehose.SetSettings(b)
 	default:
-		return nil, ui.ErrEventNotExist
+		return nil, nil, ui.ErrEventNotExist
 	}
 
 	form := &ui.Form{
@@ -160,7 +160,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		},
 	}
 
-	return form, nil
+	return form, nil, nil
 }
 
 // Write writes the data read from p into the file with the given path.

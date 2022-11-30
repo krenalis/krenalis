@@ -142,6 +142,45 @@ type Action struct {
 	Role    Role
 }
 
+// Alert represents an alert message to be shown in the UI.
+type Alert struct {
+
+	// Message is the message of the alert.
+	Message string
+
+	// Variant is the variant of the alert message.
+	Variant AlertVariant
+}
+
+// AlertVariant represents the alert variants. The variants are taken from
+// Shoelace (see https://shoelace.style/components/alert).
+type AlertVariant int
+
+const (
+	Primary AlertVariant = iota
+	Success
+	Neutral
+	Warning
+	Danger
+)
+
+func (v AlertVariant) String() string {
+	switch v {
+	case Primary:
+		return "primary"
+	case Success:
+		return "success"
+	case Neutral:
+		return "neutral"
+	case Warning:
+		return "warning"
+	case Danger:
+		return "danger"
+	default:
+		panic(fmt.Sprintf("invalid alert variant %d", v))
+	}
+}
+
 // Error represents an error to be displayed in the UI.
 type Error struct {
 	err error

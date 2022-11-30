@@ -29,7 +29,7 @@ import (
 	"chichi/connector"
 	"chichi/connector/ui"
 
-	"github.com/fraugster/parquet-go"
+	goparquet "github.com/fraugster/parquet-go"
 	"github.com/fraugster/parquet-go/parquet"
 )
 
@@ -161,7 +161,7 @@ func (c *connection) Read(files connector.FileReader, records connector.RecordWr
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
 	var s settings
 
 	switch event {
@@ -174,22 +174,22 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		// Save the settings.
 		err := json.Unmarshal(values, &s)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		// Validate Path.
 		if s.Path == "" {
-			return nil, ui.Errorf("path cannot be empty")
+			return nil, nil, ui.Errorf("path cannot be empty")
 		}
 		if utf8.RuneCountInString(s.Path) > 1000 {
-			return nil, ui.Errorf("path cannot be longer that 1000")
+			return nil, nil, ui.Errorf("path cannot be longer that 1000")
 		}
 		b, err := json.Marshal(&s)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return nil, c.firehose.SetSettings(b)
+		return nil, nil, c.firehose.SetSettings(b)
 	default:
-		return nil, ui.ErrEventNotExist
+		return nil, nil, ui.ErrEventNotExist
 	}
 
 	form := &ui.Form{
@@ -201,7 +201,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		},
 	}
 
-	return form, nil
+	return form, nil, nil
 }
 
 // Write writes to files the records read from records.

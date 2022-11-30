@@ -16,6 +16,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 	"unicode/utf8"
 
@@ -91,7 +92,7 @@ func (c *connection) Query(query string) ([]connector.Column, connector.Rows, er
 		if err != nil {
 			_ = rows.Close()
 			_ = db.Close()
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("cannot get type for property %q: %s", c.Name(), err)
 		}
 		columns[i] = connector.Column{
 			Name: c.Name(),
@@ -102,7 +103,7 @@ func (c *connection) Query(query string) ([]connector.Column, connector.Rows, er
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	var s settings
 
@@ -118,42 +119,61 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		// Test the connection and save the settings if required.
 		err := json.Unmarshal(values, &s)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		// Validate Host.
 		if n := len(s.Host); n == 0 || n > 253 {
-			return nil, ui.Errorf("host length in bytes must be in range [1,253]")
+			return nil, nil, ui.Errorf("host length in bytes must be in range [1,253]")
 		}
 		// Validate Port.
 		if s.Port < 1 || s.Port > 65536 {
-			return nil, ui.Errorf("port must be in range [1,65536]")
+			return nil, nil, ui.Errorf("port must be in range [1,65536]")
 		}
 		// Validate Username.
 		if n := utf8.RuneCountInString(s.Username); n < 1 || n > 16 {
-			return nil, ui.Errorf("username length must be in range [1,16]")
+			return nil, nil, ui.Errorf("username length must be in range [1,16]")
 		}
 		// Validate Password.
 		if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
-			return nil, ui.Errorf("password length must be in range [1,200]")
+			return nil, nil, ui.Errorf("password length must be in range [1,200]")
 		}
 		// Validate Database.
 		if n := utf8.RuneCountInString(s.Database); n < 1 || n > 64 {
-			return nil, ui.Errorf("database length must be in range [1,64]")
+			return nil, nil, ui.Errorf("database length must be in range [1,64]")
 		}
 		err = testConnection(c.ctx, &s)
 		if err != nil {
-			return nil, ui.Errorf("connection failed: %s", err)
+			msg := err.Error()
+			alert := &ui.Alert{}
+			if event == "test" {
+				alert.Message = msg
+				alert.Variant = ui.Warning
+			} else if event == "save" {
+				alert.Message = "Cannot save settings: " + msg
+				alert.Variant = ui.Danger
+			}
+			return nil, alert, nil
 		}
 		if event == "test" {
-			return nil, nil
+			return nil, &ui.Alert{
+				Message: "Connection established",
+				Variant: ui.Success,
+			}, nil
 		}
 		b, err := json.Marshal(&s)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return nil, c.firehose.SetSettings(b)
+		err = c.firehose.SetSettings(b)
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, &ui.Alert{
+			Message: "Settings saved",
+			Variant: ui.Success,
+		}, nil
 	default:
-		return nil, ui.ErrEventNotExist
+		return nil, nil, ui.ErrEventNotExist
 	}
 
 	form := &ui.Form{
@@ -170,7 +190,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		},
 	}
 
-	return form, nil
+	return form, nil, nil
 }
 
 type settings struct {

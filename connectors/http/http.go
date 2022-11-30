@@ -97,7 +97,7 @@ func (c *connection) Reader(path string) (io.ReadCloser, time.Time, error) {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	var s settings
 	var headers map[string]any
@@ -115,32 +115,32 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		// Save the settings.
 		err := json.Unmarshal(values, &s)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		// Validate Host.
 		if n := len(s.Host); n == 0 || n > 253 {
-			return nil, ui.Errorf("host length in bytes must be in range [1,253]")
+			return nil, nil, ui.Errorf("host length in bytes must be in range [1,253]")
 		}
 		// Validate Port.
 		if s.Port < 1 || s.Port > 65536 {
-			return nil, ui.Errorf("port must be in range [1,65536]")
+			return nil, nil, ui.Errorf("port must be in range [1,65536]")
 		}
 		// Validate Headers.
 		for k, v := range s.Headers {
 			if n := utf8.RuneCountInString(k); n == 0 || n > 100 {
-				return nil, ui.Errorf("header key length must be in range [1,100]")
+				return nil, nil, ui.Errorf("header key length must be in range [1,100]")
 			}
 			if n := utf8.RuneCountInString(v); n == 0 || n > 10000 {
-				return nil, ui.Errorf("header value length must be in range [1,10000]")
+				return nil, nil, ui.Errorf("header value length must be in range [1,10000]")
 			}
 		}
 		b, err := json.Marshal(&s)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return nil, c.firehose.SetSettings(b)
+		return nil, nil, c.firehose.SetSettings(b)
 	default:
-		return nil, ui.ErrEventNotExist
+		return nil, nil, ui.ErrEventNotExist
 	}
 
 	form := &ui.Form{
@@ -157,7 +157,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		},
 	}
 
-	return form, nil
+	return form, nil, nil
 }
 
 // Write writes the data read from p into the file with the given path.

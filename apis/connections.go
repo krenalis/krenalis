@@ -761,6 +761,11 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			return importError{fmt.Errorf("cannot get users from the connector: %s", err)}
 		}
 
+		// Handle errors occurred in the firehose.
+		if fh.err != nil {
+			return fh.err
+		}
+
 	case DatabaseType:
 
 		var connectorName, identityColumn, timestampColumn, usersQuery string
@@ -850,6 +855,10 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		}
 		if err = rows.Err(); err != nil {
 			return importError{fmt.Errorf("an error occurred closing the database: %s", err)}
+		}
+		// Handle errors occurred in the firehose.
+		if fh.err != nil {
+			return fh.err
 		}
 
 	case EventStreamType:
@@ -959,6 +968,10 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			return importError{fmt.Errorf("cannot read the file: %s", err)}
 		}
 
+		// Handle errors occurred in the firehose.
+		if fh.err != nil {
+			return fh.err
+		}
 	}
 
 	return nil
@@ -1276,7 +1289,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		return nil, err
 	}
 
-	form, err := connection.ServeUI(event, values)
+	form, alert, err := connection.ServeUI(event, values)
 	if err != nil {
 		if err == ui.ErrEventNotExist {
 			err = ErrUIEventNotExist
@@ -1284,7 +1297,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		return nil, err
 	}
 
-	return marshalUIForm(form, role)
+	return marshalUIFormAlert(form, alert, role)
 }
 
 // SetFileStorage sets the storage of the file connection with identifier file.
@@ -1823,50 +1836,72 @@ func generateAPIKey() (string, error) {
 	return base62.EncodeToString(key)[0:32], nil
 }
 
-// marshalUIForm marshals form with given role in JSON format.
-func marshalUIForm(form *ui.Form, role ConnectionRole) ([]byte, error) {
+// marshalUIFormAlert marshals form with given role and alert in JSON format.
+// form and alert can be nil or not, independently of each other.
+func marshalUIFormAlert(form *ui.Form, alert *ui.Alert, role ConnectionRole) ([]byte, error) {
 
-	if form == nil {
+	if form == nil && alert == nil {
 		return []byte("null"), nil
 	}
 
 	var b bytes.Buffer
-	dec := json.NewEncoder(&b)
+	enc := json.NewEncoder(&b)
 
-	b.WriteString(`{"Fields":[`)
+	b.WriteString("{")
 
-	for i, field := range form.Fields {
-		rv := reflect.ValueOf(field).Elem()
-		rt := rv.Type()
-		if r := ui.Role(rv.FieldByName("Role").Int()); r != ui.BothRole && ConnectionRole(r) != role {
-			continue
-		}
-		if i > 0 {
-			b.WriteString(`,`)
-		}
-		b.WriteString(`{"ComponentType":"`)
-		b.WriteString(rt.Name())
-		b.WriteString(`"`)
-		for j := 0; j < rt.NumField(); j++ {
-			if rt.Field(j).Name == "Destination" {
+	// Serialize the form, if present.
+	if form != nil {
+		b.WriteString(`"Form":{"Fields":[`)
+		for i, field := range form.Fields {
+			rv := reflect.ValueOf(field).Elem()
+			rt := rv.Type()
+			if r := ui.Role(rv.FieldByName("Role").Int()); r != ui.BothRole && ConnectionRole(r) != role {
 				continue
 			}
-			b.WriteString(`,"`)
-			b.WriteString(rt.Field(j).Name)
-			b.WriteString(`":`)
-			err := dec.Encode(rv.Field(j).Interface())
-			if err != nil {
-				return nil, err
+			if i > 0 {
+				b.WriteString(`,`)
 			}
+			b.WriteString(`{"ComponentType":"`)
+			b.WriteString(rt.Name())
+			b.WriteString(`"`)
+			for j := 0; j < rt.NumField(); j++ {
+				if rt.Field(j).Name == "Destination" {
+					continue
+				}
+				b.WriteString(`,"`)
+				b.WriteString(rt.Field(j).Name)
+				b.WriteString(`":`)
+				err := enc.Encode(rv.Field(j).Interface())
+				if err != nil {
+					return nil, err
+				}
+			}
+			b.WriteString(`}`)
 		}
-		b.WriteString(`}`)
+		b.WriteString(`],"Actions":`)
+		err := enc.Encode(form.Actions)
+		if err != nil {
+			return nil, err
+		}
+		b.WriteString("}")
 	}
 
-	b.WriteString(`],"Actions":`)
-	err := dec.Encode(form.Actions)
-	if err != nil {
-		return nil, err
+	// Serialize the alert, if present.
+	if alert != nil {
+		if form != nil {
+			b.WriteString(",")
+		}
+		b.WriteString(`"Alert":{"Message":`)
+		err := enc.Encode(alert.Message)
+		if err != nil {
+			return nil, err
+		}
+		b.WriteString(`,"Variant":"`)
+		b.WriteString(alert.Variant.String())
+		b.WriteString(`"`)
+		b.WriteString("}")
 	}
+
 	b.WriteString(`}`)
 
 	return b.Bytes(), nil

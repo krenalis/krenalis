@@ -102,7 +102,7 @@ type Connection interface {
 	Connector() *Connector
 
 	// ServeUI serves the connector's user interface.
-	ServeUI(event string, values []byte) (*ui.Form, error)
+	ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error)
 }
 
 // Firehose is the interface implemented by a Firehose.

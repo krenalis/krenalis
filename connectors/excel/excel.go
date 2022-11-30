@@ -144,7 +144,7 @@ func (c *connection) Read(files connector.FileReader, records connector.RecordWr
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	var s settings
 
@@ -158,26 +158,26 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		// Save the settings.
 		err := json.Unmarshal(values, &s)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		// Validate Path.
 		if s.Path == "" {
-			return nil, ui.Errorf("path cannot be empty")
+			return nil, nil, ui.Errorf("path cannot be empty")
 		}
 		if utf8.RuneCountInString(s.Path) > 1000 {
-			return nil, ui.Errorf("path cannot be longer that 1000 characters")
+			return nil, nil, ui.Errorf("path cannot be longer that 1000 characters")
 		}
 		// Validate SheetName.
 		if name := s.SheetName; name == "" || utf8.RuneCountInString(name) > 31 || strings.ContainsAny(name, ":\\/?*[]") {
-			return nil, ui.Errorf("sheet name cannot be longer than 31 characters and cannot contain :, \\, /, ?, *, [ and ]")
+			return nil, nil, ui.Errorf("sheet name cannot be longer than 31 characters and cannot contain :, \\, /, ?, *, [ and ]")
 		}
 		b, err := json.Marshal(&s)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return nil, c.firehose.SetSettings(b)
+		return nil, nil, c.firehose.SetSettings(b)
 	default:
-		return nil, ui.ErrEventNotExist
+		return nil, nil, ui.ErrEventNotExist
 	}
 
 	form := &ui.Form{
@@ -190,7 +190,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		},
 	}
 
-	return form, nil
+	return form, nil, nil
 }
 
 // Write writes to files the records read from records.

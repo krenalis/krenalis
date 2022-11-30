@@ -94,17 +94,17 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 
 	// Validate the properties.
 	if !fh.userSchema.Valid() {
-		fh.setError(errors.New("SetUser called on a Firehose without a user schema"))
+		fh.setError(importError{errors.New("SetUser called on a Firehose without a user schema")})
 		return
 	}
 	b, err := json.Marshal(properties)
 	if err != nil {
-		fh.setError(err)
+		fh.setError(importError{err})
 		return
 	}
 	properties, err = types.Decode(b, fh.userSchema)
 	if err != nil {
-		fh.setError(fmt.Errorf("user schema validation failed: %s", err))
+		fh.setError(importError{fmt.Errorf("user schema validation failed: %s", err)})
 		return
 	}
 
@@ -148,7 +148,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 		// Apply the transformation function.
 		grProp, err := pool.Run(context.Background(), t.SourceCode, props)
 		if err != nil {
-			fh.setError(fmt.Errorf("error while calling transformation function %d: %s", t.ID, err))
+			fh.setError(importError{fmt.Errorf("error while calling transformation function %d: %s", t.ID, err)})
 			return
 		}
 		if grProp != nil {
@@ -159,7 +159,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 
 	email, _ := candidateData["Email"].(string)
 	if email == "" {
-		fh.setError(fmt.Errorf("expecting 'Email' to be a non-empty string, got %#v (of type %T)", candidateData["Email"], candidateData["Email"]))
+		fh.setError(importError{fmt.Errorf("expecting 'Email' to be a non-empty string, got %#v (of type %T)", candidateData["Email"], candidateData["Email"])})
 		return
 	}
 
@@ -277,7 +277,6 @@ func (fh *firehose) WebhookURL() string {
 func (fh *firehose) setError(err error) {
 	fh.err = err
 	fh.cancel()
-	log.Printf("[error] firehose error: %s", err)
 }
 
 // statsTimeSlot returns the stats time slot for the time t.

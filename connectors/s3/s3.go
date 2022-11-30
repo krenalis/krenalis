@@ -103,7 +103,7 @@ func (c *connection) Reader(path string) (io.ReadCloser, time.Time, error) {
 var bucketReg = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]+$`)
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	var s settings
 
@@ -117,38 +117,38 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		// Save the settings.
 		err := json.Unmarshal(values, &s)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		// Validate AccessKeyID.
 		if n := len(s.AccessKeyID); n != 20 {
-			return nil, ui.Errorf("access key id must be 20 bytes long")
+			return nil, nil, ui.Errorf("access key id must be 20 bytes long")
 		}
 		// Validate SecretAccessKey.
 		if n := len(s.SecretAccessKey); n < 40 || n > 200 {
-			return nil, ui.Errorf("secret access key length in bytes must be in range [40,200]")
+			return nil, nil, ui.Errorf("secret access key length in bytes must be in range [40,200]")
 		}
 		// Validate Region.
 		const regions = "us-east-1 us-east-2 us-west-1 us-west-2 af-south-1 ap-east-1 ap-southeast-3 ap-south-1 " +
 			"ap-northeast-1 ap-northeast-2 ap-northeast-3 ap-southeast-1 ap-southeast-2 ca-central-1 eu-central-1 " +
 			"eu-west-1 eu-west-2 eu-west-3 eu-south-1 eu-north-1 me-south-1 me-central-1 sa-east-1"
 		if !strings.Contains(regions, s.Region+" ") && !strings.HasSuffix(regions, " "+s.Region) {
-			return nil, ui.Errorf("region is not valid")
+			return nil, nil, ui.Errorf("region is not valid")
 		}
 		// Validate Bucket.
 		if n := len(s.Bucket); n < 3 || n > 63 {
-			return nil, ui.Errorf("bucket length must be in range [3,63]")
+			return nil, nil, ui.Errorf("bucket length must be in range [3,63]")
 		}
 		if !bucketReg.MatchString(s.Bucket) || strings.Contains(s.Bucket, "..") ||
 			strings.HasPrefix(s.Bucket, "xn--") || strings.HasSuffix(s.Bucket, "-s3alias") {
-			return nil, ui.Errorf("bucket value is not allowed")
+			return nil, nil, ui.Errorf("bucket value is not allowed")
 		}
 		b, err := json.Marshal(&s)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return nil, c.firehose.SetSettings(b)
+		return nil, nil, c.firehose.SetSettings(b)
 	default:
-		return nil, ui.ErrEventNotExist
+		return nil, nil, ui.ErrEventNotExist
 	}
 
 	form := &ui.Form{
@@ -187,7 +187,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		},
 	}
 
-	return form, nil
+	return form, nil, nil
 }
 
 // Write writes the data read from p into the file with the given path.

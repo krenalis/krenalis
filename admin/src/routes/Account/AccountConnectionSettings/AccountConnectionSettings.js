@@ -17,12 +17,12 @@ export default class AccountConnectionSettings extends React.Component {
 			settings: { Components: null, Actions: null },
 			form: {},
 			notFound: false,
+			status: null,
 		};
 	}
 
 	componentDidMount = async () => {
-		let err, connection, settings;
-
+		let err, connection, ui;
 		[connection, err] = await call('/admin/connections/get', this.connectionID);
 		if (err !== null) {
 			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
@@ -34,20 +34,20 @@ export default class AccountConnectionSettings extends React.Component {
 			return;
 		}
 		this.setState({ connection: connection });
-
-		[settings, err] = await call('/admin/connectors/ui', this.connectionID);
+		[ui, err] = await call('/admin/connectors/ui', this.connectionID);
 		if (err !== null) {
 			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
 			this.toast.current.toast();
 			return;
 		}
+		if (ui.Alert != null) alert(`Unexpected alert sent with 'load' event: ${JSON.stringify(ui.Alert)}`);
 		let form = {};
-		if (settings.Fields != null) {
-			for (let f of settings.Fields) {
+		if (ui.Form.Fields != null) {
+			for (let f of ui.Form.Fields) {
 				form[f.Name] = f.Value;
 			}
 		}
-		this.setState({ settings: settings, form: form });
+		this.setState({ settings: ui.Form, form: form });
 	};
 
 	onComponentChange = (name, value) => {
@@ -57,7 +57,7 @@ export default class AccountConnectionSettings extends React.Component {
 	};
 
 	onActionClick = async (event) => {
-		let [settings, err] = await call('/admin/connectors/ui-event', {
+		let [ui, err] = await call('/admin/connectors/ui-event', {
 			connection: this.connectionID,
 			event: event,
 			form: this.state.form,
@@ -67,18 +67,21 @@ export default class AccountConnectionSettings extends React.Component {
 			this.toast.current.toast();
 			return;
 		}
-		if (settings == null) {
-			this.setState({ status: { variant: 'success', icon: 'check2-circle', text: 'Success' } });
+		if (ui.Alert != null) {
+			this.setState({
+				status: { variant: ui.Alert.Variant, icon: 'exclamation-square', text: ui.Alert.Message },
+			});
 			this.toast.current.toast();
-			return;
 		}
-		let form = {};
-		if (settings.Components != null) {
-			for (let c of settings.Components) {
-				form[c.Name] = c.Value;
+		if (ui.Form != null) {
+			let form = {};
+			if (ui.Form.Fields != null) {
+				for (let f of ui.Form.Fields) {
+					form[f.Name] = f.Value;
+				}
 			}
+			this.setState({ settings: ui.Form, form: form });
 		}
-		this.setState({ settings: settings, form: form });
 	};
 
 	render() {

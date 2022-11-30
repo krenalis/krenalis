@@ -68,8 +68,8 @@ func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
-	return nil, ui.ErrEventNotExist
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
+	return nil, nil, ui.ErrEventNotExist
 }
 
 type user struct {

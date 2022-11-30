@@ -411,11 +411,11 @@ func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	lists, err := c.getLists()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if c.settings.List != "" {
@@ -426,13 +426,13 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 			}
 		}
 		if listName == "" {
-			return nil, ui.Errorf("List %q does not exists", c.settings.List)
+			return nil, nil, ui.Errorf("List %q does not exists", c.settings.List)
 		}
 		return &ui.Form{
 			Fields: []ui.Component{
 				&ui.Text{Name: "", Label: "Connected list", Value: listName},
 			},
-		}, nil
+		}, nil, nil
 	}
 
 	switch event {
@@ -449,12 +449,12 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 				&ui.Select{Name: "list", Value: nil, Label: "List", Placeholder: "", Options: options},
 			},
 			Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},
-		}, nil
+		}, nil, nil
 	case "save":
 		var s map[string]string
 		err := json.Unmarshal(values, &s)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		lst := s["list"]
@@ -468,7 +468,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 			}
 		}
 		if listName == "" {
-			return nil, ui.Errorf("List %q does not exists", lst)
+			return nil, nil, ui.Errorf("List %q does not exists", lst)
 		}
 
 		// Check if the list already a webhook already set.
@@ -477,14 +477,14 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 		secret := ""
 		hooks, err := c.getWebhooks(lst)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, wh := range hooks {
 			// Check if the webhook has already been set up for the current connection.
 			if strings.HasPrefix(wh.URL, webhookBase) {
 				u, err := url.Parse(wh.URL)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				secret = u.Query().Get("secret")
 				if wh.Events.Cleaned &&
@@ -500,7 +500,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 				// Update the webhook to the correct settings.
 				_, err = c.setWebhook(lst, wh.ID)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				hasWebhook = true
 			}
@@ -509,27 +509,27 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, error) {
 			// Create a webhook.
 			secret, err = c.setWebhook(lst, "")
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 		c.settings.WebhookSecret = secret
 		c.settings.List = lst
 		newSettings, err := json.Marshal(c.settings)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		err = c.firehose.SetSettings(newSettings)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		return &ui.Form{
 			Fields: []ui.Component{
 				&ui.Text{Name: "", Label: "Connected list", Value: listName},
 			},
-		}, nil
+		}, nil, nil
 	default:
-		return nil, ui.ErrEventNotExist
+		return nil, nil, ui.ErrEventNotExist
 	}
 
 }
