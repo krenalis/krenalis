@@ -143,22 +143,13 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		}
 		err = testConnection(c.ctx, &s)
 		if err != nil {
-			msg := err.Error()
-			alert := &ui.Alert{}
 			if event == "test" {
-				alert.Message = msg
-				alert.Variant = ui.Warning
-			} else if event == "save" {
-				alert.Message = "Cannot save settings: " + msg
-				alert.Variant = ui.Danger
+				return nil, ui.WarningAlert(err.Error()), nil
 			}
-			return nil, alert, nil
+			return nil, ui.DangerAlert("Cannot save settings: " + err.Error()), nil
 		}
 		if event == "test" {
-			return nil, &ui.Alert{
-				Message: "Connection established",
-				Variant: ui.Success,
-			}, nil
+			return nil, ui.SuccessAlert("Connection established"), nil
 		}
 		b, err := json.Marshal(&s)
 		if err != nil {
