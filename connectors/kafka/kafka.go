@@ -70,9 +70,6 @@ func (c *connection) Connector() *connector.Connector {
 // notify that the event has been received. The connector resends the event if
 // not acknowledged.
 //
-// If the connection's context is canceled, Receive returns a nil error or any
-// error that occurred after the cancellation.
-//
 // Caller do not modify the event data, even temporarily, and event is not
 // retained after the ack function has been called.
 func (c *connection) Receive() ([]byte, func(), error) {
@@ -99,9 +96,6 @@ func (c *connection) Receive() ([]byte, func(), error) {
 
 // Send sends an event to the stream. If ack is not nil, connector calls ack
 // when the event has been stored or when an error occurred.
-//
-// If the connection's context is canceled, Send returns a nil error or any
-// error that occurred after the cancellation.
 //
 // Send can modify the event data, but event is not retained after the ack
 // function has been called.

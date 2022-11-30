@@ -42,7 +42,7 @@ type EventStreamConnection interface {
 	// retained after the ack function has been called.
 	Receive() (event []byte, ack func(), err error)
 
-	// Send sends an event to the stream. If ack is not null, connector calls ack
+	// Send sends an event to the stream. If ack is not nil, connector calls ack
 	// when the event has been stored or when an error occurred.
 	//
 	// Send can modify the event data, but event is not retained after the ack
