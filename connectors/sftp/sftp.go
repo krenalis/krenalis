@@ -133,16 +133,23 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		}
 		err = testConnection(&s)
 		if err != nil {
-			return nil, nil, ui.Errorf("connection failed: %s", err)
+			if event == "test" {
+				return nil, ui.WarningAlert(err.Error()), nil
+			}
+			return nil, ui.DangerAlert(err.Error()), nil
 		}
 		if event == "test" {
-			return nil, nil, nil
+			return nil, ui.SuccessAlert("Connection established"), nil
 		}
 		b, err := json.Marshal(&s)
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.firehose.SetSettings(b)
+		err = c.firehose.SetSettings(b)
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, ui.SuccessAlert("Settings saved"), nil
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}

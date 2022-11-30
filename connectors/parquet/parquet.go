@@ -187,7 +187,11 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.firehose.SetSettings(b)
+		err = c.firehose.SetSettings(b)
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, ui.SuccessAlert("Settings saved"), nil
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}

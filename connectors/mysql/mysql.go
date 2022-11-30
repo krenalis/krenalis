@@ -146,7 +146,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 			if event == "test" {
 				return nil, ui.WarningAlert(err.Error()), nil
 			}
-			return nil, ui.DangerAlert("Cannot save settings: " + err.Error()), nil
+			return nil, ui.DangerAlert(err.Error()), nil
 		}
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
