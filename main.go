@@ -9,6 +9,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -30,7 +31,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer logFile.Close()
-	log.SetOutput(logFile)
+	log.SetOutput(io.MultiWriter(logFile, os.Stderr))
 	log.SetFlags(log.Ldate | log.Ltime)
 
 	// Read the configuration file.
