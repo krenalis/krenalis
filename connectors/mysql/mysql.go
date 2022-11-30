@@ -159,10 +159,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, &ui.Alert{
-			Message: "Settings saved",
-			Variant: ui.Success,
-		}, nil
+		return nil, ui.SuccessAlert("Settings saved"), nil
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}
