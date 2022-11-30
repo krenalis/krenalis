@@ -10,7 +10,6 @@ package apis
 import (
 	"errors"
 	"fmt"
-	"unicode/utf8"
 
 	"chichi/apis/types"
 	"chichi/pkg/open2b/sql"
@@ -29,8 +28,8 @@ type WorkspaceAPI struct {
 
 // Schema returns the schema with the given name. name can be "user", "group"
 // or "event". If the schema with the given name does not exist, it returns an
-// invalid schema.
-func (ws *WorkspaceAPI) Schema(name string) (types.Schema, error) {
+// empty string.
+func (ws *WorkspaceAPI) Schema(name string) (string, error) {
 	var column string
 	switch name {
 	case "user":
@@ -40,28 +39,32 @@ func (ws *WorkspaceAPI) Schema(name string) (types.Schema, error) {
 	case "event":
 		column = "eventSchema"
 	default:
-		return types.Schema{}, fmt.Errorf("invalid schema name %q", name)
+		return "", fmt.Errorf("invalid schema name %q", name)
 	}
-	var rawSchema string
-	err := ws.myDB.QueryRow("SELECT `"+column+"` FROM `workspaces` WHERE `id` = ?", ws.workspace).Scan(&rawSchema)
+	var schema string
+	err := ws.myDB.QueryRow("SELECT `"+column+"` FROM `workspaces` WHERE `id` = ?", ws.workspace).Scan(&schema)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return types.Schema{}, errors.New("workspace does not exist anymore")
+			return "", errors.New("workspace does not exist anymore")
 		}
-		return types.Schema{}, err
-	}
-	if len(rawSchema) == 0 {
-		return types.Schema{}, nil
-	}
-	schema, err := types.ParseSchema(rawSchema, nil)
-	if err != nil {
-		return types.Schema{}, fmt.Errorf("cannot unmarshal schema of workspace %d: %s", ws.workspace, err)
+		return "", err
 	}
 	return schema, nil
 }
 
+// An InvalidSchemaSyntaxError error indicates that a schema has an invalid
+// syntax.
+type InvalidSchemaSyntaxError struct {
+	Err error
+}
+
+func (err *InvalidSchemaSyntaxError) Error() string {
+	return fmt.Sprintf("schema is not valid: %s", err.Err.Error())
+}
+
 // SetSchema sets the schema with the given name. name can be "user", "group"
-// or "event".
+// or "event". If the schema has a syntax error, it returns an
+// InvalidSchemaSyntaxError error.
 func (ws *WorkspaceAPI) SetSchema(name, schema string) error {
 	var column string
 	switch name {
@@ -74,9 +77,10 @@ func (ws *WorkspaceAPI) SetSchema(name, schema string) error {
 	default:
 		return fmt.Errorf("invalid schema name %q", name)
 	}
-	if !utf8.ValidString(schema) {
-		return errors.New("invalid schema")
+	_, err := types.ParseSchema(schema, nil)
+	if err != nil {
+		return &InvalidSchemaSyntaxError{err}
 	}
-	_, err := ws.myDB.Table("Workspaces").Update(sql.Set{column: schema}, sql.Where{"id": ws.workspace})
+	_, err = ws.myDB.Table("Workspaces").Update(sql.Set{column: schema}, sql.Where{"id": ws.workspace})
 	return err
 }

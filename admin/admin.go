@@ -8,7 +8,6 @@
 package admin
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -24,6 +23,7 @@ import (
 	"time"
 
 	"chichi/apis"
+	"chichi/apis/types"
 
 	"github.com/evanw/esbuild/pkg/api"
 )
@@ -129,12 +129,20 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		if !schema.Valid() {
+		if schema == "" {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
+		sc, err := types.ParseSchema(schema, nil)
+		if err != nil {
+			if err != nil {
+				log.Printf("[error] user schema of workspace 1 is not valid: %s", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+		}
 		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(schema.PropertiesNames())
+		_ = json.NewEncoder(w).Encode(sc.PropertiesNames())
 		return
 	}
 
@@ -227,9 +235,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			w.Header().Add("Content-Type", "application/json")
-			var b bytes.Buffer
-			_ = json.NewEncoder(&b).Encode(schema)
-			_ = json.NewEncoder(w).Encode(b.String())
+			_ = json.NewEncoder(w).Encode(schema)
 
 		case "/update":
 			var request struct {
@@ -243,6 +249,11 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			err = ws.SetSchema(request.SchemaName, request.Schema)
 			if err != nil {
+				if err, ok := err.(*apis.InvalidSchemaSyntaxError); ok {
+					w.Header().Add("Content-Type", "application/json")
+					_ = json.NewEncoder(w).Encode(map[string]any{"Error": err.Error()})
+					return
+				}
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
