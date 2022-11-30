@@ -224,7 +224,7 @@ func testConnection(ctx context.Context, settings *settings) error {
 	return db.PingContext(ctx)
 }
 
-// propertyType returns the property type of the column with name c and type t.
+// propertyType returns the property type of the column with type t.
 func propertyType(t *sql.ColumnType) (types.Type, error) {
 	switch t.DatabaseTypeName() {
 	case "BIT":
