@@ -877,19 +877,20 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			return err
 		}
 
-		c, err := _connector.NewEventStreamConnection(context.Background(), connectorName, &_connector.EventStreamConfig{
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		c, err := _connector.NewEventStreamConnection(ctx, connectorName, &_connector.EventStreamConfig{
 			Role:     role,
 			Settings: settings,
 		})
 		if err != nil {
 			return importError{fmt.Errorf("cannot connect to the connector: %s", err)}
 		}
-		defer c.Close()
 		event, ack, err := c.Receive()
 		if err != nil {
 			return err
 		}
-		ack(true)
+		ack()
 		log.Printf("received event: %s", event)
 
 	case FileType:

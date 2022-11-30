@@ -66,24 +66,16 @@ func (c *connection) Connector() *connector.Connector {
 	}
 }
 
-// Close closes the stream.
-// A call to Receive or Send opens the stream if it is closed.
-func (c *connection) Close() error {
-	if c.client != nil {
-		c.client.Close()
-		c.client = nil
-	}
-	return nil
-}
-
 // Receive receives an event from the stream. Callers call the ack function to
-// notify when and if the event has been consumed. Connector resends the event
-// if the event has not been consumed.
+// notify that the event has been received. The connector resends the event if
+// not acknowledged.
+//
+// If the connection's context is canceled, Receive returns a nil error or any
+// error that occurred after the cancellation.
 //
 // Caller do not modify the event data, even temporarily, and event is not
 // retained after the ack function has been called.
-func (c *connection) Receive() ([]byte, func(bool), error) {
-	// Create a client.
+func (c *connection) Receive() ([]byte, func(), error) {
 	if c.client == nil {
 		cl, err := kgo.NewClient(c.settings.opts()...)
 		if err != nil {
@@ -100,12 +92,15 @@ func (c *connection) Receive() ([]byte, func(bool), error) {
 	}
 	record, err := c.iter.Next()
 	if err != nil {
+		if err == context.Canceled {
+			c.client.Close()
+			c.client = nil
+			err = nil
+		}
 		return nil, nil, err
 	}
-	ack := func(consumed bool) {
-		if consumed {
-			_ = c.client.CommitRecords(c.ctx, record)
-		}
+	ack := func() {
+		_ = c.client.CommitRecords(c.ctx, record)
 	}
 	return record.Value, ack, nil
 }
@@ -113,10 +108,12 @@ func (c *connection) Receive() ([]byte, func(bool), error) {
 // Send sends an event to the stream. If ack is not nil, connector calls ack
 // when the event has been stored or when an error occurred.
 //
+// If the connection's context is canceled, Send returns a nil error or any
+// error that occurred after the cancellation.
+//
 // Send can modify the event data, but event is not retained after the ack
 // function has been called.
 func (c *connection) Send(event []byte, options connector.SendOptions, ack func(err error)) error {
-	// Create a client.
 	if c.client == nil {
 		cl, err := kgo.NewClient(c.settings.opts()...)
 		if err != nil {
@@ -134,9 +131,15 @@ func (c *connection) Send(event []byte, options connector.SendOptions, ack func(
 		Value: event,
 		Topic: c.settings.Topic,
 	}
-	var promise func(*kgo.Record, error)
-	if ack != nil {
-		promise = func(r *kgo.Record, err error) { ack(err) }
+	promise := func(r *kgo.Record, err error) {
+		if err == context.Canceled {
+			c.client.Close()
+			c.client = nil
+			err = nil
+		}
+		if ack != nil {
+			ack(err)
+		}
 	}
 	c.client.Produce(c.ctx, record, promise)
 	return nil

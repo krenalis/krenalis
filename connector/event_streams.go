@@ -34,20 +34,22 @@ type SendOptions struct {
 type EventStreamConnection interface {
 	Connection
 
-	// Close closes the stream.
-	// A call to Receive or Send opens the stream if it is closed.
-	Close() error
-
 	// Receive receives an event from the stream. Callers call the ack function to
-	// notify when and if the event has been consumed. Connector resends the event
-	// if the event has not been consumed.
+	// notify that the event has been received. The connector resends the event if
+	// not acknowledged.
+	//
+	// If the connection's context is canceled, Receive returns a nil error or any
+	// error that occurred after the cancellation.
 	//
 	// Caller do not modify the event data, even temporarily, and event is not
 	// retained after the ack function has been called.
-	Receive() (event []byte, ack func(consumed bool), err error)
+	Receive() (event []byte, ack func(), err error)
 
 	// Send sends an event to the stream. If ack is not null, connector calls ack
 	// when the event has been stored or when an error occurred.
+	//
+	// If the connection's context is canceled, Send returns a nil error or any
+	// error that occurred after the cancellation.
 	//
 	// Send can modify the event data, but event is not retained after the ack
 	// function has been called.
