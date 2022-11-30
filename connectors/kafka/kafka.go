@@ -76,12 +76,9 @@ func (c *connection) Connector() *connector.Connector {
 // Caller do not modify the event data, even temporarily, and event is not
 // retained after the ack function has been called.
 func (c *connection) Receive() ([]byte, func(), error) {
-	if c.client == nil {
-		cl, err := kgo.NewClient(c.settings.opts()...)
-		if err != nil {
-			return nil, nil, err
-		}
-		c.client = cl
+	err := c.connect()
+	if err != nil {
+		return nil, nil, err
 	}
 	// Fetch the event.
 	if c.iter == nil {
@@ -92,11 +89,6 @@ func (c *connection) Receive() ([]byte, func(), error) {
 	}
 	record, err := c.iter.Next()
 	if err != nil {
-		if err == context.Canceled {
-			c.client.Close()
-			c.client = nil
-			err = nil
-		}
 		return nil, nil, err
 	}
 	ack := func() {
@@ -114,12 +106,9 @@ func (c *connection) Receive() ([]byte, func(), error) {
 // Send can modify the event data, but event is not retained after the ack
 // function has been called.
 func (c *connection) Send(event []byte, options connector.SendOptions, ack func(err error)) error {
-	if c.client == nil {
-		cl, err := kgo.NewClient(c.settings.opts()...)
-		if err != nil {
-			return err
-		}
-		c.client = cl
+	err := c.connect()
+	if err != nil {
+		return err
 	}
 	// Send the event.
 	var key []byte
@@ -131,15 +120,9 @@ func (c *connection) Send(event []byte, options connector.SendOptions, ack func(
 		Value: event,
 		Topic: c.settings.Topic,
 	}
-	promise := func(r *kgo.Record, err error) {
-		if err == context.Canceled {
-			c.client.Close()
-			c.client = nil
-			err = nil
-		}
-		if ack != nil {
-			ack(err)
-		}
+	var promise func(*kgo.Record, error)
+	if ack != nil {
+		promise = func(r *kgo.Record, err error) { ack(err) }
 	}
 	c.client.Produce(c.ctx, record, promise)
 	return nil
@@ -234,6 +217,26 @@ func (s *settings) opts() []kgo.Opt {
 		kgo.Dialer(tlsDialer.DialContext),
 	}
 	return opts
+}
+
+// connect establishes a connection to Kafka.
+func (c *connection) connect() error {
+	if c.client != nil {
+		return nil
+	}
+	cl, err := kgo.NewClient(c.settings.opts()...)
+	if err != nil {
+		return err
+	}
+	c.client = cl
+	go func() {
+		select {
+		case <-c.ctx.Done():
+			c.client.Close()
+			c.client = nil
+		}
+	}()
+	return nil
 }
 
 // testConnection tests a connection with the given settings.
