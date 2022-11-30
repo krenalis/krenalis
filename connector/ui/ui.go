@@ -152,6 +152,21 @@ type Alert struct {
 	Variant AlertVariant
 }
 
+// PrimaryAlert returns a primary alert.
+func PrimaryAlert(msg string) *Alert { return &Alert{Message: msg, Variant: Primary} }
+
+// SuccessAlert returns a success alert.
+func SuccessAlert(msg string) *Alert { return &Alert{Message: msg, Variant: Success} }
+
+// NeutralAlert returns a neutral alert.
+func NeutralAlert(msg string) *Alert { return &Alert{Message: msg, Variant: Neutral} }
+
+// WarningAlert returns a warning alert.
+func WarningAlert(msg string) *Alert { return &Alert{Message: msg, Variant: Warning} }
+
+// DangerAlert returns a danger alert.
+func DangerAlert(msg string) *Alert { return &Alert{Message: msg, Variant: Danger} }
+
 // AlertVariant represents the alert variants. The variants are taken from
 // Shoelace (see https://shoelace.style/components/alert).
 type AlertVariant int
