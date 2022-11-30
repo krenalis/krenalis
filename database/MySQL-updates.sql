@@ -667,3 +667,6 @@ INSERT INTO `connectors` (`name`, `type`, `logoURL`) VALUES
     ('Kafka','EventStream','https://cdn.icon-icons.com/icons2/2248/PNG/512/apache_kafka_icon_138937.png');
 
 UPDATE `connections` SET `identityColumn` = '', `timestampColumn` = '' WHERE `type` = 'Database';
+
+INSERT INTO `connectors` (`name`, `type`, `logoURL`) VALUES
+    ('RabbitMQ','EventStream','https://cdn.icon-icons.com/icons2/2699/PNG/512/rabbitmq_logo_icon_170810.png');

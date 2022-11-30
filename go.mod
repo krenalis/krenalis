@@ -13,6 +13,7 @@ replace (
 	chichi/connectors/mysql => ./connectors/mysql
 	chichi/connectors/parquet => ./connectors/parquet
 	chichi/connectors/postgresql => ./connectors/postgresql
+	chichi/connectors/rabbitmq => ./connectors/rabbitmq
 	chichi/connectors/s3 => ./connectors/s3
 	chichi/connectors/sftp => ./connectors/sftp
 	chichi/connectors/website => ./connectors/website
@@ -29,6 +30,7 @@ require (
 	chichi/connectors/mysql v0.0.0-00010101000000-000000000000
 	chichi/connectors/parquet v0.0.0-00010101000000-000000000000
 	chichi/connectors/postgresql v0.0.0-00010101000000-000000000000
+	chichi/connectors/rabbitmq v0.0.0-00010101000000-000000000000
 	chichi/connectors/s3 v0.0.0-00010101000000-000000000000
 	chichi/connectors/sftp v0.0.0-00010101000000-000000000000
 	chichi/connectors/website v0.0.0-00010101000000-000000000000
@@ -87,6 +89,7 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/sftp v1.13.5 // indirect
+	github.com/rabbitmq/amqp091-go v1.5.0 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.3 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect

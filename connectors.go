@@ -18,6 +18,7 @@ import (
 	_ "chichi/connectors/mysql"
 	_ "chichi/connectors/parquet"
 	_ "chichi/connectors/postgresql"
+	_ "chichi/connectors/rabbitmq"
 	_ "chichi/connectors/s3"
 	_ "chichi/connectors/sftp"
 	_ "chichi/connectors/website"

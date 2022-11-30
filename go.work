@@ -13,6 +13,7 @@ use (
 	./connectors/mysql
 	./connectors/parquet
 	./connectors/postgresql
+	./connectors/rabbitmq
 	./connectors/s3
 	./connectors/sftp
 	./connectors/website
