@@ -693,6 +693,11 @@ func (err importError) Error() string {
 	return err.err.Error()
 }
 
+const (
+	identityColumn  = "identity"
+	timestampColumn = "timestamp"
+)
+
 // startImport starts an import for the connection with identifier id and type
 // typ. It is called by the Import method in its own goroutine.
 // The returned error is stored in the databases with the import.
@@ -768,14 +773,14 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 
 	case DatabaseType:
 
-		var connectorName, identityColumn, timestampColumn, usersQuery string
+		var connectorName, usersQuery string
 		var connector int
 		var settings []byte
 		err := this.myDB.QueryRow(
-			"SELECT `c`.`name`, `s`.`connector`, `s`.`identityColumn`, `s`.`timestampColumn`, `s`.`settings`, `s`.`usersQuery`\n"+
+			"SELECT `c`.`name`, `s`.`connector`,  `s`.`settings`, `s`.`usersQuery`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &identityColumn, &timestampColumn, &settings, &usersQuery)
+				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &settings, &usersQuery)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil
@@ -822,9 +827,6 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		}
 		if identityIndex == noColumn {
 			return importError{fmt.Errorf("missing identity column %q", identityColumn)}
-		}
-		if timestampColumn != "" && timestampIndex == noColumn {
-			return importError{fmt.Errorf("missing timestamp column %q", timestampColumn)}
 		}
 		var now time.Time
 		if timestampIndex == noColumn {
