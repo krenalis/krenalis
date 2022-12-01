@@ -8,10 +8,10 @@
 package types
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"time"
 	"unicode/utf8"
@@ -24,14 +24,14 @@ import (
 // maxTime is the maximum value for a Time value.
 const maxTime = 24 * 60 * 60 * 1000
 
-// Decode decodes a JSON-encoded data, validates it according to schema and
-// returns the decoded value.
+// Decode decodes a JSON-encoded data, read from r, validates it according to
+// schema and returns the decoded value.
 // Panics is schema is not valid.
-func Decode(data []byte, schema Schema) (map[string]any, error) {
+func Decode(r io.Reader, schema Schema) (map[string]any, error) {
 	if !schema.Valid() {
 		return nil, errors.New("schema is not valid")
 	}
-	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
+	dec := json.NewDecoder(norm.NFC.Reader(r))
 	dec.UseNumber()
 	v, err := decodeBySchema(dec, schema, false)
 	if err != nil {
@@ -42,11 +42,11 @@ func Decode(data []byte, schema Schema) (map[string]any, error) {
 
 // DecodeStrict is like Decode but returns an error if a property of the schema
 // or a property of an object is missing.
-func DecodeStrict(data []byte, schema Schema) (any, error) {
+func DecodeStrict(r io.Reader, schema Schema) (map[string]any, error) {
 	if !schema.Valid() {
 		return nil, errors.New("schema is not valid")
 	}
-	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
+	dec := json.NewDecoder(norm.NFC.Reader(r))
 	dec.UseNumber()
 	v, err := decodeBySchema(dec, schema, true)
 	if err != nil {

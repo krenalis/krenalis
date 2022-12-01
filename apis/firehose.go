@@ -8,6 +8,7 @@
 package apis
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -102,7 +103,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 		fh.setError(importError{err})
 		return
 	}
-	properties, err = types.Decode(b, fh.userSchema)
+	properties, err = types.Decode(bytes.NewReader(b), fh.userSchema)
 	if err != nil {
 		fh.setError(importError{fmt.Errorf("user schema validation failed: %s", err)})
 		return
