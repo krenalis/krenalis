@@ -8,13 +8,17 @@
 package apis
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"strconv"
+	"time"
 
 	"chichi/apis/types"
 	"chichi/pkg/open2b/sql"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/shopspring/decimal"
 )
 
 type WorkspaceAPI struct {
@@ -83,4 +87,133 @@ func (ws *WorkspaceAPI) SetSchema(name, schema string) error {
 	}
 	_, err = ws.myDB.Table("Workspaces").Update(sql.Set{column: schema}, sql.Where{"id": ws.workspace})
 	return err
+}
+
+// A PropertyNotFoundError is returned by the (*WorkspaceAPI).Users method if a
+// property does not exist.
+type PropertyNotFoundError struct {
+	Name string
+}
+
+func (err *PropertyNotFoundError) Error() string {
+	return fmt.Sprintf("property %q does not exist", err.Name)
+}
+
+// Users returns the user schema and the users, with only given properties, in
+// range [first,first+limit] with first >= 0 and 0 < limit <= 1000.
+//
+// If a property does not exist, it returns a PropertyNotFoundError error.
+func (ws *WorkspaceAPI) Users(properties []string, first, limit int) (types.Schema, [][]any, error) {
+
+	if len(properties) == 0 {
+		return types.Schema{}, nil, errors.New("properties cannot be empty")
+	}
+	if first < 0 || first > maxInt32 {
+		return types.Schema{}, nil, errors.New("invalid first")
+	}
+	if limit < 1 || limit > 1000 {
+		return types.Schema{}, nil, errors.New("invalid limit")
+	}
+
+	// Read the schema.
+	var rawSchema string
+	err := ws.myDB.QueryRow("SELECT `userSchema` FROM `workspaces` WHERE `id` = ?", ws.workspace).Scan(&rawSchema)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return types.Schema{}, nil, errors.New("workspace does not exist anymore")
+		}
+		return types.Schema{}, nil, err
+	}
+	schema, err := types.ParseSchema(rawSchema, nil)
+	if err != nil {
+		return types.Schema{}, nil, err
+	}
+	schemaProperties := schema.Properties()
+	propertyByName := map[string]types.Property{}
+	for _, p := range schemaProperties {
+		propertyByName[p.Name] = p
+	}
+
+	// Build the query.
+	var query bytes.Buffer
+	query.WriteString("SELECT ")
+	for i, name := range properties {
+		if _, ok := propertyByName[name]; !ok {
+			return types.Schema{}, nil, &PropertyNotFoundError{name}
+		}
+		if i > 0 {
+			query.WriteByte(',')
+		}
+		query.WriteByte('`')
+		query.WriteString(name)
+		query.WriteByte('`')
+	}
+	query.WriteString(" FROM `warehouse_users` LIMIT ")
+	if first > 0 {
+		query.WriteString(strconv.Itoa(first))
+		query.WriteString(", ")
+	}
+	query.WriteString(strconv.Itoa(limit))
+
+	// Execute the query.
+	var users [][]any
+	err = ws.myDB.QueryScan(query.String(), func(rows *sql.Rows) error {
+		var err error
+		for rows.Next() {
+			user := make([]any, len(properties))
+			for i := range user {
+				name := properties[i]
+				typ := propertyByName[name].Type
+				switch typ.PhysicalType() {
+				case types.PtBoolean:
+					var v bool
+					user[i] = &v
+				case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
+					var v int
+					user[i] = &v
+				case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+					var v uint
+					user[i] = &v
+				case types.PtFloat, types.PtFloat32:
+					var v float64
+					user[i] = &v
+				case types.PtDecimal:
+					var v decimal.Decimal
+					user[i] = &v
+				case types.PtDateTime, types.PtDate:
+					var v time.Time
+					user[i] = &v
+				case types.PtTime, types.PtYear:
+					var v int
+					user[i] = &v
+				case types.PtUUID, types.PtJSON, types.PtText, types.PtArray, types.PtObject, types.PtMap:
+					var v string
+					user[i] = &v
+				}
+			}
+			if err = rows.Scan(user...); err != nil {
+				return err
+			}
+			users = append(users, user)
+		}
+		return nil
+	})
+	if err != nil {
+		return types.Schema{}, nil, err
+	}
+	if users == nil {
+		users = [][]any{}
+	}
+
+	// Create the schema to return, with only the required properties.
+	returnedProperties := make([]types.Property, len(properties))
+	for i, name := range properties {
+		returnedProperties[i] = propertyByName[name]
+	}
+	schema, err = types.SchemaOf(returnedProperties)
+	if err != nil {
+		return types.Schema{}, nil, fmt.Errorf("cannot create a new schema from the user schema: %s", err)
+	}
+
+	return schema, users, err
 }
