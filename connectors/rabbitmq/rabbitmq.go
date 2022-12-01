@@ -65,6 +65,19 @@ func (c *connection) Connector() *connector.Connector {
 	}
 }
 
+// Close closes the stream. Must be called if at least one Send or Receive call
+// has been made. It cannot be called concurrently with Send and Receive.
+func (c *connection) Close() error {
+	c.deliveries = nil
+	err := c.ch.Close()
+	if err2 := c.conn.Close(); err == nil {
+		err = err2
+	}
+	c.ch = nil
+	c.conn = nil
+	return err
+}
+
 // Receive receives an event from the stream. Callers call the ack function to
 // notify that the event has been received. The connector resends the event if
 // not acknowledged.
@@ -245,18 +258,6 @@ func (c *connection) connect(deliveries bool) (err error) {
 		}
 	}()
 	return nil
-}
-
-// disconnect disconnects from RabbitMQ.
-func (c *connection) disconnect() error {
-	c.deliveries = nil
-	err := c.ch.Close()
-	if err2 := c.conn.Close(); err == nil {
-		err = err2
-	}
-	c.ch = nil
-	c.conn = nil
-	return err
 }
 
 // testConnection tests a connection with the given settings.

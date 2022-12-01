@@ -879,7 +879,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			return err
 		}
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		c, err := _connector.NewEventStreamConnection(ctx, connectorName, &_connector.EventStreamConfig{
 			Role:     role,
@@ -888,6 +888,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		if err != nil {
 			return importError{fmt.Errorf("cannot connect to the connector: %s", err)}
 		}
+		defer c.Close()
 		event, ack, err := c.Receive()
 		if err != nil {
 			return err

@@ -66,6 +66,17 @@ func (c *connection) Connector() *connector.Connector {
 	}
 }
 
+// Close closes the stream. Must be called if at least one Send or Receive call
+// has been made. It cannot be called concurrently with Send and Receive.
+func (c *connection) Close() error {
+	if c.client == nil {
+		return nil
+	}
+	c.client.Close()
+	c.client = nil
+	return nil
+}
+
 // Receive receives an event from the stream. Callers call the ack function to
 // notify that the event has been received. The connector resends the event if
 // not acknowledged.
@@ -230,13 +241,6 @@ func (c *connection) connect() error {
 		return err
 	}
 	c.client = cl
-	go func() {
-		select {
-		case <-c.ctx.Done():
-			c.client.Close()
-			c.client = nil
-		}
-	}()
 	return nil
 }
 
