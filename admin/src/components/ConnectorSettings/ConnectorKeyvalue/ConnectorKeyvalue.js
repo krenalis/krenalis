@@ -7,7 +7,10 @@ export default class ConnectorKeyValue extends React.Component {
 	constructor(props) {
 		super(props);
 		let rows = [];
-		let keyValues = Object.entries(this.props.value);
+		let keyValues = [];
+		if (this.props.value) {
+			keyValues = Object.entries(this.props.value);
+		}
 		if (keyValues.length > 0) {
 			let counter = 1;
 			for (const [key, value] of keyValues) {
