@@ -670,3 +670,7 @@ UPDATE `connections` SET `identityColumn` = '', `timestampColumn` = '' WHERE `ty
 
 INSERT INTO `connectors` (`name`, `type`, `logoURL`) VALUES
     ('RabbitMQ','EventStream','https://cdn.icon-icons.com/icons2/2699/PNG/512/rabbitmq_logo_icon_170810.png');
+
+ALTER TABLE `connections`
+    ADD COLUMN `enabled` TINYINT UNSIGNED NOT NULL AFTER `role`,
+    ADD COLUMN `stream` INT NOT NULL AFTER `storage`;

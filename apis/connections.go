@@ -106,6 +106,7 @@ type Connection struct {
 	Storage  int // zero if the connection is not a file or does not have a storage
 	OAuthURL string
 	LogoURL  string
+	Enabled  bool
 }
 
 // ConnectionInfo represents a connection.
@@ -116,6 +117,7 @@ type ConnectionInfo struct {
 	Storage    int // zero if the connection is not a file or does not have a storage
 	Name       string
 	LogoURL    string
+	Enabled    bool
 	UsersQuery string // only for databases.
 }
 

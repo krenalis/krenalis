@@ -8,6 +8,7 @@
 package apis
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,12 +18,12 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
+	"chichi/apis/httpcollector"
 	"chichi/apis/types"
+	_connector "chichi/connector"
 	"chichi/pkg/open2b/sql"
-
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/go-chi/chi/v5"
 )
@@ -33,28 +34,106 @@ var (
 )
 
 type APIs struct {
-	myDB     *sql.DB
-	chDB     chDriver.Conn
-	Accounts *Accounts
-	Users    *Users
-
-	eventsQueue      []*Event
-	eventsQueueMutex sync.Mutex
+	myDB      *sql.DB
+	chDB      chDriver.Conn
+	collector *httpcollector.Collector
+	Accounts  *Accounts
+	Users     *Users
 }
 
 var hasBeenCalled bool
 
 // New returns an API instance. It can only be called once.
 func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
+
 	if hasBeenCalled {
 		panic("apis.New has already been called")
 	}
 	hasBeenCalled = true
+
 	apis := &APIs{myDB: myDB, chDB: chDB}
 	apis.Accounts = &Accounts{apis}
 	apis.Users = &Users{apis}
 	apis.initSchema()
-	apis.startEventFlusher()
+
+	// Read the source event stream collectors and the source connections that
+	// send the events into the stream with their keys.
+	var streams []*httpcollector.Stream
+	err := myDB.QueryScan(
+		"SELECT `s`.`id`, `co`.`name` AS `connector`, `s`.`settings`, `ci`.`id` AS `Producer`, CAST(`ci`.`type` AS UNSIGNED), `k`.`key`\n"+
+			"FROM `connections` AS `s`\n"+
+			"INNER JOIN `connectors` AS `co` ON `co`.`id` = `s`.`connector`\n"+
+			"INNER JOIN `connections` AS `ci` ON `ci`.`stream` = `s`.`id`\n"+
+			"INNER JOIN `connections_keys` AS `k` ON `k`.`connection` = `ci`.`id`\n"+
+			"WHERE `s`.`type` = 'EventStream' AND `s`.`role` = 'Source' AND `s`.`settings` != '' AND `s`.`enabled` AND `ci`.`enabled`",
+		func(rows *sql.Rows) error {
+		Rows:
+			for rows.Next() {
+				var stream httpcollector.Stream
+				var producerID int
+				var producerType _connector.Type
+				var producerKey string
+				if err := rows.Scan(&stream.ID, &stream.Connector, &stream.Settings, &producerID, &producerType, &producerKey); err != nil {
+					return err
+				}
+				for _, s := range streams {
+					if s.ID == stream.ID {
+						for _, p := range s.Producers {
+							if p.ID == producerID {
+								p.Keys = append(p.Keys, producerKey)
+								continue Rows
+							}
+						}
+						s.Producers = append(s.Producers, &httpcollector.Producer{
+							ID:   producerID,
+							Type: producerType,
+							Keys: []string{producerKey},
+						})
+						continue Rows
+					}
+				}
+				stream.Producers = []*httpcollector.Producer{{
+					ID:   producerID,
+					Type: producerType,
+					Keys: []string{producerKey},
+				}}
+				streams = append(streams, &stream)
+			}
+			return nil
+		})
+	if err != nil {
+		panic(err)
+	}
+
+	apis.collector, err = httpcollector.New(context.Background(), streams)
+	if err != nil {
+		panic(err)
+	}
+
+	// Read the all the source event stream collectors.
+	var allStreams []*evenCollectorStream
+	err = myDB.QueryScan(
+		"SELECT `s`.`id`, `co`.`name` AS `connector`, `s`.`settings`\n"+
+			"FROM `connections` AS `s`\n"+
+			"INNER JOIN `connectors` AS `co` ON `co`.`id` = `s`.`connector`\n"+
+			"WHERE `s`.`type` = 'EventStream' AND `s`.`role` = 'Source' AND `s`.`settings` != '' AND `s`.`enabled`",
+		func(rows *sql.Rows) error {
+			for rows.Next() {
+				var stream evenCollectorStream
+				if err := rows.Scan(&stream.ID, &stream.Connector, &stream.Settings); err != nil {
+					return err
+				}
+				allStreams = append(allStreams, &stream)
+			}
+			return nil
+		})
+	if err != nil {
+		panic(err)
+	}
+
+	collector := newEventConnector(apis.myDB, apis.chDB, allStreams)
+	go collector.run(context.Background())
+
 	return apis
 }
 
@@ -83,18 +162,11 @@ func (api *AccountAPI) AsWorkspace(workspace int) *WorkspaceAPI {
 func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if strings.HasPrefix(r.URL.Path, "/api/v1/events") {
-		err := apis.serveEvents(w, r)
-		if err != nil {
-			switch err {
-			case errBadRequest:
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-			case errUnauthorized:
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			default:
-				log.Printf("[error] %s", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			}
+		if apis.collector == nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
 		}
+		apis.collector.ServeHTTP(w, r)
 		return
 	}
 
