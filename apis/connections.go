@@ -1914,32 +1914,16 @@ func marshalUIFormAlert(form *ui.Form, alert *ui.Alert, role ConnectionRole) ([]
 
 	// Serialize the form, if present.
 	if form != nil {
+		comma := false
 		b.WriteString(`"Form":{"Fields":[`)
-		for i, field := range form.Fields {
-			rv := reflect.ValueOf(field).Elem()
-			rt := rv.Type()
-			if r := ui.Role(rv.FieldByName("Role").Int()); r != ui.BothRole && ConnectionRole(r) != role {
-				continue
+		for _, field := range form.Fields {
+			ok, err := marshalUIComponent(&b, field, role, comma)
+			if err != nil {
+				return nil, err
 			}
-			if i > 0 {
-				b.WriteString(`,`)
+			if ok {
+				comma = true
 			}
-			b.WriteString(`{"ComponentType":"`)
-			b.WriteString(rt.Name())
-			b.WriteString(`"`)
-			for j := 0; j < rt.NumField(); j++ {
-				if rt.Field(j).Name == "Destination" {
-					continue
-				}
-				b.WriteString(`,"`)
-				b.WriteString(rt.Field(j).Name)
-				b.WriteString(`":`)
-				err := enc.Encode(rv.Field(j).Interface())
-				if err != nil {
-					return nil, err
-				}
-			}
-			b.WriteString(`}`)
 		}
 		b.WriteString(`],"Actions":`)
 		err := enc.Encode(form.Actions)
@@ -1968,6 +1952,43 @@ func marshalUIFormAlert(form *ui.Form, alert *ui.Alert, role ConnectionRole) ([]
 	b.WriteString(`}`)
 
 	return b.Bytes(), nil
+}
+
+// marshalUIComponent marshals component with the given role in JSON format.
+// If comma is true, it prepends a comma. Returns whether it has been marhalled
+func marshalUIComponent(b *bytes.Buffer, component ui.Component, role ConnectionRole, comma bool) (bool, error) {
+	rv := reflect.ValueOf(component).Elem()
+	rt := rv.Type()
+	if r := ui.Role(rv.FieldByName("Role").Int()); r != ui.BothRole && ConnectionRole(r) != role {
+		return false, nil
+	}
+	if comma {
+		b.WriteString(`,`)
+	}
+	b.WriteString(`{"ComponentType":"`)
+	b.WriteString(rt.Name())
+	b.WriteString(`"`)
+	for j := 0; j < rt.NumField(); j++ {
+		name := rt.Field(j).Name
+		if name == "Role" {
+			continue
+		}
+		b.WriteString(`,"`)
+		b.WriteString(name)
+		b.WriteString(`":`)
+		field := rv.Field(j).Interface()
+		var err error
+		if c, ok := field.(ui.Component); ok {
+			_, err = marshalUIComponent(b, c, role, false)
+		} else {
+			err = json.NewEncoder(b).Encode(field)
+		}
+		if err != nil {
+			return false, err
+		}
+	}
+	b.WriteString(`}`)
+	return true, nil
 }
 
 // abbreviate abbreviates s to almost n runes. If s is longer than n runes,
