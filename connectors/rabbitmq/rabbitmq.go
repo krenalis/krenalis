@@ -63,6 +63,9 @@ type connection struct {
 // Close closes the stream. Must be called if at least one Send or Receive call
 // has been made. It cannot be called concurrently with Send and Receive.
 func (c *connection) Close() error {
+	if c.conn == nil {
+		return nil
+	}
 	c.deliveries = nil
 	err := c.ch.Close()
 	if err2 := c.conn.Close(); err == nil {
