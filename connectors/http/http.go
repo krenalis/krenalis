@@ -35,7 +35,11 @@ var icon []byte
 var _ connector.StorageConnection = &connection{}
 
 func init() {
-	connector.RegisterStorage("HTTP", newConnection)
+	connector.RegisterStorage(connector.Storage{
+		Name:    "HTTP",
+		Icon:    icon,
+		Connect: connect,
+	})
 }
 
 type connection struct {
@@ -50,8 +54,8 @@ type settings struct {
 	Headers map[string]string
 }
 
-// newConnection returns a new HTTP connection.
-func newConnection(ctx context.Context, conf *connector.StorageConfig) (connector.StorageConnection, error) {
+// connect returns a new HTTP connection.
+func connect(ctx context.Context, conf *connector.StorageConfig) (connector.StorageConnection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -60,15 +64,6 @@ func newConnection(ctx context.Context, conf *connector.StorageConfig) (connecto
 		}
 	}
 	return &c, nil
-}
-
-// Connector returns the connector.
-func (c *connection) Connector() *connector.Connector {
-	return &connector.Connector{
-		Name: "HTTP",
-		Type: connector.StorageType,
-		Icon: icon,
-	}
 }
 
 // Reader returns a ReadCloser from which to read the file with the given path

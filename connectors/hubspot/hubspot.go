@@ -46,7 +46,16 @@ var _ connector.AppConnection = &connection{}
 var Debug = false
 
 func init() {
-	connector.RegisterApp("HubSpot", newConnection)
+	connector.RegisterApp(connector.App{
+		Name: "HubSpot",
+		Icon: icon,
+		OAuth: connector.OAuth{
+			URL:   "https://app-eu1.hubspot.com/oauth/authorize",
+			Scope: "crm.objects.contacts.read crm.objects.contacts.write crm.schemas.contacts.read",
+		},
+		WebhooksPer: connector.WebhooksPerConnector,
+		Connect:     connect,
+	})
 }
 
 type connection struct {
@@ -57,8 +66,8 @@ type connection struct {
 	accessToken  string
 }
 
-// newConnection returns a new Hubspot connection.
-func newConnection(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
+// connect returns a new Hubspot connection.
+func connect(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
 	c := connection{
 		ctx:          ctx,
 		firehose:     conf.Firehose,
@@ -67,20 +76,6 @@ func newConnection(ctx context.Context, conf *connector.AppConfig) (connector.Ap
 		accessToken:  conf.AccessToken,
 	}
 	return &c, nil
-}
-
-// Connector returns the connector.
-func (c *connection) Connector() *connector.Connector {
-	return &connector.Connector{
-		Name: "HubSpot",
-		Type: connector.AppType,
-		Icon: icon,
-		OAuth: connector.OAuth{
-			URL:   "https://app-eu1.hubspot.com/oauth/authorize",
-			Scope: "crm.objects.contacts.read crm.objects.contacts.write crm.schemas.contacts.read",
-		},
-		WebhooksPer: connector.WebhooksPerConnector,
-	}
 }
 
 // Groups returns the groups starting from the given cursor.

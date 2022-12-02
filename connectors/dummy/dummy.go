@@ -21,7 +21,10 @@ import (
 var _ connector.AppConnection = &connection{}
 
 func init() {
-	connector.RegisterApp("Dummy", newConnection)
+	connector.RegisterApp(connector.App{
+		Name:    "Dummy",
+		Connect: connect,
+	})
 }
 
 type connection struct {
@@ -29,21 +32,13 @@ type connection struct {
 	clientSecret string
 }
 
-// newConnection returns a new Dummy connection.
-func newConnection(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
+// connect returns a new Dummy connection.
+func connect(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
 	c := connection{
 		firehose:     conf.Firehose,
 		clientSecret: conf.ClientSecret,
 	}
 	return &c, nil
-}
-
-// Connector returns information about the connector.
-func (c *connection) Connector() *connector.Connector {
-	return &connector.Connector{
-		Name: "Dummy",
-		Type: connector.AppType,
-	}
 }
 
 func (c *connection) Groups(cursor string, properties []connector.PropertyPath) error {

@@ -11,6 +11,13 @@ import (
 	"context"
 )
 
+// Server represents a server connector.
+type Server struct {
+	Name    string
+	Icon    []byte // icon in SVG format
+	Connect ServerConnectFunc
+}
+
 // ServerConfig represents the configuration of a server connection.
 type ServerConfig struct {
 	Role     Role
@@ -18,9 +25,8 @@ type ServerConfig struct {
 	Firehose Firehose
 }
 
-// ServerConnectionFunc represents functions that create new server
-// connections.
-type ServerConnectionFunc func(context.Context, *ServerConfig) (ServerConnection, error)
+// ServerConnectFunc represents functions that create new server connections.
+type ServerConnectFunc func(context.Context, *ServerConfig) (ServerConnection, error)
 
 // ServerConnection is the interface implemented by server connections.
 type ServerConnection interface {

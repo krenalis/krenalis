@@ -37,11 +37,15 @@ var icon []byte
 var _ connector.DatabaseConnection = &connection{}
 
 func init() {
-	connector.RegisterDatabase("PostgreSQL", newConnection)
+	connector.RegisterDatabase(connector.Database{
+		Name:    "PostgreSQL",
+		Icon:    icon,
+		Connect: connect,
+	})
 }
 
-// newConnection returns a new PostgreSQL connection.
-func newConnection(ctx context.Context, conf *connector.DatabaseConfig) (connector.DatabaseConnection, error) {
+// connect returns a new PostgreSQL connection.
+func connect(ctx context.Context, conf *connector.DatabaseConfig) (connector.DatabaseConnection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -56,15 +60,6 @@ type connection struct {
 	ctx      context.Context
 	settings *settings
 	firehose connector.Firehose
-}
-
-// Connector returns the connector.
-func (c *connection) Connector() *connector.Connector {
-	return &connector.Connector{
-		Name: "PostgreSQL",
-		Type: connector.DatabaseType,
-		Icon: icon,
-	}
 }
 
 // Query executes the given query and returns the resulting rows.

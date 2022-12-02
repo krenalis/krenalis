@@ -65,11 +65,20 @@ type settings struct {
 }
 
 func init() {
-	connector.RegisterApp("Mailchimp", newConnection)
+	connector.RegisterApp(connector.App{
+		Name: "Mailchimp",
+		Icon: icon,
+		OAuth: connector.OAuth{
+			URL:             "https://login.mailchimp.com/oauth2/authorize?response_type=code",
+			ForcedExpiresIn: "never",
+		},
+		WebhooksPer: connector.WebhooksPerSource,
+		Connect:     connect,
+	})
 }
 
-// newConnection returns a new Mailchimp connection.
-func newConnection(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
+// connect returns a new Mailchimp connection.
+func connect(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
 	c := connection{
 		ctx:         ctx,
 		firehose:    conf.Firehose,
@@ -96,20 +105,6 @@ func newConnection(ctx context.Context, conf *connector.AppConfig) (connector.Ap
 		}
 	}
 	return &c, nil
-}
-
-// Connector returns the connector.
-func (c *connection) Connector() *connector.Connector {
-	return &connector.Connector{
-		Name: "Mailchimp",
-		Type: connector.AppType,
-		Icon: icon,
-		OAuth: connector.OAuth{
-			URL:             "https://login.mailchimp.com/oauth2/authorize?response_type=code",
-			ForcedExpiresIn: "never",
-		},
-		WebhooksPer: connector.WebhooksPerSource,
-	}
 }
 
 // Groups returns the groups starting from the given cursor.

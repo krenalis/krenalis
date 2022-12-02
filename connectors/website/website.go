@@ -24,23 +24,18 @@ var icon []byte
 var _ connector.WebsiteConnection = &connection{}
 
 func init() {
-	connector.RegisterWebsite("Website", newConnection)
+	connector.RegisterWebsite(connector.Website{
+		Name:    "Website",
+		Icon:    icon,
+		Connect: connect,
+	})
 }
 
 type connection struct{}
 
-// newConnection returns a new website connection.
-func newConnection(context.Context, *connector.WebsiteConfig) (connector.WebsiteConnection, error) {
+// connect returns a new website connection.
+func connect(context.Context, *connector.WebsiteConfig) (connector.WebsiteConnection, error) {
 	return &connection{}, nil
-}
-
-// Connector returns the connector.
-func (c *connection) Connector() *connector.Connector {
-	return &connector.Connector{
-		Name: "Website",
-		Type: connector.WebsiteType,
-		Icon: icon,
-	}
 }
 
 // ServeUI serves the connector's user interface.

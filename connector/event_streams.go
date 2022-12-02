@@ -9,6 +9,13 @@ package connector
 
 import "context"
 
+// EventStream represents an event stream connector.
+type EventStream struct {
+	Name    string
+	Icon    []byte // icon in SVG format
+	Connect EventStreamConnectFunc
+}
+
 // EventStreamConfig represents the configuration of an event stream
 // connection.
 type EventStreamConfig struct {
@@ -17,9 +24,9 @@ type EventStreamConfig struct {
 	Firehose Firehose
 }
 
-// EventStreamConnectionFunc represents functions that create new event stream
+// EventStreamConnectFunc represents functions that create new event stream
 // connections.
-type EventStreamConnectionFunc func(context.Context, *EventStreamConfig) (EventStreamConnection, error)
+type EventStreamConnectFunc func(context.Context, *EventStreamConfig) (EventStreamConnection, error)
 
 // SendOptions are the send options.
 type SendOptions struct {

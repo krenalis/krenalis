@@ -98,9 +98,6 @@ func (role Role) String() string {
 // Connection is the interface implemented by connections.
 type Connection interface {
 
-	// Connector returns the connector.
-	Connector() *Connector
-
 	// ServeUI serves the connector's user interface.
 	ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error)
 }

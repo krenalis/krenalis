@@ -22,6 +22,15 @@ var ErrWebhookUnauthorized = errors.New("webhook unauthorized")
 // PropertyPath represents a property path.
 type PropertyPath []string
 
+// App represents an app connector.
+type App struct {
+	Name        string
+	Icon        []byte      // icon in SVG format
+	OAuth       OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
+	WebhooksPer WebhooksPer // indicates if webhooks are per connector, resource or connection
+	Connect     AppConnectFunc
+}
+
 // AppConfig represents the configuration of an app connection.
 type AppConfig struct {
 	Role         Role
@@ -32,8 +41,8 @@ type AppConfig struct {
 	AccessToken  string
 }
 
-// AppConnectionFunc represents functions that create new app connections.
-type AppConnectionFunc func(context.Context, *AppConfig) (AppConnection, error)
+// AppConnectFunc represents functions that create new app connections.
+type AppConnectFunc func(context.Context, *AppConfig) (AppConnection, error)
 
 // AppConnection is the interface implemented by app connections.
 type AppConnection interface {

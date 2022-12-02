@@ -35,7 +35,11 @@ var icon []byte
 var _ connector.StorageConnection = &connection{}
 
 func init() {
-	connector.RegisterStorage("SFTP", newConnection)
+	connector.RegisterStorage(connector.Storage{
+		Name:    "SFTP",
+		Icon:    icon,
+		Connect: connnect,
+	})
 }
 
 type connection struct {
@@ -51,8 +55,8 @@ type settings struct {
 	Password string
 }
 
-// newConnection returns a new SFTP connection.
-func newConnection(ctx context.Context, conf *connector.StorageConfig) (connector.StorageConnection, error) {
+// connnect returns a new SFTP connection.
+func connnect(ctx context.Context, conf *connector.StorageConfig) (connector.StorageConnection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

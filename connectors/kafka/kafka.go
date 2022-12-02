@@ -34,11 +34,15 @@ var icon []byte
 var _ connector.EventStreamConnection = &connection{}
 
 func init() {
-	connector.RegisterEventStream("Kafka", newConnection)
+	connector.RegisterEventStream(connector.EventStream{
+		Name:    "Kafka",
+		Icon:    icon,
+		Connect: connect,
+	})
 }
 
-// newConnection returns a new Kafka connection.
-func newConnection(ctx context.Context, conf *connector.EventStreamConfig) (connector.EventStreamConnection, error) {
+// connect returns a new Kafka connection.
+func connect(ctx context.Context, conf *connector.EventStreamConfig) (connector.EventStreamConnection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -55,15 +59,6 @@ type connection struct {
 	firehose connector.Firehose
 	client   *kgo.Client
 	iter     *fetchesRecordIter
-}
-
-// Connector returns the connector.
-func (c *connection) Connector() *connector.Connector {
-	return &connector.Connector{
-		Name: "Kafka",
-		Type: connector.EventStreamType,
-		Icon: icon,
-	}
 }
 
 // Close closes the stream. Must be called if at least one Send or Receive call

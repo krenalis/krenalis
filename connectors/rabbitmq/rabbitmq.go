@@ -32,11 +32,15 @@ var icon []byte
 var _ connector.EventStreamConnection = &connection{}
 
 func init() {
-	connector.RegisterEventStream("RabbitMQ", newConnection)
+	connector.RegisterEventStream(connector.EventStream{
+		Name:    "RabbitMQ",
+		Icon:    icon,
+		Connect: connect,
+	})
 }
 
-// newConnection returns a new RabbitMQ connection.
-func newConnection(ctx context.Context, conf *connector.EventStreamConfig) (connector.EventStreamConnection, error) {
+// connect returns a new RabbitMQ connection.
+func connect(ctx context.Context, conf *connector.EventStreamConfig) (connector.EventStreamConnection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -54,15 +58,6 @@ type connection struct {
 	conn       *amqp.Connection
 	ch         *amqp.Channel
 	deliveries <-chan amqp.Delivery
-}
-
-// Connector returns the connector.
-func (c *connection) Connector() *connector.Connector {
-	return &connector.Connector{
-		Name: "RabbitMQ",
-		Type: connector.EventStreamType,
-		Icon: icon,
-	}
 }
 
 // Close closes the stream. Must be called if at least one Send or Receive call

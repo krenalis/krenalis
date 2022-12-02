@@ -11,6 +11,13 @@ import (
 	"context"
 )
 
+// Mobile represents a mobile connector.
+type Mobile struct {
+	Name    string
+	Icon    []byte // icon in SVG format
+	Connect MobileConnectFunc
+}
+
 // MobileConfig represents the configuration of a mobile connection.
 type MobileConfig struct {
 	Role     Role
@@ -18,9 +25,8 @@ type MobileConfig struct {
 	Firehose Firehose
 }
 
-// MobileConnectionFunc represents functions that create new mobile
-// connections.
-type MobileConnectionFunc func(context.Context, *MobileConfig) (MobileConnection, error)
+// MobileConnectFunc represents functions that create new mobile connections.
+type MobileConnectFunc func(context.Context, *MobileConfig) (MobileConnection, error)
 
 // MobileConnection is the interface implemented by mobile connections.
 type MobileConnection interface {
