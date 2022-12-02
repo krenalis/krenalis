@@ -103,7 +103,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Read the workspace.
 	workspace, _ := strconv.Atoi(r.Header.Get("X-Workspace"))
 	if workspace <= 0 {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
+		http.Error(w, "Bad Request (missing 'X-Workspace' header)", http.StatusBadRequest)
 		return
 	}
 	// Read the account.
