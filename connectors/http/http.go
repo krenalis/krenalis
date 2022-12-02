@@ -100,7 +100,9 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 	switch event {
 	case "load":
 		// Load the Form.
-		if c.settings != nil {
+		if c.settings == nil {
+			s.Port = 443
+		} else if c.settings != nil {
 			s = *c.settings
 			for k, v := range s.Headers {
 				headers[k] = v
