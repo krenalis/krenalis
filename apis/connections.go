@@ -112,25 +112,29 @@ type Connection struct {
 // ConnectionInfo represents a connection.
 type ConnectionInfo struct {
 	ID         int
+	Name       string
 	Type       ConnectorType
 	Role       ConnectionRole
 	Storage    int // zero if the connection is not a file or does not have a storage
-	Name       string
 	LogoURL    string
 	Enabled    bool
 	UsersQuery string // only for databases.
 }
 
-// AddApp adds an app connection given its role, app connector, OAuth refresh
-// and access tokens and returns its identifier.
+// AddApp adds an app connection given its role, app connector, name, OAuth
+// refresh and access tokens and returns its identifier. name cannot be empty
+// and cannot be longer than 120 runes.
 //
 // If the connector does not exist, it returns a ConnectorNotFoundError error.
-func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken, accessToken, expiresIn string) (int, error) {
+func (this *Connections) AddApp(role ConnectionRole, connector int, name string, refreshToken, accessToken, expiresIn string) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
 	if connector <= 0 || connector > maxInt32 {
 		return 0, errors.New("invalid connector")
+	}
+	if name == "" || utf8.RuneCountInString(name) > 120 {
+		return 0, errors.New("invalid name")
 	}
 	conn, err := this.api.apis.Connector(connector)
 	if err != nil {
@@ -188,8 +192,8 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken
 			return err
 		}
 		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `type` = 'App', `role` = ?, `connector` = ?, `resource` = ?",
-			id, this.workspace, role, connector, resource)
+			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'App', `role` = ?, `connector` = ?, `resource` = ?",
+			id, this.workspace, name, role, connector, resource)
 		return err
 	})
 	if err != nil {
@@ -206,16 +210,20 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, refreshToken
 	return id, err
 }
 
-// AddDatabase adds a database connection given its role, database connector
-// and returns its identifier.
+// AddDatabase adds a database connection given its role, database connector,
+// name and returns its identifier. name cannot be empty and cannot be longer
+// than 120 runes.
 //
 // If the connector does not exist, it returns a ConnectorNotFoundError error.
-func (this *Connections) AddDatabase(role ConnectionRole, connector int) (int, error) {
+func (this *Connections) AddDatabase(role ConnectionRole, connector int, name string) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
 	if connector <= 0 || connector > maxInt32 {
 		return 0, errors.New("invalid connector")
+	}
+	if name == "" || utf8.RuneCountInString(name) > 120 {
+		return 0, errors.New("invalid name")
 	}
 	var id int
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
@@ -235,8 +243,8 @@ func (this *Connections) AddDatabase(role ConnectionRole, connector int) (int, e
 			return err
 		}
 		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `type` = 'Database', `role` = ?, `connector` = ?",
-			id, this.workspace, role, connector)
+			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'Database', `role` = ?, `connector` = ?",
+			id, this.workspace, name, role, connector)
 		return err
 	})
 	if err != nil {
@@ -245,13 +253,14 @@ func (this *Connections) AddDatabase(role ConnectionRole, connector int) (int, e
 	return id, nil
 }
 
-// AddFile adds a file connection given its role, connector and storage
-// connection and returns its identifier. If storage is 0, the file connection
-// does not have a storage, otherwise storage must have the given role.
+// AddFile adds a file connection given its role, connector, storage
+// connection, name and returns its identifier. If storage is 0, the file
+// connection does not have a storage, otherwise storage must have the given
+// role. name cannot be empty and cannot be longer than 120 runes.
 //
 // If the connector does not exist, it returns a ConnectorNotFoundError error.
 // If the storage does not exist, it returns a ConnectionNotFound error.
-func (this *Connections) AddFile(role ConnectionRole, connector, storage int) (int, error) {
+func (this *Connections) AddFile(role ConnectionRole, connector, storage int, name string) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
@@ -260,6 +269,9 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int) (i
 	}
 	if storage < 0 || storage > maxInt32 {
 		return 0, errors.New("invalid storage")
+	}
+	if name == "" || utf8.RuneCountInString(name) > 120 {
+		return 0, errors.New("invalid name")
 	}
 	var id int
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
@@ -300,8 +312,8 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int) (i
 			return err
 		}
 		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `type` = 'File', `role` = ?, `connector` = ?, `storage` = ?",
-			id, this.workspace, role, connector, storage)
+			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'File', `role` = ?, `connector` = ?, `storage` = ?",
+			id, this.workspace, name, role, connector, storage)
 		return err
 	})
 	if err != nil {
@@ -310,16 +322,20 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int) (i
 	return id, nil
 }
 
-// AddEventStream adds an event stream connection given its role and event
-// stream connector.
+// AddEventStream adds an event stream connection given its role, event stream
+// connector and name. name cannot be empty and cannot be longer than 120
+// runes.
 //
 // If the connector does not exist, it returns a ConnectorNotFoundError error.
-func (this *Connections) AddEventStream(role ConnectionRole, connector int) (int, error) {
+func (this *Connections) AddEventStream(role ConnectionRole, connector int, name string) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
 	if connector <= 0 || connector > maxInt32 {
 		return 0, errors.New("invalid connector")
+	}
+	if name == "" || utf8.RuneCountInString(name) > 120 {
+		return 0, errors.New("invalid name")
 	}
 	var id int
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
@@ -339,8 +355,8 @@ func (this *Connections) AddEventStream(role ConnectionRole, connector int) (int
 			return err
 		}
 		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `type` = 'EventStream', `role` = ?, `connector` = ?",
-			id, this.workspace, role, connector)
+			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'EventStream', `role` = ?, `connector` = ?",
+			id, this.workspace, name, role, connector)
 		return err
 	})
 	if err != nil {
@@ -349,15 +365,19 @@ func (this *Connections) AddEventStream(role ConnectionRole, connector int) (int
 	return id, nil
 }
 
-// AddServer adds a server connection given its role and server connector.
+// AddServer adds a server connection given its role, server connector and
+// name. name cannot be empty and cannot be longer than 120 runes.
 //
 // If the connector does not exist, it returns a ConnectorNotFoundError error.
-func (this *Connections) AddServer(role ConnectionRole, connector int) (int, error) {
+func (this *Connections) AddServer(role ConnectionRole, connector int, name string) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
 	if connector <= 0 || connector > maxInt32 {
 		return 0, errors.New("invalid connector")
+	}
+	if name == "" || utf8.RuneCountInString(name) > 120 {
+		return 0, errors.New("invalid name")
 	}
 	// Generate the API key.
 	key, err := generateAPIKey()
@@ -382,8 +402,8 @@ func (this *Connections) AddServer(role ConnectionRole, connector int) (int, err
 			return err
 		}
 		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `type` = 'Server', `role` = ?, `connector` = ?",
-			id, this.workspace, role, connector)
+			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'Server', `role` = ?, `connector` = ?",
+			id, this.workspace, name, role, connector)
 		if err != nil {
 			return err
 		}
@@ -396,15 +416,19 @@ func (this *Connections) AddServer(role ConnectionRole, connector int) (int, err
 	return id, nil
 }
 
-// AddMobile adds a mobile connection given its role and mobile connector.
+// AddMobile adds a mobile connection given its role, mobile connector and
+// name. name cannot be empty and cannot be longer than 120 runes.
 //
 // If the connector does not exist, it returns a ConnectorNotFoundError error.
-func (this *Connections) AddMobile(role ConnectionRole, connector int) (int, error) {
+func (this *Connections) AddMobile(role ConnectionRole, connector int, name string) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
 	if connector <= 0 || connector > maxInt32 {
 		return 0, errors.New("invalid connector")
+	}
+	if name == "" || utf8.RuneCountInString(name) > 120 {
+		return 0, errors.New("invalid name")
 	}
 	var id int
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
@@ -424,8 +448,8 @@ func (this *Connections) AddMobile(role ConnectionRole, connector int) (int, err
 			return err
 		}
 		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `type` = 'Server', `role` = ?, `connector` = ?",
-			id, this.workspace, role, connector)
+			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'Server', `role` = ?, `connector` = ?",
+			id, this.workspace, name, role, connector)
 		return err
 	})
 	if err != nil {
@@ -434,16 +458,20 @@ func (this *Connections) AddMobile(role ConnectionRole, connector int) (int, err
 	return id, nil
 }
 
-// AddStorage adds a storage connection given its role and connector and
-// returns its identifier.
+// AddStorage adds a storage connection given its role, connector, name and
+// returns its identifier. name cannot be empty and cannot be longer than 120
+// runes.
 //
 // If the connector does not exist, it returns a ConnectorNotFoundError error.
-func (this *Connections) AddStorage(role ConnectionRole, connector int) (int, error) {
+func (this *Connections) AddStorage(role ConnectionRole, connector int, name string) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
 	if connector <= 0 || connector > maxInt32 {
 		return 0, errors.New("invalid connector")
+	}
+	if name == "" || utf8.RuneCountInString(name) > 120 {
+		return 0, errors.New("invalid name")
 	}
 	var id int
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
@@ -463,8 +491,8 @@ func (this *Connections) AddStorage(role ConnectionRole, connector int) (int, er
 			return err
 		}
 		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `type` = 'Storage', `role` = ?, `connector` = ?",
-			id, this.workspace, role, connector)
+			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'Storage', `role` = ?, `connector` = ?",
+			id, this.workspace, name, role, connector)
 		return err
 	})
 	if err != nil {
@@ -473,17 +501,20 @@ func (this *Connections) AddStorage(role ConnectionRole, connector int) (int, er
 	return id, nil
 }
 
-// AddWebsite adds a website connection given its role, website connector and
-// website host and returns its identifier. host may be of the form
-// "host:port".
+// AddWebsite adds a website connection given its role, website connector,
+// name, website host and returns its identifier. name cannot be empty and
+// cannot be longer than 120 runes. host may be of the form "host:port".
 //
 // If the connector does not exist, it returns a ConnectorNotFoundError error.
-func (this *Connections) AddWebsite(role ConnectionRole, connector int, host string) (int, error) {
+func (this *Connections) AddWebsite(role ConnectionRole, connector int, name, host string) (int, error) {
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
 	}
 	if connector <= 0 || connector > maxInt32 {
 		return 0, errors.New("invalid connector")
+	}
+	if name == "" || utf8.RuneCountInString(name) > 120 {
+		return 0, errors.New("invalid name")
 	}
 	if h, p, found := strings.Cut(host, ":"); h == "" || len(host) > 255 {
 		return 0, errors.New("invalid website host")
@@ -511,8 +542,8 @@ func (this *Connections) AddWebsite(role ConnectionRole, connector int, host str
 			return err
 		}
 		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `type` = 'Website', `role` = ?, `connector` = ?, `websiteHost` = ?",
-			id, this.workspace, role, connector, host)
+			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'Website', `role` = ?, `connector` = ?, `websiteHost` = ?",
+			id, this.workspace, name, role, connector, host)
 		return err
 	})
 	if err != nil {
@@ -529,12 +560,12 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 	}
 	s := ConnectionInfo{ID: id}
 	err := this.myDB.QueryRow(
-		"SELECT CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `c`.`name`, `c`.`logoURL`,"+
+		"SELECT `s`.`name`, CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `c`.`logoURL`,"+
 			" `s`.`enabled`, `s`.`usersQuery`\n"+
 			"FROM `connections` AS `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?",
-		id, this.workspace).Scan(&s.Type, &s.Role, &s.Name, &s.LogoURL, &s.Enabled, &s.UsersQuery)
+		id, this.workspace).Scan(&s.Name, &s.Type, &s.Role, &s.LogoURL, &s.Enabled, &s.UsersQuery)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ConnectionNotFoundError{}
@@ -1047,7 +1078,7 @@ func (this *Connections) Imports(id int) ([]*Import, error) {
 func (this *Connections) List() ([]*Connection, error) {
 	sources := []*Connection{}
 	err := this.myDB.QueryScan(
-		"SELECT `s`.`id`, CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `s`.`storage`, `c`.`name`,"+
+		"SELECT `s`.`id`, `s`.`name`, CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `s`.`storage`,"+
 			" `c`.`oAuthURL`, `c`.`logoURL`, `s`.`enabled`\n"+
 			"FROM `connections` as `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
@@ -1055,8 +1086,7 @@ func (this *Connections) List() ([]*Connection, error) {
 			var err error
 			for rows.Next() {
 				var c Connection
-				if err = rows.Scan(&c.ID, &c.Type, &c.Role, &c.Storage, &c.Name, &c.OAuthURL, &c.LogoURL,
-					&c.Enabled); err != nil {
+				if err = rows.Scan(&c.ID, &c.Name, &c.Type, &c.Role, &c.Storage, &c.OAuthURL, &c.LogoURL, &c.Enabled); err != nil {
 					return err
 				}
 				sources = append(sources, &c)

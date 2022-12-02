@@ -44,6 +44,7 @@ INSERT INTO `connectors` (`name`, `type`, `logoURL`, `webhooksPer`, `oAuthURL`, 
 CREATE TABLE `connections` (
   `id` INT NOT NULL,
   `workspace` INT NOT NULL,
+  `name` VARCHAR(120) NOT NULL DEFAULT '',
   `type` ENUM('App', 'Database', 'EventStream', 'File', 'Mobile', 'Server', 'Storage', 'Website') NOT NULL DEFAULT 'App',
   `role` ENUM('Source', 'Destination') NOT NULL DEFAULT 'Source',
   `enabled` TINYINT UNSIGNED NOT NULL,

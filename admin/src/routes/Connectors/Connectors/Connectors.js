@@ -38,7 +38,7 @@ export default class Connectors extends React.Component {
 
 	installConnection = async (c, s, host) => {
 		let role = this.connectionRole == null || this.connectionRole === '' ? 'Source' : this.connectionRole;
-		let body = { Type: c.Type, Connector: c.ID, Storage: 0, Role: role, Host: '' };
+		let body = { Connector: c.ID, Storage: 0, Role: role, Host: '' };
 		if (c.OAuth.URL === '') {
 			if (c.Type === 'File') body.Storage = s;
 			if (c.Type === 'Website') body.Host = host;

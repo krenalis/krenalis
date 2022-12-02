@@ -676,3 +676,10 @@ ALTER TABLE `connections`
     ADD COLUMN `stream` INT NOT NULL AFTER `storage`;
 
 UPDATE `connectors` SET `webhooksPer` = 'None', `oAuthURL` = '', `oAuthClientID` = '', `oAuthClientSecret` = '', `oAuthTokenEndpoint` = '' WHERE (`id` = '3');
+
+ALTER TABLE `connections`
+    ADD COLUMN `name` VARCHAR(120) NOT NULL DEFAULT '' AFTER `workspace`;
+
+UPDATE `connections`, `connectors`
+SET `connections`.`name` = `connectors`.`name`
+WHERE `connections`.`connector` = `connectors`.`id`;

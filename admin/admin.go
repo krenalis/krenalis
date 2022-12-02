@@ -756,7 +756,6 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 	ws := api.AsWorkspace(1) // TODO(marco): what is the workspace?
 
 	connection := struct {
-		Type      string
 		Connector int
 		Storage   int
 		Role      string
@@ -778,25 +777,36 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 		return nil
 	}
 
+	conn, err := admin.apis.Connector(connection.Connector)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		log.Printf("[error] cannot get connector: %s", err)
+		return nil
+	}
+	if conn == nil {
+		http.NotFound(w, r)
+		return nil
+	}
+
 	var id int
 
-	switch connection.Type {
-	case "App":
-		id, err = ws.Connections.AddApp(role, connection.Connector, "", "", "")
-	case "Database":
-		id, err = ws.Connections.AddDatabase(role, connection.Connector)
-	case "EventStream":
-		id, err = ws.Connections.AddEventStream(role, connection.Connector)
-	case "File":
-		id, err = ws.Connections.AddFile(role, connection.Connector, connection.Storage)
-	case "Mobile":
-		id, err = ws.Connections.AddMobile(role, connection.Connector)
-	case "Server":
-		id, err = ws.Connections.AddServer(role, connection.Connector)
-	case "Storage":
-		id, err = ws.Connections.AddStorage(role, connection.Connector)
-	case "Website":
-		id, err = ws.Connections.AddWebsite(role, connection.Connector, connection.Host)
+	switch conn.Type {
+	case apis.AppType:
+		id, err = ws.Connections.AddApp(role, conn.ID, conn.Name, "", "", "")
+	case apis.DatabaseType:
+		id, err = ws.Connections.AddDatabase(role, conn.ID, conn.Name)
+	case apis.EventStreamType:
+		id, err = ws.Connections.AddEventStream(role, conn.ID, conn.Name)
+	case apis.FileType:
+		id, err = ws.Connections.AddFile(role, conn.ID, connection.Storage, conn.Name)
+	case apis.MobileType:
+		id, err = ws.Connections.AddMobile(role, conn.ID, conn.Name)
+	case apis.ServerType:
+		id, err = ws.Connections.AddServer(role, conn.ID, conn.Name)
+	case apis.StorageType:
+		id, err = ws.Connections.AddStorage(role, conn.ID, conn.Name)
+	case apis.WebsiteType:
+		id, err = ws.Connections.AddWebsite(role, conn.ID, conn.Name, connection.Host)
 	}
 	if err != nil {
 		return err
@@ -921,7 +931,7 @@ func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Reque
 		expireDate = expireDate.Add(time.Duration(connector.OAuth.DefaultExpiresIn) * time.Second)
 	}
 
-	_, err = ws.Connections.AddApp(role, connectorID, tokens.RefreshToken, tokens.AccessToken,
+	_, err = ws.Connections.AddApp(role, connector.ID, connector.Name, tokens.RefreshToken, tokens.AccessToken,
 		expireDate.Format("2006-01-02 15:04:05"))
 
 	if err != nil {
