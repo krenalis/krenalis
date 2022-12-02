@@ -529,11 +529,12 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 	}
 	s := ConnectionInfo{ID: id}
 	err := this.myDB.QueryRow(
-		"SELECT CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `c`.`name`, `c`.`logoURL`, `s`.`usersQuery`\n"+
+		"SELECT CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `c`.`name`, `c`.`logoURL`,"+
+			" `s`.`enabled`, `s`.`usersQuery`\n"+
 			"FROM `connections` AS `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?",
-		id, this.workspace).Scan(&s.Type, &s.Role, &s.Name, &s.LogoURL, &s.UsersQuery)
+		id, this.workspace).Scan(&s.Type, &s.Role, &s.Name, &s.LogoURL, &s.Enabled, &s.UsersQuery)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ConnectionNotFoundError{}
@@ -1046,15 +1047,16 @@ func (this *Connections) Imports(id int) ([]*Import, error) {
 func (this *Connections) List() ([]*Connection, error) {
 	sources := []*Connection{}
 	err := this.myDB.QueryScan(
-		"SELECT `s`.`id`, CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `s`.`storage`, `c`.`name`, `c`.`oAuthURL`, `c`.`logoURL`\n"+
+		"SELECT `s`.`id`, CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `s`.`storage`, `c`.`name`,"+
+			" `c`.`oAuthURL`, `c`.`logoURL`, `s`.`enabled`\n"+
 			"FROM `connections` as `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`workspace` = ?", this.workspace, func(rows *sql.Rows) error {
 			var err error
 			for rows.Next() {
 				var c Connection
-				if err = rows.Scan(&c.ID, &c.Type, &c.Role, &c.Storage, &c.Name,
-					&c.OAuthURL, &c.LogoURL); err != nil {
+				if err = rows.Scan(&c.ID, &c.Type, &c.Role, &c.Storage, &c.Name, &c.OAuthURL, &c.LogoURL,
+					&c.Enabled); err != nil {
 					return err
 				}
 				sources = append(sources, &c)
