@@ -674,3 +674,5 @@ INSERT INTO `connectors` (`name`, `type`, `logoURL`) VALUES
 ALTER TABLE `connections`
     ADD COLUMN `enabled` TINYINT UNSIGNED NOT NULL AFTER `role`,
     ADD COLUMN `stream` INT NOT NULL AFTER `storage`;
+
+UPDATE `connectors` SET `webhooksPer` = 'None', `oAuthURL` = '', `oAuthClientID` = '', `oAuthClientSecret` = '', `oAuthTokenEndpoint` = '' WHERE (`id` = '3');
