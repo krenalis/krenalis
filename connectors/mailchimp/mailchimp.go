@@ -36,33 +36,7 @@ import (
 // Connector icon.
 var icon []byte
 
-var Debug = true
-
-type mailchimpError struct {
-	Type     string `json:"type"`
-	Title    string `json:"title"`
-	Status   int    `json:"status"`
-	Detail   string `json:"detail"`
-	Instance string `json:"instance"`
-}
-
-func (err *mailchimpError) Error() string {
-	return fmt.Sprintf("unexpected error from Mailchimp: (%d) %s - %s", err.Status, err.Detail, err.Instance)
-}
-
-type connection struct {
-	ClientSecret string
-	accessToken  string
-	ctx          context.Context
-	firehose     connector.Firehose
-	settings     settings
-}
-
-type settings struct {
-	List          string
-	DataCenter    string
-	WebhookSecret string
-}
+var Debug = false
 
 func init() {
 	connector.RegisterApp(connector.App{
@@ -75,6 +49,13 @@ func init() {
 		WebhooksPer: connector.WebhooksPerSource,
 		Connect:     connect,
 	})
+}
+
+type connection struct {
+	ctx         context.Context
+	settings    settings
+	firehose    connector.Firehose
+	accessToken string
 }
 
 // connect returns a new Mailchimp connection.
@@ -529,19 +510,6 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 }
 
-type batchOperation struct {
-	Method string            `json:"method"`
-	Path   string            `json:"path"`
-	Params map[string]string `json:"params"`
-	Body   string            `json:"body"`
-}
-type batchResponse struct {
-	ID                string `json:"id"`
-	Status            string `json:"status"`
-	ErroredOperations int    `json:"errored_operations"`
-	ResponseBodyURL   string `json:"response_body_url"`
-}
-
 // SetUsers sets the given users.
 func (c *connection) SetUsers(users []connector.User) error {
 
@@ -647,6 +615,38 @@ func (c *connection) Users(cursor string, properties []connector.PropertyPath) e
 	}
 
 	return nil
+}
+
+type batchOperation struct {
+	Method string            `json:"method"`
+	Path   string            `json:"path"`
+	Params map[string]string `json:"params"`
+	Body   string            `json:"body"`
+}
+
+type batchResponse struct {
+	ID                string
+	Status            string
+	ErroredOperations int    `json:"errored_operations"`
+	ResponseBodyURL   string `json:"response_body_url"`
+}
+
+type mailchimpError struct {
+	Type     string
+	Title    string
+	Status   int
+	Detail   string
+	Instance string
+}
+
+func (err *mailchimpError) Error() string {
+	return fmt.Sprintf("unexpected error from Mailchimp: (%d) %s - %s", err.Status, err.Detail, err.Instance)
+}
+
+type settings struct {
+	List          string
+	DataCenter    string
+	WebhookSecret string
 }
 
 // serializeProperties serializes the properties in the Mailchimp "fields"
@@ -1015,17 +1015,6 @@ func (m *Member) Properties() map[string]any {
 		"Vip":                         m.Vip,
 	}
 }
-
-// // setContext sets ctx as the context for c.
-// func (c *connection) setContext(ctx context.Context) error {
-// 	c.ctx = ctx
-// 	c.accessToken, _ = ctx.Value(connector.AccessTokenContextKey{}).(string)
-// 	c.firehose, _ = ctx.Value(connector.FirehoseContextKey{}).(connector.Firehose)
-// 	if s, ok := ctx.Value(connector.SettingsContextKey{}).([]byte); ok && len(s) > 0 {
-// 		return json.Unmarshal(s, &c.settings)
-// 	}
-// 	return nil
-// }
 
 // getMetadata returns the datacenter and the account id.
 func (c *connection) getMetadata() (string, string, error) {
