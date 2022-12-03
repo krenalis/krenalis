@@ -32,15 +32,6 @@ func (err NotSupportedTypeError) Error() string {
 	return fmt.Sprintf("type %s of the column %q is not supported", err.Type, err.Column)
 }
 
-// Connector represents a connector.
-type Connector struct {
-	Name        string      // name
-	Type        Type        // type
-	Icon        []byte      // icon in SVG format
-	OAuth       OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
-	WebhooksPer WebhooksPer // indicates if webhooks are per connector, resource or connection
-}
-
 // Type represents a connector type.
 type Type int
 
