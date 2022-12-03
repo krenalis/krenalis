@@ -155,7 +155,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	if conn.WebhooksPer != webhooksPer {
 		return errBadRequest
 	}
-	c, err := _connector.NewAppConnection(context.Background(), conn.Name, &conf)
+	c, err := _connector.RegisteredApp(conn.Name).Connect(context.Background(), &conf)
 	if err != nil {
 		return err
 	}

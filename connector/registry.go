@@ -8,7 +8,6 @@
 package connector
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"sync"
@@ -201,98 +200,98 @@ func RegisterWebsite(website Website) {
 	registry.websites[website.Name] = website
 }
 
-// NewAppConnection returns a new app connection for the app connector with the
-// given name.
-func NewAppConnection(ctx context.Context, name string, conf *AppConfig) (AppConnection, error) {
+// RegisteredApp returns the app registered with the given name.
+// If an app with this name is not registered, it panics.
+func RegisteredApp(name string) App {
 	registryMu.Lock()
 	app, ok := registry.apps[name]
 	registryMu.Unlock()
 	if !ok {
-		return nil, fmt.Errorf("connector: unknown app connector %q (forgotten import?)", name)
+		panic(fmt.Errorf("connector: unknown app connector %q (forgotten import?)", name))
 	}
-	return app.Connect(ctx, conf)
+	return app
 }
 
-// NewDatabaseConnection returns a new database connection for the database
-// connector with the given name.
-func NewDatabaseConnection(ctx context.Context, name string, conf *DatabaseConfig) (DatabaseConnection, error) {
+// RegisteredDatabase returns the database registered with the given name.
+// If a database with this name is not registered, it panics.
+func RegisteredDatabase(name string) Database {
 	registryMu.Lock()
 	database, ok := registry.databases[name]
 	registryMu.Unlock()
 	if !ok {
-		return nil, fmt.Errorf("connector: unknown database connector %q (forgotten import?)", name)
+		panic(fmt.Errorf("connector: unknown database connector %q (forgotten import?)", name))
 	}
-	return database.Connect(ctx, conf)
+	return database
 }
 
-// NewEventStreamConnection returns a new event stream connection for the event
-// stream connector with the given name.
-func NewEventStreamConnection(ctx context.Context, name string, conf *EventStreamConfig) (EventStreamConnection, error) {
+// RegisteredEventStream returns the event stream registered with the given
+// name. If an event stream with this name is not registered, it panics.
+func RegisteredEventStream(name string) EventStream {
 	registryMu.Lock()
 	stream, ok := registry.eventStream[name]
 	registryMu.Unlock()
 	if !ok {
-		return nil, fmt.Errorf("connector: unknown event stream connector %q (forgotten import?)", name)
+		panic(fmt.Errorf("connector: unknown event stream connector %q (forgotten import?)", name))
 	}
-	return stream.Connect(ctx, conf)
+	return stream
 }
 
-// NewFileConnection returns a new file connection for the file connector with
-// the given name.
-func NewFileConnection(ctx context.Context, name string, conf *FileConfig) (FileConnection, error) {
+// RegisteredFile returns the file registered with the given name.
+// If a file with this name is not registered, it panics.
+func RegisteredFile(name string) File {
 	registryMu.Lock()
 	file, ok := registry.files[name]
 	registryMu.Unlock()
 	if !ok {
-		return nil, fmt.Errorf("connector: unknown file connector %q (forgotten import?)", name)
+		panic(fmt.Errorf("connector: unknown file connector %q (forgotten import?)", name))
 	}
-	return file.Connect(ctx, conf)
+	return file
 }
 
-// NewMobileConnection returns a new mobile connection for the mobile connector
-// with the given name.
-func NewMobileConnection(ctx context.Context, name string, conf *MobileConfig) (MobileConnection, error) {
+// RegisteredMobile returns the mobile registered with the given name.
+// If a mobile with this name is not registered, it panics.
+func RegisteredMobile(name string) Mobile {
 	registryMu.Lock()
 	mobile, ok := registry.mobiles[name]
 	registryMu.Unlock()
 	if !ok {
-		return nil, fmt.Errorf("connector: unknown mobile connector %q (forgotten import?)", name)
+		panic(fmt.Errorf("connector: unknown mobile connector %q (forgotten import?)", name))
 	}
-	return mobile.Connect(ctx, conf)
+	return mobile
 }
 
-// NewServerConnection returns a new server connection for the server connector
-// with the given name.
-func NewServerConnection(ctx context.Context, name string, conf *ServerConfig) (ServerConnection, error) {
+// RegisteredServer returns the server registered with the given name.
+// If a server with this name is not registered, it panics.
+func RegisteredServer(name string) Server {
 	registryMu.Lock()
 	server, ok := registry.servers[name]
 	registryMu.Unlock()
 	if !ok {
-		return nil, fmt.Errorf("connector: unknown server connector %q (forgotten import?)", name)
+		panic(fmt.Errorf("connector: unknown server connector %q (forgotten import?)", name))
 	}
-	return server.Connect(ctx, conf)
+	return server
 }
 
-// NewStorageConnection returns a new storage connection for the storage
-// connector with the given name.
-func NewStorageConnection(ctx context.Context, name string, conf *StorageConfig) (StorageConnection, error) {
+// RegisteredStorage returns the storage registered with the given name.
+// If a storage with this name is not registered, it panics.
+func RegisteredStorage(name string) Storage {
 	registryMu.Lock()
 	storage, ok := registry.storages[name]
 	registryMu.Unlock()
 	if !ok {
-		return nil, fmt.Errorf("connector: unknown storage connector %q (forgotten import?)", name)
+		panic(fmt.Errorf("connector: unknown storage connector %q (forgotten import?)", name))
 	}
-	return storage.Connect(ctx, conf)
+	return storage
 }
 
-// NewWebsiteConnection returns a new website connection for the website
-// connector with the given name.
-func NewWebsiteConnection(ctx context.Context, name string, conf *WebsiteConfig) (WebsiteConnection, error) {
+// RegisteredWebsite returns the website registered with the given name.
+// If a website with this name is not registered, it panics.
+func RegisteredWebsite(name string) Website {
 	registryMu.Lock()
 	website, ok := registry.websites[name]
 	registryMu.Unlock()
 	if !ok {
-		return nil, fmt.Errorf("connector: unknown website connector %q (forgotten import?)", name)
+		panic(fmt.Errorf("connector: unknown website connector %q (forgotten import?)", name))
 	}
-	return website.Connect(ctx, conf)
+	return website
 }

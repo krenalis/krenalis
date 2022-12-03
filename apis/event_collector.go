@@ -119,7 +119,7 @@ func newEventConnector(myDB *sql.DB, chDB chDriver.Conn, streams []*evenCollecto
 // It should be called in its own goroutine.
 func (ec *eventCollector) run(ctx context.Context) {
 	for _, s := range ec.streams {
-		stream, err := _connector.NewEventStreamConnection(ctx, s.Connector, &_connector.EventStreamConfig{
+		stream, err := _connector.RegisteredEventStream(s.Connector).Connect(ctx, &_connector.EventStreamConfig{
 			Role:     _connector.SourceRole,
 			Settings: s.Settings,
 		})

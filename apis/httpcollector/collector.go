@@ -74,7 +74,7 @@ func New(ctx context.Context, streams []*Stream) (*Collector, error) {
 	}
 
 	for _, s := range streams {
-		stream, err := connector.NewEventStreamConnection(ctx, s.Connector, &connector.EventStreamConfig{
+		stream, err := connector.RegisteredEventStream(s.Connector).Connect(ctx, &connector.EventStreamConfig{
 			Role:     connector.SourceRole,
 			Settings: s.Settings,
 		})
