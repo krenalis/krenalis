@@ -26,7 +26,7 @@ import (
 )
 
 // Connector icon.
-var icon []byte
+var icon = "<svg></svg>"
 
 // Make sure it implements the FileConnection interface.
 var _ connector.FileConnection = &connection{}

@@ -31,7 +31,7 @@ import (
 )
 
 // Connector icon.
-var icon []byte
+var icon = "<svg></svg>"
 
 // Make sure it implements the DatabaseConnection interface.
 var _ connector.DatabaseConnection = &connection{}

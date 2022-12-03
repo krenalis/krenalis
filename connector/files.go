@@ -54,7 +54,7 @@ func (err MissingTimestampColumnError) Error() string {
 // File represents a file connector.
 type File struct {
 	Name    string
-	Icon    []byte // icon in SVG format
+	Icon    string // icon in SVG format
 	Connect FileConnectFunc
 }
 

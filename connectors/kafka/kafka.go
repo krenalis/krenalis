@@ -28,7 +28,7 @@ import (
 )
 
 // Connector icon.
-var icon []byte
+var icon = "<svg></svg>"
 
 // Make sure it implements the EventStreamConnection interface.
 var _ connector.EventStreamConnection = &connection{}

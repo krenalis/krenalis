@@ -34,7 +34,7 @@ import (
 )
 
 // Connector icon.
-var icon []byte
+var icon = "<svg></svg>"
 
 var Debug = false
 

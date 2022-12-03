@@ -30,7 +30,7 @@ func NewDatabaseQueryError(msg string) error {
 // Database represents a database connector.
 type Database struct {
 	Name    string
-	Icon    []byte // icon in SVG format
+	Icon    string // icon in SVG format
 	Connect DatabaseConnectFunc
 }
 

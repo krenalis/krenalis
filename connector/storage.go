@@ -16,7 +16,7 @@ import (
 // Storage represents a storage connector.
 type Storage struct {
 	Name    string
-	Icon    []byte // icon in SVG format
+	Icon    string // icon in SVG format
 	Connect StorageConnectFunc
 }
 

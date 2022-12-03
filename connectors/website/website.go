@@ -18,7 +18,7 @@ import (
 )
 
 // Connector icon.
-var icon []byte
+var icon = "<svg></svg>"
 
 // Make sure it implements the WebsiteConnection interface.
 var _ connector.WebsiteConnection = &connection{}

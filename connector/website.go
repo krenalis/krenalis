@@ -14,7 +14,7 @@ import (
 // Website represents a website connector.
 type Website struct {
 	Name    string
-	Icon    []byte // icon in SVG format
+	Icon    string // icon in SVG format
 	Connect WebsiteConnectFunc
 }
 

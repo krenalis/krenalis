@@ -29,7 +29,7 @@ import (
 )
 
 // Connector icon.
-var icon []byte
+var icon = "<svg></svg>"
 
 // Make sure it implements the StorageConnection interface.
 var _ connector.StorageConnection = &connection{}

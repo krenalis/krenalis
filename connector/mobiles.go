@@ -14,7 +14,7 @@ import (
 // Mobile represents a mobile connector.
 type Mobile struct {
 	Name    string
-	Icon    []byte // icon in SVG format
+	Icon    string // icon in SVG format
 	Connect MobileConnectFunc
 }
 
