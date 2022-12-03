@@ -1,4 +1,6 @@
 github.com/ClickHouse/clickhouse-go v1.5.4 h1:cKjXeYLNWVJIx2J1K6H2CqyRmfwVJVY1OV1coaaFcI0=
+github.com/ClickHouse/clickhouse-go/v2 v2.4.3 h1:DROLjHmUPygvyelxOswE5+Yyul84gRKjIaOLq3B5l1w=
+github.com/ClickHouse/clickhouse-go/v2 v2.4.3/go.mod h1:Q95k4+cA11bh5eqQvoxlNG6NCGi0rIAEDbroVIzqng8=
 github.com/go-logr/logr v1.2.3 h1:2DntVwHkVopvECVRSlL5PSo9eG+cAkDCuckLubN+rq0=
 github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
 github.com/hashicorp/go-version v1.6.0 h1:feTTfFNnjP967rlCxM/I9g701jU+RN74YKx2mOkIeek=

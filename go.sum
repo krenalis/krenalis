@@ -1,8 +1,8 @@
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/ClickHouse/ch-go v0.50.0 h1:f5Bv6WEVIcvhT9ez5+uqGZiggVTxAJ2+tgk1mYQCgAs=
 github.com/ClickHouse/ch-go v0.50.0/go.mod h1:lCZ+zUH/OCr16xF4PIg8Q5SfaUVDQLU3b21FMXU+qlQ=
-github.com/ClickHouse/clickhouse-go/v2 v2.4.2 h1:KGxgC753ToUwSE0ngb3xfSYpmXrntkMON2aBHkXgt94=
-github.com/ClickHouse/clickhouse-go/v2 v2.4.2/go.mod h1:Q95k4+cA11bh5eqQvoxlNG6NCGi0rIAEDbroVIzqng8=
+github.com/ClickHouse/clickhouse-go/v2 v2.4.3 h1:DROLjHmUPygvyelxOswE5+Yyul84gRKjIaOLq3B5l1w=
+github.com/ClickHouse/clickhouse-go/v2 v2.4.3/go.mod h1:Q95k4+cA11bh5eqQvoxlNG6NCGi0rIAEDbroVIzqng8=
 github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=
 github.com/andybalholm/brotli v1.0.4/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
 github.com/apache/thrift v0.16.0 h1:qEy6UW60iVOlUy+b9ZR0d5WzUWYGOo4HfopoyBaNmoY=
