@@ -38,7 +38,7 @@ func init() {
 	connector.RegisterStorage(connector.Storage{
 		Name:    "SFTP",
 		Icon:    icon,
-		Connect: connnect,
+		Connect: connect,
 	})
 }
 
@@ -55,8 +55,8 @@ type settings struct {
 	Password string
 }
 
-// connnect returns a new SFTP connection.
-func connnect(ctx context.Context, conf *connector.StorageConfig) (connector.StorageConnection, error) {
+// connect returns a new SFTP connection.
+func connect(ctx context.Context, conf *connector.StorageConfig) (connector.StorageConnection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -65,15 +65,6 @@ func connnect(ctx context.Context, conf *connector.StorageConfig) (connector.Sto
 		}
 	}
 	return &c, nil
-}
-
-// Connector returns the connector.
-func (c *connection) Connector() *connector.Connector {
-	return &connector.Connector{
-		Name: "SFTP",
-		Type: connector.StorageType,
-		Icon: icon,
-	}
 }
 
 // Reader returns a ReadCloser from which to read the file with the given path
