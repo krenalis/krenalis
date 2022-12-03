@@ -10,6 +10,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 )
 
@@ -35,6 +36,52 @@ var (
 		websites:    make(map[string]Website),
 	}
 )
+
+// Connector represent a connector.
+type Connector struct {
+	Name string
+	Type Type
+	Icon string
+}
+
+// Connectors returns a list sorted by name of the registered connectors.
+func Connectors() []Connector {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	n := len(registry.apps) + len(registry.databases) + len(registry.eventStream) +
+		len(registry.files) + len(registry.mobiles) + len(registry.servers) +
+		len(registry.storages) + len(registry.websites)
+	connectors := make([]Connector, 0, n)
+	for _, c := range registry.apps {
+		connectors = append(connectors, Connector{Name: c.Name, Type: AppType, Icon: c.Icon})
+	}
+	for _, c := range registry.databases {
+		connectors = append(connectors, Connector{Name: c.Name, Type: DatabaseType, Icon: c.Icon})
+	}
+	for _, c := range registry.eventStream {
+		connectors = append(connectors, Connector{Name: c.Name, Type: EventStreamType, Icon: c.Icon})
+	}
+	for _, c := range registry.files {
+		connectors = append(connectors, Connector{Name: c.Name, Type: FileType, Icon: c.Icon})
+	}
+	for _, c := range registry.mobiles {
+		connectors = append(connectors, Connector{Name: c.Name, Type: MobileType, Icon: c.Icon})
+	}
+	for _, c := range registry.servers {
+		connectors = append(connectors, Connector{Name: c.Name, Type: ServerType, Icon: c.Icon})
+	}
+	for _, c := range registry.storages {
+		connectors = append(connectors, Connector{Name: c.Name, Type: StorageType, Icon: c.Icon})
+	}
+	for _, c := range registry.websites {
+		connectors = append(connectors, Connector{Name: c.Name, Type: WebsiteType, Icon: c.Icon})
+	}
+	sort.Slice(connectors, func(i, j int) bool {
+		ci, cj := connectors[i], connectors[j]
+		return ci.Name < cj.Name || ci.Name == cj.Name && ci.Type < cj.Type
+	})
+	return connectors
+}
 
 // RegisterApp makes an app connector available by the provided name. If
 // RegisterApp is called twice with the same name or if fn is nil, it panics.
