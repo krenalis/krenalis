@@ -110,8 +110,8 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 		panic(err)
 	}
 
-	// Read the all the source event stream collectors.
-	var allStreams []*evenCollectorStream
+	// Read the all the source event stream processors.
+	var allStreams []*evenProcessorStream
 	err = myDB.QueryScan(
 		"SELECT `s`.`id`, `co`.`name` AS `connector`, `s`.`settings`\n"+
 			"FROM `connections` AS `s`\n"+
@@ -119,7 +119,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 			"WHERE `s`.`type` = 'EventStream' AND `s`.`role` = 'Source' AND `s`.`settings` != '' AND `s`.`enabled`",
 		func(rows *sql.Rows) error {
 			for rows.Next() {
-				var stream evenCollectorStream
+				var stream evenProcessorStream
 				if err := rows.Scan(&stream.ID, &stream.Connector, &stream.Settings); err != nil {
 					return err
 				}
@@ -131,7 +131,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 		panic(err)
 	}
 
-	collector := newEventConnector(apis.myDB, apis.chDB, allStreams)
+	collector := newEventProcessor(apis.myDB, apis.chDB, allStreams)
 	go collector.run(context.Background())
 
 	return apis

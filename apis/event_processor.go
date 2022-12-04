@@ -94,31 +94,30 @@ type Event struct {
 	user           uint32
 }
 
-// eventCollector collects events from source streams and sent them to
-// ClickHouse.
-type eventCollector struct {
+// eventProcessor processes events received from source streams and sent them
+// to ClickHouse.
+type eventProcessor struct {
 	myDB    *sql.DB
 	chDB    chDriver.Conn
-	streams []*evenCollectorStream
+	streams []*evenProcessorStream
 	queue   *queue
 }
 
-type evenCollectorStream struct {
+type evenProcessorStream struct {
 	ID        int
 	Connector string
 	Settings  []byte
 }
 
-// newEventConnector returns a new event connector that collects the events
-// from the given streams.
-func newEventConnector(myDB *sql.DB, chDB chDriver.Conn, streams []*evenCollectorStream) *eventCollector {
-	return &eventCollector{myDB: myDB, streams: streams, queue: newQueue(chDB)}
+// newEventProcessor returns a new event processor.
+func newEventProcessor(myDB *sql.DB, chDB chDriver.Conn, streams []*evenProcessorStream) *eventProcessor {
+	return &eventProcessor{myDB: myDB, streams: streams, queue: newQueue(chDB)}
 }
 
 // run executes the event collector ec.
 // It should be called in its own goroutine.
-func (ec *eventCollector) run(ctx context.Context) {
-	for _, s := range ec.streams {
+func (p *eventProcessor) run(ctx context.Context) {
+	for _, s := range p.streams {
 		stream, err := _connector.RegisteredEventStream(s.Connector).Connect(ctx, &_connector.EventStreamConfig{
 			Role:     _connector.SourceRole,
 			Settings: s.Settings,
@@ -126,13 +125,13 @@ func (ec *eventCollector) run(ctx context.Context) {
 		if err != nil {
 			log.Printf("cannot connector to event stream connection %d: %s", s.ID, err)
 		}
-		go ec.processStream(ctx, stream)
+		go p.processStream(ctx, stream)
 	}
 }
 
 // processStream processes the events received from the given stream collector.
 // When the context is canceled it closes the stream and return.
-func (ec *eventCollector) processStream(ctx context.Context, stream _connector.EventStreamConnection) {
+func (p *eventProcessor) processStream(ctx context.Context, stream _connector.EventStreamConnection) {
 
 	defer func() {
 		if err := stream.Close(); err != nil {
@@ -154,7 +153,7 @@ func (ec *eventCollector) processStream(ctx context.Context, stream _connector.E
 			log.Printf("cannot receive event: %s", err)
 			continue
 		}
-		err = ec.processEvent(event)
+		err = p.processEvent(event)
 		if err != nil {
 			if err == errInvalidEvent {
 				log.Print("invalid event")
@@ -169,7 +168,7 @@ func (ec *eventCollector) processStream(ctx context.Context, stream _connector.E
 }
 
 // processEvent processes an event with the given value.
-func (ec *eventCollector) processEvent(value []byte) error {
+func (p *eventProcessor) processEvent(value []byte) error {
 
 	r := bytes.NewReader(value)
 
@@ -210,7 +209,7 @@ func (ec *eventCollector) processEvent(value []byte) error {
 
 	var typ ConnectorType
 	var websiteHost string
-	err = ec.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), `websiteHost`\n"+
+	err = p.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), `websiteHost`\n"+
 		"FROM `connections`\n"+
 		"WHERE `id` = ? AND `type` IN ('Mobile', 'Website') AND `role` = 'Source'", source).
 		Scan(&typ, &websiteHost)
@@ -228,7 +227,7 @@ func (ec *eventCollector) processEvent(value []byte) error {
 			return errUnauthorized
 		}
 		var server int
-		err = ec.myDB.QueryRow("SELECT `c`.`id`\n"+
+		err = p.myDB.QueryRow("SELECT `c`.`id`\n"+
 			"FROM `connections_keys` AS `k`\n"+
 			"INNER JOIN `connections` AS `c` ON `k`.`connection` = `c`.`id`\n"+
 			"WHERE `c`.`type` = 'Server' AND `c`.`role` = 'Source' AND `k`.`key` = ?", key).Scan(&server)
@@ -302,12 +301,12 @@ func (ec *eventCollector) processEvent(value []byte) error {
 		}
 
 		// Get the user or create it if it does not exist.
-		err = ec.myDB.QueryRow("SELECT `id` FROM `users` WHERE `source` = ? AND `device` = ?", source, event.Device).Scan(&event.user)
+		err = p.myDB.QueryRow("SELECT `id` FROM `users` WHERE `source` = ? AND `device` = ?", source, event.Device).Scan(&event.user)
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}
 		if err == sql.ErrNoRows {
-			err = ec.myDB.QueryRow("SELECT `user` FROM `devices` WHERE `source` = ? AND `id` = ?", source, event.Device).Scan(&event.user)
+			err = p.myDB.QueryRow("SELECT `user` FROM `devices` WHERE `source` = ? AND `id` = ?", source, event.Device).Scan(&event.user)
 			if err != nil && err != sql.ErrNoRows {
 				return err
 			}
@@ -316,7 +315,7 @@ func (ec *eventCollector) processEvent(value []byte) error {
 				if err != nil {
 					return err
 				}
-				_, err = ec.myDB.Exec("INSERT INTO `users` SET `source` = ?, `id` = ?, `device` = ?", source, event.user, event.Device)
+				_, err = p.myDB.Exec("INSERT INTO `users` SET `source` = ?, `id` = ?, `device` = ?", source, event.user, event.Device)
 				if err != nil {
 					return err
 				}
@@ -501,7 +500,7 @@ func (ec *eventCollector) processEvent(value []byte) error {
 		}
 
 		// Add the event to the queue.
-		ec.queue.add(&event)
+		p.queue.add(&event)
 
 	}
 
