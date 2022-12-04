@@ -22,7 +22,6 @@ import (
 	"math/rand"
 	"mime"
 	"net"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -30,7 +29,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/apis/httpcollector"
 	_connector "chichi/connector"
 	"chichi/pkg/open2b/sql"
 
@@ -50,21 +48,7 @@ const (
 	testGEOIP         = "79.9.108.176"
 )
 
-var (
-	errInvalidEvent = errors.New("event is not valid")
-	errUnauthorized = errors.New("unauthorized")
-)
-
-// MessageHeader represents a message header that precedes events in a message
-// received from a stream.
-// (Keep in sink with httpcollector.MessageHeader).
-type MessageHeader struct {
-	RemoteAddr string      `json:"remoteAddr"`
-	Method     string      `json:"method"`
-	Proto      string      `json:"proto"`
-	URL        string      `json:"url"`
-	Headers    http.Header `json:"headers"`
-}
+var errInvalidEvent = errors.New("event is not valid")
 
 type Event struct {
 	City           string
@@ -175,7 +159,7 @@ func (p *eventProcessor) processEvent(value []byte) error {
 	dec := json.NewDecoder(r)
 	dec.DisallowUnknownFields()
 
-	var h httpcollector.MessageHeader
+	var h MessageHeader
 
 	err := dec.Decode(&h)
 	if err != nil {
@@ -241,7 +225,7 @@ func (p *eventProcessor) processEvent(value []byte) error {
 	}
 
 	// Decode the event.
-	var request httpcollector.MessageHeader
+	var request MessageHeader
 	err = decodeEvent(bytes.NewReader(value), &request)
 	if err != nil {
 		return err

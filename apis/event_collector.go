@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package httpcollector
+package apis
 
 import (
 	"bytes"
@@ -29,29 +29,27 @@ import (
 const maxRequestSize = 500 * 1024
 
 // Errors returned to and handled by the ServeHTTP method.
-var (
-	errBadRequest   = errors.New("bad request")
-	errUnauthorized = errors.New("unauthorized")
-)
+var errUnauthorized = errors.New("unauthorized")
 
-// Stream represents a source stream connection to send events to.
-type Stream struct {
+// eventCollectorStream represents a source stream connection to send events
+// to.
+type eventCollectorStream struct {
 	ID        int
 	Connector string
 	Settings  []byte
-	Producers []*Producer
+	Producers []*eventCollectorProducer
 }
 
-// Producer represents an event producer. It can be a website, mobile or server
-// connection.
-type Producer struct {
+// eventCollectorProducer represents an event producer. It can be a website,
+// mobile or server connection.
+type eventCollectorProducer struct {
 	ID   int
 	Type connector.Type
 	Keys []string
 }
 
-// A Collector collects events and sends them to event streams.
-type Collector struct {
+// An eventCollector collects events and sends them to event streams.
+type eventCollector struct {
 	sync.RWMutex
 
 	// sources are the allowed sources. If nil, all sources are allowed.
@@ -65,10 +63,11 @@ type Collector struct {
 	defaultStream connector.EventStreamConnection
 }
 
-// New returns a new collector that sends events to streams.
-func New(ctx context.Context, streams []*Stream) (*Collector, error) {
+// newEventCollector returns a new event collector that sends events to
+// streams.
+func newEventCollector(ctx context.Context, streams []*eventCollectorStream) (*eventCollector, error) {
 
-	var collector = Collector{
+	var collector = eventCollector{
 		sources: map[int]struct{}{},
 		routes:  map[string]connector.EventStreamConnection{},
 	}
@@ -95,7 +94,7 @@ func New(ctx context.Context, streams []*Stream) (*Collector, error) {
 }
 
 // ServeHTTP serves event requests from HTTP.
-func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (c *eventCollector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := c.serveHTTP(r)
 	if err != nil {
 		switch err {
@@ -112,7 +111,6 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // MessageHeader represents a message header that precedes events in a message
 // sent to a stream.
-// (Keep in sink with apis.MessageHeader).
 type MessageHeader struct {
 	RemoteAddr string      `json:"remoteAddr"`
 	Method     string      `json:"method"`
@@ -122,7 +120,7 @@ type MessageHeader struct {
 }
 
 // serveHTTP is called by the ServeHTTP method to serve an event request.
-func (c *Collector) serveHTTP(r *http.Request) error {
+func (c *eventCollector) serveHTTP(r *http.Request) error {
 
 	defer func() {
 		_, _ = io.Copy(io.Discard, r.Body)

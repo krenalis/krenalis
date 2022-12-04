@@ -20,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"chichi/apis/httpcollector"
 	"chichi/apis/types"
 	_connector "chichi/connector"
 	"chichi/pkg/open2b/sql"
@@ -36,7 +35,7 @@ var (
 type APIs struct {
 	myDB      *sql.DB
 	chDB      chDriver.Conn
-	collector *httpcollector.Collector
+	collector *eventCollector
 	Accounts  *Accounts
 	Users     *Users
 }
@@ -58,9 +57,9 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 
 	// Read the source event stream collectors and the source connections that
 	// send the events into the stream with their keys.
-	var streams []*httpcollector.Stream
+	var streams []*eventCollectorStream
 	err := myDB.QueryScan(
-		"SELECT `s`.`id`, `co`.`name` AS `connector`, `s`.`settings`, `ci`.`id` AS `Producer`, CAST(`ci`.`type` AS UNSIGNED), `k`.`key`\n"+
+		"SELECT `s`.`id`, `co`.`name` AS `connector`, `s`.`settings`, `ci`.`id` AS `eventCollectorProducer`, CAST(`ci`.`type` AS UNSIGNED), `k`.`key`\n"+
 			"FROM `connections` AS `s`\n"+
 			"INNER JOIN `connectors` AS `co` ON `co`.`id` = `s`.`connector`\n"+
 			"INNER JOIN `connections` AS `ci` ON `ci`.`stream` = `s`.`id`\n"+
@@ -69,7 +68,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 		func(rows *sql.Rows) error {
 		Rows:
 			for rows.Next() {
-				var stream httpcollector.Stream
+				var stream eventCollectorStream
 				var producerID int
 				var producerType _connector.Type
 				var producerKey string
@@ -84,7 +83,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 								continue Rows
 							}
 						}
-						s.Producers = append(s.Producers, &httpcollector.Producer{
+						s.Producers = append(s.Producers, &eventCollectorProducer{
 							ID:   producerID,
 							Type: producerType,
 							Keys: []string{producerKey},
@@ -92,7 +91,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 						continue Rows
 					}
 				}
-				stream.Producers = []*httpcollector.Producer{{
+				stream.Producers = []*eventCollectorProducer{{
 					ID:   producerID,
 					Type: producerType,
 					Keys: []string{producerKey},
@@ -105,7 +104,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 		panic(err)
 	}
 
-	apis.collector, err = httpcollector.New(context.Background(), streams)
+	apis.collector, err = newEventCollector(context.Background(), streams)
 	if err != nil {
 		panic(err)
 	}
