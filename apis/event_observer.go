@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"sync"
 
 	"chichi/pkg/open2b/sql"
@@ -194,10 +195,14 @@ func (observer *eventObserver) AddEvent(source, server, stream int, header *Mess
 			continue
 		}
 		listener.Lock()
+		var p int
 		if len(listener.events) == maxEventsListenedTo {
 			listener.discarded++
-			listener.Unlock()
-			continue
+			p = rand.Intn(len(listener.events) + listener.discarded)
+			if p >= maxEventsListenedTo {
+				listener.Unlock()
+				continue
+			}
 		}
 		if event == nil {
 			var b bytes.Buffer
@@ -217,7 +222,11 @@ func (observer *eventObserver) AddEvent(source, server, stream int, header *Mess
 			})
 			event = b.Bytes()
 		}
-		listener.events = append(listener.events, event)
+		if listener.discarded == 0 {
+			listener.events = append(listener.events, event)
+		} else {
+			listener.events[p] = event
+		}
 		listener.Unlock()
 	}
 }
