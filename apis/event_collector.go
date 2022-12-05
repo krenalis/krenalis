@@ -21,15 +21,19 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"chichi/connector"
 )
 
-// maxRequestSize is the maximum size of the body in bytes of an event request.
+// maxRequestSize is the maximum size in bytes of an event request body.
 const maxRequestSize = 500 * 1024
 
 // Errors returned to and handled by the ServeHTTP method.
 var errUnauthorized = errors.New("unauthorized")
+
+// eventDateLayout is the layout used for dates in events.
+var eventDateLayout = "2006-01-02T15:04:05.999Z07:00"
 
 // eventCollectorStream represents a source stream connection to send events
 // to.
@@ -93,7 +97,9 @@ func newEventCollector(ctx context.Context, streams []*eventCollectorStream) (*e
 	return &collector, nil
 }
 
-// ServeHTTP serves event requests from HTTP.
+// ServeHTTP serves event messages from HTTP.
+// A message is a JSON stream of JSON objects where the first object is the
+// message header.
 func (c *eventCollector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := c.serveHTTP(r)
 	if err != nil {
@@ -109,9 +115,9 @@ func (c *eventCollector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// MessageHeader represents a message header that precedes events in a message
-// sent to a stream.
+// MessageHeader represents the header of an event message.
 type MessageHeader struct {
+	ReceivedAt string      `json:"receivedAt"`
 	RemoteAddr string      `json:"remoteAddr"`
 	Method     string      `json:"method"`
 	Proto      string      `json:"proto"`
@@ -121,6 +127,8 @@ type MessageHeader struct {
 
 // serveHTTP is called by the ServeHTTP method to serve an event request.
 func (c *eventCollector) serveHTTP(r *http.Request) error {
+
+	date := time.Now().UTC()
 
 	defer func() {
 		_, _ = io.Copy(io.Discard, r.Body)
@@ -178,6 +186,7 @@ func (c *eventCollector) serveHTTP(r *http.Request) error {
 	enc := json.NewEncoder(&event)
 	enc.SetEscapeHTML(false)
 	request := MessageHeader{
+		ReceivedAt: date.Format(eventDateLayout),
 		RemoteAddr: r.RemoteAddr,
 		Method:     r.Method,
 		Proto:      r.Proto,

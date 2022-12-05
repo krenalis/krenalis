@@ -27,6 +27,7 @@ type WorkspaceAPI struct {
 	myDB            *sql.DB
 	chDB            chDriver.Conn
 	Connections     *Connections
+	EventListeners  *EventListeners
 	Transformations *Transformations
 }
 

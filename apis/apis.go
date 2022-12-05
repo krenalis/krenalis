@@ -33,11 +33,12 @@ var (
 )
 
 type APIs struct {
-	myDB      *sql.DB
-	chDB      chDriver.Conn
-	collector *eventCollector
-	Accounts  *Accounts
-	Users     *Users
+	myDB           *sql.DB
+	chDB           chDriver.Conn
+	eventCollector *eventCollector
+	eventProcessor *eventProcessor
+	Accounts       *Accounts
+	Users          *Users
 }
 
 var hasBeenCalled bool
@@ -104,13 +105,13 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 		panic(err)
 	}
 
-	apis.collector, err = newEventCollector(context.Background(), streams)
+	apis.eventCollector, err = newEventCollector(context.Background(), streams)
 	if err != nil {
 		panic(err)
 	}
 
 	// Read the all the source event stream processors.
-	var allStreams []*evenProcessorStream
+	var allStreams []*eventProcessorStream
 	err = myDB.QueryScan(
 		"SELECT `s`.`id`, `co`.`name` AS `connector`, `s`.`settings`\n"+
 			"FROM `connections` AS `s`\n"+
@@ -118,7 +119,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 			"WHERE `s`.`type` = 'EventStream' AND `s`.`role` = 'Source' AND `s`.`settings` != '' AND `s`.`enabled`",
 		func(rows *sql.Rows) error {
 			for rows.Next() {
-				var stream evenProcessorStream
+				var stream eventProcessorStream
 				if err := rows.Scan(&stream.ID, &stream.Connector, &stream.Settings); err != nil {
 					return err
 				}
@@ -130,8 +131,8 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 		panic(err)
 	}
 
-	collector := newEventProcessor(apis.myDB, apis.chDB, allStreams)
-	go collector.run(context.Background())
+	apis.eventProcessor = newEventProcessor(apis.myDB, apis.chDB, allStreams)
+	go apis.eventProcessor.Run(context.Background())
 
 	return apis
 }
@@ -153,6 +154,7 @@ func (apis *APIs) AsAccount(account int) *AccountAPI {
 func (api *AccountAPI) AsWorkspace(workspace int) *WorkspaceAPI {
 	ws := &WorkspaceAPI{workspace: workspace, api: api, myDB: api.myDB, chDB: api.chDB}
 	ws.Connections = &Connections{ws}
+	ws.EventListeners = &EventListeners{ws}
 	ws.Transformations = &Transformations{ws}
 	return ws
 }
@@ -161,11 +163,11 @@ func (api *AccountAPI) AsWorkspace(workspace int) *WorkspaceAPI {
 func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if strings.HasPrefix(r.URL.Path, "/api/v1/events") {
-		if apis.collector == nil {
+		if apis.eventCollector == nil {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		apis.collector.ServeHTTP(w, r)
+		apis.eventCollector.ServeHTTP(w, r)
 		return
 	}
 
@@ -281,6 +283,55 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				_ = json.NewEncoder(w).Encode(transformations)
+			})
+		})
+	})
+	router.Route("/api/event-listeners", func(router chi.Router) {
+		router.Put("/", func(w http.ResponseWriter, r *http.Request) {
+			source, _ := strconv.Atoi(chi.URLParam(r, "source"))
+			server, _ := strconv.Atoi(chi.URLParam(r, "server"))
+			stream, _ := strconv.Atoi(chi.URLParam(r, "stream"))
+			id, err := ws.EventListeners.Add(source, server, stream)
+			if err != nil {
+				log.Printf("[error] %s", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"id": id})
+		})
+		router.Delete("/{listenerID}", func(w http.ResponseWriter, r *http.Request) {
+			id := chi.URLParam(r, "listenerID")
+			ws.EventListeners.Remove(id)
+		})
+		router.Get("/{listenerID}/events", func(w http.ResponseWriter, r *http.Request) {
+			id := chi.URLParam(r, "listenerID")
+			rawEvents, discarded, err := ws.EventListeners.Events(id)
+			if err != nil {
+				log.Printf("[error] %s", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			events := make([]struct {
+				Source int
+				Server int
+				Stream int
+				Header *MessageHeader
+				Data   []byte
+				Err    string
+			}, len(rawEvents))
+			for i, event := range rawEvents {
+				events[i].Source = event.Source
+				events[i].Server = event.Server
+				events[i].Stream = event.Stream
+				events[i].Header = event.Header
+				events[i].Data = event.Data
+				if event.Err != nil {
+					events[i].Err = event.Err.Error()
+				}
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"events":    events,
+				"discarded": discarded,
 			})
 		})
 	})

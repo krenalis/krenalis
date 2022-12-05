@@ -15,6 +15,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"log"
@@ -48,8 +49,6 @@ const (
 	testGEOIP         = "79.9.108.176"
 )
 
-var errInvalidEvent = errors.New("event is not valid")
-
 type Event struct {
 	City           string
 	Country        string
@@ -76,31 +75,42 @@ type Event struct {
 	queryString    string // "x=10"
 	source         int32
 	user           uint32
+
+	// data and err are used during event processing.
+	data []byte
+	err  error
 }
 
 // eventProcessor processes events received from source streams and sent them
 // to ClickHouse.
 type eventProcessor struct {
-	myDB    *sql.DB
-	chDB    chDriver.Conn
-	streams []*evenProcessorStream
-	queue   *queue
+	myDB     *sql.DB
+	chDB     chDriver.Conn
+	streams  []*eventProcessorStream
+	queue    *queue
+	observer *eventObserver
 }
 
-type evenProcessorStream struct {
+type eventProcessorStream struct {
 	ID        int
 	Connector string
 	Settings  []byte
 }
 
-// newEventProcessor returns a new event processor.
-func newEventProcessor(myDB *sql.DB, chDB chDriver.Conn, streams []*evenProcessorStream) *eventProcessor {
-	return &eventProcessor{myDB: myDB, streams: streams, queue: newQueue(chDB)}
+// newEventProcessor returns a new event eventProcessor.
+func newEventProcessor(myDB *sql.DB, chDB chDriver.Conn, streams []*eventProcessorStream) *eventProcessor {
+	processor := eventProcessor{
+		myDB:     myDB,
+		streams:  streams,
+		queue:    newQueue(chDB),
+		observer: newEventObserver(),
+	}
+	return &processor
 }
 
-// run executes the event collector ec.
+// Run executes the event eventProcessor p.
 // It should be called in its own goroutine.
-func (p *eventProcessor) run(ctx context.Context) {
+func (p *eventProcessor) Run(ctx context.Context) {
 	for _, s := range p.streams {
 		stream, err := _connector.RegisteredEventStream(s.Connector).Connect(ctx, &_connector.EventStreamConfig{
 			Role:     _connector.SourceRole,
@@ -109,23 +119,24 @@ func (p *eventProcessor) run(ctx context.Context) {
 		if err != nil {
 			log.Printf("cannot connector to event stream connection %d: %s", s.ID, err)
 		}
-		go p.processStream(ctx, stream)
+		go p.processStream(ctx, s.ID, stream)
 	}
 }
 
-// processStream processes the events received from the given stream collector.
-// When the context is canceled it closes the stream and return.
-func (p *eventProcessor) processStream(ctx context.Context, stream _connector.EventStreamConnection) {
+// processStream processes the events received from the stream with the given
+// identifier and connection. When the context is canceled it closes the
+// connection and returns.
+func (p *eventProcessor) processStream(ctx context.Context, id int, connection _connector.EventStreamConnection) {
 
 	defer func() {
-		if err := stream.Close(); err != nil {
-			log.Printf("cannot close event stream connection: %s", err)
+		if err := connection.Close(); err != nil {
+			log.Printf("cannot close stream %d: %s", id, err)
 		}
 	}()
 
-	// Process the events received from the event stream.
+	// Process the message received from the stream.
 	for {
-		event, ack, err := stream.Receive()
+		message, ack, err := connection.Receive()
 		if err != nil {
 			if err == context.Canceled || err == context.DeadlineExceeded {
 				select {
@@ -134,16 +145,12 @@ func (p *eventProcessor) processStream(ctx context.Context, stream _connector.Ev
 				default:
 				}
 			}
-			log.Printf("cannot receive event: %s", err)
+			log.Printf("cannot receive message from stream %d: %s", id, err)
 			continue
 		}
-		err = p.processEvent(event)
+		err = p.processMessage(id, message)
 		if err != nil {
-			if err == errInvalidEvent {
-				log.Print("invalid event")
-			} else {
-				log.Printf("cannot process event: %s", err)
-			}
+			log.Printf("cannot process message, received from stream %d: %s", id, err)
 			continue
 		}
 		ack()
@@ -151,46 +158,100 @@ func (p *eventProcessor) processStream(ctx context.Context, stream _connector.Ev
 
 }
 
-// processEvent processes an event with the given value.
-func (p *eventProcessor) processEvent(value []byte) error {
+// processMessage processes a message from the given stream. If an error occurs
+// processing the message, it returns the error.
+func (p *eventProcessor) processMessage(stream int, message []byte) error {
 
-	r := bytes.NewReader(value)
+	r := bytes.NewReader(message)
 
+	// Check that message contains JSON objects and determines their offsets after the first object.
+	offsets := make([]int, 0, 1)
 	dec := json.NewDecoder(r)
+	for {
+		tok, err := dec.Token()
+		if err == io.EOF {
+			break
+		}
+		if tok != json.Delim('{') {
+			p.observer.AddEvent(0, 0, stream, nil, message, errors.New("expecting JSON object"))
+			return nil
+		}
+		depth := 1
+		for depth > 0 {
+			tok, err = dec.Token()
+			if err != nil {
+				p.observer.AddEvent(0, 0, stream, nil, message, errors.New("invalid JSON"))
+				return nil
+			}
+			if d, ok := tok.(json.Delim); ok {
+				switch d {
+				case '}', ']':
+					depth--
+				case '{', '[':
+					depth++
+				}
+			}
+		}
+		offsets = append(offsets, int(dec.InputOffset()))
+	}
+
+	// Read the message header.
+	header := new(MessageHeader)
+	r.Reset(message)
+	dec = json.NewDecoder(r)
 	dec.DisallowUnknownFields()
-
-	var h MessageHeader
-
-	err := dec.Decode(&h)
+	err := dec.Decode(header)
 	if err != nil {
-		return err
+		p.observer.AddEvent(0, 0, stream, nil, message, err)
+		return nil
 	}
 
-	// Validate the content type.
-	mt, params, err := mime.ParseMediaType(h.Headers.Get("Content-Type"))
-	if err != nil || mt != "application/json" || len(params) > 1 {
-		return errBadRequest
+	// Read the authorization header.
+	auth, ok := header.Headers["Authorization"]
+	if !ok {
+		p.observer.AddEvent(0, 0, stream, nil, message, errors.New("missing 'Authorization' header"))
+		return nil
 	}
-	if charset, ok := params["charset"]; ok && strings.ToLower(charset) != "utf-8" {
-		return errBadRequest
+	if len(auth) > 1 {
+		p.observer.AddEvent(0, 0, stream, nil, message, errors.New("too many 'Authorization' headers"))
+		return nil
+	}
+	src, key, ok := parseBasicAuth(auth[0])
+	if !ok {
+		p.observer.AddEvent(0, 0, stream, nil, message, errors.New("invalid 'Authorization' header"))
+		return nil
 	}
 
-	// Authenticate the request.
-	auth := h.Headers.Get("Authorization")
-	if auth == "" {
-		return errUnauthorized
+	// Validate the server.
+	var server int
+	if key != "" {
+		// message was sent by a server.
+		if !isWellFormedConnectorKey(key) {
+			p.observer.AddEvent(0, 0, stream, nil, message, errors.New("invalid authorization key"))
+		}
+		err = p.myDB.QueryRow("SELECT `c`.`id`\n"+
+			"FROM `connections_keys` AS `k`\n"+
+			"INNER JOIN `connections` AS `c` ON `k`.`connection` = `c`.`id`\n"+
+			"WHERE `c`.`type` = 'Server' AND `c`.`role` = 'Source' AND `k`.`key` = ?", key).Scan(&server)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				p.observer.AddEvent(0, 0, stream, nil, message, errors.New("does not exist a server with the given key"))
+				return nil
+			}
+			return err
+		}
 	}
-	src, key, ok := parseBasicAuth(auth)
-	if !ok || src == "" && key == "" {
-		return errUnauthorized
+
+	// Validate the source.
+	if src == "" {
+		p.observer.AddEvent(0, server, stream, nil, message, errors.New("missing source in 'Authorization' header"))
+		return nil
 	}
 	source, _ := strconv.Atoi(src)
 	if source <= 0 || source > math.MaxInt32 {
-		return errUnauthorized
+		p.observer.AddEvent(0, server, stream, nil, message, errors.New("invalid source in 'Authorization' header"))
+		return nil
 	}
-
-	now := time.Now().UTC()
-
 	var typ ConnectorType
 	var websiteHost string
 	err = p.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), `websiteHost`\n"+
@@ -199,47 +260,62 @@ func (p *eventProcessor) processEvent(value []byte) error {
 		Scan(&typ, &websiteHost)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return errUnauthorized
+			p.observer.AddEvent(0, server, stream, nil, message, errors.New("source does not exist"))
+			return nil
 		}
 		return err
 	}
 
-	// If there is the key, the request is sent by a server.
-	var serverRequest bool
-	if key != "" {
-		if !isWellFormedConnectorKey(key) {
-			return errUnauthorized
-		}
-		var server int
-		err = p.myDB.QueryRow("SELECT `c`.`id`\n"+
-			"FROM `connections_keys` AS `k`\n"+
-			"INNER JOIN `connections` AS `c` ON `k`.`connection` = `c`.`id`\n"+
-			"WHERE `c`.`type` = 'Server' AND `c`.`role` = 'Source' AND `k`.`key` = ?", key).Scan(&server)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				err = errors.New("key does not exist")
-			}
-			return err
-		}
-		serverRequest = true
+	serverRequest := server != 0
+
+	// Validate the content type.
+	mt, params, err := mime.ParseMediaType(header.Headers.Get("Content-Type"))
+	if err != nil || mt != "application/json" || len(params) > 1 {
+		p.observer.AddEvent(source, server, stream, nil, message, errors.New("Content-Type header must be 'application/json'"))
+		return nil
+	}
+	if charset, ok := params["charset"]; ok && strings.ToLower(charset) != "utf-8" {
+		p.observer.AddEvent(source, server, stream, nil, message, errors.New("Content-Type header charset must be 'utf-8'"))
+		return nil
 	}
 
-	// Decode the event.
-	var request MessageHeader
-	err = decodeEvent(bytes.NewReader(value), &request)
+	// Validate received at.
+	receivedAt, err := time.Parse(header.ReceivedAt, eventDateLayout)
+	if err != nil || receivedAt.IsZero() {
+		p.observer.AddEvent(source, server, stream, nil, message, errors.New("invalid received at"))
+		return nil
+	}
+
+	// Validate the remote host.
+	ip, _, err := net.SplitHostPort(header.RemoteAddr)
 	if err != nil {
-		return err
+		p.observer.AddEvent(source, server, stream, nil, message, errors.New("invalid remote address"))
+		return nil
+	}
+	remoteIP := net.ParseIP(ip)
+	if remoteIP == nil {
+		p.observer.AddEvent(source, server, stream, nil, message, errors.New("invalid remote address"))
+		return nil
 	}
 
-	for {
+	now := time.Now().UTC()
 
-		var event Event
-		err = dec.Decode(&event)
-		if err == io.EOF {
-			break
-		}
+	typeString := strings.ToLower(typ.String())
+
+	num := len(offsets)
+	offsets = append(offsets, len(message))
+	events := make([]Event, num)
+
+	for i := 0; i < num; i++ {
+
+		event := &events[i]
+		event.data = message[offsets[i]:offsets[i+1]]
+
+		dec = json.NewDecoder(bytes.NewReader(event.data))
+		err = dec.Decode(event)
 		if err != nil {
-			return err
+			event.err = err
+			continue
 		}
 
 		// Source.
@@ -247,7 +323,8 @@ func (p *eventProcessor) processEvent(value []byte) error {
 
 		// Device.
 		if _, err := base64.StdEncoding.DecodeString(event.Device); err != nil || len(event.Device) != 28 {
-			return errBadRequest
+			event.err = errors.New("invalid device")
+			continue
 		}
 
 		// Event.
@@ -255,32 +332,50 @@ func (p *eventProcessor) processEvent(value []byte) error {
 			// TODO(marco)
 		} else {
 			if e := event.Event; e != "pageview" && e != "click" {
-				return errBadRequest
+				event.err = errors.New("unknown event name")
+				continue
 			}
 		}
 
 		// Language.
 		locale := culture.Locale(event.Language)
 		if locale == nil {
-			return errBadRequest
+			event.err = errors.New("unknown language code")
+			continue
 		}
 		event.Language = locale.LanguageCode()
 
 		// Referrer.
 		if event.Referrer != "" {
-			if typ == MobileType || utf8.RuneCountInString(event.Referrer) > 2048 {
-				return errBadRequest
-			} else if u, err := url.Parse(event.Referrer); err != nil || u.Scheme != "https" && u.Scheme != "http" {
-				return errBadRequest
+			if typ == MobileType {
+				event.err = errors.New("mobile cannot have referrer")
+				continue
+			} else if utf8.RuneCountInString(event.Referrer) > 2048 {
+				event.err = errors.New("referrer is longer than 2048")
+				continue
+			} else if u, err := url.Parse(event.Referrer); err != nil {
+				event.err = errors.New("referrer is not a valid URL")
+				continue
+			} else if u.Scheme != "https" && u.Scheme != "http" {
+				event.err = errors.New("referrer must begin with 'http' or 'https'")
+				continue
 			}
 		}
 
 		// Target.
 		if event.Target != "" {
-			if typ == MobileType || utf8.RuneCountInString(event.Target) > 2048 {
-				return errBadRequest
-			} else if u, err := url.Parse(event.Target); err != nil || u.Scheme != "https" && u.Scheme != "http" {
-				return errBadRequest
+			if typ == MobileType {
+				event.err = errors.New("mobile cannot have target")
+				continue
+			} else if utf8.RuneCountInString(event.Target) > 2048 {
+				event.err = errors.New("target is longer than 2048")
+				continue
+			} else if u, err := url.Parse(event.Target); err != nil {
+				event.err = errors.New("target is not a valid URL")
+				continue
+			} else if u.Scheme != "https" && u.Scheme != "http" {
+				event.err = errors.New("target must begin with 'http' or 'https'")
+				continue
 			}
 		}
 
@@ -317,24 +412,21 @@ func (p *eventProcessor) processEvent(value []byte) error {
 		}
 
 		// IP.
-		var ip string
+		var requestIP net.IP
 		if serverRequest {
 			if event.IP == "" {
-				return errBadRequest
+				event.err = errors.New("IP address cannot be empty for server requests")
+				continue
 			}
-			ip = event.IP
+			requestIP = net.ParseIP(event.IP)
+			if requestIP == nil {
+				event.err = errors.New("IP address is not valid")
+			}
 		} else {
 			if event.IP != "" {
-				return errBadRequest
+				event.err = fmt.Errorf("%s requests cannot have IP address", typeString)
 			}
-			ip, _, err = net.SplitHostPort(h.RemoteAddr)
-			if err != nil {
-				return errBadRequest
-			}
-		}
-		requestIP := net.ParseIP(ip)
-		if requestIP == nil {
-			return errBadRequest
+			requestIP = remoteIP
 		}
 		if ip := requestIP.String(); ip == "127.0.0.1" || ip == "::1" {
 			requestIP = net.ParseIP(testGEOIP)
@@ -343,24 +435,30 @@ func (p *eventProcessor) processEvent(value []byte) error {
 		// URL.
 		if typ == MobileType {
 			if event.URL != "" {
-				return errBadRequest
+				event.err = errors.New("mobile cannot have URL")
+				continue
 			}
 		} else {
 			if event.URL == "" {
-				return errBadRequest
+				event.err = errors.New("IP address can be empty")
+				continue
 			}
 			if utf8.RuneCountInString(event.URL) > 2048 {
-				return errBadRequest
+				event.err = errors.New("URL is longer than 2048")
+				continue
 			}
 			u, err := url.Parse(event.URL)
 			if err != nil {
-				return errBadRequest
+				event.err = errors.New("URL is not a valid URL")
+				continue
 			}
 			if u.Scheme != "https" && u.Scheme != "http" {
-				return errBadRequest
+				event.err = errors.New("URL must begin with 'http' or 'https'")
+				continue
 			}
 			if u.Host != websiteHost {
-				return errBadRequest
+				event.err = errors.New("URL cannot belong to the source website")
+				continue
 			}
 			event.domain, _, _ = strings.Cut(u.Host, ":")
 			event.path = strings.TrimLeft(strings.TrimRight(u.Path, "/"), "/")
@@ -373,7 +471,8 @@ func (p *eventProcessor) processEvent(value []byte) error {
 		} else {
 			t, err := time.Parse(dateTimeLayout, event.Timestamp)
 			if err != nil {
-				return errBadRequest
+				event.err = errors.New("URL cannot belong to the source website")
+				continue
 			}
 			if serverRequest {
 				if t.After(now) {
@@ -390,10 +489,12 @@ func (p *eventProcessor) processEvent(value []byte) error {
 		// Country and city.
 		if !serverRequest {
 			if event.Country != "" {
-				return errBadRequest
+				event.err = fmt.Errorf("country is required for %s", typeString)
+				continue
 			}
 			if event.City != "" {
-				return errBadRequest
+				event.err = fmt.Errorf("country is required for %s", typeString)
+				continue
 			}
 		}
 		if event.Country == "" || event.City == "" {
@@ -412,21 +513,25 @@ func (p *eventProcessor) processEvent(value []byte) error {
 				geoDB.Close()
 			}
 		} else if event.Country != "" && culture.Country(event.Country) == nil {
-			return errBadRequest
+			event.err = fmt.Errorf("unknown country code")
+			continue
 		} else if utf8.RuneCountInString(event.City) > 50 {
-			return errBadRequest
+			event.err = fmt.Errorf("city is longer than 50")
+			continue
 		}
 
 		// UserAgent, DeviceType.
 		if typ == MobileType {
 			if event.UserAgent != "" {
-				return errBadRequest
+				event.err = fmt.Errorf("mobile cannot have user agent")
+				continue
 			}
 			if dt := event.DeviceType; dt != "" && !isDeviceType(dt) {
-				return errBadRequest
+				event.err = fmt.Errorf("device type must be 'Mobile', 'Tablet' or 'Desktop'")
+				continue
 			}
 		} else {
-			userAgent := h.Headers.Get("User-Agent")
+			userAgent := header.Headers.Get("User-Agent")
 			ua := user_agent.New(userAgent)
 			osInfo := ua.OSInfo()
 			switch osInfo.Name {
@@ -483,9 +588,17 @@ func (p *eventProcessor) processEvent(value []byte) error {
 			}
 		}
 
-		// Add the event to the queue.
-		p.queue.add(&event)
+	}
 
+	// Add the events to the queue.
+	p.queue.add(events)
+
+	// Log the events for the observers.
+	for i := 0; i < num; i++ {
+		data := events[i].data
+		events[i].data = nil
+		err := events[i].err
+		p.observer.AddEvent(source, server, stream, header, data, err)
 	}
 
 	return nil
@@ -518,10 +631,24 @@ func newQueue(chDB chDriver.Conn) *queue {
 	return q
 }
 
-// add adds an event to the queue.
-func (q *queue) add(event *Event) {
+// add adds events to the queue.
+func (q *queue) add(events []Event) {
 	q.eventsMu.Lock()
-	q.events = append(q.events, event)
+	var n int
+	for i := 0; i < len(events); i++ {
+		if events[i].err == nil {
+			n++
+		}
+	}
+	if n == 0 {
+		q.eventsMu.Unlock()
+		return
+	}
+	for i := 0; i < len(events); i++ {
+		var event Event
+		event = events[i]
+		q.events = append(q.events, &event)
+	}
 	var toFlush []*Event
 	if len(q.events) == maxEventsQueueLen {
 		toFlush = q.events

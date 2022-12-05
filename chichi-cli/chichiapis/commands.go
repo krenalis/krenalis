@@ -10,11 +10,31 @@ package chichiapis
 import (
 	"fmt"
 	"log"
+	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 
 	"chichi/apis"
 )
+
+type ProcessedEvent struct {
+	Source int
+	Server int
+	Stream int
+	Header *MessageHeader
+	Data   []byte
+	Err    string
+}
+
+type MessageHeader struct {
+	ReceivedAt string
+	RemoteAddr string
+	Method     string
+	Proto      string
+	URL        string
+	Headers    http.Header
+}
 
 // Connection represents a connection.
 type Connection struct {
@@ -104,5 +124,35 @@ func ListUsers() {
 			fmt.Printf("%-30v", user.(map[string]any)[column])
 		}
 		fmt.Printf("\n")
+	}
+}
+
+func AddEventListener(source, server, stream int) string {
+	var res struct {
+		ID string
+	}
+	err := callAPI("PUT", "api/event-listeners/", nil, &res)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return res.ID
+}
+
+func Events(listener string) ([]ProcessedEvent, int) {
+	var res struct {
+		Events    []ProcessedEvent
+		Discarded int
+	}
+	err := callAPI("GET", "api/event-listeners/"+url.PathEscape(listener)+"/events", nil, &res)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return res.Events, res.Discarded
+}
+
+func RemoveEventListener(listener string) {
+	err := callAPI("DELETE", "api/event-listeners/"+url.PathEscape(listener), nil, nil)
+	if err != nil {
+		log.Fatal(err)
 	}
 }

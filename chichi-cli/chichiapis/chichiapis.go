@@ -96,7 +96,7 @@ func callAdmin(method string, body any) (any, error) {
 func callAPI(method string, path string, body io.Reader, response any) error {
 
 	// Some initial validation.
-	if method != "GET" && method != "POST" {
+	if method != "GET" && method != "POST" && method != "PUT" && method != "DELETE" {
 		panic("method must be GET or POST")
 	}
 	if method == "GET" && body != nil {
