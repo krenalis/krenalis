@@ -683,3 +683,5 @@ ALTER TABLE `connections`
 UPDATE `connections`, `connectors`
 SET `connections`.`name` = `connectors`.`name`
 WHERE `connections`.`connector` = `connectors`.`id`;
+
+UPDATE `connectors` SET `webhooksPer` = 'Connector', `oAuthURL` = 'https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read', `oAuthClientID` = 'cef1005a-72be-4047-a301-ef6057588325', `oAuthClientSecret` = '136e50df-5b89-478f-bf01-4a71547fa668', `oAuthTokenEndpoint` = 'https://api.hubapi.com/oauth/v1/token' WHERE (`id` = '3');
