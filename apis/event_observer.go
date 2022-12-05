@@ -8,6 +8,8 @@
 package apis
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -108,7 +110,7 @@ func (this *EventListeners) Add(source, server, stream int) (string, error) {
 // Events returns the events listen to by the specified listener and the number
 // of discarded events. If the listener does not exist, it returns the
 // ErrEventListenerNotFound error.
-func (this *EventListeners) Events(id string) ([]ProcessedEvent, int, error) {
+func (this *EventListeners) Events(id string) ([]json.RawMessage, int, error) {
 	return this.api.apis.eventProcessor.observer.Events(id)
 }
 
@@ -131,7 +133,7 @@ type eventListener struct {
 	server     int
 	stream     int
 	sync.Mutex // for the events and discarded fields
-	events     []ProcessedEvent
+	events     []json.RawMessage
 	discarded  int
 }
 
@@ -156,10 +158,10 @@ type ProcessedEvent struct {
 	// if header is not nil, or the data of the entire message, if header is nil.
 	Data []byte
 
-	// Err, if not nil, is a validation error occurred processing the message.
+	// Err, if not empty, is a validation error occurred processing the message.
 	// It refers to a single event, if header is not nil, or to the entire message
 	// if header is nil.
-	Err error
+	Err string
 }
 
 // newEventObserver returns a new event observer.
@@ -180,7 +182,7 @@ func (observer *eventObserver) AddEvent(source, server, stream int, header *Mess
 	if len(observer.listeners) == 0 {
 		return
 	}
-	var event ProcessedEvent
+	var event json.RawMessage
 	for _, listener := range observer.listeners {
 		if listener.source > 0 && listener.source != source {
 			continue
@@ -197,20 +199,23 @@ func (observer *eventObserver) AddEvent(source, server, stream int, header *Mess
 			listener.Unlock()
 			continue
 		}
-		if event.Data == nil {
-			if header != nil {
-				d := make([]byte, len(data))
-				copy(d, data)
-				data = d
+		if event == nil {
+			var b bytes.Buffer
+			enc := json.NewEncoder(&b)
+			enc.SetEscapeHTML(false)
+			var errStr string
+			if err != nil {
+				errStr = err.Error()
 			}
-			event = ProcessedEvent{
+			_ = enc.Encode(ProcessedEvent{
 				Source: source,
 				Server: server,
 				Stream: stream,
 				Header: header,
 				Data:   data,
-				Err:    err,
-			}
+				Err:    errStr,
+			})
+			event = b.Bytes()
 		}
 		listener.events = append(listener.events, event)
 		listener.Unlock()
@@ -220,7 +225,7 @@ func (observer *eventObserver) AddEvent(source, server, stream int, header *Mess
 // Events returns the events listen to by the specified listener and the number
 // of discarded events. If the listener does not exist, it returns the
 // ErrEventListenerNotFound error.
-func (observer *eventObserver) Events(listener string) ([]ProcessedEvent, int, error) {
+func (observer *eventObserver) Events(listener string) ([]json.RawMessage, int, error) {
 	observer.RLock()
 	for _, l := range observer.listeners {
 		if l.id != listener {
@@ -228,7 +233,7 @@ func (observer *eventObserver) Events(listener string) ([]ProcessedEvent, int, e
 		}
 		observer.RUnlock()
 		l.Lock()
-		var events []ProcessedEvent
+		var events []json.RawMessage
 		var discarded int
 		if len(l.events) > 0 {
 			events = l.events
@@ -238,7 +243,7 @@ func (observer *eventObserver) Events(listener string) ([]ProcessedEvent, int, e
 		}
 		l.Unlock()
 		if events == nil {
-			return []ProcessedEvent{}, 0, nil
+			return []json.RawMessage{}, 0, nil
 		}
 		return events, discarded, nil
 	}

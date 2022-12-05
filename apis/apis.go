@@ -23,6 +23,7 @@ import (
 	"chichi/apis/types"
 	_connector "chichi/connector"
 	"chichi/pkg/open2b/sql"
+
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/go-chi/chi/v5"
 )
@@ -305,29 +306,11 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 		router.Get("/{listenerID}/events", func(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "listenerID")
-			rawEvents, discarded, err := ws.EventListeners.Events(id)
+			events, discarded, err := ws.EventListeners.Events(id)
 			if err != nil {
 				log.Printf("[error] %s", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
-			}
-			events := make([]struct {
-				Source int
-				Server int
-				Stream int
-				Header *MessageHeader
-				Data   []byte
-				Err    string
-			}, len(rawEvents))
-			for i, event := range rawEvents {
-				events[i].Source = event.Source
-				events[i].Server = event.Server
-				events[i].Stream = event.Stream
-				events[i].Header = event.Header
-				events[i].Data = event.Data
-				if event.Err != nil {
-					events[i].Err = event.Err.Error()
-				}
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"events":    events,
