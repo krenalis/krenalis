@@ -8,6 +8,8 @@
 package chichiapis
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -127,11 +129,19 @@ func ListUsers() {
 	}
 }
 
-func AddEventListener(source, server, stream int) string {
+func AddEventListener(size, source, server, stream int) string {
+	req := struct {
+		Size   int `json:"size"`
+		Source int `json:"source"`
+		Server int `json:"server"`
+		Stream int `json:"stream"`
+	}{size, source, server, stream}
 	var res struct {
 		ID string
 	}
-	err := callAPI("PUT", "api/event-listeners/", nil, &res)
+	var b bytes.Buffer
+	_ = json.NewEncoder(&b).Encode(req)
+	err := callAPI("PUT", "api/event-listeners/", &b, &res)
 	if err != nil {
 		log.Fatal(err)
 	}

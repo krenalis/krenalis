@@ -289,10 +289,22 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 	router.Route("/api/event-listeners", func(router chi.Router) {
 		router.Put("/", func(w http.ResponseWriter, r *http.Request) {
-			source, _ := strconv.Atoi(chi.URLParam(r, "source"))
-			server, _ := strconv.Atoi(chi.URLParam(r, "server"))
-			stream, _ := strconv.Atoi(chi.URLParam(r, "stream"))
-			id, err := ws.EventListeners.Add(source, server, stream)
+			var req struct {
+				Size   *int
+				Source int
+				Server int
+				Stream int
+			}
+			err := json.NewDecoder(r.Body).Decode(&req)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			var size = 10
+			if req.Size != nil {
+				size = *req.Size
+			}
+			id, err := ws.EventListeners.Add(size, req.Source, req.Server, req.Stream)
 			if err != nil {
 				log.Printf("[error] %s", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)

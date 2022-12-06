@@ -42,13 +42,17 @@ type EventListeners struct {
 //   - sent by the server connection server, if server is not zero,
 //   - received from the stream connection stream, if stream is not zero,
 //
-// and returns its identifier.
+// and returns its identifier. size is the maximum number of events to return
+// for each call to the Events method, it must be in [1,1000].
 //
 // Returns a ConnectionNotFoundError error with type WebsiteType if the source
 // does not exist, with type ServerType if the server does not exist and with
 // type EventStreamType if the stream does not exist. if there are too many
 // event listeners, it returns a ErrTooManyEventListeners error.
-func (this *EventListeners) Add(source, server, stream int) (string, error) {
+func (this *EventListeners) Add(size, source, server, stream int) (string, error) {
+	if size < 1 || size > maxEventsListenedTo {
+		return "", errors.New("invalid size")
+	}
 	if source < 0 || source > maxInt32 {
 		return "", errors.New("invalid source identifier")
 	}
@@ -107,7 +111,7 @@ func (this *EventListeners) Add(source, server, stream int) (string, error) {
 			return "", ConnectionNotFoundError{EventStreamType}
 		}
 	}
-	return this.api.apis.eventProcessor.observer.AddListener(source, server, stream)
+	return this.api.apis.eventProcessor.observer.AddListener(size, source, server, stream)
 }
 
 // Events returns the events listen to by the specified listener and the number
@@ -200,10 +204,10 @@ func (observer *eventObserver) AddEvent(source, server, stream int, header *Mess
 		}
 		listener.Lock()
 		var p int
-		if len(listener.events) == maxEventsListenedTo {
+		if len(listener.events) == cap(listener.events) {
 			listener.discarded++
 			p = rand.Intn(len(listener.events) + listener.discarded)
-			if p >= maxEventsListenedTo {
+			if p >= cap(listener.events) {
 				listener.Unlock()
 				continue
 			}
@@ -264,10 +268,6 @@ func (observer *eventObserver) Events(listener string) ([]json.RawMessage, int, 
 			l.discarded = 0
 		}
 		l.Unlock()
-		if events == nil {
-			return []json.RawMessage{}, 0, nil
-		}
-		sort.Slice(events, func(i, j int) bool { return times[i] < times[j] })
 		return events, discarded, nil
 	}
 	observer.RUnlock()
@@ -276,15 +276,15 @@ func (observer *eventObserver) Events(listener string) ([]json.RawMessage, int, 
 
 // AddListener adds a processed event listener.
 // See the (*EventListeners).Add documentation for details.
-func (observer *eventObserver) AddListener(source, server, stream int) (string, error) {
+func (observer *eventObserver) AddListener(size, source, server, stream int) (string, error) {
 	id := uuid.New().String()
 	listener := eventListener{
 		id:     id,
 		source: source,
 		server: server,
 		stream: stream,
-		events: make([]json.RawMessage, 0, maxEventsListenedTo),
-		times:  make([]string, 0, maxEventsListenedTo),
+		events: make([]json.RawMessage, 0, size),
+		times:  make([]string, 0, size),
 	}
 	observer.Lock()
 	defer observer.Unlock()
