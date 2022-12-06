@@ -201,9 +201,9 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, name string,
 	}
 
 	go func() {
-		err := this.reloadProperties(id)
+		err := this.reloadSchema(id)
 		if err != nil {
-			log.Printf("[error] cannot reload properties for connection %d: %s", id, err)
+			log.Printf("[error] cannot reload schema for connection %d: %s", id, err)
 		}
 	}()
 
@@ -1504,11 +1504,11 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 		return ConnectionNotFoundError{DatabaseType}
 	}
 
-	// Reload the connection properties.
+	// Reload the schema of the connection.
 	go func() {
-		err := this.reloadProperties(id)
+		err := this.reloadSchema(id)
 		if err != nil {
-			log.Printf("[error] cannot reload properties for connection %d: %s", id, err)
+			log.Printf("[error] cannot reload schema for connection %d: %s", id, err)
 		}
 	}()
 
@@ -1569,11 +1569,11 @@ func (this *Connections) newFirehose(ctx context.Context, connection, connector,
 
 var errRecordStop = errors.New("stop record")
 
-// reloadProperties reloads the properties of the connection with identifier id.
-// The connection must be a source app, database or file.
+// reloadSchema reloads the schema of the connection with identifier id. The
+// connection must be a source app, database or file.
 //
 // If the connection does not exist it returns a ConnectionNotFoundError error.
-func (this *Connections) reloadProperties(id int) error {
+func (this *Connections) reloadSchema(id int) error {
 
 	if id <= 0 || id > maxInt32 {
 		return errors.New("invalid connection identifier")
