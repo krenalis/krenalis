@@ -103,7 +103,7 @@ func newEventProcessor(myDB *sql.DB, chDB chDriver.Conn, streams []*eventProcess
 		myDB:     myDB,
 		streams:  streams,
 		queue:    newQueue(chDB),
-		observer: newEventObserver(),
+		observer: newEventObserver(myDB),
 	}
 	return &processor
 }

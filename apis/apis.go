@@ -508,6 +508,15 @@ func (apis *APIs) initSchema() {
 		usersIn    int
 	}{})
 
+	apis.myDB.Scheme("ConnectionsStatsEvents", "connections_stats_events", struct {
+		hour       int
+		source     int
+		server     int
+		stream     int
+		goodEvents int
+		badEvents  int
+	}{})
+
 	apis.myDB.Scheme("ConnectionsUsers", "connections_users", struct {
 		connection   int
 		user         string

@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"sort"
 	"sync"
@@ -129,8 +130,25 @@ func (this *EventListeners) Remove(id string) {
 
 // eventObserver represents the event observer.
 type eventObserver struct {
+	myDB *sql.DB
 	sync.RWMutex
 	listeners []*eventListener
+	statsMu   sync.Mutex // for the stats field.
+	stats     []statsEntry
+}
+
+// statsKey is the key in the eventObserver.stats slice.
+type statsKey struct {
+	source int
+	server int
+	stream int
+}
+
+// statsKey is the element type of the eventObserver.stats slice.
+type statsEntry struct {
+	key        statsKey
+	goodEvents int
+	badEvents  int
 }
 
 // eventListener represents an event listener.
@@ -173,8 +191,55 @@ type ProcessedEvent struct {
 }
 
 // newEventObserver returns a new event observer.
-func newEventObserver() *eventObserver {
-	return &eventObserver{}
+func newEventObserver(myDB *sql.DB) *eventObserver {
+	observer := &eventObserver{myDB: myDB}
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case t := <-ticker.C:
+				err := observer.flushStats(t.UTC())
+				if err != nil {
+					log.Fatalf("[error] cannot update event stats: %s", err)
+				}
+			}
+		}
+	}()
+	return observer
+}
+
+func (observer *eventObserver) flushStats(t time.Time) error {
+
+	observer.statsMu.Lock()
+	if len(observer.stats) == 0 {
+		observer.statsMu.Unlock()
+		return nil
+	}
+	stats := make([]statsEntry, len(observer.stats))
+	copy(stats, observer.stats)
+	observer.stats = observer.stats[0:0]
+	observer.statsMu.Unlock()
+
+	query := "INSERT INTO `connections_stats_events`\n" +
+		"\t(`hour`, `source`, `server`, `stream`, `goodEvents`, `badEvents`) VALUES (?, ?, ?, ?, ?, ?)\n" +
+		"\tON DUPLICATE KEY UPDATE `goodEvents` = `goodEvents` + VALUES(`goodEvents`)," +
+		" `badEvents` = `badEvents` + VALUES(`badEvents`)"
+	stmt, err := observer.myDB.Prepare(query)
+	if err != nil {
+		return err
+	}
+	hour := hoursFromEpoc(t)
+	for _, s := range stats {
+		_, err = stmt.Exec(hour, s.key.source, s.key.server, s.key.stream, s.goodEvents, s.badEvents)
+		if err != nil {
+			_ = stmt.Close()
+			return err
+		}
+	}
+	err = stmt.Close()
+
+	return err
 }
 
 // AddEvent adds a processed message or event to the observed events. source,
@@ -185,8 +250,37 @@ func newEventObserver() *eventObserver {
 // entire message data if headers is nil, otherwise is the event data. If a
 // message or event is invalid, err contains the error.
 func (observer *eventObserver) AddEvent(source, server, stream int, header *MessageHeader, data []byte, err error) {
+
 	observer.RLock()
 	defer observer.RUnlock()
+
+	// Update statistics.
+	var found bool
+	key := statsKey{source, server, stream}
+	observer.statsMu.Lock()
+	for i, s := range observer.stats {
+		if s.key == key {
+			if err == nil {
+				observer.stats[i].goodEvents++
+			} else {
+				observer.stats[i].badEvents++
+			}
+			found = true
+			break
+		}
+	}
+	if !found {
+		entry := statsEntry{key: key}
+		if err == nil {
+			entry.goodEvents = 1
+		} else {
+			entry.badEvents = 1
+		}
+		observer.stats = append(observer.stats, entry)
+	}
+	observer.statsMu.Unlock()
+
+	// Update listened events.
 	if len(observer.listeners) == 0 {
 		return
 	}
@@ -244,6 +338,7 @@ func (observer *eventObserver) AddEvent(source, server, stream int, header *Mess
 		}
 		listener.Unlock()
 	}
+
 }
 
 // Events returns the events listen to by the specified listener and the number
@@ -309,4 +404,11 @@ func (observer *eventObserver) RemoveListener(id string) {
 	}
 	observer.Unlock()
 	return
+}
+
+// hoursFromEpoc returns the hours since January 1, 1970 UTC until time t.
+// t must be a UTC time.
+func hoursFromEpoc(t time.Time) int {
+	epoc := int(t.Unix())
+	return epoc / (60 * 60)
 }

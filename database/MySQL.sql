@@ -87,6 +87,18 @@ CREATE TABLE `connections_stats` (
     PRIMARY KEY (`connection`, `timeSlot`)
 );
 
+CREATE TABLE `connections_stats_events` (
+    `hour` mediumint unsigned NOT NULL,
+    `source` int NOT NULL,
+    `server` int NOT NULL,
+    `stream` int NOT NULL,
+    `goodEvents` int unsigned NOT NULL,
+    `badEvents` int unsigned NOT NULL,
+    KEY (`server`),
+    KEY (`stream`),
+    PRIMARY KEY(`hour`, `source`, `server`, `stream`)
+);
+
 CREATE TABLE `connections_users` (
   `connection` int NOT NULL,
   `user` varchar(45) NOT NULL DEFAULT '',
