@@ -121,26 +121,30 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 			return errBadRequest
 		}
 		var resource int
+		var hasOAuth bool
 		var refreshToken string
 		var expiresIn time.Time
 		err := apis.myDB.QueryRow(
-			"SELECT `s`.`connector`, `s`.`resource`, `s`.`settings`, `r`.`code`, `r`.`oAuthAccessToken`,"+
-				" `r`.`oAuthRefreshToken`, `r`.`oAuthExpiresIn`\n"+
+			"SELECT `s`.`connector`, `s`.`resource`, `s`.`settings`, `c`.`oAuthClientSecret` <> '' AS `hasOAuth`,"+
+				" `r`.`code`, `r`.`oAuthAccessToken`, `r`.`oAuthRefreshToken`, `r`.`oAuthExpiresIn`\n"+
 				"FROM `connections` AS `s`\n"+
+				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
 				"WHERE `s`.`id` = ?", connection).
-			Scan(&connector, &resource, &conf.Settings, &conf.Resource, &conf.AccessToken, &refreshToken, &expiresIn)
+			Scan(&connector, &resource, &conf.Settings, hasOAuth, &conf.Resource, &conf.AccessToken, &refreshToken, &expiresIn)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return errNotFound
 			}
 			return err
 		}
-		accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiresIn)
-		if conf.AccessToken == "" || accessTokenExpired {
-			conf.AccessToken, err = apis.refreshOAuthToken(resource)
-			if err != nil {
-				return err
+		if hasOAuth {
+			accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiresIn)
+			if conf.AccessToken == "" || accessTokenExpired {
+				conf.AccessToken, err = apis.refreshOAuthToken(resource)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		webhooksPer = WebhooksPerSource

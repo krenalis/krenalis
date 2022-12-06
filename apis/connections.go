@@ -774,12 +774,13 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			return fmt.Errorf("cannot read user schema: %s", err)
 		}
 
-		accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
-
-		if accessToken == "" || accessTokenExpired {
-			accessToken, err = this.api.apis.refreshOAuthToken(resource)
-			if err != nil {
-				return importError{err}
+		if hasOAuth := clientSecret != ""; hasOAuth {
+			accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
+			if accessToken == "" || accessTokenExpired {
+				accessToken, err = this.api.apis.refreshOAuthToken(resource)
+				if err != nil {
+					return importError{err}
+				}
 			}
 		}
 
@@ -1298,12 +1299,13 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 			return nil, err
 		}
 
-		accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
-
-		if accessToken == "" || accessTokenExpired {
-			accessToken, err = this.api.apis.refreshOAuthToken(resource)
-			if err != nil {
-				return nil, err
+		if hasOAuth := clientSecret != ""; hasOAuth {
+			accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
+			if accessToken == "" || accessTokenExpired {
+				accessToken, err = this.api.apis.refreshOAuthToken(resource)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 
@@ -1632,12 +1634,13 @@ func (this *Connections) reloadProperties(id int) error {
 			return err
 		}
 
-		accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(*expiration)
-
-		if accessToken == "" || accessTokenExpired {
-			accessToken, err = this.api.apis.refreshOAuthToken(resource)
-			if err != nil {
-				return err
+		if hasOAuth := clientSecret != ""; hasOAuth {
+			accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(*expiration)
+			if accessToken == "" || accessTokenExpired {
+				accessToken, err = this.api.apis.refreshOAuthToken(resource)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
