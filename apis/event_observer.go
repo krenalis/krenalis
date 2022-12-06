@@ -13,7 +13,9 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sort"
 	"sync"
+	"time"
 
 	"chichi/pkg/open2b/sql"
 	"github.com/google/uuid"
@@ -135,6 +137,7 @@ type eventListener struct {
 	stream     int
 	sync.Mutex // for the events and discarded fields
 	events     []json.RawMessage
+	times      []string
 	discarded  int
 }
 
@@ -184,6 +187,7 @@ func (observer *eventObserver) AddEvent(source, server, stream int, header *Mess
 		return
 	}
 	var event json.RawMessage
+	var receivedAt string
 	for _, listener := range observer.listeners {
 		if listener.source > 0 && listener.source != source {
 			continue
@@ -205,6 +209,11 @@ func (observer *eventObserver) AddEvent(source, server, stream int, header *Mess
 			}
 		}
 		if event == nil {
+			if header == nil {
+				receivedAt = time.Now().UTC().Format(eventDateLayout)
+			} else {
+				receivedAt = header.ReceivedAt
+			}
 			var b bytes.Buffer
 			enc := json.NewEncoder(&b)
 			enc.SetEscapeHTML(false)
@@ -224,8 +233,10 @@ func (observer *eventObserver) AddEvent(source, server, stream int, header *Mess
 		}
 		if listener.discarded == 0 {
 			listener.events = append(listener.events, event)
+			listener.times = append(listener.times, receivedAt)
 		} else {
 			listener.events[p] = event
+			listener.times[p] = receivedAt
 		}
 		listener.Unlock()
 	}
@@ -243,17 +254,21 @@ func (observer *eventObserver) Events(listener string) ([]json.RawMessage, int, 
 		observer.RUnlock()
 		l.Lock()
 		var events []json.RawMessage
+		var times []string
 		var discarded int
 		if len(l.events) > 0 {
 			events = l.events
+			times = l.times
 			discarded = l.discarded
 			l.events = nil
+			l.times = nil
 			l.discarded = 0
 		}
 		l.Unlock()
 		if events == nil {
 			return []json.RawMessage{}, 0, nil
 		}
+		sort.Slice(events, func(i, j int) bool { return times[i] < times[j] })
 		return events, discarded, nil
 	}
 	observer.RUnlock()
