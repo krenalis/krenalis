@@ -593,7 +593,8 @@ func (this *Connections) Delete(id int) error {
 		if connection == nil {
 			return nil
 		}
-		if connection["type"] == StorageType {
+		typ := connection["type"].(ConnectorType)
+		if typ == StorageType {
 			hasFiles, err := tx.Table("Connections").Exists(sql.Where{"workspace": this.workspace, "storage": id})
 			if err != nil {
 				return err
@@ -617,6 +618,21 @@ func (this *Connections) Delete(id int) error {
 		_, err = tx.Table("ConnectionsStats").Delete(sql.Where{"connection": id})
 		if err != nil {
 			return err
+		}
+		var connectionColumn string
+		switch typ {
+		case MobileType, WebsiteType:
+			connectionColumn = "source"
+		case ServerType:
+			connectionColumn = "server"
+		case EventStreamType:
+			connectionColumn = "stream"
+		}
+		if connectionColumn != "" {
+			_, err = tx.Table("ConnectionsStatsEvents").Delete(sql.Where{connectionColumn: id})
+			if err != nil {
+				return err
+			}
 		}
 		_, err = tx.Table("ConnectionsUsers").Delete(sql.Where{"connection": id})
 		if err != nil {
