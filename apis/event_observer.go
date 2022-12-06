@@ -253,15 +253,14 @@ func (observer *eventObserver) Events(listener string) ([]json.RawMessage, int, 
 		}
 		observer.RUnlock()
 		l.Lock()
-		var events []json.RawMessage
-		var times []string
+		var events = make([]json.RawMessage, len(l.events))
 		var discarded int
 		if len(l.events) > 0 {
-			events = l.events
-			times = l.times
+			sort.Slice(l.events, func(i, j int) bool { return l.times[i] < l.times[j] })
+			copy(events, l.events)
 			discarded = l.discarded
-			l.events = nil
-			l.times = nil
+			l.events = l.events[0:0]
+			l.times = l.times[0:0]
 			l.discarded = 0
 		}
 		l.Unlock()
@@ -284,6 +283,8 @@ func (observer *eventObserver) AddListener(source, server, stream int) (string, 
 		source: source,
 		server: server,
 		stream: stream,
+		events: make([]json.RawMessage, 0, maxEventsListenedTo),
+		times:  make([]string, 0, maxEventsListenedTo),
 	}
 	observer.Lock()
 	defer observer.Unlock()
