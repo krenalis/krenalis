@@ -627,7 +627,7 @@ func (admin *admin) serveWithESBuild(w http.ResponseWriter, r *http.Request) {
 		Bundle:            true,
 		EntryPoints:       []string{file},
 		Format:            api.FormatESModule,
-		JSXMode:           api.JSXModeAutomatic,
+		JSX:               api.JSXAutomatic,
 		Loader:            map[string]api.Loader{".js": api.LoaderJSX},
 		MinifyIdentifiers: true,
 		MinifySyntax:      true,

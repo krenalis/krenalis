@@ -35,7 +35,7 @@ require (
 	chichi/connectors/sftp v0.0.0-00010101000000-000000000000
 	chichi/connectors/website v0.0.0-00010101000000-000000000000
 	github.com/ClickHouse/clickhouse-go/v2 v2.4.3
-	github.com/evanw/esbuild v0.15.16
+	github.com/evanw/esbuild v0.16.1
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/google/uuid v1.3.0
