@@ -141,7 +141,7 @@ func (p *eventProcessor) processStream(ctx context.Context, id int, connection _
 			if err == context.Canceled || err == context.DeadlineExceeded {
 				select {
 				case <-ctx.Done():
-					continue
+					return
 				default:
 				}
 			}
