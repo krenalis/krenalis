@@ -586,14 +586,14 @@ func (this *Connections) Delete(id int) error {
 	err := this.myDB.Transaction(func(tx *sql.Tx) error {
 		connection, err := tx.Table("Connections").Get(
 			sql.Where{"id": id, "workspace": this.workspace},
-			sql.Columns{"CAST(`type` AS UNSIGNED)", "resource"})
+			sql.Columns{"CAST(`type` AS UNSIGNED) AS `type`", "resource"})
 		if err != nil {
 			return err
 		}
 		if connection == nil {
 			return nil
 		}
-		typ := connection["type"].(ConnectorType)
+		typ := ConnectorType(connection["type"].(int))
 		if typ == StorageType {
 			hasFiles, err := tx.Table("Connections").Exists(sql.Where{"workspace": this.workspace, "storage": id})
 			if err != nil {
