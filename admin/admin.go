@@ -628,6 +628,7 @@ func (admin *admin) serveWithESBuild(w http.ResponseWriter, r *http.Request) {
 		EntryPoints:       []string{file},
 		Format:            api.FormatESModule,
 		JSX:               api.JSXAutomatic,
+		LegalComments:     api.LegalCommentsEndOfFile,
 		Loader:            map[string]api.Loader{".js": api.LoaderJSX},
 		MinifyIdentifiers: true,
 		MinifySyntax:      true,
