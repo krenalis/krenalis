@@ -222,9 +222,9 @@ func (observer *eventObserver) flushStats(t time.Time) error {
 	observer.statsMu.Unlock()
 
 	query := "INSERT INTO `connections_stats_events`\n" +
-		"\t(`hour`, `source`, `server`, `stream`, `goodEvents`, `badEvents`) VALUES (?, ?, ?, ?, ?, ?)\n" +
-		"\tON DUPLICATE KEY UPDATE `goodEvents` = `goodEvents` + VALUES(`goodEvents`)," +
-		" `badEvents` = `badEvents` + VALUES(`badEvents`)"
+		"\t(`hour`, `source`, `server`, `stream`, `good_events`, `bad_events`) VALUES (?, ?, ?, ?, ?, ?)\n" +
+		"\tON DUPLICATE KEY UPDATE `good_events` = `good_events` + VALUES(`good_events`)," +
+		" `bad_events` = `bad_events` + VALUES(`bad_events`)"
 	stmt, err := observer.myDB.Prepare(query)
 	if err != nil {
 		return err

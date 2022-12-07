@@ -41,14 +41,14 @@ func (ids *identitySolver) ResolveEntity(connection int, user string, email stri
 	}
 	// Update the relations.
 	_, err = ids.connections.myDB.Exec(
-		"UPDATE `connections_users` SET `goldenRecord` = ? WHERE `connection` = ? AND `user` = ?",
+		"UPDATE `connections_users` SET `golden_record` = ? WHERE `connection` = ? AND `user` = ?",
 		goldenRecordID, connection, user,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("cannot update relation between entity and identity: %s", err)
 	}
 	// Clean orphan Golden Records.
-	_, err = ids.connections.myDB.Exec("DELETE FROM `warehouse_users` WHERE `id` NOT IN (SELECT `goldenRecord` FROM `connections_users`)")
+	_, err = ids.connections.myDB.Exec("DELETE FROM `warehouse_users` WHERE `id` NOT IN (SELECT `golden_record` FROM `connections_users`)")
 	if err != nil {
 		return 0, fmt.Errorf("cannot clean orphan Golden Records: %s", err)
 	}
@@ -74,7 +74,7 @@ func (ids *identitySolver) createIdentity() (int, error) {
 // entityToIdentity maps an entity to the corresponding Golden Record identity,
 // if found, otherwise returns 0, false and nil.
 func (ids *identitySolver) entityToIdentity(connection int, user string) (int, bool, error) {
-	query := "SELECT `goldenRecord` FROM `connections_users` WHERE `connection` = ? AND `user` = ?"
+	query := "SELECT `golden_record` FROM `connections_users` WHERE `connection` = ? AND `user` = ?"
 	row := ids.connections.myDB.QueryRow(query, connection, user)
 	var goldenRecord int
 	err := row.Scan(&goldenRecord)
@@ -92,8 +92,8 @@ func (ids *identitySolver) entityToIdentity(connection int, user string) (int, b
 // associated to that connection.
 func (ids *identitySolver) LookupSameEntities(connection int, user string) (map[int][]string, error) {
 	query := "SELECT `connection`, `user` FROM `connections_users`\n" +
-		"WHERE `connection` <> ? AND `user` <> ? AND `goldenRecord` = \n" +
-		"(SELECT `goldenRecord` FROM `connections_users` WHERE `connection` = ? AND `user` = ?)"
+		"WHERE `connection` <> ? AND `user` <> ? AND `golden_record` = \n" +
+		"(SELECT `golden_record` FROM `connections_users` WHERE `connection` = ? AND `user` = ?)"
 	rows, err := ids.connections.myDB.Query(query, connection, user, connection, user)
 	if err != nil {
 		return nil, err

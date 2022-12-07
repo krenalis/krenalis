@@ -162,7 +162,7 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, name string,
 	err = this.myDB.Transaction(func(tx *sql.Tx) error {
 		var resource int
 		var currentRefreshToken string
-		err := tx.QueryRow("SELECT `id`, `oAuthRefreshToken` FROM `resources` WHERE `connector` = ? AND `code` = ?",
+		err := tx.QueryRow("SELECT `id`, `oauth_refresh_token` FROM `resources` WHERE `connector` = ? AND `code` = ?",
 			connector, resourceCode).Scan(&resource, &currentRefreshToken)
 		if err != nil {
 			if err != sql.ErrNoRows {
@@ -172,7 +172,7 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, name string,
 		}
 		if resource == 0 {
 			result, err := tx.Exec("INSERT INTO `resources` "+
-				"SET `connector` = ?, `code` = ?, `oAuthAccessToken` = ?, `oAuthRefreshToken` = ?, `oAuthExpiresIn` = ?",
+				"SET `connector` = ?, `code` = ?, `oauth_access_token` = ?, `oauth_refresh_token` = ?, `oauth_expires_in` = ?",
 				connector, resourceCode, accessToken, refreshToken, expiresIn)
 			if err != nil {
 				return err
@@ -181,7 +181,7 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, name string,
 			resource = int(resourceID)
 		} else if refreshToken != currentRefreshToken {
 			_, err = tx.Exec("UPDATE `resources` "+
-				"SET `oAuthAccessToken` = ?, `oAuthRefreshToken` = ?, `oAuthExpiresIn` = ? WHERE `id` = ?",
+				"SET `oauth_access_token` = ?, `oauth_refresh_token` = ?, `oauth_expires_in` = ? WHERE `id` = ?",
 				accessToken, refreshToken, expiresIn, resource)
 		}
 		if err != nil {
@@ -542,7 +542,7 @@ func (this *Connections) AddWebsite(role ConnectionRole, connector int, name, ho
 			return err
 		}
 		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'Website', `role` = ?, `connector` = ?, `websiteHost` = ?",
+			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'Website', `role` = ?, `connector` = ?, `website_host` = ?",
 			id, this.workspace, name, role, connector, host)
 		return err
 	})
@@ -560,8 +560,8 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 	}
 	s := ConnectionInfo{ID: id}
 	err := this.myDB.QueryRow(
-		"SELECT `s`.`name`, CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `c`.`logoURL`,"+
-			" `s`.`enabled`, `s`.`usersQuery`\n"+
+		"SELECT `s`.`name`, CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `c`.`logo_url`,"+
+			" `s`.`enabled`, `s`.`users_query`\n"+
 			"FROM `connections` AS `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?",
@@ -705,7 +705,7 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 	importID, err := this.myDB.Table("ConnectionsImports").Add(sql.Set{
 		"connection": id,
 		"storage":    storage,
-		"startTime":  time.Now().UTC(),
+		"start_time": time.Now().UTC(),
 	}, nil)
 	if err != nil {
 		return err
@@ -724,7 +724,7 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 			}
 		}
 		_, err2 := this.myDB.Table("ConnectionsImports").Update(
-			sql.Set{"endTime": time.Now().UTC(), "error": errorMsg},
+			sql.Set{"end_time": time.Now().UTC(), "error": errorMsg},
 			sql.Where{"id": importID})
 		if err2 != nil {
 			log.Printf("[error] cannot update the end of import %d into the database: %s", importID, err2)
@@ -765,9 +765,9 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		var settings []byte
 		var expiration time.Time
 		err := this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, `c`.`webhooksPer` - 1, `r`.`code`,"+
-				" `r`.`oAuthAccessToken`, `r`.`oAuthRefreshToken`, `r`.`oAuthExpiresIn`, `s`.`connector`,"+
-				" `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
+			"SELECT `c`.`name`, `c`.`oauth_client_secret`, `c`.`webhooks_per` - 1, `r`.`code`,"+
+				" `r`.`oauth_access_token`, `r`.`oauth_refresh_token`, `r`.`oauth_expires_in`, `s`.`connector`,"+
+				" `s`.`resource`, `s`.`user_cursor`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
@@ -828,7 +828,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		var connector int
 		var settings []byte
 		err := this.myDB.QueryRow(
-			"SELECT `c`.`name`, `s`.`connector`,  `s`.`settings`, `s`.`usersQuery`\n"+
+			"SELECT `c`.`name`, `s`.`connector`,  `s`.`settings`, `s`.`users_query`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &settings, &usersQuery)
@@ -953,7 +953,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		var connector, storage int
 		var settings []byte
 		err := this.myDB.QueryRow(
-			"SELECT `c`.`name`, `s`.`connector`, `s`.`storage`, `s`.`identityColumn`, `s`.`timestampColumn`, `s`.`settings`\n"+
+			"SELECT `c`.`name`, `s`.`connector`, `s`.`storage`, `s`.`identity_column`, `s`.`timestamp_column`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &storage, &identityColumn, &timestampColumn, &settings)
@@ -1049,7 +1049,7 @@ func (this *Connections) Imports(id int) ([]*Import, error) {
 	}
 	imports := []*Import{}
 	err := this.myDB.QueryScan(
-		"SELECT `i`.`id`, `i`.`startTime`, `i`.`endTime`, `i`.`error`\n"+
+		"SELECT `i`.`id`, `i`.`start_time`, `i`.`end_time`, `i`.`error`\n"+
 			"FROM `connections_imports` AS `i`\n"+
 			"INNER JOIN `connections` AS `c` ON `i`.`connection` = `c`.`id`\n"+
 			"WHERE `c`.`workspace` = ? AND `i`.`connection` = ?\n"+
@@ -1096,7 +1096,7 @@ func (this *Connections) List() ([]*Connection, error) {
 	sources := []*Connection{}
 	err := this.myDB.QueryScan(
 		"SELECT `s`.`id`, `s`.`name`, CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `s`.`storage`,"+
-			" `c`.`oAuthURL`, `c`.`logoURL`, `s`.`enabled`\n"+
+			" `c`.`oauth_url`, `c`.`logo_url`, `s`.`enabled`\n"+
 			"FROM `connections` as `s`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 			"WHERE `s`.`workspace` = ?", this.workspace, func(rows *sql.Rows) error {
@@ -1300,8 +1300,8 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		var settings []byte
 		var expiration time.Time
 		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, `c`.`webhooksPer` - 1, `r`.`code`, "+
-				" `r`.`oAuthAccessToken`, `r`.`oAuthExpiresIn`, `s`.`connector`, `s`.`resource`, `s`.`settings`\n"+
+			"SELECT `c`.`name`, `c`.`oauth_client_secret`, `c`.`webhooks_per` - 1, `r`.`code`, "+
+				" `r`.`oauth_access_token`, `r`.`oauth_expires_in`, `s`.`connector`, `s`.`resource`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
@@ -1493,7 +1493,7 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 		return errors.New("query does not contain the placeholder \":limit\"")
 	}
 
-	result, err := this.myDB.Exec("UPDATE `connections`\nSET `usersQuery` = ?\n"+
+	result, err := this.myDB.Exec("UPDATE `connections`\nSET `users_query` = ?\n"+
 		"WHERE `id` = ? AND `workspace` = ? AND `type` = 'Database' AND `role` = 'Source'",
 		query, id, this.workspace)
 	if err != nil {
@@ -1549,7 +1549,7 @@ func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 	stats := &ConnectionsStats{
 		UsersIn: [24]int{},
 	}
-	query := "SELECT `timeSlot`, `usersIn`\nFROM `connections_stats`\nWHERE `connection` = ? AND `timeSlot` BETWEEN ? AND ?"
+	query := "SELECT `time_slot`, `users_in`\nFROM `connections_stats`\nWHERE `connection` = ? AND `time_slot` BETWEEN ? AND ?"
 	err := this.myDB.QueryScan(query, id, fromSlot, toSlot, func(rows *sql.Rows) error {
 		var err error
 		var slot, usersIn int
@@ -1634,9 +1634,9 @@ func (this *Connections) reloadSchema(id int) error {
 		var settings []byte
 		var expiration *time.Time
 		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, `c`.`webhooksPer` - 1, IFNULL(`r`.`code`, ''), "+
-				" IFNULL(`r`.`oAuthAccessToken`, ''), IFNULL(`r`.`oAuthRefreshToken`, ''), `r`.`oAuthExpiresIn`, "+
-				" `s`.`connector`, `s`.`resource`, `s`.`userCursor`, `s`.`settings`\n"+
+			"SELECT `c`.`name`, `c`.`oauth_client_secret`, `c`.`webhooks_per` - 1, IFNULL(`r`.`code`, ''), "+
+				" IFNULL(`r`.`oauth_access_token`, ''), IFNULL(`r`.`oauth_refresh_token`, ''), `r`.`oauth_expires_in`, "+
+				" `s`.`connector`, `s`.`resource`, `s`.`user_cursor`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"LEFT JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
@@ -1690,7 +1690,7 @@ func (this *Connections) reloadSchema(id int) error {
 		var connector int
 		var settings []byte
 		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `s`.`connector`, `s`.`settings`, `s`.`usersQuery`\n"+
+			"SELECT `c`.`name`, `s`.`connector`, `s`.`settings`, `s`.`users_query`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &settings, &usersQuery)
@@ -1738,7 +1738,7 @@ func (this *Connections) reloadSchema(id int) error {
 		var connector, storage int
 		var settings []byte
 		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `s`.`connector`, `s`.`storage`, `s`.`identityColumn`, `s`.`timestampColumn`, `s`.`settings`\n"+
+			"SELECT `c`.`name`, `s`.`connector`, `s`.`storage`, `s`.`identity_column`, `s`.`timestamp_column`, `s`.`settings`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &storage, &identityColumn, &timestampColumn, &settings)

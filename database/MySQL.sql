@@ -4,8 +4,9 @@ CREATE TABLE `accounts` (
   `name` VARCHAR(45) NOT NULL DEFAULT '',
   `email` VARCHAR(120) NOT NULL DEFAULT '',
   `password` VARCHAR(60) CHARACTER SET ascii NOT NULL DEFAULT '',
-  `internalIPs` VARCHAR(160) CHARACTER SET ascii NOT NULL DEFAULT '',
-  PRIMARY KEY (`id`));
+  `internal_ips` VARCHAR(160) CHARACTER SET ascii NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`)
+);
 
 INSERT INTO `accounts` (`name`,`email`,`password`) VALUES ('ACME inc','acme@open2b.com','$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC'); /* Password: foopass2 */
 
@@ -13,19 +14,19 @@ CREATE TABLE `connectors` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(200) NOT NULL DEFAULT '',
   `type` ENUM('App', 'Database', 'EventStream', 'File', 'Mobile', 'Server', 'Storage', 'Website') NOT NULL DEFAULT 'App',
-  `logoURL` VARCHAR(500) NOT NULL DEFAULT '',
-  `webhooksPer` ENUM('None', 'Connector', 'Resource', 'Source') NOT NULL DEFAULT 'None',
-  `oAuthURL` VARCHAR(500) NOT NULL DEFAULT '',
-  `oAuthClientID` VARCHAR(500) NOT NULL DEFAULT '',
-  `oAuthClientSecret` VARCHAR(500) NOT NULL DEFAULT '',
-  `oAuthTokenEndpoint` VARCHAR(500) NOT NULL DEFAULT '',
-  `oAuthDefaultTokenType` VARCHAR(10) NOT NULL DEFAULT '',
-  `oAuthDefaultExpiresIn` INT NOT NULL DEFAULT 0,
-  `oAuthForcedExpiresIn` INT NOT NULL DEFAULT 0,
+  `logo_url` VARCHAR(500) NOT NULL DEFAULT '',
+  `webhooks_per` ENUM('None', 'Connector', 'Resource', 'Source') NOT NULL DEFAULT 'None',
+  `oauth_url` VARCHAR(500) NOT NULL DEFAULT '',
+  `oauth_client_id` VARCHAR(500) NOT NULL DEFAULT '',
+  `oauth_client_secret` VARCHAR(500) NOT NULL DEFAULT '',
+  `oauth_token_endpoint` VARCHAR(500) NOT NULL DEFAULT '',
+  `oauth_default_token_type` VARCHAR(10) NOT NULL DEFAULT '',
+  `oauth_default_expires_in` INT NOT NULL DEFAULT 0,
+  `oauth_forced_expires_in` INT NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
 );
 
-INSERT INTO `connectors` (`name`, `type`, `logoURL`, `webhooksPer`, `oAuthURL`, `oAuthClientID`, `oAuthClientSecret`, `oAuthTokenEndpoint`, `oAuthForcedExpiresIn`) VALUES
+INSERT INTO `connectors` (`name`, `type`, `logo_url`, `webhooks_per`, `oauth_url`, `oauth_client_id`, `oauth_client_secret`, `oauth_token_endpoint`, `oauth_forced_expires_in`) VALUES
     ('HubSpot','App','https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/168_Hubspot_logo_logos-512.png','Connector','https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read','cef1005a-72be-4047-a301-ef6057588325','136e50df-5b89-478f-bf01-4a71547fa668','https://api.hubapi.com/oauth/v1/token',0),
     ('MySQL','Database','https://cdn4.iconfinder.com/data/icons/logos-3/181/MySQL-512.png','None','','','','',0),
     ('Dummy','App','','Connector','https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read','cef1005a-72be-4047-a301-ef6057588325','136e50df-5b89-478f-bf01-4a71547fa668','https://api.hubapi.com/oauth/v1/token',0),
@@ -52,13 +53,13 @@ CREATE TABLE `connections` (
   `storage` INT NOT NULL,
   `stream` INT NOT NULL,
   `resource` INT NOT NULL,
-  `websiteHost` varchar(261) CHARACTER SET ascii NOT NULL DEFAULT '',
-  `userCursor` VARCHAR(500) NOT NULL DEFAULT '',
-  `identityColumn` VARCHAR(100) NOT NULL DEFAULT '',
-  `timestampColumn` VARCHAR(100) NOT NULL DEFAULT '',
+  `website_host` varchar(261) CHARACTER SET ascii NOT NULL DEFAULT '',
+  `user_cursor` VARCHAR(500) NOT NULL DEFAULT '',
+  `identity_column` VARCHAR(100) NOT NULL DEFAULT '',
+  `timestamp_column` VARCHAR(100) NOT NULL DEFAULT '',
   `settings` TEXT NOT NULL,
   `schema` MEDIUMTEXT NOT NULL,
-  `usersQuery` MEDIUMTEXT NOT NULL,
+  `users_query` MEDIUMTEXT NOT NULL,
   PRIMARY KEY (`id`)
 );
 
@@ -66,8 +67,8 @@ CREATE TABLE `connections_imports` (
     `id` INT NOT NULL AUTO_INCREMENT,
     `connection` INT NOT NULL,
     `storage` INT NOT NULL,
-    `startTime` DATETIME NOT NULL,
-    `endTime` DATETIME NOT NULL,
+    `start_time` DATETIME NOT NULL,
+    `end_time` DATETIME NOT NULL,
     `error` VARCHAR(1000) NOT NULL DEFAULT '',
     PRIMARY KEY(`id`)
 );
@@ -82,9 +83,9 @@ CREATE TABLE `connections_keys` (
 
 CREATE TABLE `connections_stats` (
     `connection` INT NOT NULL,
-    `timeSlot` INT NOT NULL,
-    `usersIn` INT NOT NULL,
-    PRIMARY KEY (`connection`, `timeSlot`)
+    `time_slot` INT NOT NULL,
+    `users_in` INT NOT NULL,
+    PRIMARY KEY (`connection`, `time_slot`)
 );
 
 CREATE TABLE `connections_stats_events` (
@@ -92,8 +93,8 @@ CREATE TABLE `connections_stats_events` (
     `source` int NOT NULL,
     `server` int NOT NULL,
     `stream` int NOT NULL,
-    `goodEvents` int unsigned NOT NULL,
-    `badEvents` int unsigned NOT NULL,
+    `good_events` int unsigned NOT NULL,
+    `bad_events` int unsigned NOT NULL,
     KEY (`server`),
     KEY (`stream`),
     PRIMARY KEY(`hour`, `source`, `server`, `stream`)
@@ -104,7 +105,7 @@ CREATE TABLE `connections_users` (
   `user` varchar(45) NOT NULL DEFAULT '',
   `data` text NOT NULL,
   `timestamps` text NOT NULL DEFAULT '',
-  `goldenRecord` int unsigned NOT NULL,
+  `golden_record` int unsigned NOT NULL,
   PRIMARY KEY (`connection`, `user`)
 );
 
@@ -118,7 +119,8 @@ CREATE TABLE `devices` (
 CREATE TABLE `domains` (
   `source` INT NOT NULL,
   `name` VARCHAR(255) NOT NULL,
-  PRIMARY KEY (`source`, `name`));
+  PRIMARY KEY (`source`, `name`)
+);
 
 CREATE TABLE `properties` (
   `id` INT unsigned NOT NULL AUTO_INCREMENT,
@@ -126,7 +128,8 @@ CREATE TABLE `properties` (
   `account` INT NOT NULL,
   UNIQUE KEY `code` (`code`),
   KEY `account` (`account`),
-  PRIMARY KEY (`id`));
+  PRIMARY KEY (`id`)
+);
 
 INSERT INTO `properties` VALUES (1,'1234567890',1);
 
@@ -134,9 +137,9 @@ CREATE TABLE `resources` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `connector` INT NOT NULL,
   `code` VARCHAR(100) NOT NULL DEFAULT '',
-  `oAuthAccessToken` VARCHAR(500) NOT NULL DEFAULT '',
-  `oAuthRefreshToken` VARCHAR(500) NOT NULL DEFAULT '',
-  `oAuthExpiresIn` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `oauth_access_token` VARCHAR(500) NOT NULL DEFAULT '',
+  `oauth_refresh_token` VARCHAR(500) NOT NULL DEFAULT '',
+  `oauth_expires_in` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',
   KEY `connector` (`connector`),
   PRIMARY KEY (`id`)
 );
@@ -155,8 +158,8 @@ INSERT INTO `smart_events` VALUES (1,50,'View Nissan Car','pageview','[{\"Field\
 
 CREATE TABLE `transformations` (
   `id` INT NOT NULL AUTO_INCREMENT,
-  `goldenRecordName` VARCHAR(100) NOT NULL DEFAULT '',
-  `sourceCode` TEXT NOT NULL,
+  `golden_record_name` VARCHAR(100) NOT NULL DEFAULT '',
+  `source_code` TEXT NOT NULL,
   PRIMARY KEY (`id`)
 );
 
@@ -186,13 +189,13 @@ CREATE TABLE `workspaces` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `account` INT NOT NULL,
   `name` VARCHAR(100) NOT NULL,
-  `userSchema` TEXT NOT NULL,
-  `groupSchema` TEXT NOT NULL,
-  `eventSchema` TEXT NOT NULL,
+  `user_schema` TEXT NOT NULL,
+  `group_schema` TEXT NOT NULL,
+  `event_schema` TEXT NOT NULL,
   PRIMARY KEY (`id`)
 );
 
-INSERT INTO `workspaces` (`id`, `account`, `name`, `userSchema`, `groupSchema`, `eventSchema`)
+INSERT INTO `workspaces` (`id`, `account`, `name`, `user_schema`, `group_schema`, `event_schema`)
 VALUES (1, 1, 'Workspace', '{ "properties": [
     {
         "name" : "FirstName",

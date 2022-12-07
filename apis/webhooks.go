@@ -125,8 +125,8 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		var refreshToken string
 		var expiresIn time.Time
 		err := apis.myDB.QueryRow(
-			"SELECT `s`.`connector`, `s`.`resource`, `s`.`settings`, `c`.`oAuthClientSecret` <> '' AS `hasOAuth`,"+
-				" `r`.`code`, `r`.`oAuthAccessToken`, `r`.`oAuthRefreshToken`, `r`.`oAuthExpiresIn`\n"+
+			"SELECT `s`.`connector`, `s`.`resource`, `s`.`settings`, `c`.`oauth_client_secret` <> '' AS `has_oauth`,"+
+				" `r`.`code`, `r`.`oauth_access_token`, `r`.`oauth_refresh_token`, `r`.`oauth_expires_in`\n"+
 				"FROM `connections` AS `s`\n"+
 				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
 				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+

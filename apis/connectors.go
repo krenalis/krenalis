@@ -96,9 +96,9 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 	}
 	connector := Connector{ID: id}
 	err := apis.myDB.QueryRow(
-		"SELECT `name`, CAST(`type` AS UNSIGNED), `oAuthURL`, `logoURL`, `oAuthClientID`, `oAuthClientSecret`,"+
-			" `oAuthTokenEndpoint`, `webhooksPer` - 1, `oAuthDefaultTokenType`, `oAuthDefaultExpiresIn`,"+
-			" `oAuthForcedExpiresIn`\n"+
+		"SELECT `name`, CAST(`type` AS UNSIGNED), `oauth_url`, `logo_url`, `oauth_client_id`, `oauth_client_secret`,"+
+			" `oauth_token_endpoint`, `webhooks_per` - 1, `oauth_default_token_type`, `oauth_default_expires_in`,"+
+			" `oauth_forced_expires_in`\n"+
 			"FROM `connectors`\nWHERE `id` = ?", id).
 		Scan(&connector.Name, &connector.Type, &connector.OAuth.URL, &connector.LogoURL, &connector.OAuth.ClientID,
 			&connector.OAuth.ClientSecret, &connector.OAuth.TokenEndpoint, &connector.WebhooksPer,
@@ -115,7 +115,7 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 // Connectors returns all connectors.
 func (apis *APIs) Connectors() ([]*Connector, error) {
 	connectors := []*Connector{}
-	err := apis.myDB.QueryScan("SELECT `id`, `name`, CAST(`type` AS UNSIGNED), `oAuthURL`, `logoURL`\nFROM `connectors`", func(rows *sql.Rows) error {
+	err := apis.myDB.QueryScan("SELECT `id`, `name`, CAST(`type` AS UNSIGNED), `oauth_url`, `logo_url`\nFROM `connectors`", func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
 			var connector Connector

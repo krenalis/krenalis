@@ -254,7 +254,7 @@ func (p *eventProcessor) processMessage(stream int, message []byte) error {
 	}
 	var typ ConnectorType
 	var websiteHost string
-	err = p.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), `websiteHost`\n"+
+	err = p.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), `website_host`\n"+
 		"FROM `connections`\n"+
 		"WHERE `id` = ? AND `type` IN ('Mobile', 'Website') AND `role` = 'Source'", source).
 		Scan(&typ, &websiteHost)
@@ -669,9 +669,9 @@ func (q *queue) flush(events []*Event) {
 RETRY:
 	for {
 		batch, err := q.chDB.PrepareBatch(context.Background(), "INSERT INTO `events`\n"+
-			"(`source`, `date`, `timestamp`, `language`, `osName`, `osVersion`, `browser`, `browserOther`,"+
-			" `browserVersion`, `deviceType`, `referrer`, `target`, `event`, `text`, `domain`, `path`,"+
-			" `queryString`, `title`, `user`, `country`, `city`)")
+			"(`source`, `date`, `timestamp`, `language`, `os_name`, `os_version`, `browser`, `browser_other`,"+
+			" `browser_version`, `device_type`, `referrer`, `target`, `event`, `text`, `domain`, `path`,"+
+			" `query_string`, `title`, `user`, `country`, `city`)")
 		if err != nil {
 			log.Printf("[error] cannot log events: %s", err)
 			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)

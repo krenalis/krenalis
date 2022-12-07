@@ -51,7 +51,7 @@ func (fh *firehose) ReceiveEvent(event connector.Event) {
 
 // SetCursor sets the user cursor.
 func (fh *firehose) SetCursor(cursor string) {
-	result, err := fh.connections.myDB.Exec("UPDATE `connections`\nSET `userCursor` = ?\nWHERE `id` = ?", cursor, fh.connection)
+	result, err := fh.connections.myDB.Exec("UPDATE `connections`\nSET `user_cursor` = ?\nWHERE `id` = ?", cursor, fh.connection)
 	if err != nil {
 		fh.setError(err)
 		return
@@ -305,8 +305,8 @@ func (fh *firehose) writeConnectionUsers(user string, props map[string]any, time
 		return err
 	}
 	_, err = fh.connections.myDB.Exec("INSERT INTO `connections_stats`\n"+
-		"SET `connection` = ?, `timeSlot` = ?, `usersIn` = 1\n"+
-		"ON DUPLICATE KEY UPDATE `usersIn` = `usersIn` + 1",
+		"SET `connection` = ?, `time_slot` = ?, `users_in` = 1\n"+
+		"ON DUPLICATE KEY UPDATE `users_in` = `users_in` + 1",
 		fh.connection, statsTimeSlot(time.Now()))
 	return err
 }

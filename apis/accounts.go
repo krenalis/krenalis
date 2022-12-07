@@ -146,7 +146,7 @@ func (this *Accounts) Get(id int) (*Account, error) {
 	}
 	account := Account{ID: id}
 	var ips string
-	err := this.myDB.QueryRow("SELECT `name`, `email`, `internalIPs`\nFROM `accounts`\nWHERE `id` = ?", id).Scan(&account.Name, &account.Email, &ips)
+	err := this.myDB.QueryRow("SELECT `name`, `email`, `internal_ips`\nFROM `accounts`\nWHERE `id` = ?", id).Scan(&account.Name, &account.Email, &ips)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil

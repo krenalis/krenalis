@@ -697,3 +697,53 @@ CREATE TABLE `connections_stats_events` (
     KEY (`stream`),
     PRIMARY KEY(`hour`, `source`, `server`, `stream`)
 );
+
+ALTER TABLE `accounts`
+    CHANGE COLUMN `internalIPs` `internal_ips` VARCHAR(160) CHARACTER SET ascii NOT NULL DEFAULT '';
+
+ALTER TABLE `connectors`
+    CHANGE COLUMN `logoURL` `logo_url` VARCHAR(500) NOT NULL DEFAULT '',
+    CHANGE COLUMN `webhooksPer` `webhooks_per` ENUM('None', 'Connector', 'Resource', 'Source') NOT NULL DEFAULT 'None',
+    CHANGE COLUMN `oAuthURL` `oauth_url` VARCHAR(500) NOT NULL DEFAULT '',
+    CHANGE COLUMN `oAuthClientID` `oauth_client_id` VARCHAR(500) NOT NULL DEFAULT '',
+    CHANGE COLUMN `oAuthClientsecret` `oauth_client_secret` VARCHAR(500) NOT NULL DEFAULT '',
+    CHANGE COLUMN `oAuthTokenEndpoint` `oauth_token_endpoint` VARCHAR(500) NOT NULL DEFAULT '',
+    CHANGE COLUMN `oAuthDefaultTokenType` `oauth_default_token_type` VARCHAR(10) NOT NULL DEFAULT '',
+    CHANGE COLUMN `oAuthDefaultExpiresIn` `oauth_default_expires_in` INT NOT NULL DEFAULT 0,
+    CHANGE COLUMN `oAuthForcedExpiresIn` `oauth_forced_expires_in` INT NOT NULL DEFAULT 0;
+
+ALTER TABLE `connections`
+    CHANGE COLUMN `websiteHost` `website_host` varchar(261) CHARACTER SET ascii NOT NULL DEFAULT '',
+    CHANGE COLUMN `userCursor` `user_cursor` VARCHAR(500) NOT NULL DEFAULT '',
+    CHANGE COLUMN `identityColumn`  `identity_column` VARCHAR(100) NOT NULL DEFAULT '',
+    CHANGE COLUMN `timestampColumn` `timestamp_column` VARCHAR(100) NOT NULL DEFAULT '',
+    CHANGE COLUMN `usersQuery` `users_query` MEDIUMTEXT NOT NULL;
+
+ALTER TABLE `connections_imports`
+    CHANGE COLUMN `startTime` `start_time` DATETIME NOT NULL,
+    CHANGE COLUMN `endTime` `end_time` DATETIME NOT NULL;
+
+ALTER TABLE `connections_stats`
+    CHANGE COLUMN `timeSlot` `time_slot` INT NOT NULL,
+    CHANGE COLUMN `usersIn` `users_in` INT NOT NULL;
+
+ALTER TABLE `connections_stats_events`
+    CHANGE COLUMN `goodEvents` `good_events` int unsigned NOT NULL,
+    CHANGE COLUMN `badEvents` `bad_events` int unsigned NOT NULL;
+
+ALTER TABLE `connections_users`
+    CHANGE COLUMN `goldenRecord` `golden_record` int unsigned NOT NULL;
+
+ALTER TABLE `resources`
+    CHANGE COLUMN `oAuthAccessToken` `oauth_access_token` VARCHAR(500) NOT NULL DEFAULT '',
+    CHANGE COLUMN `oAuthRefreshToken` `oauth_refresh_token` VARCHAR(500) NOT NULL DEFAULT '',
+    CHANGE COLUMN `oAuthExpiresIn` `oauth_expires_in` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00';
+
+ALTER TABLE `transformations`
+    CHANGE COLUMN `goldenRecordName` `golden_record_name` VARCHAR(100) NOT NULL DEFAULT '',
+    CHANGE COLUMN `sourceCode` `source_code` TEXT NOT NULL;
+
+ALTER TABLE `workspaces`
+    CHANGE COLUMN `userSchema` `user_schema` TEXT NOT NULL,
+    CHANGE COLUMN `groupSchema` `group_schema` TEXT NOT NULL,
+    CHANGE COLUMN `eventSchema` `event_schema` TEXT NOT NULL;

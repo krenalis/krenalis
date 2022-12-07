@@ -38,11 +38,11 @@ func (ws *WorkspaceAPI) Schema(name string) (string, error) {
 	var column string
 	switch name {
 	case "user":
-		column = "userSchema"
+		column = "user_schema"
 	case "group":
-		column = "groupSchema"
+		column = "group_schema"
 	case "event":
-		column = "eventSchema"
+		column = "event_schema"
 	default:
 		return "", fmt.Errorf("invalid schema name %q", name)
 	}
@@ -74,11 +74,11 @@ func (ws *WorkspaceAPI) SetSchema(name, schema string) error {
 	var column string
 	switch name {
 	case "user":
-		column = "userSchema"
+		column = "user_schema"
 	case "group":
-		column = "groupSchema"
+		column = "group_schema"
 	case "event":
-		column = "eventSchema"
+		column = "event_schema"
 	default:
 		return fmt.Errorf("invalid schema name %q", name)
 	}
@@ -118,7 +118,7 @@ func (ws *WorkspaceAPI) Users(properties []string, first, limit int) (types.Sche
 
 	// Read the schema.
 	var rawSchema string
-	err := ws.myDB.QueryRow("SELECT `userSchema` FROM `workspaces` WHERE `id` = ?", ws.workspace).Scan(&rawSchema)
+	err := ws.myDB.QueryRow("SELECT `user_schema` FROM `workspaces` WHERE `id` = ?", ws.workspace).Scan(&rawSchema)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return types.Schema{}, nil, errors.New("workspace does not exist anymore")

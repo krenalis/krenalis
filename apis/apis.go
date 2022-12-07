@@ -61,7 +61,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 	// send the events into the stream with their keys.
 	var streams []*eventCollectorStream
 	err := myDB.QueryScan(
-		"SELECT `s`.`id`, `co`.`name` AS `connector`, `s`.`settings`, `ci`.`id` AS `eventCollectorProducer`, CAST(`ci`.`type` AS UNSIGNED), `k`.`key`\n"+
+		"SELECT `s`.`id`, `co`.`name` AS `connector`, `s`.`settings`, `ci`.`id` AS `event_collector_producer`, CAST(`ci`.`type` AS UNSIGNED), `k`.`key`\n"+
 			"FROM `connections` AS `s`\n"+
 			"INNER JOIN `connectors` AS `co` ON `co`.`id` = `s`.`connector`\n"+
 			"INNER JOIN `connections` AS `ci` ON `ci`.`stream` = `s`.`id`\n"+
@@ -381,7 +381,7 @@ func (apis *APIs) refreshOAuthToken(resource int) (string, error) {
 
 	var clientID, clientSecret, tokenEndpoint, refreshToken string
 	err := apis.myDB.QueryRow(
-		"SELECT `c`.`oAuthClientID`, `c`.`oAuthClientSecret`, `c`.`oAuthTokenEndpoint`, `r`.`oAuthRefreshToken`\n"+
+		"SELECT `c`.`oauth_client_id`, `c`.`oauth_client_secret`, `c`.`oauth_token_endpoint`, `r`.`oauth_refresh_token`\n"+
 			"FROM `resources` AS `r`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `r`.`connector`\n"+
 			"WHERE `r`.`id` = ?", resource).
@@ -450,7 +450,7 @@ func (apis *APIs) refreshOAuthToken(resource int) (string, error) {
 
 	_, err = apis.myDB.Exec(
 		"UPDATE `resources`\n"+
-			"SET `oAuthAccessToken` = ?, `oAuthRefreshToken` = ?, `oAuthExpiresIn` = ?\n"+
+			"SET `oauth_access_token` = ?, `oauth_refresh_token` = ?, `oauth_expires_in` = ?\n"+
 			"WHERE `id` = ?",
 		response.AccessToken, response.RefreshToken, expiresIn, resource)
 	if err != nil {
@@ -463,28 +463,28 @@ func (apis *APIs) refreshOAuthToken(resource int) (string, error) {
 func (apis *APIs) initSchema() {
 
 	apis.myDB.Scheme("Accounts", "accounts", struct {
-		id          int
-		name        string
-		email       string
-		password    string
-		internalIPs string
+		id           int
+		name         string
+		email        string
+		password     string
+		internal_ips string
 	}{})
 
 	apis.myDB.Scheme("Connections", "connections", struct {
-		id              int
-		workspace       int
-		typ             int `sql:"type"`
-		role            int
-		connector       int
-		storage         int
-		resource        string
-		websiteHost     string
-		userCursor      string
-		identityColumn  string
-		timestampColumn string
-		settings        string
-		schema          string
-		usersQuery      string
+		id               int
+		workspace        int
+		typ              int `sql:"type"`
+		role             int
+		connector        int
+		storage          int
+		resource         string
+		website_host     string
+		user_cursor      string
+		identity_column  string
+		timestamp_column string
+		settings         string
+		schema           string
+		users_query      string
 	}{})
 
 	apis.myDB.Scheme("ConnectionsKeys", "connections_keys", struct {
@@ -497,47 +497,47 @@ func (apis *APIs) initSchema() {
 		id         int
 		connection int
 		storage    int
-		startTime  time.Time
-		endTime    time.Time
+		start_time time.Time
+		end_time   time.Time
 		error      string
 	}{})
 
 	apis.myDB.Scheme("ConnectionsStats", "connections_stats", struct {
 		connection int
-		timeSlot   int
-		usersIn    int
+		time_slot  int
+		users_in   int
 	}{})
 
 	apis.myDB.Scheme("ConnectionsStatsEvents", "connections_stats_events", struct {
-		hour       int
-		source     int
-		server     int
-		stream     int
-		goodEvents int
-		badEvents  int
+		hour        int
+		source      int
+		server      int
+		stream      int
+		good_events int
+		bad_events  int
 	}{})
 
 	apis.myDB.Scheme("ConnectionsUsers", "connections_users", struct {
-		connection   int
-		user         string
-		data         string
-		timestamps   string
-		goldenRecord int
+		connection    int
+		user          string
+		data          string
+		timestamps    string
+		golden_record int
 	}{})
 
 	apis.myDB.Scheme("Connectors", "connectors", struct {
-		id                    int
-		name                  string
-		typ                   int `sql:"type"`
-		logoURL               string
-		webhooksPer           WebhooksPer
-		oAuthURL              string
-		oAuthClientID         string
-		oAuthClientSecret     string
-		oAuthTokenEndpoint    string
-		oAuthDefaultTokenType string
-		oAuthDefaultExpiresIn int
-		oAuthForcedExpiresIn  string
+		id                       int
+		name                     string
+		typ                      int `sql:"type"`
+		logo_url                 string
+		webhooks_per             WebhooksPer
+		oauth_url                string
+		oauth_client_id          string
+		oauth_client_secret      string
+		oauth_token_endpoint     string
+		oauth_default_token_type string
+		oauth_default_expires_in int
+		oauth_forced_expires_in  string
 	}{})
 
 	apis.myDB.Scheme("Devices", "devices", struct {
@@ -567,9 +567,9 @@ func (apis *APIs) initSchema() {
 	}{})
 
 	apis.myDB.Scheme("Transformations", "transformations", struct {
-		id               int
-		goldenRecordName string
-		sourceCode       string
+		id                 int
+		golden_record_name string
+		source_code        string
 	}{})
 
 	apis.myDB.Scheme("TransformationsConnections", "transformations_connections", struct {
@@ -585,12 +585,12 @@ func (apis *APIs) initSchema() {
 	}{})
 
 	apis.myDB.Scheme("Workspaces", "workspaces", struct {
-		id          int
-		account     int
-		name        string
-		userSchema  string
-		groupSchema string
-		eventSchema string
+		id           int
+		account      int
+		name         string
+		user_schema  string
+		group_schema string
+		event_schema string
 	}{})
 
 }

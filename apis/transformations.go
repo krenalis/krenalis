@@ -47,8 +47,8 @@ type InputProperty struct {
 // If the transformation is created successfully, its ID is returned.
 func createTransformation(tx *sql.Tx, t TransformationToCreate) (int, error) {
 	id, err := tx.Table("Transformations").Add(map[string]any{
-		"sourceCode":       t.SourceCode,
-		"goldenRecordName": t.GRProperty,
+		"source_code":        t.SourceCode,
+		"golden_record_name": t.GRProperty,
 	}, nil)
 	if err != nil {
 		return 0, err
@@ -103,8 +103,8 @@ func (this *Transformations) Update(id int, t TransformationToUpdate) error {
 	err = this.myDB.Transaction(func(tx *sql.Tx) error {
 		var err error
 		_, err = tx.Table("Transformations").Update(map[string]any{
-			"sourceCode":       t.SourceCode,
-			"goldenRecordName": t.GRProperty,
+			"source_code":        t.SourceCode,
+			"golden_record_name": t.GRProperty,
 		}, sql.Where{"id": id})
 		if err != nil {
 			return err
@@ -210,7 +210,7 @@ func (this *Transformations) List(connection int) ([]Transformation, error) {
 			return nil
 		}
 		rows, err = tx.Table("Transformations").Select(
-			[]any{"id", "goldenRecordName", "sourceCode"},
+			[]any{"id", "golden_record_name", "source_code"},
 			sql.Where{"id": transfIDs},
 			nil, 0, 0,
 		).Rows()
@@ -221,10 +221,10 @@ func (this *Transformations) List(connection int) ([]Transformation, error) {
 			id := row["id"].(int)
 			transformations = append(transformations, Transformation{
 				ID:              id,
-				SourceCode:      row["sourceCode"].(string),
+				SourceCode:      row["source_code"].(string),
 				Connection:      connection,
 				InputProperties: transfProps[id],
-				GRProperty:      row["goldenRecordName"].(string),
+				GRProperty:      row["golden_record_name"].(string),
 			})
 		}
 		return nil
