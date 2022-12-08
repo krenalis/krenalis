@@ -449,7 +449,7 @@ func (this *Connections) AddMobile(role ConnectionRole, connector int, name stri
 			return err
 		}
 		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'Server', `role` = ?, `connector` = ?",
+			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'Mobile', `role` = ?, `connector` = ?",
 			id, this.workspace, name, role, connector)
 		return err
 	})
