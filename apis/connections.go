@@ -177,7 +177,8 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, name string,
 			if err != nil {
 				return err
 			}
-			resourceID, err := result.LastInsertId()
+			var resourceID int64
+			resourceID, err = result.LastInsertId()
 			resource = int(resourceID)
 		} else if refreshToken != currentRefreshToken {
 			_, err = tx.Exec("UPDATE `resources` "+
