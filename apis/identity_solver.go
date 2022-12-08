@@ -28,7 +28,7 @@ func (ids *identitySolver) ResolveEntity(connection int, user string, email stri
 		return goldenRecordID, nil // already resolved.
 	}
 	// Lookup a Golden Record with this email.
-	row := ids.connections.myDB.QueryRow("SELECT `id` from `warehouse_users` where `Email` = ?", email)
+	row := ids.connections.db.QueryRow("SELECT id from warehouse_users where Email = $1", email)
 	err = row.Scan(&goldenRecordID)
 	if err != nil {
 		if err != sql.ErrNoRows {
@@ -40,15 +40,15 @@ func (ids *identitySolver) ResolveEntity(connection int, user string, email stri
 		}
 	}
 	// Update the relations.
-	_, err = ids.connections.myDB.Exec(
-		"UPDATE `connections_users` SET `golden_record` = ? WHERE `connection` = ? AND `user` = ?",
+	_, err = ids.connections.db.Exec(
+		"UPDATE connections_users SET golden_record = ? WHERE connection = $1 AND user = $2",
 		goldenRecordID, connection, user,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("cannot update relation between entity and identity: %s", err)
 	}
 	// Clean orphan Golden Records.
-	_, err = ids.connections.myDB.Exec("DELETE FROM `warehouse_users` WHERE `id` NOT IN (SELECT `golden_record` FROM `connections_users`)")
+	_, err = ids.connections.db.Exec("DELETE FROM warehouse_users WHERE id NOT IN (SELECT golden_record FROM connections_users)")
 	if err != nil {
 		return 0, fmt.Errorf("cannot clean orphan Golden Records: %s", err)
 	}
@@ -58,24 +58,21 @@ func (ids *identitySolver) ResolveEntity(connection int, user string, email stri
 
 // createIdentity creates a new identity.
 func (ids *identitySolver) createIdentity() (int, error) {
-	result, err := ids.connections.myDB.Exec("INSERT INTO `warehouse_users` () VALUES()")
-	if err != nil {
-		return 0, err
-	}
-	id, err := result.LastInsertId()
+	var id int
+	err := ids.connections.db.QueryRow("INSERT INTO warehouse_users () VALUES() RETURNING id").Scan(&id)
 	if err != nil {
 		return 0, err
 	}
 	// TODO(Gianluca): review this conversion, depending on the data type we
 	// will adopt on the database.
-	return int(id), nil
+	return id, nil
 }
 
 // entityToIdentity maps an entity to the corresponding Golden Record identity,
 // if found, otherwise returns 0, false and nil.
 func (ids *identitySolver) entityToIdentity(connection int, user string) (int, bool, error) {
-	query := "SELECT `golden_record` FROM `connections_users` WHERE `connection` = ? AND `user` = ?"
-	row := ids.connections.myDB.QueryRow(query, connection, user)
+	query := "SELECT golden_record FROM connections_users WHERE connection = $1 AND user = $2"
+	row := ids.connections.db.QueryRow(query, connection, user)
 	var goldenRecord int
 	err := row.Scan(&goldenRecord)
 	if err != nil {
@@ -91,10 +88,10 @@ func (ids *identitySolver) entityToIdentity(connection int, user string) (int, b
 // Record's identity, in the form of a map from connection to the list of users
 // associated to that connection.
 func (ids *identitySolver) LookupSameEntities(connection int, user string) (map[int][]string, error) {
-	query := "SELECT `connection`, `user` FROM `connections_users`\n" +
-		"WHERE `connection` <> ? AND `user` <> ? AND `golden_record` = \n" +
-		"(SELECT `golden_record` FROM `connections_users` WHERE `connection` = ? AND `user` = ?)"
-	rows, err := ids.connections.myDB.Query(query, connection, user, connection, user)
+	query := "SELECT connection, user FROM connections_users\n" +
+		"WHERE connection <> $1 AND user <> $2 AND golden_record = \n" +
+		"(SELECT golden_record FROM connections_users WHERE connection = $1 AND user = $2)"
+	rows, err := ids.connections.db.Query(query, connection, user)
 	if err != nil {
 		return nil, err
 	}

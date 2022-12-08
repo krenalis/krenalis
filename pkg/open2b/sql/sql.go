@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 //
 //
-// Copyright (c) 2013-2017 Open2b
+// Copyright (c) 2022 Open2b
 //
 
 package sql
@@ -12,14 +12,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"reflect"
+	"net"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
 	"chichi/pkg/open2b/decimal"
 
-	_ "github.com/go-sql-driver/mysql" // MySQL driver
+	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 )
 
 type RowsScanner interface {
@@ -30,34 +31,12 @@ type RowsScanner interface {
 var ErrNoRows = sql.ErrNoRows
 var ErrTxDone = sql.ErrTxDone
 
-const (
-	_                 = iota
-	boolColumn        // 1
-	nullBoolColumn    // 2
-	float32Column     // 3
-	nullFloat32Column // 4
-	float64Column     // 5
-	nullFloat64Column // 6
-	intColumn         // 7
-	nullIntColumn     // 8
-	int64Column       // 9
-	nullInt64Column   // 10
-	uint64Column      // 11
-	stringColumn      // 12
-	nullStringColumn  // 13
-	decimalColumn     // 14
-	nullDecimalColumn // 15
-	timeColumn        // 16
-	nullTimeColumn    // 17
-)
-
 type Connection interface {
 	Exec(string, ...any) (sql.Result, error)
 	Prepare(string) (*sql.Stmt, error)
 	Query(string, ...any) (*Rows, error)
 	QueryScan(string, ...any) error
 	QueryRow(string, ...any) *Row
-	Table(string) *Table
 	Tables(string) ([]string, error)
 }
 
@@ -69,28 +48,34 @@ var (
 )
 
 type DB struct {
-	db         *sql.DB
-	quotedName string
-	schemes    map[string]scheme
-	log        io.Writer
+	db  *sql.DB
+	log io.Writer
 }
 
-type scheme struct {
-	quotedName string
-	columns    map[string]int
+type Config struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	Database string
 }
 
-// Open opens a mysql database. It validates its arguments without creating a connection to the database
-func Open(args map[string]string) (*DB, error) {
-	if args == nil {
-		args = map[string]string{}
+// Open opens a PostgreSQL database. It validates its arguments without creating a connection to the database
+func Open(conf *Config) (*DB, error) {
+	if conf == nil {
+		conf = &Config{}
 	}
-	var db, err = sql.Open("mysql", args["Username"]+":"+args["Password"]+"@"+args["Address"]+"/"+args["Database"]+
-		"?clientFoundRows=true&charset=utf8mb4,utf8&parseTime=true&loc=Local&allowOldPasswords=true")
+	u := url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(conf.Username, conf.Password),
+		Host:   net.JoinHostPort(conf.Host, strconv.Itoa(conf.Port)),
+		Path:   "/" + url.PathEscape(conf.Database),
+	}
+	var db, err = sql.Open("pgx", u.String())
 	if err != nil {
 		return nil, err
 	}
-	return &DB{db, "", map[string]scheme{}, nil}, nil
+	return &DB{db, nil}, nil
 }
 
 func (db *DB) Close() error {
@@ -111,104 +96,6 @@ func (db *DB) SetMaxIdleConns(n int) {
 
 func (db *DB) SetMaxOpenConns(n int) {
 	db.db.SetMaxOpenConns(n)
-}
-
-func (db *DB) Scheme(name, table string, columns any) {
-	var s = scheme{
-		quotedName: QuoteTable(table),
-		columns:    map[string]int{},
-	}
-	var typ = reflect.TypeOf(columns)
-	if typ.Kind() != reflect.Struct {
-		panic(fmt.Errorf("open2b/sql: Columns definition for scheme %q must be a struct", name))
-	}
-	for i := 0; i < typ.NumField(); i++ {
-		var column = typ.Field(i)
-		var canBeNull bool
-		var columnName = column.Name
-		if sqlTag := column.Tag.Get("sql"); sqlTag != "" {
-			parts := strings.SplitN(sqlTag, ",", 2)
-			if parts[0] != "" {
-				columnName = sqlTag
-			}
-			if len(parts) > 1 {
-				canBeNull = parts[1] == "null"
-			}
-		}
-		switch column.Type.Kind() {
-		case reflect.String:
-			if canBeNull {
-				s.columns[columnName] = nullStringColumn
-			} else {
-				s.columns[columnName] = stringColumn
-			}
-		case reflect.Bool:
-			if canBeNull {
-				s.columns[columnName] = nullBoolColumn
-			} else {
-				s.columns[columnName] = boolColumn
-			}
-		case reflect.Int:
-			if canBeNull {
-				s.columns[columnName] = nullIntColumn
-			} else {
-				s.columns[columnName] = intColumn
-			}
-		case reflect.Int64:
-			if canBeNull {
-				s.columns[columnName] = nullInt64Column
-			} else {
-				s.columns[columnName] = int64Column
-			}
-		case reflect.Uint64:
-			if canBeNull {
-				panic("nullable uint64 is not supported")
-			} else {
-				s.columns[columnName] = uint64Column
-			}
-		case reflect.Float32:
-			if canBeNull {
-				s.columns[columnName] = nullFloat32Column
-			} else {
-				s.columns[columnName] = float32Column
-			}
-		case reflect.Float64:
-			if canBeNull {
-				s.columns[columnName] = nullFloat64Column
-			} else {
-				s.columns[columnName] = float64Column
-			}
-		case reflect.Ptr: // *decimal.Dec
-			var t = column.Type.Elem()
-			if t.Kind() == reflect.Struct && t.Name() == "Dec" {
-				if canBeNull {
-					s.columns[columnName] = nullDecimalColumn
-				} else {
-					s.columns[columnName] = decimalColumn
-				}
-			}
-		case reflect.Struct: // time.Time
-			if column.Type.Name() == "Time" {
-				if canBeNull {
-					s.columns[columnName] = nullTimeColumn
-				} else {
-					s.columns[columnName] = timeColumn
-				}
-			}
-		}
-		if _, ok := s.columns[columnName]; !ok {
-			panic(fmt.Errorf("open2b/sql: Type %q of table field \"%s.%s\" is not supported", column.Type.Name(), table, columnName))
-		}
-	}
-	db.schemes[name] = s
-}
-
-func (db *DB) Table(name string) *Table {
-	var s, ok = db.schemes[name]
-	if !ok {
-		panic(fmt.Errorf("open2b/sql: Scheme %q does not exist", name))
-	}
-	return newTable(db, s)
 }
 
 func (db *DB) Exec(query string, args ...any) (sql.Result, error) {
@@ -295,7 +182,7 @@ func (db *DB) Begin() (*Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Tx{tx: tx, schemes: db.schemes, log: db.log}, nil
+	return &Tx{tx: tx, log: db.log}, nil
 }
 
 func (db *DB) SerializableTransaction(f func(tx *Tx) error) error {
@@ -310,7 +197,7 @@ func (db *DB) SerializableTransaction(f func(tx *Tx) error) error {
 				panic(err)
 			}
 		}()
-		var err = f(&Tx{tx, db.schemes, db.log})
+		var err = f(&Tx{tx, db.log})
 		if err != nil {
 			_ = tx.Rollback()
 			return err
@@ -335,7 +222,7 @@ func (db *DB) Transaction(f func(tx *Tx) error) error {
 				panic(err)
 			}
 		}()
-		var err = f(&Tx{tx, db.schemes, db.log})
+		var err = f(&Tx{tx, db.log})
 		if err != nil {
 			_ = tx.Rollback()
 			return err
@@ -354,9 +241,8 @@ func (db *DB) Conn(ctx context.Context) (*Conn, error) {
 		return nil, err
 	}
 	return &Conn{
-		conn:    conn,
-		log:     db.log,
-		schemes: db.schemes,
+		conn: conn,
+		log:  db.log,
 	}, nil
 }
 
@@ -389,9 +275,8 @@ func (db *DB) Tables(database string) ([]string, error) {
 }
 
 type Conn struct {
-	conn    *sql.Conn
-	schemes map[string]scheme
-	log     io.Writer
+	conn *sql.Conn
+	log  io.Writer
 }
 
 func (c *Conn) Exec(query string, args ...any) (sql.Result, error) {
@@ -473,14 +358,6 @@ func (c *Conn) QueryRow(query string, args ...any) *Row {
 	return &Row{row}
 }
 
-func (c *Conn) Table(name string) *Table {
-	var s, ok = c.schemes[name]
-	if !ok {
-		panic(fmt.Errorf("open2b/sql: Scheme %q does not exist", name))
-	}
-	return newTable(c, s)
-}
-
 func (c *Conn) Tables(database string) ([]string, error) {
 	var stmt = "SHOW TABLES"
 	if database != "" {
@@ -514,17 +391,8 @@ func (c *Conn) Close() error {
 }
 
 type Tx struct {
-	tx      *sql.Tx
-	schemes map[string]scheme
-	log     io.Writer
-}
-
-func (tx *Tx) Table(name string) *Table {
-	var s, ok = tx.schemes[name]
-	if !ok {
-		panic(fmt.Errorf("open2b/sql: Scheme %q does not exist", name))
-	}
-	return newTable(tx, s)
+	tx  *sql.Tx
+	log io.Writer
 }
 
 func (tx *Tx) Exec(query string, args ...any) (sql.Result, error) {
@@ -864,4 +732,15 @@ func (nd nullDecimal) Scan(src any) error {
 	}
 	*nd.d = b
 	return nil
+}
+
+func LimitFirstStatement(limit, first int) string {
+	var statement = ""
+	if limit > 0 {
+		statement = "\nLIMIT " + strconv.Itoa(limit)
+	}
+	if first > 0 {
+		statement = "\nOFFSET " + strconv.Itoa(first)
+	}
+	return statement
 }

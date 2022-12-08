@@ -7,18 +7,16 @@
 
 package main
 
-import "gopkg.in/gcfg.v1"
+import (
+	"chichi/pkg/open2b/sql"
+	"gopkg.in/gcfg.v1"
+)
 
 type Settings struct {
 	Main struct {
 		PrintESBuildWarningsOnStderr bool
 	}
-	MySQL struct {
-		Address  string
-		Username string
-		Password string
-		Database string
-	}
+	PostgreSQL sql.Config
 	ClickHouse struct {
 		Address  string
 		Username string

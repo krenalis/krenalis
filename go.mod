@@ -37,8 +37,8 @@ require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.4.3
 	github.com/evanw/esbuild v0.16.1
 	github.com/go-chi/chi/v5 v5.0.7
-	github.com/go-sql-driver/mysql v1.6.0
 	github.com/google/uuid v1.3.0
+	github.com/jackc/pgx/v5 v5.2.0
 	github.com/jxskiss/base62 v1.1.0
 	github.com/mssola/user_agent v0.5.3
 	github.com/open2b/nuts v1.5.3
@@ -76,10 +76,10 @@ require (
 	github.com/fraugster/parquet-go v0.12.0 // indirect
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.6.1 // indirect
+	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
-	github.com/jackc/pgx/v5 v5.0.4 // indirect
 	github.com/klauspost/compress v1.15.12 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/kr/text v0.2.0 // indirect

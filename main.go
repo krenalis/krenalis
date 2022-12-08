@@ -20,7 +20,7 @@ import (
 	"chichi/pkg/open2b/sql"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
@@ -40,22 +40,17 @@ func main() {
 		log.Printf("[error] cannot read configuration file: %s", err)
 		return
 	}
-	// Open a connection to the MySQL database.
-	mySQLDB, err := sql.Open(map[string]string{
-		"Username": settings.MySQL.Username,
-		"Password": settings.MySQL.Password,
-		"Address":  settings.MySQL.Address,
-		"Database": settings.MySQL.Database,
-	})
+	// Open a connection to the PostgreSQL database.
+	db, err := sql.Open(&settings.PostgreSQL)
 	if err != nil {
 		log.Fatalf("[error] cannot connect to the database: %s", err)
 	}
-	defer mySQLDB.Close()
-	err = mySQLDB.Ping()
+	defer db.Close()
+	err = db.Ping()
 	if err != nil {
-		log.Fatalf("[error] cannot ping MySQL server: %s", err)
+		log.Fatalf("[error] cannot ping PostgreSQL server: %s", err)
 	}
-	log.Printf("[info] successfully connected to the MySQL server")
+	log.Printf("[info] successfully connected to the PostgreSQL server")
 
 	// Open a connection to the ClickHouse database.
 	clickHouseConn, err := clickhouse.Open(&clickhouse.Options{
@@ -77,7 +72,7 @@ func main() {
 		log.Printf("[info] successfully connected to the ClickHouse server")
 	}
 
-	apis := apis.New(mySQLDB, clickHouseConn)
+	apis := apis.New(db, clickHouseConn)
 	admin := admin.New(apis)
 
 	http.HandleFunc("/admin/", admin.ServeHTTP)

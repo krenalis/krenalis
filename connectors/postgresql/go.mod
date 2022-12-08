@@ -2,7 +2,7 @@ module postgresql
 
 go 1.19
 
-require github.com/jackc/pgx/v5 v5.0.4
+require github.com/jackc/pgx/v5 v5.2.0
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect

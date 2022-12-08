@@ -9,7 +9,9 @@ package apis
 
 import (
 	"context"
+	"database/sql/driver"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"regexp"
@@ -31,26 +33,64 @@ const (
 	WebhooksPerSource
 )
 
-// String returns the string representation of w.
-// It panics if w is not a valid WebhooksPer value.
-func (w WebhooksPer) String() string {
-	switch w {
-	case WebhooksPerNone:
-		return "None"
-	case WebhooksPerConnector:
-		return "Connector"
-	case WebhooksPerResource:
-		return "Resource"
-	case WebhooksPerSource:
-		return "Source"
-	}
-	panic("invalid webhooksPer value")
-}
-
 // MarshalJSON implements the json.Marshaler interface.
 // It panics if w is not a valid WebhooksPer value.
-func (w WebhooksPer) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + w.String() + `"`), nil
+func (per WebhooksPer) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + per.String() + `"`), nil
+}
+
+// Scan implements the sql.Scanner interface.
+func (per *WebhooksPer) Scan(src any) error {
+	var s string
+	switch src := src.(type) {
+	case string:
+		s = src
+	case []byte:
+		s = string(src)
+	default:
+		return fmt.Errorf("cannot scan a %T value into an api.WebhooksPer value", src)
+	}
+	var p WebhooksPer
+	switch s {
+	case "None":
+		p = WebhooksPerNone
+	case "Connector":
+		p = WebhooksPerConnector
+	case "Resource":
+		p = WebhooksPerResource
+	case "Source":
+		p = WebhooksPerSource
+	default:
+		return fmt.Errorf("invalid api.WebhooksPer: %s", s)
+	}
+	*per = p
+	return nil
+}
+
+// String returns the string representation of w.
+// It panics if w is not a valid WebhooksPer value.
+func (per WebhooksPer) String() string {
+	s, err := per.Value()
+	if err != nil {
+		panic("invalid webhooksPer value")
+	}
+	return s.(string)
+}
+
+// Value implements driver.Valuer interface.
+// It returns an error if typ is not a valid ConnectionRole.
+func (per WebhooksPer) Value() (driver.Value, error) {
+	switch per {
+	case WebhooksPerNone:
+		return "None", nil
+	case WebhooksPerConnector:
+		return "Connector", nil
+	case WebhooksPerResource:
+		return "Resource", nil
+	case WebhooksPerSource:
+		return "Source", nil
+	}
+	return nil, fmt.Errorf("not a valid WebhooksPer: %d", per)
 }
 
 // Errors returned to and handled by the ServeWebhook method.
@@ -106,7 +146,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		if r <= 0 {
 			return errBadRequest
 		}
-		err := apis.myDB.QueryRow("SELECT `connector`, `code` FROM `resources` WHERE `id` = ?", r).
+		err := apis.db.QueryRow("SELECT connector, code FROM resources WHERE id = $1", r).
 			Scan(&connector, &conf.Resource)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -124,13 +164,13 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		var hasOAuth bool
 		var refreshToken string
 		var expiresIn time.Time
-		err := apis.myDB.QueryRow(
-			"SELECT `s`.`connector`, `s`.`resource`, `s`.`settings`, `c`.`oauth_client_secret` <> '' AS `has_oauth`,"+
-				" `r`.`code`, `r`.`oauth_access_token`, `r`.`oauth_refresh_token`, `r`.`oauth_expires_in`\n"+
-				"FROM `connections` AS `s`\n"+
-				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
-				"WHERE `s`.`id` = ?", connection).
+		err := apis.db.QueryRow(
+			"SELECT s.connector, s.resource, s.settings, c.oauth_client_secret <> '' AS has_oauth, r.code,"+
+				" r.oauth_access_token, r.oauth_refresh_token, r.oauth_expires_in\n"+
+				"FROM connections AS s\n"+
+				"INNER JOIN connectors AS c ON c.id = s.connector\n"+
+				"INNER JOIN resources AS r ON r.id = s.resource\n"+
+				"WHERE s.id = $1", connection).
 			Scan(&connector, &resource, &conf.Settings, hasOAuth, &conf.Resource, &conf.AccessToken, &refreshToken, &expiresIn)
 		if err != nil {
 			if err == sql.ErrNoRows {

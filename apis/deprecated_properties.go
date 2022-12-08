@@ -14,10 +14,6 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
-
-	"chichi/pkg/open2b/sql"
-
-	"github.com/go-sql-driver/mysql"
 )
 
 type DeprecatedProperties struct {
@@ -41,39 +37,40 @@ var ErrDomainNameNotValid = errors.New("domain name is not valid")
 // identifier. If the account does not exist anymore, it returns the
 // ErrAccountNotFound error.
 func (this *DeprecatedProperties) Create() (int, error) {
-	var id int
-	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		exists, err := tx.Table("Accounts").Exists(sql.Where{"id": this.account})
-		if err != nil {
-			return err
-		}
-		if !exists {
-			return ErrAccountNotFound
-		}
-		var tries = 0
-		for tries < 10 {
-			code, err := generatePropertyCode()
-			if err != nil {
-				return err
-			}
-			id, err = tx.Table("Properties").Add(map[string]any{"code": code, "account": this.account}, nil)
-			if err != nil {
-				if err2, ok := err.(*mysql.MySQLError); ok && err2.Number == 1062 {
-					tries++
-					continue
-				}
-				return err
-			}
-		}
-		if tries == 10 {
-			return errors.New("apis: cannot generate a property identifier")
-		}
-		return nil
-	})
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
+	panic("deprecated")
+	//var id int
+	//err := this.db.Transaction(func(tx *sql.Tx) error {
+	//	exists, err := tx.Table("Accounts").Exists(sql.Where{"id": this.account})
+	//	if err != nil {
+	//		return err
+	//	}
+	//	if !exists {
+	//		return ErrAccountNotFound
+	//	}
+	//	var tries = 0
+	//	for tries < 10 {
+	//		code, err := generatePropertyCode()
+	//		if err != nil {
+	//			return err
+	//		}
+	//		id, err = tx.Table("Properties").Add(map[string]any{"code": code, "account": this.account}, nil)
+	//		if err != nil {
+	//			if err2, ok := err.(*mysql.MySQLError); ok && err2.Number == 1062 {
+	//				tries++
+	//				continue
+	//			}
+	//			return err
+	//		}
+	//	}
+	//	if tries == 10 {
+	//		return errors.New("apis: cannot generate a property identifier")
+	//	}
+	//	return nil
+	//})
+	//if err != nil {
+	//	return 0, err
+	//}
+	//return id, nil
 }
 
 // AddDomain adds the domain named domain to the property with identifier id.
@@ -83,115 +80,119 @@ func (this *DeprecatedProperties) Create() (int, error) {
 // error. If the property does not exist, or it does not belong to the current
 // account, it returns the ErrPropertyNotFound error.
 func (this *DeprecatedProperties) AddDomain(id int, domain string) error {
-	if id < 1 {
-		panic("apis: invalid property identifier")
-	}
-	if !isValidDomainName(domain) {
-		return ErrDomainNameNotValid
-	}
-	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		var account int
-		err := tx.QueryRow("SELECT `account` FROM `properties` WHERE `id` = ?", id).Scan(&account)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return ErrPropertyNotFound
-			}
-			return err
-		}
-		if account != this.account {
-			return ErrPropertyNotFound
-		}
-		_, err = tx.Table("Domains").Add(map[string]any{"property": id, "domain": domain}, sql.Ignore)
-		return err
-	})
-	return err
+	panic("deprecated")
+	//if id < 1 {
+	//	panic("apis: invalid property identifier")
+	//}
+	//if !isValidDomainName(domain) {
+	//	return ErrDomainNameNotValid
+	//}
+	//err := this.db.Transaction(func(tx *sql.Tx) error {
+	//	var account int
+	//	err := tx.QueryRow("SELECT `account` FROM `properties` WHERE `id` = ?", id).Scan(&account)
+	//	if err != nil {
+	//		if err == sql.ErrNoRows {
+	//			return ErrPropertyNotFound
+	//		}
+	//		return err
+	//	}
+	//	if account != this.account {
+	//		return ErrPropertyNotFound
+	//	}
+	//	_, err = tx.Table("Domains").Add(map[string]any{"property": id, "domain": domain}, sql.Ignore)
+	//	return err
+	//})
+	//return err
 }
 
 // Delete deletes the properties with the given identifiers of the current
 // account. It does not return an error if the account does not exist.
 func (this *DeprecatedProperties) Delete(ids []int) error {
-	if len(ids) == 0 {
-		panic("apis: empty properties")
-	}
-	for _, id := range ids {
-		if id < 1 {
-			panic("apis: invalid property identifier")
-		}
-	}
-	_, err := this.myDB.Exec("DELETE `p`, `d`\n"+
-		"FROM `properties` AS `p` LEFT JOIN `domains` AS `d` ON `p`.`id` = `d`.`property`\n"+
-		"WHERE `account` = ? AND `p`.`id` IN "+sql.Quote(ids), this.account)
-	return err
+	panic("deprecated")
+	//if len(ids) == 0 {
+	//	panic("apis: empty properties")
+	//}
+	//for _, id := range ids {
+	//	if id < 1 {
+	//		panic("apis: invalid property identifier")
+	//	}
+	//}
+	//_, err := this.db.Exec("DELETE `p`, `d`\n"+
+	//	"FROM `properties` AS `p` LEFT JOIN `domains` AS `d` ON `p`.`id` = `d`.`property`\n"+
+	//	"WHERE `account` = ? AND `p`.`id` IN "+sql.Quote(ids), this.account)
+	//return err
 }
 
 // Find returns all the properties of the account.
 func (this *DeprecatedProperties) Find() ([]*DeprecatedProperty, error) {
-	properties := make([]*DeprecatedProperty, 0, 0)
-	stmt := "SELECT `id`, `code`, `domain`\nFROM `properties`\nLEFT JOIN `domains` ON `property` = `id`\nWHERE `account` = ?\nORDER BY `id`, `domain`"
-	err := this.myDB.QueryScan(stmt, func(rows *sql.Rows) error {
-		var id int
-		var code, domain string
-	Rows:
-		for rows.Next() {
-			if err := rows.Scan(&id, &code, &domain); err != nil {
-				return err
-			}
-			for _, property := range properties {
-				if property.ID == id {
-					property.Domains = append(property.Domains, domain)
-					continue Rows
-				}
-			}
-			property := &DeprecatedProperty{ID: id, Code: code}
-			if domain != "" {
-				property.Domains = []string{domain}
-			}
-			properties = append(properties, property)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return properties, nil
+	panic("deprecated")
+	//properties := make([]*DeprecatedProperty, 0, 0)
+	//stmt := "SELECT `id`, `code`, `domain`\nFROM `properties`\nLEFT JOIN `domains` ON `property` = `id`\nWHERE `account` = ?\nORDER BY `id`, `domain`"
+	//err := this.db.QueryScan(stmt, func(rows *sql.Rows) error {
+	//	var id int
+	//	var code, domain string
+	//Rows:
+	//	for rows.Next() {
+	//		if err := rows.Scan(&id, &code, &domain); err != nil {
+	//			return err
+	//		}
+	//		for _, property := range properties {
+	//			if property.ID == id {
+	//				property.Domains = append(property.Domains, domain)
+	//				continue Rows
+	//			}
+	//		}
+	//		property := &DeprecatedProperty{ID: id, Code: code}
+	//		if domain != "" {
+	//			property.Domains = []string{domain}
+	//		}
+	//		properties = append(properties, property)
+	//	}
+	//	return nil
+	//})
+	//if err != nil {
+	//	return nil, err
+	//}
+	//return properties, nil
 }
 
 // Get returns the property, of the current account, with the given
 // identifier. If the account or the property do not exist, it returns nil.
 func (this *DeprecatedProperties) Get(id int) (*DeprecatedProperty, error) {
-	if id < 1 {
-		panic("apis: invalid property identifier")
-	}
-	property := DeprecatedProperty{}
-	stmt := "SELECT `code`, `domain`\nFROM `properties`\nLEFT JOIN `domains` ON `property` = `id`\nWHERE `account` = ? AND `id` = ?"
-	err := this.myDB.QueryScan(stmt, func(rows *sql.Rows) error {
-		var code, domain string
-		for rows.Next() {
-			if err := rows.Scan(&code, &domain); err != nil {
-				return err
-			}
-			property.ID = id
-			property.Code = code
-			if domain == "" {
-				property.Domains = []string{}
-			} else {
-				property.Code = code
-				if property.Domains == nil {
-					property.Domains = []string{domain}
-				} else {
-					property.Domains = append(property.Domains)
-				}
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	if property.ID == 0 {
-		return nil, nil
-	}
-	return &property, nil
+	panic("deprecated")
+	//if id < 1 {
+	//	panic("apis: invalid property identifier")
+	//}
+	//property := DeprecatedProperty{}
+	//stmt := "SELECT `code`, `domain`\nFROM `properties`\nLEFT JOIN `domains` ON `property` = `id`\nWHERE `account` = ? AND `id` = ?"
+	//err := this.db.QueryScan(stmt, func(rows *sql.Rows) error {
+	//	var code, domain string
+	//	for rows.Next() {
+	//		if err := rows.Scan(&code, &domain); err != nil {
+	//			return err
+	//		}
+	//		property.ID = id
+	//		property.Code = code
+	//		if domain == "" {
+	//			property.Domains = []string{}
+	//		} else {
+	//			property.Code = code
+	//			if property.Domains == nil {
+	//				property.Domains = []string{domain}
+	//			} else {
+	//				property.Domains = append(property.Domains)
+	//			}
+	//		}
+	//	}
+	//	return nil
+	//})
+	//if err != nil {
+	//	return nil, err
+	//}
+	//if property.ID == 0 {
+	//	return nil, nil
+	//}
+	//return &property, nil
 }
 
 // RemoveDomain removes the domain named domain from the property with
@@ -202,28 +203,29 @@ func (this *DeprecatedProperties) Get(id int) (*DeprecatedProperty, error) {
 // error. If the property does not exist, or it does not belong to the current
 // account, it returns the ErrPropertyNotFound error.
 func (this *DeprecatedProperties) RemoveDomain(id int, domain string) error {
-	if id < 1 {
-		panic("apis: invalid property identifier")
-	}
-	if !isValidDomainName(domain) {
-		return ErrDomainNameNotValid
-	}
-	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		var account int
-		err := tx.QueryRow("SELECT `account` FROM `properties` WHERE `id` = ?", id).Scan(&account)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return ErrPropertyNotFound
-			}
-			return err
-		}
-		if account != this.account {
-			return ErrPropertyNotFound
-		}
-		_, err = tx.Table("Domains").Delete(sql.Where{"property": id, "domain": domain})
-		return err
-	})
-	return err
+	panic("deprecated")
+	//if id < 1 {
+	//	panic("apis: invalid property identifier")
+	//}
+	//if !isValidDomainName(domain) {
+	//	return ErrDomainNameNotValid
+	//}
+	//err := this.db.Transaction(func(tx *sql.Tx) error {
+	//	var account int
+	//	err := tx.QueryRow("SELECT `account` FROM `properties` WHERE `id` = ?", id).Scan(&account)
+	//	if err != nil {
+	//		if err == sql.ErrNoRows {
+	//			return ErrPropertyNotFound
+	//		}
+	//		return err
+	//	}
+	//	if account != this.account {
+	//		return ErrPropertyNotFound
+	//	}
+	//	_, err = tx.Table("Domains").Delete(sql.Where{"property": id, "domain": domain})
+	//	return err
+	//})
+	//return err
 }
 
 // generatePropertyCode generates a property code.

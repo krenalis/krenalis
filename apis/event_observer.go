@@ -65,9 +65,8 @@ func (this *EventListeners) Add(size, source, server, stream int) (string, error
 	}
 	if source > 0 || server > 0 || stream > 0 {
 		var sourceExist, serverExist, streamExist bool
-		err := this.myDB.QueryScan("SELECT `id`, CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED)\n"+
-			"FROM `connections`\n"+
-			"WHERE `id` IN (?, ?, ?) AND `workspace` = ?", source, server, stream, this.workspace,
+		err := this.db.QueryScan("SELECT id, type , role FROM connections\n"+
+			"WHERE id IN ($1, $2, $3) AND workspace = $4", source, server, stream, this.workspace,
 			func(rows *sql.Rows) error {
 				var id int
 				var typ ConnectorType
@@ -130,7 +129,7 @@ func (this *EventListeners) Remove(id string) {
 
 // eventObserver represents the event observer.
 type eventObserver struct {
-	myDB *sql.DB
+	db *sql.DB
 	sync.RWMutex
 	listeners []*eventListener
 	statsMu   sync.Mutex // for the stats field.
@@ -191,8 +190,8 @@ type ProcessedEvent struct {
 }
 
 // newEventObserver returns a new event observer.
-func newEventObserver(myDB *sql.DB) *eventObserver {
-	observer := &eventObserver{myDB: myDB}
+func newEventObserver(db *sql.DB) *eventObserver {
+	observer := &eventObserver{db: db}
 	go func() {
 		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
@@ -221,11 +220,11 @@ func (observer *eventObserver) flushStats(t time.Time) error {
 	observer.stats = observer.stats[0:0]
 	observer.statsMu.Unlock()
 
-	query := "INSERT INTO `connections_stats_events`\n" +
-		"\t(`hour`, `source`, `server`, `stream`, `good_events`, `bad_events`) VALUES (?, ?, ?, ?, ?, ?)\n" +
-		"\tON DUPLICATE KEY UPDATE `good_events` = `good_events` + VALUES(`good_events`)," +
-		" `bad_events` = `bad_events` + VALUES(`bad_events`)"
-	stmt, err := observer.myDB.Prepare(query)
+	query := "INSERT INTO connections_stats_events (hour, source, server, stream, good_events, bad_events)\n" +
+		"VALUES ($1, $2, $3, $4, $5, $6)\n" +
+		"\tON CONFLICT (hour, source, server, stream) DO UPDATE SET good_events = good_events + EXCLUDED.good_events," +
+		" bad_events = bad_events + EXCLUDED.bad_events"
+	stmt, err := observer.db.Prepare(query)
 	if err != nil {
 		return err
 	}

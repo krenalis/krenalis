@@ -24,7 +24,7 @@ import (
 type WorkspaceAPI struct {
 	workspace       int
 	api             *AccountAPI
-	myDB            *sql.DB
+	db              *sql.DB
 	chDB            chDriver.Conn
 	Connections     *Connections
 	EventListeners  *EventListeners
@@ -47,7 +47,7 @@ func (ws *WorkspaceAPI) Schema(name string) (string, error) {
 		return "", fmt.Errorf("invalid schema name %q", name)
 	}
 	var schema string
-	err := ws.myDB.QueryRow("SELECT `"+column+"` FROM `workspaces` WHERE `id` = ?", ws.workspace).Scan(&schema)
+	err := ws.db.QueryRow("SELECT "+column+" FROM workspaces WHERE id = $1", ws.workspace).Scan(&schema)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", errors.New("workspace does not exist anymore")
@@ -86,7 +86,7 @@ func (ws *WorkspaceAPI) SetSchema(name, schema string) error {
 	if err != nil {
 		return &InvalidSchemaSyntaxError{err}
 	}
-	_, err = ws.myDB.Table("Workspaces").Update(sql.Set{column: schema}, sql.Where{"id": ws.workspace})
+	_, err = ws.db.Exec("UPDATE workspaces SET "+column+" = $1 WHERE id = $2", schema, ws.workspace)
 	return err
 }
 
@@ -118,7 +118,7 @@ func (ws *WorkspaceAPI) Users(properties []string, first, limit int) (types.Sche
 
 	// Read the schema.
 	var rawSchema string
-	err := ws.myDB.QueryRow("SELECT `user_schema` FROM `workspaces` WHERE `id` = ?", ws.workspace).Scan(&rawSchema)
+	err := ws.db.QueryRow("SELECT user_schema FROM workspaces WHERE id = $1", ws.workspace).Scan(&rawSchema)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return types.Schema{}, nil, errors.New("workspace does not exist anymore")
@@ -145,20 +145,18 @@ func (ws *WorkspaceAPI) Users(properties []string, first, limit int) (types.Sche
 		if i > 0 {
 			query.WriteByte(',')
 		}
-		query.WriteByte('`')
-		query.WriteString(name)
-		query.WriteByte('`')
+		query.WriteString(sql.QuoteColumn(name))
 	}
-	query.WriteString(" FROM `warehouse_users` LIMIT ")
-	if first > 0 {
-		query.WriteString(strconv.Itoa(first))
-		query.WriteString(", ")
-	}
+	query.WriteString(" FROM warehouse_users LIMIT ")
 	query.WriteString(strconv.Itoa(limit))
+	if first > 0 {
+		query.WriteString(" OFFSET ")
+		query.WriteString(strconv.Itoa(first))
+	}
 
 	// Execute the query.
 	var users [][]any
-	err = ws.myDB.QueryScan(query.String(), func(rows *sql.Rows) error {
+	err = ws.db.QueryScan(query.String(), func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
 			user := make([]any, len(properties))

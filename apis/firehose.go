@@ -22,6 +22,7 @@ import (
 	"chichi/apis/transformations"
 	"chichi/apis/types"
 	"chichi/connector"
+	"chichi/pkg/open2b/sql"
 )
 
 // Make sure it implements the Firehose interface.
@@ -51,7 +52,7 @@ func (fh *firehose) ReceiveEvent(event connector.Event) {
 
 // SetCursor sets the user cursor.
 func (fh *firehose) SetCursor(cursor string) {
-	result, err := fh.connections.myDB.Exec("UPDATE `connections`\nSET `user_cursor` = ?\nWHERE `id` = ?", cursor, fh.connection)
+	result, err := fh.connections.db.Exec("UPDATE connections SET user_cursor = $1 WHERE id = $2", cursor, fh.connection)
 	if err != nil {
 		fh.setError(err)
 		return
@@ -83,7 +84,7 @@ func (fh *firehose) SetSettings(settings []byte) error {
 	if utf8.RuneCount(settings) > maxSettingsLen {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 	}
-	_, err := fh.connections.myDB.Exec("UPDATE `connections` SET `settings` = ? WHERE `id` = ?", settings, fh.connection)
+	_, err := fh.connections.db.Exec("UPDATE connections SET settings = $1 WHERE id = $2", settings, fh.connection)
 	if err != nil {
 		log.Printf("[error] %s", err)
 		return errors.New("cannot set settings")
@@ -233,8 +234,8 @@ type connectionEntityData struct {
 // connection.
 func (fh *firehose) entityData(connection int, user string) (connectionEntityData, error) {
 	var entityData connectionEntityData
-	row := fh.connections.myDB.QueryRow(
-		"SELECT `data`, `timestamps` FROM `connections_users` WHERE `connection` = ? AND `user` = ?",
+	row := fh.connections.db.QueryRow(
+		"SELECT data, timestamps FROM connections_users WHERE connection = $1 AND user = $2",
 		connection, user)
 	var rawData []byte
 	var rawTimestamps []byte
@@ -297,16 +298,16 @@ func (fh *firehose) writeConnectionUsers(user string, props map[string]any, time
 	if err != nil {
 		return err
 	}
-	_, err = fh.connections.myDB.Exec("INSERT INTO `connections_users`\n"+
-		"SET `connection` = ?, `user` = ?, `data` = ?, `timestamps` = ?\n"+
-		"ON DUPLICATE KEY UPDATE `data` = ?, `timestamps` = ?",
-		fh.connection, user, data, jsonTimestamps, data, jsonTimestamps)
+	_, err = fh.connections.db.Exec("INSERT INTO connections_users (connection, \"user\", data, timestamps)\n"+
+		"VALUES ($1, $2, $3, $4)\n"+
+		"ON CONFLICT (connection, \"user\") DO UPDATE SET data = $3, timestamps = $4",
+		fh.connection, user, data, jsonTimestamps)
 	if err != nil {
 		return err
 	}
-	_, err = fh.connections.myDB.Exec("INSERT INTO `connections_stats`\n"+
-		"SET `connection` = ?, `time_slot` = ?, `users_in` = 1\n"+
-		"ON DUPLICATE KEY UPDATE `users_in` = `users_in` + 1",
+	_, err = fh.connections.db.Exec("INSERT INTO connections_stats (connection, time_slot, users_in)\n"+
+		"VALUES ($1, $2, 1)\n"+
+		"ON CONFLICT (connection, time_slot) DO UPDATE SET users_in = users_in + 1",
 		fh.connection, statsTimeSlot(time.Now()))
 	return err
 }
@@ -315,20 +316,24 @@ func (fh *firehose) writeConnectionUsers(user string, props map[string]any, time
 func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
 
 	query := &strings.Builder{}
-	query.WriteString("UPDATE `warehouse_users` SET\n")
+	query.WriteString("UPDATE warehouse_users SET\n")
 	var values []any
-	i := 0
+	i := 1
 	for prop, value := range props {
-		if i > 0 {
+		if i > 1 {
 			query.WriteString(", ")
 		}
-		query.WriteString("`" + prop + "` = ?\n")
+		query.WriteString(sql.QuoteColumn(prop))
+		query.WriteString(" = $")
+		query.WriteString(strconv.Itoa(i))
+		query.WriteString(",\n")
 		values = append(values, value)
 		i++
 	}
-	query.WriteString("\nWHERE `id` = ?")
+	query.WriteString("\nWHERE id = ")
+	query.WriteString(strconv.Itoa(i))
 	values = append(values, id)
-	_, err := fh.connections.myDB.Exec(query.String(), values...)
+	_, err := fh.connections.db.Exec(query.String(), values...)
 	if err != nil {
 		return fmt.Errorf("cannot write data Golden Record: %s", err)
 	}

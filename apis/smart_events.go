@@ -55,7 +55,7 @@ func (err DomainNotAllowedError) Error() string {
 // If the Smart Event is not valid, returns InvalidSmartEventError.
 // If the Smart Event refers to a domain not allowed for this property, returns
 // a DomainNotAllowedError error.
-func (smartEvents *SmartEvents) Create(smartEvent SmartEventToCreate) (int64, error) {
+func (smartEvents *SmartEvents) Create(smartEvent SmartEventToCreate) (int, error) {
 
 	// Validate the Smart Event.
 	err := smartEvents.validateSmartEvent(smartEvent)
@@ -69,20 +69,23 @@ func (smartEvents *SmartEvents) Create(smartEvent SmartEventToCreate) (int64, er
 		return 0, err
 	}
 
-	var id int64
-	err = smartEvents.myDB.Transaction(func(tx *o2bsql.Tx) error {
+	var id int
+	err = smartEvents.db.Transaction(func(tx *o2bsql.Tx) error {
 		// Retrieve the list of rows for the current property.
-		rows, err := tx.Table("Domains").Select(
-			o2bsql.Columns{"name"},
-			o2bsql.Where{"property": smartEvents.DeprecatedProperties.id},
-			nil, 0, 0,
-		).Rows()
-		if err != nil {
-			return fmt.Errorf("cannot retrieve the list of domains: %s", err)
-		}
 		allowedDomains := map[string]bool{}
-		for _, row := range rows {
-			allowedDomains[row["name"].(string)] = true
+		err := tx.QueryScan("SELECT name from domains WHERE property = $1", smartEvents.DeprecatedProperties.id,
+			func(rows *sql.Rows) error {
+				var name string
+				for rows.Next() {
+					if err := rows.Scan(&name); err != nil {
+						return err
+					}
+					allowedDomains[name] = true
+				}
+				return nil
+			})
+		if err != nil {
+			return err
 		}
 		// Check if the domains are allowed.
 		for _, domain := range listSmartEventsDomains(smartEvent) {
@@ -91,12 +94,8 @@ func (smartEvents *SmartEvents) Create(smartEvent SmartEventToCreate) (int64, er
 			}
 		}
 		// Write the Smart Event on the database.
-		query := "INSERT INTO `smart_events` (`property`, `name`, `event`, `pages`, `buttons`) VALUES (?, ?, ?, ?, ?)"
-		result, err := smartEvents.myDB.Exec(query, smartEvents.DeprecatedProperties.id, name, event, rawPages, rawButtons)
-		if err != nil {
-			return err
-		}
-		id, err = result.LastInsertId()
+		stmt := "INSERT INTO smart_events (property, name, event, pages, buttons) VALUES ($1, $2, $3, $4, $5) RETURNING id"
+		err = smartEvents.db.QueryRow(stmt, smartEvents.DeprecatedProperties.id, name, event, rawPages, rawButtons).Scan(&id)
 		return err
 	})
 	if err != nil {
@@ -123,15 +122,15 @@ func (smartEvents *SmartEvents) Delete(ids []int) error {
 		in.WriteString(strconv.Itoa(id))
 	}
 	in.WriteString(")")
-	query := "DELETE FROM `smart_events` WHERE `id` IN " + in.String() + "AND `property` = ?"
-	_, err := smartEvents.myDB.Exec(query, smartEvents.DeprecatedProperties.id)
+	query := "DELETE FROM smart_events WHERE id IN " + in.String() + "AND property = $1"
+	_, err := smartEvents.db.Exec(query, smartEvents.DeprecatedProperties.id)
 	return err
 }
 
 // Find finds the Smart Events.
 func (smartEvents *SmartEvents) Find() ([]SmartEvent, error) {
-	query := "SELECT `id`, `name`, `event`, `pages`, `buttons` FROM `smart_events` WHERE `property` = ? ORDER BY `id`"
-	rows, err := smartEvents.myDB.Query(query, smartEvents.DeprecatedProperties.id)
+	query := "SELECT id, name, event, pages, buttons FROM smart_events WHERE property = $1 ORDER BY id"
+	rows, err := smartEvents.db.Query(query, smartEvents.DeprecatedProperties.id)
 	if err != nil {
 		return nil, err
 	}
@@ -163,8 +162,8 @@ func (smartEvents *SmartEvents) Get(id int) (SmartEvent, error) {
 	if id <= 0 {
 		panic("apis: id must be > 0")
 	}
-	query := "SELECT `name`, `event`, `pages`, `buttons` FROM `smart_events` WHERE `id` = ? AND `property` = ?"
-	row := smartEvents.myDB.QueryRow(query, id, smartEvents.DeprecatedProperties.id)
+	query := "SELECT name, event, pages, buttons FROM smart_events WHERE id = ? AND property = $1"
+	row := smartEvents.db.QueryRow(query, id, smartEvents.DeprecatedProperties.id)
 	var name, event string
 	var rawPages, rawButtons string
 	err := row.Scan(&name, &event, &rawPages, &rawButtons)
@@ -200,25 +199,22 @@ func (smartEvents *SmartEvents) Update(id int, event SmartEventToUpdate) error {
 		return err
 	}
 
-	toUpdate := map[string]any{
-		"name":    event.Name,
-		"event":   event.Event,
-		"pages":   rawPages,
-		"buttons": rawButtons,
-	}
-	err = smartEvents.myDB.Transaction(func(tx *o2bsql.Tx) error {
+	err = smartEvents.db.Transaction(func(tx *o2bsql.Tx) error {
 		// Retrieve the list of rows for the current property.
-		rows, err := tx.Table("Domains").Select(
-			o2bsql.Columns{"name"},
-			o2bsql.Where{"property": smartEvents.DeprecatedProperties.id},
-			nil, 0, 0,
-		).Rows()
-		if err != nil {
-			return fmt.Errorf("cannot retrieve the list of domains: %s", err)
-		}
 		allowedDomains := map[string]bool{}
-		for _, row := range rows {
-			allowedDomains[row["name"].(string)] = true
+		err := tx.QueryScan("SELECT name from domains WHERE property = $1", smartEvents.DeprecatedProperties.id,
+			func(rows *sql.Rows) error {
+				var name string
+				for rows.Next() {
+					if err := rows.Scan(&name); err != nil {
+						return err
+					}
+					allowedDomains[name] = true
+				}
+				return nil
+			})
+		if err != nil {
+			return err
 		}
 		// Check if the domains are allowed.
 		for _, domain := range listSmartEventsDomains(event) {
@@ -227,10 +223,9 @@ func (smartEvents *SmartEvents) Update(id int, event SmartEventToUpdate) error {
 			}
 		}
 		// Write the Smart Event on the database.
-		_, err = smartEvents.myDB.Table("SmartEvents").Update(toUpdate, o2bsql.Where{
-			"id":       id,
-			"property": smartEvents.DeprecatedProperties.id,
-		})
+		_, err = tx.Exec("UPDATE smart_events\nSET name = $1, event = $2, pages = $3, buttons = $4\n"+
+			"WHERE id = $5 AND property = $5",
+			event.Name, event.Event, rawPages, rawButtons, id, smartEvents.DeprecatedProperties.id)
 		return err
 	})
 	if err != nil {

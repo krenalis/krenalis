@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -79,6 +80,36 @@ const (
 	DestinationRole                           // destination
 )
 
+// MarshalJSON implements the json.Marshaler interface.
+// It panics if role is not a valid ConnectionRole value.
+func (role ConnectionRole) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + role.String() + `"`), nil
+}
+
+// Scan implements the sql.Scanner interface.
+func (role *ConnectionRole) Scan(src any) error {
+	var s string
+	switch src := src.(type) {
+	case string:
+		s = src
+	case []byte:
+		s = string(src)
+	default:
+		return fmt.Errorf("cannot scan a %T value into an api.ConnectionRole value", src)
+	}
+	var r ConnectionRole
+	switch s {
+	case "Source":
+		r = SourceRole
+	case "Destination":
+		r = DestinationRole
+	default:
+		return fmt.Errorf("invalid api.ConnectionRole: %s", s)
+	}
+	*role = r
+	return nil
+}
+
 // String returns the string representation of role.
 // It panics if role is not a valid ConnectionRole value.
 func (role ConnectionRole) String() string {
@@ -91,10 +122,16 @@ func (role ConnectionRole) String() string {
 	panic("invalid connection role")
 }
 
-// MarshalJSON implements the json.Marshaler interface.
-// It panics if role is not a valid ConnectionRole value.
-func (role ConnectionRole) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + role.String() + `"`), nil
+// Value implements driver.Valuer interface.
+// It returns an error if typ is not a valid ConnectionRole.
+func (role ConnectionRole) Value() (driver.Value, error) {
+	switch role {
+	case SourceRole:
+		return "Source", nil
+	case DestinationRole:
+		return "Destination", nil
+	}
+	return nil, fmt.Errorf("not a valid ConnectionRole: %d", role)
 }
 
 // Connection represents a connection.
@@ -159,10 +196,10 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, name string,
 		return 0, err
 	}
 	var id int
-	err = this.myDB.Transaction(func(tx *sql.Tx) error {
+	err = this.db.Transaction(func(tx *sql.Tx) error {
 		var resource int
 		var currentRefreshToken string
-		err := tx.QueryRow("SELECT `id`, `oauth_refresh_token` FROM `resources` WHERE `connector` = ? AND `code` = ?",
+		err := tx.QueryRow("SELECT id, oauth_refresh_token FROM resources WHERE connector = $1 AND code = $2",
 			connector, resourceCode).Scan(&resource, &currentRefreshToken)
 		if err != nil {
 			if err != sql.ErrNoRows {
@@ -171,18 +208,12 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, name string,
 			err = nil
 		}
 		if resource == 0 {
-			result, err := tx.Exec("INSERT INTO `resources` "+
-				"SET `connector` = ?, `code` = ?, `oauth_access_token` = ?, `oauth_refresh_token` = ?, `oauth_expires_in` = ?",
-				connector, resourceCode, accessToken, refreshToken, expiresIn)
-			if err != nil {
-				return err
-			}
-			var resourceID int64
-			resourceID, err = result.LastInsertId()
-			resource = int(resourceID)
+			err = tx.QueryRow("INSERT INTO resources (connector, code, oauth_access_token,"+
+				" oauth_refresh_token, oauth_expires_in) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+				connector, resourceCode, accessToken, refreshToken, expiresIn).Scan(&resource)
 		} else if refreshToken != currentRefreshToken {
-			_, err = tx.Exec("UPDATE `resources` "+
-				"SET `oauth_access_token` = ?, `oauth_refresh_token` = ?, `oauth_expires_in` = ? WHERE `id` = ?",
+			_, err = tx.Exec("UPDATE resources "+
+				"SET oauth_access_token = $1, oauth_refresh_token = $2, oauth_expires_in = $3 WHERE id = $4",
 				accessToken, refreshToken, expiresIn, resource)
 		}
 		if err != nil {
@@ -192,9 +223,8 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, name string,
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'App', `role` = ?, `connector` = ?, `resource` = ?",
-			id, this.workspace, name, role, connector, resource)
+		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector, resource)"+
+			" VALUES ($1, $2, $3, 'App', $4, $5, $6)", id, this.workspace, name, role, connector, resource)
 		return err
 	})
 	if err != nil {
@@ -227,9 +257,9 @@ func (this *Connections) AddDatabase(role ConnectionRole, connector int, name st
 		return 0, errors.New("invalid name")
 	}
 	var id int
-	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+	err := this.db.Transaction(func(tx *sql.Tx) error {
 		var connectorType ConnectorType
-		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&connectorType)
+		err := tx.QueryRow("SELECT type FROM connectors WHERE id = $1", connector).Scan(&connectorType)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ConnectorNotFoundError{DatabaseType}
@@ -243,9 +273,8 @@ func (this *Connections) AddDatabase(role ConnectionRole, connector int, name st
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'Database', `role` = ?, `connector` = ?",
-			id, this.workspace, name, role, connector)
+		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
+			" VALUES ($1, $2, $3, 'Database', $4, $5)", id, this.workspace, name, role, connector)
 		return err
 	})
 	if err != nil {
@@ -275,9 +304,9 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int, na
 		return 0, errors.New("invalid name")
 	}
 	var id int
-	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+	err := this.db.Transaction(func(tx *sql.Tx) error {
 		var typ ConnectorType
-		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
+		err := tx.QueryRow("SELECT type FROM connectors WHERE id = $1", connector).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ConnectorNotFoundError{FileType}
@@ -290,8 +319,7 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int, na
 		if storage > 0 {
 			// Check the storage.
 			var storageRole ConnectionRole
-			err = tx.QueryRow("SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ?",
-				storage).Scan(&typ, &storageRole)
+			err = tx.QueryRow("SELECT type, role FROM connections WHERE id = $1", storage).Scan(&typ, &storageRole)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return ConnectionNotFoundError{StorageType}
@@ -312,9 +340,8 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int, na
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'File', `role` = ?, `connector` = ?, `storage` = ?",
-			id, this.workspace, name, role, connector, storage)
+		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector, storage)"+
+			" VALUES ($1, $2, $3, 'File', $4, $5, $6)", id, this.workspace, name, role, connector, storage)
 		return err
 	})
 	if err != nil {
@@ -339,9 +366,9 @@ func (this *Connections) AddEventStream(role ConnectionRole, connector int, name
 		return 0, errors.New("invalid name")
 	}
 	var id int
-	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+	err := this.db.Transaction(func(tx *sql.Tx) error {
 		var typ ConnectorType
-		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
+		err := tx.QueryRow("SELECT type FROM connectors WHERE id = $1", connector).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ConnectorNotFoundError{EventStreamType}
@@ -355,9 +382,8 @@ func (this *Connections) AddEventStream(role ConnectionRole, connector int, name
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'EventStream', `role` = ?, `connector` = ?",
-			id, this.workspace, name, role, connector)
+		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
+			" VALUES ($1, $2, $3, 'EventStream', $4, $5)", id, this.workspace, name, role, connector)
 		return err
 	})
 	if err != nil {
@@ -386,9 +412,9 @@ func (this *Connections) AddServer(role ConnectionRole, connector int, name stri
 		return 0, err
 	}
 	var id int
-	err = this.myDB.Transaction(func(tx *sql.Tx) error {
+	err = this.db.Transaction(func(tx *sql.Tx) error {
 		var typ ConnectorType
-		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
+		err := tx.QueryRow("SELECT type FROM connectors WHERE id = $1", connector).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ConnectorNotFoundError{ServerType}
@@ -402,13 +428,12 @@ func (this *Connections) AddServer(role ConnectionRole, connector int, name stri
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'Server', `role` = ?, `connector` = ?",
-			id, this.workspace, name, role, connector)
+		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
+			" VALUES ($1, $2, $3, 'Server', $4, $5)", id, this.workspace, name, role, connector)
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec("INSERT INTO `connections_keys` (`connection`, `position`, `key`) VALUE (?, 0, ?)", id, key)
+		_, err = tx.Exec("INSERT INTO connections_keys (connection, position, \"key\") VALUE ($1, 0, $2)", id, key)
 		return err
 	})
 	if err != nil {
@@ -432,9 +457,9 @@ func (this *Connections) AddMobile(role ConnectionRole, connector int, name stri
 		return 0, errors.New("invalid name")
 	}
 	var id int
-	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+	err := this.db.Transaction(func(tx *sql.Tx) error {
 		var typ ConnectorType
-		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
+		err := tx.QueryRow("SELECT type FROM connectors WHERE id = $1", connector).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ConnectorNotFoundError{MobileType}
@@ -448,9 +473,8 @@ func (this *Connections) AddMobile(role ConnectionRole, connector int, name stri
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'Mobile', `role` = ?, `connector` = ?",
-			id, this.workspace, name, role, connector)
+		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
+			" VALUES ($1, $2, $3, 'Mobile', $4, $5)", id, this.workspace, name, role, connector)
 		return err
 	})
 	if err != nil {
@@ -475,9 +499,9 @@ func (this *Connections) AddStorage(role ConnectionRole, connector int, name str
 		return 0, errors.New("invalid name")
 	}
 	var id int
-	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+	err := this.db.Transaction(func(tx *sql.Tx) error {
 		var typ ConnectorType
-		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
+		err := tx.QueryRow("SELECT type FROM connectors WHERE id = $1", connector).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ConnectorNotFoundError{StorageType}
@@ -491,9 +515,8 @@ func (this *Connections) AddStorage(role ConnectionRole, connector int, name str
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'Storage', `role` = ?, `connector` = ?",
-			id, this.workspace, name, role, connector)
+		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
+			" VALUES ($1, $2, $3, 'Storage', $4, $5)", id, this.workspace, name, role, connector)
 		return err
 	})
 	if err != nil {
@@ -525,9 +548,9 @@ func (this *Connections) AddWebsite(role ConnectionRole, connector int, name, ho
 		}
 	}
 	var id int
-	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+	err := this.db.Transaction(func(tx *sql.Tx) error {
 		var typ ConnectorType
-		err := tx.QueryRow("SELECT CAST(`type` AS UNSIGNED) FROM `connectors` WHERE `id` = ?", connector).Scan(&typ)
+		err := tx.QueryRow("SELECT type FROM connectors WHERE id = $1", connector).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ConnectorNotFoundError{WebsiteType}
@@ -542,9 +565,8 @@ func (this *Connections) AddWebsite(role ConnectionRole, connector int, name, ho
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec("INSERT INTO `connections`\n"+
-			"SET `id` = ?, `workspace` = ?, `name` = ?, `type` = 'Website', `role` = ?, `connector` = ?, `website_host` = ?",
-			id, this.workspace, name, role, connector, host)
+		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector, website_host)"+
+			" VALUES ($1, $2, $3, 'Website', $4, $5, $6)", id, this.workspace, name, role, connector, host)
 		return err
 	})
 	if err != nil {
@@ -560,12 +582,11 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 		return nil, errors.New("invalid connection identifier")
 	}
 	s := ConnectionInfo{ID: id}
-	err := this.myDB.QueryRow(
-		"SELECT `s`.`name`, CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `c`.`logo_url`,"+
-			" `s`.`enabled`, `s`.`users_query`\n"+
-			"FROM `connections` AS `s`\n"+
-			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?",
+	err := this.db.QueryRow(
+		"SELECT s.name, s.type, s.role, c.logo_url, s.enabled, s.users_query\n"+
+			"FROM connections AS s\n"+
+			"INNER JOIN connectors AS c ON c.id = s.connector\n"+
+			"WHERE s.id = $1 AND s.workspace = $2",
 		id, this.workspace).Scan(&s.Name, &s.Type, &s.Role, &s.LogoURL, &s.Enabled, &s.UsersQuery)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -584,39 +605,41 @@ func (this *Connections) Delete(id int) error {
 	if id <= 0 || id > maxInt32 {
 		return errors.New("invalid connection identifier")
 	}
-	err := this.myDB.Transaction(func(tx *sql.Tx) error {
-		connection, err := tx.Table("Connections").Get(
-			sql.Where{"id": id, "workspace": this.workspace},
-			sql.Columns{"CAST(`type` AS UNSIGNED) AS `type`", "resource"})
+	err := this.db.Transaction(func(tx *sql.Tx) error {
+		var typ ConnectorType
+		var resource string
+		err := tx.QueryRow("SELECT type, resource FROM connections WHERE id = $1 AND workspace = $2",
+			id, this.workspace).Scan(&typ, &resource)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil
+			}
 			return err
 		}
-		if connection == nil {
-			return nil
-		}
-		typ := ConnectorType(connection["type"].(int))
 		if typ == StorageType {
-			hasFiles, err := tx.Table("Connections").Exists(sql.Where{"workspace": this.workspace, "storage": id})
+			var hasFiles bool
+			err = tx.QueryRow("SELECT TRUE FROM connections WHERE storage = $1 and workspace = $2",
+				id, this.workspace).Scan(&hasFiles)
 			if err != nil {
+				if err == sql.ErrNoRows {
+					return ErrStorageHasConnectedFiles
+				}
 				return err
 			}
-			if hasFiles {
-				return ErrStorageHasConnectedFiles
-			}
 		}
-		_, err = tx.Table("Connections").Delete(sql.Where{"id": id})
+		_, err = tx.Exec("DELETE FROM connections WHERE id = $1", id)
 		if err != nil {
 			return err
 		}
-		_, err = tx.Table("ConnectionsKeys").Delete(sql.Where{"connection": id})
+		_, err = tx.Exec("DELETE FROM connections_keys WHERE connection = $1", id)
 		if err != nil {
 			return err
 		}
-		_, err = tx.Table("ConnectionsImports").Delete(sql.Where{"connection": id})
+		_, err = tx.Exec("DELETE FROM connections_imports WHERE connection = $1", id)
 		if err != nil {
 			return err
 		}
-		_, err = tx.Table("ConnectionsStats").Delete(sql.Where{"connection": id})
+		_, err = tx.Exec("DELETE FROM connections_stats WHERE connection = $1", id)
 		if err != nil {
 			return err
 		}
@@ -630,20 +653,19 @@ func (this *Connections) Delete(id int) error {
 			connectionColumn = "stream"
 		}
 		if connectionColumn != "" {
-			_, err = tx.Table("ConnectionsStatsEvents").Delete(sql.Where{connectionColumn: id})
+			_, err = tx.Exec("DELETE FROM connections_stats_events WHERE "+connectionColumn+" = $1", id)
 			if err != nil {
 				return err
 			}
 		}
-		_, err = tx.Table("ConnectionsUsers").Delete(sql.Where{"connection": id})
+		_, err = tx.Exec("DELETE FROM connections_users WHERE connection = $1", id)
 		if err != nil {
 			return err
 		}
 		// Delete the resource of the deleted connection if it has no other connections.
-		_, err = tx.Exec("DELETE `r`\n"+
-			"FROM `resources` AS `r`\n"+
-			"LEFT JOIN `connections` AS `s` ON `s`.`resource` = `r`.`id`\n"+
-			"WHERE `r`.`id` = ? AND `s`.`resource` IS NULL", connection["resource"])
+		_, err = tx.Exec("DELETE FROM resources AS r WHERE NOT EXISTS (\n"+
+			"\tSELECT FROM connections AS s\n"+
+			"\tWHERE r.id = $1 AND s.resource IS NULL\n)", resource)
 		return err
 	})
 	return err
@@ -669,9 +691,8 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 	var typ ConnectorType
 	var role ConnectionRole
 	var storage int
-	err = this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED), `storage`\n"+
-		"FROM `connections`"+
-		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&typ, &role, &storage)
+	err = this.db.QueryRow("SELECT type, role, storage FROM connections WHERE id = $1 AND workspace = $2",
+		id, this.workspace).Scan(&typ, &role, &storage)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ConnectionNotFoundError{}
@@ -703,11 +724,9 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 	}
 
 	// Track the import in the database.
-	importID, err := this.myDB.Table("ConnectionsImports").Add(sql.Set{
-		"connection": id,
-		"storage":    storage,
-		"start_time": time.Now().UTC(),
-	}, nil)
+	var importID int
+	err = this.db.QueryRow("INSERT INTO connections_imports (connection, storage, start_time)\n"+
+		"VALUES ($1, $2, $3)\nRETURNING id", id, storage, time.Now().UTC()).Scan(&importID)
 	if err != nil {
 		return err
 	}
@@ -724,9 +743,8 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 				errorMsg = "an internal error has occurred"
 			}
 		}
-		_, err2 := this.myDB.Table("ConnectionsImports").Update(
-			sql.Set{"end_time": time.Now().UTC(), "error": errorMsg},
-			sql.Where{"id": importID})
+		_, err2 := this.db.Exec("UPDATE connections_imports SET end_time = $1, error = $2 WHERE id = $3",
+			time.Now().UTC(), errorMsg, importID)
 		if err2 != nil {
 			log.Printf("[error] cannot update the end of import %d into the database: %s", importID, err2)
 		}
@@ -765,14 +783,13 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		var connector, resource int
 		var settings []byte
 		var expiration time.Time
-		err := this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`oauth_client_secret`, `c`.`webhooks_per` - 1, `r`.`code`,"+
-				" `r`.`oauth_access_token`, `r`.`oauth_refresh_token`, `r`.`oauth_expires_in`, `s`.`connector`,"+
-				" `s`.`resource`, `s`.`user_cursor`, `s`.`settings`\n"+
-				"FROM `connections` AS `s`\n"+
-				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
-				"WHERE `s`.`id` = ?", id).Scan(
+		err := this.db.QueryRow(
+			"SELECT c.name, c.oauth_client_secret, c.webhooks_per, r.code, r.oauth_access_token,"+
+				" r.oauth_refresh_token, r.oauth_expires_in, s.connector, s.resource, s.user_cursor, s.settings\n"+
+				"FROM connections AS s\n"+
+				"INNER JOIN connectors AS c ON c.id = s.connector\n"+
+				"INNER JOIN resources AS r ON r.id = s.resource\n"+
+				"WHERE s.id = $1", id).Scan(
 			&name, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration, &connector,
 			&resource, &cursor, &settings)
 		if err != nil {
@@ -828,11 +845,11 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		var connectorName, usersQuery string
 		var connector int
 		var settings []byte
-		err := this.myDB.QueryRow(
-			"SELECT `c`.`name`, `s`.`connector`,  `s`.`settings`, `s`.`users_query`\n"+
-				"FROM `connections` AS `s`\n"+
-				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &settings, &usersQuery)
+		err := this.db.QueryRow(
+			"SELECT c.name, s.connector, s.settings, s.users_query\n"+
+				"FROM connections AS s\n"+
+				"INNER JOIN connectors AS c ON c.id = s.connector\n"+
+				"WHERE s.id = $1", id).Scan(&connectorName, &connector, &settings, &usersQuery)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil
@@ -919,11 +936,11 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 
 		var connectorName string
 		var settings []byte
-		err := this.myDB.QueryRow(
-			"SELECT `c`.`name`, `s`.`settings`\n"+
-				"FROM `connections` AS `s`\n"+
-				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &settings)
+		err := this.db.QueryRow(
+			"SELECT c.name, s.settings\n"+
+				"FROM connections AS s\n"+
+				"INNER JOIN connectors AS c ON c.id = s.connector\n"+
+				"WHERE s.id = $1", id).Scan(&connectorName, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil
@@ -953,11 +970,11 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		var connectorName, identityColumn, timestampColumn string
 		var connector, storage int
 		var settings []byte
-		err := this.myDB.QueryRow(
-			"SELECT `c`.`name`, `s`.`connector`, `s`.`storage`, `s`.`identity_column`, `s`.`timestamp_column`, `s`.`settings`\n"+
-				"FROM `connections` AS `s`\n"+
-				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &storage, &identityColumn, &timestampColumn, &settings)
+		err := this.db.QueryRow(
+			"SELECT c.name, s.connector, s.storage, s.identity_column, s.timestamp_column, s.settings\n"+
+				"FROM connections AS s\n"+
+				"INNER JOIN connectors AS c ON c.id = s.connector\n"+
+				"WHERE s.id = $1", id).Scan(&connectorName, &connector, &storage, &identityColumn, &timestampColumn, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil
@@ -982,11 +999,11 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 			var connectorName string
 			var connector int
 			var settings []byte
-			err = this.myDB.QueryRow(
-				"SELECT `c`.`name`, `s`.`connector`, `s`.`settings`\n"+
-					"FROM `connections` AS `s`\n"+
-					"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-					"WHERE `s`.`id` = ?", storage).Scan(&connectorName, &connector, &settings)
+			err = this.db.QueryRow(
+				"SELECT c.name, s.connector, s.settings\n"+
+					"FROM connections AS s\n"+
+					"INNER JOIN connectors AS c ON c.id = s.connector\n"+
+					"WHERE s.id = $1", storage).Scan(&connectorName, &connector, &settings)
 			if err != nil {
 				if err != sql.ErrNoRows {
 					return nil
@@ -1037,7 +1054,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 type Import struct {
 	ID        int
 	StartTime time.Time
-	EndTime   time.Time
+	EndTime   *time.Time
 	Error     string
 }
 
@@ -1049,12 +1066,12 @@ func (this *Connections) Imports(id int) ([]*Import, error) {
 		return nil, errors.New("invalid connection identifier")
 	}
 	imports := []*Import{}
-	err := this.myDB.QueryScan(
-		"SELECT `i`.`id`, `i`.`start_time`, `i`.`end_time`, `i`.`error`\n"+
-			"FROM `connections_imports` AS `i`\n"+
-			"INNER JOIN `connections` AS `c` ON `i`.`connection` = `c`.`id`\n"+
-			"WHERE `c`.`workspace` = ? AND `i`.`connection` = ?\n"+
-			"ORDER BY `i`.`id` DESC", this.workspace, id, func(rows *sql.Rows) error {
+	err := this.db.QueryScan(
+		"SELECT i.id, i.start_time, i.end_time, i.error\n"+
+			"FROM connections_imports AS i\n"+
+			"INNER JOIN connections AS c ON i.connection = c.id\n"+
+			"WHERE c.workspace = $1 AND i.connection = $2\n"+
+			"ORDER BY i.id DESC", this.workspace, id, func(rows *sql.Rows) error {
 			var err error
 			for rows.Next() {
 				var imp Import
@@ -1071,9 +1088,9 @@ func (this *Connections) Imports(id int) ([]*Import, error) {
 	if len(imports) == 0 {
 		var typ ConnectorType
 		var role ConnectionRole
-		err = this.myDB.QueryRow(
-			"SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
-			id, this.workspace).Scan(&typ, &role)
+		err = this.db.QueryRow(
+			"SELECT type, role FROM connections WHERE id = $1 AND workspace = $2", id, this.workspace).
+			Scan(&typ, &role)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil, ConnectionNotFoundError{}
@@ -1095,12 +1112,11 @@ func (this *Connections) Imports(id int) ([]*Import, error) {
 // List returns all connections.
 func (this *Connections) List() ([]*Connection, error) {
 	sources := []*Connection{}
-	err := this.myDB.QueryScan(
-		"SELECT `s`.`id`, `s`.`name`, CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `s`.`storage`,"+
-			" `c`.`oauth_url`, `c`.`logo_url`, `s`.`enabled`\n"+
-			"FROM `connections` as `s`\n"+
-			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-			"WHERE `s`.`workspace` = ?", this.workspace, func(rows *sql.Rows) error {
+	err := this.db.QueryScan(
+		"SELECT s.id, s.name, s.type, s.role, s.storage, c.oauth_url, c.logo_url, s.enabled\n"+
+			"FROM connections as s\n"+
+			"INNER JOIN connectors AS c ON c.id = s.connector\n"+
+			"WHERE s.workspace = $1", this.workspace, func(rows *sql.Rows) error {
 			var err error
 			for rows.Next() {
 				var c Connection
@@ -1128,9 +1144,8 @@ func (this *Connections) Schema(id int) (types.Schema, error) {
 	}
 	var typ ConnectorType
 	var rawSchema string
-	err := this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), `schema`\n"+
-		"FROM `connections`\n"+
-		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&typ, &rawSchema)
+	err := this.db.QueryRow("SELECT type, \"schema\" FROM connections WHERE id = $1 AND workspace = $2",
+		id, this.workspace).Scan(&typ, &rawSchema)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return types.Schema{}, ConnectionNotFoundError{}
@@ -1190,11 +1205,11 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 	var role ConnectionRole
 	var connector int
 	var settings []byte
-	err := this.myDB.QueryRow(
-		"SELECT CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), `s`.`connector`, `s`.`settings`, `c`.`name`\n"+
-			"FROM `connections` AS `s`\n"+
-			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-			"WHERE `s`.`id` = ? AND `s`.`workspace` = ?", id, this.workspace).Scan(
+	err := this.db.QueryRow(
+		"SELECT s.type, s.role, s.connector, s.settings, c.name\n"+
+			"FROM connections AS s\n"+
+			"INNER JOIN connectors AS c ON c.id = s.connector\n"+
+			"WHERE s.id = $1 AND s.workspace = $2", id, this.workspace).Scan(
 		&typ, &role, &connector, &settings, &connectorName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -1279,7 +1294,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 
 	var typ ConnectorType
 	var role ConnectionRole
-	err := this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
+	err := this.db.QueryRow("SELECT type, role FROM connections WHERE id = $1 AND workspace = $2",
 		id, this.workspace).Scan(&typ, &role)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -1300,13 +1315,13 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		var connector, resource int
 		var settings []byte
 		var expiration time.Time
-		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`oauth_client_secret`, `c`.`webhooks_per` - 1, `r`.`code`, "+
-				" `r`.`oauth_access_token`, `r`.`oauth_expires_in`, `s`.`connector`, `s`.`resource`, `s`.`settings`\n"+
-				"FROM `connections` AS `s`\n"+
-				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
-				"WHERE `s`.`id` = ?", id).Scan(
+		err = this.db.QueryRow(
+			"SELECT c.name, c.oauth_client_secret, c.webhooks_per, r.code, r.oauth_access_token,"+
+				" r.oauth_expires_in, s.connector, s.resource, s.settings\n"+
+				"FROM connections AS s\n"+
+				"INNER JOIN connectors AS c ON c.id = s.connector\n"+
+				"INNER JOIN resources AS r ON r.id = s.resource\n"+
+				"WHERE s.id = $1", id).Scan(
 			&connectorName, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &expiration,
 			&connector, &resource, &settings)
 		if err != nil {
@@ -1341,11 +1356,11 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		var connectorName string
 		var connector int
 		var settings []byte
-		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `s`.`connector`, `s`.`settings`\n"+
-				"FROM `connections` AS `s`\n"+
-				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &settings)
+		err = this.db.QueryRow(
+			"SELECT c.name, s.connector, s.settings\n"+
+				"FROM connections AS s\n"+
+				"INNER JOIN connectors AS c ON c.id = s.connector\n"+
+				"WHERE s.id = $1", id).Scan(&connectorName, &connector, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil, ConnectionNotFoundError{}
@@ -1433,7 +1448,7 @@ func (this *Connections) SetFileStorage(file, storage int) error {
 		return errors.New("file and storage cannot be the same connection")
 	}
 	if storage == 0 {
-		result, err := this.myDB.Exec("UPDATE `connections` SET `storage` = 0 WHERE `id` = ?", file)
+		result, err := this.db.Exec("UPDATE connections SET storage = 0 WHERE id = $1", file)
 		if err != nil {
 			return err
 		}
@@ -1446,11 +1461,11 @@ func (this *Connections) SetFileStorage(file, storage int) error {
 		}
 		return nil
 	}
-	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+	err := this.db.Transaction(func(tx *sql.Tx) error {
 		var fileRole, storageRole ConnectionRole
 		err := tx.QueryRow("SELECT\n"+
-			"\t(SELECT IFNULL(`role`, 0) FROM `connections` WHERE `id` = ?),\n"+
-			"\t(SELECT IFNULL(`role`, 0) FROM `connections` WHERE `id` = ?)", file, storage).Scan(&fileRole, &storageRole)
+			"\t(SELECT COALESCE(role, 0) FROM connections WHERE id = $1),\n"+
+			"\t(SELECT COALESCE(role, 0) FROM connections WHERE id = $2)", file, storage).Scan(&fileRole, &storageRole)
 		if err != nil {
 			return err
 		}
@@ -1466,7 +1481,7 @@ func (this *Connections) SetFileStorage(file, storage int) error {
 			}
 			return errors.New("storage connection is not a destination")
 		}
-		_, err = tx.Exec("UPDATE `connections` SET `storage` = ? WHERE `id` = ?", storage, file)
+		_, err = tx.Exec("UPDATE connections SET storage = $1 WHERE id = $2", storage, file)
 		return err
 	})
 	return err
@@ -1494,8 +1509,8 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 		return errors.New("query does not contain the placeholder \":limit\"")
 	}
 
-	result, err := this.myDB.Exec("UPDATE `connections`\nSET `users_query` = ?\n"+
-		"WHERE `id` = ? AND `workspace` = ? AND `type` = 'Database' AND `role` = 'Source'",
+	result, err := this.db.Exec("UPDATE connections\nSET users_query = $1\n"+
+		"WHERE id = $2 AND workspace = $3 AND type = 'Database' AND role = 'Source'",
 		query, id, this.workspace)
 	if err != nil {
 		return err
@@ -1507,7 +1522,7 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 	if affected == 0 {
 		var typ ConnectorType
 		var role ConnectionRole
-		err = this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED) FROM `connections` WHERE `id` = ? AND `workspace` = ?",
+		err = this.db.QueryRow("SELECT type, role FROM connections WHERE id = $1 AND workspace = $2",
 			id, this.workspace).Scan(&typ, &role)
 		if err != nil {
 			return err
@@ -1550,8 +1565,8 @@ func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 	stats := &ConnectionsStats{
 		UsersIn: [24]int{},
 	}
-	query := "SELECT `time_slot`, `users_in`\nFROM `connections_stats`\nWHERE `connection` = ? AND `time_slot` BETWEEN ? AND ?"
-	err := this.myDB.QueryScan(query, id, fromSlot, toSlot, func(rows *sql.Rows) error {
+	query := "SELECT time_slot, users_in\nFROM connections_stats\nWHERE connection = $1 AND time_slot BETWEEN $2 AND $3"
+	err := this.db.QueryScan(query, id, fromSlot, toSlot, func(rows *sql.Rows) error {
 		var err error
 		var slot, usersIn int
 		for rows.Next() {
@@ -1599,9 +1614,8 @@ func (this *Connections) reloadSchema(id int) error {
 	var typ ConnectorType
 	var role ConnectionRole
 	var storage int
-	err := this.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED), `storage`\n"+
-		"FROM `connections`\n"+
-		"WHERE `id` = ? AND `workspace` = ?", id, this.workspace).Scan(&typ, &role, &storage)
+	err := this.db.QueryRow("SELECT type, role, storage FROM connections WHERE id = $1 AND workspace = $2",
+		id, this.workspace).Scan(&typ, &role, &storage)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ConnectionNotFoundError{}
@@ -1634,14 +1648,14 @@ func (this *Connections) reloadSchema(id int) error {
 		var connector, resource int
 		var settings []byte
 		var expiration *time.Time
-		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `c`.`oauth_client_secret`, `c`.`webhooks_per` - 1, IFNULL(`r`.`code`, ''), "+
-				" IFNULL(`r`.`oauth_access_token`, ''), IFNULL(`r`.`oauth_refresh_token`, ''), `r`.`oauth_expires_in`, "+
-				" `s`.`connector`, `s`.`resource`, `s`.`user_cursor`, `s`.`settings`\n"+
-				"FROM `connections` AS `s`\n"+
-				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-				"LEFT JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
-				"WHERE `s`.`id` = ?", id).Scan(
+		err = this.db.QueryRow(
+			"SELECT c.name, c.oauth_client_secret, c.webhooks_per, COALESCE(r.code, ''), "+
+				" COALESCE(r.oauth_access_token, ''), COALESCE(r.oauth_refresh_token, ''), r.oauth_expires_in, "+
+				" s.connector, s.resource, s.user_cursor, s.settings\n"+
+				"FROM connections AS s\n"+
+				"INNER JOIN connectors AS c ON c.id = s.connector\n"+
+				"LEFT JOIN resources AS r ON r.id = s.resource\n"+
+				"WHERE s.id = $1", id).Scan(
 			&connectorName, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration,
 			&connector, &resource, &cursor, &settings)
 		if err != nil {
@@ -1690,11 +1704,11 @@ func (this *Connections) reloadSchema(id int) error {
 		var connectorName, usersQuery string
 		var connector int
 		var settings []byte
-		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `s`.`connector`, `s`.`settings`, `s`.`users_query`\n"+
-				"FROM `connections` AS `s`\n"+
-				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &settings, &usersQuery)
+		err = this.db.QueryRow(
+			"SELECT c.name, s.connector, s.settings, s.users_query\n"+
+				"FROM connections AS s\n"+
+				"INNER JOIN connectors AS c ON c.id = s.connector\n"+
+				"WHERE s.id = $1", id).Scan(&connectorName, &connector, &settings, &usersQuery)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ConnectionNotFoundError{}
@@ -1738,11 +1752,11 @@ func (this *Connections) reloadSchema(id int) error {
 		var connectorName, identityColumn, timestampColumn string
 		var connector, storage int
 		var settings []byte
-		err = this.myDB.QueryRow(
-			"SELECT `c`.`name`, `s`.`connector`, `s`.`storage`, `s`.`identity_column`, `s`.`timestamp_column`, `s`.`settings`\n"+
-				"FROM `connections` AS `s`\n"+
-				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-				"WHERE `s`.`id` = ?", id).Scan(&connectorName, &connector, &storage, &identityColumn, &timestampColumn, &settings)
+		err = this.db.QueryRow(
+			"SELECT c.name, s.connector, s.storage, s.identity_column, s.timestamp_column, s.settings\n"+
+				"FROM connections AS s\n"+
+				"INNER JOIN connectors AS c ON c.id = s.connector\n"+
+				"WHERE s.id = $1", id).Scan(&connectorName, &connector, &storage, &identityColumn, &timestampColumn, &settings)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return ConnectionNotFoundError{}
@@ -1761,11 +1775,11 @@ func (this *Connections) reloadSchema(id int) error {
 			var connectorName string
 			var connector int
 			var settings []byte
-			err = this.myDB.QueryRow(
-				"SELECT `c`.`name`, `s`.`connector`, `s`.`settings`\n"+
-					"FROM `connections` AS `s`\n"+
-					"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-					"WHERE `s`.`id` = ?", storage).Scan(&connectorName, &connector, &settings)
+			err = this.db.QueryRow(
+				"SELECT c.name, s.connector, s.settings\n"+
+					"FROM connections AS s\n"+
+					"INNER JOIN connectors AS c ON c.id = s.connector\n"+
+					"WHERE s.id = $1", storage).Scan(&connectorName, &connector, &settings)
 			if err != nil {
 				if err != sql.ErrNoRows {
 					return ErrFileHasNoStorage
@@ -1822,7 +1836,7 @@ func (this *Connections) reloadSchema(id int) error {
 	if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
 		return fmt.Errorf("cannot marshal schema of the connection %d: data is too large", id)
 	}
-	_, err = this.myDB.Exec("UPDATE `connections` SET `schema` = ? WHERE `id` = ?", rawSchema, id)
+	_, err = this.db.Exec("UPDATE connections SET \"schema\" = $1 WHERE id = $2", rawSchema, id)
 
 	return err
 }
@@ -1835,7 +1849,7 @@ func (this *Connections) userSchema(id int) (types.Schema, []_connector.Property
 
 	// Read the schema.
 	var rawSchema string
-	err := this.myDB.QueryRow("SELECT `schema` FROM `connections` WHERE `workspace` = ? AND `id` = ?",
+	err := this.db.QueryRow("SELECT \"schema\" FROM connections WHERE workspace = $1 AND id = $2",
 		this.workspace, id).Scan(&rawSchema)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -1850,8 +1864,8 @@ func (this *Connections) userSchema(id int) (types.Schema, []_connector.Property
 
 	// Read the paths of the mapped properties from the transformations of this connection.
 	var paths []_connector.PropertyPath
-	err = this.myDB.QueryScan(
-		"SELECT `property` FROM `transformations_connections` WHERE `connection` = ?", id, func(rows *sql.Rows) error {
+	err = this.db.QueryScan(
+		"SELECT property FROM transformations_connections WHERE connection = $1", id, func(rows *sql.Rows) error {
 			var name string
 			for rows.Next() {
 				if err := rows.Scan(&name); err != nil {

@@ -34,7 +34,7 @@ var (
 )
 
 type APIs struct {
-	myDB           *sql.DB
+	db             *sql.DB
 	chDB           chDriver.Conn
 	eventCollector *eventCollector
 	eventProcessor *eventProcessor
@@ -45,34 +45,33 @@ type APIs struct {
 var hasBeenCalled bool
 
 // New returns an API instance. It can only be called once.
-func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
+func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 
 	if hasBeenCalled {
 		panic("apis.New has already been called")
 	}
 	hasBeenCalled = true
 
-	apis := &APIs{myDB: myDB, chDB: chDB}
+	apis := &APIs{db: db, chDB: chDB}
 	apis.Accounts = &Accounts{apis}
 	apis.Users = &Users{apis}
-	apis.initSchema()
 
 	// Read the source event stream collectors and the source connections that
 	// send the events into the stream with their keys.
 	var streams []*eventCollectorStream
-	err := myDB.QueryScan(
-		"SELECT `s`.`id`, `co`.`name` AS `connector`, `s`.`settings`, `ci`.`id` AS `event_collector_producer`, CAST(`ci`.`type` AS UNSIGNED), `k`.`key`\n"+
-			"FROM `connections` AS `s`\n"+
-			"INNER JOIN `connectors` AS `co` ON `co`.`id` = `s`.`connector`\n"+
-			"INNER JOIN `connections` AS `ci` ON `ci`.`stream` = `s`.`id`\n"+
-			"INNER JOIN `connections_keys` AS `k` ON `k`.`connection` = `ci`.`id`\n"+
-			"WHERE `s`.`type` = 'EventStream' AND `s`.`role` = 'Source' AND `s`.`settings` != '' AND `s`.`enabled` AND `ci`.`enabled`",
+	err := db.QueryScan(
+		"SELECT s.id, co.name AS connector, s.settings, ci.id AS event_collector_producer, ci.type, k.key\n"+
+			"FROM connections AS s\n"+
+			"INNER JOIN connectors AS co ON co.id = s.connector\n"+
+			"INNER JOIN connections AS ci ON ci.stream = s.id\n"+
+			"INNER JOIN connections_keys AS k ON k.connection = ci.id\n"+
+			"WHERE s.type = 'EventStream' AND s.role = 'Source' AND s.settings <> '' AND s.enabled AND ci.enabled",
 		func(rows *sql.Rows) error {
 		Rows:
 			for rows.Next() {
 				var stream eventCollectorStream
 				var producerID int
-				var producerType _connector.Type
+				var producerType ConnectorType
 				var producerKey string
 				if err := rows.Scan(&stream.ID, &stream.Connector, &stream.Settings, &producerID, &producerType, &producerKey); err != nil {
 					return err
@@ -87,7 +86,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 						}
 						s.Producers = append(s.Producers, &eventCollectorProducer{
 							ID:   producerID,
-							Type: producerType,
+							Type: _connector.Type(producerType),
 							Keys: []string{producerKey},
 						})
 						continue Rows
@@ -95,7 +94,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 				}
 				stream.Producers = []*eventCollectorProducer{{
 					ID:   producerID,
-					Type: producerType,
+					Type: _connector.Type(producerType),
 					Keys: []string{producerKey},
 				}}
 				streams = append(streams, &stream)
@@ -113,11 +112,11 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 
 	// Read the all the source event stream processors.
 	var allStreams []*eventProcessorStream
-	err = myDB.QueryScan(
-		"SELECT `s`.`id`, `co`.`name` AS `connector`, `s`.`settings`\n"+
-			"FROM `connections` AS `s`\n"+
-			"INNER JOIN `connectors` AS `co` ON `co`.`id` = `s`.`connector`\n"+
-			"WHERE `s`.`type` = 'EventStream' AND `s`.`role` = 'Source' AND `s`.`settings` != '' AND `s`.`enabled`",
+	err = db.QueryScan(
+		"SELECT s.id, co.name AS connector, s.settings\n"+
+			"FROM connections AS s\n"+
+			"INNER JOIN connectors AS co ON co.id = s.connector\n"+
+			"WHERE s.type = 'EventStream' AND s.role = 'Source' AND s.settings <> '' AND s.enabled",
 		func(rows *sql.Rows) error {
 			for rows.Next() {
 				var stream eventProcessorStream
@@ -132,7 +131,7 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 		panic(err)
 	}
 
-	apis.eventProcessor = newEventProcessor(apis.myDB, apis.chDB, allStreams)
+	apis.eventProcessor = newEventProcessor(apis.db, apis.chDB, allStreams)
 	go apis.eventProcessor.Run(context.Background())
 
 	return apis
@@ -141,19 +140,19 @@ func New(myDB *sql.DB, chDB chDriver.Conn) *APIs {
 type AccountAPI struct {
 	account int
 	apis    *APIs
-	myDB    *sql.DB
+	db      *sql.DB
 	chDB    chDriver.Conn
 }
 
 // AsAccount returns an API restricted to the given account.
 func (apis *APIs) AsAccount(account int) *AccountAPI {
-	api := &AccountAPI{account: account, apis: apis, myDB: apis.myDB, chDB: apis.chDB}
+	api := &AccountAPI{account: account, apis: apis, db: apis.db, chDB: apis.chDB}
 	return api
 }
 
 // AsWorkspace returns an API restricted to the given workspace.
 func (api *AccountAPI) AsWorkspace(workspace int) *WorkspaceAPI {
-	ws := &WorkspaceAPI{workspace: workspace, api: api, myDB: api.myDB, chDB: api.chDB}
+	ws := &WorkspaceAPI{workspace: workspace, api: api, db: api.db, chDB: api.chDB}
 	ws.Connections = &Connections{ws}
 	ws.EventListeners = &EventListeners{ws}
 	ws.Transformations = &Transformations{ws}
@@ -182,7 +181,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	// Read the account.
 	var account int
-	err := apis.myDB.QueryRow("SELECT `account` FROM `workspaces` WHERE `id` = ?", workspace).Scan(&account)
+	err := apis.db.QueryRow("SELECT account FROM workspaces WHERE id = $1", workspace).Scan(&account)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Not Found", http.StatusNotFound)
@@ -380,7 +379,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (apis *APIs) refreshOAuthToken(resource int) (string, error) {
 
 	var clientID, clientSecret, tokenEndpoint, refreshToken string
-	err := apis.myDB.QueryRow(
+	err := apis.db.QueryRow(
 		"SELECT `c`.`oauth_client_id`, `c`.`oauth_client_secret`, `c`.`oauth_token_endpoint`, `r`.`oauth_refresh_token`\n"+
 			"FROM `resources` AS `r`\n"+
 			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `r`.`connector`\n"+
@@ -448,7 +447,7 @@ func (apis *APIs) refreshOAuthToken(resource int) (string, error) {
 	// Convert expires_in into a timestamp.
 	expiresIn := time.Now().UTC().Add(time.Duration(response.ExpiresIn) * time.Second) // TODO(marco): ExpiresIn should be relative to response time?
 
-	_, err = apis.myDB.Exec(
+	_, err = apis.db.Exec(
 		"UPDATE `resources`\n"+
 			"SET `oauth_access_token` = ?, `oauth_refresh_token` = ?, `oauth_expires_in` = ?\n"+
 			"WHERE `id` = ?",
@@ -458,141 +457,6 @@ func (apis *APIs) refreshOAuthToken(resource int) (string, error) {
 	}
 
 	return response.AccessToken, nil
-}
-
-func (apis *APIs) initSchema() {
-
-	apis.myDB.Scheme("Accounts", "accounts", struct {
-		id           int
-		name         string
-		email        string
-		password     string
-		internal_ips string
-	}{})
-
-	apis.myDB.Scheme("Connections", "connections", struct {
-		id               int
-		workspace        int
-		typ              int `sql:"type"`
-		role             int
-		connector        int
-		storage          int
-		resource         string
-		website_host     string
-		user_cursor      string
-		identity_column  string
-		timestamp_column string
-		settings         string
-		schema           string
-		users_query      string
-	}{})
-
-	apis.myDB.Scheme("ConnectionsKeys", "connections_keys", struct {
-		connection int
-		position   int
-		key        string
-	}{})
-
-	apis.myDB.Scheme("ConnectionsImports", "connections_imports", struct {
-		id         int
-		connection int
-		storage    int
-		start_time time.Time
-		end_time   time.Time
-		error      string
-	}{})
-
-	apis.myDB.Scheme("ConnectionsStats", "connections_stats", struct {
-		connection int
-		time_slot  int
-		users_in   int
-	}{})
-
-	apis.myDB.Scheme("ConnectionsStatsEvents", "connections_stats_events", struct {
-		hour        int
-		source      int
-		server      int
-		stream      int
-		good_events int
-		bad_events  int
-	}{})
-
-	apis.myDB.Scheme("ConnectionsUsers", "connections_users", struct {
-		connection    int
-		user          string
-		data          string
-		timestamps    string
-		golden_record int
-	}{})
-
-	apis.myDB.Scheme("Connectors", "connectors", struct {
-		id                       int
-		name                     string
-		typ                      int `sql:"type"`
-		logo_url                 string
-		webhooks_per             WebhooksPer
-		oauth_url                string
-		oauth_client_id          string
-		oauth_client_secret      string
-		oauth_token_endpoint     string
-		oauth_default_token_type string
-		oauth_default_expires_in int
-		oauth_forced_expires_in  string
-	}{})
-
-	apis.myDB.Scheme("Devices", "devices", struct {
-		property int
-		id       string
-		user     int
-	}{})
-
-	apis.myDB.Scheme("Domains", "domains", struct {
-		property int
-		name     string
-	}{})
-
-	apis.myDB.Scheme("Properties", "properties", struct {
-		id      int
-		code    string
-		account int
-	}{})
-
-	apis.myDB.Scheme("SmartEvents", "smart_events", struct {
-		property int
-		id       int
-		name     string
-		event    string
-		pages    string
-		buttons  string
-	}{})
-
-	apis.myDB.Scheme("Transformations", "transformations", struct {
-		id                 int
-		golden_record_name string
-		source_code        string
-	}{})
-
-	apis.myDB.Scheme("TransformationsConnections", "transformations_connections", struct {
-		connection     int
-		property       string
-		transformation int
-	}{})
-
-	apis.myDB.Scheme("Users", "users", struct {
-		property int
-		id       int
-		device   string
-	}{})
-
-	apis.myDB.Scheme("Workspaces", "workspaces", struct {
-		id           int
-		account      int
-		name         string
-		user_schema  string
-		group_schema string
-		event_schema string
-	}{})
-
 }
 
 // DeprecatedProperty returns an instance of DeprecatedProperties which operates

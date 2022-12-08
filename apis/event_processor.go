@@ -84,7 +84,7 @@ type Event struct {
 // eventProcessor processes events received from source streams and sent them
 // to ClickHouse.
 type eventProcessor struct {
-	myDB     *sql.DB
+	db       *sql.DB
 	chDB     chDriver.Conn
 	streams  []*eventProcessorStream
 	queue    *queue
@@ -98,12 +98,12 @@ type eventProcessorStream struct {
 }
 
 // newEventProcessor returns a new event eventProcessor.
-func newEventProcessor(myDB *sql.DB, chDB chDriver.Conn, streams []*eventProcessorStream) *eventProcessor {
+func newEventProcessor(db *sql.DB, chDB chDriver.Conn, streams []*eventProcessorStream) *eventProcessor {
 	processor := eventProcessor{
-		myDB:     myDB,
+		db:       db,
 		streams:  streams,
 		queue:    newQueue(chDB),
-		observer: newEventObserver(myDB),
+		observer: newEventObserver(db),
 	}
 	return &processor
 }
@@ -229,10 +229,10 @@ func (p *eventProcessor) processMessage(stream int, message []byte) error {
 		if !isWellFormedConnectorKey(key) {
 			p.observer.AddEvent(0, 0, stream, nil, message, errors.New("invalid authorization key"))
 		}
-		err = p.myDB.QueryRow("SELECT `c`.`id`\n"+
-			"FROM `connections_keys` AS `k`\n"+
-			"INNER JOIN `connections` AS `c` ON `k`.`connection` = `c`.`id`\n"+
-			"WHERE `c`.`type` = 'Server' AND `c`.`role` = 'Source' AND `k`.`key` = ?", key).Scan(&server)
+		err = p.db.QueryRow("SELECT c.id\n"+
+			"FROM connections_keys AS k\n"+
+			"INNER JOIN connections AS c ON k.connection = c.id\n"+
+			"WHERE c.type = 'Server' AND c.role = 'Source' AND k.key = $1", key).Scan(&server)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				p.observer.AddEvent(0, 0, stream, nil, message, errors.New("does not exist a server with the given key"))
@@ -254,9 +254,9 @@ func (p *eventProcessor) processMessage(stream int, message []byte) error {
 	}
 	var typ ConnectorType
 	var websiteHost string
-	err = p.myDB.QueryRow("SELECT CAST(`type` AS UNSIGNED), `website_host`\n"+
-		"FROM `connections`\n"+
-		"WHERE `id` = ? AND `type` IN ('Mobile', 'Website') AND `role` = 'Source'", source).
+	err = p.db.QueryRow("SELECT type, website_host\n"+
+		"FROM connections\n"+
+		"WHERE id = $1 AND type IN ('Mobile', 'Website') AND role = 'Source'", source).
 		Scan(&typ, &websiteHost)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -380,12 +380,12 @@ func (p *eventProcessor) processMessage(stream int, message []byte) error {
 		}
 
 		// Get the user or create it if it does not exist.
-		err = p.myDB.QueryRow("SELECT `id` FROM `users` WHERE `source` = ? AND `device` = ?", source, event.Device).Scan(&event.user)
+		err = p.db.QueryRow("SELECT id FROM users WHERE source = $1 AND device = $2", source, event.Device).Scan(&event.user)
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}
 		if err == sql.ErrNoRows {
-			err = p.myDB.QueryRow("SELECT `user` FROM `devices` WHERE `source` = ? AND `id` = ?", source, event.Device).Scan(&event.user)
+			err = p.db.QueryRow("SELECT user FROM devices WHERE source = $1 AND id = $2", source, event.Device).Scan(&event.user)
 			if err != nil && err != sql.ErrNoRows {
 				return err
 			}
@@ -394,7 +394,7 @@ func (p *eventProcessor) processMessage(stream int, message []byte) error {
 				if err != nil {
 					return err
 				}
-				_, err = p.myDB.Exec("INSERT INTO `users` SET `source` = ?, `id` = ?, `device` = ?", source, event.user, event.Device)
+				_, err = p.db.Exec("INSERT INTO users (source, id, device) VALUES($1, $2, $3)", source, event.user, event.Device)
 				if err != nil {
 					return err
 				}

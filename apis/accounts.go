@@ -47,7 +47,7 @@ func (this *Accounts) Authenticate(email, password string) (int, error) {
 	}
 	var id int
 	var hashedPassword []byte
-	err := this.myDB.QueryRow("SELECT `id`, `password`\nFROM `accounts`\nWHERE `email` = ?", email).Scan(&id, &hashedPassword)
+	err := this.db.QueryRow("SELECT id, password FROM accounts WHERE email = $1", email).Scan(&id, &hashedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, ErrAuthenticationFailed
@@ -64,7 +64,7 @@ func (this *Accounts) Authenticate(email, password string) (int, error) {
 // Count returns the total number of accounts.
 func (this *Accounts) Count() (int, error) {
 	var count int
-	err := this.myDB.QueryRow("SELECT COUNT(*)\nFROM `accounts`").Scan(&count)
+	err := this.db.QueryRow("SELECT COUNT(*) FROM accounts").Scan(&count)
 	return count, err
 }
 
@@ -83,12 +83,13 @@ func (this *Accounts) Create(email, password string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	result, err := this.myDB.Exec("INSERT INTO `accounts` SET `email` = ?, `password` = ?", email, string(hashedPassword))
+	var id int
+	err = this.db.QueryRow("INSERT INTO accounts (email, password) VALUES ($1, $2)",
+		email, string(hashedPassword)).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
-	id, err := result.LastInsertId()
-	return int(id), err
+	return id, err
 }
 
 // Delete deletes the accounts with the given identifiers.
@@ -101,11 +102,12 @@ func (this *Accounts) Delete(ids []int) error {
 			panic("apis: invalid account identifier to delete")
 		}
 	}
-	_, err := this.myDB.Exec("DELETE `c`, `p`, `d`\n" +
-		"FROM `accounts` AS `a`\n" +
-		"LEFT JOIN `proprieties` AS `p` ON `p`.`account` = `a`.`id`\n" +
-		"LEFT JOIN `domains` AS `d` ON `d`.`property` = `p`.`id`")
-	return err
+	panic("TO BE IMPLEMENTED")
+	//_, err := this.db.Exec("DELETE `c`, `p`, `d`\n" +
+	//	"FROM `accounts` AS `a`\n" +
+	//	"LEFT JOIN `proprieties` AS `p` ON `p`.`account` = `a`.`id`\n" +
+	//	"LEFT JOIN `domains` AS `d` ON `d`.`property` = `p`.`id`")
+	//return err
 }
 
 // Find returns the accounts in the given order limited by limit and first.
@@ -116,13 +118,13 @@ func (this *Accounts) Find(order string, limit, first int) ([]*Account, error) {
 	if limit < 0 || first < 0 {
 		panic("apis: invalid accounts limit or first")
 	}
-	stmt := "SELECT `id`, `name`, `email`\nFROM `accounts`"
+	stmt := "SELECT id, name, email FROM accounts"
 	if order != "" {
-		stmt += "\nORDER BY `" + order + "`"
+		stmt += " ORDER BY " + sql.QuoteColumn(order)
 	}
 	stmt += sql.LimitFirstStatement(limit, first)
 	accounts := make([]*Account, 0, 0)
-	err := this.myDB.QueryScan(stmt, func(rows *sql.Rows) error {
+	err := this.db.QueryScan(stmt, func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
 			var account Account
@@ -146,7 +148,7 @@ func (this *Accounts) Get(id int) (*Account, error) {
 	}
 	account := Account{ID: id}
 	var ips string
-	err := this.myDB.QueryRow("SELECT `name`, `email`, `internal_ips`\nFROM `accounts`\nWHERE `id` = ?", id).Scan(&account.Name, &account.Email, &ips)
+	err := this.db.QueryRow("SELECT name, email, internal_ips FROM accounts WHERE id = $1", id).Scan(&account.Name, &account.Email, &ips)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil

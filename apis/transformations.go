@@ -46,24 +46,20 @@ type InputProperty struct {
 // createTransformation creates the transformation t on the tx SQL transaction.
 // If the transformation is created successfully, its ID is returned.
 func createTransformation(tx *sql.Tx, t TransformationToCreate) (int, error) {
-	id, err := tx.Table("Transformations").Add(map[string]any{
-		"source_code":        t.SourceCode,
-		"golden_record_name": t.GRProperty,
-	}, nil)
+	var id int
+	err := tx.QueryRow("INSERT INTO transformations (source_code, golden_record_name) VALUES ($1, $2) RETURNING id",
+		t.SourceCode, t.GRProperty).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
 	for _, prop := range t.InputProperties {
-		_, err := tx.Table("TransformationsConnections").Add(map[string]any{
-			"connection":     prop.Connection,
-			"property":       prop.Name,
-			"transformation": id,
-		}, nil)
+		_, err = tx.Exec("INSERT INTO transformations_connections (connection, property, transformation) VALUES ($1, $2, $3)",
+			prop.Connection, prop.Name, id)
 		if err != nil {
 			return 0, err
 		}
 	}
-	return id, nil
+	return int(id), nil
 }
 
 // Create creates the transformation t. If the transformation is created
@@ -77,7 +73,7 @@ func (this *Transformations) Create(t TransformationToCreate) (int, error) {
 		return 0, err
 	}
 	var id int
-	err = this.myDB.Transaction(func(tx *sql.Tx) error {
+	err = this.db.Transaction(func(tx *sql.Tx) error {
 		var err error
 		id, err = createTransformation(tx, t)
 		if err != nil {
@@ -100,25 +96,19 @@ func (this *Transformations) Update(id int, t TransformationToUpdate) error {
 	if err != nil {
 		return err
 	}
-	err = this.myDB.Transaction(func(tx *sql.Tx) error {
-		var err error
-		_, err = tx.Table("Transformations").Update(map[string]any{
-			"source_code":        t.SourceCode,
-			"golden_record_name": t.GRProperty,
-		}, sql.Where{"id": id})
+	err = this.db.Transaction(func(tx *sql.Tx) error {
+		_, err = tx.Exec("UPDATE transformations\nSET source_code = $1, golden_record_name = $2 WHERE id = $3",
+			t.SourceCode, t.GRProperty, id)
 		if err != nil {
 			return err
 		}
-		_, err = tx.Table("TransformationsConnections").Delete(sql.Where{"transformation": id})
+		_, err = tx.Exec("DELETE FROM transformations_connections WHERE transformation = $1", id)
 		if err != nil {
 			return err
 		}
 		for _, prop := range t.InputProperties {
-			_, err := tx.Table("TransformationsConnections").Add(map[string]any{
-				"connection":     prop.Connection,
-				"property":       prop.Name,
-				"transformation": id,
-			}, nil)
+			_, err = tx.Exec("INSERT INTO transformations_connections (connection, property, transformation)\n"+
+				"VALUES($1, $2, $3)", prop.Connection, prop.Name, id)
 			if err != nil {
 				return err
 			}
@@ -144,26 +134,32 @@ func (this *Transformations) SaveAll(connection int, transformations []Transform
 		}
 	}
 
-	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+	err := this.db.Transaction(func(tx *sql.Tx) error {
 
 		// Retrieve the IDs of the transformations to delete.
-		rows, err := tx.Table("TransformationsConnections").Select(
-			[]any{"transformation"}, sql.Where{"connection": connection}, nil, 0, 0).Rows()
+		var toDelete []int
+		err := tx.QueryScan("SELECT transformation FROM transformations_connections WHERE connection = $1", connection,
+			func(rows *sql.Rows) error {
+				for rows.Next() {
+					var transformation int
+					if err := rows.Scan(&transformation); err != nil {
+						return err
+					}
+					toDelete = append(toDelete, transformation)
+				}
+				return nil
+			})
 		if err != nil {
 			return err
-		}
-		toDelete := make([]int, 0, len(rows))
-		for _, row := range rows {
-			toDelete = append(toDelete, row["transformation"].(int))
 		}
 
 		// Delete the transformations and their connections.
 		if len(toDelete) > 0 {
-			_, err := tx.Table("Transformations").Delete(sql.Where{"id": toDelete})
+			_, err = tx.Exec("DELETE FROM transformations WHERE id IN " + sql.Quote(toDelete))
 			if err != nil {
 				return fmt.Errorf("cannot delete transformations: %s", err)
 			}
-			_, err = tx.Table("TransformationsConnections").Delete(sql.Where{"connection": connection})
+			_, err = tx.Exec("DELETE FROM transformations_connections WHERE id IN " + sql.Quote(toDelete))
 			if err != nil {
 				return fmt.Errorf("cannot delete connections: %s", err)
 			}
@@ -185,49 +181,50 @@ func (this *Transformations) SaveAll(connection int, transformations []Transform
 // List lists the transformations for the given connection.
 func (this *Transformations) List(connection int) ([]Transformation, error) {
 	var transformations []Transformation
-	err := this.myDB.Transaction(func(tx *sql.Tx) error {
+	err := this.db.Transaction(func(tx *sql.Tx) error {
 		var transfIDs []int
 		transfProps := map[int][]InputProperty{}
-		rows, err := tx.Table("TransformationsConnections").Select(
-			[]any{"property", "transformation"},
-			sql.Where{"connection": connection},
-			[]any{"connection", "property"},
-			0, 0,
-		).Rows()
+		stmt := "SELECT property, transformation FROM transformations_connections WHERE connection = $1 ORDER BY connection, property"
+		err := tx.QueryScan(stmt, connection, func(rows *sql.Rows) error {
+			for rows.Next() {
+				var property string
+				var transformation int
+				if err := rows.Scan(&property, &transformation); err != nil {
+					return err
+				}
+				transfIDs = append(transfIDs, transformation)
+				transfProps[transformation] = append(transfProps[transformation], InputProperty{
+					Connection: connection,
+					Name:       property,
+				})
+			}
+			return nil
+		})
 		if err != nil {
 			return err
 		}
-		for _, row := range rows {
-			tID := row["transformation"].(int)
-			transfIDs = append(transfIDs, tID)
-			transfProps[tID] = append(transfProps[tID], InputProperty{
-				Connection: connection,
-				Name:       row["property"].(string),
-			})
-		}
-		if len(transfIDs) == 0 {
+		if transfIDs == nil {
 			transformations = []Transformation{}
 			return nil
 		}
-		rows, err = tx.Table("Transformations").Select(
-			[]any{"id", "golden_record_name", "source_code"},
-			sql.Where{"id": transfIDs},
-			nil, 0, 0,
-		).Rows()
-		if err != nil {
-			return err
-		}
-		for _, row := range rows {
-			id := row["id"].(int)
-			transformations = append(transformations, Transformation{
-				ID:              id,
-				SourceCode:      row["source_code"].(string),
-				Connection:      connection,
-				InputProperties: transfProps[id],
-				GRProperty:      row["golden_record_name"].(string),
-			})
-		}
-		return nil
+		stmt = "SELECT id, golden_record_name, source_code FROM Transformations WHERE id IN " + sql.Quote(transfIDs)
+		err = tx.QueryScan(stmt, func(rows *sql.Rows) error {
+			for rows.Next() {
+				var id int
+				var record, source string
+				if err := rows.Scan(&id, &record, &source); err != nil {
+					return err
+				}
+				transformations = append(transformations, Transformation{
+					ID:              id,
+					SourceCode:      source,
+					Connection:      connection,
+					InputProperties: transfProps[id],
+					GRProperty:      record})
+			}
+			return nil
+		})
+		return err
 	})
 	if err != nil {
 		return nil, err
