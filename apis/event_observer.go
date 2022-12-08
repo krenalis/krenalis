@@ -65,7 +65,7 @@ func (this *EventListeners) Add(size, source, server, stream int) (string, error
 	}
 	if source > 0 || server > 0 || stream > 0 {
 		var sourceExist, serverExist, streamExist bool
-		err := this.myDB.QueryScan("SELECT `id`, CAST(`s`.`type` AS UNSIGNED), CAST(`s`.`role` AS UNSIGNED), \n"+
+		err := this.myDB.QueryScan("SELECT `id`, CAST(`type` AS UNSIGNED), CAST(`role` AS UNSIGNED)\n"+
 			"FROM `connections`\n"+
 			"WHERE `id` IN (?, ?, ?) AND `workspace` = ?", source, server, stream, this.workspace,
 			func(rows *sql.Rows) error {
