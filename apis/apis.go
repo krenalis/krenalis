@@ -380,10 +380,10 @@ func (apis *APIs) refreshOAuthToken(resource int) (string, error) {
 
 	var clientID, clientSecret, tokenEndpoint, refreshToken string
 	err := apis.db.QueryRow(
-		"SELECT `c`.`oauth_client_id`, `c`.`oauth_client_secret`, `c`.`oauth_token_endpoint`, `r`.`oauth_refresh_token`\n"+
-			"FROM `resources` AS `r`\n"+
-			"INNER JOIN `connectors` AS `c` ON `c`.`id` = `r`.`connector`\n"+
-			"WHERE `r`.`id` = ?", resource).
+		"SELECT c.oauth_client_id, c.oauth_client_secret, c.oauth_token_endpoint, r.oauth_refresh_token\n"+
+			"FROM resources AS r\n"+
+			"INNER JOIN connectors AS c ON c.id = r.connector\n"+
+			"WHERE r.id = $1", resource).
 		Scan(&clientID, &clientSecret, &tokenEndpoint, &refreshToken)
 	if err != nil {
 		if err == sql.ErrNoRows {
