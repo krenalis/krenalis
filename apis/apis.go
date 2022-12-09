@@ -82,18 +82,22 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 
 	// Read all accounts.
 	accounts := map[int]*Account{}
-	err = db.QueryScan("SELECT id FROM accounts", func(rows *sql.Rows) error {
+	err = db.QueryScan("SELECT id, name, email, internal_ips FROM accounts", func(rows *sql.Rows) error {
 		var id int
+		var name, email, ips string
 		for rows.Next() {
-			if err := rows.Scan(&id); err != nil {
+			if err := rows.Scan(&id, &name, &email, &ips); err != nil {
 				return err
 			}
 			accounts[id] = &Account{
-				id:         id,
-				apis:       apis,
-				db:         apis.db,
-				chDB:       apis.chDB,
-				Workspaces: &Workspaces{},
+				apis:        apis,
+				db:          apis.db,
+				chDB:        apis.chDB,
+				Workspaces:  &Workspaces{},
+				id:          id,
+				name:        name,
+				email:       email,
+				internalIPs: strings.Fields(ips),
 			}
 		}
 		return nil

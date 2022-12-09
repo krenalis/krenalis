@@ -10,7 +10,7 @@ package apis
 import (
 	"errors"
 	"regexp"
-	"strings"
+	"sort"
 
 	"chichi/pkg/open2b/sql"
 
@@ -25,11 +25,14 @@ type Accounts struct {
 
 // Account represents an account.
 type Account struct {
-	id         int
-	apis       *APIs
-	db         *sql.DB
-	chDB       chDriver.Conn
-	Workspaces *Workspaces
+	apis        *APIs
+	db          *sql.DB
+	chDB        chDriver.Conn
+	Workspaces  *Workspaces
+	id          int
+	name        string
+	email       string
+	internalIPs []string
 }
 
 // An AccountInfo describes an account as returned by Get and List.
@@ -37,7 +40,6 @@ type AccountInfo struct {
 	ID          int
 	Name        string
 	Email       string
-	Properties  []int
 	InternalIPs []string
 }
 
@@ -83,10 +85,8 @@ func (this *Accounts) Authenticate(email, password string) (int, error) {
 }
 
 // Count returns the total number of accounts.
-func (this *Accounts) Count() (int, error) {
-	var count int
-	err := this.db.QueryRow("SELECT COUNT(*) FROM accounts").Scan(&count)
-	return count, err
+func (this *Accounts) Count() int {
+	return len(this.accounts)
 }
 
 // Create a new account given its email and password and returns its
@@ -131,51 +131,71 @@ func (this *Accounts) Delete(ids []int) error {
 	//return err
 }
 
-// Find returns the accounts in the given order limited by limit and first.
-func (this *Accounts) Find(order string, limit, first int) ([]*AccountInfo, error) {
-	if order != "name" && order != "email" {
-		panic("apis: invalid accounts order")
+// Get returns an AccountInfo describing the account with identifier id.
+// Returns the ErrAccountNotFound if the account does not exist.
+func (this *Accounts) Get(id int) (*AccountInfo, error) {
+	if id < 1 || id > maxInt32 {
+		return nil, errors.New("invalid account identifier")
 	}
-	if limit < 0 || first < 0 {
-		panic("apis: invalid accounts limit or first")
+	acc, ok := this.accounts[id]
+	if !ok {
+		return nil, ErrAccountNotFound
 	}
-	stmt := "SELECT id, name, email FROM accounts"
-	if order != "" {
-		stmt += " ORDER BY " + sql.QuoteColumn(order)
+	ips := make([]string, len(acc.internalIPs))
+	copy(ips, acc.internalIPs)
+	info := AccountInfo{
+		ID:          acc.id,
+		Name:        acc.name,
+		Email:       acc.email,
+		InternalIPs: ips,
 	}
-	stmt += sql.LimitFirstStatement(limit, first)
-	accounts := make([]*AccountInfo, 0, 0)
-	err := this.db.QueryScan(stmt, func(rows *sql.Rows) error {
-		var err error
-		for rows.Next() {
-			var account AccountInfo
-			if err = rows.Scan(&account.ID, &account.Name, &account.Email); err != nil {
-				return err
-			}
-			accounts = append(accounts, &account)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return accounts, nil
+	return &info, nil
 }
 
-// Get returns the account with identifier id. If it does not exist, returns nil.
-func (this *Accounts) Get(id int) (*AccountInfo, error) {
-	if id < 1 {
-		panic("apis: invalid account identifier")
+// List returns a list AccountInfo, in the given order, describing all accounts
+// but limited by limit and first.
+// order can be "name" or "email". limit must be > 0 and first must be >= 0.
+func (this *Accounts) List(order string, limit, first int) []*AccountInfo {
+	if order != "name" && order != "email" {
+		panic("invalid order")
 	}
-	account := AccountInfo{ID: id}
-	var ips string
-	err := this.db.QueryRow("SELECT name, email, internal_ips FROM accounts WHERE id = $1", id).Scan(&account.Name, &account.Email, &ips)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
+	if limit <= 0 {
+		panic("invalid limit")
+	}
+	if first < 0 {
+		panic("invalid first")
+	}
+	if first >= len(this.accounts) {
+		return []*AccountInfo{}
+	}
+	if first+limit > len(this.accounts) {
+		limit = len(this.accounts) - first
+	}
+	accounts := make([]*Account, 0, len(this.accounts))
+	for _, account := range this.accounts {
+		accounts = append(accounts, account)
+	}
+	if order == "name" {
+		sort.Slice(accounts, func(i, j int) bool {
+			a := accounts
+			return a[i].name < a[j].name || a[i].name == a[j].name && a[i].id < a[j].id
+		})
+	} else {
+		sort.Slice(accounts, func(i, j int) bool {
+			a := accounts
+			return a[i].email < a[j].email || a[i].email == a[j].email && a[i].id < a[j].id
+		})
+	}
+	infos := make([]*AccountInfo, limit)
+	for i, account := range accounts[first : first+limit] {
+		ips := make([]string, len(account.internalIPs))
+		copy(ips, account.internalIPs)
+		infos[i] = &AccountInfo{
+			ID:          account.id,
+			Name:        account.name,
+			Email:       account.email,
+			InternalIPs: ips,
 		}
-		return nil, err
 	}
-	account.InternalIPs = strings.Fields(ips)
-	return &account, nil
+	return infos
 }
