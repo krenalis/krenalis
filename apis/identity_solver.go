@@ -63,8 +63,6 @@ func (ids *identitySolver) createIdentity() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	// TODO(Gianluca): review this conversion, depending on the data type we
-	// will adopt on the database.
 	return id, nil
 }
 
