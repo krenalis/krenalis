@@ -16,7 +16,7 @@ import (
 )
 
 type Transformations struct {
-	*WorkspaceAPI
+	*Workspace
 }
 
 type Transformation struct {

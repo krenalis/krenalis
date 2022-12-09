@@ -33,7 +33,7 @@ var (
 )
 
 type EventListeners struct {
-	*WorkspaceAPI
+	*Workspace
 }
 
 // Add adds an event listener that listen to processed events
@@ -111,20 +111,20 @@ func (this *EventListeners) Add(size, source, server, stream int) (string, error
 			return "", ConnectionNotFoundError{EventStreamType}
 		}
 	}
-	return this.api.apis.eventProcessor.observer.AddListener(size, source, server, stream)
+	return this.account.apis.eventProcessor.observer.AddListener(size, source, server, stream)
 }
 
 // Events returns the events listen to by the specified listener and the number
 // of discarded events. If the listener does not exist, it returns the
 // ErrEventListenerNotFound error.
 func (this *EventListeners) Events(id string) ([]json.RawMessage, int, error) {
-	return this.api.apis.eventProcessor.observer.Events(id)
+	return this.account.apis.eventProcessor.observer.Events(id)
 }
 
 // Remove removes the event listener with identifier id. If the listener does
 // not exist, it does nothing.
 func (this *EventListeners) Remove(id string) {
-	this.api.apis.eventProcessor.observer.RemoveListener(id)
+	this.account.apis.eventProcessor.observer.RemoveListener(id)
 }
 
 // eventObserver represents the event observer.

@@ -21,9 +21,14 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type WorkspaceAPI struct {
+type Workspaces struct {
+	*APIs
+	workspaces map[int]*Workspace
+}
+
+type Workspace struct {
 	workspace       int
-	api             *AccountAPI
+	account         *Account
 	db              *sql.DB
 	chDB            chDriver.Conn
 	Connections     *Connections
@@ -31,10 +36,20 @@ type WorkspaceAPI struct {
 	Transformations *Transformations
 }
 
+// As returns the workspace with identifier id.
+// Returns an error is the workspace does not exist.
+func (this *Workspaces) As(id int) (*Workspace, error) {
+	ws, ok := this.workspaces[id]
+	if !ok {
+		return nil, errors.New("workspace does not exist")
+	}
+	return ws, nil
+}
+
 // Schema returns the schema with the given name. name can be "user", "group"
 // or "event". If the schema with the given name does not exist, it returns an
 // empty string.
-func (ws *WorkspaceAPI) Schema(name string) (string, error) {
+func (ws *Workspace) Schema(name string) (string, error) {
 	var column string
 	switch name {
 	case "user":
@@ -70,7 +85,7 @@ func (err *InvalidSchemaSyntaxError) Error() string {
 // SetSchema sets the schema with the given name. name can be "user", "group"
 // or "event". If the schema has a syntax error, it returns an
 // InvalidSchemaSyntaxError error.
-func (ws *WorkspaceAPI) SetSchema(name, schema string) error {
+func (ws *Workspace) SetSchema(name, schema string) error {
 	var column string
 	switch name {
 	case "user":
@@ -90,7 +105,7 @@ func (ws *WorkspaceAPI) SetSchema(name, schema string) error {
 	return err
 }
 
-// A PropertyNotFoundError is returned by the (*WorkspaceAPI).Users method if a
+// A PropertyNotFoundError is returned by the (*Workspace).Users method if a
 // property does not exist.
 type PropertyNotFoundError struct {
 	Name string
@@ -104,7 +119,7 @@ func (err *PropertyNotFoundError) Error() string {
 // range [first,first+limit] with first >= 0 and 0 < limit <= 1000.
 //
 // If a property does not exist, it returns a PropertyNotFoundError error.
-func (ws *WorkspaceAPI) Users(properties []string, first, limit int) (types.Schema, [][]any, error) {
+func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema, [][]any, error) {
 
 	if len(properties) == 0 {
 		return types.Schema{}, nil, errors.New("properties cannot be empty")

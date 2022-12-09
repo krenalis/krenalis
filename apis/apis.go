@@ -53,13 +53,58 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 	hasBeenCalled = true
 
 	apis := &APIs{db: db, chDB: chDB}
-	apis.Accounts = &Accounts{apis}
 	apis.Users = &Users{apis}
+
+	// Read all accounts.
+	accounts := map[int]*Account{}
+	err := db.QueryScan("SELECT id FROM accounts", func(rows *sql.Rows) error {
+		var id int
+		for rows.Next() {
+			if err := rows.Scan(&id); err != nil {
+				return err
+			}
+			accounts[id] = &Account{
+				id:         id,
+				apis:       apis,
+				db:         apis.db,
+				chDB:       apis.chDB,
+				Workspaces: &Workspaces{},
+			}
+		}
+		return nil
+	})
+
+	// Read all workspaces.
+	err = db.QueryScan("SELECT id, account FROM workspaces", func(rows *sql.Rows) error {
+		var id, accountID int
+		for rows.Next() {
+			if err := rows.Scan(&id, &accountID); err != nil {
+				return err
+			}
+			account := accounts[accountID]
+			if account.Workspaces.workspaces == nil {
+				account.Workspaces.workspaces = map[int]*Workspace{}
+			}
+			workspace := &Workspace{
+				workspace: id,
+				account:   account,
+				db:        db,
+				chDB:      chDB,
+			}
+			workspace.Connections = &Connections{Workspace: workspace}
+			workspace.EventListeners = &EventListeners{workspace}
+			workspace.Transformations = &Transformations{workspace}
+			account.Workspaces.workspaces[id] = workspace
+		}
+		return nil
+	})
+
+	apis.Accounts = &Accounts{apis, accounts}
 
 	// Read the source event stream collectors and the source connections that
 	// send the events into the stream with their keys.
 	var streams []*eventCollectorStream
-	err := db.QueryScan(
+	err = db.QueryScan(
 		"SELECT s.id, co.name AS connector, s.settings, ci.id AS event_collector_producer, ci.type, k.key\n"+
 			"FROM connections AS s\n"+
 			"INNER JOIN connectors AS co ON co.id = s.connector\n"+
@@ -137,28 +182,6 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 	return apis
 }
 
-type AccountAPI struct {
-	account int
-	apis    *APIs
-	db      *sql.DB
-	chDB    chDriver.Conn
-}
-
-// AsAccount returns an API restricted to the given account.
-func (apis *APIs) AsAccount(account int) *AccountAPI {
-	api := &AccountAPI{account: account, apis: apis, db: apis.db, chDB: apis.chDB}
-	return api
-}
-
-// AsWorkspace returns an API restricted to the given workspace.
-func (api *AccountAPI) AsWorkspace(workspace int) *WorkspaceAPI {
-	ws := &WorkspaceAPI{workspace: workspace, api: api, db: api.db, chDB: api.chDB}
-	ws.Connections = &Connections{ws}
-	ws.EventListeners = &EventListeners{ws}
-	ws.Transformations = &Transformations{ws}
-	return ws
-}
-
 // ServeHTTP servers the API methods from HTTP.
 func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
@@ -174,14 +197,14 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	// Read the workspace.
-	workspace, _ := strconv.Atoi(r.Header.Get("X-Workspace"))
-	if workspace <= 0 {
+	workspaceID, _ := strconv.Atoi(r.Header.Get("X-Workspace"))
+	if workspaceID <= 0 {
 		http.Error(w, "Bad Request (missing 'X-Workspace' header)", http.StatusBadRequest)
 		return
 	}
 	// Read the account.
-	var account int
-	err := apis.db.QueryRow("SELECT account FROM workspaces WHERE id = $1", workspace).Scan(&account)
+	var accountID int
+	err := apis.db.QueryRow("SELECT account FROM workspaces WHERE id = $1", workspaceID).Scan(&accountID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Not Found", http.StatusNotFound)
@@ -192,14 +215,22 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api := apis.AsAccount(account)
-	ws := api.AsWorkspace(workspace)
+	account, err := apis.Accounts.As(accountID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	workspace, err := account.Workspaces.As(workspaceID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
 
 	router := chi.NewRouter()
 	router.Route("/api/connections", func(router chi.Router) {
 		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			var connections []*Connection
-			connections, err = ws.Connections.List()
+			connections, err = workspace.Connections.List()
 			if err != nil {
 				log.Printf("[error] %s", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -214,7 +245,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				schema, err := ws.Connections.Schema(dsID)
+				schema, err := workspace.Connections.Schema(dsID)
 				if err != nil {
 					if _, ok := err.(ConnectionNotFoundError); ok {
 						http.Error(w, "Not Found", http.StatusNotFound)
@@ -238,7 +269,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				err = ws.Connections.Import(dsID, false)
+				err = workspace.Connections.Import(dsID, false)
 				if err != nil {
 					if _, ok := err.(ConnectionNotFoundError); ok {
 						http.Error(w, "Not Found", http.StatusNotFound)
@@ -255,7 +286,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				err = ws.Connections.Import(dsID, true)
+				err = workspace.Connections.Import(dsID, true)
 				if err != nil {
 					if _, ok := err.(ConnectionNotFoundError); ok {
 						http.Error(w, "Not Found", http.StatusNotFound)
@@ -272,7 +303,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				transformations, err := ws.Connections.Transformations.List(dsID)
+				transformations, err := workspace.Connections.Transformations.List(dsID)
 				if err != nil {
 					if _, ok := err.(ConnectionNotFoundError); ok {
 						http.Error(w, "Not Found", http.StatusNotFound)
@@ -303,7 +334,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if req.Size != nil {
 				size = *req.Size
 			}
-			id, err := ws.EventListeners.Add(size, req.Source, req.Server, req.Stream)
+			id, err := workspace.EventListeners.Add(size, req.Source, req.Server, req.Stream)
 			if err != nil {
 				log.Printf("[error] %s", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -313,11 +344,11 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 		router.Delete("/{listenerID}", func(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "listenerID")
-			ws.EventListeners.Remove(id)
+			workspace.EventListeners.Remove(id)
 		})
 		router.Get("/{listenerID}/events", func(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "listenerID")
-			events, discarded, err := ws.EventListeners.Events(id)
+			events, discarded, err := workspace.EventListeners.Events(id)
 			if err != nil {
 				log.Printf("[error] %s", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -337,7 +368,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			tID, err := ws.Connections.Transformations.Create(req)
+			tID, err := workspace.Connections.Transformations.Create(req)
 			if err != nil {
 				if _, ok := err.(ConnectionNotFoundError); ok {
 					http.Error(w, "Not Found", http.StatusNotFound)
@@ -361,7 +392,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = ws.Connections.Transformations.Update(tID, req)
+			err = workspace.Connections.Transformations.Update(tID, req)
 			if err != nil {
 				log.Printf("[error] %s", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -461,10 +492,10 @@ func (apis *APIs) refreshOAuthToken(resource int) (string, error) {
 
 // DeprecatedProperty returns an instance of DeprecatedProperties which operates
 // on the given property.
-func (api *AccountAPI) DeprecatedProperty(property int) *DeprecatedProperties {
+func (api *Account) DeprecatedProperty(property int) *DeprecatedProperties {
 	properties := &DeprecatedProperties{
-		AccountAPI: api,
-		id:         property,
+		Account: api,
+		id:      property,
 	}
 	properties.SmartEvents = &SmartEvents{properties}
 	properties.Visualization = &Visualization{properties}

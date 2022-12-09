@@ -34,7 +34,7 @@ import (
 )
 
 type Connections struct {
-	*WorkspaceAPI
+	*Workspace
 }
 
 const (
@@ -173,7 +173,7 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, name string,
 	if name == "" || utf8.RuneCountInString(name) > 120 {
 		return 0, errors.New("invalid name")
 	}
-	conn, err := this.api.apis.Connector(connector)
+	conn, err := this.account.apis.Connector(connector)
 	if err != nil {
 		return 0, err
 	}
@@ -811,7 +811,7 @@ func (this *Connections) startImport(id int, typ ConnectorType, reimport bool) e
 		if hasOAuth := clientSecret != ""; hasOAuth {
 			accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
 			if accessToken == "" || accessTokenExpired {
-				accessToken, err = this.api.apis.refreshOAuthToken(resource)
+				accessToken, err = this.account.apis.refreshOAuthToken(resource)
 				if err != nil {
 					return importError{err}
 				}
@@ -1334,7 +1334,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		if hasOAuth := clientSecret != ""; hasOAuth {
 			accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
 			if accessToken == "" || accessTokenExpired {
-				accessToken, err = this.api.apis.refreshOAuthToken(resource)
+				accessToken, err = this.account.apis.refreshOAuthToken(resource)
 				if err != nil {
 					return nil, err
 				}
@@ -1668,7 +1668,7 @@ func (this *Connections) reloadSchema(id int) error {
 		if hasOAuth := clientSecret != ""; hasOAuth {
 			accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(*expiration)
 			if accessToken == "" || accessTokenExpired {
-				accessToken, err = this.api.apis.refreshOAuthToken(resource)
+				accessToken, err = this.account.apis.refreshOAuthToken(resource)
 				if err != nil {
 					return err
 				}

@@ -17,7 +17,7 @@ import (
 )
 
 type DeprecatedProperties struct {
-	*AccountAPI
+	*Account
 	SmartEvents   *SmartEvents
 	Visualization *Visualization
 	id            int

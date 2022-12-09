@@ -13,16 +13,27 @@ import (
 	"strings"
 
 	"chichi/pkg/open2b/sql"
+	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Accounts struct {
 	*APIs
+	accounts map[int]*Account
 }
 
 // Account represents an account.
 type Account struct {
+	id         int
+	apis       *APIs
+	db         *sql.DB
+	chDB       chDriver.Conn
+	Workspaces *Workspaces
+}
+
+// An AccountInfo describes an account as returned by Get and Find.
+type AccountInfo struct {
 	ID          int
 	Name        string
 	Email       string
@@ -35,6 +46,16 @@ var emailRegExp = regexp.MustCompile(`^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.
 var ErrEmailInvalid = errors.New("email is not valid")
 var ErrPasswordInvalid = errors.New("password is not valid")
 var ErrAuthenticationFailed = errors.New("authentication failed")
+
+// As returns the account with identifier id.
+// Returns an error is the workspace does not exist.
+func (this *Accounts) As(id int) (*Account, error) {
+	acc, ok := this.accounts[id]
+	if !ok {
+		return nil, errors.New("account does not exit")
+	}
+	return acc, nil
+}
 
 // Authenticate authenticates an account given its email and password. If the
 // authentication fails, it returns the ErrAuthenticationFailed error.
@@ -111,7 +132,7 @@ func (this *Accounts) Delete(ids []int) error {
 }
 
 // Find returns the accounts in the given order limited by limit and first.
-func (this *Accounts) Find(order string, limit, first int) ([]*Account, error) {
+func (this *Accounts) Find(order string, limit, first int) ([]*AccountInfo, error) {
 	if order != "name" && order != "email" {
 		panic("apis: invalid accounts order")
 	}
@@ -123,11 +144,11 @@ func (this *Accounts) Find(order string, limit, first int) ([]*Account, error) {
 		stmt += " ORDER BY " + sql.QuoteColumn(order)
 	}
 	stmt += sql.LimitFirstStatement(limit, first)
-	accounts := make([]*Account, 0, 0)
+	accounts := make([]*AccountInfo, 0, 0)
 	err := this.db.QueryScan(stmt, func(rows *sql.Rows) error {
 		var err error
 		for rows.Next() {
-			var account Account
+			var account AccountInfo
 			if err = rows.Scan(&account.ID, &account.Name, &account.Email); err != nil {
 				return err
 			}
@@ -142,11 +163,11 @@ func (this *Accounts) Find(order string, limit, first int) ([]*Account, error) {
 }
 
 // Get returns the account with identifier id. If it does not exist, returns nil.
-func (this *Accounts) Get(id int) (*Account, error) {
+func (this *Accounts) Get(id int) (*AccountInfo, error) {
 	if id < 1 {
 		panic("apis: invalid account identifier")
 	}
-	account := Account{ID: id}
+	account := AccountInfo{ID: id}
 	var ips string
 	err := this.db.QueryRow("SELECT name, email, internal_ips FROM accounts WHERE id = $1", id).Scan(&account.Name, &account.Email, &ips)
 	if err != nil {

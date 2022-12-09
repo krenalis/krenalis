@@ -47,8 +47,8 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var accountID int
-	var api *apis.AccountAPI
-	var ws *apis.WorkspaceAPI
+	var account *apis.Account
+	var workspace *apis.Workspace
 	if isLoggedIn {
 		// get the account id
 		accountID, err = strconv.Atoi(cookie.Value)
@@ -57,10 +57,19 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// instantiate the account API
-		api = admin.apis.AsAccount(accountID)
+		account, err = admin.apis.Accounts.As(accountID)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
 
 		// get the workspace
-		ws = api.AsWorkspace(1) // TODO(marco)
+		workspace, err = account.Workspaces.As(1) // TODO(marco)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+
 	}
 
 	// handle requests to login page.
@@ -123,7 +132,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Handle the "/user-schema-properties" endpoint.
 	if strings.HasPrefix(rpath, "/user-schema-properties") {
-		schema, err := ws.Schema("user")
+		schema, err := workspace.Schema("user")
 		if err != nil {
 			log.Printf("[error] cannot retrieve user schema: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -156,7 +165,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		schema, err := ws.Connections.Schema(req.Connector)
+		schema, err := workspace.Connections.Schema(req.Connector)
 		if err != nil {
 			log.Printf("[error] cannot retrieve schema: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -186,7 +195,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		err = ws.Connections.Import(req.Connector, req.ResetCursor)
+		err = workspace.Connections.Import(req.Connector, req.ResetCursor)
 		if err != nil {
 			log.Printf("[error] %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -206,7 +215,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		err = ws.Transformations.SaveAll(req.Connection, req.Transformations)
+		err = workspace.Transformations.SaveAll(req.Connection, req.Transformations)
 		if err != nil {
 			log.Printf("[error] cannot update transformations: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -228,7 +237,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			schema, err := ws.Schema(request.SchemaName)
+			schema, err := workspace.Schema(request.SchemaName)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -247,7 +256,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = ws.SetSchema(request.SchemaName, request.Schema)
+			err = workspace.SetSchema(request.SchemaName, request.Schema)
 			if err != nil {
 				if err, ok := err.(*apis.InvalidSchemaSyntaxError); ok {
 					w.Header().Add("Content-Type", "application/json")
@@ -268,7 +277,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rpath := rpath[len("/connections"):]
 		switch rpath {
 		case "/find":
-			cns, err := ws.Connections.List()
+			cns, err := workspace.Connections.List()
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -285,7 +294,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			ds, err := ws.Connections.Get(id)
+			ds, err := workspace.Connections.Get(id)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -303,7 +312,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			err = ws.Connections.Delete(ids[0])
+			err = workspace.Connections.Delete(ids[0])
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -323,7 +332,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			columns, rows, err := ws.Connections.Query(req.Connection, req.Query, req.Limit)
+			columns, rows, err := workspace.Connections.Query(req.Connection, req.Query, req.Limit)
 			if err != nil {
 				if err, ok := err.(*apis.DatabaseQueryError); ok {
 					_ = json.NewEncoder(w).Encode(map[string]any{"Error": err.Message})
@@ -348,7 +357,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = ws.Connections.SetUsersQuery(req.Connection, req.Query)
+			err = workspace.Connections.SetUsersQuery(req.Connection, req.Query)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -364,7 +373,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			transformations, err := ws.Transformations.List(id)
+			transformations, err := workspace.Transformations.List(id)
 			properties := []apis.InputProperty{}
 			for _, t := range transformations {
 				for _, p := range t.InputProperties {
@@ -396,7 +405,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			imports, err := ws.Connections.Imports(id)
+			imports, err := workspace.Connections.Imports(id)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -446,7 +455,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			form, err := ws.Connections.ServeUI(connection, "load", nil)
+			form, err := workspace.Connections.ServeUI(connection, "load", nil)
 			if err != nil {
 				if err == apis.ErrUIEventNotExist {
 					http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -476,7 +485,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			form, err := ws.Connections.ServeUI(req.Connection, req.Event, req.Form)
+			form, err := workspace.Connections.ServeUI(req.Connection, req.Event, req.Form)
 			if err != nil {
 				if err == apis.ErrUIEventNotExist {
 					http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -510,7 +519,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// TODO(Gianluca): check if the property belongs to the account.
 
-		deprecatedProperty := api.DeprecatedProperty(propertyID)
+		deprecatedProperty := account.DeprecatedProperty(propertyID)
 
 		// Serve the Smart Event APIs.
 		switch rpath {
@@ -687,7 +696,12 @@ func (admin *admin) serveExecuteQuery(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// TODO(Gianluca): fix this:
-	columns, data, query, err := admin.apis.AsAccount(0).DeprecatedProperty(1).Visualization.ExecuteJSONQuery(context.TODO(), jsonQuery)
+	account, err := admin.apis.Accounts.As(0)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	columns, data, query, err := account.DeprecatedProperty(1).Visualization.ExecuteJSONQuery(context.TODO(), jsonQuery)
 	if err != nil {
 		switch err.(type) {
 		case apis.InvalidJSONQueryError, apis.SmartEventNotFoundError:
@@ -753,8 +767,16 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 		_ = r.Body.Close()
 	}()
 
-	api := admin.apis.AsAccount(accountID)
-	ws := api.AsWorkspace(1) // TODO(marco): what is the workspace?
+	account, err := admin.apis.Accounts.As(accountID)
+	if err != nil {
+		http.NotFound(w, r)
+		return nil
+	}
+	workspace, err := account.Workspaces.As(1) // TODO(marco): what is the workspace?
+	if err != nil {
+		http.NotFound(w, r)
+		return nil
+	}
 
 	connection := struct {
 		Connector int
@@ -762,7 +784,7 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 		Role      string
 		Host      string
 	}{}
-	err := json.NewDecoder(r.Body).Decode(&connection)
+	err = json.NewDecoder(r.Body).Decode(&connection)
 	if err != nil {
 		return err
 	}
@@ -793,21 +815,21 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 
 	switch conn.Type {
 	case apis.AppType:
-		id, err = ws.Connections.AddApp(role, conn.ID, conn.Name, "", "", "")
+		id, err = workspace.Connections.AddApp(role, conn.ID, conn.Name, "", "", "")
 	case apis.DatabaseType:
-		id, err = ws.Connections.AddDatabase(role, conn.ID, conn.Name)
+		id, err = workspace.Connections.AddDatabase(role, conn.ID, conn.Name)
 	case apis.EventStreamType:
-		id, err = ws.Connections.AddEventStream(role, conn.ID, conn.Name)
+		id, err = workspace.Connections.AddEventStream(role, conn.ID, conn.Name)
 	case apis.FileType:
-		id, err = ws.Connections.AddFile(role, conn.ID, connection.Storage, conn.Name)
+		id, err = workspace.Connections.AddFile(role, conn.ID, connection.Storage, conn.Name)
 	case apis.MobileType:
-		id, err = ws.Connections.AddMobile(role, conn.ID, conn.Name)
+		id, err = workspace.Connections.AddMobile(role, conn.ID, conn.Name)
 	case apis.ServerType:
-		id, err = ws.Connections.AddServer(role, conn.ID, conn.Name)
+		id, err = workspace.Connections.AddServer(role, conn.ID, conn.Name)
 	case apis.StorageType:
-		id, err = ws.Connections.AddStorage(role, conn.ID, conn.Name)
+		id, err = workspace.Connections.AddStorage(role, conn.ID, conn.Name)
 	case apis.WebsiteType:
-		id, err = ws.Connections.AddWebsite(role, conn.ID, conn.Name, connection.Host)
+		id, err = workspace.Connections.AddWebsite(role, conn.ID, conn.Name, connection.Host)
 	}
 	if err != nil {
 		return err
@@ -822,8 +844,14 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 // OAuth and redirect to the confirmation page.
 func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Request, accountID int) error {
 
-	api := admin.apis.AsAccount(accountID)
-	ws := api.AsWorkspace(1) // TODO(marco): what is the workspace?
+	account, err := admin.apis.Accounts.As(accountID)
+	if err != nil {
+		return err
+	}
+	workspace, err := account.Workspaces.As(1) // TODO(marco): what is the workspace?
+	if err != nil {
+		return err
+	}
 
 	// Get the connector's identifier.
 	idCookie, err := r.Cookie("add-connection")
@@ -932,7 +960,7 @@ func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Reque
 		expireDate = expireDate.Add(time.Duration(connector.OAuth.DefaultExpiresIn) * time.Second)
 	}
 
-	_, err = ws.Connections.AddApp(role, connector.ID, connector.Name, tokens.RefreshToken, tokens.AccessToken,
+	_, err = workspace.Connections.AddApp(role, connector.ID, connector.Name, tokens.RefreshToken, tokens.AccessToken,
 		expireDate.Format("2006-01-02 15:04:05"))
 
 	if err != nil {
