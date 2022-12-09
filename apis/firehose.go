@@ -307,7 +307,7 @@ func (fh *firehose) writeConnectionUsers(user string, props map[string]any, time
 	}
 	_, err = fh.connections.db.Exec("INSERT INTO connections_stats (connection, time_slot, users_in)\n"+
 		"VALUES ($1, $2, 1)\n"+
-		"ON CONFLICT (connection, time_slot) DO UPDATE SET users_in = users_in + 1",
+		"ON CONFLICT (connection, time_slot) DO UPDATE SET users_in = EXCLUDED.users_in + 1",
 		fh.connection, statsTimeSlot(time.Now()))
 	return err
 }
