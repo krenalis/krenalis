@@ -13,8 +13,8 @@ import (
 	"strings"
 
 	"chichi/pkg/open2b/sql"
-	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 
+	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"golang.org/x/crypto/bcrypt"
 )
 
