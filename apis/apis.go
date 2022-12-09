@@ -73,6 +73,9 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 		}
 		return nil
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Read all workspaces.
 	err = db.QueryScan("SELECT id, account, user_schema, group_schema, event_schema FROM workspaces",
@@ -103,6 +106,9 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 			}
 			return nil
 		})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	apis.Accounts = &Accounts{apis, accounts}
 
@@ -152,12 +158,12 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 			return nil
 		})
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	apis.eventCollector, err = newEventCollector(context.Background(), streams)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	// Read the all the source event stream processors.
@@ -178,7 +184,7 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 			return nil
 		})
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	apis.eventProcessor = newEventProcessor(apis.db, apis.chDB, allStreams)
