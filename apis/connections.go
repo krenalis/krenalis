@@ -173,12 +173,9 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, name string,
 	if name == "" || utf8.RuneCountInString(name) > 120 {
 		return 0, errors.New("invalid name")
 	}
-	conn, err := this.account.apis.Connector(connector)
+	conn, err := this.account.apis.Connectors.Get(connector)
 	if err != nil {
 		return 0, err
-	}
-	if conn == nil {
-		return 0, ConnectorNotFoundError{AppType}
 	}
 	if conn.Type != AppType {
 		return 0, errors.New("connector is not an app connector")

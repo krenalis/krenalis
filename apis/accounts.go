@@ -32,7 +32,7 @@ type Account struct {
 	Workspaces *Workspaces
 }
 
-// An AccountInfo describes an account as returned by Get and Find.
+// An AccountInfo describes an account as returned by Get and List.
 type AccountInfo struct {
 	ID          int
 	Name        string

@@ -189,12 +189,12 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		}
 		webhooksPer = WebhooksPerSource
 	}
-	conn, err := apis.Connector(connector)
+	conn, err := apis.Connectors.Get(connector)
 	if err != nil {
+		if _, ok := err.(ConnectorNotFoundError); ok {
+			return errNotFound
+		}
 		return err
-	}
-	if conn == nil {
-		return errNotFound
 	}
 	if conn.WebhooksPer != webhooksPer {
 		return errBadRequest

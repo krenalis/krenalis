@@ -39,6 +39,7 @@ type APIs struct {
 	eventCollector *eventCollector
 	eventProcessor *eventProcessor
 	Accounts       *Accounts
+	Connectors     *Connectors
 	Users          *Users
 }
 
@@ -55,9 +56,33 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 	apis := &APIs{db: db, chDB: chDB}
 	apis.Users = &Users{apis}
 
+	// Read all connectors.
+	connectors := map[int]*Connector{}
+	err := db.QueryScan("SELECT id, name, type, logo_url, webhooks_per, oauth_url, oauth_client_id,"+
+		" oauth_client_secret, oauth_token_endpoint, oauth_default_token_type, oauth_default_expires_in,"+
+		" oauth_forced_expires_in FROM connectors", func(rows *sql.Rows) error {
+		for rows.Next() {
+			c := Connector{}
+			oauth := ConnectorOAuth{}
+			if err := rows.Scan(&c.id, &c.name, &c.typ, &c.logoURL, &c.webhooksPer, &oauth.URL, &oauth.ClientID, &oauth.ClientSecret,
+				&oauth.TokenEndpoint, &oauth.DefaultTokenType, &oauth.DefaultExpiresIn, &oauth.ForcedExpiresIn); err != nil {
+				return err
+			}
+			if oauth.URL != "" {
+				c.oAuth = &oauth
+			}
+			connectors[c.id] = &c
+		}
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	apis.Connectors = &Connectors{apis, connectors}
+
 	// Read all accounts.
 	accounts := map[int]*Account{}
-	err := db.QueryScan("SELECT id FROM accounts", func(rows *sql.Rows) error {
+	err = db.QueryScan("SELECT id FROM accounts", func(rows *sql.Rows) error {
 		var id int
 		for rows.Next() {
 			if err := rows.Scan(&id); err != nil {

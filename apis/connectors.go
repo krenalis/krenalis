@@ -11,10 +11,46 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
-
-	"chichi/pkg/open2b/sql"
 )
+
+type Connectors struct {
+	*APIs
+	connectors map[int]*Connector
+}
+
+// Connector represents a Connector.
+type Connector struct {
+	id          int
+	name        string
+	typ         ConnectorType
+	logoURL     string
+	webhooksPer WebhooksPer
+	oAuth       *ConnectorOAuth
+}
+
+// A ConnectorOAuth represents OAuth data required to authenticate with a
+// connector.
+type ConnectorOAuth struct {
+	URL              string
+	ClientID         string
+	ClientSecret     string
+	TokenEndpoint    string
+	DefaultTokenType string
+	DefaultExpiresIn int
+	ForcedExpiresIn  int
+}
+
+// A ConnectorInfo describes a connector as returned by Get and List.
+type ConnectorInfo struct {
+	ID          int
+	Name        string
+	Type        ConnectorType
+	LogoURL     string
+	WebhooksPer WebhooksPer
+	OAuth       *ConnectorOAuth
+}
 
 // ConnectorType represents a connector type.
 type ConnectorType int
@@ -118,62 +154,49 @@ func (err ConnectorNotFoundError) Error() string {
 	return fmt.Sprintf("%s connector does not exist", strings.ToLower(err.Type.String()))
 }
 
-// Connector represents a connector.
-type Connector struct {
-	ID          int
-	Name        string
-	Type        ConnectorType
-	LogoURL     string
-	WebhooksPer WebhooksPer
-	OAuth       struct {
-		URL              string
-		ClientID         string
-		ClientSecret     string
-		TokenEndpoint    string
-		DefaultTokenType string
-		DefaultExpiresIn int
-		ForcedExpiresIn  int
-	}
-}
-
-// Connector returns the connector with the given identifier.
-func (apis *APIs) Connector(id int) (*Connector, error) {
+// Get returns a ConnectorInfo describing the connector with identifier id.
+// Returns a ConnectorNotFoundError error if the connector does not exist.
+func (this *Connectors) Get(id int) (*ConnectorInfo, error) {
 	if id <= 0 || id > maxInt32 {
 		return nil, errors.New("invalid connector identifier")
 	}
-	connector := Connector{ID: id}
-	err := apis.db.QueryRow(
-		"SELECT name, type, oauth_url, logo_url, oauth_client_id, oauth_client_secret, oauth_token_endpoint,"+
-			" webhooks_per, oauth_default_token_type, oauth_default_expires_in, oauth_forced_expires_in\n"+
-			"FROM connectors\nWHERE id = $1", id).
-		Scan(&connector.Name, &connector.Type, &connector.OAuth.URL, &connector.LogoURL, &connector.OAuth.ClientID,
-			&connector.OAuth.ClientSecret, &connector.OAuth.TokenEndpoint, &connector.WebhooksPer,
-			&connector.OAuth.DefaultTokenType, &connector.OAuth.DefaultExpiresIn, &connector.OAuth.ForcedExpiresIn)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
+	c, ok := this.connectors[id]
+	if !ok {
+		return nil, ConnectorNotFoundError{}
 	}
-	return &connector, nil
+	info := ConnectorInfo{
+		ID:          c.id,
+		Name:        c.name,
+		Type:        c.typ,
+		LogoURL:     c.logoURL,
+		WebhooksPer: c.webhooksPer,
+	}
+	if c.oAuth != nil {
+		info.OAuth = &ConnectorOAuth{}
+		*info.OAuth = *c.oAuth
+	}
+	return &info, nil
 }
 
-// Connectors returns all connectors.
-func (apis *APIs) Connectors() ([]*Connector, error) {
-	connectors := []*Connector{}
-	err := apis.db.QueryScan("SELECT id, name, type, oauth_url, logo_url FROM connectors", func(rows *sql.Rows) error {
-		var err error
-		for rows.Next() {
-			var connector Connector
-			if err = rows.Scan(&connector.ID, &connector.Name, &connector.Type, &connector.OAuth.URL, &connector.LogoURL); err != nil {
-				return err
-			}
-			connectors = append(connectors, &connector)
+// List returns a list of ConnectionInfo describing all connectors.
+func (this *Connectors) List() []*ConnectorInfo {
+	var infos = make([]*ConnectorInfo, 0, len(this.connectors))
+	for _, c := range this.connectors {
+		info := ConnectorInfo{
+			ID:          c.id,
+			Name:        c.name,
+			Type:        c.typ,
+			LogoURL:     c.logoURL,
+			WebhooksPer: c.webhooksPer,
 		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
+		if c.oAuth != nil {
+			info.OAuth = &ConnectorOAuth{}
+			*info.OAuth = *c.oAuth
+		}
+		infos = append(infos, &info)
 	}
-	return connectors, nil
+	sort.Slice(infos, func(i, j int) bool {
+		return infos[i].Name < infos[j].Name || infos[i].Name == infos[j].Name && infos[i].ID < infos[j].ID
+	})
+	return infos
 }

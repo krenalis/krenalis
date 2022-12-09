@@ -106,6 +106,10 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(rpath, "/oauth/authorize") {
 		err = admin.serveAddOAuthConnection(w, r, accountID)
 		if err != nil {
+			if _, ok := err.(apis.ConnectorNotFoundError); ok {
+				http.NotFound(w, r)
+				return
+			}
 			log.Printf("[error] %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
@@ -421,14 +425,14 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rpath := rpath[len("/connectors"):]
 		switch rpath {
 		case "/find":
-			cns, err := admin.apis.Connectors()
+			connectors := admin.apis.Connectors.List()
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
 			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(cns)
+			_ = json.NewEncoder(w).Encode(connectors)
 			return
 		case "/get":
 			var id int
@@ -438,14 +442,22 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			cn, err := admin.apis.Connector(id)
+			conn, err := admin.apis.Connectors.Get(id)
 			if err != nil {
+				if _, ok := err.(apis.ConnectorNotFoundError); ok {
+					http.NotFound(w, r)
+					return
+				}
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
 			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{"ID": cn.ID, "Name": cn.Name, "LogoURL": cn.LogoURL, "OAuthURL": cn.OAuth.URL})
+			var oAuthURL string
+			if conn.OAuth != nil {
+				oAuthURL = conn.OAuth.URL
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"ID": conn.ID, "Name": conn.Name, "LogoURL": conn.LogoURL, "OAuthURL": oAuthURL})
 			return
 		case "/ui":
 			var connection int
@@ -800,14 +812,14 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 		return nil
 	}
 
-	conn, err := admin.apis.Connector(connection.Connector)
+	conn, err := admin.apis.Connectors.Get(connection.Connector)
 	if err != nil {
+		if _, ok := err.(apis.ConnectorNotFoundError); ok {
+			http.NotFound(w, r)
+			return nil
+		}
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("[error] cannot get connector: %s", err)
-		return nil
-	}
-	if conn == nil {
-		http.NotFound(w, r)
 		return nil
 	}
 
@@ -903,7 +915,7 @@ func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Reque
 		return errors.New("missing OAuth code from redirect URL")
 	}
 
-	connector, err := admin.apis.Connector(connectorID)
+	connector, err := admin.apis.Connectors.Get(connectorID)
 	if err != nil {
 		return err
 	}
