@@ -510,22 +510,13 @@ func (tx *Tx) Tables(database string) ([]string, error) {
 }
 
 func QuoteColumn(name string) string {
-	if strings.ContainsAny(name, ".") {
-		// !!! verificare che non ci siano caratteri unicode che contengano '.' nel codice !!!
-		name = "`" + strings.Join(strings.Split(name, "."), "`.`") + "`"
-	} else {
-		name = "`" + name + "`"
-	}
-	return name
+	name = strings.ReplaceAll(name, "\x00", "")
+	name = strings.ReplaceAll(name, `"`, `""`)
+	return `"` + name + `"`
 }
 
 func QuoteTable(name string) string {
-	if strings.ContainsAny(name, ".") {
-		name = "`" + strings.Join(strings.Split(name, "."), "`.`") + "`"
-	} else {
-		name = "`" + name + "`"
-	}
-	return name
+	return QuoteColumn(name)
 }
 
 func Quote(value any) string {
@@ -559,7 +550,7 @@ func Quote(value any) string {
 	case *decimal.Dec:
 		return val.String()
 	case time.Time:
-		return "'" + val.Format("2006-01-02 15:04:05") + "'"
+		return "'" + val.Format("2006-01-02 15:04:05.999999") + "'"
 	case []string:
 		if len(val) == 1 {
 			return `(` + quote(val[0]) + `)`
@@ -626,50 +617,8 @@ func Quote(value any) string {
 }
 
 func quote(s string) string {
-	if len(s) == 0 {
-		return "''"
-	}
-	var toQuote = false
-	for _, c := range []byte{'\n', '\r', '\'', '"', '\\', '\032', 0} {
-		if strings.IndexByte(s, c) != -1 {
-			toQuote = true
-			break
-		}
-	}
-	if toQuote {
-		var quoted = make([]byte, 2+len(s)*2)
-		quoted[0] = '\''
-		var p = 1
-		for i := 0; i < len(s); i++ {
-			var escape byte
-			switch s[i] {
-			case 0:
-				escape = '0'
-			case '\n':
-				escape = 'n'
-			case '\r':
-				escape = 'r'
-			case '\\':
-				escape = '\\'
-			case '\'':
-				escape = '\''
-			case '"':
-				escape = '"'
-			case '\032':
-				escape = 'Z'
-			}
-			if escape == 0 {
-				quoted[p] = s[i]
-				p++
-			} else {
-				quoted[p] = '\\'
-				quoted[p+1] = escape
-				p += 2
-			}
-		}
-		quoted[p] = '\''
-		return string(quoted[:p+1])
-	}
+	s = strings.ReplaceAll(s, "\x00", "")
+	s = strings.ReplaceAll(s, "'", "''")
 	return "'" + s + "'"
 }
 
