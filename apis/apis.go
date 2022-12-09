@@ -448,9 +448,9 @@ func (apis *APIs) refreshOAuthToken(resource int) (string, error) {
 	expiresIn := time.Now().UTC().Add(time.Duration(response.ExpiresIn) * time.Second) // TODO(marco): ExpiresIn should be relative to response time?
 
 	_, err = apis.db.Exec(
-		"UPDATE `resources`\n"+
-			"SET `oauth_access_token` = ?, `oauth_refresh_token` = ?, `oauth_expires_in` = ?\n"+
-			"WHERE `id` = ?",
+		"UPDATE resources\n"+
+			"SET oauth_access_token = $1, oauth_refresh_token = $2, oauth_expires_in = $3\n"+
+			"WHERE id = $4",
 		response.AccessToken, response.RefreshToken, expiresIn, resource)
 	if err != nil {
 		return "", err
