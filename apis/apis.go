@@ -75,29 +75,34 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 	})
 
 	// Read all workspaces.
-	err = db.QueryScan("SELECT id, account FROM workspaces", func(rows *sql.Rows) error {
-		var id, accountID int
-		for rows.Next() {
-			if err := rows.Scan(&id, &accountID); err != nil {
-				return err
+	err = db.QueryScan("SELECT id, account, user_schema, group_schema, event_schema FROM workspaces",
+		func(rows *sql.Rows) error {
+			var id, accountID int
+			var userSchema, groupSchema, eventSchema string
+			for rows.Next() {
+				if err := rows.Scan(&id, &accountID, &userSchema, &groupSchema, &eventSchema); err != nil {
+					return err
+				}
+				account := accounts[accountID]
+				if account.Workspaces.workspaces == nil {
+					account.Workspaces.workspaces = map[int]*Workspace{}
+				}
+				workspace := &Workspace{
+					workspace:   id,
+					account:     account,
+					db:          db,
+					chDB:        chDB,
+					userSchema:  userSchema,
+					groupSchema: groupSchema,
+					eventSchema: eventSchema,
+				}
+				workspace.Connections = &Connections{Workspace: workspace}
+				workspace.EventListeners = &EventListeners{workspace}
+				workspace.Transformations = &Transformations{workspace}
+				account.Workspaces.workspaces[id] = workspace
 			}
-			account := accounts[accountID]
-			if account.Workspaces.workspaces == nil {
-				account.Workspaces.workspaces = map[int]*Workspace{}
-			}
-			workspace := &Workspace{
-				workspace: id,
-				account:   account,
-				db:        db,
-				chDB:      chDB,
-			}
-			workspace.Connections = &Connections{Workspace: workspace}
-			workspace.EventListeners = &EventListeners{workspace}
-			workspace.Transformations = &Transformations{workspace}
-			account.Workspaces.workspaces[id] = workspace
-		}
-		return nil
-	})
+			return nil
+		})
 
 	apis.Accounts = &Accounts{apis, accounts}
 

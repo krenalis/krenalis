@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"chichi/apis/types"
@@ -34,6 +35,10 @@ type Workspace struct {
 	Connections     *Connections
 	EventListeners  *EventListeners
 	Transformations *Transformations
+	mu              sync.Mutex // for userSchema, groupSchema and eventSchema fields.
+	userSchema      string
+	groupSchema     string
+	eventSchema     string
 }
 
 // As returns the workspace with identifier id.
@@ -50,26 +55,18 @@ func (this *Workspaces) As(id int) (*Workspace, error) {
 // or "event". If the schema with the given name does not exist, it returns an
 // empty string.
 func (ws *Workspace) Schema(name string) (string, error) {
-	var column string
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
 	switch name {
 	case "user":
-		column = "user_schema"
+		return ws.userSchema, nil
 	case "group":
-		column = "group_schema"
+		return ws.groupSchema, nil
 	case "event":
-		column = "event_schema"
+		return ws.eventSchema, nil
 	default:
 		return "", fmt.Errorf("invalid schema name %q", name)
 	}
-	var schema string
-	err := ws.db.QueryRow("SELECT "+column+" FROM workspaces WHERE id = $1", ws.workspace).Scan(&schema)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return "", errors.New("workspace does not exist anymore")
-		}
-		return "", err
-	}
-	return schema, nil
 }
 
 // An InvalidSchemaSyntaxError error indicates that a schema has an invalid
@@ -102,7 +99,20 @@ func (ws *Workspace) SetSchema(name, schema string) error {
 		return &InvalidSchemaSyntaxError{err}
 	}
 	_, err = ws.db.Exec("UPDATE workspaces SET "+column+" = $1 WHERE id = $2", schema, ws.workspace)
-	return err
+	if err != nil {
+		return err
+	}
+	ws.mu.Lock()
+	switch name {
+	case "user":
+		ws.userSchema = schema
+	case "group":
+		ws.groupSchema = schema
+	case "event":
+		ws.eventSchema = schema
+	}
+	ws.mu.Unlock()
+	return nil
 }
 
 // A PropertyNotFoundError is returned by the (*Workspace).Users method if a
@@ -132,14 +142,9 @@ func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema,
 	}
 
 	// Read the schema.
-	var rawSchema string
-	err := ws.db.QueryRow("SELECT user_schema FROM workspaces WHERE id = $1", ws.workspace).Scan(&rawSchema)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return types.Schema{}, nil, errors.New("workspace does not exist anymore")
-		}
-		return types.Schema{}, nil, err
-	}
+	ws.mu.Lock()
+	rawSchema := ws.userSchema
+	ws.mu.Unlock()
 	schema, err := types.ParseSchema(rawSchema, nil)
 	if err != nil {
 		return types.Schema{}, nil, err
