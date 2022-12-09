@@ -323,19 +323,17 @@ func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
 		if i > 1 {
 			query.WriteString(", ")
 		}
-		query.WriteString(sql.QuoteColumn(prop))
+		query.WriteString(sql.QuoteColumn(strings.ToLower(prop)))
 		query.WriteString(" = $")
 		query.WriteString(strconv.Itoa(i))
-		query.WriteString(",\n")
 		values = append(values, value)
 		i++
 	}
 	query.WriteString("\nWHERE id = ")
 	query.WriteString(strconv.Itoa(i))
-	values = append(values, id)
 	_, err := fh.connections.db.Exec(query.String(), values...)
 	if err != nil {
-		return fmt.Errorf("cannot write data Golden Record: %s", err)
+		return fmt.Errorf("cannot write Golden Record data: %s", err)
 	}
 	return nil
 }

@@ -41,7 +41,7 @@ func (ids *identitySolver) ResolveEntity(connection int, user string, email stri
 	}
 	// Update the relations.
 	_, err = ids.connections.db.Exec(
-		"UPDATE connections_users SET golden_record = ? WHERE connection = $1 AND user = $2",
+		"UPDATE connections_users SET golden_record = $1 WHERE connection = $2 AND user = $3",
 		goldenRecordID, connection, user,
 	)
 	if err != nil {
@@ -59,7 +59,7 @@ func (ids *identitySolver) ResolveEntity(connection int, user string, email stri
 // createIdentity creates a new identity.
 func (ids *identitySolver) createIdentity() (int, error) {
 	var id int
-	err := ids.connections.db.QueryRow("INSERT INTO warehouse_users () VALUES() RETURNING id").Scan(&id)
+	err := ids.connections.db.QueryRow("INSERT INTO warehouse_users DEFAULT VALUES RETURNING id").Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -74,10 +74,13 @@ func (ids *identitySolver) entityToIdentity(connection int, user string) (int, b
 	var goldenRecord int
 	err := row.Scan(&goldenRecord)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, false, nil
+		}
 		return 0, false, err
 	}
 	if goldenRecord == 0 {
-		return 0, false, nil
+		panic("unexpected")
 	}
 	return goldenRecord, true, nil
 }
