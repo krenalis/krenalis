@@ -20,7 +20,12 @@ type Connectors struct {
 	connectors map[int]*Connector
 }
 
-// Connector represents a Connector.
+// newConnectors returns a new *Connectors value.
+func newConnectors(apis *APIs, connectors map[int]*Connector) *Connectors {
+	return &Connectors{APIs: apis, connectors: connectors}
+}
+
+// Connector represents a connector.
 type Connector struct {
 	id          int
 	name        string
@@ -157,11 +162,11 @@ func (err ConnectorNotFoundError) Error() string {
 // Get returns a ConnectorInfo describing the connector with identifier id.
 // Returns a ConnectorNotFoundError error if the connector does not exist.
 func (this *Connectors) Get(id int) (*ConnectorInfo, error) {
-	if id <= 0 || id > maxInt32 {
+	if id < 1 || id > maxInt32 {
 		return nil, errors.New("invalid connector identifier")
 	}
-	c, ok := this.connectors[id]
-	if !ok {
+	c, err := this.get(id)
+	if err != nil {
 		return nil, ConnectorNotFoundError{}
 	}
 	info := ConnectorInfo{
@@ -178,7 +183,7 @@ func (this *Connectors) Get(id int) (*ConnectorInfo, error) {
 	return &info, nil
 }
 
-// List returns a list of ConnectionInfo describing all connectors.
+// List returns a list of ConnectorInfo describing all connectors.
 func (this *Connectors) List() []*ConnectorInfo {
 	var infos = make([]*ConnectorInfo, 0, len(this.connectors))
 	for _, c := range this.connectors {
@@ -199,4 +204,16 @@ func (this *Connectors) List() []*ConnectorInfo {
 		return infos[i].Name < infos[j].Name || infos[i].Name == infos[j].Name && infos[i].ID < infos[j].ID
 	})
 	return infos
+}
+
+var errConnectorNotFound = errors.New("connector does not exist")
+
+// get returns the connector with identifier id.
+// Returns the errConnectorNotFound error if the connector does not exist.
+func (this *Connectors) get(id int) (*Connector, error) {
+	c, ok := this.connectors[id]
+	if !ok {
+		return nil, errConnectorNotFound
+	}
+	return c, nil
 }

@@ -78,7 +78,7 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 	if err != nil {
 		log.Fatal(err)
 	}
-	apis.Connectors = &Connectors{apis, connectors}
+	apis.Connectors = newConnectors(apis, connectors)
 
 	// Read all accounts.
 	accounts := map[int]*Account{}
@@ -89,24 +89,27 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 			if err := rows.Scan(&id, &name, &email, &ips); err != nil {
 				return err
 			}
-			accounts[id] = &Account{
+			account := &Account{
 				apis:        apis,
 				db:          apis.db,
 				chDB:        apis.chDB,
-				Workspaces:  &Workspaces{},
 				id:          id,
 				name:        name,
 				email:       email,
 				internalIPs: strings.Fields(ips),
 			}
+			account.Workspaces = newWorkspaces(account)
+			accounts[id] = account
 		}
 		return nil
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
+	apis.Accounts = newAccounts(apis, accounts)
 
 	// Read all workspaces.
+	workspaces := map[int]*Workspace{}
 	err = db.QueryScan("SELECT id, account, user_schema, group_schema, event_schema FROM workspaces",
 		func(rows *sql.Rows) error {
 			var id, accountID int
@@ -116,22 +119,20 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 					return err
 				}
 				account := accounts[accountID]
-				if account.Workspaces.workspaces == nil {
-					account.Workspaces.workspaces = map[int]*Workspace{}
-				}
 				workspace := &Workspace{
-					workspace:   id,
-					account:     account,
 					db:          db,
 					chDB:        chDB,
+					id:          id,
+					account:     account,
 					userSchema:  userSchema,
 					groupSchema: groupSchema,
 					eventSchema: eventSchema,
 				}
-				workspace.Connections = &Connections{Workspace: workspace}
+				workspace.Connections = newConnections(workspace)
 				workspace.EventListeners = &EventListeners{workspace}
 				workspace.Transformations = &Transformations{workspace}
 				account.Workspaces.workspaces[id] = workspace
+				workspaces[id] = workspace
 			}
 			return nil
 		})
@@ -139,7 +140,60 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 		log.Fatal(err)
 	}
 
-	apis.Accounts = &Accounts{apis, accounts}
+	// Read all connections.
+	connections := map[int]*Connection{}
+	err = db.QueryScan("SELECT id, workspace, name, role, enabled, connector, storage, stream, resource,"+
+		" website_host, user_cursor, identity_column, timestamp_column, settings, schema, users_query FROM connections",
+		func(rows *sql.Rows) error {
+			for rows.Next() {
+				var workspaceID, connector, storage, stream int
+				var rawSchema string
+				c := Connection{}
+				if err := rows.Scan(&c.id, &workspaceID, &c.name, &c.role, &c.enabled, &connector, &storage, &stream, &c.resource,
+					&c.websiteHost, &c.userCursor, &c.identityColumn, &c.timestampColumn, &c.settings, &rawSchema,
+					&c.usersQuery); err != nil {
+					return err
+				}
+				c.connector = connectors[connector]
+				if storage > 0 {
+					if s, ok := connections[storage]; ok {
+						c.storage = s
+					} else {
+						c.storage = &Connection{}
+						connections[storage] = c.storage
+					}
+				}
+				if stream > 0 {
+					if s, ok := connections[stream]; ok {
+						c.stream = s
+					} else {
+						c.stream = &Connection{}
+						connections[stream] = c.stream
+					}
+				}
+				if len(rawSchema) > 0 {
+					c.schema, err = types.ParseSchema(rawSchema, nil)
+					if err != nil {
+						// TODO(marco) disable the connection instead of returning an error
+						return err
+					}
+				}
+				connection, ok := connections[c.id]
+				if ok {
+					*connection = c
+				} else {
+					connection = &Connection{}
+					*connection = c
+				}
+				workspace := workspaces[workspaceID]
+				workspace.Connections.connections[c.id] = connection
+				connections[c.id] = connection
+			}
+			return nil
+		})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Read the source event stream collectors and the source connections that
 	// send the events into the stream with their keys.
@@ -269,13 +323,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	router := chi.NewRouter()
 	router.Route("/api/connections", func(router chi.Router) {
 		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			var connections []*Connection
-			connections, err = workspace.Connections.List()
-			if err != nil {
-				log.Printf("[error] %s", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
+			connections := workspace.Connections.List()
 			_ = json.NewEncoder(w).Encode(connections)
 		})
 		router.Route("/{connectionID}", func(router chi.Router) {

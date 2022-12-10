@@ -281,14 +281,14 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rpath := rpath[len("/connections"):]
 		switch rpath {
 		case "/find":
-			cns, err := workspace.Connections.List()
+			connections := workspace.Connections.List()
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
 			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(cns)
+			_ = json.NewEncoder(w).Encode(connections)
 			return
 		case "/get":
 			var id int

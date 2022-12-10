@@ -23,19 +23,25 @@ import (
 )
 
 type Workspaces struct {
-	*APIs
+	*Account
 	workspaces map[int]*Workspace
 }
 
+// newWorkspaces returns a new *Workspaces value.
+func newWorkspaces(account *Account) *Workspaces {
+	return &Workspaces{Account: account, workspaces: map[int]*Workspace{}}
+}
+
+// Workspace represents a workspace.
 type Workspace struct {
-	workspace       int
-	account         *Account
 	db              *sql.DB
 	chDB            chDriver.Conn
 	Connections     *Connections
 	EventListeners  *EventListeners
 	Transformations *Transformations
 	mu              sync.Mutex // for userSchema, groupSchema and eventSchema fields.
+	id              int
+	account         *Account
 	userSchema      string
 	groupSchema     string
 	eventSchema     string
@@ -98,7 +104,7 @@ func (ws *Workspace) SetSchema(name, schema string) error {
 	if err != nil {
 		return &InvalidSchemaSyntaxError{err}
 	}
-	_, err = ws.db.Exec("UPDATE workspaces SET "+column+" = $1 WHERE id = $2", schema, ws.workspace)
+	_, err = ws.db.Exec("UPDATE workspaces SET "+column+" = $1 WHERE id = $2", schema, ws.id)
 	if err != nil {
 		return err
 	}

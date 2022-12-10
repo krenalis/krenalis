@@ -23,6 +23,11 @@ type Accounts struct {
 	accounts map[int]*Account
 }
 
+// newAccounts returns a new *Accounts value.
+func newAccounts(apis *APIs, accounts map[int]*Account) *Accounts {
+	return &Accounts{APIs: apis, accounts: accounts}
+}
+
 // Account represents an account.
 type Account struct {
 	apis        *APIs

@@ -34,11 +34,9 @@ const maxSettingsLen = 10_000 // Maximum length of settings in runes.
 // firehose is the Firehose API used by the connectors.
 type firehose struct {
 	connections   *Connections
-	connection    int
+	connection    *Connection
 	resource      int
-	connector     int
 	connectorType ConnectorType
-	role          connector.Role
 	ctx           context.Context
 	cancel        context.CancelFunc
 	webhooksPer   WebhooksPer
@@ -52,7 +50,7 @@ func (fh *firehose) ReceiveEvent(event connector.Event) {
 
 // SetCursor sets the user cursor.
 func (fh *firehose) SetCursor(cursor string) {
-	result, err := fh.connections.db.Exec("UPDATE connections SET user_cursor = $1 WHERE id = $2", cursor, fh.connection)
+	result, err := fh.connections.db.Exec("UPDATE connections SET user_cursor = $1 WHERE id = $2", cursor, fh.connection.id)
 	if err != nil {
 		fh.setError(err)
 		return
@@ -84,11 +82,12 @@ func (fh *firehose) SetSettings(settings []byte) error {
 	if utf8.RuneCount(settings) > maxSettingsLen {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 	}
-	_, err := fh.connections.db.Exec("UPDATE connections SET settings = $1 WHERE id = $2", settings, fh.connection)
+	_, err := fh.connections.db.Exec("UPDATE connections SET settings = $1 WHERE id = $2", settings, fh.connection.id)
 	if err != nil {
 		log.Printf("[error] %s", err)
 		return errors.New("cannot set settings")
 	}
+
 	return nil
 }
 
@@ -128,9 +127,9 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	}
 
 	// Retrieve the transformations for this connection.
-	connectionsTransformations, err := fh.connections.Transformations.List(fh.connection)
+	connectionsTransformations, err := fh.connections.Transformations.List(fh.connection.id)
 	if err != nil {
-		fh.setError(fmt.Errorf("cannot list transformations for %d: %s", fh.connection, err))
+		fh.setError(fmt.Errorf("cannot list transformations for %d: %s", fh.connection.id, err))
 		return
 	}
 
@@ -168,14 +167,14 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	ids := identitySolver{fh}
 
 	// Resolve the entity of this user.
-	goldenRecordID, err := ids.ResolveEntity(fh.connection, user, email)
+	goldenRecordID, err := ids.ResolveEntity(fh.connection.id, user, email)
 	if err != nil {
 		fh.setError(err)
 		return
 	}
 
 	// Retrieve the entities which are the same user.
-	sameEntities, err := ids.LookupSameEntities(fh.connection, user)
+	sameEntities, err := ids.LookupSameEntities(fh.connection.id, user)
 	if err != nil {
 		fh.setError(fmt.Errorf("cannot lookup same entities for user %q: %s", user, err))
 		return
@@ -266,11 +265,11 @@ func (fh *firehose) WebhookURL() string {
 	case WebhooksPerNone:
 		return ""
 	case WebhooksPerConnector:
-		return u + "c/" + strconv.Itoa(fh.connector) + "/"
+		return u + "c/" + strconv.Itoa(fh.connection.connector.id) + "/"
 	case WebhooksPerResource:
 		return u + "r/" + strconv.Itoa(fh.resource) + "/"
 	case WebhooksPerSource:
-		return u + "s/" + strconv.Itoa(fh.connection) + "/"
+		return u + "s/" + strconv.Itoa(fh.connection.id) + "/"
 	}
 	panic("unexpected webhooksPer value")
 }
@@ -301,14 +300,14 @@ func (fh *firehose) writeConnectionUsers(user string, props map[string]any, time
 	_, err = fh.connections.db.Exec("INSERT INTO connections_users (connection, \"user\", data, timestamps)\n"+
 		"VALUES ($1, $2, $3, $4)\n"+
 		"ON CONFLICT (connection, \"user\") DO UPDATE SET data = $3, timestamps = $4",
-		fh.connection, user, data, jsonTimestamps)
+		fh.connection.id, user, data, jsonTimestamps)
 	if err != nil {
 		return err
 	}
 	_, err = fh.connections.db.Exec("INSERT INTO connections_stats AS cs (connection, time_slot, users_in)\n"+
 		"VALUES ($1, $2, 1)\n"+
 		"ON CONFLICT (connection, time_slot) DO UPDATE SET users_in = cs.users_in + 1",
-		fh.connection, statsTimeSlot(time.Now()))
+		fh.connection.id, statsTimeSlot(time.Now()))
 	return err
 }
 
@@ -380,7 +379,7 @@ func (rw *recordWriter) Columns(columns []connector.Column) error {
 		}
 		index[c.Name] = i
 		if !c.Type.Valid() {
-			return fmt.Errorf("connector %d returned an invalid type", rw.fh.connector)
+			return fmt.Errorf("connector %d returned an invalid type", rw.fh.connection.connector.id)
 		}
 	}
 	var ok bool
@@ -402,7 +401,7 @@ func (rw *recordWriter) Columns(columns []connector.Column) error {
 // Record receives a record and calls the SetUser of the Firehose.
 func (rw *recordWriter) Record(record []any) error {
 	if rw.columns == nil {
-		return fmt.Errorf("connector %d did not call the Columns method before calling Record", rw.fh.connector)
+		return fmt.Errorf("connector %d did not call the Columns method before calling Record", rw.fh.connection.connector.id)
 	}
 	if len(record) != len(rw.columns) {
 		return errors.New("connector %q has returned records with different lengths")
@@ -428,7 +427,7 @@ func (rw *recordWriter) Record(record []any) error {
 // RecordMap receives a record and calls the SetUser of the Firehose.
 func (rw *recordWriter) RecordMap(record map[string]any) error {
 	if rw.columns == nil {
-		return fmt.Errorf("connector %d did not call the Columns method before calling RecordMap", rw.fh.connector)
+		return fmt.Errorf("connector %d did not call the Columns method before calling RecordMap", rw.fh.connection.connector.id)
 	}
 	ts := rw.timestamp
 	if rw.timestampIndex != noColumn {
@@ -447,7 +446,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 // RecordString receives a record and calls the SetUser of the Firehose.
 func (rw *recordWriter) RecordString(record []string) error {
 	if rw.columns == nil {
-		return fmt.Errorf("connector %d did not call the Columns method before calling RecordString", rw.fh.connector)
+		return fmt.Errorf("connector %d did not call the Columns method before calling RecordString", rw.fh.connection.connector.id)
 	}
 	if len(record) != len(rw.columns) {
 		return errors.New("connector %q has returned records with different lengths")
@@ -475,7 +474,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 // Timestamp can be called before Record, RecordMap and RecordString.
 func (rw *recordWriter) Timestamp(ts time.Time) error {
 	if rw.setUserCalled {
-		return fmt.Errorf("connector %d called the Timestamp method after a record method", rw.fh.connector)
+		return fmt.Errorf("connector %d called the Timestamp method after a record method", rw.fh.connection.connector.id)
 	}
 	rw.timestamp = ts
 	return nil

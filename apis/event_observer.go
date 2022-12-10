@@ -66,7 +66,7 @@ func (this *EventListeners) Add(size, source, server, stream int) (string, error
 	if source > 0 || server > 0 || stream > 0 {
 		var sourceExist, serverExist, streamExist bool
 		err := this.db.QueryScan("SELECT id, type , role FROM connections\n"+
-			"WHERE id IN ($1, $2, $3) AND workspace = $4", source, server, stream, this.workspace,
+			"WHERE id IN ($1, $2, $3) AND workspace = $4", source, server, stream, this.id,
 			func(rows *sql.Rows) error {
 				var id int
 				var typ ConnectorType
