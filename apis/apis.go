@@ -11,14 +11,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"chichi/apis/types"
 	_connector "chichi/connector"
@@ -71,6 +67,7 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 			if oauth.URL != "" {
 				c.oAuth = &oauth
 			}
+			c.resources = newResourceSet()
 			connectors[c.id] = &c
 		}
 		return nil
@@ -79,6 +76,30 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 		log.Fatal(err)
 	}
 	apis.Connectors = newConnectors(apis, connectors)
+
+	// Read all resources.
+	resources := map[int]*Resource{}
+	err = db.QueryScan("SELECT id, connector, code, oauth_access_token, oauth_refresh_token, oauth_expires_in\n"+
+		"FROM resources", func(rows *sql.Rows) error {
+		for rows.Next() {
+			r := Resource{}
+			var connectorID int
+			if err := rows.Scan(&r.id, &connectorID, &r.code, &r.oAuthAccessToken, &r.oAuthRefreshToken, &r.oAuthExpiresIn); err != nil {
+				return err
+			}
+			connector := connectors[connectorID]
+			if connector.resources == nil {
+				connector.resources = &resourceSet{m: map[int]*Resource{r.id: &r}}
+			} else {
+				connector.resources.m[r.id] = &r
+			}
+			resources[r.id] = &r
+		}
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Read all accounts.
 	accounts := map[int]*Account{}
@@ -146,10 +167,10 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 		" website_host, user_cursor, identity_column, timestamp_column, settings, schema, users_query FROM connections",
 		func(rows *sql.Rows) error {
 			for rows.Next() {
-				var workspaceID, connector, storage, stream int
+				var workspaceID, connector, storage, stream, resource int
 				var rawSchema string
 				c := Connection{}
-				if err := rows.Scan(&c.id, &workspaceID, &c.name, &c.role, &c.enabled, &connector, &storage, &stream, &c.resource,
+				if err := rows.Scan(&c.id, &workspaceID, &c.name, &c.role, &c.enabled, &connector, &storage, &stream, &resource,
 					&c.websiteHost, &c.userCursor, &c.identityColumn, &c.timestampColumn, &c.settings, &rawSchema,
 					&c.usersQuery); err != nil {
 					return err
@@ -170,6 +191,9 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 						c.stream = &Connection{}
 						connections[stream] = c.stream
 					}
+				}
+				if resource > 0 {
+					c.resource = resources[resource]
 				}
 				if len(rawSchema) > 0 {
 					c.schema, err = types.ParseSchema(rawSchema, nil)
@@ -490,92 +514,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	router.ServeHTTP(w, r)
 
-}
-
-// refreshOAuthToken refreshes the access token of the resource with identifier
-// id.
-// Returns the ErrResourceNotFound error if the resource does not exist.
-func (apis *APIs) refreshOAuthToken(resource int) (string, error) {
-
-	var clientID, clientSecret, tokenEndpoint, refreshToken string
-	err := apis.db.QueryRow(
-		"SELECT c.oauth_client_id, c.oauth_client_secret, c.oauth_token_endpoint, r.oauth_refresh_token\n"+
-			"FROM resources AS r\n"+
-			"INNER JOIN connectors AS c ON c.id = r.connector\n"+
-			"WHERE r.id = $1", resource).
-		Scan(&clientID, &clientSecret, &tokenEndpoint, &refreshToken)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return "", ErrResourceNotFound
-		}
-		return "", err
-	}
-
-	data := url.Values{}
-	data.Set("grant_type", "refresh_token")
-	data.Set("client_id", clientID)
-	data.Set("client_secret", clientSecret)
-	data.Set("redirect_uri", "https://localhost:9090/admin/oauth/authorize")
-	data.Set("refresh_token", refreshToken)
-
-	req, err := http.NewRequest("POST", tokenEndpoint, strings.NewReader(data.Encode()))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	res, err := http.DefaultTransport.RoundTrip(req)
-	if err != nil {
-		return "", err
-	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, res.Body)
-		_ = res.Body.Close()
-	}()
-
-	if res.StatusCode != http.StatusOK {
-		if res.StatusCode == http.StatusBadRequest {
-			errData := struct {
-				status string
-			}{}
-			err = json.NewDecoder(res.Body).Decode(&errData)
-			if err != nil {
-				return "", err
-			}
-			// TODO(@Andrea): check the status returned by services different
-			// from Hubspot.
-			if errData.status == "BAD_REFRESH_TOKEN" {
-				return "", ErrCannotGetConnectorAccessToken
-			}
-		}
-		return "", fmt.Errorf("unexpected status %d returned by connector while trying to get a new access token via refresh token", res.StatusCode)
-	}
-
-	response := struct {
-		TokenType    string `json:"token_type"`
-		RefreshToken string `json:"refresh_token"`
-		AccessToken  string `json:"access_token"`
-		ExpiresIn    int    `json:"expires_in"`
-	}{}
-	dec := json.NewDecoder(res.Body)
-	err = dec.Decode(&response)
-	if err != nil {
-		return "", err
-	}
-
-	// Convert expires_in into a timestamp.
-	expiresIn := time.Now().UTC().Add(time.Duration(response.ExpiresIn) * time.Second) // TODO(marco): ExpiresIn should be relative to response time?
-
-	_, err = apis.db.Exec(
-		"UPDATE resources\n"+
-			"SET oauth_access_token = $1, oauth_refresh_token = $2, oauth_expires_in = $3\n"+
-			"WHERE id = $4",
-		response.AccessToken, response.RefreshToken, expiresIn, resource)
-	if err != nil {
-		return "", err
-	}
-
-	return response.AccessToken, nil
 }
 
 // DeprecatedProperty returns an instance of DeprecatedProperties which operates

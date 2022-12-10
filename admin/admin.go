@@ -827,7 +827,7 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 
 	switch conn.Type {
 	case apis.AppType:
-		id, err = workspace.Connections.AddApp(role, conn.ID, conn.Name, "", "", "")
+		id, err = workspace.Connections.AddApp(role, conn.ID, conn.Name, "", "", time.Time{})
 	case apis.DatabaseType:
 		id, err = workspace.Connections.AddDatabase(role, conn.ID, conn.Name)
 	case apis.EventStreamType:
@@ -962,18 +962,17 @@ func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Reque
 	// TODO(carlo): compute the token type to use
 
 	// Compute the access token expire time.
-	expireDate := time.Now()
+	expireIn := time.Now()
 	if connector.OAuth.ForcedExpiresIn > 0 {
-		expireDate = expireDate.Add(time.Duration(connector.OAuth.ForcedExpiresIn) * time.Second)
+		expireIn = expireIn.Add(time.Duration(connector.OAuth.ForcedExpiresIn) * time.Second)
 	} else if tokens.ExpiresIn != nil {
 		seconds, _ := tokens.ExpiresIn.Int64()
-		expireDate = expireDate.Add(time.Duration(seconds) * time.Second)
+		expireIn = expireIn.Add(time.Duration(seconds) * time.Second)
 	} else if connector.OAuth.DefaultExpiresIn != 0 {
-		expireDate = expireDate.Add(time.Duration(connector.OAuth.DefaultExpiresIn) * time.Second)
+		expireIn = expireIn.Add(time.Duration(connector.OAuth.DefaultExpiresIn) * time.Second)
 	}
 
-	_, err = workspace.Connections.AddApp(role, connector.ID, connector.Name, tokens.RefreshToken, tokens.AccessToken,
-		expireDate.Format("2006-01-02 15:04:05"))
+	_, err = workspace.Connections.AddApp(role, connector.ID, connector.Name, tokens.RefreshToken, tokens.AccessToken, expireIn)
 
 	if err != nil {
 		return err

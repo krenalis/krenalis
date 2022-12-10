@@ -55,7 +55,7 @@ type Connection struct {
 	connector       *Connector
 	storage         *Connection
 	stream          *Connection
-	resource        int
+	resource        *Resource
 	websiteHost     string
 	userCursor      string
 	identityColumn  string
@@ -180,7 +180,7 @@ func (role ConnectionRole) Value() (driver.Value, error) {
 // and cannot be longer than 120 runes.
 //
 // If the connector does not exist, it returns a ConnectorNotFoundError error.
-func (this *Connections) AddApp(role ConnectionRole, connector int, name string, refreshToken, accessToken, expiresIn string) (int, error) {
+func (this *Connections) AddApp(role ConnectionRole, connector int, name string, refreshToken, accessToken string, expiresIn time.Time) (int, error) {
 
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
@@ -225,37 +225,34 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, name string,
 	if err != nil {
 		return 0, err
 	}
+	resource, _ := c.connector.resources.getByCode(resourceCode)
 
+	var resourceID int
 	err = this.db.Transaction(func(tx *sql.Tx) error {
-		var currentRefreshToken string
-		err := tx.QueryRow("SELECT id, oauth_refresh_token FROM resources WHERE connector = $1 AND code = $2",
-			connector, resourceCode).Scan(&c.resource, &currentRefreshToken)
-		if err != nil {
-			if err != sql.ErrNoRows {
-				return err
-			}
-			err = nil
-		}
-		if c.resource == 0 {
+		if resource == nil {
 			err = tx.QueryRow("INSERT INTO resources (connector, code, oauth_access_token,"+
 				" oauth_refresh_token, oauth_expires_in) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-				connector, resourceCode, accessToken, refreshToken, expiresIn).Scan(&c.resource)
-		} else if refreshToken != currentRefreshToken {
+				connector, resourceCode, accessToken, refreshToken, expiresIn).Scan(&resourceID)
+		} else if refreshToken != resource.oAuthRefreshToken {
 			_, err = tx.Exec("UPDATE resources "+
 				"SET oauth_access_token = $1, oauth_refresh_token = $2, oauth_expires_in = $3 WHERE id = $4",
-				accessToken, refreshToken, expiresIn, c.resource)
+				accessToken, refreshToken, expiresIn, resource.id)
+			resourceID = resource.id
 		}
 		if err != nil {
 			return err
 		}
 		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector, resource)"+
-			" VALUES ($1, $2, $3, 'App', $4, $5, $6)", id, this.id, name, role, connector, c.resource)
+			" VALUES ($1, $2, $3, 'App', $4, $5, $6)", id, this.id, name, role, connector, resourceID)
 		return err
 	})
 	if err != nil {
 		return 0, err
 	}
 
+	if resourceID > 0 {
+		c.resource = c.connector.resources.add(resourceID, resourceCode, accessToken, refreshToken, expiresIn)
+	}
 	this.add(&c)
 
 	go func() {
@@ -694,10 +691,10 @@ func (this *Connections) Delete(id int) error {
 		connectionColumn = "stream"
 	}
 
+	var deletedResources []int
 	err = this.db.Transaction(func(tx *sql.Tx) error {
 		var resource string
-		err := tx.QueryRow("SELECT resource FROM connections WHERE id = $1 AND workspace = $2",
-			id, this.id).Scan(&resource)
+		err := tx.QueryRow("SELECT resource FROM connections WHERE id = $1", id).Scan(&resource)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil
@@ -706,8 +703,7 @@ func (this *Connections) Delete(id int) error {
 		}
 		if c.connector.typ == StorageType {
 			var hasFiles bool
-			err = tx.QueryRow("SELECT TRUE FROM connections WHERE storage = $1 and workspace = $2",
-				id, this.id).Scan(&hasFiles)
+			err = tx.QueryRow("SELECT TRUE FROM connections WHERE storage = $1", id).Scan(&hasFiles)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return ErrStorageHasConnectedFiles
@@ -742,15 +738,30 @@ func (this *Connections) Delete(id int) error {
 			return err
 		}
 		// Delete the resource of the deleted connection if it has no other connections.
-		_, err = tx.Exec("DELETE FROM resources AS r WHERE NOT EXISTS (\n"+
+		err = tx.QueryScan("DELETE FROM resources AS r WHERE NOT EXISTS (\n"+
 			"\tSELECT FROM connections AS s\n"+
-			"\tWHERE r.id = $1 AND s.resource IS NULL\n)", resource)
+			"\tWHERE r.id = $1 AND s.resource IS NULL\n)\nRETURNING r.id", resource,
+			func(rows *sql.Rows) error {
+				var id int
+				for rows.Next() {
+					if err := rows.Scan(&id); err != nil {
+						return err
+					}
+					deletedResources = append(deletedResources, id)
+				}
+				return nil
+			})
 		return err
 	})
 	if err != nil {
 		return err
 	}
 
+	if deletedResources != nil {
+		for _, id := range deletedResources {
+			c.connector.resources.delete(id)
+		}
+	}
 	this.delete(id)
 
 	return nil
@@ -861,31 +872,19 @@ func (this *Connections) startImport(connection *Connection, reimport bool) erro
 	case AppType:
 
 		// Refresh the access token if necessary.
-		var resource int
 		var clientSecret, resourceCode, accessToken string
-		if connector.oAuth != nil {
-			var refreshToken string
-			var expiration time.Time
-			err := this.db.QueryRow(
-				"SELECT r.id, code, oauth_access_token, oauth_refresh_token, oauth_expires_in\n"+
-					"FROM resources AS r\n"+
-					"INNER JOIN connections as c ON c.resource = r.id\n"+
-					"WHERE c.id = $1", connection.id).
-				Scan(&resource, &resourceCode, &accessToken, &refreshToken, &expiration)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					return nil
-				}
-				return err
-			}
-			accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
-			if accessToken == "" || accessTokenExpired {
-				accessToken, err = this.account.apis.refreshOAuthToken(resource)
+		if r := connection.resource; r != nil {
+			expired := time.Now().UTC().Add(15 * time.Minute).After(r.oAuthExpiresIn)
+			if r.oAuthAccessToken == "" || expired {
+				var err error
+				r, err = this.account.apis.Connectors.refreshOAuthToken(connector.id, r.id)
 				if err != nil {
 					return importError{err}
 				}
 			}
 			clientSecret = connector.oAuth.ClientSecret
+			resourceCode = r.code
+			accessToken = r.oAuthAccessToken
 		}
 
 		// Read the user schema and the properties to read.
@@ -894,8 +893,7 @@ func (this *Connections) startImport(connection *Connection, reimport bool) erro
 			return fmt.Errorf("cannot read user schema: %s", err)
 		}
 
-		ctx := context.Background()
-		fh := this.newFirehose(ctx, connection, resource, schema)
+		fh := this.newFirehose(context.Background(), connection, schema)
 		c, err := _connector.RegisteredApp(connector.name).Connect(fh.ctx, &_connector.AppConfig{
 			Role:         role,
 			Settings:     connection.settings,
@@ -933,8 +931,7 @@ func (this *Connections) startImport(connection *Connection, reimport bool) erro
 		if err != nil {
 			return importError{err}
 		}
-		ctx := context.Background()
-		fh := this.newFirehose(ctx, connection, 0, schema)
+		fh := this.newFirehose(context.Background(), connection, schema)
 		c, err := _connector.RegisteredDatabase(connector.name).Connect(fh.ctx, &_connector.DatabaseConfig{
 			Role:     role,
 			Settings: connection.settings,
@@ -1032,7 +1029,7 @@ func (this *Connections) startImport(connection *Connection, reimport bool) erro
 		// Get the file reader.
 		var files *fileReader
 		{
-			fh := this.newFirehose(ctx, connection.storage, 0, schema)
+			fh := this.newFirehose(ctx, connection.storage, schema)
 			ctx = fh.ctx
 			c, err := _connector.RegisteredStorage(connector.name).Connect(ctx, &_connector.StorageConfig{
 				Role:     role,
@@ -1046,7 +1043,7 @@ func (this *Connections) startImport(connection *Connection, reimport bool) erro
 		}
 
 		// Connect to the file connector.
-		fh := this.newFirehose(ctx, connection, 0, types.Schema{})
+		fh := this.newFirehose(ctx, connection, types.Schema{})
 		file, err := _connector.RegisteredFile(connector.name).Connect(fh.ctx, &_connector.FileConfig{
 			Role:     role,
 			Settings: connection.settings,
@@ -1233,8 +1230,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 	if err != nil {
 		return nil, nil, err
 	}
-	ctx := context.Background()
-	fh := this.newFirehose(ctx, c, 0, types.Schema{})
+	fh := this.newFirehose(context.Background(), c, types.Schema{})
 	connection, err := _connector.RegisteredDatabase(c.connector.name).Connect(fh.ctx, &_connector.DatabaseConfig{
 		Role:     cRole,
 		Settings: c.settings,
@@ -1309,35 +1305,22 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 	case AppType:
 
 		// Refresh the access token if necessary.
-		var resource int
 		var clientSecret, resourceCode, accessToken string
-		if c.connector.oAuth != nil {
-			var refreshToken string
-			var expiration time.Time
-			err := this.db.QueryRow(
-				"SELECT r.id, code, oauth_access_token, oauth_refresh_token, oauth_expires_in\n"+
-					"FROM resources AS r\n"+
-					"INNER JOIN connections as c ON c.resource = r.id\n"+
-					"WHERE c.id = $1", c.id).
-				Scan(&resource, &resourceCode, &accessToken, &refreshToken, &expiration)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					return nil, ConnectionNotFoundError{}
-				}
-				return nil, err
-			}
-			accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
-			if accessToken == "" || accessTokenExpired {
-				accessToken, err = this.account.apis.refreshOAuthToken(resource)
+		if r := c.resource; r != nil {
+			expired := time.Now().UTC().Add(15 * time.Minute).After(r.oAuthExpiresIn)
+			if r.oAuthAccessToken == "" || expired {
+				var err error
+				r, err = this.account.apis.Connectors.refreshOAuthToken(c.connector.id, r.id)
 				if err != nil {
 					return nil, err
 				}
 			}
 			clientSecret = c.connector.oAuth.ClientSecret
+			resourceCode = r.code
+			accessToken = r.oAuthAccessToken
 		}
 
-		ctx := context.Background()
-		fh := this.newFirehose(ctx, c, resource, types.Schema{})
+		fh := this.newFirehose(context.Background(), c, types.Schema{})
 		connection, err = _connector.RegisteredApp(c.connector.name).Connect(fh.ctx, &_connector.AppConfig{
 			Role:         cRole,
 			Settings:     c.settings,
@@ -1349,8 +1332,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 
 	default:
 
-		ctx := context.Background()
-		fh := this.newFirehose(ctx, c, 0, types.Schema{})
+		fh := this.newFirehose(context.Background(), c, types.Schema{})
 
 		switch c.connector.typ {
 		case DatabaseType:
@@ -1591,7 +1573,11 @@ func (this *Connections) get(id int) (*Connection, error) {
 }
 
 // newFirehose returns a new Firehose used to call a connection method.
-func (this *Connections) newFirehose(ctx context.Context, connection *Connection, resource int, userSchema types.Schema) *firehose {
+func (this *Connections) newFirehose(ctx context.Context, connection *Connection, userSchema types.Schema) *firehose {
+	var resource int
+	if connection.resource != nil {
+		resource = connection.resource.id
+	}
 	fh := &firehose{
 		connections: this,
 		connection:  connection,
@@ -1639,36 +1625,23 @@ func (this *Connections) reloadSchema(id int) error {
 	switch c.connector.typ {
 	case AppType:
 
-		// Refresh the access token if necessary.
-		var resource int
 		var clientSecret, resourceCode, accessToken string
-		if c.connector.oAuth != nil {
-			var refreshToken string
-			var expiration time.Time
-			err := this.db.QueryRow(
-				"SELECT r.id, code, oauth_access_token, oauth_refresh_token, oauth_expires_in\n"+
-					"FROM resources AS r\n"+
-					"INNER JOIN connections as c ON c.resource = r.id\n"+
-					"WHERE c.id = $1", id).
-				Scan(&resource, &resourceCode, &accessToken, &refreshToken, &expiration)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					return nil
-				}
-				return err
-			}
-			accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiration)
-			if accessToken == "" || accessTokenExpired {
-				accessToken, err = this.account.apis.refreshOAuthToken(resource)
+		if r := c.resource; r != nil {
+			// Refresh the access token if necessary.
+			expired := time.Now().UTC().Add(15 * time.Minute).After(r.oAuthExpiresIn)
+			if r.oAuthAccessToken == "" || expired {
+				var err error
+				r, err = this.account.apis.Connectors.refreshOAuthToken(c.connector.id, r.id)
 				if err != nil {
-					return err
+					return importError{err}
 				}
 			}
 			clientSecret = c.connector.oAuth.ClientSecret
+			resourceCode = r.code
+			accessToken = r.oAuthAccessToken
 		}
 
-		ctx := context.Background()
-		fh := this.newFirehose(ctx, c, resource, types.Schema{})
+		fh := this.newFirehose(context.Background(), c, types.Schema{})
 		connection, err := _connector.RegisteredApp(c.connector.name).Connect(fh.ctx, &_connector.AppConfig{
 			Role:         cRole,
 			Settings:     c.settings,
@@ -1698,8 +1671,7 @@ func (this *Connections) reloadSchema(id int) error {
 		if err != nil {
 			return err
 		}
-		ctx := context.Background()
-		fh := this.newFirehose(ctx, c, 0, types.Schema{})
+		fh := this.newFirehose(context.Background(), c, types.Schema{})
 		connection, err := _connector.RegisteredDatabase(c.connector.name).Connect(fh.ctx, &_connector.DatabaseConfig{
 			Role:     cRole,
 			Settings: c.settings,
@@ -1738,7 +1710,7 @@ func (this *Connections) reloadSchema(id int) error {
 		var files *fileReader
 		{
 			connector := c.storage.connector
-			fh := this.newFirehose(ctx, c.storage, 0, types.Schema{})
+			fh := this.newFirehose(ctx, c.storage, types.Schema{})
 			ctx = fh.ctx
 			connection, err := _connector.RegisteredStorage(connector.name).Connect(ctx, &_connector.StorageConfig{
 				Role:     cRole,
@@ -1752,7 +1724,7 @@ func (this *Connections) reloadSchema(id int) error {
 		}
 
 		// Connect to the file connector and read only the columns.
-		fh := this.newFirehose(ctx, c, 0, types.Schema{})
+		fh := this.newFirehose(ctx, c, types.Schema{})
 		file, err := _connector.RegisteredFile(c.connector.name).Connect(fh.ctx, &_connector.FileConfig{
 			Role:     cRole,
 			Settings: c.settings,

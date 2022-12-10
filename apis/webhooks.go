@@ -136,12 +136,13 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	var conf _connector.AppConfig
 	switch m[1] {
 	case "c":
+		webhooksPer = WebhooksPerConnector
 		connector, _ = strconv.Atoi(m[2])
 		if connector <= 0 {
 			return errBadRequest
 		}
-		webhooksPer = WebhooksPerConnector
 	case "r":
+		webhooksPer = WebhooksPerResource
 		r, _ := strconv.Atoi(m[2])
 		if r <= 0 {
 			return errBadRequest
@@ -154,8 +155,8 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 			}
 			return err
 		}
-		webhooksPer = WebhooksPerResource
 	case "s":
+		webhooksPer = WebhooksPerSource
 		connection, _ = strconv.Atoi(m[2])
 		if connection <= 0 {
 			return errBadRequest
@@ -181,13 +182,13 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		if hasOAuth {
 			accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiresIn)
 			if conf.AccessToken == "" || accessTokenExpired {
-				conf.AccessToken, err = apis.refreshOAuthToken(resource)
+				res, err := apis.Connectors.refreshOAuthToken(connector, resource)
 				if err != nil {
 					return err
 				}
+				conf.AccessToken = res.oAuthAccessToken
 			}
 		}
-		webhooksPer = WebhooksPerSource
 	}
 	conn, err := apis.Connectors.Get(connector)
 	if err != nil {
