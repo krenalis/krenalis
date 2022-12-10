@@ -159,7 +159,7 @@ func (this *Transformations) SaveAll(connection int, transformations []Transform
 			if err != nil {
 				return fmt.Errorf("cannot delete transformations: %s", err)
 			}
-			_, err = tx.Exec("DELETE FROM transformations_connections WHERE id IN " + sql.Quote(toDelete))
+			_, err = tx.Exec("DELETE FROM transformations_connections WHERE connection IN " + sql.Quote(toDelete))
 			if err != nil {
 				return fmt.Errorf("cannot delete connections: %s", err)
 			}
