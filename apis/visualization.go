@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"chichi/apis/clickhouse"
 	"chichi/apis/postgres"
-	"chichi/pkg/open2b/clickhouse"
 )
 
 type Visualization struct {
