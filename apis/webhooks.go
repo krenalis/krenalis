@@ -8,8 +8,10 @@
 package apis
 
 import (
+	"bytes"
 	"context"
 	"database/sql/driver"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -70,6 +72,19 @@ func (per WebhooksPer) String() string {
 		panic("invalid webhooksPer value")
 	}
 	return s.(string)
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (per *WebhooksPer) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, null) {
+		return nil
+	}
+	var s any
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return fmt.Errorf("json: cannot unmarshal into a apis.WebhooksPer value: %s", err)
+	}
+	return per.Scan(s)
 }
 
 // Value implements driver.Valuer interface.

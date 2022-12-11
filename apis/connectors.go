@@ -8,6 +8,7 @@
 package apis
 
 import (
+	"bytes"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
@@ -190,6 +191,19 @@ func (typ ConnectorType) String() string {
 		panic("invalid connector type")
 	}
 	return s.(string)
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, null) {
+		return nil
+	}
+	var s any
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return fmt.Errorf("json: cannot unmarshal into a apis.ConnectorType value: %s", err)
+	}
+	return typ.Scan(s)
 }
 
 // Value implements driver.Valuer interface.

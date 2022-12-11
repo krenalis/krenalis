@@ -158,6 +158,21 @@ func (role ConnectionRole) String() string {
 	panic("invalid connection role")
 }
 
+var null = []byte("null")
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (role *ConnectionRole) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, null) {
+		return nil
+	}
+	var s any
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return fmt.Errorf("json: cannot unmarshal into a apis.ConnectionRole value: %s", err)
+	}
+	return role.Scan(s)
+}
+
 // Value implements driver.Valuer interface.
 // It returns an error if typ is not a valid ConnectionRole.
 func (role ConnectionRole) Value() (driver.Value, error) {
