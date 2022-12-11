@@ -85,12 +85,6 @@ func New(conf *Config) (*APIs, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to PostreSQL: %s", err)
 	}
-	defer func() {
-		err := db.Close()
-		if err != nil {
-			log.Printf("[error] closing PostgreSQL database: %s", err)
-		}
-	}()
 	err = db.Ping()
 	if err != nil {
 		return nil, fmt.Errorf("cannot ping PostreSQL: %s", err)
@@ -109,12 +103,6 @@ func New(conf *Config) (*APIs, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to ClickHouse: %s", err)
 	}
-	defer func() {
-		err := db.Close()
-		if err != nil {
-			log.Printf("[error] closing ClickHouse database: %s", err)
-		}
-	}()
 	err = chDB.Ping(context.Background())
 	if err != nil {
 		log.Printf("[warning] cannot ping ClickHouse server: %s", err)
