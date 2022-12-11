@@ -27,10 +27,10 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/postgres"
 	"chichi/apis/types"
 	_connector "chichi/connector"
 	"chichi/connector/ui"
-	"chichi/pkg/open2b/sql"
 
 	"github.com/jxskiss/base62"
 )
@@ -228,7 +228,7 @@ func (this *Connections) AddApp(role ConnectionRole, connector int, name string,
 	resource, _ := c.connector.resources.getByCode(resourceCode)
 
 	var resourceID int
-	err = this.db.Transaction(func(tx *sql.Tx) error {
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		if resource == nil {
 			err = tx.QueryRow("INSERT INTO resources (connector, code, oauth_access_token,"+
 				" oauth_refresh_token, oauth_expires_in) VALUES ($1, $2, $3, $4, $5) RETURNING id",
@@ -299,7 +299,7 @@ func (this *Connections) AddDatabase(role ConnectionRole, connector int, name st
 		return 0, errors.New("connector is not a database connector")
 	}
 
-	err = this.db.Transaction(func(tx *sql.Tx) error {
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
 			" VALUES ($1, $2, $3, 'Database', $4, $5)", id, this.id, name, role, connector)
 		return err
@@ -367,7 +367,7 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int, na
 		}
 	}
 
-	err = this.db.Transaction(func(tx *sql.Tx) error {
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector, storage)"+
 			" VALUES ($1, $2, $3, 'File', $4, $5, $6)", id, this.id, name, role, connector, storage)
 		return err
@@ -415,7 +415,7 @@ func (this *Connections) AddEventStream(role ConnectionRole, connector int, name
 		return 0, errors.New("connector is not an event stream connector")
 	}
 
-	err = this.db.Transaction(func(tx *sql.Tx) error {
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
 			" VALUES ($1, $2, $3, 'EventStream', $4, $5)", id, this.id, name, role, connector)
 		return err
@@ -468,7 +468,7 @@ func (this *Connections) AddServer(role ConnectionRole, connector int, name stri
 		return 0, err
 	}
 
-	err = this.db.Transaction(func(tx *sql.Tx) error {
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
 			" VALUES ($1, $2, $3, 'Server', $4, $5)", id, this.id, name, role, connector)
 		if err != nil {
@@ -519,7 +519,7 @@ func (this *Connections) AddMobile(role ConnectionRole, connector int, name stri
 		return 0, errors.New("connector is not a mobile connector")
 	}
 
-	err = this.db.Transaction(func(tx *sql.Tx) error {
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
 			" VALUES ($1, $2, $3, 'Mobile', $4, $5)", id, this.id, name, role, connector)
 		return err
@@ -567,7 +567,7 @@ func (this *Connections) AddStorage(role ConnectionRole, connector int, name str
 		return 0, errors.New("connector is not a storage connector")
 	}
 
-	err = this.db.Transaction(func(tx *sql.Tx) error {
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
 			" VALUES ($1, $2, $3, 'Storage', $4, $5)", id, this.id, name, role, connector)
 		return err
@@ -623,7 +623,7 @@ func (this *Connections) AddWebsite(role ConnectionRole, connector int, name, ho
 		return 0, errors.New("connector is not a storage connector")
 	}
 
-	err = this.db.Transaction(func(tx *sql.Tx) error {
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector, website_host)"+
 			" VALUES ($1, $2, $3, 'Website', $4, $5, $6)", id, this.id, name, role, connector, host)
 		return err
@@ -692,11 +692,11 @@ func (this *Connections) Delete(id int) error {
 	}
 
 	var deletedResources []int
-	err = this.db.Transaction(func(tx *sql.Tx) error {
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		var resource string
 		err := tx.QueryRow("SELECT resource FROM connections WHERE id = $1", id).Scan(&resource)
 		if err != nil {
-			if err == sql.ErrNoRows {
+			if err == postgres.ErrNoRows {
 				return nil
 			}
 			return err
@@ -705,7 +705,7 @@ func (this *Connections) Delete(id int) error {
 			var hasFiles bool
 			err = tx.QueryRow("SELECT TRUE FROM connections WHERE storage = $1", id).Scan(&hasFiles)
 			if err != nil {
-				if err == sql.ErrNoRows {
+				if err == postgres.ErrNoRows {
 					return ErrStorageHasConnectedFiles
 				}
 				return err
@@ -741,7 +741,7 @@ func (this *Connections) Delete(id int) error {
 		err = tx.QueryScan("DELETE FROM resources AS r WHERE NOT EXISTS (\n"+
 			"\tSELECT FROM connections AS s\n"+
 			"\tWHERE r.id = $1 AND s.resource IS NULL\n)\nRETURNING r.id", resource,
-			func(rows *sql.Rows) error {
+			func(rows *postgres.Rows) error {
 				var id int
 				for rows.Next() {
 					if err := rows.Scan(&id); err != nil {
@@ -1103,7 +1103,7 @@ func (this *Connections) Imports(id int) ([]*Import, error) {
 			"FROM connections_imports AS i\n"+
 			"INNER JOIN connections AS c ON i.connection = c.id\n"+
 			"WHERE c.workspace = $1 AND i.connection = $2\n"+
-			"ORDER BY i.id DESC", this.id, id, func(rows *sql.Rows) error {
+			"ORDER BY i.id DESC", this.id, id, func(rows *postgres.Rows) error {
 			var err error
 			for rows.Next() {
 				var imp Import
@@ -1431,7 +1431,7 @@ func (this *Connections) SetFileStorage(file, storage int) error {
 		}
 		return errors.New("storage connection is not a destination")
 	}
-	err = this.db.Transaction(func(tx *sql.Tx) error {
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		// TODO(marco): check that store, if not zero, still exists
 		_, err = tx.Exec("UPDATE connections SET storage = $1 WHERE id = $2", storage, file)
 		return err
@@ -1520,7 +1520,7 @@ func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 		UsersIn: [24]int{},
 	}
 	query := "SELECT time_slot, users_in\nFROM connections_stats\nWHERE connection = $1 AND time_slot BETWEEN $2 AND $3"
-	err = this.db.QueryScan(query, id, fromSlot, toSlot, func(rows *sql.Rows) error {
+	err = this.db.QueryScan(query, id, fromSlot, toSlot, func(rows *postgres.Rows) error {
 		var err error
 		var slot, usersIn int
 		for rows.Next() {
@@ -1834,7 +1834,7 @@ func (this *Connections) userSchema(id int) (types.Schema, []_connector.Property
 	// Read the paths of the mapped properties from the transformations of this connection.
 	var paths []_connector.PropertyPath
 	err = this.db.QueryScan(
-		"SELECT property FROM transformations_connections WHERE connection = $1", id, func(rows *sql.Rows) error {
+		"SELECT property FROM transformations_connections WHERE connection = $1", id, func(rows *postgres.Rows) error {
 			var name string
 			for rows.Next() {
 				if err := rows.Scan(&name); err != nil {
@@ -1845,7 +1845,7 @@ func (this *Connections) userSchema(id int) (types.Schema, []_connector.Property
 			return nil
 		})
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == postgres.ErrNoRows {
 			return types.Schema{}, nil, ConnectionNotFoundError{}
 		}
 		return types.Schema{}, nil, err

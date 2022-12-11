@@ -12,7 +12,7 @@ import (
 	"regexp"
 	"sort"
 
-	"chichi/pkg/open2b/sql"
+	"chichi/apis/postgres"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"golang.org/x/crypto/bcrypt"
@@ -31,7 +31,7 @@ func newAccounts(apis *APIs, accounts map[int]*Account) *Accounts {
 // Account represents an account.
 type Account struct {
 	apis        *APIs
-	db          *sql.DB
+	db          *postgres.DB
 	chDB        chDriver.Conn
 	Workspaces  *Workspaces
 	id          int
@@ -77,7 +77,7 @@ func (this *Accounts) Authenticate(email, password string) (int, error) {
 	var hashedPassword []byte
 	err := this.db.QueryRow("SELECT id, password FROM accounts WHERE email = $1", email).Scan(&id, &hashedPassword)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == postgres.ErrNoRows {
 			return 0, ErrAuthenticationFailed
 		}
 		return 0, err

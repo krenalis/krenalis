@@ -18,7 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"chichi/pkg/open2b/sql"
+	"chichi/apis/postgres"
+
 	"github.com/google/uuid"
 )
 
@@ -67,7 +68,7 @@ func (this *EventListeners) Add(size, source, server, stream int) (string, error
 		var sourceExist, serverExist, streamExist bool
 		err := this.db.QueryScan("SELECT id, type , role FROM connections\n"+
 			"WHERE id IN ($1, $2, $3) AND workspace = $4", source, server, stream, this.id,
-			func(rows *sql.Rows) error {
+			func(rows *postgres.Rows) error {
 				var id int
 				var typ ConnectorType
 				var role ConnectionRole
@@ -129,7 +130,7 @@ func (this *EventListeners) Remove(id string) {
 
 // eventObserver represents the event observer.
 type eventObserver struct {
-	db *sql.DB
+	db *postgres.DB
 	sync.RWMutex
 	listeners []*eventListener
 	statsMu   sync.Mutex // for the stats field.
@@ -190,7 +191,7 @@ type ProcessedEvent struct {
 }
 
 // newEventObserver returns a new event observer.
-func newEventObserver(db *sql.DB) *eventObserver {
+func newEventObserver(db *postgres.DB) *eventObserver {
 	observer := &eventObserver{db: db}
 	go func() {
 		ticker := time.NewTicker(5 * time.Second)

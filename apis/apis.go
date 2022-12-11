@@ -11,17 +11,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"chichi/apis/postgres"
 	"chichi/apis/types"
 	_connector "chichi/connector"
-	"chichi/pkg/open2b/sql"
 
+	"github.com/ClickHouse/clickhouse-go/v2"
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/go-chi/chi/v5"
+
+	_ "time/tzdata" // workaround for clickhouse-go issue #162
 )
 
 var (
@@ -30,7 +34,7 @@ var (
 )
 
 type APIs struct {
-	db             *sql.DB
+	db             *postgres.DB
 	chDB           chDriver.Conn
 	eventCollector *eventCollector
 	eventProcessor *eventProcessor
@@ -41,22 +45,89 @@ type APIs struct {
 
 var hasBeenCalled bool
 
+type Config struct {
+	PostgreSQL PostgreSQLConfig
+	ClickHouse ClickHouseConfig
+}
+
+type PostgreSQLConfig struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	Database string
+}
+
+type ClickHouseConfig struct {
+	Address  string
+	Username string
+	Password string
+	Database string
+}
+
 // New returns an API instance. It can only be called once.
-func New(db *sql.DB, chDB chDriver.Conn) *APIs {
+func New(conf *Config) (*APIs, error) {
 
 	if hasBeenCalled {
-		panic("apis.New has already been called")
+		return nil, errors.New("apis.New has already been called")
 	}
 	hasBeenCalled = true
+
+	// Open connection to PostgreSQL.
+	ps := conf.PostgreSQL
+	db, err := postgres.Open(&postgres.Options{
+		Host:     ps.Host,
+		Port:     ps.Port,
+		Username: ps.Username,
+		Password: ps.Password,
+		Database: ps.Database,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("cannot connect to PostreSQL: %s", err)
+	}
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			log.Printf("[error] closing PostgreSQL database: %s", err)
+		}
+	}()
+	err = db.Ping()
+	if err != nil {
+		return nil, fmt.Errorf("cannot ping PostreSQL: %s", err)
+	}
+
+	// Open connection to ClickHouse.
+	ch := conf.ClickHouse
+	chDB, err := clickhouse.Open(&clickhouse.Options{
+		Addr: []string{conf.ClickHouse.Address},
+		Auth: clickhouse.Auth{
+			Database: ch.Database,
+			Username: ch.Username,
+			Password: ch.Password,
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("cannot connect to ClickHouse: %s", err)
+	}
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			log.Printf("[error] closing ClickHouse database: %s", err)
+		}
+	}()
+	err = chDB.Ping(context.Background())
+	if err != nil {
+		log.Printf("[warning] cannot ping ClickHouse server: %s", err)
+	}
 
 	apis := &APIs{db: db, chDB: chDB}
 	apis.Users = &Users{apis}
 
 	// Read all connectors.
 	connectors := map[int]*Connector{}
-	err := db.QueryScan("SELECT id, name, type, logo_url, webhooks_per, oauth_url, oauth_client_id,"+
+	err = db.QueryScan("SELECT id, name, type, logo_url, webhooks_per, oauth_url, oauth_client_id,"+
 		" oauth_client_secret, oauth_token_endpoint, oauth_default_token_type, oauth_default_expires_in,"+
-		" oauth_forced_expires_in FROM connectors", func(rows *sql.Rows) error {
+		" oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
 		for rows.Next() {
 			c := Connector{}
 			oauth := ConnectorOAuth{}
@@ -73,14 +144,14 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 		return nil
 	})
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	apis.Connectors = newConnectors(apis, connectors)
 
 	// Read all resources.
 	resources := map[int]*Resource{}
 	err = db.QueryScan("SELECT id, connector, code, oauth_access_token, oauth_refresh_token, oauth_expires_in\n"+
-		"FROM resources", func(rows *sql.Rows) error {
+		"FROM resources", func(rows *postgres.Rows) error {
 		for rows.Next() {
 			r := Resource{}
 			var connectorID int
@@ -98,12 +169,12 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 		return nil
 	})
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// Read all accounts.
 	accounts := map[int]*Account{}
-	err = db.QueryScan("SELECT id, name, email, internal_ips FROM accounts", func(rows *sql.Rows) error {
+	err = db.QueryScan("SELECT id, name, email, internal_ips FROM accounts", func(rows *postgres.Rows) error {
 		var id int
 		var name, email, ips string
 		for rows.Next() {
@@ -125,14 +196,14 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 		return nil
 	})
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	apis.Accounts = newAccounts(apis, accounts)
 
 	// Read all workspaces.
 	workspaces := map[int]*Workspace{}
 	err = db.QueryScan("SELECT id, account, user_schema, group_schema, event_schema FROM workspaces",
-		func(rows *sql.Rows) error {
+		func(rows *postgres.Rows) error {
 			var id, accountID int
 			var userSchema, groupSchema, eventSchema string
 			for rows.Next() {
@@ -158,14 +229,14 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 			return nil
 		})
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// Read all connections.
 	connections := map[int]*Connection{}
 	err = db.QueryScan("SELECT id, workspace, name, role, enabled, connector, storage, stream, resource,"+
 		" website_host, user_cursor, identity_column, timestamp_column, settings, schema, users_query FROM connections",
-		func(rows *sql.Rows) error {
+		func(rows *postgres.Rows) error {
 			for rows.Next() {
 				var workspaceID, connector, storage, stream, resource int
 				var rawSchema string
@@ -216,7 +287,7 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 			return nil
 		})
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// Read the source event stream collectors and the source connections that
@@ -229,7 +300,7 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 			"INNER JOIN connections AS ci ON ci.stream = s.id\n"+
 			"INNER JOIN connections_keys AS k ON k.connection = ci.id\n"+
 			"WHERE s.type = 'EventStream' AND s.role = 'Source' AND s.settings <> '' AND s.enabled AND ci.enabled",
-		func(rows *sql.Rows) error {
+		func(rows *postgres.Rows) error {
 		Rows:
 			for rows.Next() {
 				var stream eventCollectorStream
@@ -265,12 +336,12 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 			return nil
 		})
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	apis.eventCollector, err = newEventCollector(context.Background(), streams)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// Read the all the source event stream processors.
@@ -280,7 +351,7 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 			"FROM connections AS s\n"+
 			"INNER JOIN connectors AS co ON co.id = s.connector\n"+
 			"WHERE s.type = 'EventStream' AND s.role = 'Source' AND s.settings <> '' AND s.enabled",
-		func(rows *sql.Rows) error {
+		func(rows *postgres.Rows) error {
 			for rows.Next() {
 				var stream eventProcessorStream
 				if err := rows.Scan(&stream.ID, &stream.Connector, &stream.Settings); err != nil {
@@ -297,7 +368,7 @@ func New(db *sql.DB, chDB chDriver.Conn) *APIs {
 	apis.eventProcessor = newEventProcessor(apis.db, apis.chDB, allStreams)
 	go apis.eventProcessor.Run(context.Background())
 
-	return apis
+	return apis, nil
 }
 
 // ServeHTTP servers the API methods from HTTP.
@@ -324,7 +395,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var accountID int
 	err := apis.db.QueryRow("SELECT account FROM workspaces WHERE id = $1", workspaceID).Scan(&accountID)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == postgres.ErrNoRows {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}

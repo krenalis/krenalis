@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"chichi/apis/postgres"
 	"chichi/pkg/open2b/clickhouse"
-	"chichi/pkg/open2b/sql"
 )
 
 type Visualization struct {
@@ -291,7 +291,7 @@ func (visualization *Visualization) smartEventToSQL(which any) (string, bool, er
 			}
 			where.WriteString(cond)
 			if page.Domain != "" {
-				where.WriteString(" AND `domain` = " + sql.QuoteValue(page.Domain))
+				where.WriteString(" AND `domain` = " + postgres.QuoteValue(page.Domain))
 			}
 			where.WriteString(")")
 		}
@@ -309,7 +309,7 @@ func (visualization *Visualization) smartEventToSQL(which any) (string, bool, er
 			}
 			where.WriteString("(" + cond)
 			if button.Domain != "" {
-				where.WriteString(" AND `domain` = " + sql.QuoteValue(button.Domain))
+				where.WriteString(" AND `domain` = " + postgres.QuoteValue(button.Domain))
 			}
 			where.WriteString(")")
 		}
@@ -352,9 +352,9 @@ func conditionToSQL(condition Condition) (string, error) {
 	default:
 		return "", invalidJSONQuery("operator %q not supported", condition.Operator)
 	}
-	where += " " + sql.QuoteValue(condition.Value)
+	where += " " + postgres.QuoteValue(condition.Value)
 	if condition.Domain != "" {
-		where += fmt.Sprintf(" AND `domain` = %s", sql.QuoteValue(condition.Domain))
+		where += fmt.Sprintf(" AND `domain` = %s", postgres.QuoteValue(condition.Domain))
 	}
 	return where, nil
 }

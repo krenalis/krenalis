@@ -19,10 +19,10 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/postgres"
 	"chichi/apis/transformations"
 	"chichi/apis/types"
 	"chichi/connector"
-	"chichi/pkg/open2b/sql"
 )
 
 // Make sure it implements the Firehose interface.
@@ -322,7 +322,7 @@ func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
 		if i > 1 {
 			query.WriteString(", ")
 		}
-		query.WriteString(sql.QuoteIdent(strings.ToLower(prop)))
+		query.WriteString(postgres.QuoteIdent(strings.ToLower(prop)))
 		query.WriteString(" = $")
 		query.WriteString(strconv.Itoa(i))
 		values = append(values, value)

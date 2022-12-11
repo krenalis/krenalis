@@ -4,7 +4,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package sql
+package postgres
 
 import (
 	"context"
@@ -52,7 +52,7 @@ type DB struct {
 	log io.Writer
 }
 
-type Config struct {
+type Options struct {
 	Host     string
 	Port     int
 	Username string
@@ -61,15 +61,15 @@ type Config struct {
 }
 
 // Open opens a PostgreSQL database. It validates its arguments without creating a connection to the database
-func Open(conf *Config) (*DB, error) {
-	if conf == nil {
-		conf = &Config{}
+func Open(opts *Options) (*DB, error) {
+	if opts == nil {
+		opts = &Options{}
 	}
 	u := url.URL{
 		Scheme: "postgres",
-		User:   url.UserPassword(conf.Username, conf.Password),
-		Host:   net.JoinHostPort(conf.Host, strconv.Itoa(conf.Port)),
-		Path:   "/" + url.PathEscape(conf.Database),
+		User:   url.UserPassword(opts.Username, opts.Password),
+		Host:   net.JoinHostPort(opts.Host, strconv.Itoa(opts.Port)),
+		Path:   "/" + url.PathEscape(opts.Database),
 	}
 	var db, err = sql.Open("pgx", u.String())
 	if err != nil {

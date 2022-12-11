@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	o2bsql "chichi/pkg/open2b/sql"
+	"chichi/apis/postgres"
 )
 
 type SmartEvents struct {
@@ -70,7 +70,7 @@ func (smartEvents *SmartEvents) Create(smartEvent SmartEventToCreate) (int, erro
 	}
 
 	var id int
-	err = smartEvents.db.Transaction(func(tx *o2bsql.Tx) error {
+	err = smartEvents.db.Transaction(func(tx *postgres.Tx) error {
 		// Retrieve the list of rows for the current property.
 		allowedDomains := map[string]bool{}
 		err := tx.QueryScan("SELECT name from domains WHERE property = $1", smartEvents.DeprecatedProperties.id,
@@ -199,7 +199,7 @@ func (smartEvents *SmartEvents) Update(id int, event SmartEventToUpdate) error {
 		return err
 	}
 
-	err = smartEvents.db.Transaction(func(tx *o2bsql.Tx) error {
+	err = smartEvents.db.Transaction(func(tx *postgres.Tx) error {
 		// Retrieve the list of rows for the current property.
 		allowedDomains := map[string]bool{}
 		err := tx.QueryScan("SELECT name from domains WHERE property = $1", smartEvents.DeprecatedProperties.id,

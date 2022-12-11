@@ -8,71 +8,59 @@
 package main
 
 import (
-	"context"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	_ "time/tzdata" // workaround for clickhouse-go issue #162
+	"path/filepath"
 
 	"chichi/admin"
 	"chichi/apis"
-	"chichi/pkg/open2b/sql"
 
-	"github.com/ClickHouse/clickhouse-go/v2"
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"gopkg.in/gcfg.v1"
 )
+
+type Settings struct {
+	Main struct {
+		PrintESBuildWarningsOnStderr bool
+	}
+	PostgreSQL apis.PostgreSQLConfig
+	ClickHouse apis.ClickHouseConfig
+}
 
 func main() {
 
 	// Configure the logger.
 	logFile, err := os.OpenFile("error.log", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 	if err != nil {
-		log.Fatal(err)
+		p, err := filepath.Abs("error.log")
+		if err != nil {
+			p = "error.log"
+		}
+		log.Fatalf("cannot open %q: %s", p, err)
 	}
 	defer logFile.Close()
 	log.SetOutput(io.MultiWriter(logFile, os.Stderr))
 	log.SetFlags(log.Ldate | log.Ltime)
 
 	// Read the configuration file.
-	settings, err := parseINIFile()
+	var settings Settings
+	err = gcfg.ReadFileInto(&settings, "app.ini")
 	if err != nil {
-		log.Printf("[error] cannot read configuration file: %s", err)
-		return
+		p, err := filepath.Abs("app.ini")
+		if err != nil {
+			p = "app.ini"
+		}
+		log.Fatalf("cannot open %q: %s", p, err)
 	}
-	// Open a connection to the PostgreSQL database.
-	db, err := sql.Open(&settings.PostgreSQL)
-	if err != nil {
-		log.Fatalf("[error] cannot connect to the database: %s", err)
-	}
-	defer db.Close()
-	err = db.Ping()
-	if err != nil {
-		log.Fatalf("[error] cannot ping PostgreSQL server: %s", err)
-	}
-	log.Printf("[info] successfully connected to the PostgreSQL server")
 
-	// Open a connection to the ClickHouse database.
-	clickHouseConn, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{settings.ClickHouse.Address},
-		Auth: clickhouse.Auth{
-			Database: settings.ClickHouse.Database,
-			Username: settings.ClickHouse.Username,
-			Password: settings.ClickHouse.Password,
-		},
+	apis, err := apis.New(&apis.Config{
+		PostgreSQL: settings.PostgreSQL,
+		ClickHouse: settings.ClickHouse,
 	})
 	if err != nil {
-		log.Fatalf("[error] cannot connect to the database: %s", err)
+		log.Fatalf("[error] %s", err)
 	}
-	clickHouseCtx := context.Background()
-	err = clickHouseConn.Ping(clickHouseCtx)
-	if err != nil {
-		log.Printf("[warning] cannot ping ClickHouse server: %s", err)
-	} else {
-		log.Printf("[info] successfully connected to the ClickHouse server")
-	}
-
-	apis := apis.New(db, clickHouseConn)
 	admin := admin.New(apis)
 
 	http.HandleFunc("/admin/", admin.ServeHTTP)

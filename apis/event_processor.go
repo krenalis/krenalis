@@ -30,8 +30,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/postgres"
 	_connector "chichi/connector"
-	"chichi/pkg/open2b/sql"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/mssola/user_agent"
@@ -84,7 +84,7 @@ type Event struct {
 // eventProcessor processes events received from source streams and sent them
 // to ClickHouse.
 type eventProcessor struct {
-	db       *sql.DB
+	db       *postgres.DB
 	chDB     chDriver.Conn
 	streams  []*eventProcessorStream
 	queue    *queue
@@ -98,7 +98,7 @@ type eventProcessorStream struct {
 }
 
 // newEventProcessor returns a new event eventProcessor.
-func newEventProcessor(db *sql.DB, chDB chDriver.Conn, streams []*eventProcessorStream) *eventProcessor {
+func newEventProcessor(db *postgres.DB, chDB chDriver.Conn, streams []*eventProcessorStream) *eventProcessor {
 	processor := eventProcessor{
 		db:       db,
 		streams:  streams,
@@ -234,7 +234,7 @@ func (p *eventProcessor) processMessage(stream int, message []byte) error {
 			"INNER JOIN connections AS c ON k.connection = c.id\n"+
 			"WHERE c.type = 'Server' AND c.role = 'Source' AND k.key = $1", key).Scan(&server)
 		if err != nil {
-			if err == sql.ErrNoRows {
+			if err == postgres.ErrNoRows {
 				p.observer.AddEvent(0, 0, stream, nil, message, errors.New("does not exist a server with the given key"))
 				return nil
 			}
@@ -259,7 +259,7 @@ func (p *eventProcessor) processMessage(stream int, message []byte) error {
 		"WHERE id = $1 AND type IN ('Mobile', 'Website') AND role = 'Source'", source).
 		Scan(&typ, &websiteHost)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == postgres.ErrNoRows {
 			p.observer.AddEvent(0, server, stream, nil, message, errors.New("source does not exist"))
 			return nil
 		}
@@ -381,15 +381,15 @@ func (p *eventProcessor) processMessage(stream int, message []byte) error {
 
 		// Get the user or create it if it does not exist.
 		err = p.db.QueryRow("SELECT id FROM users WHERE source = $1 AND device = $2", source, event.Device).Scan(&event.user)
-		if err != nil && err != sql.ErrNoRows {
+		if err != nil && err != postgres.ErrNoRows {
 			return err
 		}
-		if err == sql.ErrNoRows {
+		if err == postgres.ErrNoRows {
 			err = p.db.QueryRow("SELECT user FROM devices WHERE source = $1 AND id = $2", source, event.Device).Scan(&event.user)
-			if err != nil && err != sql.ErrNoRows {
+			if err != nil && err != postgres.ErrNoRows {
 				return err
 			}
-			if err == sql.ErrNoRows {
+			if err == postgres.ErrNoRows {
 				event.user, err = makeUserID()
 				if err != nil {
 					return err

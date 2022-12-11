@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"chichi/apis/postgres"
 	"chichi/apis/types"
-	"chichi/pkg/open2b/sql"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/shopspring/decimal"
@@ -34,7 +34,7 @@ func newWorkspaces(account *Account) *Workspaces {
 
 // Workspace represents a workspace.
 type Workspace struct {
-	db              *sql.DB
+	db              *postgres.DB
 	chDB            chDriver.Conn
 	Connections     *Connections
 	EventListeners  *EventListeners
@@ -171,7 +171,7 @@ func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema,
 		if i > 0 {
 			query.WriteByte(',')
 		}
-		query.WriteString(sql.QuoteIdent(name))
+		query.WriteString(postgres.QuoteIdent(name))
 	}
 	query.WriteString(" FROM warehouse_users LIMIT ")
 	query.WriteString(strconv.Itoa(limit))
@@ -182,7 +182,7 @@ func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema,
 
 	// Execute the query.
 	var users [][]any
-	err = ws.db.QueryScan(query.String(), func(rows *sql.Rows) error {
+	err = ws.db.QueryScan(query.String(), func(rows *postgres.Rows) error {
 		var err error
 		for rows.Next() {
 			user := make([]any, len(properties))

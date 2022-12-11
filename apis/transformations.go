@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"strings"
 
-	"chichi/pkg/open2b/sql"
+	"chichi/apis/postgres"
 )
 
 type Transformations struct {
@@ -45,7 +45,7 @@ type InputProperty struct {
 
 // createTransformation creates the transformation t on the tx SQL transaction.
 // If the transformation is created successfully, its ID is returned.
-func createTransformation(tx *sql.Tx, t TransformationToCreate) (int, error) {
+func createTransformation(tx *postgres.Tx, t TransformationToCreate) (int, error) {
 	var id int
 	err := tx.QueryRow("INSERT INTO transformations (source_code, golden_record_name) VALUES ($1, $2) RETURNING id",
 		t.SourceCode, t.GRProperty).Scan(&id)
@@ -73,7 +73,7 @@ func (this *Transformations) Create(t TransformationToCreate) (int, error) {
 		return 0, err
 	}
 	var id int
-	err = this.db.Transaction(func(tx *sql.Tx) error {
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		var err error
 		id, err = createTransformation(tx, t)
 		if err != nil {
@@ -96,7 +96,7 @@ func (this *Transformations) Update(id int, t TransformationToUpdate) error {
 	if err != nil {
 		return err
 	}
-	err = this.db.Transaction(func(tx *sql.Tx) error {
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		_, err = tx.Exec("UPDATE transformations\nSET source_code = $1, golden_record_name = $2 WHERE id = $3",
 			t.SourceCode, t.GRProperty, id)
 		if err != nil {
@@ -134,12 +134,12 @@ func (this *Transformations) SaveAll(connection int, transformations []Transform
 		}
 	}
 
-	err := this.db.Transaction(func(tx *sql.Tx) error {
+	err := this.db.Transaction(func(tx *postgres.Tx) error {
 
 		// Retrieve the IDs of the transformations to delete.
 		var toDelete []int
 		err := tx.QueryScan("SELECT transformation FROM transformations_connections WHERE connection = $1", connection,
-			func(rows *sql.Rows) error {
+			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					var transformation int
 					if err := rows.Scan(&transformation); err != nil {
@@ -155,11 +155,11 @@ func (this *Transformations) SaveAll(connection int, transformations []Transform
 
 		// Delete the transformations and their connections.
 		if len(toDelete) > 0 {
-			_, err = tx.Exec("DELETE FROM transformations WHERE id IN " + sql.QuoteValue(toDelete))
+			_, err = tx.Exec("DELETE FROM transformations WHERE id IN " + postgres.QuoteValue(toDelete))
 			if err != nil {
 				return fmt.Errorf("cannot delete transformations: %s", err)
 			}
-			_, err = tx.Exec("DELETE FROM transformations_connections WHERE connection IN " + sql.QuoteValue(toDelete))
+			_, err = tx.Exec("DELETE FROM transformations_connections WHERE connection IN " + postgres.QuoteValue(toDelete))
 			if err != nil {
 				return fmt.Errorf("cannot delete connections: %s", err)
 			}
@@ -181,11 +181,11 @@ func (this *Transformations) SaveAll(connection int, transformations []Transform
 // List lists the transformations for the given connection.
 func (this *Transformations) List(connection int) ([]Transformation, error) {
 	var transformations []Transformation
-	err := this.db.Transaction(func(tx *sql.Tx) error {
+	err := this.db.Transaction(func(tx *postgres.Tx) error {
 		var transfIDs []int
 		transfProps := map[int][]InputProperty{}
 		stmt := "SELECT property, transformation FROM transformations_connections WHERE connection = $1 ORDER BY connection, property"
-		err := tx.QueryScan(stmt, connection, func(rows *sql.Rows) error {
+		err := tx.QueryScan(stmt, connection, func(rows *postgres.Rows) error {
 			for rows.Next() {
 				var property string
 				var transformation int
@@ -207,8 +207,8 @@ func (this *Transformations) List(connection int) ([]Transformation, error) {
 			transformations = []Transformation{}
 			return nil
 		}
-		stmt = "SELECT id, golden_record_name, source_code FROM Transformations WHERE id IN " + sql.QuoteValue(transfIDs)
-		err = tx.QueryScan(stmt, func(rows *sql.Rows) error {
+		stmt = "SELECT id, golden_record_name, source_code FROM Transformations WHERE id IN " + postgres.QuoteValue(transfIDs)
+		err = tx.QueryScan(stmt, func(rows *postgres.Rows) error {
 			for rows.Next() {
 				var id int
 				var record, source string
