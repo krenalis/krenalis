@@ -153,13 +153,8 @@ func (typ ConnectorType) MarshalJSON() ([]byte, error) {
 
 // Scan implements the sql.Scanner interface.
 func (typ *ConnectorType) Scan(src any) error {
-	var s string
-	switch src := src.(type) {
-	case string:
-		s = src
-	case []byte:
-		s = string(src)
-	default:
+	s, ok := src.(string)
+	if !ok {
 		return fmt.Errorf("cannot scan a %T value into an api.ConnectorType value", src)
 	}
 	var t ConnectorType
