@@ -322,7 +322,7 @@ func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
 		if i > 1 {
 			query.WriteString(", ")
 		}
-		query.WriteString(sql.QuoteColumn(strings.ToLower(prop)))
+		query.WriteString(sql.QuoteIdent(strings.ToLower(prop)))
 		query.WriteString(" = $")
 		query.WriteString(strconv.Itoa(i))
 		values = append(values, value)

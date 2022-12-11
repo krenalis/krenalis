@@ -509,17 +509,7 @@ func (tx *Tx) Tables(database string) ([]string, error) {
 	return tables, nil
 }
 
-func QuoteColumn(name string) string {
-	name = strings.ReplaceAll(name, "\x00", "")
-	name = strings.ReplaceAll(name, `"`, `""`)
-	return `"` + name + `"`
-}
-
-func QuoteTable(name string) string {
-	return QuoteColumn(name)
-}
-
-func Quote(value any) string {
+func QuoteValue(value any) string {
 	if value == nil {
 		return "NULL"
 	}
@@ -607,13 +597,19 @@ func Quote(value any) string {
 				default:
 					panic(fmt.Errorf("open2b/sql: Unsupported nested type '%T'", v))
 				}
-				values[i] = Quote(v)
+				values[i] = QuoteValue(v)
 			}
 		}
 		return "(" + strings.Join(values, ",") + ")"
 	default:
 		panic(fmt.Errorf("open2b/sql: Unsupported type '%T'", val))
 	}
+}
+
+func QuoteIdent(name string) string {
+	name = strings.ReplaceAll(name, "\x00", "")
+	name = strings.ReplaceAll(name, `"`, `""`)
+	return `"` + name + `"`
 }
 
 func quote(s string) string {

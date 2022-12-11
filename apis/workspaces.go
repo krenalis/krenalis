@@ -171,7 +171,7 @@ func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema,
 		if i > 0 {
 			query.WriteByte(',')
 		}
-		query.WriteString(sql.QuoteColumn(name))
+		query.WriteString(sql.QuoteIdent(name))
 	}
 	query.WriteString(" FROM warehouse_users LIMIT ")
 	query.WriteString(strconv.Itoa(limit))

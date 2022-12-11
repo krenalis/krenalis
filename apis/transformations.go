@@ -155,11 +155,11 @@ func (this *Transformations) SaveAll(connection int, transformations []Transform
 
 		// Delete the transformations and their connections.
 		if len(toDelete) > 0 {
-			_, err = tx.Exec("DELETE FROM transformations WHERE id IN " + sql.Quote(toDelete))
+			_, err = tx.Exec("DELETE FROM transformations WHERE id IN " + sql.QuoteValue(toDelete))
 			if err != nil {
 				return fmt.Errorf("cannot delete transformations: %s", err)
 			}
-			_, err = tx.Exec("DELETE FROM transformations_connections WHERE connection IN " + sql.Quote(toDelete))
+			_, err = tx.Exec("DELETE FROM transformations_connections WHERE connection IN " + sql.QuoteValue(toDelete))
 			if err != nil {
 				return fmt.Errorf("cannot delete connections: %s", err)
 			}
@@ -207,7 +207,7 @@ func (this *Transformations) List(connection int) ([]Transformation, error) {
 			transformations = []Transformation{}
 			return nil
 		}
-		stmt = "SELECT id, golden_record_name, source_code FROM Transformations WHERE id IN " + sql.Quote(transfIDs)
+		stmt = "SELECT id, golden_record_name, source_code FROM Transformations WHERE id IN " + sql.QuoteValue(transfIDs)
 		err = tx.QueryScan(stmt, func(rows *sql.Rows) error {
 			for rows.Next() {
 				var id int
