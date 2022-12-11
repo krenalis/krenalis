@@ -111,8 +111,6 @@ github.com/mssola/user_agent v0.5.3 h1:lBRPML9mdFuIZgI2cmlQ+atbpJdLdeVl2IDodjBR5
 github.com/mssola/user_agent v0.5.3/go.mod h1:TTPno8LPY3wAIEKRpAtkdMT0f8SE24pLRGPahjCH4uw=
 github.com/open2b/nuts v1.5.3 h1:98iQaCYoGSRbqESuolHpsLnUPerWrqu+0WqvRe5WGjI=
 github.com/open2b/nuts v1.5.3/go.mod h1:3H0bVzhUKOgpIVvN9qLj/R4rs27rDv1rL6WpeLLxmzc=
-github.com/open2b/scriggo v0.56.1 h1:h3IVNM0OEvszbtdmukaJj9lPo/xSvHPclYm/RqQqUxY=
-github.com/open2b/scriggo v0.56.1/go.mod h1:FJS0k7CaKq2sNlrqAGMwU4dCltYqC1c+Eak3dj5w26Q=
 github.com/oschwald/geoip2-golang v1.8.0 h1:KfjYB8ojCEn/QLqsDU0AzrJ3R5Qa9vFlx3z6SLNcKTs=
 github.com/oschwald/geoip2-golang v1.8.0/go.mod h1:R7bRvYjOeaoenAp9sKRS8GX5bJWcZ0laWO5+DauEktw=
 github.com/oschwald/maxminddb-golang v1.10.0 h1:Xp1u0ZhqkSuopaKmk1WwHtjF0H9Hd9181uj2MQ5Vndg=

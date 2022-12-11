@@ -9,7 +9,6 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -17,8 +16,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"chichi/pkg/open2b/decimal"
 
 	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 )
@@ -537,8 +534,6 @@ func QuoteValue(value any) string {
 		return strconv.FormatFloat(val, 'G', -1, 64)
 	case string:
 		return quote(val)
-	case *decimal.Dec:
-		return val.String()
 	case time.Time:
 		return "'" + val.Format("2006-01-02 15:04:05.999999") + "'"
 	case []string:
@@ -577,15 +572,6 @@ func QuoteValue(value any) string {
 			values[i] = "'" + v.Format("2006-01-02 15:04:05") + "'"
 		}
 		return "(" + strings.Join(values, ",") + ")"
-	case []*decimal.Dec:
-		if len(val) == 1 {
-			return "(" + val[0].String() + ")"
-		}
-		var values = make([]string, len(val))
-		for i, v := range val {
-			values[i] = "'" + v.String() + "'"
-		}
-		return "(" + strings.Join(values, ",") + ")"
 	case []any:
 		var values = make([]string, len(val))
 		for i, v := range val {
@@ -593,7 +579,7 @@ func QuoteValue(value any) string {
 				values[i] = "NULL"
 			} else {
 				switch v.(type) {
-				case bool, int, int64, uint, uint64, float32, float64, string, *decimal.Dec, time.Time:
+				case bool, int, int64, uint, uint64, float32, float64, string, time.Time:
 				default:
 					panic(fmt.Errorf("open2b/sql: Unsupported nested type '%T'", v))
 				}
@@ -623,11 +609,6 @@ type Rows struct {
 }
 
 func (rs *Rows) Scan(dest ...any) error {
-	for i, d := range dest {
-		if v, ok := d.(**decimal.Dec); ok {
-			dest[i] = &nullDecimal{v}
-		}
-	}
 	return rs.Rows.Scan(dest...)
 }
 
@@ -636,47 +617,7 @@ type Row struct {
 }
 
 func (r *Row) Scan(dest ...any) error {
-	for i, d := range dest {
-		if v, ok := d.(**decimal.Dec); ok {
-			dest[i] = &nullDecimal{v}
-		}
-		if v, ok := d.(**decimal.Dec); ok {
-			dest[i] = &nullDecimal{v}
-		}
-	}
 	return r.Row.Scan(dest...)
-}
-
-type nullDecimal struct {
-	d **decimal.Dec
-}
-
-func (nd nullDecimal) Scan(src any) error {
-	if src == nil {
-		*nd.d = nil
-		return nil
-	}
-	var b *decimal.Dec
-	var ok = true
-	switch s := src.(type) {
-	case string:
-		b, ok = decimal.ParseString(s)
-	case int:
-		b = decimal.Int(s)
-	case int64:
-		b = decimal.Int64(s)
-	case float64:
-		b = decimal.Float64(s, int(decimal.Accuracy))
-	case []byte:
-		b, ok = decimal.ParseString(string(s))
-	default:
-		return errors.New("Incompatible type for *decimal.Dec")
-	}
-	if !ok {
-		return errors.New("Failed to parse *decimal.Dec")
-	}
-	*nd.d = b
-	return nil
 }
 
 func LimitFirstStatement(limit, first int) string {
