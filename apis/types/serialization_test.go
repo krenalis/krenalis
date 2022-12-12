@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/shopspring/decimal"
@@ -73,7 +74,7 @@ func TestSchemaSerialization(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := ParseSchema(test.Data, test.Resolve)
+		got, err := ParseSchema(strings.NewReader(test.Data), test.Resolve)
 		if err != nil && !test.Err {
 			t.Errorf("cannot unmarshal schema %q: %s", test.Data, err)
 			continue

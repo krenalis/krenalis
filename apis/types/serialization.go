@@ -79,9 +79,10 @@ func (schema Schema) MarshalJSON() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// ParseSchema parses the JSON-encoded data and returns the decoded schema.
-func ParseSchema(data string, resolve Resolver) (Schema, error) {
-	dec := json.NewDecoder(strings.NewReader(norm.NFC.String(data)))
+// ParseSchema parses the JSON-encoded data read from r and returns the decoded
+// schema.
+func ParseSchema(r io.Reader, resolve Resolver) (Schema, error) {
+	dec := json.NewDecoder(norm.NFC.Reader(r))
 	dec.UseNumber()
 	// Read delimiter '{'.
 	tok, err := dec.Token()

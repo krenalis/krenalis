@@ -146,7 +146,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
-		sc, err := types.ParseSchema(schema, nil)
+		sc, err := types.ParseSchema(strings.NewReader(schema), nil)
 		if err != nil {
 			if err != nil {
 				log.Printf("[error] user schema of workspace 1 is not valid: %s", err)

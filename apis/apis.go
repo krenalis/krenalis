@@ -255,7 +255,7 @@ func New(conf *Config) (*APIs, error) {
 					c.resource = resources[resource]
 				}
 				if len(rawSchema) > 0 {
-					c.schema, err = types.ParseSchema(rawSchema, nil)
+					c.schema, err = types.ParseSchema(strings.NewReader(rawSchema), nil)
 					if err != nil {
 						// TODO(marco) disable the connection instead of returning an error
 						return err

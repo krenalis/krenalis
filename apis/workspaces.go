@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -100,7 +101,7 @@ func (ws *Workspace) SetSchema(name, schema string) error {
 	default:
 		return fmt.Errorf("invalid schema name %q", name)
 	}
-	_, err := types.ParseSchema(schema, nil)
+	_, err := types.ParseSchema(strings.NewReader(schema), nil)
 	if err != nil {
 		return &InvalidSchemaSyntaxError{err}
 	}
@@ -151,7 +152,7 @@ func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema,
 	ws.mu.Lock()
 	rawSchema := ws.userSchema
 	ws.mu.Unlock()
-	schema, err := types.ParseSchema(rawSchema, nil)
+	schema, err := types.ParseSchema(strings.NewReader(rawSchema), nil)
 	if err != nil {
 		return types.Schema{}, nil, err
 	}
