@@ -149,6 +149,16 @@
 	gap: 20px;
 }
 
+.AccountConnectionsMap .map .connection .unknownLogo  {
+    background-color: var(--bg-gray);
+    height: 30px;
+    width: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 100%;
+}
+
 .AccountConnectionsMap .map .connection .littleLogo > img {
 	max-height: 30px;
 	width: auto;

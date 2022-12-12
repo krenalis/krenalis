@@ -21,5 +21,6 @@ import (
 	_ "chichi/connectors/rabbitmq"
 	_ "chichi/connectors/s3"
 	_ "chichi/connectors/sftp"
+	_ "chichi/connectors/uisample"
 	_ "chichi/connectors/website"
 )

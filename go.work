@@ -16,5 +16,6 @@ use (
 	./connectors/rabbitmq
 	./connectors/s3
 	./connectors/sftp
+	./connectors/uisample
 	./connectors/website
 )

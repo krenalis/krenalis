@@ -1394,6 +1394,8 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		return nil, err
 	}
 
+	// TODO: check and delete alternative fieldsets keys that have 'null' value
+	// before saving to database
 	form, alert, err := connection.ServeUI(event, values)
 	if err != nil {
 		if err == ui.ErrEventNotExist {
@@ -1962,10 +1964,20 @@ func marshalUIFormAlert(form *ui.Form, alert *ui.Alert, role ConnectionRole) ([]
 
 	// Serialize the form, if present.
 	if form != nil {
+
+		// Makes the keys of form.Values to have the same case as the Name field of the components.
+		values := map[string]any{}
+		if len(form.Values) > 0 {
+			err := json.Unmarshal(form.Values, &values)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		comma := false
 		b.WriteString(`"Form":{"Fields":[`)
 		for _, field := range form.Fields {
-			ok, err := marshalUIComponent(&b, field, role, comma)
+			ok, err := marshalUIComponent(&b, field, role, values, comma)
 			if err != nil {
 				return nil, err
 			}
@@ -1978,7 +1990,15 @@ func marshalUIFormAlert(form *ui.Form, alert *ui.Alert, role ConnectionRole) ([]
 		if err != nil {
 			return nil, err
 		}
+		if len(form.Values) > 0 {
+			b.WriteString(`,"Values":`)
+			err = json.NewEncoder(&b).Encode(values)
+			if err != nil {
+				return nil, err
+			}
+		}
 		b.WriteString("}")
+
 	}
 
 	// Serialize the alert, if present.
@@ -2002,9 +2022,29 @@ func marshalUIFormAlert(form *ui.Form, alert *ui.Alert, role ConnectionRole) ([]
 	return b.Bytes(), nil
 }
 
-// marshalUIComponent marshals component with the given role in JSON format.
-// If comma is true, it prepends a comma. Returns whether it has been marhalled
-func marshalUIComponent(b *bytes.Buffer, component ui.Component, role ConnectionRole, comma bool) (bool, error) {
+// adjustValuesCase adjusts the case of keys of values.
+func adjustValuesCase(key string, values map[string]any) {
+	var found struct {
+		key   string
+		value any
+	}
+	for k, v := range values {
+		if strings.EqualFold(k, key) {
+			found.key = k
+			found.value = v
+			break
+		}
+	}
+	if found.key == "" {
+		return
+	}
+	delete(values, found.key)
+	values[key] = found.value
+}
+
+// marshalUIComponent marshals component with the given role in JSON format. If
+// comma is true, it prepends a comma. Returns whether it has been marhalled.
+func marshalUIComponent(b *bytes.Buffer, component ui.Component, role ConnectionRole, values map[string]any, comma bool) (bool, error) {
 	rv := reflect.ValueOf(component).Elem()
 	rt := rv.Type()
 	if r := ui.Role(rv.FieldByName("Role").Int()); r != ui.BothRole && ConnectionRole(r) != role {
@@ -2021,14 +2061,29 @@ func marshalUIComponent(b *bytes.Buffer, component ui.Component, role Connection
 		if name == "Role" {
 			continue
 		}
+		field := rv.Field(j)
+		if name == "Name" && values != nil {
+			adjustValuesCase(field.String(), values)
+		}
 		b.WriteString(`,"`)
 		b.WriteString(name)
 		b.WriteString(`":`)
-		field := rv.Field(j).Interface()
 		var err error
-		if c, ok := field.(ui.Component); ok {
-			_, err = marshalUIComponent(b, c, role, false)
-		} else {
+		switch field := field.Interface().(type) {
+		case ui.Component:
+			_, err = marshalUIComponent(b, field, role, values, false)
+		case []ui.FieldSet:
+			b.WriteByte('[')
+			comma = false
+			for _, set := range field {
+				var ok bool
+				ok, err = marshalUIFieldSet(b, set, role, values, comma)
+				if ok {
+					comma = true
+				}
+			}
+			b.WriteByte(']')
+		default:
 			err = json.NewEncoder(b).Encode(field)
 		}
 		if err != nil {
@@ -2036,6 +2091,46 @@ func marshalUIComponent(b *bytes.Buffer, component ui.Component, role Connection
 		}
 	}
 	b.WriteString(`}`)
+	return true, nil
+}
+
+// marshalUIFieldSet marshals fieldSet with the given role in JSON format. If
+// comma is true, it prepends a comma. Returns whether it has been marhalled.
+func marshalUIFieldSet(b *bytes.Buffer, fieldSet ui.FieldSet, role ConnectionRole, values map[string]any, comma bool) (bool, error) {
+	if fieldSet.Role != ui.BothRole && ConnectionRole(fieldSet.Role) != role {
+		return false, nil
+	}
+	name := fieldSet.Name
+	if values != nil {
+		adjustValuesCase(name, values)
+	}
+	if comma {
+		b.WriteByte(',')
+	}
+	b.WriteString(`{"Name":`)
+	_ = json.NewEncoder(b).Encode(name)
+	b.WriteString(`,"Label":`)
+	_ = json.NewEncoder(b).Encode(fieldSet.Label)
+	b.WriteString(`,"Fields":[`)
+	comma = false
+	for _, c := range fieldSet.Fields {
+		var valuesOfSet map[string]any
+		switch vs := values[name].(type) {
+		case nil:
+		case map[string]any:
+			valuesOfSet = vs
+		default:
+			return false, fmt.Errorf("expected a map[string]any value for field set %s, got %T", name, values[name])
+		}
+		ok, err := marshalUIComponent(b, c, role, valuesOfSet, comma)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			comma = true
+		}
+	}
+	b.WriteString(`]}`)
 	return true, nil
 }
 

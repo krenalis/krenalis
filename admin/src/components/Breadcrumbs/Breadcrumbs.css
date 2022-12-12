@@ -20,6 +20,6 @@
 	color: var(--text-onaccent);
 }
 
-.Breadcrumbs sl-breadcrumb-item sl-icon::part(base) {
+.Breadcrumbs sl-breadcrumb-item sl-icon {
 	color: var(--text-onaccent);
 }

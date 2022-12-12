@@ -1,137 +1,137 @@
-import React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './AccountConnectionSettings.css';
+import ConnectorField from '../../../components/ConnectorFields/ConnectorField';
 import NotFound from '../../NotFound/NotFound';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Toast from '../../../components/Toast/Toast';
 import call from '../../../utils/call';
-import { renderConnectorComponent } from '../../../components/ConnectorSettings/renderConnectorComponent';
+import { SettingsContext } from '../../../context/SettingsContext';
 import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 
-export default class AccountConnectionSettings extends React.Component {
-	constructor(props) {
-		super(props);
-		this.toast = React.createRef();
-		this.connectionID = Number(String(window.location).split('/').at(-2));
-		this.state = {
-			connection: {},
-			settings: { Components: null, Actions: null },
-			form: {},
-			notFound: false,
-			status: null,
-		};
-	}
+const AccountConnectionSettings = () => {
+	let [connection, setConnection] = useState({});
+	let [fields, setFields] = useState([]);
+	let [actions, setActions] = useState([]);
+	let [values, setValues] = useState(null);
+	let [status, setStatus] = useState(null);
+	let [notFound, setNotFound] = useState(false);
 
-	componentDidMount = async () => {
-		let err, connection, ui;
-		[connection, err] = await call('/admin/connections/get', this.connectionID);
-		if (err !== null) {
-			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
-			this.toast.current.toast();
-			return;
-		}
-		if (connection == null) {
-			this.setState({ notFound: true });
-			return;
-		}
-		this.setState({ connection: connection });
-		[ui, err] = await call('/admin/connectors/ui', this.connectionID);
-		if (err !== null) {
-			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
-			this.toast.current.toast();
-			return;
-		}
-		if (ui.Alert != null) alert(`Unexpected alert sent with 'load' event: ${JSON.stringify(ui.Alert)}`);
-		let form = {};
-		if (ui.Form.Fields != null) {
-			for (let f of ui.Form.Fields) {
-				form[f.Name] = f.Value;
+	const toastRef = useRef();
+	const connectionID = Number(String(window.location).split('/').at(-2));
+
+	useEffect(() => {
+		const fetchData = async (path, callback) => {
+			let [res, err] = await call(path, connectionID);
+			if (err !== null) {
+				setStatus({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
+				toastRef.current.toast();
+				return;
 			}
-		}
-		this.setState({ settings: ui.Form, form: form });
-	};
+			callback(res);
+		};
 
-	onComponentChange = (name, value) => {
-		let form = { ...this.state.form };
-		form[name] = value;
-		this.setState({ form: form });
-	};
-
-	onActionClick = async (event) => {
-		let [ui, err] = await call('/admin/connectors/ui-event', {
-			connection: this.connectionID,
-			event: event,
-			form: this.state.form,
+		fetchData('/admin/connections/get', (connection) => {
+			if (connection == null) {
+				setNotFound(true);
+				return;
+			}
+			setConnection(connection);
 		});
-		if (err !== null) {
-			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
-			this.toast.current.toast();
+
+		fetchData('/admin/connectors/ui', (ui) => {
+			setFields(ui.Form.Fields);
+			setActions(ui.Form.Actions);
+			setValues(ui.Form.Values);
+		});
+	}, []);
+
+	const onActionClick = async (e) => {
+		// remove the errors
+		let fls = [];
+		for (let f of fields) {
+			f.Error = '';
+			fls.push(f);
+		}
+		setFields(fls);
+
+		let [ui, err] = await call('/admin/connectors/ui-event', {
+			connection: connectionID,
+			event: e,
+			values: values,
+		});
+		if (err != null) {
+			setStatus({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
+			toastRef.current.toast();
 			return;
 		}
 		if (ui.Alert != null) {
-			this.setState({
-				status: { variant: ui.Alert.Variant, icon: 'exclamation-square', text: ui.Alert.Message },
-			});
-			this.toast.current.toast();
+			setStatus({ variant: ui.Alert.Variant, icon: 'exclamation-square', text: ui.Alert.Message });
+			toastRef.current.toast();
 		}
 		if (ui.Form != null) {
-			let form = {};
-			if (ui.Form.Fields != null) {
-				for (let f of ui.Form.Fields) {
-					form[f.Name] = f.Value;
-				}
-			}
-			this.setState({ settings: ui.Form, form: form });
+			setFields(ui.Form.Fields);
+			setActions(ui.Form.Actions);
+			setValues(ui.Form.Values);
 		}
 	};
 
-	render() {
-		if (this.state.notFound) {
-			return <NotFound />;
-		} else {
-			return (
-				<div className='AccountConnectionSettings'>
-					<Breadcrumbs
-						breadcrumbs={[
-							{ Name: 'Your connections', Link: '/admin/account/connections' },
-							{ Name: `${this.state.connection.Name}'s settings` },
-						]}
-					/>
-					<div className='content'>
-						<Toast reactRef={this.toast} status={this.state.status} />
-						<div className='title'>
-							{this.state.connection.LogoURL !== '' && (
-								<img
-									className='littleLogo'
-									src={this.state.connection.LogoURL}
-									alt={`${this.state.connection.Name}'s logo`}
-								/>
-							)}
-							<div className='text'>Configure {this.state.connection.Name}</div>
-						</div>
-						<div className='settings'>
-							<div className='components'>
-								{this.state.settings.Fields != null &&
-									this.state.settings.Fields.map((c, i) =>
-										renderConnectorComponent(c, this.onComponentChange)
-									)}
-							</div>
-							<div className='actions'>
-								{this.state.settings.Actions != null &&
-									this.state.settings.Actions.map((a, i) => (
-										<SlButton
-											variant={a.Variant}
-											onClick={async () => {
-												await this.onActionClick(a.Event);
-											}}
-										>
-											{a.Text}
-										</SlButton>
-									))}
-							</div>
-						</div>
-					</div>
-				</div>
-			);
-		}
+	const onFieldChange = (name, value) => {
+		setValues((prevValues) => ({ ...prevValues, [name]: value }));
+	};
+
+	if (notFound) {
+		return <NotFound />;
 	}
-}
+
+	let connectionName = connection.Name;
+
+	let connectionLogo;
+	if (connection.LogoURL !== '') {
+		connectionLogo = <img className='littleLogo' src={connection.LogoURL} alt={`${connectionName}'s logo`} />;
+	}
+
+	let fieldsToRender = [];
+	for (let f of fields) {
+		fieldsToRender.push(<ConnectorField field={f} />);
+	}
+
+	let actionsToRender = [];
+	for (let a of actions) {
+		actionsToRender.push(
+			<SlButton
+				variant={a.Variant}
+				onClick={async () => {
+					await onActionClick(a.Event);
+				}}
+			>
+				{a.Text}
+			</SlButton>
+		);
+	}
+
+	return (
+		<div className='AccountConnectionSettings'>
+			<Breadcrumbs
+				breadcrumbs={[
+					{ Name: 'Your connections', Link: '/admin/account/connections' },
+					{ Name: `${connectionName}'s settings` },
+				]}
+			/>
+			<div className='content'>
+				<Toast reactRef={toastRef} status={status} />
+				<div className='title'>
+					{connectionLogo}
+					<div className='text'>Configure {connectionName}</div>
+				</div>
+				<div className='form'>
+					<SettingsContext.Provider value={{ values: values, onChange: onFieldChange }}>
+						<div className='fields'>{fieldsToRender}</div>
+					</SettingsContext.Provider>
+					<div className='actions'>{actionsToRender}</div>
+				</div>
+			</div>
+		</div>
+	);
+};
+
+export default AccountConnectionSettings;

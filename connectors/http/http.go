@@ -146,9 +146,9 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 	form := &ui.Form{
 		Fields: []ui.Component{
-			&ui.Input{Name: "host", Value: s.Host, Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&ui.Input{Name: "port", Value: s.Port, Label: "Port", Placeholder: "443", Type: "number", MinLength: 1, MaxLength: 5},
-			&ui.KeyValue{Name: "headers", Value: headers, Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
+			&ui.Input{Name: "host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&ui.Input{Name: "port", Label: "Port", Placeholder: "443", Type: "number", MinLength: 1, MaxLength: 5},
+			&ui.KeyValue{Name: "headers", Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
 				KeyComponent:   &ui.Input{Label: "Key", Placeholder: "Key", Type: "text", MinLength: 1, MaxLength: 100},
 				ValueComponent: &ui.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
 			},

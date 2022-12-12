@@ -148,9 +148,9 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 	form := &ui.Form{
 		Fields: []ui.Component{
-			&ui.Input{Name: "accessKeyID", Value: s.AccessKeyID, Label: "Access Key ID", Placeholder: "Access Key ID", Type: "text", MinLength: 20, MaxLength: 20},
-			&ui.Input{Name: "secretAccessKey", Value: s.SecretAccessKey, Label: "Secret Access Key", Placeholder: "Secret Access Key", Type: "password", MinLength: 40, MaxLength: 200},
-			&ui.Select{Name: "region", Value: s.Region, Label: "Region", Placeholder: "Region", Options: []ui.Option{
+			&ui.Input{Name: "accessKeyID", Label: "Access Key ID", Placeholder: "Access Key ID", Type: "text", MinLength: 20, MaxLength: 20},
+			&ui.Input{Name: "secretAccessKey", Label: "Secret Access Key", Placeholder: "Secret Access Key", Type: "password", MinLength: 40, MaxLength: 200},
+			&ui.Select{Name: "region", Label: "Region", Placeholder: "Region", Options: []ui.Option{
 				{Text: "US East (N. Virginia) us-east-1", Value: "us-east-1"},
 				{Text: "US East (Ohio) us-east-2", Value: "us-east-2"},
 				{Text: "US West (N. California) us-west-1", Value: "us-west-1"},
@@ -175,7 +175,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 				{Text: "Middle East (UAE) me-central-1", Value: "me-central-1"},
 				{Text: "South America (São Paulo) me-central-1", Value: "sa-east-1"},
 			}},
-			&ui.Input{Name: "bucket", Value: s.Bucket, Label: "Bucket Name", Placeholder: "bucket", Type: "text", MinLength: 3, MaxLength: 63},
+			&ui.Input{Name: "bucket", Label: "Bucket Name", Placeholder: "bucket", Type: "text", MinLength: 3, MaxLength: 63},
 		},
 		Actions: []ui.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},

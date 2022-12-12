@@ -48,9 +48,13 @@ export default class AccountConnectionsMap extends React.Component {
 							{files.map((f) => {
 								return (
 									<div className='file' id={`file-${f.ID}`}>
-										<div className='littleLogo'>
-											<img src={f.LogoURL} rel='noreferrer' alt={`${f.Name}'s logo`} />
-										</div>
+										{f.LogoURL === '' ? (
+											<div class='unknownLogo'>?</div>
+										) : (
+											<div className='littleLogo'>
+												<img src={f.LogoURL} rel='noreferrer' alt={`${f.Name}'s logo`} />
+											</div>
+										)}
 										{f.Name}
 									</div>
 								);
@@ -82,9 +86,13 @@ export default class AccountConnectionsMap extends React.Component {
 			} else if (c.Type !== 'File') {
 				connection = (
 					<div className='connection' id={`${c.Role.toLowerCase()}-${c.ID}`}>
-						<div className='littleLogo'>
-							<img src={c.LogoURL} rel='noreferrer' alt={`${c.Name}'s logo`} />
-						</div>
+						{c.LogoURL === '' ? (
+							<div class='unknownLogo'>?</div>
+						) : (
+							<div className='littleLogo'>
+								<img src={c.LogoURL} rel='noreferrer' alt={`${c.Name}'s logo`} />
+							</div>
+						)}
 						{c.Name}
 					</div>
 				);

@@ -489,7 +489,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			var req struct {
 				Connection int
 				Event      string
-				Form       json.RawMessage
+				Values     json.RawMessage
 			}
 			err := json.NewDecoder(r.Body).Decode(&req)
 			if err != nil {
@@ -497,7 +497,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			form, err := workspace.Connections.ServeUI(req.Connection, req.Event, req.Form)
+			form, err := workspace.Connections.ServeUI(req.Connection, req.Event, req.Values)
 			if err != nil {
 				if err == apis.ErrUIEventNotExist {
 					http.Error(w, "Bad Request", http.StatusBadRequest)

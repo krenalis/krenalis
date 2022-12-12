@@ -28,6 +28,7 @@ const (
 type Form struct {
 	Fields  []Component
 	Actions []Action
+	Values  []byte
 }
 
 type Component interface {
@@ -41,13 +42,14 @@ type Option struct {
 
 type Input struct {
 	Name        string
-	Value       any
 	Type        string // date|datetime-local|email|number|password|search|tel|text|time|url - default is 'text'
 	Label       string
 	Placeholder string
+	HelpText    string
 	Rows        int // if bigger than 1, the corresponding component is a textarea.
 	MinLength   int
 	MaxLength   int
+	Error       string
 	Role        Role
 }
 
@@ -55,10 +57,11 @@ func (i *Input) component() {}
 
 type Select struct {
 	Name        string
-	Value       any
 	Label       string
 	Placeholder string
+	HelpText    string
 	Options     []Option
+	Error       string
 	Role        Role
 }
 
@@ -66,8 +69,8 @@ func (s *Select) component() {}
 
 type Checkbox struct {
 	Name  string
-	Value bool
 	Label string
+	Error string
 	Role  Role
 }
 
@@ -75,8 +78,8 @@ func (ck *Checkbox) component() {}
 
 type ColorPicker struct {
 	Name  string
-	Value string
 	Label string
+	Error string
 	Role  Role
 }
 
@@ -84,30 +87,31 @@ func (cp *ColorPicker) component() {}
 
 type Radios struct {
 	Name    string
-	Value   any
 	Label   string
 	Options []Option
+	Error   string
 	Role    Role
 }
 
 func (rd *Radios) component() {}
 
 type Range struct {
-	Name  string
-	Value int
-	Label string
-	Min   int
-	Max   int
-	Step  int
-	Role  Role
+	Name     string
+	Label    string
+	HelpText string
+	Min      int
+	Max      int
+	Step     int
+	Error    string
+	Role     Role
 }
 
 func (r *Range) component() {}
 
 type Switch struct {
 	Name  string
-	Value bool
 	Label string
+	Error string
 	Role  Role
 }
 
@@ -115,21 +119,36 @@ func (s *Switch) component() {}
 
 type KeyValue struct {
 	Name           string
-	Value          map[string]any
 	Label          string
 	KeyLabel       string
 	KeyComponent   Component
 	ValueLabel     string
 	ValueComponent Component
+	Error          string
 	Role           Role
 }
 
 func (kv *KeyValue) component() {}
 
+type FieldSet struct {
+	Name   string
+	Label  string
+	Fields []Component
+	Role   Role
+}
+
+type AlternativeFieldSets struct {
+	Label    string
+	HelpText string
+	Sets     []FieldSet
+	Role     Role
+}
+
+func (afs *AlternativeFieldSets) component() {}
+
 type Text struct {
-	Name  string
-	Value string
 	Label string
+	Text  string
 	Role  Role
 }
 

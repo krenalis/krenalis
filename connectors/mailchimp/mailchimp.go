@@ -406,7 +406,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		}
 		return &ui.Form{
 			Fields: []ui.Component{
-				&ui.Text{Name: "", Label: "Connected list", Value: listName},
+				&ui.Text{Label: "Connected list", Text: listName},
 			},
 		}, nil, nil
 	}
@@ -422,7 +422,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		}
 		return &ui.Form{
 			Fields: []ui.Component{
-				&ui.Select{Name: "list", Value: nil, Label: "List", Placeholder: "", Options: options},
+				&ui.Select{Name: "list", Label: "List", Placeholder: "", Options: options},
 			},
 			Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},
 		}, nil, nil
@@ -501,7 +501,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 		return &ui.Form{
 			Fields: []ui.Component{
-				&ui.Text{Name: "", Label: "Connected list", Value: listName},
+				&ui.Text{Label: "Connected list", Text: listName},
 			},
 		}, nil, nil
 	default:

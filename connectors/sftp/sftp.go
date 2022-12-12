@@ -151,10 +151,10 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 	form := &ui.Form{
 		Fields: []ui.Component{
-			&ui.Input{Name: "host", Value: s.Host, Label: "Host", Placeholder: "ftp.example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&ui.Input{Name: "port", Value: s.Port, Label: "Port", Placeholder: "22", Type: "number", MinLength: 1, MaxLength: 5},
-			&ui.Input{Name: "username", Value: s.Username, Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 200},
-			&ui.Input{Name: "password", Value: s.Password, Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
+			&ui.Input{Name: "host", Label: "Host", Placeholder: "ftp.example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&ui.Input{Name: "port", Label: "Port", Placeholder: "22", Type: "number", MinLength: 1, MaxLength: 5},
+			&ui.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 200},
+			&ui.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
 		},
 		Actions: []ui.Action{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
