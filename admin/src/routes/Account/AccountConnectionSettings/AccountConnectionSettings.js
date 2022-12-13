@@ -23,7 +23,7 @@ const AccountConnectionSettings = () => {
 		const fetchData = async (path, callback) => {
 			let [res, err] = await call(path, 'POST', connectionID);
 			if (err !== null) {
-				setStatus({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
+				setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
 				toastRef.current.toast();
 				return;
 			}
@@ -60,7 +60,7 @@ const AccountConnectionSettings = () => {
 			values: values,
 		});
 		if (err != null) {
-			setStatus({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
+			setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
 			toastRef.current.toast();
 			return;
 		}
