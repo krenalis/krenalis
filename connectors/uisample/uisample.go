@@ -80,6 +80,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if c.settings != nil {
 			s = *c.settings
 		}
+		values, _ = json.Marshal(s)
 	case "save":
 		err := c.firehose.SetSettings(values)
 		if err != nil {
@@ -88,11 +89,6 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		return nil, ui.SuccessAlert("Settings saved"), nil
 	default:
 		return nil, nil, ui.ErrEventNotExist
-	}
-
-	b, err := json.Marshal(&s)
-	if err != nil {
-		return nil, nil, err
 	}
 
 	form := &ui.Form{
@@ -148,10 +144,10 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 				},
 			},
 		},
+		Values: values,
 		Actions: []ui.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
-		Values: b,
 	}
 
 	return form, nil, nil

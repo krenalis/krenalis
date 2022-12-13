@@ -137,6 +137,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		} else {
 			s = *c.settings
 		}
+		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
 		err := json.Unmarshal(values, &s)
@@ -201,6 +202,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 			&ui.Checkbox{Name: "trimLeadingSpace", Label: "Trim leading space", Role: ui.SourceRole},
 			&ui.Checkbox{Name: "useCRLF", Label: "Use CRLF"},
 		},
+		Values: values,
 		Actions: []ui.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},

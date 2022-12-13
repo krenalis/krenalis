@@ -111,6 +111,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		} else {
 			s = *c.settings
 		}
+		values, _ = json.Marshal(s)
 	case "test", "save":
 		// Test the connection and save the settings if required.
 		err := json.Unmarshal(values, &s)
@@ -168,6 +169,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 			&ui.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
 			&ui.Input{Name: "database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 63},
 		},
+		Values: values,
 		Actions: []ui.Action{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 			{Event: "save", Text: "Save", Variant: "primary"},

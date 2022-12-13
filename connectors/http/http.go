@@ -95,19 +95,16 @@ func (c *connection) Reader(path string) (io.ReadCloser, time.Time, error) {
 func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	var s settings
-	var headers map[string]any
 
 	switch event {
 	case "load":
 		// Load the Form.
 		if c.settings == nil {
 			s.Port = 443
-		} else if c.settings != nil {
+		} else {
 			s = *c.settings
-			for k, v := range s.Headers {
-				headers[k] = v
-			}
 		}
+		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
 		err := json.Unmarshal(values, &s)
@@ -153,6 +150,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 				ValueComponent: &ui.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
 			},
 		},
+		Values: values,
 		Actions: []ui.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},

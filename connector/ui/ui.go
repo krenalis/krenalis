@@ -27,8 +27,8 @@ const (
 
 type Form struct {
 	Fields  []Component
-	Actions []Action
 	Values  []byte
+	Actions []Action
 }
 
 type Component interface {

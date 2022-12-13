@@ -108,6 +108,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if c.settings != nil {
 			s = *c.settings
 		}
+		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
 		err := json.Unmarshal(values, &s)
@@ -177,6 +178,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 			}},
 			&ui.Input{Name: "bucket", Label: "Bucket Name", Placeholder: "bucket", Type: "text", MinLength: 3, MaxLength: 63},
 		},
+		Values: values,
 		Actions: []ui.Action{
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},

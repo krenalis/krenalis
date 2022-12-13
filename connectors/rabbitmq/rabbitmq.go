@@ -137,6 +137,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if c.settings != nil {
 			s = *c.settings
 		}
+		values, _ = json.Marshal(s)
 	case "test", "save":
 		// Test the connection and save the settings if required.
 		err := json.Unmarshal(values, &s)
@@ -185,6 +186,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 			&ui.Input{Name: "url", Label: "URL", Placeholder: "amqps://user:pass@example.com/vhost", Type: "text", MinLength: 7, MaxLength: 2048},
 			&ui.Input{Name: "queue", Label: "Queue", Placeholder: "queue-name", Type: "text", MinLength: 1, MaxLength: 255},
 		},
+		Values: values,
 		Actions: []ui.Action{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 			{Event: "save", Text: "Save", Variant: "primary"},
