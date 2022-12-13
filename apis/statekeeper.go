@@ -12,6 +12,9 @@ import (
 	"chichi/apis/types"
 )
 
+// logNotifications controls the logging of notifications on the log.
+const logNotifications = false
+
 // keepState starts the state keeper. It is called in its own goroutine.
 func (apis *APIs) keepState(ctx context.Context) {
 
@@ -20,8 +23,10 @@ func (apis *APIs) keepState(ctx context.Context) {
 	notifications := apis.db.ListenToNotifications(ctx)
 	for {
 		n := <-notifications
-		log.Printf("[info] received notification from pid %d and name %q : %s",
-			n.PID, n.Name, n.Payload)
+		if logNotifications {
+			log.Printf("[info] received notification from pid %d and name %q : %s",
+				n.PID, n.Name, n.Payload)
+		}
 		switch n.Name {
 		case "addConnection":
 			sk.addConnection(n)
