@@ -1,3 +1,4 @@
+//
 // SPDX-License-Identifier: Elastic-2.0
 //
 //
@@ -17,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 )
 
@@ -599,9 +601,12 @@ func QuoteIdent(name string) string {
 }
 
 func quote(s string) string {
+	return "'" + escape(s) + "'"
+}
+
+func escape(s string) string {
 	s = strings.ReplaceAll(s, "\x00", "")
-	s = strings.ReplaceAll(s, "'", "''")
-	return "'" + s + "'"
+	return strings.ReplaceAll(s, "'", "''")
 }
 
 type Rows struct {
@@ -629,4 +634,20 @@ func LimitFirstStatement(limit, first int) string {
 		statement = "\nOFFSET " + strconv.Itoa(first)
 	}
 	return statement
+}
+
+// IsForeignKeyViolation reports whether err is a foreign key violation error.
+func IsForeignKeyViolation(err error) bool {
+	if err, ok := err.(*pgconn.PgError); ok {
+		return err.Code == "23503"
+	}
+	return false
+}
+
+// ErrConstraintName returns the name of the constraint in err, if any.
+func ErrConstraintName(err error) string {
+	if err, ok := err.(*pgconn.PgError); ok {
+		return err.ConstraintName
+	}
+	return ""
 }

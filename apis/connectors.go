@@ -24,12 +24,31 @@ import (
 
 type Connectors struct {
 	*APIs
-	connectors map[int]*Connector
+	state connectorsState
+}
+
+type connectorsState struct {
+	sync.Mutex
+	ids map[int]*Connector
+}
+
+var errConnectorNotFound = errors.New("connector does not exist")
+
+// get returns the connector with identifier id.
+// Returns the errConnectorNotFound error if the connector does not exist.
+func (this *Connectors) get(id int) (*Connector, error) {
+	this.state.Lock()
+	c, ok := this.state.ids[id]
+	this.state.Unlock()
+	if ok {
+		return c, nil
+	}
+	return nil, errConnectorNotFound
 }
 
 // newConnectors returns a new *Connectors value.
 func newConnectors(apis *APIs, connectors map[int]*Connector) *Connectors {
-	return &Connectors{APIs: apis, connectors: connectors}
+	return &Connectors{APIs: apis, state: connectorsState{ids: connectors}}
 }
 
 // Connector represents a connector.
@@ -40,7 +59,7 @@ type Connector struct {
 	logoURL     string
 	webhooksPer WebhooksPer
 	oAuth       *ConnectorOAuth
-	resources   *resourceSet // keys in resources can change over time.
+	state       connectorState
 }
 
 // A ConnectorOAuth represents OAuth data required to authenticate with a
@@ -55,62 +74,49 @@ type ConnectorOAuth struct {
 	ForcedExpiresIn  int
 }
 
-// newResourceSet returns a new empty resourceSet.
-func newResourceSet() *resourceSet {
-	return &resourceSet{m: map[int]*Resource{}}
-}
-
-// resourceSet is the set of resources of a connector.
-type resourceSet struct {
+type connectorState struct {
 	sync.Mutex
-	m map[int]*Resource
+	resources map[int]*Resource
 }
 
-// delete deletes the resource with identifier id.
+// deleteResource deletes the resource with identifier id.
 // If the resource does not exist, it does nothing.
-func (rs *resourceSet) delete(id int) {
-	rs.Lock()
-	delete(rs.m, id)
-	rs.Unlock()
+func (c *Connector) deleteResource(id int) {
+	c.state.Lock()
+	delete(c.state.resources, id)
+	c.state.Unlock()
 }
 
-// get returns the resource with identifier id.
+// getResource returns the resource with identifier id.
 // The boolean return value reports whether the resource exists.
-func (rs *resourceSet) get(id int) (*Resource, bool) {
-	rs.Lock()
-	r, ok := rs.m[id]
-	rs.Unlock()
+func (c *Connector) getResource(id int) (*Resource, bool) {
+	c.state.Lock()
+	r, ok := c.state.resources[id]
+	c.state.Unlock()
 	return r, ok
 }
 
 // getByCode returns the resource with the given code.
 // The boolean return value reports whether the resource exists.
-func (rs *resourceSet) getByCode(code string) (*Resource, bool) {
-	rs.Lock()
-	for _, r := range rs.m {
-		if r.code == code {
-			rs.Unlock()
-			return r, true
+func (c *Connector) getResourceByCode(code string) (*Resource, bool) {
+	var r *Resource
+	c.state.Lock()
+	for _, resource := range c.state.resources {
+		if resource.code == code {
+			r = resource
+			break
 		}
 	}
-	rs.Unlock()
-	return nil, false
+	c.state.Unlock()
+	return r, r != nil
 }
 
-// add adds a resource with the given id, code and OAuth data and returns it.
-// If a resource with the same id already exists, add replaces it.
-func (rs *resourceSet) add(id int, code, accessToken, refreshToken string, expiresIn time.Time) *Resource {
-	r := &Resource{
-		id:                id,
-		code:              code,
-		oAuthAccessToken:  accessToken,
-		oAuthRefreshToken: refreshToken,
-		oAuthExpiresIn:    expiresIn,
-	}
-	rs.Lock()
-	rs.m[id] = r
-	rs.Unlock()
-	return r
+// addResource adds a resource with the given id, code and OAuth data and
+// returns it. If a resource with the same id already exists, add replaces it.
+func (c *Connector) addResource(r *Resource) {
+	c.state.Lock()
+	c.state.resources[r.id] = r
+	c.state.Unlock()
 }
 
 // Resource represents a resource.
@@ -249,14 +255,14 @@ func (err ConnectorNotFoundError) Error() string {
 // resource does not exist it does nothing.
 func (this *Connectors) refreshOAuthToken(id, resource int) (*Resource, error) {
 
-	connector, ok := this.connectors[id]
-	if !ok {
+	connector, err := this.get(id)
+	if err != nil {
 		return nil, ConnectorNotFoundError{}
 	}
 	if connector.oAuth == nil {
 		return nil, errors.New("connector does not support OAuth")
 	}
-	r, ok := connector.resources.get(resource)
+	r, ok := connector.getResource(resource)
 	if !ok {
 		return nil, nil
 	}
@@ -325,7 +331,13 @@ func (this *Connectors) refreshOAuthToken(id, resource int) (*Resource, error) {
 		return nil, err
 	}
 
-	r = connector.resources.add(r.id, r.code, response.AccessToken, response.RefreshToken, expiresIn)
+	connector.addResource(&Resource{
+		id:                id,
+		code:              r.code,
+		oAuthAccessToken:  response.AccessToken,
+		oAuthRefreshToken: response.RefreshToken,
+		oAuthExpiresIn:    expiresIn,
+	})
 
 	return r, nil
 }
@@ -354,10 +366,24 @@ func (this *Connectors) Get(id int) (*ConnectorInfo, error) {
 	return &info, nil
 }
 
+// list returns all the connectors.
+func (this *Connectors) list() []*Connector {
+	this.state.Lock()
+	connectors := make([]*Connector, len(this.state.ids))
+	i := 0
+	for _, c := range this.state.ids {
+		connectors[i] = c
+		i++
+	}
+	this.state.Unlock()
+	return connectors
+}
+
 // List returns a list of ConnectorInfo describing all connectors.
 func (this *Connectors) List() []*ConnectorInfo {
-	var infos = make([]*ConnectorInfo, 0, len(this.connectors))
-	for _, c := range this.connectors {
+	connectors := this.list()
+	var infos = make([]*ConnectorInfo, len(connectors))
+	for i, c := range connectors {
 		info := ConnectorInfo{
 			ID:          c.id,
 			Name:        c.name,
@@ -369,22 +395,11 @@ func (this *Connectors) List() []*ConnectorInfo {
 			info.OAuth = &ConnectorOAuth{}
 			*info.OAuth = *c.oAuth
 		}
-		infos = append(infos, &info)
+		infos[i] = &info
 	}
 	sort.Slice(infos, func(i, j int) bool {
-		return infos[i].Name < infos[j].Name || infos[i].Name == infos[j].Name && infos[i].ID < infos[j].ID
+		a, b := infos[i], infos[j]
+		return a.Name < b.Name || a.Name == b.Name && a.ID < b.ID
 	})
 	return infos
-}
-
-var errConnectorNotFound = errors.New("connector does not exist")
-
-// get returns the connector with identifier id.
-// Returns the errConnectorNotFound error if the connector does not exist.
-func (this *Connectors) get(id int) (*Connector, error) {
-	c, ok := this.connectors[id]
-	if !ok {
-		return nil, errConnectorNotFound
-	}
-	return c, nil
 }

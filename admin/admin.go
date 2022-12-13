@@ -823,26 +823,14 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 		return nil
 	}
 
-	var id int
-
+	var opts apis.ConnectionOptions
 	switch conn.Type {
-	case apis.AppType:
-		id, err = workspace.Connections.AddApp(role, conn.ID, conn.Name, "", "", time.Time{})
-	case apis.DatabaseType:
-		id, err = workspace.Connections.AddDatabase(role, conn.ID, conn.Name)
-	case apis.EventStreamType:
-		id, err = workspace.Connections.AddEventStream(role, conn.ID, conn.Name)
 	case apis.FileType:
-		id, err = workspace.Connections.AddFile(role, conn.ID, connection.Storage, conn.Name)
-	case apis.MobileType:
-		id, err = workspace.Connections.AddMobile(role, conn.ID, conn.Name)
-	case apis.ServerType:
-		id, err = workspace.Connections.AddServer(role, conn.ID, conn.Name)
-	case apis.StorageType:
-		id, err = workspace.Connections.AddStorage(role, conn.ID, conn.Name)
+		opts.Storage = connection.Storage
 	case apis.WebsiteType:
-		id, err = workspace.Connections.AddWebsite(role, conn.ID, conn.Name, connection.Host)
+		opts.Host = connection.Host
 	}
+	id, err := workspace.Connections.Add(role, conn.ID, conn.Name, opts)
 	if err != nil {
 		return err
 	}
@@ -972,7 +960,13 @@ func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Reque
 		expireIn = expireIn.Add(time.Duration(connector.OAuth.DefaultExpiresIn) * time.Second)
 	}
 
-	_, err = workspace.Connections.AddApp(role, connector.ID, connector.Name, tokens.RefreshToken, tokens.AccessToken, expireIn)
+	_, err = workspace.Connections.Add(role, connector.ID, connector.Name, apis.ConnectionOptions{
+		OAuth: &apis.AddConnectionOAuthOptions{
+			AccessToken:  tokens.AccessToken,
+			RefreshToken: tokens.RefreshToken,
+			ExpiresIn:    expireIn,
+		},
+	})
 
 	if err != nil {
 		return err

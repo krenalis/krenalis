@@ -41,7 +41,7 @@ func main() {
 	}
 	defer logFile.Close()
 	log.SetOutput(io.MultiWriter(logFile, os.Stderr))
-	log.SetFlags(log.Ldate | log.Ltime)
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
 
 	// Read the configuration file.
 	var settings Settings

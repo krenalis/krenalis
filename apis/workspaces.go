@@ -25,12 +25,31 @@ import (
 
 type Workspaces struct {
 	*Account
-	workspaces map[int]*Workspace
+	state workspacesState
+}
+
+type workspacesState struct {
+	sync.Mutex
+	ids map[int]*Workspace
+}
+
+var errWorkspaceNotFound = errors.New("workspace does not exist")
+
+// get returns the workspace with identifier id.
+// Returns the errWorkspaceNotFound error if the workspace does not exist.
+func (this *Workspaces) get(id int) (*Workspace, error) {
+	this.state.Lock()
+	w, ok := this.state.ids[id]
+	this.state.Unlock()
+	if ok {
+		return w, nil
+	}
+	return nil, errWorkspaceNotFound
 }
 
 // newWorkspaces returns a new *Workspaces value.
 func newWorkspaces(account *Account) *Workspaces {
-	return &Workspaces{Account: account, workspaces: map[int]*Workspace{}}
+	return &Workspaces{Account: account, state: workspacesState{ids: map[int]*Workspace{}}}
 }
 
 // Workspace represents a workspace.
@@ -51,11 +70,7 @@ type Workspace struct {
 // As returns the workspace with identifier id.
 // Returns an error is the workspace does not exist.
 func (this *Workspaces) As(id int) (*Workspace, error) {
-	ws, ok := this.workspaces[id]
-	if !ok {
-		return nil, errors.New("workspace does not exist")
-	}
-	return ws, nil
+	return this.get(id)
 }
 
 // Schema returns the schema with the given name. name can be "user", "group"

@@ -82,12 +82,23 @@ func (fh *firehose) SetSettings(settings []byte) error {
 	if utf8.RuneCount(settings) > maxSettingsLen {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 	}
-	_, err := fh.connections.db.Exec("UPDATE connections SET settings = $1 WHERE id = $2", settings, fh.connection.id)
+	n := setConnectionSettingsNotification{
+		Account:    fh.connection.account.id,
+		Workspace:  fh.connection.workspace.id,
+		Connection: fh.connection.id,
+		Settings:   settings,
+	}
+	err := fh.connections.db.Transaction(func(tx *postgres.Tx) error {
+		_, err := tx.Exec("UPDATE connections SET settings = $1 WHERE id = $2", n.Settings, n.Connection)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(n)
+	})
 	if err != nil {
 		log.Printf("[error] %s", err)
 		return errors.New("cannot set settings")
 	}
-
 	return nil
 }
 

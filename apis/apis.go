@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	_ "time/tzdata" // workaround for clickhouse-go issue #162
 
 	"chichi/apis/postgres"
 	"chichi/apis/types"
@@ -24,14 +25,9 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2"
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/go-chi/chi/v5"
-
-	_ "time/tzdata" // workaround for clickhouse-go issue #162
 )
 
-var (
-	ErrResourceNotFound              = errors.New("resource does not exist")
-	ErrCannotGetConnectorAccessToken = errors.New("cannot get access token")
-)
+var ErrCannotGetConnectorAccessToken = errors.New("cannot get access token")
 
 type APIs struct {
 	db             *postgres.DB
@@ -117,7 +113,7 @@ func New(conf *Config) (*APIs, error) {
 		" oauth_client_secret, oauth_token_endpoint, oauth_default_token_type, oauth_default_expires_in,"+
 		" oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
 		for rows.Next() {
-			c := Connector{}
+			c := Connector{state: connectorState{resources: map[int]*Resource{}}}
 			oauth := ConnectorOAuth{}
 			if err := rows.Scan(&c.id, &c.name, &c.typ, &c.logoURL, &c.webhooksPer, &oauth.URL, &oauth.ClientID, &oauth.ClientSecret,
 				&oauth.TokenEndpoint, &oauth.DefaultTokenType, &oauth.DefaultExpiresIn, &oauth.ForcedExpiresIn); err != nil {
@@ -126,7 +122,6 @@ func New(conf *Config) (*APIs, error) {
 			if oauth.URL != "" {
 				c.oAuth = &oauth
 			}
-			c.resources = newResourceSet()
 			connectors[c.id] = &c
 		}
 		return nil
@@ -147,11 +142,7 @@ func New(conf *Config) (*APIs, error) {
 				return err
 			}
 			connector := connectors[connectorID]
-			if connector.resources == nil {
-				connector.resources = &resourceSet{m: map[int]*Resource{r.id: &r}}
-			} else {
-				connector.resources.m[r.id] = &r
-			}
+			connector.state.resources[r.id] = &r
 			resources[r.id] = &r
 		}
 		return nil
@@ -211,7 +202,7 @@ func New(conf *Config) (*APIs, error) {
 				workspace.Connections = newConnections(workspace)
 				workspace.EventListeners = &EventListeners{workspace}
 				workspace.Transformations = &Transformations{workspace}
-				account.Workspaces.workspaces[id] = workspace
+				account.Workspaces.state.ids[id] = workspace
 				workspaces[id] = workspace
 			}
 			return nil
@@ -222,58 +213,61 @@ func New(conf *Config) (*APIs, error) {
 
 	// Read all connections.
 	connections := map[int]*Connection{}
-	err = db.QueryScan("SELECT id, workspace, name, role, enabled, connector, storage, stream, resource,"+
-		" website_host, user_cursor, identity_column, timestamp_column, settings, schema, users_query FROM connections",
-		func(rows *postgres.Rows) error {
-			for rows.Next() {
-				var workspaceID, connector, storage, stream, resource int
-				var rawSchema string
-				c := Connection{}
-				if err := rows.Scan(&c.id, &workspaceID, &c.name, &c.role, &c.enabled, &connector, &storage, &stream, &resource,
-					&c.websiteHost, &c.userCursor, &c.identityColumn, &c.timestampColumn, &c.settings, &rawSchema,
-					&c.usersQuery); err != nil {
+	err = db.QueryScan("SELECT id, workspace, name, role, enabled, connector, COALESCE(storage, 0),"+
+		" COALESCE(stream, 0), resource, website_host, user_cursor, identity_column, timestamp_column, settings,"+
+		" schema, users_query FROM connections", func(rows *postgres.Rows) error {
+		for rows.Next() {
+			var workspaceID, connector, storage, stream, resource int
+			var rawSchema string
+			c := Connection{}
+			if err := rows.Scan(&c.id, &workspaceID, &c.name, &c.role, &c.enabled, &connector, &storage, &stream, &resource,
+				&c.websiteHost, &c.userCursor, &c.identityColumn, &c.timestampColumn, &c.settings, &rawSchema,
+				&c.usersQuery); err != nil {
+				return err
+			}
+			workspace := workspaces[workspaceID]
+			c.account = workspace.account
+			c.workspace = workspace
+			c.connector = connectors[connector]
+			if storage > 0 {
+				if s, ok := connections[storage]; ok {
+					c.storage = s
+				} else {
+					c.storage = &Connection{}
+					connections[storage] = c.storage
+				}
+			}
+			if stream > 0 {
+				if s, ok := connections[stream]; ok {
+					c.stream = s
+				} else {
+					c.stream = &Connection{}
+					connections[stream] = c.stream
+				}
+			}
+			if resource > 0 {
+				c.resource = resources[resource]
+			}
+			if len(rawSchema) > 0 {
+				c.schema, err = types.ParseSchema(strings.NewReader(rawSchema), nil)
+				if err != nil {
+					// TODO(marco) disable the connection instead of returning an error
 					return err
 				}
-				c.connector = connectors[connector]
-				if storage > 0 {
-					if s, ok := connections[storage]; ok {
-						c.storage = s
-					} else {
-						c.storage = &Connection{}
-						connections[storage] = c.storage
-					}
-				}
-				if stream > 0 {
-					if s, ok := connections[stream]; ok {
-						c.stream = s
-					} else {
-						c.stream = &Connection{}
-						connections[stream] = c.stream
-					}
-				}
-				if resource > 0 {
-					c.resource = resources[resource]
-				}
-				if len(rawSchema) > 0 {
-					c.schema, err = types.ParseSchema(strings.NewReader(rawSchema), nil)
-					if err != nil {
-						// TODO(marco) disable the connection instead of returning an error
-						return err
-					}
-				}
-				connection, ok := connections[c.id]
-				if ok {
-					*connection = c
-				} else {
-					connection = &Connection{}
-					*connection = c
-				}
-				workspace := workspaces[workspaceID]
-				workspace.Connections.connections[c.id] = connection
-				connections[c.id] = connection
 			}
-			return nil
-		})
+			connection, ok := connections[c.id]
+			if ok {
+				*connection = c
+			} else {
+				connection = &Connection{}
+				*connection = c
+			}
+
+			workspace.Connections.state.ids[c.id] = connection
+			connections[c.id] = connection
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -355,6 +349,8 @@ func New(conf *Config) (*APIs, error) {
 
 	apis.eventProcessor = newEventProcessor(apis.db, apis.chDB, allStreams)
 	go apis.eventProcessor.Run(context.Background())
+
+	go apis.keepState(context.Background())
 
 	return apis, nil
 }

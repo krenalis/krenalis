@@ -37,17 +37,37 @@ import (
 
 type Connections struct {
 	*Workspace
-	mu          sync.Mutex
-	connections map[int]*Connection
+	state connectionsState
+}
+
+type connectionsState struct {
+	sync.Mutex
+	ids map[int]*Connection
+}
+
+var errConnectionNotFound = errors.New("connection does not exist")
+
+// get returns the connection with identifier id.
+// Returns the errConnectionNotFound error if the connection does not exist.
+func (this *Connections) get(id int) (*Connection, error) {
+	this.state.Lock()
+	c, ok := this.state.ids[id]
+	this.state.Unlock()
+	if ok {
+		return c, nil
+	}
+	return nil, errConnectionNotFound
 }
 
 // newConnections returns a new *Connections value.
 func newConnections(ws *Workspace) *Connections {
-	return &Connections{Workspace: ws, connections: map[int]*Connection{}}
+	return &Connections{Workspace: ws, state: connectionsState{ids: map[int]*Connection{}}}
 }
 
 // Connection represents a connection.
 type Connection struct {
+	account         *Account
+	workspace       *Workspace
 	id              int
 	name            string
 	role            ConnectionRole
@@ -85,10 +105,9 @@ const (
 )
 
 var (
-	ErrConnectionDisabled       = errors.New("connection is disabled")
-	ErrFileHasNoStorage         = errors.New("file connection has not a storage")
-	ErrStorageHasConnectedFiles = errors.New("storage has connected files")
-	ErrUIEventNotExist          = errors.New("UI event does not exist")
+	ErrConnectionDisabled = errors.New("connection is disabled")
+	ErrFileHasNoStorage   = errors.New("file connection has not a storage")
+	ErrUIEventNotExist    = errors.New("UI event does not exist")
 )
 
 // A ConnectionNotFoundError error indicates that a connection does not exist.
@@ -185,152 +204,27 @@ func (role ConnectionRole) Value() (driver.Value, error) {
 	return nil, fmt.Errorf("not a valid ConnectionRole: %d", role)
 }
 
-// AddApp adds an app connection given its role, app connector, name, OAuth
-// refresh and access tokens and returns its identifier. name cannot be empty
-// and cannot be longer than 120 runes.
-//
-// If the connector does not exist, it returns a ConnectorNotFoundError error.
-func (this *Connections) AddApp(role ConnectionRole, connector int, name string, refreshToken, accessToken string, expiresIn time.Time) (int, error) {
-
-	if role != SourceRole && role != DestinationRole {
-		return 0, errors.New("invalid role")
-	}
-	if connector < 1 || connector > maxInt32 {
-		return 0, errors.New("invalid connector")
-	}
-	if name == "" || utf8.RuneCountInString(name) > 120 {
-		return 0, errors.New("invalid name")
-	}
-
-	id, err := generateConnectionID()
-	if err != nil {
-		return 0, err
-	}
-	c := Connection{
-		id:   id,
-		name: name,
-		role: role,
-	}
-	c.connector, err = this.account.apis.Connectors.get(connector)
-	if err != nil {
-		return 0, ConnectorNotFoundError{AppType}
-	}
-	if c.connector.typ != AppType {
-		return 0, errors.New("connector is not an app connector")
-	}
-
-	var clientSecret string
-	if c.connector.oAuth != nil {
-		clientSecret = c.connector.oAuth.ClientSecret
-	}
-	connection, err := _connector.RegisteredApp(c.connector.name).Connect(context.Background(), &_connector.AppConfig{
-		Role:         _connector.Role(role),
-		ClientSecret: clientSecret,
-		AccessToken:  accessToken,
-	})
-	if err != nil {
-		return 0, err
-	}
-	resourceCode, err := connection.Resource()
-	if err != nil {
-		return 0, err
-	}
-	resource, _ := c.connector.resources.getByCode(resourceCode)
-
-	var resourceID int
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		if resource == nil {
-			err = tx.QueryRow("INSERT INTO resources (connector, code, oauth_access_token,"+
-				" oauth_refresh_token, oauth_expires_in) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-				connector, resourceCode, accessToken, refreshToken, expiresIn).Scan(&resourceID)
-		} else if refreshToken != resource.oAuthRefreshToken {
-			_, err = tx.Exec("UPDATE resources "+
-				"SET oauth_access_token = $1, oauth_refresh_token = $2, oauth_expires_in = $3 WHERE id = $4",
-				accessToken, refreshToken, expiresIn, resource.id)
-			resourceID = resource.id
-		}
-		if err != nil {
-			return err
-		}
-		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector, resource)"+
-			" VALUES ($1, $2, $3, 'App', $4, $5, $6)", id, this.id, name, role, connector, resourceID)
-		return err
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	if resourceID > 0 {
-		c.resource = c.connector.resources.add(resourceID, resourceCode, accessToken, refreshToken, expiresIn)
-	}
-	this.add(&c)
-
-	go func() {
-		err := this.reloadSchema(id)
-		if err != nil {
-			log.Printf("[error] cannot reload schema for connection %d: %s", id, err)
-		}
-	}()
-
-	return id, err
+// ConnectionOptions values are passed to the Add method with options
+// relative to the connection.
+type ConnectionOptions struct {
+	Storage int
+	Stream  int
+	Host    string
+	OAuth   *AddConnectionOAuthOptions
 }
 
-// AddDatabase adds a database connection given its role, database connector,
-// name and returns its identifier. name cannot be empty and cannot be longer
-// than 120 runes.
-//
-// If the connector does not exist, it returns a ConnectorNotFoundError error.
-func (this *Connections) AddDatabase(role ConnectionRole, connector int, name string) (int, error) {
-
-	if role != SourceRole && role != DestinationRole {
-		return 0, errors.New("invalid role")
-	}
-	if connector < 1 || connector > maxInt32 {
-		return 0, errors.New("invalid connector")
-	}
-	if name == "" || utf8.RuneCountInString(name) > 120 {
-		return 0, errors.New("invalid name")
-	}
-
-	id, err := generateConnectionID()
-	if err != nil {
-		return 0, err
-	}
-	c := Connection{
-		id:   id,
-		name: name,
-		role: role,
-	}
-	c.connector, err = this.account.apis.Connectors.get(connector)
-	if err != nil {
-		return 0, ConnectorNotFoundError{DatabaseType}
-	}
-	if c.connector.typ != DatabaseType {
-		return 0, errors.New("connector is not a database connector")
-	}
-
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
-			" VALUES ($1, $2, $3, 'Database', $4, $5)", id, this.id, name, role, connector)
-		return err
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	this.add(&c)
-
-	return id, nil
+type AddConnectionOAuthOptions struct {
+	RefreshToken string
+	AccessToken  string
+	ExpiresIn    time.Time
 }
 
-// AddFile adds a file connection given its role, connector, storage
-// connection, name and returns its identifier. If storage is 0, the file
-// connection does not have a storage, otherwise storage must have the given
-// role. name cannot be empty and cannot be longer than 120 runes.
+// Add adds a connection given its role, connector, name, options related to
+// the connector and returns its identifier. name cannot be empty and cannot
+// be longer than 120 runes.
 //
 // If the connector does not exist, it returns a ConnectorNotFoundError error.
-// If the storage does not exist, it returns a ConnectionNotFound error.
-func (this *Connections) AddFile(role ConnectionRole, connector, storage int, name string) (int, error) {
+func (this *Connections) Add(role ConnectionRole, connector int, name string, opts ConnectionOptions) (int, error) {
 
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.New("invalid role")
@@ -338,311 +232,164 @@ func (this *Connections) AddFile(role ConnectionRole, connector, storage int, na
 	if connector < 1 || connector > maxInt32 {
 		return 0, errors.New("invalid connector")
 	}
-	if storage < 0 || storage > maxInt32 {
-		return 0, errors.New("invalid storage")
-	}
 	if name == "" || utf8.RuneCountInString(name) > 120 {
 		return 0, errors.New("invalid name")
+	}
+
+	if opts.OAuth != nil {
+		if opts.OAuth.AccessToken == "" {
+			return 0, errors.New("access token cannot be empty in OAuth")
+		}
+		if opts.OAuth.RefreshToken == "" {
+			return 0, errors.New("refresh token cannot be empty in OAuth")
+		}
 	}
 
 	id, err := generateConnectionID()
 	if err != nil {
 		return 0, err
 	}
-	c := Connection{
-		id:   id,
-		name: name,
-		role: role,
+	n := addConnectionNotification{
+		Account:   this.account.id,
+		Workspace: this.id,
+		ID:        id,
+		Name:      name,
+		Role:      role,
+		Connector: connector,
 	}
-	c.connector, err = this.account.apis.Connectors.get(connector)
+	c, err := this.account.apis.Connectors.get(connector)
 	if err != nil {
-		return 0, ConnectorNotFoundError{FileType}
+		return 0, ConnectorNotFoundError{}
 	}
-	if c.connector.typ != FileType {
-		return 0, errors.New("connector is not a file connector")
+
+	// Validate Storage, Host and OAuth options.
+	if opts.Storage != 0 && c.typ != FileType {
+		return 0, fmt.Errorf("%s connector cannot have storages", strings.ToLower(c.typ.String()))
 	}
-	if storage > 0 {
-		s, err := this.get(storage)
-		if err != nil {
-			return 0, ConnectionNotFoundError{StorageType}
+	if opts.Stream != 0 {
+		switch c.typ {
+		case MobileType, ServerType, WebsiteType:
+		default:
+			return 0, fmt.Errorf("%s connector cannot have streams", strings.ToLower(c.typ.String()))
 		}
-		if s.connector.typ != StorageType {
-			return 0, errors.New("storage is not a storage connection")
+	}
+	if opts.Host != "" && c.typ != WebsiteType {
+		return 0, fmt.Errorf("%s connector cannot have host", strings.ToLower(c.typ.String()))
+	}
+	if (opts.OAuth == nil) != (c.oAuth == nil) {
+		if opts.OAuth == nil {
+			return 0, errors.New("OAuth is required by the connector")
 		}
-		if s.role != role {
-			if role == SourceRole {
-				return 0, errors.New("storage is not a source")
+		return 0, errors.New("connector does not support OAuth")
+	}
+
+	switch c.typ {
+	case FileType:
+		if opts.Storage < 0 || opts.Storage > maxInt32 {
+			return 0, errors.New("invalid storage")
+		}
+		if opts.Storage > 0 {
+			s, err := this.get(opts.Storage)
+			if err != nil {
+				return 0, ConnectionNotFoundError{StorageType}
 			}
-			return 0, errors.New("storage is not a destination")
+			if s.connector.typ != StorageType {
+				return 0, errors.New("storage is not a storage connection")
+			}
+			if s.role != role {
+				if role == SourceRole {
+					return 0, errors.New("storage is not a source")
+				}
+				return 0, errors.New("storage is not a destination")
+			}
+			n.Storage = opts.Storage
+		}
+	case ServerType:
+		n.ServerKey, err = generateServerKey()
+		if err != nil {
+			return 0, err
+		}
+	case WebsiteType:
+		if h, p, found := strings.Cut(opts.Host, ":"); h == "" || len(opts.Host) > 255 {
+			return 0, errors.New("invalid website host")
+		} else if found {
+			if port, _ := strconv.Atoi(p); port <= 0 || port > 65535 {
+				return 0, errors.New("invalid website host")
+			}
+		}
+	}
+
+	// Set the resource. It can be an existent resource or a resource to be created.
+	if opts.OAuth != nil {
+		connection, err := _connector.RegisteredApp(c.name).Connect(context.Background(), &_connector.AppConfig{
+			Role:         _connector.Role(role),
+			ClientSecret: c.oAuth.ClientSecret,
+			AccessToken:  opts.OAuth.AccessToken,
+		})
+		if err != nil {
+			return 0, err
+		}
+		code, err := connection.Resource()
+		if err != nil {
+			return 0, err
+		}
+		n.Resource.Code = code
+		resource, _ := c.getResourceByCode(code)
+		if resource != nil {
+			n.Resource.ID = resource.id
+		}
+		if resource == nil || opts.OAuth.AccessToken != resource.oAuthAccessToken ||
+			opts.OAuth.RefreshToken != resource.oAuthRefreshToken ||
+			opts.OAuth.ExpiresIn != resource.oAuthExpiresIn {
+			n.Resource.OAuthAccessToken = opts.OAuth.AccessToken
+			n.Resource.OAuthRefreshToken = opts.OAuth.RefreshToken
+			n.Resource.OAuthExpiresIn = opts.OAuth.ExpiresIn
 		}
 	}
 
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector, storage)"+
-			" VALUES ($1, $2, $3, 'File', $4, $5, $6)", id, this.id, name, role, connector, storage)
-		return err
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	this.add(&c)
-
-	return id, nil
-}
-
-// AddEventStream adds an event stream connection given its role, event stream
-// connector and name. name cannot be empty and cannot be longer than 120
-// runes.
-//
-// If the connector does not exist, it returns a ConnectorNotFoundError error.
-func (this *Connections) AddEventStream(role ConnectionRole, connector int, name string) (int, error) {
-
-	if role != SourceRole && role != DestinationRole {
-		return 0, errors.New("invalid role")
-	}
-	if connector < 1 || connector > maxInt32 {
-		return 0, errors.New("invalid connector")
-	}
-	if name == "" || utf8.RuneCountInString(name) > 120 {
-		return 0, errors.New("invalid name")
-	}
-
-	id, err := generateConnectionID()
-	if err != nil {
-		return 0, err
-	}
-	c := Connection{
-		id:   id,
-		name: name,
-		role: role,
-	}
-	c.connector, err = this.account.apis.Connectors.get(connector)
-	if err != nil {
-		return 0, ConnectorNotFoundError{EventStreamType}
-	}
-	if c.connector.typ != EventStreamType {
-		return 0, errors.New("connector is not an event stream connector")
-	}
-
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
+		if n.Resource.Code != "" {
+			if n.Resource.ID == 0 {
+				// Insert a new resource.
+				err = tx.QueryRow("INSERT INTO resources (connector, code, oauth_access_token,"+
+					" oauth_refresh_token, oauth_expires_in) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+					connector, n.Resource.Code, n.Resource.OAuthAccessToken, n.Resource.OAuthRefreshToken, n.Resource.OAuthExpiresIn).
+					Scan(&n.Resource.ID)
+			} else if n.Resource.OAuthAccessToken != "" {
+				// Update the current resource.
+				_, err = tx.Exec("UPDATE resources "+
+					"SET oauth_access_token = $1, oauth_refresh_token = $2, oauth_expires_in = $3 WHERE id = $4",
+					n.Resource.OAuthAccessToken, n.Resource.OAuthRefreshToken, n.Resource.OAuthExpiresIn, n.Resource.ID)
+			}
+			if err != nil {
+				return err
+			}
+		}
+		// Insert the connection.
 		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
-			" VALUES ($1, $2, $3, 'EventStream', $4, $5)", id, this.id, name, role, connector)
-		return err
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	this.add(&c)
-
-	return id, nil
-}
-
-// AddServer adds a server connection given its role, server connector and
-// name. name cannot be empty and cannot be longer than 120 runes.
-//
-// If the connector does not exist, it returns a ConnectorNotFoundError error.
-func (this *Connections) AddServer(role ConnectionRole, connector int, name string) (int, error) {
-
-	if role != SourceRole && role != DestinationRole {
-		return 0, errors.New("invalid role")
-	}
-	if connector < 1 || connector > maxInt32 {
-		return 0, errors.New("invalid connector")
-	}
-	if name == "" || utf8.RuneCountInString(name) > 120 {
-		return 0, errors.New("invalid name")
-	}
-
-	id, err := generateConnectionID()
-	if err != nil {
-		return 0, err
-	}
-	c := Connection{
-		id:   id,
-		name: name,
-		role: role,
-	}
-	c.connector, err = this.account.apis.Connectors.get(connector)
-	if err != nil {
-		return 0, ConnectorNotFoundError{ServerType}
-	}
-	if c.connector.typ != ServerType {
-		return 0, errors.New("connector is not a server connector")
-	}
-
-	// Generate the API key.
-	key, err := generateAPIKey()
-	if err != nil {
-		return 0, err
-	}
-
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
-			" VALUES ($1, $2, $3, 'Server', $4, $5)", id, this.id, name, role, connector)
+			" VALUES ($1, $2, $3, $4, $5, $6)", n.ID, n.Workspace, n.Name, c.typ, n.Role, n.Connector)
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec("INSERT INTO connections_keys (connection, position, \"key\") VALUE ($1, 0, $2)", id, key)
-		return err
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	this.add(&c)
-
-	return id, nil
-}
-
-// AddMobile adds a mobile connection given its role, mobile connector and
-// name. name cannot be empty and cannot be longer than 120 runes.
-//
-// If the connector does not exist, it returns a ConnectorNotFoundError error.
-func (this *Connections) AddMobile(role ConnectionRole, connector int, name string) (int, error) {
-
-	if role != SourceRole && role != DestinationRole {
-		return 0, errors.New("invalid role")
-	}
-	if connector < 1 || connector > maxInt32 {
-		return 0, errors.New("invalid connector")
-	}
-	if name == "" || utf8.RuneCountInString(name) > 120 {
-		return 0, errors.New("invalid name")
-	}
-
-	id, err := generateConnectionID()
-	if err != nil {
-		return 0, err
-	}
-	c := Connection{
-		id:   id,
-		name: name,
-		role: role,
-	}
-	c.connector, err = this.account.apis.Connectors.get(connector)
-	if err != nil {
-		return 0, ConnectorNotFoundError{MobileType}
-	}
-	if c.connector.typ != MobileType {
-		return 0, errors.New("connector is not a mobile connector")
-	}
-
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
-			" VALUES ($1, $2, $3, 'Mobile', $4, $5)", id, this.id, name, role, connector)
-		return err
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	this.add(&c)
-
-	return id, nil
-}
-
-// AddStorage adds a storage connection given its role, connector, name and
-// returns its identifier. name cannot be empty and cannot be longer than 120
-// runes.
-//
-// If the connector does not exist, it returns a ConnectorNotFoundError error.
-func (this *Connections) AddStorage(role ConnectionRole, connector int, name string) (int, error) {
-
-	if role != SourceRole && role != DestinationRole {
-		return 0, errors.New("invalid role")
-	}
-	if connector < 1 || connector > maxInt32 {
-		return 0, errors.New("invalid connector")
-	}
-	if name == "" || utf8.RuneCountInString(name) > 120 {
-		return 0, errors.New("invalid name")
-	}
-
-	id, err := generateConnectionID()
-	if err != nil {
-		return 0, err
-	}
-	c := Connection{
-		id:   id,
-		name: name,
-		role: role,
-	}
-	c.connector, err = this.account.apis.Connectors.get(connector)
-	if err != nil {
-		return 0, ConnectorNotFoundError{StorageType}
-	}
-	if c.connector.typ != StorageType {
-		return 0, errors.New("connector is not a storage connector")
-	}
-
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
-			" VALUES ($1, $2, $3, 'Storage', $4, $5)", id, this.id, name, role, connector)
-		return err
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	this.add(&c)
-
-	return id, nil
-}
-
-// AddWebsite adds a website connection given its role, website connector,
-// name, website host and returns its identifier. name cannot be empty and
-// cannot be longer than 120 runes. host may be of the form "host:port".
-//
-// If the connector does not exist, it returns a ConnectorNotFoundError error.
-func (this *Connections) AddWebsite(role ConnectionRole, connector int, name, host string) (int, error) {
-
-	if role != SourceRole && role != DestinationRole {
-		return 0, errors.New("invalid role")
-	}
-	if connector < 1 || connector > maxInt32 {
-		return 0, errors.New("invalid connector")
-	}
-	if name == "" || utf8.RuneCountInString(name) > 120 {
-		return 0, errors.New("invalid name")
-	}
-	if h, p, found := strings.Cut(host, ":"); h == "" || len(host) > 255 {
-		return 0, errors.New("invalid website host")
-	} else if found {
-		if port, _ := strconv.Atoi(p); port <= 0 || port > 65535 {
-			return 0, errors.New("invalid website host")
+		if n.ServerKey != "" {
+			// Insert the server key.
+			_, err = tx.Exec("INSERT INTO connections_keys (connection, position, \"key\") VALUE ($1, 0, $2)",
+				id, n.ServerKey)
+			if err != nil {
+				return err
+			}
 		}
-	}
-
-	id, err := generateConnectionID()
-	if err != nil {
-		return 0, err
-	}
-	c := Connection{
-		id:          id,
-		name:        name,
-		role:        role,
-		websiteHost: host,
-	}
-	c.connector, err = this.account.apis.Connectors.get(connector)
-	if err != nil {
-		return 0, ConnectorNotFoundError{StorageType}
-	}
-	if c.connector.typ != StorageType {
-		return 0, errors.New("connector is not a storage connector")
-	}
-
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector, website_host)"+
-			" VALUES ($1, $2, $3, 'Website', $4, $5, $6)", id, this.id, name, role, connector, host)
-		return err
+		return tx.Notify(n)
 	})
 	if err != nil {
+		if postgres.IsForeignKeyViolation(err) {
+			switch postgres.ErrConstraintName(err) {
+			case "connections_workspace_fkey", "connections_connector_fkey":
+				err = ConnectionNotFoundError{DatabaseType}
+			}
+		}
 		return 0, err
 	}
-
-	this.add(&c)
 
 	return id, nil
 }
@@ -681,43 +428,25 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 // If the connection is a storage and has connected files, it returns the
 // ErrStorageHasConnectedFiles error.
 func (this *Connections) Delete(id int) error {
-
 	if id < 1 || id > maxInt32 {
 		return errors.New("invalid connection identifier")
 	}
-
 	c, err := this.get(id)
 	if err != nil {
 		return nil
 	}
-
-	var connectionColumn string
-	switch c.connector.typ {
-	case MobileType, WebsiteType:
-		connectionColumn = "source"
-	case ServerType:
-		connectionColumn = "server"
-	case EventStreamType:
-		connectionColumn = "stream"
+	n := deleteConnectionNotification{
+		Account:   this.account.id,
+		Workspace: this.id,
+		ID:        id,
 	}
-
-	var deletedResources []int
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		var resource string
-		err := tx.QueryRow("SELECT resource FROM connections WHERE id = $1", id).Scan(&resource)
-		if err != nil {
-			if err == postgres.ErrNoRows {
-				return nil
-			}
-			return err
-		}
-		if c.connector.typ == StorageType {
-			var hasFiles bool
-			err = tx.QueryRow("SELECT TRUE FROM connections WHERE storage = $1", id).Scan(&hasFiles)
+		if c.connector.oAuth != nil {
+			// Delete the resource of the deleted connection if it has no other connections.
+			_, err = tx.Exec("DELETE FROM resources AS r WHERE NOT EXISTS (\n"+
+				"\tSELECT FROM connections AS c\n"+
+				"\tWHERE r.id = c.resource AND c.id <> $1 AND c.resource IS NULL\n)", id)
 			if err != nil {
-				if err == postgres.ErrNoRows {
-					return ErrStorageHasConnectedFiles
-				}
 				return err
 			}
 		}
@@ -725,56 +454,9 @@ func (this *Connections) Delete(id int) error {
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec("DELETE FROM connections_keys WHERE connection = $1", id)
-		if err != nil {
-			return err
-		}
-		_, err = tx.Exec("DELETE FROM connections_imports WHERE connection = $1", id)
-		if err != nil {
-			return err
-		}
-		_, err = tx.Exec("DELETE FROM connections_stats WHERE connection = $1", id)
-		if err != nil {
-			return err
-		}
-		if connectionColumn != "" {
-			_, err = tx.Exec("DELETE FROM connections_stats_events WHERE "+connectionColumn+" = $1", id)
-			if err != nil {
-				return err
-			}
-		}
-		_, err = tx.Exec("DELETE FROM connections_users WHERE connection = $1", id)
-		if err != nil {
-			return err
-		}
-		// Delete the resource of the deleted connection if it has no other connections.
-		err = tx.QueryScan("DELETE FROM resources AS r WHERE NOT EXISTS (\n"+
-			"\tSELECT FROM connections AS s\n"+
-			"\tWHERE r.id = $1 AND s.resource IS NULL\n)\nRETURNING r.id", resource,
-			func(rows *postgres.Rows) error {
-				var id int
-				for rows.Next() {
-					if err := rows.Scan(&id); err != nil {
-						return err
-					}
-					deletedResources = append(deletedResources, id)
-				}
-				return nil
-			})
-		return err
+		return tx.Notify(n)
 	})
-	if err != nil {
-		return err
-	}
-
-	if deletedResources != nil {
-		for _, id := range deletedResources {
-			c.connector.resources.delete(id)
-		}
-	}
-	this.delete(id)
-
-	return nil
+	return err
 }
 
 // Import starts the import of the users from the connection with the given
@@ -1136,12 +818,24 @@ func (this *Connections) Imports(id int) ([]*Import, error) {
 	return imports, nil
 }
 
+// list returns all the connections.
+func (this *Connections) list() []*Connection {
+	this.state.Lock()
+	connections := make([]*Connection, len(this.state.ids))
+	i := 0
+	for _, c := range this.state.ids {
+		connections[i] = c
+		i++
+	}
+	this.state.Unlock()
+	return connections
+}
+
 // List returns a list of ConnectionInfo describing all connections.
 func (this *Connections) List() []*ConnectionInfo {
-	this.mu.Lock()
-	infos := make([]*ConnectionInfo, len(this.connections))
-	i := 0
-	for _, c := range this.connections {
+	connections := this.list()
+	infos := make([]*ConnectionInfo, len(connections))
+	for i, c := range connections {
 		info := ConnectionInfo{
 			ID:         c.id,
 			Name:       c.name,
@@ -1158,9 +852,7 @@ func (this *Connections) List() []*ConnectionInfo {
 			info.OAuthURL = c.connector.oAuth.URL
 		}
 		infos[i] = &info
-		i++
 	}
-	this.mu.Unlock()
 	sort.Slice(infos, func(i, j int) bool {
 		a, b := infos[i], infos[j]
 		return a.Name < b.Name || a.Name == b.Name && a.ID == b.ID
@@ -1434,9 +1126,6 @@ func (this *Connections) SetFileStorage(file, storage int) error {
 			return ConnectionNotFoundError{StorageType}
 		}
 	}
-	if f.storage == s {
-		return nil
-	}
 	if s != nil && s.role != f.role {
 		if f.role == SourceRole {
 			return errors.New("storage connection is not a source")
@@ -1445,14 +1134,18 @@ func (this *Connections) SetFileStorage(file, storage int) error {
 	}
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		// TODO(marco): check that store, if not zero, still exists
-		_, err = tx.Exec("UPDATE connections SET storage = $1 WHERE id = $2", storage, file)
-		return err
+		_, err = tx.Exec("UPDATE connections SET storage = NULLIF($1, 0) WHERE id = $2", storage, file)
+		if err != nil {
+			return err
+		}
+		//return tx.Notify(n)
+		return nil
 	})
 	if err != nil {
 		return err
 	}
 
-	this.setStorage(file, storage)
+	//this.setStorage(file, storage)
 
 	return err
 }
@@ -1468,7 +1161,6 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 	if id < 1 || id > maxInt32 {
 		return errors.New("invalid connection identifier")
 	}
-
 	if !utf8.ValidString(query) {
 		return errors.New("query is not UTF-8 encoded")
 	}
@@ -1490,22 +1182,22 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 		return errors.New("connection is not a source")
 	}
 
-	_, err = this.db.Exec("UPDATE connections\nSET users_query = $1 WHERE id = $2", query, id)
-	if err != nil {
-		return err
+	n := setUserQueryNotification{
+		Account:    this.account.id,
+		Workspace:  this.id,
+		Connection: id,
+		Query:      query,
 	}
 
-	this.setUserQuery(id, query)
-
-	// Reload the schema of the connection.
-	go func() {
-		err := this.reloadSchema(id)
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
+		_, err = tx.Exec("UPDATE connections\nSET users_query = $1 WHERE id = $2", query, id)
 		if err != nil {
-			log.Printf("[error] cannot reload schema for connection %d: %s", id, err)
+			return err
 		}
-	}()
+		return tx.Notify(n)
+	})
 
-	return nil
+	return err
 }
 
 // ConnectionsStats represents the statistics on a connection for the last 24
@@ -1550,38 +1242,47 @@ func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 }
 
 // add adds the connection c to the connections.
-// It panics if a connection with the same identifier already exists.
+// If a connection with the same identifier already exists, add overwrites it.
 func (this *Connections) add(c *Connection) {
-	// TODO(marco) also checks the existence of connection, storage and stream.
-	this.mu.Lock()
-	defer this.mu.Unlock()
-	_, ok := this.connections[c.id]
-	if ok {
-		panic("attempted to add an already existing connection")
-	}
-	this.connections[c.id] = c
+	this.state.Lock()
+	this.state.ids[c.id] = c
+	this.state.Unlock()
+	return
+}
+
+// clone clones a connection and return the resulting collection.
+// It panics if the connection does not exist.
+func (this *Connections) clone(id int) *Connection {
+	this.state.Lock()
+	c := this.state.ids[id]
+	this.state.Unlock()
+	cc := new(Connection)
+	*cc = *c
+	return cc
 }
 
 // delete deletes the connection with identifier id from the connections.
 // If the connection does not exist, it does nothing.
 func (this *Connections) delete(id int) {
-	this.mu.Lock()
-	delete(this.connections, id)
-	this.mu.Unlock()
-}
-
-var errConnectionNotFound = errors.New("connection does not exist")
-
-// get returns the connection with identifier id.
-// Returns the errConnectionNotFound error if the connection does not exist.
-func (this *Connections) get(id int) (*Connection, error) {
-	this.mu.Lock()
-	defer this.mu.Unlock()
-	c, ok := this.connections[id]
-	if !ok {
-		return nil, errConnectionNotFound
+	this.state.Lock()
+	var usages []*Connection
+	for _, c := range this.state.ids {
+		if c.storage != nil && c.storage.id == id || c.stream != nil && c.stream.id == id {
+			usages = append(usages, c)
+		}
 	}
-	return c, nil
+	for _, c := range usages {
+		cc := Connection{}
+		cc = *c
+		if cc.storage != nil && cc.storage.id == id {
+			cc.storage = nil
+		} else {
+			cc.stream = nil
+		}
+		this.state.ids[c.id] = &cc
+	}
+	delete(this.state.ids, id)
+	this.state.Unlock()
 }
 
 // newFirehose returns a new Firehose used to call a connection method.
@@ -1772,64 +1473,23 @@ func (this *Connections) reloadSchema(id int) error {
 	if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
 		return fmt.Errorf("cannot marshal schema of the connection %d: data is too large", id)
 	}
-	_, err = this.db.Exec("UPDATE connections SET \"schema\" = $1 WHERE id = $2", rawSchema, id)
-	if err != nil {
-		return err
+
+	n := setConnectionUserSchemaNotification{
+		Account:    this.account.id,
+		Workspace:  this.id,
+		Connection: id,
+		Schema:     rawSchema,
 	}
 
-	this.setUserSchema(id, schema)
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
+		_, err = tx.Exec("UPDATE connections SET \"schema\" = $1 WHERE id = $2", rawSchema, id)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(n)
+	})
 
 	return err
-}
-
-// setStorage sets the storage of a file connection. file and storage are the
-// identifiers of the file and storage connections.
-// If file or storage does not exist, it does nothing.
-func (this *Connections) setStorage(file, storage int) {
-	cc := new(Connection)
-	this.mu.Lock()
-	defer this.mu.Unlock()
-	f, ok := this.connections[file]
-	if !ok {
-		return
-	}
-	s, ok := this.connections[storage]
-	if !ok {
-		return
-	}
-	*cc = *f
-	cc.storage = s
-	this.connections[file] = cc
-}
-
-// setUserQuery sets the user query of the connection with identifier id.
-// If the connection does not exist, it does nothing.
-func (this *Connections) setUserQuery(id int, query string) {
-	this.mu.Lock()
-	defer this.mu.Unlock()
-	c, ok := this.connections[id]
-	if !ok || c.usersQuery == query {
-		return
-	}
-	cc := new(Connection)
-	*cc = *c
-	cc.usersQuery = query
-	this.connections[id] = cc
-}
-
-// setUserSchema sets the user schema of the connection with identifier id.
-// If the connection does not exist, it does nothing.
-func (this *Connections) setUserSchema(id int, schema types.Schema) {
-	cc := new(Connection)
-	this.mu.Lock()
-	defer this.mu.Unlock()
-	c, ok := this.connections[id]
-	if !ok {
-		return
-	}
-	*cc = *c
-	cc.schema = schema
-	this.connections[id] = cc
 }
 
 // userSchema returns the user schema and the paths of the mapped properties of
@@ -1939,12 +1599,12 @@ func generateConnectionID() (int, error) {
 	return int(n.Int64()) + 1, nil
 }
 
-// generateAPIKey generates an API key.
-func generateAPIKey() (string, error) {
+// generateServerKey generates a server key.
+func generateServerKey() (string, error) {
 	key := make([]byte, 24)
 	_, err := rand.Read(key)
 	if err != nil {
-		return "", errors.New("cannot generate an API key")
+		return "", errors.New("cannot generate a server key")
 	}
 	return base62.EncodeToString(key)[0:32], nil
 }

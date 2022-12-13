@@ -11,6 +11,7 @@ import (
 	"errors"
 	"regexp"
 	"sort"
+	"sync"
 
 	"chichi/apis/postgres"
 
@@ -20,12 +21,31 @@ import (
 
 type Accounts struct {
 	*APIs
-	accounts map[int]*Account
+	state accountsState
+}
+
+type accountsState struct {
+	sync.Mutex
+	ids map[int]*Account
+}
+
+var errAccountNotFound = errors.New("account does not exist")
+
+// get returns the account with identifier id.
+// Returns the errAccountNotFound error if the account does not exist.
+func (this *Accounts) get(id int) (*Account, error) {
+	this.state.Lock()
+	c, ok := this.state.ids[id]
+	this.state.Unlock()
+	if ok {
+		return c, nil
+	}
+	return nil, errAccountNotFound
 }
 
 // newAccounts returns a new *Accounts value.
 func newAccounts(apis *APIs, accounts map[int]*Account) *Accounts {
-	return &Accounts{APIs: apis, accounts: accounts}
+	return &Accounts{APIs: apis, state: accountsState{ids: accounts}}
 }
 
 // Account represents an account.
@@ -55,13 +75,9 @@ var ErrPasswordInvalid = errors.New("password is not valid")
 var ErrAuthenticationFailed = errors.New("authentication failed")
 
 // As returns the account with identifier id.
-// Returns an error is the workspace does not exist.
+// Returns an error is the account does not exist.
 func (this *Accounts) As(id int) (*Account, error) {
-	acc, ok := this.accounts[id]
-	if !ok {
-		return nil, errors.New("account does not exit")
-	}
-	return acc, nil
+	return this.get(id)
 }
 
 // Authenticate authenticates an account given its email and password. If the
@@ -91,7 +107,15 @@ func (this *Accounts) Authenticate(email, password string) (int, error) {
 
 // Count returns the total number of accounts.
 func (this *Accounts) Count() int {
-	return len(this.accounts)
+	return this.count()
+}
+
+// count returns the total number of accounts.
+func (this *Accounts) count() int {
+	this.state.Lock()
+	l := len(this.state.ids)
+	this.state.Unlock()
+	return l
 }
 
 // Create a new account given its email and password and returns its
@@ -142,9 +166,9 @@ func (this *Accounts) Get(id int) (*AccountInfo, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.New("invalid account identifier")
 	}
-	acc, ok := this.accounts[id]
-	if !ok {
-		return nil, ErrAccountNotFound
+	acc, err := this.get(id)
+	if err != nil {
+		return nil, err
 	}
 	ips := make([]string, len(acc.internalIPs))
 	copy(ips, acc.internalIPs)
@@ -157,11 +181,51 @@ func (this *Accounts) Get(id int) (*AccountInfo, error) {
 	return &info, nil
 }
 
-// List returns a list AccountInfo, in the given order, describing all accounts
-// but limited by limit and first.
-// order can be "name" or "email". limit must be > 0 and first must be >= 0.
-func (this *Accounts) List(order string, limit, first int) []*AccountInfo {
-	if order != "name" && order != "email" {
+type AccountSort int
+
+const (
+	SortByName AccountSort = iota
+	SortByEmail
+)
+
+// list returns the accounts sort by the given order, starting from first and
+// up to limit. first must be >= 0 and limit must be > 0. It returns nil if
+// there are no accounts to return.
+func (this *Accounts) list(order AccountSort, first, limit int) []*Account {
+	this.state.Lock()
+	count := len(this.state.ids)
+	if first >= count {
+		this.state.Unlock()
+		return nil
+	}
+	if first+limit > count {
+		limit = count - first
+	}
+	accounts := make([]*Account, count)
+	i := 0
+	for _, account := range this.state.ids {
+		accounts[i] = account
+	}
+	if order == SortByName {
+		sort.Slice(accounts, func(i, j int) bool {
+			a, b := accounts[i], accounts[j]
+			return a.name < b.name || a.name == b.name && a.id < b.id
+		})
+	} else {
+		sort.Slice(accounts, func(i, j int) bool {
+			a, b := accounts[i], accounts[j]
+			return a.email < b.email || a.email == b.email && a.id < b.id
+		})
+	}
+	this.state.Unlock()
+	return accounts[first : first+limit]
+}
+
+// List returns a list of *AccountInfo, in the given order, describing all
+// accounts but starting from first and up to limit. first must be >= 0 and
+// limit must be > 0.
+func (this *Accounts) List(order AccountSort, first, limit int) []*AccountInfo {
+	if order != SortByName && order != SortByEmail {
 		panic("invalid order")
 	}
 	if limit <= 0 {
@@ -170,29 +234,12 @@ func (this *Accounts) List(order string, limit, first int) []*AccountInfo {
 	if first < 0 {
 		panic("invalid first")
 	}
-	if first >= len(this.accounts) {
+	accounts := this.list(order, first, limit)
+	if accounts == nil {
 		return []*AccountInfo{}
 	}
-	if first+limit > len(this.accounts) {
-		limit = len(this.accounts) - first
-	}
-	accounts := make([]*Account, 0, len(this.accounts))
-	for _, account := range this.accounts {
-		accounts = append(accounts, account)
-	}
-	if order == "name" {
-		sort.Slice(accounts, func(i, j int) bool {
-			a := accounts
-			return a[i].name < a[j].name || a[i].name == a[j].name && a[i].id < a[j].id
-		})
-	} else {
-		sort.Slice(accounts, func(i, j int) bool {
-			a := accounts
-			return a[i].email < a[j].email || a[i].email == a[j].email && a[i].id < a[j].id
-		})
-	}
-	infos := make([]*AccountInfo, limit)
-	for i, account := range accounts[first : first+limit] {
+	infos := make([]*AccountInfo, len(accounts))
+	for i, account := range accounts {
 		ips := make([]string, len(account.internalIPs))
 		copy(ips, account.internalIPs)
 		infos[i] = &AccountInfo{

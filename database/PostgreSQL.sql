@@ -47,18 +47,69 @@ INSERT INTO connectors (name, type, logo_url, webhooks_per, oauth_url, oauth_cli
     ('RabbitMQ', 'EventStream', 'https://cdn.icon-icons.com/icons2/2699/PNG/512/rabbitmq_logo_icon_170810.png', 'None', '', '', '', '', 0),
     ('UISample', 'EventStream', '', 'None', '', '', '', '', 0);
 
+CREATE TABLE workspaces (
+    id SERIAL,
+    account integer NOT NULL,
+    name varchar(100) NOT NULL,
+    user_schema varchar(65535) NOT NULL,
+    group_schema varchar(65535) NOT NULL,
+    event_schema varchar(65535) NOT NULL,
+    PRIMARY KEY (id)
+);
+
+INSERT INTO workspaces (id, account, name, user_schema, group_schema, event_schema)
+VALUES (1, 1, 'Workspace', '{ "properties": [
+    {
+        "name" : "FirstName",
+        "label": "First name",
+        "description": "First name of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    },
+    {
+        "name" : "LastName",
+        "label": "Last name",
+        "description": "Last name of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    },
+    {
+        "name" : "Email",
+        "label": "Email address",
+        "description": "Email address of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    }
+] }', '{ "properties": [
+    {
+        "name" : "Name",
+        "label": "Group name",
+        "description": "Name of the group",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    }
+] }', '');
+
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
 CREATE TABLE connections (
     id integer NOT NULL,
-    workspace integer NOT NULL,
+    workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
     name varchar(120) NOT NULL DEFAULT '',
     type connector_type NOT NULL,
     role role NOT NULL,
     enabled boolean NOT NULL DEFAULT false,
-    connector integer NOT NULL,
-    storage integer NOT NULL DEFAULT 0,
-    stream integer NOT NULL DEFAULT 0,
+    connector integer NOT NULL REFERENCES connectors ON DELETE RESTRICT,
+    storage integer DEFAULT NULL REFERENCES connectors ON DELETE SET NULL,
+    stream integer DEFAULT NULL REFERENCES connectors ON DELETE SET NULL,
     resource integer NOT NULL DEFAULT 0,
     website_host varchar(261) NOT NULL DEFAULT '',
     user_cursor varchar(500) NOT NULL DEFAULT '',
@@ -72,7 +123,7 @@ CREATE TABLE connections (
 
 CREATE TABLE connections_imports (
     id SERIAL,
-    connection integer NOT NULL,
+    connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
     storage integer NOT NULL,
     start_time timestamp NOT NULL,
     end_time timestamp DEFAULT NULL,
@@ -81,7 +132,7 @@ CREATE TABLE connections_imports (
 );
 
 CREATE TABLE connections_keys (
-    connection INT NOT NULL,
+    connection INT NOT NULL REFERENCES connections ON DELETE CASCADE,
     position smallint NOT NULL,
     "key" char(32) NOT NULL,
     PRIMARY KEY (connection, position)
@@ -90,7 +141,7 @@ CREATE TABLE connections_keys (
 CREATE INDEX ON connections_keys ("key");
 
 CREATE TABLE connections_stats (
-    connection integer NOT NULL,
+    connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
     time_slot integer NOT NULL,
     users_in integer NOT NULL,
     PRIMARY KEY (connection, time_slot)
@@ -98,9 +149,9 @@ CREATE TABLE connections_stats (
 
 CREATE TABLE connections_stats_events (
     hour integer NOT NULL,
-    source integer NOT NULL,
-    server integer NOT NULL,
-    stream integer NOT NULL,
+    source integer NOT NULL REFERENCES connections ON DELETE CASCADE,
+    server integer DEFAULT NULL REFERENCES connectors ON DELETE SET NULL,
+    stream integer DEFAULT NULL REFERENCES connectors ON DELETE SET NULL,
     good_events integer NOT NULL,
     bad_events integer NOT NULL,
     PRIMARY KEY (hour, source, server, stream)
@@ -110,7 +161,7 @@ CREATE INDEX ON connections_stats_events (server);
 CREATE INDEX ON connections_stats_events (stream);
 
 CREATE TABLE connections_users (
-    connection integer NOT NULL,
+    connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
     "user" varchar(45) NOT NULL DEFAULT '',
     data varchar(655359) NOT NULL,
     timestamps varchar(655359) NOT NULL DEFAULT '',
@@ -196,54 +247,3 @@ CREATE TABLE warehouse_users (
     LastName varchar(500) NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
-
-CREATE TABLE workspaces (
-    id SERIAL,
-    account integer NOT NULL,
-    name varchar(100) NOT NULL,
-    user_schema varchar(65535) NOT NULL,
-    group_schema varchar(65535) NOT NULL,
-    event_schema varchar(65535) NOT NULL,
-    PRIMARY KEY (id)
-);
-
-INSERT INTO workspaces (id, account, name, user_schema, group_schema, event_schema)
-VALUES (1, 1, 'Workspace', '{ "properties": [
-    {
-        "name" : "FirstName",
-        "label": "First name",
-        "description": "First name of the user",
-        "type": {
-            "name": "Text",
-            "charLen": 300
-        }
-    },
-    {
-        "name" : "LastName",
-        "label": "Last name",
-        "description": "Last name of the user",
-        "type": {
-            "name": "Text",
-            "charLen": 300
-        }
-    },
-    {
-        "name" : "Email",
-        "label": "Email address",
-        "description": "Email address of the user",
-        "type": {
-            "name": "Text",
-            "charLen": 300
-        }
-    }
-] }', '{ "properties": [
-    {
-        "name" : "Name",
-        "label": "Group name",
-        "description": "Name of the group",
-        "type": {
-            "name": "Text",
-            "charLen": 300
-        }
-    }
-] }', '');
