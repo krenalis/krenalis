@@ -32,16 +32,16 @@ func (apis *APIs) keepState(ctx context.Context) {
 			sk.addConnection(n)
 		case "deleteConnection":
 			sk.deleteConnection(n)
-		case "setConnectionUserQuery":
-			sk.setConnectionUserQuery(n)
 		case "setConnectionSettings":
 			sk.setConnectionSettings(n)
-		case "setConnectionUserSchema":
-			sk.setConnectionUserSchema(n)
 		case "setConnectionStorage":
 			sk.setConnectionStorage(n)
 		case "setConnectionStream":
 			sk.setConnectionStream(n)
+		case "setConnectionUserQuery":
+			sk.setConnectionUserQuery(n)
+		case "setConnectionUserSchema":
+			sk.setConnectionUserSchema(n)
 		default:
 			log.Printf("[warning] unknown notification %q received from %d: %s", n.Name, n.PID, n.Payload)
 		}
@@ -172,64 +172,6 @@ func (s stateKeeper) deleteConnection(n postgres.Notification) {
 	return
 }
 
-// setUserQueryNotification is the notification event sent when a user query of
-// a connection is changed.
-type setUserQueryNotification struct {
-	Account    int
-	Workspace  int
-	Connection int
-	Query      string
-}
-
-// setConnectionUserQuery sets the user query of a connection.
-func (s stateKeeper) setConnectionUserQuery(n postgres.Notification) {
-	e := setUserQueryNotification{}
-	if !decodeStateNotification(n, &e) {
-		return
-	}
-	account, _ := s.Accounts.get(e.Account)
-	workspace, _ := account.Workspaces.get(e.Workspace)
-	connection := workspace.Connections.clone(e.Connection)
-	connection.usersQuery = e.Query
-	workspace.Connections.add(connection)
-	// TODO(marco) only one server should reload the schema.
-	go func() {
-		err := workspace.Connections.reloadSchema(e.Connection)
-		if err != nil {
-			log.Printf("[error] cannot reload schema for connection %d: %s", e.Connection, err)
-		}
-	}()
-	return
-}
-
-// setConnectionUserSchemaNotification is the notification event sent when the
-// user schema of a connection is changed.
-type setConnectionUserSchemaNotification struct {
-	Account    int
-	Workspace  int
-	Connection int
-	Schema     json.RawMessage
-}
-
-// setConnectionUserSchema sets the user schema of a connection.
-func (s stateKeeper) setConnectionUserSchema(n postgres.Notification) {
-	e := setConnectionUserSchemaNotification{}
-	if !decodeStateNotification(n, &e) {
-		return
-	}
-	schema, err := types.ParseSchema(bytes.NewReader(e.Schema), nil)
-	if err != nil {
-		log.Printf("[error] cannot parse user schema for connection %d received from notification: %s", e.Connection, err)
-		return
-	}
-	account, _ := s.Accounts.get(e.Account)
-	workspace, _ := account.Workspaces.get(e.Workspace)
-	connection := workspace.Connections.clone(e.Connection)
-	connection.schema = schema
-	workspace.Connections.add(connection)
-	return
-}
-
 // setConnectionSettingsNotification is the notification event sent when the
 // settings of a connection is changed.
 type setConnectionSettingsNotification struct {
@@ -303,6 +245,64 @@ func (s stateKeeper) setConnectionStream(n postgres.Notification) {
 		stream, _ = workspace.Connections.get(e.Stream)
 	}
 	connection.stream = stream
+	workspace.Connections.add(connection)
+	return
+}
+
+// setUserQueryNotification is the notification event sent when a user query of
+// a connection is changed.
+type setUserQueryNotification struct {
+	Account    int
+	Workspace  int
+	Connection int
+	Query      string
+}
+
+// setConnectionUserQuery sets the user query of a connection.
+func (s stateKeeper) setConnectionUserQuery(n postgres.Notification) {
+	e := setUserQueryNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	account, _ := s.Accounts.get(e.Account)
+	workspace, _ := account.Workspaces.get(e.Workspace)
+	connection := workspace.Connections.clone(e.Connection)
+	connection.usersQuery = e.Query
+	workspace.Connections.add(connection)
+	// TODO(marco) only one server should reload the schema.
+	go func() {
+		err := workspace.Connections.reloadSchema(e.Connection)
+		if err != nil {
+			log.Printf("[error] cannot reload schema for connection %d: %s", e.Connection, err)
+		}
+	}()
+	return
+}
+
+// setConnectionUserSchemaNotification is the notification event sent when the
+// user schema of a connection is changed.
+type setConnectionUserSchemaNotification struct {
+	Account    int
+	Workspace  int
+	Connection int
+	Schema     json.RawMessage
+}
+
+// setConnectionUserSchema sets the user schema of a connection.
+func (s stateKeeper) setConnectionUserSchema(n postgres.Notification) {
+	e := setConnectionUserSchemaNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	schema, err := types.ParseSchema(bytes.NewReader(e.Schema), nil)
+	if err != nil {
+		log.Printf("[error] cannot parse user schema for connection %d received from notification: %s", e.Connection, err)
+		return
+	}
+	account, _ := s.Accounts.get(e.Account)
+	workspace, _ := account.Workspaces.get(e.Workspace)
+	connection := workspace.Connections.clone(e.Connection)
+	connection.schema = schema
 	workspace.Connections.add(connection)
 	return
 }
