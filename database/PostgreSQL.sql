@@ -131,6 +131,16 @@ CREATE TABLE connections_imports (
     PRIMARY KEY (id)
 );
 
+CREATE TABLE connections_exports (
+    id SERIAL,
+    connection integer NOT NULL,
+    storage integer NOT NULL,
+    start_time timestamp NOT NULL,
+    end_time timestamp DEFAULT NULL,
+    error varchar(1000) NOT NULL DEFAULT '',
+    PRIMARY KEY (id)
+);
+
 CREATE TABLE connections_keys (
     connection INT NOT NULL REFERENCES connections ON DELETE CASCADE,
     position smallint NOT NULL,
@@ -221,16 +231,11 @@ INSERT INTO smart_events VALUES
 
 CREATE TABLE transformations (
     id SERIAL,
-    golden_record_name varchar(100) NOT NULL DEFAULT '',
-    source_code varchar(65535) NOT NULL,
-    PRIMARY KEY (id)
-);
-
-CREATE TABLE transformations_connections (
     connection integer NOT NULL,
-    property varchar(50) NOT NULL DEFAULT '',
-    transformation integer,
-    PRIMARY KEY (connection, property, transformation)
+    source text NOT NULL,
+    inputs text NOT NULL,
+    output text NOT NULL,
+    PRIMARY KEY (id)
 );
 
 CREATE TABLE users (

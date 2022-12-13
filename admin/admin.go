@@ -179,9 +179,9 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if schema.Valid() {
 			names = schema.PropertiesNames()
 		}
-		properties := make([]map[string]string, len(names))
+		properties := make([]string, len(names))
 		for i, name := range names {
-			properties[i] = map[string]string{"Name": name}
+			properties[i] = name
 		}
 		w.Header().Add("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{"Properties": properties})
@@ -208,23 +208,23 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Serve the saving of transformations.
-	if strings.HasPrefix(rpath, "/transformations/save") {
+	// Handle the "/export" endpoint.
+	if strings.HasPrefix(rpath, "/export") {
 		var req struct {
-			Connection      int
-			Transformations []apis.TransformationToUpdate
+			Connector int
 		}
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		err = workspace.Transformations.SaveAll(req.Connection, req.Transformations)
+		err = workspace.Connections.Export(req.Connector)
 		if err != nil {
-			log.Printf("[error] cannot update transformations: %s", err)
+			log.Printf("[error] %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
+		_, _ = fmt.Fprint(w, `{"status":"ok"}`)
 		return
 	}
 
@@ -378,17 +378,17 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			transformations, err := workspace.Transformations.List(id)
-			properties := []apis.InputProperty{}
+			properties := []string{}
 			for _, t := range transformations {
-				for _, p := range t.InputProperties {
+				for _, input := range t.Inputs {
 					isDuplicate := false
 					for _, pr := range properties {
-						if p.Name == pr.Name {
+						if input == pr {
 							isDuplicate = true
 						}
 					}
 					if !isDuplicate {
-						properties = append(properties, p)
+						properties = append(properties, input)
 					}
 				}
 			}

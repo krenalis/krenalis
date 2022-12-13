@@ -22,7 +22,7 @@ export default class AccountConnections extends React.Component {
 	}
 
 	componentDidMount = async () => {
-		let [connections, err] = await call('/admin/connections/find');
+		let [connections, err] = await call('/admin/connections/find', 'GET');
 		if (err !== null) {
 			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
 			this.toast.current.toast();
@@ -42,7 +42,7 @@ export default class AccountConnections extends React.Component {
 		button.setAttribute('loading', '');
 		let id = this.state.askImportConfirmation;
 		let resetCursor = this.state.resetCursor;
-		let [, err] = await call('/admin/import-raw-user-data-from-connector', {
+		let [, err] = await call('/admin/import-raw-user-data-from-connector', 'POST', {
 			Connector: id,
 			ResetCursor: resetCursor,
 		});
@@ -68,7 +68,7 @@ export default class AccountConnections extends React.Component {
 
 	handleDeleteConfirmation = async () => {
 		let id = this.state.connectionToRemove.ID;
-		let [, err] = await call('/admin/connections/delete', [id]);
+		let [, err] = await call('/admin/connections/delete', 'POST', [id]);
 		if (err !== null) {
 			this.setState({
 				status: { variant: 'danger', icon: 'exclamation-octagon', text: err },
@@ -85,7 +85,7 @@ export default class AccountConnections extends React.Component {
 	};
 
 	handleShowImports = async (connection) => {
-		let [imports, err] = await call('/admin/connections/imports', connection.ID);
+		let [imports, err] = await call('/admin/connections/imports', 'POST', connection.ID);
 		if (err !== null) {
 			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
 			this.toast.current.toast();

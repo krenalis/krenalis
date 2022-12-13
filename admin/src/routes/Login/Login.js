@@ -18,7 +18,7 @@ export default class Login extends React.Component {
 
 	handleLogin = async () => {
 		this.setState({ status: null });
-		let [, err] = await call('/admin/', { email: this.state.email, password: this.state.password });
+		let [, err] = await call('/admin/', 'POST', { email: this.state.email, password: this.state.password });
 		if (err !== null) {
 			if (err === 'AuthenticationFailedError') {
 				this.setState({

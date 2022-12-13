@@ -41,7 +41,7 @@ export default class AccountConnectionProperties extends React.Component {
 	async componentDidMount() {
 		let err, connection, connectionProperties, leftProperties, rightProperties, transformations;
 
-		[connection, err] = await call('/admin/connections/get', this.connectionID);
+		[connection, err] = await call('/admin/connections/get', 'POST', this.connectionID);
 		if (err) {
 			showError.call(this, err);
 			return;
@@ -51,7 +51,7 @@ export default class AccountConnectionProperties extends React.Component {
 			return;
 		}
 
-		[connectionProperties, err] = await call('/admin/connectors-properties', {
+		[connectionProperties, err] = await call('/admin/connectors-properties', 'POST', {
 			Connector: this.connectionID,
 		});
 		if (err) {
@@ -59,27 +59,28 @@ export default class AccountConnectionProperties extends React.Component {
 			return;
 		}
 
-		[leftProperties, err] = await call('/admin/connections/get-used-properties', this.connectionID);
+		[leftProperties, err] = await call('/admin/connections/get-used-properties', 'POST', this.connectionID);
 		if (err) {
 			showError.call(this, err);
 			return;
 		}
 
-		[rightProperties, err] = await call('/admin/user-schema-properties');
+		[rightProperties, err] = await call('/admin/user-schema-properties', 'GET');
 		if (err) {
 			showError.call(this, err);
 			return;
 		}
 
-		[transformations, err] = await call(`/api/connections/${this.connectionID}/transformations`);
+		[transformations, err] = await call(`/api/connections/${this.connectionID}/transformations`, 'GET');
 		if (err) {
 			showError.call(this, err);
 			return;
 		}
 
-		let maxID = 0;
+		let counter = 1;
 		for (let t of transformations) {
-			if (t.ID > maxID) maxID = t.ID;
+			t.ID = counter;
+			counter += 1;
 		}
 
 		this.setState({
@@ -88,28 +89,27 @@ export default class AccountConnectionProperties extends React.Component {
 			leftProperties: leftProperties,
 			rightProperties: rightProperties,
 			transformations: transformations,
-			newTransformationID: maxID + 1,
+			newTransformationID: counter + 1,
 		});
 	}
 
-	onAddProperty = (name) => {
+	onAddProperty = (pName) => {
 		let leftProperties = this.state.leftProperties;
-		let property = this.state.connectionProperties.find((p) => p.Name === name);
-		leftProperties.push(property);
+		leftProperties.push(pName);
 		this.setState({ leftProperties: leftProperties });
 	};
 
-	onRemoveProperty = (name, e) => {
+	onRemoveProperty = (pName, e) => {
 		e.stopPropagation();
-		let leftProperties = this.state.leftProperties.filter((p) => p.Name !== name);
+		let leftProperties = this.state.leftProperties.filter((p) => p !== pName);
 		let trs = this.state.transformations;
 		let transformations = [];
 		for (let t of trs) {
-			if (t.InputProperties.findIndex((p) => p.Name === name) !== -1) {
+			if (t.Inputs.findIndex((p) => p === pName) !== -1) {
 				let oldDefaultTransformation = this.computeDefaultTransformationFunction(t);
-				t.InputProperties = t.InputProperties.filter((p) => p.Name !== name);
-				if (t.SourceCode === '' || t.SourceCode === oldDefaultTransformation)
-					t.SourceCode = this.computeDefaultTransformationFunction(t);
+				t.Inputs = t.Inputs.filter((p) => p !== pName);
+				if (t.Source === '' || t.Source === oldDefaultTransformation)
+					t.Source = this.computeDefaultTransformationFunction(t);
 			}
 			transformations.push(t);
 		}
@@ -120,10 +120,10 @@ export default class AccountConnectionProperties extends React.Component {
 		let transformations = this.state.transformations;
 		let t = {
 			ID: this.state.newTransformationID,
-			InputProperties: [],
-			GRProperty: '',
+			Inputs: [],
+			Output: '',
 		};
-		t.SourceCode = this.computeDefaultTransformationFunction(t);
+		t.Source = this.computeDefaultTransformationFunction(t);
 		transformations.push(t);
 		this.setState({ transformations: transformations, newTransformationID: this.state.newTransformationID + 1 });
 	};
@@ -131,7 +131,7 @@ export default class AccountConnectionProperties extends React.Component {
 	onChangeTransformation = (id, value) => {
 		let transformations = this.state.transformations;
 		let t = transformations.find((t) => t.ID === id);
-		t.SourceCode = value === '' ? this.computeDefaultTransformationFunction(t) : value;
+		t.Source = value === '' ? this.computeDefaultTransformationFunction(t) : value;
 		let i = transformations.findIndex((t) => t.ID === id);
 		transformations[i] = t;
 		this.setState({ transformations: transformations });
@@ -149,18 +149,18 @@ export default class AccountConnectionProperties extends React.Component {
 		for (let t of trs) {
 			if (t.ID === transformationID) {
 				if (prop.column === 'left') {
-					if (t.InputProperties.findIndex((p) => p.Name === prop.name) === -1) {
+					if (t.Inputs.findIndex((p) => p === prop.name) === -1) {
 						let oldDefaultTransformation = this.computeDefaultTransformationFunction(t);
-						t.InputProperties.push({ Connection: this.connectionID, Name: prop.name });
-						if (t.SourceCode === '' || t.SourceCode === oldDefaultTransformation)
-							t.SourceCode = this.computeDefaultTransformationFunction(t);
+						t.Inputs.push(prop.name);
+						if (t.Source === '' || t.Source === oldDefaultTransformation)
+							t.Source = this.computeDefaultTransformationFunction(t);
 					}
 				}
 				if (prop.column === 'right') {
 					// check if GRProperty is already used.
 					let alreadyUsed = false;
 					for (let t of trs) {
-						if (t.GRProperty === prop.name) {
+						if (t.Output === prop.name) {
 							alreadyUsed = true;
 							break;
 						}
@@ -169,7 +169,7 @@ export default class AccountConnectionProperties extends React.Component {
 						showError.call(this, 'golden record properties can be linked to only one transformation');
 						return;
 					} else {
-						t.GRProperty = prop.name;
+						t.Output = prop.name;
 					}
 				}
 			}
@@ -185,11 +185,11 @@ export default class AccountConnectionProperties extends React.Component {
 		for (let t of trs) {
 			if (t.ID === transformationID) {
 				if (column === 'left') {
-					let properties = t.InputProperties.filter((p) => p.Name !== property);
-					t.InputProperties = properties;
+					let properties = t.Inputs.filter((p) => p !== property);
+					t.Inputs = properties;
 				}
 				if (column === 'right') {
-					t.GRProperty = '';
+					t.Output = '';
 				}
 			}
 			transformations.push(t);
@@ -198,10 +198,14 @@ export default class AccountConnectionProperties extends React.Component {
 	};
 
 	onSave = async () => {
-		let [, err] = await call('/admin/transformations/save', {
-			connection: this.state.connection.ID,
-			transformations: this.state.transformations,
-		});
+		let trs = [];
+		for (let t of this.state.transformations) {
+			let toSave = { ...t };
+			delete toSave['ID'];
+			toSave.Connection = this.connectionID;
+			trs.push(toSave);
+		}
+		let [, err] = await call(`/api/connections/${this.connectionID}/transformations`, 'PUT', trs);
 		if (err != null) {
 			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
 			this.toast.current.toast();
@@ -219,11 +223,11 @@ export default class AccountConnectionProperties extends React.Component {
 
 	computeDefaultTransformationFunction = (t) => {
 		let f = defaultTransformationFunction;
-		if (t.InputProperties.length > 0) {
+		if (t.Inputs.length > 0) {
 			let prs = '';
-			t.InputProperties.forEach((p, i) => {
-				if (i === 0) prs += `user['${p.Name}']`;
-				else prs += ` + user['${p.Name}']`;
+			t.Inputs.forEach((p, i) => {
+				if (i === 0) prs += `user['${p}']`;
+				else prs += ` + user['${p}']`;
 			});
 			let i = f.indexOf('return');
 			f = f.substring(0, i + 7) + prs;
@@ -303,20 +307,20 @@ export default class AccountConnectionProperties extends React.Component {
 						{this.state.leftProperties.map((p) => {
 							return (
 								<div
-									key={p.Name}
-									className={`property${this.isSelectedProperty(p.Name, 'left') ? ' selected' : ''}`}
-									id={p.Name}
+									key={p}
+									className={`property${this.isSelectedProperty(p, 'left') ? ' selected' : ''}`}
+									id={p}
 									onClick={() =>
 										this.setState({
-											selectedProperty: { name: p.Name, column: 'left' },
+											selectedProperty: { name: p, column: 'left' },
 										})
 									}
 								>
-									<div>{p.Name}</div>
+									<div>{p}</div>
 									<SlIconButton
 										name='dash-circle'
 										label='Remove property'
-										onClick={(e) => this.onRemoveProperty(p.Name, e)}
+										onClick={(e) => this.onRemoveProperty(p, e)}
 									/>
 								</div>
 							);
@@ -350,7 +354,7 @@ export default class AccountConnectionProperties extends React.Component {
 														this.onChangeTransformation(t.ID, value);
 													}}
 													defaultLanguage='python'
-													value={t.SourceCode}
+													value={t.Source}
 													theme='vs-light'
 												/>
 											</div>
@@ -400,32 +404,32 @@ export default class AccountConnectionProperties extends React.Component {
 				</div>
 				<div className='arrows'>
 					{this.state.transformations.map((t) => {
-						let arrows = t.InputProperties.map((p) => {
+						let arrows = t.Inputs.map((p) => {
 							return (
 								<div
-									className={`arrow${this.isSelectedProperty(p.Name, 'left') ? ' selected' : ''}`}
+									className={`arrow${this.isSelectedProperty(p, 'left') ? ' selected' : ''}`}
 									onClick={
-										this.isSelectedProperty(p.Name, 'left')
+										this.isSelectedProperty(p, 'left')
 											? (e) => {
-													this.onRemoveArrow(t.ID, p.Name, 'left', e);
+													this.onRemoveArrow(t.ID, p, 'left', e);
 											  }
 											: null
 									}
 								>
 									<Xarrow
-										start={p.Name}
+										start={p}
 										end={`transformation-${t.ID}`}
 										startAnchor='right'
 										endAnchor='left'
 										showHead={false}
 										color='#818cf8'
 										strokeWidth={2}
-										labels={this.isSelectedProperty(p.Name, 'left') ? '-' : ''}
+										labels={this.isSelectedProperty(p, 'left') ? '-' : ''}
 									/>
 								</div>
 							);
 						});
-						let grp = t.GRProperty;
+						let grp = t.Output;
 						if (grp === '') return arrows;
 						arrows.push(
 							<div
@@ -473,25 +477,23 @@ export default class AccountConnectionProperties extends React.Component {
 					<div className='properties'>
 						{this.state.connectionProperties.map((p) => {
 							if (
-								p.Name.includes(term) ||
-								p.Name.includes(term.charAt(0).toUpperCase() + term.slice(1)) ||
-								p.Name.includes(term.toUpperCase) ||
-								p.Name.includes(term.toLowerCase)
+								p.includes(term) ||
+								p.includes(term.charAt(0).toUpperCase() + term.slice(1)) ||
+								p.includes(term.toUpperCase) ||
+								p.includes(term.toLowerCase)
 							) {
 								return (
 									<div
-										key={p.Name}
+										key={p}
 										className={`property${
-											this.state.leftProperties.find((lp) => lp.Name === p.Name) != null
-												? ' used'
-												: ''
+											this.state.leftProperties.find((lp) => lp === p) != null ? ' used' : ''
 										}`}
 									>
-										<div>{p.Name}</div>
+										<div>{p}</div>
 										<SlIconButton
 											name='plus-circle'
 											label='Add property'
-											onClick={(e) => this.onAddProperty(p.Name)}
+											onClick={(e) => this.onAddProperty(p)}
 										/>
 									</div>
 								);

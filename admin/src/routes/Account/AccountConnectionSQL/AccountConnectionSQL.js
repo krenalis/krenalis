@@ -26,7 +26,7 @@ export default class AccountConnectionSQL extends React.Component {
 	}
 
 	componentDidMount = async () => {
-		let [connection, err] = await call('/admin/connections/get', this.connectionID);
+		let [connection, err] = await call('/admin/connections/get', 'POST', this.connectionID);
 		if (err !== null) {
 			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
 			this.toast.current.toast();
@@ -58,7 +58,7 @@ export default class AccountConnectionSQL extends React.Component {
 			this.toast.current.toast();
 			return;
 		}
-		let [table, err] = await call('/admin/connections/preview-query', {
+		let [table, err] = await call('/admin/connections/preview-query', 'POST', {
 			Connection: this.state.connection.ID,
 			Query: this.state.query,
 			Limit: this.state.limit,
@@ -108,7 +108,7 @@ export default class AccountConnectionSQL extends React.Component {
 			this.toast.current.toast();
 			return;
 		}
-		let [, err] = await call('/admin/connections/set-users-query', {
+		let [, err] = await call('/admin/connections/set-users-query', 'POST', {
 			Connection: this.state.connection.ID,
 			Query: this.state.query,
 		});

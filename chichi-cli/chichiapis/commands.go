@@ -84,7 +84,14 @@ func ImportUsersFromConnection(connection int, reimport bool) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return
+}
+
+func ExportUsersToConnection(connection int) {
+	path := "api/connections/" + strconv.Itoa(connection) + "/export"
+	err := callAPI("POST", path, nil, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func GetTransformations(connection int) {
@@ -95,7 +102,7 @@ func GetTransformations(connection int) {
 	}
 	fmt.Printf("%-4s %-15s %s\n", "ID", "GR Property", "Input props")
 	for _, t := range transformations {
-		fmt.Printf("%-4d %-15s %v\n", t.ID, t.GRProperty, t.InputProperties)
+		fmt.Printf("%-15s %v\n", t.Output, t.Inputs)
 	}
 }
 

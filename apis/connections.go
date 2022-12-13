@@ -28,11 +28,13 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/postgres"
+	"chichi/apis/transformations"
 	"chichi/apis/types"
 	_connector "chichi/connector"
 	"chichi/connector/ui"
 
 	"github.com/jxskiss/base62"
+	"github.com/open2b/nuts/sql"
 )
 
 type Connections struct {
@@ -459,6 +461,68 @@ func (this *Connections) Delete(id int) error {
 	return err
 }
 
+func (this *Connections) Export(id int) (err error) {
+
+	if id <= 0 || id > maxInt32 {
+		return errors.New("invalid connection identifier")
+	}
+
+	// Check that the connection exists, has an allowed type and is a
+	// destination.
+	c, err := this.get(id)
+	if err != nil {
+		return ConnectionNotFoundError{}
+	}
+	var storage int
+	switch c.connector.typ {
+	case AppType:
+	default:
+		return fmt.Errorf("cannot export to a %s connection", strings.ToLower(c.connector.typ.String()))
+	}
+	if c.role == SourceRole {
+		return errors.New("cannot export to a source")
+	}
+
+	// Check that the connection has at least one transformation associated to it.
+	transformations, err := this.Transformations.List(id)
+	if err != nil {
+		return fmt.Errorf("cannot list transformations for %d: %s", id, err)
+	}
+	if len(transformations) == 0 {
+		return ErrConnectionDisabled
+	}
+
+	// Track the export in the database.
+	var exportID int
+	err = this.db.QueryRow("INSERT INTO connections_exports (connection, storage, start_time)\n"+
+		"VALUES ($1, $2, $3)\nRETURNING id", id, storage, time.Now().UTC()).Scan(&exportID)
+	if err != nil {
+		return err
+	}
+
+	// Start the import.
+	go func() {
+		err = this.startExport(c)
+		var errorMsg string
+		if err != nil {
+			if e, ok := err.(exportError); ok {
+				errorMsg = abbreviate(e.Error(), 1000)
+			} else {
+				log.Printf("[error] cannot do export %d: %s", exportID, err)
+				errorMsg = "an internal error has occurred"
+			}
+		}
+		_, err2 := this.db.Exec("UPDATE connections_exports SET end_time = $1, error = $2 WHERE id = $3",
+			time.Now().UTC(), errorMsg, exportID)
+		if err2 != nil {
+			log.Printf("[error] cannot update the end of export %d into the database: %s", exportID, err2)
+		}
+	}()
+
+	return nil
+
+}
+
 // Import starts the import of the users from the connection with the given
 // identifier. If the connection is an app and reimport is false, it imports
 // the users from the current cursor, otherwise imports all users. The
@@ -542,6 +606,15 @@ type importError struct {
 }
 
 func (err importError) Error() string {
+	return err.err.Error()
+}
+
+// exportError represents a non-internal error during export.
+type exportError struct {
+	err error
+}
+
+func (err exportError) Error() string {
 	return err.err.Error()
 }
 
@@ -759,6 +832,120 @@ func (this *Connections) startImport(connection *Connection, reimport bool) erro
 	}
 
 	return nil
+}
+
+func (this *Connections) startExport(connection *Connection) error {
+
+	const role = _connector.SourceRole
+
+	switch connection.connector.typ {
+	case AppType:
+
+		var name, clientSecret, resourceCode, accessToken, refreshToken string
+		var webhooksPer WebhooksPer
+		var connector, resource int
+		var settings []byte
+		var expiration time.Time
+		err := this.db.QueryRow(
+			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, `c`.`webhooksPer` - 1, `r`.`code`,"+
+				" `r`.`oAuthAccessToken`, `r`.`oAuthRefreshToken`, `r`.`oAuthExpiresIn`, `s`.`connector`,"+
+				" `s`.`resource`, `s`.`settings`\n"+
+				"FROM `connections` AS `s`\n"+
+				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
+				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
+				"WHERE `s`.`id` = ?", connection.id).Scan(
+			&name, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration, &connector,
+			&resource, &settings)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil
+			}
+			return err
+		}
+
+		fh := this.newFirehose(context.Background(), connection, types.Schema{})
+		c, err := _connector.RegisteredApp(name).Connect(fh.ctx, &_connector.AppConfig{
+			Role:         role,
+			Settings:     settings,
+			Firehose:     fh,
+			ClientSecret: clientSecret,
+			Resource:     resourceCode,
+			AccessToken:  accessToken,
+		})
+		if err != nil {
+			return exportError{fmt.Errorf("cannot connect to the connector: %s", err)}
+		}
+
+		// Read the transformation functions.
+		transformations, err := this.Transformations.List(connection.id)
+		if err != nil {
+			return err
+		}
+
+		// Prepare the users to export to the connection.
+		users := []_connector.User{}
+		{
+			// TODO(Gianluca): populate this map:
+			internalToExternalID := map[int]string{}
+			rows, err := this.db.Query("SELECT user, goldenRecord FROM connection_users WHERE connection = $1", connection.id)
+			if err != nil {
+				return err
+			}
+			defer rows.Close()
+			toRead := []int{}
+			for rows.Next() {
+				var user string
+				var goldenRecord int
+				err := rows.Scan(&user, &goldenRecord)
+				if err != nil {
+					return err
+				}
+				toRead = append(toRead, goldenRecord)
+			}
+			if err := rows.Err(); err != nil {
+				return err
+			}
+			// Read the users from the Golden Record and apply the
+			// transformation functions on them.
+			grUsers, err := this.readGRUsers(toRead)
+			if err != nil {
+				return err
+			}
+			for _, user := range grUsers {
+				id := internalToExternalID[user["id"].(int)]
+				user, err := exportUser(id, user, transformations)
+				if err != nil {
+					return err
+				}
+				users = append(users, user)
+			}
+		}
+
+		// Export the users to the connection.
+		log.Printf("[info] exporting %d user(s) to the connection %d", len(users), connection.id)
+		err = c.SetUsers(users)
+		if err != nil {
+			return errors.New("cannot export users")
+		}
+
+		// Handle errors occurred in the firehose.
+		if fh.err != nil {
+			return fh.err
+		}
+
+	default:
+
+		panic(fmt.Sprintf("export to %q not implemented", connection.connector.typ))
+
+	}
+
+	return nil
+
+}
+
+// readGRUsers reads the Golden Record users with the given IDs.
+func (this *Connections) readGRUsers(ids []int) ([]map[string]any, error) {
+	return nil, nil // TODO(Gianluca): implement.
 }
 
 // Import represents a connection import.
@@ -1506,13 +1693,20 @@ func (this *Connections) userSchema(id int) (types.Schema, []_connector.Property
 	// Read the paths of the mapped properties from the transformations of this connection.
 	var paths []_connector.PropertyPath
 	err = this.db.QueryScan(
-		"SELECT property FROM transformations_connections WHERE connection = $1", id, func(rows *postgres.Rows) error {
-			var name string
+		"SELECT inputs FROM transformations WHERE connection = $1", id, func(rows *postgres.Rows) error {
 			for rows.Next() {
-				if err := rows.Scan(&name); err != nil {
+				var inputsRaw string
+				if err := rows.Scan(&inputsRaw); err != nil {
 					return err
 				}
-				paths = append(paths, []string{name})
+				var inputs []string
+				err := json.Unmarshal([]byte(inputsRaw), &inputs)
+				if err != nil {
+					return err
+				}
+				for _, input := range inputs {
+					paths = append(paths, []string{input})
+				}
 			}
 			return nil
 		})
@@ -1828,4 +2022,26 @@ func abbreviate(s string, n int) string {
 		s = s[:l]
 	}
 	return s + "..."
+}
+
+// exportUser returns an user to export (with the given ID) applying the
+// transformation to the properties.
+func exportUser(id string, properties map[string]any, ts []Transformation) (_connector.User, error) {
+	user := _connector.User{
+		ID:         id,
+		Properties: map[string]any{},
+	}
+	pool := transformations.NewPool()
+	for _, t := range ts {
+		input := map[string]any{}
+		for _, in := range t.Inputs {
+			input[in] = properties[in]
+		}
+		prop, err := pool.Run(context.Background(), t.Source, input)
+		if err != nil {
+			return _connector.User{}, err
+		}
+		user.Properties[t.Output] = prop
+	}
+	return user, nil
 }

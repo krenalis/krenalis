@@ -3,7 +3,7 @@ import call from '../../../utils/call.js';
 const url = 'https://localhost:9090/admin/api/visualization';
 
 export default async function getChardData(query) {
-	let [res, error] = await call(url, query);
+	let [res, error] = await call(url, 'GET', query);
 	if (error != null) {
 		return [null, error];
 	}

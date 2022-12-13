@@ -27,7 +27,7 @@ export default class Connectors extends React.Component {
 	}
 
 	componentDidMount = async () => {
-		let [connectors, err] = await call('/admin/connectors/find');
+		let [connectors, err] = await call('/admin/connectors/find', 'GET');
 		if (err != null) {
 			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
 			this.toast.current.toast();
@@ -42,7 +42,7 @@ export default class Connectors extends React.Component {
 		if (c.OAuth === null) {
 			if (c.Type === 'File') body.Storage = s;
 			if (c.Type === 'Website') body.Host = host;
-			let [, err] = await call('/admin/add-connection', body);
+			let [, err] = await call('/admin/add-connection', 'POST', body);
 			if (err != null) {
 				this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
 				this.toast.current.toast();
@@ -61,7 +61,7 @@ export default class Connectors extends React.Component {
 	addConnection = async (c) => {
 		this.setState({ connectorToAdd: c });
 		if (c.Type === 'File') {
-			let [cns, err] = await call('/admin/connections/find');
+			let [cns, err] = await call('/admin/connections/find', 'GET');
 			if (err != null) {
 				this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
 				this.toast.current.toast();

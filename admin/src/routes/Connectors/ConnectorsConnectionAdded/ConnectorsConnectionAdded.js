@@ -18,7 +18,7 @@ export default class ConnectorsConnectionAdded extends React.Component {
 	}
 
 	async componentDidMount() {
-		let [connector, err] = await call('/admin/connectors/get', this.connectorID);
+		let [connector, err] = await call('/admin/connectors/get', 'POST', this.connectorID);
 		if (err !== null) {
 			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
 			this.toast.current.toast();

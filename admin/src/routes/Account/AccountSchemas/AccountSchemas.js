@@ -19,7 +19,7 @@ export default class AccountSchemas extends React.Component {
 	}
 
 	componentDidMount = async () => {
-		let [schema, err] = await call('/admin/schemas/get', { schemaName: this.state.schemaName });
+		let [schema, err] = await call('/admin/schemas/get', 'POST', { schemaName: this.state.schemaName });
 		if (err !== null) {
 			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
 			this.toast.current.toast();
@@ -30,7 +30,7 @@ export default class AccountSchemas extends React.Component {
 
 	handleSchemaNameUpdate = async (e) => {
 		let schemaName = e.currentTarget.value;
-		let [schema, err] = await call('/admin/schemas/get', { schemaName: schemaName });
+		let [schema, err] = await call('/admin/schemas/get', 'POST', { schemaName: schemaName });
 		if (err !== null) {
 			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
 			this.toast.current.toast();
@@ -47,7 +47,7 @@ export default class AccountSchemas extends React.Component {
 	};
 
 	handleSchemaSaving = async () => {
-		let [, err] = await call('/admin/schemas/update', {
+		let [, err] = await call('/admin/schemas/update', 'POST', {
 			SchemaName: this.state.schemaName,
 			Schema: this.state.newSchema,
 		});

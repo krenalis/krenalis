@@ -17,7 +17,7 @@ export default class AccountConnectionsMap extends React.Component {
 	}
 
 	componentDidMount = async () => {
-		let [connections, err] = await call('/admin/connections/find');
+		let [connections, err] = await call('/admin/connections/find', 'GET');
 		if (err !== null) {
 			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
 			this.toast.current.toast();

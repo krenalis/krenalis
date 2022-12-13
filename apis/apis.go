@@ -447,6 +447,23 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			})
+			router.Post("/export", func(w http.ResponseWriter, r *http.Request) {
+				connection, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				if connection <= 0 {
+					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
+					return
+				}
+				err = workspace.Connections.Export(connection)
+				if err != nil {
+					if _, ok := err.(ConnectionNotFoundError); ok {
+						http.Error(w, "Not Found", http.StatusNotFound)
+					} else {
+						log.Printf("[error] %s", err)
+						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					}
+					return
+				}
+			})
 			router.Post("/reimport", func(w http.ResponseWriter, r *http.Request) {
 				dsID, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				if dsID <= 0 {
@@ -465,22 +482,46 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			})
 			router.Get("/transformations", func(w http.ResponseWriter, r *http.Request) {
-				dsID, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				if dsID <= 0 {
+				connection, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				if connection <= 0 {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				transformations, err := workspace.Connections.Transformations.List(dsID)
+				transformations, err := workspace.Connections.Transformations.List(connection)
 				if err != nil {
 					if _, ok := err.(ConnectionNotFoundError); ok {
 						http.Error(w, "Not Found", http.StatusNotFound)
 					} else {
-						log.Printf("[error] %s", err)
+						log.Printf("[error] cannot list transformations: %s", err)
 						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					}
 					return
 				}
 				_ = json.NewEncoder(w).Encode(transformations)
+			})
+			router.Put("/transformations", func(w http.ResponseWriter, r *http.Request) {
+				connection, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				if connection <= 0 {
+					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
+					return
+				}
+				var req []Transformation
+				err := json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					http.Error(w, "Bad Request - invalid transformations", http.StatusBadRequest)
+					return
+				}
+				err = workspace.Connections.Transformations.SaveAll(connection, req)
+				if err != nil {
+					if _, ok := err.(ConnectionNotFoundError); ok {
+						http.Error(w, "Not Found", http.StatusNotFound)
+					} else {
+						log.Printf("[error] cannot save transformations: %s", err)
+						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					}
+					return
+				}
+				_, _ = w.Write([]byte(`{"status":"ok"}`))
 			})
 		})
 	})
@@ -527,46 +568,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 		})
 	})
-	router.Route("/api/transformations", func(router chi.Router) {
-		router.Put("/", func(w http.ResponseWriter, r *http.Request) {
-			var req TransformationToCreate
-			err := json.NewDecoder(r.Body).Decode(&req)
-			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-			tID, err := workspace.Connections.Transformations.Create(req)
-			if err != nil {
-				if _, ok := err.(ConnectionNotFoundError); ok {
-					http.Error(w, "Not Found", http.StatusNotFound)
-				} else {
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				}
-				return
-			}
-			_ = json.NewEncoder(w).Encode(tID)
-		})
-		router.Patch("/{transformationID}", func(w http.ResponseWriter, r *http.Request) {
-			tID, _ := strconv.Atoi(chi.URLParam(r, "transformationID"))
-			if tID <= 0 {
-				http.Error(w, "Bad Request: invalid transformation ID", http.StatusBadRequest)
-				return
-			}
-			var req TransformationToUpdate
-			err := json.NewDecoder(r.Body).Decode(&req)
-			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-			err = workspace.Connections.Transformations.Update(tID, req)
-			if err != nil {
-				log.Printf("[error] %s", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			}
-		})
-	})
-
 	router.ServeHTTP(w, r)
 
 }

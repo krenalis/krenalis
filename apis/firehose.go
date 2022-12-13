@@ -153,19 +153,19 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	candidateTimestamps := map[string]time.Time{}
 	for _, t := range connectionsTransformations {
 		props := map[string]any{}
-		for _, ip := range t.InputProperties {
-			props[ip.Name] = properties[ip.Name]
+		for _, input := range t.Inputs {
+			props[input] = properties[input]
 		}
 
 		// Apply the transformation function.
-		grProp, err := pool.Run(context.Background(), t.SourceCode, props)
+		grProp, err := pool.Run(context.Background(), t.Source, props)
 		if err != nil {
-			fh.setError(importError{fmt.Errorf("error while calling transformation function %d: %s", t.ID, err)})
+			fh.setError(importError{fmt.Errorf("error while calling transformation function: %s", err)})
 			return
 		}
 		if grProp != nil {
-			candidateData[t.GRProperty] = grProp
-			candidateTimestamps[t.GRProperty] = mostRecentTimestamp(timestamps, t.InputProperties)
+			candidateData[t.Output] = grProp
+			candidateTimestamps[t.Output] = mostRecentTimestamp(timestamps, t.Inputs)
 		}
 	}
 
@@ -211,10 +211,10 @@ transfLoop:
 				fh.setError(err)
 				return
 			}
-			ts := mostRecentTimestamp(entityData.Timestamps, t.InputProperties)
-			if ts.After(candidateTimestamps[t.GRProperty]) {
+			ts := mostRecentTimestamp(entityData.Timestamps, t.Inputs)
+			if ts.After(candidateTimestamps[t.Output]) {
 				// Don't update this Golden Record property.
-				delete(candidateData, t.GRProperty)
+				delete(candidateData, t.Output)
 				if len(candidateData) == 0 {
 					// Avoid useless iterations.
 					break transfLoop
@@ -507,28 +507,17 @@ func (fh *firehose) listTransformations(connections []int) ([]Transformation, er
 		if err != nil {
 			return nil, err
 		}
-		for _, t := range ts {
-			add := true
-			for _, t2 := range transformations {
-				if t.ID == t2.ID {
-					add = false
-					break
-				}
-			}
-			if add {
-				transformations = append(transformations, t)
-			}
-		}
+		transformations = append(transformations, ts...)
 	}
 	return transformations, nil
 }
 
 // mostRecentTimestamp returns the most recent timestamp referred by a property.
 // If there are no timestamps or properties, returns 'time.Time{}'.
-func mostRecentTimestamp(timestamps map[string]time.Time, props []InputProperty) time.Time {
+func mostRecentTimestamp(timestamps map[string]time.Time, props []string) time.Time {
 	var recent time.Time
 	for _, p := range props {
-		t := timestamps[p.Name]
+		t := timestamps[p]
 		if t.After(recent) {
 			recent = t
 		}

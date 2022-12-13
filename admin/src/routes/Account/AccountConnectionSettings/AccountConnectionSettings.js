@@ -21,7 +21,7 @@ const AccountConnectionSettings = () => {
 
 	useEffect(() => {
 		const fetchData = async (path, callback) => {
-			let [res, err] = await call(path, connectionID);
+			let [res, err] = await call(path, 'POST', connectionID);
 			if (err !== null) {
 				setStatus({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
 				toastRef.current.toast();
@@ -54,7 +54,7 @@ const AccountConnectionSettings = () => {
 		}
 		setFields(fls);
 
-		let [ui, err] = await call('/admin/connectors/ui-event', {
+		let [ui, err] = await call('/admin/connectors/ui-event', 'POST', {
 			connection: connectionID,
 			event: e,
 			values: values,

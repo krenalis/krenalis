@@ -1,15 +1,12 @@
-export default async function call(url, value) {
+export default async function call(url, method, value) {
 	let request = {
-		method: 'GET',
+		method: method === '' || method == null ? 'GET' : method,
 		headers: {
 			'X-Workspace': 1,
 		},
 	};
 
-	if (value) {
-		request.method = 'POST';
-		request.body = JSON.stringify(value);
-	}
+	if (value) request.body = JSON.stringify(value);
 
 	let res;
 	try {
