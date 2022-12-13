@@ -46,7 +46,7 @@ require (
 	github.com/open2b/nuts v1.5.3
 	github.com/oschwald/geoip2-golang v1.8.0
 	github.com/shopspring/decimal v1.3.1
-	github.com/tetratelabs/wazero v1.0.0-pre.3
+	github.com/tetratelabs/wazero v1.0.0-pre.4
 	golang.org/x/crypto v0.3.0
 	golang.org/x/text v0.4.0
 	gopkg.in/gcfg.v1 v1.2.3

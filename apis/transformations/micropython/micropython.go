@@ -18,6 +18,7 @@ import (
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/imports/emscripten"
 )
 
 // VM is a virtual machine which can run Python code through MicroPython.
@@ -42,6 +43,9 @@ func NewVM(ctx context.Context, stackSize uint64, stdout io.Writer, enableDecima
 		mod := r.NewHostModuleBuilder(modName)
 		for name, f := range modFuncs {
 			mod.NewFunctionBuilder().WithFunc(f).Export(name)
+		}
+		if modName == "env" {
+			emscripten.NewFunctionExporter().ExportFunctions(mod)
 		}
 		_, err := mod.Instantiate(ctx, r)
 		if err != nil {

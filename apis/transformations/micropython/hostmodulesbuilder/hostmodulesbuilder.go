@@ -64,16 +64,6 @@ func (h *HostModulesBuilder) BuildModules() map[string]map[string]any {
 			"emscripten_memcpy_big":     h.emscripten_memcpy_big,
 			"emscripten_resize_heap":    func(int32) int32 { panic("'emscripten_resize_heap' not implemented") },
 			"emscripten_scan_registers": func(int32) { panic("'emscripten_scan_registers' not implemented") },
-			"invoke_i":                  h.invoke_i,
-			"invoke_ii":                 h.invoke_ii,
-			"invoke_iii":                h.invoke_iii,
-			"invoke_iiii":               h.invoke_iiii,
-			"invoke_iiiii":              h.invoke_iiiii,
-			"invoke_v":                  h.invoke_v,
-			"invoke_vi":                 h.invoke_vi,
-			"invoke_vii":                h.invoke_vii,
-			"invoke_viii":               h.invoke_viii,
-			"invoke_viiii":              h.invoke_viiii,
 			"mp_js_hook":                func() { panic("'mp_js_hook' not implemented") },
 			"mp_js_ticks_ms":            func() int32 { panic("'mp_js_ticks_ms' not implemented") },
 			"mp_js_write":               h.mpJsWrite,
@@ -90,81 +80,6 @@ func (h *HostModulesBuilder) emscripten_memcpy_big(dest, src, num int32) {
 	ok = mem.Write(h.ctx, uint32(dest), data)
 	if !ok {
 		panic("cannot write memory")
-	}
-}
-
-func (h *HostModulesBuilder) invoke_i(a int32) int32 {
-	out, err := h.mod.ExportedFunction("dynCall_i").Call(h.ctx, uint64(a))
-	if err != nil {
-		log.Panic(err)
-	}
-	return int32(out[0])
-}
-
-func (h *HostModulesBuilder) invoke_ii(a, b int32) int32 {
-	out, err := h.mod.ExportedFunction("dynCall_ii").Call(h.ctx, uint64(a), uint64(b))
-	if err != nil {
-		log.Panic(err)
-	}
-	return int32(out[0])
-}
-
-func (h *HostModulesBuilder) invoke_iii(a, b, c int32) int32 {
-	out, err := h.mod.ExportedFunction("dynCall_iii").Call(h.ctx, uint64(a), uint64(b), uint64(c))
-	if err != nil {
-		log.Panic(err)
-	}
-	return int32(out[0])
-}
-
-func (h *HostModulesBuilder) invoke_iiii(a, b, c, d int32) int32 {
-	out, err := h.mod.ExportedFunction("dynCall_iiii").Call(h.ctx, uint64(a), uint64(b), uint64(c), uint64(d))
-	if err != nil {
-		log.Panic(err)
-	}
-	return int32(out[0])
-}
-
-func (h *HostModulesBuilder) invoke_iiiii(a, b, c, d, e int32) int32 {
-	out, err := h.mod.ExportedFunction("dynCall_iiiii").Call(h.ctx, uint64(a), uint64(b), uint64(c), uint64(d), uint64(e))
-	if err != nil {
-		log.Panic(err)
-	}
-	return int32(out[0])
-}
-
-func (h *HostModulesBuilder) invoke_v(a int32) {
-	_, err := h.mod.ExportedFunction("dynCall_v").Call(h.ctx, uint64(a))
-	if err != nil {
-		log.Panic(err)
-	}
-}
-
-func (h *HostModulesBuilder) invoke_vi(a, b int32) {
-	_, err := h.mod.ExportedFunction("dynCall_vi").Call(h.ctx, uint64(a), uint64(b))
-	if err != nil {
-		log.Panic(err)
-	}
-}
-
-func (h *HostModulesBuilder) invoke_vii(a, b, c int32) {
-	_, err := h.mod.ExportedFunction("dynCall_vii").Call(h.ctx, uint64(a), uint64(b), uint64(c))
-	if err != nil {
-		log.Panic(err)
-	}
-}
-
-func (h *HostModulesBuilder) invoke_viii(a, b, c, d int32) {
-	_, err := h.mod.ExportedFunction("dynCall_viii").Call(h.ctx, uint64(a), uint64(b), uint64(c), uint64(d))
-	if err != nil {
-		log.Panic(err)
-	}
-}
-
-func (h *HostModulesBuilder) invoke_viiii(a, b, c, d, e int32) {
-	_, err := h.mod.ExportedFunction("dynCall_viiii").Call(h.ctx, uint64(a), uint64(b), uint64(c), uint64(d), uint64(e))
-	if err != nil {
-		log.Panic(err)
 	}
 }
 
