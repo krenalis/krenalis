@@ -1286,25 +1286,27 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 	return marshalUIFormAlert(form, alert, c.role)
 }
 
-// SetFileStorage sets the storage of the file connection with identifier file.
+// SetStorage sets the storage of the file connection with identifier file.
 // storage is the storage connection. The file and the storage must have the
 // same role. As a special case, the current storage of the file is removed if
 // the storage argument is 0.
 //
 // It returns a ConnectionNotFound error if the file or storage does not exist.
-func (this *Connections) SetFileStorage(file, storage int) error {
+func (this *Connections) SetStorage(file, storage int) error {
+
 	if file < 1 || file > maxInt32 {
 		return errors.New("invalid file connection identifier")
 	}
 	if storage < 0 || storage > maxInt32 {
 		return errors.New("invalid storage connection identifier")
 	}
-	if file == storage {
-		return errors.New("file and storage cannot be the same connection")
-	}
+
 	f, err := this.get(file)
 	if err != nil {
 		return ConnectionNotFoundError{FileType}
+	}
+	if f.connector.typ != FileType {
+		return errors.New("file is not a file connector")
 	}
 	var s *Connection
 	if storage > 0 {
@@ -1312,27 +1314,111 @@ func (this *Connections) SetFileStorage(file, storage int) error {
 		if err != nil {
 			return ConnectionNotFoundError{StorageType}
 		}
-	}
-	if s != nil && s.role != f.role {
-		if f.role == SourceRole {
-			return errors.New("storage connection is not a source")
+		if s.connector.typ != StorageType {
+			return errors.New("storage is not a storage connector")
 		}
-		return errors.New("storage connection is not a destination")
+		if s.role != f.role {
+			if f.role == SourceRole {
+				return errors.New("storage connection is not a source")
+			}
+			return errors.New("storage connection is not a destination")
+		}
 	}
+
+	n := setConnectionStorageNotification{
+		Account:    this.account.id,
+		Workspace:  this.id,
+		Connection: file,
+		Storage:    storage,
+	}
+
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		// TODO(marco): check that store, if not zero, still exists
-		_, err = tx.Exec("UPDATE connections SET storage = NULLIF($1, 0) WHERE id = $2", storage, file)
+		result, err := tx.Exec("UPDATE connections SET storage = NULLIF($1, 0) WHERE id = $2", storage, file)
 		if err != nil {
 			return err
 		}
-		//return tx.Notify(n)
-		return nil
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if affected == 0 {
+			return ConnectionNotFoundError{FileType}
+		}
+		return tx.Notify(n)
 	})
-	if err != nil {
-		return err
+	if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_storage_fkey" {
+		return ConnectionNotFoundError{StorageType}
 	}
 
-	//this.setStorage(file, storage)
+	return err
+}
+
+// SetStream sets the stream of the mobile, server or website connection with
+// identifier source. stream is the stream connection. The source and the
+// stream must have the same role. As a special case, the current stream of the
+// source is removed if the stream argument is 0.
+//
+// It returns a ConnectionNotFound error if the source or stream does not
+// exist.
+func (this *Connections) SetStream(source, stream int) error {
+
+	if source < 1 || source > maxInt32 {
+		return errors.New("invalid source connection identifier")
+	}
+	if stream < 0 || stream > maxInt32 {
+		return errors.New("invalid stream connection identifier")
+	}
+
+	c, err := this.get(source)
+	if err != nil {
+		return ConnectionNotFoundError{}
+	}
+	switch c.connector.typ {
+	case MobileType, ServerType, WebsiteType:
+	default:
+		return errors.New("source is not a mobile, server or website connector")
+	}
+	var s *Connection
+	if stream > 0 {
+		s, err = this.get(stream)
+		if err != nil {
+			return ConnectionNotFoundError{EventStreamType}
+		}
+		if s.connector.typ != EventStreamType {
+			return errors.New("stream is not an event stream connector")
+		}
+		if s.role != c.role {
+			if c.role == SourceRole {
+				return errors.New("stream connection is not a source")
+			}
+			return errors.New("stream connection is not a destination")
+		}
+	}
+
+	n := setConnectionStreamNotification{
+		Account:    this.account.id,
+		Workspace:  this.id,
+		Connection: source,
+		Stream:     stream,
+	}
+
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
+		result, err := tx.Exec("UPDATE connections SET stream = NULLIF($1, 0) WHERE id = $2", stream, source)
+		if err != nil {
+			return err
+		}
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if affected == 0 {
+			return ConnectionNotFoundError{}
+		}
+		return tx.Notify(n)
+	})
+	if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_stream_fkey" {
+		return ConnectionNotFoundError{EventStreamType}
+	}
 
 	return err
 }

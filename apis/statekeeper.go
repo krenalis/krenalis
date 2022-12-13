@@ -38,6 +38,10 @@ func (apis *APIs) keepState(ctx context.Context) {
 			sk.setConnectionSettings(n)
 		case "setConnectionUserSchema":
 			sk.setConnectionUserSchema(n)
+		case "setConnectionStorage":
+			sk.setConnectionStorage(n)
+		case "setConnectionStream":
+			sk.setConnectionStream(n)
 		default:
 			log.Printf("[warning] unknown notification %q received from %d: %s", n.Name, n.PID, n.Payload)
 		}
@@ -245,6 +249,60 @@ func (s stateKeeper) setConnectionSettings(n postgres.Notification) {
 	workspace, _ := account.Workspaces.get(e.Workspace)
 	connection := workspace.Connections.clone(e.Connection)
 	connection.settings = e.Settings
+	workspace.Connections.add(connection)
+	return
+}
+
+// setConnectionSettingsNotification is the notification event sent when the
+// settings of a connection is changed.
+type setConnectionStorageNotification struct {
+	Account    int
+	Workspace  int
+	Connection int
+	Storage    int
+}
+
+// setConnectionStorages sets the storage of a connection.
+func (s stateKeeper) setConnectionStorage(n postgres.Notification) {
+	e := setConnectionStorageNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	account, _ := s.Accounts.get(e.Account)
+	workspace, _ := account.Workspaces.get(e.Workspace)
+	connection := workspace.Connections.clone(e.Connection)
+	var storage *Connection
+	if e.Storage > 0 {
+		storage, _ = workspace.Connections.get(e.Storage)
+	}
+	connection.storage = storage
+	workspace.Connections.add(connection)
+	return
+}
+
+// setConnectionStreamNotification is the notification event sent when the
+// settings of a connection is changed.
+type setConnectionStreamNotification struct {
+	Account    int
+	Workspace  int
+	Connection int
+	Stream     int
+}
+
+// setConnectionStream sets the stream of a connection.
+func (s stateKeeper) setConnectionStream(n postgres.Notification) {
+	e := setConnectionStreamNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	account, _ := s.Accounts.get(e.Account)
+	workspace, _ := account.Workspaces.get(e.Workspace)
+	connection := workspace.Connections.clone(e.Connection)
+	var stream *Connection
+	if e.Stream > 0 {
+		stream, _ = workspace.Connections.get(e.Stream)
+	}
+	connection.stream = stream
 	workspace.Connections.add(connection)
 	return
 }
