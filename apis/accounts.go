@@ -188,37 +188,16 @@ const (
 	SortByEmail
 )
 
-// list returns the accounts sort by the given order, starting from first and
-// up to limit. first must be >= 0 and limit must be > 0. It returns nil if
-// there are no accounts to return.
-func (this *Accounts) list(order AccountSort, first, limit int) []*Account {
+// list returns all accounts.
+func (this *Accounts) list() []*Account {
 	this.state.Lock()
-	count := len(this.state.ids)
-	if first >= count {
-		this.state.Unlock()
-		return nil
-	}
-	if first+limit > count {
-		limit = count - first
-	}
-	accounts := make([]*Account, count)
+	accounts := make([]*Account, len(this.state.ids))
 	i := 0
 	for _, account := range this.state.ids {
 		accounts[i] = account
 	}
-	if order == SortByName {
-		sort.Slice(accounts, func(i, j int) bool {
-			a, b := accounts[i], accounts[j]
-			return a.name < b.name || a.name == b.name && a.id < b.id
-		})
-	} else {
-		sort.Slice(accounts, func(i, j int) bool {
-			a, b := accounts[i], accounts[j]
-			return a.email < b.email || a.email == b.email && a.id < b.id
-		})
-	}
 	this.state.Unlock()
-	return accounts[first : first+limit]
+	return accounts
 }
 
 // List returns a list of *AccountInfo, in the given order, describing all
@@ -234,10 +213,25 @@ func (this *Accounts) List(order AccountSort, first, limit int) []*AccountInfo {
 	if first < 0 {
 		panic("invalid first")
 	}
-	accounts := this.list(order, first, limit)
-	if accounts == nil {
+	accounts := this.list()
+	count := len(accounts)
+	if first >= count {
 		return []*AccountInfo{}
 	}
+	if first+limit > count {
+		limit = count - first
+	}
+	sort.Slice(accounts, func(i, j int) bool {
+		a, b := accounts[i], accounts[j]
+		switch order {
+		case SortByName:
+			return a.name < b.name || a.name == b.name && a.id < b.id
+		case SortByEmail:
+			return a.email < b.email || a.email == b.email && a.id < b.id
+		}
+		return false
+	})
+	accounts = accounts[first : first+limit]
 	infos := make([]*AccountInfo, len(accounts))
 	for i, account := range accounts {
 		ips := make([]string, len(account.internalIPs))
