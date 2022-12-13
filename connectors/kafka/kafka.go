@@ -19,6 +19,7 @@ import (
 	"net"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"chichi/connector"
 	"chichi/connector/ui"
@@ -137,7 +138,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 	case "load":
 		// Load the UI.
 		if c.settings == nil {
-			s.Port = 9092
+			s.Kafka = &kafkaSettings{Port: 9092}
 		} else {
 			s = *c.settings
 		}
@@ -148,13 +149,32 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if err != nil {
 			return nil, nil, err
 		}
-		// Validate Host.
-		if n := len(s.Host); n == 0 || n > 253 {
-			return nil, nil, ui.Errorf("host length in bytes must be in range [1,253]")
-		}
-		// Validate Port.
-		if s.Port < 1 || s.Port > 65536 {
-			return nil, nil, ui.Errorf("port must be in range [1,65536]")
+		switch {
+		case s.Kafka != nil:
+			// Validate Host.
+			if n := len(s.Kafka.Host); n == 0 || n > 253 {
+				return nil, nil, ui.Errorf("host length in bytes must be in range [1,253]")
+			}
+			// Validate Port.
+			if s.Kafka.Port < 1 || s.Kafka.Port > 65536 {
+				return nil, nil, ui.Errorf("port must be in range [1,65536]")
+			}
+		case s.Confluent != nil:
+			// Validate Server.
+			host, port, err := net.SplitHostPort(s.Confluent.Server)
+			if err != nil {
+				return nil, nil, ui.Errorf("server is not a valid host:port")
+			}
+			if n := len(host); n == 0 || n > 253 {
+				return nil, nil, ui.Errorf("server host length in bytes must be in range [1,253]")
+			}
+			if p, _ := strconv.Atoi(port); p < 1 || p > 65536 {
+				return nil, nil, ui.Errorf("server port must be in range [1,65536]")
+			}
+			// Validate Key.
+			if utf8.RuneCountInString(s.Confluent.Key) != 16 {
+				return nil, nil, ui.Errorf("key must be long 16 characters")
+			}
 		}
 		// Validate Topic.
 		if n := len(s.Topic); n == 0 || n > 255 {
@@ -188,10 +208,29 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 	form := &ui.Form{
 		Fields: []ui.Component{
-			&ui.Input{Name: "host", Label: "Host", Placeholder: "kafka.example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&ui.Input{Name: "port", Label: "Port", Placeholder: "9092", Type: "number", MinLength: 1, MaxLength: 5},
-			&ui.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1},
-			&ui.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1},
+			&ui.AlternativeFieldSets{
+				Sets: []ui.FieldSet{
+					{
+						Name:  "Kafka",
+						Label: "Kafka",
+						Fields: []ui.Component{
+							&ui.Input{Name: "host", Label: "Host", Placeholder: "kafka.example.com", Type: "text", MinLength: 1, MaxLength: 253},
+							&ui.Input{Name: "port", Label: "Port", Placeholder: "9092", Type: "number", MinLength: 1, MaxLength: 5},
+							&ui.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1},
+							&ui.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1},
+						},
+					},
+					{
+						Name:  "Confluent",
+						Label: "Confluent",
+						Fields: []ui.Component{
+							&ui.Input{Name: "server", Label: "Bootstrap server", Placeholder: "12345.aws.confluent.cloud:9092", Type: "text", MinLength: 1, MaxLength: 258},
+							&ui.Input{Name: "key", Label: "Key", Placeholder: "AAAAAAAAAAAAAAAA", Type: "text", MinLength: 16, MaxLength: 16},
+							&ui.Input{Name: "secret", Label: "Secret", Placeholder: "secret", Type: "password", MinLength: 1},
+						},
+					},
+				},
+			},
 			&ui.Input{Name: "topic", Label: "Topic", Placeholder: "topic-name", Type: "text", MinLength: 1, MaxLength: 255},
 		},
 		Values: values,
@@ -204,24 +243,43 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 	return form, nil, nil
 }
 
-type settings struct {
+type kafkaSettings struct {
 	Host     string
 	Port     int
 	Username string
 	Password string
-	Topic    string
+}
+
+type confluentSettings struct {
+	Server string
+	Key    string
+	Secret string
+}
+type settings struct {
+	Kafka     *kafkaSettings
+	Confluent *confluentSettings
+	Topic     string
 }
 
 // opts returns s as options to configure a client.
 func (s *settings) opts() []kgo.Opt {
-	auth := plain.Auth{
-		User: s.Username,
-		Pass: s.Password,
+	var user, pass, host, port string
+	switch {
+	case s.Kafka != nil:
+		host = s.Kafka.Host
+		port = strconv.Itoa(s.Kafka.Port)
+		user = s.Kafka.Username
+		pass = s.Kafka.Password
+	case s.Confluent != nil:
+		host, port, _ = net.SplitHostPort(s.Confluent.Server)
+		user = s.Confluent.Key
+		pass = s.Confluent.Secret
 	}
+	auth := plain.Auth{User: user, Pass: pass}
 	tlsDialer := &tls.Dialer{NetDialer: &net.Dialer{Timeout: 5 * time.Second}}
 	opts := []kgo.Opt{
 		kgo.SASL(auth.AsMechanism()),
-		kgo.SeedBrokers(net.JoinHostPort(s.Host, strconv.Itoa(s.Port))),
+		kgo.SeedBrokers(net.JoinHostPort(host, port)),
 		kgo.ConsumeTopics(s.Topic),
 		kgo.Dialer(tlsDialer.DialContext),
 	}
