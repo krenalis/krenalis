@@ -108,8 +108,8 @@ CREATE TABLE connections (
     role role NOT NULL,
     enabled boolean NOT NULL DEFAULT false,
     connector integer NOT NULL REFERENCES connectors ON DELETE RESTRICT,
-    storage integer DEFAULT NULL REFERENCES connectors ON DELETE SET NULL,
-    stream integer DEFAULT NULL REFERENCES connectors ON DELETE SET NULL,
+    storage integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
+    stream integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
     resource integer NOT NULL DEFAULT 0,
     website_host varchar(261) NOT NULL DEFAULT '',
     user_cursor varchar(500) NOT NULL DEFAULT '',
@@ -160,8 +160,8 @@ CREATE TABLE connections_stats (
 CREATE TABLE connections_stats_events (
     hour integer NOT NULL,
     source integer NOT NULL REFERENCES connections ON DELETE CASCADE,
-    server integer DEFAULT NULL REFERENCES connectors ON DELETE SET NULL,
-    stream integer DEFAULT NULL REFERENCES connectors ON DELETE SET NULL,
+    server integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
+    stream integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
     good_events integer NOT NULL,
     bad_events integer NOT NULL,
     PRIMARY KEY (hour, source, server, stream)
