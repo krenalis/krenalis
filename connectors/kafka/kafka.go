@@ -263,15 +263,14 @@ type settings struct {
 
 // opts returns s as options to configure a client.
 func (s *settings) opts() []kgo.Opt {
-	var user, pass, host, port string
+	var user, pass, broker string
 	switch {
 	case s.Kafka != nil:
-		host = s.Kafka.Host
-		port = strconv.Itoa(s.Kafka.Port)
+		broker = net.JoinHostPort(s.Kafka.Host, strconv.Itoa(s.Kafka.Port))
 		user = s.Kafka.Username
 		pass = s.Kafka.Password
 	case s.Confluent != nil:
-		host, port, _ = net.SplitHostPort(s.Confluent.Server)
+		broker = s.Confluent.Server
 		user = s.Confluent.Key
 		pass = s.Confluent.Secret
 	}
@@ -279,7 +278,7 @@ func (s *settings) opts() []kgo.Opt {
 	tlsDialer := &tls.Dialer{NetDialer: &net.Dialer{Timeout: 5 * time.Second}}
 	opts := []kgo.Opt{
 		kgo.SASL(auth.AsMechanism()),
-		kgo.SeedBrokers(net.JoinHostPort(host, port)),
+		kgo.SeedBrokers(broker),
 		kgo.ConsumeTopics(s.Topic),
 		kgo.Dialer(tlsDialer.DialContext),
 	}
