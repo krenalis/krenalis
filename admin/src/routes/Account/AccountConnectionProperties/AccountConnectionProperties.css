@@ -4,10 +4,10 @@
 }
 
 .AccountConnectionProperties.selectedProperty .title,
-.AccountConnectionProperties.selectedProperty .properties.leftProperties .title,
-.AccountConnectionProperties.selectedProperty .properties.leftProperties .addProperty,
-.AccountConnectionProperties.selectedProperty .properties.leftProperties .property,
-.AccountConnectionProperties.selectedProperty .properties.rightProperties .property,
+.AccountConnectionProperties.selectedProperty .properties .addUsedProperty,
+.AccountConnectionProperties.selectedProperty .properties.usedInputProperties .title,
+.AccountConnectionProperties.selectedProperty .properties.usedInputProperties .property,
+.AccountConnectionProperties.selectedProperty .properties.usedOutputProperties .property,
 .AccountConnectionProperties.selectedProperty .arrows .arrow,
 .AccountConnectionProperties.selectedProperty .transformations .saveButton,
 .AccountConnectionProperties.selectedProperty .transformations .addTransformation {
@@ -50,7 +50,7 @@
 	cursor: pointer !important;
 }
 
-.AccountConnectionProperties.selectedProperty .properties.leftProperties .property.selected sl-icon-button {
+.AccountConnectionProperties.selectedProperty .properties.usedInputProperties .property.selected sl-icon-button {
 	visibility: hidden;
 }
 
@@ -61,16 +61,15 @@
 	grid-template-columns: 1fr 2fr 1fr;
 	grid-template-areas:
 		'head head head'
-		'leftProperties transformations rightProperties';
+		'usedInputProperties transformations usedOutputProperties';
 	gap: 30px;
-	margin-top: -200px;
+	margin-top: -220px;
 	padding-bottom: 30px;
 	align-items: center;
 }
 
 .AccountConnectionProperties .content > .head {
 	grid-area: head;
-	margin-bottom: 10px;
 }
 
 .AccountConnectionProperties .content > .head > .title {
@@ -82,12 +81,24 @@
 	gap: 10px;
 	align-items: center;
 	color: var(--text-onaccent);
-	margin-bottom: 20px;
+	margin-bottom: 10px;
 }
 
 .AccountConnectionProperties .content > .head > .title .littleLogo {
 	max-width: 35px;
 	margin-left: -35px;
+}
+
+.AccountConnectionProperties .content > .head > .badges {
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+}
+
+.AccountConnectionProperties .content > .head > .badges sl-badge::part(base) {
+	border: 0;
 }
 
 .AccountConnectionProperties .content > .head .saveButton {
@@ -102,7 +113,7 @@
 
 .AccountConnectionProperties .content .properties .title {
 	text-align: center;
-	margin-bottom: 20px;
+	margin-bottom: 10px;
 	font-size: 18px;
 	font-weight: 600;
 	color: var(--text-onaccent);
@@ -119,11 +130,11 @@
 	font-size: 14px;
 }
 
-.AccountConnectionProperties .content .properties.leftProperties {
-	grid-area: leftProperties;
+.AccountConnectionProperties .content .properties.usedInputProperties {
+	grid-area: usedInputProperties;
 }
 
-.AccountConnectionProperties .content .properties.leftProperties .addProperty {
+.AccountConnectionProperties .content .properties .addUsedProperty {
 	display: block;
 	margin: auto;
 	width: 200px;
@@ -139,7 +150,7 @@
 	cursor: pointer;
 }
 
-.AccountConnectionProperties .content .properties.leftProperties .property sl-icon-button::part(base) {
+.AccountConnectionProperties .content .properties .property sl-icon-button::part(base) {
 	padding: 0;
 }
 
@@ -216,8 +227,8 @@
 	opacity: 1;
 }
 
-.AccountConnectionProperties .content .properties.rightProperties {
-	grid-area: rightProperties;
+.AccountConnectionProperties .content .properties.usedOutputProperties {
+	grid-area: usedOutputProperties;
 }
 
 .AccountConnectionProperties .arrows {
@@ -233,11 +244,11 @@
 	padding: 5px 0px 30px 10px;
 }
 
-.AccountConnectionProperties > sl-dialog .properties {
+.AccountConnectionProperties > sl-dialog .dialogProperties {
 	margin-top: 20px;
 }
 
-.AccountConnectionProperties > sl-dialog .properties .property {
+.AccountConnectionProperties > sl-dialog .dialogProperties .property {
 	display: flex;
 	justify-content: space-between;
 	padding: 5px 0;
@@ -245,20 +256,20 @@
 	height: 35px;
 }
 
-.AccountConnectionProperties > sl-dialog .properties .property.used {
+.AccountConnectionProperties > sl-dialog .dialogProperties .property.used {
 	opacity: 0.5;
 	text-decoration: line-through;
 }
 
-.AccountConnectionProperties > sl-dialog .properties .property.used sl-icon-button {
+.AccountConnectionProperties > sl-dialog .dialogProperties .property.used sl-icon-button {
 	display: none;
 }
 
-.AccountConnectionProperties > sl-dialog .properties .property:first-child {
+.AccountConnectionProperties > sl-dialog .dialogProperties .property:first-child {
 	padding-top: 0;
 }
 
-.AccountConnectionProperties > sl-dialog .properties .property:last-child {
+.AccountConnectionProperties > sl-dialog .dialogProperties .property:last-child {
 	padding-bottom: 0;
 }
 

@@ -159,35 +159,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Handle the "/connectors-properties" endpoint.
-	if strings.HasPrefix(rpath, "/connectors-properties") {
-		var req struct {
-			Connector int
-		}
-		err := json.NewDecoder(r.Body).Decode(&req)
-		if err != nil {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return
-		}
-		schema, err := workspace.Connections.Schema(req.Connector)
-		if err != nil {
-			log.Printf("[error] cannot retrieve schema: %s", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		var names []string
-		if schema.Valid() {
-			names = schema.PropertiesNames()
-		}
-		properties := make([]string, len(names))
-		for i, name := range names {
-			properties[i] = name
-		}
-		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{"Properties": properties})
-		return
-	}
-
 	// Handle the "/import-raw-user-data-from-connector" endpoint.
 	if strings.HasPrefix(rpath, "/import-raw-user-data-from-connector") {
 		var req struct {
@@ -367,38 +338,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
-			return
-		case "/get-used-properties":
-			defer r.Body.Close()
-			var id int
-			err := json.NewDecoder(r.Body).Decode(&id)
-			if err != nil {
-				log.Printf("[error] %v", err)
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-			transformations, err := workspace.Transformations.List(id)
-			properties := []string{}
-			for _, t := range transformations {
-				for _, input := range t.Inputs {
-					isDuplicate := false
-					for _, pr := range properties {
-						if input == pr {
-							isDuplicate = true
-						}
-					}
-					if !isDuplicate {
-						properties = append(properties, input)
-					}
-				}
-			}
-			if err != nil {
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(properties)
 			return
 		case "/imports":
 			defer r.Body.Close()

@@ -19,30 +19,40 @@ const AccountConnectionSettings = () => {
 	const toastRef = useRef();
 	const connectionID = Number(String(window.location).split('/').at(-2));
 
+	const onError = (err) => {
+		setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
+		toastRef.current.toast();
+		return;
+	};
+
 	useEffect(() => {
-		const fetchData = async (path, callback) => {
-			let [res, err] = await call(path, 'POST', connectionID);
-			if (err !== null) {
-				setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
-				toastRef.current.toast();
+		const fetchConnection = async () => {
+			let [connection, err] = await call('/admin/connections/get', 'POST', connectionID);
+			if (err) {
+				onError(err);
 				return;
 			}
-			callback(res);
-		};
-
-		fetchData('/admin/connections/get', (connection) => {
 			if (connection == null) {
 				setNotFound(true);
 				return;
 			}
 			setConnection(connection);
-		});
+		};
+		fetchConnection();
+	}, []);
 
-		fetchData('/admin/connectors/ui', (ui) => {
+	useEffect(() => {
+		const fetchUI = async () => {
+			let [ui, err] = await call('/admin/connectors/ui', 'POST', connectionID);
+			if (err) {
+				onError(err);
+				return;
+			}
 			setFields(ui.Form.Fields);
 			setActions(ui.Form.Actions);
 			setValues(ui.Form.Values);
-		});
+		};
+		fetchUI();
 	}, []);
 
 	const onActionClick = async (e) => {
@@ -60,8 +70,7 @@ const AccountConnectionSettings = () => {
 			values: values,
 		});
 		if (err != null) {
-			setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
-			toastRef.current.toast();
+			onError(err);
 			return;
 		}
 		if (ui.Alert != null) {

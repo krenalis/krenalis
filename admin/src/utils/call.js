@@ -1,4 +1,4 @@
-export default async function call(url, method, value) {
+export default async function call(url, method, body) {
 	let request = {
 		method: method === '' || method == null ? 'GET' : method,
 		headers: {
@@ -6,7 +6,7 @@ export default async function call(url, method, value) {
 		},
 	};
 
-	if (value) request.body = JSON.stringify(value);
+	if (body) request.body = JSON.stringify(body);
 
 	let res;
 	try {
