@@ -461,6 +461,11 @@ func (this *Connections) Delete(id int) error {
 	return err
 }
 
+// Export starts the export of the users to the connection with the given
+// identifier.
+//
+// Note that this method is only a draft, and its code may be wrong and/or
+// partially implemented.
 func (this *Connections) Export(id int) (err error) {
 
 	if id <= 0 || id > maxInt32 {
@@ -834,6 +839,8 @@ func (this *Connections) startImport(connection *Connection, reimport bool) erro
 	return nil
 }
 
+// startExport starts the export for the connection. Note that this method is
+// only a draft, and its code may be wrong and/or partially implemented.
 func (this *Connections) startExport(connection *Connection) error {
 
 	const role = _connector.SourceRole
