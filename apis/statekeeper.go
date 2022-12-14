@@ -1,7 +1,6 @@
 package apis
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"log"
@@ -259,7 +258,7 @@ func (s *stateKeeper) setConnectionUserQuery(n postgres.Notification) {
 // user schema of a connection is changed.
 type setConnectionUserSchemaNotification struct {
 	Connection int
-	Schema     json.RawMessage
+	Schema     types.Schema
 }
 
 // setConnectionUserSchema sets the user schema of a connection.
@@ -268,12 +267,7 @@ func (s *stateKeeper) setConnectionUserSchema(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	schema, err := types.ParseSchema(bytes.NewReader(e.Schema), nil)
-	if err != nil {
-		log.Printf("[error] cannot parse user schema for connection %d received from notification: %s", e.Connection, err)
-		return
-	}
 	s.setConnection(e.Connection, func(c *Connection) {
-		c.schema = schema
+		c.schema = e.Schema
 	})
 }

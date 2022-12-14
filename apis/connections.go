@@ -1747,7 +1747,7 @@ func (this *Connections) reloadSchema(id int) error {
 
 	n := setConnectionUserSchemaNotification{
 		Connection: id,
-		Schema:     rawSchema,
+		Schema:     schema,
 	}
 
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
