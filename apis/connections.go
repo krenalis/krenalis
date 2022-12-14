@@ -68,23 +68,24 @@ func newConnections(ws *Workspace) *Connections {
 
 // Connection represents a connection.
 type Connection struct {
-	account         *Account
-	workspace       *Workspace
-	id              int
-	name            string
-	role            ConnectionRole
-	enabled         bool
-	connector       *Connector
-	storage         *Connection
-	stream          *Connection
-	resource        *Resource
-	websiteHost     string
-	userCursor      string
-	identityColumn  string
-	timestampColumn string
-	settings        []byte
-	schema          types.Schema
-	usersQuery      string
+	account          *Account
+	workspace        *Workspace
+	id               int
+	name             string
+	role             ConnectionRole
+	enabled          bool
+	connector        *Connector
+	storage          *Connection
+	stream           *Connection
+	resource         *Resource
+	websiteHost      string
+	userCursor       string
+	identityColumn   string
+	timestampColumn  string
+	settings         []byte
+	schema           types.Schema
+	usersQuery       string
+	importInProgress *ImportInProgress
 }
 
 // A ConnectionInfo describes a connection as returned by Get and List.
@@ -573,31 +574,23 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 	}
 
 	// Track the import in the database.
-	var importID int
-	err = this.db.QueryRow("INSERT INTO connections_imports (connection, storage, start_time)\n"+
-		"VALUES ($1, $2, $3)\nRETURNING id", id, storage, time.Now().UTC()).Scan(&importID)
+	n := startImportNotification{
+		Connection: id,
+		Storage:    storage,
+		Reimport:   reimport,
+		StartTime:  time.Now().UTC(),
+	}
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
+		err := this.db.QueryRow("INSERT INTO connections_imports (connection, storage, start_time)\n"+
+			"VALUES ($1, $2, $3)\nRETURNING id", n.Connection, n.Storage, n.StartTime).Scan(&n.ID)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(n)
+	})
 	if err != nil {
 		return err
 	}
-
-	// Start the import.
-	go func() {
-		err = this.startImport(c, reimport)
-		var errorMsg string
-		if err != nil {
-			if e, ok := err.(importError); ok {
-				errorMsg = abbreviate(e.Error(), 1000)
-			} else {
-				log.Printf("[error] cannot do import %d: %s", importID, err)
-				errorMsg = "an internal error has occurred"
-			}
-		}
-		_, err2 := this.db.Exec("UPDATE connections_imports SET end_time = $1, error = $2 WHERE id = $3",
-			time.Now().UTC(), errorMsg, importID)
-		if err2 != nil {
-			log.Printf("[error] cannot update the end of import %d into the database: %s", importID, err2)
-		}
-	}()
 
 	return nil
 }
@@ -625,22 +618,51 @@ const (
 	timestampColumn = "timestamp"
 )
 
-// startImport starts an import for the given connection.
-// It is called by the Import method in its own goroutine.
-// The returned error is stored in the databases with the import.
-func (this *Connections) startImport(connection *Connection, reimport bool) error {
+// startImport starts the imp import.
+// It is called by the state keeper in its own goroutine.
+func (this *Connections) startImport(imp *ImportInProgress) {
+
+	var errorMsg string
+
+	err := this._startImport(imp)
+	if err != nil {
+		if e, ok := err.(importError); ok {
+			errorMsg = abbreviate(e.Error(), 1000)
+		} else {
+			log.Printf("[error] cannot do import %d: %s", imp.id, err)
+			errorMsg = "an internal error has occurred"
+		}
+	}
+	n := endImportNotification{imp.id}
+	// TODO(marco) retry if the transaction fails.
+	err2 := this.db.Transaction(func(tx *postgres.Tx) error {
+		_, err := this.db.Exec("UPDATE connections_imports SET end_time = $1, error = $2 WHERE id = $3",
+			time.Now().UTC(), errorMsg, imp.id)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(n)
+	})
+	if err2 != nil {
+		log.Printf("[error] cannot update the end of import %d into the database: %s", imp.id, err2)
+	}
+
+}
+
+// _startImport is called by the startImport method to start the imp import.
+func (this *Connections) _startImport(imp *ImportInProgress) error {
 
 	const noColumn = -1
 	const role = _connector.SourceRole
 
-	connector := connection.connector
+	connector := imp.connection.connector
 
 	switch connector.typ {
 	case AppType:
 
 		// Refresh the access token if necessary.
 		var clientSecret, resourceCode, accessToken string
-		if r := connection.resource; r != nil {
+		if r := imp.connection.resource; r != nil {
 			expired := time.Now().UTC().Add(15 * time.Minute).After(r.oAuthExpiresIn)
 			if r.oAuthAccessToken == "" || expired {
 				var err error
@@ -655,15 +677,15 @@ func (this *Connections) startImport(connection *Connection, reimport bool) erro
 		}
 
 		// Read the user schema and the properties to read.
-		schema, properties, err := this.userSchema(connection.id)
+		schema, properties, err := this.userSchema(imp.connection.id)
 		if err != nil {
 			return fmt.Errorf("cannot read user schema: %s", err)
 		}
 
-		fh := this.newFirehose(context.Background(), connection, schema)
+		fh := this.newFirehose(context.Background(), imp.connection, schema)
 		c, err := _connector.RegisteredApp(connector.name).Connect(fh.ctx, &_connector.AppConfig{
 			Role:         role,
-			Settings:     connection.settings,
+			Settings:     imp.connection.settings,
 			Firehose:     fh,
 			ClientSecret: clientSecret,
 			Resource:     resourceCode,
@@ -672,8 +694,8 @@ func (this *Connections) startImport(connection *Connection, reimport bool) erro
 		if err != nil {
 			return importError{fmt.Errorf("cannot connect to the connector: %s", err)}
 		}
-		cursor := connection.userCursor
-		if reimport {
+		cursor := imp.connection.userCursor
+		if imp.reimport {
 			cursor = ""
 		}
 		err = c.Users(cursor, properties)
@@ -689,19 +711,19 @@ func (this *Connections) startImport(connection *Connection, reimport bool) erro
 	case DatabaseType:
 
 		// Read the user schema.
-		schema, _, err := this.userSchema(connection.id)
+		schema, _, err := this.userSchema(imp.connection.id)
 		if err != nil {
 			return fmt.Errorf("cannot read user schema: %s", err)
 		}
 
-		usersQuery, err := this.compileQuery(connection.usersQuery, noQueryLimit)
+		usersQuery, err := this.compileQuery(imp.connection.usersQuery, noQueryLimit)
 		if err != nil {
 			return importError{err}
 		}
-		fh := this.newFirehose(context.Background(), connection, schema)
+		fh := this.newFirehose(context.Background(), imp.connection, schema)
 		c, err := _connector.RegisteredDatabase(connector.name).Connect(fh.ctx, &_connector.DatabaseConfig{
 			Role:     role,
-			Settings: connection.settings,
+			Settings: imp.connection.settings,
 			Firehose: fh,
 		})
 		if err != nil {
@@ -767,10 +789,10 @@ func (this *Connections) startImport(connection *Connection, reimport bool) erro
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		connector := connection.connector
+		connector := imp.connection.connector
 		c, err := _connector.RegisteredEventStream(connector.name).Connect(ctx, &_connector.EventStreamConfig{
 			Role:     role,
-			Settings: connection.settings,
+			Settings: imp.connection.settings,
 		})
 		if err != nil {
 			return importError{fmt.Errorf("cannot connect to the connector: %s", err)}
@@ -786,7 +808,7 @@ func (this *Connections) startImport(connection *Connection, reimport bool) erro
 	case FileType:
 
 		// Read the user schema.
-		schema, _, err := this.userSchema(connection.id)
+		schema, _, err := this.userSchema(imp.connection.id)
 		if err != nil {
 			return fmt.Errorf("cannot read user schema: %s", err)
 		}
@@ -796,11 +818,11 @@ func (this *Connections) startImport(connection *Connection, reimport bool) erro
 		// Get the file reader.
 		var files *fileReader
 		{
-			fh := this.newFirehose(ctx, connection.storage, schema)
+			fh := this.newFirehose(ctx, imp.connection.storage, schema)
 			ctx = fh.ctx
 			c, err := _connector.RegisteredStorage(connector.name).Connect(ctx, &_connector.StorageConfig{
 				Role:     role,
-				Settings: connection.settings,
+				Settings: imp.connection.settings,
 				Firehose: fh,
 			})
 			if err != nil {
@@ -810,10 +832,10 @@ func (this *Connections) startImport(connection *Connection, reimport bool) erro
 		}
 
 		// Connect to the file connector.
-		fh := this.newFirehose(ctx, connection, types.Schema{})
+		fh := this.newFirehose(ctx, imp.connection, types.Schema{})
 		file, err := _connector.RegisteredFile(connector.name).Connect(fh.ctx, &_connector.FileConfig{
 			Role:     role,
-			Settings: connection.settings,
+			Settings: imp.connection.settings,
 			Firehose: fh,
 		})
 		if err != nil {
@@ -952,8 +974,17 @@ func (this *Connections) readGRUsers(ids []int) ([]map[string]any, error) {
 	return nil, nil // TODO(Gianluca): implement.
 }
 
-// Import represents a connection import.
-type Import struct {
+// ImportInProgress represents a connection import in progress.
+type ImportInProgress struct {
+	id         int
+	connection *Connection
+	storage    *Connection
+	reimport   bool
+	startTime  time.Time
+}
+
+// An ImportInfo describes a connection import as returned by Imports.
+type ImportInfo struct {
 	ID        int
 	StartTime time.Time
 	EndTime   *time.Time
@@ -963,7 +994,7 @@ type Import struct {
 // Imports returns all the imports of the source connection with identifier id.
 // The connection must be an app, database, event stream or file connection.
 // Returns a ConnectionNotFoundError error if the connection does not exist.
-func (this *Connections) Imports(id int) ([]*Import, error) {
+func (this *Connections) Imports(id int) ([]*ImportInfo, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.New("invalid connection identifier")
 	}
@@ -980,7 +1011,7 @@ func (this *Connections) Imports(id int) ([]*Import, error) {
 	if c.role == DestinationRole {
 		return nil, errors.New("destination connections cannot have imports")
 	}
-	imports := []*Import{}
+	imports := []*ImportInfo{}
 	err = this.db.QueryScan(
 		"SELECT i.id, i.start_time, i.end_time, i.error\n"+
 			"FROM connections_imports AS i\n"+
@@ -989,7 +1020,7 @@ func (this *Connections) Imports(id int) ([]*Import, error) {
 			"ORDER BY i.id DESC", this.id, id, func(rows *postgres.Rows) error {
 			var err error
 			for rows.Next() {
-				var imp Import
+				var imp ImportInfo
 				if err = rows.Scan(&imp.ID, &imp.StartTime, &imp.EndTime, &imp.Error); err != nil {
 					return err
 				}

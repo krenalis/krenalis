@@ -32,6 +32,8 @@ func (apis *APIs) keepState(ctx context.Context, workspaces map[int]*Workspace, 
 			sk.addConnection(n)
 		case "deleteConnection":
 			sk.deleteConnection(n)
+		case "endImport":
+			sk.endImport(n)
 		case "setConnectionSettings":
 			sk.setConnectionSettings(n)
 		case "setConnectionStorage":
@@ -42,6 +44,8 @@ func (apis *APIs) keepState(ctx context.Context, workspaces map[int]*Workspace, 
 			sk.setConnectionUserQuery(n)
 		case "setConnectionUserSchema":
 			sk.setConnectionUserSchema(n)
+		case "startImport":
+			sk.startImport(n)
 		default:
 			log.Printf("[warning] unknown notification %q received from %d: %s", n.Name, n.PID, n.Payload)
 		}
@@ -175,6 +179,27 @@ func (s *stateKeeper) deleteConnection(n postgres.Notification) {
 	delete(s.connections, e.ID)
 }
 
+// endImportNotification is the notification event sent when an import ends.
+type endImportNotification struct {
+	id int
+}
+
+// endImport ends an import.
+func (s *stateKeeper) endImport(n postgres.Notification) {
+	e := endImportNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	for _, c := range s.connections {
+		if c.importInProgress != nil && c.importInProgress.id == e.id {
+			s.setConnection(c.id, func(c *Connection) {
+				c.importInProgress = nil
+			})
+			break
+		}
+	}
+}
+
 // setConnectionSettingsNotification is the notification event sent when the
 // settings of a connection is changed.
 type setConnectionSettingsNotification struct {
@@ -270,4 +295,34 @@ func (s *stateKeeper) setConnectionUserSchema(n postgres.Notification) {
 	s.setConnection(e.Connection, func(c *Connection) {
 		c.schema = e.Schema
 	})
+}
+
+// startImportNotification is the notification event sent when an import
+// starts.
+type startImportNotification struct {
+	ID         int
+	Connection int
+	Storage    int
+	Reimport   bool
+	StartTime  time.Time
+}
+
+// startImport starts an import.
+func (s *stateKeeper) startImport(n postgres.Notification) {
+	e := startImportNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	c := s.setConnection(e.Connection, func(c *Connection) {
+		c.importInProgress = &ImportInProgress{
+			id:         e.ID,
+			connection: c,
+			storage:    s.connections[e.Storage],
+			reimport:   e.Reimport,
+			startTime:  e.StartTime,
+		}
+	})
+	// Start the import.
+	// TODO(marco): only one server should starts the import.
+	go c.workspace.Connections.startImport(c.importInProgress)
 }
