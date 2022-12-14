@@ -30,6 +30,8 @@ type Resolver func(name string) (Type, error)
 // custom type to resolve does not exist.
 var ErrCustomTypeNotExist = errors.New("custom type does not exist")
 
+var null = []byte("null")
+
 // MarshalJSON marshals schema into JSON.
 // It returns an error is schema is not valid.
 func (schema Schema) MarshalJSON() ([]byte, error) {
@@ -164,6 +166,20 @@ func ParseSchema(r io.Reader, resolve Resolver) (Schema, error) {
 	return Schema{properties}, nil
 }
 
+// UnmarshalJSON parses the JSON-encoded data and stores the result in the
+// schema pointed by s.
+func (s *Schema) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, null) {
+		return nil
+	}
+	schema, err := ParseSchema(bytes.NewReader(norm.NFC.Bytes(data)), nil)
+	if err != nil {
+		return err
+	}
+	*s = schema
+	return nil
+}
+
 // MarshalType marshals t into JSON.
 // It returns an error is t is not valid.
 func MarshalType(t Type) ([]byte, error) {
@@ -202,6 +218,9 @@ func (t Type) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON parses the JSON-encoded data and stores the result in the type
 // pointed by t.
 func (t *Type) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, null) {
+		return nil
+	}
 	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
 	dec.UseNumber()
 	t2, err := unmarshalType(dec, nil)
