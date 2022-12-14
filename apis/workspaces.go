@@ -117,7 +117,7 @@ func (this *Workspaces) Get(id int) (*WorkspaceInfo, error) {
 }
 
 // As returns the workspace with identifier id.
-// Returns an error is the workspace does not exist.
+// Returns an error if the workspace does not exist.
 func (this *Workspaces) As(id int) (*Workspace, error) {
 	return this.get(id)
 }
