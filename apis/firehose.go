@@ -83,8 +83,6 @@ func (fh *firehose) SetSettings(settings []byte) error {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 	}
 	n := setConnectionSettingsNotification{
-		Account:    fh.connection.account.id,
-		Workspace:  fh.connection.workspace.id,
 		Connection: fh.connection.id,
 		Settings:   settings,
 	}

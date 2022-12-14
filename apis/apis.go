@@ -350,7 +350,7 @@ func New(conf *Config) (*APIs, error) {
 	apis.eventProcessor = newEventProcessor(apis.db, apis.chDB, allStreams)
 	go apis.eventProcessor.Run(context.Background())
 
-	go apis.keepState(context.Background())
+	go apis.keepState(context.Background(), workspaces, connections)
 
 	return apis, nil
 }

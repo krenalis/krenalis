@@ -252,7 +252,6 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 		return 0, err
 	}
 	n := addConnectionNotification{
-		Account:   this.account.id,
 		Workspace: this.id,
 		ID:        id,
 		Name:      name,
@@ -438,9 +437,7 @@ func (this *Connections) Delete(id int) error {
 		return nil
 	}
 	n := deleteConnectionNotification{
-		Account:   this.account.id,
-		Workspace: this.id,
-		ID:        id,
+		ID: id,
 	}
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		if c.connector.oAuth != nil {
@@ -1333,8 +1330,6 @@ func (this *Connections) SetStorage(file, storage int) error {
 	}
 
 	n := setConnectionStorageNotification{
-		Account:    this.account.id,
-		Workspace:  this.id,
 		Connection: file,
 		Storage:    storage,
 	}
@@ -1463,8 +1458,6 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 	}
 
 	n := setUserQueryNotification{
-		Account:    this.account.id,
-		Workspace:  this.id,
 		Connection: id,
 		Query:      query,
 	}
@@ -1755,8 +1748,6 @@ func (this *Connections) reloadSchema(id int) error {
 	}
 
 	n := setConnectionUserSchemaNotification{
-		Account:    this.account.id,
-		Workspace:  this.id,
 		Connection: id,
 		Schema:     rawSchema,
 	}

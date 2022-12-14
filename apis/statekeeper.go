@@ -15,10 +15,11 @@ import (
 // logNotifications controls the logging of notifications on the log.
 const logNotifications = false
 
-// keepState starts the state keeper. It is called in its own goroutine.
-func (apis *APIs) keepState(ctx context.Context) {
+// keepState starts the state keeper. It is called in its own goroutine. The
+// workspaces argument contains all workspaces and connections all connections.
+func (apis *APIs) keepState(ctx context.Context, workspaces map[int]*Workspace, connections map[int]*Connection) {
 
-	sk := stateKeeper{apis}
+	sk := stateKeeper{apis, workspaces, connections}
 
 	notifications := apis.db.ListenToNotifications(ctx)
 	for {
@@ -64,12 +65,26 @@ func decodeStateNotification(n postgres.Notification, e any) bool {
 // state of this instance.
 type stateKeeper struct {
 	*APIs
+	workspaces  map[int]*Workspace
+	connections map[int]*Connection
+}
+
+// setConnection calls the function f passing a copy of the connection with
+// identifier id. After f is returned, it replaces the connection with its
+// copy in the state and returns the latter.
+func (s *stateKeeper) setConnection(id int, f func(c *Connection)) *Connection {
+	c := s.connections[id]
+	cc := new(Connection)
+	*cc = *c
+	f(cc)
+	c.workspace.Connections.add(cc)
+	s.connections[c.id] = cc
+	return cc
 }
 
 // addConnectionNotification is the notification event sent when a new
 // connection is added.
 type addConnectionNotification struct {
-	Account   int            // account identifier
 	Workspace int            // workspace identifier
 	ID        int            // identifier
 	Name      string         // name
@@ -88,13 +103,12 @@ type addConnectionNotification struct {
 }
 
 // addConnection adds a new connection.
-func (s stateKeeper) addConnection(n postgres.Notification) {
+func (s *stateKeeper) addConnection(n postgres.Notification) {
 	e := addConnectionNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	account, _ := s.Accounts.get(e.Account)
-	workspace, _ := account.Workspaces.get(e.Workspace)
+	workspace, _ := s.workspaces[e.Workspace]
 	connector, _ := s.Connectors.get(e.Connector)
 	var resource *Resource
 	if connector.oAuth != nil {
@@ -121,105 +135,81 @@ func (s stateKeeper) addConnection(n postgres.Notification) {
 			connector.addResource(resource)
 		}
 	}
-	var storage *Connection
-	if e.Storage > 0 {
-		storage, _ = workspace.Connections.get(e.Storage)
-	}
-	var stream *Connection
-	if e.Stream > 0 {
-		stream, _ = workspace.Connections.get(e.Stream)
-	}
-	workspace.Connections.add(&Connection{
-		account:   account,
+	c := &Connection{
+		account:   workspace.account,
 		workspace: workspace,
 		id:        e.ID,
 		name:      e.Name,
 		role:      e.Role,
 		connector: connector,
-		storage:   storage,
-		stream:    stream,
+		storage:   s.connections[e.Storage],
+		stream:    s.connections[e.Stream],
 		resource:  resource,
-	})
+	}
+	workspace.Connections.add(c)
+	s.connections[e.ID] = c
 	if connector.typ == AppType {
 		// TODO(marco) only one server should reload the schema.
 		go func() {
-			err := workspace.Connections.reloadSchema(e.ID)
+			err := workspace.Connections.reloadSchema(c.id)
 			if err != nil {
-				log.Printf("[error] cannot reload schema for connection %d: %s", e.ID, err)
+				log.Printf("[error] cannot reload schema for connection %d: %s", c.id, err)
 			}
 		}()
 	}
-	return
 }
 
 // deleteConnectionNotification is the notification event sent when a
 // connection is deleted.
 type deleteConnectionNotification struct {
-	Account   int
-	Workspace int
-	ID        int
+	ID int
 }
 
 // deleteConnection deletes a connection.
-func (s stateKeeper) deleteConnection(n postgres.Notification) {
+func (s *stateKeeper) deleteConnection(n postgres.Notification) {
 	e := deleteConnectionNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	account, _ := s.Accounts.get(e.Account)
-	workspace, _ := account.Workspaces.get(e.Workspace)
-	workspace.Connections.delete(e.ID)
-	return
+	ws := s.connections[e.ID].workspace
+	ws.Connections.delete(e.ID)
+	delete(s.connections, e.ID)
 }
 
 // setConnectionSettingsNotification is the notification event sent when the
 // settings of a connection is changed.
 type setConnectionSettingsNotification struct {
-	Account    int
-	Workspace  int
 	Connection int
 	Settings   []byte
 }
 
 // setConnectionSettings sets the settings of a connection.
-func (s stateKeeper) setConnectionSettings(n postgres.Notification) {
+func (s *stateKeeper) setConnectionSettings(n postgres.Notification) {
 	e := setConnectionSettingsNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	account, _ := s.Accounts.get(e.Account)
-	workspace, _ := account.Workspaces.get(e.Workspace)
-	connection := workspace.Connections.clone(e.Connection)
-	connection.settings = e.Settings
-	workspace.Connections.add(connection)
-	return
+	s.setConnection(e.Connection, func(c *Connection) {
+		c.settings = e.Settings
+	})
 }
 
 // setConnectionSettingsNotification is the notification event sent when the
 // settings of a connection is changed.
 type setConnectionStorageNotification struct {
-	Account    int
-	Workspace  int
 	Connection int
 	Storage    int
 }
 
 // setConnectionStorages sets the storage of a connection.
-func (s stateKeeper) setConnectionStorage(n postgres.Notification) {
+func (s *stateKeeper) setConnectionStorage(n postgres.Notification) {
 	e := setConnectionStorageNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	account, _ := s.Accounts.get(e.Account)
-	workspace, _ := account.Workspaces.get(e.Workspace)
-	connection := workspace.Connections.clone(e.Connection)
-	var storage *Connection
-	if e.Storage > 0 {
-		storage, _ = workspace.Connections.get(e.Storage)
-	}
-	connection.storage = storage
-	workspace.Connections.add(connection)
-	return
+	s.setConnection(e.Connection, func(c *Connection) {
+		c.storage = s.connections[e.Storage]
+	})
 }
 
 // setConnectionStreamNotification is the notification event sent when the
@@ -232,64 +222,50 @@ type setConnectionStreamNotification struct {
 }
 
 // setConnectionStream sets the stream of a connection.
-func (s stateKeeper) setConnectionStream(n postgres.Notification) {
+func (s *stateKeeper) setConnectionStream(n postgres.Notification) {
 	e := setConnectionStreamNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	account, _ := s.Accounts.get(e.Account)
-	workspace, _ := account.Workspaces.get(e.Workspace)
-	connection := workspace.Connections.clone(e.Connection)
-	var stream *Connection
-	if e.Stream > 0 {
-		stream, _ = workspace.Connections.get(e.Stream)
-	}
-	connection.stream = stream
-	workspace.Connections.add(connection)
-	return
+	s.setConnection(e.Connection, func(c *Connection) {
+		c.stream = s.connections[e.Stream]
+	})
 }
 
 // setUserQueryNotification is the notification event sent when a user query of
 // a connection is changed.
 type setUserQueryNotification struct {
-	Account    int
-	Workspace  int
 	Connection int
 	Query      string
 }
 
 // setConnectionUserQuery sets the user query of a connection.
-func (s stateKeeper) setConnectionUserQuery(n postgres.Notification) {
+func (s *stateKeeper) setConnectionUserQuery(n postgres.Notification) {
 	e := setUserQueryNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	account, _ := s.Accounts.get(e.Account)
-	workspace, _ := account.Workspaces.get(e.Workspace)
-	connection := workspace.Connections.clone(e.Connection)
-	connection.usersQuery = e.Query
-	workspace.Connections.add(connection)
+	c := s.setConnection(e.Connection, func(c *Connection) {
+		c.usersQuery = e.Query
+	})
 	// TODO(marco) only one server should reload the schema.
 	go func() {
-		err := workspace.Connections.reloadSchema(e.Connection)
+		err := c.workspace.Connections.reloadSchema(c.id)
 		if err != nil {
-			log.Printf("[error] cannot reload schema for connection %d: %s", e.Connection, err)
+			log.Printf("[error] cannot reload schema for connection %d: %s", c.id, err)
 		}
 	}()
-	return
 }
 
 // setConnectionUserSchemaNotification is the notification event sent when the
 // user schema of a connection is changed.
 type setConnectionUserSchemaNotification struct {
-	Account    int
-	Workspace  int
 	Connection int
 	Schema     json.RawMessage
 }
 
 // setConnectionUserSchema sets the user schema of a connection.
-func (s stateKeeper) setConnectionUserSchema(n postgres.Notification) {
+func (s *stateKeeper) setConnectionUserSchema(n postgres.Notification) {
 	e := setConnectionUserSchemaNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
@@ -299,10 +275,7 @@ func (s stateKeeper) setConnectionUserSchema(n postgres.Notification) {
 		log.Printf("[error] cannot parse user schema for connection %d received from notification: %s", e.Connection, err)
 		return
 	}
-	account, _ := s.Accounts.get(e.Account)
-	workspace, _ := account.Workspaces.get(e.Workspace)
-	connection := workspace.Connections.clone(e.Connection)
-	connection.schema = schema
-	workspace.Connections.add(connection)
-	return
+	s.setConnection(e.Connection, func(c *Connection) {
+		c.schema = schema
+	})
 }
