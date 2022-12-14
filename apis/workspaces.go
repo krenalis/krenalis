@@ -96,7 +96,7 @@ type WorkspaceInfo struct {
 // exist.
 var ErrWorkspaceNotFound = errors.New("workspace does not exist")
 
-// Get returns a WorkspaceInfo describing the connection with identifier id.
+// Get returns a WorkspaceInfo describing the workspace with identifier id.
 // Returns the ErrWorkspaceNotFound error if the workspace does not exist.
 func (this *Workspaces) Get(id int) (*WorkspaceInfo, error) {
 	if id < 1 || id > maxInt32 {
