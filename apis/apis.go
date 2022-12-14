@@ -191,14 +191,32 @@ func New(conf *Config) (*APIs, error) {
 				}
 				account := accounts[accountID]
 				workspace := &Workspace{
-					db:          db,
-					chDB:        chDB,
-					id:          id,
-					account:     account,
-					userSchema:  userSchema,
-					groupSchema: groupSchema,
-					eventSchema: eventSchema,
+					db:      db,
+					chDB:    chDB,
+					id:      id,
+					account: account,
 				}
+				if userSchema != "" {
+					workspace.schema.user, err = types.ParseSchema(strings.NewReader(userSchema), nil)
+					if err != nil {
+						return err
+					}
+				}
+				if groupSchema != "" {
+					workspace.schema.group, err = types.ParseSchema(strings.NewReader(groupSchema), nil)
+					if err != nil {
+						return err
+					}
+				}
+				if eventSchema != "" {
+					workspace.schema.event, err = types.ParseSchema(strings.NewReader(eventSchema), nil)
+					if err != nil {
+						return err
+					}
+				}
+				workspace.schemaSources.user = userSchema
+				workspace.schemaSources.group = groupSchema
+				workspace.schemaSources.event = eventSchema
 				workspace.Connections = newConnections(workspace)
 				workspace.EventListeners = &EventListeners{workspace}
 				workspace.Transformations = &Transformations{workspace}

@@ -11,10 +11,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"chichi/apis/postgres"
 	"chichi/apis/types"
@@ -36,7 +38,7 @@ type workspacesState struct {
 var errWorkspaceNotFound = errors.New("workspace does not exist")
 
 // get returns the workspace with identifier id.
-// Returns the errWorkspaceNotFound error if the workspace does not exist.
+// Returns the ErrWorkspaceNotFound error if the workspace does not exist.
 func (this *Workspaces) get(id int) (*Workspace, error) {
 	this.state.Lock()
 	w, ok := this.state.ids[id]
@@ -59,36 +61,65 @@ type Workspace struct {
 	Connections     *Connections
 	EventListeners  *EventListeners
 	Transformations *Transformations
-	mu              sync.Mutex // for userSchema, groupSchema and eventSchema fields.
 	id              int
 	account         *Account
-	userSchema      string
-	groupSchema     string
-	eventSchema     string
+	schema          struct {
+		user  types.Schema
+		group types.Schema
+		event types.Schema
+	}
+	schemaSources struct {
+		user  string
+		group string
+		event string
+	}
+}
+
+// A WorkspaceInfo describes a workspace as returned by Get and List.
+type WorkspaceInfo struct {
+	ID int
+
+	// Schema and SourceSchema are only returned by the Get method.
+	Schema struct {
+		User  types.Schema
+		Group types.Schema
+		Event types.Schema
+	}
+	SchemaSources struct {
+		User  string
+		Group string
+		Event string
+	}
+}
+
+// An ErrWorkspaceNotFound error is returned by Get if the workspace does not
+// exist.
+var ErrWorkspaceNotFound = errors.New("workspace does not exist")
+
+// Get returns a WorkspaceInfo describing the connection with identifier id.
+// Returns the ErrWorkspaceNotFound error if the workspace does not exist.
+func (this *Workspaces) Get(id int) (*WorkspaceInfo, error) {
+	if id < 1 || id > maxInt32 {
+		return nil, errors.New("invalid workspace identifier")
+	}
+	ws, err := this.get(id)
+	if err != nil {
+		return nil, ErrWorkspaceNotFound
+	}
+	info := WorkspaceInfo{ID: ws.id}
+	info.Schema.User = ws.schema.user
+	info.Schema.Group = ws.schema.group
+	info.Schema.Event = ws.schema.event
+	info.SchemaSources.User = ws.schemaSources.user
+	info.SchemaSources.Group = ws.schemaSources.group
+	info.SchemaSources.Event = ws.schemaSources.event
+	return &info, nil
 }
 
 // As returns the workspace with identifier id.
 // Returns an error is the workspace does not exist.
 func (this *Workspaces) As(id int) (*Workspace, error) {
 	return this.get(id)
-}
-
-// Schema returns the schema with the given name. name can be "user", "group"
-// or "event". If the schema with the given name does not exist, it returns an
-// empty string.
-func (ws *Workspace) Schema(name string) (string, error) {
-	ws.mu.Lock()
-	defer ws.mu.Unlock()
-	switch name {
-	case "user":
-		return ws.userSchema, nil
-	case "group":
-		return ws.groupSchema, nil
-	case "event":
-		return ws.eventSchema, nil
-	default:
-		return "", fmt.Errorf("invalid schema name %q", name)
-	}
 }
 
 // An InvalidSchemaSyntaxError error indicates that a schema has an invalid
@@ -101,40 +132,79 @@ func (err *InvalidSchemaSyntaxError) Error() string {
 	return fmt.Sprintf("schema is not valid: %s", err.Err.Error())
 }
 
-// SetSchema sets the schema with the given name. name can be "user", "group"
-// or "event". If the schema has a syntax error, it returns an
+// Info returns a WorkspaceInfo describing the workspace.
+func (ws *Workspace) Info() *WorkspaceInfo {
+	info := WorkspaceInfo{ID: ws.id}
+	info.Schema.User = ws.schema.user
+	info.Schema.Group = ws.schema.group
+	info.Schema.Event = ws.schema.event
+	info.SchemaSources.User = ws.schemaSources.user
+	info.SchemaSources.Group = ws.schemaSources.group
+	info.SchemaSources.Event = ws.schemaSources.event
+	return &info
+}
+
+// SetUserSchema sets the user schema. schema must be valid and cannot be
+// longer than 2^24-1 runes. If schema is not valid, it returns an
 // InvalidSchemaSyntaxError error.
-func (ws *Workspace) SetSchema(name, schema string) error {
-	var column string
-	switch name {
-	case "user":
-		column = "user_schema"
-	case "group":
-		column = "group_schema"
-	case "event":
-		column = "event_schema"
-	default:
-		return fmt.Errorf("invalid schema name %q", name)
+func (ws *Workspace) SetUserSchema(schema string) error {
+	return ws.setSchema("user", schema)
+}
+
+// SetGroupSchema sets the group schema. schema must be valid and cannot be
+// longer than 2^24-1 runes. If schema is not valid, it returns an
+// // InvalidSchemaSyntaxError error.
+func (ws *Workspace) SetGroupSchema(schema string) error {
+	return ws.setSchema("group", schema)
+}
+
+// SetEventSchema sets the event schema. schema must be valid and cannot be
+// longer than 2^24-1 runes. If schema is not valid, it returns an
+// // InvalidSchemaSyntaxError error.
+func (ws *Workspace) SetEventSchema(schema string) error {
+	return ws.setSchema("event", schema)
+}
+
+// setSchema is called by the SetUserSchema, SetGroupSchema, and SetEventSchema
+// methods to set a schema.
+func (ws *Workspace) setSchema(name string, schema string) error {
+	if utf8.RuneCountInString(schema) > rawSchemaMaxSize {
+		return fmt.Errorf("schema is too longer")
 	}
 	_, err := types.ParseSchema(strings.NewReader(schema), nil)
 	if err != nil {
 		return &InvalidSchemaSyntaxError{err}
 	}
-	_, err = ws.db.Exec("UPDATE workspaces SET "+column+" = $1 WHERE id = $2", schema, ws.id)
-	if err != nil {
-		return err
-	}
-	ws.mu.Lock()
+	var n any
+	var table string
 	switch name {
 	case "user":
-		ws.userSchema = schema
+		n = setWorkspaceUserSchemaNotification{
+			Workspace: ws.id,
+			Schema:    schema,
+		}
+		table = "user_schema"
 	case "group":
-		ws.groupSchema = schema
+		n = setWorkspaceGroupSchemaNotification{
+			Workspace: ws.id,
+			Schema:    schema,
+		}
+		table = "group_schema"
 	case "event":
-		ws.eventSchema = schema
+		n = setWorkspaceEventSchemaNotification{
+			Workspace: ws.id,
+			Schema:    schema,
+		}
+		table = "event_schema"
 	}
-	ws.mu.Unlock()
-	return nil
+	err = ws.db.Transaction(func(tx *postgres.Tx) error {
+		_, err = tx.Exec("UPDATE workspaces SET "+table+" = $1 WHERE id = $2", schema, ws.id)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(n)
+	})
+	return err
 }
 
 // A PropertyNotFoundError is returned by the (*Workspace).Users method if a
@@ -164,14 +234,7 @@ func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema,
 	}
 
 	// Read the schema.
-	ws.mu.Lock()
-	rawSchema := ws.userSchema
-	ws.mu.Unlock()
-	schema, err := types.ParseSchema(strings.NewReader(rawSchema), nil)
-	if err != nil {
-		return types.Schema{}, nil, err
-	}
-	schemaProperties := schema.Properties()
+	schemaProperties := ws.schema.user.Properties()
 	propertyByName := map[string]types.Property{}
 	for _, p := range schemaProperties {
 		propertyByName[p.Name] = p
@@ -198,7 +261,7 @@ func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema,
 
 	// Execute the query.
 	var users [][]any
-	err = ws.db.QueryScan(query.String(), func(rows *postgres.Rows) error {
+	err := ws.db.QueryScan(query.String(), func(rows *postgres.Rows) error {
 		var err error
 		for rows.Next() {
 			user := make([]any, len(properties))
@@ -251,10 +314,40 @@ func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema,
 	for i, name := range properties {
 		returnedProperties[i] = propertyByName[name]
 	}
-	schema, err = types.SchemaOf(returnedProperties)
+	schema, err := types.SchemaOf(returnedProperties)
 	if err != nil {
 		return types.Schema{}, nil, fmt.Errorf("cannot create a new schema from the user schema: %s", err)
 	}
 
 	return schema, users, err
+}
+
+// list returns all the workspaces.
+func (this *Workspaces) list() []*Workspace {
+	this.state.Lock()
+	workspaces := make([]*Workspace, len(this.state.ids))
+	i := 0
+	for _, c := range this.state.ids {
+		workspaces[i] = c
+		i++
+	}
+	this.state.Unlock()
+	return workspaces
+}
+
+// List returns a list of WorkspaceInfo describing all workspaces.
+func (this *Workspaces) List() []*WorkspaceInfo {
+	workspaces := this.list()
+	infos := make([]*WorkspaceInfo, len(workspaces))
+	for i, c := range workspaces {
+		info := WorkspaceInfo{
+			ID: c.id,
+		}
+		infos[i] = &info
+	}
+	sort.Slice(infos, func(i, j int) bool {
+		a, b := infos[i], infos[j]
+		return a.ID < b.ID
+	})
+	return infos
 }

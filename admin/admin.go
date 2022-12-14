@@ -23,8 +23,6 @@ import (
 	"time"
 
 	"chichi/apis"
-	"chichi/apis/types"
-
 	"github.com/evanw/esbuild/pkg/api"
 )
 
@@ -136,26 +134,25 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Handle the "/user-schema-properties" endpoint.
 	if strings.HasPrefix(rpath, "/user-schema-properties") {
-		schema, err := workspace.Schema("user")
-		if err != nil {
-			log.Printf("[error] cannot retrieve user schema: %s", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		if schema == "" {
-			http.Error(w, "Not Found", http.StatusNotFound)
-			return
-		}
-		sc, err := types.ParseSchema(strings.NewReader(schema), nil)
-		if err != nil {
-			if err != nil {
-				log.Printf("[error] user schema of workspace 1 is not valid: %s", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-		}
+		info := workspace.Info()
 		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(sc.PropertiesNames())
+		_ = json.NewEncoder(w).Encode(info.Schema.User.PropertiesNames())
+		return
+	}
+
+	// Handle the "/group-schema-properties" endpoint.
+	if strings.HasPrefix(rpath, "/group-schema-properties") {
+		info := workspace.Info()
+		w.Header().Add("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(info.Schema.Group.PropertiesNames())
+		return
+	}
+
+	// Handle the "/event-schema-properties" endpoint.
+	if strings.HasPrefix(rpath, "/event-schema-properties") {
+		info := workspace.Info()
+		w.Header().Add("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(info.Schema.Event.PropertiesNames())
 		return
 	}
 
@@ -212,11 +209,15 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			schema, err := workspace.Schema(request.SchemaName)
-			if err != nil {
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
+			info := workspace.Info()
+			var schema string
+			switch request.SchemaName {
+			case "user":
+				schema = info.SchemaSources.User
+			case "group":
+				schema = info.SchemaSources.Group
+			case "event":
+				schema = info.SchemaSources.Event
 			}
 			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(schema)
@@ -231,11 +232,17 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = workspace.SetSchema(request.SchemaName, request.Schema)
+			switch request.SchemaName {
+			case "user":
+				err = workspace.SetUserSchema(request.Schema)
+			case "group":
+				err = workspace.SetGroupSchema(request.Schema)
+			case "event":
+				err = workspace.SetEventSchema(request.Schema)
+			}
 			if err != nil {
-				if err, ok := err.(*apis.InvalidSchemaSyntaxError); ok {
-					w.Header().Add("Content-Type", "application/json")
-					_ = json.NewEncoder(w).Encode(map[string]any{"Error": err.Error()})
+				if _, ok := err.(*apis.InvalidSchemaSyntaxError); ok {
+					http.Error(w, "Bad Request", http.StatusBadRequest)
 					return
 				}
 				log.Printf("[error] %v", err)

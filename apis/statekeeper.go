@@ -44,6 +44,12 @@ func (apis *APIs) keepState(ctx context.Context, workspaces map[int]*Workspace, 
 			sk.setConnectionUserQuery(n)
 		case "setConnectionUserSchema":
 			sk.setConnectionUserSchema(n)
+		case "setWorkspaceEventSchema":
+			sk.setWorkspaceEventSchema(n)
+		case "setWorkspaceGroupSchema":
+			sk.setWorkspaceGroupSchema(n)
+		case "setWorkspaceUserSchema":
+			sk.setWorkspaceUserSchema(n)
 		case "startImport":
 			sk.startImport(n)
 		default:
@@ -86,6 +92,22 @@ func (s *stateKeeper) setConnection(id int, f func(c *Connection)) *Connection {
 	connections.state.Unlock()
 	s.connections[c.id] = cc
 	return cc
+}
+
+// setWorkspace calls the function f passing a copy of the workspace with
+// identifier id. After f is returned, it replaces the workspace with its
+// copy in the state and returns the latter.
+func (s *stateKeeper) setWorkspace(id int, f func(c *Workspace)) *Workspace {
+	w := s.workspaces[id]
+	ww := new(Workspace)
+	*ww = *w
+	f(ww)
+	workspaces := w.account.Workspaces
+	workspaces.state.Lock()
+	workspaces.state.ids[w.id] = ww
+	workspaces.state.Unlock()
+	s.workspaces[w.id] = ww
+	return ww
 }
 
 // addConnectionNotification is the notification event sent when a new
@@ -320,6 +342,78 @@ func (s *stateKeeper) setConnectionUserSchema(n postgres.Notification) {
 	}
 	s.setConnection(e.Connection, func(c *Connection) {
 		c.schema = e.Schema
+	})
+}
+
+// setWorkspaceEventSchemaNotification is the notification event sent when a
+// workspace event schema is changed.
+type setWorkspaceEventSchemaNotification struct {
+	Workspace int
+	Schema    string
+}
+
+// setWorkspaceGroupSchema sets the user schema of a workspace.
+func (s *stateKeeper) setWorkspaceEventSchema(n postgres.Notification) {
+	e := setWorkspaceEventSchemaNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	schema, err := types.ParseSchema(strings.NewReader(e.Schema), nil)
+	if err != nil {
+		log.Printf("[error] cannot parse workspace event schema of notification %s from %d: %s", n.Name, n.PID, err)
+		return
+	}
+	s.setWorkspace(e.Workspace, func(w *Workspace) {
+		w.schema.event = schema
+		w.schemaSources.event = e.Schema
+	})
+}
+
+// setWorkspaceGroupSchemaNotification is the notification event sent when a
+// workspace group schema is changed.
+type setWorkspaceGroupSchemaNotification struct {
+	Workspace int
+	Schema    string
+}
+
+// setWorkspaceGroupSchema sets the user schema of a workspace.
+func (s *stateKeeper) setWorkspaceGroupSchema(n postgres.Notification) {
+	e := setWorkspaceGroupSchemaNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	schema, err := types.ParseSchema(strings.NewReader(e.Schema), nil)
+	if err != nil {
+		log.Printf("[error] cannot parse workspace group schema of notification %s from %d: %s", n.Name, n.PID, err)
+		return
+	}
+	s.setWorkspace(e.Workspace, func(w *Workspace) {
+		w.schema.group = schema
+		w.schemaSources.group = e.Schema
+	})
+}
+
+// setWorkspaceUserSchemaNotification is the notification event sent when a
+// workspace user schema is changed.
+type setWorkspaceUserSchemaNotification struct {
+	Workspace int
+	Schema    string
+}
+
+// setWorkspaceUserSchema sets the user schema of a workspace.
+func (s *stateKeeper) setWorkspaceUserSchema(n postgres.Notification) {
+	e := setWorkspaceUserSchemaNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	schema, err := types.ParseSchema(strings.NewReader(e.Schema), nil)
+	if err != nil {
+		log.Printf("[error] cannot parse workspace user schema of notification %s from %d: %s", n.Name, n.PID, err)
+		return
+	}
+	s.setWorkspace(e.Workspace, func(w *Workspace) {
+		w.schema.user = schema
+		w.schemaSources.user = e.Schema
 	})
 }
 
