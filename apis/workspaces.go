@@ -79,7 +79,7 @@ type Workspace struct {
 type WorkspaceInfo struct {
 	ID int
 
-	// Schema and SourceSchema are only returned by the Get method.
+	// Schema and SchemaSources are only returned by the Get method.
 	Schema struct {
 		User  types.Schema
 		Group types.Schema
