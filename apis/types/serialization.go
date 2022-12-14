@@ -940,6 +940,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		if !hasLayout {
 			return Type{}, errors.New("missing 'layout' key")
 		}
+		t.vl = layout
 	} else if hasLayout {
 		return Type{}, errors.New("unexpected layout for non-time type")
 	}
