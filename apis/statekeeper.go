@@ -215,8 +215,6 @@ func (s *stateKeeper) setConnectionStorage(n postgres.Notification) {
 // setConnectionStreamNotification is the notification event sent when the
 // settings of a connection is changed.
 type setConnectionStreamNotification struct {
-	Account    int
-	Workspace  int
 	Connection int
 	Stream     int
 }

@@ -1398,8 +1398,6 @@ func (this *Connections) SetStream(source, stream int) error {
 	}
 
 	n := setConnectionStreamNotification{
-		Account:    this.account.id,
-		Workspace:  this.id,
 		Connection: source,
 		Stream:     stream,
 	}
