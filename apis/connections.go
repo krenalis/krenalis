@@ -500,7 +500,7 @@ func (this *Connections) Export(id int) (err error) {
 		return err
 	}
 
-	// Start the import.
+	// Start the export.
 	go func() {
 		err = this.startExport(c)
 		var errorMsg string
