@@ -80,7 +80,10 @@ func (s *stateKeeper) setConnection(id int, f func(c *Connection)) *Connection {
 	cc := new(Connection)
 	*cc = *c
 	f(cc)
-	c.workspace.Connections.add(cc)
+	connections := c.workspace.Connections
+	connections.state.Lock()
+	connections.state.ids[c.id] = cc
+	connections.state.Unlock()
 	s.connections[c.id] = cc
 	return cc
 }
@@ -149,7 +152,9 @@ func (s *stateKeeper) addConnection(n postgres.Notification) {
 		stream:    s.connections[e.Stream],
 		resource:  resource,
 	}
-	workspace.Connections.add(c)
+	workspace.Connections.state.Lock()
+	workspace.Connections.state.ids[c.id] = c
+	workspace.Connections.state.Unlock()
 	s.connections[e.ID] = c
 	if connector.typ == AppType {
 		// TODO(marco) only one server should reload the schema.
@@ -170,13 +175,34 @@ type deleteConnectionNotification struct {
 
 // deleteConnection deletes a connection.
 func (s *stateKeeper) deleteConnection(n postgres.Notification) {
+
 	e := deleteConnectionNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	ws := s.connections[e.ID].workspace
-	ws.Connections.delete(e.ID)
+
+	var usages []*Connection
+	connections := s.connections[e.ID].workspace.Connections
 	delete(s.connections, e.ID)
+
+	connections.state.Lock()
+	for _, c := range connections.state.ids {
+		if c.storage != nil && c.storage.id == e.ID || c.stream != nil && c.stream.id == e.ID {
+			usages = append(usages, c)
+		}
+	}
+	for _, c := range usages {
+		cc := Connection{}
+		cc = *c
+		if cc.storage != nil && cc.storage.id == e.ID {
+			cc.storage = nil
+		} else {
+			cc.stream = nil
+		}
+		connections.state.ids[c.id] = &cc
+	}
+	delete(connections.state.ids, e.ID)
+	connections.state.Unlock()
 }
 
 // endImportNotification is the notification event sent when an import ends.

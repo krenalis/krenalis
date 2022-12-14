@@ -1543,50 +1543,6 @@ func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 	return stats, nil
 }
 
-// add adds the connection c to the connections.
-// If a connection with the same identifier already exists, add overwrites it.
-func (this *Connections) add(c *Connection) {
-	this.state.Lock()
-	this.state.ids[c.id] = c
-	this.state.Unlock()
-	return
-}
-
-// clone clones a connection and return the resulting collection.
-// It panics if the connection does not exist.
-func (this *Connections) clone(id int) *Connection {
-	this.state.Lock()
-	c := this.state.ids[id]
-	this.state.Unlock()
-	cc := new(Connection)
-	*cc = *c
-	return cc
-}
-
-// delete deletes the connection with identifier id from the connections.
-// If the connection does not exist, it does nothing.
-func (this *Connections) delete(id int) {
-	this.state.Lock()
-	var usages []*Connection
-	for _, c := range this.state.ids {
-		if c.storage != nil && c.storage.id == id || c.stream != nil && c.stream.id == id {
-			usages = append(usages, c)
-		}
-	}
-	for _, c := range usages {
-		cc := Connection{}
-		cc = *c
-		if cc.storage != nil && cc.storage.id == id {
-			cc.storage = nil
-		} else {
-			cc.stream = nil
-		}
-		this.state.ids[c.id] = &cc
-	}
-	delete(this.state.ids, id)
-	this.state.Unlock()
-}
-
 // newFirehose returns a new Firehose used to call a connection method.
 func (this *Connections) newFirehose(ctx context.Context, connection *Connection, userSchema types.Schema) *firehose {
 	var resource int
