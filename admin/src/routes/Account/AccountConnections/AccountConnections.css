@@ -110,7 +110,16 @@
 
 .AccountConnections sl-dialog.importsListDialog .importTable .row {
 	display: grid;
-	grid-template-columns: .3fr 1fr 1fr 1fr;
+	grid-template-columns: .3fr 1fr 1fr 2fr;
+	align-items: center;
+}
+
+.AccountConnections sl-dialog.importsListDialog .importTable .row.successfull {
+	background-color: var(--sl-color-green-50);
+}
+
+.AccountConnections sl-dialog.importsListDialog .importTable .row.failed {
+	background-color: var(--sl-color-red-50);
 }
 
 .AccountConnections sl-dialog.importsListDialog .importTable .row > div {
@@ -121,12 +130,8 @@
 	font-weight: 600;
 }
 
-.AccountConnections sl-dialog.importsListDialog .importTable .row.successfull > div {
-	background-color: var(--sl-color-green-50);
-}
-
-.AccountConnections sl-dialog.importsListDialog .importTable .row.failed > div {
-	background-color: var(--sl-color-red-50);
+.AccountConnections sl-dialog.importsListDialog .importTable .row .error {
+	overflow-wrap: anywhere;
 }
 
 .AccountConnections sl-dialog.removeDialog .removeQuestion {
