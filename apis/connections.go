@@ -1759,31 +1759,17 @@ func (this *Connections) userSchema(id int) (types.Schema, []_connector.Property
 		return types.Schema{}, nil, ConnectionNotFoundError{}
 	}
 
-	// Read the paths of the mapped properties from the transformations of this connection.
+	// Read the paths of the mapped properties from the transformations of this
+	// connection.
 	var paths []_connector.PropertyPath
-	err = this.db.QueryScan(
-		"SELECT inputs FROM transformations WHERE connection = $1", id, func(rows *postgres.Rows) error {
-			for rows.Next() {
-				var inputsRaw string
-				if err := rows.Scan(&inputsRaw); err != nil {
-					return err
-				}
-				var inputs []string
-				err := json.Unmarshal([]byte(inputsRaw), &inputs)
-				if err != nil {
-					return err
-				}
-				for _, input := range inputs {
-					paths = append(paths, []string{input})
-				}
-			}
-			return nil
-		})
+	ts, err := this.Transformations.List(id)
 	if err != nil {
-		if err == postgres.ErrNoRows {
-			return types.Schema{}, nil, ConnectionNotFoundError{}
-		}
 		return types.Schema{}, nil, err
+	}
+	for _, t := range ts {
+		for _, in := range t.In {
+			paths = append(paths, []string{in})
+		}
 	}
 
 	// Create a schema with only the properties mapped.
@@ -2093,9 +2079,9 @@ func abbreviate(s string, n int) string {
 	return s + "..."
 }
 
-// exportUser returns an user to export (with the given ID) applying the
-// transformation to the properties.
-func exportUser(id string, properties map[string]any, ts []Transformation) (_connector.User, error) {
+// exportUser returns an user to export (with the given ID) applying the given
+// transformations to the properties.
+func exportUser(id string, properties map[string]any, ts []*Transformation) (_connector.User, error) {
 	user := _connector.User{
 		ID:         id,
 		Properties: map[string]any{},
@@ -2103,14 +2089,14 @@ func exportUser(id string, properties map[string]any, ts []Transformation) (_con
 	pool := transformations.NewPool()
 	for _, t := range ts {
 		input := map[string]any{}
-		for _, in := range t.Inputs {
+		for _, in := range t.In {
 			input[in] = properties[in]
 		}
-		prop, err := pool.Run(context.Background(), t.Source, input)
+		prop, err := pool.Run(context.Background(), t.SourceCode, input)
 		if err != nil {
 			return _connector.User{}, err
 		}
-		user.Properties[t.Output] = prop
+		user.Properties[t.Out] = prop
 	}
 	return user, nil
 }

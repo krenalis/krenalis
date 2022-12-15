@@ -112,7 +112,7 @@ const AccountConnectionProperties = () => {
 			setNewTransformationID(counter);
 			let usedInputProperties = [];
 			for (let t of transformations) {
-				for (let input of t.Inputs) {
+				for (let input of t.In) {
 					let isDuplicate = false;
 					for (let p of usedInputProperties) {
 						if (input === p) isDuplicate = true;
@@ -123,7 +123,7 @@ const AccountConnectionProperties = () => {
 			setUsedInputProperties(usedInputProperties);
 			let usedOutputProperties = [];
 			for (let t of transformations) {
-				usedOutputProperties.push(t.Output);
+				usedOutputProperties.push(t.Out);
 			}
 			setUsedOutputProperties(usedOutputProperties);
 		};
@@ -147,11 +147,11 @@ const AccountConnectionProperties = () => {
 			setUsedInputProperties(properties);
 			let trs = [];
 			for (let t of transformations) {
-				if (t.Inputs.findIndex((p) => p === name) !== -1) {
+				if (t.In.findIndex((p) => p === name) !== -1) {
 					let oldDefaultTransformation = computeDefaultTransformationFunction(t);
-					t.Inputs = t.Inputs.filter((p) => p !== name);
-					if (t.Source === '' || t.Source === oldDefaultTransformation)
-						t.Source = computeDefaultTransformationFunction(t);
+					t.In = t.In.filter((p) => p !== name);
+					if (t.SourceCode === '' || t.SourceCode === oldDefaultTransformation)
+						t.SourceCode = computeDefaultTransformationFunction(t);
 				}
 				trs.push(t);
 			}
@@ -161,7 +161,7 @@ const AccountConnectionProperties = () => {
 			setUsedOutputProperties(properties);
 			let trs = [];
 			for (let t of transformations) {
-				if (t.Output === name) t.Output = '';
+				if (t.Out === name) t.Out = '';
 				trs.push(t);
 			}
 			setTransformations(trs);
@@ -169,8 +169,8 @@ const AccountConnectionProperties = () => {
 	};
 
 	const onAddTransformation = () => {
-		let t = { ID: newTransformationID, Inputs: [], Output: '' };
-		t.Source = computeDefaultTransformationFunction(t);
+		let t = { ID: newTransformationID, In: [], Out: '' };
+		t.SourceCode = computeDefaultTransformationFunction(t);
 		let trs = [...transformations, t];
 		setTransformations(trs);
 		setNewTransformationID(newTransformationID + 1);
@@ -179,7 +179,7 @@ const AccountConnectionProperties = () => {
 	const onChangeTransformation = (id, value) => {
 		let trs = [...transformations];
 		let i = trs.findIndex((t) => t.ID === id);
-		trs[i].Source = value === '' ? computeDefaultTransformationFunction(trs[i]) : value;
+		trs[i].SourceCode = value === '' ? computeDefaultTransformationFunction(trs[i]) : value;
 		setTransformations(trs);
 	};
 
@@ -195,17 +195,17 @@ const AccountConnectionProperties = () => {
 		for (let t of transformations) {
 			if (t.ID === transformationID) {
 				if (p.type === 'input') {
-					if (t.Inputs.findIndex((property) => property === p.name) === -1) {
+					if (t.In.findIndex((property) => property === p.name) === -1) {
 						let oldDefaultTransformation = computeDefaultTransformationFunction(t);
-						t.Inputs.push(p.name);
-						if (t.Source === '' || t.Source === oldDefaultTransformation)
-							t.Source = computeDefaultTransformationFunction(t);
+						t.In.push(p.name);
+						if (t.SourceCode === '' || t.SourceCode === oldDefaultTransformation)
+							t.SourceCode = computeDefaultTransformationFunction(t);
 					}
 				}
 				if (p.type === 'output') {
 					let alreadyUsed = false;
 					for (let t of trs) {
-						if (t.Output === p.name) {
+						if (t.Out === p.name) {
 							alreadyUsed = true;
 							break;
 						}
@@ -214,7 +214,7 @@ const AccountConnectionProperties = () => {
 						onError('output properties can be linked to only one transformation');
 						return;
 					} else {
-						t.Output = p.name;
+						t.Out = p.name;
 					}
 				}
 			}
@@ -229,11 +229,11 @@ const AccountConnectionProperties = () => {
 		for (let t of transformations) {
 			if (t.ID === transformationID) {
 				if (type === 'input') {
-					let properties = t.Inputs.filter((p) => p !== property);
-					t.Inputs = properties;
+					let properties = t.In.filter((p) => p !== property);
+					t.In = properties;
 				}
 				if (type === 'output') {
-					t.Output = '';
+					t.Out = '';
 				}
 			}
 			trs.push(t);
@@ -264,9 +264,9 @@ const AccountConnectionProperties = () => {
 
 	const computeDefaultTransformationFunction = (t) => {
 		let f = defaultTransformationFunction;
-		if (t.Inputs.length > 0) {
+		if (t.In.length > 0) {
 			let properties = '';
-			t.Inputs.forEach((p, i) => {
+			t.In.forEach((p, i) => {
 				if (i === 0) properties += `user['${p}']`;
 				else properties += ` + user['${p}']`;
 			});
@@ -391,7 +391,7 @@ const AccountConnectionProperties = () => {
 											<Editor
 												onChange={(value) => onChangeTransformation(t.ID, value)}
 												defaultLanguage='python'
-												value={t.Source}
+												value={t.SourceCode}
 												theme='vs-light'
 											/>
 										</div>
@@ -440,7 +440,7 @@ const AccountConnectionProperties = () => {
 			</div>
 			<div className='arrows'>
 				{transformations.map((t) => {
-					let arrows = t.Inputs.map((p) => {
+					let arrows = t.In.map((p) => {
 						return (
 							<div
 								className={`arrow${isSelectedProperty(p, 'input') ? ' selected' : ''}`}
@@ -465,7 +465,7 @@ const AccountConnectionProperties = () => {
 							</div>
 						);
 					});
-					let grp = t.Output;
+					let grp = t.Out;
 					if (grp === '') return arrows;
 					arrows.push(
 						<div

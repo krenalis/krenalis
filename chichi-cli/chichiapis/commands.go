@@ -102,7 +102,7 @@ func GetTransformations(connection int) {
 	}
 	fmt.Printf("%-4s %-15s %s\n", "ID", "GR Property", "Input props")
 	for _, t := range transformations {
-		fmt.Printf("%-15s %v\n", t.Output, t.Inputs)
+		fmt.Printf("%-15s %v\n", t.Out, t.In)
 	}
 }
 

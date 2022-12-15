@@ -40,6 +40,8 @@ func (apis *APIs) keepState(ctx context.Context, workspaces map[int]*Workspace, 
 			sk.setConnectionStorage(n)
 		case "setConnectionStream":
 			sk.setConnectionStream(n)
+		case "setConnectionTransformations":
+			sk.setConnectionTransformations(n)
 		case "setConnectionUserQuery":
 			sk.setConnectionUserQuery(n)
 		case "setConnectionUserSchema":
@@ -203,6 +205,9 @@ func (s *stateKeeper) deleteConnection(n postgres.Notification) {
 		return
 	}
 
+	ws := s.connections[e.ID].workspace
+	ws.Transformations.set(e.ID, nil)
+
 	var usages []*Connection
 	connections := s.connections[e.ID].workspace.Connections
 	delete(s.connections, e.ID)
@@ -300,6 +305,23 @@ func (s *stateKeeper) setConnectionStream(n postgres.Notification) {
 	s.setConnection(e.Connection, func(c *Connection) {
 		c.stream = s.connections[e.Stream]
 	})
+}
+
+// setConnectionTransformations is the notification event sent when the
+// transformations of a connection are saved.
+type setConnectionTransformations struct {
+	Connection      int
+	Transformations []*Transformation
+}
+
+// setConnectionTransformations sets the transformations of a connection.
+func (s stateKeeper) setConnectionTransformations(n postgres.Notification) {
+	e := setConnectionTransformations{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	ws := s.connections[e.Connection].workspace
+	ws.Transformations.set(e.Connection, e.Transformations)
 }
 
 // setUserQueryNotification is the notification event sent when a user query of

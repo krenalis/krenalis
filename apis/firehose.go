@@ -151,19 +151,19 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	candidateTimestamps := map[string]time.Time{}
 	for _, t := range connectionsTransformations {
 		props := map[string]any{}
-		for _, input := range t.Inputs {
+		for _, input := range t.In {
 			props[input] = properties[input]
 		}
 
 		// Apply the transformation function.
-		grProp, err := pool.Run(context.Background(), t.Source, props)
+		grProp, err := pool.Run(context.Background(), t.SourceCode, props)
 		if err != nil {
 			fh.setError(importError{fmt.Errorf("error while calling transformation function: %s", err)})
 			return
 		}
 		if grProp != nil {
-			candidateData[t.Output] = grProp
-			candidateTimestamps[t.Output] = mostRecentTimestamp(timestamps, t.Inputs)
+			candidateData[t.Out] = grProp
+			candidateTimestamps[t.Out] = mostRecentTimestamp(timestamps, t.In)
 		}
 	}
 
@@ -209,10 +209,10 @@ transfLoop:
 				fh.setError(err)
 				return
 			}
-			ts := mostRecentTimestamp(entityData.Timestamps, t.Inputs)
-			if ts.After(candidateTimestamps[t.Output]) {
+			ts := mostRecentTimestamp(entityData.Timestamps, t.In)
+			if ts.After(candidateTimestamps[t.Out]) {
 				// Don't update this Golden Record property.
-				delete(candidateData, t.Output)
+				delete(candidateData, t.Out)
 				if len(candidateData) == 0 {
 					// Avoid useless iterations.
 					break transfLoop
@@ -498,8 +498,8 @@ func keys[K comparable, V any](m map[K]V) []K {
 }
 
 // listTransformations lists the transformations for the given connections.
-func (fh *firehose) listTransformations(connections []int) ([]Transformation, error) {
-	var transformations []Transformation
+func (fh *firehose) listTransformations(connections []int) ([]*Transformation, error) {
+	var transformations []*Transformation
 	for _, c := range connections {
 		ts, err := fh.connections.Transformations.List(c)
 		if err != nil {

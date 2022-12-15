@@ -219,7 +219,7 @@ func New(conf *Config) (*APIs, error) {
 				workspace.schemaSources.event = eventSchema
 				workspace.Connections = newConnections(workspace)
 				workspace.EventListeners = &EventListeners{workspace}
-				workspace.Transformations = &Transformations{workspace}
+				workspace.Transformations = newTransformations(workspace)
 				account.Workspaces.state.ids[id] = workspace
 				workspaces[id] = workspace
 			}
@@ -282,6 +282,7 @@ func New(conf *Config) (*APIs, error) {
 			}
 
 			workspace.Connections.state.ids[c.id] = connection
+			workspace.Transformations.state.ofConnection[c.id] = []*Transformation{}
 			connections[c.id] = connection
 		}
 		return nil
@@ -367,6 +368,26 @@ func New(conf *Config) (*APIs, error) {
 
 	apis.eventProcessor = newEventProcessor(apis.db, apis.chDB, allStreams)
 	go apis.eventProcessor.Run(context.Background())
+
+	// Read all the transformations.
+	err = db.QueryScan("SELECT connection, \"in\", source_code, out FROM transformations", func(rows *postgres.Rows) error {
+		for rows.Next() {
+			t := &Transformation{}
+			err := rows.Scan(&t.Connection, &t.In, &t.SourceCode, &t.Out)
+			if err != nil {
+				return err
+			}
+			c := t.Connection
+			ws := connections[c].workspace
+			ws.Transformations.state.ofConnection[c] = append(
+				ws.Transformations.state.ofConnection[c], t,
+			)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	go apis.keepState(context.Background(), workspaces, connections)
 
@@ -523,13 +544,13 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				var req []Transformation
-				err := json.NewDecoder(r.Body).Decode(&req)
+				var ts []*Transformation
+				err := json.NewDecoder(r.Body).Decode(&ts)
 				if err != nil {
 					http.Error(w, "Bad Request - invalid transformations", http.StatusBadRequest)
 					return
 				}
-				err = workspace.Connections.Transformations.SaveAll(connection, req)
+				err = workspace.Connections.Transformations.Set(connection, ts)
 				if err != nil {
 					if _, ok := err.(ConnectionNotFoundError); ok {
 						http.Error(w, "Not Found", http.StatusNotFound)
