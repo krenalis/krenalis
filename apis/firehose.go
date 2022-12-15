@@ -322,7 +322,6 @@ func (fh *firehose) writeConnectionUsers(user string, props map[string]any, time
 
 // writeToGoldenRecord writes the given properties to the Golden Record.
 func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
-
 	query := &strings.Builder{}
 	query.WriteString("UPDATE warehouse_users SET\n")
 	var values []any
@@ -337,11 +336,19 @@ func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
 		values = append(values, value)
 		i++
 	}
-	query.WriteString("\nWHERE id = ")
+	query.WriteString("\nWHERE id = $")
 	query.WriteString(strconv.Itoa(i))
-	_, err := fh.connections.db.Exec(query.String(), values...)
+	values = append(values, id)
+	res, err := fh.connections.db.Exec(query.String(), values...)
 	if err != nil {
-		return fmt.Errorf("cannot write Golden Record data: %s", err)
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return fmt.Errorf("BUG: one row should be affected, got %d", affected)
 	}
 	return nil
 }

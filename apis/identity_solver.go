@@ -40,12 +40,19 @@ func (ids *identitySolver) ResolveEntity(connection int, user string, email stri
 		}
 	}
 	// Update the relations.
-	_, err = ids.connections.db.Exec(
-		"UPDATE connections_users SET golden_record = $1 WHERE connection = $2 AND user = $3",
+	result, err := ids.connections.db.Exec(
+		"UPDATE connections_users SET golden_record = $1 WHERE connection = $2 AND \"user\" = $3",
 		goldenRecordID, connection, user,
 	)
 	if err != nil {
-		return 0, fmt.Errorf("cannot update relation between entity and identity: %s", err)
+		return 0, err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	if affected == 0 {
+		return 0, fmt.Errorf("BUG: should have updated one row, got %d", affected)
 	}
 	// Clean orphan Golden Records.
 	_, err = ids.connections.db.Exec("DELETE FROM warehouse_users WHERE id NOT IN (SELECT golden_record FROM connections_users)")
