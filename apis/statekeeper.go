@@ -1,3 +1,10 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2022 Open2b
+//
+
 package apis
 
 import (
@@ -14,13 +21,26 @@ import (
 // logNotifications controls the logging of notifications on the log.
 const logNotifications = false
 
+// startStateKeeper starts the state keeper.
+func startStateKeeper(ctx context.Context, apis *APIs) error {
+	s := stateKeeper{
+		APIs:        apis,
+		workspaces:  map[int]*Workspace{},
+		connections: map[int]*Connection{},
+	}
+	err := s.loadState()
+	if err != nil {
+		return err
+	}
+	notifications := apis.db.ListenToNotifications(ctx)
+	go s.keepState(ctx, notifications)
+	return nil
+}
+
 // keepState starts the state keeper. It is called in its own goroutine. The
 // workspaces argument contains all workspaces and connections all connections.
-func (apis *APIs) keepState(ctx context.Context, workspaces map[int]*Workspace, connections map[int]*Connection) {
+func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgres.Notification) {
 
-	sk := stateKeeper{apis, workspaces, connections}
-
-	notifications := apis.db.ListenToNotifications(ctx)
 	for {
 		n := <-notifications
 		if logNotifications {
@@ -29,31 +49,31 @@ func (apis *APIs) keepState(ctx context.Context, workspaces map[int]*Workspace, 
 		}
 		switch n.Name {
 		case "addConnection":
-			sk.addConnection(n)
+			s.addConnection(n)
 		case "deleteConnection":
-			sk.deleteConnection(n)
+			s.deleteConnection(n)
 		case "endImport":
-			sk.endImport(n)
+			s.endImport(n)
 		case "setConnectionSettings":
-			sk.setConnectionSettings(n)
+			s.setConnectionSettings(n)
 		case "setConnectionStorage":
-			sk.setConnectionStorage(n)
+			s.setConnectionStorage(n)
 		case "setConnectionStream":
-			sk.setConnectionStream(n)
+			s.setConnectionStream(n)
 		case "setConnectionTransformations":
-			sk.setConnectionTransformations(n)
+			s.setConnectionTransformations(n)
 		case "setConnectionUserQuery":
-			sk.setConnectionUserQuery(n)
+			s.setConnectionUserQuery(n)
 		case "setConnectionUserSchema":
-			sk.setConnectionUserSchema(n)
+			s.setConnectionUserSchema(n)
 		case "setWorkspaceEventSchema":
-			sk.setWorkspaceEventSchema(n)
+			s.setWorkspaceEventSchema(n)
 		case "setWorkspaceGroupSchema":
-			sk.setWorkspaceGroupSchema(n)
+			s.setWorkspaceGroupSchema(n)
 		case "setWorkspaceUserSchema":
-			sk.setWorkspaceUserSchema(n)
+			s.setWorkspaceUserSchema(n)
 		case "startImport":
-			sk.startImport(n)
+			s.startImport(n)
 		default:
 			log.Printf("[warning] unknown notification %q received from %d: %s", n.Name, n.PID, n.Payload)
 		}
