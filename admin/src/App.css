@@ -44,6 +44,7 @@
 *::after {
 	font-family: 'Inter', sans-serif;
 	box-sizing: border-box;
+	line-height: 1.5;
 	outline-color: var(--color-primary-500);
 }
 
