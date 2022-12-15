@@ -30,7 +30,7 @@ func init() {
 
 	eventsCmd = &cobra.Command{
 		Use:   "events",
-		Short: "stream live events",
+		Short: "Stream live events",
 		Run: func(cmd *cobra.Command, args []string) {
 
 			rate, err := time.ParseDuration(rateS)
