@@ -54,7 +54,7 @@
 	visibility: hidden;
 }
 
-.AccountConnectionProperties .content {
+.AccountConnectionProperties .routeContent {
 	max-width: 1600px;
 	margin: auto;
 	display: grid;
@@ -68,11 +68,11 @@
 	align-items: center;
 }
 
-.AccountConnectionProperties .content > .head {
+.AccountConnectionProperties .routeContent > .head {
 	grid-area: head;
 }
 
-.AccountConnectionProperties .content > .head > .title {
+.AccountConnectionProperties .routeContent > .head > .title {
 	font-size: 23px;
 	font-weight: 600;
 	text-align: center;
@@ -84,12 +84,12 @@
 	margin-bottom: 10px;
 }
 
-.AccountConnectionProperties .content > .head > .title .littleLogo {
+.AccountConnectionProperties .routeContent > .head > .title .littleLogo {
 	max-width: 35px;
 	margin-left: -35px;
 }
 
-.AccountConnectionProperties .content > .head > .badges {
+.AccountConnectionProperties .routeContent > .head > .badges {
     margin-bottom: 30px;
     display: flex;
     justify-content: center;
@@ -97,21 +97,21 @@
     gap: 15px;
 }
 
-.AccountConnectionProperties .content > .head > .badges sl-badge::part(base) {
+.AccountConnectionProperties .routeContent > .head > .badges sl-badge::part(base) {
 	border: 0;
 }
 
-.AccountConnectionProperties .content > .head .saveButton {
+.AccountConnectionProperties .routeContent > .head .saveButton {
 	display: block;
 	margin: auto;
 	width: 200px;
 }
 
-.AccountConnectionProperties .content .properties {
+.AccountConnectionProperties .routeContent .properties {
 	height: 100%;
 }
 
-.AccountConnectionProperties .content .properties .title {
+.AccountConnectionProperties .routeContent .properties .title {
 	text-align: center;
 	margin-bottom: 10px;
 	font-size: 18px;
@@ -119,7 +119,7 @@
 	color: var(--text-onaccent);
 }
 
-.AccountConnectionProperties .content .properties .property {
+.AccountConnectionProperties .routeContent .properties .property {
 	background-color: var(--bg-primary);
 	color: var(--text-primary);
 	padding: 15px 25px;
@@ -130,11 +130,11 @@
 	font-size: 14px;
 }
 
-.AccountConnectionProperties .content .properties.usedInputProperties {
+.AccountConnectionProperties .routeContent .properties.usedInputProperties {
 	grid-area: usedInputProperties;
 }
 
-.AccountConnectionProperties .content .properties .addUsedProperty {
+.AccountConnectionProperties .routeContent .properties .addUsedProperty {
 	display: block;
 	margin: auto;
 	width: 200px;
@@ -142,7 +142,7 @@
 	margin-bottom: 30px;
 }
 
-.AccountConnectionProperties .content .properties .property {
+.AccountConnectionProperties .routeContent .properties .property {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -150,22 +150,22 @@
 	cursor: pointer;
 }
 
-.AccountConnectionProperties .content .properties .property sl-icon-button::part(base) {
+.AccountConnectionProperties .routeContent .properties .property sl-icon-button::part(base) {
 	padding: 0;
 }
 
-.AccountConnectionProperties .content .transformations {
+.AccountConnectionProperties .routeContent .transformations {
 	grid-area: transformations;
 	text-align: center;
 	/* TODO(@Andrea): remove this workaround after issue #134 of 'react-xarrows' is solved */
 	min-height: calc(100vh + 1px);
 }
 
-.AccountConnectionProperties .content .transformations .saveButton {
+.AccountConnectionProperties .routeContent .transformations .saveButton {
 	width: 200px;
 }
 
-.AccountConnectionProperties .content .transformations .transformation {
+.AccountConnectionProperties .routeContent .transformations .transformation {
 	position: relative;
 	background-color: var(--bg-primary);
 	border-radius: 100%;
@@ -179,7 +179,7 @@
 }
 
 .AccountConnectionProperties
-	.content
+	.routeContent
 	.transformations
 	.transformation
 	sl-icon-button.addTransformationFunction::part(base) {
@@ -187,11 +187,11 @@
 	font-size: 21px;
 }
 
-.AccountConnectionProperties .content .transformations .editorWrapper ~ div {
+.AccountConnectionProperties .routeContent .transformations .editorWrapper ~ div {
 	width: 100%;
 }
 
-.AccountConnectionProperties .content .transformations .editorWrapper {
+.AccountConnectionProperties .routeContent .transformations .editorWrapper {
 	width: 100%;
 	height: 200px;
 	padding: 15px;
@@ -199,18 +199,18 @@
 	background-color: var(--bg-primary);
 }
 
-.AccountConnectionProperties .content .transformations .editorWrapper * {
+.AccountConnectionProperties .routeContent .transformations .editorWrapper * {
 	font-family: monospace !important;
 }
 
-.AccountConnectionProperties .content .transformations .addTransformation::part(base) {
+.AccountConnectionProperties .routeContent .transformations .addTransformation::part(base) {
 	width: 40px;
 	height: 40px;
 	border-radius: 100%;
 	position: relative;
 }
 
-.AccountConnectionProperties .content .transformations .addTransformation sl-icon {
+.AccountConnectionProperties .routeContent .transformations .addTransformation sl-icon {
 	position: absolute;
 	left: 50%;
 	top: 50%;
@@ -218,16 +218,16 @@
 	font-size: 20px;
 }
 
-.AccountConnectionProperties .content .transformations sl-dialog .removeTransformation {
+.AccountConnectionProperties .routeContent .transformations sl-dialog .removeTransformation {
 	min-width: 150px;
 	opacity: 0.8;
 }
 
-.AccountConnectionProperties .content .transformations sl-dialog .removeTransformation:hover {
+.AccountConnectionProperties .routeContent .transformations sl-dialog .removeTransformation:hover {
 	opacity: 1;
 }
 
-.AccountConnectionProperties .content .properties.usedOutputProperties {
+.AccountConnectionProperties .routeContent .properties.usedOutputProperties {
 	grid-area: usedOutputProperties;
 }
 

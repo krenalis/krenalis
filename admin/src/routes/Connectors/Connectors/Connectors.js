@@ -1,188 +1,199 @@
-import React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './Connectors.css';
 import call from '../../../utils/call';
-import Navigation from '../../../components/Navigation/Navigation';
+import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Card from '../../../components/Card/Card';
 import Toast from '../../../components/Toast/Toast';
 import { Navigate } from 'react-router-dom';
-
 import { SlButton, SlDialog, SlIcon, SlTooltip, SlInput } from '@shoelace-style/shoelace/dist/react/index.js';
 
-export default class Connectors extends React.Component {
-	constructor(props) {
-		super(props);
-		this.toast = React.createRef();
-		this.connectionRole = new URL(document.location).searchParams.get('role');
-		this.state = {
-			connectors: [],
-			storageConnections: [],
-			connectorToAdd: null,
-			goToConnectionAdded: 0,
-			showStorage: false,
-			askWebsiteInformations: false,
-			status: null,
-			websitePort: '',
-			websiteHost: '',
-		};
+const Connectors = () => {
+	let [connectors, setConnectors] = useState([]);
+	let [storageConnections, setStorageConnections] = useState([]);
+	let [connectorToAdd, setConnectorToAdd] = useState(null);
+	let [goToConnectionAdded, setGoToConnectionAdded] = useState(0);
+	let [showStorage, setShowStorage] = useState(false);
+	let [askWebsiteInformations, setAskWebsiteInformations] = useState(false);
+	let [status, setStatus] = useState(null);
+	let [websitePort, setWebsitePort] = useState('');
+	let [websiteHost, setWebsiteHost] = useState('');
+
+	const toastRef = useRef();
+	let connectionRole;
+	let roleParam = new URL(document.location).searchParams.get('role');
+	if (roleParam == null || roleParam === '') {
+		connectionRole = 'Source';
+	} else {
+		connectionRole = roleParam;
 	}
 
-	componentDidMount = async () => {
-		let [connectors, err] = await call('/admin/connectors/find', 'GET');
-		if (err != null) {
-			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
-			this.toast.current.toast();
-			return;
-		}
-		this.setState({ connectors: connectors });
+	const onError = (err) => {
+		setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
+		toastRef.current.toast();
+		return;
 	};
 
-	installConnection = async (c, s, host) => {
-		let role = this.connectionRole == null || this.connectionRole === '' ? 'Source' : this.connectionRole;
-		let body = { Connector: c.ID, Storage: 0, Role: role, Host: '' };
+	useEffect(() => {
+		const fetchConnectors = async () => {
+			let [connectors, err] = await call('/admin/connectors/find', 'GET');
+			if (err != null) {
+				onError(err);
+				return;
+			}
+			setConnectors(connectors);
+		};
+		fetchConnectors();
+	}, []);
+
+	const installConnection = async (c, storage, host) => {
+		let body = { Connector: c.ID, Storage: 0, Role: connectionRole, Host: '' };
 		if (c.OAuth === null) {
-			if (c.Type === 'File') body.Storage = s;
+			if (c.Type === 'File') body.Storage = storage;
 			if (c.Type === 'Website') body.Host = host;
 			let [, err] = await call('/admin/add-connection', 'POST', body);
 			if (err != null) {
-				this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
-				this.toast.current.toast();
+				onError(err);
 				return;
 			}
-			this.setState({ goToConnectionAdded: c.ID });
+			setGoToConnectionAdded(c.ID);
 			return;
 		}
 		// install with OAuth.
 		document.cookie = `add-connection=${c.ID};path=/`;
-		document.cookie = `role=${role};path=/`;
+		document.cookie = `role=${connectionRole};path=/`;
 		window.location = c.OAuth.URL;
 		return;
 	};
 
-	addConnection = async (c) => {
-		this.setState({ connectorToAdd: c });
+	const addConnection = async (c) => {
+		setConnectorToAdd(c);
 		if (c.Type === 'File') {
 			let [cns, err] = await call('/admin/connections/find', 'GET');
 			if (err != null) {
-				this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
-				this.toast.current.toast();
+				onError(err);
 				return;
 			}
 			let storageConnections = [];
 			for (let c of cns) {
-				if (c.Type === 'Storage' && c.Role === this.connectionRole) storageConnections.push(c);
+				if (c.Type === 'Storage' && c.Role === connectionRole) storageConnections.push(c);
 			}
-			this.setState({ storageConnections: storageConnections, showStorage: true });
+			setStorageConnections(storageConnections);
+			setShowStorage(true);
 			return;
 		}
 		if (c.Type === 'Website') {
-			this.setState({ askWebsiteInformations: true });
+			setAskWebsiteInformations(true);
 			return;
 		}
-		await this.installConnection(c);
+		await installConnection(c);
 	};
 
-	addFileConnection = async (storageID) => {
-		let c = this.state.connectorToAdd;
-		await this.installConnection(c, storageID);
+	const addFileConnection = async (storageID) => {
+		await installConnection(connectorToAdd, storageID, '');
+		setShowStorage(false);
 	};
 
-	addWebsiteConnection = async () => {
-		let c = this.state.connectorToAdd;
-		await this.installConnection(c, 0, this.state.websiteHost + ':' + this.state.websitePort);
-		this.setState({ askWebsiteInformations: false });
+	const addWebsiteConnection = async () => {
+		await installConnection(connectorToAdd, 0, websiteHost + ':' + websitePort);
+		setAskWebsiteInformations(false);
 	};
 
-	render() {
-		if (this.state.goToConnectionAdded !== 0) {
-			return <Navigate to={`added/${this.state.goToConnectionAdded}`} />;
-		} else {
-			return (
-				<div className='Connectors'>
-					<Navigation navItems={[{ name: 'Add a connection', link: '/admin/connectors', selected: true }]} />
-					<div class='content'>
-						<Toast reactRef={this.toast} status={this.state.status} />
-						<div className='connectors'>
-							{this.state.connectors.map((c) => {
-								return (
-									<Card key={c.ID} name={c.Name} logoURL={c.LogoURL} type={c.Type}>
-										<SlTooltip content={`Add ${c.Name}`}>
-											<SlButton
-												size='medium'
-												variant='primary'
-												onClick={async () => {
-													await this.addConnection(c);
-												}}
-												circle
-											>
-												<SlIcon name='plus' />
-											</SlButton>
-										</SlTooltip>
-									</Card>
-								);
-							})}
-						</div>
-					</div>
-					<SlDialog
-						label='Select a storage'
-						open={this.state.showStorage}
-						onSlAfterHide={() => {
-							this.setState({ showStorage: false, connectorToAdd: null });
-						}}
-						style={{ '--width': '600px' }}
-					>
-						{this.state.storageConnections.length === 0 ? (
-							<div className='no-storage'>No storage available</div>
-						) : (
-							this.state.storageConnections.map((s) => {
-								return (
-									<div className='storage'>
-										<div className='name'>{s.Name}</div>
-										<SlButton
-											variant='primary'
-											onClick={async () => {
-												await this.addFileConnection(s.ID);
-											}}
-											className='addStorage'
-										>
-											<SlIcon name='arrow-right' />
-										</SlButton>
-									</div>
-								);
-							})
-						)}
-					</SlDialog>
-					<SlDialog
-						label='Website informations'
-						open={this.state.askWebsiteInformations}
-						onSlAfterHide={() => {
-							this.setState({ askWebsiteInformations: false, connectorToAdd: null });
-						}}
-						style={{ '--width': '600px' }}
-					>
-						<div className='websiteInfo'>
-							<SlInput
-								label='Host'
-								className='hostInput'
-								onSlChange={(e) => {
-									this.setState({ websiteHost: e.currentTarget.value });
-								}}
-								value={this.state.websiteHost}
-							/>
-							<SlInput
-								label='Port'
-								className='portInput'
-								onSlChange={(e) => {
-									this.setState({ websitePort: e.currentTarget.value });
-								}}
-								value={this.state.websitePort}
-							/>
-							<SlButton className='addWebsite' variant='primary' onClick={this.addWebsiteConnection}>
-								Add website
-							</SlButton>
-						</div>
-					</SlDialog>
-				</div>
-			);
-		}
+	if (goToConnectionAdded !== 0) {
+		return <Navigate to={`added/${goToConnectionAdded}?role=${connectionRole}`} />;
 	}
-}
+
+	return (
+		<div className='Connectors'>
+			<Breadcrumbs
+				breadcrumbs={[
+					{ Name: 'Your connections map', Link: '/admin/account/connections-map' },
+					{ Name: `Add a new ${connectionRole}` },
+				]}
+			/>
+			<div className='routeContent'>
+				<Toast reactRef={toastRef} status={status} />
+				<div className='connectors'>
+					{connectors.map((c) => {
+						return (
+							<Card key={c.ID} name={c.Name} logoURL={c.LogoURL} type={c.Type}>
+								<SlTooltip content={`Add ${c.Name}`}>
+									<SlButton
+										size='medium'
+										variant='primary'
+										onClick={async () => {
+											await addConnection(c);
+										}}
+										circle
+									>
+										<SlIcon name='plus' />
+									</SlButton>
+								</SlTooltip>
+							</Card>
+						);
+					})}
+				</div>
+			</div>
+			<SlDialog
+				label='Select a storage'
+				open={showStorage}
+				onSlAfterHide={() => {
+					setShowStorage(false);
+				}}
+				style={{ '--width': '600px' }}
+			>
+				{storageConnections.length === 0 ? (
+					<div className='no-storage'>No storage available</div>
+				) : (
+					storageConnections.map((s) => {
+						return (
+							<div className='storage'>
+								<div className='name'>{s.Name}</div>
+								<SlButton
+									variant='primary'
+									onClick={async () => {
+										await addFileConnection(s.ID);
+									}}
+									className='addStorage'
+								>
+									<SlIcon name='arrow-right' />
+								</SlButton>
+							</div>
+						);
+					})
+				)}
+			</SlDialog>
+			<SlDialog
+				label='Website informations'
+				open={askWebsiteInformations}
+				onSlAfterHide={() => {
+					setAskWebsiteInformations(false);
+				}}
+				style={{ '--width': '600px' }}
+			>
+				<div className='websiteInfo'>
+					<SlInput
+						label='Host'
+						className='hostInput'
+						onSlChange={(e) => {
+							setWebsiteHost(e.currentTarget.value);
+						}}
+						value={websiteHost}
+					/>
+					<SlInput
+						label='Port'
+						className='portInput'
+						onSlChange={(e) => {
+							setWebsitePort(e.currentTarget.value);
+						}}
+						value={websitePort}
+					/>
+					<SlButton className='addWebsite' variant='primary' onClick={addWebsiteConnection}>
+						Add website
+					</SlButton>
+				</div>
+			</SlDialog>
+		</div>
+	);
+};
+
+export default Connectors;

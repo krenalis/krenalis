@@ -104,7 +104,7 @@ export default class AccountConnections extends React.Component {
 						{ name: 'Your schemas', link: '/admin/account/schemas', selected: false },
 					]}
 				/>
-				<div class='content'>
+				<div className='routeContent'>
 					<Toast reactRef={this.toast} status={this.state.status} />
 					{this.state.connections.length === 0 ? (
 						<div className='noConnection'>

@@ -2,9 +2,9 @@
 	position: relative;
 }
 
-.AccountConnectionsMap .content {
+.AccountConnectionsMap .routeContent {
 	max-width: 1500px;
-	margin: -100px auto 0 auto;
+	margin: -110px auto 0 auto;
 	padding-bottom: 50px;
 	position: relative;
 	z-index: 20;
@@ -14,7 +14,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 50px;
+	margin-bottom: 40px;
 }
 
 .AccountConnectionsMap .map {

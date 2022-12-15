@@ -316,7 +316,7 @@ const AccountConnectionProperties = () => {
 					{ Name: `${cn.Name} properties` },
 				]}
 			/>
-			<div className='content'>
+			<div className='routeContent'>
 				<Toast reactRef={toastRef} status={status} />
 				<div className='head'>
 					<div className='title'>

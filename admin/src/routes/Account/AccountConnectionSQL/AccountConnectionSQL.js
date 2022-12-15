@@ -135,7 +135,7 @@ export default class AccountConnectionSQL extends React.Component {
 							{ Name: `${this.state.connection.Name}'s SQL query configuration` },
 						]}
 					/>
-					<div className='content'>
+					<div className='routeContent'>
 						<Toast reactRef={this.toast} status={this.state.status} />
 						<div className='title'>
 							{this.state.connection.LogoURL !== '' && (

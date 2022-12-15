@@ -126,7 +126,7 @@ export default class Dashboard extends React.Component {
 		}
 		return (
 			<div className='Dashboard'>
-				<div className='content'>
+				<div className='routeContent'>
 					<div className='chart-section'>
 						<Chart data={this.state.chartData} type={this.state.chartType} width={1500} height={250} />
 

@@ -2,13 +2,13 @@
 	min-height: 100vh;
 }
 
-.AccountConnectionSQL .content {
+.AccountConnectionSQL .routeContent {
 	max-width: 1000px;
 	margin: auto;
 	margin-top: -200px;
 }
 
-.AccountConnectionSQL .content > .title {
+.AccountConnectionSQL .routeContent > .title {
 	font-size: 23px;
 	font-weight: 600;
 	text-align: center;
@@ -20,12 +20,12 @@
 	margin-bottom: 20px;
 }
 
-.AccountConnectionSQL .content .title .littleLogo {
+.AccountConnectionSQL .routeContent .title .littleLogo {
 	max-width: 35px;
 	margin-left: -35px;
 }
 
-.AccountConnectionSQL .content .editorWrapper {
+.AccountConnectionSQL .routeContent .editorWrapper {
 	grid-area: editor;
 	width: 100%;
 	height: 600px;
@@ -34,22 +34,22 @@
 	background-color: var(--bg-primary);
 }
 
-.AccountConnectionSQL .content .editorWrapper * {
+.AccountConnectionSQL .routeContent .editorWrapper * {
 	font-family: monospace !important;
 }
 
-.AccountConnectionSQL .content .buttons {
+.AccountConnectionSQL .routeContent .buttons {
 	display: flex;
 	justify-content: center;
 	gap: 30px;
 	margin: 50px 0;
 }
 
-.AccountConnectionSQL .content .buttons .previewButton {
+.AccountConnectionSQL .routeContent .buttons .previewButton {
 	min-width: 200px;
 }
 
-.AccountConnectionSQL .content .buttons .saveButton {
+.AccountConnectionSQL .routeContent .buttons .saveButton {
 	min-width: 200px;
 }
 

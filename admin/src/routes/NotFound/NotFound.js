@@ -5,7 +5,7 @@ export default class NotFound extends React.Component {
 	render() {
 		return (
 			<div className='NotFound'>
-				<div className='content'>
+				<div className='routeContent'>
 					<div className='box'>
 						<div className='icon'></div>
 						<div className='title'>404</div>

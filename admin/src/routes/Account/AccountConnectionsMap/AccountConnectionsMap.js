@@ -112,14 +112,14 @@ export default class AccountConnectionsMap extends React.Component {
 						{ name: 'Your schemas', link: '/admin/account/schemas', selected: false },
 					]}
 				/>
-				<div className='content'>
+				<div className='routeContent'>
 					<div className='buttons'>
-						<SlButton className='addSource' variant='primary'>
+						<SlButton className='addSource' variant='neutral'>
 							<SlIcon slot='suffix' name='plus-circle-dotted' />
 							Add a new source
 							<NavLink to='/admin/connectors?role=Source'></NavLink>
 						</SlButton>
-						<SlButton className='addDestination' variant='primary'>
+						<SlButton className='addDestination' variant='neutral'>
 							<SlIcon slot='suffix' name='plus-circle-dotted' />
 							Add a new destination
 							<NavLink to='/admin/connectors?role=Destination'></NavLink>

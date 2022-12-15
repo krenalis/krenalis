@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './ConnectorsConnectionAdded.css';
 import Toast from '../../../components/Toast/Toast';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
@@ -6,58 +6,60 @@ import call from '../../../utils/call';
 import { NavLink } from 'react-router-dom';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
-export default class ConnectorsConnectionAdded extends React.Component {
-	constructor(props) {
-		super(props);
-		this.toast = React.createRef();
-		this.connectorID = Number(String(window.location).split('/').pop());
-		this.state = {
-			connector: {},
-			status: null,
+const ConnectorsConnectionAdded = () => {
+	let [connector, setConnector] = useState({});
+	let [status, setStatus] = useState(null);
+
+	let toastRef = useRef();
+	let lastFragment = String(window.location).split('/').pop();
+	let connectorID = Number(lastFragment.substring(0, lastFragment.indexOf('?')));
+	let connectionRole = new URL(document.location).searchParams.get('role');
+
+	useEffect(() => {
+		const fetchConnector = async () => {
+			let [connector, err] = await call('/admin/connectors/get', 'POST', connectorID);
+			if (err !== null) {
+				setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
+				toastRef.current.toast();
+				return;
+			}
+			setConnector(connector);
 		};
-	}
+		fetchConnector();
+	}, []);
 
-	async componentDidMount() {
-		let [connector, err] = await call('/admin/connectors/get', 'POST', this.connectorID);
-		if (err !== null) {
-			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
-			this.toast.current.toast();
-			return;
-		}
-		this.setState({ connector: connector });
-	}
-
-	render() {
-		return (
-			<div className='ConnectorsConnectionAdded'>
-				<Breadcrumbs
-					breadcrumbs={[
-						{ Name: 'Add a connection', Link: '/admin/connectors' },
-						{ Name: `${this.state.connector.Name}'s connection added` },
-					]}
-				/>
-				<div className='content'>
-					<Toast reactRef={this.toast} status={this.state.status} />
-					<div className='addedConnection'>
-						<div className='logo'>
-							{this.state.connector.LogoURL === '' ? (
-								<div class='unknownLogo'>?</div>
-							) : (
-								<img alt={`${this.state.connector.Name}'s logo`} src={this.state.connector.LogoURL} />
-							)}
-						</div>
-						<div className='title'>{this.state.connector.Name} has been added</div>
-						<div className='description'>
-							You have successfully added a new connection from {this.state.connector.Name}'s connector
-						</div>
+	return (
+		<div className='ConnectorsConnectionAdded'>
+			<Breadcrumbs
+				breadcrumbs={[
+					{ Name: 'Your connections map', Link: '/admin/account/connections-map' },
+					{ Name: `Add a new ${connectionRole}`, Link: `/admin/connectors/?role=${connectionRole}` },
+					{ Name: `${connector.Name} connection added` },
+				]}
+			/>
+			<div className='routeContent'>
+				<Toast reactRef={toastRef} status={status} />
+				<div className='addedConnection'>
+					<div className='logo'>
+						{connector.LogoURL === '' ? (
+							<div class='unknownLogo'>?</div>
+						) : (
+							<img alt={`${connector.Name}'s logo`} src={connector.LogoURL} />
+						)}
 					</div>
-					<SlButton className='link' variant='text' size='medium'>
-						<SlIcon slot='suffix' name='arrow-right-circle' />
-						See all your connections
-						<NavLink to='/admin/account/connections-map'></NavLink>
-					</SlButton>
+					<div className='title'>{connector.Name} connection has been added</div>
+					<div className='description'>
+						You have successfully added a new connection based on the {connector.Name} connector
+					</div>
 				</div>
+				<SlButton className='link' variant='text' size='medium'>
+					<SlIcon slot='suffix' name='arrow-right-circle' />
+					See all your connections
+					<NavLink to='/admin/account/connections-map'></NavLink>
+				</SlButton>
 			</div>
-		);
-	}
-}
+		</div>
+	);
+};
+
+export default ConnectorsConnectionAdded;

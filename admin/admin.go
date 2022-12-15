@@ -919,7 +919,7 @@ func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Redirect to confirmation page.
-	http.Redirect(w, r, "/admin/connectors/added/"+strconv.Itoa(connectorID), http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/admin/connectors/added/"+strconv.Itoa(connectorID)+fmt.Sprintf("?role=%s", roleCookie.Value), http.StatusTemporaryRedirect)
 
 	return nil
 }

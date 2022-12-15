@@ -73,7 +73,7 @@ export default class AccountSchemas extends React.Component {
 						{ name: 'Your schemas', link: '/admin/account/schemas', selected: true },
 					]}
 				/>
-				<div className='content'>
+				<div className='routeContent'>
 					<Toast reactRef={this.toast} status={this.state.status} />
 					<div className='bar'>
 						<SlSelect

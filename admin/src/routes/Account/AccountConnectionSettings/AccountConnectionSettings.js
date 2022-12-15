@@ -126,7 +126,7 @@ const AccountConnectionSettings = () => {
 					{ Name: `${connectionName}'s settings` },
 				]}
 			/>
-			<div className='content'>
+			<div className='routeContent'>
 				<Toast reactRef={toastRef} status={status} />
 				<div className='title'>
 					{connectionLogo}
