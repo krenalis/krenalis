@@ -299,5 +299,8 @@ func (s *stateKeeper) loadState() error {
 		return nil
 	})
 
+	s.workspaces = workspaces
+	s.connections = connections
+
 	return err
 }
