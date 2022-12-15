@@ -283,10 +283,10 @@ func (s *stateKeeper) loadState() error {
 	go s.eventProcessor.Run(context.Background())
 
 	// Read all the transformations.
-	err = s.db.QueryScan("SELECT connection, \"in\", source_code, out FROM transformations", func(rows *postgres.Rows) error {
+	err = s.db.QueryScan("SELECT id, connection, \"in\", source_code, out FROM transformations", func(rows *postgres.Rows) error {
 		for rows.Next() {
 			t := &Transformation{}
-			err := rows.Scan(&t.Connection, &t.In, &t.SourceCode, &t.Out)
+			err := rows.Scan(&t.ID, &t.Connection, &t.In, &t.SourceCode, &t.Out)
 			if err != nil {
 				return err
 			}

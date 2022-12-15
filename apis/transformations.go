@@ -46,6 +46,10 @@ type transformationsState struct {
 // transformation from the Golden Record properties to a connection property.
 type Transformation struct {
 
+	// ID is the identifier of the transformation. When representing a
+	// transformation to create, this is zero.
+	ID int
+
 	// Connection is the connection.
 	Connection int
 
@@ -136,17 +140,20 @@ func (this *Transformations) Set(connection int, transformations []*Transformati
 		if err != nil {
 			return err
 		}
-		query, err := tx.Prepare("INSERT INTO transformations (connection, \"in\", source_code, out) VALUES ($1, $2, $3, $4)")
+		query, err := tx.Prepare("INSERT INTO transformations\n" +
+			"(connection, \"in\", source_code, out)\n" +
+			"VALUES ($1, $2, $3, $4) RETURNING id")
 		if err != nil {
 			return err
 		}
 		for _, t := range n.Transformations {
-			_, err := query.Exec(t.Connection, t.In, t.SourceCode, t.Out)
+			var id int
+			err := query.QueryRow(t.Connection, t.In, t.SourceCode, t.Out).Scan(&id)
 			if err != nil {
 				return err
 			}
+			t.ID = id
 		}
-
 		return tx.Notify(n)
 	})
 	if err != nil {
