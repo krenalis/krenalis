@@ -232,7 +232,7 @@ INSERT INTO smart_events VALUES
 CREATE TABLE transformations (
     id SERIAL,
     connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
-    "in" text[] NOT NULL,
+    "in" text NOT NULL,
     source_code text NOT NULL,
     out text NOT NULL,
     PRIMARY KEY (id)

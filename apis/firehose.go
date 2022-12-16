@@ -152,7 +152,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	for _, t := range connectionsTransformations {
 		props := map[string]any{}
 		for _, input := range t.In {
-			props[input] = properties[input]
+			props[input.Name] = properties[input.Name]
 		}
 
 		// Apply the transformation function.
@@ -519,10 +519,10 @@ func (fh *firehose) listTransformations(connections []int) ([]*Transformation, e
 
 // mostRecentTimestamp returns the most recent timestamp referred by a property.
 // If there are no timestamps or properties, returns 'time.Time{}'.
-func mostRecentTimestamp(timestamps map[string]time.Time, props []string) time.Time {
+func mostRecentTimestamp(timestamps map[string]time.Time, props []types.Property) time.Time {
 	var recent time.Time
 	for _, p := range props {
-		t := timestamps[p]
+		t := timestamps[p.Name]
 		if t.After(recent) {
 			recent = t
 		}

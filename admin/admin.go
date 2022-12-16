@@ -137,7 +137,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(rpath, "/user-schema-properties") {
 		info := workspace.Info()
 		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(info.Schema.User.PropertiesNames())
+		_ = json.NewEncoder(w).Encode(info.Schema.User.Properties())
 		return
 	}
 

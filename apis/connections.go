@@ -1768,7 +1768,7 @@ func (this *Connections) userSchema(id int) (types.Schema, []_connector.Property
 	}
 	for _, t := range ts {
 		for _, in := range t.In {
-			paths = append(paths, []string{in})
+			paths = append(paths, []string{in.Name})
 		}
 	}
 
@@ -2090,7 +2090,7 @@ func exportUser(id string, properties map[string]any, ts []*Transformation) (_co
 	for _, t := range ts {
 		input := map[string]any{}
 		for _, in := range t.In {
-			input[in] = properties[in]
+			input[in.Name] = properties[in.Name]
 		}
 		prop, err := pool.Run(context.Background(), t.SourceCode, input)
 		if err != nil {

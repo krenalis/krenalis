@@ -8,6 +8,8 @@
 package apis
 
 import (
+	"database/sql/driver"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -57,7 +59,10 @@ type Transformation struct {
 	// is a source then the properties are the properties of the connection,
 	// otherwise, if it is a destination, it contains the properties of the
 	// Golden Record.
-	In InputProperties
+	//
+	// This is the schema of the transformation.
+	//
+	In TransformationSchema
 
 	// SourceCode is the source code of the transformation function, which
 	// should be something like:
@@ -73,22 +78,20 @@ type Transformation struct {
 	Out string
 }
 
-// InputProperties represents the input properties of a transformation.
-type InputProperties []string
+// TransformationSchema represents the schema of a transformation.
+type TransformationSchema []types.Property
 
 // Scan implements the sql.Scanner interface.
-// TODO(Gianluca): this is just a stub of the implementation and may not be
-// correct, for example, when some array's element contains commas. Please refer
-// to https://www.postgresql.org/docs/current/arrays.html to get more details.
-func (props *InputProperties) Scan(src any) error {
+func (schema *TransformationSchema) Scan(src any) error {
 	s, ok := src.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an InputProperties value", src)
+		return fmt.Errorf("cannot scan a %T value into an TransformationSchema value", src)
 	}
-	s = s[1 : len(s)-1] // trim leading and trailing "{" ... "}"
-	parts := strings.Split(s, ",")
-	*props = InputProperties(parts)
-	return nil
+	return json.Unmarshal([]byte(s), &schema)
+}
+
+func (schema TransformationSchema) Value() (driver.Value, error) {
+	return json.Marshal([]types.Property(schema))
 }
 
 // sets sets the transformations for the given connection.
@@ -121,7 +124,7 @@ func (this *Transformations) Set(connection int, transformations []*Transformati
 			return errors.New("should have at least one input property")
 		}
 		for _, in := range t.In {
-			if !types.IsValidPropertyName(in) {
+			if !types.IsValidPropertyName(in.Name) {
 				return errors.New("invalid property name")
 			}
 		}

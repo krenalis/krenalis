@@ -24,7 +24,7 @@ const AccountConnectionProperties = () => {
 	let [usedInputProperties, setUsedInputProperties] = useState([]);
 	let [usedOutputProperties, setUsedOutputProperties] = useState([]);
 	let [transformations, setTransformations] = useState([]);
-	let [newTransformationID, setNewTransformationID] = useState(1);
+	let [lastTransformationPosition, setLastTransformationPosition] = useState(1);
 	let [inputSearchTerm, setInputSearchTerm] = useState('');
 	let [outputSearchTerm, setOutputSearchTerm] = useState('');
 	let [isInputDialogOpen, setIsInputDialogOpen] = useState(false);
@@ -43,9 +43,9 @@ const AccountConnectionProperties = () => {
 		return;
 	};
 
-	// get the connection.
 	useEffect(() => {
-		const fetchConnection = async () => {
+		const fetchState = async () => {
+			// get the connection.
 			let [connection, err] = await call('/admin/connections/get', 'POST', connectionID);
 			if (err) {
 				onError(err);
@@ -56,28 +56,20 @@ const AccountConnectionProperties = () => {
 				return;
 			}
 			setConnection(connection);
-		};
-		fetchConnection();
-	}, []);
 
-	// get the properties.
-	useEffect(() => {
-		const fetchProperties = async () => {
-			let connProperties, goldenRecordProperties, err;
-			// get the connection properties.
-			[connProperties, err] = await call(`/api/connections/${connectionID}/properties`, 'GET');
+			// get the connection properties and the golden record properties.
+			let connectionProperties, goldenRecordProperties;
+			[connectionProperties, err] = await call(`/api/connections/${connectionID}/properties`, 'GET');
 			if (err) {
 				onError(err);
 				return;
 			}
-			let connectionProperties = [];
-			for (let p of connProperties) connectionProperties.push(p.Name);
-			// get the golden record properties.
 			[goldenRecordProperties, err] = await call('/admin/user-schema-properties', 'GET');
 			if (err) {
 				onError(err);
 				return;
 			}
+
 			// place the properties in the proper column.
 			let inputProperties, outputProperties;
 			if (connection.Role === 'Source') {
@@ -89,33 +81,23 @@ const AccountConnectionProperties = () => {
 			}
 			setInputProperties(inputProperties);
 			setOutputProperties(outputProperties);
-		};
-		// fetch the properties only if the connection is already fetched.
-		if (Object.keys(connection).length === 0) return;
-		fetchProperties();
-	}, [connection]);
 
-	// get the transformations with their linked used properties.
-	useEffect(() => {
-		const fetchTransformations = async () => {
-			let [transformations, err] = await call(`/api/connections/${connectionID}/transformations`, 'GET');
+			// get the transformations.
+			let transformations;
+			[transformations, err] = await call(`/api/connections/${connectionID}/transformations`, 'GET');
 			if (err) {
 				onError(err);
 				return;
 			}
-			setTransformations(transformations);
-			let counter = 1;
-			for (let t of transformations) {
-				t.ID = counter;
-				counter += 1;
-			}
-			setNewTransformationID(counter);
+
+			// get the input properties and the output properties used by the
+			// transformations.
 			let usedInputProperties = [];
 			for (let t of transformations) {
 				for (let input of t.In) {
 					let isDuplicate = false;
 					for (let p of usedInputProperties) {
-						if (input === p) isDuplicate = true;
+						if (input.Name === p.Name) isDuplicate = true;
 					}
 					if (!isDuplicate) usedInputProperties.push(input);
 				}
@@ -123,33 +105,45 @@ const AccountConnectionProperties = () => {
 			setUsedInputProperties(usedInputProperties);
 			let usedOutputProperties = [];
 			for (let t of transformations) {
-				usedOutputProperties.push(t.Out);
+				let output = outputProperties.find((p) => t.Out === p.Name);
+				usedOutputProperties.push(output);
 			}
 			setUsedOutputProperties(usedOutputProperties);
+
+			// compute the positions of the transformations and replace their
+			// 'Out' string properties with full object properties.
+			let pos = lastTransformationPosition;
+			for (let t of transformations) {
+				let output = outputProperties.find((p) => t.Out === p.Name);
+				t.Out = output;
+				t.Position = pos;
+				pos += 1;
+			}
+			setTransformations(transformations);
+			setLastTransformationPosition(pos);
 		};
-		fetchTransformations();
+
+		fetchState();
 	}, []);
 
-	const onAddUsedProperty = (name, type) => {
+	const onAddUsedProperty = (p, type) => {
 		if (type === 'input') {
-			let properties = [...usedInputProperties, name];
-			setUsedInputProperties(properties);
+			setUsedInputProperties([...usedInputProperties, p]);
 		} else if (type === 'output') {
-			let properties = [...usedOutputProperties, name];
-			setUsedOutputProperties(properties);
+			setUsedOutputProperties([...usedOutputProperties, p]);
 		}
 	};
 
 	const onRemoveUsedProperty = (e, name, type) => {
 		e.stopPropagation();
 		if (type === 'input') {
-			let properties = usedInputProperties.filter((p) => p !== name);
+			let properties = usedInputProperties.filter((p) => p.Name !== name);
 			setUsedInputProperties(properties);
 			let trs = [];
 			for (let t of transformations) {
-				if (t.In.findIndex((p) => p === name) !== -1) {
+				if (t.In.findIndex((p) => p.Name === name) !== -1) {
 					let oldDefaultTransformation = computeDefaultTransformationFunction(t);
-					t.In = t.In.filter((p) => p !== name);
+					t.In = t.In.filter((p) => p.Name !== name);
 					if (t.SourceCode === '' || t.SourceCode === oldDefaultTransformation)
 						t.SourceCode = computeDefaultTransformationFunction(t);
 				}
@@ -157,11 +151,11 @@ const AccountConnectionProperties = () => {
 			}
 			setTransformations(trs);
 		} else if (type === 'output') {
-			let properties = usedOutputProperties.filter((p) => p !== name);
+			let properties = usedOutputProperties.filter((p) => p.Name !== name);
 			setUsedOutputProperties(properties);
 			let trs = [];
 			for (let t of transformations) {
-				if (t.Out === name) t.Out = '';
+				if (t.Out.Name === name) t.Out = null;
 				trs.push(t);
 			}
 			setTransformations(trs);
@@ -169,43 +163,48 @@ const AccountConnectionProperties = () => {
 	};
 
 	const onAddTransformation = () => {
-		let t = { ID: newTransformationID, In: [], Out: '' };
+		let t = { Position: lastTransformationPosition, In: [], Out: null };
 		t.SourceCode = computeDefaultTransformationFunction(t);
-		let trs = [...transformations, t];
-		setTransformations(trs);
-		setNewTransformationID(newTransformationID + 1);
+		setTransformations([...transformations, t]);
+		setLastTransformationPosition(lastTransformationPosition + 1);
 	};
 
-	const onChangeTransformation = (id, value) => {
+	const onChangeTransformation = (position, value) => {
 		let trs = [...transformations];
-		let i = trs.findIndex((t) => t.ID === id);
+		let i = trs.findIndex((t) => t.Position === position);
 		trs[i].SourceCode = value === '' ? computeDefaultTransformationFunction(trs[i]) : value;
 		setTransformations(trs);
 	};
 
-	const onRemoveTransformation = (id) => {
-		let trs = transformations.filter((t) => t.ID !== id);
+	const onRemoveTransformation = (position) => {
+		let trs = transformations.filter((t) => t.Position !== position);
 		setTransformations(trs);
 		setSelectedTransformation('');
 	};
 
-	const onAddArrow = (transformationID) => {
-		let p = selectedProperty;
+	const onAddArrow = (transformationPosition) => {
+		let sp = selectedProperty;
+		let p;
+		if (sp.type === 'input') {
+			p = inputProperties.find((p) => p.Name === sp.name);
+		} else if (sp.type === 'output') {
+			p = outputProperties.find((p) => p.Name === sp.name);
+		}
 		let trs = [];
 		for (let t of transformations) {
-			if (t.ID === transformationID) {
-				if (p.type === 'input') {
-					if (t.In.findIndex((property) => property === p.name) === -1) {
+			if (t.Position === transformationPosition) {
+				if (sp.type === 'input') {
+					if (t.In.findIndex((property) => property.Name === sp.name) === -1) {
 						let oldDefaultTransformation = computeDefaultTransformationFunction(t);
-						t.In.push(p.name);
+						t.In.push(p);
 						if (t.SourceCode === '' || t.SourceCode === oldDefaultTransformation)
 							t.SourceCode = computeDefaultTransformationFunction(t);
 					}
 				}
-				if (p.type === 'output') {
+				if (sp.type === 'output') {
 					let alreadyUsed = false;
 					for (let t of trs) {
-						if (t.Out === p.name) {
+						if (t.Out != null && t.Out.Name === sp.name) {
 							alreadyUsed = true;
 							break;
 						}
@@ -214,7 +213,7 @@ const AccountConnectionProperties = () => {
 						onError('output properties can be linked to only one transformation');
 						return;
 					} else {
-						t.Out = p.name;
+						t.Out = p;
 					}
 				}
 			}
@@ -223,17 +222,20 @@ const AccountConnectionProperties = () => {
 		setTransformations(trs);
 	};
 
-	const onRemoveArrow = (transformationID, property, type, e) => {
+	const onRemoveArrow = (transformationPosition, propertyName, propertyType, e) => {
 		if (e.target.previousSibling == null || e.target.previousSibling.tagName !== 'svg') return; // the click is not on the label of the arrow.
 		let trs = [];
 		for (let t of transformations) {
-			if (t.ID === transformationID) {
-				if (type === 'input') {
-					let properties = t.In.filter((p) => p !== property);
+			if (t.Position === transformationPosition) {
+				if (propertyType === 'input') {
+					let oldDefaultTransformation = computeDefaultTransformationFunction(t);
+					let properties = t.In.filter((p) => p.Name !== propertyName);
 					t.In = properties;
+					if (t.SourceCode === '' || t.SourceCode === oldDefaultTransformation)
+						t.SourceCode = computeDefaultTransformationFunction(t);
 				}
-				if (type === 'output') {
-					t.Out = '';
+				if (propertyType === 'output') {
+					t.Out = null;
 				}
 			}
 			trs.push(t);
@@ -245,7 +247,8 @@ const AccountConnectionProperties = () => {
 		let trs = [];
 		for (let t of transformations) {
 			let toSave = { ...t };
-			delete toSave.ID;
+			delete toSave.Position;
+			toSave.Out = toSave.Out == null ? '' : toSave.Out.Name;
 			toSave.Connection = connectionID;
 			trs.push(toSave);
 		}
@@ -267,8 +270,8 @@ const AccountConnectionProperties = () => {
 		if (t.In.length > 0) {
 			let properties = '';
 			t.In.forEach((p, i) => {
-				if (i === 0) properties += `user['${p}']`;
-				else properties += ` + user['${p}']`;
+				if (i === 0) properties += `user['${p.Name}']`;
+				else properties += ` + user['${p.Name}']`;
 			});
 			let i = f.indexOf('return');
 			f = f.substring(0, i + 7) + properties;
@@ -350,16 +353,16 @@ const AccountConnectionProperties = () => {
 					{usedInputProperties.map((p) => {
 						return (
 							<div
-								key={p}
-								className={`property${isSelectedProperty(p, 'input') ? ' selected' : ''}`}
-								id={p}
-								onClick={() => setSelectedProperty({ name: p, type: 'input' })}
+								key={p.Name}
+								className={`property${isSelectedProperty(p.Name, 'input') ? ' selected' : ''}`}
+								id={p.Name}
+								onClick={() => setSelectedProperty({ name: p.Name, type: 'input' })}
 							>
-								<div>{p}</div>
+								<div>{p.Label === '' ? p.Name : p.Label}</div>
 								<SlIconButton
 									name='dash-circle'
 									label='Remove property'
-									onClick={(e) => onRemoveUsedProperty(e, p, 'input')}
+									onClick={(e) => onRemoveUsedProperty(e, p.Name, 'input')}
 								/>
 							</div>
 						);
@@ -369,10 +372,10 @@ const AccountConnectionProperties = () => {
 					{transformations.map((t) => {
 						return (
 							<div
-								key={t.ID}
+								key={t.Position}
 								className='transformation'
-								id={`transformation-${t.ID}`}
-								onClick={sp ? () => onAddArrow(t.ID) : null}
+								id={`transformation-${t.Position}`}
+								onClick={sp ? () => onAddArrow(t.Position) : null}
 							>
 								<SlIconButton
 									className='addTransformationFunction'
@@ -380,7 +383,7 @@ const AccountConnectionProperties = () => {
 									label='Add transformation'
 									onClick={sp ? null : () => setSelectedTransformation(t)}
 								/>
-								{st && t.ID === st.ID && (
+								{st && t.Position === st.Position && (
 									<SlDialog
 										label='Modify the transformation'
 										open={true}
@@ -389,7 +392,7 @@ const AccountConnectionProperties = () => {
 									>
 										<div className='editorWrapper'>
 											<Editor
-												onChange={(value) => onChangeTransformation(t.ID, value)}
+												onChange={(value) => onChangeTransformation(t.Position, value)}
 												defaultLanguage='python'
 												value={t.SourceCode}
 												theme='vs-light'
@@ -399,7 +402,7 @@ const AccountConnectionProperties = () => {
 											className='removeTransformation'
 											slot='footer'
 											variant='danger'
-											onClick={() => onRemoveTransformation(t.ID)}
+											onClick={() => onRemoveTransformation(t.Position)}
 										>
 											Remove
 										</SlButton>
@@ -422,16 +425,16 @@ const AccountConnectionProperties = () => {
 					{usedOutputProperties.map((p) => {
 						return (
 							<div
-								key={p}
-								className={`property${isSelectedProperty(p, 'output') ? ' selected' : ''}`}
-								id={p}
-								onClick={() => setSelectedProperty({ name: p, type: 'output' })}
+								key={p.Name}
+								className={`property${isSelectedProperty(p.Name, 'output') ? ' selected' : ''}`}
+								id={p.Name}
+								onClick={() => setSelectedProperty({ name: p.Name, type: 'output' })}
 							>
-								<div>{p}</div>
+								<div>{p.Label === '' ? p.Name : p.Label}</div>
 								<SlIconButton
 									name='dash-circle'
 									label='Remove property'
-									onClick={(e) => onRemoveUsedProperty(e, p, 'output')}
+									onClick={(e) => onRemoveUsedProperty(e, p.Name, 'output')}
 								/>
 							</div>
 						);
@@ -443,50 +446,50 @@ const AccountConnectionProperties = () => {
 					let arrows = t.In.map((p) => {
 						return (
 							<div
-								className={`arrow${isSelectedProperty(p, 'input') ? ' selected' : ''}`}
+								className={`arrow${isSelectedProperty(p.Name, 'input') ? ' selected' : ''}`}
 								onClick={
-									isSelectedProperty(p, 'input')
+									isSelectedProperty(p.Name, 'input')
 										? (e) => {
-												onRemoveArrow(t.ID, p, 'input', e);
+												onRemoveArrow(t.Position, p.Name, 'input', e);
 										  }
 										: null
 								}
 							>
 								<Xarrow
-									start={p}
-									end={`transformation-${t.ID}`}
+									start={p.Name}
+									end={`transformation-${t.Position}`}
 									startAnchor='right'
 									endAnchor='left'
 									showHead={false}
 									color='#818cf8'
 									strokeWidth={2}
-									labels={isSelectedProperty(p, 'input') ? '-' : ''}
+									labels={isSelectedProperty(p.Name, 'input') ? '-' : ''}
 								/>
 							</div>
 						);
 					});
-					let grp = t.Out;
-					if (grp === '') return arrows;
+					let out = t.Out;
+					if (out == null) return arrows;
 					arrows.push(
 						<div
-							className={`arrow${isSelectedProperty(grp, 'output') ? ' selected' : ''}`}
+							className={`arrow${isSelectedProperty(out.Name, 'output') ? ' selected' : ''}`}
 							onClick={
-								isSelectedProperty(grp, 'output')
+								isSelectedProperty(out.Name, 'output')
 									? (e) => {
-											onRemoveArrow(t.ID, grp, 'output', e);
+											onRemoveArrow(t.Position, out.Name, 'output', e);
 									  }
 									: null
 							}
 						>
 							<Xarrow
-								start={`transformation-${t.ID}`}
-								end={grp}
+								start={`transformation-${t.Position}`}
+								end={out.Name}
 								startAnchor='right'
 								endAnchor='left'
 								showHead={false}
 								color='#818cf8'
 								strokeWidth={2}
-								labels={isSelectedProperty(grp, 'output') && '-'}
+								labels={isSelectedProperty(out.Name, 'output') && '-'}
 							/>
 						</div>
 					);
@@ -510,20 +513,21 @@ const AccountConnectionProperties = () => {
 				</SlInput>
 				<div className='dialogProperties'>
 					{inputProperties.map((p) => {
+						let toString = p.Label === '' ? p.Name : p.Label;
 						if (
-							p.includes(inputSearchTerm) ||
-							p.includes(inputSearchTerm.charAt(0).toUpperCase() + inputSearchTerm.slice(1)) ||
-							p.includes(inputSearchTerm.toUpperCase) ||
-							p.includes(inputSearchTerm.toLowerCase)
+							toString.includes(inputSearchTerm) ||
+							toString.includes(inputSearchTerm.charAt(0).toUpperCase() + inputSearchTerm.slice(1)) ||
+							toString.includes(inputSearchTerm.toUpperCase) ||
+							toString.includes(inputSearchTerm.toLowerCase)
 						) {
 							return (
 								<div
-									key={p}
+									key={p.Name}
 									className={`property${
-										usedInputProperties.find((up) => up === p) != null ? ' used' : ''
+										usedInputProperties.find((up) => up.Name === p.Name) != null ? ' used' : ''
 									}`}
 								>
-									<div>{p}</div>
+									<div>{toString}</div>
 									<SlIconButton
 										name='plus-circle'
 										label='Add property'
@@ -553,20 +557,21 @@ const AccountConnectionProperties = () => {
 				</SlInput>
 				<div className='dialogProperties'>
 					{outputProperties.map((p) => {
+						let toString = p.Label === '' ? p.Name : p.Label;
 						if (
-							p.includes(outputSearchTerm) ||
-							p.includes(outputSearchTerm.charAt(0).toUpperCase() + outputSearchTerm.slice(1)) ||
-							p.includes(outputSearchTerm.toUpperCase) ||
-							p.includes(outputSearchTerm.toLowerCase)
+							toString.includes(outputSearchTerm) ||
+							toString.includes(outputSearchTerm.charAt(0).toUpperCase() + outputSearchTerm.slice(1)) ||
+							toString.includes(outputSearchTerm.toUpperCase) ||
+							toString.includes(outputSearchTerm.toLowerCase)
 						) {
 							return (
 								<div
-									key={p}
+									key={p.Name}
 									className={`property${
-										usedOutputProperties.find((up) => up === p) != null ? ' used' : ''
+										usedOutputProperties.find((up) => up.Name === p.Name) != null ? ' used' : ''
 									}`}
 								>
-									<div>{p}</div>
+									<div>{toString}</div>
 									<SlIconButton
 										name='plus-circle'
 										label='Add property'
