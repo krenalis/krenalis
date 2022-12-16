@@ -21,7 +21,8 @@ import (
 // logNotifications controls the logging of notifications on the log.
 const logNotifications = false
 
-// startStateKeeper starts the state keeper.
+// startStateKeeper starts the state keeper. It loads the state from the
+// database and keeps it in sync.
 func startStateKeeper(ctx context.Context, apis *APIs) error {
 	s := stateKeeper{
 		APIs:        apis,
@@ -37,8 +38,8 @@ func startStateKeeper(ctx context.Context, apis *APIs) error {
 	return nil
 }
 
-// keepState starts the state keeper. It is called in its own goroutine. The
-// workspaces argument contains all workspaces and connections all connections.
+// keepState keeps state in sync with the database. It is called in its own
+// goroutine.
 func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgres.Notification) {
 
 	for {
