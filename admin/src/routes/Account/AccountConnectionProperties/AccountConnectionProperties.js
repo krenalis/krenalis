@@ -270,8 +270,8 @@ const AccountConnectionProperties = () => {
 		if (t.In.length > 0) {
 			let properties = '';
 			t.In.forEach((p, i) => {
-				if (i === 0) properties += `user['${p.Name}']`;
-				else properties += ` + user['${p.Name}']`;
+				if (i === 0) properties += `user["${p.Name}"]`;
+				else properties += ` + user["${p.Name}"]`;
 			});
 			let i = f.indexOf('return');
 			f = f.substring(0, i + 7) + properties;
