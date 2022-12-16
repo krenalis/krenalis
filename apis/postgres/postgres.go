@@ -36,6 +36,7 @@ type Connection interface {
 	Query(string, ...any) (*Rows, error)
 	QueryScan(string, ...any) error
 	QueryRow(string, ...any) *Row
+	QueryVoid(string, ...any) error
 	Tables(string) ([]string, error)
 }
 
@@ -174,6 +175,16 @@ func (db *DB) QueryScan(query string, args ...any) error {
 		return err
 	}
 	return rows.Err()
+}
+
+func (db *DB) QueryVoid(query string, args ...any) error {
+	if db.log != nil {
+		fmt.Fprint(db.log, query, "\n\n")
+		if len(args) > 0 {
+			fmt.Fprintf(db.log, "> args: %v\n", args)
+		}
+	}
+	return db.db.QueryRow(query, args...).Scan()
 }
 
 func (db *DB) Begin() (*Tx, error) {
@@ -357,6 +368,16 @@ func (c *Conn) QueryRow(query string, args ...any) *Row {
 	return &Row{row}
 }
 
+func (c *Conn) QueryVoid(query string, args ...any) error {
+	if c.log != nil {
+		fmt.Fprint(c.log, query, "\n\n")
+		if len(args) > 0 {
+			fmt.Fprintf(c.log, "> args: %v\n", args)
+		}
+	}
+	return c.conn.QueryRowContext(context.Background(), query, args...).Scan()
+}
+
 func (c *Conn) Tables(database string) ([]string, error) {
 	var stmt = "SHOW TABLES"
 	if database != "" {
@@ -471,6 +492,16 @@ func (tx *Tx) QueryRow(query string, args ...any) *Row {
 	}
 	row := tx.tx.QueryRow(query, args...)
 	return &Row{row}
+}
+
+func (tx *Tx) QueryVoid(query string, args ...any) error {
+	if tx.log != nil {
+		fmt.Fprint(tx.log, query, "\n\n")
+		if len(args) > 0 {
+			fmt.Fprintf(tx.log, "> args: %v\n", args)
+		}
+	}
+	return tx.tx.QueryRow(query, args...).Scan()
 }
 
 func (tx *Tx) Rollback() error {
