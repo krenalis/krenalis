@@ -675,6 +675,14 @@ func IsForeignKeyViolation(err error) bool {
 	return false
 }
 
+// IsDuplicateKeyValue reports whether err is a duplicate key value error.
+func IsDuplicateKeyValue(err error) bool {
+	if err, ok := err.(*pgconn.PgError); ok {
+		return err.Code == "23505"
+	}
+	return false
+}
+
 // ErrConstraintName returns the name of the constraint in err, if any.
 func ErrConstraintName(err error) string {
 	if err, ok := err.(*pgconn.PgError); ok {
