@@ -122,13 +122,12 @@ func (this *Workspaces) As(id int) (*Workspace, error) {
 	return this.get(id)
 }
 
-// An InvalidSchemaSyntaxError error indicates that a schema has an invalid
-// syntax.
-type InvalidSchemaSyntaxError struct {
+// An InvalidSchema error indicates that a schema is not valid.
+type InvalidSchema struct {
 	Err error
 }
 
-func (err *InvalidSchemaSyntaxError) Error() string {
+func (err *InvalidSchema) Error() string {
 	return fmt.Sprintf("schema is not valid: %s", err.Err.Error())
 }
 
@@ -146,21 +145,21 @@ func (ws *Workspace) Info() *WorkspaceInfo {
 
 // SetUserSchema sets the user schema. schema must be valid and cannot be
 // longer than 2^24-1 runes. If schema is not valid, it returns an
-// InvalidSchemaSyntaxError error.
+// InvalidSchema error.
 func (ws *Workspace) SetUserSchema(schema string) error {
 	return ws.setSchema("user", schema)
 }
 
 // SetGroupSchema sets the group schema. schema must be valid and cannot be
 // longer than 2^24-1 runes. If schema is not valid, it returns an
-// // InvalidSchemaSyntaxError error.
+// // InvalidSchema error.
 func (ws *Workspace) SetGroupSchema(schema string) error {
 	return ws.setSchema("group", schema)
 }
 
 // SetEventSchema sets the event schema. schema must be valid and cannot be
 // longer than 2^24-1 runes. If schema is not valid, it returns an
-// // InvalidSchemaSyntaxError error.
+// // InvalidSchema error.
 func (ws *Workspace) SetEventSchema(schema string) error {
 	return ws.setSchema("event", schema)
 }
@@ -173,7 +172,7 @@ func (ws *Workspace) setSchema(name string, schema string) error {
 	}
 	_, err := types.ParseSchema(strings.NewReader(schema), nil)
 	if err != nil {
-		return &InvalidSchemaSyntaxError{err}
+		return &InvalidSchema{err}
 	}
 	var n any
 	var table string

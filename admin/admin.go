@@ -242,7 +242,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				err = workspace.SetEventSchema(request.Schema)
 			}
 			if err != nil {
-				if _, ok := err.(*apis.InvalidSchemaSyntaxError); ok {
+				if _, ok := err.(*apis.InvalidSchema); ok {
 					http.Error(w, "Bad Request", http.StatusBadRequest)
 					return
 				}
