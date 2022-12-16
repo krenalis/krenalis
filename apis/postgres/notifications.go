@@ -30,8 +30,11 @@ type Notification struct {
 
 // Notify sends a notification.
 func (tx *Tx) Notify(payload any) error {
-	name := reflect.TypeOf(payload).Name()
-	name = strings.TrimSuffix(name, "Notification")
+	t := reflect.TypeOf(payload)
+	if t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	name := strings.TrimSuffix(t.Name(), "Notification")
 	var b bytes.Buffer
 	b.WriteString(name)
 	enc := json.NewEncoder(&b)
