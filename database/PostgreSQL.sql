@@ -53,11 +53,10 @@ CREATE TABLE workspaces (
     name varchar(100) NOT NULL,
     user_schema varchar(65535) NOT NULL,
     group_schema varchar(65535) NOT NULL,
-    event_schema varchar(65535) NOT NULL,
     PRIMARY KEY (id)
 );
 
-INSERT INTO workspaces (id, account, name, user_schema, group_schema, event_schema)
+INSERT INTO workspaces (id, account, name, user_schema, group_schema)
 VALUES (1, 1, 'Workspace', '{ "properties": [
     {
         "name" : "FirstName",
@@ -96,7 +95,7 @@ VALUES (1, 1, 'Workspace', '{ "properties": [
             "charLen": 300
         }
     }
-] }', '');
+] }');
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
@@ -190,6 +189,24 @@ CREATE TABLE domains (
     source integer NOT NULL,
     name varchar(255) NOT NULL,
     PRIMARY KEY (source, name)
+);
+
+CREATE TABLE event_data_types (
+    workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    name varchar(120) NOT NULL,
+    description varchar(400) NOT NULL DEFAULT '',
+    schema text NOT NULL,
+    PRIMARY KEY (workspace, name)
+);
+
+CREATE TABLE event_types (
+    workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    id smallint NOT NULL CHECK(id BETWEEN 1 AND 255),
+    name varchar(120) NOT NULL UNIQUE,
+    description varchar(400) NOT NULL DEFAULT '',
+    schema text NOT NULL DEFAULT '',
+    deleted bool NOT NULL DEFAULT false,
+    PRIMARY KEY (workspace, id)
 );
 
 CREATE TABLE properties (

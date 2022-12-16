@@ -13,7 +13,7 @@ CREATE TABLE events
     `browser_other` String,
     `browser_version` String,
     `device_type` Enum8('desktop' = 1, 'tablet' = 2, 'mobile' = 3),
-    `event` Enum8('pageview' = 1, 'click' = 2),
+    `event` UInt8,
     `language` FixedString(2),
     `referrer` String,
     `target` String,

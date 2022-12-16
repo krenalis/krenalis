@@ -85,7 +85,6 @@ export default class AccountSchemas extends React.Component {
 						>
 							<SlMenuItem value='user'>User</SlMenuItem>
 							<SlMenuItem value='group'>Group</SlMenuItem>
-							<SlMenuItem value='event'>Event</SlMenuItem>
 						</SlSelect>
 						<SlButton
 							className='saveButton'

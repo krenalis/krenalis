@@ -59,6 +59,8 @@ type Workspace struct {
 	db              *postgres.DB
 	chDB            chDriver.Conn
 	Connections     *Connections
+	EventTypes      *EventTypes
+	EventDataTypes  *EventDataTypes
 	EventListeners  *EventListeners
 	Transformations *Transformations
 	id              int
@@ -164,8 +166,7 @@ func (ws *Workspace) SetEventSchema(schema string) error {
 	return ws.setSchema("event", schema)
 }
 
-// setSchema is called by the SetUserSchema, SetGroupSchema, and SetEventSchema
-// methods to set a schema.
+// setSchema is called by SetUserSchema and SetGroupSchema to set a schema.
 func (ws *Workspace) setSchema(name string, schema string) error {
 	if utf8.RuneCountInString(schema) > rawSchemaMaxSize {
 		return fmt.Errorf("schema is too longer")
@@ -189,12 +190,6 @@ func (ws *Workspace) setSchema(name string, schema string) error {
 			Schema:    schema,
 		}
 		table = "group_schema"
-	case "event":
-		n = setWorkspaceEventSchemaNotification{
-			Workspace: ws.id,
-			Schema:    schema,
-		}
-		table = "event_schema"
 	}
 	err = ws.db.Transaction(func(tx *postgres.Tx) error {
 		_, err = tx.Exec("UPDATE workspaces SET "+table+" = $1 WHERE id = $2", schema, ws.id)

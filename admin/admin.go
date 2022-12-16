@@ -217,8 +217,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				schema = info.SchemaSources.User
 			case "group":
 				schema = info.SchemaSources.Group
-			case "event":
-				schema = info.SchemaSources.Event
 			}
 			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(schema)
@@ -238,8 +236,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				err = workspace.SetUserSchema(request.Schema)
 			case "group":
 				err = workspace.SetGroupSchema(request.Schema)
-			case "event":
-				err = workspace.SetEventSchema(request.Schema)
 			}
 			if err != nil {
 				if _, ok := err.(*apis.InvalidSchema); ok {

@@ -131,6 +131,8 @@ func (s *stateKeeper) loadState() error {
 				workspace.schemaSources.group = groupSchema
 				workspace.schemaSources.event = eventSchema
 				workspace.Connections = newConnections(workspace)
+				workspace.EventTypes = newEventTypes(workspace)
+				workspace.EventDataTypes = newEventDataTypes(workspace)
 				workspace.EventListeners = &EventListeners{workspace}
 				workspace.Transformations = newTransformations(workspace)
 				account.Workspaces.state.ids[id] = workspace
@@ -200,6 +202,54 @@ func (s *stateKeeper) loadState() error {
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	// Read all event types.
+	err = s.db.QueryScan("SELECT workspace, id, name, description, schema FROM event_types",
+		func(rows *postgres.Rows) error {
+			for rows.Next() {
+				t := EventType{}
+				var workspaceID int
+				if err := rows.Scan(&workspaceID, &t.id, &t.name, &t.description, &t.schemaSource); err != nil {
+					return err
+				}
+				if t.schemaSource != "" {
+					t.schema, err = types.ParseSchema(strings.NewReader(t.schemaSource), nil)
+					if err != nil {
+						// TODO(marco) disable the type instead of returning an error?
+						return err
+					}
+				}
+				workspaces[workspaceID].EventTypes.state.ids[t.id] = &t
+			}
+			return nil
+		})
+	if err != nil {
+		return err
+	}
+
+	// Read all event data types.
+	err = s.db.QueryScan("SELECT workspace, name, description, schema FROM event_data_types",
+		func(rows *postgres.Rows) error {
+			for rows.Next() {
+				t := EventDataType{}
+				var workspaceID int
+				if err := rows.Scan(&workspaceID, &t.name, &t.description, &t.schemaSource); err != nil {
+					return err
+				}
+				if t.schemaSource != "" {
+					t.schema, err = types.ParseSchema(strings.NewReader(t.schemaSource), nil)
+					if err != nil {
+						// TODO(marco) disable the type instead of returning an error?
+						return err
+					}
+				}
+				workspaces[workspaceID].EventDataTypes.state.names[t.name] = &t
+			}
+			return nil
+		})
 	if err != nil {
 		return err
 	}
