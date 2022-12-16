@@ -97,7 +97,7 @@ func decodeBySchema(dec *json.Decoder, schema Schema, strict bool) (any, error) 
 			return nil, errors.New("invalid property name")
 		}
 		if strict {
-			return nil, fmt.Errorf("unknow property name %q", name)
+			return nil, fmt.Errorf("unknown property name %q", name)
 		}
 		// Skip the property.
 		depth := 0
