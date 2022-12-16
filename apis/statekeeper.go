@@ -150,6 +150,7 @@ type addConnectionNotification struct {
 		OAuthRefreshToken string    // refresh token, can be empty.
 		OAuthExpiresIn    time.Time // expiration time, can be the zero time.
 	}
+	WebsiteHost string
 }
 
 // addConnection adds a new connection.
@@ -186,15 +187,16 @@ func (s *stateKeeper) addConnection(n postgres.Notification) {
 		}
 	}
 	c := &Connection{
-		account:   workspace.account,
-		workspace: workspace,
-		id:        e.ID,
-		name:      e.Name,
-		role:      e.Role,
-		connector: connector,
-		storage:   s.connections[e.Storage],
-		stream:    s.connections[e.Stream],
-		resource:  resource,
+		account:     workspace.account,
+		workspace:   workspace,
+		id:          e.ID,
+		name:        e.Name,
+		role:        e.Role,
+		connector:   connector,
+		storage:     s.connections[e.Storage],
+		stream:      s.connections[e.Stream],
+		resource:    resource,
+		websiteHost: e.WebsiteHost,
 	}
 	workspace.Connections.state.Lock()
 	workspace.Connections.state.ids[c.id] = c

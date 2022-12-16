@@ -775,7 +775,7 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 	case apis.FileType:
 		opts.Storage = connection.Storage
 	case apis.WebsiteType:
-		opts.Host = connection.Host
+		opts.WebsiteHost = connection.Host
 	}
 	id, err := workspace.Connections.Add(role, conn.ID, conn.Name, opts)
 	if err != nil {

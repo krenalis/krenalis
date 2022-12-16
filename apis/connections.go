@@ -210,10 +210,10 @@ func (role ConnectionRole) Value() (driver.Value, error) {
 // ConnectionOptions values are passed to the Add method with options
 // relative to the connection.
 type ConnectionOptions struct {
-	Storage int
-	Stream  int
-	Host    string
-	OAuth   *AddConnectionOAuthOptions
+	Storage     int
+	Stream      int
+	WebsiteHost string
+	OAuth       *AddConnectionOAuthOptions
 }
 
 type AddConnectionOAuthOptions struct {
@@ -275,7 +275,7 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 			return 0, fmt.Errorf("%s connector cannot have streams", strings.ToLower(c.typ.String()))
 		}
 	}
-	if opts.Host != "" && c.typ != WebsiteType {
+	if opts.WebsiteHost != "" && c.typ != WebsiteType {
 		return 0, fmt.Errorf("%s connector cannot have host", strings.ToLower(c.typ.String()))
 	}
 	if (opts.OAuth == nil) != (c.oAuth == nil) {
@@ -312,13 +312,14 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 			return 0, err
 		}
 	case WebsiteType:
-		if h, p, found := strings.Cut(opts.Host, ":"); h == "" || len(opts.Host) > 255 {
+		if h, p, found := strings.Cut(opts.WebsiteHost, ":"); h == "" || len(opts.WebsiteHost) > 255 {
 			return 0, errors.New("invalid website host")
 		} else if found {
 			if port, _ := strconv.Atoi(p); port <= 0 || port > 65535 {
 				return 0, errors.New("invalid website host")
 			}
 		}
+		n.WebsiteHost = opts.WebsiteHost
 	}
 
 	// Set the resource. It can be an existent resource or a resource to be created.
@@ -368,8 +369,9 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 			}
 		}
 		// Insert the connection.
-		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector)"+
-			" VALUES ($1, $2, $3, $4, $5, $6)", n.ID, n.Workspace, n.Name, c.typ, n.Role, n.Connector)
+		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector, storage, stream,"+
+			" resource, website_host) VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, 0), NULLIF($8, 0), $9, $10)",
+			n.ID, n.Workspace, n.Name, c.typ, n.Role, n.Connector, n.Storage, n.Stream, n.Resource.ID, n.WebsiteHost)
 		if err != nil {
 			return err
 		}
