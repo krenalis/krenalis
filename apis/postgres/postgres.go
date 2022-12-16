@@ -145,14 +145,14 @@ func (db *DB) QueryScan(query string, args ...any) error {
 		fmt.Fprint(db.log, query, "\n\n")
 	}
 	if len(args) == 0 {
-		return fmt.Errorf("open2b/sql: missing scan function")
+		return fmt.Errorf("sql: missing scan function")
 	}
 	args, arg := args[:len(args)-1], args[len(args)-1]
 	switch arg.(type) {
 	case func(*Rows) error:
 	case func(RowsScanner) error:
 	default:
-		return fmt.Errorf("open2b/sql: cannot use a %T value as scan function", arg)
+		return fmt.Errorf("sql: cannot use a %T value as scan function", arg)
 	}
 	if db.log != nil && len(args) > 0 {
 		fmt.Fprintf(db.log, "> args: %v\n", args)
@@ -325,14 +325,14 @@ func (conn *Conn) QueryScan(query string, args ...any) error {
 		fmt.Fprint(conn.log, query, "\n\n")
 	}
 	if len(args) == 0 {
-		return fmt.Errorf("open2b/sql: missing scan function")
+		return fmt.Errorf("sql: missing scan function")
 	}
 	args, arg := args[:len(args)-1], args[len(args)-1]
 	switch arg.(type) {
 	case func(*Rows) error:
 	case func(RowsScanner) error:
 	default:
-		return fmt.Errorf("open2b/sql: cannot use a %T value as scan function", arg)
+		return fmt.Errorf("sql: cannot use a %T value as scan function", arg)
 	}
 	if conn.log != nil && len(args) > 0 {
 		fmt.Fprintf(conn.log, "> args: %v\n", args)
@@ -451,14 +451,14 @@ func (tx *Tx) QueryScan(query string, args ...any) error {
 		fmt.Fprint(tx.log, query, "\n\n")
 	}
 	if len(args) == 0 {
-		return fmt.Errorf("open2b/sql: missing scan function")
+		return fmt.Errorf("sql: missing scan function")
 	}
 	args, arg := args[:len(args)-1], args[len(args)-1]
 	switch arg.(type) {
 	case func(*Rows) error:
 	case func(RowsScanner) error:
 	default:
-		return fmt.Errorf("open2b/sql: cannot use a %T value as scan function", arg)
+		return fmt.Errorf("sql: cannot use a %T value as scan function", arg)
 	}
 	if tx.log != nil && len(args) > 0 {
 		fmt.Fprintf(tx.log, "> args: %v\n", args)
@@ -614,14 +614,14 @@ func QuoteValue(value any) string {
 				switch v.(type) {
 				case bool, int, int64, uint, uint64, float32, float64, string, time.Time:
 				default:
-					panic(fmt.Errorf("open2b/sql: Unsupported nested type '%T'", v))
+					panic(fmt.Errorf("sql: Unsupported nested type '%T'", v))
 				}
 				values[i] = QuoteValue(v)
 			}
 		}
 		return "(" + strings.Join(values, ",") + ")"
 	default:
-		panic(fmt.Errorf("open2b/sql: Unsupported type '%T'", val))
+		panic(fmt.Errorf("sql: Unsupported type '%T'", val))
 	}
 }
 
