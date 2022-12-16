@@ -8,6 +8,7 @@
 package apis
 
 import (
+	"database/sql"
 	"errors"
 	"regexp"
 	"sort"
@@ -93,7 +94,7 @@ func (this *Accounts) Authenticate(email, password string) (int, error) {
 	var hashedPassword []byte
 	err := this.db.QueryRow("SELECT id, password FROM accounts WHERE email = $1", email).Scan(&id, &hashedPassword)
 	if err != nil {
-		if err == postgres.ErrNoRows {
+		if err == sql.ErrNoRows {
 			return 0, ErrAuthenticationFailed
 		}
 		return 0, err

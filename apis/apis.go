@@ -9,6 +9,7 @@ package apis
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -138,7 +139,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var accountID int
 	err := apis.db.QueryRow("SELECT account FROM workspaces WHERE id = $1", workspaceID).Scan(&accountID)
 	if err != nil {
-		if err == postgres.ErrNoRows {
+		if err == sql.ErrNoRows {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}

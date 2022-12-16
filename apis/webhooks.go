@@ -10,6 +10,7 @@ package apis
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
@@ -20,7 +21,6 @@ import (
 	"strconv"
 	"time"
 
-	"chichi/apis/postgres"
 	_connector "chichi/connector"
 )
 
@@ -160,7 +160,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		err := apis.db.QueryRow("SELECT connector, code FROM resources WHERE id = $1", r).
 			Scan(&connector, &conf.Resource)
 		if err != nil {
-			if err == postgres.ErrNoRows {
+			if err == sql.ErrNoRows {
 				return errNotFound
 			}
 			return err
@@ -184,7 +184,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 				"WHERE s.id = $1", connection).
 			Scan(&connector, &resource, &conf.Settings, hasOAuth, &conf.Resource, &conf.AccessToken, &refreshToken, &expiresIn)
 		if err != nil {
-			if err == postgres.ErrNoRows {
+			if err == sql.ErrNoRows {
 				return errNotFound
 			}
 			return err

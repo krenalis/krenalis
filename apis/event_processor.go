@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	crand "crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
@@ -234,7 +235,7 @@ func (p *eventProcessor) processMessage(stream int, message []byte) error {
 			"INNER JOIN connections AS c ON k.connection = c.id\n"+
 			"WHERE c.type = 'Server' AND c.role = 'Source' AND k.key = $1", key).Scan(&server)
 		if err != nil {
-			if err == postgres.ErrNoRows {
+			if err == sql.ErrNoRows {
 				p.observer.AddEvent(0, 0, stream, nil, message, errors.New("does not exist a server with the given key"))
 				return nil
 			}
@@ -259,7 +260,7 @@ func (p *eventProcessor) processMessage(stream int, message []byte) error {
 		"WHERE id = $1 AND type IN ('Mobile', 'Website') AND role = 'Source'", source).
 		Scan(&typ, &websiteHost)
 	if err != nil {
-		if err == postgres.ErrNoRows {
+		if err == sql.ErrNoRows {
 			p.observer.AddEvent(0, server, stream, nil, message, errors.New("source does not exist"))
 			return nil
 		}
@@ -381,15 +382,15 @@ func (p *eventProcessor) processMessage(stream int, message []byte) error {
 
 		// Get the user or create it if it does not exist.
 		err = p.db.QueryRow("SELECT id FROM users WHERE source = $1 AND device = $2", source, event.Device).Scan(&event.user)
-		if err != nil && err != postgres.ErrNoRows {
+		if err != nil && err != sql.ErrNoRows {
 			return err
 		}
-		if err == postgres.ErrNoRows {
+		if err == sql.ErrNoRows {
 			err = p.db.QueryRow("SELECT user FROM devices WHERE source = $1 AND id = $2", source, event.Device).Scan(&event.user)
-			if err != nil && err != postgres.ErrNoRows {
+			if err != nil && err != sql.ErrNoRows {
 				return err
 			}
-			if err == postgres.ErrNoRows {
+			if err == sql.ErrNoRows {
 				event.user, err = makeUserID()
 				if err != nil {
 					return err
