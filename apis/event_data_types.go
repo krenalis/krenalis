@@ -145,8 +145,8 @@ func (this *EventDataTypes) get(name string) (*EventDataType, error) {
 	return t, nil
 }
 
-// Get returns an EventDataTypeInfo describing the data type with identifier
-// id.
+// Get returns an EventDataTypeInfo describing the data type with the given
+// name.
 //
 // It returns the ErrEventDataTypeNotFound error if the type does not exist.
 func (this *EventDataTypes) Get(name string) (*EventDataTypeInfo, error) {
