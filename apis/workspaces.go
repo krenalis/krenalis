@@ -159,13 +159,6 @@ func (ws *Workspace) SetGroupSchema(schema string) error {
 	return ws.setSchema("group", schema)
 }
 
-// SetEventSchema sets the event schema. schema must be valid and cannot be
-// longer than 2^24-1 runes. If schema is not valid, it returns an
-// // InvalidSchema error.
-func (ws *Workspace) SetEventSchema(schema string) error {
-	return ws.setSchema("event", schema)
-}
-
 // setSchema is called by SetUserSchema and SetGroupSchema to set a schema.
 func (ws *Workspace) setSchema(name string, schema string) error {
 	if utf8.RuneCountInString(schema) > rawSchemaMaxSize {
