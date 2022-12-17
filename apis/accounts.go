@@ -169,7 +169,7 @@ func (this *Accounts) Get(id int) (*AccountInfo, error) {
 	}
 	acc, err := this.get(id)
 	if err != nil {
-		return nil, err
+		return nil, ErrAccountNotFound
 	}
 	ips := make([]string, len(acc.internalIPs))
 	copy(ips, acc.internalIPs)
