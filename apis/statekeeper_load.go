@@ -26,7 +26,7 @@ func (s *stateKeeper) loadState() error {
 		" oauth_client_secret, oauth_token_endpoint, oauth_default_token_type, oauth_default_expires_in,"+
 		" oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
 		for rows.Next() {
-			c := Connector{resources: &resourcesState{resources: map[int]*Resource{}}}
+			c := Connector{}
 			oauth := ConnectorOAuth{}
 			if err := rows.Scan(&c.id, &c.name, &c.typ, &c.logoURL, &c.webhooksPer, &oauth.URL, &oauth.ClientID, &oauth.ClientSecret,
 				&oauth.TokenEndpoint, &oauth.DefaultTokenType, &oauth.DefaultExpiresIn, &oauth.ForcedExpiresIn); err != nil {
@@ -43,26 +43,6 @@ func (s *stateKeeper) loadState() error {
 		return err
 	}
 	s.Connectors = newConnectors(s.APIs, &connectorsState{ids: connectors})
-
-	// Read all resources.
-	resources := map[int]*Resource{}
-	err = s.db.QueryScan("SELECT id, connector, code, oauth_access_token, oauth_refresh_token, oauth_expires_in\n"+
-		"FROM resources", func(rows *postgres.Rows) error {
-		for rows.Next() {
-			r := Resource{}
-			var connectorID int
-			if err := rows.Scan(&r.id, &connectorID, &r.code, &r.oAuthAccessToken, &r.oAuthRefreshToken, &r.oAuthExpiresIn); err != nil {
-				return err
-			}
-			connector := connectors[connectorID]
-			connector.resources.resources[r.id] = &r
-			resources[r.id] = &r
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
 
 	// Read all accounts.
 	accounts := map[int]*Account{}
@@ -104,10 +84,11 @@ func (s *stateKeeper) loadState() error {
 				}
 				account := accounts[accountID]
 				workspace := &Workspace{
-					db:      s.db,
-					chDB:    s.chDB,
-					id:      id,
-					account: account,
+					db:        s.db,
+					chDB:      s.chDB,
+					id:        id,
+					account:   account,
+					resources: &resourcesState{ids: map[int]*Resource{}},
 				}
 				if userSchema != "" {
 					workspace.schema.user, err = types.ParseSchema(strings.NewReader(userSchema), nil)
@@ -137,6 +118,27 @@ func (s *stateKeeper) loadState() error {
 				workspace.Transformations = newTransformations(workspace, &transformationsState{ofConnection: map[int][]*Transformation{}})
 				account.Workspaces.state.ids[id] = workspace
 				workspaces[id] = workspace
+			}
+			return nil
+		})
+	if err != nil {
+		return err
+	}
+
+	// Read all resources.
+	resources := map[int]*Resource{}
+	err = s.db.QueryScan("SELECT id, workspace, connector, code, access_token, refresh_token, expires_in FROM resources",
+		func(rows *postgres.Rows) error {
+			for rows.Next() {
+				r := Resource{}
+				var workspaceID, connectorID int
+				if err := rows.Scan(&r.id, &workspaceID, &connectorID, &r.code, &r.accessToken, &r.refreshToken, &r.expiresIn); err != nil {
+					return err
+				}
+				r.workspace = workspaces[workspaceID]
+				r.connector = connectors[connectorID]
+				r.workspace.resources.ids[r.id] = &r
+				resources[r.id] = &r
 			}
 			return nil
 		})
@@ -351,6 +353,7 @@ func (s *stateKeeper) loadState() error {
 
 	s.workspaces = workspaces
 	s.connections = connections
+	s.resources = resources
 
 	return err
 }

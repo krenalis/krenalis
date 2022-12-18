@@ -313,16 +313,16 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 			return 0, err
 		}
 		n.Resource.Code = code
-		resource, _ := c.resources.GetByCode(code)
+		resource, _ := this.resources.GetByCode(code)
 		if resource != nil {
 			n.Resource.ID = resource.id
 		}
-		if resource == nil || opts.OAuth.AccessToken != resource.oAuthAccessToken ||
-			opts.OAuth.RefreshToken != resource.oAuthRefreshToken ||
-			opts.OAuth.ExpiresIn != resource.oAuthExpiresIn {
-			n.Resource.OAuthAccessToken = opts.OAuth.AccessToken
-			n.Resource.OAuthRefreshToken = opts.OAuth.RefreshToken
-			n.Resource.OAuthExpiresIn = opts.OAuth.ExpiresIn
+		if resource == nil || opts.OAuth.AccessToken != resource.accessToken ||
+			opts.OAuth.RefreshToken != resource.refreshToken ||
+			opts.OAuth.ExpiresIn != resource.expiresIn {
+			n.Resource.AccessToken = opts.OAuth.AccessToken
+			n.Resource.RefreshToken = opts.OAuth.RefreshToken
+			n.Resource.ExpiresIn = opts.OAuth.ExpiresIn
 		}
 	}
 
@@ -344,17 +344,25 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 		if n.Resource.Code != "" {
 			if n.Resource.ID == 0 {
 				// Insert a new resource.
-				err = tx.QueryRow("INSERT INTO resources (connector, code, oauth_access_token,"+
-					" oauth_refresh_token, oauth_expires_in) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-					connector, n.Resource.Code, n.Resource.OAuthAccessToken, n.Resource.OAuthRefreshToken, n.Resource.OAuthExpiresIn).
+				err = tx.QueryRow("INSERT INTO resources (workspace, connector, code, access_token,"+
+					" refresh_token, expires_in) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+					n.Workspace, connector, n.Resource.Code, n.Resource.AccessToken, n.Resource.RefreshToken, n.Resource.ExpiresIn).
 					Scan(&n.Resource.ID)
-			} else if n.Resource.OAuthAccessToken != "" {
+			} else if n.Resource.AccessToken != "" {
 				// Update the current resource.
 				_, err = tx.Exec("UPDATE resources "+
-					"SET oauth_access_token = $1, oauth_refresh_token = $2, oauth_expires_in = $3 WHERE id = $4",
-					n.Resource.OAuthAccessToken, n.Resource.OAuthRefreshToken, n.Resource.OAuthExpiresIn, n.Resource.ID)
+					"SET access_token = $1, refresh_token = $2, expires_in = $3 WHERE id = $4",
+					n.Resource.AccessToken, n.Resource.RefreshToken, n.Resource.ExpiresIn, n.Resource.ID)
 			}
 			if err != nil {
+				if postgres.IsForeignKeyViolation(err) {
+					switch postgres.ErrConstraintName(err) {
+					case "resources_workspace_fkey":
+						err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
+					case "resources_connector_fkey":
+						err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
+					}
+				}
 				return err
 			}
 		}
@@ -661,20 +669,15 @@ func (this *Connections) _startImport(imp *ImportInProgress) error {
 	switch connector.typ {
 	case AppType:
 
-		// Refresh the access token if necessary.
 		var clientSecret, resourceCode, accessToken string
 		if r := imp.connection.resource; r != nil {
-			expired := time.Now().UTC().Add(15 * time.Minute).After(r.oAuthExpiresIn)
-			if r.oAuthAccessToken == "" || expired {
-				var err error
-				r, err = this.account.apis.Connectors.refreshOAuthToken(connector.id, r.id)
-				if err != nil {
-					return importError{err}
-				}
-			}
 			clientSecret = connector.oAuth.ClientSecret
 			resourceCode = r.code
-			accessToken = r.oAuthAccessToken
+			var err error
+			accessToken, err = r.freshAccessToken()
+			if err != nil {
+				return importError{fmt.Errorf("cannot retrive the OAuth access token: %s", err)}
+			}
 		}
 
 		// Read the user schema and the properties to read.
@@ -1233,20 +1236,15 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 	switch c.connector.typ {
 	case AppType:
 
-		// Refresh the access token if necessary.
 		var clientSecret, resourceCode, accessToken string
 		if r := c.resource; r != nil {
-			expired := time.Now().UTC().Add(15 * time.Minute).After(r.oAuthExpiresIn)
-			if r.oAuthAccessToken == "" || expired {
-				var err error
-				r, err = this.account.apis.Connectors.refreshOAuthToken(c.connector.id, r.id)
-				if err != nil {
-					return nil, err
-				}
-			}
 			clientSecret = c.connector.oAuth.ClientSecret
 			resourceCode = r.code
-			accessToken = r.oAuthAccessToken
+			var err error
+			accessToken, err = r.freshAccessToken()
+			if err != nil {
+				return nil, importError{fmt.Errorf("cannot retrive the OAuth access token: %s", err)}
+			}
 		}
 
 		fh := this.newFirehose(context.Background(), c, types.Schema{})
@@ -1618,18 +1616,13 @@ func (this *Connections) reloadSchema(id int) error {
 
 		var clientSecret, resourceCode, accessToken string
 		if r := c.resource; r != nil {
-			// Refresh the access token if necessary.
-			expired := time.Now().UTC().Add(15 * time.Minute).After(r.oAuthExpiresIn)
-			if r.oAuthAccessToken == "" || expired {
-				var err error
-				r, err = this.account.apis.Connectors.refreshOAuthToken(c.connector.id, r.id)
-				if err != nil {
-					return importError{err}
-				}
-			}
 			clientSecret = c.connector.oAuth.ClientSecret
 			resourceCode = r.code
-			accessToken = r.oAuthAccessToken
+			var err error
+			accessToken, err = r.freshAccessToken()
+			if err != nil {
+				return importError{fmt.Errorf("cannot retrive the OAuth access token: %s", err)}
+			}
 		}
 
 		fh := this.newFirehose(context.Background(), c, types.Schema{})

@@ -90,17 +90,17 @@ func (state *connectorsState) List() []*Connector {
 	return connectors
 }
 
-// resourcesState contains the state of a single connector's resources.
+// resourcesState contains the state of a single workspace's resources.
 type resourcesState struct {
 	sync.Mutex
-	resources map[int]*Resource
+	ids map[int]*Resource
 }
 
 // add adds a resource to the state. If a resource with the same identifier
 // already exists, add replaces it.
 func (state *resourcesState) add(r *Resource) {
 	state.Lock()
-	state.resources[r.id] = r
+	state.ids[r.id] = r
 	state.Unlock()
 }
 
@@ -108,7 +108,7 @@ func (state *resourcesState) add(r *Resource) {
 // exist, it does nothing.
 func (state *resourcesState) delete(id int) {
 	state.Lock()
-	delete(state.resources, id)
+	delete(state.ids, id)
 	state.Unlock()
 }
 
@@ -116,7 +116,7 @@ func (state *resourcesState) delete(id int) {
 // reports whether the resource exists.
 func (state *resourcesState) Get(id int) (*Resource, bool) {
 	state.Lock()
-	r, ok := state.resources[id]
+	r, ok := state.ids[id]
 	state.Unlock()
 	return r, ok
 }
@@ -126,7 +126,7 @@ func (state *resourcesState) Get(id int) (*Resource, bool) {
 func (state *resourcesState) GetByCode(code string) (*Resource, bool) {
 	var r *Resource
 	state.Lock()
-	for _, resource := range state.resources {
+	for _, resource := range state.ids {
 		if resource.code == code {
 			r = resource
 			break

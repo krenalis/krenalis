@@ -12,12 +12,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
 	"sort"
-	"strings"
-	"time"
 
 	"chichi/apis/errors"
 )
@@ -40,7 +35,6 @@ type Connector struct {
 	logoURL     string
 	webhooksPer WebhooksPer
 	oAuth       *ConnectorOAuth
-	resources   *resourcesState
 }
 
 // A ConnectorOAuth represents OAuth data required to authenticate with a
@@ -53,15 +47,6 @@ type ConnectorOAuth struct {
 	DefaultTokenType string
 	DefaultExpiresIn int
 	ForcedExpiresIn  int
-}
-
-// Resource represents a resource.
-type Resource struct {
-	id                int
-	code              string
-	oAuthAccessToken  string
-	oAuthRefreshToken string
-	oAuthExpiresIn    time.Time
 }
 
 // A ConnectorInfo describes a connector as returned by Get and List.
@@ -170,100 +155,6 @@ func (typ ConnectorType) Value() (driver.Value, error) {
 		return "Website", nil
 	}
 	return nil, fmt.Errorf("not a valid ConnectorType: %d", typ)
-}
-
-// refreshOAuth refreshes the OAuth token of the given resource of the
-// connector with identifier id. The connector must support OAuth.
-//
-// If the connector does not exist, it returns a ConnectorNotExistError. If the
-// resource does not exist it does nothing.
-func (this *Connectors) refreshOAuthToken(id, resource int) (*Resource, error) {
-
-	connector, err := this.state.Get(id)
-	if err != nil {
-		return nil, errors.NotFound("connector %d does not exist", id)
-	}
-	if connector.oAuth == nil {
-		return nil, errors.BadRequest("connector %d does not support OAuth", id)
-	}
-	r, ok := connector.resources.Get(resource)
-	if !ok {
-		return nil, nil
-	}
-
-	data := url.Values{}
-	data.Set("grant_type", "refresh_token")
-	data.Set("client_id", connector.oAuth.ClientID)
-	data.Set("client_secret", connector.oAuth.ClientSecret)
-	data.Set("redirect_uri", "https://localhost:9090/admin/oauth/authorize")
-	data.Set("refresh_token", r.oAuthRefreshToken)
-
-	req, err := http.NewRequest("POST", connector.oAuth.TokenEndpoint, strings.NewReader(data.Encode()))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	res, err := http.DefaultTransport.RoundTrip(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, res.Body)
-		_ = res.Body.Close()
-	}()
-
-	if res.StatusCode != http.StatusOK {
-		if res.StatusCode == http.StatusBadRequest {
-			errData := struct {
-				status string
-			}{}
-			err = json.NewDecoder(res.Body).Decode(&errData)
-			if err != nil {
-				return nil, err
-			}
-			// TODO(@Andrea): check the status returned by services different
-			// from Hubspot.
-			if errData.status == "BAD_REFRESH_TOKEN" {
-				return nil, errors.Unprocessable(InvalidRefreshToken, "OAuth refresh token of connector %d is not valid", id)
-			}
-		}
-		return nil, fmt.Errorf("unexpected status %d returned by connector while trying to get a new access token via refresh token", res.StatusCode)
-	}
-
-	response := struct {
-		TokenType    string `json:"token_type"`
-		RefreshToken string `json:"refresh_token"`
-		AccessToken  string `json:"access_token"`
-		ExpiresIn    int    `json:"expires_in"`
-	}{}
-	dec := json.NewDecoder(res.Body)
-	err = dec.Decode(&response)
-	if err != nil {
-		return nil, err
-	}
-
-	// Convert expires_in into a timestamp.
-	expiresIn := time.Now().UTC().Add(time.Duration(response.ExpiresIn) * time.Second) // TODO(marco): ExpiresIn should be relative to response time?
-
-	_, err = this.db.Exec(
-		"UPDATE resources\n"+
-			"SET oauth_access_token = $1, oauth_refresh_token = $2, oauth_expires_in = $3\n"+
-			"WHERE id = $4",
-		response.AccessToken, response.RefreshToken, expiresIn, r.id)
-	if err != nil {
-		return nil, err
-	}
-
-	connector.resources.add(&Resource{
-		id:                id,
-		code:              r.code,
-		oAuthAccessToken:  response.AccessToken,
-		oAuthRefreshToken: response.RefreshToken,
-		oAuthExpiresIn:    expiresIn,
-	})
-
-	return r, nil
 }
 
 // Get returns a ConnectorInfo describing the connector with identifier id.

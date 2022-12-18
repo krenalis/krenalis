@@ -222,11 +222,12 @@ INSERT INTO properties VALUES (1, '1234567890', 1);
 
 CREATE TABLE resources (
     id SERIAL,
-    connector integer NOT NULL,
-    code varchar(100) NOT NULL DEFAULT '',
-    oauth_access_token varchar(500) NOT NULL DEFAULT '',
-    oauth_refresh_token varchar(500) NOT NULL DEFAULT '',
-    oauth_expires_in timestamp(0),
+    workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    connector integer NOT NULL REFERENCES connectors ON DELETE CASCADE,
+    code varchar(100) NOT NULL,
+    access_token varchar(500) NOT NULL DEFAULT '',
+    refresh_token varchar(500) NOT NULL DEFAULT '',
+    expires_in timestamp(0),
     PRIMARY KEY (id)
 );
 

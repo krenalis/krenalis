@@ -58,6 +58,7 @@ type Workspace struct {
 		group string
 		event string
 	}
+	resources *resourcesState
 }
 
 // A WorkspaceInfo describes a workspace as returned by Get and List.

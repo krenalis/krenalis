@@ -28,6 +28,7 @@ func startStateKeeper(ctx context.Context, apis *APIs) error {
 		APIs:        apis,
 		workspaces:  map[int]*Workspace{},
 		connections: map[int]*Connection{},
+		resources:   map[int]*Resource{},
 	}
 	err := s.loadState()
 	if err != nil {
@@ -83,6 +84,8 @@ func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgr
 			s.setEventTypeDescription(n)
 		case "setEventTypeSchema":
 			s.setEventTypeSchema(n)
+		case "setResource":
+			s.setResource(n)
 		case "setWorkspaceGroupSchema":
 			s.setWorkspaceGroupSchema(n)
 		case "setWorkspaceUserSchema":
@@ -113,12 +116,13 @@ type stateKeeper struct {
 	*APIs
 	workspaces  map[int]*Workspace
 	connections map[int]*Connection
+	resources   map[int]*Resource
 }
 
-// setConnection calls the function f passing a copy of the connection with
+// replaceConnection calls the function f passing a copy of the connection with
 // identifier id. After f is returned, it replaces the connection with its
 // copy in the state and returns the latter.
-func (s *stateKeeper) setConnection(id int, f func(c *Connection)) *Connection {
+func (s *stateKeeper) replaceConnection(id int, f func(c *Connection)) *Connection {
 	c := s.connections[id]
 	cc := new(Connection)
 	*cc = *c
@@ -131,10 +135,10 @@ func (s *stateKeeper) setConnection(id int, f func(c *Connection)) *Connection {
 	return cc
 }
 
-// setEventDataType calls the function f passing a copy of the event data type
-// called name of the given workspace. After f is returned, it replaces the
-// data type with its copy in the state and returns the latter.
-func (s *stateKeeper) setEventDataType(workspace int, name string, f func(c *EventDataType)) *EventDataType {
+// replaceEventDataType calls the function f passing a copy of the event data
+// type called name of the given workspace. After f is returned, it replaces
+// the data type with its copy in the state and returns the latter.
+func (s *stateKeeper) replaceEventDataType(workspace int, name string, f func(c *EventDataType)) *EventDataType {
 	tt := new(EventDataType)
 	dt := s.workspaces[workspace].EventDataTypes
 	dt.state.Lock()
@@ -146,10 +150,10 @@ func (s *stateKeeper) setEventDataType(workspace int, name string, f func(c *Eve
 	return tt
 }
 
-// setEventType calls the function f passing a copy of the event type with
+// replaceEventType calls the function f passing a copy of the event type with
 // identifier id of the given workspace. After f is returned, it replaces the
 // type with its copy in the state and returns the latter.
-func (s *stateKeeper) setEventType(workspace int, id int, f func(c *EventType)) *EventType {
+func (s *stateKeeper) replaceEventType(workspace int, id int, f func(c *EventType)) *EventType {
 	tt := new(EventType)
 	dt := s.workspaces[workspace].EventTypes
 	dt.state.Lock()
@@ -161,10 +165,26 @@ func (s *stateKeeper) setEventType(workspace int, id int, f func(c *EventType)) 
 	return tt
 }
 
-// setWorkspace calls the function f passing a copy of the workspace with
+// replaceResource calls the function f passing a copy of the resource with
+// identifier id. After f is returned, it replaces the resource with its copy
+// in the state and returns the latter.
+func (s *stateKeeper) replaceResource(id int, f func(c *Resource)) *Resource {
+	r := s.resources[id]
+	rr := new(Resource)
+	*rr = *r
+	f(rr)
+	state := r.workspace.resources
+	state.Lock()
+	state.ids[r.id] = rr
+	state.Unlock()
+	s.resources[r.id] = rr
+	return rr
+}
+
+// replaceWorkspace calls the function f passing a copy of the workspace with
 // identifier id. After f is returned, it replaces the workspace with its
 // copy in the state and returns the latter.
-func (s *stateKeeper) setWorkspace(id int, f func(c *Workspace)) *Workspace {
+func (s *stateKeeper) replaceWorkspace(id int, f func(c *Workspace)) *Workspace {
 	w := s.workspaces[id]
 	ww := new(Workspace)
 	*ww = *w
@@ -189,11 +209,11 @@ type addConnectionNotification struct {
 	Stream    int            // stream identifier, can be zero
 	ServerKey string         // server key to add (currently not used)
 	Resource  struct {       // resource.
-		ID                int       // identifier, can be zero
-		Code              string    // code, can be empty.
-		OAuthAccessToken  string    // access token, can be empty.
-		OAuthRefreshToken string    // refresh token, can be empty.
-		OAuthExpiresIn    time.Time // expiration time, can be the zero time.
+		ID           int       // identifier, can be zero
+		Code         string    // code, can be empty.
+		AccessToken  string    // access token, can be empty.
+		RefreshToken string    // refresh token, can be empty.
+		ExpiresIn    time.Time // expiration time, can be the zero time.
 	}
 	WebsiteHost string
 }
@@ -206,29 +226,32 @@ func (s *stateKeeper) addConnection(n postgres.Notification) {
 	}
 	workspace, _ := s.workspaces[e.Workspace]
 	connector, _ := s.Connectors.state.Get(e.Connector)
-	var resource *Resource
+	var r *Resource
 	if connector.oAuth != nil {
-		r, ok := connector.resources.Get(e.Resource.ID)
-		if ok {
-			if e.Resource.OAuthAccessToken != "" {
-				// Update the current resource.
-				resource = &Resource{}
-				*resource = *r
-				resource.oAuthAccessToken = e.Resource.OAuthAccessToken
-				resource.oAuthRefreshToken = e.Resource.OAuthRefreshToken
-				resource.oAuthRefreshToken = e.Resource.OAuthRefreshToken
-				connector.resources.add(resource)
+		if _, ok := s.resources[e.Resource.ID]; ok {
+			if e.Resource.AccessToken != "" {
+				r = s.replaceResource(e.Resource.ID, func(r *Resource) {
+					r.accessToken = e.Resource.AccessToken
+					r.refreshToken = e.Resource.RefreshToken
+					r.expiresIn = e.Resource.ExpiresIn
+				})
+				s.resources[r.id] = r
 			}
 		} else {
-			// Add a new resource.
-			resource = &Resource{
-				id:                e.Resource.ID,
-				code:              e.Resource.Code,
-				oAuthAccessToken:  e.Resource.OAuthAccessToken,
-				oAuthRefreshToken: e.Resource.OAuthRefreshToken,
-				oAuthExpiresIn:    e.Resource.OAuthExpiresIn,
+			r = &Resource{
+				id:           e.Resource.ID,
+				workspace:    workspace,
+				connector:    connector,
+				code:         e.Resource.Code,
+				accessToken:  e.Resource.AccessToken,
+				refreshToken: e.Resource.RefreshToken,
+				expiresIn:    e.Resource.ExpiresIn,
 			}
-			connector.resources.add(resource)
+			state := workspace.resources
+			state.Lock()
+			state.ids[r.id] = r
+			state.Unlock()
+			s.resources[r.id] = r
 		}
 	}
 	c := &Connection{
@@ -240,7 +263,7 @@ func (s *stateKeeper) addConnection(n postgres.Notification) {
 		connector:   connector,
 		storage:     s.connections[e.Storage],
 		stream:      s.connections[e.Stream],
-		resource:    resource,
+		resource:    r,
 		websiteHost: e.WebsiteHost,
 	}
 	state := workspace.Connections.state
@@ -422,7 +445,7 @@ func (s *stateKeeper) endImport(n postgres.Notification) {
 	}
 	for _, c := range s.connections {
 		if c.importInProgress != nil && c.importInProgress.id == e.id {
-			s.setConnection(c.id, func(c *Connection) {
+			s.replaceConnection(c.id, func(c *Connection) {
 				c.importInProgress = nil
 			})
 			break
@@ -443,7 +466,7 @@ func (s *stateKeeper) setConnectionSettings(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	s.setConnection(e.Connection, func(c *Connection) {
+	s.replaceConnection(e.Connection, func(c *Connection) {
 		c.settings = e.Settings
 	})
 }
@@ -461,7 +484,7 @@ func (s *stateKeeper) setConnectionStorage(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	s.setConnection(e.Connection, func(c *Connection) {
+	s.replaceConnection(e.Connection, func(c *Connection) {
 		c.storage = s.connections[e.Storage]
 	})
 }
@@ -479,7 +502,7 @@ func (s *stateKeeper) setConnectionStream(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	s.setConnection(e.Connection, func(c *Connection) {
+	s.replaceConnection(e.Connection, func(c *Connection) {
 		c.stream = s.connections[e.Stream]
 	})
 }
@@ -514,7 +537,7 @@ func (s *stateKeeper) setConnectionUserQuery(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	c := s.setConnection(e.Connection, func(c *Connection) {
+	c := s.replaceConnection(e.Connection, func(c *Connection) {
 		c.usersQuery = e.Query
 	})
 	// TODO(marco) only one server should reload the schema.
@@ -539,7 +562,7 @@ func (s *stateKeeper) setConnectionUserSchema(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	s.setConnection(e.Connection, func(c *Connection) {
+	s.replaceConnection(e.Connection, func(c *Connection) {
 		c.schema = e.Schema
 	})
 }
@@ -558,7 +581,7 @@ func (s *stateKeeper) setEventDataTypeDescription(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	s.setEventDataType(e.Workplace, e.Name, func(t *EventDataType) {
+	s.replaceEventDataType(e.Workplace, e.Name, func(t *EventDataType) {
 		t.description = e.Description
 	})
 }
@@ -582,7 +605,7 @@ func (s *stateKeeper) setEventDataTypeSchema(n postgres.Notification) {
 		log.Printf("[error] cannot parse event data type schema of notification %s from %d: %s", n.Name, n.PID, err)
 		return
 	}
-	s.setEventDataType(e.Workspace, e.Name, func(t *EventDataType) {
+	s.replaceEventDataType(e.Workspace, e.Name, func(t *EventDataType) {
 		t.schema = schema
 		t.schemaSource = string(e.Schema)
 	})
@@ -602,7 +625,7 @@ func (s *stateKeeper) setEventTypeDescription(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	s.setEventType(e.Workplace, e.ID, func(t *EventType) {
+	s.replaceEventType(e.Workplace, e.ID, func(t *EventType) {
 		t.description = e.Description
 	})
 }
@@ -630,9 +653,29 @@ func (s *stateKeeper) setEventTypeSchema(n postgres.Notification) {
 			return
 		}
 	}
-	s.setEventType(e.Workspace, e.ID, func(t *EventType) {
+	s.replaceEventType(e.Workspace, e.ID, func(t *EventType) {
 		t.schema = schema
 		t.schemaSource = string(e.Schema)
+	})
+}
+
+type setResourceNotification struct {
+	ID           int
+	AccessToken  string
+	RefreshToken string
+	ExpiresIn    time.Time
+}
+
+// setResource sets a resource.
+func (s *stateKeeper) setResource(n postgres.Notification) {
+	e := setResourceNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	s.replaceResource(e.ID, func(r *Resource) {
+		r.accessToken = e.AccessToken
+		r.refreshToken = e.RefreshToken
+		r.expiresIn = e.ExpiresIn
 	})
 }
 
@@ -654,7 +697,7 @@ func (s *stateKeeper) setWorkspaceGroupSchema(n postgres.Notification) {
 		log.Printf("[error] cannot parse workspace group schema of notification %s from %d: %s", n.Name, n.PID, err)
 		return
 	}
-	s.setWorkspace(e.Workspace, func(w *Workspace) {
+	s.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.schema.group = schema
 		w.schemaSources.group = e.Schema
 	})
@@ -678,7 +721,7 @@ func (s *stateKeeper) setWorkspaceUserSchema(n postgres.Notification) {
 		log.Printf("[error] cannot parse workspace user schema of notification %s from %d: %s", n.Name, n.PID, err)
 		return
 	}
-	s.setWorkspace(e.Workspace, func(w *Workspace) {
+	s.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.schema.user = schema
 		w.schemaSources.user = e.Schema
 	})
@@ -700,7 +743,7 @@ func (s *stateKeeper) startImport(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	c := s.setConnection(e.Connection, func(c *Connection) {
+	c := s.replaceConnection(e.Connection, func(c *Connection) {
 		c.importInProgress = &ImportInProgress{
 			id:         e.ID,
 			connection: c,

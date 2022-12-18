@@ -10,7 +10,6 @@ package apis
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
@@ -19,7 +18,6 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
-	"time"
 
 	_connector "chichi/connector"
 )
@@ -140,78 +138,72 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	if m == nil {
 		return errBadRequest
 	}
-	var connector int
-	var connection int
-	var webhooksPer WebhooksPer
+	var connector *Connector
 	var conf _connector.AppConfig
 	switch m[1] {
 	case "c":
-		webhooksPer = WebhooksPerConnector
-		connector, _ = strconv.Atoi(m[2])
-		if connector <= 0 {
+		id, _ := strconv.Atoi(m[2])
+		if id < 1 || id > maxInt32 {
 			return errBadRequest
+		}
+		var err error
+		connector, err = apis.Connectors.state.Get(id)
+		if err != nil || connector.webhooksPer != WebhooksPerConnector {
+			return errNotFound
 		}
 	case "r":
-		webhooksPer = WebhooksPerResource
-		r, _ := strconv.Atoi(m[2])
-		if r <= 0 {
+		id, _ := strconv.Atoi(m[2])
+		if id < 1 || id > maxInt32 {
 			return errBadRequest
 		}
-		err := apis.db.QueryRow("SELECT connector, code FROM resources WHERE id = $1", r).
-			Scan(&connector, &conf.Resource)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return errNotFound
+	Resource:
+		for _, a := range apis.Accounts.state.List() {
+			for _, ws := range a.Workspaces.state.List() {
+				if r, ok := ws.resources.Get(id); ok {
+					connector = r.connector
+					conf.Resource = r.code
+					break Resource
+				}
 			}
-			return err
+		}
+		if connector == nil || connector.webhooksPer != WebhooksPerResource {
+			return errNotFound
 		}
 	case "s":
-		webhooksPer = WebhooksPerSource
-		connection, _ = strconv.Atoi(m[2])
-		if connection <= 0 {
+		id, _ := strconv.Atoi(m[2])
+		if id < 1 || id > maxInt32 {
 			return errBadRequest
 		}
-		var resource int
-		var hasOAuth bool
-		var refreshToken string
-		var expiresIn time.Time
-		err := apis.db.QueryRow(
-			"SELECT s.connector, s.resource, s.settings, c.oauth_client_secret <> '' AS has_oauth, r.code,"+
-				" r.oauth_access_token, r.oauth_refresh_token, r.oauth_expires_in\n"+
-				"FROM connections AS s\n"+
-				"INNER JOIN connectors AS c ON c.id = s.connector\n"+
-				"INNER JOIN resources AS r ON r.id = s.resource\n"+
-				"WHERE s.id = $1", connection).
-			Scan(&connector, &resource, &conf.Settings, hasOAuth, &conf.Resource, &conf.AccessToken, &refreshToken, &expiresIn)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return errNotFound
+		var connection *Connection
+	Connection:
+		for _, a := range apis.Accounts.state.List() {
+			for _, ws := range a.Workspaces.state.List() {
+				if c, err := ws.Connections.state.Get(id); err == nil {
+					connection = c
+					break Connection
+				}
 			}
+		}
+		if connection == nil || connection.resource == nil {
+			return errNotFound
+		}
+		connector = connection.connector
+		if connector.webhooksPer != WebhooksPerSource {
+			return errNotFound
+		}
+		conf.Settings = connection.settings
+		conf.Resource = connection.resource.code
+		var err error
+		conf.AccessToken, err = connection.resource.freshAccessToken()
+		if err != nil {
 			return err
 		}
-		if hasOAuth {
-			accessTokenExpired := time.Now().UTC().Add(15 * time.Minute).After(expiresIn)
-			if conf.AccessToken == "" || accessTokenExpired {
-				res, err := apis.Connectors.refreshOAuthToken(connector, resource)
-				if err != nil {
-					return err
-				}
-				conf.AccessToken = res.oAuthAccessToken
-			}
-		}
 	}
-	conn, err := apis.Connectors.state.Get(connector)
-	if err != nil {
-		return errNotFound
-	}
-	if conn.webhooksPer != webhooksPer {
-		return errBadRequest
-	}
-	c, err := _connector.RegisteredApp(conn.name).Connect(context.Background(), &conf)
+	connection, err := _connector.RegisteredApp(connector.name).Connect(context.Background(), &conf)
 	if err != nil {
 		return err
 	}
-	events, err := c.ReceiveWebhook(r)
+	events, err := connection.ReceiveWebhook(r)
 	if err != nil {
 		return err
 	}
