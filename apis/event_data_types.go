@@ -9,19 +9,16 @@ package apis
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"strings"
 	"sync"
 	"unicode/utf8"
 
+	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/types"
 )
 
-var (
-	ErrEventDataTypeAlreadyExist = errors.New("event data type already exist")
-	ErrEventDataTypeNotFound     = errors.New("event data type does not exist")
-)
+var AlreadyExist errors.Code = "AlreadyExist"
 
 type EventDataTypes struct {
 	*Workspace
@@ -56,25 +53,29 @@ type EventDataTypeInfo struct {
 }
 
 // Add adds a new data type with the given name, description and schema.
+// description cannot be longer than 400 runes and schema cannot be longer than
+// 65,535 runes.
 //
-// If a data type with the same name already exist, it returns the
-// ErrEventDataTypeAlreadyExist error. If the workspace does not exist,
-// it returns the ErrWorkspaceNotFound error.
+// If the workplace does not exist, it returns an errors.NotFound error. If a
+// data type with the same name already exists, it returns an
+// errors.UnprocessableError error with code AlreadyExist and if the schema is
+// not valid, it returns an errors.UnprocessableError error with code
+// InvalidSchema.
 func (this *EventDataTypes) Add(name, description, schema string) error {
 	if !types.IsValidCustomTypeName(name) {
-		return errors.New("name is not a valid type name")
+		return errors.BadRequest("name %q is not a valid data type name", name)
 	}
 	if utf8.RuneCountInString(name) > 120 {
-		return errors.New("name cannot be longer than 120 characters")
+		return errors.BadRequest("name %q is longer than 120 runes", name)
 	}
 	if utf8.RuneCountInString(description) > 400 {
-		return errors.New("description cannot be longer than 400 characters")
+		return errors.BadRequest("description is longer than 400 runes")
 	}
 	if schema == "" {
-		return errors.New("schema cannot be empty")
+		return errors.BadRequest("schema is empty")
 	}
 	if utf8.RuneCountInString(schema) > 65535 {
-		return errors.New("schema cannot be longer than 65535 characters")
+		return errors.BadRequest("schema is longer than 65,535 runes")
 	}
 	n := addEventDataTypeNotification{
 		Workspace:   this.id,
@@ -85,15 +86,20 @@ func (this *EventDataTypes) Add(name, description, schema string) error {
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
 		_, err := types.ParseSchema(strings.NewReader(schema), eventDataTypeResolver(tx, n.Workspace))
 		if err != nil {
-			return &InvalidSchema{err}
+			//return errors.UnprocessableData(InvalidSchema, "schema is not valid", errors.Data{"error": err})
+			return errors.Unprocessable(InvalidSchema, "schema is not valid: %w", err)
 		}
 		_, err = tx.Exec("INSERT INTO event_data_types (workspace, name, description, schema) VALUES ($1, $2, $3, $4)",
 			n.Workspace, n.Name, n.Description, schema)
 		if err != nil {
-			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "event_data_types_workspace_fkey" {
-				err = ErrWorkspaceNotFound
-			} else if postgres.IsDuplicateKeyValue(err) && postgres.ErrConstraintName(err) == "event_data_types_pkey" {
-				err = ErrEventDataTypeAlreadyExist
+			if postgres.IsForeignKeyViolation(err) {
+				if postgres.ErrConstraintName(err) == "event_data_types_workspace_fkey" {
+					err = errors.NotFound("workspace %d does not exist", n.Workspace)
+				}
+			} else if postgres.IsDuplicateKeyValue(err) {
+				if postgres.ErrConstraintName(err) == "event_data_types_pkey" {
+					err = errors.Unprocessable(AlreadyExist, "event data type %s already exists", n.Name)
+				}
 			}
 			return err
 		}
@@ -106,10 +112,10 @@ func (this *EventDataTypes) Add(name, description, schema string) error {
 // exist, it does nothing.
 func (this *EventDataTypes) Delete(name string) error {
 	if !types.IsValidCustomTypeName(name) {
-		return errors.New("name is not a valid custom type name")
+		return errors.BadRequest("name %q is not a valid data type name", name)
 	}
 	if utf8.RuneCountInString(name) > 120 {
-		return errors.New("name cannot be longer than 120 characters")
+		return errors.BadRequest("name %s is longer than 120 runes", name)
 	}
 	n := &deleteEventDataTypeNotification{
 		Workspace: this.id,
@@ -148,17 +154,17 @@ func (this *EventDataTypes) get(name string) (*EventDataType, error) {
 // Get returns an EventDataTypeInfo describing the data type with the given
 // name.
 //
-// It returns the ErrEventDataTypeNotFound error if the type does not exist.
+// It returns an errors.NotFoundError error if the type does not exist.
 func (this *EventDataTypes) Get(name string) (*EventDataTypeInfo, error) {
 	if !types.IsValidCustomTypeName(name) {
-		return nil, errors.New("name is not a valid data type name")
+		return nil, errors.BadRequest("name %q is not a valid data type name", name)
 	}
 	if utf8.RuneCountInString(name) > 120 {
-		return nil, errors.New("name cannot be longer than 120 characters")
+		return nil, errors.BadRequest("name %s is longer than 120 runes", name)
 	}
 	t, err := this.get(name)
 	if err != nil {
-		return nil, ErrEventDataTypeNotFound
+		return nil, errors.NotFound("data type %s does not exist", name)
 	}
 	info := EventDataTypeInfo{
 		Name:         t.name,
@@ -197,18 +203,18 @@ func (this *EventDataTypes) List() ([]*EventDataTypeInfo, error) {
 }
 
 // SetDescription sets the description of the event data type with the given
-// name.
+// name. description cannot be longer than 400 runes.
 //
-// It returns the ErrEventDataTypeNotFound error if the type does not exist.
+// If the type does not exist, it returns an errors.NotFoundError error.
 func (this *EventDataTypes) SetDescription(name string, description string) error {
 	if !types.IsValidCustomTypeName(name) {
-		return errors.New("name is not a valid custom type name")
+		return errors.BadRequest("name %q is not a valid data type name", name)
 	}
 	if utf8.RuneCountInString(name) > 120 {
-		return errors.New("name cannot be longer than 120 characters")
+		return errors.BadRequest("name %s is longer than 120 runes", name)
 	}
 	if utf8.RuneCountInString(description) > 400 {
-		return errors.New("description cannot be longer than 400 characters")
+		return errors.BadRequest("description is longer than 400 runes")
 	}
 	n := setEventDataTypeDescriptionNotification{
 		Workplace:   this.id,
@@ -226,29 +232,31 @@ func (this *EventDataTypes) SetDescription(name string, description string) erro
 			return err
 		}
 		if affected == 0 {
-			return ErrEventDataTypeNotFound
+			return errors.NotFound("data type %s does not exist", n.Name)
 		}
 		return tx.Notify(n)
 	})
 	return err
 }
 
-// SetSchema sets the schema of the event data type with the given name.
+// SetSchema sets the schema of the data type with the given name. schema
+// cannot be longer than 65,535 runes.
 //
-// It returns the ErrEventDataTypeNotFound error if the type does not exist,
-// and an InvalidSchema if the schema is not valid.
+// If the type does not exist, it returns an errors.NotFoundError error, and if
+// the schema is not valid, it returns an errors.UnprocessableError error with
+// code InvalidSchema.
 func (this *EventDataTypes) SetSchema(name string, schema string) error {
 	if !types.IsValidCustomTypeName(name) {
-		return errors.New("name is not a valid custom type name")
+		return errors.BadRequest("name %q is not a valid data type name", name)
 	}
 	if utf8.RuneCountInString(name) > 120 {
-		return errors.New("name cannot be longer than 120 characters")
+		return errors.BadRequest("name %s is longer than 120 runes", name)
 	}
 	if schema == "" {
-		return errors.New("invalid empty schema")
+		return errors.BadRequest("schema is empty")
 	}
 	if utf8.RuneCountInString(schema) > 65535 {
-		return errors.New("schema cannot be longer than 65535 characters")
+		return errors.BadRequest("schema is longer than 65,535 runes")
 	}
 	n := setEventDataTypeSchemaNotification{
 		Workspace: this.id,
@@ -261,11 +269,11 @@ func (this *EventDataTypes) SetSchema(name string, schema string) error {
 			err2 := tx.QueryVoid("SELECT FROM event_data_types WHERE workspace = $1 AND name = $2", n.Workspace, n.Name)
 			if err2 != nil {
 				if err2 == sql.ErrNoRows {
-					return ErrEventDataTypeNotFound
+					return errors.NotFound("data type %s does not exist", n.Name)
 				}
 				return err2
 			}
-			return &InvalidSchema{err}
+			return errors.Unprocessable(InvalidSchema, "schema is not valid: %w", err)
 		}
 		result, err := tx.Exec("UPDATE event_data_types SET schema = $1 WHERE workspace = $2 AND name = $3",
 			schema, n.Workspace, n.Name)
@@ -277,7 +285,7 @@ func (this *EventDataTypes) SetSchema(name string, schema string) error {
 			return err
 		}
 		if affected == 0 {
-			return ErrEventDataTypeNotFound
+			return errors.NotFound("data type %s does not exist", n.Name)
 		}
 		return tx.Notify(n)
 	})

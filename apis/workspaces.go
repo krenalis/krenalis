@@ -9,7 +9,7 @@ package apis
 
 import (
 	"bytes"
-	"errors"
+	"database/sql"
 	"fmt"
 	"sort"
 	"strconv"
@@ -18,12 +18,15 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/types"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/shopspring/decimal"
 )
+
+var PropertyNotExist errors.Code = "PropertyNotExist"
 
 type Workspaces struct {
 	*Account
@@ -38,7 +41,7 @@ type workspacesState struct {
 var errWorkspaceNotFound = errors.New("workspace does not exist")
 
 // get returns the workspace with identifier id.
-// Returns the ErrWorkspaceNotFound error if the workspace does not exist.
+// Returns the errWorkspaceNotFound error if the workspace does not exist.
 func (this *Workspaces) get(id int) (*Workspace, error) {
 	this.state.Lock()
 	w, ok := this.state.ids[id]
@@ -94,19 +97,15 @@ type WorkspaceInfo struct {
 	}
 }
 
-// An ErrWorkspaceNotFound error is returned by Get if the workspace does not
-// exist.
-var ErrWorkspaceNotFound = errors.New("workspace does not exist")
-
 // Get returns a WorkspaceInfo describing the workspace with identifier id.
-// Returns the ErrWorkspaceNotFound error if the workspace does not exist.
+// If the workspace does not exist, it returns an errors.NotFoundError error.
 func (this *Workspaces) Get(id int) (*WorkspaceInfo, error) {
 	if id < 1 || id > maxInt32 {
-		return nil, errors.New("invalid workspace identifier")
+		return nil, errors.BadRequest("workspace identifier %d is not valid", id)
 	}
 	ws, err := this.get(id)
 	if err != nil {
-		return nil, ErrWorkspaceNotFound
+		return nil, errors.NotFound("workspace %d does not exist", id)
 	}
 	info := WorkspaceInfo{ID: ws.id}
 	info.Schema.User = ws.schema.user
@@ -124,15 +123,6 @@ func (this *Workspaces) As(id int) (*Workspace, error) {
 	return this.get(id)
 }
 
-// An InvalidSchema error indicates that a schema is not valid.
-type InvalidSchema struct {
-	Err error
-}
-
-func (err *InvalidSchema) Error() string {
-	return fmt.Sprintf("schema is not valid: %s", err.Err.Error())
-}
-
 // Info returns a WorkspaceInfo describing the workspace.
 func (ws *Workspace) Info() *WorkspaceInfo {
 	info := WorkspaceInfo{ID: ws.id}
@@ -145,16 +135,22 @@ func (ws *Workspace) Info() *WorkspaceInfo {
 	return &info
 }
 
-// SetUserSchema sets the user schema. schema must be valid and cannot be
-// longer than 2^24-1 runes. If schema is not valid, it returns an
-// InvalidSchema error.
+// SetUserSchema sets the user schema. schema cannot be longer than 16,777,215
+// runes.
+//
+// If the workspace does not exist, it returns an errors.NotFoundError error.
+// If schema is not valid, it returns an errors.UnprocessableError error with
+// code InvalidSchema.
 func (ws *Workspace) SetUserSchema(schema string) error {
 	return ws.setSchema("user", schema)
 }
 
-// SetGroupSchema sets the group schema. schema must be valid and cannot be
-// longer than 2^24-1 runes. If schema is not valid, it returns an
-// // InvalidSchema error.
+// SetGroupSchema sets the group schema. schema cannot be longer than
+// 16,777,215 runes.
+//
+// If the workspace does not exist, it returns an errors.NotFoundError error.
+// If schema is not valid, it returns an errors.UnprocessableError error with
+// code InvalidSchema.
 func (ws *Workspace) SetGroupSchema(schema string) error {
 	return ws.setSchema("group", schema)
 }
@@ -162,11 +158,11 @@ func (ws *Workspace) SetGroupSchema(schema string) error {
 // setSchema is called by SetUserSchema and SetGroupSchema to set a schema.
 func (ws *Workspace) setSchema(name string, schema string) error {
 	if utf8.RuneCountInString(schema) > rawSchemaMaxSize {
-		return fmt.Errorf("schema is too longer")
+		return fmt.Errorf("schema is longer that 16,777,215 runes")
 	}
 	_, err := types.ParseSchema(strings.NewReader(schema), nil)
 	if err != nil {
-		return &InvalidSchema{err}
+		return errors.Unprocessable(InvalidSchema, "schema is not valid: %w", err)
 	}
 	var n any
 	var table string
@@ -187,6 +183,9 @@ func (ws *Workspace) setSchema(name string, schema string) error {
 	err = ws.db.Transaction(func(tx *postgres.Tx) error {
 		_, err = tx.Exec("UPDATE workspaces SET "+table+" = $1 WHERE id = $2", schema, ws.id)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				err = errors.NotFound("workspace %d does not exist", ws.id)
+			}
 			return err
 		}
 		return tx.Notify(n)
@@ -194,30 +193,27 @@ func (ws *Workspace) setSchema(name string, schema string) error {
 	return err
 }
 
-// A PropertyNotFoundError is returned by the (*Workspace).Users method if a
-// property does not exist.
-type PropertyNotFoundError struct {
-	Name string
-}
-
-func (err *PropertyNotFoundError) Error() string {
-	return fmt.Sprintf("property %q does not exist", err.Name)
-}
-
 // Users returns the user schema and the users, with only given properties, in
-// range [first,first+limit] with first >= 0 and 0 < limit <= 1000.
+// range [first,first+limit] with first >= 0 and 0 < limit <= 1000. properties
+// cannot be empty.
 //
-// If a property does not exist, it returns a PropertyNotFoundError error.
+// If a property does not exist, it returns an errors.UnprocessableError error
+// with code PropertyNotExist.
 func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema, [][]any, error) {
 
 	if len(properties) == 0 {
-		return types.Schema{}, nil, errors.New("properties cannot be empty")
+		return types.Schema{}, nil, errors.BadRequest("properties is empty")
+	}
+	for _, name := range properties {
+		if !types.IsValidPropertyName(name) {
+			return types.Schema{}, nil, errors.BadRequest("property name %q is not valid", name)
+		}
 	}
 	if first < 0 || first > maxInt32 {
-		return types.Schema{}, nil, errors.New("invalid first")
+		return types.Schema{}, nil, errors.BadRequest("first %d in not valid", first)
 	}
 	if limit < 1 || limit > 1000 {
-		return types.Schema{}, nil, errors.New("invalid limit")
+		return types.Schema{}, nil, errors.BadRequest("limit %d is not valid", limit)
 	}
 
 	// Read the schema.
@@ -232,7 +228,7 @@ func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema,
 	query.WriteString("SELECT ")
 	for i, name := range properties {
 		if _, ok := propertyByName[name]; !ok {
-			return types.Schema{}, nil, &PropertyNotFoundError{name}
+			return types.Schema{}, nil, errors.Unprocessable(PropertyNotExist, "property %s does not exist", name)
 		}
 		if i > 0 {
 			query.WriteByte(',')
@@ -247,6 +243,7 @@ func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema,
 	}
 
 	// Execute the query.
+	// TODO(marco) check that the workspace exists.
 	var users [][]any
 	err := ws.db.QueryScan(query.String(), func(rows *postgres.Rows) error {
 		var err error

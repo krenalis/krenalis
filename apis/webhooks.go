@@ -200,17 +200,14 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 			}
 		}
 	}
-	conn, err := apis.Connectors.Get(connector)
+	conn, err := apis.Connectors.get(connector)
 	if err != nil {
-		if _, ok := err.(ConnectorNotFoundError); ok {
-			return errNotFound
-		}
-		return err
+		return errNotFound
 	}
-	if conn.WebhooksPer != webhooksPer {
+	if conn.webhooksPer != webhooksPer {
 		return errBadRequest
 	}
-	c, err := _connector.RegisteredApp(conn.Name).Connect(context.Background(), &conf)
+	c, err := _connector.RegisteredApp(conn.name).Connect(context.Background(), &conf)
 	if err != nil {
 		return err
 	}

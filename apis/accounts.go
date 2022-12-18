@@ -9,16 +9,18 @@ package apis
 
 import (
 	"database/sql"
-	"errors"
 	"regexp"
 	"sort"
 	"sync"
 
+	"chichi/apis/errors"
 	"chichi/apis/postgres"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"golang.org/x/crypto/bcrypt"
 )
+
+var AuthenticationFailed errors.Code = "AuthenticationFailed"
 
 type Accounts struct {
 	*APIs
@@ -71,10 +73,6 @@ type AccountInfo struct {
 
 var emailRegExp = regexp.MustCompile(`^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`)
 
-var ErrEmailInvalid = errors.New("email is not valid")
-var ErrPasswordInvalid = errors.New("password is not valid")
-var ErrAuthenticationFailed = errors.New("authentication failed")
-
 // As returns the account with identifier id.
 // Returns an error is the account does not exist.
 func (this *Accounts) As(id int) (*Account, error) {
@@ -82,26 +80,27 @@ func (this *Accounts) As(id int) (*Account, error) {
 }
 
 // Authenticate authenticates an account given its email and password. If the
-// authentication fails, it returns the ErrAuthenticationFailed error.
+// authentication fails, it returns an errors.UnprocessableError error with
+// code AuthenticationFailed.
 func (this *Accounts) Authenticate(email, password string) (int, error) {
 	if !emailRegExp.MatchString(email) {
-		return 0, ErrEmailInvalid
+		return 0, errors.BadRequest("email is not valid")
 	}
 	if len(password) < 8 {
-		return 0, ErrPasswordInvalid
+		return 0, errors.BadRequest("password is not valid")
 	}
 	var id int
 	var hashedPassword []byte
 	err := this.db.QueryRow("SELECT id, password FROM accounts WHERE email = $1", email).Scan(&id, &hashedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return 0, ErrAuthenticationFailed
+			return 0, errors.Unprocessable(AuthenticationFailed, "authentication has failed")
 		}
 		return 0, err
 	}
 	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
 	if err != nil {
-		return 0, ErrAuthenticationFailed
+		return 0, errors.Unprocessable(AuthenticationFailed, "authentication has failed")
 	}
 	return id, nil
 }
@@ -120,15 +119,13 @@ func (this *Accounts) count() int {
 }
 
 // Create a new account given its email and password and returns its
-// identifier. If the email is not valid it panics with error
-// ErrEmailInvalid and if the password is not valid it panics with
-// error ErrPasswordInvalid.
+// identifier.
 func (this *Accounts) Create(email, password string) (int, error) {
 	if !emailRegExp.MatchString(email) {
-		return 0, ErrEmailInvalid
+		return 0, errors.BadRequest("email is not valid")
 	}
 	if len(password) < 8 {
-		return 0, ErrPasswordInvalid
+		return 0, errors.BadRequest("password is not valid")
 	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -146,11 +143,11 @@ func (this *Accounts) Create(email, password string) (int, error) {
 // Delete deletes the accounts with the given identifiers.
 func (this *Accounts) Delete(ids []int) error {
 	if len(ids) == 0 {
-		panic("apis: empty accounts to delete")
+		return errors.BadRequest("ids is empty")
 	}
 	for _, id := range ids {
 		if id < 1 {
-			panic("apis: invalid account identifier to delete")
+			return errors.BadRequest("account identifier %d is not valid", id)
 		}
 	}
 	panic("TO BE IMPLEMENTED")
@@ -162,14 +159,14 @@ func (this *Accounts) Delete(ids []int) error {
 }
 
 // Get returns an AccountInfo describing the account with identifier id.
-// Returns the ErrAccountNotFound if the account does not exist.
+// If the account does not exist, it returns an errors.NotFoundError error.
 func (this *Accounts) Get(id int) (*AccountInfo, error) {
 	if id < 1 || id > maxInt32 {
-		return nil, errors.New("invalid account identifier")
+		return nil, errors.BadRequest("account identifier %d is not valid", id)
 	}
 	acc, err := this.get(id)
 	if err != nil {
-		return nil, ErrAccountNotFound
+		return nil, errors.NotFound("account %d does not exist", id)
 	}
 	ips := make([]string, len(acc.internalIPs))
 	copy(ips, acc.internalIPs)
@@ -189,6 +186,16 @@ const (
 	SortByEmail
 )
 
+func (s AccountSort) String() string {
+	switch s {
+	case SortByName:
+		return "name"
+	case SortByEmail:
+		return "email"
+	}
+	panic("invalid account sort")
+}
+
 // list returns all accounts.
 func (this *Accounts) list() []*Account {
 	this.state.Lock()
@@ -204,20 +211,20 @@ func (this *Accounts) list() []*Account {
 // List returns a list of *AccountInfo, in the given order, describing all
 // accounts but starting from first and up to limit. first must be >= 0 and
 // limit must be > 0.
-func (this *Accounts) List(order AccountSort, first, limit int) []*AccountInfo {
+func (this *Accounts) List(order AccountSort, first, limit int) ([]*AccountInfo, error) {
 	if order != SortByName && order != SortByEmail {
-		panic("invalid order")
+		return nil, errors.BadRequest("order %d is not valid", int(order))
 	}
 	if limit <= 0 {
-		panic("invalid limit")
+		return nil, errors.BadRequest("limit %d is not valid", limit)
 	}
 	if first < 0 {
-		panic("invalid first")
+		return nil, errors.BadRequest("first %d is not valid", first)
 	}
 	accounts := this.list()
 	count := len(accounts)
 	if first >= count {
-		return []*AccountInfo{}
+		return []*AccountInfo{}, nil
 	}
 	if first+limit > count {
 		limit = count - first
@@ -244,5 +251,5 @@ func (this *Accounts) List(order AccountSort, first, limit int) []*AccountInfo {
 			InternalIPs: ips,
 		}
 	}
-	return infos
+	return infos, nil
 }

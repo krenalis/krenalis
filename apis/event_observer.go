@@ -10,14 +10,13 @@ package apis
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"log"
 	"math/rand"
 	"sort"
 	"sync"
 	"time"
 
+	"chichi/apis/errors"
 	"chichi/apis/postgres"
 
 	"github.com/google/uuid"
@@ -29,8 +28,9 @@ const (
 )
 
 var (
-	ErrEventListenerNotFound = errors.New("event listener does not exist")
-	ErrTooManyEventListeners = errors.New("too many event listeners")
+	ServerNotExist   errors.Code = "ServerNotExist"
+	SourceNotExist   errors.Code = "SourceNotExist"
+	TooManyListeners errors.Code = "TooManyListeners"
 )
 
 type EventListeners struct {
@@ -47,22 +47,22 @@ type EventListeners struct {
 // and returns its identifier. size is the maximum number of events to return
 // for each call to the Events method, it must be in [1,1000].
 //
-// Returns a ConnectionNotFoundError error with type WebsiteType if the source
-// does not exist, with type ServerType if the server does not exist and with
-// type EventStreamType if the stream does not exist. if there are too many
-// event listeners, it returns a ErrTooManyEventListeners error.
+// If the source, server, or stream does not exist, it returns an
+// errors.UnprocessableError error with code SourceNotExist, ServerNotExist,
+// and StreamNotExist respectively. If there are already too many listeners, it
+// returns an errors.UnprocessableError error with code TooManyListeners.
 func (this *EventListeners) Add(size, source, server, stream int) (string, error) {
 	if size < 1 || size > maxEventsListenedTo {
-		return "", errors.New("invalid size")
+		return "", errors.BadRequest("size %d is not valid", size)
 	}
 	if source < 0 || source > maxInt32 {
-		return "", errors.New("invalid source identifier")
+		return "", errors.BadRequest("source identifier %d is not valid", source)
 	}
 	if server < 0 || server > maxInt32 {
-		return "", errors.New("invalid server identifier")
+		return "", errors.BadRequest("server identifier %d is not valid", server)
 	}
 	if stream < 0 || stream > maxInt32 {
-		return "", errors.New("invalid stream identifier")
+		return "", errors.BadRequest("stream identifier %d is not valid", stream)
 	}
 	if source > 0 || server > 0 || stream > 0 {
 		var sourceExist, serverExist, streamExist bool
@@ -79,22 +79,22 @@ func (this *EventListeners) Add(size, source, server, stream int) (string, error
 					switch id {
 					case source:
 						if typ != MobileType && typ != WebsiteType {
-							return fmt.Errorf("connector %d is not a mobile or website connector", source)
+							return errors.BadRequest("connection %d is not a mobile or website", source)
 						}
 						sourceExist = true
 					case server:
 						if typ != ServerType {
-							return fmt.Errorf("connector %d is not a server connector", server)
+							return errors.BadRequest("connection %d is not a server", server)
 						}
 						serverExist = true
 					case stream:
 						if typ != EventStreamType {
-							return fmt.Errorf("connector %d is not an event stream connector", server)
+							return errors.BadRequest("connection %d is not a stream", stream)
 						}
 						streamExist = true
 					}
 					if role != SourceRole {
-						return fmt.Errorf("connector %d is not a source connector", id)
+						return errors.BadRequest("connection %d is not a source", id)
 					}
 				}
 				return nil
@@ -103,21 +103,22 @@ func (this *EventListeners) Add(size, source, server, stream int) (string, error
 			return "", err
 		}
 		if source > 0 && !sourceExist {
-			return "", ConnectionNotFoundError{WebsiteType}
+			return "", errors.Unprocessable(SourceNotExist, "source %d does not exist", source)
 		}
 		if server > 0 && !serverExist {
-			return "", ConnectionNotFoundError{ServerType}
+			return "", errors.Unprocessable(ServerNotExist, "server %d does not exist", server)
 		}
 		if stream > 0 && !streamExist {
-			return "", ConnectionNotFoundError{EventStreamType}
+			return "", errors.Unprocessable(StreamNotExist, "stream %d does not exist", stream)
 		}
 	}
 	return this.account.apis.eventProcessor.observer.AddListener(size, source, server, stream)
 }
 
-// Events returns the events listen to by the specified listener and the number
-// of discarded events. If the listener does not exist, it returns the
-// ErrEventListenerNotFound error.
+// Events returns the events listen to and the number of discarded events by
+// the listener with identifier id.
+//
+// If the listener does not exist, it returns an errors.NotFoundError error.
 func (this *EventListeners) Events(id string) ([]json.RawMessage, int, error) {
 	return this.account.apis.eventProcessor.observer.Events(id)
 }
@@ -366,7 +367,7 @@ func (observer *eventObserver) Events(listener string) ([]json.RawMessage, int, 
 		return events, discarded, nil
 	}
 	observer.RUnlock()
-	return nil, 0, ErrEventListenerNotFound
+	return nil, 0, errors.NotFound("event listener %q does not exist", listener)
 }
 
 // AddListener adds a processed event listener.
@@ -384,7 +385,7 @@ func (observer *eventObserver) AddListener(size, source, server, stream int) (st
 	observer.Lock()
 	defer observer.Unlock()
 	if len(observer.listeners) == maxEventListeners {
-		return "", ErrTooManyEventListeners
+		return "", errors.Unprocessable(TooManyListeners, "there are already %d listeners", maxEventListeners)
 	}
 	observer.listeners = append(observer.listeners, &listener)
 	return id, nil

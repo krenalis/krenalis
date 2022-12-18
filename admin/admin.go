@@ -10,7 +10,6 @@ package admin
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -23,6 +22,7 @@ import (
 	"time"
 
 	"chichi/apis"
+	"chichi/apis/errors"
 
 	"github.com/evanw/esbuild/pkg/api"
 )
@@ -105,8 +105,8 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(rpath, "/oauth/authorize") {
 		err = admin.serveAddOAuthConnection(w, r, accountID)
 		if err != nil {
-			if _, ok := err.(apis.ConnectorNotFoundError); ok {
-				http.NotFound(w, r)
+			if err, ok := err.(errors.ResponseWriterTo); ok {
+				_ = err.WriteTo(w)
 				return
 			}
 			log.Printf("[error] %s", err)
@@ -238,8 +238,8 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				err = workspace.SetGroupSchema(request.Schema)
 			}
 			if err != nil {
-				if _, ok := err.(*apis.InvalidSchema); ok {
-					http.Error(w, "Bad Request", http.StatusBadRequest)
+				if err, ok := err.(errors.ResponseWriterTo); ok {
+					_ = err.WriteTo(w)
 					return
 				}
 				log.Printf("[error] %v", err)
@@ -313,8 +313,12 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			columns, rows, err := workspace.Connections.Query(req.Connection, req.Query, req.Limit)
 			if err != nil {
-				if err, ok := err.(*apis.DatabaseQueryError); ok {
-					_ = json.NewEncoder(w).Encode(map[string]any{"Error": err.Message})
+				if err, ok := err.(*errors.UnprocessableError); ok && err.Code == apis.QueryExecutionFailed {
+					_ = json.NewEncoder(w).Encode(map[string]any{"Error": err.Err.Error()})
+					return
+				}
+				if err, ok := err.(errors.ResponseWriterTo); ok {
+					_ = err.WriteTo(w)
 					return
 				}
 				log.Printf("[error] %v", err)
@@ -387,8 +391,8 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			defer r.Body.Close()
 			conn, err := admin.apis.Connectors.Get(id)
 			if err != nil {
-				if _, ok := err.(apis.ConnectorNotFoundError); ok {
-					http.NotFound(w, r)
+				if err, ok := err.(errors.ResponseWriterTo); ok {
+					_ = err.WriteTo(w)
 					return
 				}
 				log.Printf("[error] %v", err)
@@ -412,8 +416,8 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			defer r.Body.Close()
 			form, err := workspace.Connections.ServeUI(connection, "load", nil)
 			if err != nil {
-				if err == apis.ErrUIEventNotExist {
-					http.Error(w, "Bad Request", http.StatusBadRequest)
+				if err, ok := err.(errors.ResponseWriterTo); ok {
+					_ = err.WriteTo(w)
 					return
 				}
 				log.Printf("[error] %v", err)
@@ -442,8 +446,8 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			defer r.Body.Close()
 			form, err := workspace.Connections.ServeUI(req.Connection, req.Event, req.Values)
 			if err != nil {
-				if err == apis.ErrUIEventNotExist {
-					http.Error(w, "Bad Request", http.StatusBadRequest)
+				if err, ok := err.(errors.ResponseWriterTo); ok {
+					_ = err.WriteTo(w)
 					return
 				}
 				log.Printf("[error] %v", err)
@@ -699,8 +703,12 @@ func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 	accountID, err := admin.apis.Accounts.Authenticate(loginData.Email, loginData.Password)
 	if err != nil {
-		if err == apis.ErrAuthenticationFailed {
+		if err, ok := err.(*errors.UnprocessableError); ok && err.Code == apis.AuthenticationFailed {
 			enc.Encode([]any{0, "AuthenticationFailedError"})
+			return
+		}
+		if err, ok := err.(errors.ResponseWriterTo); ok {
+			_ = err.WriteTo(w)
 			return
 		}
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -757,8 +765,8 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 
 	conn, err := admin.apis.Connectors.Get(connection.Connector)
 	if err != nil {
-		if _, ok := err.(apis.ConnectorNotFoundError); ok {
-			http.NotFound(w, r)
+		if err, ok := err.(errors.ResponseWriterTo); ok {
+			_ = err.WriteTo(w)
 			return nil
 		}
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)

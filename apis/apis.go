@@ -11,7 +11,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -19,6 +18,7 @@ import (
 	"strings"
 	_ "time/tzdata" // workaround for clickhouse-go issue #162
 
+	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/types"
 
@@ -27,7 +27,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-var ErrCannotGetConnectorAccessToken = errors.New("cannot get access token")
+var InvalidSchema errors.Code = "InvalidSchema"
 
 type APIs struct {
 	db             *postgres.DB
@@ -174,12 +174,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				schema, err := workspace.Connections.Schema(dsID)
 				if err != nil {
-					if _, ok := err.(ConnectionNotFoundError); ok {
-						http.Error(w, "Not Found", http.StatusNotFound)
-					} else {
-						log.Printf("[error] %s", err)
-						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
 					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
 				var properties []types.Property
@@ -198,12 +198,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				err = workspace.Connections.Import(dsID, false)
 				if err != nil {
-					if _, ok := err.(ConnectionNotFoundError); ok {
-						http.Error(w, "Not Found", http.StatusNotFound)
-					} else {
-						log.Printf("[error] %s", err)
-						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
 					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
 			})
@@ -215,12 +215,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				err = workspace.Connections.Export(connection)
 				if err != nil {
-					if _, ok := err.(ConnectionNotFoundError); ok {
-						http.Error(w, "Not Found", http.StatusNotFound)
-					} else {
-						log.Printf("[error] %s", err)
-						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
 					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
 			})
@@ -232,12 +232,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				err = workspace.Connections.Import(dsID, true)
 				if err != nil {
-					if _, ok := err.(ConnectionNotFoundError); ok {
-						http.Error(w, "Not Found", http.StatusNotFound)
-					} else {
-						log.Printf("[error] %s", err)
-						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
 					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
 			})
@@ -249,12 +249,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				transformations, err := workspace.Connections.Transformations.List(connection)
 				if err != nil {
-					if _, ok := err.(ConnectionNotFoundError); ok {
-						http.Error(w, "Not Found", http.StatusNotFound)
-					} else {
-						log.Printf("[error] cannot list transformations: %s", err)
-						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
 					}
+					log.Printf("[error] cannot list transformations: %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
 				_ = json.NewEncoder(w).Encode(transformations)
@@ -273,12 +273,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				err = workspace.Connections.Transformations.Set(connection, ts)
 				if err != nil {
-					if _, ok := err.(ConnectionNotFoundError); ok {
-						http.Error(w, "Not Found", http.StatusNotFound)
-					} else {
-						log.Printf("[error] cannot save transformations: %s", err)
-						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
 					}
+					log.Printf("[error] cannot save transformations: %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
 				_, _ = w.Write([]byte(`{"status":"ok"}`))

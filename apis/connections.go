@@ -13,7 +13,6 @@ import (
 	"crypto/rand"
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -27,6 +26,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/transformations"
 	"chichi/apis/types"
@@ -35,6 +35,18 @@ import (
 
 	"github.com/jxskiss/base62"
 	"github.com/open2b/nuts/sql"
+)
+
+var (
+	ConnectorNotExist    errors.Code = "ConnectorNotExist"
+	EventNotExist        errors.Code = "EventNotExist"
+	InvalidRefreshToken  errors.Code = "InvalidRefreshToken"
+	NoStorage            errors.Code = "NoStorage"
+	NoTransformations    errors.Code = "NoTransformations"
+	QueryExecutionFailed errors.Code = "QueryExecutionFailed"
+	StorageNotExist      errors.Code = "StorageNotExist"
+	StreamNotExist       errors.Code = "StreamNotExist"
+	WorkspaceNotExist    errors.Code = "WorkspaceNotExist"
 )
 
 type Connections struct {
@@ -106,34 +118,6 @@ const (
 	rawSchemaMaxSize = 16_777_215 // maximum size in runes of the 'schema' column of the 'connections' table.
 	queryMaxSize     = 16_777_215 // maximum size in runes of a connection query.
 )
-
-var (
-	ErrConnectionDisabled = errors.New("connection is disabled")
-	ErrFileHasNoStorage   = errors.New("file connection has not a storage")
-	ErrUIEventNotExist    = errors.New("UI event does not exist")
-)
-
-// A ConnectionNotFoundError error indicates that a connection does not exist.
-type ConnectionNotFoundError struct {
-	Type ConnectorType
-}
-
-func (err ConnectionNotFoundError) Error() string {
-	if err.Type == 0 {
-		return "connection does not exist"
-	}
-	return fmt.Sprintf("%s connection does not exist", strings.ToLower(err.Type.String()))
-}
-
-// A DatabaseQueryError error is returned from a database connector if an error
-// occurs when executing a query.
-type DatabaseQueryError struct {
-	Message string
-}
-
-func (err *DatabaseQueryError) Error() string {
-	return err.Message
-}
 
 // ConnectionRole represents a connection role.
 type ConnectionRole int
@@ -222,104 +206,116 @@ type AddConnectionOAuthOptions struct {
 	ExpiresIn    time.Time
 }
 
-// Add adds a connection given its role, connector, name, options related to
-// the connector and returns its identifier. name cannot be empty and cannot
+// Add adds a connection given its role, connector, name, and, options related
+// to the connector and returns its identifier. name cannot be empty and cannot
 // be longer than 120 runes.
 //
-// If the connector does not exist, it returns a ConnectorNotFoundError error.
+// If the connector, storage or stream does not exist, it returns an
+// errors.UnprocessableError error with code ConnectorNotExist, StorageNotExist
+// and StreamNotExist respectively.
 func (this *Connections) Add(role ConnectionRole, connector int, name string, opts ConnectionOptions) (int, error) {
 
 	if role != SourceRole && role != DestinationRole {
-		return 0, errors.New("invalid role")
+		return 0, errors.BadRequest("role %q is not valid", role)
 	}
 	if connector < 1 || connector > maxInt32 {
-		return 0, errors.New("invalid connector")
+		return 0, errors.BadRequest("connector identifier %d is not valid", connector)
 	}
 	if name == "" || utf8.RuneCountInString(name) > 120 {
-		return 0, errors.New("invalid name")
+		return 0, errors.BadRequest("name %q is not valid", name)
 	}
-
+	if opts.Storage < 0 || opts.Storage > maxInt32 {
+		return 0, errors.BadRequest("storage identifier %d is not valid", opts.Storage)
+	}
+	if opts.Stream < 0 || opts.Stream > maxInt32 {
+		return 0, errors.BadRequest("stream identifier %d is not valid", opts.Stream)
+	}
 	if opts.OAuth != nil {
 		if opts.OAuth.AccessToken == "" {
-			return 0, errors.New("access token cannot be empty in OAuth")
+			return 0, errors.BadRequest("OAuth access token is empty")
 		}
 		if opts.OAuth.RefreshToken == "" {
-			return 0, errors.New("refresh token cannot be empty in OAuth")
+			return 0, errors.BadRequest("OAuth refresh token is empty")
 		}
 	}
 
-	id, err := generateConnectionID()
-	if err != nil {
-		return 0, err
-	}
 	n := addConnectionNotification{
 		Workspace: this.id,
-		ID:        id,
 		Name:      name,
 		Role:      role,
 		Connector: connector,
 	}
 	c, err := this.account.apis.Connectors.get(connector)
 	if err != nil {
-		return 0, ConnectorNotFoundError{}
+		return 0, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
 	}
 
-	// Validate Storage, Host and OAuth options.
-	if opts.Storage != 0 && c.typ != FileType {
-		return 0, fmt.Errorf("%s connector cannot have storages", strings.ToLower(c.typ.String()))
-	}
-	if opts.Stream != 0 {
-		switch c.typ {
-		case MobileType, ServerType, WebsiteType:
-		default:
-			return 0, fmt.Errorf("%s connector cannot have streams", strings.ToLower(c.typ.String()))
+	// Validate the storage.
+	if opts.Storage > 0 {
+		if c.typ != FileType {
+			return 0, errors.BadRequest("connector %d cannot have a storage, it's a %s",
+				c.id, strings.ToLower(c.typ.String()))
 		}
-	}
-	if opts.WebsiteHost != "" && c.typ != WebsiteType {
-		return 0, fmt.Errorf("%s connector cannot have host", strings.ToLower(c.typ.String()))
-	}
-	if (opts.OAuth == nil) != (c.oAuth == nil) {
-		if opts.OAuth == nil {
-			return 0, errors.New("OAuth is required by the connector")
-		}
-		return 0, errors.New("connector does not support OAuth")
-	}
-
-	switch c.typ {
-	case FileType:
-		if opts.Storage < 0 || opts.Storage > maxInt32 {
-			return 0, errors.New("invalid storage")
-		}
-		if opts.Storage > 0 {
-			s, err := this.get(opts.Storage)
-			if err != nil {
-				return 0, ConnectionNotFoundError{StorageType}
-			}
-			if s.connector.typ != StorageType {
-				return 0, errors.New("storage is not a storage connection")
-			}
-			if s.role != role {
-				if role == SourceRole {
-					return 0, errors.New("storage is not a source")
-				}
-				return 0, errors.New("storage is not a destination")
-			}
-			n.Storage = opts.Storage
-		}
-	case ServerType:
-		n.ServerKey, err = generateServerKey()
+		s, err := this.get(opts.Storage)
 		if err != nil {
-			return 0, err
+			return 0, errors.Unprocessable(StorageNotExist, "storage %d does not exist", opts.Storage)
 		}
-	case WebsiteType:
+		if s.connector.typ != StorageType {
+			return 0, errors.BadRequest("connection %d is not a storage", opts.Storage)
+		}
+		if s.role != role {
+			if role == SourceRole {
+				return 0, errors.BadRequest("storage %d is not a source", opts.Storage)
+			}
+			return 0, errors.BadRequest("storage %d is not a destination", opts.Storage)
+		}
+		n.Storage = opts.Storage
+	}
+
+	// Validate the stream.
+	if opts.Stream > 0 {
+		if c.typ == MobileType || c.typ == ServerType || c.typ == WebsiteType {
+			return 0, errors.BadRequest("connector %d cannot have a stream, it's a %s",
+				c.id, strings.ToLower(c.typ.String()))
+		}
+		s, err := this.get(opts.Stream)
+		if err != nil {
+			return 0, errors.Unprocessable(StreamNotExist, "stream %d does not exist", opts.Stream)
+		}
+		if s.connector.typ != EventStreamType {
+			return 0, errors.BadRequest("connection %d is not a stream", opts.Stream)
+		}
+		if s.role != role {
+			if role == SourceRole {
+				return 0, errors.BadRequest("stream %d is not a source", opts.Stream)
+			}
+			return 0, errors.BadRequest("stream %d is not a destination", opts.Stream)
+		}
+		n.Stream = opts.Stream
+	}
+
+	// Validate the website host.
+	if opts.WebsiteHost != "" {
+		if c.typ != WebsiteType {
+			return 0, errors.BadRequest("connector %d cannot have a website host, it's a %s",
+				c.id, strings.ToLower(c.typ.String()))
+		}
 		if h, p, found := strings.Cut(opts.WebsiteHost, ":"); h == "" || len(opts.WebsiteHost) > 255 {
-			return 0, errors.New("invalid website host")
+			return 0, errors.BadRequest("website host %q is not valid", opts.WebsiteHost)
 		} else if found {
 			if port, _ := strconv.Atoi(p); port <= 0 || port > 65535 {
-				return 0, errors.New("invalid website host")
+				return 0, errors.BadRequest("website host %q is not valid", opts.WebsiteHost)
 			}
 		}
 		n.WebsiteHost = opts.WebsiteHost
+	}
+
+	// Validate OAuth.
+	if (opts.OAuth == nil) != (c.oAuth == nil) {
+		if opts.OAuth == nil {
+			return 0, errors.BadRequest("OAuth is required by connector %d", connector)
+		}
+		return 0, errors.BadRequest("connector %d does not support OAuth", connector)
 	}
 
 	// Set the resource. It can be an existent resource or a resource to be created.
@@ -350,6 +346,20 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 		}
 	}
 
+	// Generate a connection identifier.
+	n.ID, err = generateConnectionID()
+	if err != nil {
+		return 0, err
+	}
+
+	// Generate a server key.
+	if c.typ == ServerType {
+		n.ServerKey, err = generateServerKey()
+		if err != nil {
+			return 0, err
+		}
+	}
+
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		if n.Resource.Code != "" {
 			if n.Resource.ID == 0 {
@@ -373,12 +383,26 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 			" resource, website_host) VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, 0), NULLIF($8, 0), $9, $10)",
 			n.ID, n.Workspace, n.Name, c.typ, n.Role, n.Connector, n.Storage, n.Stream, n.Resource.ID, n.WebsiteHost)
 		if err != nil {
+			if err != nil {
+				if postgres.IsForeignKeyViolation(err) {
+					switch postgres.ErrConstraintName(err) {
+					case "connections_workspace_fkey":
+						err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
+					case "connections_connector_fkey":
+						err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
+					case "connections_storage_fkey":
+						err = errors.Unprocessable(StorageNotExist, "storage %d does not exist", n.Storage)
+					case "connections_stream_fkey":
+						err = errors.Unprocessable(StreamNotExist, "stream %d does not exist", n.Stream)
+					}
+				}
+			}
 			return err
 		}
 		if n.ServerKey != "" {
 			// Insert the server key.
 			_, err = tx.Exec("INSERT INTO connections_keys (connection, position, \"key\") VALUE ($1, 0, $2)",
-				id, n.ServerKey)
+				n.ID, n.ServerKey)
 			if err != nil {
 				return err
 			}
@@ -386,27 +410,21 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 		return tx.Notify(n)
 	})
 	if err != nil {
-		if postgres.IsForeignKeyViolation(err) {
-			switch postgres.ErrConstraintName(err) {
-			case "connections_workspace_fkey", "connections_connector_fkey":
-				err = ConnectionNotFoundError{DatabaseType}
-			}
-		}
 		return 0, err
 	}
 
-	return id, nil
+	return n.ID, nil
 }
 
 // Get returns a ConnectionInfo describing the connection with identifier id.
-// Returns a ConnectionNotFoundError error if the connection does not exist.
+// If the connection does not exist, it returns an errors.NotFoundError error.
 func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 	if id < 1 || id > maxInt32 {
-		return nil, errors.New("invalid connection identifier")
+		return nil, errors.BadRequest("connection identifier %d is not valid", id)
 	}
 	c, err := this.get(id)
 	if err != nil {
-		return nil, ConnectionNotFoundError{}
+		return nil, errors.NotFound("connection %d does not exist", id)
 	}
 	info := ConnectionInfo{
 		ID:         c.id,
@@ -428,12 +446,9 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 
 // Delete deletes the connection with the given identifier.
 // If the connection does not exist, it does nothing.
-//
-// If the connection is a storage and has connected files, it returns the
-// ErrStorageHasConnectedFiles error.
 func (this *Connections) Delete(id int) error {
 	if id < 1 || id > maxInt32 {
-		return errors.New("invalid connection identifier")
+		return errors.BadRequest("connection identifier %d is not valid", id)
 	}
 	c, err := this.get(id)
 	if err != nil {
@@ -464,37 +479,43 @@ func (this *Connections) Delete(id int) error {
 // Export starts the export of the users to the connection with the given
 // identifier.
 //
+// If the connection does not exist, it returns an errors.NotFoundError error.
+// If the connection has no transformations, it returns an
+// errors.UnprocessableError error with code NoTransformations.
+//
 // Note that this method is only a draft, and its code may be wrong and/or
 // partially implemented.
 func (this *Connections) Export(id int) (err error) {
 
 	if id <= 0 || id > maxInt32 {
-		return errors.New("invalid connection identifier")
+		return errors.BadRequest("connection identifier %d is not valid", id)
 	}
 
 	// Check that the connection exists, has an allowed type and is a
 	// destination.
 	c, err := this.get(id)
 	if err != nil {
-		return ConnectionNotFoundError{}
+		return errors.NotFound("connection %d does not exist", id)
 	}
 	var storage int
 	switch c.connector.typ {
 	case AppType:
 	default:
-		return fmt.Errorf("cannot export to a %s connection", strings.ToLower(c.connector.typ.String()))
+		return errors.BadRequest("cannot export to connection %d, it's a %s connection",
+			id, strings.ToLower(c.connector.typ.String()))
 	}
 	if c.role == SourceRole {
-		return errors.New("cannot export to a source")
+		return errors.BadRequest("connection %d is not a destination", id)
 	}
 
 	// Check that the connection has at least one transformation associated to it.
 	transformations, err := this.Transformations.List(id)
 	if err != nil {
+		// TODO(marco): it should not return an internal error if the connection does not exist.
 		return fmt.Errorf("cannot list transformations for %d: %s", id, err)
 	}
 	if len(transformations) == 0 {
-		return ErrConnectionDisabled
+		return errors.Unprocessable(NoTransformations, "connection %d has no transformations", id)
 	}
 
 	// Track the export in the database.
@@ -525,53 +546,54 @@ func (this *Connections) Export(id int) (err error) {
 	}()
 
 	return nil
-
 }
 
 // Import starts the import of the users from the connection with the given
-// identifier. If the connection is an app and reimport is false, it imports
-// the users from the current cursor, otherwise imports all users. The
-// connection must be a source app, database or file connection.
+// identifier. The connection must be a source app, database or file. If the
+// connection is an app and reimport is false, it imports the users from the
+// current cursor, otherwise imports all users.
 //
-// Returns a ConnectionNotFoundError error if the connection does not exist.
-// Returns the ErrConnectionDisabled error if the connection does not have any
-// transformation function associated to it.
-// Returns the ErrFileHasNoStorage error if the connection is a file and does
-// not have a storage.
+// If the connection does not exist, it returns an errors.Notfound error. If
+// the connection is a file and does not have a storage, it returns an
+// errors.UnprocessableError error with code NoStorage and if the connection
+// has no transformations, it returns an errors.UnprocessableError error with
+// code NoTransformations.
 func (this *Connections) Import(id int, reimport bool) (err error) {
 
 	if id < 1 || id > maxInt32 {
-		return errors.New("invalid connection identifier")
+		return errors.BadRequest("connection identifier %d is not valid", id)
 	}
 
 	// Check that the connection exists, has an allowed type and is a source.
 	c, err := this.get(id)
 	if err != nil {
-		return ConnectionNotFoundError{}
+		return errors.NotFound("connection %d does not exist", id)
 	}
 	var storage int
 	switch c.connector.typ {
 	case AppType, DatabaseType, EventStreamType:
 	case FileType:
 		if c.storage == nil {
-			return ErrFileHasNoStorage
+			return errors.Unprocessable(NoStorage, "file connection %d does not have a storage", id)
 		}
 		storage = c.storage.id
 	default:
-		return fmt.Errorf("cannot import from a %s connection", strings.ToLower(c.connector.typ.String()))
+		return errors.BadRequest("cannot import from connection %d, it's a %s connection",
+			id, strings.ToLower(c.connector.typ.String()))
 	}
 	if c.role == DestinationRole {
-		return errors.New("cannot import from a destination")
+		return errors.BadRequest("connection %d is not a source", id)
 	}
 
 	// Check that the connection has at least one transformation associated to it.
 	if c.connector.typ != EventStreamType {
 		transformations, err := this.Transformations.List(id)
 		if err != nil {
+			// TODO(marco): it should not return an internal error if the connection does not exist.
 			return fmt.Errorf("cannot list transformations for %d: %s", id, err)
 		}
 		if len(transformations) == 0 {
-			return ErrConnectionDisabled
+			return errors.Unprocessable(NoTransformations, "connection %d has no transformations", id)
 		}
 	}
 
@@ -590,11 +612,8 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 		}
 		return tx.Notify(n)
 	})
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 // importError represents a non-internal error during import.
@@ -993,25 +1012,27 @@ type ImportInfo struct {
 	Error     string
 }
 
-// Imports returns all the imports of the source connection with identifier id.
-// The connection must be an app, database, event stream or file connection.
-// Returns a ConnectionNotFoundError error if the connection does not exist.
+// Imports returns a list of ImportInfo describing all imports of the
+// connection with identifier id. The connection must be a source app,
+// database, or file.
+//
+// If the connection does not exist, it returns an errors.NotFoundError error.
 func (this *Connections) Imports(id int) ([]*ImportInfo, error) {
 	if id < 1 || id > maxInt32 {
-		return nil, errors.New("invalid connection identifier")
+		return nil, errors.BadRequest("connection identifier %d is not valid", id)
 	}
 	c, err := this.get(id)
 	if err != nil {
-		return nil, ConnectionNotFoundError{}
+		return nil, errors.NotFound("connection %d does not exist", id)
 	}
 	switch c.connector.typ {
 	case AppType, DatabaseType, EventStreamType, FileType:
 	default:
-		return nil, fmt.Errorf("%s connections cannot have imports",
-			strings.ToLower(c.connector.typ.String()))
+		return nil, errors.BadRequest("connection %d cannot have imports, it's a %s connection",
+			id, strings.ToLower(c.connector.typ.String()))
 	}
 	if c.role == DestinationRole {
-		return nil, errors.New("destination connections cannot have imports")
+		return nil, errors.BadRequest("connection %d cannot have imports, it's a destination", id)
 	}
 	imports := []*ImportInfo{}
 	err = this.db.QueryScan(
@@ -1036,7 +1057,7 @@ func (this *Connections) Imports(id int) ([]*ImportInfo, error) {
 	if len(imports) == 0 {
 		_, err := this.get(id)
 		if err != nil {
-			return nil, ConnectionNotFoundError{}
+			return nil, errors.NotFound("connection %d does not exist", id)
 		}
 	}
 	return imports, nil
@@ -1085,20 +1106,23 @@ func (this *Connections) List() []*ConnectionInfo {
 }
 
 // Schema returns the schema of the connection with identifier id. The
-// connection must be an app, database of file connection. If the
-// connection does not have a schema, it returns an invalid schema.
+// connection must be an app, database, or file. If the connection does not
+// have a schema, it returns an invalid schema.
 //
-// Returns a ConnectionNotFoundError error if the connection does not exist.
+// If the connection does not exist, it returns an errors.NotFoundError error.
 func (this *Connections) Schema(id int) (types.Schema, error) {
 	if id < 1 || id > maxInt32 {
-		return types.Schema{}, errors.New("invalid connection identifier")
+		return types.Schema{}, errors.BadRequest("connection identifier %d is not valid", id)
 	}
 	c, err := this.get(id)
 	if err != nil {
-		return types.Schema{}, ConnectionNotFoundError{}
+		return types.Schema{}, errors.NotFound("connection %d does not exist", id)
 	}
 	if c.connector.typ == StorageType {
-		return types.Schema{}, errors.New("cannot read properties from a storage")
+		return types.Schema{}, errors.BadRequest("connection %d has no properties, it's a storage", id)
+	}
+	if c.connector.typ == EventStreamType {
+		return types.Schema{}, errors.BadRequest("connection %d has no properties, it's a stream", id)
 	}
 	return c.schema, nil
 }
@@ -1109,44 +1133,41 @@ type Column struct {
 	Type types.Type
 }
 
-// Query executes the given query on the database connection with identifier
-// id and returns the resulting columns and rows.
+// Query executes the given query on the source database connection with
+// identifier id and returns the resulting columns and rows.
 //
 // query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
-// must contain the ':limit' placeholder. limit must be between 1 and 100.
+// must contain the ':limit' placeholder between '[[' and ']]'. limit must be
+// between 1 and 100.
 //
-// It returns an error if the connection is a destination.
-// It returns a ConnectionNotFoundError error if the connection does not exist
-// and returns a DatabaseQueryError error if an error occurred while executing
-// the query.
+// If the connection does not exist, it returns an errors.NotFoundError error.
+// If the execution of the query fails, it returns an errors.UnprocessableError
+// with code QueryExecutionFailed.
 func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]string, error) {
 
-	if id <= 0 || id > maxInt32 {
-		return nil, nil, errors.New("invalid connection identifier")
+	if id < 1 || id > maxInt32 {
+		return nil, nil, errors.BadRequest("connection identifier %d is not valid", id)
 	}
 
 	if !utf8.ValidString(query) {
-		return nil, nil, errors.New("query is not UTF-8 encoded")
+		return nil, nil, errors.BadRequest("query is not UTF-8 encoded")
 	}
 	if utf8.RuneCountInString(query) > queryMaxSize {
-		return nil, nil, fmt.Errorf("query is longer than %d", queryMaxSize)
-	}
-	if !strings.Contains(query, ":limit") {
-		return nil, nil, errors.New("query does not contain the placeholder \":limit\"")
+		return nil, nil, errors.BadRequest("query is longer than 16,777,215 runes")
 	}
 	if limit < 1 || limit > 100 {
-		return nil, nil, errors.New("invalid limit")
+		return nil, nil, errors.BadRequest("limit %d is not valid", limit)
 	}
 
 	c, err := this.get(id)
 	if err != nil {
-		return nil, nil, ConnectorNotFoundError{DatabaseType}
+		return nil, nil, errors.NotFound("connector %d does not exist", id)
 	}
 	if c.connector.typ != DatabaseType {
-		return nil, nil, errors.New("connection is not a database")
+		return nil, nil, errors.BadRequest("connection %d is not a database", id)
 	}
 	if c.role != SourceRole {
-		return nil, nil, errors.New("connection is not a source")
+		return nil, nil, errors.BadRequest("connection %d is not a source", id)
 	}
 
 	const cRole = _connector.SourceRole
@@ -1168,7 +1189,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 	rawColumns, rawRows, err := connection.Query(query)
 	if err != nil {
 		if err, ok := err.(*_connector.DatabaseQueryError); ok {
-			return nil, nil, &DatabaseQueryError{Message: err.Message}
+			return nil, nil, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", id, err)
 		}
 		return nil, nil, err
 	}
@@ -1210,17 +1231,19 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 
 // ServeUI serves the user interface for the connection with identifier id.
 // event is the event and values contains the form values in JSON format.
-// Returns a ConnectionNotFoundError error if the connection does not exist and
-// the ErrUIEventNotExist error if the event does not exist.
+//
+// If the connection does not exist, it returns an errors.NotFoundError error.
+// If the event does not exist, it returns an errors.UnprocessableError error
+// with code EventNotExist.
 func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, error) {
 
 	if id < 1 || id > maxInt32 {
-		return nil, errors.New("invalid connection identifier")
+		return nil, errors.BadRequest("connection identifier %d is not valid", id)
 	}
 
 	c, err := this.get(id)
 	if err != nil {
-		return nil, ConnectionNotFoundError{}
+		return nil, errors.NotFound("connection %d does not exist", id)
 	}
 
 	cRole := _connector.Role(c.role)
@@ -1315,7 +1338,8 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 	form, alert, err := connection.ServeUI(event, values)
 	if err != nil {
 		if err == ui.ErrEventNotExist {
-			err = ErrUIEventNotExist
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector",
+				event, c.connector.name)
 		}
 		return nil, err
 	}
@@ -1325,40 +1349,42 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 
 // SetStorage sets the storage of the file connection with identifier file.
 // storage is the storage connection. The file and the storage must have the
-// same role. As a special case, the current storage of the file is removed if
-// the storage argument is 0.
+// same role. As a special case, the current storage of the file, if there is
+// one, is removed if the storage argument is 0.
 //
-// It returns a ConnectionNotFound error if the file or storage does not exist.
+// If the file does not exist, it returns an errors.NotFoundError error. If the
+// storage does not exist, it returns an errors.UnprocessableError error with
+// code StorageNotExist.
 func (this *Connections) SetStorage(file, storage int) error {
 
 	if file < 1 || file > maxInt32 {
-		return errors.New("invalid file connection identifier")
+		return errors.BadRequest("file identifier %d is not valid", file)
 	}
 	if storage < 0 || storage > maxInt32 {
-		return errors.New("invalid storage connection identifier")
+		return errors.BadRequest("storage identifier %d is not valid", storage)
 	}
 
 	f, err := this.get(file)
 	if err != nil {
-		return ConnectionNotFoundError{FileType}
+		return errors.NotFound("file %d does not exist", file)
 	}
 	if f.connector.typ != FileType {
-		return errors.New("file is not a file connector")
+		return errors.BadRequest("file is not a file connector")
 	}
 	var s *Connection
 	if storage > 0 {
 		s, err = this.get(storage)
 		if err != nil {
-			return ConnectionNotFoundError{StorageType}
+			return errors.Unprocessable(StorageNotExist, "storage %d does not exist", storage)
 		}
 		if s.connector.typ != StorageType {
-			return errors.New("storage is not a storage connector")
+			return errors.BadRequest("connection %d is not a storage", storage)
 		}
 		if s.role != f.role {
 			if f.role == SourceRole {
-				return errors.New("storage connection is not a source")
+				return errors.BadRequest("storage %d is not a source", storage)
 			}
-			return errors.New("storage connection is not a destination")
+			return errors.BadRequest("storage %d is not a destination", storage)
 		}
 	}
 
@@ -1370,6 +1396,11 @@ func (this *Connections) SetStorage(file, storage int) error {
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		result, err := tx.Exec("UPDATE connections SET storage = NULLIF($1, 0) WHERE id = $2", storage, file)
 		if err != nil {
+			if postgres.IsForeignKeyViolation(err) {
+				if postgres.ErrConstraintName(err) == "connections_storage_fkey" {
+					err = errors.Unprocessable(StorageNotExist, "storage %d does not exist", storage)
+				}
+			}
 			return err
 		}
 		affected, err := result.RowsAffected()
@@ -1377,13 +1408,10 @@ func (this *Connections) SetStorage(file, storage int) error {
 			return err
 		}
 		if affected == 0 {
-			return ConnectionNotFoundError{FileType}
+			return errors.NotFound("file %d does not exist", file)
 		}
 		return tx.Notify(n)
 	})
-	if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_storage_fkey" {
-		return ConnectionNotFoundError{StorageType}
-	}
 
 	return err
 }
@@ -1391,42 +1419,43 @@ func (this *Connections) SetStorage(file, storage int) error {
 // SetStream sets the stream of the mobile, server or website connection with
 // identifier source. stream is the stream connection. The source and the
 // stream must have the same role. As a special case, the current stream of the
-// source is removed if the stream argument is 0.
+// source, if there is one, is removed if the stream argument is 0.
 //
-// It returns a ConnectionNotFound error if the source or stream does not
-// exist.
+// If the source does not exist, it returns an errors.NotFoundError error. If
+// the stream does exist, it returns an errors.UnprocessableError error with
+// code StreamNotExist.
 func (this *Connections) SetStream(source, stream int) error {
 
 	if source < 1 || source > maxInt32 {
-		return errors.New("invalid source connection identifier")
+		return errors.BadRequest("source identifier %d is not valid", source)
 	}
 	if stream < 0 || stream > maxInt32 {
-		return errors.New("invalid stream connection identifier")
+		return errors.BadRequest("stream identifier %d is not valid", stream)
 	}
 
 	c, err := this.get(source)
 	if err != nil {
-		return ConnectionNotFoundError{}
+		return errors.NotFound("source %d does not exist", source)
 	}
 	switch c.connector.typ {
 	case MobileType, ServerType, WebsiteType:
 	default:
-		return errors.New("source is not a mobile, server or website connector")
+		return errors.BadRequest("source is not a mobile, server or website connector")
 	}
 	var s *Connection
 	if stream > 0 {
 		s, err = this.get(stream)
 		if err != nil {
-			return ConnectionNotFoundError{EventStreamType}
+			return errors.Unprocessable(StreamNotExist, "stream %d does not exist", stream)
 		}
 		if s.connector.typ != EventStreamType {
-			return errors.New("stream is not an event stream connector")
+			return errors.BadRequest("connection %d is not a stream", stream)
 		}
 		if s.role != c.role {
 			if c.role == SourceRole {
-				return errors.New("stream connection is not a source")
+				return errors.BadRequest("stream %d is not a source", stream)
 			}
-			return errors.New("stream connection is not a destination")
+			return errors.BadRequest("stream %d is not a destination", stream)
 		}
 	}
 
@@ -1438,6 +1467,11 @@ func (this *Connections) SetStream(source, stream int) error {
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		result, err := tx.Exec("UPDATE connections SET stream = NULLIF($1, 0) WHERE id = $2", stream, source)
 		if err != nil {
+			if postgres.IsForeignKeyViolation(err) {
+				if postgres.ErrConstraintName(err) == "connections_stream_fkey" {
+					err = errors.Unprocessable(StreamNotExist, "stream %d does not exist", stream)
+				}
+			}
 			return err
 		}
 		affected, err := result.RowsAffected()
@@ -1445,47 +1479,43 @@ func (this *Connections) SetStream(source, stream int) error {
 			return err
 		}
 		if affected == 0 {
-			return ConnectionNotFoundError{}
+			return errors.NotFound("source %d does not exist", source)
 		}
 		return tx.Notify(n)
 	})
-	if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_stream_fkey" {
-		return ConnectionNotFoundError{EventStreamType}
-	}
 
 	return err
 }
 
-// SetUsersQuery sets the users query of the database connection with
+// SetUsersQuery sets the users query of the database source connection with
 // identifier id. query must be UTF-8 encoded, it cannot be longer than
 // 16,777,215 runes and must contain the ':limit' placeholder.
 //
-// It returns an error if the connection is a destination.
-// It returns a ConnectionNotFoundError error if the connection does not exist.
+// If the connection does not exist, it returns an errors.NotFoundError error.
 func (this *Connections) SetUsersQuery(id int, query string) error {
 
 	if id < 1 || id > maxInt32 {
-		return errors.New("invalid connection identifier")
+		return errors.BadRequest("connection identifier %d is not valid", id)
 	}
 	if !utf8.ValidString(query) {
-		return errors.New("query is not UTF-8 encoded")
+		return errors.BadRequest("query is not UTF-8 encoded")
 	}
 	if utf8.RuneCountInString(query) > queryMaxSize {
-		return fmt.Errorf("query is longer than %d", queryMaxSize)
+		return errors.BadRequest("query is longer than %d", queryMaxSize)
 	}
 	if !strings.Contains(query, ":limit") {
-		return errors.New("query does not contain the placeholder \":limit\"")
+		return errors.BadRequest("query does not contain the ':limit' placeholder")
 	}
 
 	c, err := this.get(id)
 	if err != nil {
-		return ConnectionNotFoundError{DatabaseType}
+		return errors.NotFound("connection %d does not exist", id)
 	}
 	if c.connector.typ != DatabaseType {
-		return errors.New("connection is not a database")
+		return errors.BadRequest("connection %d is not a database", id)
 	}
 	if c.role != SourceRole {
-		return errors.New("connection is not a source")
+		return errors.BadRequest("connection %d is not a source", id)
 	}
 
 	n := setUserQueryNotification{
@@ -1494,9 +1524,16 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 	}
 
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err = tx.Exec("UPDATE connections\nSET users_query = $1 WHERE id = $2", query, id)
+		result, err := tx.Exec("UPDATE connections\nSET users_query = $1 WHERE id = $2", query, id)
 		if err != nil {
 			return err
+		}
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if affected == 0 {
+			return errors.NotFound("connection %d does not exist", id)
 		}
 		return tx.Notify(n)
 	})
@@ -1511,15 +1548,16 @@ type ConnectionsStats struct {
 }
 
 // Stats returns statistics on the connection with identifier id for the last
-// 24 hours. It returns a ConnectionNotFoundError error if the connection does
-// not exist.
+// 24 hours.
+//
+// If the connection does not exist, it returns an errors.Notfound error.
 func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 	if id < 1 || id > maxInt32 {
-		return nil, errors.New("invalid connection identifier")
+		return nil, errors.BadRequest("connection identifier %d is not valid", id)
 	}
 	_, err := this.get(id)
 	if err != nil {
-		return nil, ConnectionNotFoundError{}
+		return nil, errors.NotFound("connection %d does not exist", id)
 	}
 	now := time.Now().UTC()
 	toSlot := statsTimeSlot(now)
@@ -1581,7 +1619,7 @@ func (this *Connections) reloadSchema(id int) error {
 	case AppType, DatabaseType:
 	case FileType:
 		if c.storage == nil {
-			return ErrFileHasNoStorage
+			return errors.New("file connection has not storage")
 		}
 	default:
 		return fmt.Errorf("cannot import properties from a %s connection",
@@ -1674,7 +1712,7 @@ func (this *Connections) reloadSchema(id int) error {
 	case FileType:
 
 		if c.storage == nil {
-			return ErrFileHasNoStorage
+			return errors.New("file connection has not storage")
 		}
 
 		var ctx = context.Background()
@@ -1758,7 +1796,7 @@ func (this *Connections) userSchema(id int) (types.Schema, []_connector.Property
 
 	c, err := this.get(id)
 	if err != nil {
-		return types.Schema{}, nil, ConnectionNotFoundError{}
+		return types.Schema{}, nil, errors.New("connection does not exist")
 	}
 
 	// Read the paths of the mapped properties from the transformations of this
@@ -1804,16 +1842,16 @@ const noQueryLimit = -1
 func (this *Connections) compileQuery(query string, limit int) (string, error) {
 	p := strings.Index(query, ":limit")
 	if p == -1 {
-		return "", errors.New("missing ':limit' placeholder in query")
+		return "", errors.BadRequest("query does not contain the ':limit' placeholder")
 	}
 	s1 := strings.Index(query[:p], "[[")
 	if s1 == -1 {
-		return "", errors.New("missing '[[' in query")
+		return "", errors.BadRequest("query does not contain '[['")
 	}
 	n := len(":limit")
 	s2 := strings.Index(query[p+n:], "]]")
 	if s2 == -1 {
-		return "", errors.New("missing ']]' in query")
+		return "", errors.BadRequest("query does not contain ']]'")
 	}
 	s2 += p + n + 2
 	if limit == noQueryLimit {
@@ -2081,7 +2119,7 @@ func abbreviate(s string, n int) string {
 	return s + "..."
 }
 
-// exportUser returns an user to export (with the given ID) applying the given
+// exportUser returns a user to export (with the given ID) applying the given
 // transformations to the properties.
 func exportUser(id string, properties map[string]any, ts []*Transformation) (_connector.User, error) {
 	user := _connector.User{

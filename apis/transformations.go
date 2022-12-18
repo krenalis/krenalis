@@ -10,11 +10,11 @@ package apis
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
 
+	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/types"
 )
@@ -108,28 +108,29 @@ func (this *Transformations) set(connection int, transformations []*Transformati
 }
 
 // Set sets the transformations for the given connection.
+// TODO(marco): document errors.
 func (this *Transformations) Set(connection int, transformations []*Transformation) error {
 
 	if connection < 1 || connection > maxInt32 {
-		return errors.New("invalid connection identifier")
+		return errors.BadRequest("connection identifier %d is not valid", connection)
 	}
 
 	// Validate the transformations.
 	for _, t := range transformations {
 		// TODO(Gianluca): validate the Python function here.
 		if strings.TrimSpace(t.SourceCode) == "" {
-			return errors.New("transformation function cannot be empty")
+			return errors.BadRequest("a transformation source code is empty")
 		}
 		if len(t.In) == 0 {
-			return errors.New("should have at least one input property")
+			return errors.BadRequest("input properties are empty")
 		}
 		for _, in := range t.In {
 			if !types.IsValidPropertyName(in.Name) {
-				return errors.New("invalid property name")
+				return errors.BadRequest("input property name %q is not valid", in.Name)
 			}
 		}
 		if !types.IsValidPropertyName(t.Out) {
-			return errors.New("invalid property name")
+			return errors.BadRequest("output property name %q is not valid", t.Out)
 		}
 	}
 
@@ -147,6 +148,13 @@ func (this *Transformations) Set(connection int, transformations []*Transformati
 			"(connection, \"in\", source_code, out)\n" +
 			"VALUES ($1, $2, $3, $4) RETURNING id")
 		if err != nil {
+			if err != nil {
+				if postgres.IsForeignKeyViolation(err) {
+					if postgres.ErrConstraintName(err) == "transformations_connection_fkey" {
+						err = errors.NotFound("connection %d does not exist", connection)
+					}
+				}
+			}
 			return err
 		}
 		for _, t := range n.Transformations {
@@ -159,17 +167,8 @@ func (this *Transformations) Set(connection int, transformations []*Transformati
 		}
 		return tx.Notify(n)
 	})
-	if err != nil {
-		if postgres.IsForeignKeyViolation(err) {
-			switch postgres.ErrConstraintName(err) {
-			case "transformations_connection_fkey":
-				err = ConnectionNotFoundError{}
-			}
-		}
-		return err
-	}
 
-	return nil
+	return err
 }
 
 // List lists the transformations for the given connection.
@@ -184,14 +183,14 @@ func (this *Transformations) list(connection int) []*Transformation {
 }
 
 // List lists the transformations for the given connection.
-// Returns a ConnectionNotFoundError error if the connection does not exist.
+// If the connection does not exist, it returns an errors.NotFoundError error.
 func (this *Transformations) List(connection int) ([]*Transformation, error) {
 	if connection < 1 || connection > maxInt32 {
-		return nil, errors.New("invalid connection identifier")
+		return nil, errors.BadRequest("connection identifier %d is not valid", connection)
 	}
-	_, err := this.Workspace.Connections.Get(connection)
+	_, err := this.Workspace.Connections.get(connection)
 	if err != nil {
-		return nil, err
+		return nil, errors.NotFound("connection %d does not exist", connection)
 	}
 	ts := this.list(connection)
 	if ts == nil {

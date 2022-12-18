@@ -9,7 +9,6 @@ package apis
 
 import (
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -28,10 +27,6 @@ type DeprecatedProperty struct {
 	Code    string
 	Domains []string
 }
-
-var ErrAccountNotFound = errors.New("account does not exist")
-var ErrPropertyNotFound = errors.New("property does not exist")
-var ErrDomainNameNotValid = errors.New("domain name is not valid")
 
 // Create creates a new property for the current account and returns its
 // identifier. If the account does not exist anymore, it returns the

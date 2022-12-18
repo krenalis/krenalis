@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,6 +19,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"chichi/apis/errors"
 )
 
 type Connectors struct {
@@ -236,18 +237,6 @@ func (typ ConnectorType) Value() (driver.Value, error) {
 	return nil, fmt.Errorf("not a valid ConnectorType: %d", typ)
 }
 
-// A ConnectorNotFoundError error indicates that a connector does not exist.
-type ConnectorNotFoundError struct {
-	Type ConnectorType
-}
-
-func (err ConnectorNotFoundError) Error() string {
-	if err.Type == 0 {
-		return "connector does not exist"
-	}
-	return fmt.Sprintf("%s connector does not exist", strings.ToLower(err.Type.String()))
-}
-
 // refreshOAuth refreshes the OAuth token of the given resource of the
 // connector with identifier id. The connector must support OAuth.
 //
@@ -257,10 +246,10 @@ func (this *Connectors) refreshOAuthToken(id, resource int) (*Resource, error) {
 
 	connector, err := this.get(id)
 	if err != nil {
-		return nil, ConnectorNotFoundError{}
+		return nil, errors.NotFound("connector %d does not exist", id)
 	}
 	if connector.oAuth == nil {
-		return nil, errors.New("connector does not support OAuth")
+		return nil, errors.BadRequest("connector %d does not support OAuth", id)
 	}
 	r, ok := connector.getResource(resource)
 	if !ok {
@@ -301,7 +290,7 @@ func (this *Connectors) refreshOAuthToken(id, resource int) (*Resource, error) {
 			// TODO(@Andrea): check the status returned by services different
 			// from Hubspot.
 			if errData.status == "BAD_REFRESH_TOKEN" {
-				return nil, ErrCannotGetConnectorAccessToken
+				return nil, errors.Unprocessable(InvalidRefreshToken, "OAuth refresh token of connector %d is not valid", id)
 			}
 		}
 		return nil, fmt.Errorf("unexpected status %d returned by connector while trying to get a new access token via refresh token", res.StatusCode)
@@ -346,11 +335,11 @@ func (this *Connectors) refreshOAuthToken(id, resource int) (*Resource, error) {
 // Returns a ConnectorNotFoundError error if the connector does not exist.
 func (this *Connectors) Get(id int) (*ConnectorInfo, error) {
 	if id < 1 || id > maxInt32 {
-		return nil, errors.New("invalid connector identifier")
+		return nil, errors.BadRequest("connector identifier %d is not valid", id)
 	}
 	c, err := this.get(id)
 	if err != nil {
-		return nil, ConnectorNotFoundError{}
+		return nil, errors.NotFound("connector %d does not exist", id)
 	}
 	info := ConnectorInfo{
 		ID:          c.id,
