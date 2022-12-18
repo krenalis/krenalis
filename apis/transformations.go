@@ -156,8 +156,7 @@ func (this *Transformations) List(connection int) ([]*Transformation, error) {
 	if connection < 1 || connection > maxInt32 {
 		return nil, errors.BadRequest("connection identifier %d is not valid", connection)
 	}
-	_, err := this.Workspace.Connections.state.Get(connection)
-	if err != nil {
+	if _, ok := this.Workspace.Connections.state.Get(connection); !ok {
 		return nil, errors.NotFound("connection %d does not exist", connection)
 	}
 	ts := this.state.List(connection)

@@ -84,8 +84,8 @@ func (this *Workspaces) Get(id int) (*WorkspaceInfo, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("workspace identifier %d is not valid", id)
 	}
-	ws, err := this.state.Get(id)
-	if err != nil {
+	ws, ok := this.state.Get(id)
+	if !ok {
 		return nil, errors.NotFound("workspace %d does not exist", id)
 	}
 	info := WorkspaceInfo{ID: ws.id}
@@ -101,7 +101,11 @@ func (this *Workspaces) Get(id int) (*WorkspaceInfo, error) {
 // As returns the workspace with identifier id.
 // Returns an error if the workspace does not exist.
 func (this *Workspaces) As(id int) (*Workspace, error) {
-	return this.state.Get(id)
+	ws, ok := this.state.Get(id)
+	if !ok {
+		return nil, errors.NotFound("workspace %d does not exist", id)
+	}
+	return ws, nil
 }
 
 // Info returns a WorkspaceInfo describing the workspace.

@@ -141,8 +141,8 @@ func (this *EventDataTypes) Get(name string) (*EventDataTypeInfo, error) {
 	if utf8.RuneCountInString(name) > 120 {
 		return nil, errors.BadRequest("name %s is longer than 120 runes", name)
 	}
-	t, err := this.state.Get(name)
-	if err != nil {
+	t, ok := this.state.Get(name)
+	if !ok {
 		return nil, errors.NotFound("data type %s does not exist", name)
 	}
 	info := EventDataTypeInfo{

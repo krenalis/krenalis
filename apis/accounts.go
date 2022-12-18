@@ -56,7 +56,11 @@ var emailRegExp = regexp.MustCompile(`^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.
 // As returns the account with identifier id.
 // Returns an error is the account does not exist.
 func (this *Accounts) As(id int) (*Account, error) {
-	return this.state.Get(id)
+	account, ok := this.state.Get(id)
+	if !ok {
+		return nil, errors.NotFound("account %d does not exist", id)
+	}
+	return account, nil
 }
 
 // Authenticate authenticates an account given its email and password. If the
@@ -136,8 +140,8 @@ func (this *Accounts) Get(id int) (*AccountInfo, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("account identifier %d is not valid", id)
 	}
-	acc, err := this.state.Get(id)
-	if err != nil {
+	acc, ok := this.state.Get(id)
+	if !ok {
 		return nil, errors.NotFound("account %d does not exist", id)
 	}
 	ips := make([]string, len(acc.internalIPs))

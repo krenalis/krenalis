@@ -163,8 +163,8 @@ func (this *Connectors) Get(id int) (*ConnectorInfo, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("connector identifier %d is not valid", id)
 	}
-	c, err := this.state.Get(id)
-	if err != nil {
+	c, ok := this.state.Get(id)
+	if !ok {
 		return nil, errors.NotFound("connector %d does not exist", id)
 	}
 	info := ConnectorInfo{

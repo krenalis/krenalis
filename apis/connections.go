@@ -225,8 +225,8 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 		Role:      role,
 		Connector: connector,
 	}
-	c, err := this.account.apis.Connectors.state.Get(connector)
-	if err != nil {
+	c, ok := this.account.apis.Connectors.state.Get(connector)
+	if !ok {
 		return 0, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
 	}
 
@@ -236,8 +236,8 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 			return 0, errors.BadRequest("connector %d cannot have a storage, it's a %s",
 				c.id, strings.ToLower(c.typ.String()))
 		}
-		s, err := this.state.Get(opts.Storage)
-		if err != nil {
+		s, ok := this.state.Get(opts.Storage)
+		if !ok {
 			return 0, errors.Unprocessable(StorageNotExist, "storage %d does not exist", opts.Storage)
 		}
 		if s.connector.typ != StorageType {
@@ -258,8 +258,8 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 			return 0, errors.BadRequest("connector %d cannot have a stream, it's a %s",
 				c.id, strings.ToLower(c.typ.String()))
 		}
-		s, err := this.state.Get(opts.Stream)
-		if err != nil {
+		s, ok := this.state.Get(opts.Stream)
+		if !ok {
 			return 0, errors.Unprocessable(StreamNotExist, "stream %d does not exist", opts.Stream)
 		}
 		if s.connector.typ != EventStreamType {
@@ -327,6 +327,7 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 	}
 
 	// Generate a connection identifier.
+	var err error
 	n.ID, err = generateConnectionID()
 	if err != nil {
 		return 0, err
@@ -410,8 +411,8 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("connection identifier %d is not valid", id)
 	}
-	c, err := this.state.Get(id)
-	if err != nil {
+	c, ok := this.state.Get(id)
+	if !ok {
 		return nil, errors.NotFound("connection %d does not exist", id)
 	}
 	info := ConnectionInfo{
@@ -438,24 +439,24 @@ func (this *Connections) Delete(id int) error {
 	if id < 1 || id > maxInt32 {
 		return errors.BadRequest("connection identifier %d is not valid", id)
 	}
-	c, err := this.state.Get(id)
-	if err != nil {
+	c, ok := this.state.Get(id)
+	if !ok {
 		return nil
 	}
 	n := deleteConnectionNotification{
 		ID: id,
 	}
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
+	err := this.db.Transaction(func(tx *postgres.Tx) error {
 		if c.connector.oAuth != nil {
 			// Delete the resource of the deleted connection if it has no other connections.
-			_, err = tx.Exec("DELETE FROM resources AS r WHERE NOT EXISTS (\n"+
+			_, err := tx.Exec("DELETE FROM resources AS r WHERE NOT EXISTS (\n"+
 				"\tSELECT FROM connections AS c\n"+
 				"\tWHERE r.id = c.resource AND c.id <> $1 AND c.resource IS NULL\n)", id)
 			if err != nil {
 				return err
 			}
 		}
-		_, err = tx.Exec("DELETE FROM connections WHERE id = $1", id)
+		_, err := tx.Exec("DELETE FROM connections WHERE id = $1", id)
 		if err != nil {
 			return err
 		}
@@ -481,8 +482,8 @@ func (this *Connections) Export(id int) (err error) {
 
 	// Check that the connection exists, has an allowed type and is a
 	// destination.
-	c, err := this.state.Get(id)
-	if err != nil {
+	c, ok := this.state.Get(id)
+	if !ok {
 		return errors.NotFound("connection %d does not exist", id)
 	}
 	var storage int
@@ -553,8 +554,8 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 	}
 
 	// Check that the connection exists, has an allowed type and is a source.
-	c, err := this.state.Get(id)
-	if err != nil {
+	c, ok := this.state.Get(id)
+	if !ok {
 		return errors.NotFound("connection %d does not exist", id)
 	}
 	var storage int
@@ -1004,8 +1005,8 @@ func (this *Connections) Imports(id int) ([]*ImportInfo, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("connection identifier %d is not valid", id)
 	}
-	c, err := this.state.Get(id)
-	if err != nil {
+	c, ok := this.state.Get(id)
+	if !ok {
 		return nil, errors.NotFound("connection %d does not exist", id)
 	}
 	switch c.connector.typ {
@@ -1018,7 +1019,7 @@ func (this *Connections) Imports(id int) ([]*ImportInfo, error) {
 		return nil, errors.BadRequest("connection %d cannot have imports, it's a destination", id)
 	}
 	imports := []*ImportInfo{}
-	err = this.db.QueryScan(
+	err := this.db.QueryScan(
 		"SELECT i.id, i.start_time, i.end_time, i.error\n"+
 			"FROM connections_imports AS i\n"+
 			"INNER JOIN connections AS c ON i.connection = c.id\n"+
@@ -1038,8 +1039,7 @@ func (this *Connections) Imports(id int) ([]*ImportInfo, error) {
 		return nil, err
 	}
 	if len(imports) == 0 {
-		_, err := this.state.Get(id)
-		if err != nil {
+		if _, ok := this.state.Get(id); !ok {
 			return nil, errors.NotFound("connection %d does not exist", id)
 		}
 	}
@@ -1097,8 +1097,8 @@ func (this *Connections) Schema(id int) (types.Schema, error) {
 	if id < 1 || id > maxInt32 {
 		return types.Schema{}, errors.BadRequest("connection identifier %d is not valid", id)
 	}
-	c, err := this.state.Get(id)
-	if err != nil {
+	c, ok := this.state.Get(id)
+	if !ok {
 		return types.Schema{}, errors.NotFound("connection %d does not exist", id)
 	}
 	if c.connector.typ == StorageType {
@@ -1142,8 +1142,8 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 		return nil, nil, errors.BadRequest("limit %d is not valid", limit)
 	}
 
-	c, err := this.state.Get(id)
-	if err != nil {
+	c, ok := this.state.Get(id)
+	if !ok {
 		return nil, nil, errors.NotFound("connector %d does not exist", id)
 	}
 	if c.connector.typ != DatabaseType {
@@ -1156,6 +1156,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 	const cRole = _connector.SourceRole
 
 	// Execute the query.
+	var err error
 	query, err = this.compileQuery(query, limit)
 	if err != nil {
 		return nil, nil, err
@@ -1224,13 +1225,14 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		return nil, errors.BadRequest("connection identifier %d is not valid", id)
 	}
 
-	c, err := this.state.Get(id)
-	if err != nil {
+	c, ok := this.state.Get(id)
+	if !ok {
 		return nil, errors.NotFound("connection %d does not exist", id)
 	}
 
 	cRole := _connector.Role(c.role)
 
+	var err error
 	var connection _connector.Connection
 
 	switch c.connector.typ {
@@ -1342,8 +1344,8 @@ func (this *Connections) SetStorage(file, storage int) error {
 		return errors.BadRequest("storage identifier %d is not valid", storage)
 	}
 
-	f, err := this.state.Get(file)
-	if err != nil {
+	f, ok := this.state.Get(file)
+	if !ok {
 		return errors.NotFound("file %d does not exist", file)
 	}
 	if f.connector.typ != FileType {
@@ -1351,8 +1353,8 @@ func (this *Connections) SetStorage(file, storage int) error {
 	}
 	var s *Connection
 	if storage > 0 {
-		s, err = this.state.Get(storage)
-		if err != nil {
+		s, ok = this.state.Get(storage)
+		if !ok {
 			return errors.Unprocessable(StorageNotExist, "storage %d does not exist", storage)
 		}
 		if s.connector.typ != StorageType {
@@ -1371,7 +1373,7 @@ func (this *Connections) SetStorage(file, storage int) error {
 		Storage:    storage,
 	}
 
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
+	err := this.db.Transaction(func(tx *postgres.Tx) error {
 		result, err := tx.Exec("UPDATE connections SET storage = NULLIF($1, 0) WHERE id = $2", storage, file)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
@@ -1411,8 +1413,8 @@ func (this *Connections) SetStream(source, stream int) error {
 		return errors.BadRequest("stream identifier %d is not valid", stream)
 	}
 
-	c, err := this.state.Get(source)
-	if err != nil {
+	c, ok := this.state.Get(source)
+	if !ok {
 		return errors.NotFound("source %d does not exist", source)
 	}
 	switch c.connector.typ {
@@ -1422,8 +1424,8 @@ func (this *Connections) SetStream(source, stream int) error {
 	}
 	var s *Connection
 	if stream > 0 {
-		s, err = this.state.Get(stream)
-		if err != nil {
+		s, ok = this.state.Get(stream)
+		if !ok {
 			return errors.Unprocessable(StreamNotExist, "stream %d does not exist", stream)
 		}
 		if s.connector.typ != EventStreamType {
@@ -1442,7 +1444,7 @@ func (this *Connections) SetStream(source, stream int) error {
 		Stream:     stream,
 	}
 
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
+	err := this.db.Transaction(func(tx *postgres.Tx) error {
 		result, err := tx.Exec("UPDATE connections SET stream = NULLIF($1, 0) WHERE id = $2", stream, source)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
@@ -1485,8 +1487,8 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 		return errors.BadRequest("query does not contain the ':limit' placeholder")
 	}
 
-	c, err := this.state.Get(id)
-	if err != nil {
+	c, ok := this.state.Get(id)
+	if !ok {
 		return errors.NotFound("connection %d does not exist", id)
 	}
 	if c.connector.typ != DatabaseType {
@@ -1501,7 +1503,7 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 		Query:      query,
 	}
 
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
+	err := this.db.Transaction(func(tx *postgres.Tx) error {
 		result, err := tx.Exec("UPDATE connections\nSET users_query = $1 WHERE id = $2", query, id)
 		if err != nil {
 			return err
@@ -1533,8 +1535,7 @@ func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("connection identifier %d is not valid", id)
 	}
-	_, err := this.state.Get(id)
-	if err != nil {
+	if _, ok := this.state.Get(id); !ok {
 		return nil, errors.NotFound("connection %d does not exist", id)
 	}
 	now := time.Now().UTC()
@@ -1544,7 +1545,7 @@ func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 		UsersIn: [24]int{},
 	}
 	query := "SELECT time_slot, users_in\nFROM connections_stats\nWHERE connection = $1 AND time_slot BETWEEN $2 AND $3"
-	err = this.db.QueryScan(query, id, fromSlot, toSlot, func(rows *postgres.Rows) error {
+	err := this.db.QueryScan(query, id, fromSlot, toSlot, func(rows *postgres.Rows) error {
 		var err error
 		var slot, usersIn int
 		for rows.Next() {
@@ -1586,12 +1587,12 @@ var errRecordStop = errors.New("stop record")
 func (this *Connections) reloadSchema(id int) error {
 
 	if id < 1 || id > maxInt32 {
-		return errors.New("invalid connection identifier")
+		return errors.New("connection identifier is not valid")
 	}
 
-	c, err := this.state.Get(id)
-	if err != nil {
-		return err
+	c, ok := this.state.Get(id)
+	if !ok {
+		return errors.New("connection does not exist")
 	}
 	switch c.connector.typ {
 	case AppType, DatabaseType:
@@ -1767,8 +1768,8 @@ func (this *Connections) reloadSchema(id int) error {
 // If the connection does not exist it returns a ConnectionNotFoundError error.
 func (this *Connections) userSchema(id int) (types.Schema, []_connector.PropertyPath, error) {
 
-	c, err := this.state.Get(id)
-	if err != nil {
+	c, ok := this.state.Get(id)
+	if !ok {
 		return types.Schema{}, nil, errors.New("connection does not exist")
 	}
 

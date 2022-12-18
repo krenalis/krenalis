@@ -146,9 +146,9 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		if id < 1 || id > maxInt32 {
 			return errBadRequest
 		}
-		var err error
-		connector, err = apis.Connectors.state.Get(id)
-		if err != nil || connector.webhooksPer != WebhooksPerConnector {
+		var ok bool
+		connector, ok = apis.Connectors.state.Get(id)
+		if !ok || connector.webhooksPer != WebhooksPerConnector {
 			return errNotFound
 		}
 	case "r":
@@ -178,7 +178,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	Connection:
 		for _, a := range apis.Accounts.state.List() {
 			for _, ws := range a.Workspaces.state.List() {
-				if c, err := ws.Connections.state.Get(id); err == nil {
+				if c, ok := ws.Connections.state.Get(id); ok {
 					connection = c
 					break Connection
 				}

@@ -8,17 +8,7 @@
 package apis
 
 import (
-	"errors"
 	"sync"
-)
-
-var (
-	errAccountNotFound       = errors.New("account does not exist")
-	errConnectionNotFound    = errors.New("connection does not exist")
-	errConnectorNotFound     = errors.New("connector does not exist")
-	errEventDataTypeNotFound = errors.New("event data type does not exist")
-	errEventTypeNotFound     = errors.New("event type does not exist")
-	errWorkspaceNotFound     = errors.New("workspace does not exist")
 )
 
 // accountsState contains the state of all accounts.
@@ -35,16 +25,13 @@ func (state *accountsState) Count() int {
 	return count
 }
 
-// Get returns the account with identifier id.
-// Returns the errAccountNotFound error if the account does not exist.
-func (state *accountsState) Get(id int) (*Account, error) {
+// Get returns the account with identifier id. The boolean return value reports
+// whether the account exists.
+func (state *accountsState) Get(id int) (*Account, bool) {
 	state.Lock()
 	c, ok := state.ids[id]
 	state.Unlock()
-	if ok {
-		return c, nil
-	}
-	return nil, errAccountNotFound
+	return c, ok
 }
 
 // List returns all accounts.
@@ -65,16 +52,13 @@ type connectorsState struct {
 	ids map[int]*Connector
 }
 
-// Get returns the connector with identifier id.
-// Returns the errConnectorNotFound error if the connector does not exist.
-func (state *connectorsState) Get(id int) (*Connector, error) {
+// Get returns the connector with identifier id. The boolean return value
+// reports whether the connector exists.
+func (state *connectorsState) Get(id int) (*Connector, bool) {
 	state.Lock()
 	c, ok := state.ids[id]
 	state.Unlock()
-	if ok {
-		return c, nil
-	}
-	return nil, errConnectorNotFound
+	return c, ok
 }
 
 // List returns all the connectors.
@@ -142,16 +126,14 @@ type workspacesState struct {
 	ids map[int]*Workspace
 }
 
-// Get returns the workspace with identifier id.
+// Get returns the workspace with identifier id. The boolean return value
+// reports whether the workspace exists.
 // Returns the errWorkspaceNotFound error if the workspace does not exist.
-func (state *workspacesState) Get(id int) (*Workspace, error) {
+func (state *workspacesState) Get(id int) (*Workspace, bool) {
 	state.Lock()
 	w, ok := state.ids[id]
 	state.Unlock()
-	if ok {
-		return w, nil
-	}
-	return nil, errWorkspaceNotFound
+	return w, ok
 }
 
 // List returns all the workspaces.
@@ -173,16 +155,13 @@ type connectionsState struct {
 	ids map[int]*Connection
 }
 
-// Get returns the connection with identifier id.
-// Returns the errConnectionNotFound error if the connection does not exist.
-func (state *connectionsState) Get(id int) (*Connection, error) {
+// Get returns the connection with identifier id. The boolean return value
+// reports whether the connection exists.
+func (state *connectionsState) Get(id int) (*Connection, bool) {
 	state.Lock()
 	c, ok := state.ids[id]
 	state.Unlock()
-	if ok {
-		return c, nil
-	}
-	return nil, errConnectionNotFound
+	return c, ok
 }
 
 // List returns all the connections.
@@ -234,16 +213,13 @@ type eventTypesState struct {
 	ids map[int]*EventType
 }
 
-// Get returns the type with identifier id. It returns the
-// errEventTypeNotFound error if the type does not exist.
-func (state *eventTypesState) Get(id int) (*EventType, error) {
+// Get returns the event type with identifier id. The boolean return value
+// reports whether the event type exists.
+func (state *eventTypesState) Get(id int) (*EventType, bool) {
 	state.Lock()
 	t, ok := state.ids[id]
 	state.Unlock()
-	if !ok {
-		return nil, errEventTypeNotFound
-	}
-	return t, nil
+	return t, ok
 }
 
 // List returns all event types.
@@ -265,16 +241,13 @@ type eventDataTypesState struct {
 	names map[string]*EventDataType
 }
 
-// Get returns the data type with the given name. It returns the
-// errEventDataTypeNotFound error if the type does not exist.
-func (state *eventDataTypesState) Get(name string) (*EventDataType, error) {
+// Get returns the event data type with the given name. The boolean return
+// value reports whether the event data type exists.
+func (state *eventDataTypesState) Get(name string) (*EventDataType, bool) {
 	state.Lock()
 	t, ok := state.names[name]
 	state.Unlock()
-	if !ok {
-		return nil, errEventDataTypeNotFound
-	}
-	return t, nil
+	return t, ok
 }
 
 // List returns all the data types.

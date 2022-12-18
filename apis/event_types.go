@@ -166,8 +166,8 @@ func (this *EventTypes) Get(id int) (*EventTypeInfo, error) {
 	if id < 1 || id > types.MaxUInt8 {
 		return nil, errors.BadRequest("event type identifier %d is not valid", id)
 	}
-	t, err := this.state.Get(id)
-	if err != nil {
+	t, ok := this.state.Get(id)
+	if !ok {
 		return nil, errors.NotFound("event type %d does not exist", id)
 	}
 	info := EventTypeInfo{
