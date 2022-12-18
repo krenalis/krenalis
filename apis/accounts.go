@@ -11,7 +11,6 @@ import (
 	"database/sql"
 	"regexp"
 	"sort"
-	"sync"
 
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
@@ -24,31 +23,12 @@ var AuthenticationFailed errors.Code = "AuthenticationFailed"
 
 type Accounts struct {
 	*APIs
-	state accountsState
-}
-
-type accountsState struct {
-	sync.Mutex
-	ids map[int]*Account
-}
-
-var errAccountNotFound = errors.New("account does not exist")
-
-// get returns the account with identifier id.
-// Returns the errAccountNotFound error if the account does not exist.
-func (this *Accounts) get(id int) (*Account, error) {
-	this.state.Lock()
-	c, ok := this.state.ids[id]
-	this.state.Unlock()
-	if ok {
-		return c, nil
-	}
-	return nil, errAccountNotFound
+	state *accountsState
 }
 
 // newAccounts returns a new *Accounts value.
-func newAccounts(apis *APIs, accounts map[int]*Account) *Accounts {
-	return &Accounts{APIs: apis, state: accountsState{ids: accounts}}
+func newAccounts(apis *APIs, state *accountsState) *Accounts {
+	return &Accounts{APIs: apis, state: state}
 }
 
 // Account represents an account.
@@ -76,7 +56,7 @@ var emailRegExp = regexp.MustCompile(`^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.
 // As returns the account with identifier id.
 // Returns an error is the account does not exist.
 func (this *Accounts) As(id int) (*Account, error) {
-	return this.get(id)
+	return this.state.Get(id)
 }
 
 // Authenticate authenticates an account given its email and password. If the
@@ -107,15 +87,7 @@ func (this *Accounts) Authenticate(email, password string) (int, error) {
 
 // Count returns the total number of accounts.
 func (this *Accounts) Count() int {
-	return this.count()
-}
-
-// count returns the total number of accounts.
-func (this *Accounts) count() int {
-	this.state.Lock()
-	l := len(this.state.ids)
-	this.state.Unlock()
-	return l
+	return this.state.Count()
 }
 
 // Create a new account given its email and password and returns its
@@ -164,7 +136,7 @@ func (this *Accounts) Get(id int) (*AccountInfo, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("account identifier %d is not valid", id)
 	}
-	acc, err := this.get(id)
+	acc, err := this.state.Get(id)
 	if err != nil {
 		return nil, errors.NotFound("account %d does not exist", id)
 	}
@@ -196,19 +168,7 @@ func (s AccountSort) String() string {
 	panic("invalid account sort")
 }
 
-// list returns all accounts.
-func (this *Accounts) list() []*Account {
-	this.state.Lock()
-	accounts := make([]*Account, len(this.state.ids))
-	i := 0
-	for _, account := range this.state.ids {
-		accounts[i] = account
-	}
-	this.state.Unlock()
-	return accounts
-}
-
-// List returns a list of *AccountInfo, in the given order, describing all
+// List returns a List of *AccountInfo, in the given order, describing all
 // accounts but starting from first and up to limit. first must be >= 0 and
 // limit must be > 0.
 func (this *Accounts) List(order AccountSort, first, limit int) ([]*AccountInfo, error) {
@@ -221,7 +181,7 @@ func (this *Accounts) List(order AccountSort, first, limit int) ([]*AccountInfo,
 	if first < 0 {
 		return nil, errors.BadRequest("first %d is not valid", first)
 	}
-	accounts := this.list()
+	accounts := this.state.List()
 	count := len(accounts)
 	if first >= count {
 		return []*AccountInfo{}, nil

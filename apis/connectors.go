@@ -17,7 +17,6 @@ import (
 	"net/url"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"chichi/apis/errors"
@@ -25,31 +24,12 @@ import (
 
 type Connectors struct {
 	*APIs
-	state connectorsState
-}
-
-type connectorsState struct {
-	sync.Mutex
-	ids map[int]*Connector
-}
-
-var errConnectorNotFound = errors.New("connector does not exist")
-
-// get returns the connector with identifier id.
-// Returns the errConnectorNotFound error if the connector does not exist.
-func (this *Connectors) get(id int) (*Connector, error) {
-	this.state.Lock()
-	c, ok := this.state.ids[id]
-	this.state.Unlock()
-	if ok {
-		return c, nil
-	}
-	return nil, errConnectorNotFound
+	state *connectorsState
 }
 
 // newConnectors returns a new *Connectors value.
-func newConnectors(apis *APIs, connectors map[int]*Connector) *Connectors {
-	return &Connectors{APIs: apis, state: connectorsState{ids: connectors}}
+func newConnectors(apis *APIs, state *connectorsState) *Connectors {
+	return &Connectors{APIs: apis, state: state}
 }
 
 // Connector represents a connector.
@@ -60,7 +40,7 @@ type Connector struct {
 	logoURL     string
 	webhooksPer WebhooksPer
 	oAuth       *ConnectorOAuth
-	state       connectorState
+	resources   *resourcesState
 }
 
 // A ConnectorOAuth represents OAuth data required to authenticate with a
@@ -73,51 +53,6 @@ type ConnectorOAuth struct {
 	DefaultTokenType string
 	DefaultExpiresIn int
 	ForcedExpiresIn  int
-}
-
-type connectorState struct {
-	sync.Mutex
-	resources map[int]*Resource
-}
-
-// deleteResource deletes the resource with identifier id.
-// If the resource does not exist, it does nothing.
-func (c *Connector) deleteResource(id int) {
-	c.state.Lock()
-	delete(c.state.resources, id)
-	c.state.Unlock()
-}
-
-// getResource returns the resource with identifier id.
-// The boolean return value reports whether the resource exists.
-func (c *Connector) getResource(id int) (*Resource, bool) {
-	c.state.Lock()
-	r, ok := c.state.resources[id]
-	c.state.Unlock()
-	return r, ok
-}
-
-// getByCode returns the resource with the given code.
-// The boolean return value reports whether the resource exists.
-func (c *Connector) getResourceByCode(code string) (*Resource, bool) {
-	var r *Resource
-	c.state.Lock()
-	for _, resource := range c.state.resources {
-		if resource.code == code {
-			r = resource
-			break
-		}
-	}
-	c.state.Unlock()
-	return r, r != nil
-}
-
-// addResource adds a resource with the given id, code and OAuth data and
-// returns it. If a resource with the same id already exists, add replaces it.
-func (c *Connector) addResource(r *Resource) {
-	c.state.Lock()
-	c.state.resources[r.id] = r
-	c.state.Unlock()
 }
 
 // Resource represents a resource.
@@ -244,14 +179,14 @@ func (typ ConnectorType) Value() (driver.Value, error) {
 // resource does not exist it does nothing.
 func (this *Connectors) refreshOAuthToken(id, resource int) (*Resource, error) {
 
-	connector, err := this.get(id)
+	connector, err := this.state.Get(id)
 	if err != nil {
 		return nil, errors.NotFound("connector %d does not exist", id)
 	}
 	if connector.oAuth == nil {
 		return nil, errors.BadRequest("connector %d does not support OAuth", id)
 	}
-	r, ok := connector.getResource(resource)
+	r, ok := connector.resources.Get(resource)
 	if !ok {
 		return nil, nil
 	}
@@ -320,7 +255,7 @@ func (this *Connectors) refreshOAuthToken(id, resource int) (*Resource, error) {
 		return nil, err
 	}
 
-	connector.addResource(&Resource{
+	connector.resources.add(&Resource{
 		id:                id,
 		code:              r.code,
 		oAuthAccessToken:  response.AccessToken,
@@ -337,7 +272,7 @@ func (this *Connectors) Get(id int) (*ConnectorInfo, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("connector identifier %d is not valid", id)
 	}
-	c, err := this.get(id)
+	c, err := this.state.Get(id)
 	if err != nil {
 		return nil, errors.NotFound("connector %d does not exist", id)
 	}
@@ -370,7 +305,7 @@ func (this *Connectors) list() []*Connector {
 
 // List returns a list of ConnectorInfo describing all connectors.
 func (this *Connectors) List() []*ConnectorInfo {
-	connectors := this.list()
+	connectors := this.state.List()
 	var infos = make([]*ConnectorInfo, len(connectors))
 	for i, c := range connectors {
 		info := ConnectorInfo{

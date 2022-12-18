@@ -205,10 +205,10 @@ func (s *stateKeeper) addConnection(n postgres.Notification) {
 		return
 	}
 	workspace, _ := s.workspaces[e.Workspace]
-	connector, _ := s.Connectors.get(e.Connector)
+	connector, _ := s.Connectors.state.Get(e.Connector)
 	var resource *Resource
 	if connector.oAuth != nil {
-		r, ok := connector.getResource(e.Resource.ID)
+		r, ok := connector.resources.Get(e.Resource.ID)
 		if ok {
 			if e.Resource.OAuthAccessToken != "" {
 				// Update the current resource.
@@ -217,7 +217,7 @@ func (s *stateKeeper) addConnection(n postgres.Notification) {
 				resource.oAuthAccessToken = e.Resource.OAuthAccessToken
 				resource.oAuthRefreshToken = e.Resource.OAuthRefreshToken
 				resource.oAuthRefreshToken = e.Resource.OAuthRefreshToken
-				connector.addResource(resource)
+				connector.resources.add(resource)
 			}
 		} else {
 			// Add a new resource.
@@ -228,7 +228,7 @@ func (s *stateKeeper) addConnection(n postgres.Notification) {
 				oAuthRefreshToken: e.Resource.OAuthRefreshToken,
 				oAuthExpiresIn:    e.Resource.OAuthExpiresIn,
 			}
-			connector.addResource(resource)
+			connector.resources.add(resource)
 		}
 	}
 	c := &Connection{
@@ -243,9 +243,10 @@ func (s *stateKeeper) addConnection(n postgres.Notification) {
 		resource:    resource,
 		websiteHost: e.WebsiteHost,
 	}
-	workspace.Connections.state.Lock()
-	workspace.Connections.state.ids[c.id] = c
-	workspace.Connections.state.Unlock()
+	state := workspace.Connections.state
+	state.Lock()
+	state.ids[c.id] = c
+	state.Unlock()
 	s.connections[e.ID] = c
 	if connector.typ == AppType {
 		// TODO(marco) only one server should reload the schema.
@@ -343,7 +344,7 @@ func (s *stateKeeper) deleteConnection(n postgres.Notification) {
 	}
 
 	ws := s.connections[e.ID].workspace
-	ws.Transformations.set(e.ID, nil)
+	ws.Transformations.state.set(e.ID, nil)
 
 	var usages []*Connection
 	connections := s.connections[e.ID].workspace.Connections
@@ -497,7 +498,7 @@ func (s stateKeeper) setConnectionTransformations(n postgres.Notification) {
 		return
 	}
 	ws := s.connections[e.Connection].workspace
-	ws.Transformations.set(e.Connection, e.Transformations)
+	ws.Transformations.state.set(e.Connection, e.Transformations)
 }
 
 // setUserQueryNotification is the notification event sent when a user query of

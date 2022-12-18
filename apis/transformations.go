@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"sync"
 
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
@@ -21,22 +20,15 @@ import (
 
 type Transformations struct {
 	*Workspace
-	state transformationsState
+	state *transformationsState
 }
 
 // newTransformations returns a new Transformations for the given workspace.
-func newTransformations(ws *Workspace) *Transformations {
+func newTransformations(ws *Workspace, state *transformationsState) *Transformations {
 	return &Transformations{
 		Workspace: ws,
-		state: transformationsState{
-			ofConnection: map[int][]*Transformation{},
-		},
+		state:     state,
 	}
-}
-
-type transformationsState struct {
-	sync.Mutex
-	ofConnection map[int][]*Transformation
 }
 
 // Transformation represents a transformation from a kind of properties to
@@ -92,19 +84,6 @@ func (schema *TransformationSchema) Scan(src any) error {
 
 func (schema TransformationSchema) Value() (driver.Value, error) {
 	return json.Marshal([]types.Property(schema))
-}
-
-// sets sets the transformations for the given connection.
-// If transformations is nil, then every transformation associated to connection
-// is removed.
-func (this *Transformations) set(connection int, transformations []*Transformation) {
-	this.state.Lock()
-	if transformations == nil {
-		delete(this.state.ofConnection, connection)
-	} else {
-		this.state.ofConnection[connection] = transformations
-	}
-	this.state.Unlock()
 }
 
 // Set sets the transformations for the given connection.
@@ -172,27 +151,16 @@ func (this *Transformations) Set(connection int, transformations []*Transformati
 }
 
 // List lists the transformations for the given connection.
-//
-// If there are no transformations associated to the given connection, this
-// method returns nil.
-func (this *Transformations) list(connection int) []*Transformation {
-	this.state.Lock()
-	ts := this.state.ofConnection[connection]
-	this.state.Unlock()
-	return ts
-}
-
-// List lists the transformations for the given connection.
 // If the connection does not exist, it returns an errors.NotFoundError error.
 func (this *Transformations) List(connection int) ([]*Transformation, error) {
 	if connection < 1 || connection > maxInt32 {
 		return nil, errors.BadRequest("connection identifier %d is not valid", connection)
 	}
-	_, err := this.Workspace.Connections.get(connection)
+	_, err := this.Workspace.Connections.state.Get(connection)
 	if err != nil {
 		return nil, errors.NotFound("connection %d does not exist", connection)
 	}
-	ts := this.list(connection)
+	ts := this.state.List(connection)
 	if ts == nil {
 		// No transformations associated to this connection.
 		return []*Transformation{}, nil

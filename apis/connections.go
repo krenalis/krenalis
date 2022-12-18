@@ -22,7 +22,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -51,31 +50,12 @@ var (
 
 type Connections struct {
 	*Workspace
-	state connectionsState
-}
-
-type connectionsState struct {
-	sync.Mutex
-	ids map[int]*Connection
-}
-
-var errConnectionNotFound = errors.New("connection does not exist")
-
-// get returns the connection with identifier id.
-// Returns the errConnectionNotFound error if the connection does not exist.
-func (this *Connections) get(id int) (*Connection, error) {
-	this.state.Lock()
-	c, ok := this.state.ids[id]
-	this.state.Unlock()
-	if ok {
-		return c, nil
-	}
-	return nil, errConnectionNotFound
+	state *connectionsState
 }
 
 // newConnections returns a new *Connections value.
-func newConnections(ws *Workspace) *Connections {
-	return &Connections{Workspace: ws, state: connectionsState{ids: map[int]*Connection{}}}
+func newConnections(ws *Workspace, state *connectionsState) *Connections {
+	return &Connections{Workspace: ws, state: state}
 }
 
 // Connection represents a connection.
@@ -245,7 +225,7 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 		Role:      role,
 		Connector: connector,
 	}
-	c, err := this.account.apis.Connectors.get(connector)
+	c, err := this.account.apis.Connectors.state.Get(connector)
 	if err != nil {
 		return 0, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
 	}
@@ -256,7 +236,7 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 			return 0, errors.BadRequest("connector %d cannot have a storage, it's a %s",
 				c.id, strings.ToLower(c.typ.String()))
 		}
-		s, err := this.get(opts.Storage)
+		s, err := this.state.Get(opts.Storage)
 		if err != nil {
 			return 0, errors.Unprocessable(StorageNotExist, "storage %d does not exist", opts.Storage)
 		}
@@ -278,7 +258,7 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 			return 0, errors.BadRequest("connector %d cannot have a stream, it's a %s",
 				c.id, strings.ToLower(c.typ.String()))
 		}
-		s, err := this.get(opts.Stream)
+		s, err := this.state.Get(opts.Stream)
 		if err != nil {
 			return 0, errors.Unprocessable(StreamNotExist, "stream %d does not exist", opts.Stream)
 		}
@@ -333,7 +313,7 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 			return 0, err
 		}
 		n.Resource.Code = code
-		resource, _ := c.getResourceByCode(code)
+		resource, _ := c.resources.GetByCode(code)
 		if resource != nil {
 			n.Resource.ID = resource.id
 		}
@@ -422,7 +402,7 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("connection identifier %d is not valid", id)
 	}
-	c, err := this.get(id)
+	c, err := this.state.Get(id)
 	if err != nil {
 		return nil, errors.NotFound("connection %d does not exist", id)
 	}
@@ -450,7 +430,7 @@ func (this *Connections) Delete(id int) error {
 	if id < 1 || id > maxInt32 {
 		return errors.BadRequest("connection identifier %d is not valid", id)
 	}
-	c, err := this.get(id)
+	c, err := this.state.Get(id)
 	if err != nil {
 		return nil
 	}
@@ -493,7 +473,7 @@ func (this *Connections) Export(id int) (err error) {
 
 	// Check that the connection exists, has an allowed type and is a
 	// destination.
-	c, err := this.get(id)
+	c, err := this.state.Get(id)
 	if err != nil {
 		return errors.NotFound("connection %d does not exist", id)
 	}
@@ -565,7 +545,7 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 	}
 
 	// Check that the connection exists, has an allowed type and is a source.
-	c, err := this.get(id)
+	c, err := this.state.Get(id)
 	if err != nil {
 		return errors.NotFound("connection %d does not exist", id)
 	}
@@ -1021,7 +1001,7 @@ func (this *Connections) Imports(id int) ([]*ImportInfo, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("connection identifier %d is not valid", id)
 	}
-	c, err := this.get(id)
+	c, err := this.state.Get(id)
 	if err != nil {
 		return nil, errors.NotFound("connection %d does not exist", id)
 	}
@@ -1055,7 +1035,7 @@ func (this *Connections) Imports(id int) ([]*ImportInfo, error) {
 		return nil, err
 	}
 	if len(imports) == 0 {
-		_, err := this.get(id)
+		_, err := this.state.Get(id)
 		if err != nil {
 			return nil, errors.NotFound("connection %d does not exist", id)
 		}
@@ -1078,7 +1058,7 @@ func (this *Connections) list() []*Connection {
 
 // List returns a list of ConnectionInfo describing all connections.
 func (this *Connections) List() []*ConnectionInfo {
-	connections := this.list()
+	connections := this.state.List()
 	infos := make([]*ConnectionInfo, len(connections))
 	for i, c := range connections {
 		info := ConnectionInfo{
@@ -1114,7 +1094,7 @@ func (this *Connections) Schema(id int) (types.Schema, error) {
 	if id < 1 || id > maxInt32 {
 		return types.Schema{}, errors.BadRequest("connection identifier %d is not valid", id)
 	}
-	c, err := this.get(id)
+	c, err := this.state.Get(id)
 	if err != nil {
 		return types.Schema{}, errors.NotFound("connection %d does not exist", id)
 	}
@@ -1159,7 +1139,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 		return nil, nil, errors.BadRequest("limit %d is not valid", limit)
 	}
 
-	c, err := this.get(id)
+	c, err := this.state.Get(id)
 	if err != nil {
 		return nil, nil, errors.NotFound("connector %d does not exist", id)
 	}
@@ -1241,7 +1221,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		return nil, errors.BadRequest("connection identifier %d is not valid", id)
 	}
 
-	c, err := this.get(id)
+	c, err := this.state.Get(id)
 	if err != nil {
 		return nil, errors.NotFound("connection %d does not exist", id)
 	}
@@ -1364,7 +1344,7 @@ func (this *Connections) SetStorage(file, storage int) error {
 		return errors.BadRequest("storage identifier %d is not valid", storage)
 	}
 
-	f, err := this.get(file)
+	f, err := this.state.Get(file)
 	if err != nil {
 		return errors.NotFound("file %d does not exist", file)
 	}
@@ -1373,7 +1353,7 @@ func (this *Connections) SetStorage(file, storage int) error {
 	}
 	var s *Connection
 	if storage > 0 {
-		s, err = this.get(storage)
+		s, err = this.state.Get(storage)
 		if err != nil {
 			return errors.Unprocessable(StorageNotExist, "storage %d does not exist", storage)
 		}
@@ -1433,7 +1413,7 @@ func (this *Connections) SetStream(source, stream int) error {
 		return errors.BadRequest("stream identifier %d is not valid", stream)
 	}
 
-	c, err := this.get(source)
+	c, err := this.state.Get(source)
 	if err != nil {
 		return errors.NotFound("source %d does not exist", source)
 	}
@@ -1444,7 +1424,7 @@ func (this *Connections) SetStream(source, stream int) error {
 	}
 	var s *Connection
 	if stream > 0 {
-		s, err = this.get(stream)
+		s, err = this.state.Get(stream)
 		if err != nil {
 			return errors.Unprocessable(StreamNotExist, "stream %d does not exist", stream)
 		}
@@ -1507,7 +1487,7 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 		return errors.BadRequest("query does not contain the ':limit' placeholder")
 	}
 
-	c, err := this.get(id)
+	c, err := this.state.Get(id)
 	if err != nil {
 		return errors.NotFound("connection %d does not exist", id)
 	}
@@ -1555,7 +1535,7 @@ func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("connection identifier %d is not valid", id)
 	}
-	_, err := this.get(id)
+	_, err := this.state.Get(id)
 	if err != nil {
 		return nil, errors.NotFound("connection %d does not exist", id)
 	}
@@ -1611,7 +1591,7 @@ func (this *Connections) reloadSchema(id int) error {
 		return errors.New("invalid connection identifier")
 	}
 
-	c, err := this.get(id)
+	c, err := this.state.Get(id)
 	if err != nil {
 		return err
 	}
@@ -1794,7 +1774,7 @@ func (this *Connections) reloadSchema(id int) error {
 // If the connection does not exist it returns a ConnectionNotFoundError error.
 func (this *Connections) userSchema(id int) (types.Schema, []_connector.PropertyPath, error) {
 
-	c, err := this.get(id)
+	c, err := this.state.Get(id)
 	if err != nil {
 		return types.Schema{}, nil, errors.New("connection does not exist")
 	}

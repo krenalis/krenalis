@@ -10,7 +10,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"strings"
-	"sync"
 	"unicode/utf8"
 
 	"chichi/apis/errors"
@@ -22,17 +21,12 @@ var AlreadyExist errors.Code = "AlreadyExist"
 
 type EventDataTypes struct {
 	*Workspace
-	state eventDataTypesState
+	state *eventDataTypesState
 }
 
 // newEventDataTypes returns a new *EventDataTypes value.
-func newEventDataTypes(ws *Workspace) *EventDataTypes {
-	return &EventDataTypes{Workspace: ws, state: eventDataTypesState{names: map[string]*EventDataType{}}}
-}
-
-type eventDataTypesState struct {
-	sync.Mutex
-	names map[string]*EventDataType
+func newEventDataTypes(ws *Workspace, state *eventDataTypesState) *EventDataTypes {
+	return &EventDataTypes{Workspace: ws, state: state}
 }
 
 // A EventDataType represents a defined event type.
@@ -136,21 +130,6 @@ func (this *EventDataTypes) Delete(name string) error {
 	return err
 }
 
-var errEventDataTypeNotFound = errors.New("event data type does not exist")
-
-// get returns the data type with the given name.
-//
-// It returns the errEventDataTypeNotFound error if the type does not exist.
-func (this *EventDataTypes) get(name string) (*EventDataType, error) {
-	this.state.Lock()
-	t, ok := this.state.names[name]
-	this.state.Unlock()
-	if !ok {
-		return nil, errEventDataTypeNotFound
-	}
-	return t, nil
-}
-
 // Get returns an EventDataTypeInfo describing the data type with the given
 // name.
 //
@@ -162,7 +141,7 @@ func (this *EventDataTypes) Get(name string) (*EventDataTypeInfo, error) {
 	if utf8.RuneCountInString(name) > 120 {
 		return nil, errors.BadRequest("name %s is longer than 120 runes", name)
 	}
-	t, err := this.get(name)
+	t, err := this.state.Get(name)
 	if err != nil {
 		return nil, errors.NotFound("data type %s does not exist", name)
 	}
@@ -175,23 +154,10 @@ func (this *EventDataTypes) Get(name string) (*EventDataTypeInfo, error) {
 	return &info, nil
 }
 
-// list returns all the data types.
-func (this *EventDataTypes) list() []*EventDataType {
-	this.state.Lock()
-	dataTypes := make([]*EventDataType, len(this.state.names))
-	i := 0
-	for _, t := range this.state.names {
-		dataTypes[i] = t
-		i++
-	}
-	this.state.Unlock()
-	return dataTypes
-}
-
 // List returns a list of EventDataTypeInfo describing all data types.
 // Unlike Info, Schema and SchemaSource are not meaningful.
 func (this *EventDataTypes) List() ([]*EventDataTypeInfo, error) {
-	dataTypes := this.list()
+	dataTypes := this.state.List()
 	infos := make([]*EventDataTypeInfo, len(dataTypes))
 	for i, t := range dataTypes {
 		infos[i] = &EventDataTypeInfo{

@@ -200,7 +200,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 			}
 		}
 	}
-	conn, err := apis.Connectors.get(connector)
+	conn, err := apis.Connectors.state.Get(connector)
 	if err != nil {
 		return errNotFound
 	}

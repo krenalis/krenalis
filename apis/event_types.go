@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"math"
 	"strings"
-	"sync"
 	"unicode/utf8"
 
 	"chichi/apis/errors"
@@ -24,17 +23,12 @@ var TooManyTypes errors.Code = "TooManyTypes"
 
 type EventTypes struct {
 	*Workspace
-	state eventTypesState
+	state *eventTypesState
 }
 
 // newEventTypes returns a new *EventTypes value.
-func newEventTypes(ws *Workspace) *EventTypes {
-	return &EventTypes{Workspace: ws, state: eventTypesState{ids: map[int]*EventType{}}}
-}
-
-type eventTypesState struct {
-	sync.Mutex
-	ids map[int]*EventType
+func newEventTypes(ws *Workspace, state *eventTypesState) *EventTypes {
+	return &EventTypes{Workspace: ws, state: state}
 }
 
 // An EventType represents an event type.
@@ -165,21 +159,6 @@ func (this *EventTypes) DeleteType(id int) error {
 	return err
 }
 
-var errEventTypeNotFound = errors.New("event type does not exist")
-
-// get returns the type with identifier id.
-//
-// It returns the errEventTypeNotFound error if the type does not exist.
-func (this *EventTypes) get(id int) (*EventType, error) {
-	this.state.Lock()
-	t, ok := this.state.ids[id]
-	this.state.Unlock()
-	if !ok {
-		return nil, errEventTypeNotFound
-	}
-	return t, nil
-}
-
 // Get returns an EventTypeInfo describing the type with identifier id.
 //
 // If the type does not exist, it returns an errors.NotFoundError error.
@@ -187,7 +166,7 @@ func (this *EventTypes) Get(id int) (*EventTypeInfo, error) {
 	if id < 1 || id > types.MaxUInt8 {
 		return nil, errors.BadRequest("event type identifier %d is not valid", id)
 	}
-	t, err := this.get(id)
+	t, err := this.state.Get(id)
 	if err != nil {
 		return nil, errors.NotFound("event type %d does not exist", id)
 	}
@@ -202,22 +181,10 @@ func (this *EventTypes) Get(id int) (*EventTypeInfo, error) {
 	return &info, nil
 }
 
-// list returns all event types.
-func (this *EventTypes) list() []*EventType {
-	this.state.Lock()
-	eventTypes := make([]*EventType, len(this.state.ids))
-	i := 0
-	for _, t := range this.state.ids {
-		eventTypes[i] = t
-	}
-	this.state.Unlock()
-	return eventTypes
-}
-
 // List returns a list of EventTypeInfo describing all event types.
 // Unlike Get, Schema and SchemaSource are not meaningful.
 func (this *EventTypes) List() []*EventTypeInfo {
-	eventTypes := this.list()
+	eventTypes := this.state.List()
 	infos := make([]*EventTypeInfo, len(eventTypes))
 	for i, t := range eventTypes {
 		infos[i] = &EventTypeInfo{

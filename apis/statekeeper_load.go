@@ -26,7 +26,7 @@ func (s *stateKeeper) loadState() error {
 		" oauth_client_secret, oauth_token_endpoint, oauth_default_token_type, oauth_default_expires_in,"+
 		" oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
 		for rows.Next() {
-			c := Connector{state: connectorState{resources: map[int]*Resource{}}}
+			c := Connector{resources: &resourcesState{resources: map[int]*Resource{}}}
 			oauth := ConnectorOAuth{}
 			if err := rows.Scan(&c.id, &c.name, &c.typ, &c.logoURL, &c.webhooksPer, &oauth.URL, &oauth.ClientID, &oauth.ClientSecret,
 				&oauth.TokenEndpoint, &oauth.DefaultTokenType, &oauth.DefaultExpiresIn, &oauth.ForcedExpiresIn); err != nil {
@@ -42,7 +42,7 @@ func (s *stateKeeper) loadState() error {
 	if err != nil {
 		return err
 	}
-	s.Connectors = newConnectors(s.APIs, connectors)
+	s.Connectors = newConnectors(s.APIs, &connectorsState{ids: connectors})
 
 	// Read all resources.
 	resources := map[int]*Resource{}
@@ -55,7 +55,7 @@ func (s *stateKeeper) loadState() error {
 				return err
 			}
 			connector := connectors[connectorID]
-			connector.state.resources[r.id] = &r
+			connector.resources.resources[r.id] = &r
 			resources[r.id] = &r
 		}
 		return nil
@@ -82,7 +82,7 @@ func (s *stateKeeper) loadState() error {
 				email:       email,
 				internalIPs: strings.Fields(ips),
 			}
-			account.Workspaces = newWorkspaces(account)
+			account.Workspaces = newWorkspaces(account, &workspacesState{ids: map[int]*Workspace{}})
 			accounts[id] = account
 		}
 		return nil
@@ -90,7 +90,7 @@ func (s *stateKeeper) loadState() error {
 	if err != nil {
 		return err
 	}
-	s.Accounts = newAccounts(s.APIs, accounts)
+	s.Accounts = newAccounts(s.APIs, &accountsState{ids: accounts})
 
 	// Read all workspaces.
 	workspaces := map[int]*Workspace{}
@@ -130,11 +130,11 @@ func (s *stateKeeper) loadState() error {
 				workspace.schemaSources.user = userSchema
 				workspace.schemaSources.group = groupSchema
 				workspace.schemaSources.event = eventSchema
-				workspace.Connections = newConnections(workspace)
-				workspace.EventTypes = newEventTypes(workspace)
-				workspace.EventDataTypes = newEventDataTypes(workspace)
+				workspace.Connections = newConnections(workspace, &connectionsState{ids: map[int]*Connection{}})
+				workspace.EventTypes = newEventTypes(workspace, &eventTypesState{ids: map[int]*EventType{}})
+				workspace.EventDataTypes = newEventDataTypes(workspace, &eventDataTypesState{names: map[string]*EventDataType{}})
 				workspace.EventListeners = &EventListeners{workspace}
-				workspace.Transformations = newTransformations(workspace)
+				workspace.Transformations = newTransformations(workspace, &transformationsState{ofConnection: map[int][]*Transformation{}})
 				account.Workspaces.state.ids[id] = workspace
 				workspaces[id] = workspace
 			}

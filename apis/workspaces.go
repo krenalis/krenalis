@@ -14,7 +14,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -30,31 +29,12 @@ var PropertyNotExist errors.Code = "PropertyNotExist"
 
 type Workspaces struct {
 	*Account
-	state workspacesState
-}
-
-type workspacesState struct {
-	sync.Mutex
-	ids map[int]*Workspace
-}
-
-var errWorkspaceNotFound = errors.New("workspace does not exist")
-
-// get returns the workspace with identifier id.
-// Returns the errWorkspaceNotFound error if the workspace does not exist.
-func (this *Workspaces) get(id int) (*Workspace, error) {
-	this.state.Lock()
-	w, ok := this.state.ids[id]
-	this.state.Unlock()
-	if ok {
-		return w, nil
-	}
-	return nil, errWorkspaceNotFound
+	state *workspacesState
 }
 
 // newWorkspaces returns a new *Workspaces value.
-func newWorkspaces(account *Account) *Workspaces {
-	return &Workspaces{Account: account, state: workspacesState{ids: map[int]*Workspace{}}}
+func newWorkspaces(account *Account, state *workspacesState) *Workspaces {
+	return &Workspaces{Account: account, state: state}
 }
 
 // Workspace represents a workspace.
@@ -103,7 +83,7 @@ func (this *Workspaces) Get(id int) (*WorkspaceInfo, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("workspace identifier %d is not valid", id)
 	}
-	ws, err := this.get(id)
+	ws, err := this.state.Get(id)
 	if err != nil {
 		return nil, errors.NotFound("workspace %d does not exist", id)
 	}
@@ -120,7 +100,7 @@ func (this *Workspaces) Get(id int) (*WorkspaceInfo, error) {
 // As returns the workspace with identifier id.
 // Returns an error if the workspace does not exist.
 func (this *Workspaces) As(id int) (*Workspace, error) {
-	return this.get(id)
+	return this.state.Get(id)
 }
 
 // Info returns a WorkspaceInfo describing the workspace.
@@ -306,22 +286,9 @@ func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema,
 	return schema, users, err
 }
 
-// list returns all the workspaces.
-func (this *Workspaces) list() []*Workspace {
-	this.state.Lock()
-	workspaces := make([]*Workspace, len(this.state.ids))
-	i := 0
-	for _, c := range this.state.ids {
-		workspaces[i] = c
-		i++
-	}
-	this.state.Unlock()
-	return workspaces
-}
-
 // List returns a list of WorkspaceInfo describing all workspaces.
 func (this *Workspaces) List() []*WorkspaceInfo {
-	workspaces := this.list()
+	workspaces := this.state.List()
 	infos := make([]*WorkspaceInfo, len(workspaces))
 	for i, c := range workspaces {
 		info := WorkspaceInfo{
