@@ -56,7 +56,6 @@ type Workspace struct {
 	schemaSources struct {
 		user  string
 		group string
-		event string
 	}
 	resources *resourcesState
 }
@@ -69,12 +68,10 @@ type WorkspaceInfo struct {
 	Schema struct {
 		User  types.Schema
 		Group types.Schema
-		Event types.Schema
 	}
 	SchemaSources struct {
 		User  string
 		Group string
-		Event string
 	}
 }
 
@@ -91,10 +88,8 @@ func (this *Workspaces) Get(id int) (*WorkspaceInfo, error) {
 	info := WorkspaceInfo{ID: ws.id}
 	info.Schema.User = ws.schema.user
 	info.Schema.Group = ws.schema.group
-	info.Schema.Event = ws.schema.event
 	info.SchemaSources.User = ws.schemaSources.user
 	info.SchemaSources.Group = ws.schemaSources.group
-	info.SchemaSources.Event = ws.schemaSources.event
 	return &info, nil
 }
 
@@ -113,10 +108,8 @@ func (ws *Workspace) Info() *WorkspaceInfo {
 	info := WorkspaceInfo{ID: ws.id}
 	info.Schema.User = ws.schema.user
 	info.Schema.Group = ws.schema.group
-	info.Schema.Event = ws.schema.event
 	info.SchemaSources.User = ws.schemaSources.user
 	info.SchemaSources.Group = ws.schemaSources.group
-	info.SchemaSources.Event = ws.schemaSources.event
 	return &info
 }
 

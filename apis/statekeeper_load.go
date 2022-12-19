@@ -74,12 +74,12 @@ func (s *stateKeeper) loadState() error {
 
 	// Read all workspaces.
 	workspaces := map[int]*Workspace{}
-	err = s.db.QueryScan("SELECT id, account, user_schema, group_schema, event_schema FROM workspaces",
+	err = s.db.QueryScan("SELECT id, account, user_schema, group_schema FROM workspaces",
 		func(rows *postgres.Rows) error {
 			var id, accountID int
-			var userSchema, groupSchema, eventSchema string
+			var userSchema, groupSchema string
 			for rows.Next() {
-				if err := rows.Scan(&id, &accountID, &userSchema, &groupSchema, &eventSchema); err != nil {
+				if err := rows.Scan(&id, &accountID, &userSchema, &groupSchema); err != nil {
 					return err
 				}
 				account := accounts[accountID]
@@ -102,15 +102,8 @@ func (s *stateKeeper) loadState() error {
 						return err
 					}
 				}
-				if eventSchema != "" {
-					workspace.schema.event, err = types.ParseSchema(strings.NewReader(eventSchema), nil)
-					if err != nil {
-						return err
-					}
-				}
 				workspace.schemaSources.user = userSchema
 				workspace.schemaSources.group = groupSchema
-				workspace.schemaSources.event = eventSchema
 				workspace.Connections = newConnections(workspace, &connectionsState{ids: map[int]*Connection{}})
 				workspace.EventTypes = newEventTypes(workspace, &eventTypesState{ids: map[int]*EventType{}})
 				workspace.EventDataTypes = newEventDataTypes(workspace, &eventDataTypesState{names: map[string]*EventDataType{}})

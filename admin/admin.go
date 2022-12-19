@@ -149,14 +149,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Handle the "/event-schema-properties" endpoint.
-	if strings.HasPrefix(rpath, "/event-schema-properties") {
-		info := workspace.Info()
-		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(info.Schema.Event.PropertiesNames())
-		return
-	}
-
 	// Handle the "/import-raw-user-data-from-connector" endpoint.
 	if strings.HasPrefix(rpath, "/import-raw-user-data-from-connector") {
 		var req struct {
