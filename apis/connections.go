@@ -1122,19 +1122,6 @@ func (this *Connections) Imports(id int) ([]*ImportInfo, error) {
 	return imports, nil
 }
 
-// list returns all the connections.
-func (this *Connections) list() []*Connection {
-	this.state.Lock()
-	connections := make([]*Connection, len(this.state.ids))
-	i := 0
-	for _, c := range this.state.ids {
-		connections[i] = c
-		i++
-	}
-	this.state.Unlock()
-	return connections
-}
-
 // List returns a list of ConnectionInfo describing all connections.
 func (this *Connections) List() []*ConnectionInfo {
 	connections := this.state.List()
