@@ -207,7 +207,6 @@ type addConnectionNotification struct {
 	Connector int            // connector identifier
 	Storage   int            // storage identifier, can be zero
 	Stream    int            // stream identifier, can be zero
-	ServerKey string         // server key to add (currently not used)
 	Resource  struct {       // resource.
 		ID           int       // identifier, can be zero
 		Code         string    // code, can be empty.
@@ -215,7 +214,8 @@ type addConnectionNotification struct {
 		RefreshToken string    // refresh token, can be empty.
 		ExpiresIn    time.Time // expiration time, can be the zero time.
 	}
-	WebsiteHost string
+	WebsiteHost string // website host in form host:port
+	Key         []byte // server key to add
 }
 
 // addConnection adds a new connection.
@@ -265,6 +265,9 @@ func (s *stateKeeper) addConnection(n postgres.Notification) {
 		stream:      s.connections[e.Stream],
 		resource:    r,
 		websiteHost: e.WebsiteHost,
+	}
+	if e.Key != nil {
+		c.keys = []string{string(e.Key)}
 	}
 	state := workspace.Connections.state
 	state.Lock()

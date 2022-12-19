@@ -336,7 +336,7 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 
 	// Generate a server key.
 	if c.typ == ServerType {
-		n.ServerKey, err = generateServerKey()
+		n.Key, err = generateServerKey()
 		if err != nil {
 			return 0, err
 		}
@@ -389,10 +389,10 @@ func (this *Connections) Add(role ConnectionRole, connector int, name string, op
 			}
 			return err
 		}
-		if n.ServerKey != "" {
+		if n.Key != nil {
 			// Insert the server key.
-			_, err = tx.Exec("INSERT INTO connections_keys (connection, position, \"key\") VALUE ($1, 0, $2)",
-				n.ID, n.ServerKey)
+			_, err = tx.Exec("INSERT INTO connections_keys (connection, value, creation_time) VALUES ($1, $2, $3)",
+				n.ID, n.Key, time.Now().UTC())
 			if err != nil {
 				return err
 			}
@@ -1851,13 +1851,13 @@ func generateConnectionID() (int, error) {
 }
 
 // generateServerKey generates a server key.
-func generateServerKey() (string, error) {
+func generateServerKey() ([]byte, error) {
 	key := make([]byte, 24)
 	_, err := rand.Read(key)
 	if err != nil {
-		return "", errors.New("cannot generate a server key")
+		return nil, errors.New("cannot generate a server key")
 	}
-	return base62.EncodeToString(key)[0:32], nil
+	return base62.Decode(base62.Encode(key)[0:32])
 }
 
 // marshalUIFormAlert marshals form with given role and alert in JSON format.

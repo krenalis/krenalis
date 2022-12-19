@@ -204,15 +204,15 @@ func (s *stateKeeper) loadState() error {
 	}
 
 	// Read all keys.
-	err = s.db.QueryScan(`SELECT connection, "key" FROM connections_keys ORDER BY connection`, func(rows *postgres.Rows) error {
+	err = s.db.QueryScan(`SELECT connection, value FROM connections_keys ORDER BY connection`, func(rows *postgres.Rows) error {
 		for rows.Next() {
 			var connectionID int
-			var key string
-			if err := rows.Scan(&connectionID, &key); err != nil {
+			var value string
+			if err := rows.Scan(&connectionID, &value); err != nil {
 				return err
 			}
 			connection := connections[connectionID]
-			connection.keys = append(connection.keys, key)
+			connection.keys = append(connection.keys, value)
 		}
 		return nil
 	})
@@ -272,7 +272,7 @@ func (s *stateKeeper) loadState() error {
 	// send the events into the stream with their keys.
 	var streams []*eventCollectorStream
 	err = s.db.QueryScan(
-		"SELECT s.id, co.name AS connector, s.settings, ci.id AS event_collector_producer, ci.type, k.key\n"+
+		"SELECT s.id, co.name AS connector, s.settings, ci.id AS event_collector_producer, ci.type, k.value\n"+
 			"FROM connections AS s\n"+
 			"INNER JOIN connectors AS co ON co.id = s.connector\n"+
 			"INNER JOIN connections AS ci ON ci.stream = s.id\n"+

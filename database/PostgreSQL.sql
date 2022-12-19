@@ -142,9 +142,9 @@ CREATE TABLE connections_exports (
 
 CREATE TABLE connections_keys (
     connection INT NOT NULL REFERENCES connections ON DELETE CASCADE,
-    position smallint NOT NULL,
-    "key" char(32) NOT NULL,
-    PRIMARY KEY (connection, position)
+    value BYTEA NOT NULL,
+    creation_time timestamp NOT NULL,
+    PRIMARY KEY (connection, value)
 );
 
 CREATE INDEX ON connections_keys ("key");
