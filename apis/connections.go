@@ -36,6 +36,8 @@ import (
 	"github.com/open2b/nuts/sql"
 )
 
+const maxKeysPerServer = 20 // maximum number of keys per server.
+
 var (
 	ConnectorNotExist    errors.Code = "ConnectorNotExist"
 	EventNotExist        errors.Code = "EventNotExist"
@@ -45,6 +47,8 @@ var (
 	QueryExecutionFailed errors.Code = "QueryExecutionFailed"
 	StorageNotExist      errors.Code = "StorageNotExist"
 	StreamNotExist       errors.Code = "StreamNotExist"
+	TooManyKeys          errors.Code = "TooManyKeys"
+	UniqueKey            errors.Code = "UniqueKey"
 	WorkspaceNotExist    errors.Code = "WorkspaceNotExist"
 )
 
@@ -538,6 +542,65 @@ func (this *Connections) Export(id int) (err error) {
 	return nil
 }
 
+// GenerateKey generates a new key for the source server with identifier id.
+//
+// If the server does not exist, it returns an errors.NotFoundError error. If
+// the server has already too many keys, it returns an
+// errors.UnprocessableError error with code TooManyKeys.
+func (this *Connections) GenerateKey(id int) (string, error) {
+	if id < 1 || id > maxInt32 {
+		return "", errors.BadRequest("connection identifier %d is not valid", id)
+	}
+	c, ok := this.state.Get(id)
+	if !ok {
+		return "", errors.NotFound("connection %d does not exist", id)
+	}
+	if c.connector.typ != ServerType {
+		return "", errors.NotFound("connection %d is not a server", id)
+	}
+	if c.role != SourceRole {
+		return "", errors.NotFound("server %d is not a source", id)
+	}
+	binaryKey, err := generateServerKey()
+	if err != nil {
+		return "", err
+	}
+	n := generateConnectionKeyNotification{
+		Connection:   id,
+		Value:        binaryKey,
+		CreationTime: time.Now().UTC(),
+	}
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
+		var count int
+		err := tx.QueryRow("SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
+		if err != nil {
+			return err
+		}
+		if count == maxKeysPerServer {
+			return errors.Unprocessable(TooManyKeys, "server %d has already %d types", n.Connection, maxKeysPerServer)
+		}
+		_, err = tx.Exec("INSERT INTO connections_keys (connection, value, creation_time) VALUES ($1, $2, $3)",
+			n.Connection, n.Value, n.CreationTime)
+		if err != nil {
+			if postgres.IsForeignKeyViolation(err) {
+				if postgres.ErrConstraintName(err) == "connections_keys_connection_fkey" {
+					err = errors.NotFound("connection %d does not exist", n.Connection)
+				}
+			}
+			return err
+		}
+		return tx.Notify(n)
+	})
+	if err != nil {
+		return "", err
+	}
+
+	// Encode the key in the base62 form.
+	key := encodeServerKey(n.Value)
+
+	return key, nil
+}
+
 // Import starts the import of the users from the connection with the given
 // identifier. The connection must be a source app, database or file. If the
 // connection is an app and reimport is false, it imports the users from the
@@ -963,6 +1026,30 @@ func (this *Connections) startExport(connection *Connection) error {
 
 }
 
+// Keys returns the keys of the source server with identifier id.
+//
+// If the server does not exist, it returns an errors.NotFoundError error.
+func (this *Connections) Keys(id int) ([]string, error) {
+	if id < 1 || id > maxInt32 {
+		return nil, errors.BadRequest("connection identifier %d is not valid", id)
+	}
+	c, ok := this.state.Get(id)
+	if !ok {
+		return nil, errors.NotFound("connection %d does not exist", id)
+	}
+	if c.connector.typ != ServerType {
+		return nil, errors.NotFound("connection %d is not a server", id)
+	}
+	if c.role != SourceRole {
+		return nil, errors.NotFound("server %d is not a source", id)
+	}
+	keys := make([]string, len(c.keys))
+	for i, key := range c.keys {
+		keys[i] = encodeServerKey([]byte(key))
+	}
+	return keys, nil
+}
+
 // readGRUsers reads the Golden Record users with the given IDs.
 func (this *Connections) readGRUsers(ids []int) ([]map[string]any, error) {
 	return nil, nil // TODO(Gianluca): implement.
@@ -1077,6 +1164,60 @@ func (this *Connections) List() []*ConnectionInfo {
 	return infos
 }
 
+// RevokeKey revokes the given key of the source server with identifier id. key
+// cannot be empty and cannot be the unique key of the server.
+//
+// If the key does not exist, it returns an errors.NotFoundError error. If the
+// key is the unique key of the server, it returns an errors.UnprocessableError
+// error with code UniqueKey.
+func (this *Connections) RevokeKey(id int, key string) error {
+	if id < 1 || id > maxInt32 {
+		return errors.BadRequest("connection identifier %d is not valid", id)
+	}
+	if key == "" {
+		return errors.BadRequest("key is empty")
+	}
+	binaryKey, ok := decodeServerKey(key)
+	if !ok {
+		return errors.BadRequest("key %q is malformed", key)
+	}
+	c, ok := this.state.Get(id)
+	if !ok {
+		return errors.NotFound("connection %d does not exist", id)
+	}
+	if c.connector.typ != ServerType {
+		return errors.NotFound("connection %d is not a server", id)
+	}
+	if c.role != SourceRole {
+		return errors.NotFound("server %d is not a source", id)
+	}
+	n := revokeConnectionKeyNotification{
+		Connection: id,
+		Value:      binaryKey,
+	}
+	err := this.db.Transaction(func(tx *postgres.Tx) error {
+		var count int
+		err := tx.QueryRow("SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
+		if err != nil {
+			return err
+		}
+		if count == 1 {
+			return errors.Unprocessable(UniqueKey, "key cannot be revoked because it's the unique key of the server")
+		}
+		result, err := tx.Exec("DELETE FROM connections_keys WHERE connection = $1 AND value = $2", n.Connection, n.Value)
+		if err != nil {
+			return err
+		}
+		affected, err := result.RowsAffected()
+		if affected == 0 {
+			return errors.NotFound("key %q does not exist", n.Value)
+		}
+		return tx.Notify(n)
+	})
+
+	return err
+}
+
 // Schema returns the schema of the connection with identifier id. The
 // connection must be an app, database, or file. If the connection does not
 // have a schema, it returns an invalid schema.
@@ -1139,7 +1280,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 		return nil, nil, errors.BadRequest("connection %d is not a database", id)
 	}
 	if c.role != SourceRole {
-		return nil, nil, errors.BadRequest("connection %d is not a source", id)
+		return nil, nil, errors.BadRequest("database %d is not a source", id)
 	}
 
 	const cRole = _connector.SourceRole
@@ -1484,7 +1625,7 @@ func (this *Connections) SetUsersQuery(id int, query string) error {
 		return errors.BadRequest("connection %d is not a database", id)
 	}
 	if c.role != SourceRole {
-		return errors.BadRequest("connection %d is not a source", id)
+		return errors.BadRequest("database %d is not a source", id)
 	}
 
 	n := setUserQueryNotification{
@@ -1837,6 +1978,25 @@ func newFileReader(storage _connector.StorageConnection) *fileReader {
 // It is the caller's responsibility to close the returned reader.
 func (files *fileReader) Reader(path string) (io.ReadCloser, time.Time, error) {
 	return files.s.Reader(path)
+}
+
+// decodeServerKey decodes a server key encoded as base62 to its binary form.
+// It returns an error if key is malformed.
+func decodeServerKey(key string) ([]byte, bool) {
+	if len(key) != 32 {
+		return nil, false
+	}
+	b, err := base62.DecodeString(key)
+	if err != nil {
+		return nil, false
+	}
+	return b, true
+}
+
+// encodeServerKey encodes a binary server key to its base62 form and returns
+// it.
+func encodeServerKey(key []byte) string {
+	return base62.EncodeToString(key)[0:32]
 }
 
 var bigMaxInt32 = big.NewInt(math.MaxInt32)

@@ -64,6 +64,10 @@ func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgr
 			s.deleteEventType(n)
 		case "endImport":
 			s.endImport(n)
+		case "generateConnectionKey":
+			s.generateConnectionKey(n)
+		case "revokeConnectionKey":
+			s.revokeConnectionKey(n)
 		case "setConnectionSettings":
 			s.setConnectionSettings(n)
 		case "setConnectionStorage":
@@ -454,6 +458,52 @@ func (s *stateKeeper) endImport(n postgres.Notification) {
 			break
 		}
 	}
+}
+
+// generateConnectionKeyNotification is the notification event sent when a
+// connection key is generated.
+type generateConnectionKeyNotification struct {
+	Connection   int
+	Value        []byte
+	CreationTime time.Time
+}
+
+// generateConnectionKey generates a new connection key.
+func (s *stateKeeper) generateConnectionKey(n postgres.Notification) {
+	e := generateConnectionKeyNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	key := string(e.Value)
+	s.replaceConnection(e.Connection, func(c *Connection) {
+		c.keys = append(c.keys, key)
+	})
+}
+
+// revokeConnectionKeyNotification is the notification event sent when a
+// connection key is revoked.
+type revokeConnectionKeyNotification struct {
+	Connection int
+	Value      []byte
+}
+
+// revokeConnectionKey revokes a connection key.
+func (s *stateKeeper) revokeConnectionKey(n postgres.Notification) {
+	e := revokeConnectionKeyNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	c := s.connections[e.Connection]
+	keys := make([]string, 0, len(c.keys)-1)
+	key := string(e.Value)
+	for _, k := range c.keys {
+		if k != key {
+			keys = append(keys, k)
+		}
+	}
+	s.replaceConnection(e.Connection, func(c *Connection) {
+		c.keys = keys
+	})
 }
 
 // setConnectionSettingsNotification is the notification event sent when the

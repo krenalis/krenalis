@@ -204,18 +204,19 @@ func (s *stateKeeper) loadState() error {
 	}
 
 	// Read all keys.
-	err = s.db.QueryScan(`SELECT connection, value FROM connections_keys ORDER BY connection`, func(rows *postgres.Rows) error {
-		for rows.Next() {
-			var connectionID int
-			var value string
-			if err := rows.Scan(&connectionID, &value); err != nil {
-				return err
+	err = s.db.QueryScan(`SELECT connection, value FROM connections_keys ORDER BY connection, creation_time`,
+		func(rows *postgres.Rows) error {
+			for rows.Next() {
+				var connectionID int
+				var value string
+				if err := rows.Scan(&connectionID, &value); err != nil {
+					return err
+				}
+				connection := connections[connectionID]
+				connection.keys = append(connection.keys, value)
 			}
-			connection := connections[connectionID]
-			connection.keys = append(connection.keys, value)
-		}
-		return nil
-	})
+			return nil
+		})
 	if err != nil {
 		return err
 	}
