@@ -7,7 +7,7 @@ import Toast from '../../components/Toast/Toast';
 import { Navigate } from 'react-router-dom';
 import { SlButton, SlDialog, SlIcon, SlTooltip, SlInput } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const Connectors = () => {
+const ConnectorsList = () => {
 	let [connectors, setConnectors] = useState([]);
 	let [storageConnections, setStorageConnections] = useState([]);
 	let [connectorToAdd, setConnectorToAdd] = useState(null);
@@ -196,4 +196,4 @@ const Connectors = () => {
 	);
 };
 
-export default Connectors;
+export default ConnectorsList;

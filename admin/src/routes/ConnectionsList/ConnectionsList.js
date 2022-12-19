@@ -7,7 +7,7 @@ import call from '../../utils/call';
 import { NavLink } from 'react-router-dom';
 import { SlButton, SlIcon, SlDialog, SlSelect, SlMenuItem } from '@shoelace-style/shoelace/dist/react/index.js';
 
-export default class AccountConnections extends React.Component {
+export default class ConnectionsList extends React.Component {
 	constructor(props) {
 		super(props);
 		this.toast = React.createRef();

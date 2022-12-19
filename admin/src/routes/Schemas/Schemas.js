@@ -6,7 +6,7 @@ import call from '../../utils/call';
 import { SlButton, SlIcon, SlSelect, SlMenuItem } from '@shoelace-style/shoelace/dist/react/index.js';
 import { DiffEditor } from '@monaco-editor/react';
 
-export default class AccountSchemas extends React.Component {
+export default class Schemas extends React.Component {
 	constructor(props) {
 		super(props);
 		this.toast = React.createRef();

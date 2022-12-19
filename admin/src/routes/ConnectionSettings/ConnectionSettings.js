@@ -8,7 +8,7 @@ import call from '../../utils/call';
 import { SettingsContext } from '../../context/SettingsContext';
 import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const AccountConnectionSettings = () => {
+const ConnectionSettings = () => {
 	let [connection, setConnection] = useState({});
 	let [fields, setFields] = useState([]);
 	let [actions, setActions] = useState([]);
@@ -143,4 +143,4 @@ const AccountConnectionSettings = () => {
 	);
 };
 
-export default AccountConnectionSettings;
+export default ConnectionSettings;

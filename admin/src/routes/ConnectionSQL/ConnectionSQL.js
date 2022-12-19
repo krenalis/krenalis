@@ -10,7 +10,7 @@ import Editor from '@monaco-editor/react';
 
 const queryMaxSize = 16777215;
 
-export default class AccountConnectionSQL extends React.Component {
+export default class ConnectionSQL extends React.Component {
 	constructor(props) {
 		super(props);
 		this.toast = React.createRef();

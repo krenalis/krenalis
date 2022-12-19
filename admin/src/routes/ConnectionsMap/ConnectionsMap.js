@@ -7,7 +7,7 @@ import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NavLink } from 'react-router-dom';
 import Xarrow from 'react-xarrows';
 
-const AccountConnectionsMap = () => {
+const ConnectionsMap = () => {
 	let [sources, setSources] = useState([]);
 	let [destinations, setDestinations] = useState([]);
 	let [status, setStatus] = useState(null);
@@ -214,4 +214,4 @@ const AccountConnectionsMap = () => {
 	);
 };
 
-export default AccountConnectionsMap;
+export default ConnectionsMap;

@@ -17,7 +17,7 @@ import {
 import Editor from '@monaco-editor/react';
 import Xarrow from 'react-xarrows';
 
-const AccountConnectionProperties = () => {
+const ConnectionProperties = () => {
 	let [connection, setConnection] = useState({});
 	let [inputProperties, setInputProperties] = useState([]);
 	let [outputProperties, setOutputProperties] = useState([]);
@@ -588,4 +588,4 @@ const AccountConnectionProperties = () => {
 	);
 };
 
-export default AccountConnectionProperties;
+export default ConnectionProperties;

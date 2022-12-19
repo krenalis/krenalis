@@ -6,7 +6,7 @@ import call from '../../utils/call';
 import { NavLink } from 'react-router-dom';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ConnectorsConnectionAdded = () => {
+const ConnectionAdded = () => {
 	let [connector, setConnector] = useState({});
 	let [status, setStatus] = useState(null);
 
@@ -62,4 +62,4 @@ const ConnectorsConnectionAdded = () => {
 	);
 };
 
-export default ConnectorsConnectionAdded;
+export default ConnectionAdded;
