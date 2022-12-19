@@ -71,6 +71,7 @@ type Connection struct {
 	stream           *Connection
 	resource         *Resource
 	websiteHost      string
+	keys             []string
 	userCursor       string
 	identityColumn   string
 	timestampColumn  string

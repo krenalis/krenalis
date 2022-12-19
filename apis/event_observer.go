@@ -250,14 +250,25 @@ func (observer *eventObserver) flushStats(t time.Time) error {
 // be nil if an error occurred processing the message headers. data is the
 // entire message data if headers is nil, otherwise is the event data. If a
 // message or event is invalid, err contains the error.
-func (observer *eventObserver) AddEvent(source, server, stream int, header *MessageHeader, data []byte, err error) {
+func (observer *eventObserver) AddEvent(source, server, stream *Connection, header *MessageHeader, data []byte, err error) {
 
 	observer.RLock()
 	defer observer.RUnlock()
 
+	var sourceID, serverID, streamID int
+	if source != nil {
+		sourceID = source.id
+	}
+	if server != nil {
+		serverID = server.id
+	}
+	if stream != nil {
+		streamID = stream.id
+	}
+
 	// Update statistics.
 	var found bool
-	key := statsKey{source, server, stream}
+	key := statsKey{sourceID, serverID, streamID}
 	observer.statsMu.Lock()
 	for i, s := range observer.stats {
 		if s.key == key {
@@ -288,13 +299,13 @@ func (observer *eventObserver) AddEvent(source, server, stream int, header *Mess
 	var event json.RawMessage
 	var receivedAt string
 	for _, listener := range observer.listeners {
-		if listener.source > 0 && listener.source != source {
+		if listener.source > 0 && listener.source != sourceID {
 			continue
 		}
-		if listener.server > 0 && listener.server != server {
+		if listener.server > 0 && listener.server != serverID {
 			continue
 		}
-		if listener.stream > 0 && listener.stream != stream {
+		if listener.stream > 0 && listener.stream != streamID {
 			continue
 		}
 		listener.Lock()
@@ -321,9 +332,9 @@ func (observer *eventObserver) AddEvent(source, server, stream int, header *Mess
 				errStr = err.Error()
 			}
 			_ = enc.Encode(ProcessedEvent{
-				Source: source,
-				Server: server,
-				Stream: stream,
+				Source: source.id,
+				Server: server.id,
+				Stream: stream.id,
 				Header: header,
 				Data:   data,
 				Err:    errStr,

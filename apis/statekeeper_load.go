@@ -10,7 +10,6 @@ package apis
 import (
 	"bytes"
 	"context"
-	"log"
 	"strings"
 
 	"chichi/apis/postgres"
@@ -177,6 +176,9 @@ func (s *stateKeeper) loadState() error {
 			if resource > 0 {
 				c.resource = resources[resource]
 			}
+			if c.connector.typ == ServerType {
+				c.keys = []string{}
+			}
 			if len(rawSchema) > 0 {
 				c.schema, err = types.ParseSchema(strings.NewReader(rawSchema), nil)
 				if err != nil {
@@ -191,10 +193,26 @@ func (s *stateKeeper) loadState() error {
 				connection = &Connection{}
 				*connection = c
 			}
-
 			workspace.Connections.state.ids[c.id] = connection
 			workspace.Transformations.state.ofConnection[c.id] = []*Transformation{}
 			connections[c.id] = connection
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// Read all keys.
+	err = s.db.QueryScan(`SELECT connection, "key" FROM connections_keys ORDER BY connection`, func(rows *postgres.Rows) error {
+		for rows.Next() {
+			var connectionID int
+			var key string
+			if err := rows.Scan(&connectionID, &key); err != nil {
+				return err
+			}
+			connection := connections[connectionID]
+			connection.keys = append(connection.keys, key)
 		}
 		return nil
 	})
@@ -304,28 +322,7 @@ func (s *stateKeeper) loadState() error {
 		return err
 	}
 
-	// Read the all the source event stream processors.
-	var allStreams []*eventProcessorStream
-	err = s.db.QueryScan(
-		"SELECT s.id, co.name AS connector, s.settings\n"+
-			"FROM connections AS s\n"+
-			"INNER JOIN connectors AS co ON co.id = s.connector\n"+
-			"WHERE s.type = 'EventStream' AND s.role = 'Source' AND s.settings <> '' AND s.enabled",
-		func(rows *postgres.Rows) error {
-			for rows.Next() {
-				var stream eventProcessorStream
-				if err := rows.Scan(&stream.ID, &stream.Connector, &stream.Settings); err != nil {
-					return err
-				}
-				allStreams = append(allStreams, &stream)
-			}
-			return nil
-		})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	s.eventProcessor = newEventProcessor(s.db, s.chDB, allStreams)
+	s.eventProcessor = newEventProcessor(s.db, s.chDB, connections)
 	go s.eventProcessor.Run(context.Background())
 
 	// Read all the transformations.
