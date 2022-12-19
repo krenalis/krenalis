@@ -147,8 +147,6 @@ CREATE TABLE connections_keys (
     PRIMARY KEY (connection, value)
 );
 
-CREATE INDEX ON connections_keys ("key");
-
 CREATE TABLE connections_stats (
     connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
     time_slot integer NOT NULL,
