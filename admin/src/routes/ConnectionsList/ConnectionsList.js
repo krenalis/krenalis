@@ -1,9 +1,9 @@
 import React from 'react';
-import './AccountConnections.css';
-import Toast from '../../../components/Toast/Toast';
-import Navigation from '../../../components/Navigation/Navigation';
-import Card from '../../../components/Card/Card';
-import call from '../../../utils/call';
+import './ConnectionsList.css';
+import Toast from '../../components/Toast/Toast';
+import Navigation from '../../components/Navigation/Navigation';
+import Card from '../../components/Card/Card';
+import call from '../../utils/call';
 import { NavLink } from 'react-router-dom';
 import { SlButton, SlIcon, SlDialog, SlSelect, SlMenuItem } from '@shoelace-style/shoelace/dist/react/index.js';
 
@@ -96,12 +96,12 @@ export default class AccountConnections extends React.Component {
 
 	render() {
 		return (
-			<div className='AccountConnections'>
+			<div className='ConnectionsList'>
 				<Navigation
 					navItems={[
-						{ name: 'Your connections map', link: '/admin/account/connections-map', selected: false },
-						{ name: 'Your connections', link: '/admin/account/connections', selected: true },
-						{ name: 'Your schemas', link: '/admin/account/schemas', selected: false },
+						{ name: 'Connections map', link: '/admin/connections-map', selected: false },
+						{ name: 'Connections list', link: '/admin/connections', selected: true },
+						{ name: 'Schemas', link: '/admin/schemas', selected: false },
 					]}
 				/>
 				<div className='routeContent'>

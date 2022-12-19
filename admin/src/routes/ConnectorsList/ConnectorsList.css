@@ -1,42 +1,42 @@
-.Connectors {
+.ConnectorsList {
 	min-height: 100vh;
 }
 
-.Connectors .routeContent {
+.ConnectorsList .routeContent {
 	max-width: 1200px;
 	margin: auto;
 	margin-top: -150px;
 	padding-bottom: 30px;
 }
 
-.Connectors h1 {
+.ConnectorsList h1 {
 	text-align: center;
 	margin-bottom: 30px;
 }
 
-.Connectors .connectors {
+.ConnectorsList .connectors {
 	display: grid;
 	grid-template-columns: 1fr 1fr 1fr;
 	gap: 30px;
 }
 
-.Connectors sl-dialog::part(body) {
+.ConnectorsList sl-dialog::part(body) {
 	padding: 10px 30px 20px 30px;
 }
 
-.Connectors sl-dialog .no-storage {
+.ConnectorsList sl-dialog .no-storage {
 	text-align: center;
 	padding-bottom: 15px;
 }
 
-.Connectors sl-dialog .storage {
+.ConnectorsList sl-dialog .storage {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 	margin-bottom: 15px;
 }
 
-.Connectors sl-dialog .storage sl-button::part(base) {
+.ConnectorsList sl-dialog .storage sl-button::part(base) {
 	border-radius: 100%;
 	width: 35px;
 	height: 35px;
@@ -45,15 +45,15 @@
 	align-items: center;
 }
 
-.Connectors sl-dialog  .websiteInfo {
+.ConnectorsList sl-dialog  .websiteInfo {
 	padding: 0 10px 20px 10px;
 }
 
-.Connectors sl-dialog .websiteInfo .hostInput {
+.ConnectorsList sl-dialog .websiteInfo .hostInput {
 	margin-bottom: 20px;
 }
 
-.Connectors sl-dialog .websiteInfo .addWebsite  {
+.ConnectorsList sl-dialog .websiteInfo .addWebsite  {
     display: block;
     margin: 30px auto 0 auto;
 }

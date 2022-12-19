@@ -1,8 +1,8 @@
-.AccountConnectionsMap {
+.ConnectionsMap {
 	position: relative;
 }
 
-.AccountConnectionsMap .routeContent {
+.ConnectionsMap .routeContent {
 	max-width: 1500px;
 	margin: -110px auto 0 auto;
 	padding-bottom: 50px;
@@ -10,14 +10,14 @@
 	z-index: 20;
 }
 
-.AccountConnectionsMap .buttons {
+.ConnectionsMap .buttons {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 	margin-bottom: 40px;
 }
 
-.AccountConnectionsMap .map {
+.ConnectionsMap .map {
 	display: grid;
 	grid-template-columns: 1fr 1fr 1fr;
 	grid-template-areas: 'sources main destinations';
@@ -25,15 +25,15 @@
 	align-items: start;
 }
 
-.AccountConnectionsMap .map .sources {
+.ConnectionsMap .map .sources {
 	grid-area: sources;
 }
 
-.AccountConnectionsMap .map .main {
+.ConnectionsMap .map .main {
 	grid-area: main;
 }
 
-.AccountConnectionsMap .map .main .centralLogo {
+.ConnectionsMap .map .main .centralLogo {
 	width: 180px;
 	height: 180px;
 	margin: auto;
@@ -63,7 +63,7 @@
 	}
 }
 
-.AccountConnectionsMap .map .main .databases {
+.ConnectionsMap .map .main .databases {
 	margin-top: 100px;
 	display: flex;
 	align-items: start;
@@ -71,7 +71,7 @@
 	gap: 100px;
 }
 
-.AccountConnectionsMap .map .main .databases .database {
+.ConnectionsMap .map .main .databases .database {
     text-align: center;
     display: flex;
     justify-content: center;
@@ -81,21 +81,21 @@
 	padding-top: 5px;
 }
 
-.AccountConnectionsMap .map .main .databases .database sl-icon {
+.ConnectionsMap .map .main .databases .database sl-icon {
 	font-size: 60px;
 	margin-bottom: 15px;
 	color: var(--sl-color-gray-600);
 }
 
-.AccountConnectionsMap .map .main .databases .database .name {
+.ConnectionsMap .map .main .databases .database .name {
 	font-size: 18px;
 }
 
-.AccountConnectionsMap .map .destinations {
+.ConnectionsMap .map .destinations {
 	grid-area: destinations;
 }
 
-.AccountConnectionsMap .map .connection {
+.ConnectionsMap .map .connection {
 	background-color: var(--bg-primary);
 	padding: 20px 30px;
 	border-radius: var(--radius);
@@ -106,7 +106,7 @@
 	margin-bottom: 30px;
 }
 
-.AccountConnectionsMap .map .connection.storage {
+.ConnectionsMap .map .connection.storage {
 	background-color: transparent;
 	border-radius: 0;
 	box-shadow: unset;
@@ -117,28 +117,28 @@
 	grid-template-areas: 'files arrow storage';
 }
 
-.AccountConnectionsMap .map .destinations .connection.storage {
+.ConnectionsMap .map .destinations .connection.storage {
 	grid-template-areas: 'storage arrow files';
 }
 
-.AccountConnectionsMap .map .connection.storage .files {
+.ConnectionsMap .map .connection.storage .files {
 	grid-area: files;
 }
 
-.AccountConnectionsMap .map .connection.storage .files .file {
+.ConnectionsMap .map .connection.storage .files .file {
 	margin-bottom: 20px;
 }
 
-.AccountConnectionsMap .map .connection.storage .files .file:last-child {
+.ConnectionsMap .map .connection.storage .files .file:last-child {
 	margin-bottom: 0;
 }
 
-.AccountConnectionsMap .map .connection.storage .storage {
+.ConnectionsMap .map .connection.storage .storage {
 	grid-area: storage;
 }
 
-.AccountConnectionsMap .map .connection.storage > .files .file,
-.AccountConnectionsMap .map .connection.storage > .storage {
+.ConnectionsMap .map .connection.storage > .files .file,
+.ConnectionsMap .map .connection.storage > .storage {
 	background-color: var(--bg-primary);
 	padding: 20px 30px;
 	border-radius: var(--radius);
@@ -149,7 +149,7 @@
 	gap: 20px;
 }
 
-.AccountConnectionsMap .map .connection .unknownLogo  {
+.ConnectionsMap .map .connection .unknownLogo  {
     background-color: var(--bg-gray);
     height: 30px;
     width: 30px;
@@ -159,18 +159,18 @@
     border-radius: 100%;
 }
 
-.AccountConnectionsMap .map .connection .littleLogo > img {
+.ConnectionsMap .map .connection .littleLogo > img {
 	max-height: 30px;
 	width: auto;
 }
 
-.AccountConnectionsMap .arrows {
+.ConnectionsMap .arrows {
 	position: relative;
 	z-index: 10;
 }
 
-.AccountConnectionsMap .connection .arrow > div,
-.AccountConnectionsMap .arrows .arrow > div {
+.ConnectionsMap .connection .arrow > div,
+.ConnectionsMap .arrows .arrow > div {
 	width: -moz-available;
 	width: -webkit-fill-available;
 	width: fill-available;

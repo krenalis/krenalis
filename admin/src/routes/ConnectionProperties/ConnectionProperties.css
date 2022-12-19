@@ -1,0 +1,301 @@
+.ConnectionProperties  {
+	min-height: 100vh;
+	position: relative;
+}
+
+.ConnectionProperties .selectedProperty .title,
+.ConnectionProperties .selectedProperty .properties .addUsedProperty,
+.ConnectionProperties .selectedProperty .properties.usedInputProperties .title,
+.ConnectionProperties .selectedProperty .properties.usedInputProperties .property,
+.ConnectionProperties .selectedProperty .properties.usedOutputProperties .property,
+.ConnectionProperties .selectedProperty .arrows .arrow,
+.ConnectionProperties .selectedProperty .transformations .saveButton,
+.ConnectionProperties .selectedProperty .transformations .addTransformation {
+	opacity: 0.2;
+}
+
+.ConnectionProperties .selectedProperty .properties .property.selected {
+	opacity: 1;
+	background-color: var(--color-primary-600);
+	color: var(--text-onaccent);
+	cursor: default;
+}
+
+.ConnectionProperties .selectedProperty .arrows .arrow.selected {
+	opacity: 1;
+}
+
+.ConnectionProperties .selectedProperty .arrows .arrow.selected > div > div {
+	width: 25px !important;
+	height: 25px !important;
+	border-radius: 100% !important;
+	display: flex !important;
+	justify-content: center !important;
+	align-items: center !important;
+	background-color: var(--color-primary-500) !important;
+	color: var(--text-onaccent) !important;
+	font-size: 21px !important;
+	cursor: pointer !important;
+}
+
+.ConnectionProperties .selectedProperty .transformations .transformation {
+	transition: transform 0.5s;
+}
+
+.ConnectionProperties .selectedProperty .transformations .transformation:hover {
+	transform: scale(1.05);
+}
+
+.ConnectionProperties .selectedProperty .transformations .transformation * {
+	cursor: pointer !important;
+}
+
+.ConnectionProperties .selectedProperty .properties.usedInputProperties .property.selected sl-icon-button {
+	visibility: hidden;
+}
+
+.ConnectionProperties  .routeContent {
+	max-width: 1600px;
+	margin: auto;
+	display: grid;
+	grid-template-columns: 1fr 2fr 1fr;
+	grid-template-areas:
+		'head head head'
+		'usedInputProperties transformations usedOutputProperties';
+	gap: 30px;
+	margin-top: -220px;
+	padding-bottom: 30px;
+	align-items: center;
+}
+
+.ConnectionProperties  .routeContent > .head {
+	grid-area: head;
+}
+
+.ConnectionProperties  .routeContent > .head > .title {
+	font-size: 23px;
+	font-weight: 600;
+	text-align: center;
+	display: flex;
+	justify-content: center;
+	gap: 10px;
+	align-items: center;
+	color: var(--text-onaccent);
+	margin-bottom: 10px;
+}
+
+.ConnectionProperties  .routeContent > .head > .title .littleLogo {
+	max-width: 35px;
+	margin-left: -35px;
+}
+
+.ConnectionProperties  .routeContent > .head > .badges {
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+}
+
+.ConnectionProperties  .routeContent > .head > .badges sl-badge::part(base) {
+	border: 0;
+}
+
+.ConnectionProperties  .routeContent > .head .saveButton {
+	display: block;
+	margin: auto;
+	width: 200px;
+}
+
+.ConnectionProperties  .routeContent .properties {
+	height: 100%;
+}
+
+.ConnectionProperties  .routeContent .properties .title {
+	text-align: center;
+	margin-bottom: 10px;
+	font-size: 18px;
+	font-weight: 600;
+	color: var(--text-onaccent);
+}
+
+.ConnectionProperties  .routeContent .properties .property {
+	background-color: var(--bg-primary);
+	color: var(--text-primary);
+	padding: 15px 25px;
+	margin-bottom: 15px;
+	border-radius: var(--radius);
+	box-shadow: var(--sl-shadow-x-small);
+	overflow-wrap: anywhere;
+	font-size: 14px;
+}
+
+.ConnectionProperties  .routeContent .properties.usedInputProperties {
+	grid-area: usedInputProperties;
+}
+
+.ConnectionProperties  .routeContent .properties .addUsedProperty {
+	display: block;
+	margin: auto;
+	width: 200px;
+	margin: 0 auto;
+	margin-bottom: 30px;
+}
+
+.ConnectionProperties  .routeContent .properties .property {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+	cursor: pointer;
+}
+
+.ConnectionProperties  .routeContent .properties .property sl-icon-button::part(base) {
+	padding: 0;
+}
+
+.ConnectionProperties  .routeContent .transformations {
+	grid-area: transformations;
+	text-align: center;
+	/* TODO(@Andrea): remove this workaround after issue #134 of 'react-xarrows' is solved */
+	min-height: calc(100vh + 1px);
+}
+
+.ConnectionProperties  .routeContent .transformations .saveButton {
+	width: 200px;
+}
+
+.ConnectionProperties  .routeContent .transformations .transformation {
+	position: relative;
+	background-color: var(--bg-primary);
+	border-radius: 100%;
+	width: 50px;
+	height: 50px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	box-shadow: var(--sl-shadow-small);
+	margin: 30px auto;
+}
+
+.ConnectionProperties 
+	.routeContent
+	.transformations
+	.transformation
+	sl-icon-button.addTransformationFunction::part(base) {
+	color: var(--color-primary-500);
+	font-size: 21px;
+}
+
+.ConnectionProperties  .routeContent .transformations .editorWrapper ~ div {
+	width: 100%;
+}
+
+.ConnectionProperties  .routeContent .transformations .editorWrapper {
+	width: 100%;
+	height: 200px;
+	padding: 15px;
+	border-radius: var(--radius);
+	background-color: var(--bg-primary);
+}
+
+.ConnectionProperties  .routeContent .transformations .editorWrapper * {
+	font-family: monospace !important;
+}
+
+.ConnectionProperties  .routeContent .transformations .addTransformation::part(base) {
+	width: 40px;
+	height: 40px;
+	border-radius: 100%;
+	position: relative;
+}
+
+.ConnectionProperties  .routeContent .transformations .addTransformation sl-icon {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	font-size: 20px;
+}
+
+.ConnectionProperties  .routeContent .transformations sl-dialog .removeTransformation {
+	min-width: 150px;
+	opacity: 0.8;
+}
+
+.ConnectionProperties  .routeContent .transformations sl-dialog .removeTransformation:hover {
+	opacity: 1;
+}
+
+.ConnectionProperties  .routeContent .properties.usedOutputProperties {
+	grid-area: usedOutputProperties;
+}
+
+.ConnectionProperties  .arrows {
+	position: relative;
+}
+
+.ConnectionProperties  .arrows .arrow > div {
+	width: 100%;
+}
+
+.ConnectionProperties  > sl-dialog::part(panel) {
+	height: 400px;
+	padding: 5px 0px 30px 10px;
+}
+
+.ConnectionProperties  > sl-dialog .dialogProperties {
+	margin-top: 20px;
+}
+
+.ConnectionProperties  > sl-dialog .dialogProperties .property {
+	display: flex;
+	justify-content: space-between;
+	padding: 5px 0;
+	align-items: center;
+	height: 35px;
+}
+
+.ConnectionProperties  > sl-dialog .dialogProperties .property.used {
+	opacity: 0.5;
+	text-decoration: line-through;
+}
+
+.ConnectionProperties  > sl-dialog .dialogProperties .property.used sl-icon-button {
+	display: none;
+}
+
+.ConnectionProperties  > sl-dialog .dialogProperties .property:first-child {
+	padding-top: 0;
+}
+
+.ConnectionProperties  > sl-dialog .dialogProperties .property:last-child {
+	padding-bottom: 0;
+}
+
+.ConnectionProperties  .selectedPropertyMessage {
+	position: fixed;
+	top: 0;
+	left: 100px;
+	width: calc(100% - 100px);
+	height: 70px;
+	z-index: 10;
+	background-color: var(--bg-primary);
+	justify-content: center;
+	align-items: center;
+	display: flex;
+	font-size: 17px;
+	box-shadow: var(--sl-shadow-small);
+	padding: 0 150px;
+}
+
+.ConnectionProperties  .selectedPropertyMessage span {
+	color: var(--color-primary-600);
+	font-weight: 600;
+}
+
+.ConnectionProperties  .selectedPropertyMessage .removeSelectedProperty {
+	position: absolute;
+	right: 40px;
+	min-width: 180px;
+}

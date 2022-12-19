@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import './AccountConnectionSettings.css';
-import ConnectorField from '../../../components/ConnectorFields/ConnectorField';
-import NotFound from '../../NotFound/NotFound';
-import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
-import Toast from '../../../components/Toast/Toast';
-import call from '../../../utils/call';
-import { SettingsContext } from '../../../context/SettingsContext';
+import './ConnectionSettings.css';
+import ConnectorField from '../../components/ConnectorFields/ConnectorField';
+import NotFound from '../NotFound/NotFound';
+import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
+import Toast from '../../components/Toast/Toast';
+import call from '../../utils/call';
+import { SettingsContext } from '../../context/SettingsContext';
 import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const AccountConnectionSettings = () => {
@@ -119,11 +119,11 @@ const AccountConnectionSettings = () => {
 	}
 
 	return (
-		<div className='AccountConnectionSettings'>
+		<div className='ConnectionSettings'>
 			<Breadcrumbs
 				breadcrumbs={[
-					{ Name: 'Your connections', Link: '/admin/account/connections' },
-					{ Name: `${connectionName}'s settings` },
+					{ Name: 'Connections list', Link: '/admin/connections' },
+					{ Name: `${connectionName} settings` },
 				]}
 			/>
 			<div className='routeContent'>

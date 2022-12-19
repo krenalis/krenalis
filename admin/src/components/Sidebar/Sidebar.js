@@ -26,7 +26,7 @@ export default class Sidebar extends React.Component {
 						<div className='Top'>
 							<SlButton variant='text'>
 								<SlIcon name='plugin' />
-								<NavLink to='/admin/account/connections-map'></NavLink>
+								<NavLink to='/admin/connections-map'></NavLink>
 							</SlButton>
 						</div>
 						<div className='Bottom'>

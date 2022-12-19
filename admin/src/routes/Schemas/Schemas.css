@@ -1,18 +1,18 @@
-.AccountSchemas {
+.Schemas {
 	min-height: 100vh;
 }
 
-.AccountSchemas .routeContent {
+.Schemas .routeContent {
 	max-width: 1500px;
 	margin: auto;
 	margin-top: -160px;
 }
 
-.AccountSchemas .routeContent .title {
+.Schemas .routeContent .title {
 	font-weight: 600;
 }
 
-.AccountSchemas .routeContent .bar {
+.Schemas .routeContent .bar {
 	display: flex;
 	justify-content: center;
 	gap: 30px;
@@ -20,24 +20,24 @@
 	align-items: baseline;
 }
 
-.AccountSchemas .routeContent .bar sl-select {
+.Schemas .routeContent .bar sl-select {
 	width: fit-content;
 	min-width: 250px;
 	max-width: 350px;
 	border: 0;
 }
 
-.AccountSchemas .routeContent .bar sl-select::part(control) {
+.Schemas .routeContent .bar sl-select::part(control) {
 	background-color: var(--bg-transparent);
 	color: var(--text-onaccent);
 	border: 0;
 }
 
-.AccountSchemas .routeContent .bar .saveButton {
+.Schemas .routeContent .bar .saveButton {
 	width: 200px;
 }
 
-.AccountSchemas .routeContent .editorWrapper {
+.Schemas .routeContent .editorWrapper {
 	width: 100%;
 	height: 600px;
 	padding: 30px;
@@ -46,6 +46,6 @@
 	box-shadow: var(--sl-shadow-small);
 }
 
-.AccountSchemas .routeContent .editorWrapper * {
+.Schemas .routeContent .editorWrapper * {
 	font-family: monospace !important;
 }

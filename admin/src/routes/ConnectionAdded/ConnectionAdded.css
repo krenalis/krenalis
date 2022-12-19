@@ -1,15 +1,15 @@
-.ConnectorsConnectionAdded {
+.ConnectionAdded {
 	min-height: 100vh;
 }
 
-.ConnectorsConnectionAdded .routeContent {
+.ConnectionAdded .routeContent {
 	max-width: 700px;
 	margin: auto;
 	text-align: center;
 	margin-top: -180px;
 }
 
-.ConnectorsConnectionAdded .addedConnection {
+.ConnectionAdded .addedConnection {
 	box-shadow: var(--sl-shadow-small);
 	padding: 50px;
 	background-color: var(--bg-primary);
@@ -17,18 +17,18 @@
 	border-radius: var(--radius);
 }
 
-.ConnectorsConnectionAdded .addedConnection .logo {
+.ConnectionAdded .addedConnection .logo {
 	width: fit-content;
 	margin: auto;
 }
 
-.ConnectorsConnectionAdded .addedConnection .logo img {
+.ConnectionAdded .addedConnection .logo img {
 	max-width: 70px;
 	height: auto;
 	margin: auto;
 }
 
-.ConnectorsConnectionAdded .addedConnection .logo .unknownLogo {
+.ConnectionAdded .addedConnection .logo .unknownLogo {
 	background-color: var(--bg-gray);
 	color: var(--text-primary);
 	width: 60px;
@@ -41,26 +41,26 @@
 	font-size: 22px;
 }
 
-.ConnectorsConnectionAdded .title {
+.ConnectionAdded .title {
 	margin-top: 30px;
 	font-weight: 600;
 	font-size: 18px;
 }
 
-.ConnectorsConnectionAdded .description {
+.ConnectionAdded .description {
 	margin-top: 10px;
 }
 
-.ConnectorsConnectionAdded .link {
+.ConnectionAdded .link {
 	margin-top: 20px;
 }
 
-.ConnectorsConnectionAdded a {
+.ConnectionAdded a {
 	font-weight: 600;
 }
 
-.ConnectorsConnectionAdded a,
-.ConnectorsConnectionAdded sl-icon {
+.ConnectionAdded a,
+.ConnectionAdded sl-icon {
 	color: var(--color-primary);
 	font-weight: 600;
 }

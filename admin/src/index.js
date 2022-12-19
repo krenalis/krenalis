@@ -3,14 +3,14 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import Login from './routes/Login/Login';
 import PrivateWrapper from './routes/PrivateWrapper/PrivateWrapper';
-import Connectors from './routes/Connectors/Connectors/Connectors';
-import ConnectorsConnectionAdded from './routes/Connectors/ConnectorsConnectionAdded/ConnectorsConnectionAdded';
-import AccountConnections from './routes/Account/AccountConnections/AccountConnections';
-import AccountConnectionsMap from './routes/Account/AccountConnectionsMap/AccountConnectionsMap';
-import AccountConnectionProperties from './routes/Account/AccountConnectionProperties/AccountConnectionProperties';
-import AccountConnectionSQL from './routes/Account/AccountConnectionSQL/AccountConnectionSQL';
-import AccountConnectionSettings from './routes/Account/AccountConnectionSettings/AccountConnectionSettings';
-import AccountSchemas from './routes/Account/AccountSchemas/AccountSchemas';
+import ConnectorsList from './routes/ConnectorsList/ConnectorsList';
+import ConnectionAdded from './routes/ConnectionAdded/ConnectionAdded';
+import ConnectionsList from './routes/ConnectionsList/ConnectionsList';
+import ConnectionsMap from './routes/ConnectionsMap/ConnectionsMap';
+import ConnectionProperties from './routes/ConnectionProperties/ConnectionProperties';
+import ConnectionSQL from './routes/ConnectionSQL/ConnectionSQL';
+import ConnectionSettings from './routes/ConnectionSettings/ConnectionSettings';
+import Schemas from './routes/Schemas/Schemas';
 import NotFound from './routes/NotFound/NotFound';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
@@ -21,14 +21,14 @@ root.render(
 			<Route path='/admin/' element={<App />}>
 				<Route index element={<Login />} />
 				<Route element={<PrivateWrapper />}>
-					<Route path='connectors/added/:id' element={<ConnectorsConnectionAdded />} />
-					<Route path='connectors' element={<Connectors />} />
-					<Route path='account/connections/:id/properties' element={<AccountConnectionProperties />} />
-					<Route path='account/connections/:id/sql' element={<AccountConnectionSQL />} />
-					<Route path='account/connections/:id/settings' element={<AccountConnectionSettings />} />
-					<Route path='account/connections-map' element={<AccountConnectionsMap />} />
-					<Route path='account/connections' element={<AccountConnections />} />
-					<Route path='account/schemas' element={<AccountSchemas />} />
+					<Route path='connectors/added/:id' element={<ConnectionAdded />} />
+					<Route path='connectors' element={<ConnectorsList />} />
+					<Route path='connections/:id/properties' element={<ConnectionProperties />} />
+					<Route path='connections/:id/sql' element={<ConnectionSQL />} />
+					<Route path='connections/:id/settings' element={<ConnectionSettings />} />
+					<Route path='connections-map' element={<ConnectionsMap />} />
+					<Route path='connections' element={<ConnectionsList />} />
+					<Route path='schemas' element={<Schemas />} />
 					<Route path='*' element={<NotFound />} />
 				</Route>
 			</Route>

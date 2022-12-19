@@ -1,10 +1,10 @@
 import React from 'react';
-import './AccountConnectionSQL.css';
-import NotFound from '../../NotFound/NotFound';
-import Toast from '../../../components/Toast/Toast';
-import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
-import Grid from '../../../components/Grid/Grid';
-import call from '../../../utils/call';
+import './ConnectionSQL.css';
+import NotFound from '../NotFound/NotFound';
+import Toast from '../../components/Toast/Toast';
+import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
+import Grid from '../../components/Grid/Grid';
+import call from '../../utils/call';
 import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
 import Editor from '@monaco-editor/react';
 
@@ -128,11 +128,11 @@ export default class AccountConnectionSQL extends React.Component {
 			return <NotFound />;
 		} else {
 			return (
-				<div className='AccountConnectionSQL'>
+				<div className='ConnectionSQL'>
 					<Breadcrumbs
 						breadcrumbs={[
-							{ Name: 'Your connections', Link: '/admin/account/connections' },
-							{ Name: `${this.state.connection.Name}'s SQL query configuration` },
+							{ Name: 'Connections list', Link: '/admin/connections' },
+							{ Name: `${this.state.connection.Name} query configuration` },
 						]}
 					/>
 					<div className='routeContent'>
@@ -145,7 +145,7 @@ export default class AccountConnectionSQL extends React.Component {
 									alt={`${this.state.connection.Name}'s logo`}
 								/>
 							)}
-							<div className='text'>Configure your {this.state.connection.Name} SQL query</div>
+							<div className='text'>Configure your {this.state.connection.Name} query</div>
 						</div>
 						<div className='editorWrapper'>
 							<Editor

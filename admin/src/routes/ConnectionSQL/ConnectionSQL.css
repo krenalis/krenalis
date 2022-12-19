@@ -1,14 +1,14 @@
-.AccountConnectionSQL {
+.ConnectionSQL {
 	min-height: 100vh;
 }
 
-.AccountConnectionSQL .routeContent {
+.ConnectionSQL .routeContent {
 	max-width: 1000px;
 	margin: auto;
 	margin-top: -200px;
 }
 
-.AccountConnectionSQL .routeContent > .title {
+.ConnectionSQL .routeContent > .title {
 	font-size: 23px;
 	font-weight: 600;
 	text-align: center;
@@ -20,12 +20,12 @@
 	margin-bottom: 20px;
 }
 
-.AccountConnectionSQL .routeContent .title .littleLogo {
+.ConnectionSQL .routeContent .title .littleLogo {
 	max-width: 35px;
 	margin-left: -35px;
 }
 
-.AccountConnectionSQL .routeContent .editorWrapper {
+.ConnectionSQL .routeContent .editorWrapper {
 	grid-area: editor;
 	width: 100%;
 	height: 600px;
@@ -34,25 +34,25 @@
 	background-color: var(--bg-primary);
 }
 
-.AccountConnectionSQL .routeContent .editorWrapper * {
+.ConnectionSQL .routeContent .editorWrapper * {
 	font-family: monospace !important;
 }
 
-.AccountConnectionSQL .routeContent .buttons {
+.ConnectionSQL .routeContent .buttons {
 	display: flex;
 	justify-content: center;
 	gap: 30px;
 	margin: 50px 0;
 }
 
-.AccountConnectionSQL .routeContent .buttons .previewButton {
+.ConnectionSQL .routeContent .buttons .previewButton {
 	min-width: 200px;
 }
 
-.AccountConnectionSQL .routeContent .buttons .saveButton {
+.ConnectionSQL .routeContent .buttons .saveButton {
 	min-width: 200px;
 }
 
-.AccountConnectionSQL sl-dialog .Grid {
+.ConnectionSQL sl-dialog .Grid {
 	padding: 0 30px 30px 30px;
 }

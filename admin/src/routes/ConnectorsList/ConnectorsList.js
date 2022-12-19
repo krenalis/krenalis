@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import './Connectors.css';
-import call from '../../../utils/call';
-import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
-import Card from '../../../components/Card/Card';
-import Toast from '../../../components/Toast/Toast';
+import './ConnectorsList.css';
+import call from '../../utils/call';
+import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
+import Card from '../../components/Card/Card';
+import Toast from '../../components/Toast/Toast';
 import { Navigate } from 'react-router-dom';
 import { SlButton, SlDialog, SlIcon, SlTooltip, SlInput } from '@shoelace-style/shoelace/dist/react/index.js';
 
@@ -103,10 +103,10 @@ const Connectors = () => {
 	}
 
 	return (
-		<div className='Connectors'>
+		<div className='ConnectorsList'>
 			<Breadcrumbs
 				breadcrumbs={[
-					{ Name: 'Your connections map', Link: '/admin/account/connections-map' },
+					{ Name: 'Connections map', Link: '/admin/connections-map' },
 					{ Name: `Add a new ${connectionRole}` },
 				]}
 			/>

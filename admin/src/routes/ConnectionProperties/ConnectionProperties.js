@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import './AccountConnectionProperties.css';
-import NotFound from '../../NotFound/NotFound';
-import Toast from '../../../components/Toast/Toast';
-import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
-import call from '../../../utils/call';
-import { defaultTransformationFunction } from '../../../utils/docs/defaultTransformationFunction';
+import './ConnectionProperties.css';
+import NotFound from '../NotFound/NotFound';
+import Toast from '../../components/Toast/Toast';
+import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
+import call from '../../utils/call';
+import { transformationFunction } from '../../assets/docs/transformationFunction';
 import {
 	SlButton,
 	SlIcon,
@@ -266,7 +266,7 @@ const AccountConnectionProperties = () => {
 	};
 
 	const computeDefaultTransformationFunction = (t) => {
-		let f = defaultTransformationFunction;
+		let f = transformationFunction;
 		if (t.In.properties.length > 0) {
 			let properties = '';
 			t.In.properties.forEach((p, i) => {
@@ -293,7 +293,7 @@ const AccountConnectionProperties = () => {
 	let cn = connection;
 
 	return (
-		<div className={`AccountConnectionProperties${sp ? ' selectedProperty' : ''}`}>
+		<div className={`ConnectionProperties${sp ? ' selectedProperty' : ''}`}>
 			{sp && (
 				<div className='selectedPropertyMessage'>
 					<div>
@@ -315,7 +315,7 @@ const AccountConnectionProperties = () => {
 			)}
 			<Breadcrumbs
 				breadcrumbs={[
-					{ Name: 'Your connections', Link: '/admin/account/connections' },
+					{ Name: 'Connections list', Link: '/admin/connections' },
 					{ Name: `${cn.Name} properties` },
 				]}
 			/>

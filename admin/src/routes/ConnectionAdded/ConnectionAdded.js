@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import './ConnectorsConnectionAdded.css';
-import Toast from '../../../components/Toast/Toast';
-import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
-import call from '../../../utils/call';
+import './ConnectionAdded.css';
+import Toast from '../../components/Toast/Toast';
+import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
+import call from '../../utils/call';
 import { NavLink } from 'react-router-dom';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
@@ -29,10 +29,10 @@ const ConnectorsConnectionAdded = () => {
 	}, []);
 
 	return (
-		<div className='ConnectorsConnectionAdded'>
+		<div className='ConnectionAdded'>
 			<Breadcrumbs
 				breadcrumbs={[
-					{ Name: 'Your connections map', Link: '/admin/account/connections-map' },
+					{ Name: 'Connections map', Link: '/admin/connections-map' },
 					{ Name: `Add a new ${connectionRole}`, Link: `/admin/connectors/?role=${connectionRole}` },
 					{ Name: `${connector.Name} connection added` },
 				]}
@@ -55,7 +55,7 @@ const ConnectorsConnectionAdded = () => {
 				<SlButton className='link' variant='text' size='medium'>
 					<SlIcon slot='suffix' name='arrow-right-circle' />
 					See all your connections
-					<NavLink to='/admin/account/connections-map'></NavLink>
+					<NavLink to='/admin/connections-map'></NavLink>
 				</SlButton>
 			</div>
 		</div>

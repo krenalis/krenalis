@@ -1,8 +1,8 @@
 import React from 'react';
-import './AccountSchemas.css';
-import Toast from '../../../components/Toast/Toast';
-import Navigation from '../../../components/Navigation/Navigation';
-import call from '../../../utils/call';
+import './Schemas.css';
+import Toast from '../../components/Toast/Toast';
+import Navigation from '../../components/Navigation/Navigation';
+import call from '../../utils/call';
 import { SlButton, SlIcon, SlSelect, SlMenuItem } from '@shoelace-style/shoelace/dist/react/index.js';
 import { DiffEditor } from '@monaco-editor/react';
 
@@ -65,12 +65,12 @@ export default class AccountSchemas extends React.Component {
 
 	render() {
 		return (
-			<div className='AccountSchemas'>
+			<div className='Schemas'>
 				<Navigation
 					navItems={[
-						{ name: 'Your connections map', link: '/admin/account/connections-map', selected: false },
-						{ name: 'Your connections', link: '/admin/account/connections', selected: false },
-						{ name: 'Your schemas', link: '/admin/account/schemas', selected: true },
+						{ name: 'Connections map', link: '/admin/connections-map', selected: false },
+						{ name: 'Connections list', link: '/admin/connections', selected: false },
+						{ name: 'Schemas', link: '/admin/schemas', selected: true },
 					]}
 				/>
 				<div className='routeContent'>

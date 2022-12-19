@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import './AccountConnectionsMap.css';
-import Navigation from '../../../components/Navigation/Navigation';
-import Toast from '../../../components/Toast/Toast';
-import call from '../../../utils/call';
+import './ConnectionsMap.css';
+import Navigation from '../../components/Navigation/Navigation';
+import Toast from '../../components/Toast/Toast';
+import call from '../../utils/call';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NavLink } from 'react-router-dom';
 import Xarrow from 'react-xarrows';
@@ -108,12 +108,12 @@ const AccountConnectionsMap = () => {
 	};
 
 	return (
-		<div className='AccountConnectionsMap'>
+		<div className='ConnectionsMap'>
 			<Navigation
 				navItems={[
-					{ name: 'Your connections map', link: '/admin/account/connections-map', selected: true },
-					{ name: 'Your connections', link: '/admin/account/connections', selected: false },
-					{ name: 'Your schemas', link: '/admin/account/schemas', selected: false },
+					{ name: 'Connections map', link: '/admin/connections-map', selected: true },
+					{ name: 'Connections list', link: '/admin/connections', selected: false },
+					{ name: 'Schemas', link: '/admin/schemas', selected: false },
 				]}
 			/>
 			<div className='routeContent'>

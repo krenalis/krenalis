@@ -1,15 +1,15 @@
-.AccountConnections .routeContent {
+.ConnectionsList .routeContent {
 	max-width: 1200px;
 	margin: -100px auto 0 auto;
 	padding-bottom: 50px;
 }
 
-.AccountConnections h1 {
+.ConnectionsList h1 {
 	text-align: center;
 	margin-bottom: 30px;
 }
 
-.AccountConnections .noConnection {
+.ConnectionsList .noConnection {
 	box-shadow: var(--sl-shadow-small);
 	border-radius: var(--radius);
 	padding: 70px 30px;
@@ -17,45 +17,45 @@
 	text-align: center;
 }
 
-.AccountConnections .noConnection > sl-icon {
+.ConnectionsList .noConnection > sl-icon {
 	font-size: 50px;
 	opacity: 0.7;
 }
 
-.AccountConnections .noConnection .title {
+.ConnectionsList .noConnection .title {
 	font-size: 18px;
 	margin-top: 20px;
 	font-weight: 600;
 }
 
-.AccountConnections .noConnection .description {
+.ConnectionsList .noConnection .description {
 	margin: 10px 0 40px 0;
 }
 
-.AccountConnections .noConnection .installSource {
+.ConnectionsList .noConnection .installSource {
 	margin-right: 10px;
 }
 
-.AccountConnections .noConnection .installDestination {
+.ConnectionsList .noConnection .installDestination {
 	margin-left: 10px;
 }
 
-.AccountConnections .connections {
+.ConnectionsList .connections {
 	display: grid;
 	grid-template-columns: 1fr 1fr 1fr;
 	gap: 30px;
 }
 
-.AccountConnections .Card .buttons sl-button {
+.ConnectionsList .Card .buttons sl-button {
 	display: block;
 	margin-bottom: 3px;	
 }
 
-.AccountConnections .Card .buttons sl-button:last-of-type {
+.ConnectionsList .Card .buttons sl-button:last-of-type {
 	margin-bottom: 0;
 }
 
-.AccountConnections .addConnectionBox {
+.ConnectionsList .addConnectionBox {
 	background-color: var(--bg-crystal);
 	backdrop-filter: blur(33px);
 	background-blend-mode: overlay;
@@ -70,18 +70,18 @@
 	min-height: 380px;
 }
 
-.AccountConnections .addConnectionBox sl-icon {
+.ConnectionsList .addConnectionBox sl-icon {
 	font-size: 50px;
 	opacity: 0.7;
 }
 
-.AccountConnections .addConnectionBox .text {
+.ConnectionsList .addConnectionBox .text {
 	margin-top: 20px;
 	opacity: 0.7;
 	font-weight: 600;
 }
 
-.AccountConnections .addConnectionBox > a {
+.ConnectionsList .addConnectionBox > a {
 	position: absolute;
 	left: 0;
 	top: 0;
@@ -89,64 +89,64 @@
 	height: 100%;
 }
 
-.AccountConnections sl-dialog::part(body) {
+.ConnectionsList sl-dialog::part(body) {
 	text-align: center;
 	padding-bottom: 60px;
 	padding-top: 0;
 }
 
-.AccountConnections sl-dialog .dialogTitle {
+.ConnectionsList sl-dialog .dialogTitle {
 	font-size: 21px;
 	margin-bottom: 30px;
 }
 
-.AccountConnections sl-dialog sl-select {
+.ConnectionsList sl-dialog sl-select {
 	max-width: 400px;
 	margin: 0 auto 30px auto;
 }
 
-.AccountConnections sl-dialog .buttons {
+.ConnectionsList sl-dialog .buttons {
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: 15px;
 }
 
-.AccountConnections sl-dialog.importsListDialog::part(body) {
+.ConnectionsList sl-dialog.importsListDialog::part(body) {
     padding: 10px 50px 40px 50px;
 }
 
-.AccountConnections sl-dialog.importsListDialog .importTable .row {
+.ConnectionsList sl-dialog.importsListDialog .importTable .row {
 	display: grid;
 	grid-template-columns: .3fr 1fr 1fr 2fr;
 	align-items: center;
 }
 
-.AccountConnections sl-dialog.importsListDialog .importTable .row.successfull {
+.ConnectionsList sl-dialog.importsListDialog .importTable .row.successfull {
 	background-color: var(--sl-color-green-50);
 }
 
-.AccountConnections sl-dialog.importsListDialog .importTable .row.failed {
+.ConnectionsList sl-dialog.importsListDialog .importTable .row.failed {
 	background-color: var(--sl-color-red-50);
 }
 
-.AccountConnections sl-dialog.importsListDialog .importTable .row > div {
+.ConnectionsList sl-dialog.importsListDialog .importTable .row > div {
 	padding: 15px;
 }
 
-.AccountConnections sl-dialog.importsListDialog .importTable .row.head > div {
+.ConnectionsList sl-dialog.importsListDialog .importTable .row.head > div {
 	font-weight: 600;
 }
 
-.AccountConnections sl-dialog.importsListDialog .importTable .row .error {
+.ConnectionsList sl-dialog.importsListDialog .importTable .row .error {
 	overflow-wrap: anywhere;
 }
 
-.AccountConnections sl-dialog.removeDialog .removeQuestion {
+.ConnectionsList sl-dialog.removeDialog .removeQuestion {
 	font-size: 18px;
 	margin-bottom: 30px;
 }
 
-.AccountConnections sl-dialog.removeDialog .removeQuestion span {
+.ConnectionsList sl-dialog.removeDialog .removeQuestion span {
 	font-weight: 600;
 }
