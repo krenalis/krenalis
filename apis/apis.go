@@ -20,7 +20,6 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
-	"chichi/apis/types"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -166,7 +165,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(connections)
 		})
 		router.Route("/{connectionID}", func(router chi.Router) {
-			router.Get("/properties", func(w http.ResponseWriter, r *http.Request) {
+			router.Get("/schema", func(w http.ResponseWriter, r *http.Request) {
 				dsID, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				if dsID <= 0 {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
@@ -182,13 +181,11 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
-				var properties []types.Property
 				if schema.Valid() {
-					properties = schema.Properties()
+					_ = json.NewEncoder(w).Encode(schema)
 				} else {
-					properties = []types.Property{}
+					_, _ = w.Write([]byte("null"))
 				}
-				_ = json.NewEncoder(w).Encode(properties)
 			})
 			router.Post("/import", func(w http.ResponseWriter, r *http.Request) {
 				dsID, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))

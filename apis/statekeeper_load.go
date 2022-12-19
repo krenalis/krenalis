@@ -8,6 +8,7 @@
 package apis
 
 import (
+	"bytes"
 	"context"
 	"log"
 	"strings"
@@ -328,21 +329,33 @@ func (s *stateKeeper) loadState() error {
 	go s.eventProcessor.Run(context.Background())
 
 	// Read all the transformations.
+	var transformations []*Transformation
+	schemas := [][]byte{}
 	err = s.db.QueryScan("SELECT id, connection, \"in\", source_code, out FROM transformations", func(rows *postgres.Rows) error {
 		for rows.Next() {
 			t := &Transformation{}
-			err := rows.Scan(&t.ID, &t.Connection, &t.In, &t.SourceCode, &t.Out)
+			var schema []byte
+			err := rows.Scan(&t.ID, &t.Connection, &schema, &t.SourceCode, &t.Out)
 			if err != nil {
 				return err
 			}
-			c := t.Connection
-			ws := connections[c].workspace
-			ws.Transformations.state.ofConnection[c] = append(
-				ws.Transformations.state.ofConnection[c], t,
-			)
+			transformations = append(transformations, t)
+			schemas = append(schemas, schema)
 		}
 		return nil
 	})
+	for i, t := range transformations {
+		var err error
+		t.In, err = types.ParseSchema(bytes.NewReader(schemas[i]), nil)
+		if err != nil {
+			return err
+		}
+		c := t.Connection
+		ws := connections[c].workspace
+		ws.Transformations.state.ofConnection[c] = append(
+			ws.Transformations.state.ofConnection[c], t,
+		)
+	}
 
 	s.workspaces = workspaces
 	s.connections = connections

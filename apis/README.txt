@@ -1,7 +1,7 @@
 This file contains the documentation for the REST APIs of Chichi.
 
 GET    /api/connections                       List the connections
-GET    /api/connections/{id}/properties       List the properties of a connection
+GET    /api/connections/{id}/schema           Get the schema of a connection
 GET    /api/connections/{id}/transformations  List the transformations of a connection
 PUT    /api/connections/{id}/transformations  Set the transformations of a connection
 POST   /api/connections/{id}/import           Import from a connection

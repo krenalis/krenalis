@@ -681,13 +681,13 @@ func (this *Connections) _startImport(imp *ImportInProgress) error {
 			}
 		}
 
-		// Read the user schema and the properties to read.
-		schema, properties, err := this.userSchema(imp.connection.id)
+		// Read the properties to read.
+		_, properties, err := this.userSchema(imp.connection.id)
 		if err != nil {
 			return fmt.Errorf("cannot read user schema: %s", err)
 		}
 
-		fh := this.newFirehose(context.Background(), imp.connection, schema)
+		fh := this.newFirehose(context.Background(), imp.connection)
 		c, err := _connector.RegisteredApp(connector.name).Connect(fh.ctx, &_connector.AppConfig{
 			Role:         role,
 			Settings:     imp.connection.settings,
@@ -715,17 +715,11 @@ func (this *Connections) _startImport(imp *ImportInProgress) error {
 
 	case DatabaseType:
 
-		// Read the user schema.
-		schema, _, err := this.userSchema(imp.connection.id)
-		if err != nil {
-			return fmt.Errorf("cannot read user schema: %s", err)
-		}
-
 		usersQuery, err := this.compileQuery(imp.connection.usersQuery, noQueryLimit)
 		if err != nil {
 			return importError{err}
 		}
-		fh := this.newFirehose(context.Background(), imp.connection, schema)
+		fh := this.newFirehose(context.Background(), imp.connection)
 		c, err := _connector.RegisteredDatabase(connector.name).Connect(fh.ctx, &_connector.DatabaseConfig{
 			Role:     role,
 			Settings: imp.connection.settings,
@@ -812,18 +806,12 @@ func (this *Connections) _startImport(imp *ImportInProgress) error {
 
 	case FileType:
 
-		// Read the user schema.
-		schema, _, err := this.userSchema(imp.connection.id)
-		if err != nil {
-			return fmt.Errorf("cannot read user schema: %s", err)
-		}
-
 		var ctx = context.Background()
 
 		// Get the file reader.
 		var files *fileReader
 		{
-			fh := this.newFirehose(ctx, imp.connection.storage, schema)
+			fh := this.newFirehose(ctx, imp.connection.storage)
 			ctx = fh.ctx
 			c, err := _connector.RegisteredStorage(connector.name).Connect(ctx, &_connector.StorageConfig{
 				Role:     role,
@@ -837,7 +825,7 @@ func (this *Connections) _startImport(imp *ImportInProgress) error {
 		}
 
 		// Connect to the file connector.
-		fh := this.newFirehose(ctx, imp.connection, types.Schema{})
+		fh := this.newFirehose(ctx, imp.connection)
 		file, err := _connector.RegisteredFile(connector.name).Connect(fh.ctx, &_connector.FileConfig{
 			Role:     role,
 			Settings: imp.connection.settings,
@@ -894,7 +882,7 @@ func (this *Connections) startExport(connection *Connection) error {
 			return err
 		}
 
-		fh := this.newFirehose(context.Background(), connection, types.Schema{})
+		fh := this.newFirehose(context.Background(), connection)
 		c, err := _connector.RegisteredApp(name).Connect(fh.ctx, &_connector.AppConfig{
 			Role:         role,
 			Settings:     settings,
@@ -1161,7 +1149,7 @@ func (this *Connections) Query(id int, query string, limit int) ([]Column, [][]s
 	if err != nil {
 		return nil, nil, err
 	}
-	fh := this.newFirehose(context.Background(), c, types.Schema{})
+	fh := this.newFirehose(context.Background(), c)
 	connection, err := _connector.RegisteredDatabase(c.connector.name).Connect(fh.ctx, &_connector.DatabaseConfig{
 		Role:     cRole,
 		Settings: c.settings,
@@ -1249,7 +1237,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 			}
 		}
 
-		fh := this.newFirehose(context.Background(), c, types.Schema{})
+		fh := this.newFirehose(context.Background(), c)
 		connection, err = _connector.RegisteredApp(c.connector.name).Connect(fh.ctx, &_connector.AppConfig{
 			Role:         cRole,
 			Settings:     c.settings,
@@ -1261,7 +1249,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 
 	default:
 
-		fh := this.newFirehose(context.Background(), c, types.Schema{})
+		fh := this.newFirehose(context.Background(), c)
 
 		switch c.connector.typ {
 		case DatabaseType:
@@ -1563,7 +1551,7 @@ func (this *Connections) Stats(id int) (*ConnectionsStats, error) {
 }
 
 // newFirehose returns a new Firehose used to call a connection method.
-func (this *Connections) newFirehose(ctx context.Context, connection *Connection, userSchema types.Schema) *firehose {
+func (this *Connections) newFirehose(ctx context.Context, connection *Connection) *firehose {
 	var resource int
 	if connection.resource != nil {
 		resource = connection.resource.id
@@ -1572,7 +1560,6 @@ func (this *Connections) newFirehose(ctx context.Context, connection *Connection
 		connections: this,
 		connection:  connection,
 		resource:    resource,
-		userSchema:  userSchema,
 	}
 	fh.ctx, fh.cancel = context.WithCancel(ctx)
 	return fh
@@ -1626,7 +1613,7 @@ func (this *Connections) reloadSchema(id int) error {
 			}
 		}
 
-		fh := this.newFirehose(context.Background(), c, types.Schema{})
+		fh := this.newFirehose(context.Background(), c)
 		connection, err := _connector.RegisteredApp(c.connector.name).Connect(fh.ctx, &_connector.AppConfig{
 			Role:         cRole,
 			Settings:     c.settings,
@@ -1656,7 +1643,7 @@ func (this *Connections) reloadSchema(id int) error {
 		if err != nil {
 			return err
 		}
-		fh := this.newFirehose(context.Background(), c, types.Schema{})
+		fh := this.newFirehose(context.Background(), c)
 		connection, err := _connector.RegisteredDatabase(c.connector.name).Connect(fh.ctx, &_connector.DatabaseConfig{
 			Role:     cRole,
 			Settings: c.settings,
@@ -1695,7 +1682,7 @@ func (this *Connections) reloadSchema(id int) error {
 		var files *fileReader
 		{
 			connector := c.storage.connector
-			fh := this.newFirehose(ctx, c.storage, types.Schema{})
+			fh := this.newFirehose(ctx, c.storage)
 			ctx = fh.ctx
 			connection, err := _connector.RegisteredStorage(connector.name).Connect(ctx, &_connector.StorageConfig{
 				Role:     cRole,
@@ -1709,7 +1696,7 @@ func (this *Connections) reloadSchema(id int) error {
 		}
 
 		// Connect to the file connector and read only the columns.
-		fh := this.newFirehose(ctx, c, types.Schema{})
+		fh := this.newFirehose(ctx, c)
 		file, err := _connector.RegisteredFile(c.connector.name).Connect(fh.ctx, &_connector.FileConfig{
 			Role:     cRole,
 			Settings: c.settings,
@@ -1781,8 +1768,8 @@ func (this *Connections) userSchema(id int) (types.Schema, []_connector.Property
 		return types.Schema{}, nil, err
 	}
 	for _, t := range ts {
-		for _, in := range t.In {
-			paths = append(paths, []string{in.Name})
+		for _, in := range t.In.PropertiesNames() {
+			paths = append(paths, []string{in})
 		}
 	}
 
@@ -2103,8 +2090,8 @@ func exportUser(id string, properties map[string]any, ts []*Transformation) (_co
 	pool := transformations.NewPool()
 	for _, t := range ts {
 		input := map[string]any{}
-		for _, in := range t.In {
-			input[in.Name] = properties[in.Name]
+		for _, in := range t.In.PropertiesNames() {
+			input[in] = properties[in]
 		}
 		prop, err := pool.Run(context.Background(), t.SourceCode, input)
 		if err != nil {

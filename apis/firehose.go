@@ -39,7 +39,6 @@ type firehose struct {
 	ctx         context.Context
 	cancel      context.CancelFunc
 	webhooksPer WebhooksPer
-	userSchema  types.Schema
 	err         error
 }
 
@@ -101,22 +100,6 @@ func (fh *firehose) SetSettings(settings []byte) error {
 
 func (fh *firehose) SetUser(user string, properties map[string]any, timestamp time.Time, timestamps map[string]time.Time) {
 
-	// Validate the properties.
-	if !fh.userSchema.Valid() {
-		fh.setError(importError{errors.New("SetUser called on a Firehose without a user schema")})
-		return
-	}
-	b, err := json.Marshal(properties)
-	if err != nil {
-		fh.setError(importError{err})
-		return
-	}
-	properties, err = types.Decode(bytes.NewReader(b), fh.userSchema)
-	if err != nil {
-		fh.setError(importError{fmt.Errorf("user schema validation failed: %s", err)})
-		return
-	}
-
 	// Set the timestamps.
 	if timestamps == nil {
 		timestamps = map[string]time.Time{}
@@ -128,7 +111,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	}
 
 	// Serialize the properties and the timestamps to the database.
-	err = fh.writeConnectionUsers(user, properties, timestamps)
+	err := fh.writeConnectionUsers(user, properties, timestamps)
 	if err != nil {
 		fh.setError(err)
 		return
@@ -144,25 +127,40 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	// Create a pool of transformation VMs.
 	pool := transformations.NewPool()
 
+	// Encode the properties to JSON.
+	propsJSON, err := json.Marshal(properties)
+	if err != nil {
+		fh.setError(importError{err})
+		return
+	}
+
 	// Applying the transformations, calculate the Golden Record properties and
 	// their relative timestamps for this user in this connection.
 	candidateData := map[string]any{}
 	candidateTimestamps := map[string]time.Time{}
 	for _, t := range connectionsTransformations {
-		props := map[string]any{}
-		for _, input := range t.In {
-			props[input.Name] = properties[input.Name]
+		userProps := map[string]any{}
+		schemaProps := t.In.PropertiesNames()
+		for _, input := range schemaProps {
+			userProps[input] = properties[input]
+		}
+
+		// Validate the properties using the transformation schema.
+		userProps, err = types.Decode(bytes.NewReader(propsJSON), t.In)
+		if err != nil {
+			fh.setError(importError{fmt.Errorf("transformation schema validation failed: %s", err)})
+			return
 		}
 
 		// Apply the transformation function.
-		grProp, err := pool.Run(context.Background(), t.SourceCode, props)
+		grProp, err := pool.Run(context.Background(), t.SourceCode, userProps)
 		if err != nil {
 			fh.setError(importError{fmt.Errorf("error while calling transformation function: %s", err)})
 			return
 		}
 		if grProp != nil {
 			candidateData[t.Out] = grProp
-			candidateTimestamps[t.Out] = mostRecentTimestamp(timestamps, t.In)
+			candidateTimestamps[t.Out] = mostRecentTimestamp(timestamps, schemaProps)
 		}
 	}
 
@@ -208,7 +206,7 @@ transfLoop:
 				fh.setError(err)
 				return
 			}
-			ts := mostRecentTimestamp(entityData.Timestamps, t.In)
+			ts := mostRecentTimestamp(entityData.Timestamps, t.In.PropertiesNames())
 			if ts.After(candidateTimestamps[t.Out]) {
 				// Don't update this Golden Record property.
 				delete(candidateData, t.Out)
@@ -518,10 +516,10 @@ func (fh *firehose) listTransformations(connections []int) ([]*Transformation, e
 
 // mostRecentTimestamp returns the most recent timestamp referred by a property.
 // If there are no timestamps or properties, returns 'time.Time{}'.
-func mostRecentTimestamp(timestamps map[string]time.Time, props []types.Property) time.Time {
+func mostRecentTimestamp(timestamps map[string]time.Time, props []string) time.Time {
 	var recent time.Time
 	for _, p := range props {
-		t := timestamps[p.Name]
+		t := timestamps[p]
 		if t.After(recent) {
 			recent = t
 		}

@@ -8,9 +8,7 @@
 package apis
 
 import (
-	"database/sql/driver"
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"chichi/apis/errors"
@@ -47,14 +45,14 @@ type Transformation struct {
 	// Connection is the connection.
 	Connection int
 
-	// In contains the input properties of the transformation. If the connection
-	// is a source then the properties are the properties of the connection,
-	// otherwise, if it is a destination, it contains the properties of the
-	// Golden Record.
+	// In is the schema of the input properties of the transformation. If the
+	// connection is a source then the properties are the properties of the
+	// connection, otherwise, if it is a destination, it contains the properties
+	// of the Golden Record.
 	//
 	// This is the schema of the transformation.
 	//
-	In TransformationSchema
+	In types.Schema
 
 	// SourceCode is the source code of the transformation function, which
 	// should be something like:
@@ -70,20 +68,17 @@ type Transformation struct {
 	Out string
 }
 
-// TransformationSchema represents the schema of a transformation.
-type TransformationSchema []types.Property
-
-// Scan implements the sql.Scanner interface.
-func (schema *TransformationSchema) Scan(src any) error {
-	s, ok := src.(string)
-	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an TransformationSchema value", src)
+// sets sets the transformations for the given connection.
+// If transformations is nil, then every transformation associated to connection
+// is removed.
+func (this *Transformations) set(connection int, transformations []*Transformation) {
+	this.state.Lock()
+	if transformations == nil {
+		delete(this.state.ofConnection, connection)
+	} else {
+		this.state.ofConnection[connection] = transformations
 	}
-	return json.Unmarshal([]byte(s), &schema)
-}
-
-func (schema TransformationSchema) Value() (driver.Value, error) {
-	return json.Marshal([]types.Property(schema))
+	this.state.Unlock()
 }
 
 // Set sets the transformations for the given connection.
@@ -100,12 +95,16 @@ func (this *Transformations) Set(connection int, transformations []*Transformati
 		if strings.TrimSpace(t.SourceCode) == "" {
 			return errors.BadRequest("a transformation source code is empty")
 		}
-		if len(t.In) == 0 {
-			return errors.BadRequest("input properties are empty")
+		if !t.In.Valid() {
+			return errors.BadRequest("schema is invalid")
 		}
-		for _, in := range t.In {
-			if !types.IsValidPropertyName(in.Name) {
-				return errors.BadRequest("input property name %q is not valid", in.Name)
+		props := t.In.PropertiesNames()
+		if len(props) == 0 {
+			return errors.BadRequest("should have at least one input property")
+		}
+		for _, in := range props {
+			if !types.IsValidPropertyName(in) {
+				return errors.BadRequest("input property name %q is not valid", in)
 			}
 		}
 		if !types.IsValidPropertyName(t.Out) {
@@ -116,6 +115,16 @@ func (this *Transformations) Set(connection int, transformations []*Transformati
 	n := setConnectionTransformations{
 		Connection:      connection,
 		Transformations: transformations,
+	}
+
+	// Marshal the schemas into JSON.
+	schemas := make([][]byte, len(transformations))
+	for i, t := range transformations {
+		var err error
+		schemas[i], err = json.Marshal(t.In)
+		if err != nil {
+			return err
+		}
 	}
 
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
@@ -136,9 +145,9 @@ func (this *Transformations) Set(connection int, transformations []*Transformati
 			}
 			return err
 		}
-		for _, t := range n.Transformations {
+		for i, t := range n.Transformations {
 			var id int
-			err := query.QueryRow(t.Connection, t.In, t.SourceCode, t.Out).Scan(&id)
+			err := query.QueryRow(t.Connection, schemas[i], t.SourceCode, t.Out).Scan(&id)
 			if err != nil {
 				return err
 			}
