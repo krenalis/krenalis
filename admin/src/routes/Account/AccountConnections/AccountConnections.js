@@ -111,10 +111,15 @@ export default class AccountConnections extends React.Component {
 							<sl-icon name='plugin'></sl-icon>
 							<div className='title'>No connection</div>
 							<div className='description'>Get started by installing a new connection</div>
-							<SlButton className='installButton' variant='primary'>
+							<SlButton className='installSource' variant='primary'>
 								<SlIcon slot='suffix' name='plus-circle-dotted' />
-								Add a new connection
-								<NavLink to='/admin/connectors'></NavLink>
+								Add a new source
+								<NavLink to='/admin/connectors?role=Source'></NavLink>
+							</SlButton>
+							<SlButton className='installDestination' variant='primary'>
+								<SlIcon slot='suffix' name='plus-circle-dotted' />
+								Add a new destination
+								<NavLink to='/admin/connectors?role=Destination'></NavLink>
 							</SlButton>
 						</div>
 					) : (

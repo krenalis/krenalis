@@ -32,6 +32,14 @@
 	margin: 10px 0 40px 0;
 }
 
+.AccountConnections .noConnection .installSource {
+	margin-right: 10px;
+}
+
+.AccountConnections .noConnection .installDestination {
+	margin-left: 10px;
+}
+
 .AccountConnections .connections {
 	display: grid;
 	grid-template-columns: 1fr 1fr 1fr;
