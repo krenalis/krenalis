@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var transformationsShowCmd = &cobra.Command{
+var mappingsList = &cobra.Command{
 	Use:  "list <connection ID>",
 	Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -23,10 +23,10 @@ var transformationsShowCmd = &cobra.Command{
 		if connection <= 0 {
 			log.Fatalf("invalid connection ID %q", args[0])
 		}
-		chichiapis.GetTransformations(connection)
+		chichiapis.GetMappings(connection)
 	},
 }
 
 func init() {
-	transformationsCmd.AddCommand(transformationsShowCmd)
+	mappingsCmd.AddCommand(mappingsList)
 }

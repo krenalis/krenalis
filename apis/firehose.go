@@ -117,10 +117,10 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 		return
 	}
 
-	// Retrieve the transformations for this connection.
-	connectionsTransformations, err := fh.connections.Transformations(fh.connection.id)
+	// Retrieve the mappings for this connection.
+	connectionsMappings, err := fh.connections.Mappings(fh.connection.id)
 	if err != nil {
-		fh.setError(fmt.Errorf("cannot list transformations for %d: %s", fh.connection.id, err))
+		fh.setError(fmt.Errorf("cannot list mappings for %d: %s", fh.connection.id, err))
 		return
 	}
 
@@ -134,33 +134,34 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 		return
 	}
 
-	// Applying the transformations, calculate the Golden Record properties and
-	// their relative timestamps for this user in this connection.
+	// Apply the transformations of mappings, calculate the Golden Record
+	// properties and their relative timestamps for this user in this
+	// connection.
 	candidateData := map[string]any{}
 	candidateTimestamps := map[string]time.Time{}
-	for _, t := range connectionsTransformations {
+	for _, m := range connectionsMappings {
 		userProps := map[string]any{}
-		schemaProps := t.In.PropertiesNames()
+		schemaProps := m.In.PropertiesNames()
 		for _, input := range schemaProps {
 			userProps[input] = properties[input]
 		}
 
-		// Validate the properties using the transformation schema.
-		userProps, err = types.Decode(bytes.NewReader(propsJSON), t.In)
+		// Validate the properties using the mapping schema.
+		userProps, err = types.Decode(bytes.NewReader(propsJSON), m.In)
 		if err != nil {
-			fh.setError(importError{fmt.Errorf("transformation schema validation failed: %s", err)})
+			fh.setError(importError{fmt.Errorf("mapping schema validation failed: %s", err)})
 			return
 		}
 
-		// Apply the transformation function.
-		grProp, err := pool.Run(context.Background(), t.SourceCode, userProps)
+		// Apply the transformation function of the mapping.
+		grProp, err := pool.Run(context.Background(), m.SourceCode, userProps)
 		if err != nil {
-			fh.setError(importError{fmt.Errorf("error while calling transformation function: %s", err)})
+			fh.setError(importError{fmt.Errorf("error while calling transformation function of mapping: %s", err)})
 			return
 		}
 		if grProp != nil {
-			candidateData[t.Out] = grProp
-			candidateTimestamps[t.Out] = mostRecentTimestamp(timestamps, schemaProps)
+			candidateData[m.Out] = grProp
+			candidateTimestamps[m.Out] = mostRecentTimestamp(timestamps, schemaProps)
 		}
 	}
 
@@ -186,30 +187,29 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 		return
 	}
 
-	// Retrieve the transformation functions for the entities that match with
-	// the current user.
-	otherTransformations, err := fh.listTransformations(keys(sameEntities))
+	// Retrieve the mappings for the entities that match with the current user.
+	otherMappings, err := fh.listMappings(keys(sameEntities))
 	if err != nil {
-		fh.setError(fmt.Errorf("cannot retrieve transformations for other entities: %s", err))
+		fh.setError(fmt.Errorf("cannot retrieve mappings for other entities: %s", err))
 		return
 	}
 
 	// Discard any incoming Golden Record property which is older than the
 	// existent properties.
 transfLoop:
-	for _, t := range otherTransformations {
-		// For the connection of this transformation, determine the timestamps
-		// relative to the users which refers to the same identity.
-		for _, u := range sameEntities[t.Connection.id] {
-			entityData, err := fh.entityData(t.Connection.id, u)
+	for _, m := range otherMappings {
+		// For the connection of this mapping, determine the timestamps relative
+		// to the users which refers to the same identity.
+		for _, u := range sameEntities[m.Connection.id] {
+			entityData, err := fh.entityData(m.Connection.id, u)
 			if err != nil {
 				fh.setError(err)
 				return
 			}
-			ts := mostRecentTimestamp(entityData.Timestamps, t.In.PropertiesNames())
-			if ts.After(candidateTimestamps[t.Out]) {
+			ts := mostRecentTimestamp(entityData.Timestamps, m.In.PropertiesNames())
+			if ts.After(candidateTimestamps[m.Out]) {
 				// Don't update this Golden Record property.
-				delete(candidateData, t.Out)
+				delete(candidateData, m.Out)
 				if len(candidateData) == 0 {
 					// Avoid useless iterations.
 					break transfLoop
@@ -501,17 +501,17 @@ func keys[K comparable, V any](m map[K]V) []K {
 	return keys
 }
 
-// listTransformations lists the transformations for the given connections.
-func (fh *firehose) listTransformations(connections []int) ([]*Transformation, error) {
-	var transformations []*Transformation
+// listMappings lists the mappings for the given connections.
+func (fh *firehose) listMappings(connections []int) ([]*Mapping, error) {
+	var mappings []*Mapping
 	for _, c := range connections {
-		ts, err := fh.connections.Transformations(c)
+		ts, err := fh.connections.Mappings(c)
 		if err != nil {
 			return nil, err
 		}
-		transformations = append(transformations, ts...)
+		mappings = append(mappings, ts...)
 	}
-	return transformations, nil
+	return mappings, nil
 }
 
 // mostRecentTimestamp returns the most recent timestamp referred by a property.

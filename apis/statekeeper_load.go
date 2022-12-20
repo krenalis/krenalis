@@ -185,7 +185,7 @@ func (s *stateKeeper) loadState() error {
 					return err
 				}
 			}
-			c.transformations = []*Transformation{}
+			c.mappings = []*Mapping{}
 			connection, ok := connections[c.id]
 			if ok {
 				*connection = c
@@ -325,34 +325,34 @@ func (s *stateKeeper) loadState() error {
 	s.eventProcessor = newEventProcessor(s.db, s.chDB, connections)
 	go s.eventProcessor.Run(context.Background())
 
-	// Read all the transformations.
-	var transformations []*Transformation
+	// Read the mappings.
+	var mappings []*Mapping
 	schemas := [][]byte{}
 	connectionIDs := []int{}
-	err = s.db.QueryScan("SELECT id, connection, \"in\", source_code, out FROM transformations", func(rows *postgres.Rows) error {
+	err = s.db.QueryScan("SELECT id, connection, \"in\", source_code, out FROM connections_mappings", func(rows *postgres.Rows) error {
 		for rows.Next() {
-			t := &Transformation{}
+			m := &Mapping{}
 			var schema []byte
 			var connectionID int
-			err := rows.Scan(&t.ID, &connectionID, &schema, &t.SourceCode, &t.Out)
+			err := rows.Scan(&m.ID, &connectionID, &schema, &m.SourceCode, &m.Out)
 			if err != nil {
 				return err
 			}
-			transformations = append(transformations, t)
+			mappings = append(mappings, m)
 			schemas = append(schemas, schema)
 			connectionIDs = append(connectionIDs, connectionID)
 		}
 		return nil
 	})
-	for i, t := range transformations {
+	for i, m := range mappings {
 		var err error
-		t.In, err = types.ParseSchema(bytes.NewReader(schemas[i]), nil)
+		m.In, err = types.ParseSchema(bytes.NewReader(schemas[i]), nil)
 		if err != nil {
 			return err
 		}
 		conn := connections[connectionIDs[i]]
-		t.Connection = conn
-		conn.transformations = append(conn.transformations, t)
+		m.Connection = conn
+		conn.mappings = append(conn.mappings, m)
 	}
 
 	s.workspaces = workspaces

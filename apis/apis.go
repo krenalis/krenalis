@@ -238,43 +238,43 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			})
-			router.Get("/transformations", func(w http.ResponseWriter, r *http.Request) {
+			router.Get("/mappings", func(w http.ResponseWriter, r *http.Request) {
 				connection, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				if connection <= 0 {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				transformations, err := workspace.Connections.Transformations(connection)
+				mappings, err := workspace.Connections.Mappings(connection)
 				if err != nil {
 					if err, ok := err.(errors.ResponseWriterTo); ok {
 						_ = err.WriteTo(w)
 						return
 					}
-					log.Printf("[error] cannot list transformations: %s", err)
+					log.Printf("[error] cannot list mappings: %s", err)
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
-				_ = json.NewEncoder(w).Encode(transformations)
+				_ = json.NewEncoder(w).Encode(mappings)
 			})
-			router.Put("/transformations", func(w http.ResponseWriter, r *http.Request) {
+			router.Put("/mappings", func(w http.ResponseWriter, r *http.Request) {
 				connection, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				if connection <= 0 {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				var ts []*TransformationToCreate
+				var ts []*MappingsToCreate
 				err := json.NewDecoder(r.Body).Decode(&ts)
 				if err != nil {
-					http.Error(w, "Bad Request - invalid transformations", http.StatusBadRequest)
+					http.Error(w, "Bad Request - invalid mappings", http.StatusBadRequest)
 					return
 				}
-				err = workspace.Connections.SetTransformations(connection, ts)
+				err = workspace.Connections.SetMappings(connection, ts)
 				if err != nil {
 					if err, ok := err.(errors.ResponseWriterTo); ok {
 						_ = err.WriteTo(w)
 						return
 					}
-					log.Printf("[error] cannot save transformations: %s", err)
+					log.Printf("[error] cannot save mappings: %s", err)
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}

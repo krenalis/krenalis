@@ -94,14 +94,14 @@ func ExportUsersToConnection(connection int) {
 	}
 }
 
-func GetTransformations(connection int) {
-	var transformations []apis.Transformation
-	err := callAPI("GET", "api/connections/"+strconv.Itoa(connection)+"/transformations", nil, &transformations)
+func GetMappings(connection int) {
+	var mappings []apis.Mapping
+	err := callAPI("GET", "api/connections/"+strconv.Itoa(connection)+"/mappings", nil, &mappings)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("%-4s %-15s %s\n", "ID", "GR Property", "Input props")
-	for _, t := range transformations {
+	for _, t := range mappings {
 		fmt.Printf("%-15s %v\n", t.Out, t.In)
 	}
 }

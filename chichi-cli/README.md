@@ -64,8 +64,4 @@ Note that these subcommands are still not implemented:
 - `chichi-cli schemas show { user | group | event }`
 - `chichi-cli schemas update { user | group | event } { <filename> | - }`
 - `chichi-cli schemas properties { user | group | event }`
-- `chichi-cli transformations get-source`
-- `chichi-cli transformations update-source`
-- `chichi-cli transformations get-connections`
-- `chichi-cli transformations update-connections`
 - `chichi-cli users`

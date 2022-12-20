@@ -93,7 +93,7 @@ const ConnectionProperties = () => {
 
 			// get the transformations.
 			let transformations;
-			[transformations, err] = await call(`/api/connections/${connectionID}/transformations`, 'GET');
+			[transformations, err] = await call(`/api/connections/${connectionID}/mappings`, 'GET');
 			if (err) {
 				onError(err);
 				return;
@@ -251,7 +251,7 @@ const ConnectionProperties = () => {
 			delete toSave.Position;
 			trs.push(toSave);
 		}
-		let [, err] = await call(`/api/connections/${connectionID}/transformations`, 'PUT', trs);
+		let [, err] = await call(`/api/connections/${connectionID}/mappings`, 'PUT', trs);
 		if (err) {
 			onError(err);
 			return;

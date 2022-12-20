@@ -74,8 +74,8 @@ func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgr
 			s.setConnectionStorage(n)
 		case "setConnectionStream":
 			s.setConnectionStream(n)
-		case "setConnectionTransformations":
-			s.setConnectionTransformations(n)
+		case "setConnectionMappings":
+			s.setConnectionMappings(n)
 		case "setConnectionUserQuery":
 			s.setConnectionUserQuery(n)
 		case "setConnectionUserSchema":
@@ -557,26 +557,26 @@ func (s *stateKeeper) setConnectionStream(n postgres.Notification) {
 	})
 }
 
-// setConnectionTransformations is the notification event sent when the
-// transformations of a connection are saved.
-type setConnectionTransformations struct {
-	Connection      int
-	Transformations []*Transformation
+// setConnectionMappings is the notification event sent when the mappings of a
+// connection are saved.
+type setConnectionMappings struct {
+	Connection int
+	Mappings   []*Mapping
 }
 
-// setConnectionTransformations sets the transformations of a connection.
-func (s stateKeeper) setConnectionTransformations(n postgres.Notification) {
-	e := setConnectionTransformations{}
+// setConnectionMappings sets the mappings of a connection.
+func (s stateKeeper) setConnectionMappings(n postgres.Notification) {
+	e := setConnectionMappings{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
 	s.replaceConnection(e.Connection, func(c *Connection) {
-		c.transformations = make([]*Transformation, len(e.Transformations))
-		for i := range c.transformations {
-			t := &Transformation{}
-			*t = *e.Transformations[i]
-			t.Connection = c
-			c.transformations[i] = t
+		c.mappings = make([]*Mapping, len(e.Mappings))
+		for i := range c.mappings {
+			m := &Mapping{}
+			*m = *e.Mappings[i]
+			m.Connection = c
+			c.mappings[i] = m
 		}
 	})
 }
