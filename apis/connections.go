@@ -662,7 +662,7 @@ func (this *Connections) GenerateKey(id int) (string, error) {
 // connection is an app and reimport is false, it imports the users from the
 // current cursor, otherwise imports all users.
 //
-// If the connection does not exist, it returns an errors.Notfound error. If
+// If the connection does not exist, it returns an errors.NotFound error. If
 // the connection is a file and does not have a storage, it returns an
 // errors.UnprocessableError error with code NoStorage and if the connection
 // has no transformations, it returns an errors.UnprocessableError error with
