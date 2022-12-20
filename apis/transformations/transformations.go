@@ -28,6 +28,10 @@ func NewPool() *Transformations {
 
 const stackSize = 10 * 1024 * 1024
 
+// TODO(Gianluca): remove. This is used during development with large user
+// datasets.
+const bypassPython = false
+
 // Run runs the Python code, passing to it the given user and returning the
 // resulting value.
 //
@@ -47,6 +51,16 @@ const stackSize = 10 * 1024 * 1024
 //	def transform(user: dict) -> str:
 //	    return user["firstname"]
 func (t *Transformations) Run(ctx context.Context, code string, user map[string]any) (any, error) {
+
+	// TODO(Gianluca): remove. This is used during development with large user
+	// datasets.
+	if bypassPython {
+		var key string
+		for k := range user {
+			key = k
+		}
+		return user[key], nil
+	}
 
 	// Initialize a new MicroPython VM that writes the stdout to a buffer.
 	stdout := &bytes.Buffer{}
