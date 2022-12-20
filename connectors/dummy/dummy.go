@@ -9,6 +9,8 @@ package dummy
 
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -74,43 +76,21 @@ type user struct {
 
 var now = time.Now()
 
-var users = []user{
-	{
-		ID: "1",
-		Properties: map[string]any{
-			"first_name": "Mario",
-			"last_name":  "Rossi",
-			"email":      "mariorossi@example.com",
-		},
-	},
-	{
-		ID: "2",
-		Properties: map[string]any{
-			"first_name": "Luigi",
-			"last_name":  "Verdi",
-			"email":      "luigiverdi@example.com",
-		},
-	},
-}
-
-var timestamps = map[string]map[string]time.Time{
-	"1": {
-		"last_name": now.Add(5 * time.Second),
-		"email":     now.Add(1 * time.Second),
-	},
-	"2": {
-		"last_name": now.Add(7 * time.Second),
-		"email":     now.Add(3 * time.Second),
-	},
-}
-
 func (c *connection) SetUsers(users []connector.User) error {
 	panic("not implemented")
 }
 
+//go:embed users.json
+var jsonUsers []byte
+
 func (c *connection) Users(cursor string, properties []connector.PropertyPath) error {
+	var users []user
+	err := json.Unmarshal(jsonUsers, &users)
+	if err != nil {
+		panic(err)
+	}
 	for _, user := range users {
-		c.firehose.SetUser(user.ID, user.Properties, now, timestamps[user.ID])
+		c.firehose.SetUser(user.ID, user.Properties, now, nil)
 	}
 	return nil
 }
