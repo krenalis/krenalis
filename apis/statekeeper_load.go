@@ -108,7 +108,6 @@ func (s *stateKeeper) loadState() error {
 				workspace.EventTypes = newEventTypes(workspace, &eventTypesState{ids: map[int]*EventType{}})
 				workspace.EventDataTypes = newEventDataTypes(workspace, &eventDataTypesState{names: map[string]*EventDataType{}})
 				workspace.EventListeners = &EventListeners{workspace}
-				workspace.Transformations = newTransformations(workspace, &transformationsState{ofConnection: map[int][]*Transformation{}})
 				account.Workspaces.state.ids[id] = workspace
 				workspaces[id] = workspace
 			}
@@ -186,6 +185,7 @@ func (s *stateKeeper) loadState() error {
 					return err
 				}
 			}
+			c.transformations = []*Transformation{}
 			connection, ok := connections[c.id]
 			if ok {
 				*connection = c
@@ -194,7 +194,6 @@ func (s *stateKeeper) loadState() error {
 				*connection = c
 			}
 			workspace.Connections.state.ids[c.id] = connection
-			workspace.Transformations.state.ofConnection[c.id] = []*Transformation{}
 			connections[c.id] = connection
 		}
 		return nil
@@ -329,16 +328,19 @@ func (s *stateKeeper) loadState() error {
 	// Read all the transformations.
 	var transformations []*Transformation
 	schemas := [][]byte{}
+	connectionIDs := []int{}
 	err = s.db.QueryScan("SELECT id, connection, \"in\", source_code, out FROM transformations", func(rows *postgres.Rows) error {
 		for rows.Next() {
 			t := &Transformation{}
 			var schema []byte
-			err := rows.Scan(&t.ID, &t.Connection, &schema, &t.SourceCode, &t.Out)
+			var connectionID int
+			err := rows.Scan(&t.ID, &connectionID, &schema, &t.SourceCode, &t.Out)
 			if err != nil {
 				return err
 			}
 			transformations = append(transformations, t)
 			schemas = append(schemas, schema)
+			connectionIDs = append(connectionIDs, connectionID)
 		}
 		return nil
 	})
@@ -348,11 +350,9 @@ func (s *stateKeeper) loadState() error {
 		if err != nil {
 			return err
 		}
-		c := t.Connection
-		ws := connections[c].workspace
-		ws.Transformations.state.ofConnection[c] = append(
-			ws.Transformations.state.ofConnection[c], t,
-		)
+		conn := connections[connectionIDs[i]]
+		t.Connection = conn
+		conn.transformations = append(conn.transformations, t)
 	}
 
 	s.workspaces = workspaces

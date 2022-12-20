@@ -118,7 +118,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	}
 
 	// Retrieve the transformations for this connection.
-	connectionsTransformations, err := fh.connections.Transformations.List(fh.connection.id)
+	connectionsTransformations, err := fh.connections.Transformations(fh.connection.id)
 	if err != nil {
 		fh.setError(fmt.Errorf("cannot list transformations for %d: %s", fh.connection.id, err))
 		return
@@ -200,8 +200,8 @@ transfLoop:
 	for _, t := range otherTransformations {
 		// For the connection of this transformation, determine the timestamps
 		// relative to the users which refers to the same identity.
-		for _, u := range sameEntities[t.Connection] {
-			entityData, err := fh.entityData(t.Connection, u)
+		for _, u := range sameEntities[t.Connection.id] {
+			entityData, err := fh.entityData(t.Connection.id, u)
 			if err != nil {
 				fh.setError(err)
 				return
@@ -505,7 +505,7 @@ func keys[K comparable, V any](m map[K]V) []K {
 func (fh *firehose) listTransformations(connections []int) ([]*Transformation, error) {
 	var transformations []*Transformation
 	for _, c := range connections {
-		ts, err := fh.connections.Transformations.List(c)
+		ts, err := fh.connections.Transformations(c)
 		if err != nil {
 			return nil, err
 		}

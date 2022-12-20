@@ -39,16 +39,15 @@ func newWorkspaces(account *Account, state *workspacesState) *Workspaces {
 
 // Workspace represents a workspace.
 type Workspace struct {
-	db              *postgres.DB
-	chDB            chDriver.Conn
-	Connections     *Connections
-	EventTypes      *EventTypes
-	EventDataTypes  *EventDataTypes
-	EventListeners  *EventListeners
-	Transformations *Transformations
-	id              int
-	account         *Account
-	schema          struct {
+	db             *postgres.DB
+	chDB           chDriver.Conn
+	Connections    *Connections
+	EventTypes     *EventTypes
+	EventDataTypes *EventDataTypes
+	EventListeners *EventListeners
+	id             int
+	account        *Account
+	schema         struct {
 		user  types.Schema
 		group types.Schema
 		event types.Schema

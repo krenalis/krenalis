@@ -373,9 +373,6 @@ func (s *stateKeeper) deleteConnection(n postgres.Notification) {
 		return
 	}
 
-	ws := s.connections[e.ID].workspace
-	ws.Transformations.state.set(e.ID, nil)
-
 	var usages []*Connection
 	connections := s.connections[e.ID].workspace.Connections
 	delete(s.connections, e.ID)
@@ -573,8 +570,15 @@ func (s stateKeeper) setConnectionTransformations(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	ws := s.connections[e.Connection].workspace
-	ws.Transformations.state.set(e.Connection, e.Transformations)
+	s.replaceConnection(e.Connection, func(c *Connection) {
+		c.transformations = make([]*Transformation, len(e.Transformations))
+		for i := range c.transformations {
+			t := &Transformation{}
+			*t = *e.Transformations[i]
+			t.Connection = c
+			c.transformations[i] = t
+		}
+	})
 }
 
 // setUserQueryNotification is the notification event sent when a user query of

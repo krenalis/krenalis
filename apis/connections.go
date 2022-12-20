@@ -83,19 +83,67 @@ type Connection struct {
 	schema           types.Schema
 	usersQuery       string
 	importInProgress *ImportInProgress
+	transformations  []*Transformation
+}
+
+// Transformation represents a transformation from a kind of properties to
+// another.
+//
+// In particular, if the transformation refers to a source connection, it is a
+// transformation from the connection properties to a property of the Golden
+// Record; otherwise, if it refers to a destination connection, it is a
+// transformation from the Golden Record properties to a connection property.
+type Transformation struct {
+
+	// ID is the identifier of the transformation.
+	ID int
+
+	// Connection is the connection.
+	Connection *Connection
+
+	// In is the schema of the input properties of the transformation. If the
+	// connection is a source then the properties are the properties of the
+	// connection, otherwise, if it is a destination, it contains the properties
+	// of the Golden Record.
+	//
+	// This is the schema of the transformation.
+	//
+	In types.Schema
+
+	// SourceCode is the source code of the transformation function, which
+	// should be something like:
+	//
+	//   def transform(user):
+	//     return user["first_name"]
+	//
+	SourceCode string
+
+	// Out is the output property of the transformation. If the connection is a
+	// source then this is a Golden Record property, otherwise, if it is a
+	// destination, it is one of the properties of the connection.
+	Out string
 }
 
 // A ConnectionInfo describes a connection as returned by Get and List.
 type ConnectionInfo struct {
+	ID              int
+	Name            string
+	Type            ConnectorType
+	Role            ConnectionRole
+	Storage         int    // zero if the connection is not a file or does not have a storage.
+	OAuthURL        string // empty if the connection does not use OAuth.
+	LogoURL         string
+	Enabled         bool
+	UsersQuery      string // only for databases.
+	Transformations []*TransformationInfo
+}
+
+// TransformationInfo describes a transformation as returned by Get and List.
+type TransformationInfo struct {
 	ID         int
-	Name       string
-	Type       ConnectorType
-	Role       ConnectionRole
-	Storage    int    // zero if the connection is not a file or does not have a storage.
-	OAuthURL   string // empty if the connection does not use OAuth.
-	LogoURL    string
-	Enabled    bool
-	UsersQuery string // only for databases.
+	In         types.Schema
+	SourceCode string
+	Out        string
 }
 
 const (
@@ -429,6 +477,14 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 		Enabled:    c.enabled,
 		UsersQuery: c.usersQuery,
 	}
+	for _, t := range c.transformations {
+		info.Transformations = append(info.Transformations, &TransformationInfo{
+			ID:         t.ID,
+			In:         t.In,
+			SourceCode: t.SourceCode,
+			Out:        t.Out,
+		})
+	}
 	if c.storage != nil {
 		info.Storage = c.storage.id
 	}
@@ -503,7 +559,7 @@ func (this *Connections) Export(id int) (err error) {
 	}
 
 	// Check that the connection has at least one transformation associated to it.
-	transformations, err := this.Transformations.List(id)
+	transformations, err := this.Transformations(id)
 	if err != nil {
 		// TODO(marco): it should not return an internal error if the connection does not exist.
 		return fmt.Errorf("cannot list transformations for %d: %s", id, err)
@@ -640,7 +696,7 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 
 	// Check that the connection has at least one transformation associated to it.
 	if c.connector.typ != EventStreamType {
-		transformations, err := this.Transformations.List(id)
+		transformations, err := this.Transformations(id)
 		if err != nil {
 			// TODO(marco): it should not return an internal error if the connection does not exist.
 			return fmt.Errorf("cannot list transformations for %d: %s", id, err)
@@ -960,7 +1016,7 @@ func (this *Connections) startExport(connection *Connection) error {
 		}
 
 		// Read the transformation functions.
-		transformations, err := this.Transformations.List(connection.id)
+		transformations, err := this.Transformations(connection.id)
 		if err != nil {
 			return err
 		}
@@ -1136,6 +1192,14 @@ func (this *Connections) List() []*ConnectionInfo {
 			Enabled:    c.enabled,
 			UsersQuery: c.usersQuery,
 		}
+		for _, t := range c.transformations {
+			info.Transformations = append(info.Transformations, &TransformationInfo{
+				ID:         t.ID,
+				In:         t.In,
+				SourceCode: t.SourceCode,
+				Out:        t.Out,
+			})
+		}
 		if c.storage != nil {
 			info.Storage = c.storage.id
 		}
@@ -1225,6 +1289,16 @@ func (this *Connections) Schema(id int) (types.Schema, error) {
 		return types.Schema{}, errors.BadRequest("connection %d has no properties, it's a stream", id)
 	}
 	return c.schema, nil
+}
+
+// Transformations returns the transformations of the connection with identifier
+// id.
+func (this *Connections) Transformations(connection int) ([]*Transformation, error) {
+	ts, ok := this.state.Get(connection)
+	if !ok {
+		return nil, errors.NotFound("connection %d does not exist", connection)
+	}
+	return ts.transformations, nil
 }
 
 // Column represents a column of a database connection.
@@ -1584,6 +1658,113 @@ func (this *Connections) SetStream(source, stream int) error {
 	return err
 }
 
+// TransformationToCreate represents a transformation to create.
+type TransformationToCreate struct {
+	// In is the schema of the input properties of the transformation. If the
+	// connection is a source then the properties are the properties of the
+	// connection, otherwise, if it is a destination, it contains the properties
+	// of the Golden Record.
+	//
+	// This is the schema of the transformation.
+	//
+	In types.Schema
+
+	// SourceCode is the source code of the transformation function, which
+	// should be something like:
+	//
+	//   def transform(user):
+	//     return user["first_name"]
+	//
+	SourceCode string
+
+	// Out is the output property of the transformation. If the connection is a
+	// source then this is a Golden Record property, otherwise, if it is a
+	// destination, it is one of the properties of the connection.
+	Out string
+}
+
+// SetTransformations sets the transformations of the connection with identifier
+// id.
+func (this *Connections) SetTransformations(connection int, transformations []*TransformationToCreate) error {
+
+	if connection < 1 || connection > maxInt32 {
+		return errors.BadRequest("connection identifier %d is not valid", connection)
+	}
+
+	// Validate the transformations.
+	for _, t := range transformations {
+		// TODO(Gianluca): validate the Python function here.
+		if strings.TrimSpace(t.SourceCode) == "" {
+			return errors.BadRequest("a transformation source code is empty")
+		}
+		if !t.In.Valid() {
+			return errors.BadRequest("schema is invalid")
+		}
+		props := t.In.PropertiesNames()
+		if len(props) == 0 {
+			return errors.BadRequest("should have at least one input property")
+		}
+		for _, in := range props {
+			if !types.IsValidPropertyName(in) {
+				return errors.BadRequest("input property name %q is not valid", in)
+			}
+		}
+		if !types.IsValidPropertyName(t.Out) {
+			return errors.BadRequest("output property name %q is not valid", t.Out)
+		}
+	}
+
+	n := setConnectionTransformations{Connection: connection}
+
+	// Prepare the transformations for the notification and marshal the schemas
+	// into JSON.
+	n.Transformations = make([]*Transformation, len(transformations))
+	schemas := make([][]byte, len(transformations))
+	for i, t := range transformations {
+		n.Transformations[i] = &Transformation{
+			In:         t.In,
+			SourceCode: t.SourceCode,
+			Out:        t.Out,
+		}
+		var err error
+		schemas[i], err = json.Marshal(t.In)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := this.db.Transaction(func(tx *postgres.Tx) error {
+		_, err := tx.Exec("DELETE FROM transformations WHERE connection = $1", n.Connection)
+		if err != nil {
+			return err
+		}
+		query, err := tx.Prepare("INSERT INTO transformations\n" +
+			"(connection, \"in\", source_code, out)\n" +
+			"VALUES ($1, $2, $3, $4) RETURNING id")
+		if err != nil {
+			if err != nil {
+				if postgres.IsForeignKeyViolation(err) {
+					if postgres.ErrConstraintName(err) == "transformations_connection_fkey" {
+						err = errors.NotFound("connection %d does not exist", connection)
+					}
+				}
+			}
+			return err
+		}
+		for i, t := range n.Transformations {
+			var id int
+			err := query.QueryRow(connection, schemas[i], t.SourceCode, t.Out).Scan(&id)
+			if err != nil {
+				return err
+			}
+			t.ID = id
+		}
+		return tx.Notify(n)
+	})
+
+	return err
+}
+
 // SetUsersQuery sets the users query of the database source connection with
 // identifier id. query must be UTF-8 encoded, it cannot be longer than
 // 16,777,215 runes and must contain the ':limit' placeholder.
@@ -1892,7 +2073,7 @@ func (this *Connections) userSchema(id int) (types.Schema, []_connector.Property
 	// Read the paths of the mapped properties from the transformations of this
 	// connection.
 	var paths []_connector.PropertyPath
-	ts, err := this.Transformations.List(id)
+	ts, err := this.Transformations(id)
 	if err != nil {
 		return types.Schema{}, nil, err
 	}

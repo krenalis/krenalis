@@ -177,36 +177,6 @@ func (state *connectionsState) List() []*Connection {
 	return connections
 }
 
-// transformationsState contains the state of a single connection's
-// transformations.
-type transformationsState struct {
-	sync.Mutex
-	ofConnection map[int][]*Transformation
-}
-
-// List returns the transformations of the given connection.
-//
-// If there are no transformations associated to the given connection, it
-// returns nil.
-func (state *transformationsState) List(connection int) []*Transformation {
-	state.Lock()
-	ts := state.ofConnection[connection]
-	state.Unlock()
-	return ts
-}
-
-// set sets the transformations of the given connection. If transformations is
-// nil, then every transformation associated to the connection is removed.
-func (state *transformationsState) set(connection int, transformations []*Transformation) {
-	state.Lock()
-	if transformations == nil {
-		delete(state.ofConnection, connection)
-	} else {
-		state.ofConnection[connection] = transformations
-	}
-	state.Unlock()
-}
-
 // eventDataState contains the state of a single workspace's event types.
 type eventTypesState struct {
 	sync.Mutex

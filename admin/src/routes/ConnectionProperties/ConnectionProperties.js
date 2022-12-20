@@ -249,7 +249,6 @@ const ConnectionProperties = () => {
 		for (let t of transformations) {
 			let toSave = { ...t };
 			delete toSave.Position;
-			toSave.Connection = connectionID;
 			trs.push(toSave);
 		}
 		let [, err] = await call(`/api/connections/${connectionID}/transformations`, 'PUT', trs);

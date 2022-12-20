@@ -244,7 +244,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				transformations, err := workspace.Connections.Transformations.List(connection)
+				transformations, err := workspace.Connections.Transformations(connection)
 				if err != nil {
 					if err, ok := err.(errors.ResponseWriterTo); ok {
 						_ = err.WriteTo(w)
@@ -262,13 +262,13 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				var ts []*Transformation
+				var ts []*TransformationToCreate
 				err := json.NewDecoder(r.Body).Decode(&ts)
 				if err != nil {
 					http.Error(w, "Bad Request - invalid transformations", http.StatusBadRequest)
 					return
 				}
-				err = workspace.Connections.Transformations.Set(connection, ts)
+				err = workspace.Connections.SetTransformations(connection, ts)
 				if err != nil {
 					if err, ok := err.(errors.ResponseWriterTo); ok {
 						_ = err.WriteTo(w)
