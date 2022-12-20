@@ -50,7 +50,6 @@ type Workspace struct {
 	schema         struct {
 		user  types.Schema
 		group types.Schema
-		event types.Schema
 	}
 	schemaSources struct {
 		user  string
