@@ -14,7 +14,6 @@ import (
 
 	"chichi/apis/postgres"
 	"chichi/apis/types"
-	"chichi/connector"
 )
 
 // loadState loads the state from the database.
@@ -268,56 +267,7 @@ func (s *stateKeeper) loadState() error {
 		return err
 	}
 
-	// Read the source event stream collectors and the source connections that
-	// send the events into the stream with their keys.
-	var streams []*eventCollectorStream
-	err = s.db.QueryScan(
-		"SELECT s.id, co.name AS connector, s.settings, ci.id AS event_collector_producer, ci.type, k.value\n"+
-			"FROM connections AS s\n"+
-			"INNER JOIN connectors AS co ON co.id = s.connector\n"+
-			"INNER JOIN connections AS ci ON ci.stream = s.id\n"+
-			"INNER JOIN connections_keys AS k ON k.connection = ci.id\n"+
-			"WHERE s.type = 'EventStream' AND s.role = 'Source' AND s.settings <> '' AND s.enabled AND ci.enabled",
-		func(rows *postgres.Rows) error {
-		Rows:
-			for rows.Next() {
-				var stream eventCollectorStream
-				var producerID int
-				var producerType ConnectorType
-				var producerKey string
-				if err := rows.Scan(&stream.ID, &stream.Connector, &stream.Settings, &producerID, &producerType, &producerKey); err != nil {
-					return err
-				}
-				for _, s := range streams {
-					if s.ID == stream.ID {
-						for _, p := range s.Producers {
-							if p.ID == producerID {
-								p.Keys = append(p.Keys, producerKey)
-								continue Rows
-							}
-						}
-						s.Producers = append(s.Producers, &eventCollectorProducer{
-							ID:   producerID,
-							Type: connector.Type(producerType),
-							Keys: []string{producerKey},
-						})
-						continue Rows
-					}
-				}
-				stream.Producers = []*eventCollectorProducer{{
-					ID:   producerID,
-					Type: connector.Type(producerType),
-					Keys: []string{producerKey},
-				}}
-				streams = append(streams, &stream)
-			}
-			return nil
-		})
-	if err != nil {
-		return err
-	}
-
-	s.eventCollector, err = newEventCollector(context.Background(), streams)
+	s.eventCollector, err = newEventCollector(context.Background(), connections, nil)
 	if err != nil {
 		return err
 	}

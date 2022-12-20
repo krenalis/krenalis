@@ -35,62 +35,48 @@ var errUnauthorized = errors.New("unauthorized")
 // eventDateLayout is the layout used for dates in events.
 var eventDateLayout = "2006-01-02T15:04:05.999Z07:00"
 
-// eventCollectorStream represents a source stream connection to send events
-// to.
-type eventCollectorStream struct {
-	ID        int
-	Connector string
-	Settings  []byte
-	Producers []*eventCollectorProducer
-}
-
-// eventCollectorProducer represents an event producer. It can be a website,
-// mobile or server connection.
-type eventCollectorProducer struct {
-	ID   int
-	Type connector.Type
-	Keys []string
-}
-
 // An eventCollector collects events and sends them to event streams.
 type eventCollector struct {
 	sync.RWMutex
 
-	// sources are the allowed sources. If nil, all sources are allowed.
-	sources map[int]struct{}
+	connections map[int]*Connection
 
-	// route maps a connection key to the stream to send its events to.
-	routes map[string]connector.EventStreamConnection
+	keys map[string]*Connection
 
 	// defaultStream is the stream to send events to if request key is empty.
 	// If nil, the requests with an empty key are denied.
-	defaultStream connector.EventStreamConnection
+	defaultStream *Connection
+
+	streamConnections map[int]connector.EventStreamConnection
 }
 
 // newEventCollector returns a new event collector that sends events to
 // streams.
-func newEventCollector(ctx context.Context, streams []*eventCollectorStream) (*eventCollector, error) {
+func newEventCollector(ctx context.Context, connections map[int]*Connection, defaultStream *Connection) (*eventCollector, error) {
 
 	var collector = eventCollector{
-		sources: map[int]struct{}{},
-		routes:  map[string]connector.EventStreamConnection{},
+		connections:       map[int]*Connection{},
+		keys:              map[string]*Connection{},
+		streamConnections: map[int]connector.EventStreamConnection{},
 	}
 
-	for _, s := range streams {
-		stream, err := connector.RegisteredEventStream(s.Connector).Connect(ctx, &connector.EventStreamConfig{
-			Role:     connector.SourceRole,
-			Settings: s.Settings,
-		})
-		if err != nil {
-			return nil, err
-		}
-		for _, p := range s.Producers {
-			if t := p.Type; t == connector.WebsiteType || t == connector.MobileType {
-				collector.sources[p.ID] = struct{}{}
+	for id, c := range connections {
+		switch c.connector.typ {
+		case MobileType, WebsiteType:
+			collector.connections[id] = c
+		case ServerType:
+			for _, key := range c.keys {
+				collector.keys[key] = c
 			}
-			for _, k := range p.Keys {
-				collector.routes[k] = stream
+		case EventStreamType:
+			stream, err := connector.RegisteredEventStream(c.connector.name).Connect(ctx, &connector.EventStreamConfig{
+				Role:     connector.SourceRole,
+				Settings: c.settings,
+			})
+			if err != nil {
+				return nil, err
 			}
+			collector.streamConnections[id] = stream
 		}
 	}
 
@@ -157,28 +143,34 @@ func (c *eventCollector) serveHTTP(r *http.Request) error {
 	if !ok || src == "" {
 		return errUnauthorized
 	}
-	// Validate the source.
-	source, _ := strconv.Atoi(src)
-	if source <= 0 || source > math.MaxInt32 {
-		return errUnauthorized
-	}
-	c.RLock()
-	sources, routes := c.sources, c.routes
-	c.RUnlock()
-	if sources != nil {
-		if _, ok := sources[source]; !ok {
+	// Validate the key.
+	var server *Connection
+	if key != "" {
+		server = c.keys[key]
+		if server == nil {
 			return errUnauthorized
 		}
 	}
-	// Validate the key.
-	var stream connector.EventStreamConnection
-	if key == "" {
-		stream = c.defaultStream
-	} else {
-		stream = routes[key]
+
+	// Validate the source.
+	sourceID, _ := strconv.Atoi(src)
+	if sourceID < 1 || sourceID > math.MaxInt32 {
+		return errBadRequest
+	}
+	source, ok := c.connections[sourceID]
+	if !ok {
+		return errNotFound
+	}
+
+	stream := source.stream
+	if server != nil {
+		stream = server.stream
 	}
 	if stream == nil {
-		return errUnauthorized
+		if c.defaultStream == nil {
+			return errNotFound
+		}
+		stream = c.defaultStream
 	}
 
 	// Prepare the event data.
@@ -209,7 +201,7 @@ func (c *eventCollector) serveHTTP(r *http.Request) error {
 	// Send the event to the stream.
 	var ch chan struct{}
 	opts := connector.SendOptions{OrderKey: src}
-	err = stream.Send(event.Bytes(), opts, func(err error) {
+	err = c.streamConnections[stream.id].Send(event.Bytes(), opts, func(err error) {
 		ch <- struct{}{}
 	})
 	_ = <-ch
