@@ -58,7 +58,7 @@ func (s *postgresEventStream) Receive() (event []byte, ack func(), err error) {
 		if err != nil {
 			if err == sql.ErrNoRows {
 				_ = tx.Commit()
-				time.Sleep(1) // TODO(marco): implement with distributed notifications
+				time.Sleep(1 * time.Second) // TODO(marco): implement with distributed notifications
 				continue
 			}
 			_ = tx.Rollback()
