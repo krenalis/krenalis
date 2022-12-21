@@ -39,36 +39,40 @@ var eventDateLayout = "2006-01-02T15:04:05.999Z07:00"
 type eventCollector struct {
 	sync.RWMutex
 
-	connections map[int]*Connection
+	sources map[int]*Connection
 
 	keys map[string]*Connection
 
-	// defaultStream is the stream to send events to if request key is empty.
-	// If nil, the requests with an empty key are denied.
-	defaultStream *Connection
+	// defaultStream is the stream to send events to if request sources don't
+	// have a stream.
+	defaultStream connector.EventStreamConnection
 
 	streamConnections map[int]connector.EventStreamConnection
 }
 
-// newEventCollector returns a new event collector that sends events to
-// streams.
-func newEventCollector(ctx context.Context, connections map[int]*Connection, defaultStream *Connection) (*eventCollector, error) {
+// newEventCollector returns a new event collector. Reads events sent from
+// mobile, server and website sources in connections and sends them to the
+// source streams in connections. defaultStream is the stream to send events if
+// a source does not have a stream.
+func newEventCollector(ctx context.Context, connections map[int]*Connection,
+	defaultStream connector.EventStreamConnection) (*eventCollector, error) {
 
 	var collector = eventCollector{
-		connections:       map[int]*Connection{},
+		sources:           map[int]*Connection{},
 		keys:              map[string]*Connection{},
+		defaultStream:     defaultStream,
 		streamConnections: map[int]connector.EventStreamConnection{},
 	}
 
 	for id, c := range connections {
+		if !c.enabled || c.role != SourceRole {
+			continue
+		}
 		switch c.connector.typ {
-		case MobileType, WebsiteType:
-			collector.connections[id] = c
-		case ServerType:
-			for _, key := range c.keys {
-				collector.keys[key] = c
-			}
 		case EventStreamType:
+			if len(c.settings) == 0 {
+				continue
+			}
 			stream, err := connector.RegisteredEventStream(c.connector.name).Connect(ctx, &connector.EventStreamConfig{
 				Role:     connector.SourceRole,
 				Settings: c.settings,
@@ -77,6 +81,12 @@ func newEventCollector(ctx context.Context, connections map[int]*Connection, def
 				return nil, err
 			}
 			collector.streamConnections[id] = stream
+		case MobileType, WebsiteType:
+			collector.sources[id] = c
+		case ServerType:
+			for _, key := range c.keys {
+				collector.keys[key] = c
+			}
 		}
 	}
 
@@ -133,7 +143,7 @@ func (c *eventCollector) serveHTTP(r *http.Request) error {
 	// Validate the content length.
 	if cl := r.Header.Get("Content-Length"); cl != "" {
 		length, _ := strconv.Atoi(cl)
-		if length <= 0 || length > maxRequestSize {
+		if length < 1 || length > maxRequestSize {
 			return errBadRequest
 		}
 	}
@@ -157,20 +167,22 @@ func (c *eventCollector) serveHTTP(r *http.Request) error {
 	if sourceID < 1 || sourceID > math.MaxInt32 {
 		return errBadRequest
 	}
-	source, ok := c.connections[sourceID]
+	source, ok := c.sources[sourceID]
 	if !ok {
 		return errNotFound
 	}
 
-	stream := source.stream
-	if server != nil {
-		stream = server.stream
+	var streamID int
+	var streamConnection connector.EventStreamConnection
+	if server != nil && server.stream != nil {
+		streamID = server.stream.id
+	} else if source.stream != nil {
+		streamID = source.stream.id
 	}
-	if stream == nil {
-		if c.defaultStream == nil {
-			return errNotFound
-		}
-		stream = c.defaultStream
+	if streamID == 0 {
+		streamConnection = c.defaultStream
+	} else {
+		streamConnection = c.streamConnections[streamID]
 	}
 
 	// Prepare the event data.
@@ -199,9 +211,9 @@ func (c *eventCollector) serveHTTP(r *http.Request) error {
 	}
 
 	// Send the event to the stream.
-	var ch chan struct{}
+	ch := make(chan struct{})
 	opts := connector.SendOptions{OrderKey: src}
-	err = c.streamConnections[stream.id].Send(event.Bytes(), opts, func(err error) {
+	err = streamConnection.Send(event.Bytes(), opts, func(err error) {
 		ch <- struct{}{}
 	})
 	_ = <-ch

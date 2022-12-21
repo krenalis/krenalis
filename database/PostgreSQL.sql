@@ -161,7 +161,7 @@ CREATE TABLE connections_stats_events (
     stream integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
     good_events integer NOT NULL,
     bad_events integer NOT NULL,
-    PRIMARY KEY (hour, source, server, stream)
+    UNIQUE (hour, source, server, stream)
 );
 
 CREATE INDEX ON connections_stats_events (server);
@@ -195,6 +195,11 @@ CREATE TABLE event_data_types (
     description varchar(400) NOT NULL DEFAULT '',
     schema text NOT NULL,
     PRIMARY KEY (workspace, name)
+);
+
+CREATE TABLE event_stream_queue (
+    timestamp timestamp NOT NULL,
+    event bytea NOT NULL
 );
 
 CREATE TABLE event_types (

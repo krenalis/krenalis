@@ -94,26 +94,29 @@ type eventProcessor struct {
 	servers  struct {
 		keys map[string]*Connection
 	}
+	defaultStream _connector.EventStreamConnection
 }
 
 // newEventProcessor returns a new event eventProcessor.
-func newEventProcessor(db *postgres.DB, chDB chDriver.Conn, connections map[int]*Connection) *eventProcessor {
+func newEventProcessor(db *postgres.DB, chDB chDriver.Conn, connections map[int]*Connection,
+	defaultStream _connector.EventStreamConnection) *eventProcessor {
 
 	processor := eventProcessor{
-		db:       db,
-		queue:    newQueue(chDB),
-		sources:  map[int]*Connection{},
-		observer: newEventObserver(db),
+		db:            db,
+		sources:       map[int]*Connection{},
+		queue:         newQueue(chDB),
+		observer:      newEventObserver(db),
+		defaultStream: defaultStream,
 	}
 	processor.servers.keys = map[string]*Connection{}
 
-	for _, c := range connections {
+	for id, c := range connections {
 		if !c.enabled || c.role != SourceRole {
 			continue
 		}
 		switch c.connector.typ {
 		case MobileType, WebsiteType:
-			processor.sources[c.id] = c
+			processor.sources[id] = c
 		case EventStreamType:
 			if len(c.settings) > 0 {
 				processor.streams = append(processor.streams, c)
@@ -141,6 +144,7 @@ func (p *eventProcessor) Run(ctx context.Context) {
 		}
 		go p.processStream(ctx, stream, connection)
 	}
+	go p.processStream(ctx, nil, p.defaultStream)
 }
 
 // processStream processes the events received from the stream with the given
@@ -148,9 +152,14 @@ func (p *eventProcessor) Run(ctx context.Context) {
 // connection and returns.
 func (p *eventProcessor) processStream(ctx context.Context, stream *Connection, connection _connector.EventStreamConnection) {
 
+	streamID, streamName := 0, "default stream"
+	if stream != nil {
+		streamID, streamName = stream.id, "stream "+strconv.Itoa(stream.id)
+	}
+
 	defer func() {
 		if err := connection.Close(); err != nil {
-			log.Printf("cannot close stream %d: %s", stream.id, err)
+			log.Printf("cannot close stream %s: %s", streamName, err)
 		}
 	}()
 
@@ -165,12 +174,12 @@ func (p *eventProcessor) processStream(ctx context.Context, stream *Connection, 
 				default:
 				}
 			}
-			log.Printf("cannot receive message from stream %d: %s", stream.id, err)
+			log.Printf("cannot receive message from %s: %s", streamName, err)
 			continue
 		}
-		err = p.processMessage(stream, message)
+		err = p.processMessage(streamID, message)
 		if err != nil {
-			log.Printf("cannot process message, received from stream %d: %s", stream.id, err)
+			log.Printf("cannot process message, received from %s: %s", streamName, err)
 			continue
 		}
 		ack()
@@ -178,9 +187,9 @@ func (p *eventProcessor) processStream(ctx context.Context, stream *Connection, 
 
 }
 
-// processMessage processes a message from the given stream. If an error occurs
-// processing the message, it returns the error.
-func (p *eventProcessor) processMessage(stream *Connection, message []byte) error {
+// processMessage processes a message received from the stream with identifier
+// streamID. If an error occurs processing the message, it returns the error.
+func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 
 	r := bytes.NewReader(message)
 
@@ -193,14 +202,14 @@ func (p *eventProcessor) processMessage(stream *Connection, message []byte) erro
 			break
 		}
 		if tok != json.Delim('{') {
-			p.observer.AddEvent(nil, nil, stream, nil, message, errors.New("expecting JSON object"))
+			p.observer.AddEvent(0, 0, streamID, nil, message, errors.New("expecting JSON object"))
 			return nil
 		}
 		depth := 1
 		for depth > 0 {
 			tok, err = dec.Token()
 			if err != nil {
-				p.observer.AddEvent(nil, nil, stream, nil, message, errors.New("invalid JSON"))
+				p.observer.AddEvent(0, 0, streamID, nil, message, errors.New("invalid JSON"))
 				return nil
 			}
 			if d, ok := tok.(json.Delim); ok {
@@ -222,84 +231,88 @@ func (p *eventProcessor) processMessage(stream *Connection, message []byte) erro
 	dec.DisallowUnknownFields()
 	err := dec.Decode(header)
 	if err != nil {
-		p.observer.AddEvent(nil, nil, stream, nil, message, err)
+		p.observer.AddEvent(0, 0, streamID, nil, message, err)
 		return nil
 	}
 
 	// Read the authorization header.
 	auth, ok := header.Headers["Authorization"]
 	if !ok {
-		p.observer.AddEvent(nil, nil, stream, nil, message, errors.New("missing 'Authorization' header"))
+		p.observer.AddEvent(0, 0, streamID, nil, message, errors.New("missing 'Authorization' header"))
 		return nil
 	}
 	if len(auth) > 1 {
-		p.observer.AddEvent(nil, nil, stream, nil, message, errors.New("too many 'Authorization' headers"))
+		p.observer.AddEvent(0, 0, streamID, nil, message, errors.New("too many 'Authorization' headers"))
 		return nil
 	}
 	src, key, ok := parseBasicAuth(auth[0])
 	if !ok {
-		p.observer.AddEvent(nil, nil, stream, nil, message, errors.New("invalid 'Authorization' header"))
+		p.observer.AddEvent(0, 0, streamID, nil, message, errors.New("invalid 'Authorization' header"))
 		return nil
 	}
 
 	// Validate the server.
+	var serverID int
 	var server *Connection
 	if key != "" {
 		// message was sent by a server.
 		if !isWellFormedConnectorKey(key) {
-			p.observer.AddEvent(nil, nil, stream, nil, message, errors.New("invalid authorization key"))
+			p.observer.AddEvent(0, 0, streamID, nil, message, errors.New("invalid authorization key"))
 		}
 		server = p.servers.keys[key]
 		if server == nil {
-			p.observer.AddEvent(nil, nil, stream, nil, message, errors.New("does not exist a server with the given key"))
+			p.observer.AddEvent(0, 0, streamID, nil, message, errors.New("does not exist a server with the given key"))
 			return nil
 		}
+		serverID = server.id
 	}
 
 	// Validate the source.
 	if src == "" {
-		p.observer.AddEvent(nil, server, stream, nil, message, errors.New("missing source in 'Authorization' header"))
+		p.observer.AddEvent(0, serverID, streamID, nil, message, errors.New("missing source in 'Authorization' header"))
 		return nil
 	}
 	sourceID, _ := strconv.Atoi(src)
 	if sourceID < 1 || sourceID > math.MaxInt32 {
-		p.observer.AddEvent(nil, server, stream, nil, message, errors.New("invalid source in 'Authorization' header"))
+		p.observer.AddEvent(0, serverID, streamID, nil, message, errors.New("invalid source in 'Authorization' header"))
 		return nil
 	}
 	source, ok := p.sources[sourceID]
 	if !ok || (server != nil && server.workspace != source.workspace) {
-		p.observer.AddEvent(nil, server, stream, nil, message, errors.New("source does not exist"))
+		p.observer.AddEvent(0, serverID, streamID, nil, message, errors.New("source does not exist"))
 	}
 
 	// Validate the content type.
 	mt, params, err := mime.ParseMediaType(header.Headers.Get("Content-Type"))
 	if err != nil || mt != "application/json" || len(params) > 1 {
-		p.observer.AddEvent(source, server, stream, nil, message, errors.New("Content-Type header must be 'application/json'"))
+		p.observer.AddEvent(sourceID, serverID, streamID, nil, message, errors.New("Content-Type header must be 'application/json'"))
 		return nil
 	}
 	if charset, ok := params["charset"]; ok && strings.ToLower(charset) != "utf-8" {
-		p.observer.AddEvent(source, server, stream, nil, message, errors.New("Content-Type header charset must be 'utf-8'"))
+		p.observer.AddEvent(sourceID, serverID, streamID, nil, message, errors.New("Content-Type header charset must be 'utf-8'"))
 		return nil
 	}
 
 	// Validate received at.
 	receivedAt, err := time.Parse(header.ReceivedAt, eventDateLayout)
 	if err != nil || receivedAt.IsZero() {
-		p.observer.AddEvent(source, server, stream, nil, message, errors.New("invalid received at"))
+		p.observer.AddEvent(sourceID, serverID, streamID, nil, message, errors.New("invalid received at"))
 		return nil
 	}
 
 	// Validate the remote host.
 	ip, _, err := net.SplitHostPort(header.RemoteAddr)
 	if err != nil {
-		p.observer.AddEvent(source, server, stream, nil, message, errors.New("invalid remote address"))
+		p.observer.AddEvent(sourceID, serverID, streamID, nil, message, errors.New("invalid remote address"))
 		return nil
 	}
 	remoteIP := net.ParseIP(ip)
 	if remoteIP == nil {
-		p.observer.AddEvent(source, server, stream, nil, message, errors.New("invalid remote address"))
+		p.observer.AddEvent(sourceID, serverID, streamID, nil, message, errors.New("invalid remote address"))
 		return nil
 	}
+
+	log.Print("process event")
 
 	now := time.Now().UTC()
 
@@ -602,7 +615,7 @@ func (p *eventProcessor) processMessage(stream *Connection, message []byte) erro
 		data := events[i].data
 		events[i].data = nil
 		err := events[i].err
-		p.observer.AddEvent(source, server, stream, header, data, err)
+		p.observer.AddEvent(sourceID, serverID, streamID, header, data, err)
 	}
 
 	return nil

@@ -267,12 +267,16 @@ func (s *stateKeeper) loadState() error {
 		return err
 	}
 
-	s.eventCollector, err = newEventCollector(context.Background(), connections, nil)
+	// defaultStream receives events from the collector for which the source connector
+	// does not have its own stream.
+	defaultStream := newPostgresEventStream(context.Background(), s.db)
+
+	s.eventCollector, err = newEventCollector(context.Background(), connections, defaultStream)
 	if err != nil {
 		return err
 	}
 
-	s.eventProcessor = newEventProcessor(s.db, s.chDB, connections)
+	s.eventProcessor = newEventProcessor(s.db, s.chDB, connections, defaultStream)
 	go s.eventProcessor.Run(context.Background())
 
 	// Read the mappings.

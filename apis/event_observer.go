@@ -222,10 +222,10 @@ func (observer *eventObserver) flushStats(t time.Time) error {
 	observer.stats = observer.stats[0:0]
 	observer.statsMu.Unlock()
 
-	query := "INSERT INTO connections_stats_events (hour, source, server, stream, good_events, bad_events)\n" +
-		"VALUES ($1, $2, $3, $4, $5, $6)\n" +
-		"\tON CONFLICT (hour, source, server, stream) DO UPDATE SET good_events = good_events + EXCLUDED.good_events," +
-		" bad_events = bad_events + EXCLUDED.bad_events"
+	query := "INSERT INTO connections_stats_events AS s (hour, source, server, stream, good_events, bad_events)\n" +
+		"VALUES ($1, $2, NULLIF($3, 0), NULLIF($4, 0), $5, $6)\n" +
+		"\tON CONFLICT (hour, source, server, stream) DO UPDATE SET good_events = s.good_events + EXCLUDED.good_events," +
+		" bad_events = s.bad_events + EXCLUDED.bad_events"
 	stmt, err := observer.db.Prepare(query)
 	if err != nil {
 		return err
@@ -250,25 +250,14 @@ func (observer *eventObserver) flushStats(t time.Time) error {
 // be nil if an error occurred processing the message headers. data is the
 // entire message data if headers is nil, otherwise is the event data. If a
 // message or event is invalid, err contains the error.
-func (observer *eventObserver) AddEvent(source, server, stream *Connection, header *MessageHeader, data []byte, err error) {
+func (observer *eventObserver) AddEvent(source, server, stream int, header *MessageHeader, data []byte, err error) {
 
 	observer.RLock()
 	defer observer.RUnlock()
 
-	var sourceID, serverID, streamID int
-	if source != nil {
-		sourceID = source.id
-	}
-	if server != nil {
-		serverID = server.id
-	}
-	if stream != nil {
-		streamID = stream.id
-	}
-
 	// Update statistics.
 	var found bool
-	key := statsKey{sourceID, serverID, streamID}
+	key := statsKey{source, server, stream}
 	observer.statsMu.Lock()
 	for i, s := range observer.stats {
 		if s.key == key {
@@ -299,13 +288,13 @@ func (observer *eventObserver) AddEvent(source, server, stream *Connection, head
 	var event json.RawMessage
 	var receivedAt string
 	for _, listener := range observer.listeners {
-		if listener.source > 0 && listener.source != sourceID {
+		if listener.source > 0 && listener.source != source {
 			continue
 		}
-		if listener.server > 0 && listener.server != serverID {
+		if listener.server > 0 && listener.server != server {
 			continue
 		}
-		if listener.stream > 0 && listener.stream != streamID {
+		if listener.stream > 0 && listener.stream != stream {
 			continue
 		}
 		listener.Lock()
@@ -332,9 +321,9 @@ func (observer *eventObserver) AddEvent(source, server, stream *Connection, head
 				errStr = err.Error()
 			}
 			_ = enc.Encode(ProcessedEvent{
-				Source: source.id,
-				Server: server.id,
-				Stream: stream.id,
+				Source: source,
+				Server: server,
+				Stream: stream,
 				Header: header,
 				Data:   data,
 				Err:    errStr,
