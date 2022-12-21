@@ -102,6 +102,7 @@ func newEventProcessor(db *postgres.DB, chDB chDriver.Conn, connections map[int]
 	processor := eventProcessor{
 		db:       db,
 		queue:    newQueue(chDB),
+		sources:  map[int]*Connection{},
 		observer: newEventObserver(db),
 	}
 	processor.servers.keys = map[string]*Connection{}
