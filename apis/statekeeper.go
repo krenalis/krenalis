@@ -575,7 +575,7 @@ func (s stateKeeper) setConnectionMappings(n postgres.Notification) {
 		for i := range c.mappings {
 			m := &Mapping{}
 			*m = *e.Mappings[i]
-			m.Connection = c
+			m.connection = c
 			c.mappings[i] = m
 		}
 	})

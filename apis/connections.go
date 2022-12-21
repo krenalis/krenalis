@@ -97,33 +97,33 @@ type Connection struct {
 // mapping (without transformation) from a property to another.
 type Mapping struct {
 
-	// ID is the identifier of the mapping.
-	ID int
+	// id is the identifier of the mapping.
+	id int
 
-	// Connection is the connection.
-	Connection *Connection
+	// connection is the connection.
+	connection *Connection
 
-	// In is the schema of the input properties of the mapping. If the
+	// in is the schema of the input properties of the mapping. If the
 	// connection is a source then the properties are the properties of the
 	// connection, otherwise, if it is a destination, it contains the properties
 	// of the Golden Record.
 	//
 	// In case of "one to one" mappings, this schema contains just one property.
-	In types.Schema
+	in types.Schema
 
-	// SourceCode is the source code of the transformation function, which
+	// sourceCode is the source code of the transformation function, which
 	// should be something like:
 	//
 	//   def transform(user):
 	//     return user["first_name"]
 	//
 	// This is the empty string for "one to one" mappings.
-	SourceCode string
+	sourceCode string
 
-	// Out is the output property of the mapping. If the connection is a source
+	// out is the output property of the mapping. If the connection is a source
 	// then this is a Golden Record property, otherwise, if it is a destination,
 	// it is one of the properties of the connection.
-	Out string
+	out string
 }
 
 // A ConnectionInfo describes a connection as returned by Get and List.
@@ -481,10 +481,10 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 	}
 	for _, m := range c.mappings {
 		info.Mappings = append(info.Mappings, &MappingInfo{
-			ID:         m.ID,
-			In:         m.In,
-			SourceCode: m.SourceCode,
-			Out:        m.Out,
+			ID:         m.id,
+			In:         m.in,
+			SourceCode: m.sourceCode,
+			Out:        m.out,
 		})
 	}
 	if c.storage != nil {
@@ -1196,10 +1196,10 @@ func (this *Connections) List() []*ConnectionInfo {
 		}
 		for _, t := range c.mappings {
 			info.Mappings = append(info.Mappings, &MappingInfo{
-				ID:         t.ID,
-				In:         t.In,
-				SourceCode: t.SourceCode,
-				Out:        t.Out,
+				ID:         t.id,
+				In:         t.in,
+				SourceCode: t.sourceCode,
+				Out:        t.out,
 			})
 		}
 		if c.storage != nil {
@@ -1725,9 +1725,9 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 	schemas := make([][]byte, len(mappings))
 	for i, t := range mappings {
 		n.Mappings[i] = &Mapping{
-			In:         t.In,
-			SourceCode: t.SourceCode,
-			Out:        t.Out,
+			in:         t.In,
+			sourceCode: t.SourceCode,
+			out:        t.Out,
 		}
 		var err error
 		schemas[i], err = json.Marshal(t.In)
@@ -1756,11 +1756,11 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 		}
 		for i, t := range n.Mappings {
 			var id int
-			err := query.QueryRow(connection, schemas[i], t.SourceCode, t.Out).Scan(&id)
+			err := query.QueryRow(connection, schemas[i], t.sourceCode, t.out).Scan(&id)
 			if err != nil {
 				return err
 			}
-			t.ID = id
+			t.id = id
 		}
 		return tx.Notify(n)
 	})
@@ -2081,7 +2081,7 @@ func (this *Connections) userSchema(id int) (types.Schema, []_connector.Property
 		return types.Schema{}, nil, err
 	}
 	for _, t := range ts {
-		for _, in := range t.In.PropertiesNames() {
+		for _, in := range t.in.PropertiesNames() {
 			paths = append(paths, []string{in})
 		}
 	}
@@ -2422,20 +2422,20 @@ func exportUser(id string, properties map[string]any, mappings []*Mapping) (_con
 	pool := transformations.NewPool()
 	for _, m := range mappings {
 		input := map[string]any{}
-		propNames := m.In.PropertiesNames()
+		propNames := m.in.PropertiesNames()
 		for _, in := range propNames {
 			input[in] = properties[in]
 		}
-		if m.SourceCode == "" {
+		if m.sourceCode == "" {
 			// "One to one" mapping.
-			user.Properties[m.Out] = input[propNames[0]]
+			user.Properties[m.out] = input[propNames[0]]
 		} else {
 			// Mapping with a transformation function.
-			prop, err := pool.Run(context.Background(), m.SourceCode, input)
+			prop, err := pool.Run(context.Background(), m.sourceCode, input)
 			if err != nil {
 				return _connector.User{}, err
 			}
-			user.Properties[m.Out] = prop
+			user.Properties[m.out] = prop
 		}
 	}
 	return user, nil

@@ -254,14 +254,23 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
+				mappingsInfos := make([]*MappingInfo, len(mappings))
+				for i, m := range mappings {
+					mappingsInfos[i] = &MappingInfo{
+						ID:         m.id,
+						In:         m.in,
+						SourceCode: m.sourceCode,
+						Out:        m.out,
+					}
+				}
 				// TODO(Gianluca): this is a workaround that will be removed
 				// when one-to-one mappings will be supported in the UI.
-				for _, m := range mappings {
+				for _, m := range mappingsInfos {
 					if m.SourceCode == "" {
 						m.SourceCode = "# one-to-one"
 					}
 				}
-				_ = json.NewEncoder(w).Encode(mappings)
+				_ = json.NewEncoder(w).Encode(mappingsInfos)
 			})
 			router.Put("/mappings", func(w http.ResponseWriter, r *http.Request) {
 				connection, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))

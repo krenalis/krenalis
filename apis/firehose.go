@@ -141,33 +141,33 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	candidateTimestamps := map[string]time.Time{}
 	for _, m := range connectionsMappings {
 		userProps := map[string]any{}
-		schemaProps := m.In.PropertiesNames()
+		schemaProps := m.in.PropertiesNames()
 		for _, input := range schemaProps {
 			userProps[input] = properties[input]
 		}
 
 		// Validate the properties using the mapping schema.
-		userProps, err = types.Decode(bytes.NewReader(propsJSON), m.In)
+		userProps, err = types.Decode(bytes.NewReader(propsJSON), m.in)
 		if err != nil {
 			fh.setError(importError{fmt.Errorf("mapping schema validation failed: %s", err)})
 			return
 		}
 
 		// "One to one" mapping.
-		if m.SourceCode == "" {
+		if m.sourceCode == "" {
 			propName := schemaProps[0]
-			candidateData[m.Out] = userProps[propName]
-			candidateTimestamps[m.Out] = timestamps[propName]
+			candidateData[m.out] = userProps[propName]
+			candidateTimestamps[m.out] = timestamps[propName]
 		} else {
 			// Mapping with a transformation function.
-			grProp, err := pool.Run(context.Background(), m.SourceCode, userProps)
+			grProp, err := pool.Run(context.Background(), m.sourceCode, userProps)
 			if err != nil {
 				fh.setError(importError{fmt.Errorf("error while calling transformation function of mapping: %s", err)})
 				return
 			}
 			if grProp != nil {
-				candidateData[m.Out] = grProp
-				candidateTimestamps[m.Out] = mostRecentTimestamp(timestamps, schemaProps)
+				candidateData[m.out] = grProp
+				candidateTimestamps[m.out] = mostRecentTimestamp(timestamps, schemaProps)
 			}
 		}
 	}
@@ -207,16 +207,16 @@ transfLoop:
 	for _, m := range otherMappings {
 		// For the connection of this mapping, determine the timestamps relative
 		// to the users which refers to the same identity.
-		for _, u := range sameEntities[m.Connection.id] {
-			entityData, err := fh.entityData(m.Connection.id, u)
+		for _, u := range sameEntities[m.connection.id] {
+			entityData, err := fh.entityData(m.connection.id, u)
 			if err != nil {
 				fh.setError(err)
 				return
 			}
-			ts := mostRecentTimestamp(entityData.Timestamps, m.In.PropertiesNames())
-			if ts.After(candidateTimestamps[m.Out]) {
+			ts := mostRecentTimestamp(entityData.Timestamps, m.in.PropertiesNames())
+			if ts.After(candidateTimestamps[m.out]) {
 				// Don't update this Golden Record property.
-				delete(candidateData, m.Out)
+				delete(candidateData, m.out)
 				if len(candidateData) == 0 {
 					// Avoid useless iterations.
 					break transfLoop

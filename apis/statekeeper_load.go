@@ -284,7 +284,7 @@ func (s *stateKeeper) loadState() error {
 			m := &Mapping{}
 			var schema []byte
 			var connectionID int
-			err := rows.Scan(&m.ID, &connectionID, &schema, &m.SourceCode, &m.Out)
+			err := rows.Scan(&m.id, &connectionID, &schema, &m.sourceCode, &m.out)
 			if err != nil {
 				return err
 			}
@@ -296,12 +296,12 @@ func (s *stateKeeper) loadState() error {
 	})
 	for i, m := range mappings {
 		var err error
-		m.In, err = types.ParseSchema(bytes.NewReader(schemas[i]), nil)
+		m.in, err = types.ParseSchema(bytes.NewReader(schemas[i]), nil)
 		if err != nil {
 			return err
 		}
 		conn := connections[connectionIDs[i]]
-		m.Connection = conn
+		m.connection = conn
 		conn.mappings = append(conn.mappings, m)
 	}
 
