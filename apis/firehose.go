@@ -153,15 +153,22 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 			return
 		}
 
-		// Apply the transformation function of the mapping.
-		grProp, err := pool.Run(context.Background(), m.SourceCode, userProps)
-		if err != nil {
-			fh.setError(importError{fmt.Errorf("error while calling transformation function of mapping: %s", err)})
-			return
-		}
-		if grProp != nil {
-			candidateData[m.Out] = grProp
-			candidateTimestamps[m.Out] = mostRecentTimestamp(timestamps, schemaProps)
+		// "One to one" mapping.
+		if m.SourceCode == "" {
+			propName := schemaProps[0]
+			candidateData[m.Out] = userProps[propName]
+			candidateTimestamps[m.Out] = timestamps[propName]
+		} else {
+			// Mapping with a transformation function.
+			grProp, err := pool.Run(context.Background(), m.SourceCode, userProps)
+			if err != nil {
+				fh.setError(importError{fmt.Errorf("error while calling transformation function of mapping: %s", err)})
+				return
+			}
+			if grProp != nil {
+				candidateData[m.Out] = grProp
+				candidateTimestamps[m.Out] = mostRecentTimestamp(timestamps, schemaProps)
+			}
 		}
 	}
 

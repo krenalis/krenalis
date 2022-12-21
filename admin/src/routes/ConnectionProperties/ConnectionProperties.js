@@ -398,6 +398,18 @@ const ConnectionProperties = () => {
 											/>
 										</div>
 										<SlButton
+											slot='footer'
+											variant='primary'
+											onClick={() => {
+												let trs = [...transformations];
+												let i = trs.findIndex((t2) => t2.Position === t.Position);
+												trs[i].SourceCode = "# one-to-one";
+												setTransformations(trs);
+											}}
+										>
+											Set this as one-to-one mapping
+										</SlButton>
+										<SlButton
 											className='removeTransformation'
 											slot='footer'
 											variant='danger'

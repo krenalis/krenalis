@@ -88,10 +88,13 @@ type Connection struct {
 
 // Mapping represents a mapping from a kind of properties to another.
 //
-// In particular, if the mapping refers to a source connection, it is a
-// mapping from the connection properties to a property of the Golden
-// Record; otherwise, if it refers to a destination connection, it is a
-// mapping from the Golden Record properties to a connection property.
+// In particular, if the mapping refers to a source connection, it is a mapping
+// from the connection properties to a property of the Golden Record; otherwise,
+// if it refers to a destination connection, it is a mapping from the Golden
+// Record properties to a connection property.
+//
+// A mapping with just one input property and no source code is a "one to one"
+// mapping (without transformation) from a property to another.
 type Mapping struct {
 
 	// ID is the identifier of the mapping.
@@ -104,15 +107,17 @@ type Mapping struct {
 	// connection is a source then the properties are the properties of the
 	// connection, otherwise, if it is a destination, it contains the properties
 	// of the Golden Record.
+	//
+	// In case of "one to one" mappings, this schema contains just one property.
 	In types.Schema
 
-	// TODO(Gianluca): revise this doc when 1-1 mappings will be implemented.
 	// SourceCode is the source code of the transformation function, which
 	// should be something like:
 	//
 	//   def transform(user):
 	//     return user["first_name"]
 	//
+	// This is the empty string for "one to one" mappings.
 	SourceCode string
 
 	// Out is the output property of the mapping. If the connection is a source
@@ -1655,20 +1660,25 @@ func (this *Connections) SetStream(source, stream int) error {
 }
 
 // MappingToCreate represents a mapping to create.
+//
+// A mapping with just one input property and no source code is a "one to one"
+// mapping (without transformation) from a property to another.
 type MappingToCreate struct {
 	// In is the schema of the input properties of the mapping. If the
 	// connection is a source then the properties are the properties of the
 	// connection, otherwise, if it is a destination, it contains the properties
 	// of the Golden Record.
+	//
+	// In case of "one to one" mappings, this schema contains just one property.
 	In types.Schema
 
-	// TODO(Gianluca): revise this doc when 1-1 mappings will be implemented.
 	// SourceCode is the source code of the transformation function, which
 	// should be something like:
 	//
 	//   def transform(user):
 	//     return user["first_name"]
 	//
+	// In case of "one to one" mappings, this is the empty string.
 	SourceCode string
 
 	// Out is the output property of the mapping. If the connection is a source
@@ -1687,15 +1697,15 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 	// Validate the mappings.
 	for _, t := range mappings {
 		// TODO(Gianluca): validate the Python function here.
-		if strings.TrimSpace(t.SourceCode) == "" {
-			return errors.BadRequest("mapping source code is empty")
-		}
 		if !t.In.Valid() {
 			return errors.BadRequest("schema is invalid")
 		}
 		props := t.In.PropertiesNames()
 		if len(props) == 0 {
 			return errors.BadRequest("should have at least one input property")
+		}
+		if t.SourceCode == "" && len(props) != 1 {
+			return errors.BadRequest("mappings without source code must have just one input property, got %d", len(props))
 		}
 		for _, in := range props {
 			if !types.IsValidPropertyName(in) {
@@ -2412,14 +2422,21 @@ func exportUser(id string, properties map[string]any, mappings []*Mapping) (_con
 	pool := transformations.NewPool()
 	for _, m := range mappings {
 		input := map[string]any{}
-		for _, in := range m.In.PropertiesNames() {
+		propNames := m.In.PropertiesNames()
+		for _, in := range propNames {
 			input[in] = properties[in]
 		}
-		prop, err := pool.Run(context.Background(), m.SourceCode, input)
-		if err != nil {
-			return _connector.User{}, err
+		if m.SourceCode == "" {
+			// "One to one" mapping.
+			user.Properties[m.Out] = input[propNames[0]]
+		} else {
+			// Mapping with a transformation function.
+			prop, err := pool.Run(context.Background(), m.SourceCode, input)
+			if err != nil {
+				return _connector.User{}, err
+			}
+			user.Properties[m.Out] = prop
 		}
-		user.Properties[m.Out] = prop
 	}
 	return user, nil
 }
