@@ -262,7 +262,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				var ts []*MappingsToCreate
+				var ts []*MappingToCreate
 				err := json.NewDecoder(r.Body).Decode(&ts)
 				if err != nil {
 					http.Error(w, "Bad Request - invalid mappings", http.StatusBadRequest)

@@ -1654,8 +1654,8 @@ func (this *Connections) SetStream(source, stream int) error {
 	return err
 }
 
-// MappingsToCreate represents a mapping to create.
-type MappingsToCreate struct {
+// MappingToCreate represents a mapping to create.
+type MappingToCreate struct {
 	// In is the schema of the input properties of the mapping. If the
 	// connection is a source then the properties are the properties of the
 	// connection, otherwise, if it is a destination, it contains the properties
@@ -1678,7 +1678,7 @@ type MappingsToCreate struct {
 }
 
 // SetMappings sets the mappings of the connection with identifier id.
-func (this *Connections) SetMappings(connection int, mappings []*MappingsToCreate) error {
+func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate) error {
 
 	if connection < 1 || connection > maxInt32 {
 		return errors.BadRequest("connection identifier %d is not valid", connection)
