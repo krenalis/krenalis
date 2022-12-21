@@ -10,6 +10,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -187,37 +188,12 @@ func (db *DB) QueryVoid(query string, args ...any) error {
 	return db.db.QueryRow(query, args...).Scan()
 }
 
-func (db *DB) Begin() (*Tx, error) {
-	tx, err := db.db.Begin()
+func (db *DB) Begin(ctx context.Context) (*Tx, error) {
+	tx, err := db.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &Tx{tx: tx, log: db.log}, nil
-}
-
-func (db *DB) SerializableTransaction(f func(tx *Tx) error) error {
-	var tx, err = db.db.BeginTx(context.Background(), &sql.TxOptions{Isolation: sql.LevelSerializable})
-	if err != nil {
-		return err
-	}
-	return func() error {
-		defer func() {
-			if err := recover(); err != nil {
-				_ = tx.Rollback()
-				panic(err)
-			}
-		}()
-		var err = f(&Tx{tx, db.log})
-		if err != nil {
-			_ = tx.Rollback()
-			return err
-		}
-		err = tx.Commit()
-		if err != nil && err != sql.ErrTxDone {
-			return err
-		}
-		return nil
-	}()
+	return &Tx{tx, db.log, false}, nil
 }
 
 func (db *DB) Transaction(f func(tx *Tx) error) error {
@@ -232,7 +208,7 @@ func (db *DB) Transaction(f func(tx *Tx) error) error {
 				panic(err)
 			}
 		}()
-		var err = f(&Tx{tx, db.log})
+		var err = f(&Tx{tx, db.log, true})
 		if err != nil {
 			_ = tx.Rollback()
 			return err
@@ -411,8 +387,9 @@ func (c *Conn) Close() error {
 }
 
 type Tx struct {
-	tx  *sql.Tx
-	log io.Writer
+	tx      *sql.Tx
+	log     io.Writer
+	wrapped bool
 }
 
 func (tx *Tx) Exec(query string, args ...any) (sql.Result, error) {
@@ -505,10 +482,22 @@ func (tx *Tx) QueryVoid(query string, args ...any) error {
 }
 
 func (tx *Tx) Rollback() error {
+	if tx.wrapped {
+		return errors.New("rollback called in a wrapped transaction")
+	}
+	if tx.log != nil {
+		fmt.Fprint(tx.log, "ROLLBACK\n\n")
+	}
 	return tx.tx.Rollback()
 }
 
 func (tx *Tx) Commit() error {
+	if tx.wrapped {
+		return errors.New("commit called in a wrapped transaction")
+	}
+	if tx.log != nil {
+		fmt.Fprint(tx.log, "COMMIT\n\n")
+	}
 	return tx.tx.Commit()
 }
 
