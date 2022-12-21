@@ -269,20 +269,20 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				var ts []*MappingToCreate
-				err := json.NewDecoder(r.Body).Decode(&ts)
+				var mappings []*MappingToCreate
+				err := json.NewDecoder(r.Body).Decode(&mappings)
 				if err != nil {
 					http.Error(w, "Bad Request - invalid mappings", http.StatusBadRequest)
 					return
 				}
 				// TODO(Gianluca): this is a workaround that will be removed
 				// when one-to-one mappings will be supported in the UI.
-				for _, m := range ts {
+				for _, m := range mappings {
 					if m.SourceCode == "# one-to-one" {
 						m.SourceCode = ""
 					}
 				}
-				err = workspace.Connections.SetMappings(connection, ts)
+				err = workspace.Connections.SetMappings(connection, mappings)
 				if err != nil {
 					if err, ok := err.(errors.ResponseWriterTo); ok {
 						_ = err.WriteTo(w)
