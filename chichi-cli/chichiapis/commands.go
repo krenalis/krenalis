@@ -95,7 +95,7 @@ func ExportUsersToConnection(connection int) {
 }
 
 func GetMappings(connection int) {
-	var mappings []apis.Mapping
+	var mappings []apis.MappingInfo
 	err := callAPI("GET", "api/connections/"+strconv.Itoa(connection)+"/mappings", nil, &mappings)
 	if err != nil {
 		log.Fatal(err)
