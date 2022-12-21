@@ -143,8 +143,8 @@ type ConnectionInfo struct {
 // MappingInfo describes a mapping as returned by Get and List.
 type MappingInfo struct {
 	ID         int
-	In         types.Schema
-	SourceCode string
+	In         types.Schema // just one property if it refers to a "one to one" mapping.
+	SourceCode string       // empty string if it refers to a "one to one" mapping.
 	Out        string
 }
 
