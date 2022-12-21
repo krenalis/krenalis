@@ -138,6 +138,13 @@ func (schema Schema) Properties() []Property {
 	}
 	properties := make([]Property, len(schema.properties))
 	copy(properties, schema.properties)
+	for _, property := range properties {
+		if property.Aliases != nil {
+			aliases := make([]string, len(property.Aliases))
+			copy(aliases, property.Aliases)
+			property.Aliases = aliases
+		}
+	}
 	return properties
 }
 
