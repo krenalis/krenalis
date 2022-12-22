@@ -561,7 +561,15 @@ func (s *stateKeeper) setConnectionStream(n postgres.Notification) {
 // mappings of a connection are saved.
 type setConnectionMappingsNotification struct {
 	Connection int
-	Mappings   []*MappingInfo
+	Mappings   []notifiedMapping
+}
+
+// notifiedMapping is a mapping to set notified to the state keeper.
+type notifiedMapping struct {
+	ID         int
+	In         types.Schema
+	SourceCode string
+	Out        string
 }
 
 // setConnectionMappings sets the mappings of a connection.

@@ -1721,10 +1721,10 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 
 	// Prepare the mappings for the notification and marshal the schemas into
 	// JSON.
-	n.Mappings = make([]*MappingInfo, len(mappings))
+	n.Mappings = make([]notifiedMapping, len(mappings))
 	schemas := make([][]byte, len(mappings))
 	for i, t := range mappings {
-		n.Mappings[i] = &MappingInfo{
+		n.Mappings[i] = notifiedMapping{
 			In:         t.In,
 			SourceCode: t.SourceCode,
 			Out:        t.Out,
