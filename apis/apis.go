@@ -18,12 +18,12 @@ import (
 	"strings"
 	_ "time/tzdata" // workaround for clickhouse-go issue #162
 
-	"chichi/apis/errors"
-	"chichi/apis/postgres"
-
 	"github.com/ClickHouse/clickhouse-go/v2"
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/go-chi/chi/v5"
+
+	"chichi/apis/errors"
+	"chichi/apis/postgres"
 )
 
 var InvalidSchema errors.Code = "InvalidSchema"
@@ -360,7 +360,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			schema, users, err := workspace.Users(req.Properties, 0, 1000)
+			schema, users, err := workspace.Users(req.Properties, "", 0, 1000)
 			if err != nil {
 				log.Printf("[error] %s", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)

@@ -8,24 +8,27 @@
 package apis
 
 import (
-	"bytes"
+	"context"
 	"database/sql"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/types"
+	"chichi/apis/warehouses"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
-	"github.com/shopspring/decimal"
 )
 
-var PropertyNotExist errors.Code = "PropertyNotExist"
+var (
+	NoWarehouse          errors.Code = "NoWarehouse"
+	OrderNotExist        errors.Code = "OrderNotExist"
+	OrderTypeNotSortable errors.Code = "OrderTypeNotSortable"
+	PropertyNotExist     errors.Code = "PropertyNotExist"
+)
 
 type Workspaces struct {
 	*Account
@@ -41,6 +44,7 @@ func newWorkspaces(account *Account, state *workspacesState) *Workspaces {
 type Workspace struct {
 	db             *postgres.DB
 	chDB           chDriver.Conn
+	warehouse      warehouses.Warehouse
 	Connections    *Connections
 	EventTypes     *EventTypes
 	EventDataTypes *EventDataTypes
@@ -175,21 +179,11 @@ func (ws *Workspace) setSchema(name string, schema string) error {
 //
 // If a property does not exist, it returns an errors.UnprocessableError error
 // with code PropertyNotExist.
-func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema, [][]any, error) {
+func (ws *Workspace) Users(properties []string, order string, first, limit int) (types.Schema, [][]any, error) {
 
-	if len(properties) == 0 {
-		return types.Schema{}, nil, errors.BadRequest("properties is empty")
-	}
-	for _, name := range properties {
-		if !types.IsValidPropertyName(name) {
-			return types.Schema{}, nil, errors.BadRequest("property name %q is not valid", name)
-		}
-	}
-	if first < 0 || first > maxInt32 {
-		return types.Schema{}, nil, errors.BadRequest("first %d in not valid", first)
-	}
-	if limit < 1 || limit > 1000 {
-		return types.Schema{}, nil, errors.BadRequest("limit %d is not valid", limit)
+	// Verify that the workspace has a data warehouse.
+	if ws.warehouse == nil {
+		return types.Schema{}, nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.id)
 	}
 
 	// Read the schema.
@@ -199,84 +193,57 @@ func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema,
 		propertyByName[p.Name] = p
 	}
 
-	// Build the query.
-	var query bytes.Buffer
-	query.WriteString("SELECT ")
-	for i, name := range properties {
+	// Validate the arguments.
+	if len(properties) == 0 {
+		return types.Schema{}, nil, errors.BadRequest("properties is empty")
+	}
+	for _, name := range properties {
 		if _, ok := propertyByName[name]; !ok {
-			return types.Schema{}, nil, errors.Unprocessable(PropertyNotExist, "property %s does not exist", name)
-		}
-		if i > 0 {
-			query.WriteByte(',')
-		}
-		query.WriteString(postgres.QuoteIdent(strings.ToLower(name)))
-	}
-	query.WriteString(" FROM warehouse_users LIMIT ")
-	query.WriteString(strconv.Itoa(limit))
-	if first > 0 {
-		query.WriteString(" OFFSET ")
-		query.WriteString(strconv.Itoa(first))
-	}
-
-	// Execute the query.
-	// TODO(marco) check that the workspace exists.
-	var users [][]any
-	err := ws.db.QueryScan(query.String(), func(rows *postgres.Rows) error {
-		var err error
-		for rows.Next() {
-			user := make([]any, len(properties))
-			for i := range user {
-				name := properties[i]
-				typ := propertyByName[name].Type
-				switch typ.PhysicalType() {
-				case types.PtBoolean:
-					var v bool
-					user[i] = &v
-				case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
-					var v int
-					user[i] = &v
-				case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
-					var v uint
-					user[i] = &v
-				case types.PtFloat, types.PtFloat32:
-					var v float64
-					user[i] = &v
-				case types.PtDecimal:
-					var v decimal.Decimal
-					user[i] = &v
-				case types.PtDateTime, types.PtDate:
-					var v time.Time
-					user[i] = &v
-				case types.PtTime, types.PtYear:
-					var v int
-					user[i] = &v
-				case types.PtUUID, types.PtJSON, types.PtText, types.PtArray, types.PtObject, types.PtMap:
-					var v string
-					user[i] = &v
-				}
+			if name == "" {
+				return types.Schema{}, nil, errors.BadRequest("a property name is empty")
 			}
-			if err = rows.Scan(user...); err != nil {
-				return err
+			if !types.IsValidPropertyName(name) {
+				return types.Schema{}, nil, errors.BadRequest("property name %q is not valid", name)
 			}
-			users = append(users, user)
+			return types.Schema{}, nil, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
 		}
-		return nil
-	})
-	if err != nil {
-		return types.Schema{}, nil, err
 	}
-	if users == nil {
-		users = [][]any{}
+	var orderProperty types.Property
+	if order != "" {
+		if !types.IsValidPropertyName(order) {
+			return types.Schema{}, nil, errors.BadRequest("order %q is not a valid property name", order)
+		}
+		var ok bool
+		orderProperty, ok = ws.schema.user.Property(order)
+		if !ok {
+			return types.Schema{}, nil, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
+		}
+		switch orderProperty.Type.PhysicalType() {
+		case types.PtJSON, types.PtArray, types.PtObject, types.PtMap:
+			return types.Schema{}, nil, errors.Unprocessable(OrderTypeNotSortable,
+				"cannot sort by %s: property has type %s", order, orderProperty.Type)
+		}
+	}
+	if first < 0 || first > maxInt32 {
+		return types.Schema{}, nil, errors.BadRequest("first %d in not valid", first)
+	}
+	if limit < 1 || limit > 1000 {
+		return types.Schema{}, nil, errors.BadRequest("limit %d is not valid", limit)
 	}
 
 	// Create the schema to return, with only the required properties.
-	returnedProperties := make([]types.Property, len(properties))
+	queryProperties := make([]types.Property, len(properties))
 	for i, name := range properties {
-		returnedProperties[i] = propertyByName[name]
+		queryProperties[i] = propertyByName[name]
 	}
-	schema, err := types.SchemaOf(returnedProperties)
+	schema, err := types.SchemaOf(queryProperties)
 	if err != nil {
 		return types.Schema{}, nil, fmt.Errorf("cannot create a new schema from the user schema: %s", err)
+	}
+
+	users, err := ws.warehouse.Users(context.Background(), schema, orderProperty, first, limit)
+	if err != nil {
+		return types.Schema{}, nil, err
 	}
 
 	return schema, users, err

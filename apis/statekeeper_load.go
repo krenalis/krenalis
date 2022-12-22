@@ -14,6 +14,7 @@ import (
 
 	"chichi/apis/postgres"
 	"chichi/apis/types"
+	"chichi/apis/warehouses"
 )
 
 // loadState loads the state from the database.
@@ -73,12 +74,14 @@ func (s *stateKeeper) loadState() error {
 
 	// Read all workspaces.
 	workspaces := map[int]*Workspace{}
-	err = s.db.QueryScan("SELECT id, account, user_schema, group_schema FROM workspaces",
+	err = s.db.QueryScan("SELECT id, account, user_schema, group_schema, warehouse_type, warehouse_settings FROM workspaces",
 		func(rows *postgres.Rows) error {
 			var id, accountID int
 			var userSchema, groupSchema string
+			var warehouseType *warehouses.Type
+			var warehouseSettings []byte
 			for rows.Next() {
-				if err := rows.Scan(&id, &accountID, &userSchema, &groupSchema); err != nil {
+				if err := rows.Scan(&id, &accountID, &userSchema, &groupSchema, &warehouseType, &warehouseSettings); err != nil {
 					return err
 				}
 				account := accounts[accountID]
@@ -103,6 +106,9 @@ func (s *stateKeeper) loadState() error {
 				}
 				workspace.schemaSources.user = userSchema
 				workspace.schemaSources.group = groupSchema
+				if warehouseType != nil {
+					workspace.warehouse = warehouses.Open(*warehouseType, warehouseSettings)
+				}
 				workspace.Connections = newConnections(workspace, &connectionsState{ids: map[int]*Connection{}})
 				workspace.EventTypes = newEventTypes(workspace, &eventTypesState{ids: map[int]*EventType{}})
 				workspace.EventDataTypes = newEventDataTypes(workspace, &eventDataTypesState{names: map[string]*EventDataType{}})

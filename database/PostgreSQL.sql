@@ -47,16 +47,20 @@ INSERT INTO connectors (name, type, logo_url, webhooks_per, oauth_url, oauth_cli
     ('RabbitMQ', 'EventStream', 'https://cdn.icon-icons.com/icons2/2699/PNG/512/rabbitmq_logo_icon_170810.png', 'None', '', '', '', '', 0),
     ('UISample', 'EventStream', '', 'None', '', '', '', '', 0);
 
+CREATE TYPE warehouse_type AS ENUM ('PostgreSQL', 'Snowflake', 'Redshift', 'BigQuery');
+
 CREATE TABLE workspaces (
     id SERIAL,
     account integer NOT NULL,
     name varchar(100) NOT NULL,
     user_schema varchar(65535) NOT NULL,
     group_schema varchar(65535) NOT NULL,
+    warehouse_type warehouse_type DEFAULT NULL,
+    warehouse_settings varchar(65535) NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
 
-INSERT INTO workspaces (id, account, name, user_schema, group_schema)
+INSERT INTO workspaces (id, account, name, user_schema, group_schema, warehouse_type, warehouse_settings)
 VALUES (1, 1, 'Workspace', '{ "properties": [
     {
         "name" : "FirstName",
@@ -95,7 +99,7 @@ VALUES (1, 1, 'Workspace', '{ "properties": [
             "charLen": 300
         }
     }
-] }');
+] }', 'PostgreSQL', '{"Host":"127.0.0.1","Port":5432,"Username":"chichi","Password":"","Database":"warehouse"}');
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
@@ -166,15 +170,6 @@ CREATE TABLE connections_stats_events (
 
 CREATE INDEX ON connections_stats_events (server);
 CREATE INDEX ON connections_stats_events (stream);
-
-CREATE TABLE connections_users (
-    connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
-    "user" varchar(45) NOT NULL DEFAULT '',
-    data varchar(655359) NOT NULL,
-    timestamps varchar(655359) NOT NULL DEFAULT '',
-    golden_record integer NOT NULL DEFAULT 0,
-    PRIMARY KEY (connection, "user")
-);
 
 CREATE TABLE devices (
     source INT NOT NULL,
@@ -264,12 +259,4 @@ CREATE TABLE users (
     id integer NOT NULL,
     device char(28) DEFAULT NULL,
     PRIMARY KEY (source, id)
-);
-
-CREATE TABLE warehouse_users (
-    id SERIAL,
-    Email varchar(500) NOT NULL DEFAULT '',
-    FirstName varchar(500) NOT NULL DEFAULT '',
-    LastName varchar(500) NOT NULL DEFAULT '',
-    PRIMARY KEY (id)
 );

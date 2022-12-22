@@ -33,7 +33,7 @@ const maxSettingsLen = 10_000 // Maximum length of settings in runes.
 
 // firehose is the Firehose API used by the connectors.
 type firehose struct {
-	connections *Connections
+	workspace   *Workspace
 	connection  *Connection
 	resource    int
 	ctx         context.Context
@@ -48,7 +48,7 @@ func (fh *firehose) ReceiveEvent(event connector.Event) {
 
 // SetCursor sets the user cursor.
 func (fh *firehose) SetCursor(cursor string) {
-	result, err := fh.connections.db.Exec("UPDATE connections SET user_cursor = $1 WHERE id = $2", cursor, fh.connection.id)
+	result, err := fh.workspace.db.Exec("UPDATE connections SET user_cursor = $1 WHERE id = $2", cursor, fh.connection.id)
 	if err != nil {
 		fh.setError(err)
 		return
@@ -84,7 +84,7 @@ func (fh *firehose) SetSettings(settings []byte) error {
 		Connection: fh.connection.id,
 		Settings:   settings,
 	}
-	err := fh.connections.db.Transaction(func(tx *postgres.Tx) error {
+	err := fh.workspace.db.Transaction(func(tx *postgres.Tx) error {
 		_, err := tx.Exec("UPDATE connections SET settings = $1 WHERE id = $2", n.Settings, n.Connection)
 		if err != nil {
 			return err
@@ -99,6 +99,11 @@ func (fh *firehose) SetSettings(settings []byte) error {
 }
 
 func (fh *firehose) SetUser(user string, properties map[string]any, timestamp time.Time, timestamps map[string]time.Time) {
+
+	if fh.workspace.warehouse == nil {
+		fh.err = fmt.Errorf("workspace %d does not have a warehouse", fh.workspace.id)
+		return
+	}
 
 	// Set the timestamps.
 	if timestamps == nil {
@@ -118,7 +123,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	}
 
 	// Retrieve the mappings for this connection.
-	connectionsMappings, err := fh.connections.Mappings(fh.connection.id)
+	connectionsMappings, err := fh.workspace.Connections.Mappings(fh.connection.id)
 	if err != nil {
 		fh.setError(fmt.Errorf("cannot list mappings for %d: %s", fh.connection.id, err))
 		return
@@ -246,7 +251,7 @@ type connectionEntityData struct {
 // connection.
 func (fh *firehose) entityData(connection int, user string) (connectionEntityData, error) {
 	var entityData connectionEntityData
-	row := fh.connections.db.QueryRow(
+	row := fh.workspace.warehouse.QueryRow(fh.ctx,
 		"SELECT data, timestamps FROM connections_users WHERE connection = $1 AND user = $2",
 		connection, user)
 	var rawData []byte
@@ -310,14 +315,14 @@ func (fh *firehose) writeConnectionUsers(user string, props map[string]any, time
 	if err != nil {
 		return err
 	}
-	_, err = fh.connections.db.Exec("INSERT INTO connections_users (connection, \"user\", data, timestamps)\n"+
+	_, err = fh.workspace.warehouse.Exec(fh.ctx, "INSERT INTO connections_users (connection, \"user\", data, timestamps)\n"+
 		"VALUES ($1, $2, $3, $4)\n"+
 		"ON CONFLICT (connection, \"user\") DO UPDATE SET data = $3, timestamps = $4",
 		fh.connection.id, user, data, jsonTimestamps)
 	if err != nil {
 		return err
 	}
-	_, err = fh.connections.db.Exec("INSERT INTO connections_stats AS cs (connection, time_slot, users_in)\n"+
+	_, err = fh.workspace.db.Exec("INSERT INTO connections_stats AS cs (connection, time_slot, users_in)\n"+
 		"VALUES ($1, $2, 1)\n"+
 		"ON CONFLICT (connection, time_slot) DO UPDATE SET users_in = cs.users_in + 1",
 		fh.connection.id, statsTimeSlot(time.Now()))
@@ -327,7 +332,7 @@ func (fh *firehose) writeConnectionUsers(user string, props map[string]any, time
 // writeToGoldenRecord writes the given properties to the Golden Record.
 func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
 	query := &strings.Builder{}
-	query.WriteString("UPDATE warehouse_users SET\n")
+	query.WriteString("UPDATE users SET\n")
 	var values []any
 	i := 1
 	for prop, value := range props {
@@ -343,7 +348,7 @@ func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
 	query.WriteString("\nWHERE id = $")
 	query.WriteString(strconv.Itoa(i))
 	values = append(values, id)
-	res, err := fh.connections.db.Exec(query.String(), values...)
+	res, err := fh.workspace.warehouse.Exec(fh.ctx, query.String(), values...)
 	if err != nil {
 		return err
 	}
@@ -512,7 +517,7 @@ func keys[K comparable, V any](m map[K]V) []K {
 func (fh *firehose) listMappings(connections []int) ([]*Mapping, error) {
 	var mappings []*Mapping
 	for _, c := range connections {
-		ts, err := fh.connections.Mappings(c)
+		ts, err := fh.workspace.Connections.Mappings(c)
 		if err != nil {
 			return nil, err
 		}

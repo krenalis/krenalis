@@ -532,12 +532,19 @@ func (this *Connections) Delete(id int) error {
 // identifier.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
-// If the connection has no mappings, it returns an
-// errors.UnprocessableError error with code NoMappings.
+// If the workspace does not have a data warehouse, it returns an
+// errors.UnprocessableError error with code NoWarehouse. If the connection has
+// no mappings, it returns an errors.UnprocessableError error with code
+// NoMappings.
 //
 // Note that this method is only a draft, and its code may be wrong and/or
 // partially implemented.
 func (this *Connections) Export(id int) (err error) {
+
+	// Verify that the workspace has a data warehouse.
+	if this.warehouse == nil {
+		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.id)
+	}
 
 	if id <= 0 || id > maxInt32 {
 		return errors.BadRequest("connection identifier %d is not valid", id)
@@ -664,12 +671,18 @@ func (this *Connections) GenerateKey(id int) (string, error) {
 // connection is an app and reimport is false, it imports the users from the
 // current cursor, otherwise imports all users.
 //
-// If the connection does not exist, it returns an errors.NotFound error. If the
-// connection is a file and does not have a storage, it returns an
-// errors.UnprocessableError error with code NoStorage and if the connection has
-// no mappings, it returns an errors.UnprocessableError error with code
-// NoMappings.
+// If the connection does not exist, it returns an errors.NotFound error. If
+// the workspace does not have a data warehouse, it returns an
+// errors.UnprocessableError error with code NoWarehouse. If the connection is
+// a file and does not have a storage, it returns an errors.UnprocessableError
+// error with code NoStorage and if the connection has no mappings, it returns
+// an errors.UnprocessableError error with code NoMappings.
 func (this *Connections) Import(id int, reimport bool) (err error) {
+
+	// Verify that the workspace has a data warehouse.
+	if this.warehouse == nil {
+		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.id)
+	}
 
 	if id < 1 || id > maxInt32 {
 		return errors.BadRequest("connection identifier %d is not valid", id)
@@ -1870,9 +1883,9 @@ func (this *Connections) newFirehose(ctx context.Context, connection *Connection
 		resource = connection.resource.id
 	}
 	fh := &firehose{
-		connections: this,
-		connection:  connection,
-		resource:    resource,
+		workspace:  this.Workspace,
+		connection: connection,
+		resource:   resource,
 	}
 	fh.ctx, fh.cancel = context.WithCancel(ctx)
 	return fh
