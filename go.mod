@@ -38,7 +38,7 @@ require (
 	chichi/connectors/website v0.0.0-00010101000000-000000000000
 	github.com/ClickHouse/clickhouse-go/v2 v2.4.3
 	github.com/evanw/esbuild v0.16.10
-	github.com/go-chi/chi/v5 v5.0.7
+	github.com/go-chi/chi/v5 v5.0.8
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgx/v5 v5.2.0
 	github.com/jxskiss/base62 v1.1.0
