@@ -137,7 +137,11 @@ func (e *UnprocessableError) Unwrap() error {
 
 // WriteTo implements the ResponseWriterTo interface.
 func (e *UnprocessableError) WriteTo(w http.ResponseWriter) error {
-	return writeTo(w, http.StatusUnprocessableEntity, e.Code, e.Message, e.Err.Error())
+	var details string
+	if e.Err != nil {
+		details = e.Err.Error()
+	}
+	return writeTo(w, http.StatusUnprocessableEntity, e.Code, e.Message, details)
 }
 
 // marshalString marshals s as a JSON string and returns the result.
