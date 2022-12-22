@@ -28,7 +28,7 @@ func (ids *identitySolver) ResolveEntity(connection int, user string, email stri
 		return goldenRecordID, nil // already resolved.
 	}
 	// Lookup a Golden Record with this email.
-	row := ids.workspace.warehouse.QueryRow(ids.ctx, "SELECT id from users where Email = $1", email)
+	row := ids.workspace.warehouse.QueryRow(ids.ctx, `SELECT id from users where "Email" = $1`, email)
 	err = row.Scan(&goldenRecordID)
 	if err != nil {
 		if err != sql.ErrNoRows {

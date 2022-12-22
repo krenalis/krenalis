@@ -163,17 +163,17 @@ func (warehouse *postgreSQL) Users(ctx context.Context, schema types.Schema, ord
 
 	// Build the query.
 	var query strings.Builder
-	query.WriteString("SELECT ")
+	query.WriteString(`SELECT "`)
 	for i, p := range properties {
 		if i > 0 {
-			query.WriteByte(',')
+			query.WriteString(`", "`)
 		}
 		if !types.IsValidPropertyName(p.Name) {
 			panic(fmt.Sprintf("invalid property name: %q", p.Name))
 		}
-		query.WriteString(strings.ToLower(p.Name))
+		query.WriteString(p.Name)
 	}
-	query.WriteString(" FROM users")
+	query.WriteString(`" FROM users`)
 	if order.Name != "" {
 		if !types.IsValidPropertyName(order.Name) {
 			panic(fmt.Sprintf("invalid property name: %q", order.Name))
