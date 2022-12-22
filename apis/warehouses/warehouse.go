@@ -13,14 +13,11 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"chichi/apis/types"
 	"chichi/connector/ui"
 )
-
-var ErrUserNotExist = errors.New("user does not exist")
 
 type Type int
 
@@ -31,26 +28,49 @@ const (
 	Snowflake
 )
 
+// wrapError wraps err as an Error error.
+// If err is nil, it returns a nil error.
+func wrapError(err error) error {
+	if err == nil {
+		return nil
+	}
+	return &Error{err}
+}
+
+// Error represents an error with a data warehouse. It could be for example an
+// authentication error or a network error.
+type Error struct {
+	Err error
+}
+
+func (e *Error) Error() string {
+	return fmt.Sprintf("cannot call the data warehouse: %s", e.Err)
+}
+
 // Warehouse is the interface implemented by data warehouses.
 type Warehouse interface {
 
 	// Exec executes a query without returning any rows. args are the placeholders.
+	// If the query fails, it returns an Error value.
 	Exec(ctx context.Context, query string, args ...any) (sql.Result, error)
 
 	// ServeUI serves the data warehouse's user interface.
 	ServeUI(ctx context.Context, event string, values []byte) ([]byte, *ui.Form, *ui.Alert, error)
 
 	// Query executes a query that returns rows. args are the placeholders.
+	// If the query fails, it returns an Error value.
 	Query(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 
 	// QueryRow executes a query that should return at most one row.
+	// If the query fails, it returns an Error value.
 	QueryRow(ctx context.Context, query string, args ...any) Row
 
 	// Users returns the users, with only the properties in schema, ordered by
 	// order if order is not the zero Property, and in range [first,first+limit]
 	// with first >= 0 and 0 < limit <= 1000.
 	//
-	// It panics is schema or order is not valid.
+	// If a query to the warehouse fails, it returns an Error value.
+	// If an argument is not valid, it panics.
 	Users(ctx context.Context, schema types.Schema, order types.Property, first, limit int) ([][]any, error)
 }
 

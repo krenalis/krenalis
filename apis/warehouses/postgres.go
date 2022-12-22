@@ -43,12 +43,14 @@ func openPostgres(settings []byte) *postgreSQL {
 }
 
 // Exec executes a query without returning any rows. args are the placeholders.
+// If the query fails, it returns an Error value.
 func (warehouse *postgreSQL) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	db, err := warehouse.connection()
 	if err != nil {
 		return nil, err
 	}
-	return db.ExecContext(ctx, query, args...)
+	result, err := db.ExecContext(ctx, query, args...)
+	return result, wrapError(err)
 }
 
 // ServeUI serves the data warehouse's user interface.
@@ -129,15 +131,18 @@ func (warehouse *postgreSQL) ServeUI(ctx context.Context, event string, values [
 }
 
 // Query executes a query that returns rows. args are the placeholders.
+// If the query fails, it returns an Error value.
 func (warehouse *postgreSQL) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
 	db, err := warehouse.connection()
 	if err != nil {
 		return nil, err
 	}
-	return db.QueryContext(ctx, query, args...)
+	rows, err := db.QueryContext(ctx, query, args...)
+	return rows, wrapError(err)
 }
 
 // QueryRow executes a query that should return at most one row.
+// If the query fails, it returns an Error value.
 func (warehouse *postgreSQL) QueryRow(ctx context.Context, query string, args ...any) Row {
 	db, err := warehouse.connection()
 	if err != nil {
@@ -151,7 +156,8 @@ func (warehouse *postgreSQL) QueryRow(ctx context.Context, query string, args ..
 // order if order is not the zero Property, and in range [first,first+limit]
 // with first >= 0 and 0 < limit <= 1000.
 //
-// It panics is schema or order is not valid.
+// If a query to the warehouse fails, it returns an Error value.
+// If an argument is not valid, it panics.
 func (warehouse *postgreSQL) Users(ctx context.Context, schema types.Schema, order types.Property, first, limit int) ([][]any, error) {
 
 	db, err := warehouse.connection()
@@ -192,7 +198,7 @@ func (warehouse *postgreSQL) Users(ctx context.Context, schema types.Schema, ord
 	var users [][]any
 	rows, err := db.QueryContext(ctx, query.String())
 	if err != nil {
-		return nil, err
+		return nil, wrapError(err)
 	}
 	for rows.Next() {
 		user := make([]any, len(properties))
@@ -227,12 +233,12 @@ func (warehouse *postgreSQL) Users(ctx context.Context, schema types.Schema, ord
 		}
 		if err = rows.Scan(user...); err != nil {
 			_ = rows.Close()
-			return nil, err
+			return nil, wrapError(err)
 		}
 		users = append(users, user)
 	}
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, wrapError(err)
 	}
 	err = rows.Close()
 	if err != nil {
@@ -256,7 +262,7 @@ func (warehouse *postgreSQL) connection() (*sql.DB, error) {
 		}
 		warehouse.db, err = sql.Open("pgx", warehouse.settings.dsn())
 		if err != nil {
-			return nil, err
+			return nil, wrapError(err)
 		}
 	}
 	return warehouse.db, nil
@@ -272,14 +278,16 @@ func (row postgreSQLRow) Scan(dest ...any) error {
 	if row.err != nil {
 		return row.err
 	}
-	return row.row.Scan(dest...)
+	err := row.row.Scan(dest...)
+	return wrapError(err)
 }
 
 func (row postgreSQLRow) Err() error {
 	if row.err != nil {
 		return row.err
 	}
-	return row.row.Err()
+	err := row.row.Err()
+	return wrapError(err)
 }
 
 type settings struct {

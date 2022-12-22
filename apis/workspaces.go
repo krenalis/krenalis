@@ -11,6 +11,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -24,6 +25,7 @@ import (
 )
 
 var (
+	WarehouseFailed      errors.Code = "WarehouseFailed"
 	NoWarehouse          errors.Code = "NoWarehouse"
 	OrderNotExist        errors.Code = "OrderNotExist"
 	OrderTypeNotSortable errors.Code = "OrderTypeNotSortable"
@@ -178,7 +180,8 @@ func (ws *Workspace) setSchema(name string, schema string) error {
 // cannot be empty.
 //
 // If a property does not exist, it returns an errors.UnprocessableError error
-// with code PropertyNotExist.
+// with code PropertyNotExist, and if the warehouse failed, it returns an
+// errors.UnprocessableError error with code WarehouseFailed.
 func (ws *Workspace) Users(properties []string, order string, first, limit int) (types.Schema, [][]any, error) {
 
 	// Verify that the workspace has a data warehouse.
@@ -243,6 +246,11 @@ func (ws *Workspace) Users(properties []string, order string, first, limit int) 
 
 	users, err := ws.warehouse.Users(context.Background(), schema, orderProperty, first, limit)
 	if err != nil {
+		if _, ok := err.(*warehouses.Error); ok {
+			// TODO(marco): log the error in a log specific of the workspace.
+			log.Printf("cannot get users from the data warehouse of the workspace %d: %s", ws.id, err)
+			err = errors.Unprocessable(WarehouseFailed, "warehouse connection is failed")
+		}
 		return types.Schema{}, nil, err
 	}
 

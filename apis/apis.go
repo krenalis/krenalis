@@ -362,6 +362,10 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			schema, users, err := workspace.Users(req.Properties, "", 0, 1000)
 			if err != nil {
+				if err, ok := err.(errors.ResponseWriterTo); ok {
+					_ = err.WriteTo(w)
+					return
+				}
 				log.Printf("[error] %s", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
