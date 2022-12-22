@@ -1717,7 +1717,7 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 		}
 	}
 
-	n := setConnectionMappings{Connection: connection}
+	n := setConnectionMappingsNotification{Connection: connection}
 
 	// Prepare the mappings for the notification and marshal the schemas into
 	// JSON.

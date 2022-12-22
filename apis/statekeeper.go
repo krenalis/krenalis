@@ -557,16 +557,16 @@ func (s *stateKeeper) setConnectionStream(n postgres.Notification) {
 	})
 }
 
-// setConnectionMappings is the notification event sent when the mappings of a
-// connection are saved.
-type setConnectionMappings struct {
+// setConnectionMappingsNotification is the notification event sent when the
+// mappings of a connection are saved.
+type setConnectionMappingsNotification struct {
 	Connection int
 	Mappings   []*MappingInfo
 }
 
 // setConnectionMappings sets the mappings of a connection.
 func (s stateKeeper) setConnectionMappings(n postgres.Notification) {
-	e := setConnectionMappings{}
+	e := setConnectionMappingsNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
