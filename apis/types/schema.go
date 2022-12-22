@@ -130,6 +130,30 @@ func (schema Schema) AsRole(role Role) Schema {
 	return Schema{properties}
 }
 
+// Property returns the property with the given name, or the zero value of
+// Property if it does not exist. The ok result indicates whether the property
+// exists in the schema. Panics if schema is not a valid schema or if name is
+// not a valid property name.
+func (schema Schema) Property(name string) (property Property, ok bool) {
+	if !schema.Valid() {
+		panic("schema is not valid")
+	}
+	if !IsValidPropertyName(name) {
+		panic("name is not a valid property name")
+	}
+	for _, property := range schema.properties {
+		if property.Name == name {
+			if property.Aliases != nil {
+				aliases := make([]string, len(property.Aliases))
+				copy(aliases, property.Aliases)
+				property.Aliases = aliases
+			}
+			return property, true
+		}
+	}
+	return Property{}, false
+}
+
 // Properties returns the properties of schema.
 // Panics if schema is not a valid schema.
 func (schema Schema) Properties() []Property {
