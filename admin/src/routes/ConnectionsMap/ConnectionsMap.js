@@ -140,6 +140,7 @@ const ConnectionsMap = () => {
 							<div className='database users' id='usersDatabase'>
 								<SlIcon name='database' />
 								<div className='name'>Users</div>
+								<NavLink to='/admin/users'></NavLink>
 							</div>
 							<div className='database events' id='eventsDatabase'>
 								<SlIcon name='database' />

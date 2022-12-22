@@ -79,6 +79,7 @@
     flex-flow: column;
     background-color: transparent;
 	padding-top: 5px;
+	position: relative;
 }
 
 .ConnectionsMap .map .main .databases .database sl-icon {
@@ -89,6 +90,15 @@
 
 .ConnectionsMap .map .main .databases .database .name {
 	font-size: 18px;
+}
+
+.ConnectionsMap .map .main .databases .database a {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 10;
 }
 
 .ConnectionsMap .map .destinations {

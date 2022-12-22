@@ -126,12 +126,38 @@ sl-breadcrumb-item > a {
 
 /* || icons */
 
-.codicon {
+.codicon,
+.codicon::before {
 	font-family: 'codicon' !important;
 }
 
-.codicon::before {
-	font-family: 'codicon' !important;
+/* ag-grid */
+
+.ag-icon,
+.ag-icon::before,
+.ag-icon::after,
+.ag-radio-button-input-wrapper::before,
+.ag-radio-button-input-wrapper::after {
+	font-family: agGridAlpine!important;
+	line-height: initial;
+}
+
+.ag-root-wrapper {
+	border: 0!important;
+	box-shadow: var(--sl-shadow-small);
+}
+
+.ag-header {
+	background-color: var(--bg-primary)!important;
+	border-bottom: 1px solid var(--border-primary)!important;
+}
+
+.ag-header-container {
+	width: 100%;
+}
+
+.ag-center-cols-container {
+	min-width: 100%;
 }
 
 /* || Forms */

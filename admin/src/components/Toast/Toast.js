@@ -2,7 +2,7 @@ import React from 'react';
 import './Toast.css';
 import { SlAlert, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
-export default class Alert extends React.Component {
+export default class Toast extends React.Component {
 	render() {
 		return this.props.status == null ? (
 			<SlAlert ref={this.props.reactRef} variant='neutral' closable></SlAlert>

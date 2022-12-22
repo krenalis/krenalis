@@ -348,6 +348,38 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 		})
 	})
+	router.Route("/api/users", func(router chi.Router) {
+		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+			var req struct {
+				Properties []string
+				Start      int
+				End        int
+			}
+			err := json.NewDecoder(r.Body).Decode(&req)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			schema, users, err := workspace.Users(req.Properties, 0, 1000)
+			if err != nil {
+				log.Printf("[error] %s", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			var end int
+			if len(users) < req.End {
+				end = len(users)
+			} else {
+				end = req.End
+			}
+			w.Header().Add("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"count":  len(users),
+				"users":  users[req.Start:end],
+				"schema": schema,
+			})
+		})
+	})
 	router.ServeHTTP(w, r)
 
 }

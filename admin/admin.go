@@ -120,19 +120,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Handle the "/list-users" endpoint.
-	if strings.HasPrefix(rpath, "/list-users") {
-		users, err := admin.apis.Users.Find()
-		if err != nil {
-			log.Printf("[error] cannot retrieve users: %s", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(users)
-		return
-	}
-
 	// Handle the "/user-schema-properties" endpoint.
 	if strings.HasPrefix(rpath, "/user-schema") {
 		info := workspace.Info()

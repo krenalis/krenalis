@@ -209,7 +209,7 @@ func (ws *Workspace) Users(properties []string, first, limit int) (types.Schema,
 		if i > 0 {
 			query.WriteByte(',')
 		}
-		query.WriteString(postgres.QuoteIdent(name))
+		query.WriteString(postgres.QuoteIdent(strings.ToLower(name)))
 	}
 	query.WriteString(" FROM warehouse_users LIMIT ")
 	query.WriteString(strconv.Itoa(limit))
