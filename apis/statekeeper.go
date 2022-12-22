@@ -561,7 +561,7 @@ func (s *stateKeeper) setConnectionStream(n postgres.Notification) {
 // connection are saved.
 type setConnectionMappings struct {
 	Connection int
-	Mappings   []*Mapping
+	Mappings   []*MappingInfo
 }
 
 // setConnectionMappings sets the mappings of a connection.
@@ -572,11 +572,14 @@ func (s stateKeeper) setConnectionMappings(n postgres.Notification) {
 	}
 	s.replaceConnection(e.Connection, func(c *Connection) {
 		c.mappings = make([]*Mapping, len(e.Mappings))
-		for i := range c.mappings {
-			m := &Mapping{}
-			*m = *e.Mappings[i]
-			m.connection = c
-			c.mappings[i] = m
+		for i, m := range e.Mappings {
+			c.mappings[i] = &Mapping{
+				id:         m.ID,
+				connection: c,
+				in:         m.In,
+				sourceCode: m.SourceCode,
+				out:        m.Out,
+			}
 		}
 	})
 }

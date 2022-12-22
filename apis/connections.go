@@ -1721,13 +1721,13 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 
 	// Prepare the mappings for the notification and marshal the schemas into
 	// JSON.
-	n.Mappings = make([]*Mapping, len(mappings))
+	n.Mappings = make([]*MappingInfo, len(mappings))
 	schemas := make([][]byte, len(mappings))
 	for i, t := range mappings {
-		n.Mappings[i] = &Mapping{
-			in:         t.In,
-			sourceCode: t.SourceCode,
-			out:        t.Out,
+		n.Mappings[i] = &MappingInfo{
+			In:         t.In,
+			SourceCode: t.SourceCode,
+			Out:        t.Out,
 		}
 		var err error
 		schemas[i], err = json.Marshal(t.In)
@@ -1756,11 +1756,11 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 		}
 		for i, t := range n.Mappings {
 			var id int
-			err := query.QueryRow(connection, schemas[i], t.sourceCode, t.out).Scan(&id)
+			err := query.QueryRow(connection, schemas[i], t.SourceCode, t.Out).Scan(&id)
 			if err != nil {
 				return err
 			}
-			t.id = id
+			t.ID = id
 		}
 		return tx.Notify(n)
 	})
