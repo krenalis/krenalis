@@ -43,11 +43,28 @@ type firehose struct {
 }
 
 func (fh *firehose) ReceiveEvent(event connector.Event) {
-	return
+
+	// Return if the context has expired.
+	select {
+	case <-fh.ctx.Done():
+		return
+	default:
+	}
+
+	// TODO.
+
 }
 
 // SetCursor sets the user cursor.
 func (fh *firehose) SetCursor(cursor string) {
+
+	// Return if the context has expired.
+	select {
+	case <-fh.ctx.Done():
+		return
+	default:
+	}
+
 	result, err := fh.workspace.db.Exec("UPDATE connections SET user_cursor = $1 WHERE id = $2", cursor, fh.connection.id)
 	if err != nil {
 		fh.setError(err)
@@ -61,19 +78,45 @@ func (fh *firehose) SetCursor(cursor string) {
 	if affected == 0 {
 		fh.cancel()
 	}
-	return
+
 }
 
 func (fh *firehose) SetGroup(group string, properties map[string]any, timestamp time.Time, timestamps map[string]time.Time) {
-	return
+
+	// Return if the context has expired.
+	select {
+	case <-fh.ctx.Done():
+		return
+	default:
+	}
+
+	// TODO.
+
 }
 
 func (fh *firehose) SetGroupUsers(group string, users []string) {
-	return
+
+	// Return if the context has expired.
+	select {
+	case <-fh.ctx.Done():
+		return
+	default:
+	}
+
+	// TODO.
+
 }
 
 // SetSettings sets the given settings of the connection.
 func (fh *firehose) SetSettings(settings []byte) error {
+
+	// Return if the context has expired.
+	select {
+	case <-fh.ctx.Done():
+		return fh.ctx.Err()
+	default:
+	}
+
 	if !utf8.Valid(settings) {
 		return errors.New("settings is not valid UTF-8")
 	}
@@ -99,6 +142,13 @@ func (fh *firehose) SetSettings(settings []byte) error {
 }
 
 func (fh *firehose) SetUser(user string, properties map[string]any, timestamp time.Time, timestamps map[string]time.Time) {
+
+	// Return if the context has expired.
+	select {
+	case <-fh.ctx.Done():
+		return
+	default:
+	}
 
 	if fh.workspace.warehouse == nil {
 		fh.err = fmt.Errorf("workspace %d does not have a warehouse", fh.workspace.id)
@@ -272,7 +322,16 @@ func (fh *firehose) entityData(connection int, user string) (connectionEntityDat
 }
 
 func (fh *firehose) SetUserGroups(user string, groups []string) {
-	return
+
+	// Return if the context has expired.
+	select {
+	case <-fh.ctx.Done():
+		return
+	default:
+	}
+
+	// TODO.
+
 }
 
 // WebhookURL returns the URL of the webhook.
