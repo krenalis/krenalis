@@ -71,8 +71,11 @@ func (warehouse *postgreSQL) Exec(ctx context.Context, query string, args ...any
 	if err != nil {
 		return nil, err
 	}
-	result, err := db.ExecContext(ctx, query, args...)
-	return result, wrapError(err)
+	r, err := db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return nil, wrapError(err)
+	}
+	return result{r}, nil
 }
 
 // Type returns the type of the warehouse.
@@ -159,13 +162,16 @@ func (warehouse *postgreSQL) ServeUI(ctx context.Context, event string, values [
 
 // Query executes a query that returns rows. args are the placeholders.
 // If the query fails, it returns an Error value.
-func (warehouse *postgreSQL) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+func (warehouse *postgreSQL) Query(ctx context.Context, query string, args ...any) (*Rows, error) {
 	db, err := warehouse.connection()
 	if err != nil {
 		return nil, err
 	}
 	rows, err := db.QueryContext(ctx, query, args...)
-	return rows, wrapError(err)
+	if err != nil {
+		return nil, wrapError(err)
+	}
+	return &Rows{rows}, nil
 }
 
 // QueryRow executes a query that should return at most one row.

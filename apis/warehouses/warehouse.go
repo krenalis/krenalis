@@ -66,7 +66,7 @@ type Warehouse interface {
 
 	// Query executes a query that returns rows. args are the placeholders.
 	// If the query fails, it returns an Error value.
-	Query(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	Query(ctx context.Context, query string, args ...any) (*Rows, error)
 
 	// QueryRow executes a query that should return at most one row.
 	QueryRow(ctx context.Context, query string, args ...any) Row
@@ -126,6 +126,50 @@ func (row Row) Err() error {
 	}
 	err := row.row.Err()
 	return wrapError(err)
+}
+
+// Rows represents the result of a query. Its methods, on error, return an
+// Error value.
+type Rows struct {
+	rows *sql.Rows
+}
+
+func (rows Rows) Close() error {
+	return wrapError(rows.rows.Close())
+}
+
+func (rows Rows) Err() error {
+	return wrapError(rows.rows.Err())
+}
+
+func (rows Rows) Next() bool {
+	return rows.rows.Next()
+}
+
+func (rows Rows) Scan(dest ...any) error {
+	return wrapError(rows.rows.Scan(dest...))
+}
+
+// result implements the sql.Result interface but on error it returns an Error
+// value.
+type result struct {
+	result sql.Result
+}
+
+func (r result) LastInsertId() (int64, error) {
+	id, err := r.result.LastInsertId()
+	if err != nil {
+		return 0, wrapError(err)
+	}
+	return id, nil
+}
+
+func (r result) RowsAffected() (int64, error) {
+	n, err := r.result.RowsAffected()
+	if err != nil {
+		return 0, wrapError(err)
+	}
+	return n, nil
 }
 
 // MarshalJSON implements the json.Marshaler interface.
