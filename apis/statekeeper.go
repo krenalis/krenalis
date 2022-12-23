@@ -447,7 +447,7 @@ type disconnectWorkspaceWarehouseNotification struct {
 	Workspace int
 }
 
-// deleteEventType deletes an event type.
+// disconnectWorkspaceWarehouse disconnects a warehouse of a workspace.
 func (s *stateKeeper) disconnectWorkspaceWarehouse(n postgres.Notification) {
 	e := disconnectWorkspaceWarehouseNotification{}
 	if !decodeStateNotification(n, &e) {

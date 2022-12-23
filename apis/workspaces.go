@@ -97,7 +97,8 @@ func (this *Workspaces) DisconnectWarehouse(id int) error {
 		Workspace: this.id,
 	}
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		result, err := tx.Exec("UPDATE workspaces SET warehouse_type = NULL, warehouse_settings = '' WHERE id = $1 AND warehouse_type IS NOT NULL", n.Workspace)
+		result, err := tx.Exec("UPDATE workspaces\nSET warehouse_type = NULL, warehouse_settings = ''\n"+
+			"WHERE id = $1 AND warehouse_type IS NOT NULL", n.Workspace)
 		if err != nil {
 			return err
 		}
