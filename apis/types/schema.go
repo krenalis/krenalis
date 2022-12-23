@@ -10,6 +10,8 @@ package types
 import (
 	"errors"
 	"sort"
+
+	"golang.org/x/exp/slices"
 )
 
 var errInvalidSchemaSyntax = errors.New("invalid schema syntax")
@@ -143,11 +145,7 @@ func (schema Schema) Property(name string) (property Property, ok bool) {
 	}
 	for _, property := range schema.properties {
 		if property.Name == name {
-			if property.Aliases != nil {
-				aliases := make([]string, len(property.Aliases))
-				copy(aliases, property.Aliases)
-				property.Aliases = aliases
-			}
+			property.Aliases = slices.Clone(property.Aliases)
 			return property, true
 		}
 	}
@@ -160,14 +158,9 @@ func (schema Schema) Properties() []Property {
 	if !schema.Valid() {
 		panic("schema is not valid")
 	}
-	properties := make([]Property, len(schema.properties))
-	copy(properties, schema.properties)
+	properties := slices.Clone(schema.properties)
 	for _, property := range properties {
-		if property.Aliases != nil {
-			aliases := make([]string, len(property.Aliases))
-			copy(aliases, property.Aliases)
-			property.Aliases = aliases
-		}
+		property.Aliases = slices.Clone(property.Aliases)
 	}
 	return properties
 }
