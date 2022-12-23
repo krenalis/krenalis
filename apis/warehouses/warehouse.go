@@ -80,11 +80,6 @@ type Warehouse interface {
 	Users(ctx context.Context, schema types.Schema, order types.Property, first, limit int) ([][]any, error)
 }
 
-type Row interface {
-	Scan(dest ...any) error
-	Err() error
-}
-
 // Open opens a data warehouse specified by its type and settings.
 // Open does not open a connection to the database.
 func Open(typ Type, settings []byte) (Warehouse, error) {
@@ -106,6 +101,31 @@ func IsValidType(typ Type) bool {
 		return false
 	}
 	return false
+}
+
+// Row returns a single row as a result of calling QueryRow.
+type Row struct {
+	row *sql.Row
+	err error
+}
+
+func (row Row) Scan(dest ...any) error {
+	if row.err != nil {
+		return row.err
+	}
+	err := row.row.Scan(dest...)
+	if err == sql.ErrNoRows {
+		return err
+	}
+	return wrapError(err)
+}
+
+func (row Row) Err() error {
+	if row.err != nil {
+		return row.err
+	}
+	err := row.row.Err()
+	return wrapError(err)
 }
 
 // MarshalJSON implements the json.Marshaler interface.

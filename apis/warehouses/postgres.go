@@ -173,10 +173,10 @@ func (warehouse *postgreSQL) Query(ctx context.Context, query string, args ...an
 func (warehouse *postgreSQL) QueryRow(ctx context.Context, query string, args ...any) Row {
 	db, err := warehouse.connection()
 	if err != nil {
-		return postgreSQLRow{err: err}
+		return Row{err: err}
 	}
 	row := db.QueryRowContext(ctx, query, args...)
-	return postgreSQLRow{row: row}
+	return Row{row: row}
 }
 
 // Users returns the users, with only the properties in schema, ordered by
@@ -297,31 +297,6 @@ func (warehouse *postgreSQL) connection() (*sql.DB, error) {
 	}
 	warehouse.db = db
 	return db, nil
-}
-
-// postgreSQLRow implements the Row interface.
-type postgreSQLRow struct {
-	row *sql.Row
-	err error
-}
-
-func (row postgreSQLRow) Scan(dest ...any) error {
-	if row.err != nil {
-		return row.err
-	}
-	err := row.row.Scan(dest...)
-	if err == sql.ErrNoRows {
-		return err
-	}
-	return wrapError(err)
-}
-
-func (row postgreSQLRow) Err() error {
-	if row.err != nil {
-		return row.err
-	}
-	err := row.row.Err()
-	return wrapError(err)
 }
 
 type settings struct {
