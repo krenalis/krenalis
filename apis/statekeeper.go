@@ -16,6 +16,7 @@ import (
 
 	"chichi/apis/postgres"
 	"chichi/apis/types"
+	"chichi/apis/warehouses"
 )
 
 // logNotifications controls the logging of notifications on the log.
@@ -94,6 +95,8 @@ func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgr
 			s.setWorkspaceGroupSchema(n)
 		case "setWorkspaceUserSchema":
 			s.setWorkspaceUserSchema(n)
+		case "setWorkspaceWarehouse":
+			s.setWorkspaceWarehouse(n)
 		case "startImport":
 			s.startImport(n)
 		default:
@@ -793,6 +796,50 @@ func (s *stateKeeper) setWorkspaceUserSchema(n postgres.Notification) {
 		w.schema.user = schema
 		w.schemaSources.user = e.Schema
 	})
+}
+
+// setWorkspaceWarehouse is the notification event sent when a workspace
+// warehouse is changed.
+type setWorkspaceWarehouseNotification struct {
+	Workspace int
+	Warehouse *notifiedWarehouse
+}
+
+type notifiedWarehouse struct {
+	Type     warehouses.Type
+	Settings []byte
+}
+
+// setWorkspaceUserSchema sets the warehouse of a workspace.
+func (s *stateKeeper) setWorkspaceWarehouse(n postgres.Notification) {
+	e := setWorkspaceWarehouseNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	dismissed := s.workspaces[e.Workspace].warehouse
+	if e.Warehouse != nil {
+		s.replaceWorkspace(e.Workspace, func(w *Workspace) {
+			warehouse, err := warehouses.Open(e.Warehouse.Type, e.Warehouse.Settings)
+			if err == nil {
+				w.warehouse = warehouse
+			} else {
+				log.Printf("cannot open the warehouse of workspace %d: %s", e.Workspace, err)
+				w.warehouse = nil
+			}
+		})
+	} else {
+		s.replaceWorkspace(e.Workspace, func(w *Workspace) {
+			w.warehouse = nil
+		})
+	}
+	// Close the dismissed warehouse.
+	if dismissed != nil {
+		err := dismissed.Close()
+		if err != nil {
+			// TODO(marco): write the error into a workspace specific log
+			log.Printf("error occurred closing the warehouse: %s", err)
+		}
+	}
 }
 
 // startImportNotification is the notification event sent when an import

@@ -1529,7 +1529,7 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 		return nil, err
 	}
 
-	return marshalUIFormAlert(form, alert, c.role)
+	return marshalUIFormAlert(form, alert, ui.Role(c.role))
 }
 
 // SetStorage sets the storage of the file connection with identifier file.
@@ -2206,7 +2206,7 @@ func generateServerKey() ([]byte, error) {
 
 // marshalUIFormAlert marshals form with given role and alert in JSON format.
 // form and alert can be nil or not, independently of each other.
-func marshalUIFormAlert(form *ui.Form, alert *ui.Alert, role ConnectionRole) ([]byte, error) {
+func marshalUIFormAlert(form *ui.Form, alert *ui.Alert, role ui.Role) ([]byte, error) {
 
 	if form == nil && alert == nil {
 		return []byte("null"), nil
@@ -2299,11 +2299,13 @@ func adjustValuesCase(key string, values map[string]any) {
 
 // marshalUIComponent marshals component with the given role in JSON format. If
 // comma is true, it prepends a comma. Returns whether it has been marhalled.
-func marshalUIComponent(b *bytes.Buffer, component ui.Component, role ConnectionRole, values map[string]any, comma bool) (bool, error) {
+func marshalUIComponent(b *bytes.Buffer, component ui.Component, role ui.Role, values map[string]any, comma bool) (bool, error) {
 	rv := reflect.ValueOf(component).Elem()
 	rt := rv.Type()
-	if r := ui.Role(rv.FieldByName("Role").Int()); r != ui.BothRole && ConnectionRole(r) != role {
-		return false, nil
+	if role != ui.BothRole {
+		if r := ui.Role(rv.FieldByName("Role").Int()); r != ui.BothRole && r != role {
+			return false, nil
+		}
 	}
 	if comma {
 		b.WriteString(`,`)
@@ -2351,9 +2353,11 @@ func marshalUIComponent(b *bytes.Buffer, component ui.Component, role Connection
 
 // marshalUIFieldSet marshals fieldSet with the given role in JSON format. If
 // comma is true, it prepends a comma. Returns whether it has been marhalled.
-func marshalUIFieldSet(b *bytes.Buffer, fieldSet ui.FieldSet, role ConnectionRole, values map[string]any, comma bool) (bool, error) {
-	if fieldSet.Role != ui.BothRole && ConnectionRole(fieldSet.Role) != role {
-		return false, nil
+func marshalUIFieldSet(b *bytes.Buffer, fieldSet ui.FieldSet, role ui.Role, values map[string]any, comma bool) (bool, error) {
+	if role != ui.BothRole {
+		if fieldSet.Role != ui.BothRole && fieldSet.Role != role {
+			return false, nil
+		}
 	}
 	name := fieldSet.Name
 	if values != nil {

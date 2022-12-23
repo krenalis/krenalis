@@ -73,8 +73,13 @@ func (warehouse *postgreSQL) Exec(ctx context.Context, query string, args ...any
 	return result, wrapError(err)
 }
 
+// Type returns the type of the warehouse.
+func (warehouse *postgreSQL) Type() Type {
+	return PostgreSQL
+}
+
 // ServeUI serves the data warehouse's user interface.
-func (warehouse *postgreSQL) ServeUI(ctx context.Context, event string, values []byte) ([]byte, *ui.Form, *ui.Alert, error) {
+func (warehouse *postgreSQL) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, []byte, error) {
 
 	var s settings
 
@@ -116,18 +121,18 @@ func (warehouse *postgreSQL) ServeUI(ctx context.Context, event string, values [
 		err = testConnection(ctx, &s)
 		if err != nil {
 			if event == "test" {
-				return nil, nil, ui.WarningAlert(err.Error()), nil
+				return nil, ui.WarningAlert(err.Error()), nil, nil
 			}
-			return nil, nil, ui.DangerAlert(err.Error()), nil
+			return nil, ui.DangerAlert(err.Error()), nil, nil
 		}
 		if event == "test" {
-			return nil, nil, ui.SuccessAlert("Connection established"), nil
+			return nil, ui.SuccessAlert("Connection established"), nil, nil
 		}
 		b, err := json.Marshal(&s)
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		return b, nil, ui.SuccessAlert("Settings saved"), nil
+		return nil, ui.SuccessAlert("Settings saved"), b, nil
 	default:
 		return nil, nil, nil, ui.ErrEventNotExist
 	}
@@ -147,7 +152,7 @@ func (warehouse *postgreSQL) ServeUI(ctx context.Context, event string, values [
 		},
 	}
 
-	return nil, form, nil, nil
+	return form, nil, nil, nil
 }
 
 // Query executes a query that returns rows. args are the placeholders.

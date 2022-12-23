@@ -58,8 +58,11 @@ type Warehouse interface {
 	// If the query fails, it returns an Error value.
 	Exec(ctx context.Context, query string, args ...any) (sql.Result, error)
 
+	// Type returns the type of the warehouse.
+	Type() Type
+
 	// ServeUI serves the data warehouse's user interface.
-	ServeUI(ctx context.Context, event string, values []byte) ([]byte, *ui.Form, *ui.Alert, error)
+	ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, []byte, error)
 
 	// Query executes a query that returns rows. args are the placeholders.
 	// If the query fails, it returns an Error value.

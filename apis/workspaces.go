@@ -12,6 +12,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"math"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -20,16 +21,18 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/types"
 	"chichi/apis/warehouses"
+	"chichi/connector/ui"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
 
 var (
-	WarehouseFailed      errors.Code = "WarehouseFailed"
-	NoWarehouse          errors.Code = "NoWarehouse"
-	OrderNotExist        errors.Code = "OrderNotExist"
-	OrderTypeNotSortable errors.Code = "OrderTypeNotSortable"
-	PropertyNotExist     errors.Code = "PropertyNotExist"
+	NoWarehouse           errors.Code = "NoWarehouse"
+	OrderNotExist         errors.Code = "OrderNotExist"
+	OrderTypeNotSortable  errors.Code = "OrderTypeNotSortable"
+	PropertyNotExist      errors.Code = "PropertyNotExist"
+	WarehouseFailed       errors.Code = "WarehouseFailed"
+	WarehouseTypeMismatch errors.Code = "WarehouseTypeMismatch"
 )
 
 type Workspaces struct {
@@ -272,4 +275,87 @@ func (this *Workspaces) List() []*WorkspaceInfo {
 		return a.ID < b.ID
 	})
 	return infos
+}
+
+// ServeWarehouseUI serves the warehouse UI of the workspace with identifier
+// id where typ is the type of the warehouse. event is the event and values
+// contains the form values in JSON format.
+//
+// If the workspace does not exist, it returns an errors.NotFoundError error.
+// If the workspace does not have a warehouse, it returns an
+// errors.UnprocessableError error with code NoWarehouse.
+// If the warehouse of the workspace does not have type typ, it returns an
+// errors.UnprocessableError with code WarehouseTypeMismatch.
+// If the event does not exist, it returns an errors.UnprocessableError error
+// with code EventNotExist.
+func (this *Workspaces) ServeWarehouseUI(id int, typ warehouses.Type, event string, values []byte) ([]byte, error) {
+
+	if id < 1 || id > math.MaxInt32 {
+		return nil, errors.BadRequest("workspace identifier %d is not valid", id)
+	}
+
+	ws, ok := this.state.Get(id)
+	if !ok {
+		return nil, errors.NotFound("workspace %d does not exist", id)
+	}
+	if ws.warehouse == nil {
+		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a warehouse", id)
+	}
+
+	warehouseType := ws.warehouse.Type()
+
+	form, alert, settings, err := ws.warehouse.ServeUI(context.Background(), event, values)
+	if err != nil {
+		if err == ui.ErrEventNotExist {
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s warehouse", event, warehouseType)
+		}
+		return nil, err
+	}
+
+	response, err := marshalUIFormAlert(form, alert, ui.BothRole)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update the settings.
+	if settings != nil {
+		n := setWorkspaceWarehouseNotification{
+			Workspace: this.id,
+			Warehouse: &notifiedWarehouse{
+				Type:     warehouseType,
+				Settings: settings,
+			},
+		}
+		err := this.db.Transaction(func(tx *postgres.Tx) error {
+			result, err := tx.Exec("UPDATE workspaces SET warehouse_settings = $1 WHERE id = $2 AND warehouse_type = $3",
+				n.Warehouse.Settings, n.Workspace, n.Warehouse.Type)
+			if err != nil {
+				return err
+			}
+			affected, err := result.RowsAffected()
+			if err != nil {
+				return err
+			}
+			if affected == 0 {
+				var currentType warehouses.Type
+				err = tx.QueryRow("SELECT NULLIF(warehouse_type, 0) FROM workspaces WHERE id = $1", id).Scan(&currentType)
+				if err != nil {
+					if err == sql.ErrNoRows {
+						err = errors.NotFound("workspace %d does not exist", id)
+					}
+					return err
+				}
+				if currentType == 0 {
+					return errors.Unprocessable(NoWarehouse, "workspace %d does not have a warehouse", id)
+				}
+				return errors.Unprocessable(WarehouseTypeMismatch, "warehouse of workspace %d has type %s, not %s", id, currentType, typ)
+			}
+			return tx.Notify(n)
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return response, nil
 }
