@@ -11,6 +11,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -30,16 +31,35 @@ import (
 var _ Warehouse = &postgreSQL{}
 
 type postgreSQL struct {
-	mu          sync.Mutex
-	db          *sql.DB
-	settings    *settings
-	rawSettings []byte
+	mu       sync.Mutex // for the db and closed fields
+	db       *sql.DB
+	closed   bool
+	settings *settings
 }
 
 // openPostgres the data warehouse with the given settings.
 // If settings is nil, ServeUI is the only callable method.
-func openPostgres(settings []byte) *postgreSQL {
-	return &postgreSQL{rawSettings: settings}
+func openPostgres(settings []byte) (*postgreSQL, error) {
+	warehouse := &postgreSQL{}
+	err := json.Unmarshal(settings, &warehouse.settings)
+	if err != nil {
+		return nil, err
+	}
+	return warehouse, nil
+}
+
+// Close closes the warehouse. It will not allow any new queries to run, and it
+// waits for the current ones to finish.
+func (warehouse *postgreSQL) Close() error {
+	var err error
+	warehouse.mu.Lock()
+	if warehouse.db != nil {
+		err = warehouse.db.Close()
+		warehouse.db = nil
+		warehouse.closed = true
+	}
+	warehouse.mu.Unlock()
+	return err
 }
 
 // Exec executes a query without returning any rows. args are the placeholders.
@@ -255,17 +275,18 @@ func (warehouse *postgreSQL) Users(ctx context.Context, schema types.Schema, ord
 func (warehouse *postgreSQL) connection() (*sql.DB, error) {
 	warehouse.mu.Lock()
 	defer warehouse.mu.Unlock()
-	if warehouse.db == nil {
-		err := json.Unmarshal(warehouse.rawSettings, &warehouse.settings)
-		if err != nil {
-			return nil, err
-		}
-		warehouse.db, err = sql.Open("pgx", warehouse.settings.dsn())
-		if err != nil {
-			return nil, wrapError(err)
-		}
+	if warehouse.closed {
+		return nil, wrapError(errors.New("warehouse is closed"))
 	}
-	return warehouse.db, nil
+	if warehouse.db != nil {
+		return warehouse.db, nil
+	}
+	db, err := sql.Open("pgx", warehouse.settings.dsn())
+	if err != nil {
+		return nil, wrapError(err)
+	}
+	warehouse.db = db
+	return db, nil
 }
 
 // postgreSQLRow implements the Row interface.

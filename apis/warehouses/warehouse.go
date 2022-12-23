@@ -50,6 +50,10 @@ func (e *Error) Error() string {
 // Warehouse is the interface implemented by data warehouses.
 type Warehouse interface {
 
+	// Close closes the warehouse. It will not allow any new queries to run, and it
+	// waits for the current ones to finish.
+	Close() error
+
 	// Exec executes a query without returning any rows. args are the placeholders.
 	// If the query fails, it returns an Error value.
 	Exec(ctx context.Context, query string, args ...any) (sql.Result, error)
@@ -80,14 +84,15 @@ type Row interface {
 }
 
 // Open opens a data warehouse specified by its type and settings.
-// Open does not open a connection to the database and does not validate
-// settings. It returns nil only if the type does not exist.
-func Open(typ Type, settings []byte) Warehouse {
+// Open does not open a connection to the database.
+func Open(typ Type, settings []byte) (Warehouse, error) {
 	switch typ {
 	case PostgreSQL:
 		return openPostgres(settings)
+	case BigQuery, Redshift, Snowflake:
+		return nil, fmt.Errorf("warehouse type %s is not supported", typ)
 	}
-	return nil
+	return nil, fmt.Errorf("warehouse type %d does not exist", typ)
 }
 
 // MarshalJSON implements the json.Marshaler interface.
