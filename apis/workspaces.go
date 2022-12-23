@@ -108,13 +108,10 @@ func (this *Workspaces) DisconnectWarehouse(id int) error {
 		}
 		if affected == 0 {
 			err = tx.QueryVoid("SELECT FROM workspaces WHERE id = $1", id)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					err = errors.NotFound("workspace %d does not exist", id)
-				}
-				return err
+			if err == sql.ErrNoRows {
+				err = errors.NotFound("workspace %d does not exist", id)
 			}
-			return nil
+			return err
 		}
 		return tx.Notify(n)
 	})
