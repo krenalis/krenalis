@@ -69,7 +69,6 @@ type Warehouse interface {
 	Query(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 
 	// QueryRow executes a query that should return at most one row.
-	// If the query fails, it returns an Error value.
 	QueryRow(ctx context.Context, query string, args ...any) Row
 
 	// Users returns the users, with only the properties in schema, ordered by

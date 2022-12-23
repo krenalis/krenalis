@@ -305,6 +305,9 @@ func (row postgreSQLRow) Scan(dest ...any) error {
 		return row.err
 	}
 	err := row.row.Scan(dest...)
+	if err == sql.ErrNoRows {
+		return err
+	}
 	return wrapError(err)
 }
 
