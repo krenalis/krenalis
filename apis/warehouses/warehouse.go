@@ -97,6 +97,17 @@ func Open(typ Type, settings []byte) (Warehouse, error) {
 	return nil, fmt.Errorf("warehouse type %d does not exist", typ)
 }
 
+// IsValidType reports whether typ is a valid warehouse type.
+func IsValidType(typ Type) bool {
+	switch typ {
+	case PostgreSQL:
+		return true
+	case BigQuery, Redshift, Snowflake:
+		return false
+	}
+	return false
+}
+
 // MarshalJSON implements the json.Marshaler interface.
 // It panics if typ is not a valid Type value.
 func (typ Type) MarshalJSON() ([]byte, error) {

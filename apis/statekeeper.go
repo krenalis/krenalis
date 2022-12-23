@@ -63,6 +63,8 @@ func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgr
 			s.deleteEventDataType(n)
 		case "deleteEventType":
 			s.deleteEventType(n)
+		case "disconnectWorkspaceWarehouse":
+			s.disconnectWorkspaceWarehouse(n)
 		case "endImport":
 			s.endImport(n)
 		case "generateConnectionKey":
@@ -437,6 +439,31 @@ func (s *stateKeeper) deleteEventType(n postgres.Notification) {
 	delete(eventTypes.state.ids, e.ID)
 	eventTypes.state.Unlock()
 	// TODO(marco): remove events from ClickHouse and then remove definitively the event type from Postgres.
+}
+
+// disconnectWorkspaceWarehouseNotification is the notification event sent when
+// a warehouse of a workspace is disconnected.
+type disconnectWorkspaceWarehouseNotification struct {
+	Workspace int
+}
+
+// deleteEventType deletes an event type.
+func (s *stateKeeper) disconnectWorkspaceWarehouse(n postgres.Notification) {
+	e := disconnectWorkspaceWarehouseNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	disconnected := s.workspaces[e.Workspace].warehouse
+	s.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.warehouse = nil
+	})
+	go func() {
+		err := disconnected.Close()
+		if err != nil {
+			// TODO(marco): write the error into a workspace specific log
+			log.Printf("error occurred disconnecting the warehouse: %s", err)
+		}
+	}()
 }
 
 // endImportNotification is the notification event sent when an import ends.
@@ -816,7 +843,7 @@ func (s *stateKeeper) setWorkspaceWarehouse(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	dismissed := s.workspaces[e.Workspace].warehouse
+	disconnected := s.workspaces[e.Workspace].warehouse
 	if e.Warehouse != nil {
 		s.replaceWorkspace(e.Workspace, func(w *Workspace) {
 			warehouse, err := warehouses.Open(e.Warehouse.Type, e.Warehouse.Settings)
@@ -832,13 +859,15 @@ func (s *stateKeeper) setWorkspaceWarehouse(n postgres.Notification) {
 			w.warehouse = nil
 		})
 	}
-	// Close the dismissed warehouse.
-	if dismissed != nil {
-		err := dismissed.Close()
-		if err != nil {
-			// TODO(marco): write the error into a workspace specific log
-			log.Printf("error occurred closing the warehouse: %s", err)
-		}
+	// Close the disconnected warehouse.
+	if disconnected != nil {
+		go func() {
+			err := disconnected.Close()
+			if err != nil {
+				// TODO(marco): write the error into a workspace specific log
+				log.Printf("error occurred disconnecting the warehouse: %s", err)
+			}
+		}()
 	}
 }
 

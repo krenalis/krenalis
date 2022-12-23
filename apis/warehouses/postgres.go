@@ -41,9 +41,11 @@ type postgreSQL struct {
 // If settings is nil, ServeUI is the only callable method.
 func openPostgres(settings []byte) (*postgreSQL, error) {
 	warehouse := &postgreSQL{}
-	err := json.Unmarshal(settings, &warehouse.settings)
-	if err != nil {
-		return nil, err
+	if len(settings) > 0 {
+		err := json.Unmarshal(settings, &warehouse.settings)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return warehouse, nil
 }
@@ -282,6 +284,9 @@ func (warehouse *postgreSQL) connection() (*sql.DB, error) {
 	defer warehouse.mu.Unlock()
 	if warehouse.closed {
 		return nil, wrapError(errors.New("warehouse is closed"))
+	}
+	if warehouse.settings == nil {
+		return nil, wrapError(errors.New("there are no settings"))
 	}
 	if warehouse.db != nil {
 		return warehouse.db, nil
