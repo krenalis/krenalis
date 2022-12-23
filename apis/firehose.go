@@ -196,34 +196,44 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	candidateTimestamps := map[string]time.Time{}
 	for _, m := range connectionsMappings {
 		userProps := map[string]any{}
-		schemaProps := m.in.PropertiesNames()
-		for _, input := range schemaProps {
+		inNames := m.in.PropertiesNames()
+		outNames := m.out.PropertiesNames()
+		for _, input := range inNames {
 			userProps[input] = properties[input]
 		}
 
-		// Validate the properties using the mapping schema.
+		// Validate the properties using the mapping input schema.
 		userProps, err = types.Decode(bytes.NewReader(propsJSON), m.in)
 		if err != nil {
-			fh.setError(importError{fmt.Errorf("mapping schema validation failed: %s", err)})
+			fh.setError(importError{fmt.Errorf("input mapping schema validation failed: %s", err)})
 			return
 		}
 
 		// "One to one" mapping.
 		if m.sourceCode == "" {
-			propName := schemaProps[0]
-			candidateData[m.out] = userProps[propName]
-			candidateTimestamps[m.out] = timestamps[propName]
+			candidateData[outNames[0]] = userProps[inNames[0]]
+			candidateTimestamps[outNames[0]] = timestamps[inNames[0]]
 		} else {
 			// Mapping with a transformation function.
-			grProp, err := pool.Run(context.Background(), m.sourceCode, userProps)
+			grProps, err := pool.Run(context.Background(), m.sourceCode, userProps)
 			if err != nil {
 				fh.setError(importError{fmt.Errorf("error while calling transformation function of mapping: %s", err)})
 				return
 			}
-			if grProp != nil {
-				candidateData[m.out] = grProp
-				candidateTimestamps[m.out] = mostRecentTimestamp(timestamps, schemaProps)
+			ts := mostRecentTimestamp(timestamps, inNames)
+			for name, v := range grProps {
+				candidateData[name] = v
+				candidateTimestamps[name] = ts
 			}
+		}
+
+		// Validate the output properties using the mapping output schema.
+		// TODO(Gianluca): avoid deserializing and serializing from/to JSON.
+		jsonOut, _ := json.Marshal(candidateData)
+		_, err := types.Decode(bytes.NewReader(jsonOut), m.out)
+		if err != nil {
+			fh.setError(importError{fmt.Errorf("output mapping schema validation failed: %s", err)})
+			return
 		}
 	}
 
@@ -268,13 +278,18 @@ transfLoop:
 				fh.setError(err)
 				return
 			}
-			ts := mostRecentTimestamp(entityData.Timestamps, m.in.PropertiesNames())
-			if ts.After(candidateTimestamps[m.out]) {
-				// Don't update this Golden Record property.
-				delete(candidateData, m.out)
-				if len(candidateData) == 0 {
-					// Avoid useless iterations.
-					break transfLoop
+			for name := range candidateData {
+				if _, ok := entityData.Timestamps[name]; !ok {
+					continue
+				}
+				ts := mostRecentTimestamp(entityData.Timestamps, m.in.PropertiesNames())
+				if ts.After(candidateTimestamps[name]) {
+					// Don't update this Golden Record property.
+					delete(candidateData, name)
+					if len(candidateData) == 0 {
+						// Avoid useless iterations.
+						break transfLoop
+					}
 				}
 			}
 		}

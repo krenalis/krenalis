@@ -34,19 +34,23 @@ const stackSize = 10 * 1024 * 1024
 // In particular, the code must be the source code of a Python function named
 // 'transform' which takes a single parameter of type 'dict' with string as keys
 // (which are the property names) and property values as values, and must return
-// a value which will be put in the Golden Record.
+// a dictionary where the keys are the properties.
 //
 // For example, code may be:
 //
-//	def transform(user):
-//	    return user["firstname"]
+//	  def transform(user):
+//		    return {
+//		        "FirstName": user["firstname"],
+//		    }
 //
 // type annotations may be optionally provided (they serve just as documentation
 // and will be ignored when interpreting the code):
 //
-//	def transform(user: dict) -> str:
-//	    return user["firstname"]
-func (t *Transformations) Run(ctx context.Context, code string, user map[string]any) (any, error) {
+//	  def transform(user: dict) -> dict:
+//		    return {
+//		        "FirstName": user["firstname"],
+//		    }
+func (t *Transformations) Run(ctx context.Context, code string, user map[string]any) (map[string]any, error) {
 
 	// Initialize a new MicroPython VM that writes the stdout to a buffer.
 	stdout := &bytes.Buffer{}
@@ -56,7 +60,7 @@ func (t *Transformations) Run(ctx context.Context, code string, user map[string]
 	}
 	defer vm.Close()
 
-	// Inject code around the function code and run it.
+	// Wrap the 'transform' function and run it.
 	src := &bytes.Buffer{}
 	src.WriteString(code)
 	src.WriteString("\nimport json\n\nprint(json.dumps(transform(json.loads(" + `"""` + "\n")
@@ -73,7 +77,7 @@ func (t *Transformations) Run(ctx context.Context, code string, user map[string]
 	}
 
 	// Decode the stdout as JSON and return it.
-	var out any
+	var out map[string]any
 	err = json.NewDecoder(stdout).Decode(&out)
 	if err != nil {
 		return nil, fmt.Errorf("cannot decode JSON printed by MicroPython: %s", err)

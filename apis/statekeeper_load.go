@@ -291,26 +291,32 @@ func (s *stateKeeper) loadState() error {
 
 	// Read the mappings.
 	var mappings []*Mapping
-	schemas := [][]byte{}
+	inSchemas := [][]byte{}
+	outSchemas := [][]byte{}
 	connectionIDs := []int{}
 	err = s.db.QueryScan("SELECT id, connection, \"in\", source_code, out FROM connections_mappings", func(rows *postgres.Rows) error {
 		for rows.Next() {
 			m := &Mapping{}
-			var schema []byte
+			var inSchema, outSchema []byte
 			var connectionID int
-			err := rows.Scan(&m.id, &connectionID, &schema, &m.sourceCode, &m.out)
+			err := rows.Scan(&m.id, &connectionID, &inSchema, &m.sourceCode, &outSchema)
 			if err != nil {
 				return err
 			}
 			mappings = append(mappings, m)
-			schemas = append(schemas, schema)
+			inSchemas = append(inSchemas, inSchema)
+			outSchemas = append(outSchemas, outSchema)
 			connectionIDs = append(connectionIDs, connectionID)
 		}
 		return nil
 	})
 	for i, m := range mappings {
 		var err error
-		m.in, err = types.ParseSchema(bytes.NewReader(schemas[i]), nil)
+		m.in, err = types.ParseSchema(bytes.NewReader(inSchemas[i]), nil)
+		if err != nil {
+			return err
+		}
+		m.out, err = types.ParseSchema(bytes.NewReader(outSchemas[i]), nil)
 		if err != nil {
 			return err
 		}

@@ -599,7 +599,7 @@ type notifiedMapping struct {
 	ID         int
 	In         types.Schema
 	SourceCode string
-	Out        string
+	Out        types.Schema
 }
 
 // setConnectionMappings sets the mappings of a connection.

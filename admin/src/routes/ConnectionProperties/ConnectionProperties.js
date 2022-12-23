@@ -102,21 +102,30 @@ const ConnectionProperties = () => {
 			// get the input properties and the output properties used by the
 			// transformations.
 			let usedInputProperties = [];
+			let usedOutputProperties = [];
 			for (let t of transformations) {
 				for (let input of t.In.properties) {
 					let isDuplicate = false;
 					for (let p of usedInputProperties) {
-						if (input.name === p.name) isDuplicate = true;
+						if (input.name === p.name) {
+							isDuplicate = true;
+							break;
+						}
 					}
 					if (!isDuplicate) usedInputProperties.push(input);
 				}
+				for (let output of t.Out.properties) {
+					let isDuplicate = false;
+					for (let p of usedOutputProperties) {
+						if (output.name === p.name) {
+							isDuplicate = true;
+							break;
+						}
+					}
+					if (!isDuplicate) usedOutputProperties.push(output);
+				}
 			}
 			setUsedInputProperties(usedInputProperties);
-			let usedOutputProperties = [];
-			for (let t of transformations) {
-				let output = outputProperties.find((p) => t.Out === p.name);
-				usedOutputProperties.push(output);
-			}
 			setUsedOutputProperties(usedOutputProperties);
 
 			// compute the positions of the transformations.
@@ -135,41 +144,44 @@ const ConnectionProperties = () => {
 	const onAddUsedProperty = (p, type) => {
 		if (type === 'input') {
 			setUsedInputProperties([...usedInputProperties, p]);
-		} else if (type === 'output') {
+		} else {
 			setUsedOutputProperties([...usedOutputProperties, p]);
 		}
 	};
 
-	const onRemoveUsedProperty = (e, name, type) => {
+	const onRemoveUsedProperty = (e, removedName, type) => {
 		e.stopPropagation();
 		if (type === 'input') {
-			let properties = usedInputProperties.filter((p) => p.name !== name);
-			setUsedInputProperties(properties);
-			let trs = [];
-			for (let t of transformations) {
-				if (t.In.properties.findIndex((p) => p.name === name) !== -1) {
-					let oldDefaultTransformation = computeDefaultTransformationFunction(t);
-					t.In.properties = t.In.properties.filter((p) => p.name !== name);
-					if (t.SourceCode === '' || t.SourceCode === oldDefaultTransformation)
-						t.SourceCode = computeDefaultTransformationFunction(t);
-				}
-				trs.push(t);
-			}
-			setTransformations(trs);
-		} else if (type === 'output') {
-			let properties = usedOutputProperties.filter((p) => p.name !== name);
-			setUsedOutputProperties(properties);
-			let trs = [];
-			for (let t of transformations) {
-				if (t.Out === name) t.Out = '';
-				trs.push(t);
-			}
-			setTransformations(trs);
+			setUsedInputProperties(usedInputProperties.filter((p) => p.name !== removedName));
+		} else {
+			setUsedOutputProperties(usedOutputProperties.filter((p) => p.name !== removedName));
 		}
+		let trs = [];
+		for (let t of transformations) {
+			let transformationProperties = type === 'input' ? t.In.properties : t.Out.properties;
+			let doesContainRemovedProperty = transformationProperties.findIndex((p) => p.name === removedName) !== -1;
+			if (doesContainRemovedProperty) {
+				let oldDefaultTransformation;
+				if (type === 'input') {
+					oldDefaultTransformation = computeDefaultTransformationFunction(t);
+				}
+				let filtered = transformationProperties.filter((p) => p.name !== removedName);
+				if (type === 'input') {
+					if (t.SourceCode === '' || t.SourceCode === oldDefaultTransformation) {
+						t.SourceCode = computeDefaultTransformationFunction(t);
+					}
+					t.In.properties = filtered;
+				} else {
+					t.Out.properties = filtered;
+				}
+			}
+			trs.push(t);
+		}
+		setTransformations(trs);
 	};
 
 	const onAddTransformation = () => {
-		let t = { Position: lastTransformationPosition, In: { properties: [] }, Out: '' };
+		let t = { Position: lastTransformationPosition, In: { properties: [] }, Out: { properties: [] } };
 		t.SourceCode = computeDefaultTransformationFunction(t);
 		setTransformations([...transformations, t]);
 		setLastTransformationPosition(lastTransformationPosition + 1);
@@ -203,18 +215,9 @@ const ConnectionProperties = () => {
 					}
 				}
 				if (sp.type === 'output') {
-					let alreadyUsed = false;
-					for (let t of transformations) {
-						if (t.Out === sp.name) {
-							alreadyUsed = true;
-							break;
-						}
-					}
-					if (alreadyUsed) {
-						onError('output properties can be linked to only one transformation');
-						return;
-					} else {
-						t.Out = sp.name;
+					if (t.Out.properties.findIndex((property) => property.name === sp.name) === -1) {
+						let p = outputProperties.find((p) => p.name === sp.name);
+						t.Out.properties.push(p);
 					}
 				}
 			}
@@ -236,7 +239,8 @@ const ConnectionProperties = () => {
 						t.SourceCode = computeDefaultTransformationFunction(t);
 				}
 				if (propertyType === 'output') {
-					t.Out = '';
+					let properties = t.Out.properties.filter((p) => p.name !== propertyName);
+					t.Out.properties = properties;
 				}
 			}
 			trs.push(t);
@@ -266,15 +270,18 @@ const ConnectionProperties = () => {
 
 	const computeDefaultTransformationFunction = (t) => {
 		let f = transformationFunction;
-		if (t.In.properties.length > 0) {
-			let properties = '';
-			t.In.properties.forEach((p, i) => {
-				if (i === 0) properties += `user["${p.name}"]`;
-				else properties += ` + user["${p.name}"]`;
-			});
-			let i = f.indexOf('return');
-			f = f.substring(0, i + 7) + properties;
-		}
+		// TODO: rewrite this.
+		// if (t.In.properties.length > 0) {
+		// 	let properties = '';
+		// 	t.In.properties.forEach((p, i) => {
+		// 		if (i > 0) {
+		// 			properties += " + ";
+		// 		}
+		// 		properties += `user["${p.name}"]`;
+		// 	});
+		// 	let i = f.indexOf('return');
+		// 	f = f.substring(0, i + 7) + properties;
+		// }
 		return f;
 	};
 
@@ -403,7 +410,7 @@ const ConnectionProperties = () => {
 											onClick={() => {
 												let trs = [...transformations];
 												let i = trs.findIndex((t2) => t2.Position === t.Position);
-												trs[i].SourceCode = "# one-to-one";
+												trs[i].SourceCode = '# one-to-one';
 												setTransformations(trs);
 											}}
 										>
@@ -454,7 +461,7 @@ const ConnectionProperties = () => {
 			</div>
 			<div className='arrows'>
 				{transformations.map((t) => {
-					let arrows = t.In.properties.map((p) => {
+					let inputArrows = t.In.properties.map((p) => {
 						return (
 							<div
 								className={`arrow${isSelectedProperty(p.name, 'input') ? ' selected' : ''}`}
@@ -474,37 +481,37 @@ const ConnectionProperties = () => {
 									showHead={false}
 									color='#818cf8'
 									strokeWidth={2}
-									labels={isSelectedProperty(p.name, 'input') ? '-' : ''}
+									labels={isSelectedProperty(p.name, 'input') && '-'}
 								/>
 							</div>
 						);
 					});
-					let out = t.Out;
-					if (out === '') return arrows;
-					arrows.push(
-						<div
-							className={`arrow${isSelectedProperty(out, 'output') ? ' selected' : ''}`}
-							onClick={
-								isSelectedProperty(out, 'output')
-									? (e) => {
-											onRemoveArrow(t.Position, out, 'output', e);
-									  }
-									: null
-							}
-						>
-							<Xarrow
-								start={`transformation-${t.Position}`}
-								end={out}
-								startAnchor='right'
-								endAnchor='left'
-								showHead={false}
-								color='#818cf8'
-								strokeWidth={2}
-								labels={isSelectedProperty(out, 'output') && '-'}
-							/>
-						</div>
-					);
-					return arrows;
+					let outputArrows = t.Out.properties.map((p) => {
+						return (
+							<div
+								className={`arrow${isSelectedProperty(p.name, 'output') ? ' selected' : ''}`}
+								onClick={
+									isSelectedProperty(p.name, 'output')
+										? (e) => {
+												onRemoveArrow(t.Position, p.name, 'output', e);
+										  }
+										: null
+								}
+							>
+								<Xarrow
+									start={`transformation-${t.Position}`}
+									end={p.name}
+									startAnchor='right'
+									endAnchor='left'
+									showHead={false}
+									color='#818cf8'
+									strokeWidth={2}
+									labels={isSelectedProperty(p.name, 'output') && '-'}
+								/>
+							</div>
+						);
+					});
+					return [...inputArrows, ...outputArrows];
 				})}
 			</div>
 			<SlDialog

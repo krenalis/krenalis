@@ -114,16 +114,19 @@ type Mapping struct {
 	// sourceCode is the source code of the transformation function, which
 	// should be something like:
 	//
-	//   def transform(user):
-	//     return user["first_name"]
+	//    def transform(user):
+	//        return {
+	//            "FirstName": user["firstname"],
+	//        }
 	//
 	// This is the empty string for "one to one" mappings.
 	sourceCode string
 
-	// out is the output property of the mapping. If the connection is a source
-	// then this is a Golden Record property, otherwise, if it is a destination,
-	// it is one of the properties of the connection.
-	out string
+	// out is the schema of the output properties of the mapping. If the
+	// connection is a source then the properties are the properties of the
+	// Golden Record, otherwise, if it is a destination, it contains the
+	// properties of the connection.
+	out types.Schema
 }
 
 // A ConnectionInfo describes a connection as returned by Get and List.
@@ -145,7 +148,7 @@ type MappingInfo struct {
 	ID         int
 	In         types.Schema // just one property if it refers to a "one to one" mapping.
 	SourceCode string       // empty string if it refers to a "one to one" mapping.
-	Out        string
+	Out        types.Schema // just one property if it refers to a "one to one" mapping.
 }
 
 const (
@@ -1689,16 +1692,19 @@ type MappingToCreate struct {
 	// SourceCode is the source code of the transformation function, which
 	// should be something like:
 	//
-	//   def transform(user):
-	//     return user["first_name"]
+	//    def transform(user):
+	//        return {
+	//            "FirstName": user["firstname"],
+	//        }
 	//
 	// In case of "one to one" mappings, this is the empty string.
 	SourceCode string
 
-	// Out is the output property of the mapping. If the connection is a source
-	// then this is a Golden Record property, otherwise, if it is a destination,
-	// it is one of the properties of the connection.
-	Out string
+	// out is the schema of the output properties of the mapping. If the
+	// connection is a source then the properties are the properties of the
+	// Golden Record, otherwise, if it is a destination, it contains the
+	// properties of the connection.
+	Out types.Schema
 }
 
 // SetMappings sets the mappings of the connection with identifier id.
@@ -1712,22 +1718,31 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 	for _, t := range mappings {
 		// TODO(Gianluca): validate the Python function here.
 		if !t.In.Valid() {
-			return errors.BadRequest("schema is invalid")
+			return errors.BadRequest("input schema is invalid")
 		}
-		props := t.In.PropertiesNames()
-		if len(props) == 0 {
+		if !t.Out.Valid() {
+			return errors.BadRequest("output schema is invalid")
+		}
+		inProps := t.In.PropertiesNames()
+		if len(inProps) == 0 {
 			return errors.BadRequest("should have at least one input property")
 		}
-		if t.SourceCode == "" && len(props) != 1 {
-			return errors.BadRequest("mappings without source code must have just one input property, got %d", len(props))
+		outProps := t.Out.PropertiesNames()
+		if len(outProps) == 0 {
+			return errors.BadRequest("should have at least one output property")
 		}
-		for _, in := range props {
+		if t.SourceCode == "" && (len(inProps) != 1 || len(outProps) != 1) {
+			return errors.BadRequest("mappings without source code must have just one input/output property")
+		}
+		for _, in := range inProps {
 			if !types.IsValidPropertyName(in) {
 				return errors.BadRequest("input property name %q is not valid", in)
 			}
 		}
-		if !types.IsValidPropertyName(t.Out) {
-			return errors.BadRequest("output property name %q is not valid", t.Out)
+		for _, out := range outProps {
+			if !types.IsValidPropertyName(out) {
+				return errors.BadRequest("output property name %q is not valid", out)
+			}
 		}
 	}
 
@@ -1736,7 +1751,8 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 	// Prepare the mappings for the notification and marshal the schemas into
 	// JSON.
 	n.Mappings = make([]notifiedMapping, len(mappings))
-	schemas := make([][]byte, len(mappings))
+	inSchemas := make([][]byte, len(mappings))
+	outSchemas := make([][]byte, len(mappings))
 	for i, t := range mappings {
 		n.Mappings[i] = notifiedMapping{
 			In:         t.In,
@@ -1744,7 +1760,11 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 			Out:        t.Out,
 		}
 		var err error
-		schemas[i], err = json.Marshal(t.In)
+		inSchemas[i], err = json.Marshal(t.In)
+		if err != nil {
+			return err
+		}
+		outSchemas[i], err = json.Marshal(t.Out)
 		if err != nil {
 			return err
 		}
@@ -1770,7 +1790,7 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 		}
 		for i, t := range n.Mappings {
 			var id int
-			err := query.QueryRow(connection, schemas[i], t.SourceCode, t.Out).Scan(&id)
+			err := query.QueryRow(connection, inSchemas[i], t.SourceCode, outSchemas[i]).Scan(&id)
 			if err != nil {
 				return err
 			}
@@ -2432,6 +2452,9 @@ func abbreviate(s string, n int) string {
 
 // exportUser returns a user to export (with the given ID) applying the given
 // mappings to the properties.
+//
+// TODO(Gianluca): note that this code has never been tested, as the export
+// procedure is still work in progress.
 func exportUser(id string, properties map[string]any, mappings []*Mapping) (_connector.User, error) {
 	user := _connector.User{
 		ID:         id,
@@ -2440,20 +2463,23 @@ func exportUser(id string, properties map[string]any, mappings []*Mapping) (_con
 	pool := transformations.NewPool()
 	for _, m := range mappings {
 		input := map[string]any{}
-		propNames := m.in.PropertiesNames()
-		for _, in := range propNames {
+		inNames := m.in.PropertiesNames()
+		for _, in := range inNames {
 			input[in] = properties[in]
 		}
+		outNames := m.out.PropertiesNames()
 		if m.sourceCode == "" {
 			// "One to one" mapping.
-			user.Properties[m.out] = input[propNames[0]]
+			user.Properties[outNames[0]] = input[inNames[0]]
 		} else {
 			// Mapping with a transformation function.
-			prop, err := pool.Run(context.Background(), m.sourceCode, input)
+			props, err := pool.Run(context.Background(), m.sourceCode, input)
 			if err != nil {
 				return _connector.User{}, err
 			}
-			user.Properties[m.out] = prop
+			for name, v := range props {
+				user.Properties[name] = v
+			}
 		}
 	}
 	return user, nil
