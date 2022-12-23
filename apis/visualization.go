@@ -27,7 +27,7 @@ type Visualization struct {
 // and the query itself as a string.
 // If the given JSON query is invalid, returns an InvalidJSONQueryError error.
 // If the JSON query refers to a Smart Event which cannot be found (for example
-// it does not exist or it does not belong to the current property), a
+// it does not exist, or it does not belong to the current property), a
 // SmartEventNotFoundError error is returned.
 func (visualization *Visualization) ExecuteJSONQuery(ctx context.Context, jsonQuery JSONQuery) (columns []string, data [][]any, query string, err error) {
 
@@ -86,7 +86,7 @@ func (err SmartEventNotFoundError) Error() string {
 // jsonQueryToSQL converts a JSON query into a SQL query. Also returns the
 // columns. If the JSON query is not valid, returns an InvalidJSONQueryError.
 // If the JSON query refers to a Smart Event which cannot be found (for example
-// it does not exist or it does not belong to the current property), a
+// it does not exist, or it does not belong to the current property), a
 // SmartEventNotFoundError error is returned.
 func (visualization *Visualization) jsonQueryToSQL(jq JSONQuery) (string, []string, error) {
 

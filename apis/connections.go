@@ -533,9 +533,9 @@ func (this *Connections) Delete(id int) error {
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If the workspace does not have a data warehouse, it returns an
-// errors.UnprocessableError error with code NoWarehouse. If the connection has
-// no mappings, it returns an errors.UnprocessableError error with code
-// NoMappings.
+// errors.UnprocessableError error with code NoWarehouse.
+// If the connection has no mappings, it returns an errors.UnprocessableError
+// error with code NoMappings.
 //
 // Note that this method is only a draft, and its code may be wrong and/or
 // partially implemented.
@@ -609,8 +609,8 @@ func (this *Connections) Export(id int) (err error) {
 
 // GenerateKey generates a new key for the source server with identifier id.
 //
-// If the server does not exist, it returns an errors.NotFoundError error. If
-// the server has already too many keys, it returns an
+// If the server does not exist, it returns an errors.NotFoundError error.
+// If the server has already too many keys, it returns an
 // errors.UnprocessableError error with code TooManyKeys.
 func (this *Connections) GenerateKey(id int) (string, error) {
 	if id < 1 || id > maxInt32 {
@@ -671,12 +671,13 @@ func (this *Connections) GenerateKey(id int) (string, error) {
 // connection is an app and reimport is false, it imports the users from the
 // current cursor, otherwise imports all users.
 //
-// If the connection does not exist, it returns an errors.NotFound error. If
-// the workspace does not have a data warehouse, it returns an
-// errors.UnprocessableError error with code NoWarehouse. If the connection is
-// a file and does not have a storage, it returns an errors.UnprocessableError
-// error with code NoStorage and if the connection has no mappings, it returns
-// an errors.UnprocessableError error with code NoMappings.
+// If the connection does not exist, it returns an errors.NotFound error.
+// If the workspace does not have a data warehouse, it returns an
+// errors.UnprocessableError error with code NoWarehouse.
+// If the connection is a file and does not have a storage, it returns an
+// errors.UnprocessableError error with code NoStorage.
+// If the connection has no mappings, it returns an errors.UnprocessableError
+// error with code NoMappings.
 func (this *Connections) Import(id int, reimport bool) (err error) {
 
 	// Verify that the workspace has a data warehouse.
@@ -1233,9 +1234,9 @@ func (this *Connections) List() []*ConnectionInfo {
 // RevokeKey revokes the given key of the source server with identifier id. key
 // cannot be empty and cannot be the unique key of the server.
 //
-// If the key does not exist, it returns an errors.NotFoundError error. If the
-// key is the unique key of the server, it returns an errors.UnprocessableError
-// error with code UniqueKey.
+// If the key does not exist, it returns an errors.NotFoundError error.
+// If the key is the unique key of the server, it returns an
+// errors.UnprocessableError error with code UniqueKey.
 func (this *Connections) RevokeKey(id int, key string) error {
 	if id < 1 || id > maxInt32 {
 		return errors.BadRequest("connection identifier %d is not valid", id)
@@ -1537,9 +1538,9 @@ func (this *Connections) ServeUI(id int, event string, values []byte) ([]byte, e
 // same role. As a special case, the current storage of the file, if there is
 // one, is removed if the storage argument is 0.
 //
-// If the file does not exist, it returns an errors.NotFoundError error. If the
-// storage does not exist, it returns an errors.UnprocessableError error with
-// code StorageNotExist.
+// If the file does not exist, it returns an errors.NotFoundError error.
+// If the storage does not exist, it returns an errors.UnprocessableError error
+// with code StorageNotExist.
 func (this *Connections) SetStorage(file, storage int) error {
 
 	if file < 1 || file > maxInt32 {
@@ -1606,8 +1607,8 @@ func (this *Connections) SetStorage(file, storage int) error {
 // stream must have the same role. As a special case, the current stream of the
 // source, if there is one, is removed if the stream argument is 0.
 //
-// If the source does not exist, it returns an errors.NotFoundError error. If
-// the stream does exist, it returns an errors.UnprocessableError error with
+// If the source does not exist, it returns an errors.NotFoundError error.
+// If the stream does exist, it returns an errors.UnprocessableError error with
 // code StreamNotExist.
 func (this *Connections) SetStream(source, stream int) error {
 

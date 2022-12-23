@@ -49,8 +49,9 @@ type EventListeners struct {
 //
 // If the source, server, or stream does not exist, it returns an
 // errors.UnprocessableError error with code SourceNotExist, ServerNotExist,
-// and StreamNotExist respectively. If there are already too many listeners, it
-// returns an errors.UnprocessableError error with code TooManyListeners.
+// and StreamNotExist respectively.
+// If there are already too many listeners, it returns an
+// errors.UnprocessableError error with code TooManyListeners.
 func (this *EventListeners) Add(size, source, server, stream int) (string, error) {
 	if size < 1 || size > maxEventsListenedTo {
 		return "", errors.BadRequest("size %d is not valid", size)

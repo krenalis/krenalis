@@ -50,8 +50,8 @@ type EventDataTypeInfo struct {
 // description cannot be longer than 400 runes and schema cannot be longer than
 // 65,535 runes.
 //
-// If the workplace does not exist, it returns an errors.NotFound error. If a
-// data type with the same name already exists, it returns an
+// If the workplace does not exist, it returns an errors.NotFound error.
+// If a data type with the same name already exists, it returns an
 // errors.UnprocessableError error with code AlreadyExist and if the schema is
 // not valid, it returns an errors.UnprocessableError error with code
 // InvalidSchema.
@@ -208,9 +208,9 @@ func (this *EventDataTypes) SetDescription(name string, description string) erro
 // SetSchema sets the schema of the data type with the given name. schema
 // cannot be longer than 65,535 runes.
 //
-// If the type does not exist, it returns an errors.NotFoundError error, and if
-// the schema is not valid, it returns an errors.UnprocessableError error with
-// code InvalidSchema.
+// If the type does not exist, it returns an errors.NotFoundError error.
+// If the schema is not valid, it returns an errors.UnprocessableError error
+// with code InvalidSchema.
 func (this *EventDataTypes) SetSchema(name string, schema string) error {
 	if !types.IsValidCustomTypeName(name) {
 		return errors.BadRequest("name %q is not a valid data type name", name)

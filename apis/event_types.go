@@ -235,9 +235,9 @@ func (this *EventTypes) SetDescription(id int, description string) error {
 // cannot be longer than 65,535 runes. If schema is empty, the type will have
 // no schema.
 //
-// If the type does not exist, it returns an errors.NotFoundError error. If the
-// schema is not valid, it returns the errors.UnprocessableError error with
-// code InvalidSchema.
+// If the type does not exist, it returns an errors.NotFoundError error.
+// If the schema is not valid, it returns the errors.UnprocessableError error
+// with code InvalidSchema.
 func (this *EventTypes) SetSchema(id int, schema string) error {
 	if id < 1 || id > types.MaxUInt8 {
 		return errors.BadRequest("event type identifier %d is not valid", id)

@@ -183,8 +183,9 @@ func (ws *Workspace) setSchema(name string, schema string) error {
 // cannot be empty.
 //
 // If a property does not exist, it returns an errors.UnprocessableError error
-// with code PropertyNotExist, and if the warehouse failed, it returns an
-// errors.UnprocessableError error with code WarehouseFailed.
+// with code PropertyNotExist.
+// If the warehouse failed, it returns an errors.UnprocessableError error with
+// code WarehouseFailed.
 func (ws *Workspace) Users(properties []string, order string, first, limit int) (types.Schema, [][]any, error) {
 
 	// Verify that the workspace has a data warehouse.

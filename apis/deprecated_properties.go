@@ -72,7 +72,8 @@ func (this *DeprecatedProperties) Create() (int, error) {
 // It does nothing if the property already has the domain to add.
 //
 // If domain is not a valid domain name, it returns the ErrDomainNameNotValid
-// error. If the property does not exist, or it does not belong to the current
+// error.
+// If the property does not exist, or it does not belong to the current
 // account, it returns the ErrPropertyNotFound error.
 func (this *DeprecatedProperties) AddDomain(id int, domain string) error {
 	panic("deprecated")
