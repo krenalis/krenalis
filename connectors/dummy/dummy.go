@@ -19,6 +19,9 @@ import (
 	"chichi/connector/ui"
 )
 
+// exportOnly10Users, when true, makes Dummy export only 10 users.
+const exportOnly10Users = false
+
 // Make sure it implements the AppConnection interface.
 var _ connector.AppConnection = &connection{}
 
@@ -88,6 +91,9 @@ func (c *connection) Users(cursor string, properties []connector.PropertyPath) e
 	err := json.Unmarshal(jsonUsers, &users)
 	if err != nil {
 		panic(err)
+	}
+	if exportOnly10Users {
+		users = users[:10]
 	}
 	for _, user := range users {
 		c.firehose.SetUser(user.ID, user.Properties, now, nil)
