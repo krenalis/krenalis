@@ -16,7 +16,6 @@ import (
 	"fmt"
 
 	"chichi/apis/types"
-	"chichi/connector/ui"
 )
 
 type Type int
@@ -54,15 +53,30 @@ type Warehouse interface {
 	// waits for the current ones to finish.
 	Close() error
 
+	// CreateTables creates the data warehouse tables. schema is the schema of the
+	// users table. If a table already exists it returns an Error error.
+	CreateTables(ctx context.Context, schema types.Schema) error
+
+	// DropTables drops the data warehouse tables. It does not return an error if a
+	// table does not exist.
+	DropTables(ctx context.Context) error
+
 	// Exec executes a query without returning any rows. args are the placeholders.
 	// If the query fails, it returns an Error value.
 	Exec(ctx context.Context, query string, args ...any) (sql.Result, error)
 
+	// Ping checks whether the connection to the data warehouse is active and, if
+	// necessary, establishes a new connection.
+	Ping(ctx context.Context) error
+
+	// TableNames returns the names of the tables in the warehouse.
+	TableNames(ctx context.Context) ([]string, error)
+
+	// TableSchema returns the schema of the table called name.
+	TableSchema(ctx context.Context, name string) (types.Schema, error)
+
 	// Type returns the type of the warehouse.
 	Type() Type
-
-	// ServeUI serves the data warehouse's user interface.
-	ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, []byte, error)
 
 	// Query executes a query that returns rows. args are the placeholders.
 	// If the query fails, it returns an Error value.
@@ -78,18 +92,9 @@ type Warehouse interface {
 	// If a query to the warehouse fails, it returns an Error value.
 	// If an argument is not valid, it panics.
 	Users(ctx context.Context, schema types.Schema, order types.Property, first, limit int) ([][]any, error)
-}
 
-// Open opens a data warehouse specified by its type and settings.
-// Open does not open a connection to the database.
-func Open(typ Type, settings []byte) (Warehouse, error) {
-	switch typ {
-	case PostgreSQL:
-		return openPostgres(settings)
-	case BigQuery, Redshift, Snowflake:
-		return nil, fmt.Errorf("warehouse type %s is not supported", typ)
-	}
-	return nil, fmt.Errorf("warehouse type %d does not exist", typ)
+	// Validate validates the settings and returns an error if they are not valid.
+	Validate() error
 }
 
 // IsValidType reports whether typ is a valid warehouse type.
@@ -240,4 +245,31 @@ func (typ Type) Value() (driver.Value, error) {
 		return "Snowflake", nil
 	}
 	return nil, fmt.Errorf("not a valid Type: %d", typ)
+}
+
+// isValidTableName reports whether name is a valid table name.
+// A valid table name must:
+//   - start with [A-Za-z_]
+//   - subsequently contain only [A-Za-z0-9_]
+func isValidTableName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if !('a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
+			return false
+		}
+	}
+	return true
+}
+
+// isValidSchemaName reports whether name is a valid schema name.
+func isValidSchemaName(name string) bool {
+	return isValidTableName(name)
+}
+
+// newError returns a new Error value with a fmt.Errorf(format, a...) error.
+func newError(format string, a ...any) error {
+	return &Error{Err: fmt.Errorf(format, a...)}
 }

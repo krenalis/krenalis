@@ -63,8 +63,6 @@ func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgr
 			s.deleteEventDataType(n)
 		case "deleteEventType":
 			s.deleteEventType(n)
-		case "disconnectWorkspaceWarehouse":
-			s.disconnectWorkspaceWarehouse(n)
 		case "endImport":
 			s.endImport(n)
 		case "generateConnectionKey":
@@ -441,31 +439,6 @@ func (s *stateKeeper) deleteEventType(n postgres.Notification) {
 	// TODO(marco): remove events from ClickHouse and then remove definitively the event type from Postgres.
 }
 
-// disconnectWorkspaceWarehouseNotification is the notification event sent when
-// a warehouse of a workspace is disconnected.
-type disconnectWorkspaceWarehouseNotification struct {
-	Workspace int
-}
-
-// disconnectWorkspaceWarehouse disconnects a warehouse of a workspace.
-func (s *stateKeeper) disconnectWorkspaceWarehouse(n postgres.Notification) {
-	e := disconnectWorkspaceWarehouseNotification{}
-	if !decodeStateNotification(n, &e) {
-		return
-	}
-	disconnected := s.workspaces[e.Workspace].warehouse
-	s.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.warehouse = nil
-	})
-	go func() {
-		err := disconnected.Close()
-		if err != nil {
-			// TODO(marco): write the error into a workspace specific log
-			log.Printf("error occurred disconnecting the warehouse: %s", err)
-		}
-	}()
-}
-
 // endImportNotification is the notification event sent when an import ends.
 type endImportNotification struct {
 	id int
@@ -834,7 +807,7 @@ type setWorkspaceWarehouseNotification struct {
 
 type notifiedWarehouse struct {
 	Type     warehouses.Type
-	Settings []byte
+	Settings json.RawMessage `json:",omitempty"`
 }
 
 // setWorkspaceUserSchema sets the warehouse of a workspace.
@@ -846,13 +819,9 @@ func (s *stateKeeper) setWorkspaceWarehouse(n postgres.Notification) {
 	disconnected := s.workspaces[e.Workspace].warehouse
 	if e.Warehouse != nil {
 		s.replaceWorkspace(e.Workspace, func(w *Workspace) {
-			warehouse, err := warehouses.Open(e.Warehouse.Type, e.Warehouse.Settings)
-			if err == nil {
-				w.warehouse = warehouse
-			} else {
-				log.Printf("cannot open the warehouse of workspace %d: %s", e.Workspace, err)
-				w.warehouse = nil
-			}
+			var settings warehouses.PostgreSQLSettings
+			_ = json.Unmarshal(e.Warehouse.Settings, &settings)
+			w.warehouse = warehouses.OpenPostgres(&settings)
 		})
 	} else {
 		s.replaceWorkspace(e.Workspace, func(w *Workspace) {

@@ -10,7 +10,7 @@ package apis
 import (
 	"bytes"
 	"context"
-	"log"
+	"encoding/json"
 	"strings"
 
 	"chichi/apis/postgres"
@@ -108,10 +108,9 @@ func (s *stateKeeper) loadState() error {
 				workspace.schemaSources.user = userSchema
 				workspace.schemaSources.group = groupSchema
 				if warehouseType != nil {
-					workspace.warehouse, err = warehouses.Open(*warehouseType, warehouseSettings)
-					if err != nil {
-						log.Printf("cannot open the warehouse of workspace %d: %s", workspace.id, err)
-					}
+					var settings warehouses.PostgreSQLSettings
+					_ = json.Unmarshal(warehouseSettings, &settings)
+					workspace.warehouse = warehouses.OpenPostgres(&settings)
 				}
 				workspace.Connections = newConnections(workspace, &connectionsState{ids: map[int]*Connection{}})
 				workspace.EventTypes = newEventTypes(workspace, &eventTypesState{ids: map[int]*EventType{}})

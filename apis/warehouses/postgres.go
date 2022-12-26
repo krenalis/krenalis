@@ -10,12 +10,13 @@ package warehouses
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
+	_ "embed"
 	"errors"
 	"fmt"
 	"log"
 	"net"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,10 +24,11 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/types"
-	"chichi/connector/ui"
-
 	"github.com/shopspring/decimal"
 )
+
+//go:embed connections_users.sql
+var createConnectionsUsersTable string
 
 var _ Warehouse = &postgreSQL{}
 
@@ -34,20 +36,21 @@ type postgreSQL struct {
 	mu       sync.Mutex // for the db and closed fields
 	db       *sql.DB
 	closed   bool
-	settings *settings
+	settings *PostgreSQLSettings
 }
 
-// openPostgres the data warehouse with the given settings.
-// If settings is nil, ServeUI is the only callable method.
-func openPostgres(settings []byte) (*postgreSQL, error) {
-	warehouse := &postgreSQL{}
-	if len(settings) > 0 {
-		err := json.Unmarshal(settings, &warehouse.settings)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return warehouse, nil
+type PostgreSQLSettings struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	Database string
+	Schema   string
+}
+
+// OpenPostgres opens a PostgreSQL data warehouse with the given settings.
+func OpenPostgres(settings *PostgreSQLSettings) *postgreSQL {
+	return &postgreSQL{settings: settings}
 }
 
 // Close closes the warehouse. It will not allow any new queries to run, and it
@@ -62,6 +65,74 @@ func (warehouse *postgreSQL) Close() error {
 	}
 	warehouse.mu.Unlock()
 	return err
+}
+
+// CreateTables creates the data warehouse tables. schema is the schema of the
+// users table. If a table already exists it returns an Error error.
+func (warehouse *postgreSQL) CreateTables(ctx context.Context, schema types.Schema) error {
+	// Build the "create" statement for the users table.
+	var b strings.Builder
+	b.WriteString("CREATE TABLE \"users\" (\nid SERIAL,\n")
+	for _, p := range schema.Properties() {
+		if !types.IsValidPropertyName(p.Name) {
+			panic("property name is not valid")
+		}
+		b.WriteByte('"')
+		b.WriteString(p.Name)
+		b.WriteString(`" `)
+		dataType, err := warehouse.columnDataType(p.Name, p.Type)
+		if err != nil {
+			return err
+		}
+		b.WriteString(dataType)
+		b.WriteString(" NOT NULL,\n")
+	}
+	b.WriteString("PRIMARY KEY (id)\n)")
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	createUsersTable := b.String()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return wrapError(err)
+	}
+	// Create the "users" table.
+	_, err = tx.ExecContext(ctx, createUsersTable)
+	if err != nil {
+		_ = tx.Rollback()
+		return wrapError(err)
+	}
+	// Create the "connections_users" table.
+	_, err = tx.ExecContext(ctx, createConnectionsUsersTable)
+	if err != nil {
+		_ = tx.Rollback()
+		return wrapError(err)
+	}
+	err = tx.Commit()
+	return wrapError(err)
+}
+
+// DropTables drops the data warehouse tables. It does not return an error if a
+// table does not exist.
+func (warehouse *postgreSQL) DropTables(ctx context.Context) error {
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return wrapError(err)
+	}
+	for _, table := range []string{"users", "connections_users"} {
+		_, err = tx.ExecContext(ctx, `DROP TABLE IF EXISTS "`+table+`"`)
+		if err != nil {
+			_ = tx.Rollback()
+			return wrapError(err)
+		}
+	}
+	err = tx.Commit()
+	return wrapError(err)
 }
 
 // Exec executes a query without returning any rows. args are the placeholders.
@@ -83,81 +154,14 @@ func (warehouse *postgreSQL) Type() Type {
 	return PostgreSQL
 }
 
-// ServeUI serves the data warehouse's user interface.
-func (warehouse *postgreSQL) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, []byte, error) {
-
-	var s settings
-
-	switch event {
-	case "load":
-		// Load the UI.
-		if warehouse.settings == nil {
-			s.Port = 5432
-		} else {
-			s = *warehouse.settings
-		}
-		values, _ = json.Marshal(s)
-	case "test", "save":
-		// Test the connection and save the settings if required.
-		err := json.Unmarshal(values, &s)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		// Validate Host.
-		if n := len(s.Host); n == 0 || n > 253 {
-			return nil, nil, nil, ui.Errorf("host length in bytes must be in range [1,253]")
-		}
-		// Validate Port.
-		if s.Port < 1 || s.Port > 65536 {
-			return nil, nil, nil, ui.Errorf("port must be in range [1,65536]")
-		}
-		// Validate Username.
-		if n := len(s.Username); n < 1 || n > 63 {
-			return nil, nil, nil, ui.Errorf("username length in bytes must be in range [1,63]")
-		}
-		// Validate Password.
-		if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-			return nil, nil, nil, ui.Errorf("password length must be in range [1,100]")
-		}
-		// Validate Database.
-		if n := len(s.Database); n < 1 || n > 63 {
-			return nil, nil, nil, ui.Errorf("database length in bytes must be in range [1,63]")
-		}
-		err = testConnection(ctx, &s)
-		if err != nil {
-			if event == "test" {
-				return nil, ui.WarningAlert(err.Error()), nil, nil
-			}
-			return nil, ui.DangerAlert(err.Error()), nil, nil
-		}
-		if event == "test" {
-			return nil, ui.SuccessAlert("Connection established"), nil, nil
-		}
-		b, err := json.Marshal(&s)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		return nil, ui.SuccessAlert("Settings saved"), b, nil
-	default:
-		return nil, nil, nil, ui.ErrEventNotExist
+// Ping checks whether the connection to the data warehouse is active and, if
+// necessary, establishes a new connection.
+func (warehouse *postgreSQL) Ping(ctx context.Context) error {
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
 	}
-
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&ui.Input{Name: "port", Label: "Port", Placeholder: "5432", Type: "number", MinLength: 1, MaxLength: 5},
-			&ui.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 63},
-			&ui.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
-			&ui.Input{Name: "database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 63},
-		},
-		Values: values,
-		Actions: []ui.Action{
-			{Event: "test", Text: "Test Connection", Variant: "neutral"},
-			{Event: "save", Text: "Save", Variant: "primary"},
-		},
-	}
-
-	return form, nil, nil, nil
+	return db.PingContext(ctx)
 }
 
 // Query executes a query that returns rows. args are the placeholders.
@@ -183,6 +187,155 @@ func (warehouse *postgreSQL) QueryRow(ctx context.Context, query string, args ..
 	}
 	row := db.QueryRowContext(ctx, query, args...)
 	return Row{row: row}
+}
+
+// TableNames returns the names of the tables in the warehouse.
+func (warehouse *postgreSQL) TableNames(ctx context.Context) ([]string, error) {
+	rows, err := warehouse.db.QueryContext(ctx,
+		`SELECT tablename FROM pg_tables WHERE schemaname = "`+warehouse.settings.Schema+`"`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var name string
+	var names []string
+	for rows.Next() {
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		if isValidTableName(name) {
+			names = append(names, name)
+		}
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
+// TableSchema returns the schema of the table called name.
+func (warehouse *postgreSQL) TableSchema(ctx context.Context, name string) (types.Schema, error) {
+	if !types.IsValidPropertyName(name) {
+		panic("table name is not valid")
+	}
+	db, err := warehouse.connection()
+	if err != nil {
+		return types.Schema{}, err
+	}
+	query := "SELECT column_name, data_type, character_maximum_length, numeric_precision," +
+		" numeric_precision_radix, numeric_scale\n" +
+		"FROM information_schema.columns" +
+		`WHERE table_name = "` + name + `"` +
+		"ORDER BY ordinal_position"
+	rows, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return types.Schema{}, wrapError(err)
+	}
+	var properties []types.Property
+	for rows.Next() {
+		var name, dataType, charLength, precision, precisionRadix, scale sql.NullString
+		if err := rows.Scan(&name, &dataType, &charLength, &precision, &precisionRadix, &scale); err != nil {
+			_ = rows.Close()
+			return types.Schema{}, wrapError(err)
+		}
+		if !name.Valid {
+			return types.Schema{}, wrapError(fmt.Errorf("data warehouse has returned NULL as column name"))
+		}
+		if !dataType.Valid {
+			return types.Schema{}, wrapError(fmt.Errorf("data warehouse has returned NULL as column data type"))
+		}
+		if !types.IsValidPropertyName(name.String) {
+			return types.Schema{}, fmt.Errorf("column name %q is not supported", name.String)
+		}
+		property := types.Property{Name: name.String}
+		switch dataType.String {
+		case "smallint":
+			property.Type = types.Int16()
+		case "integer":
+			property.Type = types.Int()
+		case "bigint":
+			property.Type = types.Int64()
+		case "numeric":
+			// Parse precision radix.
+			if !precisionRadix.Valid {
+				return types.Schema{}, wrapError(fmt.Errorf(
+					"data warehouse has returned NULL as precision radix for column %s", name.String))
+			}
+			radix, _ := strconv.Atoi(precisionRadix.String)
+			if radix != 2 && radix != 10 {
+				return types.Schema{}, wrapError(fmt.Errorf(
+					"data warehouse has returned an invalid precision radix for column %s", name.String))
+			}
+			// Parse precision.
+			if !precision.Valid {
+				return types.Schema{}, wrapError(fmt.Errorf(
+					"data warehouse has returned NULL as precision for column %s", name.String))
+			}
+			p, err := strconv.ParseInt(precision.String, radix, 64)
+			if err != nil || p < 1 {
+				return types.Schema{}, wrapError(fmt.Errorf(
+					"data warehouse has returned an invalid precision for column %s: %s", name.String, precision.String))
+			}
+			if p > types.MaxDecimalPrecision {
+				return types.Schema{}, fmt.Errorf("numeric precision of column %s is not supported: %d", name.String, p)
+			}
+			// Parse scale.
+			if !scale.Valid {
+				return types.Schema{}, wrapError(fmt.Errorf(
+					"data warehouse has returned NULL as scale for column %s", name.String))
+			}
+			s, err := strconv.ParseInt(scale.String, radix, 64)
+			if err != nil || s < 0 || s > p {
+				return types.Schema{}, wrapError(fmt.Errorf(
+					"data warehouse has returned an invalid scale for column %s: %s", name.String, scale.String))
+			}
+			if s > types.MaxDecimalScale {
+				return types.Schema{}, fmt.Errorf("numeric scale of column %s is not supported: %d", name.String, s)
+			}
+			property.Type = types.Decimal(int(p), int(s))
+		case "real":
+			property.Type = types.Float32()
+		case "double precision":
+			property.Type = types.Float()
+		case "varchar", "char", "text":
+			if charLength.Valid {
+				chars, _ := strconv.Atoi(charLength.String)
+				if chars < 1 {
+					return types.Schema{}, wrapError(fmt.Errorf(
+						"data warehouse has returned an invalid character maximum length for column %s", name.String))
+				}
+				property.Type = types.Text(types.Chars(chars))
+			} else {
+				if dataType.String == "char" {
+					property.Type = types.Text(types.Chars(1))
+				} else {
+					property.Type = types.Text()
+				}
+			}
+		case "timestamp", "timestamp with time zone":
+			property.Type = types.DateTime("2006-01-02 15:04:05.999999")
+		case "date":
+			property.Type = types.Date("2006-01-02")
+		case "time", "time with time zone":
+			property.Type = types.Time("15:04:05")
+		case "boolean":
+			property.Type = types.Boolean()
+		case "uuid":
+			property.Type = types.UUID()
+		case "jsonb":
+			property.Type = types.JSON()
+		}
+		properties = append(properties, property)
+	}
+	if err := rows.Err(); err != nil {
+		return types.Schema{}, wrapError(err)
+	}
+	schema, err := types.SchemaOf(properties)
+	if err != nil {
+		return types.Schema{}, wrapError(fmt.Errorf("cannot map data warehouse: %s", err))
+	}
+	return schema, nil
 }
 
 // Users returns the users, with only the properties in schema, ordered by
@@ -284,6 +437,42 @@ func (warehouse *postgreSQL) Users(ctx context.Context, schema types.Schema, ord
 	return users, nil
 }
 
+// Validate validates the settings and returns an error if they are not valid.
+func (warehouse *postgreSQL) Validate() error {
+	s := warehouse.settings
+	// Validate Host.
+	if n := len(s.Host); n == 0 || n > 253 {
+		return newError("host length in bytes must be in range [1,253]")
+	}
+	// Validate Port.
+	if s.Port < 1 || s.Port > 65536 {
+		return newError("port must be in range [1,65536]")
+	}
+	// Validate Username.
+	if n := len(s.Username); n < 1 || n > 63 {
+		return newError("username length in bytes must be in range [1,63]")
+	}
+	// Validate Password.
+	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
+		return newError("password length must be in range [1,100]")
+	}
+	// Validate Database.
+	if n := len(s.Database); n < 1 || n > 63 {
+		return newError("database length in bytes must be in range [1,63]")
+	}
+	// Validate Schema.
+	if n := len(s.Schema); n < 1 || n > 63 {
+		return newError("schema length in bytes must be in range [1,63]")
+	}
+	if !isValidSchemaName(s.Schema) {
+		return newError("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
+	}
+	if strings.HasPrefix(s.Schema, "pg_") {
+		return newError("schema cannot start with 'pg_'")
+	}
+	return nil
+}
+
 // connection returns the database connection.
 func (warehouse *postgreSQL) connection() (*sql.DB, error) {
 	warehouse.mu.Lock()
@@ -305,33 +494,107 @@ func (warehouse *postgreSQL) connection() (*sql.DB, error) {
 	return db, nil
 }
 
-type settings struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database string
-}
-
 // dsn returns the connection string, from s, in the URL format.
-func (s *settings) dsn() string {
+func (s *PostgreSQLSettings) dsn() string {
 	u := url.URL{
-		Scheme: "postgres",
-		User:   url.UserPassword(s.Username, s.Password),
-		Host:   net.JoinHostPort(s.Host, strconv.Itoa(s.Port)),
-		Path:   "/" + url.PathEscape(s.Database),
+		Scheme:   "postgres",
+		User:     url.UserPassword(s.Username, s.Password),
+		Host:     net.JoinHostPort(s.Host, strconv.Itoa(s.Port)),
+		Path:     "/" + url.PathEscape(s.Database),
+		RawQuery: "search_path=" + url.QueryEscape(s.Schema),
 	}
 	return u.String()
 }
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *settings) error {
-	db, err := sql.Open("pgx", settings.dsn())
+func (s *PostgreSQLSettings) testConnection(ctx context.Context) error {
+	db, err := sql.Open("pgx", s.dsn())
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 	db.SetMaxIdleConns(0)
 	return db.PingContext(ctx)
+}
+
+// columnType returns the column data type corresponding to the schema type t.
+func (warehouse *postgreSQL) columnDataType(name string, typ types.Type) (string, error) {
+	var c string
+	switch typ.PhysicalType() {
+	case types.PtBoolean:
+		c = "boolean"
+	case types.PtInt:
+		c = "integer"
+	case types.PtInt8:
+		c = "smallint"
+		if name != "" {
+			c = " CHECK(" + name + "BETWEEN -128 AND 127)"
+		}
+	case types.PtInt16:
+		c = "smallint"
+	case types.PtInt64:
+		c = "bigint"
+	case types.PtUInt:
+		c = "bigint"
+		if name != "" {
+			c += " CHECK (" + name + " BETWEEN 0 AND 2^32)"
+		}
+	case types.PtUInt8:
+		c = "smallint"
+		if name != "" {
+			c += " CHECK (" + name + " BETWEEN 0 AND 2^8)"
+		}
+	case types.PtUInt16:
+		c = "int"
+		if name != "" {
+			c += " CHECK (" + name + " BETWEEN 0 AND 2^16)"
+		}
+	case types.PtUInt64:
+		return "", errors.New("PtUint64 type is not supported")
+	case types.PtFloat:
+		c = "double precision"
+	case types.PtFloat32:
+		c = "real"
+	case types.PtDecimal:
+		p, s := strconv.Itoa(typ.Precision()), strconv.Itoa(typ.Scale())
+		c = "numeric(" + p + "," + s + ")"
+	case types.PtDateTime:
+		c = "timestamp"
+	case types.PtDate:
+		c = "date"
+	case types.PtTime:
+		c = "time"
+	case types.PtYear:
+		c = "smallint CHECK (" + name + " BETWEEN 1 AND 9999)"
+	case types.PtUUID:
+		c = "uuid"
+	case types.PtJSON:
+		c = "jsonb"
+	case types.PtText:
+		n, ok := typ.CharLen()
+		if ok {
+			c = "varchar(" + strconv.Itoa(n) + ")"
+		} else {
+			c = "varchar"
+		}
+		n, ok = typ.ByteLen()
+		if ok {
+			c += " CHECK (octet_length(" + name + ") <= " + strconv.Itoa(n) + ")"
+		}
+	case types.PtArray:
+		var err error
+		c, err = warehouse.columnDataType("", typ.ItemType())
+		if err != nil {
+			return "", err
+		}
+		c += "[]"
+	case types.PtObject:
+		// TODO(MARCO)
+	case types.PtMap:
+		c = "jsonb"
+	default:
+		panic(fmt.Errorf("unexpected schema physical type: %d", typ.PhysicalType()))
+	}
+	return c, nil
 }

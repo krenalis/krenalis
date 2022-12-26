@@ -8,12 +8,11 @@
 package apis
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
-	"math"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -22,18 +21,21 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/types"
 	"chichi/apis/warehouses"
-	"chichi/connector/ui"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
 
 var (
+	NoSchema             errors.Code = "NoSchema"
 	NoWarehouse          errors.Code = "NoWarehouse"
+	NotConnected         errors.Code = "NotConnected"
+	ConnectionFailed     errors.Code = "ConnectionFailed"
 	OrderNotExist        errors.Code = "OrderNotExist"
 	OrderTypeNotSortable errors.Code = "OrderTypeNotSortable"
 	PropertyNotExist     errors.Code = "PropertyNotExist"
+	AlreadyConnected     errors.Code = "AlreadyConnected"
 	WarehouseFailed      errors.Code = "WarehouseFailed"
-	WarehouseTypeInvalid errors.Code = "WarehouseTypeInvalid"
+	InvalidSettings      errors.Code = "InvalidSettings"
 )
 
 type Workspaces struct {
@@ -83,22 +85,76 @@ type WorkspaceInfo struct {
 	}
 }
 
-// DisconnectWarehouse disconnects the warehouse of the workspace with
-// identifier id. A disconnected warehouse is no longer used. If the workspace
-// does not have a warehouse, it does nothing. To connect a warehouse, use
-// ServerWarehouseUI.
+// WarehouseSettings is the interface implemented by data warehouse settings.
+type WarehouseSettings interface {
+	warehouseType() warehouses.Type
+}
+
+// PostgreSQLSettings are the settings used to connect to a PostgreSQL data
+// warehouse. It implements the WarehouseSettings interface.
+type PostgreSQLSettings struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	Database string
+	Schema   string
+}
+
+func (s *PostgreSQLSettings) warehouseType() warehouses.Type {
+	return warehouses.PostgreSQL
+}
+
+// ConnectWarehouse connects a data warehouse, with the given settings, to the
+// workspace. It also creates the tables in the connected data warehouse.
 //
-// If the workspace does not exist, it returns an errors.NotFoundError error.
-func (this *Workspaces) DisconnectWarehouse(id int) error {
-	if id < 1 || id > math.MaxInt32 {
-		return errors.BadRequest("workspace identifier %d is not valid", id)
+// It returns an errors.NotFoundError error, if the workspace does not exist,
+// and it returns an errors.UnprocessableError error with code
+//   - NoSchema, if the workspace does not have the user schema.
+//   - AlreadyConnected, if the workspace is already connected to a data
+//     warehouse.
+//   - InvalidSettings, if the settings are not valid.
+//   - ConnectionFailed, if the connection fails.
+func (ws *Workspace) ConnectWarehouse(settings WarehouseSettings) error {
+	if !ws.schema.user.Valid() {
+		return errors.Unprocessable(NoSchema, "workspace %d does not have the user schema", ws.id)
 	}
-	n := disconnectWorkspaceWarehouseNotification{
-		Workspace: this.id,
+	if ws.warehouse != nil {
+		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.id)
 	}
-	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		result, err := tx.Exec("UPDATE workspaces\nSET warehouse_type = NULL, warehouse_settings = ''\n"+
-			"WHERE id = $1 AND warehouse_type IS NOT NULL", n.Workspace)
+	s := settings.(*PostgreSQLSettings)
+	ps := &warehouses.PostgreSQLSettings{
+		Host:     s.Host,
+		Port:     s.Port,
+		Username: s.Username,
+		Password: s.Password,
+		Database: s.Database,
+		Schema:   s.Schema,
+	}
+	warehouse := warehouses.OpenPostgres(ps)
+	err := warehouse.Validate()
+	if err != nil {
+		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
+	}
+	err = warehouse.Ping(context.Background())
+	if err != nil {
+		return errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
+	}
+	rawSettings, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	n := setWorkspaceWarehouseNotification{
+		Workspace: ws.id,
+		Warehouse: &notifiedWarehouse{
+			Type:     warehouses.PostgreSQL,
+			Settings: rawSettings,
+		},
+	}
+	err = ws.db.Transaction(func(tx *postgres.Tx) error {
+		result, err := tx.Exec("UPDATE workspaces SET warehouse_type = $1, warehouse_settings = $2 WHERE id = $3"+
+			" AND warehouse_type IS NULL",
+			n.Warehouse.Type, string(n.Warehouse.Settings), n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -107,10 +163,67 @@ func (this *Workspaces) DisconnectWarehouse(id int) error {
 			return err
 		}
 		if affected == 0 {
-			err = tx.QueryVoid("SELECT FROM workspaces WHERE id = $1", id)
-			if err == sql.ErrNoRows {
-				err = errors.NotFound("workspace %d does not exist", id)
+			err = tx.QueryVoid("SELECT FROM workspaces WHERE id = $1", n.Workspace)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					err = errors.NotFound("workspace %d does not exist", n.Workspace)
+				}
+				return err
 			}
+			return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.id)
+		}
+		err = warehouse.CreateTables(context.Background(), ws.schema.user)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(n)
+	})
+	return err
+}
+
+// DisconnectWarehouse disconnects the data warehouse. If deleteTables is true,
+// it also deletes the tables from the data warehouse.
+//
+// If the workspace does not exist, it returns an errors.NotFoundError error.
+// If the workspace is not connected to a data warehouse, it returns an
+// errors.UnprocessableError error with code NotConnected.
+func (ws *Workspace) DisconnectWarehouse(deleteTables bool) error {
+	if ws.warehouse == nil {
+		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.id)
+	}
+	n := setWorkspaceWarehouseNotification{
+		Workspace: ws.id,
+		Warehouse: nil,
+	}
+	err := ws.db.Transaction(func(tx *postgres.Tx) error {
+		var typ *warehouses.Type
+		var settings []byte
+		err := tx.QueryRow("SELECT warehouse_type, warehouse_settings FROM workspaces WHERE id = $1",
+			n.Workspace).Scan(&typ, &settings)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return errors.NotFound("workspace %d does not exist", n.Workspace)
+			}
+			return err
+		}
+		if typ == nil {
+			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", n.Workspace)
+		}
+		if deleteTables {
+			var s warehouses.PostgreSQLSettings
+			err := json.Unmarshal(settings, &s)
+			if err != nil {
+				return err
+			}
+			warehouse := warehouses.OpenPostgres(&s)
+			// TODO(marco): consider whether there is a better solution than removing the tables at this time.
+			err = warehouse.DropTables(context.Background())
+			if err != nil {
+				return err
+			}
+		}
+		_, err = tx.Exec("UPDATE workspaces SET warehouse_type = NULL, warehouse_settings = '' WHERE id = $1", n.Workspace)
+		if err != nil {
 			return err
 		}
 		return tx.Notify(n)
@@ -174,6 +287,76 @@ func (ws *Workspace) SetUserSchema(schema string) error {
 // code InvalidSchema.
 func (ws *Workspace) SetGroupSchema(schema string) error {
 	return ws.setSchema("group", schema)
+}
+
+// SetWarehouse sets the settings used to connect to the data warehouse.
+//
+// It returns an errors.NotFoundError error, if the workspace does not exist,
+// and it returns an errors.UnprocessableError error with code
+//   - NotConnected, if the workspace is not connected to a data warehouse.
+//   - InvalidSettings, if the settings are not valid.
+//   - ConnectionFailed, if the connection fails.
+func (ws *Workspace) SetWarehouse(settings WarehouseSettings) error {
+	if ws.warehouse == nil {
+		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.id)
+	}
+	if typ := ws.warehouse.Type(); typ != warehouses.PostgreSQL {
+		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", fmt.Errorf(
+			"workspace %d is connected to a %s data warehouse, but settings are for a %s data warehouse",
+			ws.id, typ, warehouses.PostgreSQL))
+	}
+	s := settings.(*PostgreSQLSettings)
+	ps := &warehouses.PostgreSQLSettings{
+		Host:     s.Host,
+		Port:     s.Port,
+		Username: s.Username,
+		Password: s.Password,
+		Database: s.Database,
+		Schema:   s.Schema,
+	}
+	warehouse := warehouses.OpenPostgres(ps)
+	err := warehouse.Validate()
+	if err != nil {
+		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
+	}
+	err = warehouse.Ping(context.Background())
+	if err != nil {
+		return errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
+	}
+	rawSettings, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	n := setWorkspaceWarehouseNotification{
+		Workspace: ws.id,
+		Warehouse: &notifiedWarehouse{
+			Type:     warehouses.PostgreSQL,
+			Settings: rawSettings,
+		},
+	}
+	err = ws.db.Transaction(func(tx *postgres.Tx) error {
+		result, err := tx.Exec("UPDATE workspaces SET warehouse_settings = $1 WHERE id = $2 AND warehouse_type = $3",
+			string(n.Warehouse.Settings), n.Workspace, n.Warehouse.Type)
+		if err != nil {
+			return err
+		}
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if affected == 0 {
+			err = tx.QueryVoid("SELECT FROM workspaces WHERE id = $1", n.Workspace)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					err = errors.NotFound("workspace %d does not exist", n.Workspace)
+				}
+				return err
+			}
+			return errors.Unprocessable(NoWarehouse, "workspace %d is not connected to a PostgreSQL data warehouse", ws.id)
+		}
+		return tx.Notify(n)
+	})
+	return err
 }
 
 // setSchema is called by SetUserSchema and SetGroupSchema to set a schema.
@@ -312,88 +495,4 @@ func (this *Workspaces) List() []*WorkspaceInfo {
 		return a.ID < b.ID
 	})
 	return infos
-}
-
-// ServeWarehouseUI serves the warehouse UI of the workspace with identifier
-// id where typ is the type of the warehouse. event is the event and values
-// contains the form values in JSON format.
-//
-// If the workspace does not exist, it returns an errors.NotFoundError error.
-// If the warehouse of the workspace does not have type typ, it returns an
-// errors.UnprocessableError with code WarehouseTypeInvalid.
-// If the event does not exist, it returns an errors.UnprocessableError error
-// with code EventNotExist.
-func (this *Workspaces) ServeWarehouseUI(id int, typ warehouses.Type, event string, values []byte) ([]byte, error) {
-
-	if id < 1 || id > math.MaxInt32 {
-		return nil, errors.BadRequest("workspace identifier %d is not valid", id)
-	}
-	if !warehouses.IsValidType(typ) {
-		return nil, errors.BadRequest("warehouse type %d is not valid", typ)
-	}
-
-	ws, ok := this.state.Get(id)
-	if !ok {
-		return nil, errors.NotFound("workspace %d does not exist", id)
-	}
-	warehouse := ws.warehouse
-	if warehouse == nil {
-		var err error
-		warehouse, err = warehouses.Open(typ, nil)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	form, alert, settings, err := warehouse.ServeUI(context.Background(), event, values)
-	if err != nil {
-		if err == ui.ErrEventNotExist {
-			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s warehouse", event, typ)
-		}
-		return nil, err
-	}
-
-	response, err := marshalUIFormAlert(form, alert, ui.BothRole)
-	if err != nil {
-		return nil, err
-	}
-
-	// Update the settings.
-	if settings != nil && !bytes.Equal(settings, values) {
-		n := setWorkspaceWarehouseNotification{
-			Workspace: this.id,
-			Warehouse: &notifiedWarehouse{
-				Type:     typ,
-				Settings: settings,
-			},
-		}
-		err := this.db.Transaction(func(tx *postgres.Tx) error {
-			result, err := tx.Exec("UPDATE workspaces SET warehouse_type = $1, warehouse_settings = $2 WHERE id = $3"+
-				" AND ( warehouse_type = $1 OR warehouse_type IS NULL )",
-				n.Warehouse.Type, n.Warehouse.Settings, n.Workspace)
-			if err != nil {
-				return err
-			}
-			affected, err := result.RowsAffected()
-			if err != nil {
-				return err
-			}
-			if affected == 0 {
-				err = tx.QueryVoid("SELECT FROM workspaces WHERE id = $1", id)
-				if err != nil {
-					if err == sql.ErrNoRows {
-						err = errors.NotFound("workspace %d does not exist", id)
-					}
-					return err
-				}
-				return errors.Unprocessable(WarehouseTypeInvalid, "warehouse type of workspace %d is not %s", id, typ)
-			}
-			return tx.Notify(n)
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return response, nil
 }
