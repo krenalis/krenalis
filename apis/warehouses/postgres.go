@@ -85,7 +85,7 @@ func (warehouse *postgreSQL) CreateTables(ctx context.Context, schema types.Sche
 			return err
 		}
 		b.WriteString(dataType)
-		b.WriteString(" NOT NULL,\n")
+		b.WriteString(",\n")
 	}
 	b.WriteString("PRIMARY KEY (id)\n)")
 	db, err := warehouse.connection()
@@ -595,6 +595,9 @@ func (warehouse *postgreSQL) columnDataType(name string, typ types.Type) (string
 		c = "jsonb"
 	default:
 		panic(fmt.Errorf("unexpected schema physical type: %d", typ.PhysicalType()))
+	}
+	if !typ.Null() {
+		c += " NOT NULL"
 	}
 	return c, nil
 }
