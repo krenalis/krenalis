@@ -53,14 +53,14 @@ func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgr
 		switch n.Name {
 		case "addConnection":
 			s.addConnection(n)
-		case "addEventDataType":
-			s.addEventDataType(n)
+		case "addDataType":
+			s.addDataType(n)
 		case "addEventType":
 			s.addEventType(n)
 		case "deleteConnection":
 			s.deleteConnection(n)
-		case "deleteEventDataType":
-			s.deleteEventDataType(n)
+		case "deleteDataType":
+			s.deleteDataType(n)
 		case "deleteEventType":
 			s.deleteEventType(n)
 		case "endImport":
@@ -81,10 +81,10 @@ func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgr
 			s.setConnectionUserQuery(n)
 		case "setConnectionUserSchema":
 			s.setConnectionUserSchema(n)
-		case "setEventDataTypeDescription":
-			s.setEventDataTypeDescription(n)
-		case "setEventDataTypeSchema":
-			s.setEventDataTypeSchema(n)
+		case "setDataTypeDescription":
+			s.setDataTypeDescription(n)
+		case "setDataTypeSchema":
+			s.setDataTypeSchema(n)
 		case "setEventTypeDescription":
 			s.setEventTypeDescription(n)
 		case "setEventTypeSchema":
@@ -142,12 +142,12 @@ func (s *stateKeeper) replaceConnection(id int, f func(c *Connection)) *Connecti
 	return cc
 }
 
-// replaceEventDataType calls the function f passing a copy of the event data
-// type called name of the given workspace. After f is returned, it replaces
-// the data type with its copy in the state and returns the latter.
-func (s *stateKeeper) replaceEventDataType(workspace int, name string, f func(c *EventDataType)) *EventDataType {
-	tt := new(EventDataType)
-	dt := s.workspaces[workspace].EventDataTypes
+// replaceDataType calls the function f passing a copy of the data type called
+// name of the given workspace. After f is returned, it replaces the data type
+// with its copy in the state and returns the latter.
+func (s *stateKeeper) replaceDataType(workspace int, name string, f func(c *DataType)) *DataType {
+	tt := new(DataType)
+	dt := s.workspaces[workspace].DataTypes
 	dt.state.Lock()
 	t := dt.state.names[name]
 	*tt = *t
@@ -292,33 +292,33 @@ func (s *stateKeeper) addConnection(n postgres.Notification) {
 	}
 }
 
-// addEventDataTypeNotification is the notification event sent when an event
-// data type is added.
-type addEventDataTypeNotification struct {
+// addDataTypeNotification is the notification event sent when a data type is
+// added.
+type addDataTypeNotification struct {
 	Workspace   int
 	Name        string
 	Description string
 	Schema      json.RawMessage `json:",omitempty"`
 }
 
-// addEventDataType adds a new event type.
-func (s *stateKeeper) addEventDataType(n postgres.Notification) {
-	e := addEventDataTypeNotification{}
+// addDataType adds a new data type.
+func (s *stateKeeper) addDataType(n postgres.Notification) {
+	e := addDataTypeNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
 	schema, err := types.ParseSchema(strings.NewReader(string(e.Schema)), nil)
 	if err != nil {
-		log.Printf("[error] cannot parse event data type schema of notification %s from %d: %s", n.Name, n.PID, err)
+		log.Printf("[error] cannot parse data type schema of notification %s from %d: %s", n.Name, n.PID, err)
 		return
 	}
-	t := EventDataType{
+	t := DataType{
 		name:         e.Name,
 		description:  e.Description,
 		schema:       schema,
 		schemaSource: string(e.Schema),
 	}
-	eventTypes := s.workspaces[e.Workspace].EventDataTypes
+	eventTypes := s.workspaces[e.Workspace].DataTypes
 	eventTypes.state.Lock()
 	eventTypes.state.names[e.Name] = &t
 	eventTypes.state.Unlock()
@@ -400,20 +400,20 @@ func (s *stateKeeper) deleteConnection(n postgres.Notification) {
 	connections.state.Unlock()
 }
 
-// deleteEventDataTypeNotification is the notification event sent when an event
-// data type is deleted.
-type deleteEventDataTypeNotification struct {
+// deleteDataTypeNotification is the notification event sent when a data type
+// is deleted.
+type deleteDataTypeNotification struct {
 	Workspace int
 	Name      string
 }
 
-// deleteEventDataType deletes an event data type.
-func (s *stateKeeper) deleteEventDataType(n postgres.Notification) {
-	e := deleteEventDataTypeNotification{}
+// deleteDataType deletes a data type.
+func (s *stateKeeper) deleteDataType(n postgres.Notification) {
+	e := deleteDataTypeNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	eventTypes := s.workspaces[e.Workspace].EventDataTypes
+	eventTypes := s.workspaces[e.Workspace].DataTypes
 	eventTypes.state.Lock()
 	delete(eventTypes.state.names, e.Name)
 	eventTypes.state.Unlock()
@@ -638,45 +638,45 @@ func (s *stateKeeper) setConnectionUserSchema(n postgres.Notification) {
 	})
 }
 
-// setEventDataTypeDescriptionNotification is the notification event sent when
-// the description of an event data type is changed.
-type setEventDataTypeDescriptionNotification struct {
+// setDataTypeDescriptionNotification is the notification event sent when the
+// description of a data type is changed.
+type setDataTypeDescriptionNotification struct {
 	Workplace   int
 	Name        string
 	Description string
 }
 
-// setEventDataTypeDescription sets the description of an event data type.
-func (s *stateKeeper) setEventDataTypeDescription(n postgres.Notification) {
-	e := setEventDataTypeDescriptionNotification{}
+// setDataTypeDescription sets the description of a data type.
+func (s *stateKeeper) setDataTypeDescription(n postgres.Notification) {
+	e := setDataTypeDescriptionNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	s.replaceEventDataType(e.Workplace, e.Name, func(t *EventDataType) {
+	s.replaceDataType(e.Workplace, e.Name, func(t *DataType) {
 		t.description = e.Description
 	})
 }
 
-// setEventDataTypeSchemaNotification is the notification event sent when the
-// schema of an event data type is changed.
-type setEventDataTypeSchemaNotification struct {
+// setDataTypeSchemaNotification is the notification event sent when the schema
+// of a data type is changed.
+type setDataTypeSchemaNotification struct {
 	Workspace int
 	Name      string
 	Schema    json.RawMessage `json:",omitempty"`
 }
 
-// setEventDataTypeSchema sets the schema of an event dta type.
-func (s *stateKeeper) setEventDataTypeSchema(n postgres.Notification) {
-	e := setEventDataTypeSchemaNotification{}
+// setDataTypeSchema sets the schema of a data type.
+func (s *stateKeeper) setDataTypeSchema(n postgres.Notification) {
+	e := setDataTypeSchemaNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
 	schema, err := types.ParseSchema(strings.NewReader(string(e.Schema)), nil)
 	if err != nil {
-		log.Printf("[error] cannot parse event data type schema of notification %s from %d: %s", n.Name, n.PID, err)
+		log.Printf("[error] cannot parse data type schema of notification %s from %d: %s", n.Name, n.PID, err)
 		return
 	}
-	s.replaceEventDataType(e.Workspace, e.Name, func(t *EventDataType) {
+	s.replaceDataType(e.Workspace, e.Name, func(t *DataType) {
 		t.schema = schema
 		t.schemaSource = string(e.Schema)
 	})

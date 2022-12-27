@@ -171,6 +171,14 @@ CREATE TABLE connections_stats_events (
 CREATE INDEX ON connections_stats_events (server);
 CREATE INDEX ON connections_stats_events (stream);
 
+CREATE TABLE data_types (
+    workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    name varchar(120) NOT NULL,
+    description varchar(400) NOT NULL DEFAULT '',
+    schema text NOT NULL,
+    PRIMARY KEY (workspace, name)
+);
+
 CREATE TABLE devices (
     source INT NOT NULL,
     id char(28) NOT NULL,
@@ -182,14 +190,6 @@ CREATE TABLE domains (
     source integer NOT NULL,
     name varchar(255) NOT NULL,
     PRIMARY KEY (source, name)
-);
-
-CREATE TABLE event_data_types (
-    workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
-    name varchar(120) NOT NULL,
-    description varchar(400) NOT NULL DEFAULT '',
-    schema text NOT NULL,
-    PRIMARY KEY (workspace, name)
 );
 
 CREATE TABLE event_stream_queue (

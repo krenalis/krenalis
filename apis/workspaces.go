@@ -55,7 +55,7 @@ type Workspace struct {
 	warehouse      warehouses.Warehouse
 	Connections    *Connections
 	EventTypes     *EventTypes
-	EventDataTypes *EventDataTypes
+	DataTypes      *DataTypes
 	EventListeners *EventListeners
 	id             int
 	account        *Account

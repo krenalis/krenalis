@@ -177,7 +177,7 @@ func (state *connectionsState) List() []*Connection {
 	return connections
 }
 
-// eventDataState contains the state of a single workspace's event types.
+// eventTypesState contains the state of a single workspace's event types.
 type eventTypesState struct {
 	sync.Mutex
 	ids map[int]*EventType
@@ -204,16 +204,15 @@ func (state *eventTypesState) List() []*EventType {
 	return eventTypes
 }
 
-// eventDataTypesState contains the state of a single workspace's event data
-// types.
-type eventDataTypesState struct {
+// dataTypesState contains the state of a single workspace's data types.
+type dataTypesState struct {
 	sync.Mutex
-	names map[string]*EventDataType
+	names map[string]*DataType
 }
 
-// Get returns the event data type with the given name. The boolean return
-// value reports whether the event data type exists.
-func (state *eventDataTypesState) Get(name string) (*EventDataType, bool) {
+// Get returns the data type with the given name. The boolean return value
+// reports whether the data type exists.
+func (state *dataTypesState) Get(name string) (*DataType, bool) {
 	state.Lock()
 	t, ok := state.names[name]
 	state.Unlock()
@@ -221,9 +220,9 @@ func (state *eventDataTypesState) Get(name string) (*EventDataType, bool) {
 }
 
 // List returns all the data types.
-func (state *eventDataTypesState) List() []*EventDataType {
+func (state *dataTypesState) List() []*DataType {
 	state.Lock()
-	dataTypes := make([]*EventDataType, len(state.names))
+	dataTypes := make([]*DataType, len(state.names))
 	i := 0
 	for _, t := range state.names {
 		dataTypes[i] = t

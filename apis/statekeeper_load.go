@@ -114,7 +114,7 @@ func (s *stateKeeper) loadState() error {
 				}
 				workspace.Connections = newConnections(workspace, &connectionsState{ids: map[int]*Connection{}})
 				workspace.EventTypes = newEventTypes(workspace, &eventTypesState{ids: map[int]*EventType{}})
-				workspace.EventDataTypes = newEventDataTypes(workspace, &eventDataTypesState{names: map[string]*EventDataType{}})
+				workspace.DataTypes = newDataTypes(workspace, &dataTypesState{names: map[string]*DataType{}})
 				workspace.EventListeners = &EventListeners{workspace}
 				account.Workspaces.state.ids[id] = workspace
 				workspaces[id] = workspace
@@ -252,11 +252,11 @@ func (s *stateKeeper) loadState() error {
 		return err
 	}
 
-	// Read all event data types.
-	err = s.db.QueryScan("SELECT workspace, name, description, schema FROM event_data_types",
+	// Read all data types.
+	err = s.db.QueryScan("SELECT workspace, name, description, schema FROM data_types",
 		func(rows *postgres.Rows) error {
 			for rows.Next() {
-				t := EventDataType{}
+				t := DataType{}
 				var workspaceID int
 				if err := rows.Scan(&workspaceID, &t.name, &t.description, &t.schemaSource); err != nil {
 					return err
@@ -268,7 +268,7 @@ func (s *stateKeeper) loadState() error {
 						return err
 					}
 				}
-				workspaces[workspaceID].EventDataTypes.state.names[t.name] = &t
+				workspaces[workspaceID].DataTypes.state.names[t.name] = &t
 			}
 			return nil
 		})
