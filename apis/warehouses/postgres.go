@@ -77,15 +77,10 @@ func (warehouse *postgreSQL) CreateTables(ctx context.Context, schema types.Sche
 		if !types.IsValidPropertyName(p.Name) {
 			panic("property name is not valid")
 		}
-		b.WriteByte('"')
-		b.WriteString(p.Name)
-		b.WriteString(`" `)
-		dataType, err := warehouse.columnDataType(p.Name, p.Type)
+		err := warehouse.serializeColumn(&b, p.Name, p.Type)
 		if err != nil {
 			return err
 		}
-		b.WriteString(dataType)
-		b.WriteString(",\n")
 	}
 	b.WriteString("PRIMARY KEY (id)\n)")
 	db, err := warehouse.connection()
@@ -518,86 +513,121 @@ func (s *PostgreSQLSettings) testConnection(ctx context.Context) error {
 	return db.PingContext(ctx)
 }
 
-// columnType returns the column data type corresponding to the schema type t.
-func (warehouse *postgreSQL) columnDataType(name string, typ types.Type) (string, error) {
-	var c string
-	switch typ.PhysicalType() {
+// serializeColumn serializes a column where name and typ are the name and the
+// type of the column. If typ is an object, it will serialize each property of
+// the object as a column.
+func (warehouse *postgreSQL) serializeColumn(b *strings.Builder, name string, typ types.Type) error {
+	pt := typ.PhysicalType()
+	if pt == types.PtObject {
+		properties := typ.Properties()
+		for {
+			p, ok := properties.Next()
+			if !ok {
+				break
+			}
+			if !types.IsValidPropertyName(p.Name) {
+				panic("property name is not valid")
+			}
+			err := warehouse.serializeColumn(b, name+"_"+p.Name, p.Type)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	b.WriteByte('"')
+	b.WriteString(name)
+	b.WriteString(`" `)
+	switch pt {
 	case types.PtBoolean:
-		c = "boolean"
+		b.WriteString("boolean")
 	case types.PtInt:
-		c = "integer"
+		b.WriteString("integer")
 	case types.PtInt8:
-		c = "smallint"
+		b.WriteString("smallint")
 		if name != "" {
-			c = " CHECK(" + name + "BETWEEN -128 AND 127)"
+			b.WriteString(" CHECK(")
+			b.WriteString(name)
+			b.WriteString("BETWEEN -128 AND 127)")
 		}
 	case types.PtInt16:
-		c = "smallint"
+		b.WriteString("smallint")
 	case types.PtInt64:
-		c = "bigint"
+		b.WriteString("bigint")
 	case types.PtUInt:
-		c = "bigint"
+		b.WriteString("bigint")
 		if name != "" {
-			c += " CHECK (" + name + " BETWEEN 0 AND 2^32)"
+			b.WriteString(" CHECK (")
+			b.WriteString(name)
+			b.WriteString(" BETWEEN 0 AND 2^32)")
 		}
 	case types.PtUInt8:
-		c = "smallint"
+		b.WriteString("smallint")
 		if name != "" {
-			c += " CHECK (" + name + " BETWEEN 0 AND 2^8)"
+			b.WriteString(" CHECK (")
+			b.WriteString(name)
+			b.WriteString(" BETWEEN 0 AND 2^8)")
 		}
 	case types.PtUInt16:
-		c = "int"
+		b.WriteString("int")
 		if name != "" {
-			c += " CHECK (" + name + " BETWEEN 0 AND 2^16)"
+			b.WriteString(" CHECK (")
+			b.WriteString(name)
+			b.WriteString(" BETWEEN 0 AND 2^16)")
 		}
 	case types.PtUInt64:
-		return "", errors.New("PtUint64 type is not supported")
+		return errors.New("PtUint64 type is not supported")
 	case types.PtFloat:
-		c = "double precision"
+		b.WriteString("double precision")
 	case types.PtFloat32:
-		c = "real"
+		b.WriteString("real")
 	case types.PtDecimal:
-		p, s := strconv.Itoa(typ.Precision()), strconv.Itoa(typ.Scale())
-		c = "numeric(" + p + "," + s + ")"
+		b.WriteString("numeric(")
+		b.WriteString(strconv.Itoa(typ.Precision()))
+		b.WriteByte(',')
+		b.WriteString(strconv.Itoa(typ.Scale()))
+		b.WriteByte(')')
 	case types.PtDateTime:
-		c = "timestamp"
+		b.WriteString("timestamp")
 	case types.PtDate:
-		c = "date"
+		b.WriteString("date")
 	case types.PtTime:
-		c = "time"
+		b.WriteString("time")
 	case types.PtYear:
-		c = "smallint CHECK (" + name + " BETWEEN 1 AND 9999)"
+		b.WriteString("smallint CHECK (")
+		b.WriteString(name)
+		b.WriteString(" BETWEEN 1 AND 9999)")
 	case types.PtUUID:
-		c = "uuid"
+		b.WriteString("uuid")
 	case types.PtJSON:
-		c = "jsonb"
+		b.WriteString("jsonb")
 	case types.PtText:
 		n, ok := typ.CharLen()
 		if ok {
-			c = "varchar(" + strconv.Itoa(n) + ")"
+			b.WriteString("varchar(")
+			b.WriteString(strconv.Itoa(n))
+			b.WriteByte(')')
 		} else {
-			c = "varchar"
+			b.WriteString("varchar")
 		}
 		n, ok = typ.ByteLen()
 		if ok {
-			c += " CHECK (octet_length(" + name + ") <= " + strconv.Itoa(n) + ")"
+			b.WriteString(" CHECK (octet_length(")
+			b.WriteString(name)
+			b.WriteString(") <= ")
+			b.WriteString(strconv.Itoa(n))
+			b.WriteByte(')')
 		}
 	case types.PtArray:
-		var err error
-		c, err = warehouse.columnDataType("", typ.ItemType())
-		if err != nil {
-			return "", err
-		}
-		c += "[]"
-	case types.PtObject:
-		// TODO(MARCO)
+		return errors.New("PtArray type is not supported")
 	case types.PtMap:
-		c = "jsonb"
+		b.WriteString("jsonb")
 	default:
 		panic(fmt.Errorf("unexpected schema physical type: %d", typ.PhysicalType()))
 	}
 	if !typ.Null() {
-		c += " NOT NULL"
+		b.WriteString(" NOT NULL")
 	}
-	return c, nil
+	b.WriteString(",\n")
+	return nil
 }
