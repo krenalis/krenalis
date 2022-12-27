@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/shopspring/decimal"
+	"golang.org/x/exp/slices"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -995,33 +996,17 @@ func (t Type) WithUnique() Type {
 	return t
 }
 
-// Properties returns an iterator to iterate over the properties of an Object
-// type. Panics if t is not an Object type.
-func (t Type) Properties() *Properties {
+// Properties returns the properties of the Object type t.
+// Panics if t is not an Object type.
+func (t Type) Properties() []ObjectProperty {
 	if t.pt != PtObject {
 		panic("cannot get the properties of a non-Object type")
 	}
-	return &Properties{t.vl.([]ObjectProperty)}
-}
-
-// Properties is an iterator to iterate over the properties of an Object.
-type Properties struct {
-	pr []ObjectProperty
-}
-
-// Next returns the next property of iter.
-// If there are no more properties, it returns ObjectProperty{} and false.
-func (iter *Properties) Next() (ObjectProperty, bool) {
-	if iter.pr == nil {
-		panic("Next on an ended iterator")
+	properties := slices.Clone(t.vl.([]ObjectProperty))
+	for _, property := range properties {
+		property.Aliases = slices.Clone(property.Aliases)
 	}
-	if len(iter.pr) == 0 {
-		iter.pr = nil
-		return ObjectProperty{}, false
-	}
-	p := iter.pr[0]
-	iter.pr = iter.pr[1:]
-	return p, true
+	return properties
 }
 
 // ValueType returns the type of the value of a Map type.

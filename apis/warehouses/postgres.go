@@ -519,12 +519,7 @@ func (s *PostgreSQLSettings) testConnection(ctx context.Context) error {
 func (warehouse *postgreSQL) serializeColumn(b *strings.Builder, name string, typ types.Type) error {
 	pt := typ.PhysicalType()
 	if pt == types.PtObject {
-		properties := typ.Properties()
-		for {
-			p, ok := properties.Next()
-			if !ok {
-				break
-			}
+		for _, p := range typ.Properties() {
 			if !types.IsValidPropertyName(p.Name) {
 				panic("property name is not valid")
 			}
