@@ -57,9 +57,9 @@ type Warehouse interface {
 	// users table. If a table already exists it returns an Error error.
 	CreateTables(ctx context.Context, schema types.Schema) error
 
-	// DropTables drops the data warehouse tables. It does not return an error if a
-	// table does not exist.
-	DropTables(ctx context.Context) error
+	// DropTables drops the data warehouse tables created from the given schema. It
+	// does not return an error if a table does not exist.
+	DropTables(ctx context.Context, schema types.Schema) error
 
 	// Exec executes a query without returning any rows. args are the placeholders.
 	// If the query fails, it returns an Error value.

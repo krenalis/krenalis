@@ -71,32 +71,36 @@ func (warehouse *postgreSQL) Close() error {
 // users table. If a table already exists it returns an Error error.
 func (warehouse *postgreSQL) CreateTables(ctx context.Context, schema types.Schema) error {
 	// Build the "create" statement for the users table.
+	var createTables []string
 	var b strings.Builder
 	b.WriteString("CREATE TABLE \"users\" (\nid SERIAL,\n")
 	for _, p := range schema.Properties() {
 		if !types.IsValidPropertyName(p.Name) {
 			panic("property name is not valid")
 		}
-		err := warehouse.serializeColumn(&b, p.Name, p.Type)
+		tables, err := warehouse.serializeColumn(&b, "users", p.Name, p.Type)
 		if err != nil {
 			return err
 		}
+		createTables = append(createTables, tables...)
 	}
 	b.WriteString("PRIMARY KEY (id)\n)")
+	createTables = append(createTables, b.String())
 	db, err := warehouse.connection()
 	if err != nil {
 		return err
 	}
-	createUsersTable := b.String()
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return wrapError(err)
 	}
-	// Create the "users" table.
-	_, err = tx.ExecContext(ctx, createUsersTable)
-	if err != nil {
-		_ = tx.Rollback()
-		return wrapError(err)
+	// Create the tables.
+	for i := len(createTables) - 1; i >= 0; i-- {
+		_, err = tx.ExecContext(ctx, createTables[i])
+		if err != nil {
+			_ = tx.Rollback()
+			return wrapError(err)
+		}
 	}
 	// Create the "connections_users" table.
 	_, err = tx.ExecContext(ctx, createConnectionsUsersTable)
@@ -108,25 +112,32 @@ func (warehouse *postgreSQL) CreateTables(ctx context.Context, schema types.Sche
 	return wrapError(err)
 }
 
-// DropTables drops the data warehouse tables. It does not return an error if a
-// table does not exist.
-func (warehouse *postgreSQL) DropTables(ctx context.Context) error {
+// DropTables drops the data warehouse tables created from the given schema. It
+// does not return an error if a table does not exist.
+func (warehouse *postgreSQL) DropTables(ctx context.Context, schema types.Schema) error {
+	tables := []string{"connections_users", "users"}
+	for _, p := range schema.Properties() {
+		if isArrayOfObjects(p.Type) {
+			if !types.IsValidPropertyName(p.Name) {
+				panic("property name is not valid")
+			}
+			tables = append(tables, tablesOfObject("users_"+p.Name, p.Type.ItemType())...)
+		}
+	}
+	var b strings.Builder
+	b.WriteString(`DROP TABLE IF EXISTS "`)
+	for i, table := range tables {
+		if i > 0 {
+			b.WriteString(`", "`)
+		}
+		b.WriteString(table)
+	}
+	b.WriteByte('"')
 	db, err := warehouse.connection()
 	if err != nil {
 		return err
 	}
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return wrapError(err)
-	}
-	for _, table := range []string{"users", "connections_users"} {
-		_, err = tx.ExecContext(ctx, `DROP TABLE IF EXISTS "`+table+`"`)
-		if err != nil {
-			_ = tx.Rollback()
-			return wrapError(err)
-		}
-	}
-	err = tx.Commit()
+	_, err = db.ExecContext(ctx, b.String())
 	return wrapError(err)
 }
 
@@ -516,19 +527,47 @@ func (s *PostgreSQLSettings) testConnection(ctx context.Context) error {
 // serializeColumn serializes a column where name and typ are the name and the
 // type of the column. If typ is an object, it will serialize each property of
 // the object as a column.
-func (warehouse *postgreSQL) serializeColumn(b *strings.Builder, name string, typ types.Type) error {
+func (warehouse *postgreSQL) serializeColumn(b *strings.Builder, table, name string, typ types.Type) ([]string, error) {
+	var createTables []string
 	pt := typ.PhysicalType()
 	if pt == types.PtObject {
 		for _, p := range typ.Properties() {
 			if !types.IsValidPropertyName(p.Name) {
 				panic("property name is not valid")
 			}
-			err := warehouse.serializeColumn(b, name+"_"+p.Name, p.Type)
+			tables, err := warehouse.serializeColumn(b, table, name+"_"+p.Name, p.Type)
 			if err != nil {
-				return err
+				return nil, err
 			}
+			createTables = append(createTables, tables...)
 		}
-		return nil
+		return createTables, nil
+	}
+	if pt == types.PtArray {
+		if itemType := typ.ItemType(); itemType.PhysicalType() == types.PtObject {
+			// Build the "create" statement for the table of the object.
+			refTable := table + "_" + name
+			var b strings.Builder
+			b.WriteString(`CREATE TABLE "`)
+			b.WriteString(refTable)
+			b.WriteString("\" (\n\"id\" SERIAL,\n\"")
+			b.WriteString(table)
+			b.WriteString("_id\" integer NOT NULL REFERENCES \"users\" ON DELETE CASCADE,\n")
+			for _, p := range itemType.Properties() {
+				if !types.IsValidPropertyName(p.Name) {
+					panic("property name is not valid")
+				}
+				tables, err := warehouse.serializeColumn(&b, refTable, p.Name, p.Type)
+				if err != nil {
+					return nil, err
+				}
+				createTables = append(createTables, tables...)
+			}
+			b.WriteString("PRIMARY KEY (id)\n)")
+			createTables = append(createTables, b.String())
+			return createTables, nil
+		}
+		return nil, errors.New("PtArray type is not supported")
 	}
 	b.WriteByte('"')
 	b.WriteString(name)
@@ -571,7 +610,7 @@ func (warehouse *postgreSQL) serializeColumn(b *strings.Builder, name string, ty
 			b.WriteString(" BETWEEN 0 AND 2^16)")
 		}
 	case types.PtUInt64:
-		return errors.New("PtUint64 type is not supported")
+		return nil, errors.New("PtUint64 type is not supported")
 	case types.PtFloat:
 		b.WriteString("double precision")
 	case types.PtFloat32:
@@ -613,8 +652,6 @@ func (warehouse *postgreSQL) serializeColumn(b *strings.Builder, name string, ty
 			b.WriteString(strconv.Itoa(n))
 			b.WriteByte(')')
 		}
-	case types.PtArray:
-		return errors.New("PtArray type is not supported")
 	case types.PtMap:
 		b.WriteString("jsonb")
 	default:
@@ -624,5 +661,24 @@ func (warehouse *postgreSQL) serializeColumn(b *strings.Builder, name string, ty
 		b.WriteString(" NOT NULL")
 	}
 	b.WriteString(",\n")
-	return nil
+	return createTables, nil
+}
+
+// isArrayOfObjects reports whether t is an array of objects.
+func isArrayOfObjects(t types.Type) bool {
+	return t.PhysicalType() == types.PtArray && t.ItemType().PhysicalType() == types.PtObject
+}
+
+// tablesOfObject returns table names from the type t.
+func tablesOfObject(table string, t types.Type) []string {
+	tables := []string{table}
+	for _, p := range t.Properties() {
+		if isArrayOfObjects(p.Type) {
+			if !types.IsValidPropertyName(p.Name) {
+				panic("property name is not valid")
+			}
+			tables = append(tables, tablesOfObject(table+"_"+p.Name, p.Type.ItemType())...)
+		}
+	}
+	return tables
 }

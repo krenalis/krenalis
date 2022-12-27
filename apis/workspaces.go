@@ -217,7 +217,7 @@ func (ws *Workspace) DisconnectWarehouse(deleteTables bool) error {
 			}
 			warehouse := warehouses.OpenPostgres(&s)
 			// TODO(marco): consider whether there is a better solution than removing the tables at this time.
-			err = warehouse.DropTables(context.Background())
+			err = warehouse.DropTables(context.Background(), ws.schema.user)
 			if err != nil {
 				return err
 			}
