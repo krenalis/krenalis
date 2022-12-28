@@ -84,7 +84,7 @@ func (this *EventTypes) Add(name, description, schema string) (int, error) {
 	}
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
 		if schema != "" {
-			_, err := types.Parse(schema, dataTypeResolver(tx, n.Workspace))
+			_, err := types.Parse(schema, typeResolver(tx, n.Workspace))
 			if err != nil {
 				return errors.Unprocessable(InvalidSchema, "schema is not valid: %w", err)
 			}
@@ -254,7 +254,7 @@ func (this *EventTypes) SetSchema(id int, schema string) error {
 	}
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
 		if schema != "" {
-			_, err := types.Parse(schema, dataTypeResolver(tx, n.Workspace))
+			_, err := types.Parse(schema, typeResolver(tx, n.Workspace))
 			if err != nil {
 				return errors.Unprocessable(InvalidDefinition, "schema is not valid: %w", err)
 			}

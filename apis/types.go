@@ -18,44 +18,44 @@ import (
 
 var AlreadyExist errors.Code = "AlreadyExist"
 
-type DataTypes struct {
+type Types struct {
 	*Workspace
-	state *dataTypesState
+	state *typesState
 }
 
-// newDataTypes returns a new *DataTypes value.
-func newDataTypes(ws *Workspace, state *dataTypesState) *DataTypes {
-	return &DataTypes{Workspace: ws, state: state}
+// newTypes returns a new *Types value.
+func newTypes(ws *Workspace, state *typesState) *Types {
+	return &Types{Workspace: ws, state: state}
 }
 
-// A DataType represents a data type.
-type DataType struct {
+// A Type represents a type.
+type Type struct {
 	name        string
 	description string
 	definition  string
 	typ         types.Type
 }
 
-// An DataTypeInfo describes a data type as returned by Get and List.
-type DataTypeInfo struct {
+// A TypeInfo describes a type as returned by Get and List.
+type TypeInfo struct {
 	Name        string
 	Description string
 	Definition  string
 	Type        types.Type
 }
 
-// Add adds a new data type with the given name, description and definition.
+// Add adds a new type with the given name, description and definition.
 // description cannot be longer than 400 runes and definition cannot be longer
 // than 65,535 runes.
 //
 // If the workplace does not exist, it returns an errors.NotFound error.
-// If a data type with the same name already exists, it returns an
+// If a type with the same name already exists, it returns an
 // errors.UnprocessableError error with code AlreadyExist and if the definition
 // is not valid, it returns an errors.UnprocessableError error with code
 // InvalidDefinition.
-func (this *DataTypes) Add(name, description, definition string) error {
+func (this *Types) Add(name, description, definition string) error {
 	if !types.IsValidCustomTypeName(name) {
-		return errors.BadRequest("name %q is not a valid data type name", name)
+		return errors.BadRequest("name %q is not a valid type name", name)
 	}
 	if utf8.RuneCountInString(name) > 120 {
 		return errors.BadRequest("name %q is longer than 120 runes", name)
@@ -69,27 +69,27 @@ func (this *DataTypes) Add(name, description, definition string) error {
 	if utf8.RuneCountInString(definition) > 65535 {
 		return errors.BadRequest("definition is longer than 65,535 runes")
 	}
-	n := addDataTypeNotification{
+	n := addTypeNotification{
 		Workspace:   this.id,
 		Name:        name,
 		Description: description,
 		Definition:  json.RawMessage(definition),
 	}
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err := types.Parse(definition, dataTypeResolver(tx, n.Workspace))
+		_, err := types.Parse(definition, typeResolver(tx, n.Workspace))
 		if err != nil {
 			return errors.Unprocessable(InvalidDefinition, "definition is not valid: %w", err)
 		}
-		_, err = tx.Exec("INSERT INTO data_types (workspace, name, description, definition) VALUES ($1, $2, $3, $4)",
+		_, err = tx.Exec("INSERT INTO types (workspace, name, description, definition) VALUES ($1, $2, $3, $4)",
 			n.Workspace, n.Name, n.Description, definition)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
-				if postgres.ErrConstraintName(err) == "data_types_workspace_fkey" {
+				if postgres.ErrConstraintName(err) == "types_workspace_fkey" {
 					err = errors.NotFound("workspace %d does not exist", n.Workspace)
 				}
 			} else if postgres.IsDuplicateKeyValue(err) {
-				if postgres.ErrConstraintName(err) == "data_types_pkey" {
-					err = errors.Unprocessable(AlreadyExist, "data type %s already exists", n.Name)
+				if postgres.ErrConstraintName(err) == "types_pkey" {
+					err = errors.Unprocessable(AlreadyExist, "type %s already exists", n.Name)
 				}
 			}
 			return err
@@ -99,22 +99,21 @@ func (this *DataTypes) Add(name, description, definition string) error {
 	return err
 }
 
-// Delete deletes the data type with the given name. If the type does not
-// exist, it does nothing.
-func (this *DataTypes) Delete(name string) error {
+// Delete deletes the type with the given name. If the type does not exist, it
+// does nothing.
+func (this *Types) Delete(name string) error {
 	if !types.IsValidCustomTypeName(name) {
-		return errors.BadRequest("name %q is not a valid data type name", name)
+		return errors.BadRequest("name %q is not a valid type name", name)
 	}
 	if utf8.RuneCountInString(name) > 120 {
 		return errors.BadRequest("name %s is longer than 120 runes", name)
 	}
-	n := &deleteDataTypeNotification{
+	n := &deleteTypeNotification{
 		Workspace: this.id,
 		Name:      name,
 	}
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		result, err := tx.Exec("DELETE FROM data_types WHERE workspace = $1 AND name = $2",
-			n.Workspace, n.Name)
+		result, err := tx.Exec("DELETE FROM types WHERE workspace = $1 AND name = $2", n.Workspace, n.Name)
 		if err != nil {
 			return err
 		}
@@ -127,21 +126,21 @@ func (this *DataTypes) Delete(name string) error {
 	return err
 }
 
-// Get returns an DataTypeInfo describing the data type with the given name.
+// Get returns an TypeInfo describing the type with the given name.
 //
-// It returns an errors.NotFoundError error if the data type does not exist.
-func (this *DataTypes) Get(name string) (*DataTypeInfo, error) {
+// It returns an errors.NotFoundError error if the type does not exist.
+func (this *Types) Get(name string) (*TypeInfo, error) {
 	if !types.IsValidCustomTypeName(name) {
-		return nil, errors.BadRequest("name %q is not a valid data type name", name)
+		return nil, errors.BadRequest("name %q is not a valid type name", name)
 	}
 	if utf8.RuneCountInString(name) > 120 {
 		return nil, errors.BadRequest("name %s is longer than 120 runes", name)
 	}
 	t, ok := this.state.Get(name)
 	if !ok {
-		return nil, errors.NotFound("data type %s does not exist", name)
+		return nil, errors.NotFound("type %s does not exist", name)
 	}
-	info := DataTypeInfo{
+	info := TypeInfo{
 		Name:        t.name,
 		Description: t.description,
 		Definition:  t.definition,
@@ -150,13 +149,13 @@ func (this *DataTypes) Get(name string) (*DataTypeInfo, error) {
 	return &info, nil
 }
 
-// List returns a list of DataTypeInfo describing all data types.
+// List returns a list of TypeInfo describing all types.
 // Unlike Info, Definition and Type are not meaningful.
-func (this *DataTypes) List() ([]*DataTypeInfo, error) {
-	dataTypes := this.state.List()
-	infos := make([]*DataTypeInfo, len(dataTypes))
-	for i, t := range dataTypes {
-		infos[i] = &DataTypeInfo{
+func (this *Types) List() ([]*TypeInfo, error) {
+	types := this.state.List()
+	infos := make([]*TypeInfo, len(types))
+	for i, t := range types {
+		infos[i] = &TypeInfo{
 			Name:        t.name,
 			Description: t.description,
 		}
@@ -164,13 +163,13 @@ func (this *DataTypes) List() ([]*DataTypeInfo, error) {
 	return infos, nil
 }
 
-// SetDescription sets the description of the data type with the given name.
+// SetDescription sets the description of the type with the given name.
 // description cannot be longer than 400 runes.
 //
-// If the data type does not exist, it returns an errors.NotFoundError error.
-func (this *DataTypes) SetDescription(name string, description string) error {
+// If the type does not exist, it returns an errors.NotFoundError error.
+func (this *Types) SetDescription(name string, description string) error {
 	if !types.IsValidCustomTypeName(name) {
-		return errors.BadRequest("name %q is not a valid data type name", name)
+		return errors.BadRequest("name %q is not a valid type name", name)
 	}
 	if utf8.RuneCountInString(name) > 120 {
 		return errors.BadRequest("name %s is longer than 120 runes", name)
@@ -178,13 +177,13 @@ func (this *DataTypes) SetDescription(name string, description string) error {
 	if utf8.RuneCountInString(description) > 400 {
 		return errors.BadRequest("description is longer than 400 runes")
 	}
-	n := setDataTypeDescriptionNotification{
+	n := setTypeDescriptionNotification{
 		Workplace:   this.id,
 		Name:        name,
 		Description: description,
 	}
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		result, err := tx.Exec("UPDATE data_types SET description = $1 WHERE workspace = $2 AND name = $3",
+		result, err := tx.Exec("UPDATE types SET description = $1 WHERE workspace = $2 AND name = $3",
 			n.Description, n.Workplace, n.Name)
 		if err != nil {
 			return err
@@ -194,22 +193,22 @@ func (this *DataTypes) SetDescription(name string, description string) error {
 			return err
 		}
 		if affected == 0 {
-			return errors.NotFound("data type %s does not exist", n.Name)
+			return errors.NotFound("type %s does not exist", n.Name)
 		}
 		return tx.Notify(n)
 	})
 	return err
 }
 
-// SetDefinition sets the definition of the data type with the given name.
+// SetDefinition sets the definition of the type with the given name.
 // definition cannot be longer than 65,535 runes.
 //
-// If the data type does not exist, it returns an errors.NotFoundError error.
-// If the schema is not valid, it returns an errors.UnprocessableError error
-// with code InvalidDefinition.
-func (this *DataTypes) SetDefinition(name string, definition string) error {
+// If the type does not exist, it returns an errors.NotFoundError error.
+// If the definition is not valid, it returns an errors.UnprocessableError
+// error with code InvalidDefinition.
+func (this *Types) SetDefinition(name string, definition string) error {
 	if !types.IsValidCustomTypeName(name) {
-		return errors.BadRequest("name %q is not a valid data type name", name)
+		return errors.BadRequest("name %q is not a valid type name", name)
 	}
 	if utf8.RuneCountInString(name) > 120 {
 		return errors.BadRequest("name %s is longer than 120 runes", name)
@@ -220,24 +219,24 @@ func (this *DataTypes) SetDefinition(name string, definition string) error {
 	if utf8.RuneCountInString(definition) > 65535 {
 		return errors.BadRequest("definition is longer than 65,535 runes")
 	}
-	n := setDataTypeDefinitionNotification{
+	n := setTypeDefinitionNotification{
 		Workspace:  this.id,
 		Name:       name,
 		Definition: json.RawMessage(definition),
 	}
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err := types.Parse(definition, dataTypeResolver(tx, n.Workspace))
+		_, err := types.Parse(definition, typeResolver(tx, n.Workspace))
 		if err != nil {
-			err2 := tx.QueryVoid("SELECT FROM data_types WHERE workspace = $1 AND name = $2", n.Workspace, n.Name)
+			err2 := tx.QueryVoid("SELECT FROM types WHERE workspace = $1 AND name = $2", n.Workspace, n.Name)
 			if err2 != nil {
 				if err2 == sql.ErrNoRows {
-					return errors.NotFound("data type %s does not exist", n.Name)
+					return errors.NotFound("type %s does not exist", n.Name)
 				}
 				return err2
 			}
 			return errors.Unprocessable(InvalidDefinition, "definition is not valid: %w", err)
 		}
-		result, err := tx.Exec("UPDATE data_types SET schema = $1 WHERE workspace = $2 AND name = $3",
+		result, err := tx.Exec("UPDATE types SET schema = $1 WHERE workspace = $2 AND name = $3",
 			definition, n.Workspace, n.Name)
 		if err != nil {
 			return err
@@ -247,15 +246,15 @@ func (this *DataTypes) SetDefinition(name string, definition string) error {
 			return err
 		}
 		if affected == 0 {
-			return errors.NotFound("data type %s does not exist", n.Name)
+			return errors.NotFound("type %s does not exist", n.Name)
 		}
 		return tx.Notify(n)
 	})
 	return err
 }
 
-// dataTypeResolver returns a resolver that resolve the data types.
-func dataTypeResolver(tx *postgres.Tx, workspace int) types.Resolver {
+// typeResolver returns a resolver that resolve the types.
+func typeResolver(tx *postgres.Tx, workspace int) types.Resolver {
 
 	var definitionOf map[string]string
 	var typeOf map[string]types.Type
@@ -265,7 +264,7 @@ func dataTypeResolver(tx *postgres.Tx, workspace int) types.Resolver {
 		if definitionOf == nil {
 			definitions := map[string]string{}
 			err := tx.QueryScan(
-				"SELECT name, schema FROM data_types WHERE workspace = $1", workspace,
+				"SELECT name, schema FROM types WHERE workspace = $1", workspace,
 				func(rows *sql.Rows) error {
 					var name, definition string
 					for rows.Next() {

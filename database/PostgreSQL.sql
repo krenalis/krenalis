@@ -131,55 +131,6 @@ CREATE TABLE connections_stats_events (
 CREATE INDEX ON connections_stats_events (server);
 CREATE INDEX ON connections_stats_events (stream);
 
-CREATE TABLE data_types (
-    workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
-    name varchar(120) NOT NULL,
-    description varchar(400) NOT NULL DEFAULT '',
-    definition text NOT NULL,
-    PRIMARY KEY (workspace, name)
-);
-
-INSERT INTO data_types (workspace, name, definition) VALUES
-(1, 'user', '{ "name": "Object", "properties": [
-    {
-        "name" : "FirstName",
-        "label": "First name",
-        "description": "First name of the user",
-        "type": {
-            "name": "Text",
-            "charLen": 300
-        }
-    },
-    {
-        "name" : "LastName",
-        "label": "Last name",
-        "description": "Last name of the user",
-        "type": {
-            "name": "Text",
-            "charLen": 300
-        }
-    },
-    {
-        "name" : "Email",
-        "label": "Email address",
-        "description": "Email address of the user",
-        "type": {
-            "name": "Text",
-            "charLen": 300
-        }
-    }
-] }'), (1, 'group', '{ "name": "Object", "properties": [
-    {
-        "name" : "Name",
-        "label": "Group name",
-        "description": "Name of the group",
-        "type": {
-            "name": "Text",
-            "charLen": 300
-        }
-    }
-] }');
-
 CREATE TABLE devices (
     source INT NOT NULL,
     id char(28) NOT NULL,
@@ -267,6 +218,55 @@ CREATE TABLE tasks (
   completed_at TIMESTAMP,
   result      JSONB
 );
+
+CREATE TABLE types (
+    workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    name varchar(120) NOT NULL,
+    description varchar(400) NOT NULL DEFAULT '',
+    definition text NOT NULL,
+    PRIMARY KEY (workspace, name)
+);
+
+INSERT INTO types (workspace, name, definition) VALUES
+                                                    (1, 'user', '{ "name": "Object", "properties": [
+    {
+        "name" : "FirstName",
+        "label": "First name",
+        "description": "First name of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    },
+    {
+        "name" : "LastName",
+        "label": "Last name",
+        "description": "Last name of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    },
+    {
+        "name" : "Email",
+        "label": "Email address",
+        "description": "Email address of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    }
+] }'), (1, 'group', '{ "name": "Object", "properties": [
+    {
+        "name" : "Name",
+        "label": "Group name",
+        "description": "Name of the group",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    }
+] }');
 
 CREATE TABLE users (
     source integer NOT NULL,

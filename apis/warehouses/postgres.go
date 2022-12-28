@@ -240,22 +240,22 @@ func (warehouse *postgreSQL) TableSchema(ctx context.Context, name string) (type
 	}
 	var properties []types.Property
 	for rows.Next() {
-		var name, dataType, charLength, precision, precisionRadix, scale sql.NullString
-		if err := rows.Scan(&name, &dataType, &charLength, &precision, &precisionRadix, &scale); err != nil {
+		var name, typ, charLength, precision, precisionRadix, scale sql.NullString
+		if err := rows.Scan(&name, &typ, &charLength, &precision, &precisionRadix, &scale); err != nil {
 			_ = rows.Close()
 			return types.Type{}, wrapError(err)
 		}
 		if !name.Valid {
 			return types.Type{}, wrapError(fmt.Errorf("data warehouse has returned NULL as column name"))
 		}
-		if !dataType.Valid {
+		if !typ.Valid {
 			return types.Type{}, wrapError(fmt.Errorf("data warehouse has returned NULL as column data type"))
 		}
 		if !types.IsValidPropertyName(name.String) {
 			return types.Type{}, fmt.Errorf("column name %q is not supported", name.String)
 		}
 		property := types.Property{Name: name.String}
-		switch dataType.String {
+		switch typ.String {
 		case "smallint":
 			property.Type = types.Int16()
 		case "integer":
@@ -313,7 +313,7 @@ func (warehouse *postgreSQL) TableSchema(ctx context.Context, name string) (type
 				}
 				property.Type = types.Text(types.Chars(chars))
 			} else {
-				if dataType.String == "char" {
+				if typ.String == "char" {
 					property.Type = types.Text(types.Chars(1))
 				} else {
 					property.Type = types.Text()

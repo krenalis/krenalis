@@ -53,7 +53,7 @@ type Workspace struct {
 	warehouse      warehouses.Warehouse
 	Connections    *Connections
 	EventTypes     *EventTypes
-	DataTypes      *DataTypes
+	Types          *Types
 	EventListeners *EventListeners
 	id             int
 	account        *Account
@@ -96,7 +96,7 @@ func (s *PostgreSQLSettings) warehouseType() warehouses.Type {
 //   - InvalidSettings, if the settings are not valid.
 //   - ConnectionFailed, if the connection fails.
 func (ws *Workspace) ConnectWarehouse(settings WarehouseSettings) error {
-	userType, ok := ws.DataTypes.state.Get("user")
+	userType, ok := ws.Types.state.Get("user")
 	if !ok {
 		return errors.Unprocessable(NoSchema, "workspace %d does not have the user schema", ws.id)
 	}
@@ -198,8 +198,8 @@ func (ws *Workspace) DisconnectWarehouse(deleteTables bool) error {
 			}
 			warehouse := warehouses.OpenPostgres(&s)
 			var userSchema types.Type
-			if dataType, ok := ws.DataTypes.state.Get("user"); ok {
-				userSchema = dataType.typ
+			if typ, ok := ws.Types.state.Get("user"); ok {
+				userSchema = typ.typ
 			}
 			// TODO(marco): consider whether there is a better solution than removing the tables at this time.
 			err = warehouse.DropTables(context.Background(), userSchema)
@@ -333,8 +333,8 @@ func (ws *Workspace) Users(properties []string, order string, first, limit int) 
 
 	// Read the schema.
 	var schemaProperties []types.Property
-	if dataType, ok := ws.DataTypes.state.Get("user"); ok {
-		schemaProperties = dataType.typ.Properties()
+	if typ, ok := ws.Types.state.Get("user"); ok {
+		schemaProperties = typ.typ.Properties()
 	}
 	propertyByName := map[string]types.Property{}
 	for _, p := range schemaProperties {

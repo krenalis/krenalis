@@ -53,14 +53,14 @@ func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgr
 		switch n.Name {
 		case "addConnection":
 			s.addConnection(n)
-		case "addDataType":
-			s.addDataType(n)
+		case "addType":
+			s.addType(n)
 		case "addEventType":
 			s.addEventType(n)
 		case "deleteConnection":
 			s.deleteConnection(n)
-		case "deleteDataType":
-			s.deleteDataType(n)
+		case "deleteType":
+			s.deleteType(n)
 		case "deleteEventType":
 			s.deleteEventType(n)
 		case "endImport":
@@ -81,10 +81,10 @@ func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgr
 			s.setConnectionUserQuery(n)
 		case "setConnectionUserSchema":
 			s.setConnectionUserSchema(n)
-		case "setDataTypeDescription":
-			s.setDataTypeDescription(n)
-		case "setDataTypeDefinition":
-			s.setDataTypeDefinition(n)
+		case "setTypeDescription":
+			s.setTypeDescription(n)
+		case "setTypeDefinition":
+			s.setTypeDefinition(n)
 		case "setEventTypeDescription":
 			s.setEventTypeDescription(n)
 		case "setEventTypeSchema":
@@ -138,12 +138,12 @@ func (s *stateKeeper) replaceConnection(id int, f func(c *Connection)) *Connecti
 	return cc
 }
 
-// replaceDataType calls the function f passing a copy of the data type called
-// name of the given workspace. After f is returned, it replaces the data type
-// with its copy in the state and returns the latter.
-func (s *stateKeeper) replaceDataType(workspace int, name string, f func(c *DataType)) *DataType {
-	tt := new(DataType)
-	dt := s.workspaces[workspace].DataTypes
+// replaceType calls the function f passing a copy of the type called name of
+// the given workspace. After f is returned, it replaces the type with its copy
+// in the state and returns the latter.
+func (s *stateKeeper) replaceType(workspace int, name string, f func(c *Type)) *Type {
+	tt := new(Type)
+	dt := s.workspaces[workspace].Types
 	dt.state.Lock()
 	t := dt.state.names[name]
 	*tt = *t
@@ -288,33 +288,32 @@ func (s *stateKeeper) addConnection(n postgres.Notification) {
 	}
 }
 
-// addDataTypeNotification is the notification event sent when a data type is
-// added.
-type addDataTypeNotification struct {
+// addTypeNotification is the notification event sent when a type is added.
+type addTypeNotification struct {
 	Workspace   int
 	Name        string
 	Description string
 	Definition  json.RawMessage `json:",omitempty"`
 }
 
-// addDataType adds a new data type.
-func (s *stateKeeper) addDataType(n postgres.Notification) {
-	e := addDataTypeNotification{}
+// addType adds a new type.
+func (s *stateKeeper) addType(n postgres.Notification) {
+	e := addTypeNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
 	typ, err := types.Parse(string(e.Definition), nil)
 	if err != nil {
-		log.Printf("[error] cannot parse data type definition of notification %s from %d: %s", n.Name, n.PID, err)
+		log.Printf("[error] cannot parse type definition of notification %s from %d: %s", n.Name, n.PID, err)
 		return
 	}
-	t := DataType{
+	t := Type{
 		name:        e.Name,
 		description: e.Description,
 		definition:  string(e.Definition),
 		typ:         typ,
 	}
-	eventTypes := s.workspaces[e.Workspace].DataTypes
+	eventTypes := s.workspaces[e.Workspace].Types
 	eventTypes.state.Lock()
 	eventTypes.state.names[e.Name] = &t
 	eventTypes.state.Unlock()
@@ -396,20 +395,20 @@ func (s *stateKeeper) deleteConnection(n postgres.Notification) {
 	connections.state.Unlock()
 }
 
-// deleteDataTypeNotification is the notification event sent when a data type
-// is deleted.
-type deleteDataTypeNotification struct {
+// deleteTypeNotification is the notification event sent when a type is
+// deleted.
+type deleteTypeNotification struct {
 	Workspace int
 	Name      string
 }
 
-// deleteDataType deletes a data type.
-func (s *stateKeeper) deleteDataType(n postgres.Notification) {
-	e := deleteDataTypeNotification{}
+// deleteType deletes a type.
+func (s *stateKeeper) deleteType(n postgres.Notification) {
+	e := deleteTypeNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	eventTypes := s.workspaces[e.Workspace].DataTypes
+	eventTypes := s.workspaces[e.Workspace].Types
 	eventTypes.state.Lock()
 	delete(eventTypes.state.names, e.Name)
 	eventTypes.state.Unlock()
@@ -634,45 +633,45 @@ func (s *stateKeeper) setConnectionUserSchema(n postgres.Notification) {
 	})
 }
 
-// setDataTypeDescriptionNotification is the notification event sent when the
-// description of a data type is changed.
-type setDataTypeDescriptionNotification struct {
+// setTypeDescriptionNotification is the notification event sent when the
+// description of a type is changed.
+type setTypeDescriptionNotification struct {
 	Workplace   int
 	Name        string
 	Description string
 }
 
-// setDataTypeDescription sets the description of a data type.
-func (s *stateKeeper) setDataTypeDescription(n postgres.Notification) {
-	e := setDataTypeDescriptionNotification{}
+// setTypeDescription sets the description of a type.
+func (s *stateKeeper) setTypeDescription(n postgres.Notification) {
+	e := setTypeDescriptionNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	s.replaceDataType(e.Workplace, e.Name, func(t *DataType) {
+	s.replaceType(e.Workplace, e.Name, func(t *Type) {
 		t.description = e.Description
 	})
 }
 
-// setDataTypeDefinitionNotification is the notification event sent when the
-// definition of a data type is changed.
-type setDataTypeDefinitionNotification struct {
+// setTypeDefinitionNotification is the notification event sent when the
+// definition of a type is changed.
+type setTypeDefinitionNotification struct {
 	Workspace  int
 	Name       string
 	Definition json.RawMessage `json:",omitempty"`
 }
 
-// setDataTypeDefinition sets the definition of a data type.
-func (s *stateKeeper) setDataTypeDefinition(n postgres.Notification) {
-	e := setDataTypeDefinitionNotification{}
+// setTypeDefinition sets the definition of a type.
+func (s *stateKeeper) setTypeDefinition(n postgres.Notification) {
+	e := setTypeDefinitionNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
 	typ, err := types.Parse(string(e.Definition), nil)
 	if err != nil {
-		log.Printf("[error] cannot parse data type definition of notification %s from %d: %s", n.Name, n.PID, err)
+		log.Printf("[error] cannot parse type definition of notification %s from %d: %s", n.Name, n.PID, err)
 		return
 	}
-	s.replaceDataType(e.Workspace, e.Name, func(t *DataType) {
+	s.replaceType(e.Workspace, e.Name, func(t *Type) {
 		t.definition = string(e.Definition)
 		t.typ = typ
 	})
