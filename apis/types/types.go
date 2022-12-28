@@ -1009,6 +1009,20 @@ func (t Type) Properties() []ObjectProperty {
 	return properties
 }
 
+// PropertiesNames returns the names of the properties of the Object t.
+// Panics if t is not an Object type.
+func (t Type) PropertiesNames() []string {
+	if t.pt != PtObject {
+		panic("cannot get the properties names of a non-Object type")
+	}
+	properties := t.vl.([]ObjectProperty)
+	names := make([]string, len(properties))
+	for i, p := range properties {
+		names[i] = p.Name
+	}
+	return names
+}
+
 // ValueType returns the type of the value of a Map type.
 // Panics if t is not a Map type.
 func (t Type) ValueType() Type {
