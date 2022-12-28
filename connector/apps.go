@@ -59,7 +59,7 @@ type AppConnection interface {
 	Resource() (string, error)
 
 	// Schemas returns user and group schemas.
-	Schemas() (types.Schema, types.Schema, error)
+	Schemas() (types.Type, types.Type, error)
 
 	// SetUsers sets the given users.
 	SetUsers(users []User) error

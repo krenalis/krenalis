@@ -9,7 +9,6 @@ package apis
 import (
 	"encoding/json"
 	"math"
-	"strings"
 	"unicode/utf8"
 
 	"chichi/apis/errors"
@@ -40,7 +39,7 @@ type EventType struct {
 	name         string
 	description  string
 	predefined   bool
-	schema       types.Schema
+	schema       types.Type
 	schemaSource string
 }
 
@@ -50,7 +49,7 @@ type EventTypeInfo struct {
 	Name         string
 	Description  string
 	Predefined   bool
-	Schema       types.Schema
+	Schema       types.Type
 	SchemaSource string
 }
 
@@ -85,7 +84,7 @@ func (this *EventTypes) Add(name, description, schema string) (int, error) {
 	}
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
 		if schema != "" {
-			_, err := types.ParseSchema(strings.NewReader(schema), dataTypeResolver(tx, n.Workspace))
+			_, err := types.Parse(schema, dataTypeResolver(tx, n.Workspace))
 			if err != nil {
 				return errors.Unprocessable(InvalidSchema, "schema is not valid: %w", err)
 			}
@@ -255,7 +254,7 @@ func (this *EventTypes) SetSchema(id int, schema string) error {
 	}
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
 		if schema != "" {
-			_, err := types.ParseSchema(strings.NewReader(schema), dataTypeResolver(tx, n.Workspace))
+			_, err := types.Parse(schema, dataTypeResolver(tx, n.Workspace))
 			if err != nil {
 				return errors.Unprocessable(InvalidDefinition, "schema is not valid: %w", err)
 			}

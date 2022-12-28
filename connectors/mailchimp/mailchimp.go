@@ -158,7 +158,7 @@ func (c *connection) Resource() (string, error) {
 }
 
 // Schemas returns user and group schemas.
-func (c *connection) Schemas() (types.Schema, types.Schema, error) {
+func (c *connection) Schemas() (types.Type, types.Type, error) {
 	params := url.Values{
 		"fields": []string{"merge_fields.options.choices,merge_fields.name,merge_fields.tag,merge_fields.type"},
 	}
@@ -174,13 +174,13 @@ func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 	}{}
 	err := c.call("GET", "/lists/"+c.settings.List+"/merge-fields", params, nil, 200, &res)
 	if err != nil {
-		return types.Schema{}, types.Schema{}, err
+		return types.Type{}, types.Type{}, err
 	}
 
 	// Merge fields.
-	mergeFields := make([]types.ObjectProperty, len(res.MergeFields))
+	mergeFields := make([]types.Property, len(res.MergeFields))
 	for i, mf := range res.MergeFields {
-		field := types.ObjectProperty{
+		field := types.Property{
 			Name:  mf.Tag,
 			Label: mf.Name,
 			Type:  types.Text(),
@@ -196,7 +196,7 @@ func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 		mergeFields[i] = field
 	}
 
-	schema, err := types.SchemaOf([]types.Property{
+	schema, err := types.ObjectOf([]types.Property{
 		{
 			Name:  "ConsentsToOneToOneMessaging",
 			Label: "Consents to OneToOne messaging",
@@ -248,7 +248,7 @@ func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 		}, {
 			Name:  "LastNote",
 			Label: "Last Note",
-			Type: types.Object([]types.ObjectProperty{
+			Type: types.Object([]types.Property{
 				{
 					Name:  "note_id",
 					Label: "ID",
@@ -274,7 +274,7 @@ func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 		}, {
 			Name:  "Location",
 			Label: "Location",
-			Type: types.Object([]types.ObjectProperty{
+			Type: types.Object([]types.Property{
 				{
 					Name:  "latitude",
 					Label: "Latitude",
@@ -326,7 +326,7 @@ func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 		}, {
 			Name:  "Stats",
 			Label: "Stats",
-			Type: types.Object([]types.ObjectProperty{
+			Type: types.Object([]types.Property{
 				{
 					Name:  "avg_open_rate",
 					Label: "Open rate",
@@ -380,10 +380,10 @@ func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 		},
 	})
 	if err != nil {
-		return types.Schema{}, types.Schema{}, fmt.Errorf("cannot create schema from properties: %s", err)
+		return types.Type{}, types.Type{}, fmt.Errorf("cannot create schema from properties: %s", err)
 	}
 
-	return schema, types.Schema{}, nil
+	return schema, types.Type{}, nil
 }
 
 // ServeUI serves the connector's user interface.

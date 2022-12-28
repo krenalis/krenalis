@@ -24,102 +24,41 @@ import (
 // maxTime is the maximum value for a Time value.
 const maxTime = 24 * 60 * 60 * 1000
 
-// Decode decodes a JSON-encoded data, read from r, validates it according to
-// schema and returns the decoded value.
-// Panics is schema is not valid.
-func Decode(r io.Reader, schema Schema) (map[string]any, error) {
-	if !schema.Valid() {
-		return nil, errors.New("schema is not valid")
+// Decode decodes a JSON-encoded data, read from r, validates it according to t
+// and returns the decoded value.
+// Panics is t is not valid.
+func Decode(r io.Reader, t Type) (map[string]any, error) {
+	if !t.Valid() {
+		return nil, errors.New("type is not valid")
+	}
+	if t.pt != PtObject {
+		return nil, errors.New("type is not an object")
 	}
 	dec := json.NewDecoder(norm.NFC.Reader(r))
 	dec.UseNumber()
-	v, err := decodeBySchema(dec, schema, false)
+	v, err := decodeByType(dec, nil, t, false)
 	if err != nil {
 		return nil, err
 	}
 	return v.(map[string]any), nil
 }
 
-// DecodeStrict is like Decode but returns an error if a property of the schema
-// or a property of an object is missing.
-func DecodeStrict(r io.Reader, schema Schema) (map[string]any, error) {
-	if !schema.Valid() {
-		return nil, errors.New("schema is not valid")
+// DecodeStrict is like Decode but returns an error if a property of an object
+// is missing.
+func DecodeStrict(r io.Reader, t Type) (map[string]any, error) {
+	if !t.Valid() {
+		return nil, errors.New("type is not valid")
+	}
+	if t.pt != PtObject {
+		return nil, errors.New("type is not an object")
 	}
 	dec := json.NewDecoder(norm.NFC.Reader(r))
 	dec.UseNumber()
-	v, err := decodeBySchema(dec, schema, true)
+	v, err := decodeByType(dec, nil, t, true)
 	if err != nil {
 		return nil, err
 	}
 	return v.(map[string]any), nil
-}
-
-// decodeBySchema decodes a JSON-encoded value, read from dec, validates it
-// according to schema and returns the decoded value. If strict is true, it
-// returns an error if a property is missing.
-func decodeBySchema(dec *json.Decoder, schema Schema, strict bool) (any, error) {
-	tok, err := dec.Token()
-	if err != nil {
-		return nil, err
-	}
-	if tok != json.Delim('{') {
-		return nil, errors.New("not a JSON object")
-	}
-	propertyByName := map[string]Property{}
-	for _, p := range schema.properties {
-		propertyByName[p.Name] = p
-		for _, alias := range p.Aliases {
-			propertyByName[alias] = p
-		}
-	}
-	object := map[string]any{}
-	for {
-		tok, err = dec.Token()
-		if err != nil {
-			return nil, err
-		}
-		name, ok := tok.(string)
-		if !ok {
-			break
-		}
-		if p, ok := propertyByName[name]; ok {
-			object[p.Name], err = decodeByType(dec, nil, p.Type, strict)
-			if err != nil {
-				return nil, err
-			}
-			continue
-		}
-		if name == "" {
-			return nil, errors.New("property name is empty")
-		}
-		if !IsValidPropertyName(name) {
-			return nil, errors.New("invalid property name")
-		}
-		if strict {
-			return nil, fmt.Errorf("unknown property name %q", name)
-		}
-		// Skip the property.
-		depth := 0
-		for {
-			tok, err = dec.Token()
-			if err != nil {
-				return nil, err
-			}
-			if d, ok := tok.(json.Delim); ok {
-				switch d {
-				case '{', '[':
-					depth++
-				case '}', ']':
-					depth--
-				}
-			}
-			if depth == 0 {
-				break
-			}
-		}
-	}
-	return object, nil
 }
 
 // decodeByType decodes a JSON-encoded value, read from dec, validates it
@@ -384,8 +323,8 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 		if tok != json.Delim('{') {
 			return nil, errors.New("not a JSON object")
 		}
-		propertyByName := map[string]ObjectProperty{}
-		for _, p := range t.vl.([]ObjectProperty) {
+		propertyByName := map[string]Property{}
+		for _, p := range t.vl.([]Property) {
 			propertyByName[p.Name] = p
 			for _, alias := range p.Aliases {
 				propertyByName[alias] = p

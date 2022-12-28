@@ -332,11 +332,11 @@ func (ws *Workspace) Users(properties []string, order string, first, limit int) 
 	}
 
 	// Read the schema.
-	var schemaProperties []types.ObjectProperty
+	var schemaProperties []types.Property
 	if dataType, ok := ws.DataTypes.state.Get("user"); ok {
 		schemaProperties = dataType.typ.Properties()
 	}
-	propertyByName := map[string]types.ObjectProperty{}
+	propertyByName := map[string]types.Property{}
 	for _, p := range schemaProperties {
 		propertyByName[p.Name] = p
 	}
@@ -356,7 +356,7 @@ func (ws *Workspace) Users(properties []string, order string, first, limit int) 
 			return types.Type{}, nil, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
 		}
 	}
-	var orderProperty types.ObjectProperty
+	var orderProperty types.Property
 	if order != "" {
 		if !types.IsValidPropertyName(order) {
 			return types.Type{}, nil, errors.BadRequest("order %q is not a valid property name", order)
@@ -379,7 +379,7 @@ func (ws *Workspace) Users(properties []string, order string, first, limit int) 
 	}
 
 	// Create the schema to return, with only the required properties.
-	queryProperties := make([]types.ObjectProperty, len(properties))
+	queryProperties := make([]types.Property, len(properties))
 	for i, name := range properties {
 		queryProperties[i] = propertyByName[name]
 	}

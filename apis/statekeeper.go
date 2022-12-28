@@ -303,7 +303,7 @@ func (s *stateKeeper) addDataType(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	typ, err := types.ParseType(string(e.Definition), nil)
+	typ, err := types.Parse(string(e.Definition), nil)
 	if err != nil {
 		log.Printf("[error] cannot parse data type definition of notification %s from %d: %s", n.Name, n.PID, err)
 		return
@@ -337,9 +337,9 @@ func (s *stateKeeper) addEventType(n postgres.Notification) {
 		return
 	}
 	var err error
-	var schema types.Schema
+	var schema types.Type
 	if len(e.Schema) > 0 {
-		schema, err = types.ParseSchema(strings.NewReader(string(e.Schema)), nil)
+		schema, err = types.Parse(string(e.Schema), nil)
 		if err != nil {
 			log.Printf("[error] cannot parse event type schema of notification %s from %d: %s", n.Name, n.PID, err)
 			return
@@ -566,9 +566,9 @@ type setConnectionMappingsNotification struct {
 // notifiedMapping is a mapping to set notified to the state keeper.
 type notifiedMapping struct {
 	ID         int
-	In         types.Schema
+	In         types.Type
 	SourceCode string
-	Out        types.Schema
+	Out        types.Type
 }
 
 // setConnectionMappings sets the mappings of a connection.
@@ -620,7 +620,7 @@ func (s *stateKeeper) setConnectionUserQuery(n postgres.Notification) {
 // user schema of a connection is changed.
 type setConnectionUserSchemaNotification struct {
 	Connection int
-	Schema     types.Schema
+	Schema     types.Type
 }
 
 // setConnectionUserSchema sets the user schema of a connection.
@@ -667,7 +667,7 @@ func (s *stateKeeper) setDataTypeDefinition(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	typ, err := types.ParseType(string(e.Definition), nil)
+	typ, err := types.Parse(string(e.Definition), nil)
 	if err != nil {
 		log.Printf("[error] cannot parse data type definition of notification %s from %d: %s", n.Name, n.PID, err)
 		return
@@ -712,9 +712,9 @@ func (s *stateKeeper) setEventTypeSchema(n postgres.Notification) {
 		return
 	}
 	var err error
-	var schema types.Schema
+	var schema types.Type
 	if len(e.Schema) > 0 {
-		schema, err = types.ParseSchema(strings.NewReader(string(e.Schema)), nil)
+		schema, err = types.Parse(string(e.Schema), nil)
 		if err != nil {
 			log.Printf("[error] cannot parse event type schema of notification %s from %d: %s", n.Name, n.PID, err)
 			return

@@ -58,13 +58,13 @@ func (c *connection) Resource() (string, error) {
 	return "dummy-resource", nil
 }
 
-func (c *connection) Schemas() (types.Schema, types.Schema, error) {
-	userSchema := types.MustSchemaOf([]types.Property{
+func (c *connection) Schemas() (types.Type, types.Type, error) {
+	userSchema := types.Object([]types.Property{
 		{Name: "first_name", Type: types.Text()},
 		{Name: "last_name", Type: types.Text()},
 		{Name: "email", Type: types.Text()},
 	})
-	return userSchema, types.Schema{}, nil
+	return userSchema, types.Type{}, nil
 }
 
 // ServeUI serves the connector's user interface.

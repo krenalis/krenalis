@@ -8,7 +8,6 @@
 package apis
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"strings"
@@ -172,7 +171,7 @@ func (s *stateKeeper) loadState() error {
 				c.keys = []string{}
 			}
 			if len(rawSchema) > 0 {
-				c.schema, err = types.ParseSchema(strings.NewReader(rawSchema), nil)
+				c.schema, err = types.Parse(rawSchema, nil)
 				if err != nil {
 					// TODO(marco) disable the connection instead of returning an error
 					return err
@@ -223,7 +222,7 @@ func (s *stateKeeper) loadState() error {
 					return err
 				}
 				if t.schemaSource != "" {
-					t.schema, err = types.ParseSchema(strings.NewReader(t.schemaSource), nil)
+					t.schema, err = types.Parse(t.schemaSource, nil)
 					if err != nil {
 						// TODO(marco) disable the type instead of returning an error?
 						return err
@@ -247,7 +246,7 @@ func (s *stateKeeper) loadState() error {
 					return err
 				}
 				if t.definition != "" {
-					t.typ, err = types.ParseType(t.definition, nil)
+					t.typ, err = types.Parse(t.definition, nil)
 					if err != nil {
 						// TODO(marco) disable the type instead of returning an error?
 						return err
@@ -296,11 +295,11 @@ func (s *stateKeeper) loadState() error {
 	})
 	for i, m := range mappings {
 		var err error
-		m.in, err = types.ParseSchema(bytes.NewReader(inSchemas[i]), nil)
+		m.in, err = types.Parse(string(inSchemas[i]), nil)
 		if err != nil {
 			return err
 		}
-		m.out, err = types.ParseSchema(bytes.NewReader(outSchemas[i]), nil)
+		m.out, err = types.Parse(string(outSchemas[i]), nil)
 		if err != nil {
 			return err
 		}

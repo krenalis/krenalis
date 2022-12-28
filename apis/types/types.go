@@ -8,6 +8,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"regexp"
@@ -241,12 +242,13 @@ func (role Role) String() string {
 	panic("invalid role")
 }
 
-// ObjectProperty represents an object property.
-type ObjectProperty struct {
+// Property represents an object property.
+type Property struct {
 	Name        string
 	Aliases     []string
 	Label       string
 	Description string
+	Role        Role
 	Type        Type
 }
 
@@ -282,7 +284,7 @@ type Type struct {
 	//   - string value representing a layout for DateTime, Date and Time
 	//   - *regexp.Regexp value for Text
 	//   - []string with the enum values for Text
-	//   - []ObjectProperty for Object
+	//   - []Property for Object
 	//   - Type of the item for Array
 	//   - Type of the value for Map
 	vl any
@@ -445,12 +447,12 @@ func Array(t Type) Type {
 // Panics if properties is empty, or if a property name pr alias is empty or
 // repeated, or if a property string field is not UTF-8 encoded or if a
 // property type is not valid.
-func Object(properties []ObjectProperty) Type {
+func Object(properties []Property) Type {
 	if len(properties) == 0 {
 		panic("no property in object")
 	}
 	exists := make(map[string]struct{}, len(properties))
-	ps := make([]ObjectProperty, len(properties))
+	ps := make([]Property, len(properties))
 	for i, property := range properties {
 		if property.Name == "" {
 			panic("property name is empty")
@@ -483,7 +485,7 @@ func Object(properties []ObjectProperty) Type {
 		if !property.Type.Valid() {
 			panic("invalid property type")
 		}
-		ps[i] = ObjectProperty{
+		ps[i] = Property{
 			Name:        property.Name,
 			Aliases:     aliases,
 			Label:       normalizedUTF8(property.Label),
@@ -497,6 +499,120 @@ func Object(properties []ObjectProperty) Type {
 // Map returns a Map type with value type t.
 func Map(t Type) Type {
 	return Type{pt: PtMap, vl: t}
+}
+
+// ObjectOf returns a new object type with the given properties.
+// It returns an error if properties is empty, or if a property name or alias
+// is empty or repeated, or if a property string field is not UTF-8 encoded, or
+// if a property type and role are not valid.
+func ObjectOf(properties []Property) (Type, error) {
+	if len(properties) == 0 {
+		return Type{}, errors.New("no property in type")
+	}
+	exists := make(map[string]struct{}, len(properties))
+	ps := make([]Property, len(properties))
+	for i, property := range properties {
+		if property.Name == "" {
+			return Type{}, errors.New("property name is empty")
+		}
+		if !IsValidPropertyName(property.Name) {
+			return Type{}, errors.New("invalid property name")
+		}
+		if _, ok := exists[property.Name]; ok {
+			return Type{}, errors.New("property name is repeated")
+		}
+		exists[property.Name] = struct{}{}
+		var aliases []string
+		if len(property.Aliases) > 0 {
+			aliases = make([]string, len(property.Aliases))
+			for i, alias := range property.Aliases {
+				if alias == "" {
+					return Type{}, errors.New("property alias is empty")
+				}
+				if !IsValidPropertyName(alias) {
+					return Type{}, errors.New("invalid property alias")
+				}
+				if _, ok := exists[alias]; ok {
+					return Type{}, errors.New("property alias already named")
+				}
+				aliases[i] = alias
+				exists[alias] = struct{}{}
+			}
+			sort.Strings(aliases)
+		}
+		if property.Role < BothRole || property.Role > DestinationRole {
+			return Type{}, errors.New("invalid property role")
+		}
+		if !property.Type.Valid() {
+			return Type{}, errors.New("invalid property type")
+		}
+		ps[i] = Property{
+			Name:        property.Name,
+			Aliases:     aliases,
+			Label:       normalizedUTF8(property.Label),
+			Description: normalizedUTF8(property.Description),
+			Role:        property.Role,
+			Type:        property.Type,
+		}
+	}
+	return Type{pt: PtObject, vl: ps}, nil
+}
+
+// IsValidPropertyName reports whether name is a valid property name.
+// A property name must:
+//   - start with [A-Za-z_]
+//   - subsequently contain only [A-Za-z0-9_]
+func IsValidPropertyName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if !('a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
+			return false
+		}
+	}
+	return true
+}
+
+// AsRole returns an object type with the properties of typ but that are
+// compatible with role. It returns typ if all properties are compatible and
+// an invalid type if there are no compatible properties.
+//
+// Panics if typ or role are not valid, or typ is not an object type or role is
+// Both.
+func (t Type) AsRole(role Role) Type {
+	if !t.Valid() {
+		panic("type is not valid")
+	}
+	if t.pt != PtObject {
+		panic("cannot return type as role for non-Object type")
+	}
+	if role < BothRole || role > DestinationRole {
+		panic("role is not valid")
+	}
+	if role == BothRole {
+		return t
+	}
+	start := 0
+	var roleProperties []Property
+	properties := t.vl.([]Property)
+	for i, p := range properties {
+		if p.Role == BothRole || p.Role == role {
+			continue
+		}
+		if start < i {
+			roleProperties = append(roleProperties, properties[start:i]...)
+		}
+		start = i + 1
+	}
+	if roleProperties == nil {
+		return t
+	}
+	if start < len(roleProperties) {
+		roleProperties = append(roleProperties, roleProperties[start:]...)
+	}
+	return Type{pt: PtObject, vl: roleProperties}
 }
 
 // Valid indicates if t is valid.
@@ -998,11 +1114,11 @@ func (t Type) WithUnique() Type {
 
 // Properties returns the properties of the Object type t.
 // Panics if t is not an Object type.
-func (t Type) Properties() []ObjectProperty {
+func (t Type) Properties() []Property {
 	if t.pt != PtObject {
 		panic("cannot get the properties of a non-Object type")
 	}
-	properties := slices.Clone(t.vl.([]ObjectProperty))
+	properties := slices.Clone(t.vl.([]Property))
 	for _, property := range properties {
 		property.Aliases = slices.Clone(property.Aliases)
 	}
@@ -1015,7 +1131,7 @@ func (t Type) PropertiesNames() []string {
 	if t.pt != PtObject {
 		panic("cannot get the properties names of a non-Object type")
 	}
-	properties := t.vl.([]ObjectProperty)
+	properties := t.vl.([]Property)
 	names := make([]string, len(properties))
 	for i, p := range properties {
 		names[i] = p.Name

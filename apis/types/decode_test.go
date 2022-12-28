@@ -122,7 +122,7 @@ func TestDecode(t *testing.T) {
 		},
 		{
 			Data: `{"first_name":"John Smith","values":[3, 8, 1],"billing_address":{"city":"Venice","country":"IT"}}`,
-			Type: Object([]ObjectProperty{
+			Type: Object([]Property{
 				{
 					Name:        "first_name",
 					Label:       "First name",
@@ -138,7 +138,7 @@ func TestDecode(t *testing.T) {
 					Name:    "address",
 					Aliases: []string{"billing_address"},
 					Label:   "address",
-					Type: Object([]ObjectProperty{
+					Type: Object([]Property{
 						{
 							Name:        "city",
 							Label:       "City",

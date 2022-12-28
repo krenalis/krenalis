@@ -76,7 +76,7 @@ func (this *DataTypes) Add(name, description, definition string) error {
 		Definition:  json.RawMessage(definition),
 	}
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err := types.ParseType(definition, dataTypeResolver(tx, n.Workspace))
+		_, err := types.Parse(definition, dataTypeResolver(tx, n.Workspace))
 		if err != nil {
 			return errors.Unprocessable(InvalidDefinition, "definition is not valid: %w", err)
 		}
@@ -226,7 +226,7 @@ func (this *DataTypes) SetDefinition(name string, definition string) error {
 		Definition: json.RawMessage(definition),
 	}
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err := types.ParseType(definition, dataTypeResolver(tx, n.Workspace))
+		_, err := types.Parse(definition, dataTypeResolver(tx, n.Workspace))
 		if err != nil {
 			err2 := tx.QueryVoid("SELECT FROM data_types WHERE workspace = $1 AND name = $2", n.Workspace, n.Name)
 			if err2 != nil {
@@ -286,7 +286,7 @@ func dataTypeResolver(tx *postgres.Tx, workspace int) types.Resolver {
 			return typ, nil
 		}
 		if schema, ok := definitionOf[name]; ok {
-			t, err := types.ParseType(schema, resolve)
+			t, err := types.Parse(schema, resolve)
 			if err != nil {
 				return types.Type{}, err
 			}

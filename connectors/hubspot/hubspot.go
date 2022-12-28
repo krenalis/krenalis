@@ -210,7 +210,7 @@ func (c *connection) Resource() (string, error) {
 }
 
 // Schemas returns user and group schemas.
-func (c *connection) Schemas() (types.Schema, types.Schema, error) {
+func (c *connection) Schemas() (types.Type, types.Type, error) {
 
 	var response struct {
 		Results []struct {
@@ -229,7 +229,7 @@ func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 	}
 	err := c.call("GET", "/crm/v3/properties/contact", nil, 200, &response)
 	if err != nil {
-		return types.Schema{}, types.Schema{}, err
+		return types.Type{}, types.Type{}, err
 	}
 
 	properties := []types.Property{}
@@ -240,7 +240,7 @@ func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 		}
 		typ, err := propertyType(r.Name, r.Type)
 		if err != nil {
-			return types.Schema{}, types.Schema{}, err
+			return types.Type{}, types.Type{}, err
 		}
 		property := types.Property{
 			Name:        r.Name,
@@ -273,12 +273,12 @@ func (c *connection) Schemas() (types.Schema, types.Schema, error) {
 		properties = append(properties, property)
 	}
 
-	schema, err := types.SchemaOf(properties)
+	schema, err := types.ObjectOf(properties)
 	if err != nil {
-		return types.Schema{}, types.Schema{}, fmt.Errorf("cannot create schema from properties: %s", err)
+		return types.Type{}, types.Type{}, fmt.Errorf("cannot create schema from properties: %s", err)
 	}
 
-	return schema, types.Schema{}, nil
+	return schema, types.Type{}, nil
 }
 
 // ServeUI serves the connector's user interface.

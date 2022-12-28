@@ -32,157 +32,9 @@ var ErrCustomTypeNotExist = errors.New("custom type does not exist")
 
 var null = []byte("null")
 
-// MarshalJSON marshals schema into JSON.
-// It returns an error is schema is not valid.
-func (schema Schema) MarshalJSON() ([]byte, error) {
-	if !schema.Valid() {
-		return nil, errors.New("schema is not valid")
-	}
-	var b bytes.Buffer
-	b.WriteString(`{"properties":[`)
-	for i, p := range schema.properties {
-		if i > 0 {
-			b.WriteString(",")
-		}
-		b.WriteString(`{"name":"`)
-		b.WriteString(p.Name)
-		b.WriteByte('"')
-		if p.Aliases != nil {
-			b.WriteString(`,"aliases":[`)
-			for i, alias := range p.Aliases {
-				if i > 0 {
-					b.WriteByte(',')
-				}
-				b.WriteByte('"')
-				b.WriteString(alias)
-				b.WriteByte('"')
-			}
-			b.WriteByte(']')
-		}
-		if p.Label != "" {
-			b.WriteString(`,"label":`)
-			_ = marshalString(&b, p.Label)
-		}
-		if p.Description != "" {
-			b.WriteString(`,"description":`)
-			_ = marshalString(&b, p.Description)
-		}
-		switch p.Role {
-		case SourceRole:
-			b.WriteString(`,"role":"source"`)
-		case DestinationRole:
-			b.WriteString(`,"role":"destination"`)
-		}
-		b.WriteString(`,"type":`)
-		marshalType(&b, p.Type)
-		b.WriteByte('}')
-	}
-	b.WriteString(`]}`)
-	return b.Bytes(), nil
-}
-
-// ParseSchema parses the JSON-encoded data read from r and returns the decoded
-// schema.
-func ParseSchema(r io.Reader, resolve Resolver) (Schema, error) {
-	dec := json.NewDecoder(norm.NFC.Reader(r))
-	dec.UseNumber()
-	// Read delimiter '{'.
-	tok, err := dec.Token()
-	if err != nil {
-		if err == io.EOF {
-			err = errInvalidSchemaSyntax
-		}
-		return Schema{}, err
-	}
-	if tok != json.Delim('{') {
-		return Schema{}, errInvalidSchemaSyntax
-	}
-	// Read the "properties" key.
-	tok, err = dec.Token()
-	if err != nil {
-		return Schema{}, err
-	}
-	if tok != "properties" {
-		return Schema{}, errInvalidSchemaSyntax
-	}
-	// Read delimiter '['.
-	tok, err = dec.Token()
-	if err != nil {
-		return Schema{}, err
-	}
-	if tok != json.Delim('[') {
-		return Schema{}, errInvalidSchemaSyntax
-	}
-	exists := map[string]struct{}{}
-	var properties []Property
-	for {
-		// Read delimiter '{' or ']'.
-		tok, err := dec.Token()
-		if err != nil {
-			return Schema{}, err
-		}
-		d, ok := tok.(json.Delim)
-		if !ok || d != '{' && d != ']' {
-			return Schema{}, errInvalidSchemaSyntax
-		}
-		if d == ']' {
-			break
-		}
-		// Read the property keys.
-		property, role, err := unmarshalProperty(dec, resolve, true)
-		if err != nil {
-			return Schema{}, err
-		}
-		if _, ok := exists[property.Name]; ok {
-			return Schema{}, errors.New("repeated property name")
-		}
-		exists[property.Name] = struct{}{}
-		for _, alias := range property.Aliases {
-			if _, ok := exists[alias]; ok {
-				return Schema{}, errors.New("property alias already named")
-			}
-			exists[alias] = struct{}{}
-		}
-		properties = append(properties, Property{
-			Name:        property.Name,
-			Aliases:     property.Aliases,
-			Label:       property.Label,
-			Description: property.Description,
-			Role:        role,
-			Type:        property.Type,
-		})
-	}
-	// Read delimiter '}'.
-	tok, err = dec.Token()
-	if err != nil {
-		return Schema{}, err
-	}
-	if _, ok := tok.(json.Delim); !ok {
-		return Schema{}, errInvalidSchemaSyntax
-	}
-	if properties == nil {
-		return Schema{}, errors.New("invalid empty properties")
-	}
-	return Schema{properties}, nil
-}
-
-// UnmarshalJSON parses the JSON-encoded data and stores the result in the
-// schema pointed by s.
-func (s *Schema) UnmarshalJSON(data []byte) error {
-	if bytes.Equal(data, null) {
-		return nil
-	}
-	schema, err := ParseSchema(bytes.NewReader(norm.NFC.Bytes(data)), nil)
-	if err != nil {
-		return err
-	}
-	*s = schema
-	return nil
-}
-
-// MarshalType marshals t into JSON.
+// Marshal marshals t into JSON.
 // It returns an error is t is not valid.
-func MarshalType(t Type) ([]byte, error) {
+func Marshal(t Type) ([]byte, error) {
 	if !t.Valid() {
 		return nil, errors.New("type is not valid")
 	}
@@ -191,10 +43,10 @@ func MarshalType(t Type) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// ParseType parses the JSON-encoded data and returns the decoded type. For
-// custom types, it calls the resolve function, if not nil, to resolve the type
-// custom name to its type.
-func ParseType(data string, resolve Resolver) (Type, error) {
+// Parse parses the JSON-encoded data and returns the decoded type. For custom
+// types, it calls the resolve function, if not nil, to resolve the type custom
+// name to its type.
+func Parse(data string, resolve Resolver) (Type, error) {
 	dec := json.NewDecoder(strings.NewReader(norm.NFC.String(data)))
 	dec.UseNumber()
 	t, err := unmarshalType(dec, resolve)
@@ -366,7 +218,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 		marshalType(b, t.vl.(Type))
 	case PtObject:
 		b.WriteString(`,"properties":[`)
-		properties := t.vl.([]ObjectProperty)
+		properties := t.vl.([]Property)
 		for i, p := range properties {
 			if i > 0 {
 				b.WriteString(",")
@@ -465,7 +317,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	var itemType Type
 	var minItems, maxItems = 0, MaxItems
 	var uniqueItems bool
-	var properties []ObjectProperty
+	var properties []Property
 	var valueType Type
 
 	var ok bool
@@ -1058,9 +910,9 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 // For custom types, it calls the resolve function, if not nil, to resolve the
 // type custom name to its type. If inSchema is true, it unmarshals a schema
 // property and then also returns its role.
-func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (ObjectProperty, Role, error) {
+func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Property, Role, error) {
 
-	var p ObjectProperty
+	var p Property
 	var role Role
 
 	// Read property keys and values.
@@ -1069,7 +921,7 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Obje
 		// Read a key or delimiter '}'.
 		tok, err := dec.Token()
 		if err != nil {
-			return ObjectProperty{}, 0, err
+			return Property{}, 0, err
 		}
 		if _, ok := tok.(json.Delim); ok {
 			break
@@ -1078,11 +930,11 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Obje
 
 		if key == "type" {
 			if p.Type.Valid() {
-				return ObjectProperty{}, 0, errors.New("repeated 'type' key")
+				return Property{}, 0, errors.New("repeated 'type' key")
 			}
 			p.Type, err = unmarshalType(dec, resolve)
 			if err != nil {
-				return ObjectProperty{}, 0, err
+				return Property{}, 0, err
 			}
 			continue
 		}
@@ -1090,7 +942,7 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Obje
 		// Read the value.
 		tok, err = dec.Token()
 		if err != nil {
-			return ObjectProperty{}, 0, err
+			return Property{}, 0, err
 		}
 
 		var ok bool
@@ -1099,74 +951,74 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Obje
 		switch key {
 		case "name":
 			if p.Name != "" {
-				return ObjectProperty{}, 0, errors.New("repeated 'name' key")
+				return Property{}, 0, errors.New("repeated 'name' key")
 			}
 			p.Name, ok = tok.(string)
 			if !ok {
-				return ObjectProperty{}, 0, errors.New("unexpected value for property name")
+				return Property{}, 0, errors.New("unexpected value for property name")
 			}
 			if p.Name == "" {
-				return ObjectProperty{}, 0, errors.New("property name is empty")
+				return Property{}, 0, errors.New("property name is empty")
 			}
 			if !IsValidPropertyName(p.Name) {
-				return ObjectProperty{}, 0, errors.New("invalid property name")
+				return Property{}, 0, errors.New("invalid property name")
 			}
 		case "aliases":
 			if p.Aliases != nil {
-				return ObjectProperty{}, 0, errors.New("repeated 'aliases' key")
+				return Property{}, 0, errors.New("repeated 'aliases' key")
 			}
 			p.Aliases = []string{}
 			if tok != json.Delim('[') {
-				return ObjectProperty{}, 0, errors.New("invalid aliases")
+				return Property{}, 0, errors.New("invalid aliases")
 			}
 		Aliases:
 			for {
 				tok, err = dec.Token()
 				if err != nil {
-					return ObjectProperty{}, 0, err
+					return Property{}, 0, err
 				}
 				switch alias := tok.(type) {
 				case string:
 					if alias == "" {
-						return ObjectProperty{}, 0, errors.New("property alias is empty")
+						return Property{}, 0, errors.New("property alias is empty")
 					}
 					if !IsValidPropertyName(alias) {
-						return ObjectProperty{}, 0, errors.New("invalid property alias")
+						return Property{}, 0, errors.New("invalid property alias")
 					}
 					p.Aliases = append(p.Aliases, alias)
 				case json.Delim:
 					break Aliases
 				default:
-					return ObjectProperty{}, 0, errors.New("invalid value in aliases")
+					return Property{}, 0, errors.New("invalid value in aliases")
 				}
 			}
 			if len(p.Aliases) == 0 {
-				return ObjectProperty{}, 0, errors.New("invalid empty aliases")
+				return Property{}, 0, errors.New("invalid empty aliases")
 			}
 		case "label":
 			if hasLabel {
-				return ObjectProperty{}, 0, errors.New("repeated 'label' key")
+				return Property{}, 0, errors.New("repeated 'label' key")
 			}
 			p.Label, ok = tok.(string)
 			if !ok {
-				return ObjectProperty{}, 0, errors.New("unexpected value for property label")
+				return Property{}, 0, errors.New("unexpected value for property label")
 			}
 			hasLabel = true
 		case "description":
 			if hasDestination {
-				return ObjectProperty{}, 0, errors.New("repeated 'description' key")
+				return Property{}, 0, errors.New("repeated 'description' key")
 			}
 			p.Description, ok = tok.(string)
 			if !ok {
-				return ObjectProperty{}, 0, errors.New("unexpected value for property description")
+				return Property{}, 0, errors.New("unexpected value for property description")
 			}
 			hasDestination = true
 		case "role":
 			if !inSchema {
-				return ObjectProperty{}, 0, errors.New("unknown property 'role'")
+				return Property{}, 0, errors.New("unknown property 'role'")
 			}
 			if hasRole {
-				return ObjectProperty{}, 0, errors.New("repeated 'role' key")
+				return Property{}, 0, errors.New("repeated 'role' key")
 			}
 			switch r, _ := tok.(string); r {
 			case "both":
@@ -1175,20 +1027,20 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Obje
 			case "destination":
 				role = DestinationRole
 			default:
-				return ObjectProperty{}, 0, errors.New("unexpected value for property role")
+				return Property{}, 0, errors.New("unexpected value for property role")
 			}
 			hasRole = true
 		default:
-			return ObjectProperty{}, 0, fmt.Errorf("unknown property '%s'", key)
+			return Property{}, 0, fmt.Errorf("unknown property '%s'", key)
 		}
 
 	}
 
 	if p.Name == "" {
-		return ObjectProperty{}, 0, errors.New("missing property name")
+		return Property{}, 0, errors.New("missing property name")
 	}
 	if !p.Type.Valid() {
-		return ObjectProperty{}, 0, errors.New("missing property type")
+		return Property{}, 0, errors.New("missing property type")
 	}
 
 	return p, role, nil

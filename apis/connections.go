@@ -80,7 +80,7 @@ type Connection struct {
 	identityColumn   string
 	timestampColumn  string
 	settings         []byte
-	schema           types.Schema
+	schema           types.Type
 	usersQuery       string
 	importInProgress *ImportInProgress
 	mappings         []*Mapping
@@ -109,7 +109,7 @@ type Mapping struct {
 	// of the Golden Record.
 	//
 	// In case of "one to one" mappings, this schema contains just one property.
-	in types.Schema
+	in types.Type
 
 	// sourceCode is the source code of the transformation function, which
 	// should be something like:
@@ -126,7 +126,7 @@ type Mapping struct {
 	// connection is a source then the properties are the properties of the
 	// Golden Record, otherwise, if it is a destination, it contains the
 	// properties of the connection.
-	out types.Schema
+	out types.Type
 }
 
 // A ConnectionInfo describes a connection as returned by Get and List.
@@ -146,9 +146,9 @@ type ConnectionInfo struct {
 // MappingInfo describes a mapping as returned by Get and List.
 type MappingInfo struct {
 	ID         int
-	In         types.Schema // just one property if it refers to a "one to one" mapping.
-	SourceCode string       // empty string if it refers to a "one to one" mapping.
-	Out        types.Schema // just one property if it refers to a "one to one" mapping.
+	In         types.Type // just one property if it refers to a "one to one" mapping.
+	SourceCode string     // empty string if it refers to a "one to one" mapping.
+	Out        types.Type // just one property if it refers to a "one to one" mapping.
 }
 
 const (
@@ -1293,19 +1293,19 @@ func (this *Connections) RevokeKey(id int, key string) error {
 // have a schema, it returns an invalid schema.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
-func (this *Connections) Schema(id int) (types.Schema, error) {
+func (this *Connections) Schema(id int) (types.Type, error) {
 	if id < 1 || id > maxInt32 {
-		return types.Schema{}, errors.BadRequest("connection identifier %d is not valid", id)
+		return types.Type{}, errors.BadRequest("connection identifier %d is not valid", id)
 	}
 	c, ok := this.state.Get(id)
 	if !ok {
-		return types.Schema{}, errors.NotFound("connection %d does not exist", id)
+		return types.Type{}, errors.NotFound("connection %d does not exist", id)
 	}
 	if c.connector.typ == StorageType {
-		return types.Schema{}, errors.BadRequest("connection %d has no properties, it's a storage", id)
+		return types.Type{}, errors.BadRequest("connection %d has no properties, it's a storage", id)
 	}
 	if c.connector.typ == EventStreamType {
-		return types.Schema{}, errors.BadRequest("connection %d has no properties, it's a stream", id)
+		return types.Type{}, errors.BadRequest("connection %d has no properties, it's a stream", id)
 	}
 	return c.schema, nil
 }
@@ -1687,7 +1687,7 @@ type MappingToCreate struct {
 	// of the Golden Record.
 	//
 	// In case of "one to one" mappings, this schema contains just one property.
-	In types.Schema
+	In types.Type
 
 	// SourceCode is the source code of the transformation function, which
 	// should be something like:
@@ -1704,7 +1704,7 @@ type MappingToCreate struct {
 	// connection is a source then the properties are the properties of the
 	// Golden Record, otherwise, if it is a destination, it contains the
 	// properties of the connection.
-	Out types.Schema
+	Out types.Type
 }
 
 // SetMappings sets the mappings of the connection with identifier id.
@@ -1944,7 +1944,7 @@ func (this *Connections) reloadSchema(id int) error {
 
 	cRole := _connector.Role(c.role)
 
-	var schema types.Schema
+	var schema types.Type
 
 	switch c.connector.typ {
 	case AppType:
@@ -2012,10 +2012,7 @@ func (this *Connections) reloadSchema(id int) error {
 			properties[i].Name = col.Name
 			properties[i].Type = col.Type
 		}
-		schema, err = types.SchemaOf(properties)
-		if err != nil {
-			return fmt.Errorf("connection %d returned an invalid column: %s", id, err)
-		}
+		schema = types.Object(properties)
 
 	case FileType:
 
@@ -2064,10 +2061,7 @@ func (this *Connections) reloadSchema(id int) error {
 			properties[i].Name = col.Name
 			properties[i].Type = col.Type
 		}
-		schema, err = types.SchemaOf(properties)
-		if err != nil {
-			return fmt.Errorf("connection %d returned an invalid column: %s", id, err)
-		}
+		schema = types.Object(properties)
 
 	}
 
@@ -2100,11 +2094,11 @@ func (this *Connections) reloadSchema(id int) error {
 // the connection with identifier id.
 //
 // If the connection does not exist it returns a ConnectionNotFoundError error.
-func (this *Connections) userSchema(id int) (types.Schema, []_connector.PropertyPath, error) {
+func (this *Connections) userSchema(id int) (types.Type, []_connector.PropertyPath, error) {
 
 	c, ok := this.state.Get(id)
 	if !ok {
-		return types.Schema{}, nil, errors.New("connection does not exist")
+		return types.Type{}, nil, errors.New("connection does not exist")
 	}
 
 	// Read the paths of the mapped properties from the transformations of this
@@ -2112,7 +2106,7 @@ func (this *Connections) userSchema(id int) (types.Schema, []_connector.Property
 	var paths []_connector.PropertyPath
 	ts, err := this.Mappings(id)
 	if err != nil {
-		return types.Schema{}, nil, err
+		return types.Type{}, nil, err
 	}
 	for _, t := range ts {
 		for _, in := range t.in.PropertiesNames() {
@@ -2133,9 +2127,9 @@ func (this *Connections) userSchema(id int) (types.Schema, []_connector.Property
 	}
 	schema := c.schema
 	if mappedProperties != nil {
-		schema, err = types.SchemaOf(mappedProperties)
+		schema = types.Object(mappedProperties)
 		if err != nil {
-			return types.Schema{}, nil, fmt.Errorf("cannot create a new schema from the schema of connection %d: %s", id, err)
+			return types.Type{}, nil, fmt.Errorf("cannot create a new schema from the schema of connection %d: %s", id, err)
 		}
 	}
 

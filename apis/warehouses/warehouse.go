@@ -73,7 +73,7 @@ type Warehouse interface {
 	TableNames(ctx context.Context) ([]string, error)
 
 	// TableSchema returns the schema of the table called name.
-	TableSchema(ctx context.Context, name string) (types.Schema, error)
+	TableSchema(ctx context.Context, name string) (types.Type, error)
 
 	// Type returns the type of the warehouse.
 	Type() Type
@@ -91,7 +91,7 @@ type Warehouse interface {
 	//
 	// If a query to the warehouse fails, it returns an Error value.
 	// If an argument is not valid, it panics.
-	Users(ctx context.Context, schema types.Type, order types.ObjectProperty, first, limit int) ([][]any, error)
+	Users(ctx context.Context, schema types.Type, order types.Property, first, limit int) ([][]any, error)
 
 	// Validate validates the settings and returns an error if they are not valid.
 	Validate() error

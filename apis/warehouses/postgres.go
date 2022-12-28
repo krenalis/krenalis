@@ -221,13 +221,13 @@ func (warehouse *postgreSQL) TableNames(ctx context.Context) ([]string, error) {
 }
 
 // TableSchema returns the schema of the table called name.
-func (warehouse *postgreSQL) TableSchema(ctx context.Context, name string) (types.Schema, error) {
+func (warehouse *postgreSQL) TableSchema(ctx context.Context, name string) (types.Type, error) {
 	if !types.IsValidPropertyName(name) {
 		panic("table name is not valid")
 	}
 	db, err := warehouse.connection()
 	if err != nil {
-		return types.Schema{}, err
+		return types.Type{}, err
 	}
 	query := "SELECT column_name, data_type, character_maximum_length, numeric_precision," +
 		" numeric_precision_radix, numeric_scale\n" +
@@ -236,23 +236,23 @@ func (warehouse *postgreSQL) TableSchema(ctx context.Context, name string) (type
 		"ORDER BY ordinal_position"
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
-		return types.Schema{}, wrapError(err)
+		return types.Type{}, wrapError(err)
 	}
 	var properties []types.Property
 	for rows.Next() {
 		var name, dataType, charLength, precision, precisionRadix, scale sql.NullString
 		if err := rows.Scan(&name, &dataType, &charLength, &precision, &precisionRadix, &scale); err != nil {
 			_ = rows.Close()
-			return types.Schema{}, wrapError(err)
+			return types.Type{}, wrapError(err)
 		}
 		if !name.Valid {
-			return types.Schema{}, wrapError(fmt.Errorf("data warehouse has returned NULL as column name"))
+			return types.Type{}, wrapError(fmt.Errorf("data warehouse has returned NULL as column name"))
 		}
 		if !dataType.Valid {
-			return types.Schema{}, wrapError(fmt.Errorf("data warehouse has returned NULL as column data type"))
+			return types.Type{}, wrapError(fmt.Errorf("data warehouse has returned NULL as column data type"))
 		}
 		if !types.IsValidPropertyName(name.String) {
-			return types.Schema{}, fmt.Errorf("column name %q is not supported", name.String)
+			return types.Type{}, fmt.Errorf("column name %q is not supported", name.String)
 		}
 		property := types.Property{Name: name.String}
 		switch dataType.String {
@@ -265,39 +265,39 @@ func (warehouse *postgreSQL) TableSchema(ctx context.Context, name string) (type
 		case "numeric":
 			// Parse precision radix.
 			if !precisionRadix.Valid {
-				return types.Schema{}, wrapError(fmt.Errorf(
+				return types.Type{}, wrapError(fmt.Errorf(
 					"data warehouse has returned NULL as precision radix for column %s", name.String))
 			}
 			radix, _ := strconv.Atoi(precisionRadix.String)
 			if radix != 2 && radix != 10 {
-				return types.Schema{}, wrapError(fmt.Errorf(
+				return types.Type{}, wrapError(fmt.Errorf(
 					"data warehouse has returned an invalid precision radix for column %s", name.String))
 			}
 			// Parse precision.
 			if !precision.Valid {
-				return types.Schema{}, wrapError(fmt.Errorf(
+				return types.Type{}, wrapError(fmt.Errorf(
 					"data warehouse has returned NULL as precision for column %s", name.String))
 			}
 			p, err := strconv.ParseInt(precision.String, radix, 64)
 			if err != nil || p < 1 {
-				return types.Schema{}, wrapError(fmt.Errorf(
+				return types.Type{}, wrapError(fmt.Errorf(
 					"data warehouse has returned an invalid precision for column %s: %s", name.String, precision.String))
 			}
 			if p > types.MaxDecimalPrecision {
-				return types.Schema{}, fmt.Errorf("numeric precision of column %s is not supported: %d", name.String, p)
+				return types.Type{}, fmt.Errorf("numeric precision of column %s is not supported: %d", name.String, p)
 			}
 			// Parse scale.
 			if !scale.Valid {
-				return types.Schema{}, wrapError(fmt.Errorf(
+				return types.Type{}, wrapError(fmt.Errorf(
 					"data warehouse has returned NULL as scale for column %s", name.String))
 			}
 			s, err := strconv.ParseInt(scale.String, radix, 64)
 			if err != nil || s < 0 || s > p {
-				return types.Schema{}, wrapError(fmt.Errorf(
+				return types.Type{}, wrapError(fmt.Errorf(
 					"data warehouse has returned an invalid scale for column %s: %s", name.String, scale.String))
 			}
 			if s > types.MaxDecimalScale {
-				return types.Schema{}, fmt.Errorf("numeric scale of column %s is not supported: %d", name.String, s)
+				return types.Type{}, fmt.Errorf("numeric scale of column %s is not supported: %d", name.String, s)
 			}
 			property.Type = types.Decimal(int(p), int(s))
 		case "real":
@@ -308,7 +308,7 @@ func (warehouse *postgreSQL) TableSchema(ctx context.Context, name string) (type
 			if charLength.Valid {
 				chars, _ := strconv.Atoi(charLength.String)
 				if chars < 1 {
-					return types.Schema{}, wrapError(fmt.Errorf(
+					return types.Type{}, wrapError(fmt.Errorf(
 						"data warehouse has returned an invalid character maximum length for column %s", name.String))
 				}
 				property.Type = types.Text(types.Chars(chars))
@@ -335,12 +335,9 @@ func (warehouse *postgreSQL) TableSchema(ctx context.Context, name string) (type
 		properties = append(properties, property)
 	}
 	if err := rows.Err(); err != nil {
-		return types.Schema{}, wrapError(err)
+		return types.Type{}, wrapError(err)
 	}
-	schema, err := types.SchemaOf(properties)
-	if err != nil {
-		return types.Schema{}, wrapError(fmt.Errorf("cannot map data warehouse: %s", err))
-	}
+	schema := types.Object(properties)
 	return schema, nil
 }
 
@@ -350,7 +347,7 @@ func (warehouse *postgreSQL) TableSchema(ctx context.Context, name string) (type
 //
 // If a query to the warehouse fails, it returns an Error value.
 // If an argument is not valid, it panics.
-func (warehouse *postgreSQL) Users(ctx context.Context, schema types.Type, order types.ObjectProperty, first, limit int) ([][]any, error) {
+func (warehouse *postgreSQL) Users(ctx context.Context, schema types.Type, order types.Property, first, limit int) ([][]any, error) {
 
 	db, err := warehouse.connection()
 	if err != nil {
