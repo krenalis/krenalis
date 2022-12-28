@@ -97,7 +97,6 @@ func (s *stateKeeper) loadState() error {
 					workspace.warehouse = warehouses.OpenPostgres(&settings)
 				}
 				workspace.Connections = newConnections(workspace, &connectionsState{ids: map[int]*Connection{}})
-				workspace.EventTypes = newEventTypes(workspace, &eventTypesState{ids: map[int]*EventType{}})
 				workspace.Types = newTypes(workspace, &typesState{names: map[string]*Type{}})
 				workspace.EventListeners = &EventListeners{workspace}
 				account.Workspaces.state.ids[id] = workspace
@@ -212,37 +211,13 @@ func (s *stateKeeper) loadState() error {
 		return err
 	}
 
-	// Read all event types.
-	err = s.db.QueryScan("SELECT workspace, id, name, description, schema FROM event_types",
-		func(rows *postgres.Rows) error {
-			for rows.Next() {
-				t := EventType{}
-				var workspaceID int
-				if err := rows.Scan(&workspaceID, &t.id, &t.name, &t.description, &t.schemaSource); err != nil {
-					return err
-				}
-				if t.schemaSource != "" {
-					t.schema, err = types.Parse(t.schemaSource, nil)
-					if err != nil {
-						// TODO(marco) disable the type instead of returning an error?
-						return err
-					}
-				}
-				workspaces[workspaceID].EventTypes.state.ids[t.id] = &t
-			}
-			return nil
-		})
-	if err != nil {
-		return err
-	}
-
 	// Read all types.
-	err = s.db.QueryScan("SELECT workspace, name, description, definition FROM types",
+	err = s.db.QueryScan("SELECT workspace, name, description, definition, coalesce(event, 0) FROM types",
 		func(rows *postgres.Rows) error {
 			for rows.Next() {
 				t := Type{}
 				var workspaceID int
-				if err := rows.Scan(&workspaceID, &t.name, &t.description, &t.definition); err != nil {
+				if err := rows.Scan(&workspaceID, &t.name, &t.description, &t.definition, &t.event); err != nil {
 					return err
 				}
 				if t.definition != "" {

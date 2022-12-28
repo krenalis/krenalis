@@ -52,7 +52,6 @@ type Workspace struct {
 	chDB           chDriver.Conn
 	warehouse      warehouses.Warehouse
 	Connections    *Connections
-	EventTypes     *EventTypes
 	Types          *Types
 	EventListeners *EventListeners
 	id             int

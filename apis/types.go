@@ -9,6 +9,8 @@ package apis
 import (
 	"database/sql"
 	"encoding/json"
+	"math"
+	"strings"
 	"unicode/utf8"
 
 	"chichi/apis/errors"
@@ -16,7 +18,12 @@ import (
 	"chichi/apis/types"
 )
 
-var AlreadyExist errors.Code = "AlreadyExist"
+const maxReservedEventTypeID = 10
+
+var (
+	AlreadyExist  errors.Code = "AlreadyExist"
+	TooManyEvents errors.Code = "TooManyEvents"
+)
 
 type Types struct {
 	*Workspace
@@ -33,6 +40,7 @@ type Type struct {
 	name        string
 	description string
 	definition  string
+	event       uint8
 	typ         types.Type
 }
 
@@ -80,8 +88,32 @@ func (this *Types) Add(name, description, definition string) error {
 		if err != nil {
 			return errors.Unprocessable(InvalidDefinition, "definition is not valid: %w", err)
 		}
-		_, err = tx.Exec("INSERT INTO types (workspace, name, description, definition) VALUES ($1, $2, $3, $4)",
-			n.Workspace, n.Name, n.Description, definition)
+		if strings.HasSuffix(name, "_event") {
+			n.Event = maxReservedEventTypeID + 1
+			err := this.db.QueryScan(
+				"SELECT event FROM types WHERE workspace = $1 AND event IS NOT NULL ORDER BY event", n.Workspace,
+				func(rows *postgres.Rows) error {
+					var err error
+					var event uint8
+					for rows.Next() {
+						if err = rows.Scan(&event); err != nil {
+							return err
+						}
+						if n.Event == event {
+							n.Event++
+						}
+					}
+					return nil
+				})
+			if err != nil {
+				return err
+			}
+			if n.Event > math.MaxUint8 {
+				return errors.Unprocessable(TooManyEvents, "there are already %d events", math.MaxUint8)
+			}
+		}
+		_, err = tx.Exec("INSERT INTO types (workspace, name, description, definition, event)"+
+			" VALUES ($1, $2, $3, $4, NULLIF($5, 0))", n.Workspace, n.Name, n.Description, definition, n.Event)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "types_workspace_fkey" {

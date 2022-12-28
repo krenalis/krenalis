@@ -177,33 +177,6 @@ func (state *connectionsState) List() []*Connection {
 	return connections
 }
 
-// eventTypesState contains the state of a single workspace's event types.
-type eventTypesState struct {
-	sync.Mutex
-	ids map[int]*EventType
-}
-
-// Get returns the event type with identifier id. The boolean return value
-// reports whether the event type exists.
-func (state *eventTypesState) Get(id int) (*EventType, bool) {
-	state.Lock()
-	t, ok := state.ids[id]
-	state.Unlock()
-	return t, ok
-}
-
-// List returns all event types.
-func (state *eventTypesState) List() []*EventType {
-	state.Lock()
-	eventTypes := make([]*EventType, len(state.ids))
-	i := 0
-	for _, t := range state.ids {
-		eventTypes[i] = t
-	}
-	state.Unlock()
-	return eventTypes
-}
-
 // typesState contains the state of a single workspace's types.
 type typesState struct {
 	sync.Mutex

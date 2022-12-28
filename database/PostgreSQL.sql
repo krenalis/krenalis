@@ -149,16 +149,6 @@ CREATE TABLE event_stream_queue (
     event bytea NOT NULL
 );
 
-CREATE TABLE event_types (
-    workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
-    id smallint NOT NULL CHECK(id BETWEEN 1 AND 255),
-    name varchar(120) NOT NULL UNIQUE,
-    description varchar(400) NOT NULL DEFAULT '',
-    schema text NOT NULL DEFAULT '',
-    deleted bool NOT NULL DEFAULT false,
-    PRIMARY KEY (workspace, id)
-);
-
 CREATE TABLE properties (
     id SERIAL,
     code char(10) NOT NULL UNIQUE,
@@ -224,11 +214,12 @@ CREATE TABLE types (
     name varchar(120) NOT NULL,
     description varchar(400) NOT NULL DEFAULT '',
     definition text NOT NULL,
+    event smallint CHECK(id BETWEEN 1 AND 255),
     PRIMARY KEY (workspace, name)
 );
 
 INSERT INTO types (workspace, name, definition) VALUES
-                                                    (1, 'user', '{ "name": "Object", "properties": [
+    (1, 'user', '{ "name": "Object", "properties": [
     {
         "name" : "FirstName",
         "label": "First name",
