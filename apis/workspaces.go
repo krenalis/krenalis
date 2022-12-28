@@ -14,8 +14,6 @@ import (
 	"fmt"
 	"log"
 	"sort"
-	"strings"
-	"unicode/utf8"
 
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
@@ -59,30 +57,12 @@ type Workspace struct {
 	EventListeners *EventListeners
 	id             int
 	account        *Account
-	schema         struct {
-		user  types.Schema
-		group types.Schema
-	}
-	schemaSources struct {
-		user  string
-		group string
-	}
-	resources *resourcesState
+	resources      *resourcesState
 }
 
 // A WorkspaceInfo describes a workspace as returned by Get and List.
 type WorkspaceInfo struct {
 	ID int
-
-	// Schema and SchemaSources are only returned by the Get method.
-	Schema struct {
-		User  types.Schema
-		Group types.Schema
-	}
-	SchemaSources struct {
-		User  string
-		Group string
-	}
 }
 
 // WarehouseSettings is the interface implemented by data warehouse settings.
@@ -116,7 +96,8 @@ func (s *PostgreSQLSettings) warehouseType() warehouses.Type {
 //   - InvalidSettings, if the settings are not valid.
 //   - ConnectionFailed, if the connection fails.
 func (ws *Workspace) ConnectWarehouse(settings WarehouseSettings) error {
-	if !ws.schema.user.Valid() {
+	userSchema, ok := ws.DataTypes.state.Get("user")
+	if !ok {
 		return errors.Unprocessable(NoSchema, "workspace %d does not have the user schema", ws.id)
 	}
 	if ws.warehouse != nil {
@@ -172,7 +153,7 @@ func (ws *Workspace) ConnectWarehouse(settings WarehouseSettings) error {
 			}
 			return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.id)
 		}
-		err = warehouse.CreateTables(context.Background(), ws.schema.user)
+		err = warehouse.CreateTables(context.Background(), userSchema.schema)
 		if err != nil {
 			return err
 		}
@@ -216,8 +197,12 @@ func (ws *Workspace) DisconnectWarehouse(deleteTables bool) error {
 				return err
 			}
 			warehouse := warehouses.OpenPostgres(&s)
+			var userSchema types.Schema
+			if dataType, ok := ws.DataTypes.state.Get("user"); ok {
+				userSchema = dataType.schema
+			}
 			// TODO(marco): consider whether there is a better solution than removing the tables at this time.
-			err = warehouse.DropTables(context.Background(), ws.schema.user)
+			err = warehouse.DropTables(context.Background(), userSchema)
 			if err != nil {
 				return err
 			}
@@ -242,10 +227,6 @@ func (this *Workspaces) Get(id int) (*WorkspaceInfo, error) {
 		return nil, errors.NotFound("workspace %d does not exist", id)
 	}
 	info := WorkspaceInfo{ID: ws.id}
-	info.Schema.User = ws.schema.user
-	info.Schema.Group = ws.schema.group
-	info.SchemaSources.User = ws.schemaSources.user
-	info.SchemaSources.Group = ws.schemaSources.group
 	return &info, nil
 }
 
@@ -262,31 +243,7 @@ func (this *Workspaces) As(id int) (*Workspace, error) {
 // Info returns a WorkspaceInfo describing the workspace.
 func (ws *Workspace) Info() *WorkspaceInfo {
 	info := WorkspaceInfo{ID: ws.id}
-	info.Schema.User = ws.schema.user
-	info.Schema.Group = ws.schema.group
-	info.SchemaSources.User = ws.schemaSources.user
-	info.SchemaSources.Group = ws.schemaSources.group
 	return &info
-}
-
-// SetUserSchema sets the user schema. schema cannot be longer than 16,777,215
-// runes.
-//
-// If the workspace does not exist, it returns an errors.NotFoundError error.
-// If schema is not valid, it returns an errors.UnprocessableError error with
-// code InvalidSchema.
-func (ws *Workspace) SetUserSchema(schema string) error {
-	return ws.setSchema("user", schema)
-}
-
-// SetGroupSchema sets the group schema. schema cannot be longer than
-// 16,777,215 runes.
-//
-// If the workspace does not exist, it returns an errors.NotFoundError error.
-// If schema is not valid, it returns an errors.UnprocessableError error with
-// code InvalidSchema.
-func (ws *Workspace) SetGroupSchema(schema string) error {
-	return ws.setSchema("group", schema)
 }
 
 // SetWarehouse sets the settings used to connect to the data warehouse.
@@ -359,44 +316,6 @@ func (ws *Workspace) SetWarehouse(settings WarehouseSettings) error {
 	return err
 }
 
-// setSchema is called by SetUserSchema and SetGroupSchema to set a schema.
-func (ws *Workspace) setSchema(name string, schema string) error {
-	if utf8.RuneCountInString(schema) > rawSchemaMaxSize {
-		return fmt.Errorf("schema is longer that 16,777,215 runes")
-	}
-	_, err := types.ParseSchema(strings.NewReader(schema), nil)
-	if err != nil {
-		return errors.Unprocessable(InvalidSchema, "schema is not valid: %w", err)
-	}
-	var n any
-	var table string
-	switch name {
-	case "user":
-		n = setWorkspaceUserSchemaNotification{
-			Workspace: ws.id,
-			Schema:    schema,
-		}
-		table = "user_schema"
-	case "group":
-		n = setWorkspaceGroupSchemaNotification{
-			Workspace: ws.id,
-			Schema:    schema,
-		}
-		table = "group_schema"
-	}
-	err = ws.db.Transaction(func(tx *postgres.Tx) error {
-		_, err = tx.Exec("UPDATE workspaces SET "+table+" = $1 WHERE id = $2", schema, ws.id)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				err = errors.NotFound("workspace %d does not exist", ws.id)
-			}
-			return err
-		}
-		return tx.Notify(n)
-	})
-	return err
-}
-
 // Users returns the user schema and the users, with only given properties, in
 // range [first,first+limit] with first >= 0 and 0 < limit <= 1000. properties
 // cannot be empty.
@@ -413,7 +332,10 @@ func (ws *Workspace) Users(properties []string, order string, first, limit int) 
 	}
 
 	// Read the schema.
-	schemaProperties := ws.schema.user.Properties()
+	var schemaProperties []types.Property
+	if dataType, ok := ws.DataTypes.state.Get("user"); ok {
+		schemaProperties = dataType.schema.Properties()
+	}
 	propertyByName := map[string]types.Property{}
 	for _, p := range schemaProperties {
 		propertyByName[p.Name] = p
@@ -439,8 +361,7 @@ func (ws *Workspace) Users(properties []string, order string, first, limit int) 
 		if !types.IsValidPropertyName(order) {
 			return types.Schema{}, nil, errors.BadRequest("order %q is not a valid property name", order)
 		}
-		var ok bool
-		orderProperty, ok = ws.schema.user.Property(order)
+		orderProperty, ok := propertyByName[order]
 		if !ok {
 			return types.Schema{}, nil, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
 		}

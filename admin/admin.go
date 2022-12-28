@@ -122,17 +122,17 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Handle the "/user-schema-properties" endpoint.
 	if strings.HasPrefix(rpath, "/user-schema") {
-		info := workspace.Info()
+		dataType, _ := workspace.DataTypes.Get("user")
 		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(info.Schema.User)
+		_ = json.NewEncoder(w).Encode(dataType.Schema)
 		return
 	}
 
 	// Handle the "/group-schema-properties" endpoint.
 	if strings.HasPrefix(rpath, "/group-schema-properties") {
-		info := workspace.Info()
+		dataType, _ := workspace.DataTypes.Get("group")
 		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(info.Schema.Group.PropertiesNames())
+		_ = json.NewEncoder(w).Encode(dataType.Schema.PropertiesNames())
 		return
 	}
 
@@ -189,14 +189,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			info := workspace.Info()
-			var schema string
-			switch request.SchemaName {
-			case "user":
-				schema = info.SchemaSources.User
-			case "group":
-				schema = info.SchemaSources.Group
-			}
+			schema, _ := workspace.DataTypes.Get(request.SchemaName)
 			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(schema)
 
@@ -210,12 +203,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			switch request.SchemaName {
-			case "user":
-				err = workspace.SetUserSchema(request.Schema)
-			case "group":
-				err = workspace.SetGroupSchema(request.Schema)
-			}
+			err = workspace.DataTypes.SetSchema(request.SchemaName, request.Schema)
 			if err != nil {
 				if err, ok := err.(errors.ResponseWriterTo); ok {
 					_ = err.WriteTo(w)

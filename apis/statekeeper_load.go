@@ -75,14 +75,13 @@ func (s *stateKeeper) loadState() error {
 
 	// Read all workspaces.
 	workspaces := map[int]*Workspace{}
-	err = s.db.QueryScan("SELECT id, account, user_schema, group_schema, warehouse_type, warehouse_settings FROM workspaces",
+	err = s.db.QueryScan("SELECT id, account,  warehouse_type, warehouse_settings FROM workspaces",
 		func(rows *postgres.Rows) error {
 			var id, accountID int
-			var userSchema, groupSchema string
 			var warehouseType *warehouses.Type
 			var warehouseSettings []byte
 			for rows.Next() {
-				if err := rows.Scan(&id, &accountID, &userSchema, &groupSchema, &warehouseType, &warehouseSettings); err != nil {
+				if err := rows.Scan(&id, &accountID, &warehouseType, &warehouseSettings); err != nil {
 					return err
 				}
 				account := accounts[accountID]
@@ -93,20 +92,6 @@ func (s *stateKeeper) loadState() error {
 					account:   account,
 					resources: &resourcesState{ids: map[int]*Resource{}},
 				}
-				if userSchema != "" {
-					workspace.schema.user, err = types.ParseSchema(strings.NewReader(userSchema), nil)
-					if err != nil {
-						return err
-					}
-				}
-				if groupSchema != "" {
-					workspace.schema.group, err = types.ParseSchema(strings.NewReader(groupSchema), nil)
-					if err != nil {
-						return err
-					}
-				}
-				workspace.schemaSources.user = userSchema
-				workspace.schemaSources.group = groupSchema
 				if warehouseType != nil {
 					var settings warehouses.PostgreSQLSettings
 					_ = json.Unmarshal(warehouseSettings, &settings)

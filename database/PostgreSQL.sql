@@ -53,53 +53,13 @@ CREATE TABLE workspaces (
     id SERIAL,
     account integer NOT NULL,
     name varchar(100) NOT NULL,
-    user_schema varchar(65535) NOT NULL,
-    group_schema varchar(65535) NOT NULL,
     warehouse_type warehouse_type DEFAULT NULL,
     warehouse_settings varchar(65535) NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
 
-INSERT INTO workspaces (id, account, name, user_schema, group_schema, warehouse_type, warehouse_settings)
-VALUES (1, 1, 'Workspace', '{ "properties": [
-    {
-        "name" : "FirstName",
-        "label": "First name",
-        "description": "First name of the user",
-        "type": {
-            "name": "Text",
-            "charLen": 300
-        }
-    },
-    {
-        "name" : "LastName",
-        "label": "Last name",
-        "description": "Last name of the user",
-        "type": {
-            "name": "Text",
-            "charLen": 300
-        }
-    },
-    {
-        "name" : "Email",
-        "label": "Email address",
-        "description": "Email address of the user",
-        "type": {
-            "name": "Text",
-            "charLen": 300
-        }
-    }
-] }', '{ "properties": [
-    {
-        "name" : "Name",
-        "label": "Group name",
-        "description": "Name of the group",
-        "type": {
-            "name": "Text",
-            "charLen": 300
-        }
-    }
-] }', 'PostgreSQL', '{"Host":"127.0.0.1","Port":5432,"Username":"chichi","Password":"","Database":"warehouse"}');
+INSERT INTO workspaces (id, account, name, warehouse_type, warehouse_settings)
+VALUES (1, 1, 'Workspace', 'PostgreSQL', '{"Host":"127.0.0.1","Port":5432,"Username":"chichi","Password":"","Database":"warehouse"}');
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
@@ -178,6 +138,47 @@ CREATE TABLE data_types (
     schema text NOT NULL,
     PRIMARY KEY (workspace, name)
 );
+
+INSERT INTO data_types (workspace, name, schema) VALUES
+(1, 'user', '{ "properties": [
+    {
+        "name" : "FirstName",
+        "label": "First name",
+        "description": "First name of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    },
+    {
+        "name" : "LastName",
+        "label": "Last name",
+        "description": "Last name of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    },
+    {
+        "name" : "Email",
+        "label": "Email address",
+        "description": "Email address of the user",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    }
+] }'), (1, 'group', '{ "properties": [
+    {
+        "name" : "Name",
+        "label": "Group name",
+        "description": "Name of the group",
+        "type": {
+            "name": "Text",
+            "charLen": 300
+        }
+    }
+] }');
 
 CREATE TABLE devices (
     source INT NOT NULL,

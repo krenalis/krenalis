@@ -91,10 +91,6 @@ func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgr
 			s.setEventTypeSchema(n)
 		case "setResource":
 			s.setResource(n)
-		case "setWorkspaceGroupSchema":
-			s.setWorkspaceGroupSchema(n)
-		case "setWorkspaceUserSchema":
-			s.setWorkspaceUserSchema(n)
 		case "setWorkspaceWarehouse":
 			s.setWorkspaceWarehouse(n)
 		case "startImport":
@@ -747,54 +743,6 @@ func (s *stateKeeper) setResource(n postgres.Notification) {
 		r.accessToken = e.AccessToken
 		r.refreshToken = e.RefreshToken
 		r.expiresIn = e.ExpiresIn
-	})
-}
-
-// setWorkspaceGroupSchemaNotification is the notification event sent when a
-// workspace group schema is changed.
-type setWorkspaceGroupSchemaNotification struct {
-	Workspace int
-	Schema    string
-}
-
-// setWorkspaceGroupSchema sets the user schema of a workspace.
-func (s *stateKeeper) setWorkspaceGroupSchema(n postgres.Notification) {
-	e := setWorkspaceGroupSchemaNotification{}
-	if !decodeStateNotification(n, &e) {
-		return
-	}
-	schema, err := types.ParseSchema(strings.NewReader(e.Schema), nil)
-	if err != nil {
-		log.Printf("[error] cannot parse workspace group schema of notification %s from %d: %s", n.Name, n.PID, err)
-		return
-	}
-	s.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.schema.group = schema
-		w.schemaSources.group = e.Schema
-	})
-}
-
-// setWorkspaceUserSchemaNotification is the notification event sent when a
-// workspace user schema is changed.
-type setWorkspaceUserSchemaNotification struct {
-	Workspace int
-	Schema    string
-}
-
-// setWorkspaceUserSchema sets the user schema of a workspace.
-func (s *stateKeeper) setWorkspaceUserSchema(n postgres.Notification) {
-	e := setWorkspaceUserSchemaNotification{}
-	if !decodeStateNotification(n, &e) {
-		return
-	}
-	schema, err := types.ParseSchema(strings.NewReader(e.Schema), nil)
-	if err != nil {
-		log.Printf("[error] cannot parse workspace user schema of notification %s from %d: %s", n.Name, n.PID, err)
-		return
-	}
-	s.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.schema.user = schema
-		w.schemaSources.user = e.Schema
 	})
 }
 
