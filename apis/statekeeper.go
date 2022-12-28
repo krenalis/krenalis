@@ -83,8 +83,8 @@ func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgr
 			s.setConnectionUserSchema(n)
 		case "setDataTypeDescription":
 			s.setDataTypeDescription(n)
-		case "setDataTypeSchema":
-			s.setDataTypeSchema(n)
+		case "setDataTypeDefinition":
+			s.setDataTypeDefinition(n)
 		case "setEventTypeDescription":
 			s.setEventTypeDescription(n)
 		case "setEventTypeSchema":
@@ -294,7 +294,7 @@ type addDataTypeNotification struct {
 	Workspace   int
 	Name        string
 	Description string
-	Schema      json.RawMessage `json:",omitempty"`
+	Definition  json.RawMessage `json:",omitempty"`
 }
 
 // addDataType adds a new data type.
@@ -303,16 +303,16 @@ func (s *stateKeeper) addDataType(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	schema, err := types.ParseSchema(strings.NewReader(string(e.Schema)), nil)
+	typ, err := types.ParseType(string(e.Definition), nil)
 	if err != nil {
-		log.Printf("[error] cannot parse data type schema of notification %s from %d: %s", n.Name, n.PID, err)
+		log.Printf("[error] cannot parse data type definition of notification %s from %d: %s", n.Name, n.PID, err)
 		return
 	}
 	t := DataType{
-		name:         e.Name,
-		description:  e.Description,
-		schema:       schema,
-		schemaSource: string(e.Schema),
+		name:        e.Name,
+		description: e.Description,
+		definition:  string(e.Definition),
+		typ:         typ,
 	}
 	eventTypes := s.workspaces[e.Workspace].DataTypes
 	eventTypes.state.Lock()
@@ -653,28 +653,28 @@ func (s *stateKeeper) setDataTypeDescription(n postgres.Notification) {
 	})
 }
 
-// setDataTypeSchemaNotification is the notification event sent when the schema
-// of a data type is changed.
-type setDataTypeSchemaNotification struct {
-	Workspace int
-	Name      string
-	Schema    json.RawMessage `json:",omitempty"`
+// setDataTypeDefinitionNotification is the notification event sent when the
+// definition of a data type is changed.
+type setDataTypeDefinitionNotification struct {
+	Workspace  int
+	Name       string
+	Definition json.RawMessage `json:",omitempty"`
 }
 
-// setDataTypeSchema sets the schema of a data type.
-func (s *stateKeeper) setDataTypeSchema(n postgres.Notification) {
-	e := setDataTypeSchemaNotification{}
+// setDataTypeDefinition sets the definition of a data type.
+func (s *stateKeeper) setDataTypeDefinition(n postgres.Notification) {
+	e := setDataTypeDefinitionNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	schema, err := types.ParseSchema(strings.NewReader(string(e.Schema)), nil)
+	typ, err := types.ParseType(string(e.Definition), nil)
 	if err != nil {
-		log.Printf("[error] cannot parse data type schema of notification %s from %d: %s", n.Name, n.PID, err)
+		log.Printf("[error] cannot parse data type definition of notification %s from %d: %s", n.Name, n.PID, err)
 		return
 	}
 	s.replaceDataType(e.Workspace, e.Name, func(t *DataType) {
-		t.schema = schema
-		t.schemaSource = string(e.Schema)
+		t.definition = string(e.Definition)
+		t.typ = typ
 	})
 }
 

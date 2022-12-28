@@ -135,12 +135,12 @@ CREATE TABLE data_types (
     workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
     name varchar(120) NOT NULL,
     description varchar(400) NOT NULL DEFAULT '',
-    schema text NOT NULL,
+    definition text NOT NULL,
     PRIMARY KEY (workspace, name)
 );
 
-INSERT INTO data_types (workspace, name, schema) VALUES
-(1, 'user', '{ "properties": [
+INSERT INTO data_types (workspace, name, definition) VALUES
+(1, 'user', '{ "name": "Object", "properties": [
     {
         "name" : "FirstName",
         "label": "First name",
@@ -168,7 +168,7 @@ INSERT INTO data_types (workspace, name, schema) VALUES
             "charLen": 300
         }
     }
-] }'), (1, 'group', '{ "properties": [
+] }'), (1, 'group', '{ "name": "Object", "properties": [
     {
         "name" : "Name",
         "label": "Group name",

@@ -69,7 +69,7 @@ func (warehouse *postgreSQL) Close() error {
 
 // CreateTables creates the data warehouse tables. schema is the schema of the
 // users table. If a table already exists it returns an Error error.
-func (warehouse *postgreSQL) CreateTables(ctx context.Context, schema types.Schema) error {
+func (warehouse *postgreSQL) CreateTables(ctx context.Context, schema types.Type) error {
 	// Build the "create" statement for the users table.
 	var createTables []string
 	var b strings.Builder
@@ -114,7 +114,7 @@ func (warehouse *postgreSQL) CreateTables(ctx context.Context, schema types.Sche
 
 // DropTables drops the data warehouse tables created from the given schema. It
 // does not return an error if a table does not exist.
-func (warehouse *postgreSQL) DropTables(ctx context.Context, schema types.Schema) error {
+func (warehouse *postgreSQL) DropTables(ctx context.Context, schema types.Type) error {
 	tables := []string{"connections_users", "users"}
 	for _, p := range schema.Properties() {
 		if isArrayOfObjects(p.Type) {
@@ -350,7 +350,7 @@ func (warehouse *postgreSQL) TableSchema(ctx context.Context, name string) (type
 //
 // If a query to the warehouse fails, it returns an Error value.
 // If an argument is not valid, it panics.
-func (warehouse *postgreSQL) Users(ctx context.Context, schema types.Schema, order types.Property, first, limit int) ([][]any, error) {
+func (warehouse *postgreSQL) Users(ctx context.Context, schema types.Type, order types.ObjectProperty, first, limit int) ([][]any, error) {
 
 	db, err := warehouse.connection()
 	if err != nil {

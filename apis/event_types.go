@@ -19,7 +19,10 @@ import (
 
 const maxReservedEventTypeID = 10
 
-var TooManyTypes errors.Code = "TooManyTypes"
+var (
+	InvalidSchema errors.Code = "InvalidSchema"
+	TooManyTypes  errors.Code = "TooManyTypes"
+)
 
 type EventTypes struct {
 	*Workspace
@@ -237,7 +240,7 @@ func (this *EventTypes) SetDescription(id int, description string) error {
 //
 // If the type does not exist, it returns an errors.NotFoundError error.
 // If the schema is not valid, it returns the errors.UnprocessableError error
-// with code InvalidSchema.
+// with code InvalidDefinition.
 func (this *EventTypes) SetSchema(id int, schema string) error {
 	if id < 1 || id > types.MaxUInt8 {
 		return errors.BadRequest("event type identifier %d is not valid", id)
@@ -254,7 +257,7 @@ func (this *EventTypes) SetSchema(id int, schema string) error {
 		if schema != "" {
 			_, err := types.ParseSchema(strings.NewReader(schema), dataTypeResolver(tx, n.Workspace))
 			if err != nil {
-				return errors.Unprocessable(InvalidSchema, "schema is not valid: %w", err)
+				return errors.Unprocessable(InvalidDefinition, "schema is not valid: %w", err)
 			}
 		}
 		result, err := tx.Exec("UPDATE event_types SET schema = $1 WHERE workspace = $2 AND id = $3",

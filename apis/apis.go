@@ -26,7 +26,7 @@ import (
 	"chichi/apis/postgres"
 )
 
-var InvalidSchema errors.Code = "InvalidSchema"
+var InvalidDefinition errors.Code = "InvalidDefinition"
 
 type APIs struct {
 	db             *postgres.DB

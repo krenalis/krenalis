@@ -124,7 +124,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(rpath, "/user-schema") {
 		dataType, _ := workspace.DataTypes.Get("user")
 		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(dataType.Schema)
+		_ = json.NewEncoder(w).Encode(dataType.Type)
 		return
 	}
 
@@ -132,7 +132,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(rpath, "/group-schema-properties") {
 		dataType, _ := workspace.DataTypes.Get("group")
 		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(dataType.Schema.PropertiesNames())
+		_ = json.NewEncoder(w).Encode(dataType.Type.PropertiesNames())
 		return
 	}
 
@@ -203,7 +203,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = workspace.DataTypes.SetSchema(request.SchemaName, request.Schema)
+			err = workspace.DataTypes.SetDefinition(request.SchemaName, request.Schema)
 			if err != nil {
 				if err, ok := err.(errors.ResponseWriterTo); ok {
 					_ = err.WriteTo(w)

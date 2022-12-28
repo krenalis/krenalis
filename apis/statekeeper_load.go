@@ -238,16 +238,16 @@ func (s *stateKeeper) loadState() error {
 	}
 
 	// Read all data types.
-	err = s.db.QueryScan("SELECT workspace, name, description, schema FROM data_types",
+	err = s.db.QueryScan("SELECT workspace, name, description, definition FROM data_types",
 		func(rows *postgres.Rows) error {
 			for rows.Next() {
 				t := DataType{}
 				var workspaceID int
-				if err := rows.Scan(&workspaceID, &t.name, &t.description, &t.schemaSource); err != nil {
+				if err := rows.Scan(&workspaceID, &t.name, &t.description, &t.definition); err != nil {
 					return err
 				}
-				if t.schemaSource != "" {
-					t.schema, err = types.ParseSchema(strings.NewReader(t.schemaSource), nil)
+				if t.definition != "" {
+					t.typ, err = types.ParseType(t.definition, nil)
 					if err != nil {
 						// TODO(marco) disable the type instead of returning an error?
 						return err

@@ -55,11 +55,11 @@ type Warehouse interface {
 
 	// CreateTables creates the data warehouse tables. schema is the schema of the
 	// users table. If a table already exists it returns an Error error.
-	CreateTables(ctx context.Context, schema types.Schema) error
+	CreateTables(ctx context.Context, schema types.Type) error
 
 	// DropTables drops the data warehouse tables created from the given schema. It
 	// does not return an error if a table does not exist.
-	DropTables(ctx context.Context, schema types.Schema) error
+	DropTables(ctx context.Context, schema types.Type) error
 
 	// Exec executes a query without returning any rows. args are the placeholders.
 	// If the query fails, it returns an Error value.
@@ -91,7 +91,7 @@ type Warehouse interface {
 	//
 	// If a query to the warehouse fails, it returns an Error value.
 	// If an argument is not valid, it panics.
-	Users(ctx context.Context, schema types.Schema, order types.Property, first, limit int) ([][]any, error)
+	Users(ctx context.Context, schema types.Type, order types.ObjectProperty, first, limit int) ([][]any, error)
 
 	// Validate validates the settings and returns an error if they are not valid.
 	Validate() error

@@ -96,7 +96,7 @@ func (s *PostgreSQLSettings) warehouseType() warehouses.Type {
 //   - InvalidSettings, if the settings are not valid.
 //   - ConnectionFailed, if the connection fails.
 func (ws *Workspace) ConnectWarehouse(settings WarehouseSettings) error {
-	userSchema, ok := ws.DataTypes.state.Get("user")
+	userType, ok := ws.DataTypes.state.Get("user")
 	if !ok {
 		return errors.Unprocessable(NoSchema, "workspace %d does not have the user schema", ws.id)
 	}
@@ -153,7 +153,7 @@ func (ws *Workspace) ConnectWarehouse(settings WarehouseSettings) error {
 			}
 			return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.id)
 		}
-		err = warehouse.CreateTables(context.Background(), userSchema.schema)
+		err = warehouse.CreateTables(context.Background(), userType.typ)
 		if err != nil {
 			return err
 		}
@@ -197,9 +197,9 @@ func (ws *Workspace) DisconnectWarehouse(deleteTables bool) error {
 				return err
 			}
 			warehouse := warehouses.OpenPostgres(&s)
-			var userSchema types.Schema
+			var userSchema types.Type
 			if dataType, ok := ws.DataTypes.state.Get("user"); ok {
-				userSchema = dataType.schema
+				userSchema = dataType.typ
 			}
 			// TODO(marco): consider whether there is a better solution than removing the tables at this time.
 			err = warehouse.DropTables(context.Background(), userSchema)
@@ -324,69 +324,66 @@ func (ws *Workspace) SetWarehouse(settings WarehouseSettings) error {
 // with code PropertyNotExist.
 // If the warehouse failed, it returns an errors.UnprocessableError error with
 // code WarehouseFailed.
-func (ws *Workspace) Users(properties []string, order string, first, limit int) (types.Schema, [][]any, error) {
+func (ws *Workspace) Users(properties []string, order string, first, limit int) (types.Type, [][]any, error) {
 
 	// Verify that the workspace has a data warehouse.
 	if ws.warehouse == nil {
-		return types.Schema{}, nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.id)
+		return types.Type{}, nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.id)
 	}
 
 	// Read the schema.
-	var schemaProperties []types.Property
+	var schemaProperties []types.ObjectProperty
 	if dataType, ok := ws.DataTypes.state.Get("user"); ok {
-		schemaProperties = dataType.schema.Properties()
+		schemaProperties = dataType.typ.Properties()
 	}
-	propertyByName := map[string]types.Property{}
+	propertyByName := map[string]types.ObjectProperty{}
 	for _, p := range schemaProperties {
 		propertyByName[p.Name] = p
 	}
 
 	// Validate the arguments.
 	if len(properties) == 0 {
-		return types.Schema{}, nil, errors.BadRequest("properties is empty")
+		return types.Type{}, nil, errors.BadRequest("properties is empty")
 	}
 	for _, name := range properties {
 		if _, ok := propertyByName[name]; !ok {
 			if name == "" {
-				return types.Schema{}, nil, errors.BadRequest("a property name is empty")
+				return types.Type{}, nil, errors.BadRequest("a property name is empty")
 			}
 			if !types.IsValidPropertyName(name) {
-				return types.Schema{}, nil, errors.BadRequest("property name %q is not valid", name)
+				return types.Type{}, nil, errors.BadRequest("property name %q is not valid", name)
 			}
-			return types.Schema{}, nil, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
+			return types.Type{}, nil, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
 		}
 	}
-	var orderProperty types.Property
+	var orderProperty types.ObjectProperty
 	if order != "" {
 		if !types.IsValidPropertyName(order) {
-			return types.Schema{}, nil, errors.BadRequest("order %q is not a valid property name", order)
+			return types.Type{}, nil, errors.BadRequest("order %q is not a valid property name", order)
 		}
 		orderProperty, ok := propertyByName[order]
 		if !ok {
-			return types.Schema{}, nil, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
+			return types.Type{}, nil, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
 		}
 		switch orderProperty.Type.PhysicalType() {
 		case types.PtJSON, types.PtArray, types.PtObject, types.PtMap:
-			return types.Schema{}, nil, errors.Unprocessable(OrderTypeNotSortable,
+			return types.Type{}, nil, errors.Unprocessable(OrderTypeNotSortable,
 				"cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
 	}
 	if first < 0 || first > maxInt32 {
-		return types.Schema{}, nil, errors.BadRequest("first %d in not valid", first)
+		return types.Type{}, nil, errors.BadRequest("first %d in not valid", first)
 	}
 	if limit < 1 || limit > 1000 {
-		return types.Schema{}, nil, errors.BadRequest("limit %d is not valid", limit)
+		return types.Type{}, nil, errors.BadRequest("limit %d is not valid", limit)
 	}
 
 	// Create the schema to return, with only the required properties.
-	queryProperties := make([]types.Property, len(properties))
+	queryProperties := make([]types.ObjectProperty, len(properties))
 	for i, name := range properties {
 		queryProperties[i] = propertyByName[name]
 	}
-	schema, err := types.SchemaOf(queryProperties)
-	if err != nil {
-		return types.Schema{}, nil, fmt.Errorf("cannot create a new schema from the user schema: %s", err)
-	}
+	schema := types.Object(queryProperties)
 
 	users, err := ws.warehouse.Users(context.Background(), schema, orderProperty, first, limit)
 	if err != nil {
@@ -395,7 +392,7 @@ func (ws *Workspace) Users(properties []string, order string, first, limit int) 
 			log.Printf("cannot get users from the data warehouse of the workspace %d: %s", ws.id, err)
 			err = errors.Unprocessable(WarehouseFailed, "warehouse connection is failed")
 		}
-		return types.Schema{}, nil, err
+		return types.Type{}, nil, err
 	}
 
 	return schema, users, err
