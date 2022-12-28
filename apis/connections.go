@@ -2128,9 +2128,6 @@ func (this *Connections) userSchema(id int) (types.Type, []_connector.PropertyPa
 	schema := c.schema
 	if mappedProperties != nil {
 		schema = types.Object(mappedProperties)
-		if err != nil {
-			return types.Type{}, nil, fmt.Errorf("cannot create a new schema from the schema of connection %d: %s", id, err)
-		}
 	}
 
 	return schema, paths, nil
