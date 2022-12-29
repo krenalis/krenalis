@@ -10,6 +10,7 @@ package apis
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"chichi/apis/postgres"
@@ -225,6 +226,9 @@ func (s *stateKeeper) loadState() error {
 					if err != nil {
 						// TODO(marco) disable the type instead of returning an error?
 						return err
+					}
+					if t.typ.Custom() != t.name {
+						return fmt.Errorf("expected type name %q, got %q", t.name, t.typ.Custom())
 					}
 				}
 				workspaces[workspaceID].Types.state.names[t.name] = &t

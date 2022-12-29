@@ -52,22 +52,16 @@ type TypeInfo struct {
 	Type        types.Type
 }
 
-// Add adds a new type with the given name, description and definition.
-// description cannot be longer than 400 runes and definition cannot be longer
-// than 65,535 runes.
+// Add adds a new type with the given definition and description.
+// definition cannot be longer than 65,535 runes, and description cannot be
+// longer than 400 runes.
 //
 // If the workplace does not exist, it returns an errors.NotFound error.
 // If a type with the same name already exists, it returns an
 // errors.UnprocessableError error with code AlreadyExist and if the definition
 // is not valid, it returns an errors.UnprocessableError error with code
 // InvalidDefinition.
-func (this *Types) Add(name, description, definition string) error {
-	if !types.IsValidCustomTypeName(name) {
-		return errors.BadRequest("name %q is not a valid type name", name)
-	}
-	if utf8.RuneCountInString(name) > 120 {
-		return errors.BadRequest("name %q is longer than 120 runes", name)
-	}
+func (this *Types) Add(definition, description string) error {
 	if utf8.RuneCountInString(description) > 400 {
 		return errors.BadRequest("description is longer than 400 runes")
 	}
@@ -79,14 +73,20 @@ func (this *Types) Add(name, description, definition string) error {
 	}
 	n := addTypeNotification{
 		Workspace:   this.id,
-		Name:        name,
 		Description: description,
 		Definition:  json.RawMessage(definition),
 	}
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err := types.Parse(definition, typeResolver(tx, n.Workspace))
+		t, err := types.Parse(definition, typeResolver(tx, n.Workspace))
 		if err != nil {
 			return errors.Unprocessable(InvalidDefinition, "definition is not valid: %w", err)
+		}
+		name := t.Custom()
+		if !types.IsValidCustomTypeName(name) {
+			return errors.BadRequest("custom name %q is not a valid type name", name)
+		}
+		if utf8.RuneCountInString(name) > 120 {
+			return errors.BadRequest("custom name %q is longer than 120 runes", name)
 		}
 		if strings.HasSuffix(name, "_event") {
 			n.Event = maxReservedEventTypeID + 1
@@ -113,7 +113,7 @@ func (this *Types) Add(name, description, definition string) error {
 			}
 		}
 		_, err = tx.Exec("INSERT INTO types (workspace, name, description, definition, event)"+
-			" VALUES ($1, $2, $3, $4, NULLIF($5, 0))", n.Workspace, n.Name, n.Description, definition, n.Event)
+			" VALUES ($1, $2, $3, $4, NULLIF($5, 0))", n.Workspace, name, n.Description, definition, n.Event)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "types_workspace_fkey" {
@@ -121,7 +121,7 @@ func (this *Types) Add(name, description, definition string) error {
 				}
 			} else if postgres.IsDuplicateKeyValue(err) {
 				if postgres.ErrConstraintName(err) == "types_pkey" {
-					err = errors.Unprocessable(AlreadyExist, "type %s already exists", n.Name)
+					err = errors.Unprocessable(AlreadyExist, "type %s already exists", name)
 				}
 			}
 			return err
@@ -232,19 +232,13 @@ func (this *Types) SetDescription(name string, description string) error {
 	return err
 }
 
-// SetDefinition sets the definition of the type with the given name.
-// definition cannot be longer than 65,535 runes.
+// SetDefinition sets the definition of a type. definition cannot be longer
+// than 65,535 runes.
 //
 // If the type does not exist, it returns an errors.NotFoundError error.
 // If the definition is not valid, it returns an errors.UnprocessableError
 // error with code InvalidDefinition.
-func (this *Types) SetDefinition(name string, definition string) error {
-	if !types.IsValidCustomTypeName(name) {
-		return errors.BadRequest("name %q is not a valid type name", name)
-	}
-	if utf8.RuneCountInString(name) > 120 {
-		return errors.BadRequest("name %s is longer than 120 runes", name)
-	}
+func (this *Types) SetDefinition(definition string) error {
 	if definition == "" {
 		return errors.BadRequest("definition is empty")
 	}
@@ -253,23 +247,22 @@ func (this *Types) SetDefinition(name string, definition string) error {
 	}
 	n := setTypeDefinitionNotification{
 		Workspace:  this.id,
-		Name:       name,
 		Definition: json.RawMessage(definition),
 	}
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err := types.Parse(definition, typeResolver(tx, n.Workspace))
+		t, err := types.Parse(definition, typeResolver(tx, n.Workspace))
 		if err != nil {
-			err2 := tx.QueryVoid("SELECT FROM types WHERE workspace = $1 AND name = $2", n.Workspace, n.Name)
-			if err2 != nil {
-				if err2 == sql.ErrNoRows {
-					return errors.NotFound("type %s does not exist", n.Name)
-				}
-				return err2
-			}
 			return errors.Unprocessable(InvalidDefinition, "definition is not valid: %w", err)
 		}
+		name := t.Custom()
+		if !types.IsValidCustomTypeName(name) {
+			return errors.BadRequest("name %q is not a valid type name", name)
+		}
+		if utf8.RuneCountInString(name) > 120 {
+			return errors.BadRequest("name %s is longer than 120 runes", name)
+		}
 		result, err := tx.Exec("UPDATE types SET definition = $1 WHERE workspace = $2 AND name = $3",
-			definition, n.Workspace, n.Name)
+			definition, n.Workspace, name)
 		if err != nil {
 			return err
 		}
@@ -278,7 +271,7 @@ func (this *Types) SetDefinition(name string, definition string) error {
 			return err
 		}
 		if affected == 0 {
-			return errors.NotFound("type %s does not exist", n.Name)
+			return errors.NotFound("type %s does not exist", name)
 		}
 		return tx.Notify(n)
 	})

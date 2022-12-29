@@ -195,15 +195,14 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		case "/update":
 			var request struct {
-				SchemaName string
-				Schema     string
+				Schema string
 			}
 			err := json.NewDecoder(r.Body).Decode(&request)
 			if err != nil {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = workspace.Types.SetDefinition(request.SchemaName, request.Schema)
+			err = workspace.Types.SetDefinition(request.Schema)
 			if err != nil {
 				if err, ok := err.(errors.ResponseWriterTo); ok {
 					_ = err.WriteTo(w)

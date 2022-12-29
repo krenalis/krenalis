@@ -219,7 +219,7 @@ CREATE TABLE types (
 );
 
 INSERT INTO types (workspace, name, definition) VALUES
-    (1, 'user', '{ "name": "Object", "properties": [
+    (1, 'user', '{ "custom": "user", "name": "Object", "properties": [
     {
         "name" : "FirstName",
         "label": "First name",
@@ -247,7 +247,7 @@ INSERT INTO types (workspace, name, definition) VALUES
             "charLen": 300
         }
     }
-] }'), (1, 'group', '{ "name": "Object", "properties": [
+] }'), (1, 'group', '{ "custom": "group", "name": "Object", "properties": [
     {
         "name" : "Name",
         "label": "Group name",

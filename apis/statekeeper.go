@@ -268,7 +268,6 @@ func (s *stateKeeper) addConnection(n postgres.Notification) {
 // addTypeNotification is the notification event sent when a type is added.
 type addTypeNotification struct {
 	Workspace   int
-	Name        string
 	Description string
 	Definition  json.RawMessage `json:",omitempty"`
 	Event       uint8
@@ -285,8 +284,9 @@ func (s *stateKeeper) addType(n postgres.Notification) {
 		log.Printf("[error] cannot parse type definition of notification %s from %d: %s", n.Name, n.PID, err)
 		return
 	}
+	name := typ.Custom()
 	t := Type{
-		name:        e.Name,
+		name:        name,
 		description: e.Description,
 		definition:  string(e.Definition),
 		event:       e.Event,
@@ -294,7 +294,7 @@ func (s *stateKeeper) addType(n postgres.Notification) {
 	}
 	eventTypes := s.workspaces[e.Workspace].Types
 	eventTypes.state.Lock()
-	eventTypes.state.names[e.Name] = &t
+	eventTypes.state.names[name] = &t
 	eventTypes.state.Unlock()
 }
 
@@ -577,7 +577,6 @@ func (s *stateKeeper) setTypeDescription(n postgres.Notification) {
 // definition of a type is changed.
 type setTypeDefinitionNotification struct {
 	Workspace  int
-	Name       string
 	Definition json.RawMessage `json:",omitempty"`
 }
 
@@ -592,7 +591,8 @@ func (s *stateKeeper) setTypeDefinition(n postgres.Notification) {
 		log.Printf("[error] cannot parse type definition of notification %s from %d: %s", n.Name, n.PID, err)
 		return
 	}
-	s.replaceType(e.Workspace, e.Name, func(t *Type) {
+	name := typ.Custom()
+	s.replaceType(e.Workspace, name, func(t *Type) {
 		t.definition = string(e.Definition)
 		t.typ = typ
 	})
