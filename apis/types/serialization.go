@@ -308,6 +308,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 
 	var pt PhysicalType
 	var lt LogicalType
+	var custom string
 	var null bool
 	var minimum, maximum json.Number
 	var precision, scale, byteLen, charLen int
@@ -372,6 +373,14 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 			lt, ok = LogicalTypeByName(tok.(string))
 			if !ok {
 				return Type{}, errors.New("invalid logical type")
+			}
+		case "custom":
+			if custom != "" {
+				return Type{}, errors.New("repeated 'custom' key")
+			}
+			custom, _ = tok.(string)
+			if !IsValidCustomTypeName(custom) {
+				return Type{}, errors.New("invalid custom")
 			}
 		case "null":
 			if hasNull {
@@ -593,6 +602,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	if lt.Valid() {
 		t.lt = lt
 	}
+	t.custom = custom
 	t.null = null
 	if minimum == "" {
 		if PtInt <= t.pt && t.pt <= PtInt24 || PtUInt <= t.pt && t.pt <= PtUInt24 {
