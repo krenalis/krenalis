@@ -268,7 +268,7 @@ func (this *Types) SetDefinition(name string, definition string) error {
 			}
 			return errors.Unprocessable(InvalidDefinition, "definition is not valid: %w", err)
 		}
-		result, err := tx.Exec("UPDATE types SET schema = $1 WHERE workspace = $2 AND name = $3",
+		result, err := tx.Exec("UPDATE types SET definition = $1 WHERE workspace = $2 AND name = $3",
 			definition, n.Workspace, n.Name)
 		if err != nil {
 			return err
