@@ -51,17 +51,23 @@ type ResponseWriterTo interface {
 // BadRequest returns an error that formats as the given text, and its WriteTo
 // method replies to the request with an HTTP 400 bad request error.
 //
+// If format includes a %w verb with an error operand, BadRequest returns an
+// error that implements an Unwrap method returning the operand, and the
+// WriteTo method reports the error message in the "details" key.
+//
 // It can be used when an invalid call is received. For example, it could be
 // used if a required argument is empty or if the provided data is not formally
 // valid.
 func BadRequest(format string, a ...any) error {
-	return &badRequestError{fmt.Sprintf(format, a...)}
+	e := fmt.Errorf(format, a...)
+	return &badRequestError{s: e.Error(), err: Unwrap(e)}
 }
 
 // badRequestError is an implementation of error used to represent a bad
 // request error.
 type badRequestError struct {
-	s string
+	s   string
+	err error
 }
 
 // Error implements the errors interface.
@@ -69,9 +75,18 @@ func (e *badRequestError) Error() string {
 	return e.s
 }
 
+// Unwrap returns the wrapped error.
+func (e *badRequestError) Unwrap() error {
+	return e.err
+}
+
 // WriteTo implements the ResponseWriterTo interface.
 func (e *badRequestError) WriteTo(w http.ResponseWriter) error {
-	return writeTo(w, http.StatusBadRequest, "BadRequest", e.s, "")
+	var details string
+	if e.err != nil {
+		details = e.err.Error()
+	}
+	return writeTo(w, http.StatusBadRequest, "BadRequest", e.s, details)
 }
 
 // NotFound returns an error that formats as the given text, and its WriteTo
