@@ -191,7 +191,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			schema, _ := workspace.Types.Get(request.SchemaName)
 			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(schema)
+			_ = json.NewEncoder(w).Encode(schema.Definition)
 
 		case "/update":
 			var request struct {
