@@ -181,7 +181,7 @@ const ConnectionProperties = () => {
 	};
 
 	const onAddTransformation = () => {
-		let t = { Position: lastTransformationPosition, In: { properties: [] }, Out: { properties: [] } };
+		let t = { Position: lastTransformationPosition, In: { name: "Object", properties: [] }, Out: { name: "Object", properties: [] } };
 		t.SourceCode = computeDefaultTransformationFunction(t);
 		setTransformations([...transformations, t]);
 		setLastTransformationPosition(lastTransformationPosition + 1);
