@@ -606,7 +606,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	var t Type
 
 	if !pt.Valid() {
-		return Type{}, errors.New("missing physical type")
+		return Type{}, errors.New("missing 'name' key")
 	}
 	t.pt = pt
 	if lt.Valid() {
