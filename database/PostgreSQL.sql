@@ -59,7 +59,7 @@ CREATE TABLE workspaces (
 );
 
 INSERT INTO workspaces (id, account, name, warehouse_type, warehouse_settings)
-VALUES (1, 1, 'Workspace', 'PostgreSQL', '{"Host":"127.0.0.1","Port":5432,"Username":"chichi","Password":"","Database":"warehouse"}');
+VALUES (1, 1, 'Workspace', NULL, '');
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
