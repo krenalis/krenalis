@@ -249,6 +249,7 @@ type Property struct {
 	Label       string
 	Description string
 	Role        Role
+	Nullable    bool
 	Type        Type
 }
 
@@ -490,6 +491,7 @@ func Object(properties []Property) Type {
 			Aliases:     aliases,
 			Label:       normalizedUTF8(property.Label),
 			Description: normalizedUTF8(property.Description),
+			Nullable:    property.Nullable,
 			Type:        property.Type,
 		}
 	}
@@ -552,6 +554,7 @@ func ObjectOf(properties []Property) (Type, error) {
 			Label:       normalizedUTF8(property.Label),
 			Description: normalizedUTF8(property.Description),
 			Role:        property.Role,
+			Nullable:    property.Nullable,
 			Type:        property.Type,
 		}
 	}

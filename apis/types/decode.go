@@ -341,7 +341,18 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 				break
 			}
 			if p, ok := propertyByName[name]; ok {
-				object[p.Name], err = decodeByType(dec, nil, p.Type, strict)
+				tok, err = dec.Token()
+				if err != nil {
+					return nil, err
+				}
+				if tok == nil {
+					if !p.Nullable {
+						return nil, fmt.Errorf("property %s cannot be null", p.Name)
+					}
+					object[p.Name] = nil
+					continue
+				}
+				object[p.Name], err = decodeByType(dec, tok, p.Type, strict)
 				if err != nil {
 					return nil, err
 				}
