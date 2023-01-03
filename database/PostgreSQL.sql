@@ -214,7 +214,7 @@ CREATE TABLE types (
     name varchar(120) NOT NULL,
     description varchar(400) NOT NULL DEFAULT '',
     definition text NOT NULL,
-    event smallint CHECK(id BETWEEN 1 AND 255),
+    event smallint CHECK(event BETWEEN 1 AND 255),
     PRIMARY KEY (workspace, name)
 );
 
