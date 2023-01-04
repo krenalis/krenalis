@@ -384,6 +384,26 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 		})
 	})
+	router.Route("/api/workspace/connect-warehouse", func(router chi.Router) {
+		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+			var setts PostgreSQLSettings
+			err := json.NewDecoder(r.Body).Decode(&setts)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			err = workspace.ConnectWarehouse(&setts)
+			if err != nil {
+				if err, ok := err.(errors.ResponseWriterTo); ok {
+					_ = err.WriteTo(w)
+					return
+				}
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+		})
+	})
 	router.ServeHTTP(w, r)
 
 }

@@ -173,3 +173,12 @@ func RemoveEventListener(listener string) {
 		log.Fatal(err)
 	}
 }
+
+func WorkspaceConnectWarehouse(config apis.PostgreSQLSettings) {
+	b := &bytes.Buffer{}
+	_ = json.NewEncoder(b).Encode(config)
+	err := callAPI("POST", "api/workspace/connect-warehouse", b, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
