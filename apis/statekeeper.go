@@ -634,7 +634,7 @@ type notifiedWarehouse struct {
 	Settings json.RawMessage `json:",omitempty"`
 }
 
-// setWorkspaceUserSchema sets the warehouse of a workspace.
+// setWorkspaceWarehouse sets the warehouse of a workspace.
 func (s *stateKeeper) setWorkspaceWarehouse(n postgres.Notification) {
 	e := setWorkspaceWarehouseNotification{}
 	if !decodeStateNotification(n, &e) {
