@@ -226,7 +226,8 @@ INSERT INTO types (workspace, name, definition) VALUES
         "description": "First name of the user",
         "type": {
             "name": "Text",
-            "charLen": 300
+            "charLen": 300,
+            "null": true
         }
     },
     {
@@ -235,7 +236,8 @@ INSERT INTO types (workspace, name, definition) VALUES
         "description": "Last name of the user",
         "type": {
             "name": "Text",
-            "charLen": 300
+            "charLen": 300,
+            "null": true
         }
     },
     {
@@ -244,7 +246,8 @@ INSERT INTO types (workspace, name, definition) VALUES
         "description": "Email address of the user",
         "type": {
             "name": "Text",
-            "charLen": 300
+            "charLen": 300,
+            "null": true
         }
     }
 ] }'), (1, 'group', '{ "custom": "group", "name": "Object", "properties": [
@@ -254,7 +257,8 @@ INSERT INTO types (workspace, name, definition) VALUES
         "description": "Name of the group",
         "type": {
             "name": "Text",
-            "charLen": 300
+            "charLen": 300,
+            "null": true
         }
     }
 ] }');
