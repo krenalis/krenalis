@@ -168,6 +168,10 @@ func (s *stateKeeper) replaceWorkspace(id int, f func(c *Workspace)) *Workspace 
 	w := s.workspaces[id]
 	ww := new(Workspace)
 	*ww = *w
+	connections := new(Connections)
+	*connections = *ww.Connections
+	connections.Workspace = ww
+	ww.Connections = connections
 	f(ww)
 	workspaces := w.account.Workspaces
 	workspaces.state.Lock()
