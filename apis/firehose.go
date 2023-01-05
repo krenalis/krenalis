@@ -219,7 +219,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 			for i := range in {
 				in[i] = userProps[inNames[i]]
 			}
-			out := callPredefinedFunction(m.predefinedFunc, in)
+			out := callPredefinedFuncByID(m.predefinedFunc, in)
 			ts := mostRecentTimestamp(timestamps, inNames)
 			for i, outName := range outNames {
 				candidateData[outName] = out[i]

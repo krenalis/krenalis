@@ -418,7 +418,7 @@ type setConnectionMappingsNotification struct {
 type notifiedMapping struct {
 	ID             int
 	In             types.Type
-	PredefinedFunc PredefinedFuncID
+	PredefinedFunc int
 	SourceCode     string
 	Out            types.Type
 }

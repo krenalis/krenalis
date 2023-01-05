@@ -115,6 +115,23 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Handle the "/predefined-transformations" endpoint.
+	if strings.HasPrefix(rpath, "/predefined-transformations") {
+		funcs := make([]map[string]any, len(apis.PredefinedMappingFuncs))
+		for i, f := range apis.PredefinedMappingFuncs {
+			funcs[i] = map[string]any{
+				"ID":          f.ID,
+				"Name":        f.Name,
+				"Description": f.Description,
+				"Icon":        f.Icon,
+				"In":          f.In,
+				"Out":         f.Out,
+			}
+		}
+		w.Header().Add("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(funcs)
+	}
+
 	if rpath == "/api/visualization" {
 		admin.serveExecuteQuery(w, r)
 		return

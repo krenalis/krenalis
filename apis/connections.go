@@ -111,10 +111,10 @@ type Mapping struct {
 	// In case of "one to one" mappings, this schema contains just one property.
 	in types.Type
 
-	// predefinedFunc is the predefined transformation function of this mapping,
-	// otherwise is zero if this mapping is not a predefined transformation
-	// mapping.
-	predefinedFunc PredefinedFuncID
+	// PredefinedFunc is the ID of the predefined transformation function of
+	// this mapping, otherwise is zero if this mapping is not a predefined
+	// transformation mapping.
+	predefinedFunc int
 
 	// sourceCode is the source code of the transformation function, which
 	// should be something like:
@@ -151,10 +151,10 @@ type ConnectionInfo struct {
 // MappingInfo describes a mapping as returned by Get and List.
 type MappingInfo struct {
 	ID             int
-	In             types.Type       // just one property if it refers to a "one to one" mapping.
-	SourceCode     string           // empty string if it refers to a "one to one" mapping.
-	PredefinedFunc PredefinedFuncID // zero if not a predefined transformation mapping.
-	Out            types.Type       // just one property if it refers to a "one to one" mapping.
+	In             types.Type // just one property if it refers to a "one to one" mapping.
+	SourceCode     string     // empty string if it refers to a "one to one" mapping.
+	PredefinedFunc int        // zero if not a predefined transformation mapping.
+	Out            types.Type // just one property if it refers to a "one to one" mapping.
 }
 
 const (
@@ -1696,10 +1696,10 @@ type MappingToCreate struct {
 	// In case of "one to one" mappings, this schema contains just one property.
 	In types.Type
 
-	// PredefinedFunc is the predefined transformation function of this mapping,
-	// otherwise is zero if this mapping is not a predefined transformation
-	// mapping.
-	PredefinedFunc PredefinedFuncID
+	// PredefinedFunc is the ID of the predefined transformation function of
+	// this mapping, otherwise is zero if this mapping is not a predefined
+	// transformation mapping.
+	PredefinedFunc int
 
 	// SourceCode is the source code of the transformation function, which
 	// should be something like:
@@ -2488,7 +2488,7 @@ func exportUser(id string, properties map[string]any, mappings []*Mapping) (_con
 			for i := range in {
 				in[i] = input[inNames[i]]
 			}
-			out := callPredefinedFunction(m.predefinedFunc, in)
+			out := callPredefinedFuncByID(m.predefinedFunc, in)
 			for i, outName := range outNames {
 				user.Properties[outName] = out[i]
 			}
