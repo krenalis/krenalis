@@ -130,6 +130,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Add("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(funcs)
+		return
 	}
 
 	if rpath == "/api/visualization" {
