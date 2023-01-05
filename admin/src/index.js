@@ -10,7 +10,6 @@ import ConnectionsMap from './routes/ConnectionsMap/ConnectionsMap';
 import ConnectionProperties from './routes/ConnectionProperties/ConnectionProperties';
 import ConnectionSQL from './routes/ConnectionSQL/ConnectionSQL';
 import ConnectionSettings from './routes/ConnectionSettings/ConnectionSettings';
-import Schemas from './routes/Schemas/Schemas';
 import UsersList from './routes/UsersList/UsersList';
 import NotFound from './routes/NotFound/NotFound';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
@@ -29,7 +28,6 @@ root.render(
 					<Route path='connections/:id/settings' element={<ConnectionSettings />} />
 					<Route path='connections-map' element={<ConnectionsMap />} />
 					<Route path='connections' element={<ConnectionsList />} />
-					<Route path='schemas' element={<Schemas />} />
 					<Route path='users' element={<UsersList />} />
 					<Route path='*' element={<NotFound />} />
 				</Route>

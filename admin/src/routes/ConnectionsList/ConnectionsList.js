@@ -101,7 +101,6 @@ export default class ConnectionsList extends React.Component {
 					navItems={[
 						{ name: 'Connections map', link: '/admin/connections-map', selected: false },
 						{ name: 'Connections list', link: '/admin/connections', selected: true },
-						{ name: 'Schemas', link: '/admin/schemas', selected: false },
 					]}
 				/>
 				<div className='routeContent'>

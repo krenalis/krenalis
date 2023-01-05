@@ -113,7 +113,6 @@ const ConnectionsMap = () => {
 				navItems={[
 					{ name: 'Connections map', link: '/admin/connections-map', selected: true },
 					{ name: 'Connections list', link: '/admin/connections', selected: false },
-					{ name: 'Schemas', link: '/admin/schemas', selected: false },
 				]}
 			/>
 			<div className='routeContent'>
