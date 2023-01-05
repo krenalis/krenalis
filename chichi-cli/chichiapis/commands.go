@@ -182,3 +182,10 @@ func WorkspaceConnectWarehouse(config apis.PostgreSQLSettings) {
 		log.Fatal(err)
 	}
 }
+
+func WorkspaceDisconnectWarehouse() {
+	err := callAPI("POST", "api/workspace/disconnect-warehouse", nil, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
