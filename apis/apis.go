@@ -264,13 +264,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						Out:            m.out,
 					}
 				}
-				// TODO(Gianluca): this is a workaround that will be removed
-				// when one-to-one mappings will be supported in the UI.
-				for _, m := range mappingsInfos {
-					if m.SourceCode == "" {
-						m.SourceCode = "# one-to-one"
-					}
-				}
 				_ = json.NewEncoder(w).Encode(mappingsInfos)
 			})
 			router.Put("/mappings", func(w http.ResponseWriter, r *http.Request) {
@@ -284,13 +277,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					http.Error(w, "Bad Request - invalid mappings", http.StatusBadRequest)
 					return
-				}
-				// TODO(Gianluca): this is a workaround that will be removed
-				// when one-to-one mappings will be supported in the UI.
-				for _, m := range mappings {
-					if m.SourceCode == "# one-to-one" {
-						m.SourceCode = ""
-					}
 				}
 				err = workspace.Connections.SetMappings(connection, mappings)
 				if err != nil {

@@ -4,6 +4,9 @@ import NotFound from '../NotFound/NotFound';
 import Toast from '../../components/Toast/Toast';
 import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
 import call from '../../utils/call';
+import ConnectionProperty from '../../components/ConnectionProperty/ConnectionProperty';
+import TransformationNode from '../../components/TrasformationNode/TransformationNode';
+import TransformationDialog from '../../components/TransformationDialog/TransformationDialog';
 import { transformationFunction } from '../../assets/docs/transformationFunction';
 import {
 	SlButton,
@@ -14,7 +17,6 @@ import {
 	SlInput,
 	SlBadge,
 } from '@shoelace-style/shoelace/dist/react/index.js';
-import Editor from '@monaco-editor/react';
 import Xarrow from 'react-xarrows';
 
 const ConnectionProperties = () => {
@@ -31,6 +33,9 @@ const ConnectionProperties = () => {
 	let [isOutputDialogOpen, setIsOutputDialogOpen] = useState(false);
 	let [selectedProperty, setSelectedProperty] = useState(null);
 	let [selectedTransformation, setSelectedTransformation] = useState(null);
+	let [selectedPredefinedTransformation, setSelectedPredefinedTransformation] = useState(0);
+	let [predefinedTransformations, setPredefinedTransformations] = useState([]);
+	let [showPredefinedTransformations, setShowPredefinedTransformations] = useState(false);
 	let [status, setStatus] = useState(null);
 	let [notFound, setNotFound] = useState(false);
 
@@ -91,6 +96,15 @@ const ConnectionProperties = () => {
 			setInputProperties(inputProperties);
 			setOutputProperties(outputProperties);
 
+			// get the predefined transformations.
+			let predefinedTransformations;
+			[predefinedTransformations, err] = await call('/admin/predefined-transformations', 'GET');
+			if (err) {
+				onError(err);
+				return;
+			}
+			setPredefinedTransformations(predefinedTransformations);
+
 			// get the transformations.
 			let transformations;
 			[transformations, err] = await call(`/api/connections/${connectionID}/mappings`, 'GET');
@@ -98,6 +112,17 @@ const ConnectionProperties = () => {
 				onError(err);
 				return;
 			}
+
+			// replace the predefined transformations IDs with the full
+			// predefined transformations.
+			for (let t of transformations) {
+				if (t.PredefinedFunc !== 0) {
+					let predefinedTransformation = predefinedTransformations.find((pt) => pt.ID === t.PredefinedFunc);
+					t.PredefinedFunc = predefinedTransformation;
+				}
+			}
+
+			console.log(transformations);
 
 			// get the input properties and the output properties used by the
 			// transformations.
@@ -159,17 +184,27 @@ const ConnectionProperties = () => {
 		let trs = [];
 		for (let t of transformations) {
 			let transformationProperties = type === 'input' ? t.In.properties : t.Out.properties;
-			let doesContainRemovedProperty = transformationProperties.findIndex((p) => p.name === removedName) !== -1;
+			let doesContainRemovedProperty =
+				transformationProperties.findIndex((p) => p != null && p.name === removedName) !== -1;
 			if (doesContainRemovedProperty) {
-				let oldDefaultTransformation;
-				if (type === 'input') {
-					oldDefaultTransformation = computeDefaultTransformationFunction(t);
-				}
-				let filtered = transformationProperties.filter((p) => p.name !== removedName);
-				if (type === 'input') {
-					if (t.SourceCode === '' || t.SourceCode === oldDefaultTransformation) {
-						t.SourceCode = computeDefaultTransformationFunction(t);
+				let filtered = [];
+				if (t.PredefinedFunc !== 0) {
+					// replace the removed property with 'undefined' to preserve order.
+					for (let p of transformationProperties) {
+						if (p != null && p.name === removedName) {
+							filtered.push(undefined);
+						} else {
+							filtered.push(p);
+						}
 					}
+				} else {
+					for (let p of transformationProperties) {
+						if (p.name !== removedName) {
+							filtered.push(p);
+						}
+					}
+				}
+				if (type === 'input') {
 					t.In.properties = filtered;
 				} else {
 					t.Out.properties = filtered;
@@ -180,9 +215,54 @@ const ConnectionProperties = () => {
 		setTransformations(trs);
 	};
 
-	const onAddTransformation = () => {
-		let t = { Position: lastTransformationPosition, In: { name: "Object", properties: [] }, Out: { name: "Object", properties: [] } };
-		t.SourceCode = computeDefaultTransformationFunction(t);
+	const onAddOneToOneTransformation = (name, type) => {
+		if (type === sp.type) {
+			onError(`cannot connect two ${type} properties`);
+			return;
+		}
+		let inputProperty, outputProperty;
+		if (sp.type === 'input') {
+			inputProperty = inputProperties.find((p) => p.name === sp.name);
+			outputProperty = outputProperties.find((p) => p.name === name);
+		} else {
+			inputProperty = inputProperties.find((p) => p.name === name);
+			outputProperty = outputProperties.find((p) => p.name === sp.name);
+		}
+		let t = {
+			Position: lastTransformationPosition,
+			In: { name: 'Object', properties: [inputProperty] },
+			Out: { name: 'Object', properties: [outputProperty] },
+		};
+		t.SourceCode = '';
+		t.PredefinedFunc = 0;
+		setTransformations([...transformations, t]);
+		setLastTransformationPosition(lastTransformationPosition + 1);
+		setSelectedProperty(null);
+	};
+
+	const onAddPredefinedTransformation = () => {
+		let t = {
+			Position: lastTransformationPosition,
+			In: { name: 'Object', properties: [] },
+			Out: { name: 'Object', properties: [] },
+		};
+		t.SourceCode = '';
+		let pt = predefinedTransformations.find((t) => t.ID === selectedPredefinedTransformation);
+		setShowPredefinedTransformations(false);
+		if (pt == null) return;
+		t.PredefinedFunc = pt;
+		setTransformations([...transformations, t]);
+		setLastTransformationPosition(lastTransformationPosition + 1);
+	};
+
+	const onAddCustomTransformation = () => {
+		let t = {
+			Position: lastTransformationPosition,
+			In: { name: 'Object', properties: [] },
+			Out: { name: 'Object', properties: [] },
+		};
+		t.SourceCode = transformationFunction;
+		t.PredefinedFunc = 0;
 		setTransformations([...transformations, t]);
 		setLastTransformationPosition(lastTransformationPosition + 1);
 	};
@@ -190,7 +270,7 @@ const ConnectionProperties = () => {
 	const onChangeTransformation = (position, value) => {
 		let trs = [...transformations];
 		let i = trs.findIndex((t) => t.Position === position);
-		trs[i].SourceCode = value === '' ? computeDefaultTransformationFunction(trs[i]) : value;
+		trs[i].SourceCode = value === '' ? transformationFunction : value;
 		setTransformations(trs);
 	};
 
@@ -200,18 +280,15 @@ const ConnectionProperties = () => {
 		setSelectedTransformation('');
 	};
 
-	const onAddArrow = (transformationPosition) => {
+	const onCustomTransformationConnect = (transformationPosition) => {
 		let sp = selectedProperty;
 		let trs = [];
 		for (let t of transformations) {
 			if (t.Position === transformationPosition) {
 				if (sp.type === 'input') {
 					if (t.In.properties.findIndex((property) => property.name === sp.name) === -1) {
-						let oldDefaultTransformation = computeDefaultTransformationFunction(t);
 						let p = inputProperties.find((p) => p.name === sp.name);
 						t.In.properties.push(p);
-						if (t.SourceCode === '' || t.SourceCode === oldDefaultTransformation)
-							t.SourceCode = computeDefaultTransformationFunction(t);
 					}
 				}
 				if (sp.type === 'output') {
@@ -224,23 +301,80 @@ const ConnectionProperties = () => {
 			trs.push(t);
 		}
 		setTransformations(trs);
+		setSelectedProperty(null);
 	};
 
-	const onRemoveArrow = (transformationPosition, propertyName, propertyType, e) => {
+	const onPredefinedTransformationConnect = (transformationPosition, parameter) => {
+		let sp = selectedProperty;
+		let trs = [];
+		for (let t of transformations) {
+			if (t.Position === transformationPosition) {
+				if (sp.type === 'input') {
+					if (t.In.properties.findIndex((property) => property != null && property.name === sp.name) === -1) {
+						let parameterIndex = t.PredefinedFunc.In.findIndex((p) => p === parameter);
+						let p = inputProperties.find((p) => p.name === sp.name);
+						if (t.In.properties.length === 0) {
+							let parametersCount = t.PredefinedFunc.In.length;
+							t.In.properties = Array(parametersCount);
+							t.In.properties[parameterIndex] = p;
+						} else {
+							t.In.properties[parameterIndex] = p;
+						}
+					}
+				}
+				if (sp.type === 'output') {
+					if (
+						t.Out.properties.findIndex((property) => property != null && property.name === sp.name) === -1
+					) {
+						let parameterIndex = t.PredefinedFunc.Out.findIndex((p) => p === parameter);
+						let p = outputProperties.find((p) => p.name === sp.name);
+						let parametersCount = t.PredefinedFunc.Out.length;
+						if (parametersCount === 1) {
+							// it's possible to connect an arbitrary number of
+							// output properties
+							t.Out.properties.push(p);
+						} else if (t.Out.properties.length === 0) {
+							t.Out.properties = Array(parametersCount);
+							t.Out.properties[parameterIndex] = p;
+						} else {
+							t.Out.properties[parameterIndex] = p;
+						}
+					}
+				}
+			}
+			trs.push(t);
+		}
+		setTransformations(trs);
+		setSelectedProperty(null);
+	};
+
+	const onRemoveConnection = (transformationPosition, propertyName, propertyType, e) => {
 		if (e.target.previousSibling == null || e.target.previousSibling.tagName !== 'svg') return; // the click is not on the label of the arrow.
 		let trs = [];
 		for (let t of transformations) {
 			if (t.Position === transformationPosition) {
-				if (propertyType === 'input') {
-					let oldDefaultTransformation = computeDefaultTransformationFunction(t);
-					let properties = t.In.properties.filter((p) => p.name !== propertyName);
-					t.In.properties = properties;
-					if (t.SourceCode === '' || t.SourceCode === oldDefaultTransformation)
-						t.SourceCode = computeDefaultTransformationFunction(t);
+				let properties = propertyType === 'input' ? t.In.properties : t.Out.properties;
+				let filtered = [];
+				if (t.PredefinedFunc !== 0) {
+					// replace the removed property with 'undefined' to preserve order.
+					for (let p of properties) {
+						if (p != null && p.name === propertyName) {
+							filtered.push(undefined);
+						} else {
+							filtered.push(p);
+						}
+					}
+				} else {
+					for (let p of properties) {
+						if (p.name !== propertyName) {
+							filtered.push(p);
+						}
+					}
 				}
-				if (propertyType === 'output') {
-					let properties = t.Out.properties.filter((p) => p.name !== propertyName);
-					t.Out.properties = properties;
+				if (propertyType === 'input') {
+					t.In.properties = filtered;
+				} else {
+					t.Out.properties = filtered;
 				}
 			}
 			trs.push(t);
@@ -253,6 +387,26 @@ const ConnectionProperties = () => {
 		for (let t of transformations) {
 			let toSave = { ...t };
 			delete toSave.Position;
+			if (t.PredefinedFunc !== 0) {
+				// validate the predefined function connections.
+				for (let [i, p] of t.PredefinedFunc.In.entries()) {
+					if (t.In.properties[i] == null) {
+						onError(
+							`The input parameter "${p}" of the predefined transformation "${t.PredefinedFunc.Name}" is not linked to any input property`
+						);
+						return;
+					}
+				}
+				for (let [i, p] of t.PredefinedFunc.Out.entries()) {
+					if (t.Out.properties[i] == null) {
+						onError(
+							`The output parameter "${p}" of the predefined transformation "${t.PredefinedFunc.Name}" is not linked to any output property`
+						);
+						return;
+					}
+				}
+				toSave.PredefinedFunc = t.PredefinedFunc.ID;
+			}
 			trs.push(toSave);
 		}
 		let [, err] = await call(`/api/connections/${connectionID}/mappings`, 'PUT', trs);
@@ -266,23 +420,6 @@ const ConnectionProperties = () => {
 			text: 'Your transformations have been successfully saved',
 		});
 		toastRef.current.toast();
-	};
-
-	const computeDefaultTransformationFunction = (t) => {
-		let f = transformationFunction;
-		// TODO: rewrite this.
-		// if (t.In.properties.length > 0) {
-		// 	let properties = '';
-		// 	t.In.properties.forEach((p, i) => {
-		// 		if (i > 0) {
-		// 			properties += " + ";
-		// 		}
-		// 		properties += `user["${p.name}"]`;
-		// 	});
-		// 	let i = f.indexOf('return');
-		// 	f = f.substring(0, i + 7) + properties;
-		// }
-		return f;
 	};
 
 	const isSelectedProperty = (name, type) => {
@@ -303,9 +440,9 @@ const ConnectionProperties = () => {
 			{sp && (
 				<div className='selectedPropertyMessage'>
 					<div>
-						Modify the links
+						Add a mapping
 						{sp.type === 'input' ? ' from ' : ' to '}
-						<span className='name'>"{sp.name}"</span>
+						<span className='name'>"{sp.label === '' ? sp.name : sp.label}"</span>
 					</div>
 					<SlButton
 						className='removeSelectedProperty'
@@ -345,7 +482,13 @@ const ConnectionProperties = () => {
 						</SlBadge>
 					</div>
 					<SlTooltip content='Save properties'>
-						<SlButton className='saveButton' variant='primary' size='large' onClick={onSave}>
+						<SlButton
+							className='saveButton'
+							variant='primary'
+							size='large'
+							disabled={sp != null}
+							onClick={onSave}
+						>
 							<SlIcon slot='prefix' name='save' />
 							Save
 						</SlButton>
@@ -353,164 +496,219 @@ const ConnectionProperties = () => {
 				</div>
 				<div className='properties usedInputProperties'>
 					<div className='title'>{cn.Role === 'Source' ? `${cn.Name} properties` : 'Golden record'}</div>
-					<SlButton className='addUsedProperty' variant='neutral' onClick={() => setIsInputDialogOpen(true)}>
+					<SlButton
+						className='addUsedProperty'
+						variant='neutral'
+						disabled={sp != null}
+						onClick={() => setIsInputDialogOpen(true)}
+					>
 						Add property
 					</SlButton>
-					{usedInputProperties.map((p) => {
+					{usedInputProperties.map(({ name, label }) => {
+						let type = 'input';
+						let isSelected = isSelectedProperty(name, type);
 						return (
-							<div
-								key={p.name}
-								className={`property${isSelectedProperty(p.name, 'input') ? ' selected' : ''}`}
-								id={p.name}
-								onClick={() => setSelectedProperty({ name: p.name, type: 'input' })}
-							>
-								<div>{p.label ? p.label : p.name}</div>
-								<SlIconButton
-									name='dash-circle'
-									label='Remove property'
-									onClick={(e) => onRemoveUsedProperty(e, p.name, 'input')}
-								/>
-							</div>
+							<ConnectionProperty
+								name={name}
+								label={label}
+								type={type}
+								isSelected={isSelected}
+								onHandle={() => setSelectedProperty({ name: name, label: label, type: type })}
+								onRemove={(e) => onRemoveUsedProperty(e, name, type)}
+								disableRemove={sp != null}
+								onConnect={sp && !isSelected ? () => onAddOneToOneTransformation(name, type) : null}
+							/>
 						);
 					})}
 				</div>
 				<div className='transformations'>
 					{transformations.map((t) => {
 						return (
-							<div
-								key={t.Position}
-								className='transformation'
-								id={`transformation-${t.Position}`}
-								onClick={sp ? () => onAddArrow(t.Position) : null}
-							>
-								<SlIconButton
-									className='addTransformationFunction'
-									name='braces'
-									label='Add transformation'
-									onClick={sp ? null : () => setSelectedTransformation(t)}
+							<div key={t.Position} className='transformation' id={`transformation-${t.Position}`}>
+								<TransformationNode
+									transformation={t}
+									onSelect={sp ? null : () => setSelectedTransformation(t)}
+									onRemove={() => onRemoveTransformation(t.Position)}
+									onCustomTransformationConnect={
+										sp ? () => onCustomTransformationConnect(t.Position) : null
+									}
+									onPredefinedTransformationConnect={
+										sp
+											? (handleID) => onPredefinedTransformationConnect(t.Position, handleID)
+											: null
+									}
 								/>
-								{st && t.Position === st.Position && (
-									<SlDialog
-										label='Modify the transformation'
-										open={true}
-										onSlAfterHide={() => setSelectedTransformation(null)}
-										style={{ '--width': '700px' }}
-									>
-										<div className='editorWrapper'>
-											<Editor
-												onChange={(value) => onChangeTransformation(t.Position, value)}
-												defaultLanguage='python'
-												value={t.SourceCode}
-												theme='vs-light'
-											/>
-										</div>
-										<SlButton
-											slot='footer'
-											variant='primary'
-											onClick={() => {
-												let trs = [...transformations];
-												let i = trs.findIndex((t2) => t2.Position === t.Position);
-												trs[i].SourceCode = '# one-to-one';
-												setTransformations(trs);
-											}}
-										>
-											Set this as one-to-one mapping
-										</SlButton>
-										<SlButton
-											className='removeTransformation'
-											slot='footer'
-											variant='danger'
-											onClick={() => onRemoveTransformation(t.Position)}
-										>
-											Remove
-										</SlButton>
-									</SlDialog>
+								{st && st.Position === t.Position && (
+									<TransformationDialog
+										transformation={t}
+										onClose={() => setSelectedTransformation(null)}
+										onEditorChange={(value) => onChangeTransformation(t.Position, value)}
+										onRemove={() => onRemoveTransformation(t.Position)}
+									/>
 								)}
 							</div>
 						);
 					})}
-					<SlTooltip content='Add a transformation'>
-						<SlButton className='addTransformation' variant='default' onClick={onAddTransformation}>
-							<SlIcon name='plus'></SlIcon>
-						</SlButton>
-					</SlTooltip>
+					<div className='addTransformationButtons'>
+						<SlTooltip content='Write a custom transformation' disabled={sp != null}>
+							<SlButton
+								className='addTransformation'
+								variant='default'
+								disabled={sp != null}
+								onClick={onAddCustomTransformation}
+							>
+								<SlIcon name='plus-lg'></SlIcon>
+							</SlButton>
+						</SlTooltip>
+						<SlTooltip content='Choose a predefined transformation' disabled={sp != null}>
+							<SlButton
+								className='addTransformation'
+								variant='default'
+								disabled={sp != null}
+								onClick={() => setShowPredefinedTransformations(true)}
+							>
+								<SlIcon name='list'></SlIcon>
+							</SlButton>
+						</SlTooltip>
+					</div>
+					{showPredefinedTransformations && (
+						<SlDialog
+							label='Select a predefined transformation'
+							className='predefinedTransformationsDialog'
+							open={true}
+							onSlAfterHide={() => setShowPredefinedTransformations(false)}
+							style={{ '--width': '700px' }}
+						>
+							<div className='predefinedTransformations'>
+								{predefinedTransformations.map((t) => {
+									return (
+										<div
+											className={`predefinedTransformation${
+												t.ID === selectedPredefinedTransformation ? ' selected' : ''
+											}`}
+											onClick={() => setSelectedPredefinedTransformation(t.ID)}
+										>
+											<SlIcon name={t.Icon}></SlIcon>
+											<div className='name'>{t.Name}</div>
+											<div className='description'>{t.Description}</div>
+										</div>
+									);
+								})}
+							</div>
+							<SlButton
+								disabled={selectedPredefinedTransformation === 0}
+								slot='footer'
+								variant='primary'
+								onClick={onAddPredefinedTransformation}
+							>
+								Add
+							</SlButton>
+						</SlDialog>
+					)}
 				</div>
 				<div className='properties usedOutputProperties'>
 					<div className='title'>{cn.Role === 'Source' ? `Golden record` : `${cn.Name} properties`}</div>
-					<SlButton className='addUsedProperty' variant='neutral' onClick={() => setIsOutputDialogOpen(true)}>
+					<SlButton
+						className='addUsedProperty'
+						variant='neutral'
+						disabled={sp != null}
+						onClick={() => setIsOutputDialogOpen(true)}
+					>
 						Add property
 					</SlButton>
-					{usedOutputProperties.map((p) => {
+					{usedOutputProperties.map(({ name, label }) => {
+						let type = 'output';
+						let isSelected = isSelectedProperty(name, type);
 						return (
-							<div
-								key={p.name}
-								className={`property${isSelectedProperty(p.name, 'output') ? ' selected' : ''}`}
-								id={p.name}
-								onClick={() => setSelectedProperty({ name: p.name, type: 'output' })}
-							>
-								<div>{p.label ? p.label : p.name}</div>
-								<SlIconButton
-									name='dash-circle'
-									label='Remove property'
-									onClick={(e) => onRemoveUsedProperty(e, p.name, 'output')}
-								/>
-							</div>
+							<ConnectionProperty
+								name={name}
+								label={label}
+								type={type}
+								isSelected={isSelected}
+								onHandle={() => setSelectedProperty({ name: name, label: label, type: type })}
+								onRemove={(e) => onRemoveUsedProperty(e, name, type)}
+								disableRemove={sp != null}
+								onConnect={sp && !isSelected ? () => onAddOneToOneTransformation(name, type) : null}
+							/>
 						);
 					})}
 				</div>
 			</div>
 			<div className='arrows'>
 				{transformations.map((t) => {
-					let inputArrows = t.In.properties.map((p) => {
-						return (
-							<div
-								className={`arrow${isSelectedProperty(p.name, 'input') ? ' selected' : ''}`}
-								onClick={
-									isSelectedProperty(p.name, 'input')
-										? (e) => {
-												onRemoveArrow(t.Position, p.name, 'input', e);
-										  }
-										: null
-								}
-							>
-								<Xarrow
-									start={p.name}
-									end={`transformation-${t.Position}`}
-									startAnchor='right'
-									endAnchor='left'
-									showHead={false}
-									color='#818cf8'
-									strokeWidth={2}
-									labels={isSelectedProperty(p.name, 'input') && '-'}
-								/>
-							</div>
-						);
-					});
-					let outputArrows = t.Out.properties.map((p) => {
-						return (
-							<div
-								className={`arrow${isSelectedProperty(p.name, 'output') ? ' selected' : ''}`}
-								onClick={
-									isSelectedProperty(p.name, 'output')
-										? (e) => {
-												onRemoveArrow(t.Position, p.name, 'output', e);
-										  }
-										: null
-								}
-							>
-								<Xarrow
-									start={`transformation-${t.Position}`}
-									end={p.name}
-									startAnchor='right'
-									endAnchor='left'
-									showHead={false}
-									color='#818cf8'
-									strokeWidth={2}
-									labels={isSelectedProperty(p.name, 'output') && '-'}
-								/>
-							</div>
-						);
-					});
+					let inputArrows = [];
+					for (let [i, p] of t.In.properties.entries()) {
+						if (p != null) {
+							inputArrows.push(
+								<div
+									className={`arrow${isSelectedProperty(p.name, 'input') ? ' selected' : ''}`}
+									onClick={
+										isSelectedProperty(p.name, 'input')
+											? (e) => {
+													onRemoveConnection(t.Position, p.name, 'input', e);
+											  }
+											: null
+									}
+								>
+									<Xarrow
+										start={p.name}
+										end={
+											t.PredefinedFunc !== 0
+												? `transformation-${t.Position}-input-${t.PredefinedFunc.In[i].replace(
+														/\s/g,
+														''
+												  )}`
+												: `transformation-${t.Position}`
+										}
+										startAnchor='right'
+										endAnchor='left'
+										showHead={false}
+										color='#a1a1aa'
+										strokeWidth={2}
+										labels={isSelectedProperty(p.name, 'input') && '-'}
+									/>
+								</div>
+							);
+						}
+					}
+					let outputArrows = [];
+					for (let [i, p] of t.Out.properties.entries()) {
+						if (p != null) {
+							outputArrows.push(
+								<div
+									className={`arrow${isSelectedProperty(p.name, 'output') ? ' selected' : ''}`}
+									onClick={
+										isSelectedProperty(p.name, 'output')
+											? (e) => {
+													onRemoveConnection(t.Position, p.name, 'output', e);
+											  }
+											: null
+									}
+								>
+									<Xarrow
+										start={
+											t.PredefinedFunc !== 0 && t.PredefinedFunc.Out.length === 1
+												? `transformation-${
+														t.Position
+												  }-output-${t.PredefinedFunc.Out[0].replace(/\s/g, '')}`
+												: t.PredefinedFunc !== 0
+												? `transformation-${t.Position}-output-${t.PredefinedFunc.Out[
+														i
+												  ].replace(/\s/g, '')}`
+												: `transformation-${t.Position}`
+										}
+										end={p.name}
+										startAnchor='right'
+										endAnchor='left'
+										showHead={false}
+										color='#a1a1aa'
+										strokeWidth={2}
+										labels={isSelectedProperty(p.name, 'output') && '-'}
+									/>
+								</div>
+							);
+						}
+					}
 					return [...inputArrows, ...outputArrows];
 				})}
 			</div>

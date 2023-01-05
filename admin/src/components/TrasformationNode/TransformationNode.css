@@ -1,0 +1,138 @@
+.TransformationNode {
+    box-shadow: var(--sl-shadow-small);
+}
+
+.TransformationNode.oneToOne {
+    background-color: var(--sl-color-danger-600);
+    width: 32px;
+    height: 32px;
+    border-radius: 100%
+}
+
+.TransformationNode.oneToOne sl-icon-button {
+    color: var(--text-onaccent);
+}
+
+.TransformationNode.oneToOne sl-icon-button::part(base):hover {
+    color: unset;
+}
+
+.TransformationNode.predefined {
+    background-color: var(--bg-primary);
+    min-width: 400px;
+    padding: 25px 0;
+    font-size: 14px;
+    border-radius: var(--radius);
+    user-select: none; /* Standard syntax */
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+    gap: 20px;
+    overflow: clip;
+    border: 2px solid var(--bg-primary);
+}
+
+.TransformationNode.predefined .info sl-icon {
+    font-size: 20px;
+}
+
+.TransformationNode.predefined .info sl-icon-button {
+    background-color: var(--sl-color-danger-600);
+    color: var(--text-onaccent);
+    border-radius: 100%;
+    font-size: 11px;
+}
+
+.TransformationNode.predefined .info sl-icon-button::part(base) {
+    padding: 5px;
+}
+
+.TransformationNode.predefined .info sl-icon-button::part(base):hover {
+    color: unset;
+    opacity: 1;
+}
+
+.TransformationNode.predefined .leftHandles {
+    text-align: left;
+}
+
+.TransformationNode.predefined .rightHandles {
+    text-align: right;
+}
+
+.TransformationNode.predefined .handleWrapper {
+    font-size: 12px;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+.TransformationNode.predefined .handleWrapper:last-child {
+    margin-bottom: 0;
+}
+
+.TransformationNode.predefined .handleWrapper .handle {
+    position: absolute;
+    width: 12px;
+    height: 15px;
+    background-color: var(--sl-color-neutral-400);
+    cursor: pointer;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.TransformationNode.predefined .handleWrapper .label {
+    opacity: .9;
+}
+
+.TransformationNode.predefined .leftHandles .handleWrapper {
+    padding-left: 15px;
+}
+
+.TransformationNode.predefined .rightHandles .handleWrapper {
+    padding-right: 15px;
+}
+
+.TransformationNode.predefined .leftHandles .handleWrapper .handle {
+    border-bottom-right-radius: 50%;
+    border-top-right-radius: 50%;
+    left: -4px;
+}
+
+.TransformationNode.predefined .rightHandles .handleWrapper .handle {
+    border-bottom-left-radius: 50%;
+    border-top-left-radius: 50%;
+    right: -4px;
+}
+
+.TransformationNode.custom {
+    background-color: var(--bg-primary);
+    border-radius: 100%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: clip;
+    position: relative;
+    border: 2px solid var(--bg-primary);
+}
+
+.TransformationNode.custom .handle {
+    position: absolute;
+    width: 12px;
+    height: 15px;
+    background-color: var(--sl-color-neutral-400);
+    cursor: pointer;
+}
+
+.TransformationNode.custom .handle.left {
+    border-bottom-left-radius: 50%;
+    border-top-left-radius: 50%;
+    right: -4px;
+}
+
+.TransformationNode.custom .handle.right {
+    border-bottom-right-radius: 50%;
+    border-top-right-radius: 50%;
+    left: -4px;
+}

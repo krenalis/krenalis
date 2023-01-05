@@ -3,26 +3,24 @@
 	position: relative;
 }
 
-.ConnectionProperties.selectedProperty .title,
+.ConnectionProperties.selectedProperty .head,
+.ConnectionProperties.selectedProperty .properties .title,
 .ConnectionProperties.selectedProperty .properties .addUsedProperty,
-.ConnectionProperties.selectedProperty .properties.usedInputProperties .title,
-.ConnectionProperties.selectedProperty .properties.usedInputProperties .property,
-.ConnectionProperties.selectedProperty .properties.usedOutputProperties .property,
-.ConnectionProperties.selectedProperty .arrows .arrow,
 .ConnectionProperties.selectedProperty .transformations .saveButton,
 .ConnectionProperties.selectedProperty .transformations .addTransformation {
 	opacity: 0.2;
 }
 
-.ConnectionProperties.selectedProperty .properties .property.selected {
-	opacity: 1;
-	background-color: var(--color-primary-600);
-	color: var(--text-onaccent);
-	cursor: default;
-}
-
 .ConnectionProperties.selectedProperty .arrows .arrow.selected {
 	opacity: 1;
+}
+
+.ConnectionProperties .TransformationNode .handle {
+	visibility: hidden;
+}
+
+.ConnectionProperties.selectedProperty .TransformationNode .handle {
+	visibility: visible;
 }
 
 .ConnectionProperties.selectedProperty .arrows .arrow.selected > div > div {
@@ -38,19 +36,7 @@
 	cursor: pointer !important;
 }
 
-.ConnectionProperties.selectedProperty .transformations .transformation {
-	transition: transform 0.5s;
-}
-
-.ConnectionProperties.selectedProperty .transformations .transformation:hover {
-	transform: scale(1.05);
-}
-
-.ConnectionProperties.selectedProperty .transformations .transformation * {
-	cursor: pointer !important;
-}
-
-.ConnectionProperties.selectedProperty .properties.usedInputProperties .property.selected sl-icon-button {
+.ConnectionProperties.selectedProperty .properties .ConnectionProperty.selected sl-icon-button {
 	visibility: hidden;
 }
 
@@ -119,17 +105,6 @@
 	color: var(--text-onaccent);
 }
 
-.ConnectionProperties .routeContent .properties .property {
-	background-color: var(--bg-primary);
-	color: var(--text-primary);
-	padding: 15px 25px;
-	margin-bottom: 15px;
-	border-radius: var(--radius);
-	box-shadow: var(--sl-shadow-x-small);
-	overflow-wrap: anywhere;
-	font-size: 14px;
-}
-
 .ConnectionProperties .routeContent .properties.usedInputProperties {
 	grid-area: usedInputProperties;
 }
@@ -140,18 +115,6 @@
 	width: 200px;
 	margin: 0 auto;
 	margin-bottom: 30px;
-}
-
-.ConnectionProperties .routeContent .properties .property {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 20px;
-	cursor: pointer;
-}
-
-.ConnectionProperties .routeContent .properties .property sl-icon-button::part(base) {
-	padding: 0;
 }
 
 .ConnectionProperties .routeContent .transformations {
@@ -167,24 +130,20 @@
 
 .ConnectionProperties .routeContent .transformations .transformation {
 	position: relative;
-	background-color: var(--bg-primary);
-	border-radius: 100%;
-	width: 50px;
-	height: 50px;
+	width: fit-content;
+	height: fit-content;
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	box-shadow: var(--sl-shadow-small);
-	margin: 30px auto;
+	margin: 60px auto;
 }
 
-.ConnectionProperties 
-	.routeContent
-	.transformations
-	.transformation
-	sl-icon-button.addTransformationFunction::part(base) {
-	color: var(--color-primary-500);
-	font-size: 21px;
+.ConnectionProperties .routeContent .transformations .transformation .TransformationNode {
+	z-index: 10;
+}
+
+.ConnectionProperties .routeContent .transformations .transformation sl-dialog {
+	z-index: 20;
 }
 
 .ConnectionProperties .routeContent .transformations .editorWrapper ~ div {
@@ -203,6 +162,13 @@
 	font-family: monospace !important;
 }
 
+.ConnectionProperties .routeContent .transformations .addTransformationButtons {
+	display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+}
+
 .ConnectionProperties .routeContent .transformations .addTransformation::part(base) {
 	width: 40px;
 	height: 40px;
@@ -216,6 +182,56 @@
 	top: 50%;
 	transform: translate(-50%, -50%);
 	font-size: 20px;
+}
+
+.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformations {
+	max-width: 500px;
+	margin: auto;
+}
+
+.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformation {
+	display: grid;
+    grid-template-columns: 40px 1fr;
+    grid-template-areas:
+        "icon name"
+        "icon description";
+    border: 1px solid var(--border-primary);
+    align-items: center;
+    text-align: left;
+    column-gap: 20px;
+	padding: 10px 25px;
+	cursor: pointer;
+}
+
+.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformation.selected {
+	color: var(--color-primary-600)
+}
+
+.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformation:first-child {
+	border-top-left-radius: var(--radius);
+	border-top-right-radius: var(--radius);
+}
+
+.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformation:last-child {
+	border-top: 0;
+	border-bottom-left-radius: var(--radius);
+	border-bottom-right-radius: var(--radius);
+}
+
+.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformation sl-icon {
+	grid-area: icon;
+	margin: auto;
+	font-size: 23px;
+}
+
+.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformation .name {
+	grid-area: name;
+	font-weight: 600;
+}
+
+.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformation .description {
+	grid-area: description;
+	font-size: 14px;
 }
 
 .ConnectionProperties .routeContent .transformations sl-dialog .removeTransformation {
@@ -279,7 +295,7 @@
 	left: 100px;
 	width: calc(100% - 100px);
 	height: 70px;
-	z-index: 10;
+	z-index: 20;
 	background-color: var(--bg-primary);
 	justify-content: center;
 	align-items: center;
@@ -299,3 +315,27 @@
 	right: 40px;
 	min-width: 180px;
 }
+
+.ConnectionProperties .newTransformationDialog::part(title) {
+	text-align: left;
+}
+
+.ConnectionProperties .newTransformationDialog::part(body) {
+	padding: 20px 30px 50px 30px
+}
+
+.ConnectionProperties .newTransformationDialog .choices {
+	max-width: 400px;
+	margin: auto;
+	text-align: left;
+}
+
+.ConnectionProperties .newTransformationDialog .choices sl-radio {
+	margin-bottom: 10px;
+}
+
+.ConnectionProperties .newTransformationDialog .choices sl-radio:last-child {
+	margin-bottom: 0;
+}
+
+
