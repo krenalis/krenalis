@@ -57,10 +57,6 @@ type Warehouse interface {
 	// users table. If a table already exists it returns an Error error.
 	CreateTables(ctx context.Context, schema types.Type) error
 
-	// DropTables drops the data warehouse tables created from the given schema. It
-	// does not return an error if a table does not exist.
-	DropTables(ctx context.Context, schema types.Type) error
-
 	// Exec executes a query without returning any rows. args are the placeholders.
 	// If the query fails, it returns an Error value.
 	Exec(ctx context.Context, query string, args ...any) (sql.Result, error)
@@ -69,11 +65,10 @@ type Warehouse interface {
 	// necessary, establishes a new connection.
 	Ping(ctx context.Context) error
 
-	// TableNames returns the names of the tables in the warehouse.
-	TableNames(ctx context.Context) ([]string, error)
-
-	// TableSchema returns the schema of the table called name.
-	TableSchema(ctx context.Context, name string) (types.Type, error)
+	// Tables returns the tables of the data warehouse.
+	// It returns only the tables 'users', 'groups', 'events', and the tables with
+	// prefix 'users_', 'groups_' and 'events_'.
+	Tables(ctx context.Context) ([]*Table, error)
 
 	// Type returns the type of the warehouse.
 	Type() Type
@@ -95,6 +90,21 @@ type Warehouse interface {
 
 	// Validate validates the settings and returns an error if they are not valid.
 	Validate() error
+}
+
+// Table represents a table.
+type Table struct {
+	Name    string
+	Columns []*Column
+}
+
+// Column represents a table column.
+type Column struct {
+	Name        string
+	Description string
+	Type        types.Type
+	IsNullable  bool
+	IsUpdatable bool
 }
 
 // IsValidType reports whether typ is a valid warehouse type.

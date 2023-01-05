@@ -189,3 +189,10 @@ func WorkspaceDisconnectWarehouse() {
 		log.Fatal(err)
 	}
 }
+
+func WorkspaceReloadSchema() {
+	err := callAPI("POST", "api/workspace/reload-schema", nil, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}

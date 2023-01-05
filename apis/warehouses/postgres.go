@@ -16,7 +16,6 @@ import (
 	"log"
 	"net"
 	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -112,35 +111,6 @@ func (warehouse *postgreSQL) CreateTables(ctx context.Context, schema types.Type
 	return wrapError(err)
 }
 
-// DropTables drops the data warehouse tables created from the given schema. It
-// does not return an error if a table does not exist.
-func (warehouse *postgreSQL) DropTables(ctx context.Context, schema types.Type) error {
-	tables := []string{"connections_users", "users"}
-	for _, p := range schema.Properties() {
-		if isArrayOfObjects(p.Type) {
-			if !types.IsValidPropertyName(p.Name) {
-				panic("property name is not valid")
-			}
-			tables = append(tables, tablesOfObject("users_"+p.Name, p.Type.ItemType())...)
-		}
-	}
-	var b strings.Builder
-	b.WriteString(`DROP TABLE IF EXISTS "`)
-	for i, table := range tables {
-		if i > 0 {
-			b.WriteString(`", "`)
-		}
-		b.WriteString(table)
-	}
-	b.WriteByte('"')
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
-	_, err = db.ExecContext(ctx, b.String())
-	return wrapError(err)
-}
-
 // Exec executes a query without returning any rows. args are the placeholders.
 // If the query fails, it returns an Error value.
 func (warehouse *postgreSQL) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
@@ -195,150 +165,151 @@ func (warehouse *postgreSQL) QueryRow(ctx context.Context, query string, args ..
 	return Row{row: row}
 }
 
-// TableNames returns the names of the tables in the warehouse.
-func (warehouse *postgreSQL) TableNames(ctx context.Context) ([]string, error) {
-	rows, err := warehouse.db.QueryContext(ctx,
-		`SELECT tablename FROM pg_tables WHERE schemaname = "`+warehouse.settings.Schema+`"`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var name string
-	var names []string
-	for rows.Next() {
-		if err := rows.Scan(&name); err != nil {
-			return nil, err
-		}
-		if isValidTableName(name) {
-			names = append(names, name)
-		}
-	}
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-	sort.Strings(names)
-	return names, nil
-}
+// Tables returns the tables of the data warehouse.
+// It returns only the tables 'users', 'groups', 'events', and the tables with
+// prefix 'users_', 'groups_' and 'events_'.
+func (warehouse *postgreSQL) Tables(ctx context.Context) ([]*Table, error) {
 
-// TableSchema returns the schema of the table called name.
-func (warehouse *postgreSQL) TableSchema(ctx context.Context, name string) (types.Type, error) {
-	if !types.IsValidPropertyName(name) {
-		panic("table name is not valid")
-	}
+	// Get the connection.
 	db, err := warehouse.connection()
 	if err != nil {
-		return types.Type{}, err
+		return nil, err
 	}
-	query := "SELECT column_name, data_type, character_maximum_length, numeric_precision," +
-		" numeric_precision_radix, numeric_scale\n" +
-		"FROM information_schema.columns" +
-		`WHERE table_name = "` + name + `"` +
-		"ORDER BY ordinal_position"
-	rows, err := db.QueryContext(ctx, query)
+
+	var table *Table
+	var tables []*Table
+
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return types.Type{}, wrapError(err)
+		return nil, wrapError(err)
 	}
-	var properties []types.Property
-	for rows.Next() {
-		var name, typ, charLength, precision, precisionRadix, scale sql.NullString
-		if err := rows.Scan(&name, &typ, &charLength, &precision, &precisionRadix, &scale); err != nil {
-			_ = rows.Close()
-			return types.Type{}, wrapError(err)
+	defer func() {
+		if tx != nil {
+			_ = tx.Rollback()
 		}
-		if !name.Valid {
-			return types.Type{}, wrapError(fmt.Errorf("data warehouse has returned NULL as column name"))
+	}()
+
+	// Read columns.
+	query := "SELECT c.table_name, c.column_name, c.is_nullable, c.data_type, c.character_maximum_length," +
+		" c.numeric_precision, c.numeric_precision_radix, c.numeric_scale, c.is_updatable," +
+		" col_description(c.table_name::regclass::oid, c.ordinal_position)\n" +
+		"FROM information_schema.columns c\n" +
+		"INNER JOIN information_schema.tables t ON c.table_name = t.table_name AND c.table_schema = t.table_schema\n" +
+		"WHERE t.table_schema = '" + warehouse.settings.Schema + "' AND t.table_type = 'BASE TABLE' AND" +
+		" ( t.table_name IN ('users', 'groups', 'events') OR t.table_name LIKE 'users\\__%' OR" +
+		" t.table_name LIKE 'groups\\__%' OR t.table_name LIKE 'events\\__%' )\n" +
+		"ORDER BY c.table_name, c.ordinal_position"
+
+	rows, err := tx.QueryContext(ctx, query)
+	if err != nil {
+		return nil, wrapError(err)
+	}
+	for rows.Next() {
+		var tableName, columnName, isNullable, typ, charLength, precision, radix, scale, isUpdatable, description sql.NullString
+		if err := rows.Scan(&tableName, &columnName, &isNullable, &typ, &charLength, &precision, &radix, &scale, &isUpdatable, &description); err != nil {
+			_ = rows.Close()
+			return nil, wrapError(err)
+		}
+		if !columnName.Valid {
+			return nil, newError("data warehouse has returned NULL as column name")
 		}
 		if !typ.Valid {
-			return types.Type{}, wrapError(fmt.Errorf("data warehouse has returned NULL as column data type"))
+			return nil, newError("data warehouse has returned NULL as column data type")
 		}
-		if !types.IsValidPropertyName(name.String) {
-			return types.Type{}, fmt.Errorf("column name %q is not supported", name.String)
+		if !types.IsValidPropertyName(columnName.String) {
+			return nil, newError("column name %q is not supported", columnName.String)
 		}
-		property := types.Property{Name: name.String}
+		var t types.Type
 		switch typ.String {
 		case "smallint":
-			property.Type = types.Int16()
+			t = types.Int16()
 		case "integer":
-			property.Type = types.Int()
+			t = types.Int()
 		case "bigint":
-			property.Type = types.Int64()
+			t = types.Int64()
 		case "numeric":
 			// Parse precision radix.
-			if !precisionRadix.Valid {
-				return types.Type{}, wrapError(fmt.Errorf(
-					"data warehouse has returned NULL as precision radix for column %s", name.String))
+			if !radix.Valid {
+				return nil, newError("data warehouse has returned NULL as precision radix for column %s", columnName.String)
 			}
-			radix, _ := strconv.Atoi(precisionRadix.String)
+			radix, _ := strconv.Atoi(radix.String)
 			if radix != 2 && radix != 10 {
-				return types.Type{}, wrapError(fmt.Errorf(
-					"data warehouse has returned an invalid precision radix for column %s", name.String))
+				return nil, newError("data warehouse has returned an invalid precision radix for column %s", columnName.String)
 			}
 			// Parse precision.
 			if !precision.Valid {
-				return types.Type{}, wrapError(fmt.Errorf(
-					"data warehouse has returned NULL as precision for column %s", name.String))
+				return nil, newError("data warehouse has returned NULL as precision for column %s", columnName.String)
 			}
 			p, err := strconv.ParseInt(precision.String, radix, 64)
 			if err != nil || p < 1 {
-				return types.Type{}, wrapError(fmt.Errorf(
-					"data warehouse has returned an invalid precision for column %s: %s", name.String, precision.String))
-			}
-			if p > types.MaxDecimalPrecision {
-				return types.Type{}, fmt.Errorf("numeric precision of column %s is not supported: %d", name.String, p)
+				return nil, newError("data warehouse has returned an invalid precision for column %s: %s", columnName.String, precision.String)
 			}
 			// Parse scale.
 			if !scale.Valid {
-				return types.Type{}, wrapError(fmt.Errorf(
-					"data warehouse has returned NULL as scale for column %s", name.String))
+				return nil, newError("data warehouse has returned NULL as scale for column %s", columnName.String)
 			}
 			s, err := strconv.ParseInt(scale.String, radix, 64)
 			if err != nil || s < 0 || s > p {
-				return types.Type{}, wrapError(fmt.Errorf(
-					"data warehouse has returned an invalid scale for column %s: %s", name.String, scale.String))
+				return nil, newError("data warehouse has returned an invalid scale for column %s: %s", columnName.String, scale.String)
 			}
-			if s > types.MaxDecimalScale {
-				return types.Type{}, fmt.Errorf("numeric scale of column %s is not supported: %d", name.String, s)
-			}
-			property.Type = types.Decimal(int(p), int(s))
+			t = types.Decimal(int(p), int(s))
 		case "real":
-			property.Type = types.Float32()
+			t = types.Float32()
 		case "double precision":
-			property.Type = types.Float()
-		case "varchar", "char", "text":
+			t = types.Float()
+		case "character varying", "character":
 			if charLength.Valid {
 				chars, _ := strconv.Atoi(charLength.String)
 				if chars < 1 {
-					return types.Type{}, wrapError(fmt.Errorf(
-						"data warehouse has returned an invalid character maximum length for column %s", name.String))
+					return nil, newError("data warehouse has returned an invalid character maximum length for column %s", columnName.String)
 				}
-				property.Type = types.Text(types.Chars(chars))
+				t = types.Text(types.Chars(chars))
 			} else {
-				if typ.String == "char" {
-					property.Type = types.Text(types.Chars(1))
-				} else {
-					property.Type = types.Text()
-				}
+				t = types.Text()
 			}
-		case "timestamp", "timestamp with time zone":
-			property.Type = types.DateTime("2006-01-02 15:04:05.999999")
+		case "text":
+			t = types.Text()
+		case "timestamp without time zone", "timestamp with time zone":
+			t = types.DateTime("2006-01-02 15:04:05.999999")
 		case "date":
-			property.Type = types.Date("2006-01-02")
-		case "time", "time with time zone":
-			property.Type = types.Time("15:04:05")
+			t = types.Date("2006-01-02")
+		case "time without time zone", "time with time zone":
+			t = types.Time("15:04:05")
 		case "boolean":
-			property.Type = types.Boolean()
+			t = types.Boolean()
 		case "uuid":
-			property.Type = types.UUID()
-		case "jsonb":
-			property.Type = types.JSON()
+			t = types.UUID()
+		case "json", "jsonb":
+			t = types.JSON()
+		default:
+			return nil, newError("type of column %q.%q is not supported: %s", tableName.String, columnName.String, typ.String)
 		}
-		properties = append(properties, property)
+		column := &Column{
+			Name:        columnName.String,
+			Type:        t,
+			IsNullable:  isNullable.String == "YES",
+			IsUpdatable: isUpdatable.String == "YES",
+		}
+		if description.Valid {
+			column.Description = description.String
+		}
+		if table == nil || tableName.String != table.Name {
+			table = &Table{Name: tableName.String}
+			tables = append(tables, table)
+		}
+		table.Columns = append(table.Columns, column)
 	}
 	if err := rows.Err(); err != nil {
-		return types.Type{}, wrapError(err)
+		return nil, wrapError(err)
 	}
-	schema := types.Object(properties)
-	return schema, nil
+
+	err = tx.Commit()
+	tx = nil
+	if err != nil {
+		return nil, err
+	}
+
+	return tables, nil
 }
 
 // Users returns the users, with only the properties in schema, ordered by

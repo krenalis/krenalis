@@ -176,31 +176,3 @@ func (state *connectionsState) List() []*Connection {
 	state.Unlock()
 	return connections
 }
-
-// typesState contains the state of a single workspace's types.
-type typesState struct {
-	sync.Mutex
-	names map[string]*Type
-}
-
-// Get returns the type with the given name. The boolean return value reports
-// whether the type exists.
-func (state *typesState) Get(name string) (*Type, bool) {
-	state.Lock()
-	t, ok := state.names[name]
-	state.Unlock()
-	return t, ok
-}
-
-// List returns all the types.
-func (state *typesState) List() []*Type {
-	state.Lock()
-	types := make([]*Type, len(state.names))
-	i := 0
-	for _, t := range state.names {
-		types[i] = t
-		i++
-	}
-	state.Unlock()
-	return types
-}

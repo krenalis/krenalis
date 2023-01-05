@@ -55,6 +55,7 @@ CREATE TABLE workspaces (
     name varchar(100) NOT NULL,
     warehouse_type warehouse_type DEFAULT NULL,
     warehouse_settings varchar(65535) NOT NULL DEFAULT '',
+    schema text NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
 
@@ -208,60 +209,6 @@ CREATE TABLE tasks (
   completed_at TIMESTAMP,
   result      JSONB
 );
-
-CREATE TABLE types (
-    workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
-    name varchar(120) NOT NULL,
-    description varchar(400) NOT NULL DEFAULT '',
-    definition text NOT NULL,
-    event smallint CHECK(event BETWEEN 1 AND 255),
-    PRIMARY KEY (workspace, name)
-);
-
-INSERT INTO types (workspace, name, definition) VALUES
-    (1, 'user', '{ "custom": "user", "name": "Object", "properties": [
-    {
-        "name" : "FirstName",
-        "label": "First name",
-        "description": "First name of the user",
-        "type": {
-            "name": "Text",
-            "charLen": 300,
-            "null": true
-        }
-    },
-    {
-        "name" : "LastName",
-        "label": "Last name",
-        "description": "Last name of the user",
-        "type": {
-            "name": "Text",
-            "charLen": 300,
-            "null": true
-        }
-    },
-    {
-        "name" : "Email",
-        "label": "Email address",
-        "description": "Email address of the user",
-        "type": {
-            "name": "Text",
-            "charLen": 300,
-            "null": true
-        }
-    }
-] }'), (1, 'group', '{ "custom": "group", "name": "Object", "properties": [
-    {
-        "name" : "Name",
-        "label": "Group name",
-        "description": "Name of the group",
-        "type": {
-            "name": "Text",
-            "charLen": 300,
-            "null": true
-        }
-    }
-] }');
 
 CREATE TABLE users (
     source integer NOT NULL,

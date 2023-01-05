@@ -53,12 +53,8 @@ func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgr
 		switch n.Name {
 		case "addConnection":
 			s.addConnection(n)
-		case "addType":
-			s.addType(n)
 		case "deleteConnection":
 			s.deleteConnection(n)
-		case "deleteType":
-			s.deleteType(n)
 		case "endImport":
 			s.endImport(n)
 		case "generateConnectionKey":
@@ -77,12 +73,10 @@ func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgr
 			s.setConnectionUserQuery(n)
 		case "setConnectionUserSchema":
 			s.setConnectionUserSchema(n)
-		case "setTypeDescription":
-			s.setTypeDescription(n)
-		case "setTypeDefinition":
-			s.setTypeDefinition(n)
 		case "setResource":
 			s.setResource(n)
+		case "setWorkspaceSchema":
+			s.setWorkspaceSchema(n)
 		case "setWorkspaceWarehouse":
 			s.setWorkspaceWarehouse(n)
 		case "startImport":
@@ -128,21 +122,6 @@ func (s *stateKeeper) replaceConnection(id int, f func(c *Connection)) *Connecti
 	connections.state.Unlock()
 	s.connections[c.id] = cc
 	return cc
-}
-
-// replaceType calls the function f passing a copy of the type called name of
-// the given workspace. After f is returned, it replaces the type with its copy
-// in the state and returns the latter.
-func (s *stateKeeper) replaceType(workspace int, name string, f func(c *Type)) *Type {
-	tt := new(Type)
-	dt := s.workspaces[workspace].Types
-	dt.state.Lock()
-	t := dt.state.names[name]
-	*tt = *t
-	f(tt)
-	dt.state.names[name] = tt
-	dt.state.Unlock()
-	return tt
 }
 
 // replaceResource calls the function f passing a copy of the resource with
@@ -269,39 +248,6 @@ func (s *stateKeeper) addConnection(n postgres.Notification) {
 	}
 }
 
-// addTypeNotification is the notification event sent when a type is added.
-type addTypeNotification struct {
-	Workspace   int
-	Description string
-	Definition  json.RawMessage `json:",omitempty"`
-	Event       uint8
-}
-
-// addType adds a new type.
-func (s *stateKeeper) addType(n postgres.Notification) {
-	e := addTypeNotification{}
-	if !decodeStateNotification(n, &e) {
-		return
-	}
-	typ, err := types.Parse(string(e.Definition), nil)
-	if err != nil {
-		log.Printf("[error] cannot parse type definition of notification %s from %d: %s", n.Name, n.PID, err)
-		return
-	}
-	name := typ.Custom()
-	t := Type{
-		name:        name,
-		description: e.Description,
-		definition:  string(e.Definition),
-		event:       e.Event,
-		typ:         typ,
-	}
-	eventTypes := s.workspaces[e.Workspace].Types
-	eventTypes.state.Lock()
-	eventTypes.state.names[name] = &t
-	eventTypes.state.Unlock()
-}
-
 // deleteConnectionNotification is the notification event sent when a
 // connection is deleted.
 type deleteConnectionNotification struct {
@@ -338,25 +284,6 @@ func (s *stateKeeper) deleteConnection(n postgres.Notification) {
 	}
 	delete(connections.state.ids, e.ID)
 	connections.state.Unlock()
-}
-
-// deleteTypeNotification is the notification event sent when a type is
-// deleted.
-type deleteTypeNotification struct {
-	Workspace int
-	Name      string
-}
-
-// deleteType deletes a type.
-func (s *stateKeeper) deleteType(n postgres.Notification) {
-	e := deleteTypeNotification{}
-	if !decodeStateNotification(n, &e) {
-		return
-	}
-	eventTypes := s.workspaces[e.Workspace].Types
-	eventTypes.state.Lock()
-	delete(eventTypes.state.names, e.Name)
-	eventTypes.state.Unlock()
 }
 
 // endImportNotification is the notification event sent when an import ends.
@@ -558,50 +485,6 @@ func (s *stateKeeper) setConnectionUserSchema(n postgres.Notification) {
 	})
 }
 
-// setTypeDescriptionNotification is the notification event sent when the
-// description of a type is changed.
-type setTypeDescriptionNotification struct {
-	Workplace   int
-	Name        string
-	Description string
-}
-
-// setTypeDescription sets the description of a type.
-func (s *stateKeeper) setTypeDescription(n postgres.Notification) {
-	e := setTypeDescriptionNotification{}
-	if !decodeStateNotification(n, &e) {
-		return
-	}
-	s.replaceType(e.Workplace, e.Name, func(t *Type) {
-		t.description = e.Description
-	})
-}
-
-// setTypeDefinitionNotification is the notification event sent when the
-// definition of a type is changed.
-type setTypeDefinitionNotification struct {
-	Workspace  int
-	Definition json.RawMessage `json:",omitempty"`
-}
-
-// setTypeDefinition sets the definition of a type.
-func (s *stateKeeper) setTypeDefinition(n postgres.Notification) {
-	e := setTypeDefinitionNotification{}
-	if !decodeStateNotification(n, &e) {
-		return
-	}
-	typ, err := types.Parse(string(e.Definition), nil)
-	if err != nil {
-		log.Printf("[error] cannot parse type definition of notification %s from %d: %s", n.Name, n.PID, err)
-		return
-	}
-	name := typ.Custom()
-	s.replaceType(e.Workspace, name, func(t *Type) {
-		t.definition = string(e.Definition)
-		t.typ = typ
-	})
-}
-
 type setResourceNotification struct {
 	ID           int
 	AccessToken  string
@@ -619,6 +502,33 @@ func (s *stateKeeper) setResource(n postgres.Notification) {
 		r.accessToken = e.AccessToken
 		r.refreshToken = e.RefreshToken
 		r.expiresIn = e.ExpiresIn
+	})
+}
+
+// setWorkspaceSchemaNotification is the notification event sent when a
+// workspace schema is changed.
+type setWorkspaceSchemaNotification struct {
+	Workspace int
+	Schema    map[string]*types.Type
+}
+
+// setWorkspaceSchema sets the schema of a workspace.
+func (s *stateKeeper) setWorkspaceSchema(n postgres.Notification) {
+	e := setWorkspaceSchemaNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	var unchanged []string
+	for name, typ := range e.Schema {
+		if typ == nil {
+			unchanged = append(unchanged, name)
+		}
+	}
+	s.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		for _, name := range unchanged {
+			e.Schema[name] = w.schema[name]
+		}
+		w.schema = e.Schema
 	})
 }
 

@@ -406,7 +406,21 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 	router.Route("/api/workspace/disconnect-warehouse", func(router chi.Router) {
 		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			err = workspace.DisconnectWarehouse(true)
+			err = workspace.DisconnectWarehouse()
+			if err != nil {
+				if err, ok := err.(errors.ResponseWriterTo); ok {
+					_ = err.WriteTo(w)
+					return
+				}
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+		})
+	})
+	router.Route("/api/workspace/reload-schema", func(router chi.Router) {
+		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+			err = workspace.ReloadSchema()
 			if err != nil {
 				if err, ok := err.(errors.ResponseWriterTo); ok {
 					_ = err.WriteTo(w)

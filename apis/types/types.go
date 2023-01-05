@@ -1151,6 +1151,134 @@ func (t Type) ValueType() Type {
 	return t.vl.(Type)
 }
 
+// EqualTo reports whether t is equals to t2.
+func (t Type) EqualTo(t2 Type) bool {
+	// Physical type.
+	if t.pt != t2.pt {
+		return false
+	}
+	// Logical type.
+	if t.lt != t2.lt {
+		return false
+	}
+	// Null.
+	if t.null != t2.null {
+		return false
+	}
+	// Minimum and maximum.
+	switch t.pt {
+	case PtInt, PtInt8, PtInt16, PtInt24:
+		if t.p != t2.p || t.s != t2.s {
+			return false
+		}
+	case PtUInt, PtUInt8, PtUInt16, PtUInt24:
+		if t.p != t2.p || t.s != t2.s {
+			return false
+		}
+	case PtInt64, PtUInt64, PtFloat, PtFloat32:
+		if t.vl != t2.vl {
+			return false
+		}
+	case PtDecimal:
+		if vl1, ok := t.vl.(decimalRange); ok {
+			vl2, ok := t2.vl.(decimalRange)
+			if !ok || !vl1.min.Equal(vl2.min) || !vl1.max.Equal(vl2.max) {
+				return false
+			}
+		} else if t2.vl != nil {
+			return false
+		}
+	}
+	// Precision, byte length or items minimum length.
+	if t.p != t2.p {
+		return false
+	}
+	// Scale, character length or items maximum length.
+	if t.s != t2.s {
+		return false
+	}
+	// Regular expression or values.
+	if t.pt == PtText {
+		switch vl1 := t.vl.(type) {
+		case nil:
+			if t2.vl != nil {
+				return false
+			}
+		case *regexp.Regexp:
+			if t2.vl == nil {
+				return false
+			}
+			vl2, ok := t2.vl.(*regexp.Regexp)
+			if !ok {
+				return false
+			}
+			if vl1.String() != vl2.String() {
+				return false
+			}
+		case []string:
+			if t2.vl == nil {
+				return false
+			}
+			vl2, ok := t2.vl.([]string)
+			if !ok {
+				return false
+			}
+			if len(vl1) != len(vl2) {
+				return false
+			}
+			for i, v1 := range vl1 {
+				if v2 := vl2[i]; v1 != v2 {
+					return false
+				}
+			}
+		}
+	}
+	// Unique items and item type.
+	if t.pt == PtArray {
+		if t.unique != t2.unique {
+			return false
+		}
+		if !t.vl.(Type).EqualTo(t2.vl.(Type)) {
+			return false
+		}
+	}
+	// Properties.
+	if t.pt == PtObject {
+		properties1 := t.vl.([]Property)
+		properties2 := t2.vl.([]Property)
+		if len(properties1) != len(properties2) {
+			return false
+		}
+		for i, p1 := range properties1 {
+			p2 := properties2[i]
+			if p1.Name != p2.Name {
+				return false
+			}
+			if p1.Label != p2.Label {
+				return false
+			}
+			if p1.Description != p2.Description {
+				return false
+			}
+			if p1.Nullable != p2.Nullable {
+				return false
+			}
+			if !p1.Type.EqualTo(p2.Type) {
+				return false
+			}
+		}
+	}
+	// Value type.
+	if t.pt == PtMap && !t.vl.(Type).EqualTo(t2.vl.(Type)) {
+		return false
+	}
+	// Custom.
+	if t.custom != t2.custom {
+		return false
+	}
+	return true
+}
+
 // Length represents a Text length.
 type Length interface {
 	length() int

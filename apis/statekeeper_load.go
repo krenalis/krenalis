@@ -10,7 +10,7 @@ package apis
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"log"
 	"strings"
 
 	"chichi/apis/postgres"
@@ -75,13 +75,13 @@ func (s *stateKeeper) loadState() error {
 
 	// Read all workspaces.
 	workspaces := map[int]*Workspace{}
-	err = s.db.QueryScan("SELECT id, account,  warehouse_type, warehouse_settings FROM workspaces",
+	err = s.db.QueryScan("SELECT id, account,  warehouse_type, warehouse_settings, schema FROM workspaces",
 		func(rows *postgres.Rows) error {
 			var id, accountID int
 			var warehouseType *warehouses.Type
-			var warehouseSettings []byte
+			var warehouseSettings, schema []byte
 			for rows.Next() {
-				if err := rows.Scan(&id, &accountID, &warehouseType, &warehouseSettings); err != nil {
+				if err := rows.Scan(&id, &accountID, &warehouseType, &warehouseSettings, &schema); err != nil {
 					return err
 				}
 				account := accounts[accountID]
@@ -96,9 +96,15 @@ func (s *stateKeeper) loadState() error {
 					var settings warehouses.PostgreSQLSettings
 					_ = json.Unmarshal(warehouseSettings, &settings)
 					workspace.warehouse = warehouses.OpenPostgres(&settings)
+					workspace.schema = map[string]*types.Type{}
+					if len(schema) > 0 {
+						err = json.Unmarshal(schema, &workspace.schema)
+						if err != nil {
+							log.Fatalf("cannot unmarshal schema of workspace %d: %s", id, err)
+						}
+					}
 				}
 				workspace.Connections = newConnections(workspace, &connectionsState{ids: map[int]*Connection{}})
-				workspace.Types = newTypes(workspace, &typesState{names: map[string]*Type{}})
 				workspace.EventListeners = &EventListeners{workspace}
 				account.Workspaces.state.ids[id] = workspace
 				workspaces[id] = workspace
@@ -205,33 +211,6 @@ func (s *stateKeeper) loadState() error {
 				}
 				connection := connections[connectionID]
 				connection.keys = append(connection.keys, value)
-			}
-			return nil
-		})
-	if err != nil {
-		return err
-	}
-
-	// Read all types.
-	err = s.db.QueryScan("SELECT workspace, name, description, definition, coalesce(event, 0) FROM types",
-		func(rows *postgres.Rows) error {
-			for rows.Next() {
-				t := Type{}
-				var workspaceID int
-				if err := rows.Scan(&workspaceID, &t.name, &t.description, &t.definition, &t.event); err != nil {
-					return err
-				}
-				if t.definition != "" {
-					t.typ, err = types.Parse(t.definition, nil)
-					if err != nil {
-						// TODO(marco) disable the type instead of returning an error?
-						return err
-					}
-					if t.typ.Custom() != t.name {
-						return fmt.Errorf("expected type name %q, got %q", t.name, t.typ.Custom())
-					}
-				}
-				workspaces[workspaceID].Types.state.names[t.name] = &t
 			}
 			return nil
 		})

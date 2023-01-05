@@ -62,6 +62,5 @@ Note that these subcommands are still not implemented:
 
 - `chichi-cli connectors`
 - `chichi-cli schemas show { user | group | event }`
-- `chichi-cli schemas update { user | group | event } { <filename> | - }`
 - `chichi-cli schemas properties { user | group | event }`
 - `chichi-cli users`

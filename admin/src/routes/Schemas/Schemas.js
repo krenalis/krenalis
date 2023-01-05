@@ -13,7 +13,7 @@ export default class Schemas extends React.Component {
 		this.state = {
 			newSchema: '',
 			originalSchema: '',
-			schemaName: 'user',
+			schemaName: 'users',
 			status: null,
 		};
 	}
@@ -83,8 +83,8 @@ export default class Schemas extends React.Component {
 								this.handleSchemaNameUpdate(e);
 							}}
 						>
-							<SlMenuItem value='user'>User</SlMenuItem>
-							<SlMenuItem value='group'>Group</SlMenuItem>
+							<SlMenuItem value='users'>Users</SlMenuItem>
+							<SlMenuItem value='groups'>Groups</SlMenuItem>
 						</SlSelect>
 						<SlButton
 							className='saveButton'

@@ -13,3 +13,4 @@ GET    /api/event-listeners/{id}/events     Returns the processed events
 POST   /api/users                           List the Golden Records of the users and the schema
 POST   /api/workspace/connect-warehouse     Connect a data warehouse
 POST   /api/workspace/disconnect-warehouse  Disconnect a data warehouse
+POST   /api/workspace/reload-schema         Reload the schema of the data warehouse

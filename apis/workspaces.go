@@ -8,12 +8,14 @@
 package apis
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
@@ -24,7 +26,6 @@ import (
 )
 
 var (
-	NoSchema             errors.Code = "NoSchema"
 	NoWarehouse          errors.Code = "NoWarehouse"
 	NotConnected         errors.Code = "NotConnected"
 	ConnectionFailed     errors.Code = "ConnectionFailed"
@@ -51,8 +52,8 @@ type Workspace struct {
 	db             *postgres.DB
 	chDB           chDriver.Conn
 	warehouse      warehouses.Warehouse
+	schema         map[string]*types.Type
 	Connections    *Connections
-	Types          *Types
 	EventListeners *EventListeners
 	id             int
 	account        *Account
@@ -61,7 +62,8 @@ type Workspace struct {
 
 // A WorkspaceInfo describes a workspace as returned by Get and List.
 type WorkspaceInfo struct {
-	ID int
+	ID     int
+	Schema map[string]types.Type
 }
 
 // WarehouseSettings is the interface implemented by data warehouse settings.
@@ -89,16 +91,11 @@ func (s *PostgreSQLSettings) warehouseType() warehouses.Type {
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist,
 // and it returns an errors.UnprocessableError error with code
-//   - NoSchema, if the workspace does not have the user schema.
 //   - AlreadyConnected, if the workspace is already connected to a data
 //     warehouse.
 //   - InvalidSettings, if the settings are not valid.
 //   - ConnectionFailed, if the connection fails.
 func (ws *Workspace) ConnectWarehouse(settings WarehouseSettings) error {
-	userType, ok := ws.Types.state.Get("user")
-	if !ok {
-		return errors.Unprocessable(NoSchema, "workspace %d does not have the user schema", ws.id)
-	}
 	if ws.warehouse != nil {
 		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.id)
 	}
@@ -152,22 +149,17 @@ func (ws *Workspace) ConnectWarehouse(settings WarehouseSettings) error {
 			}
 			return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.id)
 		}
-		err = warehouse.CreateTables(context.Background(), userType.typ)
-		if err != nil {
-			return err
-		}
 		return tx.Notify(n)
 	})
 	return err
 }
 
-// DisconnectWarehouse disconnects the data warehouse. If deleteTables is true,
-// it also deletes the tables from the data warehouse.
+// DisconnectWarehouse disconnects the data warehouse.
 //
 // If the workspace does not exist, it returns an errors.NotFoundError error.
 // If the workspace is not connected to a data warehouse, it returns an
 // errors.UnprocessableError error with code NotConnected.
-func (ws *Workspace) DisconnectWarehouse(deleteTables bool) error {
+func (ws *Workspace) DisconnectWarehouse() error {
 	if ws.warehouse == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.id)
 	}
@@ -177,9 +169,7 @@ func (ws *Workspace) DisconnectWarehouse(deleteTables bool) error {
 	}
 	err := ws.db.Transaction(func(tx *postgres.Tx) error {
 		var typ *warehouses.Type
-		var settings []byte
-		err := tx.QueryRow("SELECT warehouse_type, warehouse_settings FROM workspaces WHERE id = $1",
-			n.Workspace).Scan(&typ, &settings)
+		err := tx.QueryRow("SELECT warehouse_type FROM workspaces WHERE id = $1", n.Workspace).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return errors.NotFound("workspace %d does not exist", n.Workspace)
@@ -189,24 +179,7 @@ func (ws *Workspace) DisconnectWarehouse(deleteTables bool) error {
 		if typ == nil {
 			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", n.Workspace)
 		}
-		if deleteTables {
-			var s warehouses.PostgreSQLSettings
-			err := json.Unmarshal(settings, &s)
-			if err != nil {
-				return err
-			}
-			warehouse := warehouses.OpenPostgres(&s)
-			var userSchema types.Type
-			if typ, ok := ws.Types.state.Get("user"); ok {
-				userSchema = typ.typ
-			}
-			// TODO(marco): consider whether there is a better solution than removing the tables at this time.
-			err = warehouse.DropTables(context.Background(), userSchema)
-			if err != nil {
-				return err
-			}
-		}
-		_, err = tx.Exec("UPDATE workspaces SET warehouse_type = NULL, warehouse_settings = '' WHERE id = $1", n.Workspace)
+		_, err = tx.Exec("UPDATE workspaces SET warehouse_type = NULL, warehouse_settings = '', schema = '' WHERE id = $1", n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -243,6 +216,15 @@ func (this *Workspaces) As(id int) (*Workspace, error) {
 func (ws *Workspace) Info() *WorkspaceInfo {
 	info := WorkspaceInfo{ID: ws.id}
 	return &info
+}
+
+// Schema returns the schema with the given name.
+func (ws *Workspace) Schema(name string) (types.Type, bool) {
+	schema, ok := ws.schema[name]
+	if ok {
+		return *schema, true
+	}
+	return types.Type{}, false
 }
 
 // SetWarehouse sets the settings used to connect to the data warehouse.
@@ -315,6 +297,93 @@ func (ws *Workspace) SetWarehouse(settings WarehouseSettings) error {
 	return err
 }
 
+// ReloadSchema reloads the schema of the workspace.
+//
+// It returns an errors.NotFoundError error, if the workspace does not exist,
+// and it returns an errors.UnprocessableError error with code
+//   - NotConnected, if the workspace is not connected to a data warehouse.
+//   - WarehouseFailed, if the connection to the data warehouse failed.
+func (ws *Workspace) ReloadSchema() error {
+	if ws.warehouse == nil {
+		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.id)
+	}
+	tables, err := ws.warehouse.Tables(context.Background())
+	if err != nil {
+		if err, ok := err.(*warehouses.Error); ok {
+			return errors.Unprocessable(WarehouseFailed, "data warehouse has returned an error: %w", err.Err)
+		}
+		return err
+	}
+	n := setWorkspaceSchemaNotification{
+		Workspace: ws.id,
+		Schema:    map[string]*types.Type{},
+	}
+	for _, table := range tables {
+		name := table.Name
+		if name != "users" && name != "groups" && name != "events" &&
+			(name == "users_" || !strings.HasPrefix(name, "users_")) &&
+			(name == "groups_" || !strings.HasPrefix(name, "groups_")) &&
+			(name == "events_" || !strings.HasPrefix(name, "events_")) {
+			continue
+		}
+		var properties []types.Property
+		for _, c := range table.Columns {
+			property := types.Property{
+				Name:        c.Name,
+				Description: c.Description,
+				Role:        types.BothRole,
+				Nullable:    c.IsNullable,
+				Type:        c.Type,
+			}
+			if !c.IsUpdatable {
+				property.Role = types.SourceRole
+			}
+			properties = append(properties, property)
+		}
+		typ := types.Object(properties).AsCustom(name)
+		n.Schema[name] = &typ
+	}
+	newRawSchema, err := json.Marshal(n.Schema)
+	if err != nil {
+		return fmt.Errorf("cannot marshal data warehouse schema for workspace %d: %s", ws.id, err)
+	}
+	err = ws.db.Transaction(func(tx *postgres.Tx) error {
+		var typ *warehouses.Type
+		var oldRawSchema []byte
+		err := tx.QueryRow("SELECT warehouse_type, schema FROM workspaces WHERE id = $1", n.Workspace).Scan(&typ, &oldRawSchema)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				err = errors.NotFound("workspace %d does not exist", n.Workspace)
+			}
+			return err
+		}
+		if typ == nil {
+			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", n.Workspace)
+		}
+		if bytes.Equal(newRawSchema, oldRawSchema) {
+			return nil
+		}
+		_, err = tx.Exec("UPDATE workspaces SET schema = $1 WHERE id = $2", newRawSchema, n.Workspace)
+		if err != nil {
+			return err
+		}
+		if len(oldRawSchema) > 0 {
+			var oldSchema map[string]*types.Type
+			err = json.Unmarshal(oldRawSchema, &oldSchema)
+			if err != nil {
+				return fmt.Errorf("cannot parse schema of workspace %d: %s", n.Workspace, err)
+			}
+			for name, t := range n.Schema {
+				if t2, ok := oldSchema[name]; ok && t.EqualTo(*t2) {
+					n.Schema[name] = nil
+				}
+			}
+		}
+		return tx.Notify(n)
+	})
+	return err
+}
+
 // Users returns the user schema and the users, with only given properties, in
 // range [first,first+limit] with first >= 0 and 0 < limit <= 1000. properties
 // cannot be empty.
@@ -332,8 +401,8 @@ func (ws *Workspace) Users(properties []string, order string, first, limit int) 
 
 	// Read the schema.
 	var schemaProperties []types.Property
-	if typ, ok := ws.Types.state.Get("user"); ok {
-		schemaProperties = typ.typ.Properties()
+	if typ, ok := ws.schema["user"]; ok {
+		schemaProperties = typ.Properties()
 	}
 	propertyByName := map[string]types.Property{}
 	for _, p := range schemaProperties {

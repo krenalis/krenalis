@@ -122,17 +122,17 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Handle the "/user-schema-properties" endpoint.
 	if strings.HasPrefix(rpath, "/user-schema") {
-		dataType, _ := workspace.Types.Get("user")
+		schema, _ := workspace.Schema("users")
 		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(dataType.Type)
+		_ = json.NewEncoder(w).Encode(schema)
 		return
 	}
 
 	// Handle the "/group-schema-properties" endpoint.
 	if strings.HasPrefix(rpath, "/group-schema-properties") {
-		dataType, _ := workspace.Types.Get("group")
+		schema, _ := workspace.Schema("groups")
 		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(dataType.Type.PropertiesNames())
+		_ = json.NewEncoder(w).Encode(schema.PropertiesNames())
 		return
 	}
 
@@ -189,29 +189,9 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			schema, _ := workspace.Types.Get(request.SchemaName)
+			schema, _ := workspace.Schema(request.SchemaName)
 			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(schema.Definition)
-
-		case "/update":
-			var request struct {
-				Schema string
-			}
-			err := json.NewDecoder(r.Body).Decode(&request)
-			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-			err = workspace.Types.SetDefinition(request.Schema)
-			if err != nil {
-				if err, ok := err.(errors.ResponseWriterTo); ok {
-					_ = err.WriteTo(w)
-					return
-				}
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
+			_ = json.NewEncoder(w).Encode(schema)
 		default:
 			http.NotFound(w, r)
 		}
