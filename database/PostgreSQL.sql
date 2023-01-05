@@ -192,6 +192,7 @@ CREATE TABLE connections_mappings (
     id SERIAL,
     connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
     "in" text NOT NULL,
+    predefined_func integer NOT NULL DEFAULT 0,
     source_code text NOT NULL,
     out text NOT NULL,
     PRIMARY KEY (id)

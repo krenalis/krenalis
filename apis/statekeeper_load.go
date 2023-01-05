@@ -235,12 +235,12 @@ func (s *stateKeeper) loadState() error {
 	inSchemas := [][]byte{}
 	outSchemas := [][]byte{}
 	connectionIDs := []int{}
-	err = s.db.QueryScan("SELECT id, connection, \"in\", source_code, out FROM connections_mappings", func(rows *postgres.Rows) error {
+	err = s.db.QueryScan("SELECT id, connection, \"in\", predefined_func, source_code, out FROM connections_mappings", func(rows *postgres.Rows) error {
 		for rows.Next() {
 			m := &Mapping{}
 			var inSchema, outSchema []byte
 			var connectionID int
-			err := rows.Scan(&m.id, &connectionID, &inSchema, &m.sourceCode, &outSchema)
+			err := rows.Scan(&m.id, &connectionID, &inSchema, &m.predefinedFunc, &m.sourceCode, &outSchema)
 			if err != nil {
 				return err
 			}

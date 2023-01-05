@@ -416,10 +416,11 @@ type setConnectionMappingsNotification struct {
 
 // notifiedMapping is a mapping to set notified to the state keeper.
 type notifiedMapping struct {
-	ID         int
-	In         types.Type
-	SourceCode string
-	Out        types.Type
+	ID             int
+	In             types.Type
+	PredefinedFunc PredefinedFuncID
+	SourceCode     string
+	Out            types.Type
 }
 
 // setConnectionMappings sets the mappings of a connection.
@@ -432,11 +433,12 @@ func (s stateKeeper) setConnectionMappings(n postgres.Notification) {
 		c.mappings = make([]*Mapping, len(e.Mappings))
 		for i, m := range e.Mappings {
 			c.mappings[i] = &Mapping{
-				id:         m.ID,
-				connection: c,
-				in:         m.In,
-				sourceCode: m.SourceCode,
-				out:        m.Out,
+				id:             m.ID,
+				connection:     c,
+				in:             m.In,
+				predefinedFunc: m.PredefinedFunc,
+				sourceCode:     m.SourceCode,
+				out:            m.Out,
 			}
 		}
 	})

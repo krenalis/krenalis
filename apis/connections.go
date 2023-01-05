@@ -111,6 +111,11 @@ type Mapping struct {
 	// In case of "one to one" mappings, this schema contains just one property.
 	in types.Type
 
+	// predefinedFunc is the predefined transformation function of this mapping,
+	// otherwise is zero if this mapping is not a predefined transformation
+	// mapping.
+	predefinedFunc PredefinedFuncID
+
 	// sourceCode is the source code of the transformation function, which
 	// should be something like:
 	//
@@ -145,10 +150,11 @@ type ConnectionInfo struct {
 
 // MappingInfo describes a mapping as returned by Get and List.
 type MappingInfo struct {
-	ID         int
-	In         types.Type // just one property if it refers to a "one to one" mapping.
-	SourceCode string     // empty string if it refers to a "one to one" mapping.
-	Out        types.Type // just one property if it refers to a "one to one" mapping.
+	ID             int
+	In             types.Type       // just one property if it refers to a "one to one" mapping.
+	SourceCode     string           // empty string if it refers to a "one to one" mapping.
+	PredefinedFunc PredefinedFuncID // zero if not a predefined transformation mapping.
+	Out            types.Type       // just one property if it refers to a "one to one" mapping.
 }
 
 const (
@@ -484,10 +490,11 @@ func (this *Connections) Get(id int) (*ConnectionInfo, error) {
 	}
 	for _, m := range c.mappings {
 		info.Mappings = append(info.Mappings, &MappingInfo{
-			ID:         m.id,
-			In:         m.in,
-			SourceCode: m.sourceCode,
-			Out:        m.out,
+			ID:             m.id,
+			In:             m.in,
+			PredefinedFunc: m.predefinedFunc,
+			SourceCode:     m.sourceCode,
+			Out:            m.out,
 		})
 	}
 	if c.storage != nil {
@@ -1689,6 +1696,11 @@ type MappingToCreate struct {
 	// In case of "one to one" mappings, this schema contains just one property.
 	In types.Type
 
+	// PredefinedFunc is the predefined transformation function of this mapping,
+	// otherwise is zero if this mapping is not a predefined transformation
+	// mapping.
+	PredefinedFunc PredefinedFuncID
+
 	// SourceCode is the source code of the transformation function, which
 	// should be something like:
 	//
@@ -1731,8 +1743,15 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 		if len(outProps) == 0 {
 			return errors.BadRequest("should have at least one output property")
 		}
-		if t.SourceCode == "" && (len(inProps) != 1 || len(outProps) != 1) {
-			return errors.BadRequest("mappings without source code must have just one input/output property")
+		// Validate "one to one" mappings.
+		if t.SourceCode == "" && t.PredefinedFunc == 0 {
+			if len(inProps) != 1 || len(outProps) != 1 {
+				return errors.BadRequest("invalid one-to-one mapping")
+			}
+		}
+		// TODO(Gianluca): validate predefined function input/outputs.
+		if t.SourceCode != "" && t.PredefinedFunc > 0 {
+			return errors.BadRequest("invalid mapping (cannot have both source code and predefined function)")
 		}
 		for _, in := range inProps {
 			if !types.IsValidPropertyName(in) {
@@ -1755,9 +1774,10 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 	outSchemas := make([][]byte, len(mappings))
 	for i, t := range mappings {
 		n.Mappings[i] = notifiedMapping{
-			In:         t.In,
-			SourceCode: t.SourceCode,
-			Out:        t.Out,
+			In:             t.In,
+			PredefinedFunc: t.PredefinedFunc,
+			SourceCode:     t.SourceCode,
+			Out:            t.Out,
 		}
 		var err error
 		inSchemas[i], err = json.Marshal(t.In)
@@ -1776,8 +1796,8 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 			return err
 		}
 		query, err := tx.Prepare("INSERT INTO connections_mappings\n" +
-			"(connection, \"in\", source_code, out)\n" +
-			"VALUES ($1, $2, $3, $4) RETURNING id")
+			"(connection, \"in\", predefined_func, source_code, out)\n" +
+			"VALUES ($1, $2, $3, $4, $5) RETURNING id")
 		if err != nil {
 			if err != nil {
 				if postgres.IsForeignKeyViolation(err) {
@@ -1790,7 +1810,7 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 		}
 		for i, t := range n.Mappings {
 			var id int
-			err := query.QueryRow(connection, inSchemas[i], t.SourceCode, outSchemas[i]).Scan(&id)
+			err := query.QueryRow(connection, inSchemas[i], t.PredefinedFunc, t.SourceCode, outSchemas[i]).Scan(&id)
 			if err != nil {
 				return err
 			}
@@ -2462,6 +2482,16 @@ func exportUser(id string, properties map[string]any, mappings []*Mapping) (_con
 		if m.sourceCode == "" {
 			// "One to one" mapping.
 			user.Properties[outNames[0]] = input[inNames[0]]
+		} else if m.predefinedFunc != 0 {
+			// Predefined transformation.
+			in := make([]any, len(inNames))
+			for i := range in {
+				in[i] = input[inNames[i]]
+			}
+			out := callPredefinedFunction(m.predefinedFunc, in)
+			for i, outName := range outNames {
+				user.Properties[outName] = out[i]
+			}
 		} else {
 			// Mapping with a transformation function.
 			props, err := pool.Run(context.Background(), m.sourceCode, input)

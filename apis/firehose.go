@@ -209,10 +209,22 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 			return
 		}
 
-		// "One to one" mapping.
 		if m.sourceCode == "" {
+			// "One to one" mapping.
 			candidateData[outNames[0]] = userProps[inNames[0]]
 			candidateTimestamps[outNames[0]] = timestamps[inNames[0]]
+		} else if m.predefinedFunc != 0 {
+			// Predefined transformation.
+			in := make([]any, len(inNames))
+			for i := range in {
+				in[i] = userProps[inNames[i]]
+			}
+			out := callPredefinedFunction(m.predefinedFunc, in)
+			ts := mostRecentTimestamp(timestamps, inNames)
+			for i, outName := range outNames {
+				candidateData[outName] = out[i]
+				candidateTimestamps[outName] = ts
+			}
 		} else {
 			// Mapping with a transformation function.
 			grProps, err := pool.Run(context.Background(), m.sourceCode, userProps)

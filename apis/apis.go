@@ -257,10 +257,11 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				mappingsInfos := make([]*MappingInfo, len(mappings))
 				for i, m := range mappings {
 					mappingsInfos[i] = &MappingInfo{
-						ID:         m.id,
-						In:         m.in,
-						SourceCode: m.sourceCode,
-						Out:        m.out,
+						ID:             m.id,
+						In:             m.in,
+						PredefinedFunc: m.predefinedFunc,
+						SourceCode:     m.sourceCode,
+						Out:            m.out,
 					}
 				}
 				// TODO(Gianluca): this is a workaround that will be removed
