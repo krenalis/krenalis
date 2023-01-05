@@ -14,6 +14,8 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"sync"
 
 	"chichi/apis/types"
 )
@@ -65,6 +67,11 @@ type Warehouse interface {
 	// necessary, establishes a new connection.
 	Ping(ctx context.Context) error
 
+	// PrepareBatch creates a prepared batch statement for inserting rows in
+	// batch and returns it. table specifies the table in which the rows will be
+	// inserted, and columns specifies the columns.
+	PrepareBatch(ctx context.Context, table string, columns []string) (Batch, error)
+
 	// Tables returns the tables of the data warehouse.
 	// It returns only the tables 'users', 'groups', 'events', and the tables with
 	// prefix 'users_', 'groups_' and 'events_'.
@@ -90,6 +97,23 @@ type Warehouse interface {
 
 	// Validate validates the settings and returns an error if they are not valid.
 	Validate() error
+}
+
+// Batch is implemented by values returned by PrepareBatch.
+type Batch interface {
+
+	// Abort aborts the batch.
+	Abort() error
+
+	// Append appends the values of a row to batch.
+	Append(v ...interface{}) error
+
+	// AppendStruct appends the values of a row, read from the fields of the struct
+	// v, to batch. It returns an error if v is not a struct.
+	AppendStruct(v interface{}) error
+
+	// Send sends the batch to the data warehouse.
+	Send() error
 }
 
 // Table represents a table.
@@ -257,11 +281,11 @@ func (typ Type) Value() (driver.Value, error) {
 	return nil, fmt.Errorf("not a valid Type: %d", typ)
 }
 
-// isValidTableName reports whether name is a valid table name.
-// A valid table name must:
+// isValidIdentifier reports whether name is a valid identifier.
+// A valid identifier must:
 //   - start with [A-Za-z_]
 //   - subsequently contain only [A-Za-z0-9_]
-func isValidTableName(name string) bool {
+func isValidIdentifier(name string) bool {
 	if name == "" {
 		return false
 	}
@@ -276,10 +300,39 @@ func isValidTableName(name string) bool {
 
 // isValidSchemaName reports whether name is a valid schema name.
 func isValidSchemaName(name string) bool {
-	return isValidTableName(name)
+	return isValidIdentifier(name)
 }
 
 // newError returns a new Error value with a fmt.Errorf(format, a...) error.
 func newError(format string, a ...any) error {
 	return &Error{Err: fmt.Errorf(format, a...)}
+}
+
+// columnsIndexes contains the column indexes of the struct passed as argument
+// to AppendStruct of Batch.
+var columnsIndexes = sync.Map{}
+
+// columnsIndex returns a map from a column name to its index in the struct t.
+func columnsIndex(t reflect.Type) (map[string][]int, error) {
+	idx, ok := columnsIndexes.Load(t)
+	if ok {
+		return idx.(map[string][]int), nil
+	}
+	index := map[string][]int{}
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		if field.PkgPath != "" {
+			continue
+		}
+		column := field.Tag.Get("column")
+		if column == "" {
+			column = field.Name
+		}
+		if !isValidIdentifier(column) {
+			return nil, fmt.Errorf("column name %q is not a valid identifier", column)
+		}
+		index[column] = field.Index
+	}
+	columnsIndexes.Store(t, index)
+	return index, nil
 }

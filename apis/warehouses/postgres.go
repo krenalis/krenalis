@@ -16,6 +16,7 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,6 +31,7 @@ import (
 var createConnectionsUsersTable string
 
 var _ Warehouse = &postgreSQL{}
+var _ Batch = &postgresBatch{}
 
 type postgreSQL struct {
 	mu       sync.Mutex // for the db and closed fields
@@ -123,6 +125,38 @@ func (warehouse *postgreSQL) Exec(ctx context.Context, query string, args ...any
 		return nil, wrapError(err)
 	}
 	return result{r}, nil
+}
+
+// PrepareBatch creates a prepared batch statement for inserting rows in
+// batch and returns it. table specifies the table in which the rows will be
+// inserted, and columns specifies the columns.
+func (warehouse *postgreSQL) PrepareBatch(ctx context.Context, table string, columns []string) (Batch, error) {
+	if !isValidIdentifier(table) {
+		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
+	}
+	if len(columns) == 0 {
+		return nil, fmt.Errorf("columns cannot be empty")
+	}
+	batch := &postgresBatch{
+		warehouse: warehouse,
+		ctx:       ctx,
+		columns:   columns,
+		buf:       strings.Builder{},
+	}
+	batch.buf.WriteString("INSERT INTO ")
+	batch.buf.WriteString(table)
+	batch.buf.WriteString(" (")
+	for i, column := range columns {
+		if i > 0 {
+			batch.buf.WriteByte(',')
+		}
+		if !isValidIdentifier(column) {
+			return nil, fmt.Errorf("column name %q is not a valid identifier", column)
+		}
+		batch.buf.WriteString(column)
+	}
+	batch.buf.WriteString(") ")
+	return batch, nil
 }
 
 // Type returns the type of the warehouse.
@@ -649,4 +683,163 @@ func tablesOfObject(table string, t types.Type) []string {
 		}
 	}
 	return tables
+}
+
+// postgresBatch implements the Batch interface.
+type postgresBatch struct {
+	warehouse *postgreSQL
+	ctx       context.Context
+	columns   []string
+	buf       strings.Builder
+	appended  bool
+	err       error
+}
+
+// Abort aborts the execution of the batch insert.
+func (batch *postgresBatch) Abort() error {
+	if batch.err != nil {
+		return batch.err
+	}
+	batch.err = errors.New("batch execution aborted")
+	return nil
+}
+
+// Append appends the values of a row to batch.
+func (batch *postgresBatch) Append(v ...any) error {
+	if batch.err != nil {
+		return batch.err
+	}
+	if len(v) != len(batch.columns) {
+		return fmt.Errorf("cannot append values: expected %d values, got %d", len(batch.columns), len(v))
+	}
+	if batch.appended {
+		batch.buf.WriteString(",(")
+	} else {
+		batch.buf.WriteString("(")
+		batch.appended = true
+	}
+	for i, value := range v {
+		if i > 0 {
+			batch.buf.WriteByte(',')
+		}
+		quoteValue(&batch.buf, value)
+	}
+	batch.buf.WriteString(")")
+	return nil
+}
+
+// AppendStruct appends the values of a row, read from the fields of the struct
+// v, to batch. It returns an error if v is not a struct or pointer to a struct.
+func (batch *postgresBatch) AppendStruct(v any) error {
+	if batch.err != nil {
+		return batch.err
+	}
+	if batch.appended {
+		batch.buf.WriteString(",(")
+	} else {
+		batch.buf.WriteString("(")
+		batch.appended = true
+	}
+	rv := reflect.Indirect(reflect.ValueOf(v))
+	if rv.Kind() != reflect.Struct {
+		return errors.New("v is not a struct or pointer to a struct")
+	}
+	rt := rv.Type()
+	indexOf, err := columnsIndex(rt)
+	if err != nil {
+		return err
+	}
+	for i, name := range batch.columns {
+		if i > 0 {
+			batch.buf.WriteByte(',')
+		}
+		index, ok := indexOf[name]
+		if !ok {
+			batch.err = fmt.Errorf("cannot append struct: field for column %q does not exist", name)
+		}
+		value := rv.FieldByIndex(index)
+		quoteValue(&batch.buf, value.Interface())
+	}
+	batch.buf.WriteString(")")
+	return nil
+}
+
+// Send sends the batch to the data warehouse.
+func (batch *postgresBatch) Send() error {
+	if batch.err != nil {
+		return batch.err
+	}
+	_, err := batch.warehouse.Exec(batch.ctx, batch.buf.String())
+	if err != nil {
+		batch.err = wrapError(err)
+		return err
+	}
+	batch.err = errors.New("the Send method has already been called")
+	return nil
+}
+
+// quoteValue quotes s as a string and writes it into b.
+func quoteString(b *strings.Builder, s string) {
+	if s == "" {
+		b.WriteString("''")
+		return
+	}
+	b.WriteByte('\'')
+	for {
+		p := strings.IndexAny(s, "\x00'")
+		if p == -1 {
+			p = len(s)
+		}
+		b.WriteString(s[:p])
+		if p == len(s) {
+			break
+		}
+		if s[p] == '\'' {
+			b.WriteByte('\'')
+		}
+		s = s[p+1:]
+		if len(s) == 0 {
+			break
+		}
+	}
+	b.WriteByte('\'')
+}
+
+// quoteValue quotes value and writes it into b.
+func quoteValue(b *strings.Builder, value any) {
+	if value == nil {
+		b.WriteString("NULL")
+		return
+	}
+	switch v := value.(type) {
+	case bool:
+		if v {
+			b.WriteString("TRUE")
+		}
+		b.WriteString("FALSE")
+	case int:
+		b.WriteString(strconv.FormatInt(int64(v), 10))
+	case int32:
+		b.WriteString(strconv.FormatInt(int64(v), 10))
+	case int64:
+		b.WriteString(strconv.FormatInt(v, 10))
+	case uint:
+		b.WriteString(strconv.FormatUint(uint64(v), 10))
+	case uint32:
+		b.WriteString(strconv.FormatUint(uint64(v), 10))
+	case uint64:
+		b.WriteString(strconv.FormatUint(v, 10))
+	case float32:
+		b.WriteString(strconv.FormatFloat(float64(v), 'G', -1, 32))
+	case float64:
+		b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
+	case string:
+		quoteString(b, v)
+	case time.Time:
+		b.WriteByte('\'')
+		b.WriteString(v.Format("2006-01-02 15:04:05.999999"))
+		b.WriteByte('\'')
+	default:
+		panic(fmt.Errorf("unsupported type '%T'", v))
+	}
 }
