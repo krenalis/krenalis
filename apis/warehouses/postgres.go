@@ -25,6 +25,7 @@ import (
 
 	"chichi/apis/types"
 	"github.com/shopspring/decimal"
+	"golang.org/x/exp/slices"
 )
 
 //go:embed connections_users.sql
@@ -150,7 +151,7 @@ func (warehouse *postgreSQL) PrepareBatch(ctx context.Context, table string, col
 	batch := &postgresBatch{
 		warehouse: warehouse,
 		ctx:       ctx,
-		columns:   columns,
+		columns:   slices.Clone(columns),
 		buf:       strings.Builder{},
 	}
 	batch.buf.WriteString("INSERT INTO ")
@@ -235,7 +236,7 @@ func (warehouse *postgreSQL) Tables(ctx context.Context) ([]*Table, error) {
 	}
 	for rows.Next() {
 		var tableName, columnName, isNullable, typ, charLength, precision, radix, scale, isUpdatable, description sql.NullString
-		if err := rows.Scan(&tableName, &columnName, &isNullable, &typ, &charLength, &precision, &radix, &scale, &isUpdatable, &description); err != nil {
+		if err = rows.Scan(&tableName, &columnName, &isNullable, &typ, &charLength, &precision, &radix, &scale, &isUpdatable, &description); err != nil {
 			_ = rows.Close()
 			return nil, wrapError(err)
 		}
@@ -770,10 +771,14 @@ func (batch *postgresBatch) Send() error {
 	if batch.err != nil {
 		return batch.err
 	}
-	_, err := batch.warehouse.Exec(batch.ctx, batch.buf.String())
+	db, err := batch.warehouse.connection()
+	if err != nil {
+		return err
+	}
+	_, err = db.ExecContext(batch.ctx, batch.buf.String())
 	if err != nil {
 		batch.err = wrapError(err)
-		return err
+		return batch.err
 	}
 	batch.err = errors.New("the Send method has already been called")
 	return nil
