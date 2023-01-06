@@ -127,6 +127,16 @@ func (warehouse *postgreSQL) Exec(ctx context.Context, query string, args ...any
 	return result{r}, nil
 }
 
+// Ping checks whether the connection to the data warehouse is active and, if
+// necessary, establishes a new connection.
+func (warehouse *postgreSQL) Ping(ctx context.Context) error {
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	return db.PingContext(ctx)
+}
+
 // PrepareBatch creates a prepared batch statement for inserting rows in
 // batch and returns it. table specifies the table in which the rows will be
 // inserted, and columns specifies the columns.
@@ -157,21 +167,6 @@ func (warehouse *postgreSQL) PrepareBatch(ctx context.Context, table string, col
 	}
 	batch.buf.WriteString(") ")
 	return batch, nil
-}
-
-// Type returns the type of the warehouse.
-func (warehouse *postgreSQL) Type() Type {
-	return PostgreSQL
-}
-
-// Ping checks whether the connection to the data warehouse is active and, if
-// necessary, establishes a new connection.
-func (warehouse *postgreSQL) Ping(ctx context.Context) error {
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
-	return db.PingContext(ctx)
 }
 
 // Query executes a query that returns rows. args are the placeholders.
@@ -344,6 +339,11 @@ func (warehouse *postgreSQL) Tables(ctx context.Context) ([]*Table, error) {
 	}
 
 	return tables, nil
+}
+
+// Type returns the type of the warehouse.
+func (warehouse *postgreSQL) Type() Type {
+	return PostgreSQL
 }
 
 // Users returns the users, with only the properties in schema, ordered by
