@@ -756,6 +756,7 @@ func (batch *postgresBatch) AppendStruct(v any) error {
 		index, ok := indexOf[name]
 		if !ok {
 			batch.err = fmt.Errorf("cannot append struct: field for column %q does not exist", name)
+			return batch.err
 		}
 		value := rv.FieldByIndex(index)
 		quoteValue(&batch.buf, value.Interface())
