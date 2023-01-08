@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package warehouses
+package clickhouse
 
 import (
 	"context"
@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"chichi/apis/types"
+	"chichi/apis/warehouses"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -29,18 +30,18 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-var _ Warehouse = &clickHouse{}
-var _ Batch = &clickHouseBatch{}
+var _ warehouses.Warehouse = &clickHouse{}
+var _ warehouses.Batch = &batch{}
 
 type clickHouse struct {
 	mu       sync.Mutex // for the conn and closed fields
 	conn     chDriver.Conn
 	closed   bool
-	settings *clickHouseSettings
+	settings *chSettings
 	err      error
 }
 
-type clickHouseSettings struct {
+type chSettings struct {
 	Host     string
 	Port     int
 	Username string
@@ -48,9 +49,9 @@ type clickHouseSettings struct {
 	Database string
 }
 
-// openClickHouse opens a ClickHouse data warehouse with the given settings.
-func openClickHouse(settings []byte) (Warehouse, error) {
-	var s clickHouseSettings
+// Open opens a ClickHouse data warehouse with the given settings.
+func Open(settings []byte) (warehouses.Warehouse, error) {
+	var s chSettings
 	err := json.Unmarshal(settings, &s)
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
@@ -113,8 +114,8 @@ func (warehouse *clickHouse) Ping(ctx context.Context) error {
 // PrepareBatch creates a prepared batch statement for inserting rows in
 // batch and returns it. table specifies the table in which the rows will be
 // inserted, and columns specifies the columns.
-func (warehouse *clickHouse) PrepareBatch(ctx context.Context, table string, columns []string) (Batch, error) {
-	if !isValidIdentifier(table) {
+func (warehouse *clickHouse) PrepareBatch(ctx context.Context, table string, columns []string) (warehouses.Batch, error) {
+	if !warehouses.IsValidIdentifier(table) {
 		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
 	}
 	if len(columns) == 0 {
@@ -128,41 +129,31 @@ func (warehouse *clickHouse) PrepareBatch(ctx context.Context, table string, col
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		if !isValidIdentifier(column) {
+		if !warehouses.IsValidIdentifier(column) {
 			return nil, fmt.Errorf("column name %q is not a valid identifier", column)
 		}
 		b.WriteString(column)
 	}
 	b.WriteString(") ")
-	batch, err := warehouse.conn.PrepareBatch(ctx, b.String())
+	batch := &batch{columns: slices.Clone(columns)}
+	var err error
+	batch.batch, err = warehouse.conn.PrepareBatch(ctx, b.String())
 	if err != nil {
 		return nil, err
 	}
-	return &clickHouseBatch{
-		batch:   batch,
-		columns: slices.Clone(columns),
-	}, nil
+	return batch, nil
 }
 
 // Tables returns the tables of the data warehouse.
 // It returns only the tables 'users', 'groups', 'events', and the tables with
 // prefix 'users_', 'groups_' and 'events_'.
-func (warehouse *clickHouse) Tables(ctx context.Context) ([]*Table, error) {
+func (warehouse *clickHouse) Tables(ctx context.Context) ([]*warehouses.Table, error) {
 
 	// Get the connection.
 	conn, err := warehouse.connection()
 	if err != nil {
 		return nil, err
 	}
-
-	// Read columns.
-	//query := "SELECT table, name, type, position, comment, character_octet_length, numeric_precision," +
-	//	" numeric_precision_radix, numeric_scale\n" +
-	//	"FROM system.columns\n" +
-	//	"WHERE database = '" + warehouse.settings.Database + "' AND " +
-	//	" ( table IN ('users', 'groups', 'events') OR table LIKE 'users\\\\__%' OR" +
-	//	" table LIKE 'groups\\__%' OR table LIKE 'events\\__%' )\n" +
-	//	"ORDER BY table, position"
 
 	// Read columns.
 	query := "SELECT c.table_name, c.column_name, c.data_type, c.column_comment\n" +
@@ -173,54 +164,54 @@ func (warehouse *clickHouse) Tables(ctx context.Context) ([]*Table, error) {
 		" t.table_name LIKE 'groups\\__%' OR t.table_name LIKE 'events\\__%' )\n" +
 		"ORDER BY c.table_name, c.ordinal_position"
 
-	var table *Table
-	var tables []*Table
+	var table *warehouses.Table
+	var tables []*warehouses.Table
 
 	rows, err := conn.Query(ctx, query)
 	for rows.Next() {
 		var tableName, columnName, typ, comment string
 		if err = rows.Scan(&tableName, &columnName, &typ, &comment); err != nil {
-			return nil, wrapError(err)
+			return nil, warehouses.WrapError(err)
 		}
 		if !types.IsValidPropertyName(columnName) {
-			return nil, newError("column name %q is not supported", columnName)
+			return nil, warehouses.NewError("column name %q is not supported", columnName)
 		}
-		column := &Column{
+		column := &warehouses.Column{
 			Name:        columnName,
 			Description: comment,
 		}
-		column.Type = clickHousePropertyType(typ)
+		column.Type = propertyType(typ)
 		if !column.Type.Valid() {
 			return nil, fmt.Errorf("type %q of column %s is not supported", typ, column.Name)
 		}
 		column.IsNullable = column.Type.Null()
 		if table == nil || tableName != table.Name {
-			table = &Table{Name: tableName}
+			table = &warehouses.Table{Name: tableName}
 			tables = append(tables, table)
 		}
 		table.Columns = append(table.Columns, column)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, wrapError(err)
+		return nil, warehouses.WrapError(err)
 	}
 
 	return tables, nil
 }
 
 // Type returns the type of the warehouse.
-func (warehouse *clickHouse) Type() Type {
-	return ClickHouse
+func (warehouse *clickHouse) Type() warehouses.Type {
+	return warehouses.ClickHouse
 }
 
 // Query executes a query that returns rows. args are the placeholders.
 // If the query fails, it returns an Error value.
-func (warehouse *clickHouse) Query(ctx context.Context, query string, args ...any) (*Rows, error) {
+func (warehouse *clickHouse) Query(ctx context.Context, query string, args ...any) (*warehouses.Rows, error) {
 	return nil, nil
 }
 
 // QueryRow executes a query that should return at most one row.
-func (warehouse *clickHouse) QueryRow(ctx context.Context, query string, args ...any) Row {
-	return Row{}
+func (warehouse *clickHouse) QueryRow(ctx context.Context, query string, args ...any) warehouses.Row {
+	return warehouses.Row{}
 }
 
 // Settings returns the data warehouse settings.
@@ -275,7 +266,7 @@ func (warehouse *clickHouse) Users(ctx context.Context, schema types.Type, order
 	var users [][]any
 	rows, err := conn.Query(ctx, query.String())
 	if err != nil {
-		return nil, wrapError(err)
+		return nil, warehouses.WrapError(err)
 	}
 	for rows.Next() {
 		user := make([]any, len(properties))
@@ -310,12 +301,12 @@ func (warehouse *clickHouse) Users(ctx context.Context, schema types.Type, order
 		}
 		if err = rows.Scan(user...); err != nil {
 			_ = rows.Close()
-			return nil, wrapError(err)
+			return nil, warehouses.WrapError(err)
 		}
 		users = append(users, user)
 	}
 	if err = rows.Err(); err != nil {
-		return nil, wrapError(err)
+		return nil, warehouses.WrapError(err)
 	}
 	err = rows.Close()
 	if err != nil {
@@ -333,24 +324,24 @@ func (warehouse *clickHouse) connection() (clickhouse.Conn, error) {
 	warehouse.mu.Lock()
 	defer warehouse.mu.Unlock()
 	if warehouse.closed {
-		return nil, wrapError(errors.New("warehouse is closed"))
+		return nil, warehouses.WrapError(errors.New("warehouse is closed"))
 	}
 	if warehouse.settings == nil {
-		return nil, wrapError(errors.New("there are no settings"))
+		return nil, warehouses.WrapError(errors.New("there are no settings"))
 	}
 	if warehouse.conn != nil {
 		return warehouse.conn, nil
 	}
 	conn, err := clickhouse.Open(warehouse.settings.options())
 	if err != nil {
-		return nil, wrapError(err)
+		return nil, warehouses.WrapError(err)
 	}
 	warehouse.conn = conn
 	return conn, nil
 }
 
 // options returns s as a *clickhouse.Options value.
-func (s *clickHouseSettings) options() *clickhouse.Options {
+func (s *chSettings) options() *clickhouse.Options {
 	return &clickhouse.Options{
 		Addr: []string{net.JoinHostPort(s.Host, strconv.Itoa(s.Port))},
 		Auth: clickhouse.Auth{
@@ -363,7 +354,7 @@ func (s *clickHouseSettings) options() *clickhouse.Options {
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func (s *clickHouseSettings) testConnection(ctx context.Context) error {
+func (s *chSettings) testConnection(ctx context.Context) error {
 	conn, err := clickhouse.Open(s.options())
 	if err != nil {
 		return err
@@ -375,22 +366,22 @@ func (s *clickHouseSettings) testConnection(ctx context.Context) error {
 	return conn.Close()
 }
 
-// clickHouseBatch implements the Batch interface.
-type clickHouseBatch struct {
-	warehouse *postgreSQL
+// batch implements the Batch interface.
+type batch struct {
+	warehouse *clickHouse
 	columns   []string
 	batch     chDriver.Batch
 	err       error
 }
 
 // Abort aborts the execution of the batch insert.
-func (batch *clickHouseBatch) Abort() error {
+func (batch *batch) Abort() error {
 	if batch.err != nil {
 		return batch.err
 	}
 	err := batch.batch.Abort()
 	if err != nil {
-		batch.err = wrapError(err)
+		batch.err = warehouses.WrapError(err)
 		return batch.err
 	}
 	batch.err = errors.New("batch execution aborted")
@@ -398,19 +389,19 @@ func (batch *clickHouseBatch) Abort() error {
 }
 
 // Append appends the values of a row to batch.
-func (batch *clickHouseBatch) Append(v ...any) error {
+func (batch *batch) Append(v ...any) error {
 	if batch.err != nil {
 		return batch.err
 	}
 	if err := batch.batch.Append(v...); err != nil {
-		batch.err = wrapError(err)
+		batch.err = warehouses.WrapError(err)
 	}
 	return batch.err
 }
 
 // AppendStruct appends the values of a row, read from the fields of the struct
 // v, to batch. It returns an error if v is not a struct or pointer to a struct.
-func (batch *clickHouseBatch) AppendStruct(v any) error {
+func (batch *batch) AppendStruct(v any) error {
 	if batch.err != nil {
 		return batch.err
 	}
@@ -419,7 +410,7 @@ func (batch *clickHouseBatch) AppendStruct(v any) error {
 		return errors.New("v is not a struct or pointer to a struct")
 	}
 	rt := rv.Type()
-	indexOf, err := columnsIndex(rt)
+	indexOf, err := warehouses.ColumnsIndex(rt)
 	if err != nil {
 		return err
 	}
@@ -434,18 +425,18 @@ func (batch *clickHouseBatch) AppendStruct(v any) error {
 		values[i] = value.Interface()
 	}
 	if err := batch.batch.Append(values...); err != nil {
-		batch.err = wrapError(err)
+		batch.err = warehouses.WrapError(err)
 	}
 	return batch.err
 }
 
 // Send sends the batch to the data warehouse.
-func (batch *clickHouseBatch) Send() error {
+func (batch *batch) Send() error {
 	if batch.err != nil {
 		return batch.err
 	}
 	if err := batch.batch.Send(); err != nil {
-		batch.err = wrapError(err)
+		batch.err = warehouses.WrapError(err)
 		return batch.err
 	}
 	batch.err = errors.New("the Send method has already been called")

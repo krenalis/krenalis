@@ -68,7 +68,6 @@ Populate the database with the queries in:
 and populate the warehouse with the queries in:
 
 * [database/data-warehouse-sample.sql](database/data-warehouse-sample.sql)
-* [apis/warehouses/connections_users.sql](apis/warehouses/connections_users.sql)
 
 ### 5. Connect the warehouse and reload the schema
 

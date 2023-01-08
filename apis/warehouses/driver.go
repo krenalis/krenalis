@@ -30,37 +30,6 @@ const (
 	Snowflake
 )
 
-// wrapError wraps err as an Error error.
-// If err is nil, it returns a nil error.
-func wrapError(err error) error {
-	if err == nil {
-		return nil
-	}
-	return &Error{err}
-}
-
-// Error represents an error with a data warehouse. It could be for example an
-// authentication error or a network error.
-type Error struct {
-	Err error
-}
-
-func (e *Error) Error() string {
-	return fmt.Sprintf("cannot call the data warehouse: %s", e.Err)
-}
-
-// Open opens a data warehouse with the given type and settings.
-// It returns an error if typ or settings are not valid.
-func Open(typ Type, settings []byte) (Warehouse, error) {
-	switch typ {
-	case PostgreSQL:
-		return openPostgres(settings)
-	case ClickHouse:
-		return openClickHouse(settings)
-	}
-	return nil, fmt.Errorf("warehouse type %q is not valid", typ)
-}
-
 // Warehouse is the interface implemented by data warehouses.
 type Warehouse interface {
 
@@ -129,6 +98,30 @@ type Batch interface {
 	Send() error
 }
 
+// Error represents an error with a data warehouse. It could be for example an
+// authentication error or a network error.
+type Error struct {
+	Err error
+}
+
+func (e *Error) Error() string {
+	return fmt.Sprintf("cannot call the data warehouse: %s", e.Err)
+}
+
+// NewError returns a new Error value with a fmt.Errorf(format, a...) error.
+func NewError(format string, a ...any) error {
+	return &Error{Err: fmt.Errorf(format, a...)}
+}
+
+// WrapError wraps err as an Error error.
+// If err is nil, it returns a nil error.
+func WrapError(err error) error {
+	if err == nil {
+		return nil
+	}
+	return &Error{err}
+}
+
 // Table represents a table.
 type Table struct {
 	Name    string
@@ -157,69 +150,69 @@ func IsValidType(typ Type) bool {
 
 // Row returns a single row as a result of calling QueryRow.
 type Row struct {
-	row *sql.Row
-	err error
+	Row   *sql.Row
+	Error error
 }
 
 func (row Row) Scan(dest ...any) error {
-	if row.err != nil {
-		return row.err
+	if row.Error != nil {
+		return row.Error
 	}
-	err := row.row.Scan(dest...)
+	err := row.Row.Scan(dest...)
 	if err == sql.ErrNoRows {
 		return err
 	}
-	return wrapError(err)
+	return WrapError(err)
 }
 
 func (row Row) Err() error {
-	if row.err != nil {
-		return row.err
+	if row.Error != nil {
+		return row.Error
 	}
-	err := row.row.Err()
-	return wrapError(err)
+	err := row.Row.Err()
+	return WrapError(err)
 }
 
 // Rows represents the result of a query. Its methods, on error, return an
 // Error value.
 type Rows struct {
-	rows *sql.Rows
+	Rows *sql.Rows
 }
 
 func (rows Rows) Close() error {
-	return wrapError(rows.rows.Close())
+	return WrapError(rows.Rows.Close())
 }
 
 func (rows Rows) Err() error {
-	return wrapError(rows.rows.Err())
+	return WrapError(rows.Rows.Err())
 }
 
 func (rows Rows) Next() bool {
-	return rows.rows.Next()
+	return rows.Rows.Next()
 }
 
 func (rows Rows) Scan(dest ...any) error {
-	return wrapError(rows.rows.Scan(dest...))
+	return WrapError(rows.Rows.Scan(dest...))
 }
 
-// result implements the sql.Result interface but on error it returns an Error
+// Result implements the sql.Result interface but on error it returns an Error
 // value.
-type result struct {
-	result sql.Result
+type Result struct {
+	Result sql.Result
 }
 
-func (r result) LastInsertId() (int64, error) {
-	id, err := r.result.LastInsertId()
+func (r Result) LastInsertId() (int64, error) {
+	id, err := r.Result.LastInsertId()
 	if err != nil {
-		return 0, wrapError(err)
+		return 0, WrapError(err)
 	}
 	return id, nil
 }
 
-func (r result) RowsAffected() (int64, error) {
-	n, err := r.result.RowsAffected()
+func (r Result) RowsAffected() (int64, error) {
+	n, err := r.Result.RowsAffected()
 	if err != nil {
-		return 0, wrapError(err)
+		return 0, WrapError(err)
 	}
 	return n, nil
 }
@@ -298,11 +291,11 @@ func (typ Type) Value() (driver.Value, error) {
 	return nil, fmt.Errorf("not a valid Type: %d", typ)
 }
 
-// isValidIdentifier reports whether name is a valid identifier.
+// IsValidIdentifier reports whether name is a valid identifier.
 // A valid identifier must:
 //   - start with [A-Za-z_]
 //   - subsequently contain only [A-Za-z0-9_]
-func isValidIdentifier(name string) bool {
+func IsValidIdentifier(name string) bool {
 	if name == "" {
 		return false
 	}
@@ -315,22 +308,17 @@ func isValidIdentifier(name string) bool {
 	return true
 }
 
-// isValidSchemaName reports whether name is a valid schema name.
-func isValidSchemaName(name string) bool {
-	return isValidIdentifier(name)
-}
-
-// newError returns a new Error value with a fmt.Errorf(format, a...) error.
-func newError(format string, a ...any) error {
-	return &Error{Err: fmt.Errorf(format, a...)}
+// IsValidSchemaName reports whether name is a valid schema name.
+func IsValidSchemaName(name string) bool {
+	return IsValidIdentifier(name)
 }
 
 // columnsIndexes contains the column indexes of the struct passed as argument
 // to AppendStruct of Batch.
 var columnsIndexes = sync.Map{}
 
-// columnsIndex returns a map from a column name to its index in the struct t.
-func columnsIndex(t reflect.Type) (map[string][]int, error) {
+// ColumnsIndex returns a map from a column name to its index in the struct t.
+func ColumnsIndex(t reflect.Type) (map[string][]int, error) {
 	idx, ok := columnsIndexes.Load(t)
 	if ok {
 		return idx.(map[string][]int), nil
@@ -345,7 +333,7 @@ func columnsIndex(t reflect.Type) (map[string][]int, error) {
 		if column == "" {
 			column = field.Name
 		}
-		if !isValidIdentifier(column) {
+		if !IsValidIdentifier(column) {
 			return nil, fmt.Errorf("column name %q is not a valid identifier", column)
 		}
 		index[column] = field.Index

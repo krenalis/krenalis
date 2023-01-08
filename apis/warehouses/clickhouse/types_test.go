@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package warehouses
+package clickhouse
 
 import (
 	"testing"
@@ -61,7 +61,7 @@ func TestClickHouseTypes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got := clickHousePropertyType(test.s)
+		got := propertyType(test.s)
 		if got.Valid() != test.t.Valid() {
 			if test.t.Valid() {
 				t.Errorf("%s: expecting a valid type, got an invalid type", test.s)
@@ -87,7 +87,7 @@ func TestClickHouseUnsupportedTypes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got := clickHousePropertyType(test)
+		got := propertyType(test)
 		if got.Valid() {
 			t.Errorf("%s: expecting an invalid type, got a valid type: %#v", test, got)
 		}

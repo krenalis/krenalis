@@ -556,7 +556,7 @@ func (s *stateKeeper) setWorkspaceWarehouse(n postgres.Notification) {
 	if e.Warehouse != nil {
 		var err error
 		s.replaceWorkspace(e.Workspace, func(w *Workspace) {
-			w.warehouse, err = warehouses.Open(e.Warehouse.Type, e.Warehouse.Settings)
+			w.warehouse, err = openWarehouse(e.Warehouse.Type, e.Warehouse.Settings)
 		})
 		if err != nil {
 			log.Printf("[error] cannot open data warehouse of workspace %d: %s", e.Workspace, err)

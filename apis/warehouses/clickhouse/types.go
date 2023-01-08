@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package warehouses
+package clickhouse
 
 import (
 	"bytes"
@@ -15,18 +15,18 @@ import (
 	"chichi/apis/types"
 )
 
-// clickHousePropertyType returns the types.Type corresponding to the
-// ClickHouse type typ stored in the system.columns.type column.
-// It returns an invalid type if typ is not supported.
-func clickHousePropertyType(typ string) types.Type {
+// propertyType returns the types.Type corresponding to the ClickHouse type typ
+// stored in the system.columns.type column. It returns an invalid type if typ
+// is not supported.
+func propertyType(typ string) types.Type {
 	if !utf8.ValidString(typ) {
 		return types.Type{}
 	}
-	t, _ := parseClickHouseType(typ)
+	t, _ := parseType(typ)
 	return t
 }
 
-func parseClickHouseType(s string) (types.Type, string) {
+func parseType(s string) (types.Type, string) {
 	s = strings.TrimLeft(s, " ")
 	var i int
 	for ; i < len(s); i++ {
@@ -154,30 +154,30 @@ func parseClickHouseType(s string) (types.Type, string) {
 		}
 		return types.Text().WithEnum(enum), s[1:]
 	case "LowCardinality":
-		t, s := parseClickHouseType(s[i+1:])
+		t, s := parseType(s[i+1:])
 		if s == "" {
 			return types.Type{}, ""
 		}
 		return t, s[1:]
 	case "Array":
-		t, s := parseClickHouseType(s[i+1:])
+		t, s := parseType(s[i+1:])
 		if !t.Valid() || s == "" {
 			return types.Type{}, ""
 		}
 		return types.Array(t), s[1:]
 	case "Nullable":
-		t, s := parseClickHouseType(s[i+1:])
+		t, s := parseType(s[i+1:])
 		if !t.Valid() || s == "" {
 			return types.Type{}, ""
 		}
 		return t.WithNull(), s[1:]
 	case "Map":
-		key, s := parseClickHouseType(s[i+1:])
+		key, s := parseType(s[i+1:])
 		s, comma := trimComma(s)
 		if !key.Valid() || key.PhysicalType() != types.PtText || !comma {
 			return types.Type{}, ""
 		}
-		value, s := parseClickHouseType(s)
+		value, s := parseType(s)
 		if !value.Valid() || s == "" {
 			return types.Type{}, ""
 		}

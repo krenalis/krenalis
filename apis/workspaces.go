@@ -21,6 +21,8 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/types"
 	"chichi/apis/warehouses"
+	"chichi/apis/warehouses/clickhouse"
+	"chichi/apis/warehouses/postgresql"
 
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
@@ -119,7 +121,7 @@ func (ws *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) error 
 	if ws.warehouse != nil {
 		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.id)
 	}
-	warehouse, err := warehouses.Open(warehouses.Type(typ), settings)
+	warehouse, err := openWarehouse(warehouses.Type(typ), settings)
 	if err != nil {
 		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
 	}
@@ -249,7 +251,7 @@ func (ws *Workspace) SetWarehouse(typ WarehouseType, settings []byte) error {
 			"workspace %d is connected to a %s data warehouse, but settings are for a %s data warehouse",
 			ws.id, ws.warehouse.Type(), typ))
 	}
-	warehouse, err := warehouses.Open(ws.warehouse.Type(), settings)
+	warehouse, err := openWarehouse(ws.warehouse.Type(), settings)
 	if err != nil {
 		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
 	}
@@ -473,4 +475,16 @@ func (this *Workspaces) List() []*WorkspaceInfo {
 		return a.ID < b.ID
 	})
 	return infos
+}
+
+// openWarehouse opens a data warehouse with the given type and settings.
+// It returns an error if typ or settings are not valid.
+func openWarehouse(typ warehouses.Type, settings []byte) (warehouses.Warehouse, error) {
+	switch typ {
+	case warehouses.PostgreSQL:
+		return postgresql.OpenPostgres(settings)
+	case warehouses.ClickHouse:
+		return clickhouse.Open(settings)
+	}
+	return nil, fmt.Errorf("warehouse type %q is not valid", typ)
 }

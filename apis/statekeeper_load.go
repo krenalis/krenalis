@@ -93,7 +93,7 @@ func (s *stateKeeper) loadState() error {
 					resources: &resourcesState{ids: map[int]*Resource{}},
 				}
 				if warehouseType != nil {
-					workspace.warehouse, err = warehouses.Open(*warehouseType, warehouseSettings)
+					workspace.warehouse, err = openWarehouse(*warehouseType, warehouseSettings)
 					if err != nil {
 						log.Fatalf("cannot open data warehouse of workspace %d: %s", id, err)
 					}

@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package warehouses
+package postgresql
 
 import (
 	"context"
@@ -25,6 +25,8 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/types"
+	"chichi/apis/warehouses"
+
 	"github.com/shopspring/decimal"
 	"golang.org/x/exp/slices"
 )
@@ -32,17 +34,17 @@ import (
 //go:embed connections_users.sql
 var createConnectionsUsersTable string
 
-var _ Warehouse = &postgreSQL{}
-var _ Batch = &postgresBatch{}
+var _ warehouses.Warehouse = &postgreSQL{}
+var _ warehouses.Batch = &batch{}
 
 type postgreSQL struct {
 	mu       sync.Mutex // for the db and closed fields
 	db       *sql.DB
 	closed   bool
-	settings *postgreSQLSettings
+	settings *psSettings
 }
 
-type postgreSQLSettings struct {
+type psSettings struct {
 	Host     string
 	Port     int
 	Username string
@@ -51,9 +53,9 @@ type postgreSQLSettings struct {
 	Schema   string
 }
 
-// openPostgres opens a PostgreSQL data warehouse with the given settings.
-func openPostgres(settings []byte) (Warehouse, error) {
-	var s postgreSQLSettings
+// OpenPostgres opens a PostgreSQL data warehouse with the given settings.
+func OpenPostgres(settings []byte) (warehouses.Warehouse, error) {
+	var s psSettings
 	err := json.Unmarshal(settings, &s)
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
@@ -82,7 +84,7 @@ func openPostgres(settings []byte) (Warehouse, error) {
 	if n := len(s.Schema); n < 1 || n > 63 {
 		return nil, fmt.Errorf("schema length in bytes must be in range [1,63]")
 	}
-	if !isValidSchemaName(s.Schema) {
+	if !warehouses.IsValidSchemaName(s.Schema) {
 		return nil, fmt.Errorf("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
 	}
 	if strings.HasPrefix(s.Schema, "pg_") {
@@ -130,24 +132,24 @@ func (warehouse *postgreSQL) CreateTables(ctx context.Context, schema types.Type
 	}
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return wrapError(err)
+		return warehouses.WrapError(err)
 	}
 	// Create the tables.
 	for i := len(createTables) - 1; i >= 0; i-- {
 		_, err = tx.ExecContext(ctx, createTables[i])
 		if err != nil {
 			_ = tx.Rollback()
-			return wrapError(err)
+			return warehouses.WrapError(err)
 		}
 	}
 	// Create the "connections_users" table.
 	_, err = tx.ExecContext(ctx, createConnectionsUsersTable)
 	if err != nil {
 		_ = tx.Rollback()
-		return wrapError(err)
+		return warehouses.WrapError(err)
 	}
 	err = tx.Commit()
-	return wrapError(err)
+	return warehouses.WrapError(err)
 }
 
 // Exec executes a query without returning any rows. args are the placeholders.
@@ -159,9 +161,9 @@ func (warehouse *postgreSQL) Exec(ctx context.Context, query string, args ...any
 	}
 	r, err := db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, wrapError(err)
+		return nil, warehouses.WrapError(err)
 	}
-	return result{r}, nil
+	return warehouses.Result{Result: r}, nil
 }
 
 // Ping checks whether the connection to the data warehouse is active and, if
@@ -177,14 +179,14 @@ func (warehouse *postgreSQL) Ping(ctx context.Context) error {
 // PrepareBatch creates a prepared batch statement for inserting rows in
 // batch and returns it. table specifies the table in which the rows will be
 // inserted, and columns specifies the columns.
-func (warehouse *postgreSQL) PrepareBatch(ctx context.Context, table string, columns []string) (Batch, error) {
-	if !isValidIdentifier(table) {
+func (warehouse *postgreSQL) PrepareBatch(ctx context.Context, table string, columns []string) (warehouses.Batch, error) {
+	if !warehouses.IsValidIdentifier(table) {
 		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
 	}
 	if len(columns) == 0 {
 		return nil, fmt.Errorf("columns cannot be empty")
 	}
-	batch := &postgresBatch{
+	batch := &batch{
 		warehouse: warehouse,
 		ctx:       ctx,
 		columns:   slices.Clone(columns),
@@ -197,7 +199,7 @@ func (warehouse *postgreSQL) PrepareBatch(ctx context.Context, table string, col
 		if i > 0 {
 			batch.buf.WriteByte(',')
 		}
-		if !isValidIdentifier(column) {
+		if !warehouses.IsValidIdentifier(column) {
 			return nil, fmt.Errorf("column name %q is not a valid identifier", column)
 		}
 		batch.buf.WriteString(column)
@@ -208,27 +210,27 @@ func (warehouse *postgreSQL) PrepareBatch(ctx context.Context, table string, col
 
 // Query executes a query that returns rows. args are the placeholders.
 // If the query fails, it returns an Error value.
-func (warehouse *postgreSQL) Query(ctx context.Context, query string, args ...any) (*Rows, error) {
+func (warehouse *postgreSQL) Query(ctx context.Context, query string, args ...any) (*warehouses.Rows, error) {
 	db, err := warehouse.connection()
 	if err != nil {
 		return nil, err
 	}
 	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, wrapError(err)
+		return nil, warehouses.WrapError(err)
 	}
-	return &Rows{rows}, nil
+	return &warehouses.Rows{Rows: rows}, nil
 }
 
 // QueryRow executes a query that should return at most one row.
 // If the query fails, it returns an Error value.
-func (warehouse *postgreSQL) QueryRow(ctx context.Context, query string, args ...any) Row {
+func (warehouse *postgreSQL) QueryRow(ctx context.Context, query string, args ...any) warehouses.Row {
 	db, err := warehouse.connection()
 	if err != nil {
-		return Row{err: err}
+		return warehouses.Row{Error: err}
 	}
 	row := db.QueryRowContext(ctx, query, args...)
-	return Row{row: row}
+	return warehouses.Row{Row: row}
 }
 
 // Settings returns the data warehouse settings.
@@ -240,7 +242,7 @@ func (warehouse *postgreSQL) Settings() []byte {
 // Tables returns the tables of the data warehouse.
 // It returns only the tables 'users', 'groups', 'events', and the tables with
 // prefix 'users_', 'groups_' and 'events_'.
-func (warehouse *postgreSQL) Tables(ctx context.Context) ([]*Table, error) {
+func (warehouse *postgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, error) {
 
 	// Get the connection.
 	db, err := warehouse.connection()
@@ -248,12 +250,12 @@ func (warehouse *postgreSQL) Tables(ctx context.Context) ([]*Table, error) {
 		return nil, err
 	}
 
-	var table *Table
-	var tables []*Table
+	var table *warehouses.Table
+	var tables []*warehouses.Table
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, wrapError(err)
+		return nil, warehouses.WrapError(err)
 	}
 	defer func() {
 		if tx != nil {
@@ -274,22 +276,22 @@ func (warehouse *postgreSQL) Tables(ctx context.Context) ([]*Table, error) {
 
 	rows, err := tx.QueryContext(ctx, query)
 	if err != nil {
-		return nil, wrapError(err)
+		return nil, warehouses.WrapError(err)
 	}
 	for rows.Next() {
 		var tableName, columnName, isNullable, typ, charLength, precision, radix, scale, isUpdatable, description sql.NullString
 		if err = rows.Scan(&tableName, &columnName, &isNullable, &typ, &charLength, &precision, &radix, &scale, &isUpdatable, &description); err != nil {
 			_ = rows.Close()
-			return nil, wrapError(err)
+			return nil, warehouses.WrapError(err)
 		}
 		if !columnName.Valid {
-			return nil, newError("data warehouse has returned NULL as column name")
+			return nil, warehouses.NewError("data warehouse has returned NULL as column name")
 		}
 		if !typ.Valid {
-			return nil, newError("data warehouse has returned NULL as column data type")
+			return nil, warehouses.NewError("data warehouse has returned NULL as column data type")
 		}
 		if !types.IsValidPropertyName(columnName.String) {
-			return nil, newError("column name %q is not supported", columnName.String)
+			return nil, warehouses.NewError("column name %q is not supported", columnName.String)
 		}
 		var t types.Type
 		switch typ.String {
@@ -302,27 +304,27 @@ func (warehouse *postgreSQL) Tables(ctx context.Context) ([]*Table, error) {
 		case "numeric":
 			// Parse precision radix.
 			if !radix.Valid {
-				return nil, newError("data warehouse has returned NULL as precision radix for column %s", columnName.String)
+				return nil, warehouses.NewError("data warehouse has returned NULL as precision radix for column %s", columnName.String)
 			}
 			radix, _ := strconv.Atoi(radix.String)
 			if radix != 2 && radix != 10 {
-				return nil, newError("data warehouse has returned an invalid precision radix for column %s", columnName.String)
+				return nil, warehouses.NewError("data warehouse has returned an invalid precision radix for column %s", columnName.String)
 			}
 			// Parse precision.
 			if !precision.Valid {
-				return nil, newError("data warehouse has returned NULL as precision for column %s", columnName.String)
+				return nil, warehouses.NewError("data warehouse has returned NULL as precision for column %s", columnName.String)
 			}
 			p, err := strconv.ParseInt(precision.String, radix, 64)
 			if err != nil || p < 1 {
-				return nil, newError("data warehouse has returned an invalid precision for column %s: %s", columnName.String, precision.String)
+				return nil, warehouses.NewError("data warehouse has returned an invalid precision for column %s: %s", columnName.String, precision.String)
 			}
 			// Parse scale.
 			if !scale.Valid {
-				return nil, newError("data warehouse has returned NULL as scale for column %s", columnName.String)
+				return nil, warehouses.NewError("data warehouse has returned NULL as scale for column %s", columnName.String)
 			}
 			s, err := strconv.ParseInt(scale.String, radix, 64)
 			if err != nil || s < 0 || s > p {
-				return nil, newError("data warehouse has returned an invalid scale for column %s: %s", columnName.String, scale.String)
+				return nil, warehouses.NewError("data warehouse has returned an invalid scale for column %s: %s", columnName.String, scale.String)
 			}
 			t = types.Decimal(int(p), int(s))
 		case "real":
@@ -333,7 +335,7 @@ func (warehouse *postgreSQL) Tables(ctx context.Context) ([]*Table, error) {
 			if charLength.Valid {
 				chars, _ := strconv.Atoi(charLength.String)
 				if chars < 1 {
-					return nil, newError("data warehouse has returned an invalid character maximum length for column %s", columnName.String)
+					return nil, warehouses.NewError("data warehouse has returned an invalid character maximum length for column %s", columnName.String)
 				}
 				t = types.Text(types.Chars(chars))
 			} else {
@@ -354,9 +356,9 @@ func (warehouse *postgreSQL) Tables(ctx context.Context) ([]*Table, error) {
 		case "json", "jsonb":
 			t = types.JSON()
 		default:
-			return nil, newError("type of column %q.%q is not supported: %s", tableName.String, columnName.String, typ.String)
+			return nil, warehouses.NewError("type of column %q.%q is not supported: %s", tableName.String, columnName.String, typ.String)
 		}
-		column := &Column{
+		column := &warehouses.Column{
 			Name:        columnName.String,
 			Type:        t,
 			IsNullable:  isNullable.String == "YES",
@@ -366,13 +368,13 @@ func (warehouse *postgreSQL) Tables(ctx context.Context) ([]*Table, error) {
 			column.Description = description.String
 		}
 		if table == nil || tableName.String != table.Name {
-			table = &Table{Name: tableName.String}
+			table = &warehouses.Table{Name: tableName.String}
 			tables = append(tables, table)
 		}
 		table.Columns = append(table.Columns, column)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, wrapError(err)
+		return nil, warehouses.WrapError(err)
 	}
 
 	err = tx.Commit()
@@ -385,8 +387,8 @@ func (warehouse *postgreSQL) Tables(ctx context.Context) ([]*Table, error) {
 }
 
 // Type returns the type of the warehouse.
-func (warehouse *postgreSQL) Type() Type {
-	return PostgreSQL
+func (warehouse *postgreSQL) Type() warehouses.Type {
+	return warehouses.PostgreSQL
 }
 
 // Users returns the users, with only the properties in schema, ordered by
@@ -435,7 +437,7 @@ func (warehouse *postgreSQL) Users(ctx context.Context, schema types.Type, order
 	var users [][]any
 	rows, err := db.QueryContext(ctx, query.String())
 	if err != nil {
-		return nil, wrapError(err)
+		return nil, warehouses.WrapError(err)
 	}
 	for rows.Next() {
 		user := make([]any, len(properties))
@@ -470,12 +472,12 @@ func (warehouse *postgreSQL) Users(ctx context.Context, schema types.Type, order
 		}
 		if err = rows.Scan(user...); err != nil {
 			_ = rows.Close()
-			return nil, wrapError(err)
+			return nil, warehouses.WrapError(err)
 		}
 		users = append(users, user)
 	}
 	if err = rows.Err(); err != nil {
-		return nil, wrapError(err)
+		return nil, warehouses.WrapError(err)
 	}
 	err = rows.Close()
 	if err != nil {
@@ -493,24 +495,24 @@ func (warehouse *postgreSQL) connection() (*sql.DB, error) {
 	warehouse.mu.Lock()
 	defer warehouse.mu.Unlock()
 	if warehouse.closed {
-		return nil, wrapError(errors.New("warehouse is closed"))
+		return nil, warehouses.WrapError(errors.New("warehouse is closed"))
 	}
 	if warehouse.settings == nil {
-		return nil, wrapError(errors.New("there are no settings"))
+		return nil, warehouses.WrapError(errors.New("there are no settings"))
 	}
 	if warehouse.db != nil {
 		return warehouse.db, nil
 	}
 	db, err := sql.Open("pgx", warehouse.settings.dsn())
 	if err != nil {
-		return nil, wrapError(err)
+		return nil, warehouses.WrapError(err)
 	}
 	warehouse.db = db
 	return db, nil
 }
 
 // dsn returns the connection string, from s, in the URL format.
-func (s *postgreSQLSettings) dsn() string {
+func (s *psSettings) dsn() string {
 	u := url.URL{
 		Scheme:   "postgres",
 		User:     url.UserPassword(s.Username, s.Password),
@@ -523,7 +525,7 @@ func (s *postgreSQLSettings) dsn() string {
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func (s *postgreSQLSettings) testConnection(ctx context.Context) error {
+func (s *psSettings) testConnection(ctx context.Context) error {
 	db, err := sql.Open("pgx", s.dsn())
 	if err != nil {
 		return err
@@ -678,22 +680,8 @@ func isArrayOfObjects(t types.Type) bool {
 	return t.PhysicalType() == types.PtArray && t.ItemType().PhysicalType() == types.PtObject
 }
 
-// tablesOfObject returns table names from the type t.
-func tablesOfObject(table string, t types.Type) []string {
-	tables := []string{table}
-	for _, p := range t.Properties() {
-		if isArrayOfObjects(p.Type) {
-			if !types.IsValidPropertyName(p.Name) {
-				panic("property name is not valid")
-			}
-			tables = append(tables, tablesOfObject(table+"_"+p.Name, p.Type.ItemType())...)
-		}
-	}
-	return tables
-}
-
-// postgresBatch implements the Batch interface.
-type postgresBatch struct {
+// batch implements the Batch interface.
+type batch struct {
 	warehouse *postgreSQL
 	ctx       context.Context
 	columns   []string
@@ -703,7 +691,7 @@ type postgresBatch struct {
 }
 
 // Abort aborts the execution of the batch insert.
-func (batch *postgresBatch) Abort() error {
+func (batch *batch) Abort() error {
 	if batch.err != nil {
 		return batch.err
 	}
@@ -712,7 +700,7 @@ func (batch *postgresBatch) Abort() error {
 }
 
 // Append appends the values of a row to batch.
-func (batch *postgresBatch) Append(v ...any) error {
+func (batch *batch) Append(v ...any) error {
 	if batch.err != nil {
 		return batch.err
 	}
@@ -737,7 +725,7 @@ func (batch *postgresBatch) Append(v ...any) error {
 
 // AppendStruct appends the values of a row, read from the fields of the struct
 // v, to batch. It returns an error if v is not a struct or pointer to a struct.
-func (batch *postgresBatch) AppendStruct(v any) error {
+func (batch *batch) AppendStruct(v any) error {
 	if batch.err != nil {
 		return batch.err
 	}
@@ -752,7 +740,7 @@ func (batch *postgresBatch) AppendStruct(v any) error {
 		return errors.New("v is not a struct or pointer to a struct")
 	}
 	rt := rv.Type()
-	indexOf, err := columnsIndex(rt)
+	indexOf, err := warehouses.ColumnsIndex(rt)
 	if err != nil {
 		return err
 	}
@@ -773,7 +761,7 @@ func (batch *postgresBatch) AppendStruct(v any) error {
 }
 
 // Send sends the batch to the data warehouse.
-func (batch *postgresBatch) Send() error {
+func (batch *batch) Send() error {
 	if batch.err != nil {
 		return batch.err
 	}
@@ -783,7 +771,7 @@ func (batch *postgresBatch) Send() error {
 	}
 	_, err = db.ExecContext(batch.ctx, batch.buf.String())
 	if err != nil {
-		batch.err = wrapError(err)
+		batch.err = warehouses.WrapError(err)
 		return batch.err
 	}
 	batch.err = errors.New("the Send method has already been called")
