@@ -18,12 +18,12 @@ import (
 	"strings"
 	_ "time/tzdata" // workaround for clickhouse-go issue #162
 
+	"chichi/apis/errors"
+	"chichi/apis/postgres"
+
 	"github.com/ClickHouse/clickhouse-go/v2"
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/go-chi/chi/v5"
-
-	"chichi/apis/errors"
-	"chichi/apis/postgres"
 )
 
 var InvalidDefinition errors.Code = "InvalidDefinition"
@@ -373,13 +373,16 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 	router.Route("/api/workspace/connect-warehouse", func(router chi.Router) {
 		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			var setts PostgreSQLSettings
-			err := json.NewDecoder(r.Body).Decode(&setts)
+			req := struct {
+				Type     WarehouseType
+				Settings json.RawMessage
+			}{}
+			err := json.NewDecoder(r.Body).Decode(&req)
 			if err != nil {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = workspace.ConnectWarehouse(&setts)
+			err = workspace.ConnectWarehouse(req.Type, req.Settings)
 			if err != nil {
 				if err, ok := err.(errors.ResponseWriterTo); ok {
 					_ = err.WriteTo(w)

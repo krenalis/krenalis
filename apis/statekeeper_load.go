@@ -93,9 +93,10 @@ func (s *stateKeeper) loadState() error {
 					resources: &resourcesState{ids: map[int]*Resource{}},
 				}
 				if warehouseType != nil {
-					var settings warehouses.PostgreSQLSettings
-					_ = json.Unmarshal(warehouseSettings, &settings)
-					workspace.warehouse = warehouses.OpenPostgres(&settings)
+					workspace.warehouse, err = warehouses.Open(*warehouseType, warehouseSettings)
+					if err != nil {
+						log.Fatalf("cannot open data warehouse of workspace %d: %s", id, err)
+					}
 					workspace.schema = map[string]*types.Type{}
 					if len(schema) > 0 {
 						err = json.Unmarshal(schema, &workspace.schema)

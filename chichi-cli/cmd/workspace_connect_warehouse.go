@@ -13,31 +13,28 @@ import (
 	"os"
 
 	"chichi-cli/chichiapis"
-	"chichi/apis"
 
 	"github.com/spf13/cobra"
 )
 
 var workspaceConnectWarehouseCmd = &cobra.Command{
-	Use:   "connect-warehouse <file>",
+	Use:   "connect-warehouse <type> <file>",
 	Short: "Connect a data warehouse to the workspace",
 	Long: "Connect a data warehouse to the workspace.\n\n" +
-		"<file> must be a JSON file containing an object " +
-		"which can be serialized into a apis.PostgreSQLSettings value",
-	Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+		"<type> is the data warehouse type and can be ClickHouse or PostgreSQL,\n" +
+		"<file> is a JSON file containing the data warehouse settings",
+	Args: cobra.MatchAll(cobra.ExactArgs(2), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
-		filename := args[0]
-		f, err := os.Open(filename)
+		typ := args[0]
+		filename := args[1]
+		settings, err := os.ReadFile(filename)
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer f.Close()
-		var setts apis.PostgreSQLSettings
-		err = json.NewDecoder(f).Decode(&setts)
-		if err != nil {
-			log.Fatal(err)
+		if !json.Valid(settings) {
+			log.Fatalf("content of file %q is not JSON valid", filename)
 		}
-		chichiapis.WorkspaceConnectWarehouse(setts)
+		chichiapis.WorkspaceConnectWarehouse(typ, settings)
 	},
 }
 

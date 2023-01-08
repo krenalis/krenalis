@@ -66,24 +66,44 @@ type WorkspaceInfo struct {
 	Schema map[string]types.Type
 }
 
-// WarehouseSettings is the interface implemented by data warehouse settings.
-type WarehouseSettings interface {
-	warehouseType() warehouses.Type
+type WarehouseType int
+
+const (
+	ClickHouse = WarehouseType(warehouses.ClickHouse)
+	PostgreSQL = WarehouseType(warehouses.PostgreSQL)
+)
+
+// String returns the string representation of typ.
+// It panics if typ is not a valid WarehouseType value.
+func (typ WarehouseType) String() string {
+	switch typ {
+	case ClickHouse:
+		return "ClickHouse"
+	case PostgreSQL:
+		return "PostgreSQL"
+	}
+	panic("invalid data warehouse type")
 }
 
-// PostgreSQLSettings are the settings used to connect to a PostgreSQL data
-// warehouse. It implements the WarehouseSettings interface.
-type PostgreSQLSettings struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database string
-	Schema   string
-}
-
-func (s *PostgreSQLSettings) warehouseType() warehouses.Type {
-	return warehouses.PostgreSQL
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (typ *WarehouseType) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, null) {
+		return nil
+	}
+	var s string
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return fmt.Errorf("json: cannot unmarshal into a apis.WarehouseType value: %s", err)
+	}
+	var t WarehouseType
+	switch s {
+	case "ClickHouse":
+		t = ClickHouse
+	case "PostgreSQL":
+		t = PostgreSQL
+	}
+	*typ = t
+	return nil
 }
 
 // ConnectWarehouse connects a data warehouse, with the given settings, to the
@@ -95,21 +115,11 @@ func (s *PostgreSQLSettings) warehouseType() warehouses.Type {
 //     warehouse.
 //   - InvalidSettings, if the settings are not valid.
 //   - ConnectionFailed, if the connection fails.
-func (ws *Workspace) ConnectWarehouse(settings WarehouseSettings) error {
+func (ws *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) error {
 	if ws.warehouse != nil {
 		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.id)
 	}
-	s := settings.(*PostgreSQLSettings)
-	ps := &warehouses.PostgreSQLSettings{
-		Host:     s.Host,
-		Port:     s.Port,
-		Username: s.Username,
-		Password: s.Password,
-		Database: s.Database,
-		Schema:   s.Schema,
-	}
-	warehouse := warehouses.OpenPostgres(ps)
-	err := warehouse.Validate()
+	warehouse, err := warehouses.Open(warehouses.Type(typ), settings)
 	if err != nil {
 		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
 	}
@@ -117,15 +127,11 @@ func (ws *Workspace) ConnectWarehouse(settings WarehouseSettings) error {
 	if err != nil {
 		return errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
 	}
-	rawSettings, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
 	n := setWorkspaceWarehouseNotification{
 		Workspace: ws.id,
 		Warehouse: &notifiedWarehouse{
-			Type:     warehouses.PostgreSQL,
-			Settings: rawSettings,
+			Type:     warehouse.Type(),
+			Settings: warehouse.Settings(),
 		},
 	}
 	err = ws.db.Transaction(func(tx *postgres.Tx) error {
@@ -234,26 +240,16 @@ func (ws *Workspace) Schema(name string) (types.Type, bool) {
 //   - NotConnected, if the workspace is not connected to a data warehouse.
 //   - InvalidSettings, if the settings are not valid.
 //   - ConnectionFailed, if the connection fails.
-func (ws *Workspace) SetWarehouse(settings WarehouseSettings) error {
+func (ws *Workspace) SetWarehouse(typ WarehouseType, settings []byte) error {
 	if ws.warehouse == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.id)
 	}
-	if typ := ws.warehouse.Type(); typ != warehouses.PostgreSQL {
+	if warehouses.Type(typ) != ws.warehouse.Type() {
 		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", fmt.Errorf(
 			"workspace %d is connected to a %s data warehouse, but settings are for a %s data warehouse",
-			ws.id, typ, warehouses.PostgreSQL))
+			ws.id, ws.warehouse.Type(), typ))
 	}
-	s := settings.(*PostgreSQLSettings)
-	ps := &warehouses.PostgreSQLSettings{
-		Host:     s.Host,
-		Port:     s.Port,
-		Username: s.Username,
-		Password: s.Password,
-		Database: s.Database,
-		Schema:   s.Schema,
-	}
-	warehouse := warehouses.OpenPostgres(ps)
-	err := warehouse.Validate()
+	warehouse, err := warehouses.Open(ws.warehouse.Type(), settings)
 	if err != nil {
 		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
 	}
@@ -261,15 +257,11 @@ func (ws *Workspace) SetWarehouse(settings WarehouseSettings) error {
 	if err != nil {
 		return errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
 	}
-	rawSettings, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
 	n := setWorkspaceWarehouseNotification{
 		Workspace: ws.id,
 		Warehouse: &notifiedWarehouse{
-			Type:     warehouses.PostgreSQL,
-			Settings: rawSettings,
+			Type:     warehouse.Type(),
+			Settings: warehouse.Settings(),
 		},
 	}
 	err = ws.db.Transaction(func(tx *postgres.Tx) error {

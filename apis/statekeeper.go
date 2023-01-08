@@ -554,11 +554,13 @@ func (s *stateKeeper) setWorkspaceWarehouse(n postgres.Notification) {
 	}
 	disconnected := s.workspaces[e.Workspace].warehouse
 	if e.Warehouse != nil {
+		var err error
 		s.replaceWorkspace(e.Workspace, func(w *Workspace) {
-			var settings warehouses.PostgreSQLSettings
-			_ = json.Unmarshal(e.Warehouse.Settings, &settings)
-			w.warehouse = warehouses.OpenPostgres(&settings)
+			w.warehouse, err = warehouses.Open(e.Warehouse.Type, e.Warehouse.Settings)
 		})
+		if err != nil {
+			log.Printf("[error] cannot open data warehouse of workspace %d: %s", e.Workspace, err)
+		}
 	} else {
 		s.replaceWorkspace(e.Workspace, func(w *Workspace) {
 			w.warehouse = nil

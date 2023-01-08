@@ -24,6 +24,7 @@ type Type int
 
 const (
 	BigQuery Type = iota + 1
+	ClickHouse
 	PostgreSQL
 	Redshift
 	Snowflake
@@ -46,6 +47,18 @@ type Error struct {
 
 func (e *Error) Error() string {
 	return fmt.Sprintf("cannot call the data warehouse: %s", e.Err)
+}
+
+// Open opens a data warehouse with the given type and settings.
+// It returns an error if typ or settings are not valid.
+func Open(typ Type, settings []byte) (Warehouse, error) {
+	switch typ {
+	case PostgreSQL:
+		return openPostgres(settings)
+	case ClickHouse:
+		return openClickHouse(settings)
+	}
+	return nil, fmt.Errorf("warehouse type %q is not valid", typ)
 }
 
 // Warehouse is the interface implemented by data warehouses.
@@ -72,6 +85,9 @@ type Warehouse interface {
 	// inserted, and columns specifies the columns.
 	PrepareBatch(ctx context.Context, table string, columns []string) (Batch, error)
 
+	// Settings returns the data warehouse settings.
+	Settings() []byte
+
 	// Tables returns the tables of the data warehouse.
 	// It returns only the tables 'users', 'groups', 'events', and the tables with
 	// prefix 'users_', 'groups_' and 'events_'.
@@ -94,9 +110,6 @@ type Warehouse interface {
 	// If a query to the warehouse fails, it returns an Error value.
 	// If an argument is not valid, it panics.
 	Users(ctx context.Context, schema types.Type, order types.Property, first, limit int) ([][]any, error)
-
-	// Validate validates the settings and returns an error if they are not valid.
-	Validate() error
 }
 
 // Batch is implemented by values returned by PrepareBatch.
@@ -227,6 +240,8 @@ func (typ *Type) Scan(src any) error {
 	switch s {
 	case "BigQuery":
 		t = BigQuery
+	case "ClickHouse":
+		t = ClickHouse
 	case "PostgreSQL":
 		t = PostgreSQL
 	case "Redshift":
@@ -271,6 +286,8 @@ func (typ Type) Value() (driver.Value, error) {
 	switch typ {
 	case BigQuery:
 		return "BigQuery", nil
+	case ClickHouse:
+		return "ClickHouse", nil
 	case PostgreSQL:
 		return "PostgreSQL", nil
 	case Redshift:

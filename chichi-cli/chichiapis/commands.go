@@ -174,9 +174,13 @@ func RemoveEventListener(listener string) {
 	}
 }
 
-func WorkspaceConnectWarehouse(config apis.PostgreSQLSettings) {
+func WorkspaceConnectWarehouse(typ string, settings []byte) {
+	req := struct {
+		Type     string
+		Settings json.RawMessage
+	}{typ, settings}
 	b := &bytes.Buffer{}
-	_ = json.NewEncoder(b).Encode(config)
+	_ = json.NewEncoder(b).Encode(req)
 	err := callAPI("POST", "api/workspace/connect-warehouse", b, nil)
 	if err != nil {
 		log.Fatal(err)

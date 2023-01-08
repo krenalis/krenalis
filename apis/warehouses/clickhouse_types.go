@@ -1,0 +1,328 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2023 Open2b
+//
+
+package warehouses
+
+import (
+	"bytes"
+	"strings"
+	"unicode/utf8"
+
+	"chichi/apis/types"
+)
+
+// clickHousePropertyType returns the types.Type corresponding to the
+// ClickHouse type typ stored in the system.columns.type column.
+// It returns an invalid type if typ is not supported.
+func clickHousePropertyType(typ string) types.Type {
+	if !utf8.ValidString(typ) {
+		return types.Type{}
+	}
+	t, _ := parseClickHouseType(typ)
+	return t
+}
+
+func parseClickHouseType(s string) (types.Type, string) {
+	s = strings.TrimLeft(s, " ")
+	var i int
+	for ; i < len(s); i++ {
+		c := s[i]
+		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9') {
+			break
+		}
+	}
+	if i == len(s) || s[i] != '(' {
+		var t types.Type
+		switch s[:i] {
+		case "UInt8":
+			t = types.UInt8()
+		case "UInt16":
+			t = types.UInt16()
+		case "UInt32":
+			t = types.UInt()
+		case "UInt64":
+			t = types.UInt64()
+		case "Int8":
+			t = types.Int8()
+		case "Int16":
+			t = types.Int16()
+		case "Int32":
+			t = types.Int()
+		case "Int64":
+			t = types.Int64()
+		case "Float32":
+			t = types.Float32()
+		case "Float64":
+			t = types.Float()
+		case "Boolean":
+			t = types.Boolean()
+		case "String":
+			t = types.Text()
+		case "UUID":
+			t = types.UUID()
+		case "Date":
+			t = types.Date("2006-01-02")
+		case "Date32":
+			t = types.Int()
+		case "DateTime":
+			t = types.DateTime("2006-01-02 15:04:05")
+		case "JSON":
+			t = types.JSON()
+		case "IPv4":
+			t = types.UInt()
+		case "IPv6":
+			t = types.Text(types.Bytes(16))
+		default:
+			return types.Type{}, ""
+		}
+		return t, s[i:]
+	}
+	switch s[:i] {
+	case "Decimal":
+		precision, s, _ := parseUint(s[i+1:])
+		if precision == 0 || precision > 76 {
+			return types.Type{}, ""
+		}
+		s, ok := trimComma(s)
+		if !ok {
+			return types.Type{}, ""
+		}
+		scale, s, ok := parseUint(s)
+		if !ok || scale > precision || s == "" {
+			return types.Type{}, ""
+		}
+		return types.Decimal(precision, scale), s[1:]
+	case "FixedString":
+		n, s, _ := parseUint(s[i+1:])
+		if n == 0 || s == "" {
+			return types.Type{}, ""
+		}
+		return types.Text(types.Bytes(n)), s[1:]
+	case "DateTime":
+		_, s, ok := parseString(s[i+1:])
+		if !ok || s == "" {
+			return types.Type{}, ""
+		}
+		return types.DateTime("2006-01-02 15:04:05"), s[1:]
+	case "DateTime64":
+		n, s, ok := parseUint(s[i+1:])
+		if !ok || n > 9 {
+			return types.Type{}, ""
+		}
+		layout := "2006-01-02 15:04:05"
+		if n > 0 {
+			layout += "." + strings.Repeat("9", n)
+		}
+		// Skip the timezone if present.
+		if s, ok := trimComma(s); ok {
+			_, s, ok = parseString(s)
+			if !ok {
+				return types.Type{}, ""
+			}
+		}
+		if s == "" {
+			return types.Type{}, ""
+		}
+		return types.DateTime(layout), s[1:]
+	case "Enum8", "Enum16":
+		s = s[i+1:]
+		var enum []string
+		var item string
+		for {
+			var ok bool
+			item, s, ok = parseString(s)
+			if !ok {
+				return types.Type{}, ""
+			}
+			if s, ok = trimEqual(s); ok {
+				_, s, ok = parseInt(s)
+				if !ok {
+					return types.Type{}, ""
+				}
+			}
+			enum = append(enum, item)
+			if s, ok = trimComma(s); !ok {
+				break
+			}
+		}
+		if s == "" {
+			return types.Type{}, ""
+		}
+		return types.Text().WithEnum(enum), s[1:]
+	case "LowCardinality":
+		t, s := parseClickHouseType(s[i+1:])
+		if s == "" {
+			return types.Type{}, ""
+		}
+		return t, s[1:]
+	case "Array":
+		t, s := parseClickHouseType(s[i+1:])
+		if !t.Valid() || s == "" {
+			return types.Type{}, ""
+		}
+		return types.Array(t), s[1:]
+	case "Nullable":
+		t, s := parseClickHouseType(s[i+1:])
+		if !t.Valid() || s == "" {
+			return types.Type{}, ""
+		}
+		return t.WithNull(), s[1:]
+	case "Map":
+		key, s := parseClickHouseType(s[i+1:])
+		s, comma := trimComma(s)
+		if !key.Valid() || key.PhysicalType() != types.PtText || !comma {
+			return types.Type{}, ""
+		}
+		value, s := parseClickHouseType(s)
+		if !value.Valid() || s == "" {
+			return types.Type{}, ""
+		}
+		return types.Map(value), s[1:]
+	}
+	return types.Type{}, ""
+}
+
+// trimComma returns s without leading spaces (' ') followed by a comma if
+// present. The returned boolean reports whether the comma is present.
+func trimComma(s string) (string, bool) {
+	p := strings.TrimLeft(s, " ")
+	if len(p) == 0 || p[0] != ',' {
+		return s, false
+	}
+	return p[1:], true
+}
+
+// trimEqual returns s without leading spaces (' ') followed by an equal
+// character ('=') if present. The returned boolean reports whether the equal
+// character is present.
+func trimEqual(s string) (string, bool) {
+	p := strings.TrimLeft(s, " ")
+	if len(p) == 0 || p[0] != '=' {
+		return s, false
+	}
+	return p[1:], true
+}
+
+// parseInt parses s, which begins with a signed integer, and returns the
+// integer, the remaining part of s, and true. If s does not begin with a
+// number, it returns "", s and false.
+func parseInt(s string) (int, string, bool) {
+	p := strings.TrimLeft(s, " ")
+	var neg bool
+	if len(p) > 0 && p[0] == '-' {
+		neg = true
+		p = p[1:]
+	}
+	var n, i int
+	for ; i < len(p); i++ {
+		c := p[i]
+		if c < '0' || c > '9' {
+			break
+		}
+		n = n*10 + int(c-'0')
+	}
+	if i == 0 {
+		return 0, s, false
+	}
+	if neg {
+		n = -n
+	}
+	return n, p[i:], true
+}
+
+// parseUint parses s, which begins with an unsigned integer, and returns the
+// integer, the remaining part of s, and true. If s does not begin with a
+// number, it returns "", s and false.
+func parseUint(s string) (int, string, bool) {
+	p := strings.TrimLeft(s, " ")
+	var n, i int
+	for ; i < len(p); i++ {
+		c := p[i]
+		if c < '0' || c > '9' {
+			break
+		}
+		n = n*10 + int(c-'0')
+	}
+	if i == 0 {
+		return 0, s, false
+	}
+	return n, p[i:], true
+}
+
+// parseString parses s, which begin with a ClickHouse literal string, and
+// returns the string content and the remaining part of s. If s does not begin
+// with a literal string, it returns an empty string and s.
+func parseString(s string) (string, string, bool) {
+	p := strings.TrimLeft(s, " ")
+	if len(p) == 0 || p[0] != '\'' {
+		return "", s, false
+	}
+	p = p[1:]
+	var b bytes.Buffer
+	for {
+		i := strings.IndexAny(p, `'\`)
+		if i == -1 {
+			return "", s, false
+		}
+		b.WriteString(p[:i])
+		if p[i] == '\'' {
+			if i == len(p)-1 || p[i+1] != '\'' {
+				return b.String(), p[i+1:], true
+			}
+			b.WriteByte('\'')
+			p = p[i+2:]
+			continue
+		}
+		if i+2 >= len(p) {
+			return "", s, false
+		}
+		var r rune
+		switch p[i+1] {
+		case 'b':
+			r = '\b'
+		case 'f':
+			r = '\f'
+		case 'r':
+			r = '\r'
+		case 'n':
+			r = '\n'
+		case 't':
+			r = '\t'
+		case '0':
+			r = 0
+		case 'a':
+			r = '\a'
+		case 'v':
+			r = '\v'
+		case 'x':
+			if i+4 >= len(p) {
+				return "", s, false
+			}
+			r = 16*unhex(p[i+2]) + unhex(p[i+3])
+			if r >= utf8.RuneSelf {
+				return "", s, false
+			}
+			i += 2
+		default:
+			r = rune(p[i+1])
+		}
+		b.WriteRune(r)
+		p = p[i+2:]
+	}
+}
+
+func unhex(c byte) rune {
+	switch {
+	case '0' <= c && c <= '9':
+		return rune(c - '0')
+	case 'a' <= c && c <= 'f':
+		return rune(c - 'a' + 10)
+	case 'A' <= c && c <= 'F':
+		return rune(c - 'A' + 10)
+	}
+	return 0
+}

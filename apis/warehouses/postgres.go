@@ -11,6 +11,7 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -38,10 +39,10 @@ type postgreSQL struct {
 	mu       sync.Mutex // for the db and closed fields
 	db       *sql.DB
 	closed   bool
-	settings *PostgreSQLSettings
+	settings *postgreSQLSettings
 }
 
-type PostgreSQLSettings struct {
+type postgreSQLSettings struct {
 	Host     string
 	Port     int
 	Username string
@@ -50,9 +51,44 @@ type PostgreSQLSettings struct {
 	Schema   string
 }
 
-// OpenPostgres opens a PostgreSQL data warehouse with the given settings.
-func OpenPostgres(settings *PostgreSQLSettings) *postgreSQL {
-	return &postgreSQL{settings: settings}
+// openPostgres opens a PostgreSQL data warehouse with the given settings.
+func openPostgres(settings []byte) (Warehouse, error) {
+	var s postgreSQLSettings
+	err := json.Unmarshal(settings, &s)
+	if err != nil {
+		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
+	}
+	// Validate Host.
+	if n := len(s.Host); n == 0 || n > 253 {
+		return nil, fmt.Errorf("host length in bytes must be in range [1,253]")
+	}
+	// Validate Port.
+	if s.Port < 1 || s.Port > 65536 {
+		return nil, fmt.Errorf("port must be in range [1,65536]")
+	}
+	// Validate Username.
+	if n := len(s.Username); n < 1 || n > 63 {
+		return nil, fmt.Errorf("username length in bytes must be in range [1,63]")
+	}
+	// Validate Password.
+	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
+		return nil, fmt.Errorf("password length must be in range [1,100]")
+	}
+	// Validate Database.
+	if n := len(s.Database); n < 1 || n > 63 {
+		return nil, fmt.Errorf("database length in bytes must be in range [1,63]")
+	}
+	// Validate Schema.
+	if n := len(s.Schema); n < 1 || n > 63 {
+		return nil, fmt.Errorf("schema length in bytes must be in range [1,63]")
+	}
+	if !isValidSchemaName(s.Schema) {
+		return nil, fmt.Errorf("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
+	}
+	if strings.HasPrefix(s.Schema, "pg_") {
+		return nil, fmt.Errorf("schema cannot start with 'pg_'")
+	}
+	return &postgreSQL{settings: &s}, nil
 }
 
 // Close closes the warehouse. It will not allow any new queries to run, and it
@@ -193,6 +229,12 @@ func (warehouse *postgreSQL) QueryRow(ctx context.Context, query string, args ..
 	}
 	row := db.QueryRowContext(ctx, query, args...)
 	return Row{row: row}
+}
+
+// Settings returns the data warehouse settings.
+func (warehouse *postgreSQL) Settings() []byte {
+	s, _ := json.Marshal(warehouse.settings)
+	return s
 }
 
 // Tables returns the tables of the data warehouse.
@@ -446,42 +488,6 @@ func (warehouse *postgreSQL) Users(ctx context.Context, schema types.Type, order
 	return users, nil
 }
 
-// Validate validates the settings and returns an error if they are not valid.
-func (warehouse *postgreSQL) Validate() error {
-	s := warehouse.settings
-	// Validate Host.
-	if n := len(s.Host); n == 0 || n > 253 {
-		return newError("host length in bytes must be in range [1,253]")
-	}
-	// Validate Port.
-	if s.Port < 1 || s.Port > 65536 {
-		return newError("port must be in range [1,65536]")
-	}
-	// Validate Username.
-	if n := len(s.Username); n < 1 || n > 63 {
-		return newError("username length in bytes must be in range [1,63]")
-	}
-	// Validate Password.
-	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return newError("password length must be in range [1,100]")
-	}
-	// Validate Database.
-	if n := len(s.Database); n < 1 || n > 63 {
-		return newError("database length in bytes must be in range [1,63]")
-	}
-	// Validate Schema.
-	if n := len(s.Schema); n < 1 || n > 63 {
-		return newError("schema length in bytes must be in range [1,63]")
-	}
-	if !isValidSchemaName(s.Schema) {
-		return newError("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
-	}
-	if strings.HasPrefix(s.Schema, "pg_") {
-		return newError("schema cannot start with 'pg_'")
-	}
-	return nil
-}
-
 // connection returns the database connection.
 func (warehouse *postgreSQL) connection() (*sql.DB, error) {
 	warehouse.mu.Lock()
@@ -504,7 +510,7 @@ func (warehouse *postgreSQL) connection() (*sql.DB, error) {
 }
 
 // dsn returns the connection string, from s, in the URL format.
-func (s *PostgreSQLSettings) dsn() string {
+func (s *postgreSQLSettings) dsn() string {
 	u := url.URL{
 		Scheme:   "postgres",
 		User:     url.UserPassword(s.Username, s.Password),
@@ -517,7 +523,7 @@ func (s *PostgreSQLSettings) dsn() string {
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func (s *PostgreSQLSettings) testConnection(ctx context.Context) error {
+func (s *postgreSQLSettings) testConnection(ctx context.Context) error {
 	db, err := sql.Open("pgx", s.dsn())
 	if err != nil {
 		return err

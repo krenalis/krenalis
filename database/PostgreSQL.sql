@@ -47,7 +47,7 @@ INSERT INTO connectors (name, type, logo_url, webhooks_per, oauth_url, oauth_cli
     ('RabbitMQ', 'EventStream', 'https://cdn.icon-icons.com/icons2/2699/PNG/512/rabbitmq_logo_icon_170810.png', 'None', '', '', '', '', 0),
     ('UISample', 'EventStream', '', 'None', '', '', '', '', 0);
 
-CREATE TYPE warehouse_type AS ENUM ('PostgreSQL', 'Snowflake', 'Redshift', 'BigQuery');
+CREATE TYPE warehouse_type AS ENUM ('BigQuery', 'ClickHouse', 'PostgreSQL', 'Redshift', 'Snowflake');
 
 CREATE TABLE workspaces (
     id SERIAL,
