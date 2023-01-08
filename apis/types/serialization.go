@@ -615,7 +615,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	t.custom = custom
 	t.null = null
 	if minimum == "" {
-		if PtInt <= t.pt && t.pt <= PtInt24 || PtUInt <= t.pt && t.pt <= PtUInt24 {
+		if PtInt <= t.pt && t.pt <= PtInt24 {
 			t.p = int32(minInt[t.pt-PtInt])
 		}
 	} else {
@@ -690,8 +690,10 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		}
 	}
 	if maximum == "" {
-		if PtInt <= t.pt && t.pt <= PtInt24 || PtUInt <= t.pt && t.pt <= PtUInt24 {
+		if PtInt <= t.pt && t.pt <= PtInt24 {
 			t.s = int32(maxInt[t.pt-PtInt])
+		} else if PtUInt <= t.pt && t.pt <= PtUInt24 {
+			t.s = int32(maxUInt[t.pt-PtUInt])
 		}
 	} else {
 		switch t.pt {

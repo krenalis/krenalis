@@ -776,7 +776,7 @@ func (t Type) UIntRange() (min, max uint64) {
 	if t.pt < PtUInt || t.pt > PtUInt64 {
 		panic("type is not an UInt, UInt8, Int16, UInt24 or UInt64 type")
 	}
-	if t.pt != PtInt64 {
+	if t.pt != PtUInt64 {
 		return uint64(t.p), uint64(t.s)
 	}
 	if i, ok := t.vl.(uintRange); ok {
