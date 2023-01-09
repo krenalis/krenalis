@@ -65,6 +65,7 @@ func main() {
 	for _, module := range modules {
 		cmd("go", []string{"fmt", "./..."}, repo, module)
 		cmd("go", []string{"vet", "./..."}, repo, module)
+		cmd("go", []string{"test", "./..."}, repo, module)
 		cmd("go", []string{"mod", "tidy"}, repo, module)
 	}
 
