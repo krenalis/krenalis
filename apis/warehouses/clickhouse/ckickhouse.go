@@ -10,6 +10,7 @@ package clickhouse
 import (
 	"context"
 	"database/sql"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,6 +31,9 @@ import (
 	"github.com/shopspring/decimal"
 	"golang.org/x/exp/slices"
 )
+
+//go:embed connections_users.sql
+var createConnectionsUsersTable string
 
 var _ warehouses.Warehouse = &ClickHouse{}
 var _ warehouses.Batch = &batch{}
@@ -94,6 +98,16 @@ func (warehouse *ClickHouse) Close() error {
 // If the query fails, it returns an Error value.
 func (warehouse *ClickHouse) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	return nil, nil
+}
+
+// Init initializes the data warehouse by creating the supporting tables.
+func (warehouse *ClickHouse) Init(ctx context.Context) error {
+	conn, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	err = conn.Exec(ctx, createConnectionsUsersTable)
+	return warehouses.WrapError(err)
 }
 
 // Ping checks whether the connection to the data warehouse is active and, if

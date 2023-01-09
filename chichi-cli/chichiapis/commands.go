@@ -194,6 +194,13 @@ func WorkspaceDisconnectWarehouse() {
 	}
 }
 
+func WorkspaceInitWarehouse() {
+	err := callAPI("POST", "api/workspace/init-warehouse", nil, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func WorkspaceReloadSchema() {
 	err := callAPI("POST", "api/workspace/reload-schema", nil, nil)
 	if err != nil {

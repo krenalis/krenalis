@@ -28,6 +28,9 @@ type Warehouse interface {
 	// If the query fails, it returns an Error value.
 	Exec(ctx context.Context, query string, args ...any) (sql.Result, error)
 
+	// Init initializes the data warehouse by creating the supporting tables.
+	Init(ctx context.Context) error
+
 	// Ping checks whether the connection to the data warehouse is active and, if
 	// necessary, establishes a new connection.
 	Ping(ctx context.Context) error

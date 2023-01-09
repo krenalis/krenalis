@@ -121,6 +121,16 @@ func (warehouse *PostgreSQL) Exec(ctx context.Context, query string, args ...any
 	return warehouses.Result{Result: r}, nil
 }
 
+// Init initializes the data warehouse by creating the supporting tables.
+func (warehouse *PostgreSQL) Init(ctx context.Context) error {
+	conn, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	_, err = conn.ExecContext(ctx, createConnectionsUsersTable)
+	return warehouses.WrapError(err)
+}
+
 // Ping checks whether the connection to the data warehouse is active and, if
 // necessary, establishes a new connection.
 func (warehouse *PostgreSQL) Ping(ctx context.Context) error {

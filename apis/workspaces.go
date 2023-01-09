@@ -184,6 +184,18 @@ func (ws *Workspace) Info() *WorkspaceInfo {
 	return &info
 }
 
+// InitWarehouse initializes the connected data warehouse by creating the
+// supporting tables.
+//
+// It returns an errors.UnprocessableError error with code NotConnected, if the
+// workspace is not connected to a data warehouse.
+func (ws *Workspace) InitWarehouse() error {
+	if ws.warehouse == nil {
+		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.id)
+	}
+	return ws.warehouse.Init(context.Background())
+}
+
 // Schema returns the schema with the given name.
 func (ws *Workspace) Schema(name string) (types.Type, bool) {
 	schema, ok := ws.schema[name]
