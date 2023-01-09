@@ -56,7 +56,7 @@ CREATE TABLE workspaces (
     name varchar(100) NOT NULL,
     warehouse_type warehouse_type DEFAULT NULL,
     warehouse_settings varchar(65535) NOT NULL DEFAULT '',
-    schema text NOT NULL DEFAULT '',
+    schemas text NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
 

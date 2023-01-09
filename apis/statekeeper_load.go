@@ -73,13 +73,13 @@ func (s *stateKeeper) loadState() error {
 
 	// Read all workspaces.
 	workspaces := map[int]*Workspace{}
-	err = s.db.QueryScan("SELECT id, account,  warehouse_type, warehouse_settings, schema FROM workspaces",
+	err = s.db.QueryScan("SELECT id, account,  warehouse_type, warehouse_settings, schemas FROM workspaces",
 		func(rows *postgres.Rows) error {
 			var id, accountID int
 			var warehouseType *WarehouseType
-			var warehouseSettings, schema []byte
+			var warehouseSettings, schemas []byte
 			for rows.Next() {
-				if err := rows.Scan(&id, &accountID, &warehouseType, &warehouseSettings, &schema); err != nil {
+				if err := rows.Scan(&id, &accountID, &warehouseType, &warehouseSettings, &schemas); err != nil {
 					return err
 				}
 				account := accounts[accountID]
@@ -94,11 +94,11 @@ func (s *stateKeeper) loadState() error {
 					if err != nil {
 						log.Fatalf("cannot open data warehouse of workspace %d: %s", id, err)
 					}
-					workspace.schema = map[string]*types.Type{}
-					if len(schema) > 0 {
-						err = json.Unmarshal(schema, &workspace.schema)
+					workspace.schemas = map[string]*types.Type{}
+					if len(schemas) > 0 {
+						err = json.Unmarshal(schemas, &workspace.schemas)
 						if err != nil {
-							log.Fatalf("cannot unmarshal schema of workspace %d: %s", id, err)
+							log.Fatalf("cannot unmarshal schemas of workspace %d: %s", id, err)
 						}
 					}
 				}
@@ -217,7 +217,7 @@ func (s *stateKeeper) loadState() error {
 	}
 
 	// Handle events if the workspace has the "events" schema.
-	if workspace, ok := workspaces[1]; ok && workspace.schema["events"] != nil {
+	if workspace, ok := workspaces[1]; ok && workspace.schemas["events"] != nil {
 
 		// defaultStream receives events from the collector for which the source connector
 		// does not have its own stream.

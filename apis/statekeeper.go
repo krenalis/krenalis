@@ -74,8 +74,8 @@ func (s *stateKeeper) keepState(ctx context.Context, notifications <-chan postgr
 			s.setConnectionUserSchema(n)
 		case "setResource":
 			s.setResource(n)
-		case "setWorkspaceSchema":
-			s.setWorkspaceSchema(n)
+		case "setWorkspaceSchemas":
+			s.setWorkspaceSchemas(n)
 		case "setWorkspaceWarehouse":
 			s.setWorkspaceWarehouse(n)
 		case "startImport":
@@ -506,30 +506,30 @@ func (s *stateKeeper) setResource(n postgres.Notification) {
 	})
 }
 
-// setWorkspaceSchemaNotification is the notification event sent when a
-// workspace schema is changed.
-type setWorkspaceSchemaNotification struct {
+// setWorkspaceSchemasNotification is the notification event sent when schemas
+// of a workspace are changed.
+type setWorkspaceSchemasNotification struct {
 	Workspace int
-	Schema    map[string]*types.Type
+	Schemas   map[string]*types.Type
 }
 
-// setWorkspaceSchema sets the schema of a workspace.
-func (s *stateKeeper) setWorkspaceSchema(n postgres.Notification) {
-	e := setWorkspaceSchemaNotification{}
+// setWorkspaceSchemas sets the schemas of a workspace.
+func (s *stateKeeper) setWorkspaceSchemas(n postgres.Notification) {
+	e := setWorkspaceSchemasNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
 	var unchanged []string
-	for name, typ := range e.Schema {
+	for name, typ := range e.Schemas {
 		if typ == nil {
 			unchanged = append(unchanged, name)
 		}
 	}
 	s.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		for _, name := range unchanged {
-			e.Schema[name] = w.schema[name]
+			e.Schemas[name] = w.schemas[name]
 		}
-		w.schema = e.Schema
+		w.schemas = e.Schemas
 	})
 }
 

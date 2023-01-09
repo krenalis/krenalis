@@ -51,7 +51,7 @@ func newWorkspaces(account *Account, state *workspacesState) *Workspaces {
 type Workspace struct {
 	db             *postgres.DB
 	warehouse      warehouses.Warehouse
-	schema         map[string]*types.Type
+	schemas        map[string]*types.Type
 	Connections    *Connections
 	EventListeners *EventListeners
 	id             int
@@ -144,7 +144,7 @@ func (ws *Workspace) DisconnectWarehouse() error {
 		if typ == nil {
 			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", n.Workspace)
 		}
-		_, err = tx.Exec("UPDATE workspaces SET warehouse_type = NULL, warehouse_settings = '', schema = '' WHERE id = $1", n.Workspace)
+		_, err = tx.Exec("UPDATE workspaces SET warehouse_type = NULL, warehouse_settings = '', schemas = '' WHERE id = $1", n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -197,7 +197,7 @@ func (ws *Workspace) InitWarehouse() error {
 
 // Schema returns the schema with the given name.
 func (ws *Workspace) Schema(name string) (types.Type, bool) {
-	schema, ok := ws.schema[name]
+	schema, ok := ws.schemas[name]
 	if ok {
 		return *schema, true
 	}
@@ -277,9 +277,9 @@ func (ws *Workspace) ReloadSchema() error {
 		}
 		return err
 	}
-	n := setWorkspaceSchemaNotification{
+	n := setWorkspaceSchemasNotification{
 		Workspace: ws.id,
-		Schema:    map[string]*types.Type{},
+		Schemas:   map[string]*types.Type{},
 	}
 	for _, table := range tables {
 		var properties []types.Property
@@ -296,16 +296,16 @@ func (ws *Workspace) ReloadSchema() error {
 			properties = append(properties, property)
 		}
 		typ := types.Object(properties).AsCustom(table.Name)
-		n.Schema[table.Name] = &typ
+		n.Schemas[table.Name] = &typ
 	}
-	newRawSchema, err := json.Marshal(n.Schema)
+	newRawSchemas, err := json.Marshal(n.Schemas)
 	if err != nil {
 		return fmt.Errorf("cannot marshal data warehouse schema for workspace %d: %s", ws.id, err)
 	}
 	err = ws.db.Transaction(func(tx *postgres.Tx) error {
 		var typ *WarehouseType
-		var oldRawSchema []byte
-		err := tx.QueryRow("SELECT warehouse_type, schema FROM workspaces WHERE id = $1", n.Workspace).Scan(&typ, &oldRawSchema)
+		var oldRawSchemas []byte
+		err := tx.QueryRow("SELECT warehouse_type, schemas FROM workspaces WHERE id = $1", n.Workspace).Scan(&typ, &oldRawSchemas)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				err = errors.NotFound("workspace %d does not exist", n.Workspace)
@@ -315,22 +315,22 @@ func (ws *Workspace) ReloadSchema() error {
 		if typ == nil {
 			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", n.Workspace)
 		}
-		if bytes.Equal(newRawSchema, oldRawSchema) {
+		if bytes.Equal(newRawSchemas, oldRawSchemas) {
 			return nil
 		}
-		_, err = tx.Exec("UPDATE workspaces SET schema = $1 WHERE id = $2", newRawSchema, n.Workspace)
+		_, err = tx.Exec("UPDATE workspaces SET schemas = $1 WHERE id = $2", newRawSchemas, n.Workspace)
 		if err != nil {
 			return err
 		}
-		if len(oldRawSchema) > 0 {
-			var oldSchema map[string]*types.Type
-			err = json.Unmarshal(oldRawSchema, &oldSchema)
+		if len(oldRawSchemas) > 0 {
+			var oldSchemas map[string]*types.Type
+			err = json.Unmarshal(oldRawSchemas, &oldSchemas)
 			if err != nil {
-				return fmt.Errorf("cannot parse schema of workspace %d: %s", n.Workspace, err)
+				return fmt.Errorf("cannot parse schemas of workspace %d: %s", n.Workspace, err)
 			}
-			for name, t := range n.Schema {
-				if t2, ok := oldSchema[name]; ok && t.EqualTo(*t2) {
-					n.Schema[name] = nil
+			for name, t := range n.Schemas {
+				if t2, ok := oldSchemas[name]; ok && t.EqualTo(*t2) {
+					n.Schemas[name] = nil
 				}
 			}
 		}
@@ -356,7 +356,7 @@ func (ws *Workspace) Users(properties []string, order string, first, limit int) 
 
 	// Read the schema.
 	var schemaProperties []types.Property
-	if typ, ok := ws.schema["users"]; ok {
+	if typ, ok := ws.schemas["users"]; ok {
 		schemaProperties = typ.Properties()
 	}
 	propertyByName := map[string]types.Property{}
