@@ -107,51 +107,6 @@ func (warehouse *PostgreSQL) Close() error {
 	return err
 }
 
-// CreateTables creates the data warehouse tables. schema is the schema of the
-// users table. If a table already exists it returns an Error error.
-func (warehouse *PostgreSQL) CreateTables(ctx context.Context, schema types.Type) error {
-	// Build the "create" statement for the users table.
-	var createTables []string
-	var b strings.Builder
-	b.WriteString("CREATE TABLE \"users\" (\nid SERIAL,\n")
-	for _, p := range schema.Properties() {
-		if !types.IsValidPropertyName(p.Name) {
-			panic("property name is not valid")
-		}
-		tables, err := warehouse.serializeColumn(&b, "users", p.Name, p.Type)
-		if err != nil {
-			return err
-		}
-		createTables = append(createTables, tables...)
-	}
-	b.WriteString("PRIMARY KEY (id)\n)")
-	createTables = append(createTables, b.String())
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return warehouses.WrapError(err)
-	}
-	// Create the tables.
-	for i := len(createTables) - 1; i >= 0; i-- {
-		_, err = tx.ExecContext(ctx, createTables[i])
-		if err != nil {
-			_ = tx.Rollback()
-			return warehouses.WrapError(err)
-		}
-	}
-	// Create the "connections_users" table.
-	_, err = tx.ExecContext(ctx, createConnectionsUsersTable)
-	if err != nil {
-		_ = tx.Rollback()
-		return warehouses.WrapError(err)
-	}
-	err = tx.Commit()
-	return warehouses.WrapError(err)
-}
-
 // Exec executes a query without returning any rows. args are the placeholders.
 // If the query fails, it returns an Error value.
 func (warehouse *PostgreSQL) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {

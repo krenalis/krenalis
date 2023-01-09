@@ -90,12 +90,6 @@ func (warehouse *ClickHouse) Close() error {
 	return err
 }
 
-// CreateTables creates the data warehouse tables. schema is the schema of the
-// users table. If a table already exists it returns an Error error.
-func (warehouse *ClickHouse) CreateTables(ctx context.Context, schema types.Type) error {
-	return nil
-}
-
 // Exec executes a query without returning any rows. args are the placeholders.
 // If the query fails, it returns an Error value.
 func (warehouse *ClickHouse) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {

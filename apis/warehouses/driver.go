@@ -24,10 +24,6 @@ type Warehouse interface {
 	// waits for the current ones to finish.
 	Close() error
 
-	// CreateTables creates the data warehouse tables. schema is the schema of the
-	// users table. If a table already exists it returns an Error error.
-	CreateTables(ctx context.Context, schema types.Type) error
-
 	// Exec executes a query without returning any rows. args are the placeholders.
 	// If the query fails, it returns an Error value.
 	Exec(ctx context.Context, query string, args ...any) (sql.Result, error)
