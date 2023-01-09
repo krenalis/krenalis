@@ -195,7 +195,6 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 		if !column.Type.Valid() {
 			return nil, fmt.Errorf("type %q of column %s is not supported", typ, column.Name)
 		}
-		column.IsNullable = column.Type.Null()
 		if table == nil || tableName != table.Name {
 			table = &warehouses.Table{Name: tableName}
 			tables = append(tables, table)

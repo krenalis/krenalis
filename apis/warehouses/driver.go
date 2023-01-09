@@ -117,7 +117,6 @@ type Column struct {
 	Name        string
 	Description string
 	Type        types.Type
-	IsNullable  bool
 	IsUpdatable bool
 }
 

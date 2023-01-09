@@ -325,10 +325,12 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 		default:
 			return nil, warehouses.NewError("type of column %q.%q is not supported: %s", tableName.String, columnName.String, typ.String)
 		}
+		if isNullable.String == "YES" {
+			t = t.WithNull()
+		}
 		column := &warehouses.Column{
 			Name:        columnName.String,
 			Type:        t,
-			IsNullable:  isNullable.String == "YES",
 			IsUpdatable: isUpdatable.String == "YES",
 		}
 		if description.Valid {
