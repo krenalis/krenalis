@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -68,46 +69,6 @@ type WorkspaceInfo struct {
 	Schema map[string]types.Type
 }
 
-type WarehouseType int
-
-const (
-	ClickHouse = WarehouseType(warehouses.ClickHouse)
-	PostgreSQL = WarehouseType(warehouses.PostgreSQL)
-)
-
-// String returns the string representation of typ.
-// It panics if typ is not a valid WarehouseType value.
-func (typ WarehouseType) String() string {
-	switch typ {
-	case ClickHouse:
-		return "ClickHouse"
-	case PostgreSQL:
-		return "PostgreSQL"
-	}
-	panic("invalid data warehouse type")
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface.
-func (typ *WarehouseType) UnmarshalJSON(data []byte) error {
-	if bytes.Equal(data, null) {
-		return nil
-	}
-	var s string
-	err := json.Unmarshal(data, &s)
-	if err != nil {
-		return fmt.Errorf("json: cannot unmarshal into a apis.WarehouseType value: %s", err)
-	}
-	var t WarehouseType
-	switch s {
-	case "ClickHouse":
-		t = ClickHouse
-	case "PostgreSQL":
-		t = PostgreSQL
-	}
-	*typ = t
-	return nil
-}
-
 // ConnectWarehouse connects a data warehouse, with the given settings, to the
 // workspace. It also creates the tables in the connected data warehouse.
 //
@@ -121,7 +82,7 @@ func (ws *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) error 
 	if ws.warehouse != nil {
 		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.id)
 	}
-	warehouse, err := openWarehouse(warehouses.Type(typ), settings)
+	warehouse, err := openWarehouse(typ, settings)
 	if err != nil {
 		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
 	}
@@ -132,7 +93,7 @@ func (ws *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) error 
 	n := setWorkspaceWarehouseNotification{
 		Workspace: ws.id,
 		Warehouse: &notifiedWarehouse{
-			Type:     warehouse.Type(),
+			Type:     typ,
 			Settings: warehouse.Settings(),
 		},
 	}
@@ -176,7 +137,7 @@ func (ws *Workspace) DisconnectWarehouse() error {
 		Warehouse: nil,
 	}
 	err := ws.db.Transaction(func(tx *postgres.Tx) error {
-		var typ *warehouses.Type
+		var typ *WarehouseType
 		err := tx.QueryRow("SELECT warehouse_type FROM workspaces WHERE id = $1", n.Workspace).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -246,12 +207,12 @@ func (ws *Workspace) SetWarehouse(typ WarehouseType, settings []byte) error {
 	if ws.warehouse == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.id)
 	}
-	if warehouses.Type(typ) != ws.warehouse.Type() {
+	if typ != typeOfWarehouse(ws.warehouse) {
 		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", fmt.Errorf(
 			"workspace %d is connected to a %s data warehouse, but settings are for a %s data warehouse",
-			ws.id, ws.warehouse.Type(), typ))
+			ws.id, typeOfWarehouse(ws.warehouse), typ))
 	}
-	warehouse, err := openWarehouse(ws.warehouse.Type(), settings)
+	warehouse, err := openWarehouse(typ, settings)
 	if err != nil {
 		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
 	}
@@ -262,7 +223,7 @@ func (ws *Workspace) SetWarehouse(typ WarehouseType, settings []byte) error {
 	n := setWorkspaceWarehouseNotification{
 		Workspace: ws.id,
 		Warehouse: &notifiedWarehouse{
-			Type:     warehouse.Type(),
+			Type:     typ,
 			Settings: warehouse.Settings(),
 		},
 	}
@@ -342,7 +303,7 @@ func (ws *Workspace) ReloadSchema() error {
 		return fmt.Errorf("cannot marshal data warehouse schema for workspace %d: %s", ws.id, err)
 	}
 	err = ws.db.Transaction(func(tx *postgres.Tx) error {
-		var typ *warehouses.Type
+		var typ *WarehouseType
 		var oldRawSchema []byte
 		err := tx.QueryRow("SELECT warehouse_type, schema FROM workspaces WHERE id = $1", n.Workspace).Scan(&typ, &oldRawSchema)
 		if err != nil {
@@ -479,12 +440,108 @@ func (this *Workspaces) List() []*WorkspaceInfo {
 
 // openWarehouse opens a data warehouse with the given type and settings.
 // It returns an error if typ or settings are not valid.
-func openWarehouse(typ warehouses.Type, settings []byte) (warehouses.Warehouse, error) {
+func openWarehouse(typ WarehouseType, settings []byte) (warehouses.Warehouse, error) {
 	switch typ {
-	case warehouses.PostgreSQL:
+	case BigQuery, Redshift, Snowflake:
+		return nil, fmt.Errorf("warehouse type %s is not yet supported", typ)
+	case PostgreSQL:
 		return postgresql.OpenPostgres(settings)
-	case warehouses.ClickHouse:
+	case ClickHouse:
 		return clickhouse.Open(settings)
 	}
-	return nil, fmt.Errorf("warehouse type %q is not valid", typ)
+	return nil, fmt.Errorf("warehouse type %d is not valid", typ)
+}
+
+// typeOfWarehouse returns the type of the given data warehouse.
+func typeOfWarehouse(warehouse warehouses.Warehouse) WarehouseType {
+	switch warehouse.(type) {
+	case *clickhouse.ClickHouse:
+		return ClickHouse
+	case *postgresql.PostgreSQL:
+		return PostgreSQL
+	}
+	panic("unknown Warehouse")
+}
+
+// WarehouseType represents a data warehouse type.
+type WarehouseType int
+
+const (
+	BigQuery WarehouseType = iota + 1
+	ClickHouse
+	PostgreSQL
+	Redshift
+	Snowflake
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+// It panics if typ is not a valid WarehouseType value.
+func (typ WarehouseType) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + typ.String() + `"`), nil
+}
+
+// Scan implements the sql.Scanner interface.
+func (typ *WarehouseType) Scan(src any) error {
+	s, ok := src.(string)
+	if !ok {
+		return fmt.Errorf("cannot scan a %T value into an WarehouseType value", src)
+	}
+	var t WarehouseType
+	switch s {
+	case "BigQuery":
+		t = BigQuery
+	case "ClickHouse":
+		t = ClickHouse
+	case "PostgreSQL":
+		t = PostgreSQL
+	case "Redshift":
+		t = Redshift
+	case "Snowflake":
+		t = Snowflake
+	default:
+		return fmt.Errorf("invalid WarehouseType: %s", s)
+	}
+	*typ = t
+	return nil
+}
+
+// String returns the string representation of typ.
+// It panics if typ is not a valid WarehouseType value.
+func (typ WarehouseType) String() string {
+	s, err := typ.Value()
+	if err != nil {
+		panic("invalid warehouse type")
+	}
+	return s.(string)
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (typ *WarehouseType) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, null) {
+		return nil
+	}
+	var s any
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return fmt.Errorf("json: cannot unmarshal into a WarehouseType value: %s", err)
+	}
+	return typ.Scan(s)
+}
+
+// Value implements driver.Valuer interface.
+// It returns an error if typ is not a valid WarehouseType.
+func (typ WarehouseType) Value() (driver.Value, error) {
+	switch typ {
+	case BigQuery:
+		return "BigQuery", nil
+	case ClickHouse:
+		return "ClickHouse", nil
+	case PostgreSQL:
+		return "PostgreSQL", nil
+	case Redshift:
+		return "Redshift", nil
+	case Snowflake:
+		return "Snowflake", nil
+	}
+	return nil, fmt.Errorf("not a valid WarehouseType: %d", typ)
 }

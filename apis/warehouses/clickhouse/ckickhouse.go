@@ -30,10 +30,10 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-var _ warehouses.Warehouse = &clickHouse{}
+var _ warehouses.Warehouse = &ClickHouse{}
 var _ warehouses.Batch = &batch{}
 
-type clickHouse struct {
+type ClickHouse struct {
 	mu       sync.Mutex // for the conn and closed fields
 	conn     chDriver.Conn
 	closed   bool
@@ -72,12 +72,12 @@ func Open(settings []byte) (warehouses.Warehouse, error) {
 	if s.Database == "" {
 		return nil, fmt.Errorf("database cannot be empty")
 	}
-	return &clickHouse{settings: &s}, nil
+	return &ClickHouse{settings: &s}, nil
 }
 
 // Close closes the warehouse. It will not allow any new queries to run, and it
 // waits for the current ones to finish.
-func (warehouse *clickHouse) Close() error {
+func (warehouse *ClickHouse) Close() error {
 	var err error
 	warehouse.mu.Lock()
 	if warehouse.conn != nil {
@@ -91,19 +91,19 @@ func (warehouse *clickHouse) Close() error {
 
 // CreateTables creates the data warehouse tables. schema is the schema of the
 // users table. If a table already exists it returns an Error error.
-func (warehouse *clickHouse) CreateTables(ctx context.Context, schema types.Type) error {
+func (warehouse *ClickHouse) CreateTables(ctx context.Context, schema types.Type) error {
 	return nil
 }
 
 // Exec executes a query without returning any rows. args are the placeholders.
 // If the query fails, it returns an Error value.
-func (warehouse *clickHouse) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+func (warehouse *ClickHouse) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	return nil, nil
 }
 
 // Ping checks whether the connection to the data warehouse is active and, if
 // necessary, establishes a new connection.
-func (warehouse *clickHouse) Ping(ctx context.Context) error {
+func (warehouse *ClickHouse) Ping(ctx context.Context) error {
 	conn, err := warehouse.connection()
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func (warehouse *clickHouse) Ping(ctx context.Context) error {
 // PrepareBatch creates a prepared batch statement for inserting rows in
 // batch and returns it. table specifies the table in which the rows will be
 // inserted, and columns specifies the columns.
-func (warehouse *clickHouse) PrepareBatch(ctx context.Context, table string, columns []string) (warehouses.Batch, error) {
+func (warehouse *ClickHouse) PrepareBatch(ctx context.Context, table string, columns []string) (warehouses.Batch, error) {
 	if !warehouses.IsValidIdentifier(table) {
 		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
 	}
@@ -147,7 +147,7 @@ func (warehouse *clickHouse) PrepareBatch(ctx context.Context, table string, col
 // Tables returns the tables of the data warehouse.
 // It returns only the tables 'users', 'groups', 'events', and the tables with
 // prefix 'users_', 'groups_' and 'events_'.
-func (warehouse *clickHouse) Tables(ctx context.Context) ([]*warehouses.Table, error) {
+func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, error) {
 
 	// Get the connection.
 	conn, err := warehouse.connection()
@@ -198,24 +198,19 @@ func (warehouse *clickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 	return tables, nil
 }
 
-// Type returns the type of the warehouse.
-func (warehouse *clickHouse) Type() warehouses.Type {
-	return warehouses.ClickHouse
-}
-
 // Query executes a query that returns rows. args are the placeholders.
 // If the query fails, it returns an Error value.
-func (warehouse *clickHouse) Query(ctx context.Context, query string, args ...any) (*warehouses.Rows, error) {
+func (warehouse *ClickHouse) Query(ctx context.Context, query string, args ...any) (*warehouses.Rows, error) {
 	return nil, nil
 }
 
 // QueryRow executes a query that should return at most one row.
-func (warehouse *clickHouse) QueryRow(ctx context.Context, query string, args ...any) warehouses.Row {
+func (warehouse *ClickHouse) QueryRow(ctx context.Context, query string, args ...any) warehouses.Row {
 	return warehouses.Row{}
 }
 
 // Settings returns the data warehouse settings.
-func (warehouse *clickHouse) Settings() []byte {
+func (warehouse *ClickHouse) Settings() []byte {
 	s, _ := json.Marshal(warehouse.settings)
 	return s
 }
@@ -226,7 +221,7 @@ func (warehouse *clickHouse) Settings() []byte {
 //
 // If a query to the warehouse fails, it returns an Error value.
 // If an argument is not valid, it panics.
-func (warehouse *clickHouse) Users(ctx context.Context, schema types.Type, order types.Property, first, limit int) ([][]any, error) {
+func (warehouse *ClickHouse) Users(ctx context.Context, schema types.Type, order types.Property, first, limit int) ([][]any, error) {
 
 	conn, err := warehouse.connection()
 	if err != nil {
@@ -320,7 +315,7 @@ func (warehouse *clickHouse) Users(ctx context.Context, schema types.Type, order
 }
 
 // connection returns the database connection.
-func (warehouse *clickHouse) connection() (clickhouse.Conn, error) {
+func (warehouse *ClickHouse) connection() (clickhouse.Conn, error) {
 	warehouse.mu.Lock()
 	defer warehouse.mu.Unlock()
 	if warehouse.closed {
@@ -368,7 +363,7 @@ func (s *chSettings) testConnection(ctx context.Context) error {
 
 // batch implements the Batch interface.
 type batch struct {
-	warehouse *clickHouse
+	warehouse *ClickHouse
 	columns   []string
 	batch     chDriver.Batch
 	err       error

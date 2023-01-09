@@ -15,7 +15,6 @@ import (
 
 	"chichi/apis/postgres"
 	"chichi/apis/types"
-	"chichi/apis/warehouses"
 )
 
 // loadState loads the state from the database.
@@ -78,7 +77,7 @@ func (s *stateKeeper) loadState() error {
 	err = s.db.QueryScan("SELECT id, account,  warehouse_type, warehouse_settings, schema FROM workspaces",
 		func(rows *postgres.Rows) error {
 			var id, accountID int
-			var warehouseType *warehouses.Type
+			var warehouseType *WarehouseType
 			var warehouseSettings, schema []byte
 			for rows.Next() {
 				if err := rows.Scan(&id, &accountID, &warehouseType, &warehouseSettings, &schema); err != nil {

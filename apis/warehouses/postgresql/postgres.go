@@ -34,10 +34,10 @@ import (
 //go:embed connections_users.sql
 var createConnectionsUsersTable string
 
-var _ warehouses.Warehouse = &postgreSQL{}
+var _ warehouses.Warehouse = &PostgreSQL{}
 var _ warehouses.Batch = &batch{}
 
-type postgreSQL struct {
+type PostgreSQL struct {
 	mu       sync.Mutex // for the db and closed fields
 	db       *sql.DB
 	closed   bool
@@ -90,12 +90,12 @@ func OpenPostgres(settings []byte) (warehouses.Warehouse, error) {
 	if strings.HasPrefix(s.Schema, "pg_") {
 		return nil, fmt.Errorf("schema cannot start with 'pg_'")
 	}
-	return &postgreSQL{settings: &s}, nil
+	return &PostgreSQL{settings: &s}, nil
 }
 
 // Close closes the warehouse. It will not allow any new queries to run, and it
 // waits for the current ones to finish.
-func (warehouse *postgreSQL) Close() error {
+func (warehouse *PostgreSQL) Close() error {
 	var err error
 	warehouse.mu.Lock()
 	if warehouse.db != nil {
@@ -109,7 +109,7 @@ func (warehouse *postgreSQL) Close() error {
 
 // CreateTables creates the data warehouse tables. schema is the schema of the
 // users table. If a table already exists it returns an Error error.
-func (warehouse *postgreSQL) CreateTables(ctx context.Context, schema types.Type) error {
+func (warehouse *PostgreSQL) CreateTables(ctx context.Context, schema types.Type) error {
 	// Build the "create" statement for the users table.
 	var createTables []string
 	var b strings.Builder
@@ -154,7 +154,7 @@ func (warehouse *postgreSQL) CreateTables(ctx context.Context, schema types.Type
 
 // Exec executes a query without returning any rows. args are the placeholders.
 // If the query fails, it returns an Error value.
-func (warehouse *postgreSQL) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+func (warehouse *PostgreSQL) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	db, err := warehouse.connection()
 	if err != nil {
 		return nil, err
@@ -168,7 +168,7 @@ func (warehouse *postgreSQL) Exec(ctx context.Context, query string, args ...any
 
 // Ping checks whether the connection to the data warehouse is active and, if
 // necessary, establishes a new connection.
-func (warehouse *postgreSQL) Ping(ctx context.Context) error {
+func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 	db, err := warehouse.connection()
 	if err != nil {
 		return err
@@ -179,7 +179,7 @@ func (warehouse *postgreSQL) Ping(ctx context.Context) error {
 // PrepareBatch creates a prepared batch statement for inserting rows in
 // batch and returns it. table specifies the table in which the rows will be
 // inserted, and columns specifies the columns.
-func (warehouse *postgreSQL) PrepareBatch(ctx context.Context, table string, columns []string) (warehouses.Batch, error) {
+func (warehouse *PostgreSQL) PrepareBatch(ctx context.Context, table string, columns []string) (warehouses.Batch, error) {
 	if !warehouses.IsValidIdentifier(table) {
 		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
 	}
@@ -210,7 +210,7 @@ func (warehouse *postgreSQL) PrepareBatch(ctx context.Context, table string, col
 
 // Query executes a query that returns rows. args are the placeholders.
 // If the query fails, it returns an Error value.
-func (warehouse *postgreSQL) Query(ctx context.Context, query string, args ...any) (*warehouses.Rows, error) {
+func (warehouse *PostgreSQL) Query(ctx context.Context, query string, args ...any) (*warehouses.Rows, error) {
 	db, err := warehouse.connection()
 	if err != nil {
 		return nil, err
@@ -224,7 +224,7 @@ func (warehouse *postgreSQL) Query(ctx context.Context, query string, args ...an
 
 // QueryRow executes a query that should return at most one row.
 // If the query fails, it returns an Error value.
-func (warehouse *postgreSQL) QueryRow(ctx context.Context, query string, args ...any) warehouses.Row {
+func (warehouse *PostgreSQL) QueryRow(ctx context.Context, query string, args ...any) warehouses.Row {
 	db, err := warehouse.connection()
 	if err != nil {
 		return warehouses.Row{Error: err}
@@ -234,7 +234,7 @@ func (warehouse *postgreSQL) QueryRow(ctx context.Context, query string, args ..
 }
 
 // Settings returns the data warehouse settings.
-func (warehouse *postgreSQL) Settings() []byte {
+func (warehouse *PostgreSQL) Settings() []byte {
 	s, _ := json.Marshal(warehouse.settings)
 	return s
 }
@@ -242,7 +242,7 @@ func (warehouse *postgreSQL) Settings() []byte {
 // Tables returns the tables of the data warehouse.
 // It returns only the tables 'users', 'groups', 'events', and the tables with
 // prefix 'users_', 'groups_' and 'events_'.
-func (warehouse *postgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, error) {
+func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, error) {
 
 	// Get the connection.
 	db, err := warehouse.connection()
@@ -386,18 +386,13 @@ func (warehouse *postgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 	return tables, nil
 }
 
-// Type returns the type of the warehouse.
-func (warehouse *postgreSQL) Type() warehouses.Type {
-	return warehouses.PostgreSQL
-}
-
 // Users returns the users, with only the properties in schema, ordered by
 // order if order is not the zero Property, and in range [first,first+limit]
 // with first >= 0 and 0 < limit <= 1000.
 //
 // If a query to the warehouse fails, it returns an Error value.
 // If an argument is not valid, it panics.
-func (warehouse *postgreSQL) Users(ctx context.Context, schema types.Type, order types.Property, first, limit int) ([][]any, error) {
+func (warehouse *PostgreSQL) Users(ctx context.Context, schema types.Type, order types.Property, first, limit int) ([][]any, error) {
 
 	db, err := warehouse.connection()
 	if err != nil {
@@ -491,7 +486,7 @@ func (warehouse *postgreSQL) Users(ctx context.Context, schema types.Type, order
 }
 
 // connection returns the database connection.
-func (warehouse *postgreSQL) connection() (*sql.DB, error) {
+func (warehouse *PostgreSQL) connection() (*sql.DB, error) {
 	warehouse.mu.Lock()
 	defer warehouse.mu.Unlock()
 	if warehouse.closed {
@@ -538,7 +533,7 @@ func (s *psSettings) testConnection(ctx context.Context) error {
 // serializeColumn serializes a column where name and typ are the name and the
 // type of the column. If typ is an object, it will serialize each property of
 // the object as a column.
-func (warehouse *postgreSQL) serializeColumn(b *strings.Builder, table, name string, typ types.Type) ([]string, error) {
+func (warehouse *PostgreSQL) serializeColumn(b *strings.Builder, table, name string, typ types.Type) ([]string, error) {
 	var createTables []string
 	pt := typ.PhysicalType()
 	if pt == types.PtObject {
@@ -682,7 +677,7 @@ func isArrayOfObjects(t types.Type) bool {
 
 // batch implements the Batch interface.
 type batch struct {
-	warehouse *postgreSQL
+	warehouse *PostgreSQL
 	ctx       context.Context
 	columns   []string
 	buf       strings.Builder

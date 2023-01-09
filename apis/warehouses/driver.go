@@ -8,26 +8,13 @@
 package warehouses
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
-	"database/sql/driver"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"sync"
 
 	"chichi/apis/types"
-)
-
-type Type int
-
-const (
-	BigQuery Type = iota + 1
-	ClickHouse
-	PostgreSQL
-	Redshift
-	Snowflake
 )
 
 // Warehouse is the interface implemented by data warehouses.
@@ -61,9 +48,6 @@ type Warehouse interface {
 	// It returns only the tables 'users', 'groups', 'events', and the tables with
 	// prefix 'users_', 'groups_' and 'events_'.
 	Tables(ctx context.Context) ([]*Table, error)
-
-	// Type returns the type of the warehouse.
-	Type() Type
 
 	// Query executes a query that returns rows. args are the placeholders.
 	// If the query fails, it returns an Error value.
@@ -137,17 +121,6 @@ type Column struct {
 	IsUpdatable bool
 }
 
-// IsValidType reports whether typ is a valid warehouse type.
-func IsValidType(typ Type) bool {
-	switch typ {
-	case PostgreSQL:
-		return true
-	case BigQuery, Redshift, Snowflake:
-		return false
-	}
-	return false
-}
-
 // Row returns a single row as a result of calling QueryRow.
 type Row struct {
 	Row   *sql.Row
@@ -215,80 +188,6 @@ func (r Result) RowsAffected() (int64, error) {
 		return 0, WrapError(err)
 	}
 	return n, nil
-}
-
-// MarshalJSON implements the json.Marshaler interface.
-// It panics if typ is not a valid Type value.
-func (typ Type) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + typ.String() + `"`), nil
-}
-
-// Scan implements the sql.Scanner interface.
-func (typ *Type) Scan(src any) error {
-	s, ok := src.(string)
-	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an warehouse.Type value", src)
-	}
-	var t Type
-	switch s {
-	case "BigQuery":
-		t = BigQuery
-	case "ClickHouse":
-		t = ClickHouse
-	case "PostgreSQL":
-		t = PostgreSQL
-	case "Redshift":
-		t = Redshift
-	case "Snowflake":
-		t = Snowflake
-	default:
-		return fmt.Errorf("invalid warehouse.Type: %s", s)
-	}
-	*typ = t
-	return nil
-}
-
-// String returns the string representation of typ.
-// It panics if typ is not a valid Type value.
-func (typ Type) String() string {
-	s, err := typ.Value()
-	if err != nil {
-		panic("invalid warehouse type")
-	}
-	return s.(string)
-}
-
-var null = []byte("null")
-
-// UnmarshalJSON implements the json.Unmarshaler interface.
-func (typ *Type) UnmarshalJSON(data []byte) error {
-	if bytes.Equal(data, null) {
-		return nil
-	}
-	var s any
-	err := json.Unmarshal(data, &s)
-	if err != nil {
-		return fmt.Errorf("json: cannot unmarshal into a warehouse.Type value: %s", err)
-	}
-	return typ.Scan(s)
-}
-
-// Value implements driver.Valuer interface.
-// It returns an error if typ is not a valid Type.
-func (typ Type) Value() (driver.Value, error) {
-	switch typ {
-	case BigQuery:
-		return "BigQuery", nil
-	case ClickHouse:
-		return "ClickHouse", nil
-	case PostgreSQL:
-		return "PostgreSQL", nil
-	case Redshift:
-		return "Redshift", nil
-	case Snowflake:
-		return "Snowflake", nil
-	}
-	return nil, fmt.Errorf("not a valid Type: %d", typ)
 }
 
 // IsValidIdentifier reports whether name is a valid identifier.

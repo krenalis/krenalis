@@ -16,7 +16,6 @@ import (
 
 	"chichi/apis/postgres"
 	"chichi/apis/types"
-	"chichi/apis/warehouses"
 )
 
 // logNotifications controls the logging of notifications on the log.
@@ -542,7 +541,7 @@ type setWorkspaceWarehouseNotification struct {
 }
 
 type notifiedWarehouse struct {
-	Type     warehouses.Type
+	Type     WarehouseType
 	Settings json.RawMessage `json:",omitempty"`
 }
 
