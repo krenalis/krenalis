@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"log"
 	"sort"
-	"strings"
 
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
@@ -283,13 +282,6 @@ func (ws *Workspace) ReloadSchema() error {
 		Schema:    map[string]*types.Type{},
 	}
 	for _, table := range tables {
-		name := table.Name
-		if name != "users" && name != "groups" && name != "events" &&
-			(name == "users_" || !strings.HasPrefix(name, "users_")) &&
-			(name == "groups_" || !strings.HasPrefix(name, "groups_")) &&
-			(name == "events_" || !strings.HasPrefix(name, "events_")) {
-			continue
-		}
 		var properties []types.Property
 		for _, c := range table.Columns {
 			property := types.Property{
@@ -304,8 +296,8 @@ func (ws *Workspace) ReloadSchema() error {
 			}
 			properties = append(properties, property)
 		}
-		typ := types.Object(properties).AsCustom(name)
-		n.Schema[name] = &typ
+		typ := types.Object(properties).AsCustom(table.Name)
+		n.Schema[table.Name] = &typ
 	}
 	newRawSchema, err := json.Marshal(n.Schema)
 	if err != nil {
