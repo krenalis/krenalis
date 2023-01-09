@@ -209,7 +209,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 			return
 		}
 
-		if m.sourceCode == "" {
+		if m.sourceCode == "" && m.predefinedFunc == 0 {
 			// "One to one" mapping.
 			candidateData[outNames[0]] = userProps[inNames[0]]
 			candidateTimestamps[outNames[0]] = timestamps[inNames[0]]
