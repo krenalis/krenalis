@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	_ "time/tzdata" // workaround for clickhouse-go issue #162
 
 	"chichi/apis/types"
 	"chichi/apis/warehouses"

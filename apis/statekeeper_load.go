@@ -56,7 +56,6 @@ func (s *stateKeeper) loadState() error {
 			account := &Account{
 				apis:        s.APIs,
 				db:          s.db,
-				chDB:        s.chDB,
 				id:          id,
 				name:        name,
 				email:       email,
@@ -86,7 +85,6 @@ func (s *stateKeeper) loadState() error {
 				account := accounts[accountID]
 				workspace := &Workspace{
 					db:        s.db,
-					chDB:      s.chDB,
 					id:        id,
 					account:   account,
 					resources: &resourcesState{ids: map[int]*Resource{}},
@@ -218,17 +216,22 @@ func (s *stateKeeper) loadState() error {
 		return err
 	}
 
-	// defaultStream receives events from the collector for which the source connector
-	// does not have its own stream.
-	defaultStream := newPostgresEventStream(context.Background(), s.db)
+	// Handle events if the workspace has the "events" schema.
+	if workspace, ok := workspaces[1]; ok && workspace.schema["events"] != nil {
 
-	s.eventCollector, err = newEventCollector(context.Background(), connections, defaultStream)
-	if err != nil {
-		return err
+		// defaultStream receives events from the collector for which the source connector
+		// does not have its own stream.
+		defaultStream := newPostgresEventStream(context.Background(), s.db)
+
+		s.eventCollector, err = newEventCollector(context.Background(), connections, defaultStream)
+		if err != nil {
+			return err
+		}
+
+		s.eventProcessor = newEventProcessor(s.db, workspace.warehouse, connections, defaultStream)
+		go s.eventProcessor.Run(context.Background())
+
 	}
-
-	s.eventProcessor = newEventProcessor(s.db, s.chDB, connections, defaultStream)
-	go s.eventProcessor.Run(context.Background())
 
 	// Read the mappings.
 	var mappings []*Mapping

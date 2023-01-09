@@ -25,7 +25,6 @@ type Settings struct {
 		PrintESBuildWarningsOnStderr bool
 	}
 	PostgreSQL apis.PostgreSQLConfig
-	ClickHouse apis.ClickHouseConfig
 }
 
 func main() {
@@ -56,7 +55,6 @@ func main() {
 
 	apis, err := apis.New(&apis.Config{
 		PostgreSQL: settings.PostgreSQL,
-		ClickHouse: settings.ClickHouse,
 	})
 	if err != nil {
 		log.Fatalf("[error] %s", err)

@@ -24,8 +24,6 @@ import (
 	"chichi/apis/warehouses"
 	"chichi/apis/warehouses/clickhouse"
 	"chichi/apis/warehouses/postgresql"
-
-	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
 
 var (
@@ -53,7 +51,6 @@ func newWorkspaces(account *Account, state *workspacesState) *Workspaces {
 // Workspace represents a workspace.
 type Workspace struct {
 	db             *postgres.DB
-	chDB           chDriver.Conn
 	warehouse      warehouses.Warehouse
 	schema         map[string]*types.Type
 	Connections    *Connections

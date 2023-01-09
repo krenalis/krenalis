@@ -16,13 +16,10 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	_ "time/tzdata" // workaround for clickhouse-go issue #162
 
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
 
-	"github.com/ClickHouse/clickhouse-go/v2"
-	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -30,7 +27,6 @@ var InvalidDefinition errors.Code = "InvalidDefinition"
 
 type APIs struct {
 	db             *postgres.DB
-	chDB           chDriver.Conn
 	eventCollector *eventCollector
 	eventProcessor *eventProcessor
 	Accounts       *Accounts
@@ -42,19 +38,11 @@ var hasBeenCalled bool
 
 type Config struct {
 	PostgreSQL PostgreSQLConfig
-	ClickHouse ClickHouseConfig
 }
 
 type PostgreSQLConfig struct {
 	Host     string
 	Port     int
-	Username string
-	Password string
-	Database string
-}
-
-type ClickHouseConfig struct {
-	Address  string
 	Username string
 	Password string
 	Database string
@@ -85,25 +73,7 @@ func New(conf *Config) (*APIs, error) {
 		return nil, fmt.Errorf("cannot ping PostreSQL: %s", err)
 	}
 
-	// Open connection to ClickHouse.
-	ch := conf.ClickHouse
-	chDB, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{conf.ClickHouse.Address},
-		Auth: clickhouse.Auth{
-			Database: ch.Database,
-			Username: ch.Username,
-			Password: ch.Password,
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("cannot connect to ClickHouse: %s", err)
-	}
-	err = chDB.Ping(context.Background())
-	if err != nil {
-		log.Printf("[warning] cannot ping ClickHouse server: %s", err)
-	}
-
-	apis := &APIs{db: db, chDB: chDB}
+	apis := &APIs{db: db}
 	apis.Users = &Users{apis}
 
 	err = startStateKeeper(context.Background(), apis)

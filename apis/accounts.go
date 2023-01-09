@@ -14,8 +14,8 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
-
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -35,7 +35,7 @@ func newAccounts(apis *APIs, state *accountsState) *Accounts {
 type Account struct {
 	apis        *APIs
 	db          *postgres.DB
-	chDB        chDriver.Conn
+	chDB        chDriver.Conn // TODO(marco): remove this field
 	Workspaces  *Workspaces
 	id          int
 	name        string

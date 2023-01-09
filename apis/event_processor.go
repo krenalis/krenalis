@@ -32,9 +32,9 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/postgres"
+	"chichi/apis/warehouses"
 	_connector "chichi/connector"
 
-	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/mssola/user_agent"
 	"github.com/open2b/nuts/culture"
 	"github.com/oschwald/geoip2-golang"
@@ -83,10 +83,9 @@ type Event struct {
 }
 
 // eventProcessor processes events received from source streams and sent them
-// to ClickHouse.
+// to the data warehouse.
 type eventProcessor struct {
 	db       *postgres.DB
-	chDB     chDriver.Conn
 	streams  []*Connection
 	sources  map[int]*Connection
 	queue    *queue
@@ -98,13 +97,13 @@ type eventProcessor struct {
 }
 
 // newEventProcessor returns a new event eventProcessor.
-func newEventProcessor(db *postgres.DB, chDB chDriver.Conn, connections map[int]*Connection,
+func newEventProcessor(db *postgres.DB, warehouse warehouses.Warehouse, connections map[int]*Connection,
 	defaultStream _connector.EventStreamConnection) *eventProcessor {
 
 	processor := eventProcessor{
 		db:            db,
 		sources:       map[int]*Connection{},
-		queue:         newQueue(chDB),
+		queue:         newQueue(warehouse),
 		observer:      newEventObserver(db),
 		defaultStream: defaultStream,
 	}
@@ -623,14 +622,15 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 
 // queue is the queue of the processed events.
 type queue struct {
-	eventsMu sync.Mutex
-	events   []*Event
-	chDB     chDriver.Conn
+	eventsMu  sync.Mutex
+	events    []*Event
+	warehouse warehouses.Warehouse
 }
 
-// newQueue returns a new queue that flushed events into the database chDB.
-func newQueue(chDB chDriver.Conn) *queue {
-	q := &queue{chDB: chDB}
+// newQueue returns a new queue that flushed events into the given data
+// warehouse.
+func newQueue(warehouse warehouses.Warehouse) *queue {
+	q := &queue{warehouse: warehouse}
 	// Start a goroutine that flushes the events every flushQueueTimeout seconds.
 	go func() {
 		ticker := time.NewTicker(flushQueueTimeout)
@@ -677,7 +677,11 @@ func (q *queue) add(events []Event) {
 	}
 }
 
-// flush flushes a batch of events to ClickHouse.
+var batchEventsColumns = []string{"source", "date", "timestamp", "language", "os_name", "os_version", "browser",
+	"browser_other", "browser_version", "device_type", "referrer2", "target", "event", "text", "domain", "path",
+	"query_string", "title", "user", "country", "city"}
+
+// flush flushes a batch of events to the data warehouse.
 func (q *queue) flush(events []*Event) {
 	if len(events) == 0 {
 		return
@@ -685,10 +689,7 @@ func (q *queue) flush(events []*Event) {
 	log.Printf("[info] flushing %d events", len(events))
 RETRY:
 	for {
-		batch, err := q.chDB.PrepareBatch(context.Background(), "INSERT INTO `events`\n"+
-			"(`source`, `date`, `timestamp`, `language`, `os_name`, `os_version`, `browser`, `browser_other`,"+
-			" `browser_version`, `device_type`, `referrer`, `target`, `event`, `text`, `domain`, `path`,"+
-			" `query_string`, `title`, `user`, `country`, `city`)")
+		batch, err := q.warehouse.PrepareBatch(context.Background(), "events", batchEventsColumns)
 		if err != nil {
 			log.Printf("[error] cannot log events: %s", err)
 			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)

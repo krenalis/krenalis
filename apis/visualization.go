@@ -11,10 +11,10 @@ import (
 	"context"
 	"database/sql/driver"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
-	"chichi/apis/clickhouse"
 	"chichi/apis/postgres"
 )
 
@@ -162,7 +162,7 @@ func (visualization *Visualization) jsonQueryToSQL(jq JSONQuery) (string, []stri
 			if !isValidColumnInQuery(groupBy) {
 				return "", nil, invalidJSONQuery("cannot group by %q", groupBy)
 			}
-			quotedColumn := clickhouse.QuoteColumn(groupBy)
+			quotedColumn := quoteColumn(groupBy)
 			groupBys = append(groupBys, quotedColumn)
 			columns = append(columns, quotedColumn)
 		}
@@ -324,7 +324,7 @@ func conditionToSQL(condition Condition) (string, error) {
 	if !isValidColumnInQuery(condition.Field) {
 		return "", invalidJSONQuery("invalid field %q", condition.Field)
 	}
-	quotedField := clickhouse.QuoteColumn(condition.Field)
+	quotedField := quoteColumn(condition.Field)
 	switch condition.Operator {
 	case "StartsWith":
 		return fmt.Sprintf("startsWith(%s, '%s')", quotedField, condition.Value), nil
@@ -457,4 +457,17 @@ func isValidColumnInQuery(column string) bool {
 	default:
 		return false
 	}
+}
+
+// https://clickhouse.com/docs/en/sql-reference/syntax/#identifiers
+var identifierRegexp = regexp.MustCompile(`^[a-zA-Z_][0-9a-zA-Z_]*$`)
+
+// quoteColumn quotes the given column name.
+func quoteColumn(name string) string {
+	// TODO(Gianluca): replace the regular expression with a 'for' loop to
+	// increase efficiency.
+	if !identifierRegexp.MatchString(name) {
+		panic("invalid identifier")
+	}
+	return "`" + name + "`"
 }
