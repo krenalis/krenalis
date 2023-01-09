@@ -47,8 +47,8 @@ func main() {
 	var settings Settings
 	err = gcfg.ReadFileInto(&settings, "app.ini")
 	if err != nil {
-		p, err := filepath.Abs("app.ini")
-		if err != nil {
+		p, err2 := filepath.Abs("app.ini")
+		if err2 != nil {
 			p = "app.ini"
 		}
 		log.Fatalf("cannot open %q: %s", p, err)
