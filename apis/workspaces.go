@@ -395,7 +395,7 @@ func (ws *Workspace) Users(properties []string, order string, first, limit int) 
 
 	// Read the schema.
 	var schemaProperties []types.Property
-	if typ, ok := ws.schema["user"]; ok {
+	if typ, ok := ws.schema["users"]; ok {
 		schemaProperties = typ.Properties()
 	}
 	propertyByName := map[string]types.Property{}
