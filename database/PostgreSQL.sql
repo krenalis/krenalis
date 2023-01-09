@@ -45,7 +45,8 @@ INSERT INTO connectors (name, type, logo_url, webhooks_per, oauth_url, oauth_cli
     ('Website', 'Website', 'https://cdn2.iconfinder.com/data/icons/free-simple-line-mix/48/22-Website-512.png', 'None', '', '', '', '', 0),
     ('Kafka', 'EventStream', 'https://cdn.icon-icons.com/icons2/2248/PNG/512/apache_kafka_icon_138937.png', 'None', '', '', '', '', 0),
     ('RabbitMQ', 'EventStream', 'https://cdn.icon-icons.com/icons2/2699/PNG/512/rabbitmq_logo_icon_170810.png', 'None', '', '', '', '', 0),
-    ('UISample', 'EventStream', '', 'None', '', '', '', '', 0);
+    ('UISample', 'EventStream', '', 'None', '', '', '', '', 0),
+    ('Server', 'Server', 'https://cdn1.iconfinder.com/data/icons/unicons-line-vol-5/24/server-512.png', 'None', '', '', '', '', 0);
 
 CREATE TYPE warehouse_type AS ENUM ('BigQuery', 'ClickHouse', 'PostgreSQL', 'Redshift', 'Snowflake');
 
