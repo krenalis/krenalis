@@ -60,9 +60,10 @@ func (c *connection) Resource() (string, error) {
 
 func (c *connection) Schemas() (types.Type, types.Type, error) {
 	userSchema := types.Object([]types.Property{
-		{Name: "first_name", Type: types.Text()},
-		{Name: "last_name", Type: types.Text()},
 		{Name: "email", Type: types.Text()},
+		{Name: "first_name", Type: types.Text()},
+		{Name: "full_name", Type: types.Text()},
+		{Name: "last_name", Type: types.Text()},
 	})
 	return userSchema, types.Type{}, nil
 }
