@@ -86,8 +86,8 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Array","minItems":2,"maxItems":8,"uniqueItems":true,"itemType":{"name":"Decimal"}}`,
 			Type: Array(Decimal(0, 0)).WithMinItems(2).WithMaxItems(8).WithUnique(),
 		}, {
-			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"}},{"name":"size","nullable":true,"type":{"name":"Decimal"}}]}`,
-			Type: Object([]Property{{Name: "email", Type: Text()}, {Name: "size", Nullable: true, Type: Decimal(0, 0)}}),
+			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"}},{"name":"size","type":{"name":"Decimal","null":true}}]}`,
+			Type: Object([]Property{{Name: "email", Type: Text()}, {Name: "size", Type: Decimal(0, 0).WithNull()}}),
 		}, {
 			Data:    `{"name":"Object","properties":[{"name":"email","type":"Email"}]}`,
 			Type:    Object([]Property{{Name: "email", Type: Text(Chars(120)).WithRegexp(regexp.MustCompile(`@`)).AsCustom("Email")}}),
@@ -272,9 +272,6 @@ func equalTypes(t1, t2 Type) error {
 			}
 			if p1.Description != p2.Description {
 				return fmt.Errorf("expected property description %q, got %q", p1.Description, p2.Description)
-			}
-			if p1.Nullable != p2.Nullable {
-				return fmt.Errorf("expected property nullable %t, got %t", p1.Nullable, p2.Nullable)
 			}
 			if err := equalTypes(p1.Type, p2.Type); err != nil {
 				return err

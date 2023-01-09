@@ -346,7 +346,7 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 					return nil, err
 				}
 				if tok == nil {
-					if !p.Nullable {
+					if !p.Type.null {
 						return nil, fmt.Errorf("property %s cannot be null", p.Name)
 					}
 					object[p.Name] = nil

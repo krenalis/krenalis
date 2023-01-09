@@ -288,7 +288,6 @@ func (ws *Workspace) ReloadSchema() error {
 				Name:        c.Name,
 				Description: c.Description,
 				Role:        types.BothRole,
-				Nullable:    c.IsNullable,
 				Type:        c.Type,
 			}
 			if !c.IsUpdatable {

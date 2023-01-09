@@ -153,10 +153,9 @@ func TestDecode(t *testing.T) {
 					}),
 				},
 				{
-					Name:     "birthday",
-					Label:    "Birthday",
-					Nullable: true,
-					Type:     Date("2006-01-02"),
+					Name:  "birthday",
+					Label: "Birthday",
+					Type:  Date("2006-01-02").WithNull(),
 				},
 			}),
 			Value: map[string]any{
