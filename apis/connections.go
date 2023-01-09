@@ -1749,9 +1749,23 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 				return errors.BadRequest("invalid one-to-one mapping")
 			}
 		}
-		// TODO(Gianluca): validate predefined function input/outputs.
-		if t.SourceCode != "" && t.PredefinedFunc > 0 {
-			return errors.BadRequest("invalid mapping (cannot have both source code and predefined function)")
+		// Validate predefined mapping.
+		if t.PredefinedFunc > 0 {
+			if t.SourceCode != "" {
+				return errors.BadRequest("invalid mapping (cannot have both source code and predefined function)")
+			}
+			f, ok := predefinedFuncByID(t.PredefinedFunc)
+			if !ok {
+				return errors.BadRequest("predefined function with ID %d does not exist", t.PredefinedFunc)
+			}
+			if len(f.In.Properties()) != len(inProps) {
+				return errors.BadRequest("predefined function expects %d input parameter(s), got %d", len(f.In.Properties()), len(inProps))
+			}
+			if len(f.Out.Properties()) != len(outProps) {
+				return errors.BadRequest("predefined function expects %d output parameter(s), got %d", len(f.Out.Properties()), len(outProps))
+			}
+			// TODO(Gianluca): validate input and output parameters using some
+			// “assignability” criterion.
 		}
 		for _, in := range inProps {
 			if !types.IsValidPropertyName(in) {

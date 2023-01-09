@@ -311,10 +311,10 @@ const ConnectionProperties = () => {
 			if (t.Position === transformationPosition) {
 				if (sp.type === 'input') {
 					if (t.In.properties.findIndex((property) => property != null && property.name === sp.name) === -1) {
-						let parameterIndex = t.PredefinedFunc.In.findIndex((p) => p === parameter);
+						let parameterIndex = t.PredefinedFunc.In.properties.findIndex((p) => p.label === parameter);
 						let p = inputProperties.find((p) => p.name === sp.name);
 						if (t.In.properties.length === 0) {
-							let parametersCount = t.PredefinedFunc.In.length;
+							let parametersCount = t.PredefinedFunc.In.properties.length;
 							t.In.properties = Array(parametersCount);
 							t.In.properties[parameterIndex] = p;
 						} else {
@@ -326,9 +326,9 @@ const ConnectionProperties = () => {
 					if (
 						t.Out.properties.findIndex((property) => property != null && property.name === sp.name) === -1
 					) {
-						let parameterIndex = t.PredefinedFunc.Out.findIndex((p) => p === parameter);
+						let parameterIndex = t.PredefinedFunc.Out.properties.findIndex((p) => p.label === parameter);
 						let p = outputProperties.find((p) => p.name === sp.name);
-						let parametersCount = t.PredefinedFunc.Out.length;
+						let parametersCount = t.PredefinedFunc.Out.properties.length;
 						if (parametersCount === 1) {
 							// it's possible to connect an arbitrary number of
 							// output properties
@@ -389,18 +389,18 @@ const ConnectionProperties = () => {
 			delete toSave.Position;
 			if (t.PredefinedFunc !== 0) {
 				// validate the predefined function connections.
-				for (let [i, p] of t.PredefinedFunc.In.entries()) {
+				for (let [i, p] of t.PredefinedFunc.In.properties.entries()) {
 					if (t.In.properties[i] == null) {
 						onError(
-							`The input parameter "${p}" of the predefined transformation "${t.PredefinedFunc.Name}" is not linked to any input property`
+							`The input parameter "${p.label}" of the predefined transformation "${t.PredefinedFunc.Name}" is not linked to any input property`
 						);
 						return;
 					}
 				}
-				for (let [i, p] of t.PredefinedFunc.Out.entries()) {
+				for (let [i, p] of t.PredefinedFunc.Out.properties.entries()) {
 					if (t.Out.properties[i] == null) {
 						onError(
-							`The output parameter "${p}" of the predefined transformation "${t.PredefinedFunc.Name}" is not linked to any output property`
+							`The output parameter "${p.label}" of the predefined transformation "${t.PredefinedFunc.Name}" is not linked to any output property`
 						);
 						return;
 					}
@@ -654,7 +654,7 @@ const ConnectionProperties = () => {
 										start={p.name}
 										end={
 											t.PredefinedFunc !== 0
-												? `transformation-${t.Position}-input-${t.PredefinedFunc.In[i].replace(
+												? `transformation-${t.Position}-input-${t.PredefinedFunc.In.properties[i].label.replace(
 														/\s/g,
 														''
 												  )}`
@@ -687,14 +687,14 @@ const ConnectionProperties = () => {
 								>
 									<Xarrow
 										start={
-											t.PredefinedFunc !== 0 && t.PredefinedFunc.Out.length === 1
+											t.PredefinedFunc !== 0 && t.PredefinedFunc.Out.properties.length === 1
 												? `transformation-${
 														t.Position
-												  }-output-${t.PredefinedFunc.Out[0].replace(/\s/g, '')}`
+												  }-output-${t.PredefinedFunc.Out.properties[0].label.replace(/\s/g, '')}`
 												: t.PredefinedFunc !== 0
-												? `transformation-${t.Position}-output-${t.PredefinedFunc.Out[
+												? `transformation-${t.Position}-output-${t.PredefinedFunc.Out.properties[
 														i
-												  ].replace(/\s/g, '')}`
+												  ].label.replace(/\s/g, '')}`
 												: `transformation-${t.Position}`
 										}
 										end={p.name}

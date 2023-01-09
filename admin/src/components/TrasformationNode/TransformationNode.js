@@ -21,16 +21,16 @@ const TransformationNode = ({
 		node = (
 			<div className='TransformationNode predefined'>
 				<div className='leftHandles'>
-					{t.PredefinedFunc.In.map((parameter) => {
-						let trimmed = parameter.replace(/\s/g, '');
+					{t.PredefinedFunc.In.properties.map((parameter) => {
+						let trimmed = parameter.label.replace(/\s/g, '');
 						return (
 							<div className='handleWrapper'>
-								<div className='label'>{parameter}</div>
+								<div className='label'>{parameter.label}</div>
 								<div
 									className='handle'
 									onClick={
 										onPredefinedTransformationConnect != null
-											? () => onPredefinedTransformationConnect(parameter)
+											? () => onPredefinedTransformationConnect(parameter.label)
 											: null
 									}
 									id={`transformation-${t.Position}-input-${trimmed}`}
@@ -45,16 +45,16 @@ const TransformationNode = ({
 					<SlIconButton name='x-lg' onClick={onRemove} />
 				</div>
 				<div className='rightHandles'>
-					{t.PredefinedFunc.Out.map((parameter) => {
-						let trimmed = parameter.replace(/\s/g, '');
+					{t.PredefinedFunc.Out.properties.map((parameter) => {
+						let trimmed = parameter.label.replace(/\s/g, '');
 						return (
 							<div className='handleWrapper'>
-								<div className='label'>{parameter}</div>
+								<div className='label'>{parameter.label}</div>
 								<div
 									className='handle'
 									onClick={
 										onPredefinedTransformationConnect != null
-											? () => onPredefinedTransformationConnect(parameter)
+											? () => onPredefinedTransformationConnect(parameter.label)
 											: null
 									}
 									id={`transformation-${t.Position}-output-${trimmed}`}
