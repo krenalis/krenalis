@@ -19,8 +19,9 @@ import (
 	"chichi/connector/ui"
 )
 
-// exportOnly10Users, when true, makes Dummy export only 10 users.
-const exportOnly10Users = false
+// exportOnly10Users, when true, makes Dummy export only 10 users instead of the
+// entire data set.
+const exportOnly10Users = true
 
 // Make sure it implements the AppConnection interface.
 var _ connector.AppConnection = &connection{}
