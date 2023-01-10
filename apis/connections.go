@@ -86,54 +86,6 @@ type Connection struct {
 	mappings         []*Mapping
 }
 
-// Mapping represents a mapping from a kind of properties to another.
-//
-// In particular, if the mapping refers to a source connection, it is a mapping
-// from the connection properties to a property of the Golden Record; otherwise,
-// if it refers to a destination connection, it is a mapping from the Golden
-// Record properties to a connection property.
-//
-// A mapping with just one input property and no source code is a "one to one"
-// mapping (without transformation) from a property to another.
-type Mapping struct {
-
-	// id is the identifier of the mapping.
-	id int
-
-	// connection is the connection.
-	connection *Connection
-
-	// in is the schema of the input properties of the mapping. If the
-	// connection is a source then the properties are the properties of the
-	// connection, otherwise, if it is a destination, it contains the properties
-	// of the Golden Record.
-	//
-	// In case of "one to one" mappings, this schema contains just one property.
-	in types.Type
-
-	// PredefinedFunc is the ID of the predefined transformation function of
-	// this mapping, otherwise is zero if this mapping is not a predefined
-	// transformation mapping.
-	predefinedFunc int
-
-	// sourceCode is the source code of the transformation function, which
-	// should be something like:
-	//
-	//    def transform(user):
-	//        return {
-	//            "FirstName": user["firstname"],
-	//        }
-	//
-	// This is the empty string for "one to one" mappings.
-	sourceCode string
-
-	// out is the schema of the output properties of the mapping. If the
-	// connection is a source then the properties are the properties of the
-	// Golden Record, otherwise, if it is a destination, it contains the
-	// properties of the connection.
-	out types.Type
-}
-
 // A ConnectionInfo describes a connection as returned by Get and List.
 type ConnectionInfo struct {
 	ID         int
@@ -146,15 +98,6 @@ type ConnectionInfo struct {
 	Enabled    bool
 	UsersQuery string // only for databases.
 	Mappings   []*MappingInfo
-}
-
-// MappingInfo describes a mapping as returned by Get and List.
-type MappingInfo struct {
-	ID             int
-	In             types.Type // just one property if it refers to a "one to one" mapping.
-	SourceCode     string     // empty string if it refers to a "one to one" mapping.
-	PredefinedFunc int        // zero if not a predefined transformation mapping.
-	Out            types.Type // just one property if it refers to a "one to one" mapping.
 }
 
 const (
@@ -1656,42 +1599,6 @@ func (this *Connections) SetStream(source, stream int) error {
 	})
 
 	return err
-}
-
-// MappingToCreate represents a mapping to create.
-//
-// A mapping with just one input property and no source code is a "one to one"
-// mapping (without transformation) from a property to another.
-type MappingToCreate struct {
-	// In is the schema of the input properties of the mapping. If the
-	// connection is a source then the properties are the properties of the
-	// connection, otherwise, if it is a destination, it contains the properties
-	// of the Golden Record.
-	//
-	// In case of "one to one" mappings, this schema contains just one property.
-	In types.Type
-
-	// PredefinedFunc is the ID of the predefined transformation function of
-	// this mapping, otherwise is zero if this mapping is not a predefined
-	// transformation mapping.
-	PredefinedFunc int
-
-	// SourceCode is the source code of the transformation function, which
-	// should be something like:
-	//
-	//    def transform(user):
-	//        return {
-	//            "FirstName": user["firstname"],
-	//        }
-	//
-	// In case of "one to one" mappings, this is the empty string.
-	SourceCode string
-
-	// out is the schema of the output properties of the mapping. If the
-	// connection is a source then the properties are the properties of the
-	// Golden Record, otherwise, if it is a destination, it contains the
-	// properties of the connection.
-	Out types.Type
 }
 
 // SetMappings sets the mappings of the connection with identifier id.
