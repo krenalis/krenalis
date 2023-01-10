@@ -258,78 +258,16 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 		if !types.IsValidPropertyName(columnName.String) {
 			return nil, warehouses.NewError("column name %q is not supported", columnName.String)
 		}
-		var t types.Type
-		switch typ.String {
-		case "smallint":
-			t = types.Int16()
-		case "integer":
-			t = types.Int()
-		case "bigint":
-			t = types.Int64()
-		case "numeric":
-			// Parse precision radix.
-			if !radix.Valid {
-				return nil, warehouses.NewError("data warehouse has returned NULL as precision radix for column %s", columnName.String)
-			}
-			radix, _ := strconv.Atoi(radix.String)
-			if radix != 2 && radix != 10 {
-				return nil, warehouses.NewError("data warehouse has returned an invalid precision radix for column %s", columnName.String)
-			}
-			// Parse precision.
-			if !precision.Valid {
-				return nil, warehouses.NewError("data warehouse has returned NULL as precision for column %s", columnName.String)
-			}
-			p, err := strconv.ParseInt(precision.String, radix, 64)
-			if err != nil || p < 1 {
-				return nil, warehouses.NewError("data warehouse has returned an invalid precision for column %s: %s", columnName.String, precision.String)
-			}
-			// Parse scale.
-			if !scale.Valid {
-				return nil, warehouses.NewError("data warehouse has returned NULL as scale for column %s", columnName.String)
-			}
-			s, err := strconv.ParseInt(scale.String, radix, 64)
-			if err != nil || s < 0 || s > p {
-				return nil, warehouses.NewError("data warehouse has returned an invalid scale for column %s: %s", columnName.String, scale.String)
-			}
-			t = types.Decimal(int(p), int(s))
-		case "real":
-			t = types.Float32()
-		case "double precision":
-			t = types.Float()
-		case "character varying", "character":
-			if charLength.Valid {
-				chars, _ := strconv.Atoi(charLength.String)
-				if chars < 1 {
-					return nil, warehouses.NewError("data warehouse has returned an invalid character maximum length for column %s", columnName.String)
-				}
-				t = types.Text(types.Chars(chars))
-			} else {
-				t = types.Text()
-			}
-		case "text":
-			t = types.Text()
-		case "timestamp without time zone", "timestamp with time zone":
-			t = types.DateTime("2006-01-02 15:04:05.999999")
-		case "date":
-			t = types.Date("2006-01-02")
-		case "time without time zone", "time with time zone":
-			t = types.Time("15:04:05")
-		case "boolean":
-			t = types.Boolean()
-		case "uuid":
-			t = types.UUID()
-		case "json", "jsonb":
-			t = types.JSON()
-		default:
-			return nil, warehouses.NewError("type of column %q.%q is not supported: %s", tableName.String, columnName.String, typ.String)
-		}
-		if isNullable.String == "YES" {
-			t = t.WithNull()
-		}
 		column := &warehouses.Column{
 			Name:        columnName.String,
-			Type:        t,
 			IsUpdatable: isUpdatable.String == "YES",
+		}
+		column.Type, err = columnType(typ.String, isNullable, charLength, precision, radix, scale)
+		if err != nil {
+			return nil, warehouses.NewError("data warehouse has returned an invalid type: %s", err)
+		}
+		if !column.Type.Valid() {
+			return nil, warehouses.NewError("type %q of column %s is not supported", typ.String, column.Name)
 		}
 		if description.Valid {
 			column.Description = description.String
