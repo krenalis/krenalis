@@ -15,10 +15,10 @@ import (
 	"chichi/apis/types"
 )
 
-// propertyType returns the types.Type corresponding to the ClickHouse type typ
-// stored in the system.columns.type column. It returns an invalid type if typ
-// is not supported.
-func propertyType(typ string) types.Type {
+// columnType returns the types.Type corresponding to the ClickHouse type typ
+// stored in the information_schema.columns column. It returns an invalid type
+// if typ is not supported.
+func columnType(typ string) types.Type {
 	if !utf8.ValidString(typ) {
 		return types.Type{}
 	}

@@ -13,7 +13,7 @@ import (
 	"chichi/apis/types"
 )
 
-func TestClickHouseTypes(t *testing.T) {
+func TestTypes(t *testing.T) {
 
 	tests := []struct {
 		s string
@@ -61,7 +61,7 @@ func TestClickHouseTypes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got := propertyType(test.s)
+		got := columnType(test.s)
 		if got.Valid() != test.t.Valid() {
 			if test.t.Valid() {
 				t.Errorf("%s: expecting a valid type, got an invalid type", test.s)
@@ -74,7 +74,7 @@ func TestClickHouseTypes(t *testing.T) {
 	}
 }
 
-func TestClickHouseUnsupportedTypes(t *testing.T) {
+func TestUnsupportedTypes(t *testing.T) {
 
 	tests := []string{
 		// Unsupported types.
@@ -87,7 +87,7 @@ func TestClickHouseUnsupportedTypes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got := propertyType(test)
+		got := columnType(test)
 		if got.Valid() {
 			t.Errorf("%s: expecting an invalid type, got a valid type: %#v", test, got)
 		}
