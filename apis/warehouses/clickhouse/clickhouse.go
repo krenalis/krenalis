@@ -355,20 +355,6 @@ func (s *chSettings) options() *clickhouse.Options {
 	}
 }
 
-// testConnection tests a connection with the given settings.
-// Returns an error if the connection cannot be established.
-func (s *chSettings) testConnection(ctx context.Context) error {
-	conn, err := clickhouse.Open(s.options())
-	if err != nil {
-		return err
-	}
-	err = conn.Ping(ctx)
-	if err != nil {
-		return err
-	}
-	return conn.Close()
-}
-
 // batch implements the Batch interface.
 type batch struct {
 	warehouse *ClickHouse

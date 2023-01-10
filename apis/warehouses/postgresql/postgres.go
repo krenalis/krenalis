@@ -423,18 +423,6 @@ func (s *psSettings) dsn() string {
 	return u.String()
 }
 
-// testConnection tests a connection with the given settings.
-// Returns an error if the connection cannot be established.
-func (s *psSettings) testConnection(ctx context.Context) error {
-	db, err := sql.Open("pgx", s.dsn())
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-	db.SetMaxIdleConns(0)
-	return db.PingContext(ctx)
-}
-
 // serializeColumn serializes a column where name and typ are the name and the
 // type of the column. If typ is an object, it will serialize each property of
 // the object as a column.
