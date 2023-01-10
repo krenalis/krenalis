@@ -14,8 +14,8 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
-	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 
+	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"golang.org/x/crypto/bcrypt"
 )
 
