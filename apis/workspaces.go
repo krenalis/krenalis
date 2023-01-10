@@ -439,7 +439,7 @@ func openWarehouse(typ WarehouseType, settings []byte) (warehouses.Warehouse, er
 	case BigQuery, Redshift, Snowflake:
 		return nil, fmt.Errorf("warehouse type %s is not yet supported", typ)
 	case PostgreSQL:
-		return postgresql.OpenPostgres(settings)
+		return postgresql.Open(settings)
 	case ClickHouse:
 		return clickhouse.Open(settings)
 	}

@@ -53,8 +53,8 @@ type psSettings struct {
 	Schema   string
 }
 
-// OpenPostgres opens a PostgreSQL data warehouse with the given settings.
-func OpenPostgres(settings []byte) (warehouses.Warehouse, error) {
+// Open opens a PostgreSQL data warehouse with the given settings.
+func Open(settings []byte) (warehouses.Warehouse, error) {
 	var s psSettings
 	err := json.Unmarshal(settings, &s)
 	if err != nil {
