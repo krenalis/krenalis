@@ -191,7 +191,7 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 		}
 		column.Type = columnType(typ)
 		if !column.Type.Valid() {
-			return nil, fmt.Errorf("type %q of column %s is not supported", typ, column.Name)
+			return nil, warehouses.NewError("type %q of column %s is not supported", typ, column.Name)
 		}
 		if table == nil || tableName != table.Name {
 			table = &warehouses.Table{Name: tableName}
