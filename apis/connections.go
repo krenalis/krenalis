@@ -578,12 +578,7 @@ func (this *Connections) Export(id int) (err error) {
 	}
 
 	// Check that the connection has at least one mapping associated to it.
-	mappings, err := this.Mappings(id)
-	if err != nil {
-		// TODO(marco): it should not return an internal error if the connection does not exist.
-		return fmt.Errorf("cannot list mappings for %d: %s", id, err)
-	}
-	if len(mappings) == 0 {
+	if len(c.mappings) == 0 {
 		return errors.Unprocessable(NoMappings, "connection %d has no mappings", id)
 	}
 
@@ -722,12 +717,7 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 
 	// Check that the connection has at least one mapping associated to it.
 	if c.connector.typ != EventStreamType {
-		mappings, err := this.Mappings(id)
-		if err != nil {
-			// TODO(marco): it should not return an internal error if the connection does not exist.
-			return fmt.Errorf("cannot list mappings for %d: %s", id, err)
-		}
-		if len(mappings) == 0 {
+		if len(c.mappings) == 0 {
 			return errors.Unprocessable(NoMappings, "connection %d has no mappings", id)
 		}
 	}
@@ -1041,12 +1031,6 @@ func (this *Connections) startExport(connection *Connection) error {
 			return exportError{fmt.Errorf("cannot connect to the connector: %s", err)}
 		}
 
-		// Read the mappings.
-		mappings, err := this.Mappings(connection.id)
-		if err != nil {
-			return err
-		}
-
 		// Prepare the users to export to the connection.
 		users := []_connector.User{}
 		{
@@ -1078,7 +1062,7 @@ func (this *Connections) startExport(connection *Connection) error {
 			}
 			for _, user := range grUsers {
 				id := internalToExternalID[user["id"].(int)]
-				user, err := exportUser(id, user, mappings)
+				user, err := exportUser(id, user, connection.mappings)
 				if err != nil {
 					return err
 				}
@@ -1315,15 +1299,6 @@ func (this *Connections) Schema(id int) (types.Type, error) {
 		return types.Type{}, errors.BadRequest("connection %d has no properties, it's a stream", id)
 	}
 	return c.schema, nil
-}
-
-// Mappings returns the mappings of the connection with identifier id.
-func (this *Connections) Mappings(connection int) ([]*Mapping, error) {
-	ts, ok := this.state.Get(connection)
-	if !ok {
-		return nil, errors.NotFound("connection %d does not exist", connection)
-	}
-	return ts.mappings, nil
 }
 
 // Column represents a column of a database connection.
@@ -1720,10 +1695,10 @@ type MappingToCreate struct {
 }
 
 // SetMappings sets the mappings of the connection with identifier id.
-func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate) error {
+func (this *Connections) SetMappings(id int, mappings []*MappingToCreate) error {
 
-	if connection < 1 || connection > maxInt32 {
-		return errors.BadRequest("connection identifier %d is not valid", connection)
+	if id < 1 || id > maxInt32 {
+		return errors.BadRequest("connection identifier %d is not valid", id)
 	}
 
 	// Validate the mappings.
@@ -1779,7 +1754,7 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 		}
 	}
 
-	n := setConnectionMappingsNotification{Connection: connection}
+	n := setConnectionMappingsNotification{Connection: id}
 
 	// Prepare the mappings for the notification and marshal the schemas into
 	// JSON.
@@ -1816,19 +1791,19 @@ func (this *Connections) SetMappings(connection int, mappings []*MappingToCreate
 			if err != nil {
 				if postgres.IsForeignKeyViolation(err) {
 					if postgres.ErrConstraintName(err) == "connections_mappings_connection_fkey" {
-						err = errors.NotFound("connection %d does not exist", connection)
+						err = errors.NotFound("connection %d does not exist", id)
 					}
 				}
 			}
 			return err
 		}
 		for i, t := range n.Mappings {
-			var id int
-			err := query.QueryRow(connection, inSchemas[i], t.PredefinedFunc, t.SourceCode, outSchemas[i]).Scan(&id)
+			var mapID int
+			err := query.QueryRow(id, inSchemas[i], t.PredefinedFunc, t.SourceCode, outSchemas[i]).Scan(&mapID)
 			if err != nil {
 				return err
 			}
-			t.ID = id
+			t.ID = mapID
 		}
 		return tx.Notify(n)
 	})
@@ -2138,12 +2113,8 @@ func (this *Connections) userSchema(id int) (types.Type, []_connector.PropertyPa
 	// Read the paths of the mapped properties from the transformations of this
 	// connection.
 	var paths []_connector.PropertyPath
-	ts, err := this.Mappings(id)
-	if err != nil {
-		return types.Type{}, nil, err
-	}
-	for _, t := range ts {
-		for _, in := range t.in.PropertiesNames() {
+	for _, m := range c.mappings {
+		for _, in := range m.in.PropertiesNames() {
 			paths = append(paths, []string{in})
 		}
 	}

@@ -209,12 +209,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			})
 			router.Get("/mappings", func(w http.ResponseWriter, r *http.Request) {
-				connection, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				if connection <= 0 {
+				connectionID, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				if connectionID <= 0 {
 					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
 					return
 				}
-				mappings, err := workspace.Connections.Mappings(connection)
+				connection, err := workspace.Connections.Get(connectionID)
 				if err != nil {
 					if err, ok := err.(errors.ResponseWriterTo); ok {
 						_ = err.WriteTo(w)
@@ -224,17 +224,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
-				mappingsInfos := make([]*MappingInfo, len(mappings))
-				for i, m := range mappings {
-					mappingsInfos[i] = &MappingInfo{
-						ID:             m.id,
-						In:             m.in,
-						PredefinedFunc: m.predefinedFunc,
-						SourceCode:     m.sourceCode,
-						Out:            m.out,
-					}
-				}
-				_ = json.NewEncoder(w).Encode(mappingsInfos)
+				_ = json.NewEncoder(w).Encode(connection.Mappings)
 			})
 			router.Put("/mappings", func(w http.ResponseWriter, r *http.Request) {
 				connection, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))

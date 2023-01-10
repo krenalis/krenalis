@@ -172,13 +172,6 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 		return
 	}
 
-	// Retrieve the mappings for this connection.
-	connectionsMappings, err := fh.workspace.Connections.Mappings(fh.connection.id)
-	if err != nil {
-		fh.setError(fmt.Errorf("cannot list mappings for %d: %s", fh.connection.id, err))
-		return
-	}
-
 	// Create a pool of transformation VMs.
 	pool := transformations.NewPool()
 
@@ -194,7 +187,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	// connection.
 	candidateData := map[string]any{}
 	candidateTimestamps := map[string]time.Time{}
-	for _, m := range connectionsMappings {
+	for _, m := range fh.connection.mappings {
 		userProps := map[string]any{}
 		inNames := m.in.PropertiesNames()
 		outNames := m.out.PropertiesNames()
@@ -603,11 +596,11 @@ func keys[K comparable, V any](m map[K]V) []K {
 func (fh *firehose) listMappings(connections []int) ([]*Mapping, error) {
 	var mappings []*Mapping
 	for _, c := range connections {
-		ts, err := fh.workspace.Connections.Mappings(c)
-		if err != nil {
-			return nil, err
+		conn, ok := fh.workspace.Connections.state.Get(c)
+		if !ok {
+			return nil, fmt.Errorf("connection %d does not exist anymore", c)
 		}
-		mappings = append(mappings, ts...)
+		mappings = append(mappings, conn.mappings...)
 	}
 	return mappings, nil
 }
