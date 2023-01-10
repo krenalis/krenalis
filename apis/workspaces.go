@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
@@ -26,15 +27,16 @@ import (
 )
 
 var (
+	AlreadyConnected     errors.Code = "AlreadyConnected"
+	ConnectionFailed     errors.Code = "ConnectionFailed"
+	InvalidSettings      errors.Code = "InvalidSettings"
 	NoWarehouse          errors.Code = "NoWarehouse"
 	NotConnected         errors.Code = "NotConnected"
-	ConnectionFailed     errors.Code = "ConnectionFailed"
 	OrderNotExist        errors.Code = "OrderNotExist"
 	OrderTypeNotSortable errors.Code = "OrderTypeNotSortable"
 	PropertyNotExist     errors.Code = "PropertyNotExist"
-	AlreadyConnected     errors.Code = "AlreadyConnected"
+	RepeatedPropertyName errors.Code = "RepeatedPropertyName"
 	WarehouseFailed      errors.Code = "WarehouseFailed"
-	InvalidSettings      errors.Code = "InvalidSettings"
 )
 
 type Workspaces struct {
@@ -282,21 +284,13 @@ func (ws *Workspace) ReloadSchema() error {
 		Schemas:   map[string]*types.Type{},
 	}
 	for _, table := range tables {
-		var properties []types.Property
-		for _, c := range table.Columns {
-			property := types.Property{
-				Name:        c.Name,
-				Description: c.Description,
-				Role:        types.BothRole,
-				Type:        c.Type,
-			}
-			if !c.IsUpdatable {
-				property.Role = types.SourceRole
-			}
-			properties = append(properties, property)
+		properties, err := propertiesOfColumns(table.Columns)
+		if err, ok := err.(repeatedPropertyNameError); ok {
+			return errors.Unprocessable(RepeatedPropertyName,
+				"column %s.%s results in a repeated property named %s", table.Name, err.column, err.property)
 		}
-		typ := types.Object(properties).AsCustom(table.Name)
-		n.Schemas[table.Name] = &typ
+		schema := types.Object(properties).AsCustom(table.Name)
+		n.Schemas[table.Name] = &schema
 	}
 	newRawSchemas, err := json.Marshal(n.Schemas)
 	if err != nil {
@@ -544,4 +538,124 @@ func (typ WarehouseType) Value() (driver.Value, error) {
 		return "Snowflake", nil
 	}
 	return nil, fmt.Errorf("not a valid WarehouseType: %d", typ)
+}
+
+// A repeatedPropertyNameError value is returned from propertiesOfColumns when
+// grouped columns result in a repeated property name.
+type repeatedPropertyNameError struct {
+	column, property string
+}
+
+func (err repeatedPropertyNameError) Error() string {
+	return fmt.Sprintf("column %s results in a repeated property named %s", err.column, err.property)
+}
+
+// propertiesOfColumns returns the type properties of columns.
+// Consecutive columns with a common prefix are grouped into a single object
+// property. It could change the columns slice and the column names.
+//
+// Columns starting with an underscore ('_'), are grouped as if the underscore
+// were not present but are not returned as properties.
+//
+// Grouping columns can result in properties with the same name. In this case,
+// it returns a repeatedPropertyNameError error.
+func propertiesOfColumns(columns []*warehouses.Column) ([]types.Property, error) {
+	var properties []types.Property
+	for i := 0; i < len(columns); i++ {
+		c := columns[i]
+		var property types.Property
+		// group the columns with the same prefix.
+		if prefix, n := columnsCommonPrefix(columns[i:]); prefix != "" {
+			group := columns[i : i+n]
+			i += n - 1
+			for j := 0; j < n; j++ {
+				column := group[j]
+				// remove from the group the columns with an underscore prefix.
+				if column.Name[0] == '_' {
+					copy(group[j:], group[j+1:])
+					j--
+					n--
+					continue
+				}
+				// remove the prefix from the column names.
+				column.Name = strings.TrimPrefix(column.Name, prefix)
+			}
+			if n == 0 {
+				continue
+			}
+			props, err := propertiesOfColumns(group[:n])
+			if err != nil {
+				return nil, err
+			}
+			property = types.Property{
+				Name: strings.TrimSuffix(prefix, "_"),
+				Type: types.Object(props),
+			}
+		} else {
+			if c.Name[0] == '_' {
+				continue
+			}
+			property = types.Property{
+				Name:        c.Name,
+				Description: c.Description,
+				Type:        c.Type,
+			}
+			if !c.IsUpdatable {
+				property.Role = types.SourceRole
+			}
+		}
+		for _, p := range properties {
+			if p.Name == property.Name {
+				return nil, repeatedPropertyNameError{c.Name, p.Name}
+			}
+		}
+		properties = append(properties, property)
+	}
+	return properties, nil
+}
+
+// columnsCommonPrefix returns the common prefix between the first column in
+// columns and the successive consecutive columns. A common prefix, if exists,
+// ends with an underscore character ('_').
+//
+// If a common prefix exists, it returns the prefix, and the number of
+// consecutive columns having the common prefix, starting from the first
+// column, otherwise it returns an empty string and zero.
+//
+// See TestColumnsCommonPrefix for some examples.
+func columnsCommonPrefix(columns []*warehouses.Column) (string, int) {
+	first := columns[0].Name
+	if first[0] == '_' {
+		first = first[1:]
+	}
+	var prefix string
+	var n = len(columns)
+Columns:
+	for i := 0; i < len(first)-1; i++ {
+		c := first[i]
+		for k := 1; k < n; k++ {
+			name := columns[k].Name
+			if name[0] == '_' {
+				name = name[1:]
+			}
+			if i < len(name)-1 && name[i] == c {
+				// continue with the next column.
+				if c == '_' {
+					prefix = first[:i+1]
+				}
+				continue
+			}
+			if prefix == "" {
+				// continue only with the previous columns.
+				n = k
+				continue Columns
+			}
+			// break and return the prefix.
+			break Columns
+		}
+	}
+	if prefix == "" {
+		n = 0
+	}
+	return prefix, n
 }

@@ -155,8 +155,7 @@ func (warehouse *ClickHouse) PrepareBatch(ctx context.Context, table string, col
 
 // Tables returns the tables of the data warehouse.
 // It returns only the tables 'users', 'groups', 'events', and the tables with
-// prefix 'users_', 'groups_' and 'events_'. Also, it does not return columns
-// starting with an underscore.
+// prefix 'users_', 'groups_' and 'events_'.
 func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, error) {
 
 	// Get the connection.
@@ -171,8 +170,7 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 		"INNER JOIN information_schema.tables t ON c.table_name = t.table_name AND c.table_schema = t.table_schema\n" +
 		"WHERE t.table_schema = '" + warehouse.settings.Database + "' AND t.table_type = 'BASE TABLE' AND" +
 		" ( t.table_name IN ('users', 'groups', 'events') OR t.table_name LIKE 'users\\__%' OR" +
-		" t.table_name LIKE 'groups\\__%' OR t.table_name LIKE 'events\\__%' ) AND" +
-		" NOT startsWith(c.column_name, '_')\n" +
+		" t.table_name LIKE 'groups\\__%' OR t.table_name LIKE 'events\\__%' )\n" +
 		"ORDER BY c.table_name, c.ordinal_position"
 
 	var table *warehouses.Table

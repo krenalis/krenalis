@@ -45,8 +45,7 @@ type Warehouse interface {
 
 	// Tables returns the tables of the data warehouse.
 	// It returns only the tables 'users', 'groups', 'events', and the tables with
-	// prefix 'users_', 'groups_' and 'events_'. Also, it does not return columns
-	// starting with an underscore.
+	// prefix 'users_', 'groups_' and 'events_'.
 	Tables(ctx context.Context) ([]*Table, error)
 
 	// Query executes a query that returns rows. args are the placeholders.
