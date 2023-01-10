@@ -153,6 +153,12 @@ func (warehouse *ClickHouse) PrepareBatch(ctx context.Context, table string, col
 	return batch, nil
 }
 
+// Settings returns the data warehouse settings.
+func (warehouse *ClickHouse) Settings() []byte {
+	s, _ := json.Marshal(warehouse.settings)
+	return s
+}
+
 // Tables returns the tables of the data warehouse.
 // It returns only the tables 'users', 'groups', 'events', and the tables with
 // prefix 'users_', 'groups_' and 'events_'.
@@ -215,12 +221,6 @@ func (warehouse *ClickHouse) Query(ctx context.Context, query string, args ...an
 // QueryRow executes a query that should return at most one row.
 func (warehouse *ClickHouse) QueryRow(ctx context.Context, query string, args ...any) warehouses.Row {
 	return warehouses.Row{}
-}
-
-// Settings returns the data warehouse settings.
-func (warehouse *ClickHouse) Settings() []byte {
-	s, _ := json.Marshal(warehouse.settings)
-	return s
 }
 
 // Users returns the users, with only the properties in schema, ordered by
