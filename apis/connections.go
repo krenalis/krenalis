@@ -673,7 +673,7 @@ func (this *Connections) Import(id int, reimport bool) (err error) {
 		StartTime:  time.Now().UTC(),
 	}
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		err := this.db.QueryRow("INSERT INTO connections_imports (connection, storage, start_time)\n"+
+		err := tx.QueryRow("INSERT INTO connections_imports (connection, storage, start_time)\n"+
 			"VALUES ($1, $2, $3)\nRETURNING id", n.Connection, n.Storage, n.StartTime).Scan(&n.ID)
 		if err != nil {
 			return err
