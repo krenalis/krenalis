@@ -725,7 +725,7 @@ func (this *Connections) startImport(imp *ImportInProgress) {
 	n := endImportNotification{imp.id}
 	// TODO(marco) retry if the transaction fails.
 	err2 := this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err := this.db.Exec("UPDATE connections_imports SET end_time = $1, error = $2 WHERE id = $3",
+		_, err := tx.Exec("UPDATE connections_imports SET end_time = $1, error = $2 WHERE id = $3",
 			time.Now().UTC(), errorMsg, imp.id)
 		if err != nil {
 			return err
