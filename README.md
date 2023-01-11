@@ -69,17 +69,23 @@ and populate the warehouse with the queries in:
 
 * [database/data-warehouse-sample.sql](database/data-warehouse-sample.sql)
 
-### 5. Connect the warehouse and reload the schema
+### 5. Connect the data warehouse and reload the schema
 
 (note that these steps requires [the chichi-cli executable](#interact-with-chichi-using-chichi-cli) installed and available on your system)
 
-Connect the warehouse with:
+Connect the data warehouse with:
 
 ```
-$ chichi-cli connect-warehouse ./mywarehouse.json
+$ chichi-cli connect-warehouse PostgreSQL ./postgresql.json
 ```
 
-where `./mywarehouse.json` is a JSON file containing the information to access the warehouse, like:
+or 
+
+```
+$ chichi-cli connect-warehouse ClickHouse ./clickhouse.json
+```
+
+where `./postgresql.json` is a JSON file containing the information to access the PostgreSQL data warehouse, like:
 
 ```json
 {
@@ -89,6 +95,18 @@ where `./mywarehouse.json` is a JSON file containing the information to access t
     "Password": "***********",
     "Database": "warehouse",
     "Schema": "public"
+}
+```
+
+and `./clickhouse.json` is a JSON file containing the information to access the ClickHouse data warehouse, like:
+
+```json
+{
+    "Host": "localhost",
+    "Port": 9000,
+    "Username": "user",
+    "Password": "***********",
+    "Database": "warehouse"
 }
 ```
 
