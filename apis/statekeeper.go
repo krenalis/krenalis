@@ -287,7 +287,7 @@ func (s *stateKeeper) deleteConnection(n postgres.Notification) {
 
 // endImportNotification is the notification event sent when an import ends.
 type endImportNotification struct {
-	id int
+	ID int
 }
 
 // endImport ends an import.
@@ -297,7 +297,7 @@ func (s *stateKeeper) endImport(n postgres.Notification) {
 		return
 	}
 	for _, c := range s.connections {
-		if c.importInProgress != nil && c.importInProgress.id == e.id {
+		if c.importInProgress != nil && c.importInProgress.id == e.ID {
 			s.replaceConnection(c.id, func(c *Connection) {
 				c.importInProgress = nil
 			})
