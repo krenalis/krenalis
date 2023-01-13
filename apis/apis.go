@@ -232,6 +232,7 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 		ID:          c.ID,
 		Name:        c.Name,
 		Type:        ConnectorType(c.Type),
+		HasSettings: c.HasSettings,
 		LogoURL:     c.LogoURL,
 		WebhooksPer: WebhooksPer(c.WebhooksPer),
 	}
@@ -251,6 +252,7 @@ func (apis *APIs) Connectors() []*Connector {
 			ID:          c.ID,
 			Name:        c.Name,
 			Type:        ConnectorType(c.Type),
+			HasSettings: c.HasSettings,
 			LogoURL:     c.LogoURL,
 			WebhooksPer: WebhooksPer(c.WebhooksPer),
 		}

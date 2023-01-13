@@ -203,6 +203,7 @@ type Connector struct {
 	ID          int
 	Name        string
 	Type        ConnectorType
+	HasSettings bool
 	LogoURL     string
 	WebhooksPer WebhooksPer
 	OAuth       *ConnectorOAuth

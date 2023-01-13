@@ -22,14 +22,15 @@ func (s *State) load() error {
 
 	// Read all connectors.
 	s.connectors = map[int]*Connector{}
-	err := s.db.QueryScan("SELECT id, name, type, logo_url, webhooks_per, oauth_url, oauth_client_id,"+
+	err := s.db.QueryScan("SELECT id, name, type, has_settings, logo_url, webhooks_per, oauth_url, oauth_client_id,"+
 		" oauth_client_secret, oauth_token_endpoint, oauth_default_token_type, oauth_default_expires_in,"+
 		" oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
 		for rows.Next() {
 			c := Connector{}
 			oauth := ConnectorOAuth{}
-			if err := rows.Scan(&c.ID, &c.Name, &c.Type, &c.LogoURL, &c.WebhooksPer, &oauth.URL, &oauth.ClientID, &oauth.ClientSecret,
-				&oauth.TokenEndpoint, &oauth.DefaultTokenType, &oauth.DefaultExpiresIn, &oauth.ForcedExpiresIn); err != nil {
+			if err := rows.Scan(&c.ID, &c.Name, &c.Type, &c.HasSettings, &c.LogoURL, &c.WebhooksPer, &oauth.URL,
+				&oauth.ClientID, &oauth.ClientSecret, &oauth.TokenEndpoint, &oauth.DefaultTokenType,
+				&oauth.DefaultExpiresIn, &oauth.ForcedExpiresIn); err != nil {
 				return err
 			}
 			if oauth.URL != "" {
