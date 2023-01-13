@@ -9,8 +9,10 @@
   - [2. Configure and add certificates](#2-configure-and-add-certificates)
   - [3. Compile the server](#3-compile-the-server)
   - [4. Populate the database and the warehouse](#4-populate-the-database-and-the-warehouse)
-  - [5. Connect the warehouse and reload the schema](#5-connect-the-warehouse-and-reload-the-schema)
-  - [5. Run and open the browser](#5-run-and-open-the-browser)
+  - [5. Connect the data warehouse](#5-connect-the-data-warehouse)
+  - [6. Initialize the warehouse](#6-initialize-the-warehouse)
+  - [7. Reload the schema](#7-reload-the-schema)
+  - [8. Run and open the browser](#8-run-and-open-the-browser)
 - [Expose on the Internet (optional)](#expose-on-the-internet-optional)
 - [How test events](#how-test-events)
 - [Interact with Chichi using `chichi-cli`](#interact-with-chichi-using-chichi-cli)
@@ -69,7 +71,7 @@ and populate the warehouse with the queries in:
 
 * [database/data-warehouse-sample.sql](database/data-warehouse-sample.sql)
 
-### 5. Connect the data warehouse and reload the schema
+### 5. Connect the data warehouse
 
 (note that these steps requires [the chichi-cli executable](#interact-with-chichi-using-chichi-cli) installed and available on your system)
 
@@ -110,13 +112,23 @@ and `./clickhouse.json` is a JSON file containing the information to access the 
 }
 ```
 
-Then reload the schema with:
+### 6. Initialize the warehouse
+
+Initialize the warehouse with:
+
+```
+$ chichi-cli init-warehouse
+```
+
+### 7. Reload the schema
+
+Reload the schema with:
 
 ```
 $ chichi-cli reload-schema
 ```
 
-### 5. Run and open the browser
+### 8. Run and open the browser
 
 Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/admin/.
 
