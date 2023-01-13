@@ -283,15 +283,16 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 	}
 	conn := c.Connector()
 	connection := Connection{
-		db:         this.db,
-		connection: c,
-		ID:         c.ID,
-		Name:       c.Name,
-		Type:       ConnectorType(conn.Type),
-		Role:       ConnectionRole(c.Role),
-		LogoURL:    conn.LogoURL,
-		Enabled:    c.Enabled,
-		UsersQuery: c.UsersQuery,
+		db:          this.db,
+		connection:  c,
+		ID:          c.ID,
+		Name:        c.Name,
+		Type:        ConnectorType(conn.Type),
+		Role:        ConnectionRole(c.Role),
+		HasSettings: conn.HasSettings,
+		LogoURL:     conn.LogoURL,
+		Enabled:     c.Enabled,
+		UsersQuery:  c.UsersQuery,
 	}
 	for _, t := range c.Mappings() {
 		connection.Mappings = append(connection.Mappings, &MappingInfo{
@@ -317,15 +318,16 @@ func (this *Workspace) Connections() []*Connection {
 	for i, c := range connections {
 		conn := c.Connector()
 		connection := Connection{
-			db:         this.db,
-			connection: c,
-			ID:         c.ID,
-			Name:       c.Name,
-			Type:       ConnectorType(conn.Type),
-			Role:       ConnectionRole(c.Role),
-			LogoURL:    conn.LogoURL,
-			Enabled:    c.Enabled,
-			UsersQuery: c.UsersQuery,
+			db:          this.db,
+			connection:  c,
+			ID:          c.ID,
+			Name:        c.Name,
+			Type:        ConnectorType(conn.Type),
+			Role:        ConnectionRole(c.Role),
+			HasSettings: conn.HasSettings,
+			LogoURL:     conn.LogoURL,
+			Enabled:     c.Enabled,
+			UsersQuery:  c.UsersQuery,
 		}
 		for _, t := range c.Mappings() {
 			connection.Mappings = append(connection.Mappings, &MappingInfo{

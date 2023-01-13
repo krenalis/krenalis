@@ -56,18 +56,19 @@ var (
 
 // Connection represents a connection.
 type Connection struct {
-	db         *postgres.DB
-	connection *state.Connection
-	ID         int
-	Name       string
-	Type       ConnectorType
-	Role       ConnectionRole
-	Storage    int    // zero if the connection is not a file or does not have a storage.
-	OAuthURL   string // empty if the connection does not use OAuth.
-	LogoURL    string
-	Enabled    bool
-	UsersQuery string // only for databases.
-	Mappings   []*MappingInfo
+	db          *postgres.DB
+	connection  *state.Connection
+	ID          int
+	Name        string
+	Type        ConnectorType
+	Role        ConnectionRole
+	Storage     int    // zero if the connection is not a file or does not have a storage.
+	OAuthURL    string // empty if the connection does not use OAuth.
+	HasSettings bool
+	LogoURL     string
+	Enabled     bool
+	UsersQuery  string // only for databases.
+	Mappings    []*MappingInfo
 }
 
 // ConnectionOptions values are passed to the Add method with options
