@@ -21,13 +21,14 @@ import (
 
 // State represents the application state.
 type State struct {
-	mu          *sync.Mutex
-	db          *postgres.DB
-	accounts    map[int]*Account
-	connectors  map[int]*Connector
-	workspaces  map[int]*Workspace
-	connections map[int]*Connection
-	resources   map[int]*Resource
+	mu               *sync.Mutex
+	db               *postgres.DB
+	accounts         map[int]*Account
+	connectors       map[int]*Connector
+	workspaces       map[int]*Workspace
+	connections      map[int]*Connection
+	connectionsByKey map[string]*Connection
+	resources        map[int]*Resource
 }
 
 // Account returns the account with identifier id.
@@ -53,6 +54,15 @@ func (state *State) Accounts() []*Account {
 		return accounts[i].ID < accounts[j].ID
 	})
 	return accounts
+}
+
+// ConnectionByKey returns the connection with the given key.
+// The boolean return value reports whether the key exists.
+func (state *State) ConnectionByKey(key string) (*Connection, bool) {
+	state.mu.Lock()
+	c, ok := state.connectionsByKey[key]
+	state.mu.Unlock()
+	return c, ok
 }
 
 // Connector returns the connector with identifier id.

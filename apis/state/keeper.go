@@ -36,13 +36,14 @@ var StartImport func(imp *ImportInProgress)
 // Keep keeps the state returns it.
 func Keep(ctx context.Context, db *postgres.DB) (*State, error) {
 	s := &State{
-		db:          db,
-		mu:          new(sync.Mutex),
-		accounts:    map[int]*Account{},
-		connectors:  map[int]*Connector{},
-		workspaces:  map[int]*Workspace{},
-		connections: map[int]*Connection{},
-		resources:   map[int]*Resource{},
+		db:               db,
+		mu:               new(sync.Mutex),
+		accounts:         map[int]*Account{},
+		connectors:       map[int]*Connector{},
+		workspaces:       map[int]*Workspace{},
+		connections:      map[int]*Connection{},
+		connectionsByKey: map[string]*Connection{},
+		resources:        map[int]*Resource{},
 	}
 	err := s.load()
 	if err != nil {
@@ -297,6 +298,9 @@ func (s *State) addConnection(n postgres.Notification) {
 	}
 	s.mu.Lock()
 	s.connections[e.ID] = c
+	if e.Key != "" {
+		s.connectionsByKey[e.Key] = c
+	}
 	s.mu.Unlock()
 	// Update the workspace.
 	workspace.mu.Lock()
@@ -330,12 +334,15 @@ func (s *State) addConnectionKey(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	s.replaceConnection(e.Connection, func(c *Connection) {
+	c := s.replaceConnection(e.Connection, func(c *Connection) {
 		keys := make([]string, len(c.Keys)+1)
 		copy(keys, c.Keys)
 		keys[len(c.Keys)] = e.Value
 		c.Keys = keys
 	})
+	s.mu.Lock()
+	s.connectionsByKey[e.Value] = c
+	s.mu.Unlock()
 }
 
 // DeleteConnectionNotification is the notification event sent when a
@@ -351,8 +358,12 @@ func (s *State) deleteConnection(n postgres.Notification) {
 		return
 	}
 	connection := s.connections[e.ID]
+	// Update connections and keys.
 	s.mu.Lock()
 	delete(s.connections, e.ID)
+	for _, key := range connection.Keys {
+		delete(s.connectionsByKey, key)
+	}
 	s.mu.Unlock()
 	// Update the workspace.
 	ws := connection.workspace
@@ -419,6 +430,9 @@ func (s *State) revokeConnectionKey(n postgres.Notification) {
 		}
 		c.Keys = keys
 	})
+	s.mu.Lock()
+	delete(s.connectionsByKey, e.Value)
+	s.mu.Unlock()
 }
 
 // SetConnectionSettingsNotification is the notification event sent when the
