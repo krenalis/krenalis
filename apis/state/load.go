@@ -18,8 +18,8 @@ import (
 	"chichi/apis/types"
 )
 
-// Keep keeps the state and returns it.
-func Keep(ctx context.Context, db *postgres.DB) (*State, error) {
+// Load loads the state and returns it.
+func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 	s := &State{
 		db:               db,

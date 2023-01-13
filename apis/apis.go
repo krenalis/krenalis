@@ -66,7 +66,7 @@ func New(conf *Config) (*APIs, error) {
 	}
 
 	apis := &APIs{db: db}
-	apis.state, err = state.Keep(context.Background(), db)
+	apis.state, err = state.Load(context.Background(), db)
 	if err != nil {
 		log.Fatalf("[error] cannot load state: %s", err)
 	}
