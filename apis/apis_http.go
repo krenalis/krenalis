@@ -121,6 +121,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
+				_, _ = w.Write([]byte(`{"status":"ok"}`))
 			})
 			router.Post("/export", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
@@ -144,6 +145,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
+				_, _ = w.Write([]byte(`{"status":"ok"}`))
 			})
 			router.Post("/reimport", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
@@ -167,6 +169,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
+				_, _ = w.Write([]byte(`{"status":"ok"}`))
 			})
 			router.Get("/mappings", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
@@ -242,6 +245,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		router.Delete("/{listenerID}", func(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "listenerID")
 			workspace.EventListeners().Remove(id)
+			_, _ = w.Write([]byte(`{"status":"ok"}`))
 		})
 		router.Get("/{listenerID}/events", func(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "listenerID")
@@ -314,6 +318,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			_, _ = w.Write([]byte(`{"status":"ok"}`))
 		})
 	})
 	router.Route("/api/workspace/disconnect-warehouse", func(router chi.Router) {
@@ -328,6 +333,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			_, _ = w.Write([]byte(`{"status":"ok"}`))
 		})
 	})
 	router.Route("/api/workspace/init-warehouse", func(router chi.Router) {
@@ -342,6 +348,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			_, _ = w.Write([]byte(`{"status":"ok"}`))
 		})
 	})
 	router.Route("/api/workspace/reload-schemas", func(router chi.Router) {
@@ -356,6 +363,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			_, _ = w.Write([]byte(`{"status":"ok"}`))
 		})
 	})
 	router.ServeHTTP(w, r)
