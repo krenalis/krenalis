@@ -769,7 +769,7 @@ func (this *Connection) SetUsersQuery(query string) error {
 		return errors.BadRequest("database %d is not a source", c.ID)
 	}
 
-	n := state.SetUserQueryNotification{
+	n := state.SetConnectionUserQueryNotification{
 		Connection: c.ID,
 		Query:      query,
 	}

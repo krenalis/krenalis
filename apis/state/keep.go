@@ -511,16 +511,16 @@ func (s *State) setConnectionMappings(n postgres.Notification) {
 	c.mu.Unlock()
 }
 
-// SetUserQueryNotification is the notification event sent when a user query of
-// a connection is changed.
-type SetUserQueryNotification struct {
+// SetConnectionUserQueryNotification is the notification event sent when a
+// user query of a connection is changed.
+type SetConnectionUserQueryNotification struct {
 	Connection int
 	Query      string
 }
 
 // setConnectionUserQuery sets the user query of a connection.
 func (s *State) setConnectionUserQuery(n postgres.Notification) {
-	e := SetUserQueryNotification{}
+	e := SetConnectionUserQueryNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
