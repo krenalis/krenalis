@@ -1,18 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 import './ConnectionSettings.css';
-import ConnectorField from '../../components/ConnectorFields/ConnectorField';
 import NotFound from '../NotFound/NotFound';
+import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
+import ConnectionHeading from '../../components/ConnectionHeading/ConnectionHeading';
 import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
+import NavigationTabs from '../../components/NavigationTabs/NavigationTabs';
+import ConnectionForm from '../../components/ConnectionForm/ConnectionForm';
+import ConnectionDeletion from '../../components/ConnectionDeletion/ConnectionDeletion';
+import ConnectionKeys from '../../components/ConnectionKeys/ConnectionKeys';
+import ConnectionStream from '../../components/ConnectionStream/ConnectionStream';
+import ConnectionStorage from '../../components/ConnectionStorage/ConnectionStorage';
 import Toast from '../../components/Toast/Toast';
 import call from '../../utils/call';
-import { SettingsContext } from '../../context/SettingsContext';
-import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
+import { Navigate } from 'react-router-dom';
+import { SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectionSettings = () => {
-	let [connection, setConnection] = useState({});
-	let [fields, setFields] = useState([]);
-	let [actions, setActions] = useState([]);
-	let [values, setValues] = useState(null);
+	let [connection, setConnection] = useState(null);
+	let [isDeleted, setIsDeleted] = useState(false);
 	let [status, setStatus] = useState(null);
 	let [notFound, setNotFound] = useState(false);
 
@@ -26,7 +31,8 @@ const ConnectionSettings = () => {
 	};
 
 	useEffect(() => {
-		const fetchConnection = async () => {
+		const fetchData = async () => {
+			// get the connection.
 			let [connection, err] = await call('/admin/connections/get', 'POST', connectionID);
 			if (err) {
 				onError(err);
@@ -38,106 +44,109 @@ const ConnectionSettings = () => {
 			}
 			setConnection(connection);
 		};
-		fetchConnection();
+		fetchData();
 	}, []);
-
-	useEffect(() => {
-		const fetchUI = async () => {
-			let [ui, err] = await call('/admin/connectors/ui', 'POST', connectionID);
-			if (err) {
-				onError(err);
-				return;
-			}
-			setFields(ui.Form.Fields);
-			setActions(ui.Form.Actions);
-			setValues(ui.Form.Values);
-		};
-		fetchUI();
-	}, []);
-
-	const onActionClick = async (e) => {
-		// remove the errors
-		let fls = [];
-		for (let f of fields) {
-			f.Error = '';
-			fls.push(f);
-		}
-		setFields(fls);
-
-		let [ui, err] = await call('/admin/connectors/ui-event', 'POST', {
-			connection: connectionID,
-			event: e,
-			values: values,
-		});
-		if (err != null) {
-			onError(err);
-			return;
-		}
-		if (ui.Alert != null) {
-			setStatus({ variant: ui.Alert.Variant, icon: 'exclamation-square', text: ui.Alert.Message });
-			toastRef.current.toast();
-		}
-		if (ui.Form != null) {
-			setFields(ui.Form.Fields);
-			setActions(ui.Form.Actions);
-			setValues(ui.Form.Values);
-		}
-	};
-
-	const onFieldChange = (name, value) => {
-		setValues((prevValues) => ({ ...prevValues, [name]: value }));
-	};
 
 	if (notFound) {
 		return <NotFound />;
 	}
 
-	let connectionName = connection.Name;
-
-	let connectionLogo;
-	if (connection.LogoURL !== '') {
-		connectionLogo = <img className='littleLogo' src={connection.LogoURL} alt={`${connectionName}'s logo`} />;
+	if (isDeleted) {
+		return <Navigate to='/admin/connections' />;
 	}
 
-	let fieldsToRender = [];
-	for (let f of fields) {
-		fieldsToRender.push(<ConnectorField field={f} />);
+	let c = connection;
+	if (c == null) return;
+	let tabs = [
+		{ Name: 'Overview', Link: `/admin/connections/${c.ID}`, Selected: false },
+		{ Name: 'Settings', Link: `/admin/connections/${c.ID}/settings`, Selected: true },
+	];
+	if (c.Type === 'App' || c.Type === 'Database' || c.Type === 'File') {
+		tabs.splice(1, 0, { Name: 'Properties', Link: `/admin/connections/${c.ID}/properties`, Selected: false });
 	}
-
-	let actionsToRender = [];
-	for (let a of actions) {
-		actionsToRender.push(
-			<SlButton
-				variant={a.Variant}
-				onClick={async () => {
-					await onActionClick(a.Event);
-				}}
-			>
-				{a.Text}
-			</SlButton>
-		);
+	if (c.Type === 'Database' && c.Role === 'Source') {
+		tabs.splice(1, 0, { Name: 'SQL query', Link: `/admin/connections/${c.ID}/sql`, Selected: false });
 	}
 
 	return (
 		<div className='ConnectionSettings'>
-			<Breadcrumbs
-				breadcrumbs={[
-					{ Name: 'Connections list', Link: '/admin/connections' },
-					{ Name: `${connectionName} settings` },
-				]}
-			/>
+			<PrimaryBackground contentWidth={1400} height={300}>
+				<Breadcrumbs
+					onAccent={true}
+					breadcrumbs={[{ Name: 'Connections', Link: '/admin/connections' }, { Name: `${c.Name}` }]}
+				/>
+				<ConnectionHeading connection={c} />
+				<NavigationTabs tabs={tabs} onAccent={true} />
+			</PrimaryBackground>
 			<div className='routeContent'>
 				<Toast reactRef={toastRef} status={status} />
-				<div className='title'>
-					{connectionLogo}
-					<div className='text'>Configure {connectionName}</div>
-				</div>
-				<div className='form'>
-					<SettingsContext.Provider value={{ values: values, onChange: onFieldChange }}>
-						<div className='fields'>{fieldsToRender}</div>
-					</SettingsContext.Provider>
-					<div className='actions'>{actionsToRender}</div>
-				</div>
+				<SlTabGroup className='settings' placement='start'>
+					{c.HasSettings && (
+						<>
+							<SlTab slot='nav' panel='connection'>
+								Connection
+							</SlTab>
+							<SlTabPanel name='connection'>
+								<div className='panelTitle'>Connection</div>
+								<ConnectionForm
+									connection={c}
+									onStatusChange={(status) => {
+										setStatus(status);
+										toastRef.current.toast();
+									}}
+									onError={onError}
+								/>
+							</SlTabPanel>
+						</>
+					)}
+					{c.Type === 'Server' && c.Role === 'Source' && (
+						<>
+							<SlTab slot='nav' panel='apiKeys'>
+								API Keys
+							</SlTab>
+							<SlTabPanel name='apiKeys'>
+								<div className='panelTitle'>API Keys</div>
+								<ConnectionKeys connection={c} onError={onError} />
+							</SlTabPanel>
+						</>
+					)}
+					{c.Type === 'File' && (
+						<>
+							<SlTab slot='nav' panel='storage'>
+								Storage
+							</SlTab>
+							<SlTabPanel name='storage'>
+								<div className='panelTitle'>Storage</div>
+								<ConnectionStorage
+									connection={c}
+									onConnectionChange={(c) => setConnection(c)}
+									onError={onError}
+								/>
+							</SlTabPanel>
+						</>
+					)}
+					{(c.Type === 'Mobile' || c.Type === 'Website' || c.Type === 'Server') && c.Role === 'Source' && (
+						<>
+							<SlTab slot='nav' panel='eventStream'>
+								Event Stream
+							</SlTab>
+							<SlTabPanel name='eventStream'>
+								<div className='panelTitle'>Event Stream</div>
+								<ConnectionStream
+									connection={c}
+									onConnectionChange={(c) => setConnection(c)}
+									onError={onError}
+								/>
+							</SlTabPanel>
+						</>
+					)}
+					<SlTab slot='nav' panel='deletion'>
+						Deletion
+					</SlTab>
+					<SlTabPanel name='deletion'>
+						<ConnectionDeletion connection={c} onDelete={() => setIsDeleted(true)} onError={onError} />
+					</SlTabPanel>
+				</SlTabGroup>
 			</div>
 		</div>
 	);

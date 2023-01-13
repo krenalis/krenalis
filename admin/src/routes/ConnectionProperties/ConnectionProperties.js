@@ -3,6 +3,10 @@ import './ConnectionProperties.css';
 import NotFound from '../NotFound/NotFound';
 import Toast from '../../components/Toast/Toast';
 import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
+import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
+import NavigationTabs from '../../components/NavigationTabs/NavigationTabs';
+import FlexContainer from '../../components/FlexContainer/FlexContainer';
+import ConnectionHeading from '../../components/ConnectionHeading/ConnectionHeading';
 import call from '../../utils/call';
 import ConnectionProperty from '../../components/ConnectionProperty/ConnectionProperty';
 import TransformationNode from '../../components/TrasformationNode/TransformationNode';
@@ -15,7 +19,6 @@ import {
 	SlTooltip,
 	SlIconButton,
 	SlInput,
-	SlBadge,
 } from '@shoelace-style/shoelace/dist/react/index.js';
 import Xarrow from 'react-xarrows';
 
@@ -121,8 +124,6 @@ const ConnectionProperties = () => {
 					t.PredefinedFunc = predefinedTransformation;
 				}
 			}
-
-			console.log(transformations);
 
 			// get the input properties and the output properties used by the
 			// transformations.
@@ -433,8 +434,17 @@ const ConnectionProperties = () => {
 
 	let sp = selectedProperty;
 	let st = selectedTransformation;
-	let cn = connection;
-
+	let c = connection;
+	let tabs = [
+		{ Name: 'Overview', Link: `/admin/connections/${c.ID}`, Selected: false },
+		{ Name: 'Settings', Link: `/admin/connections/${c.ID}/settings`, Selected: false },
+	];
+	if (c.Type === 'App' || c.Type === 'Database' || c.Type === 'File') {
+		tabs.splice(1, 0, { Name: 'Properties', Link: `/admin/connections/${c.ID}/properties`, Selected: true });
+	}
+	if (c.Type === 'Database' && c.Role === 'Source') {
+		tabs.splice(1, 0, { Name: 'SQL query', Link: `/admin/connections/${c.ID}/sql`, Selected: false });
+	}
 	return (
 		<div className={`ConnectionProperties${sp ? ' selectedProperty' : ''}`}>
 			{sp && (
@@ -456,46 +466,30 @@ const ConnectionProperties = () => {
 					</SlButton>
 				</div>
 			)}
-			<Breadcrumbs
-				breadcrumbs={[
-					{ Name: 'Connections list', Link: '/admin/connections' },
-					{ Name: `${cn.Name} properties` },
-				]}
-			/>
+			<PrimaryBackground contentWidth={1400} height={300}>
+				<Breadcrumbs
+					onAccent={true}
+					breadcrumbs={[{ Name: 'Connections', Link: '/admin/connections' }, { Name: `${c.Name}` }]}
+				/>
+				<ConnectionHeading connection={c} />
+				<FlexContainer justifyContent='space-between'>
+					<NavigationTabs tabs={tabs} onAccent={true} />
+					<SlButton
+						className='saveButton'
+						variant='success'
+						size='large'
+						disabled={sp != null}
+						onClick={onSave}
+					>
+						<SlIcon slot='prefix' name='save' />
+						Save
+					</SlButton>
+				</FlexContainer>
+			</PrimaryBackground>
 			<div className='routeContent'>
 				<Toast reactRef={toastRef} status={status} />
-				<div className='head'>
-					<div className='title'>
-						{cn.LogoURL !== '' && <img className='littleLogo' src={cn.LogoURL} alt={`${cn.Name}'s logo`} />}
-						<div className='text'>
-							{cn.Role === 'Source'
-								? `Map ${cn.Name} properties to your golden record`
-								: `Map your golden record to ${cn.Name} properties`}
-						</div>
-					</div>
-					<div className='badges'>
-						<SlBadge className='type' variant='neutral'>
-							{cn.Type}
-						</SlBadge>
-						<SlBadge className='role' variant='neutral'>
-							{cn.Role}
-						</SlBadge>
-					</div>
-					<SlTooltip content='Save properties'>
-						<SlButton
-							className='saveButton'
-							variant='primary'
-							size='large'
-							disabled={sp != null}
-							onClick={onSave}
-						>
-							<SlIcon slot='prefix' name='save' />
-							Save
-						</SlButton>
-					</SlTooltip>
-				</div>
 				<div className='properties usedInputProperties'>
-					<div className='title'>{cn.Role === 'Source' ? `${cn.Name} properties` : 'Golden record'}</div>
+					<div className='title'>{c.Role === 'Source' ? `${c.Name} properties` : 'Golden record'}</div>
 					<SlButton
 						className='addUsedProperty'
 						variant='neutral'
@@ -607,7 +601,7 @@ const ConnectionProperties = () => {
 					)}
 				</div>
 				<div className='properties usedOutputProperties'>
-					<div className='title'>{cn.Role === 'Source' ? `Golden record` : `${cn.Name} properties`}</div>
+					<div className='title'>{c.Role === 'Source' ? `Golden record` : `${c.Name} properties`}</div>
 					<SlButton
 						className='addUsedProperty'
 						variant='neutral'
@@ -654,10 +648,9 @@ const ConnectionProperties = () => {
 										start={p.name}
 										end={
 											t.PredefinedFunc !== 0
-												? `transformation-${t.Position}-input-${t.PredefinedFunc.In.properties[i].label.replace(
-														/\s/g,
-														''
-												  )}`
+												? `transformation-${t.Position}-input-${t.PredefinedFunc.In.properties[
+														i
+												  ].label.replace(/\s/g, '')}`
 												: `transformation-${t.Position}`
 										}
 										startAnchor='right'
@@ -690,11 +683,17 @@ const ConnectionProperties = () => {
 											t.PredefinedFunc !== 0 && t.PredefinedFunc.Out.properties.length === 1
 												? `transformation-${
 														t.Position
-												  }-output-${t.PredefinedFunc.Out.properties[0].label.replace(/\s/g, '')}`
+												  }-output-${t.PredefinedFunc.Out.properties[0].label.replace(
+														/\s/g,
+														''
+												  )}`
 												: t.PredefinedFunc !== 0
-												? `transformation-${t.Position}-output-${t.PredefinedFunc.Out.properties[
-														i
-												  ].label.replace(/\s/g, '')}`
+												? `transformation-${
+														t.Position
+												  }-output-${t.PredefinedFunc.Out.properties[i].label.replace(
+														/\s/g,
+														''
+												  )}`
 												: `transformation-${t.Position}`
 										}
 										end={p.name}

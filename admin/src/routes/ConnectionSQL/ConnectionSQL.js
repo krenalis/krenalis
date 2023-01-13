@@ -1,8 +1,11 @@
-import React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './ConnectionSQL.css';
 import NotFound from '../NotFound/NotFound';
 import Toast from '../../components/Toast/Toast';
+import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
 import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
+import NavigationTabs from '../../components/NavigationTabs/NavigationTabs';
+import ConnectionHeading from '../../components/ConnectionHeading/ConnectionHeading';
 import Grid from '../../components/Grid/Grid';
 import call from '../../utils/call';
 import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
@@ -10,181 +13,146 @@ import Editor from '@monaco-editor/react';
 
 const queryMaxSize = 16777215;
 
-export default class ConnectionSQL extends React.Component {
-	constructor(props) {
-		super(props);
-		this.toast = React.createRef();
-		this.connectionID = Number(String(window.location).split('/').at(-2));
-		this.state = {
-			connection: {},
-			status: null,
-			notFound: false,
-			query: '',
-			limit: 20, // TODO(@Andrea): implement as a select
-			table: null,
-		};
-	}
+const ConnectionSQL = () => {
+	let [connection, setConnection] = useState({});
+	let [status, setStatus] = useState(null);
+	let [notFound, setNotFound] = useState(false);
+	let [query, setQuery] = useState('');
+	let [limit, setLimit] = useState(20); // TODO(@Andrea): implement as a select
+	let [table, setTable] = useState(null);
 
-	componentDidMount = async () => {
-		let [connection, err] = await call('/admin/connections/get', 'POST', this.connectionID);
-		if (err !== null) {
-			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
-			this.toast.current.toast();
-			return;
-		}
-		if (connection == null) {
-			this.setState({ notFound: true });
-			return;
-		}
-		this.setState({ connection: connection, query: connection.UsersQuery });
+	let toastRef = useRef();
+	let connectionID = Number(String(window.location).split('/').at(-2));
+
+	const onError = (err) => {
+		setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
+		toastRef.current.toast();
+		return;
 	};
 
-	handlePreview = async () => {
-		if (this.state.query.length > queryMaxSize) {
-			this.setState({
-				status: { variant: 'danger', icon: 'exclamation-octagon', text: 'You query is too long' },
-			});
-			this.toast.current.toast();
+	useEffect(() => {
+		const fetchConnection = async () => {
+			let [connection, err] = await call('/admin/connections/get', 'POST', connectionID);
+			if (err) {
+				onError(err);
+				return;
+			}
+			if (connection == null) {
+				setNotFound(true);
+				return;
+			}
+			setConnection(connection);
+			setQuery(connection.UsersQuery);
+		};
+		fetchConnection();
+	}, []);
+
+	const handlePreview = async () => {
+		if (query.length > queryMaxSize) {
+			onError('You query is too long');
 			return;
 		}
-		if (!this.state.query.includes(':limit')) {
-			this.setState({
-				status: {
-					variant: 'danger',
-					icon: 'exclamation-octagon',
-					text: `your query does not contain the ':limit' placeholder`,
-				},
-			});
-			this.toast.current.toast();
+		if (!query.includes(':limit')) {
+			onError(`Your query does not contain the ':limit' placeholder`);
 			return;
 		}
 		let [table, err] = await call('/admin/connections/preview-query', 'POST', {
-			Connection: this.state.connection.ID,
-			Query: this.state.query,
-			Limit: this.state.limit,
+			Connection: connection.ID,
+			Query: query,
+			Limit: limit,
 		});
 		if (err !== null) {
-			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
-			this.toast.current.toast();
+			onError(err);
 			return;
 		}
 		if (table.Columns.length === 0) {
-			this.setState({
-				status: {
-					variant: 'danger',
-					icon: 'exclamation-octagon',
-					text: 'Your query did not return any columns',
-				},
-			});
-			this.toast.current.toast();
+			onError('Your query did not return any columns');
 			return;
 		}
 		if (table.Rows.length === 0) {
-			this.setState({
-				status: { variant: 'danger', icon: 'exclamation-octagon', text: 'Your query did not return any rows' },
-			});
-			this.toast.current.toast();
+			onError('Your query did not return any rows');
 			return;
 		}
-		this.setState({ table: table });
+		setTable(table);
 	};
 
-	saveQuery = async () => {
-		if (this.state.query.length > queryMaxSize) {
-			this.setState({
-				status: { variant: 'danger', icon: 'exclamation-octagon', text: 'You query is too long' },
-			});
-			this.toast.current.toast();
+	const saveQuery = async () => {
+		if (query.length > queryMaxSize) {
+			onError('You query is too long');
 			return;
 		}
-		if (!this.state.query.includes(':limit')) {
-			this.setState({
-				status: {
-					variant: 'danger',
-					icon: 'exclamation-octagon',
-					text: `your query does not contain the ':limit' placeholder`,
-				},
-			});
-			this.toast.current.toast();
+		if (!query.includes(':limit')) {
+			onError(`Your query does not contain the ':limit' placeholder`);
 			return;
 		}
 		let [, err] = await call('/admin/connections/set-users-query', 'POST', {
-			Connection: this.state.connection.ID,
-			Query: this.state.query,
+			Connection: connection.ID,
+			Query: query,
 		});
 		if (err !== null) {
-			this.setState({ status: { variant: 'danger', icon: 'exclamation-octagon', text: err } });
-			this.toast.current.toast();
+			onError(err);
 			return;
 		}
-		this.setState({
-			status: { variant: 'success', icon: 'check2-circle', text: 'Your query has been successfully saved' },
-		});
-		this.toast.current.toast();
+		setStatus({ variant: 'success', icon: 'check2-circle', text: 'Your query has been successfully saved' });
+		toastRef.current.toast();
 	};
 
-	render() {
-		if (this.state.notFound) {
-			return <NotFound />;
-		} else {
-			return (
-				<div className='ConnectionSQL'>
-					<Breadcrumbs
-						breadcrumbs={[
-							{ Name: 'Connections list', Link: '/admin/connections' },
-							{ Name: `${this.state.connection.Name} query configuration` },
-						]}
-					/>
-					<div className='routeContent'>
-						<Toast reactRef={this.toast} status={this.state.status} />
-						<div className='title'>
-							{this.state.connection.LogoURL !== '' && (
-								<img
-									className='littleLogo'
-									src={this.state.connection.LogoURL}
-									alt={`${this.state.connection.Name}'s logo`}
-								/>
-							)}
-							<div className='text'>Configure your {this.state.connection.Name} query</div>
-						</div>
-						<div className='editorWrapper'>
-							<Editor
-								onChange={(value) => {
-									this.setState({ query: value });
-								}}
-								defaultLanguage='sql'
-								value={this.state.query}
-								theme='vs-primary'
-							/>
-						</div>
-						<div className='buttons'>
-							<SlButton
-								className='previewButton'
-								variant='neutral'
-								size='large'
-								onClick={this.handlePreview}
-							>
-								<SlIcon slot='prefix' name='eye' />
-								Preview
-							</SlButton>
-							<SlButton className='saveButton' variant='primary' size='large' onClick={this.saveQuery}>
-								<SlIcon slot='prefix' name='save' />
-								Save
-							</SlButton>
-						</div>
-					</div>
-					{this.state.table && (
-						<SlDialog
-							label='Users preview'
-							open={true}
-							style={{ '--width': '1200px' }}
-							onSlAfterHide={() => this.setState({ table: null })}
-						>
-							<Grid table={this.state.table} />
-						</SlDialog>
-					)}
-				</div>
-			);
-		}
+	if (notFound) {
+		return <NotFound />;
 	}
-}
+
+	let c = connection;
+	let tabs = [
+		{ Name: 'Overview', Link: `/admin/connections/${c.ID}`, Selected: false },
+		{ Name: 'SQL query', Link: `/admin/connections/${c.ID}/sql`, Selected: true },
+		{ Name: 'Settings', Link: `/admin/connections/${c.ID}/settings`, Selected: false },
+	];
+	if (c.Type === 'App' || c.Type === 'Database' || c.Type === 'File') {
+		tabs.splice(2, 0, { Name: 'Properties', Link: `/admin/connections/${c.ID}/properties`, Selected: false });
+	}
+	return (
+		<div className='ConnectionSQL'>
+			<PrimaryBackground contentWidth={1400} height={300}>
+				<Breadcrumbs
+					onAccent={true}
+					breadcrumbs={[{ Name: 'Connections', Link: '/admin/connections' }, { Name: `${c.Name}` }]}
+				/>
+				<ConnectionHeading connection={c} />
+				<NavigationTabs tabs={tabs} onAccent={true} />
+			</PrimaryBackground>
+			<div className='routeContent'>
+				<Toast reactRef={toastRef} status={status} />
+				<div className='editorWrapper'>
+					<Editor
+						onChange={(value) => setQuery(value)}
+						defaultLanguage='sql'
+						value={query}
+						theme='vs-primary'
+					/>
+				</div>
+				<div className='buttons'>
+					<SlButton className='previewButton' variant='neutral' size='large' onClick={handlePreview}>
+						<SlIcon slot='prefix' name='eye' />
+						Preview
+					</SlButton>
+					<SlButton className='saveButton' variant='primary' size='large' onClick={saveQuery}>
+						<SlIcon slot='prefix' name='save' />
+						Save
+					</SlButton>
+				</div>
+			</div>
+			{table && (
+				<SlDialog
+					label='Users preview'
+					open={true}
+					style={{ '--width': '1200px' }}
+					onSlAfterHide={() => setTable(null)}
+				>
+					<Grid table={table} />
+				</SlDialog>
+			)}
+		</div>
+	);
+};
+
+export default ConnectionSQL;

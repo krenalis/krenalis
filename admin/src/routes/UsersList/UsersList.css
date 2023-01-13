@@ -1,19 +1,6 @@
 .UsersList .routeContent {
 	max-width: 1200px;
 	margin: auto;
-	margin-top: -250px;
-}
-
-.UsersList .routeContent > .title {
-	font-size: 23px;
-	font-weight: 600;
-	text-align: center;
-	display: flex;
-	justify-content: center;
-	gap: 10px;
-	align-items: center;
-	color: var(--text-onaccent);
-	margin-bottom: 20px;
 }
 
 .UsersList .gridContainer .head {

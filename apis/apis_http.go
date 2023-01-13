@@ -215,6 +215,164 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				_, _ = w.Write([]byte(`{"status":"ok"}`))
 			})
+			router.Get("/stats", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				var stats *ConnectionsStats
+				stats, err = connection.Stats()
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				_ = json.NewEncoder(w).Encode(stats)
+			})
+			router.Get("/keys", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				var keys []string
+				keys, err = connection.Keys()
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				_ = json.NewEncoder(w).Encode(keys)
+			})
+			router.Post("/keys", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				var key string
+				key, err = connection.GenerateKey()
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				_ = json.NewEncoder(w).Encode(key)
+			})
+			router.Delete("/keys/{key}", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				key := chi.URLParam(r, "key")
+				err = connection.RevokeKey(key)
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				_, _ = w.Write([]byte(`{"status":"ok"}`))
+			})
+			router.Put("/stream/{stream}", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				stream, _ := strconv.Atoi(chi.URLParam(r, "stream"))
+				if stream < 0 {
+					http.Error(w, "Bad Request: invalid stream ID", http.StatusBadRequest)
+					return
+				}
+				err = connection.SetStream(stream)
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				_, _ = w.Write([]byte(`{"status":"ok"}`))
+			})
+			router.Put("/storage/{storage}", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				storage, _ := strconv.Atoi(chi.URLParam(r, "storage"))
+				if storage < 0 {
+					http.Error(w, "Bad Request: invalid storage ID", http.StatusBadRequest)
+					return
+				}
+				err = connection.SetStorage(storage)
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				_, _ = w.Write([]byte(`{"status":"ok"}`))
+			})
 		})
 	})
 	router.Route("/api/event-listeners", func(router chi.Router) {

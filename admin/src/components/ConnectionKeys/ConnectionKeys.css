@@ -1,0 +1,19 @@
+.keys {
+    margin-bottom: 30px;
+}
+
+.keys .FlexContainer {
+    margin-bottom: 20px;
+}
+
+.keys .key {
+    border: 1px solid var(--border-primary);
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    padding: 0 20px;
+    font-size: 14px;
+    border-radius: 5px;
+    min-width: 320px;
+}

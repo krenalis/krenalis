@@ -1,64 +1,24 @@
 .ConnectionSettings .routeContent {
-	max-width: 800px;
-	margin: -200px auto auto;
-	padding-bottom: 30px;
+    max-width: 1400px;
+    margin: auto;
+    padding-bottom: 30px;
 }
 
-.ConnectionSettings .routeContent > .title {
-	font-size: 23px;
-	font-weight: 600;
-	text-align: center;
-	display: flex;
-	justify-content: center;
-	gap: 10px;
-	align-items: center;
-	color: var(--text-onaccent);
-	margin-bottom: 20px;
+.ConnectionSettings .settings {
+	margin-top: 100px;
 }
 
-.ConnectionSettings .routeContent .title .littleLogo {
-	max-width: 35px;
-	margin-left: -35px;
+.ConnectionSettings .settings::part(nav) {
+	flex-basis: 300px;
 }
 
-.ConnectionSettings .form {
-	box-shadow: var(--sl-shadow-small);
-	border-radius: var(--radius);
-	padding: 70px;
-	background-color: var(--bg-primary);
+.ConnectionSettings .settings::part(body) {
+	padding: 0 150px;
+	overflow: visible;
 }
 
-.ConnectionSettings .form .fields > * {
-	margin-bottom: 30px;
-}
-
-.ConnectionSettings .form .fields > * .error {
-	color: var(--sl-color-danger-500);
+.ConnectionSettings .panelTitle {
+    font-size: 21px;
     font-weight: 600;
-    margin-top: 5px;
-    font-size: 14px;
-}
-
-.ConnectionSettings .form .fields > * > *::part(form-control-help-text) {
-	margin-top: 5px;
-	opacity: .7;
-}
-
-.ConnectionSettings .form .fields sl-radio-group sl-radio {
-	margin-bottom: 7px;
-}
-
-.ConnectionSettings .form .fields sl-radio-group sl-radio:last-of-type {
-	margin-bottom: 0;
-}
-
-.ConnectionSettings .form .actions {
-	margin-top: 70px;
-	display: flex;
-	justify-content: center;
-	gap: 30px;
-}
-
-.ConnectionSettings .form .actions sl-button {
-	min-width: 150px;
+    margin-bottom: 30px;
 }

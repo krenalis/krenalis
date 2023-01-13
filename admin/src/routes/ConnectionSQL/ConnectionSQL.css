@@ -1,28 +1,6 @@
-.ConnectionSQL {
-	min-height: 100vh;
-}
-
 .ConnectionSQL .routeContent {
 	max-width: 1000px;
 	margin: auto;
-	margin-top: -200px;
-}
-
-.ConnectionSQL .routeContent > .title {
-	font-size: 23px;
-	font-weight: 600;
-	text-align: center;
-	display: flex;
-	justify-content: center;
-	gap: 10px;
-	align-items: center;
-	color: var(--text-onaccent);
-	margin-bottom: 20px;
-}
-
-.ConnectionSQL .routeContent .title .littleLogo {
-	max-width: 35px;
-	margin-left: -35px;
 }
 
 .ConnectionSQL .routeContent .editorWrapper {
@@ -32,6 +10,8 @@
 	padding: 30px;
 	border-radius: var(--radius);
 	background-color: var(--bg-primary);
+	margin-top: 50px;
+	box-shadow: var(--sl-shadow-small);
 }
 
 .ConnectionSQL .routeContent .editorWrapper * {

@@ -40,7 +40,7 @@ export default class Login extends React.Component {
 
 	render() {
 		if (this.state.isLoggedIn) {
-			return <Navigate to='connections-map' />;
+			return <Navigate to='connections' />;
 		} else {
 			return (
 				<div className='Login'>

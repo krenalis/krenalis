@@ -1,0 +1,38 @@
+.streamContainer {
+    margin-bottom: 30px;
+}
+
+.streamContainer .stream {
+    border: 1px solid var(--border-primary);
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    padding: 0 20px;
+    font-size: 14px;
+    border-radius: 5px;
+    min-width: 320px;
+}
+
+.streamsDialog::part(body) {
+    padding: 10px 30px 20px;
+}
+
+.streamsDialog .noStream {
+    text-align: center;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.streamsDialog .stream {
+    margin-bottom: 15px;
+}
+
+.streamsDialog .changeStreamButton::part(base) {
+    border-radius: 100%;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

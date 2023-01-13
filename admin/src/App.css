@@ -37,6 +37,9 @@
 	--color-primary-800: var(--sl-color-primary-800);
 	--color-primary-900: var(--sl-color-primary-900);
 	--color-primary-950: var(--sl-color-primary-950);
+
+	background-color: var(--bg-gray);
+	padding-bottom: 30px;
 }
 
 *,
@@ -87,7 +90,6 @@ body {
 
 #root > .App {
 	background-color: var(--bg-gray);
-	min-height: 100vh;
 }
 
 /* || buttons and links */

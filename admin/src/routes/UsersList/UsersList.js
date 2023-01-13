@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import './UsersList.css';
 import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
+import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
 import Toast from '../../components/Toast/Toast';
 import call from '../../utils/call';
 import {
@@ -178,21 +179,18 @@ const UsersList = () => {
 
 	return (
 		<div className='UsersList'>
-			<Breadcrumbs
-				breadcrumbs={[
-					{ Name: 'Connections map', Link: '/admin/connections-map' },
-					{ Name: `Golden Record users` },
-				]}
-			/>
+			<PrimaryBackground height={300} overlap={150}>
+				<Breadcrumbs
+					breadcrumbs={[{ Name: 'Connections', Link: '/admin/connections' }, { Name: `Golden Record users` }]}
+					onAccent={true}
+				/>
+			</PrimaryBackground>
 			<div className='routeContent'>
 				<Toast reactRef={toastRef} status={status} />
-				<div className='title'>
-					<div className='text'>Golden Record users</div>
-				</div>
 				<div className='gridContainer'>
 					<div className='head'>
 						<div className='gridHeading'>
-							<div className='gridTitle'>Users list</div>
+							<div className='gridTitle'>Golden Record users</div>
 						</div>
 						<div className='gridActions'>
 							<SlDropdown stayOpenOnSelect={true} className='toggleColumns'>

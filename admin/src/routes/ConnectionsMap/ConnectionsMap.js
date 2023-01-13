@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import './ConnectionsMap.css';
 import Navigation from '../../components/Navigation/Navigation';
+import ConnectionBlock from '../../components/ConnectionBlock/ConnectionBlock';
+import LinkedConnectionBlocks from '../../components/LinkedConnectionBlocks/LinkedConnectionBlocks';
+import Arrow from '../../components/Arrow/Arrow';
 import Toast from '../../components/Toast/Toast';
 import call from '../../utils/call';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NavLink } from 'react-router-dom';
-import Xarrow from 'react-xarrows';
 
 const ConnectionsMap = () => {
 	let [sources, setSources] = useState([]);
@@ -44,64 +46,28 @@ const ConnectionsMap = () => {
 				} else if (c.Role === 'Destination') {
 					files = destinations.filter((cn) => cn.Storage === c.ID);
 				}
-				if (files.length > 0) {
-					connections.push(
-						<div className='connection storage' id={`${c.Role.toLowerCase()}-${c.ID}`}>
-							<div className='files'>
-								{files.map((f) => {
-									return (
-										<div className='file' id={`file-${f.ID}`}>
-											{f.LogoURL === '' ? (
-												<div class='unknownLogo'>?</div>
-											) : (
-												<div className='littleLogo'>
-													<img src={f.LogoURL} rel='noreferrer' alt={`${f.Name}'s logo`} />
-												</div>
-											)}
-											{f.Name}
-										</div>
-									);
-								})}
-							</div>
-							<div className='storage' id={`storage-${c.ID}`}>
-								<div className='littleLogo'>
-									<img src={c.LogoURL} rel='noreferrer' alt={`${c.Name}'s logo`} />
-								</div>
-								{c.Name}
-							</div>
-							{files.map((f) => {
-								return (
-									<div key={`arrow-${f.ID}`} className='arrow'>
-										<Xarrow
-											start={`file-${f.ID}`}
-											end={`storage-${c.ID}`}
-											startAnchor={c.Role === 'Source' ? 'right' : 'left'}
-											endAnchor={c.Role === 'Source' ? 'left' : 'right'}
-											showHead={false}
-											color='#e4e4e7'
-											strokeWidth={2}
-										/>
-									</div>
-								);
-							})}
-						</div>
-					);
-					continue;
-				}
-			}
-			if (c.Type !== 'File') {
 				connections.push(
-					<div className='connection' id={`${c.Role.toLowerCase()}-${c.ID}`}>
-						{c.LogoURL === '' ? (
-							<div class='unknownLogo'>?</div>
-						) : (
-							<div className='littleLogo'>
-								<img src={c.LogoURL} rel='noreferrer' alt={`${c.Name}'s logo`} />
-							</div>
-						)}
-						{c.Name}
-					</div>
+					<LinkedConnectionBlocks
+						primaryConnection={c}
+						primaryColumn={c.Role === 'Source' ? 'right' : 'left'}
+						secondaryConnections={files}
+						startAnchor={c.Role === 'Source' ? 'left' : 'right'}
+						endAnchor={c.Role === 'Source' ? 'right' : 'left'}
+					></LinkedConnectionBlocks>
 				);
+			} else if (c.Type === 'EventStream') {
+				let streamed = sources.filter((cn) => cn.Stream === c.ID);
+				connections.push(
+					<LinkedConnectionBlocks
+						primaryConnection={c}
+						primaryColumn={c.Role === 'Source' ? 'right' : 'left'}
+						secondaryConnections={streamed}
+						startAnchor={c.Role === 'Source' ? 'left' : 'right'}
+						endAnchor={c.Role === 'Source' ? 'right' : 'left'}
+					></LinkedConnectionBlocks>
+				);
+			} else if (c.Storage === 0 && c.Stream === 0) {
+				connections.push(<ConnectionBlock connection={c}></ConnectionBlock>);
 			}
 		}
 		return connections;
@@ -109,12 +75,7 @@ const ConnectionsMap = () => {
 
 	return (
 		<div className='ConnectionsMap'>
-			<Navigation
-				navItems={[
-					{ name: 'Connections map', link: '/admin/connections-map', selected: true },
-					{ name: 'Connections list', link: '/admin/connections', selected: false },
-				]}
-			/>
+			<Navigation navItems={[{ name: 'Connections', link: '/admin/connections', selected: true }]} />
 			<div className='routeContent'>
 				<Toast reactRef={toastRef} status={status} />
 				<div className='buttons'>
@@ -151,64 +112,20 @@ const ConnectionsMap = () => {
 				</div>
 			</div>
 			<div className='arrows'>
-				{sources.map((s) => {
-					if (s.Type !== 'File') {
-						return (
-							<div key={`arrow-${s.ID}`} className='arrow'>
-								<Xarrow
-									start={`source-${s.ID}`}
-									end='centralLogo'
-									startAnchor='right'
-									endAnchor='left'
-									showHead={false}
-									color='#e4e4e7'
-									strokeWidth={2}
-								/>
-							</div>
-						);
+				{sources.map((c) => {
+					if (c.Storage === 0 && c.Stream === 0) {
+						return <Arrow start={`${c.ID}`} end='centralLogo' startAnchor='right' endAnchor='left' />;
 					}
 					return null;
 				})}
-				{destinations.map((d) => {
-					if (d.Type !== 'File') {
-						return (
-							<div key={`arrow-${d.ID}`} className='arrow'>
-								<Xarrow
-									start={`destination-${d.ID}`}
-									end='centralLogo'
-									startAnchor='left'
-									endAnchor='right'
-									showHead={false}
-									color='#e4e4e7'
-									strokeWidth={2}
-								/>
-							</div>
-						);
+				{destinations.map((c) => {
+					if (c.Storage === 0 && c.Stream === 0) {
+						return <Arrow start={`${c.ID}`} end='centralLogo' startAnchor='left' endAnchor='right' />;
 					}
 					return null;
 				})}
-				<div className='arrow'>
-					<Xarrow
-						start='centralLogo'
-						end='usersDatabase'
-						startAnchor='bottom'
-						endAnchor='top'
-						showHead={false}
-						color='#e4e4e7'
-						strokeWidth={2}
-					/>
-				</div>
-				<div className='arrow'>
-					<Xarrow
-						start='centralLogo'
-						end='eventsDatabase'
-						startAnchor='bottom'
-						endAnchor='top'
-						showHead={false}
-						color='#e4e4e7'
-						strokeWidth={2}
-					/>
-				</div>
+				<Arrow start='centralLogo' end='usersDatabase' startAnchor='bottom' endAnchor='top' />
+				<Arrow start='centralLogo' end='eventsDatabase' startAnchor='bottom' endAnchor='top' />
 			</div>
 		</div>
 	);

@@ -305,6 +305,9 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 	if s := c.Storage(); s != nil {
 		connection.Storage = s.ID
 	}
+	if s := c.Stream(); s != nil {
+		connection.Stream = s.ID
+	}
 	if conn.OAuth != nil {
 		connection.OAuthURL = conn.OAuth.URL
 	}
@@ -339,6 +342,9 @@ func (this *Workspace) Connections() []*Connection {
 		}
 		if s := c.Storage(); s != nil {
 			connection.Storage = s.ID
+		}
+		if s := c.Stream(); s != nil {
+			connection.Stream = s.ID
 		}
 		if conn.OAuth != nil {
 			connection.OAuthURL = conn.OAuth.URL

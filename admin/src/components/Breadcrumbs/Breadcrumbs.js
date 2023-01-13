@@ -3,17 +3,17 @@ import './Breadcrumbs.css';
 import { SlBreadcrumb, SlBreadcrumbItem } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NavLink } from 'react-router-dom';
 
-export default class Breadcrumbs extends React.Component {
-	render() {
-		return (
-			<SlBreadcrumb className='Breadcrumbs'>
-				{this.props.breadcrumbs.map((b) => (
-					<SlBreadcrumbItem>
-						{b.Name}
-						{b.Link && <NavLink to={b.Link}></NavLink>}
-					</SlBreadcrumbItem>
-				))}
-			</SlBreadcrumb>
-		);
-	}
-}
+const Breadcrumbs = ({ breadcrumbs, onAccent }) => {
+	return (
+		<SlBreadcrumb className={`Breadcrumbs${onAccent ? ' onAccent' : ''}`}>
+			{breadcrumbs.map((b) => (
+				<SlBreadcrumbItem>
+					{b.Name}
+					{b.Link && <NavLink to={b.Link}></NavLink>}
+				</SlBreadcrumbItem>
+			))}
+		</SlBreadcrumb>
+	);
+};
+
+export default Breadcrumbs;

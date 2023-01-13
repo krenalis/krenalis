@@ -1,0 +1,27 @@
+.NavigationTabs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 30px;
+}
+
+.NavigationTabs.onAccent {
+    color: var(--text-onaccent);
+}
+
+.NavigationTabs .tab {
+    padding: 3px;
+    position: relative;
+}
+
+.NavigationTabs .tab.selected {
+    border-bottom: 2px solid;
+}
+
+.NavigationTabs .tab > a {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}

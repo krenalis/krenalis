@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import './ConnectorsList.css';
 import call from '../../utils/call';
 import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
+import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
 import Card from '../../components/Card/Card';
 import Toast from '../../components/Toast/Toast';
 import { Navigate } from 'react-router-dom';
@@ -104,12 +105,15 @@ const ConnectorsList = () => {
 
 	return (
 		<div className='ConnectorsList'>
-			<Breadcrumbs
-				breadcrumbs={[
-					{ Name: 'Connections map', Link: '/admin/connections-map' },
-					{ Name: `Add a new ${connectionRole}` },
-				]}
-			/>
+			<PrimaryBackground height={300} overlap={100}>
+				<Breadcrumbs
+					breadcrumbs={[
+						{ Name: 'Connections', Link: '/admin/connections' },
+						{ Name: `Add a new ${connectionRole}` },
+					]}
+					onAccent={true}
+				/>
+			</PrimaryBackground>
 			<div className='routeContent'>
 				<Toast reactRef={toastRef} status={status} />
 				<div className='connectors'>

@@ -1,12 +1,7 @@
-.ConnectionAdded {
-	min-height: 100vh;
-}
-
 .ConnectionAdded .routeContent {
 	max-width: 700px;
 	margin: auto;
 	text-align: center;
-	margin-top: -180px;
 }
 
 .ConnectionAdded .addedConnection {

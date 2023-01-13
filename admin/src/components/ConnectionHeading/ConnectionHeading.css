@@ -1,0 +1,33 @@
+.ConnectionHeading {
+    margin: 30px 0;
+}
+
+.ConnectionHeading > .title {
+	font-size: 30px;
+	font-weight: 600;
+	text-align: center;
+	display: flex;
+	justify-content: center;
+	gap: 10px;
+	align-items: center;
+	color: var(--text-onaccent);
+	margin-bottom: 10px;
+}
+
+.ConnectionHeading > .title .littleLogo {
+	max-width: 35px;
+	margin-left: -35px;
+}
+
+.ConnectionHeading > .badges {
+    margin-bottom: 55px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    font-size: 18px;
+}
+
+.ConnectionHeading > .badges sl-badge::part(base) {
+	border: 0;
+}

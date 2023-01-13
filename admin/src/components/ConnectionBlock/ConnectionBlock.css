@@ -1,0 +1,23 @@
+.ConnectionBlock {
+    background-color: var(--bg-primary);
+    padding: 20px 30px;
+    border-radius: var(--radius);
+    box-shadow: var(--sl-shadow-small);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: relative;
+    min-height: 70px;
+}
+
+.ConnectionBlock .name {
+    transform: translateY(1px);
+}
+
+.ConnectionBlock > a {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+}
