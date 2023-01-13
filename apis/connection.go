@@ -129,7 +129,7 @@ func (this *Connection) GenerateKey() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	n := state.GenerateConnectionKeyNotification{
+	n := state.AddConnectionKeyNotification{
 		Connection:   c.ID,
 		Value:        binaryKey,
 		CreationTime: time.Now().UTC(),

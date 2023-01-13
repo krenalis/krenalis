@@ -66,12 +66,12 @@ func (s *State) keep(ctx context.Context, notifications <-chan postgres.Notifica
 		switch n.Name {
 		case "AddConnection":
 			s.addConnection(n)
+		case "AddConnectionKey":
+			s.addConnectionKey(n)
 		case "DeleteConnection":
 			s.deleteConnection(n)
 		case "EndImport":
 			s.endImport(n)
-		case "GenerateConnectionKey":
-			s.generateConnectionKey(n)
 		case "RevokeConnectionKey":
 			s.revokeConnectionKey(n)
 		case "SetConnectionSettings":
@@ -316,6 +316,28 @@ func (s *State) addConnection(n postgres.Notification) {
 	}
 }
 
+// AddConnectionKeyNotification is the notification event sent when a
+// connection key is added.
+type AddConnectionKeyNotification struct {
+	Connection   int
+	Value        []byte
+	CreationTime time.Time
+}
+
+// addConnectionKey adds a new connection key.
+func (s *State) addConnectionKey(n postgres.Notification) {
+	e := AddConnectionKeyNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	s.replaceConnection(e.Connection, func(c *Connection) {
+		keys := make([]string, len(c.Keys)+1)
+		copy(keys, c.Keys)
+		keys[len(c.Keys)] = string(e.Value)
+		c.Keys = keys
+	})
+}
+
 // DeleteConnectionNotification is the notification event sent when a
 // connection is deleted.
 type DeleteConnectionNotification struct {
@@ -371,28 +393,6 @@ func (s *State) endImport(n postgres.Notification) {
 			break
 		}
 	}
-}
-
-// GenerateConnectionKeyNotification is the notification event sent when a
-// connection key is generated.
-type GenerateConnectionKeyNotification struct {
-	Connection   int
-	Value        []byte
-	CreationTime time.Time
-}
-
-// generateConnectionKey generates a new connection key.
-func (s *State) generateConnectionKey(n postgres.Notification) {
-	e := GenerateConnectionKeyNotification{}
-	if !decodeStateNotification(n, &e) {
-		return
-	}
-	s.replaceConnection(e.Connection, func(c *Connection) {
-		keys := make([]string, len(c.Keys)+1)
-		copy(keys, c.Keys)
-		keys[len(c.Keys)] = string(e.Value)
-		c.Keys = keys
-	})
 }
 
 // RevokeConnectionKeyNotification is the notification event sent when a
