@@ -28,7 +28,8 @@ func (ids *identitySolver) ResolveEntity(connection int, user string, email stri
 		return goldenRecordID, nil // already resolved.
 	}
 	// Lookup a Golden Record with this email.
-	row := ids.workspace.warehouse.QueryRow(ids.ctx, `SELECT id from users where "Email" = $1`, email)
+	ws := ids.connection.Workspace()
+	row := ws.Warehouse.QueryRow(ids.ctx, `SELECT id from users where "Email" = $1`, email)
 	err = row.Scan(&goldenRecordID)
 	if err != nil {
 		if err != sql.ErrNoRows {
@@ -40,7 +41,7 @@ func (ids *identitySolver) ResolveEntity(connection int, user string, email stri
 		}
 	}
 	// Update the relations.
-	result, err := ids.workspace.warehouse.Exec(ids.ctx,
+	result, err := ws.Warehouse.Exec(ids.ctx,
 		"UPDATE connections_users SET golden_record = $1 WHERE connection = $2 AND \"user\" = $3",
 		goldenRecordID, connection, user,
 	)
@@ -55,7 +56,7 @@ func (ids *identitySolver) ResolveEntity(connection int, user string, email stri
 		return 0, fmt.Errorf("BUG: should have updated one row, got %d", affected)
 	}
 	// Clean orphan Golden Records.
-	_, err = ids.workspace.warehouse.Exec(ids.ctx, "DELETE FROM users WHERE id NOT IN (SELECT golden_record FROM connections_users)")
+	_, err = ws.Warehouse.Exec(ids.ctx, "DELETE FROM users WHERE id NOT IN (SELECT golden_record FROM connections_users)")
 	if err != nil {
 		return 0, fmt.Errorf("cannot clean orphan Golden Records: %s", err)
 	}
@@ -66,7 +67,8 @@ func (ids *identitySolver) ResolveEntity(connection int, user string, email stri
 // createIdentity creates a new identity.
 func (ids *identitySolver) createIdentity() (int, error) {
 	var id int
-	err := ids.workspace.warehouse.QueryRow(ids.ctx, "INSERT INTO users DEFAULT VALUES RETURNING id").Scan(&id)
+	ws := ids.connection.Workspace()
+	err := ws.Warehouse.QueryRow(ids.ctx, "INSERT INTO users DEFAULT VALUES RETURNING id").Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -76,8 +78,9 @@ func (ids *identitySolver) createIdentity() (int, error) {
 // entityToIdentity maps an entity to the corresponding Golden Record identity,
 // if found, otherwise returns 0, false and nil.
 func (ids *identitySolver) entityToIdentity(connection int, user string) (int, bool, error) {
+	ws := ids.connection.Workspace()
 	query := "SELECT golden_record FROM connections_users WHERE connection = $1 AND user = $2"
-	row := ids.workspace.warehouse.QueryRow(ids.ctx, query, connection, user)
+	row := ws.Warehouse.QueryRow(ids.ctx, query, connection, user)
 	var goldenRecord int
 	err := row.Scan(&goldenRecord)
 	if err != nil {
@@ -96,10 +99,11 @@ func (ids *identitySolver) entityToIdentity(connection int, user string) (int, b
 // Record's identity, in the form of a map from connection to the list of users
 // associated to that connection.
 func (ids *identitySolver) LookupSameEntities(connection int, user string) (map[int][]string, error) {
+	ws := ids.connection.Workspace()
 	query := "SELECT connection, user FROM connections_users\n" +
 		"WHERE connection <> $1 AND user <> $2 AND golden_record = \n" +
 		"(SELECT golden_record FROM connections_users WHERE connection = $1 AND user = $2)"
-	rows, err := ids.workspace.warehouse.Query(ids.ctx, query, connection, user)
+	rows, err := ws.Warehouse.Query(ids.ctx, query, connection, user)
 	if err != nil {
 		return nil, err
 	}

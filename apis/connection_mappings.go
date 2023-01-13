@@ -8,10 +8,12 @@
 package apis
 
 import (
-	"chichi/apis/types"
 	"fmt"
 	"reflect"
 	"strings"
+
+	"chichi/apis/state"
+	"chichi/apis/types"
 )
 
 // Mapping represents a mapping from a kind of properties to another.
@@ -29,7 +31,7 @@ type Mapping struct {
 	id int
 
 	// connection is the connection.
-	connection *Connection
+	connection *state.Connection
 
 	// in is the schema of the input properties of the mapping. If the
 	// connection is a source then the properties are the properties of the

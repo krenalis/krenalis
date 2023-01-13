@@ -18,6 +18,7 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
+	"chichi/apis/state"
 
 	"github.com/google/uuid"
 )
@@ -34,7 +35,9 @@ var (
 )
 
 type EventListeners struct {
-	*Workspace
+	db        *postgres.DB
+	processor *eventProcessor
+	workspace *state.Workspace
 }
 
 // Add adds an event listener that listen to processed events
@@ -68,7 +71,7 @@ func (this *EventListeners) Add(size, source, server, stream int) (string, error
 	if source > 0 || server > 0 || stream > 0 {
 		var sourceExist, serverExist, streamExist bool
 		err := this.db.QueryScan("SELECT id, type , role FROM connections\n"+
-			"WHERE id IN ($1, $2, $3) AND workspace = $4", source, server, stream, this.id,
+			"WHERE id IN ($1, $2, $3) AND workspace = $4", source, server, stream, this.workspace.ID,
 			func(rows *postgres.Rows) error {
 				var id int
 				var typ ConnectorType
@@ -113,7 +116,7 @@ func (this *EventListeners) Add(size, source, server, stream int) (string, error
 			return "", errors.Unprocessable(StreamNotExist, "stream %d does not exist", stream)
 		}
 	}
-	return this.account.apis.eventProcessor.observer.AddListener(size, source, server, stream)
+	return this.processor.observer.AddListener(size, source, server, stream)
 }
 
 // Events returns the events listen to and the number of discarded events by
@@ -121,13 +124,13 @@ func (this *EventListeners) Add(size, source, server, stream int) (string, error
 //
 // If the listener does not exist, it returns an errors.NotFoundError error.
 func (this *EventListeners) Events(id string) ([]json.RawMessage, int, error) {
-	return this.account.apis.eventProcessor.observer.Events(id)
+	return this.processor.observer.Events(id)
 }
 
 // Remove removes the event listener with identifier id. If the listener does
 // not exist, it does nothing.
 func (this *EventListeners) Remove(id string) {
-	this.account.apis.eventProcessor.observer.RemoveListener(id)
+	this.processor.observer.RemoveListener(id)
 }
 
 // eventObserver represents the event observer.

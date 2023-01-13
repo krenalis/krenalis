@@ -20,6 +20,7 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/postgres"
+	"chichi/apis/state"
 	"chichi/apis/transformations"
 	"chichi/apis/types"
 	"chichi/connector"
@@ -33,8 +34,8 @@ const maxSettingsLen = 10_000 // Maximum length of settings in runes.
 
 // firehose is the Firehose API used by the connectors.
 type firehose struct {
-	workspace   *Workspace
-	connection  *Connection
+	db          *postgres.DB
+	connection  *state.Connection
 	resource    int
 	ctx         context.Context
 	cancel      context.CancelFunc
@@ -65,7 +66,7 @@ func (fh *firehose) SetCursor(cursor string) {
 	default:
 	}
 
-	result, err := fh.workspace.db.Exec("UPDATE connections SET user_cursor = $1 WHERE id = $2", cursor, fh.connection.id)
+	result, err := fh.db.Exec("UPDATE connections SET user_cursor = $1 WHERE id = $2", cursor, fh.connection.ID)
 	if err != nil {
 		fh.setError(err)
 		return
@@ -123,11 +124,11 @@ func (fh *firehose) SetSettings(settings []byte) error {
 	if utf8.RuneCount(settings) > maxSettingsLen {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 	}
-	n := setConnectionSettingsNotification{
-		Connection: fh.connection.id,
+	n := state.SetConnectionSettingsNotification{
+		Connection: fh.connection.ID,
 		Settings:   settings,
 	}
-	err := fh.workspace.db.Transaction(func(tx *postgres.Tx) error {
+	err := fh.db.Transaction(func(tx *postgres.Tx) error {
 		_, err := tx.Exec("UPDATE connections SET settings = $1 WHERE id = $2", n.Settings, n.Connection)
 		if err != nil {
 			return err
@@ -150,8 +151,9 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	default:
 	}
 
-	if fh.workspace.warehouse == nil {
-		fh.err = fmt.Errorf("workspace %d does not have a warehouse", fh.workspace.id)
+	ws := fh.connection.Workspace()
+	if ws.Warehouse == nil {
+		fh.err = fmt.Errorf("workspace %d does not have a warehouse", ws.ID)
 		return
 	}
 
@@ -187,32 +189,32 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	// connection.
 	candidateData := map[string]any{}
 	candidateTimestamps := map[string]time.Time{}
-	for _, m := range fh.connection.mappings {
+	for _, m := range fh.connection.Mappings() {
 		userProps := map[string]any{}
-		inNames := m.in.PropertiesNames()
-		outNames := m.out.PropertiesNames()
+		inNames := m.In.PropertiesNames()
+		outNames := m.Out.PropertiesNames()
 		for _, input := range inNames {
 			userProps[input] = properties[input]
 		}
 
 		// Validate the properties using the mapping input schema.
-		userProps, err = types.Decode(bytes.NewReader(propsJSON), m.in)
+		userProps, err = types.Decode(bytes.NewReader(propsJSON), m.In)
 		if err != nil {
 			fh.setError(importError{fmt.Errorf("input mapping schema validation failed: %s", err)})
 			return
 		}
 
-		if m.sourceCode == "" && m.predefinedFunc == 0 {
+		if m.SourceCode == "" && m.PredefinedFunc == 0 {
 			// "One to one" mapping.
 			candidateData[outNames[0]] = userProps[inNames[0]]
 			candidateTimestamps[outNames[0]] = timestamps[inNames[0]]
-		} else if m.predefinedFunc != 0 {
+		} else if m.PredefinedFunc != 0 {
 			// Predefined transformation.
 			in := make([]any, len(inNames))
 			for i := range in {
 				in[i] = userProps[inNames[i]]
 			}
-			out := callPredefinedFuncByID(m.predefinedFunc, in)
+			out := callPredefinedFuncByID(m.PredefinedFunc, in)
 			ts := mostRecentTimestamp(timestamps, inNames)
 			for i, outName := range outNames {
 				candidateData[outName] = out[i]
@@ -220,7 +222,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 			}
 		} else {
 			// Mapping with a transformation function.
-			grProps, err := pool.Run(context.Background(), m.sourceCode, userProps)
+			grProps, err := pool.Run(context.Background(), m.SourceCode, userProps)
 			if err != nil {
 				fh.setError(importError{fmt.Errorf("error while calling transformation function of mapping: %s", err)})
 				return
@@ -235,7 +237,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 		// Validate the output properties using the mapping output schema.
 		// TODO(Gianluca): avoid deserializing and serializing from/to JSON.
 		jsonOut, _ := json.Marshal(candidateData)
-		_, err := types.Decode(bytes.NewReader(jsonOut), m.out)
+		_, err := types.Decode(bytes.NewReader(jsonOut), m.Out)
 		if err != nil {
 			fh.setError(importError{fmt.Errorf("output mapping schema validation failed: %s", err)})
 			return
@@ -251,14 +253,14 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	ids := identitySolver{fh}
 
 	// Resolve the entity of this user.
-	goldenRecordID, err := ids.ResolveEntity(fh.connection.id, user, email)
+	goldenRecordID, err := ids.ResolveEntity(fh.connection.ID, user, email)
 	if err != nil {
 		fh.setError(err)
 		return
 	}
 
 	// Retrieve the entities which are the same user.
-	sameEntities, err := ids.LookupSameEntities(fh.connection.id, user)
+	sameEntities, err := ids.LookupSameEntities(fh.connection.ID, user)
 	if err != nil {
 		fh.setError(fmt.Errorf("cannot lookup same entities for user %q: %s", user, err))
 		return
@@ -277,8 +279,9 @@ transfLoop:
 	for _, m := range otherMappings {
 		// For the connection of this mapping, determine the timestamps relative
 		// to the users which refers to the same identity.
-		for _, u := range sameEntities[m.connection.id] {
-			entityData, err := fh.entityData(m.connection.id, u)
+		connection := m.Connection()
+		for _, u := range sameEntities[connection.ID] {
+			entityData, err := fh.entityData(connection.ID, u)
 			if err != nil {
 				fh.setError(err)
 				return
@@ -287,7 +290,7 @@ transfLoop:
 				if _, ok := entityData.Timestamps[name]; !ok {
 					continue
 				}
-				ts := mostRecentTimestamp(entityData.Timestamps, m.in.PropertiesNames())
+				ts := mostRecentTimestamp(entityData.Timestamps, m.In.PropertiesNames())
 				if ts.After(candidateTimestamps[name]) {
 					// Don't update this Golden Record property.
 					delete(candidateData, name)
@@ -321,7 +324,8 @@ type connectionEntityData struct {
 // connection.
 func (fh *firehose) entityData(connection int, user string) (connectionEntityData, error) {
 	var entityData connectionEntityData
-	row := fh.workspace.warehouse.QueryRow(fh.ctx,
+	ws := fh.connection.Workspace()
+	row := ws.Warehouse.QueryRow(fh.ctx,
 		"SELECT data, timestamps FROM connections_users WHERE connection = $1 AND user = $2",
 		connection, user)
 	var rawData []byte
@@ -362,11 +366,11 @@ func (fh *firehose) WebhookURL() string {
 	case WebhooksPerNone:
 		return ""
 	case WebhooksPerConnector:
-		return u + "c/" + strconv.Itoa(fh.connection.connector.id) + "/"
+		return u + "c/" + strconv.Itoa(fh.connection.Connector().ID) + "/"
 	case WebhooksPerResource:
 		return u + "r/" + strconv.Itoa(fh.resource) + "/"
 	case WebhooksPerSource:
-		return u + "s/" + strconv.Itoa(fh.connection.id) + "/"
+		return u + "s/" + strconv.Itoa(fh.connection.ID) + "/"
 	}
 	panic("unexpected webhooksPer value")
 }
@@ -394,17 +398,18 @@ func (fh *firehose) writeConnectionUsers(user string, props map[string]any, time
 	if err != nil {
 		return err
 	}
-	_, err = fh.workspace.warehouse.Exec(fh.ctx, "INSERT INTO connections_users (connection, \"user\", data, timestamps)\n"+
+	ws := fh.connection.Workspace()
+	_, err = ws.Warehouse.Exec(fh.ctx, "INSERT INTO connections_users (connection, \"user\", data, timestamps)\n"+
 		"VALUES ($1, $2, $3, $4)\n"+
 		"ON CONFLICT (connection, \"user\") DO UPDATE SET data = $3, timestamps = $4",
-		fh.connection.id, user, data, jsonTimestamps)
+		fh.connection.ID, user, data, jsonTimestamps)
 	if err != nil {
 		return err
 	}
-	_, err = fh.workspace.db.Exec("INSERT INTO connections_stats AS cs (connection, time_slot, users_in)\n"+
+	_, err = fh.db.Exec("INSERT INTO connections_stats AS cs (connection, time_slot, users_in)\n"+
 		"VALUES ($1, $2, 1)\n"+
 		"ON CONFLICT (connection, time_slot) DO UPDATE SET users_in = cs.users_in + 1",
-		fh.connection.id, statsTimeSlot(time.Now()))
+		fh.connection.ID, statsTimeSlot(time.Now()))
 	return err
 }
 
@@ -427,7 +432,8 @@ func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
 	query.WriteString("\nWHERE id = $")
 	query.WriteString(strconv.Itoa(i))
 	values = append(values, id)
-	res, err := fh.workspace.warehouse.Exec(fh.ctx, query.String(), values...)
+	ws := fh.connection.Workspace()
+	res, err := ws.Warehouse.Exec(fh.ctx, query.String(), values...)
 	if err != nil {
 		return err
 	}
@@ -483,7 +489,7 @@ func (rw *recordWriter) Columns(columns []connector.Column) error {
 		}
 		index[c.Name] = i
 		if !c.Type.Valid() {
-			return fmt.Errorf("connector %d returned an invalid type", rw.fh.connection.connector.id)
+			return fmt.Errorf("connector %d returned an invalid type", rw.fh.connection.Connector().ID)
 		}
 	}
 	var ok bool
@@ -505,7 +511,7 @@ func (rw *recordWriter) Columns(columns []connector.Column) error {
 // Record receives a record and calls the SetUser of the Firehose.
 func (rw *recordWriter) Record(record []any) error {
 	if rw.columns == nil {
-		return fmt.Errorf("connector %d did not call the Columns method before calling Record", rw.fh.connection.connector.id)
+		return fmt.Errorf("connector %d did not call the Columns method before calling Record", rw.fh.connection.Connector().ID)
 	}
 	if len(record) != len(rw.columns) {
 		return errors.New("connector %q has returned records with different lengths")
@@ -531,7 +537,7 @@ func (rw *recordWriter) Record(record []any) error {
 // RecordMap receives a record and calls the SetUser of the Firehose.
 func (rw *recordWriter) RecordMap(record map[string]any) error {
 	if rw.columns == nil {
-		return fmt.Errorf("connector %d did not call the Columns method before calling RecordMap", rw.fh.connection.connector.id)
+		return fmt.Errorf("connector %d did not call the Columns method before calling RecordMap", rw.fh.connection.Connector().ID)
 	}
 	ts := rw.timestamp
 	if rw.timestampIndex != noColumn {
@@ -550,7 +556,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 // RecordString receives a record and calls the SetUser of the Firehose.
 func (rw *recordWriter) RecordString(record []string) error {
 	if rw.columns == nil {
-		return fmt.Errorf("connector %d did not call the Columns method before calling RecordString", rw.fh.connection.connector.id)
+		return fmt.Errorf("connector %d did not call the Columns method before calling RecordString", rw.fh.connection.Connector().ID)
 	}
 	if len(record) != len(rw.columns) {
 		return errors.New("connector %q has returned records with different lengths")
@@ -578,7 +584,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 // Timestamp can be called before Record, RecordMap and RecordString.
 func (rw *recordWriter) Timestamp(ts time.Time) error {
 	if rw.setUserCalled {
-		return fmt.Errorf("connector %d called the Timestamp method after a record method", rw.fh.connection.connector.id)
+		return fmt.Errorf("connector %d called the Timestamp method after a record method", rw.fh.connection.Connector().ID)
 	}
 	rw.timestamp = ts
 	return nil
@@ -593,14 +599,15 @@ func keys[K comparable, V any](m map[K]V) []K {
 }
 
 // listMappings lists the mappings for the given connections.
-func (fh *firehose) listMappings(connections []int) ([]*Mapping, error) {
-	var mappings []*Mapping
+func (fh *firehose) listMappings(connections []int) ([]*state.Mapping, error) {
+	var mappings []*state.Mapping
 	for _, c := range connections {
-		conn, ok := fh.workspace.Connections.state.Get(c)
+		ws := fh.connection.Workspace()
+		conn, ok := ws.Connection(c)
 		if !ok {
 			return nil, fmt.Errorf("connection %d does not exist anymore", c)
 		}
-		mappings = append(mappings, conn.mappings...)
+		mappings = append(mappings, conn.Mappings()...)
 	}
 	return mappings, nil
 }

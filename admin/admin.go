@@ -56,14 +56,14 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// instantiate the account API
-		account, err = admin.apis.Accounts.As(accountID)
+		account, err := admin.apis.Account(accountID)
 		if err != nil {
 			http.NotFound(w, r)
 			return
 		}
 
 		// get the workspace
-		workspace, err = account.Workspaces.As(1) // TODO(marco)
+		workspace, err = account.Workspace(1) // TODO(marco)
 		if err != nil {
 			http.NotFound(w, r)
 			return
@@ -140,7 +140,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Handle the "/user-schema-properties" endpoint.
 	if strings.HasPrefix(rpath, "/user-schema") {
-		schema, _ := workspace.Schema("users")
+		schema := workspace.Schema("users")
 		w.Header().Add("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(schema)
 		return
@@ -148,7 +148,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Handle the "/group-schema-properties" endpoint.
 	if strings.HasPrefix(rpath, "/group-schema-properties") {
-		schema, _ := workspace.Schema("groups")
+		schema := workspace.Schema("groups")
 		w.Header().Add("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(schema.PropertiesNames())
 		return
@@ -165,7 +165,13 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		err = workspace.Connections.Import(req.Connector, req.ResetCursor)
+		connection, err := workspace.Connection(req.Connector)
+		if err != nil {
+			log.Printf("[error] %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		err = connection.Import(req.ResetCursor)
 		if err != nil {
 			log.Printf("[error] %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -184,7 +190,13 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		err = workspace.Connections.Export(req.Connector)
+		connection, err := workspace.Connection(req.Connector)
+		if err != nil {
+			log.Printf("[error] %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		err = connection.Export()
 		if err != nil {
 			log.Printf("[error] %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -207,7 +219,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			schema, _ := workspace.Schema(request.SchemaName)
+			schema := workspace.Schema(request.SchemaName)
 			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(schema)
 		default:
@@ -220,7 +232,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rpath := rpath[len("/connections"):]
 		switch rpath {
 		case "/find":
-			connections := workspace.Connections.List()
+			connections := workspace.Connections()
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -237,25 +249,31 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			ds, err := workspace.Connections.Get(id)
+			connection, err := workspace.Connection(id)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
 			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(ds)
+			_ = json.NewEncoder(w).Encode(connection)
 			return
 		case "/delete":
 			var ids []int
 			err := json.NewDecoder(r.Body).Decode(&ids)
-			if err != nil {
+			if err != nil || len(ids) == 0 {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
 			defer r.Body.Close()
-			err = workspace.Connections.Delete(ids[0])
+			connection, err := workspace.Connection(ids[0])
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			err = connection.Delete()
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -275,7 +293,13 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			columns, rows, err := workspace.Connections.Query(req.Connection, req.Query, req.Limit)
+			connection, err := workspace.Connection(req.Connection)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			columns, rows, err := connection.Query(req.Query, req.Limit)
 			if err != nil {
 				if err, ok := err.(*errors.UnprocessableError); ok && err.Code == apis.QueryExecutionFailed {
 					_ = json.NewEncoder(w).Encode(map[string]any{"Error": err.Err.Error()})
@@ -304,7 +328,13 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			err = workspace.Connections.SetUsersQuery(req.Connection, req.Query)
+			connection, err := workspace.Connection(req.Connection)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			err = connection.SetUsersQuery(req.Query)
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -320,7 +350,13 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			imports, err := workspace.Connections.Imports(id)
+			connection, err := workspace.Connection(id)
+			if err != nil {
+				log.Printf("[error] %v", err)
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			imports, err := connection.Imports()
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -336,7 +372,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rpath := rpath[len("/connectors"):]
 		switch rpath {
 		case "/find":
-			connectors := admin.apis.Connectors.List()
+			connectors := admin.apis.Connectors()
 			if err != nil {
 				log.Printf("[error] %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -353,7 +389,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			conn, err := admin.apis.Connectors.Get(id)
+			conn, err := admin.apis.Connector(id)
 			if err != nil {
 				if err, ok := err.(errors.ResponseWriterTo); ok {
 					_ = err.WriteTo(w)
@@ -371,14 +407,24 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(map[string]any{"ID": conn.ID, "Name": conn.Name, "LogoURL": conn.LogoURL, "OAuthURL": oAuthURL})
 			return
 		case "/ui":
-			var connection int
-			err := json.NewDecoder(r.Body).Decode(&connection)
+			var id int
+			err := json.NewDecoder(r.Body).Decode(&id)
 			if err != nil {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
 			defer r.Body.Close()
-			form, err := workspace.Connections.ServeUI(connection, "load", nil)
+			connection, err := workspace.Connection(id)
+			if err != nil {
+				if err, ok := err.(errors.ResponseWriterTo); ok {
+					_ = err.WriteTo(w)
+					return
+				}
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			form, err := connection.ServeUI("load", nil)
 			if err != nil {
 				if err, ok := err.(errors.ResponseWriterTo); ok {
 					_ = err.WriteTo(w)
@@ -408,7 +454,17 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer r.Body.Close()
-			form, err := workspace.Connections.ServeUI(req.Connection, req.Event, req.Values)
+			connection, err := workspace.Connection(req.Connection)
+			if err != nil {
+				if err, ok := err.(errors.ResponseWriterTo); ok {
+					_ = err.WriteTo(w)
+					return
+				}
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			form, err := connection.ServeUI(req.Event, req.Values)
 			if err != nil {
 				if err, ok := err.(errors.ResponseWriterTo); ok {
 					_ = err.WriteTo(w)
@@ -619,7 +675,7 @@ func (admin *admin) serveExecuteQuery(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// TODO(Gianluca): fix this:
-	account, err := admin.apis.Accounts.As(0)
+	account, err := admin.apis.Account(0)
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -665,7 +721,7 @@ func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	enc := json.NewEncoder(w)
-	accountID, err := admin.apis.Accounts.Authenticate(loginData.Email, loginData.Password)
+	accountID, err := admin.apis.AuthenticateAccount(loginData.Email, loginData.Password)
 	if err != nil {
 		if err, ok := err.(*errors.UnprocessableError); ok && err.Code == apis.AuthenticationFailed {
 			enc.Encode([]any{0, "AuthenticationFailedError"})
@@ -694,12 +750,12 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 		_ = r.Body.Close()
 	}()
 
-	account, err := admin.apis.Accounts.As(accountID)
+	account, err := admin.apis.Account(accountID)
 	if err != nil {
 		http.NotFound(w, r)
 		return nil
 	}
-	workspace, err := account.Workspaces.As(1) // TODO(marco): what is the workspace?
+	workspace, err := account.Workspace(1) // TODO(marco): what is the workspace?
 	if err != nil {
 		http.NotFound(w, r)
 		return nil
@@ -727,7 +783,7 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 		return nil
 	}
 
-	conn, err := admin.apis.Connectors.Get(connection.Connector)
+	conn, err := admin.apis.Connector(connection.Connector)
 	if err != nil {
 		if err, ok := err.(errors.ResponseWriterTo); ok {
 			_ = err.WriteTo(w)
@@ -745,7 +801,7 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 	case apis.WebsiteType:
 		opts.WebsiteHost = connection.Host
 	}
-	id, err := workspace.Connections.Add(role, conn.ID, conn.Name, opts)
+	id, err := workspace.AddConnection(role, conn.ID, conn.Name, opts)
 	if err != nil {
 		return err
 	}
@@ -759,11 +815,11 @@ func (admin *admin) serveAddConnection(w http.ResponseWriter, r *http.Request, a
 // OAuth and redirect to the confirmation page.
 func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Request, accountID int) error {
 
-	account, err := admin.apis.Accounts.As(accountID)
+	account, err := admin.apis.Account(accountID)
 	if err != nil {
 		return err
 	}
-	workspace, err := account.Workspaces.As(1) // TODO(marco): what is the workspace?
+	workspace, err := account.Workspace(1) // TODO(marco): what is the workspace?
 	if err != nil {
 		return err
 	}
@@ -818,7 +874,7 @@ func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Reque
 		return errors.New("missing OAuth code from redirect URL")
 	}
 
-	connector, err := admin.apis.Connectors.Get(connectorID)
+	connector, err := admin.apis.Connector(connectorID)
 	if err != nil {
 		return err
 	}
@@ -875,7 +931,7 @@ func (admin *admin) serveAddOAuthConnection(w http.ResponseWriter, r *http.Reque
 		expireIn = expireIn.Add(time.Duration(connector.OAuth.DefaultExpiresIn) * time.Second)
 	}
 
-	_, err = workspace.Connections.Add(role, connector.ID, connector.Name, apis.ConnectionOptions{
+	_, err = workspace.AddConnection(role, connector.ID, connector.Name, apis.ConnectionOptions{
 		OAuth: &apis.AddConnectionOAuthOptions{
 			AccessToken:  tokens.AccessToken,
 			RefreshToken: tokens.RefreshToken,

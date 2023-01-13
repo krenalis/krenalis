@@ -10,27 +10,23 @@ package apis
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
-	"strconv"
-	"strings"
+	"sort"
 
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
+	"chichi/apis/state"
 
-	"github.com/go-chi/chi/v5"
+	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/exp/slices"
 )
-
-var InvalidDefinition errors.Code = "InvalidDefinition"
 
 type APIs struct {
 	db             *postgres.DB
+	state          *state.State
 	eventCollector *eventCollector
 	eventProcessor *eventProcessor
-	Accounts       *Accounts
-	Connectors     *Connectors
 	Users          *Users
 }
 
@@ -68,346 +64,231 @@ func New(conf *Config) (*APIs, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to PostreSQL: %s", err)
 	}
-	err = db.Ping()
-	if err != nil {
-		return nil, fmt.Errorf("cannot ping PostreSQL: %s", err)
-	}
 
 	apis := &APIs{db: db}
-	apis.Users = &Users{apis}
-
-	err = startStateKeeper(context.Background(), apis)
+	apis.state, err = state.Keep(context.Background(), db)
 	if err != nil {
 		log.Fatalf("[error] cannot load state: %s", err)
 	}
 
+	// TODO(Marco): To be removed
+	state.ReloadSchema = func(id int) error {
+		account, _ := apis.Account(1)
+		ws, _ := account.Workspace(1)
+		c, err := ws.Connection(id)
+		if err != nil {
+			return err
+		}
+		return c.reloadSchema()
+	}
+
+	// TODO(Marco): To be removed
+	state.StartImport = func(imp *state.ImportInProgress) {
+		account, _ := apis.Account(1)
+		ws, _ := account.Workspace(1)
+		c, err := ws.Connection(imp.Connection().ID)
+		if err != nil {
+			log.Printf("[error] cannot start import: %s", err)
+			return
+		}
+		c.startImport(imp)
+		return
+	}
+
+	apis.Users = &Users{apis}
+
 	return apis, nil
 }
 
-// ServeHTTP servers the API methods from HTTP.
-func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-	if strings.HasPrefix(r.URL.Path, "/api/v1/events") {
-		if apis.eventCollector == nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		apis.eventCollector.ServeHTTP(w, r)
-		return
+// Account returns the account with identifier id.
+//
+// It returns an errors.NoFound error if the account does not exist.
+func (apis *APIs) Account(id int) (*Account, error) {
+	if id < 1 || id > maxInt32 {
+		return nil, errors.BadRequest("identifier %d is not a valid account identifier", id)
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-
-	// Read the workspace.
-	workspaceID, _ := strconv.Atoi(r.Header.Get("X-Workspace"))
-	if workspaceID <= 0 {
-		http.Error(w, "Bad Request (missing 'X-Workspace' header)", http.StatusBadRequest)
-		return
+	acc, ok := apis.state.Account(id)
+	if !ok {
+		return nil, errors.NotFound("account %d does not exist", id)
 	}
-	// Read the account.
-	var accountID int
-	err := apis.db.QueryRow("SELECT account FROM workspaces WHERE id = $1", workspaceID).Scan(&accountID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			http.Error(w, "Not Found", http.StatusNotFound)
-			return
-		}
-		log.Printf("[error] %s", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
+	account := Account{
+		db:             apis.db,
+		eventProcessor: apis.eventProcessor,
+		state:          apis.state,
+		account:        acc,
+		ID:             acc.ID,
+		Name:           acc.Name,
+		Email:          acc.Email,
+		InternalIPs:    slices.Clone(acc.InternalIPs),
 	}
-
-	account, err := apis.Accounts.As(accountID)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-	workspace, err := account.Workspaces.As(workspaceID)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-
-	router := chi.NewRouter()
-	router.Route("/api/connections", func(router chi.Router) {
-		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			connections := workspace.Connections.List()
-			_ = json.NewEncoder(w).Encode(connections)
-		})
-		router.Route("/{connectionID}", func(router chi.Router) {
-			router.Get("/schema", func(w http.ResponseWriter, r *http.Request) {
-				dsID, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				if dsID <= 0 {
-					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
-					return
-				}
-				schema, err := workspace.Connections.Schema(dsID)
-				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				if schema.Valid() {
-					_ = json.NewEncoder(w).Encode(schema)
-				} else {
-					_, _ = w.Write([]byte("null"))
-				}
-			})
-			router.Post("/import", func(w http.ResponseWriter, r *http.Request) {
-				dsID, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				if dsID <= 0 {
-					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
-					return
-				}
-				err = workspace.Connections.Import(dsID, false)
-				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-			})
-			router.Post("/export", func(w http.ResponseWriter, r *http.Request) {
-				connection, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				if connection <= 0 {
-					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
-					return
-				}
-				err = workspace.Connections.Export(connection)
-				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-			})
-			router.Post("/reimport", func(w http.ResponseWriter, r *http.Request) {
-				dsID, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				if dsID <= 0 {
-					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
-					return
-				}
-				err = workspace.Connections.Import(dsID, true)
-				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-			})
-			router.Get("/mappings", func(w http.ResponseWriter, r *http.Request) {
-				connectionID, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				if connectionID <= 0 {
-					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
-					return
-				}
-				connection, err := workspace.Connections.Get(connectionID)
-				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] cannot list mappings: %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				_ = json.NewEncoder(w).Encode(connection.Mappings)
-			})
-			router.Put("/mappings", func(w http.ResponseWriter, r *http.Request) {
-				connection, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				if connection <= 0 {
-					http.Error(w, "Bad Request: invalid connection ID", http.StatusBadRequest)
-					return
-				}
-				var mappings []*MappingToCreate
-				err := json.NewDecoder(r.Body).Decode(&mappings)
-				if err != nil {
-					http.Error(w, "Bad Request - invalid mappings", http.StatusBadRequest)
-					return
-				}
-				err = workspace.Connections.SetMappings(connection, mappings)
-				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] cannot save mappings: %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				_, _ = w.Write([]byte(`{"status":"ok"}`))
-			})
-		})
-	})
-	router.Route("/api/event-listeners", func(router chi.Router) {
-		router.Put("/", func(w http.ResponseWriter, r *http.Request) {
-			var req struct {
-				Size   *int
-				Source int
-				Server int
-				Stream int
-			}
-			err := json.NewDecoder(r.Body).Decode(&req)
-			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-			var size = 10
-			if req.Size != nil {
-				size = *req.Size
-			}
-			id, err := workspace.EventListeners.Add(size, req.Source, req.Server, req.Stream)
-			if err != nil {
-				log.Printf("[error] %s", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"id": id})
-		})
-		router.Delete("/{listenerID}", func(w http.ResponseWriter, r *http.Request) {
-			id := chi.URLParam(r, "listenerID")
-			workspace.EventListeners.Remove(id)
-		})
-		router.Get("/{listenerID}/events", func(w http.ResponseWriter, r *http.Request) {
-			id := chi.URLParam(r, "listenerID")
-			events, discarded, err := workspace.EventListeners.Events(id)
-			if err != nil {
-				log.Printf("[error] %s", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"events":    events,
-				"discarded": discarded,
-			})
-		})
-	})
-	router.Route("/api/users", func(router chi.Router) {
-		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			var req struct {
-				Properties []string
-				Start      int
-				End        int
-			}
-			err := json.NewDecoder(r.Body).Decode(&req)
-			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-			schema, users, err := workspace.Users(req.Properties, "", 0, 1000)
-			if err != nil {
-				if err, ok := err.(errors.ResponseWriterTo); ok {
-					_ = err.WriteTo(w)
-					return
-				}
-				log.Printf("[error] %s", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			var end int
-			if len(users) < req.End {
-				end = len(users)
-			} else {
-				end = req.End
-			}
-			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"count":  len(users),
-				"users":  users[req.Start:end],
-				"schema": schema,
-			})
-		})
-	})
-	router.Route("/api/workspace/connect-warehouse", func(router chi.Router) {
-		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			req := struct {
-				Type     WarehouseType
-				Settings json.RawMessage
-			}{}
-			err := json.NewDecoder(r.Body).Decode(&req)
-			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-			err = workspace.ConnectWarehouse(req.Type, req.Settings)
-			if err != nil {
-				if err, ok := err.(errors.ResponseWriterTo); ok {
-					_ = err.WriteTo(w)
-					return
-				}
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-		})
-	})
-	router.Route("/api/workspace/disconnect-warehouse", func(router chi.Router) {
-		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			err = workspace.DisconnectWarehouse()
-			if err != nil {
-				if err, ok := err.(errors.ResponseWriterTo); ok {
-					_ = err.WriteTo(w)
-					return
-				}
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-		})
-	})
-	router.Route("/api/workspace/init-warehouse", func(router chi.Router) {
-		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			err = workspace.InitWarehouse()
-			if err != nil {
-				if err, ok := err.(errors.ResponseWriterTo); ok {
-					_ = err.WriteTo(w)
-					return
-				}
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-		})
-	})
-	router.Route("/api/workspace/reload-schema", func(router chi.Router) {
-		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			err = workspace.ReloadSchema()
-			if err != nil {
-				if err, ok := err.(errors.ResponseWriterTo); ok {
-					_ = err.WriteTo(w)
-					return
-				}
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-		})
-	})
-	router.ServeHTTP(w, r)
-
+	return &account, nil
 }
 
-// DeprecatedProperty returns an instance of DeprecatedProperties which operates
-// on the given property.
-func (api *Account) DeprecatedProperty(property int) *DeprecatedProperties {
-	properties := &DeprecatedProperties{
-		Account: api,
-		id:      property,
+// Accounts returns a list of Account, in the given order, describing all
+// accounts but starting from first and up to limit. first must be >= 0 and
+// limit must be > 0.
+func (apis *APIs) Accounts(order AccountSort, first, limit int) ([]*Account, error) {
+	if order != SortByName && order != SortByEmail {
+		return nil, errors.BadRequest("order %d is not valid", int(order))
 	}
-	properties.SmartEvents = &SmartEvents{properties}
-	properties.Visualization = &Visualization{properties}
-	return properties
+	if limit <= 0 {
+		return nil, errors.BadRequest("limit %d is not valid", limit)
+	}
+	if first < 0 {
+		return nil, errors.BadRequest("first %d is not valid", first)
+	}
+	accounts := apis.state.Accounts()
+	count := len(accounts)
+	if first >= count {
+		return []*Account{}, nil
+	}
+	if first+limit > count {
+		limit = count - first
+	}
+	sort.Slice(accounts, func(i, j int) bool {
+		a, b := accounts[i], accounts[j]
+		switch order {
+		case SortByName:
+			return a.Name < b.Name || a.Name == b.Name && a.ID < b.ID
+		case SortByEmail:
+			return a.Email < b.Email || a.Email == b.Email && a.ID < b.ID
+		}
+		return false
+	})
+	accounts = accounts[first : first+limit]
+	accs := make([]*Account, len(accounts))
+	for i, account := range accounts {
+		accs[i] = &Account{
+			ID:          account.ID,
+			Name:        account.Name,
+			Email:       account.Email,
+			InternalIPs: slices.Clone(account.InternalIPs),
+		}
+	}
+	return accs, nil
+}
+
+// AuthenticateAccount authenticates an account given its email and password.
+//
+// It returns an errors.UnprocessableError error with code
+// AuthenticationFailed, if the authentication fails.
+func (apis *APIs) AuthenticateAccount(email, password string) (int, error) {
+	if !emailRegExp.MatchString(email) {
+		return 0, errors.BadRequest("email is not valid")
+	}
+	if len(password) < 8 {
+		return 0, errors.BadRequest("password is not valid")
+	}
+	var id int
+	var hashedPassword []byte
+	err := apis.db.QueryRow("SELECT id, password FROM accounts WHERE email = $1", email).Scan(&id, &hashedPassword)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, errors.Unprocessable(AuthenticationFailed, "authentication has failed")
+		}
+		return 0, err
+	}
+	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
+	if err != nil {
+		return 0, errors.Unprocessable(AuthenticationFailed, "authentication has failed")
+	}
+	return id, nil
+}
+
+// Connector returns the connector with identifier id.
+//
+// It returns an errors.NotFoundError error if the connector does not exist.
+func (apis *APIs) Connector(id int) (*Connector, error) {
+	c, ok := apis.state.Connector(id)
+	if !ok {
+		return nil, errors.NotFound("connector %d does not exist", id)
+	}
+	connector := Connector{
+		ID:          c.ID,
+		Name:        c.Name,
+		Type:        ConnectorType(c.Type),
+		LogoURL:     c.LogoURL,
+		WebhooksPer: WebhooksPer(c.WebhooksPer),
+	}
+	if c.OAuth != nil {
+		connector.OAuth = &ConnectorOAuth{}
+		*connector.OAuth = ConnectorOAuth(*c.OAuth)
+	}
+	return &connector, nil
+}
+
+// Connectors returns the collectors.
+func (apis *APIs) Connectors() []*Connector {
+	cc := apis.state.Connectors()
+	connectors := make([]*Connector, len(cc))
+	for i, c := range cc {
+		connector := Connector{
+			ID:          c.ID,
+			Name:        c.Name,
+			Type:        ConnectorType(c.Type),
+			LogoURL:     c.LogoURL,
+			WebhooksPer: WebhooksPer(c.WebhooksPer),
+		}
+		if c.OAuth != nil {
+			connector.OAuth = &ConnectorOAuth{}
+			*connector.OAuth = ConnectorOAuth(*c.OAuth)
+		}
+		connectors[i] = &connector
+	}
+	sort.Slice(connectors, func(i, j int) bool {
+		a, b := connectors[i], connectors[j]
+		return a.Name < b.Name || a.Name == b.Name && a.ID < b.ID
+	})
+	return connectors
+}
+
+// CreateAccount a new account given its email and password and returns its
+// identifier.
+func (apis *APIs) CreateAccount(email, password string) (int, error) {
+	if !emailRegExp.MatchString(email) {
+		return 0, errors.BadRequest("email is not valid")
+	}
+	if len(password) < 8 {
+		return 0, errors.BadRequest("password is not valid")
+	}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return 0, err
+	}
+	var id int
+	err = apis.db.QueryRow("INSERT INTO accounts (email, password) VALUES ($1, $2)",
+		email, string(hashedPassword)).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, err
+}
+
+// CountAccounts returns the total number of accounts.
+func (apis *APIs) CountAccounts() int {
+	return len(apis.state.Accounts())
+}
+
+type Workspace struct {
+	db             *postgres.DB
+	eventProcessor *eventProcessor
+	state          *state.State
+	workspace      *state.Workspace
+}
+
+type AccountSort int
+
+const (
+	SortByName AccountSort = iota
+	SortByEmail
+)
+
+func (s AccountSort) String() string {
+	switch s {
+	case SortByName:
+		return "name"
+	case SortByEmail:
+		return "email"
+	}
+	panic("invalid account sort")
 }

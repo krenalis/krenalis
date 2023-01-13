@@ -10,7 +10,6 @@ package apis
 import (
 	"bytes"
 	"context"
-	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +18,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"chichi/apis/state"
 	_connector "chichi/connector"
 )
 
@@ -39,11 +39,35 @@ func (per WebhooksPer) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + per.String() + `"`), nil
 }
 
-// Scan implements the sql.Scanner interface.
-func (per *WebhooksPer) Scan(src any) error {
-	s, ok := src.(string)
+// String returns the string representation of w.
+// It panics if w is not a valid WebhooksPer value.
+func (per WebhooksPer) String() string {
+	switch per {
+	case WebhooksPerNone:
+		return "None"
+	case WebhooksPerConnector:
+		return "Connector"
+	case WebhooksPerResource:
+		return "Resource"
+	case WebhooksPerSource:
+		return "Source"
+	}
+	panic("invalid webhooksPer value")
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (per *WebhooksPer) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, null) {
+		return nil
+	}
+	var v any
+	err := json.Unmarshal(data, &v)
+	if err != nil {
+		return fmt.Errorf("json: cannot unmarshal into a apis.WebhooksPer value: %s", err)
+	}
+	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an api.WebhooksPer value", src)
+		return fmt.Errorf("cannot scan a %T value into an api.WebhooksPer value", v)
 	}
 	var p WebhooksPer
 	switch s {
@@ -56,49 +80,10 @@ func (per *WebhooksPer) Scan(src any) error {
 	case "Source":
 		p = WebhooksPerSource
 	default:
-		return fmt.Errorf("invalid api.WebhooksPer: %s", s)
+		return fmt.Errorf("invalid state.WebhooksPer: %s", s)
 	}
 	*per = p
 	return nil
-}
-
-// String returns the string representation of w.
-// It panics if w is not a valid WebhooksPer value.
-func (per WebhooksPer) String() string {
-	s, err := per.Value()
-	if err != nil {
-		panic("invalid webhooksPer value")
-	}
-	return s.(string)
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface.
-func (per *WebhooksPer) UnmarshalJSON(data []byte) error {
-	if bytes.Equal(data, null) {
-		return nil
-	}
-	var s any
-	err := json.Unmarshal(data, &s)
-	if err != nil {
-		return fmt.Errorf("json: cannot unmarshal into a apis.WebhooksPer value: %s", err)
-	}
-	return per.Scan(s)
-}
-
-// Value implements driver.Valuer interface.
-// It returns an error if typ is not a valid ConnectionRole.
-func (per WebhooksPer) Value() (driver.Value, error) {
-	switch per {
-	case WebhooksPerNone:
-		return "None", nil
-	case WebhooksPerConnector:
-		return "Connector", nil
-	case WebhooksPerResource:
-		return "Resource", nil
-	case WebhooksPerSource:
-		return "Source", nil
-	}
-	return nil, fmt.Errorf("not a valid WebhooksPer: %d", per)
 }
 
 // Errors returned to and handled by the ServeWebhook method.
@@ -138,7 +123,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	if m == nil {
 		return errBadRequest
 	}
-	var connector *Connector
+	var connector *state.Connector
 	var conf _connector.AppConfig
 	switch m[1] {
 	case "c":
@@ -147,8 +132,8 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 			return errBadRequest
 		}
 		var ok bool
-		connector, ok = apis.Connectors.state.Get(id)
-		if !ok || connector.webhooksPer != WebhooksPerConnector {
+		connector, ok = apis.state.Connector(id)
+		if !ok || connector.WebhooksPer != state.WebhooksPerConnector {
 			return errNotFound
 		}
 	case "r":
@@ -157,16 +142,16 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 			return errBadRequest
 		}
 	Resource:
-		for _, a := range apis.Accounts.state.List() {
-			for _, ws := range a.Workspaces.state.List() {
-				if r, ok := ws.resources.Get(id); ok {
-					connector = r.connector
-					conf.Resource = r.code
+		for _, a := range apis.state.Accounts() {
+			for _, ws := range a.Workspaces() {
+				if r, ok := ws.Resource(id); ok {
+					connector = r.Connector()
+					conf.Resource = r.Code
 					break Resource
 				}
 			}
 		}
-		if connector == nil || connector.webhooksPer != WebhooksPerResource {
+		if connector == nil || connector.WebhooksPer != state.WebhooksPerResource {
 			return errNotFound
 		}
 	case "s":
@@ -174,32 +159,36 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		if id < 1 || id > maxInt32 {
 			return errBadRequest
 		}
-		var connection *Connection
+		var connection *state.Connection
 	Connection:
-		for _, a := range apis.Accounts.state.List() {
-			for _, ws := range a.Workspaces.state.List() {
-				if c, ok := ws.Connections.state.Get(id); ok {
+		for _, a := range apis.state.Accounts() {
+			for _, ws := range a.Workspaces() {
+				if c, ok := ws.Connection(id); ok {
 					connection = c
 					break Connection
 				}
 			}
 		}
-		if connection == nil || connection.resource == nil {
+		if connection == nil {
 			return errNotFound
 		}
-		connector = connection.connector
-		if connector.webhooksPer != WebhooksPerSource {
+		resource := connection.Resource()
+		if resource == nil {
 			return errNotFound
 		}
-		conf.Settings = connection.settings
-		conf.Resource = connection.resource.code
+		connector = connection.Connector()
+		if connector.WebhooksPer != state.WebhooksPerSource {
+			return errNotFound
+		}
+		conf.Settings = connection.Settings
+		conf.Resource = resource.Code
 		var err error
-		conf.AccessToken, err = connection.resource.freshAccessToken()
+		conf.AccessToken, err = freshAccessToken(apis.db, resource)
 		if err != nil {
 			return err
 		}
 	}
-	connection, err := _connector.RegisteredApp(connector.name).Connect(context.Background(), &conf)
+	connection, err := _connector.RegisteredApp(connector.Name).Connect(context.Background(), &conf)
 	if err != nil {
 		return err
 	}

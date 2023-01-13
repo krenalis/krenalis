@@ -32,6 +32,7 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/postgres"
+	"chichi/apis/state"
 	"chichi/apis/warehouses"
 	_connector "chichi/connector"
 
@@ -86,42 +87,42 @@ type Event struct {
 // to the data warehouse.
 type eventProcessor struct {
 	db       *postgres.DB
-	streams  []*Connection
-	sources  map[int]*Connection
+	streams  []*state.Connection
+	sources  map[int]*state.Connection
 	queue    *queue
 	observer *eventObserver
 	servers  struct {
-		keys map[string]*Connection
+		keys map[string]*state.Connection
 	}
 	defaultStream _connector.EventStreamConnection
 }
 
 // newEventProcessor returns a new event eventProcessor.
-func newEventProcessor(db *postgres.DB, warehouse warehouses.Warehouse, connections map[int]*Connection,
+func newEventProcessor(db *postgres.DB, warehouse warehouses.Warehouse, connections map[int]*state.Connection,
 	defaultStream _connector.EventStreamConnection) *eventProcessor {
 
 	processor := eventProcessor{
 		db:            db,
-		sources:       map[int]*Connection{},
+		sources:       map[int]*state.Connection{},
 		queue:         newQueue(warehouse),
 		observer:      newEventObserver(db),
 		defaultStream: defaultStream,
 	}
-	processor.servers.keys = map[string]*Connection{}
+	processor.servers.keys = map[string]*state.Connection{}
 
 	for id, c := range connections {
-		if !c.enabled || c.role != SourceRole {
+		if !c.Enabled || c.Role != state.SourceRole {
 			continue
 		}
-		switch c.connector.typ {
-		case MobileType, WebsiteType:
+		switch c.Connector().Type {
+		case state.MobileType, state.WebsiteType:
 			processor.sources[id] = c
-		case EventStreamType:
-			if len(c.settings) > 0 {
+		case state.EventStreamType:
+			if len(c.Settings) > 0 {
 				processor.streams = append(processor.streams, c)
 			}
-		case ServerType:
-			for _, key := range c.keys {
+		case state.ServerType:
+			for _, key := range c.Keys {
 				processor.servers.keys[key] = c
 			}
 		}
@@ -134,12 +135,12 @@ func newEventProcessor(db *postgres.DB, warehouse warehouses.Warehouse, connecti
 // It should be called in its own goroutine.
 func (p *eventProcessor) Run(ctx context.Context) {
 	for _, stream := range p.streams {
-		connection, err := _connector.RegisteredEventStream(stream.connector.name).Connect(ctx, &_connector.EventStreamConfig{
+		connection, err := _connector.RegisteredEventStream(stream.Connector().Name).Connect(ctx, &_connector.EventStreamConfig{
 			Role:     _connector.SourceRole,
-			Settings: stream.settings,
+			Settings: stream.Settings,
 		})
 		if err != nil {
-			log.Printf("cannot connector to event stream connection %d: %stream", stream.id, err)
+			log.Printf("cannot connector to event stream connection %d: %stream", stream.ID, err)
 		}
 		go p.processStream(ctx, stream, connection)
 	}
@@ -149,11 +150,11 @@ func (p *eventProcessor) Run(ctx context.Context) {
 // processStream processes the events received from the stream with the given
 // identifier and connection. When the context is canceled it closes the
 // connection and returns.
-func (p *eventProcessor) processStream(ctx context.Context, stream *Connection, connection _connector.EventStreamConnection) {
+func (p *eventProcessor) processStream(ctx context.Context, stream *state.Connection, connection _connector.EventStreamConnection) {
 
 	streamID, streamName := 0, "default stream"
 	if stream != nil {
-		streamID, streamName = stream.id, "stream "+strconv.Itoa(stream.id)
+		streamID, streamName = stream.ID, "stream "+strconv.Itoa(stream.ID)
 	}
 
 	defer func() {
@@ -252,7 +253,7 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 
 	// Validate the server.
 	var serverID int
-	var server *Connection
+	var server *state.Connection
 	if key != "" {
 		// message was sent by a server.
 		if !isWellFormedConnectorKey(key) {
@@ -263,7 +264,7 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 			p.observer.AddEvent(0, 0, streamID, nil, message, errors.New("does not exist a server with the given key"))
 			return nil
 		}
-		serverID = server.id
+		serverID = server.ID
 	}
 
 	// Validate the source.
@@ -277,7 +278,7 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 		return nil
 	}
 	source, ok := p.sources[sourceID]
-	if !ok || (server != nil && server.workspace != source.workspace) {
+	if !ok || (server != nil && server.Workspace() != source.Workspace()) {
 		p.observer.AddEvent(0, serverID, streamID, nil, message, errors.New("source does not exist"))
 	}
 
@@ -315,7 +316,7 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 
 	now := time.Now().UTC()
 
-	typ := source.connector.typ
+	typ := source.Connector().Type
 	typeString := strings.ToLower(typ.String())
 
 	num := len(offsets)
@@ -335,7 +336,7 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 		}
 
 		// Source.
-		event.source = int32(source.id)
+		event.source = int32(source.ID)
 
 		// Device.
 		if _, err := base64.StdEncoding.DecodeString(event.Device); err != nil || len(event.Device) != 28 {
@@ -344,7 +345,7 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 		}
 
 		// Event.
-		if typ == MobileType {
+		if typ == state.MobileType {
 			// TODO(marco)
 		} else {
 			if e := event.Event; e != "pageview" && e != "click" {
@@ -363,7 +364,7 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 
 		// Referrer.
 		if event.Referrer != "" {
-			if typ == MobileType {
+			if typ == state.MobileType {
 				event.err = errors.New("mobile cannot have referrer")
 				continue
 			} else if utf8.RuneCountInString(event.Referrer) > 2048 {
@@ -380,7 +381,7 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 
 		// Target.
 		if event.Target != "" {
-			if typ == MobileType {
+			if typ == state.MobileType {
 				event.err = errors.New("mobile cannot have target")
 				continue
 			} else if utf8.RuneCountInString(event.Target) > 2048 {
@@ -449,7 +450,7 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 		}
 
 		// URL.
-		if typ == MobileType {
+		if typ == state.MobileType {
 			if event.URL != "" {
 				event.err = errors.New("mobile cannot have URL")
 				continue
@@ -472,7 +473,7 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 				event.err = errors.New("URL must begin with 'http' or 'https'")
 				continue
 			}
-			if u.Host != source.websiteHost {
+			if u.Host != source.WebsiteHost {
 				event.err = errors.New("URL cannot belong to the source website")
 				continue
 			}
@@ -537,7 +538,7 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 		}
 
 		// UserAgent, DeviceType.
-		if typ == MobileType {
+		if typ == state.MobileType {
 			if event.UserAgent != "" {
 				event.err = fmt.Errorf("mobile cannot have user agent")
 				continue

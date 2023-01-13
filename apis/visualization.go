@@ -9,7 +9,6 @@ package apis
 
 import (
 	"context"
-	"database/sql/driver"
 	"fmt"
 	"regexp"
 	"strings"
@@ -38,7 +37,7 @@ func (visualization *Visualization) ExecuteJSONQuery(ctx context.Context, jsonQu
 	}
 
 	// Run the SQL query on ClickHouse.
-	data, err = visualization.runClickHouseQuery(ctx, query)
+	//data, err = visualization.runClickHouseQuery(ctx, query) // TODO(marco): uncomment this line
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -361,72 +360,72 @@ func conditionToSQL(condition Condition) (string, error) {
 
 // runClickHouseQuery runs the given query on the ClickHouse database and
 // returns its results as a [][]any.
-func (visualization *Visualization) runClickHouseQuery(ctx context.Context, query string) ([][]any, error) {
-	rows, err := visualization.chDB.Query(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	columnTypes := rows.ColumnTypes()
-	columnsLen := len(columnTypes)
-	result := [][]any{}
-	for rows.Next() {
-		sqlRow := make([]any, columnsLen)
-		for j, column := range columnTypes {
-			switch column.DatabaseTypeName() {
-			case "DateTime":
-				var value time.Time
-				sqlRow[j] = &value
-			case "FixedString(2)":
-				var value string
-				sqlRow[j] = &value
-			case "String":
-				var value string
-				sqlRow[j] = &value
-			case "UInt8":
-				var value uint8
-				sqlRow[j] = &value
-			case "UInt16":
-				var value uint16
-				sqlRow[j] = &value
-			case "UInt64":
-				var value uint64
-				sqlRow[j] = &value
-			default:
-				panic(fmt.Sprintf("BUG: handling of database type %q not implemented", column.DatabaseTypeName()))
-			}
-		}
-		err := rows.Scan(sqlRow...)
-		if err != nil {
-			return nil, err
-		}
-		row := make([]any, len(sqlRow))
-		for i, pr := range sqlRow {
-			switch v := pr.(type) {
-			case interface{ Value() (driver.Value, error) }:
-				value, err := v.Value()
-				if err != nil {
-					panic(err)
-				}
-				row[i] = value
-			case *time.Time:
-				row[i] = (*v).String()
-			case *string:
-				row[i] = *v
-			case *uint8:
-				row[i] = *v
-			case *uint16:
-				row[i] = *v
-			case *uint64:
-				row[i] = *v
-			default:
-				panic("unexpected")
-			}
-		}
-		result = append(result, row)
-	}
-	return result, nil
-}
+//func (visualization *Visualization) runClickHouseQuery(ctx context.Context, query string) ([][]any, error) {
+//	rows, err := visualization.CHDB.Query(ctx, query)
+//	if err != nil {
+//		return nil, err
+//	}
+//	defer rows.Close()
+//	columnTypes := rows.ColumnTypes()
+//	columnsLen := len(columnTypes)
+//	result := [][]any{}
+//	for rows.Next() {
+//		sqlRow := make([]any, columnsLen)
+//		for j, column := range columnTypes {
+//			switch column.DatabaseTypeName() {
+//			case "DateTime":
+//				var value time.Time
+//				sqlRow[j] = &value
+//			case "FixedString(2)":
+//				var value string
+//				sqlRow[j] = &value
+//			case "String":
+//				var value string
+//				sqlRow[j] = &value
+//			case "UInt8":
+//				var value uint8
+//				sqlRow[j] = &value
+//			case "UInt16":
+//				var value uint16
+//				sqlRow[j] = &value
+//			case "UInt64":
+//				var value uint64
+//				sqlRow[j] = &value
+//			default:
+//				panic(fmt.Sprintf("BUG: handling of database type %q not implemented", column.DatabaseTypeName()))
+//			}
+//		}
+//		err := rows.Scan(sqlRow...)
+//		if err != nil {
+//			return nil, err
+//		}
+//		row := make([]any, len(sqlRow))
+//		for i, pr := range sqlRow {
+//			switch v := pr.(type) {
+//			case interface{ Value() (driver.Value, error) }:
+//				value, err := v.Value()
+//				if err != nil {
+//					panic(err)
+//				}
+//				row[i] = value
+//			case *time.Time:
+//				row[i] = (*v).String()
+//			case *string:
+//				row[i] = *v
+//			case *uint8:
+//				row[i] = *v
+//			case *uint16:
+//				row[i] = *v
+//			case *uint64:
+//				row[i] = *v
+//			default:
+//				panic("unexpected")
+//			}
+//		}
+//		result = append(result, row)
+//	}
+//	return result, nil
+//}
 
 // isValidColumnInQuery reports whether column is a valid column name that can
 // be used in a SQL query.

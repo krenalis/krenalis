@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"chichi/apis/state"
 	"chichi/connector"
 )
 
@@ -39,9 +40,9 @@ var eventDateLayout = "2006-01-02T15:04:05.999Z07:00"
 type eventCollector struct {
 	sync.RWMutex
 
-	sources map[int]*Connection
+	sources map[int]*state.Connection
 
-	keys map[string]*Connection
+	keys map[string]*state.Connection
 
 	// defaultStream is the stream to send events to if request sources don't
 	// have a stream.
@@ -54,37 +55,37 @@ type eventCollector struct {
 // mobile, server and website sources in connections and sends them to the
 // source streams in connections. defaultStream is the stream to send events if
 // a source does not have a stream.
-func newEventCollector(ctx context.Context, connections map[int]*Connection,
+func newEventCollector(ctx context.Context, connections map[int]*state.Connection,
 	defaultStream connector.EventStreamConnection) (*eventCollector, error) {
 
 	var collector = eventCollector{
-		sources:           map[int]*Connection{},
-		keys:              map[string]*Connection{},
+		sources:           map[int]*state.Connection{},
+		keys:              map[string]*state.Connection{},
 		defaultStream:     defaultStream,
 		streamConnections: map[int]connector.EventStreamConnection{},
 	}
 
 	for id, c := range connections {
-		if !c.enabled || c.role != SourceRole {
+		if !c.Enabled || c.Role != state.SourceRole {
 			continue
 		}
-		switch c.connector.typ {
-		case EventStreamType:
-			if len(c.settings) == 0 {
+		switch conn := c.Connector(); conn.Type {
+		case state.EventStreamType:
+			if len(c.Settings) == 0 {
 				continue
 			}
-			stream, err := connector.RegisteredEventStream(c.connector.name).Connect(ctx, &connector.EventStreamConfig{
+			stream, err := connector.RegisteredEventStream(conn.Name).Connect(ctx, &connector.EventStreamConfig{
 				Role:     connector.SourceRole,
-				Settings: c.settings,
+				Settings: c.Settings,
 			})
 			if err != nil {
 				return nil, err
 			}
 			collector.streamConnections[id] = stream
-		case MobileType, WebsiteType:
+		case state.MobileType, state.WebsiteType:
 			collector.sources[id] = c
-		case ServerType:
-			for _, key := range c.keys {
+		case state.ServerType:
+			for _, key := range c.Keys {
 				collector.keys[key] = c
 			}
 		}
@@ -154,7 +155,7 @@ func (c *eventCollector) serveHTTP(r *http.Request) error {
 		return errUnauthorized
 	}
 	// Validate the key.
-	var server *Connection
+	var server *state.Connection
 	if key != "" {
 		server = c.keys[key]
 		if server == nil {
@@ -174,10 +175,10 @@ func (c *eventCollector) serveHTTP(r *http.Request) error {
 
 	var streamID int
 	var streamConnection connector.EventStreamConnection
-	if server != nil && server.stream != nil {
-		streamID = server.stream.id
-	} else if source.stream != nil {
-		streamID = source.stream.id
+	if server != nil && server.Stream() != nil {
+		streamID = server.Stream().ID
+	} else if s := source.Stream(); s != nil {
+		streamID = s.ID
 	}
 	if streamID == 0 {
 		streamConnection = c.defaultStream

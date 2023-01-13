@@ -18,39 +18,31 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
+	"chichi/apis/state"
 )
-
-// Resource represents a resource.
-type Resource struct {
-	id           int
-	workspace    *Workspace
-	connector    *Connector
-	code         string
-	accessToken  string
-	refreshToken string
-	expiresIn    time.Time
-}
 
 // freshAccessToken returns a fresh OAuth access token for the resource. If it
 // has no access token, or it is expired, freshAccessToken fetches a fresh
 // access token and returns it.
-func (r *Resource) freshAccessToken() (string, error) {
+func freshAccessToken(db *postgres.DB, r *state.Resource) (string, error) {
 
-	if r.accessToken != "" {
-		expired := time.Now().UTC().Add(15 * time.Minute).After(r.expiresIn)
+	if r.AccessToken != "" {
+		expired := time.Now().UTC().Add(15 * time.Minute).After(r.ExpiresIn)
 		if !expired {
-			return r.accessToken, nil
+			return r.AccessToken, nil
 		}
 	}
 
+	connector := r.Connector()
+
 	data := url.Values{}
 	data.Set("grant_type", "refresh_token")
-	data.Set("client_id", r.connector.oAuth.ClientID)
-	data.Set("client_secret", r.connector.oAuth.ClientSecret)
+	data.Set("client_id", connector.OAuth.ClientID)
+	data.Set("client_secret", connector.OAuth.ClientSecret)
 	data.Set("redirect_uri", "https://localhost:9090/admin/oauth/authorize")
-	data.Set("refresh_token", r.refreshToken)
+	data.Set("refresh_token", r.RefreshToken)
 
-	req, err := http.NewRequest("POST", r.connector.oAuth.TokenEndpoint, strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", connector.OAuth.TokenEndpoint, strings.NewReader(data.Encode()))
 	if err != nil {
 		return "", err
 	}
@@ -77,7 +69,7 @@ func (r *Resource) freshAccessToken() (string, error) {
 			// TODO(@Andrea): check the status returned by services different
 			// from Hubspot.
 			if errData.status == "BAD_REFRESH_TOKEN" {
-				return "", errors.Unprocessable(InvalidRefreshToken, "OAuth refresh token of connector %d is not valid", r.connector.id)
+				return "", errors.Unprocessable(InvalidRefreshToken, "OAuth refresh token of connector %d is not valid", connector.ID)
 			}
 		}
 		return "", fmt.Errorf("unexpected status %d returned by connector while trying to get a new access token via refresh token", res.StatusCode)
@@ -99,14 +91,14 @@ func (r *Resource) freshAccessToken() (string, error) {
 	// TODO(marco): ExpiresIn should be relative to response time?
 	expiresIn := time.Now().UTC().Add(time.Duration(oAuth.ExpiresIn) * time.Second)
 
-	n := setResourceNotification{
-		ID:           r.id,
+	n := state.SetResourceNotification{
+		ID:           r.ID,
 		AccessToken:  oAuth.AccessToken,
 		RefreshToken: oAuth.RefreshToken,
 		ExpiresIn:    expiresIn,
 	}
 
-	err = r.workspace.db.Transaction(func(tx *postgres.Tx) error {
+	err = db.Transaction(func(tx *postgres.Tx) error {
 		_, err = tx.Exec(
 			"UPDATE resources SET access_token = $1, refresh_token = $2, expires_in = $3 WHERE id = $4",
 			n.AccessToken, n.RefreshToken, n.ExpiresIn, n.ID)

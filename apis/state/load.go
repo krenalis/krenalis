@@ -5,47 +5,46 @@
 // Copyright (c) 2022 Open2b
 //
 
-package apis
+package state
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"strings"
+	"sync"
 
 	"chichi/apis/postgres"
 	"chichi/apis/types"
 )
 
-// loadState loads the state from the database.
-func (s *stateKeeper) loadState() error {
+// load loads the state from the database.
+func (s *State) load() error {
 
 	// Read all connectors.
-	connectors := map[int]*Connector{}
+	s.connectors = map[int]*Connector{}
 	err := s.db.QueryScan("SELECT id, name, type, logo_url, webhooks_per, oauth_url, oauth_client_id,"+
 		" oauth_client_secret, oauth_token_endpoint, oauth_default_token_type, oauth_default_expires_in,"+
 		" oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
 		for rows.Next() {
 			c := Connector{}
 			oauth := ConnectorOAuth{}
-			if err := rows.Scan(&c.id, &c.name, &c.typ, &c.logoURL, &c.webhooksPer, &oauth.URL, &oauth.ClientID, &oauth.ClientSecret,
+			if err := rows.Scan(&c.ID, &c.Name, &c.Type, &c.LogoURL, &c.WebhooksPer, &oauth.URL, &oauth.ClientID, &oauth.ClientSecret,
 				&oauth.TokenEndpoint, &oauth.DefaultTokenType, &oauth.DefaultExpiresIn, &oauth.ForcedExpiresIn); err != nil {
 				return err
 			}
 			if oauth.URL != "" {
-				c.oAuth = &oauth
+				c.OAuth = &oauth
 			}
-			connectors[c.id] = &c
+			s.connectors[c.ID] = &c
 		}
 		return nil
 	})
 	if err != nil {
 		return err
 	}
-	s.Connectors = newConnectors(s.APIs, &connectorsState{ids: connectors})
 
 	// Read all accounts.
-	accounts := map[int]*Account{}
+	s.accounts = map[int]*Account{}
 	err = s.db.QueryScan("SELECT id, name, email, internal_ips FROM accounts", func(rows *postgres.Rows) error {
 		var id int
 		var name, email, ips string
@@ -54,26 +53,24 @@ func (s *stateKeeper) loadState() error {
 				return err
 			}
 			account := &Account{
-				apis:        s.APIs,
-				db:          s.db,
-				id:          id,
-				name:        name,
-				email:       email,
-				internalIPs: strings.Fields(ips),
+				mu:          new(sync.Mutex),
+				ID:          id,
+				Name:        name,
+				Email:       email,
+				InternalIPs: strings.Fields(ips),
 			}
-			account.Workspaces = newWorkspaces(account, &workspacesState{ids: map[int]*Workspace{}})
-			accounts[id] = account
+			account.workspaces = map[int]*Workspace{}
+			s.accounts[id] = account
 		}
 		return nil
 	})
 	if err != nil {
 		return err
 	}
-	s.Accounts = newAccounts(s.APIs, &accountsState{ids: accounts})
 
 	// Read all workspaces.
-	workspaces := map[int]*Workspace{}
-	err = s.db.QueryScan("SELECT id, account,  warehouse_type, warehouse_settings, schemas FROM workspaces",
+	s.workspaces = map[int]*Workspace{}
+	err = s.db.QueryScan("SELECT id, account, warehouse_type, warehouse_settings, schemas FROM workspaces",
 		func(rows *postgres.Rows) error {
 			var id, accountID int
 			var warehouseType *WarehouseType
@@ -82,30 +79,30 @@ func (s *stateKeeper) loadState() error {
 				if err := rows.Scan(&id, &accountID, &warehouseType, &warehouseSettings, &schemas); err != nil {
 					return err
 				}
-				account := accounts[accountID]
+				account := s.accounts[accountID]
 				workspace := &Workspace{
-					db:        s.db,
-					id:        id,
+					mu:        new(sync.Mutex),
+					ID:        id,
 					account:   account,
-					resources: &resourcesState{ids: map[int]*Resource{}},
+					resources: map[int]*Resource{},
 				}
 				if warehouseType != nil {
-					workspace.warehouse, err = openWarehouse(*warehouseType, warehouseSettings)
+					workspace.Warehouse, err = openWarehouse(*warehouseType, warehouseSettings)
 					if err != nil {
 						log.Fatalf("cannot open data warehouse of workspace %d: %s", id, err)
 					}
-					workspace.schemas = map[string]*types.Type{}
+					workspace.Schemas = map[string]*types.Type{}
 					if len(schemas) > 0 {
-						err = json.Unmarshal(schemas, &workspace.schemas)
+						err = json.Unmarshal(schemas, &workspace.Schemas)
 						if err != nil {
 							log.Fatalf("cannot unmarshal schemas of workspace %d: %s", id, err)
 						}
 					}
 				}
-				workspace.Connections = newConnections(workspace, &connectionsState{ids: map[int]*Connection{}})
-				workspace.EventListeners = &EventListeners{workspace}
-				account.Workspaces.state.ids[id] = workspace
-				workspaces[id] = workspace
+				workspace.connections = map[int]*Connection{}
+				//workspace.EventListeners = &EventListeners{workspace}  // TODO(marco)
+				account.workspaces[id] = workspace
+				s.workspaces[id] = workspace
 			}
 			return nil
 		})
@@ -114,19 +111,20 @@ func (s *stateKeeper) loadState() error {
 	}
 
 	// Read all resources.
-	resources := map[int]*Resource{}
+	s.resources = map[int]*Resource{}
 	err = s.db.QueryScan("SELECT id, workspace, connector, code, access_token, refresh_token, expires_in FROM resources",
 		func(rows *postgres.Rows) error {
 			for rows.Next() {
 				r := Resource{}
 				var workspaceID, connectorID int
-				if err := rows.Scan(&r.id, &workspaceID, &connectorID, &r.code, &r.accessToken, &r.refreshToken, &r.expiresIn); err != nil {
+				if err := rows.Scan(&r.ID, &workspaceID, &connectorID, &r.Code, &r.AccessToken, &r.RefreshToken, &r.ExpiresIn); err != nil {
 					return err
 				}
-				r.workspace = workspaces[workspaceID]
-				r.connector = connectors[connectorID]
-				r.workspace.resources.ids[r.id] = &r
-				resources[r.id] = &r
+				r.mu = new(sync.Mutex)
+				r.workspace = s.workspaces[workspaceID]
+				r.connector = s.connectors[connectorID]
+				r.workspace.resources[r.ID] = &r
+				s.resources[r.ID] = &r
 			}
 			return nil
 		})
@@ -135,7 +133,7 @@ func (s *stateKeeper) loadState() error {
 	}
 
 	// Read all connections.
-	connections := map[int]*Connection{}
+	s.connections = map[int]*Connection{}
 	err = s.db.QueryScan("SELECT id, workspace, name, role, enabled, connector, COALESCE(storage, 0),"+
 		" COALESCE(stream, 0), resource, website_host, user_cursor, identity_column, timestamp_column, settings,"+
 		" schema, users_query FROM connections", func(rows *postgres.Rows) error {
@@ -143,54 +141,55 @@ func (s *stateKeeper) loadState() error {
 			var workspaceID, connector, storage, stream, resource int
 			var rawSchema string
 			c := Connection{}
-			if err := rows.Scan(&c.id, &workspaceID, &c.name, &c.role, &c.enabled, &connector, &storage, &stream, &resource,
-				&c.websiteHost, &c.userCursor, &c.identityColumn, &c.timestampColumn, &c.settings, &rawSchema,
-				&c.usersQuery); err != nil {
+			if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &c.Role, &c.Enabled, &connector, &storage, &stream, &resource,
+				&c.WebsiteHost, &c.UserCursor, &c.IdentityColumn, &c.TimestampColumn, &c.Settings, &rawSchema,
+				&c.UsersQuery); err != nil {
 				return err
 			}
-			workspace := workspaces[workspaceID]
+			workspace := s.workspaces[workspaceID]
+			c.mu = new(sync.Mutex)
 			c.account = workspace.account
 			c.workspace = workspace
-			c.connector = connectors[connector]
+			c.connector = s.connectors[connector]
 			if storage > 0 {
-				if s, ok := connections[storage]; ok {
-					c.storage = s
+				if st, ok := s.connections[storage]; ok {
+					c.storage = st
 				} else {
 					c.storage = &Connection{}
-					connections[storage] = c.storage
+					s.connections[storage] = c.storage
 				}
 			}
 			if stream > 0 {
-				if s, ok := connections[stream]; ok {
-					c.stream = s
+				if st, ok := s.connections[stream]; ok {
+					c.stream = st
 				} else {
 					c.stream = &Connection{}
-					connections[stream] = c.stream
+					s.connections[stream] = c.stream
 				}
 			}
 			if resource > 0 {
-				c.resource = resources[resource]
+				c.resource = s.resources[resource]
 			}
-			if c.connector.typ == ServerType {
-				c.keys = []string{}
+			if c.connector.Type == ServerType {
+				c.Keys = []string{}
 			}
 			if len(rawSchema) > 0 {
-				c.schema, err = types.Parse(rawSchema, nil)
+				c.Schema, err = types.Parse(rawSchema, nil)
 				if err != nil {
 					// TODO(marco) disable the connection instead of returning an error
 					return err
 				}
 			}
 			c.mappings = []*Mapping{}
-			connection, ok := connections[c.id]
+			connection, ok := s.connections[c.ID]
 			if ok {
 				*connection = c
 			} else {
 				connection = &Connection{}
 				*connection = c
 			}
-			workspace.Connections.state.ids[c.id] = connection
-			connections[c.id] = connection
+			workspace.connections[c.ID] = connection
+			s.connections[c.ID] = connection
 		}
 		return nil
 	})
@@ -207,8 +206,8 @@ func (s *stateKeeper) loadState() error {
 				if err := rows.Scan(&connectionID, &value); err != nil {
 					return err
 				}
-				connection := connections[connectionID]
-				connection.keys = append(connection.keys, value)
+				connection := s.connections[connectionID]
+				connection.Keys = append(connection.Keys, value)
 			}
 			return nil
 		})
@@ -216,22 +215,24 @@ func (s *stateKeeper) loadState() error {
 		return err
 	}
 
+	// TODO(marco): uncomment the following code.
+
 	// Handle events if the workspace has the "events" schema.
-	if workspace, ok := workspaces[1]; ok && workspace.schemas["events"] != nil {
-
-		// defaultStream receives events from the collector for which the source connector
-		// does not have its own stream.
-		defaultStream := newPostgresEventStream(context.Background(), s.db)
-
-		s.eventCollector, err = newEventCollector(context.Background(), connections, defaultStream)
-		if err != nil {
-			return err
-		}
-
-		s.eventProcessor = newEventProcessor(s.db, workspace.warehouse, connections, defaultStream)
-		go s.eventProcessor.Run(context.Background())
-
-	}
+	//if workspace, ok := s.workspaces[1]; ok && workspace.Schemas["events"] != nil {
+	//
+	//	// defaultStream receives events from the collector for which the source connector
+	//	// does not have its own stream.
+	//	defaultStream := newPostgresEventStream(context.Background(), s.db)
+	//
+	//	s.eventCollector, err = newEventCollector(context.Background(), connections, defaultStream)
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	s.eventProcessor = newEventProcessor(s.db, workspace.Warehouse, connections, defaultStream)
+	//	go s.eventProcessor.Run(context.Background())
+	//
+	//}
 
 	// Read the mappings.
 	var mappings []*Mapping
@@ -240,10 +241,12 @@ func (s *stateKeeper) loadState() error {
 	connectionIDs := []int{}
 	err = s.db.QueryScan("SELECT id, connection, \"in\", predefined_func, source_code, out FROM connections_mappings", func(rows *postgres.Rows) error {
 		for rows.Next() {
-			m := &Mapping{}
+			m := &Mapping{
+				mu: new(sync.Mutex),
+			}
 			var inSchema, outSchema []byte
 			var connectionID int
-			err := rows.Scan(&m.id, &connectionID, &inSchema, &m.predefinedFunc, &m.sourceCode, &outSchema)
+			err := rows.Scan(&m.ID, &connectionID, &inSchema, &m.PredefinedFunc, &m.SourceCode, &outSchema)
 			if err != nil {
 				return err
 			}
@@ -256,22 +259,17 @@ func (s *stateKeeper) loadState() error {
 	})
 	for i, m := range mappings {
 		var err error
-		m.in, err = types.Parse(string(inSchemas[i]), nil)
+		m.In, err = types.Parse(string(inSchemas[i]), nil)
 		if err != nil {
 			return err
 		}
-		m.out, err = types.Parse(string(outSchemas[i]), nil)
+		m.Out, err = types.Parse(string(outSchemas[i]), nil)
 		if err != nil {
 			return err
 		}
-		conn := connections[connectionIDs[i]]
-		m.connection = conn
-		conn.mappings = append(conn.mappings, m)
+		connection := s.connections[connectionIDs[i]]
+		connection.mappings = append(connection.mappings, m)
 	}
-
-	s.workspaces = workspaces
-	s.connections = connections
-	s.resources = resources
 
 	return err
 }
