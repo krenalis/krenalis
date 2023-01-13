@@ -233,7 +233,7 @@ type AddConnectionNotification struct {
 		ExpiresIn    time.Time // expiration time, can be the zero time.
 	}
 	WebsiteHost string // website host in form host:port
-	Key         []byte // server key to add
+	Key         string // server key to add
 }
 
 // addConnection adds a new connection.
@@ -292,8 +292,8 @@ func (s *State) addConnection(n postgres.Notification) {
 		resource:    r,
 		WebsiteHost: e.WebsiteHost,
 	}
-	if e.Key != nil {
-		c.Keys = []string{string(e.Key)}
+	if e.Key != "" {
+		c.Keys = []string{e.Key}
 	}
 	s.mu.Lock()
 	s.connections[e.ID] = c
@@ -320,7 +320,7 @@ func (s *State) addConnection(n postgres.Notification) {
 // connection key is added.
 type AddConnectionKeyNotification struct {
 	Connection   int
-	Value        []byte
+	Value        string
 	CreationTime time.Time
 }
 
@@ -333,7 +333,7 @@ func (s *State) addConnectionKey(n postgres.Notification) {
 	s.replaceConnection(e.Connection, func(c *Connection) {
 		keys := make([]string, len(c.Keys)+1)
 		copy(keys, c.Keys)
-		keys[len(c.Keys)] = string(e.Value)
+		keys[len(c.Keys)] = e.Value
 		c.Keys = keys
 	})
 }
@@ -399,7 +399,7 @@ func (s *State) endImport(n postgres.Notification) {
 // connection key is revoked.
 type RevokeConnectionKeyNotification struct {
 	Connection int
-	Value      []byte
+	Value      string
 }
 
 // revokeConnectionKey revokes a connection key.
@@ -410,11 +410,10 @@ func (s *State) revokeConnectionKey(n postgres.Notification) {
 	}
 	s.replaceConnection(e.Connection, func(c *Connection) {
 		keys := make([]string, len(c.Keys)-1)
-		key := string(e.Value)
 		i := 0
-		for _, k := range c.Keys {
-			if k != key {
-				keys[i] = k
+		for _, key := range c.Keys {
+			if key != e.Value {
+				keys[i] = key
 				i++
 			}
 		}

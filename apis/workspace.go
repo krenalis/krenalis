@@ -194,8 +194,13 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, name st
 	}
 
 	// Generate a server key.
+	var binaryKey []byte
 	if c.Type == state.ServerType {
 		n.Key, err = generateServerKey()
+		if err != nil {
+			return 0, err
+		}
+		binaryKey, err = decodeServerKey(n.Key)
 		if err != nil {
 			return 0, err
 		}
@@ -248,10 +253,10 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, name st
 			}
 			return err
 		}
-		if n.Key != nil {
+		if binaryKey != nil {
 			// Insert the server key.
 			_, err = tx.Exec("INSERT INTO connections_keys (connection, value, creation_time) VALUES ($1, $2, $3)",
-				n.ID, n.Key, time.Now().UTC())
+				n.ID, binaryKey, time.Now().UTC())
 			if err != nil {
 				return err
 			}

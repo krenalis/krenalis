@@ -125,13 +125,17 @@ func (this *Connection) GenerateKey() (string, error) {
 	if c.Role != state.SourceRole {
 		return "", errors.NotFound("server %d is not a source", c.ID)
 	}
-	binaryKey, err := generateServerKey()
+	value, err := generateServerKey()
+	if err != nil {
+		return "", err
+	}
+	binaryValue, err := decodeServerKey(value)
 	if err != nil {
 		return "", err
 	}
 	n := state.AddConnectionKeyNotification{
 		Connection:   c.ID,
-		Value:        binaryKey,
+		Value:        value,
 		CreationTime: time.Now().UTC(),
 	}
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
@@ -144,7 +148,7 @@ func (this *Connection) GenerateKey() (string, error) {
 			return errors.Unprocessable(TooManyKeys, "server %d has already %d types", n.Connection, maxKeysPerServer)
 		}
 		_, err = tx.Exec("INSERT INTO connections_keys (connection, value, creation_time) VALUES ($1, $2, $3)",
-			n.Connection, n.Value, n.CreationTime)
+			n.Connection, binaryValue, n.CreationTime)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "connections_keys_connection_fkey" {
@@ -159,10 +163,7 @@ func (this *Connection) GenerateKey() (string, error) {
 		return "", err
 	}
 
-	// Encode the key in the base62 form.
-	key := encodeServerKey(n.Value)
-
-	return key, nil
+	return value, nil
 }
 
 // Keys returns the keys of the source server with identifier id.
@@ -237,8 +238,8 @@ func (this *Connection) RevokeKey(key string) error {
 	if key == "" {
 		return errors.BadRequest("key is empty")
 	}
-	binaryKey, ok := decodeServerKey(key)
-	if !ok {
+	binaryKey, err := decodeServerKey(key)
+	if err != nil {
 		return errors.BadRequest("key %q is malformed", key)
 	}
 	c := this.connection
@@ -251,9 +252,9 @@ func (this *Connection) RevokeKey(key string) error {
 	}
 	n := state.RevokeConnectionKeyNotification{
 		Connection: c.ID,
-		Value:      binaryKey,
+		Value:      encodeServerKey(binaryKey),
 	}
-	err := this.db.Transaction(func(tx *postgres.Tx) error {
+	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		var count int
 		err := tx.QueryRow("SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
 		if err != nil {
@@ -262,7 +263,7 @@ func (this *Connection) RevokeKey(key string) error {
 		if count == 1 {
 			return errors.Unprocessable(UniqueKey, "key cannot be revoked because it's the unique key of the server")
 		}
-		result, err := tx.Exec("DELETE FROM connections_keys WHERE connection = $1 AND value = $2", n.Connection, n.Value)
+		result, err := tx.Exec("DELETE FROM connections_keys WHERE connection = $1 AND value = $2", n.Connection, binaryKey)
 		if err != nil {
 			return err
 		}
@@ -1098,15 +1099,15 @@ func (files *fileReader) Reader(path string) (io.ReadCloser, time.Time, error) {
 
 // decodeServerKey decodes a server key encoded as base62 to its binary form.
 // It returns an error if key is malformed.
-func decodeServerKey(key string) ([]byte, bool) {
+func decodeServerKey(key string) ([]byte, error) {
 	if len(key) != 32 {
-		return nil, false
+		return nil, errors.New("key is malformed")
 	}
 	b, err := base62.DecodeString(key)
 	if err != nil {
-		return nil, false
+		return nil, errors.New("key is malformed")
 	}
-	return b, true
+	return b, nil
 }
 
 // encodeServerKey encodes a binary server key to its base62 form and returns
@@ -1126,14 +1127,14 @@ func generateConnectionID() (int, error) {
 	return int(n.Int64()) + 1, nil
 }
 
-// generateServerKey generates a server key.
-func generateServerKey() ([]byte, error) {
+// generateServerKey generates a server key in its base62 form.
+func generateServerKey() (string, error) {
 	key := make([]byte, 24)
 	_, err := rand.Read(key)
 	if err != nil {
-		return nil, errors.New("cannot generate a server key")
+		return "", errors.New("cannot generate a server key")
 	}
-	return base62.Decode(base62.Encode(key)[0:32])
+	return base62.EncodeToString(key)[0:32], nil
 }
 
 // marshalUIFormAlert marshals form with given role and alert in JSON format.
