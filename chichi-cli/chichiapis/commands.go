@@ -201,8 +201,8 @@ func WorkspaceInitWarehouse() {
 	}
 }
 
-func WorkspaceReloadSchema() {
-	err := callAPI("POST", "api/workspace/reload-schema", nil, nil)
+func WorkspaceReloadSchemas() {
+	err := callAPI("POST", "api/workspace/reload-schemas", nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

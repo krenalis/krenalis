@@ -13,15 +13,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var workspaceReloadSchemaCmd = &cobra.Command{
-	Use:   "reload-schema <workspace>",
-	Short: "Reload the schema",
-	Long:  "Reload the schema of the data warehouse",
+var workspaceReloadSchemasCmd = &cobra.Command{
+	Use:   "reload-schemas <workspace>",
+	Short: "Reload the schemas",
+	Long:  "Reload the schemas of the data warehouse",
 	Run: func(cmd *cobra.Command, args []string) {
-		chichiapis.WorkspaceReloadSchema()
+		chichiapis.WorkspaceReloadSchemas()
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(workspaceReloadSchemaCmd)
+	rootCmd.AddCommand(workspaceReloadSchemasCmd)
 }

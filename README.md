@@ -120,12 +120,12 @@ Initialize the warehouse with:
 $ chichi-cli init-warehouse
 ```
 
-### 7. Reload the schema
+### 7. Reload the schemas
 
-Reload the schema with:
+Reload the schemas with:
 
 ```
-$ chichi-cli reload-schema
+$ chichi-cli reload-schemas
 ```
 
 ### 8. Run and open the browser
