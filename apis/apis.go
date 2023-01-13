@@ -97,6 +97,31 @@ func New(conf *Config) (*APIs, error) {
 
 	apis.Users = &Users{apis}
 
+	account, ok := apis.state.Account(1)
+	if !ok {
+		return apis, nil
+	}
+	workspace, ok := account.Workspace(1)
+	if !ok {
+		return apis, nil
+	}
+	if workspace.Warehouse == nil {
+		return apis, nil
+	}
+
+	// defaultStream receives events from the collector for which the source connector
+	// does not have its own stream.
+	defaultStream := newPostgresEventStream(context.Background(), db)
+
+	connections := apis.state.Connections()
+	apis.eventCollector, err = newEventCollector(context.Background(), connections, defaultStream)
+	if err != nil {
+		return nil, err
+	}
+
+	apis.eventProcessor = newEventProcessor(db, workspace.Warehouse, connections, defaultStream)
+	go apis.eventProcessor.Run(context.Background())
+
 	return apis, nil
 }
 

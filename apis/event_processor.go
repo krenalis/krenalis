@@ -98,7 +98,7 @@ type eventProcessor struct {
 }
 
 // newEventProcessor returns a new event eventProcessor.
-func newEventProcessor(db *postgres.DB, warehouse warehouses.Warehouse, connections map[int]*state.Connection,
+func newEventProcessor(db *postgres.DB, warehouse warehouses.Warehouse, connections []*state.Connection,
 	defaultStream _connector.EventStreamConnection) *eventProcessor {
 
 	processor := eventProcessor{
@@ -110,13 +110,13 @@ func newEventProcessor(db *postgres.DB, warehouse warehouses.Warehouse, connecti
 	}
 	processor.servers.keys = map[string]*state.Connection{}
 
-	for id, c := range connections {
+	for _, c := range connections {
 		if !c.Enabled || c.Role != state.SourceRole {
 			continue
 		}
 		switch c.Connector().Type {
 		case state.MobileType, state.WebsiteType:
-			processor.sources[id] = c
+			processor.sources[c.ID] = c
 		case state.EventStreamType:
 			if len(c.Settings) > 0 {
 				processor.streams = append(processor.streams, c)

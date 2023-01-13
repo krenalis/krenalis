@@ -215,25 +215,6 @@ func (s *State) load() error {
 		return err
 	}
 
-	// TODO(marco): uncomment the following code.
-
-	// Handle events if the workspace has the "events" schema.
-	//if workspace, ok := s.workspaces[1]; ok && workspace.Schemas["events"] != nil {
-	//
-	//	// defaultStream receives events from the collector for which the source connector
-	//	// does not have its own stream.
-	//	defaultStream := newPostgresEventStream(context.Background(), s.db)
-	//
-	//	s.eventCollector, err = newEventCollector(context.Background(), connections, defaultStream)
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	s.eventProcessor = newEventProcessor(s.db, workspace.Warehouse, connections, defaultStream)
-	//	go s.eventProcessor.Run(context.Background())
-	//
-	//}
-
 	// Read the mappings.
 	var mappings []*Mapping
 	inSchemas := [][]byte{}

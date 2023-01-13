@@ -55,7 +55,7 @@ type eventCollector struct {
 // mobile, server and website sources in connections and sends them to the
 // source streams in connections. defaultStream is the stream to send events if
 // a source does not have a stream.
-func newEventCollector(ctx context.Context, connections map[int]*state.Connection,
+func newEventCollector(ctx context.Context, connections []*state.Connection,
 	defaultStream connector.EventStreamConnection) (*eventCollector, error) {
 
 	var collector = eventCollector{
@@ -65,7 +65,7 @@ func newEventCollector(ctx context.Context, connections map[int]*state.Connectio
 		streamConnections: map[int]connector.EventStreamConnection{},
 	}
 
-	for id, c := range connections {
+	for _, c := range connections {
 		if !c.Enabled || c.Role != state.SourceRole {
 			continue
 		}
@@ -81,9 +81,9 @@ func newEventCollector(ctx context.Context, connections map[int]*state.Connectio
 			if err != nil {
 				return nil, err
 			}
-			collector.streamConnections[id] = stream
+			collector.streamConnections[c.ID] = stream
 		case state.MobileType, state.WebsiteType:
-			collector.sources[id] = c
+			collector.sources[c.ID] = c
 		case state.ServerType:
 			for _, key := range c.Keys {
 				collector.keys[key] = c
