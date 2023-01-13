@@ -17,6 +17,8 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/types"
 	"chichi/apis/warehouses"
+
+	"golang.org/x/exp/maps"
 )
 
 // State represents the application state.
@@ -63,6 +65,14 @@ func (state *State) ConnectionByKey(key string) (*Connection, bool) {
 	c, ok := state.connectionsByKey[key]
 	state.mu.Unlock()
 	return c, ok
+}
+
+// Connections returns all connections.
+func (state *State) Connections() []*Connection {
+	state.mu.Lock()
+	connections := maps.Values(state.connections)
+	state.mu.Unlock()
+	return connections
 }
 
 // Connector returns the connector with identifier id.
