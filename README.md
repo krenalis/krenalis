@@ -11,7 +11,7 @@
   - [4. Populate the database and the warehouse](#4-populate-the-database-and-the-warehouse)
   - [5. Connect the data warehouse](#5-connect-the-data-warehouse)
   - [6. Initialize the warehouse](#6-initialize-the-warehouse)
-  - [7. Reload the schema](#7-reload-the-schema)
+  - [7. Reload the schemas](#7-reload-the-schemas)
   - [8. Run and open the browser](#8-run-and-open-the-browser)
 - [Expose on the Internet (optional)](#expose-on-the-internet-optional)
 - [How test events](#how-test-events)
