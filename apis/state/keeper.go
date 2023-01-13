@@ -33,27 +33,6 @@ var ReloadSchemas func(connection int) error
 // StartImport is called when an import should be started.
 var StartImport func(imp *ImportInProgress)
 
-// Keep keeps the state returns it.
-func Keep(ctx context.Context, db *postgres.DB) (*State, error) {
-	s := &State{
-		db:               db,
-		mu:               new(sync.Mutex),
-		accounts:         map[int]*Account{},
-		connectors:       map[int]*Connector{},
-		workspaces:       map[int]*Workspace{},
-		connections:      map[int]*Connection{},
-		connectionsByKey: map[string]*Connection{},
-		resources:        map[int]*Resource{},
-	}
-	err := s.load()
-	if err != nil {
-		return nil, err
-	}
-	notifications := db.ListenToNotifications(ctx)
-	go s.keep(ctx, notifications)
-	return s, nil
-}
-
 // keep keeps state in sync with the database. It is called in its own
 // goroutine.
 func (s *State) keep(ctx context.Context, notifications <-chan postgres.Notification) {
@@ -64,11 +43,16 @@ func (s *State) keep(ctx context.Context, notifications <-chan postgres.Notifica
 			log.Printf("[info] received notification from pid %d and name %q : %s",
 				n.PID, n.Name, n.Payload)
 		}
+		if !s.notifications && n.Name != "AddNode" {
+			continue
+		}
 		switch n.Name {
 		case "AddConnection":
 			s.addConnection(n)
 		case "AddConnectionKey":
 			s.addConnectionKey(n)
+		case "AddNode":
+			s.addNode(n)
 		case "DeleteConnection":
 			s.deleteConnection(n)
 		case "EndImport":
@@ -343,6 +327,21 @@ func (s *State) addConnectionKey(n postgres.Notification) {
 	s.mu.Lock()
 	s.connectionsByKey[e.Value] = c
 	s.mu.Unlock()
+}
+
+// AddNodeNotification is the notification sent when a node is added to the
+// network.
+type AddNodeNotification struct {
+	ID int
+}
+
+// addNode adds a node to the network.
+func (s *State) addNode(n postgres.Notification) {
+	e := AddNodeNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	s.notifications = true
 }
 
 // DeleteConnectionNotification is the notification event sent when a

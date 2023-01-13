@@ -25,6 +25,7 @@ import (
 type State struct {
 	mu               *sync.Mutex
 	db               *postgres.DB
+	notifications    bool
 	accounts         map[int]*Account
 	connectors       map[int]*Connector
 	workspaces       map[int]*Workspace
