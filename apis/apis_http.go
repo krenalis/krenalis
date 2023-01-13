@@ -346,7 +346,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 	router.Route("/api/workspace/reload-schema", func(router chi.Router) {
 		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			err = workspace.ReloadSchema()
+			err = workspace.ReloadSchemas()
 			if err != nil {
 				if err, ok := err.(errors.ResponseWriterTo); ok {
 					_ = err.WriteTo(w)

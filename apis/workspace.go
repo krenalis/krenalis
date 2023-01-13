@@ -453,14 +453,14 @@ func (this *Workspace) InitWarehouse() error {
 	return ws.Warehouse.Init(context.Background())
 }
 
-// ReloadSchema reloads the schema of the workspace.
+// ReloadSchemas reloads the schemas of the workspace.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist,
 // and it returns an errors.UnprocessableError error with code
 //   - NotConnected, if the workspace is not connected to a data warehouse.
 //   - WarehouseFailed, if the connection to the data warehouse failed.
 //   - InvalidSchemaTable, if a table of a schema is not valid.
-func (this *Workspace) ReloadSchema() error {
+func (this *Workspace) ReloadSchemas() error {
 	ws := this.workspace
 	if ws.Warehouse == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)

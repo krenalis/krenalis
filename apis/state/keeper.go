@@ -27,8 +27,8 @@ import (
 // logNotifications controls the logging of notifications on the log.
 const logNotifications = false
 
-// ReloadSchema is called when a connection schema should be reloaded.
-var ReloadSchema func(connection int) error
+// ReloadSchemas is called when a connection schema should be reloaded.
+var ReloadSchemas func(connection int) error
 
 // StartImport is called when an import should be started.
 var StartImport func(imp *ImportInProgress)
@@ -304,11 +304,11 @@ func (s *State) addConnection(n postgres.Notification) {
 	workspace.mu.Unlock()
 	if connector.Type == AppType {
 		// TODO(marco) only one server should reload the schema.
-		if ReloadSchema == nil {
-			panic("state.ReloadSchema is nil")
+		if ReloadSchemas == nil {
+			panic("state.ReloadSchemas is nil")
 		}
 		go func() {
-			err := ReloadSchema(c.ID)
+			err := ReloadSchemas(c.ID)
 			if err != nil {
 				log.Printf("[error] cannot reload schema for connection %d: %s", c.ID, err)
 			}
@@ -516,11 +516,11 @@ func (s *State) setConnectionUserQuery(n postgres.Notification) {
 		c.UsersQuery = e.Query
 	})
 	// TODO(marco) only one server should reload the schema.
-	if ReloadSchema == nil {
-		panic("state.ReloadSchema is nil")
+	if ReloadSchemas == nil {
+		panic("state.ReloadSchemas is nil")
 	}
 	go func() {
-		err := ReloadSchema(c.ID)
+		err := ReloadSchemas(c.ID)
 		if err != nil {
 			log.Printf("[error] cannot reload schema for connection %d: %s", c.ID, err)
 		}

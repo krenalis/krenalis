@@ -72,7 +72,7 @@ func New(conf *Config) (*APIs, error) {
 	}
 
 	// TODO(Marco): To be removed
-	state.ReloadSchema = func(id int) error {
+	state.ReloadSchemas = func(id int) error {
 		account, _ := apis.Account(1)
 		ws, _ := account.Workspace(1)
 		c, err := ws.Connection(id)
