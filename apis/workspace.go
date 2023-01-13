@@ -28,11 +28,14 @@ import (
 	"chichi/apis/warehouses/clickhouse"
 	"chichi/apis/warehouses/postgresql"
 	_connector "chichi/connector"
+
+	"golang.org/x/exp/slices"
 )
 
 var (
 	AlreadyConnected     errors.Code = "AlreadyConnected"
 	ConnectionFailed     errors.Code = "ConnectionFailed"
+	InvalidSchemaTable   errors.Code = "InvalidSchemaTable"
 	InvalidSettings      errors.Code = "InvalidSettings"
 	NoWarehouse          errors.Code = "NoWarehouse"
 	NotConnected         errors.Code = "NotConnected"
@@ -456,6 +459,7 @@ func (this *Workspace) InitWarehouse() error {
 // and it returns an errors.UnprocessableError error with code
 //   - NotConnected, if the workspace is not connected to a data warehouse.
 //   - WarehouseFailed, if the connection to the data warehouse failed.
+//   - InvalidSchemaTable, if a table of a schema is not valid.
 func (this *Workspace) ReloadSchema() error {
 	ws := this.workspace
 	if ws.Warehouse == nil {
@@ -473,6 +477,21 @@ func (this *Workspace) ReloadSchema() error {
 		Schemas:   map[string]*types.Type{},
 	}
 	for _, table := range tables {
+		// Check that the 'users' table contains the 'id' column.
+		if table.Name == "users" {
+			i := slices.IndexFunc(table.Columns, func(c *warehouses.Column) bool {
+				return c.Name == "id"
+			})
+			if i == -1 {
+				return errors.Unprocessable(InvalidSchemaTable, "'users' table has no 'id' column")
+			}
+			if c := table.Columns[i]; c.Type.PhysicalType() != types.PtInt {
+				return errors.Unprocessable(InvalidSchemaTable, "column 'users.id' does not have type Int")
+			} else if c.Type.Null() {
+				return errors.Unprocessable(InvalidSchemaTable, "column 'users.id' must not be nullable")
+			}
+			table.Columns = slices.Delete(table.Columns, i, i+1)
+		}
 		properties, err := propertiesOfColumns(table.Columns)
 		if err, ok := err.(repeatedPropertyNameError); ok {
 			return errors.Unprocessable(RepeatedPropertyName,
