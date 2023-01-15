@@ -247,11 +247,11 @@ type ConnectorType int
 const (
 	AppType ConnectorType = iota + 1
 	DatabaseType
-	EventStreamType
 	FileType
 	MobileType
 	ServerType
 	StorageType
+	StreamType
 	WebsiteType
 )
 
@@ -267,8 +267,6 @@ func (typ *ConnectorType) Scan(src any) error {
 		t = AppType
 	case "Database":
 		t = DatabaseType
-	case "EventStream":
-		t = EventStreamType
 	case "File":
 		t = FileType
 	case "Mobile":
@@ -277,6 +275,8 @@ func (typ *ConnectorType) Scan(src any) error {
 		t = ServerType
 	case "Storage":
 		t = StorageType
+	case "Stream":
+		t = StreamType
 	case "Website":
 		t = WebsiteType
 	default:
@@ -304,8 +304,6 @@ func (typ ConnectorType) Value() (driver.Value, error) {
 		return "App", nil
 	case DatabaseType:
 		return "Database", nil
-	case EventStreamType:
-		return "EventStream", nil
 	case FileType:
 		return "File", nil
 	case MobileType:
@@ -314,6 +312,8 @@ func (typ ConnectorType) Value() (driver.Value, error) {
 		return "Server", nil
 	case StorageType:
 		return "Storage", nil
+	case StreamType:
+		return "Stream", nil
 	case WebsiteType:
 		return "Website", nil
 	}

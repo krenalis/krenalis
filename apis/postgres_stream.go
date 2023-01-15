@@ -18,17 +18,17 @@ import (
 	"chichi/connector/ui"
 )
 
-// Make sure it implements the EventStreamConnection interface.
-var _ connector.EventStreamConnection = &postgresEventStream{}
+// Make sure it implements the StreamConnection interface.
+var _ connector.StreamConnection = &postgresStream{}
 
-// newPostgresEventStream returns a new postgresEventStream value implementing
-// an event stream on db.
-func newPostgresEventStream(ctx context.Context, db *postgres.DB) *postgresEventStream {
-	return &postgresEventStream{ctx, db, make(chan struct{})}
+// newPostgresStream returns a new postgresStream value implementing a stream
+// on db.
+func newPostgresStream(ctx context.Context, db *postgres.DB) *postgresStream {
+	return &postgresStream{ctx, db, make(chan struct{})}
 }
 
-// postgresEventStream is an event stream implemented on a PostgreSQL database.
-type postgresEventStream struct {
+// postgresStream is a stream implemented on a PostgreSQL database.
+type postgresStream struct {
 	ctx  context.Context
 	db   *postgres.DB
 	sent chan struct{}
@@ -36,7 +36,7 @@ type postgresEventStream struct {
 
 // Close closes the stream. Must be called if at least one Send or Receive call
 // has been made. It cannot be called concurrently with Send and Receive.
-func (s *postgresEventStream) Close() error {
+func (s *postgresStream) Close() error {
 	return s.db.Close()
 }
 
@@ -46,7 +46,7 @@ func (s *postgresEventStream) Close() error {
 //
 // Caller do not modify the event data, even temporarily, and event is not
 // retained after the ack function has been called.
-func (s *postgresEventStream) Receive() (event []byte, ack func(), err error) {
+func (s *postgresStream) Receive() (event []byte, ack func(), err error) {
 	for {
 		tx, err := s.db.Begin(s.ctx)
 		if err != nil {
@@ -79,7 +79,7 @@ func (s *postgresEventStream) Receive() (event []byte, ack func(), err error) {
 //
 // Send can modify the event data, but event is not retained after the ack
 // function has been called.
-func (s *postgresEventStream) Send(event []byte, options connector.SendOptions, ack func(err error)) error {
+func (s *postgresStream) Send(event []byte, options connector.SendOptions, ack func(err error)) error {
 	now := time.Now().UTC()
 	go func() {
 		_, err := s.db.Exec("INSERT INTO event_stream_queue (timestamp, event) VALUES ($1, $2)", now, event)
@@ -91,7 +91,7 @@ func (s *postgresEventStream) Send(event []byte, options connector.SendOptions, 
 }
 
 // ServeUI always returns an ui.ErrEventNotExist error. It exists only to
-// implement the connector.EventStreamConnection interface.
-func (s *postgresEventStream) ServeUI(string, []byte) (*ui.Form, *ui.Alert, error) {
+// implement the connector.StreamConnection interface.
+func (s *postgresStream) ServeUI(string, []byte) (*ui.Form, *ui.Alert, error) {
 	return nil, nil, ui.ErrEventNotExist
 }

@@ -16,23 +16,23 @@ import (
 var (
 	registryMu sync.RWMutex
 	registry   = struct {
-		apps        map[string]App
-		databases   map[string]Database
-		eventStream map[string]EventStream
-		files       map[string]File
-		mobiles     map[string]Mobile
-		servers     map[string]Server
-		storages    map[string]Storage
-		websites    map[string]Website
+		apps      map[string]App
+		databases map[string]Database
+		streams   map[string]Stream
+		files     map[string]File
+		mobiles   map[string]Mobile
+		servers   map[string]Server
+		storages  map[string]Storage
+		websites  map[string]Website
 	}{
-		apps:        make(map[string]App),
-		databases:   make(map[string]Database),
-		eventStream: make(map[string]EventStream),
-		files:       make(map[string]File),
-		mobiles:     make(map[string]Mobile),
-		servers:     make(map[string]Server),
-		storages:    make(map[string]Storage),
-		websites:    make(map[string]Website),
+		apps:      make(map[string]App),
+		databases: make(map[string]Database),
+		streams:   make(map[string]Stream),
+		files:     make(map[string]File),
+		mobiles:   make(map[string]Mobile),
+		servers:   make(map[string]Server),
+		storages:  make(map[string]Storage),
+		websites:  make(map[string]Website),
 	}
 )
 
@@ -47,7 +47,7 @@ type Connector struct {
 func Connectors() []Connector {
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	n := len(registry.apps) + len(registry.databases) + len(registry.eventStream) +
+	n := len(registry.apps) + len(registry.databases) + len(registry.streams) +
 		len(registry.files) + len(registry.mobiles) + len(registry.servers) +
 		len(registry.storages) + len(registry.websites)
 	connectors := make([]Connector, 0, n)
@@ -57,8 +57,8 @@ func Connectors() []Connector {
 	for _, c := range registry.databases {
 		connectors = append(connectors, Connector{Name: c.Name, Type: DatabaseType, Icon: c.Icon})
 	}
-	for _, c := range registry.eventStream {
-		connectors = append(connectors, Connector{Name: c.Name, Type: EventStreamType, Icon: c.Icon})
+	for _, c := range registry.streams {
+		connectors = append(connectors, Connector{Name: c.Name, Type: StreamType, Icon: c.Icon})
 	}
 	for _, c := range registry.files {
 		connectors = append(connectors, Connector{Name: c.Name, Type: FileType, Icon: c.Icon})
@@ -111,19 +111,19 @@ func RegisterDatabase(database Database) {
 	registry.databases[database.Name] = database
 }
 
-// RegisterEventStream makes an event stream connector available by the
-// provided name. If RegisterEventStream is called twice with the same name or
-// if fn is nil, it panics.
-func RegisterEventStream(stream EventStream) {
+// RegisterStream makes a stream connector available by the provided name.
+// If RegisterStream is called twice with the same name or if fn is nil, it
+// panics.
+func RegisterStream(stream Stream) {
 	if stream.Connect == nil {
-		panic("connector: RegisterEventStream function is nil")
+		panic("connector: RegisterStream function is nil")
 	}
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.files[stream.Name]; dup {
-		panic("connector: RegisterEventStream called twice for connector " + stream.Name)
+		panic("connector: RegisterStream called twice for connector " + stream.Name)
 	}
-	registry.eventStream[stream.Name] = stream
+	registry.streams[stream.Name] = stream
 }
 
 // RegisterFile makes a file connector available by the provided name. If
@@ -224,14 +224,14 @@ func RegisteredDatabase(name string) Database {
 	return database
 }
 
-// RegisteredEventStream returns the event stream registered with the given
-// name. If an event stream with this name is not registered, it panics.
-func RegisteredEventStream(name string) EventStream {
+// RegisteredStream returns the stream registered with the given name.
+// If a stream with this name is not registered, it panics.
+func RegisteredStream(name string) Stream {
 	registryMu.Lock()
-	stream, ok := registry.eventStream[name]
+	stream, ok := registry.streams[name]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("connector: unknown event stream connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("connector: unknown stream connector %q (forgotten import?)", name))
 	}
 	return stream
 }

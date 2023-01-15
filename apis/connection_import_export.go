@@ -120,7 +120,7 @@ func (this *Connection) Import(reimport bool) (err error) {
 	// Check that the connection has an allowed type and is a source.
 	var storage int
 	switch connector.Type {
-	case state.AppType, state.DatabaseType, state.EventStreamType:
+	case state.AppType, state.DatabaseType, state.StreamType:
 	case state.FileType:
 		if s := c.Storage(); s == nil {
 			return errors.Unprocessable(NoStorage, "file connection %d does not have a storage", c.ID)
@@ -135,7 +135,7 @@ func (this *Connection) Import(reimport bool) (err error) {
 	}
 
 	// Check that the connection has at least one mapping associated to it.
-	if connector.Type != state.EventStreamType {
+	if connector.Type != state.StreamType {
 		if len(c.Mappings()) == 0 {
 			return errors.Unprocessable(NoMappings, "connection %d has no mappings", c.ID)
 		}
@@ -319,25 +319,6 @@ func (this *Connection) _startImport(imp *state.ImportInProgress) error {
 			return fh.err
 		}
 
-	case state.EventStreamType:
-
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		c, err := _connector.RegisteredEventStream(connector.Name).Connect(ctx, &_connector.EventStreamConfig{
-			Role:     role,
-			Settings: connection.Settings,
-		})
-		if err != nil {
-			return importError{fmt.Errorf("cannot connect to the connector: %s", err)}
-		}
-		defer c.Close()
-		event, ack, err := c.Receive()
-		if err != nil {
-			return err
-		}
-		ack()
-		log.Printf("received event: %s", event)
-
 	case state.FileType:
 
 		var ctx = context.Background()
@@ -380,6 +361,26 @@ func (this *Connection) _startImport(imp *state.ImportInProgress) error {
 		if fh.err != nil {
 			return fh.err
 		}
+
+	case state.StreamType:
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		c, err := _connector.RegisteredStream(connector.Name).Connect(ctx, &_connector.StreamConfig{
+			Role:     role,
+			Settings: connection.Settings,
+		})
+		if err != nil {
+			return importError{fmt.Errorf("cannot connect to the connector: %s", err)}
+		}
+		defer c.Close()
+		event, ack, err := c.Receive()
+		if err != nil {
+			return err
+		}
+		ack()
+		log.Printf("received event: %s", event)
+
 	}
 
 	return nil

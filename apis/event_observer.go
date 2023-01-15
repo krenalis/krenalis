@@ -92,7 +92,7 @@ func (this *EventListeners) Add(size, source, server, stream int) (string, error
 						}
 						serverExist = true
 					case stream:
-						if typ != EventStreamType {
+						if typ != StreamType {
 							return errors.BadRequest("connection %d is not a stream", stream)
 						}
 						streamExist = true

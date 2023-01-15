@@ -87,7 +87,7 @@ If webhooksPer is "Connection":
 * Settings
 * Firehose
 
-## EventStreamConnection
+## StreamConnection
 
 ### Close
 

@@ -15,13 +15,13 @@ const ConnectionStream = ({ connection: c, onConnectionChange, onError }) => {
 				onError(err);
 				return;
 			}
-			let eventStreams = [];
+			let streams = [];
 			for (let cn of connections) {
-				if (cn.Type === 'EventStream' && cn.Role === c.Role) {
-					eventStreams.push(cn);
+				if (cn.Type === 'Stream' && cn.Role === c.Role) {
+					streams.push(cn);
 				}
 			}
-			setStreams(eventStreams);
+			setStreams(streams);
 		};
 		fetchStreams();
 	}, []);

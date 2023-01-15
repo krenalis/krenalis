@@ -95,17 +95,17 @@ type eventProcessor struct {
 	observer   *eventObserver
 }
 
-// eventProcessorStream represents an event stream used by the event processor.
+// eventProcessorStream represents a stream used by the event processor.
 type eventProcessorStream struct {
 	id     int
-	stream connector.EventStreamConnection
+	stream connector.StreamConnection
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
 // newEventProcessor returns a new event processor.
 func newEventProcessor(ctx context.Context, db *postgres.DB, st *state.State,
-	defaultStream connector.EventStreamConnection) (*eventProcessor, error) {
+	defaultStream connector.StreamConnection) (*eventProcessor, error) {
 
 	processor := eventProcessor{
 		db:       db,
@@ -139,7 +139,7 @@ func (processor *eventProcessor) isSuitableStream(c *state.Connection) bool {
 	if c == nil || !c.Enabled || c.Role != state.SourceRole || len(c.Settings) == 0 {
 		return false
 	}
-	if typ := c.Connector().Type; typ != state.EventStreamType {
+	if typ := c.Connector().Type; typ != state.StreamType {
 		return false
 	}
 	if c.Workspace().Warehouse == nil {
@@ -199,17 +199,17 @@ func (processor *eventProcessor) onSetWarehouseSettings(n state.SetWarehouseSett
 func (processor *eventProcessor) replaceStream(old *eventProcessorStream, new *state.Connection) {
 	// Open to the new stream.
 	if new != nil {
-		var stream connector.EventStreamConnection
+		var stream connector.StreamConnection
 		for stream == nil {
 			var err error
-			stream, err = connector.RegisteredEventStream(new.Connector().Name).Connect(
-				context.Background(), &connector.EventStreamConfig{
+			stream, err = connector.RegisteredStream(new.Connector().Name).Connect(
+				context.Background(), &connector.StreamConfig{
 					Role:     connector.DestinationRole,
 					Settings: new.Settings,
 				})
 			if err != nil {
 				// Wait and retry.
-				log.Printf("[warning] cannot connect to event stream %d", new.ID)
+				log.Printf("[warning] cannot connect to stream %d", new.ID)
 				time.Sleep(10 * time.Millisecond)
 				processor.Lock()
 				if processor.streams[new.ID] != old {
@@ -229,7 +229,7 @@ func (processor *eventProcessor) replaceStream(old *eventProcessorStream, new *s
 		processor.Lock()
 		if processor.streams[new.ID] != old {
 			if err := stream.Close(); err != nil {
-				log.Printf("[warning] an error accurred closing the event stream %d: %s", new.ID, err)
+				log.Printf("[warning] an error accurred closing the stream %d: %s", new.ID, err)
 			}
 			processor.Unlock()
 			cancel()
@@ -251,7 +251,7 @@ func (p *eventProcessor) process(s *eventProcessorStream) {
 
 	streamName := "default stream"
 	if s.id > 0 {
-		streamName = "event stream " + strconv.Itoa(s.id)
+		streamName = "stream " + strconv.Itoa(s.id)
 	}
 
 	defer func() {

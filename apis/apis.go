@@ -81,14 +81,14 @@ func New(conf *Config) (*APIs, error) {
 
 	// Run the event collector.
 	apis.eventCollector, err = newEventCollector(context.Background(), apis.state,
-		newPostgresEventStream(context.Background(), db))
+		newPostgresStream(context.Background(), db))
 	if err != nil {
 		return nil, err
 	}
 
 	// Run the event processor.
 	apis.eventProcessor, err = newEventProcessor(context.Background(), db, apis.state,
-		newPostgresEventStream(context.Background(), db))
+		newPostgresStream(context.Background(), db))
 	if err != nil {
 		return nil, err
 	}

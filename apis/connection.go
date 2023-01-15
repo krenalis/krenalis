@@ -200,7 +200,7 @@ func (this *Connection) Imports() ([]*Import, error) {
 	c := this.connection
 	connector := c.Connector()
 	switch connector.Type {
-	case state.AppType, state.DatabaseType, state.EventStreamType, state.FileType:
+	case state.AppType, state.DatabaseType, state.FileType, state.StreamType:
 	default:
 		return nil, errors.BadRequest("connection %d cannot have imports, it's a %s connection",
 			c.ID, strings.ToLower(connector.Type.String()))
@@ -287,7 +287,7 @@ func (this *Connection) Schema() (types.Type, error) {
 	switch c.Connector().Type {
 	case state.StorageType:
 		return types.Type{}, errors.BadRequest("connection %d has no properties, it's a storage", c.ID)
-	case state.EventStreamType:
+	case state.StreamType:
 		return types.Type{}, errors.BadRequest("connection %d has no properties, it's a stream", c.ID)
 	}
 	return c.Schema, nil
@@ -440,12 +440,6 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 				Settings: c.Settings,
 				Firehose: fh,
 			})
-		case state.EventStreamType:
-			connection, err = _connector.RegisteredEventStream(connector.Name).Connect(fh.ctx, &_connector.EventStreamConfig{
-				Role:     cRole,
-				Settings: c.Settings,
-				Firehose: fh,
-			})
 		case state.FileType:
 			connection, err = _connector.RegisteredFile(connector.Name).Connect(fh.ctx, &_connector.FileConfig{
 				Role:     cRole,
@@ -466,6 +460,12 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 			})
 		case state.StorageType:
 			connection, err = _connector.RegisteredStorage(connector.Name).Connect(fh.ctx, &_connector.StorageConfig{
+				Role:     cRole,
+				Settings: c.Settings,
+				Firehose: fh,
+			})
+		case state.StreamType:
+			connection, err = _connector.RegisteredStream(connector.Name).Connect(fh.ctx, &_connector.StreamConfig{
 				Role:     cRole,
 				Settings: c.Settings,
 				Firehose: fh,
@@ -704,7 +704,7 @@ func (this *Connection) SetStream(stream int) error {
 		if !ok {
 			return errors.Unprocessable(StreamNotExist, "stream %d does not exist", stream)
 		}
-		if s.Connector().Type != state.EventStreamType {
+		if s.Connector().Type != state.StreamType {
 			return errors.BadRequest("connection %d is not a stream", stream)
 		}
 		if s.Role != c.Role {

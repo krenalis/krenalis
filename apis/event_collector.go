@@ -35,17 +35,17 @@ var errUnauthorized = errors.New("unauthorized")
 // eventDateLayout is the layout used for dates in events.
 var eventDateLayout = "2006-01-02T15:04:05.999Z07:00"
 
-// An eventCollector collects events and sends them to event streams.
+// An eventCollector collects events and sends them to streams.
 type eventCollector struct {
 	sync.Mutex // for the streams field.
 	state      *state.State
 	streams    map[int]*eventCollectorStream
 }
 
-// eventCollectorStream represents an event stream used by the event collector.
+// eventCollectorStream represents a stream used by the event collector.
 type eventCollectorStream struct {
 	id      int
-	stream  connector.EventStreamConnection
+	stream  connector.StreamConnection
 	sending sync.WaitGroup
 }
 
@@ -54,7 +54,7 @@ type eventCollectorStream struct {
 // stream. If a source does not have a stream, events will be sent to
 // defaultStream.
 func newEventCollector(ctx context.Context, st *state.State,
-	defaultStream connector.EventStreamConnection) (*eventCollector, error) {
+	defaultStream connector.StreamConnection) (*eventCollector, error) {
 
 	var collector = eventCollector{
 		state:   st,
@@ -300,17 +300,17 @@ func (collector *eventCollector) onSetWarehouseSettings(n state.SetWarehouseSett
 func (collector *eventCollector) replaceStream(old *eventCollectorStream, new *state.Connection) {
 	// Open to the new stream.
 	if new != nil {
-		var stream connector.EventStreamConnection
+		var stream connector.StreamConnection
 		for stream == nil {
 			var err error
-			stream, err = connector.RegisteredEventStream(new.Connector().Name).Connect(
-				context.Background(), &connector.EventStreamConfig{
+			stream, err = connector.RegisteredStream(new.Connector().Name).Connect(
+				context.Background(), &connector.StreamConfig{
 					Role:     connector.SourceRole,
 					Settings: new.Settings,
 				})
 			if err != nil {
 				// Wait and retry.
-				log.Printf("[warning] cannot connect to event stream %d", new.ID)
+				log.Printf("[warning] cannot connect to stream %d", new.ID)
 				time.Sleep(10 * time.Millisecond)
 				collector.Lock()
 				if collector.streams[new.ID] != old {
@@ -323,7 +323,7 @@ func (collector *eventCollector) replaceStream(old *eventCollectorStream, new *s
 		collector.Lock()
 		if collector.streams[new.ID] != old {
 			if err := stream.Close(); err != nil {
-				log.Printf("[warning] an error accurred closing the event stream %d: %s", new.ID, err)
+				log.Printf("[warning] an error accurred closing the stream %d: %s", new.ID, err)
 			}
 			collector.Unlock()
 			return
@@ -336,7 +336,7 @@ func (collector *eventCollector) replaceStream(old *eventCollectorStream, new *s
 		old.sending.Wait()
 		err := old.stream.Close()
 		if err != nil {
-			log.Printf("[warning] an error accurred closing the event stream %d: %s", old.id, err)
+			log.Printf("[warning] an error accurred closing the stream %d: %s", old.id, err)
 		}
 	}
 }

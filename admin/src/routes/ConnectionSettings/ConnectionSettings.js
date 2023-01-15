@@ -127,11 +127,11 @@ const ConnectionSettings = () => {
 					)}
 					{(c.Type === 'Mobile' || c.Type === 'Website' || c.Type === 'Server') && c.Role === 'Source' && (
 						<>
-							<SlTab slot='nav' panel='eventStream'>
-								Event Stream
+							<SlTab slot='nav' panel='stream'>
+								Stream
 							</SlTab>
-							<SlTabPanel name='eventStream'>
-								<div className='panelTitle'>Event Stream</div>
+							<SlTabPanel name='stream'>
+								<div className='panelTitle'>Stream</div>
 								<ConnectionStream
 									connection={c}
 									onConnectionChange={(c) => setConnection(c)}

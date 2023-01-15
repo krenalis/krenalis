@@ -122,7 +122,7 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, name st
 		if !ok {
 			return 0, errors.Unprocessable(StreamNotExist, "stream %d does not exist", opts.Stream)
 		}
-		if s.Connector().Type != state.EventStreamType {
+		if s.Connector().Type != state.StreamType {
 			return 0, errors.BadRequest("connection %d is not a stream", opts.Stream)
 		}
 		if ConnectionRole(s.Role) != role {

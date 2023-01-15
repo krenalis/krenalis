@@ -28,11 +28,11 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the EventStreamConnection interface.
-var _ connector.EventStreamConnection = &connection{}
+// Make sure it implements the StreamConnection interface.
+var _ connector.StreamConnection = &connection{}
 
 func init() {
-	connector.RegisterEventStream(connector.EventStream{
+	connector.RegisterStream(connector.Stream{
 		Name:    "RabbitMQ",
 		Icon:    icon,
 		Connect: connect,
@@ -40,7 +40,7 @@ func init() {
 }
 
 // connect returns a new RabbitMQ connection.
-func connect(ctx context.Context, conf *connector.EventStreamConfig) (connector.EventStreamConnection, error) {
+func connect(ctx context.Context, conf *connector.StreamConfig) (connector.StreamConnection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

@@ -9,24 +9,22 @@ package connector
 
 import "context"
 
-// EventStream represents an event stream connector.
-type EventStream struct {
+// Stream represents a stream connector.
+type Stream struct {
 	Name    string
 	Icon    string // icon in SVG format
-	Connect EventStreamConnectFunc
+	Connect StreamConnectFunc
 }
 
-// EventStreamConfig represents the configuration of an event stream
-// connection.
-type EventStreamConfig struct {
+// StreamConfig represents the configuration of a stream connection.
+type StreamConfig struct {
 	Role     Role
 	Settings []byte
 	Firehose Firehose
 }
 
-// EventStreamConnectFunc represents functions that create new event stream
-// connections.
-type EventStreamConnectFunc func(context.Context, *EventStreamConfig) (EventStreamConnection, error)
+// StreamConnectFunc represents functions that create new stream connections.
+type StreamConnectFunc func(context.Context, *StreamConfig) (StreamConnection, error)
 
 // SendOptions are the send options.
 type SendOptions struct {
@@ -36,10 +34,9 @@ type SendOptions struct {
 	OrderKey string
 }
 
-// EventStreamConnection is the interface implemented by event stream
-// connections. An EventStreamConnection value can be use for sending or
-// receiving but not both.
-type EventStreamConnection interface {
+// StreamConnection is the interface implemented by stream connections.
+// A StreamConnection value can be use for sending or receiving but not both.
+type StreamConnection interface {
 	Connection
 
 	// Close closes the stream. When Close is called, no other calls to connection

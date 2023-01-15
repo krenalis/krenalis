@@ -11,7 +11,7 @@ CREATE TABLE accounts (
 INSERT INTO accounts (name, email, password) VALUES
     ('ACME inc', 'acme@open2b.com', '$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC'); -- Password: foopass2
 
-CREATE TYPE connector_type AS ENUM ('App', 'Database', 'EventStream', 'File', 'Mobile', 'Server', 'Storage', 'Website');
+CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'Mobile', 'Server', 'Storage', 'Stream', 'Website');
 CREATE TYPE webhooks_per AS ENUM ('None', 'Connector', 'Resource', 'Source');
 
 CREATE TABLE connectors (
@@ -44,9 +44,9 @@ INSERT INTO connectors (name, type, has_settings, logo_url, webhooks_per, oauth_
     ('PostgreSQL', 'Database', TRUE, 'https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/postgresql-512.png', 'None', '', '', '', '', 0),
     ('Parquet', 'File', TRUE, '', 'None', '', '', '', '', 0),
     ('Website', 'Website', TRUE, 'https://cdn2.iconfinder.com/data/icons/free-simple-line-mix/48/22-Website-512.png', 'None', '', '', '', '', 0),
-    ('Kafka', 'EventStream', TRUE, 'https://cdn.icon-icons.com/icons2/2248/PNG/512/apache_kafka_icon_138937.png', 'None', '', '', '', '', 0),
-    ('RabbitMQ', 'EventStream', TRUE, 'https://cdn.icon-icons.com/icons2/2699/PNG/512/rabbitmq_logo_icon_170810.png', 'None', '', '', '', '', 0),
-    ('UISample', 'EventStream', TRUE, '', 'None', '', '', '', '', 0),
+    ('Kafka', 'Stream', TRUE, 'https://cdn.icon-icons.com/icons2/2248/PNG/512/apache_kafka_icon_138937.png', 'None', '', '', '', '', 0),
+    ('RabbitMQ', 'Stream', TRUE, 'https://cdn.icon-icons.com/icons2/2699/PNG/512/rabbitmq_logo_icon_170810.png', 'None', '', '', '', '', 0),
+    ('UISample', 'Stream', TRUE, '', 'None', '', '', '', '', 0),
     ('Server', 'Server', FALSE, 'https://cdn1.iconfinder.com/data/icons/unicons-line-vol-5/24/server-512.png', 'None', '', '', '', '', 0);
 
 CREATE TYPE warehouse_type AS ENUM ('BigQuery', 'ClickHouse', 'PostgreSQL', 'Redshift', 'Snowflake');

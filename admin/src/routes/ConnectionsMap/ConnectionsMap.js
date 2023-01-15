@@ -55,7 +55,7 @@ const ConnectionsMap = () => {
 						endAnchor={c.Role === 'Source' ? 'right' : 'left'}
 					></LinkedConnectionBlocks>
 				);
-			} else if (c.Type === 'EventStream') {
+			} else if (c.Type === 'Stream') {
 				let streamed = sources.filter((cn) => cn.Stream === c.ID);
 				connections.push(
 					<LinkedConnectionBlocks

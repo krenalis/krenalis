@@ -38,11 +38,11 @@ type Type int
 const (
 	AppType Type = iota + 1
 	DatabaseType
-	EventStreamType
 	FileType
 	MobileType
 	ServerType
 	StorageType
+	StreamType
 	WebsiteType
 )
 
