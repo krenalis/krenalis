@@ -62,8 +62,8 @@ type connection struct {
 	iter     *fetchesRecordIter
 }
 
-// Close closes the stream. Must be called if at least one Send or Receive call
-// has been made. It cannot be called concurrently with Send and Receive.
+// Close closes the stream. When Close is called, no other calls to connection
+// methods are in progress and no more will be made.
 func (c *connection) Close() error {
 	if c.client == nil {
 		return nil
@@ -79,6 +79,8 @@ func (c *connection) Close() error {
 //
 // Caller do not modify the event data, even temporarily, and event is not
 // retained after the ack function has been called.
+//
+// Receive can be used by multiple goroutines at the same time.
 func (c *connection) Receive() ([]byte, func(), error) {
 	err := c.connect()
 	if err != nil {
@@ -106,6 +108,8 @@ func (c *connection) Receive() ([]byte, func(), error) {
 //
 // Send can modify the event data, but event is not retained after the ack
 // function has been called.
+//
+// Send can be used by multiple goroutines at the same time.
 func (c *connection) Send(event []byte, options connector.SendOptions, ack func(err error)) error {
 	err := c.connect()
 	if err != nil {

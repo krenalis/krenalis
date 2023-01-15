@@ -37,12 +37,13 @@ type SendOptions struct {
 }
 
 // EventStreamConnection is the interface implemented by event stream
-// connections.
+// connections. An EventStreamConnection value can be use for sending or
+// receiving but not both.
 type EventStreamConnection interface {
 	Connection
 
-	// Close closes the stream. Must be called if at least one Send or Receive call
-	// has been made. It cannot be called concurrently with Send and Receive.
+	// Close closes the stream. When Close is called, no other calls to connection
+	// methods are in progress and no more will be made.
 	Close() error
 
 	// Receive receives an event from the stream. Callers call the ack function to
@@ -51,6 +52,8 @@ type EventStreamConnection interface {
 	//
 	// Caller do not modify the event data, even temporarily, and event is not
 	// retained after the ack function has been called.
+	//
+	// Receive can be used by multiple goroutines at the same time.
 	Receive() (event []byte, ack func(), err error)
 
 	// Send sends an event to the stream. If ack is not nil, connector calls ack
@@ -58,5 +61,7 @@ type EventStreamConnection interface {
 	//
 	// Send can modify the event data, but event is not retained after the ack
 	// function has been called.
+	//
+	// Send can be used by multiple goroutines at the same time.
 	Send(event []byte, options SendOptions, ack func(err error)) error
 }
