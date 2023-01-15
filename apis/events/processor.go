@@ -123,7 +123,10 @@ func NewProcessor(ctx context.Context, db *postgres.DB, st *state.State,
 	}
 
 	// Process the events from the default stream.
-	go processor.process(&processorStream{stream: defaultStream})
+	go processor.process(&processorStream{
+		stream: defaultStream,
+		ctx:    ctx,
+	})
 
 	st.AddListener(processor.onAddConnection)
 	st.AddListener(processor.onDeleteConnection)
