@@ -380,17 +380,15 @@ func (this *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) erro
 	if err != nil {
 		return errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
 	}
-	n := state.SetWorkspaceWarehouseNotification{
+	n := state.SetWarehouseSettingsNotification{
 		Workspace: ws.ID,
-		Warehouse: &state.NotifiedWarehouse{
-			Type:     state.WarehouseType(typ),
-			Settings: warehouse.Settings(),
-		},
+		Type:      state.WarehouseType(typ),
+		Settings:  warehouse.Settings(),
 	}
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		result, err := tx.Exec("UPDATE workspaces SET warehouse_type = $1, warehouse_settings = $2 WHERE id = $3"+
 			" AND warehouse_type IS NULL",
-			n.Warehouse.Type, string(n.Warehouse.Settings), n.Workspace)
+			n.Type, string(n.Settings), n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -423,9 +421,9 @@ func (this *Workspace) DisconnectWarehouse() error {
 	if ws.Warehouse == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
 	}
-	n := state.SetWorkspaceWarehouseNotification{
+	n := state.SetWarehouseSettingsNotification{
 		Workspace: ws.ID,
-		Warehouse: nil,
+		Settings:  nil,
 	}
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
 		var typ *state.WarehouseType
@@ -568,15 +566,14 @@ func (this *Workspace) Schema(name string) types.Type {
 	return *schema
 }
 
-// SetWarehouse sets the settings used to connect to the data warehouse of the
-// workspace.
+// SetWarehouseSettings sets the settings of the workspace's data warehouse.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist,
 // and it returns an errors.UnprocessableError error with code
 //   - NotConnected, if the workspace is not connected to a data warehouse.
 //   - InvalidSettings, if the settings are not valid.
 //   - ConnectionFailed, if the connection fails.
-func (this *Workspace) SetWarehouse(typ WarehouseType, settings []byte) error {
+func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) error {
 	ws := this.workspace
 	if ws.Warehouse == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
@@ -594,16 +591,14 @@ func (this *Workspace) SetWarehouse(typ WarehouseType, settings []byte) error {
 	if err != nil {
 		return errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
 	}
-	n := state.SetWorkspaceWarehouseNotification{
+	n := state.SetWarehouseSettingsNotification{
 		Workspace: ws.ID,
-		Warehouse: &state.NotifiedWarehouse{
-			Type:     state.WarehouseType(typ),
-			Settings: warehouse.Settings(),
-		},
+		Type:      state.WarehouseType(typ),
+		Settings:  warehouse.Settings(),
 	}
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
 		result, err := tx.Exec("UPDATE workspaces SET warehouse_settings = $1 WHERE id = $2 AND warehouse_type = $3",
-			string(n.Warehouse.Settings), n.Workspace, n.Warehouse.Type)
+			string(n.Settings), n.Workspace, n.Type)
 		if err != nil {
 			return err
 		}

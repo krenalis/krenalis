@@ -73,10 +73,10 @@ func (s *State) keep(ctx context.Context, notifications <-chan postgres.Notifica
 			s.setConnectionUserSchema(n)
 		case "SetResource":
 			s.setResource(n)
+		case "SetWarehouseSettings":
+			s.setWarehouseSettings(n)
 		case "SetWorkspaceSchemas":
 			s.setWorkspaceSchemas(n)
-		case "SetWorkspaceWarehouse":
-			s.setWorkspaceWarehouse(n)
 		case "StartImport":
 			s.startImport(n)
 		default:
@@ -577,6 +577,46 @@ func (s *State) setResource(n postgres.Notification) {
 	})
 }
 
+// SetWarehouseSettingsNotification is the notification event sent when the
+// settings of a data warehouse are changed.
+type SetWarehouseSettingsNotification struct {
+	Workspace int
+	Type      WarehouseType
+	Settings  json.RawMessage `json:",omitempty"`
+}
+
+// setWarehouseSettings sets the settings of a data warehouse.
+func (s *State) setWarehouseSettings(n postgres.Notification) {
+	e := SetWarehouseSettingsNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	disconnected := s.workspaces[e.Workspace].Warehouse
+	if e.Settings == nil {
+		s.replaceWorkspace(e.Workspace, func(w *Workspace) {
+			w.Warehouse = nil
+		})
+	} else {
+		var err error
+		s.replaceWorkspace(e.Workspace, func(w *Workspace) {
+			w.Warehouse, err = openWarehouse(e.Type, e.Settings)
+		})
+		if err != nil {
+			log.Printf("[error] cannot open data warehouse of workspace %d: %s", e.Workspace, err)
+		}
+	}
+	// Close the disconnected warehouse.
+	if disconnected != nil {
+		go func() {
+			err := disconnected.Close()
+			if err != nil {
+				// TODO(marco): write the error into a workspace specific log
+				log.Printf("error occurred disconnecting the warehouse: %s", err)
+			}
+		}()
+	}
+}
+
 // SetWorkspaceSchemasNotification is the notification event sent when schemas
 // of a workspace are changed.
 type SetWorkspaceSchemasNotification struct {
@@ -604,16 +644,50 @@ func (s *State) setWorkspaceSchemas(n postgres.Notification) {
 	})
 }
 
-// SetWorkspaceWarehouseNotification is the notification event sent when a
-// workspace warehouse is changed.
-type SetWorkspaceWarehouseNotification struct {
-	Workspace int
-	Warehouse *NotifiedWarehouse
+// StartImportNotification is the notification event sent when an import
+// starts.
+type StartImportNotification struct {
+	ID         int
+	Connection int
+	Storage    int
+	Reimport   bool
+	StartTime  time.Time
 }
 
-type NotifiedWarehouse struct {
-	Type     WarehouseType
-	Settings json.RawMessage `json:",omitempty"`
+// startImport starts an import.
+func (s *State) startImport(n postgres.Notification) {
+	e := StartImportNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	c := s.connections[e.Connection]
+	c.mu.Lock()
+	c.importInProgress = &ImportInProgress{
+		mu:         new(sync.Mutex),
+		ID:         e.ID,
+		connection: c,
+		storage:    s.connections[e.Storage],
+		Reimport:   e.Reimport,
+		StartTime:  e.StartTime,
+	}
+	c.mu.Unlock()
+	// Start the import.
+	// TODO(marco): only one server should starts the import.
+	go StartImport(c.importInProgress)
+}
+
+// openWarehouse opens a data warehouse with the given type and settings.
+// It returns an error if typ or settings are not valid.
+func openWarehouse(typ WarehouseType, settings []byte) (warehouses.Warehouse, error) {
+	switch typ {
+	case BigQuery, Redshift, Snowflake:
+		return nil, fmt.Errorf("warehouse type %s is not yet supported", typ)
+	case PostgreSQL:
+		return postgresql.Open(settings)
+	case ClickHouse:
+		return clickhouse.Open(settings)
+	}
+	return nil, fmt.Errorf("warehouse type %d is not valid", typ)
 }
 
 // WarehouseType represents a data warehouse type.
@@ -678,82 +752,4 @@ func (typ WarehouseType) Value() (driver.Value, error) {
 		return "Snowflake", nil
 	}
 	return nil, fmt.Errorf("not a valid WarehouseType: %d", typ)
-}
-
-// setWorkspaceWarehouse sets the warehouse of a workspace.
-func (s *State) setWorkspaceWarehouse(n postgres.Notification) {
-	e := SetWorkspaceWarehouseNotification{}
-	if !decodeStateNotification(n, &e) {
-		return
-	}
-	disconnected := s.workspaces[e.Workspace].Warehouse
-	if e.Warehouse != nil {
-		var err error
-		s.replaceWorkspace(e.Workspace, func(w *Workspace) {
-			w.Warehouse, err = openWarehouse(e.Warehouse.Type, e.Warehouse.Settings)
-		})
-		if err != nil {
-			log.Printf("[error] cannot open data warehouse of workspace %d: %s", e.Workspace, err)
-		}
-	} else {
-		s.replaceWorkspace(e.Workspace, func(w *Workspace) {
-			w.Warehouse = nil
-		})
-	}
-	// Close the disconnected warehouse.
-	if disconnected != nil {
-		go func() {
-			err := disconnected.Close()
-			if err != nil {
-				// TODO(marco): write the error into a workspace specific log
-				log.Printf("error occurred disconnecting the warehouse: %s", err)
-			}
-		}()
-	}
-}
-
-// StartImportNotification is the notification event sent when an import
-// starts.
-type StartImportNotification struct {
-	ID         int
-	Connection int
-	Storage    int
-	Reimport   bool
-	StartTime  time.Time
-}
-
-// startImport starts an import.
-func (s *State) startImport(n postgres.Notification) {
-	e := StartImportNotification{}
-	if !decodeStateNotification(n, &e) {
-		return
-	}
-	c := s.connections[e.Connection]
-	c.mu.Lock()
-	c.importInProgress = &ImportInProgress{
-		mu:         new(sync.Mutex),
-		ID:         e.ID,
-		connection: c,
-		storage:    s.connections[e.Storage],
-		Reimport:   e.Reimport,
-		StartTime:  e.StartTime,
-	}
-	c.mu.Unlock()
-	// Start the import.
-	// TODO(marco): only one server should starts the import.
-	go StartImport(c.importInProgress)
-}
-
-// openWarehouse opens a data warehouse with the given type and settings.
-// It returns an error if typ or settings are not valid.
-func openWarehouse(typ WarehouseType, settings []byte) (warehouses.Warehouse, error) {
-	switch typ {
-	case BigQuery, Redshift, Snowflake:
-		return nil, fmt.Errorf("warehouse type %s is not yet supported", typ)
-	case PostgreSQL:
-		return postgresql.Open(settings)
-	case ClickHouse:
-		return clickhouse.Open(settings)
-	}
-	return nil, fmt.Errorf("warehouse type %d is not valid", typ)
 }
