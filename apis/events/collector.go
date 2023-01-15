@@ -5,12 +5,11 @@
 // Copyright (c) 2022 Open2b
 //
 
-package apis
+package events
 
 import (
 	"bytes"
 	"context"
-	_ "embed"
 	"encoding/json"
 	"errors"
 	"io"
@@ -29,17 +28,21 @@ import (
 // maxRequestSize is the maximum size in bytes of an event request body.
 const maxRequestSize = 500 * 1024
 
-// Errors returned to and handled by the ServeHTTP method.
-var errUnauthorized = errors.New("unauthorized")
-
 // eventDateLayout is the layout used for dates in events.
 var eventDateLayout = "2006-01-02T15:04:05.999Z07:00"
 
-// An eventCollector collects events and sends them to streams.
-type eventCollector struct {
-	sync.Mutex // for the streams field.
-	state      *state.State
-	streams    map[int]*eventCollectorStream
+// Errors handled by the HTTP server of the collector.
+var (
+	errUnauthorized = errors.New("unauthorized")
+	errBadRequest   = errors.New("bad request")
+	errNotFound     = errors.New("not found")
+)
+
+// A Collector collects events and sends them to streams.
+type Collector struct {
+	mu      sync.Mutex // for the streams field.
+	state   *state.State
+	streams map[int]*eventCollectorStream
 }
 
 // eventCollectorStream represents a stream used by the event collector.
@@ -49,14 +52,14 @@ type eventCollectorStream struct {
 	sending sync.WaitGroup
 }
 
-// newEventCollector returns a new event collector. It reads events sent from
+// NewCollector returns a new event collector. It reads events sent from
 // mobile, server and website sources and sends them to the corresponding
 // stream. If a source does not have a stream, events will be sent to
 // defaultStream.
-func newEventCollector(ctx context.Context, st *state.State,
-	defaultStream connector.StreamConnection) (*eventCollector, error) {
+func NewCollector(ctx context.Context, st *state.State,
+	defaultStream connector.StreamConnection) (*Collector, error) {
 
-	var collector = eventCollector{
+	var collector = Collector{
 		state:   st,
 		streams: map[int]*eventCollectorStream{},
 	}
@@ -87,7 +90,7 @@ func newEventCollector(ctx context.Context, st *state.State,
 // ServeHTTP serves event messages from HTTP.
 // A message is a JSON stream of JSON objects where the first object is the
 // message header.
-func (c *eventCollector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := c.serveHTTP(r)
 	if err != nil {
 		switch err {
@@ -113,7 +116,7 @@ type MessageHeader struct {
 }
 
 // serveHTTP is called by the ServeHTTP method to serve an event request.
-func (collector *eventCollector) serveHTTP(r *http.Request) error {
+func (collector *Collector) serveHTTP(r *http.Request) error {
 
 	date := time.Now().UTC()
 
@@ -174,14 +177,14 @@ func (collector *eventCollector) serveHTTP(r *http.Request) error {
 		streamID = s.ID
 	}
 	var stream *eventCollectorStream
-	collector.Lock()
+	collector.mu.Lock()
 	stream, ok = collector.streams[streamID]
 	if !ok {
 		// Use the default stream.
 		stream, ok = collector.streams[0]
 	}
 	stream.sending.Add(1)
-	collector.Unlock()
+	collector.mu.Unlock()
 
 	// Prepare the event data.
 	var event bytes.Buffer
@@ -222,7 +225,7 @@ func (collector *eventCollector) serveHTTP(r *http.Request) error {
 }
 
 // onAddConnection is called when a connection is added.
-func (collector *eventCollector) onAddConnection(n state.AddConnectionNotification) {
+func (collector *Collector) onAddConnection(n state.AddConnectionNotification) {
 	c, _ := collector.state.Connection(n.ID)
 	if s, ok := collector.streamOf(c); ok {
 		go collector.replaceStream(nil, s)
@@ -230,7 +233,7 @@ func (collector *eventCollector) onAddConnection(n state.AddConnectionNotificati
 }
 
 // onDeleteConnection is called when a connection is deleted.
-func (collector *eventCollector) onDeleteConnection(n state.DeleteConnectionNotification) {
+func (collector *Collector) onDeleteConnection(n state.DeleteConnectionNotification) {
 	// Check if an open stream has been deleted.
 	old, ok := collector.streams[n.ID]
 	if ok {
@@ -252,7 +255,7 @@ func (collector *eventCollector) onDeleteConnection(n state.DeleteConnectionNoti
 }
 
 // onSetConnectionSettings is called when settings of a connection is changed.
-func (collector *eventCollector) onSetConnectionSettings(n state.SetConnectionSettingsNotification) {
+func (collector *Collector) onSetConnectionSettings(n state.SetConnectionSettingsNotification) {
 	old, ok := collector.streams[n.Connection]
 	if ok {
 		new, _ := collector.state.Connection(n.Connection)
@@ -261,7 +264,7 @@ func (collector *eventCollector) onSetConnectionSettings(n state.SetConnectionSe
 }
 
 // onSetConnectionStream is called when the stream of a connection is changed.
-func (collector *eventCollector) onSetConnectionStream(n state.SetConnectionStreamNotification) {
+func (collector *Collector) onSetConnectionStream(n state.SetConnectionStreamNotification) {
 	old, ok := collector.streams[n.Connection]
 	if ok {
 		new, _ := collector.state.Connection(n.Connection)
@@ -271,7 +274,7 @@ func (collector *eventCollector) onSetConnectionStream(n state.SetConnectionStre
 
 // onSetWarehouseSettings is called when the settings of a workspace data
 // warehouse are changed.
-func (collector *eventCollector) onSetWarehouseSettings(n state.SetWarehouseSettingsNotification) {
+func (collector *Collector) onSetWarehouseSettings(n state.SetWarehouseSettingsNotification) {
 	ws, _ := collector.state.Workspace(n.Workspace)
 	if n.Settings == nil {
 		// Close the streams of the workspace.
@@ -297,7 +300,7 @@ func (collector *eventCollector) onSetWarehouseSettings(n state.SetWarehouseSett
 // replaceStream replaces the stream old with new, opening the new stream and
 // closing the old one. If old is nil, it only opens and adds the new stream.
 // If new is nil, it only closes and removes the old one.
-func (collector *eventCollector) replaceStream(old *eventCollectorStream, new *state.Connection) {
+func (collector *Collector) replaceStream(old *eventCollectorStream, new *state.Connection) {
 	// Open to the new stream.
 	if new != nil {
 		var stream connector.StreamConnection
@@ -312,24 +315,24 @@ func (collector *eventCollector) replaceStream(old *eventCollectorStream, new *s
 				// Wait and retry.
 				log.Printf("[warning] cannot connect to stream %d", new.ID)
 				time.Sleep(10 * time.Millisecond)
-				collector.Lock()
+				collector.mu.Lock()
 				if collector.streams[new.ID] != old {
-					collector.Unlock()
+					collector.mu.Unlock()
 					return
 				}
-				collector.Unlock()
+				collector.mu.Unlock()
 			}
 		}
-		collector.Lock()
+		collector.mu.Lock()
 		if collector.streams[new.ID] != old {
 			if err := stream.Close(); err != nil {
 				log.Printf("[warning] an error accurred closing the stream %d: %s", new.ID, err)
 			}
-			collector.Unlock()
+			collector.mu.Unlock()
 			return
 		}
 		collector.streams[new.ID] = &eventCollectorStream{id: new.ID, stream: stream}
-		collector.Unlock()
+		collector.mu.Unlock()
 	}
 	// Close the old stream.
 	if old != nil {
@@ -342,7 +345,7 @@ func (collector *eventCollector) replaceStream(old *eventCollectorStream, new *s
 }
 
 // streamOf returns the stream of c.
-func (collector *eventCollector) streamOf(c *state.Connection) (*state.Connection, bool) {
+func (collector *Collector) streamOf(c *state.Connection) (*state.Connection, bool) {
 	if c == nil || !c.Enabled || c.Role != state.SourceRole {
 		return nil, false
 	}

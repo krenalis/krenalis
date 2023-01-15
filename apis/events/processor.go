@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package apis
+package events
 
 import (
 	"bytes"
@@ -83,37 +83,37 @@ type Event struct {
 	err       error
 }
 
-// eventProcessor processes events received from source streams and sent them
-// to their data warehouses.
-type eventProcessor struct {
+// Processor processes events received from source streams and sent them to
+// their data warehouses.
+type Processor struct {
 	sync.Mutex // for the streams field.
 	db         *postgres.DB
 	ctx        context.Context
 	state      *state.State
-	streams    map[int]*eventProcessorStream
+	streams    map[int]*processorStream
 	queues     map[int]*queue
-	observer   *eventObserver
+	observer   *observer
 }
 
-// eventProcessorStream represents a stream used by the event processor.
-type eventProcessorStream struct {
+// processorStream represents a stream used by the processor.
+type processorStream struct {
 	id     int
 	stream connector.StreamConnection
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-// newEventProcessor returns a new event processor.
-func newEventProcessor(ctx context.Context, db *postgres.DB, st *state.State,
-	defaultStream connector.StreamConnection) (*eventProcessor, error) {
+// NewProcessor returns a new processor.
+func NewProcessor(ctx context.Context, db *postgres.DB, st *state.State,
+	defaultStream connector.StreamConnection) (*Processor, error) {
 
-	processor := eventProcessor{
+	processor := Processor{
 		db:       db,
 		ctx:      ctx,
 		state:    st,
-		streams:  map[int]*eventProcessorStream{},
+		streams:  map[int]*processorStream{},
 		queues:   map[int]*queue{},
-		observer: newEventObserver(db),
+		observer: newObserver(db),
 	}
 
 	for _, c := range st.Connections() {
@@ -123,7 +123,7 @@ func newEventProcessor(ctx context.Context, db *postgres.DB, st *state.State,
 	}
 
 	// Process the events from the default stream.
-	go processor.process(&eventProcessorStream{stream: defaultStream})
+	go processor.process(&processorStream{stream: defaultStream})
 
 	st.AddListener(processor.onAddConnection)
 	st.AddListener(processor.onDeleteConnection)
@@ -135,7 +135,7 @@ func newEventProcessor(ctx context.Context, db *postgres.DB, st *state.State,
 
 // isSuitableStream reports whether c is a stream to which the processor must
 // send events.
-func (processor *eventProcessor) isSuitableStream(c *state.Connection) bool {
+func (processor *Processor) isSuitableStream(c *state.Connection) bool {
 	if c == nil || !c.Enabled || c.Role != state.SourceRole || len(c.Settings) == 0 {
 		return false
 	}
@@ -149,7 +149,7 @@ func (processor *eventProcessor) isSuitableStream(c *state.Connection) bool {
 }
 
 // onAddConnection is called when a connection is added.
-func (processor *eventProcessor) onAddConnection(n state.AddConnectionNotification) {
+func (processor *Processor) onAddConnection(n state.AddConnectionNotification) {
 	c, _ := processor.state.Connection(n.ID)
 	if processor.isSuitableStream(c) {
 		go processor.replaceStream(nil, c)
@@ -157,7 +157,7 @@ func (processor *eventProcessor) onAddConnection(n state.AddConnectionNotificati
 }
 
 // onDeleteConnection is called when a connection is deleted.
-func (processor *eventProcessor) onDeleteConnection(n state.DeleteConnectionNotification) {
+func (processor *Processor) onDeleteConnection(n state.DeleteConnectionNotification) {
 	if old, ok := processor.streams[n.ID]; ok {
 		go processor.replaceStream(old, nil)
 	}
@@ -165,7 +165,7 @@ func (processor *eventProcessor) onDeleteConnection(n state.DeleteConnectionNoti
 
 // onSetConnectionSettings is called when the settings of a connection are
 // changed.
-func (processor *eventProcessor) onSetConnectionSettings(n state.SetConnectionSettingsNotification) {
+func (processor *Processor) onSetConnectionSettings(n state.SetConnectionSettingsNotification) {
 	if old, ok := processor.streams[n.Connection]; ok {
 		new, _ := processor.state.Connection(n.Connection)
 		go processor.replaceStream(old, new)
@@ -174,7 +174,7 @@ func (processor *eventProcessor) onSetConnectionSettings(n state.SetConnectionSe
 
 // onSetWarehouseSettings is called when the settings of a workspace data
 // warehouse are changed.
-func (processor *eventProcessor) onSetWarehouseSettings(n state.SetWarehouseSettingsNotification) {
+func (processor *Processor) onSetWarehouseSettings(n state.SetWarehouseSettingsNotification) {
 	ws, _ := processor.state.Workspace(n.Workspace)
 	if n.Settings == nil {
 		// Close the streams of the workspace.
@@ -196,7 +196,7 @@ func (processor *eventProcessor) onSetWarehouseSettings(n state.SetWarehouseSett
 // replaceStream replaces the stream old with new, opening the new stream and
 // closing the old one. If old is nil, it only opens and adds the new stream.
 // If new is nil, it only closes and removes the old one.
-func (processor *eventProcessor) replaceStream(old *eventProcessorStream, new *state.Connection) {
+func (processor *Processor) replaceStream(old *processorStream, new *state.Connection) {
 	// Open to the new stream.
 	if new != nil {
 		var stream connector.StreamConnection
@@ -220,7 +220,7 @@ func (processor *eventProcessor) replaceStream(old *eventProcessorStream, new *s
 			}
 		}
 		ctx, cancel := context.WithCancel(processor.ctx)
-		s := &eventProcessorStream{
+		s := &processorStream{
 			id:     new.ID,
 			stream: stream,
 			ctx:    ctx,
@@ -247,7 +247,7 @@ func (processor *eventProcessor) replaceStream(old *eventProcessorStream, new *s
 
 // process processes the events received from the stream s.
 // If the stream's context is cancelled, it closes the stream and returns.
-func (p *eventProcessor) process(s *eventProcessorStream) {
+func (p *Processor) process(s *processorStream) {
 
 	streamName := "default stream"
 	if s.id > 0 {
@@ -287,7 +287,7 @@ func (p *eventProcessor) process(s *eventProcessorStream) {
 
 // processMessage processes a message received from the stream with identifier
 // streamID. If an error occurs processing the message, it returns the error.
-func (p *eventProcessor) processMessage(streamID int, message []byte) error {
+func (p *Processor) processMessage(streamID int, message []byte) error {
 
 	r := bytes.NewReader(message)
 
@@ -724,7 +724,7 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 }
 
 // server returns the server with the given key.
-func (p *eventProcessor) server(key string) (*state.Connection, bool) {
+func (p *Processor) server(key string) (*state.Connection, bool) {
 	server, ok := p.state.ConnectionByKey(key)
 	if !ok || !server.Enabled || server.Role != state.SourceRole {
 		return nil, false
@@ -737,7 +737,7 @@ func (p *eventProcessor) server(key string) (*state.Connection, bool) {
 
 // source returns the source with identifier id. If server is not nil,
 // checks if the source and the sever have the same workspace.
-func (p *eventProcessor) source(id int, server *state.Connection) (*state.Connection, bool) {
+func (p *Processor) source(id int, server *state.Connection) (*state.Connection, bool) {
 	if id < 1 || id > math.MaxInt32 {
 		return nil, false
 	}
@@ -924,6 +924,42 @@ func parseBasicAuth(auth string) (username, password string, ok bool) {
 		return "", "", false
 	}
 	return username, password, true
+}
+
+// abbreviate abbreviates s to almost n runes. If s is longer than n runes,
+// the abbreviated string terminates with "...".
+func abbreviate(s string, n int) string {
+	const spaces = " \n\r\t\f" // https://infra.spec.whatwg.org/#ascii-whitespace
+	s = strings.TrimRight(s, spaces)
+	if len(s) <= n {
+		return s
+	}
+	if n < 3 {
+		return ""
+	}
+	p := 0
+	n2 := 0
+	for i := range s {
+		switch p {
+		case n - 2:
+			n2 = i
+		case n:
+			break
+		}
+		p++
+	}
+	if p < n {
+		return s
+	}
+	if p = strings.LastIndexAny(s[:n2], spaces); p > 0 {
+		s = strings.TrimRight(s[:p], spaces)
+	} else {
+		s = ""
+	}
+	if l := len(s) - 1; l >= 0 && (s[l] == '.' || s[l] == ',') {
+		s = s[:l]
+	}
+	return s + "..."
 }
 
 // asciiEqualFold is strings.EqualFold, ASCII only. It reports whether s and t

@@ -15,6 +15,7 @@ import (
 	"sort"
 
 	"chichi/apis/errors"
+	"chichi/apis/events"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 
@@ -25,8 +26,8 @@ import (
 type APIs struct {
 	db             *postgres.DB
 	state          *state.State
-	eventCollector *eventCollector
-	eventProcessor *eventProcessor
+	eventCollector *events.Collector
+	eventProcessor *events.Processor
 	Users          *Users
 }
 
@@ -80,14 +81,14 @@ func New(conf *Config) (*APIs, error) {
 	apis.state.AddListener(apis.onSetConnectionUserQuery)
 
 	// Run the event collector.
-	apis.eventCollector, err = newEventCollector(context.Background(), apis.state,
+	apis.eventCollector, err = events.NewCollector(context.Background(), apis.state,
 		newPostgresStream(context.Background(), db))
 	if err != nil {
 		return nil, err
 	}
 
 	// Run the event processor.
-	apis.eventProcessor, err = newEventProcessor(context.Background(), db, apis.state,
+	apis.eventProcessor, err = events.NewProcessor(context.Background(), db, apis.state,
 		newPostgresStream(context.Background(), db))
 	if err != nil {
 		return nil, err
@@ -305,7 +306,7 @@ func (apis *APIs) reloadSchema(connection *state.Connection) {
 
 type Workspace struct {
 	db             *postgres.DB
-	eventProcessor *eventProcessor
+	eventProcessor *events.Processor
 	state          *state.State
 	workspace      *state.Workspace
 }

@@ -21,6 +21,7 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/errors"
+	"chichi/apis/events"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/types"
@@ -446,8 +447,8 @@ func (this *Workspace) DisconnectWarehouse() error {
 	return err
 }
 
-func (this *Workspace) EventListeners() *EventListeners {
-	return &EventListeners{db: this.db, processor: this.eventProcessor, workspace: this.workspace}
+func (this *Workspace) EventListeners() *events.Listeners {
+	return events.NewListeners(this.db, this.eventProcessor, this.workspace)
 }
 
 // InitWarehouse initializes the data warehouse of the workspace by creating

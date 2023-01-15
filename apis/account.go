@@ -11,6 +11,7 @@ import (
 	"regexp"
 
 	"chichi/apis/errors"
+	"chichi/apis/events"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 )
@@ -22,7 +23,7 @@ var emailRegExp = regexp.MustCompile(`^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.
 // Account represents an account.
 type Account struct {
 	db             *postgres.DB
-	eventProcessor *eventProcessor
+	eventProcessor *events.Processor
 	state          *state.State
 	account        *state.Account
 	ID             int
