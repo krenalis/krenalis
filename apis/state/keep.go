@@ -8,7 +8,6 @@
 package state
 
 import (
-	"context"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
@@ -22,63 +21,96 @@ import (
 	"chichi/apis/warehouses"
 	"chichi/apis/warehouses/clickhouse"
 	"chichi/apis/warehouses/postgresql"
+
+	"github.com/google/uuid"
 )
 
 // logNotifications controls the logging of notifications on the log.
 const logNotifications = false
 
-// ReloadSchemas is called when a connection schema should be reloaded.
-var ReloadSchemas func(connection int) error
+// AddListener adds a notification listener.
+// It panics if it is called after Keep is called.
+func (state *State) AddListener(listener any) {
+	state.mu.Lock()
+	keeping := state.keeping
+	state.mu.Unlock()
+	if keeping {
+		panic(fmt.Sprintf("state: cannot call AddListener after Keep has been called"))
+	}
+	switch l := listener.(type) {
+	case func(AddConnectionNotification):
+		state.listeners.AddConnection = append(state.listeners.AddConnection, l)
+	case func(AddImportInProgressNotification):
+		state.listeners.AddImportInProgress = append(state.listeners.AddImportInProgress, l)
+	case func(DeleteConnectionNotification):
+		state.listeners.DeleteConnection = append(state.listeners.DeleteConnection, l)
+	case func(SetConnectionSettingsNotification):
+		state.listeners.SetConnectionSettings = append(state.listeners.SetConnectionSettings, l)
+	case func(SetConnectionStreamNotification):
+		state.listeners.SetConnectionStream = append(state.listeners.SetConnectionStream, l)
+	case func(SetConnectionUserQueryNotification):
+		state.listeners.SetConnectionUserQuery = append(state.listeners.SetConnectionUserQuery, l)
+	case func(SetWarehouseSettingsNotification):
+		state.listeners.SetWarehouseSettings = append(state.listeners.SetWarehouseSettings, l)
+	default:
+		panic(fmt.Sprintf("state: unexpected listener type %T", listener))
+	}
+}
 
-// StartImport is called when an import should be started.
-var StartImport func(imp *ImportInProgress)
+// Keep keeps the state updated.
+func (state *State) Keep() {
+	state.mu.Lock()
+	state.keeping = true
+	state.mu.Unlock()
+	go state.keep()
+}
 
-// keep keeps state in sync with the database. It is called in its own
+// keep keeps the state in sync with the database. It is called in its own
 // goroutine.
-func (s *State) keep(ctx context.Context, notifications <-chan postgres.Notification) {
+func (state *State) keep() {
 
 	for {
-		n := <-notifications
+		n := <-state.notifications
 		if logNotifications {
 			log.Printf("[info] received notification from pid %d and name %q : %s",
 				n.PID, n.Name, n.Payload)
 		}
-		if !s.notifications && n.Name != "AddNode" {
+		if !state.syncing && n.Name != "LoadState" {
 			continue
 		}
 		switch n.Name {
 		case "AddConnection":
-			s.addConnection(n)
+			state.addConnection(n)
 		case "AddConnectionKey":
-			s.addConnectionKey(n)
-		case "AddNode":
-			s.addNode(n)
+			state.addConnectionKey(n)
+		case "AddImportInProgress":
+			state.addImportInProgress(n)
 		case "DeleteConnection":
-			s.deleteConnection(n)
+			state.deleteConnection(n)
 		case "EndImport":
-			s.endImport(n)
+			state.endImport(n)
+		case "LoadState":
+			state.loadState(n)
 		case "RevokeConnectionKey":
-			s.revokeConnectionKey(n)
+			state.revokeConnectionKey(n)
 		case "SetConnectionSettings":
-			s.setConnectionSettings(n)
+			state.setConnectionSettings(n)
 		case "SetConnectionStorage":
-			s.setConnectionStorage(n)
+			state.setConnectionStorage(n)
 		case "SetConnectionStream":
-			s.setConnectionStream(n)
+			state.setConnectionStream(n)
 		case "SetConnectionMappings":
-			s.setConnectionMappings(n)
+			state.setConnectionMappings(n)
 		case "SetConnectionUserQuery":
-			s.setConnectionUserQuery(n)
+			state.setConnectionUserQuery(n)
 		case "SetConnectionUserSchema":
-			s.setConnectionUserSchema(n)
+			state.setConnectionUserSchema(n)
 		case "SetResource":
-			s.setResource(n)
+			state.setResource(n)
 		case "SetWarehouseSettings":
-			s.setWarehouseSettings(n)
+			state.setWarehouseSettings(n)
 		case "SetWorkspaceSchemas":
-			s.setWorkspaceSchemas(n)
-		case "StartImport":
-			s.startImport(n)
+			state.setWorkspaceSchemas(n)
 		default:
 			log.Printf("[warning] unknown notification %q received from %d: %s", n.Name, n.PID, n.Payload)
 		}
@@ -99,14 +131,14 @@ func decodeStateNotification(n postgres.Notification, e any) bool {
 // replaceConnection calls the function f passing a copy of the connection with
 // identifier id. After f is returned, it replaces the connection with its
 // copy in the state and returns the latter.
-func (s *State) replaceConnection(id int, f func(*Connection)) *Connection {
-	c := s.connections[id]
+func (state *State) replaceConnection(id int, f func(*Connection)) *Connection {
+	c := state.connections[id]
 	cc := new(Connection)
 	*cc = *c
 	f(cc)
-	s.mu.Lock()
-	s.connections[id] = cc
-	s.mu.Unlock()
+	state.mu.Lock()
+	state.connections[id] = cc
+	state.mu.Unlock()
 	// Update the workspaces.
 	ws := cc.workspace
 	ws.mu.Lock()
@@ -143,8 +175,8 @@ func (s *State) replaceConnection(id int, f func(*Connection)) *Connection {
 // replaceResource calls the function f passing a copy of the resource with
 // identifier id. After f is returned, it replaces the resource with its copy
 // in the state and returns the latter.
-func (s *State) replaceResource(id int, f func(*Resource)) *Resource {
-	r := s.resources[id]
+func (state *State) replaceResource(id int, f func(*Resource)) *Resource {
+	r := state.resources[id]
 	rr := new(Resource)
 	*rr = *r
 	f(rr)
@@ -160,21 +192,21 @@ func (s *State) replaceResource(id int, f func(*Resource)) *Resource {
 			connection.mu.Unlock()
 		}
 	}
-	s.resources[id] = rr
+	state.resources[id] = rr
 	return rr
 }
 
 // replaceWorkspace calls the function f passing a copy of the workspace with
 // identifier id. After f is returned, it replaces the workspace with its
 // copy in the state and returns the latter.
-func (s *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
-	w := s.workspaces[id]
+func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
+	w := state.workspaces[id]
 	ww := new(Workspace)
 	*ww = *w
 	f(ww)
-	s.mu.Lock()
-	s.workspaces[id] = ww
-	s.mu.Unlock()
+	state.mu.Lock()
+	state.workspaces[id] = ww
+	state.mu.Unlock()
 	// Update the account.
 	account := ww.account
 	account.mu.Lock()
@@ -222,26 +254,26 @@ type AddConnectionNotification struct {
 }
 
 // addConnection adds a new connection.
-func (s *State) addConnection(n postgres.Notification) {
+func (state *State) addConnection(n postgres.Notification) {
 	e := AddConnectionNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	workspace, _ := s.workspaces[e.Workspace]
-	connector, _ := s.connectors[e.Connector]
+	workspace, _ := state.workspaces[e.Workspace]
+	connector, _ := state.connectors[e.Connector]
 	var r *Resource
 	if connector.OAuth != nil {
-		if _, ok := s.resources[e.Resource.ID]; ok {
+		if _, ok := state.resources[e.Resource.ID]; ok {
 			if e.Resource.AccessToken != "" {
-				r = s.replaceResource(e.Resource.ID, func(r *Resource) {
+				r = state.replaceResource(e.Resource.ID, func(r *Resource) {
 					r.AccessToken = e.Resource.AccessToken
 					r.RefreshToken = e.Resource.RefreshToken
 					r.ExpiresIn = e.Resource.ExpiresIn
 				})
 				// Update the resources.
-				s.mu.Lock()
-				s.resources[r.ID] = r
-				s.mu.Unlock()
+				state.mu.Lock()
+				state.resources[r.ID] = r
+				state.mu.Unlock()
 			}
 		} else {
 			r = &Resource{
@@ -255,9 +287,9 @@ func (s *State) addConnection(n postgres.Notification) {
 				ExpiresIn:    e.Resource.ExpiresIn,
 			}
 			// Update the resources.
-			s.mu.Lock()
-			s.resources[r.ID] = r
-			s.mu.Unlock()
+			state.mu.Lock()
+			state.resources[r.ID] = r
+			state.mu.Unlock()
 			// Update the workspaces.
 			workspace.mu.Lock()
 			workspace.resources[r.ID] = r
@@ -272,35 +304,26 @@ func (s *State) addConnection(n postgres.Notification) {
 		Name:        e.Name,
 		Role:        e.Role,
 		connector:   connector,
-		storage:     s.connections[e.Storage],
-		stream:      s.connections[e.Stream],
+		storage:     state.connections[e.Storage],
+		stream:      state.connections[e.Stream],
 		resource:    r,
 		WebsiteHost: e.WebsiteHost,
 	}
 	if e.Key != "" {
 		c.Keys = []string{e.Key}
 	}
-	s.mu.Lock()
-	s.connections[e.ID] = c
+	state.mu.Lock()
+	state.connections[e.ID] = c
 	if e.Key != "" {
-		s.connectionsByKey[e.Key] = c
+		state.connectionsByKey[e.Key] = c
 	}
-	s.mu.Unlock()
+	state.mu.Unlock()
 	// Update the workspace.
 	workspace.mu.Lock()
 	workspace.connections[c.ID] = c
 	workspace.mu.Unlock()
-	if connector.Type == AppType {
-		// TODO(marco) only one server should reload the schema.
-		if ReloadSchemas == nil {
-			panic("state.ReloadSchemas is nil")
-		}
-		go func() {
-			err := ReloadSchemas(c.ID)
-			if err != nil {
-				log.Printf("[error] cannot reload schema for connection %d: %s", c.ID, err)
-			}
-		}()
+	for _, listener := range state.listeners.AddConnection {
+		listener(e)
 	}
 }
 
@@ -313,35 +336,52 @@ type AddConnectionKeyNotification struct {
 }
 
 // addConnectionKey adds a new connection key.
-func (s *State) addConnectionKey(n postgres.Notification) {
+func (state *State) addConnectionKey(n postgres.Notification) {
 	e := AddConnectionKeyNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	c := s.replaceConnection(e.Connection, func(c *Connection) {
+	c := state.replaceConnection(e.Connection, func(c *Connection) {
 		keys := make([]string, len(c.Keys)+1)
 		copy(keys, c.Keys)
 		keys[len(c.Keys)] = e.Value
 		c.Keys = keys
 	})
-	s.mu.Lock()
-	s.connectionsByKey[e.Value] = c
-	s.mu.Unlock()
+	state.mu.Lock()
+	state.connectionsByKey[e.Value] = c
+	state.mu.Unlock()
 }
 
-// AddNodeNotification is the notification sent when a node is added to the
-// network.
-type AddNodeNotification struct {
-	ID int
+// AddImportInProgressNotification is the notification event sent when an
+// import in progress is added.
+type AddImportInProgressNotification struct {
+	ID         int
+	Connection int
+	Storage    int
+	Reimport   bool
+	StartTime  time.Time
 }
 
-// addNode adds a node to the network.
-func (s *State) addNode(n postgres.Notification) {
-	e := AddNodeNotification{}
+// addImportInProgress adds an import in progress.
+func (state *State) addImportInProgress(n postgres.Notification) {
+	e := AddImportInProgressNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	s.notifications = true
+	c := state.connections[e.Connection]
+	c.mu.Lock()
+	c.importInProgress = &ImportInProgress{
+		mu:         new(sync.Mutex),
+		ID:         e.ID,
+		connection: c,
+		storage:    state.connections[e.Storage],
+		Reimport:   e.Reimport,
+		StartTime:  e.StartTime,
+	}
+	c.mu.Unlock()
+	for _, listener := range state.listeners.AddImportInProgress {
+		listener(e)
+	}
 }
 
 // DeleteConnectionNotification is the notification event sent when a
@@ -351,19 +391,19 @@ type DeleteConnectionNotification struct {
 }
 
 // deleteConnection deletes a connection.
-func (s *State) deleteConnection(n postgres.Notification) {
+func (state *State) deleteConnection(n postgres.Notification) {
 	e := DeleteConnectionNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	connection := s.connections[e.ID]
+	connection := state.connections[e.ID]
 	// Update connections and keys.
-	s.mu.Lock()
-	delete(s.connections, e.ID)
+	state.mu.Lock()
+	delete(state.connections, e.ID)
 	for _, key := range connection.Keys {
-		delete(s.connectionsByKey, key)
+		delete(state.connectionsByKey, key)
 	}
-	s.mu.Unlock()
+	state.mu.Unlock()
 	// Update the workspace.
 	ws := connection.workspace
 	ws.mu.Lock()
@@ -382,6 +422,9 @@ func (s *State) deleteConnection(n postgres.Notification) {
 			c.mu.Unlock()
 		}
 	}
+	for _, listener := range state.listeners.DeleteConnection {
+		listener(e)
+	}
 }
 
 // EndImportNotification is the notification event sent when an import ends.
@@ -390,19 +433,36 @@ type EndImportNotification struct {
 }
 
 // endImport ends an import.
-func (s *State) endImport(n postgres.Notification) {
+func (state *State) endImport(n postgres.Notification) {
 	e := EndImportNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	for _, c := range s.connections {
-		if imp := c.importInProgress; imp.ID == e.ID {
-			s.replaceConnection(c.ID, func(c *Connection) {
+	for _, c := range state.connections {
+		if imp := c.importInProgress; imp != nil && imp.ID == e.ID {
+			state.replaceConnection(c.ID, func(c *Connection) {
 				c.importInProgress = nil
 			})
 			break
 		}
 	}
+}
+
+// LoadStateNotification is the notification sent when a state is loaded.
+type LoadStateNotification struct {
+	ID uuid.UUID
+}
+
+// loadState loads the state.
+func (state *State) loadState(n postgres.Notification) {
+	e := LoadStateNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	if e.ID == state.id {
+		state.syncing = true
+	}
+	return
 }
 
 // RevokeConnectionKeyNotification is the notification event sent when a
@@ -413,12 +473,12 @@ type RevokeConnectionKeyNotification struct {
 }
 
 // revokeConnectionKey revokes a connection key.
-func (s *State) revokeConnectionKey(n postgres.Notification) {
+func (state *State) revokeConnectionKey(n postgres.Notification) {
 	e := RevokeConnectionKeyNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	s.replaceConnection(e.Connection, func(c *Connection) {
+	state.replaceConnection(e.Connection, func(c *Connection) {
 		keys := make([]string, len(c.Keys)-1)
 		i := 0
 		for _, key := range c.Keys {
@@ -429,9 +489,9 @@ func (s *State) revokeConnectionKey(n postgres.Notification) {
 		}
 		c.Keys = keys
 	})
-	s.mu.Lock()
-	delete(s.connectionsByKey, e.Value)
-	s.mu.Unlock()
+	state.mu.Lock()
+	delete(state.connectionsByKey, e.Value)
+	state.mu.Unlock()
 }
 
 // SetConnectionSettingsNotification is the notification event sent when the
@@ -442,14 +502,17 @@ type SetConnectionSettingsNotification struct {
 }
 
 // setConnectionSettings sets the settings of a connection.
-func (s *State) setConnectionSettings(n postgres.Notification) {
+func (state *State) setConnectionSettings(n postgres.Notification) {
 	e := SetConnectionSettingsNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	s.replaceConnection(e.Connection, func(c *Connection) {
+	state.replaceConnection(e.Connection, func(c *Connection) {
 		c.Settings = e.Settings
 	})
+	for _, listener := range state.listeners.SetConnectionSettings {
+		listener(e)
+	}
 }
 
 // SetConnectionStorageNotification is the notification event sent when the
@@ -460,13 +523,13 @@ type SetConnectionStorageNotification struct {
 }
 
 // setConnectionStorages sets the storage of a connection.
-func (s *State) setConnectionStorage(n postgres.Notification) {
+func (state *State) setConnectionStorage(n postgres.Notification) {
 	e := SetConnectionStorageNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	c := s.connections[e.Connection]
-	storage := s.connections[e.Storage]
+	c := state.connections[e.Connection]
+	storage := state.connections[e.Storage]
 	c.mu.Lock()
 	c.storage = storage
 	c.mu.Unlock()
@@ -480,16 +543,19 @@ type SetConnectionStreamNotification struct {
 }
 
 // setConnectionStream sets the stream of a connection.
-func (s *State) setConnectionStream(n postgres.Notification) {
+func (state *State) setConnectionStream(n postgres.Notification) {
 	e := SetConnectionStreamNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	c := s.connections[e.Connection]
-	stream := s.connections[e.Stream]
+	c := state.connections[e.Connection]
+	stream := state.connections[e.Stream]
 	c.mu.Lock()
 	c.stream = stream
 	c.mu.Unlock()
+	for _, listener := range state.listeners.SetConnectionStream {
+		listener(e)
+	}
 }
 
 // SetConnectionMappingsNotification is the notification event sent when the
@@ -500,12 +566,12 @@ type SetConnectionMappingsNotification struct {
 }
 
 // setConnectionMappings sets the mappings of a connection.
-func (s *State) setConnectionMappings(n postgres.Notification) {
+func (state *State) setConnectionMappings(n postgres.Notification) {
 	e := SetConnectionMappingsNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	c := s.connections[e.Connection]
+	c := state.connections[e.Connection]
 	c.mu.Lock()
 	c.mappings = e.Mappings
 	c.mu.Unlock()
@@ -519,24 +585,17 @@ type SetConnectionUserQueryNotification struct {
 }
 
 // setConnectionUserQuery sets the user query of a connection.
-func (s *State) setConnectionUserQuery(n postgres.Notification) {
+func (state *State) setConnectionUserQuery(n postgres.Notification) {
 	e := SetConnectionUserQueryNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	c := s.replaceConnection(e.Connection, func(c *Connection) {
+	state.replaceConnection(e.Connection, func(c *Connection) {
 		c.UsersQuery = e.Query
 	})
-	// TODO(marco) only one server should reload the schema.
-	if ReloadSchemas == nil {
-		panic("state.ReloadSchemas is nil")
+	for _, listener := range state.listeners.SetConnectionUserQuery {
+		listener(e)
 	}
-	go func() {
-		err := ReloadSchemas(c.ID)
-		if err != nil {
-			log.Printf("[error] cannot reload schema for connection %d: %s", c.ID, err)
-		}
-	}()
 }
 
 // SetConnectionUserSchemaNotification is the notification event sent when the
@@ -547,12 +606,12 @@ type SetConnectionUserSchemaNotification struct {
 }
 
 // setConnectionUserSchema sets the user schema of a connection.
-func (s *State) setConnectionUserSchema(n postgres.Notification) {
+func (state *State) setConnectionUserSchema(n postgres.Notification) {
 	e := SetConnectionUserSchemaNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	s.replaceConnection(e.Connection, func(c *Connection) {
+	state.replaceConnection(e.Connection, func(c *Connection) {
 		c.Schema = e.Schema
 	})
 }
@@ -565,12 +624,12 @@ type SetResourceNotification struct {
 }
 
 // setResource sets a resource.
-func (s *State) setResource(n postgres.Notification) {
+func (state *State) setResource(n postgres.Notification) {
 	e := SetResourceNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	s.replaceResource(e.ID, func(r *Resource) {
+	state.replaceResource(e.ID, func(r *Resource) {
 		r.AccessToken = e.AccessToken
 		r.RefreshToken = e.RefreshToken
 		r.ExpiresIn = e.ExpiresIn
@@ -586,19 +645,19 @@ type SetWarehouseSettingsNotification struct {
 }
 
 // setWarehouseSettings sets the settings of a data warehouse.
-func (s *State) setWarehouseSettings(n postgres.Notification) {
+func (state *State) setWarehouseSettings(n postgres.Notification) {
 	e := SetWarehouseSettingsNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	disconnected := s.workspaces[e.Workspace].Warehouse
+	disconnected := state.workspaces[e.Workspace].Warehouse
 	if e.Settings == nil {
-		s.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 			w.Warehouse = nil
 		})
 	} else {
 		var err error
-		s.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 			w.Warehouse, err = openWarehouse(e.Type, e.Settings)
 		})
 		if err != nil {
@@ -615,6 +674,9 @@ func (s *State) setWarehouseSettings(n postgres.Notification) {
 			}
 		}()
 	}
+	for _, listener := range state.listeners.SetWarehouseSettings {
+		listener(e)
+	}
 }
 
 // SetWorkspaceSchemasNotification is the notification event sent when schemas
@@ -625,7 +687,7 @@ type SetWorkspaceSchemasNotification struct {
 }
 
 // setWorkspaceSchemas sets the schemas of a workspace.
-func (s *State) setWorkspaceSchemas(n postgres.Notification) {
+func (state *State) setWorkspaceSchemas(n postgres.Notification) {
 	e := SetWorkspaceSchemasNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
@@ -636,44 +698,12 @@ func (s *State) setWorkspaceSchemas(n postgres.Notification) {
 			unchanged = append(unchanged, name)
 		}
 	}
-	s.replaceWorkspace(e.Workspace, func(w *Workspace) {
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		for _, name := range unchanged {
 			e.Schemas[name] = w.Schemas[name]
 		}
 		w.Schemas = e.Schemas
 	})
-}
-
-// StartImportNotification is the notification event sent when an import
-// starts.
-type StartImportNotification struct {
-	ID         int
-	Connection int
-	Storage    int
-	Reimport   bool
-	StartTime  time.Time
-}
-
-// startImport starts an import.
-func (s *State) startImport(n postgres.Notification) {
-	e := StartImportNotification{}
-	if !decodeStateNotification(n, &e) {
-		return
-	}
-	c := s.connections[e.Connection]
-	c.mu.Lock()
-	c.importInProgress = &ImportInProgress{
-		mu:         new(sync.Mutex),
-		ID:         e.ID,
-		connection: c,
-		storage:    s.connections[e.Storage],
-		Reimport:   e.Reimport,
-		StartTime:  e.StartTime,
-	}
-	c.mu.Unlock()
-	// Start the import.
-	// TODO(marco): only one server should starts the import.
-	go StartImport(c.importInProgress)
 }
 
 // openWarehouse opens a data warehouse with the given type and settings.

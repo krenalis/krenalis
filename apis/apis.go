@@ -66,61 +66,35 @@ func New(conf *Config) (*APIs, error) {
 	}
 
 	apis := &APIs{db: db}
+	apis.Users = &Users{apis}
+
+	// Load the state.
 	apis.state, err = state.Load(context.Background(), db)
 	if err != nil {
 		log.Fatalf("[error] cannot load state: %s", err)
 	}
 
-	// TODO(Marco): To be removed
-	state.ReloadSchemas = func(id int) error {
-		account, _ := apis.Account(1)
-		ws, _ := account.Workspace(1)
-		c, err := ws.Connection(id)
-		if err != nil {
-			return err
-		}
-		return c.reloadSchema()
-	}
+	// Listen to state changes.
+	apis.state.AddListener(apis.onAddConnection)
+	apis.state.AddListener(apis.onAddImportInProgress)
+	apis.state.AddListener(apis.onSetConnectionUserQuery)
 
-	// TODO(Marco): To be removed
-	state.StartImport = func(imp *state.ImportInProgress) {
-		account, _ := apis.Account(1)
-		ws, _ := account.Workspace(1)
-		c, err := ws.Connection(imp.Connection().ID)
-		if err != nil {
-			log.Printf("[error] cannot start import: %s", err)
-			return
-		}
-		c.startImport(imp)
-		return
-	}
-
-	apis.Users = &Users{apis}
-
-	account, ok := apis.state.Account(1)
-	if !ok {
-		return apis, nil
-	}
-	workspace, ok := account.Workspace(1)
-	if !ok {
-		return apis, nil
-	}
-	if workspace.Warehouse == nil {
-		return apis, nil
-	}
-
-	// defaultStream receives events from the collector for which the source connector
-	// does not have its own stream.
-	defaultStream := newPostgresEventStream(context.Background(), db)
-
-	connections := apis.state.Connections()
-	apis.eventCollector, err = newEventCollector(context.Background(), connections, defaultStream)
+	// Run the event collector.
+	apis.eventCollector, err = newEventCollector(context.Background(), apis.state,
+		newPostgresEventStream(context.Background(), db))
 	if err != nil {
 		return nil, err
 	}
 
-	apis.eventProcessor = newEventProcessor(db, workspace.Warehouse, connections, defaultStream)
-	go apis.eventProcessor.Run(context.Background())
+	// Run the event processor.
+	apis.eventProcessor, err = newEventProcessor(context.Background(), db, apis.state,
+		newPostgresEventStream(context.Background(), db))
+	if err != nil {
+		return nil, err
+	}
+
+	// Keep the state updated.
+	apis.state.Keep()
 
 	return apis, nil
 }
@@ -294,6 +268,39 @@ func (apis *APIs) CreateAccount(email, password string) (int, error) {
 // CountAccounts returns the total number of accounts.
 func (apis *APIs) CountAccounts() int {
 	return len(apis.state.Accounts())
+}
+
+// onAddConnection is called when a connection is added.
+func (apis *APIs) onAddConnection(n state.AddConnectionNotification) {
+	// TODO(marco) only one server should reload the schema.
+	connection, _ := apis.state.Connection(n.ID)
+	if conn := connection.Connector(); conn.Type != state.AppType {
+		return
+	}
+	go apis.reloadSchema(connection)
+}
+
+// onAddImportInProgress is called when an import in progress is added.
+func (apis *APIs) onAddImportInProgress(n state.AddImportInProgressNotification) {
+	// TODO(marco): only one server should starts the import.
+	connection, _ := apis.state.Connection(n.Connection)
+	c := &Connection{db: apis.db, connection: connection}
+	go c.startImport(connection.ImportInProgress())
+}
+
+// onSetConnectionUserQuery is called when a connection user query is changed.
+func (apis *APIs) onSetConnectionUserQuery(n state.SetConnectionUserQueryNotification) {
+	// TODO(marco) only one server should reload the schema.
+	connection, _ := apis.state.Connection(n.Connection)
+	go apis.reloadSchema(connection)
+}
+
+func (apis *APIs) reloadSchema(connection *state.Connection) {
+	c := &Connection{db: apis.db, connection: connection}
+	err := c.reloadSchema()
+	if err != nil {
+		log.Printf("[error] cannot reload schema for connection %d: %s", c.ID, err)
+	}
 }
 
 type Workspace struct {

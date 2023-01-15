@@ -16,14 +16,23 @@ import (
 
 	"chichi/apis/postgres"
 	"chichi/apis/types"
+
+	"github.com/google/uuid"
 )
 
 // Load loads the state and returns it.
 func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
-	s := &State{
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return nil, err
+	}
+
+	state := &State{
+		id:               id,
 		db:               db,
 		mu:               new(sync.Mutex),
+		notifications:    db.ListenToNotifications(ctx),
 		accounts:         map[int]*Account{},
 		connectors:       map[int]*Connector{},
 		workspaces:       map[int]*Workspace{},
@@ -32,15 +41,13 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		resources:        map[int]*Resource{},
 	}
 
-	notifications := db.ListenToNotifications(ctx)
+	n := LoadStateNotification{ID: state.id}
 
-	n := AddNodeNotification{ID: 0}
-
-	err := s.db.Transaction(func(tx *postgres.Tx) error {
+	err = state.db.Transaction(func(tx *postgres.Tx) error {
 
 		// Read all connectors.
-		s.connectors = map[int]*Connector{}
-		err := s.db.QueryScan("SELECT id, name, type, has_settings, logo_url, webhooks_per, oauth_url, oauth_client_id,"+
+		state.connectors = map[int]*Connector{}
+		err := state.db.QueryScan("SELECT id, name, type, has_settings, logo_url, webhooks_per, oauth_url, oauth_client_id,"+
 			" oauth_client_secret, oauth_token_endpoint, oauth_default_token_type, oauth_default_expires_in,"+
 			" oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
 			for rows.Next() {
@@ -54,7 +61,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 				if oauth.URL != "" {
 					c.OAuth = &oauth
 				}
-				s.connectors[c.ID] = &c
+				state.connectors[c.ID] = &c
 			}
 			return nil
 		})
@@ -63,8 +70,8 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		}
 
 		// Read all accounts.
-		s.accounts = map[int]*Account{}
-		err = s.db.QueryScan("SELECT id, name, email, internal_ips FROM accounts", func(rows *postgres.Rows) error {
+		state.accounts = map[int]*Account{}
+		err = state.db.QueryScan("SELECT id, name, email, internal_ips FROM accounts", func(rows *postgres.Rows) error {
 			var id int
 			var name, email, ips string
 			for rows.Next() {
@@ -79,7 +86,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					InternalIPs: strings.Fields(ips),
 				}
 				account.workspaces = map[int]*Workspace{}
-				s.accounts[id] = account
+				state.accounts[id] = account
 			}
 			return nil
 		})
@@ -88,8 +95,8 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		}
 
 		// Read all workspaces.
-		s.workspaces = map[int]*Workspace{}
-		err = s.db.QueryScan("SELECT id, account, warehouse_type, warehouse_settings, schemas FROM workspaces",
+		state.workspaces = map[int]*Workspace{}
+		err = state.db.QueryScan("SELECT id, account, warehouse_type, warehouse_settings, schemas FROM workspaces",
 			func(rows *postgres.Rows) error {
 				var id, accountID int
 				var warehouseType *WarehouseType
@@ -98,7 +105,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					if err := rows.Scan(&id, &accountID, &warehouseType, &warehouseSettings, &schemas); err != nil {
 						return err
 					}
-					account := s.accounts[accountID]
+					account := state.accounts[accountID]
 					workspace := &Workspace{
 						mu:        new(sync.Mutex),
 						ID:        id,
@@ -108,20 +115,20 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					if warehouseType != nil {
 						workspace.Warehouse, err = openWarehouse(*warehouseType, warehouseSettings)
 						if err != nil {
-							log.Fatalf("cannot open data warehouse of workspace %d: %s", id, err)
+							log.Fatalf("cannot open data warehouse of workspace %d: %state", id, err)
 						}
 						workspace.Schemas = map[string]*types.Type{}
 						if len(schemas) > 0 {
 							err = json.Unmarshal(schemas, &workspace.Schemas)
 							if err != nil {
-								log.Fatalf("cannot unmarshal schemas of workspace %d: %s", id, err)
+								log.Fatalf("cannot unmarshal schemas of workspace %d: %state", id, err)
 							}
 						}
 					}
 					workspace.connections = map[int]*Connection{}
 					//workspace.EventListeners = &EventListeners{workspace}  // TODO(marco)
 					account.workspaces[id] = workspace
-					s.workspaces[id] = workspace
+					state.workspaces[id] = workspace
 				}
 				return nil
 			})
@@ -130,8 +137,8 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		}
 
 		// Read all resources.
-		s.resources = map[int]*Resource{}
-		err = s.db.QueryScan("SELECT id, workspace, connector, code, access_token, refresh_token, expires_in FROM resources",
+		state.resources = map[int]*Resource{}
+		err = state.db.QueryScan("SELECT id, workspace, connector, code, access_token, refresh_token, expires_in FROM resources",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					r := Resource{}
@@ -140,10 +147,10 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 						return err
 					}
 					r.mu = new(sync.Mutex)
-					r.workspace = s.workspaces[workspaceID]
-					r.connector = s.connectors[connectorID]
+					r.workspace = state.workspaces[workspaceID]
+					r.connector = state.connectors[connectorID]
 					r.workspace.resources[r.ID] = &r
-					s.resources[r.ID] = &r
+					state.resources[r.ID] = &r
 				}
 				return nil
 			})
@@ -152,8 +159,8 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		}
 
 		// Read all connections.
-		s.connections = map[int]*Connection{}
-		err = s.db.QueryScan("SELECT id, workspace, name, role, enabled, connector, COALESCE(storage, 0),"+
+		state.connections = map[int]*Connection{}
+		err = state.db.QueryScan("SELECT id, workspace, name, role, enabled, connector, COALESCE(storage, 0),"+
 			" COALESCE(stream, 0), resource, website_host, user_cursor, identity_column, timestamp_column, settings,"+
 			" schema, users_query FROM connections", func(rows *postgres.Rows) error {
 			for rows.Next() {
@@ -165,29 +172,29 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					&c.UsersQuery); err != nil {
 					return err
 				}
-				workspace := s.workspaces[workspaceID]
+				workspace := state.workspaces[workspaceID]
 				c.mu = new(sync.Mutex)
 				c.account = workspace.account
 				c.workspace = workspace
-				c.connector = s.connectors[connector]
+				c.connector = state.connectors[connector]
 				if storage > 0 {
-					if st, ok := s.connections[storage]; ok {
+					if st, ok := state.connections[storage]; ok {
 						c.storage = st
 					} else {
 						c.storage = &Connection{}
-						s.connections[storage] = c.storage
+						state.connections[storage] = c.storage
 					}
 				}
 				if stream > 0 {
-					if st, ok := s.connections[stream]; ok {
+					if st, ok := state.connections[stream]; ok {
 						c.stream = st
 					} else {
 						c.stream = &Connection{}
-						s.connections[stream] = c.stream
+						state.connections[stream] = c.stream
 					}
 				}
 				if resource > 0 {
-					c.resource = s.resources[resource]
+					c.resource = state.resources[resource]
 				}
 				if c.connector.Type == ServerType {
 					c.Keys = []string{}
@@ -200,7 +207,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					}
 				}
 				c.mappings = []*Mapping{}
-				connection, ok := s.connections[c.ID]
+				connection, ok := state.connections[c.ID]
 				if ok {
 					*connection = c
 				} else {
@@ -208,7 +215,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					*connection = c
 				}
 				workspace.connections[c.ID] = connection
-				s.connections[c.ID] = connection
+				state.connections[c.ID] = connection
 			}
 			return nil
 		})
@@ -217,7 +224,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		}
 
 		// Read all keys.
-		err = s.db.QueryScan(`SELECT connection, value FROM connections_keys ORDER BY connection, creation_time`,
+		err = state.db.QueryScan(`SELECT connection, value FROM connections_keys ORDER BY connection, creation_time`,
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					var connectionID int
@@ -225,7 +232,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					if err := rows.Scan(&connectionID, &value); err != nil {
 						return err
 					}
-					connection := s.connections[connectionID]
+					connection := state.connections[connectionID]
 					connection.Keys = append(connection.Keys, value)
 				}
 				return nil
@@ -239,7 +246,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		inSchemas := [][]byte{}
 		outSchemas := [][]byte{}
 		connectionIDs := []int{}
-		err = s.db.QueryScan("SELECT id, connection, \"in\", predefined_func, source_code, out FROM connections_mappings", func(rows *postgres.Rows) error {
+		err = state.db.QueryScan("SELECT id, connection, \"in\", predefined_func, source_code, out FROM connections_mappings", func(rows *postgres.Rows) error {
 			for rows.Next() {
 				m := &Mapping{
 					mu: new(sync.Mutex),
@@ -267,7 +274,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 			if err != nil {
 				return err
 			}
-			connection := s.connections[connectionIDs[i]]
+			connection := state.connections[connectionIDs[i]]
 			connection.mappings = append(connection.mappings, m)
 		}
 		if err != nil {
@@ -280,7 +287,5 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		return nil, err
 	}
 
-	go s.keep(ctx, notifications)
-
-	return s, nil
+	return state, nil
 }

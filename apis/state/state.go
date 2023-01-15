@@ -18,20 +18,33 @@ import (
 	"chichi/apis/types"
 	"chichi/apis/warehouses"
 
+	"github.com/google/uuid"
 	"golang.org/x/exp/maps"
 )
 
 // State represents the application state.
 type State struct {
+	id               uuid.UUID
 	mu               *sync.Mutex
 	db               *postgres.DB
-	notifications    bool
+	keeping          bool // report whether Keep has been called.
+	syncing          bool // reports whether the keeper has started synchronizing the state.
 	accounts         map[int]*Account
 	connectors       map[int]*Connector
 	workspaces       map[int]*Workspace
 	connections      map[int]*Connection
 	connectionsByKey map[string]*Connection
 	resources        map[int]*Resource
+	notifications    <-chan postgres.Notification
+	listeners        struct {
+		AddConnection          []func(AddConnectionNotification)
+		AddImportInProgress    []func(AddImportInProgressNotification)
+		DeleteConnection       []func(DeleteConnectionNotification)
+		SetConnectionSettings  []func(SetConnectionSettingsNotification)
+		SetConnectionStream    []func(SetConnectionStreamNotification)
+		SetConnectionUserQuery []func(SetConnectionUserQueryNotification)
+		SetWarehouseSettings   []func(SetWarehouseSettingsNotification)
+	}
 }
 
 // Account returns the account with identifier id.
@@ -68,6 +81,15 @@ func (state *State) ConnectionByKey(key string) (*Connection, bool) {
 	return c, ok
 }
 
+// Connection returns the connection with identifier id.
+// The boolean return value reports whether the connection exists.
+func (state *State) Connection(id int) (*Connection, bool) {
+	state.mu.Lock()
+	c, ok := state.connections[id]
+	state.mu.Unlock()
+	return c, ok
+}
+
 // Connections returns all connections.
 func (state *State) Connections() []*Connection {
 	state.mu.Lock()
@@ -99,6 +121,15 @@ func (state *State) Connectors() []*Connector {
 		return connectors[i].ID < connectors[j].ID
 	})
 	return connectors
+}
+
+// Workspace returns the workspace with identifier id.
+// The boolean return value reports whether the workspace exists.
+func (state *State) Workspace(id int) (*Workspace, bool) {
+	state.mu.Lock()
+	ws, ok := state.workspaces[id]
+	state.mu.Unlock()
+	return ws, ok
 }
 
 // Account represents an account.

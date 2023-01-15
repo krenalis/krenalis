@@ -33,8 +33,7 @@ import (
 
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/apis/warehouses"
-	_connector "chichi/connector"
+	"chichi/connector"
 
 	"github.com/mssola/user_agent"
 	"github.com/open2b/nuts/culture"
@@ -78,108 +77,207 @@ type Event struct {
 	source         int32
 	user           uint32
 
-	// data and err are used during event processing.
-	data []byte
-	err  error
+	// workspace, data and err are used during event processing.
+	workspace int
+	data      []byte
+	err       error
 }
 
 // eventProcessor processes events received from source streams and sent them
-// to the data warehouse.
+// to their data warehouses.
 type eventProcessor struct {
-	db       *postgres.DB
-	streams  []*state.Connection
-	sources  map[int]*state.Connection
-	queue    *queue
-	observer *eventObserver
-	servers  struct {
-		keys map[string]*state.Connection
-	}
-	defaultStream _connector.EventStreamConnection
+	sync.Mutex // for the streams field.
+	db         *postgres.DB
+	ctx        context.Context
+	state      *state.State
+	streams    map[int]*eventProcessorStream
+	queues     map[int]*queue
+	observer   *eventObserver
 }
 
-// newEventProcessor returns a new event eventProcessor.
-func newEventProcessor(db *postgres.DB, warehouse warehouses.Warehouse, connections []*state.Connection,
-	defaultStream _connector.EventStreamConnection) *eventProcessor {
+// eventProcessorStream represents an event stream used by the event processor.
+type eventProcessorStream struct {
+	id     int
+	stream connector.EventStreamConnection
+	ctx    context.Context
+	cancel context.CancelFunc
+}
+
+// newEventProcessor returns a new event processor.
+func newEventProcessor(ctx context.Context, db *postgres.DB, st *state.State,
+	defaultStream connector.EventStreamConnection) (*eventProcessor, error) {
 
 	processor := eventProcessor{
-		db:            db,
-		sources:       map[int]*state.Connection{},
-		queue:         newQueue(warehouse),
-		observer:      newEventObserver(db),
-		defaultStream: defaultStream,
+		db:       db,
+		ctx:      ctx,
+		state:    st,
+		streams:  map[int]*eventProcessorStream{},
+		queues:   map[int]*queue{},
+		observer: newEventObserver(db),
 	}
-	processor.servers.keys = map[string]*state.Connection{}
 
-	for _, c := range connections {
-		if !c.Enabled || c.Role != state.SourceRole {
-			continue
-		}
-		switch c.Connector().Type {
-		case state.MobileType, state.WebsiteType:
-			processor.sources[c.ID] = c
-		case state.EventStreamType:
-			if len(c.Settings) > 0 {
-				processor.streams = append(processor.streams, c)
-			}
-		case state.ServerType:
-			for _, key := range c.Keys {
-				processor.servers.keys[key] = c
-			}
+	for _, c := range st.Connections() {
+		if processor.isSuitableStream(c) {
+			processor.replaceStream(nil, c)
 		}
 	}
 
-	return &processor
+	// Process the events from the default stream.
+	go processor.process(&eventProcessorStream{stream: defaultStream})
+
+	st.AddListener(processor.onAddConnection)
+	st.AddListener(processor.onDeleteConnection)
+	st.AddListener(processor.onSetConnectionSettings)
+	st.AddListener(processor.onSetWarehouseSettings)
+
+	return &processor, nil
 }
 
-// Run executes the event eventProcessor p.
-// It should be called in its own goroutine.
-func (p *eventProcessor) Run(ctx context.Context) {
-	for _, stream := range p.streams {
-		connection, err := _connector.RegisteredEventStream(stream.Connector().Name).Connect(ctx, &_connector.EventStreamConfig{
-			Role:     _connector.SourceRole,
-			Settings: stream.Settings,
-		})
-		if err != nil {
-			log.Printf("cannot connector to event stream connection %d: %stream", stream.ID, err)
-		}
-		go p.processStream(ctx, stream, connection)
+// isSuitableStream reports whether c is a stream to which the processor must
+// send events.
+func (processor *eventProcessor) isSuitableStream(c *state.Connection) bool {
+	if c == nil || !c.Enabled || c.Role != state.SourceRole || len(c.Settings) == 0 {
+		return false
 	}
-	go p.processStream(ctx, nil, p.defaultStream)
+	if typ := c.Connector().Type; typ != state.EventStreamType {
+		return false
+	}
+	if c.Workspace().Warehouse == nil {
+		return false
+	}
+	return true
 }
 
-// processStream processes the events received from the stream with the given
-// identifier and connection. When the context is canceled it closes the
-// connection and returns.
-func (p *eventProcessor) processStream(ctx context.Context, stream *state.Connection, connection _connector.EventStreamConnection) {
+// onAddConnection is called when a connection is added.
+func (processor *eventProcessor) onAddConnection(n state.AddConnectionNotification) {
+	c, _ := processor.state.Connection(n.ID)
+	if processor.isSuitableStream(c) {
+		go processor.replaceStream(nil, c)
+	}
+}
 
-	streamID, streamName := 0, "default stream"
-	if stream != nil {
-		streamID, streamName = stream.ID, "stream "+strconv.Itoa(stream.ID)
+// onDeleteConnection is called when a connection is deleted.
+func (processor *eventProcessor) onDeleteConnection(n state.DeleteConnectionNotification) {
+	if old, ok := processor.streams[n.ID]; ok {
+		go processor.replaceStream(old, nil)
+	}
+}
+
+// onSetConnectionSettings is called when the settings of a connection are
+// changed.
+func (processor *eventProcessor) onSetConnectionSettings(n state.SetConnectionSettingsNotification) {
+	if old, ok := processor.streams[n.Connection]; ok {
+		new, _ := processor.state.Connection(n.Connection)
+		go processor.replaceStream(old, new)
+	}
+}
+
+// onSetWarehouseSettings is called when the settings of a workspace data
+// warehouse are changed.
+func (processor *eventProcessor) onSetWarehouseSettings(n state.SetWarehouseSettingsNotification) {
+	ws, _ := processor.state.Workspace(n.Workspace)
+	if n.Settings == nil {
+		// Close the streams of the workspace.
+		for _, c := range ws.Connections() {
+			if s, ok := processor.streams[c.ID]; ok {
+				go processor.replaceStream(s, nil)
+			}
+		}
+		return
+	}
+	// Open the streams of the workspace if they are not already open.
+	for _, c := range ws.Connections() {
+		if _, ok := processor.streams[c.ID]; !ok && processor.isSuitableStream(c) {
+			go processor.replaceStream(nil, c)
+		}
+	}
+}
+
+// replaceStream replaces the stream old with new, opening the new stream and
+// closing the old one. If old is nil, it only opens and adds the new stream.
+// If new is nil, it only closes and removes the old one.
+func (processor *eventProcessor) replaceStream(old *eventProcessorStream, new *state.Connection) {
+	// Open to the new stream.
+	if new != nil {
+		var stream connector.EventStreamConnection
+		for stream == nil {
+			var err error
+			stream, err = connector.RegisteredEventStream(new.Connector().Name).Connect(
+				context.Background(), &connector.EventStreamConfig{
+					Role:     connector.DestinationRole,
+					Settings: new.Settings,
+				})
+			if err != nil {
+				// Wait and retry.
+				log.Printf("[warning] cannot connect to event stream %d", new.ID)
+				time.Sleep(10 * time.Millisecond)
+				processor.Lock()
+				if processor.streams[new.ID] != old {
+					processor.Unlock()
+					return
+				}
+				processor.Unlock()
+			}
+		}
+		ctx, cancel := context.WithCancel(processor.ctx)
+		s := &eventProcessorStream{
+			id:     new.ID,
+			stream: stream,
+			ctx:    ctx,
+			cancel: cancel,
+		}
+		processor.Lock()
+		if processor.streams[new.ID] != old {
+			if err := stream.Close(); err != nil {
+				log.Printf("[warning] an error accurred closing the event stream %d: %s", new.ID, err)
+			}
+			processor.Unlock()
+			cancel()
+			return
+		}
+		processor.streams[new.ID] = s
+		processor.Unlock()
+		go processor.process(s)
+	}
+	// Close the old stream.
+	if old != nil {
+		old.cancel()
+	}
+}
+
+// process processes the events received from the stream s.
+// If the stream's context is cancelled, it closes the stream and returns.
+func (p *eventProcessor) process(s *eventProcessorStream) {
+
+	streamName := "default stream"
+	if s.id > 0 {
+		streamName = "event stream " + strconv.Itoa(s.id)
 	}
 
 	defer func() {
-		if err := connection.Close(); err != nil {
+		if err := s.stream.Close(); err != nil {
 			log.Printf("cannot close stream %s: %s", streamName, err)
 		}
 	}()
 
-	// Process the message received from the stream.
 	for {
-		message, ack, err := connection.Receive()
+		message, ack, err := s.stream.Receive()
 		if err != nil {
-			if err == context.Canceled || err == context.DeadlineExceeded {
-				select {
-				case <-ctx.Done():
-					return
-				default:
+			select {
+			case <-s.ctx.Done():
+				err := s.stream.Close()
+				if err != nil {
+					log.Printf("[warning] an error accurred closing the %s: %s", streamName, err)
 				}
+				return
+			default:
+				log.Printf("[error] cannot receive message from the %s: %s", streamName, err)
+				continue
 			}
-			log.Printf("cannot receive message from %s: %s", streamName, err)
-			continue
 		}
-		err = p.processMessage(streamID, message)
+		err = p.processMessage(s.id, message)
 		if err != nil {
-			log.Printf("cannot process message, received from %s: %s", streamName, err)
+			log.Printf("cannot process message, received from the %s: %s", streamName, err)
 			continue
 		}
 		ack()
@@ -259,8 +357,8 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 		if !isWellFormedConnectorKey(key) {
 			p.observer.AddEvent(0, 0, streamID, nil, message, errors.New("invalid authorization key"))
 		}
-		server = p.servers.keys[key]
-		if server == nil {
+		server, ok := p.server(key)
+		if !ok {
 			p.observer.AddEvent(0, 0, streamID, nil, message, errors.New("does not exist a server with the given key"))
 			return nil
 		}
@@ -273,13 +371,9 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 		return nil
 	}
 	sourceID, _ := strconv.Atoi(src)
-	if sourceID < 1 || sourceID > math.MaxInt32 {
+	source, ok := p.source(sourceID, server)
+	if !ok {
 		p.observer.AddEvent(0, serverID, streamID, nil, message, errors.New("invalid source in 'Authorization' header"))
-		return nil
-	}
-	source, ok := p.sources[sourceID]
-	if !ok || (server != nil && server.Workspace() != source.Workspace()) {
-		p.observer.AddEvent(0, serverID, streamID, nil, message, errors.New("source does not exist"))
 	}
 
 	// Validate the content type.
@@ -607,8 +701,16 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 
 	}
 
-	// Add the events to the queue.
-	p.queue.add(events)
+	// Add the events to the queue of the workspace.
+	workspaceID := source.Workspace().ID
+	p.Lock()
+	queue, ok := p.queues[workspaceID]
+	if !ok {
+		queue = newQueue(workspaceID)
+		p.queues[workspaceID] = queue
+	}
+	queue.add(events)
+	p.Unlock()
 
 	// Log the events for the observers.
 	for i := 0; i < num; i++ {
@@ -621,27 +723,59 @@ func (p *eventProcessor) processMessage(streamID int, message []byte) error {
 	return nil
 }
 
+// server returns the server with the given key.
+func (p *eventProcessor) server(key string) (*state.Connection, bool) {
+	server, ok := p.state.ConnectionByKey(key)
+	if !ok || !server.Enabled || server.Role != state.SourceRole {
+		return nil, false
+	}
+	if typ := server.Connector().Type; typ != state.ServerType {
+		return nil, false
+	}
+	return server, true
+}
+
+// source returns the source with identifier id. If server is not nil,
+// checks if the source and the sever have the same workspace.
+func (p *eventProcessor) source(id int, server *state.Connection) (*state.Connection, bool) {
+	if id < 1 || id > math.MaxInt32 {
+		return nil, false
+	}
+	source, ok := p.state.Connection(id)
+	if !ok || !source.Enabled || source.Role != state.SourceRole {
+		return nil, false
+	}
+	if typ := source.Connector().Type; typ != state.MobileType && typ != state.WebsiteType {
+		return nil, false
+	}
+	if server != nil && source.Workspace().ID != server.Workspace().ID {
+		return nil, false
+	}
+	return source, true
+}
+
 // queue is the queue of the processed events.
 type queue struct {
-	eventsMu  sync.Mutex
-	events    []*Event
-	warehouse warehouses.Warehouse
+	sync.Mutex // for the events field.
+	state      *state.State
+	workspace  int
+	events     []*Event
 }
 
 // newQueue returns a new queue that flushed events into the given data
 // warehouse.
-func newQueue(warehouse warehouses.Warehouse) *queue {
-	q := &queue{warehouse: warehouse}
+func newQueue(workspace int) *queue {
+	q := &queue{workspace: workspace}
 	// Start a goroutine that flushes the events every flushQueueTimeout seconds.
 	go func() {
 		ticker := time.NewTicker(flushQueueTimeout)
 		for {
 			select {
 			case <-ticker.C:
-				q.eventsMu.Lock()
+				q.Lock()
 				toFlush := q.events
 				q.events = nil
-				q.eventsMu.Unlock()
+				q.Unlock()
 				go q.flush(toFlush)
 			}
 		}
@@ -651,7 +785,7 @@ func newQueue(warehouse warehouses.Warehouse) *queue {
 
 // add adds events to the queue.
 func (q *queue) add(events []Event) {
-	q.eventsMu.Lock()
+	q.Lock()
 	var n int
 	for i := 0; i < len(events); i++ {
 		if events[i].err == nil {
@@ -659,7 +793,7 @@ func (q *queue) add(events []Event) {
 		}
 	}
 	if n == 0 {
-		q.eventsMu.Unlock()
+		q.Unlock()
 		return
 	}
 	for i := 0; i < len(events); i++ {
@@ -672,7 +806,7 @@ func (q *queue) add(events []Event) {
 		toFlush = q.events
 		q.events = nil
 	}
-	q.eventsMu.Unlock()
+	q.Unlock()
 	if toFlush != nil {
 		go q.flush(toFlush)
 	}
@@ -690,7 +824,11 @@ func (q *queue) flush(events []*Event) {
 	log.Printf("[info] flushing %d events", len(events))
 RETRY:
 	for {
-		batch, err := q.warehouse.PrepareBatch(context.Background(), "events", batchEventsColumns)
+		ws, ok := q.state.Workspace(q.workspace)
+		if !ok || ws.Warehouse == nil {
+			return
+		}
+		batch, err := ws.Warehouse.PrepareBatch(context.Background(), "events", batchEventsColumns)
 		if err != nil {
 			log.Printf("[error] cannot log events: %s", err)
 			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)

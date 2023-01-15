@@ -142,7 +142,7 @@ func (this *Connection) Import(reimport bool) (err error) {
 	}
 
 	// Track the import in the database.
-	n := state.StartImportNotification{
+	n := state.AddImportInProgressNotification{
 		Connection: c.ID,
 		Storage:    storage,
 		Reimport:   reimport,
