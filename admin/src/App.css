@@ -1,7 +1,7 @@
 :root {
 	--bg-primary: var(--sl-color-neutral-0);
 	--bg-gray: var(--sl-color-neutral-50);
-	--bg-dark: var(--sl-color-neutral-900);
+	--bg-dark: var(--sl-color-neutral-950);
 	--bg-crystal: hsl(0deg 0% 98% / 50%);
 	--bg-transparent: #ffffff10;
 	--bg-editor: #1e1e1e;

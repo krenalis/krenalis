@@ -10,8 +10,8 @@ const Arrow = ({ start, end, startAnchor, endAnchor }) => {
 				startAnchor={startAnchor}
 				endAnchor={endAnchor}
 				showHead={false}
-				color='#a1a1aa'
-				strokeWidth={2}
+				color='#cacad6'
+				strokeWidth={1}
 			/>
 		</div>
 	);

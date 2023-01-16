@@ -78,11 +78,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     cursor: pointer;
-    background-color: var(--sl-color-success-300);
-}
-
-.ConnectionOverview .importsList .cell.error.hasError {
-    background-color: var(--sl-color-danger-300);
 }
 
 .ConnectionOverview .noImport {

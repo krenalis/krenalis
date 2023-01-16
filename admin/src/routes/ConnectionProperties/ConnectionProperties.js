@@ -605,8 +605,8 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 											startAnchor='right'
 											endAnchor='left'
 											showHead={false}
-											color='#a1a1aa'
-											strokeWidth={2}
+											color='#cacad6'
+											strokeWidth={1}
 											labels={isSelectedProperty(p.name, 'input') && '-'}
 										/>
 									</div>
@@ -649,8 +649,8 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 											startAnchor='right'
 											endAnchor='left'
 											showHead={false}
-											color='#a1a1aa'
-											strokeWidth={2}
+											color='#cacad6'
+											strokeWidth={1}
 											labels={isSelectedProperty(p.name, 'output') && '-'}
 										/>
 									</div>

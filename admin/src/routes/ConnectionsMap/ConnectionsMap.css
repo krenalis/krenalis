@@ -34,19 +34,19 @@
 }
 
 .ConnectionsMap .map .main .centralLogo {
-	width: 180px;
-	height: 180px;
-	margin: auto;
-	background-color: var(--color-primary-600);
-	border-radius: 100%;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	color: var(--text-onaccent);
-	font-size: 23px;
-	box-shadow: 0 0 0 0 rgba(79, 70, 229, 1);
-	animation: pulse 2s infinite;
-	border: 15px solid var(--color-primary-400);
+    width: 180px;
+    height: 180px;
+    margin: auto;
+    background-color: var(--color-primary-600);
+    border-radius: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--text-onaccent);
+    font-size: 40px;
+    box-shadow: 0 0 #4f46e5;
+    animation: pulse 2s infinite;
+    border: 20px solid var(--color-primary-400);
 }
 
 @keyframes pulse {
