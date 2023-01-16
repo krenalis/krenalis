@@ -22,6 +22,7 @@ import (
 
 type Settings struct {
 	Main struct {
+		Host                         string
 		PrintESBuildWarningsOnStderr bool
 	}
 	PostgreSQL apis.PostgreSQLConfig
@@ -65,7 +66,12 @@ func main() {
 	http.HandleFunc("/api/", apis.ServeHTTP)
 	http.HandleFunc("/webhook/", apis.ServeWebhook)
 	http.Handle("/trace-events-script/", http.FileServer(http.Dir(".")))
-	err = http.ListenAndServeTLS(":9090", "cert.pem", "key.pem", nil)
+
+	addr := settings.Main.Host
+	if addr == "" {
+		addr = "127.0.0.1:9090"
+	}
+	err = http.ListenAndServeTLS(addr, "cert.pem", "key.pem", nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
