@@ -1,0 +1,32 @@
+.Connection .routeContent {
+    max-width: 1400px;
+    margin: auto;
+    margin-top: -80px;
+}
+
+.Connection .connectionSections::part(tabs) {
+    border-bottom: 0;
+}
+
+.Connection .connectionSections::part(active-tab-indicator) {
+    display: none;
+}
+
+.Connection .connectionSections sl-tab::part(base) {
+    font-weight: 600;
+}
+
+.Connection .connectionSections > sl-tab::part(base) {
+    color: var(--text-onaccent);
+    opacity: .7;
+    font-size: 17px;
+    font-weight: 400;
+}
+
+.Connection .connectionSections > sl-tab[active]::part(base) {
+    opacity: 1;
+}
+
+.Connection .connectionSections > sl-tab-panel {
+    margin-top: 50px;
+}

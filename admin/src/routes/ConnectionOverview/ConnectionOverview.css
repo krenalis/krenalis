@@ -1,83 +1,98 @@
-.ConnectionOverview .routeContent {
-    max-width: 1400px;
-    margin: auto;
-    margin-top: 80px;
-}
-
-.ConnectionOverview .routeContent .chart .title {
-    font-size: 20px;
+.ConnectionOverview .chart .chartHead {
     margin-bottom: 20px;
-    text-align: center;
 }
 
-.ConnectionOverview .routeContent .chart .recharts-wrapper {
+.ConnectionOverview .chart .title {
+    padding-left: 40px;
+    font-weight: 600;
+}
+
+.ConnectionOverview .chart .recharts-wrapper {
     margin: auto;
     position: relative;
     left: -20px;
 }
 
-.ConnectionOverview .routeContent .importsWrapper {
-    margin: 100px auto;
+.ConnectionOverview .importsWrapper {
+    margin: 100px auto 20px auto;
 }
 
-.ConnectionOverview .routeContent .importsWrapper .title {
-    font-size: 20px;
+.ConnectionOverview .importsWrapper .title {
     margin-bottom: 20px;
-    text-align: center;
-}
-
-.ConnectionOverview .routeContent .importsList {
-    display: grid;
-    grid-template-columns: 1fr 2fr 2fr 5fr;
-    max-width: 1350px;
-    margin: 0 auto;
-    border-radius: var(--radius)
-}
-
-.ConnectionOverview .routeContent .importsList > div {
-    /* background-color: var(--bg-primary); */
-    padding: 10px 15px;
-    border-left: 1px solid var(--sl-color-neutral-400);
-    border-bottom: 1px solid var(--sl-color-neutral-400)
-}
-
-.ConnectionOverview .routeContent .importsList > div.headCell {
+    padding-left: 40px;
     font-weight: 600;
 }
 
-.ConnectionOverview .routeContent .importsList > div:first-child {
-    border-top: 1px solid var(--sl-color-neutral-400);
+.ConnectionOverview .importsList {
+    display: grid;
+    grid-template-columns: 1fr 2fr 2fr 3fr;
+    max-width: 1350px;
+    margin: 0 auto;
+    border-radius: var(--radius);
+    background-color: var(--bg-primary);
+    box-shadow: var(--sl-shadow-small);
+}
+
+.ConnectionOverview .importsList > div {
+    padding: 10px 15px;
+    border-left: 1px solid var(--border-primary);
+    border-bottom: 1px solid var(--border-primary)
+}
+
+.ConnectionOverview .importsList > div.headCell {
+    font-weight: 600;
+}
+
+.ConnectionOverview .importsList > div:first-child {
+    border-top: 1px solid var(--border-primary);
     border-top-left-radius: var(--radius);
 }
 
-.ConnectionOverview .routeContent .importsList > div:nth-child(2),
-.ConnectionOverview .routeContent .importsList > div:nth-child(3) {
-    border-top: 1px solid var(--sl-color-neutral-400);
+.ConnectionOverview .importsList > div:nth-child(2),
+.ConnectionOverview .importsList > div:nth-child(3) {
+    border-top: 1px solid var(--border-primary);
 }
 
-.ConnectionOverview .routeContent .importsList > div:nth-child(4) {
-    border-top: 1px solid var(--sl-color-neutral-400);
-    border-right: 1px solid var(--sl-color-neutral-400);
+.ConnectionOverview .importsList > div:nth-child(4) {
+    border-top: 1px solid var(--border-primary);
+    border-right: 1px solid var(--border-primary);
     border-top-right-radius: var(--radius);
 }
 
-.ConnectionOverview .routeContent .importsList > div:nth-child(8),
-.ConnectionOverview .routeContent .importsList > div:nth-child(12) {
-    border-right: 1px solid var(--sl-color-neutral-400);
+.ConnectionOverview .importsList > div:nth-child(8),
+.ConnectionOverview .importsList > div:nth-child(12) {
+    border-right: 1px solid var(--border-primary);
 }
 
-.ConnectionOverview .routeContent .importsList > div:nth-last-child(4) {
+.ConnectionOverview .importsList > div:nth-last-child(4) {
     border-bottom-left-radius: var(--radius);
 }
 
-.ConnectionOverview .routeContent .importsList > div:last-child {
+.ConnectionOverview .importsList > div:last-child {
     border-bottom-right-radius: var(--radius);
-    border-right: 1px solid var(--sl-color-neutral-400);
+    border-right: 1px solid var(--border-primary);
 }
 
-.ConnectionOverview .routeContent .noImport {
+.ConnectionOverview .importsList .cell.error { 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    background-color: var(--sl-color-success-300);
+}
+
+.ConnectionOverview .importsList .cell.error.hasError {
+    background-color: var(--sl-color-danger-300);
+}
+
+.ConnectionOverview .noImport {
     text-align: center;
-    font-weight: 600;
+    background-color: var(--bg-primary);
+    border-radius: var(--radius);
+    padding: 50px 30px;
+    max-width: 1350px;
+    margin: auto;
+    box-shadow: var(--sl-shadow-small);
 }
 
 .ConnectionOverview sl-dialog.askImportConfirmationDialog::part(body) {

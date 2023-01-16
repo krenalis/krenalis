@@ -44,8 +44,7 @@
 	min-width: 180px;
 }
 
-.ConnectionProperties .routeContent {
-	max-width: 1400px;
+.ConnectionProperties .main {
 	margin: auto;
 	display: grid;
 	grid-template-columns: 1fr 2fr 1fr;
@@ -54,23 +53,22 @@
 	gap: 30px;
 	padding-bottom: 30px;
 	align-items: center;
-	margin-top: 80px;
 }
 
-.ConnectionProperties .routeContent .properties {
+.ConnectionProperties .main .properties {
 	height: 100%;
 }
 
-.ConnectionProperties .routeContent .properties .title {
+.ConnectionProperties .main .properties .title {
 	text-align: center;
 	margin-bottom: 10px;
 }
 
-.ConnectionProperties .routeContent .properties.usedInputProperties {
+.ConnectionProperties .main .properties.usedInputProperties {
 	grid-area: usedInputProperties;
 }
 
-.ConnectionProperties .routeContent .properties .addUsedProperty {
+.ConnectionProperties .main .properties .addUsedProperty {
 	display: block;
 	margin: auto;
 	width: 200px;
@@ -78,18 +76,18 @@
 	margin-bottom: 30px;
 }
 
-.ConnectionProperties .routeContent .transformations {
+.ConnectionProperties .main .transformations {
 	grid-area: transformations;
 	text-align: center;
 	/* TODO(@Andrea): remove this workaround after issue #134 of 'react-xarrows' is solved */
 	min-height: calc(100vh + 1px);
 }
 
-.ConnectionProperties .routeContent .transformations .saveButton {
+.ConnectionProperties .main .transformations .saveButton {
 	width: 200px;
 }
 
-.ConnectionProperties .routeContent .transformations .transformation {
+.ConnectionProperties .main .transformations .transformation {
 	position: relative;
 	width: fit-content;
 	height: fit-content;
@@ -99,19 +97,19 @@
 	margin: 60px auto;
 }
 
-.ConnectionProperties .routeContent .transformations .transformation .TransformationNode {
+.ConnectionProperties .main .transformations .transformation .TransformationNode {
 	z-index: 10;
 }
 
-.ConnectionProperties .routeContent .transformations .transformation sl-dialog {
+.ConnectionProperties .main .transformations .transformation sl-dialog {
 	z-index: 20;
 }
 
-.ConnectionProperties .routeContent .transformations .editorWrapper ~ div {
+.ConnectionProperties .main .transformations .editorWrapper ~ div {
 	width: 100%;
 }
 
-.ConnectionProperties .routeContent .transformations .editorWrapper {
+.ConnectionProperties .main .transformations .editorWrapper {
 	width: 100%;
 	height: 200px;
 	padding: 15px;
@@ -119,25 +117,26 @@
 	background-color: var(--bg-primary);
 }
 
-.ConnectionProperties .routeContent .transformations .editorWrapper * {
+.ConnectionProperties .main .transformations .editorWrapper * {
 	font-family: monospace !important;
 }
 
-.ConnectionProperties .routeContent .transformations .addTransformationButtons {
+.ConnectionProperties .main .transformations .addTransformationButtons {
 	display: flex;
     justify-content: center;
     align-items: center;
     gap: 15px;
+	margin-top: 50px;
 }
 
-.ConnectionProperties .routeContent .transformations .addTransformation::part(base) {
+.ConnectionProperties .main .transformations .addTransformation::part(base) {
 	width: 40px;
 	height: 40px;
 	border-radius: 100%;
 	position: relative;
 }
 
-.ConnectionProperties .routeContent .transformations .addTransformation sl-icon {
+.ConnectionProperties .main .transformations .addTransformation sl-icon {
 	position: absolute;
 	left: 50%;
 	top: 50%;
@@ -145,12 +144,12 @@
 	font-size: 20px;
 }
 
-.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformations {
+.ConnectionProperties .main .predefinedTransformationsDialog .predefinedTransformations {
 	max-width: 500px;
 	margin: auto;
 }
 
-.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformation {
+.ConnectionProperties .main .predefinedTransformationsDialog .predefinedTransformation {
 	display: grid;
     grid-template-columns: 40px 1fr;
     grid-template-areas:
@@ -164,47 +163,47 @@
 	cursor: pointer;
 }
 
-.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformation.selected {
+.ConnectionProperties .main .predefinedTransformationsDialog .predefinedTransformation.selected {
 	color: var(--color-primary-600)
 }
 
-.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformation:first-child {
+.ConnectionProperties .main .predefinedTransformationsDialog .predefinedTransformation:first-child {
 	border-top-left-radius: var(--radius);
 	border-top-right-radius: var(--radius);
 }
 
-.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformation:last-child {
+.ConnectionProperties .main .predefinedTransformationsDialog .predefinedTransformation:last-child {
 	border-top: 0;
 	border-bottom-left-radius: var(--radius);
 	border-bottom-right-radius: var(--radius);
 }
 
-.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformation sl-icon {
+.ConnectionProperties .main .predefinedTransformationsDialog .predefinedTransformation sl-icon {
 	grid-area: icon;
 	margin: auto;
 	font-size: 23px;
 }
 
-.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformation .name {
+.ConnectionProperties .main .predefinedTransformationsDialog .predefinedTransformation .name {
 	grid-area: name;
 	font-weight: 600;
 }
 
-.ConnectionProperties .routeContent .predefinedTransformationsDialog .predefinedTransformation .description {
+.ConnectionProperties .main .predefinedTransformationsDialog .predefinedTransformation .description {
 	grid-area: description;
 	font-size: 14px;
 }
 
-.ConnectionProperties .routeContent .transformations sl-dialog .removeTransformation {
+.ConnectionProperties .main .transformations sl-dialog .removeTransformation {
 	min-width: 150px;
 	opacity: 0.8;
 }
 
-.ConnectionProperties .routeContent .transformations sl-dialog .removeTransformation:hover {
+.ConnectionProperties .main .transformations sl-dialog .removeTransformation:hover {
 	opacity: 1;
 }
 
-.ConnectionProperties .routeContent .properties.usedOutputProperties {
+.ConnectionProperties .main .properties.usedOutputProperties {
 	grid-area: usedOutputProperties;
 }
 

@@ -18,5 +18,8 @@
 
 .NotFound .routeContent .box .description {
 	font-size: 18px;
-	margin-top: 10px;
+}
+
+.NotFound .routeContent .box .goBack {
+	margin-top: 30px;
 }

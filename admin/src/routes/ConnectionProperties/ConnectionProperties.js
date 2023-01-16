@@ -1,12 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import './ConnectionProperties.css';
-import NotFound from '../NotFound/NotFound';
-import Toast from '../../components/Toast/Toast';
-import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
-import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
-import NavigationTabs from '../../components/NavigationTabs/NavigationTabs';
-import FlexContainer from '../../components/FlexContainer/FlexContainer';
-import ConnectionHeading from '../../components/ConnectionHeading/ConnectionHeading';
 import call from '../../utils/call';
 import ConnectionProperty from '../../components/ConnectionProperty/ConnectionProperty';
 import TransformationNode from '../../components/TrasformationNode/TransformationNode';
@@ -22,8 +15,7 @@ import {
 } from '@shoelace-style/shoelace/dist/react/index.js';
 import Xarrow from 'react-xarrows';
 
-const ConnectionProperties = () => {
-	let [connection, setConnection] = useState({});
+const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelected }) => {
 	let [inputProperties, setInputProperties] = useState([]);
 	let [outputProperties, setOutputProperties] = useState([]);
 	let [usedInputProperties, setUsedInputProperties] = useState([]);
@@ -39,35 +31,14 @@ const ConnectionProperties = () => {
 	let [selectedPredefinedTransformation, setSelectedPredefinedTransformation] = useState(0);
 	let [predefinedTransformations, setPredefinedTransformations] = useState([]);
 	let [showPredefinedTransformations, setShowPredefinedTransformations] = useState(false);
-	let [status, setStatus] = useState(null);
-	let [notFound, setNotFound] = useState(false);
-
-	const toastRef = useRef();
-	const connectionID = Number(String(window.location).split('/').at(-2));
-
-	const onError = (err) => {
-		setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
-		toastRef.current.toast();
-		return;
-	};
 
 	useEffect(() => {
 		const fetchState = async () => {
-			// get the connection.
-			let [connection, err] = await call('/admin/connections/get', 'POST', connectionID);
-			if (err) {
-				onError(err);
-				return;
-			}
-			if (connection == null) {
-				setNotFound(true);
-				return;
-			}
-			setConnection(connection);
+			let err;
 
 			// get the connection properties and the user properties.
 			let connectionSchema;
-			[connectionSchema, err] = await call(`/api/connections/${connectionID}/schema`, 'GET');
+			[connectionSchema, err] = await call(`/api/connections/${c.ID}/schema`, 'GET');
 			if (err) {
 				onError(err);
 				return;
@@ -89,10 +60,10 @@ const ConnectionProperties = () => {
 
 			// place the properties in the proper column.
 			let inputProperties, outputProperties;
-			if (connection.Role === 'Source') {
+			if (c.Role === 'Source') {
 				inputProperties = connectionProperties;
 				outputProperties = userProperties;
-			} else if (connection.Role === 'Destination') {
+			} else if (c.Role === 'Destination') {
 				inputProperties = userProperties;
 				outputProperties = connectionProperties;
 			}
@@ -110,11 +81,12 @@ const ConnectionProperties = () => {
 
 			// get the transformations.
 			let transformations;
-			[transformations, err] = await call(`/api/connections/${connectionID}/mappings`, 'GET');
+			[transformations, err] = await call(`/api/connections/${c.ID}/mappings`, 'GET');
 			if (err) {
 				onError(err);
 				return;
 			}
+			if (transformations == null) return;
 
 			// replace the predefined transformations IDs with the full
 			// predefined transformations.
@@ -410,17 +382,16 @@ const ConnectionProperties = () => {
 			}
 			trs.push(toSave);
 		}
-		let [, err] = await call(`/api/connections/${connectionID}/mappings`, 'PUT', trs);
+		let [, err] = await call(`/api/connections/${c.ID}/mappings`, 'PUT', trs);
 		if (err) {
 			onError(err);
 			return;
 		}
-		setStatus({
+		onStatuChange({
 			variant: 'success',
 			icon: 'check2-circle',
 			text: 'Your transformations have been successfully saved',
 		});
-		toastRef.current.toast();
 	};
 
 	const isSelectedProperty = (name, type) => {
@@ -428,23 +399,8 @@ const ConnectionProperties = () => {
 		return sp && sp.name === name && sp.type === type;
 	};
 
-	if (notFound) {
-		return <NotFound />;
-	}
-
 	let sp = selectedProperty;
 	let st = selectedTransformation;
-	let c = connection;
-	let tabs = [
-		{ Name: 'Overview', Link: `/admin/connections/${c.ID}`, Selected: false },
-		{ Name: 'Settings', Link: `/admin/connections/${c.ID}/settings`, Selected: false },
-	];
-	if (c.Type === 'App' || c.Type === 'Database' || c.Type === 'File') {
-		tabs.splice(1, 0, { Name: 'Properties', Link: `/admin/connections/${c.ID}/properties`, Selected: true });
-	}
-	if (c.Type === 'Database' && c.Role === 'Source') {
-		tabs.splice(1, 0, { Name: 'SQL query', Link: `/admin/connections/${c.ID}/sql`, Selected: false });
-	}
 	return (
 		<div className={`ConnectionProperties${sp ? ' selectedProperty' : ''}`}>
 			{sp && (
@@ -466,28 +422,7 @@ const ConnectionProperties = () => {
 					</SlButton>
 				</div>
 			)}
-			<PrimaryBackground contentWidth={1400} height={300}>
-				<Breadcrumbs
-					onAccent={true}
-					breadcrumbs={[{ Name: 'Connections', Link: '/admin/connections' }, { Name: `${c.Name}` }]}
-				/>
-				<ConnectionHeading connection={c} />
-				<FlexContainer justifyContent='space-between'>
-					<NavigationTabs tabs={tabs} onAccent={true} />
-					<SlButton
-						className='saveButton'
-						variant='success'
-						size='large'
-						disabled={sp != null}
-						onClick={onSave}
-					>
-						<SlIcon slot='prefix' name='save' />
-						Save
-					</SlButton>
-				</FlexContainer>
-			</PrimaryBackground>
-			<div className='routeContent'>
-				<Toast reactRef={toastRef} status={status} />
+			<div className='main'>
 				<div className='properties usedInputProperties'>
 					<div className='title'>{c.Role === 'Source' ? `${c.Name} properties` : 'Golden record'}</div>
 					<SlButton
@@ -516,6 +451,16 @@ const ConnectionProperties = () => {
 					})}
 				</div>
 				<div className='transformations'>
+					<SlButton
+						className='saveButton'
+						variant='primary'
+						size='large'
+						disabled={sp != null}
+						onClick={onSave}
+					>
+						<SlIcon slot='prefix' name='save' />
+						Save
+					</SlButton>
 					{transformations.map((t) => {
 						return (
 							<div key={t.Position} className='transformation' id={`transformation-${t.Position}`}>
@@ -629,87 +574,91 @@ const ConnectionProperties = () => {
 				</div>
 			</div>
 			<div className='arrows'>
-				{transformations.map((t) => {
-					let inputArrows = [];
-					for (let [i, p] of t.In.properties.entries()) {
-						if (p != null) {
-							inputArrows.push(
-								<div
-									className={`arrow${isSelectedProperty(p.name, 'input') ? ' selected' : ''}`}
-									onClick={
-										isSelectedProperty(p.name, 'input')
-											? (e) => {
-													onRemoveConnection(t.Position, p.name, 'input', e);
-											  }
-											: null
-									}
-								>
-									<Xarrow
-										start={p.name}
-										end={
-											t.PredefinedFunc !== 0
-												? `transformation-${t.Position}-input-${t.PredefinedFunc.In.properties[
-														i
-												  ].label.replace(/\s/g, '')}`
-												: `transformation-${t.Position}`
+				{isSelected &&
+					transformations.map((t) => {
+						let inputArrows = [];
+						for (let [i, p] of t.In.properties.entries()) {
+							if (p != null) {
+								inputArrows.push(
+									<div
+										className={`arrow${isSelectedProperty(p.name, 'input') ? ' selected' : ''}`}
+										onClick={
+											isSelectedProperty(p.name, 'input')
+												? (e) => {
+														onRemoveConnection(t.Position, p.name, 'input', e);
+												  }
+												: null
 										}
-										startAnchor='right'
-										endAnchor='left'
-										showHead={false}
-										color='#a1a1aa'
-										strokeWidth={2}
-										labels={isSelectedProperty(p.name, 'input') && '-'}
-									/>
-								</div>
-							);
+									>
+										<Xarrow
+											start={p.name}
+											end={
+												t.PredefinedFunc !== 0
+													? `transformation-${
+															t.Position
+													  }-input-${t.PredefinedFunc.In.properties[i].label.replace(
+															/\s/g,
+															''
+													  )}`
+													: `transformation-${t.Position}`
+											}
+											startAnchor='right'
+											endAnchor='left'
+											showHead={false}
+											color='#a1a1aa'
+											strokeWidth={2}
+											labels={isSelectedProperty(p.name, 'input') && '-'}
+										/>
+									</div>
+								);
+							}
 						}
-					}
-					let outputArrows = [];
-					for (let [i, p] of t.Out.properties.entries()) {
-						if (p != null) {
-							outputArrows.push(
-								<div
-									className={`arrow${isSelectedProperty(p.name, 'output') ? ' selected' : ''}`}
-									onClick={
-										isSelectedProperty(p.name, 'output')
-											? (e) => {
-													onRemoveConnection(t.Position, p.name, 'output', e);
-											  }
-											: null
-									}
-								>
-									<Xarrow
-										start={
-											t.PredefinedFunc !== 0 && t.PredefinedFunc.Out.properties.length === 1
-												? `transformation-${
-														t.Position
-												  }-output-${t.PredefinedFunc.Out.properties[0].label.replace(
-														/\s/g,
-														''
-												  )}`
-												: t.PredefinedFunc !== 0
-												? `transformation-${
-														t.Position
-												  }-output-${t.PredefinedFunc.Out.properties[i].label.replace(
-														/\s/g,
-														''
-												  )}`
-												: `transformation-${t.Position}`
+						let outputArrows = [];
+						for (let [i, p] of t.Out.properties.entries()) {
+							if (p != null) {
+								outputArrows.push(
+									<div
+										className={`arrow${isSelectedProperty(p.name, 'output') ? ' selected' : ''}`}
+										onClick={
+											isSelectedProperty(p.name, 'output')
+												? (e) => {
+														onRemoveConnection(t.Position, p.name, 'output', e);
+												  }
+												: null
 										}
-										end={p.name}
-										startAnchor='right'
-										endAnchor='left'
-										showHead={false}
-										color='#a1a1aa'
-										strokeWidth={2}
-										labels={isSelectedProperty(p.name, 'output') && '-'}
-									/>
-								</div>
-							);
+									>
+										<Xarrow
+											start={
+												t.PredefinedFunc !== 0 && t.PredefinedFunc.Out.properties.length === 1
+													? `transformation-${
+															t.Position
+													  }-output-${t.PredefinedFunc.Out.properties[0].label.replace(
+															/\s/g,
+															''
+													  )}`
+													: t.PredefinedFunc !== 0
+													? `transformation-${
+															t.Position
+													  }-output-${t.PredefinedFunc.Out.properties[i].label.replace(
+															/\s/g,
+															''
+													  )}`
+													: `transformation-${t.Position}`
+											}
+											end={p.name}
+											startAnchor='right'
+											endAnchor='left'
+											showHead={false}
+											color='#a1a1aa'
+											strokeWidth={2}
+											labels={isSelectedProperty(p.name, 'output') && '-'}
+										/>
+									</div>
+								);
+							}
 						}
-					}
-					return [...inputArrows, ...outputArrows];
-				})}
+						return [...inputArrows, ...outputArrows];
+					})}
 			</div>
 			<SlDialog
 				label='Add a property'

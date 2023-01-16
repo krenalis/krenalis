@@ -1,20 +1,13 @@
-.ConnectionSettings .routeContent {
-    max-width: 1400px;
-    margin: auto;
-    padding-bottom: 30px;
-}
-
-.ConnectionSettings .settings {
-	margin-top: 100px;
-}
-
 .ConnectionSettings .settings::part(nav) {
 	flex-basis: 300px;
 }
 
 .ConnectionSettings .settings::part(body) {
-	padding: 0 150px;
 	overflow: visible;
+}
+
+.ConnectionSettings .settings > sl-tab-panel::part(base) {
+    padding: 0 150px;
 }
 
 .ConnectionSettings .panelTitle {

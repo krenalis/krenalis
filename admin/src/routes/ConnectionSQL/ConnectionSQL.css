@@ -1,35 +1,30 @@
-.ConnectionSQL .routeContent {
-	max-width: 1000px;
-	margin: auto;
+.ConnectionSQL .editorWrapper {
+    grid-area: editor;
+    width: 800px;
+    height: 600px;
+    padding: 30px;
+    border-radius: var(--radius);
+    background-color: var(--bg-primary);
+    margin: 0 auto;
+    box-shadow: var(--sl-shadow-small);
 }
 
-.ConnectionSQL .routeContent .editorWrapper {
-	grid-area: editor;
-	width: 100%;
-	height: 600px;
-	padding: 30px;
-	border-radius: var(--radius);
-	background-color: var(--bg-primary);
-	margin-top: 50px;
-	box-shadow: var(--sl-shadow-small);
-}
-
-.ConnectionSQL .routeContent .editorWrapper * {
+.ConnectionSQL .editorWrapper * {
 	font-family: monospace !important;
 }
 
-.ConnectionSQL .routeContent .buttons {
+.ConnectionSQL .buttons {
 	display: flex;
 	justify-content: center;
 	gap: 30px;
 	margin: 50px 0;
 }
 
-.ConnectionSQL .routeContent .buttons .previewButton {
+.ConnectionSQL .buttons .previewButton {
 	min-width: 200px;
 }
 
-.ConnectionSQL .routeContent .buttons .saveButton {
+.ConnectionSQL .buttons .saveButton {
 	min-width: 200px;
 }
 

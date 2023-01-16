@@ -5,7 +5,7 @@ const PrimaryBackground = ({ children, height, overlap, contentWidth }) => {
 	if (height) style['height'] = `${height}px`;
 	if (overlap) style['marginBottom'] = `-${overlap}px`;
 	let wrapperStyle;
-	if (contentWidth) wrapperStyle = { width: `${contentWidth}px`, margin: 'auto' };
+	if (contentWidth) wrapperStyle = { maxWidth: `${contentWidth}px`, margin: 'auto' };
 	return (
 		<div className='PrimaryBackground' style={style}>
 			<div className='widthWrapper' style={wrapperStyle}>

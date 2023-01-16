@@ -51,6 +51,10 @@
 	outline-color: var(--color-primary-500);
 }
 
+*::part(base) {
+	font-family: Inter,sans-serif;
+}
+
 h1,
 h1,
 h3,
