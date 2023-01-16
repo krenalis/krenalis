@@ -44,12 +44,16 @@ func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
 
 	// Read the configuration file.
+	settingsFile := "app.ini"
+	if len(os.Args) > 1 {
+		settingsFile = os.Args[1]
+	}
 	var settings Settings
-	err = gcfg.ReadFileInto(&settings, "app.ini")
+	err = gcfg.ReadFileInto(&settings, settingsFile)
 	if err != nil {
-		p, err2 := filepath.Abs("app.ini")
+		p, err2 := filepath.Abs(settingsFile)
 		if err2 != nil {
-			p = "app.ini"
+			p = settingsFile
 		}
 		log.Fatalf("cannot open %q: %s", p, err)
 	}
