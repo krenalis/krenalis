@@ -522,8 +522,8 @@ func (state *State) setConnectionSettings(n postgres.Notification) {
 // SetConnectionStatusNotification is the notification event sent when a
 // connection status is changed.
 type SetConnectionStatusNotification struct {
-	ID      int
-	Enabled bool
+	Connection int
+	Enabled    bool
 }
 
 // setConnectionStatus changes a connection status.
@@ -532,7 +532,7 @@ func (state *State) setConnectionStatus(n postgres.Notification) {
 	if !decodeStateNotification(n, &e) {
 		return
 	}
-	state.replaceConnection(e.ID, func(c *Connection) {
+	state.replaceConnection(e.Connection, func(c *Connection) {
 		c.Enabled = e.Enabled
 	})
 	for _, listener := range state.listeners.SetConnectionStatus {

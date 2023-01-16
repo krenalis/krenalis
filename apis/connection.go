@@ -299,11 +299,11 @@ func (this *Connection) SetStatus(enabled bool) error {
 		return nil
 	}
 	n := state.SetConnectionStatusNotification{
-		ID:      this.connection.ID,
-		Enabled: enabled,
+		Connection: this.connection.ID,
+		Enabled:    enabled,
 	}
 	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		result, err := tx.Exec("UPDATE connections SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.ID)
+		result, err := tx.Exec("UPDATE connections SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.Connection)
 		if err != nil {
 			return err
 		}
