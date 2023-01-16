@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"sort"
 	"strconv"
+	"strings"
 
 	"chichi/apis"
 )
@@ -42,6 +43,22 @@ type MessageHeader struct {
 type Connection struct {
 	ID   int
 	Name string
+}
+
+func DisableConnection(connection int) {
+	path := "api/connections/" + strconv.Itoa(connection) + "/status"
+	err := callAPI("POST", path, strings.NewReader(`{"enabled":false}`), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func EnableConnection(connection int) {
+	path := "api/connections/" + strconv.Itoa(connection) + "/status"
+	err := callAPI("POST", path, strings.NewReader(`{"enabled":true}`), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func ListConnections() {
