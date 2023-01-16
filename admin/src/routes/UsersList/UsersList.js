@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import './UsersList.css';
-import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
 import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
 import Toast from '../../components/Toast/Toast';
 import call from '../../utils/call';
@@ -179,12 +178,7 @@ const UsersList = () => {
 
 	return (
 		<div className='UsersList'>
-			<PrimaryBackground height={300} overlap={150}>
-				<Breadcrumbs
-					breadcrumbs={[{ Name: 'Connections', Link: '/admin/connections' }, { Name: `Golden Record users` }]}
-					onAccent={true}
-				/>
-			</PrimaryBackground>
+			<PrimaryBackground height={300} overlap={150}></PrimaryBackground>
 			<div className='routeContent'>
 				<Toast reactRef={toastRef} status={status} />
 				<div className='gridContainer'>

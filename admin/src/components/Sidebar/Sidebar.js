@@ -1,42 +1,52 @@
-import React from 'react';
+import { useState } from 'react';
 import './Sidebar.css';
 import { NavLink, Navigate } from 'react-router-dom';
-import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
-export default class Sidebar extends React.Component {
-	constructor(props) {
-		super(props);
-		this.state = {
-			isLoggedOut: false,
-		};
-	}
+const Sidebar = ({ currentRoute }) => {
+	let [isLoggedOut, setIsLoggedOut] = useState(false);
 
-	handleLogout = () => {
+	const onLogout = () => {
 		document.cookie = 'session=; Max-Age=-99999999; Path=/';
-		this.setState({ isLoggedOut: true });
+		setIsLoggedOut(true);
 	};
 
-	render() {
-		if (this.state.isLoggedOut) {
-			return <Navigate to='/admin' />;
-		} else {
-			return (
-				<div className='Sidebar'>
-					<div className='Items'>
-						<div className='Top'>
-							<SlButton variant='text'>
-								<SlIcon name='plugin' />
-								<NavLink to='/admin/connections'></NavLink>
-							</SlButton>
-						</div>
-						<div className='Bottom'>
-							<SlButton variant='text' onClick={this.handleLogout}>
-								<SlIcon name='box-arrow-left' />
-							</SlButton>
-						</div>
+	let topItems = [
+		{ name: 'connections', label: 'Connections', link: '/admin/connections', icon: 'plugin' },
+		{ name: 'users', label: 'Users', link: '/admin/users', icon: 'person-lines-fill' },
+	];
+
+	if (isLoggedOut) {
+		return <Navigate to='/admin' />;
+	}
+
+	return (
+		<div className='Sidebar'>
+			<div className='Items'>
+				<div className='Top'>
+					<div className='logo'>
+						<div className='image'>C</div>
+						<div className='text'>Chichi</div>
+					</div>
+					{topItems.map((i) => {
+						return (
+							<div className={`item${i.name === currentRoute ? ' selected' : ''}`}>
+								<SlIcon name={i.icon} />
+								<div className='text'>{i.label}</div>
+								<NavLink to={i.link}></NavLink>
+							</div>
+						);
+					})}
+				</div>
+				<div className='Bottom'>
+					<div className='item' onClick={onLogout}>
+						<SlIcon name='box-arrow-left' />
+						<div className='text'>Logout</div>
 					</div>
 				</div>
-			);
-		}
-	}
-}
+			</div>
+		</div>
+	);
+};
+
+export default Sidebar;
