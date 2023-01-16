@@ -26,6 +26,10 @@ const (
 	timestampColumn = "timestamp"
 )
 
+var (
+	AlreadyInProgress errors.Code = "AlreadyInProgress"
+)
+
 // Export starts the export of the users to the connection with the given
 // identifier.
 //
@@ -100,15 +104,19 @@ func (this *Connection) Export() (err error) {
 // reimport is false, it imports the users from the current cursor, otherwise
 // imports all users.
 //
-// If the workspace does not have a data warehouse, it returns an
-// errors.UnprocessableError error with code NoWarehouse.
-// If the connection is a file and does not have a storage, it returns an
-// errors.UnprocessableError error with code NoStorage.
-// If the connection has no mappings, it returns an errors.UnprocessableError
-// error with code NoMappings.
+// It returns an errors.UnprocessableError error with code
+//   - AlreadyInProgress, if an import is already in progress.
+//   - NoWarehouse, if the workspace does not have a data warehouse.
+//   - NoStorage, if the connection is a file and does not have a storage.
+//   - NoMappings, If the connection has no mappings.
 func (this *Connection) Import(reimport bool) (err error) {
 
 	c := this.connection
+
+	if c.ImportInProgress() != nil {
+		return errors.Unprocessable(AlreadyInProgress, "an import is already in progress for the connection %d", c.ID)
+	}
+
 	ws := c.Workspace()
 	connector := c.Connector()
 
@@ -149,7 +157,14 @@ func (this *Connection) Import(reimport bool) (err error) {
 		StartTime:  time.Now().UTC(),
 	}
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		err := tx.QueryRow("INSERT INTO connections_imports (connection, storage, start_time)\n"+
+		err := tx.QueryVoid("SELECT FROM connections_imports WHERE connection = $1 AND end_time IS NULL", n.Connection)
+		if err != sql.ErrNoRows {
+			if err == nil {
+				return errors.Unprocessable(AlreadyInProgress, "an import is already in progress for the connection %d", n.Connection)
+			}
+			return err
+		}
+		err = tx.QueryRow("INSERT INTO connections_imports (connection, storage, start_time)\n"+
 			"VALUES ($1, $2, $3)\nRETURNING id", n.Connection, n.Storage, n.StartTime).Scan(&n.ID)
 		if err != nil {
 			return err
