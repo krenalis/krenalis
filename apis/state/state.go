@@ -41,6 +41,7 @@ type State struct {
 		AddImportInProgress    []func(AddImportInProgressNotification)
 		DeleteConnection       []func(DeleteConnectionNotification)
 		SetConnectionSettings  []func(SetConnectionSettingsNotification)
+		SetConnectionStatus    []func(SetConnectionStatusNotification)
 		SetConnectionStream    []func(SetConnectionStreamNotification)
 		SetConnectionUserQuery []func(SetConnectionUserQueryNotification)
 		SetWarehouseSettings   []func(SetWarehouseSettingsNotification)

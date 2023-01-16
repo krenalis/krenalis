@@ -71,6 +71,33 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(connections)
 		})
 		router.Route("/{connectionID}", func(router chi.Router) {
+			router.Post("/status", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				var req struct {
+					Enabled bool
+				}
+				err = json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					http.Error(w, "Bad Request", http.StatusBadRequest)
+					return
+				}
+				err = connection.SetStatus(req.Enabled)
+				if err != nil {
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+			})
 			router.Get("/schema", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)

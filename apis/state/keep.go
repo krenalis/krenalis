@@ -46,6 +46,8 @@ func (state *State) AddListener(listener any) {
 		state.listeners.DeleteConnection = append(state.listeners.DeleteConnection, l)
 	case func(SetConnectionSettingsNotification):
 		state.listeners.SetConnectionSettings = append(state.listeners.SetConnectionSettings, l)
+	case func(SetConnectionStatusNotification):
+		state.listeners.SetConnectionStatus = append(state.listeners.SetConnectionStatus, l)
 	case func(SetConnectionStreamNotification):
 		state.listeners.SetConnectionStream = append(state.listeners.SetConnectionStream, l)
 	case func(SetConnectionUserQueryNotification):
@@ -99,6 +101,8 @@ func (state *State) keep() {
 			state.setConnectionStorage(n)
 		case "SetConnectionStream":
 			state.setConnectionStream(n)
+		case "SetConnectionStatus":
+			state.setConnectionStatus(n)
 		case "SetConnectionMappings":
 			state.setConnectionMappings(n)
 		case "SetConnectionUserQuery":
@@ -511,6 +515,27 @@ func (state *State) setConnectionSettings(n postgres.Notification) {
 		c.Settings = e.Settings
 	})
 	for _, listener := range state.listeners.SetConnectionSettings {
+		listener(e)
+	}
+}
+
+// SetConnectionStatusNotification is the notification event sent when a
+// connection status is changed.
+type SetConnectionStatusNotification struct {
+	ID      int
+	Enabled bool
+}
+
+// setConnectionStatus changes a connection status.
+func (state *State) setConnectionStatus(n postgres.Notification) {
+	e := SetConnectionStatusNotification{}
+	if !decodeStateNotification(n, &e) {
+		return
+	}
+	state.replaceConnection(e.ID, func(c *Connection) {
+		c.Enabled = e.Enabled
+	})
+	for _, listener := range state.listeners.SetConnectionStatus {
 		listener(e)
 	}
 }

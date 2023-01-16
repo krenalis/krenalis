@@ -293,6 +293,32 @@ func (this *Connection) Schema() (types.Type, error) {
 	return c.Schema, nil
 }
 
+// SetStatus sets the status of the connection.
+func (this *Connection) SetStatus(enabled bool) error {
+	if enabled == this.Enabled {
+		return nil
+	}
+	n := state.SetConnectionStatusNotification{
+		ID:      this.connection.ID,
+		Enabled: enabled,
+	}
+	err := this.db.Transaction(func(tx *postgres.Tx) error {
+		result, err := tx.Exec("UPDATE connections SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.ID)
+		if err != nil {
+			return err
+		}
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if affected == 0 {
+			return nil
+		}
+		return tx.Notify(n)
+	})
+	return err
+}
+
 // Column represents a column of a database connection.
 type Column struct {
 	Name string
