@@ -131,13 +131,14 @@ func NewProcessor(ctx context.Context, db *postgres.DB, st *state.State,
 	st.AddListener(processor.onAddConnection)
 	st.AddListener(processor.onDeleteConnection)
 	st.AddListener(processor.onSetConnectionSettings)
+	st.AddListener(processor.onSetConnectionStatus)
 	st.AddListener(processor.onSetWarehouseSettings)
 
 	return &processor, nil
 }
 
-// isSuitableStream reports whether c is a stream to which the processor must
-// send events.
+// isSuitableStream reports whether c is a stream from which the processor must
+// read events.
 func (processor *Processor) isSuitableStream(c *state.Connection) bool {
 	if c == nil || !c.Enabled || c.Role != state.SourceRole || len(c.Settings) == 0 {
 		return false
@@ -172,6 +173,20 @@ func (processor *Processor) onSetConnectionSettings(n state.SetConnectionSetting
 	if old, ok := processor.streams[n.Connection]; ok {
 		new, _ := processor.state.Connection(n.Connection)
 		go processor.replaceStream(old, new)
+	}
+}
+
+// onSetConnectionStatus is called when the status of a connection is changed.
+func (processor *Processor) onSetConnectionStatus(n state.SetConnectionStatusNotification) {
+	c, _ := processor.state.Connection(n.Connection)
+	if processor.isSuitableStream(c) {
+		if _, ok := processor.streams[c.ID]; !ok {
+			go processor.replaceStream(nil, c)
+		}
+	} else {
+		if s, ok := processor.streams[c.ID]; ok {
+			go processor.replaceStream(s, nil)
+		}
 	}
 }
 

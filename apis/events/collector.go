@@ -67,7 +67,7 @@ func NewCollector(ctx context.Context, st *state.State,
 	// Open and add the streams.
 	streams := map[int]*state.Connection{}
 	for _, c := range st.Connections() {
-		if s, ok := collector.streamOf(c); ok {
+		if s, ok := collector.suitableStreamOf(c); ok {
 			streams[s.ID] = s
 		}
 	}
@@ -81,6 +81,7 @@ func NewCollector(ctx context.Context, st *state.State,
 	st.AddListener(collector.onAddConnection)
 	st.AddListener(collector.onDeleteConnection)
 	st.AddListener(collector.onSetConnectionSettings)
+	st.AddListener(collector.onSetConnectionStatus)
 	st.AddListener(collector.onSetConnectionStream)
 	st.AddListener(collector.onSetWarehouseSettings)
 
@@ -227,7 +228,7 @@ func (collector *Collector) serveHTTP(r *http.Request) error {
 // onAddConnection is called when a connection is added.
 func (collector *Collector) onAddConnection(n state.AddConnectionNotification) {
 	c, _ := collector.state.Connection(n.ID)
-	if s, ok := collector.streamOf(c); ok {
+	if s, ok := collector.suitableStreamOf(c); ok {
 		go collector.replaceStream(nil, s)
 	}
 }
@@ -242,7 +243,7 @@ func (collector *Collector) onDeleteConnection(n state.DeleteConnectionNotificat
 	// Check if a connector with an open stream has been deleted.
 	keepOpen := map[int]bool{0: true}
 	for _, c := range collector.state.Connections() {
-		if s, ok := collector.streamOf(c); ok {
+		if s, ok := collector.suitableStreamOf(c); ok {
 			keepOpen[s.ID] = true
 		}
 	}
@@ -260,6 +261,21 @@ func (collector *Collector) onSetConnectionSettings(n state.SetConnectionSetting
 	if ok {
 		new, _ := collector.state.Connection(n.Connection)
 		go collector.replaceStream(old, new)
+	}
+}
+
+// onSetConnectionStatus is called when the status of a connection is changed.
+func (collector *Collector) onSetConnectionStatus(n state.SetConnectionStatusNotification) {
+	c, _ := collector.state.Connection(n.Connection)
+	s, ok := collector.suitableStreamOf(c)
+	if ok {
+		if _, ok := collector.streams[s.ID]; !ok {
+			go collector.replaceStream(nil, s)
+		}
+	} else {
+		if s, ok := collector.streams[s.ID]; ok {
+			go collector.replaceStream(s, nil)
+		}
 	}
 }
 
@@ -287,7 +303,7 @@ func (collector *Collector) onSetWarehouseSettings(n state.SetWarehouseSettingsN
 	}
 	// Open the streams of the workspace if they are not already open.
 	for _, c := range ws.Connections() {
-		s, ok := collector.streamOf(c)
+		s, ok := collector.suitableStreamOf(c)
 		if !ok {
 			continue
 		}
@@ -344,8 +360,8 @@ func (collector *Collector) replaceStream(old *eventCollectorStream, new *state.
 	}
 }
 
-// streamOf returns the stream of c.
-func (collector *Collector) streamOf(c *state.Connection) (*state.Connection, bool) {
+// suitableStreamOf returns the stream of c only if the collector must send events to it.
+func (collector *Collector) suitableStreamOf(c *state.Connection) (*state.Connection, bool) {
 	if c == nil || !c.Enabled || c.Role != state.SourceRole {
 		return nil, false
 	}
