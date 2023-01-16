@@ -205,7 +205,7 @@ func (processor *Processor) replaceStream(old *processorStream, new *state.Conne
 		var stream connector.StreamConnection
 		for stream == nil {
 			var err error
-			stream, err = connector.RegisteredStream(new.Connector().Name).Connect(
+			stream, err = connector.RegisteredStream(new.Connector().Name).Open(
 				context.Background(), &connector.StreamConfig{
 					Role:     connector.DestinationRole,
 					Settings: new.Settings,

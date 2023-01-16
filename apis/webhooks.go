@@ -188,7 +188,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 			return err
 		}
 	}
-	connection, err := _connector.RegisteredApp(connector.Name).Connect(context.Background(), &conf)
+	connection, err := _connector.RegisteredApp(connector.Name).Open(context.Background(), &conf)
 	if err != nil {
 		return err
 	}

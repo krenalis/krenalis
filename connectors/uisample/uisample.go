@@ -21,14 +21,14 @@ var _ connector.StreamConnection = &connection{}
 
 func init() {
 	connector.RegisterStream(connector.Stream{
-		Name:    "UISample",
-		Icon:    "",
-		Connect: connect,
+		Name: "UISample",
+		Icon: "",
+		Open: open,
 	})
 }
 
-// connect returns a new UISample connection.
-func connect(ctx context.Context, conf *connector.StreamConfig) (connector.StreamConnection, error) {
+// open opens a UISample connection and returns it.
+func open(ctx context.Context, conf *connector.StreamConfig) (connector.StreamConnection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

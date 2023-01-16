@@ -28,8 +28,8 @@ var _ connector.AppConnection = &connection{}
 
 func init() {
 	connector.RegisterApp(connector.App{
-		Name:    "Dummy",
-		Connect: connect,
+		Name: "Dummy",
+		Open: open,
 	})
 }
 
@@ -38,8 +38,8 @@ type connection struct {
 	clientSecret string
 }
 
-// connect returns a new Dummy connection.
-func connect(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
+// open opens a Dummy connection and returns it.
+func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
 	c := connection{
 		firehose:     conf.Firehose,
 		clientSecret: conf.ClientSecret,

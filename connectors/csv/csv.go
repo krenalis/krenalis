@@ -33,9 +33,9 @@ var _ connector.FileConnection = &connection{}
 
 func init() {
 	connector.RegisterFile(connector.File{
-		Name:    "CSV",
-		Icon:    icon,
-		Connect: connect,
+		Name: "CSV",
+		Icon: icon,
+		Open: open,
 	})
 }
 
@@ -56,8 +56,8 @@ type settings struct {
 	UseCRLF          bool
 }
 
-// connect returns a new CSV connection.
-func connect(ctx context.Context, conf *connector.FileConfig) (connector.FileConnection, error) {
+// open opens a CSV connection and returns it.
+func open(ctx context.Context, conf *connector.FileConfig) (connector.FileConnection, error) {
 	c := connection{ctx: ctx, role: conf.Role, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

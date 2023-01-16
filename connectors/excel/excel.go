@@ -35,9 +35,9 @@ var _ connector.FileConnection = &connection{}
 
 func init() {
 	connector.RegisterFile(connector.File{
-		Name:    "Excel",
-		Icon:    icon,
-		Connect: connect,
+		Name: "Excel",
+		Icon: icon,
+		Open: open,
 	})
 }
 
@@ -52,8 +52,8 @@ type settings struct {
 	SheetName string
 }
 
-// connect returns a new Excel connection.
-func connect(ctx context.Context, conf *connector.FileConfig) (connector.FileConnection, error) {
+// open opens an Excel connection and returns it.
+func open(ctx context.Context, conf *connector.FileConfig) (connector.FileConnection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

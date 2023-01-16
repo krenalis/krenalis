@@ -306,7 +306,7 @@ func (collector *Collector) replaceStream(old *eventCollectorStream, new *state.
 		var stream connector.StreamConnection
 		for stream == nil {
 			var err error
-			stream, err = connector.RegisteredStream(new.Connector().Name).Connect(
+			stream, err = connector.RegisteredStream(new.Connector().Name).Open(
 				context.Background(), &connector.StreamConfig{
 					Role:     connector.SourceRole,
 					Settings: new.Settings,

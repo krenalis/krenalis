@@ -161,7 +161,7 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, name st
 
 	// Set the resource. It can be an existent resource or a resource to be created.
 	if opts.OAuth != nil {
-		connection, err := _connector.RegisteredApp(c.Name).Connect(context.Background(), &_connector.AppConfig{
+		connection, err := _connector.RegisteredApp(c.Name).Open(context.Background(), &_connector.AppConfig{
 			Role:         _connector.Role(role),
 			ClientSecret: c.OAuth.ClientSecret,
 			AccessToken:  opts.OAuth.AccessToken,

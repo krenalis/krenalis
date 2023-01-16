@@ -53,9 +53,9 @@ func (err MissingTimestampColumnError) Error() string {
 
 // File represents a file connector.
 type File struct {
-	Name    string
-	Icon    string // icon in SVG format
-	Connect FileConnectFunc
+	Name string
+	Icon string // icon in SVG format
+	Open OpenFileFunc
 }
 
 // FileConfig represents the configuration of a file connection.
@@ -65,8 +65,8 @@ type FileConfig struct {
 	Firehose Firehose
 }
 
-// FileConnectFunc represents functions that create new file connections.
-type FileConnectFunc func(context.Context, *FileConfig) (FileConnection, error)
+// OpenFileFunc represents functions that open file connections.
+type OpenFileFunc func(context.Context, *FileConfig) (FileConnection, error)
 
 // FileConnection is the interface implemented by file connections.
 type FileConnection interface {

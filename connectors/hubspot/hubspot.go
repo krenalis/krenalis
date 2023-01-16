@@ -54,7 +54,7 @@ func init() {
 			Scope: "crm.objects.contacts.read crm.objects.contacts.write crm.schemas.contacts.read",
 		},
 		WebhooksPer: connector.WebhooksPerConnector,
-		Connect:     connect,
+		Open:        open,
 	})
 }
 
@@ -66,8 +66,8 @@ type connection struct {
 	accessToken  string
 }
 
-// connect returns a new Hubspot connection.
-func connect(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
+// open opens a HubSpot connection and returns it.
+func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
 	c := connection{
 		ctx:          ctx,
 		firehose:     conf.Firehose,

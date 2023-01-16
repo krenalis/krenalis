@@ -33,14 +33,14 @@ var _ connector.StreamConnection = &connection{}
 
 func init() {
 	connector.RegisterStream(connector.Stream{
-		Name:    "RabbitMQ",
-		Icon:    icon,
-		Connect: connect,
+		Name: "RabbitMQ",
+		Icon: icon,
+		Open: open,
 	})
 }
 
-// connect returns a new RabbitMQ connection.
-func connect(ctx context.Context, conf *connector.StreamConfig) (connector.StreamConnection, error) {
+// open opens a RabbitMQ connection and returns it.
+func open(ctx context.Context, conf *connector.StreamConfig) (connector.StreamConnection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

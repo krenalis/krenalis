@@ -11,9 +11,9 @@ import "context"
 
 // Stream represents a stream connector.
 type Stream struct {
-	Name    string
-	Icon    string // icon in SVG format
-	Connect StreamConnectFunc
+	Name string
+	Icon string // icon in SVG format
+	Open OpenStreamFunc
 }
 
 // StreamConfig represents the configuration of a stream connection.
@@ -23,8 +23,8 @@ type StreamConfig struct {
 	Firehose Firehose
 }
 
-// StreamConnectFunc represents functions that create new stream connections.
-type StreamConnectFunc func(context.Context, *StreamConfig) (StreamConnection, error)
+// OpenStreamFunc represents functions that open stream connections.
+type OpenStreamFunc func(context.Context, *StreamConfig) (StreamConnection, error)
 
 // SendOptions are the send options.
 type SendOptions struct {

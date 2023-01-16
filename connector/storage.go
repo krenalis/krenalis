@@ -15,9 +15,9 @@ import (
 
 // Storage represents a storage connector.
 type Storage struct {
-	Name    string
-	Icon    string // icon in SVG format
-	Connect StorageConnectFunc
+	Name string
+	Icon string // icon in SVG format
+	Open OpenStorageFunc
 }
 
 // StorageConfig represents the configuration of a storage connection.
@@ -27,8 +27,8 @@ type StorageConfig struct {
 	Firehose Firehose
 }
 
-// StorageConnectFunc represents functions that create new storage connections.
-type StorageConnectFunc func(context.Context, *StorageConfig) (StorageConnection, error)
+// OpenStorageFunc represents functions that open storage connections.
+type OpenStorageFunc func(context.Context, *StorageConfig) (StorageConnection, error)
 
 // StorageConnection is the interface implemented by storage connections.
 type StorageConnection interface {

@@ -13,9 +13,9 @@ import (
 
 // Server represents a server connector.
 type Server struct {
-	Name    string
-	Icon    string // icon in SVG format
-	Connect ServerConnectFunc
+	Name string
+	Icon string // icon in SVG format
+	Open OpenServerFunc
 }
 
 // ServerConfig represents the configuration of a server connection.
@@ -25,8 +25,8 @@ type ServerConfig struct {
 	Firehose Firehose
 }
 
-// ServerConnectFunc represents functions that create new server connections.
-type ServerConnectFunc func(context.Context, *ServerConfig) (ServerConnection, error)
+// OpenServerFunc represents functions that open server connections.
+type OpenServerFunc func(context.Context, *ServerConfig) (ServerConnection, error)
 
 // ServerConnection is the interface implemented by server connections.
 type ServerConnection interface {

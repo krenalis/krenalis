@@ -36,9 +36,9 @@ var _ connector.StorageConnection = &connection{}
 
 func init() {
 	connector.RegisterStorage(connector.Storage{
-		Name:    "HTTP",
-		Icon:    icon,
-		Connect: connect,
+		Name: "HTTP",
+		Icon: icon,
+		Open: open,
 	})
 }
 
@@ -54,8 +54,8 @@ type settings struct {
 	Headers map[string]string
 }
 
-// connect returns a new HTTP connection.
-func connect(ctx context.Context, conf *connector.StorageConfig) (connector.StorageConnection, error) {
+// open opens an HTTP connection and returns it.
+func open(ctx context.Context, conf *connector.StorageConfig) (connector.StorageConnection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

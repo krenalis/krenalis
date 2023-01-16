@@ -339,7 +339,7 @@ func (this *Connection) Query(query string, limit int) ([]Column, [][]string, er
 		return nil, nil, err
 	}
 	fh := this.newFirehose(context.Background())
-	connection, err := _connector.RegisteredDatabase(connector.Name).Connect(fh.ctx, &_connector.DatabaseConfig{
+	connection, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
 		Role:     cRole,
 		Settings: c.Settings,
 		Firehose: fh,
@@ -420,7 +420,7 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 		}
 
 		fh := this.newFirehose(context.Background())
-		connection, err = _connector.RegisteredApp(connector.Name).Connect(fh.ctx, &_connector.AppConfig{
+		connection, err = _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
 			Role:         cRole,
 			Settings:     c.Settings,
 			Firehose:     fh,
@@ -435,43 +435,43 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 
 		switch connector.Type {
 		case state.DatabaseType:
-			connection, err = _connector.RegisteredDatabase(connector.Name).Connect(fh.ctx, &_connector.DatabaseConfig{
+			connection, err = _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
 				Role:     cRole,
 				Settings: c.Settings,
 				Firehose: fh,
 			})
 		case state.FileType:
-			connection, err = _connector.RegisteredFile(connector.Name).Connect(fh.ctx, &_connector.FileConfig{
+			connection, err = _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
 				Role:     cRole,
 				Settings: c.Settings,
 				Firehose: fh,
 			})
 		case state.MobileType:
-			connection, err = _connector.RegisteredMobile(connector.Name).Connect(fh.ctx, &_connector.MobileConfig{
+			connection, err = _connector.RegisteredMobile(connector.Name).Open(fh.ctx, &_connector.MobileConfig{
 				Role:     cRole,
 				Settings: c.Settings,
 				Firehose: fh,
 			})
 		case state.ServerType:
-			connection, err = _connector.RegisteredServer(connector.Name).Connect(fh.ctx, &_connector.ServerConfig{
+			connection, err = _connector.RegisteredServer(connector.Name).Open(fh.ctx, &_connector.ServerConfig{
 				Role:     cRole,
 				Settings: c.Settings,
 				Firehose: fh,
 			})
 		case state.StorageType:
-			connection, err = _connector.RegisteredStorage(connector.Name).Connect(fh.ctx, &_connector.StorageConfig{
+			connection, err = _connector.RegisteredStorage(connector.Name).Open(fh.ctx, &_connector.StorageConfig{
 				Role:     cRole,
 				Settings: c.Settings,
 				Firehose: fh,
 			})
 		case state.StreamType:
-			connection, err = _connector.RegisteredStream(connector.Name).Connect(fh.ctx, &_connector.StreamConfig{
+			connection, err = _connector.RegisteredStream(connector.Name).Open(fh.ctx, &_connector.StreamConfig{
 				Role:     cRole,
 				Settings: c.Settings,
 				Firehose: fh,
 			})
 		case state.WebsiteType:
-			connection, err = _connector.RegisteredWebsite(connector.Name).Connect(fh.ctx, &_connector.WebsiteConfig{
+			connection, err = _connector.RegisteredWebsite(connector.Name).Open(fh.ctx, &_connector.WebsiteConfig{
 				Role:     cRole,
 				Settings: c.Settings,
 				Firehose: fh,
@@ -893,7 +893,7 @@ func (this *Connection) reloadSchema() error {
 		}
 
 		fh := this.newFirehose(context.Background())
-		connection, err := _connector.RegisteredApp(connector.Name).Connect(fh.ctx, &_connector.AppConfig{
+		connection, err := _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
 			Role:         cRole,
 			Settings:     c.Settings,
 			Firehose:     fh,
@@ -923,7 +923,7 @@ func (this *Connection) reloadSchema() error {
 			return err
 		}
 		fh := this.newFirehose(context.Background())
-		connection, err := _connector.RegisteredDatabase(connector.Name).Connect(fh.ctx, &_connector.DatabaseConfig{
+		connection, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
 			Role:     cRole,
 			Settings: c.Settings,
 			Firehose: fh,
@@ -960,7 +960,7 @@ func (this *Connection) reloadSchema() error {
 			s := c.Storage()
 			fh := this.newFirehose(ctx)
 			ctx = fh.ctx
-			connection, err := _connector.RegisteredStorage(s.Connector().Name).Connect(ctx, &_connector.StorageConfig{
+			connection, err := _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
 				Role:     cRole,
 				Settings: c.Settings,
 				Firehose: fh,
@@ -973,7 +973,7 @@ func (this *Connection) reloadSchema() error {
 
 		// Connect to the file connector and read only the columns.
 		fh := this.newFirehose(ctx)
-		file, err := _connector.RegisteredFile(connector.Name).Connect(fh.ctx, &_connector.FileConfig{
+		file, err := _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
 			Role:     cRole,
 			Settings: c.Settings,
 			Firehose: fh,

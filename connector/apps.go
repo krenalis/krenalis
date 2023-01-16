@@ -28,7 +28,7 @@ type App struct {
 	Icon        string      // icon in SVG format
 	OAuth       OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
 	WebhooksPer WebhooksPer // indicates if webhooks are per connector, resource or connection
-	Connect     AppConnectFunc
+	Open        OpenAppFunc
 }
 
 // AppConfig represents the configuration of an app connection.
@@ -41,8 +41,8 @@ type AppConfig struct {
 	AccessToken  string
 }
 
-// AppConnectFunc represents functions that create new app connections.
-type AppConnectFunc func(context.Context, *AppConfig) (AppConnection, error)
+// OpenAppFunc represents functions that open app connections.
+type OpenAppFunc func(context.Context, *AppConfig) (AppConnection, error)
 
 // AppConnection is the interface implemented by app connections.
 type AppConnection interface {

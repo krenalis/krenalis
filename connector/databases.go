@@ -29,9 +29,9 @@ func NewDatabaseQueryError(msg string) error {
 
 // Database represents a database connector.
 type Database struct {
-	Name    string
-	Icon    string // icon in SVG format
-	Connect DatabaseConnectFunc
+	Name string
+	Icon string // icon in SVG format
+	Open OpenDatabaseFunc
 }
 
 // DatabaseConfig represents the configuration of a database connection.
@@ -41,9 +41,8 @@ type DatabaseConfig struct {
 	Firehose Firehose
 }
 
-// DatabaseConnectFunc represents functions that create new database
-// connections.
-type DatabaseConnectFunc func(context.Context, *DatabaseConfig) (DatabaseConnection, error)
+// OpenDatabaseFunc represents functions that open database connections.
+type OpenDatabaseFunc func(context.Context, *DatabaseConfig) (DatabaseConnection, error)
 
 // DatabaseConnection is the interface implemented by database connections.
 type DatabaseConnection interface {

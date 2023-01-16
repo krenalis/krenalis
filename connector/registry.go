@@ -85,7 +85,7 @@ func Connectors() []Connector {
 // RegisterApp makes an app connector available by the provided name. If
 // RegisterApp is called twice with the same name or if fn is nil, it panics.
 func RegisterApp(app App) {
-	if app.Connect == nil {
+	if app.Open == nil {
 		panic("connector: RegisterApp function is nil")
 	}
 	registryMu.Lock()
@@ -100,7 +100,7 @@ func RegisterApp(app App) {
 // If RegisterDatabase is called twice with the same name or if fn is nil, it
 // panics.
 func RegisterDatabase(database Database) {
-	if database.Connect == nil {
+	if database.Open == nil {
 		panic("connector: RegisterDatabase function is nil")
 	}
 	registryMu.Lock()
@@ -115,7 +115,7 @@ func RegisterDatabase(database Database) {
 // If RegisterStream is called twice with the same name or if fn is nil, it
 // panics.
 func RegisterStream(stream Stream) {
-	if stream.Connect == nil {
+	if stream.Open == nil {
 		panic("connector: RegisterStream function is nil")
 	}
 	registryMu.Lock()
@@ -129,7 +129,7 @@ func RegisterStream(stream Stream) {
 // RegisterFile makes a file connector available by the provided name. If
 // RegisterFile is called twice with the same name or if fn is nil, it panics.
 func RegisterFile(file File) {
-	if file.Connect == nil {
+	if file.Open == nil {
 		panic("connector: RegisterFile function is nil")
 	}
 	registryMu.Lock()
@@ -144,7 +144,7 @@ func RegisterFile(file File) {
 // RegisterDatabase is called twice with the same name or if fn is nil, it
 // panics.
 func RegisterMobile(mobile Mobile) {
-	if mobile.Connect == nil {
+	if mobile.Open == nil {
 		panic("connector: RegisterMobile function is nil")
 	}
 	registryMu.Lock()
@@ -159,7 +159,7 @@ func RegisterMobile(mobile Mobile) {
 // RegisterServer is called twice with the same name or if fn is nil, it
 // panics.
 func RegisterServer(server Server) {
-	if server.Connect == nil {
+	if server.Open == nil {
 		panic("connector: RegisterServer function is nil")
 	}
 	registryMu.Lock()
@@ -174,7 +174,7 @@ func RegisterServer(server Server) {
 // RegisterStorage is called twice with the same name or if fn is nil, it
 // panics.
 func RegisterStorage(storage Storage) {
-	if storage.Connect == nil {
+	if storage.Open == nil {
 		panic("connector: RegisterStorage function is nil")
 	}
 	registryMu.Lock()
@@ -189,7 +189,7 @@ func RegisterStorage(storage Storage) {
 // RegisterWebsite is called twice with the same name or if fn is nil, it
 // panics.
 func RegisterWebsite(website Website) {
-	if website.Connect == nil {
+	if website.Open == nil {
 		panic("connector: RegisterWebsite function is nil")
 	}
 	registryMu.Lock()

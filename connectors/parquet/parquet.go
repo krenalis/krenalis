@@ -41,9 +41,9 @@ var _ connector.FileConnection = &connection{}
 
 func init() {
 	connector.RegisterFile(connector.File{
-		Name:    "Parquet",
-		Icon:    icon,
-		Connect: connect,
+		Name: "Parquet",
+		Icon: icon,
+		Open: open,
 	})
 }
 
@@ -57,8 +57,8 @@ type settings struct {
 	Path string
 }
 
-// connect returns a new Parquet connection.
-func connect(ctx context.Context, conf *connector.FileConfig) (connector.FileConnection, error) {
+// open opens a Parquet connection and returns it.
+func open(ctx context.Context, conf *connector.FileConfig) (connector.FileConnection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

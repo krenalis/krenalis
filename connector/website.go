@@ -13,9 +13,9 @@ import (
 
 // Website represents a website connector.
 type Website struct {
-	Name    string
-	Icon    string // icon in SVG format
-	Connect WebsiteConnectFunc
+	Name string
+	Icon string // icon in SVG format
+	Open OpenWebsiteFunc
 }
 
 // WebsiteConfig represents the configuration of a website connection.
@@ -25,8 +25,8 @@ type WebsiteConfig struct {
 	Firehose Firehose
 }
 
-// WebsiteConnectFunc represents functions that create new website connections.
-type WebsiteConnectFunc func(context.Context, *WebsiteConfig) (WebsiteConnection, error)
+// OpenWebsiteFunc represents functions that open website connections.
+type OpenWebsiteFunc func(context.Context, *WebsiteConfig) (WebsiteConnection, error)
 
 // WebsiteConnection is the interface implemented by website connections.
 type WebsiteConnection interface {

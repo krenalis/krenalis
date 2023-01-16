@@ -47,7 +47,7 @@ func init() {
 			ForcedExpiresIn: "never",
 		},
 		WebhooksPer: connector.WebhooksPerSource,
-		Connect:     connect,
+		Open:        open,
 	})
 }
 
@@ -58,8 +58,8 @@ type connection struct {
 	accessToken string
 }
 
-// connect returns a new Mailchimp connection.
-func connect(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
+// open opens a Mailchimp connection and returns it.
+func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
 	c := connection{
 		ctx:         ctx,
 		firehose:    conf.Firehose,

@@ -25,16 +25,16 @@ var _ connector.WebsiteConnection = &connection{}
 
 func init() {
 	connector.RegisterWebsite(connector.Website{
-		Name:    "Website",
-		Icon:    icon,
-		Connect: connect,
+		Name: "Website",
+		Icon: icon,
+		Open: open,
 	})
 }
 
 type connection struct{}
 
-// connect returns a new website connection.
-func connect(context.Context, *connector.WebsiteConfig) (connector.WebsiteConnection, error) {
+// open opens a Website connection and returns it.
+func open(context.Context, *connector.WebsiteConfig) (connector.WebsiteConnection, error) {
 	return &connection{}, nil
 }
 

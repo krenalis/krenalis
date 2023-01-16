@@ -223,7 +223,7 @@ func (this *Connection) _startImport(imp *state.ImportInProgress) error {
 		}
 
 		fh := this.newFirehose(context.Background())
-		c, err := _connector.RegisteredApp(connector.Name).Connect(fh.ctx, &_connector.AppConfig{
+		c, err := _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
 			Role:         role,
 			Settings:     connection.Settings,
 			Firehose:     fh,
@@ -255,7 +255,7 @@ func (this *Connection) _startImport(imp *state.ImportInProgress) error {
 			return importError{err}
 		}
 		fh := this.newFirehose(context.Background())
-		c, err := _connector.RegisteredDatabase(connector.Name).Connect(fh.ctx, &_connector.DatabaseConfig{
+		c, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
 			Role:     role,
 			Settings: connection.Settings,
 			Firehose: fh,
@@ -328,7 +328,7 @@ func (this *Connection) _startImport(imp *state.ImportInProgress) error {
 		{
 			fh := this.newFirehoseForConnection(ctx, connection.Storage())
 			ctx = fh.ctx
-			c, err := _connector.RegisteredStorage(connector.Name).Connect(ctx, &_connector.StorageConfig{
+			c, err := _connector.RegisteredStorage(connector.Name).Open(ctx, &_connector.StorageConfig{
 				Role:     role,
 				Settings: connection.Settings,
 				Firehose: fh,
@@ -341,7 +341,7 @@ func (this *Connection) _startImport(imp *state.ImportInProgress) error {
 
 		// Connect to the file connector.
 		fh := this.newFirehose(ctx)
-		file, err := _connector.RegisteredFile(connector.Name).Connect(fh.ctx, &_connector.FileConfig{
+		file, err := _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
 			Role:     role,
 			Settings: connection.Settings,
 			Firehose: fh,
@@ -366,7 +366,7 @@ func (this *Connection) _startImport(imp *state.ImportInProgress) error {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		c, err := _connector.RegisteredStream(connector.Name).Connect(ctx, &_connector.StreamConfig{
+		c, err := _connector.RegisteredStream(connector.Name).Open(ctx, &_connector.StreamConfig{
 			Role:     role,
 			Settings: connection.Settings,
 		})
@@ -421,7 +421,7 @@ func (this *Connection) startExport() error {
 		}
 
 		fh := this.newFirehose(context.Background())
-		c, err := _connector.RegisteredApp(name).Connect(fh.ctx, &_connector.AppConfig{
+		c, err := _connector.RegisteredApp(name).Open(fh.ctx, &_connector.AppConfig{
 			Role:         role,
 			Settings:     settings,
 			Firehose:     fh,
