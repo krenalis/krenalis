@@ -89,8 +89,8 @@ func (state *State) keep() {
 			state.addImportInProgress(n)
 		case "DeleteConnection":
 			state.deleteConnection(n)
-		case "EndImport":
-			state.endImport(n)
+		case "DeleteImportInProgress":
+			state.deleteImportInProgress(n)
 		case "LoadState":
 			state.loadState(n)
 		case "RevokeConnectionKey":
@@ -431,14 +431,15 @@ func (state *State) deleteConnection(n postgres.Notification) {
 	}
 }
 
-// EndImportNotification is the notification event sent when an import ends.
-type EndImportNotification struct {
+// DeleteImportInProgressNotification is the notification event sent when an
+// import in progress is deleted.
+type DeleteImportInProgressNotification struct {
 	ID int
 }
 
-// endImport ends an import.
-func (state *State) endImport(n postgres.Notification) {
-	e := EndImportNotification{}
+// deleteImportInProgress deletes an import in progress.
+func (state *State) deleteImportInProgress(n postgres.Notification) {
+	e := DeleteImportInProgressNotification{}
 	if !decodeStateNotification(n, &e) {
 		return
 	}

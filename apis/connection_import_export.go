@@ -175,7 +175,7 @@ func (this *Connection) startImport(imp *state.ImportInProgress) {
 			errorMsg = "an internal error has occurred"
 		}
 	}
-	n := state.EndImportNotification{
+	n := state.DeleteImportInProgressNotification{
 		ID: imp.ID,
 	}
 	// TODO(marco) retry if the transaction fails.
