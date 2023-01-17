@@ -222,13 +222,16 @@ func (this *Connection) startImport(imp *state.ImportInProgress) {
 
 	err := this._startImport(imp)
 	if err != nil {
+		health = state.RecentError
 		if e, ok := err.(importError); ok {
 			errorMsg = abbreviate(e.Error(), 1000)
+			if _, ok := e.err.(*_connector.AccessDeniedError); ok {
+				health = state.AccessDenied
+			}
 		} else {
 			log.Printf("[error] cannot do import %d: %s", imp.ID, err)
 			errorMsg = "an internal error has occurred"
 		}
-		health = state.RecentError
 	}
 	n := state.DeleteImportInProgressNotification{
 		ID:     imp.ID,

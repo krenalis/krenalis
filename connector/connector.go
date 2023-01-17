@@ -15,6 +15,16 @@ import (
 	"chichi/connector/ui"
 )
 
+// An AccessDeniedError error is returned by a connector method when it is
+// unable to access a requested resource due to insufficient permissions.
+type AccessDeniedError struct {
+	Err error
+}
+
+func (err *AccessDeniedError) Error() string {
+	return err.Err.Error()
+}
+
 // A NotSupportedTypeError error is returned by FileConnector.Read and
 // DatabaseConnector.Query methods when a column type is not supported.
 type NotSupportedTypeError struct {
