@@ -28,6 +28,8 @@ const (
 
 var (
 	AlreadyInProgress errors.Code = "AlreadyInProgress"
+	NotEnabled        errors.Code = "NotEnabled"
+	StorageNotEnabled errors.Code = "StorageNotEnabled"
 )
 
 // Export starts the export of the users to the connection with the given
@@ -104,15 +106,21 @@ func (this *Connection) Export() (err error) {
 // reimport is false, it imports the users from the current cursor, otherwise
 // imports all users.
 //
+// It returns an errors.NotFound if the connection does not exist.
 // It returns an errors.UnprocessableError error with code
 //   - AlreadyInProgress, if an import is already in progress.
-//   - NoWarehouse, if the workspace does not have a data warehouse.
+//   - NoMappings, if the connection has no mappings.
 //   - NoStorage, if the connection is a file and does not have a storage.
-//   - NoMappings, If the connection has no mappings.
+//   - NoWarehouse, if the workspace does not have a data warehouse.
+//   - NotEnabled, if the connection is not enabled.
+//   - StorageNotEnabled, if the storage is not enabled.
 func (this *Connection) Import(reimport bool) (err error) {
 
 	c := this.connection
 
+	if !c.Enabled {
+		return errors.Unprocessable(NotEnabled, "connection %d is not enabled", c.ID)
+	}
 	if c.ImportInProgress() != nil {
 		return errors.Unprocessable(AlreadyInProgress, "an import is already in progress for the connection %d", c.ID)
 	}
@@ -122,18 +130,18 @@ func (this *Connection) Import(reimport bool) (err error) {
 
 	// Verify that the workspace has a data warehouse.
 	if ws.Warehouse == nil {
-		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
+		return errors.Unprocessable(NoWarehouse, "workspace %d of connection %d does not have a data warehouse", ws.ID, c.ID)
 	}
 
 	// Check that the connection has an allowed type and is a source.
-	var storage int
 	switch connector.Type {
 	case state.AppType, state.DatabaseType, state.StreamType:
 	case state.FileType:
 		if s := c.Storage(); s == nil {
 			return errors.Unprocessable(NoStorage, "file connection %d does not have a storage", c.ID)
+		} else if !s.Enabled {
+			return errors.Unprocessable(StorageNotEnabled, "storage %d of file connection %d is not enabled", s.ID, c.ID)
 		}
-		storage = c.ID
 	default:
 		return errors.BadRequest("cannot import from connection %d, it's a %s connection",
 			c.ID, strings.ToLower(connector.Type.String()))
@@ -152,12 +160,42 @@ func (this *Connection) Import(reimport bool) (err error) {
 	// Track the import in the database.
 	n := state.AddImportInProgressNotification{
 		Connection: c.ID,
-		Storage:    storage,
 		Reimport:   reimport,
 		StartTime:  time.Now().UTC(),
 	}
 	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		err := tx.QueryVoid("SELECT FROM connections_imports WHERE connection = $1 AND end_time IS NULL", n.Connection)
+		var enabled bool
+		var workspace int
+		var hasWarehouse bool
+		err := tx.QueryRow("SELECT c.enabled, COALESCE(c.storage, 0), w.id, w.warehouse_type IS NOT NULL\n"+
+			"FROM connections c\n"+
+			"INNER JOIN workspaces w ON c.workspace = w.id\n"+
+			"WHERE c.id = $1", n.Connection).Scan(&enabled, &n.Storage, &workspace, &hasWarehouse)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				err = errors.NotFound("connection %d does not exist", n.Connection)
+			}
+			return err
+		}
+		if !enabled {
+			return errors.Unprocessable(NotEnabled, "connection %d is not enabled", n.Connection)
+		}
+		if !hasWarehouse {
+			return errors.Unprocessable(NoWarehouse, "workspace %d of connection %d does not have a data warehouse", workspace, n.Connection)
+		}
+		if connector.Type == state.FileType {
+			if n.Storage == 0 {
+				return errors.Unprocessable(NoStorage, "file connection %d has not a storage", n.Connection)
+			}
+			err := tx.QueryRow("SELECT enabled FROM connections WHERE id = $1", n.Storage).Scan(&enabled)
+			if err != nil {
+				return err
+			}
+			if !enabled {
+				return errors.Unprocessable(StorageNotEnabled, "storage %d of file connection %d is not enabled", n.Storage, n.Connection)
+			}
+		}
+		err = tx.QueryVoid("SELECT FROM connections_imports WHERE connection = $1 AND end_time IS NULL", n.Connection)
 		if err != sql.ErrNoRows {
 			if err == nil {
 				return errors.Unprocessable(AlreadyInProgress, "an import is already in progress for the connection %d", n.Connection)
@@ -165,7 +203,7 @@ func (this *Connection) Import(reimport bool) (err error) {
 			return err
 		}
 		err = tx.QueryRow("INSERT INTO connections_imports (connection, storage, start_time)\n"+
-			"VALUES ($1, $2, $3)\nRETURNING id", n.Connection, n.Storage, n.StartTime).Scan(&n.ID)
+			"VALUES ($1, NULLIF($2, 0), $3)\nRETURNING id", n.Connection, n.Storage, n.StartTime).Scan(&n.ID)
 		if err != nil {
 			return err
 		}

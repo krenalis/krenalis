@@ -90,7 +90,7 @@ CREATE TABLE connections (
 CREATE TABLE connections_imports (
     id SERIAL,
     connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
-    storage integer NOT NULL,
+    storage integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
     start_time timestamp NOT NULL,
     end_time timestamp DEFAULT NULL,
     error varchar(1000) NOT NULL DEFAULT '',
