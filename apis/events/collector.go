@@ -277,7 +277,7 @@ func (collector *Collector) onSetConnectionStatus(n state.SetConnectionStatusNot
 		if _, ok := collector.streams[s.ID]; !ok {
 			go collector.replaceStream(nil, s)
 		}
-	} else {
+	} else if s, ok = c.Stream(); ok {
 		if s, ok := collector.streams[s.ID]; ok {
 			go collector.replaceStream(s, nil)
 		}
