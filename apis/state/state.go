@@ -260,7 +260,7 @@ const (
 func (typ *ConnectorType) Scan(src any) error {
 	s, ok := src.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an api.ConnectorType value", src)
+		return fmt.Errorf("cannot scan a %T value into an state.ConnectorType value", src)
 	}
 	var t ConnectorType
 	switch s {
@@ -334,7 +334,7 @@ const (
 func (per *WebhooksPer) Scan(src any) error {
 	s, ok := src.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an api.WebhooksPer value", src)
+		return fmt.Errorf("cannot scan a %T value into an state.WebhooksPer value", src)
 	}
 	var p WebhooksPer
 	switch s {
@@ -553,7 +553,7 @@ const (
 func (role *ConnectionRole) Scan(src any) error {
 	s, ok := src.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an api.ConnectionRole value", src)
+		return fmt.Errorf("cannot scan a %T value into an state.ConnectionRole value", src)
 	}
 	var r ConnectionRole
 	switch s {
@@ -562,7 +562,7 @@ func (role *ConnectionRole) Scan(src any) error {
 	case "Destination":
 		r = DestinationRole
 	default:
-		return fmt.Errorf("invalid api.ConnectionRole: %s", s)
+		return fmt.Errorf("invalid state.ConnectionRole: %s", s)
 	}
 	*role = r
 	return nil
