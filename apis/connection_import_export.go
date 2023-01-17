@@ -241,8 +241,14 @@ func (this *Connection) startImport(imp *state.ImportInProgress) {
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec("UPDATE connections SET health = $1 WHERE id = $2", n.Health, this.connection.ID)
+		var exists bool
+		err = tx.QueryRow("UPDATE connections SET health = $1 WHERE id = $2 RETURNING true",
+			n.Health, this.connection.ID).Scan(&exists)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				// Connection does not exist anymore.
+				return nil
+			}
 			return err
 		}
 		return tx.Notify(n)
