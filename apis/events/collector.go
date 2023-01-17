@@ -172,10 +172,15 @@ func (collector *Collector) serveHTTP(r *http.Request) error {
 	}
 
 	var streamID int
-	if server != nil && server.Stream() != nil {
-		streamID = server.Stream().ID
-	} else if s := source.Stream(); s != nil {
-		streamID = s.ID
+	if server != nil {
+		if s, ok := server.Stream(); ok {
+			streamID = s.ID
+		}
+	}
+	if streamID == 0 {
+		if s, ok := source.Stream(); ok {
+			streamID = s.ID
+		}
 	}
 	var stream *eventCollectorStream
 	collector.mu.Lock()
@@ -365,8 +370,8 @@ func (collector *Collector) suitableStreamOf(c *state.Connection) (*state.Connec
 	if c == nil || !c.Enabled || c.Role != state.SourceRole {
 		return nil, false
 	}
-	s := c.Stream()
-	if s == nil || !s.Enabled || len(s.Settings) == 0 || s.Workspace().Warehouse == nil {
+	s, ok := c.Stream()
+	if !ok || !s.Enabled || len(s.Settings) == 0 || s.Workspace().Warehouse == nil {
 		return nil, false
 	}
 	return s, true

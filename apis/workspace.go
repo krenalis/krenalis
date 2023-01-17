@@ -303,10 +303,10 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 			Out:        t.Out,
 		})
 	}
-	if s := c.Storage(); s != nil {
+	if s, ok := c.Storage(); ok {
 		connection.Storage = s.ID
 	}
-	if s := c.Stream(); s != nil {
+	if s, ok := c.Stream(); ok {
 		connection.Stream = s.ID
 	}
 	if conn.OAuth != nil {
@@ -341,10 +341,10 @@ func (this *Workspace) Connections() []*Connection {
 				Out:        t.Out,
 			})
 		}
-		if s := c.Storage(); s != nil {
+		if s, ok := c.Storage(); ok {
 			connection.Storage = s.ID
 		}
-		if s := c.Stream(); s != nil {
+		if s, ok := c.Stream(); ok {
 			connection.Stream = s.ID
 		}
 		if conn.OAuth != nil {

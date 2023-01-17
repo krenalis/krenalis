@@ -435,7 +435,7 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 	case state.AppType:
 
 		var clientSecret, resourceCode, accessToken string
-		if r := c.Resource(); r != nil {
+		if r, ok := c.Resource(); ok {
 			clientSecret = connector.OAuth.ClientSecret
 			resourceCode = r.Code
 			var err error
@@ -861,7 +861,7 @@ func (this *Connection) newFirehose(ctx context.Context) *firehose {
 // newFirehose returns a new Firehose for the connection c.
 func (this *Connection) newFirehoseForConnection(ctx context.Context, c *state.Connection) *firehose {
 	var resource int
-	if r := c.Resource(); r != nil {
+	if r, ok := c.Resource(); ok {
 		resource = r.ID
 	}
 	fh := &firehose{
@@ -889,7 +889,7 @@ func (this *Connection) reloadSchema() error {
 	switch connector.Type {
 	case state.AppType, state.DatabaseType:
 	case state.FileType:
-		if c.Storage() == nil {
+		if _, ok := c.Storage(); !ok {
 			return errors.New("file connection has not storage")
 		}
 	default:
@@ -908,7 +908,7 @@ func (this *Connection) reloadSchema() error {
 	case state.AppType:
 
 		var clientSecret, resourceCode, accessToken string
-		if r := c.Resource(); r != nil {
+		if r, ok := c.Resource(); ok {
 			clientSecret = connector.OAuth.ClientSecret
 			resourceCode = r.Code
 			var err error
@@ -974,16 +974,15 @@ func (this *Connection) reloadSchema() error {
 
 	case state.FileType:
 
-		if c.Storage() == nil {
-			return errors.New("file connection has not storage")
-		}
-
 		var ctx = context.Background()
 
 		// Get the file reader.
 		var files *fileReader
 		{
-			s := c.Storage()
+			s, ok := c.Storage()
+			if !ok {
+				return errors.New("file connection has not storage")
+			}
 			fh := this.newFirehose(ctx)
 			ctx = fh.ctx
 			connection, err := _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{

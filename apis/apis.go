@@ -286,7 +286,8 @@ func (apis *APIs) onAddImportInProgress(n state.AddImportInProgressNotification)
 	// TODO(marco): only one server should starts the import.
 	connection, _ := apis.state.Connection(n.Connection)
 	c := &Connection{db: apis.db, connection: connection}
-	go c.startImport(connection.ImportInProgress())
+	imp, _ := connection.ImportInProgress()
+	go c.startImport(imp)
 }
 
 // onSetConnectionUserQuery is called when a connection user query is changed.

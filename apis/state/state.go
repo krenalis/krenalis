@@ -469,39 +469,40 @@ func (connection *Connection) Connector() *Connector {
 }
 
 // Stream returns the stream of the connection.
-// If there is no stream, it returns nil.
-func (connection *Connection) Stream() *Connection {
+// The boolean return value reports whether the connection has a stream.
+func (connection *Connection) Stream() (*Connection, bool) {
 	connection.mu.Lock()
 	s := connection.stream
 	connection.mu.Unlock()
-	return s
+	return s, s != nil
 }
 
 // Storage returns the storage of the connection.
-// If there is no storage, it returns nil.
-func (connection *Connection) Storage() *Connection {
+// The boolean return value reports whether the connection has a storage.
+func (connection *Connection) Storage() (*Connection, bool) {
 	connection.mu.Lock()
 	s := connection.storage
 	connection.mu.Unlock()
-	return s
+	return s, s != nil
 }
 
 // Resource returns the resource of the connection.
-// If there is no resource, it returns nil.
-func (connection *Connection) Resource() *Resource {
+// The boolean return value reports whether the connection has a resource.
+func (connection *Connection) Resource() (*Resource, bool) {
 	connection.mu.Lock()
 	r := connection.resource
 	connection.mu.Unlock()
-	return r
+	return r, r != nil
 }
 
-// ImportInProgress returns the in progress import of the connection.
-// If there is no import in progress, it returns nil.
-func (connection *Connection) ImportInProgress() *ImportInProgress {
+// ImportInProgress returns the import in progress of the connection.
+// The boolean return value reports whether the connection has an import in
+// progress.
+func (connection *Connection) ImportInProgress() (*ImportInProgress, bool) {
 	connection.mu.Lock()
 	im := connection.importInProgress
 	connection.mu.Unlock()
-	return im
+	return im, im != nil
 }
 
 // Mappings returns the mappings of the connection.
@@ -532,12 +533,12 @@ func (imp *ImportInProgress) Connection() *Connection {
 }
 
 // Storage returns the storage of the import.
-// If there is no storage, it returns nil.
-func (imp *ImportInProgress) Storage() *Connection {
+// The boolean return value reports whether the import has a storage.
+func (imp *ImportInProgress) Storage() (*Connection, bool) {
 	imp.mu.Lock()
 	s := imp.storage
 	imp.mu.Unlock()
-	return s
+	return s, s != nil
 }
 
 // ConnectionRole represents a connection role.

@@ -172,8 +172,8 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		if connection == nil {
 			return errNotFound
 		}
-		resource := connection.Resource()
-		if resource == nil {
+		resource, ok := connection.Resource()
+		if !ok {
 			return errNotFound
 		}
 		connector = connection.Connector()

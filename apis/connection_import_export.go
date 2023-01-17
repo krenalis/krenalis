@@ -121,7 +121,7 @@ func (this *Connection) Import(reimport bool) (err error) {
 	if !c.Enabled {
 		return errors.Unprocessable(NotEnabled, "connection %d is not enabled", c.ID)
 	}
-	if c.ImportInProgress() != nil {
+	if _, ok := c.ImportInProgress(); ok {
 		return errors.Unprocessable(AlreadyInProgress, "an import is already in progress for the connection %d", c.ID)
 	}
 
@@ -137,7 +137,7 @@ func (this *Connection) Import(reimport bool) (err error) {
 	switch connector.Type {
 	case state.AppType, state.DatabaseType, state.StreamType:
 	case state.FileType:
-		if s := c.Storage(); s == nil {
+		if s, ok := c.Storage(); !ok {
 			return errors.Unprocessable(NoStorage, "file connection %d does not have a storage", c.ID)
 		} else if !s.Enabled {
 			return errors.Unprocessable(StorageNotEnabled, "storage %d of file connection %d is not enabled", s.ID, c.ID)
@@ -259,7 +259,7 @@ func (this *Connection) _startImport(imp *state.ImportInProgress) error {
 	case state.AppType:
 
 		var clientSecret, resourceCode, accessToken string
-		if r := connection.Resource(); r != nil {
+		if r, ok := connection.Resource(); ok {
 			clientSecret = connector.OAuth.ClientSecret
 			resourceCode = r.Code
 			var err error
@@ -379,7 +379,8 @@ func (this *Connection) _startImport(imp *state.ImportInProgress) error {
 		// Get the file reader.
 		var files *fileReader
 		{
-			fh := this.newFirehoseForConnection(ctx, connection.Storage())
+			s, _ := connection.Storage()
+			fh := this.newFirehoseForConnection(ctx, s)
 			ctx = fh.ctx
 			c, err := _connector.RegisteredStorage(connector.Name).Open(ctx, &_connector.StorageConfig{
 				Role:     role,
