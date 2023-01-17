@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import './UsersList.css';
+import Header from '../../components/Header/Header';
 import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
 import Toast from '../../components/Toast/Toast';
 import call from '../../utils/call';
@@ -178,7 +179,9 @@ const UsersList = () => {
 
 	return (
 		<div className='UsersList'>
-			<PrimaryBackground height={300} overlap={150}></PrimaryBackground>
+			<PrimaryBackground height={300} overlap={130}>
+				<Header />
+			</PrimaryBackground>
 			<div className='routeContent'>
 				<Toast reactRef={toastRef} status={status} />
 				<div className='gridContainer'>

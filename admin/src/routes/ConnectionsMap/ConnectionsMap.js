@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import './ConnectionsMap.css';
-import Navigation from '../../components/Navigation/Navigation';
+import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
+import Header from '../../components/Header/Header';
 import ConnectionBlock from '../../components/ConnectionBlock/ConnectionBlock';
 import LinkedConnectionBlocks from '../../components/LinkedConnectionBlocks/LinkedConnectionBlocks';
 import Arrow from '../../components/Arrow/Arrow';
@@ -75,7 +76,9 @@ const ConnectionsMap = () => {
 
 	return (
 		<div className='ConnectionsMap'>
-			<Navigation navItems={[{ name: 'Connections', link: '/admin/connections', selected: true }]} />
+			<PrimaryBackground height={300} overlap={120}>
+				<Header />
+			</PrimaryBackground>
 			<div className='routeContent'>
 				<Toast reactRef={toastRef} status={status} />
 				<div className='buttons'>

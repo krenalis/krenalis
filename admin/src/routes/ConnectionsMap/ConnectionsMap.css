@@ -3,8 +3,8 @@
 }
 
 .ConnectionsMap .routeContent {
-	max-width: 1500px;
-	margin: -110px auto 0 auto;
+	max-width: 1400px;
+	margin: auto;
 	padding-bottom: 50px;
 	position: relative;
 	z-index: 20;
