@@ -19,7 +19,6 @@ const ConnectionDeletion = ({ connection: c, onDelete, onError }) => {
 
 	return (
 		<>
-			<div className='panelTitle'>Deletion</div>
 			<fieldset className='dangerZone'>
 				<div className='heading'>Danger zone</div>
 				<div className='label'>Delete the connection</div>

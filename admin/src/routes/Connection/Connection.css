@@ -1,3 +1,7 @@
+.Connection .Breadcrumbs::part(base) {
+    padding-left: var(--sl-spacing-medium);
+}
+
 .Connection .routeContent {
     max-width: 1400px;
     margin: auto;

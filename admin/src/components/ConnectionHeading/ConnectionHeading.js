@@ -1,20 +1,24 @@
 import './ConnectionHeading.css';
+import getConnectionStatusInfos from '../../utils/getConnectionStatusInfos';
 import { SlBadge } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ConnectionHeading = ({ connection: cn }) => {
+const ConnectionHeading = ({ connection: c }) => {
+	let { text: statusText, variant: statusVariant } = getConnectionStatusInfos(c);
+
 	return (
 		<div className='ConnectionHeading'>
 			<div className='title'>
-				{cn.LogoURL !== '' && <img className='littleLogo' src={cn.LogoURL} alt={`${cn.Name}'s logo`} />}
-				<div className='text'>{cn.Name}</div>
+				{c.LogoURL !== '' && <img className='littleLogo' src={c.LogoURL} alt={`${c.Name}'s logo`} />}
+				<div className='text'>{c.Name}</div>
 			</div>
 			<div className='badges'>
 				<SlBadge className='type' variant='neutral'>
-					{cn.Type}
+					{c.Type}
 				</SlBadge>
 				<SlBadge className='role' variant='neutral'>
-					{cn.Role}
+					{c.Role}
 				</SlBadge>
+				<SlBadge className={`status ${statusVariant}`}>{statusText}</SlBadge>
 			</div>
 		</div>
 	);

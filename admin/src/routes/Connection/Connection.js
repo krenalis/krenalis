@@ -62,7 +62,7 @@ const Connection = () => {
 	if (c == null) return;
 	return (
 		<div className='Connection'>
-			<PrimaryBackground contentWidth={1400} height={300}>
+			<PrimaryBackground contentWidth={1400} height={250}>
 				<Breadcrumbs
 					onAccent={true}
 					breadcrumbs={[{ Name: 'Connections', Link: '/admin/connections' }, { Name: `${c.Name}` }]}

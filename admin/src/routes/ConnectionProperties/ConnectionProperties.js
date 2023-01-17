@@ -43,6 +43,7 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 				onError(err);
 				return;
 			}
+			if (connectionSchema == null) return;
 			let connectionProperties = [];
 			for (let p of connectionSchema.properties) {
 				connectionProperties.push(p);
@@ -53,6 +54,7 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 				onError(err);
 				return;
 			}
+			if (userSchema == null) return;
 			let userProperties = [];
 			for (let p of userSchema.properties) {
 				userProperties.push(p);

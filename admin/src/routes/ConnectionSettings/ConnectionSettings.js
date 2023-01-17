@@ -2,6 +2,7 @@ import { useState } from 'react';
 import './ConnectionSettings.css';
 import ConnectionForm from '../../components/ConnectionForm/ConnectionForm';
 import ConnectionDeletion from '../../components/ConnectionDeletion/ConnectionDeletion';
+import ConnectionEnabling from '../../components/ConnectionEnabling/ConnectionEnabling';
 import ConnectionKeys from '../../components/ConnectionKeys/ConnectionKeys';
 import ConnectionStream from '../../components/ConnectionStream/ConnectionStream';
 import ConnectionStorage from '../../components/ConnectionStorage/ConnectionStorage';
@@ -76,10 +77,18 @@ const ConnectionSettings = ({ connection: c, onError, onStatusChange, onConnecti
 						</SlTabPanel>
 					</>
 				)}
+				<SlTab slot='nav' panel='enabling'>
+					Enabling
+				</SlTab>
+				<SlTabPanel name='enabling'>
+					<div className='panelTitle'>Enabling</div>
+					<ConnectionEnabling connection={c} onConnectionChange={onConnectionChange} onError={onError} />
+				</SlTabPanel>
 				<SlTab slot='nav' panel='deletion'>
 					Deletion
 				</SlTab>
 				<SlTabPanel name='deletion'>
+					<div className='panelTitle'>Deletion</div>
 					<ConnectionDeletion connection={c} onDelete={() => setIsDeleted(true)} onError={onError} />
 				</SlTabPanel>
 			</SlTabGroup>

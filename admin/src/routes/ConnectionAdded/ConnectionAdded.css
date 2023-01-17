@@ -4,6 +4,10 @@
 	text-align: center;
 }
 
+.ConnectionAdded .Breadcrumbs::part(base) {
+	justify-content: center;
+}
+
 .ConnectionAdded .addedConnection {
 	box-shadow: var(--sl-shadow-small);
 	padding: 50px;

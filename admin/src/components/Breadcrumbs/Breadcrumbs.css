@@ -1,7 +1,3 @@
-.Breadcrumbs::part(base) {
-	justify-content: center;
-}
-
 .Breadcrumbs.onAccent sl-breadcrumb-item::part(label) {
 	color: var(--color-primary-400);
 }
