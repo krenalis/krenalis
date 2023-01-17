@@ -558,7 +558,7 @@ func (this *Workspace) ReloadSchemas() error {
 	return err
 }
 
-// Schema returns the schema, of the workspace with identifier id. If the
+// Schema returns the schema, with the given name, of the workspace. If the
 // schema does not exist, it returns an invalid schema.
 func (this *Workspace) Schema(name string) types.Type {
 	ws := this.workspace
