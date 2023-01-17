@@ -581,7 +581,7 @@ func (role ConnectionRole) String() string {
 }
 
 // Value implements driver.Valuer interface.
-// It returns an error if typ is not a valid ConnectionRole.
+// It returns an error if role is not a valid ConnectionRole.
 func (role ConnectionRole) Value() (driver.Value, error) {
 	switch role {
 	case SourceRole:
