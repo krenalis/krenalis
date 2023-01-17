@@ -260,7 +260,7 @@ func columnType(c string, t excelize.CellType) (types.Type, error) {
 		return types.Date(""), nil // TODO(marco) set the layout
 	case excelize.CellTypeNumber:
 		return types.Decimal(0, 0), nil
-	case excelize.CellTypeUnset, excelize.CellTypeError, excelize.CellTypeString:
+	case excelize.CellTypeUnset, excelize.CellTypeError, excelize.CellTypeInlineString, excelize.CellTypeSharedString:
 		return types.Text(), nil
 	default:
 		return types.Type{}, connector.NewNotSupportedTypeError(c, strconv.Itoa(int(t)))
