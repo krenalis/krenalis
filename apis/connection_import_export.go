@@ -218,6 +218,7 @@ func (this *Connection) Import(reimport bool) (err error) {
 func (this *Connection) startImport(imp *state.ImportInProgress) {
 
 	var errorMsg string
+	var health state.ConnectionHealth
 
 	err := this._startImport(imp)
 	if err != nil {
@@ -227,14 +228,20 @@ func (this *Connection) startImport(imp *state.ImportInProgress) {
 			log.Printf("[error] cannot do import %d: %s", imp.ID, err)
 			errorMsg = "an internal error has occurred"
 		}
+		health = state.RecentError
 	}
 	n := state.DeleteImportInProgressNotification{
-		ID: imp.ID,
+		ID:     imp.ID,
+		Health: health,
 	}
 	// TODO(marco) retry if the transaction fails.
 	err2 := this.db.Transaction(func(tx *postgres.Tx) error {
 		_, err := tx.Exec("UPDATE connections_imports SET end_time = $1, error = $2 WHERE id = $3",
-			time.Now().UTC(), errorMsg, imp.ID)
+			time.Now().UTC(), errorMsg, n.ID)
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec("UPDATE connections SET health = $1 WHERE id = $2", n.Health, this.connection.ID)
 		if err != nil {
 			return err
 		}

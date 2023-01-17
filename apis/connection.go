@@ -70,6 +70,7 @@ type Connection struct {
 	Enabled     bool
 	UsersQuery  string // only for databases.
 	Mappings    []*MappingInfo
+	Health      ConnectionHealth
 }
 
 // ConnectionOptions values are passed to the Add method with options
@@ -1432,6 +1433,38 @@ func exportUser(id string, properties map[string]any, mappings []*state.Mapping)
 		}
 	}
 	return user, nil
+}
+
+// ConnectionHealth is an indicator of the current state of a connection.
+type ConnectionHealth int
+
+const (
+	Healthy ConnectionHealth = iota
+	NoRecentData
+	RecentError
+	AccessDenied
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+// It panics if health is not a valid ConnectionHealth value.
+func (health ConnectionHealth) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + health.String() + `"`), nil
+}
+
+// String returns the string representation of health.
+// It panics if health is not a valid ConnectionHealth value.
+func (health ConnectionHealth) String() string {
+	switch health {
+	case Healthy:
+		return "Healthy"
+	case NoRecentData:
+		return "NoRecentData"
+	case RecentError:
+		return "RecentError"
+	case AccessDenied:
+		return "AccessDenied"
+	}
+	panic("invalid connection health")
 }
 
 // ConnectionRole represents a connection role.

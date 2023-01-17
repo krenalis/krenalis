@@ -162,14 +162,14 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		state.connections = map[int]*Connection{}
 		err = state.db.QueryScan("SELECT id, workspace, name, role, enabled, connector, COALESCE(storage, 0),"+
 			" COALESCE(stream, 0), resource, website_host, user_cursor, identity_column, timestamp_column, settings,"+
-			" schema, users_query FROM connections", func(rows *postgres.Rows) error {
+			" schema, users_query, health FROM connections", func(rows *postgres.Rows) error {
 			for rows.Next() {
 				var workspaceID, connector, storage, stream, resource int
 				var rawSchema string
 				c := Connection{}
 				if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &c.Role, &c.Enabled, &connector, &storage, &stream, &resource,
 					&c.WebsiteHost, &c.UserCursor, &c.IdentityColumn, &c.TimestampColumn, &c.Settings, &rawSchema,
-					&c.UsersQuery); err != nil {
+					&c.UsersQuery, &c.Health); err != nil {
 					return err
 				}
 				workspace := state.workspaces[workspaceID]

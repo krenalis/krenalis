@@ -442,6 +442,7 @@ type Connection struct {
 	UsersQuery       string
 	importInProgress *ImportInProgress
 	mappings         []*Mapping
+	Health           ConnectionHealth
 }
 
 // Account returns the account of the connection.
@@ -539,6 +540,71 @@ func (imp *ImportInProgress) Storage() (*Connection, bool) {
 	s := imp.storage
 	imp.mu.Unlock()
 	return s, s != nil
+}
+
+// ConnectionHealth is an indicator of the current state of a connection.
+type ConnectionHealth int
+
+const (
+	Healthy ConnectionHealth = iota
+	NoRecentData
+	RecentError
+	AccessDenied
+)
+
+// Scan implements the sql.Scanner interface.
+func (health *ConnectionHealth) Scan(src any) error {
+	s, ok := src.(string)
+	if !ok {
+		return fmt.Errorf("cannot scan a %T value into an state.ConnectionHealth value", src)
+	}
+	var h ConnectionHealth
+	switch s {
+	case "Healthy":
+		h = Healthy
+	case "NoRecentData":
+		h = NoRecentData
+	case "RecentError":
+		h = RecentError
+	case "AccessDenied":
+		h = AccessDenied
+	default:
+		return fmt.Errorf("invalid state.ConnectionHealth: %s", s)
+	}
+	*health = h
+	return nil
+}
+
+// String returns the string representation of health.
+// It panics if health is not a valid ConnectionHealth value.
+func (health ConnectionHealth) String() string {
+	switch health {
+	case Healthy:
+		return "Healthy"
+	case NoRecentData:
+		return "NoRecentData"
+	case RecentError:
+		return "RecentError"
+	case AccessDenied:
+		return "AccessDenied"
+	}
+	panic("invalid connection health")
+}
+
+// Value implements driver.Valuer interface.
+// It returns an error if health is not a valid ConnectionHealth.
+func (health ConnectionHealth) Value() (driver.Value, error) {
+	switch health {
+	case Healthy:
+		return "Healthy", nil
+	case NoRecentData:
+		return "NoRecentData", nil
+	case RecentError:
+		return "RecentError", nil
+	case AccessDenied:
+		return "AccessDenied", nil
+	}
+	return nil, fmt.Errorf("not a valid ConnectionHealth: %d", health)
 }
 
 // ConnectionRole represents a connection role.

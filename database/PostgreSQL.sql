@@ -66,6 +66,8 @@ VALUES (1, 1, 'Workspace', NULL, '');
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
+CREATE TYPE connection_health AS ENUM ('Healthy', 'NoRecentData', 'RecentError', 'AccessDenied');
+
 CREATE TABLE connections (
     id integer NOT NULL,
     workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
@@ -84,6 +86,7 @@ CREATE TABLE connections (
     settings varchar(65535) NOT NULL DEFAULT '',
     schema text NOT NULL DEFAULT '',
     users_query text NOT NULL DEFAULT '',
+    health connection_health NOT NULL DEFAULT 'Healthy',
     PRIMARY KEY (id)
 );
 

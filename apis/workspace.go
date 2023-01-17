@@ -294,6 +294,7 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 		LogoURL:     conn.LogoURL,
 		Enabled:     c.Enabled,
 		UsersQuery:  c.UsersQuery,
+		Health:      ConnectionHealth(c.Health),
 	}
 	for _, t := range c.Mappings() {
 		connection.Mappings = append(connection.Mappings, &MappingInfo{
@@ -332,6 +333,7 @@ func (this *Workspace) Connections() []*Connection {
 			LogoURL:     conn.LogoURL,
 			Enabled:     c.Enabled,
 			UsersQuery:  c.UsersQuery,
+			Health:      ConnectionHealth(c.Health),
 		}
 		for _, t := range c.Mappings() {
 			connection.Mappings = append(connection.Mappings, &MappingInfo{

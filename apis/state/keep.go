@@ -434,7 +434,8 @@ func (state *State) deleteConnection(n postgres.Notification) {
 // DeleteImportInProgressNotification is the notification event sent when an
 // import in progress is deleted.
 type DeleteImportInProgressNotification struct {
-	ID int
+	ID     int
+	Health ConnectionHealth
 }
 
 // deleteImportInProgress deletes an import in progress.
@@ -447,6 +448,7 @@ func (state *State) deleteImportInProgress(n postgres.Notification) {
 		if imp := c.importInProgress; imp != nil && imp.ID == e.ID {
 			state.replaceConnection(c.ID, func(c *Connection) {
 				c.importInProgress = nil
+				c.Health = e.Health
 			})
 			break
 		}
