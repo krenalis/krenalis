@@ -1,0 +1,4 @@
+.GridHeaderRow {
+    display: grid;
+    grid-template-columns: var(--grid-style);
+}

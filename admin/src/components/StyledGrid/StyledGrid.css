@@ -1,0 +1,56 @@
+.StyledGrid .Grid {
+    border-radius: var(--radius);
+    box-shadow: var(--sl-shadow-large);
+}
+
+.StyledGrid .Grid .GridHeaderCell,
+.StyledGrid .Grid .GridCell {
+    background-color: var(--bg-primary);
+    padding: 15px 0;
+}
+
+.StyledGrid .cellContent {
+    padding: 0 20px;
+}
+
+.StyledGrid .Grid .GridHeaderCell {
+    font-size: 13px;
+    background-color: var(--bg-gray);
+}
+
+.StyledGrid .Grid .GridHeaderCell .cellContent {
+    border-right: 3px solid var(--border-primary);
+}
+
+.StyledGrid .Grid .GridHeaderCell.lastCell .cellContent {
+    border-right: 0;
+}
+
+.StyledGrid .Grid .GridHeaderCell.firstCell {
+    border-top-left-radius: var(--radius);
+}
+
+.StyledGrid .Grid .GridHeaderCell.lastCell {
+    border-top-right-radius: var(--radius);
+}
+
+.StyledGrid .Grid .GridCell {
+    font-size: 15px;
+}
+
+.StyledGrid .Grid .GridRow.even .GridCell,
+.StyledGrid .Grid .GridNestedRows.even .GridRow.parent .GridCell {
+    background-color: var(--bg-gray);
+}
+
+.StyledGrid .Grid .GridNestedRows.even {
+    background-color: var(--bg-gray);
+}
+
+.StyledGrid .Grid .GridRow.lastRow .GridCell.firstCell {
+    border-bottom-left-radius: var(--radius);
+}
+
+.StyledGrid .Grid .GridRow.lastRow .GridCell.lastCell {
+    border-bottom-right-radius: var(--radius);
+}

@@ -1,8 +1,24 @@
 .Grid {
 	display: grid;
-	gap: 20px;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    user-select: none; /* Standard syntax */
 }
 
-.Grid .headCell {
+.Grid .GridHeaderCell {
 	font-weight: 600;
+}
+
+.Grid .noRows,
+.Grid .loading {
+    text-align: center;
+    padding: 120px 30px 170px 30px;
+    background-color: var(--bg-primary);
+    border-bottom-left-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+}
+
+.Grid .noRows {
+    font-weight: 600;
+    opacity: .5;
 }

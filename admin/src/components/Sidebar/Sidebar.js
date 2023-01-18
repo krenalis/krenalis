@@ -14,6 +14,7 @@ const Sidebar = ({ currentRoute }) => {
 	let topItems = [
 		{ name: 'connections', label: 'Connections', link: '/admin/connections', icon: 'plugin' },
 		{ name: 'users', label: 'Users', link: '/admin/users', icon: 'person-lines-fill' },
+		{ name: 'schema', label: 'Schema', link: '/admin/schema', icon: 'database-fill' },
 	];
 
 	if (isLoggedOut) {

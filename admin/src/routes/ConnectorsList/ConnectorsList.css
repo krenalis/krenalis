@@ -2,6 +2,10 @@
 	min-height: 100vh;
 }
 
+.ConnectorsList sl-breadcrumb::part(base) {
+	justify-content: center;
+}
+
 .ConnectorsList .routeContent {
 	max-width: 1200px;
 	margin: auto;

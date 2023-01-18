@@ -2,15 +2,17 @@ import React from 'react';
 import './Toast.css';
 import { SlAlert, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
-export default class Toast extends React.Component {
-	render() {
-		return this.props.status == null ? (
-			<SlAlert ref={this.props.reactRef} variant='neutral' closable></SlAlert>
-		) : (
-			<SlAlert ref={this.props.reactRef} variant={this.props.status.variant} closable>
-				<SlIcon slot='icon' name={this.props.status.icon} />
-				<b>{this.props.status.text}</b>
-			</SlAlert>
-		);
+const Toast = ({ reactRef, status }) => {
+	if (status == null) {
+		return <SlAlert ref={reactRef} variant='neutral' closable></SlAlert>;
 	}
-}
+
+	return (
+		<SlAlert ref={reactRef} variant={status.variant} closable>
+			<SlIcon slot='icon' name={status.icon} />
+			<b>{status.text}</b>
+		</SlAlert>
+	);
+};
+
+export default Toast;

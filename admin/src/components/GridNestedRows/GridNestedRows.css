@@ -1,0 +1,97 @@
+.GridNestedRows {
+    position: relative;
+}
+
+.GridNestedRows .expand {
+    position: absolute;
+    top: 26px;
+    left: 20px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    transition: transform 300ms;
+    color: var(--sl-color-neutral-400);
+}
+
+.GridNestedRows.expanded .expand {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.GridNestedRows .GridRow.parent .GridCell.firstCell .cellContent {
+    padding-left: 50px;
+}
+
+.GridNestedRows .GridRow.children {
+    display: none;
+    background-color: var(--bg-gray);
+    position: relative;
+}
+
+.GridNestedRows .GridRow.children::before {
+    content: "";
+    width: 15px;
+    height: 15px;
+    position: absolute;
+    border-left: 3px solid var(--sl-color-neutral-400);
+    border-bottom: 3px solid var(--sl-color-neutral-400);
+    left: 55px;
+    top: 40%;
+    transform: translateY(-50%);
+    border-bottom-left-radius: 5px;
+}
+
+.GridNestedRows.expanded .GridRow.parent {
+    border-top: 1px solid var(--border-primary);
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.GridNestedRows.expanded .GridRow.children {
+    display: grid;
+}
+
+.GridNestedRows .GridRow.children:last-child {
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.GridNestedRows .GridRow.children .GridCell {
+    background-color: var(--bg-gray);
+}
+
+.GridNestedRows .GridRow.children .GridCell.firstCell .cellContent {
+    padding-left: 80px;
+}
+
+.GridNestedRows.lastRow {
+    border-bottom-left-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+}
+
+.GridNestedRows.lastRow .GridRow.parent {
+    border-bottom-left-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+}
+
+.GridNestedRows.lastRow.expanded .GridRow.parent {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.GridNestedRows.lastRow .GridRow.parent .GridCell.firstCell {
+    border-bottom-left-radius: var(--radius);
+}
+
+.GridNestedRows.lastRow .GridRow.parent .GridCell.lastCell {
+    border-bottom-right-radius: var(--radius);
+}
+
+.GridNestedRows.lastRow .GridRow.children:last-child {
+    border-bottom-left-radius: var(--radius);
+    border-bottom-right-radius: var(--radius)
+}
+
+.GridNestedRows.lastRow .GridRow.children:last-child .GridCell.firstCell {
+    border-bottom-left-radius: var(--radius);
+}
+
+.GridNestedRows.lastRow .GridRow.children:last-child .GridCell.lastCell {
+    border-bottom-right-radius: var(--radius);
+}

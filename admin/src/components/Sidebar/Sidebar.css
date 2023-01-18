@@ -41,7 +41,7 @@
     color: var(--text-onaccent);
     width: 45px;
     height: 45px;
-    border-radius: 10px;
+    border-radius: var(--radius);
     display: flex;
     justify-content: center;
     align-items: center;

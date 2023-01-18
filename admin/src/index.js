@@ -10,6 +10,8 @@ import ConnectionsMap from './routes/ConnectionsMap/ConnectionsMap';
 import Connection from './routes/Connection/Connection';
 import UsersWrapper from './routes/UsersWrapper/UsersWrapper';
 import UsersList from './routes/UsersList/UsersList';
+import SchemaWrapper from './routes/SchemaWrapper/SchemaWrapper';
+import Schema from './routes/Schema/Schema';
 import NotFound from './routes/NotFound/NotFound';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
@@ -28,6 +30,9 @@ root.render(
 					</Route>
 					<Route element={<UsersWrapper />}>
 						<Route path='users' element={<UsersList />} />
+					</Route>
+					<Route element={<SchemaWrapper />}>
+						<Route path='schema' element={<Schema />} />
 					</Route>
 					<Route path='*' element={<NotFound />} />
 				</Route>

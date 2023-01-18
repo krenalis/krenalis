@@ -10,7 +10,7 @@
 	--text-onaccent: var(--sl-color-neutral-0);
 	--text-gray: var(--sl-color-neutral-400);
 	--border-primary: var(--sl-color-neutral-200);
-	--radius: 20px;
+	--radius: 10px;
 
 	/* set shoelace primary colors */
 	--sl-color-primary-50: var(--sl-color-indigo-50) !important;
