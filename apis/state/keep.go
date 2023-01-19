@@ -500,7 +500,9 @@ func (state *State) loadState(n postgres.Notification) {
 	}
 	if e.ID == state.id {
 		state.syncing = true
+		state.mu.Lock()
 		state.election.lastSeen = time.Now()
+		state.mu.Unlock()
 		go state.keepElections()
 	}
 	return
@@ -546,12 +548,11 @@ func (state *State) seeLeader(n postgres.Notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	if state.election.number != e.Election {
-		return
-	}
 	now := time.Now()
 	state.mu.Lock()
-	state.election.lastSeen = now
+	if state.election.number == e.Election {
+		state.election.lastSeen = now
+	}
 	state.mu.Unlock()
 }
 
