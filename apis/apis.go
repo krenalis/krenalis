@@ -43,6 +43,7 @@ type PostgreSQLConfig struct {
 	Username string
 	Password string
 	Database string
+	Schema   string
 }
 
 // New returns an API instance. It can only be called once.
@@ -61,6 +62,7 @@ func New(conf *Config) (*APIs, error) {
 		Username: ps.Username,
 		Password: ps.Password,
 		Database: ps.Database,
+		Schema:   ps.Schema,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to PostreSQL: %s", err)

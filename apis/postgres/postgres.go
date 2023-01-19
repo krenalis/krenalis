@@ -121,6 +121,7 @@ type Options struct {
 	Username string
 	Password string
 	Database string
+	Schema   string
 	MaxConns int32
 }
 
@@ -137,6 +138,9 @@ func Open(opts *Options) (*DB, error) {
 		User:   url.UserPassword(opts.Username, opts.Password),
 		Host:   net.JoinHostPort(opts.Host, strconv.Itoa(opts.Port)),
 		Path:   "/" + url.PathEscape(opts.Database),
+	}
+	if opts.Schema != "" {
+		u.RawQuery = "search_path=" + url.QueryEscape(opts.Schema)
 	}
 	config, err := pgxpool.ParseConfig(u.String())
 	if err != nil {
