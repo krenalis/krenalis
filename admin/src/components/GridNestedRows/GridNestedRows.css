@@ -4,25 +4,25 @@
 
 .GridNestedRows .expand {
     position: absolute;
-    top: 26px;
-    left: 20px;
-    transform: translateY(-50%);
+    top: 25px;
+    left: var(--parent-indentation); /* set in the component */
+    transform: translateY(-50%) translate(-31px);
     cursor: pointer;
-    transition: transform 300ms;
-    color: var(--sl-color-neutral-400);
+    transition: transform .3s;
+    color: var(--sl-color-primary-400);
 }
 
-.GridNestedRows.expanded .expand {
-    transform: translateY(-50%) rotate(180deg);
+.GridNestedRows.expanded > .expand {
+    transform: translateY(-50%) translateX(-30px) rotate(180deg);
 }
 
-.GridNestedRows .GridRow.parent .GridCell.firstCell .cellContent {
-    padding-left: 50px;
+.GridNestedRows .GridRow.parent .GridCell.first .cellContent {
+    padding-left: var(--parent-indentation); /* set in the component */
 }
 
-.GridNestedRows .GridRow.children {
+.GridNestedRows .GridRow.children,
+.GridNestedRows .GridNestedRows.children {
     display: none;
-    background-color: var(--bg-gray);
     position: relative;
 }
 
@@ -33,65 +33,88 @@
     position: absolute;
     border-left: 3px solid var(--sl-color-neutral-400);
     border-bottom: 3px solid var(--sl-color-neutral-400);
-    left: 55px;
+    left: var(--children-indentation); /* set in the component */
     top: 40%;
-    transform: translateY(-50%);
+    transform: translateY(-50%) translateX(-30px);
     border-bottom-left-radius: 5px;
 }
 
-.GridNestedRows.expanded .GridRow.parent {
+.GridNestedRows.expanded > .GridRow.parent {
     border-top: 1px solid var(--border-primary);
     border-bottom: 1px solid var(--border-primary);
 }
 
-.GridNestedRows.expanded .GridRow.children {
+.GridNestedRows.expanded > .GridRow.children,
+.GridNestedRows.expanded > .GridNestedRows.children {
     display: grid;
 }
 
-.GridNestedRows .GridRow.children:last-child {
-    border-bottom: 1px solid var(--border-primary);
+.GridNestedRows .GridRow.children .GridCell,
+.GridNestedRows .GridNestedRows .GridRow .GridCell {
+    background-color: var(--bg-gray)!important;
 }
 
-.GridNestedRows .GridRow.children .GridCell {
-    background-color: var(--bg-gray);
+.GridNestedRows .GridRow.children .GridCell.first .cellContent,
+.GridNestedRows .GridNestedRows.children .GridRow.children .GridCell.first .cellContent {
+    padding-left: var(--children-indentation); /* set in the component */
 }
 
-.GridNestedRows .GridRow.children .GridCell.firstCell .cellContent {
-    padding-left: 80px;
+.GridNestedRows .GridRow.parent ~ .GridNestedRows.expanded > .GridRow.parent {
+    border-top: 0;
 }
 
-.GridNestedRows.lastRow {
+.GridNestedRows.last {
+    border-radius: var(--radius);
+}
+
+.GridNestedRows.last .GridRow.parent .GridCell.first {
     border-bottom-left-radius: var(--radius);
-    border-bottom-right-radius: var(--radius);
 }
 
-.GridNestedRows.lastRow .GridRow.parent {
-    border-bottom-left-radius: var(--radius);
-    border-bottom-right-radius: var(--radius);
-}
-
-.GridNestedRows.lastRow.expanded .GridRow.parent {
+.GridNestedRows.last.expanded .GridRow.parent .GridCell.first {
     border-bottom-left-radius: 0;
+}
+
+.GridNestedRows.last .GridRow.parent .GridCell.last {
+    border-bottom-right-radius: var(--radius);
+}
+
+.GridNestedRows.last.expanded .GridRow.parent .GridCell.last {
     border-bottom-right-radius: 0;
 }
 
-.GridNestedRows.lastRow .GridRow.parent .GridCell.firstCell {
+.GridNestedRows .GridRow.children:last-child .GridCell.first {
     border-bottom-left-radius: var(--radius);
 }
 
-.GridNestedRows.lastRow .GridRow.parent .GridCell.lastCell {
+.GridNestedRows .GridRow.children:last-child .GridCell.last {
     border-bottom-right-radius: var(--radius);
 }
 
-.GridNestedRows.lastRow .GridRow.children:last-child {
-    border-bottom-left-radius: var(--radius);
-    border-bottom-right-radius: var(--radius)
-}
-
-.GridNestedRows.lastRow .GridRow.children:last-child .GridCell.firstCell {
+.GridNestedRows .GridNestedRows.children:last-child .GridRow.parent .GridCell.first {
     border-bottom-left-radius: var(--radius);
 }
 
-.GridNestedRows.lastRow .GridRow.children:last-child .GridCell.lastCell {
+.GridNestedRows .GridNestedRows.children.expanded:last-child > .GridRow.parent .GridCell.first {
+    border-bottom-left-radius: 0;
+}
+
+.GridNestedRows .GridNestedRows.children:last-child .GridRow.parent .GridCell.last {
     border-bottom-right-radius: var(--radius);
+}
+
+.GridNestedRows .GridNestedRows.children.expanded:last-child > .GridRow.parent .GridCell.last {
+    border-bottom-right-radius: 0;
+}
+
+.GridNestedRows > .children:last-child  {
+    border-bottom: 1px solid var(--border-primary)!important;
+}
+
+.GridNestedRows.last > .children:last-child {
+    border-bottom: 0!important;
+}
+
+.GridNestedRows.last .GridNestedRows:last-child > .children:last-child {
+    border-bottom: 0!important;
 }

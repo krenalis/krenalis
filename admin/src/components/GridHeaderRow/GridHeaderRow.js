@@ -1,18 +1,12 @@
 import './GridHeaderRow.css';
 import GridHeaderCell from '../GridHeaderCell/GridHeaderCell';
+import getChildIndexClassname from '../../utils/getChildIndexClassname';
 
 const GridHeaderRow = ({ columns }) => {
 	let gridHeaderCells = [];
 	for (let [i, column] of columns.entries()) {
-		let index = i + 1;
-		let className = 'GridHeaderCell';
-		if (index === 1) {
-			className += ' firstCell';
-		}
-		if (index === columns.length) {
-			className += ' lastCell';
-		}
-		gridHeaderCells.push(<GridHeaderCell value={column.Name} className={className} />);
+		let className = getChildIndexClassname(i, columns.length);
+		gridHeaderCells.push(<GridHeaderCell value={column.Name} className={`GridHeaderCell ${className}`} />);
 	}
 
 	return <div className='GridHeaderRow'>{gridHeaderCells}</div>;

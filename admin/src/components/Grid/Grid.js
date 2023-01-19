@@ -3,33 +3,22 @@ import './Grid.css';
 import GridHeaderRow from '../GridHeaderRow/GridHeaderRow';
 import GridRow from '../GridRow/GridRow';
 import GridNestedRows from '../GridNestedRows/GridNestedRows';
+import getChildIndexClassname from '../../utils/getChildIndexClassname';
 import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const Grid = ({ columns, rows, isLoading }) => {
 	let gridRows = [];
 	for (let [i, cells] of rows.entries()) {
-		let index = i + 1;
-		let className = '';
-		if (index === 1) {
-			className += ' firstRow';
-		}
-		if (index === rows.length) {
-			className += ' lastRow';
-		}
-		if (index % 2 === 0) {
-			className += ' even';
-		} else {
-			className += ' odd';
-		}
+		let className = getChildIndexClassname(i, rows.length);
 		if (Array.isArray(cells[0])) {
-			gridRows.push(<GridNestedRows rows={cells} className={`GridNestedRows ${className}`} />);
+			gridRows.push(<GridNestedRows rows={cells} className={`GridNestedRows ${className}`} nesting={1} />);
 			continue;
 		}
 		gridRows.push(<GridRow cells={cells} className={`GridRow ${className}`} />);
 	}
 
 	return (
-		<div className='Grid' style={{ '--grid-style': `repeat(${columns.length}, 1fr)` }}>
+		<div className='Grid' style={{ '--grid-columns': `repeat(${columns.length}, 1fr)` }}>
 			{isLoading ? (
 				<div className='loading'>
 					<SlSpinner

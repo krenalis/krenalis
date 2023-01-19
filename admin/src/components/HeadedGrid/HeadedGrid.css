@@ -8,11 +8,11 @@
     box-shadow: none;
 }
 
-.HeadedGrid .StyledGrid .Grid .GridHeaderCell.firstCell {
+.HeadedGrid .StyledGrid .Grid .GridHeaderCell.first {
     border-top-left-radius: 0;
 }
 
-.HeadedGrid .StyledGrid .Grid .GridHeaderCell.lastCell {
+.HeadedGrid .StyledGrid .Grid .GridHeaderCell.last {
     border-top-right-radius: 0;
 }
 

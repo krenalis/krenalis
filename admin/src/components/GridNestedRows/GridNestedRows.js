@@ -3,30 +3,52 @@ import './GridNestedRows.css';
 import GridRow from '../GridRow/GridRow';
 import { SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const GridNestedRows = ({ rows, className }) => {
+const GridNestedRows = ({ rows, className, nesting }) => {
 	let [isExpanded, setIsExpanded] = useState(false);
 
-	let gridRows = [];
+	let icon = (
+		<SlIcon
+			className='expand'
+			name='caret-down-fill'
+			onClick={() => {
+				setIsExpanded(!isExpanded);
+			}}
+		></SlIcon>
+	);
+
+	let rws = [];
 	for (let [i, cells] of rows.entries()) {
-		if (i === 0) {
-			gridRows.push(
-				<>
-					<SlIcon
-						className='expand'
-						name='caret-down-fill'
-						onClick={() => {
-							setIsExpanded(!isExpanded);
-						}}
-					></SlIcon>
-					<GridRow cells={cells} className='GridRow parent' />
-				</>
-			);
-			continue;
+		if (Array.isArray(cells[0])) {
+			rws.push(<GridNestedRows rows={cells} className='GridNestedRows children' nesting={nesting + 1} />);
+		} else {
+			let row;
+			if (i === 0) {
+				row = (
+					<>
+						{icon}
+						<GridRow cells={cells} className='GridRow parent' />
+					</>
+				);
+			} else {
+				row = <GridRow cells={cells} className='GridRow children' />;
+			}
+			rws.push(row);
 		}
-		gridRows.push(<GridRow cells={cells} className='GridRow children' />);
 	}
 
-	return <div className={`${className}${isExpanded ? ' expanded' : ''}`}>{gridRows}</div>;
+	let parentIndentation = 50 + 30 * (nesting - 1) + 'px'; // takes the indentation of the previous level.
+	let childrenIndentation = 50 + 30 * nesting + 'px'; // takes the incremented indentation.
+	return (
+		<div
+			className={`${className}${isExpanded ? ' expanded' : ''}`}
+			style={{
+				'--parent-indentation': parentIndentation,
+				'--children-indentation': childrenIndentation,
+			}}
+		>
+			{rws}
+		</div>
+	);
 };
 
 export default GridNestedRows;

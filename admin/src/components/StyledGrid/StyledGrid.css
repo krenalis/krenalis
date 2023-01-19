@@ -22,15 +22,15 @@
     border-right: 3px solid var(--border-primary);
 }
 
-.StyledGrid .Grid .GridHeaderCell.lastCell .cellContent {
+.StyledGrid .Grid .GridHeaderCell.last .cellContent {
     border-right: 0;
 }
 
-.StyledGrid .Grid .GridHeaderCell.firstCell {
+.StyledGrid .Grid .GridHeaderCell.first {
     border-top-left-radius: var(--radius);
 }
 
-.StyledGrid .Grid .GridHeaderCell.lastCell {
+.StyledGrid .Grid .GridHeaderCell.last {
     border-top-right-radius: var(--radius);
 }
 
@@ -47,10 +47,10 @@
     background-color: var(--bg-gray);
 }
 
-.StyledGrid .Grid .GridRow.lastRow .GridCell.firstCell {
+.StyledGrid .Grid .GridRow.last .GridCell.first {
     border-bottom-left-radius: var(--radius);
 }
 
-.StyledGrid .Grid .GridRow.lastRow .GridCell.lastCell {
+.StyledGrid .Grid .GridRow.last .GridCell.last {
     border-bottom-right-radius: var(--radius);
 }

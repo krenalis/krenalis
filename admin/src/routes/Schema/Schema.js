@@ -25,7 +25,6 @@ const Schema = () => {
 	useEffect(() => {
 		const fetchSchema = async () => {
 			let [schema, err] = await call('/admin/user-schema', 'GET');
-			console.log(schema.properties);
 			if (err != null) {
 				onError(err);
 				return;
@@ -61,19 +60,34 @@ const Schema = () => {
 		}, 500);
 	};
 
-	let columns = [{ Name: 'name' }, { Name: 'type' }];
-	let rows = [];
-	for (let p of properties) {
-		if (p.type.name === 'Object') {
+	const getPropertiesRows = (properties) => {
+		const getNestedRows = (p) => {
 			let nestedRows = [[p.name, p.type.name]];
 			for (let pr of p.type.properties) {
-				nestedRows.push([pr.name, pr.type.name]);
+				if (pr.type.name === 'Object') {
+					let nr = getNestedRows(pr);
+					nestedRows.push(nr);
+				} else {
+					nestedRows.push([pr.name, pr.type.name]);
+				}
 			}
-			rows.push(nestedRows);
-			continue;
+			return nestedRows;
+		};
+		let rows = [];
+		for (let p of properties) {
+			if (p.type.name === 'Object') {
+				let nestedRows = getNestedRows(p);
+				rows.push(nestedRows);
+			} else {
+				let row = [p.name, p.type.name];
+				rows.push(row);
+			}
 		}
-		rows.push([p.name, p.type.name]);
-	}
+		return rows;
+	};
+
+	let columns = [{ Name: 'name' }, { Name: 'type' }];
+	let rows = getPropertiesRows(properties);
 
 	return (
 		<div className='Schema'>

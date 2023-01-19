@@ -1,4 +1,4 @@
 .GridRow {
     display: grid;
-    grid-template-columns: var(--grid-style);
+    grid-template-columns: var(--grid-columns);
 }
