@@ -273,7 +273,9 @@ func (apis *APIs) CountAccounts() int {
 
 // onAddConnection is called when a connection is added.
 func (apis *APIs) onAddConnection(n state.AddConnectionNotification) {
-	// TODO(marco) only one server should reload the schema.
+	if !apis.state.IsLeader() {
+		return
+	}
 	connection, _ := apis.state.Connection(n.ID)
 	if conn := connection.Connector(); conn.Type != state.AppType {
 		return
@@ -283,7 +285,9 @@ func (apis *APIs) onAddConnection(n state.AddConnectionNotification) {
 
 // onAddImportInProgress is called when an import in progress is added.
 func (apis *APIs) onAddImportInProgress(n state.AddImportInProgressNotification) {
-	// TODO(marco): only one server should starts the import.
+	if !apis.state.IsLeader() {
+		return
+	}
 	connection, _ := apis.state.Connection(n.Connection)
 	c := &Connection{db: apis.db, connection: connection}
 	imp, _ := connection.ImportInProgress()
@@ -292,7 +296,9 @@ func (apis *APIs) onAddImportInProgress(n state.AddImportInProgressNotification)
 
 // onSetConnectionUserQuery is called when a connection user query is changed.
 func (apis *APIs) onSetConnectionUserQuery(n state.SetConnectionUserQueryNotification) {
-	// TODO(marco) only one server should reload the schema.
+	if !apis.state.IsLeader() {
+		return
+	}
 	connection, _ := apis.state.Connection(n.Connection)
 	go apis.reloadSchema(connection)
 }

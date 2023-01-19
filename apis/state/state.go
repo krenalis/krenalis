@@ -133,6 +133,14 @@ func (state *State) Connectors() []*Connector {
 	return connectors
 }
 
+// IsLeader reports whether this node is the leader.
+func (state *State) IsLeader() bool {
+	state.mu.Lock()
+	election := state.election
+	state.mu.Unlock()
+	return election.leader == state.id
+}
+
 // Workspace returns the workspace with identifier id.
 // The boolean return value reports whether the workspace exists.
 func (state *State) Workspace(id int) (*Workspace, bool) {
