@@ -9,14 +9,10 @@ package postgresql
 
 import (
 	"context"
-	"database/sql"
 	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
-	"net"
-	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -24,6 +20,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/postgres"
 	"chichi/apis/types"
 	"chichi/apis/warehouses"
 
@@ -39,7 +36,7 @@ var _ warehouses.Batch = &batch{}
 
 type PostgreSQL struct {
 	mu       sync.Mutex // for the db and closed fields
-	db       *sql.DB
+	db       *postgres.DB
 	closed   bool
 	settings *psSettings
 }
@@ -99,7 +96,7 @@ func (warehouse *PostgreSQL) Close() error {
 	var err error
 	warehouse.mu.Lock()
 	if warehouse.db != nil {
-		err = warehouse.db.Close()
+		warehouse.db.Close()
 		warehouse.db = nil
 		warehouse.closed = true
 	}
@@ -109,14 +106,14 @@ func (warehouse *PostgreSQL) Close() error {
 
 // Exec executes a query without returning any rows. args are the placeholders.
 // If the query fails, it returns an Error value.
-func (warehouse *PostgreSQL) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+func (warehouse *PostgreSQL) Exec(ctx context.Context, query string, args ...any) (warehouses.Result, error) {
 	db, err := warehouse.connection()
 	if err != nil {
-		return nil, err
+		return warehouses.Result{}, err
 	}
-	r, err := db.ExecContext(ctx, query, args...)
+	r, err := db.Exec(ctx, query, args...)
 	if err != nil {
-		return nil, warehouses.WrapError(err)
+		return warehouses.Result{}, warehouses.WrapError(err)
 	}
 	return warehouses.Result{Result: r}, nil
 }
@@ -127,7 +124,7 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = conn.ExecContext(ctx, createConnectionsUsersTable)
+	_, err = conn.Exec(ctx, createConnectionsUsersTable)
 	return warehouses.WrapError(err)
 }
 
@@ -138,7 +135,7 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return db.PingContext(ctx)
+	return db.Ping(ctx)
 }
 
 // PrepareBatch creates a prepared batch statement for inserting rows in
@@ -180,7 +177,7 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query string, args ...an
 	if err != nil {
 		return nil, err
 	}
-	rows, err := db.QueryContext(ctx, query, args...)
+	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, warehouses.WrapError(err)
 	}
@@ -194,7 +191,7 @@ func (warehouse *PostgreSQL) QueryRow(ctx context.Context, query string, args ..
 	if err != nil {
 		return warehouses.Row{Error: err}
 	}
-	row := db.QueryRowContext(ctx, query, args...)
+	row := db.QueryRow(ctx, query, args...)
 	return warehouses.Row{Row: row}
 }
 
@@ -218,74 +215,66 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 	var table *warehouses.Table
 	var tables []*warehouses.Table
 
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, warehouses.WrapError(err)
-	}
-	defer func() {
-		if tx != nil {
-			_ = tx.Rollback()
-		}
-	}()
+	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
 
-	// Read columns.
-	query := "SELECT c.table_name, c.column_name, c.is_nullable, c.data_type, c.character_maximum_length," +
-		" c.numeric_precision, c.numeric_precision_radix, c.numeric_scale, c.is_updatable," +
-		" col_description(c.table_name::regclass::oid, c.ordinal_position)\n" +
-		"FROM information_schema.columns c\n" +
-		"INNER JOIN information_schema.tables t ON c.table_name = t.table_name AND c.table_schema = t.table_schema\n" +
-		"WHERE t.table_schema = '" + warehouse.settings.Schema + "' AND t.table_type = 'BASE TABLE' AND" +
-		" ( t.table_name IN ('users', 'groups', 'events') OR t.table_name LIKE 'users\\__%' OR" +
-		" t.table_name LIKE 'groups\\__%' OR t.table_name LIKE 'events\\__%' )\n" +
-		"ORDER BY c.table_name, c.ordinal_position"
+		// Read columns.
+		query := "SELECT c.table_name, c.column_name, c.is_nullable, c.data_type, c.character_maximum_length," +
+			" c.numeric_precision, c.numeric_precision_radix, c.numeric_scale, c.is_updatable," +
+			" col_description(c.table_name::regclass::oid, c.ordinal_position)\n" +
+			"FROM information_schema.columns c\n" +
+			"INNER JOIN information_schema.tables t ON c.table_name = t.table_name AND c.table_schema = t.table_schema\n" +
+			"WHERE t.table_schema = '" + warehouse.settings.Schema + "' AND t.table_type = 'BASE TABLE' AND" +
+			" ( t.table_name IN ('users', 'groups', 'events') OR t.table_name LIKE 'users\\__%' OR" +
+			" t.table_name LIKE 'groups\\__%' OR t.table_name LIKE 'events\\__%' )\n" +
+			"ORDER BY c.table_name, c.ordinal_position"
 
-	rows, err := tx.QueryContext(ctx, query)
-	if err != nil {
-		return nil, warehouses.WrapError(err)
-	}
-	for rows.Next() {
-		var tableName, columnName, isNullable, typ, charLength, precision, radix, scale, isUpdatable, description sql.NullString
-		if err = rows.Scan(&tableName, &columnName, &isNullable, &typ, &charLength, &precision, &radix, &scale, &isUpdatable, &description); err != nil {
-			_ = rows.Close()
-			return nil, warehouses.WrapError(err)
-		}
-		if !columnName.Valid {
-			return nil, warehouses.NewError("data warehouse has returned NULL as column name")
-		}
-		if !typ.Valid {
-			return nil, warehouses.NewError("data warehouse has returned NULL as column data type")
-		}
-		if !types.IsValidPropertyName(columnName.String) {
-			return nil, warehouses.NewError("column name %q is not supported", columnName.String)
-		}
-		column := &warehouses.Column{
-			Name:        columnName.String,
-			IsUpdatable: isUpdatable.String == "YES",
-		}
-		column.Type, err = columnType(typ.String, isNullable, charLength, precision, radix, scale)
+		rows, err := tx.Query(ctx, query)
 		if err != nil {
-			return nil, warehouses.NewError("data warehouse has returned an invalid type: %s", err)
+			return err
 		}
-		if !column.Type.Valid() {
-			return nil, warehouses.NewError("type %q of column %s is not supported", typ.String, column.Name)
+		for rows.Next() {
+			var tableName, columnName, isNullable, typ, charLength, precision, radix, scale, isUpdatable, description *string
+			if err = rows.Scan(&tableName, &columnName, &isNullable, &typ, &charLength, &precision, &radix, &scale, &isUpdatable, &description); err != nil {
+				rows.Close()
+				return err
+			}
+			if columnName == nil {
+				return errors.New("data warehouse has returned NULL as column name")
+			}
+			if typ == nil {
+				return errors.New("data warehouse has returned NULL as column data type")
+			}
+			if !types.IsValidPropertyName(*columnName) {
+				return fmt.Errorf("column name %q is not supported", *columnName)
+			}
+			column := &warehouses.Column{
+				Name:        *columnName,
+				IsUpdatable: *isUpdatable == "YES",
+			}
+			column.Type, err = columnType(*typ, isNullable, charLength, precision, radix, scale)
+			if err != nil {
+				return fmt.Errorf("data warehouse has returned an invalid type: %s", err)
+			}
+			if !column.Type.Valid() {
+				return fmt.Errorf("type %q of column %s is not supported", *typ, column.Name)
+			}
+			if description != nil {
+				column.Description = *description
+			}
+			if table == nil || *tableName != table.Name {
+				table = &warehouses.Table{Name: *tableName}
+				tables = append(tables, table)
+			}
+			table.Columns = append(table.Columns, column)
 		}
-		if description.Valid {
-			column.Description = description.String
+		if err := rows.Err(); err != nil {
+			return err
 		}
-		if table == nil || tableName.String != table.Name {
-			table = &warehouses.Table{Name: tableName.String}
-			tables = append(tables, table)
-		}
-		table.Columns = append(table.Columns, column)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, warehouses.WrapError(err)
-	}
 
-	err = tx.Commit()
-	tx = nil
+		return nil
+	})
 	if err != nil {
-		return nil, err
+		return nil, warehouses.WrapError(err)
 	}
 
 	return tables, nil
@@ -335,7 +324,7 @@ func (warehouse *PostgreSQL) Users(ctx context.Context, schema types.Type, order
 
 	// Execute the query.
 	var users [][]any
-	rows, err := db.QueryContext(ctx, query.String())
+	rows, err := db.Query(ctx, query.String())
 	if err != nil {
 		return nil, warehouses.WrapError(err)
 	}
@@ -371,7 +360,7 @@ func (warehouse *PostgreSQL) Users(ctx context.Context, schema types.Type, order
 			}
 		}
 		if err = rows.Scan(user...); err != nil {
-			_ = rows.Close()
+			rows.Close()
 			return nil, warehouses.WrapError(err)
 		}
 		users = append(users, user)
@@ -379,10 +368,7 @@ func (warehouse *PostgreSQL) Users(ctx context.Context, schema types.Type, order
 	if err = rows.Err(); err != nil {
 		return nil, warehouses.WrapError(err)
 	}
-	err = rows.Close()
-	if err != nil {
-		log.Printf("cannot close rows: %s", err)
-	}
+	rows.Close()
 	if users == nil {
 		users = [][]any{}
 	}
@@ -391,7 +377,7 @@ func (warehouse *PostgreSQL) Users(ctx context.Context, schema types.Type, order
 }
 
 // connection returns the database connection.
-func (warehouse *PostgreSQL) connection() (*sql.DB, error) {
+func (warehouse *PostgreSQL) connection() (*postgres.DB, error) {
 	warehouse.mu.Lock()
 	defer warehouse.mu.Unlock()
 	if warehouse.closed {
@@ -403,7 +389,7 @@ func (warehouse *PostgreSQL) connection() (*sql.DB, error) {
 	if warehouse.db != nil {
 		return warehouse.db, nil
 	}
-	db, err := sql.Open("pgx", warehouse.settings.dsn())
+	db, err := postgres.Open(warehouse.settings.options())
 	if err != nil {
 		return nil, warehouses.WrapError(err)
 	}
@@ -412,15 +398,14 @@ func (warehouse *PostgreSQL) connection() (*sql.DB, error) {
 }
 
 // dsn returns the connection string, from s, in the URL format.
-func (s *psSettings) dsn() string {
-	u := url.URL{
-		Scheme:   "postgres",
-		User:     url.UserPassword(s.Username, s.Password),
-		Host:     net.JoinHostPort(s.Host, strconv.Itoa(s.Port)),
-		Path:     "/" + url.PathEscape(s.Database),
-		RawQuery: "search_path=" + url.QueryEscape(s.Schema),
+func (s *psSettings) options() *postgres.Options {
+	return &postgres.Options{
+		Host:     s.Host,
+		Port:     s.Port,
+		Username: s.Username,
+		Password: s.Password,
+		Database: s.Database,
 	}
-	return u.String()
 }
 
 // serializeColumn serializes a column where name and typ are the name and the
@@ -657,7 +642,7 @@ func (batch *batch) Send() error {
 	if err != nil {
 		return err
 	}
-	_, err = db.ExecContext(batch.ctx, batch.buf.String())
+	_, err = db.Exec(batch.ctx, batch.buf.String())
 	if err != nil {
 		batch.err = warehouses.WrapError(err)
 		return batch.err

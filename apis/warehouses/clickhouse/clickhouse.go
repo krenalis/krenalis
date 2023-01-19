@@ -9,7 +9,6 @@ package clickhouse
 
 import (
 	"context"
-	"database/sql"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -96,8 +95,8 @@ func (warehouse *ClickHouse) Close() error {
 
 // Exec executes a query without returning any rows. args are the placeholders.
 // If the query fails, it returns an Error value.
-func (warehouse *ClickHouse) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	return nil, nil
+func (warehouse *ClickHouse) Exec(ctx context.Context, query string, args ...any) (warehouses.Result, error) {
+	return warehouses.Result{}, nil
 }
 
 // Init initializes the data warehouse by creating the supporting tables.

@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"sync"
 
+	"chichi/apis/postgres"
 	"chichi/apis/types"
 )
 
@@ -26,7 +27,7 @@ type Warehouse interface {
 
 	// Exec executes a query without returning any rows. args are the placeholders.
 	// If the query fails, it returns an Error value.
-	Exec(ctx context.Context, query string, args ...any) (sql.Result, error)
+	Exec(ctx context.Context, query string, args ...any) (Result, error)
 
 	// Init initializes the data warehouse by creating the supporting tables.
 	Init(ctx context.Context) error
@@ -121,7 +122,7 @@ type Column struct {
 
 // Row returns a single row as a result of calling QueryRow.
 type Row struct {
-	Row   *sql.Row
+	Row   *postgres.Row
 	Error error
 }
 
@@ -136,22 +137,14 @@ func (row Row) Scan(dest ...any) error {
 	return WrapError(err)
 }
 
-func (row Row) Err() error {
-	if row.Error != nil {
-		return row.Error
-	}
-	err := row.Row.Err()
-	return WrapError(err)
-}
-
 // Rows represents the result of a query. Its methods, on error, return an
 // Error value.
 type Rows struct {
-	Rows *sql.Rows
+	Rows *postgres.Rows
 }
 
-func (rows Rows) Close() error {
-	return WrapError(rows.Rows.Close())
+func (rows Rows) Close() {
+	rows.Rows.Close()
 }
 
 func (rows Rows) Err() error {
@@ -169,22 +162,11 @@ func (rows Rows) Scan(dest ...any) error {
 // Result implements the sql.Result interface but on error it returns an Error
 // value.
 type Result struct {
-	Result sql.Result
-}
-
-func (r Result) LastInsertId() (int64, error) {
-	id, err := r.Result.LastInsertId()
-	if err != nil {
-		return 0, WrapError(err)
-	}
-	return id, nil
+	Result *postgres.Result
 }
 
 func (r Result) RowsAffected() (int64, error) {
-	n, err := r.Result.RowsAffected()
-	if err != nil {
-		return 0, WrapError(err)
-	}
+	n := r.Result.RowsAffected()
 	return n, nil
 }
 
