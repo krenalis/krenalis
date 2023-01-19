@@ -17,7 +17,7 @@ import (
 
 // columnType returns the types.Type corresponding to the PostgreSQL type typ
 // stored in the information_schema.columns column. It returns an invalid type
-// if typ is not supported. It returned an error if an argument is not valid.
+// if typ is not supported. It returns an error if an argument is not valid.
 func columnType(typ string, isNullable, charLength, precision, radix, scale *string) (types.Type, error) {
 	var t types.Type
 	switch typ {
