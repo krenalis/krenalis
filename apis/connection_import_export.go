@@ -71,9 +71,11 @@ func (this *Connection) Export() (err error) {
 		return errors.Unprocessable(NoMappings, "connection %d has no mappings", c.ID)
 	}
 
+	ctx := context.Background()
+
 	// Track the export in the database.
 	var exportID int
-	err = this.db.QueryRow("INSERT INTO connections_exports (connection, storage, start_time)\n"+
+	err = this.db.QueryRow(ctx, "INSERT INTO connections_exports (connection, storage, start_time)\n"+
 		"VALUES ($1, $2, $3)\nRETURNING id", c.ID, storage, time.Now().UTC()).Scan(&exportID)
 	if err != nil {
 		return err
@@ -91,7 +93,7 @@ func (this *Connection) Export() (err error) {
 				errorMsg = "an internal error has occurred"
 			}
 		}
-		_, err2 := this.db.Exec("UPDATE connections_exports SET end_time = $1, error = $2 WHERE id = $3",
+		_, err2 := this.db.Exec(ctx, "UPDATE connections_exports SET end_time = $1, error = $2 WHERE id = $3",
 			time.Now().UTC(), errorMsg, exportID)
 		if err2 != nil {
 			log.Printf("[error] cannot update the end of export %d into the database: %s", exportID, err2)
@@ -163,11 +165,12 @@ func (this *Connection) Import(reimport bool) (err error) {
 		Reimport:   reimport,
 		StartTime:  time.Now().UTC(),
 	}
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
+	ctx := context.Background()
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var enabled bool
 		var workspace int
 		var hasWarehouse bool
-		err := tx.QueryRow("SELECT c.enabled, COALESCE(c.storage, 0), w.id, w.warehouse_type IS NOT NULL\n"+
+		err := tx.QueryRow(ctx, "SELECT c.enabled, COALESCE(c.storage, 0), w.id, w.warehouse_type IS NOT NULL\n"+
 			"FROM connections c\n"+
 			"INNER JOIN workspaces w ON c.workspace = w.id\n"+
 			"WHERE c.id = $1", n.Connection).Scan(&enabled, &n.Storage, &workspace, &hasWarehouse)
@@ -187,7 +190,7 @@ func (this *Connection) Import(reimport bool) (err error) {
 			if n.Storage == 0 {
 				return errors.Unprocessable(NoStorage, "file connection %d has not a storage", n.Connection)
 			}
-			err := tx.QueryRow("SELECT enabled FROM connections WHERE id = $1", n.Storage).Scan(&enabled)
+			err := tx.QueryRow(ctx, "SELECT enabled FROM connections WHERE id = $1", n.Storage).Scan(&enabled)
 			if err != nil {
 				return err
 			}
@@ -195,19 +198,19 @@ func (this *Connection) Import(reimport bool) (err error) {
 				return errors.Unprocessable(StorageNotEnabled, "storage %d of file connection %d is not enabled", n.Storage, n.Connection)
 			}
 		}
-		err = tx.QueryVoid("SELECT FROM connections_imports WHERE connection = $1 AND end_time IS NULL", n.Connection)
+		err = tx.QueryVoid(ctx, "SELECT FROM connections_imports WHERE connection = $1 AND end_time IS NULL", n.Connection)
 		if err != sql.ErrNoRows {
 			if err == nil {
 				return errors.Unprocessable(AlreadyInProgress, "an import is already in progress for the connection %d", n.Connection)
 			}
 			return err
 		}
-		err = tx.QueryRow("INSERT INTO connections_imports (connection, storage, start_time)\n"+
+		err = tx.QueryRow(ctx, "INSERT INTO connections_imports (connection, storage, start_time)\n"+
 			"VALUES ($1, NULLIF($2, 0), $3)\nRETURNING id", n.Connection, n.Storage, n.StartTime).Scan(&n.ID)
 		if err != nil {
 			return err
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 
 	return err
@@ -237,15 +240,18 @@ func (this *Connection) startImport(imp *state.ImportInProgress) {
 		ID:     imp.ID,
 		Health: health,
 	}
+
+	ctx := context.Background()
+
 	// TODO(marco) retry if the transaction fails.
-	err2 := this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err := tx.Exec("UPDATE connections_imports SET end_time = $1, error = $2 WHERE id = $3",
+	err2 := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		_, err := tx.Exec(ctx, "UPDATE connections_imports SET end_time = $1, error = $2 WHERE id = $3",
 			time.Now().UTC(), errorMsg, n.ID)
 		if err != nil {
 			return err
 		}
 		var exists bool
-		err = tx.QueryRow("UPDATE connections SET health = $1 WHERE id = $2 RETURNING true",
+		err = tx.QueryRow(ctx, "UPDATE connections SET health = $1 WHERE id = $2 RETURNING true",
 			n.Health, this.connection.ID).Scan(&exists)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -254,7 +260,7 @@ func (this *Connection) startImport(imp *state.ImportInProgress) {
 			}
 			return err
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 	if err2 != nil {
 		log.Printf("[error] cannot update the end of import %d into the database: %s", imp.ID, err2)
@@ -465,6 +471,8 @@ func (this *Connection) startExport() error {
 	connection := this.connection
 	connector := connection.Connector()
 
+	ctx := context.Background()
+
 	switch connector.Type {
 	case state.AppType:
 
@@ -473,7 +481,7 @@ func (this *Connection) startExport() error {
 		var connector, resource int
 		var settings []byte
 		var expiration time.Time
-		err := this.db.QueryRow(
+		err := this.db.QueryRow(ctx,
 			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, `c`.`webhooksPer` - 1, `r`.`code`,"+
 				" `r`.`oAuthAccessToken`, `r`.`oAuthRefreshToken`, `r`.`oAuthExpiresIn`, `s`.`connector`,"+
 				" `s`.`resource`, `s`.`settings`\n"+
@@ -508,7 +516,7 @@ func (this *Connection) startExport() error {
 		{
 			// TODO(Gianluca): populate this map:
 			internalToExternalID := map[int]string{}
-			rows, err := this.db.Query("SELECT user, goldenRecord FROM connection_users WHERE connection = $1", connection.ID)
+			rows, err := this.db.Query(ctx, "SELECT user, goldenRecord FROM connection_users WHERE connection = $1", connection.ID)
 			if err != nil {
 				return err
 			}

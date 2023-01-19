@@ -43,10 +43,10 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 	n := LoadStateNotification{ID: state.id}
 
-	err = state.db.Transaction(func(tx *postgres.Tx) error {
+	err = state.db.Transaction(ctx, func(tx *postgres.Tx) error {
 
 		// Read the latest election.
-		err := state.db.QueryRow("SELECT number, leader FROM election LIMIT 1").
+		err := state.db.QueryRow(ctx, "SELECT number, leader FROM election LIMIT 1").
 			Scan(&state.election.number, &state.election.leader)
 		if err != nil {
 			return err
@@ -54,7 +54,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all connectors.
 		state.connectors = map[int]*Connector{}
-		err = state.db.QueryScan("SELECT id, name, type, has_settings, logo_url, webhooks_per, oauth_url, oauth_client_id,"+
+		err = state.db.QueryScan(ctx, "SELECT id, name, type, has_settings, logo_url, webhooks_per, oauth_url, oauth_client_id,"+
 			" oauth_client_secret, oauth_token_endpoint, oauth_default_token_type, oauth_default_expires_in,"+
 			" oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
 			for rows.Next() {
@@ -78,7 +78,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all accounts.
 		state.accounts = map[int]*Account{}
-		err = state.db.QueryScan("SELECT id, name, email, internal_ips FROM accounts", func(rows *postgres.Rows) error {
+		err = state.db.QueryScan(ctx, "SELECT id, name, email, internal_ips FROM accounts", func(rows *postgres.Rows) error {
 			var id int
 			var name, email, ips string
 			for rows.Next() {
@@ -103,7 +103,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
-		err = state.db.QueryScan("SELECT id, account, warehouse_type, warehouse_settings, schemas FROM workspaces",
+		err = state.db.QueryScan(ctx, "SELECT id, account, warehouse_type, warehouse_settings, schemas FROM workspaces",
 			func(rows *postgres.Rows) error {
 				var id, accountID int
 				var warehouseType *WarehouseType
@@ -145,7 +145,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all resources.
 		state.resources = map[int]*Resource{}
-		err = state.db.QueryScan("SELECT id, workspace, connector, code, access_token, refresh_token, expires_in FROM resources",
+		err = state.db.QueryScan(ctx, "SELECT id, workspace, connector, code, access_token, refresh_token, expires_in FROM resources",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					r := Resource{}
@@ -167,7 +167,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all connections.
 		state.connections = map[int]*Connection{}
-		err = state.db.QueryScan("SELECT id, workspace, name, role, enabled, connector, COALESCE(storage, 0),"+
+		err = state.db.QueryScan(ctx, "SELECT id, workspace, name, role, enabled, connector, COALESCE(storage, 0),"+
 			" COALESCE(stream, 0), resource, website_host, user_cursor, identity_column, timestamp_column, settings,"+
 			" schema, users_query, health FROM connections", func(rows *postgres.Rows) error {
 			for rows.Next() {
@@ -231,7 +231,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		}
 
 		// Read all keys.
-		err = state.db.QueryScan(`SELECT connection, value FROM connections_keys ORDER BY connection, creation_time`,
+		err = state.db.QueryScan(ctx, `SELECT connection, value FROM connections_keys ORDER BY connection, creation_time`,
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					var connectionID int
@@ -253,7 +253,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		inSchemas := [][]byte{}
 		outSchemas := [][]byte{}
 		connectionIDs := []int{}
-		err = state.db.QueryScan("SELECT id, connection, \"in\", predefined_func, source_code, out FROM connections_mappings", func(rows *postgres.Rows) error {
+		err = state.db.QueryScan(ctx, "SELECT id, connection, \"in\", predefined_func, source_code, out FROM connections_mappings", func(rows *postgres.Rows) error {
 			for rows.Next() {
 				m := &Mapping{
 					mu: new(sync.Mutex),
@@ -288,7 +288,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 			return err
 		}
 
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 	if err != nil {
 		return nil, err

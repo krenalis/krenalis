@@ -8,6 +8,7 @@
 package apis
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -69,11 +70,13 @@ func (smartEvents *SmartEvents) Create(smartEvent SmartEventToCreate) (int, erro
 		return 0, err
 	}
 
+	ctx := context.Background()
+
 	var id int
-	err = smartEvents.db.Transaction(func(tx *postgres.Tx) error {
+	err = smartEvents.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		// Retrieve the list of rows for the current property.
 		allowedDomains := map[string]bool{}
-		err := tx.QueryScan("SELECT name from domains WHERE property = $1", smartEvents.DeprecatedProperties.id,
+		err := tx.QueryScan(ctx, "SELECT name from domains WHERE property = $1", smartEvents.DeprecatedProperties.id,
 			func(rows *sql.Rows) error {
 				var name string
 				for rows.Next() {
@@ -95,7 +98,7 @@ func (smartEvents *SmartEvents) Create(smartEvent SmartEventToCreate) (int, erro
 		}
 		// Write the Smart Event on the database.
 		stmt := "INSERT INTO smart_events (property, name, event, pages, buttons) VALUES ($1, $2, $3, $4, $5) RETURNING id"
-		err = smartEvents.db.QueryRow(stmt, smartEvents.DeprecatedProperties.id, name, event, rawPages, rawButtons).Scan(&id)
+		err = smartEvents.db.QueryRow(ctx, stmt, smartEvents.DeprecatedProperties.id, name, event, rawPages, rawButtons).Scan(&id)
 		return err
 	})
 	if err != nil {
@@ -123,14 +126,14 @@ func (smartEvents *SmartEvents) Delete(ids []int) error {
 	}
 	in.WriteString(")")
 	query := "DELETE FROM smart_events WHERE id IN " + in.String() + "AND property = $1"
-	_, err := smartEvents.db.Exec(query, smartEvents.DeprecatedProperties.id)
+	_, err := smartEvents.db.Exec(context.Background(), query, smartEvents.DeprecatedProperties.id)
 	return err
 }
 
 // Find finds the Smart Events.
 func (smartEvents *SmartEvents) Find() ([]SmartEvent, error) {
 	query := "SELECT id, name, event, pages, buttons FROM smart_events WHERE property = $1 ORDER BY id"
-	rows, err := smartEvents.db.Query(query, smartEvents.DeprecatedProperties.id)
+	rows, err := smartEvents.db.Query(context.Background(), query, smartEvents.DeprecatedProperties.id)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +166,7 @@ func (smartEvents *SmartEvents) Get(id int) (SmartEvent, error) {
 		panic("apis: id must be > 0")
 	}
 	query := "SELECT name, event, pages, buttons FROM smart_events WHERE id = ? AND property = $1"
-	row := smartEvents.db.QueryRow(query, id, smartEvents.DeprecatedProperties.id)
+	row := smartEvents.db.QueryRow(context.Background(), query, id, smartEvents.DeprecatedProperties.id)
 	var name, event string
 	var rawPages, rawButtons string
 	err := row.Scan(&name, &event, &rawPages, &rawButtons)
@@ -199,10 +202,12 @@ func (smartEvents *SmartEvents) Update(id int, event SmartEventToUpdate) error {
 		return err
 	}
 
-	err = smartEvents.db.Transaction(func(tx *postgres.Tx) error {
+	ctx := context.Background()
+
+	err = smartEvents.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		// Retrieve the list of rows for the current property.
 		allowedDomains := map[string]bool{}
-		err := tx.QueryScan("SELECT name from domains WHERE property = $1", smartEvents.DeprecatedProperties.id,
+		err := tx.QueryScan(ctx, "SELECT name from domains WHERE property = $1", smartEvents.DeprecatedProperties.id,
 			func(rows *sql.Rows) error {
 				var name string
 				for rows.Next() {
@@ -223,7 +228,7 @@ func (smartEvents *SmartEvents) Update(id int, event SmartEventToUpdate) error {
 			}
 		}
 		// Write the Smart Event on the database.
-		_, err = tx.Exec("UPDATE smart_events\nSET name = $1, event = $2, pages = $3, buttons = $4\n"+
+		_, err = tx.Exec(ctx, "UPDATE smart_events\nSET name = $1, event = $2, pages = $3, buttons = $4\n"+
 			"WHERE id = $5 AND property = $5",
 			event.Name, event.Event, rawPages, rawButtons, id, smartEvents.DeprecatedProperties.id)
 		return err

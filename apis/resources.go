@@ -8,6 +8,7 @@
 package apis
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -98,14 +99,16 @@ func freshAccessToken(db *postgres.DB, r *state.Resource) (string, error) {
 		ExpiresIn:    expiresIn,
 	}
 
-	err = db.Transaction(func(tx *postgres.Tx) error {
-		_, err = tx.Exec(
+	ctx := context.Background()
+
+	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
+		_, err = tx.Exec(ctx,
 			"UPDATE resources SET access_token = $1, refresh_token = $2, expires_in = $3 WHERE id = $4",
 			n.AccessToken, n.RefreshToken, n.ExpiresIn, n.ID)
 		if err != nil {
 			return err
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 	if err != nil {
 		return "", err

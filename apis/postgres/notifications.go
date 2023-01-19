@@ -18,8 +18,6 @@ import (
 	"reflect"
 	"strings"
 	"time"
-
-	"github.com/jackc/pgx/v5/stdlib"
 )
 
 type Notification struct {
@@ -29,7 +27,7 @@ type Notification struct {
 }
 
 // Notify sends a notification.
-func (tx *Tx) Notify(payload any) error {
+func (tx *Tx) Notify(ctx context.Context, payload any) error {
 	t := reflect.TypeOf(payload)
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
@@ -65,14 +63,14 @@ func (tx *Tx) Notify(payload any) error {
 		s = z.String()
 		for len(s) > 8000-2 {
 			const k = 8000 - 3
-			_, err = tx.Exec("NOTIFY chichi, '+" + s[:k] + "'")
+			_, err = tx.Exec(ctx, "NOTIFY chichi, '+"+s[:k]+"'")
 			if err != nil {
 				return err
 			}
 			s = s[k:]
 		}
 	}
-	_, err = tx.Exec("NOTIFY chichi, '" + s + "'")
+	_, err = tx.Exec(ctx, "NOTIFY chichi, '"+s+"'")
 	return err
 }
 
@@ -94,15 +92,13 @@ func (db *DB) ListenToNotifications(ctx context.Context) <-chan Notification {
 				time.Sleep(10 * time.Millisecond)
 				continue
 			}
-			_, err = conn.Exec("LISTEN chichi")
+			_, err = conn.Exec(ctx, "LISTEN chichi")
 			if err != nil {
-				_ = conn.Close()
 				continue
 			}
-			err = conn.conn.Raw(func(c any) error {
-				cc := c.(*stdlib.Conn).Conn()
+			err = func() error {
 				for {
-					n, err := cc.WaitForNotification(ctx)
+					n, err := conn.conn.Conn().WaitForNotification(ctx)
 					if err != nil {
 						return err
 					}
@@ -139,13 +135,12 @@ func (db *DB) ListenToNotifications(ctx context.Context) <-chan Notification {
 					}
 					ch <- Notification{n.PID, payload[:i], payload[i:]}
 				}
-			})
+			}()
 			if err != nil {
-				_, _ = conn.Exec("UNLISTEN chichi")
-				_ = conn.Close()
+				_, _ = conn.Exec(ctx, "UNLISTEN chichi")
 				continue
 			}
-			err = conn.Close()
+			err = conn.Close(ctx)
 		}
 	}()
 	return ch

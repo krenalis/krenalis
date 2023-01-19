@@ -8,6 +8,7 @@
 package state
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -43,6 +44,8 @@ func (state *State) keepElections() {
 	// |--------------|          leaderInterval
 	// |--------------|·······|  grantedLeaderInterval
 
+	ctx := context.Background()
+
 	// leader is called when the node is the leader.
 	leader := func(election election) {
 		if debugElection {
@@ -50,8 +53,8 @@ func (state *State) keepElections() {
 		}
 		for {
 			// Send the see leader notification.
-			err := state.db.Transaction(func(tx *postgres.Tx) error {
-				return tx.Notify(SeeLeaderNotification{Election: election.number})
+			err := state.db.Transaction(ctx, func(tx *postgres.Tx) error {
+				return tx.Notify(ctx, SeeLeaderNotification{Election: election.number})
 			})
 			if err == nil {
 				break
@@ -131,9 +134,10 @@ var errEndedElection = errors.New("ended election")
 // ended.
 func (state *State) electAsLeader(election int) error {
 	n := ElectLeaderNotification{Leader: state.id, Number: election}
-	err := state.db.Transaction(func(tx *postgres.Tx) error {
+	ctx := context.Background()
+	err := state.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var t bool
-		err := tx.QueryRow("UPDATE election\n"+
+		err := tx.QueryRow(ctx, "UPDATE election\n"+
 			"SET number = $1, leader = $2, date = NOW()::timestamp\n"+
 			"WHERE number = $3 RETURNING true", n.Number, n.Leader, n.Number-1).Scan(&t)
 		if err != nil {
@@ -142,7 +146,7 @@ func (state *State) electAsLeader(election int) error {
 			}
 			return err
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 	return err
 }

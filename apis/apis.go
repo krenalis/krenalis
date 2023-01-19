@@ -181,7 +181,7 @@ func (apis *APIs) AuthenticateAccount(email, password string) (int, error) {
 	}
 	var id int
 	var hashedPassword []byte
-	err := apis.db.QueryRow("SELECT id, password FROM accounts WHERE email = $1", email).Scan(&id, &hashedPassword)
+	err := apis.db.QueryRow(context.Background(), "SELECT id, password FROM accounts WHERE email = $1", email).Scan(&id, &hashedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, errors.Unprocessable(AuthenticationFailed, "authentication has failed")
@@ -258,7 +258,7 @@ func (apis *APIs) CreateAccount(email, password string) (int, error) {
 		return 0, err
 	}
 	var id int
-	err = apis.db.QueryRow("INSERT INTO accounts (email, password) VALUES ($1, $2)",
+	err = apis.db.QueryRow(context.Background(), "INSERT INTO accounts (email, password) VALUES ($1, $2)",
 		email, string(hashedPassword)).Scan(&id)
 	if err != nil {
 		return 0, err

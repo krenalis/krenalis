@@ -8,6 +8,7 @@
 package apis
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"log"
@@ -42,7 +43,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	// Read the account.
 	var accountID int
-	err := apis.db.QueryRow("SELECT account FROM workspaces WHERE id = $1", workspaceID).Scan(&accountID)
+	err := apis.db.QueryRow(context.Background(), "SELECT account FROM workspaces WHERE id = $1", workspaceID).Scan(&accountID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Not Found", http.StatusNotFound)

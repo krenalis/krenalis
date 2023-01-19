@@ -9,6 +9,7 @@ package events
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"log"
 	"math"
@@ -77,7 +78,7 @@ func (this *Listeners) Add(size, source, server, stream int) (string, error) {
 	}
 	if source > 0 || server > 0 || stream > 0 {
 		var sourceExist, serverExist, streamExist bool
-		err := this.db.QueryScan("SELECT id, type , role FROM connections\n"+
+		err := this.db.QueryScan(context.Background(), "SELECT id, type , role FROM connections\n"+
 			"WHERE id IN ($1, $2, $3) AND workspace = $4", source, server, stream, this.workspace.ID,
 			func(rows *postgres.Rows) error {
 				var id int
@@ -233,23 +234,27 @@ func (observer *observer) flushStats(t time.Time) error {
 	observer.stats = observer.stats[0:0]
 	observer.statsMu.Unlock()
 
-	query := "INSERT INTO connections_stats_events AS s (hour, source, server, stream, good_events, bad_events)\n" +
-		"VALUES ($1, $2, NULLIF($3, 0), NULLIF($4, 0), $5, $6)\n" +
-		"\tON CONFLICT (hour, source, server, stream) DO UPDATE SET good_events = s.good_events + EXCLUDED.good_events," +
-		" bad_events = s.bad_events + EXCLUDED.bad_events"
-	stmt, err := observer.db.Prepare(query)
-	if err != nil {
-		return err
-	}
-	hour := hoursFromEpoc(t)
-	for _, s := range stats {
-		_, err = stmt.Exec(hour, s.key.source, s.key.server, s.key.stream, s.goodEvents, s.badEvents)
+	ctx := context.Background()
+
+	err := observer.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		query := "INSERT INTO connections_stats_events AS s (hour, source, server, stream, good_events, bad_events)\n" +
+			"VALUES ($1, $2, NULLIF($3, 0), NULLIF($4, 0), $5, $6)\n" +
+			"\tON CONFLICT (hour, source, server, stream) DO UPDATE SET good_events = s.good_events + EXCLUDED.good_events," +
+			" bad_events = s.bad_events + EXCLUDED.bad_events"
+		stmt, err := tx.Prepare(ctx, query)
 		if err != nil {
-			_ = stmt.Close()
 			return err
 		}
-	}
-	err = stmt.Close()
+		hour := hoursFromEpoc(t)
+		for _, s := range stats {
+			_, err = stmt.Exec(ctx, hour, s.key.source, s.key.server, s.key.stream, s.goodEvents, s.badEvents)
+			if err != nil {
+				_ = stmt.Close()
+				return err
+			}
+		}
+		return stmt.Close()
+	})
 
 	return err
 }

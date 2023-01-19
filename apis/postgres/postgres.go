@@ -19,8 +19,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgconn"
-	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
+	"chichi/pkg/pgx"
+	"chichi/pkg/pgx/pgconn"
+	"chichi/pkg/pgx/pgxpool"
+	_ "chichi/pkg/pgx/stdlib" // PostgreSQL driver
 )
 
 type RowsScanner interface {
@@ -28,17 +30,77 @@ type RowsScanner interface {
 	Scan(...any) error
 }
 
-var ErrNoRows = sql.ErrNoRows
-var ErrTxDone = sql.ErrTxDone
+// Result is the result returned by a call to the Exec method.
+type Result struct {
+	ct pgconn.CommandTag
+}
+
+// RowsAffected returns the number of rows affected.
+// TODO(Gianluca): ensure that this implementation has the same behavior of
+// sql.Result.RowsAffected.
+func (res *Result) RowsAffected() int64 {
+	return res.ct.RowsAffected()
+}
+
+// Stmt represents a prepared statement in a transaction.
+type Stmt struct {
+	tx     *Tx
+	closed bool
+}
+
+func (stmt *Stmt) Close() error {
+	if stmt.closed {
+		return nil
+	}
+	stmt.closed = true
+	stmt.tx.preparedQuery = false
+	return nil
+}
+
+const preparedStmtName = "chichi-postgres-prep-stmt"
+
+func (stmt *Stmt) Exec(ctx context.Context, args ...any) (*Result, error) {
+	if stmt.closed {
+		return nil, errors.New("already closed")
+	}
+	return stmt.tx.Exec(ctx, preparedStmtName, args...)
+}
+
+func (stmt *Stmt) Query(ctx context.Context, args ...any) (*Rows, error) {
+	if stmt.closed {
+		return nil, errors.New("already closed")
+	}
+	return stmt.tx.Query(ctx, preparedStmtName, args...)
+}
+
+func (stmt *Stmt) QueryScan(ctx context.Context, args ...any) error {
+	if stmt.closed {
+		return errors.New("already closed")
+	}
+	return stmt.tx.QueryScan(ctx, preparedStmtName, args...)
+}
+
+func (stmt *Stmt) QueryRow(ctx context.Context, args ...any) *Row {
+	if stmt.closed {
+		return &Row{closed: true}
+	}
+	return stmt.tx.QueryRow(ctx, preparedStmtName, args...)
+}
+
+func (stmt *Stmt) QueryVoid(ctx context.Context, args ...any) error {
+	if stmt.closed {
+		return errors.New("already closed")
+	}
+	return stmt.tx.QueryVoid(ctx, preparedStmtName, args...)
+}
 
 type Connection interface {
-	Exec(string, ...any) (sql.Result, error)
-	Prepare(string) (*sql.Stmt, error)
-	Query(string, ...any) (*Rows, error)
-	QueryScan(string, ...any) error
-	QueryRow(string, ...any) *Row
-	QueryVoid(string, ...any) error
-	Tables(string) ([]string, error)
+	Exec(context.Context, string, ...any) (*Result, error)
+	Query(context.Context, string, ...any) (*Rows, error)
+	QueryScan(context.Context, string, ...any) error
+	QueryRow(context.Context, string, ...any) *Row
+	QueryVoid(context.Context, string, ...any) error
+	Tables(context.Context, string) ([]string, error)
 }
 
 var (
@@ -49,7 +111,7 @@ var (
 )
 
 type DB struct {
-	db  *sql.DB
+	db  *pgxpool.Pool
 	log io.Writer
 }
 
@@ -59,9 +121,13 @@ type Options struct {
 	Username string
 	Password string
 	Database string
+	MaxConns int32
 }
 
-// Open opens a PostgreSQL database. It validates its arguments without creating a connection to the database
+// Open opens a PostgreSQL database. It validates its arguments without creating
+// a connection to the database.
+// opts.MaxConns, when greater than zero, specifies the number of maximum
+// connections.
 func Open(opts *Options) (*DB, error) {
 	if opts == nil {
 		opts = &Options{}
@@ -72,76 +138,81 @@ func Open(opts *Options) (*DB, error) {
 		Host:   net.JoinHostPort(opts.Host, strconv.Itoa(opts.Port)),
 		Path:   "/" + url.PathEscape(opts.Database),
 	}
-	var db, err = sql.Open("pgx", u.String())
+	config, err := pgxpool.ParseConfig(u.String())
 	if err != nil {
 		return nil, err
 	}
-	return &DB{db, nil}, nil
+	if opts.MaxConns > 0 {
+		config.MaxConns = opts.MaxConns
+	}
+	conn, err := pgxpool.NewWithConfig(context.Background(), config)
+	if err != nil {
+		return nil, err
+	}
+	return &DB{conn, nil}, nil
 }
 
-func (db *DB) Close() error {
-	return db.db.Close()
+func (db *DB) Close() {
+	db.db.Close()
 }
 
 func (db *DB) SetQueryLog(log io.Writer) {
 	db.log = log
 }
 
-func (db *DB) Ping() error {
-	return db.db.Ping()
+func (db *DB) Ping(ctx context.Context) error {
+	return db.db.Ping(ctx)
 }
 
-func (db *DB) SetMaxIdleConns(n int) {
-	db.db.SetMaxIdleConns(n)
-}
-
-func (db *DB) SetMaxOpenConns(n int) {
-	db.db.SetMaxOpenConns(n)
-}
-
-func (db *DB) Exec(query string, args ...any) (sql.Result, error) {
+func (db *DB) Exec(ctx context.Context, query string, args ...any) (*Result, error) {
 	if db.log != nil {
 		fmt.Fprint(db.log, query, "\n\n")
 		if len(args) > 0 {
 			fmt.Fprintf(db.log, "> args: %v\n", args)
 		}
 	}
-	return db.db.Exec(query, args...)
-}
-
-func (db *DB) Prepare(query string) (*sql.Stmt, error) {
-	if db.log != nil {
-		fmt.Fprint(db.log, query, "\n\n")
-	}
-	return db.db.Prepare(query)
-}
-
-func (db *DB) Query(query string, args ...any) (*Rows, error) {
-	if db.log != nil {
-		fmt.Fprint(db.log, query, "\n\n")
-		if len(args) > 0 {
-			fmt.Fprintf(db.log, "> args: %v\n", args)
-		}
-	}
-	rows, err := db.db.Query(query, args...)
+	ct, err := db.db.Exec(ctx, query, args...)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
+		return nil, err
+	}
+	return &Result{ct}, nil
+}
+
+func (db *DB) Query(ctx context.Context, query string, args ...any) (*Rows, error) {
+	if db.log != nil {
+		fmt.Fprint(db.log, query, "\n\n")
+		if len(args) > 0 {
+			fmt.Fprintf(db.log, "> args: %v\n", args)
+		}
+	}
+	rows, err := db.db.Query(ctx, query, args...)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
 		return nil, err
 	}
 	return &Rows{rows}, nil
 }
 
-func (db *DB) QueryRow(query string, args ...any) *Row {
+func (db *DB) QueryRow(ctx context.Context, query string, args ...any) *Row {
 	if db.log != nil {
 		fmt.Fprint(db.log, query, "\n\n")
 		if len(args) > 0 {
 			fmt.Fprintf(db.log, "> args: %v\n", args)
 		}
 	}
-	row := db.db.QueryRow(query, args...)
-	return &Row{row}
+	row := db.db.QueryRow(ctx, query, args...)
+	return &Row{Row: row}
 }
 
-func (db *DB) QueryScan(query string, args ...any) error {
+func (db *DB) QueryScan(ctx context.Context, query string, args ...any) error {
+	// TODO(Gianluca): it's not clear which of the functions called here can, in
+	// practice, return the 'pgx.ErrNoRows' error, as it's not documented; so,
+	// to ensure that it always catch, it is checked everywhere.
 	if db.log != nil {
 		fmt.Fprint(db.log, query, "\n\n")
 	}
@@ -158,8 +229,11 @@ func (db *DB) QueryScan(query string, args ...any) error {
 	if db.log != nil && len(args) > 0 {
 		fmt.Fprintf(db.log, "> args: %v\n", args)
 	}
-	rows, err := db.db.Query(query, args...)
+	rows, err := db.db.Query(ctx, query, args...)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
 		return err
 	}
 	defer rows.Close()
@@ -170,50 +244,59 @@ func (db *DB) QueryScan(query string, args ...any) error {
 		err = scan(&Rows{rows})
 	}
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
 		return err
 	}
-	if err = rows.Close(); err != nil {
-		return err
+	rows.Close()
+	err = rows.Err()
+	if err == pgx.ErrNoRows {
+		err = sql.ErrNoRows
 	}
-	return rows.Err()
+	return err
 }
 
-func (db *DB) QueryVoid(query string, args ...any) error {
+func (db *DB) QueryVoid(ctx context.Context, query string, args ...any) error {
 	if db.log != nil {
 		fmt.Fprint(db.log, query, "\n\n")
 		if len(args) > 0 {
 			fmt.Fprintf(db.log, "> args: %v\n", args)
 		}
 	}
-	return db.db.QueryRow(query, args...).Scan()
+	err := db.db.QueryRow(ctx, query, args...).Scan()
+	if err == pgx.ErrNoRows {
+		err = sql.ErrNoRows
+	}
+	return err
 }
 
 func (db *DB) Begin(ctx context.Context) (*Tx, error) {
-	tx, err := db.db.BeginTx(ctx, nil)
+	tx, err := db.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return nil, err
 	}
-	return &Tx{tx, db.log, false}, nil
+	return &Tx{tx, db.log, false, false}, nil
 }
 
-func (db *DB) Transaction(f func(tx *Tx) error) error {
-	var tx, err = db.db.Begin()
+func (db *DB) Transaction(ctx context.Context, f func(tx *Tx) error) error {
+	var tx, err = db.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	return func() error {
 		defer func() {
 			if err := recover(); err != nil {
-				_ = tx.Rollback()
+				_ = tx.Rollback(ctx)
 				panic(err)
 			}
 		}()
-		var err = f(&Tx{tx, db.log, true})
+		var err = f(&Tx{tx, db.log, true, false})
 		if err != nil {
-			_ = tx.Rollback()
+			_ = tx.Rollback(ctx)
 			return err
 		}
-		err = tx.Commit()
+		err = tx.Commit(ctx)
 		if err != nil && err != sql.ErrTxDone {
 			return err
 		}
@@ -222,7 +305,7 @@ func (db *DB) Transaction(f func(tx *Tx) error) error {
 }
 
 func (db *DB) Conn(ctx context.Context) (*Conn, error) {
-	conn, err := db.db.Conn(context.Background())
+	conn, err := db.db.Acquire(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +315,10 @@ func (db *DB) Conn(ctx context.Context) (*Conn, error) {
 	}, nil
 }
 
-func (db *DB) Tables(database string) ([]string, error) {
+func (db *DB) Tables(ctx context.Context, database string) ([]string, error) {
+	// TODO(Gianluca): it's not clear which of the functions called here can, in
+	// practice, return the 'pgx.ErrNoRows' error, as it's not documented; so,
+	// to ensure that it always catch, it is checked everywhere.
 	var stmt = "SHOW TABLES"
 	if database != "" {
 		stmt = "SHOW TABLES FROM `" + database + "`"
@@ -240,8 +326,11 @@ func (db *DB) Tables(database string) ([]string, error) {
 	if db.log != nil {
 		fmt.Fprint(db.log, stmt, "\n\n")
 	}
-	var rows, err = db.db.Query(stmt)
+	var rows, err = db.db.Query(ctx, stmt)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
 		return nil, err
 	}
 	defer rows.Close()
@@ -250,53 +339,65 @@ func (db *DB) Tables(database string) ([]string, error) {
 		var table string
 		err = rows.Scan(&table)
 		if err != nil {
+			if err == pgx.ErrNoRows {
+				err = sql.ErrNoRows
+			}
 			return nil, err
 		}
 		tables = append(tables, table)
 	}
 	if err = rows.Err(); err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
 		return nil, err
 	}
 	return tables, nil
 }
 
 type Conn struct {
-	conn *sql.Conn
+	conn *pgxpool.Conn
 	log  io.Writer
 }
 
-func (c *Conn) Exec(query string, args ...any) (sql.Result, error) {
+func (c *Conn) Exec(ctx context.Context, query string, args ...any) (*Result, error) {
 	if c.log != nil {
 		fmt.Fprint(c.log, query, "\n\n")
 		if len(args) > 0 {
 			fmt.Fprintf(c.log, "> args: %v\n", args)
 		}
 	}
-	return c.conn.ExecContext(context.Background(), query, args...)
-}
-
-func (c *Conn) Prepare(query string) (*sql.Stmt, error) {
-	if c.log != nil {
-		fmt.Fprint(c.log, query, "\n\n")
-	}
-	return c.conn.PrepareContext(context.Background(), query)
-}
-
-func (c *Conn) Query(query string, args ...any) (*Rows, error) {
-	if c.log != nil {
-		fmt.Fprint(c.log, query, "\n\n")
-		if len(args) > 0 {
-			fmt.Fprintf(c.log, "> args: %v\n", args)
-		}
-	}
-	rows, err := c.conn.QueryContext(context.Background(), query, args...)
+	ct, err := c.conn.Exec(ctx, query, args...)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
+		return nil, err
+	}
+	return &Result{ct: ct}, nil
+}
+
+func (c *Conn) Query(ctx context.Context, query string, args ...any) (*Rows, error) {
+	if c.log != nil {
+		fmt.Fprint(c.log, query, "\n\n")
+		if len(args) > 0 {
+			fmt.Fprintf(c.log, "> args: %v\n", args)
+		}
+	}
+	rows, err := c.conn.Query(ctx, query, args...)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
 		return nil, err
 	}
 	return &Rows{rows}, nil
 }
 
-func (conn *Conn) QueryScan(query string, args ...any) error {
+func (conn *Conn) QueryScan(ctx context.Context, query string, args ...any) error {
+	// TODO(Gianluca): it's not clear which of the functions called here can, in
+	// practice, return the 'pgx.ErrNoRows' error, as it's not documented; so,
+	// to ensure that it always catch, it is checked everywhere.
 	if conn.log != nil {
 		fmt.Fprint(conn.log, query, "\n\n")
 	}
@@ -313,8 +414,11 @@ func (conn *Conn) QueryScan(query string, args ...any) error {
 	if conn.log != nil && len(args) > 0 {
 		fmt.Fprintf(conn.log, "> args: %v\n", args)
 	}
-	rows, err := conn.Query(query, args...)
+	rows, err := conn.Query(ctx, query, args...)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
 		return err
 	}
 	defer rows.Close()
@@ -325,36 +429,48 @@ func (conn *Conn) QueryScan(query string, args ...any) error {
 		err = scan(rows)
 	}
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
 		return err
 	}
-	if err = rows.Close(); err != nil {
-		return err
+	rows.Close()
+	err = rows.Err()
+	if err == pgx.ErrNoRows {
+		err = sql.ErrNoRows
 	}
-	return rows.Err()
+	return err
 }
 
-func (c *Conn) QueryRow(query string, args ...any) *Row {
+func (c *Conn) QueryRow(ctx context.Context, query string, args ...any) *Row {
 	if c.log != nil {
 		fmt.Fprint(c.log, query, "\n\n")
 		if len(args) > 0 {
 			fmt.Fprintf(c.log, "> args: %v\n", args)
 		}
 	}
-	row := c.conn.QueryRowContext(context.Background(), query, args...)
-	return &Row{row}
+	row := c.conn.QueryRow(ctx, query, args...)
+	return &Row{Row: row}
 }
 
-func (c *Conn) QueryVoid(query string, args ...any) error {
+func (c *Conn) QueryVoid(ctx context.Context, query string, args ...any) error {
 	if c.log != nil {
 		fmt.Fprint(c.log, query, "\n\n")
 		if len(args) > 0 {
 			fmt.Fprintf(c.log, "> args: %v\n", args)
 		}
 	}
-	return c.conn.QueryRowContext(context.Background(), query, args...).Scan()
+	err := c.conn.QueryRow(ctx, query, args...).Scan()
+	if err == pgx.ErrNoRows {
+		err = sql.ErrNoRows
+	}
+	return err
 }
 
-func (c *Conn) Tables(database string) ([]string, error) {
+func (c *Conn) Tables(ctx context.Context, database string) ([]string, error) {
+	// TODO(Gianluca): it's not clear which of the functions called here can, in
+	// practice, return the 'pgx.ErrNoRows' error, as it's not documented; so,
+	// to ensure that it always catch, it is checked everywhere.
 	var stmt = "SHOW TABLES"
 	if database != "" {
 		stmt = "SHOW TABLES FROM `" + database + "`"
@@ -362,8 +478,11 @@ func (c *Conn) Tables(database string) ([]string, error) {
 	if c.log != nil {
 		fmt.Fprint(c.log, stmt, "\n\n")
 	}
-	var rows, err = c.conn.QueryContext(context.Background(), stmt)
+	var rows, err = c.conn.Query(ctx, stmt)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
 		return nil, err
 	}
 	defer rows.Close()
@@ -372,58 +491,91 @@ func (c *Conn) Tables(database string) ([]string, error) {
 		var table string
 		err = rows.Scan(&table)
 		if err != nil {
+			if err == pgx.ErrNoRows {
+				err = sql.ErrNoRows
+			}
 			return nil, err
 		}
 		tables = append(tables, table)
 	}
 	if err = rows.Err(); err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
 		return nil, err
 	}
 	return tables, nil
 }
 
-func (c *Conn) Close() error {
-	return c.conn.Close()
+func (c *Conn) Close(ctx context.Context) error {
+	c.conn.Release()
+	return nil
 }
 
 type Tx struct {
-	tx      *sql.Tx
-	log     io.Writer
-	wrapped bool
+	tx            pgx.Tx
+	log           io.Writer
+	wrapped       bool
+	preparedQuery bool
 }
 
-func (tx *Tx) Exec(query string, args ...any) (sql.Result, error) {
+func (tx *Tx) Exec(ctx context.Context, query string, args ...any) (*Result, error) {
 	if tx.log != nil {
 		fmt.Fprint(tx.log, query, "\n\n")
 		if len(args) > 0 {
 			fmt.Fprintf(tx.log, "> args: %v\n", args)
 		}
 	}
-	return tx.tx.Exec(query, args...)
-}
-
-func (tx *Tx) Prepare(query string) (*sql.Stmt, error) {
-	if tx.log != nil {
-		fmt.Fprint(tx.log, query, "\n\n")
-	}
-	return tx.tx.Prepare(query)
-}
-
-func (tx *Tx) Query(query string, args ...any) (*Rows, error) {
-	if tx.log != nil {
-		fmt.Fprint(tx.log, query, "\n\n")
-		if len(args) > 0 {
-			fmt.Fprintf(tx.log, "> args: %v\n", args)
-		}
-	}
-	rows, err := tx.tx.Query(query, args...)
+	ct, err := tx.tx.Exec(ctx, query, args...)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
+		return nil, err
+	}
+	return &Result{ct}, nil
+}
+
+// Prepare prepares a statement.
+// This method is not meant to be called concurrently.
+// Also, only one statement can be created before calling the Close method on
+// the returned Stmt.
+func (tx *Tx) Prepare(ctx context.Context, query string) (*Stmt, error) {
+	if tx.preparedQuery {
+		return nil, errors.New("query already prepared")
+	}
+	tx.preparedQuery = true
+	if tx.log != nil {
+		fmt.Fprint(tx.log, query, "\n\n")
+	}
+	_, err := tx.tx.Prepare(ctx, preparedStmtName, query)
+	if err != nil {
+		return nil, err
+	}
+	return &Stmt{tx: tx}, nil
+}
+
+func (tx *Tx) Query(ctx context.Context, query string, args ...any) (*Rows, error) {
+	if tx.log != nil {
+		fmt.Fprint(tx.log, query, "\n\n")
+		if len(args) > 0 {
+			fmt.Fprintf(tx.log, "> args: %v\n", args)
+		}
+	}
+	rows, err := tx.tx.Query(ctx, query, args...)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
 		return nil, err
 	}
 	return &Rows{rows}, nil
 }
 
-func (tx *Tx) QueryScan(query string, args ...any) error {
+func (tx *Tx) QueryScan(ctx context.Context, query string, args ...any) error {
+	// TODO(Gianluca): it's not clear which of the functions called here can, in
+	// practice, return the 'pgx.ErrNoRows' error, as it's not documented; so,
+	// to ensure that it always catch, it is checked everywhere.
 	if tx.log != nil {
 		fmt.Fprint(tx.log, query, "\n\n")
 	}
@@ -440,8 +592,11 @@ func (tx *Tx) QueryScan(query string, args ...any) error {
 	if tx.log != nil && len(args) > 0 {
 		fmt.Fprintf(tx.log, "> args: %v\n", args)
 	}
-	rows, err := tx.Query(query, args...)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
 		return err
 	}
 	defer rows.Close()
@@ -452,64 +607,79 @@ func (tx *Tx) QueryScan(query string, args ...any) error {
 		err = scan(rows)
 	}
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
 		return err
 	}
-	if err = rows.Close(); err != nil {
-		return err
+	rows.Close()
+	err = rows.Err()
+	if err == pgx.ErrNoRows {
+		err = sql.ErrNoRows
 	}
-	return rows.Err()
+	return err
 }
 
-func (tx *Tx) QueryRow(query string, args ...any) *Row {
+func (tx *Tx) QueryRow(ctx context.Context, query string, args ...any) *Row {
 	if tx.log != nil {
 		fmt.Fprint(tx.log, query, "\n\n")
 		if len(args) > 0 {
 			fmt.Fprintf(tx.log, "> args: %v\n", args)
 		}
 	}
-	row := tx.tx.QueryRow(query, args...)
-	return &Row{row}
+	row := tx.tx.QueryRow(ctx, query, args...)
+	return &Row{Row: row}
 }
 
-func (tx *Tx) QueryVoid(query string, args ...any) error {
+func (tx *Tx) QueryVoid(ctx context.Context, query string, args ...any) error {
 	if tx.log != nil {
 		fmt.Fprint(tx.log, query, "\n\n")
 		if len(args) > 0 {
 			fmt.Fprintf(tx.log, "> args: %v\n", args)
 		}
 	}
-	return tx.tx.QueryRow(query, args...).Scan()
+	err := tx.tx.QueryRow(ctx, query, args...).Scan()
+	if err == pgx.ErrNoRows {
+		err = sql.ErrNoRows
+	}
+	return err
 }
 
-func (tx *Tx) Rollback() error {
+func (tx *Tx) Rollback(ctx context.Context) error {
 	if tx.wrapped {
 		return errors.New("rollback called in a wrapped transaction")
 	}
 	if tx.log != nil {
 		fmt.Fprint(tx.log, "ROLLBACK\n\n")
 	}
-	return tx.tx.Rollback()
+	return tx.tx.Rollback(ctx)
 }
 
-func (tx *Tx) Commit() error {
+func (tx *Tx) Commit(ctx context.Context) error {
 	if tx.wrapped {
 		return errors.New("commit called in a wrapped transaction")
 	}
 	if tx.log != nil {
 		fmt.Fprint(tx.log, "COMMIT\n\n")
 	}
-	return tx.tx.Commit()
+	return tx.tx.Commit(ctx)
 }
 
-func (tx *Tx) Tables(database string) ([]string, error) {
-	var rows *sql.Rows
+func (tx *Tx) Tables(ctx context.Context, database string) ([]string, error) {
+	// TODO(Gianluca): it's not clear which of the functions called here can, in
+	// practice, return the 'pgx.ErrNoRows' error, as it's not documented; so,
+	// to ensure that it always catch, it is checked everywhere.
+	var rows pgx.Rows
 	var err error
 	if database == "" {
-		rows, err = tx.tx.Query("SHOW TABLES")
+		rows, err = tx.tx.Query(ctx, "SHOW TABLES")
 	} else {
-		rows, err = tx.tx.Query("SHOW TABLES FROM `" + database + "`")
+		rows, err = tx.tx.Query(ctx, "SHOW TABLES FROM `"+database+"`")
 	}
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
 		return nil, err
 	}
 	defer rows.Close()
@@ -518,11 +688,17 @@ func (tx *Tx) Tables(database string) ([]string, error) {
 		var table string
 		err = rows.Scan(&table)
 		if err != nil {
+			if err == pgx.ErrNoRows {
+				err = sql.ErrNoRows
+			}
 			return nil, err
 		}
 		tables = append(tables, table)
 	}
 	if err = rows.Err(); err != nil {
+		if err == pgx.ErrNoRows {
+			err = sql.ErrNoRows
+		}
 		return nil, err
 	}
 	return tables, nil
@@ -630,7 +806,7 @@ func escape(s string) string {
 }
 
 type Rows struct {
-	*sql.Rows
+	pgx.Rows
 }
 
 func (rs *Rows) Scan(dest ...any) error {
@@ -638,11 +814,19 @@ func (rs *Rows) Scan(dest ...any) error {
 }
 
 type Row struct {
-	*sql.Row
+	pgx.Row
+	closed bool
 }
 
 func (r *Row) Scan(dest ...any) error {
-	return r.Row.Scan(dest...)
+	if r.closed {
+		return errors.New("already closed")
+	}
+	err := r.Row.Scan(dest...)
+	if err == pgx.ErrNoRows {
+		err = sql.ErrNoRows
+	}
+	return err
 }
 
 func LimitFirstStatement(limit, first int) string {

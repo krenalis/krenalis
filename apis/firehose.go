@@ -66,17 +66,12 @@ func (fh *firehose) SetCursor(cursor string) {
 	default:
 	}
 
-	result, err := fh.db.Exec("UPDATE connections SET user_cursor = $1 WHERE id = $2", cursor, fh.connection.ID)
+	result, err := fh.db.Exec(fh.ctx, "UPDATE connections SET user_cursor = $1 WHERE id = $2", cursor, fh.connection.ID)
 	if err != nil {
 		fh.setError(err)
 		return
 	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		fh.setError(err)
-		return
-	}
-	if affected == 0 {
+	if result.RowsAffected() == 0 {
 		fh.cancel()
 	}
 
@@ -128,12 +123,12 @@ func (fh *firehose) SetSettings(settings []byte) error {
 		Connection: fh.connection.ID,
 		Settings:   settings,
 	}
-	err := fh.db.Transaction(func(tx *postgres.Tx) error {
-		_, err := tx.Exec("UPDATE connections SET settings = $1 WHERE id = $2", n.Settings, n.Connection)
+	err := fh.db.Transaction(fh.ctx, func(tx *postgres.Tx) error {
+		_, err := tx.Exec(fh.ctx, "UPDATE connections SET settings = $1 WHERE id = $2", n.Settings, n.Connection)
 		if err != nil {
 			return err
 		}
-		return tx.Notify(n)
+		return tx.Notify(fh.ctx, n)
 	})
 	if err != nil {
 		log.Printf("[error] %s", err)
@@ -406,7 +401,7 @@ func (fh *firehose) writeConnectionUsers(user string, props map[string]any, time
 	if err != nil {
 		return err
 	}
-	_, err = fh.db.Exec("INSERT INTO connections_stats AS cs (connection, time_slot, users_in)\n"+
+	_, err = fh.db.Exec(fh.ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, users_in)\n"+
 		"VALUES ($1, $2, 1)\n"+
 		"ON CONFLICT (connection, time_slot) DO UPDATE SET users_in = cs.users_in + 1",
 		fh.connection.ID, statsTimeSlot(time.Now()))

@@ -37,7 +37,8 @@ type postgresStream struct {
 // Close closes the stream. Must be called if at least one Send or Receive call
 // has been made. It cannot be called concurrently with Send and Receive.
 func (s *postgresStream) Close() error {
-	return s.db.Close()
+	s.db.Close()
+	return nil
 }
 
 // Receive receives an event from the stream. Callers call the ack function to
@@ -52,20 +53,20 @@ func (s *postgresStream) Receive() (event []byte, ack func(), err error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		err = tx.QueryRow("DELETE FROM event_stream_queue WHERE timestamp =\n" +
-			"\t(SELECT timestamp FROM event_stream_queue ORDER BY timestamp FOR UPDATE SKIP LOCKED LIMIT 1)\n" +
+		err = tx.QueryRow(s.ctx, "DELETE FROM event_stream_queue WHERE timestamp =\n"+
+			"\t(SELECT timestamp FROM event_stream_queue ORDER BY timestamp FOR UPDATE SKIP LOCKED LIMIT 1)\n"+
 			"RETURNING event").Scan(&event)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				_ = tx.Commit()
+				_ = tx.Commit(s.ctx)
 				time.Sleep(1 * time.Second) // TODO(marco): implement with distributed notifications
 				continue
 			}
-			_ = tx.Rollback()
+			_ = tx.Rollback(s.ctx)
 			return nil, nil, err
 		}
 		ack = func() {
-			err = tx.Commit()
+			err = tx.Commit(s.ctx)
 			if err != nil {
 				log.Printf("[warning] cannot delete event from event queue: %s", err)
 			}
@@ -82,7 +83,7 @@ func (s *postgresStream) Receive() (event []byte, ack func(), err error) {
 func (s *postgresStream) Send(event []byte, options connector.SendOptions, ack func(err error)) error {
 	now := time.Now().UTC()
 	go func() {
-		_, err := s.db.Exec("INSERT INTO event_stream_queue (timestamp, event) VALUES ($1, $2)", now, event)
+		_, err := s.db.Exec(s.ctx, "INSERT INTO event_stream_queue (timestamp, event) VALUES ($1, $2)", now, event)
 		if ack != nil {
 			ack(err)
 		}

@@ -207,17 +207,19 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, name st
 		}
 	}
 
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
+	ctx := context.Background()
+
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		if n.Resource.Code != "" {
 			if n.Resource.ID == 0 {
 				// Insert a new resource.
-				err = tx.QueryRow("INSERT INTO resources (workspace, connector, code, access_token,"+
+				err = tx.QueryRow(ctx, "INSERT INTO resources (workspace, connector, code, access_token,"+
 					" refresh_token, expires_in) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
 					n.Workspace, connector, n.Resource.Code, n.Resource.AccessToken, n.Resource.RefreshToken, n.Resource.ExpiresIn).
 					Scan(&n.Resource.ID)
 			} else if n.Resource.AccessToken != "" {
 				// Update the current resource.
-				_, err = tx.Exec("UPDATE resources "+
+				_, err = tx.Exec(ctx, "UPDATE resources "+
 					"SET access_token = $1, refresh_token = $2, expires_in = $3 WHERE id = $4",
 					n.Resource.AccessToken, n.Resource.RefreshToken, n.Resource.ExpiresIn, n.Resource.ID)
 			}
@@ -234,7 +236,7 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, name st
 			}
 		}
 		// Insert the connection.
-		_, err = tx.Exec("INSERT INTO connections (id, workspace, name, type, role, connector, storage, stream,"+
+		_, err = tx.Exec(ctx, "INSERT INTO connections (id, workspace, name, type, role, connector, storage, stream,"+
 			" resource, website_host) VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, 0), NULLIF($8, 0), $9, $10)",
 			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Connector, n.Storage, n.Stream, n.Resource.ID, n.WebsiteHost)
 		if err != nil {
@@ -256,13 +258,13 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, name st
 		}
 		if binaryKey != nil {
 			// Insert the server key.
-			_, err = tx.Exec("INSERT INTO connections_keys (connection, value, creation_time) VALUES ($1, $2, $3)",
+			_, err = tx.Exec(ctx, "INSERT INTO connections_keys (connection, value, creation_time) VALUES ($1, $2, $3)",
 				n.ID, binaryKey, time.Now().UTC())
 			if err != nil {
 				return err
 			}
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 	if err != nil {
 		return 0, err
@@ -388,19 +390,16 @@ func (this *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) erro
 		Type:      state.WarehouseType(typ),
 		Settings:  warehouse.Settings(),
 	}
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		result, err := tx.Exec("UPDATE workspaces SET warehouse_type = $1, warehouse_settings = $2 WHERE id = $3"+
+	ctx := context.Background()
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = $1, warehouse_settings = $2 WHERE id = $3"+
 			" AND warehouse_type IS NULL",
 			n.Type, string(n.Settings), n.Workspace)
 		if err != nil {
 			return err
 		}
-		affected, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if affected == 0 {
-			err = tx.QueryVoid("SELECT FROM workspaces WHERE id = $1", n.Workspace)
+		if result.RowsAffected() == 0 {
+			err = tx.QueryVoid(ctx, "SELECT FROM workspaces WHERE id = $1", n.Workspace)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					err = errors.NotFound("workspace %d does not exist", n.Workspace)
@@ -409,7 +408,7 @@ func (this *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) erro
 			}
 			return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.ID)
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 	return err
 }
@@ -428,9 +427,10 @@ func (this *Workspace) DisconnectWarehouse() error {
 		Workspace: ws.ID,
 		Settings:  nil,
 	}
-	err := this.db.Transaction(func(tx *postgres.Tx) error {
+	ctx := context.Background()
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var typ *state.WarehouseType
-		err := tx.QueryRow("SELECT warehouse_type FROM workspaces WHERE id = $1", n.Workspace).Scan(&typ)
+		err := tx.QueryRow(ctx, "SELECT warehouse_type FROM workspaces WHERE id = $1", n.Workspace).Scan(&typ)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return errors.NotFound("workspace %d does not exist", n.Workspace)
@@ -440,11 +440,11 @@ func (this *Workspace) DisconnectWarehouse() error {
 		if typ == nil {
 			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", n.Workspace)
 		}
-		_, err = tx.Exec("UPDATE workspaces SET warehouse_type = NULL, warehouse_settings = '', schemas = '' WHERE id = $1", n.Workspace)
+		_, err = tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = NULL, warehouse_settings = '', schemas = '' WHERE id = $1", n.Workspace)
 		if err != nil {
 			return err
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 	return err
 }
@@ -521,10 +521,11 @@ func (this *Workspace) ReloadSchemas() error {
 	if err != nil {
 		return fmt.Errorf("cannot marshal data warehouse schema for workspace %d: %s", ws.ID, err)
 	}
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
+	ctx := context.Background()
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var typ *state.WarehouseType
 		var oldRawSchemas []byte
-		err := tx.QueryRow("SELECT warehouse_type, schemas FROM workspaces WHERE id = $1", n.Workspace).Scan(&typ, &oldRawSchemas)
+		err := tx.QueryRow(ctx, "SELECT warehouse_type, schemas FROM workspaces WHERE id = $1", n.Workspace).Scan(&typ, &oldRawSchemas)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				err = errors.NotFound("workspace %d does not exist", n.Workspace)
@@ -537,7 +538,7 @@ func (this *Workspace) ReloadSchemas() error {
 		if bytes.Equal(newRawSchemas, oldRawSchemas) {
 			return nil
 		}
-		_, err = tx.Exec("UPDATE workspaces SET schemas = $1 WHERE id = $2", newRawSchemas, n.Workspace)
+		_, err = tx.Exec(ctx, "UPDATE workspaces SET schemas = $1 WHERE id = $2", newRawSchemas, n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -553,7 +554,7 @@ func (this *Workspace) ReloadSchemas() error {
 				}
 			}
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 	return err
 }
@@ -599,18 +600,15 @@ func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) 
 		Type:      state.WarehouseType(typ),
 		Settings:  warehouse.Settings(),
 	}
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		result, err := tx.Exec("UPDATE workspaces SET warehouse_settings = $1 WHERE id = $2 AND warehouse_type = $3",
+	ctx := context.Background()
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_settings = $1 WHERE id = $2 AND warehouse_type = $3",
 			string(n.Settings), n.Workspace, n.Type)
 		if err != nil {
 			return err
 		}
-		affected, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if affected == 0 {
-			err = tx.QueryVoid("SELECT FROM workspaces WHERE id = $1", n.Workspace)
+		if result.RowsAffected() == 0 {
+			err = tx.QueryVoid(ctx, "SELECT FROM workspaces WHERE id = $1", n.Workspace)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					err = errors.NotFound("workspace %d does not exist", n.Workspace)
@@ -619,7 +617,7 @@ func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) 
 			}
 			return errors.Unprocessable(NoWarehouse, "workspace %d is not connected to a PostgreSQL data warehouse", ws.ID)
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 	return err
 }

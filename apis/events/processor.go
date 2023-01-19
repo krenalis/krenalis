@@ -508,13 +508,15 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 			}
 		}
 
+		ctx := context.Background()
+
 		// Get the user or create it if it does not exist.
-		err = p.db.QueryRow("SELECT id FROM users WHERE source = $1 AND device = $2", source, event.Device).Scan(&event.user)
+		err = p.db.QueryRow(ctx, "SELECT id FROM users WHERE source = $1 AND device = $2", source, event.Device).Scan(&event.user)
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}
 		if err == sql.ErrNoRows {
-			err = p.db.QueryRow("SELECT user FROM devices WHERE source = $1 AND id = $2", source, event.Device).Scan(&event.user)
+			err = p.db.QueryRow(ctx, "SELECT user FROM devices WHERE source = $1 AND id = $2", source, event.Device).Scan(&event.user)
 			if err != nil && err != sql.ErrNoRows {
 				return err
 			}
@@ -523,7 +525,7 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 				if err != nil {
 					return err
 				}
-				_, err = p.db.Exec("INSERT INTO users (source, id, device) VALUES($1, $2, $3)", source, event.user, event.Device)
+				_, err = p.db.Exec(ctx, "INSERT INTO users (source, id, device) VALUES($1, $2, $3)", source, event.user, event.Device)
 				if err != nil {
 					return err
 				}

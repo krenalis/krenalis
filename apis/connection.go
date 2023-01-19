@@ -93,22 +93,23 @@ func (this *Connection) Delete() error {
 	n := state.DeleteConnectionNotification{
 		ID: this.connection.ID,
 	}
-	err := this.db.Transaction(func(tx *postgres.Tx) error {
+	ctx := context.Background()
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		connector := this.connection.Connector()
 		if connector.OAuth != nil {
 			// Delete the resource of the deleted connection if it has no other connections.
-			_, err := tx.Exec("DELETE FROM resources AS r WHERE NOT EXISTS (\n"+
+			_, err := tx.Exec(ctx, "DELETE FROM resources AS r WHERE NOT EXISTS (\n"+
 				"\tSELECT FROM connections AS c\n"+
 				"\tWHERE r.id = c.resource AND c.id <> $1 AND c.resource IS NULL\n)", n.ID)
 			if err != nil {
 				return err
 			}
 		}
-		_, err := tx.Exec("DELETE FROM connections WHERE id = $1", n.ID)
+		_, err := tx.Exec(ctx, "DELETE FROM connections WHERE id = $1", n.ID)
 		if err != nil {
 			return err
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 	return err
 }
@@ -141,16 +142,17 @@ func (this *Connection) GenerateKey() (string, error) {
 		Value:        value,
 		CreationTime: time.Now().UTC(),
 	}
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
+	ctx := context.Background()
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var count int
-		err := tx.QueryRow("SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
+		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
 		if err != nil {
 			return err
 		}
 		if count == maxKeysPerServer {
 			return errors.Unprocessable(TooManyKeys, "server %d has already %d types", n.Connection, maxKeysPerServer)
 		}
-		_, err = tx.Exec("INSERT INTO connections_keys (connection, value, creation_time) VALUES ($1, $2, $3)",
+		_, err = tx.Exec(ctx, "INSERT INTO connections_keys (connection, value, creation_time) VALUES ($1, $2, $3)",
 			n.Connection, binaryValue, n.CreationTime)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
@@ -160,7 +162,7 @@ func (this *Connection) GenerateKey() (string, error) {
 			}
 			return err
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 	if err != nil {
 		return "", err
@@ -210,7 +212,7 @@ func (this *Connection) Imports() ([]*Import, error) {
 		return nil, errors.BadRequest("connection %d cannot have imports, it's a destination", c.ID)
 	}
 	imports := []*Import{}
-	err := this.db.QueryScan(
+	err := this.db.QueryScan(context.Background(),
 		"SELECT id, start_time, end_time, error\n"+
 			"FROM connections_imports\n"+
 			"WHERE connection = $1\n"+
@@ -257,24 +259,24 @@ func (this *Connection) RevokeKey(key string) error {
 		Connection: c.ID,
 		Value:      encodeServerKey(binaryKey),
 	}
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
+	ctx := context.Background()
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var count int
-		err := tx.QueryRow("SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
+		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
 		if err != nil {
 			return err
 		}
 		if count == 1 {
 			return errors.Unprocessable(UniqueKey, "key cannot be revoked because it's the unique key of the server")
 		}
-		result, err := tx.Exec("DELETE FROM connections_keys WHERE connection = $1 AND value = $2", n.Connection, binaryKey)
+		result, err := tx.Exec(ctx, "DELETE FROM connections_keys WHERE connection = $1 AND value = $2", n.Connection, binaryKey)
 		if err != nil {
 			return err
 		}
-		affected, err := result.RowsAffected()
-		if affected == 0 {
+		if result.RowsAffected() == 0 {
 			return errors.NotFound("key %q does not exist", n.Value)
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 
 	return err
@@ -303,19 +305,16 @@ func (this *Connection) SetStatus(enabled bool) error {
 		Connection: this.connection.ID,
 		Enabled:    enabled,
 	}
-	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		result, err := tx.Exec("UPDATE connections SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.Connection)
+	ctx := context.Background()
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE connections SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.Connection)
 		if err != nil {
 			return err
 		}
-		affected, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if affected == 0 {
+		if result.RowsAffected() == 0 {
 			return nil
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 	return err
 }
@@ -605,13 +604,15 @@ func (this *Connection) SetMappings(mappings []*MappingToCreate) error {
 		}
 	}
 
-	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err := tx.Exec("DELETE FROM connections_mappings WHERE connection = $1", n.Connection)
+	ctx := context.Background()
+
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		_, err := tx.Exec(ctx, "DELETE FROM connections_mappings WHERE connection = $1", n.Connection)
 		if err != nil {
 			return err
 		}
-		query, err := tx.Prepare("INSERT INTO connections_mappings\n" +
-			"(connection, \"in\", predefined_func, source_code, out)\n" +
+		stmt, err := tx.Prepare(ctx, "INSERT INTO connections_mappings\n"+
+			"(connection, \"in\", predefined_func, source_code, out)\n"+
 			"VALUES ($1, $2, $3, $4, $5) RETURNING id")
 		if err != nil {
 			if err != nil {
@@ -625,13 +626,17 @@ func (this *Connection) SetMappings(mappings []*MappingToCreate) error {
 		}
 		for i, t := range n.Mappings {
 			var mapID int
-			err := query.QueryRow(this.connection.ID, inSchemas[i], t.PredefinedFunc, t.SourceCode, outSchemas[i]).Scan(&mapID)
+			err := stmt.QueryRow(ctx, this.connection.ID, inSchemas[i], t.PredefinedFunc, t.SourceCode, outSchemas[i]).Scan(&mapID)
 			if err != nil {
 				return err
 			}
 			t.ID = mapID
 		}
-		return tx.Notify(n)
+		err = stmt.Close()
+		if err != nil {
+			return err
+		}
+		return tx.Notify(ctx, n)
 	})
 
 	return err
@@ -679,8 +684,10 @@ func (this *Connection) SetStorage(storage int) error {
 		Storage:    storage,
 	}
 
-	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		result, err := tx.Exec("UPDATE connections SET storage = NULLIF($1, 0) WHERE id = $2", n.Storage, n.Connection)
+	ctx := context.Background()
+
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE connections SET storage = NULLIF($1, 0) WHERE id = $2", n.Storage, n.Connection)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "connections_storage_fkey" {
@@ -689,14 +696,10 @@ func (this *Connection) SetStorage(storage int) error {
 			}
 			return err
 		}
-		affected, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if affected == 0 {
+		if result.RowsAffected() == 0 {
 			return errors.NotFound("connection %d does not exist", n.Connection)
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 
 	return err
@@ -747,8 +750,10 @@ func (this *Connection) SetStream(stream int) error {
 		Stream:     stream,
 	}
 
-	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		result, err := tx.Exec("UPDATE connections SET stream = NULLIF($1, 0) WHERE id = $2", n.Stream, n.Connection)
+	ctx := context.Background()
+
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE connections SET stream = NULLIF($1, 0) WHERE id = $2", n.Stream, n.Connection)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "connections_stream_fkey" {
@@ -757,14 +762,10 @@ func (this *Connection) SetStream(stream int) error {
 			}
 			return err
 		}
-		affected, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if affected == 0 {
+		if result.RowsAffected() == 0 {
 			return errors.NotFound("connection %d does not exist", n.Connection)
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 
 	return err
@@ -801,19 +802,17 @@ func (this *Connection) SetUsersQuery(query string) error {
 		Query:      query,
 	}
 
-	err := this.db.Transaction(func(tx *postgres.Tx) error {
-		result, err := tx.Exec("UPDATE connections\nSET users_query = $1 WHERE id = $2", query, c.ID)
+	ctx := context.Background()
+
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE connections\nSET users_query = $1 WHERE id = $2", query, c.ID)
 		if err != nil {
 			return err
 		}
-		affected, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if affected == 0 {
+		if result.RowsAffected() == 0 {
 			return errors.NotFound("connection %d does not exist", c.ID)
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 
 	return err
@@ -837,7 +836,7 @@ func (this *Connection) Stats() (*ConnectionsStats, error) {
 		UsersIn: [24]int{},
 	}
 	query := "SELECT time_slot, users_in\nFROM connections_stats\nWHERE connection = $1 AND time_slot BETWEEN $2 AND $3"
-	err := this.db.QueryScan(query, this.connection.ID, fromSlot, toSlot, func(rows *postgres.Rows) error {
+	err := this.db.QueryScan(context.Background(), query, this.connection.ID, fromSlot, toSlot, func(rows *postgres.Rows) error {
 		var err error
 		var slot, usersIn int
 		for rows.Next() {
@@ -1037,12 +1036,14 @@ func (this *Connection) reloadSchema() error {
 		Schema:     schema,
 	}
 
-	err = this.db.Transaction(func(tx *postgres.Tx) error {
-		_, err = tx.Exec("UPDATE connections SET \"schema\" = $1 WHERE id = $2", rawSchema, n.Connection)
+	ctx := context.Background()
+
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		_, err = tx.Exec(ctx, "UPDATE connections SET \"schema\" = $1 WHERE id = $2", rawSchema, n.Connection)
 		if err != nil {
 			return err
 		}
-		return tx.Notify(n)
+		return tx.Notify(ctx, n)
 	})
 
 	return err
