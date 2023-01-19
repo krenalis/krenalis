@@ -22,6 +22,13 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+// election represents a leader election.
+type election struct {
+	number   int
+	leader   uuid.UUID
+	lastSeen time.Time
+}
+
 // State represents the application state.
 type State struct {
 	id               uuid.UUID
@@ -29,6 +36,7 @@ type State struct {
 	db               *postgres.DB
 	keeping          bool // report whether Keep has been called.
 	syncing          bool // reports whether the keeper has started synchronizing the state.
+	election         election
 	accounts         map[int]*Account
 	connectors       map[int]*Connector
 	workspaces       map[int]*Workspace
@@ -40,6 +48,7 @@ type State struct {
 		AddConnection          []func(AddConnectionNotification)
 		AddImportInProgress    []func(AddImportInProgressNotification)
 		DeleteConnection       []func(DeleteConnectionNotification)
+		ElectLeader            []func(ElectLeaderNotification)
 		SetConnectionSettings  []func(SetConnectionSettingsNotification)
 		SetConnectionStatus    []func(SetConnectionStatusNotification)
 		SetConnectionStream    []func(SetConnectionStreamNotification)

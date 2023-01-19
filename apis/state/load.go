@@ -45,9 +45,16 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 	err = state.db.Transaction(func(tx *postgres.Tx) error {
 
+		// Read the latest election.
+		err := state.db.QueryRow("SELECT number, leader FROM election LIMIT 1").
+			Scan(&state.election.number, &state.election.leader)
+		if err != nil {
+			return err
+		}
+
 		// Read all connectors.
 		state.connectors = map[int]*Connector{}
-		err := state.db.QueryScan("SELECT id, name, type, has_settings, logo_url, webhooks_per, oauth_url, oauth_client_id,"+
+		err = state.db.QueryScan("SELECT id, name, type, has_settings, logo_url, webhooks_per, oauth_url, oauth_client_id,"+
 			" oauth_client_secret, oauth_token_endpoint, oauth_default_token_type, oauth_default_expires_in,"+
 			" oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
 			for rows.Next() {

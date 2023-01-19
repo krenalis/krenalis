@@ -44,6 +44,8 @@ func (state *State) AddListener(listener any) {
 		state.listeners.AddImportInProgress = append(state.listeners.AddImportInProgress, l)
 	case func(DeleteConnectionNotification):
 		state.listeners.DeleteConnection = append(state.listeners.DeleteConnection, l)
+	case func(ElectLeaderNotification):
+		state.listeners.ElectLeader = append(state.listeners.ElectLeader, l)
 	case func(SetConnectionSettingsNotification):
 		state.listeners.SetConnectionSettings = append(state.listeners.SetConnectionSettings, l)
 	case func(SetConnectionStatusNotification):
@@ -64,12 +66,12 @@ func (state *State) Keep() {
 	state.mu.Lock()
 	state.keeping = true
 	state.mu.Unlock()
-	go state.keep()
+	go state.keepState()
 }
 
-// keep keeps the state in sync with the database. It is called in its own
+// keepState keeps the state in sync with the database. It is called in its own
 // goroutine.
-func (state *State) keep() {
+func (state *State) keepState() {
 
 	for {
 		n := <-state.notifications
@@ -91,10 +93,14 @@ func (state *State) keep() {
 			state.deleteConnection(n)
 		case "DeleteImportInProgress":
 			state.deleteImportInProgress(n)
+		case "ElectLeader":
+			state.electLeader(n)
 		case "LoadState":
 			state.loadState(n)
 		case "RevokeConnectionKey":
 			state.revokeConnectionKey(n)
+		case "SeeLeader":
+			state.seeLeader(n)
 		case "SetConnectionSettings":
 			state.setConnectionSettings(n)
 		case "SetConnectionStorage":
@@ -122,8 +128,8 @@ func (state *State) keep() {
 
 }
 
-// decodeNotification decodes a state change notification.
-func decodeStateNotification(n postgres.Notification, e any) bool {
+// decodeNotification decodes a notification.
+func decodeNotification(n postgres.Notification, e any) bool {
 	err := json.NewDecoder(strings.NewReader(n.Payload)).Decode(&e)
 	if err != nil {
 		log.Printf("[error] cannot unmarshal notification %s from %d: %s", n.Name, n.PID, err)
@@ -260,7 +266,7 @@ type AddConnectionNotification struct {
 // addConnection adds a new connection.
 func (state *State) addConnection(n postgres.Notification) {
 	e := AddConnectionNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	workspace, _ := state.workspaces[e.Workspace]
@@ -342,7 +348,7 @@ type AddConnectionKeyNotification struct {
 // addConnectionKey adds a new connection key.
 func (state *State) addConnectionKey(n postgres.Notification) {
 	e := AddConnectionKeyNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	c := state.replaceConnection(e.Connection, func(c *Connection) {
@@ -369,7 +375,7 @@ type AddImportInProgressNotification struct {
 // addImportInProgress adds an import in progress.
 func (state *State) addImportInProgress(n postgres.Notification) {
 	e := AddImportInProgressNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	c := state.connections[e.Connection]
@@ -397,7 +403,7 @@ type DeleteConnectionNotification struct {
 // deleteConnection deletes a connection.
 func (state *State) deleteConnection(n postgres.Notification) {
 	e := DeleteConnectionNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	connection := state.connections[e.ID]
@@ -441,7 +447,7 @@ type DeleteImportInProgressNotification struct {
 // deleteImportInProgress deletes an import in progress.
 func (state *State) deleteImportInProgress(n postgres.Notification) {
 	e := DeleteImportInProgressNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	for _, c := range state.connections {
@@ -455,6 +461,32 @@ func (state *State) deleteImportInProgress(n postgres.Notification) {
 	}
 }
 
+// ElectLeaderNotification is the notification sent when a leader is elected.
+type ElectLeaderNotification struct {
+	Number int
+	Leader uuid.UUID
+}
+
+// electLeader elects a leader.
+func (state *State) electLeader(n postgres.Notification) {
+	e := ElectLeaderNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	// Update election.
+	election := election{
+		number:   e.Number,
+		leader:   e.Leader,
+		lastSeen: time.Now(),
+	}
+	state.mu.Lock()
+	state.election = election
+	state.mu.Unlock()
+	for _, listener := range state.listeners.ElectLeader {
+		listener(e)
+	}
+}
+
 // LoadStateNotification is the notification sent when a state is loaded.
 type LoadStateNotification struct {
 	ID uuid.UUID
@@ -463,11 +495,13 @@ type LoadStateNotification struct {
 // loadState loads the state.
 func (state *State) loadState(n postgres.Notification) {
 	e := LoadStateNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	if e.ID == state.id {
 		state.syncing = true
+		state.election.lastSeen = time.Now()
+		go state.keepElections()
 	}
 	return
 }
@@ -482,7 +516,7 @@ type RevokeConnectionKeyNotification struct {
 // revokeConnectionKey revokes a connection key.
 func (state *State) revokeConnectionKey(n postgres.Notification) {
 	e := RevokeConnectionKeyNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	state.replaceConnection(e.Connection, func(c *Connection) {
@@ -501,6 +535,26 @@ func (state *State) revokeConnectionKey(n postgres.Notification) {
 	state.mu.Unlock()
 }
 
+// SeeLeaderNotification is the notification sent when the leader is seen.
+type SeeLeaderNotification struct {
+	Election int
+}
+
+// seeLeader sees the leader.
+func (state *State) seeLeader(n postgres.Notification) {
+	e := SeeLeaderNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	if state.election.number != e.Election {
+		return
+	}
+	now := time.Now()
+	state.mu.Lock()
+	state.election.lastSeen = now
+	state.mu.Unlock()
+}
+
 // SetConnectionSettingsNotification is the notification event sent when the
 // settings of a connection is changed.
 type SetConnectionSettingsNotification struct {
@@ -511,7 +565,7 @@ type SetConnectionSettingsNotification struct {
 // setConnectionSettings sets the settings of a connection.
 func (state *State) setConnectionSettings(n postgres.Notification) {
 	e := SetConnectionSettingsNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	state.replaceConnection(e.Connection, func(c *Connection) {
@@ -532,7 +586,7 @@ type SetConnectionStatusNotification struct {
 // setConnectionStatus changes a connection status.
 func (state *State) setConnectionStatus(n postgres.Notification) {
 	e := SetConnectionStatusNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	state.replaceConnection(e.Connection, func(c *Connection) {
@@ -553,7 +607,7 @@ type SetConnectionStorageNotification struct {
 // setConnectionStorages sets the storage of a connection.
 func (state *State) setConnectionStorage(n postgres.Notification) {
 	e := SetConnectionStorageNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	c := state.connections[e.Connection]
@@ -573,7 +627,7 @@ type SetConnectionStreamNotification struct {
 // setConnectionStream sets the stream of a connection.
 func (state *State) setConnectionStream(n postgres.Notification) {
 	e := SetConnectionStreamNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	c := state.connections[e.Connection]
@@ -596,7 +650,7 @@ type SetConnectionMappingsNotification struct {
 // setConnectionMappings sets the mappings of a connection.
 func (state *State) setConnectionMappings(n postgres.Notification) {
 	e := SetConnectionMappingsNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	c := state.connections[e.Connection]
@@ -615,7 +669,7 @@ type SetConnectionUserQueryNotification struct {
 // setConnectionUserQuery sets the user query of a connection.
 func (state *State) setConnectionUserQuery(n postgres.Notification) {
 	e := SetConnectionUserQueryNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	state.replaceConnection(e.Connection, func(c *Connection) {
@@ -636,7 +690,7 @@ type SetConnectionUserSchemaNotification struct {
 // setConnectionUserSchema sets the user schema of a connection.
 func (state *State) setConnectionUserSchema(n postgres.Notification) {
 	e := SetConnectionUserSchemaNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	state.replaceConnection(e.Connection, func(c *Connection) {
@@ -654,7 +708,7 @@ type SetResourceNotification struct {
 // setResource sets a resource.
 func (state *State) setResource(n postgres.Notification) {
 	e := SetResourceNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	state.replaceResource(e.ID, func(r *Resource) {
@@ -675,7 +729,7 @@ type SetWarehouseSettingsNotification struct {
 // setWarehouseSettings sets the settings of a data warehouse.
 func (state *State) setWarehouseSettings(n postgres.Notification) {
 	e := SetWarehouseSettingsNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	disconnected := state.workspaces[e.Workspace].Warehouse
@@ -717,7 +771,7 @@ type SetWorkspaceSchemasNotification struct {
 // setWorkspaceSchemas sets the schemas of a workspace.
 func (state *State) setWorkspaceSchemas(n postgres.Notification) {
 	e := SetWorkspaceSchemasNotification{}
-	if !decodeStateNotification(n, &e) {
+	if !decodeNotification(n, &e) {
 		return
 	}
 	var unchanged []string

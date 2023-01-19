@@ -150,6 +150,15 @@ CREATE TABLE domains (
     PRIMARY KEY (source, name)
 );
 
+CREATE TABLE election (
+    number integer NOT NULL,
+    leader uuid NOT NULL,
+    date timestamp NOT NULL,
+    PRIMARY KEY (number)
+);
+
+INSERT INTO election (number, leader, date) VALUES (0, '00000000-0000-0000-0000-000000000000', '2023-01-01 00:00:00.000000');
+
 CREATE TABLE event_stream_queue (
     timestamp timestamp NOT NULL,
     event bytea NOT NULL
