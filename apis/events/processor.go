@@ -247,7 +247,7 @@ func (processor *Processor) replaceStream(old *processorStream, new *state.Conne
 		processor.Lock()
 		if processor.streams[new.ID] != old {
 			if err := stream.Close(); err != nil {
-				log.Printf("[warning] an error accurred closing the stream %d: %s", new.ID, err)
+				log.Printf("[warning] an error occurred closing the stream %d: %s", new.ID, err)
 			}
 			processor.Unlock()
 			cancel()
@@ -285,7 +285,7 @@ func (p *Processor) process(s *processorStream) {
 			case <-s.ctx.Done():
 				err := s.stream.Close()
 				if err != nil {
-					log.Printf("[warning] an error accurred closing the %s: %s", streamName, err)
+					log.Printf("[warning] an error occurred closing the %s: %s", streamName, err)
 				}
 				return
 			default:

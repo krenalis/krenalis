@@ -347,7 +347,7 @@ func (collector *Collector) replaceStream(old *eventCollectorStream, new *state.
 		collector.mu.Lock()
 		if collector.streams[new.ID] != old {
 			if err := stream.Close(); err != nil {
-				log.Printf("[warning] an error accurred closing the stream %d: %s", new.ID, err)
+				log.Printf("[warning] an error occurred closing the stream %d: %s", new.ID, err)
 			}
 			collector.mu.Unlock()
 			return
@@ -360,7 +360,7 @@ func (collector *Collector) replaceStream(old *eventCollectorStream, new *state.
 		old.sending.Wait()
 		err := old.stream.Close()
 		if err != nil {
-			log.Printf("[warning] an error accurred closing the stream %d: %s", old.id, err)
+			log.Printf("[warning] an error occurred closing the stream %d: %s", old.id, err)
 		}
 	}
 }
