@@ -373,28 +373,28 @@ func (warehouse *PostgreSQL) Users(ctx context.Context, schema types.Type, order
 			typ := properties[i].Type
 			switch typ.PhysicalType() {
 			case types.PtBoolean:
-				var v bool
+				var v *bool
 				user[i] = &v
 			case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
-				var v int
+				var v *int
 				user[i] = &v
 			case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
-				var v uint
+				var v *uint
 				user[i] = &v
 			case types.PtFloat, types.PtFloat32:
-				var v float64
+				var v *float64
 				user[i] = &v
 			case types.PtDecimal:
-				var v decimal.Decimal
+				var v *decimal.Decimal
 				user[i] = &v
 			case types.PtDateTime, types.PtDate:
-				var v time.Time
+				var v *time.Time
 				user[i] = &v
 			case types.PtTime, types.PtYear:
-				var v int
+				var v *int
 				user[i] = &v
 			case types.PtUUID, types.PtJSON, types.PtText, types.PtArray, types.PtObject, types.PtMap:
-				var v string
+				var v *string
 				user[i] = &v
 			}
 		}
