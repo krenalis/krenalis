@@ -46,7 +46,6 @@ type OpenAppFunc func(context.Context, *AppConfig) (AppConnection, error)
 
 // AppConnection is the interface implemented by app connections.
 type AppConnection interface {
-	Connection
 
 	// Groups returns the groups starting from the given cursor.
 	Groups(cursor string, properties []PropertyPath) error

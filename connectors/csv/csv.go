@@ -127,11 +127,10 @@ func (c *connection) Read(files connector.FileReader, records connector.RecordWr
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
-	var s settings
-
 	switch event {
 	case "load":
 		// Load the Form.
+		var s settings
 		if c.settings == nil {
 			s.Comma = ","
 		} else {
@@ -140,51 +139,11 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		err := json.Unmarshal(values, &s)
+		s, err := c.SettingsUI(values)
 		if err != nil {
 			return nil, nil, err
 		}
-		// Validate Path.
-		if s.Path == "" {
-			return nil, nil, ui.Errorf("path cannot be empty")
-		}
-		if utf8.RuneCountInString(s.Path) > 1000 {
-			return nil, nil, ui.Errorf("path cannot be longer that 1000 characters")
-		}
-		// Validate Comma.
-		if utf8.RuneCountInString(s.Comma) != 1 {
-			return nil, nil, ui.Errorf("comma must be a single character")
-		}
-		if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
-			return nil, nil, ui.Errorf("comma cannot be \\r, \\n, or the Unicode replacement character")
-		}
-		if c.role == connector.SourceRole {
-			// Validate Comment.
-			if c := s.Comment; c != "" {
-				if utf8.RuneCountInString(c) != 1 {
-					return nil, nil, ui.Errorf("comment, if provided, must be a single character")
-				}
-				if c == "\n" || c == "\r" || c == "\uFFFD" {
-					return nil, nil, ui.Errorf("comment cannot be \\r, \\n, or the Unicode replacement character")
-				}
-				if c == s.Comma {
-					return nil, nil, ui.Errorf("comment cannot be equal to the comma")
-				}
-			}
-			// Validate FieldsPerRecord.
-			if f := s.FieldsPerRecord; f < 0 || f > 1000 {
-				return nil, nil, ui.Errorf("fields per record, if provided, must be in range [0,1000]")
-			}
-		} else {
-			s.Comment = ""
-			s.FieldsPerRecord = 0
-			s.TrimLeadingSpace = false
-		}
-		b, err := json.Marshal(&s)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = c.firehose.SetSettings(b)
+		err = c.firehose.SetSettings(s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -209,6 +168,52 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 	}
 
 	return form, nil, nil
+}
+
+// SettingsUI obtains the settings from UI values and return them.
+func (c *connection) SettingsUI(values []byte) ([]byte, error) {
+	var s settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	// Validate Path.
+	if s.Path == "" {
+		return nil, ui.Errorf("path cannot be empty")
+	}
+	if utf8.RuneCountInString(s.Path) > 1000 {
+		return nil, ui.Errorf("path cannot be longer that 1000 characters")
+	}
+	// Validate Comma.
+	if utf8.RuneCountInString(s.Comma) != 1 {
+		return nil, ui.Errorf("comma must be a single character")
+	}
+	if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
+		return nil, ui.Errorf("comma cannot be \\r, \\n, or the Unicode replacement character")
+	}
+	if c.role == connector.SourceRole {
+		// Validate Comment.
+		if c := s.Comment; c != "" {
+			if utf8.RuneCountInString(c) != 1 {
+				return nil, ui.Errorf("comment, if provided, must be a single character")
+			}
+			if c == "\n" || c == "\r" || c == "\uFFFD" {
+				return nil, ui.Errorf("comment cannot be \\r, \\n, or the Unicode replacement character")
+			}
+			if c == s.Comma {
+				return nil, ui.Errorf("comment cannot be equal to the comma")
+			}
+		}
+		// Validate FieldsPerRecord.
+		if f := s.FieldsPerRecord; f < 0 || f > 1000 {
+			return nil, ui.Errorf("fields per record, if provided, must be in range [0,1000]")
+		}
+	} else {
+		s.Comment = ""
+		s.FieldsPerRecord = 0
+		s.TrimLeadingSpace = false
+	}
+	return json.Marshal(&s)
 }
 
 // Write writes to files the records read from records.

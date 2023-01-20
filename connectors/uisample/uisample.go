@@ -73,16 +73,20 @@ func (c *connection) Send(event []byte, options connector.SendOptions, ack func(
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
-	var s settings
-
 	switch event {
 	case "load":
+		// Load the Form.
+		var s settings
 		if c.settings != nil {
 			s = *c.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		err := c.firehose.SetSettings(values)
+		s, err := c.SettingsUI(values)
+		if err != nil {
+			return nil, nil, err
+		}
+		err = c.firehose.SetSettings(s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -151,6 +155,16 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 	}
 
 	return form, nil, nil
+}
+
+// SettingsUI obtains the settings from UI values and return them.
+func (c *connection) SettingsUI(values []byte) ([]byte, error) {
+	var s settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(&s)
 }
 
 type settings struct {

@@ -32,8 +32,6 @@ import (
 
 	"chichi/apis/types"
 	"chichi/connector"
-	"chichi/connector/ui"
-
 	"github.com/open2b/nuts/capture"
 )
 
@@ -279,11 +277,6 @@ func (c *connection) Schemas() (types.Type, types.Type, error) {
 	}
 
 	return schema, types.Type{}, nil
-}
-
-// ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
-	return nil, nil, ui.ErrEventNotExist
 }
 
 // SetUsers sets the users.

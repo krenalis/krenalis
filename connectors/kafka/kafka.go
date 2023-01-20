@@ -136,11 +136,10 @@ func (c *connection) Send(event []byte, options connector.SendOptions, ack func(
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
-	var s settings
-
 	switch event {
 	case "load":
 		// Load the UI.
+		var s settings
 		if c.settings == nil {
 			s.Kafka = &kafkaSettings{Port: 9092}
 		} else {
@@ -149,45 +148,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		values, _ = json.Marshal(s)
 	case "test", "save":
 		// Test the connection and save the settings if required.
-		err := json.Unmarshal(values, &s)
-		if err != nil {
-			return nil, nil, err
-		}
-		switch {
-		case s.Kafka != nil:
-			// Validate Host.
-			if n := len(s.Kafka.Host); n == 0 || n > 253 {
-				return nil, nil, ui.Errorf("host length in bytes must be in range [1,253]")
-			}
-			// Validate Port.
-			if s.Kafka.Port < 1 || s.Kafka.Port > 65536 {
-				return nil, nil, ui.Errorf("port must be in range [1,65536]")
-			}
-		case s.Confluent != nil:
-			// Validate Server.
-			host, port, err := net.SplitHostPort(s.Confluent.Server)
-			if err != nil {
-				return nil, nil, ui.Errorf("server is not a valid host:port")
-			}
-			if n := len(host); n == 0 || n > 253 {
-				return nil, nil, ui.Errorf("server host length in bytes must be in range [1,253]")
-			}
-			if p, _ := strconv.Atoi(port); p < 1 || p > 65536 {
-				return nil, nil, ui.Errorf("server port must be in range [1,65536]")
-			}
-			// Validate Key.
-			if utf8.RuneCountInString(s.Confluent.Key) != 16 {
-				return nil, nil, ui.Errorf("key must be long 16 characters")
-			}
-		}
-		// Validate Topic.
-		if n := len(s.Topic); n == 0 || n > 255 {
-			return nil, nil, ui.Errorf("topic length must be in range [1,255]")
-		}
-		if !validTopicName(s.Topic) {
-			return nil, nil, ui.Errorf("topic name can contain only [A-Za-z0-9_.-]")
-		}
-		err = testConnection(c.ctx, &s)
+		s, err := c.SettingsUI(values)
 		if err != nil {
 			if event == "test" {
 				return nil, ui.WarningAlert(err.Error()), nil
@@ -197,11 +158,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
 		}
-		b, err := json.Marshal(&s)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = c.firehose.SetSettings(b)
+		err = c.firehose.SetSettings(s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -245,6 +202,54 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 	}
 
 	return form, nil, nil
+}
+
+// SettingsUI obtains the settings from UI values and return them.
+func (c *connection) SettingsUI(values []byte) ([]byte, error) {
+	var s settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case s.Kafka != nil:
+		// Validate Host.
+		if n := len(s.Kafka.Host); n == 0 || n > 253 {
+			return nil, ui.Errorf("host length in bytes must be in range [1,253]")
+		}
+		// Validate Port.
+		if s.Kafka.Port < 1 || s.Kafka.Port > 65536 {
+			return nil, ui.Errorf("port must be in range [1,65536]")
+		}
+	case s.Confluent != nil:
+		// Validate Server.
+		host, port, err := net.SplitHostPort(s.Confluent.Server)
+		if err != nil {
+			return nil, ui.Errorf("server is not a valid host:port")
+		}
+		if n := len(host); n == 0 || n > 253 {
+			return nil, ui.Errorf("server host length in bytes must be in range [1,253]")
+		}
+		if p, _ := strconv.Atoi(port); p < 1 || p > 65536 {
+			return nil, ui.Errorf("server port must be in range [1,65536]")
+		}
+		// Validate Key.
+		if utf8.RuneCountInString(s.Confluent.Key) != 16 {
+			return nil, ui.Errorf("key must be long 16 characters")
+		}
+	}
+	// Validate Topic.
+	if n := len(s.Topic); n == 0 || n > 255 {
+		return nil, ui.Errorf("topic length must be in range [1,255]")
+	}
+	if !validTopicName(s.Topic) {
+		return nil, ui.Errorf("topic name can contain only [A-Za-z0-9_.-]")
+	}
+	err = testConnection(c.ctx, &s)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(&s)
 }
 
 type kafkaSettings struct {

@@ -70,7 +70,6 @@ type OpenFileFunc func(context.Context, *FileConfig) (FileConnection, error)
 
 // FileConnection is the interface implemented by file connections.
 type FileConnection interface {
-	Connection
 
 	// Read reads the records from files and writes them to records.
 	Read(files FileReader, records RecordWriter) error

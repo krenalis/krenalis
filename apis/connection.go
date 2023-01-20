@@ -429,7 +429,7 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 	connector := c.Connector()
 
 	var err error
-	var connection _connector.Connection
+	var connection any
 
 	switch connector.Type {
 	case state.AppType:
@@ -508,10 +508,14 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	connectionUI, ok := connection.(_connector.UI)
+	if !ok {
+		return nil, errors.BadRequest("connector %d does not have a UI", c.ID)
+	}
 
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
-	form, alert, err := connection.ServeUI(event, values)
+	form, alert, err := connectionUI.ServeUI(event, values)
 	if err != nil {
 		if err == ui.ErrEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector",

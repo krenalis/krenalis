@@ -16,7 +16,6 @@ import (
 
 	"chichi/apis/types"
 	"chichi/connector"
-	"chichi/connector/ui"
 )
 
 // exportOnly10Users, when true, makes Dummy export only 10 users instead of the
@@ -67,11 +66,6 @@ func (c *connection) Schemas() (types.Type, types.Type, error) {
 		{Name: "last_name", Type: types.Text()},
 	})
 	return userSchema, types.Type{}, nil
-}
-
-// ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
-	return nil, nil, ui.ErrEventNotExist
 }
 
 type user struct {

@@ -29,6 +29,4 @@ type WebsiteConfig struct {
 type OpenWebsiteFunc func(context.Context, *WebsiteConfig) (WebsiteConnection, error)
 
 // WebsiteConnection is the interface implemented by website connections.
-type WebsiteConnection interface {
-	Connection
-}
+type WebsiteConnection interface{}

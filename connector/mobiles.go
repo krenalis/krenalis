@@ -29,6 +29,4 @@ type MobileConfig struct {
 type OpenMobileFunc func(context.Context, *MobileConfig) (MobileConnection, error)
 
 // MobileConnection is the interface implemented by mobile connections.
-type MobileConnection interface {
-	Connection
-}
+type MobileConnection interface{}

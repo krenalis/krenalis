@@ -96,11 +96,14 @@ func (role Role) String() string {
 	panic("invalid role")
 }
 
-// Connection is the interface implemented by connections.
-type Connection interface {
+// UI is the interface implemented by connections that have a UI.
+type UI interface {
 
 	// ServeUI serves the connector's user interface.
 	ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error)
+
+	// SettingsUI obtains settings from UI values and return them.
+	SettingsUI(values []byte) ([]byte, error)
 }
 
 // Firehose is the interface implemented by a Firehose.

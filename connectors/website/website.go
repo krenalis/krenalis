@@ -14,7 +14,6 @@ import (
 	_ "embed"
 
 	"chichi/connector"
-	"chichi/connector/ui"
 )
 
 // Connector icon.
@@ -36,9 +35,4 @@ type connection struct{}
 // open opens a Website connection and returns it.
 func open(context.Context, *connector.WebsiteConfig) (connector.WebsiteConnection, error) {
 	return &connection{}, nil
-}
-
-// ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
-	return nil, nil, ui.ErrEventNotExist
 }

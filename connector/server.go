@@ -29,6 +29,4 @@ type ServerConfig struct {
 type OpenServerFunc func(context.Context, *ServerConfig) (ServerConnection, error)
 
 // ServerConnection is the interface implemented by server connections.
-type ServerConnection interface {
-	Connection
-}
+type ServerConnection interface{}

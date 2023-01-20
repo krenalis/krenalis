@@ -141,37 +141,21 @@ func (c *connection) Read(files connector.FileReader, records connector.RecordWr
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
-	var s settings
-
 	switch event {
 	case "load":
 		// Load the Form.
+		var s settings
 		if c.settings != nil {
 			s = *c.settings
 		}
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		err := json.Unmarshal(values, &s)
+		s, err := c.SettingsUI(values)
 		if err != nil {
 			return nil, nil, err
 		}
-		// Validate Path.
-		if s.Path == "" {
-			return nil, nil, ui.Errorf("path cannot be empty")
-		}
-		if utf8.RuneCountInString(s.Path) > 1000 {
-			return nil, nil, ui.Errorf("path cannot be longer that 1000 characters")
-		}
-		// Validate SheetName.
-		if name := s.SheetName; name == "" || utf8.RuneCountInString(name) > 31 || strings.ContainsAny(name, ":\\/?*[]") {
-			return nil, nil, ui.Errorf("sheet name cannot be longer than 31 characters and cannot contain :, \\, /, ?, *, [ and ]")
-		}
-		b, err := json.Marshal(&s)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = c.firehose.SetSettings(b)
+		err = c.firehose.SetSettings(s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -192,6 +176,27 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 	}
 
 	return form, nil, nil
+}
+
+// SettingsUI obtains the settings from UI values and return them.
+func (c *connection) SettingsUI(values []byte) ([]byte, error) {
+	var s settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	// Validate Path.
+	if s.Path == "" {
+		return nil, ui.Errorf("path cannot be empty")
+	}
+	if utf8.RuneCountInString(s.Path) > 1000 {
+		return nil, ui.Errorf("path cannot be longer that 1000 characters")
+	}
+	// Validate SheetName.
+	if name := s.SheetName; name == "" || utf8.RuneCountInString(name) > 31 || strings.ContainsAny(name, ":\\/?*[]") {
+		return nil, ui.Errorf("sheet name cannot be longer than 31 characters and cannot contain :, \\, /, ?, *, [ and ]")
+	}
+	return json.Marshal(&s)
 }
 
 // Write writes to files the records read from records.

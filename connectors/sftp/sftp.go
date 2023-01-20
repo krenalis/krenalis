@@ -94,11 +94,10 @@ func (c *connection) Reader(path string) (io.ReadCloser, time.Time, error) {
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
-	var s settings
-
 	switch event {
 	case "load":
 		// Load the Form.
+		var s settings
 		if c.settings == nil {
 			s.Port = 22
 		} else {
@@ -107,27 +106,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		values, _ = json.Marshal(s)
 	case "test", "save":
 		// Test the connection and save the settings if required.
-		err := json.Unmarshal(values, &s)
-		if err != nil {
-			return nil, nil, err
-		}
-		// Validate Host.
-		if n := len(s.Host); n == 0 || n > 253 {
-			return nil, nil, ui.Errorf("host length in bytes must be in range [1,253]")
-		}
-		// Validate Port.
-		if s.Port < 1 || s.Port > 65536 {
-			return nil, nil, ui.Errorf("port must be in range [1,65536]")
-		}
-		// Validate Username.
-		if n := utf8.RuneCountInString(s.Username); n < 1 || n > 200 {
-			return nil, nil, ui.Errorf("username length must be in range [1,200]")
-		}
-		// Validate Password.
-		if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
-			return nil, nil, ui.Errorf("password length must be in range [1,200]")
-		}
-		err = testConnection(&s)
+		s, err := c.SettingsUI(values)
 		if err != nil {
 			if event == "test" {
 				return nil, ui.WarningAlert(err.Error()), nil
@@ -137,11 +116,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
 		}
-		b, err := json.Marshal(&s)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = c.firehose.SetSettings(b)
+		err = c.firehose.SetSettings(s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -165,6 +140,36 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 	}
 
 	return form, nil, nil
+}
+
+// SettingsUI obtains the settings from UI values and return them.
+func (c *connection) SettingsUI(values []byte) ([]byte, error) {
+	var s settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	// Validate Host.
+	if n := len(s.Host); n == 0 || n > 253 {
+		return nil, ui.Errorf("host length in bytes must be in range [1,253]")
+	}
+	// Validate Port.
+	if s.Port < 1 || s.Port > 65536 {
+		return nil, ui.Errorf("port must be in range [1,65536]")
+	}
+	// Validate Username.
+	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 200 {
+		return nil, ui.Errorf("username length must be in range [1,200]")
+	}
+	// Validate Password.
+	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
+		return nil, ui.Errorf("password length must be in range [1,200]")
+	}
+	err = testConnection(&s)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(&s)
 }
 
 // Write writes the data read from p into the file with the given path.

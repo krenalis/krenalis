@@ -133,36 +133,17 @@ func (c *connection) Send(event []byte, options connector.SendOptions, ack func(
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
-	var s settings
-
 	switch event {
 	case "load":
 		// Load the UI.
+		var s settings
 		if c.settings != nil {
 			s = *c.settings
 		}
 		values, _ = json.Marshal(s)
 	case "test", "save":
 		// Test the connection and save the settings if required.
-		err := json.Unmarshal(values, &s)
-		if err != nil {
-			return nil, nil, err
-		}
-		// Validate URL.
-		if n := len(s.URL); n < 7 || n > 2048 {
-			return nil, nil, ui.Errorf("URL length in bytes must be in range [7,2048]")
-		}
-		if _, err := amqp.ParseURI(s.URL); err != nil {
-			return nil, nil, ui.Errorf("URL is not a valid RabbitMQ URI")
-		}
-		// Validate Queue.
-		if n := len(s.Queue); n == 0 || n > 255 {
-			return nil, nil, ui.Errorf("queue length in bytes must be in range [1,255]")
-		}
-		if strings.HasPrefix(s.Queue, "amq.") {
-			return nil, nil, ui.Errorf("queue names starting with 'amq.' are reserved for internal use by the broker")
-		}
-		err = c.testConnection()
+		s, err := c.SettingsUI(values)
 		if err != nil {
 			if event == "test" {
 				return nil, ui.WarningAlert(err.Error()), nil
@@ -172,11 +153,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
 		}
-		b, err := json.Marshal(&s)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = c.firehose.SetSettings(b)
+		err = c.firehose.SetSettings(s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -198,6 +175,34 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 	}
 
 	return form, nil, nil
+}
+
+// SettingsUI obtains the settings from UI values and return them.
+func (c *connection) SettingsUI(values []byte) ([]byte, error) {
+	var s settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	// Validate URL.
+	if n := len(s.URL); n < 7 || n > 2048 {
+		return nil, ui.Errorf("URL length in bytes must be in range [7,2048]")
+	}
+	if _, err := amqp.ParseURI(s.URL); err != nil {
+		return nil, ui.Errorf("URL is not a valid RabbitMQ URI")
+	}
+	// Validate Queue.
+	if n := len(s.Queue); n == 0 || n > 255 {
+		return nil, ui.Errorf("queue length in bytes must be in range [1,255]")
+	}
+	if strings.HasPrefix(s.Queue, "amq.") {
+		return nil, ui.Errorf("queue names starting with 'amq.' are reserved for internal use by the broker")
+	}
+	err = c.testConnection()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(&s)
 }
 
 type settings struct {
