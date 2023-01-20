@@ -157,7 +157,7 @@ CREATE TABLE election (
     PRIMARY KEY (number)
 );
 
-INSERT INTO election (number, leader, date) VALUES (0, '00000000-0000-0000-0000-000000000000', '2023-01-01 00:00:00.000000');
+INSERT INTO election (number, leader, date) VALUES (1, '00000000-0000-0000-0000-000000000000', '2023-01-01 00:00:00.000000');
 
 CREATE TABLE event_stream_queue (
     timestamp timestamp NOT NULL,
