@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"time"
 
@@ -22,8 +23,9 @@ import (
 var debugElection = false
 
 const (
-	leaderInterval        = 2 * time.Second
-	grantedLeaderInterval = leaderInterval + leaderInterval/2
+	leaderInterval         = 2 * time.Second
+	grantedLeaderInterval  = leaderInterval + leaderInterval/2
+	electionRandomInterval = leaderInterval / 5
 )
 
 // keepElections keeps leader elections.
@@ -35,7 +37,7 @@ func (state *State) keepElections() {
 		debugElection = true
 	}
 
-	// |--------------|·······|~~~~
+	// |--------------|·······|~~~~~~~|
 	//
 	// --- leader send a notification at the end of this interval.
 	// ··· followers grant additional time to the leader.
@@ -43,8 +45,10 @@ func (state *State) keepElections() {
 	//
 	// |--------------|          leaderInterval
 	// |--------------|·······|  grantedLeaderInterval
+	// |~~~~~~~|                 electionRandomInterval
 
 	ctx := context.Background()
+	randSource := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// leader is called when the node is the leader.
 	leader := func(election election) {
@@ -79,9 +83,23 @@ func (state *State) keepElections() {
 			time.Sleep(deadline.Sub(now))
 			return
 		}
-		election.number++
+		d := time.Duration(randSource.Intn(int(electionRandomInterval)))
 		if debugElection {
-			_, _ = fmt.Fprintf(os.Stderr, "\ttry number %d: ", election.number)
+			_, _ = fmt.Fprintf(os.Stderr, "\t%s until election\n", d)
+		}
+		time.Sleep(d)
+		election.number++
+		state.mu.Lock()
+		number := state.election.number
+		state.mu.Unlock()
+		if election.number == number {
+			if debugElection {
+				_, _ = fmt.Fprintf(os.Stderr, "\telection already ended\n")
+			}
+			return
+		}
+		if debugElection {
+			_, _ = fmt.Fprintf(os.Stderr, "\ttry election %d: ", election.number)
 		}
 		err := state.electAsLeader(election.number)
 		if err == nil {
