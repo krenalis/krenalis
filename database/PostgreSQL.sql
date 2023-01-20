@@ -202,14 +202,20 @@ INSERT INTO smart_events VALUES
     (1, 50, 'View Nissan Car', 'pageview', '[{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"cars/nissan/\",\"Domain\":\"english.example.com\"},{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"auto/nissan/\",\"Domain\":\"italian.example.com\"}]', 'null'),(1,51, 'Configure a Nissan Car', 'click', '[{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"cars/nissan/\",\"Domain\":\"english.example.com\"},{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"auto/nissan/\",\"Domain\":\"italian.example.com\"}]', '[{\"Field\":\"text\",\"Operator\":\"Equals\",\"Value\":\"Configure your car\",\"Domain\":\"english.example.com\"},{\"Field\":\"text\",\"Operator\":\"Equals\",\"Value\":\"Configura la tua auto\",\"Domain\":\"italian.example.com\"}]'),
     (1, 52, 'Click on Login Button', 'click', 'null', '[{\"Field\":\"text\",\"Operator\":\"Contains\",\"Value\":\"Log in\"}]');
 
+CREATE TYPE mapping_custom_func AS (
+	in_types text,
+	out_types text,
+	source text
+);
+
 CREATE TABLE connections_mappings (
-    id SERIAL,
-    connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
-    "in" text NOT NULL,
-    predefined_func integer NOT NULL DEFAULT 0,
-    source_code text NOT NULL,
-    out text NOT NULL,
-    PRIMARY KEY (id)
+	connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
+	position smallint,
+	in_properties varchar[],
+	out_properties varchar[],
+	predefined_func integer NULL,
+	custom_func mapping_custom_func NULL,
+	PRIMARY KEY (connection, position)
 );
 
 CREATE TYPE task_status AS ENUM ('pending', 'running', 'completed', 'failed');

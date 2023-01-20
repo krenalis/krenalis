@@ -28,29 +28,23 @@ func NewPool() *Transformations {
 
 const stackSize = 10 * 1024 * 1024
 
-// Run runs the Python code, passing to it the given user and returning the
-// resulting value.
+// Run runs the Python code, passing to it the given parameters and returning
+// the resulting values.
 //
-// In particular, the code must be the source code of a Python function named
-// 'transform' which takes a single parameter of type 'dict' with string as keys
-// (which are the property names) and property values as values, and must return
-// a dictionary where the keys are the properties.
+// In particular, code must be the source of a Python function named 'f' which
+// takes parameters and returns one or more values.
 //
 // For example, code may be:
 //
-//	  def transform(user):
-//		    return {
-//		        "FirstName": user["firstname"],
-//		    }
+//	  def f(a, b):
+//		    return a + b
 //
 // type annotations may be optionally provided (they serve just as documentation
 // and will be ignored when interpreting the code):
 //
-//	  def transform(user: dict) -> dict:
-//		    return {
-//		        "FirstName": user["firstname"],
-//		    }
-func (t *Transformations) Run(ctx context.Context, code string, user map[string]any) (map[string]any, error) {
+//	  def f(a: int, b: int) -> int:
+//		    return a + b
+func (t *Transformations) Run(ctx context.Context, code string, params []any) ([]any, error) {
 
 	// Initialize a new MicroPython VM that writes the stdout to a buffer.
 	stdout := &bytes.Buffer{}
@@ -60,15 +54,17 @@ func (t *Transformations) Run(ctx context.Context, code string, user map[string]
 	}
 	defer vm.Close()
 
-	// Wrap the 'transform' function and run it.
+	// Wrap the 'f' function and run it.
 	src := &bytes.Buffer{}
-	src.WriteString(code)
-	src.WriteString("\nimport json\n\nprint(json.dumps(transform(json.loads(" + `"""` + "\n")
-	err = json.NewEncoder(src).Encode(user)
+	src.WriteString("import json\n")
+	src.WriteString(code + "\n\n")
+	src.WriteString("out = f(*json.loads(" + `"""`)
+	err = json.NewEncoder(src).Encode(params)
 	if err != nil {
 		return nil, fmt.Errorf("cannot encode parameters: %s", err)
 	}
-	src.WriteString(`"""))))`)
+	src.WriteString(`"""))`)
+	src.WriteString("\nprint(json.dumps(out if isinstance(out, tuple) else (out,)))")
 	err = vm.RunSourceCode(src.Bytes())
 	if err != nil {
 		log.Printf("this is the source code that failed:\n\n%s", src.String())
@@ -77,7 +73,7 @@ func (t *Transformations) Run(ctx context.Context, code string, user map[string]
 	}
 
 	// Decode the stdout as JSON and return it.
-	var out map[string]any
+	var out []any
 	err = json.NewDecoder(stdout).Decode(&out)
 	if err != nil {
 		return nil, fmt.Errorf("cannot decode JSON printed by MicroPython: %s", err)

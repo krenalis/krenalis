@@ -252,8 +252,8 @@
 .ConnectionProperties .selectedPropertyMessage {
 	position: fixed;
 	top: 0;
-	left: 100px;
-	width: calc(100% - 100px);
+	right: 0;
+	width: calc(100% - 220px);
 	height: 70px;
 	z-index: 20;
 	background-color: var(--bg-primary);

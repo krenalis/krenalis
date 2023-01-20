@@ -19,7 +19,12 @@ const TransformationDialog = ({ transformation: t, onClose, onEditorChange, onRe
 				style={{ '--width': '700px' }}
 			>
 				<div className='editorWrapper'>
-					<Editor onChange={onEditorChange} defaultLanguage='python' value={t.SourceCode} theme='vs-light' />
+					<Editor
+						onChange={onEditorChange}
+						defaultLanguage='python'
+						value={t.CustomFunc.Source}
+						theme='vs-light'
+					/>
 				</div>
 				<SlButton className='removeTransformation' slot='footer' variant='danger' onClick={onRemove}>
 					Remove

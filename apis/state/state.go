@@ -524,7 +524,7 @@ func (connection *Connection) ImportInProgress() (*ImportInProgress, bool) {
 }
 
 // Mappings returns the mappings of the connection.
-// If there is no mappings, it returns nil.
+// If there are no mappings, it returns an empty slice.
 func (connection *Connection) Mappings() []*Mapping {
 	connection.mu.Lock()
 	ms := connection.mappings
@@ -677,19 +677,34 @@ func (role ConnectionRole) Value() (driver.Value, error) {
 
 // Mapping represents a mapping from a kind of properties to another.
 type Mapping struct {
-	mu             *sync.Mutex
-	ID             int
-	connection     *Connection
-	In             types.Type
-	PredefinedFunc int
-	SourceCode     string
-	Out            types.Type
+	// InProperties contains the names of the input properties of the mapping.
+	// For “one-to-one” mappings, it contains just one name.
+	InProperties []string
+
+	// OutProperties contains the names of the output properties of the mapping.
+	// For “one-to-one” mappings, it contains just one name.
+	OutProperties []string
+
+	// PredefinedFunc, when not-nil, is the ID of the predefined function
+	// associated to this mapping, otherwise is nil.
+	PredefinedFunc *PredefinedFunc
+
+	// CustomFunc, when not-nil, is the custom function associated to this
+	// mapping, otherwise is nil.
+	CustomFunc *MappingCustomFunc
 }
 
-// Connection returns the connection of the mapping.
-func (mapping *Mapping) Connection() *Connection {
-	mapping.mu.Lock()
-	c := mapping.connection
-	mapping.mu.Unlock()
-	return c
+type MappingCustomFunc struct {
+	InTypes  []types.Type
+	OutTypes []types.Type
+	Source   string
 }
+
+type PredefinedFunc int
+
+const (
+	TrimSpace PredefinedFunc = iota + 1
+	SplitName
+	UpperCase
+	LowerCase
+)

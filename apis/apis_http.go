@@ -226,7 +226,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
-				var mappings []*MappingToCreate
+				var mappings []*Mapping
 				err = json.NewDecoder(r.Body).Decode(&mappings)
 				if err != nil {
 					http.Error(w, "Bad Request - invalid mappings", http.StatusBadRequest)

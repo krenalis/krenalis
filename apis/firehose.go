@@ -170,14 +170,11 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	}
 
 	// Create a pool of transformation VMs.
+	//
+	// TODO(Gianluca): this is not necessary when there are no custom
+	// transformation function. When reviewing that part, also review this
+	// initialization.
 	pool := transformations.NewPool()
-
-	// Encode the properties to JSON.
-	propsJSON, err := json.Marshal(properties)
-	if err != nil {
-		fh.setError(importError{err})
-		return
-	}
 
 	// Apply the transformations of mappings, calculate the Golden Record
 	// properties and their relative timestamps for this user in this
@@ -185,58 +182,97 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	candidateData := map[string]any{}
 	candidateTimestamps := map[string]time.Time{}
 	for _, m := range fh.connection.Mappings() {
-		userProps := map[string]any{}
-		inNames := m.In.PropertiesNames()
-		outNames := m.Out.PropertiesNames()
-		for _, input := range inNames {
-			userProps[input] = properties[input]
-		}
 
-		// Validate the properties using the mapping input schema.
-		userProps, err = types.Decode(bytes.NewReader(propsJSON), m.In)
-		if err != nil {
-			fh.setError(importError{fmt.Errorf("input mapping schema validation failed: %s", err)})
-			return
-		}
-
-		if m.SourceCode == "" && m.PredefinedFunc == 0 {
-			// "One to one" mapping.
-			candidateData[outNames[0]] = userProps[inNames[0]]
-			candidateTimestamps[outNames[0]] = timestamps[inNames[0]]
-		} else if m.PredefinedFunc != 0 {
-			// Predefined transformation.
-			in := make([]any, len(inNames))
-			for i := range in {
-				in[i] = userProps[inNames[i]]
+		// Ensure that the input properties exist.
+		for _, p := range m.InProperties {
+			if _, ok := properties[p]; !ok {
+				fh.setError(importError{fmt.Errorf("property %q not found in connection %d", p, fh.connection.ID)})
+				return
 			}
-			out := callPredefinedFuncByID(m.PredefinedFunc, in)
-			ts := mostRecentTimestamp(timestamps, inNames)
-			for i, outName := range outNames {
+		}
+
+		if m.PredefinedFunc == nil && m.CustomFunc == nil {
+
+			// "One to one" mapping.
+			candidateData[m.OutProperties[0]] = properties[m.InProperties[0]]
+			candidateTimestamps[m.OutProperties[0]] = timestamps[m.InProperties[0]]
+
+		} else if m.PredefinedFunc != nil {
+
+			// Predefined transformation.
+			f, _ := predefinedFuncDefinitionByID(*m.PredefinedFunc)
+			in := make([]any, len(m.InProperties))
+			// TODO(Gianluca): this code that makes the validation can be
+			// simplified by changing the APIs of the 'types' package.
+			values := map[string]any{}
+			for i, p := range m.InProperties {
+				values[p] = properties[p]
+				in[i] = properties[m.InProperties[i]]
+			}
+			j, _ := json.Marshal(values)
+			_, err := types.Decode(bytes.NewReader(j), f.In)
+			if err != nil {
+				fh.setError(importError{err})
+				return
+			}
+			out := callPredefinedFunc(f, in)
+			ts := mostRecentTimestamp(timestamps, m.InProperties)
+			for i, outName := range m.OutProperties {
 				candidateData[outName] = out[i]
 				candidateTimestamps[outName] = ts
 			}
+
 		} else {
-			// Mapping with a transformation function.
-			grProps, err := pool.Run(context.Background(), m.SourceCode, userProps)
+
+			// Mapping with a custom transformation function.
+
+			// Validate input properties.
+			{
+				values := map[string]any{}
+				for _, p := range m.InProperties {
+					values[p] = properties[p]
+				}
+				schema, _ := typesToSchema(m.CustomFunc.InTypes, m.InProperties)
+				j, _ := json.Marshal(values)
+				_, err = types.Decode(bytes.NewReader(j), schema)
+				if err != nil {
+					fh.setError(importError{err})
+					return
+				}
+			}
+
+			in := make([]any, len(m.InProperties))
+			for i := range in {
+				in[i] = properties[m.InProperties[i]]
+			}
+			out, err := pool.Run(context.Background(), m.CustomFunc.Source, in)
 			if err != nil {
 				fh.setError(importError{fmt.Errorf("error while calling transformation function of mapping: %s", err)})
 				return
 			}
-			ts := mostRecentTimestamp(timestamps, inNames)
-			for name, v := range grProps {
-				candidateData[name] = v
+
+			// Validate output properties.
+			{
+				values := map[string]any{}
+				for i, p := range m.OutProperties {
+					values[p] = out[i]
+				}
+				schema, _ := typesToSchema(m.CustomFunc.OutTypes, m.OutProperties)
+				j, _ := json.Marshal(values)
+				_, err = types.Decode(bytes.NewReader(j), schema)
+				if err != nil {
+					fh.setError(importError{err})
+					return
+				}
+			}
+
+			ts := mostRecentTimestamp(timestamps, m.InProperties)
+			for i, name := range m.OutProperties {
+				candidateData[name] = out[i]
 				candidateTimestamps[name] = ts
 			}
 		}
 
-		// Validate the output properties using the mapping output schema.
-		// TODO(Gianluca): avoid deserializing and serializing from/to JSON.
-		jsonOut, _ := json.Marshal(candidateData)
-		_, err := types.Decode(bytes.NewReader(jsonOut), m.Out)
-		if err != nil {
-			fh.setError(importError{fmt.Errorf("output mapping schema validation failed: %s", err)})
-			return
-		}
 	}
 
 	email, _ := candidateData["Email"].(string)
@@ -262,7 +298,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	}
 
 	// Retrieve the mappings for the entities that match with the current user.
-	otherMappings, err := fh.listMappings(keys(sameEntities))
+	otherMappings, connectionOfMapping, err := fh.listMappings(keys(sameEntities))
 	if err != nil {
 		fh.setError(fmt.Errorf("cannot retrieve mappings for other entities: %s", err))
 		return
@@ -274,9 +310,8 @@ transfLoop:
 	for _, m := range otherMappings {
 		// For the connection of this mapping, determine the timestamps relative
 		// to the users which refers to the same identity.
-		connection := m.Connection()
-		for _, u := range sameEntities[connection.ID] {
-			entityData, err := fh.entityData(connection.ID, u)
+		for _, u := range sameEntities[connectionOfMapping[m]] {
+			entityData, err := fh.entityData(connectionOfMapping[m], u)
 			if err != nil {
 				fh.setError(err)
 				return
@@ -285,7 +320,7 @@ transfLoop:
 				if _, ok := entityData.Timestamps[name]; !ok {
 					continue
 				}
-				ts := mostRecentTimestamp(entityData.Timestamps, m.In.PropertiesNames())
+				ts := mostRecentTimestamp(entityData.Timestamps, m.InProperties)
 				if ts.After(candidateTimestamps[name]) {
 					// Don't update this Golden Record property.
 					delete(candidateData, name)
@@ -299,6 +334,14 @@ transfLoop:
 	}
 
 	// Write the data to the Golden Record.
+	//
+	// TODO(Gianluca): there may be a case when a property is written to the
+	// Golden Record, but such property is not present in the database anymore
+	// (or is no longer compatible).
+	// Consider this kind of error when reviewing the implementation of the part
+	// that writes values to the warehouse.
+	//
+	//
 	if len(candidateData) > 0 {
 		err = fh.writeToGoldenRecord(goldenRecordID, candidateData)
 		if err != nil {
@@ -593,18 +636,23 @@ func keys[K comparable, V any](m map[K]V) []K {
 	return keys
 }
 
-// listMappings lists the mappings for the given connections.
-func (fh *firehose) listMappings(connections []int) ([]*state.Mapping, error) {
+// listMappings lists the mappings for the given connections, and a map from the
+// Mapping to the corresponding connection ID.
+func (fh *firehose) listMappings(connections []int) ([]*state.Mapping, map[*state.Mapping]int, error) {
 	var mappings []*state.Mapping
+	connectionOfMapping := map[*state.Mapping]int{}
 	for _, c := range connections {
 		ws := fh.connection.Workspace()
 		conn, ok := ws.Connection(c)
 		if !ok {
-			return nil, fmt.Errorf("connection %d does not exist anymore", c)
+			return nil, nil, fmt.Errorf("connection %d does not exist anymore", c)
 		}
 		mappings = append(mappings, conn.Mappings()...)
+		for _, m := range conn.Mappings() {
+			connectionOfMapping[m] = c
+		}
 	}
-	return mappings, nil
+	return mappings, connectionOfMapping, nil
 }
 
 // mostRecentTimestamp returns the most recent timestamp referred by a property.
@@ -618,4 +666,18 @@ func mostRecentTimestamp(timestamps map[string]time.Time, props []string) time.T
 		}
 	}
 	return recent
+}
+
+func typesToSchema(ts []types.Type, names []string) (types.Type, error) {
+	if len(ts) != len(names) {
+		panic("different lengths")
+	}
+	props := make([]types.Property, len(ts))
+	for i := range props {
+		props[i] = types.Property{
+			Name: names[i],
+			Type: ts[i],
+		}
+	}
+	return types.ObjectOf(props)
 }

@@ -69,7 +69,7 @@ type Connection struct {
 	LogoURL     string
 	Enabled     bool
 	UsersQuery  string // only for databases.
-	Mappings    []*MappingInfo
+	Mappings    []*Mapping
 	Health      ConnectionHealth
 }
 
@@ -524,83 +524,136 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 }
 
 // SetMappings sets the mappings of the connection.
-func (this *Connection) SetMappings(mappings []*MappingToCreate) error {
+//
+// This method can be called only on a connection of type App, Database or File,
+// otherwise a BadRequest error is returned.
+//
+// If a mapping is not valid, it returns a BadRequest error; a mapping is
+// considered valid if InProperties and OutProperties contains valid property
+// names and are both not-empty, and one of PredefinedFunc and MappingCustomFunc
+// are provided (or none, for "one to one" mappings).
+//
+// "One-to-one" mappings must have one input and one output properties,
+// otherwise the mapping is considered invalid.
+//
+// For mappings with non-nil PredefinedFunc, the pointed value must be a valid
+// ID of a predefined mapping function and the count of the input/output
+// properties must match the count of the input/output parameters of the
+// referred predefined function.
+//
+// For mappings with non-nil MappingCustomFunc, the pointed value must be a
+// descriptor of a custom transformation function, with a valid Python source
+// code, and the count of the input/output properties must match the count of
+// the input/output types of the referred custom function.
+func (this *Connection) SetMappings(mappings []*Mapping) error {
+
+	// Validate the connection type.
+	switch this.Type {
+	case AppType, DatabaseType, FileType:
+		// Ok.
+	default:
+		return errors.BadRequest("cannot set mappings on a connection of type %q", this.Type)
+	}
 
 	// Validate the mappings.
-	for _, t := range mappings {
-		// TODO(Gianluca): validate the Python function here.
-		if !t.In.Valid() {
-			return errors.BadRequest("input schema is invalid")
+	for _, m := range mappings {
+
+		if m.PredefinedFunc != nil && m.CustomFunc != nil {
+			return errors.BadRequest("mapping cannot have both predefined function and custom function")
 		}
-		if !t.Out.Valid() {
-			return errors.BadRequest("output schema is invalid")
-		}
-		inProps := t.In.PropertiesNames()
-		if len(inProps) == 0 {
-			return errors.BadRequest("should have at least one input property")
-		}
-		outProps := t.Out.PropertiesNames()
-		if len(outProps) == 0 {
-			return errors.BadRequest("should have at least one output property")
-		}
-		// Validate "one to one" mappings.
-		if t.SourceCode == "" && t.PredefinedFunc == 0 {
-			if len(inProps) != 1 || len(outProps) != 1 {
-				return errors.BadRequest("invalid one-to-one mapping")
+
+		// Validate the property names.
+		for _, p := range m.InProperties {
+			if !types.IsValidPropertyName(p) {
+				return errors.BadRequest("input property name %q is not valid", p)
 			}
 		}
-		// Validate predefined mapping.
-		if t.PredefinedFunc > 0 {
-			if t.SourceCode != "" {
-				return errors.BadRequest("invalid mapping (cannot have both source code and predefined function)")
+		for _, p := range m.OutProperties {
+			if !types.IsValidPropertyName(p) {
+				return errors.BadRequest("output property name %q is not valid", p)
 			}
-			f, ok := predefinedFuncByID(t.PredefinedFunc)
+		}
+
+		// Validate a "one-to-one" mapping.
+		if m.PredefinedFunc == nil && m.CustomFunc == nil {
+			if len(m.InProperties) != 1 {
+				return errors.BadRequest("one-to-one mapping should have one input property, got %d", len(m.InProperties))
+			}
+			if len(m.OutProperties) != 1 {
+				return errors.BadRequest("one-to-one mapping should have one output property, got %d", len(m.OutProperties))
+			}
+			continue
+		}
+
+		// Validate a mapping with predefined function.
+		if m.PredefinedFunc != nil {
+			funcID := *m.PredefinedFunc
+			f, ok := predefinedFuncDefinitionByID(state.PredefinedFunc(funcID))
 			if !ok {
-				return errors.BadRequest("predefined function with ID %d does not exist", t.PredefinedFunc)
+				return errors.BadRequest("predefined function with ID %d does not exist", funcID)
 			}
-			if len(f.In.Properties()) != len(inProps) {
-				return errors.BadRequest("predefined function expects %d input parameter(s), got %d", len(f.In.Properties()), len(inProps))
+			fInProps, fOutProps := f.In.Properties(), f.Out.Properties()
+			if len(fInProps) != len(m.InProperties) {
+				return errors.BadRequest("predefined function expects %d input properties, got %d", len(fInProps), len(m.InProperties))
 			}
-			if len(f.Out.Properties()) != len(outProps) {
-				return errors.BadRequest("predefined function expects %d output parameter(s), got %d", len(f.Out.Properties()), len(outProps))
+			if len(fOutProps) != len(m.OutProperties) {
+				return errors.BadRequest("predefined function expects %d output properties, got %d", len(fOutProps), len(m.OutProperties))
 			}
-			// TODO(Gianluca): validate input and output parameters using some
-			// “assignability” criterion.
+			continue
 		}
-		for _, in := range inProps {
-			if !types.IsValidPropertyName(in) {
-				return errors.BadRequest("input property name %q is not valid", in)
-			}
+
+		// Validate a mapping with custom transformation function.
+		if m.CustomFunc.Source == "" {
+			return errors.BadRequest("custom function cannot have empty source code")
 		}
-		for _, out := range outProps {
-			if !types.IsValidPropertyName(out) {
-				return errors.BadRequest("output property name %q is not valid", out)
-			}
+		if len(m.CustomFunc.InTypes) == 0 {
+			return errors.BadRequest("custom function should have at least one input type")
 		}
+		if len(m.CustomFunc.OutTypes) == 0 {
+			return errors.BadRequest("custom function should have at least one output type")
+		}
+		// TODO(Gianluca): consider validating the Python source code.
+		if len(m.CustomFunc.InTypes) != len(m.InProperties) {
+			return errors.BadRequest("custom function expects %d input properties, got %d", len(m.CustomFunc.InTypes), len(m.InProperties))
+		}
+		if len(m.CustomFunc.OutTypes) != len(m.OutProperties) {
+			return errors.BadRequest("custom function expects %d output properties, got %d", len(m.CustomFunc.OutTypes), len(m.OutProperties))
+		}
+		inSchema, err := typesToSchema(m.CustomFunc.InTypes, m.InProperties)
+		if err != nil || !inSchema.Valid() {
+			return errors.BadRequest("invalid input types for custom function: %s", err)
+		}
+		outSchema, err := typesToSchema(m.CustomFunc.OutTypes, m.OutProperties)
+		if err != nil || !outSchema.Valid() {
+			return errors.BadRequest("invalid output types for custom function: %s", err)
+		}
+
 	}
 
 	n := state.SetConnectionMappingsNotification{Connection: this.connection.ID}
 
-	// Prepare the mappings for the notification and marshal the schemas into
-	// JSON.
+	// Prepare the mappings for the notification and marshal the input types
+	// into JSON.
 	n.Mappings = make([]*state.Mapping, len(mappings))
-	inSchemas := make([][]byte, len(mappings))
-	outSchemas := make([][]byte, len(mappings))
-	for i, t := range mappings {
+	customFuncInTypes := make([][]byte, len(mappings))
+	customFuncOutTypes := make([][]byte, len(mappings))
+	for i, m := range mappings {
 		n.Mappings[i] = &state.Mapping{
-			In:             t.In,
-			PredefinedFunc: t.PredefinedFunc,
-			SourceCode:     t.SourceCode,
-			Out:            t.Out,
+			InProperties:   m.InProperties,
+			OutProperties:  m.OutProperties,
+			PredefinedFunc: (*state.PredefinedFunc)(m.PredefinedFunc),
+			CustomFunc:     (*state.MappingCustomFunc)(m.CustomFunc),
 		}
-		var err error
-		inSchemas[i], err = json.Marshal(t.In)
-		if err != nil {
-			return err
-		}
-		outSchemas[i], err = json.Marshal(t.Out)
-		if err != nil {
-			return err
+		if m.CustomFunc != nil {
+			var err error
+			customFuncInTypes[i], err = json.Marshal(m.CustomFunc.InTypes)
+			if err != nil {
+				return err
+			}
+			customFuncOutTypes[i], err = json.Marshal(m.CustomFunc.OutTypes)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -611,26 +664,36 @@ func (this *Connection) SetMappings(mappings []*MappingToCreate) error {
 		if err != nil {
 			return err
 		}
+
 		stmt, err := tx.Prepare(ctx, "INSERT INTO connections_mappings\n"+
-			"(connection, \"in\", predefined_func, source_code, out)\n"+
-			"VALUES ($1, $2, $3, $4, $5) RETURNING id")
+			"(connection, position, in_properties, out_properties, predefined_func,\n"+
+			"custom_func.in_types, custom_func.out_types, custom_func.source)\n"+
+			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8)")
 		if err != nil {
+			return err
+		}
+		for i, m := range n.Mappings {
+			position := i + 1
+			var customFunc struct {
+				in_types  []byte
+				out_types []byte
+				source    string
+			}
+			if m.CustomFunc != nil {
+				customFunc.in_types = customFuncInTypes[i]
+				customFunc.out_types = customFuncOutTypes[i]
+				customFunc.source = m.CustomFunc.Source
+			}
+			_, err := stmt.Exec(ctx, this.ID, position, m.InProperties, m.OutProperties,
+				m.PredefinedFunc, customFunc.in_types, customFunc.out_types, customFunc.source)
 			if err != nil {
 				if postgres.IsForeignKeyViolation(err) {
 					if postgres.ErrConstraintName(err) == "connections_mappings_connection_fkey" {
-						err = errors.NotFound("connection %d does not exist", this.connection.ID)
+						err = errors.NotFound("connection %d does not exist", this.ID)
 					}
 				}
-			}
-			return err
-		}
-		for i, t := range n.Mappings {
-			var mapID int
-			err := stmt.QueryRow(ctx, this.connection.ID, inSchemas[i], t.PredefinedFunc, t.SourceCode, outSchemas[i]).Scan(&mapID)
-			if err != nil {
 				return err
 			}
-			t.ID = mapID
 		}
 		err = stmt.Close()
 		if err != nil {
@@ -1059,7 +1122,7 @@ func (this *Connection) userSchema() (types.Type, []_connector.PropertyPath, err
 	// connection.
 	var paths []_connector.PropertyPath
 	for _, m := range c.Mappings() {
-		for _, in := range m.In.PropertiesNames() {
+		for _, in := range m.InProperties {
 			paths = append(paths, []string{in})
 		}
 	}
@@ -1394,46 +1457,73 @@ func abbreviate(s string, n int) string {
 // exportUser returns a user to export (with the given ID) applying the given
 // mappings to the properties.
 //
-// TODO(Gianluca): note that this code has never been tested, as the export
-// procedure is still work in progress.
+// TODO(Gianluca): note that this code has never been tested and misses some
+// validation parts, as the export procedure is still work in progress.
 func exportUser(id string, properties map[string]any, mappings []*state.Mapping) (_connector.User, error) {
+
 	user := _connector.User{
 		ID:         id,
 		Properties: map[string]any{},
 	}
+
 	pool := transformations.NewPool()
+
 	for _, m := range mappings {
-		input := map[string]any{}
-		inNames := m.In.PropertiesNames()
-		for _, in := range inNames {
-			input[in] = properties[in]
-		}
-		outNames := m.Out.PropertiesNames()
-		if m.SourceCode == "" {
-			// "One to one" mapping.
-			user.Properties[outNames[0]] = input[inNames[0]]
-		} else if m.PredefinedFunc != 0 {
-			// Predefined transformation.
-			in := make([]any, len(inNames))
-			for i := range in {
-				in[i] = input[inNames[i]]
+
+		// Ensure that the input properties exist.
+		for _, p := range m.InProperties {
+			if _, ok := properties[p]; !ok {
+				return _connector.User{}, exportError{fmt.Errorf("property %q not found", p)}
 			}
-			out := callPredefinedFuncByID(m.PredefinedFunc, in)
-			for i, outName := range outNames {
+		}
+
+		if m.PredefinedFunc == nil && m.CustomFunc == nil {
+
+			// "One to one" mapping.
+			user.Properties[m.OutProperties[0]] = properties[m.InProperties[0]]
+
+		} else if m.PredefinedFunc != nil {
+
+			// Predefined transformation.
+			f, _ := predefinedFuncDefinitionByID(*m.PredefinedFunc)
+			in := make([]any, len(m.InProperties))
+			// TODO(Gianluca): this code that makes the validation can be
+			// simplified by changing the APIs of the 'types' package.
+			values := map[string]any{}
+			for i, p := range m.InProperties {
+				values[p] = properties[p]
+				in[i] = properties[m.InProperties[i]]
+			}
+			j, _ := json.Marshal(values)
+			_, err := types.Decode(bytes.NewReader(j), f.In)
+			if err != nil {
+				return _connector.User{}, exportError{err}
+			}
+			out := callPredefinedFunc(f, in)
+			for i, outName := range m.OutProperties {
 				user.Properties[outName] = out[i]
 			}
+
 		} else {
-			// Mapping with a transformation function.
-			props, err := pool.Run(context.Background(), m.SourceCode, input)
+
+			// Mapping with a custom transformation function.
+			in := make([]any, len(m.InProperties))
+			for i := range in {
+				in[i] = properties[m.InProperties[i]]
+			}
+			out, err := pool.Run(context.Background(), m.CustomFunc.Source, in)
 			if err != nil {
-				return _connector.User{}, err
+				return _connector.User{}, exportError{fmt.Errorf("error while calling transformation function of mapping: %s", err)}
 			}
-			for name, v := range props {
-				user.Properties[name] = v
+			for i, name := range m.OutProperties {
+				user.Properties[name] = out[i]
 			}
+
 		}
 	}
+
 	return user, nil
+
 }
 
 // ConnectionHealth is an indicator of the current state of a connection.

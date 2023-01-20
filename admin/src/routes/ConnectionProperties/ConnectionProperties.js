@@ -4,6 +4,7 @@ import call from '../../utils/call';
 import ConnectionProperty from '../../components/ConnectionProperty/ConnectionProperty';
 import TransformationNode from '../../components/TrasformationNode/TransformationNode';
 import TransformationDialog from '../../components/TransformationDialog/TransformationDialog';
+import { getTransformationType } from '../../utils/getTransformationType';
 import { transformationFunction } from '../../assets/docs/transformationFunction';
 import {
 	SlButton,
@@ -93,7 +94,7 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 			// replace the predefined transformations IDs with the full
 			// predefined transformations.
 			for (let t of transformations) {
-				if (t.PredefinedFunc !== 0) {
+				if (t.PredefinedFunc != null) {
 					let predefinedTransformation = predefinedTransformations.find((pt) => pt.ID === t.PredefinedFunc);
 					t.PredefinedFunc = predefinedTransformation;
 				}
@@ -104,25 +105,31 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 			let usedInputProperties = [];
 			let usedOutputProperties = [];
 			for (let t of transformations) {
-				for (let input of t.In.properties) {
+				for (let input of t.InProperties) {
 					let isDuplicate = false;
 					for (let p of usedInputProperties) {
-						if (input.name === p.name) {
+						if (input === p.name) {
 							isDuplicate = true;
 							break;
 						}
 					}
-					if (!isDuplicate) usedInputProperties.push(input);
+					if (!isDuplicate) {
+						let fullProperty = inputProperties.find((p) => p.name === input);
+						usedInputProperties.push(fullProperty);
+					}
 				}
-				for (let output of t.Out.properties) {
+				for (let output of t.OutProperties) {
 					let isDuplicate = false;
 					for (let p of usedOutputProperties) {
-						if (output.name === p.name) {
+						if (output === p.name) {
 							isDuplicate = true;
 							break;
 						}
 					}
-					if (!isDuplicate) usedOutputProperties.push(output);
+					if (!isDuplicate) {
+						let fullProperty = outputProperties.find((p) => p.name === output);
+						usedOutputProperties.push(fullProperty);
+					}
 				}
 			}
 			setUsedInputProperties(usedInputProperties);
@@ -158,15 +165,16 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 		}
 		let trs = [];
 		for (let t of transformations) {
-			let transformationProperties = type === 'input' ? t.In.properties : t.Out.properties;
+			let transformationProperties = type === 'input' ? t.InProperties : t.OutProperties;
 			let doesContainRemovedProperty =
-				transformationProperties.findIndex((p) => p != null && p.name === removedName) !== -1;
+				transformationProperties.findIndex((p) => p != null && p === removedName) !== -1;
 			if (doesContainRemovedProperty) {
+				if (getTransformationType(t) === 'one-to-one') continue; // remove the transformation.
 				let filtered = [];
-				if (t.PredefinedFunc !== 0) {
+				if (t.PredefinedFunc != null) {
 					// replace the removed property with 'undefined' to preserve order.
 					for (let p of transformationProperties) {
-						if (p != null && p.name === removedName) {
+						if (p != null && p === removedName) {
 							filtered.push(undefined);
 						} else {
 							filtered.push(p);
@@ -174,15 +182,15 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 					}
 				} else {
 					for (let p of transformationProperties) {
-						if (p.name !== removedName) {
+						if (p !== removedName) {
 							filtered.push(p);
 						}
 					}
 				}
 				if (type === 'input') {
-					t.In.properties = filtered;
+					t.InProperties = filtered;
 				} else {
-					t.Out.properties = filtered;
+					t.OutProperties = filtered;
 				}
 			}
 			trs.push(t);
@@ -205,11 +213,11 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 		}
 		let t = {
 			Position: lastTransformationPosition,
-			In: { name: 'Object', properties: [inputProperty] },
-			Out: { name: 'Object', properties: [outputProperty] },
+			InProperties: [inputProperty.name],
+			OutProperties: [outputProperty.name],
 		};
-		t.SourceCode = '';
-		t.PredefinedFunc = 0;
+		t.CustomFunc = null;
+		t.PredefinedFunc = null;
 		setTransformations([...transformations, t]);
 		setLastTransformationPosition(lastTransformationPosition + 1);
 		setSelectedProperty(null);
@@ -218,13 +226,12 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 	const onAddPredefinedTransformation = () => {
 		let t = {
 			Position: lastTransformationPosition,
-			In: { name: 'Object', properties: [] },
-			Out: { name: 'Object', properties: [] },
+			InProperties: [],
+			OutProperties: [],
 		};
-		t.SourceCode = '';
+		t.CustomFunc = null;
 		let pt = predefinedTransformations.find((t) => t.ID === selectedPredefinedTransformation);
 		setShowPredefinedTransformations(false);
-		if (pt == null) return;
 		t.PredefinedFunc = pt;
 		setTransformations([...transformations, t]);
 		setLastTransformationPosition(lastTransformationPosition + 1);
@@ -233,11 +240,11 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 	const onAddCustomTransformation = () => {
 		let t = {
 			Position: lastTransformationPosition,
-			In: { name: 'Object', properties: [] },
-			Out: { name: 'Object', properties: [] },
+			InProperties: [],
+			OutProperties: [],
 		};
-		t.SourceCode = transformationFunction;
-		t.PredefinedFunc = 0;
+		t.SourceCode = t.CustomFunc = { InTypes: [], OutTypes: [], Source: transformationFunction };
+		t.PredefinedFunc = null;
 		setTransformations([...transformations, t]);
 		setLastTransformationPosition(lastTransformationPosition + 1);
 	};
@@ -245,7 +252,7 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 	const onChangeTransformation = (position, value) => {
 		let trs = [...transformations];
 		let i = trs.findIndex((t) => t.Position === position);
-		trs[i].SourceCode = value === '' ? transformationFunction : value;
+		trs[i].CustomFunc.Source = value === '' ? transformationFunction : value;
 		setTransformations(trs);
 	};
 
@@ -261,15 +268,13 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 		for (let t of transformations) {
 			if (t.Position === transformationPosition) {
 				if (sp.type === 'input') {
-					if (t.In.properties.findIndex((property) => property.name === sp.name) === -1) {
-						let p = inputProperties.find((p) => p.name === sp.name);
-						t.In.properties.push(p);
+					if (t.InProperties.findIndex((property) => property === sp.name) === -1) {
+						t.InProperties.push(sp.name);
 					}
 				}
 				if (sp.type === 'output') {
-					if (t.Out.properties.findIndex((property) => property.name === sp.name) === -1) {
-						let p = outputProperties.find((p) => p.name === sp.name);
-						t.Out.properties.push(p);
+					if (t.OutProperties.findIndex((property) => property === sp.name) === -1) {
+						t.OutProperties.push(sp.name);
 					}
 				}
 			}
@@ -285,34 +290,30 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 		for (let t of transformations) {
 			if (t.Position === transformationPosition) {
 				if (sp.type === 'input') {
-					if (t.In.properties.findIndex((property) => property != null && property.name === sp.name) === -1) {
+					if (t.InProperties.findIndex((property) => property != null && property === sp.name) === -1) {
 						let parameterIndex = t.PredefinedFunc.In.properties.findIndex((p) => p.label === parameter);
-						let p = inputProperties.find((p) => p.name === sp.name);
-						if (t.In.properties.length === 0) {
+						if (t.InProperties.length === 0) {
 							let parametersCount = t.PredefinedFunc.In.properties.length;
-							t.In.properties = Array(parametersCount);
-							t.In.properties[parameterIndex] = p;
+							t.InProperties = Array(parametersCount);
+							t.InProperties[parameterIndex] = sp.name;
 						} else {
-							t.In.properties[parameterIndex] = p;
+							t.InProperties[parameterIndex] = sp.name;
 						}
 					}
 				}
 				if (sp.type === 'output') {
-					if (
-						t.Out.properties.findIndex((property) => property != null && property.name === sp.name) === -1
-					) {
+					if (t.OutProperties.findIndex((property) => property != null && property === sp.name) === -1) {
 						let parameterIndex = t.PredefinedFunc.Out.properties.findIndex((p) => p.label === parameter);
-						let p = outputProperties.find((p) => p.name === sp.name);
 						let parametersCount = t.PredefinedFunc.Out.properties.length;
 						if (parametersCount === 1) {
 							// it's possible to connect an arbitrary number of
 							// output properties
-							t.Out.properties.push(p);
-						} else if (t.Out.properties.length === 0) {
-							t.Out.properties = Array(parametersCount);
-							t.Out.properties[parameterIndex] = p;
+							t.OutProperties.push(sp.name);
+						} else if (t.OutProperties.length === 0) {
+							t.OutProperties = Array(parametersCount);
+							t.OutProperties[parameterIndex] = sp.name;
 						} else {
-							t.Out.properties[parameterIndex] = p;
+							t.OutProperties[parameterIndex] = sp.name;
 						}
 					}
 				}
@@ -328,12 +329,13 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 		let trs = [];
 		for (let t of transformations) {
 			if (t.Position === transformationPosition) {
-				let properties = propertyType === 'input' ? t.In.properties : t.Out.properties;
+				if (getTransformationType(t) === 'one-to-one') continue;
+				let properties = propertyType === 'input' ? t.InProperties : t.OutProperties;
 				let filtered = [];
-				if (t.PredefinedFunc !== 0) {
+				if (t.PredefinedFunc !== null) {
 					// replace the removed property with 'undefined' to preserve order.
 					for (let p of properties) {
-						if (p != null && p.name === propertyName) {
+						if (p != null && p === propertyName) {
 							filtered.push(undefined);
 						} else {
 							filtered.push(p);
@@ -341,15 +343,15 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 					}
 				} else {
 					for (let p of properties) {
-						if (p.name !== propertyName) {
+						if (p !== propertyName) {
 							filtered.push(p);
 						}
 					}
 				}
 				if (propertyType === 'input') {
-					t.In.properties = filtered;
+					t.InProperties = filtered;
 				} else {
-					t.Out.properties = filtered;
+					t.OutProperties = filtered;
 				}
 			}
 			trs.push(t);
@@ -362,10 +364,10 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 		for (let t of transformations) {
 			let toSave = { ...t };
 			delete toSave.Position;
-			if (t.PredefinedFunc !== 0) {
+			if (t.PredefinedFunc !== null) {
 				// validate the predefined function connections.
 				for (let [i, p] of t.PredefinedFunc.In.properties.entries()) {
-					if (t.In.properties[i] == null) {
+					if (t.InProperties[i] == null) {
 						onError(
 							`The input parameter "${p.label}" of the predefined transformation "${t.PredefinedFunc.Name}" is not linked to any input property`
 						);
@@ -373,7 +375,7 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 					}
 				}
 				for (let [i, p] of t.PredefinedFunc.Out.properties.entries()) {
-					if (t.Out.properties[i] == null) {
+					if (t.OutProperties[i] == null) {
 						onError(
 							`The output parameter "${p.label}" of the predefined transformation "${t.PredefinedFunc.Name}" is not linked to any output property`
 						);
@@ -382,6 +384,7 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 				}
 				toSave.PredefinedFunc = t.PredefinedFunc.ID;
 			}
+			// TODO: VALIDATE THE CUSTOMFUNC TOO...
 			trs.push(toSave);
 		}
 		let [, err] = await call(`/api/connections/${c.ID}/mappings`, 'PUT', trs);
@@ -579,23 +582,23 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 				{isSelected &&
 					transformations.map((t) => {
 						let inputArrows = [];
-						for (let [i, p] of t.In.properties.entries()) {
+						for (let [i, p] of t.InProperties.entries()) {
 							if (p != null) {
 								inputArrows.push(
 									<div
-										className={`arrow${isSelectedProperty(p.name, 'input') ? ' selected' : ''}`}
+										className={`arrow${isSelectedProperty(p, 'input') ? ' selected' : ''}`}
 										onClick={
-											isSelectedProperty(p.name, 'input')
+											isSelectedProperty(p, 'input')
 												? (e) => {
-														onRemoveConnection(t.Position, p.name, 'input', e);
+														onRemoveConnection(t.Position, p, 'input', e);
 												  }
 												: null
 										}
 									>
 										<Xarrow
-											start={p.name}
+											start={p}
 											end={
-												t.PredefinedFunc !== 0
+												t.PredefinedFunc !== null
 													? `transformation-${
 															t.Position
 													  }-input-${t.PredefinedFunc.In.properties[i].label.replace(
@@ -609,36 +612,37 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 											showHead={false}
 											color='#cacad6'
 											strokeWidth={1}
-											labels={isSelectedProperty(p.name, 'input') && '-'}
+											labels={isSelectedProperty(p, 'input') && '-'}
 										/>
 									</div>
 								);
 							}
 						}
 						let outputArrows = [];
-						for (let [i, p] of t.Out.properties.entries()) {
+						for (let [i, p] of t.OutProperties.entries()) {
 							if (p != null) {
 								outputArrows.push(
 									<div
-										className={`arrow${isSelectedProperty(p.name, 'output') ? ' selected' : ''}`}
+										className={`arrow${isSelectedProperty(p, 'output') ? ' selected' : ''}`}
 										onClick={
-											isSelectedProperty(p.name, 'output')
+											isSelectedProperty(p, 'output')
 												? (e) => {
-														onRemoveConnection(t.Position, p.name, 'output', e);
+														onRemoveConnection(t.Position, p, 'output', e);
 												  }
 												: null
 										}
 									>
 										<Xarrow
 											start={
-												t.PredefinedFunc !== 0 && t.PredefinedFunc.Out.properties.length === 1
+												t.PredefinedFunc !== null &&
+												t.PredefinedFunc.Out.properties.length === 1
 													? `transformation-${
 															t.Position
 													  }-output-${t.PredefinedFunc.Out.properties[0].label.replace(
 															/\s/g,
 															''
 													  )}`
-													: t.PredefinedFunc !== 0
+													: t.PredefinedFunc !== null
 													? `transformation-${
 															t.Position
 													  }-output-${t.PredefinedFunc.Out.properties[i].label.replace(
@@ -647,13 +651,13 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 													  )}`
 													: `transformation-${t.Position}`
 											}
-											end={p.name}
+											end={p}
 											startAnchor='right'
 											endAnchor='left'
 											showHead={false}
 											color='#cacad6'
 											strokeWidth={1}
-											labels={isSelectedProperty(p.name, 'output') && '-'}
+											labels={isSelectedProperty(p, 'output') && '-'}
 										/>
 									</div>
 								);

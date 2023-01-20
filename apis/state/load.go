@@ -249,41 +249,36 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		}
 
 		// Read the mappings.
-		var mappings []*Mapping
-		inSchemas := [][]byte{}
-		outSchemas := [][]byte{}
-		connectionIDs := []int{}
-		err = state.db.QueryScan(ctx, "SELECT id, connection, \"in\", predefined_func, source_code, out FROM connections_mappings", func(rows *postgres.Rows) error {
+		err = state.db.QueryScan(ctx, "SELECT connection, in_properties, out_properties, predefined_func,\n"+
+			"(custom_func).in_types, (custom_func).out_types, (custom_func).source\n"+
+			"FROM connections_mappings", func(rows *postgres.Rows) error {
 			for rows.Next() {
-				m := &Mapping{
-					mu: new(sync.Mutex),
-				}
-				var inSchema, outSchema []byte
+				m := &Mapping{}
 				var connectionID int
-				err := rows.Scan(&m.ID, &connectionID, &inSchema, &m.PredefinedFunc, &m.SourceCode, &outSchema)
+				var inTypes, outTypes []byte // custom func only.
+				var src string               // custom func only.
+				err := rows.Scan(&connectionID, &m.InProperties, &m.OutProperties, &m.PredefinedFunc,
+					&inTypes, &outTypes, &src)
 				if err != nil {
 					return err
 				}
-				mappings = append(mappings, m)
-				inSchemas = append(inSchemas, inSchema)
-				outSchemas = append(outSchemas, outSchema)
-				connectionIDs = append(connectionIDs, connectionID)
+				if len(inTypes) > 0 { // custom func.
+					m.CustomFunc = &MappingCustomFunc{}
+					err := json.Unmarshal(inTypes, &m.CustomFunc.InTypes)
+					if err != nil {
+						return err
+					}
+					err = json.Unmarshal(outTypes, &m.CustomFunc.OutTypes)
+					if err != nil {
+						return err
+					}
+					m.CustomFunc.Source = src
+				}
+				connection := state.connections[connectionID]
+				connection.mappings = append(connection.mappings, m)
 			}
 			return nil
 		})
-		for i, m := range mappings {
-			var err error
-			m.In, err = types.Parse(string(inSchemas[i]), nil)
-			if err != nil {
-				return err
-			}
-			m.Out, err = types.Parse(string(outSchemas[i]), nil)
-			if err != nil {
-				return err
-			}
-			connection := state.connections[connectionIDs[i]]
-			connection.mappings = append(connection.mappings, m)
-		}
 		if err != nil {
 			return err
 		}

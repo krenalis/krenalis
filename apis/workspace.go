@@ -296,14 +296,15 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 		LogoURL:     conn.LogoURL,
 		Enabled:     c.Enabled,
 		UsersQuery:  c.UsersQuery,
+		Mappings:    []*Mapping{},
 		Health:      ConnectionHealth(c.Health),
 	}
-	for _, t := range c.Mappings() {
-		connection.Mappings = append(connection.Mappings, &MappingInfo{
-			ID:         t.ID,
-			In:         t.In,
-			SourceCode: t.SourceCode,
-			Out:        t.Out,
+	for _, m := range c.Mappings() {
+		connection.Mappings = append(connection.Mappings, &Mapping{
+			InProperties:   m.InProperties,
+			OutProperties:  m.OutProperties,
+			PredefinedFunc: (*PredefinedFunc)(m.PredefinedFunc),
+			CustomFunc:     (*MappingCustomFunc)(m.CustomFunc),
 		})
 	}
 	if s, ok := c.Storage(); ok {
@@ -337,12 +338,12 @@ func (this *Workspace) Connections() []*Connection {
 			UsersQuery:  c.UsersQuery,
 			Health:      ConnectionHealth(c.Health),
 		}
-		for _, t := range c.Mappings() {
-			connection.Mappings = append(connection.Mappings, &MappingInfo{
-				ID:         t.ID,
-				In:         t.In,
-				SourceCode: t.SourceCode,
-				Out:        t.Out,
+		for _, m := range c.Mappings() {
+			connection.Mappings = append(connection.Mappings, &Mapping{
+				InProperties:   m.InProperties,
+				OutProperties:  m.OutProperties,
+				PredefinedFunc: (*PredefinedFunc)(m.PredefinedFunc),
+				CustomFunc:     (*MappingCustomFunc)(m.CustomFunc),
 			})
 		}
 		if s, ok := c.Storage(); ok {
