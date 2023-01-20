@@ -510,7 +510,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 }
 
-// SettingsUI obtains the settings from UI values and return them.
+// SettingsUI obtains the settings from UI values and returns them.
 func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 	return nil, errors.New("to be implemented")
 }

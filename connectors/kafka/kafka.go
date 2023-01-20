@@ -204,7 +204,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 	return form, nil, nil
 }
 
-// SettingsUI obtains the settings from UI values and return them.
+// SettingsUI obtains the settings from UI values and returns them.
 func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
