@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"os"
 	"time"
@@ -86,6 +87,9 @@ func (state *State) keepElections() {
 		debugf("\t%s until election\n", d)
 		time.Sleep(d)
 		election.number++
+		if int32(election.number) < 0 {
+			election.number = 1
+		}
 		state.mu.Lock()
 		number := state.election.number
 		state.mu.Unlock()
@@ -140,11 +144,15 @@ var errEndedElection = errors.New("ended election")
 func (state *State) electAsLeader(election int) error {
 	n := ElectLeaderNotification{Leader: state.id, Number: election}
 	ctx := context.Background()
+	var prevElection = election - 1
+	if prevElection == 0 {
+		prevElection = math.MaxInt32
+	}
 	err := state.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var t bool
 		err := tx.QueryRow(ctx, "UPDATE election\n"+
 			"SET number = $1, leader = $2, date = NOW()::timestamp\n"+
-			"WHERE number = $3 RETURNING true", n.Number, n.Leader, n.Number-1).Scan(&t)
+			"WHERE number = $3 RETURNING true", n.Number, n.Leader, prevElection).Scan(&t)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				err = errEndedElection
