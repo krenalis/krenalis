@@ -100,7 +100,7 @@ func (state *State) keepElections() {
 		if err == nil {
 			debugf("elected!\n")
 			time.Sleep(leaderInterval)
-			// Wait che elect leader notification.
+			// Await notification of the elected leader.
 			for {
 				state.mu.Lock()
 				ack := election.number <= state.election.number
