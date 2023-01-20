@@ -64,6 +64,7 @@ func (c *connection) Schemas() (types.Type, types.Type, error) {
 		{Name: "first_name", Type: types.Text()},
 		{Name: "full_name", Type: types.Text()},
 		{Name: "last_name", Type: types.Text()},
+		{Name: "favourite_drink", Type: types.Text().WithEnum([]string{"tea", "beer", "wine", "water"})},
 	})
 	return userSchema, types.Type{}, nil
 }
