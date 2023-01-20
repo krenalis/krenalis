@@ -16,11 +16,11 @@ import (
 )
 
 // columnType returns the types.Type corresponding to the PostgreSQL type typ
-// stored in the information_schema.columns column. udt_name is the name of the
+// stored in the information_schema.columns column. udtName is the name of the
 // column data type, which is relevant in case of user-defined types. enums is a
 // mapping of available enum types. It returns an invalid type if typ is not
 // supported. It returns an error if an argument is not valid.
-func columnType(typ, udt_name string, isNullable, charLength, precision, radix, scale *string, enums map[string]types.Type) (types.Type, error) {
+func columnType(typ, udtName string, isNullable, charLength, precision, radix, scale *string, enums map[string]types.Type) (types.Type, error) {
 	var t types.Type
 	switch typ {
 	case "smallint":
@@ -85,7 +85,7 @@ func columnType(typ, udt_name string, isNullable, charLength, precision, radix, 
 		t = types.JSON()
 	case "USER-DEFINED":
 		// Check if the user-defined type is an enum.
-		if typ, ok := enums[udt_name]; ok {
+		if typ, ok := enums[udtName]; ok {
 			t = typ
 		}
 	}
