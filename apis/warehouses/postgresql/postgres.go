@@ -217,8 +217,43 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 
 	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
 
+		// Read the available enums.
+		query := "SELECT pg_type.typname, pg_enum.enumlabel FROM pg_type JOIN pg_enum ON pg_enum.enumtypid = pg_type.oid"
+		rows, err := tx.Query(ctx, query)
+		if err != nil {
+			return err
+		}
+		rawEnums := map[string][]string{}
+		for rows.Next() {
+			var typName, enumLabel string
+			if err = rows.Scan(&typName, &enumLabel); err != nil {
+				rows.Close()
+				return err
+			}
+			if typName == "" {
+				rows.Close()
+				return errors.New("invalid empty enum name")
+			}
+			if enumLabel == "" {
+				rows.Close()
+				return fmt.Errorf("empty enum label for type %q", typName)
+			}
+			if !utf8.ValidString(enumLabel) {
+				rows.Close()
+				return fmt.Errorf("not-valid UTF-8 encoded enum label for type %q", typName)
+			}
+			rawEnums[typName] = append(rawEnums[typName], enumLabel)
+		}
+		enums := map[string]types.Type{}
+		for name, values := range rawEnums {
+			enums[name] = types.Text().WithEnum(values)
+		}
+		if err := rows.Err(); err != nil {
+			return err
+		}
+
 		// Read columns.
-		query := "SELECT c.table_name, c.column_name, c.is_nullable, c.data_type, c.character_maximum_length," +
+		query = "SELECT c.table_name, c.column_name, c.is_nullable, c.data_type, c.udt_name, c.character_maximum_length," +
 			" c.numeric_precision, c.numeric_precision_radix, c.numeric_scale, c.is_updatable," +
 			" col_description(c.table_name::regclass::oid, c.ordinal_position)\n" +
 			"FROM information_schema.columns c\n" +
@@ -228,13 +263,13 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			" t.table_name LIKE 'groups\\__%' OR t.table_name LIKE 'events\\__%' )\n" +
 			"ORDER BY c.table_name, c.ordinal_position"
 
-		rows, err := tx.Query(ctx, query)
+		rows, err = tx.Query(ctx, query)
 		if err != nil {
 			return err
 		}
 		for rows.Next() {
-			var tableName, columnName, isNullable, typ, charLength, precision, radix, scale, isUpdatable, description *string
-			if err = rows.Scan(&tableName, &columnName, &isNullable, &typ, &charLength, &precision, &radix, &scale, &isUpdatable, &description); err != nil {
+			var tableName, columnName, isNullable, typ, udtName, charLength, precision, radix, scale, isUpdatable, description *string
+			if err = rows.Scan(&tableName, &columnName, &isNullable, &typ, &udtName, &charLength, &precision, &radix, &scale, &isUpdatable, &description); err != nil {
 				rows.Close()
 				return err
 			}
@@ -251,12 +286,16 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 				Name:        *columnName,
 				IsUpdatable: *isUpdatable == "YES",
 			}
-			column.Type, err = columnType(*typ, isNullable, charLength, precision, radix, scale)
+			column.Type, err = columnType(*typ, *udtName, isNullable, charLength, precision, radix, scale, enums)
 			if err != nil {
 				return fmt.Errorf("data warehouse has returned an invalid type: %s", err)
 			}
 			if !column.Type.Valid() {
-				return fmt.Errorf("type %q of column %s is not supported", *typ, column.Name)
+				name := *typ
+				if name == "USER-DEFINED" {
+					name = *udtName
+				}
+				return fmt.Errorf("type %q of column %s is not supported", name, column.Name)
 			}
 			if description != nil {
 				column.Description = *description

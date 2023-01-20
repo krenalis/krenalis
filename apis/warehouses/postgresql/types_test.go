@@ -45,7 +45,7 @@ func TestTypes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := columnType(test.s, test.isNullable, test.charLength, test.precision, test.radix, test.scale)
+		got, err := columnType(test.s, "", test.isNullable, test.charLength, test.precision, test.radix, test.scale, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -72,7 +72,7 @@ func TestUnsupportedTypes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := columnType(test, pointer("NO"), nil, nil, nil, nil)
+		got, err := columnType(test, "", pointer("NO"), nil, nil, nil, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}
