@@ -68,7 +68,11 @@ const Schema = () => {
 					let nr = getNestedRows(pr);
 					nestedRows.push(nr);
 				} else {
-					nestedRows.push([pr.name, pr.type.name]);
+					let name = pr.type.name;
+					if ('enum' in pr.type) {
+						name += " (enum with values: " + pr.type.enum.join(', ') + ")"
+					}
+					nestedRows.push([pr.name, name]);
 				}
 			}
 			return nestedRows;
@@ -79,7 +83,11 @@ const Schema = () => {
 				let nestedRows = getNestedRows(p);
 				rows.push(nestedRows);
 			} else {
-				let row = [p.name, p.type.name];
+				let name = p.type.name;
+				if ('enum' in p.type) {
+					name += " (enum with values: " + p.type.enum.join(', ') + ")"
+				}
+				let row = [p.name, name];
 				rows.push(row);
 			}
 		}
