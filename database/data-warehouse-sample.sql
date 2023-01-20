@@ -12,5 +12,6 @@ CREATE TABLE users (
     "Gender"                gender,
     "FoodPreferences_Drink" drink,
     "FoodPreferences_Fruit" fruit,
+    "PhoneNumbers"          varchar(300)[],
     PRIMARY KEY (id)
 );

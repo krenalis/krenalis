@@ -69,6 +69,9 @@ const Schema = () => {
 					nestedRows.push(nr);
 				} else {
 					let name = pr.type.name;
+					if (name == 'Array' && 'itemType' in pr.type) {
+						name = 'Array (of ' + pr.type.itemType.name +' elements)'
+					}
 					if ('enum' in pr.type) {
 						name += " (enum with values: " + pr.type.enum.join(', ') + ")"
 					}
@@ -84,6 +87,9 @@ const Schema = () => {
 				rows.push(nestedRows);
 			} else {
 				let name = p.type.name;
+				if (name == 'Array' && 'itemType' in p.type) {
+					name = 'Array (of ' + p.type.itemType.name +' elements)'
+				}
 				if ('enum' in p.type) {
 					name += " (enum with values: " + p.type.enum.join(', ') + ")"
 				}

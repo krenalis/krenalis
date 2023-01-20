@@ -292,8 +292,8 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			}
 			if !column.Type.Valid() {
 				name := *typ
-				if name == "USER-DEFINED" {
-					name = *udtName
+				if name != *udtName {
+					name += " (" + *udtName + ")"
 				}
 				return fmt.Errorf("type %q of column %s is not supported", name, column.Name)
 			}
