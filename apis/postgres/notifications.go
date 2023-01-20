@@ -27,7 +27,17 @@ type Notification struct {
 }
 
 // Notify sends a notification.
+func (db *DB) Notify(ctx context.Context, payload any) error {
+	return notify(ctx, db, payload)
+}
+
+// Notify sends a notification.
 func (tx *Tx) Notify(ctx context.Context, payload any) error {
+	return notify(ctx, tx, payload)
+}
+
+// notify sends a notification on the connection conn.
+func notify(ctx context.Context, conn Connection, payload any) error {
 	t := reflect.TypeOf(payload)
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
@@ -45,6 +55,12 @@ func (tx *Tx) Notify(ctx context.Context, payload any) error {
 	s = s[:len(s)-1] // remove new line added by Encode.
 	s = escape(s)
 	if len(s) > 8000-2 {
+		if db, ok := conn.(*DB); ok {
+			// Send within a transaction.
+			return db.Transaction(ctx, func(tx *Tx) error {
+				return notify(ctx, tx, payload)
+			})
+		}
 		var z strings.Builder
 		bw := base64.NewEncoder(base64.RawStdEncoding, &z)
 		zw := gzip.NewWriter(bw)
@@ -63,14 +79,14 @@ func (tx *Tx) Notify(ctx context.Context, payload any) error {
 		s = z.String()
 		for len(s) > 8000-2 {
 			const k = 8000 - 3
-			_, err = tx.Exec(ctx, "NOTIFY chichi, '+"+s[:k]+"'")
+			_, err = conn.Exec(ctx, "NOTIFY chichi, '+"+s[:k]+"'")
 			if err != nil {
 				return err
 			}
 			s = s[k:]
 		}
 	}
-	_, err = tx.Exec(ctx, "NOTIFY chichi, '"+s+"'")
+	_, err = conn.Exec(ctx, "NOTIFY chichi, '"+s+"'")
 	return err
 }
 
