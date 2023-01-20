@@ -50,11 +50,16 @@ func (state *State) keepElections() {
 	ctx := context.Background()
 	randSource := rand.New(rand.NewSource(time.Now().UnixNano()))
 
+	debugf := func(format string, a ...any) {
+		if !debugElection {
+			return
+		}
+		_, _ = fmt.Fprintf(os.Stderr, format, a...)
+	}
+
 	// leader is called when the node is the leader.
 	leader := func(election election) {
-		if debugElection {
-			_, _ = fmt.Fprintf(os.Stderr, "-- %d Leader\n", election.number)
-		}
+		debugf("-- %d Leader\n", election.number)
 		for {
 			// Send the see leader notification.
 			err := state.db.Transaction(ctx, func(tx *postgres.Tx) error {
@@ -63,9 +68,7 @@ func (state *State) keepElections() {
 			if err == nil {
 				break
 			}
-			if debugElection {
-				_, _ = fmt.Fprintf(os.Stderr, "\t%s\n", err)
-			}
+			debugf("\t%s\n", err)
 			log.Printf("[warning] cannot send a see leader notification: %s", err)
 			time.Sleep(100 * time.Millisecond)
 		}
@@ -74,9 +77,7 @@ func (state *State) keepElections() {
 
 	// follower is called when the node is a follower.
 	follower := func(election election) {
-		if debugElection {
-			_, _ = fmt.Fprintf(os.Stderr, "-- %d Follower\n", election.number)
-		}
+		debugf("-- %d Follower\n", election.number)
 		now := time.Now()
 		deadline := election.lastSeen.Add(grantedLeaderInterval)
 		if deadline.After(now) {
@@ -84,28 +85,20 @@ func (state *State) keepElections() {
 			return
 		}
 		d := time.Duration(randSource.Intn(int(electionRandomInterval)))
-		if debugElection {
-			_, _ = fmt.Fprintf(os.Stderr, "\t%s until election\n", d)
-		}
+		debugf("\t%s until election\n", d)
 		time.Sleep(d)
 		election.number++
 		state.mu.Lock()
 		number := state.election.number
 		state.mu.Unlock()
 		if election.number == number {
-			if debugElection {
-				_, _ = fmt.Fprintf(os.Stderr, "\telection already ended\n")
-			}
+			debugf("\telection already ended\n")
 			return
 		}
-		if debugElection {
-			_, _ = fmt.Fprintf(os.Stderr, "\ttry election %d: ", election.number)
-		}
+		debugf("\ttry election %d: ", election.number)
 		err := state.electAsLeader(election.number)
 		if err == nil {
-			if debugElection {
-				_, _ = fmt.Fprintf(os.Stderr, "elected!\n")
-			}
+			debugf("elected!\n")
 			time.Sleep(leaderInterval)
 			// Wait che elect leader notification.
 			for {
@@ -119,14 +112,10 @@ func (state *State) keepElections() {
 			}
 		}
 		if err == errEndedElection {
-			if debugElection {
-				_, _ = fmt.Fprintf(os.Stderr, "number was ended\n")
-			}
+			debugf("number was ended\n")
 			return
 		}
-		if debugElection {
-			_, _ = fmt.Fprintf(os.Stderr, "%s\n", err)
-		}
+		debugf("\t%s\n", err)
 		log.Printf("[warning] cannot send leader number notification: %s", err)
 		return
 	}
