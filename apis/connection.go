@@ -441,7 +441,7 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 			var err error
 			accessToken, err = freshAccessToken(this.db, r)
 			if err != nil {
-				return nil, importError{fmt.Errorf("cannot retrive the OAuth access token: %s", err)}
+				return nil, fmt.Errorf("cannot retrive the OAuth access token: %s", err)
 			}
 		}
 
@@ -981,7 +981,7 @@ func (this *Connection) reloadSchema() error {
 			var err error
 			accessToken, err = freshAccessToken(this.db, r)
 			if err != nil {
-				return importError{fmt.Errorf("cannot retrive the OAuth access token: %s", err)}
+				return err
 			}
 		}
 
