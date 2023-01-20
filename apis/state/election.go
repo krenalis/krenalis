@@ -62,9 +62,7 @@ func (state *State) keepElections() {
 		debugf("-- %d Leader\n", election.number)
 		for {
 			// Send the see leader notification.
-			err := state.db.Transaction(ctx, func(tx *postgres.Tx) error {
-				return tx.Notify(ctx, SeeLeaderNotification{Election: election.number})
-			})
+			err := state.db.Notify(ctx, SeeLeaderNotification{Election: election.number})
 			if err == nil {
 				break
 			}
