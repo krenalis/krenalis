@@ -67,7 +67,7 @@ type Event struct {
 	Title          string // "Product X"
 	URL            string // "https://example.com/product/x/y?x=10"
 	UserAgent      string // "https://example.com/product/x/y?x=10"
-	browser        string
+	browserName    string
 	browserOther   string
 	browserVersion string
 	date           string
@@ -675,24 +675,24 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 			browserName, browserVersion := ua.Browser()
 			switch browserName {
 			default:
-				event.browser = "Other"
+				event.browserName = "Other"
 				if len(browserName) <= 25 {
 					event.browserOther = browserName
 				}
 			case "Chrome":
-				event.browser = "Chrome"
+				event.browserName = "Chrome"
 			case "Safari":
-				event.browser = "Safari"
+				event.browserName = "Safari"
 			case "Edge":
-				event.browser = "Edge"
+				event.browserName = "Edge"
 			case "Firefox":
-				event.browser = "Firefox"
+				event.browserName = "Firefox"
 			case "Samsung Internet":
-				event.browser = "Samsung Internet"
+				event.browserName = "Samsung Internet"
 			case "Opera":
-				event.browser = "Opera"
+				event.browserName = "Opera"
 			}
-			if event.browser != "Other" || event.browserOther != "" {
+			if event.browserName != "Other" || event.browserOther != "" {
 				if strings.Contains(browserVersion, ".") {
 					parts := strings.SplitN(browserVersion, ".", 3)
 					if len(parts) == 3 {
@@ -830,7 +830,7 @@ func (q *queue) add(events []Event) {
 	}
 }
 
-var batchEventsColumns = []string{"source", "date", "timestamp", "language", "os_name", "os_version", "browser",
+var batchEventsColumns = []string{"source", "date", "timestamp", "language", "os_name", "os_version", "browser_name",
 	"browser_other", "browser_version", "device_type", "referrer", "target", "event", "text", "domain", "path",
 	"query_string", "title", "user", "country", "city"}
 
@@ -854,7 +854,7 @@ RETRY:
 		}
 		for _, event := range events {
 			err := batch.Append(event.source, event.date, event.Timestamp, event.Language, event.OSName,
-				event.OSVersion, event.browser, event.browserOther, event.browserVersion, event.DeviceType,
+				event.OSVersion, event.browserName, event.browserOther, event.browserVersion, event.DeviceType,
 				event.Referrer, event.Target, event.Event, event.Text, event.domain, event.path, event.queryString,
 				event.Title, event.user, event.Country, event.City)
 			if err != nil {
