@@ -156,17 +156,18 @@ func (warehouse *PostgreSQL) PrepareBatch(ctx context.Context, table string, col
 	}
 	batch.buf.WriteString("INSERT INTO ")
 	batch.buf.WriteString(table)
-	batch.buf.WriteString(" (")
+	batch.buf.WriteString(` ("`)
 	for i, column := range columns {
 		if i > 0 {
-			batch.buf.WriteByte(',')
+			batch.buf.WriteString(`,"`)
 		}
 		if !warehouses.IsValidIdentifier(column) {
 			return nil, fmt.Errorf("column name %q is not a valid identifier", column)
 		}
 		batch.buf.WriteString(column)
+		batch.buf.WriteByte('"')
 	}
-	batch.buf.WriteString(") ")
+	batch.buf.WriteString(") VALUES ")
 	return batch, nil
 }
 
