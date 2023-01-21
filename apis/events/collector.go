@@ -189,8 +189,8 @@ func (collector *Collector) serveHTTP(r *http.Request) error {
 		// Use the default stream.
 		stream, ok = collector.streams[0]
 	}
-	stream.sending.Add(1)
 	collector.mu.Unlock()
+	stream.sending.Add(1)
 
 	// Prepare the event data.
 	var event bytes.Buffer

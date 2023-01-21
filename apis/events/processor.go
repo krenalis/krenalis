@@ -406,7 +406,7 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 	}
 
 	// Validate received at.
-	receivedAt, err := time.Parse(header.ReceivedAt, eventDateLayout)
+	receivedAt, err := time.Parse(eventDateLayout, header.ReceivedAt)
 	if err != nil || receivedAt.IsZero() {
 		p.observer.AddEvent(sourceID, serverID, streamID, nil, message, errors.New("invalid received at"))
 		return nil
@@ -423,8 +423,6 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 		p.observer.AddEvent(sourceID, serverID, streamID, nil, message, errors.New("invalid remote address"))
 		return nil
 	}
-
-	log.Print("process event")
 
 	now := time.Now().UTC()
 
@@ -511,12 +509,12 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 		ctx := context.Background()
 
 		// Get the user or create it if it does not exist.
-		err = p.db.QueryRow(ctx, "SELECT id FROM users WHERE source = $1 AND device = $2", source, event.Device).Scan(&event.user)
+		err = p.db.QueryRow(ctx, "SELECT id FROM users WHERE source = $1 AND device = $2", source.ID, event.Device).Scan(&event.user)
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}
 		if err == sql.ErrNoRows {
-			err = p.db.QueryRow(ctx, "SELECT user FROM devices WHERE source = $1 AND id = $2", source, event.Device).Scan(&event.user)
+			err = p.db.QueryRow(ctx, "SELECT user FROM devices WHERE source = $1 AND id = $2", source.ID, event.Device).Scan(&event.user)
 			if err != nil && err != sql.ErrNoRows {
 				return err
 			}
@@ -525,7 +523,7 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 				if err != nil {
 					return err
 				}
-				_, err = p.db.Exec(ctx, "INSERT INTO users (source, id, device) VALUES($1, $2, $3)", source, event.user, event.Device)
+				_, err = p.db.Exec(ctx, "INSERT INTO users (source, id, device) VALUES($1, $2, $3)", source.ID, event.user, event.Device)
 				if err != nil {
 					return err
 				}
@@ -726,11 +724,11 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 	p.Lock()
 	queue, ok := p.queues[workspaceID]
 	if !ok {
-		queue = newQueue(workspaceID)
+		queue = newQueue(p.state, workspaceID)
 		p.queues[workspaceID] = queue
 	}
-	queue.add(events)
 	p.Unlock()
+	queue.add(events)
 
 	// Log the events for the observers.
 	for i := 0; i < num; i++ {
@@ -784,8 +782,8 @@ type queue struct {
 
 // newQueue returns a new queue that flushed events into the given data
 // warehouse.
-func newQueue(workspace int) *queue {
-	q := &queue{workspace: workspace}
+func newQueue(state *state.State, workspace int) *queue {
+	q := &queue{state: state, workspace: workspace}
 	// Start a goroutine that flushes the events every flushQueueTimeout seconds.
 	go func() {
 		ticker := time.NewTicker(flushQueueTimeout)
