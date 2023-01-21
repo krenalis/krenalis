@@ -309,8 +309,9 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 
 	r := bytes.NewReader(message)
 
-	// Check that message contains JSON objects and determines their offsets after the first object.
-	offsets := make([]int, 0, 1)
+	// Verify that message contains JSON objects and locate their offsets after the first object.
+	// The last offset is equals to the message length.
+	offsets := make([]int, 0, 2)
 	dec := json.NewDecoder(r)
 	for {
 		tok, err := dec.Token()
@@ -429,8 +430,7 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 	typ := source.Connector().Type
 	typeString := strings.ToLower(typ.String())
 
-	num := len(offsets)
-	offsets = append(offsets, len(message))
+	num := len(offsets) - 1
 	events := make([]Event, num)
 
 	for i := 0; i < num; i++ {
@@ -831,7 +831,7 @@ func (q *queue) add(events []Event) {
 }
 
 var batchEventsColumns = []string{"source", "date", "timestamp", "language", "os_name", "os_version", "browser",
-	"browser_other", "browser_version", "device_type", "referrer2", "target", "event", "text", "domain", "path",
+	"browser_other", "browser_version", "device_type", "referrer", "target", "event", "text", "domain", "path",
 	"query_string", "title", "user", "country", "city"}
 
 // flush flushes a batch of events to the data warehouse.
@@ -869,6 +869,7 @@ RETRY:
 			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
 			continue
 		}
+		break
 	}
 }
 
