@@ -35,47 +35,73 @@ import (
 	"chichi/apis/state"
 	"chichi/connector"
 
+	"github.com/google/uuid"
 	"github.com/mssola/user_agent"
 	"github.com/open2b/nuts/culture"
 	"github.com/oschwald/geoip2-golang"
+	"github.com/relvacode/iso8601"
 	"golang.org/x/text/unicode/norm"
 )
 
 const (
-	dateTimeLayout    = "2006-01-02 15:04:05"
 	flushQueueTimeout = 1 * time.Second // interval to flushEvents the queue
 	geoLite2Path      = "GeoLite2-City.mmdb"
 	maxEventSize      = 32 * 1024
 	maxEventsQueueLen = 10000
-	testGEOIP         = "79.9.108.176"
 )
 
 type Event struct {
-	City           string
-	Country        string
-	Device         string
-	DeviceType     string
-	Event          string // "pageview", "click", ...
-	IP             string
-	Language       string // "it-IT"
-	OSName         string
-	OSVersion      string
-	Referrer       string // "https://example.com"
-	Target         string // "https://example.com"
-	Text           string // "Add to cart"
-	Timestamp      string
-	Title          string // "Product X"
-	URL            string // "https://example.com/product/x/y?x=10"
-	UserAgent      string // "https://example.com/product/x/y?x=10"
-	browserName    string
-	browserOther   string
-	browserVersion string
-	date           string
-	domain         string // "example.com"
-	path           string // "product/x/y"
-	queryString    string // "x=10"
-	source         int32
-	user           uint32
+	City        string
+	Country     string
+	AnonymousId string
+	DeviceType  string
+	Event       string
+	IP          string
+	Language    string
+	OSName      string
+	OSVersion   string
+	Referrer    string
+	SentAt      string
+	Target      string
+	Text        string
+	Timestamp   string
+	Title       string
+	URL         string
+	browser     struct {
+		name    string
+		other   string
+		version string
+	}
+	location struct {
+		city    string
+		country struct {
+			code string
+			name string
+		}
+		latitude  float64
+		longitude float64
+		timezone  string
+	}
+	date   string
+	domain string
+	ip     string
+	os     struct {
+		name    string
+		version string
+	}
+	page struct {
+		path     string
+		referrer string
+		search   string
+		title    string
+		url      string
+	}
+	receivedAt time.Time
+	sentAt     time.Time
+	source     int32
+	timestamp  time.Time
+	userAgent  string
+	userId     string
 
 	// workspace, data and err are used during event processing.
 	workspace int
@@ -407,8 +433,7 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 	}
 
 	// Validate received at.
-	receivedAt, err := time.Parse(eventDateLayout, header.ReceivedAt)
-	if err != nil || receivedAt.IsZero() {
+	if err != nil || header.ReceivedAt.IsZero() {
 		p.observer.AddEvent(sourceID, serverID, streamID, nil, message, errors.New("invalid received at"))
 		return nil
 	}
@@ -448,9 +473,9 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 		// Source.
 		event.source = int32(source.ID)
 
-		// Device.
-		if _, err := base64.StdEncoding.DecodeString(event.Device); err != nil || len(event.Device) != 28 {
-			event.err = errors.New("invalid device")
+		// AnonymousId.
+		if _, err := uuid.Parse(event.AnonymousId); err != nil {
+			event.err = errors.New("invalid anonymous id")
 			continue
 		}
 
@@ -472,23 +497,6 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 		}
 		event.Language = locale.LanguageCode()
 
-		// Referrer.
-		if event.Referrer != "" {
-			if typ == state.MobileType {
-				event.err = errors.New("mobile cannot have referrer")
-				continue
-			} else if utf8.RuneCountInString(event.Referrer) > 2048 {
-				event.err = errors.New("referrer is longer than 2048")
-				continue
-			} else if u, err := url.Parse(event.Referrer); err != nil {
-				event.err = errors.New("referrer is not a valid URL")
-				continue
-			} else if u.Scheme != "https" && u.Scheme != "http" {
-				event.err = errors.New("referrer must begin with 'http' or 'https'")
-				continue
-			}
-		}
-
 		// Target.
 		if event.Target != "" {
 			if typ == state.MobileType {
@@ -509,21 +517,21 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 		ctx := context.Background()
 
 		// Get the user or create it if it does not exist.
-		err = p.db.QueryRow(ctx, "SELECT id FROM users WHERE source = $1 AND device = $2", source.ID, event.Device).Scan(&event.user)
+		err = p.db.QueryRow(ctx, "SELECT id FROM users WHERE source = $1 AND anonymous_id = $2", source.ID, event.AnonymousId).Scan(&event.userId)
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}
 		if err == sql.ErrNoRows {
-			err = p.db.QueryRow(ctx, "SELECT user FROM devices WHERE source = $1 AND id = $2", source.ID, event.Device).Scan(&event.user)
+			err = p.db.QueryRow(ctx, "SELECT user FROM devices WHERE source = $1 AND id = $2", source.ID, event.AnonymousId).Scan(&event.userId)
 			if err != nil && err != sql.ErrNoRows {
 				return err
 			}
 			if err == sql.ErrNoRows {
-				event.user, err = makeUserID()
+				event.userId, err = makeUserId()
 				if err != nil {
 					return err
 				}
-				_, err = p.db.Exec(ctx, "INSERT INTO users (source, id, device) VALUES($1, $2, $3)", source.ID, event.user, event.Device)
+				_, err = p.db.Exec(ctx, "INSERT INTO users (source, id, anonymous_id) VALUES($1, $2, $3)", source.ID, event.userId, event.AnonymousId)
 				if err != nil {
 					return err
 				}
@@ -533,11 +541,6 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 		// Text.
 		if utf8.RuneCountInString(event.Text) > 120 {
 			event.Text = abbreviate(event.Text, 120)
-		}
-
-		// Title.
-		if utf8.RuneCountInString(event.Title) > 120 {
-			event.Title = abbreviate(event.Title, 120)
 		}
 
 		// IP.
@@ -557,11 +560,9 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 			}
 			requestIP = remoteIP
 		}
-		if ip := requestIP.String(); ip == "127.0.0.1" || ip == "::1" {
-			requestIP = net.ParseIP(testGEOIP)
-		}
+		event.ip = requestIP.To16().String()
 
-		// URL.
+		// page.
 		if typ == state.MobileType {
 			if event.URL != "" {
 				event.err = errors.New("mobile cannot have URL")
@@ -589,33 +590,70 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 				event.err = errors.New("URL cannot belong to the source website")
 				continue
 			}
-			event.domain, _, _ = strings.Cut(u.Host, ":")
-			event.path = strings.TrimLeft(strings.TrimRight(u.Path, "/"), "/")
-			event.queryString = u.RawQuery
+			event.page.url = u.String()
+			event.page.path = u.Path
+			event.page.title = event.Title
+			event.page.search = u.RawQuery
+			if event.Referrer != "" {
+				if typ == state.MobileType {
+					event.err = errors.New("mobile cannot have referrer")
+					continue
+				}
+				if utf8.RuneCountInString(event.Referrer) > 2048 {
+					event.err = errors.New("referrer is longer than 2048")
+					continue
+				}
+				u, err := url.Parse(event.Referrer)
+				if err != nil {
+					event.err = errors.New("referrer is not a valid URL")
+					continue
+				}
+				if u.Scheme != "https" && u.Scheme != "http" {
+					event.err = errors.New("referrer must begin with 'http' or 'https'")
+					continue
+				}
+				event.page.referrer = u.String()
+			}
 		}
 
-		// Timestamp.
+		// Timestamp and date.
 		if event.Timestamp == "" {
-			event.Timestamp = now.Format(dateTimeLayout)
+			event.timestamp = header.ReceivedAt
 		} else {
-			t, err := time.Parse(dateTimeLayout, event.Timestamp)
+			event.timestamp, err = iso8601.ParseString(event.Timestamp)
 			if err != nil {
-				event.err = errors.New("URL cannot belong to the source website")
+				event.err = errors.New("timestamp is not in ISO8601 format")
 				continue
 			}
+			event.timestamp = event.timestamp.UTC()
 			if server != nil {
-				if t.After(now) {
-					event.Timestamp = now.Format(dateTimeLayout)
+				if event.timestamp.After(now) {
+					event.timestamp = header.ReceivedAt
 				}
 			} else {
-				if t.Add(-15*time.Minute).Before(now) || t.After(now) {
-					event.Timestamp = now.Format(dateTimeLayout)
+				if t := event.timestamp; t.Add(-15*time.Minute).Before(now) || t.After(now) {
+					event.timestamp = header.ReceivedAt
 				}
 			}
 		}
-		event.date = event.Timestamp[0:10]
+		event.date = event.timestamp.Format("2006-01-02")
 
-		// Country and city.
+		// SentAt.
+		if event.SentAt == "" {
+			event.sentAt = header.ReceivedAt
+		} else {
+			event.sentAt, err = iso8601.ParseString(event.Timestamp)
+			if err != nil {
+				event.err = errors.New("sentAt is not in ISO8601 format")
+				continue
+			}
+			event.sentAt = event.sentAt.UTC()
+		}
+
+		// ReceivedAt.
+		event.receivedAt = header.ReceivedAt
+
+		// Location.
 		if server == nil {
 			if event.Country != "" {
 				event.err = fmt.Errorf("country is required for %s", typeString)
@@ -637,21 +675,33 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 				if err != nil {
 					return err
 				}
-				event.Country = city.Country.IsoCode
-				event.City = city.City.Names["en"]
+				event.location.city = city.City.Names["en"]
+				c := culture.Country(event.Country)
+				if c != nil {
+					event.location.country.code = c.Code()
+					event.location.country.name = c.Name()
+				}
+				event.location.latitude = city.Location.Latitude
+				event.location.longitude = city.Location.Longitude
+				event.location.timezone = city.Location.TimeZone
 				geoDB.Close()
 			}
-		} else if event.Country != "" && culture.Country(event.Country) == nil {
-			event.err = fmt.Errorf("unknown country code")
-			continue
+		} else if event.Country != "" {
+			c := culture.Country(event.Country)
+			if c == nil {
+				event.err = fmt.Errorf("unknown country code")
+				continue
+			}
+			event.location.country.code = c.Code()
+			event.location.country.name = c.Name()
 		} else if utf8.RuneCountInString(event.City) > 50 {
 			event.err = fmt.Errorf("city is longer than 50")
 			continue
 		}
 
-		// UserAgent, DeviceType.
+		// UserAgent, DeviceType and Browser.
 		if typ == state.MobileType {
-			if event.UserAgent != "" {
+			if event.userAgent != "" {
 				event.err = fmt.Errorf("mobile cannot have user agent")
 				continue
 			}
@@ -659,40 +709,44 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 				event.err = fmt.Errorf("device type must be 'Mobile', 'Tablet' or 'Desktop'")
 				continue
 			}
+			event.os.name = event.OSName
+			event.os.version = event.OSVersion
 		} else {
-			userAgent := header.Headers.Get("User-Agent")
-			ua := user_agent.New(userAgent)
+			event.userAgent = header.Headers.Get("User-Agent")
+			ua := user_agent.New(event.userAgent)
 			osInfo := ua.OSInfo()
 			switch osInfo.Name {
-			case "Android", "Windows", "iOS", "MacOS", "Linux", "ChromeOS":
-				event.OSName = osInfo.Name
+			case "Mac OS X":
+				event.os.name = "macOS"
+			case "Android", "Windows", "iOS", "Linux", "ChromeOS":
+				event.os.name = osInfo.Name
 			default:
-				event.OSName = "Other"
+				event.os.name = "Other"
 			}
-			if utf8.RuneCountInString(event.OSVersion) <= 10 {
-				event.OSVersion = osInfo.Version
+			if utf8.RuneCountInString(osInfo.Version) <= 10 {
+				event.os.version = osInfo.Version
 			}
 			browserName, browserVersion := ua.Browser()
 			switch browserName {
 			default:
-				event.browserName = "Other"
+				event.browser.name = "Other"
 				if len(browserName) <= 25 {
-					event.browserOther = browserName
+					event.browser.other = browserName
 				}
 			case "Chrome":
-				event.browserName = "Chrome"
+				event.browser.name = "Chrome"
 			case "Safari":
-				event.browserName = "Safari"
+				event.browser.name = "Safari"
 			case "Edge":
-				event.browserName = "Edge"
+				event.browser.name = "Edge"
 			case "Firefox":
-				event.browserName = "Firefox"
+				event.browser.name = "Firefox"
 			case "Samsung Internet":
-				event.browserName = "Samsung Internet"
+				event.browser.name = "Samsung Internet"
 			case "Opera":
-				event.browserName = "Opera"
+				event.browser.name = "Opera"
 			}
-			if event.browserName != "Other" || event.browserOther != "" {
+			if event.browser.name != "Other" || event.browser.other != "" {
 				if strings.Contains(browserVersion, ".") {
 					parts := strings.SplitN(browserVersion, ".", 3)
 					if len(parts) == 3 {
@@ -703,11 +757,11 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 					}
 				}
 				if utf8.RuneCountInString(browserVersion) <= 10 {
-					event.browserVersion = browserVersion
+					event.browser.version = browserVersion
 				}
 			}
 			if ua.Mobile() {
-				if h := strings.ToLower(userAgent); strings.Contains(h, "ipad") || strings.Contains(h, "tablet") {
+				if h := strings.ToLower(event.userAgent); strings.Contains(h, "ipad") || strings.Contains(h, "tablet") {
 					event.DeviceType = "tablet"
 				} else {
 					event.DeviceType = "mobile"
@@ -830,9 +884,37 @@ func (q *queue) add(events []Event) {
 	}
 }
 
-var batchEventsColumns = []string{"source", "date", "timestamp", "language", "os_name", "os_version", "browser_name",
-	"browser_other", "browser_version", "device_type", "referrer", "target", "event", "text", "domain", "path",
-	"query_string", "title", "user", "country", "city"}
+var batchEventsColumns = []string{
+	"source",
+	"anonymous_id",
+	"user_id",
+	"date",
+	"timestamp",
+	"sent_at",
+	"received_at",
+	"ip",
+	"os_name",
+	"os_version",
+	"user_agent",
+	"browser_name",
+	"browser_other",
+	"browser_version",
+	"location_city",
+	"location_country_code",
+	"location_country_name",
+	"location_latitude",
+	"location_longitude",
+	"device_type",
+	"event",
+	"language",
+	"page_path",
+	"page_referrer",
+	"page_title",
+	"page_url",
+	"page_search",
+	"target",
+	"text",
+}
 
 // flush flushes a batch of events to the data warehouse.
 func (q *queue) flush(events []*Event) {
@@ -852,11 +934,38 @@ RETRY:
 			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
 			continue
 		}
-		for _, event := range events {
-			err := batch.Append(event.source, event.date, event.Timestamp, event.Language, event.OSName,
-				event.OSVersion, event.browserName, event.browserOther, event.browserVersion, event.DeviceType,
-				event.Referrer, event.Target, event.Event, event.Text, event.domain, event.path, event.queryString,
-				event.Title, event.user, event.Country, event.City)
+		for _, e := range events {
+			err := batch.Append(
+				e.source,
+				e.AnonymousId,
+				e.userId,
+				e.date,
+				e.timestamp,
+				e.sentAt,
+				e.receivedAt,
+				e.ip,
+				e.os.name,
+				e.os.version,
+				e.userAgent,
+				e.browser.name,
+				e.browser.other,
+				e.browser.version,
+				e.location.city,
+				e.location.country.code,
+				e.location.country.name,
+				e.location.latitude,
+				e.location.longitude,
+				e.DeviceType,
+				e.Event,
+				e.Language,
+				e.page.path,
+				e.page.referrer,
+				e.page.title,
+				e.page.url,
+				e.page.search,
+				e.Target,
+				e.Text,
+			)
 			if err != nil {
 				log.Printf("[error] cannot log events: %s", err)
 				time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
@@ -903,14 +1012,14 @@ func isWellFormedConnectorKey(key string) bool {
 	return true
 }
 
-// makeUserID returns a new random user identifier.
-func makeUserID() (uint32, error) {
+// makeUserId returns a new random user identifier.
+func makeUserId() (string, error) {
 	b := make([]byte, 4)
 	_, err := crand.Read(b)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
-	return binary.LittleEndian.Uint32(b), nil
+	return strconv.FormatUint(uint64(binary.LittleEndian.Uint32(b)), 10), nil
 }
 
 // isDeviceType reports whether t is a device type.

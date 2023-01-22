@@ -29,7 +29,7 @@ import (
 const maxRequestSize = 500 * 1024
 
 // eventDateLayout is the layout used for dates in events.
-var eventDateLayout = "2006-01-02T15:04:05.999Z07:00"
+const eventDateLayout = "2006-01-02T15:04:05.999Z"
 
 // Errors handled by the HTTP server of the collector.
 var (
@@ -108,7 +108,7 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // MessageHeader represents the header of an event message.
 type MessageHeader struct {
-	ReceivedAt string      `json:"receivedAt"`
+	ReceivedAt time.Time   `json:"receivedAt"`
 	RemoteAddr string      `json:"remoteAddr"`
 	Method     string      `json:"method"`
 	Proto      string      `json:"proto"`
@@ -197,7 +197,7 @@ func (collector *Collector) serveHTTP(r *http.Request) error {
 	enc := json.NewEncoder(&event)
 	enc.SetEscapeHTML(false)
 	request := MessageHeader{
-		ReceivedAt: date.Format(eventDateLayout),
+		ReceivedAt: date,
 		RemoteAddr: r.RemoteAddr,
 		Method:     r.Method,
 		Proto:      r.Proto,

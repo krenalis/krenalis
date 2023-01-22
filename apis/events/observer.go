@@ -327,7 +327,7 @@ func (observer *observer) AddEvent(source, server, stream int, header *MessageHe
 			if header == nil {
 				receivedAt = time.Now().UTC().Format(eventDateLayout)
 			} else {
-				receivedAt = header.ReceivedAt
+				receivedAt = header.ReceivedAt.Format(eventDateLayout)
 			}
 			var b bytes.Buffer
 			enc := json.NewEncoder(&b)

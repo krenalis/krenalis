@@ -138,9 +138,9 @@ CREATE INDEX ON connections_stats_events (server);
 CREATE INDEX ON connections_stats_events (stream);
 
 CREATE TABLE devices (
-    source INT NOT NULL,
-    id char(28) NOT NULL,
-    "user" integer DEFAULT NULL,
+    source integer NOT NULL,
+    id uuid NOT NULL,
+    "user" varchar DEFAULT NULL,
     PRIMARY KEY (source, id)
 );
 
@@ -233,7 +233,7 @@ CREATE TABLE tasks (
 
 CREATE TABLE users (
     source integer NOT NULL,
-    id integer NOT NULL,
-    device char(28) DEFAULT NULL,
+    id varchar NOT NULL,
+    anonymous_id uuid NOT NULL,
     PRIMARY KEY (source, id)
 );

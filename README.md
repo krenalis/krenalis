@@ -69,7 +69,11 @@ Populate the database with the queries in:
 
 and populate the warehouse with the queries in:
 
-* [database/data-warehouse-sample.sql](database/data-warehouse-sample.sql)
+* [database/warehouses/postgresql.sql](database/warehouses/postgresql.sql)
+
+or
+
+* [database/warehouses/clickhouse.sql](database/warehouses/clickhouse.sql)
 
 ### 5. Connect the data warehouse
 

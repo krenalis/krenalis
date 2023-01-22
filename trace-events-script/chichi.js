@@ -25,15 +25,15 @@
 	function sendEvent(data) {
 		let d = data == null ? {} : data;
 
-		let device;
+		let anonymousId;
 		if (isStorageAvailable('localStorage')) {
-			device = localStorage.getItem('chichi-device');
-			if (device == null) {
-				device = makeid();
-				localStorage.setItem('chichi-device', device);
+			anonymousId = localStorage.getItem('chichi_anonymous_id');
+			if (anonymousId == null) {
+				anonymousId = makeAnonymousId();
+				localStorage.setItem('chichi_anonymous_id', anonymousId);
 			}
 		}
-		d.device = device;
+		d.anonymousId = anonymousId;
 
 		d.referrer = document.referrer;
 
@@ -161,10 +161,8 @@
 		}
 	}
 
-	function makeid() {
-		let array = new Uint8Array(20);
-		self.crypto.getRandomValues(array);
-		return btoa(String.fromCharCode.apply(null, array));
+	function makeAnonymousId() {
+		return self.crypto.randomUUID();
 	}
 
 })();

@@ -47,6 +47,7 @@ require (
 	github.com/mssola/user_agent v0.5.3
 	github.com/open2b/nuts v1.5.3
 	github.com/oschwald/geoip2-golang v1.8.0
+	github.com/relvacode/iso8601 v1.3.0
 	github.com/shopspring/decimal v1.3.1
 	github.com/tetratelabs/wazero v1.0.0-pre.4
 	golang.org/x/crypto v0.5.0
