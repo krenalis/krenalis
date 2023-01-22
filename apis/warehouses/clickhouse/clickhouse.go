@@ -123,6 +123,10 @@ func (warehouse *ClickHouse) Ping(ctx context.Context) error {
 // batch and returns it. table specifies the table in which the rows will be
 // inserted, and columns specifies the columns.
 func (warehouse *ClickHouse) PrepareBatch(ctx context.Context, table string, columns []string) (warehouses.Batch, error) {
+	conn, err := warehouse.connection()
+	if err != nil {
+		return nil, err
+	}
 	if !warehouses.IsValidIdentifier(table) {
 		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
 	}
@@ -130,22 +134,21 @@ func (warehouse *ClickHouse) PrepareBatch(ctx context.Context, table string, col
 		return nil, fmt.Errorf("columns cannot be empty")
 	}
 	var b strings.Builder
-	b.WriteString("INSERT INTO ")
+	b.WriteString("INSERT INTO `")
 	b.WriteString(table)
-	b.WriteString(" (")
+	b.WriteString("` (`")
 	for i, column := range columns {
 		if i > 0 {
-			b.WriteByte(',')
+			b.WriteString("`,`")
 		}
 		if !warehouses.IsValidIdentifier(column) {
 			return nil, fmt.Errorf("column name %q is not a valid identifier", column)
 		}
 		b.WriteString(column)
 	}
-	b.WriteString(") ")
+	b.WriteString("`) VALUES ")
 	batch := &batch{columns: slices.Clone(columns)}
-	var err error
-	batch.batch, err = warehouse.conn.PrepareBatch(ctx, b.String())
+	batch.batch, err = conn.PrepareBatch(ctx, b.String())
 	if err != nil {
 		return nil, err
 	}
