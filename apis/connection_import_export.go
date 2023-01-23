@@ -455,7 +455,7 @@ func (this *Connection) _startImport(imp *state.ImportInProgress) error {
 			return err
 		}
 		ack()
-		log.Printf("received event: %s", event)
+		log.Printf("[info] received event: %s", event)
 
 	}
 

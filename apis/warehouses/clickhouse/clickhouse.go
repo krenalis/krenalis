@@ -315,7 +315,7 @@ func (warehouse *ClickHouse) Users(ctx context.Context, schema types.Type, order
 	}
 	err = rows.Close()
 	if err != nil {
-		log.Printf("cannot close rows: %s", err)
+		log.Printf("[error] cannot close rows: %s", err)
 	}
 	if users == nil {
 		users = [][]any{}

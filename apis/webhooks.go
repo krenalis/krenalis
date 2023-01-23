@@ -108,7 +108,7 @@ func (apis *APIs) ServeWebhook(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		log.Printf("cannot serve webhook: %s", err)
+		log.Printf("[error] cannot serve webhook: %s", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}

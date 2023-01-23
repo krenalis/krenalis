@@ -904,7 +904,7 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 	if err != nil {
 		if _, ok := err.(*warehouses.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
-			log.Printf("cannot get users from the data warehouse of the workspace %d: %s", ws.ID, err)
+			log.Printf("[error] cannot get users from the data warehouse of the workspace %d: %s", ws.ID, err)
 			err = errors.Unprocessable(WarehouseFailed, "warehouse connection is failed")
 		}
 		return types.Type{}, nil, err

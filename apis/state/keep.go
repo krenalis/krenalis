@@ -757,7 +757,7 @@ func (state *State) setWarehouseSettings(n postgres.Notification) {
 			err := disconnected.Close()
 			if err != nil {
 				// TODO(marco): write the error into a workspace specific log
-				log.Printf("error occurred disconnecting the warehouse: %s", err)
+				log.Printf("[error] error occurred disconnecting the warehouse: %s", err)
 			}
 		}()
 	}

@@ -307,11 +307,11 @@ func (p *Processor) process(s *processorStream) {
 
 	defer func() {
 		if err := s.stream.Close(); err != nil {
-			log.Printf("cannot close stream %s: %s", streamName, err)
+			log.Printf("[error] cannot close stream %s: %s", streamName, err)
 		}
 		if p.geoLiteDB != nil {
 			if err := p.geoLiteDB.Close(); err != nil {
-				log.Printf("cannot close GeoLite: %s", err)
+				log.Printf("[error] cannot close GeoLite: %s", err)
 			}
 		}
 	}()
@@ -333,7 +333,7 @@ func (p *Processor) process(s *processorStream) {
 		}
 		err = p.processMessage(s.id, message)
 		if err != nil {
-			log.Printf("cannot process message, received from the %s: %s", streamName, err)
+			log.Printf("[error] cannot process message, received from the %s: %s", streamName, err)
 			continue
 		}
 		ack()

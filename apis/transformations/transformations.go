@@ -67,8 +67,8 @@ func (t *Transformations) Run(ctx context.Context, code string, params []any) ([
 	src.WriteString("\nprint(json.dumps(out if isinstance(out, tuple) else (out,)))")
 	err = vm.RunSourceCode(src.Bytes())
 	if err != nil {
-		log.Printf("this is the source code that failed:\n\n%s", src.String())
-		log.Printf("you can copy-paste this code in a service like https://www.programiz.com/python-programming/online-compiler/ to get more information about the error")
+		log.Printf("[info] this is the source code that failed:\n\n%s", src.String())
+		log.Printf("[info] you can copy-paste this code in a service like https://www.programiz.com/python-programming/online-compiler/ to get more information about the error")
 		return nil, fmt.Errorf("cannot run Python source code: %s", err)
 	}
 
