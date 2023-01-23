@@ -80,6 +80,8 @@ func columnType(typ, udtName string, isNullable, charLength, precision, radix, s
 		t = types.Time("15:04:05")
 	case "boolean":
 		t = types.Boolean()
+	case "inet":
+		t = types.Inet()
 	case "uuid":
 		t = types.UUID()
 	case "json", "jsonb":
