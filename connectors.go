@@ -20,6 +20,7 @@ import (
 	_ "chichi/connectors/postgresql"
 	_ "chichi/connectors/rabbitmq"
 	_ "chichi/connectors/s3"
+	_ "chichi/connectors/server"
 	_ "chichi/connectors/sftp"
 	_ "chichi/connectors/uisample"
 	_ "chichi/connectors/website"

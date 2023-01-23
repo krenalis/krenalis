@@ -15,6 +15,7 @@ replace (
 	chichi/connectors/postgresql => ./connectors/postgresql
 	chichi/connectors/rabbitmq => ./connectors/rabbitmq
 	chichi/connectors/s3 => ./connectors/s3
+	chichi/connectors/server => ./connectors/server
 	chichi/connectors/sftp => ./connectors/sftp
 	chichi/connectors/uisample => ./connectors/uisample
 	chichi/connectors/website => ./connectors/website
@@ -33,6 +34,7 @@ require (
 	chichi/connectors/postgresql v0.0.0-00010101000000-000000000000
 	chichi/connectors/rabbitmq v0.0.0-00010101000000-000000000000
 	chichi/connectors/s3 v0.0.0-00010101000000-000000000000
+	chichi/connectors/server v0.0.0-00010101000000-000000000000
 	chichi/connectors/sftp v0.0.0-00010101000000-000000000000
 	chichi/connectors/uisample v0.0.0-00010101000000-000000000000
 	chichi/connectors/website v0.0.0-00010101000000-000000000000

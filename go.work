@@ -15,6 +15,7 @@ use (
 	./connectors/postgresql
 	./connectors/rabbitmq
 	./connectors/s3
+	./connectors/server
 	./connectors/sftp
 	./connectors/uisample
 	./connectors/website
