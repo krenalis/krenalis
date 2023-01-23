@@ -1,0 +1,55 @@
+.ConnectorSettings .Breadcrumbs::part(base) {
+    justify-content: center;
+}
+
+.ConnectorSettings .routeContent {
+    max-width: 800px;
+    margin: auto;
+}
+
+.ConnectorSettings .heading {
+    color: var(--text-onaccent);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    margin-top: 50px;
+    transform: translateX(-7px);
+}
+
+.ConnectorSettings .littleLogo {
+    max-width: 30px;
+}
+
+.ConnectorSettings .basic .inputWrapper {
+    margin-bottom: 30px;
+}
+
+.ConnectorSettings .basic .switchWrapper {
+    margin: 50px 0;
+}
+
+.ConnectorSettings .basic .noStorages,
+.ConnectorSettings .basic .noStreams {
+    display: flex;
+    gap: 20px;
+    align-items: baseline;
+    margin: 50px 0;
+}
+
+.ConnectorSettings .settings {
+    background-color: var(--bg-primary);
+    border-radius: var(--radius);
+    box-shadow: var(--sl-shadow-large);
+    padding: 50px 80px;
+}
+
+.ConnectorSettings .saveWrapper {
+    text-align: center;
+}
+
+.ConnectorSettings .saveButton {
+    min-width: 180px;
+    display: inline-block;
+}

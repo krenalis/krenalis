@@ -31,7 +31,7 @@ const ConnectionAdded = () => {
 
 	return (
 		<div className='ConnectionAdded'>
-			<PrimaryBackground height={300} overlap={100}>
+			<PrimaryBackground height={300} overlap={120}>
 				<Breadcrumbs
 					breadcrumbs={[
 						{ Name: 'Connections', Link: '/admin/connections' },

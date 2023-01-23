@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import './ConnectionForm.css';
 import ConnectorField from '../ConnectorFields/ConnectorField';
-import { SettingsContext } from '../../context/SettingsContext';
 import call from '../../utils/call';
+import { SettingsContext } from '../../context/SettingsContext';
 import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectionForm = ({ connection: c, onStatusChange, onError }) => {
@@ -12,7 +12,7 @@ const ConnectionForm = ({ connection: c, onStatusChange, onError }) => {
 
 	useEffect(() => {
 		const fetchUI = async () => {
-			let [ui, err] = await call('/admin/connectors/ui', 'POST', c.ID);
+			let [ui, err] = await call('/admin/connections/ui', 'POST', c.ID);
 			if (err) {
 				onError(err);
 				return;
@@ -33,7 +33,7 @@ const ConnectionForm = ({ connection: c, onStatusChange, onError }) => {
 		}
 		setFields(fls);
 
-		let [ui, err] = await call('/admin/connectors/ui-event', 'POST', {
+		let [ui, err] = await call('/admin/connections/ui-event', 'POST', {
 			connection: c.ID,
 			event: e,
 			values: values,

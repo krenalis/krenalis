@@ -553,6 +553,66 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte(`{"status":"ok"}`))
 		})
 	})
+	router.Route("/api/workspace/oauth-token", func(router chi.Router) {
+		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+			var req struct {
+				Connector int
+				OAuthCode string
+			}
+			err := json.NewDecoder(r.Body).Decode(&req)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			oauthToken, err := workspace.OAuthToken(req.OAuthCode, req.Connector)
+			if err != nil {
+				if err, ok := err.(errors.ResponseWriterTo); ok {
+					_ = err.WriteTo(w)
+					return
+				}
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(oauthToken)
+		})
+	})
+	router.Route("/api/workspace/add-connection", func(router chi.Router) {
+		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+			var req struct {
+				Connector int
+				Role      string
+				Settings  json.RawMessage
+				Options   ConnectionOptions
+			}
+			err := json.NewDecoder(r.Body).Decode(&req)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			var role ConnectionRole
+			switch req.Role {
+			case "Source":
+				role = SourceRole
+			case "Destination":
+				role = DestinationRole
+			default:
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			id, err := workspace.AddConnection(role, req.Connector, req.Settings, req.Options)
+			if err != nil {
+				if err, ok := err.(errors.ResponseWriterTo); ok {
+					_ = err.WriteTo(w)
+					return
+				}
+				log.Printf("[error] %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(id)
+		})
+	})
 	router.ServeHTTP(w, r)
 
 }

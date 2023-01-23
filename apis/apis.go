@@ -206,6 +206,7 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 		return nil, errors.NotFound("connector %d does not exist", id)
 	}
 	connector := Connector{
+		connector:   c,
 		ID:          c.ID,
 		Name:        c.Name,
 		Type:        ConnectorType(c.Type),
@@ -226,6 +227,7 @@ func (apis *APIs) Connectors() []*Connector {
 	connectors := make([]*Connector, len(cc))
 	for i, c := range cc {
 		connector := Connector{
+			connector:   c,
 			ID:          c.ID,
 			Name:        c.Name,
 			Type:        ConnectorType(c.Type),

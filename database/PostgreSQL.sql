@@ -83,7 +83,7 @@ CREATE TABLE connections (
     user_cursor varchar(500) NOT NULL DEFAULT '',
     identity_column varchar(100) NOT NULL DEFAULT '',
     timestamp_column varchar(100) NOT NULL DEFAULT '',
-    settings varchar(65535) NOT NULL DEFAULT '',
+    settings varchar(65535),
     schema text NOT NULL DEFAULT '',
     users_query text NOT NULL DEFAULT '',
     health connection_health NOT NULL DEFAULT 'Healthy',

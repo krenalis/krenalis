@@ -73,21 +73,6 @@ type Connection struct {
 	Health      ConnectionHealth
 }
 
-// ConnectionOptions values are passed to the Add method with options
-// relative to the connection.
-type ConnectionOptions struct {
-	Storage     int
-	Stream      int
-	WebsiteHost string
-	OAuth       *AddConnectionOAuthOptions
-}
-
-type AddConnectionOAuthOptions struct {
-	RefreshToken string
-	AccessToken  string
-	ExpiresIn    time.Time
-}
-
 // Delete deletes the connection.
 func (this *Connection) Delete() error {
 	n := state.DeleteConnectionNotification{

@@ -1,0 +1,14 @@
+.OAuth .loading {
+    width: 800px;
+    margin: auto;
+    background-color: var(--bg-primary);
+    padding: 80px;
+    height: 250px;
+    text-align: center;
+    border-radius: var(--radius);
+    box-shadow: var(--sl-shadow-large);
+}
+
+.OAuth .loading .text {
+    margin-bottom: 20px;
+}

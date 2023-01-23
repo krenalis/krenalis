@@ -9,12 +9,21 @@ package apis
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+
+	"chichi/apis/errors"
+	"chichi/apis/state"
+	_connector "chichi/connector"
+	"chichi/connector/ui"
+
+	"github.com/jxskiss/base62"
 )
 
 // Connector represent a connector.
 type Connector struct {
+	connector   *state.Connector
 	ID          int
 	Name        string
 	Type        ConnectorType
@@ -117,4 +126,112 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 	}
 	*typ = t
 	return nil
+}
+
+// ServeUI serves the user interface for the connector with the given role.
+// event is the event and values contains the form values in JSON format.
+// oAuth is the OAuth token returned by the (*Workspace).OAuth method, it is
+// required if the connector requires OAuth.
+//
+// If the event does not exist, it returns an errors.UnprocessableError error
+// with code EventNotExist.
+func (this *Connector) ServeUI(event string, values []byte, role ConnectionRole, oAuth string) ([]byte, error) {
+
+	c := this.connector
+
+	if (oAuth == "") != (c.OAuth == nil) {
+		if oAuth == "" {
+			return nil, errors.BadRequest("OAuth is required by connector %d", c.ID)
+		}
+		return nil, errors.BadRequest("connector %d does not support OAuth", c.ID)
+	}
+
+	// Decode oAuth.
+	var r authorizedResource
+	if oAuth != "" {
+		data, err := base62.DecodeString(oAuth)
+		if err != nil {
+			return nil, errors.BadRequest("oAuth is not valid")
+		}
+		err = json.Unmarshal(data, &r)
+		if err != nil {
+			return nil, errors.BadRequest("oAuth is not valid")
+		}
+	}
+
+	var err error
+	var connection any
+
+	switch c.Type {
+	case state.AppType:
+
+		var clientSecret, resourceCode, accessToken string
+		if oAuth != "" {
+			clientSecret = c.OAuth.ClientSecret
+			resourceCode = r.Code
+			accessToken = r.AccessToken
+		}
+
+		connection, err = _connector.RegisteredApp(c.Name).Open(context.Background(), &_connector.AppConfig{
+			Role:         _connector.Role(role),
+			ClientSecret: clientSecret,
+			Resource:     resourceCode,
+			AccessToken:  accessToken,
+		})
+
+	default:
+
+		ctx := context.Background()
+
+		switch c.Type {
+		case state.DatabaseType:
+			connection, err = _connector.RegisteredDatabase(c.Name).Open(ctx, &_connector.DatabaseConfig{
+				Role: _connector.Role(role),
+			})
+		case state.FileType:
+			connection, err = _connector.RegisteredFile(c.Name).Open(ctx, &_connector.FileConfig{
+				Role: _connector.Role(role),
+			})
+		case state.MobileType:
+			connection, err = _connector.RegisteredMobile(c.Name).Open(ctx, &_connector.MobileConfig{
+				Role: _connector.Role(role),
+			})
+		case state.ServerType:
+			connection, err = _connector.RegisteredServer(c.Name).Open(ctx, &_connector.ServerConfig{
+				Role: _connector.Role(role),
+			})
+		case state.StorageType:
+			connection, err = _connector.RegisteredStorage(c.Name).Open(ctx, &_connector.StorageConfig{
+				Role: _connector.Role(role),
+			})
+		case state.StreamType:
+			connection, err = _connector.RegisteredStream(c.Name).Open(ctx, &_connector.StreamConfig{
+				Role: _connector.Role(role),
+			})
+		case state.WebsiteType:
+			connection, err = _connector.RegisteredWebsite(c.Name).Open(ctx, &_connector.WebsiteConfig{
+				Role: _connector.Role(role),
+			})
+		}
+
+	}
+	if err != nil {
+		return nil, err
+	}
+	connectionUI, ok := connection.(_connector.UI)
+	if !ok {
+		return nil, errors.BadRequest("connector %d does not have a UI", c.ID)
+	}
+
+	// TODO: check and delete alternative fieldsets keys that have 'null' value
+	// before saving to database
+	form, alert, err := connectionUI.ServeUI(event, values)
+	if err != nil {
+		if err == ui.ErrEventNotExist {
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, c.Name)
+		}
+		return nil, err
+	}
+
+	return marshalUIFormAlert(form, alert, ui.Role(role))
 }

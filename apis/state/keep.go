@@ -249,6 +249,7 @@ type AddConnectionNotification struct {
 	ID        int            // identifier
 	Name      string         // name
 	Role      ConnectionRole // role
+	Enabled   bool           // enabled or disabled
 	Connector int            // connector identifier
 	Storage   int            // storage identifier, can be zero
 	Stream    int            // stream identifier, can be zero
@@ -261,6 +262,7 @@ type AddConnectionNotification struct {
 	}
 	WebsiteHost string // website host in form host:port
 	Key         string // server key to add
+	Settings    []byte
 }
 
 // addConnection adds a new connection.
@@ -313,11 +315,13 @@ func (state *State) addConnection(n postgres.Notification) {
 		ID:          e.ID,
 		Name:        e.Name,
 		Role:        e.Role,
+		Enabled:     e.Enabled,
 		connector:   connector,
 		storage:     state.connections[e.Storage],
 		stream:      state.connections[e.Stream],
 		resource:    r,
 		WebsiteHost: e.WebsiteHost,
+		Settings:    e.Settings,
 	}
 	if e.Key != "" {
 		c.Keys = []string{e.Key}

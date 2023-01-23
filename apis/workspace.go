@@ -13,7 +13,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -30,6 +33,7 @@ import (
 	"chichi/apis/warehouses/postgresql"
 	_connector "chichi/connector"
 
+	"github.com/jxskiss/base62"
 	"golang.org/x/exp/slices"
 )
 
@@ -47,14 +51,45 @@ var (
 	WarehouseFailed      errors.Code = "WarehouseFailed"
 )
 
-// AddConnection adds a connection given its role, connector, name, and options
-// related to the connector and returns its identifier. name cannot be empty
-// and cannot be longer than 120 runes.
+// ConnectionOptions values are passed to the AddConnection method with options
+// relative to the connection.
+type ConnectionOptions struct {
+
+	// Name is the name of the connection. It cannot be longer than 120 runes.
+	// If empty, the connection name will be the name of its connector.
+	Name string
+
+	// Enable reports whether the connection is enabled or disabled when added.
+	Enabled bool
+
+	// Storage is the storage of a file connection. It must be 0 if the
+	// connection is not a file or has no storage.
+	Storage int
+
+	// Stream is the stream of a mobile, server, or website connection. It must
+	// be 0 if the connection is not a mobile, server, or website connection or
+	// has no stream.
+	Stream int
+
+	// WebsiteHost is the host, in the form "host:port", of a website
+	// connection. It must be empty if the connection is not a website. It
+	// cannot be longer than 261 runes.
+	WebsiteHost string
+
+	// OAuth is an OAuth token returned by OAuthToken. It must be empty if the
+	// connector does not support OAuth.
+	OAuth string
+}
+
+// AddConnection adds a connection given its role, connector, settings, and
+// options and returns its identifier.
 //
-// If the connector, storage or stream does not exist, it returns an
-// errors.UnprocessableError error with code ConnectorNotExist, StorageNotExist
-// and StreamNotExist respectively.
-func (this *Workspace) AddConnection(role ConnectionRole, connector int, name string, opts ConnectionOptions) (int, error) {
+// It returns an errors.UnprocessableError error with code
+//   - ConnectorNotExist, if the connector does not exist.
+//   - InvalidSettings, if the settings are not valid.
+//   - StorageNotExist, if the storage does not exist.
+//   - StreamNotExist, if the stream does not exist.
+func (this *Workspace) AddConnection(role ConnectionRole, connector int, settings []byte, opts ConnectionOptions) (int, error) {
 
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.BadRequest("role %q is not valid", role)
@@ -62,8 +97,8 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, name st
 	if connector < 1 || connector > maxInt32 {
 		return 0, errors.BadRequest("connector identifier %d is not valid", connector)
 	}
-	if name == "" || utf8.RuneCountInString(name) > 120 {
-		return 0, errors.BadRequest("name %q is not valid", name)
+	if utf8.RuneCountInString(opts.Name) > 120 {
+		return 0, errors.BadRequest("name %q is not valid", opts.Name)
 	}
 	if opts.Storage < 0 || opts.Storage > maxInt32 {
 		return 0, errors.BadRequest("storage identifier %d is not valid", opts.Storage)
@@ -71,24 +106,21 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, name st
 	if opts.Stream < 0 || opts.Stream > maxInt32 {
 		return 0, errors.BadRequest("stream identifier %d is not valid", opts.Stream)
 	}
-	if opts.OAuth != nil {
-		if opts.OAuth.AccessToken == "" {
-			return 0, errors.BadRequest("OAuth access token is empty")
-		}
-		if opts.OAuth.RefreshToken == "" {
-			return 0, errors.BadRequest("OAuth refresh token is empty")
-		}
+
+	c, ok := this.state.Connector(connector)
+	if !ok {
+		return 0, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
 	}
 
 	n := state.AddConnectionNotification{
 		Workspace: this.workspace.ID,
-		Name:      name,
+		Name:      opts.Name,
 		Role:      state.ConnectionRole(role),
+		Enabled:   opts.Enabled,
 		Connector: connector,
 	}
-	c, ok := this.state.Connector(connector)
-	if !ok {
-		return 0, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
+	if opts.Name == "" {
+		n.Name = c.Name
 	}
 
 	// Validate the storage.
@@ -152,38 +184,99 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, name st
 	}
 
 	// Validate OAuth.
-	if (opts.OAuth == nil) != (c.OAuth == nil) {
-		if opts.OAuth == nil {
+	if (opts.OAuth == "") != (c.OAuth == nil) {
+		if opts.OAuth == "" {
 			return 0, errors.BadRequest("OAuth is required by connector %d", connector)
 		}
 		return 0, errors.BadRequest("connector %d does not support OAuth", connector)
 	}
 
-	// Set the resource. It can be an existent resource or a resource to be created.
-	if opts.OAuth != nil {
-		connection, err := _connector.RegisteredApp(c.Name).Open(context.Background(), &_connector.AppConfig{
-			Role:         _connector.Role(role),
-			ClientSecret: c.OAuth.ClientSecret,
-			AccessToken:  opts.OAuth.AccessToken,
-		})
+	// Set the resource. It can be an existing resource or a resource that needs to be created.
+	if opts.OAuth != "" {
+		data, err := base62.DecodeString(opts.OAuth)
+		if err != nil {
+			return 0, errors.BadRequest("OAuth is not valid")
+		}
+		var resource authorizedResource
+		err = json.Unmarshal(data, &resource)
+		if err != nil {
+			return 0, errors.BadRequest("OAuth is not valid")
+		}
+		if resource.Workspace != this.workspace.ID || resource.Connector != c.ID {
+			return 0, errors.BadRequest("OAuth is not valid")
+		}
+		n.Resource.Code = resource.Code
+		r, ok := this.workspace.ResourceByCode(resource.Code)
+		if ok {
+			n.Resource.ID = r.ID
+		}
+		if !ok || resource.AccessToken != r.AccessToken || resource.RefreshToken != r.RefreshToken ||
+			resource.ExpiresIn != r.ExpiresIn {
+			n.Resource.AccessToken = resource.AccessToken
+			n.Resource.RefreshToken = resource.RefreshToken
+			n.Resource.ExpiresIn = resource.ExpiresIn
+		}
+	}
+
+	ctx := context.Background()
+
+	// Validate the settings.
+	if c.HasSettings {
+		var connection any
+		var err error
+		switch c.Type {
+		case state.AppType:
+			connection, err = _connector.RegisteredApp(c.Name).Open(ctx, &_connector.AppConfig{
+				Role:         _connector.Role(role),
+				ClientSecret: c.OAuth.ClientSecret,
+				Resource:     n.Resource.Code,
+				AccessToken:  n.Resource.AccessToken,
+			})
+		case state.DatabaseType:
+			connection, err = _connector.RegisteredDatabase(c.Name).Open(ctx, &_connector.DatabaseConfig{
+				Role: _connector.Role(role),
+			})
+		case state.FileType:
+			connection, err = _connector.RegisteredFile(c.Name).Open(ctx, &_connector.FileConfig{
+				Role: _connector.Role(role),
+			})
+		case state.MobileType:
+			connection, err = _connector.RegisteredMobile(c.Name).Open(ctx, &_connector.MobileConfig{
+				Role: _connector.Role(role),
+			})
+		case state.ServerType:
+			connection, err = _connector.RegisteredServer(c.Name).Open(ctx, &_connector.ServerConfig{
+				Role: _connector.Role(role),
+			})
+		case state.StorageType:
+			connection, err = _connector.RegisteredStorage(c.Name).Open(ctx, &_connector.StorageConfig{
+				Role: _connector.Role(role),
+			})
+		case state.StreamType:
+			connection, err = _connector.RegisteredStream(c.Name).Open(ctx, &_connector.StreamConfig{
+				Role: _connector.Role(role),
+			})
+		case state.WebsiteType:
+			connection, err = _connector.RegisteredWebsite(c.Name).Open(ctx, &_connector.WebsiteConfig{
+				Role: _connector.Role(role),
+			})
+		}
 		if err != nil {
 			return 0, err
 		}
-		code, err := connection.Resource()
+		connectionUI, ok := connection.(_connector.UI)
+		if !ok {
+			return 0, errors.BadRequest("connector %d does not have a UI", c.ID)
+		}
+		n.Settings, err = connectionUI.SettingsUI(settings)
 		if err != nil {
-			return 0, err
+			return 0, errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
 		}
-		n.Resource.Code = code
-		resource, _ := this.workspace.ResourceByCode(code)
-		if resource != nil {
-			n.Resource.ID = resource.ID
+		if !utf8.Valid(n.Settings) {
+			return 0, errors.New("settings is not valid UTF-8")
 		}
-		if resource == nil || opts.OAuth.AccessToken != resource.AccessToken ||
-			opts.OAuth.RefreshToken != resource.RefreshToken ||
-			opts.OAuth.ExpiresIn != resource.ExpiresIn {
-			n.Resource.AccessToken = opts.OAuth.AccessToken
-			n.Resource.RefreshToken = opts.OAuth.RefreshToken
-			n.Resource.ExpiresIn = opts.OAuth.ExpiresIn
+		if utf8.RuneCount(n.Settings) > maxSettingsLen {
+			return 0, fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 		}
 	}
 
@@ -206,8 +299,6 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, name st
 			return 0, err
 		}
 	}
-
-	ctx := context.Background()
 
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		if n.Resource.Code != "" {
@@ -236,9 +327,10 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, name st
 			}
 		}
 		// Insert the connection.
-		_, err = tx.Exec(ctx, "INSERT INTO connections (id, workspace, name, type, role, connector, storage, stream,"+
-			" resource, website_host) VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, 0), NULLIF($8, 0), $9, $10)",
-			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Connector, n.Storage, n.Stream, n.Resource.ID, n.WebsiteHost)
+		_, err = tx.Exec(ctx, "INSERT INTO connections "+
+			"(id, workspace, name, type, role, enabled, connector, storage, stream, resource, website_host, settings)"+
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, 0), NULLIF($9, 0), $10, $11, $12)", n.ID, n.Workspace,
+			n.Name, c.Type, n.Role, n.Enabled, n.Connector, n.Storage, n.Stream, n.Resource.ID, n.WebsiteHost, string(n.Settings))
 		if err != nil {
 			if err != nil {
 				if postgres.IsForeignKeyViolation(err) {
@@ -271,6 +363,118 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, name st
 	}
 
 	return n.ID, nil
+}
+
+// authorizedResource represents an authorized resource that can be used to
+// create a new connection.
+type authorizedResource struct {
+	Workspace    int
+	Connector    int
+	Code         string
+	AccessToken  string
+	RefreshToken string
+	ExpiresIn    time.Time
+}
+
+// OAuthToken returns an OAuth token, given an OAuth authorization code,
+// that can be used to add a new connection for the specified connector.
+//
+// It returns an errors.NotFound error if the workspace does not exist anymore.
+// It returns an errors.UnprocessableError error with code ConnectorNotExist if
+// the connector does not exist.
+func (this *Workspace) OAuthToken(authorizationCode string, connector int) (string, error) {
+
+	if authorizationCode == "" {
+		return "", errors.BadRequest("authorization code is empty")
+	}
+	if connector < 1 || connector > maxInt32 {
+		return "", errors.BadRequest("connector identifier %d is not valid", connector)
+	}
+
+	c, ok := this.state.Connector(connector)
+	if !ok {
+		return "", errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
+	}
+	if c.OAuth == nil {
+		return "", errors.BadRequest("connector %d does not support OAuth", connector)
+	}
+
+	// Retrieve the refresh and access tokens.
+	body := url.Values{}
+	body.Set("grant_type", "authorization_code")
+	body.Set("client_id", c.OAuth.ClientID)
+	body.Set("client_secret", c.OAuth.ClientSecret)
+	body.Set("redirect_uri", "https://localhost:9090/admin/oauth/authorize")
+	body.Set("code", authorizationCode)
+
+	req, err := http.NewRequest("POST", c.OAuth.TokenEndpoint, strings.NewReader(body.Encode()))
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	if err != nil {
+		return "", err
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("cannot retrieve the refresh and access tokens from connector %d: %s", c.ID, err)
+	}
+	defer func() {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}()
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("cannot retrieve the refresh and access tokens from connector %d: server responded with status %d", c.ID, resp.StatusCode)
+	}
+
+	tokens := struct {
+		// TODO(carlo): add Scope field and validate it
+		AccessToken  string       `json:"access_token"`
+		TokenType    string       `json:"token_type"` // TODO(carlo): validate the value
+		ExpiresIn    *json.Number `json:"expires_in"` // TODO(carlo): validate the value
+		RefreshToken string       `json:"refresh_token"`
+	}{}
+	err = json.NewDecoder(resp.Body).Decode(&tokens)
+	if err != nil {
+		return "", fmt.Errorf("cannot decode response from OAuth server of connector %d: %s", c.ID, err)
+	}
+
+	// TODO(carlo): compute the token type to use
+
+	// Compute the access token expire time.
+	expiresIn := time.Now()
+	if c.OAuth.ForcedExpiresIn > 0 {
+		expiresIn = expiresIn.Add(time.Duration(c.OAuth.ForcedExpiresIn) * time.Second)
+	} else if tokens.ExpiresIn != nil {
+		seconds, _ := tokens.ExpiresIn.Int64()
+		expiresIn = expiresIn.Add(time.Duration(seconds) * time.Second)
+	} else if c.OAuth.DefaultExpiresIn != 0 {
+		expiresIn = expiresIn.Add(time.Duration(c.OAuth.DefaultExpiresIn) * time.Second)
+	}
+
+	connection, err := _connector.RegisteredApp(c.Name).Open(context.Background(), &_connector.AppConfig{
+		ClientSecret: c.OAuth.ClientSecret,
+		AccessToken:  tokens.AccessToken,
+	})
+	if err != nil {
+		return "", err
+	}
+	code, err := connection.Resource()
+	if err != nil {
+		return "", err
+	}
+
+	resource, err := json.Marshal(authorizedResource{
+		Workspace:    this.workspace.ID,
+		Connector:    connector,
+		Code:         code,
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresIn:    expiresIn,
+	})
+
+	// TODO(marco): Encrypt the token.
+
+	return base62.EncodeToString(resource), nil
 }
 
 // Connection returns the connection with identifier id of the workspace ws.

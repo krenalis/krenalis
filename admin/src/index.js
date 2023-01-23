@@ -5,6 +5,7 @@ import Login from './routes/Login/Login';
 import NavigationWrapper from './routes/NavigationWrapper/NavigationWrapper';
 import ConnectionsWrapper from './routes/ConnectionsWrapper/ConnectionsWrapper';
 import ConnectorsList from './routes/ConnectorsList/ConnectorsList';
+import ConnectorSettings from './routes/ConnectorSettings/ConnectorSettings';
 import ConnectionAdded from './routes/ConnectionAdded/ConnectionAdded';
 import ConnectionsMap from './routes/ConnectionsMap/ConnectionsMap';
 import Connection from './routes/Connection/Connection';
@@ -12,6 +13,8 @@ import UsersWrapper from './routes/UsersWrapper/UsersWrapper';
 import UsersList from './routes/UsersList/UsersList';
 import SchemaWrapper from './routes/SchemaWrapper/SchemaWrapper';
 import Schema from './routes/Schema/Schema';
+import OAuth from './routes/OAuth/OAuth';
+import OAuthError from './routes/OAuthError/OAuthError';
 import NotFound from './routes/NotFound/NotFound';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
@@ -24,9 +27,12 @@ root.render(
 				<Route element={<NavigationWrapper />}>
 					<Route element={<ConnectionsWrapper />}>
 						<Route path='connectors/added/:id' element={<ConnectionAdded />} />
+						<Route path='connectors/:id' element={<ConnectorSettings />} />
 						<Route path='connectors' element={<ConnectorsList />} />
 						<Route path='connections/:id' element={<Connection />} />
 						<Route path='connections' element={<ConnectionsMap />} />
+						<Route path='oauth' element={<OAuth />} />
+						<Route path='oauth/error' element={<OAuthError />} />
 					</Route>
 					<Route element={<UsersWrapper />}>
 						<Route path='users' element={<UsersList />} />
