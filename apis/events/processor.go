@@ -119,6 +119,7 @@ type Processor struct {
 	streams    map[int]*processorStream
 	queues     map[int]*queue
 	observer   *observer
+	geoLiteDB  *geoip2.Reader
 }
 
 // processorStream represents a stream used by the processor.
@@ -146,6 +147,12 @@ func NewProcessor(ctx context.Context, db *postgres.DB, st *state.State,
 		if processor.isSuitableStream(c) {
 			processor.replaceStream(nil, c)
 		}
+	}
+
+	var err error
+	processor.geoLiteDB, err = geoip2.Open(geoLite2Path)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, fmt.Errorf("cannot open GeoLite at path %q: %s", geoLite2Path, err)
 	}
 
 	// Process the events from the default stream.
@@ -301,6 +308,11 @@ func (p *Processor) process(s *processorStream) {
 	defer func() {
 		if err := s.stream.Close(); err != nil {
 			log.Printf("cannot close stream %s: %s", streamName, err)
+		}
+		if p.geoLiteDB != nil {
+			if err := p.geoLiteDB.Close(); err != nil {
+				log.Printf("cannot close GeoLite: %s", err)
+			}
 		}
 	}()
 
@@ -665,13 +677,8 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 			}
 		}
 		if event.Country == "" || event.City == "" {
-			geoDB, err := geoip2.Open(geoLite2Path)
-			if err != nil && !errors.Is(err, fs.ErrNotExist) {
-				return err
-			}
-			if !errors.Is(err, fs.ErrNotExist) {
-				defer geoDB.Close()
-				city, err := geoDB.City(requestIP)
+			if p.geoLiteDB != nil {
+				city, err := p.geoLiteDB.City(requestIP)
 				if err != nil {
 					return err
 				}
@@ -684,7 +691,6 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 				event.location.latitude = city.Location.Latitude
 				event.location.longitude = city.Location.Longitude
 				event.location.timezone = city.Location.TimeZone
-				geoDB.Close()
 			}
 		} else if event.Country != "" {
 			c := culture.Country(event.Country)
