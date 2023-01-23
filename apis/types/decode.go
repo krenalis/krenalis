@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"strconv"
 	"time"
 	"unicode/utf8"
@@ -267,6 +268,15 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 		}
 		if !json.Valid([]byte(s)) {
 			return nil, errors.New("not a valid JSON value")
+		}
+		return s, nil
+	case PtInet:
+		s, ok := tok.(string)
+		if !ok {
+			return nil, errors.New("not an Inet value")
+		}
+		if net.ParseIP(s) == nil {
+			return nil, errors.New("not a valid Inet value")
 		}
 		return s, nil
 	case PtText:

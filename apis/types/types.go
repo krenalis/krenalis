@@ -94,6 +94,7 @@ const (
 	PtYear
 	PtUUID
 	PtJSON
+	PtInet
 	PtText
 	PtArray
 	PtObject
@@ -121,6 +122,7 @@ var physicalName = []string{
 	"Year",
 	"UUID",
 	"JSON",
+	"Inet",
 	"Text",
 	"Array",
 	"Object",
@@ -408,6 +410,11 @@ func UUID() Type {
 // JSON returns the JSON type.
 func JSON() Type {
 	return Type{pt: PtJSON}
+}
+
+// Inet returns the Inet type.
+func Inet() Type {
+	return Type{pt: PtInet}
 }
 
 // Text returns the Text type with the given lengths.

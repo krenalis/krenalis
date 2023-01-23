@@ -106,6 +106,21 @@ func TestDecode(t *testing.T) {
 			Value: `{"name":"John"}`,
 		},
 		{
+			Data:  `"192.0.2.235"`,
+			Type:  Inet(),
+			Value: `192.0.2.235`,
+		},
+		{
+			Data:  `"::FFFF:192.0.2.235"`,
+			Type:  Inet(),
+			Value: `::FFFF:192.0.2.235`,
+		},
+		{
+			Data:  `"2001:db8::8a2e:370:7334"`,
+			Type:  Inet(),
+			Value: `2001:db8::8a2e:370:7334`,
+		},
+		{
 			Data:  `"abc"`,
 			Type:  Text(Chars(5)),
 			Value: "abc",
