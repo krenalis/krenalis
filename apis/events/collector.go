@@ -97,13 +97,19 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		switch err {
 		case errBadRequest:
 			http.Error(w, "Bad Request", http.StatusBadRequest)
+		case errNotFound:
+			http.Error(w, "Invalid path or identifier", http.StatusNotFound)
 		case errUnauthorized:
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		default:
 			log.Printf("[error] %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
+		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
+	return
 }
 
 // MessageHeader represents the header of an event message.
