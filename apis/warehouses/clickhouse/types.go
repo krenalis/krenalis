@@ -75,7 +75,7 @@ func parseType(s string) (types.Type, string) {
 		case "IPv4":
 			t = types.UInt()
 		case "IPv6":
-			t = types.Text(types.Bytes(16))
+			t = types.Inet()
 		default:
 			return types.Type{}, ""
 		}
