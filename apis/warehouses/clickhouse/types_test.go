@@ -54,7 +54,7 @@ func TestTypes(t *testing.T) {
 		{`Nullable(String)`, types.Text().WithNull()},
 		{`Nullable(DateTime('Asia/Istanbul'))`, types.DateTime("2006-01-02 15:04:05").WithNull()},
 		{`IPv4`, types.UInt()},
-		{`IPv6`, types.Text(types.Bytes(16))},
+		{`IPv6`, types.Inet()},
 		{`FixedString(10)`, types.Text(types.Bytes(10))},
 		{`Map(String, Int32)`, types.Map(types.Int())},
 		{`Map(String, Array(String))`, types.Map(types.Array(types.Text()))},
