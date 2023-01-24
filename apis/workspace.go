@@ -894,13 +894,18 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 	}
 
 	// Create the schema to return, with only the required properties.
+	columns := make([]warehouses.Column, len(properties))
 	queryProperties := make([]types.Property, len(properties))
 	for i, name := range properties {
+		p := propertyByName[name]
+		columns[i] = warehouses.Column{
+			Name: p.Name,
+			Type: p.Type,
+		}
 		queryProperties[i] = propertyByName[name]
 	}
-	schema := types.Object(queryProperties)
 
-	users, err := ws.Warehouse.Users(context.Background(), schema, orderProperty, first, limit)
+	users, err := ws.Warehouse.Users(context.Background(), columns, orderProperty, first, limit)
 	if err != nil {
 		if err2, ok := err.(*warehouses.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
@@ -909,6 +914,8 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 		}
 		return types.Type{}, nil, err
 	}
+
+	schema := types.Object(queryProperties)
 
 	return schema, users, err
 }

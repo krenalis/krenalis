@@ -320,32 +320,30 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 	return tables, nil
 }
 
-// Users returns the users, with only the properties in schema, ordered by
-// order if order is not the zero Property, and in range [first,first+limit]
-// with first >= 0 and 0 < limit <= 1000.
+// Users returns the users, with only the given columns, ordered by order if
+// order is not the zero Property, and in range [first,first+limit] with
+// first >= 0 and 0 < limit <= 1000.
 //
 // If a query to the warehouse fails, it returns an Error value.
 // If an argument is not valid, it panics.
-func (warehouse *PostgreSQL) Users(ctx context.Context, schema types.Type, order types.Property, first, limit int) ([][]any, error) {
+func (warehouse *PostgreSQL) Users(ctx context.Context, columns []warehouses.Column, order types.Property, first, limit int) ([][]any, error) {
 
 	db, err := warehouse.connection()
 	if err != nil {
 		return nil, err
 	}
 
-	properties := schema.Properties()
-
 	// Build the query.
 	var query strings.Builder
 	query.WriteString(`SELECT "`)
-	for i, p := range properties {
+	for i, c := range columns {
 		if i > 0 {
 			query.WriteString(`", "`)
 		}
-		if !types.IsValidPropertyName(p.Name) {
-			panic(fmt.Sprintf("invalid property name: %q", p.Name))
+		if !types.IsValidPropertyName(c.Name) {
+			panic(fmt.Sprintf("invalid property name: %q", c.Name))
 		}
-		query.WriteString(p.Name)
+		query.WriteString(c.Name)
 	}
 	query.WriteString(`" FROM users`)
 	if order.Name != "" {
@@ -369,9 +367,9 @@ func (warehouse *PostgreSQL) Users(ctx context.Context, schema types.Type, order
 		return nil, warehouses.WrapError(err)
 	}
 	for rows.Next() {
-		user := make([]any, len(properties))
+		user := make([]any, len(columns))
 		for i := range user {
-			typ := properties[i].Type
+			typ := columns[i].Type
 			switch typ.PhysicalType() {
 			case types.PtBoolean:
 				var v *bool
