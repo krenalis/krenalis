@@ -176,7 +176,7 @@ func writeTo(w http.ResponseWriter, status int, code Code, message, details stri
 	b.WriteString(marshalString(message))
 	if details != "" {
 		b.WriteString(`,"details":`)
-		b.WriteString(marshalString(message))
+		b.WriteString(marshalString(details))
 	}
 	b.WriteString(`}}`)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
