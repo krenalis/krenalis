@@ -17,6 +17,7 @@ func TestTypes(t *testing.T) {
 
 	tests := []struct {
 		s          string
+		udtName    string
 		t          types.Type
 		isNullable *string
 		charLength *string
@@ -24,28 +25,31 @@ func TestTypes(t *testing.T) {
 		radix      *string
 		scale      *string
 	}{
-		{`smallint`, types.Int16(), pointer("NO"), nil, nil, nil, nil},
-		{`integer`, types.Int(), pointer("NO"), nil, nil, nil, nil},
-		{`bigint`, types.Int64(), pointer("NO"), nil, nil, nil, nil},
-		{`numeric`, types.Decimal(10, 3), pointer("NO"), nil, pointer("10"), pointer("10"), pointer("3")},
-		{`real`, types.Float32(), pointer("NO"), nil, nil, nil, nil},
-		{`double precision`, types.Float().WithNull(), pointer("YES"), nil, nil, nil, nil},
-		{`character varying`, types.Text(types.Chars(20)), pointer("NO"), pointer("20"), nil, nil, nil},
-		{`character`, types.Text(types.Chars(8)), pointer("NO"), pointer("8"), nil, nil, nil},
-		{`text`, types.Text(), pointer("NO"), nil, nil, nil, nil},
-		{`timestamp without time zone`, types.DateTime("2006-01-02 15:04:05.999999"), pointer("NO"), nil, nil, nil, nil},
-		{`timestamp with time zone`, types.DateTime("2006-01-02 15:04:05.999999"), pointer("NO"), nil, nil, nil, nil},
-		{`date`, types.Date("2006-01-02"), pointer("NO"), nil, nil, nil, nil},
-		{`time without time zone`, types.Time("15:04:05"), pointer("NO"), nil, nil, nil, nil},
-		{`time with time zone`, types.Time("15:04:05"), pointer("NO"), nil, nil, nil, nil},
-		{`boolean`, types.Boolean().WithNull(), pointer("YES"), nil, nil, nil, nil},
-		{`uuid`, types.UUID(), pointer("NO"), nil, nil, nil, nil},
-		{`json`, types.JSON(), pointer("NO"), nil, nil, nil, nil},
-		{`jsonb`, types.JSON(), pointer("NO"), nil, nil, nil, nil},
+		{`smallint`, "", types.Int16(), pointer("NO"), nil, nil, nil, nil},
+		{`integer`, "", types.Int(), pointer("NO"), nil, nil, nil, nil},
+		{`bigint`, "", types.Int64(), pointer("NO"), nil, nil, nil, nil},
+		{`numeric`, "", types.Decimal(10, 3), pointer("NO"), nil, pointer("10"), pointer("10"), pointer("3")},
+		{`real`, "", types.Float32(), pointer("NO"), nil, nil, nil, nil},
+		{`double precision`, "", types.Float().WithNull(), pointer("YES"), nil, nil, nil, nil},
+		{`character varying`, "", types.Text(types.Chars(20)), pointer("NO"), pointer("20"), nil, nil, nil},
+		{`character`, "", types.Text(types.Chars(8)), pointer("NO"), pointer("8"), nil, nil, nil},
+		{`text`, "", types.Text(), pointer("NO"), nil, nil, nil, nil},
+		{`timestamp without time zone`, "", types.DateTime("2006-01-02 15:04:05.999999"), pointer("NO"), nil, nil, nil, nil},
+		{`timestamp with time zone`, "", types.DateTime("2006-01-02 15:04:05.999999"), pointer("NO"), nil, nil, nil, nil},
+		{`date`, "", types.Date("2006-01-02"), pointer("NO"), nil, nil, nil, nil},
+		{`time without time zone`, "", types.Time("15:04:05"), pointer("NO"), nil, nil, nil, nil},
+		{`time with time zone`, "", types.Time("15:04:05"), pointer("NO"), nil, nil, nil, nil},
+		{`boolean`, "", types.Boolean().WithNull(), pointer("YES"), nil, nil, nil, nil},
+		{`uuid`, "", types.UUID(), pointer("NO"), nil, nil, nil, nil},
+		{`json`, "", types.JSON(), pointer("NO"), nil, nil, nil, nil},
+		{`jsonb`, "", types.JSON(), pointer("NO"), nil, nil, nil, nil},
+		{`ARRAY`, `_int4`, types.Array(types.Int()), pointer("NO"), nil, nil, nil, nil},
+		{`ARRAY`, `_varchar`, types.Array(types.Text()), pointer("NO"), nil, nil, nil, nil},
+		{`ARRAY`, `_bool`, types.Array(types.Boolean()), pointer("NO"), nil, nil, nil, nil},
 	}
 
 	for _, test := range tests {
-		got, err := columnType(test.s, "", test.isNullable, test.charLength, test.precision, test.radix, test.scale, nil)
+		got, err := columnType(test.s, test.udtName, test.isNullable, test.charLength, test.precision, test.radix, test.scale, nil)
 		if err != nil {
 			t.Error(err)
 		}

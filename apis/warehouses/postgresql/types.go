@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"chichi/apis/types"
 )
@@ -26,7 +25,7 @@ func columnType(typ, udtName string, isNullable, charLength, precision, radix, s
 	switch typ {
 	case "smallint":
 		t = types.Int16()
-	case "integer", "int4":
+	case "integer":
 		t = types.Int()
 	case "bigint":
 		t = types.Int64()
@@ -60,7 +59,7 @@ func columnType(typ, udtName string, isNullable, charLength, precision, radix, s
 		t = types.Float32()
 	case "double precision":
 		t = types.Float()
-	case "character varying", "character", "varchar":
+	case "character varying", "character":
 		if charLength != nil {
 			chars, _ := strconv.Atoi(*charLength)
 			if chars < 1 {
@@ -87,17 +86,29 @@ func columnType(typ, udtName string, isNullable, charLength, precision, radix, s
 	case "json", "jsonb":
 		t = types.JSON()
 	case "ARRAY":
-		name := strings.TrimPrefix(udtName, "_")
-		if name == udtName {
-			return types.Type{}, fmt.Errorf("unsupported array element %q", udtName)
+		if charLength != nil {
+			return types.Type{}, fmt.Errorf("unsupported array with non-null char length")
 		}
-		elemType, err := columnType(name, udtName, isNullable, charLength, precision, radix, scale, enums)
-		if err != nil {
-			return types.Type{}, err
+		if precision != nil {
+			return types.Type{}, fmt.Errorf("unsupported array with non-null precision")
 		}
-		if elemType.Valid() {
-			return types.Array(elemType), nil
+		if radix != nil {
+			return types.Type{}, fmt.Errorf("unsupported array with non-null radix")
 		}
+		if scale != nil {
+			return types.Type{}, fmt.Errorf("unsupported array with non-null scale")
+		}
+		switch udtName {
+		case "_bool":
+			t = types.Boolean()
+		case "_int4":
+			t = types.Int()
+		case "_varchar":
+			t = types.Text()
+		default:
+			return types.Type{}, fmt.Errorf("unsupported array type with 'udt_name' = %q", udtName)
+		}
+		t = types.Array(t)
 	case "USER-DEFINED":
 		// Check if the user-defined type is an enum.
 		if typ, ok := enums[udtName]; ok {
