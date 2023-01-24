@@ -43,7 +43,7 @@ INSERT INTO connectors (name, type, has_settings, logo_url, webhooks_per, oauth_
     ('S3', 'Storage', TRUE, 'https://cdn2.iconfinder.com/data/icons/amazon-aws-stencils/100/Storage__Content_Delivery_Amazon_S3-512.png', 'None', '', '', '', '', 0),
     ('PostgreSQL', 'Database', TRUE, 'https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/postgresql-512.png', 'None', '', '', '', '', 0),
     ('Parquet', 'File', TRUE, '', 'None', '', '', '', '', 0),
-    ('Website', 'Website', TRUE, 'https://cdn2.iconfinder.com/data/icons/free-simple-line-mix/48/22-Website-512.png', 'None', '', '', '', '', 0),
+    ('Website', 'Website', FALSE, 'https://cdn2.iconfinder.com/data/icons/free-simple-line-mix/48/22-Website-512.png', 'None', '', '', '', '', 0),
     ('Kafka', 'Stream', TRUE, 'https://cdn.icon-icons.com/icons2/2248/PNG/512/apache_kafka_icon_138937.png', 'None', '', '', '', '', 0),
     ('RabbitMQ', 'Stream', TRUE, 'https://cdn.icon-icons.com/icons2/2699/PNG/512/rabbitmq_logo_icon_170810.png', 'None', '', '', '', '', 0),
     ('UISample', 'Stream', TRUE, '', 'None', '', '', '', '', 0),
