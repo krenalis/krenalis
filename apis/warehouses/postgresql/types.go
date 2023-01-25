@@ -16,11 +16,21 @@ import (
 )
 
 // columnType returns the types.Type corresponding to the PostgreSQL type typ
-// stored in the information_schema.columns column. udtName is the name of the
-// column data type, which is relevant in case of user-defined types and arrays.
-// enums is a mapping of available enum types. It returns an invalid type if typ
-// is not supported. It returns an error if an argument is not valid.
-func columnType(typ, udtName string, isNullable, charLength, precision, radix, scale *string, enums map[string]types.Type) (types.Type, error) {
+// stored in the information_schema.columns column.
+//
+// udtName is the name of the column data type, which is relevant in case of
+// user-defined types and arrays.
+//
+// attTypMod, when non-nil, is a type-specific data attribute read from
+// pg_attribute.atttypmod (represents, for example, the maximum length of a
+// varchar column or the maximum length of the text of an array element); is nil
+// if the column type has no associated type-specific data.
+//
+// enums is a mapping of available enum types.
+//
+// It returns an invalid type if typ is not supported. It returns an error if an
+// argument is not valid.
+func columnType(typ, udtName string, isNullable, charLength, precision, radix, scale *string, attTypMod *int, enums map[string]types.Type) (types.Type, error) {
 	var t types.Type
 	switch typ {
 	case "smallint":
@@ -86,29 +96,30 @@ func columnType(typ, udtName string, isNullable, charLength, precision, radix, s
 	case "json", "jsonb":
 		t = types.JSON()
 	case "ARRAY":
-		if charLength != nil {
-			return types.Type{}, fmt.Errorf("unsupported array with non-null char length")
-		}
-		if precision != nil {
-			return types.Type{}, fmt.Errorf("unsupported array with non-null precision")
-		}
-		if radix != nil {
-			return types.Type{}, fmt.Errorf("unsupported array with non-null radix")
-		}
-		if scale != nil {
-			return types.Type{}, fmt.Errorf("unsupported array with non-null scale")
-		}
+		// From https://www.postgresql.org/docs/current/arrays.html:
+		//
+		// “[...] However, the current implementation ignores any supplied array
+		// size limits, i.e., the behavior is the same as for arrays of
+		// unspecified length.”
+		//
+		// so there's no way to limit the min/max number of array elements.
 		switch udtName {
 		case "_bool":
-			t = types.Boolean()
+			t = types.Array(types.Boolean())
 		case "_int4":
-			t = types.Int()
+			t = types.Array(types.Int())
 		case "_varchar":
-			t = types.Text()
-		default:
-			return types.Type{}, fmt.Errorf("unsupported array type with 'udt_name' = %q", udtName)
+			if attTypMod != nil {
+				length := *attTypMod - 4 // See the function "_pg_char_max_length".
+				if length < 1 {
+					return types.Type{}, fmt.Errorf("atttypmod value %d is not valid", *attTypMod)
+				}
+				t = types.Text(types.Chars(length))
+			} else {
+				t = types.Text()
+			}
+			t = types.Array(t)
 		}
-		t = types.Array(t)
 	case "USER-DEFINED":
 		// Check if the user-defined type is an enum.
 		if typ, ok := enums[udtName]; ok {

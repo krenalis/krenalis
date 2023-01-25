@@ -253,6 +253,34 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			return err
 		}
 
+		// Read the 'atttypmod' attribute of column types, where relevant.
+		query = "SELECT c.relname, a.attname, a.atttypmod\n" +
+			"FROM pg_attribute AS a\n" +
+			"INNER JOIN pg_class AS c ON a.attrelid = c.oid\n" +
+			"INNER JOIN pg_namespace AS n ON c.relnamespace = n.oid\n" +
+			"WHERE n.nspname = '" + warehouse.settings.Schema + "' AND a.atttypmod <> -1"
+		rows, err = tx.Query(ctx, query)
+		if err != nil {
+			return err
+		}
+		attTypMods := map[string]map[string]*int{}
+		for rows.Next() {
+			var relname, attname string
+			var atttypmod int
+			err := rows.Scan(&relname, &attname, &atttypmod)
+			if err != nil {
+				return err
+			}
+			if attTypMods[relname] == nil {
+				attTypMods[relname] = map[string]*int{attname: &atttypmod}
+			} else {
+				attTypMods[relname][attname] = &atttypmod
+			}
+		}
+		if err := rows.Err(); err != nil {
+			return err
+		}
+
 		// Read columns.
 		query = "SELECT c.table_name, c.column_name, c.is_nullable, c.data_type, c.udt_name, c.character_maximum_length," +
 			" c.numeric_precision, c.numeric_precision_radix, c.numeric_scale, c.is_updatable," +
@@ -287,16 +315,13 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 				Name:        *columnName,
 				IsUpdatable: *isUpdatable == "YES",
 			}
-			column.Type, err = columnType(*typ, *udtName, isNullable, charLength, precision, radix, scale, enums)
+			attTypMod := attTypMods[*tableName][*columnName]
+			column.Type, err = columnType(*typ, *udtName, isNullable, charLength, precision, radix, scale, attTypMod, enums)
 			if err != nil {
 				return fmt.Errorf("data warehouse has returned an invalid type: %s", err)
 			}
 			if !column.Type.Valid() {
-				name := *typ
-				if name != *udtName {
-					name += " (" + *udtName + ")"
-				}
-				return fmt.Errorf("type %q of column %s is not supported", name, column.Name)
+				return fmt.Errorf("type of column %s.%s is not supported", *tableName, column.Name)
 			}
 			if description != nil {
 				column.Description = *description
