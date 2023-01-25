@@ -29,7 +29,7 @@ const ConnectorSettings = () => {
 	let [fields, setFields] = useState([]);
 	let [actions, setActions] = useState([]);
 	let [values, setValues] = useState(null);
-	let [isConnectionAdded, setIsConnectionAdded] = useState(false);
+	let [newConnectionID, setNewConnectionID] = useState(0);
 	let [status, setStatus] = useState(null);
 	let [notFound, setNotFound] = useState(false);
 
@@ -131,7 +131,7 @@ const ConnectorSettings = () => {
 				onError(err);
 				return;
 			}
-			setIsConnectionAdded(true);
+			setNewConnectionID(id);
 			return;
 		}
 		let [ui, err] = await call('/admin/connectors/ui-event', 'POST', {
@@ -178,7 +178,7 @@ const ConnectorSettings = () => {
 			onError(err);
 			return;
 		}
-		setIsConnectionAdded(true);
+		setNewConnectionID(id);
 		return;
 	};
 
@@ -205,8 +205,8 @@ const ConnectorSettings = () => {
 		return <NotFound />;
 	}
 
-	if (isConnectionAdded) {
-		return <Navigate to={`/admin/connectors/added/${connectorID}?role=${connectionRole}`} />;
+	if (newConnectionID > 0) {
+		return <Navigate to={`/admin/connections?new=${newConnectionID}`} />;
 	}
 
 	let c = connector;

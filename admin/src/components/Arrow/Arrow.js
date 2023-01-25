@@ -1,9 +1,9 @@
 import './Arrow.css';
 import Xarrow from 'react-xarrows';
 
-const Arrow = ({ start, end, startAnchor, endAnchor }) => {
+const Arrow = ({ start, end, startAnchor, endAnchor, isNew }) => {
 	return (
-		<div className='Arrow'>
+		<div className={`Arrow${isNew ? ' new' : ''}`}>
 			<Xarrow
 				start={start}
 				end={end}

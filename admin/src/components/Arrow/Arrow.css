@@ -1,3 +1,14 @@
+@keyframes arrow-fade-in {
+	0% { opacity: 0 }
+	90% { opacity: 0 }
+    100% { opacity: 1}
+}
+
+.Arrow.new {
+    animation: arrow-fade-in 3800ms;
+	animation-fill-mode: both;
+}
+
 .Arrow > div {
     width: -moz-available;
 	width: -webkit-fill-available;

@@ -2,20 +2,30 @@ import './LinkedConnectionBlocks.css';
 import ConnectionBlock from '../ConnectionBlock/ConnectionBlock';
 import Arrow from '../Arrow/Arrow';
 
-const LinkedConnectionBlocks = ({ primaryConnection, primaryColumn, secondaryConnections, startAnchor, endAnchor }) => {
+const LinkedConnectionBlocks = ({
+	primaryConnection,
+	primaryColumn,
+	secondaryConnections,
+	startAnchor,
+	endAnchor,
+	newConnection,
+}) => {
 	if (primaryColumn !== 'left' && primaryColumn !== 'right') return null;
 	let hasSecondaryConnections = secondaryConnections != null && secondaryConnections.length > 0;
 
 	return (
 		<div className={`LinkedConnectionBlocks${` ${primaryColumn}`}${hasSecondaryConnections ? ' grid' : ''}`}>
 			<div className='primaryConnection'>
-				<ConnectionBlock connection={primaryConnection}></ConnectionBlock>
+				<ConnectionBlock
+					connection={primaryConnection}
+					isNew={primaryConnection.ID === newConnection}
+				></ConnectionBlock>
 			</div>
 			{hasSecondaryConnections && (
 				<>
 					<div className='secondaryConnections'>
 						{secondaryConnections.map((c) => (
-							<ConnectionBlock connection={c}></ConnectionBlock>
+							<ConnectionBlock connection={c} isNew={c.ID === newConnection}></ConnectionBlock>
 						))}
 					</div>
 					<div className='arrows'>
@@ -29,6 +39,7 @@ const LinkedConnectionBlocks = ({ primaryConnection, primaryColumn, secondaryCon
 									showHead={false}
 									color='#e4e4e7'
 									strokeWidth={2}
+									isNew={s.ID === newConnection}
 								/>
 							);
 						})}

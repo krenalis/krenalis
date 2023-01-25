@@ -16,6 +16,7 @@ const ConnectionsMap = () => {
 	let [status, setStatus] = useState(null);
 
 	let toastRef = useRef();
+	let newConnection = Number(new URL(document.location).searchParams.get('new'));
 
 	useEffect(() => {
 		const fetchConnections = async () => {
@@ -54,6 +55,7 @@ const ConnectionsMap = () => {
 						secondaryConnections={files}
 						startAnchor={c.Role === 'Source' ? 'left' : 'right'}
 						endAnchor={c.Role === 'Source' ? 'right' : 'left'}
+						newConnection={newConnection}
 					></LinkedConnectionBlocks>
 				);
 			} else if (c.Type === 'Stream') {
@@ -65,10 +67,11 @@ const ConnectionsMap = () => {
 						secondaryConnections={streamed}
 						startAnchor={c.Role === 'Source' ? 'left' : 'right'}
 						endAnchor={c.Role === 'Source' ? 'right' : 'left'}
+						newConnection={newConnection}
 					></LinkedConnectionBlocks>
 				);
 			} else if (c.Storage === 0 && c.Stream === 0) {
-				connections.push(<ConnectionBlock connection={c}></ConnectionBlock>);
+				connections.push(<ConnectionBlock connection={c} isNew={c.ID === newConnection}></ConnectionBlock>);
 			}
 		}
 		return connections;
@@ -117,13 +120,29 @@ const ConnectionsMap = () => {
 			<div className='arrows'>
 				{sources.map((c) => {
 					if (c.Storage === 0 && c.Stream === 0) {
-						return <Arrow start={`${c.ID}`} end='centralLogo' startAnchor='right' endAnchor='left' />;
+						return (
+							<Arrow
+								start={`${c.ID}`}
+								end='centralLogo'
+								startAnchor='right'
+								endAnchor='left'
+								isNew={c.ID === newConnection}
+							/>
+						);
 					}
 					return null;
 				})}
 				{destinations.map((c) => {
 					if (c.Storage === 0 && c.Stream === 0) {
-						return <Arrow start={`${c.ID}`} end='centralLogo' startAnchor='left' endAnchor='right' />;
+						return (
+							<Arrow
+								start={`${c.ID}`}
+								end='centralLogo'
+								startAnchor='left'
+								endAnchor='right'
+								isNew={c.ID === newConnection}
+							/>
+						);
 					}
 					return null;
 				})}

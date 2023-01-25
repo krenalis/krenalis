@@ -6,7 +6,7 @@ import getConnectionStatusInfos from '../../utils/getConnectionStatusInfos';
 import { NavLink } from 'react-router-dom';
 import { SlTooltip, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ConnectionBlock = ({ connection: c }) => {
+const ConnectionBlock = ({ connection: c, isNew }) => {
 	let logo;
 	if (c.LogoURL === '') {
 		logo = <UnknownLogo size={21} />;
@@ -17,7 +17,7 @@ const ConnectionBlock = ({ connection: c }) => {
 	let { text: statusText, variant: statusVariant } = getConnectionStatusInfos(c);
 
 	return (
-		<div className='ConnectionBlock' id={`${c.ID}`}>
+		<div className={`ConnectionBlock${isNew ? ' new' : ''}`} id={`${c.ID}`}>
 			<FlexContainer alignItems='center' justifyContent='space-between' gap={20}>
 				<FlexContainer alignItems='center' gap={10}>
 					{logo}

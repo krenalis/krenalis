@@ -13,6 +13,17 @@
     font-size: 14px;
 }
 
+@keyframes soft-scale {
+    0% { transform: scale(1); }
+    100% { transform: scale(.85); }    
+}
+
+.ConnectionBlock.new {
+    animation: soft-scale 600ms;
+    animation-direction: alternate;
+    animation-iteration-count: 6;
+}
+
 .ConnectionBlock > .FlexContainer {
     width: 100%;
 }
