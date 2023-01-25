@@ -215,7 +215,7 @@ const ConnectorSettings = () => {
 
 	return (
 		<div className='ConnectorSettings'>
-			<PrimaryBackground height={300} overlap={100}>
+			<PrimaryBackground height={250} overlap={50}>
 				<Breadcrumbs
 					breadcrumbs={[
 						{ Name: 'Connections', Link: '/admin/connections' },

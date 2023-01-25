@@ -76,7 +76,7 @@ const ConnectionsMap = () => {
 
 	return (
 		<div className='ConnectionsMap'>
-			<PrimaryBackground height={300} overlap={120}>
+			<PrimaryBackground height={250} overlap={100}>
 				<Header />
 			</PrimaryBackground>
 			<div className='routeContent'>

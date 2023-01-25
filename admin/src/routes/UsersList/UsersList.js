@@ -179,7 +179,7 @@ const UsersList = () => {
 
 	return (
 		<div className='UsersList'>
-			<PrimaryBackground height={300} overlap={130}>
+			<PrimaryBackground height={250} overlap={100}>
 				<Header />
 			</PrimaryBackground>
 			<div className='routeContent'>
