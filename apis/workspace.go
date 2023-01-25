@@ -893,18 +893,15 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 		return types.Type{}, nil, errors.BadRequest("limit %d is not valid", limit)
 	}
 
-	// Create the schema to return, with only the required properties.
-	columns := make([]warehouses.Column, len(properties))
-	queryProperties := make([]types.Property, len(properties))
+	// Create the schema to return, with only the requested properties.
+	requestedProperties := make([]types.Property, len(properties))
 	for i, name := range properties {
-		p := propertyByName[name]
-		columns[i] = warehouses.Column{
-			Name: p.Name,
-			Type: p.Type,
-		}
-		queryProperties[i] = propertyByName[name]
+		requestedProperties[i] = propertyByName[name]
 	}
+	schema := types.Object(requestedProperties)
 
+	// Read the users.
+	columns := columnsOfProperties(requestedProperties)
 	users, err := ws.Warehouse.Users(context.Background(), columns, orderProperty, first, limit)
 	if err != nil {
 		if err2, ok := err.(*warehouses.Error); ok {
@@ -914,8 +911,6 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 		}
 		return types.Type{}, nil, err
 	}
-
-	schema := types.Object(queryProperties)
 
 	return schema, users, err
 }
@@ -1131,4 +1126,20 @@ Columns:
 		n = 0
 	}
 	return prefix, n
+}
+
+// columnsOfProperties returns the warehouse columns of properties.
+func columnsOfProperties(properties []types.Property) []warehouses.Column {
+	columns := make([]warehouses.Column, 0, len(properties))
+	for _, p := range properties {
+		if pt := p.Type; pt.PhysicalType() == types.PtObject {
+			for _, column := range columnsOfProperties(pt.Properties()) {
+				column.Name = p.Name + "_" + column.Name
+				columns = append(columns, column)
+			}
+		} else {
+			columns = append(columns, warehouses.Column{Name: p.Name, Type: p.Type})
+		}
+	}
+	return columns
 }
