@@ -25,7 +25,7 @@ const ConnectorSettings = () => {
 	let [stream, setStream] = useState(0);
 	let [streams, setStreams] = useState([]);
 	let [websiteHost, setWebsiteHost] = useState('');
-	let [isEnabled, setIsEnabled] = useState(false);
+	let [isEnabled, setIsEnabled] = useState(true);
 	let [fields, setFields] = useState([]);
 	let [actions, setActions] = useState([]);
 	let [values, setValues] = useState(null);
