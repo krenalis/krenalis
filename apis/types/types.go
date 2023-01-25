@@ -380,12 +380,22 @@ func Decimal(precision, scale int) Type {
 }
 
 // DateTime returns the DateTime type with the given layout.
+//
+// A layout is a specific pattern used when a DateTime value is represented
+// as a string or an integer. For strings, layout can be any time package
+// layout string. For integers, layout can be Nanoseconds, Microseconds,
+// Milliseconds and Seconds, and the value is relative to the Unix epoc.
+//
 // It panics if layout is not a valid UTF-8-encoded string.
 func DateTime(layout string) Type {
 	return Type{pt: PtDateTime, vl: normalizedUTF8(layout)}
 }
 
 // Date returns the Date type with the given layout.
+//
+// A layout is a specific pattern used when a Date value is represented as a
+// string. It can be any time package layout string.
+//
 // It panics if layout is not a valid UTF-8-encoded string.
 func Date(layout string) Type {
 	return Type{pt: PtDate, vl: normalizedUTF8(layout)}
