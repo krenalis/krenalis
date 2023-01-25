@@ -8,11 +8,14 @@
 package main
 
 import (
+	"context"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	"chichi/admin"
 	"chichi/apis"
@@ -58,10 +61,24 @@ func main() {
 		log.Fatalf("cannot open %q: %s", p, err)
 	}
 
-	apis, err := apis.New(&apis.Config{
+	ctx, cancel := context.WithCancel(context.Background())
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		cancel()
+	}()
+
+	apis, err := apis.New(ctx, &apis.Config{
 		PostgreSQL: settings.PostgreSQL,
 	})
 	if err != nil {
+		if err == context.Canceled {
+			select {
+			case <-ctx.Done():
+				os.Exit(0)
+			}
+		}
 		log.Fatalf("[error] %s", err)
 	}
 	admin := admin.New(apis)
@@ -75,8 +92,18 @@ func main() {
 	if addr == "" {
 		addr = "127.0.0.1:9090"
 	}
-	err = http.ListenAndServeTLS(addr, "cert.pem", "key.pem", nil)
-	if err != nil {
+	httpServer := http.Server{
+		Addr: addr,
+	}
+	go func() {
+		<-ctx.Done()
+		err := httpServer.Shutdown(context.Background())
+		if err != nil {
+			log.Printf("[error] shutting down HTTP server: %s", err)
+		}
+	}()
+	err = httpServer.ListenAndServeTLS("cert.pem", "key.pem")
+	if err != nil && err != http.ErrServerClosed {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }

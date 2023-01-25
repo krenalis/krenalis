@@ -100,6 +100,12 @@ func (db *DB) ListenToNotifications(ctx context.Context) <-chan Notification {
 		for {
 			b.Reset()
 			if err != nil {
+				if err == context.Canceled {
+					select {
+					case <-ctx.Done():
+						return
+					}
+				}
 				log.Printf("[error] %s", err)
 			}
 			var conn *Conn

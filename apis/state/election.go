@@ -48,7 +48,6 @@ func (state *State) keepElections() {
 	// |--------------|·······|  grantedLeaderInterval
 	// |~~~~~~~|                 electionRandomInterval
 
-	ctx := context.Background()
 	randSource := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	debugf := func(format string, a ...any) {
@@ -59,33 +58,38 @@ func (state *State) keepElections() {
 	}
 
 	// leader is called when the node is the leader.
-	leader := func(election election) {
+	// If state.ctx is canceled, leader returns its error.
+	leader := func(election election) error {
 		debugf("-- %d Leader\n", election.number)
 		for {
 			// Send the see leader notification.
-			err := state.db.Notify(ctx, SeeLeaderNotification{Election: election.number})
+			err := state.db.Notify(state.ctx, SeeLeaderNotification{Election: election.number})
 			if err == nil {
 				break
 			}
 			debugf("\t%s\n", err)
 			log.Printf("[warning] cannot send a see leader notification: %s", err)
-			time.Sleep(100 * time.Millisecond)
+			if err := state.sleep(100 * time.Millisecond); err != nil {
+				return err
+			}
 		}
-		time.Sleep(leaderInterval)
+		return state.sleep(leaderInterval)
 	}
 
 	// follower is called when the node is a follower.
-	follower := func(election election) {
+	// If state.ctx is canceled, follower returns its error.
+	follower := func(election election) error {
 		debugf("-- %d Follower\n", election.number)
 		now := time.Now()
 		deadline := election.lastSeen.Add(grantedLeaderInterval)
 		if deadline.After(now) {
-			time.Sleep(deadline.Sub(now))
-			return
+			return state.sleep(deadline.Sub(now))
 		}
 		d := time.Duration(randSource.Intn(int(electionRandomInterval)))
 		debugf("\t%s until election\n", d)
-		time.Sleep(d)
+		if err := state.sleep(d); err != nil {
+			return err
+		}
 		election.number++
 		if int32(election.number) < 0 {
 			election.number = 1
@@ -95,41 +99,54 @@ func (state *State) keepElections() {
 		state.mu.Unlock()
 		if election.number == number {
 			debugf("\telection already ended\n")
-			return
+			return nil
 		}
 		debugf("\ttry election %d: ", election.number)
 		err := state.electAsLeader(election.number)
 		if err == nil {
 			debugf("elected!\n")
-			time.Sleep(leaderInterval)
+			if err := state.sleep(leaderInterval); err != nil {
+				return err
+			}
 			// Await notification of the elected leader.
 			for {
 				state.mu.Lock()
 				ack := election.number <= state.election.number
 				state.mu.Unlock()
 				if ack {
-					return
+					return nil
 				}
-				leader(election)
+				err := leader(election)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		if err == errEndedElection {
 			debugf("number was ended\n")
-			return
+			return nil
+		}
+		if err == context.Canceled {
+			select {
+			case <-state.ctx.Done():
+				return err
+			}
 		}
 		debugf("\t%s\n", err)
 		log.Printf("[warning] cannot send leader number notification: %s", err)
-		return
+		return nil
 	}
 
-	for {
+	var err error
+
+	for err == nil {
 		state.mu.Lock()
 		election := state.election
 		state.mu.Unlock()
 		if election.leader == state.id {
-			leader(election)
+			err = leader(election)
 		} else {
-			follower(election)
+			err = follower(election)
 		}
 	}
 
@@ -143,14 +160,13 @@ var errEndedElection = errors.New("ended election")
 // ended.
 func (state *State) electAsLeader(election int) error {
 	n := ElectLeaderNotification{Leader: state.id, Number: election}
-	ctx := context.Background()
 	var prevElection = election - 1
 	if prevElection == 0 {
 		prevElection = math.MaxInt32
 	}
-	err := state.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := state.db.Transaction(state.ctx, func(tx *postgres.Tx) error {
 		var t bool
-		err := tx.QueryRow(ctx, "UPDATE election\n"+
+		err := tx.QueryRow(state.ctx, "UPDATE election\n"+
 			"SET number = $1, leader = $2, date = NOW()::timestamp\n"+
 			"WHERE number = $3 RETURNING true", n.Number, n.Leader, prevElection).Scan(&t)
 		if err != nil {
@@ -159,7 +175,19 @@ func (state *State) electAsLeader(election int) error {
 			}
 			return err
 		}
-		return tx.Notify(ctx, n)
+		return tx.Notify(state.ctx, n)
 	})
 	return err
+}
+
+// sleep pauses the current goroutine for at least the duration d, unless the
+// state.ctx context is cancelled, in that case it returns immediately with the
+// context error.
+func (state *State) sleep(d time.Duration) error {
+	select {
+	case <-state.ctx.Done():
+		return state.ctx.Err()
+	case <-time.After(d):
+		return nil
+	}
 }

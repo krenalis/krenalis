@@ -8,6 +8,7 @@
 package state
 
 import (
+	"context"
 	"database/sql/driver"
 	"fmt"
 	"sort"
@@ -34,6 +35,7 @@ type State struct {
 	id               uuid.UUID
 	mu               *sync.Mutex
 	db               *postgres.DB
+	ctx              context.Context
 	keeping          bool // report whether Keep has been called.
 	syncing          bool // reports whether the keeper has started synchronizing the state.
 	election         election

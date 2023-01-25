@@ -73,8 +73,14 @@ func (state *State) Keep() {
 // goroutine.
 func (state *State) keepState() {
 
+	var n postgres.Notification
+
 	for {
-		n := <-state.notifications
+		select {
+		case <-state.ctx.Done():
+			return
+		case n = <-state.notifications:
+		}
 		if logNotifications {
 			log.Printf("[info] received notification from pid %d and name %q : %s",
 				n.PID, n.Name, n.Payload)

@@ -47,7 +47,7 @@ type PostgreSQLConfig struct {
 }
 
 // New returns an API instance. It can only be called once.
-func New(conf *Config) (*APIs, error) {
+func New(ctx context.Context, conf *Config) (*APIs, error) {
 
 	if hasBeenCalled {
 		return nil, errors.New("apis.New has already been called")
@@ -72,9 +72,9 @@ func New(conf *Config) (*APIs, error) {
 	apis.Users = &Users{apis}
 
 	// Load the state.
-	apis.state, err = state.Load(context.Background(), db)
+	apis.state, err = state.Load(ctx, db)
 	if err != nil {
-		log.Fatalf("[error] cannot load state: %s", err)
+		return nil, err
 	}
 
 	// Listen to state changes.
@@ -83,14 +83,14 @@ func New(conf *Config) (*APIs, error) {
 	apis.state.AddListener(apis.onSetConnectionUserQuery)
 
 	// Run the event collector.
-	apis.eventCollector, err = events.NewCollector(context.Background(), apis.state,
+	apis.eventCollector, err = events.NewCollector(ctx, apis.state,
 		newPostgresStream(context.Background(), db))
 	if err != nil {
 		return nil, err
 	}
 
 	// Run the event processor.
-	apis.eventProcessor, err = events.NewProcessor(context.Background(), db, apis.state,
+	apis.eventProcessor, err = events.NewProcessor(ctx, db, apis.state,
 		newPostgresStream(context.Background(), db))
 	if err != nil {
 		return nil, err

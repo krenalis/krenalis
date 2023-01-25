@@ -32,6 +32,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		id:               id,
 		db:               db,
 		mu:               new(sync.Mutex),
+		ctx:              ctx,
 		notifications:    db.ListenToNotifications(ctx),
 		accounts:         map[int]*Account{},
 		connectors:       map[int]*Connector{},
