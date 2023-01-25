@@ -17,9 +17,9 @@ import (
 
 // columnType returns the types.Type corresponding to the PostgreSQL type typ
 // stored in the information_schema.columns column. udtName is the name of the
-// column data type, which is relevant in case of user-defined types. enums is a
-// mapping of available enum types. It returns an invalid type if typ is not
-// supported. It returns an error if an argument is not valid.
+// column data type, which is relevant in case of user-defined types and arrays.
+// enums is a mapping of available enum types. It returns an invalid type if typ
+// is not supported. It returns an error if an argument is not valid.
 func columnType(typ, udtName string, isNullable, charLength, precision, radix, scale *string, enums map[string]types.Type) (types.Type, error) {
 	var t types.Type
 	switch typ {
