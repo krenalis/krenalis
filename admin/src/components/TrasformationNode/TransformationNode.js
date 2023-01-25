@@ -1,23 +1,15 @@
 import './TransformationNode.css';
-import { getTransformationType } from '../../utils/getTransformationType';
 import { SlIconButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const TransformationNode = ({
-	transformation: t,
-	onSelect,
-	onCustomTransformationConnect,
-	onPredefinedTransformationConnect,
-	onRemove,
-}) => {
-	let transformationType = getTransformationType(t);
+const TransformationNode = ({ transformation: t, onSelect, onConnect, onRemove }) => {
 	let node;
-	if (transformationType === 'one-to-one') {
+	if (t.Type === 'one-to-one') {
 		node = (
 			<div className='TransformationNode oneToOne'>
 				<SlIconButton name='x-lg' onClick={onRemove} />
 			</div>
 		);
-	} else if (transformationType === 'predefined') {
+	} else if (t.Type === 'predefined') {
 		node = (
 			<div className='TransformationNode predefined'>
 				<div className='leftHandles'>
@@ -28,11 +20,7 @@ const TransformationNode = ({
 								<div className='label'>{parameter.label}</div>
 								<div
 									className='handle'
-									onClick={
-										onPredefinedTransformationConnect != null
-											? () => onPredefinedTransformationConnect(parameter.label)
-											: null
-									}
+									onClick={onConnect != null ? () => onConnect(parameter.label) : null}
 									id={`transformation-${t.Position}-input-${trimmed}`}
 								></div>
 							</div>
@@ -52,11 +40,7 @@ const TransformationNode = ({
 								<div className='label'>{parameter.label}</div>
 								<div
 									className='handle'
-									onClick={
-										onPredefinedTransformationConnect != null
-											? () => onPredefinedTransformationConnect(parameter.label)
-											: null
-									}
+									onClick={onConnect != null ? () => onConnect(parameter.label) : null}
 									id={`transformation-${t.Position}-output-${trimmed}`}
 								></div>
 							</div>
@@ -65,12 +49,12 @@ const TransformationNode = ({
 				</div>
 			</div>
 		);
-	} else if (transformationType === 'custom') {
+	} else if (t.Type === 'custom') {
 		node = (
 			<div className='TransformationNode custom'>
-				<div className='handle left' onClick={onCustomTransformationConnect}></div>
+				<div className='handle left' onClick={onConnect}></div>
 				<SlIconButton name='braces' onClick={onSelect} />
-				<div className='handle right' onClick={onCustomTransformationConnect}></div>
+				<div className='handle right' onClick={onConnect}></div>
 			</div>
 		);
 	}

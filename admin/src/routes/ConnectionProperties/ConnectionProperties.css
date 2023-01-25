@@ -215,67 +215,6 @@
 	width: 100%;
 }
 
-.ConnectionProperties > sl-dialog::part(panel) {
-	height: 400px;
-	padding: 5px 0px 30px 10px;
-}
-
-.ConnectionProperties > sl-dialog .dialogProperties {
-	margin-top: 20px;
-}
-
-.ConnectionProperties > sl-dialog .dialogProperties .property {
-	display: flex;
-	justify-content: space-between;
-	padding: 5px 0;
-	align-items: center;
-	height: 35px;
-}
-
-.ConnectionProperties > sl-dialog .dialogProperties .property.used {
-	opacity: 0.5;
-	text-decoration: line-through;
-}
-
-.ConnectionProperties > sl-dialog .dialogProperties .property.used sl-icon-button {
-	display: none;
-}
-
-.ConnectionProperties > sl-dialog .dialogProperties .property:first-child {
-	padding-top: 0;
-}
-
-.ConnectionProperties > sl-dialog .dialogProperties .property:last-child {
-	padding-bottom: 0;
-}
-
-.ConnectionProperties .selectedPropertyMessage {
-	position: fixed;
-	top: 0;
-	right: 0;
-	width: calc(100% - 220px);
-	height: 70px;
-	z-index: 20;
-	background-color: var(--bg-primary);
-	justify-content: center;
-	align-items: center;
-	display: flex;
-	font-size: 17px;
-	box-shadow: var(--sl-shadow-small);
-	padding: 0 150px;
-}
-
-.ConnectionProperties .selectedPropertyMessage span {
-	color: var(--color-primary-600);
-	font-weight: 600;
-}
-
-.ConnectionProperties .selectedPropertyMessage .removeSelectedProperty {
-	position: absolute;
-	right: 40px;
-	min-width: 180px;
-}
-
 .ConnectionProperties .newTransformationDialog::part(title) {
 	text-align: left;
 }

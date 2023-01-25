@@ -1,16 +1,14 @@
 import './TransformationDialog.css';
-import { getTransformationType } from '../../utils/getTransformationType';
 import { SlDialog, SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 import Editor from '@monaco-editor/react';
 
 const TransformationDialog = ({ transformation: t, onClose, onEditorChange, onRemove }) => {
-	let transformationType = getTransformationType(t);
 	let dialog;
-	if (transformationType === 'one-to-one') {
+	if (t.Type === 'one-to-one') {
 		return null;
-	} else if (transformationType === 'predefined') {
+	} else if (t.Type === 'predefined') {
 		dialog = null;
-	} else if (transformationType === 'custom') {
+	} else if (t.Type === 'custom') {
 		dialog = (
 			<SlDialog
 				label='Modify the transformation'
