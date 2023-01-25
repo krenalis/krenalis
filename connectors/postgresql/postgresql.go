@@ -252,7 +252,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		}
 		return types.Decimal(int(precision), int(scale)), nil
 	case "TIME":
-		return types.Time(""), nil // TODO(marco) set the layout
+		return types.Time(), nil
 	case "TIMESTAMP", "TIMESTAMPTZ":
 		return types.DateTime(""), nil // TODO(marco) set the layout
 	case "UUID":

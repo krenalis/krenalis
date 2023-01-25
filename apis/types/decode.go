@@ -22,9 +22,6 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-// maxTime is the maximum value for a Time value.
-const maxTime = 24 * 60 * 60 * 1000
-
 // Decode decodes a JSON-encoded data, read from r, validates it according to t
 // and returns the decoded value.
 // Panics is t is not valid.
@@ -199,45 +196,15 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 		}
 		return tm, nil
 	case PtTime:
-		var tm int
-		layout := t.Layout()
-		switch layout {
-		case Nanoseconds, Microseconds, Milliseconds, Seconds:
-			var s string
-			switch v := tok.(type) {
-			case string:
-				s = v
-			case json.Number:
-				s = string(v)
-			}
-			d, err := decimal.NewFromString(s)
-			if err != nil || d.IsNegative() {
-				return nil, errors.New("not a Time value")
-			}
-			switch layout {
-			case Nanoseconds:
-				d = d.Div(decimal.NewFromInt(1_000_000))
-			case Microseconds:
-				d = d.Div(decimal.NewFromInt(1_000))
-			case Seconds:
-				d = d.Mul(decimal.NewFromInt(1_000))
-			}
-			tm = int(d.IntPart())
-		default:
-			s, ok := tok.(string)
-			if !ok {
-				return nil, errors.New("not a Time value")
-			}
-			tp, err := time.Parse(layout, s)
-			if err != nil {
-				return nil, errors.New("not a Time value")
-			}
-			tm = int(tp.Sub(time.Date(tp.Year(), tp.Month(), tp.Day(), 0, 0, 0, 0, time.UTC)).Milliseconds())
+		s, ok := tok.(string)
+		if !ok {
+			return nil, errors.New("not a Time value")
 		}
-		if tm > maxTime {
-			return nil, errors.New("Time values must be less than 24h")
+		_, err := time.Parse("15:04:05.999999999", s)
+		if err != nil {
+			return nil, errors.New("not a Time value")
 		}
-		return tm, nil
+		return s, nil
 	case PtYear:
 		s, ok := tok.(json.Number)
 		if !ok {

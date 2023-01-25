@@ -258,7 +258,7 @@ func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error
 			return types.DateTime(""), nil // TODO(marco) set the layout
 		}
 		if lt.TIME != nil {
-			return types.Time(""), nil // TODO(marco) add unit of measure
+			return types.Time(), nil
 		}
 		if lt.INTEGER != nil {
 			if lt.INTEGER.IsSigned {
@@ -329,7 +329,7 @@ func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error
 		case parquet.ConvertedType_TIMESTAMP_MICROS, parquet.ConvertedType_TIMESTAMP_MILLIS:
 			return types.DateTime(""), nil // TODO(marco) set the layout
 		case parquet.ConvertedType_TIME_MICROS, parquet.ConvertedType_TIME_MILLIS:
-			return types.Time(""), nil // // TODO(marco) set the layout
+			return types.Time(), nil
 		}
 		return types.Type{}, fmt.Errorf("unsupported converted Parquet type %q", *ct)
 	}

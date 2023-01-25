@@ -283,7 +283,7 @@ type Type struct {
 	//   - uintRange value for UInt64
 	//   - floatRange value for Float and Float32
 	//   - decimalRange value for Decimal
-	//   - string value representing a layout for DateTime, Date and Time
+	//   - string value representing a layout for DateTime and Date
 	//   - *regexp.Regexp value for Text
 	//   - []string with the enum values for Text
 	//   - []Property for Object
@@ -401,10 +401,9 @@ func Date(layout string) Type {
 	return Type{pt: PtDate, vl: normalizedUTF8(layout)}
 }
 
-// Time returns the Time type with the given layout.
-// It panics if layout is not a valid UTF-8-encoded string.
-func Time(layout string) Type {
-	return Type{pt: PtTime, vl: normalizedUTF8(layout)}
+// Time returns the Time type.
+func Time() Type {
+	return Type{pt: PtTime}
 }
 
 // Year returns the Year type.
@@ -957,11 +956,11 @@ func (t Type) Scale() int {
 	return int(t.s)
 }
 
-// Layout returns the layout of DateTime, Date and Time types.
-// Panics if t is not a DateTime, Date or Time type.
+// Layout returns the layout of DateTime and Date types.
+// Panics if t is not a DateTime or Date type.
 func (t Type) Layout() string {
-	if t.pt != PtDateTime && t.pt != PtDate && t.pt != PtTime {
-		panic("cannot get layout of a non-time type")
+	if t.pt != PtDateTime && t.pt != PtDate {
+		panic("cannot get layout of a non-DateTime or non-Date type")
 	}
 	return t.vl.(string)
 }

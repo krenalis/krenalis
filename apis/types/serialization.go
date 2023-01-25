@@ -182,7 +182,7 @@ func marshalType(b *bytes.Buffer, t Type, custom bool) {
 			b.WriteString(`,"scale":`)
 			b.WriteString(strconv.Itoa(int(t.s)))
 		}
-	case PtDateTime, PtDate, PtTime:
+	case PtDateTime, PtDate:
 		b.WriteString(`,"layout":`)
 		marshalString(b, t.vl.(string))
 	case PtText:
@@ -826,7 +826,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		}
 		t.vl = enum
 	}
-	if pt == PtDateTime || pt == PtDate || pt == PtTime {
+	if pt == PtDateTime || pt == PtDate {
 		if !hasLayout {
 			return Type{}, errors.New("missing 'layout' key")
 		}

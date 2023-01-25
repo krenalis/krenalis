@@ -86,9 +86,14 @@ func TestDecode(t *testing.T) {
 			Value: time.Date(2022, 11, 22, 0, 0, 0, 0, time.UTC),
 		},
 		{
-			Data:  `18945218`,
-			Type:  Time("ms"),
-			Value: 18945218,
+			Data:  `"11:39:24"`,
+			Type:  Time(),
+			Value: "11:39:24",
+		},
+		{
+			Data:  `"11:39:24.623901"`,
+			Type:  Time(),
+			Value: "11:39:24.623901",
 		},
 		{
 			Data:  `2022`,

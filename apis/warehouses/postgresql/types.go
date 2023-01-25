@@ -76,7 +76,7 @@ func columnType(typ, udtName string, isNullable, charLength, precision, radix, s
 	case "date":
 		t = types.Date("2006-01-02")
 	case "time without time zone":
-		t = types.Time("15:04:05")
+		t = types.Time()
 	case "boolean":
 		t = types.Boolean()
 	case "inet":
