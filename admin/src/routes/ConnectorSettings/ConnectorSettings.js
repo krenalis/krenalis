@@ -65,6 +65,7 @@ const ConnectorSettings = () => {
 				return;
 			}
 			setConnector(connector);
+			setName(connector.Name);
 			let storages = [];
 			if (connector.Type === 'File') {
 				let connections;
