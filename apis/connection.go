@@ -118,10 +118,6 @@ func (this *Connection) GenerateKey() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	binaryValue, err := decodeServerKey(value)
-	if err != nil {
-		return "", err
-	}
 	n := state.AddConnectionKeyNotification{
 		Connection:   c.ID,
 		Value:        value,
@@ -138,7 +134,7 @@ func (this *Connection) GenerateKey() (string, error) {
 			return errors.Unprocessable(TooManyKeys, "server %d has already %d types", n.Connection, maxKeysPerServer)
 		}
 		_, err = tx.Exec(ctx, "INSERT INTO connections_keys (connection, value, creation_time) VALUES ($1, $2, $3)",
-			n.Connection, binaryValue, n.CreationTime)
+			n.Connection, n.Value, n.CreationTime)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "connections_keys_connection_fkey" {
@@ -228,8 +224,7 @@ func (this *Connection) RevokeKey(key string) error {
 	if key == "" {
 		return errors.BadRequest("key is empty")
 	}
-	binaryKey, err := decodeServerKey(key)
-	if err != nil {
+	if !isServerKey(key) {
 		return errors.BadRequest("key %q is malformed", key)
 	}
 	c := this.connection
@@ -242,10 +237,10 @@ func (this *Connection) RevokeKey(key string) error {
 	}
 	n := state.RevokeConnectionKeyNotification{
 		Connection: c.ID,
-		Value:      encodeServerKey(binaryKey),
+		Value:      key,
 	}
 	ctx := context.Background()
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var count int
 		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
 		if err != nil {
@@ -254,7 +249,7 @@ func (this *Connection) RevokeKey(key string) error {
 		if count == 1 {
 			return errors.Unprocessable(UniqueKey, "key cannot be revoked because it's the unique key of the server")
 		}
-		result, err := tx.Exec(ctx, "DELETE FROM connections_keys WHERE connection = $1 AND value = $2", n.Connection, binaryKey)
+		result, err := tx.Exec(ctx, "DELETE FROM connections_keys WHERE connection = $1 AND value = $2", n.Connection, n.Value)
 		if err != nil {
 			return err
 		}
@@ -1178,17 +1173,13 @@ func (files *fileReader) Reader(path string) (io.ReadCloser, time.Time, error) {
 	return files.s.Reader(path)
 }
 
-// decodeServerKey decodes a server key encoded as base62 to its binary form.
-// It returns an error if key is malformed.
-func decodeServerKey(key string) ([]byte, error) {
+// isServerKey reports whether key can be a server key.
+func isServerKey(key string) bool {
 	if len(key) != 32 {
-		return nil, errors.New("key is malformed")
+		return false
 	}
-	b, err := base62.DecodeString(key)
-	if err != nil {
-		return nil, errors.New("key is malformed")
-	}
-	return b, nil
+	_, err := base62.DecodeString(key)
+	return err == nil
 }
 
 // encodeServerKey encodes a binary server key to its base62 form and returns

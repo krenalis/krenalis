@@ -112,7 +112,7 @@ CREATE TABLE connections_exports (
 
 CREATE TABLE connections_keys (
     connection INT NOT NULL REFERENCES connections ON DELETE CASCADE,
-    value BYTEA NOT NULL,
+    value char(32) NOT NULL,
     creation_time timestamp NOT NULL,
     PRIMARY KEY (connection, value)
 );
