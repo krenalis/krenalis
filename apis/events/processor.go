@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"context"
 	crand "crypto/rand"
-	"database/sql"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
@@ -51,9 +50,9 @@ const (
 )
 
 type Event struct {
+	AnonymousId string
 	City        string
 	Country     string
-	AnonymousId string
 	DeviceType  string
 	Event       string
 	IP          string
@@ -67,6 +66,7 @@ type Event struct {
 	Timestamp   string
 	Title       string
 	URL         string
+	UserId      string
 	browser     struct {
 		name    string
 		other   string
@@ -101,7 +101,6 @@ type Event struct {
 	source     int32
 	timestamp  time.Time
 	userAgent  string
-	userId     string
 
 	// workspace, data and err are used during event processing.
 	workspace int
@@ -526,30 +525,6 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 			}
 		}
 
-		ctx := context.Background()
-
-		// Get the user or create it if it does not exist.
-		err = p.db.QueryRow(ctx, "SELECT id FROM users WHERE source = $1 AND anonymous_id = $2", source.ID, event.AnonymousId).Scan(&event.userId)
-		if err != nil && err != sql.ErrNoRows {
-			return err
-		}
-		if err == sql.ErrNoRows {
-			err = p.db.QueryRow(ctx, "SELECT user FROM devices WHERE source = $1 AND id = $2", source.ID, event.AnonymousId).Scan(&event.userId)
-			if err != nil && err != sql.ErrNoRows {
-				return err
-			}
-			if err == sql.ErrNoRows {
-				event.userId, err = makeUserId()
-				if err != nil {
-					return err
-				}
-				_, err = p.db.Exec(ctx, "INSERT INTO users (source, id, anonymous_id) VALUES($1, $2, $3)", source.ID, event.userId, event.AnonymousId)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
 		// Text.
 		if utf8.RuneCountInString(event.Text) > 120 {
 			event.Text = abbreviate(event.Text, 120)
@@ -944,7 +919,7 @@ RETRY:
 			err := batch.Append(
 				e.source,
 				e.AnonymousId,
-				e.userId,
+				e.UserId,
 				e.date,
 				e.timestamp,
 				e.sentAt,

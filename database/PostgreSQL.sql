@@ -137,13 +137,6 @@ CREATE TABLE connections_stats_events (
 CREATE INDEX ON connections_stats_events (server);
 CREATE INDEX ON connections_stats_events (stream);
 
-CREATE TABLE devices (
-    source integer NOT NULL,
-    id uuid NOT NULL,
-    "user" varchar DEFAULT NULL,
-    PRIMARY KEY (source, id)
-);
-
 CREATE TABLE domains (
     source integer NOT NULL,
     name varchar(255) NOT NULL,
@@ -229,11 +222,4 @@ CREATE TABLE tasks (
   started_at  TIMESTAMP,
   completed_at TIMESTAMP,
   result      JSONB
-);
-
-CREATE TABLE users (
-    source integer NOT NULL,
-    id varchar NOT NULL,
-    anonymous_id uuid NOT NULL,
-    PRIMARY KEY (source, id)
 );
