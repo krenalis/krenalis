@@ -242,6 +242,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					}
 					connection := state.connections[connectionID]
 					connection.Keys = append(connection.Keys, value)
+					state.connectionsByKey[value] = connection
 				}
 				return nil
 			})
