@@ -73,13 +73,23 @@ type Connection struct {
 }
 
 // Delete deletes the connection.
+//
+// It returns an errors.NotFoundError error if the connection does not exist
+// anymore.
 func (this *Connection) Delete() error {
 	n := state.DeleteConnectionNotification{
 		ID: this.connection.ID,
 	}
+	connector := this.connection.Connector()
 	ctx := context.Background()
 	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		connector := this.connection.Connector()
+		result, err := tx.Exec(ctx, "DELETE FROM connections WHERE id = $1", n.ID)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return errors.NotFound("connection %d does not exist", n.ID)
+		}
 		if connector.OAuth != nil {
 			// Delete the resource of the deleted connection if it has no other connections.
 			_, err := tx.Exec(ctx, "DELETE FROM resources AS r WHERE NOT EXISTS (\n"+
@@ -88,10 +98,6 @@ func (this *Connection) Delete() error {
 			if err != nil {
 				return err
 			}
-		}
-		_, err := tx.Exec(ctx, "DELETE FROM connections WHERE id = $1", n.ID)
-		if err != nil {
-			return err
 		}
 		return tx.Notify(ctx, n)
 	})
