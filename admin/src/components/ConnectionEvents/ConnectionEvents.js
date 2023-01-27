@@ -1,0 +1,127 @@
+import { useEffect, useState } from 'react';
+import './ConnectionEvents.css';
+import IconWrapper from '../IconWrapper/IconWrapper';
+import call from '../../utils/call';
+import SyntaxHighlighter from 'react-syntax-highlighter';
+import { github } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+
+const ConnectionEvents = ({ connection: c, onError, onStatusChange, isSelected }) => {
+	let [events, setEvents] = useState([]);
+	let [selectedEvent, setSelectedEvent] = useState(null);
+	let [discarded, setDiscarded] = useState(0);
+
+	useEffect(() => {
+		let listenerID;
+		let interval;
+		let id = 1;
+		const startListener = async () => {
+			let [listener, err] = await call('/api/event-listeners', 'PUT', { Size: 3, Source: c.ID });
+			if (err != null) {
+				onError(err);
+				return;
+			}
+			listenerID = listener.id;
+			interval = setInterval(async () => {
+				let [res, err] = await call(`/api/event-listeners/${listenerID}/events`, 'GET');
+				if (err != null) {
+					onError(err);
+					return;
+				}
+				let newly = [];
+				for (let e of res.events) {
+					let dec = JSON.parse(atob(e.Data));
+					newly.push({
+						id: id,
+						type: dec.event,
+						path: dec.url,
+						time: e.Header.receivedAt,
+						full: JSON.stringify(dec, null, 4),
+					});
+					id += 1;
+				}
+				setEvents((prevEvents) => [...prevEvents, ...newly]);
+				setDiscarded((prevDiscarded) => prevDiscarded + res.discarded);
+			}, 2500);
+		};
+		if (isSelected) {
+			startListener();
+			return async () => {
+				clearInterval(interval);
+				let [, err] = await call(`/api/event-listeners/${listenerID}`, 'DELETE');
+				if (err != null) {
+					onError(err);
+					return;
+				}
+			};
+		}
+	}, [isSelected]);
+
+	const onSelectEvent = (id) => {
+		setSelectedEvent(0);
+		setTimeout(() => {
+			setSelectedEvent(id);
+		}, 100);
+	};
+
+	let rightPanel;
+	if (selectedEvent !== null) {
+		if (selectedEvent === 0) {
+			// empty panel
+		} else {
+			let fullEventMessage = events.find((e) => e.id === selectedEvent).full;
+			rightPanel = (
+				<div className='fullEvent'>
+					<SyntaxHighlighter language='javascript' style={github}>
+						{fullEventMessage}{' '}
+					</SyntaxHighlighter>
+				</div>
+			);
+		}
+	} else {
+		rightPanel = (
+			<div className='selectEventMessage'>
+				<IconWrapper size={40} name='cursor'></IconWrapper>
+				<div className='title'>Click on one event</div>
+				<div className='description'>Select one of the events from the events list to see its full message</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className='ConnectionEvents'>
+			<div className='events'>
+				<div className='eventList'>
+					<div className='heading'>
+						<div className='title'>
+							<IconWrapper name='activity' moat />
+							<div className='text'>Live events</div>
+						</div>
+						<div className='discarded'>
+							<span className='count'>{discarded}</span>
+							<span className='text'>discarded</span>
+						</div>
+					</div>
+
+					<div className='body'>
+						{events.length === 0 && <div className='noEvents'>Listening for new events ...</div>}
+						{events.map((e) => {
+							return (
+								<div
+									class={`event${selectedEvent === e.id ? ' selected' : ''}`}
+									onClick={() => onSelectEvent(e.id)}
+								>
+									<div class='name'>{e.type}</div>
+									<div class='path'>{e.path}</div>
+									<div class='time'>{e.time}</div>
+								</div>
+							);
+						})}
+					</div>
+				</div>
+			</div>
+			<div className={`panel${selectedEvent !== null ? ' selected' : ' unselected'}`}>{rightPanel}</div>
+		</div>
+	);
+};
+
+export default ConnectionEvents;

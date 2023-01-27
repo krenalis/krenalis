@@ -195,3 +195,9 @@ sl-dialog::part(base) {
 		padding: 0 50px;
 	}
 }
+
+/* || Tab panels */
+
+sl-tab-group::part(body) {
+	overflow: visible;
+}

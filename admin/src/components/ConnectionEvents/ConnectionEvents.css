@@ -1,0 +1,127 @@
+@keyframes events-fade-in {
+    from { opacity: 0 }
+    to { opacity: 1 }
+}
+
+.ConnectionEvents {
+    display: grid;
+    align-items: start;
+    grid-template-columns: 1fr 1fr;
+    gap: 50px;
+}
+
+.ConnectionEvents .eventList {
+    background-color: var(--bg-primary);
+    box-shadow: var(--sl-shadow-large);
+    border-radius: var(--radius);
+    min-height: 100%;
+}
+
+.ConnectionEvents .eventList .noEvents {
+    padding: 30px;
+    text-align: center;
+    font-size: 14px;
+    opacity: .7;
+    border-top: 1px solid var(--border-primary);
+}
+
+.ConnectionEvents .eventList .heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 20px 30px;
+}
+
+.ConnectionEvents .eventList .title {
+    background-color: var(--bg-primary);
+    border-radius: var(--radius);
+    min-height: 100%;
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+}
+
+.ConnectionEvents .eventList .discarded {
+    color: var(--sl-color-danger-400);
+    font-size: 14px;
+}
+
+.ConnectionEvents .eventList .discarded .count {
+    padding-right: 5px;
+}
+
+.ConnectionEvents .eventList .body {
+    max-height: 500px;
+    overflow: auto;
+}
+
+.ConnectionEvents .eventList .event {
+    padding: 17px 30px;
+    border-top: 1px solid var(--border-primary);
+    font-size: 13px;
+    display: flex;
+    gap: 10px;
+    cursor: pointer;
+    animation: events-fade-in 500ms;
+    animation-fill-mode: both;
+    will-change: border-left;
+    transition: border-left 200ms;
+}
+
+.ConnectionEvents .eventList .event.selected {
+    border-left: 5px solid var(--color-primary-600)
+}
+
+.ConnectionEvents .eventList .event.selected:last-child {
+    border-bottom-left-radius: var(--radius);
+}
+
+.ConnectionEvents .eventList .event .name {
+    min-width: 150px;
+    font-weight: 600;
+}
+
+.ConnectionEvents .eventList .event .path {
+    min-width: 250px;
+}
+
+.ConnectionEvents .eventList .event .time {
+    width: 100%;
+    text-align: right;
+}
+
+.ConnectionEvents .panel {
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius);
+    min-height: 585px;
+    padding: 30px;
+}
+
+.ConnectionEvents .panel.unselected {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.ConnectionEvents .panel .selectEventMessage {
+    width: 350px;
+    text-align: center;
+}
+
+.ConnectionEvents .panel .selectEventMessage .title {
+    font-size: 19px;
+    margin-top: 8px;
+    margin-bottom: 3px;
+}
+
+.ConnectionEvents .panel .selectEventMessage .description {
+    font-size: 14px;
+    opacity: .7;
+}
+
+.ConnectionEvents .panel .fullEvent {
+    animation: events-fade-in 500ms;
+}
+.ConnectionEvents .panel .fullEvent {
+    font-size: 14px;
+}

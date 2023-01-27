@@ -1,11 +1,9 @@
-.Connection .Breadcrumbs::part(base) {
-    padding-left: var(--sl-spacing-medium);
+.Connection .routeContent {
+    padding: 0 100px;
 }
 
-.Connection .routeContent {
-    max-width: 1400px;
-    margin: auto;
-    margin-top: -80px;
+.Connection .Breadcrumbs::part(base) {
+    padding-left: var(--sl-spacing-large);
 }
 
 .Connection .connectionSections::part(tabs) {
@@ -23,7 +21,7 @@
 .Connection .connectionSections > sl-tab::part(base) {
     color: var(--text-onaccent);
     opacity: .7;
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 400;
 }
 

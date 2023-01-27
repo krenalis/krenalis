@@ -4,6 +4,7 @@ import NotFound from '../NotFound/NotFound';
 import Toast from '../../components/Toast/Toast';
 import ConnectionOverview from '../ConnectionOverview/ConnectionOverview';
 import ConnectionSQL from '../ConnectionSQL/ConnectionSQL';
+import ConnectionEvents from '../../components/ConnectionEvents/ConnectionEvents';
 import ConnectionProperties from '../ConnectionProperties/ConnectionProperties';
 import ConnectionSettings from '../ConnectionSettings/ConnectionSettings';
 import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
@@ -62,7 +63,7 @@ const Connection = () => {
 	if (c == null) return;
 	return (
 		<div className='Connection'>
-			<PrimaryBackground contentWidth={1400} height={250}>
+			<PrimaryBackground height={200} overlap={65}>
 				<Breadcrumbs
 					onAccent={true}
 					breadcrumbs={[{ Name: 'Connections', Link: '/admin/connections' }, { Name: `${c.Name}` }]}
@@ -94,6 +95,21 @@ const Connection = () => {
 									onError={onError}
 									onStatusChange={onStatusChange}
 									isSelected={selectedSection === 'sqlquery'}
+								/>
+							</SlTabPanel>
+						</>
+					)}
+					{(c.Type === 'Mobile' || c.Type === 'Website' || c.Type === 'Server' || c.Type === 'Stream') && (
+						<>
+							<SlTab slot='nav' panel='events'>
+								Events
+							</SlTab>
+							<SlTabPanel name='events'>
+								<ConnectionEvents
+									connection={c}
+									onError={onError}
+									onStatusChange={onStatusChange}
+									isSelected={selectedSection === 'events'}
 								/>
 							</SlTabPanel>
 						</>
