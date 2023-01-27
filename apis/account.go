@@ -8,7 +8,12 @@
 package apis
 
 import (
+	"context"
+	"crypto/rand"
+	"math"
+	"math/big"
 	"regexp"
+	"unicode/utf8"
 
 	"chichi/apis/errors"
 	"chichi/apis/events"
@@ -30,6 +35,80 @@ type Account struct {
 	Name           string
 	Email          string
 	InternalIPs    []string
+}
+
+// Warehouse represents data warehouse settings. It is used with AddWorkspace.
+type Warehouse struct {
+	Type     WarehouseType
+	Settings []byte
+}
+
+// AddWorkspace adds a workspace with the given name and data warehouse, if not
+// nil, and returns the identifier.
+//
+// It returns an errors.NotFoundError error if the account does not exist anymore.
+// It returns an errors.UnprocessableError error with code
+//   - ConnectionFailed, if the connection to the data warehouse fails.
+//   - InvalidSettings, if the warehouse settings are not valid.
+func (this *Account) AddWorkspace(name string, warehouse *Warehouse) (int, error) {
+
+	if name == "" {
+		return 0, errors.BadRequest("name is empty")
+	}
+	if utf8.RuneCountInString(name) > 100 {
+		return 0, errors.BadRequest("name is longer that 100 runes")
+	}
+
+	if warehouse != nil {
+		warehouse, err := openWarehouse(warehouse.Type, warehouse.Settings)
+		if err != nil {
+			return 0, errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
+		}
+		err = warehouse.Ping(context.Background())
+		if err != nil {
+			return 0, errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
+		}
+	}
+
+	n := state.AddWorkspaceNotification{
+		Account: this.account.ID,
+		Name:    name,
+	}
+	if warehouse != nil {
+		n.Warehouse.Type = state.WarehouseType(warehouse.Type)
+		n.Warehouse.Settings = warehouse.Settings
+	}
+
+	// Generate the identifier.
+	var err error
+	n.ID, err = generateRandomID()
+	if err != nil {
+		return 0, err
+	}
+
+	ctx := context.Background()
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		var err error
+		if n.Warehouse.Settings == nil {
+			_, err = tx.Exec(ctx, "INSERT INTO workspaces (id, account, name) VALUES ($1, $2, $3)", n.ID, n.Account, n.Name)
+		} else {
+			_, err = tx.Exec(ctx, "INSERT INTO workspaces (id, account, name, warehouse_type, warehouse_settings)"+
+				" VALUES ($1, $2, $3, $4, $5)", n.ID, n.Account, n.Name, n.Warehouse.Type, string(n.Warehouse.Settings))
+		}
+		if err != nil {
+			if postgres.IsForeignKeyViolation(err) {
+				if postgres.ErrConstraintName(err) == "workspaces_keys_account_fkey" {
+					return errors.NotFound("account %d does not exist", n.Account)
+				}
+			}
+		}
+		return tx.Notify(ctx, n)
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return n.ID, nil
 }
 
 // Workspace returns the workspace with identifier id of the account.
@@ -56,4 +135,15 @@ func (this *Account) DeprecatedProperty(property int) *DeprecatedProperties {
 	properties.SmartEvents = &SmartEvents{properties}
 	properties.Visualization = &Visualization{properties}
 	return properties
+}
+
+var bigMaxInt32 = big.NewInt(math.MaxInt32)
+
+// generateRandomID generates a random identifier in [1, maxInt32].
+func generateRandomID() (int, error) {
+	n, err := rand.Int(rand.Reader, bigMaxInt32)
+	if err != nil {
+		return 0, err
+	}
+	return int(n.Int64()) + 1, nil
 }

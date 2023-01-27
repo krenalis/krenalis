@@ -280,9 +280,9 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 		}
 	}
 
-	// Generate a connection identifier.
+	// Generate the identifier.
 	var err error
-	n.ID, err = generateConnectionID()
+	n.ID, err = generateRandomID()
 	if err != nil {
 		return 0, err
 	}

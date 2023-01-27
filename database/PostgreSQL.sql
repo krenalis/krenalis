@@ -52,8 +52,8 @@ INSERT INTO connectors (name, type, has_settings, logo_url, webhooks_per, oauth_
 CREATE TYPE warehouse_type AS ENUM ('BigQuery', 'ClickHouse', 'PostgreSQL', 'Redshift', 'Snowflake');
 
 CREATE TABLE workspaces (
-    id SERIAL,
-    account integer NOT NULL,
+    id integer NOT NULL,
+    account integer NOT NULL REFERENCES accounts ON DELETE CASCADE,
     name varchar(100) NOT NULL,
     warehouse_type warehouse_type DEFAULT NULL,
     warehouse_settings varchar(65535) NOT NULL DEFAULT '',

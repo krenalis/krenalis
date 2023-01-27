@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
@@ -1186,17 +1185,6 @@ func isServerKey(key string) bool {
 // it.
 func encodeServerKey(key []byte) string {
 	return base62.EncodeToString(key)[0:32]
-}
-
-var bigMaxInt32 = big.NewInt(math.MaxInt32)
-
-// generateConnectionID generates a connection ID in [1, maxInt32].
-func generateConnectionID() (int, error) {
-	n, err := rand.Int(rand.Reader, bigMaxInt32)
-	if err != nil {
-		return 0, err
-	}
-	return int(n.Int64()) + 1, nil
 }
 
 // generateServerKey generates a server key in its base62 form.

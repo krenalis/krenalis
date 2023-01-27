@@ -95,6 +95,8 @@ func (state *State) keepState() {
 			state.addConnectionKey(n)
 		case "AddImportInProgress":
 			state.addImportInProgress(n)
+		case "AddWorkspace":
+			state.addWorkspace(n)
 		case "DeleteConnection":
 			state.deleteConnection(n)
 		case "DeleteImportInProgress":
@@ -402,6 +404,46 @@ func (state *State) addImportInProgress(n postgres.Notification) {
 	for _, listener := range state.listeners.AddImportInProgress {
 		listener(e)
 	}
+}
+
+// AddWorkspaceNotification is the notification event sent when a workspace is added.
+type AddWorkspaceNotification struct {
+	ID        int
+	Account   int
+	Name      string
+	Warehouse struct {
+		Type     WarehouseType
+		Settings json.RawMessage `json:",omitempty"`
+	}
+}
+
+// addWorkspace adds a workspace.
+func (state *State) addWorkspace(n postgres.Notification) {
+	e := AddWorkspaceNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	account := state.accounts[e.Account]
+	ws := Workspace{
+		mu:          &sync.Mutex{},
+		Schemas:     map[string]*types.Type{},
+		connections: map[int]*Connection{},
+		ID:          e.ID,
+		account:     account,
+	}
+	if e.Warehouse.Settings != nil {
+		warehouse, err := openWarehouse(e.Warehouse.Type, e.Warehouse.Settings)
+		if err != nil {
+			log.Printf("[error] cannot open data warehouse of workspace %d: %s", e.ID, err)
+		}
+		ws.Warehouse = warehouse
+	}
+	state.mu.Lock()
+	state.workspaces[e.ID] = &ws
+	state.mu.Unlock()
+	account.mu.Lock()
+	account.workspaces[e.ID] = &ws
+	account.mu.Unlock()
 }
 
 // DeleteConnectionNotification is the notification event sent when a
