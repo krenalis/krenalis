@@ -123,7 +123,7 @@ func (state *State) keepElections() {
 			}
 		}
 		if err == errEndedElection {
-			debugf("number was ended\n")
+			debugf("election was ended\n")
 			return nil
 		}
 		if err == context.Canceled {
@@ -133,7 +133,7 @@ func (state *State) keepElections() {
 			}
 		}
 		debugf("\t%s\n", err)
-		log.Printf("[warning] cannot send leader number notification: %s", err)
+		log.Printf("[warning] cannot send leader election notification: %s", err)
 		return nil
 	}
 
