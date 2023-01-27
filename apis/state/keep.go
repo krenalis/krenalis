@@ -709,6 +709,8 @@ func (state *State) setConnectionUserSchema(n postgres.Notification) {
 	})
 }
 
+// SetResourceNotification is the notification event sent when a resource is
+// changed.
 type SetResourceNotification struct {
 	ID           int
 	AccessToken  string
