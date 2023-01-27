@@ -79,7 +79,7 @@ func (ids *identitySolver) createIdentity() (int, error) {
 // if found, otherwise returns 0, false and nil.
 func (ids *identitySolver) entityToIdentity(connection int, user string) (int, bool, error) {
 	ws := ids.connection.Workspace()
-	query := "SELECT golden_record FROM connections_users WHERE connection = $1 AND user = $2"
+	query := "SELECT golden_record FROM connections_users WHERE connection = $1 AND \"user\" = $2"
 	row := ws.Warehouse.QueryRow(ids.ctx, query, connection, user)
 	var goldenRecord int
 	err := row.Scan(&goldenRecord)
@@ -90,7 +90,7 @@ func (ids *identitySolver) entityToIdentity(connection int, user string) (int, b
 		return 0, false, err
 	}
 	if goldenRecord == 0 {
-		panic("unexpected")
+		return 0, false, nil
 	}
 	return goldenRecord, true, nil
 }
@@ -100,9 +100,9 @@ func (ids *identitySolver) entityToIdentity(connection int, user string) (int, b
 // associated to that connection.
 func (ids *identitySolver) LookupSameEntities(connection int, user string) (map[int][]string, error) {
 	ws := ids.connection.Workspace()
-	query := "SELECT connection, user FROM connections_users\n" +
-		"WHERE connection <> $1 AND user <> $2 AND golden_record = \n" +
-		"(SELECT golden_record FROM connections_users WHERE connection = $1 AND user = $2)"
+	query := "SELECT connection, \"user\" FROM connections_users\n" +
+		"WHERE connection <> $1 AND \"user\" <> $2 AND golden_record = \n" +
+		"(SELECT golden_record FROM connections_users WHERE connection = $1 AND \"user\" = $2)"
 	rows, err := ws.Warehouse.Query(ids.ctx, query, connection, user)
 	if err != nil {
 		return nil, err
