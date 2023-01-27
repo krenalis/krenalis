@@ -50,6 +50,7 @@ type State struct {
 		AddConnection          []func(AddConnectionNotification)
 		AddImportInProgress    []func(AddImportInProgressNotification)
 		DeleteConnection       []func(DeleteConnectionNotification)
+		DeleteWorkspace        []func(DeleteWorkspaceNotification)
 		ElectLeader            []func(ElectLeaderNotification)
 		SetConnectionSettings  []func(SetConnectionSettingsNotification)
 		SetConnectionStatus    []func(SetConnectionStatusNotification)

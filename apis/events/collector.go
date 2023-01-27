@@ -47,9 +47,10 @@ type Collector struct {
 
 // eventCollectorStream represents a stream used by the event collector.
 type eventCollectorStream struct {
-	id      int
-	stream  connector.StreamConnection
-	sending sync.WaitGroup
+	id        int
+	workspace int
+	stream    connector.StreamConnection
+	sending   sync.WaitGroup
 }
 
 // NewCollector returns a new event collector. It reads events sent from
@@ -80,6 +81,7 @@ func NewCollector(ctx context.Context, st *state.State,
 
 	st.AddListener(collector.onAddConnection)
 	st.AddListener(collector.onDeleteConnection)
+	st.AddListener(collector.onDeleteWorkspace)
 	st.AddListener(collector.onSetConnectionSettings)
 	st.AddListener(collector.onSetConnectionStatus)
 	st.AddListener(collector.onSetConnectionStream)
@@ -266,6 +268,28 @@ func (collector *Collector) onDeleteConnection(n state.DeleteConnectionNotificat
 	}
 }
 
+// onDeleteWorkspace is called when a workspace is deleted.
+func (collector *Collector) onDeleteWorkspace(n state.DeleteWorkspaceNotification) {
+	// Check if one o more open streams have been deleted.
+	for _, s := range collector.streams {
+		if s.workspace == n.ID {
+			go collector.replaceStream(s, nil)
+		}
+	}
+	// Check if one or more connectors with an open stream have been deleted.
+	keepOpen := map[int]bool{0: true}
+	for _, c := range collector.state.Connections() {
+		if s, ok := collector.suitableStreamOf(c); ok {
+			keepOpen[s.ID] = true
+		}
+	}
+	for _, s := range collector.streams {
+		if !keepOpen[s.id] {
+			go collector.replaceStream(s, nil)
+		}
+	}
+}
+
 // onSetConnectionSettings is called when settings of a connection is changed.
 func (collector *Collector) onSetConnectionSettings(n state.SetConnectionSettingsNotification) {
 	old, ok := collector.streams[n.Connection]
@@ -358,7 +382,11 @@ func (collector *Collector) replaceStream(old *eventCollectorStream, new *state.
 			collector.mu.Unlock()
 			return
 		}
-		collector.streams[new.ID] = &eventCollectorStream{id: new.ID, stream: stream}
+		collector.streams[new.ID] = &eventCollectorStream{
+			id:        new.ID,
+			stream:    stream,
+			workspace: new.Workspace().ID,
+		}
 		collector.mu.Unlock()
 	}
 	// Close the old stream.
@@ -371,7 +399,8 @@ func (collector *Collector) replaceStream(old *eventCollectorStream, new *state.
 	}
 }
 
-// suitableStreamOf returns the stream of c only if the collector must send events to it.
+// suitableStreamOf returns the stream of c only if the collector must send
+// events to it.
 func (collector *Collector) suitableStreamOf(c *state.Connection) (*state.Connection, bool) {
 	if c == nil || !c.Enabled || c.Role != state.SourceRole {
 		return nil, false

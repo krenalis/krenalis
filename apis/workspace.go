@@ -360,6 +360,27 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 	return n.ID, nil
 }
 
+// Delete deletes the workspace with all its connections.
+//
+// It returns an errors.NotFound error if the workspace does not exist anymore.
+func (this *Workspace) Delete() error {
+	n := state.DeleteWorkspaceNotification{
+		ID: this.workspace.ID,
+	}
+	ctx := context.Background()
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1", n.ID)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return errors.NotFound("workspace %d does not exist", n.ID)
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
+}
+
 // authorizedResource represents an authorized resource that can be used to
 // create a new connection.
 type authorizedResource struct {

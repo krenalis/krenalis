@@ -123,10 +123,11 @@ type Processor struct {
 
 // processorStream represents a stream used by the processor.
 type processorStream struct {
-	id     int
-	stream connector.StreamConnection
-	ctx    context.Context
-	cancel context.CancelFunc
+	id        int
+	workspace int
+	stream    connector.StreamConnection
+	ctx       context.Context
+	cancel    context.CancelFunc
 }
 
 // NewProcessor returns a new processor.
@@ -162,6 +163,7 @@ func NewProcessor(ctx context.Context, db *postgres.DB, st *state.State,
 
 	st.AddListener(processor.onAddConnection)
 	st.AddListener(processor.onDeleteConnection)
+	st.AddListener(processor.onDeleteWorkspace)
 	st.AddListener(processor.onSetConnectionSettings)
 	st.AddListener(processor.onSetConnectionStatus)
 	st.AddListener(processor.onSetWarehouseSettings)
@@ -196,6 +198,15 @@ func (processor *Processor) onAddConnection(n state.AddConnectionNotification) {
 func (processor *Processor) onDeleteConnection(n state.DeleteConnectionNotification) {
 	if old, ok := processor.streams[n.ID]; ok {
 		go processor.replaceStream(old, nil)
+	}
+}
+
+// onDeleteWorkspace is called when a workspace is deleted.
+func (processor *Processor) onDeleteWorkspace(n state.DeleteWorkspaceNotification) {
+	for _, s := range processor.streams {
+		if s.workspace == n.ID {
+			go processor.replaceStream(s, nil)
+		}
 	}
 }
 
@@ -271,10 +282,11 @@ func (processor *Processor) replaceStream(old *processorStream, new *state.Conne
 		}
 		ctx, cancel := context.WithCancel(processor.ctx)
 		s := &processorStream{
-			id:     new.ID,
-			stream: stream,
-			ctx:    ctx,
-			cancel: cancel,
+			id:        new.ID,
+			workspace: new.Workspace().ID,
+			stream:    stream,
+			ctx:       ctx,
+			cancel:    cancel,
 		}
 		processor.Lock()
 		if processor.streams[new.ID] != old {

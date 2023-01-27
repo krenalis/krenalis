@@ -44,6 +44,8 @@ func (state *State) AddListener(listener any) {
 		state.listeners.AddImportInProgress = append(state.listeners.AddImportInProgress, l)
 	case func(DeleteConnectionNotification):
 		state.listeners.DeleteConnection = append(state.listeners.DeleteConnection, l)
+	case func(DeleteWorkspaceNotification):
+		state.listeners.DeleteWorkspace = append(state.listeners.DeleteWorkspace, l)
 	case func(ElectLeaderNotification):
 		state.listeners.ElectLeader = append(state.listeners.ElectLeader, l)
 	case func(SetConnectionSettingsNotification):
@@ -101,6 +103,8 @@ func (state *State) keepState() {
 			state.deleteConnection(n)
 		case "DeleteImportInProgress":
 			state.deleteImportInProgress(n)
+		case "DeleteWorkspace":
+			state.deleteWorkspace(n)
 		case "ElectLeader":
 			state.electLeader(n)
 		case "LoadState":
@@ -510,6 +514,41 @@ func (state *State) deleteImportInProgress(n postgres.Notification) {
 			})
 			break
 		}
+	}
+}
+
+// DeleteWorkspaceNotification is the notification event sent when a workspace
+// is deleted.
+type DeleteWorkspaceNotification struct {
+	ID int
+}
+
+// deleteWorkspace deletes a workspace.
+func (state *State) deleteWorkspace(n postgres.Notification) {
+	e := DeleteWorkspaceNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	ws := state.workspaces[e.ID]
+	account := state.accounts[ws.account.ID]
+	state.mu.Lock()
+	// Delete the workspace.
+	delete(state.workspaces, e.ID)
+	delete(account.workspaces, e.ID)
+	// Delete the connections.
+	for _, c := range ws.connections {
+		for _, key := range c.Keys {
+			delete(state.connectionsByKey, key)
+		}
+		delete(state.connections, c.ID)
+	}
+	// Delete the resources.
+	for _, r := range ws.resources {
+		delete(state.resources, r.ID)
+	}
+	state.mu.Unlock()
+	for _, listener := range state.listeners.DeleteWorkspace {
+		listener(e)
 	}
 }
 
