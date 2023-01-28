@@ -50,6 +50,11 @@ CREATE TABLE events (
     page_title varchar,
     page_url varchar,
     page_search varchar,
+    utm_source varchar,
+    utm_medium varchar,
+    utm_campaign varchar,
+    utm_term varchar,
+    utm_content varchar,
     target varchar,
     text varchar
 )

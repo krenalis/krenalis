@@ -50,6 +50,11 @@ CREATE TABLE events
     `page_title` String,
     `page_url` String,
     `page_search` String,
+    `utm_source` String,
+    `utm_medium` String,
+    `utm_campaign` String,
+    `utm_term` String,
+    `utm_content` String,
     `target` String,
     `text` String
 )

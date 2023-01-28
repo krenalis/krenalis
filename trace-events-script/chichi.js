@@ -52,6 +52,17 @@
 			height: window.screen.height
 		};
 
+		let search = new URLSearchParams(window.location.search);
+		for (const [key, value] of search.entries()) {
+			if ( key.startsWith('utm_') ) {
+				if ( !('utm' in d) ) {
+					d.utm = {};
+				}
+				let name = key.substring(4);
+				d.utm[name] = value;
+			}
+		}
+
 		console.log(d);
 
 		// serialize the collected data in JSON.

@@ -72,7 +72,14 @@ type Event struct {
 	Title     string
 	URL       string
 	UserId    string
-	browser   struct {
+	UTM       struct {
+		Source   string
+		Medium   string
+		Campaign string
+		Term     string
+		Content  string
+	}
+	browser struct {
 		name    string
 		other   string
 		version string
@@ -927,6 +934,11 @@ var batchEventsColumns = []string{
 	"page_title",
 	"page_url",
 	"page_search",
+	"utm_source",
+	"utm_medium",
+	"utm_campaign",
+	"utm_term",
+	"utm_content",
 	"target",
 	"text",
 }
@@ -981,6 +993,11 @@ RETRY:
 				e.page.title,
 				e.page.url,
 				e.page.search,
+				e.UTM.Source,
+				e.UTM.Medium,
+				e.UTM.Campaign,
+				e.UTM.Term,
+				e.UTM.Content,
 				e.Target,
 				e.Text,
 			)
