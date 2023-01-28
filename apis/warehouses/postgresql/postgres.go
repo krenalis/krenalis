@@ -755,11 +755,15 @@ func quoteValue(b *strings.Builder, value any) {
 		b.WriteString("FALSE")
 	case int:
 		b.WriteString(strconv.FormatInt(int64(v), 10))
+	case int16:
+		b.WriteString(strconv.FormatInt(int64(v), 10))
 	case int32:
 		b.WriteString(strconv.FormatInt(int64(v), 10))
 	case int64:
 		b.WriteString(strconv.FormatInt(v, 10))
 	case uint:
+		b.WriteString(strconv.FormatUint(uint64(v), 10))
+	case uint16:
 		b.WriteString(strconv.FormatUint(uint64(v), 10))
 	case uint32:
 		b.WriteString(strconv.FormatUint(uint64(v), 10))

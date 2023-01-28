@@ -46,6 +46,12 @@
 
 		d.url = window.location.href;
 
+		d.screen = {
+			density: window.devicePixelRatio,
+			width: window.screen.width,
+			height: window.screen.height
+		};
+
 		console.log(d);
 
 		// serialize the collected data in JSON.

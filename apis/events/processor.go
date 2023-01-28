@@ -60,14 +60,19 @@ type Event struct {
 	OSName      string
 	OSVersion   string
 	Referrer    string
-	SentAt      string
-	Target      string
-	Text        string
-	Timestamp   string
-	Title       string
-	URL         string
-	UserId      string
-	browser     struct {
+	Screen      struct {
+		Density float64
+		Width   int
+		Height  int
+	}
+	SentAt    string
+	Target    string
+	Text      string
+	Timestamp string
+	Title     string
+	URL       string
+	UserId    string
+	browser   struct {
 		name    string
 		other   string
 		version string
@@ -97,10 +102,15 @@ type Event struct {
 		url      string
 	}
 	receivedAt time.Time
-	sentAt     time.Time
-	source     int32
-	timestamp  time.Time
-	userAgent  string
+	screen     struct {
+		density uint16
+		width   uint16
+		height  uint16
+	}
+	sentAt    time.Time
+	source    int32
+	timestamp time.Time
+	userAgent string
 
 	// workspace, data and err are used during event processing.
 	workspace int
@@ -615,6 +625,15 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 			}
 		}
 
+		// screen.
+		if d := event.Screen.Density; 0 < d && d < 10 {
+			event.screen.density = uint16(math.Round(d * 100))
+		}
+		if w, h := event.Screen.Width, event.Screen.Height; (0 < w && w <= math.MaxInt16) && (0 < h && h <= math.MaxInt16) {
+			event.screen.width = uint16(w)
+			event.screen.height = uint16(h)
+		}
+
 		// Timestamp and date.
 		if event.Timestamp == "" {
 			event.timestamp = header.ReceivedAt
@@ -889,6 +908,9 @@ var batchEventsColumns = []string{
 	"os_name",
 	"os_version",
 	"user_agent",
+	"screen_density",
+	"screen_width",
+	"screen_height",
 	"browser_name",
 	"browser_other",
 	"browser_version",
@@ -940,6 +962,9 @@ RETRY:
 				e.os.name,
 				e.os.version,
 				e.userAgent,
+				e.screen.density,
+				e.screen.width,
+				e.screen.height,
 				e.browser.name,
 				e.browser.other,
 				e.browser.version,
