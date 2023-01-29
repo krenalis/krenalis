@@ -191,7 +191,7 @@ func NewProcessor(ctx context.Context, db *postgres.DB, st *state.State,
 // isSuitableStream reports whether c is a stream from which the processor must
 // read events.
 func (processor *Processor) isSuitableStream(c *state.Connection) bool {
-	if c == nil || !c.Enabled || c.Role != state.SourceRole || len(c.Settings) == 0 {
+	if c == nil || !c.Enabled || c.Role != state.SourceRole {
 		return false
 	}
 	if typ := c.Connector().Type; typ != state.StreamType {

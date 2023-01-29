@@ -406,7 +406,7 @@ func (collector *Collector) suitableStreamOf(c *state.Connection) (*state.Connec
 		return nil, false
 	}
 	s, ok := c.Stream()
-	if !ok || !s.Enabled || len(s.Settings) == 0 || s.Workspace().Warehouse == nil {
+	if !ok || !s.Enabled || s.Workspace().Warehouse == nil {
 		return nil, false
 	}
 	return s, true
