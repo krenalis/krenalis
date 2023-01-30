@@ -537,11 +537,11 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 func (this *Connection) SetMappings(mappings []*Mapping) error {
 
 	// Validate the connection type.
-	switch this.Type {
-	case AppType, DatabaseType, FileType:
+	switch typ := this.connection.Connector().Type; typ {
+	case state.AppType, state.DatabaseType, state.FileType:
 		// Ok.
 	default:
-		return errors.BadRequest("cannot set mappings on a connection of type %q", this.Type)
+		return errors.BadRequest("cannot set mappings on a connection of type %q", typ)
 	}
 
 	// Validate the mappings.
@@ -673,12 +673,12 @@ func (this *Connection) SetMappings(mappings []*Mapping) error {
 				customFunc.out_types = customFuncOutTypes[i]
 				customFunc.source = m.CustomFunc.Source
 			}
-			_, err := stmt.Exec(ctx, this.ID, position, m.InProperties, m.OutProperties,
+			_, err := stmt.Exec(ctx, n.Connection, position, m.InProperties, m.OutProperties,
 				m.PredefinedFunc, customFunc.in_types, customFunc.out_types, customFunc.source)
 			if err != nil {
 				if postgres.IsForeignKeyViolation(err) {
 					if postgres.ErrConstraintName(err) == "connections_mappings_connection_fkey" {
-						err = errors.NotFound("connection %d does not exist", this.ID)
+						err = errors.NotFound("connection %d does not exist", n.Connection)
 					}
 				}
 				return err
