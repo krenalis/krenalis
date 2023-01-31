@@ -315,11 +315,14 @@ func (apis *APIs) reloadSchema(connection *state.Connection) {
 	}
 }
 
+// Workspace represents a workspace.
 type Workspace struct {
 	db             *postgres.DB
-	eventProcessor *events.Processor
 	state          *state.State
+	eventProcessor *events.Processor
 	workspace      *state.Workspace
+	ID             int
+	Name           string
 }
 
 type AccountSort int

@@ -782,6 +782,35 @@ func (this *Workspace) ReloadSchemas() error {
 	return err
 }
 
+// Rename renames the workspace with the given name. name cannot be empty.
+//
+// It returns an errors.NotFoundError error if the workspace does not exist
+// anymore.
+func (this *Workspace) Rename(name string) error {
+	if name == "" {
+		return errors.BadRequest("name is empty")
+	}
+	if name == this.workspace.Name {
+		return nil
+	}
+	n := state.RenameWorkspaceNotification{
+		Workspace: this.workspace.ID,
+		Name:      name,
+	}
+	ctx := context.Background()
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1 WHERE id = $2", n.Name, n.Workspace)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return errors.NotFound("workspace %d does not exist", n.Workspace)
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
+}
+
 // Schema returns the schema, with the given name, of the workspace. If the
 // schema does not exist, it returns an invalid schema.
 func (this *Workspace) Schema(name string) types.Type {

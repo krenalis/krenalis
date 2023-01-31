@@ -122,7 +122,33 @@ func (this *Account) Workspace(id int) (*Workspace, error) {
 	if !ok {
 		return nil, errors.NotFound("workspace %d does not exist", id)
 	}
-	return &Workspace{db: this.db, eventProcessor: this.eventProcessor, state: this.state, workspace: ws}, nil
+	workspace := Workspace{
+		db:             this.db,
+		state:          this.state,
+		eventProcessor: this.eventProcessor,
+		workspace:      ws,
+		ID:             ws.ID,
+		Name:           ws.Name,
+	}
+	return &workspace, nil
+}
+
+// Workspaces returns the workspaces of the account.
+func (this *Account) Workspaces() []*Workspace {
+	workspaces := this.account.Workspaces()
+	infos := make([]*Workspace, len(workspaces))
+	for i, ws := range workspaces {
+		workspace := Workspace{
+			db:             this.db,
+			state:          this.state,
+			eventProcessor: this.eventProcessor,
+			workspace:      ws,
+			ID:             ws.ID,
+			Name:           ws.Name,
+		}
+		infos[i] = &workspace
+	}
+	return infos
 }
 
 // DeprecatedProperty returns an instance of DeprecatedProperties which operates

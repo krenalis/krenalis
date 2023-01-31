@@ -191,10 +191,10 @@ type Workspace struct {
 	Warehouse   warehouses.Warehouse
 	Schemas     map[string]*types.Type
 	connections map[int]*Connection
-	//EventListeners *EventListeners
-	ID        int
-	account   *Account
-	resources map[int]*Resource
+	ID          int
+	account     *Account
+	Name        string
+	resources   map[int]*Resource
 }
 
 // Account returns the account of the workspace.

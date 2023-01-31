@@ -104,13 +104,14 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
-		err = state.db.QueryScan(ctx, "SELECT id, account, warehouse_type, warehouse_settings, schemas FROM workspaces",
+		err = state.db.QueryScan(ctx, "SELECT id, account, name, warehouse_type, warehouse_settings, schemas FROM workspaces",
 			func(rows *postgres.Rows) error {
 				var id, accountID int
+				var name string
 				var warehouseType *WarehouseType
 				var warehouseSettings, schemas []byte
 				for rows.Next() {
-					if err := rows.Scan(&id, &accountID, &warehouseType, &warehouseSettings, &schemas); err != nil {
+					if err := rows.Scan(&id, &accountID, &name, &warehouseType, &warehouseSettings, &schemas); err != nil {
 						return err
 					}
 					account := state.accounts[accountID]
@@ -118,6 +119,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 						mu:        new(sync.Mutex),
 						ID:        id,
 						account:   account,
+						Name:      name,
 						resources: map[int]*Resource{},
 					}
 					if warehouseType != nil {
