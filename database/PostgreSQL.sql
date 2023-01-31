@@ -77,7 +77,7 @@ CREATE TYPE connection_transformation AS (
 CREATE TABLE connections (
     id integer NOT NULL,
     workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
-    name varchar(120) NOT NULL DEFAULT '',
+    name varchar(100) NOT NULL DEFAULT '',
     type connector_type NOT NULL,
     role role NOT NULL,
     enabled boolean NOT NULL DEFAULT false,

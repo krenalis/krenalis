@@ -109,6 +109,8 @@ func (state *State) keepState() {
 			state.electLeader(n)
 		case "LoadState":
 			state.loadState(n)
+		case "RenameConnection":
+			state.renameConnection(n)
 		case "RenameWorkspace":
 			state.renameWorkspace(n)
 		case "RevokeConnectionKey":
@@ -601,6 +603,24 @@ func (state *State) loadState(n postgres.Notification) {
 		go state.keepElections()
 	}
 	return
+}
+
+// RenameConnectionNotification is the notification event sent when a
+// connection is renamed.
+type RenameConnectionNotification struct {
+	Connection int
+	Name       string
+}
+
+// renameConnection renames a connection.
+func (state *State) renameConnection(n postgres.Notification) {
+	e := RenameConnectionNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceConnection(e.Connection, func(c *Connection) {
+		c.Name = e.Name
+	})
 }
 
 // RenameWorkspaceNotification is the notification event sent when a

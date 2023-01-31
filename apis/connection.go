@@ -412,6 +412,36 @@ func (this *Connection) Query(query string, limit int) ([]Column, [][]string, er
 	return columns, rows, nil
 }
 
+// Rename renames the connection with the given new name.
+// name must be between 1 and 100 runes long.
+//
+// It returns an errors.NotFoundError error if the connection does not exist
+// anymore.
+func (this *Connection) Rename(name string) error {
+	if name == "" || utf8.RuneCountInString(name) > 100 {
+		return errors.BadRequest("name %q is not valid", name)
+	}
+	if name == this.connection.Name {
+		return nil
+	}
+	n := state.RenameConnectionNotification{
+		Connection: this.connection.ID,
+		Name:       name,
+	}
+	ctx := context.Background()
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1 WHERE id = $2", n.Name, n.Connection)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return errors.NotFound("connection %d does not exist", n.Connection)
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
+}
+
 // ServeUI serves the user interface for the connection. event is the event and
 // values contains the form values in JSON format.
 //

@@ -44,7 +44,7 @@ type Warehouse struct {
 }
 
 // AddWorkspace adds a workspace with the given name and data warehouse, if not
-// nil, and returns the identifier.
+// nil, and returns the identifier. name must be between 1 and 100 runes long.
 //
 // It returns an errors.NotFoundError error if the account does not exist anymore.
 // It returns an errors.UnprocessableError error with code
@@ -52,11 +52,8 @@ type Warehouse struct {
 //   - InvalidSettings, if the warehouse settings are not valid.
 func (this *Account) AddWorkspace(name string, warehouse *Warehouse) (int, error) {
 
-	if name == "" {
-		return 0, errors.BadRequest("name is empty")
-	}
-	if utf8.RuneCountInString(name) > 100 {
-		return 0, errors.BadRequest("name is longer that 100 runes")
+	if name == "" || utf8.RuneCountInString(name) > 100 {
+		return 0, errors.BadRequest("name %q is not valid", name)
 	}
 
 	if warehouse != nil {

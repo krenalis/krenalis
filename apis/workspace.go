@@ -55,7 +55,7 @@ var (
 // relative to the connection.
 type ConnectionOptions struct {
 
-	// Name is the name of the connection. It cannot be longer than 120 runes.
+	// Name is the name of the connection. It cannot be longer than 100 runes.
 	// If empty, the connection name will be the name of its connector.
 	Name string
 
@@ -97,7 +97,7 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 	if connector < 1 || connector > maxInt32 {
 		return 0, errors.BadRequest("connector identifier %d is not valid", connector)
 	}
-	if utf8.RuneCountInString(opts.Name) > 120 {
+	if utf8.RuneCountInString(opts.Name) > 100 {
 		return 0, errors.BadRequest("name %q is not valid", opts.Name)
 	}
 	if opts.Storage < 0 || opts.Storage > maxInt32 {
@@ -782,13 +782,14 @@ func (this *Workspace) ReloadSchemas() error {
 	return err
 }
 
-// Rename renames the workspace with the given name. name cannot be empty.
+// Rename renames the workspace with the given new name.
+// name must be between 1 and 100 runes long.
 //
 // It returns an errors.NotFoundError error if the workspace does not exist
 // anymore.
 func (this *Workspace) Rename(name string) error {
-	if name == "" {
-		return errors.BadRequest("name is empty")
+	if name == "" || utf8.RuneCountInString(name) > 100 {
+		return errors.BadRequest("name %q is not valid", name)
 	}
 	if name == this.workspace.Name {
 		return nil
