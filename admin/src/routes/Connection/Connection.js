@@ -4,8 +4,9 @@ import NotFound from '../NotFound/NotFound';
 import Toast from '../../components/Toast/Toast';
 import ConnectionOverview from '../ConnectionOverview/ConnectionOverview';
 import ConnectionSQL from '../ConnectionSQL/ConnectionSQL';
+import ConnectionMappings from '../ConnectionMappings/ConnectionMappings';
 import ConnectionEvents from '../../components/ConnectionEvents/ConnectionEvents';
-import ConnectionProperties from '../ConnectionProperties/ConnectionProperties';
+import ConnectionTransformation from '../ConnectionTransformation/ConnectionTransformation';
 import ConnectionSettings from '../ConnectionSettings/ConnectionSettings';
 import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
 import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
@@ -116,16 +117,31 @@ const Connection = () => {
 					)}
 					{(c.Type === 'App' || c.Type === 'Database' || c.Type === 'File') && (
 						<>
-							<SlTab slot='nav' panel='properties'>
-								Properties
+							<SlTab slot='nav' panel='mappings'>
+								Mappings
 							</SlTab>
-							<SlTabPanel name='properties'>
-								<ConnectionProperties
+							<SlTabPanel name='mappings'>
+								<ConnectionMappings
 									connection={c}
 									onError={onError}
 									onStatuChange={onStatusChange}
 									renderArrows={selectedSection}
-									isSelected={selectedSection === 'properties'}
+									isSelected={selectedSection === 'mappings'}
+								/>
+							</SlTabPanel>
+						</>
+					)}
+					{(c.Type === 'App' || c.Type === 'Database' || c.Type === 'File') && (
+						<>
+							<SlTab slot='nav' panel='transformation'>
+								Transformation
+							</SlTab>
+							<SlTabPanel name='transformation'>
+								<ConnectionTransformation
+									connection={c}
+									onError={onError}
+									onStatuChange={onStatusChange}
+									isSelected={selectedSection === 'transformation'}
 								/>
 							</SlTabPanel>
 						</>

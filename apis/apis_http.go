@@ -200,6 +200,50 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				_, _ = w.Write([]byte(`{"status":"ok"}`))
 			})
+			router.Get("/transformation", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				_ = json.NewEncoder(w).Encode(connection.Transformation)
+			})
+			router.Put("/transformation", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				var transformation *Transformation
+				err = json.NewDecoder(r.Body).Decode(&transformation)
+				if err != nil {
+					http.Error(w, "Bad Request: invalid transformation", http.StatusBadRequest)
+					return
+				}
+				err = connection.SetTransformation(transformation)
+				if err != nil {
+					if err, ok := err.(errors.ResponseWriterTo); ok {
+						_ = err.WriteTo(w)
+						return
+					}
+					log.Printf("[error] cannot set transformation: %s", err)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				_, _ = w.Write([]byte(`{"status":"ok"}`))
+			})
 			router.Get("/mappings", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)

@@ -462,6 +462,7 @@ type Connection struct {
 	UsersQuery       string
 	importInProgress *ImportInProgress
 	mappings         []*Mapping
+	transformation   *Transformation
 	Health           ConnectionHealth
 }
 
@@ -533,6 +534,15 @@ func (connection *Connection) Mappings() []*Mapping {
 	ms := connection.mappings
 	connection.mu.Unlock()
 	return ms
+}
+
+// Transformation returns the transformation of the connection, if it has one,
+// otherwise returns nil.
+func (connection *Connection) Transformation() *Transformation {
+	connection.mu.Lock()
+	t := connection.transformation
+	connection.mu.Unlock()
+	return t
 }
 
 // ImportInProgress represents a connection import in progress.
@@ -676,6 +686,24 @@ func (role ConnectionRole) Value() (driver.Value, error) {
 		return "Destination", nil
 	}
 	return nil, fmt.Errorf("not a valid ConnectionRole: %d", role)
+}
+
+// Transformation represents a Python transformation which can be associated to
+// a connection.
+type Transformation struct {
+
+	// In is the input schema of the transformation, which should have at least
+	// one property in it.
+	In types.Type
+
+	// Out is the output schema of the transformation, which should have at
+	// least one property in it.
+	Out types.Type
+
+	// PythonSource is the Python source code of this transformation, which
+	// declares the 'transform' function which takes in input and returns a
+	// Python dictionary.
+	PythonSource string
 }
 
 // Mapping represents a mapping from a kind of properties to another.

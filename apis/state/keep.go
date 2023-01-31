@@ -121,6 +121,8 @@ func (state *State) keepState() {
 			state.setConnectionStream(n)
 		case "SetConnectionStatus":
 			state.setConnectionStatus(n)
+		case "SetConnectionTransformation":
+			state.setConnectionTransformation(n)
 		case "SetConnectionMappings":
 			state.setConnectionMappings(n)
 		case "SetConnectionUserQuery":
@@ -730,6 +732,25 @@ func (state *State) setConnectionStream(n postgres.Notification) {
 	for _, listener := range state.listeners.SetConnectionStream {
 		listener(e)
 	}
+}
+
+// SetConnectionTransformationNotification is the notification event sent when
+// the transformation of a connection is set.
+type SetConnectionTransformationNotification struct {
+	Connection     int
+	Transformation *Transformation // nil means no transformation.
+}
+
+// setConnectionTransformation sets the transformation of a connection.
+func (state *State) setConnectionTransformation(n postgres.Notification) {
+	e := SetConnectionTransformationNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	c := state.connections[e.Connection]
+	c.mu.Lock()
+	c.transformation = e.Transformation
+	c.mu.Unlock()
 }
 
 // SetConnectionMappingsNotification is the notification event sent when the

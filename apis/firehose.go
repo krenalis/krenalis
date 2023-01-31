@@ -176,11 +176,69 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 	// initialization.
 	pool := transformations.NewPool()
 
+	// Prepare the candidate data and timestamps.
+	candidateData := map[string]any{}
+	candidateTimestamps := map[string]time.Time{}
+
+	ctx := context.Background()
+
+	// If the connection has an associated transformation, run it.
+	if t := fh.connection.Transformation(); t != nil {
+
+		// Prepare the user for the transformation.
+		inPropsNames := t.In.PropertiesNames()
+		user := make(map[string]any, len(inPropsNames))
+		for _, name := range inPropsNames {
+			value, ok := properties[name]
+			if !ok {
+				fh.setError(importError{fmt.Errorf("property %q not found in connection %d", name, fh.connection.ID)})
+				return
+			}
+			user[name] = value
+		}
+		// Validate the input properties according to the input schema.
+		{
+			data, err := json.Marshal(user)
+			if err != nil {
+				fh.setError(err)
+				return
+			}
+			_, err = types.Decode(bytes.NewReader(data), t.In)
+			if err != nil {
+				fh.setError(importError{fmt.Errorf("input schema validation failed: %s", err)})
+				return
+			}
+		}
+		// Run the Python transformation function.
+		var err error
+		candidateData, err = pool.Run2(ctx, t.PythonSource, user)
+		if err != nil {
+			fh.setError(importError{fmt.Errorf("error while calling transformation function of mapping: %s", err)})
+			return
+		}
+		// Validate the properties returned by Python according to the output schema.
+		{
+			data, err := json.Marshal(candidateData)
+			if err != nil {
+				fh.setError(err)
+				return
+			}
+			_, err = types.Decode(bytes.NewReader(data), t.Out)
+			if err != nil {
+				fh.setError(importError{fmt.Errorf("output schema validation failed: %s", err)})
+				return
+			}
+		}
+		// Determine the timestamps for the updated properties.
+		ts := mostRecentTimestamp(timestamps, inPropsNames)
+		for _, name := range inPropsNames {
+			candidateTimestamps[name] = ts
+		}
+	}
+
 	// Apply the transformations of mappings, calculate the Golden Record
 	// properties and their relative timestamps for this user in this
 	// connection.
-	candidateData := map[string]any{}
-	candidateTimestamps := map[string]time.Time{}
 	for _, m := range fh.connection.Mappings() {
 
 		// Ensure that the input properties exist.
@@ -245,7 +303,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 			for i := range in {
 				in[i] = properties[m.InProperties[i]]
 			}
-			out, err := pool.Run(context.Background(), m.CustomFunc.Source, in)
+			out, err := pool.Run(ctx, m.CustomFunc.Source, in)
 			if err != nil {
 				fh.setError(importError{fmt.Errorf("error while calling transformation function of mapping: %s", err)})
 				return

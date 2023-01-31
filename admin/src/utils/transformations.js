@@ -1,86 +1,46 @@
-export const defaultTransformation = `# TODO: the automatic generation of transformation
-# functions code has been disabled, as it needs a rewrite.
-#
-# You should manually change the code below.
+export const defaultTransformation = `def transform(user: dict) -> dict:
 
-def transform(user):
-    return {
-        "FirstName": user["firstname"],
-    }
+	"""
+	The input parameter is a dictionary representing the user
+	imported from the connection.
+
+	Returns a single parameter which is a dictionary representing
+	the transformed user.
+	"""
+
+	return user
 `;
 
 export class Transformation {
 	constructor(obj) {
-		this.InProperties = [];
-		this.OutProperties = [];
-		this.PredefinedFunc = null;
-		this.CustomFunc = null;
-		this.Position = 0;
-		this.Type = '';
-		if (obj) {
-			Object.assign(this, obj);
-			if (obj.PredefinedFunc !== null) {
-				this.Type = 'predefined';
-			} else if (obj.InProperties.length === 1 && obj.OutProperties.length === 1 && obj.CustomFunc == null) {
-				this.Type = 'one-to-one';
-			} else {
-				this.Type = 'custom';
-			}
-		}
-	}
-
-	static createOneToOneTransformation(input, output, position) {
-		return new Transformation({
-			InProperties: [input],
-			OutProperties: [output],
-			PredefinedFunc: null,
-			CustomFunc: null,
-			Position: position,
-		});
-	}
-
-	static createPredefinedTransformation(predefined, position) {
-		return new Transformation({
-			InProperties: [],
-			OutProperties: [],
-			PredefinedFunc: predefined,
-			CustomFunc: null,
-			Position: position,
-		});
-	}
-
-	static createCustomTransformation(position) {
-		return new Transformation({
-			InProperties: [],
-			OutProperties: [],
-			PredefinedFunc: null,
-			CustomFunc: { InTypes: [], OutTypes: [], Source: defaultTransformation },
-			Position: position,
-		});
-	}
-
-	toServerFormat = () => {
-		return {
-			InProperties: this.InProperties,
-			OutProperties: this.OutProperties,
-			PredefinedFunc: this.PredefinedFunc != null ? this.PredefinedFunc.ID : null,
-			CustomFunc: this.CustomFunc,
+		this.In = {
+			name: 'Object',
+			properties: [],
 		};
-	};
+		this.Out = {
+			name: 'Object',
+			properties: [],
+		};
+		this.PythonSource = defaultTransformation;
+		if (obj == null) {
+			return;
+		}
+		Object.assign(this, obj);
+	}
 
 	getProperties = (role) => {
 		if (role === 'input') {
-			return this.InProperties;
+			return this.In.properties;
 		} else {
-			return this.OutProperties;
+			return this.Out.properties;
 		}
 	};
 
 	setProperties = (role, properties) => {
 		if (role === 'input') {
-			this.InProperties = properties;
+			this.In.properties = properties;
 		} else {
-			this.OutProperties = properties;
+			this.Out.properties = properties;
 		}
 	};
 
@@ -89,96 +49,15 @@ export class Transformation {
 		return properties.findIndex((p) => p === name) !== -1;
 	};
 
-	addProperty = (role, name, parameter) => {
-		switch (this.Type) {
-			case 'one-to-one':
-				return;
-			case 'custom':
-				let properties = this.getProperties(role);
-				properties.push(name);
-				this.setProperties(role, properties);
-				break;
-			case 'predefined':
-				let parametersLength = this.getParametersLength(role);
-				let parameterIndex = this.getParameterIndex(role, parameter);
-				if (role === 'output' && parametersLength === 1) {
-					// in this case it's possible to connect an arbitrary number
-					// of output properties.
-					this.OutProperties.push(name);
-				} else {
-					let properties = this.getProperties(role);
-					if (properties.length === 0) {
-						properties = Array(parametersLength);
-						properties[parameterIndex] = name;
-					} else {
-						properties[parameterIndex] = name;
-					}
-					this.setProperties(role, properties);
-				}
-				break;
-			default:
-				return;
-		}
+	addProperty = (role, name) => {
+		let properties = this.getProperties(role);
+		properties.push(name);
+		this.setProperties(role, properties);
 	};
 
 	removeProperty = (role, name) => {
-		if (this.Type === 'predefined') {
-			let parametersLength = this.getParametersLength(role);
-			if (role !== 'output' || parametersLength !== 1) {
-				// maintain the order.
-				let properties = this.getProperties(role);
-				let updated = [];
-				for (let p of properties) {
-					if (p === name) {
-						updated.push(undefined);
-					} else {
-						updated.push(p);
-					}
-				}
-				this.setProperties(role, updated);
-				return;
-			}
-		}
 		let properties = this.getProperties(role);
-		let updated = properties.filter((p) => p !== name);
+		let updated = properties.filter((p) => p.name !== name);
 		this.setProperties(role, updated);
-	};
-
-	validateProperties = () => {
-		if (this.Type !== 'predefined') return null;
-		for (let [i, p] of this.PredefinedFunc.In.properties.entries()) {
-			if (this.InProperties[i] === undefined) {
-				return `The input parameter "${p.label}" of the predefined transformation "${this.PredefinedFunc.Name}" is not linked to any input property`;
-			}
-		}
-		for (let [i, p] of this.PredefinedFunc.Out.properties.entries()) {
-			if (this.OutProperties[i] === undefined) {
-				return `The output parameter "${p.label}" of the predefined transformation "${this.PredefinedFunc.Name}" is not linked to any output property`;
-			}
-		}
-		return null;
-	};
-
-	updateSource = (source) => {
-		if (this.Type !== 'custom') return;
-		this.CustomFunc.Source = source === '' ? defaultTransformation : source;
-	};
-
-	getParametersLength = (role) => {
-		if (this.Type !== 'predefined') return 0;
-		if (role === 'input') {
-			return this.PredefinedFunc.In.properties.length;
-		} else {
-			return this.PredefinedFunc.Out.properties.length;
-		}
-	};
-
-	getParameterIndex = (role, parameter) => {
-		if (this.Type !== 'predefined') return 0;
-		if (role === 'input') {
-			return this.PredefinedFunc.In.properties.findIndex((p) => p.label === parameter);
-		} else {
-			return this.PredefinedFunc.Out.properties.findIndex((p) => p.label === parameter);
-		}
 	};
 }

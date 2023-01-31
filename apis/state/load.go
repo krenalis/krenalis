@@ -169,15 +169,17 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		// Read all connections.
 		state.connections = map[int]*Connection{}
 		err = state.db.QueryScan(ctx, "SELECT id, workspace, name, role, enabled, connector, COALESCE(storage, 0),"+
-			" COALESCE(stream, 0), resource, website_host, user_cursor, identity_column, timestamp_column, settings,"+
-			" schema, users_query, health FROM connections", func(rows *postgres.Rows) error {
+			" COALESCE(stream, 0), resource, website_host, user_cursor, identity_column, timestamp_column,"+
+			"(transformation).in_types, (transformation).out_types, (transformation).python_source,"+
+			"settings, schema, users_query, health FROM connections", func(rows *postgres.Rows) error {
 			for rows.Next() {
 				var workspaceID, connector, storage, stream, resource int
+				var transformIn, transformOut, transformSrc string
 				var rawSchema string
 				c := Connection{}
 				if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &c.Role, &c.Enabled, &connector, &storage, &stream, &resource,
-					&c.WebsiteHost, &c.UserCursor, &c.IdentityColumn, &c.TimestampColumn, &c.Settings, &rawSchema,
-					&c.UsersQuery, &c.Health); err != nil {
+					&c.WebsiteHost, &c.UserCursor, &c.IdentityColumn, &c.TimestampColumn,
+					&transformIn, &transformOut, &transformSrc, &c.Settings, &rawSchema, &c.UsersQuery, &c.Health); err != nil {
 					return err
 				}
 				workspace := state.workspaces[workspaceID]
@@ -213,6 +215,19 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 						// TODO(marco) disable the connection instead of returning an error
 						return err
 					}
+				}
+				// Load the connection's transformation, if present.
+				if transformIn != "" {
+					t := &Transformation{PythonSource: transformSrc}
+					err := json.Unmarshal([]byte(transformIn), &t.In)
+					if err != nil {
+						return err
+					}
+					err = json.Unmarshal([]byte(transformOut), &t.Out)
+					if err != nil {
+						return err
+					}
+					c.transformation = t
 				}
 				c.mappings = []*Mapping{}
 				connection, ok := state.connections[c.ID]

@@ -1,31 +1,29 @@
 import { useState, useEffect } from 'react';
-import './ConnectionProperties.css';
+import './ConnectionMappings.css';
 import call from '../../utils/call';
 import ConnectionProperty from '../../components/ConnectionProperty/ConnectionProperty';
-import TransformationNode from '../../components/TrasformationNode/TransformationNode';
-import TransformationDialog from '../../components/TransformationDialog/TransformationDialog';
+import MappingNode from '../../components/MappingNode/MappingNode';
 import SelectedPropertyMessage from '../../components/SelectedPropertyMessage/SelectedPropertyMessage';
 import PropertiesDialog from '../../components/PropertiesDialog/PropertiesDialog';
-import { Transformation } from '../../utils/transformations';
+import { Mapping } from '../../utils/mappings';
 import { SlButton, SlIcon, SlDialog, SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
 import Xarrow from 'react-xarrows';
 
-const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelected }) => {
+const ConnectionMappings = ({ connection: c, onError, onStatuChange, isSelected }) => {
 	let [inputProperties, setInputProperties] = useState([]);
 	let [outputProperties, setOutputProperties] = useState([]);
 	let [usedInputProperties, setUsedInputProperties] = useState([]);
 	let [usedOutputProperties, setUsedOutputProperties] = useState([]);
-	let [transformations, setTransformations] = useState([]);
-	let [lastTransformationPosition, setLastTransformationPosition] = useState(1);
+	let [mappings, setMappings] = useState([]);
+	let [lastMappingPosition, setLastMappingPosition] = useState(1);
 	let [inputSearchTerm, setInputSearchTerm] = useState('');
 	let [outputSearchTerm, setOutputSearchTerm] = useState('');
 	let [isInputDialogOpen, setIsInputDialogOpen] = useState(false);
 	let [isOutputDialogOpen, setIsOutputDialogOpen] = useState(false);
 	let [selectedProperty, setSelectedProperty] = useState(null);
-	let [selectedTransformation, setSelectedTransformation] = useState(null);
-	let [selectedPredefinedTransformation, setSelectedPredefinedTransformation] = useState(0);
-	let [predefinedTransformations, setPredefinedTransformations] = useState([]);
-	let [showPredefinedTransformations, setShowPredefinedTransformations] = useState(false);
+	let [selectedPredefinedMapping, setSelectedPredefinedMapping] = useState(0);
+	let [predefinedMappings, setPredefinedMappings] = useState([]);
+	let [showPredefinedMappings, setShowPredefinedMappings] = useState(false);
 
 	const hooksByRole = {
 		input: {
@@ -90,39 +88,39 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 			setInputProperties(inputProperties);
 			setOutputProperties(outputProperties);
 
-			// get the predefined transformations.
-			let predefinedTransformations;
-			[predefinedTransformations, err] = await call('/admin/predefined-transformations', 'GET');
+			// get the predefined mappings.
+			let predefinedMappings;
+			[predefinedMappings, err] = await call('/admin/predefined-mappings', 'GET');
 			if (err) {
 				onError(err);
 				return;
 			}
-			setPredefinedTransformations(predefinedTransformations);
+			setPredefinedMappings(predefinedMappings);
 
-			// get the transformations.
-			let transformations;
-			[transformations, err] = await call(`/api/connections/${c.ID}/mappings`, 'GET');
+			// get the mappings.
+			let mappings;
+			[mappings, err] = await call(`/api/connections/${c.ID}/mappings`, 'GET');
 			if (err) {
 				onError(err);
 				return;
 			}
-			if (transformations == null) return;
+			if (mappings == null) return;
 
-			// replace the predefined transformations IDs with the full
-			// predefined transformations.
-			for (let t of transformations) {
-				if (t.PredefinedFunc != null) {
-					let predefinedTransformation = predefinedTransformations.find((pt) => pt.ID === t.PredefinedFunc);
-					t.PredefinedFunc = predefinedTransformation;
+			// replace the predefined mappings IDs with the full predefined
+			// mappings.
+			for (let m of mappings) {
+				if (m.PredefinedFunc != null) {
+					let predefinedMapping = predefinedMappings.find((pt) => pt.ID === m.PredefinedFunc);
+					m.PredefinedFunc = predefinedMapping;
 				}
 			}
 
 			// get the input properties and the output properties used by the
-			// transformations.
+			// mappings.
 			let usedInputProperties = [];
 			let usedOutputProperties = [];
-			for (let t of transformations) {
-				for (let input of t.InProperties) {
+			for (let m of mappings) {
+				for (let input of m.InProperties) {
 					let isDuplicate = false;
 					for (let p of usedInputProperties) {
 						if (input === p.name) {
@@ -135,7 +133,7 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 						usedInputProperties.push(fullProperty);
 					}
 				}
-				for (let output of t.OutProperties) {
+				for (let output of m.OutProperties) {
 					let isDuplicate = false;
 					for (let p of usedOutputProperties) {
 						if (output === p.name) {
@@ -152,27 +150,27 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 			setUsedInputProperties(usedInputProperties);
 			setUsedOutputProperties(usedOutputProperties);
 
-			// compute the positions of the transformations.
-			let pos = lastTransformationPosition;
-			for (let t of transformations) {
-				t.Position = pos;
+			// compute the positions of the mappings.
+			let pos = lastMappingPosition;
+			for (let m of mappings) {
+				m.Position = pos;
 				pos += 1;
 			}
 
-			// turn the transformations into "Transformation" objects.
-			let transformationObjects = [];
-			for (let t of transformations) {
-				transformationObjects.push(new Transformation(t));
+			// turn the mappings into "Mapping" objects.
+			let mappingObjects = [];
+			for (let m of mappings) {
+				mappingObjects.push(new Mapping(m));
 			}
 
-			setTransformations(transformationObjects);
-			setLastTransformationPosition(pos);
+			setMappings(mappingObjects);
+			setLastMappingPosition(pos);
 		};
 		fetchState();
 	}, []);
 
-	const incrementTransformationPosition = () => {
-		setLastTransformationPosition(lastTransformationPosition + 1);
+	const incrementMappingPosition = () => {
+		setLastMappingPosition(lastMappingPosition + 1);
 	};
 
 	const onAddUsedProperty = (role, p) => {
@@ -184,31 +182,23 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 		e.stopPropagation();
 		let { usedProperties, setUsedProperties } = hooksByRole[role];
 		setUsedProperties(usedProperties.filter((p) => p.name !== name));
-		// remove the property from the transformations that use it.
-		let trs = [];
-		for (let t of transformations) {
-			if (t.containsProperty(role, name)) {
-				if (t.Type === 'one-to-one') continue; // remove the transformation.
-				t.removeProperty(role, name);
+		// remove the property from the mappings that use it.
+		let mps = [];
+		for (let m of mappings) {
+			if (m.containsProperty(role, name)) {
+				if (m.Type === 'one-to-one') continue; // remove the mapping.
+				m.removeProperty(role, name);
 			}
-			trs.push(t);
+			mps.push(m);
 		}
-		setTransformations(trs);
+		setMappings(mps);
 	};
 
-	const onAddCustomTransformation = () => {
-		setTransformations([...transformations, Transformation.createCustomTransformation(lastTransformationPosition)]);
-		incrementTransformationPosition();
-	};
-
-	const onAddPredefinedTransformation = () => {
-		let predefined = predefinedTransformations.find((t) => t.ID === selectedPredefinedTransformation);
-		setTransformations([
-			...transformations,
-			Transformation.createPredefinedTransformation(predefined, lastTransformationPosition),
-		]);
-		setShowPredefinedTransformations(false);
-		incrementTransformationPosition();
+	const onAddPredefinedMapping = () => {
+		let predefined = predefinedMappings.find((t) => t.ID === selectedPredefinedMapping);
+		setMappings([...mappings, Mapping.createPredefinedMapping(predefined, lastMappingPosition)]);
+		setShowPredefinedMappings(false);
+		incrementMappingPosition();
 	};
 
 	const onOneToOneConnect = (name, role) => {
@@ -219,70 +209,57 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 		}
 		let input = sp.role === 'input' ? sp.name : name;
 		let output = sp.role === 'output' ? sp.name : name;
-		setTransformations([
-			...transformations,
-			Transformation.createOneToOneTransformation(input, output, lastTransformationPosition),
-		]);
+		setMappings([...mappings, Mapping.createOneToOneMapping(input, output, lastMappingPosition)]);
 		setSelectedProperty(null);
-		incrementTransformationPosition();
+		incrementMappingPosition();
 	};
 
-	const onTransformationConnect = (position, parameter) => {
+	const onMappingConnect = (position, parameter) => {
 		let sp = selectedProperty;
-		let trs = [];
-		for (let t of transformations) {
-			if (t.Position === position && !t.containsProperty(sp.role, sp.name)) {
-				t.addProperty(sp.role, sp.name, parameter);
+		let mps = [];
+		for (let m of mappings) {
+			if (m.Position === position && !m.containsProperty(sp.role, sp.name)) {
+				m.addProperty(sp.role, sp.name, parameter);
 			}
-			trs.push(t);
+			mps.push(m);
 		}
-		setTransformations(trs);
+		setMappings(mps);
 		setSelectedProperty(null);
 	};
 
 	const onRemoveConnection = (e, role, position, name) => {
 		if (e.target.previousSibling == null || e.target.previousSibling.tagName !== 'svg') return; // the click is not on the label of the arrow.
-		let trs = [];
-		for (let t of transformations) {
-			if (t.Position === position) {
-				if (t.Type === 'one-to-one') continue; // remove the transformation.
-				t.removeProperty(role, name);
+		let mps = [];
+		for (let m of mappings) {
+			if (m.Position === position) {
+				if (m.Type === 'one-to-one') continue; // remove the mapping.
+				m.removeProperty(role, name);
 			}
-			trs.push(t);
+			mps.push(m);
 		}
-		setTransformations(trs);
+		setMappings(mps);
 	};
 
-	const onChangeTransformation = (position, value) => {
-		let trs = [];
-		for (let t of transformations) {
-			if (t.Position === position) t.updateSource(value);
-			trs.push(t);
+	const onRemoveMapping = (position) => {
+		let mps = [];
+		for (let m of mappings) {
+			if (m.Position !== position) mps.push(m);
 		}
-		setTransformations(trs);
-	};
-
-	const onRemoveTransformation = (position) => {
-		let trs = [];
-		for (let t of transformations) {
-			if (t.Position !== position) trs.push(t);
-		}
-		setTransformations(trs);
-		setSelectedTransformation(null);
+		setMappings(mps);
 	};
 
 	const onSave = async () => {
-		let trs = [];
-		for (let t of transformations) {
-			let err = t.validateProperties();
+		let mps = [];
+		for (let m of mappings) {
+			let err = m.validateProperties();
 			if (err != null) {
 				onError(err);
 				return;
 			}
-			let toSave = t.toServerFormat();
-			trs.push(toSave);
+			let toSave = m.toServerFormat();
+			mps.push(toSave);
 		}
-		let [, err] = await call(`/api/connections/${c.ID}/mappings`, 'PUT', trs);
+		let [, err] = await call(`/api/connections/${c.ID}/mappings`, 'PUT', mps);
 		if (err) {
 			onError(err);
 			return;
@@ -290,7 +267,7 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 		onStatuChange({
 			variant: 'success',
 			icon: 'check2-circle',
-			text: 'Your transformations have been successfully saved',
+			text: 'Your mappings have been successfully saved',
 		});
 	};
 
@@ -300,9 +277,8 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 	};
 
 	let sp = selectedProperty;
-	let st = selectedTransformation;
 	return (
-		<div className={`ConnectionProperties${sp ? ' selectedProperty' : ''}`}>
+		<div className={`ConnectionMappings${sp ? ' selectedProperty' : ''}`}>
 			{sp && (
 				<SelectedPropertyMessage
 					selectedProperty={sp}
@@ -330,6 +306,7 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 								name={name}
 								label={label}
 								role={role}
+								type={type}
 								isSelected={isSelected}
 								onHandle={() =>
 									setSelectedProperty({ name: name, label: label, type: type, role: role })
@@ -337,11 +314,12 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 								onRemove={(e) => onRemoveUsedProperty(e, role, name)}
 								disableRemove={sp != null}
 								onConnect={sp && !isSelected ? () => onOneToOneConnect(name, role) : null}
+								connectable
 							/>
 						);
 					})}
 				</div>
-				<div className='transformations'>
+				<div className='mappings'>
 					<SlButton
 						className='saveButton'
 						variant='primary'
@@ -352,77 +330,58 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 						<SlIcon slot='prefix' name='save' />
 						Save
 					</SlButton>
-					{transformations.map((t) => {
+					{mappings.map((m) => {
 						return (
-							<div key={t.Position} className='transformation' id={`transformation-${t.Position}`}>
-								<TransformationNode
-									transformation={t}
-									onSelect={sp ? null : () => setSelectedTransformation(t)}
-									onConnect={sp ? (handleID) => onTransformationConnect(t.Position, handleID) : null}
-									onRemove={() => onRemoveTransformation(t.Position)}
+							<div key={m.Position} className='mapping' id={`mapping-${m.Position}`}>
+								<MappingNode
+									mapping={m}
+									onConnect={sp ? (handleID) => onMappingConnect(m.Position, handleID) : null}
+									onRemove={() => onRemoveMapping(m.Position)}
 								/>
-								{st && st.Position === t.Position && (
-									<TransformationDialog
-										transformation={t}
-										onClose={() => setSelectedTransformation(null)}
-										onEditorChange={(value) => onChangeTransformation(t.Position, value)}
-										onRemove={() => onRemoveTransformation(t.Position)}
-									/>
-								)}
 							</div>
 						);
 					})}
-					<div className='addTransformationButtons'>
-						<SlTooltip content='Write a custom transformation' disabled={sp != null}>
+					<div className='addMappingButtons'>
+						<SlTooltip content='Choose a predefined mapping' disabled={sp != null}>
 							<SlButton
-								className='addTransformation'
+								className='addMapping'
 								variant='default'
 								disabled={sp != null}
-								onClick={onAddCustomTransformation}
-							>
-								<SlIcon name='plus-lg'></SlIcon>
-							</SlButton>
-						</SlTooltip>
-						<SlTooltip content='Choose a predefined transformation' disabled={sp != null}>
-							<SlButton
-								className='addTransformation'
-								variant='default'
-								disabled={sp != null}
-								onClick={() => setShowPredefinedTransformations(true)}
+								onClick={() => setShowPredefinedMappings(true)}
 							>
 								<SlIcon name='list'></SlIcon>
 							</SlButton>
 						</SlTooltip>
 					</div>
-					{showPredefinedTransformations && (
+					{showPredefinedMappings && (
 						<SlDialog
-							label='Select a predefined transformation'
-							className='predefinedTransformationsDialog'
+							label='Select a predefined mapping'
+							className='predefinedMappingsDialog'
 							open={true}
-							onSlAfterHide={() => setShowPredefinedTransformations(false)}
+							onSlAfterHide={() => setShowPredefinedMappings(false)}
 							style={{ '--width': '700px' }}
 						>
-							<div className='predefinedTransformations'>
-								{predefinedTransformations.map((t) => {
+							<div className='predefinedMappings'>
+								{predefinedMappings.map((m) => {
 									return (
 										<div
-											className={`predefinedTransformation${
-												t.ID === selectedPredefinedTransformation ? ' selected' : ''
+											className={`predefinedMapping${
+												m.ID === selectedPredefinedMapping ? ' selected' : ''
 											}`}
-											onClick={() => setSelectedPredefinedTransformation(t.ID)}
+											onClick={() => setSelectedPredefinedMapping(m.ID)}
 										>
-											<SlIcon name={t.Icon}></SlIcon>
-											<div className='name'>{t.Name}</div>
-											<div className='description'>{t.Description}</div>
+											<SlIcon name={m.Icon}></SlIcon>
+											<div className='name'>{m.Name}</div>
+											<div className='description'>{m.Description}</div>
 										</div>
 									);
 								})}
 							</div>
 							<SlButton
-								disabled={selectedPredefinedTransformation === 0}
+								disabled={selectedPredefinedMapping === 0}
 								slot='footer'
 								variant='primary'
-								onClick={onAddPredefinedTransformation}
+								onClick={onAddPredefinedMapping}
 							>
 								Add
 							</SlButton>
@@ -447,6 +406,7 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 								name={name}
 								label={label}
 								role={role}
+								type={type}
 								isSelected={isSelected}
 								onHandle={() =>
 									setSelectedProperty({ name: name, label: label, type: type, role: role })
@@ -454,6 +414,7 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 								onRemove={(e) => onRemoveUsedProperty(e, role, name)}
 								disableRemove={sp != null}
 								onConnect={sp && !isSelected ? () => onOneToOneConnect(name, role) : null}
+								connectable
 							/>
 						);
 					})}
@@ -461,9 +422,9 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 			</div>
 			<div className='arrows'>
 				{isSelected &&
-					transformations.map((t) => {
+					mappings.map((m) => {
 						let inputArrows = [];
-						for (let [i, p] of t.InProperties.entries()) {
+						for (let [i, p] of m.InProperties.entries()) {
 							if (p !== undefined) {
 								inputArrows.push(
 									<div
@@ -471,7 +432,7 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 										onClick={
 											isSelectedProperty(p, 'input')
 												? (e) => {
-														onRemoveConnection(e, 'input', t.Position, p);
+														onRemoveConnection(e, 'input', m.Position, p);
 												  }
 												: null
 										}
@@ -479,14 +440,11 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 										<Xarrow
 											start={p}
 											end={
-												t.PredefinedFunc !== null
-													? `transformation-${
-															t.Position
-													  }-input-${t.PredefinedFunc.In.properties[i].label.replace(
-															/\s/g,
-															''
-													  )}`
-													: `transformation-${t.Position}`
+												m.PredefinedFunc !== null
+													? `mapping-${m.Position}-input-${m.PredefinedFunc.In.properties[
+															i
+													  ].label.replace(/\s/g, '')}`
+													: `mapping-${m.Position}`
 											}
 											startAnchor='right'
 											endAnchor='left'
@@ -500,7 +458,7 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 							}
 						}
 						let outputArrows = [];
-						for (let [i, p] of t.OutProperties.entries()) {
+						for (let [i, p] of m.OutProperties.entries()) {
 							if (p !== undefined) {
 								outputArrows.push(
 									<div
@@ -508,29 +466,26 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 										onClick={
 											isSelectedProperty(p, 'output')
 												? (e) => {
-														onRemoveConnection(e, 'output', t.Position, p);
+														onRemoveConnection(e, 'output', m.Position, p);
 												  }
 												: null
 										}
 									>
 										<Xarrow
 											start={
-												t.PredefinedFunc !== null &&
-												t.PredefinedFunc.Out.properties.length === 1
-													? `transformation-${
-															t.Position
-													  }-output-${t.PredefinedFunc.Out.properties[0].label.replace(
+												m.PredefinedFunc !== null &&
+												m.PredefinedFunc.Out.properties.length === 1
+													? `mapping-${
+															m.Position
+													  }-output-${m.PredefinedFunc.Out.properties[0].label.replace(
 															/\s/g,
 															''
 													  )}`
-													: t.PredefinedFunc !== null
-													? `transformation-${
-															t.Position
-													  }-output-${t.PredefinedFunc.Out.properties[i].label.replace(
-															/\s/g,
-															''
-													  )}`
-													: `transformation-${t.Position}`
+													: m.PredefinedFunc !== null
+													? `mapping-${m.Position}-output-${m.PredefinedFunc.Out.properties[
+															i
+													  ].label.replace(/\s/g, '')}`
+													: `mapping-${m.Position}`
 											}
 											end={p}
 											startAnchor='right'
@@ -566,4 +521,4 @@ const ConnectionProperties = ({ connection: c, onError, onStatuChange, isSelecte
 	);
 };
 
-export default ConnectionProperties;
+export default ConnectionMappings;

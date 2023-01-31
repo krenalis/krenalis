@@ -103,8 +103,8 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Handle the "/predefined-transformations" endpoint.
-	if strings.HasPrefix(rpath, "/predefined-transformations") {
+	// Handle the "/predefined-mappings" endpoint.
+	if strings.HasPrefix(rpath, "/predefined-mappings") {
 		funcs := make([]map[string]any, len(apis.PredefinedMappingFuncs))
 		for i, f := range apis.PredefinedMappingFuncs {
 			funcs[i] = map[string]any{

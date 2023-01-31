@@ -68,6 +68,12 @@ CREATE TYPE role AS ENUM ('Source', 'Destination');
 
 CREATE TYPE connection_health AS ENUM ('Healthy', 'NoRecentData', 'RecentError', 'AccessDenied');
 
+CREATE TYPE connection_transformation AS (
+    in_types text,
+    out_types text,
+    python_source text
+);
+
 CREATE TABLE connections (
     id integer NOT NULL,
     workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
@@ -83,6 +89,7 @@ CREATE TABLE connections (
     user_cursor varchar(500) NOT NULL DEFAULT '',
     identity_column varchar(100) NOT NULL DEFAULT '',
     timestamp_column varchar(100) NOT NULL DEFAULT '',
+    transformation connection_transformation NOT NULL DEFAULT '("", "", "")',
     settings varchar(65535),
     schema text NOT NULL DEFAULT '',
     users_query text NOT NULL DEFAULT '',

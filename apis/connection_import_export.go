@@ -38,8 +38,9 @@ var (
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If the workspace does not have a data warehouse, it returns an
 // errors.UnprocessableError error with code NoWarehouse.
-// If the connection has no mappings, it returns an errors.UnprocessableError
-// error with code NoMappings.
+// If the connection has no transformation nor mappings associated to it, it
+// returns an errors.UnprocessableError error with code
+// NoTransformationNorMappings.
 //
 // Note that this method is only a draft, and its code may be wrong and/or
 // partially implemented.
@@ -66,9 +67,10 @@ func (this *Connection) Export() (err error) {
 		return errors.BadRequest("connection %d is not a destination", c.ID)
 	}
 
-	// Check that the connection has at least one mapping associated to it.
-	if len(c.Mappings()) == 0 {
-		return errors.Unprocessable(NoMappings, "connection %d has no mappings", c.ID)
+	// Check that the connection has a transformation or one (or more) mapping
+	// associated to it.
+	if c.Transformation() == nil && len(c.Mappings()) == 0 {
+		return errors.Unprocessable(NoTransformationNorMappings, "connection %d has no transformation nor mappings", c.ID)
 	}
 
 	ctx := context.Background()
@@ -111,8 +113,9 @@ func (this *Connection) Export() (err error) {
 // It returns an errors.NotFound if the connection does not exist.
 // It returns an errors.UnprocessableError error with code
 //   - AlreadyInProgress, if an import is already in progress.
-//   - NoMappings, if the connection has no mappings.
 //   - NoStorage, if the connection is a file and does not have a storage.
+//   - NoTransformationNorMappings, if the connection has no transformation nor
+//     mappings associated.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
 //   - NotEnabled, if the connection is not enabled.
 //   - StorageNotEnabled, if the storage is not enabled.
@@ -154,8 +157,8 @@ func (this *Connection) Import(reimport bool) (err error) {
 
 	// Check that the connection has at least one mapping associated to it.
 	if connector.Type != state.StreamType {
-		if len(c.Mappings()) == 0 {
-			return errors.Unprocessable(NoMappings, "connection %d has no mappings", c.ID)
+		if c.Transformation() == nil && len(c.Mappings()) == 0 {
+			return errors.Unprocessable(NoTransformationNorMappings, "connection %d has no transformation nor mappings", c.ID)
 		}
 	}
 

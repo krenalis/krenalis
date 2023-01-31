@@ -6,7 +6,7 @@ export default async function call(url, method, body) {
 		},
 	};
 
-	if (body) request.body = JSON.stringify(body);
+	if (body !== undefined) request.body = JSON.stringify(body);
 
 	let res;
 	try {

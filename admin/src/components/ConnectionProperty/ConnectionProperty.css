@@ -24,6 +24,20 @@
     border: 2px solid var(--color-primary-600);
 }
 
+.ConnectionProperty .text .primary {
+    font-weight: 600;
+}
+
+.ConnectionProperty .text .secondary {
+    font-size: 13px;
+    padding-left: 7px;
+}
+
+.ConnectionProperty .text .type {
+    font-size: 13px;
+    opacity: .7;
+}
+
 .ConnectionProperty sl-icon-button::part(base) {
 	padding: 0;
 }

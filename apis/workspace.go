@@ -506,18 +506,19 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 	}
 	conn := c.Connector()
 	connection := Connection{
-		db:          this.db,
-		connection:  c,
-		ID:          c.ID,
-		Name:        c.Name,
-		Type:        ConnectorType(conn.Type),
-		Role:        ConnectionRole(c.Role),
-		HasSettings: conn.HasSettings,
-		LogoURL:     conn.LogoURL,
-		Enabled:     c.Enabled,
-		UsersQuery:  c.UsersQuery,
-		Mappings:    []*Mapping{},
-		Health:      ConnectionHealth(c.Health),
+		db:             this.db,
+		connection:     c,
+		ID:             c.ID,
+		Name:           c.Name,
+		Type:           ConnectorType(conn.Type),
+		Role:           ConnectionRole(c.Role),
+		HasSettings:    conn.HasSettings,
+		LogoURL:        conn.LogoURL,
+		Enabled:        c.Enabled,
+		UsersQuery:     c.UsersQuery,
+		Transformation: (*Transformation)(c.Transformation()),
+		Mappings:       []*Mapping{},
+		Health:         ConnectionHealth(c.Health),
 	}
 	for _, m := range c.Mappings() {
 		connection.Mappings = append(connection.Mappings, &Mapping{
@@ -546,17 +547,18 @@ func (this *Workspace) Connections() []*Connection {
 	for i, c := range connections {
 		conn := c.Connector()
 		connection := Connection{
-			db:          this.db,
-			connection:  c,
-			ID:          c.ID,
-			Name:        c.Name,
-			Type:        ConnectorType(conn.Type),
-			Role:        ConnectionRole(c.Role),
-			HasSettings: conn.HasSettings,
-			LogoURL:     conn.LogoURL,
-			Enabled:     c.Enabled,
-			UsersQuery:  c.UsersQuery,
-			Health:      ConnectionHealth(c.Health),
+			db:             this.db,
+			connection:     c,
+			ID:             c.ID,
+			Name:           c.Name,
+			Type:           ConnectorType(conn.Type),
+			Role:           ConnectionRole(c.Role),
+			HasSettings:    conn.HasSettings,
+			LogoURL:        conn.LogoURL,
+			Enabled:        c.Enabled,
+			UsersQuery:     c.UsersQuery,
+			Health:         ConnectionHealth(c.Health),
+			Transformation: (*Transformation)(c.Transformation()),
 		}
 		for _, m := range c.Mappings() {
 			connection.Mappings = append(connection.Mappings, &Mapping{

@@ -1,23 +1,23 @@
-.TransformationNode {
+.MappingNode {
     box-shadow: var(--sl-shadow-small);
 }
 
-.TransformationNode.oneToOne {
+.MappingNode.oneToOne {
     background-color: var(--sl-color-danger-600);
     width: 32px;
     height: 32px;
     border-radius: 100%
 }
 
-.TransformationNode.oneToOne sl-icon-button {
+.MappingNode.oneToOne sl-icon-button {
     color: var(--text-onaccent);
 }
 
-.TransformationNode.oneToOne sl-icon-button::part(base):hover {
+.MappingNode.oneToOne sl-icon-button::part(base):hover {
     color: unset;
 }
 
-.TransformationNode.predefined {
+.MappingNode.predefined {
     background-color: var(--bg-primary);
     min-width: 400px;
     padding: 25px 0;
@@ -32,45 +32,45 @@
     border: 2px solid var(--bg-primary);
 }
 
-.TransformationNode.predefined .info sl-icon {
+.MappingNode.predefined .info sl-icon {
     font-size: 20px;
 }
 
-.TransformationNode.predefined .info sl-icon-button {
+.MappingNode.predefined .info sl-icon-button {
     background-color: var(--sl-color-danger-600);
     color: var(--text-onaccent);
     border-radius: 100%;
     font-size: 11px;
 }
 
-.TransformationNode.predefined .info sl-icon-button::part(base) {
+.MappingNode.predefined .info sl-icon-button::part(base) {
     padding: 5px;
 }
 
-.TransformationNode.predefined .info sl-icon-button::part(base):hover {
+.MappingNode.predefined .info sl-icon-button::part(base):hover {
     color: unset;
     opacity: 1;
 }
 
-.TransformationNode.predefined .leftHandles {
+.MappingNode.predefined .leftHandles {
     text-align: left;
 }
 
-.TransformationNode.predefined .rightHandles {
+.MappingNode.predefined .rightHandles {
     text-align: right;
 }
 
-.TransformationNode.predefined .handleWrapper {
+.MappingNode.predefined .handleWrapper {
     font-size: 12px;
     margin-bottom: 10px;
     position: relative;
 }
 
-.TransformationNode.predefined .handleWrapper:last-child {
+.MappingNode.predefined .handleWrapper:last-child {
     margin-bottom: 0;
 }
 
-.TransformationNode.predefined .handleWrapper .handle {
+.MappingNode.predefined .handleWrapper .handle {
     position: absolute;
     width: 12px;
     height: 15px;
@@ -80,31 +80,31 @@
     transform: translateY(-50%);
 }
 
-.TransformationNode.predefined .handleWrapper .label {
+.MappingNode.predefined .handleWrapper .label {
     opacity: .9;
 }
 
-.TransformationNode.predefined .leftHandles .handleWrapper {
+.MappingNode.predefined .leftHandles .handleWrapper {
     padding-left: 15px;
 }
 
-.TransformationNode.predefined .rightHandles .handleWrapper {
+.MappingNode.predefined .rightHandles .handleWrapper {
     padding-right: 15px;
 }
 
-.TransformationNode.predefined .leftHandles .handleWrapper .handle {
+.MappingNode.predefined .leftHandles .handleWrapper .handle {
     border-bottom-right-radius: 50%;
     border-top-right-radius: 50%;
     left: -4px;
 }
 
-.TransformationNode.predefined .rightHandles .handleWrapper .handle {
+.MappingNode.predefined .rightHandles .handleWrapper .handle {
     border-bottom-left-radius: 50%;
     border-top-left-radius: 50%;
     right: -4px;
 }
 
-.TransformationNode.custom {
+.MappingNode.custom {
     background-color: var(--bg-primary);
     border-radius: 100%;
     width: 50px;
@@ -117,7 +117,7 @@
     border: 2px solid var(--bg-primary);
 }
 
-.TransformationNode.custom .handle {
+.MappingNode.custom .handle {
     position: absolute;
     width: 12px;
     height: 15px;
@@ -125,13 +125,13 @@
     cursor: pointer;
 }
 
-.TransformationNode.custom .handle.left {
+.MappingNode.custom .handle.left {
     border-bottom-left-radius: 50%;
     border-top-left-radius: 50%;
     right: -4px;
 }
 
-.TransformationNode.custom .handle.right {
+.MappingNode.custom .handle.right {
     border-bottom-right-radius: 50%;
     border-top-right-radius: 50%;
     left: -4px;

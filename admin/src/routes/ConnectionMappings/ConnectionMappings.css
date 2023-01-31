@@ -1,0 +1,207 @@
+.ConnectionMappings  {
+	min-height: 100vh;
+	position: relative;
+}
+
+.ConnectionMappings.selectedProperty .head,
+.ConnectionMappings.selectedProperty .properties .title,
+.ConnectionMappings.selectedProperty .properties .addUsedProperty,
+.ConnectionMappings.selectedProperty .mappings .saveButton,
+.ConnectionMappings.selectedProperty .mappings .addMapping {
+	opacity: 0.2;
+}
+
+.ConnectionMappings.selectedProperty .arrows .arrow.selected {
+	opacity: 1;
+}
+
+.ConnectionMappings .MappingNode .handle {
+	visibility: hidden;
+}
+
+.ConnectionMappings.selectedProperty .MappingNode .handle {
+	visibility: visible;
+}
+
+.ConnectionMappings.selectedProperty .arrows .arrow.selected > div > div {
+	width: 25px !important;
+	height: 25px !important;
+	border-radius: 100% !important;
+	display: flex !important;
+	justify-content: center !important;
+	align-items: center !important;
+	background-color: var(--color-primary-500) !important;
+	color: var(--text-onaccent) !important;
+	font-size: 21px !important;
+	cursor: pointer !important;
+}
+
+.ConnectionMappings.selectedProperty .properties .ConnectionProperty.selected sl-icon-button {
+	visibility: hidden;
+}
+
+.ConnectionMappings .saveButton {
+	min-width: 180px;
+}
+
+.ConnectionMappings .main {
+	margin: auto;
+	display: grid;
+	grid-template-columns: 1fr 2fr 1fr;
+	grid-template-areas:
+		'usedInputProperties mappings usedOutputProperties';
+	gap: 30px;
+	padding-bottom: 30px;
+	align-items: center;
+}
+
+.ConnectionMappings .main .properties {
+	height: 100%;
+}
+
+.ConnectionMappings .main .properties .title {
+	text-align: center;
+	margin-bottom: 10px;
+}
+
+.ConnectionMappings .main .properties.usedInputProperties {
+	grid-area: usedInputProperties;
+}
+
+.ConnectionMappings .main .properties .addUsedProperty {
+	display: block;
+	margin: auto;
+	width: 200px;
+	margin: 0 auto;
+	margin-bottom: 30px;
+}
+
+.ConnectionMappings .main .mappings {
+	grid-area: mappings;
+	text-align: center;
+	/* TODO(@Andrea): remove this workaround after issue #134 of 'react-xarrows' is solved */
+	min-height: calc(100vh + 1px);
+}
+
+.ConnectionMappings .main .mappings .saveButton {
+	width: 200px;
+}
+
+.ConnectionMappings .main .mappings .mapping {
+	position: relative;
+	width: fit-content;
+	height: fit-content;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	margin: 60px auto;
+}
+
+.ConnectionMappings .main .mappings .mapping .MappingNode {
+	z-index: 10;
+}
+
+.ConnectionMappings .main .mappings .mapping sl-dialog {
+	z-index: 20;
+}
+
+.ConnectionMappings .main .mappings .editorWrapper ~ div {
+	width: 100%;
+}
+
+.ConnectionMappings .main .mappings .editorWrapper {
+	width: 100%;
+	height: 200px;
+	padding: 15px;
+	border-radius: var(--radius);
+	background-color: var(--bg-primary);
+}
+
+.ConnectionMappings .main .mappings .editorWrapper * {
+	font-family: monospace !important;
+}
+
+.ConnectionMappings .main .mappings .addMappingButtons {
+	display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+	margin-top: 50px;
+}
+
+.ConnectionMappings .main .mappings .addMapping::part(base) {
+	width: 40px;
+	height: 40px;
+	border-radius: 100%;
+	position: relative;
+}
+
+.ConnectionMappings .main .mappings .addMapping sl-icon {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	font-size: 20px;
+}
+
+.ConnectionMappings .main .predefinedMappingsDialog .predefinedMappings {
+	max-width: 500px;
+	margin: auto;
+}
+
+.ConnectionMappings .main .predefinedMappingsDialog .predefinedMapping {
+	display: grid;
+    grid-template-columns: 40px 1fr;
+    grid-template-areas:
+        "icon name"
+        "icon description";
+    border: 1px solid var(--border-primary);
+    align-items: center;
+    text-align: left;
+    column-gap: 20px;
+	padding: 10px 25px;
+	cursor: pointer;
+}
+
+.ConnectionMappings .main .predefinedMappingsDialog .predefinedMapping.selected {
+	color: var(--color-primary-600)
+}
+
+.ConnectionMappings .main .predefinedMappingsDialog .predefinedMapping:first-child {
+	border-top-left-radius: var(--radius);
+	border-top-right-radius: var(--radius);
+}
+
+.ConnectionMappings .main .predefinedMappingsDialog .predefinedMapping:last-child {
+	border-top: 0;
+	border-bottom-left-radius: var(--radius);
+	border-bottom-right-radius: var(--radius);
+}
+
+.ConnectionMappings .main .predefinedMappingsDialog .predefinedMapping sl-icon {
+	grid-area: icon;
+	margin: auto;
+	font-size: 23px;
+}
+
+.ConnectionMappings .main .predefinedMappingsDialog .predefinedMapping .name {
+	grid-area: name;
+	font-weight: 600;
+}
+
+.ConnectionMappings .main .predefinedMappingsDialog .predefinedMapping .description {
+	grid-area: description;
+	font-size: 14px;
+}
+
+.ConnectionMappings .main .properties.usedOutputProperties {
+	grid-area: usedOutputProperties;
+}
+
+.ConnectionMappings .arrows {
+	position: relative;
+}
+
+.ConnectionMappings .arrows .arrow > div {
+	width: 100%;
+}

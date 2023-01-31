@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -40,36 +41,46 @@ const (
 )
 
 var (
-	ConnectorNotExist    errors.Code = "ConnectorNotExist"
-	EventNotExist        errors.Code = "EventNotExist"
-	InvalidRefreshToken  errors.Code = "InvalidRefreshToken"
-	NoStorage            errors.Code = "NoStorage"
-	NoMappings           errors.Code = "NoMappings"
-	QueryExecutionFailed errors.Code = "QueryExecutionFailed"
-	StorageNotExist      errors.Code = "StorageNotExist"
-	StreamNotExist       errors.Code = "StreamNotExist"
-	TooManyKeys          errors.Code = "TooManyKeys"
-	UniqueKey            errors.Code = "UniqueKey"
-	WorkspaceNotExist    errors.Code = "WorkspaceNotExist"
+	AlreadyHasMappings          errors.Code = "AlreadyHasMappings"
+	AlreadyHasTransformation    errors.Code = "AlreadyHasTransformation"
+	ConnectorNotExist           errors.Code = "ConnectorNotExist"
+	EventNotExist               errors.Code = "EventNotExist"
+	InvalidRefreshToken         errors.Code = "InvalidRefreshToken"
+	NoStorage                   errors.Code = "NoStorage"
+	NoTransformationNorMappings errors.Code = "NoMappings"
+	QueryExecutionFailed        errors.Code = "QueryExecutionFailed"
+	StorageNotExist             errors.Code = "StorageNotExist"
+	StreamNotExist              errors.Code = "StreamNotExist"
+	TooManyKeys                 errors.Code = "TooManyKeys"
+	UniqueKey                   errors.Code = "UniqueKey"
+	WorkspaceNotExist           errors.Code = "WorkspaceNotExist"
 )
 
 // Connection represents a connection.
 type Connection struct {
-	db          *postgres.DB
-	connection  *state.Connection
-	ID          int
-	Name        string
-	Type        ConnectorType
-	Role        ConnectionRole
-	Storage     int    // zero if the connection is not a file or does not have a storage.
-	Stream      int    // zero if the connection is not an app, website or server or does not have a stream.
-	OAuthURL    string // empty if the connection does not use OAuth.
-	HasSettings bool
-	LogoURL     string
-	Enabled     bool
-	UsersQuery  string // only for databases.
-	Mappings    []*Mapping
-	Health      ConnectionHealth
+	db             *postgres.DB
+	connection     *state.Connection
+	ID             int
+	Name           string
+	Type           ConnectorType
+	Role           ConnectionRole
+	Storage        int    // zero if the connection is not a file or does not have a storage.
+	Stream         int    // zero if the connection is not an app, website or server or does not have a stream.
+	OAuthURL       string // empty if the connection does not use OAuth.
+	HasSettings    bool
+	LogoURL        string
+	Enabled        bool
+	UsersQuery     string          // only for databases.
+	Transformation *Transformation // nil if connection has no transformation.
+	Mappings       []*Mapping
+	Health         ConnectionHealth
+}
+
+// Transformation represents the transformation of a connection.
+type Transformation struct {
+	In           types.Type
+	Out          types.Type
+	PythonSource string
 }
 
 // Delete deletes the connection.
@@ -512,28 +523,152 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 	return marshalUIFormAlert(form, alert, ui.Role(c.Role))
 }
 
-// SetMappings sets the mappings of the connection.
+// SetTransformation sets the transformation of the connection. The connection
+// must be an app, database or file connection. Calling this method with a nil
+// transformation removes the transformation associated to the connection.
 //
-// This method can be called only on a connection of type App, Database or File,
-// otherwise a BadRequest error is returned.
+// The transformation, when not nil, should have at least one input and one
+// output property, and its source should be a valid Python source declaring a
+// 'transform' function which takes and returns a Python dictionary as
+// parameter.
 //
-// If a mapping is not valid, it returns a BadRequest error; a mapping is
-// considered valid if InProperties and OutProperties contains valid property
+// It returns an errors.NotFoundError error if the connection does not exist
+// anymore.
+// It returns an errors.UnprocessableError error with code AlreadyHasMappings if
+// the connection has one or more mappings associated to it.
+func (this *Connection) SetTransformation(transformation *Transformation) error {
+
+	id := this.connection.ID
+
+	// Validate the connection type.
+	switch typ := this.connection.Connector().Type; typ {
+	case state.AppType, state.DatabaseType, state.FileType:
+		// Ok.
+	default:
+		return errors.BadRequest("connection %d has no type app, database or file", id)
+	}
+
+	// Remove the transformation, if it should be removed.
+	if transformation == nil {
+		n := state.SetConnectionTransformationNotification{
+			Connection:     id,
+			Transformation: nil,
+		}
+		ctx := context.Background()
+		err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+			query := "UPDATE connections SET\n" +
+				"transformation.in_types = '',\n" +
+				"transformation.out_types = '',\n" +
+				"transformation.python_source = ''\n" +
+				"WHERE id = $1"
+			result, err := tx.Exec(ctx, query, n.Connection)
+			if err != nil {
+				return err
+			}
+			if result.RowsAffected() == 0 {
+				return errors.NotFound("connection %d does not exist", n.Connection)
+			}
+			return tx.Notify(ctx, n)
+		})
+		return err
+	}
+
+	// Validate the transformation.
+	if !transformation.In.Valid() || transformation.In.PhysicalType() != types.PtObject {
+		return errors.BadRequest("input schema is invalid")
+	}
+	if len(transformation.In.Properties()) == 0 {
+		return errors.BadRequest("input schema does not have properties")
+	}
+	if !transformation.Out.Valid() || transformation.Out.PhysicalType() != types.PtObject {
+		return errors.BadRequest("output schema is invalid")
+	}
+	if len(transformation.Out.Properties()) == 0 {
+		return errors.BadRequest("output schema does not have properties")
+	}
+	// TODO(Gianluca): do a proper validation of the Python source code.
+	if !strings.Contains(transformation.PythonSource, "def transform") {
+		return errors.BadRequest("Python source code does not contain 'transform' function")
+	}
+
+	n := state.SetConnectionTransformationNotification{
+		Connection:     id,
+		Transformation: (*state.Transformation)(transformation),
+	}
+
+	ctx := context.Background()
+
+	// Prepare the input/output types to be written on the database.
+	inTypes, err := n.Transformation.In.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	outTypes, err := n.Transformation.Out.MarshalJSON()
+	if err != nil {
+		return err
+	}
+
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+
+		// Ensure that the connection does not already have associated mappings.
+		err := tx.QueryVoid(ctx,
+			"SELECT FROM connections_mappings WHERE connection = $1",
+			n.Connection)
+		if err == nil {
+			return errors.Unprocessable(AlreadyHasMappings,
+				"connection %d already has mappings associated", n.Connection)
+		}
+		if err != sql.ErrNoRows {
+			return err
+		}
+
+		// Write the transformation of the connection.
+		query := "UPDATE connections SET\n" +
+			"transformation.in_types = $1,\n" +
+			"transformation.out_types = $2,\n" +
+			"transformation.python_source = $3\n" +
+			"WHERE id = $4"
+		result, err := tx.Exec(ctx, query, inTypes, outTypes,
+			n.Transformation.PythonSource, n.Connection)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return errors.NotFound("connection %d does not exist", n.Connection)
+		}
+
+		return tx.Notify(ctx, n)
+
+	})
+
+	return err
+
+}
+
+// SetMappings sets the mappings of the connection. The connection must be an
+// app, database or file connection.
+//
+// InProperties and OutProperties of a mapping should contain valid property
 // names and are both not-empty, and one of PredefinedFunc and MappingCustomFunc
 // are provided (or none, for "one to one" mappings).
 //
-// "One-to-one" mappings must have one input and one output properties,
-// otherwise the mapping is considered invalid.
+// "One-to-one" mappings must have one input and one output properties.
 //
-// For mappings with non-nil PredefinedFunc, the pointed value must be a valid
-// ID of a predefined mapping function and the count of the input/output
-// properties must match the count of the input/output parameters of the
-// referred predefined function.
+// For mappings with non-nil PredefinedFunc, the pointed value must be the ID of
+// a predefined mapping function and the count of the input/output properties
+// must match the count of the input/output parameters of the referred
+// predefined function.
 //
 // For mappings with non-nil MappingCustomFunc, the pointed value must be a
 // descriptor of a custom transformation function, with a valid Python source
 // code, and the count of the input/output properties must match the count of
 // the input/output types of the referred custom function.
+//
+// It returns an errors.NotFoundError error if the connection does not exist
+// anymore.
+// It returns an errors.UnprocessableError error with code
+// AlreadyHasTransformation if one or more mappings are added when the
+// connection already has a transformation associated to it.
 func (this *Connection) SetMappings(mappings []*Mapping) error {
 
 	// Validate the connection type.
@@ -649,6 +784,19 @@ func (this *Connection) SetMappings(mappings []*Mapping) error {
 	ctx := context.Background()
 
 	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+
+		// If adding one or more mappings, ensure that the connection does not
+		// already have an associated transformation.
+		if len(n.Mappings) > 0 {
+			err := tx.QueryVoid(ctx, "SELECT FROM connections WHERE id = $1 AND (transformation).in_types <> ''", n.Connection)
+			if err == nil {
+				return errors.Unprocessable(AlreadyHasTransformation, "connection already has a transformation associated")
+			}
+			if err != sql.ErrNoRows {
+				return err
+			}
+		}
+
 		_, err := tx.Exec(ctx, "DELETE FROM connections_mappings WHERE connection = $1", n.Connection)
 		if err != nil {
 			return err
@@ -683,6 +831,7 @@ func (this *Connection) SetMappings(mappings []*Mapping) error {
 				}
 				return err
 			}
+
 		}
 		err = stmt.Close()
 		if err != nil {
@@ -1107,9 +1256,13 @@ func (this *Connection) userSchema() (types.Type, []_connector.PropertyPath, err
 
 	c := this.connection
 
-	// Read the paths of the mapped properties from the transformations of this
-	// connection.
+	// Collect the paths of the properties used in transformation or mappings.
 	var paths []_connector.PropertyPath
+	if t := c.Transformation(); t != nil {
+		for _, name := range t.In.PropertiesNames() {
+			paths = append(paths, []string{name})
+		}
+	}
 	for _, m := range c.Mappings() {
 		for _, in := range m.InProperties {
 			paths = append(paths, []string{in})
@@ -1433,6 +1586,9 @@ func abbreviate(s string, n int) string {
 //
 // TODO(Gianluca): note that this code has never been tested and misses some
 // validation parts, as the export procedure is still work in progress.
+//
+// TODO(Gianluca): when the export implementation will be discussed and
+// refactored, add support for output transformations.
 func exportUser(id string, properties map[string]any, mappings []*state.Mapping) (_connector.User, error) {
 
 	user := _connector.User{
