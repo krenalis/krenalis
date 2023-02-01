@@ -33,8 +33,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-
 	// Read the workspace.
 	workspaceID, _ := strconv.Atoi(r.Header.Get("X-Workspace"))
 	if workspaceID <= 0 {
@@ -69,6 +67,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	router.Route("/api/connections", func(router chi.Router) {
 		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			connections := workspace.Connections()
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(connections)
 		})
 		router.Route("/{connectionID}", func(router chi.Router) {
@@ -76,12 +75,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
 				var req struct {
@@ -93,35 +87,21 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				err = connection.SetStatus(req.Enabled)
-				if err != nil {
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				_, _ = w.Write([]byte(`{"status":"ok"}`))
+				respond(w, err)
 			})
 			router.Get("/schema", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
 				schema, err := connection.Schema()
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
+				w.Header().Set("Content-Type", "application/json")
 				if schema.Valid() {
 					_ = json.NewEncoder(w).Encode(schema)
 				} else {
@@ -132,98 +112,47 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
 				err = connection.Import(false)
-				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				_, _ = w.Write([]byte(`{"status":"ok"}`))
+				respond(w, err)
 			})
 			router.Post("/export", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
 				err = connection.Export()
-				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				_, _ = w.Write([]byte(`{"status":"ok"}`))
+				respond(w, err)
 			})
 			router.Post("/reimport", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
 				err = connection.Import(true)
-				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				_, _ = w.Write([]byte(`{"status":"ok"}`))
+				respond(w, err)
 			})
 			router.Get("/transformation", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
+				w.Header().Set("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(connection.Transformation)
 			})
 			router.Put("/transformation", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
 				var transformation *Transformation
@@ -233,41 +162,23 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				err = connection.SetTransformation(transformation)
-				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] cannot set transformation: %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				_, _ = w.Write([]byte(`{"status":"ok"}`))
+				respond(w, err)
 			})
 			router.Get("/mappings", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
+				w.Header().Set("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(connection.Mappings)
 			})
 			router.Put("/mappings", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
 				var mappings []*Mapping
@@ -277,127 +188,72 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				err = connection.SetMappings(mappings)
-				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] cannot save mappings: %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				_, _ = w.Write([]byte(`{"status":"ok"}`))
+				respond(w, err)
 			})
 			router.Get("/stats", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
 				var stats *ConnectionsStats
 				stats, err = connection.Stats()
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
+				w.Header().Set("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(stats)
 			})
 			router.Get("/keys", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
 				var keys []string
 				keys, err = connection.Keys()
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
+				w.Header().Set("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(keys)
 			})
 			router.Post("/keys", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
 				var key string
 				key, err = connection.GenerateKey()
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
+				w.Header().Set("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(key)
 			})
 			router.Delete("/keys/{key}", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
 				key := chi.URLParam(r, "key")
 				err = connection.RevokeKey(key)
-				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				_, _ = w.Write([]byte(`{"status":"ok"}`))
+				respond(w, err)
 			})
 			router.Put("/stream/{stream}", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
 				stream, _ := strconv.Atoi(chi.URLParam(r, "stream"))
@@ -406,27 +262,13 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				err = connection.SetStream(stream)
-				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				_, _ = w.Write([]byte(`{"status":"ok"}`))
+				respond(w, err)
 			})
 			router.Put("/storage/{storage}", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					respond(w, err)
 					return
 				}
 				storage, _ := strconv.Atoi(chi.URLParam(r, "storage"))
@@ -435,16 +277,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				err = connection.SetStorage(storage)
-				if err != nil {
-					if err, ok := err.(errors.ResponseWriterTo); ok {
-						_ = err.WriteTo(w)
-						return
-					}
-					log.Printf("[error] %s", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				_, _ = w.Write([]byte(`{"status":"ok"}`))
+				respond(w, err)
 			})
 		})
 	})
@@ -467,25 +300,24 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			id, err := workspace.EventListeners().Add(size, req.Source, req.Server, req.Stream)
 			if err != nil {
-				log.Printf("[error] %s", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				respond(w, err)
 				return
 			}
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{"id": id})
 		})
 		router.Delete("/{listenerID}", func(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "listenerID")
 			workspace.EventListeners().Remove(id)
-			_, _ = w.Write([]byte(`{"status":"ok"}`))
 		})
 		router.Get("/{listenerID}/events", func(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "listenerID")
 			events, discarded, err := workspace.EventListeners().Events(id)
 			if err != nil {
-				log.Printf("[error] %s", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				respond(w, err)
 				return
 			}
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"events":    events,
 				"discarded": discarded,
@@ -506,12 +338,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			schema, users, err := workspace.Users(req.Properties, "", 0, 1000)
 			if err != nil {
-				if err, ok := err.(errors.ResponseWriterTo); ok {
-					_ = err.WriteTo(w)
-					return
-				}
-				log.Printf("[error] %s", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				respond(w, err)
 				return
 			}
 			var end int
@@ -540,61 +367,25 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			err = workspace.ConnectWarehouse(req.Type, req.Settings)
-			if err != nil {
-				if err, ok := err.(errors.ResponseWriterTo); ok {
-					_ = err.WriteTo(w)
-					return
-				}
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			_, _ = w.Write([]byte(`{"status":"ok"}`))
+			respond(w, err)
 		})
 	})
 	router.Route("/api/workspace/disconnect-warehouse", func(router chi.Router) {
 		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 			err = workspace.DisconnectWarehouse()
-			if err != nil {
-				if err, ok := err.(errors.ResponseWriterTo); ok {
-					_ = err.WriteTo(w)
-					return
-				}
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			_, _ = w.Write([]byte(`{"status":"ok"}`))
+			respond(w, err)
 		})
 	})
 	router.Route("/api/workspace/init-warehouse", func(router chi.Router) {
 		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 			err = workspace.InitWarehouse()
-			if err != nil {
-				if err, ok := err.(errors.ResponseWriterTo); ok {
-					_ = err.WriteTo(w)
-					return
-				}
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			_, _ = w.Write([]byte(`{"status":"ok"}`))
+			respond(w, err)
 		})
 	})
 	router.Route("/api/workspace/reload-schemas", func(router chi.Router) {
 		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 			err = workspace.ReloadSchemas()
-			if err != nil {
-				if err, ok := err.(errors.ResponseWriterTo); ok {
-					_ = err.WriteTo(w)
-					return
-				}
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			_, _ = w.Write([]byte(`{"status":"ok"}`))
+			respond(w, err)
 		})
 	})
 	router.Route("/api/workspace/oauth-token", func(router chi.Router) {
@@ -610,14 +401,10 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			oauthToken, err := workspace.OAuthToken(req.OAuthCode, req.Connector)
 			if err != nil {
-				if err, ok := err.(errors.ResponseWriterTo); ok {
-					_ = err.WriteTo(w)
-					return
-				}
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				respond(w, err)
 				return
 			}
+			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(oauthToken)
 		})
 	})
@@ -646,17 +433,27 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			id, err := workspace.AddConnection(role, req.Connector, req.Settings, req.Options)
 			if err != nil {
-				if err, ok := err.(errors.ResponseWriterTo); ok {
-					_ = err.WriteTo(w)
-					return
-				}
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				respond(w, err)
 				return
 			}
+			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(id)
 		})
 	})
 	router.ServeHTTP(w, r)
 
+}
+
+// respond responds to the HTTP client writing on w, in case of error, and also
+// writes on the log if the error is an internal server error.
+func respond(w http.ResponseWriter, err error) {
+	if err == nil {
+		return
+	}
+	if err, ok := err.(errors.ResponseWriterTo); ok {
+		_ = err.WriteTo(w)
+		return
+	}
+	log.Printf("[error] %s", err)
+	http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 }
