@@ -6,10 +6,11 @@ import MappingNode from '../../components/MappingNode/MappingNode';
 import SelectedPropertyMessage from '../../components/SelectedPropertyMessage/SelectedPropertyMessage';
 import PropertiesDialog from '../../components/PropertiesDialog/PropertiesDialog';
 import { Mapping } from '../../utils/mappings';
+import { useNavigate } from 'react-router';
 import { SlButton, SlIcon, SlDialog, SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
 import Xarrow from 'react-xarrows';
 
-const ConnectionMappings = ({ connection: c, onError, onStatuChange, isSelected }) => {
+const ConnectionMappings = ({ connection: c, onError, onStatuChange, onConnectionChange, isSelected }) => {
 	let [inputProperties, setInputProperties] = useState([]);
 	let [outputProperties, setOutputProperties] = useState([]);
 	let [usedInputProperties, setUsedInputProperties] = useState([]);
@@ -47,6 +48,8 @@ const ConnectionMappings = ({ connection: c, onError, onStatuChange, isSelected 
 			setIsDialogOpen: setIsOutputDialogOpen,
 		},
 	};
+
+	const navigate = useNavigate();
 
 	useEffect(() => {
 		const fetchState = async () => {
@@ -269,6 +272,12 @@ const ConnectionMappings = ({ connection: c, onError, onStatuChange, isSelected 
 			icon: 'check2-circle',
 			text: 'Your mappings have been successfully saved',
 		});
+		c.Mappings = mps;
+		onConnectionChange(c);
+	};
+
+	const onAlertDialogCloseRequest = (e) => {
+		e.preventDefault();
 	};
 
 	const isSelectedProperty = (name, role) => {
@@ -517,6 +526,21 @@ const ConnectionMappings = ({ connection: c, onError, onStatuChange, isSelected 
 					/>
 				);
 			})}
+			<SlDialog
+				label='Transformation already configured'
+				className='AlertDialog'
+				open={c.Transformation != null}
+				onSlRequestClose={onAlertDialogCloseRequest}
+				style={{ '--width': '700px' }}
+			>
+				<div className='message'>
+					This connection already has a transformation configured. To set the mappings make sure you delete it
+					first.
+				</div>
+				<SlButton variant='primary' className='backToOverview' onClick={() => navigate(0)}>
+					Return to overview
+				</SlButton>
+			</SlDialog>
 		</div>
 	);
 };

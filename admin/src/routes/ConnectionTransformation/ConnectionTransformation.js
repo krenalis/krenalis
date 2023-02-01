@@ -4,10 +4,11 @@ import call from '../../utils/call';
 import ConnectionProperty from '../../components/ConnectionProperty/ConnectionProperty';
 import PropertiesDialog from '../../components/PropertiesDialog/PropertiesDialog';
 import { Transformation } from '../../utils/transformations';
+import { useNavigate } from 'react-router';
 import Editor from '@monaco-editor/react';
-import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ConnectionTransformation = ({ connection: c, onError, onStatuChange, isSelected }) => {
+const ConnectionTransformation = ({ connection: c, onError, onStatuChange, onConnectionChange, isSelected }) => {
 	let [inputProperties, setInputProperties] = useState([]);
 	let [outputProperties, setOutputProperties] = useState([]);
 	let [usedInputProperties, setUsedInputProperties] = useState([]);
@@ -40,6 +41,8 @@ const ConnectionTransformation = ({ connection: c, onError, onStatuChange, isSel
 			setIsDialogOpen: setIsOutputDialogOpen,
 		},
 	};
+
+	const navigate = useNavigate();
 
 	useEffect(() => {
 		const fetchState = async () => {
@@ -145,9 +148,11 @@ const ConnectionTransformation = ({ connection: c, onError, onStatuChange, isSel
 			icon: 'check2-circle',
 			text: 'Your transformation has been successfully saved',
 		});
+		c.Transformation = toSave;
+		onConnectionChange(c);
 	};
 
-	const onReset = async () => {
+	const onClear = async () => {
 		let [, err] = await call(`/api/connections/${c.ID}/transformation`, 'PUT', null);
 		if (err) {
 			onError(err);
@@ -160,11 +165,19 @@ const ConnectionTransformation = ({ connection: c, onError, onStatuChange, isSel
 		onStatuChange({
 			variant: 'success',
 			icon: 'check2-circle',
-			text: 'Your transformation has been successfully reset',
+			text: 'Your transformation has been successfully cleaned up',
 		});
+		c.Transformation = null;
+		onConnectionChange(c);
 	};
 
-	if (transformation == null) return;
+	const onAlertDialogCloseRequest = (e) => {
+		e.preventDefault();
+	};
+
+	if (transformation == null) {
+		return;
+	}
 
 	return (
 		<div className={'ConnectionTransformation'}>
@@ -189,13 +202,18 @@ const ConnectionTransformation = ({ connection: c, onError, onStatuChange, isSel
 				</div>
 				<div className='transformation'>
 					<div className='buttons'>
-						<SlButton className='saveButton' variant='primary' onClick={onSave}>
+						<SlButton
+							className='saveButton'
+							variant='primary'
+							disabled={usedInputProperties.length === 0 && usedOutputProperties.length === 0}
+							onClick={onSave}
+						>
 							<SlIcon slot='prefix' name='save' />
 							Save
 						</SlButton>
-						<SlButton className='resetButton' variant='danger' onClick={onReset}>
+						<SlButton className='clearButton' variant='danger' onClick={onClear}>
 							<SlIcon slot='prefix' name='x-lg' />
-							Reset
+							Clear
 						</SlButton>
 					</div>
 					<div className='editorWrapper'>
@@ -241,6 +259,21 @@ const ConnectionTransformation = ({ connection: c, onError, onStatuChange, isSel
 					/>
 				);
 			})}
+			<SlDialog
+				label='Mappings already configured'
+				className='AlertDialog'
+				open={c.Mappings.length > 0}
+				onSlRequestClose={onAlertDialogCloseRequest}
+				style={{ '--width': '700px' }}
+			>
+				<div className='message'>
+					This connection already has mappings configured. To set the transformation make sure you delete them
+					first.
+				</div>
+				<SlButton variant='primary' className='backToOverview' onClick={() => navigate(0)}>
+					Return to overview
+				</SlButton>
+			</SlDialog>
 		</div>
 	);
 };

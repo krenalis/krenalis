@@ -205,3 +205,21 @@
 .ConnectionMappings .arrows .arrow > div {
 	width: 100%;
 }
+
+.ConnectionMappings .AlertDialog::part(body) {
+	text-align: center;
+	padding-bottom: 30px;
+}
+
+.ConnectionMappings .AlertDialog .message {
+    max-width: 80%;
+    margin: 0 auto 20px auto;
+}
+
+.ConnectionMappings .AlertDialog::part(title) {
+	text-align: center;
+}
+
+.ConnectionMappings .AlertDialog::part(close-button) {
+	display: none;
+}

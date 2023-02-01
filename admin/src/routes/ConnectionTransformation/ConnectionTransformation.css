@@ -73,4 +73,20 @@
 	grid-area: usedOutputProperties;
 }
 
+.ConnectionTransformation .AlertDialog::part(body) {
+	text-align: center;
+	padding-bottom: 30px;
+}
 
+.ConnectionTransformation .AlertDialog .message {
+    max-width: 80%;
+    margin: 0 auto 20px auto;
+}
+
+.ConnectionTransformation .AlertDialog::part(title) {
+	text-align: center;
+}
+
+.ConnectionTransformation .AlertDialog::part(close-button) {
+	display: none;
+}

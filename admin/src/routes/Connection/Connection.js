@@ -126,6 +126,7 @@ const Connection = () => {
 									onError={onError}
 									onStatuChange={onStatusChange}
 									renderArrows={selectedSection}
+									onConnectionChange={onConnectionChange}
 									isSelected={selectedSection === 'mappings'}
 								/>
 							</SlTabPanel>
@@ -141,6 +142,7 @@ const Connection = () => {
 									connection={c}
 									onError={onError}
 									onStatuChange={onStatusChange}
+									onConnectionChange={onConnectionChange}
 									isSelected={selectedSection === 'transformation'}
 								/>
 							</SlTabPanel>
