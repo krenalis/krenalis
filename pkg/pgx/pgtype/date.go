@@ -79,7 +79,7 @@ func (src Date) MarshalJSON() ([]byte, error) {
 
 	switch src.InfinityModifier {
 	case Finite:
-		s = src.Time.Format("2006-01-02")
+		s = src.Time.Format(time.DateOnly)
 	case Infinity:
 		s = "infinity"
 	case NegativeInfinity:
@@ -107,7 +107,7 @@ func (dst *Date) UnmarshalJSON(b []byte) error {
 	case "-infinity":
 		*dst = Date{Valid: true, InfinityModifier: -Infinity}
 	default:
-		t, err := time.ParseInLocation("2006-01-02", *s, time.UTC)
+		t, err := time.ParseInLocation(time.DateOnly, *s, time.UTC)
 		if err != nil {
 			return err
 		}

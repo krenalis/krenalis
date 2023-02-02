@@ -116,7 +116,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) 
 		return nil, err
 	}
 
-	timestamp, err := time.Parse("2006-01-02 15:04:05", r.Form.Get("fired_at"))
+	timestamp, err := time.Parse(time.DateTime, r.Form.Get("fired_at"))
 	if err != nil {
 		return nil, err
 	}

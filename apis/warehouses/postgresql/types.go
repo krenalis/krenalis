@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"chichi/apis/types"
 )
@@ -84,7 +85,7 @@ func columnType(typ, udtName string, isNullable, charLength, precision, radix, s
 	case "timestamp without time zone", "timestamp with time zone":
 		t = types.DateTime("2006-01-02 15:04:05.999999")
 	case "date":
-		t = types.Date("2006-01-02")
+		t = types.Date(time.DateOnly)
 	case "time without time zone":
 		t = types.Time()
 	case "boolean":

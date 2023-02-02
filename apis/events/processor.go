@@ -661,7 +661,7 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 				}
 			}
 		}
-		event.date = event.timestamp.Format("2006-01-02")
+		event.date = event.timestamp.Format(time.DateOnly)
 
 		// SentAt.
 		if event.SentAt == "" {

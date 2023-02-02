@@ -234,7 +234,7 @@ func (visualization *Visualization) jsonQueryToSQL(jq JSONQuery) (string, []stri
 // timeToClickHouseDate represents t in a date string compatible with
 // ClickHouse.
 func timeToClickHouseDate(t time.Time) string {
-	return "'" + t.Format("2006-01-02") + "'"
+	return "'" + t.Format(time.DateOnly) + "'"
 }
 
 // smartEventToSQL returns the SQL 'WHERE' expression relative to a Smart Event,

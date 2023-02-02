@@ -619,7 +619,7 @@ func (rw *recordWriter) Record(record []any) error {
 	ts := rw.timestamp
 	if rw.timestampIndex != noColumn {
 		var err error
-		ts, err = time.Parse("2006-01-02 15:04:05", record[rw.timestampIndex].(string))
+		ts, err = time.Parse(time.DateTime, record[rw.timestampIndex].(string))
 		if err != nil {
 			return fmt.Errorf("invalid timestamp column value: %s", ts)
 		}
@@ -638,7 +638,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 	ts := rw.timestamp
 	if rw.timestampIndex != noColumn {
 		var err error
-		ts, err = time.Parse("2006-01-02 15:04:05", record[rw.timestampColumn].(string))
+		ts, err = time.Parse(time.DateTime, record[rw.timestampColumn].(string))
 		if err != nil {
 			return fmt.Errorf("invalid timestamp column value: %s", ts)
 		}
@@ -664,7 +664,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 	ts := rw.timestamp
 	if rw.timestampIndex != noColumn {
 		var err error
-		ts, err = time.Parse("2006-01-02 15:04:05", record[rw.timestampIndex])
+		ts, err = time.Parse(time.DateTime, record[rw.timestampIndex])
 		if err != nil {
 			return fmt.Errorf("invalid timestamp column value: %s", ts)
 		}

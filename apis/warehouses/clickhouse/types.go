@@ -10,6 +10,7 @@ package clickhouse
 import (
 	"bytes"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"chichi/apis/types"
@@ -65,11 +66,11 @@ func parseType(s string) (types.Type, string) {
 		case "UUID":
 			t = types.UUID()
 		case "Date":
-			t = types.Date("2006-01-02")
+			t = types.Date(time.DateOnly)
 		case "Date32":
 			t = types.Int()
 		case "DateTime":
-			t = types.DateTime("2006-01-02 15:04:05")
+			t = types.DateTime(time.DateTime)
 		case "JSON":
 			t = types.JSON()
 		case "IPv4":
@@ -107,13 +108,13 @@ func parseType(s string) (types.Type, string) {
 		if !ok || s == "" {
 			return types.Type{}, ""
 		}
-		return types.DateTime("2006-01-02 15:04:05"), s[1:]
+		return types.DateTime(time.DateTime), s[1:]
 	case "DateTime64":
 		n, s, ok := parseUint(s[i+1:])
 		if !ok || n > 9 {
 			return types.Type{}, ""
 		}
-		layout := "2006-01-02 15:04:05"
+		layout := time.DateTime
 		if n > 0 {
 			layout += "." + strings.Repeat("9", n)
 		}

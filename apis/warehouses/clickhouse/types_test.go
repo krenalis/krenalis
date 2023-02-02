@@ -9,6 +9,7 @@ package clickhouse
 
 import (
 	"testing"
+	"time"
 
 	"chichi/apis/types"
 )
@@ -33,11 +34,11 @@ func TestTypes(t *testing.T) {
 		{`Boolean`, types.Boolean()},
 		{`String`, types.Text()},
 		{`UUID`, types.UUID()},
-		{`Date`, types.Date("2006-01-02")},
+		{`Date`, types.Date(time.DateOnly)},
 		{`Date32`, types.Int()},
-		{`DateTime`, types.DateTime("2006-01-02 15:04:05")},
-		{`DateTime('Asia/Istanbul')`, types.DateTime("2006-01-02 15:04:05")},
-		{`DateTime64(0)`, types.DateTime("2006-01-02 15:04:05")},
+		{`DateTime`, types.DateTime(time.DateTime)},
+		{`DateTime('Asia/Istanbul')`, types.DateTime(time.DateTime)},
+		{`DateTime64(0)`, types.DateTime(time.DateTime)},
 		{`DateTime64(9)`, types.DateTime("2006-01-02 15:04:05.999999999")},
 		{`DateTime64(3, 'Asia/Istanbul')`, types.DateTime("2006-01-02 15:04:05.999")},
 		{`Enum8('hello' = 1, 'world' = 2)`, types.Text().WithEnum([]string{"hello", "world"})},
@@ -52,7 +53,7 @@ func TestTypes(t *testing.T) {
 		{`Array(Nullable(String))`, types.Array(types.Text().WithNull())},
 		{`JSON`, types.JSON()},
 		{`Nullable(String)`, types.Text().WithNull()},
-		{`Nullable(DateTime('Asia/Istanbul'))`, types.DateTime("2006-01-02 15:04:05").WithNull()},
+		{`Nullable(DateTime('Asia/Istanbul'))`, types.DateTime(time.DateTime).WithNull()},
 		{`IPv4`, types.UInt()},
 		{`IPv6`, types.Inet()},
 		{`FixedString(10)`, types.Text(types.Bytes(10))},

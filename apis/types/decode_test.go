@@ -82,7 +82,7 @@ func TestDecode(t *testing.T) {
 		},
 		{
 			Data:  `"2022-11-22"`,
-			Type:  Date("2006-01-02"),
+			Type:  Date(time.DateOnly),
 			Value: time.Date(2022, 11, 22, 0, 0, 0, 0, time.UTC),
 		},
 		{
@@ -175,7 +175,7 @@ func TestDecode(t *testing.T) {
 				{
 					Name:  "birthday",
 					Label: "Birthday",
-					Type:  Date("2006-01-02").WithNull(),
+					Type:  Date(time.DateOnly).WithNull(),
 				},
 			}),
 			Value: map[string]any{

@@ -221,7 +221,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "TEXT", "BLOB":
 		return types.Text(types.Bytes(65535)), nil
 	case "DATE":
-		return types.Date("2006-01-02"), nil
+		return types.Date(time.DateOnly), nil
 	case "DATETIME":
 		return types.DateTime(time.RFC3339), nil
 	case "DECIMAL":

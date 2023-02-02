@@ -767,11 +767,11 @@ func QuoteValue(value any) string {
 		return "(" + strings.Join(values, ",") + ")"
 	case []time.Time:
 		if len(val) == 1 {
-			return "('" + val[0].Format("2006-01-02 15:04:05") + "')"
+			return "('" + val[0].Format(time.DateTime) + "')"
 		}
 		var values = make([]string, len(val))
 		for i, v := range val {
-			values[i] = "'" + v.Format("2006-01-02 15:04:05") + "'"
+			values[i] = "'" + v.Format(time.DateTime) + "'"
 		}
 		return "(" + strings.Join(values, ",") + ")"
 	case []any:

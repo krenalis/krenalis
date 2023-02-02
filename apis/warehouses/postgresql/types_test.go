@@ -9,6 +9,7 @@ package postgresql
 
 import (
 	"testing"
+	"time"
 
 	"chichi/apis/types"
 )
@@ -36,7 +37,7 @@ func TestTypes(t *testing.T) {
 		{`text`, "", types.Text(), pointer("NO"), nil, nil, nil, nil},
 		{`timestamp without time zone`, "", types.DateTime("2006-01-02 15:04:05.999999"), pointer("NO"), nil, nil, nil, nil},
 		{`timestamp with time zone`, "", types.DateTime("2006-01-02 15:04:05.999999"), pointer("NO"), nil, nil, nil, nil},
-		{`date`, "", types.Date("2006-01-02"), pointer("NO"), nil, nil, nil, nil},
+		{`date`, "", types.Date(time.DateOnly), pointer("NO"), nil, nil, nil, nil},
 		{`time without time zone`, "", types.Time(), pointer("NO"), nil, nil, nil, nil},
 		{`boolean`, "", types.Boolean().WithNull(), pointer("YES"), nil, nil, nil, nil},
 		{`uuid`, "", types.UUID(), pointer("NO"), nil, nil, nil, nil},
