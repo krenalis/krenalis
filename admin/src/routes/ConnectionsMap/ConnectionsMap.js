@@ -1,29 +1,27 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import './ConnectionsMap.css';
 import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
 import Header from '../../components/Header/Header';
 import ConnectionBlock from '../../components/ConnectionBlock/ConnectionBlock';
 import LinkedConnectionBlocks from '../../components/LinkedConnectionBlocks/LinkedConnectionBlocks';
 import Arrow from '../../components/Arrow/Arrow';
-import Toast from '../../components/Toast/Toast';
-import call from '../../utils/call';
+import { AppContext } from '../../context/AppContext';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NavLink } from 'react-router-dom';
 
 const ConnectionsMap = () => {
 	let [sources, setSources] = useState([]);
 	let [destinations, setDestinations] = useState([]);
-	let [status, setStatus] = useState(null);
 
-	let toastRef = useRef();
+	let { API, showError } = useContext(AppContext);
+
 	let newConnection = Number(new URL(document.location).searchParams.get('new'));
 
 	useEffect(() => {
 		const fetchConnections = async () => {
-			let [connections, err] = await call('/admin/connections/find', 'GET');
-			if (err !== null) {
-				setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
-				toastRef.current.toast();
+			let [connections, err] = await API.connections.find();
+			if (err) {
+				showError(err);
 				return;
 			}
 			let sources = [];
@@ -83,7 +81,6 @@ const ConnectionsMap = () => {
 				<Header />
 			</PrimaryBackground>
 			<div className='routeContent'>
-				<Toast reactRef={toastRef} status={status} />
 				<div className='buttons'>
 					<SlButton className='addSource' variant='neutral'>
 						<SlIcon slot='suffix' name='plus-circle-dotted' />

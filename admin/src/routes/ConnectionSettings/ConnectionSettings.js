@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import './ConnectionSettings.css';
 import ConnectionForm from '../../components/ConnectionForm/ConnectionForm';
 import ConnectionDeletion from '../../components/ConnectionDeletion/ConnectionDeletion';
@@ -6,14 +6,17 @@ import ConnectionEnabling from '../../components/ConnectionEnabling/ConnectionEn
 import ConnectionKeys from '../../components/ConnectionKeys/ConnectionKeys';
 import ConnectionStream from '../../components/ConnectionStream/ConnectionStream';
 import ConnectionStorage from '../../components/ConnectionStorage/ConnectionStorage';
-import { Navigate } from 'react-router-dom';
+import { AppContext } from '../../context/AppContext';
 import { SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ConnectionSettings = ({ connection: c, onError, onStatusChange, onConnectionChange, isSelected }) => {
+const ConnectionSettings = ({ connection: c, onConnectionChange, isSelected }) => {
 	let [isDeleted, setIsDeleted] = useState(false);
 
+	let { redirect } = useContext(AppContext);
+
 	if (isDeleted) {
-		return <Navigate to='/admin/connections' />;
+		redirect('/admin/connections');
+		return;
 	}
 
 	return (
@@ -26,13 +29,7 @@ const ConnectionSettings = ({ connection: c, onError, onStatusChange, onConnecti
 						</SlTab>
 						<SlTabPanel name='connection'>
 							<div className='panelTitle'>Connection</div>
-							<ConnectionForm
-								connection={c}
-								onStatusChange={(status) => {
-									onStatusChange(status);
-								}}
-								onError={onError}
-							/>
+							<ConnectionForm connection={c} />
 						</SlTabPanel>
 					</>
 				)}
@@ -43,7 +40,7 @@ const ConnectionSettings = ({ connection: c, onError, onStatusChange, onConnecti
 						</SlTab>
 						<SlTabPanel name='apiKeys'>
 							<div className='panelTitle'>API Keys</div>
-							<ConnectionKeys connection={c} onError={onError} />
+							<ConnectionKeys connection={c} />
 						</SlTabPanel>
 					</>
 				)}
@@ -54,11 +51,7 @@ const ConnectionSettings = ({ connection: c, onError, onStatusChange, onConnecti
 						</SlTab>
 						<SlTabPanel name='storage'>
 							<div className='panelTitle'>Storage</div>
-							<ConnectionStorage
-								connection={c}
-								onConnectionChange={onConnectionChange}
-								onError={onError}
-							/>
+							<ConnectionStorage connection={c} onConnectionChange={onConnectionChange} />
 						</SlTabPanel>
 					</>
 				)}
@@ -69,11 +62,7 @@ const ConnectionSettings = ({ connection: c, onError, onStatusChange, onConnecti
 						</SlTab>
 						<SlTabPanel name='stream'>
 							<div className='panelTitle'>Stream</div>
-							<ConnectionStream
-								connection={c}
-								onConnectionChange={onConnectionChange}
-								onError={onError}
-							/>
+							<ConnectionStream connection={c} onConnectionChange={onConnectionChange} />
 						</SlTabPanel>
 					</>
 				)}
@@ -82,14 +71,14 @@ const ConnectionSettings = ({ connection: c, onError, onStatusChange, onConnecti
 				</SlTab>
 				<SlTabPanel name='enabling'>
 					<div className='panelTitle'>Enabling</div>
-					<ConnectionEnabling connection={c} onConnectionChange={onConnectionChange} onError={onError} />
+					<ConnectionEnabling connection={c} onConnectionChange={onConnectionChange} />
 				</SlTabPanel>
 				<SlTab slot='nav' panel='deletion'>
 					Deletion
 				</SlTab>
 				<SlTabPanel name='deletion'>
 					<div className='panelTitle'>Deletion</div>
-					<ConnectionDeletion connection={c} onDelete={() => setIsDeleted(true)} onError={onError} />
+					<ConnectionDeletion connection={c} onDelete={() => setIsDeleted(true)} />
 				</SlTabPanel>
 			</SlTabGroup>
 		</div>

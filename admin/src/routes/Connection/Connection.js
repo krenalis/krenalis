@@ -1,7 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import './Connection.css';
-import NotFound from '../NotFound/NotFound';
-import Toast from '../../components/Toast/Toast';
 import ConnectionOverview from '../ConnectionOverview/ConnectionOverview';
 import ConnectionSQL from '../ConnectionSQL/ConnectionSQL';
 import ConnectionMappings from '../ConnectionMappings/ConnectionMappings';
@@ -11,28 +9,16 @@ import ConnectionSettings from '../ConnectionSettings/ConnectionSettings';
 import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
 import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
 import ConnectionHeading from '../../components/ConnectionHeading/ConnectionHeading';
-import call from '../../utils/call';
+import { NotFoundError } from '../../api/errors';
+import { AppContext } from '../../context/AppContext';
 import { SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const Connection = () => {
 	let [connection, setConnection] = useState(null);
 	let [selectedSection, setSelectedSection] = useState('');
-	let [notFound, setNotFound] = useState(false);
-	let [status, setStatus] = useState(null);
 
-	const toastRef = useRef();
+	const { API, showError, showNotFound } = useContext(AppContext);
 	const connectionID = Number(String(window.location).split('/').pop());
-
-	const onError = (err) => {
-		setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
-		toastRef.current.toast();
-		return;
-	};
-
-	const onStatusChange = (status) => {
-		setStatus(status);
-		toastRef.current.toast();
-	};
 
 	const onConnectionChange = (c) => setConnection(c);
 
@@ -42,23 +28,19 @@ const Connection = () => {
 
 	useEffect(() => {
 		const fetchConnection = async () => {
-			let [connection, err] = await call('/admin/connections/get', 'POST', connectionID);
+			let [connection, err] = await API.connections.get(connectionID);
 			if (err) {
-				onError(err);
-				return;
-			}
-			if (connection == null) {
-				setNotFound(true);
+				if (err instanceof NotFoundError) {
+					showNotFound();
+					return;
+				}
+				showError(err);
 				return;
 			}
 			setConnection(connection);
 		};
 		fetchConnection();
 	}, []);
-
-	if (notFound) {
-		return <NotFound />;
-	}
 
 	let c = connection;
 	if (c == null) return;
@@ -72,18 +54,12 @@ const Connection = () => {
 				<ConnectionHeading connection={c} />
 			</PrimaryBackground>
 			<div className='routeContent'>
-				<Toast reactRef={toastRef} status={status} />
 				<SlTabGroup className='connectionSections' onSlTabShow={onSlTabShow}>
 					<SlTab slot='nav' panel='overview'>
 						Overview
 					</SlTab>
 					<SlTabPanel name='overview'>
-						<ConnectionOverview
-							connection={c}
-							onError={onError}
-							onStatusChange={onStatusChange}
-							isSelected={selectedSection === 'overview'}
-						/>
+						<ConnectionOverview connection={c} isSelected={selectedSection === 'overview'} />
 					</SlTabPanel>
 					{c.Type === 'Database' && c.Role === 'Source' && (
 						<>
@@ -91,12 +67,7 @@ const Connection = () => {
 								SQL Query
 							</SlTab>
 							<SlTabPanel name='sqlquery'>
-								<ConnectionSQL
-									connection={c}
-									onError={onError}
-									onStatusChange={onStatusChange}
-									isSelected={selectedSection === 'sqlquery'}
-								/>
+								<ConnectionSQL connection={c} isSelected={selectedSection === 'sqlquery'} />
 							</SlTabPanel>
 						</>
 					)}
@@ -106,12 +77,7 @@ const Connection = () => {
 								Events
 							</SlTab>
 							<SlTabPanel name='events'>
-								<ConnectionEvents
-									connection={c}
-									onError={onError}
-									onStatusChange={onStatusChange}
-									isSelected={selectedSection === 'events'}
-								/>
+								<ConnectionEvents connection={c} isSelected={selectedSection === 'events'} />
 							</SlTabPanel>
 						</>
 					)}
@@ -123,9 +89,6 @@ const Connection = () => {
 							<SlTabPanel name='mappings'>
 								<ConnectionMappings
 									connection={c}
-									onError={onError}
-									onStatuChange={onStatusChange}
-									renderArrows={selectedSection}
 									onConnectionChange={onConnectionChange}
 									isSelected={selectedSection === 'mappings'}
 								/>
@@ -140,8 +103,6 @@ const Connection = () => {
 							<SlTabPanel name='transformation'>
 								<ConnectionTransformation
 									connection={c}
-									onError={onError}
-									onStatuChange={onStatusChange}
 									onConnectionChange={onConnectionChange}
 									isSelected={selectedSection === 'transformation'}
 								/>
@@ -154,8 +115,6 @@ const Connection = () => {
 					<SlTabPanel name='settings'>
 						<ConnectionSettings
 							connection={c}
-							onError={onError}
-							onStatusChange={onStatusChange}
 							onConnectionChange={onConnectionChange}
 							isSelected={selectedSection === 'settings'}
 						/>

@@ -1,20 +1,42 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import './ConnectionForm.css';
 import ConnectorField from '../ConnectorFields/ConnectorField';
-import call from '../../utils/call';
+import { NotFoundError, UnprocessableError } from '../../api/errors';
+import { AppContext } from '../../context/AppContext';
+import statuses from '../../constants/statuses';
+import * as icons from '../../constants/icons';
 import { SettingsContext } from '../../context/SettingsContext';
 import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ConnectionForm = ({ connection: c, onStatusChange, onError }) => {
+const ConnectionForm = ({ connection: c }) => {
 	let [fields, setFields] = useState([]);
 	let [actions, setActions] = useState([]);
 	let [values, setValues] = useState(null);
 
+	let { API, showError, showStatus, redirect } = useContext(AppContext);
+
 	useEffect(() => {
 		const fetchUI = async () => {
-			let [ui, err] = await call('/admin/connections/ui', 'POST', c.ID);
+			let [ui, err] = await API.connections.ui(c.ID);
 			if (err) {
-				onError(err);
+				if (err instanceof NotFoundError) {
+					redirect('/admin/connections');
+					showStatus(statuses.connectionDoesNotExistAnymore);
+					return;
+				}
+				if (err instanceof UnprocessableError) {
+					if (err.code === 'EventNotExist') {
+						// TODO(@Andrea): find a way to show the full error message
+						// in the toast notification when the server is started with
+						// the CHICHI_DEBUG_UI environment variable set to 'true'.
+						console.error(
+							`Unprocessable: connection does not implement the 'load' event in its ServeUI method`
+						);
+						showError('Unexpected error. Contact the administrator for more informations.');
+					}
+					return;
+				}
+				showError(err);
 				return;
 			}
 			setFields(ui.Form.Fields);
@@ -32,18 +54,28 @@ const ConnectionForm = ({ connection: c, onStatusChange, onError }) => {
 			fls.push(f);
 		}
 		setFields(fls);
-
-		let [ui, err] = await call('/admin/connections/ui-event', 'POST', {
-			connection: c.ID,
-			event: e,
-			values: values,
-		});
-		if (err != null) {
-			onError(err);
+		let [ui, err] = await API.connections.uiEvent(c.ID, e, values);
+		if (err) {
+			if (err instanceof NotFoundError) {
+				redirect('/admin/connections');
+				showStatus(statuses.connectionDoesNotExistAnymore);
+				return;
+			}
+			if (err instanceof UnprocessableError) {
+				if (err.code === 'EventNotExist') {
+					// TODO(@Andrea): find a way to show the full error message
+					// in the toast notification when the server is started with
+					// the CHICHI_DEBUG_UI environment variable set to 'true'.
+					console.error(`Unprocessable: connection does not implement the ${e} event in its ServeUI method`);
+					showError('Unexpected error. Contact the administrator for more informations.');
+				}
+				return;
+			}
+			showError(err);
 			return;
 		}
 		if (ui.Alert != null) {
-			onStatusChange({ variant: ui.Alert.Variant, icon: 'exclamation-square', text: ui.Alert.Message });
+			showStatus([ui.Alert.Variant, icons.EXCLAMATION, ui.Alert.Messasge]);
 		}
 		if (ui.Form != null) {
 			setFields(ui.Form.Fields);

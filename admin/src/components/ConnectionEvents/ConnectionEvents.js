@@ -1,30 +1,52 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import './ConnectionEvents.css';
 import IconWrapper from '../IconWrapper/IconWrapper';
-import call from '../../utils/call';
+import { AppContext } from '../../context/AppContext';
+import { NotFoundError, UnprocessableError } from '../../api/errors';
+import statuses from '../../constants/statuses';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { github } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
-const ConnectionEvents = ({ connection: c, onError, onStatusChange, isSelected }) => {
+const ConnectionEvents = ({ connection: c, isSelected }) => {
 	let [events, setEvents] = useState([]);
 	let [selectedEvent, setSelectedEvent] = useState(null);
 	let [discarded, setDiscarded] = useState(0);
+
+	let { API, showError, showStatus, redirect } = useContext(AppContext);
 
 	useEffect(() => {
 		let listenerID;
 		let interval;
 		let id = 1;
 		const startListener = async () => {
-			let [listener, err] = await call('/api/event-listeners', 'PUT', { Size: 3, Source: c.ID });
-			if (err != null) {
-				onError(err);
+			let [listener, err] = await API.eventlisteners.add(3, c.ID);
+			if (err) {
+				if (err instanceof UnprocessableError) {
+					if (
+						err.code === 'SourceNotExist' ||
+						err.code === 'ServerNotExist' ||
+						err.code === 'StreamNotExist'
+					) {
+						redirect('/admin/connections');
+						showStatus(statuses.connectionDoesNotExistAnymore);
+					}
+					if (err.code === 'TooManyListeners') {
+						showStatus(statuses.tooManyListeners);
+					}
+					return;
+				}
+				showError(err);
 				return;
 			}
 			listenerID = listener.id;
 			interval = setInterval(async () => {
-				let [res, err] = await call(`/api/event-listeners/${listenerID}/events`, 'GET');
-				if (err != null) {
-					onError(err);
+				let [res, err] = await API.eventlisteners.events(listenerID);
+				if (err) {
+					if (err instanceof NotFoundError) {
+						showStatus(statuses.listenerDoesNotExist);
+						return;
+					}
+					showError(err);
 					return;
 				}
 				let newly = [];
@@ -47,9 +69,9 @@ const ConnectionEvents = ({ connection: c, onError, onStatusChange, isSelected }
 			startListener();
 			return async () => {
 				clearInterval(interval);
-				let [, err] = await call(`/api/event-listeners/${listenerID}`, 'DELETE');
-				if (err != null) {
-					onError(err);
+				let [, err] = await API.eventlisteners.remove(listenerID);
+				if (err) {
+					showError(err);
 					return;
 				}
 			};

@@ -1,19 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import './ConnectorsList.css';
-import call from '../../utils/call';
 import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
 import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
 import Card from '../../components/Card/Card';
-import Toast from '../../components/Toast/Toast';
-import { Navigate } from 'react-router-dom';
+import { AppContext } from '../../context/AppContext';
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectorsList = () => {
 	let [connectors, setConnectors] = useState([]);
 	let [goToConnectorSettings, setGoToConnectorSettings] = useState(0);
-	let [status, setStatus] = useState(null);
 
-	const toastRef = useRef();
+	let { API, showError, redirect } = useContext(AppContext);
+
 	let connectionRole;
 	let roleParam = new URL(document.location).searchParams.get('role');
 	if (roleParam == null || roleParam === '') {
@@ -22,17 +20,11 @@ const ConnectorsList = () => {
 		connectionRole = roleParam;
 	}
 
-	const onError = (err) => {
-		setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
-		toastRef.current.toast();
-		return;
-	};
-
 	useEffect(() => {
 		const fetchConnectors = async () => {
-			let [connectors, err] = await call('/admin/connectors/find', 'GET');
+			let [connectors, err] = await API.connectors.find();
 			if (err != null) {
-				onError(err);
+				showError(err);
 				return;
 			}
 			setConnectors(connectors);
@@ -48,7 +40,8 @@ const ConnectorsList = () => {
 	};
 
 	if (goToConnectorSettings !== 0) {
-		return <Navigate to={`/admin/connectors/${goToConnectorSettings}?role=${connectionRole}`} />;
+		redirect(`/admin/connectors/${goToConnectorSettings}?role=${connectionRole}`);
+		return;
 	}
 
 	return (
@@ -63,7 +56,6 @@ const ConnectorsList = () => {
 				/>
 			</PrimaryBackground>
 			<div className='routeContent'>
-				<Toast reactRef={toastRef} status={status} />
 				<div className='connectors'>
 					{connectors.map((c) => {
 						return (

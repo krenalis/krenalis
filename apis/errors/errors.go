@@ -35,6 +35,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 )
 
@@ -86,7 +87,11 @@ func (e *badRequestError) WriteTo(w http.ResponseWriter) error {
 	if e.err != nil {
 		details = e.err.Error()
 	}
-	return writeTo(w, http.StatusBadRequest, "BadRequest", e.s, details)
+	var message string
+	if v := os.Getenv("CHICHI_DEBUG_UI"); v == "true" {
+		message = e.s
+	}
+	return writeTo(w, http.StatusBadRequest, "BadRequest", message, details)
 }
 
 // NotFound returns an error that formats as the given text, and its WriteTo

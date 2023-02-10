@@ -1,14 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import './ConnectionTransformation.css';
 import call from '../../utils/call';
 import ConnectionProperty from '../../components/ConnectionProperty/ConnectionProperty';
 import PropertiesDialog from '../../components/PropertiesDialog/PropertiesDialog';
 import { Transformation } from '../../utils/transformations';
+import statuses from '../../constants/statuses';
+import { AppContext } from '../../context/AppContext';
 import { useNavigate } from 'react-router';
 import Editor from '@monaco-editor/react';
 import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
+import { NotFoundError, UnprocessableError } from '../../api/errors';
 
-const ConnectionTransformation = ({ connection: c, onError, onStatuChange, onConnectionChange, isSelected }) => {
+const ConnectionTransformation = ({ connection: c, onConnectionChange, isSelected }) => {
 	let [inputProperties, setInputProperties] = useState([]);
 	let [outputProperties, setOutputProperties] = useState([]);
 	let [usedInputProperties, setUsedInputProperties] = useState([]);
@@ -18,6 +21,8 @@ const ConnectionTransformation = ({ connection: c, onError, onStatuChange, onCon
 	let [isInputDialogOpen, setIsInputDialogOpen] = useState(false);
 	let [isOutputDialogOpen, setIsOutputDialogOpen] = useState(false);
 	let [transformation, setTransformation] = useState(null);
+
+	let { API, showError, showStatus, redirect } = useContext(AppContext);
 
 	const hooksByRole = {
 		input: {
@@ -50,9 +55,9 @@ const ConnectionTransformation = ({ connection: c, onError, onStatuChange, onCon
 
 			// get the connection properties and the warehouse user properties.
 			let connectionSchema;
-			[connectionSchema, err] = await call(`/api/connections/${c.ID}/schema`, 'GET');
+			[connectionSchema, err] = await API.connections.schema(c.ID);
 			if (err) {
-				onError(err);
+				showError(err);
 				return;
 			}
 			if (connectionSchema == null) return;
@@ -61,9 +66,9 @@ const ConnectionTransformation = ({ connection: c, onError, onStatuChange, onCon
 				connectionProperties.push(p);
 			}
 			let userSchema;
-			[userSchema, err] = await call('/admin/user-schema-properties', 'GET');
+			[userSchema, err] = await API.workspace.userSchema();
 			if (err) {
-				onError(err);
+				showError(err);
 				return;
 			}
 			if (userSchema == null) return;
@@ -86,9 +91,9 @@ const ConnectionTransformation = ({ connection: c, onError, onStatuChange, onCon
 
 			// get the transformation.
 			let transformation;
-			[transformation, err] = await call(`/api/connections/${c.ID}/transformation`);
+			[transformation, err] = await API.connections.transformation(c.ID);
 			if (err) {
-				onError(err);
+				showError(err);
 				return;
 			}
 			let transformationObject = new Transformation(transformation);
@@ -138,35 +143,43 @@ const ConnectionTransformation = ({ connection: c, onError, onStatuChange, onCon
 			Out: t.Out,
 			PythonSource: t.PythonSource,
 		};
-		let [, err] = await call(`/api/connections/${c.ID}/transformation`, 'PUT', toSave);
+		let [, err] = await API.connections.setTransformation(c.ID, toSave);
 		if (err) {
-			onError(err);
+			if (err instanceof NotFoundError) {
+				redirect('/admin/connections');
+				showStatus(statuses.connectionDoesNotExistAnymore);
+				return;
+			}
+			if (err instanceof UnprocessableError) {
+				if (err.code === 'AlreadyHasMappings') {
+					showStatus(statuses.alreadyHasMappings);
+				}
+				return;
+			}
+			showError(err);
 			return;
 		}
-		onStatuChange({
-			variant: 'success',
-			icon: 'check2-circle',
-			text: 'Your transformation has been successfully saved',
-		});
+		showStatus(statuses.transformationSaved);
 		c.Transformation = toSave;
 		onConnectionChange(c);
 	};
 
 	const onClear = async () => {
-		let [, err] = await call(`/api/connections/${c.ID}/transformation`, 'PUT', null);
+		let [, err] = await API.connections.setTransformation(c.ID, null);
 		if (err) {
-			onError(err);
+			if (err instanceof NotFoundError) {
+				redirect('/admin/connections');
+				showStatus(statuses.connectionDoesNotExistAnymore);
+				return;
+			}
+			showError(err);
 			return;
 		}
 		let t = new Transformation();
 		setTransformation(t);
 		setUsedInputProperties([]);
 		setUsedOutputProperties([]);
-		onStatuChange({
-			variant: 'success',
-			icon: 'check2-circle',
-			text: 'Your transformation has been successfully cleaned up',
-		});
+		showStatus(statuses.transformationCleanedUp);
 		c.Transformation = null;
 		onConnectionChange(c);
 	};

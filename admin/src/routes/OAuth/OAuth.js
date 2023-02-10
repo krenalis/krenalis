@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import './OAuth.css';
 import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
-import call from '../../utils/call';
-import { Navigate } from 'react-router-dom';
+import { AppContext } from '../../context/AppContext';
 import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const OAuth = () => {
 	let [hasError, setHasError] = useState(false);
 	let [redirectURL, setRedirectURL] = useState('');
+
+	let { API, redirect } = useContext(AppContext);
 
 	useEffect(() => {
 		const fetchOAuthToken = async () => {
@@ -17,10 +18,7 @@ const OAuth = () => {
 			localStorage.removeItem('addConnectionRole');
 			let url = new URL(document.location);
 			let oauthCode = url.searchParams.get('oauthCode');
-			let [oauthToken, err] = await call('/api/workspace/oauth-token', 'POST', {
-				Connector: Number(connectorID),
-				OAuthCode: oauthCode,
-			});
+			let [oauthToken, err] = await API.workspace.oauthToken(Number(connectorID), oauthCode);
 			if (err != null) {
 				console.error(err);
 				setHasError(true);
@@ -33,11 +31,13 @@ const OAuth = () => {
 	}, []);
 
 	if (hasError) {
-		return <Navigate to='/admin/oauth/error'></Navigate>;
+		redirect('/admin/oauth/error');
+		return;
 	}
 
 	if (redirectURL !== '') {
-		return <Navigate to={redirectURL}></Navigate>;
+		redirect(redirectURL);
+		return;
 	}
 
 	return (

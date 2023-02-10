@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import './UsersList.css';
 import Header from '../../components/Header/Header';
 import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
-import Toast from '../../components/Toast/Toast';
-import call from '../../utils/call';
+import statuses from '../../constants/statuses';
+import { AppContext } from '../../context/AppContext';
 import {
 	SlButton,
 	SlDropdown,
@@ -17,9 +17,9 @@ import {
 import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
+import { NotFoundError, UnprocessableError } from '../../api/errors';
 
 const UsersList = () => {
-	let [status, setStatus] = useState(null);
 	let [columnDefs, setColumnDefs] = useState([]);
 	let [usersRows, setUsersRows] = useState([]);
 	let [usersCount, setUsersCount] = useState(0);
@@ -28,7 +28,7 @@ const UsersList = () => {
 	let [isLoading, setIsLoading] = useState(false);
 	let [limit, setLimit] = useState(15);
 
-	let toastRef = useRef();
+	let { API, showError, showStatus, redirect } = useContext(AppContext);
 	let gridRef = useRef();
 
 	useEffect(() => {
@@ -47,13 +47,12 @@ const UsersList = () => {
 			if (storageProperties != null) {
 				properties = JSON.parse(storageProperties);
 			} else {
-				let [userSchema, err] = await call('/admin/user-schema');
-				if (err != null) {
-					setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
-					toastRef.current.toast();
+				let [schema, err] = await API.workspace.userSchema();
+				if (err) {
+					showError(err);
 					return;
 				}
-				for (let p of userSchema.properties) {
+				for (let p of schema.properties) {
 					properties[p.name] = { label: p.label, isUsed: true };
 				}
 				localStorage.setItem('usersProperties', JSON.stringify(properties));
@@ -66,15 +65,28 @@ const UsersList = () => {
 			}
 
 			setIsLoading(true);
-			let [{ count, users }, err] = await call('/api/users', 'POST', {
-				properties: propertiesNames,
-				start: 0,
-				end: lim,
-			});
+			let [{ count, users }, err] = await API.users.find(propertiesNames, 0, lim);
 			if (err != null) {
-				setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
+				if (err instanceof NotFoundError) {
+					redirect('/admin');
+					showStatus(statuses.workspaceDoesNotExistAnymore);
+					return;
+				}
+				if (err instanceof UnprocessableError) {
+					switch (err.code) {
+						case 'PropertyNotExist':
+							showStatus(statuses.propertyNotExist);
+							break;
+						case 'WarehouseFailed':
+							showStatus(statuses.warehouseConnectionFailed);
+							break;
+						default:
+							break;
+					}
+					return;
+				}
+				showError(err);
 				setIsLoading(false);
-				toastRef.current.toast();
 				return;
 			}
 			setIsLoading(false);
@@ -113,14 +125,27 @@ const UsersList = () => {
 		for (let name in properties) propertiesNames.push(name);
 		let start = page * limit - limit;
 		setIsLoading(true);
-		let [{ count, users }, err] = await call('/api/users', 'POST', {
-			properties: propertiesNames,
-			start: start,
-			end: start + limit,
-		});
+		let [{ count, users }, err] = await API.users.find(propertiesNames, start, start + limit);
 		if (err != null) {
-			setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
-			toastRef.current.toast();
+			if (err instanceof NotFoundError) {
+				redirect('/admin');
+				showStatus(statuses.workspaceDoesNotExistAnymore);
+				return;
+			}
+			if (err instanceof UnprocessableError) {
+				switch (err.code) {
+					case 'PropertyNotExist':
+						showStatus(statuses.propertyNotExist);
+						break;
+					case 'WarehouseFailed':
+						showStatus(statuses.warehouseConnectionFailed);
+						break;
+					default:
+						break;
+				}
+				return;
+			}
+			showError(err);
 			setIsLoading(false);
 			return;
 		}
@@ -183,7 +208,6 @@ const UsersList = () => {
 				<Header />
 			</PrimaryBackground>
 			<div className='routeContent'>
-				<Toast reactRef={toastRef} status={status} />
 				<div className='gridContainer'>
 					<div className='head'>
 						<div className='gridHeading'>

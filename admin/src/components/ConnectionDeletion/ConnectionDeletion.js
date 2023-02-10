@@ -1,16 +1,25 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import './ConnectionDeletion.css';
 import FlexContainer from '../FlexContainer/FlexContainer';
-import call from '../../utils/call';
+import { AppContext } from '../../context/AppContext';
+import statuses from '../../constants/statuses';
 import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { NotFoundError } from '../../api/errors';
 
-const ConnectionDeletion = ({ connection: c, onDelete, onError }) => {
+const ConnectionDeletion = ({ connection: c, onDelete }) => {
 	let [askDeletionConfirmation, setAskDeletionConfirmation] = useState(false);
 
+	let { API, showError, showStatus, redirect } = useContext(AppContext);
+
 	const onDeletionConfirmation = async () => {
-		let [, err] = await call('/admin/connections/delete', 'POST', [c.ID]);
+		let [, err] = await API.connections.delete(c.ID);
 		if (err !== null) {
-			onError(err);
+			if (err instanceof NotFoundError) {
+				redirect('/admin/connections');
+				showStatus(statuses.connectionDoesNotExistAnymore);
+				return;
+			}
+			showError(err);
 			return;
 		}
 		setAskDeletionConfirmation(false);

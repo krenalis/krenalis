@@ -1,6 +1,6 @@
 .sl-toast-stack {
-	top: unset;
-	bottom: 0;
+	top: unset!important;
+	bottom: 0!important;
 }
 
 .sl-toast-stack sl-alert::part(base) {

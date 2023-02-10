@@ -1,18 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import './ConnectionStream.css';
 import FlexContainer from '../FlexContainer/FlexContainer';
-import call from '../../utils/call';
+import { AppContext } from '../../context/AppContext';
+import { NotFoundError, UnprocessableError } from '../../api/errors';
+import statuses from '../../constants/statuses';
 import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ConnectionStream = ({ connection: c, onConnectionChange, onError }) => {
+const ConnectionStream = ({ connection: c, onConnectionChange }) => {
 	let [streams, setStreams] = useState([]);
 	let [showStreams, setShowStreams] = useState(false);
 
+	let { API, showError, showStatus, redirect } = useContext(AppContext);
+
 	useEffect(() => {
 		const fetchStreams = async () => {
-			let [connections, err] = await call('/admin/connections/find', 'GET');
+			let [connections, err] = await API.connections.find();
 			if (err) {
-				onError(err);
+				showError(err);
 				return;
 			}
 			let streams = [];
@@ -27,22 +31,37 @@ const ConnectionStream = ({ connection: c, onConnectionChange, onError }) => {
 	}, []);
 
 	const onChangeStream = async (stream) => {
-		let [, err] = await call(`/api/connections/${c.ID}/stream/${stream}`, 'PUT');
+		let [, err] = await API.connections.setStorage(c.ID, stream);
+		setShowStreams(false);
 		if (err !== null) {
-			onError(err);
-			setShowStreams(false);
+			if (err instanceof NotFoundError) {
+				redirect('/admin/connections');
+				showStatus(statuses.connectionDoesNotExistAnymore);
+				return;
+			}
+			if (err instanceof UnprocessableError) {
+				if (err.code === 'StreamNotExist') {
+					showStatus(statuses.streamNotExist);
+				}
+				return;
+			}
+			showError(err);
 			return;
 		}
 		let cn = { ...c };
 		cn.Stream = stream;
-		setShowStreams(false);
 		onConnectionChange(cn);
 	};
 
 	const onRemoveStream = async () => {
-		let [, err] = await call(`/api/connections/${c.ID}/stream/0`, 'PUT');
+		let [, err] = await API.connections.setStorage(c.ID, 0);
 		if (err !== null) {
-			onError(err);
+			if (err instanceof NotFoundError) {
+				redirect('/admin/connections');
+				showStatus(statuses.connectionDoesNotExistAnymore);
+				return;
+			}
+			showError(err);
 			return;
 		}
 		let cn = { ...c };

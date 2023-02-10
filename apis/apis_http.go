@@ -71,6 +71,26 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(connections)
 		})
 		router.Route("/{connectionID}", func(router chi.Router) {
+			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(connection)
+			})
+			router.Delete("/", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				err = connection.Delete()
+				respond(w, err)
+			})
 			router.Post("/status", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
@@ -107,6 +127,22 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				} else {
 					_, _ = w.Write([]byte("null"))
 				}
+			})
+			router.Get("/imports", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				imports, err := connection.Imports()
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(imports)
+
 			})
 			router.Post("/import", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
@@ -206,6 +242,87 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(stats)
 			})
+			router.Get("/ui", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				form, err := connection.ServeUI("load", nil)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Add("Content-Type", "application/json")
+				_, _ = w.Write(form)
+			})
+			router.Post("/ui-event", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				var req struct {
+					Event  string
+					Values json.RawMessage
+				}
+				err = json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				form, err := connection.ServeUI(req.Event, req.Values)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Add("Content-Type", "application/json")
+				_, _ = w.Write(form)
+			})
+			router.Post("/query", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				var req struct {
+					Query string
+					Limit int
+				}
+				err = json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				columns, rows, err := connection.Query(req.Query, req.Limit)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Add("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{"Columns": columns, "Rows": rows})
+			})
+			router.Post("/set-users-query", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				var req struct {
+					Query string
+				}
+				err = json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				err = connection.SetUsersQuery(req.Query)
+				respond(w, err)
+			})
 			router.Get("/keys", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
@@ -257,10 +374,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				stream, _ := strconv.Atoi(chi.URLParam(r, "stream"))
-				if stream < 0 {
-					http.Error(w, "Bad Request: invalid stream ID", http.StatusBadRequest)
-					return
-				}
 				err = connection.SetStream(stream)
 				respond(w, err)
 			})
@@ -278,6 +391,95 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				err = connection.SetStorage(storage)
 				respond(w, err)
+			})
+		})
+	})
+	router.Route("/api/connectors", func(router chi.Router) {
+		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			connectors := apis.Connectors()
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(connectors)
+		})
+		router.Route("/{connectorID}", func(router chi.Router) {
+			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
+				connector, err := apis.Connector(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(connector)
+			})
+			router.Post("/ui", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
+				connector, err := apis.Connector(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				var req struct {
+					Role       string
+					OAuthToken string
+				}
+				err = json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				var role ConnectionRole
+				switch req.Role {
+				case "Source":
+					role = SourceRole
+				case "Destination":
+					role = DestinationRole
+				default:
+					respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
+					return
+				}
+				form, err := connector.ServeUI("load", nil, role, req.OAuthToken)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Add("Content-Type", "application/json")
+				_, _ = w.Write(form)
+			})
+			router.Post("/ui-event", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
+				connector, err := apis.Connector(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				var req struct {
+					Event      string
+					Values     json.RawMessage
+					Role       string
+					OAuthToken string
+				}
+				err = json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				var role ConnectionRole
+				switch req.Role {
+				case "Source":
+					role = SourceRole
+				case "Destination":
+					role = DestinationRole
+				default:
+					respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
+					return
+				}
+				form, err := connector.ServeUI(req.Event, req.Values, role, req.OAuthToken)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Add("Content-Type", "application/json")
+				_, _ = w.Write(form)
 			})
 		})
 	})
@@ -388,6 +590,13 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			respond(w, err)
 		})
 	})
+	router.Route("/api/workspace/user-schema", func(router chi.Router) {
+		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			schema := workspace.Schema("users")
+			w.Header().Add("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(schema)
+		})
+	})
 	router.Route("/api/workspace/oauth-token", func(router chi.Router) {
 		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 			var req struct {
@@ -438,6 +647,23 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(id)
+		})
+	})
+	router.Route("/api/predefined-mappings", func(router chi.Router) {
+		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			funcs := make([]map[string]any, len(PredefinedMappingFuncs))
+			for i, f := range PredefinedMappingFuncs {
+				funcs[i] = map[string]any{
+					"ID":          f.ID,
+					"Name":        f.Name,
+					"Description": f.Description,
+					"Icon":        f.Icon,
+					"In":          f.In,
+					"Out":         f.Out,
+				}
+			}
+			w.Header().Add("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(funcs)
 		})
 	})
 	router.ServeHTTP(w, r)

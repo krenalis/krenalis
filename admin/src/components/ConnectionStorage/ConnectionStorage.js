@@ -1,18 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import './ConnectionStorage.css';
 import FlexContainer from '../FlexContainer/FlexContainer';
-import call from '../../utils/call';
+import { AppContext } from '../../context/AppContext';
+import statuses from '../../constants/statuses';
+import { NotFoundError, UnprocessableError } from '../../api/errors';
 import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ConnectionStorage = ({ connection: c, onConnectionChange, onError }) => {
+const ConnectionStorage = ({ connection: c, onConnectionChange }) => {
 	let [storages, setStorages] = useState([]);
 	let [showStorages, setShowStorages] = useState(false);
 
+	let { API, redirect, showError, showStatus } = useContext(AppContext);
+
 	useEffect(() => {
 		const fetchStreams = async () => {
-			let [connections, err] = await call('/admin/connections/find', 'GET');
+			let [connections, err] = await API.connections.find();
 			if (err) {
-				onError(err);
+				showError(err);
 				return;
 			}
 			let storages = [];
@@ -27,22 +31,37 @@ const ConnectionStorage = ({ connection: c, onConnectionChange, onError }) => {
 	}, []);
 
 	const onChangeStorage = async (storage) => {
-		let [, err] = await call(`/api/connections/${c.ID}/storage/${storage}`, 'PUT');
+		let [, err] = await API.connections.setStorage(c.ID, storage);
+		setShowStorages(false);
 		if (err !== null) {
-			onError(err);
-			setShowStorages(false);
+			if (err instanceof NotFoundError) {
+				redirect('/admin/connections');
+				showStatus(statuses.connectionDoesNotExistAnymore);
+				return;
+			}
+			if (err instanceof UnprocessableError) {
+				if (err.code === 'StorageNotExist') {
+					showStatus(statuses.storageNotExist);
+				}
+				return;
+			}
+			showError(err);
 			return;
 		}
 		let cn = { ...c };
 		cn.Storage = storage;
-		setShowStorages(false);
 		onConnectionChange(cn);
 	};
 
 	const onRemoveStorage = async () => {
-		let [, err] = await call(`/api/connections/${c.ID}/storage/0`, 'PUT');
+		let [, err] = await API.connections.setStorage(c.ID, 0);
 		if (err !== null) {
-			onError(err);
+			if (err instanceof NotFoundError) {
+				redirect('/admin/connections');
+				showStatus(statuses.connectionDoesNotExistAnymore);
+				return;
+			}
+			showError(err);
 			return;
 		}
 		let cn = { ...c };

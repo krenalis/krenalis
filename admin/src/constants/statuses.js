@@ -1,0 +1,52 @@
+import * as variants from './variants';
+import * as icons from './icons';
+
+const statuses = {
+	connectionDoesNotExistAnymore: [variants.DANGER, icons.NOT_FOUND, 'The connection does not exist anymore'],
+	connectorDoesNotExistAnymore: [variants.DANGER, icons.NOT_FOUND, 'The connector does not exist anymore'],
+	workspaceDoesNotExistAnymore: [variants.DANGER, icons.NOT_FOUND, 'The workspace does not exist anymore'],
+	tooManyKeys: [variants.DANGER, icons.FORBIDDEN, 'You have reached the maximum number of keys'],
+	uniqueKey: [variants.DANGER, icons.FORBIDDEN, 'You cannot delete the last key'],
+	alreadyInProgress: [variants.DANGER, icons.FORBIDDEN, 'You already have an import in progress'],
+	noStorage: [variants.DANGER, icons.FORBIDDEN, 'You must associate a storage connection before starting an import'],
+	noTransformationNorMappings: [
+		variants.DANGER,
+		icons.FORBIDDEN,
+		'You must associate the mappings or a transformation before starting an import',
+	],
+	noWarehouse: [
+		variants.DANGER,
+		icons.FORBIDDEN,
+		'You must connect a data warehouse to the workspace before starting an import',
+	],
+	warehouseNotConnected: [variants.DANGER, icons.NOT_FOUND, 'The workspace is not connected to any data warehouse'],
+	warehouseConnectionFailed: [variants.DANGER, icons.NOT_FOUND, 'The connection to the data warehouse has failed'],
+	notEnabled: [variants.DANGER, icons.FORBIDDEN, 'You must enable the connection before starting an import'],
+	storageNotEnabled: [
+		variants.DANGER,
+		icons.FORBIDDEN,
+		'You must enable the storage associated to this connection before starting an import',
+	],
+	invalidSchemaTable: [variants.DANGER, icons.INVALID_INSERTED_VALUE, 'The schema table is invalid'],
+	storageNotExist: [variants.DANGER, icons.NOT_FOUND, 'The selected storage does not exist anymore'],
+	streamNotExist: [variants.DANGER, icons.NOT_FOUND, 'The selected stream does not exist anymore'],
+	propertyNotExist: [variants.DANGER, icons.NOT_FOUND, 'One of the schema properties does not exist'],
+	settingsNotValid: [variants.DANGER, icons.INVALID_INSERTED_VALUE, 'This settings are not valid'],
+	listenerDoesNotExist: [variants.DANGER, icons.NOT_FOUND, 'The listener does not exist'],
+	queryExecutionFailed: [variants.DANGER, icons.CODE_ERROR, 'The inserted query returns an error'],
+	tooManyListeners: [variants.DANGER, icons.FORBIDDEN, 'You have exceeded the number of event listeners allowed'],
+	alreadyHasTransformation: [
+		variants.DANGER,
+		icons.FORBIDDEN,
+		'This connection already has a configured transformation',
+	],
+	alreadyHasMappings: [variants.DANGER, icons.FORBIDDEN, 'This connection already has configured mappings'],
+	importStarted: [variants.PRIMARY, icons.DOWNLOAD, 'Your import has been started'],
+	querySet: [variants.PRIMARY, icons.OK, 'Your query has been successfully saved'],
+	mappingsSaved: [variants.SUCCESS, icons.OK, 'Your mappings have been successfully saved'],
+	schemasReloaded: [variants.SUCCESS, icons.OK, 'The schemas have been reloaded successfully'],
+	transformationSaved: [variants.SUCCESS, icons.OK, 'Your transformation has been successfully saved'],
+	transformationCleanedUp: [variants.SUCCESS, icons.OK, 'Your transformation has been successfully cleaned up'],
+};
+
+export default statuses;

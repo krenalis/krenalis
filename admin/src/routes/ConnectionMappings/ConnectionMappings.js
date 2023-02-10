@@ -1,16 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import './ConnectionMappings.css';
-import call from '../../utils/call';
 import ConnectionProperty from '../../components/ConnectionProperty/ConnectionProperty';
 import MappingNode from '../../components/MappingNode/MappingNode';
 import SelectedPropertyMessage from '../../components/SelectedPropertyMessage/SelectedPropertyMessage';
 import PropertiesDialog from '../../components/PropertiesDialog/PropertiesDialog';
 import { Mapping } from '../../utils/mappings';
+import { AppContext } from '../../context/AppContext';
+import statuses from '../../constants/statuses';
 import { useNavigate } from 'react-router';
 import { SlButton, SlIcon, SlDialog, SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
 import Xarrow from 'react-xarrows';
+import { NotFoundError, UnprocessableError } from '../../api/errors';
 
-const ConnectionMappings = ({ connection: c, onError, onStatuChange, onConnectionChange, isSelected }) => {
+const ConnectionMappings = ({ connection: c, onConnectionChange, isSelected }) => {
 	let [inputProperties, setInputProperties] = useState([]);
 	let [outputProperties, setOutputProperties] = useState([]);
 	let [usedInputProperties, setUsedInputProperties] = useState([]);
@@ -25,6 +27,8 @@ const ConnectionMappings = ({ connection: c, onError, onStatuChange, onConnectio
 	let [selectedPredefinedMapping, setSelectedPredefinedMapping] = useState(0);
 	let [predefinedMappings, setPredefinedMappings] = useState([]);
 	let [showPredefinedMappings, setShowPredefinedMappings] = useState(false);
+
+	let { API, showError, showStatus, redirect } = useContext(AppContext);
 
 	const hooksByRole = {
 		input: {
@@ -57,9 +61,9 @@ const ConnectionMappings = ({ connection: c, onError, onStatuChange, onConnectio
 
 			// get the connection properties and the warehouse user properties.
 			let connectionSchema;
-			[connectionSchema, err] = await call(`/api/connections/${c.ID}/schema`, 'GET');
+			[connectionSchema, err] = await API.connections.schema(c.ID);
 			if (err) {
-				onError(err);
+				showError(err);
 				return;
 			}
 			if (connectionSchema == null) return;
@@ -68,9 +72,9 @@ const ConnectionMappings = ({ connection: c, onError, onStatuChange, onConnectio
 				connectionProperties.push(p);
 			}
 			let userSchema;
-			[userSchema, err] = await call('/admin/user-schema-properties', 'GET');
+			[userSchema, err] = await API.workspace.userSchema();
 			if (err) {
-				onError(err);
+				showError(err);
 				return;
 			}
 			if (userSchema == null) return;
@@ -93,18 +97,18 @@ const ConnectionMappings = ({ connection: c, onError, onStatuChange, onConnectio
 
 			// get the predefined mappings.
 			let predefinedMappings;
-			[predefinedMappings, err] = await call('/admin/predefined-mappings', 'GET');
+			[predefinedMappings, err] = await API.predefinedMappings();
 			if (err) {
-				onError(err);
+				showError(err);
 				return;
 			}
 			setPredefinedMappings(predefinedMappings);
 
 			// get the mappings.
 			let mappings;
-			[mappings, err] = await call(`/api/connections/${c.ID}/mappings`, 'GET');
+			[mappings, err] = await API.connections.mappings(c.ID);
 			if (err) {
-				onError(err);
+				showError(err);
 				return;
 			}
 			if (mappings == null) return;
@@ -207,7 +211,7 @@ const ConnectionMappings = ({ connection: c, onError, onStatuChange, onConnectio
 	const onOneToOneConnect = (name, role) => {
 		let sp = selectedProperty;
 		if (role === sp.role) {
-			onError(`cannot connect two ${role} properties`);
+			showError(`cannot connect two ${role} properties`);
 			return;
 		}
 		let input = sp.role === 'input' ? sp.name : name;
@@ -256,22 +260,29 @@ const ConnectionMappings = ({ connection: c, onError, onStatuChange, onConnectio
 		for (let m of mappings) {
 			let err = m.validateProperties();
 			if (err != null) {
-				onError(err);
+				showError(err);
 				return;
 			}
 			let toSave = m.toServerFormat();
 			mps.push(toSave);
 		}
-		let [, err] = await call(`/api/connections/${c.ID}/mappings`, 'PUT', mps);
+		let [, err] = await API.connections.setMappings(c.ID, mps);
 		if (err) {
-			onError(err);
+			if (err instanceof NotFoundError) {
+				redirect('/admin/connections');
+				showStatus(statuses.connectionDoesNotExistAnymore);
+				return;
+			}
+			if (err instanceof UnprocessableError) {
+				if (err.code === 'AlreadyHasTransformation') {
+					showStatus(statuses.alreadyHasTransformation);
+				}
+				return;
+			}
+			showError(err);
 			return;
 		}
-		onStatuChange({
-			variant: 'success',
-			icon: 'check2-circle',
-			text: 'Your mappings have been successfully saved',
-		});
+		showStatus(statuses.mappingsSaved);
 		c.Mappings = mps;
 		onConnectionChange(c);
 	};

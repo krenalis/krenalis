@@ -46,6 +46,7 @@ var (
 	ConnectorNotExist           errors.Code = "ConnectorNotExist"
 	EventNotExist               errors.Code = "EventNotExist"
 	InvalidRefreshToken         errors.Code = "InvalidRefreshToken"
+	KeyNotExist                 errors.Code = "KeyNotExist"
 	NoStorage                   errors.Code = "NoStorage"
 	NoTransformationNorMappings errors.Code = "NoMappings"
 	QueryExecutionFailed        errors.Code = "QueryExecutionFailed"
@@ -246,10 +247,10 @@ func (this *Connection) RevokeKey(key string) error {
 	c := this.connection
 	connector := c.Connector()
 	if connector.Type != state.ServerType {
-		return errors.NotFound("connection %d is not a server", c.ID)
+		return errors.BadRequest("connection %d is not a server", c.ID)
 	}
 	if c.Role != state.SourceRole {
-		return errors.NotFound("server %d is not a source", c.ID)
+		return errors.BadRequest("server %d is not a source", c.ID)
 	}
 	n := state.RevokeConnectionKeyNotification{
 		Connection: c.ID,
@@ -270,7 +271,7 @@ func (this *Connection) RevokeKey(key string) error {
 			return err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.NotFound("key %q does not exist", n.Value)
+			return errors.Unprocessable(KeyNotExist, "key %q does not exist")
 		}
 		return tx.Notify(ctx, n)
 	})

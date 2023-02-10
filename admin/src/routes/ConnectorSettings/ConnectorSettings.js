@@ -1,12 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useContext } from 'react';
 import './ConnectorSettings.css';
 import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
 import ConnectorField from '../../components/ConnectorFields/ConnectorField';
 import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
-import Toast from '../../components/Toast/Toast';
-import call from '../../utils/call';
 import NotFound from '../NotFound/NotFound';
 import { SettingsContext } from '../../context/SettingsContext';
+import { AppContext } from '../../context/AppContext';
+import statuses from '../../constants/statuses';
 import { NavLink, Navigate } from 'react-router-dom';
 import {
 	SlButton,
@@ -16,6 +16,7 @@ import {
 	SlMenuItem,
 	SlIcon,
 } from '@shoelace-style/shoelace/dist/react/index.js';
+import { NotFoundError, UnprocessableError } from '../../api/errors';
 
 const ConnectorSettings = () => {
 	let [connector, setConnector] = useState(null);
@@ -30,10 +31,9 @@ const ConnectorSettings = () => {
 	let [actions, setActions] = useState([]);
 	let [values, setValues] = useState(null);
 	let [newConnectionID, setNewConnectionID] = useState(0);
-	let [status, setStatus] = useState(null);
 	let [notFound, setNotFound] = useState(false);
 
-	const toastRef = useRef();
+	let { API, showError, showStatus, redirect } = useContext(AppContext);
 
 	let connectorID, connectionRole, OAuthToken;
 	let url = new URL(document.location);
@@ -46,18 +46,17 @@ const ConnectorSettings = () => {
 	}
 	OAuthToken = url.searchParams.get('oauthToken') == null ? '' : url.searchParams.get('oauthToken');
 
-	const onError = (err) => {
-		setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
-		toastRef.current.toast();
-		return;
-	};
-
 	useEffect(() => {
 		const fetchData = async () => {
 			let err, connector;
-			[connector, err] = await call('/admin/connectors/get', 'POST', connectorID);
+			[connector, err] = await API.connectors.get(connectorID);
 			if (err) {
-				onError(err);
+				if (err instanceof NotFoundError) {
+					redirect('/admin/connectors');
+					showStatus(statuses.connectorDoesNotExistAnymore);
+					return;
+				}
+				showError(err);
 				return;
 			}
 			if (connector == null) {
@@ -69,7 +68,11 @@ const ConnectorSettings = () => {
 			let storages = [];
 			if (connector.Type === 'File') {
 				let connections;
-				[connections, err] = await call('/api/connections', 'GET');
+				[connections, err] = await API.connections.find();
+				if (err) {
+					showError(err);
+					return;
+				}
 				for (let c of connections) {
 					if (c.Type === 'Storage' && c.Role === connectionRole) storages.push(c);
 				}
@@ -81,7 +84,11 @@ const ConnectorSettings = () => {
 				connectionRole === 'Source'
 			) {
 				let connections;
-				[connections, err] = await call('/api/connections', 'GET');
+				[connections, err] = await API.connections.find();
+				if (err) {
+					showError(err);
+					return;
+				}
 				for (let c of connections) {
 					if (c.Type === 'Stream' && c.Role === connectionRole) streams.push(c);
 				}
@@ -89,13 +96,26 @@ const ConnectorSettings = () => {
 			setStreams(streams);
 			if (connector.HasSettings === false) return;
 			let ui;
-			[ui, err] = await call('/admin/connectors/ui', 'POST', {
-				Connector: connectorID,
-				Role: connectionRole,
-				OAuthToken: OAuthToken,
-			});
+			[ui, err] = await API.connectors.ui(connectorID, connectionRole, OAuthToken);
 			if (err) {
-				onError(err);
+				if (err instanceof NotFoundError) {
+					redirect('/admin/connectors');
+					showStatus(statuses.connectorDoesNotExistAnymore);
+					return;
+				}
+				if (err instanceof UnprocessableError) {
+					if (err.code === 'EventNotExist') {
+						// TODO(@Andrea): find a way to show the full error message
+						// in the toast notification when the server is started with
+						// the CHICHI_DEBUG_UI environment variable set to 'true'.
+						console.error(
+							`Unprocessable: connector does not implement the 'load' event in its ServeUI method`
+						);
+						showError('Unexpected error. Contact the administrator for more informations.');
+					}
+					return;
+				}
+				showError(err);
 				return;
 			}
 			setFields(ui.Form.Fields);
@@ -114,40 +134,58 @@ const ConnectorSettings = () => {
 		}
 		setFields(fls);
 		if (e === 'save') {
-			let [id, err] = await call('/api/workspace/add-connection', 'POST', {
-				Connector: connectorID,
-				Role: connectionRole,
-				Settings: values,
-				Options: {
-					Name: name,
-					Enabled: isEnabled,
-					Storage: storage,
-					Stream: stream,
-					WebsiteHost: websiteHost,
-					OAuth: OAuthToken,
-				},
+			let [id, err] = await API.workspace.addConnection(connectorID, connectionRole, values, {
+				Name: name,
+				Enabled: isEnabled,
+				Storage: storage,
+				Stream: stream,
+				WebsiteHost: websiteHost,
+				OAuth: OAuthToken,
 			});
 			if (err != null) {
-				onError(err);
+				if (err instanceof UnprocessableError) {
+					switch (err.code) {
+						case 'ConnectorNotExist':
+							redirect('/admin/connectors');
+							showStatus(statuses.connectorDoesNotExistAnymore);
+							break;
+						case 'InvalidSettings':
+							showStatus(statuses.settingsNotValid);
+							break;
+						case 'StorageNotExist':
+							showStatus(statuses.storageNotExist);
+							break;
+						case 'StreamNotExist':
+							showStatus(statuses.streamNotExist);
+							break;
+						default:
+							break;
+					}
+					return;
+				}
+				showError(err);
 				return;
 			}
 			setNewConnectionID(id);
 			return;
 		}
-		let [ui, err] = await call('/admin/connectors/ui-event', 'POST', {
-			connector: connectorID,
-			event: e,
-			values: values,
-			Role: connectionRole,
-			OAuthToken: OAuthToken,
-		});
+		let [ui, err] = await API.connectors.uiEvent(connectorID, e, values, connectionRole, OAuthToken);
 		if (err != null) {
-			onError(err);
+			if (err instanceof UnprocessableError) {
+				if (err.code === 'EventNotExist') {
+					// TODO(@Andrea): find a way to show the full error message
+					// in the toast notification when the server is started with
+					// the CHICHI_DEBUG_UI environment variable set to 'true'.
+					console.error(`Unprocessable: connection does not implement the ${e} event in its ServeUI method`);
+					showError('Unexpected error. Contact the administrator for more informations.');
+				}
+				return;
+			}
+			showError(err);
 			return;
 		}
 		if (ui.Alert != null) {
-			setStatus({ variant: ui.Alert.Variant, icon: 'exclamation-square', text: ui.Alert.Message });
-			toastRef.current.toast();
+			showStatus([ui.Alert.Variant, 'exclamation-square', ui.Alert.Message]);
 		}
 		if (ui.Form != null) {
 			setFields(ui.Form.Fields);
@@ -161,21 +199,36 @@ const ConnectorSettings = () => {
 	};
 
 	const onSave = async () => {
-		let [id, err] = await call('/api/workspace/add-connection', 'POST', {
-			Connector: connectorID,
-			Role: connectionRole,
-			Settings: null,
-			Options: {
-				Name: name,
-				Enabled: isEnabled,
-				Storage: storage,
-				Stream: stream,
-				WebsiteHost: websiteHost,
-				OAuth: OAuthToken,
-			},
+		let [id, err] = await API.workspace.addConnection(connectorID, connectionRole, values, {
+			Name: name,
+			Enabled: isEnabled,
+			Storage: storage,
+			Stream: stream,
+			WebsiteHost: websiteHost,
+			OAuth: OAuthToken,
 		});
 		if (err != null) {
-			onError(err);
+			if (err instanceof UnprocessableError) {
+				switch (err.code) {
+					case 'ConnectorNotExist':
+						redirect('/admin/connectors');
+						showStatus(statuses.connectorDoesNotExistAnymore);
+						break;
+					case 'InvalidSettings':
+						showStatus(statuses.settingsNotValid);
+						break;
+					case 'StorageNotExist':
+						showStatus(statuses.storageNotExist);
+						break;
+					case 'StreamNotExist':
+						showStatus(statuses.streamNotExist);
+						break;
+					default:
+						break;
+				}
+				return;
+			}
+			showError(err);
 			return;
 		}
 		setNewConnectionID(id);
@@ -230,7 +283,6 @@ const ConnectorSettings = () => {
 					<div className='text'>Add a {c.Name} connection</div>
 				</div>
 			</PrimaryBackground>
-			<Toast reactRef={toastRef} status={status} />
 			<div className='routeContent'>
 				<div className='settings'>
 					<div className='basic'>

@@ -1,17 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import './ConnectionOverview.css';
-import call from '../../utils/call';
 import FlexContainer from '../../components/FlexContainer/FlexContainer';
+import { AppContext } from '../../context/AppContext';
+import { NotFoundError, UnprocessableError } from '../../api/errors';
+import statuses from '../../constants/statuses';
 import { BarChart, Bar, XAxis, Tooltip, YAxis, CartesianGrid } from 'recharts';
 import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ConnectionOverview = ({ connection: c, onError, onStatusChange, isSelected }) => {
+const ConnectionOverview = ({ connection: c, isSelected }) => {
 	let [userStats, setUserStats] = useState([]);
 	let [imports, setImports] = useState([]);
 	let [hasImports, setHasImports] = useState(true);
 	let [askImportConfirmation, setAskImportConfirmation] = useState(false);
 	let [selectedError, setSelectedError] = useState('');
 	let [resetCursor, setResetCursor] = useState(false);
+
+	const { API, showStatus, showError, redirect } = useContext(AppContext);
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -22,9 +26,14 @@ const ConnectionOverview = ({ connection: c, onError, onStatusChange, isSelected
 			let err;
 			// get the stats.
 			let stats;
-			[stats, err] = await call(`/api/connections/${c.ID}/stats`, 'GET');
+			[stats, err] = await API.connections.stats(c.ID);
 			if (err) {
-				onError(err);
+				if (err instanceof NotFoundError) {
+					redirect('/admin/connections');
+					showStatus(statuses.connectionDoesNotExistAnymore);
+					return;
+				}
+				showError(err);
 				return;
 			}
 			let userStats = [];
@@ -40,9 +49,9 @@ const ConnectionOverview = ({ connection: c, onError, onStatusChange, isSelected
 
 			// get the imports.
 			let imports;
-			[imports, err] = await call('/admin/connections/imports', 'POST', c.ID);
+			[imports, err] = await API.connections.imports(c.ID);
 			if (err) {
-				onError(err);
+				showError(err);
 				return;
 			}
 			setImports(imports);
@@ -53,18 +62,45 @@ const ConnectionOverview = ({ connection: c, onError, onStatusChange, isSelected
 	const onImportConfirmation = async (e) => {
 		let button = e.currentTarget;
 		button.setAttribute('loading', '');
-		let [, err] = await call('/admin/import-raw-user-data-from-connector', 'POST', {
-			Connector: c.ID,
-			ResetCursor: resetCursor,
-		});
+		let [, err] = await API.connections.import(c.ID, resetCursor);
 		button.removeAttribute('loading');
 		if (err) {
-			onError(err);
+			if (err instanceof NotFoundError) {
+				redirect('/admin/connections');
+				showStatus(statuses.connectionDoesNotExistAnymore);
+				return;
+			}
+			if (err instanceof UnprocessableError) {
+				switch (err.code) {
+					case 'AlreadyInProgress':
+						showStatus(statuses.alreadyInProgress);
+						break;
+					case 'NoStorage':
+						showStatus(statuses.noStorage);
+						break;
+					case 'NoTransformationNorMappings':
+						showStatus(statuses.noTransformationNorMappings);
+						break;
+					case 'NoWarehouse':
+						showStatus(statuses.noWarehouse);
+						break;
+					case 'NotEnabled':
+						showStatus(statuses.notEnabled);
+						break;
+					case 'StorageNotEnabled':
+						showStatus(statuses.storageNotEnabled);
+						break;
+					default:
+						break;
+				}
+				return;
+			}
+			showError(err);
 			setAskImportConfirmation(false);
 			return;
 		}
 		setAskImportConfirmation(false);
-		onStatusChange({ variant: 'primary', icon: 'cloud-download', text: 'Your import has been started' });
+		showStatus(statuses.importStarted);
 	};
 
 	let cursorOptions = [

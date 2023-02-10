@@ -1,32 +1,24 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import './Schema.css';
 import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
 import Header from '../../components/Header/Header';
 import HeadedGrid from '../../components/HeadedGrid/HeadedGrid';
-import Toast from '../../components/Toast/Toast';
-import call from '../../utils/call';
+import { AppContext } from '../../context/AppContext';
+import statuses from '../../constants/statuses';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { UnprocessableError } from '../../api/errors';
 
 const Schema = () => {
 	let [properties, setProperties] = useState([]);
 	let [isLoading, setIsLoading] = useState(false);
-	let [status, setStatus] = useState(null);
 
-	let toastRef = useRef();
-
-	const onError = (err) => {
-		setTimeout(() => {
-			setStatus({ variant: 'danger', icon: 'exclamation-octagon', text: err });
-			toastRef.current.toast();
-			setIsLoading(false);
-		}, 500);
-	};
+	let { API, showError, showStatus } = useContext(AppContext);
 
 	useEffect(() => {
 		const fetchSchema = async () => {
-			let [schema, err] = await call('/admin/user-schema', 'GET');
-			if (err != null) {
-				onError(err);
+			let [schema, err] = await API.workspace.userSchema();
+			if (err) {
+				showError(err);
 				return;
 			}
 			setProperties(schema.properties);
@@ -36,27 +28,42 @@ const Schema = () => {
 		fetchSchema();
 	}, []);
 
-	const onReloadSchema = async () => {
+	const onReloadSchemas = async () => {
 		let err;
 		setIsLoading(true);
-		[, err] = await call('/api/workspace/reload-schemas', 'POST');
+		[, err] = await API.workspace.reloadSchemas();
 		if (err != null) {
+			if (err instanceof UnprocessableError) {
+				switch (err.code) {
+					case 'NotConnected':
+						showStatus(statuses.warehouseNotConnected);
+						break;
+					case 'WarehouseFailed':
+						showStatus(statuses.warehouseConnectionFailed);
+						break;
+					case 'InvalidSchemaTable':
+						showStatus(statuses.invalidSchemaTable);
+						break;
+					default:
+						break;
+				}
+				return;
+			}
 			setProperties([]);
-			onError(err);
+			showError(err);
 			return;
 		}
 		let schema;
-		[schema, err] = await call('/admin/user-schema', 'GET');
-		if (err != null) {
+		[schema, err] = await API.workspace.userSchema();
+		if (err) {
 			setProperties([]);
-			onError(err);
+			showError(err);
 			return;
 		}
 		setProperties(schema.properties);
 		setTimeout(() => {
 			setIsLoading(false);
-			setStatus({ variant: 'success', icon: 'check2-circle', text: 'The schema has been reloaded successfully' });
-			toastRef.current.toast();
+			showStatus(statuses.schemasReloaded);
 		}, 500);
 	};
 
@@ -69,11 +76,11 @@ const Schema = () => {
 					nestedRows.push(nr);
 				} else {
 					let name = pr.type.name;
-					if (name == 'Array' && 'itemType' in pr.type) {
-						name = 'Array (of ' + pr.type.itemType.name +' elements)'
+					if (name === 'Array' && 'itemType' in pr.type) {
+						name = 'Array (of ' + pr.type.itemType.name + ' elements)';
 					}
 					if ('enum' in pr.type) {
-						name += " (enum with values: " + pr.type.enum.join(', ') + ")"
+						name += ' (enum with values: ' + pr.type.enum.join(', ') + ')';
 					}
 					nestedRows.push([pr.name, name]);
 				}
@@ -87,11 +94,11 @@ const Schema = () => {
 				rows.push(nestedRows);
 			} else {
 				let name = p.type.name;
-				if (name == 'Array' && 'itemType' in p.type) {
-					name = 'Array (of ' + p.type.itemType.name +' elements)'
+				if (name === 'Array' && 'itemType' in p.type) {
+					name = 'Array (of ' + p.type.itemType.name + ' elements)';
 				}
 				if ('enum' in p.type) {
-					name += " (enum with values: " + p.type.enum.join(', ') + ")"
+					name += ' (enum with values: ' + p.type.enum.join(', ') + ')';
 				}
 				let row = [p.name, name];
 				rows.push(row);
@@ -109,11 +116,10 @@ const Schema = () => {
 				<Header />
 			</PrimaryBackground>
 			<div className='routeContent'>
-				<Toast reactRef={toastRef} status={status} />
 				<HeadedGrid columns={columns} rows={rows} title='Golden Record schema' isLoading={isLoading}>
-					<SlButton className='reloadSchema' variant='default' onClick={onReloadSchema}>
+					<SlButton className='reloadSchemas' variant='default' onClick={onReloadSchemas}>
 						<SlIcon name='arrow-clockwise' slot='prefix'></SlIcon>
-						Reload Schema
+						Reload Schemas
 					</SlButton>
 				</HeadedGrid>
 			</div>
