@@ -226,9 +226,13 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 		var err error
 		switch c.Type {
 		case state.AppType:
+			var clientSecret string
+			if c.OAuth != nil {
+				clientSecret = c.OAuth.ClientSecret
+			}
 			connection, err = _connector.RegisteredApp(c.Name).Open(ctx, &_connector.AppConfig{
 				Role:         _connector.Role(role),
-				ClientSecret: c.OAuth.ClientSecret,
+				ClientSecret: clientSecret,
 				Resource:     n.Resource.Code,
 				AccessToken:  n.Resource.AccessToken,
 			})
