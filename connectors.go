@@ -14,6 +14,7 @@ import (
 	_ "chichi/connectors/http"
 	_ "chichi/connectors/hubspot"
 	_ "chichi/connectors/kafka"
+	_ "chichi/connectors/klaviyo"
 	_ "chichi/connectors/mailchimp"
 	_ "chichi/connectors/mysql"
 	_ "chichi/connectors/parquet"

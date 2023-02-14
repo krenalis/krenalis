@@ -9,6 +9,7 @@ use (
 	./connectors/http
 	./connectors/hubspot
 	./connectors/kafka
+	./connectors/klaviyo
 	./connectors/mailchimp
 	./connectors/mysql
 	./connectors/parquet
