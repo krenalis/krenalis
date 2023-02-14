@@ -271,7 +271,7 @@ func (this *Connection) RevokeKey(key string) error {
 			return err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.Unprocessable(KeyNotExist, "key %q does not exist")
+			return errors.Unprocessable(KeyNotExist, "key %q does not exist", key)
 		}
 		return tx.Notify(ctx, n)
 	})
