@@ -134,7 +134,7 @@ CREATE TABLE connections_stats (
 
 CREATE TABLE connections_stats_events (
     hour integer NOT NULL,
-    source integer NOT NULL REFERENCES connections ON DELETE CASCADE,
+    source integer DEFAULT NULL REFERENCES connections ON DELETE CASCADE,
     server integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
     stream integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
     good_events integer NOT NULL,

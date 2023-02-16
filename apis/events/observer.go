@@ -238,7 +238,7 @@ func (observer *observer) flushStats(t time.Time) error {
 
 	err := observer.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		query := "INSERT INTO connections_stats_events AS s (hour, source, server, stream, good_events, bad_events)\n" +
-			"VALUES ($1, $2, NULLIF($3, 0), NULLIF($4, 0), $5, $6)\n" +
+			"VALUES ($1, NULLIF($2, 0), NULLIF($3, 0), NULLIF($4, 0), $5, $6)\n" +
 			"\tON CONFLICT (hour, source, server, stream) DO UPDATE SET good_events = s.good_events + EXCLUDED.good_events," +
 			" bad_events = s.bad_events + EXCLUDED.bad_events"
 		stmt, err := tx.Prepare(ctx, query)
