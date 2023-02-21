@@ -13,7 +13,7 @@ const ConnectionStorage = ({ connection: c, onConnectionChange }) => {
 	let { API, redirect, showError, showStatus } = useContext(AppContext);
 
 	useEffect(() => {
-		const fetchStreams = async () => {
+		const fetchStorages = async () => {
 			let [connections, err] = await API.connections.find();
 			if (err) {
 				showError(err);
@@ -27,7 +27,7 @@ const ConnectionStorage = ({ connection: c, onConnectionChange }) => {
 			}
 			setStorages(storages);
 		};
-		fetchStreams();
+		fetchStorages();
 	}, []);
 
 	const onChangeStorage = async (storage) => {
