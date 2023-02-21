@@ -56,5 +56,6 @@ CREATE TABLE events (
     utm_term varchar NOT NULL,
     utm_content varchar NOT NULL,
     target varchar NOT NULL,
-    text varchar NOT NULL
+    text varchar NOT NULL,
+    properties jsonb NOT NULL
 )

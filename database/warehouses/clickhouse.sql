@@ -56,7 +56,8 @@ CREATE TABLE events
     `utm_term` String,
     `utm_content` String,
     `target` String,
-    `text` String
+    `text` String,
+    `properties` String
 )
 ENGINE = MergeTree
 PRIMARY KEY (source, date, user_id, timestamp)

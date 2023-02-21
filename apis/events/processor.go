@@ -49,6 +49,9 @@ const (
 	maxEventsQueueLen = 10000
 )
 
+// emptyProperties represents an empty event properties.
+var emptyProperties = []byte("{}")
+
 type Event struct {
 	AnonymousId string
 	City        string
@@ -59,6 +62,7 @@ type Event struct {
 	Language    string
 	OSName      string
 	OSVersion   string
+	Properties  json.RawMessage
 	Referrer    string
 	Screen      struct {
 		Density float64
@@ -108,6 +112,7 @@ type Event struct {
 		title    string
 		url      string
 	}
+	properties string
 	receivedAt time.Time
 	screen     struct {
 		density uint16
@@ -519,14 +524,35 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 			continue
 		}
 
-		// Event.
-		if typ == state.MobileType {
-			// TODO(marco)
-		} else {
-			if e := event.Event; e != "pageview" && e != "click" {
-				event.err = errors.New("unknown event name")
+		// Properties.
+		if len(event.Properties) > 0 && !bytes.Equal(event.Properties, emptyProperties) {
+			if event.Properties[0] != '{' {
+				event.err = errors.New("properties is not a JSON object")
 				continue
 			}
+			// Decode the properties.
+			dec := json.NewDecoder(bytes.NewReader(event.Properties))
+			dec.UseNumber()
+			var properties map[string]any
+			err = dec.Decode(&properties)
+			if err != nil {
+				event.err = fmt.Errorf("unexpected error decoding properties: %s", err)
+				continue
+			}
+			// Encode the properties.
+			var b strings.Builder
+			enc := json.NewEncoder(&b)
+			enc.SetIndent("", "")
+			enc.SetEscapeHTML(false)
+			err = enc.Encode(properties)
+			if err != nil {
+				event.err = fmt.Errorf("unexpected error encoding properties: %s", err)
+				continue
+			}
+			s := b.String()
+			event.properties = s[:len(s)-1] // remove the new line.
+		} else {
+			event.properties = "{}"
 		}
 
 		// Language.
@@ -941,6 +967,7 @@ var batchEventsColumns = []string{
 	"utm_content",
 	"target",
 	"text",
+	"properties",
 }
 
 // flush flushes a batch of events to the data warehouse.
@@ -962,7 +989,7 @@ RETRY:
 			continue
 		}
 		for _, e := range events {
-			err := batch.Append(
+			err = batch.Append(
 				e.source,
 				e.AnonymousId,
 				e.UserId,
@@ -1000,6 +1027,7 @@ RETRY:
 				e.UTM.Content,
 				e.Target,
 				e.Text,
+				e.properties,
 			)
 			if err != nil {
 				log.Printf("[error] cannot log events: %s", err)
