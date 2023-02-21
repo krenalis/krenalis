@@ -30,8 +30,7 @@
     margin: 50px 0;
 }
 
-.ConnectorSettings .basic .noStorages,
-.ConnectorSettings .basic .noStreams {
+.ConnectorSettings .basic .noStorages {
     display: flex;
     gap: 20px;
     align-items: baseline;

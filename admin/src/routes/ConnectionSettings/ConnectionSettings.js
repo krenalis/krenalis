@@ -4,7 +4,6 @@ import ConnectionForm from '../../components/ConnectionForm/ConnectionForm';
 import ConnectionDeletion from '../../components/ConnectionDeletion/ConnectionDeletion';
 import ConnectionEnabling from '../../components/ConnectionEnabling/ConnectionEnabling';
 import ConnectionKeys from '../../components/ConnectionKeys/ConnectionKeys';
-import ConnectionStream from '../../components/ConnectionStream/ConnectionStream';
 import ConnectionStorage from '../../components/ConnectionStorage/ConnectionStorage';
 import { AppContext } from '../../context/AppContext';
 import { SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelace/dist/react/index.js';
@@ -52,17 +51,6 @@ const ConnectionSettings = ({ connection: c, onConnectionChange, isSelected }) =
 						<SlTabPanel name='storage'>
 							<div className='panelTitle'>Storage</div>
 							<ConnectionStorage connection={c} onConnectionChange={onConnectionChange} />
-						</SlTabPanel>
-					</>
-				)}
-				{(c.Type === 'Mobile' || c.Type === 'Website' || c.Type === 'Server') && c.Role === 'Source' && (
-					<>
-						<SlTab slot='nav' panel='stream'>
-							Stream
-						</SlTab>
-						<SlTabPanel name='stream'>
-							<div className='panelTitle'>Stream</div>
-							<ConnectionStream connection={c} onConnectionChange={onConnectionChange} />
 						</SlTabPanel>
 					</>
 				)}

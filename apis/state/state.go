@@ -54,7 +54,6 @@ type State struct {
 		ElectLeader            []func(ElectLeaderNotification)
 		SetConnectionSettings  []func(SetConnectionSettingsNotification)
 		SetConnectionStatus    []func(SetConnectionStatusNotification)
-		SetConnectionStream    []func(SetConnectionStreamNotification)
 		SetConnectionUserQuery []func(SetConnectionUserQueryNotification)
 		SetWarehouseSettings   []func(SetWarehouseSettingsNotification)
 	}
@@ -450,7 +449,6 @@ type Connection struct {
 	Enabled          bool
 	connector        *Connector
 	storage          *Connection
-	stream           *Connection
 	resource         *Resource
 	WebsiteHost      string
 	Keys             []string
@@ -488,15 +486,6 @@ func (connection *Connection) Connector() *Connector {
 	c := connection.connector
 	connection.mu.Unlock()
 	return c
-}
-
-// Stream returns the stream of the connection.
-// The boolean return value reports whether the connection has a stream.
-func (connection *Connection) Stream() (*Connection, bool) {
-	connection.mu.Lock()
-	s := connection.stream
-	connection.mu.Unlock()
-	return s, s != nil
 }
 
 // Storage returns the storage of the connection.

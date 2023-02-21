@@ -66,11 +66,6 @@ type ConnectionOptions struct {
 	// connection is not a file or has no storage.
 	Storage int
 
-	// Stream is the stream of a mobile, server, or website connection. It must
-	// be 0 if the connection is not a mobile, server, or website connection or
-	// has no stream.
-	Stream int
-
 	// WebsiteHost is the host, in the form "host:port", of a website
 	// connection. It must be empty if the connection is not a website. It
 	// cannot be longer than 261 runes.
@@ -88,7 +83,6 @@ type ConnectionOptions struct {
 //   - ConnectorNotExist, if the connector does not exist.
 //   - InvalidSettings, if the settings are not valid.
 //   - StorageNotExist, if the storage does not exist.
-//   - StreamNotExist, if the stream does not exist.
 func (this *Workspace) AddConnection(role ConnectionRole, connector int, settings []byte, opts ConnectionOptions) (int, error) {
 
 	if role != SourceRole && role != DestinationRole {
@@ -102,9 +96,6 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 	}
 	if opts.Storage < 0 || opts.Storage > maxInt32 {
 		return 0, errors.BadRequest("storage identifier %d is not valid", opts.Storage)
-	}
-	if opts.Stream < 0 || opts.Stream > maxInt32 {
-		return 0, errors.BadRequest("stream identifier %d is not valid", opts.Stream)
 	}
 
 	c, ok := this.state.Connector(connector)
@@ -143,28 +134,6 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 			return 0, errors.BadRequest("storage %d is not a destination", opts.Storage)
 		}
 		n.Storage = opts.Storage
-	}
-
-	// Validate the stream.
-	if opts.Stream > 0 {
-		if c.Type == state.MobileType || c.Type == state.ServerType || c.Type == state.WebsiteType {
-			return 0, errors.BadRequest("connector %d cannot have a stream, it's a %s",
-				c.ID, strings.ToLower(c.Type.String()))
-		}
-		s, ok := this.workspace.Connection(opts.Stream)
-		if !ok {
-			return 0, errors.Unprocessable(StreamNotExist, "stream %d does not exist", opts.Stream)
-		}
-		if s.Connector().Type != state.StreamType {
-			return 0, errors.BadRequest("connection %d is not a stream", opts.Stream)
-		}
-		if ConnectionRole(s.Role) != role {
-			if role == SourceRole {
-				return 0, errors.BadRequest("stream %d is not a source", opts.Stream)
-			}
-			return 0, errors.BadRequest("stream %d is not a destination", opts.Stream)
-		}
-		n.Stream = opts.Stream
 	}
 
 	// Validate the website host.
@@ -327,9 +296,9 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 		}
 		// Insert the connection.
 		_, err = tx.Exec(ctx, "INSERT INTO connections "+
-			"(id, workspace, name, type, role, enabled, connector, storage, stream, resource, website_host, settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, 0), NULLIF($9, 0), $10, $11, $12)", n.ID, n.Workspace,
-			n.Name, c.Type, n.Role, n.Enabled, n.Connector, n.Storage, n.Stream, n.Resource.ID, n.WebsiteHost, string(n.Settings))
+			"(id, workspace, name, type, role, enabled, connector, storage, resource, website_host, settings)"+
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, 0), $9, $10, $11)", n.ID, n.Workspace,
+			n.Name, c.Type, n.Role, n.Enabled, n.Connector, n.Storage, n.Resource.ID, n.WebsiteHost, string(n.Settings))
 		if err != nil {
 			if err != nil {
 				if postgres.IsForeignKeyViolation(err) {
@@ -340,8 +309,6 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 						err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
 					case "connections_storage_fkey":
 						err = errors.Unprocessable(StorageNotExist, "storage %d does not exist", n.Storage)
-					case "connections_stream_fkey":
-						err = errors.Unprocessable(StreamNotExist, "stream %d does not exist", n.Stream)
 					}
 				}
 			}
@@ -535,9 +502,6 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 	if s, ok := c.Storage(); ok {
 		connection.Storage = s.ID
 	}
-	if s, ok := c.Stream(); ok {
-		connection.Stream = s.ID
-	}
 	if conn.OAuth != nil {
 		connection.OAuthURL = conn.OAuth.URL
 	}
@@ -574,9 +538,6 @@ func (this *Workspace) Connections() []*Connection {
 		}
 		if s, ok := c.Storage(); ok {
 			connection.Storage = s.ID
-		}
-		if s, ok := c.Stream(); ok {
-			connection.Stream = s.ID
 		}
 		if conn.OAuth != nil {
 			connection.OAuthURL = conn.OAuth.URL

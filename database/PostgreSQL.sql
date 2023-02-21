@@ -84,7 +84,6 @@ CREATE TABLE connections (
     enabled boolean NOT NULL DEFAULT false,
     connector integer NOT NULL REFERENCES connectors ON DELETE RESTRICT,
     storage integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
-    stream integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
     resource integer NOT NULL DEFAULT 0,
     website_host varchar(261) NOT NULL DEFAULT '',
     user_cursor varchar(500) NOT NULL DEFAULT '',

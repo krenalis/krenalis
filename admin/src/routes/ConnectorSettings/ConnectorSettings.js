@@ -23,8 +23,6 @@ const ConnectorSettings = () => {
 	let [name, setName] = useState('');
 	let [storage, setStorage] = useState(0);
 	let [storages, setStorages] = useState([]);
-	let [stream, setStream] = useState(0);
-	let [streams, setStreams] = useState([]);
 	let [websiteHost, setWebsiteHost] = useState('');
 	let [isEnabled, setIsEnabled] = useState(true);
 	let [fields, setFields] = useState([]);
@@ -78,22 +76,6 @@ const ConnectorSettings = () => {
 				}
 			}
 			setStorages(storages);
-			let streams = [];
-			if (
-				(connector.Type === 'Mobile' || connector.Type === 'Website' || connector.Type === 'Server') &&
-				connectionRole === 'Source'
-			) {
-				let connections;
-				[connections, err] = await API.connections.find();
-				if (err) {
-					showError(err);
-					return;
-				}
-				for (let c of connections) {
-					if (c.Type === 'Stream' && c.Role === connectionRole) streams.push(c);
-				}
-			}
-			setStreams(streams);
 			if (connector.HasSettings === false) return;
 			let ui;
 			[ui, err] = await API.connectors.ui(connectorID, connectionRole, OAuthToken);
@@ -138,7 +120,6 @@ const ConnectorSettings = () => {
 				Name: name,
 				Enabled: isEnabled,
 				Storage: storage,
-				Stream: stream,
 				WebsiteHost: websiteHost,
 				OAuth: OAuthToken,
 			});
@@ -154,9 +135,6 @@ const ConnectorSettings = () => {
 							break;
 						case 'StorageNotExist':
 							showStatus(statuses.storageNotExist);
-							break;
-						case 'StreamNotExist':
-							showStatus(statuses.streamNotExist);
 							break;
 						default:
 							break;
@@ -203,7 +181,6 @@ const ConnectorSettings = () => {
 			Name: name,
 			Enabled: isEnabled,
 			Storage: storage,
-			Stream: stream,
 			WebsiteHost: websiteHost,
 			OAuth: OAuthToken,
 		});
@@ -219,9 +196,6 @@ const ConnectorSettings = () => {
 						break;
 					case 'StorageNotExist':
 						showStatus(statuses.storageNotExist);
-						break;
-					case 'StreamNotExist':
-						showStatus(statuses.streamNotExist);
 						break;
 					default:
 						break;
@@ -322,34 +296,6 @@ const ConnectorSettings = () => {
 								)}
 							</div>
 						)}
-						{(c.Type === 'Mobile' || c.Type === 'Website' || c.Type === 'Server') &&
-							connectionRole === 'Source' && (
-								<div className='inputWrapper'>
-									{streams.length === 0 ? (
-										<div className='noStreams'>
-											<div className='text'>
-												Currently there are no stream {connectionRole.toLowerCase()}s available
-											</div>
-											<SlButton variant='neutral'>
-												<SlIcon name='plus-circle' slot='suffix'></SlIcon>
-												Create one
-												<NavLink to={`/admin/connectors?role=${connectionRole}`}></NavLink>
-											</SlButton>
-										</div>
-									) : (
-										<SlSelect
-											name='stream'
-											value={stream}
-											label='Stream'
-											onSlChange={(e) => setStream(e.currentTarget.value)}
-										>
-											{streams.map((s) => {
-												return <SlMenuItem value={s.ID}>{s.Name}</SlMenuItem>;
-											})}
-										</SlSelect>
-									)}
-								</div>
-							)}
 						{c.Type === 'Website' && (
 							<>
 								<div className='inputWrapper'>

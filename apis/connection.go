@@ -51,7 +51,6 @@ var (
 	NoTransformationNorMappings errors.Code = "NoMappings"
 	QueryExecutionFailed        errors.Code = "QueryExecutionFailed"
 	StorageNotExist             errors.Code = "StorageNotExist"
-	StreamNotExist              errors.Code = "StreamNotExist"
 	TooManyKeys                 errors.Code = "TooManyKeys"
 	UniqueKey                   errors.Code = "UniqueKey"
 	WorkspaceNotExist           errors.Code = "WorkspaceNotExist"
@@ -66,7 +65,6 @@ type Connection struct {
 	Type           ConnectorType
 	Role           ConnectionRole
 	Storage        int    // zero if the connection is not a file or does not have a storage.
-	Stream         int    // zero if the connection is not an app, website or server or does not have a stream.
 	OAuthURL       string // empty if the connection does not use OAuth.
 	HasSettings    bool
 	LogoURL        string
@@ -924,72 +922,6 @@ func (this *Connection) SetStorage(storage int) error {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "connections_storage_fkey" {
 					err = errors.Unprocessable(StorageNotExist, "storage %d does not exist", storage)
-				}
-			}
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			return errors.NotFound("connection %d does not exist", n.Connection)
-		}
-		return tx.Notify(ctx, n)
-	})
-
-	return err
-}
-
-// SetStream sets the stream of the connection. The connection must be a
-// source mobile, server or website connection. stream is the stream
-// connection. The connection and the stream must have the same role. As a
-// special case, the current stream of the connection, if there is one, is
-// removed if the stream argument is 0.
-//
-// It returns an errors.NotFoundError error if the connection does not exist
-// anymore.
-// It returns an errors.UnprocessableError error with code StreamNotExist, if
-// the stream does exist.
-func (this *Connection) SetStream(stream int) error {
-
-	if stream < 0 || stream > maxInt32 {
-		return errors.BadRequest("stream identifier %d is not valid", stream)
-	}
-
-	c := this.connection
-	switch c.Connector().Type {
-	case state.MobileType, state.ServerType, state.WebsiteType:
-	default:
-		return errors.BadRequest("source is not a mobile, server or website connector")
-	}
-	var s *state.Connection
-	if stream > 0 {
-		var ok bool
-		s, ok = c.Workspace().Connection(stream)
-		if !ok {
-			return errors.Unprocessable(StreamNotExist, "stream %d does not exist", stream)
-		}
-		if s.Connector().Type != state.StreamType {
-			return errors.BadRequest("connection %d is not a stream", stream)
-		}
-		if s.Role != c.Role {
-			if c.Role == state.SourceRole {
-				return errors.BadRequest("stream %d is not a source", stream)
-			}
-			return errors.BadRequest("stream %d is not a destination", stream)
-		}
-	}
-
-	n := state.SetConnectionStreamNotification{
-		Connection: c.ID,
-		Stream:     stream,
-	}
-
-	ctx := context.Background()
-
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE connections SET stream = NULLIF($1, 0) WHERE id = $2", n.Stream, n.Connection)
-		if err != nil {
-			if postgres.IsForeignKeyViolation(err) {
-				if postgres.ErrConstraintName(err) == "connections_stream_fkey" {
-					err = errors.Unprocessable(StreamNotExist, "stream %d does not exist", stream)
 				}
 			}
 			return err

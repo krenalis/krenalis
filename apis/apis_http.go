@@ -366,17 +366,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				err = connection.RevokeKey(key)
 				respond(w, err)
 			})
-			router.Put("/stream/{stream}", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				stream, _ := strconv.Atoi(chi.URLParam(r, "stream"))
-				err = connection.SetStream(stream)
-				respond(w, err)
-			})
 			router.Put("/storage/{storage}", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)

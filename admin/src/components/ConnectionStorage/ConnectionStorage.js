@@ -97,7 +97,7 @@ const ConnectionStorage = ({ connection: c, onConnectionChange }) => {
 				label={`Select a storage`}
 			>
 				{dialogStorages.length === 0 ? (
-					<div className='noStream'>No Storage available</div>
+					<div className='noStorage'>No Storage available</div>
 				) : (
 					dialogStorages.map((s) => (
 						<FlexContainer className='storage' alignItems='center' justifyContent='space-between' gap={20}>

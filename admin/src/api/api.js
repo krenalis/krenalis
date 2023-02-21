@@ -75,13 +75,6 @@ class Connections {
 		);
 	};
 
-	setStream = async (connection, stream) => {
-		return await call(
-			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/stream/${stream}`,
-			http.PUT
-		);
-	};
-
 	setStatus = async (connection, enabled) => {
 		return await call(`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/status`, http.POST, {
 			enabled: enabled,

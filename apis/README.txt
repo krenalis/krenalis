@@ -17,7 +17,6 @@ POST    /api/connections/{id}/set-users-query     Set the query of a connection
 GET     /api/connections/{id}/keys                Get the API keys of a connection
 POST    /api/connections/{id}/keys                Generate a new API key for a connection
 DELETE  /api/connections/{id}/keys/{id}           Delete the API key of a connection
-PUT     /api/connections/{id}/stream/{id}         Set the stream of a connection
 PUT     /api/connections/{id}/storage/{id}        Set the storage of a connection
 GET     /api/connections/{id}/transformation      Get the transformation of a connection
 PUT     /api/connections/{id}/transformation      Set the transformation of a connection

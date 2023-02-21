@@ -56,19 +56,7 @@ const ConnectionsMap = () => {
 						newConnection={newConnection}
 					></LinkedConnectionBlocks>
 				);
-			} else if (c.Type === 'Stream') {
-				let streamed = sources.filter((cn) => cn.Stream === c.ID);
-				connections.push(
-					<LinkedConnectionBlocks
-						primaryConnection={c}
-						primaryColumn={c.Role === 'Source' ? 'right' : 'left'}
-						secondaryConnections={streamed}
-						startAnchor={c.Role === 'Source' ? 'left' : 'right'}
-						endAnchor={c.Role === 'Source' ? 'right' : 'left'}
-						newConnection={newConnection}
-					></LinkedConnectionBlocks>
-				);
-			} else if (c.Storage === 0 && c.Stream === 0) {
+			} else if (c.Storage === 0) {
 				connections.push(<ConnectionBlock connection={c} isNew={c.ID === newConnection}></ConnectionBlock>);
 			}
 		}
@@ -116,7 +104,7 @@ const ConnectionsMap = () => {
 			</div>
 			<div className='arrows'>
 				{sources.map((c) => {
-					if (c.Storage === 0 && c.Stream === 0) {
+					if (c.Storage === 0) {
 						return (
 							<Arrow
 								start={`${c.ID}`}
@@ -130,7 +118,7 @@ const ConnectionsMap = () => {
 					return null;
 				})}
 				{destinations.map((c) => {
-					if (c.Storage === 0 && c.Stream === 0) {
+					if (c.Storage === 0) {
 						return (
 							<Arrow
 								start={`${c.ID}`}

@@ -170,16 +170,16 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all connections.
 		state.connections = map[int]*Connection{}
-		err = state.db.QueryScan(ctx, "SELECT id, workspace, name, role, enabled, connector, COALESCE(storage, 0),"+
-			" COALESCE(stream, 0), resource, website_host, user_cursor, identity_column, timestamp_column,"+
-			"(transformation).in_types, (transformation).out_types, (transformation).python_source,"+
-			"settings, schema, users_query, health FROM connections", func(rows *postgres.Rows) error {
+		err = state.db.QueryScan(ctx, "SELECT id, workspace, name, role, enabled, connector,"+
+			" COALESCE(storage, 0), resource, website_host, user_cursor, identity_column, timestamp_column,"+
+			" (transformation).in_types, (transformation).out_types, (transformation).python_source,"+
+			" settings, schema, users_query, health FROM connections", func(rows *postgres.Rows) error {
 			for rows.Next() {
-				var workspaceID, connector, storage, stream, resource int
+				var workspaceID, connector, storage, resource int
 				var transformIn, transformOut, transformSrc string
 				var rawSchema string
 				c := Connection{}
-				if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &c.Role, &c.Enabled, &connector, &storage, &stream, &resource,
+				if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &c.Role, &c.Enabled, &connector, &storage, &resource,
 					&c.WebsiteHost, &c.UserCursor, &c.IdentityColumn, &c.TimestampColumn,
 					&transformIn, &transformOut, &transformSrc, &c.Settings, &rawSchema, &c.UsersQuery, &c.Health); err != nil {
 					return err
@@ -195,14 +195,6 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					} else {
 						c.storage = &Connection{}
 						state.connections[storage] = c.storage
-					}
-				}
-				if stream > 0 {
-					if st, ok := state.connections[stream]; ok {
-						c.stream = st
-					} else {
-						c.stream = &Connection{}
-						state.connections[stream] = c.stream
 					}
 				}
 				if resource > 0 {

@@ -52,8 +52,6 @@ func (state *State) AddListener(listener any) {
 		state.listeners.SetConnectionSettings = append(state.listeners.SetConnectionSettings, l)
 	case func(SetConnectionStatusNotification):
 		state.listeners.SetConnectionStatus = append(state.listeners.SetConnectionStatus, l)
-	case func(SetConnectionStreamNotification):
-		state.listeners.SetConnectionStream = append(state.listeners.SetConnectionStream, l)
 	case func(SetConnectionUserQueryNotification):
 		state.listeners.SetConnectionUserQuery = append(state.listeners.SetConnectionUserQuery, l)
 	case func(SetWarehouseSettingsNotification):
@@ -121,8 +119,6 @@ func (state *State) keepState() {
 			state.setConnectionSettings(n)
 		case "SetConnectionStorage":
 			state.setConnectionStorage(n)
-		case "SetConnectionStream":
-			state.setConnectionStream(n)
 		case "SetConnectionStatus":
 			state.setConnectionStatus(n)
 		case "SetConnectionTransformation":
@@ -177,11 +173,6 @@ func (state *State) replaceConnection(id int, f func(*Connection)) *Connection {
 		if connection.storage == c {
 			connection.mu.Lock()
 			connection.storage = cc
-			connection.mu.Unlock()
-		}
-		if connection.stream == c {
-			connection.mu.Lock()
-			connection.stream = cc
 			connection.mu.Unlock()
 		}
 		if imp := connection.importInProgress; imp != nil {
@@ -270,7 +261,6 @@ type AddConnectionNotification struct {
 	Enabled   bool           // enabled or disabled
 	Connector int            // connector identifier
 	Storage   int            // storage identifier, can be zero
-	Stream    int            // stream identifier, can be zero
 	Resource  struct {       // resource.
 		ID           int       // identifier, can be zero
 		Code         string    // code, can be empty.
@@ -336,7 +326,6 @@ func (state *State) addConnection(n postgres.Notification) {
 		Enabled:     e.Enabled,
 		connector:   connector,
 		storage:     state.connections[e.Storage],
-		stream:      state.connections[e.Stream],
 		resource:    r,
 		WebsiteHost: e.WebsiteHost,
 		Settings:    e.Settings,
@@ -486,11 +475,6 @@ func (state *State) deleteConnection(n postgres.Notification) {
 		if c.storage == connection {
 			c.mu.Lock()
 			c.storage = nil
-			c.mu.Unlock()
-		}
-		if c.stream == connection {
-			c.mu.Lock()
-			c.stream = nil
 			c.mu.Unlock()
 		}
 	}
@@ -749,29 +733,6 @@ func (state *State) setConnectionStorage(n postgres.Notification) {
 	c.mu.Lock()
 	c.storage = storage
 	c.mu.Unlock()
-}
-
-// SetConnectionStreamNotification is the notification event sent when the
-// settings of a connection is changed.
-type SetConnectionStreamNotification struct {
-	Connection int
-	Stream     int
-}
-
-// setConnectionStream sets the stream of a connection.
-func (state *State) setConnectionStream(n postgres.Notification) {
-	e := SetConnectionStreamNotification{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	c := state.connections[e.Connection]
-	stream := state.connections[e.Stream]
-	c.mu.Lock()
-	c.stream = stream
-	c.mu.Unlock()
-	for _, listener := range state.listeners.SetConnectionStream {
-		listener(e)
-	}
 }
 
 // SetConnectionTransformationNotification is the notification event sent when
