@@ -49,6 +49,7 @@ func TestScan(t *testing.T) {
 		{"boolean", "true", reflect.TypeOf(false), true},
 		{"inet", "'127.0.0.1'", reflect.TypeOf(netip.Addr{}), netip.MustParseAddr("127.0.0.1")},
 		{"uuid", "'4d92d698-687d-4447-b34f-6b29d74a9730'", reflect.TypeOf([16]uint8{}), [16]uint8(uuid.MustParse("4d92d698-687d-4447-b34f-6b29d74a9730"))},
+		{"jsonb", "'{\"foo\": \"boo\"}'", reflect.TypeOf(""), "{\"foo\": \"boo\"}"},
 	}
 
 	settingsFile, ok := os.LookupEnv(settingsEnvKey)
@@ -177,6 +178,7 @@ func TestScanToAny(t *testing.T) {
 		{"boolean", "true", "", "bool"},
 		{"inet", "'127.0.0.1'", "", "netip.Prefix"},
 		{"uuid", "'4d92d698-687d-4447-b34f-6b29d74a9730'", "", "[16]uint8"},
+		{"jsonb", "'{\"foo\": \"boo\"}'", "", "map[string]interface {}"},
 		{"integer[]", "'{1,2,3}'", "", "[]interface {}"},
 	}
 
