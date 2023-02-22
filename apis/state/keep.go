@@ -279,8 +279,8 @@ func (state *State) addConnection(n postgres.Notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	workspace, _ := state.workspaces[e.Workspace]
-	connector, _ := state.connectors[e.Connector]
+	workspace := state.workspaces[e.Workspace]
+	connector := state.connectors[e.Connector]
 	var r *Resource
 	if connector.OAuth != nil {
 		if _, ok := state.resources[e.Resource.ID]; ok {
