@@ -6,7 +6,7 @@ import GridNestedRows from '../GridNestedRows/GridNestedRows';
 import getChildIndexClassname from '../../utils/getChildIndexClassname';
 import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const Grid = ({ columns, rows, isLoading }) => {
+const Grid = ({ columns, rows, isLoading, actions }) => {
 	let gridRows = [];
 	for (let [i, cells] of rows.entries()) {
 		let className = getChildIndexClassname(i, rows.length);
@@ -14,11 +14,14 @@ const Grid = ({ columns, rows, isLoading }) => {
 			gridRows.push(<GridNestedRows rows={cells} className={`GridNestedRows ${className}`} nesting={1} />);
 			continue;
 		}
-		gridRows.push(<GridRow cells={cells} className={`GridRow ${className}`} />);
+		gridRows.push(<GridRow cells={cells} className={`GridRow ${className}`} actions={actions} />);
 	}
 
+	let columnsLength = columns.length;
+	if (actions) columnsLength += 1;
+
 	return (
-		<div className='Grid' style={{ '--grid-columns': `repeat(${columns.length}, 1fr)` }}>
+		<div className='Grid' style={{ '--grid-columns': `repeat(${columnsLength}, 1fr)` }}>
 			{isLoading ? (
 				<div className='loading'>
 					<SlSpinner

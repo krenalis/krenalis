@@ -4,7 +4,8 @@
 }
 
 .StyledGrid .Grid .GridHeaderCell,
-.StyledGrid .Grid .GridCell {
+.StyledGrid .Grid .GridCell,
+.StyledGrid .Grid .actions {
     background-color: var(--bg-primary);
     padding: 15px 0;
 }
@@ -39,6 +40,7 @@
 }
 
 .StyledGrid .Grid .GridRow.even .GridCell,
+.StyledGrid .Grid .GridRow.even .actions,
 .StyledGrid .Grid .GridNestedRows.even .GridRow.parent .GridCell {
     background-color: var(--bg-gray);
 }
@@ -52,5 +54,17 @@
 }
 
 .StyledGrid .Grid .GridRow.last .GridCell.last {
+    border-bottom-right-radius: var(--radius);
+}
+
+.StyledGrid .Grid .GridRow .actions {
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.StyledGrid .Grid .GridRow.last .actions {
     border-bottom-right-radius: var(--radius);
 }
