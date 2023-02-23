@@ -77,6 +77,11 @@ func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnecti
 	return &c, nil
 }
 
+// ActionTypes returns the connection's action types.
+func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
+	return nil, nil
+}
+
 // Groups returns the groups starting from the given cursor.
 func (c *connection) Groups(cursor string, properties []connector.PropertyPath) error {
 

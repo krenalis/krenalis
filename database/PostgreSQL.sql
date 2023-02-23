@@ -69,7 +69,7 @@ CREATE TYPE role AS ENUM ('Source', 'Destination');
 
 CREATE TYPE connection_health AS ENUM ('Healthy', 'NoRecentData', 'RecentError', 'AccessDenied');
 
-CREATE TYPE connection_transformation AS (
+CREATE TYPE transformation AS (
     in_types text,
     out_types text,
     python_source text
@@ -89,11 +89,23 @@ CREATE TABLE connections (
     user_cursor varchar(500) NOT NULL DEFAULT '',
     identity_column varchar(100) NOT NULL DEFAULT '',
     timestamp_column varchar(100) NOT NULL DEFAULT '',
-    transformation connection_transformation NOT NULL DEFAULT '("", "", "")',
+    transformation transformation NOT NULL DEFAULT '("", "", "")',
     settings varchar(65535),
     schema text NOT NULL DEFAULT '',
     users_query text NOT NULL DEFAULT '',
     health connection_health NOT NULL DEFAULT 'Healthy',
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE actions (
+    id SERIAL,
+    connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
+    action_type int NOT NULL,
+    name varchar(60) NOT NULL DEFAULT '',
+    enabled boolean NOT NULL DEFAULT FALSE,
+    filter text NOT NULL DEFAULT '',
+    mapping text NOT NULL DEFAULT '',
+    transformation transformation NOT NULL DEFAULT '("", "", "")',
     PRIMARY KEY (id)
 );
 

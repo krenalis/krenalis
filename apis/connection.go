@@ -314,6 +314,132 @@ func (this *Connection) SetStatus(enabled bool) error {
 	return err
 }
 
+// Action returns the action with identifier id of the destination connection of
+// type app.
+// It returns an errors.NotFound error if the action does not exist.
+func (this *Connection) Action(id int) (*Action, error) {
+	c := this.connection
+	if c.Role != state.DestinationRole {
+		return nil, errors.BadRequest("connection is not a destination")
+	}
+	connector := c.Connector()
+	if connector.Type != state.AppType {
+		return nil, errors.BadRequest("connection type is not app")
+	}
+	if id < 1 || id > maxInt32 {
+		return nil, errors.BadRequest("identifier %d is not a valid action identifier", id)
+	}
+	a, ok := this.connection.Action(id)
+	if !ok {
+		return nil, errors.NotFound("action %d does not exist", id)
+	}
+	action := Action{
+		db:             this.db,
+		ID:             a.ID,
+		Connection:     this.connection.ID,
+		ActionType:     a.ActionType,
+		Name:           a.Name,
+		Enabled:        a.Enabled,
+		Filter:         a.Filter,
+		Mapping:        a.Mapping,
+		Transformation: (*Transformation)(a.Transformation),
+		action:         a,
+	}
+	return &action, nil
+}
+
+// Actions returns the actions of the connection.
+func (this *Connection) Actions() []*Action {
+	as := this.connection.Actions()
+	actions := make([]*Action, len(as))
+	for i, a := range as {
+		action := Action{
+			db:             this.db,
+			ID:             a.ID,
+			Connection:     this.connection.ID,
+			ActionType:     a.ActionType,
+			Name:           a.Name,
+			Enabled:        a.Enabled,
+			Filter:         a.Filter,
+			Mapping:        a.Mapping,
+			Transformation: (*Transformation)(a.Transformation),
+			action:         a,
+		}
+		actions[i] = &action
+	}
+	return actions
+}
+
+// ActionTypes returns the action types of the connection, which must be a
+// destination of type app.
+func (this *Connection) ActionTypes() ([]*ActionType, error) {
+
+	// Make validations.
+	c := this.connection
+	if c.Role != state.DestinationRole {
+		return nil, errors.BadRequest("connection is not a destination")
+	}
+	connector := c.Connector()
+	if connector.Type != state.AppType {
+		return nil, errors.BadRequest("connection type is not app")
+	}
+
+	cRole := _connector.Role(c.Role)
+
+	// Retrieve the resource secrets, if necessary.
+	var clientSecret, resourceCode, accessToken string
+	if r, ok := c.Resource(); ok {
+		clientSecret = connector.OAuth.ClientSecret
+		resourceCode = r.Code
+		var err error
+		accessToken, err = freshAccessToken(this.db, r)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Instantiate a firehose.
+	fh := this.newFirehose(context.Background())
+	connection, err := _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
+		Role:         cRole,
+		Settings:     c.Settings,
+		Firehose:     fh,
+		ClientSecret: clientSecret,
+		Resource:     resourceCode,
+		AccessToken:  accessToken,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Retrieve the action types from the connection.
+	actionTypes, err := connection.ActionTypes()
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert the action types.
+	aTypes := make([]*ActionType, len(actionTypes))
+	for i, at := range actionTypes {
+		aTypes[i] = &ActionType{
+			ID:                   at.ID,
+			Name:                 at.Name,
+			Description:          at.Description,
+			Schema:               at.Schema,
+			AdditionalProperties: at.AdditionalProperties,
+			SuggestedFilter: ActionFilter{
+				Logical: at.SuggestedFilter.Logical,
+			},
+		}
+		aTypes[i].SuggestedFilter.Conditions = make([]ActionFilterCondition, len(at.SuggestedFilter.Conditions))
+		for j := range at.SuggestedFilter.Conditions {
+			aTypes[i].SuggestedFilter.Conditions[j] = (ActionFilterCondition)(at.SuggestedFilter.Conditions[j])
+		}
+	}
+
+	return aTypes, nil
+}
+
 // Column represents a column of a database connection.
 type Column struct {
 	Name string
@@ -552,6 +678,88 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 	return marshalUIFormAlert(form, alert, ui.Role(c.Role))
 }
 
+// AddAction adds the action to the destination connection of type app,
+// returning its identifier.
+//
+// The action name must be a non-empty valid UTF-8 encoded string and cannot be
+// longer than 60 runes. The action must have a mapping associated or a
+// function, and cannot have both.
+//
+// If it has a mapping, the names of the mapped properties must be valid
+// property names.
+//
+// If it has a transformation, such transformation should have at least one
+// input and one output property, and its source should be a valid Python
+// source.
+// TODO(Gianluca): specify how this transformation function should be written,
+// depending on the use on the events dispatcher.
+//
+// It returns an errors.NotFoundError error if the connection does not exist
+// anymore.
+func (this *Connection) AddAction(action ActionToSet) (int, error) {
+	c := this.connection
+	if c.Role != state.DestinationRole {
+		return 0, errors.BadRequest("connection is not a destination")
+	}
+	connector := c.Connector()
+	if connector.Type != state.AppType {
+		return 0, errors.BadRequest("connection type is not app")
+	}
+	err := validateAction(action)
+	if err != nil {
+		return 0, errors.BadRequest(err.Error())
+	}
+	n := state.AddConnectionActionNotification{
+		Connection:     c.ID,
+		ActionType:     action.ActionType,
+		Name:           action.Name,
+		Enabled:        action.Enabled,
+		Filter:         action.Filter,
+		Mapping:        action.Mapping,
+		Transformation: (*state.Transformation)(action.Transformation),
+	}
+	ctx := context.Background()
+	var filter, mapping, tIn, tOut, tSource []byte
+	filter, err = json.Marshal(action.Filter)
+	if err != nil {
+		return 0, err
+	}
+	if action.Mapping != nil {
+		mapping, err = json.Marshal(action.Mapping)
+		if err != nil {
+			return 0, err
+		}
+	}
+	if t := action.Transformation; t != nil {
+		tIn, err = json.Marshal(t.In)
+		if err != nil {
+			return 0, err
+		}
+		tOut, err = json.Marshal(t.Out)
+		if err != nil {
+			return 0, err
+		}
+		tSource = []byte(t.PythonSource)
+	}
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		query := "INSERT INTO actions (connection, action_type, name, enabled,\n" +
+			"filter, mapping, transformation.in_types, transformation.out_types,\n" +
+			"transformation.python_source) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\n" +
+			"RETURNING id"
+		err := tx.QueryRow(ctx, query, n.Connection, n.ActionType, n.Name,
+			n.Enabled, string(filter), string(mapping), string(tIn), string(tOut), string(tSource)).
+			Scan(&n.ID)
+		if err != nil {
+			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {
+				err = errors.Unprocessable(ConnectorNotExist, "connection %d does not exist", n.Connection)
+			}
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+	return n.ID, err
+}
+
 // SetTransformation sets the transformation of the connection. The connection
 // must be an app, database or file connection. Calling this method with a nil
 // transformation removes the transformation associated to the connection.
@@ -603,21 +811,9 @@ func (this *Connection) SetTransformation(transformation *Transformation) error 
 	}
 
 	// Validate the transformation.
-	if !transformation.In.Valid() || transformation.In.PhysicalType() != types.PtObject {
-		return errors.BadRequest("input schema is invalid")
-	}
-	if len(transformation.In.Properties()) == 0 {
-		return errors.BadRequest("input schema does not have properties")
-	}
-	if !transformation.Out.Valid() || transformation.Out.PhysicalType() != types.PtObject {
-		return errors.BadRequest("output schema is invalid")
-	}
-	if len(transformation.Out.Properties()) == 0 {
-		return errors.BadRequest("output schema does not have properties")
-	}
-	// TODO(Gianluca): do a proper validation of the Python source code.
-	if !strings.Contains(transformation.PythonSource, "def transform") {
-		return errors.BadRequest("Python source code does not contain 'transform' function")
+	err := validateTransformation(transformation)
+	if err != nil {
+		return errors.BadRequest(err.Error())
 	}
 
 	n := state.SetConnectionTransformationNotification{
@@ -1703,5 +1899,31 @@ func (role *ConnectionRole) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("invalid apis.ConnectionRole: %s", s)
 	}
 	*role = r
+	return nil
+}
+
+// validateTransformation validates the given not-nil transformation, returning
+// nil if the transformation is valid or an error with an error message
+// explaining why the transformation is invalid.
+func validateTransformation(t *Transformation) error {
+	if t == nil {
+		panic("t is nil")
+	}
+	if !t.In.Valid() || t.In.PhysicalType() != types.PtObject {
+		return errors.New("input schema is invalid")
+	}
+	if len(t.In.Properties()) == 0 {
+		return errors.New("input schema does not have properties")
+	}
+	if !t.Out.Valid() || t.Out.PhysicalType() != types.PtObject {
+		return errors.New("output schema is invalid")
+	}
+	if len(t.Out.Properties()) == 0 {
+		return errors.New("output schema does not have properties")
+	}
+	// TODO(Gianluca): do a proper validation of the Python source code.
+	if !strings.Contains(t.PythonSource, "def transform") {
+		return errors.New("Python source code does not contain 'transform' function")
+	}
 	return nil
 }

@@ -46,6 +46,30 @@ func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnecti
 	return &c, nil
 }
 
+// ActionTypes returns the connection's action types.
+func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
+	actionTypes := []*connector.ActionType{
+		{
+			ID:          1,
+			Name:        "Send Add to Cart",
+			Description: "Send an Add to Cart event to Dummy",
+			Schema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "item_name", Type: types.Text()},
+				{Name: "item_id", Type: types.Int()},
+			}),
+			AdditionalProperties: false,
+			SuggestedFilter: connector.ActionFilter{
+				Logical: "and",
+				Conditions: []connector.ActionFilterCondition{
+					{Property: "Event Type", Operator: "is", Value: "Track"},
+				},
+			},
+		},
+	}
+	return actionTypes, nil
+}
+
 func (c *connection) Groups(cursor string, properties []connector.PropertyPath) error {
 	panic("not implemented")
 }

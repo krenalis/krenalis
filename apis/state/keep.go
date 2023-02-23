@@ -21,6 +21,7 @@ import (
 	"chichi/apis/warehouses"
 	"chichi/apis/warehouses/clickhouse"
 	"chichi/apis/warehouses/postgresql"
+	"chichi/connector"
 
 	"github.com/google/uuid"
 )
@@ -91,6 +92,8 @@ func (state *State) keepState() {
 		switch n.Name {
 		case "AddConnection":
 			state.addConnection(n)
+		case "AddConnectionAction":
+			state.addConnectionAction(n)
 		case "AddConnectionKey":
 			state.addConnectionKey(n)
 		case "AddImportInProgress":
@@ -99,6 +102,8 @@ func (state *State) keepState() {
 			state.addWorkspace(n)
 		case "DeleteConnection":
 			state.deleteConnection(n)
+		case "DeleteConnectionAction":
+			state.deleteConnectionAction(n)
 		case "DeleteImportInProgress":
 			state.deleteImportInProgress(n)
 		case "DeleteWorkspace":
@@ -113,6 +118,10 @@ func (state *State) keepState() {
 			state.renameWorkspace(n)
 		case "RevokeConnectionKey":
 			state.revokeConnectionKey(n)
+		case "SetConnectionAction":
+			state.setConnectionAction(n)
+		case "SetConnectionActionStatus":
+			state.setConnectionActionStatus(n)
 		case "SeeLeader":
 			state.seeLeader(n)
 		case "SetConnectionSettings":
@@ -152,6 +161,25 @@ func decodeNotification(n postgres.Notification, e any) bool {
 	return true
 }
 
+// replaceAction calls the function f passing a copy of the action with
+// identifier id. After f is returned, it replaces the action with its copy in
+// the state and returns the latter.
+func (state *State) replaceAction(id int, f func(*Action)) *Action {
+	a := state.actions[id]
+	aa := new(Action)
+	*aa = *a
+	f(aa)
+	state.mu.Lock()
+	state.actions[id] = aa
+	state.mu.Unlock()
+	// Update the connection.
+	c := a.connection
+	c.mu.Lock()
+	c.actions[id] = aa
+	c.mu.Unlock()
+	return aa
+}
+
 // replaceConnection calls the function f passing a copy of the connection with
 // identifier id. After f is returned, it replaces the connection with its
 // copy in the state and returns the latter.
@@ -187,6 +215,12 @@ func (state *State) replaceConnection(id int, f func(*Connection)) *Connection {
 				imp.mu.Unlock()
 			}
 		}
+	}
+	// Update the actions.
+	for _, action := range c.actions {
+		action.mu.Lock()
+		action.connection = cc
+		action.mu.Unlock()
 	}
 	return cc
 }
@@ -329,6 +363,7 @@ func (state *State) addConnection(n postgres.Notification) {
 		resource:    r,
 		WebsiteHost: e.WebsiteHost,
 		Settings:    e.Settings,
+		actions:     map[int]*Action{},
 	}
 	if e.Key != "" {
 		c.Keys = []string{e.Key}
@@ -371,6 +406,45 @@ func (state *State) addConnectionKey(n postgres.Notification) {
 	state.mu.Lock()
 	state.connectionsByKey[e.Value] = c
 	state.mu.Unlock()
+}
+
+// AddConnectionAction is the notification event sent when a
+// connection action is added.
+type AddConnectionActionNotification struct {
+	ID             int
+	Connection     int
+	ActionType     int
+	Name           string
+	Enabled        bool
+	Filter         connector.ActionFilter
+	Mapping        map[string]string
+	Transformation *Transformation
+}
+
+// addConnectionAction adds a new connection action.
+func (state *State) addConnectionAction(n postgres.Notification) {
+	e := AddConnectionActionNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	c := state.connections[e.Connection]
+	action := &Action{
+		mu:             new(sync.Mutex),
+		ID:             e.ID,
+		connection:     c,
+		ActionType:     e.ActionType,
+		Name:           e.Name,
+		Enabled:        e.Enabled,
+		Filter:         e.Filter,
+		Mapping:        e.Mapping,
+		Transformation: e.Transformation,
+	}
+	state.mu.Lock()
+	state.actions[e.ID] = action
+	state.mu.Unlock()
+	c.mu.Lock()
+	c.actions[e.ID] = action
+	c.mu.Unlock()
 }
 
 // AddImportInProgressNotification is the notification event sent when an
@@ -481,6 +555,28 @@ func (state *State) deleteConnection(n postgres.Notification) {
 	for _, listener := range state.listeners.DeleteConnection {
 		listener(e)
 	}
+}
+
+// DeleteConnectionActionNotification is the notification event sent when a
+// connection action is deleted.
+type DeleteConnectionActionNotification struct {
+	Connection int
+	ID         int
+}
+
+// deleteConnectionAction deletes a connection action.
+func (state *State) deleteConnectionAction(n postgres.Notification) {
+	e := DeleteConnectionActionNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.mu.Lock()
+	delete(state.actions, e.ID)
+	state.mu.Unlock()
+	c := state.connections[e.Connection]
+	c.mu.Lock()
+	delete(c.actions, e.ID)
+	c.mu.Unlock()
 }
 
 // DeleteImportInProgressNotification is the notification event sent when an
@@ -671,6 +767,50 @@ func (state *State) seeLeader(n postgres.Notification) {
 		state.election.lastSeen = now
 	}
 	state.mu.Unlock()
+}
+
+// SetConnectionActionNotification is the notification sent when a connection
+// action is set.
+type SetConnectionActionNotification struct {
+	ID             int
+	Connection     int
+	ActionType     int
+	Name           string
+	Enabled        bool
+	Filter         connector.ActionFilter
+	Mapping        map[string]string
+	Transformation *Transformation
+}
+
+// setConnectionAction sets a connection action.
+func (state *State) setConnectionAction(n postgres.Notification) {
+	e := SetConnectionActionNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceAction(e.ID, func(a *Action) {
+		a.ActionType = e.ActionType
+		a.Name = e.Name
+		a.Enabled = e.Enabled
+		a.Filter = e.Filter
+		a.Mapping = e.Mapping
+		a.Transformation = e.Transformation
+	})
+}
+
+type SetConnectionActionStatusNotification struct {
+	ID      int
+	Enabled bool
+}
+
+func (state *State) setConnectionActionStatus(n postgres.Notification) {
+	e := AddConnectionActionNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceAction(e.ID, func(a *Action) {
+		a.Enabled = e.Enabled
+	})
 }
 
 // SetConnectionSettingsNotification is the notification event sent when the

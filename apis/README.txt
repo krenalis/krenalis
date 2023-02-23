@@ -3,6 +3,13 @@ This file contains the documentation for the REST APIs of Chichi.
 GET     /api/connections                           List the connections
 GET     /api/connections/{id}                      Get a connection
 DELETE  /api/connections/{id}                      Delete a connection
+GET     /api/connections/{id}/actions              List the actions of a connection.
+POST    /api/connections/{id}/actions              Add an action to a connection.
+GET     /api/connections/{id}/actions/{id}         Get the action of a connection.
+PUT     /api/connections/{id}/actions/{id}         Update the action of a connection.
+DELETE  /api/connections/{id}/actions/{id}         Delete the action of a connection.
+POST    /api/connections/{id}/actions/{id}/status  Set the status of an action of a connection          
+GET     /api/connections/{id}/action-types         List the action types of a connection.
 POST    /api/connections/{id}/status               Set the status of a connection
 GET     /api/connections/{id}/schema               Get the schema of a connection
 GET     /api/connections/{id}/mappings             List the mappings of a connection

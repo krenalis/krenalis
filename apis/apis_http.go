@@ -91,6 +91,130 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				err = connection.Delete()
 				respond(w, err)
 			})
+			router.Get("/actions", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(connection.Actions())
+			})
+			router.Post("/actions", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				var req ActionToSet
+				err = json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					http.Error(w, "Bad Request", http.StatusBadRequest)
+					return
+				}
+				actionID, err := connection.AddAction(req)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(actionID)
+			})
+			router.Get("/actions/{actionID}", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				actionID, _ := strconv.Atoi(chi.URLParam(r, "actionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				action, err := connection.Action(actionID)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(action)
+			})
+			router.Put("/actions/{actionID}", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				actionID, _ := strconv.Atoi(chi.URLParam(r, "actionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				var req ActionToSet
+				err = json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					http.Error(w, "Bad Request", http.StatusBadRequest)
+					return
+				}
+				action, err := connection.Action(actionID)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				err = action.Set(req)
+				respond(w, err)
+			})
+			router.Delete("/actions/{actionID}", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				actionID, _ := strconv.Atoi(chi.URLParam(r, "actionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				action, err := connection.Action(actionID)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				err = action.Delete()
+				respond(w, err)
+			})
+			router.Post("/actions/{actionID}/status", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				actionID, _ := strconv.Atoi(chi.URLParam(r, "actionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				var req struct {
+					Enabled bool
+				}
+				err = json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					http.Error(w, "Bad Request", http.StatusBadRequest)
+					return
+				}
+				action, err := connection.Action(actionID)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				err = action.SetStatus(req.Enabled)
+				respond(w, err)
+			})
+			router.Get("/action-types", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				actionTypes, err := connection.ActionTypes()
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(actionTypes)
+			})
 			router.Post("/status", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)

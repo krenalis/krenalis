@@ -18,6 +18,7 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/types"
 	"chichi/apis/warehouses"
+	"chichi/connector"
 
 	"github.com/google/uuid"
 	"golang.org/x/exp/maps"
@@ -44,6 +45,7 @@ type State struct {
 	workspaces       map[int]*Workspace
 	connections      map[int]*Connection
 	connectionsByKey map[string]*Connection
+	actions          map[int]*Action
 	resources        map[int]*Resource
 	notifications    <-chan postgres.Notification
 	listeners        struct {
@@ -459,6 +461,7 @@ type Connection struct {
 	Schema           types.Type
 	UsersQuery       string
 	importInProgress *ImportInProgress
+	actions          map[int]*Action
 	mappings         []*Mapping
 	transformation   *Transformation
 	Health           ConnectionHealth
@@ -514,6 +517,28 @@ func (connection *Connection) ImportInProgress() (*ImportInProgress, bool) {
 	im := connection.importInProgress
 	connection.mu.Unlock()
 	return im, im != nil
+}
+
+// Action returns the action of the connection with identifier id.
+// The boolean returns value reports whether the action exists.
+func (connection *Connection) Action(id int) (*Action, bool) {
+	connection.mu.Lock()
+	a, ok := connection.actions[id]
+	connection.mu.Unlock()
+	return a, ok
+}
+
+// Actions returns the actions of the connection.
+func (connection *Connection) Actions() []*Action {
+	connection.mu.Lock()
+	actions := make([]*Action, len(connection.actions))
+	i := 0
+	for _, a := range connection.actions {
+		actions[i] = a
+		i++
+	}
+	connection.mu.Unlock()
+	return actions
 }
 
 // Mappings returns the mappings of the connection.
@@ -728,3 +753,45 @@ const (
 	UpperCase
 	LowerCase
 )
+
+// Action represents an action associated to a destination connection to send
+// events.
+type Action struct {
+	mu *sync.Mutex
+
+	// ID is the identifier.
+	ID int
+
+	// connection is the connection of the action.
+	connection *Connection
+
+	// ActionType is the identifier of the action type for the connection.
+	ActionType int
+
+	// Name is the name of the action.
+	Name string
+
+	// Enabled indicates if this action is enabled or not.
+	Enabled bool
+
+	// Filter is the filter used to determine which events should be processed
+	// by this action.
+	Filter connector.ActionFilter
+
+	// Mapping is the mapping associated to the action, if present, otherwise is
+	// nil. A connection cannot have both a mapping and a transformation.
+	Mapping map[string]string
+
+	// Transformation is the transformation associated to the action, if
+	// present, otherwise is nil. A connection cannot have both a mapping and a
+	// transformation.
+	Transformation *Transformation
+}
+
+// Connection returns the connection of the action.
+func (action *Action) Connection() *Connection {
+	action.mu.Lock()
+	c := action.connection
+	action.mu.Unlock()
+	return c
+}
