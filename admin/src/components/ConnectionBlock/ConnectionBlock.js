@@ -1,7 +1,7 @@
 import './ConnectionBlock.css';
 import UnknownLogo from '../UnknownLogo/UnknownLogo';
 import LittleLogo from '../LittleLogo/LittleLogo';
-import FlexContainer from '../FlexContainer/FlexContainer';
+import Flex from '../Flex/Flex';
 import getConnectionStatusInfos from '../../utils/getConnectionStatusInfos';
 import { NavLink } from 'react-router-dom';
 import { SlTooltip, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
@@ -18,17 +18,17 @@ const ConnectionBlock = ({ connection: c, isNew }) => {
 
 	return (
 		<div className={`ConnectionBlock${isNew ? ' new' : ''}`} id={`${c.ID}`}>
-			<FlexContainer alignItems='center' justifyContent='space-between' gap={20}>
-				<FlexContainer alignItems='center' gap={10}>
+			<Flex alignItems='center' justifyContent='space-between' gap={20}>
+				<Flex alignItems='center' gap={10}>
 					{logo}
 					<div className='name'>{c.Name}</div>
-				</FlexContainer>
+				</Flex>
 				<SlTooltip content={statusText}>
 					<div className='hoverArea'>
 						<SlIcon className={statusVariant} name='circle-fill'></SlIcon>
 					</div>
 				</SlTooltip>
-			</FlexContainer>
+			</Flex>
 			<NavLink to={`/admin/connections/${c.ID}`}></NavLink>
 		</div>
 	);

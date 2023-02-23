@@ -24,7 +24,7 @@
     animation-iteration-count: 6;
 }
 
-.ConnectionBlock > .FlexContainer {
+.ConnectionBlock > .flex {
     width: 100%;
 }
 

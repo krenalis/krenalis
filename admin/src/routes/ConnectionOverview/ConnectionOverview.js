@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import './ConnectionOverview.css';
-import FlexContainer from '../../components/FlexContainer/FlexContainer';
+import Flex from '../../components/Flex/Flex';
 import { AppContext } from '../../context/AppContext';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 import statuses from '../../constants/statuses';
@@ -112,7 +112,7 @@ const ConnectionOverview = ({ connection: c, isSelected }) => {
 			{hasImports ? (
 				<>
 					<div className='chart'>
-						<FlexContainer className='chartHead' justifyContent='space-between' alignItems='baseline'>
+						<Flex className='chartHead' justifyContent='space-between' alignItems='baseline'>
 							<div className='title'>Users ingested by {c.Name} in the last 24 hours</div>
 							<SlButton
 								className='importButton'
@@ -123,7 +123,7 @@ const ConnectionOverview = ({ connection: c, isSelected }) => {
 								<SlIcon slot='suffix' name='cloud-download' />
 								Start a new import
 							</SlButton>
-						</FlexContainer>
+						</Flex>
 						<BarChart width={1400} height={350} data={userStats}>
 							<CartesianGrid strokeDasharray='3 3' />
 							<XAxis dataKey='name' />

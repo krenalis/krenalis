@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import './ConnectionStorage.css';
-import FlexContainer from '../FlexContainer/FlexContainer';
+import Flex from '../Flex/Flex';
 import { AppContext } from '../../context/AppContext';
 import statuses from '../../constants/statuses';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
@@ -76,13 +76,13 @@ const ConnectionStorage = ({ connection: c, onConnectionChange }) => {
 		<>
 			{currentStorage && (
 				<>
-					<FlexContainer className='storageContainer' alignItems='center' gap={30}>
+					<Flex className='storageContainer' alignItems='center' gap={30}>
 						<div className='storage'>{currentStorage.Name}</div>
 						<SlButton variant='danger' onClick={onRemoveStorage}>
 							<SlIcon slot='prefix' name='x' />
 							Remove
 						</SlButton>
-					</FlexContainer>
+					</Flex>
 				</>
 			)}
 			<SlButton variant='neutral' onClick={() => setShowStorages(true)}>
@@ -100,7 +100,7 @@ const ConnectionStorage = ({ connection: c, onConnectionChange }) => {
 					<div className='noStorage'>No Storage available</div>
 				) : (
 					dialogStorages.map((s) => (
-						<FlexContainer className='storage' alignItems='center' justifyContent='space-between' gap={20}>
+						<Flex className='storage' alignItems='center' justifyContent='space-between' gap={20}>
 							<div className='name'>{s.Name}</div>
 							<SlButton
 								variant='primary'
@@ -111,7 +111,7 @@ const ConnectionStorage = ({ connection: c, onConnectionChange }) => {
 							>
 								<SlIcon name='arrow-right' />
 							</SlButton>
-						</FlexContainer>
+						</Flex>
 					))
 				)}
 			</SlDialog>

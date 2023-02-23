@@ -1,11 +1,11 @@
 import './Header.css';
-import FlexContainer from '../FlexContainer/FlexContainer';
+import Flex from '../Flex/Flex';
 import { SlSelect, SlMenuItem, SlAvatar } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const Header = () => {
 	return (
 		<>
-			<FlexContainer className='Header' justifyContent='space-between' alignItems='center'>
+			<Flex className='Header' justifyContent='space-between' alignItems='center'>
 				<SlSelect name='workspaceSelector' value='1'>
 					<SlMenuItem value='1' selected>
 						Mock workspace 1
@@ -16,7 +16,7 @@ const Header = () => {
 					<sl-icon name='bell-fill'></sl-icon>
 					<SlAvatar image='data:image/jpeg;base64,/9j/' />
 				</div>
-			</FlexContainer>
+			</Flex>
 		</>
 	);
 };

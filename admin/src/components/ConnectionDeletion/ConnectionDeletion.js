@@ -1,6 +1,6 @@
 import { useState, useContext } from 'react';
 import './ConnectionDeletion.css';
-import FlexContainer from '../FlexContainer/FlexContainer';
+import Flex from '../Flex/Flex';
 import { AppContext } from '../../context/AppContext';
 import statuses from '../../constants/statuses';
 import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
@@ -31,7 +31,7 @@ const ConnectionDeletion = ({ connection: c, onDelete }) => {
 			<fieldset className='dangerZone'>
 				<div className='heading'>Danger zone</div>
 				<div className='label'>Delete the connection</div>
-				<FlexContainer justifyContent='space-between' alignItems='baseline'>
+				<Flex justifyContent='space-between' alignItems='baseline'>
 					<div className='description'>Delete permanently the connection</div>
 					<SlButton
 						className='deleteButton'
@@ -41,7 +41,7 @@ const ConnectionDeletion = ({ connection: c, onDelete }) => {
 						<SlIcon slot='suffix' name='trash3' />
 						Delete
 					</SlButton>
-				</FlexContainer>
+				</Flex>
 			</fieldset>
 			<SlDialog
 				className='deletionDialog'

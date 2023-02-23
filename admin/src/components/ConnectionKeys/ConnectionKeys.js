@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import './ConnectionKeys.css';
-import FlexContainer from '../FlexContainer/FlexContainer';
+import Flex from '../Flex/Flex';
 import { AppContext } from '../../context/AppContext';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 import statuses from '../../constants/statuses';
@@ -83,13 +83,13 @@ const ConnectionKeys = ({ connection: c }) => {
 			<div className='keys'>
 				{keys.map((key) => {
 					return (
-						<FlexContainer alignItems='center' gap={30}>
+						<Flex alignItems='center' gap={30}>
 							<div className='key'>{key}</div>
 							<SlButton variant='danger' onClick={() => onRevokeKey(key)}>
 								<SlIcon slot='prefix' name='x' />
 								Revoke
 							</SlButton>
-						</FlexContainer>
+						</Flex>
 					);
 				})}
 			</div>
