@@ -1,5 +1,5 @@
 import './OAuthError.css';
-import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
+import PrimaryBackground from '../PrimaryBackground/PrimaryBackground';
 import { NavLink } from 'react-router-dom';
 import { SlIcon, SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 

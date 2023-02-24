@@ -1,8 +1,8 @@
 import { useState, useEffect, useContext } from 'react';
 import './Schema.css';
-import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
-import Header from '../../components/Header/Header';
-import HeadedGrid from '../../components/HeadedGrid/HeadedGrid';
+import PrimaryBackground from '../PrimaryBackground/PrimaryBackground';
+import Header from '../Header/Header';
+import HeadedGrid from '../HeadedGrid/HeadedGrid';
 import { AppContext } from '../../context/AppContext';
 import statuses from '../../constants/statuses';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';

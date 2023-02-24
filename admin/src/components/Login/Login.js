@@ -1,6 +1,6 @@
 import React from 'react';
 import './Login.css';
-import Alert from '../../components/Alert/Alert';
+import Alert from '../Alert/Alert';
 import call from '../../utils/call';
 import { Navigate } from 'react-router-dom';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';

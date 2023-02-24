@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext, useRef } from 'react';
 import './UsersList.css';
-import Header from '../../components/Header/Header';
-import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
+import Header from '../Header/Header';
+import PrimaryBackground from '../PrimaryBackground/PrimaryBackground';
 import statuses from '../../constants/statuses';
 import { AppContext } from '../../context/AppContext';
 import {

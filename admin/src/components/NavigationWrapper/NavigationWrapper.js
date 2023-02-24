@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import './NavigationWrapper.css';
-import Sidebar from '../../components/Sidebar/Sidebar';
+import Sidebar from '../Sidebar/Sidebar';
 import { NavigationContext } from '../../context/NavigationContext';
 import { Outlet } from 'react-router-dom';
 

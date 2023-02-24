@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useContext } from 'react';
 import './ConnectorSettings.css';
-import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
-import ConnectorField from '../../components/ConnectorFields/ConnectorField';
-import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
+import PrimaryBackground from '../PrimaryBackground/PrimaryBackground';
+import ConnectorField from '../ConnectorFields/ConnectorField';
+import Breadcrumbs from '../Breadcrumbs/Breadcrumbs';
 import NotFound from '../NotFound/NotFound';
 import { SettingsContext } from '../../context/SettingsContext';
 import { AppContext } from '../../context/AppContext';

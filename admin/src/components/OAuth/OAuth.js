@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import './OAuth.css';
-import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
+import PrimaryBackground from '../PrimaryBackground/PrimaryBackground';
 import { AppContext } from '../../context/AppContext';
 import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 

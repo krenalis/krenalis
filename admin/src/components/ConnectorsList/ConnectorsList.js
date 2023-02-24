@@ -1,8 +1,8 @@
 import { useState, useEffect, useContext } from 'react';
 import './ConnectorsList.css';
-import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs';
-import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
-import Card from '../../components/Card/Card';
+import Breadcrumbs from '../Breadcrumbs/Breadcrumbs';
+import PrimaryBackground from '../PrimaryBackground/PrimaryBackground';
+import Card from '../Card/Card';
 import { AppContext } from '../../context/AppContext';
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
 

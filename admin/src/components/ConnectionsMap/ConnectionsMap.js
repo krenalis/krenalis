@@ -1,10 +1,10 @@
 import { useState, useEffect, useContext } from 'react';
 import './ConnectionsMap.css';
-import PrimaryBackground from '../../components/PrimaryBackground/PrimaryBackground';
-import Header from '../../components/Header/Header';
-import ConnectionBlock from '../../components/ConnectionBlock/ConnectionBlock';
-import LinkedConnectionBlocks from '../../components/LinkedConnectionBlocks/LinkedConnectionBlocks';
-import Arrow from '../../components/Arrow/Arrow';
+import PrimaryBackground from '../PrimaryBackground/PrimaryBackground';
+import Header from '../Header/Header';
+import ConnectionBlock from '../ConnectionBlock/ConnectionBlock';
+import LinkedConnectionBlocks from '../LinkedConnectionBlocks/LinkedConnectionBlocks';
+import Arrow from '../Arrow/Arrow';
 import { AppContext } from '../../context/AppContext';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NavLink } from 'react-router-dom';
