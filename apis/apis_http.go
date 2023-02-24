@@ -111,7 +111,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				var req ActionToSet
 				err = json.NewDecoder(r.Body).Decode(&req)
 				if err != nil {
-					http.Error(w, "Bad Request", http.StatusBadRequest)
+					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
 				actionID, err := connection.AddAction(req)
@@ -149,7 +149,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				var req ActionToSet
 				err = json.NewDecoder(r.Body).Decode(&req)
 				if err != nil {
-					http.Error(w, "Bad Request", http.StatusBadRequest)
+					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
 				action, err := connection.Action(actionID)
@@ -189,7 +189,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				err = json.NewDecoder(r.Body).Decode(&req)
 				if err != nil {
-					http.Error(w, "Bad Request", http.StatusBadRequest)
+					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
 				action, err := connection.Action(actionID)
@@ -227,7 +227,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				err = json.NewDecoder(r.Body).Decode(&req)
 				if err != nil {
-					http.Error(w, "Bad Request", http.StatusBadRequest)
+					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
 				err = connection.SetStatus(req.Enabled)
@@ -318,7 +318,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				var transformation *Transformation
 				err = json.NewDecoder(r.Body).Decode(&transformation)
 				if err != nil {
-					http.Error(w, "Bad Request: invalid transformation", http.StatusBadRequest)
+					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
 				err = connection.SetTransformation(transformation)
@@ -344,7 +344,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				var mappings []*Mapping
 				err = json.NewDecoder(r.Body).Decode(&mappings)
 				if err != nil {
-					http.Error(w, "Bad Request - invalid mappings", http.StatusBadRequest)
+					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
 				err = connection.SetMappings(mappings)
@@ -499,7 +499,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				storage, _ := strconv.Atoi(chi.URLParam(r, "storage"))
 				if storage < 0 {
-					http.Error(w, "Bad Request: invalid storage ID", http.StatusBadRequest)
+					respond(w, errors.BadRequest("invalid storage ID"))
 					return
 				}
 				err = connection.SetStorage(storage)
@@ -606,7 +606,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			err := json.NewDecoder(r.Body).Decode(&req)
 			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
+				respond(w, errors.BadRequest("invalid JSON"))
 				return
 			}
 			var size = 10
@@ -648,7 +648,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			err := json.NewDecoder(r.Body).Decode(&req)
 			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
+				respond(w, errors.BadRequest("invalid JSON"))
 				return
 			}
 			schema, users, err := workspace.Users(req.Properties, "", 0, 1000)
@@ -678,7 +678,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}{}
 			err := json.NewDecoder(r.Body).Decode(&req)
 			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
+				respond(w, errors.BadRequest("invalid JSON"))
 				return
 			}
 			err = workspace.ConnectWarehouse(req.Type, req.Settings)
@@ -718,7 +718,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			err := json.NewDecoder(r.Body).Decode(&req)
 			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
+				respond(w, errors.BadRequest("invalid JSON"))
 				return
 			}
 			oauthToken, err := workspace.OAuthToken(req.OAuthCode, req.Connector)
@@ -740,7 +740,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			err := json.NewDecoder(r.Body).Decode(&req)
 			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
+				respond(w, errors.BadRequest("invalid JSON"))
 				return
 			}
 			var role ConnectionRole
@@ -750,7 +750,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			case "Destination":
 				role = DestinationRole
 			default:
-				http.Error(w, "Bad Request", http.StatusBadRequest)
+				respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
 				return
 			}
 			id, err := workspace.AddConnection(role, req.Connector, req.Settings, req.Options)
