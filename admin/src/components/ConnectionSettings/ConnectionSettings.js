@@ -6,12 +6,16 @@ import ConnectionEnabling from '../../components/ConnectionEnabling/ConnectionEn
 import ConnectionKeys from '../../components/ConnectionKeys/ConnectionKeys';
 import ConnectionStorage from '../../components/ConnectionStorage/ConnectionStorage';
 import { AppContext } from '../../context/AppContext';
+import { ConnectionContext } from '../../context/ConnectionContext';
 import { SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ConnectionSettings = ({ connection: c, onConnectionChange, isSelected }) => {
+const ConnectionSettings = () => {
 	let [isDeleted, setIsDeleted] = useState(false);
 
 	let { redirect } = useContext(AppContext);
+	let { c, setCurrentConnectionSection } = useContext(ConnectionContext);
+
+	setCurrentConnectionSection('settings');
 
 	if (isDeleted) {
 		redirect('/admin/connections');
@@ -50,7 +54,7 @@ const ConnectionSettings = ({ connection: c, onConnectionChange, isSelected }) =
 						</SlTab>
 						<SlTabPanel name='storage'>
 							<div className='panelTitle'>Storage</div>
-							<ConnectionStorage connection={c} onConnectionChange={onConnectionChange} />
+							<ConnectionStorage connection={c} />
 						</SlTabPanel>
 					</>
 				)}
@@ -59,7 +63,7 @@ const ConnectionSettings = ({ connection: c, onConnectionChange, isSelected }) =
 				</SlTab>
 				<SlTabPanel name='enabling'>
 					<div className='panelTitle'>Enabling</div>
-					<ConnectionEnabling connection={c} onConnectionChange={onConnectionChange} />
+					<ConnectionEnabling connection={c} />
 				</SlTabPanel>
 				<SlTab slot='nav' panel='deletion'>
 					Deletion

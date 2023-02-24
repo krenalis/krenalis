@@ -1,17 +1,17 @@
 import { useState, useEffect, useContext } from 'react';
 import './ConnectionTransformation.css';
-import call from '../../utils/call';
 import ConnectionProperty from '../../components/ConnectionProperty/ConnectionProperty';
 import PropertiesDialog from '../../components/PropertiesDialog/PropertiesDialog';
 import { Transformation } from '../../utils/transformations';
 import statuses from '../../constants/statuses';
 import { AppContext } from '../../context/AppContext';
+import { ConnectionContext } from '../../context/ConnectionContext';
 import { useNavigate } from 'react-router';
 import Editor from '@monaco-editor/react';
 import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 
-const ConnectionTransformation = ({ connection: c, onConnectionChange, isSelected }) => {
+const ConnectionTransformation = () => {
 	let [inputProperties, setInputProperties] = useState([]);
 	let [outputProperties, setOutputProperties] = useState([]);
 	let [usedInputProperties, setUsedInputProperties] = useState([]);
@@ -23,6 +23,9 @@ const ConnectionTransformation = ({ connection: c, onConnectionChange, isSelecte
 	let [transformation, setTransformation] = useState(null);
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
+	let { c, setCurrentConnectionSection, setConnection } = useContext(ConnectionContext);
+
+	setCurrentConnectionSection('transformation');
 
 	const hooksByRole = {
 		input: {
@@ -161,7 +164,7 @@ const ConnectionTransformation = ({ connection: c, onConnectionChange, isSelecte
 		}
 		showStatus(statuses.transformationSaved);
 		c.Transformation = toSave;
-		onConnectionChange(c);
+		setConnection(c);
 	};
 
 	const onClear = async () => {
@@ -181,7 +184,7 @@ const ConnectionTransformation = ({ connection: c, onConnectionChange, isSelecte
 		setUsedOutputProperties([]);
 		showStatus(statuses.transformationCleanedUp);
 		c.Transformation = null;
-		onConnectionChange(c);
+		setConnection(c);
 	};
 
 	const onAlertDialogCloseRequest = (e) => {
@@ -283,8 +286,8 @@ const ConnectionTransformation = ({ connection: c, onConnectionChange, isSelecte
 					This connection already has mappings configured. To set the transformation make sure you delete them
 					first.
 				</div>
-				<SlButton variant='primary' className='backToOverview' onClick={() => navigate(0)}>
-					Return to overview
+				<SlButton variant='primary' onClick={() => navigate('../mappings')}>
+					Go to mappings
 				</SlButton>
 			</SlDialog>
 		</div>

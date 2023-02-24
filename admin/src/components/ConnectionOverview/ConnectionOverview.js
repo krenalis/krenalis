@@ -2,12 +2,13 @@ import { useState, useEffect, useContext } from 'react';
 import './ConnectionOverview.css';
 import Flex from '../../components/Flex/Flex';
 import { AppContext } from '../../context/AppContext';
+import { ConnectionContext } from '../../context/ConnectionContext';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 import statuses from '../../constants/statuses';
 import { BarChart, Bar, XAxis, Tooltip, YAxis, CartesianGrid } from 'recharts';
 import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ConnectionOverview = ({ connection: c, isSelected }) => {
+const ConnectionOverview = () => {
 	let [userStats, setUserStats] = useState([]);
 	let [imports, setImports] = useState([]);
 	let [hasImports, setHasImports] = useState(true);
@@ -16,6 +17,9 @@ const ConnectionOverview = ({ connection: c, isSelected }) => {
 	let [resetCursor, setResetCursor] = useState(false);
 
 	const { API, showStatus, showError, redirect } = useContext(AppContext);
+	const { c, setCurrentConnectionSection } = useContext(ConnectionContext);
+
+	setCurrentConnectionSection('overview');
 
 	useEffect(() => {
 		const fetchData = async () => {

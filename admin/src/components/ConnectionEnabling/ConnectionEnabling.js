@@ -1,10 +1,12 @@
 import { useContext } from 'react';
 import './ConnectionEnabling.css';
 import { AppContext } from '../../context/AppContext';
+import { ConnectionContext } from '../../context/ConnectionContext';
 import { SlSwitch } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ConnectionEnabling = ({ connection: c, onConnectionChange }) => {
+const ConnectionEnabling = ({ connection: c }) => {
 	let { API, showError } = useContext(AppContext);
+	let { setConnection } = useContext(ConnectionContext);
 
 	const onSwitchChange = async () => {
 		let cn = { ...c };
@@ -15,7 +17,7 @@ const ConnectionEnabling = ({ connection: c, onConnectionChange }) => {
 			return;
 		}
 		cn.Enabled = v;
-		onConnectionChange(cn);
+		setConnection(cn);
 	};
 
 	return (

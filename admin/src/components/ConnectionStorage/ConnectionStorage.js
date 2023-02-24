@@ -2,15 +2,17 @@ import { useState, useEffect, useContext } from 'react';
 import './ConnectionStorage.css';
 import Flex from '../Flex/Flex';
 import { AppContext } from '../../context/AppContext';
+import { ConnectionContext } from '../../context/ConnectionContext';
 import statuses from '../../constants/statuses';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ConnectionStorage = ({ connection: c, onConnectionChange }) => {
+const ConnectionStorage = ({ connection: c }) => {
 	let [storages, setStorages] = useState([]);
 	let [showStorages, setShowStorages] = useState(false);
 
 	let { API, redirect, showError, showStatus } = useContext(AppContext);
+	let { setConnection } = useContext(ConnectionContext);
 
 	useEffect(() => {
 		const fetchStorages = async () => {
@@ -50,7 +52,7 @@ const ConnectionStorage = ({ connection: c, onConnectionChange }) => {
 		}
 		let cn = { ...c };
 		cn.Storage = storage;
-		onConnectionChange(cn);
+		setConnection(cn);
 	};
 
 	const onRemoveStorage = async () => {
@@ -66,7 +68,7 @@ const ConnectionStorage = ({ connection: c, onConnectionChange }) => {
 		}
 		let cn = { ...c };
 		cn.Storage = 0;
-		onConnectionChange(cn);
+		setConnection(cn);
 	};
 
 	let currentStorage = storages.find((s) => s.ID === c.Storage);

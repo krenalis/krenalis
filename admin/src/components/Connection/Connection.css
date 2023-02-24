@@ -1,34 +1,38 @@
 .Connection .routeContent {
-    padding: 0 100px;
+    padding: 50px 100px;
 }
 
 .Connection .Breadcrumbs::part(base) {
     padding-left: var(--sl-spacing-large);
 }
 
-.Connection .connectionSections::part(tabs) {
-    border-bottom: 0;
+.Connection .links {
+    display: flex;
+    gap: 20px;
+    padding-left: var(--sl-spacing-large);
 }
 
-.Connection .connectionSections::part(active-tab-indicator) {
-    display: none;
-}
-
-.Connection .connectionSections sl-tab::part(base) {
-    font-weight: 600;
-}
-
-.Connection .connectionSections > sl-tab::part(base) {
+.Connection .links .link {
     color: var(--text-onaccent);
+    cursor: pointer;
     opacity: .7;
-    font-size: 16px;
-    font-weight: 400;
+    position: relative;
+    padding: 10px;
 }
 
-.Connection .connectionSections > sl-tab[active]::part(base) {
+.Connection .links .link:first-child {
+    padding-left: 0;
+}
+
+.Connection .links .link.selected {
     opacity: 1;
 }
 
-.Connection .connectionSections > sl-tab-panel {
-    margin-top: 50px;
+.Connection .links .link > a {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
 }
+

@@ -29,7 +29,7 @@ const ConnectionBlock = ({ connection: c, isNew }) => {
 					</div>
 				</SlTooltip>
 			</Flex>
-			<NavLink to={`/admin/connections/${c.ID}`}></NavLink>
+			<NavLink to={`/admin/connections/${c.ID}/overview`}></NavLink>
 		</div>
 	);
 };

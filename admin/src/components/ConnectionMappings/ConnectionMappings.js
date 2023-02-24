@@ -6,13 +6,14 @@ import SelectedPropertyMessage from '../../components/SelectedPropertyMessage/Se
 import PropertiesDialog from '../../components/PropertiesDialog/PropertiesDialog';
 import { Mapping } from '../../utils/mappings';
 import { AppContext } from '../../context/AppContext';
+import { ConnectionContext } from '../../context/ConnectionContext';
 import statuses from '../../constants/statuses';
 import { useNavigate } from 'react-router';
 import { SlButton, SlIcon, SlDialog, SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
 import Xarrow from 'react-xarrows';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 
-const ConnectionMappings = ({ connection: c, onConnectionChange, isSelected }) => {
+const ConnectionMappings = () => {
 	let [inputProperties, setInputProperties] = useState([]);
 	let [outputProperties, setOutputProperties] = useState([]);
 	let [usedInputProperties, setUsedInputProperties] = useState([]);
@@ -29,6 +30,9 @@ const ConnectionMappings = ({ connection: c, onConnectionChange, isSelected }) =
 	let [showPredefinedMappings, setShowPredefinedMappings] = useState(false);
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
+	let { c, setCurrentConnectionSection, setConnection } = useContext(ConnectionContext);
+
+	setCurrentConnectionSection('mappings');
 
 	const hooksByRole = {
 		input: {
@@ -284,7 +288,7 @@ const ConnectionMappings = ({ connection: c, onConnectionChange, isSelected }) =
 		}
 		showStatus(statuses.mappingsSaved);
 		c.Mappings = mps;
-		onConnectionChange(c);
+		setConnection(c);
 	};
 
 	const onAlertDialogCloseRequest = (e) => {
@@ -441,86 +445,84 @@ const ConnectionMappings = ({ connection: c, onConnectionChange, isSelected }) =
 				</div>
 			</div>
 			<div className='arrows'>
-				{isSelected &&
-					mappings.map((m) => {
-						let inputArrows = [];
-						for (let [i, p] of m.InProperties.entries()) {
-							if (p !== undefined) {
-								inputArrows.push(
-									<div
-										className={`arrow${isSelectedProperty(p, 'input') ? ' selected' : ''}`}
-										onClick={
-											isSelectedProperty(p, 'input')
-												? (e) => {
-														onRemoveConnection(e, 'input', m.Position, p);
-												  }
-												: null
+				{mappings.map((m) => {
+					let inputArrows = [];
+					for (let [i, p] of m.InProperties.entries()) {
+						if (p !== undefined) {
+							inputArrows.push(
+								<div
+									className={`arrow${isSelectedProperty(p, 'input') ? ' selected' : ''}`}
+									onClick={
+										isSelectedProperty(p, 'input')
+											? (e) => {
+													onRemoveConnection(e, 'input', m.Position, p);
+											  }
+											: null
+									}
+								>
+									<Xarrow
+										start={p}
+										end={
+											m.PredefinedFunc !== null
+												? `mapping-${m.Position}-input-${m.PredefinedFunc.In.properties[
+														i
+												  ].label.replace(/\s/g, '')}`
+												: `mapping-${m.Position}`
 										}
-									>
-										<Xarrow
-											start={p}
-											end={
-												m.PredefinedFunc !== null
-													? `mapping-${m.Position}-input-${m.PredefinedFunc.In.properties[
-															i
-													  ].label.replace(/\s/g, '')}`
-													: `mapping-${m.Position}`
-											}
-											startAnchor='right'
-											endAnchor='left'
-											showHead={false}
-											color='#cacad6'
-											strokeWidth={1}
-											labels={isSelectedProperty(p, 'input') && '-'}
-										/>
-									</div>
-								);
-							}
+										startAnchor='right'
+										endAnchor='left'
+										showHead={false}
+										color='#cacad6'
+										strokeWidth={1}
+										labels={isSelectedProperty(p, 'input') && '-'}
+									/>
+								</div>
+							);
 						}
-						let outputArrows = [];
-						for (let [i, p] of m.OutProperties.entries()) {
-							if (p !== undefined) {
-								outputArrows.push(
-									<div
-										className={`arrow${isSelectedProperty(p, 'output') ? ' selected' : ''}`}
-										onClick={
-											isSelectedProperty(p, 'output')
-												? (e) => {
-														onRemoveConnection(e, 'output', m.Position, p);
-												  }
-												: null
+					}
+					let outputArrows = [];
+					for (let [i, p] of m.OutProperties.entries()) {
+						if (p !== undefined) {
+							outputArrows.push(
+								<div
+									className={`arrow${isSelectedProperty(p, 'output') ? ' selected' : ''}`}
+									onClick={
+										isSelectedProperty(p, 'output')
+											? (e) => {
+													onRemoveConnection(e, 'output', m.Position, p);
+											  }
+											: null
+									}
+								>
+									<Xarrow
+										start={
+											m.PredefinedFunc !== null && m.PredefinedFunc.Out.properties.length === 1
+												? `mapping-${
+														m.Position
+												  }-output-${m.PredefinedFunc.Out.properties[0].label.replace(
+														/\s/g,
+														''
+												  )}`
+												: m.PredefinedFunc !== null
+												? `mapping-${m.Position}-output-${m.PredefinedFunc.Out.properties[
+														i
+												  ].label.replace(/\s/g, '')}`
+												: `mapping-${m.Position}`
 										}
-									>
-										<Xarrow
-											start={
-												m.PredefinedFunc !== null &&
-												m.PredefinedFunc.Out.properties.length === 1
-													? `mapping-${
-															m.Position
-													  }-output-${m.PredefinedFunc.Out.properties[0].label.replace(
-															/\s/g,
-															''
-													  )}`
-													: m.PredefinedFunc !== null
-													? `mapping-${m.Position}-output-${m.PredefinedFunc.Out.properties[
-															i
-													  ].label.replace(/\s/g, '')}`
-													: `mapping-${m.Position}`
-											}
-											end={p}
-											startAnchor='right'
-											endAnchor='left'
-											showHead={false}
-											color='#cacad6'
-											strokeWidth={1}
-											labels={isSelectedProperty(p, 'output') && '-'}
-										/>
-									</div>
-								);
-							}
+										end={p}
+										startAnchor='right'
+										endAnchor='left'
+										showHead={false}
+										color='#cacad6'
+										strokeWidth={1}
+										labels={isSelectedProperty(p, 'output') && '-'}
+									/>
+								</div>
+							);
 						}
-						return [...inputArrows, ...outputArrows];
-					})}
+					}
+					return [...inputArrows, ...outputArrows];
+				})}
 			</div>
 			{Object.keys(hooksByRole).map((role) => {
 				let { isDialogOpen, setIsDialogOpen, searchTerm, setSearchTerm, properties, usedProperties } =
@@ -548,8 +550,8 @@ const ConnectionMappings = ({ connection: c, onConnectionChange, isSelected }) =
 					This connection already has a transformation configured. To set the mappings make sure you delete it
 					first.
 				</div>
-				<SlButton variant='primary' className='backToOverview' onClick={() => navigate(0)}>
-					Return to overview
+				<SlButton variant='primary' onClick={() => navigate('../transformation')}>
+					Go to transformation
 				</SlButton>
 			</SlDialog>
 		</div>

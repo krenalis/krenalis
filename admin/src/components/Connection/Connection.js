@@ -1,29 +1,24 @@
 import { useState, useEffect, useContext } from 'react';
 import './Connection.css';
-import ConnectionOverview from '../ConnectionOverview/ConnectionOverview';
-import ConnectionSQL from '../ConnectionSQL/ConnectionSQL';
-import ConnectionMappings from '../ConnectionMappings/ConnectionMappings';
-import ConnectionEvents from '../ConnectionEvents/ConnectionEvents';
-import ConnectionTransformation from '../ConnectionTransformation/ConnectionTransformation';
-import ConnectionSettings from '../ConnectionSettings/ConnectionSettings';
 import PrimaryBackground from '../PrimaryBackground/PrimaryBackground';
 import Breadcrumbs from '../Breadcrumbs/Breadcrumbs';
 import ConnectionHeading from '../ConnectionHeading/ConnectionHeading';
 import { NotFoundError } from '../../api/errors';
 import { AppContext } from '../../context/AppContext';
-import { SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelace/dist/react/index.js';
+import { ConnectionContext } from '../../context/ConnectionContext';
+import { Outlet, NavLink } from 'react-router-dom';
 
 const Connection = () => {
 	let [connection, setConnection] = useState(null);
-	let [selectedSection, setSelectedSection] = useState('');
+	let [currentSection, setCurrentSection] = useState('');
 
 	const { API, showError, showNotFound } = useContext(AppContext);
-	const connectionID = Number(String(window.location).split('/').pop());
+	let urlFragments = String(window.location).split('/');
+	let fragmentIndex = urlFragments.findIndex((f) => f === 'connections');
+	let connectionID = Number(urlFragments[fragmentIndex + 1]);
 
-	const onConnectionChange = (c) => setConnection(c);
-
-	const onSlTabShow = (e) => {
-		setSelectedSection(e.detail.name);
+	const setCurrentConnectionSection = (section) => {
+		setCurrentSection(section);
 	};
 
 	useEffect(() => {
@@ -46,80 +41,57 @@ const Connection = () => {
 	if (c == null) return;
 	return (
 		<div className='Connection'>
-			<PrimaryBackground height={200} overlap={65}>
+			<PrimaryBackground height={200}>
 				<Breadcrumbs
 					onAccent={true}
 					breadcrumbs={[{ Name: 'Connections', Link: '/admin/connections' }, { Name: `${c.Name}` }]}
 				/>
 				<ConnectionHeading connection={c} />
-			</PrimaryBackground>
-			<div className='routeContent'>
-				<SlTabGroup className='connectionSections' onSlTabShow={onSlTabShow}>
-					<SlTab slot='nav' panel='overview'>
+				<div className='links'>
+					<div className={`link${currentSection === 'overview' ? ' selected' : ''}`}>
+						<NavLink to='overview'></NavLink>
 						Overview
-					</SlTab>
-					<SlTabPanel name='overview'>
-						<ConnectionOverview connection={c} isSelected={selectedSection === 'overview'} />
-					</SlTabPanel>
+					</div>
 					{c.Type === 'Database' && c.Role === 'Source' && (
-						<>
-							<SlTab slot='nav' panel='sqlquery'>
-								SQL Query
-							</SlTab>
-							<SlTabPanel name='sqlquery'>
-								<ConnectionSQL connection={c} isSelected={selectedSection === 'sqlquery'} />
-							</SlTabPanel>
-						</>
+						<div className={`link${currentSection === 'sql' ? ' selected' : ''}`}>
+							<NavLink to='sql'></NavLink>
+							SQL Query
+						</div>
 					)}
 					{(c.Type === 'Mobile' || c.Type === 'Website' || c.Type === 'Server' || c.Type === 'Stream') && (
-						<>
-							<SlTab slot='nav' panel='events'>
-								Events
-							</SlTab>
-							<SlTabPanel name='events'>
-								<ConnectionEvents connection={c} isSelected={selectedSection === 'events'} />
-							</SlTabPanel>
-						</>
+						<div className={`link${currentSection === 'events' ? ' selected' : ''}`}>
+							<NavLink to='events'></NavLink>
+							Events
+						</div>
 					)}
 					{(c.Type === 'App' || c.Type === 'Database' || c.Type === 'File') && (
-						<>
-							<SlTab slot='nav' panel='mappings'>
-								Mappings
-							</SlTab>
-							<SlTabPanel name='mappings'>
-								<ConnectionMappings
-									connection={c}
-									onConnectionChange={onConnectionChange}
-									isSelected={selectedSection === 'mappings'}
-								/>
-							</SlTabPanel>
-						</>
+						<div className={`link${currentSection === 'mappings' ? ' selected' : ''}`}>
+							<NavLink to='mappings'></NavLink>
+							Mappings
+						</div>
 					)}
 					{(c.Type === 'App' || c.Type === 'Database' || c.Type === 'File') && (
-						<>
-							<SlTab slot='nav' panel='transformation'>
-								Transformation
-							</SlTab>
-							<SlTabPanel name='transformation'>
-								<ConnectionTransformation
-									connection={c}
-									onConnectionChange={onConnectionChange}
-									isSelected={selectedSection === 'transformation'}
-								/>
-							</SlTabPanel>
-						</>
+						<div className={`link${currentSection === 'transformation' ? ' selected' : ''}`}>
+							<NavLink to='transformation'></NavLink>
+							Transformation
+						</div>
 					)}
-					<SlTab slot='nav' panel='settings'>
+					<div className={`link${currentSection === 'settings' ? ' selected' : ''}`}>
+						<NavLink to='settings'></NavLink>
 						Settings
-					</SlTab>
-					<SlTabPanel name='settings'>
-						<ConnectionSettings
-							connection={c}
-							onConnectionChange={onConnectionChange}
-							isSelected={selectedSection === 'settings'}
-						/>
-					</SlTabPanel>
-				</SlTabGroup>
+					</div>
+				</div>
+			</PrimaryBackground>
+			<div className='routeContent'>
+				<ConnectionContext.Provider
+					value={{
+						c: c,
+						setCurrentConnectionSection: setCurrentConnectionSection,
+						setConnection: setConnection,
+					}}
+				>
+					<Outlet />
+				</ConnectionContext.Provider>
 			</div>
 		</div>
 	);

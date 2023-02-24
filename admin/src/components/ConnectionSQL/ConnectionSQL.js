@@ -3,18 +3,23 @@ import './ConnectionSQL.css';
 import Grid from '../../components/Grid/Grid';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 import { AppContext } from '../../context/AppContext';
+import { ConnectionContext } from '../../context/ConnectionContext';
 import statuses from '../../constants/statuses';
 import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
 import Editor from '@monaco-editor/react';
 
 const queryMaxSize = 16777215;
 
-const ConnectionSQL = ({ connection: c, isSelected }) => {
+const ConnectionSQL = () => {
+	let { c, setCurrentConnectionSection } = useContext(ConnectionContext);
+
 	let [query, setQuery] = useState(c.UsersQuery);
 	let [limit, setLimit] = useState(20); // TODO(@Andrea): implement as a select
 	let [table, setTable] = useState(null);
 
 	const { API, showError, showStatus, redirect } = useContext(AppContext);
+
+	setCurrentConnectionSection('sql');
 
 	const handlePreview = async () => {
 		if (query.length > queryMaxSize) {

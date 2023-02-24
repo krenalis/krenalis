@@ -2,17 +2,21 @@ import { useEffect, useState, useContext } from 'react';
 import './ConnectionEvents.css';
 import IconWrapper from '../IconWrapper/IconWrapper';
 import { AppContext } from '../../context/AppContext';
+import { ConnectionContext } from '../../context/ConnectionContext';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 import statuses from '../../constants/statuses';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { github } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
-const ConnectionEvents = ({ connection: c, isSelected }) => {
+const ConnectionEvents = () => {
 	let [events, setEvents] = useState([]);
 	let [selectedEvent, setSelectedEvent] = useState(null);
 	let [discarded, setDiscarded] = useState(0);
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
+	let { c, setCurrentConnectionSection } = useContext(ConnectionContext);
+
+	setCurrentConnectionSection('events');
 
 	useEffect(() => {
 		let listenerID;
@@ -65,18 +69,16 @@ const ConnectionEvents = ({ connection: c, isSelected }) => {
 				setDiscarded((prevDiscarded) => prevDiscarded + res.discarded);
 			}, 2500);
 		};
-		if (isSelected) {
-			startListener();
-			return async () => {
-				clearInterval(interval);
-				let [, err] = await API.eventlisteners.remove(listenerID);
-				if (err) {
-					showError(err);
-					return;
-				}
-			};
-		}
-	}, [isSelected]);
+		startListener();
+		return async () => {
+			clearInterval(interval);
+			let [, err] = await API.eventlisteners.remove(listenerID);
+			if (err) {
+				showError(err);
+				return;
+			}
+		};
+	}, []);
 
 	const onSelectEvent = (id) => {
 		setSelectedEvent(0);
