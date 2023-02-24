@@ -97,7 +97,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) 
 }
 
 func (c *connection) Resource() (string, error) {
-	return "dummy-resource", nil
+	return "", nil
 }
 
 func (c *connection) Schemas() (types.Type, types.Type, error) {
