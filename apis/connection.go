@@ -335,6 +335,7 @@ func (this *Connection) Action(id int) (*Action, error) {
 	}
 	action := Action{
 		db:             this.db,
+		action:         a,
 		ID:             a.ID,
 		Connection:     this.connection.ID,
 		ActionType:     a.ActionType,
@@ -343,7 +344,6 @@ func (this *Connection) Action(id int) (*Action, error) {
 		Filter:         a.Filter,
 		Mapping:        a.Mapping,
 		Transformation: (*Transformation)(a.Transformation),
-		action:         a,
 	}
 	return &action, nil
 }
@@ -355,6 +355,7 @@ func (this *Connection) Actions() []*Action {
 	for i, a := range as {
 		action := Action{
 			db:             this.db,
+			action:         a,
 			ID:             a.ID,
 			Connection:     this.connection.ID,
 			ActionType:     a.ActionType,
@@ -363,7 +364,6 @@ func (this *Connection) Actions() []*Action {
 			Filter:         a.Filter,
 			Mapping:        a.Mapping,
 			Transformation: (*Transformation)(a.Transformation),
-			action:         a,
 		}
 		actions[i] = &action
 	}
