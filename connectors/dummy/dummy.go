@@ -34,15 +34,13 @@ func init() {
 }
 
 type connection struct {
-	firehose     connector.Firehose
-	clientSecret string
+	firehose connector.Firehose
 }
 
 // open opens a Dummy connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
 	c := connection{
-		firehose:     conf.Firehose,
-		clientSecret: conf.ClientSecret,
+		firehose: conf.Firehose,
 	}
 	return &c, nil
 }
