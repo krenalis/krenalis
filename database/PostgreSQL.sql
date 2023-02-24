@@ -103,6 +103,7 @@ CREATE TABLE actions (
     action_type int NOT NULL,
     name varchar(60) NOT NULL DEFAULT '',
     enabled boolean NOT NULL DEFAULT FALSE,
+    endpoint int NOT NULL,
     filter text NOT NULL DEFAULT '',
     mapping text NOT NULL DEFAULT '',
     transformation transformation NOT NULL DEFAULT '("", "", "")',

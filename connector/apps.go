@@ -25,9 +25,10 @@ type PropertyPath []string
 // App represents an app connector.
 type App struct {
 	Name        string
-	Icon        string      // icon in SVG format
-	OAuth       OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
-	WebhooksPer WebhooksPer // indicates if webhooks are per connector, resource or connection
+	Icon        string         // icon in SVG format
+	Endpoints   map[int]string // endpoints' names by their identifier
+	OAuth       OAuth          // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
+	WebhooksPer WebhooksPer    // indicates if webhooks are per connector, resource or connection
 	Open        OpenAppFunc
 }
 

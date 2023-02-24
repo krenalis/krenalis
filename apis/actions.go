@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"unicode/utf8"
 
 	"chichi/apis/errors"
@@ -25,11 +26,13 @@ import (
 type Action struct {
 	db             *postgres.DB
 	action         *state.Action
+	connection     *Connection
 	ID             int
 	Connection     int
 	ActionType     int
 	Name           string
 	Enabled        bool
+	Endpoint       int
 	Filter         connector.ActionFilter
 	Mapping        map[string]string
 	Transformation *Transformation
@@ -63,6 +66,9 @@ func (this *Action) Delete() error {
 // longer than 60 runes. The action must have a mapping associated or a
 // function, and cannot have both.
 //
+// The action endpoint must be the identifier of one the endpoints supported by
+// the action type.
+//
 // If it has a mapping, the names of the mapped properties must be valid
 // property names.
 //
@@ -72,7 +78,11 @@ func (this *Action) Delete() error {
 // TODO(Gianluca): specify how this transformation function should be written,
 // depending on the use on the events dispatcher.
 func (this *Action) Set(action ActionToSet) error {
-	err := validateAction(action)
+	actionTypes, err := this.connection.actionTypes()
+	if err != nil {
+		return err
+	}
+	err = validateAction(action, actionTypes)
 	if err != nil {
 		return errors.BadRequest(err.Error())
 	}
@@ -82,6 +92,7 @@ func (this *Action) Set(action ActionToSet) error {
 		ActionType:     action.ActionType,
 		Name:           action.Name,
 		Enabled:        action.Enabled,
+		Endpoint:       action.Endpoint,
 		Filter:         action.Filter,
 		Mapping:        action.Mapping,
 		Transformation: (*state.Transformation)(action.Transformation),
@@ -111,10 +122,10 @@ func (this *Action) Set(action ActionToSet) error {
 	}
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
-			"name = $1, enabled = $2, filter = $3, mapping = $4,\n"+
-			"transformation.in_types = $5, transformation.out_types = $6,\n"+
-			"transformation.python_source = $7 WHERE id = $8",
-			n.Name, n.Enabled, string(filter), string(mapping), string(tIn),
+			"name = $1, enabled = $2, endpoint = $3, filter = $4, mapping = $5,\n"+
+			"transformation.in_types = $6, transformation.out_types = $7,\n"+
+			"transformation.python_source = $8 WHERE id = $9",
+			n.Name, n.Enabled, n.Endpoint, string(filter), string(mapping), string(tIn),
 			string(tOut), string(tSource), n.ID,
 		)
 		if err != nil {
@@ -158,6 +169,7 @@ type ActionToSet struct {
 	ActionType     int
 	Name           string
 	Enabled        bool
+	Endpoint       int
 	Filter         connector.ActionFilter
 	Mapping        map[string]string
 	Transformation *Transformation
@@ -165,7 +177,18 @@ type ActionToSet struct {
 
 // validateAction validates the given action, retuning nil if the action is
 // valid or an error with an error message explaining why the action is invalid.
-func validateAction(action ActionToSet) error {
+func validateAction(action ActionToSet, actionTypes []*ActionType) error {
+
+	var actionType *ActionType
+	for _, at := range actionTypes {
+		if at.ID == action.ActionType {
+			actionType = at
+			break
+		}
+	}
+	if actionType == nil {
+		return fmt.Errorf("action type %d does not exist", action.ActionType)
+	}
 
 	if action.Name == "" {
 		return errors.New("action name is empty")
@@ -175,6 +198,13 @@ func validateAction(action ActionToSet) error {
 	}
 	if n := utf8.RuneCountInString(action.Name); n > 60 {
 		return errors.New("action name is longer than 60 runes")
+	}
+
+	if e := action.Endpoint; e < 1 || e > math.MaxInt32 {
+		return fmt.Errorf("invalid endpoint identifier")
+	}
+	if _, ok := actionType.Endpoints[action.Endpoint]; !ok {
+		return fmt.Errorf("endpoint %d not found", action.Endpoint)
 	}
 
 	switch action.Filter.Logical {
@@ -221,6 +251,7 @@ type ActionType struct {
 	ID                   int
 	Name                 string
 	Description          string
+	Endpoints            map[int]string // connector's endpoints supported by this action.
 	Schema               types.Type
 	AdditionalProperties bool
 	SuggestedFilter      ActionFilter

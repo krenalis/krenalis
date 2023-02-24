@@ -416,6 +416,7 @@ type AddConnectionActionNotification struct {
 	ActionType     int
 	Name           string
 	Enabled        bool
+	Endpoint       int
 	Filter         connector.ActionFilter
 	Mapping        map[string]string
 	Transformation *Transformation
@@ -435,6 +436,7 @@ func (state *State) addConnectionAction(n postgres.Notification) {
 		ActionType:     e.ActionType,
 		Name:           e.Name,
 		Enabled:        e.Enabled,
+		Endpoint:       e.Endpoint,
 		Filter:         e.Filter,
 		Mapping:        e.Mapping,
 		Transformation: e.Transformation,
@@ -777,6 +779,7 @@ type SetConnectionActionNotification struct {
 	ActionType     int
 	Name           string
 	Enabled        bool
+	Endpoint       int
 	Filter         connector.ActionFilter
 	Mapping        map[string]string
 	Transformation *Transformation
@@ -792,6 +795,7 @@ func (state *State) setConnectionAction(n postgres.Notification) {
 		a.ActionType = e.ActionType
 		a.Name = e.Name
 		a.Enabled = e.Enabled
+		a.Endpoint = e.Endpoint
 		a.Filter = e.Filter
 		a.Mapping = e.Mapping
 		a.Transformation = e.Transformation

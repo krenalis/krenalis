@@ -27,8 +27,9 @@ var _ connector.AppConnection = &connection{}
 
 func init() {
 	connector.RegisterApp(connector.App{
-		Name: "Dummy",
-		Open: open,
+		Name:      "Dummy",
+		Endpoints: map[int]string{1: "Europe", 2: "America"},
+		Open:      open,
 	})
 }
 
@@ -53,6 +54,7 @@ func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
 			ID:          1,
 			Name:        "Send Add to Cart",
 			Description: "Send an Add to Cart event to Dummy",
+			Endpoints:   []int{1, 2},
 			Schema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
 				{Name: "item_name", Type: types.Text()},
@@ -63,6 +65,22 @@ func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
 				Logical: "and",
 				Conditions: []connector.ActionFilterCondition{
 					{Property: "Event Type", Operator: "is", Value: "Track"},
+				},
+			},
+		},
+		{
+			ID:          2,
+			Name:        "Send custom event",
+			Description: "Send a custom event to Dummy",
+			Endpoints:   []int{2},
+			Schema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+			}),
+			AdditionalProperties: true,
+			SuggestedFilter: connector.ActionFilter{
+				Logical: "and",
+				Conditions: []connector.ActionFilterCondition{
+					{Property: "Event Type", Operator: "is", Value: "CustomEvent"},
 				},
 			},
 		},

@@ -336,11 +336,13 @@ func (this *Connection) Action(id int) (*Action, error) {
 	action := Action{
 		db:             this.db,
 		action:         a,
+		connection:     this,
 		ID:             a.ID,
 		Connection:     this.connection.ID,
 		ActionType:     a.ActionType,
 		Name:           a.Name,
 		Enabled:        a.Enabled,
+		Endpoint:       a.Endpoint,
 		Filter:         a.Filter,
 		Mapping:        a.Mapping,
 		Transformation: (*Transformation)(a.Transformation),
@@ -356,11 +358,13 @@ func (this *Connection) Actions() []*Action {
 		action := Action{
 			db:             this.db,
 			action:         a,
+			connection:     this,
 			ID:             a.ID,
 			Connection:     this.connection.ID,
 			ActionType:     a.ActionType,
 			Name:           a.Name,
 			Enabled:        a.Enabled,
+			Endpoint:       a.Endpoint,
 			Filter:         a.Filter,
 			Mapping:        a.Mapping,
 			Transformation: (*Transformation)(a.Transformation),
@@ -373,71 +377,14 @@ func (this *Connection) Actions() []*Action {
 // ActionTypes returns the action types of the connection, which must be a
 // destination of type app.
 func (this *Connection) ActionTypes() ([]*ActionType, error) {
-
-	// Make validations.
-	c := this.connection
-	if c.Role != state.DestinationRole {
+	if this.connection.Role != state.DestinationRole {
 		return nil, errors.BadRequest("connection is not a destination")
 	}
-	connector := c.Connector()
+	connector := this.connection.Connector()
 	if connector.Type != state.AppType {
 		return nil, errors.BadRequest("connection type is not app")
 	}
-
-	cRole := _connector.Role(c.Role)
-
-	// Retrieve the resource secrets, if necessary.
-	var clientSecret, resourceCode, accessToken string
-	if r, ok := c.Resource(); ok {
-		clientSecret = connector.OAuth.ClientSecret
-		resourceCode = r.Code
-		var err error
-		accessToken, err = freshAccessToken(this.db, r)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Instantiate a firehose.
-	fh := this.newFirehose(context.Background())
-	connection, err := _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
-		Role:         cRole,
-		Settings:     c.Settings,
-		Firehose:     fh,
-		ClientSecret: clientSecret,
-		Resource:     resourceCode,
-		AccessToken:  accessToken,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Retrieve the action types from the connection.
-	actionTypes, err := connection.ActionTypes()
-	if err != nil {
-		return nil, err
-	}
-
-	// Convert the action types.
-	aTypes := make([]*ActionType, len(actionTypes))
-	for i, at := range actionTypes {
-		aTypes[i] = &ActionType{
-			ID:                   at.ID,
-			Name:                 at.Name,
-			Description:          at.Description,
-			Schema:               at.Schema,
-			AdditionalProperties: at.AdditionalProperties,
-			SuggestedFilter: ActionFilter{
-				Logical: at.SuggestedFilter.Logical,
-			},
-		}
-		aTypes[i].SuggestedFilter.Conditions = make([]ActionFilterCondition, len(at.SuggestedFilter.Conditions))
-		for j := range at.SuggestedFilter.Conditions {
-			aTypes[i].SuggestedFilter.Conditions[j] = (ActionFilterCondition)(at.SuggestedFilter.Conditions[j])
-		}
-	}
-
-	return aTypes, nil
+	return this.actionTypes()
 }
 
 // Column represents a column of a database connection.
@@ -685,6 +632,9 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 // longer than 60 runes. The action must have a mapping associated or a
 // function, and cannot have both.
 //
+// The action endpoint must be the identifier of one the endpoints supported by
+// the action type.
+//
 // If it has a mapping, the names of the mapped properties must be valid
 // property names.
 //
@@ -705,7 +655,11 @@ func (this *Connection) AddAction(action ActionToSet) (int, error) {
 	if connector.Type != state.AppType {
 		return 0, errors.BadRequest("connection type is not app")
 	}
-	err := validateAction(action)
+	actionTypes, err := this.ActionTypes()
+	if err != nil {
+		return 0, err
+	}
+	err = validateAction(action, actionTypes)
 	if err != nil {
 		return 0, errors.BadRequest(err.Error())
 	}
@@ -714,6 +668,7 @@ func (this *Connection) AddAction(action ActionToSet) (int, error) {
 		ActionType:     action.ActionType,
 		Name:           action.Name,
 		Enabled:        action.Enabled,
+		Endpoint:       action.Endpoint,
 		Filter:         action.Filter,
 		Mapping:        action.Mapping,
 		Transformation: (*state.Transformation)(action.Transformation),
@@ -743,11 +698,13 @@ func (this *Connection) AddAction(action ActionToSet) (int, error) {
 	}
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		query := "INSERT INTO actions (connection, action_type, name, enabled,\n" +
-			"filter, mapping, transformation.in_types, transformation.out_types,\n" +
-			"transformation.python_source) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\n" +
+			"endpoint, filter, mapping, transformation.in_types,\n" +
+			"transformation.out_types, transformation.python_source)\n" +
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)\n" +
 			"RETURNING id"
 		err := tx.QueryRow(ctx, query, n.Connection, n.ActionType, n.Name,
-			n.Enabled, string(filter), string(mapping), string(tIn), string(tOut), string(tSource)).
+			n.Enabled, n.Endpoint, string(filter), string(mapping), string(tIn),
+			string(tOut), string(tSource)).
 			Scan(&n.ID)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {
@@ -1211,6 +1168,75 @@ func (this *Connection) Stats() (*ConnectionsStats, error) {
 		return nil, err
 	}
 	return stats, nil
+}
+
+// actionTypes returns the action types of the connection.
+func (this *Connection) actionTypes() ([]*ActionType, error) {
+
+	c := this.connection
+	connector := c.Connector()
+	cRole := _connector.Role(c.Role)
+
+	// Retrieve the resource secrets, if necessary.
+	var clientSecret, resourceCode, accessToken string
+	if r, ok := c.Resource(); ok {
+		clientSecret = connector.OAuth.ClientSecret
+		resourceCode = r.Code
+		var err error
+		accessToken, err = freshAccessToken(this.db, r)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Retrieve the app.
+	app := _connector.RegisteredApp(connector.Name)
+
+	// Instantiate a firehose.
+	fh := this.newFirehose(context.Background())
+	connection, err := app.Open(fh.ctx, &_connector.AppConfig{
+		Role:         cRole,
+		Settings:     c.Settings,
+		Firehose:     fh,
+		ClientSecret: clientSecret,
+		Resource:     resourceCode,
+		AccessToken:  accessToken,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Retrieve the action types from the connection.
+	actionTypes, err := connection.ActionTypes()
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert the action types.
+	aTypes := make([]*ActionType, len(actionTypes))
+	for i, at := range actionTypes {
+		endpoints := map[int]string{}
+		for _, e := range at.Endpoints {
+			endpoints[e] = app.Endpoints[e]
+		}
+		aTypes[i] = &ActionType{
+			ID:                   at.ID,
+			Name:                 at.Name,
+			Description:          at.Description,
+			Endpoints:            endpoints,
+			Schema:               at.Schema,
+			AdditionalProperties: at.AdditionalProperties,
+			SuggestedFilter: ActionFilter{
+				Logical: at.SuggestedFilter.Logical,
+			},
+		}
+		aTypes[i].SuggestedFilter.Conditions = make([]ActionFilterCondition, len(at.SuggestedFilter.Conditions))
+		for j := range at.SuggestedFilter.Conditions {
+			aTypes[i].SuggestedFilter.Conditions[j] = (ActionFilterCondition)(at.SuggestedFilter.Conditions[j])
+		}
+	}
+
+	return aTypes, nil
 }
 
 // newFirehose returns a new Firehose.

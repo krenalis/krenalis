@@ -774,6 +774,9 @@ type Action struct {
 	// Enabled indicates if this action is enabled or not.
 	Enabled bool
 
+	// Endpoint is the action type's endpoint chosen for this action.
+	Endpoint int
+
 	// Filter is the filter used to determine which events should be processed
 	// by this action.
 	Filter connector.ActionFilter

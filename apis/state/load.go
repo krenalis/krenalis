@@ -263,54 +263,57 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read the actions.
 		err = state.db.QueryScan(ctx, "SELECT id, connection, action_type, name,\n"+
-			"enabled, filter, mapping, (transformation).in_types, (transformation).out_types,\n"+
-			"(transformation).python_source FROM actions", func(rows *postgres.Rows) error {
-			for rows.Next() {
-				var id, connectionID, actionType int
-				var name string
-				var enabled bool
-				var filter, mapping, transformIn, transformOut, pythonSource []byte
-				err := rows.Scan(&id, &connectionID, &actionType, &name, &enabled,
-					&filter, &mapping, &transformIn, &transformOut, &pythonSource)
-				if err != nil {
-					return err
-				}
-				c := state.connections[connectionID]
-				action := &Action{
-					mu:         new(sync.Mutex),
-					ID:         id,
-					connection: c,
-					ActionType: actionType,
-					Name:       name,
-					Enabled:    enabled,
-				}
-				err = json.Unmarshal(filter, &action.Filter)
-				if err != nil {
-					return err
-				}
-				if len(mapping) > 0 {
-					err = json.Unmarshal(mapping, &action.Mapping)
+			"enabled, endpoint, filter, mapping, (transformation).in_types,\n"+
+			"(transformation).out_types, (transformation).python_source FROM actions",
+			func(rows *postgres.Rows) error {
+				for rows.Next() {
+					var id, connectionID, actionType int
+					var name string
+					var enabled bool
+					var endpoint int
+					var filter, mapping, transformIn, transformOut, pythonSource []byte
+					err := rows.Scan(&id, &connectionID, &actionType, &name, &enabled,
+						&endpoint, &filter, &mapping, &transformIn, &transformOut, &pythonSource)
 					if err != nil {
 						return err
 					}
-				}
-				if len(transformIn) > 0 {
-					t := &Transformation{PythonSource: string(pythonSource)}
-					err := json.Unmarshal(transformIn, &t.In)
+					c := state.connections[connectionID]
+					action := &Action{
+						mu:         new(sync.Mutex),
+						ID:         id,
+						connection: c,
+						ActionType: actionType,
+						Name:       name,
+						Enabled:    enabled,
+						Endpoint:   endpoint,
+					}
+					err = json.Unmarshal(filter, &action.Filter)
 					if err != nil {
 						return err
 					}
-					err = json.Unmarshal(transformOut, &t.Out)
-					if err != nil {
-						return err
+					if len(mapping) > 0 {
+						err = json.Unmarshal(mapping, &action.Mapping)
+						if err != nil {
+							return err
+						}
 					}
-					action.Transformation = t
+					if len(transformIn) > 0 {
+						t := &Transformation{PythonSource: string(pythonSource)}
+						err := json.Unmarshal(transformIn, &t.In)
+						if err != nil {
+							return err
+						}
+						err = json.Unmarshal(transformOut, &t.Out)
+						if err != nil {
+							return err
+						}
+						action.Transformation = t
+					}
+					state.actions[id] = action
+					c.actions[id] = action
 				}
-				state.actions[id] = action
-				c.actions[id] = action
-			}
-			return nil
-		})
+				return nil
+			})
 		if err != nil {
 			return err
 		}
