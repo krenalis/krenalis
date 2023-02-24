@@ -34,7 +34,7 @@ CREATE TABLE connectors (
 INSERT INTO connectors (name, type, has_settings, logo_url, webhooks_per, oauth_url, oauth_client_id, oauth_client_secret, oauth_token_endpoint, oauth_forced_expires_in) VALUES
     ('HubSpot', 'App', FALSE, 'https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/168_Hubspot_logo_logos-512.png', 'Connector', 'https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read', 'cef1005a-72be-4047-a301-ef6057588325', '136e50df-5b89-478f-bf01-4a71547fa668', 'https://api.hubapi.com/oauth/v1/token', 0),
     ('MySQL', 'Database', TRUE, 'https://cdn4.iconfinder.com/data/icons/logos-3/181/MySQL-512.png', 'None', '', '', '', '', 0),
-    ('Dummy', 'App', FALSE, '', 'Connector', '', '', '', '', 0),
+    ('Dummy', 'App', FALSE, 'https://cdn3.iconfinder.com/data/icons/education-209/64/tube-lab-science-school-256.png', 'Connector', '', '', '', '', 0),
     ('Mailchimp', 'App', TRUE, 'https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/mailchimp-512.png', 'Source', 'https://login.mailchimp.com/oauth2/authorize?response_type=code&client_id=631597222767&redirect_uri=https://127.0.0.1:9090/admin/oauth/authorize', '631597222767', '90c2d1a1383de35e5ecca5a73f0e2c19e751056d0e3cdd81ac', 'https://login.mailchimp.com/oauth2/token',2147483647),
     ('CSV', 'File', TRUE, 'https://cdn3.iconfinder.com/data/icons/cad-database-presentation-spreadsheet-vector-fil-2/512/19-512.png', 'None', '', '', '', '', 0),
     ('SFTP', 'Storage', TRUE, 'https://cdn2.iconfinder.com/data/icons/whcompare-servers-web-hosting/50/sftp-512.png', 'None', '', '', '', '', 0),
