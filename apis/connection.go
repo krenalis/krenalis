@@ -355,7 +355,15 @@ func (this *Connection) Action(id int) (*Action, error) {
 }
 
 // Actions returns the actions of the connection.
-func (this *Connection) Actions() []*Action {
+func (this *Connection) Actions() ([]*Action, error) {
+	c := this.connection
+	if c.Role != state.DestinationRole {
+		return nil, errors.BadRequest("connection is not a destination")
+	}
+	connector := c.Connector()
+	if connector.Type != state.AppType {
+		return nil, errors.BadRequest("connection type is not app")
+	}
 	as := this.connection.Actions()
 	actions := make([]*Action, len(as))
 	for i, a := range as {
@@ -379,7 +387,7 @@ func (this *Connection) Actions() []*Action {
 		}
 		actions[i] = &action
 	}
-	return actions
+	return actions, nil
 }
 
 // ActionTypes returns the action types of the connection, which must be a

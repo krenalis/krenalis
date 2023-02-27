@@ -99,7 +99,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				w.Header().Set("Content-Type", "application/json")
-				_ = json.NewEncoder(w).Encode(connection.Actions())
+				actions, err := connection.Actions()
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				_ = json.NewEncoder(w).Encode(actions)
 			})
 			router.Post("/actions", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
