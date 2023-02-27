@@ -572,6 +572,12 @@ func (state *State) deleteConnection(n postgres.Notification) {
 			c.mu.Unlock()
 		}
 	}
+	// Update the actions.
+	state.mu.Lock()
+	for _, a := range connection.actions {
+		delete(state.actions, a.ID)
+	}
+	state.mu.Unlock()
 	for _, listener := range state.listeners.DeleteConnection {
 		listener(e)
 	}
