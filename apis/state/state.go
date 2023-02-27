@@ -537,6 +537,9 @@ func (connection *Connection) Actions() []*Action {
 		i++
 	}
 	connection.mu.Unlock()
+	sort.Slice(actions, func(i, j int) bool {
+		return actions[i].ID < actions[j].ID
+	})
 	return actions
 }
 
