@@ -519,7 +519,7 @@ func (connection *Connection) ImportInProgress() (*ImportInProgress, bool) {
 }
 
 // Action returns the action of the connection with identifier id.
-// The boolean returns value reports whether the action exists.
+// The boolean return value reports whether the action exists.
 func (connection *Connection) Action(id int) (*Action, bool) {
 	connection.mu.Lock()
 	a, ok := connection.actions[id]
