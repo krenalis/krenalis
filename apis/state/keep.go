@@ -830,11 +830,14 @@ func (state *State) setConnectionAction(n postgres.Notification) {
 	})
 }
 
+// SetConnectionActionStatusNotification is the notification sent when the
+// status of a connection action is set.
 type SetConnectionActionStatusNotification struct {
 	ID      int
 	Enabled bool
 }
 
+// setConnectionActionStatus sets the status of a connection action.
 func (state *State) setConnectionActionStatus(n postgres.Notification) {
 	e := AddConnectionActionNotification{}
 	if !decodeNotification(n, &e) {
