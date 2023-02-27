@@ -18,7 +18,6 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/types"
 	"chichi/apis/warehouses"
-	"chichi/connector"
 
 	"github.com/google/uuid"
 	"golang.org/x/exp/maps"
@@ -779,7 +778,7 @@ type Action struct {
 
 	// Filter is the filter used to determine which events should be processed
 	// by this action.
-	Filter connector.ActionFilter
+	Filter ActionFilter
 
 	// Mapping is the mapping associated to the action, if present, otherwise is
 	// nil. A connection cannot have both a mapping and a transformation.
@@ -789,6 +788,20 @@ type Action struct {
 	// present, otherwise is nil. A connection cannot have both a mapping and a
 	// transformation.
 	Transformation *Transformation
+}
+
+// ActionFilter represents an action filter associated to an action.
+type ActionFilter struct {
+	Logical    string // "all" or "any"
+	Conditions []ActionFilterCondition
+}
+
+// ActionFilterCondition represents an action filter condition associated to an
+// action's filter.
+type ActionFilterCondition struct {
+	Property string // "Event", "User", ...
+	Operator string // "is", "is not", ...
+	Value    string // "Track", "Page", ...
 }
 
 // Connection returns the connection of the action.

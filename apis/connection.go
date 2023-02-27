@@ -343,9 +343,13 @@ func (this *Connection) Action(id int) (*Action, error) {
 		Name:           a.Name,
 		Enabled:        a.Enabled,
 		Endpoint:       a.Endpoint,
-		Filter:         a.Filter,
 		Mapping:        a.Mapping,
 		Transformation: (*Transformation)(a.Transformation),
+	}
+	action.Filter.Logical = a.Filter.Logical
+	action.Filter.Conditions = make([]ActionFilterCondition, len(a.Filter.Conditions))
+	for i := range action.Filter.Conditions {
+		action.Filter.Conditions[i] = ActionFilterCondition(a.Filter.Conditions[i])
 	}
 	return &action, nil
 }
@@ -365,9 +369,13 @@ func (this *Connection) Actions() []*Action {
 			Name:           a.Name,
 			Enabled:        a.Enabled,
 			Endpoint:       a.Endpoint,
-			Filter:         a.Filter,
 			Mapping:        a.Mapping,
 			Transformation: (*Transformation)(a.Transformation),
+		}
+		action.Filter.Logical = a.Filter.Logical
+		action.Filter.Conditions = make([]ActionFilterCondition, len(a.Filter.Conditions))
+		for i := range action.Filter.Conditions {
+			action.Filter.Conditions[i] = ActionFilterCondition(a.Filter.Conditions[i])
 		}
 		actions[i] = &action
 	}
@@ -669,9 +677,13 @@ func (this *Connection) AddAction(action ActionToSet) (int, error) {
 		Name:           action.Name,
 		Enabled:        action.Enabled,
 		Endpoint:       action.Endpoint,
-		Filter:         action.Filter,
 		Mapping:        action.Mapping,
 		Transformation: (*state.Transformation)(action.Transformation),
+	}
+	n.Filter.Logical = action.Filter.Logical
+	n.Filter.Conditions = make([]state.ActionFilterConditionNotification, len(action.Filter.Conditions))
+	for i := range n.Filter.Conditions {
+		n.Filter.Conditions[i] = (state.ActionFilterConditionNotification)(action.Filter.Conditions[i])
 	}
 	ctx := context.Background()
 	var filter, mapping, tIn, tOut, tSource []byte
@@ -1226,13 +1238,6 @@ func (this *Connection) actionTypes() ([]*ActionType, error) {
 			Endpoints:            endpoints,
 			Schema:               at.Schema,
 			AdditionalProperties: at.AdditionalProperties,
-			SuggestedFilter: ActionFilter{
-				Logical: at.SuggestedFilter.Logical,
-			},
-		}
-		aTypes[i].SuggestedFilter.Conditions = make([]ActionFilterCondition, len(at.SuggestedFilter.Conditions))
-		for j := range at.SuggestedFilter.Conditions {
-			aTypes[i].SuggestedFilter.Conditions[j] = (ActionFilterCondition)(at.SuggestedFilter.Conditions[j])
 		}
 	}
 

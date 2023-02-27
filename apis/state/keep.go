@@ -21,7 +21,6 @@ import (
 	"chichi/apis/warehouses"
 	"chichi/apis/warehouses/clickhouse"
 	"chichi/apis/warehouses/postgresql"
-	"chichi/connector"
 
 	"github.com/google/uuid"
 )
@@ -417,9 +416,24 @@ type AddConnectionActionNotification struct {
 	Name           string
 	Enabled        bool
 	Endpoint       int
-	Filter         connector.ActionFilter
+	Filter         ActionFilterNotification
 	Mapping        map[string]string
 	Transformation *Transformation
+}
+
+// ActionFilterNotification represents the action filter associated to a
+// notification which adds or sets an action.
+type ActionFilterNotification struct {
+	Logical    string
+	Conditions []ActionFilterConditionNotification
+}
+
+// ActionFilterConditionNotification represents one of the action filter
+// conditions associated to a notification which adds or sets an action.
+type ActionFilterConditionNotification struct {
+	Property string
+	Operator string
+	Value    string
 }
 
 // addConnectionAction adds a new connection action.
@@ -437,9 +451,13 @@ func (state *State) addConnectionAction(n postgres.Notification) {
 		Name:           e.Name,
 		Enabled:        e.Enabled,
 		Endpoint:       e.Endpoint,
-		Filter:         e.Filter,
 		Mapping:        e.Mapping,
 		Transformation: e.Transformation,
+	}
+	action.Filter.Logical = e.Filter.Logical
+	action.Filter.Conditions = make([]ActionFilterCondition, len(e.Filter.Conditions))
+	for i := range action.Filter.Conditions {
+		action.Filter.Conditions[i] = ActionFilterCondition(e.Filter.Conditions[i])
 	}
 	state.mu.Lock()
 	state.actions[e.ID] = action
@@ -780,7 +798,7 @@ type SetConnectionActionNotification struct {
 	Name           string
 	Enabled        bool
 	Endpoint       int
-	Filter         connector.ActionFilter
+	Filter         ActionFilterNotification
 	Mapping        map[string]string
 	Transformation *Transformation
 }
@@ -796,7 +814,11 @@ func (state *State) setConnectionAction(n postgres.Notification) {
 		a.Name = e.Name
 		a.Enabled = e.Enabled
 		a.Endpoint = e.Endpoint
-		a.Filter = e.Filter
+		a.Filter.Logical = e.Filter.Logical
+		a.Filter.Conditions = make([]ActionFilterCondition, len(e.Filter.Conditions))
+		for i := range a.Filter.Conditions {
+			a.Filter.Conditions[i] = ActionFilterCondition(e.Filter.Conditions[i])
+		}
 		a.Mapping = e.Mapping
 		a.Transformation = e.Transformation
 	})

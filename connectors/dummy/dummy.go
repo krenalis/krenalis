@@ -59,12 +59,6 @@ func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
 				{Name: "item_id", Type: types.Int()},
 			}),
 			AdditionalProperties: false,
-			SuggestedFilter: connector.ActionFilter{
-				Logical: "and",
-				Conditions: []connector.ActionFilterCondition{
-					{Property: "Event Type", Operator: "is", Value: "Track"},
-				},
-			},
 		},
 		{
 			ID:          2,
@@ -75,12 +69,6 @@ func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
 				{Name: "email", Type: types.Text()},
 			}),
 			AdditionalProperties: true,
-			SuggestedFilter: connector.ActionFilter{
-				Logical: "and",
-				Conditions: []connector.ActionFilterCondition{
-					{Property: "Event Type", Operator: "is", Value: "CustomEvent"},
-				},
-			},
 		},
 	}
 	return actionTypes, nil

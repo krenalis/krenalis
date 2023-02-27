@@ -241,16 +241,4 @@ type ActionType struct {
 	Endpoints            []int
 	Schema               types.Type
 	AdditionalProperties bool
-	SuggestedFilter      ActionFilter
-}
-
-type ActionFilter struct {
-	Logical    string // "all" or "any"
-	Conditions []ActionFilterCondition
-}
-
-type ActionFilterCondition struct {
-	Property string // "Event Type", "Event Name", "User ID"...
-	Operator string // "is", "is not", "exists", ...
-	Value    string // "Track", "Page", ...
 }

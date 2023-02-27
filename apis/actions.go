@@ -18,7 +18,6 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/types"
-	"chichi/connector"
 )
 
 // Action represents an action associated to a destination connection to send
@@ -33,9 +32,23 @@ type Action struct {
 	Name           string
 	Enabled        bool
 	Endpoint       int
-	Filter         connector.ActionFilter
+	Filter         ActionFilter
 	Mapping        map[string]string
 	Transformation *Transformation
+}
+
+// ActionFilter represents an action filter associated to an action.
+type ActionFilter struct {
+	Logical    string
+	Conditions []ActionFilterCondition
+}
+
+// ActionFilterCondition represents an action filter condition associated to an
+// action's filter.
+type ActionFilterCondition struct {
+	Property string
+	Operator string
+	Value    string
 }
 
 // Delete deletes the action.
@@ -93,9 +106,13 @@ func (this *Action) Set(action ActionToSet) error {
 		Name:           action.Name,
 		Enabled:        action.Enabled,
 		Endpoint:       action.Endpoint,
-		Filter:         action.Filter,
 		Mapping:        action.Mapping,
 		Transformation: (*state.Transformation)(action.Transformation),
+	}
+	n.Filter.Logical = action.Filter.Logical
+	n.Filter.Conditions = make([]state.ActionFilterConditionNotification, len(action.Filter.Conditions))
+	for i := range n.Filter.Conditions {
+		n.Filter.Conditions[i] = (state.ActionFilterConditionNotification)(action.Filter.Conditions[i])
 	}
 	ctx := context.Background()
 	var filter, mapping, tIn, tOut, tSource []byte
@@ -170,7 +187,7 @@ type ActionToSet struct {
 	Name           string
 	Enabled        bool
 	Endpoint       int
-	Filter         connector.ActionFilter
+	Filter         ActionFilter
 	Mapping        map[string]string
 	Transformation *Transformation
 }
@@ -254,18 +271,4 @@ type ActionType struct {
 	Endpoints            map[int]string // connector's endpoints supported by this action.
 	Schema               types.Type
 	AdditionalProperties bool
-	SuggestedFilter      ActionFilter
-}
-
-// ActionFilter represents a filter of an action.
-type ActionFilter struct {
-	Logical    string // "all" or "any"
-	Conditions []ActionFilterCondition
-}
-
-// ActionFilterCondition represents a condition in an action filter.
-type ActionFilterCondition struct {
-	Property string // "Event Type", "Event Name", "User ID"...
-	Operator string // "is", "is not", "exists", ...
-	Value    string // "Track", "Page", ...
 }
