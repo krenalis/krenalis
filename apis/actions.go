@@ -82,12 +82,13 @@ func (this *Action) Delete() error {
 // The action endpoint must be the identifier of one the endpoints supported by
 // the action type.
 //
-// If it has a mapping, the names of the mapped properties must be valid
-// property names.
+// If it has a mapping, the names of the properties in which the values are
+// mapped must be present in the action type schema.
 //
 // If it has a transformation, such transformation should have at least one
-// input and one output property, and its source should be a valid Python
-// source.
+// input and one output property, its source should be a valid Python source,
+// and the names of the properties in the output schema must be present in the
+// action type schema.
 // TODO(Gianluca): specify how this transformation function should be written,
 // depending on the use on the events dispatcher.
 func (this *Action) Set(action ActionToSet) error {
@@ -246,13 +247,18 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 		return errors.New("action has neither mapping nor transformation associated")
 	}
 
+	schemaProps := map[string]bool{}
+	for _, name := range actionType.Schema.PropertiesNames() {
+		schemaProps[name] = true
+	}
+
 	if action.Mapping != nil {
 		for left, right := range action.Mapping {
 			if !types.IsValidPropertyName(left) {
 				return fmt.Errorf("property name %q is not valid", left)
 			}
-			if !types.IsValidPropertyName(right) {
-				return fmt.Errorf("property name %q is not valid", left)
+			if !schemaProps[right] {
+				return fmt.Errorf("property name %q does not exist in action type schema", right)
 			}
 		}
 	}
@@ -261,6 +267,11 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 		err := validateTransformation(action.Transformation)
 		if err != nil {
 			return err
+		}
+		for _, right := range action.Transformation.Out.PropertiesNames() {
+			if !schemaProps[right] {
+				return fmt.Errorf("property name %q does not exist in action type schema", right)
+			}
 		}
 	}
 
