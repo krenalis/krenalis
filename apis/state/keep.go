@@ -121,6 +121,8 @@ func (state *State) keepState() {
 			state.setConnectionAction(n)
 		case "SetConnectionActionStatus":
 			state.setConnectionActionStatus(n)
+		case "SetConnectionActionTypes":
+			state.setConnectionActionTypes(n)
 		case "SeeLeader":
 			state.seeLeader(n)
 		case "SetConnectionSettings":
@@ -845,6 +847,44 @@ func (state *State) setConnectionActionStatus(n postgres.Notification) {
 	}
 	state.replaceAction(e.ID, func(a *Action) {
 		a.Enabled = e.Enabled
+	})
+}
+
+// SetConnectionActionTypesNotification is the notification sent when the action
+// types of a connection are set.
+type SetConnectionActionTypesNotification struct {
+	Connection  int
+	ActionTypes []ActionTypeNotification
+}
+
+// ActionTypeNotification represent an action type to set.
+type ActionTypeNotification struct {
+	ID                   int
+	Name                 string
+	Description          string
+	Endpoints            []int
+	Schema               types.Type
+	AdditionalProperties bool
+}
+
+// setConnectionActionTypes sets the action types of a connection.
+func (state *State) setConnectionActionTypes(n postgres.Notification) {
+	e := SetConnectionActionTypesNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceConnection(e.Connection, func(c *Connection) {
+		c.actionTypes = make([]*ActionType, len(e.ActionTypes))
+		for i, at := range e.ActionTypes {
+			c.actionTypes[i] = &ActionType{
+				ID:                   at.ID,
+				Name:                 at.Name,
+				Description:          at.Description,
+				Endpoints:            at.Endpoints,
+				Schema:               at.Schema,
+				AdditionalProperties: at.AdditionalProperties,
+			}
+		}
 	})
 }
 

@@ -285,6 +285,9 @@ func (apis *APIs) onAddConnection(n state.AddConnectionNotification) {
 		return
 	}
 	go apis.reloadSchema(connection)
+	if connection.Role == state.DestinationRole {
+		go apis.reloadActionTypes(connection)
+	}
 }
 
 // onAddImportInProgress is called when an import in progress is added.
@@ -305,6 +308,16 @@ func (apis *APIs) onSetConnectionUserQuery(n state.SetConnectionUserQueryNotific
 	}
 	connection, _ := apis.state.Connection(n.Connection)
 	go apis.reloadSchema(connection)
+}
+
+// reloadActionTypes reload the action types for the destination connection of
+// type app.
+func (apis *APIs) reloadActionTypes(connection *state.Connection) {
+	c := &Connection{db: apis.db, connection: connection}
+	err := c.reloadActionTypes()
+	if err != nil {
+		log.Printf("[error] cannot reload action types for connection %d: %s", c.ID, err)
+	}
 }
 
 func (apis *APIs) reloadSchema(connection *state.Connection) {

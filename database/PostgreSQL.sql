@@ -93,6 +93,7 @@ CREATE TABLE connections (
     settings varchar(65535),
     schema text NOT NULL DEFAULT '',
     users_query text NOT NULL DEFAULT '',
+    action_types text NOT NULL DEFAULT '',
     health connection_health NOT NULL DEFAULT 'Healthy',
     PRIMARY KEY (id)
 );

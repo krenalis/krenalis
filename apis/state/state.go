@@ -461,6 +461,7 @@ type Connection struct {
 	UsersQuery       string
 	importInProgress *ImportInProgress
 	actions          map[int]*Action
+	actionTypes      []*ActionType
 	mappings         []*Mapping
 	transformation   *Transformation
 	Health           ConnectionHealth
@@ -541,6 +542,14 @@ func (connection *Connection) Actions() []*Action {
 		return actions[i].ID < actions[j].ID
 	})
 	return actions
+}
+
+// ActionTypes returns the action types of the connection.
+func (connection *Connection) ActionTypes() []*ActionType {
+	connection.mu.Lock()
+	actionTypes := connection.actionTypes
+	connection.mu.Unlock()
+	return actionTypes
 }
 
 // Mappings returns the mappings of the connection.
@@ -813,4 +822,14 @@ func (action *Action) Connection() *Connection {
 	c := action.connection
 	action.mu.Unlock()
 	return c
+}
+
+// ActionType represents an action type for a connection.
+type ActionType struct {
+	ID                   int
+	Name                 string
+	Description          string
+	Endpoints            []int
+	Schema               types.Type
+	AdditionalProperties bool
 }

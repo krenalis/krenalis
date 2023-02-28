@@ -393,14 +393,39 @@ func (this *Connection) Actions() ([]*Action, error) {
 // ActionTypes returns the action types of the connection, which must be a
 // destination of type app.
 func (this *Connection) ActionTypes() ([]*ActionType, error) {
-	if this.connection.Role != state.DestinationRole {
+	c := this.connection
+	if c.Role != state.DestinationRole {
 		return nil, errors.BadRequest("connection is not a destination")
 	}
-	connector := this.connection.Connector()
-	if connector.Type != state.AppType {
+	if c.Connector().Type != state.AppType {
 		return nil, errors.BadRequest("connection type is not app")
 	}
-	return this.actionTypes()
+	return this.actionTypes(), nil
+}
+
+// actionTypes returns the action types for this connection.
+func (this *Connection) actionTypes() []*ActionType {
+	connector := this.connection.Connector()
+	app := _connector.RegisteredApp(connector.Name)
+	stateActionTypes := this.connection.ActionTypes()
+	actionTypes := make([]*ActionType, len(stateActionTypes))
+	for i, at := range stateActionTypes {
+		endpoints := map[int]string{}
+		for _, e := range at.Endpoints {
+			endpoints[e] = app.Endpoints[e]
+		}
+		actionType := ActionType{
+			actionType:           at,
+			ID:                   at.ID,
+			Name:                 at.Name,
+			Description:          at.Description,
+			Endpoints:            endpoints,
+			Schema:               at.Schema,
+			AdditionalProperties: at.AdditionalProperties,
+		}
+		actionTypes[i] = &actionType
+	}
+	return actionTypes
 }
 
 // Column represents a column of a database connection.
@@ -1190,8 +1215,9 @@ func (this *Connection) Stats() (*ConnectionsStats, error) {
 	return stats, nil
 }
 
-// actionTypes returns the action types of the connection.
-func (this *Connection) actionTypes() ([]*ActionType, error) {
+// reloadActionTypes reloads the action types for the destination connection of
+// type app.
+func (this *Connection) reloadActionTypes() error {
 
 	c := this.connection
 	connector := c.Connector()
@@ -1205,7 +1231,7 @@ func (this *Connection) actionTypes() ([]*ActionType, error) {
 		var err error
 		accessToken, err = freshAccessToken(this.db, r)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
@@ -1223,33 +1249,46 @@ func (this *Connection) actionTypes() ([]*ActionType, error) {
 		AccessToken:  accessToken,
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Retrieve the action types from the connection.
 	actionTypes, err := connection.ActionTypes()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// Convert the action types.
-	aTypes := make([]*ActionType, len(actionTypes))
+	n := state.SetConnectionActionTypesNotification{
+		Connection:  c.ID,
+		ActionTypes: make([]state.ActionTypeNotification, len(actionTypes)),
+	}
 	for i, at := range actionTypes {
-		endpoints := map[int]string{}
-		for _, e := range at.Endpoints {
-			endpoints[e] = app.Endpoints[e]
-		}
-		aTypes[i] = &ActionType{
+		n.ActionTypes[i] = state.ActionTypeNotification{
 			ID:                   at.ID,
 			Name:                 at.Name,
 			Description:          at.Description,
-			Endpoints:            endpoints,
+			Endpoints:            at.Endpoints,
 			Schema:               at.Schema,
 			AdditionalProperties: at.AdditionalProperties,
 		}
 	}
 
-	return aTypes, nil
+	ctx := context.Background()
+
+	rawActionTypes, err := json.Marshal(actionTypes)
+	if err != nil {
+		return err
+	}
+
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		_, err = tx.Exec(ctx, "UPDATE connections SET \"action_types\" = $1 WHERE id = $2", rawActionTypes, n.Connection)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+
+	return nil
 }
 
 // newFirehose returns a new Firehose.

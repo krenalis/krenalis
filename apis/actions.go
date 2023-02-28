@@ -91,11 +91,8 @@ func (this *Action) Delete() error {
 // TODO(Gianluca): specify how this transformation function should be written,
 // depending on the use on the events dispatcher.
 func (this *Action) Set(action ActionToSet) error {
-	actionTypes, err := this.connection.actionTypes()
-	if err != nil {
-		return err
-	}
-	err = validateAction(action, actionTypes)
+	actionTypes := this.connection.actionTypes()
+	err := validateAction(action, actionTypes)
 	if err != nil {
 		return errors.BadRequest(err.Error())
 	}
@@ -196,10 +193,10 @@ type ActionToSet struct {
 // valid or an error with an error message explaining why the action is invalid.
 func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 
-	var actionType *ActionType
+	var actionType *state.ActionType
 	for _, at := range actionTypes {
 		if at.ID == action.ActionType {
-			actionType = at
+			actionType = at.actionType
 			break
 		}
 	}
@@ -220,7 +217,14 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 	if e := action.Endpoint; e < 1 || e > math.MaxInt32 {
 		return fmt.Errorf("invalid endpoint identifier")
 	}
-	if _, ok := actionType.Endpoints[action.Endpoint]; !ok {
+	endpointFound := false
+	for _, ee := range actionType.Endpoints {
+		if ee == action.Endpoint {
+			endpointFound = true
+			break
+		}
+	}
+	if !endpointFound {
 		return fmt.Errorf("endpoint %d not found", action.Endpoint)
 	}
 
@@ -265,6 +269,7 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 
 // ActionType represents an action type.
 type ActionType struct {
+	actionType           *state.ActionType
 	ID                   int
 	Name                 string
 	Description          string
