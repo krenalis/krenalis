@@ -314,8 +314,8 @@ func (this *Connection) SetStatus(enabled bool) error {
 	return err
 }
 
-// Action returns the action with identifier id of the destination connection of
-// type app.
+// Action returns the action with identifier id of the connection, which must be
+// a destination of type app.
 // It returns an errors.NotFound error if the action does not exist.
 func (this *Connection) Action(id int) (*Action, error) {
 	c := this.connection
@@ -665,8 +665,8 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 	return marshalUIFormAlert(form, alert, ui.Role(c.Role))
 }
 
-// AddAction adds the action to the destination connection of type app,
-// returning its identifier.
+// AddAction adds action to connection, returning the identifier of the added
+// action. The connection must be a destination of type app.
 //
 // The action name must be a non-empty valid UTF-8 encoded string and cannot be
 // longer than 60 runes. The action must have a mapping associated or a

@@ -310,8 +310,8 @@ func (apis *APIs) onSetConnectionUserQuery(n state.SetConnectionUserQueryNotific
 	go apis.reloadSchema(connection)
 }
 
-// reloadActionTypes reload the action types for the destination connection of
-// type app.
+// reloadActionTypes reloads the action types for the connection, which must be
+// a destination of type app.
 func (apis *APIs) reloadActionTypes(connection *state.Connection) {
 	c := &Connection{db: apis.db, connection: connection}
 	err := c.reloadActionTypes()
