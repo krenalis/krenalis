@@ -235,10 +235,9 @@ type User struct {
 }
 
 type ActionType struct {
-	ID                   int
-	Name                 string
-	Description          string
-	Endpoints            []int
-	Schema               types.Type
-	AdditionalProperties bool
+	ID          int
+	Name        string
+	Description string
+	Endpoints   []int
+	Schema      types.Type
 }

@@ -280,11 +280,10 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 
 // ActionType represents an action type.
 type ActionType struct {
-	actionType           *state.ActionType
-	ID                   int
-	Name                 string
-	Description          string
-	Endpoints            map[int]string // connector's endpoints supported by this action.
-	Schema               types.Type
-	AdditionalProperties bool
+	actionType  *state.ActionType
+	ID          int
+	Name        string
+	Description string
+	Endpoints   map[int]string // connector's endpoints supported by this action.
+	Schema      types.Type
 }

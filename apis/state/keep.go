@@ -859,12 +859,11 @@ type SetConnectionActionTypesNotification struct {
 
 // ActionTypeNotification represent an action type to set.
 type ActionTypeNotification struct {
-	ID                   int
-	Name                 string
-	Description          string
-	Endpoints            []int
-	Schema               types.Type
-	AdditionalProperties bool
+	ID          int
+	Name        string
+	Description string
+	Endpoints   []int
+	Schema      types.Type
 }
 
 // setConnectionActionTypes sets the action types of a connection.
@@ -877,12 +876,11 @@ func (state *State) setConnectionActionTypes(n postgres.Notification) {
 		c.actionTypes = make([]*ActionType, len(e.ActionTypes))
 		for i, at := range e.ActionTypes {
 			c.actionTypes[i] = &ActionType{
-				ID:                   at.ID,
-				Name:                 at.Name,
-				Description:          at.Description,
-				Endpoints:            at.Endpoints,
-				Schema:               at.Schema,
-				AdditionalProperties: at.AdditionalProperties,
+				ID:          at.ID,
+				Name:        at.Name,
+				Description: at.Description,
+				Endpoints:   at.Endpoints,
+				Schema:      at.Schema,
 			}
 		}
 	})

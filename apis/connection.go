@@ -415,13 +415,12 @@ func (this *Connection) actionTypes() []*ActionType {
 			endpoints[e] = app.Endpoints[e]
 		}
 		actionType := ActionType{
-			actionType:           at,
-			ID:                   at.ID,
-			Name:                 at.Name,
-			Description:          at.Description,
-			Endpoints:            endpoints,
-			Schema:               at.Schema,
-			AdditionalProperties: at.AdditionalProperties,
+			actionType:  at,
+			ID:          at.ID,
+			Name:        at.Name,
+			Description: at.Description,
+			Endpoints:   endpoints,
+			Schema:      at.Schema,
 		}
 		actionTypes[i] = &actionType
 	}
@@ -1265,12 +1264,11 @@ func (this *Connection) reloadActionTypes() error {
 	}
 	for i, at := range actionTypes {
 		n.ActionTypes[i] = state.ActionTypeNotification{
-			ID:                   at.ID,
-			Name:                 at.Name,
-			Description:          at.Description,
-			Endpoints:            at.Endpoints,
-			Schema:               at.Schema,
-			AdditionalProperties: at.AdditionalProperties,
+			ID:          at.ID,
+			Name:        at.Name,
+			Description: at.Description,
+			Endpoints:   at.Endpoints,
+			Schema:      at.Schema,
 		}
 	}
 

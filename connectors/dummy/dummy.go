@@ -58,7 +58,6 @@ func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
 				{Name: "item_name", Type: types.Text()},
 				{Name: "item_id", Type: types.Int()},
 			}),
-			AdditionalProperties: false,
 		},
 		{
 			ID:          2,
@@ -68,7 +67,6 @@ func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
 			Schema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
 			}),
-			AdditionalProperties: true,
 		},
 	}
 	return actionTypes, nil

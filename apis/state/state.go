@@ -826,10 +826,9 @@ func (action *Action) Connection() *Connection {
 
 // ActionType represents an action type for a connection.
 type ActionType struct {
-	ID                   int
-	Name                 string
-	Description          string
-	Endpoints            []int
-	Schema               types.Type
-	AdditionalProperties bool
+	ID          int
+	Name        string
+	Description string
+	Endpoints   []int
+	Schema      types.Type
 }
