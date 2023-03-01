@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strings"
 	"unicode/utf8"
 
 	"chichi/apis/errors"
@@ -82,8 +83,10 @@ func (this *Action) Delete() error {
 // The action endpoint must be the identifier of one the endpoints supported by
 // the action type.
 //
-// If it has a mapping, the names of the properties in which the values are
-// mapped must be present in the action type schema.
+// If it has a mapping, the mapping properties must be property names or
+// property selectors (property names separated by a dot '.'), and the names of
+// the properties in which the values are mapped must be present in the action
+// type schema.
 //
 // If it has a transformation, such transformation should have at least one
 // input and one output property, its source should be a valid Python source,
@@ -254,9 +257,20 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 
 	if action.Mapping != nil {
 		for left, right := range action.Mapping {
-			if !types.IsValidPropertyName(left) {
-				return fmt.Errorf("property name %q is not valid", left)
+			// Validate the left expression, which can be an identifier or a
+			// selector.
+			if strings.Contains(left, ".") { // selector, eg. "traits.address.street1".
+				for _, p := range strings.Split(left, ".") {
+					if !types.IsValidPropertyName(p) {
+						return fmt.Errorf("property name %q in selector %q is not valid", p, left)
+					}
+				}
+			} else { // identifier, eg. "addressStreet1".
+				if !types.IsValidPropertyName(left) {
+					return fmt.Errorf("property name %q is not valid", left)
+				}
 			}
+			// Validate the right expression.
 			if !schemaProps[right] {
 				return fmt.Errorf("property name %q does not exist in action type schema", right)
 			}

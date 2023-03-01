@@ -675,8 +675,10 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 // The action endpoint must be the identifier of one the endpoints supported by
 // the action type.
 //
-// If it has a mapping, the names of the properties in which the values are
-// mapped must be present in the action type schema.
+// If it has a mapping, the mapping properties must be property names or
+// property selectors (property names separated by a dot '.'), and the names of
+// the properties in which the values are mapped must be present in the action
+// type schema.
 //
 // If it has a transformation, such transformation should have at least one
 // input and one output property, its source should be a valid Python source,
