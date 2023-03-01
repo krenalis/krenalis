@@ -167,11 +167,13 @@ func parseType(s string) (types.Type, string) {
 		}
 		return types.Array(t), s[1:]
 	case "Nullable":
+		// TODO(Gianluca): handle "Nullable" when "CanBeNull" will be
+		// implemented at property/column level.
 		t, s := parseType(s[i+1:])
 		if !t.Valid() || s == "" {
 			return types.Type{}, ""
 		}
-		return t.WithNull(), s[1:]
+		return t, s[1:]
 	case "Map":
 		key, s := parseType(s[i+1:])
 		s, comma := trimComma(s)

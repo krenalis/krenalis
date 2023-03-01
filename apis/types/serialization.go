@@ -104,9 +104,6 @@ func marshalType(b *bytes.Buffer, t Type, custom bool) {
 		b.WriteString(t.lt.String())
 		b.WriteString(`"`)
 	}
-	if t.null {
-		b.WriteString(`,"null":true`)
-	}
 	switch t.pt {
 	case PtInt, PtInt8, PtInt16, PtInt24:
 		if min := int64(t.p); min > minInt[t.pt-PtInt] {
@@ -311,12 +308,11 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		return Type{}, errors.New("invalid type syntax")
 	}
 
-	var hasNull, hasScale, hasLayout, hasMinItems, hasMaxItems, hasUniqueItems bool
+	var hasScale, hasLayout, hasMinItems, hasMaxItems, hasUniqueItems bool
 
 	var pt PhysicalType
 	var lt LogicalType
 	var custom string
-	var null bool
 	var minimum, maximum json.Number
 	var precision, scale, byteLen, charLen int
 	var re *regexp.Regexp
@@ -389,15 +385,6 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 			if !IsValidCustomTypeName(custom) {
 				return Type{}, errors.New("invalid custom")
 			}
-		case "null":
-			if hasNull {
-				return Type{}, errors.New("repeated 'null' key")
-			}
-			null, ok = tok.(bool)
-			if !ok {
-				return Type{}, errors.New("invalid null")
-			}
-			hasNull = true
 		case "minimum":
 			if minimum != "" {
 				return Type{}, errors.New("repeated 'minimum' key")
@@ -610,7 +597,6 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 		t.lt = lt
 	}
 	t.custom = custom
-	t.null = null
 	if minimum == "" {
 		if PtInt <= t.pt && t.pt <= PtInt24 {
 			t.p = int32(minInt[t.pt-PtInt])

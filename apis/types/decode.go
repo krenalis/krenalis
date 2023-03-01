@@ -71,9 +71,6 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 			return nil, err
 		}
 		if tok == nil {
-			if t.null {
-				return nil, nil
-			}
 			return nil, errors.New("null not allowed")
 		}
 	}
@@ -274,10 +271,6 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 				break
 			}
 			if tok == nil {
-				if it.null {
-					items = append(items, nil)
-					continue
-				}
 				return nil, errors.New("null item not allowed")
 			}
 			item, err := decodeByType(dec, tok, it, strict)
@@ -323,11 +316,7 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 					return nil, err
 				}
 				if tok == nil {
-					if !p.Type.null {
-						return nil, fmt.Errorf("property %s cannot be null", p.Name)
-					}
-					object[p.Name] = nil
-					continue
+					return nil, fmt.Errorf("property %s cannot be null", p.Name)
 				}
 				object[p.Name], err = decodeByType(dec, tok, p.Type, strict)
 				if err != nil {

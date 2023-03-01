@@ -689,9 +689,12 @@ func (this *Workspace) ReloadSchemas() error {
 			}
 			if c := table.Columns[i]; c.Type.PhysicalType() != types.PtInt {
 				return errors.Unprocessable(InvalidSchemaTable, "column 'users.id' does not have type Int")
-			} else if c.Type.Null() {
-				return errors.Unprocessable(InvalidSchemaTable, "column 'users.id' must not be nullable")
 			}
+			// TODO(Gianluca): re-enable this check when the properties of
+			// 'types' (or the columns) will implement CanBeNull.
+			// } else if c.Type.Null() {
+			// 	return errors.Unprocessable(InvalidSchemaTable, "column 'users.id' must not be nullable")
+			// }
 			table.Columns = slices.Delete(table.Columns, i, i+1)
 		}
 		if table.Name == "events" {

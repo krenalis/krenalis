@@ -31,7 +31,7 @@ import (
 //
 // It returns an invalid type if typ is not supported. It returns an error if an
 // argument is not valid.
-func columnType(typ, udtName string, isNullable, charLength, precision, radix, scale *string, attTypMod *int, enums map[string]types.Type) (types.Type, error) {
+func columnType(typ, udtName string, charLength, precision, radix, scale *string, attTypMod *int, enums map[string]types.Type) (types.Type, error) {
 	var t types.Type
 	switch typ {
 	case "smallint":
@@ -126,12 +126,6 @@ func columnType(typ, udtName string, isNullable, charLength, precision, radix, s
 		if typ, ok := enums[udtName]; ok {
 			t = typ
 		}
-	}
-	if isNullable == nil {
-		return types.Type{}, errors.New("is_nullable value is NULL")
-	}
-	if t.Valid() && *isNullable == "YES" {
-		t = t.WithNull()
 	}
 	return t, nil
 }

@@ -259,7 +259,6 @@ type Type struct {
 	pt PhysicalType
 	lt LogicalType
 
-	null   bool // null reports whether null values are allowed.
 	unique bool // unique reports whether the items of an Array must be unique.
 
 	// p represents
@@ -684,25 +683,6 @@ func (t Type) WithLogicalType(lt LogicalType) Type {
 		panic("invalid logical type")
 	}
 	t.lt = lt
-	return t
-}
-
-// Null reports whether null values are allowed.
-// Panics if t is not a valid type.
-func (t Type) Null() bool {
-	if !t.Valid() {
-		panic("type is not valid")
-	}
-	return t.null
-}
-
-// WithNull returns the type t but with null values allowed.
-// Panics if t is not a valid type.
-func (t Type) WithNull() Type {
-	if !t.Valid() {
-		panic("type is not valid")
-	}
-	t.null = true
 	return t
 }
 
@@ -1172,10 +1152,6 @@ func (t Type) EqualTo(t2 Type) bool {
 	}
 	// Logical type.
 	if t.lt != t2.lt {
-		return false
-	}
-	// Null.
-	if t.null != t2.null {
 		return false
 	}
 	// Minimum and maximum.

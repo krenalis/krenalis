@@ -316,7 +316,8 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 				IsUpdatable: *isUpdatable == "YES",
 			}
 			attTypMod := attTypMods[*tableName][*columnName]
-			column.Type, err = columnType(*typ, *udtName, isNullable, charLength, precision, radix, scale, attTypMod, enums)
+			_ = isNullable // TODO(Gianluca): use this value.
+			column.Type, err = columnType(*typ, *udtName, charLength, precision, radix, scale, attTypMod, enums)
 			if err != nil {
 				return fmt.Errorf("data warehouse has returned an invalid type: %s", err)
 			}
@@ -604,7 +605,9 @@ func (warehouse *PostgreSQL) serializeColumn(b *strings.Builder, table, name str
 	default:
 		panic(fmt.Errorf("unexpected schema physical type: %d", typ.PhysicalType()))
 	}
-	if !typ.Null() {
+	// TODO(Gianluca): check if the column can be null from the type, but from
+	// the property, when implemented.
+	if false {
 		b.WriteString(" NOT NULL")
 	}
 	b.WriteString(",\n")

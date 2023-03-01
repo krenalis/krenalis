@@ -250,7 +250,7 @@ func (c *connection) Schemas() (types.Type, types.Type, error) {
 			Name:        r.Name,
 			Label:       r.Label,
 			Description: r.Description,
-			Type:        typ.WithNull(), // TODO(marco): check if null is required for all properties
+			Type:        typ,
 		}
 		if r.Calculated {
 			property.Role = types.SourceRole

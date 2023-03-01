@@ -35,9 +35,6 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Text"}`,
 			Type: Text(),
 		}, {
-			Data: `{"name":"Text","null":true}`,
-			Type: Text().WithNull(),
-		}, {
 			Data: `{"name":"Text","charLen":10}`,
 			Type: Text(Chars(10)),
 		}, {
@@ -80,14 +77,14 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Array","itemType":{"name":"Text"}}`,
 			Type: Array(Text()),
 		}, {
-			Data: `{"name":"Array","itemType":{"name":"Int","null":true}}`,
-			Type: Array(Int().WithNull()),
+			Data: `{"name":"Array","itemType":{"name":"Int"}}`,
+			Type: Array(Int()),
 		}, {
 			Data: `{"name":"Array","minItems":2,"maxItems":8,"uniqueItems":true,"itemType":{"name":"Decimal"}}`,
 			Type: Array(Decimal(0, 0)).WithMinItems(2).WithMaxItems(8).WithUnique(),
 		}, {
-			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"}},{"name":"size","type":{"name":"Decimal","null":true}}]}`,
-			Type: Object([]Property{{Name: "email", Type: Text()}, {Name: "size", Type: Decimal(0, 0).WithNull()}}),
+			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"}},{"name":"size","type":{"name":"Decimal"}}]}`,
+			Type: Object([]Property{{Name: "email", Type: Text()}, {Name: "size", Type: Decimal(0, 0)}}),
 		}, {
 			Data:    `{"name":"Object","properties":[{"name":"email","type":"Email"}]}`,
 			Type:    Object([]Property{{Name: "email", Type: Text(Chars(120)).WithRegexp(regexp.MustCompile(`@`)).AsCustom("Email")}}),
@@ -136,13 +133,6 @@ func equalTypes(t1, t2 Type) error {
 			return fmt.Errorf("unknows logical type %d", t2.pt)
 		}
 		return fmt.Errorf("expected logical type %s, got %s", t1.pt, t2.pt)
-	}
-	// Null.
-	if t1.null != t2.null {
-		if t1.null {
-			return errors.New("expected null allowed, got not allowed")
-		}
-		return errors.New("expected null not allowed, got allowed")
 	}
 	// Minimum and maximum.
 	switch t1.pt {
