@@ -37,7 +37,6 @@ type postgresStream struct {
 // Close closes the stream. Must be called if at least one Send or Receive call
 // has been made. It cannot be called concurrently with Send and Receive.
 func (s *postgresStream) Close() error {
-	s.db.Close()
 	return nil
 }
 
