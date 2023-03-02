@@ -83,11 +83,10 @@ func (this *Action) Delete() error {
 // The action endpoint must be the identifier of one the endpoints supported by
 // the action type.
 //
-// If it has a mapping, the mapping properties must be property names or
-// property selectors (property names separated by a dot '.'), and the names of
-// the properties in which the values are mapped must be present in the action
-// type schema; every property of the action type schema can be mapped at most
-// once.
+// If it has a mapping, the names of the properties in which the values are
+// mapped (the keys of the map) must be present in the action type schema, while
+// the mapping properties (the values of the map) must be property names or
+// property selectors (property names separated by a dot '.').
 //
 // If it has a transformation, such transformation should have at least one
 // input and one output property, its source should be a valid Python source,
@@ -252,8 +251,7 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 	}
 
 	if action.Mapping != nil {
-		alreadyMapped := map[string]bool{}
-		for left, right := range action.Mapping {
+		for right, left := range action.Mapping {
 			// Validate the left expression, which can be an identifier or a
 			// selector.
 			if strings.Contains(left, ".") { // selector, eg. "traits.address.street1".
@@ -272,10 +270,6 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 			if !existsInObject(rightPath, actionType.Schema) {
 				return fmt.Errorf("property %q does not exist in action type schema", right)
 			}
-			if alreadyMapped[right] {
-				return fmt.Errorf("property %q mapped more than once", right)
-			}
-			alreadyMapped[right] = true
 		}
 	}
 
