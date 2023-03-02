@@ -251,11 +251,6 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 		return errors.New("action has neither mapping nor transformation associated")
 	}
 
-	schemaProps := map[string]bool{}
-	for _, name := range actionType.Schema.PropertiesNames() {
-		schemaProps[name] = true
-	}
-
 	if action.Mapping != nil {
 		alreadyMapped := map[string]bool{}
 		for left, right := range action.Mapping {
@@ -273,8 +268,9 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 				}
 			}
 			// Validate the right expression.
-			if !schemaProps[right] {
-				return fmt.Errorf("property name %q does not exist in action type schema", right)
+			rightPath := strings.Split(right, ".")
+			if !existsInObject(rightPath, actionType.Schema) {
+				return fmt.Errorf("property %q does not exist in action type schema", right)
 			}
 			if alreadyMapped[right] {
 				return fmt.Errorf("property %q mapped more than once", right)
@@ -287,6 +283,10 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 		err := validateTransformation(action.Transformation)
 		if err != nil {
 			return err
+		}
+		schemaProps := map[string]bool{}
+		for _, name := range actionType.Schema.PropertiesNames() {
+			schemaProps[name] = true
 		}
 		for _, right := range action.Transformation.Out.PropertiesNames() {
 			if !schemaProps[right] {
@@ -306,4 +306,32 @@ type ActionType struct {
 	Description string
 	Endpoints   map[int]string // connector's endpoints supported by this action.
 	Schema      types.Type
+}
+
+// existsInObject reports whether a property, denoted by its path - for example
+// ["traits", "address", "street1"] - exists in the given object type (which may
+// be, in the previous example, an object type with property "traits", which
+// contains an object with a property "address", which contains a property with
+// name "street1").
+// object must have an object physical type.
+func existsInObject(propPath []string, object types.Type) bool {
+	if object.PhysicalType() != types.PtObject {
+		panic("not an object")
+	}
+	name := propPath[0]
+	for _, prop := range object.Properties() {
+		if prop.Name != name {
+			continue
+		}
+		// Found.
+		rest := propPath[1:]
+		if len(rest) == 0 {
+			return true
+		}
+		if prop.Type.PhysicalType() != types.PtObject {
+			return false
+		}
+		return existsInObject(rest, prop.Type)
+	}
+	return false
 }
