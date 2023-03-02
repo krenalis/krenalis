@@ -17,11 +17,11 @@ type Event struct {
 }
 
 // Channel represents a pair of Go channels used in the events pipe, which is
-// used to communicate between an event producer and a consumer. The Event
+// used to communicate between an event producer and a consumer. The Events
 // channel is used by the producer to send events to the consumer, and the Done
 // channel is used by the consumer to send confirmations back to the producer.
 //
-// The producer closes the Event channel when it has finished sending all
+// The producer closes the Events channel when it has finished sending all
 // events, and the consumer closes the Done channel when it has sent all
 // confirmations.
 type Channel struct {
