@@ -68,6 +68,21 @@ func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
 				{Name: "email", Type: types.Text()},
 			}),
 		},
+		{
+			ID:          3,
+			Name:        "Send Identity",
+			Description: "Send an Identity to Dummy",
+			Endpoints:   []int{1, 2},
+			Schema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text()},
+				{Name: "traits", Type: types.Object([]types.Property{
+					{Name: "address", Type: types.Object([]types.Property{
+						{Name: "street1", Type: types.Text()},
+						{Name: "street2", Type: types.Text()},
+					})},
+				})},
+			}),
+		},
 	}
 	return actionTypes, nil
 }
