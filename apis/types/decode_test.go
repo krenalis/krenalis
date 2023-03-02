@@ -136,7 +136,7 @@ func TestDecode(t *testing.T) {
 			Value: []any{3, 8, 11, 2},
 		},
 		{
-			Data: `{"first_name":"John Smith","values":[3, 8, 1],"billing_address":{"city":"Venice","country":"IT"},"birthday":"2006-01-02"}`,
+			Data: `{"first_name":"John Smith","values":[3, 8, 1],"billing_address":{"city":"Venice","country":"IT"},"birthday":"2006-01-02","phone":null}`,
 			Type: Object([]Property{
 				{
 					Name:        "first_name",
@@ -172,6 +172,12 @@ func TestDecode(t *testing.T) {
 					Label: "Birthday",
 					Type:  Date(time.DateOnly),
 				},
+				{
+					Name:     "phone",
+					Label:    "Phone number",
+					Type:     Text(),
+					Nullable: true,
+				},
 			}),
 			Value: map[string]any{
 				"first_name": "John Smith",
@@ -181,6 +187,7 @@ func TestDecode(t *testing.T) {
 					"country": "IT",
 				},
 				"birthday": time.Date(2006, 1, 2, 0, 0, 0, 0, time.UTC),
+				"phone":    nil,
 			},
 		},
 		{

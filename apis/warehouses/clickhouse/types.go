@@ -17,17 +17,19 @@ import (
 )
 
 // columnType returns the types.Type corresponding to the ClickHouse type typ
-// stored in the information_schema.columns column. It returns an invalid type
-// if typ is not supported.
-func columnType(typ string) types.Type {
+// stored in the information_schema.columns column.
+// The boolean return parameter reports whether the column type is nullable.
+// It returns an invalid type if typ is not supported.
+func columnType(typ string) (types.Type, bool) {
 	if !utf8.ValidString(typ) {
-		return types.Type{}
+		return types.Type{}, false
 	}
-	t, _ := parseType(typ)
-	return t
+	t, nullable, _ := parseType(typ, true)
+	return t, nullable
 }
 
-func parseType(s string) (types.Type, string) {
+// The boolean return parameter reports whether the column type is nullable.
+func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 	s = strings.TrimLeft(s, " ")
 	var i int
 	for ; i < len(s); i++ {
@@ -78,41 +80,41 @@ func parseType(s string) (types.Type, string) {
 		case "IPv6":
 			t = types.Inet()
 		default:
-			return types.Type{}, ""
+			return types.Type{}, false, ""
 		}
-		return t, s[i:]
+		return t, false, s[i:]
 	}
 	switch s[:i] {
 	case "Decimal":
 		precision, s, _ := parseUint(s[i+1:])
 		if precision == 0 || precision > 76 {
-			return types.Type{}, ""
+			return types.Type{}, false, ""
 		}
 		s, ok := trimComma(s)
 		if !ok {
-			return types.Type{}, ""
+			return types.Type{}, false, ""
 		}
 		scale, s, ok := parseUint(s)
 		if !ok || scale > precision || s == "" {
-			return types.Type{}, ""
+			return types.Type{}, false, ""
 		}
-		return types.Decimal(precision, scale), s[1:]
+		return types.Decimal(precision, scale), false, s[1:]
 	case "FixedString":
 		n, s, _ := parseUint(s[i+1:])
 		if n == 0 || s == "" {
-			return types.Type{}, ""
+			return types.Type{}, false, ""
 		}
-		return types.Text(types.Bytes(n)), s[1:]
+		return types.Text(types.Bytes(n)), false, s[1:]
 	case "DateTime":
 		_, s, ok := parseString(s[i+1:])
 		if !ok || s == "" {
-			return types.Type{}, ""
+			return types.Type{}, false, ""
 		}
-		return types.DateTime(time.DateTime), s[1:]
+		return types.DateTime(time.DateTime), false, s[1:]
 	case "DateTime64":
 		n, s, ok := parseUint(s[i+1:])
 		if !ok || n > 9 {
-			return types.Type{}, ""
+			return types.Type{}, false, ""
 		}
 		layout := time.DateTime
 		if n > 0 {
@@ -122,13 +124,13 @@ func parseType(s string) (types.Type, string) {
 		if s, ok := trimComma(s); ok {
 			_, s, ok = parseString(s)
 			if !ok {
-				return types.Type{}, ""
+				return types.Type{}, false, ""
 			}
 		}
 		if s == "" {
-			return types.Type{}, ""
+			return types.Type{}, false, ""
 		}
-		return types.DateTime(layout), s[1:]
+		return types.DateTime(layout), false, s[1:]
 	case "Enum8", "Enum16":
 		s = s[i+1:]
 		var enum []string
@@ -137,12 +139,12 @@ func parseType(s string) (types.Type, string) {
 			var ok bool
 			item, s, ok = parseString(s)
 			if !ok {
-				return types.Type{}, ""
+				return types.Type{}, false, ""
 			}
 			if s, ok = trimEqual(s); ok {
 				_, s, ok = parseInt(s)
 				if !ok {
-					return types.Type{}, ""
+					return types.Type{}, false, ""
 				}
 			}
 			enum = append(enum, item)
@@ -151,42 +153,43 @@ func parseType(s string) (types.Type, string) {
 			}
 		}
 		if s == "" {
-			return types.Type{}, ""
+			return types.Type{}, false, ""
 		}
-		return types.Text().WithEnum(enum), s[1:]
+		return types.Text().WithEnum(enum), false, s[1:]
 	case "LowCardinality":
-		t, s := parseType(s[i+1:])
+		t, _, s := parseType(s[i+1:], false)
 		if s == "" {
-			return types.Type{}, ""
+			return types.Type{}, false, ""
 		}
-		return t, s[1:]
+		return t, false, s[1:]
 	case "Array":
-		t, s := parseType(s[i+1:])
+		t, _, s := parseType(s[i+1:], false)
 		if !t.Valid() || s == "" {
-			return types.Type{}, ""
+			return types.Type{}, false, ""
 		}
-		return types.Array(t), s[1:]
+		return types.Array(t), false, s[1:]
 	case "Nullable":
-		// TODO(Gianluca): handle "Nullable" when "CanBeNull" will be
-		// implemented at property/column level.
-		t, s := parseType(s[i+1:])
-		if !t.Valid() || s == "" {
-			return types.Type{}, ""
+		if !allowNullable {
+			return types.Type{}, false, ""
 		}
-		return t, s[1:]
+		t, _, s := parseType(s[i+1:], false)
+		if !t.Valid() || s == "" {
+			return types.Type{}, false, ""
+		}
+		return t, true, s[1:]
 	case "Map":
-		key, s := parseType(s[i+1:])
+		key, _, s := parseType(s[i+1:], false)
 		s, comma := trimComma(s)
 		if !key.Valid() || key.PhysicalType() != types.PtText || !comma {
-			return types.Type{}, ""
+			return types.Type{}, false, ""
 		}
-		value, s := parseType(s)
+		value, _, s := parseType(s, false)
 		if !value.Valid() || s == "" {
-			return types.Type{}, ""
+			return types.Type{}, false, ""
 		}
-		return types.Map(value), s[1:]
+		return types.Map(value), false, s[1:]
 	}
-	return types.Type{}, ""
+	return types.Type{}, false, ""
 }
 
 // trimComma returns s without leading spaces (' ') followed by a comma if

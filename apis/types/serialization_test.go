@@ -89,6 +89,10 @@ func TestTypeSerialization(t *testing.T) {
 			Data:    `{"name":"Object","properties":[{"name":"email","type":"Email"}]}`,
 			Type:    Object([]Property{{Name: "email", Type: Text(Chars(120)).WithRegexp(regexp.MustCompile(`@`)).AsCustom("Email")}}),
 			Resolve: resolve,
+		}, {
+			Data:    `{"name":"Object","properties":[{"name":"email","type":"Email","nullable":true}]}`,
+			Type:    Object([]Property{{Name: "email", Type: Text(Chars(120)).WithRegexp(regexp.MustCompile(`@`)).AsCustom("Email"), Nullable: true}}),
+			Resolve: resolve,
 		},
 	}
 
@@ -265,6 +269,9 @@ func equalTypes(t1, t2 Type) error {
 			}
 			if err := equalTypes(p1.Type, p2.Type); err != nil {
 				return err
+			}
+			if p1.Nullable != p2.Nullable {
+				return fmt.Errorf("expected property key 'nullable' with value %t, got %t", p1.Nullable, p2.Nullable)
 			}
 		}
 	}

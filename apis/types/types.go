@@ -252,6 +252,7 @@ type Property struct {
 	Description string
 	Role        Role
 	Type        Type
+	Nullable    bool
 }
 
 // Type represents a type.
@@ -506,6 +507,7 @@ func Object(properties []Property) Type {
 			Label:       normalizedUTF8(property.Label),
 			Description: normalizedUTF8(property.Description),
 			Type:        property.Type,
+			Nullable:    property.Nullable,
 		}
 	}
 	return Type{pt: PtObject, vl: ps}
@@ -568,6 +570,7 @@ func ObjectOf(properties []Property) (Type, error) {
 			Description: normalizedUTF8(property.Description),
 			Role:        property.Role,
 			Type:        property.Type,
+			Nullable:    property.Nullable,
 		}
 	}
 	return Type{pt: PtObject, vl: ps}, nil
@@ -1250,6 +1253,9 @@ func (t Type) EqualTo(t2 Type) bool {
 				return false
 			}
 			if !p1.Type.EqualTo(p2.Type) {
+				return false
+			}
+			if p1.Nullable != p2.Nullable {
 				return false
 			}
 		}

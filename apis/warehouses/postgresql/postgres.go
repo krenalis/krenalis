@@ -305,6 +305,9 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			if columnName == nil {
 				return errors.New("data warehouse has returned NULL as column name")
 			}
+			if isNullable == nil {
+				return errors.New("data warehouse has returned NULL as nullability of column")
+			}
 			if typ == nil {
 				return errors.New("data warehouse has returned NULL as column data type")
 			}
@@ -314,9 +317,9 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			column := &warehouses.Column{
 				Name:        *columnName,
 				IsUpdatable: *isUpdatable == "YES",
+				Nullable:    *isNullable == "YES",
 			}
 			attTypMod := attTypMods[*tableName][*columnName]
-			_ = isNullable // TODO(Gianluca): use this value.
 			column.Type, err = columnType(*typ, *udtName, charLength, precision, radix, scale, attTypMod, enums)
 			if err != nil {
 				return fmt.Errorf("data warehouse has returned an invalid type: %s", err)
@@ -475,7 +478,10 @@ func (s *psSettings) options() *postgres.Options {
 // serializeColumn serializes a column where name and typ are the name and the
 // type of the column. If typ is an object, it will serialize each property of
 // the object as a column.
-func (warehouse *PostgreSQL) serializeColumn(b *strings.Builder, table, name string, typ types.Type) ([]string, error) {
+//
+// TODO(Gianluca): this method has been updated to support nullable properties,
+// even though it's not used.
+func (warehouse *PostgreSQL) serializeColumn(b *strings.Builder, table, name string, typ types.Type, nullable bool) ([]string, error) {
 	var createTables []string
 	pt := typ.PhysicalType()
 	if pt == types.PtObject {
@@ -483,7 +489,7 @@ func (warehouse *PostgreSQL) serializeColumn(b *strings.Builder, table, name str
 			if !types.IsValidPropertyName(p.Name) {
 				panic("property name is not valid")
 			}
-			tables, err := warehouse.serializeColumn(b, table, name+"_"+p.Name, p.Type)
+			tables, err := warehouse.serializeColumn(b, table, name+"_"+p.Name, p.Type, p.Nullable)
 			if err != nil {
 				return nil, err
 			}
@@ -505,7 +511,7 @@ func (warehouse *PostgreSQL) serializeColumn(b *strings.Builder, table, name str
 				if !types.IsValidPropertyName(p.Name) {
 					panic("property name is not valid")
 				}
-				tables, err := warehouse.serializeColumn(&b, refTable, p.Name, p.Type)
+				tables, err := warehouse.serializeColumn(&b, refTable, p.Name, p.Type, p.Nullable)
 				if err != nil {
 					return nil, err
 				}
@@ -605,9 +611,7 @@ func (warehouse *PostgreSQL) serializeColumn(b *strings.Builder, table, name str
 	default:
 		panic(fmt.Errorf("unexpected schema physical type: %d", typ.PhysicalType()))
 	}
-	// TODO(Gianluca): check if the column can be null from the type, but from
-	// the property, when implemented.
-	if false {
+	if !nullable {
 		b.WriteString(" NOT NULL")
 	}
 	b.WriteString(",\n")
