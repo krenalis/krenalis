@@ -120,7 +120,7 @@ func equalTypes(t1, t2 Type) error {
 	// Physical type.
 	if t1.pt != t2.pt {
 		if !t2.pt.Valid() {
-			return fmt.Errorf("unknows physical type %d", t2.pt)
+			return fmt.Errorf("unknown physical type %d", t2.pt)
 		}
 		return fmt.Errorf("expected physical type %s, got %s", t1.pt, t2.pt)
 	}
@@ -130,7 +130,7 @@ func equalTypes(t1, t2 Type) error {
 			return fmt.Errorf("expected logical type %s, got no logical type", t1.pt)
 		}
 		if !t2.lt.Valid() {
-			return fmt.Errorf("unknows logical type %d", t2.pt)
+			return fmt.Errorf("unknown logical type %d", t2.pt)
 		}
 		return fmt.Errorf("expected logical type %s, got %s", t1.pt, t2.pt)
 	}
