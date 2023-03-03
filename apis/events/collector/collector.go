@@ -178,7 +178,8 @@ func (collector *Collector) serveHTTP(r *http.Request) error {
 
 // readRequestBody reads a request body and returns it in a canonical
 // representation. The request body cannot be longer than maxRequestSize bytes
-// and must be a JSON object, otherwise it returns the errBadRequest error.
+// and must be a streaming of JSON objects, otherwise it returns the
+// errBadRequest error.
 func readRequestBody(r io.Reader) ([]byte, error) {
 	// Read r and check that it is not longer than maxRequestSize bytes.
 	lr := &io.LimitedReader{R: r, N: maxRequestSize + 1}
@@ -190,40 +191,33 @@ func readRequestBody(r io.Reader) ([]byte, error) {
 	if lr.N == 0 {
 		return nil, errBadRequest
 	}
-	// Decode as a JSON object.
-	dec := json.NewDecoder(&b)
+	// Create the decoder.
+	nr := norm.NFC.Reader(&b)
+	dec := json.NewDecoder(nr)
 	dec.UseNumber()
-	var payload map[string]any
-	err = dec.Decode(&payload)
-	if err != nil {
-		return nil, errBadRequest
-	}
-	// Check that the body contains at most only whitespace characters.
+	// Create the encoder.
+	var out bytes.Buffer
+	enc := json.NewEncoder(&out)
+	enc.SetIndent("", "")
+	enc.SetEscapeHTML(false)
+	// Decode and encode the JSON events.
 	for {
-		c, err := b.ReadByte()
-		if err == io.EOF {
-			break
+		var payload map[string]any
+		err = dec.Decode(&payload)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, errBadRequest
 		}
-		switch c {
-		case ' ', '\n', '\r', '\t':
-		default:
+		err = enc.Encode(payload)
+		if err != nil {
 			return nil, errBadRequest
 		}
 	}
-	b.Reset()
-	// Encode it in a canonical representation.
-	w := norm.NFC.Writer(&b)
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "")
-	enc.SetEscapeHTML(false)
-	err = enc.Encode(payload)
-	if err != nil {
+	if out.Len() == 0 {
 		return nil, errBadRequest
 	}
-	err = w.Close()
-	if err != nil {
-		return nil, err
-	}
-	p := b.Bytes()
+	p := out.Bytes()
 	return p[:len(p)-1], nil
 }
