@@ -74,7 +74,7 @@ func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
 			Description: "Send an Identity to Dummy",
 			Endpoints:   []int{1, 2},
 			Schema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
+				{Name: "email", Required: true, Type: types.Text()},
 				{Name: "traits", Type: types.Object([]types.Property{
 					{Name: "address", Type: types.Object([]types.Property{
 						{Name: "street1", Type: types.Text()},
