@@ -250,6 +250,16 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 		return errors.New("action has neither mapping nor transformation associated")
 	}
 
+	// Collect the top-level required properties in the action type schema,
+	// which must be necessarily mapped by mappings or by the Python
+	// transformation.
+	actionTypeRequiredProps := map[string]struct{}{}
+	for _, p := range actionType.Schema.Properties() {
+		if p.Required {
+			actionTypeRequiredProps[p.Name] = struct{}{}
+		}
+	}
+
 	if action.Mapping != nil {
 		for right, left := range action.Mapping {
 			// Validate the left expression, which can be an identifier or a
@@ -270,6 +280,7 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 			if !existsInObject(rightPath, actionType.Schema) {
 				return fmt.Errorf("property %q does not exist in action type schema", right)
 			}
+			delete(actionTypeRequiredProps, rightPath[0])
 		}
 	}
 
@@ -286,7 +297,18 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 			if !schemaProps[right] {
 				return fmt.Errorf("property name %q does not exist in action type schema", right)
 			}
+			delete(actionTypeRequiredProps, right)
 		}
+	}
+
+	if len(actionTypeRequiredProps) > 0 {
+		var name string
+		for p := range actionTypeRequiredProps {
+			if name == "" || p < name {
+				name = p
+			}
+		}
+		return fmt.Errorf("required property %s in action type schema not mapped", name)
 	}
 
 	return nil
