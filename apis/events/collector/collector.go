@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package events
+package collector
 
 import (
 	"bytes"
@@ -27,9 +27,6 @@ import (
 // maxRequestSize is the maximum size in bytes of an event request body.
 const maxRequestSize = 500 * 1024
 
-// eventDateLayout is the layout used for dates in events.
-const eventDateLayout = "2006-01-02T15:04:05.999Z"
-
 // Errors handled by the HTTP server of the collector.
 var (
 	errUnauthorized = errors.New("unauthorized")
@@ -43,9 +40,9 @@ type Collector struct {
 	stream connector.StreamConnection
 }
 
-// NewCollector returns a new event collector. It reads events sent from
-// mobile, server and website sources and sends them to stream.
-func NewCollector(ctx context.Context, st *state.State, stream connector.StreamConnection) (*Collector, error) {
+// New returns a new event collector. It reads events sent from mobile, server
+// and website sources and sends them to stream.
+func New(ctx context.Context, st *state.State, stream connector.StreamConnection) (*Collector, error) {
 	var collector = Collector{
 		state:  st,
 		stream: stream,

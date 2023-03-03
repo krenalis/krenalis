@@ -30,6 +30,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/events/collector"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/connector"
@@ -39,7 +40,6 @@ import (
 	"github.com/open2b/nuts/culture"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/relvacode/iso8601"
-	"golang.org/x/text/unicode/norm"
 )
 
 const (
@@ -48,6 +48,9 @@ const (
 	maxEventSize      = 32 * 1024
 	maxEventsQueueLen = 10000
 )
+
+// eventDateLayout is the layout used for dates in events.
+const eventDateLayout = "2006-01-02T15:04:05.999Z"
 
 // emptyProperties represents an empty event properties.
 var emptyProperties = []byte("{}")
@@ -413,7 +416,7 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 	}
 
 	// Read the message header.
-	header := new(MessageHeader)
+	header := new(collector.MessageHeader)
 	r.Reset(message)
 	dec = json.NewDecoder(r)
 	dec.DisallowUnknownFields()
@@ -1043,23 +1046,6 @@ RETRY:
 		}
 		break
 	}
-}
-
-// decodeEvent decodes an event read from body into a value pointed by event.
-func decodeEvent(body io.Reader, event any) error {
-	body = norm.NFC.Reader(io.LimitReader(body, maxEventSize))
-	err := json.NewDecoder(body).Decode(event)
-	if err != nil {
-		return errBadRequest
-	}
-	n, err := body.Read([]byte(" "))
-	if n > 0 {
-		return errBadRequest
-	}
-	if err != nil && err != io.EOF {
-		return err
-	}
-	return nil
 }
 
 // isWellFormedConnectorKey reports whether key is a well-formed key.

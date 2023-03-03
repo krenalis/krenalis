@@ -16,6 +16,7 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/events"
+	"chichi/apis/events/collector"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 
@@ -26,7 +27,7 @@ import (
 type APIs struct {
 	db             *postgres.DB
 	state          *state.State
-	eventCollector *events.Collector
+	eventCollector *collector.Collector
 	eventProcessor *events.Processor
 	Users          *Users
 }
@@ -83,7 +84,7 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 	apis.state.AddListener(apis.onSetConnectionUserQuery)
 
 	// Run the event collector.
-	apis.eventCollector, err = events.NewCollector(ctx, apis.state,
+	apis.eventCollector, err = collector.New(ctx, apis.state,
 		newPostgresStream(context.Background(), db))
 	if err != nil {
 		return nil, err

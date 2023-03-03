@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"chichi/apis/errors"
+	"chichi/apis/events/collector"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 
@@ -191,7 +192,7 @@ type ProcessedEvent struct {
 
 	// Header is the message header. It is nil if a validation error occurred
 	// processing the entire message.
-	Header *MessageHeader
+	Header *collector.MessageHeader
 
 	// Data contains the data, encoded in JSON, of a single event in the message,
 	// if header is not nil, or the data of the entire message, if header is nil.
@@ -266,7 +267,7 @@ func (observer *observer) flushStats(t time.Time) error {
 // be nil if an error occurred processing the message headers. data is the
 // entire message data if headers is nil, otherwise is the event data. If a
 // message or event is invalid, err contains the error.
-func (observer *observer) AddEvent(source, server, stream int, header *MessageHeader, data []byte, err error) {
+func (observer *observer) AddEvent(source, server, stream int, header *collector.MessageHeader, data []byte, err error) {
 
 	observer.RLock()
 	defer observer.RUnlock()
