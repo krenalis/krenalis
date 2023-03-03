@@ -200,7 +200,7 @@ func TestDecode(t *testing.T) {
 	for _, test := range tests {
 		dec := json.NewDecoder(strings.NewReader(test.Data))
 		dec.UseNumber()
-		got, err := decodeByType(dec, nil, test.Type, false)
+		got, err := decodeByType(dec, nil, test.Type)
 		if err != nil {
 			t.Errorf("cannot decode '%s': %s", test.Data, err)
 			continue

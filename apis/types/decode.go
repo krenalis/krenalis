@@ -34,25 +34,7 @@ func Decode(r io.Reader, t Type) (map[string]any, error) {
 	}
 	dec := json.NewDecoder(norm.NFC.Reader(r))
 	dec.UseNumber()
-	v, err := decodeByType(dec, nil, t, false)
-	if err != nil {
-		return nil, err
-	}
-	return v.(map[string]any), nil
-}
-
-// DecodeStrict is like Decode but returns an error if a property of an object
-// is missing.
-func DecodeStrict(r io.Reader, t Type) (map[string]any, error) {
-	if !t.Valid() {
-		return nil, errors.New("type is not valid")
-	}
-	if t.pt != PtObject {
-		return nil, errors.New("type is not an object")
-	}
-	dec := json.NewDecoder(norm.NFC.Reader(r))
-	dec.UseNumber()
-	v, err := decodeByType(dec, nil, t, true)
+	v, err := decodeByType(dec, nil, t)
 	if err != nil {
 		return nil, err
 	}
@@ -60,10 +42,9 @@ func DecodeStrict(r io.Reader, t Type) (map[string]any, error) {
 }
 
 // decodeByType decodes a JSON-encoded value, read from dec, validates it
-// according to t and returns the decoded value. If strict is true, it returns
-// an error if an object property is missing.
+// according to t and returns the decoded value.
 // If tok is not nil, it does not read the first token from dec but uses tok.
-func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, error) {
+func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 	var err error
 	if tok == nil {
 		tok, err = dec.Token()
@@ -273,7 +254,7 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 			if tok == nil {
 				return nil, errors.New("null item not allowed")
 			}
-			item, err := decodeByType(dec, tok, it, strict)
+			item, err := decodeByType(dec, tok, it)
 			if err != nil {
 				return nil, err
 			}
@@ -322,7 +303,7 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 					object[p.Name] = nil
 					continue
 				}
-				object[p.Name], err = decodeByType(dec, tok, p.Type, strict)
+				object[p.Name], err = decodeByType(dec, tok, p.Type)
 				if err != nil {
 					return nil, err
 				}
@@ -334,28 +315,7 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 			if !IsValidPropertyName(name) {
 				return nil, errors.New("invalid property name")
 			}
-			if strict {
-				return nil, fmt.Errorf("unknow property name %q", name)
-			}
-			// Skip the property.
-			depth := 0
-			for {
-				tok, err = dec.Token()
-				if err != nil {
-					return nil, err
-				}
-				if d, ok := tok.(json.Delim); ok {
-					switch d {
-					case '{', '[':
-						depth++
-					case '}', ']':
-						depth--
-					}
-				}
-				if depth == 0 {
-					break
-				}
-			}
+			return nil, fmt.Errorf("unknown property name %q", name)
 		}
 		return object, nil
 	case PtMap:
@@ -377,7 +337,7 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type, strict bool) (any, 
 			if _, ok := values[key]; ok {
 				return nil, errors.New("repeated map key")
 			}
-			values[key], err = decodeByType(dec, nil, vt, strict)
+			values[key], err = decodeByType(dec, nil, vt)
 			if err != nil {
 				return nil, err
 			}
