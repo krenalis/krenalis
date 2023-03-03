@@ -22,6 +22,8 @@ import (
 
 	"chichi/apis/state"
 	"chichi/connector"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 // maxRequestSize is the maximum size in bytes of an event request body.
@@ -140,8 +142,8 @@ func (collector *Collector) serveHTTP(r *http.Request) error {
 	}
 
 	// Prepare the event data.
-	var event bytes.Buffer
-	enc := json.NewEncoder(&event)
+	var payload bytes.Buffer
+	enc := json.NewEncoder(&payload)
 	enc.SetEscapeHTML(false)
 	request := MessageHeader{
 		ReceivedAt: date,
@@ -155,22 +157,73 @@ func (collector *Collector) serveHTTP(r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	body := &io.LimitedReader{R: r.Body, N: maxRequestSize + 1}
-	_, err = event.ReadFrom(body)
+
+	// Read the request body and append it to the payload.
+	body, err := readRequestBody(r.Body)
 	if err != nil {
 		return err
 	}
-	if body.N == 0 {
-		return errBadRequest
-	}
+	payload.Write(body)
 
 	// Send the event to the stream.
 	ch := make(chan struct{})
 	opts := connector.SendOptions{OrderKey: src}
-	err = collector.stream.Send(event.Bytes(), opts, func(err error) {
+	err = collector.stream.Send(payload.Bytes(), opts, func(err error) {
 		ch <- struct{}{}
 	})
 	_ = <-ch
 
 	return err
+}
+
+// readRequestBody reads a request body and returns it in a canonical
+// representation. The request body cannot be longer than maxRequestSize bytes
+// and must be a JSON object, otherwise it returns the errBadRequest error.
+func readRequestBody(r io.Reader) ([]byte, error) {
+	// Read r and check that it is not longer than maxRequestSize bytes.
+	lr := &io.LimitedReader{R: r, N: maxRequestSize + 1}
+	var b bytes.Buffer
+	_, err := b.ReadFrom(r)
+	if err != nil {
+		return nil, err
+	}
+	if lr.N == 0 {
+		return nil, errBadRequest
+	}
+	// Decode as a JSON object.
+	dec := json.NewDecoder(&b)
+	dec.UseNumber()
+	var payload map[string]any
+	err = dec.Decode(&payload)
+	if err != nil {
+		return nil, errBadRequest
+	}
+	// Check that the body contains at most only whitespace characters.
+	for {
+		c, err := b.ReadByte()
+		if err == io.EOF {
+			break
+		}
+		switch c {
+		case ' ', '\n', '\r', '\t':
+		default:
+			return nil, errBadRequest
+		}
+	}
+	b.Reset()
+	// Encode it in a canonical representation.
+	w := norm.NFC.Writer(&b)
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "")
+	enc.SetEscapeHTML(false)
+	err = enc.Encode(payload)
+	if err != nil {
+		return nil, errBadRequest
+	}
+	err = w.Close()
+	if err != nil {
+		return nil, err
+	}
+	p := b.Bytes()
+	return p[:len(p)-1], nil
 }
