@@ -957,7 +957,7 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Prop
 		}
 
 		var ok bool
-		var hasLabel, hasDestination, hasNullable, hasRequired, hasRole bool
+		var hasLabel, hasDescription, hasNullable, hasRequired, hasRole bool
 
 		switch key {
 		case "name":
@@ -1016,14 +1016,14 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Prop
 			}
 			hasLabel = true
 		case "description":
-			if hasDestination {
+			if hasDescription {
 				return Property{}, 0, errors.New("repeated 'description' key")
 			}
 			p.Description, ok = tok.(string)
 			if !ok {
 				return Property{}, 0, errors.New("unexpected value for property description")
 			}
-			hasDestination = true
+			hasDescription = true
 		case "required":
 			if hasRequired {
 				return Property{}, 0, errors.New("repeated 'required' key")
