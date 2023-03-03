@@ -251,6 +251,7 @@ type Property struct {
 	Label       string
 	Description string
 	Role        Role
+	Required    bool
 	Type        Type
 	Nullable    bool
 }
@@ -506,6 +507,7 @@ func Object(properties []Property) Type {
 			Aliases:     aliases,
 			Label:       normalizedUTF8(property.Label),
 			Description: normalizedUTF8(property.Description),
+			Required:    property.Required,
 			Type:        property.Type,
 			Nullable:    property.Nullable,
 		}
@@ -569,6 +571,7 @@ func ObjectOf(properties []Property) (Type, error) {
 			Label:       normalizedUTF8(property.Label),
 			Description: normalizedUTF8(property.Description),
 			Role:        property.Role,
+			Required:    property.Required,
 			Type:        property.Type,
 			Nullable:    property.Nullable,
 		}
@@ -1250,6 +1253,9 @@ func (t Type) EqualTo(t2 Type) bool {
 				return false
 			}
 			if p1.Description != p2.Description {
+				return false
+			}
+			if p1.Required != p2.Required {
 				return false
 			}
 			if !p1.Type.EqualTo(p2.Type) {

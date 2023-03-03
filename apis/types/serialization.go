@@ -251,6 +251,9 @@ func marshalType(b *bytes.Buffer, t Type, custom bool) {
 				b.WriteString(`,"description":`)
 				_ = marshalString(b, p.Description)
 			}
+			if p.Required {
+				b.WriteString(`,"required":true`)
+			}
 			b.WriteString(`,"type":`)
 			marshalType(b, p.Type, false)
 			if p.Nullable {
@@ -954,7 +957,7 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Prop
 		}
 
 		var ok bool
-		var hasLabel, hasDestination, hasNullable, hasRole bool
+		var hasLabel, hasDestination, hasNullable, hasRequired, hasRole bool
 
 		switch key {
 		case "name":
@@ -1021,6 +1024,15 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Prop
 				return Property{}, 0, errors.New("unexpected value for property description")
 			}
 			hasDestination = true
+		case "required":
+			if hasRequired {
+				return Property{}, 0, errors.New("repeated 'required' key")
+			}
+			p.Required, ok = tok.(bool)
+			if !ok {
+				return Property{}, 0, errors.New("unexpected value for 'required' key of property")
+			}
+			hasRequired = true
 		case "role":
 			if !inSchema {
 				return Property{}, 0, errors.New("unknown property 'role'")

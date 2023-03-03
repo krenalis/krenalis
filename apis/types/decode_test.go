@@ -168,9 +168,10 @@ func TestDecode(t *testing.T) {
 					}),
 				},
 				{
-					Name:  "birthday",
-					Label: "Birthday",
-					Type:  Date(time.DateOnly),
+					Name:     "birthday",
+					Label:    "Birthday",
+					Required: true,
+					Type:     Date(time.DateOnly),
 				},
 				{
 					Name:     "phone",

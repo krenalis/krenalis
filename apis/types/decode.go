@@ -275,10 +275,14 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 			return nil, errors.New("not a JSON object")
 		}
 		propertyByName := map[string]Property{}
+		requiredProperties := map[string]struct{}{}
 		for _, p := range t.vl.([]Property) {
 			propertyByName[p.Name] = p
 			for _, alias := range p.Aliases {
 				propertyByName[alias] = p
+			}
+			if p.Required {
+				requiredProperties[p.Name] = struct{}{}
 			}
 		}
 		object := map[string]any{}
@@ -301,12 +305,14 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 						return nil, fmt.Errorf("property %s cannot be null", p.Name)
 					}
 					object[p.Name] = nil
+					delete(requiredProperties, p.Name)
 					continue
 				}
 				object[p.Name], err = decodeByType(dec, tok, p.Type)
 				if err != nil {
 					return nil, err
 				}
+				delete(requiredProperties, p.Name)
 				continue
 			}
 			if name == "" {
@@ -316,6 +322,15 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 				return nil, errors.New("invalid property name")
 			}
 			return nil, fmt.Errorf("unknown property name %q", name)
+		}
+		if len(requiredProperties) > 0 {
+			var name string
+			for p := range requiredProperties {
+				if name == "" || p < name {
+					name = p
+				}
+			}
+			return nil, fmt.Errorf("required property %s not found", name)
 		}
 		return object, nil
 	case PtMap:

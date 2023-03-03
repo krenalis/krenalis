@@ -94,6 +94,11 @@ func TestTypeSerialization(t *testing.T) {
 			Type:    Object([]Property{{Name: "email", Type: Text(Chars(120)).WithRegexp(regexp.MustCompile(`@`)).AsCustom("Email"), Nullable: true}}),
 			Resolve: resolve,
 		},
+		{
+			Data:    `{"name":"Object","properties":[{"name":"email","required":true,"type":"Email"}]}`,
+			Type:    Object([]Property{{Name: "email", Required: true, Type: Text(Chars(120)).WithRegexp(regexp.MustCompile(`@`)).AsCustom("Email")}}),
+			Resolve: resolve,
+		},
 	}
 
 	for _, test := range tests {
@@ -266,6 +271,9 @@ func equalTypes(t1, t2 Type) error {
 			}
 			if p1.Description != p2.Description {
 				return fmt.Errorf("expected property description %q, got %q", p1.Description, p2.Description)
+			}
+			if p1.Required != p2.Required {
+				return fmt.Errorf("expected property key 'required' with value %t, got %t", p1.Required, p2.Required)
 			}
 			if err := equalTypes(p1.Type, p2.Type); err != nil {
 				return err
