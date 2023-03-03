@@ -434,6 +434,16 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(map[string]any{"Columns": columns, "Rows": rows})
 			})
+			router.Post("/reload", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				err = connection.Reload()
+				respond(w, err)
+			})
 			router.Post("/set-users-query", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)

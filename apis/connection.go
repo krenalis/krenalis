@@ -1135,6 +1135,27 @@ func (this *Connection) SetStorage(storage int) error {
 	return err
 }
 
+// Reload reloads the schema for app and database source connections, the action
+// types for app destination connections, and it is a nop for any other
+// connection type/role.
+func (this *Connection) Reload() error {
+	c := this.connection
+	connector := c.Connector()
+	if c.Role == state.SourceRole {
+		if t := connector.Type; t == state.AppType || t == state.DatabaseType {
+			err := this.reloadSchema()
+			return err
+		}
+		return nil
+	}
+	// Destination.
+	if connector.Type == state.AppType {
+		err := this.reloadActionTypes()
+		return err
+	}
+	return nil
+}
+
 // SetUsersQuery sets the users query of connection. The connection must be a
 // database source connection. query must be UTF-8 encoded, it cannot be longer
 // than 16,777,215 runes and must contain the ':limit' placeholder.
@@ -1217,12 +1238,19 @@ func (this *Connection) Stats() (*ConnectionsStats, error) {
 	return stats, nil
 }
 
-// reloadActionTypes reloads the action types for the destination connection of
-// type app.
+// reloadActionTypes reloads the action types for the connection, which must be
+// a destination with type app.
 func (this *Connection) reloadActionTypes() error {
 
 	c := this.connection
 	connector := c.Connector()
+	if connector.Type != state.AppType {
+		return fmt.Errorf("cannot reload action types for a %s connection", connector.Type)
+	}
+	if c.Role == state.SourceRole {
+		return errors.New("cannot reload action types for a source")
+	}
+
 	cRole := _connector.Role(c.Role)
 
 	// Retrieve the resource secrets, if necessary.

@@ -1,0 +1,35 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2023 Open2b
+//
+
+package cmd
+
+import (
+	"log"
+	"strconv"
+
+	"chichi-cli/chichiapis"
+
+	"github.com/spf13/cobra"
+)
+
+var reloadCmd = &cobra.Command{
+	Use:   "reload <connection>",
+	Short: "reloads schema and action types",
+	Long:  "reloads schema and action types",
+	Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	Run: func(cmd *cobra.Command, args []string) {
+		connection, _ := strconv.Atoi(args[0])
+		if connection <= 0 {
+			log.Fatalf("invalid connection ID %q", args[0])
+		}
+		chichiapis.Reload(connection)
+	},
+}
+
+func init() {
+	connectionsCmd.AddCommand(reloadCmd)
+}

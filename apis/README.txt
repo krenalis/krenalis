@@ -20,6 +20,7 @@ POST    /api/connections/{id}/reimport             Import from a connection
 POST    /api/connections/{id}/export               Export to connection
 GET     /api/connections/{id}/stats                Get the stats of a connection
 POST    /api/connections/{id}/query                Execute a query on a connection
+POST    /api/connections/{id}/reload               Reload the schema or the action types of a connection.
 POST    /api/connections/{id}/set-users-query      Set the query of a connection
 GET     /api/connections/{id}/keys                 Get the API keys of a connection
 POST    /api/connections/{id}/keys                 Generate a new API key for a connection
