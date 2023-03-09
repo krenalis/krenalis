@@ -48,7 +48,17 @@ func TestTypes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := columnType(test.s, test.udtName, test.charLength, test.precision, test.radix, test.scale, nil, nil)
+		row := pgTypeInfo{
+			table:      "test_table",
+			column:     "test_column",
+			dataType:   test.s,
+			udtName:    test.udtName,
+			charLength: test.charLength,
+			precision:  test.precision,
+			radix:      test.radix,
+			scale:      test.scale,
+		}
+		got, err := columnType(row, nil, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -75,7 +85,10 @@ func TestUnsupportedTypes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := columnType(test, "", nil, nil, nil, nil, nil, nil)
+		row := pgTypeInfo{
+			dataType: test,
+		}
+		got, err := columnType(row, nil, nil, nil)
 		if err != nil {
 			t.Error(err)
 		}

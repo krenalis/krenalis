@@ -281,6 +281,12 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			return err
 		}
 
+		// Instantiate a resolver for the composite types.
+		ctResolver, err := compositeTypeResolver(ctx, tx, enums, attTypMods)
+		if err != nil {
+			return err
+		}
+
 		// Read columns.
 		query = "SELECT c.table_name, c.column_name, c.is_nullable, c.data_type, c.udt_name, c.character_maximum_length," +
 			" c.numeric_precision, c.numeric_precision_radix, c.numeric_scale, c.is_updatable," +
@@ -297,41 +303,55 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			return err
 		}
 		for rows.Next() {
-			var tableName, columnName, isNullable, typ, udtName, charLength, precision, radix, scale, isUpdatable, description *string
-			if err = rows.Scan(&tableName, &columnName, &isNullable, &typ, &udtName, &charLength, &precision, &radix, &scale, &isUpdatable, &description); err != nil {
+			var row pgTypeInfo
+			var tableName, columnName, dataType, udtName, isNullable, isUpdatable, description *string
+			if err = rows.Scan(&tableName, &columnName, &isNullable, &dataType,
+				&udtName, &row.charLength, &row.precision, &row.radix, &row.scale, &isUpdatable, &description); err != nil {
 				rows.Close()
 				return err
 			}
+			if tableName == nil {
+				return errors.New("data warehouse has returned NULL as table name")
+			}
+			row.table = *tableName
 			if columnName == nil {
 				return errors.New("data warehouse has returned NULL as column name")
-			}
-			if isNullable == nil {
-				return errors.New("data warehouse has returned NULL as nullability of column")
-			}
-			if typ == nil {
-				return errors.New("data warehouse has returned NULL as column data type")
 			}
 			if !types.IsValidPropertyName(*columnName) {
 				return fmt.Errorf("column name %q is not supported", *columnName)
 			}
+			row.column = *columnName
+			if isNullable == nil {
+				return errors.New("data warehouse has returned NULL as nullability of column")
+			}
+			if dataType == nil {
+				return errors.New("data warehouse has returned NULL as column data type")
+			}
+			row.dataType = *dataType
+			if udtName == nil {
+				return errors.New("data warehouse has returned NULL as column udt name")
+			}
+			row.udtName = *udtName
+			if isUpdatable == nil {
+				return errors.New("data warehouse has returned NULL as updatability of column")
+			}
 			column := &warehouses.Column{
-				Name:        *columnName,
+				Name:        row.column,
 				IsUpdatable: *isUpdatable == "YES",
 				Nullable:    *isNullable == "YES",
 			}
-			attTypMod := attTypMods[*tableName][*columnName]
-			column.Type, err = columnType(*typ, *udtName, charLength, precision, radix, scale, attTypMod, enums)
+			column.Type, err = columnType(row, enums, ctResolver, attTypMods)
 			if err != nil {
 				return fmt.Errorf("data warehouse has returned an invalid type: %s", err)
 			}
 			if !column.Type.Valid() {
-				return fmt.Errorf("type of column %s.%s is not supported", *tableName, column.Name)
+				return fmt.Errorf("type of column %s.%s is not supported", row.table, column.Name)
 			}
 			if description != nil {
 				column.Description = *description
 			}
-			if table == nil || *tableName != table.Name {
-				table = &warehouses.Table{Name: *tableName}
+			if table == nil || row.table != table.Name {
+				table = &warehouses.Table{Name: row.table}
 				tables = append(tables, table)
 			}
 			table.Columns = append(table.Columns, column)
@@ -347,6 +367,20 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 	}
 
 	return tables, nil
+}
+
+// pgTypeInfo holds information about a PostgreSQL type, as read from the
+// PostgreSQL information tables (as 'information_schema.columns' and
+// 'information_schema.attributes').
+type pgTypeInfo struct {
+	table      string
+	column     string
+	dataType   string
+	udtName    string
+	charLength *string
+	precision  *string
+	radix      *string
+	scale      *string
 }
 
 // Users returns the users, with only the given columns, ordered by order if

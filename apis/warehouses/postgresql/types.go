@@ -16,24 +16,26 @@ import (
 	"chichi/apis/types"
 )
 
-// columnType returns the types.Type corresponding to the PostgreSQL type typ
-// stored in the information_schema.columns column.
+// columnType returns the types.Type corresponding to the PostgreSQL type
+// described in column.
 //
-// udtName is the name of the column data type, which is relevant in case of
-// user-defined types and arrays.
+// enums is a mapping of the available enum types.
 //
-// attTypMod, when non-nil, is a type-specific data attribute read from
-// pg_attribute.atttypmod (represents, for example, the maximum length of a
-// varchar column or the maximum length of the text of an array element); is nil
-// if the column type has no associated type-specific data.
+// attTypMods holds a type-specific data attributes read from the table
+// 'pg_attribute.atttypmod'. The first key is the table name (or the composite
+// type name, which is stored in PostgreSQL as a table), while the second key is
+// the column name (or composite type field name). It represents, for example,
+// the maximum length of a varchar column or the maximum length of the text of
+// an array element); may not contain a key if the column type has no associated
+// type-specific data.
 //
-// enums is a mapping of available enum types.
+// ctResolver is a types.Resolver which resolves composite types.
 //
 // It returns an invalid type if typ is not supported. It returns an error if an
 // argument is not valid.
-func columnType(typ, udtName string, charLength, precision, radix, scale *string, attTypMod *int, enums map[string]types.Type) (types.Type, error) {
+func columnType(column pgTypeInfo, enums map[string]types.Type, ctResolver types.Resolver, attTypMods map[string]map[string]*int) (types.Type, error) {
 	var t types.Type
-	switch typ {
+	switch column.dataType {
 	case "smallint":
 		t = types.Int16()
 	case "integer":
@@ -42,28 +44,28 @@ func columnType(typ, udtName string, charLength, precision, radix, scale *string
 		t = types.Int64()
 	case "numeric":
 		// Parse precision radix.
-		if radix == nil {
+		if column.radix == nil {
 			return types.Type{}, errors.New("numeric_precision_radix value is NULL")
 		}
-		rdx, _ := strconv.Atoi(*radix)
+		rdx, _ := strconv.Atoi(*column.radix)
 		if rdx != 2 && rdx != 10 {
-			return types.Type{}, fmt.Errorf("numeric_precision_radix value %q is not valid", *radix)
+			return types.Type{}, fmt.Errorf("numeric_precision_radix value %q is not valid", *column.radix)
 		}
 		// Parse precision.
-		if precision == nil {
+		if column.precision == nil {
 			return types.Type{}, errors.New("numeric_precision value is NULL")
 		}
-		p, err := strconv.ParseInt(*precision, rdx, 64)
+		p, err := strconv.ParseInt(*column.precision, rdx, 64)
 		if err != nil || p < 1 {
-			return types.Type{}, fmt.Errorf("numeric_precision value %q is not valid", *precision)
+			return types.Type{}, fmt.Errorf("numeric_precision value %q is not valid", *column.precision)
 		}
 		// Parse scale.
-		if scale == nil {
+		if column.scale == nil {
 			return types.Type{}, errors.New("numeric_scale value is NULL")
 		}
-		s, err := strconv.ParseInt(*scale, rdx, 64)
+		s, err := strconv.ParseInt(*column.scale, rdx, 64)
 		if err != nil || s < 0 || s > p {
-			return types.Type{}, fmt.Errorf("numeric_scale value %q is not valid", *scale)
+			return types.Type{}, fmt.Errorf("numeric_scale value %q is not valid", *column.scale)
 		}
 		t = types.Decimal(int(p), int(s))
 	case "real":
@@ -71,10 +73,10 @@ func columnType(typ, udtName string, charLength, precision, radix, scale *string
 	case "double precision":
 		t = types.Float()
 	case "character varying", "character":
-		if charLength != nil {
-			chars, _ := strconv.Atoi(*charLength)
+		if column.charLength != nil {
+			chars, _ := strconv.Atoi(*column.charLength)
 			if chars < 1 {
-				return types.Type{}, fmt.Errorf("character_maximum_length value %q is not valid", *charLength)
+				return types.Type{}, fmt.Errorf("character_maximum_length value %q is not valid", *column.charLength)
 			}
 			t = types.Text(types.Chars(chars))
 		} else {
@@ -104,12 +106,13 @@ func columnType(typ, udtName string, charLength, precision, radix, scale *string
 		// unspecified length.”
 		//
 		// so there's no way to limit the min/max number of array elements.
-		switch udtName {
+		switch column.udtName {
 		case "_bool":
 			t = types.Array(types.Boolean())
 		case "_int4":
 			t = types.Array(types.Int())
 		case "_varchar":
+			attTypMod := attTypMods[column.table][column.column]
 			if attTypMod != nil {
 				length := *attTypMod - 4 // See the function "_pg_char_max_length".
 				if length < 1 {
@@ -123,8 +126,14 @@ func columnType(typ, udtName string, charLength, precision, radix, scale *string
 		}
 	case "USER-DEFINED":
 		// Check if the user-defined type is an enum.
-		if typ, ok := enums[udtName]; ok {
+		if typ, ok := enums[column.udtName]; ok {
 			t = typ
+		} else {
+			var err error
+			t, err = ctResolver(column.udtName)
+			if err != nil {
+				return types.Type{}, err
+			}
 		}
 	}
 	return t, nil
