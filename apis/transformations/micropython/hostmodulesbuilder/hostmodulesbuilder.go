@@ -8,7 +8,6 @@
 package hostmodulesbuilder
 
 import (
-	"context"
 	"io"
 	"log"
 
@@ -17,14 +16,13 @@ import (
 
 // HostModulesBuilder is a builder for the host modules.
 type HostModulesBuilder struct {
-	ctx    context.Context
 	mod    api.Module
 	stdout io.Writer
 }
 
 // New returns a new instance of HostModulesBuilder. If a function returned by
 // this builder writes something, it writes it to stdout.
-func New(ctx context.Context, stdout io.Writer) *HostModulesBuilder {
+func New(stdout io.Writer) *HostModulesBuilder {
 	return &HostModulesBuilder{stdout: stdout}
 }
 
@@ -73,18 +71,18 @@ func (h *HostModulesBuilder) BuildModules() map[string]map[string]any {
 
 func (h *HostModulesBuilder) emscripten_memcpy_big(dest, src, num int32) {
 	mem := h.mod.Memory()
-	data, ok := mem.Read(h.ctx, uint32(src), uint32(num))
+	data, ok := mem.Read(uint32(src), uint32(num))
 	if !ok {
 		panic("cannot read memory")
 	}
-	ok = mem.Write(h.ctx, uint32(dest), data)
+	ok = mem.Write(uint32(dest), data)
 	if !ok {
 		panic("cannot write memory")
 	}
 }
 
 func (h *HostModulesBuilder) mpJsWrite(ptr, length int32) {
-	data, ok := h.mod.Memory().Read(h.ctx, uint32(ptr), uint32(length))
+	data, ok := h.mod.Memory().Read(uint32(ptr), uint32(length))
 	if !ok {
 		log.Panicf("cannot read from %d %d", ptr, length)
 	}

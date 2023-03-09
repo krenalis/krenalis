@@ -36,7 +36,7 @@ var microPythonSource []byte
 func NewVM(ctx context.Context, stackSize uint64, stdout io.Writer, enableDecimal bool) (*VM, error) {
 
 	r := wazero.NewRuntime(ctx)
-	h := hostmodulesbuilder.New(ctx, stdout)
+	h := hostmodulesbuilder.New(stdout)
 
 	// Instantiate the host modules.
 	for modName, modFuncs := range h.BuildModules() {
@@ -47,14 +47,14 @@ func NewVM(ctx context.Context, stackSize uint64, stdout io.Writer, enableDecima
 		if modName == "env" {
 			emscripten.NewFunctionExporter().ExportFunctions(mod)
 		}
-		_, err := mod.Instantiate(ctx, r)
+		_, err := mod.Instantiate(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("cannot instantiate module %q: %s", modName, err)
 		}
 	}
 
 	// Instantiate "micropython.wasm".
-	mod, err := r.InstantiateModuleFromBinary(ctx, microPythonSource)
+	mod, err := r.Instantiate(ctx, microPythonSource)
 	if err != nil {
 		return nil, fmt.Errorf("cannot instantiate module from binary: %s", err)
 	}
@@ -96,7 +96,7 @@ func (vm *VM) REPLSendEnter() error { return vm.REPLSendChar(13) }
 // RunSourceCode runs the given source code.
 func (vm *VM) RunSourceCode(src []byte) error {
 	codeOffset := uint32(0)
-	ok := vm.mod.Memory().Write(vm.ctx, codeOffset, src)
+	ok := vm.mod.Memory().Write(codeOffset, src)
 	if !ok {
 		return errors.New("out of range")
 	}
