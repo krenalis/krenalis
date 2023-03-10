@@ -36,7 +36,7 @@ import (
 	"chichi/connector"
 
 	"github.com/google/uuid"
-	"github.com/mssola/user_agent"
+	"github.com/mssola/useragent"
 	"github.com/open2b/nuts/culture"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/relvacode/iso8601"
@@ -761,7 +761,7 @@ func (p *Processor) processMessage(streamID int, message []byte) error {
 			event.os.version = event.OSVersion
 		} else {
 			event.userAgent = header.Headers.Get("User-Agent")
-			ua := user_agent.New(event.userAgent)
+			ua := useragent.New(event.userAgent)
 			osInfo := ua.OSInfo()
 			switch osInfo.Name {
 			case "Mac OS X":

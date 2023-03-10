@@ -49,7 +49,7 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b
 	github.com/jackc/puddle/v2 v2.1.2
 	github.com/jxskiss/base62 v1.1.0
-	github.com/mssola/user_agent v0.5.3
+	github.com/mssola/useragent v1.0.0
 	github.com/open2b/nuts v1.5.3
 	github.com/oschwald/geoip2-golang v1.8.0
 	github.com/relvacode/iso8601 v1.3.0
