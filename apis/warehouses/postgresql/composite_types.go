@@ -110,7 +110,6 @@ func initCompositeTypeResolver(ctx context.Context, tx *postgres.Tx, enums map[s
 				props = append(props, prop)
 			}
 			t := types.Object(props)
-			// TODO(Gianluca): should we call 'AsCustom(name)' here?
 			typeOf[name] = t
 			return t, nil
 		}
