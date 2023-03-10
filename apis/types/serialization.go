@@ -821,7 +821,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	}
 	if hasUniqueItems {
 		if pt != PtArray {
-			return Type{}, errors.New("unexpected uniqueItems for no Array type")
+			return Type{}, errors.New("unexpected uniqueItems for non-Array type")
 		}
 		if pt := t.vl.(Type).pt; pt == PtArray || pt == PtObject {
 			return Type{}, errors.New("unexpected uniqueItems for items with type Array or Object")
