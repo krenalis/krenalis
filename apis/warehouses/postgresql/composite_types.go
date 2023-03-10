@@ -15,8 +15,14 @@ import (
 	"chichi/apis/types"
 )
 
-// compositeTypeResolver returns a resolver for the composite types, retrieving
-// information from the transaction tx.
+// compositeTypeResolver represents a function which resolves composite types
+// defined in the PostgreSQL schema by taking their name and returning the
+// types.Type corresponding to the composite type definition. If name does not
+// correspond to any composite type, returns types.Type{}, nil.
+type compositeTypeResolver func(name string) (types.Type, error)
+
+// initCompositeTypeResolver initializes and returns a resolver for the
+// composite types, retrieving information from the transaction tx.
 //
 // enums is a mapping of the available enum types.
 //
@@ -27,7 +33,7 @@ import (
 // the maximum length of a varchar column or the maximum length of the text of
 // an array element); may not contain a key if the column type has no associated
 // type-specific data.
-func compositeTypeResolver(ctx context.Context, tx *postgres.Tx, enums map[string]types.Type, attTypMods map[string]map[string]*int) (types.Resolver, error) {
+func initCompositeTypeResolver(ctx context.Context, tx *postgres.Tx, enums map[string]types.Type, attTypMods map[string]map[string]*int) (compositeTypeResolver, error) {
 
 	// Read from the database the information about composite types.
 
@@ -79,7 +85,7 @@ func compositeTypeResolver(ctx context.Context, tx *postgres.Tx, enums map[strin
 
 	typeOf := map[string]types.Type{}
 
-	var resolve types.Resolver
+	var resolve compositeTypeResolver
 	resolve = func(name string) (types.Type, error) {
 		if typ, ok := typeOf[name]; ok {
 			return typ, nil

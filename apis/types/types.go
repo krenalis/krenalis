@@ -291,9 +291,6 @@ type Type struct {
 	//   - Type of the item for Array
 	//   - Type of the value for Map
 	vl any
-
-	// custom type. Empty for non-custom types.
-	custom string
 }
 
 // Boolean returns the Boolean type.
@@ -689,35 +686,6 @@ func (t Type) WithLogicalType(lt LogicalType) Type {
 		panic("invalid logical type")
 	}
 	t.lt = lt
-	return t
-}
-
-// Custom returns the custom name of t. If t is not a custom type it returns an empty
-// string. Panics if t is not a valid type.
-func (t Type) Custom() string {
-	if !t.Valid() {
-		panic("type is not valid")
-	}
-	return t.custom
-}
-
-// AsCustom returns t as a custom type called name.
-// Panics if t is not valid, or t is already a custom type, or name is not
-// valid custom name.
-func (t Type) AsCustom(name string) Type {
-	if !t.Valid() {
-		panic("type is not valid")
-	}
-	if t.custom != "" {
-		panic("type is already a custom type")
-	}
-	if name == "" {
-		panic("custom type name is empty")
-	}
-	if !IsValidCustomTypeName(name) {
-		panic("custom type name is not valid")
-	}
-	t.custom = name
 	return t
 }
 
@@ -1270,10 +1238,6 @@ func (t Type) EqualTo(t2 Type) bool {
 	if t.pt == PtMap && !t.vl.(Type).EqualTo(t2.vl.(Type)) {
 		return false
 	}
-	// Custom.
-	if t.custom != t2.custom {
-		return false
-	}
 	return true
 }
 
@@ -1299,21 +1263,4 @@ func normalizedUTF8(s string) string {
 		panic("invalid UTF-8 encoding")
 	}
 	return norm.NFC.String(s)
-}
-
-// IsValidCustomTypeName reports whether name is a valid custom type name.
-// A custom type name must:
-//   - start with [A-Za-z_]
-//   - subsequently contain only [A-Za-z0-9_]
-func IsValidCustomTypeName(name string) bool {
-	if name == "" {
-		return false
-	}
-	for i := 0; i < len(name); i++ {
-		c := name[i]
-		if !('a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return false
-		}
-	}
-	return true
 }

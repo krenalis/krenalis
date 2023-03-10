@@ -20,10 +20,9 @@ import (
 func TestDecode(t *testing.T) {
 
 	tests := []struct {
-		Data    string
-		Type    Type
-		Resolve Resolver
-		Value   any
+		Data  string
+		Type  Type
+		Value any
 	}{
 		{
 			Data:  `1`,

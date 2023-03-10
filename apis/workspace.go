@@ -702,7 +702,7 @@ func (this *Workspace) ReloadSchemas() error {
 			return errors.Unprocessable(RepeatedPropertyName,
 				"column %s.%s results in a repeated property named %s", table.Name, err.column, err.property)
 		}
-		schema := types.Object(properties).AsCustom(table.Name)
+		schema := types.Object(properties)
 		n.Schemas[table.Name] = &schema
 	}
 	newRawSchemas, err := json.Marshal(n.Schemas)

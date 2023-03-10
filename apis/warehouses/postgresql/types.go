@@ -29,11 +29,12 @@ import (
 // an array element); may not contain a key if the column type has no associated
 // type-specific data.
 //
-// ctResolver is a types.Resolver which resolves composite types.
+// resolver is a compositeTypeResolver which resolves composite types defined in
+// the PostgreSQL schema.
 //
 // It returns an invalid type if typ is not supported. It returns an error if an
 // argument is not valid.
-func columnType(column pgTypeInfo, enums map[string]types.Type, ctResolver types.Resolver, attTypMods map[string]map[string]*int) (types.Type, error) {
+func columnType(column pgTypeInfo, enums map[string]types.Type, resolver compositeTypeResolver, attTypMods map[string]map[string]*int) (types.Type, error) {
 	var t types.Type
 	switch column.dataType {
 	case "smallint":
@@ -130,7 +131,7 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, ctResolver types
 			t = typ
 		} else {
 			var err error
-			t, err = ctResolver(column.udtName)
+			t, err = resolver(column.udtName)
 			if err != nil {
 				return types.Type{}, err
 			}

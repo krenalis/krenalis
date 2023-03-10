@@ -16,20 +16,11 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// resolve implements Resolver resolving a type named "Email".
-func resolve(name string) (Type, error) {
-	if name != "Email" {
-		return Type{}, ErrCustomTypeNotExist
-	}
-	return Text(Chars(120)).WithRegexp(regexp.MustCompile(`@`)).AsCustom("Email"), nil
-}
-
 func TestTypeSerialization(t *testing.T) {
 
 	tests := []struct {
-		Data    string
-		Type    Type
-		Resolve Resolver
+		Data string
+		Type Type
 	}{
 		{
 			Data: `{"name":"Text"}`,
@@ -86,23 +77,13 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"}},{"name":"size","type":{"name":"Decimal"}}]}`,
 			Type: Object([]Property{{Name: "email", Type: Text()}, {Name: "size", Type: Decimal(0, 0)}}),
 		}, {
-			Data:    `{"name":"Object","properties":[{"name":"email","type":"Email"}]}`,
-			Type:    Object([]Property{{Name: "email", Type: Text(Chars(120)).WithRegexp(regexp.MustCompile(`@`)).AsCustom("Email")}}),
-			Resolve: resolve,
-		}, {
-			Data:    `{"name":"Object","properties":[{"name":"email","type":"Email","nullable":true}]}`,
-			Type:    Object([]Property{{Name: "email", Type: Text(Chars(120)).WithRegexp(regexp.MustCompile(`@`)).AsCustom("Email"), Nullable: true}}),
-			Resolve: resolve,
-		},
-		{
-			Data:    `{"name":"Object","properties":[{"name":"email","required":true,"type":"Email"}]}`,
-			Type:    Object([]Property{{Name: "email", Required: true, Type: Text(Chars(120)).WithRegexp(regexp.MustCompile(`@`)).AsCustom("Email")}}),
-			Resolve: resolve,
+			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"},"nullable":true}]}`,
+			Type: Object([]Property{{Name: "email", Type: Text(), Nullable: true}}),
 		},
 	}
 
 	for _, test := range tests {
-		got, err := Parse(test.Data, test.Resolve)
+		got, err := Parse(test.Data)
 		if err != nil {
 			t.Errorf("cannot unmarshal type %q: %s", test.Data, err)
 			continue
@@ -291,16 +272,6 @@ func equalTypes(t1, t2 Type) error {
 		if err := equalTypes(t1.vl.(Type), t2.vl.(Type)); err != nil {
 			return err
 		}
-	}
-	// Custom.
-	if t1.custom != t2.custom {
-		if t1.custom == "" {
-			return fmt.Errorf("expected non-custom type, got custom type %q", t2.custom)
-		}
-		if t2.custom == "" {
-			return fmt.Errorf("expected custom type %q, got non-custom type", t1.custom)
-		}
-		return fmt.Errorf("expected custom type %q, got custom type %q", t1.custom, t2.custom)
 	}
 	return nil
 }

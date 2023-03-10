@@ -282,7 +282,7 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 		}
 
 		// Instantiate a resolver for the composite types.
-		ctResolver, err := compositeTypeResolver(ctx, tx, enums, attTypMods)
+		ctResolver, err := initCompositeTypeResolver(ctx, tx, enums, attTypMods)
 		if err != nil {
 			return err
 		}

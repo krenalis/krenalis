@@ -207,7 +207,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					c.Keys = []string{}
 				}
 				if len(rawSchema) > 0 {
-					c.Schema, err = types.Parse(rawSchema, nil)
+					c.Schema, err = types.Parse(rawSchema)
 					if err != nil {
 						// TODO(marco) disable the connection instead of returning an error
 						return err

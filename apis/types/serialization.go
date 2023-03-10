@@ -22,14 +22,6 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-// Resolver resolves a custom type name to its type. If a custom type with the
-// given name does not exist, it returns a ErrCustomTypeNotExist error.
-type Resolver func(name string) (Type, error)
-
-// A ErrCustomTypeNotExist error is returned by a Resolver function when the
-// custom type to resolve does not exist.
-var ErrCustomTypeNotExist = errors.New("custom type does not exist")
-
 var null = []byte("null")
 
 // Marshal marshals t into JSON.
@@ -43,13 +35,11 @@ func Marshal(t Type) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// Parse parses the JSON-encoded data and returns the decoded type. For custom
-// types, it calls the resolve function, if not nil, to resolve the type custom
-// name to its type.
-func Parse(data string, resolve Resolver) (Type, error) {
+// Parse parses the JSON-encoded data and returns the decoded type.
+func Parse(data string) (Type, error) {
 	dec := json.NewDecoder(strings.NewReader(norm.NFC.String(data)))
 	dec.UseNumber()
-	t, err := unmarshalType(dec, resolve)
+	t, err := unmarshalType(dec)
 	if err == io.EOF {
 		err = io.ErrUnexpectedEOF
 	}
@@ -75,7 +65,7 @@ func (t *Type) UnmarshalJSON(data []byte) error {
 	}
 	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
 	dec.UseNumber()
-	t2, err := unmarshalType(dec, nil)
+	t2, err := unmarshalType(dec)
 	if err != nil {
 		return err
 	}
@@ -85,18 +75,7 @@ func (t *Type) UnmarshalJSON(data []byte) error {
 
 // marshalType marshals t as JSON and writes it to b.
 func marshalType(b *bytes.Buffer, t Type, custom bool) {
-	if t.custom != "" {
-		if !custom {
-			marshalString(b, t.custom)
-			return
-		}
-		b.WriteString(`{"custom":"`)
-		b.WriteString(t.custom)
-		b.WriteString(`",`)
-	} else {
-		b.WriteByte('{')
-	}
-	b.WriteString(`"name":"`)
+	b.WriteString(`{"name":"`)
 	b.WriteString(t.pt.String())
 	b.WriteString(`"`)
 	if t.lt > 0 {
@@ -270,46 +249,13 @@ func marshalType(b *bytes.Buffer, t Type, custom bool) {
 }
 
 // unmarshalType reads the JSON tokens from dec and returns the decoded type.
-// For custom types, it calls the resolve function, if not nil, to resolve the
-// type custom name to its type.
-func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
+func unmarshalType(dec *json.Decoder) (Type, error) {
 
-	// Read a type custom or delimiter '{'.
+	// Read the delimiter '{'.
 	tok, err := dec.Token()
 	if err != nil {
 		return Type{}, err
 	}
-
-	// Resolve custom type.
-	if name, ok := tok.(string); ok {
-		if name == "" {
-			return Type{}, errors.New("custom type name is empty")
-		}
-		if !IsValidCustomTypeName(name) {
-			return Type{}, errors.New("custom type name is not valid")
-		}
-		if resolve == nil {
-			return Type{}, errors.New("unknown custom type")
-		}
-		t, err := resolve(name)
-		if err != nil {
-			if err == ErrCustomTypeNotExist {
-				return Type{}, errors.New("unknown custom type")
-			}
-			return Type{}, err
-		}
-		if !t.Valid() {
-			return Type{}, errors.New("resolve has returned an invalid type")
-		}
-		if t.custom == "" {
-			return Type{}, errors.New("resolve has returned a non-custom type")
-		}
-		if t.custom != name {
-			return Type{}, errors.New("resolve has not returned the named custom type")
-		}
-		return t, nil
-	}
-
 	if tok != json.Delim('{') {
 		return Type{}, errors.New("invalid type syntax")
 	}
@@ -318,7 +264,6 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 
 	var pt PhysicalType
 	var lt LogicalType
-	var custom string
 	var minimum, maximum json.Number
 	var precision, scale, byteLen, charLen int
 	var re *regexp.Regexp
@@ -347,13 +292,13 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 
 		switch key {
 		case "itemType":
-			itemType, err = unmarshalType(dec, resolve)
+			itemType, err = unmarshalType(dec)
 			if err != nil {
 				return Type{}, err
 			}
 			continue
 		case "valueType":
-			valueType, err = unmarshalType(dec, resolve)
+			valueType, err = unmarshalType(dec)
 			if err != nil {
 				return Type{}, err
 			}
@@ -382,14 +327,6 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 			lt, ok = LogicalTypeByName(tok.(string))
 			if !ok {
 				return Type{}, errors.New("invalid logical type")
-			}
-		case "custom":
-			if custom != "" {
-				return Type{}, errors.New("repeated 'custom' key")
-			}
-			custom, _ = tok.(string)
-			if !IsValidCustomTypeName(custom) {
-				return Type{}, errors.New("invalid custom")
 			}
 		case "minimum":
 			if minimum != "" {
@@ -565,7 +502,7 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 				if d == ']' {
 					break
 				}
-				property, _, err := unmarshalProperty(dec, resolve, false)
+				property, _, err := unmarshalProperty(dec, false)
 				if err != nil {
 					return Type{}, err
 				}
@@ -602,7 +539,6 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 	if lt.Valid() {
 		t.lt = lt
 	}
-	t.custom = custom
 	if minimum == "" {
 		if PtInt <= t.pt && t.pt <= PtInt24 {
 			t.p = int32(minInt[t.pt-PtInt])
@@ -918,10 +854,9 @@ func unmarshalType(dec *json.Decoder, resolve Resolver) (Type, error) {
 
 // unmarshalProperty reads the JSON tokens from dec, which must have already
 // read the token '{', and returns the decoded property.
-// For custom types, it calls the resolve function, if not nil, to resolve the
-// type custom name to its type. If inSchema is true, it unmarshals a schema
-// property and then also returns its role.
-func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Property, Role, error) {
+// If inSchema is true, it unmarshals a schema property and then also returns
+// its role.
+func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error) {
 
 	var p Property
 	var role Role
@@ -943,7 +878,7 @@ func unmarshalProperty(dec *json.Decoder, resolve Resolver, inSchema bool) (Prop
 			if p.Type.Valid() {
 				return Property{}, 0, errors.New("repeated 'type' key")
 			}
-			p.Type, err = unmarshalType(dec, resolve)
+			p.Type, err = unmarshalType(dec)
 			if err != nil {
 				return Property{}, 0, err
 			}
