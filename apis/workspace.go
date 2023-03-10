@@ -694,9 +694,6 @@ func (this *Workspace) ReloadSchemas() error {
 			}
 			table.Columns = slices.Delete(table.Columns, i, i+1)
 		}
-		if table.Name == "events" {
-			continue // TODO(marco): skip the events table, for now
-		}
 		properties, err := propertiesOfColumns(table.Columns)
 		if err, ok := err.(repeatedPropertyNameError); ok {
 			return errors.Unprocessable(RepeatedPropertyName,
