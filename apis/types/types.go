@@ -261,6 +261,8 @@ type Type struct {
 	pt PhysicalType
 	lt LogicalType
 
+	flat bool // flat reports whether the properties of an Object refer to flat database columns.
+
 	unique bool // unique reports whether the items of an Array must be unique.
 
 	// p represents
@@ -1059,6 +1061,24 @@ func (t Type) WithMaxItems(max int) Type {
 	return t
 }
 
+// Flat reports whether t is marked as flat. Panics if t is not an Object.
+func (t Type) Flat() bool {
+	if t.pt != PtObject {
+		panic("cannot get flat of a non-Object type")
+	}
+	return t.flat
+}
+
+// WithFlat returns the type t but marked as flat. t must be an Object. Panics
+// if t is not an Object.
+func (t Type) WithFlat() Type {
+	if t.pt != PtObject {
+		panic("cannot set flat a non-Object type")
+	}
+	t.flat = true
+	return t
+}
+
 // Unique reports whether the items of t are unique.
 // Panics if t is not an Array.
 func (t Type) Unique() bool {
@@ -1204,6 +1224,10 @@ func (t Type) EqualTo(t2 Type) bool {
 		if !t.vl.(Type).EqualTo(t2.vl.(Type)) {
 			return false
 		}
+	}
+	// Flat objects.
+	if t.pt == PtObject && t.flat != t2.flat {
+		return false
 	}
 	// Properties.
 	if t.pt == PtObject {

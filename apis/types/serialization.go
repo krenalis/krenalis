@@ -241,6 +241,9 @@ func marshalType(b *bytes.Buffer, t Type, custom bool) {
 			b.WriteByte('}')
 		}
 		b.WriteString("]")
+		if t.flat {
+			b.WriteString(`,"flat":true`)
+		}
 	case PtMap:
 		b.WriteString(`,"valueType":`)
 		marshalType(b, t.vl.(Type), false)
@@ -260,7 +263,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		return Type{}, errors.New("invalid type syntax")
 	}
 
-	var hasScale, hasLayout, hasMinItems, hasMaxItems, hasUniqueItems bool
+	var hasScale, hasLayout, hasMinItems, hasMaxItems, hasFlat, hasUniqueItems bool
 
 	var pt PhysicalType
 	var lt LogicalType
@@ -271,7 +274,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	var layout string
 	var itemType Type
 	var minItems, maxItems = 0, MaxItems
-	var uniqueItems bool
+	var flat, uniqueItems bool
 	var properties []Property
 	var valueType Type
 
@@ -472,6 +475,15 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return Type{}, errors.New("invalid max items")
 			}
 			hasMaxItems = true
+		case "flat":
+			if hasFlat {
+				return Type{}, errors.New("repeated 'flat' key")
+			}
+			flat, ok = tok.(bool)
+			if !ok {
+				return Type{}, errors.New("invalid value for 'flat' key")
+			}
+			hasFlat = true
 		case "uniqueItems":
 			if hasUniqueItems {
 				return Type{}, errors.New("repeated 'uniqueItems' key")
@@ -818,6 +830,12 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	}
 	if pt == PtArray {
 		t.s = int32(maxItems)
+	}
+	if hasFlat {
+		if pt != PtObject {
+			return Type{}, errors.New("unexpected flat for non-Object type")
+		}
+		t.flat = flat
 	}
 	if hasUniqueItems {
 		if pt != PtArray {

@@ -1070,7 +1070,7 @@ func propertiesOfColumns(columns []*warehouses.Column) ([]types.Property, error)
 			}
 			property = types.Property{
 				Name: strings.TrimSuffix(prefix, "_"),
-				Type: types.Object(props),
+				Type: types.Object(props).WithFlat(),
 			}
 		} else {
 			if c.Name[0] == '_' {
