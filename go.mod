@@ -1,6 +1,6 @@
 module chichi
 
-go 1.19
+go 1.20
 
 replace (
 	chichi/connectors/csv => ./connectors/csv
