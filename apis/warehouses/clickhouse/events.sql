@@ -5,6 +5,8 @@
 -- Copyright (c) 2023 Open2b
 --
 
+-- Keep in sync with the schema at "apis/events/schema.go".
+
 CREATE TABLE events
 (
     `source` Int32,

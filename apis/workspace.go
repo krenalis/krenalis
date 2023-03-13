@@ -694,6 +694,11 @@ func (this *Workspace) ReloadSchemas() error {
 			}
 			table.Columns = slices.Delete(table.Columns, i, i+1)
 		}
+		if table.Name == "events" {
+			// The schema of the "events" table is hardcoded in the file
+			// "apis/events/schema.go".
+			continue
+		}
 		properties, err := propertiesOfColumns(table.Columns)
 		if err, ok := err.(repeatedPropertyNameError); ok {
 			return errors.Unprocessable(RepeatedPropertyName,
