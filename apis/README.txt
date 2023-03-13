@@ -45,4 +45,5 @@ POST    /api/workspace/init-warehouse              Initialize the data warehouse
 GET     /api/workspace/user-schema                 Get the user schema of the workspace
 POST    /api/workspace/oauth-token                 Generate an OAuth token not yet associated with a connection
 POST    /api/workspace/add-connection              Add a new connection
+GET     /api/events-schema                         Get the events schema
 GET     /api/predefined-mappings                   Get the predefined mappings

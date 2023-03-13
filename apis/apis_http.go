@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"chichi/apis/errors"
+	"chichi/apis/events"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -776,6 +777,10 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(id)
 		})
+	})
+	router.Get("/api/events-schema", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(events.Schema)
 	})
 	router.Get("/api/predefined-mappings", func(w http.ResponseWriter, r *http.Request) {
 		funcs := make([]map[string]any, len(PredefinedMappingFuncs))
