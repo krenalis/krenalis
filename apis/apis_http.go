@@ -777,22 +777,20 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(id)
 		})
 	})
-	router.Route("/api/predefined-mappings", func(router chi.Router) {
-		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			funcs := make([]map[string]any, len(PredefinedMappingFuncs))
-			for i, f := range PredefinedMappingFuncs {
-				funcs[i] = map[string]any{
-					"ID":          f.ID,
-					"Name":        f.Name,
-					"Description": f.Description,
-					"Icon":        f.Icon,
-					"In":          f.In,
-					"Out":         f.Out,
-				}
+	router.Get("/api/predefined-mappings", func(w http.ResponseWriter, r *http.Request) {
+		funcs := make([]map[string]any, len(PredefinedMappingFuncs))
+		for i, f := range PredefinedMappingFuncs {
+			funcs[i] = map[string]any{
+				"ID":          f.ID,
+				"Name":        f.Name,
+				"Description": f.Description,
+				"Icon":        f.Icon,
+				"In":          f.In,
+				"Out":         f.Out,
 			}
-			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(funcs)
-		})
+		}
+		w.Header().Add("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(funcs)
 	})
 	router.ServeHTTP(w, r)
 
