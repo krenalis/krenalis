@@ -34,6 +34,9 @@ import (
 //go:embed connections_users.sql
 var createConnectionsUsersTable string
 
+//go:embed events.sql
+var createEventsTable string
+
 var _ warehouses.Warehouse = &ClickHouse{}
 var _ warehouses.Batch = &batch{}
 
@@ -106,6 +109,10 @@ func (warehouse *ClickHouse) Init(ctx context.Context) error {
 		return err
 	}
 	err = conn.Exec(ctx, createConnectionsUsersTable)
+	if err != nil {
+		return warehouses.WrapError(err)
+	}
+	err = conn.Exec(ctx, createEventsTable)
 	return warehouses.WrapError(err)
 }
 

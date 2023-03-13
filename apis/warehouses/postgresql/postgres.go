@@ -31,6 +31,9 @@ import (
 //go:embed connections_users.sql
 var createConnectionsUsersTable string
 
+//go:embed events.sql
+var createEventsTable string
+
 var _ warehouses.Warehouse = &PostgreSQL{}
 var _ warehouses.Batch = &batch{}
 
@@ -125,6 +128,10 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 		return err
 	}
 	_, err = conn.Exec(ctx, createConnectionsUsersTable)
+	if err != nil {
+		return warehouses.WrapError(err)
+	}
+	_, err = conn.Exec(ctx, createEventsTable)
 	return warehouses.WrapError(err)
 }
 
