@@ -15,7 +15,7 @@ import (
 
 // Keep in sync with the SQL in files "apis/warehouses/*/events.sql"
 
-var _, Schema = types.ObjectOf([]types.Property{
+var Schema, _ = types.ObjectOf([]types.Property{
 	{Name: "source", Type: types.Int()},
 	{Name: "anonymous_id", Type: types.UUID()},
 	{Name: "user_id", Type: types.Text()},
