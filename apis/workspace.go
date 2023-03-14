@@ -352,118 +352,6 @@ func (this *Workspace) Delete() error {
 	return err
 }
 
-// authorizedResource represents an authorized resource that can be used to
-// create a new connection.
-type authorizedResource struct {
-	Workspace    int
-	Connector    int
-	Code         string
-	AccessToken  string
-	RefreshToken string
-	ExpiresIn    time.Time
-}
-
-// OAuthToken returns an OAuth token, given an OAuth authorization code,
-// that can be used to add a new connection for the specified connector.
-//
-// It returns an errors.NotFound error if the workspace does not exist anymore.
-// It returns an errors.UnprocessableError error with code ConnectorNotExist if
-// the connector does not exist.
-func (this *Workspace) OAuthToken(authorizationCode string, connector int) (string, error) {
-
-	if authorizationCode == "" {
-		return "", errors.BadRequest("authorization code is empty")
-	}
-	if connector < 1 || connector > maxInt32 {
-		return "", errors.BadRequest("connector identifier %d is not valid", connector)
-	}
-
-	c, ok := this.state.Connector(connector)
-	if !ok {
-		return "", errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
-	}
-	if c.OAuth == nil {
-		return "", errors.BadRequest("connector %d does not support OAuth", connector)
-	}
-
-	// Retrieve the refresh and access tokens.
-	body := url.Values{}
-	body.Set("grant_type", "authorization_code")
-	body.Set("client_id", c.OAuth.ClientID)
-	body.Set("client_secret", c.OAuth.ClientSecret)
-	body.Set("redirect_uri", "https://localhost:9090/admin/oauth/authorize")
-	body.Set("code", authorizationCode)
-
-	req, err := http.NewRequest("POST", c.OAuth.TokenEndpoint, strings.NewReader(body.Encode()))
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	if err != nil {
-		return "", err
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("cannot retrieve the refresh and access tokens from connector %d: %s", c.ID, err)
-	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, resp.Body)
-		_ = resp.Body.Close()
-	}()
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("cannot retrieve the refresh and access tokens from connector %d: server responded with status %d", c.ID, resp.StatusCode)
-	}
-
-	tokens := struct {
-		// TODO(carlo): add Scope field and validate it
-		AccessToken  string       `json:"access_token"`
-		TokenType    string       `json:"token_type"` // TODO(carlo): validate the value
-		ExpiresIn    *json.Number `json:"expires_in"` // TODO(carlo): validate the value
-		RefreshToken string       `json:"refresh_token"`
-	}{}
-	err = json.NewDecoder(resp.Body).Decode(&tokens)
-	if err != nil {
-		return "", fmt.Errorf("cannot decode response from OAuth server of connector %d: %s", c.ID, err)
-	}
-
-	// TODO(carlo): compute the token type to use
-
-	// Compute the access token expire time.
-	expiresIn := time.Now()
-	if c.OAuth.ForcedExpiresIn > 0 {
-		expiresIn = expiresIn.Add(time.Duration(c.OAuth.ForcedExpiresIn) * time.Second)
-	} else if tokens.ExpiresIn != nil {
-		seconds, _ := tokens.ExpiresIn.Int64()
-		expiresIn = expiresIn.Add(time.Duration(seconds) * time.Second)
-	} else if c.OAuth.DefaultExpiresIn != 0 {
-		expiresIn = expiresIn.Add(time.Duration(c.OAuth.DefaultExpiresIn) * time.Second)
-	}
-
-	connection, err := _connector.RegisteredApp(c.Name).Open(context.Background(), &_connector.AppConfig{
-		ClientSecret: c.OAuth.ClientSecret,
-		AccessToken:  tokens.AccessToken,
-	})
-	if err != nil {
-		return "", err
-	}
-	code, err := connection.Resource()
-	if err != nil {
-		return "", err
-	}
-
-	resource, err := json.Marshal(authorizedResource{
-		Workspace:    this.workspace.ID,
-		Connector:    connector,
-		Code:         code,
-		AccessToken:  tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
-		ExpiresIn:    expiresIn,
-	})
-
-	// TODO(marco): Encrypt the token.
-
-	return base62.EncodeToString(resource), nil
-}
-
 // Connection returns the connection with identifier id of the workspace ws.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
@@ -653,6 +541,118 @@ func (this *Workspace) InitWarehouse() error {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
 	}
 	return ws.Warehouse.Init(context.Background())
+}
+
+// authorizedResource represents an authorized resource that can be used to
+// create a new connection.
+type authorizedResource struct {
+	Workspace    int
+	Connector    int
+	Code         string
+	AccessToken  string
+	RefreshToken string
+	ExpiresIn    time.Time
+}
+
+// OAuthToken returns an OAuth token, given an OAuth authorization code,
+// that can be used to add a new connection for the specified connector.
+//
+// It returns an errors.NotFound error if the workspace does not exist anymore.
+// It returns an errors.UnprocessableError error with code ConnectorNotExist if
+// the connector does not exist.
+func (this *Workspace) OAuthToken(authorizationCode string, connector int) (string, error) {
+
+	if authorizationCode == "" {
+		return "", errors.BadRequest("authorization code is empty")
+	}
+	if connector < 1 || connector > maxInt32 {
+		return "", errors.BadRequest("connector identifier %d is not valid", connector)
+	}
+
+	c, ok := this.state.Connector(connector)
+	if !ok {
+		return "", errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
+	}
+	if c.OAuth == nil {
+		return "", errors.BadRequest("connector %d does not support OAuth", connector)
+	}
+
+	// Retrieve the refresh and access tokens.
+	body := url.Values{}
+	body.Set("grant_type", "authorization_code")
+	body.Set("client_id", c.OAuth.ClientID)
+	body.Set("client_secret", c.OAuth.ClientSecret)
+	body.Set("redirect_uri", "https://localhost:9090/admin/oauth/authorize")
+	body.Set("code", authorizationCode)
+
+	req, err := http.NewRequest("POST", c.OAuth.TokenEndpoint, strings.NewReader(body.Encode()))
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	if err != nil {
+		return "", err
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("cannot retrieve the refresh and access tokens from connector %d: %s", c.ID, err)
+	}
+	defer func() {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}()
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("cannot retrieve the refresh and access tokens from connector %d: server responded with status %d", c.ID, resp.StatusCode)
+	}
+
+	tokens := struct {
+		// TODO(carlo): add Scope field and validate it
+		AccessToken  string       `json:"access_token"`
+		TokenType    string       `json:"token_type"` // TODO(carlo): validate the value
+		ExpiresIn    *json.Number `json:"expires_in"` // TODO(carlo): validate the value
+		RefreshToken string       `json:"refresh_token"`
+	}{}
+	err = json.NewDecoder(resp.Body).Decode(&tokens)
+	if err != nil {
+		return "", fmt.Errorf("cannot decode response from OAuth server of connector %d: %s", c.ID, err)
+	}
+
+	// TODO(carlo): compute the token type to use
+
+	// Compute the access token expire time.
+	expiresIn := time.Now()
+	if c.OAuth.ForcedExpiresIn > 0 {
+		expiresIn = expiresIn.Add(time.Duration(c.OAuth.ForcedExpiresIn) * time.Second)
+	} else if tokens.ExpiresIn != nil {
+		seconds, _ := tokens.ExpiresIn.Int64()
+		expiresIn = expiresIn.Add(time.Duration(seconds) * time.Second)
+	} else if c.OAuth.DefaultExpiresIn != 0 {
+		expiresIn = expiresIn.Add(time.Duration(c.OAuth.DefaultExpiresIn) * time.Second)
+	}
+
+	connection, err := _connector.RegisteredApp(c.Name).Open(context.Background(), &_connector.AppConfig{
+		ClientSecret: c.OAuth.ClientSecret,
+		AccessToken:  tokens.AccessToken,
+	})
+	if err != nil {
+		return "", err
+	}
+	code, err := connection.Resource()
+	if err != nil {
+		return "", err
+	}
+
+	resource, err := json.Marshal(authorizedResource{
+		Workspace:    this.workspace.ID,
+		Connector:    connector,
+		Code:         code,
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresIn:    expiresIn,
+	})
+
+	// TODO(marco): Encrypt the token.
+
+	return base62.EncodeToString(resource), nil
 }
 
 // ReloadSchemas reloads the schemas of the workspace.
