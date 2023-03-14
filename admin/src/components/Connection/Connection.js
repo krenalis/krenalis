@@ -64,6 +64,12 @@ const Connection = () => {
 							Events
 						</div>
 					)}
+					{c.Role === 'Destination' && (
+						<div className={`link${currentSection === 'actions' ? ' selected' : ''}`}>
+							<NavLink to='actions'></NavLink>
+							Actions
+						</div>
+					)}
 					{(c.Type === 'App' || c.Type === 'Database' || c.Type === 'File') && (
 						<div className={`link${currentSection === 'mappings' ? ' selected' : ''}`}>
 							<NavLink to='mappings'></NavLink>
@@ -85,7 +91,7 @@ const Connection = () => {
 			<div className='routeContent'>
 				<ConnectionContext.Provider
 					value={{
-						c: c,
+						connection: c,
 						setCurrentConnectionSection: setCurrentConnectionSection,
 						setConnection: setConnection,
 					}}

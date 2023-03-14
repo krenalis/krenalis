@@ -14,7 +14,7 @@ const ConnectionEvents = () => {
 	let [discarded, setDiscarded] = useState(0);
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
-	let { c, setCurrentConnectionSection } = useContext(ConnectionContext);
+	let { connection: c, setCurrentConnectionSection } = useContext(ConnectionContext);
 
 	setCurrentConnectionSection('events');
 

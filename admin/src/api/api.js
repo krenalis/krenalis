@@ -14,6 +14,10 @@ class API {
 	predefinedMappings = async () => {
 		return await call(`${this.baseURL}/api/predefined-mappings`, http.GET);
 	};
+
+	eventsSchema = async () => {
+		return await call(`${this.baseURL}/api/events-schema`, http.GET);
+	};
 }
 
 class Connections {
@@ -128,6 +132,47 @@ class Connections {
 		return await call(
 			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/keys/${encodeURIComponent(key)}`,
 			http.DELETE
+		);
+	};
+
+	actionTypes = async (connection) => {
+		return await call(`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/action-types`, http.GET);
+	};
+
+	actions = async (connection) => {
+		return await call(`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/actions`, http.GET);
+	};
+
+	addAction = async (connection, actionObject) => {
+		return await call(
+			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/actions`,
+			http.POST,
+			actionObject
+		);
+	};
+
+	setAction = async (connection, action, actionObject) => {
+		return await call(
+			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(action)}`,
+			http.PUT,
+			actionObject
+		);
+	};
+
+	deleteAction = async (connection, action) => {
+		return await call(
+			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(action)}`,
+			http.DELETE
+		);
+	};
+
+	setActionStatus = async (connection, action, enabled) => {
+		return await call(
+			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(
+				action
+			)}/status`,
+			http.POST,
+			{ Enabled: enabled }
 		);
 	};
 }

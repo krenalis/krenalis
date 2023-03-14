@@ -20,11 +20,12 @@
 }
 
 .StyledGrid .Grid .GridHeaderCell .cellContent {
-    border-right: 3px solid var(--border-primary);
+    border-left: 3px solid var(--border-primary);
 }
 
-.StyledGrid .Grid .GridHeaderCell.last .cellContent {
-    border-right: 0;
+.StyledGrid .Grid .GridHeaderCell.first .cellContent,
+.StyledGrid .Grid .GridHeaderCell.empty .cellContent {
+    border-left: 0;
 }
 
 .StyledGrid .Grid .GridHeaderCell.first {

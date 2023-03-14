@@ -17,7 +17,7 @@ const ConnectionOverview = () => {
 	let [resetCursor, setResetCursor] = useState(false);
 
 	const { API, showStatus, showError, redirect } = useContext(AppContext);
-	const { c, setCurrentConnectionSection } = useContext(ConnectionContext);
+	const { connection: c, setCurrentConnectionSection } = useContext(ConnectionContext);
 
 	setCurrentConnectionSection('overview');
 

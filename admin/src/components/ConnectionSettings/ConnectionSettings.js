@@ -13,7 +13,7 @@ const ConnectionSettings = () => {
 	let [isDeleted, setIsDeleted] = useState(false);
 
 	let { redirect } = useContext(AppContext);
-	let { c, setCurrentConnectionSection } = useContext(ConnectionContext);
+	let { connection: c, setCurrentConnectionSection } = useContext(ConnectionContext);
 
 	setCurrentConnectionSection('settings');
 

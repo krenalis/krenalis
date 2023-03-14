@@ -6,7 +6,7 @@ import GridNestedRows from '../GridNestedRows/GridNestedRows';
 import getChildIndexClassname from '../../utils/getChildIndexClassname';
 import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const Grid = ({ columns, rows, isLoading, actions }) => {
+const Grid = ({ columns, rows, isLoading, actions, noRowsMessage }) => {
 	let gridRows = [];
 	for (let [i, cells] of rows.entries()) {
 		let className = getChildIndexClassname(i, rows.length);
@@ -34,7 +34,13 @@ const Grid = ({ columns, rows, isLoading, actions }) => {
 			) : (
 				<>
 					<GridHeaderRow columns={columns} />
-					{gridRows.length > 0 ? gridRows : <div className='noRows'>No rows to show</div>}
+					{gridRows.length > 0 ? (
+						gridRows
+					) : noRowsMessage ? (
+						<div className='noRows'>{noRowsMessage}</div>
+					) : (
+						<div className='noRows'>No rows to show</div>
+					)}
 				</>
 			)}
 		</div>

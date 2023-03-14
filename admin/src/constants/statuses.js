@@ -46,6 +46,7 @@ const statuses = {
 	schemasReloaded: [variants.SUCCESS, icons.OK, 'The schemas have been reloaded successfully'],
 	transformationSaved: [variants.SUCCESS, icons.OK, 'Your transformation has been successfully saved'],
 	transformationCleanedUp: [variants.SUCCESS, icons.OK, 'Your transformation has been successfully cleaned up'],
+	actionSaved: [variants.SUCCESS, icons.OK, 'Your action has been successfully saved'],
 };
 
 export default statuses;

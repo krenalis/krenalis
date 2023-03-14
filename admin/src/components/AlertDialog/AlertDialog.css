@@ -1,0 +1,37 @@
+.alertDialog::part(body) {
+    padding: 0;
+    overflow: visible;
+}
+
+.alertDialog::part(title) {
+    padding: 0;
+}
+
+.alertDialog::part(close-button) {
+    padding: 10px;
+}
+
+.alertDialog .alertIcon {
+    color: var(--alert-color);
+    font-size: 30px;
+    text-align: center;
+}
+
+.alertDialog .alertTitle {
+    text-align: center;
+    padding: 0 20px;
+    font-weight: 600;
+    font-size: 18px;
+}
+
+.alertDialog .alertContent {
+    padding: 15px 30px 30px 30px;
+}
+
+.alertDialog .alertActions {
+    display: flex;
+    justify-content: end;
+    gap: 15px;
+    padding: 15px 25px;
+    border-top: 1px solid var(--border-primary);
+}

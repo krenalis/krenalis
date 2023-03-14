@@ -1,0 +1,15 @@
+.sectionTitle {
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.sectionDescription {
+    font-size: 14px;
+}
+
+.sectionContent {
+    background-color: var(--bg-primary);
+    margin-top: 10px;
+    padding: 30px 50px;
+    box-shadow: var(--sl-shadow-small);
+}

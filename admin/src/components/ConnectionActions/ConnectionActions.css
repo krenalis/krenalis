@@ -1,0 +1,52 @@
+.ConnectionActions {
+    max-width: 1200px;
+    margin: auto;
+}
+
+.ConnectionActions .StyledGrid {
+    margin-top: 20px;
+}
+
+.ConnectionActions .title {
+    padding-left: 12px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.ConnectionActions .actionButtons {
+    display: flex;
+    gap: 10px;
+    justify-content: end;
+}
+
+.actionDialog::part(body) {
+    padding-bottom: 50px;
+}
+
+.actionDialog .actionTypes {
+    max-width: 500px;
+    margin: auto;
+}
+
+.actionDialog .actionType {
+    border: 1px solid var(--sl-color-neutral-300);
+    padding: 20px;
+    border-bottom: 0;
+    display: flex;
+    gap: 12px;
+    cursor: pointer;
+    align-items: end;
+}
+
+.actionDialog .actionType:first-child {
+    border-top-left-radius: var(--radius);
+    border-top-right-radius: var(--radius);
+}
+
+.actionDialog .actionType:last-child {
+    border-bottom-left-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+    border-bottom: 1px solid var(--sl-color-neutral-300);
+}
+
+

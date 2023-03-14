@@ -1,7 +1,7 @@
 import { createContext } from 'react';
 
 const defaultConnectionContext = {
-	c: {},
+	connection: {},
 	setCurrentConnectionSection: () => {},
 	setConnection: () => {},
 };

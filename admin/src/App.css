@@ -102,6 +102,10 @@ sl-button {
 	position: relative;
 }
 
+sl-button[variant='default']::part(base) {
+	background-color: var(--bg-gray);
+}
+
 sl-button > a {
 	position: absolute;
 	left: 0;

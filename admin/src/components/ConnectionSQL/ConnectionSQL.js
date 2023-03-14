@@ -11,7 +11,7 @@ import Editor from '@monaco-editor/react';
 const queryMaxSize = 16777215;
 
 const ConnectionSQL = () => {
-	let { c, setCurrentConnectionSection } = useContext(ConnectionContext);
+	let { connection: c, setCurrentConnectionSection } = useContext(ConnectionContext);
 
 	let [query, setQuery] = useState(c.UsersQuery);
 	let [limit, setLimit] = useState(20); // TODO(@Andrea): implement as a select

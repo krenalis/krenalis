@@ -2,7 +2,7 @@ import './GridHeaderCell.css';
 
 const GridHeaderCell = ({ value, className }) => {
 	return (
-		<div className={className}>
+		<div className={`${className}${value === '' ? ' empty' : ''}`}>
 			<div className='cellContent'>{value}</div>
 		</div>
 	);
