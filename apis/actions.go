@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/errors"
+	"chichi/apis/events"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/types"
@@ -265,14 +266,21 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 			// Validate the left expression, which can be an identifier or a
 			// selector.
 			if strings.Contains(left, ".") { // selector, eg. "traits.address.street1".
-				for _, p := range strings.Split(left, ".") {
+				path := strings.Split(left, ".")
+				for _, p := range path {
 					if !types.IsValidPropertyName(p) {
 						return fmt.Errorf("property name %q in selector %q is not valid", p, left)
 					}
 				}
+				if !existsInObject(path, events.Schema) {
+					return fmt.Errorf("property %q does not exist in event schema", left)
+				}
 			} else { // identifier, eg. "addressStreet1".
 				if !types.IsValidPropertyName(left) {
 					return fmt.Errorf("property name %q is not valid", left)
+				}
+				if !existsInObject([]string{left}, events.Schema) {
+					return fmt.Errorf("property %q does not exist in event schema", left)
 				}
 			}
 			// Validate the right expression.
@@ -285,19 +293,39 @@ func validateAction(action ActionToSet, actionTypes []*ActionType) error {
 	}
 
 	if action.Transformation != nil {
+		// Validate the transformation itself.
 		err := validateTransformation(action.Transformation)
 		if err != nil {
 			return err
 		}
-		schemaProps := map[string]bool{}
-		for _, name := range actionType.Schema.PropertiesNames() {
-			schemaProps[name] = true
+		// Validate the input properties of the transformation.
+		eventProps := map[string]types.Property{}
+		for _, prop := range events.Schema.Properties() {
+			eventProps[prop.Name] = prop
 		}
-		for _, right := range action.Transformation.Out.PropertiesNames() {
-			if !schemaProps[right] {
-				return fmt.Errorf("property name %q does not exist in action type schema", right)
+		for _, left := range action.Transformation.In.Properties() {
+			p, ok := eventProps[left.Name]
+			if !ok {
+				return fmt.Errorf("property name %q does not exist in event schema", left.Name)
 			}
-			delete(actionTypeRequiredProps, right)
+			if !p.Type.EqualTo(left.Type) {
+				return fmt.Errorf("expecting type %s for property %q, got %s", p.Type, p.Name, left.Type)
+			}
+		}
+		// Validate the output properties of the transformation.
+		actionTypeProps := map[string]types.Property{}
+		for _, prop := range actionType.Schema.Properties() {
+			actionTypeProps[prop.Name] = prop
+		}
+		for _, right := range action.Transformation.Out.Properties() {
+			p, ok := actionTypeProps[right.Name]
+			if !ok {
+				return fmt.Errorf("property name %q does not exist in action type schema", right.Name)
+			}
+			if !p.Type.EqualTo(right.Type) {
+				return fmt.Errorf("expecting type %s for property %q, got %s", p.Type, p.Name, right.Type)
+			}
+			delete(actionTypeRequiredProps, right.Name)
 		}
 	}
 
@@ -330,6 +358,9 @@ type ActionType struct {
 // contains an object with a property "address", which contains a property with
 // name "street1").
 // object must have an object physical type.
+// If one of the sub-properties has type map or JSON, it is assumed that such
+// property exists (the validation can be done only at runtime, with the
+// effective value).
 func existsInObject(propPath []string, object types.Type) bool {
 	if object.PhysicalType() != types.PtObject {
 		panic("not an object")
@@ -344,10 +375,14 @@ func existsInObject(propPath []string, object types.Type) bool {
 		if len(rest) == 0 {
 			return true
 		}
-		if prop.Type.PhysicalType() != types.PtObject {
+		switch prop.Type.PhysicalType() {
+		case types.PtObject:
+			return existsInObject(rest, prop.Type)
+		case types.PtMap, types.PtJSON:
+			return true
+		default:
 			return false
 		}
-		return existsInObject(rest, prop.Type)
 	}
 	return false
 }
