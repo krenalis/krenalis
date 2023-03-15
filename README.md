@@ -13,6 +13,7 @@
   - [6. Initialize the warehouse](#6-initialize-the-warehouse)
   - [7. Reload the schemas](#7-reload-the-schemas)
   - [8. Run and open the browser](#8-run-and-open-the-browser)
+- [The `CHICHI_DEBUG_UI` environment variable](#the-chichi_debug_ui-environment-variable)
 - [Expose on the Internet (optional)](#expose-on-the-internet-optional)
 - [How test events](#how-test-events)
 - [Interact with Chichi using `chichi-cli`](#interact-with-chichi-using-chichi-cli)
@@ -135,6 +136,10 @@ $ chichi-cli reload-schemas
 ### 8. Run and open the browser
 
 Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/admin/.
+
+## The `CHICHI_DEBUG_UI` environment variable
+
+Set the `CHICHI_DEBUG_UI` to `true` to display clearer error messages in the UI.
 
 ## Expose on the Internet (optional)
 
