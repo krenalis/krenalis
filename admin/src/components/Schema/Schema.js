@@ -64,7 +64,7 @@ const Schema = () => {
 		setTimeout(() => {
 			setIsLoading(false);
 			showStatus(statuses.schemasReloaded);
-		}, 500);
+		}, 300);
 	};
 
 	const getPropertiesRows = (properties) => {

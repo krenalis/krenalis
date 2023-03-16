@@ -37,6 +37,10 @@ class Connections {
 		return await call(`${this.baseURL}/api/connections/${encodeURIComponent(connection)}`, http.DELETE);
 	};
 
+	reload = async (connection) => {
+		return await call(`/api/connections/${encodeURIComponent(connection)}/reload`, http.POST);
+	};
+
 	stats = async (connection) => {
 		return await call(`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/stats`, http.GET);
 	};

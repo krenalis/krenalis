@@ -5,6 +5,7 @@ import ConnectionDeletion from '../../components/ConnectionDeletion/ConnectionDe
 import ConnectionEnabling from '../../components/ConnectionEnabling/ConnectionEnabling';
 import ConnectionKeys from '../../components/ConnectionKeys/ConnectionKeys';
 import ConnectionStorage from '../../components/ConnectionStorage/ConnectionStorage';
+import ConnectionReload from '../../components/ConnectionReload/ConnectionReload';
 import { AppContext } from '../../context/AppContext';
 import { ConnectionContext } from '../../context/ConnectionContext';
 import { SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelace/dist/react/index.js';
@@ -25,6 +26,7 @@ const ConnectionSettings = () => {
 	return (
 		<div className='ConnectionSettings'>
 			<SlTabGroup className='settings' placement='start'>
+				{/* Connection */}
 				{c.HasSettings && (
 					<>
 						<SlTab slot='nav' panel='connection'>
@@ -36,6 +38,8 @@ const ConnectionSettings = () => {
 						</SlTabPanel>
 					</>
 				)}
+
+				{/* API Keys */}
 				{c.Type === 'Server' && c.Role === 'Source' && (
 					<>
 						<SlTab slot='nav' panel='apiKeys'>
@@ -47,6 +51,8 @@ const ConnectionSettings = () => {
 						</SlTabPanel>
 					</>
 				)}
+
+				{/* Storage */}
 				{c.Type === 'File' && (
 					<>
 						<SlTab slot='nav' panel='storage'>
@@ -58,6 +64,8 @@ const ConnectionSettings = () => {
 						</SlTabPanel>
 					</>
 				)}
+
+				{/* Enabling */}
 				<SlTab slot='nav' panel='enabling'>
 					Enabling
 				</SlTab>
@@ -65,6 +73,17 @@ const ConnectionSettings = () => {
 					<div className='panelTitle'>Enabling</div>
 					<ConnectionEnabling connection={c} />
 				</SlTabPanel>
+
+				{/* Reload */}
+				<SlTab slot='nav' panel='reload'>
+					Reload
+				</SlTab>
+				<SlTabPanel name='reload'>
+					<div className='panelTitle'>Reload</div>
+					<ConnectionReload />
+				</SlTabPanel>
+
+				{/* Deletion */}
 				<SlTab slot='nav' panel='deletion'>
 					Deletion
 				</SlTab>
