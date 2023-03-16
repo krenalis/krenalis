@@ -1,4 +1,4 @@
-import { useContext, useState } from 'React';
+import { useContext, useState } from 'react';
 import './ConnectionReload.css';
 import { AppContext } from '../../context/AppContext';
 import { ConnectionContext } from '../../context/ConnectionContext';
