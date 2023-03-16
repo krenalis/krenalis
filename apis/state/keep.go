@@ -409,7 +409,7 @@ func (state *State) addConnectionKey(n postgres.Notification) {
 	state.mu.Unlock()
 }
 
-// AddConnectionAction is the notification event sent when a
+// AddConnectionActionNotification is the notification event sent when a
 // connection action is added.
 type AddConnectionActionNotification struct {
 	ID             int
