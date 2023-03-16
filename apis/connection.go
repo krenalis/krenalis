@@ -1290,24 +1290,27 @@ func (this *Connection) reloadActionTypes() error {
 
 	n := state.SetConnectionActionTypesNotification{
 		Connection:  c.ID,
-		ActionTypes: make([]state.ActionTypeNotification, len(actionTypes)),
+		ActionTypes: make([]*state.ActionType, len(actionTypes)),
 	}
+	actionTypeOf := map[int]*state.ActionType{}
 	for i, at := range actionTypes {
-		n.ActionTypes[i] = state.ActionTypeNotification{
+		actionType := &state.ActionType{
 			ID:          at.ID,
 			Name:        at.Name,
 			Description: at.Description,
 			Endpoints:   at.Endpoints,
 			Schema:      at.Schema,
 		}
+		n.ActionTypes[i] = actionType
+		actionTypeOf[at.ID] = actionType
 	}
 
-	ctx := context.Background()
-
-	rawActionTypes, err := json.Marshal(actionTypes)
+	rawActionTypes, err := json.Marshal(actionTypeOf)
 	if err != nil {
 		return err
 	}
+
+	ctx := context.Background()
 
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		_, err = tx.Exec(ctx, "UPDATE connections SET \"action_types\" = $1 WHERE id = $2", rawActionTypes, n.Connection)

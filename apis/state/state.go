@@ -461,7 +461,7 @@ type Connection struct {
 	UsersQuery       string
 	importInProgress *ImportInProgress
 	actions          map[int]*Action
-	actionTypes      []*ActionType
+	actionTypes      map[int]*ActionType
 	mappings         []*Mapping
 	transformation   *Transformation
 	Health           ConnectionHealth
@@ -544,11 +544,28 @@ func (connection *Connection) Actions() []*Action {
 	return actions
 }
 
+// ActionType returns the action type of the connection with identifier id.
+// The boolean return value reports whether the action type exists.
+func (connection *Connection) ActionType(id int) (*ActionType, bool) {
+	connection.mu.Lock()
+	at, ok := connection.actionTypes[id]
+	connection.mu.Unlock()
+	return at, ok
+}
+
 // ActionTypes returns the action types of the connection.
 func (connection *Connection) ActionTypes() []*ActionType {
 	connection.mu.Lock()
-	actionTypes := connection.actionTypes
+	actionTypes := make([]*ActionType, len(connection.actionTypes))
+	i := 0
+	for _, at := range connection.actionTypes {
+		actionTypes[i] = at
+		i++
+	}
 	connection.mu.Unlock()
+	sort.Slice(actionTypes, func(i, j int) bool {
+		return actionTypes[i].ID < actionTypes[j].ID
+	})
 	return actionTypes
 }
 

@@ -850,20 +850,11 @@ func (state *State) setConnectionActionStatus(n postgres.Notification) {
 	})
 }
 
-// SetConnectionActionTypesNotification is the notification sent when the action
-// types of a connection are set.
+// SetConnectionActionTypesNotification is the notification sent when the
+// action types of a connection are set.
 type SetConnectionActionTypesNotification struct {
 	Connection  int
-	ActionTypes []ActionTypeNotification
-}
-
-// ActionTypeNotification represent an action type to set.
-type ActionTypeNotification struct {
-	ID          int
-	Name        string
-	Description string
-	Endpoints   []int
-	Schema      types.Type
+	ActionTypes []*ActionType
 }
 
 // setConnectionActionTypes sets the action types of a connection.
@@ -872,18 +863,14 @@ func (state *State) setConnectionActionTypes(n postgres.Notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	state.replaceConnection(e.Connection, func(c *Connection) {
-		c.actionTypes = make([]*ActionType, len(e.ActionTypes))
-		for i, at := range e.ActionTypes {
-			c.actionTypes[i] = &ActionType{
-				ID:          at.ID,
-				Name:        at.Name,
-				Description: at.Description,
-				Endpoints:   at.Endpoints,
-				Schema:      at.Schema,
-			}
-		}
-	})
+	c := state.connections[e.Connection]
+	actionTypes := make(map[int]*ActionType, len(e.ActionTypes))
+	for _, at := range e.ActionTypes {
+		actionTypes[at.ID] = at
+	}
+	c.mu.Lock()
+	c.actionTypes = actionTypes
+	c.mu.Unlock()
 }
 
 // SetConnectionSettingsNotification is the notification event sent when the
