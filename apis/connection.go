@@ -31,6 +31,7 @@ import (
 	"chichi/connector/ui"
 
 	"github.com/jxskiss/base62"
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -178,11 +179,7 @@ func (this *Connection) Keys() ([]string, error) {
 	if c.Role != state.SourceRole {
 		return nil, errors.NotFound("server %d is not a source", c.ID)
 	}
-	keys := make([]string, len(c.Keys))
-	for i, key := range c.Keys {
-		keys[i] = encodeServerKey([]byte(key))
-	}
-	return keys, nil
+	return slices.Clone(c.Keys), nil
 }
 
 // An Import describes a connection import as returned by Imports.
@@ -1607,12 +1604,6 @@ func isServerKey(key string) bool {
 	}
 	_, err := base62.DecodeString(key)
 	return err == nil
-}
-
-// encodeServerKey encodes a binary server key to its base62 form and returns
-// it.
-func encodeServerKey(key []byte) string {
-	return base62.EncodeToString(key)[0:32]
 }
 
 // generateServerKey generates a server key in its base62 form.
