@@ -14,6 +14,7 @@ const ConnectionEvents = () => {
 	let [selectedEvent, setSelectedEvent] = useState(null);
 	let [discarded, setDiscarded] = useState(0);
 	let [isListenerNotFound, setIsListenerNotFound] = useState(false);
+	let [eventID, setEventID] = useState(1);
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
 	let { connection: c, setCurrentConnectionSection } = useContext(ConnectionContext);
@@ -27,7 +28,7 @@ const ConnectionEvents = () => {
 		}
 		let listenerID;
 		let interval;
-		let id = 1;
+		let id = eventID;
 		const startListener = async () => {
 			let [source, server, stream] = [0, 0, 0];
 			switch (c.Type) {
@@ -81,7 +82,9 @@ const ConnectionEvents = () => {
 						time: e.Header.receivedAt,
 						full: JSON.stringify(dec, null, 4),
 					});
-					id += 1;
+					let newID = id + 1;
+					id = newID;
+					setEventID(newID);
 				}
 				setEvents((prevEvents) => [...prevEvents, ...newly]);
 				setDiscarded((prevDiscarded) => prevDiscarded + res.discarded);
