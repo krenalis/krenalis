@@ -10,6 +10,7 @@ package state
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -35,7 +36,7 @@ func (state *State) AddListener(listener any) {
 	keeping := state.keeping
 	state.mu.Unlock()
 	if keeping {
-		panic(fmt.Sprintf("state: cannot call AddListener after Keep has been called"))
+		panic(errors.New("state: cannot call AddListener after Keep has been called"))
 	}
 	switch l := listener.(type) {
 	case func(AddConnectionNotification):
