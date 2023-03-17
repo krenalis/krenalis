@@ -289,7 +289,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 						mu:         new(sync.Mutex),
 						ID:         id,
 						connection: c,
-						ActionType: actionType,
+						ActionType: c.actionTypes[actionType],
 						Name:       name,
 						Enabled:    enabled,
 						Endpoint:   endpoint,

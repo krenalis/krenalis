@@ -450,7 +450,7 @@ func (state *State) addConnectionAction(n postgres.Notification) {
 		mu:             new(sync.Mutex),
 		ID:             e.ID,
 		connection:     c,
-		ActionType:     e.ActionType,
+		ActionType:     c.actionTypes[e.ActionType],
 		Name:           e.Name,
 		Enabled:        e.Enabled,
 		Endpoint:       e.Endpoint,
@@ -818,7 +818,7 @@ func (state *State) setConnectionAction(n postgres.Notification) {
 		return
 	}
 	state.replaceAction(e.ID, func(a *Action) {
-		a.ActionType = e.ActionType
+		a.ActionType = a.connection.actionTypes[e.ActionType]
 		a.Name = e.Name
 		a.Enabled = e.Enabled
 		a.Endpoint = e.Endpoint

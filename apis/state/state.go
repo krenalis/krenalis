@@ -793,8 +793,8 @@ type Action struct {
 	// connection is the connection of the action.
 	connection *Connection
 
-	// ActionType is the identifier of the action type for the connection.
-	ActionType int
+	// ActionType is the action type of the action.
+	ActionType *ActionType
 
 	// Name is the name of the action.
 	Name string
