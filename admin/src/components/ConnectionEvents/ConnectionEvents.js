@@ -25,10 +25,10 @@ const ConnectionEvents = () => {
 		const startListener = async () => {
 			let [source, server, stream] = [0, 0, 0];
 			switch (c.Type) {
-				case "Server":
+				case 'Server':
 					server = c.ID;
 					break;
-				case "Stream":
+				case 'Stream':
 					stream = c.ID;
 					break;
 				default:
@@ -136,7 +136,6 @@ const ConnectionEvents = () => {
 							<span className='text'>discarded</span>
 						</div>
 					</div>
-
 					<div className='body'>
 						{events.length === 0 && (
 							<div className='noEvents'>
@@ -148,7 +147,7 @@ const ConnectionEvents = () => {
 								</span>
 							</div>
 						)}
-						{events.map((e) => {
+						{[...events].reverse().map((e) => {
 							return (
 								<div
 									class={`event${selectedEvent === e.id ? ' selected' : ''}`}
