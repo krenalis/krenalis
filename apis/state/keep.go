@@ -710,7 +710,6 @@ func (state *State) loadState(n postgres.Notification) {
 		state.mu.Unlock()
 		go state.keepElections()
 	}
-	return
 }
 
 // RenameConnectionNotification is the notification event sent when a
