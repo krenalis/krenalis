@@ -138,7 +138,16 @@ const ConnectionEvents = () => {
 					</div>
 
 					<div className='body'>
-						{events.length === 0 && <div className='noEvents'>Listening for new events ...</div>}
+						{events.length === 0 && (
+							<div className='noEvents'>
+								Listening for new events{' '}
+								<span className='loadingEllipsis'>
+									<span className='ellipsis1'>.</span>
+									<span className='ellipsis2'>.</span>
+									<span className='ellipsis3'>.</span>
+								</span>
+							</div>
+						)}
 						{events.map((e) => {
 							return (
 								<div
