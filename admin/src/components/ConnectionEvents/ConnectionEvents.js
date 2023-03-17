@@ -23,7 +23,18 @@ const ConnectionEvents = () => {
 		let interval;
 		let id = 1;
 		const startListener = async () => {
-			let [listener, err] = await API.eventlisteners.add(3, c.ID);
+			let [source, server, stream] = [0, 0, 0];
+			switch (c.Type) {
+				case "Server":
+					server = c.ID;
+					break;
+				case "Stream":
+					stream = c.ID;
+					break;
+				default:
+					source = c.ID;
+			}
+			let [listener, err] = await API.eventlisteners.add(3, source, server, stream);
 			if (err) {
 				if (err instanceof UnprocessableError) {
 					if (
