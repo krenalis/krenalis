@@ -285,10 +285,12 @@ func (apis *APIs) onAddConnection(n state.AddConnectionNotification) {
 	if conn := connection.Connector(); conn.Type != state.AppType {
 		return
 	}
-	go apis.reloadSchema(connection)
-	if connection.Role == state.DestinationRole {
-		go apis.reloadActionTypes(connection)
+	if connection.Role == state.SourceRole {
+		go apis.reloadSchema(connection)
+		return
 	}
+	// DestinationRole.
+	go apis.reloadActionTypes(connection)
 }
 
 // onAddImportInProgress is called when an import in progress is added.
