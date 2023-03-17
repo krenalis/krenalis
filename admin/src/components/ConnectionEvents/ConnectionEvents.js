@@ -13,6 +13,7 @@ const ConnectionEvents = () => {
 	let [events, setEvents] = useState([]);
 	let [selectedEvent, setSelectedEvent] = useState(null);
 	let [discarded, setDiscarded] = useState(0);
+	let [isListenerNotFound, setIsListenerNotFound] = useState(false);
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
 	let { connection: c, setCurrentConnectionSection } = useContext(ConnectionContext);
@@ -20,6 +21,10 @@ const ConnectionEvents = () => {
 	setCurrentConnectionSection('events');
 
 	useEffect(() => {
+		if (isListenerNotFound) {
+			setIsListenerNotFound(false);
+			return;
+		}
 		let listenerID;
 		let interval;
 		let id = 1;
@@ -59,7 +64,7 @@ const ConnectionEvents = () => {
 				let [res, err] = await API.eventlisteners.events(listenerID);
 				if (err) {
 					if (err instanceof NotFoundError) {
-						showStatus(statuses.listenerDoesNotExist);
+						setIsListenerNotFound(true);
 						return;
 					}
 					showError(err);
@@ -91,7 +96,7 @@ const ConnectionEvents = () => {
 				return;
 			}
 		};
-	}, []);
+	}, [isListenerNotFound]);
 
 	const onSelectEvent = (id) => {
 		setSelectedEvent(0);
