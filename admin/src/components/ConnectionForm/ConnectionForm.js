@@ -74,8 +74,12 @@ const ConnectionForm = ({ connection: c }) => {
 			showError(err);
 			return;
 		}
+		if (e === 'save') {
+			showStatus(statuses.connectionSaved);
+			return;
+		}
 		if (ui.Alert != null) {
-			showStatus([ui.Alert.Variant, icons.EXCLAMATION, ui.Alert.Messasge]);
+			showStatus([ui.Alert.Variant, icons.EXCLAMATION, ui.Alert.Message]);
 		}
 		if (ui.Form != null) {
 			setFields(ui.Form.Fields);

@@ -48,6 +48,7 @@ const statuses = {
 	transformationCleanedUp: [variants.SUCCESS, icons.OK, 'Your transformation has been successfully cleaned up'],
 	actionSaved: [variants.SUCCESS, icons.OK, 'Your action has been successfully saved'],
 	connectionReloaded: [variants.SUCCESS, icons.OK, 'The connection has been reloaded successfully'],
+	connectionSaved: [variants.SUCCESS, icons.OK, 'The connection settings have been saved successfully'],
 };
 
 export default statuses;
