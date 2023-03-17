@@ -118,7 +118,7 @@ class Connections {
 	};
 
 	uiEvent = async (connection, event, values) => {
-		return await call(`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/ui`, http.POST, {
+		return await call(`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/ui-event`, http.POST, {
 			event: event,
 			values: values,
 		});
