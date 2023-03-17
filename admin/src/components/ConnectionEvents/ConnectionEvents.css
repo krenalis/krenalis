@@ -67,7 +67,7 @@
 }
 
 .ConnectionEvents .eventList .discarded {
-    color: var(--sl-color-danger-400);
+    color: var(--sl-color-neutral-400);
     font-size: 14px;
 }
 
@@ -113,6 +113,24 @@
 .ConnectionEvents .eventList .event .time {
     width: 100%;
     text-align: right;
+}
+
+.ConnectionEvents .eventList .event .error {
+    min-width: 17px;
+}
+
+.ConnectionEvents .eventList .event .error sl-icon {
+    font-size: 17px;
+    position: relative;
+    top: .5px;
+}
+
+.ConnectionEvents .eventList .event .error sl-icon.iconError {
+    color: var(--sl-color-danger-600);
+}
+
+.ConnectionEvents .eventList .event .error sl-icon.iconSuccess {
+    color: var(--sl-color-success-600);
 }
 
 .ConnectionEvents .panel {

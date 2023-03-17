@@ -7,6 +7,7 @@ import { NotFoundError, UnprocessableError } from '../../api/errors';
 import statuses from '../../constants/statuses';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { github } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectionEvents = () => {
 	let [events, setEvents] = useState([]);
@@ -69,6 +70,7 @@ const ConnectionEvents = () => {
 					let dec = JSON.parse(atob(e.Data));
 					newly.push({
 						id: id,
+						err: e.Err,
 						type: dec.event,
 						path: dec.url,
 						time: e.Header.receivedAt,
@@ -156,6 +158,17 @@ const ConnectionEvents = () => {
 									<div class='name'>{e.type}</div>
 									<div class='path'>{e.path}</div>
 									<div class='time'>{e.time}</div>
+									<div className='error'>
+										{e.err !== '' ? (
+											<SlTooltip content={e.err} placement='top'>
+												<SlIcon className='iconError' name='exclamation-circle-fill'></SlIcon>
+											</SlTooltip>
+										) : (
+											<SlTooltip content='No error' placement='top'>
+												<SlIcon className='iconSuccess' name='check-circle-fill'></SlIcon>
+											</SlTooltip>
+										)}
+									</div>
 								</div>
 							);
 						})}
