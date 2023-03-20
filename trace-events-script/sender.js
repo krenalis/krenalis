@@ -106,7 +106,7 @@ const postEvents = (function () {
 			}, cb);
 		};
 	}
-	return function (endpoint, source, events, keepalive, cb) {
+	return function (endpoint, events, source, keepalive, cb) {
 		const xhr = new XMLHttpRequest();
 		xhr.open('POST', endpoint, true);
 		xhr.setRequestHeader('Content-Type', 'application/json');
