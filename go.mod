@@ -54,7 +54,7 @@ require (
 	github.com/oschwald/geoip2-golang v1.8.0
 	github.com/relvacode/iso8601 v1.3.0
 	github.com/shopspring/decimal v1.3.1
-	github.com/tetratelabs/wazero v1.0.0-rc.1
+	github.com/tetratelabs/wazero v1.0.0-rc.2
 	golang.org/x/crypto v0.7.0
 	golang.org/x/exp v0.0.0-20230307190834-24139beb5833
 	golang.org/x/text v0.8.0
