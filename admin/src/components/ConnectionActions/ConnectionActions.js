@@ -157,7 +157,8 @@ let ConnectionActions = () => {
 								}}
 							>
 								<LittleLogo url={c.LogoURL} alternativeText={`${c.Name}'s logo`}></LittleLogo>
-								<div className='span'>{t.Name}</div>
+								<div className='name'>{t.Name}</div>
+								<div className='description'>{t.Description}</div>
 							</div>
 						);
 					})}

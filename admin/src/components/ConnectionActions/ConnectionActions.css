@@ -32,10 +32,30 @@
     border: 1px solid var(--sl-color-neutral-300);
     padding: 20px;
     border-bottom: 0;
-    display: flex;
-    gap: 12px;
     cursor: pointer;
-    align-items: end;
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    grid-template-areas:
+        "logo name"
+        "logo description";
+    align-items: center;
+    column-gap: 15px;
+}
+
+.actionDialog .actionType .LittleLogo {
+    grid-area: logo;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.actionDialog .actionType .name {
+    grid-area: name;
+}
+
+.actionDialog .actionType .description {
+    grid-area: description;
+    font-size: 13px;
 }
 
 .actionDialog .actionType:first-child {
