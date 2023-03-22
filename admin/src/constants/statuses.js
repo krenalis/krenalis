@@ -30,7 +30,7 @@ const statuses = {
 	invalidSchemaTable: [variants.DANGER, icons.INVALID_INSERTED_VALUE, 'The schema table is invalid'],
 	storageNotExist: [variants.DANGER, icons.NOT_FOUND, 'The selected storage does not exist anymore'],
 	propertyNotExist: [variants.DANGER, icons.NOT_FOUND, 'One of the schema properties does not exist'],
-	settingsNotValid: [variants.DANGER, icons.INVALID_INSERTED_VALUE, 'This settings are not valid'],
+	settingsNotValid: [variants.DANGER, icons.INVALID_INSERTED_VALUE, 'These settings are not valid'],
 	listenerDoesNotExist: [variants.DANGER, icons.NOT_FOUND, 'The listener does not exist'],
 	queryExecutionFailed: [variants.DANGER, icons.CODE_ERROR, 'The inserted query returns an error'],
 	tooManyListeners: [variants.DANGER, icons.FORBIDDEN, 'You have exceeded the number of event listeners allowed'],
