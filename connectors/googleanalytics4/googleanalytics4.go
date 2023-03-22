@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"chichi/apis/types"
 	"chichi/connector"
@@ -126,8 +127,8 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 	form := &ui.Form{
 		Fields: []ui.Component{
-			&ui.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text"},
-			&ui.Input{Name: "APISecret", Label: "API Secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text"},
+			&ui.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
+			&ui.Input{Name: "APISecret", Label: "API Secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
 		},
 		Values: values,
 		Actions: []ui.Action{
@@ -146,7 +147,21 @@ func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// TODO(Gianluca): validate settings.
+	if n := len(s.MeasurementID); n < 2 || n > 20 {
+		return nil, ui.Errorf("Measurement ID length must be in [2,20]")
+	}
+	if !strings.HasPrefix(s.MeasurementID, "G-") && !strings.HasPrefix(s.MeasurementID, "AW-") {
+		return nil, ui.Errorf("Measurement ID must begin with 'G-' or 'AW-'")
+	}
+	if n := len(s.APISecret); n < 1 || n > 40 {
+		return nil, ui.Errorf("API Secret length must be in [1,40]")
+	}
+	for i := 0; i < len(s.APISecret); i++ {
+		c := s.APISecret[i]
+		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
+			return nil, ui.Errorf("API secret must contain only alphanumeric characters")
+		}
+	}
 	return json.Marshal(&s)
 }
 
