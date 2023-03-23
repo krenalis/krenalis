@@ -123,17 +123,17 @@ func equalTypes(t1, t2 Type) error {
 		if !t2.pt.Valid() {
 			return fmt.Errorf("unknown physical type %d", t2.pt)
 		}
-		return fmt.Errorf("expected physical type %s, got %s", t1.pt, t2.pt)
+		return fmt.Errorf("expected physical type %d, got %d", t1.pt, t2.pt)
 	}
 	// Logical type.
 	if t1.lt != t2.lt {
 		if t2.lt == 0 {
-			return fmt.Errorf("expected logical type %s, got no logical type", t1.pt)
+			return fmt.Errorf("expected logical type %d, got no logical type", t1.lt)
 		}
 		if !t2.lt.Valid() {
-			return fmt.Errorf("unknown logical type %d", t2.pt)
+			return fmt.Errorf("unknown logical type %d", t2.lt)
 		}
-		return fmt.Errorf("expected logical type %s, got %s", t1.pt, t2.pt)
+		return fmt.Errorf("expected logical type %d, got %d", t1.lt, t2.lt)
 	}
 	// Minimum and maximum.
 	switch t1.pt {
