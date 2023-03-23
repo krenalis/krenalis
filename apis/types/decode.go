@@ -24,7 +24,7 @@ import (
 
 // Decode decodes a JSON-encoded data, read from r, validates it according to t
 // and returns the decoded value.
-// Panics if t is not valid.
+// Returns error if t is not valid.
 func Decode(r io.Reader, t Type) (map[string]any, error) {
 	if !t.Valid() {
 		return nil, errors.New("type is not valid")
