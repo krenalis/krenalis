@@ -23,6 +23,10 @@ func TestTypeSerialization(t *testing.T) {
 		Type Type
 	}{
 		{
+			Data: `null`,
+			Type: Type{},
+		},
+		{
 			Data: `{"name":"Text"}`,
 			Type: Text(),
 		}, {
@@ -110,6 +114,10 @@ func TestTypeSerialization(t *testing.T) {
 // equalTypes returns an error if t1 and t2 are not equal.
 // It assumes that t1 is valid and validates t2.
 func equalTypes(t1, t2 Type) error {
+	// Type validity.
+	if t1.Valid() != t2.Valid() {
+		return fmt.Errorf("expected Valid() = %t, got %t", t1.Valid(), t2.Valid())
+	}
 	// Physical type.
 	if t1.pt != t2.pt {
 		if !t2.pt.Valid() {

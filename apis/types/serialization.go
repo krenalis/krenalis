@@ -25,10 +25,10 @@ import (
 var null = []byte("null")
 
 // Marshal marshals t into JSON.
-// It returns an error is t is not valid.
+// If t is not valid, it is marshalled as 'null'.
 func Marshal(t Type) ([]byte, error) {
 	if !t.Valid() {
-		return nil, errors.New("type is not valid")
+		return null, nil
 	}
 	var b bytes.Buffer
 	marshalType(&b, t, true)
@@ -47,10 +47,10 @@ func Parse(data string) (Type, error) {
 }
 
 // MarshalJSON marshals t into JSON.
-// It returns an error is t is not valid.
+// If t is not valid, it is marshalled as 'null'.
 func (t Type) MarshalJSON() ([]byte, error) {
 	if !t.Valid() {
-		return nil, errors.New("type is not valid")
+		return null, nil
 	}
 	var b bytes.Buffer
 	marshalType(&b, t, true)
@@ -252,12 +252,16 @@ func marshalType(b *bytes.Buffer, t Type, custom bool) {
 }
 
 // unmarshalType reads the JSON tokens from dec and returns the decoded type.
+// 'null' is unmarshalled as a not valid type.
 func unmarshalType(dec *json.Decoder) (Type, error) {
 
-	// Read the delimiter '{'.
+	// Read the delimiter '{' or 'null'.
 	tok, err := dec.Token()
 	if err != nil {
 		return Type{}, err
+	}
+	if tok == nil {
+		return Type{}, nil
 	}
 	if tok != json.Delim('{') {
 		return Type{}, errors.New("invalid type syntax")
