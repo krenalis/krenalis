@@ -1316,6 +1316,9 @@ func (this *Connection) reloadActionTypes() error {
 		}
 		return tx.Notify(ctx, n)
 	})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
