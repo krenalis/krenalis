@@ -22,28 +22,26 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+var errNullToken = errors.New("invalid type syntax")
+
 var null = []byte("null")
 
-// Marshal marshals t into JSON.
-// If t is not valid, it is marshalled as 'null'.
-func Marshal(t Type) ([]byte, error) {
-	if !t.Valid() {
-		return null, nil
-	}
-	var b bytes.Buffer
-	marshalType(&b, t, true)
-	return b.Bytes(), nil
-}
-
 // Parse parses the JSON-encoded data and returns the decoded type.
+// If data represents JSON null, Parse returns an error.
 func Parse(data string) (Type, error) {
 	dec := json.NewDecoder(strings.NewReader(norm.NFC.String(data)))
 	dec.UseNumber()
 	t, err := unmarshalType(dec)
-	if err == io.EOF {
-		err = io.ErrUnexpectedEOF
+	if err != nil {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+		return Type{}, err
 	}
-	return t, err
+	if tok, err := dec.Token(); err != io.EOF {
+		return Type{}, fmt.Errorf("invalid token %s after top-level value", tok)
+	}
+	return t, nil
 }
 
 // MarshalJSON marshals t into JSON.
@@ -60,13 +58,10 @@ func (t Type) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON parses the JSON-encoded data and stores the result in the type
 // pointed by t.
 func (t *Type) UnmarshalJSON(data []byte) error {
-	if bytes.Equal(data, null) {
-		return nil
-	}
 	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
 	dec.UseNumber()
 	t2, err := unmarshalType(dec)
-	if err != nil {
+	if err != nil && err != errNullToken {
 		return err
 	}
 	*t = t2
@@ -252,7 +247,7 @@ func marshalType(b *bytes.Buffer, t Type, custom bool) {
 }
 
 // unmarshalType reads the JSON tokens from dec and returns the decoded type.
-// 'null' is unmarshalled as a not valid type.
+// If the first token is 'null' it returns the errNullToken error.
 func unmarshalType(dec *json.Decoder) (Type, error) {
 
 	// Read the delimiter '{' or 'null'.
@@ -261,7 +256,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		return Type{}, err
 	}
 	if tok == nil {
-		return Type{}, nil
+		return Type{}, errNullToken
 	}
 	if tok != json.Delim('{') {
 		return Type{}, errors.New("invalid type syntax")

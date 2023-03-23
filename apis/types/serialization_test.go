@@ -23,10 +23,6 @@ func TestTypeSerialization(t *testing.T) {
 		Type Type
 	}{
 		{
-			Data: `null`,
-			Type: Type{},
-		},
-		{
 			Data: `{"name":"Text"}`,
 			Type: Text(),
 		}, {
@@ -95,7 +91,7 @@ func TestTypeSerialization(t *testing.T) {
 			t.Errorf("cannot unmarshal type %q: %s", test.Data, err)
 			continue
 		}
-		if err = equalTypes(test.Type, got); err != nil {
+		if err = sameType(test.Type, got); err != nil {
 			t.Errorf("%s: %s", test.Data, err)
 			continue
 		}
@@ -105,19 +101,15 @@ func TestTypeSerialization(t *testing.T) {
 			continue
 		}
 		if data := string(b); test.Data != data {
-			t.Errorf("expecting %s, got %s", test.Data, data)
+			t.Errorf("expecting %q, got %q", test.Data, data)
 		}
 	}
 
 }
 
-// equalTypes returns an error if t1 and t2 are not equal.
-// It assumes that t1 is valid and validates t2.
-func equalTypes(t1, t2 Type) error {
-	// Type validity.
-	if t1.Valid() != t2.Valid() {
-		return fmt.Errorf("expected Valid() = %t, got %t", t1.Valid(), t2.Valid())
-	}
+// sameType reports whether t1 and t2 are the same type. It compares t2 against
+// t1.
+func sameType(t1, t2 Type) error {
 	// Physical type.
 	if t1.pt != t2.pt {
 		if !t2.pt.Valid() {
@@ -236,7 +228,7 @@ func equalTypes(t1, t2 Type) error {
 		if t2.vl == nil {
 			return errors.New("expected item type, got nil")
 		}
-		if err := equalTypes(t1.vl.(Type), t2.vl.(Type)); err != nil {
+		if err := sameType(t1.vl.(Type), t2.vl.(Type)); err != nil {
 			return err
 		}
 	}
@@ -267,7 +259,7 @@ func equalTypes(t1, t2 Type) error {
 			if p1.Required != p2.Required {
 				return fmt.Errorf("expected property key 'required' with value %t, got %t", p1.Required, p2.Required)
 			}
-			if err := equalTypes(p1.Type, p2.Type); err != nil {
+			if err := sameType(p1.Type, p2.Type); err != nil {
 				return err
 			}
 			if p1.Nullable != p2.Nullable {
@@ -283,7 +275,7 @@ func equalTypes(t1, t2 Type) error {
 		if t2.vl == nil {
 			return errors.New("expected value type, got nil")
 		}
-		if err := equalTypes(t1.vl.(Type), t2.vl.(Type)); err != nil {
+		if err := sameType(t1.vl.(Type), t2.vl.(Type)); err != nil {
 			return err
 		}
 	}
