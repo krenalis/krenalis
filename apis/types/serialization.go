@@ -51,7 +51,7 @@ func (t Type) MarshalJSON() ([]byte, error) {
 		return null, nil
 	}
 	var b bytes.Buffer
-	marshalType(&b, t, true)
+	marshalType(&b, t)
 	return b.Bytes(), nil
 }
 
@@ -69,7 +69,7 @@ func (t *Type) UnmarshalJSON(data []byte) error {
 }
 
 // marshalType marshals t as JSON and writes it to b.
-func marshalType(b *bytes.Buffer, t Type, custom bool) {
+func marshalType(b *bytes.Buffer, t Type) {
 	b.WriteString(`{"name":"`)
 	b.WriteString(t.pt.String())
 	b.WriteString(`"`)
@@ -193,7 +193,7 @@ func marshalType(b *bytes.Buffer, t Type, custom bool) {
 			b.WriteString(`,"uniqueItems":true`)
 		}
 		b.WriteString(`,"itemType":`)
-		marshalType(b, t.vl.(Type), false)
+		marshalType(b, t.vl.(Type))
 	case PtObject:
 		b.WriteString(`,"properties":[`)
 		properties := t.vl.([]Property)
@@ -229,7 +229,7 @@ func marshalType(b *bytes.Buffer, t Type, custom bool) {
 				b.WriteString(`,"required":true`)
 			}
 			b.WriteString(`,"type":`)
-			marshalType(b, p.Type, false)
+			marshalType(b, p.Type)
 			if p.Nullable {
 				b.WriteString(`,"nullable":true`)
 			}
@@ -241,7 +241,7 @@ func marshalType(b *bytes.Buffer, t Type, custom bool) {
 		}
 	case PtMap:
 		b.WriteString(`,"valueType":`)
-		marshalType(b, t.vl.(Type), false)
+		marshalType(b, t.vl.(Type))
 	}
 	b.WriteString(`}`)
 }
