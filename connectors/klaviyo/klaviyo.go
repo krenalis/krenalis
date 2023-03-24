@@ -9,6 +9,7 @@ package klaviyo
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -67,9 +68,24 @@ func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnecti
 	return &c, nil
 }
 
+const (
+	actionTypeCreateEvent = iota + 1
+)
+
 // ActionTypes returns the connection's action types.
 func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
-	return nil, nil
+	actionTypes := []*connector.ActionType{
+		{
+			ID:          actionTypeCreateEvent,
+			Name:        "Create Event",
+			Description: "Create an Event on Klaviyo",
+			Schema: types.Object([]types.Property{
+				{Name: "email", Type: types.Text(), Required: true},
+				{Name: "metric_name", Type: types.Text(), Required: true},
+			}),
+		},
+	}
+	return actionTypes, nil
 }
 
 // Groups returns the groups starting from the given cursor.
@@ -79,7 +95,7 @@ func (c *connection) Groups(cursor string, properties []connector.PropertyPath) 
 
 // ReceiveWebhook receives a webhook request and returns its events.
 // It returns the ErrWebhookUnauthorized error is the request was not authorized.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, error) {
 	return nil, connector.ErrWebhookUnauthorized
 }
 
@@ -200,6 +216,43 @@ func (c *connection) Schemas() (types.Type, types.Type, error) {
 			}),
 		}})
 	return userSchema, types.Type{}, nil
+}
+
+// SendEvent sends event, along with the given mapped event, to the endpoint.
+// actionType specifies the action type corresponding to the event.
+func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, actionType, endpoint int) error {
+	switch actionType {
+	case actionTypeCreateEvent:
+		var msg struct {
+			Data struct {
+				Type       string `json:"type"`
+				Attributes struct {
+					Profile struct {
+						Email string `json:"$email"`
+					} `json:"profile"`
+					Metric struct {
+						Name string `json:"name"`
+					} `json:"metric"`
+					Properties map[string]any `json:"properties"`
+					Time       string         `json:"time"`
+					Value      any            `json:"value"`
+				} `json:"attributes"`
+			} `json:"data"`
+		}
+		msg.Data.Type = "event"
+		msg.Data.Attributes.Profile.Email = mappedEvent["email"].(string)
+		msg.Data.Attributes.Metric.Name = mappedEvent["metric_name"].(string)
+		msg.Data.Attributes.Properties = mappedEvent
+		msg.Data.Attributes.Time = event.Timestamp.Format(time.RFC3339)
+		body, err := json.Marshal(msg)
+		if err != nil {
+			return err
+		}
+		err = c.call("POST", "https://a.klaviyo.com/api/events/", bytes.NewReader(body), 202, nil)
+		return err
+	default:
+		panic(fmt.Sprintf("unsupported action type %d", actionType))
+	}
 }
 
 // SetUsers sets the users.

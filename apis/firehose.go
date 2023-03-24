@@ -43,7 +43,7 @@ type firehose struct {
 	err         error
 }
 
-func (fh *firehose) ReceiveEvent(event connector.Event) {
+func (fh *firehose) ReceiveEvent(event connector.WebhookEvent) {
 
 	// Return if the context has expired.
 	select {

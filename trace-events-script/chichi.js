@@ -8,9 +8,22 @@ function main() {
 	const analytics = window.chichianalytics;
 
 	const a = new Analytics(analytics.key, analytics.url);
-	analytics.page = a.page.bind(a);
-	analytics.identify = a.identify.bind(a);
-	analytics.track = a.track.bind(a);
+	const methods = [
+		'alias',
+		'getAnonymousId',
+		'group',
+		'identify',
+		'page',
+		'ready',
+		'reset',
+		'screen',
+		'setAnonymousId',
+		'track',
+	];
+	for (let i = 0; i < methods.length; i++) {
+		const method = methods[i];
+		analytics[method] = a[method].bind(a);
+	}
 
 	for (let i = 0; i < analytics.length; i++) {
 		let event = analytics[i];
@@ -19,6 +32,8 @@ function main() {
 
 	// empty the array.
 	analytics.length = 0;
+
+	window.chichianalytics = a;
 }
 
 main();

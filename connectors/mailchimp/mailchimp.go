@@ -71,6 +71,8 @@ func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnecti
 			return nil, err
 		}
 	} else {
+		// TODO: the 'open' function should return as soon as possible. Refactor
+		// this implementation.
 		var err error
 		c.settings.DataCenter, _, err = c.getMetadata()
 		if err != nil {
@@ -100,7 +102,7 @@ func (c *connection) Groups(cursor string, properties []connector.PropertyPath) 
 
 // ReceiveWebhook receives a webhook request and returns its events.
 // It returns the ErrWebhookUnauthorized error is the request was not authorized.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, error) {
 
 	if c.settings.WebhookSecret == "" {
 		// Webhooks are not set up.
@@ -128,7 +130,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) 
 	user := r.Form.Get("data[id]")
 
 	// TODO(carlo): subscribe and unsubscribe events are important and should be handled as separate event types.
-	var events = make([]connector.Event, 1)
+	var events = make([]connector.WebhookEvent, 1)
 	switch r.Form.Get("type") {
 	case "subscribe":
 		// User subscribed.
@@ -389,6 +391,12 @@ func (c *connection) Schemas() (types.Type, types.Type, error) {
 	}
 
 	return schema, types.Type{}, nil
+}
+
+// SendEvent sends event, along with the given mapped event, to the endpoint.
+// actionType specifies the action type corresponding to the event.
+func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, actionType, endpoint int) error {
+	return errors.New("not implemented")
 }
 
 // ServeUI serves the connector's user interface.

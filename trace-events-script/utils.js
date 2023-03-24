@@ -1,6 +1,6 @@
-// utm returns an object with the UTM parameters, or it returns undefined if there are none.
-function utm() {
-	let utm;
+// campaign returns an object with the UTM parameters of the campaign, or it returns undefined if there are none.
+function campaign() {
+	let campaign;
 	// Legacy: ie10 and ie11 do not support URLSearchParams.
 	const search = window.location.search.substring(1).replace(/\?/g, '&');
 	const params = search.split('&');
@@ -16,11 +16,12 @@ function utm() {
 		try {
 			// Legacy: ie10 and ie11 do not support replaceAll.
 			const v = decodeURIComponent(kv[1].replace(/\+/g, ' '));
-			utm = utm || {};
-			utm[kv[0]] = v;
+			campaign = campaign || {};
+			const k = kv[0] === 'campaign' ? 'name' : kv[0];
+			campaign[k] = v;
 		} catch (_) {}
 	}
-	return utm;
+	return campaign;
 }
 
 // uuid returns a random UUID.
@@ -35,4 +36,11 @@ function uuid() {
 	return uuid.split(/[:\/]/g).pop();
 }
 
-export { utm, uuid };
+// typesOf returns a string representing the types of the elements of the array arr.
+// If arr is not an array, it throws an error. If arr is empty, it returns an empty string.
+// For example, if arr is ['a', 5], it returns 'string,number'.
+function typesOf(arr) {
+	return arr.map((v) => typeof v).join(',');
+}
+
+export { campaign, uuid, typesOf };

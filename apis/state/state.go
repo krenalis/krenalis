@@ -85,6 +85,22 @@ func (state *State) Accounts() []*Account {
 	return accounts
 }
 
+// Actions returns all the actions from every connection.
+func (state *State) Actions() []*Action {
+	state.mu.Lock()
+	actions := make([]*Action, len(state.actions))
+	i := 0
+	for _, action := range state.actions {
+		actions[i] = action
+		i++
+	}
+	state.mu.Unlock()
+	sort.Slice(actions, func(i, j int) bool {
+		return actions[i].ID < actions[j].ID
+	})
+	return actions
+}
+
 // ConnectionByKey returns the connection with the given key.
 // The boolean return value reports whether the key exists.
 func (state *State) ConnectionByKey(key string) (*Connection, bool) {
@@ -828,8 +844,8 @@ type ActionFilter struct {
 // ActionFilterCondition represents an action filter condition associated to an
 // action's filter.
 type ActionFilterCondition struct {
-	Property string // "Event", "User", ...
-	Operator string // "is", "is not", ...
+	Property string // "AnonymousID", "Event", "UserID".
+	Operator string // "is", "is not".
 	Value    string // "Track", "Page", ...
 }
 
@@ -846,6 +862,6 @@ type ActionType struct {
 	ID          int
 	Name        string
 	Description string
-	Endpoints   []int
+	Endpoints   []int // nil if the action type has no endpoints.
 	Schema      types.Type
 }

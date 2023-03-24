@@ -407,9 +407,12 @@ func (this *Connection) actionTypes() []*ActionType {
 	stateActionTypes := this.connection.ActionTypes()
 	actionTypes := make([]*ActionType, len(stateActionTypes))
 	for i, at := range stateActionTypes {
-		endpoints := map[int]string{}
-		for _, e := range at.Endpoints {
-			endpoints[e] = app.Endpoints[e]
+		var endpoints map[int]string
+		if app.Endpoints != nil {
+			endpoints = map[int]string{}
+			for _, e := range at.Endpoints {
+				endpoints[e] = app.Endpoints[e]
+			}
 		}
 		actionType := ActionType{
 			actionType:  at,
@@ -670,7 +673,7 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 // function, and cannot have both.
 //
 // The action endpoint must be the identifier of one the endpoints supported by
-// the action type.
+// the action type, if it supports them, otherwise must be 0.
 //
 // If it has a mapping, the names of the properties in which the values are
 // mapped (the keys of the map) must be present in the action type schema, while
@@ -1284,13 +1287,23 @@ func (this *Connection) reloadActionTypes() error {
 	if err != nil {
 		return err
 	}
+	usesEndpoints := app.Endpoints != nil
+	if usesEndpoints && len(app.Endpoints) == 0 {
+		return fmt.Errorf("map of endpoints must be nil or contain at least one value")
+	}
 	for _, at := range actionTypes {
-		if len(at.Endpoints) == 0 {
-			return fmt.Errorf("missing endpoints declarations in action type %d", at.ID)
-		}
-		for _, endpoint := range at.Endpoints {
-			if _, ok := app.Endpoints[endpoint]; !ok {
-				return fmt.Errorf("action type %d refers to endpoint %d, but it's not declared by the connector", at.ID, endpoint)
+		if usesEndpoints {
+			if len(at.Endpoints) == 0 {
+				return fmt.Errorf("missing endpoints declarations in action type %d", at.ID)
+			}
+			for _, endpoint := range at.Endpoints {
+				if _, ok := app.Endpoints[endpoint]; !ok {
+					return fmt.Errorf("action type %d refers to endpoint %d, but it's not declared by the connector", at.ID, endpoint)
+				}
+			}
+		} else {
+			if at.Endpoints != nil {
+				return fmt.Errorf("action type %d declares endpoints while the connector does not declares them", at.ID)
 			}
 		}
 	}

@@ -11,6 +11,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -83,6 +84,15 @@ func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
 				})},
 			}),
 		},
+		{
+			ID:          4,
+			Name:        "Send generic event",
+			Description: "Send a generic event, useful for testing",
+			Endpoints:   []int{1, 2},
+			Schema: types.Object([]types.Property{
+				{Name: "properties", Type: types.JSON()},
+			}),
+		},
 	}
 	return actionTypes, nil
 }
@@ -91,7 +101,7 @@ func (c *connection) Groups(cursor string, properties []connector.PropertyPath) 
 	panic("not implemented")
 }
 
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, error) {
 	panic("not implemented")
 }
 
@@ -108,6 +118,14 @@ func (c *connection) Schemas() (types.Type, types.Type, error) {
 		{Name: "favourite_drink", Type: types.Text().WithEnum([]string{"tea", "beer", "wine", "water"})},
 	})
 	return userSchema, types.Type{}, nil
+}
+
+// SendEvent sends event, along with the given mapped event, to the endpoint.
+// actionType specifies the action type corresponding to the event.
+func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, actionType, endpoint int) error {
+	log.Printf("dummy: sending event %#v, %#v to the endpoint %d", event, mappedEvent, endpoint)
+	time.Sleep(50 * time.Millisecond)
+	return nil
 }
 
 type user struct {

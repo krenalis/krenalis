@@ -27,14 +27,14 @@ var emailRegExp = regexp.MustCompile(`^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.
 
 // Account represents an account.
 type Account struct {
-	db             *postgres.DB
-	eventProcessor *events.Processor
-	state          *state.State
-	account        *state.Account
-	ID             int
-	Name           string
-	Email          string
-	InternalIPs    []string
+	db            *postgres.DB
+	eventObserver *events.Observer
+	state         *state.State
+	account       *state.Account
+	ID            int
+	Name          string
+	Email         string
+	InternalIPs   []string
 }
 
 // Warehouse represents data warehouse settings. It is used with AddWorkspace.
@@ -120,12 +120,12 @@ func (this *Account) Workspace(id int) (*Workspace, error) {
 		return nil, errors.NotFound("workspace %d does not exist", id)
 	}
 	workspace := Workspace{
-		db:             this.db,
-		state:          this.state,
-		eventProcessor: this.eventProcessor,
-		workspace:      ws,
-		ID:             ws.ID,
-		Name:           ws.Name,
+		db:            this.db,
+		state:         this.state,
+		eventObserver: this.eventObserver,
+		workspace:     ws,
+		ID:            ws.ID,
+		Name:          ws.Name,
 	}
 	return &workspace, nil
 }
@@ -136,12 +136,12 @@ func (this *Account) Workspaces() []*Workspace {
 	infos := make([]*Workspace, len(workspaces))
 	for i, ws := range workspaces {
 		workspace := Workspace{
-			db:             this.db,
-			state:          this.state,
-			eventProcessor: this.eventProcessor,
-			workspace:      ws,
-			ID:             ws.ID,
-			Name:           ws.Name,
+			db:            this.db,
+			state:         this.state,
+			eventObserver: this.eventObserver,
+			workspace:     ws,
+			ID:            ws.ID,
+			Name:          ws.Name,
 		}
 		infos[i] = &workspace
 	}

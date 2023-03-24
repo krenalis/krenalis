@@ -9,24 +9,34 @@ class Storage {
 		this.store = window.localStorage;
 	}
 
-	setUserID(id) {
-		this.store.setItem('chichi_user_id', id);
+	getAnonymousID() {
+		return this.store.getItem('chichi_anonymous_id');
+	}
+
+	getGroupID() {
+		return this.store.getItem('chichi_group_id');
 	}
 
 	getUserID() {
 		return this.store.getItem('chichi_user_id');
 	}
 
-	setAnonymousId(id) {
+	reset() {
+		this.store.getItem('chichi_anonymous_id');
+		this.store.removeItem('chichi_group_id');
+		this.store.removeItem('chichi_user_id');
+	}
+
+	setAnonymousID(id) {
 		this.store.setItem('chichi_anonymous_id', id);
 	}
 
-	getAnonymousId() {
-		return this.store.getItem('chichi_anonymous_id');
+	setGroupID(id) {
+		this.store.setItem('chichi_group_id', id);
 	}
 
-	setUserTraits(traits) {
-		this.store.setItem('chichi_user_traits', JSON.stringify(traits));
+	setUserID(id) {
+		this.store.setItem('chichi_user_id', id);
 	}
 }
 

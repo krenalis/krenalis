@@ -16,7 +16,6 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/events"
-	"chichi/apis/events/collector"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 
@@ -27,7 +26,7 @@ import (
 type APIs struct {
 	db             *postgres.DB
 	state          *state.State
-	eventCollector *collector.Collector
+	events         *events.Events
 	eventProcessor *events.Processor
 	Users          *Users
 }
@@ -83,19 +82,7 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 	apis.state.AddListener(apis.onAddImportInProgress)
 	apis.state.AddListener(apis.onSetConnectionUserQuery)
 
-	// Run the event collector.
-	apis.eventCollector, err = collector.New(ctx, apis.state,
-		newPostgresStream(context.Background(), db))
-	if err != nil {
-		return nil, err
-	}
-
-	// Run the event processor.
-	apis.eventProcessor, err = events.NewProcessor(ctx, db, apis.state,
-		newPostgresStream(context.Background(), db))
-	if err != nil {
-		return nil, err
-	}
+	apis.events, err = events.New(ctx, db, apis.state)
 
 	// Keep the state updated.
 	apis.state.Keep()
@@ -115,14 +102,14 @@ func (apis *APIs) Account(id int) (*Account, error) {
 		return nil, errors.NotFound("account %d does not exist", id)
 	}
 	account := Account{
-		db:             apis.db,
-		eventProcessor: apis.eventProcessor,
-		state:          apis.state,
-		account:        acc,
-		ID:             acc.ID,
-		Name:           acc.Name,
-		Email:          acc.Email,
-		InternalIPs:    slices.Clone(acc.InternalIPs),
+		db:            apis.db,
+		eventObserver: apis.events.Observer(),
+		state:         apis.state,
+		account:       acc,
+		ID:            acc.ID,
+		Name:          acc.Name,
+		Email:         acc.Email,
+		InternalIPs:   slices.Clone(acc.InternalIPs),
 	}
 	return &account, nil
 }
@@ -333,12 +320,12 @@ func (apis *APIs) reloadSchema(connection *state.Connection) {
 
 // Workspace represents a workspace.
 type Workspace struct {
-	db             *postgres.DB
-	state          *state.State
-	eventProcessor *events.Processor
-	workspace      *state.Workspace
-	ID             int
-	Name           string
+	db            *postgres.DB
+	state         *state.State
+	eventObserver *events.Observer
+	workspace     *state.Workspace
+	ID            int
+	Name          string
 }
 
 type AccountSort int

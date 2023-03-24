@@ -71,12 +71,16 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 				}
 			} else {
 				actionType = actionTypeProp;
+				let endpoint = 0;
+				if (actionType.Endpoints != null) {
+					endpoint = Number(Object.keys(actionType.Endpoints)[0]);
+				}
 				action = {
 					ID: 0,
 					Connection: c.ID,
 					ActionType: actionType.ID,
 					Name: actionType.Name,
-					Endpoint: Number(Object.keys(actionType.Endpoints)[0]),
+					Endpoint: endpoint,
 					Filter: { Logical: 'all', Conditions: [] },
 					Enabled: true,
 					Mapping: null,
@@ -391,138 +395,140 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 					Add new condition
 				</SlButton>
 			</Section>
-			<Section
-				title='Properties'
-				description='The relation between the event properties and the action type properties'
-				actions={
-					propertiesMode === '' ? null : propertiesMode === 'mappings' ? (
-						<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
-							Switch to transformation function
-						</SlButton>
+			{actionType.Schema != null &&
+				<Section
+					title='Properties'
+					description='The relation between the event properties and the action type properties'
+					actions={
+						propertiesMode === '' ? null : propertiesMode === 'mappings' ? (
+							<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
+								Switch to transformation function
+							</SlButton>
+						) : (
+							<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
+								Switch to mappings
+							</SlButton>
+						)
+					}
+				>
+					{propertiesMode === '' ? (
+						<div className='propertiesButtons'>
+							<SlButton variant='default' onClick={onSetMappingsMode}>
+								<SlIcon name='shuffle' slot='prefix'></SlIcon>
+								Map the properties
+							</SlButton>
+							<span>or</span>
+							<SlButton variant='default' onClick={onSetTransformationMode}>
+								<SlIcon name='filetype-py' slot='prefix'></SlIcon>
+								Write a transformation function
+							</SlButton>
+						</div>
+					) : propertiesMode === 'mappings' ? (
+						<div className='mappings'>
+							{Object.keys(action.Mapping).map((k) => {
+								return (
+									<div
+										className='mapping'
+										style={{ '--mapping-indentation': `${action.Mapping[k].indentation * 30}px` }}
+									>
+										<SlInput
+											size='small'
+											value={action.Mapping[k].value}
+											type='text'
+											name={k}
+											onSlInput={onMappingUpdate}
+											disabled={action.Mapping[k].disabled}
+											className='inputProperty'
+										/>
+										<div className='arrow'>
+											<SlIcon name='arrow-right' />
+										</div>
+										<SlInput
+											readonly
+											size='small'
+											value={k}
+											type='text'
+											name={k}
+											onSlInput={null}
+											className={`outputProperty${
+												action.Mapping[k].indentation > 0 ? ' indented' : ''
+											}`}
+										/>
+									</div>
+								);
+							})}
+						</div>
 					) : (
-						<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
-							Switch to mappings
-						</SlButton>
-					)
-				}
-			>
-				{propertiesMode === '' ? (
-					<div className='propertiesButtons'>
-						<SlButton variant='default' onClick={onSetMappingsMode}>
-							<SlIcon name='shuffle' slot='prefix'></SlIcon>
-							Map the properties
-						</SlButton>
-						<span>or</span>
-						<SlButton variant='default' onClick={onSetTransformationMode}>
-							<SlIcon name='filetype-py' slot='prefix'></SlIcon>
-							Write a transformation function
-						</SlButton>
-					</div>
-				) : propertiesMode === 'mappings' ? (
-					<div className='mappings'>
-						{Object.keys(action.Mapping).map((k) => {
-							return (
-								<div
-									className='mapping'
-									style={{ '--mapping-indentation': `${action.Mapping[k].indentation * 30}px` }}
+						<div className='transformation'>
+							<div className='inputProperties'>
+								{action.Transformation.In.properties.map((p) => {
+									return (
+										<div className='property'>
+											<div className='name'>{p.name}</div>
+											<div className='type'>{p.type.name}</div>
+											<SlButton
+												className='removeProperty'
+												size='small'
+												variant='danger'
+												outline
+												onClick={() => onRemoveTransformationProperty('input', p.name)}
+											>
+												<SlIcon name='trash'></SlIcon>
+											</SlButton>
+										</div>
+									);
+								})}
+								<SlButton
+									className='addProperty'
+									size='small'
+									variant='default'
+									onClick={() => setIsEventSchemaDialogOpen(true)}
 								>
-									<SlInput
-										size='small'
-										value={action.Mapping[k].value}
-										type='text'
-										name={k}
-										onSlInput={onMappingUpdate}
-										disabled={action.Mapping[k].disabled}
-										className='inputProperty'
-									/>
-									<div className='arrow'>
-										<SlIcon name='arrow-right' />
-									</div>
-									<SlInput
-										readonly
-										size='small'
-										value={k}
-										type='text'
-										name={k}
-										onSlInput={null}
-										className={`outputProperty${
-											action.Mapping[k].indentation > 0 ? ' indented' : ''
-										}`}
-									/>
-								</div>
-							);
-						})}
-					</div>
-				) : (
-					<div className='transformation'>
-						<div className='inputProperties'>
-							{action.Transformation.In.properties.map((p) => {
-								return (
-									<div className='property'>
-										<div className='name'>{p.name}</div>
-										<div className='type'>{p.type.name}</div>
-										<SlButton
-											className='removeProperty'
-											size='small'
-											variant='danger'
-											outline
-											onClick={() => onRemoveTransformationProperty('input', p.name)}
-										>
-											<SlIcon name='trash'></SlIcon>
-										</SlButton>
-									</div>
-								);
-							})}
-							<SlButton
-								className='addProperty'
-								size='small'
-								variant='default'
-								onClick={() => setIsEventSchemaDialogOpen(true)}
-							>
-								<SlIcon name='plus' slot='prefix'></SlIcon>
-								Add new property
-							</SlButton>
+									<SlIcon name='plus' slot='prefix'></SlIcon>
+									Add new property
+								</SlButton>
+							</div>
+							<div className='editorWrapper'>
+								<Editor
+									onChange={(value) => onChangeTransformationPythonSource(value)}
+									defaultLanguage='python'
+									value={action.Transformation.PythonSource}
+									theme='vs-primary'
+								/>
+							</div>
+							<div className='outputProperties'>
+								{action.Transformation.Out.properties.map((p) => {
+									return (
+										<div className='property'>
+											<div className='name'>{p.name}</div>
+											<div className='type'>{p.type.name}</div>
+											<SlButton
+												className='removeProperty'
+												size='small'
+												variant='danger'
+												outline
+												onClick={() => onRemoveTransformationProperty('output', p.name)}
+											>
+												<SlIcon name='trash'></SlIcon>
+											</SlButton>
+										</div>
+									);
+								})}
+								<SlButton
+									className='addProperty'
+									size='small'
+									variant='default'
+									onClick={() => setIsActionTypeSchemaDialogOpen(true)}
+								>
+									<SlIcon name='plus' slot='prefix'></SlIcon>
+									Add new property
+								</SlButton>
+							</div>
 						</div>
-						<div className='editorWrapper'>
-							<Editor
-								onChange={(value) => onChangeTransformationPythonSource(value)}
-								defaultLanguage='python'
-								value={action.Transformation.PythonSource}
-								theme='vs-primary'
-							/>
-						</div>
-						<div className='outputProperties'>
-							{action.Transformation.Out.properties.map((p) => {
-								return (
-									<div className='property'>
-										<div className='name'>{p.name}</div>
-										<div className='type'>{p.type.name}</div>
-										<SlButton
-											className='removeProperty'
-											size='small'
-											variant='danger'
-											outline
-											onClick={() => onRemoveTransformationProperty('output', p.name)}
-										>
-											<SlIcon name='trash'></SlIcon>
-										</SlButton>
-									</div>
-								);
-							})}
-							<SlButton
-								className='addProperty'
-								size='small'
-								variant='default'
-								onClick={() => setIsActionTypeSchemaDialogOpen(true)}
-							>
-								<SlIcon name='plus' slot='prefix'></SlIcon>
-								Add new property
-							</SlButton>
-						</div>
-					</div>
-				)}
-			</Section>
-			{Object.keys(actionType.Endpoints).length > 1 && (
+					)}
+				</Section>
+			}
+			{actionType.Endpoints != null && Object.keys(actionType.Endpoints).length > 1 && (
 				<Section
 					title='Endpoint'
 					description='The location of the server to which the action events will be sent'
@@ -635,7 +641,7 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 					document.body
 				)}
 			<div className='saveWrapper'>
-				<SlButton variant='primary' disabled={propertiesMode === ''} onClick={onSave}>
+				<SlButton variant='primary' disabled={(actionType.Schema != null) && propertiesMode === ''} onClick={onSave}>
 					Save
 				</SlButton>
 			</div>

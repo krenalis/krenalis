@@ -1062,6 +1062,9 @@ func (state *State) setWarehouseSettings(n postgres.Notification) {
 			log.Printf("[error] cannot open data warehouse of workspace %d: %s", e.Workspace, err)
 		}
 	}
+	for _, listener := range state.listeners.SetWarehouseSettings {
+		listener(e)
+	}
 	// Close the disconnected warehouse.
 	if disconnected != nil {
 		go func() {
@@ -1071,9 +1074,6 @@ func (state *State) setWarehouseSettings(n postgres.Notification) {
 				log.Printf("[error] error occurred disconnecting the warehouse: %s", err)
 			}
 		}()
-	}
-	for _, listener := range state.listeners.SetWarehouseSettings {
-		listener(e)
 	}
 }
 

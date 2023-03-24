@@ -121,14 +121,14 @@ func (c *connection) Groups(cursor string, properties []connector.PropertyPath) 
 // It returns the ErrWebhookUnauthorized error is the request was not
 // authorized.
 // See https://developers.hubspot.com/docs/api/webhooks.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, error) {
 
 	// Check if the webhook is valid.
 	if !isValidWebhook(c.clientSecret, r) {
 		return nil, connector.ErrWebhookUnauthorized
 	}
 
-	var events []connector.Event
+	var events []connector.WebhookEvent
 
 	// Read the requests.
 	var requests []struct {
@@ -144,7 +144,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) 
 		return nil, err
 	}
 	for _, req := range requests {
-		var event connector.Event
+		var event connector.WebhookEvent
 		timestamp := time.UnixMilli(req.OccurredAt).UTC()
 		resource := strconv.Itoa(req.PortalId)
 		switch req.SubscriptionType {
@@ -283,6 +283,12 @@ func (c *connection) Schemas() (types.Type, types.Type, error) {
 	}
 
 	return schema, types.Type{}, nil
+}
+
+// SendEvent sends event, along with the given mapped event, to the endpoint.
+// actionType specifies the action type corresponding to the event.
+func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, actionType, endpoint int) error {
+	return errors.New("not implemented")
 }
 
 // SetUsers sets the users.

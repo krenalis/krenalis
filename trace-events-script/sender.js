@@ -1,3 +1,5 @@
+import { uuid } from './utils';
+
 class Sender {
 	#source = '';
 	#endpoint = '';
@@ -15,7 +17,7 @@ class Sender {
 	}
 
 	send(event) {
-		this.#events.push(event);
+		this.#events.push(JSON.stringify(event));
 		if (this.#events.length === 1) {
 			this.#timeoutID = setTimeout(() => {
 				this.flush(false);
@@ -28,8 +30,20 @@ class Sender {
 			return;
 		}
 		this.#flushing = true;
+
+		let messageID = uuid();
+		let sentAt = new Date();
+		let body = '{"messageId":"' + messageID + '","sentAt":"' + sentAt.toJSON() + '","batch":[';
+		for (let i = 0; i < this.#events.length; i++) {
+			if (i > 0) {
+				body += ',';
+			}
+			body += this.#events[i];
+		}
+		body += ']}';
+
 		try {
-			postEvents(this.#endpoint, this.#events, this.#source, keepalive, (res) => {
+			post(this.#endpoint, this.#source, body, keepalive, (res) => {
 				if (res instanceof Error) {
 					console.warn('cannot send events: ' + res.message);
 					return;
@@ -70,21 +84,14 @@ const onUnload = function () {
 	};
 };
 
-// post issues a POST to the specified endpoint with the given events.
-// source is the source ID. If keepalive is true the request outlives the page.
+// post issues a POST to the specified endpoint with the given body, source is
+// the source ID. If keepalive is true the request outlives the page.
 // It returns an object with properties 'ok', 'status' and 'statusText'.
 // Returns an Error value in case of error.
-const postEvents = (function () {
+const post = (function () {
 	// Legacy: ie10 and ie11 do not support fetch.
 	if (window.fetch && typeof window.fetch === 'function') {
-		return function (endpoint, events, source, keepalive, cb) {
-			let body = '';
-			for (let i = 0; i < events.length; i++) {
-				if (i > 0) {
-					body += '\n';
-				}
-				body += JSON.stringify(events[i]);
-			}
+		return function (endpoint, source, body, keepalive, cb) {
 			const promise = fetch(endpoint, {
 				method: 'POST',
 				cache: 'no-cache',
@@ -106,7 +113,7 @@ const postEvents = (function () {
 			}, cb);
 		};
 	}
-	return function (endpoint, events, source, keepalive, cb) {
+	return function (endpoint, source, body, keepalive, cb) {
 		const xhr = new XMLHttpRequest();
 		xhr.open('POST', endpoint, true);
 		xhr.setRequestHeader('Content-Type', 'application/json');
@@ -125,13 +132,6 @@ const postEvents = (function () {
 			};
 			cb(response);
 		};
-		let body = '';
-		for (let i = 0; i < events.length; i++) {
-			if (i > 0) {
-				body += '\n';
-			}
-			body += JSON.stringify(events[i]);
-		}
 		xhr.send(body);
 	};
 })();

@@ -111,7 +111,7 @@ type Firehose interface {
 
 	// ReceiveEvent receives the given event for the connection.
 	// The event.Resource field must be empty.
-	ReceiveEvent(event Event)
+	ReceiveEvent(event WebhookEvent)
 
 	// SetCursor sets the given cursor for the connection.
 	SetCursor(cursor string)
@@ -139,7 +139,7 @@ type Firehose interface {
 	WebhookURL() string
 }
 
-type Event interface {
+type WebhookEvent interface {
 	event()
 }
 
@@ -238,6 +238,9 @@ type ActionType struct {
 	ID          int
 	Name        string
 	Description string
-	Endpoints   []int
-	Schema      types.Type
+	// Endpoints are the endpoints of the action type. If the connector does not
+	// use endpoints this must be nil; otherwise it must contain at least one
+	// endpoint from the endpoints declared by the connector.
+	Endpoints []int
+	Schema    types.Type
 }

@@ -13,7 +13,18 @@
 		var c = document.getElementsByTagName('script')[0];
 		c.parentNode.insertBefore(s, c);
 	};
-	var methods = ['page', 'identify', 'track'];
+	var methods = [
+		'alias',
+		'getAnonymousId',
+		'group',
+		'identify',
+		'page',
+		'ready',
+		'reset',
+		'screen',
+		'setAnonymousId',
+		'track',
+	];
 	for (var i = 0; i < methods.length; i++) {
 		(function (name) {
 			a[name] = function () {
@@ -22,6 +33,6 @@
 			};
 		})(methods[i]);
 	}
-	a.load('123456789', 'https://localhost:9090/api/v1/events');
+	a.load('123456789', 'https://localhost:9090/api/v1/batch');
 	a.page();
 })();

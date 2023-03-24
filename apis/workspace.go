@@ -24,7 +24,7 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/errors"
-	"chichi/apis/events"
+	_events "chichi/apis/events"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/types"
@@ -35,6 +35,10 @@ import (
 
 	"github.com/jxskiss/base62"
 	"golang.org/x/exp/slices"
+)
+
+const (
+	maxEventsListenedTo = 1000 // maximum number of processed events listened to.
 )
 
 var (
@@ -48,6 +52,10 @@ var (
 	OrderTypeNotSortable errors.Code = "OrderTypeNotSortable"
 	PropertyNotExist     errors.Code = "PropertyNotExist"
 	RepeatedPropertyName errors.Code = "RepeatedPropertyName"
+	ServerNotExist       errors.Code = "ServerNotExist"
+	SourceNotExist       errors.Code = "SourceNotExist"
+	StreamNotExist       errors.Code = "StreamNotExist"
+	TooManyListeners     errors.Code = "TooManyListeners"
 	WarehouseFailed      errors.Code = "WarehouseFailed"
 )
 
@@ -331,6 +339,90 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 	return n.ID, nil
 }
 
+// AddEventListener adds a listener that listen to processed events
+//
+//   - occurred on the mobile or website connection source, if source is not
+//     zero,
+//   - sent by the server connection server, if server is not zero,
+//   - received from the stream connection stream, if stream is not zero,
+//
+// and returns its identifier. size is the maximum number of events to return
+// for each call to the Events method, it must be in [1,1000].
+//
+// If the source, server, or stream does not exist, it returns an
+// errors.UnprocessableError error with code SourceNotExist, ServerNotExist,
+// and StreamNotExist respectively.
+// If there are already too many listeners, it returns an
+// errors.UnprocessableError error with code TooManyListeners.
+func (this *Workspace) AddEventListener(size, source, server, stream int) (string, error) {
+
+	if size < 1 || size > maxEventsListenedTo {
+		return "", errors.BadRequest("size %d is not valid", size)
+	}
+	if source < 0 || source > maxInt32 {
+		return "", errors.BadRequest("source identifier %d is not valid", source)
+	}
+	if server < 0 || server > maxInt32 {
+		return "", errors.BadRequest("server identifier %d is not valid", server)
+	}
+	if stream < 0 || stream > maxInt32 {
+		return "", errors.BadRequest("stream identifier %d is not valid", stream)
+	}
+
+	if source > 0 || server > 0 || stream > 0 {
+
+		var sourceExist, serverExist, streamExist bool
+		err := this.db.QueryScan(context.Background(), "SELECT id, type , role FROM connections\n"+
+			"WHERE id IN ($1, $2, $3) AND workspace = $4", source, server, stream, this.workspace.ID,
+			func(rows *postgres.Rows) error {
+				var id int
+				var typ state.ConnectorType
+				var role state.ConnectionRole
+				for rows.Next() {
+					if err := rows.Scan(&id, &typ, &role); err != nil {
+						return err
+					}
+					switch id {
+					case source:
+						if typ != state.MobileType && typ != state.WebsiteType {
+							return errors.BadRequest("connection %d is not a mobile or website", source)
+						}
+						sourceExist = true
+					case server:
+						if typ != state.ServerType {
+							return errors.BadRequest("connection %d is not a server", server)
+						}
+						serverExist = true
+					case stream:
+						if typ != state.StreamType {
+							return errors.BadRequest("connection %d is not a stream", stream)
+						}
+						streamExist = true
+					}
+					if role != state.SourceRole {
+						return errors.BadRequest("connection %d is not a source", id)
+					}
+				}
+				return nil
+			})
+		if err != nil {
+			return "", err
+		}
+		if source > 0 && !sourceExist {
+			return "", errors.Unprocessable(SourceNotExist, "source %d does not exist", source)
+		}
+		if server > 0 && !serverExist {
+			return "", errors.Unprocessable(ServerNotExist, "server %d does not exist", server)
+		}
+		if stream > 0 && !streamExist {
+			return "", errors.Unprocessable(StreamNotExist, "stream %d does not exist", stream)
+		}
+
+	}
+
+	return this.eventObserver.AddListener(size, source, server, stream)
+}
+
 // Delete deletes the workspace with all its connections.
 //
 // It returns an errors.NotFound error if the workspace does not exist anymore.
@@ -525,10 +617,6 @@ func (this *Workspace) DisconnectWarehouse() error {
 	return err
 }
 
-func (this *Workspace) EventListeners() *events.Listeners {
-	return events.NewListeners(this.db, this.eventProcessor, this.workspace)
-}
-
 // InitWarehouse initializes the data warehouse of the workspace by creating
 // the supporting tables.
 //
@@ -655,6 +743,21 @@ func (this *Workspace) OAuthToken(authorizationCode string, connector int) (stri
 	return base62.EncodeToString(resource), nil
 }
 
+// ListenedEvents returns the events listen to by the specified listener and
+// the number of discarded events.
+//
+// It returns an errors.NotFoundError error, if the listener does not exist.
+func (this *Workspace) ListenedEvents(listener string) ([]json.RawMessage, int, error) {
+	events, discarded, err := this.eventObserver.Events(listener)
+	if err != nil {
+		if err == _events.ErrEventListenerNotFound {
+			return nil, 0, errors.NotFound("event listener %q does not exist", listener)
+		}
+		return nil, 0, err
+	}
+	return events, discarded, nil
+}
+
 // ReloadSchemas reloads the schemas of the workspace.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist,
@@ -747,6 +850,12 @@ func (this *Workspace) ReloadSchemas() error {
 		return tx.Notify(ctx, n)
 	})
 	return err
+}
+
+// RemoveEventListener removes the given event listener. It does nothing if the
+// listener does not exist.
+func (this *Workspace) RemoveEventListener(listener string) {
+	this.eventObserver.RemoveListener(listener)
 }
 
 // Rename renames the workspace with the given new name.

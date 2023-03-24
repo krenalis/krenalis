@@ -52,6 +52,10 @@ If webhooksPer is "Connection":
 * ClientSecret
 * AccessToken
 
+### SendEvent
+
+* Settings
+
 ### SetUsers
 
 * Settings

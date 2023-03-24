@@ -19,12 +19,13 @@ import (
 	"time"
 
 	"chichi/apis/errors"
-	"chichi/apis/events/collector"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 
 	"github.com/google/uuid"
 )
+
+var ErrEventListenerNotFound = errors.New("event listener does not exist")
 
 const (
 	maxEventListeners   = 100  // maximum number of event listeners.
@@ -41,12 +42,12 @@ var (
 
 type Listeners struct {
 	db        *postgres.DB
-	processor *Processor
+	observer  *Observer
 	workspace *state.Workspace
 }
 
-func NewListeners(db *postgres.DB, processor *Processor, workspace *state.Workspace) *Listeners {
-	return &Listeners{db, processor, workspace}
+func NewListeners(db *postgres.DB, observer *Observer, workspace *state.Workspace) *Listeners {
+	return &Listeners{db, observer, workspace}
 }
 
 // Add adds a listener that listen to processed events
@@ -125,7 +126,7 @@ func (this *Listeners) Add(size, source, server, stream int) (string, error) {
 			return "", errors.Unprocessable(StreamNotExist, "stream %d does not exist", stream)
 		}
 	}
-	return this.processor.observer.AddListener(size, source, server, stream)
+	return this.observer.AddListener(size, source, server, stream)
 }
 
 // Events returns the events listen to and the number of discarded events by
@@ -133,17 +134,17 @@ func (this *Listeners) Add(size, source, server, stream int) (string, error) {
 //
 // If the listener does not exist, it returns an errors.NotFoundError error.
 func (this *Listeners) Events(id string) ([]json.RawMessage, int, error) {
-	return this.processor.observer.Events(id)
+	return this.observer.Events(id)
 }
 
 // Remove removes the event listener with identifier id. If the listener does
 // not exist, it does nothing.
 func (this *Listeners) Remove(id string) {
-	this.processor.observer.RemoveListener(id)
+	this.observer.RemoveListener(id)
 }
 
-// observer represents the event observer.
-type observer struct {
+// Observer represents the event observer.
+type Observer struct {
 	db *postgres.DB
 	sync.RWMutex
 	listeners []*listener
@@ -192,7 +193,7 @@ type ProcessedEvent struct {
 
 	// Header is the message header. It is nil if a validation error occurred
 	// processing the entire message.
-	Header *collector.MessageHeader
+	Header *collectedHeader
 
 	// Data contains the data, encoded in JSON, of a single event in the message,
 	// if header is not nil, or the data of the entire message, if header is nil.
@@ -205,8 +206,8 @@ type ProcessedEvent struct {
 }
 
 // newObserver returns a new observer.
-func newObserver(db *postgres.DB) *observer {
-	observer := &observer{db: db}
+func newObserver(db *postgres.DB) *Observer {
+	observer := &Observer{db: db}
 	go func() {
 		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
@@ -223,7 +224,7 @@ func newObserver(db *postgres.DB) *observer {
 	return observer
 }
 
-func (observer *observer) flushStats(t time.Time) error {
+func (observer *Observer) flushStats(t time.Time) error {
 
 	observer.statsMu.Lock()
 	if len(observer.stats) == 0 {
@@ -260,14 +261,11 @@ func (observer *observer) flushStats(t time.Time) error {
 	return err
 }
 
-// AddEvent adds a processed message or event to the observed events. source,
-// if not-zero is the connection, mobile or website, where the event occurred.
-// If the event was sent by a server, server is its connection identifier,
-// otherwise server is zero. header contains the HTTP message headers and can
-// be nil if an error occurred processing the message headers. data is the
-// entire message data if headers is nil, otherwise is the event data. If a
-// message or event is invalid, err contains the error.
-func (observer *observer) AddEvent(source, server, stream int, header *collector.MessageHeader, data []byte, err error) {
+// AddEvent adds an event to the observed events. source, if not-zero is the
+// connection, mobile or website, where the event occurred. If the event was
+// sent by a server, server is its connection identifier, otherwise server is
+// zero. If a message or event is invalid, err contains the error.
+func (observer *Observer) AddEvent(source, server, stream int, event *collectedEvent, err error) {
 
 	observer.RLock()
 	defer observer.RUnlock()
@@ -302,7 +300,7 @@ func (observer *observer) AddEvent(source, server, stream int, header *collector
 	if len(observer.listeners) == 0 {
 		return
 	}
-	var event json.RawMessage
+	var rawEvent json.RawMessage
 	var receivedAt string
 	for _, listener := range observer.listeners {
 		if listener.source > 0 && listener.source != source {
@@ -324,34 +322,33 @@ func (observer *observer) AddEvent(source, server, stream int, header *collector
 				continue
 			}
 		}
-		if event == nil {
-			if header == nil {
-				receivedAt = time.Now().UTC().Format(eventDateLayout)
-			} else {
-				receivedAt = header.ReceivedAt.Format(eventDateLayout)
-			}
+		if rawEvent == nil {
 			var b bytes.Buffer
 			enc := json.NewEncoder(&b)
 			enc.SetEscapeHTML(false)
+			_ = enc.Encode(event)
+			data := b.Bytes()
 			var errStr string
 			if err != nil {
 				errStr = err.Error()
 			}
+			b.Reset()
 			_ = enc.Encode(ProcessedEvent{
 				Source: source,
 				Server: server,
 				Stream: stream,
-				Header: header,
+				Header: event.header,
 				Data:   data,
 				Err:    errStr,
 			})
-			event = b.Bytes()
+			rawEvent = b.Bytes()
 		}
+		receivedAt = event.header.ReceivedAt.Format(eventDateLayout)
 		if listener.discarded == 0 {
-			listener.events = append(listener.events, event)
+			listener.events = append(listener.events, rawEvent)
 			listener.times = append(listener.times, receivedAt)
 		} else {
-			listener.events[p] = event
+			listener.events[p] = rawEvent
 			listener.times[p] = receivedAt
 		}
 		listener.Unlock()
@@ -362,7 +359,7 @@ func (observer *observer) AddEvent(source, server, stream int, header *collector
 // Events returns the events listen to by the specified listener and the number
 // of discarded events. If the listener does not exist, it returns the
 // ErrEventListenerNotFound error.
-func (observer *observer) Events(listener string) ([]json.RawMessage, int, error) {
+func (observer *Observer) Events(listener string) ([]json.RawMessage, int, error) {
 	observer.RLock()
 	for _, l := range observer.listeners {
 		if l.id != listener {
@@ -384,12 +381,12 @@ func (observer *observer) Events(listener string) ([]json.RawMessage, int, error
 		return events, discarded, nil
 	}
 	observer.RUnlock()
-	return nil, 0, errors.NotFound("event listener %q does not exist", listener)
+	return nil, 0, ErrEventListenerNotFound
 }
 
 // AddListener adds a processed event listener.
 // See the (*Listeners).Add documentation for details.
-func (observer *observer) AddListener(size, source, server, stream int) (string, error) {
+func (observer *Observer) AddListener(size, source, server, stream int) (string, error) {
 	id := uuid.New().String()
 	listener := listener{
 		id:     id,
@@ -409,7 +406,7 @@ func (observer *observer) AddListener(size, source, server, stream int) (string,
 }
 
 // RemoveListener removes the listener with identifier id.
-func (observer *observer) RemoveListener(id string) {
+func (observer *Observer) RemoveListener(id string) {
 	observer.Lock()
 	p := -1
 	for i, listener := range observer.listeners {

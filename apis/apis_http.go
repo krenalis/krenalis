@@ -25,12 +25,8 @@ import (
 // ServeHTTP servers the API methods from HTTP.
 func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	if strings.HasPrefix(r.URL.Path, "/api/v1/events") {
-		if apis.eventCollector == nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		apis.eventCollector.ServeHTTP(w, r)
+	if strings.HasPrefix(r.URL.Path, "/api/v1/") {
+		apis.events.ServeHTTP(w, r)
 		return
 	}
 
@@ -629,7 +625,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if req.Size != nil {
 				size = *req.Size
 			}
-			id, err := workspace.EventListeners().Add(size, req.Source, req.Server, req.Stream)
+			id, err := workspace.AddEventListener(size, req.Source, req.Server, req.Stream)
 			if err != nil {
 				respond(w, err)
 				return
@@ -639,11 +635,11 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 		router.Delete("/{listenerID}", func(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "listenerID")
-			workspace.EventListeners().Remove(id)
+			workspace.RemoveEventListener(id)
 		})
 		router.Get("/{listenerID}/events", func(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "listenerID")
-			events, discarded, err := workspace.EventListeners().Events(id)
+			events, discarded, err := workspace.ListenedEvents(id)
 			if err != nil {
 				respond(w, err)
 				return

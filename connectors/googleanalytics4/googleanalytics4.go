@@ -8,11 +8,16 @@
 package googleanalytics4
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"log"
 	"net/http"
+	_url "net/url"
 	"strings"
 
 	"chichi/apis/types"
@@ -23,15 +28,22 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+// sendToDebugServer controls whether the events should be sent to the debug
+// server instead of the production server; it also enables printing some debug
+// information on the log.
+//
+// See
+// https://developers.google.com/analytics/devguides/collection/protocol/ga4/validating-events?client_type=firebase
+const sendToDebugServer = false
+
 // Make sure it implements the AppConnection interface.
 var _ connector.AppConnection = &connection{}
 
 func init() {
 	connector.RegisterApp(connector.App{
-		Name:      "Google Analytics 4",
-		Endpoints: map[int]string{1: "Default"},
-		Icon:      icon,
-		Open:      open,
+		Name: "Google Analytics 4",
+		Icon: icon,
+		Open: open,
 	})
 }
 
@@ -59,19 +71,26 @@ func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnecti
 }
 
 const (
-	addToCart = iota + 1
+	eventPageView = iota + 1 // https://developers.google.com/analytics/devguides/collection/ga4/views?client_type=gtag#manually_send_page_view_events
+	eventShare               // https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference/events#share
 )
 
 // ActionTypes returns the connection's action types.
 func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
 	actionTypes := []*connector.ActionType{
 		{
-			ID:          addToCart,
-			Name:        "Add to cart",
-			Description: "Send an Add to Cart event to Google Analytics 4",
-			Endpoints:   []int{1},
+			ID:          eventPageView,
+			Name:        "Page view",
+			Description: "Send a Page view event to Google Analytics 4",
+		},
+		{
+			ID:          eventShare,
+			Name:        "Share",
+			Description: "Send a Share event to Google Analytics 4",
 			Schema: types.Object([]types.Property{
-				{Name: "value", Type: types.Float()},
+				{Name: "method", Type: types.Text()},
+				{Name: "content_type", Type: types.Text()},
+				{Name: "item_id", Type: types.Text()},
 			}),
 		},
 	}
@@ -85,7 +104,7 @@ func (c *connection) Groups(cursor string, properties []connector.PropertyPath) 
 
 // ReceiveWebhook receives a webhook request and returns its events.
 // It returns the ErrWebhookUnauthorized error is the request was not authorized.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.Event, error) {
+func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, error) {
 	return nil, connector.ErrWebhookUnauthorized
 }
 
@@ -97,6 +116,38 @@ func (c *connection) Resource() (string, error) {
 // Schemas returns user and group schemas.
 func (c *connection) Schemas() (types.Type, types.Type, error) {
 	return types.Type{}, types.Type{}, nil
+}
+
+// SendEvent sends event, along with the given mapped event, to the endpoint.
+// actionType specifies the action type corresponding to the event.
+func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, actionType, endpoint int) error {
+	var err error
+	switch actionType {
+	case eventPageView:
+		err = c.collect(event.AnonymousID, event.UserID, "page_view", map[string]any{
+			"page_location": event.Page.URL,
+			"page_referrer": event.Page.Referrer,
+			"page_title":    event.Page.Title,
+		})
+	case eventShare:
+		params := map[string]any{}
+		if method, ok := mappedEvent["method"].(string); ok {
+			params["method"] = method
+		}
+		if contentType, ok := mappedEvent["content_type"].(string); ok {
+			params["content_type"] = contentType
+		}
+		if itemID, ok := mappedEvent["item_id"].(string); ok {
+			params["item_id"] = itemID
+		}
+		err = c.collect(event.AnonymousID, event.UserID, "share", params)
+	default:
+		panic(fmt.Sprintf("unsupported action type %d", actionType))
+	}
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // SetUsers sets the users.
@@ -169,4 +220,61 @@ func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 // Users returns the users starting from the given cursor.
 func (c *connection) Users(cursor string, properties []connector.PropertyPath) error {
 	panic("not implemented")
+}
+
+func (c *connection) collect(anonymousID, userID, eventName string, eventParams map[string]any) error {
+	// See https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference.
+
+	// Build the URL.
+	url := &_url.URL{
+		Scheme: "https",
+		Host:   "www.google-analytics.com",
+		Path:   "/mp/collect",
+	}
+	if sendToDebugServer {
+		url.Path = "/debug/mp/collect"
+	}
+	values := url.Query()
+	values.Add("api_secret", c.settings.APISecret)
+	values.Add("measurement_id", c.settings.MeasurementID)
+	url.RawQuery = values.Encode()
+
+	// Build the request's data.
+	data := map[string]any{
+		// TODO(Gianluca): consider sending the user ID as the client_id, if
+		// defined, otherwise the anonymousID.
+		"client_id": anonymousID,
+		"user_id":   userID,
+		"events": []map[string]any{
+			{
+				"name":   eventName,
+				"params": eventParams,
+			},
+		},
+	}
+	body := &bytes.Buffer{}
+	err := json.NewEncoder(body).Encode(data)
+	if err != nil {
+		return err
+	}
+
+	// Issue the POST request to www.google-analytics.com.
+	resp, err := http.Post(url.String(), "application/json", body)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("%q returned status code %d", url, resp.StatusCode)
+	}
+
+	// Print some information, if in test mode.
+	if sendToDebugServer {
+		response, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		log.Printf("%q returned status code %d and this content: %s", url, resp.StatusCode, response)
+	}
+
+	return nil
 }

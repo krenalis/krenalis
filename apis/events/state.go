@@ -1,0 +1,229 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2023 Open2b
+//
+
+package events
+
+import (
+	"context"
+	"log"
+	"sync"
+
+	"chichi/apis/state"
+	_warehouses "chichi/apis/warehouses"
+	"chichi/connector"
+)
+
+// eventsState holds the state for the events.
+type eventsState struct {
+	sync.Mutex
+	ctx          context.Context
+	state        *state.State
+	destinations map[int]connector.AppConnection
+}
+
+// newEventsState returns a new eventsState based on the st state.
+func newEventsState(ctx context.Context, st *state.State) *eventsState {
+	eventSt := &eventsState{
+		ctx:          ctx,
+		state:        st,
+		destinations: map[int]connector.AppConnection{},
+	}
+	for _, c := range st.Connections() {
+		if !isDestination(c) {
+			continue
+		}
+		err := eventSt.openDestination(c)
+		if err != nil {
+			log.Printf("cannot open destination %d: %s", c.ID, err)
+			continue
+		}
+	}
+	st.AddListener(eventSt.onAddConnection)
+	st.AddListener(eventSt.onDeleteConnection)
+	st.AddListener(eventSt.onDeleteWorkspace)
+	st.AddListener(eventSt.onSetConnectionSettings)
+	st.AddListener(eventSt.onSetConnectionStatus)
+	st.AddListener(eventSt.onSetWarehouseSettings)
+	return eventSt
+}
+
+// Source returns the enabled source connection with the identifier id and true,
+// if it exists, otherwise returns nil and false.
+func (st *eventsState) Source(id int) (*state.Connection, bool) {
+	source, ok := st.state.Connection(id)
+	if ok && source.Enabled && source.Role == state.SourceRole {
+		return source, true
+	}
+	return nil, false
+}
+
+// Destination returns an open connection to the destination with identifier id
+// an true, if such destination has been opened, otherwise returns nil and
+// false.
+func (st *eventsState) Destination(id int) (connector.AppConnection, bool) {
+	st.Lock()
+	d, ok := st.destinations[id]
+	st.Unlock()
+	return d, ok
+}
+
+// ServerByKey returns an enable destination server connection given its key and
+// true, if exists, otherwise returns nil and false.
+func (st *eventsState) ServerByKey(key string) (*state.Connection, bool) {
+	server, ok := st.state.ConnectionByKey(key)
+	if ok && server.Enabled && server.Role == state.SourceRole &&
+		server.Connector().Type == state.ServerType {
+		return server, true
+	}
+	return nil, false
+}
+
+// Warehouse returns the warehouse of a workspace and true, if it exists and has
+// one, otherwise nil and false.
+func (st *eventsState) Warehouse(workspace int) (_warehouses.Warehouse, bool) {
+	ws, ok := st.state.Workspace(workspace)
+	if !ok || ws.Warehouse == nil {
+		return nil, false
+	}
+	return ws.Warehouse, true
+}
+
+// Actions returns the enabled actions for every enabled connection.
+func (st *eventsState) Actions() []*state.Action {
+	var actions []*state.Action
+	for _, action := range st.state.Actions() {
+		if !action.Enabled || !action.Connection().Enabled {
+			continue
+		}
+		actions = append(actions, action)
+	}
+	return actions
+}
+
+// onAddConnection is called when a connection is added.
+func (st *eventsState) onAddConnection(n state.AddConnectionNotification) {
+	c, _ := st.state.Connection(n.ID)
+	if !isDestination(c) {
+		return
+	}
+	err := st.openDestination(c)
+	if err != nil {
+		log.Printf("cannot open destination %d: %s", c.ID, err)
+		return
+	}
+}
+
+// onDeleteConnection is called when a connection is deleted.
+func (st *eventsState) onDeleteConnection(n state.DeleteConnectionNotification) {
+	st.deleteDestination(n.ID)
+}
+
+// onDeleteWorkspace is called when a workspace is deleted.
+func (st *eventsState) onDeleteWorkspace(n state.DeleteWorkspaceNotification) {
+	toKeep := map[int]struct{}{}
+	for _, c := range st.state.Connections() {
+		toKeep[c.ID] = struct{}{}
+	}
+	st.Lock()
+	for id := range st.destinations {
+		if _, ok := toKeep[id]; !ok {
+			delete(st.destinations, id)
+		}
+	}
+	st.Unlock()
+}
+
+// onSetConnectionSettings is called when the settings of a connections are
+// changed.
+func (st *eventsState) onSetConnectionSettings(n state.SetConnectionSettingsNotification) {
+	c, _ := st.state.Connection(n.Connection)
+	if !isDestination(c) {
+		return
+	}
+	err := st.openDestination(c)
+	if err != nil {
+		log.Printf("cannot open destination %d: %s", c.ID, err)
+		return
+	}
+}
+
+// onSetConnectionStatus is called when the status of a connection changes.
+func (st *eventsState) onSetConnectionStatus(n state.SetConnectionStatusNotification) {
+	if n.Enabled {
+		c, _ := st.state.Connection(n.Connection)
+		if !isDestination(c) {
+			return
+		}
+		err := st.openDestination(c)
+		if err != nil {
+			log.Printf("cannot open destination %d: %s", c.ID, err)
+			return
+		}
+		return
+	}
+	// Disabling a connection.
+	st.deleteDestination(n.Connection)
+}
+
+// onSetWarehouseSettings is called when the warehouse settings of a workspace
+// are changed.
+func (st *eventsState) onSetWarehouseSettings(n state.SetWarehouseSettingsNotification) {
+	ws, _ := st.state.Workspace(n.Workspace)
+	for _, c := range ws.Connections() {
+		if c.Enabled && c.Role == state.DestinationRole {
+			if c.Workspace().Warehouse == nil {
+				st.deleteDestination(c.ID)
+				continue
+			}
+			err := st.openDestination(c)
+			if err != nil {
+				log.Printf("cannot open destination %d: %s", c.ID, err)
+				continue
+			}
+		}
+	}
+}
+
+// openDestination opens the destination from the connection c and sets it into
+// the state.
+func (st *eventsState) openDestination(c *state.Connection) error {
+	cName := c.Connector().Name
+	app := connector.RegisteredApp(cName)
+	cRole := connector.Role(c.Role)
+	// TODO(Gianluca): currently the OAuth access token is not provided to the
+	// opened app connection, so the events can only be sent to connectors that
+	// use a different authorization mechanism.
+	// We have to implement a way to retrieve - and maintain up-to-date - the
+	// OAuth parameters.
+	connection, err := app.Open(st.ctx, &connector.AppConfig{
+		Role:     cRole,
+		Settings: c.Settings,
+	})
+	if err != nil {
+		return err
+	}
+	st.Lock()
+	st.destinations[c.ID] = connection
+	st.Unlock()
+	return nil
+}
+
+// deleteDestination deletes the destination with identifier id from the state.
+// It does nothing if the connection does not exist in the state.
+func (st *eventsState) deleteDestination(id int) {
+	st.Lock()
+	delete(st.destinations, id)
+	st.Unlock()
+}
+
+// isDestination reports whether c is a destination, that is an enabled
+// destination connection of type app that belongs a to a workspace with an
+// associated warehouse.
+func isDestination(c *state.Connection) bool {
+	return c.Enabled && c.Role == state.DestinationRole &&
+		c.Connector().Type == state.AppType && c.Workspace().Warehouse != nil
+}
