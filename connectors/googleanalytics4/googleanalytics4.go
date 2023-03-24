@@ -28,9 +28,10 @@ var _ connector.AppConnection = &connection{}
 
 func init() {
 	connector.RegisterApp(connector.App{
-		Name: "Google Analytics 4",
-		Icon: icon,
-		Open: open,
+		Name:      "Google Analytics 4",
+		Endpoints: map[int]string{1: "Default"},
+		Icon:      icon,
+		Open:      open,
 	})
 }
 
