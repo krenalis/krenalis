@@ -1284,6 +1284,16 @@ func (this *Connection) reloadActionTypes() error {
 	if err != nil {
 		return err
 	}
+	for _, at := range actionTypes {
+		if len(at.Endpoints) == 0 {
+			return fmt.Errorf("missing endpoints declarations in action type %d", at.ID)
+		}
+		for _, endpoint := range at.Endpoints {
+			if _, ok := app.Endpoints[endpoint]; !ok {
+				return fmt.Errorf("action type %d refers to endpoint %d, but it's not declared by the connector", at.ID, endpoint)
+			}
+		}
+	}
 
 	n := state.SetConnectionActionTypesNotification{
 		Connection:  c.ID,
