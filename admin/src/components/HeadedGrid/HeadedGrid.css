@@ -1,24 +1,5 @@
-.HeadedGrid {
-    border-radius: var(--radius);
-    box-shadow: var(--sl-shadow-large);
-}
-
-.HeadedGrid .StyledGrid .Grid {
-    border-radius: 0;
-    box-shadow: none;
-}
-
-.HeadedGrid .StyledGrid .Grid .GridHeaderCell.first {
-    border-top-left-radius: 0;
-}
-
-.HeadedGrid .StyledGrid .Grid .GridHeaderCell.last {
-    border-top-right-radius: 0;
-}
-
 .HeadedGrid .gridHead  {
-    background-color: var(--color-primary-600);
-    padding: 20px 30px;
+    padding: 0px 30px 20px 30px;
     border-top-left-radius: var(--radius);
     border-top-right-radius: var(--radius);
     display: flex;
@@ -28,7 +9,6 @@
 }
 
 .HeadedGrid .gridHead .gridTitle {
-    font-size: 21px;
+    font-size: 17px;
     font-weight: 600;
-    color: var(--text-onaccent);
 }

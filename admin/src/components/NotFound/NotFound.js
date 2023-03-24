@@ -12,7 +12,7 @@ export default class NotFound extends React.Component {
 						<div className='icon'></div>
 						<div className='title'>404</div>
 						<div className='description'>The page you searched for does not exist</div>
-						<SlButton className='goBack' size='large' variant='primary'>
+						<SlButton className='goBack' size='large' variant='default'>
 							Go to connections
 							<NavLink to='/admin/connections'></NavLink>
 						</SlButton>

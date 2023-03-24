@@ -6,7 +6,7 @@ import { ConnectionContext } from '../../context/ConnectionContext';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 import statuses from '../../constants/statuses';
 import { BarChart, Bar, XAxis, Tooltip, YAxis, CartesianGrid } from 'recharts';
-import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlButton, SlIcon, SlDialog, SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectionOverview = () => {
 	let [userStats, setUserStats] = useState([]);
@@ -14,6 +14,7 @@ const ConnectionOverview = () => {
 	let [hasImports, setHasImports] = useState(true);
 	let [askImportConfirmation, setAskImportConfirmation] = useState(false);
 	let [selectedError, setSelectedError] = useState('');
+	let [isLoading, setIsLoading] = useState(true);
 	let [resetCursor, setResetCursor] = useState(false);
 
 	const { API, showStatus, showError, redirect } = useContext(AppContext);
@@ -22,9 +23,15 @@ const ConnectionOverview = () => {
 	setCurrentConnectionSection('overview');
 
 	useEffect(() => {
+		const stopLoading = () => {
+			setTimeout(() => {
+				setIsLoading(false);
+			}, 500);
+		};
 		const fetchData = async () => {
 			if (c.Role !== 'Source' || (c.Type !== 'App' && c.Type !== 'Database' && c.Type !== 'File')) {
 				setHasImports(false);
+				stopLoading();
 				return;
 			}
 			let err;
@@ -35,9 +42,11 @@ const ConnectionOverview = () => {
 				if (err instanceof NotFoundError) {
 					redirect('/admin/connections');
 					showStatus(statuses.connectionDoesNotExistAnymore);
+					stopLoading();
 					return;
 				}
 				showError(err);
+				stopLoading();
 				return;
 			}
 			let userStats = [];
@@ -56,9 +65,11 @@ const ConnectionOverview = () => {
 			[imports, err] = await API.connections.imports(c.ID);
 			if (err) {
 				showError(err);
+				stopLoading();
 				return;
 			}
 			setImports(imports);
+			stopLoading();
 		};
 		fetchData();
 	}, []);
@@ -107,6 +118,14 @@ const ConnectionOverview = () => {
 		showStatus(statuses.importStarted);
 	};
 
+	if (isLoading) {
+		return (
+			<div className='ConnectionOverview loading'>
+				<SlSpinner></SlSpinner>
+			</div>
+		);
+	}
+
 	let cursorOptions = [
 		{ Text: 'Pick up the import from where it left off', Icon: 'arrow-bar-right', Value: false },
 		{ Text: 'Start importing all over again', Icon: 'arrow-clockwise', Value: true },
@@ -120,7 +139,7 @@ const ConnectionOverview = () => {
 							<div className='title'>Users ingested by {c.Name} in the last 24 hours</div>
 							<SlButton
 								className='importButton'
-								variant='primary'
+								variant='text'
 								size='large'
 								onClick={() => setAskImportConfirmation(true)}
 							>

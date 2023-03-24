@@ -1,9 +1,8 @@
 import { useState, useEffect, useContext } from 'react';
 import './ConnectorsList.css';
-import Breadcrumbs from '../Breadcrumbs/Breadcrumbs';
-import PrimaryBackground from '../PrimaryBackground/PrimaryBackground';
 import Card from '../Card/Card';
 import { AppContext } from '../../context/AppContext';
+import { NavigationContext } from '../../context/NavigationContext';
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectorsList = () => {
@@ -11,6 +10,8 @@ const ConnectorsList = () => {
 	let [goToConnectorSettings, setGoToConnectorSettings] = useState(0);
 
 	let { API, showError, redirect } = useContext(AppContext);
+	let { setCurrentTitle, setPreviousRoute } = useContext(NavigationContext);
+	setPreviousRoute('/admin/connections');
 
 	let connectionRole;
 	let roleParam = new URL(document.location).searchParams.get('role');
@@ -19,6 +20,8 @@ const ConnectorsList = () => {
 	} else {
 		connectionRole = roleParam;
 	}
+
+	setCurrentTitle(`Add a ${connectionRole.toLocaleLowerCase()} connection`);
 
 	useEffect(() => {
 		const fetchConnectors = async () => {
@@ -46,15 +49,6 @@ const ConnectorsList = () => {
 
 	return (
 		<div className='ConnectorsList'>
-			<PrimaryBackground height={250} overlap={100}>
-				<Breadcrumbs
-					breadcrumbs={[
-						{ Name: 'Connections', Link: '/admin/connections' },
-						{ Name: `Add a new ${connectionRole}` },
-					]}
-					onAccent={true}
-				/>
-			</PrimaryBackground>
 			<div className='routeContent'>
 				<div className='connectors'>
 					{connectors.map((c) => {
@@ -63,7 +57,7 @@ const ConnectorsList = () => {
 								<SlTooltip content={`Add ${c.Name}`}>
 									<SlButton
 										size='medium'
-										variant='primary'
+										variant='default'
 										onClick={
 											c.OAuth == null
 												? () => setGoToConnectorSettings(c.ID)

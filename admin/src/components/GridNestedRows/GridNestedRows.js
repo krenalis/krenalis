@@ -9,7 +9,7 @@ const GridNestedRows = ({ rows, className, nesting }) => {
 	let icon = (
 		<SlIcon
 			className='expand'
-			name='caret-down-fill'
+			name='caret-right-fill'
 			onClick={() => {
 				setIsExpanded(!isExpanded);
 			}}

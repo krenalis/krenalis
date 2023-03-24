@@ -3,6 +3,7 @@ import UnknownLogo from '../UnknownLogo/UnknownLogo';
 import LittleLogo from '../LittleLogo/LittleLogo';
 import Flex from '../Flex/Flex';
 import getConnectionStatusInfos from '../../utils/getConnectionStatusInfos';
+import StatusDot from '../StatusDot/StatusDot';
 import { NavLink } from 'react-router-dom';
 import { SlTooltip, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
@@ -24,9 +25,7 @@ const ConnectionBlock = ({ connection: c, isNew }) => {
 					<div className='name'>{c.Name}</div>
 				</Flex>
 				<SlTooltip content={statusText}>
-					<div className='hoverArea'>
-						<SlIcon className={statusVariant} name='circle-fill'></SlIcon>
-					</div>
+					<StatusDot statusText={statusText} statusVariant={statusVariant} />
 				</SlTooltip>
 			</Flex>
 			<NavLink to={`/admin/connections/${c.ID}/overview`}></NavLink>

@@ -200,7 +200,7 @@ const ConnectionTransformation = () => {
 			<div className='main'>
 				<div className='properties usedInputProperties'>
 					<div className='title'>{c.Role === 'Source' ? `${c.Name} properties` : 'Golden record'}</div>
-					<SlButton className='addUsedProperty' variant='neutral' onClick={() => setIsInputDialogOpen(true)}>
+					<SlButton className='addUsedProperty' variant='default' onClick={() => setIsInputDialogOpen(true)}>
 						Add property
 					</SlButton>
 					{usedInputProperties.map(({ name, label, type }) => {
@@ -227,7 +227,7 @@ const ConnectionTransformation = () => {
 							<SlIcon slot='prefix' name='save' />
 							Save
 						</SlButton>
-						<SlButton className='clearButton' variant='danger' onClick={onClear}>
+						<SlButton className='clearButton' variant='default' onClick={onClear}>
 							<SlIcon slot='prefix' name='x-lg' />
 							Clear
 						</SlButton>
@@ -243,7 +243,7 @@ const ConnectionTransformation = () => {
 				</div>
 				<div className='properties usedOutputProperties'>
 					<div className='title'>{c.Role === 'Source' ? `Golden record` : `${c.Name} properties`}</div>
-					<SlButton className='addUsedProperty' variant='neutral' onClick={() => setIsOutputDialogOpen(true)}>
+					<SlButton className='addUsedProperty' variant='default' onClick={() => setIsOutputDialogOpen(true)}>
 						Add property
 					</SlButton>
 					{usedOutputProperties.map(({ name, label, type }) => {

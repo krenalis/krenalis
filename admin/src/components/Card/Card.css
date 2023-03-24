@@ -7,6 +7,7 @@
 	display: flex;
 	flex-flow: column;
 	justify-content: space-between;
+	border: 1px solid var(--sl-color-neutral-200);
 }
 
 .Card .logo > img {

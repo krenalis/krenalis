@@ -50,7 +50,7 @@
 	grid-template-columns: 1fr 2fr 1fr;
 	grid-template-areas:
 		'usedInputProperties mappings usedOutputProperties';
-	gap: 30px;
+	gap: 50px;
 	padding-bottom: 30px;
 	align-items: center;
 }

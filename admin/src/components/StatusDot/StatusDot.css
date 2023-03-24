@@ -1,0 +1,25 @@
+.StatusDot .hoverArea {
+    position: relative;
+    z-index: 2;
+    width: 30px;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.StatusDot sl-icon {
+    font-size: 9px;
+}
+
+.StatusDot sl-icon.success {
+    color: var(--sl-color-success-600);
+}
+
+.StatusDot sl-icon.neutral {
+    color: var(--sl-color-neutral-300);
+}
+
+.StatusDot sl-icon.danger {
+    color: var(--sl-color-danger-600);
+}

@@ -11,6 +11,7 @@
     position: relative;
     z-index: 1;
     font-size: 14px;
+    border: 1px solid var(--sl-color-neutral-200);
 }
 
 @keyframes soft-scale {
@@ -21,7 +22,7 @@
 .ConnectionBlock.new {
     animation: soft-scale 600ms;
     animation-direction: alternate;
-    animation-iteration-count: 6;
+    animation-iteration-count: 4;
 }
 
 .ConnectionBlock > .flex {
@@ -30,32 +31,6 @@
 
 .ConnectionBlock .name {
     transform: translateY(1px);
-}
-
-.ConnectionBlock .hoverArea {
-    position: relative;
-    z-index: 2;
-    width: 30px;
-    height: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.ConnectionBlock sl-icon {
-    font-size: 9px;
-}
-
-.ConnectionBlock sl-icon.success {
-    color: var(--sl-color-success-600);
-}
-
-.ConnectionBlock sl-icon.neutral {
-    color: var(--sl-color-neutral-300);
-}
-
-.ConnectionBlock sl-icon.danger {
-    color: var(--sl-color-danger-600);
 }
 
 .ConnectionBlock > a {

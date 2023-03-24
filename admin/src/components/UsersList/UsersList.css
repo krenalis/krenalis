@@ -1,44 +1,3 @@
-.UsersList .routeContent {
-	max-width: 1200px;
-	margin: auto;
-}
-
-.UsersList .gridContainer .head {
-    background-color: var(--color-primary-600);
-    padding: 20px 30px;
-    border-top-left-radius: var(--radius);
-    border-top-right-radius: var(--radius);
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	gap: 20px;
-}
-
-.UsersList .gridContainer .head .gridHeading {
-	display: flex;
-	align-items: center;
-	justify-content: start;
-	gap: 50px;
-}
-
-.UsersList .gridContainer .head .gridTitle {
-	font-size: 21px;
-	font-weight: 600;
-	color: var(--text-onaccent);
-	transform: translate3d(5px, 3px, 0px);
-}
-
-.UsersList .gridContainer .head .gridActions {
-	display: flex;
-	justify-content: right;
-	align-items: center;
-	gap: 10px;
-}
-
-.UsersList .gridContainer .head .toggleColumns sl-menu-item:hover::part(base) {
-	background-color: unset;
-}
-
 .UsersList .gridContainer .grid {
     margin: auto;
 	position: relative;
@@ -59,14 +18,12 @@
     display: flex;
     justify-content: center;
     align-items: center;
+	border: 1px solid var(--sl-color-neutral-200)!important;
+	border-radius: var(--radius);
 }
 
 .UsersList .gridContainer .footer {
-    background-color: var(--bg-primary);
-    box-shadow: var(--sl-shadow-small);
-    padding: 20px 30px;
-    border-bottom-left-radius: var(--radius);
-    border-bottom-right-radius: var(--radius);
+    padding: 20px 0;
     display: flex;
     justify-content: space-between;
 	position: relative;

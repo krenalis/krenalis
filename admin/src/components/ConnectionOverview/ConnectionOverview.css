@@ -1,3 +1,11 @@
+.ConnectionOverview.loading {
+    text-align: center;
+}
+
+.ConnectionOverview.loading sl-spinner {
+    font-size: 50px;
+}
+
 .ConnectionOverview .chart .chartHead {
     margin-bottom: 20px;
 }

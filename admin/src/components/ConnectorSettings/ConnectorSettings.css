@@ -3,23 +3,8 @@
 }
 
 .ConnectorSettings .routeContent {
-    max-width: 800px;
-    margin: auto;
-}
-
-.ConnectorSettings .heading {
-    color: var(--text-onaccent);
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    justify-content: center;
-    font-size: 19px;
-    margin-top: 50px;
-    transform: translateX(-7px);
-}
-
-.ConnectorSettings .littleLogo {
-    max-width: 30px;
+    padding-left: 400px; 
+    padding-right: 400px;
 }
 
 .ConnectorSettings .basic .inputWrapper {
@@ -40,8 +25,9 @@
 .ConnectorSettings .settings {
     background-color: var(--bg-primary);
     border-radius: var(--radius);
-    box-shadow: var(--sl-shadow-large);
+    box-shadow: var(--sl-shadow-small);
     padding: 50px 80px;
+    border: 1px solid var(--sl-color-neutral-200);
 }
 
 .ConnectorSettings .saveWrapper {

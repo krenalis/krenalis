@@ -1,11 +1,10 @@
 import { useState, useEffect, useContext } from 'react';
 import './ConnectionsMap.css';
-import PrimaryBackground from '../PrimaryBackground/PrimaryBackground';
-import Header from '../Header/Header';
 import ConnectionBlock from '../ConnectionBlock/ConnectionBlock';
 import LinkedConnectionBlocks from '../LinkedConnectionBlocks/LinkedConnectionBlocks';
 import Arrow from '../Arrow/Arrow';
 import { AppContext } from '../../context/AppContext';
+import { NavigationContext } from '../../context/NavigationContext';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NavLink } from 'react-router-dom';
 
@@ -14,6 +13,10 @@ const ConnectionsMap = () => {
 	let [destinations, setDestinations] = useState([]);
 
 	let { API, showError } = useContext(AppContext);
+	let { setCurrentTitle, setPreviousRoute } = useContext(NavigationContext);
+
+	setCurrentTitle('Connections');
+	setPreviousRoute('');
 
 	let newConnection = Number(new URL(document.location).searchParams.get('new'));
 
@@ -65,18 +68,15 @@ const ConnectionsMap = () => {
 
 	return (
 		<div className='ConnectionsMap'>
-			<PrimaryBackground height={250} overlap={100}>
-				<Header />
-			</PrimaryBackground>
 			<div className='routeContent'>
 				<div className='buttons'>
-					<SlButton className='addSource' variant='neutral'>
-						<SlIcon slot='suffix' name='plus-circle-dotted' />
+					<SlButton className='addSource' variant='text'>
+						<SlIcon slot='suffix' name='plus-circle' />
 						Add a new source
 						<NavLink to='/admin/connectors?role=Source'></NavLink>
 					</SlButton>
-					<SlButton className='addDestination' variant='neutral'>
-						<SlIcon slot='suffix' name='plus-circle-dotted' />
+					<SlButton className='addDestination' variant='text'>
+						<SlIcon slot='suffix' name='plus-circle' />
 						Add a new destination
 						<NavLink to='/admin/connectors?role=Destination'></NavLink>
 					</SlButton>
@@ -85,7 +85,7 @@ const ConnectionsMap = () => {
 					<div className='sources'>{renderConnections(sources)}</div>
 					<div className='main'>
 						<div className='centralLogo' id='centralLogo'>
-							C
+							Logo
 						</div>
 						<div className='databases'>
 							<div className='database users' id='usersDatabase'>

@@ -1,9 +1,9 @@
 import { useState, useEffect, useContext } from 'react';
 import './Schema.css';
-import PrimaryBackground from '../PrimaryBackground/PrimaryBackground';
-import Header from '../Header/Header';
-import HeadedGrid from '../HeadedGrid/HeadedGrid';
+import StyledGrid from '../StyledGrid/StyledGrid';
+import Toolbar from '../Toolbar/Toolbar';
 import { AppContext } from '../../context/AppContext';
+import { NavigationContext } from '../../context/NavigationContext';
 import statuses from '../../constants/statuses';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 import { UnprocessableError } from '../../api/errors';
@@ -13,6 +13,10 @@ const Schema = () => {
 	let [isLoading, setIsLoading] = useState(false);
 
 	let { API, showError, showStatus } = useContext(AppContext);
+
+	let { setCurrentTitle } = useContext(NavigationContext);
+
+	setCurrentTitle('Golden Record schema');
 
 	useEffect(() => {
 		const fetchSchema = async () => {
@@ -112,16 +116,14 @@ const Schema = () => {
 
 	return (
 		<div className='Schema'>
-			<PrimaryBackground height={250} overlap={100}>
-				<Header />
-			</PrimaryBackground>
-			<div className='routeContent'>
-				<HeadedGrid columns={columns} rows={rows} title='Golden Record schema' isLoading={isLoading}>
-					<SlButton className='reloadSchemas' variant='default' onClick={onReloadSchemas}>
-						<SlIcon name='arrow-clockwise' slot='prefix'></SlIcon>
-						Reload Schemas
-					</SlButton>
-				</HeadedGrid>
+			<Toolbar>
+				<SlButton className='reloadSchemas' variant='text' onClick={onReloadSchemas}>
+					<SlIcon name='arrow-clockwise' slot='prefix'></SlIcon>
+					Reload Schemas
+				</SlButton>
+			</Toolbar>
+			<div className='routeContent schema'>
+				<StyledGrid columns={columns} rows={rows} isLoading={isLoading}></StyledGrid>
 			</div>
 		</div>
 	);

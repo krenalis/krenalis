@@ -1,3 +1,9 @@
+.OAuth {
+    padding: 30px;
+	background-color: var(--bg-gray);
+	min-height: calc(100vh - 70px);
+}
+
 .OAuth .loading {
     width: 800px;
     margin: auto;
@@ -6,7 +12,9 @@
     height: 250px;
     text-align: center;
     border-radius: var(--radius);
-    box-shadow: var(--sl-shadow-large);
+    box-shadow: var(--sl-shadow-small);
+    border: 1px solid var(--sl-color-neutral-200);
+    margin-top: 20px;
 }
 
 .OAuth .loading .text {

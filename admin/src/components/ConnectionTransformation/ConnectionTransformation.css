@@ -9,7 +9,7 @@
 .ConnectionTransformation .main {
 	margin: auto;
 	display: grid;
-	grid-template-columns: 1fr 3fr 1fr;
+	grid-template-columns: 1fr 2fr 1fr;
 	grid-template-areas:
 		'usedInputProperties transformation usedOutputProperties';
 	gap: 50px;
@@ -55,14 +55,15 @@
 }
 
 .ConnectionTransformation .main .transformation .editorWrapper {
-    grid-area: editor;
+	grid-area: editor;
     width: 100%;
     height: 600px;
     padding: 30px;
     border-radius: var(--radius);
     background-color: var(--bg-primary);
-    margin: 40px auto 0 auto;
-    box-shadow: var(--sl-shadow-large);
+    margin: 40px auto 0;
+    box-shadow: var(--sl-shadow-small);
+    border: 1px solid var(--sl-color-neutral-200);
 }
 
 .ConnectionTransformation .editorWrapper * {

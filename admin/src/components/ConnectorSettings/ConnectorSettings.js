@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import './ConnectorSettings.css';
-import PrimaryBackground from '../PrimaryBackground/PrimaryBackground';
 import ConnectorField from '../ConnectorFields/ConnectorField';
-import Breadcrumbs from '../Breadcrumbs/Breadcrumbs';
 import NotFound from '../NotFound/NotFound';
+import Flex from '../Flex/Flex';
+import LittleLogo from '../LittleLogo/LittleLogo';
 import { SettingsContext } from '../../context/SettingsContext';
 import { AppContext } from '../../context/AppContext';
+import { NavigationContext } from '../../context/NavigationContext';
 import statuses from '../../constants/statuses';
 import { NavLink, Navigate } from 'react-router-dom';
 import {
@@ -32,6 +33,7 @@ const ConnectorSettings = () => {
 	let [notFound, setNotFound] = useState(false);
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
+	let { setCurrentTitle, setPreviousRoute } = useContext(NavigationContext);
 
 	let connectorID, connectionRole, OAuthToken;
 	let url = new URL(document.location);
@@ -43,6 +45,8 @@ const ConnectorSettings = () => {
 		connectionRole = roleParam;
 	}
 	OAuthToken = url.searchParams.get('oauthToken') == null ? '' : url.searchParams.get('oauthToken');
+
+	setPreviousRoute(`/admin/connectors?role=${connectionRole}`);
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -62,6 +66,16 @@ const ConnectorSettings = () => {
 				return;
 			}
 			setConnector(connector);
+			setCurrentTitle(
+				<Flex alignItems='baseline' gap='10px'>
+					<span style={{ position: 'relative', top: '3px' }}>
+						<LittleLogo url={connector.LogoURL} alternativeText={`${connector.Name}'s logo`}></LittleLogo>
+					</span>
+					<span>
+						Add {connector.Name} {connectionRole.toLowerCase()} connection
+					</span>
+				</Flex>
+			);
 			setName(connector.Name);
 			let storages = [];
 			if (connector.Type === 'File') {
@@ -243,20 +257,6 @@ const ConnectorSettings = () => {
 
 	return (
 		<div className='ConnectorSettings'>
-			<PrimaryBackground height={250} overlap={50}>
-				<Breadcrumbs
-					breadcrumbs={[
-						{ Name: 'Connections', Link: '/admin/connections' },
-						{ Name: `Add a new ${connectionRole}`, Link: `/admin/connectors/?role=${connectionRole}` },
-						{ Name: `Add a ${connector.Name} connection` },
-					]}
-					onAccent={true}
-				/>
-				<div className='heading'>
-					{c.LogoURL !== '' && <img className='littleLogo' src={c.LogoURL} alt={`${c.Name}'s logo`} />}
-					<div className='text'>Add a {c.Name} connection</div>
-				</div>
-			</PrimaryBackground>
 			<div className='routeContent'>
 				<div className='settings'>
 					<div className='basic'>

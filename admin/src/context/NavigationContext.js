@@ -1,3 +1,9 @@
 import { createContext } from 'react';
 
-export const NavigationContext = createContext();
+const defaultNavigationContext = {
+	setCurrentRoute: () => {},
+	setCurrentTitle: () => {},
+	setPreviousRoute: () => {},
+};
+
+export const NavigationContext = createContext(defaultNavigationContext);

@@ -5,7 +5,7 @@
 }
 
 .Arrow.new {
-    animation: arrow-fade-in 3800ms;
+    animation: arrow-fade-in 2600ms;
 	animation-fill-mode: both;
 }
 

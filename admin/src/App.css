@@ -38,8 +38,7 @@
 	--color-primary-900: var(--sl-color-primary-900);
 	--color-primary-950: var(--sl-color-primary-950);
 
-	background-color: var(--bg-gray);
-	padding-bottom: 30px;
+	background-color: var(--bg-primary);
 }
 
 *,
@@ -49,6 +48,7 @@
 	box-sizing: border-box;
 	line-height: 1.5;
 	outline-color: var(--color-primary-500);
+	color: var(--sl-color-neutral-700);	
 }
 
 *::part(base) {
@@ -93,7 +93,7 @@ body {
 }
 
 #root > .App {
-	background-color: var(--bg-gray);
+	background-color: var(--bg-primary);
 }
 
 /* || buttons and links */
@@ -106,6 +106,18 @@ sl-button[variant='default']::part(base) {
 	background-color: var(--bg-gray);
 }
 
+sl-button[variant='text']::part(base) {
+	font-weight: 600;
+}
+
+sl-button[variant='text']::part(label) {
+	padding-right: 10px;
+}
+
+sl-button[variant='text'] sl-icon {
+	color: var(--sl-color-primary-600);
+}
+
 sl-button > a {
 	position: absolute;
 	left: 0;
@@ -114,11 +126,19 @@ sl-button > a {
 	height: 100%;
 }
 
-sl-button[variant='primary'] > a,
-sl-button[variant='neutral'] > a,
-sl-button[variant='danger'] > a,
-sl-button[variant='success'] > a,
-sl-button[variant='warning'] > a {
+sl-button[variant='primary'] > *,
+sl-button[variant='neutral'] > *,
+sl-button[variant='danger'] > *,
+sl-button[variant='success'] > *,
+sl-button[variant='warning'] > * {
+	color: var(--text-onaccent);
+}
+
+sl-alert[variant='primary'] > *,
+sl-alert[variant='neutral'] > *,
+sl-alert[variant='danger'] > *,
+sl-alert[variant='success'] > *,
+sl-alert[variant='warning'] > * {
 	color: var(--text-onaccent);
 }
 
@@ -153,7 +173,8 @@ sl-breadcrumb-item > a {
 }
 
 .ag-root-wrapper {
-	border: 0!important;
+	border: 1px solid var(--sl-color-neutral-200)!important;
+	border-radius: var(--radius);
 	box-shadow: var(--sl-shadow-small);
 }
 
@@ -194,10 +215,18 @@ sl-dialog::part(base) {
 
 /* || Content */
 
-@media (max-width: 1800px) {
-	.App .routeContent {
-		padding: 0 50px;
-	}
+.App .routeContent {
+	padding: 30px;
+	background-color: var(--bg-gray);
+	min-height: calc(100vh - 70px);
+}
+
+.App .routeContent.connection { 
+	min-height: calc(100vh - 140px);
+}
+
+.App .routeContent.schema { 
+	min-height: calc(100vh - 120px);
 }
 
 /* || Tab panels */

@@ -1,23 +1,32 @@
 import './Header.css';
-import Flex from '../Flex/Flex';
-import { SlSelect, SlMenuItem, SlAvatar } from '@shoelace-style/shoelace/dist/react/index.js';
+import IconWrapper from '../IconWrapper/IconWrapper';
+import { SlAvatar, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { useNavigate } from 'react-router';
 
-const Header = () => {
+const Header = ({ title, previousRoute }) => {
+	const navigate = useNavigate();
+
+	const onGoBackIconClick = () => {
+		return navigate(previousRoute);
+	};
+
 	return (
-		<>
-			<Flex className='Header' justifyContent='space-between' alignItems='center'>
-				<SlSelect name='workspaceSelector' value='1'>
-					<SlMenuItem value='1' selected>
-						Mock workspace 1
-					</SlMenuItem>
-					<SlMenuItem value='2'>Mock workspace 2</SlMenuItem>
-				</SlSelect>
-				<div className='account'>
-					<sl-icon name='bell-fill'></sl-icon>
-					<SlAvatar image='data:image/jpeg;base64,/9j/' />
-				</div>
-			</Flex>
-		</>
+		<div className='Header' justifyContent='space-between' alignItems='center'>
+			<div className='title'>
+				{previousRoute !== '' && (
+					<SlIcon className='goBackIcon' name='arrow-90deg-up' onClick={onGoBackIconClick}></SlIcon>
+				)}
+				<span>{title}</span>
+			</div>
+			<div className='account'>
+				<IconWrapper name='bell' moat={true}></IconWrapper>
+				<IconWrapper name='question-lg' moat={true}></IconWrapper>
+				<SlAvatar
+					className='accountAvatar'
+					image='data:image/jpeg;base64,/9j/'
+				/>
+			</div>
+		</div>
 	);
 };
 

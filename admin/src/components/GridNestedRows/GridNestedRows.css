@@ -9,11 +9,11 @@
     transform: translateY(-50%) translate(-31px);
     cursor: pointer;
     transition: transform .3s;
-    color: var(--sl-color-primary-400);
+    color: var(--sl-color-neutral-400);
 }
 
 .GridNestedRows.expanded > .expand {
-    transform: translateY(-50%) translateX(-30px) rotate(180deg);
+    transform: translateY(-50%) translateX(-30px) rotate(90deg);
 }
 
 .GridNestedRows .GridRow.parent .GridCell.first .cellContent {

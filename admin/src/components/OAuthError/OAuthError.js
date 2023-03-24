@@ -1,16 +1,14 @@
 import './OAuthError.css';
-import PrimaryBackground from '../PrimaryBackground/PrimaryBackground';
 import { NavLink } from 'react-router-dom';
 import { SlIcon, SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const OAuthError = () => {
 	return (
 		<div className='OAuthError'>
-			<PrimaryBackground height={300} overlap={130}></PrimaryBackground>
 			<div className='error'>
 				<SlIcon name='exclamation-circle-fill'></SlIcon>
 				<div className='text'>Something went wrong during the OAuth authentication</div>
-				<SlButton variant='primary'>
+				<SlButton variant='default'>
 					<SlIcon slot='suffix' name='arrow-right-circle'></SlIcon>
 					Go to connections map
 					<NavLink to='/admin/connections'></NavLink>

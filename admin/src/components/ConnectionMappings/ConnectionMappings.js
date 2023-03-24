@@ -316,7 +316,7 @@ const ConnectionMappings = () => {
 					<div className='title'>{c.Role === 'Source' ? `${c.Name} properties` : 'Golden record'}</div>
 					<SlButton
 						className='addUsedProperty'
-						variant='neutral'
+						variant='default'
 						disabled={sp != null}
 						onClick={() => setIsInputDialogOpen(true)}
 					>
@@ -416,7 +416,7 @@ const ConnectionMappings = () => {
 					<div className='title'>{c.Role === 'Source' ? `Golden record` : `${c.Name} properties`}</div>
 					<SlButton
 						className='addUsedProperty'
-						variant='neutral'
+						variant='default'
 						disabled={sp != null}
 						onClick={() => setIsOutputDialogOpen(true)}
 					>

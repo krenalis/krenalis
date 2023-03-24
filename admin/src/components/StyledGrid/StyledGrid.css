@@ -1,6 +1,7 @@
-.StyledGrid .Grid {
+.StyledGrid {
     border-radius: var(--radius);
-    box-shadow: var(--sl-shadow-large);
+    border: 1px solid var(--sl-color-neutral-200);
+    box-shadow: var(--sl-shadow-small);
 }
 
 .StyledGrid .Grid .GridHeaderCell,
@@ -68,4 +69,10 @@
 
 .StyledGrid .Grid .GridRow.last .actions {
     border-bottom-right-radius: var(--radius);
+}
+
+.StyledGrid .Grid .noRows,
+.StyledGrid .Grid .loading {
+    background-color: var(--bg-primary);
+    border-radius: var(--radius);
 }

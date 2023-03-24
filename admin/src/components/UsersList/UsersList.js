@@ -1,9 +1,9 @@
 import { useState, useEffect, useContext, useRef } from 'react';
 import './UsersList.css';
-import Header from '../Header/Header';
-import PrimaryBackground from '../PrimaryBackground/PrimaryBackground';
 import statuses from '../../constants/statuses';
+import Toolbar from '../Toolbar/Toolbar';
 import { AppContext } from '../../context/AppContext';
+import { NavigationContext } from '../../context/NavigationContext';
 import {
 	SlButton,
 	SlDropdown,
@@ -29,6 +29,11 @@ const UsersList = () => {
 	let [limit, setLimit] = useState(15);
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
+
+	let { setCurrentTitle } = useContext(NavigationContext);
+
+	setCurrentTitle('Golden Record users');
+
 	let gridRef = useRef();
 
 	useEffect(() => {
@@ -86,10 +91,10 @@ const UsersList = () => {
 					return;
 				}
 				showError(err);
-				setIsLoading(false);
+				setTimeout(() => setIsLoading(false), 500);
 				return;
 			}
-			setIsLoading(false);
+			setTimeout(() => setIsLoading(false), 500);
 
 			setUsersCount(count);
 			setPagination({ current: 1, last: Math.ceil(count / lim) });
@@ -146,10 +151,10 @@ const UsersList = () => {
 				return;
 			}
 			showError(err);
-			setIsLoading(false);
+			setTimeout(() => setIsLoading(false), 500);
 			return;
 		}
-		setIsLoading(false);
+		setTimeout(() => setIsLoading(false), 500);
 
 		setUsersCount(count);
 		setPagination({ current: page, last: Math.ceil(count / limit) });
@@ -204,38 +209,27 @@ const UsersList = () => {
 
 	return (
 		<div className='UsersList'>
-			<PrimaryBackground height={250} overlap={100}>
-				<Header />
-			</PrimaryBackground>
+			<Toolbar>
+				<SlDropdown stayOpenOnSelect={true} className='toggleColumns'>
+					<SlButton slot='trigger' variant='default'>
+						<SlIcon slot='prefix' name='layout-three-columns' />
+						Toggle columns
+					</SlButton>
+					<SlMenu>
+						{Object.entries(properties).map(([name, property]) => {
+							return (
+								<SlMenuItem>
+									<SlSwitch onSlChange={() => handleToggleColumn(name)} checked={property.isUsed}>
+										{property.label}
+									</SlSwitch>
+								</SlMenuItem>
+							);
+						})}
+					</SlMenu>
+				</SlDropdown>
+			</Toolbar>
 			<div className='routeContent'>
 				<div className='gridContainer'>
-					<div className='head'>
-						<div className='gridHeading'>
-							<div className='gridTitle'>Golden Record users</div>
-						</div>
-						<div className='gridActions'>
-							<SlDropdown stayOpenOnSelect={true} className='toggleColumns'>
-								<SlButton slot='trigger' variant='default'>
-									<SlIcon slot='suffix' name='layout-three-columns' />
-									Toggle columns
-								</SlButton>
-								<SlMenu>
-									{Object.entries(properties).map(([name, property]) => {
-										return (
-											<SlMenuItem>
-												<SlSwitch
-													onSlChange={() => handleToggleColumn(name)}
-													checked={property.isUsed}
-												>
-													{property.label}
-												</SlSwitch>
-											</SlMenuItem>
-										);
-									})}
-								</SlMenu>
-							</SlDropdown>
-						</div>
-					</div>
 					<div className='grid ag-theme-alpine' style={{ height: '700px', width: '100%' }}>
 						<AgGridReact ref={gridRef} columnDefs={columnDefs} rowData={usersRows}></AgGridReact>
 						{isLoading && (

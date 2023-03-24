@@ -1,6 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
 import './OAuth.css';
-import PrimaryBackground from '../PrimaryBackground/PrimaryBackground';
 import { AppContext } from '../../context/AppContext';
 import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 
@@ -42,7 +41,6 @@ const OAuth = () => {
 
 	return (
 		<div className='OAuth'>
-			<PrimaryBackground height={300} overlap={130}></PrimaryBackground>
 			<div className='loading'>
 				<div className='text'>Finalizing the OAuth authentication...</div>
 				<SlSpinner

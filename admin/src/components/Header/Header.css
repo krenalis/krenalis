@@ -1,42 +1,36 @@
 .Header {
-	padding-bottom: 15px;
-	border-bottom: 1px solid var(--bg-transparent);
+	padding: 15px 30px;
+	display: grid;
+	grid-template-areas: "title account";
+	border-bottom: 1px solid var(--sl-color-neutral-200);
+	justify-content: space-between;
+	align-items: baseline;
+	height: 70px;
 }
 
-.Header sl-select {
-	width: fit-content;
-	min-width: 250px;
-	max-width: 350px;
-	border: 0;
+.Header .title {
+	grid-area: title;
+	font-size: 17px;
+	display: flex;
+	align-items: baseline;
+	gap: 15px;
 }
 
-.Header sl-select::part(control) {
-	background-color: var(--bg-transparent);
-	color: var(--text-onaccent);
-	border: 0;
-	font-size: 14px;
-	padding: 12px 0;
-}
-
-.Header sl-select sl-menu-item::part(base) {
-	font-size: 14px;
+.Header .title .goBackIcon {
+	cursor: pointer;
 }
 
 .Header .account {
 	display: flex;
 	align-items: center;
-	gap: 25px;
-}
-
-.Header .account sl-icon {
-	font-size: 23px;
-	color: var(--color-primary-300);
+	gap: 10px;
+	grid-area: account;
 }
 
 .Header .account sl-avatar::part(base) {
 	background-color: transparent;
-	width: 40px;
-	height: 40px;
+	width: 50px;
+	height: 50px;
 }
 
 .Header .account sl-avatar::part(image) {
