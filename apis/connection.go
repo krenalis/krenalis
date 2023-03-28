@@ -698,11 +698,8 @@ func (this *Connection) AddAction(action ActionToSet) (int, error) {
 	if connector.Type != state.AppType {
 		return 0, errors.BadRequest("connection type is not app")
 	}
-	actionTypes, err := this.ActionTypes()
-	if err != nil {
-		return 0, err
-	}
-	err = validateAction(action, actionTypes)
+	actionTypes := this.actionTypes()
+	err := validateAction(action, actionTypes)
 	if err != nil {
 		return 0, errors.BadRequest(err.Error())
 	}
