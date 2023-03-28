@@ -1244,12 +1244,6 @@ func (this *Connection) reloadActionTypes() error {
 
 	c := this.connection
 	connector := c.Connector()
-	if connector.Type != state.AppType {
-		return fmt.Errorf("cannot reload action types for a %s connection", connector.Type)
-	}
-	if c.Role == state.SourceRole {
-		return errors.New("cannot reload action types for a source")
-	}
 
 	cRole := _connector.Role(c.Role)
 
@@ -1379,19 +1373,6 @@ func (this *Connection) reloadSchema() error {
 
 	c := this.connection
 	connector := c.Connector()
-	switch connector.Type {
-	case state.AppType, state.DatabaseType:
-	case state.FileType:
-		if _, ok := c.Storage(); !ok {
-			return errors.New("file connection has not storage")
-		}
-	default:
-		return fmt.Errorf("cannot import properties from a %s connection",
-			strings.ToLower(connector.Type.String()))
-	}
-	if c.Role == state.DestinationRole {
-		return errors.New("cannot import from a destination")
-	}
 
 	cRole := _connector.Role(c.Role)
 
