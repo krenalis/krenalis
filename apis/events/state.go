@@ -179,10 +179,12 @@ func (st *eventsState) onSetWarehouseSettings(n state.SetWarehouseSettingsNotifi
 				st.deleteDestination(c.ID)
 				continue
 			}
-			err := st.openDestination(c)
-			if err != nil {
-				log.Printf("cannot open destination %d: %s", c.ID, err)
-				continue
+			if isDestination(c) {
+				err := st.openDestination(c)
+				if err != nil {
+					log.Printf("cannot open destination %d: %s", c.ID, err)
+					continue
+				}
 			}
 		}
 	}
