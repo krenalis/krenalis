@@ -916,7 +916,7 @@ func (state *State) setConnectionStatus(n postgres.Notification) {
 }
 
 // SetConnectionStorageNotification is the notification event sent when the
-// settings of a connection is changed.
+// storage of a connection is changed.
 type SetConnectionStorageNotification struct {
 	Connection int
 	Storage    int
