@@ -1,6 +1,14 @@
 import './EditorWrapper.css';
 import Editor from '@monaco-editor/react';
-import { SlSpinner, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
+
+// TODO: serve static assets from the server.
+const SQL_LOGO =
+	'';
+const JS_LOGO =
+	'';
+const PYTHON_LOGO =
+	'';
 
 const EditorWrapper = ({ defaultLanguage, width, height, value, onChange, ...delegated }) => {
 	const onEditorDidMount = (editor) => {
@@ -22,26 +30,26 @@ const EditorWrapper = ({ defaultLanguage, width, height, value, onChange, ...del
 		onChange(source);
 	};
 
-	let iconName;
+	let languageLogo;
 	switch (defaultLanguage) {
 		case 'sql':
-			iconName = 'filetype-sql';
+			languageLogo = <img src={SQL_LOGO} alt='SQL logo' />;
 			break;
 		case 'javascript':
-			iconName = 'filetype-js';
+			languageLogo = <img src={JS_LOGO} alt='Javascript logo' />;
 			break;
 		case 'python':
-			iconName = 'filetype-py';
+			languageLogo = <img src={PYTHON_LOGO} alt='Python logo' />;
 			break;
 		default:
-			iconName = 'file-earmark-code';
+			languageLogo = 'file-earmark-code';
 			break;
 	}
 
 	return (
 		<div className='editorWrapper'>
 			<div className='heading'>
-				<SlIcon name={iconName}></SlIcon>
+				<span className='languageLogo'>{languageLogo}</span>
 				<span className='language'>{defaultLanguage}</span>
 			</div>
 			<div className='editor' style={{ width: `${width}px`, height: `${height}px` }}>
@@ -60,6 +68,7 @@ const EditorWrapper = ({ defaultLanguage, width, height, value, onChange, ...del
 							horizontalSliderSize: 8,
 						},
 						lineHeight: 25,
+						fontSize: 16,
 						smoothScrolling: true,
 						cursorSmoothCaretAnimation: 'on',
 						overviewRulerBorder: false,

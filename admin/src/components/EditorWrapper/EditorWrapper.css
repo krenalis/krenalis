@@ -16,19 +16,20 @@
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
     color: var(--sl-color-neutral-500);
-    text-transform: uppercase;
+    text-transform: capitalize;
     font-size: 13px;
     display: flex;
     border-bottom: 1px solid var(--sl-color-neutral-200);
+    align-items: end;
+    gap: 10px;
+}
+
+.editorWrapper .heading .languageLogo > img {
+    max-width: 25px;
 }
 
 .editorWrapper .heading .language {
     font-weight: 600;
-}
-
-.editorWrapper .heading sl-icon {
-    padding-right: 5px;
-    font-size: 16px;
 }
 
 .editorWrapper .editor {
