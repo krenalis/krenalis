@@ -1,16 +1,10 @@
-.ConnectionSQL .editorWrapper {
-    grid-area: editor;
-    width: 800px;
-    height: 600px;
-    padding: 30px;
-    border-radius: var(--radius);
-    background-color: var(--bg-primary);
-    margin: 0 auto;
-    box-shadow: var(--sl-shadow-small);
+.ConnectionSQL {
+	width: 800px;
+	margin: 0 auto;
 }
 
-.ConnectionSQL .editorWrapper * {
-	font-family: monospace !important;
+.ConnectionSQL .editorWrapper {
+    grid-area: editor;
 }
 
 .ConnectionSQL .buttons {

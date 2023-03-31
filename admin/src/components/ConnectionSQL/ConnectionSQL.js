@@ -1,18 +1,17 @@
 import { useState, useContext } from 'react';
 import './ConnectionSQL.css';
 import Grid from '../../components/Grid/Grid';
+import EditorWrapper from '../EditorWrapper/EditorWrapper';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 import { AppContext } from '../../context/AppContext';
 import { ConnectionContext } from '../../context/ConnectionContext';
 import statuses from '../../constants/statuses';
 import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
-import Editor from '@monaco-editor/react';
 
 const queryMaxSize = 16777215;
 
 const ConnectionSQL = () => {
 	let { connection: c, setCurrentConnectionSection } = useContext(ConnectionContext);
-
 	let [query, setQuery] = useState(c.UsersQuery);
 	let [limit, setLimit] = useState(20); // TODO(@Andrea): implement as a select
 	let [table, setTable] = useState(null);
@@ -22,15 +21,16 @@ const ConnectionSQL = () => {
 	setCurrentConnectionSection('sql');
 
 	const handlePreview = async () => {
-		if (query.length > queryMaxSize) {
+		let trimmed = query.trim();
+		if (trimmed.length > queryMaxSize) {
 			showError('You query is too long');
 			return;
 		}
-		if (!query.includes(':limit')) {
+		if (!trimmed.includes(':limit')) {
 			showError(`Your query does not contain the ':limit' placeholder`);
 			return;
 		}
-		let [table, err] = await API.connections.query(c.ID, query, limit);
+		let [table, err] = await API.connections.query(c.ID, trimmed, limit);
 		if (err !== null) {
 			if (err instanceof NotFoundError) {
 				redirect('/admin/connections');
@@ -58,15 +58,16 @@ const ConnectionSQL = () => {
 	};
 
 	const saveQuery = async () => {
-		if (query.length > queryMaxSize) {
+		let trimmed = query.trim();
+		if (trimmed.length > queryMaxSize) {
 			showError('You query is too long');
 			return;
 		}
-		if (!query.includes(':limit')) {
+		if (!trimmed.includes(':limit')) {
 			showError(`Your query does not contain the ':limit' placeholder`);
 			return;
 		}
-		let [, err] = await API.connections.setUsersQuery(c.ID, query);
+		let [, err] = await API.connections.setUsersQuery(c.ID, trimmed);
 		if (err !== null) {
 			if (err instanceof NotFoundError) {
 				redirect('/admin/connections');
@@ -82,20 +83,19 @@ const ConnectionSQL = () => {
 	return (
 		<>
 			<div className='ConnectionSQL'>
-				<div className='editorWrapper'>
-					<Editor
-						onChange={(value) => setQuery(value)}
-						defaultLanguage='sql'
-						value={query}
-						theme='vs-primary'
-					/>
-				</div>
+				<EditorWrapper
+					defaultLanguage='sql'
+					width={800}
+					height={600}
+					value={query}
+					onChange={(value) => setQuery(value)}
+				></EditorWrapper>
 				<div className='buttons'>
-					<SlButton className='previewButton' variant='neutral' size='large' onClick={handlePreview}>
+					<SlButton className='previewButton' variant='neutral' size='medium' onClick={handlePreview}>
 						<SlIcon slot='prefix' name='eye' />
 						Preview
 					</SlButton>
-					<SlButton className='saveButton' variant='primary' size='large' onClick={saveQuery}>
+					<SlButton className='saveButton' variant='primary' size='medium' onClick={saveQuery}>
 						<SlIcon slot='prefix' name='save' />
 						Save
 					</SlButton>

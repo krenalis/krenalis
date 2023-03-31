@@ -4,6 +4,7 @@ import './Action.css';
 import Section from '../Section/Section';
 import AlertDialog from '../AlertDialog/AlertDialog';
 import statuses from '../../constants/statuses';
+import EditorWrapper from '../EditorWrapper/EditorWrapper';
 import { AppContext } from '../../context/AppContext';
 import { ConnectionContext } from '../../context/ConnectionContext';
 import {
@@ -15,7 +16,6 @@ import {
 	SlDialog,
 	SlIconButton,
 } from '@shoelace-style/shoelace/dist/react/index.js';
-import Editor from '@monaco-editor/react';
 
 const defaultTransformationFunction = `def transform(event: dict) -> dict:
 	return event
@@ -271,6 +271,10 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 			}
 			a.Mapping = mappingToSave;
 		}
+		if (a.Transformation != null) {
+			let trimmed = a.Transformation.PythonSource.trim();
+			a.Transformation.PythonSource = trimmed;
+		}
 		let err;
 		if (actionProp != null) {
 			[, err] = await API.connections.setAction(c.ID, a.ID, a);
@@ -395,7 +399,7 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 					Add new condition
 				</SlButton>
 			</Section>
-			{actionType.Schema != null &&
+			{actionType.Schema != null && (
 				<Section
 					title='Properties'
 					description='The relation between the event properties and the action type properties'
@@ -488,14 +492,12 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 									Add new property
 								</SlButton>
 							</div>
-							<div className='editorWrapper'>
-								<Editor
-									onChange={(value) => onChangeTransformationPythonSource(value)}
-									defaultLanguage='python'
-									value={action.Transformation.PythonSource}
-									theme='vs-primary'
-								/>
-							</div>
+							<EditorWrapper
+								defaultLanguage='python'
+								height={400}
+								value={action.Transformation.PythonSource}
+								onChange={(value) => onChangeTransformationPythonSource(value)}
+							/>
 							<div className='outputProperties'>
 								{action.Transformation.Out.properties.map((p) => {
 									return (
@@ -527,7 +529,7 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 						</div>
 					)}
 				</Section>
-			}
+			)}
 			{actionType.Endpoints != null && Object.keys(actionType.Endpoints).length > 1 && (
 				<Section
 					title='Endpoint'
@@ -641,7 +643,11 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 					document.body
 				)}
 			<div className='saveWrapper'>
-				<SlButton variant='primary' disabled={(actionType.Schema != null) && propertiesMode === ''} onClick={onSave}>
+				<SlButton
+					variant='primary'
+					disabled={actionType.Schema != null && propertiesMode === ''}
+					onClick={onSave}
+				>
 					Save
 				</SlButton>
 			</div>

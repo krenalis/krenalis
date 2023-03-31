@@ -61,15 +61,6 @@
     align-items: baseline;
 }
 
-.action .editorWrapper {
-    min-height: 500px;
-    height: 100%;
-}
-
-.action .editorWrapper * {
-    font-family: monospace!important;
-}
-
 .action .mappings .mapping {
     display: grid;
     grid-template-columns: 1fr 30px 1fr;
@@ -149,13 +140,12 @@
     padding: 0;
 }
 
-.action .transformation .property .removeProperty::part(base):hover {
-    background-color: var(--bg-primary);
-    color: var(--sl-color-danger-600);
-}
-
 .action .transformation .property .removeProperty::part(label) { 
     padding: 0;
+}
+
+.action .transformation .property .removeProperty sl-icon {
+    color: var(--sl-color-danger-600);
 }
 
 .eventSchemaDialog::part(panel),

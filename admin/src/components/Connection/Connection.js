@@ -88,8 +88,8 @@ const Connection = () => {
 				{c.Role === 'Destination' && (
 					<div className={`link${currentSection === 'actions' ? ' selected' : ''}`}>
 						<NavLink to='actions'></NavLink>
-						<SlIcon name='play'></SlIcon>
-						Live actions
+						<SlIcon name='send-exclamation'></SlIcon>
+						Actions
 					</div>
 				)}
 				{(c.Type === 'App' || c.Type === 'Database' || c.Type === 'File') && (

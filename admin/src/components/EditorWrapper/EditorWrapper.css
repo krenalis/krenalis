@@ -1,0 +1,55 @@
+.editorWrapper {
+    border-radius: 20px;
+    background-color: var(--bg-primary);
+    box-shadow: var(--sl-shadow-small);
+    border: 1px solid var(--sl-color-neutral-200);
+}
+
+.editorWrapper * {
+    font-family: 'Source Code Pro', monospace !important;
+}
+
+.editorWrapper .heading {
+    background-color: var(--bg-gray);
+    border-radius: 20px;
+    padding: 18px 30px 15px 30px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    color: var(--sl-color-neutral-500);
+    text-transform: uppercase;
+    font-size: 13px;
+    display: flex;
+    border-bottom: 1px solid var(--sl-color-neutral-200);
+}
+
+.editorWrapper .heading .language {
+    font-weight: 600;
+}
+
+.editorWrapper .heading sl-icon {
+    padding-right: 5px;
+    font-size: 16px;
+}
+
+.editorWrapper .editor {
+    padding: 20px 20px 20px 10px;
+}
+
+.editorWrapper .decorationsOverviewRuler {
+    border-radius: 5px;
+}
+
+.editorWrapper .scrollbar .slider {
+    border-radius: 5px;
+}
+
+.editorWrapper .line-numbers {
+    color: var(--sl-color-neutral-800)!important;
+    opacity: .8;
+    user-select: none;
+}
+
+.editorWrapper .line-numbers.active-line-number {
+    color: var(--sl-color-primary-600)!important;
+    opacity: 1;
+}
