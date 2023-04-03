@@ -8,7 +8,6 @@
 package admin
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -44,7 +43,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var accountID int
-	var account *apis.Account
 	var workspace *apis.Workspace
 	if isLoggedIn {
 		// get the account id
@@ -103,11 +101,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if rpath == "/api/visualization" {
-		admin.serveExecuteQuery(w, r)
-		return
-	}
-
 	// Handle the "/group-schema-properties" endpoint.
 	if strings.HasPrefix(rpath, "/group-schema-properties") {
 		schema := workspace.Schema("groups")
@@ -140,123 +133,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		_, _ = fmt.Fprint(w, `{"status":"ok"}`)
 		return
-	}
-
-	if strings.HasPrefix(rpath, "/properties/") {
-
-		rpath := rpath[len("/properties"):]
-
-		// Read the property ID from the headers.
-		propertyID, _ := strconv.Atoi(r.Header.Get("X-Property"))
-		if propertyID < 1 {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return
-		}
-
-		// TODO(Gianluca): check if the property belongs to the account.
-
-		deprecatedProperty := account.DeprecatedProperty(propertyID)
-
-		// Serve the Smart Event APIs.
-		switch rpath {
-		case "/smart-events.create":
-			var event apis.SmartEventToCreate
-			err := json.NewDecoder(r.Body).Decode(&event)
-			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-			defer r.Body.Close()
-			id, err := deprecatedProperty.SmartEvents.Create(event)
-			if err != nil {
-				switch err.(type) {
-				case apis.DomainNotAllowedError,
-					apis.InvalidSmartEventError:
-					http.Error(w, fmt.Sprintf("Bad Request: %s", err), http.StatusBadRequest)
-					return
-				default:
-					log.Printf("[error] %v", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-			}
-			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(id)
-			return
-
-		case "/smart-events.delete":
-			var eventIDs []int
-			err := json.NewDecoder(r.Body).Decode(&eventIDs)
-			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-			defer r.Body.Close()
-			err = deprecatedProperty.SmartEvents.Delete(eventIDs)
-			if err != nil {
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			return
-
-		case "/smart-events.find":
-			smartEvents, err := deprecatedProperty.SmartEvents.Find()
-			if err != nil {
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(smartEvents)
-			return
-
-		case "/smart-events.get":
-			var id int
-			err := json.NewDecoder(r.Body).Decode(&id)
-			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-			defer r.Body.Close()
-			smartEvents, err := deprecatedProperty.SmartEvents.Get(id)
-			if err != nil {
-				log.Printf("[error] %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(smartEvents)
-			return
-
-		case "/smart-events.update":
-			var req struct {
-				ID         int
-				SmartEvent apis.SmartEventToUpdate
-			}
-			err := json.NewDecoder(r.Body).Decode(&req)
-			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-			defer r.Body.Close()
-			err = deprecatedProperty.SmartEvents.Update(req.ID, req.SmartEvent)
-			if err != nil {
-				switch err.(type) {
-				case apis.DomainNotAllowedError,
-					apis.InvalidSmartEventError:
-					http.Error(w, fmt.Sprintf("Bad Request: %s", err), http.StatusBadRequest)
-					return
-				default:
-					log.Printf("[error] %v", err)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-			}
-			return
-
-		}
-
 	}
 
 	http.ServeFile(w, r, "./admin/public/index.html")
@@ -318,51 +194,6 @@ func (admin *admin) serveWithESBuild(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	http.NotFound(w, r)
-}
-
-func (admin *admin) serveExecuteQuery(w http.ResponseWriter, r *http.Request) {
-	// Parse the request.
-	var jsonQuery apis.JSONQuery
-	err := json.NewDecoder(r.Body).Decode(&jsonQuery)
-	if err != nil {
-		w.Header().Add("X-Error", err.Error())
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
-	// TODO(Gianluca): fix this:
-	account, err := admin.apis.Account(0)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-	columns, data, query, err := account.DeprecatedProperty(1).Visualization.ExecuteJSONQuery(context.TODO(), jsonQuery)
-	if err != nil {
-		switch err.(type) {
-		case apis.InvalidJSONQueryError, apis.SmartEventNotFoundError:
-			w.Header().Add("X-Error", err.Error())
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return
-		default:
-			log.Printf("[error] cannot execute query: %s", err)
-			w.Header().Add("X-Error", err.Error())
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	// Send the results to the client.
-	w.Header().Add("Content-Type", "application/json")
-	var response struct {
-		Columns []string
-		Data    [][]any
-		Query   string
-	}
-	response.Columns = columns
-	response.Data = data
-	response.Query = query
-	_ = json.NewEncoder(w).Encode(response)
 }
 
 func (admin *admin) login(w http.ResponseWriter, r *http.Request) {

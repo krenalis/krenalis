@@ -148,18 +148,6 @@ func (this *Account) Workspaces() []*Workspace {
 	return infos
 }
 
-// DeprecatedProperty returns an instance of DeprecatedProperties which operates
-// on the given property.
-func (this *Account) DeprecatedProperty(property int) *DeprecatedProperties {
-	properties := &DeprecatedProperties{
-		Account: this,
-		id:      property,
-	}
-	properties.SmartEvents = &SmartEvents{properties}
-	properties.Visualization = &Visualization{properties}
-	return properties
-}
-
 var bigMaxInt32 = big.NewInt(math.MaxInt32)
 
 // generateRandomID generates a random identifier in [1, maxInt32].
