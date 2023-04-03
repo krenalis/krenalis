@@ -214,20 +214,6 @@ CREATE TABLE resources (
 
 CREATE INDEX ON resources (connector);
 
-CREATE TABLE smart_events (
-    source integer NOT NULL,
-    id SERIAL,
-    name varchar(255) NOT NULL DEFAULT '',
-    event varchar(50) NOT NULL DEFAULT '',
-    pages varchar(65535) NOT NULL,
-    buttons varchar(65535) NOT NULL,
-    PRIMARY KEY (id)
-);
-
-INSERT INTO smart_events VALUES
-    (1, 50, 'View Nissan Car', 'page', '[{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"cars/nissan/\",\"Domain\":\"english.example.com\"},{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"auto/nissan/\",\"Domain\":\"italian.example.com\"}]', 'null'),(1,51, 'Configure a Nissan Car', 'click', '[{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"cars/nissan/\",\"Domain\":\"english.example.com\"},{\"Field\":\"path\",\"Operator\":\"StartsWith\",\"Value\":\"auto/nissan/\",\"Domain\":\"italian.example.com\"}]', '[{\"Field\":\"text\",\"Operator\":\"Equals\",\"Value\":\"Configure your car\",\"Domain\":\"english.example.com\"},{\"Field\":\"text\",\"Operator\":\"Equals\",\"Value\":\"Configura la tua auto\",\"Domain\":\"italian.example.com\"}]'),
-    (1, 52, 'Click on Login Button', 'click', 'null', '[{\"Field\":\"text\",\"Operator\":\"Contains\",\"Value\":\"Log in\"}]');
-
 CREATE TYPE mapping_custom_func AS (
 	in_types text,
 	out_types text,
