@@ -36,7 +36,7 @@ var (
 	}
 )
 
-// Connector represent a connector.
+// Connector represents a connector.
 type Connector struct {
 	Name string
 	Type Type

@@ -21,7 +21,7 @@ import (
 	"github.com/jxskiss/base62"
 )
 
-// Connector represent a connector.
+// Connector represents a connector.
 type Connector struct {
 	connector   *state.Connector
 	ID          int
