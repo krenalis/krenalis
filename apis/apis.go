@@ -28,7 +28,6 @@ type APIs struct {
 	state          *state.State
 	events         *events.Events
 	eventProcessor *events.Processor
-	Users          *Users
 }
 
 var hasBeenCalled bool
@@ -69,7 +68,6 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 	}
 
 	apis := &APIs{db: db}
-	apis.Users = &Users{apis}
 
 	// Load the state.
 	apis.state, err = state.Load(ctx, db)
