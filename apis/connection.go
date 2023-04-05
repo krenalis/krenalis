@@ -1208,7 +1208,7 @@ type ConnectionsStats struct {
 
 // Stats returns statistics on the connection for the last 24 hours.
 //
-// It returns an errors.Notfound error if the connection does not exist
+// It returns an errors.NotFound error if the connection does not exist
 // anymore.
 func (this *Connection) Stats() (*ConnectionsStats, error) {
 	now := time.Now().UTC()
