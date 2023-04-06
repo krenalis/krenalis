@@ -427,14 +427,8 @@ func (this *Connection) actionTypes() []*ActionType {
 	return actionTypes
 }
 
-// Column represents a column of a database connection.
-type Column struct {
-	Name string
-	Type types.Type
-}
-
 // Query executes the given query on the connection and returns the resulting
-// columns and rows. The connection must be a source database connection.
+// schema and rows. The connection must be a source database connection.
 //
 // query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
 // must contain the ':limit' placeholder between '[[' and ']]'. limit must be
@@ -443,25 +437,25 @@ type Column struct {
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If the execution of the query fails, it returns an errors.UnprocessableError
 // with code QueryExecutionFailed.
-func (this *Connection) Query(query string, limit int) ([]Column, [][]string, error) {
+func (this *Connection) Query(query string, limit int) (types.Type, [][]string, error) {
 
 	if !utf8.ValidString(query) {
-		return nil, nil, errors.BadRequest("query is not UTF-8 encoded")
+		return types.Type{}, nil, errors.BadRequest("query is not UTF-8 encoded")
 	}
 	if utf8.RuneCountInString(query) > queryMaxSize {
-		return nil, nil, errors.BadRequest("query is longer than 16,777,215 runes")
+		return types.Type{}, nil, errors.BadRequest("query is longer than 16,777,215 runes")
 	}
 	if limit < 1 || limit > 100 {
-		return nil, nil, errors.BadRequest("limit %d is not valid", limit)
+		return types.Type{}, nil, errors.BadRequest("limit %d is not valid", limit)
 	}
 
 	c := this.connection
 	connector := c.Connector()
 	if connector.Type != state.DatabaseType {
-		return nil, nil, errors.BadRequest("connection %d is not a database", c.ID)
+		return types.Type{}, nil, errors.BadRequest("connection %d is not a database", c.ID)
 	}
 	if c.Role != state.SourceRole {
-		return nil, nil, errors.BadRequest("database %d is not a source", c.ID)
+		return types.Type{}, nil, errors.BadRequest("database %d is not a source", c.ID)
 	}
 
 	const cRole = _connector.SourceRole
@@ -470,7 +464,7 @@ func (this *Connection) Query(query string, limit int) ([]Column, [][]string, er
 	var err error
 	query, err = compileConnectionQuery(query, limit)
 	if err != nil {
-		return nil, nil, err
+		return types.Type{}, nil, err
 	}
 	fh := this.newFirehose(context.Background())
 	connection, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
@@ -479,35 +473,29 @@ func (this *Connection) Query(query string, limit int) ([]Column, [][]string, er
 		Firehose: fh,
 	})
 	if err != nil {
-		return nil, nil, err
+		return types.Type{}, nil, err
 	}
-	rawColumns, rawRows, err := connection.Query(query)
+	schema, rawRows, err := connection.Query(query)
 	if err != nil {
 		if err, ok := err.(*_connector.DatabaseQueryError); ok {
-			return nil, nil, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
+			return types.Type{}, nil, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 		}
-		return nil, nil, err
-	}
-
-	// Fill the columns.
-	columns := make([]Column, len(rawColumns))
-	for i, c := range rawColumns {
-		columns[i].Name = c.Name
-		columns[i].Type = c.Type
+		return types.Type{}, nil, err
 	}
 
 	// Fill the rows.
 	var rows [][]string
-	values := make([]any, len(columns))
+	propertiesNames := schema.PropertiesNames()
+	values := make([]any, len(propertiesNames))
 	for i := range values {
 		var value string
 		values[i] = &value
 	}
 	for rawRows.Next() {
 		if err := rawRows.Scan(values...); err != nil {
-			return nil, nil, err
+			return types.Type{}, nil, err
 		}
-		row := make([]string, len(rawColumns))
+		row := make([]string, len(propertiesNames))
 		for i, v := range values {
 			row[i] = *(v.(*string))
 		}
@@ -515,13 +503,13 @@ func (this *Connection) Query(query string, limit int) ([]Column, [][]string, er
 	}
 	err = rawRows.Close()
 	if err != nil {
-		return nil, nil, err
+		return types.Type{}, nil, err
 	}
 	if rows == nil {
 		rows = [][]string{}
 	}
 
-	return columns, rows, nil
+	return schema, rows, nil
 }
 
 // Rename renames the connection with the given new name.
@@ -1428,7 +1416,8 @@ func (this *Connection) reloadSchema() error {
 		if err != nil {
 			return err
 		}
-		columns, rows, err := connection.Query(usersQuery)
+		var rows _connector.Rows
+		schema, rows, err = connection.Query(usersQuery)
 		if err != nil {
 			return err
 		}
@@ -1436,12 +1425,6 @@ func (this *Connection) reloadSchema() error {
 		if err != nil {
 			return err
 		}
-		properties := make([]types.Property, len(columns))
-		for i, col := range columns {
-			properties[i].Name = col.Name
-			properties[i].Type = col.Type
-		}
-		schema = types.Object(properties)
 
 	case state.FileType:
 

@@ -62,39 +62,39 @@ type connection struct {
 }
 
 // Query executes the given query and returns the resulting rows.
-func (c *connection) Query(query string) ([]connector.Column, connector.Rows, error) {
+func (c *connection) Query(query string) (types.Type, connector.Rows, error) {
 	db, err := sql.Open("pgx", c.settings.dsn())
 	if err != nil {
-		return nil, nil, err
+		return types.Type{}, nil, err
 	}
 	db.SetMaxIdleConns(0)
 	rows, err := db.QueryContext(c.ctx, query)
 	if err != nil {
 		_ = db.Close()
 		if err, ok := err.(*pgconn.PgError); ok {
-			return nil, nil, connector.NewDatabaseQueryError(err.Message)
+			return types.Type{}, nil, connector.NewDatabaseQueryError(err.Message)
 		}
-		return nil, nil, err
+		return types.Type{}, nil, err
 	}
 	columnTypes, err := rows.ColumnTypes()
 	if err != nil {
 		_ = rows.Close()
 		_ = db.Close()
 	}
-	columns := make([]connector.Column, len(columnTypes))
+	properties := make([]types.Property, len(columnTypes))
 	for i, c := range columnTypes {
 		typ, err := propertyType(c)
 		if err != nil {
 			_ = rows.Close()
 			_ = db.Close()
-			return nil, nil, err
+			return types.Type{}, nil, err
 		}
-		columns[i] = connector.Column{
+		properties[i] = types.Property{
 			Name: c.Name(),
 			Type: typ,
 		}
 	}
-	return columns, rows, nil
+	return types.Object(properties), rows, nil
 }
 
 // ServeUI serves the connector's user interface.

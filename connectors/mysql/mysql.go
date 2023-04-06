@@ -60,10 +60,10 @@ type connection struct {
 }
 
 // Query executes the given query and returns the resulting rows.
-func (c *connection) Query(query string) ([]connector.Column, connector.Rows, error) {
+func (c *connection) Query(query string) (types.Type, connector.Rows, error) {
 	mysqlConnector, err := mysql.NewConnector(c.settings.config())
 	if err != nil {
-		return nil, nil, err
+		return types.Type{}, nil, err
 	}
 	db := sql.OpenDB(mysqlConnector)
 	db.SetMaxIdleConns(0)
@@ -71,30 +71,30 @@ func (c *connection) Query(query string) ([]connector.Column, connector.Rows, er
 	if err != nil {
 		_ = db.Close()
 		if err, ok := err.(*mysql.MySQLError); ok {
-			return nil, nil, connector.NewDatabaseQueryError(err.Message)
+			return types.Type{}, nil, connector.NewDatabaseQueryError(err.Message)
 		}
-		return nil, nil, err
+		return types.Type{}, nil, err
 	}
 	columnTypes, err := rows.ColumnTypes()
 	if err != nil {
 		_ = rows.Close()
 		_ = db.Close()
-		return nil, nil, err
+		return types.Type{}, nil, err
 	}
-	columns := make([]connector.Column, len(columnTypes))
+	properties := make([]types.Property, len(columnTypes))
 	for i, c := range columnTypes {
 		typ, err := propertyType(c)
 		if err != nil {
 			_ = rows.Close()
 			_ = db.Close()
-			return nil, nil, fmt.Errorf("cannot get type for property %q: %s", c.Name(), err)
+			return types.Type{}, nil, fmt.Errorf("cannot get type for property %q: %s", c.Name(), err)
 		}
-		columns[i] = connector.Column{
+		properties[i] = types.Property{
 			Name: c.Name(),
 			Type: typ,
 		}
 	}
-	return columns, rows, nil
+	return types.Object(properties), rows, nil
 }
 
 // ServeUI serves the connector's user interface.

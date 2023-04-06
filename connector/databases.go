@@ -47,8 +47,8 @@ type OpenDatabaseFunc func(context.Context, *DatabaseConfig) (DatabaseConnection
 // DatabaseConnection is the interface implemented by database connections.
 type DatabaseConnection interface {
 
-	// Query executes the given query and returns the resulting rows.
-	Query(query string) ([]Column, Rows, error)
+	// Query executes the given query and returns the resulting schema and rows.
+	Query(query string) (types.Type, Rows, error)
 }
 
 // Rows is the result of a database query. Its cursor starts before the first
@@ -58,10 +58,4 @@ type Rows interface {
 	Err() error
 	Next() bool
 	Scan(dest ...any) error
-}
-
-// Column represents a column returned by a database query.
-type Column struct {
-	Name string
-	Type types.Type
 }

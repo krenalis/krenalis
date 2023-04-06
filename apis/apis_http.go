@@ -18,6 +18,7 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/events"
+	"chichi/apis/types"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -423,10 +424,19 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				columns, rows, err := connection.Query(req.Query, req.Limit)
+				schema, rows, err := connection.Query(req.Query, req.Limit)
 				if err != nil {
 					respond(w, err)
 					return
+				}
+				properties := schema.Properties()
+				columns := make([]struct {
+					Name string
+					Type types.Type
+				}, len(properties))
+				for i, p := range properties {
+					columns[i].Name = p.Name
+					columns[i].Type = p.Type
 				}
 				w.Header().Add("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(map[string]any{"Columns": columns, "Rows": rows})

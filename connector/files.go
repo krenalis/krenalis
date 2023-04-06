@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"io"
 	"time"
+
+	"chichi/apis/types"
 )
 
 var (
@@ -132,4 +134,10 @@ type RecordWriter interface {
 	// If ts is zero time, it means that the timestamp is unknown.
 	// Timestamp can be called before Record, RecordMap and RecordString.
 	Timestamp(ts time.Time) error
+}
+
+// Column represents a column returned by RecordWriter.Columns.
+type Column struct {
+	Name string
+	Type types.Type
 }

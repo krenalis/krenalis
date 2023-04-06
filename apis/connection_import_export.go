@@ -341,7 +341,7 @@ func (this *Connection) _startImport(imp *state.ImportInProgress) error {
 		if err != nil {
 			return importError{fmt.Errorf("cannot connect to the connector: %s", err)}
 		}
-		columns, rows, err := c.Query(usersQuery)
+		schema, rows, err := c.Query(usersQuery)
 		if err != nil {
 			if err, ok := err.(*_connector.DatabaseQueryError); ok {
 				return importError{err}
@@ -349,10 +349,11 @@ func (this *Connection) _startImport(imp *state.ImportInProgress) error {
 			return err
 		}
 		defer rows.Close()
+		propertiesNames := schema.PropertiesNames()
 		identityIndex := noColumn
 		timestampIndex := noColumn
-		for i, c := range columns {
-			switch c.Name {
+		for i, name := range propertiesNames {
+			switch name {
 			case identityColumn:
 				identityIndex = i
 			case timestampColumn:
@@ -366,7 +367,7 @@ func (this *Connection) _startImport(imp *state.ImportInProgress) error {
 		if timestampIndex == noColumn {
 			now = time.Now().UTC()
 		}
-		row := make([]any, len(columns))
+		row := make([]any, len(propertiesNames))
 		for rows.Next() {
 			for i := range row {
 				var v string
@@ -383,9 +384,9 @@ func (this *Connection) _startImport(imp *state.ImportInProgress) error {
 				ts = row[timestampIndex].(time.Time)
 			}
 			user := map[string]any{}
-			for i, c := range columns {
+			for i, name := range propertiesNames {
 				v := row[i].(*string)
-				user[c.Name] = *v
+				user[name] = *v
 			}
 			fh.SetUser(*identity, user, ts, nil)
 		}
