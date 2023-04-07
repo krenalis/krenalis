@@ -11,6 +11,7 @@ import (
 	_ "chichi/connectors/csv"
 	_ "chichi/connectors/dummy"
 	_ "chichi/connectors/excel"
+	_ "chichi/connectors/filesystem"
 	_ "chichi/connectors/googleanalytics4"
 	_ "chichi/connectors/http"
 	_ "chichi/connectors/hubspot"

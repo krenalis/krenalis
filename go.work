@@ -6,6 +6,7 @@ use (
 	./connectors/csv
 	./connectors/dummy
 	./connectors/excel
+	./connectors/filesystem
 	./connectors/googleanalytics4
 	./connectors/http
 	./connectors/hubspot

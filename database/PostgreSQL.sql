@@ -49,7 +49,9 @@ INSERT INTO connectors (name, type, has_settings, logo_url, webhooks_per, oauth_
     ('UISample', 'Stream', TRUE, '', 'None', '', '', '', '', 0),
     ('Server', 'Server', FALSE, 'https://cdn1.iconfinder.com/data/icons/unicons-line-vol-5/24/server-512.png', 'None', '', '', '', '', 0),
     ('Klaviyo', 'App', TRUE, 'https://cdn3.iconfinder.com/data/icons/font-awesome-solid/512/k-256.png', 'None', '', '', '', '', 0),
-    ('Google Analytics 4', 'App', TRUE, 'https://cdn4.iconfinder.com/data/icons/social-media-logos-6/512/108-analytics_google_analytics_google-256.png', 'None', '', '', '', '', 0);
+    ('Google Analytics 4', 'App', TRUE, 'https://cdn4.iconfinder.com/data/icons/social-media-logos-6/512/108-analytics_google_analytics_google-256.png', 'None', '', '', '', '', 0),
+    ('Filesystem', 'Storage', TRUE, 'https://cdn2.iconfinder.com/data/icons/audio-music-5/65/cd-case-256.png', 'None', '', '', '', '', 0);
+
 
 CREATE TYPE warehouse_type AS ENUM ('BigQuery', 'ClickHouse', 'PostgreSQL', 'Redshift', 'Snowflake');
 

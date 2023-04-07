@@ -6,6 +6,7 @@ replace (
 	chichi/connectors/csv => ./connectors/csv
 	chichi/connectors/dummy => ./connectors/dummy
 	chichi/connectors/excel => ./connectors/excel
+	chichi/connectors/filesystem => ./connectors/filesystem
 	chichi/connectors/googleanalytics4 => ./connectors/googleanalytics4
 	chichi/connectors/http => ./connectors/http
 	chichi/connectors/hubspot => ./connectors/hubspot
@@ -27,6 +28,7 @@ require (
 	chichi/connectors/csv v0.0.0-00010101000000-000000000000
 	chichi/connectors/dummy v0.0.0-00010101000000-000000000000
 	chichi/connectors/excel v0.0.0-00010101000000-000000000000
+	chichi/connectors/filesystem v0.0.0-00010101000000-000000000000
 	chichi/connectors/googleanalytics4 v0.0.0-00010101000000-000000000000
 	chichi/connectors/http v0.0.0-00010101000000-000000000000
 	chichi/connectors/hubspot v0.0.0-00010101000000-000000000000
