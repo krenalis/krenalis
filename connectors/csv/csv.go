@@ -104,9 +104,9 @@ func (c *connection) Read(files connector.FileReader, records connector.RecordWr
 		// Write the columns.
 		if first {
 			columns := make([]connector.Column, len(record))
-			for i, c := range columns {
-				c.Name = "column" + strconv.Itoa(i+1)
-				c.Type = types.Text()
+			for i := range columns {
+				columns[i].Name = "column" + strconv.Itoa(i+1)
+				columns[i].Type = types.Text()
 			}
 			err = records.Columns(columns)
 			if err != nil {
