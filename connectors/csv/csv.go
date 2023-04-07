@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"strconv"
 	"unicode/utf8"
 
 	"chichi/apis/types"
@@ -105,7 +104,7 @@ func (c *connection) Read(files connector.FileReader, records connector.RecordWr
 		if first {
 			columns := make([]connector.Column, len(record))
 			for i := range columns {
-				columns[i].Name = "column" + strconv.Itoa(i+1)
+				columns[i].Name = record[i]
 				columns[i].Type = types.Text()
 			}
 			err = records.Columns(columns)
