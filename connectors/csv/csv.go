@@ -112,6 +112,7 @@ func (c *connection) Read(files connector.FileReader, records connector.RecordWr
 				return err
 			}
 			first = false
+			continue
 		}
 		// Write the record.
 		err = records.RecordString(record)
