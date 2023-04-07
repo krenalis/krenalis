@@ -91,7 +91,7 @@ func (c *connection) Read(files connector.FileReader, records connector.RecordWr
 	v.LazyQuotes = c.settings.LazyQuotes
 	v.TrimLeadingSpace = c.settings.TrimLeadingSpace
 
-	var first bool
+	first := true
 	for {
 		// Read a record.
 		record, err := v.Read()
