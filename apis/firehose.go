@@ -550,6 +550,7 @@ func (fh *firehose) newRecordWriter(identityColumn, timestampColumn string, only
 		onlyColumns:     onlyColumns,
 		identityColumn:  identityColumn,
 		timestampColumn: timestampColumn,
+		timestampIndex:  noColumn,
 	}
 }
 
