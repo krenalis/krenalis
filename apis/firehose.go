@@ -593,7 +593,8 @@ func (rw *recordWriter) Columns(columns []connector.Column) error {
 		return connector.MissingIdentityColumnError{Column: rw.identityColumn}
 	}
 	if rw.timestampColumn != "" {
-		if rw.timestampIndex, ok = index[rw.identityColumn]; !ok {
+		rw.timestampIndex, ok = index[rw.timestampColumn]
+		if !ok {
 			return connector.MissingTimestampColumnError{Column: rw.timestampColumn}
 		}
 	}
