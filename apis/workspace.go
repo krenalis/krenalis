@@ -957,10 +957,13 @@ func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) 
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore.
-// If a property does not exist, it returns an errors.UnprocessableError error
-// with code PropertyNotExist.
-// If the warehouse failed, it returns an errors.UnprocessableError error with
-// code WarehouseFailed.
+// It returns an errors.UnprocessableError error with code
+//
+//   - NoWarehouse, if the workspace does not have a data warehouse.
+//   - OrderNotExist, if order does not exist in schema.
+//   - OrderTypeNotSortable, if the type of the order property is not sortable.
+//   - PropertyNotExist, if a property does not exist.
+//   - WarehouseFailed, if the data warehouse failed.
 func (this *Workspace) Users(properties []string, order string, first, limit int) (types.Type, [][]any, error) {
 
 	ws := this.workspace
