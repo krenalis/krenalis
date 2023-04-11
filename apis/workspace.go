@@ -1257,7 +1257,7 @@ Columns:
 func columnsOfProperties(properties []types.Property) []warehouses.Column {
 	columns := make([]warehouses.Column, 0, len(properties))
 	for _, p := range properties {
-		if pt := p.Type; pt.PhysicalType() == types.PtObject {
+		if pt := p.Type; pt.PhysicalType() == types.PtObject && pt.Flat() {
 			for _, column := range columnsOfProperties(pt.Properties()) {
 				column.Name = p.Name + "_" + column.Name
 				columns = append(columns, column)
