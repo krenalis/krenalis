@@ -955,6 +955,9 @@ func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) 
 // the users in range [first,first+limit] with first >= 0 and 0 < limit <= 1000
 // and only the given properties. properties cannot be empty.
 //
+// order is the property by which to sort the returned users and cannot have
+// type JSON, Array, Object, or Map.
+//
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore.
 // It returns an errors.UnprocessableError error with code
