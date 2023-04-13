@@ -505,12 +505,14 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 //
 // It returns an errors.UnprocessableError error with code
 //
+//   - EventTypeNotExists, if the specified event type does not exist.
 //   - PropertyNotExists, if a property of a mapping / transformation does not
 //     exist in the schema (except for properties of the event type schema,
 //     which is specified and thus returned as an errors.BadRequest error).
-//   - EventTypeNotExists, if the specified event type does not exist.
 //   - QueryExecutionFailed, if the execution of the specified query fails.
 func (this *Connection) validateAction(target state.ActionTarget, eventType string, action ActionToSet) (types.Type, error) {
+
+	// First, do formal validations.
 
 	// Validate the target.
 	switch target {
@@ -602,6 +604,8 @@ func (this *Connection) validateAction(target state.ActionTarget, eventType stri
 		}
 	}
 
+	// Second, do validations based on the connection.
+
 	c := this.connection
 	connector := c.Connector()
 
@@ -616,7 +620,7 @@ func (this *Connection) validateAction(target state.ActionTarget, eventType stri
 		}
 	}
 
-	// Get the schema with which to validate an action to be added.
+	// Fetch the schema with which to validate an action to be added.
 	var schema types.Type
 	switch connector.Type {
 	case state.AppType:
