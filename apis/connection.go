@@ -133,7 +133,7 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 			haveEventsActionNoEventType = true
 		}
 	}
-	wsSchemas := this.connection.Workspace().Schemas
+	wsSchemas := c.Workspace().Schemas
 	targets := c.Connector().Targets
 	if targets.Contains(state.UsersTarget) {
 		var name = "Import users"
