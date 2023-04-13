@@ -42,8 +42,8 @@ var _ connector.AppEventsConnection = (*connection)(nil)
 func init() {
 	connector.RegisterApp(connector.App{
 		Name:                   "Google Analytics 4",
-		Icon:                   icon,
 		DestinationDescription: "send events to Google Analytics 4",
+		Icon:                   icon,
 	}, open)
 }
 
