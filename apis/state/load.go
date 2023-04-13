@@ -10,8 +10,8 @@ package state
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -20,6 +20,12 @@ import (
 	_connector "chichi/connector"
 
 	"github.com/google/uuid"
+)
+
+var (
+	appEventsConnectionType = reflect.TypeOf((*_connector.AppEventsConnection)(nil)).Elem()
+	appUsersConnectionType  = reflect.TypeOf((*_connector.AppUsersConnection)(nil)).Elem()
+	appGroupsConnectionType = reflect.TypeOf((*_connector.AppGroupsConnection)(nil)).Elem()
 )
 
 // Load loads the state and returns it.
@@ -58,20 +64,15 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all connectors.
 		state.connectors = map[int]*Connector{}
-		err = state.db.QueryScan(ctx, "SELECT id, name, type, targets, has_settings, logo_url, webhooks_per,"+
+		err = state.db.QueryScan(ctx, "SELECT id, name, type, has_settings, logo_url, webhooks_per,"+
 			" oauth_url, oauth_client_id, oauth_client_secret, oauth_token_endpoint, oauth_default_token_type,"+
 			" oauth_default_expires_in, oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
 			for rows.Next() {
 				c := Connector{}
-				var targets []string
 				oauth := ConnectorOAuth{}
-				if err := rows.Scan(&c.ID, &c.Name, &c.Type, &targets, &c.HasSettings, &c.LogoURL, &c.WebhooksPer,
+				if err := rows.Scan(&c.ID, &c.Name, &c.Type, &c.HasSettings, &c.LogoURL, &c.WebhooksPer,
 					&oauth.URL, &oauth.ClientID, &oauth.ClientSecret, &oauth.TokenEndpoint, &oauth.DefaultTokenType,
 					&oauth.DefaultExpiresIn, &oauth.ForcedExpiresIn); err != nil {
-					return err
-				}
-				c.Targets, err = deserializeConnectorTargets(targets)
-				if err != nil {
 					return err
 				}
 				if oauth.URL != "" {
@@ -82,22 +83,36 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					app := _connector.RegisteredApp(c.Name)
 					c.SourceDescription = app.SourceDescription
 					c.DestinationDescription = app.DestinationDescription
+					t := app.ConnectionReflectType()
+					if t.Implements(appEventsConnectionType) {
+						c.Targets |= EventsFlag
+					}
+					if t.Implements(appUsersConnectionType) {
+						c.Targets |= UsersFlag
+					}
+					if t.Implements(appGroupsConnectionType) {
+						c.Targets |= GroupsFlag
+					}
 				case DatabaseType:
 					database := _connector.RegisteredDatabase(c.Name)
 					c.SourceDescription = database.SourceDescription
 					c.DestinationDescription = database.DestinationDescription
+					c.Targets = UsersFlag | GroupsFlag
 				case FileType:
 					file := _connector.RegisteredFile(c.Name)
 					c.SourceDescription = file.SourceDescription
 					c.DestinationDescription = file.DestinationDescription
+					c.Targets = UsersFlag | GroupsFlag
 				case MobileType:
 					mobile := _connector.RegisteredMobile(c.Name)
 					c.SourceDescription = mobile.SourceDescription
 					c.DestinationDescription = mobile.DestinationDescription
+					c.Targets = EventsFlag
 				case ServerType:
 					server := _connector.RegisteredServer(c.Name)
 					c.SourceDescription = server.SourceDescription
 					c.DestinationDescription = server.DestinationDescription
+					c.Targets = EventsFlag
 				case StorageType:
 					storage := _connector.RegisteredStorage(c.Name)
 					c.SourceDescription = storage.SourceDescription
@@ -106,10 +121,12 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					stream := _connector.RegisteredStream(c.Name)
 					c.SourceDescription = stream.SourceDescription
 					c.DestinationDescription = stream.DestinationDescription
+					c.Targets = EventsFlag
 				case WebsiteType:
 					website := _connector.RegisteredWebsite(c.Name)
 					c.SourceDescription = website.SourceDescription
 					c.DestinationDescription = website.DestinationDescription
+					c.Targets = EventsFlag
 				}
 				state.connectors[c.ID] = &c
 			}
@@ -372,23 +389,4 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 	}
 
 	return state, nil
-}
-
-// deserializeConnectorTargets deserializes the targets read from the database
-// and returns them as a ConnectorTargets value.
-func deserializeConnectorTargets(targets []string) (ConnectorTargets, error) {
-	var tt ConnectorTargets
-	for _, t := range targets {
-		switch t {
-		case "Events":
-			tt |= EventsFlag
-		case "Users":
-			tt |= UsersFlag
-		case "Groups":
-			tt |= GroupsFlag
-		default:
-			return 0, fmt.Errorf("unknown connector target %q", t)
-		}
-	}
-	return tt, nil
 }
