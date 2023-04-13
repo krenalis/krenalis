@@ -39,15 +39,21 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppConnection interface.
-var _ connector.AppConnection = &connection{}
+// Make sure it implements the AppUsersConnection and the AppGroupsConnection
+// interfaces.
+var _ interface {
+	connector.AppUsersConnection
+	connector.AppGroupsConnection
+} = &connection{}
 
 var Debug = false
 
 func init() {
 	connector.RegisterApp(connector.App{
-		Name: "HubSpot",
-		Icon: icon,
+		Name:                   "HubSpot",
+		SourceDescription:      "import contacts as users and companies as groups from HubSpot",
+		DestinationDescription: "export users as contacts and groups as companies to HubSpot",
+		Icon:                   icon,
 		OAuth: connector.OAuth{
 			URL:   "https://app-eu1.hubspot.com/oauth/authorize",
 			Scope: "crm.objects.contacts.read crm.objects.contacts.write crm.schemas.contacts.read",
@@ -77,9 +83,15 @@ func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnecti
 	return &c, nil
 }
 
-// ActionTypes returns the connection's action types.
-func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
+// EventTypes returns the connection's event types.
+func (c *connection) EventTypes() ([]*connector.EventType, error) {
 	return nil, nil
+}
+
+// GroupSchema returns the group schema.
+func (c *connection) GroupSchema() (types.Type, error) {
+	// TODO(marco): implement
+	return types.Type{}, nil
 }
 
 // Groups returns the groups starting from the given cursor.
@@ -213,8 +225,41 @@ func (c *connection) Resource() (string, error) {
 	return strconv.Itoa(res.PortalId), nil
 }
 
-// Schemas returns user and group schemas.
-func (c *connection) Schemas() (types.Type, types.Type, error) {
+// SetGroups sets the given groups.
+func (c *connection) SetGroups(groups []connector.Group) error {
+	// TODO(marco): implement
+	return nil
+}
+
+// SetUsers sets the users.
+// It requires the "crm.objects.contacts.write" scope.
+func (c *connection) SetUsers(users []connector.User) error {
+
+	var body bytes.Buffer
+	body.WriteString(`{"inputs":[`)
+
+	for i, user := range users {
+		if i > 0 {
+			body.WriteString(`,`)
+		}
+		id, _ := json.Marshal(user.ID)
+		body.WriteString(`{"id":`)
+		body.Write(id)
+		body.WriteString(`,"properties":`)
+		err := json.NewEncoder(&body).Encode(user.Properties)
+		if err != nil {
+			return err
+		}
+		body.WriteString(`}`)
+	}
+
+	body.WriteString(`]}`)
+
+	return c.call("POST", "/crm/v3/objects/contacts/batch/update", &body, 200, nil)
+}
+
+// UserSchema returns the user schema.
+func (c *connection) UserSchema() (types.Type, error) {
 
 	var response struct {
 		Results []struct {
@@ -233,7 +278,7 @@ func (c *connection) Schemas() (types.Type, types.Type, error) {
 	}
 	err := c.call("GET", "/crm/v3/properties/contact", nil, 200, &response)
 	if err != nil {
-		return types.Type{}, types.Type{}, err
+		return types.Type{}, err
 	}
 
 	properties := []types.Property{}
@@ -244,7 +289,7 @@ func (c *connection) Schemas() (types.Type, types.Type, error) {
 		}
 		typ, err := propertyType(r.Name, r.Type)
 		if err != nil {
-			return types.Type{}, types.Type{}, err
+			return types.Type{}, err
 		}
 		property := types.Property{
 			Name:        r.Name,
@@ -279,43 +324,10 @@ func (c *connection) Schemas() (types.Type, types.Type, error) {
 
 	schema, err := types.ObjectOf(properties)
 	if err != nil {
-		return types.Type{}, types.Type{}, fmt.Errorf("cannot create schema from properties: %s", err)
+		return types.Type{}, fmt.Errorf("cannot create schema from properties: %s", err)
 	}
 
-	return schema, types.Type{}, nil
-}
-
-// SendEvent sends event, along with the given mapped event, to the endpoint.
-// actionType specifies the action type corresponding to the event.
-func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, actionType, endpoint int) error {
-	return errors.New("not implemented")
-}
-
-// SetUsers sets the users.
-// It requires the "crm.objects.contacts.write" scope.
-func (c *connection) SetUsers(users []connector.User) error {
-
-	var body bytes.Buffer
-	body.WriteString(`{"inputs":[`)
-
-	for i, user := range users {
-		if i > 0 {
-			body.WriteString(`,`)
-		}
-		id, _ := json.Marshal(user.ID)
-		body.WriteString(`{"id":`)
-		body.Write(id)
-		body.WriteString(`,"properties":`)
-		err := json.NewEncoder(&body).Encode(user.Properties)
-		if err != nil {
-			return err
-		}
-		body.WriteString(`}`)
-	}
-
-	body.WriteString(`]}`)
-
-	return c.call("POST", "/crm/v3/objects/contacts/batch/update", &body, 200, nil)
+	return schema, nil
 }
 
 // Users returns the users starting from the given cursor.

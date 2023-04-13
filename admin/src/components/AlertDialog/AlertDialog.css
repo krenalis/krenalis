@@ -12,9 +12,12 @@
 }
 
 .alertDialog .alertIcon {
-    color: var(--alert-color);
     font-size: 30px;
     text-align: center;
+}
+
+.alertDialog .alertIcon sl-icon {
+    color: var(--alert-color);
 }
 
 .alertDialog .alertTitle {

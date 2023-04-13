@@ -36,19 +36,21 @@ var icon = "<svg></svg>"
 // https://developers.google.com/analytics/devguides/collection/protocol/ga4/validating-events?client_type=firebase
 const sendToDebugServer = false
 
-// Make sure it implements the AppConnection interface.
-var _ connector.AppConnection = &connection{}
+// Make sure it implements the AppEventsConnection interface.
+var _ connector.AppEventsConnection = &connection{}
 
 func init() {
 	connector.RegisterApp(connector.App{
-		Name: "Google Analytics 4",
-		Icon: icon,
-		Open: open,
+		Name:                   "Google Analytics 4",
+		Icon:                   icon,
+		Open:                   open,
+		DestinationDescription: "send events to Google Analytics 4",
 	})
 }
 
 type connection struct {
 	ctx      context.Context
+	role     connector.Role
 	settings *settings
 	firehose connector.Firehose
 }
@@ -60,7 +62,11 @@ type settings struct {
 
 // open opens a Google Analytics 4 connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
-	c := connection{ctx: ctx, firehose: conf.Firehose}
+	c := connection{
+		ctx:      ctx,
+		role:     conf.Role,
+		firehose: conf.Firehose,
+	}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -70,21 +76,21 @@ func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnecti
 	return &c, nil
 }
 
-const (
-	eventPageView = iota + 1 // https://developers.google.com/analytics/devguides/collection/ga4/views?client_type=gtag#manually_send_page_view_events
-	eventShare               // https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference/events#share
-)
-
-// ActionTypes returns the connection's action types.
-func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
-	actionTypes := []*connector.ActionType{
+// EventTypes returns the connection's event types.
+func (c *connection) EventTypes() ([]*connector.EventType, error) {
+	if c.role == connector.SourceRole {
+		return nil, nil
+	}
+	eventTypes := []*connector.EventType{
+		// https://developers.google.com/analytics/devguides/collection/ga4/views?client_type=gtag#manually_send_page_view_events
 		{
-			ID:          eventPageView,
+			ID:          "event_page_view",
 			Name:        "Page view",
 			Description: "Send a Page view event to Google Analytics 4",
 		},
+		// https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference/events#share
 		{
-			ID:          eventShare,
+			ID:          "event_share",
 			Name:        "Share",
 			Description: "Send a Share event to Google Analytics 4",
 			Schema: types.Object([]types.Property{
@@ -94,18 +100,7 @@ func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
 			}),
 		},
 	}
-	return actionTypes, nil
-}
-
-// Groups returns the groups starting from the given cursor.
-func (c *connection) Groups(cursor string, properties []connector.PropertyPath) error {
-	return nil
-}
-
-// ReceiveWebhook receives a webhook request and returns its events.
-// It returns the ErrWebhookUnauthorized error is the request was not authorized.
-func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, error) {
-	return nil, connector.ErrWebhookUnauthorized
+	return eventTypes, nil
 }
 
 // Resource returns the resource from a client token.
@@ -113,23 +108,18 @@ func (c *connection) Resource() (string, error) {
 	return "", nil
 }
 
-// Schemas returns user and group schemas.
-func (c *connection) Schemas() (types.Type, types.Type, error) {
-	return types.Type{}, types.Type{}, nil
-}
-
-// SendEvent sends event, along with the given mapped event, to the endpoint.
-// actionType specifies the action type corresponding to the event.
-func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, actionType, endpoint int) error {
+// SendEvent sends the event, along with the given mapped event.
+// eventType specifies the event type corresponding to the event.
+func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, eventType string) error {
 	var err error
-	switch actionType {
-	case eventPageView:
+	switch eventType {
+	case "event_page_view":
 		err = c.collect(event.AnonymousID, event.UserID, "page_view", map[string]any{
 			"page_location": event.Page.URL,
 			"page_referrer": event.Page.Referrer,
 			"page_title":    event.Page.Title,
 		})
-	case eventShare:
+	case "event_share":
 		params := map[string]any{}
 		if method, ok := mappedEvent["method"].(string); ok {
 			params["method"] = method
@@ -142,17 +132,12 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 		}
 		err = c.collect(event.AnonymousID, event.UserID, "share", params)
 	default:
-		panic(fmt.Sprintf("unsupported action type %d", actionType))
+		panic(fmt.Sprintf("unsupported event type %q", eventType))
 	}
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-// SetUsers sets the users.
-func (c *connection) SetUsers(users []connector.User) error {
-	return errors.New("not implemented")
 }
 
 // ServeUI serves the connector's user interface.
@@ -215,11 +200,6 @@ func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 		}
 	}
 	return json.Marshal(&s)
-}
-
-// Users returns the users starting from the given cursor.
-func (c *connection) Users(cursor string, properties []connector.PropertyPath) error {
-	panic("not implemented")
 }
 
 func (c *connection) collect(anonymousID, userID, eventName string, eventParams map[string]any) error {

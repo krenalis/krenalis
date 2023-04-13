@@ -22,7 +22,7 @@ type eventsState struct {
 	sync.Mutex
 	ctx          context.Context
 	state        *state.State
-	destinations map[int]connector.AppConnection
+	destinations map[int]connector.AppEventsConnection
 }
 
 // newEventsState returns a new eventsState based on the st state.
@@ -30,7 +30,7 @@ func newEventsState(ctx context.Context, st *state.State) *eventsState {
 	eventSt := &eventsState{
 		ctx:          ctx,
 		state:        st,
-		destinations: map[int]connector.AppConnection{},
+		destinations: map[int]connector.AppEventsConnection{},
 	}
 	for _, c := range st.Connections() {
 		if !isDestination(c) {
@@ -48,6 +48,7 @@ func newEventsState(ctx context.Context, st *state.State) *eventsState {
 	st.AddListener(eventSt.onSetConnectionSettings)
 	st.AddListener(eventSt.onSetConnectionStatus)
 	st.AddListener(eventSt.onSetWarehouseSettings)
+	st.AddListener(eventSt.onSetWorkspacePrivacyRegion)
 	return eventSt
 }
 
@@ -64,7 +65,7 @@ func (st *eventsState) Source(id int) (*state.Connection, bool) {
 // Destination returns an open connection to the destination with identifier id
 // an true, if such destination has been opened, otherwise returns nil and
 // false.
-func (st *eventsState) Destination(id int) (connector.AppConnection, bool) {
+func (st *eventsState) Destination(id int) (connector.AppEventsConnection, bool) {
 	st.Lock()
 	d, ok := st.destinations[id]
 	st.Unlock()
@@ -102,6 +103,21 @@ func (st *eventsState) Actions() []*state.Action {
 		actions = append(actions, action)
 	}
 	return actions
+}
+
+// HasEnabledActions reports whether connection is enabled and has at least one
+// enabled action.
+func (st *eventsState) HasEnabledActions(connection int) bool {
+	c, _ := st.state.Connection(connection)
+	if !c.Enabled {
+		return false
+	}
+	for _, a := range c.Actions() {
+		if a.Enabled {
+			return true
+		}
+	}
+	return false
 }
 
 // onAddConnection is called when a connection is added.
@@ -190,6 +206,22 @@ func (st *eventsState) onSetWarehouseSettings(n state.SetWarehouseSettingsNotifi
 	}
 }
 
+// onSetWorkspacePrivacyRegion is called when the privacy region of a workspace
+// is changed.
+func (st *eventsState) onSetWorkspacePrivacyRegion(n state.SetWorkspacePrivacyRegion) {
+	ws, _ := st.state.Workspace(n.Workspace)
+	for _, c := range ws.Connections() {
+		if !isDestination(c) {
+			continue
+		}
+		err := st.openDestination(c)
+		if err != nil {
+			log.Printf("cannot open destination %d: %s", c.ID, err)
+			continue
+		}
+	}
+}
+
 // openDestination opens the destination from the connection c and sets it into
 // the state.
 func (st *eventsState) openDestination(c *state.Connection) error {
@@ -202,14 +234,15 @@ func (st *eventsState) openDestination(c *state.Connection) error {
 	// We have to implement a way to retrieve - and maintain up-to-date - the
 	// OAuth parameters.
 	connection, err := app.Open(st.ctx, &connector.AppConfig{
-		Role:     cRole,
-		Settings: c.Settings,
+		Role:          cRole,
+		Settings:      c.Settings,
+		PrivacyRegion: connector.PrivacyRegion(c.Workspace().PrivacyRegion),
 	})
 	if err != nil {
 		return err
 	}
 	st.Lock()
-	st.destinations[c.ID] = connection
+	st.destinations[c.ID] = connection.(connector.AppEventsConnection)
 	st.Unlock()
 	return nil
 }
@@ -223,9 +256,11 @@ func (st *eventsState) deleteDestination(id int) {
 }
 
 // isDestination reports whether c is a destination, that is an enabled
-// destination connection of type app that belongs a to a workspace with an
-// associated warehouse.
+// destination app connection with Events target that belongs to a
+// workspace with an associated warehouse.
 func isDestination(c *state.Connection) bool {
+	conn := c.Connector()
 	return c.Enabled && c.Role == state.DestinationRole &&
-		c.Connector().Type == state.AppType && c.Workspace().Warehouse != nil
+		conn.Type == state.AppType && c.Workspace().Warehouse != nil &&
+		conn.Targets.Contains(state.EventsTarget)
 }

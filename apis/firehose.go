@@ -8,7 +8,6 @@
 package apis
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -19,9 +18,9 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/mappings"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/apis/transformations"
 	"chichi/apis/types"
 	"chichi/connector"
 )
@@ -36,6 +35,7 @@ const maxSettingsLen = 10_000 // Maximum length of settings in runes.
 type firehose struct {
 	db          *postgres.DB
 	connection  *state.Connection
+	action      *state.Action
 	resource    int
 	ctx         context.Context
 	cancel      context.CancelFunc
@@ -152,7 +152,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 		return
 	}
 
-	// Set the timestamps.
+	// Write the user properties to the database.
 	if timestamps == nil {
 		timestamps = map[string]time.Time{}
 	}
@@ -161,245 +161,34 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 			timestamps[name] = timestamp
 		}
 	}
-
-	// Serialize the properties and the timestamps to the database.
 	err := fh.writeConnectionUsers(user, properties, timestamps)
 	if err != nil {
 		fh.setError(err)
 		return
 	}
 
-	// Create a pool of transformation VMs.
-	//
-	// TODO(Gianluca): this is not necessary when there are no custom
-	// transformation function. When reviewing that part, also review this
-	// initialization.
-	pool := transformations.NewPool()
-
-	// Prepare the candidate data and timestamps.
-	candidateData := map[string]any{}
-	candidateTimestamps := map[string]time.Time{}
-
+	// Apply the mapping (or the transformation).
 	ctx := context.Background()
-
-	// If the connection has an associated transformation, run it.
-	if t := fh.connection.Transformation(); t != nil {
-
-		// Prepare the user for the transformation.
-		inPropsNames := t.In.PropertiesNames()
-		user := make(map[string]any, len(inPropsNames))
-		for _, name := range inPropsNames {
-			value, ok := properties[name]
-			if !ok {
-				fh.setError(importError{fmt.Errorf("property %q not found in connection %d", name, fh.connection.ID)})
-				return
-			}
-			user[name] = value
-		}
-		// Validate the input properties according to the input schema.
-		{
-			data, err := json.Marshal(user)
-			if err != nil {
-				fh.setError(err)
-				return
-			}
-			_, err = types.Decode(bytes.NewReader(data), t.In)
-			if err != nil {
-				fh.setError(importError{fmt.Errorf("input schema validation failed: %s", err)})
-				return
-			}
-		}
-		// Run the Python transformation function.
-		var err error
-		candidateData, err = pool.Run2(ctx, t.PythonSource, user)
-		if err != nil {
-			fh.setError(importError{fmt.Errorf("error while calling transformation function of mapping: %s", err)})
-			return
-		}
-		// Validate the properties returned by Python according to the output schema.
-		{
-			data, err := json.Marshal(candidateData)
-			if err != nil {
-				fh.setError(err)
-				return
-			}
-			_, err = types.Decode(bytes.NewReader(data), t.Out)
-			if err != nil {
-				fh.setError(importError{fmt.Errorf("output schema validation failed: %s", err)})
-				return
-			}
-		}
-		// Determine the timestamps for the updated properties.
-		ts := mostRecentTimestamp(timestamps, inPropsNames)
-		for _, name := range inPropsNames {
-			candidateTimestamps[name] = ts
-		}
-	}
-
-	// Apply the transformations of mappings, calculate the Golden Record
-	// properties and their relative timestamps for this user in this
-	// connection.
-	for _, m := range fh.connection.Mappings() {
-
-		// Ensure that the input properties exist.
-		for _, p := range m.InProperties {
-			if _, ok := properties[p]; !ok {
-				fh.setError(importError{fmt.Errorf("property %q not found in connection %d", p, fh.connection.ID)})
-				return
-			}
-		}
-
-		if m.PredefinedFunc == nil && m.CustomFunc == nil {
-
-			// "One to one" mapping.
-			candidateData[m.OutProperties[0]] = properties[m.InProperties[0]]
-			candidateTimestamps[m.OutProperties[0]] = timestamps[m.InProperties[0]]
-
-		} else if m.PredefinedFunc != nil {
-
-			// Predefined transformation.
-			f, _ := predefinedFuncDefinitionByID(*m.PredefinedFunc)
-			in := make([]any, len(m.InProperties))
-			// TODO(Gianluca): this code that makes the validation can be
-			// simplified by changing the APIs of the 'types' package.
-			values := map[string]any{}
-			for i, p := range m.InProperties {
-				values[p] = properties[p]
-				in[i] = properties[m.InProperties[i]]
-			}
-			j, _ := json.Marshal(values)
-			_, err := types.Decode(bytes.NewReader(j), f.In)
-			if err != nil {
-				fh.setError(importError{err})
-				return
-			}
-			out := callPredefinedFunc(f, in)
-			ts := mostRecentTimestamp(timestamps, m.InProperties)
-			for i, outName := range m.OutProperties {
-				candidateData[outName] = out[i]
-				candidateTimestamps[outName] = ts
-			}
-
-		} else {
-
-			// Mapping with a custom transformation function.
-
-			// Validate input properties.
-			{
-				values := map[string]any{}
-				for _, p := range m.InProperties {
-					values[p] = properties[p]
-				}
-				schema, _ := typesToSchema(m.CustomFunc.InTypes, m.InProperties)
-				j, _ := json.Marshal(values)
-				_, err = types.Decode(bytes.NewReader(j), schema)
-				if err != nil {
-					fh.setError(importError{err})
-					return
-				}
-			}
-
-			in := make([]any, len(m.InProperties))
-			for i := range in {
-				in[i] = properties[m.InProperties[i]]
-			}
-			out, err := pool.Run(ctx, m.CustomFunc.Source, in)
-			if err != nil {
-				fh.setError(importError{fmt.Errorf("error while calling transformation function of mapping: %s", err)})
-				return
-			}
-
-			// Validate output properties.
-			{
-				values := map[string]any{}
-				for i, p := range m.OutProperties {
-					values[p] = out[i]
-				}
-				schema, _ := typesToSchema(m.CustomFunc.OutTypes, m.OutProperties)
-				j, _ := json.Marshal(values)
-				_, err = types.Decode(bytes.NewReader(j), schema)
-				if err != nil {
-					fh.setError(importError{err})
-					return
-				}
-			}
-
-			ts := mostRecentTimestamp(timestamps, m.InProperties)
-			for i, name := range m.OutProperties {
-				candidateData[name] = out[i]
-				candidateTimestamps[name] = ts
-			}
-		}
-
-	}
-
-	email, _ := candidateData["Email"].(string)
-	if email == "" {
-		fh.setError(importError{fmt.Errorf("expecting 'Email' to be a non-empty string, got %#v (of type %T)", candidateData["Email"], candidateData["Email"])})
+	candidateData, err := mappings.Apply(ctx, fh.action, properties, types.Type{})
+	if err != nil {
+		fh.setError(actionExecutionError{fmt.Errorf("cannot apply mapping or transformation: %s", err)})
 		return
 	}
 
-	ids := identitySolver{fh}
-
 	// Resolve the entity of this user.
+	ids := identitySolver{fh}
+	email, _ := candidateData["Email"].(string)
+	if email == "" {
+		fh.setError(actionExecutionError{fmt.Errorf("expecting 'Email' to be a non-empty string, got %#v (of type %T)", candidateData["Email"], candidateData["Email"])})
+		return
+	}
 	goldenRecordID, err := ids.ResolveEntity(fh.connection.ID, user, email)
 	if err != nil {
 		fh.setError(err)
 		return
 	}
 
-	// Retrieve the entities which are the same user.
-	sameEntities, err := ids.LookupSameEntities(fh.connection.ID, user)
-	if err != nil {
-		fh.setError(fmt.Errorf("cannot lookup same entities for user %q: %s", user, err))
-		return
-	}
-
-	// Retrieve the mappings for the entities that match with the current user.
-	otherMappings, connectionOfMapping, err := fh.listMappings(keys(sameEntities))
-	if err != nil {
-		fh.setError(fmt.Errorf("cannot retrieve mappings for other entities: %s", err))
-		return
-	}
-
-	// Discard any incoming Golden Record property which is older than the
-	// existent properties.
-transfLoop:
-	for _, m := range otherMappings {
-		// For the connection of this mapping, determine the timestamps relative
-		// to the users which refers to the same identity.
-		for _, u := range sameEntities[connectionOfMapping[m]] {
-			entityData, err := fh.entityData(connectionOfMapping[m], u)
-			if err != nil {
-				fh.setError(err)
-				return
-			}
-			for name := range candidateData {
-				if _, ok := entityData.Timestamps[name]; !ok {
-					continue
-				}
-				ts := mostRecentTimestamp(entityData.Timestamps, m.InProperties)
-				if ts.After(candidateTimestamps[name]) {
-					// Don't update this Golden Record property.
-					delete(candidateData, name)
-					if len(candidateData) == 0 {
-						// Avoid useless iterations.
-						break transfLoop
-					}
-				}
-			}
-		}
-	}
-
-	// Write the data to the Golden Record.
-	//
-	// TODO(Gianluca): there may be a case when a property is written to the
-	// Golden Record, but such property is not present in the database anymore
-	// (or is no longer compatible).
-	// Consider this kind of error when reviewing the implementation of the part
-	// that writes values to the warehouse.
-	//
-	//
+	// Write the data to the Golden Record, if necessary.
 	if len(candidateData) > 0 {
 		err = fh.writeToGoldenRecord(goldenRecordID, candidateData)
 		if err != nil {
@@ -457,16 +246,17 @@ func (fh *firehose) SetUserGroups(user string, groups []string) {
 // WebhookURL returns the URL of the webhook.
 // If the connector does not support webhooks, it returns an empty string.
 func (fh *firehose) WebhookURL() string {
+	c := fh.connection
 	u := "https://localhost:9090/webhook/"
 	switch fh.webhooksPer {
 	case WebhooksPerNone:
 		return ""
 	case WebhooksPerConnector:
-		return u + "c/" + strconv.Itoa(fh.connection.Connector().ID) + "/"
+		return u + "c/" + strconv.Itoa(c.Connector().ID) + "/"
 	case WebhooksPerResource:
 		return u + "r/" + strconv.Itoa(fh.resource) + "/"
 	case WebhooksPerSource:
-		return u + "s/" + strconv.Itoa(fh.connection.ID) + "/"
+		return u + "s/" + strconv.Itoa(c.ID) + "/"
 	}
 	panic("unexpected webhooksPer value")
 }
@@ -494,23 +284,32 @@ func (fh *firehose) writeConnectionUsers(user string, props map[string]any, time
 	if err != nil {
 		return err
 	}
-	ws := fh.connection.Workspace()
+	c := fh.connection
+	ws := c.Workspace()
 	_, err = ws.Warehouse.Exec(fh.ctx, "INSERT INTO connections_users (connection, \"user\", data, timestamps)\n"+
 		"VALUES ($1, $2, $3, $4)\n"+
 		"ON CONFLICT (connection, \"user\") DO UPDATE SET data = $3, timestamps = $4",
-		fh.connection.ID, user, data, jsonTimestamps)
+		c.ID, user, data, jsonTimestamps)
 	if err != nil {
 		return err
 	}
 	_, err = fh.db.Exec(fh.ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, users_in)\n"+
 		"VALUES ($1, $2, 1)\n"+
 		"ON CONFLICT (connection, time_slot) DO UPDATE SET users_in = cs.users_in + 1",
-		fh.connection.ID, statsTimeSlot(time.Now()))
+		c.ID, statsTimeSlot(time.Now()))
 	return err
 }
 
 // writeToGoldenRecord writes the given properties to the Golden Record.
 func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
+
+	// TODO(Gianluca):
+	for _, v := range props {
+		if _, ok := v.(map[string]interface{}); ok {
+			return errors.New("writeToGoldenRecord is still partially implemented and does not support objects")
+		}
+	}
+
 	query := &strings.Builder{}
 	query.WriteString("UPDATE users SET\n")
 	var values []any
@@ -694,25 +493,6 @@ func keys[K comparable, V any](m map[K]V) []K {
 		keys = append(keys, k)
 	}
 	return keys
-}
-
-// listMappings lists the mappings for the given connections, and a map from the
-// Mapping to the corresponding connection ID.
-func (fh *firehose) listMappings(connections []int) ([]*state.Mapping, map[*state.Mapping]int, error) {
-	var mappings []*state.Mapping
-	connectionOfMapping := map[*state.Mapping]int{}
-	for _, c := range connections {
-		ws := fh.connection.Workspace()
-		conn, ok := ws.Connection(c)
-		if !ok {
-			return nil, nil, fmt.Errorf("connection %d does not exist anymore", c)
-		}
-		mappings = append(mappings, conn.Mappings()...)
-		for _, m := range conn.Mappings() {
-			connectionOfMapping[m] = c
-		}
-	}
-	return mappings, connectionOfMapping, nil
 }
 
 // mostRecentTimestamp returns the most recent timestamp referred by a property.

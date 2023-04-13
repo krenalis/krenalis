@@ -14,12 +14,9 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
-
-	"chichi/apis"
 )
 
 type ProcessedEvent struct {
@@ -107,20 +104,6 @@ func ImportUsersFromConnection(connection int, reimport bool) {
 func ExportUsersToConnection(connection int) {
 	path := "api/connections/" + strconv.Itoa(connection) + "/export"
 	err := callAPI("POST", path, nil, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func GetMappings(connection int) {
-	var mappings []apis.Mapping
-	err := callAPI("GET", "api/connections/"+strconv.Itoa(connection)+"/mappings", nil, &mappings)
-	if err != nil {
-		log.Fatal(err)
-	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	err = enc.Encode(mappings)
 	if err != nil {
 		log.Fatal(err)
 	}

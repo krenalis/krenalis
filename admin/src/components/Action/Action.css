@@ -10,25 +10,52 @@
     justify-content: end;
 }
 
-.action .actionType {
+.action .saveWrapper sl-button::part(base) {
+    min-width: 200px;
+}
+
+.action .actionInfo {
     margin-bottom: 50px;
 }
 
-.action .actionType .actionTypeLogo {
+.action .actionInfo .actionTypeLogo {
     display: block;
     max-height: 50px;
     width: auto;
     margin: auto;
 }
 
-.action .actionType .actionTypeName {
+.action .actionInfo .actionName {
     font-weight: 600;
     font-size: 19px;
     text-align: center;
     margin-top: 10px;
 }
 
-.action .actionType .actionTypeDescription {
+.action .actionInfo .actionName .name {
+    position: relative;
+}
+
+.action .actionInfo .actionName .nameInput {
+    max-width: 180px;
+    display: inline-block;
+    margin: auto;
+    margin-bottom: 5px;
+}
+
+.action .actionInfo .actionName .nameInput::part(base) {
+    font-size: 14px;
+}
+
+.action .actionInfo .actionName .name sl-icon-button {
+    position: absolute;
+    font-size: 15px;
+    right: -30px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.action .actionInfo .actionTypeDescription {
     text-align: center;
 }
 
@@ -132,12 +159,16 @@
     right: 0;
     top: 50%;
     transform: translate(50%, -50%);
-    background-color: var(--bg-primary);
+    background-color: var(--bg-gray);
 }
 
 .action .transformation .property .removeProperty::part(base) {
     border: 0;
     padding: 0;
+}
+
+.action .transformation .property .removeProperty::part(base):hover { 
+    background-color: transparent!important;
 }
 
 .action .transformation .property .removeProperty::part(label) { 
@@ -148,37 +179,54 @@
     color: var(--sl-color-danger-600);
 }
 
-.eventSchemaDialog::part(panel),
-.actionTypeSchemaDialog::part(panel) {
+.inputSchemaDialog::part(panel),
+.outputSchemaDialog::part(panel) {
     max-height: 600px;
 	padding: 5px 0px 30px 10px;
 }
 
-.eventSchemaDialog .property,
-.actionTypeSchemaDialog .property {
+.inputSchemaDialog .property,
+.outputSchemaDialog .property {
     margin-bottom: 15px;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.eventSchemaDialog .property:last-child,
-.actionTypeSchemaDialog .property:last-child {
+.inputSchemaDialog .property:last-child,
+.outputSchemaDialog .property:last-child {
     margin-bottom: 0;
 }
 
-.eventSchemaDialog .property.used .name,
-.actionTypeSchemaDialog .property.used .name {
+.inputSchemaDialog .property.used .name,
+.outputSchemaDialog .property.used .name {
     font-weight: 600;
 }
 
-.eventSchemaDialog .property.used .name,
-.actionTypeSchemaDialog .property.used .name {
+.inputSchemaDialog .property.used .name,
+.outputSchemaDialog .property.used .name {
     text-decoration: line-through;
 }
 
-.eventSchemaDialog .property .type,
-.actionTypeSchemaDialog .property .type {
+.inputSchemaDialog .property .type,
+.outputSchemaDialog .property .type {
     opacity: .7;
     font-size: 14px;
+}
+
+.action .queryButtons {
+    margin-top: 15px;
+    display: flex;
+    gap: 15px;
+}
+
+.action .setSchemaFirst {
+    text-align: center;
+    font-weight: 600;
+}
+
+.action .previewDrawer .StyledGrid,
+.action .previewDrawer .StyledGrid .Grid {
+    height: 100%;
+    display: block;
 }

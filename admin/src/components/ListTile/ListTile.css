@@ -1,0 +1,54 @@
+.listTile {
+    display: grid;
+    grid-template-columns: 50px 1fr 20px;
+    grid-template-areas:
+        "icon name chevron"
+        "icon description chevron"
+    ;
+    align-items: center;
+    border: 1px solid var(--sl-color-neutral-200);
+    padding: 18px 25px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color;
+}
+
+.listTile:hover {
+    background-color: #fbfbfb;
+}
+
+.listTile.disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.listTile.disabled:hover {
+    background-color: transparent;
+}
+
+.listTile .tileIcon {
+    grid-area: icon;
+}
+
+.listTile .tileIcon sl-icon {
+    font-size: 25px;
+}
+
+.listTile .tileName {
+    grid-area: name;
+    font-weight: 600;
+}
+
+.listTile .tileDescription {
+    grid-area: description;
+    font-size: 14px;
+}
+
+.listTile .tileDescription .disablingReason {
+    color: var(--sl-color-danger-600);
+}
+
+.listTile .tileChevron {
+    grid-area: chevron;
+}
+

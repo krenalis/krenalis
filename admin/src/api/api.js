@@ -60,7 +60,7 @@ class Connections {
 	};
 
 	query = async (connection, query, limit) => {
-		return await call(`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/query`, http.POST, {
+		return await call(`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/exec-query`, http.POST, {
 			query: query,
 			limit: limit,
 		});
@@ -143,6 +143,36 @@ class Connections {
 		return await call(`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/action-types`, http.GET);
 	};
 
+	usersAction = async (connection) => {
+		return await call(
+			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/action-types/Users`,
+			http.GET
+		);
+	};
+
+	groupsAction = async (connection) => {
+		return await call(
+			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/action-types/Groups`,
+			http.GET
+		);
+	};
+
+	eventsAction = async (connection) => {
+		return await call(
+			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/action-types/Events`,
+			http.GET
+		);
+	};
+
+	eventAction = async (connection, eventType) => {
+		return await call(
+			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/action-types/Events/${encodeURIComponent(
+				eventType
+			)}`,
+			http.GET
+		);
+	};
+
 	actions = async (connection) => {
 		return await call(`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/actions`, http.GET);
 	};
@@ -177,6 +207,16 @@ class Connections {
 			)}/status`,
 			http.POST,
 			{ Enabled: enabled }
+		);
+	};
+
+	executeAction = async (connection, action, reimport) => {
+		return await call(
+			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(
+				action
+			)}/execute`,
+			http.POST,
+			{ Reimport: reimport }
 		);
 	};
 }

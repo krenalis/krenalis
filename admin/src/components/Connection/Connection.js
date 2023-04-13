@@ -71,13 +71,6 @@ const Connection = () => {
 					<SlIcon name='activity'></SlIcon>
 					Overview
 				</div>
-				{c.Type === 'Database' && c.Role === 'Source' && (
-					<div className={`link${currentSection === 'sql' ? ' selected' : ''}`}>
-						<NavLink to='sql'></NavLink>
-						<SlIcon name='filetype-sql'></SlIcon>
-						SQL Query
-					</div>
-				)}
 				{(c.Type === 'Mobile' || c.Type === 'Website' || c.Type === 'Server' || c.Type === 'Stream') && (
 					<div className={`link${currentSection === 'events' ? ' selected' : ''}`}>
 						<NavLink to='events'></NavLink>
@@ -85,27 +78,13 @@ const Connection = () => {
 						Live events
 					</div>
 				)}
-				{c.Role === 'Destination' && (
+				{
 					<div className={`link${currentSection === 'actions' ? ' selected' : ''}`}>
 						<NavLink to='actions'></NavLink>
 						<SlIcon name='send-exclamation'></SlIcon>
 						Actions
 					</div>
-				)}
-				{(c.Type === 'App' || c.Type === 'Database' || c.Type === 'File') && (
-					<div className={`link${currentSection === 'mappings' ? ' selected' : ''}`}>
-						<NavLink to='mappings'></NavLink>
-						<SlIcon name='diagram-3'></SlIcon>
-						Mappings
-					</div>
-				)}
-				{(c.Type === 'App' || c.Type === 'Database' || c.Type === 'File') && (
-					<div className={`link${currentSection === 'transformation' ? ' selected' : ''}`}>
-						<NavLink to='transformation'></NavLink>
-						<SlIcon name='braces'></SlIcon>
-						Transformation
-					</div>
-				)}
+				}
 				<div className={`link${currentSection === 'settings' ? ' selected' : ''}`}>
 					<NavLink to='settings'></NavLink>
 					<SlIcon name='sliders2'></SlIcon>

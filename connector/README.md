@@ -1,7 +1,15 @@
 
 ## Connection
 
-### ServeUserInterface
+### ServeUI
+
+* Settings
+* Firehose
+* ClientSecret (only for app connections)
+* Resource     (only for app connections)
+* AccessToken  (only for app connections)
+
+### SettingsUI
 
 * Settings
 * Firehose
@@ -11,6 +19,30 @@
 
 ## AppConnection
 
+### EventTypes
+
+* Settings
+* ClientSecret
+* Resource
+* AccessToken
+* PrivacyRegion
+
+### EventTypeSchema
+
+* Settings
+* ClientSecret
+* Resource
+* AccessToken
+* PrivacyRegion
+
+### GroupSchema
+
+* Settings
+* ClientSecret
+* Resource
+* AccessToken
+* PrivacyRegion
+
 ### Groups
 
 * Settings
@@ -18,14 +50,7 @@
 * ClientSecret
 * Resource
 * AccessToken
-
-### Properties
-
-* Settings
-* Firehose
-* ClientSecret
-* Resource
-* AccessToken
+* PrivacyRegion
 
 ### ReceiveWebhook
 
@@ -51,10 +76,21 @@ If webhooksPer is "Connection":
 
 * ClientSecret
 * AccessToken
+* PrivacyRegion
 
 ### SendEvent
 
 * Settings
+* PrivacyRegion
+
+### SetGroups
+
+* Settings
+* Firehose
+* ClientSecret
+* Resource
+* AccessToken
+* PrivacyRegion
 
 ### SetUsers
 
@@ -63,6 +99,15 @@ If webhooksPer is "Connection":
 * ClientSecret
 * Resource
 * AccessToken
+* PrivacyRegion
+
+### UserSchema
+
+* Settings
+* ClientSecret
+* Resource
+* AccessToken
+* PrivacyRegio
 
 ### Users
 
@@ -71,6 +116,7 @@ If webhooksPer is "Connection":
 * ClientSecret
 * Resource
 * AccessToken
+* PrivacyRegion
 
 ## DatabaseConnection
 

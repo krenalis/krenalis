@@ -49,8 +49,8 @@ func (log *eventsLog) Append(events []*collectedEvent) <-chan error {
 	return ack
 }
 
-// Delivered sets the event, with identifier id, as delivered to the endpoint
-// of the given action.
+// Delivered sets the event, with identifier id, as delivered for the given
+// action.
 func (log *eventsLog) Delivered(id ksuid.KSUID, action int) {
 	now := time.Now().UTC()
 	go func() {

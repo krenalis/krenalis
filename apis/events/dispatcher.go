@@ -51,7 +51,7 @@ func (d *Dispatcher) Done() chan<- *processedEvent {
 // queueKey represents a key in queues map.
 type queueKey struct {
 	destination int // destination connection.
-	endpoint    int // action's endpoint.
+	endpoint    int // endpoint.
 }
 
 // dispatch dispatches the events. It is called in its own goroutine by the newEventsLog

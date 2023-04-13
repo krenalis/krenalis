@@ -10,7 +10,6 @@ package state
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -30,33 +29,35 @@ import (
 const logNotifications = false
 
 // AddListener adds a notification listener.
-// It panics if it is called after Keep is called.
+// It must be called before Keep is called or in a listener execution.
 func (state *State) AddListener(listener any) {
-	state.mu.Lock()
-	keeping := state.keeping
-	state.mu.Unlock()
-	if keeping {
-		panic(errors.New("state: cannot call AddListener after Keep has been called"))
-	}
 	switch l := listener.(type) {
+	case func(AddActionNotification):
+		state.listeners.AddAction = append(state.listeners.AddAction, l)
 	case func(AddConnectionNotification):
 		state.listeners.AddConnection = append(state.listeners.AddConnection, l)
-	case func(AddImportInProgressNotification):
-		state.listeners.AddImportInProgress = append(state.listeners.AddImportInProgress, l)
+	case func(DeleteActionNotification):
+		state.listeners.DeleteAction = append(state.listeners.DeleteAction, l)
 	case func(DeleteConnectionNotification):
 		state.listeners.DeleteConnection = append(state.listeners.DeleteConnection, l)
 	case func(DeleteWorkspaceNotification):
 		state.listeners.DeleteWorkspace = append(state.listeners.DeleteWorkspace, l)
 	case func(ElectLeaderNotification):
 		state.listeners.ElectLeader = append(state.listeners.ElectLeader, l)
+	case func(ExecuteActionNotification):
+		state.listeners.ExecuteAction = append(state.listeners.ExecuteAction, l)
+	case func(SetActionNotification):
+		state.listeners.SetAction = append(state.listeners.SetAction, l)
+	case func(SetActionSchedulePeriodNotification):
+		state.listeners.SetActionSchedulePeriod = append(state.listeners.SetActionSchedulePeriod, l)
 	case func(SetConnectionSettingsNotification):
 		state.listeners.SetConnectionSettings = append(state.listeners.SetConnectionSettings, l)
 	case func(SetConnectionStatusNotification):
 		state.listeners.SetConnectionStatus = append(state.listeners.SetConnectionStatus, l)
-	case func(SetConnectionUserQueryNotification):
-		state.listeners.SetConnectionUserQuery = append(state.listeners.SetConnectionUserQuery, l)
 	case func(SetWarehouseSettingsNotification):
 		state.listeners.SetWarehouseSettings = append(state.listeners.SetWarehouseSettings, l)
+	case func(SetWorkspacePrivacyRegion):
+		state.listeners.SetWorkspacePrivacyRegion = append(state.listeners.SetWorkspacePrivacyRegion, l)
 	default:
 		panic(fmt.Sprintf("state: unexpected listener type %T", listener))
 	}
@@ -64,9 +65,6 @@ func (state *State) AddListener(listener any) {
 
 // Keep keeps the state updated.
 func (state *State) Keep() {
-	state.mu.Lock()
-	state.keeping = true
-	state.mu.Unlock()
 	go state.keepState()
 }
 
@@ -90,26 +88,26 @@ func (state *State) keepState() {
 			continue
 		}
 		switch n.Name {
+		case "AddAction":
+			state.addAction(n)
 		case "AddConnection":
 			state.addConnection(n)
-		case "AddConnectionAction":
-			state.addConnectionAction(n)
 		case "AddConnectionKey":
 			state.addConnectionKey(n)
-		case "AddImportInProgress":
-			state.addImportInProgress(n)
 		case "AddWorkspace":
 			state.addWorkspace(n)
+		case "DeleteAction":
+			state.deleteAction(n)
 		case "DeleteConnection":
 			state.deleteConnection(n)
-		case "DeleteConnectionAction":
-			state.deleteConnectionAction(n)
-		case "DeleteImportInProgress":
-			state.deleteImportInProgress(n)
 		case "DeleteWorkspace":
 			state.deleteWorkspace(n)
 		case "ElectLeader":
 			state.electLeader(n)
+		case "EndActionExecution":
+			state.endActionExecution(n)
+		case "ExecuteAction":
+			state.executeAction(n)
 		case "LoadState":
 			state.loadState(n)
 		case "RenameConnection":
@@ -118,34 +116,30 @@ func (state *State) keepState() {
 			state.renameWorkspace(n)
 		case "RevokeConnectionKey":
 			state.revokeConnectionKey(n)
-		case "SetConnectionAction":
-			state.setConnectionAction(n)
-		case "SetConnectionActionStatus":
-			state.setConnectionActionStatus(n)
-		case "SetConnectionActionTypes":
-			state.setConnectionActionTypes(n)
 		case "SeeLeader":
 			state.seeLeader(n)
+		case "SetAction":
+			state.setAction(n)
+		case "SetActionSchedulePeriod":
+			state.setActionSchedulePeriod(n)
+		case "SetActionSchema":
+			state.setActionSchema(n)
+		case "SetActionStatus":
+			state.setActionStatus(n)
 		case "SetConnectionSettings":
 			state.setConnectionSettings(n)
 		case "SetConnectionStorage":
 			state.setConnectionStorage(n)
 		case "SetConnectionStatus":
 			state.setConnectionStatus(n)
-		case "SetConnectionTransformation":
-			state.setConnectionTransformation(n)
-		case "SetConnectionMappings":
-			state.setConnectionMappings(n)
-		case "SetConnectionUserQuery":
-			state.setConnectionUserQuery(n)
-		case "SetConnectionUserSchema":
-			state.setConnectionUserSchema(n)
 		case "SetResource":
 			state.setResource(n)
 		case "SetWarehouseSettings":
 			state.setWarehouseSettings(n)
 		case "SetWorkspaceSchemas":
 			state.setWorkspaceSchemas(n)
+		case "SetWorkspacePrivacyRegion":
+			state.setWorkspacePrivacyRegion(n)
 		default:
 			log.Printf("[warning] unknown notification %q received from %d: %s", n.Name, n.PID, n.Payload)
 		}
@@ -198,23 +192,23 @@ func (state *State) replaceConnection(id int, f func(*Connection)) *Connection {
 	ws.mu.Lock()
 	ws.connections[id] = cc
 	ws.mu.Unlock()
-	// Update the connections.
-	for _, connection := range ws.connections {
-		if connection.storage == c {
-			connection.mu.Lock()
-			connection.storage = cc
-			connection.mu.Unlock()
-		}
-		if imp := connection.importInProgress; imp != nil {
-			if imp.connection == c {
-				imp.mu.Lock()
-				imp.connection = cc
-				imp.mu.Unlock()
+	// Update the storage in the connections.
+	if c.connector.Type == StorageType {
+		for _, connection := range ws.connections {
+			if connection == c {
+				continue
 			}
-			if imp.storage == c {
-				imp.mu.Lock()
-				imp.storage = cc
-				imp.mu.Unlock()
+			if connection.storage == c {
+				connection.mu.Lock()
+				connection.storage = cc
+				connection.mu.Unlock()
+			}
+			for _, action := range connection.actions {
+				if ex := action.execution; ex != nil && ex.storage == c {
+					ex.mu.Lock()
+					ex.storage = cc
+					ex.mu.Unlock()
+				}
 			}
 		}
 	}
@@ -274,7 +268,6 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 			connection.workspace = ww
 			connection.mu.Unlock()
 		}
-
 	}
 	// Update the resources.
 	for _, resource := range ww.resources {
@@ -285,6 +278,57 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 		}
 	}
 	return ww
+}
+
+// AddActionNotification is the notification event sent when an action is added.
+type AddActionNotification struct {
+	ID             int
+	Connection     int
+	Target         ActionTarget
+	EventType      string
+	Name           string
+	Enabled        bool
+	ScheduleStart  int16
+	SchedulePeriod int16
+	Filter         *ActionFilter
+	Schema         types.Type
+	Mapping        map[string]string
+	Transformation *Transformation
+	Query          string
+}
+
+// addAction adds a new action.
+func (state *State) addAction(n postgres.Notification) {
+	e := AddActionNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	c := state.connections[e.Connection]
+	action := &Action{
+		mu:             new(sync.Mutex),
+		ID:             e.ID,
+		connection:     c,
+		Target:         e.Target,
+		Name:           e.Name,
+		Enabled:        e.Enabled,
+		EventType:      e.EventType,
+		ScheduleStart:  e.ScheduleStart,
+		SchedulePeriod: e.SchedulePeriod,
+		Filter:         e.Filter,
+		Schema:         e.Schema,
+		Mapping:        e.Mapping,
+		Transformation: e.Transformation,
+		Query:          e.Query,
+	}
+	state.mu.Lock()
+	state.actions[e.ID] = action
+	state.mu.Unlock()
+	c.mu.Lock()
+	c.actions[e.ID] = action
+	c.mu.Unlock()
+	for _, listener := range state.listeners.AddAction {
+		listener(e)
+	}
 }
 
 // AddConnectionNotification is the notification event sent when a new
@@ -410,99 +454,44 @@ func (state *State) addConnectionKey(n postgres.Notification) {
 	state.mu.Unlock()
 }
 
-// AddConnectionActionNotification is the notification event sent when a
-// connection action is added.
-type AddConnectionActionNotification struct {
-	ID             int
-	Connection     int
-	ActionType     int
-	Name           string
-	Enabled        bool
-	Endpoint       int
-	Filter         ActionFilterNotification
-	Mapping        map[string]string
-	Transformation *Transformation
+// ExecuteActionNotification is the notification event sent when an action is
+// executed.
+type ExecuteActionNotification struct {
+	ID        int
+	Action    int
+	Storage   int
+	Reimport  bool
+	StartTime time.Time
 }
 
-// ActionFilterNotification represents the action filter associated to a
-// notification which adds or sets an action.
-type ActionFilterNotification struct {
-	Logical    string
-	Conditions []ActionFilterConditionNotification
-}
-
-// ActionFilterConditionNotification represents one of the action filter
-// conditions associated to a notification which adds or sets an action.
-type ActionFilterConditionNotification struct {
-	Property string
-	Operator string
-	Value    string
-}
-
-// addConnectionAction adds a new connection action.
-func (state *State) addConnectionAction(n postgres.Notification) {
-	e := AddConnectionActionNotification{}
+// executeAction executes an action.
+func (state *State) executeAction(n postgres.Notification) {
+	e := ExecuteActionNotification{}
 	if !decodeNotification(n, &e) {
 		return
 	}
-	c := state.connections[e.Connection]
-	action := &Action{
-		mu:             new(sync.Mutex),
-		ID:             e.ID,
-		connection:     c,
-		ActionType:     c.actionTypes[e.ActionType],
-		Name:           e.Name,
-		Enabled:        e.Enabled,
-		Endpoint:       e.Endpoint,
-		Mapping:        e.Mapping,
-		Transformation: e.Transformation,
+	a := state.actions[e.Action]
+	var storage *Connection
+	if e.Storage > 0 {
+		storage = state.connections[e.Storage]
 	}
-	action.Filter.Logical = e.Filter.Logical
-	action.Filter.Conditions = make([]ActionFilterCondition, len(e.Filter.Conditions))
-	for i := range action.Filter.Conditions {
-		action.Filter.Conditions[i] = ActionFilterCondition(e.Filter.Conditions[i])
+	a.mu.Lock()
+	a.execution = &ActionExecution{
+		mu:        &sync.Mutex{},
+		ID:        e.ID,
+		action:    a,
+		storage:   storage,
+		Reimport:  e.Reimport,
+		StartTime: e.StartTime,
 	}
-	state.mu.Lock()
-	state.actions[e.ID] = action
-	state.mu.Unlock()
-	c.mu.Lock()
-	c.actions[e.ID] = action
-	c.mu.Unlock()
-}
-
-// AddImportInProgressNotification is the notification event sent when an
-// import in progress is added.
-type AddImportInProgressNotification struct {
-	ID         int
-	Connection int
-	Storage    int
-	Reimport   bool
-	StartTime  time.Time
-}
-
-// addImportInProgress adds an import in progress.
-func (state *State) addImportInProgress(n postgres.Notification) {
-	e := AddImportInProgressNotification{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	c := state.connections[e.Connection]
-	c.mu.Lock()
-	c.importInProgress = &ImportInProgress{
-		mu:         new(sync.Mutex),
-		ID:         e.ID,
-		connection: c,
-		storage:    state.connections[e.Storage],
-		Reimport:   e.Reimport,
-		StartTime:  e.StartTime,
-	}
-	c.mu.Unlock()
-	for _, listener := range state.listeners.AddImportInProgress {
+	a.mu.Unlock()
+	for _, listener := range state.listeners.ExecuteAction {
 		listener(e)
 	}
 }
 
-// AddWorkspaceNotification is the notification event sent when a workspace is added.
+// AddWorkspaceNotification is the notification event sent when a workspace is
+// added.
 type AddWorkspaceNotification struct {
 	ID        int
 	Account   int
@@ -511,6 +500,7 @@ type AddWorkspaceNotification struct {
 		Type     WarehouseType
 		Settings json.RawMessage `json:",omitempty"`
 	}
+	PrivacyRegion PrivacyRegion
 }
 
 // addWorkspace adds a workspace.
@@ -540,6 +530,31 @@ func (state *State) addWorkspace(n postgres.Notification) {
 	account.mu.Lock()
 	account.workspaces[e.ID] = &ws
 	account.mu.Unlock()
+}
+
+// DeleteActionNotification is the notification event sent when an action is
+// deleted.
+type DeleteActionNotification struct {
+	Connection int
+	ID         int
+}
+
+// deleteAction deletes an action.
+func (state *State) deleteAction(n postgres.Notification) {
+	e := DeleteActionNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.mu.Lock()
+	delete(state.actions, e.ID)
+	state.mu.Unlock()
+	c := state.connections[e.Connection]
+	c.mu.Lock()
+	delete(c.actions, e.ID)
+	c.mu.Unlock()
+	for _, listener := range state.listeners.DeleteAction {
+		listener(e)
+	}
 }
 
 // DeleteConnectionNotification is the notification event sent when a
@@ -586,46 +601,24 @@ func (state *State) deleteConnection(n postgres.Notification) {
 	}
 }
 
-// DeleteConnectionActionNotification is the notification event sent when a
-// connection action is deleted.
-type DeleteConnectionActionNotification struct {
-	Connection int
-	ID         int
-}
-
-// deleteConnectionAction deletes a connection action.
-func (state *State) deleteConnectionAction(n postgres.Notification) {
-	e := DeleteConnectionActionNotification{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.mu.Lock()
-	delete(state.actions, e.ID)
-	state.mu.Unlock()
-	c := state.connections[e.Connection]
-	c.mu.Lock()
-	delete(c.actions, e.ID)
-	c.mu.Unlock()
-}
-
-// DeleteImportInProgressNotification is the notification event sent when an
-// import in progress is deleted.
-type DeleteImportInProgressNotification struct {
+// EndActionExecutionNotification is the notification event sent when action
+// execution ends.
+type EndActionExecutionNotification struct {
 	ID     int
-	Health ConnectionHealth
+	Health Health
 }
 
-// deleteImportInProgress deletes an import in progress.
-func (state *State) deleteImportInProgress(n postgres.Notification) {
-	e := DeleteImportInProgressNotification{}
+// endActionExecution ends an action execution in progress.
+func (state *State) endActionExecution(n postgres.Notification) {
+	e := EndActionExecutionNotification{}
 	if !decodeNotification(n, &e) {
 		return
 	}
-	for _, c := range state.connections {
-		if imp := c.importInProgress; imp != nil && imp.ID == e.ID {
-			state.replaceConnection(c.ID, func(c *Connection) {
-				c.importInProgress = nil
-				c.Health = e.Health
+	for _, a := range state.actions {
+		if ex := a.execution; ex != nil && ex.ID == e.ID {
+			state.replaceAction(a.ID, func(a *Action) {
+				a.execution = nil
+				a.Health = e.Health
 			})
 			break
 		}
@@ -797,80 +790,93 @@ func (state *State) seeLeader(n postgres.Notification) {
 	state.mu.Unlock()
 }
 
-// SetConnectionActionNotification is the notification sent when a connection
-// action is set.
-type SetConnectionActionNotification struct {
+// SetActionNotification is the notification sent when an action is set.
+type SetActionNotification struct {
 	ID             int
-	Connection     int
-	ActionType     int
 	Name           string
 	Enabled        bool
-	Endpoint       int
-	Filter         ActionFilterNotification
+	Filter         *ActionFilter
+	Schema         types.Type
 	Mapping        map[string]string
 	Transformation *Transformation
+	Query          string
 }
 
-// setConnectionAction sets a connection action.
-func (state *State) setConnectionAction(n postgres.Notification) {
-	e := SetConnectionActionNotification{}
+// setAction sets an action.
+func (state *State) setAction(n postgres.Notification) {
+	e := SetActionNotification{}
 	if !decodeNotification(n, &e) {
 		return
 	}
 	state.replaceAction(e.ID, func(a *Action) {
-		a.ActionType = a.connection.actionTypes[e.ActionType]
 		a.Name = e.Name
 		a.Enabled = e.Enabled
-		a.Endpoint = e.Endpoint
-		a.Filter.Logical = e.Filter.Logical
-		a.Filter.Conditions = make([]ActionFilterCondition, len(e.Filter.Conditions))
-		for i := range a.Filter.Conditions {
-			a.Filter.Conditions[i] = ActionFilterCondition(e.Filter.Conditions[i])
-		}
+		a.Filter = e.Filter
+		a.Schema = e.Schema
 		a.Mapping = e.Mapping
 		a.Transformation = e.Transformation
+		a.Query = e.Query
+	})
+	for _, listener := range state.listeners.SetAction {
+		listener(e)
+	}
+}
+
+// SetActionSchedulePeriodNotification is the notification sent when the
+// schedule period of an action is set.
+type SetActionSchedulePeriodNotification struct {
+	ID             int
+	SchedulePeriod int16
+}
+
+// setActionSchedulePeriod sets the schedule period of an action.
+func (state *State) setActionSchedulePeriod(n postgres.Notification) {
+	e := SetActionSchedulePeriodNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceAction(e.ID, func(a *Action) {
+		a.SchedulePeriod = e.SchedulePeriod
+	})
+	for _, listener := range state.listeners.SetActionSchedulePeriod {
+		listener(e)
+	}
+}
+
+// SetActionSchemaNotification is the notification event sent when the schema of
+// an action is changed.
+type SetActionSchemaNotification struct {
+	ID     int
+	Schema types.Type
+}
+
+// setActionSchema sets the schema of an action.
+func (state *State) setActionSchema(n postgres.Notification) {
+	e := SetActionSchemaNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceAction(e.ID, func(a *Action) {
+		a.Schema = e.Schema
 	})
 }
 
-// SetConnectionActionStatusNotification is the notification sent when the
-// status of a connection action is set.
-type SetConnectionActionStatusNotification struct {
+// SetActionStatusNotification is the notification sent when the status of an
+// action is set.
+type SetActionStatusNotification struct {
 	ID      int
 	Enabled bool
 }
 
-// setConnectionActionStatus sets the status of a connection action.
-func (state *State) setConnectionActionStatus(n postgres.Notification) {
-	e := AddConnectionActionNotification{}
+// setActionStatus sets the status of an action.
+func (state *State) setActionStatus(n postgres.Notification) {
+	e := SetActionStatusNotification{}
 	if !decodeNotification(n, &e) {
 		return
 	}
 	state.replaceAction(e.ID, func(a *Action) {
 		a.Enabled = e.Enabled
 	})
-}
-
-// SetConnectionActionTypesNotification is the notification sent when the
-// action types of a connection are set.
-type SetConnectionActionTypesNotification struct {
-	Connection  int
-	ActionTypes []*ActionType
-}
-
-// setConnectionActionTypes sets the action types of a connection.
-func (state *State) setConnectionActionTypes(n postgres.Notification) {
-	e := SetConnectionActionTypesNotification{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	c := state.connections[e.Connection]
-	actionTypes := make(map[int]*ActionType, len(e.ActionTypes))
-	for _, at := range e.ActionTypes {
-		actionTypes[at.ID] = at
-	}
-	c.mu.Lock()
-	c.actionTypes = actionTypes
-	c.mu.Unlock()
 }
 
 // SetConnectionSettingsNotification is the notification event sent when the
@@ -933,83 +939,6 @@ func (state *State) setConnectionStorage(n postgres.Notification) {
 	c.mu.Lock()
 	c.storage = storage
 	c.mu.Unlock()
-}
-
-// SetConnectionTransformationNotification is the notification event sent when
-// the transformation of a connection is set.
-type SetConnectionTransformationNotification struct {
-	Connection     int
-	Transformation *Transformation // nil means no transformation.
-}
-
-// setConnectionTransformation sets the transformation of a connection.
-func (state *State) setConnectionTransformation(n postgres.Notification) {
-	e := SetConnectionTransformationNotification{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	c := state.connections[e.Connection]
-	c.mu.Lock()
-	c.transformation = e.Transformation
-	c.mu.Unlock()
-}
-
-// SetConnectionMappingsNotification is the notification event sent when the
-// mappings of a connection are saved.
-type SetConnectionMappingsNotification struct {
-	Connection int
-	Mappings   []*Mapping
-}
-
-// setConnectionMappings sets the mappings of a connection.
-func (state *State) setConnectionMappings(n postgres.Notification) {
-	e := SetConnectionMappingsNotification{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	c := state.connections[e.Connection]
-	c.mu.Lock()
-	c.mappings = e.Mappings
-	c.mu.Unlock()
-}
-
-// SetConnectionUserQueryNotification is the notification event sent when a
-// user query of a connection is changed.
-type SetConnectionUserQueryNotification struct {
-	Connection int
-	Query      string
-}
-
-// setConnectionUserQuery sets the user query of a connection.
-func (state *State) setConnectionUserQuery(n postgres.Notification) {
-	e := SetConnectionUserQueryNotification{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceConnection(e.Connection, func(c *Connection) {
-		c.UsersQuery = e.Query
-	})
-	for _, listener := range state.listeners.SetConnectionUserQuery {
-		listener(e)
-	}
-}
-
-// SetConnectionUserSchemaNotification is the notification event sent when the
-// user schema of a connection is changed.
-type SetConnectionUserSchemaNotification struct {
-	Connection int
-	Schema     types.Type
-}
-
-// setConnectionUserSchema sets the user schema of a connection.
-func (state *State) setConnectionUserSchema(n postgres.Notification) {
-	e := SetConnectionUserSchemaNotification{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceConnection(e.Connection, func(c *Connection) {
-		c.Schema = e.Schema
-	})
 }
 
 // SetResourceNotification is the notification event sent when a resource is
@@ -1102,6 +1031,27 @@ func (state *State) setWorkspaceSchemas(n postgres.Notification) {
 		}
 		w.Schemas = e.Schemas
 	})
+}
+
+// SetWorkspacePrivacyRegion is the notification event sent when the privacy
+// region of a workspace is changed.
+type SetWorkspacePrivacyRegion struct {
+	Workspace     int
+	PrivacyRegion PrivacyRegion
+}
+
+// setWorkspacePrivacyRegion sets the privacy region of a workspace.
+func (state *State) setWorkspacePrivacyRegion(n postgres.Notification) {
+	e := SetWorkspacePrivacyRegion{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.PrivacyRegion = e.PrivacyRegion
+	})
+	for _, listener := range state.listeners.SetWorkspacePrivacyRegion {
+		listener(e)
+	}
 }
 
 // openWarehouse opens a data warehouse with the given type and settings.

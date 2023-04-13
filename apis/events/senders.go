@@ -28,7 +28,7 @@ func startSenders(ctx context.Context, events <-chan *processedEvent, done chan<
 						continue
 					}
 					// TODO(Gianluca): use correct error handling here.
-					err := destination.SendEvent(event.inEvent, event.mappedEvent, event.actionType, event.endpoint)
+					err := destination.SendEvent(event.inEvent, event.mappedEvent, event.eventType)
 					if err != nil {
 						log.Printf("cannot send event: %s", err)
 						continue

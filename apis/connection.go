@@ -16,16 +16,16 @@ import (
 	"fmt"
 	"io"
 	"math"
+	mathrand "math/rand"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"chichi/apis/errors"
+	"chichi/apis/events"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/apis/transformations"
 	"chichi/apis/types"
 	_connector "chichi/connector"
 	"chichi/connector/ui"
@@ -42,45 +42,539 @@ const (
 )
 
 var (
-	AlreadyHasMappings          errors.Code = "AlreadyHasMappings"
-	AlreadyHasTransformation    errors.Code = "AlreadyHasTransformation"
-	ConnectorNotExist           errors.Code = "ConnectorNotExist"
-	EventNotExist               errors.Code = "EventNotExist"
-	InvalidRefreshToken         errors.Code = "InvalidRefreshToken"
-	KeyNotExist                 errors.Code = "KeyNotExist"
-	NoStorage                   errors.Code = "NoStorage"
-	NoTransformationNorMappings errors.Code = "NoMappings"
-	QueryExecutionFailed        errors.Code = "QueryExecutionFailed"
-	StorageNotExist             errors.Code = "StorageNotExist"
-	TooManyKeys                 errors.Code = "TooManyKeys"
-	UniqueKey                   errors.Code = "UniqueKey"
-	WorkspaceNotExist           errors.Code = "WorkspaceNotExist"
+	ConnectorNotExists  errors.Code = "ConnectorNotExists"
+	EventNotExists      errors.Code = "EventNotExists"
+	EventTypeNotExists  errors.Code = "EventTypeNotExists"
+	InvalidRefreshToken errors.Code = "InvalidRefreshToken"
+	KeyNotExists        errors.Code = "KeyNotExists"
+	NoGroupsSchema      errors.Code = "NoGroupsSchema"
+	NoStorage           errors.Code = "NoStorage"
+	NoUsersSchema       errors.Code = "NoUsersSchema"
+	StorageNotExists    errors.Code = "StorageNotExists"
+	TargetAlreadyExists errors.Code = "TargetAlreadyExists"
+	TooManyKeys         errors.Code = "TooManyKeys"
+	UniqueKey           errors.Code = "UniqueKey"
+	WorkspaceNotExists  errors.Code = "WorkspaceNotExists"
 )
 
 // Connection represents a connection.
 type Connection struct {
-	db             *postgres.DB
-	connection     *state.Connection
-	ID             int
-	Name           string
-	Type           ConnectorType
-	Role           ConnectionRole
-	Storage        int    // zero if the connection is not a file or does not have a storage.
-	OAuthURL       string // empty if the connection does not use OAuth.
-	HasSettings    bool
-	LogoURL        string
-	Enabled        bool
-	UsersQuery     string          // only for databases.
-	Transformation *Transformation // nil if connection has no transformation.
-	Mappings       []*Mapping
-	Health         ConnectionHealth
+	db          *postgres.DB
+	connection  *state.Connection
+	ID          int
+	Name        string
+	Type        ConnectorType
+	Role        ConnectionRole
+	Connector   int
+	Storage     int    // zero if the connection is not a file or does not have a storage.
+	OAuthURL    string // empty if the connection does not use OAuth.
+	HasSettings bool
+	LogoURL     string
+	Enabled     bool
+	Health      Health
 }
 
-// Transformation represents the transformation of a connection.
-type Transformation struct {
-	In           types.Type
-	Out          types.Type
-	PythonSource string
+// Action returns the action with identifier id of the connection.
+// It returns an errors.NotFound error if the action does not exist.
+func (this *Connection) Action(id int) (*Action, error) {
+	if id < 1 || id > maxInt32 {
+		return nil, errors.BadRequest("identifier %d is not a valid action identifier", id)
+	}
+	a, ok := this.connection.Action(id)
+	if !ok {
+		return nil, errors.NotFound("action %d does not exist", id)
+	}
+	var action Action
+	action.fromState(this.db, a)
+	return &action, nil
+}
+
+// Actions returns the actions of the connection.
+func (this *Connection) Actions() ([]Action, error) {
+	as := this.connection.Actions()
+	actions := make([]Action, len(as))
+	for i, a := range as {
+		actions[i].fromState(this.db, a)
+	}
+	return actions, nil
+}
+
+// ActionType represents an action type.
+type ActionType struct {
+	Name            string
+	Description     string
+	Target          ActionTarget
+	EventType       *string
+	Disabled        bool
+	DisablingReason *DisablingReason
+}
+
+// DisablingReason represents a reason for which an action type may be disabled.
+type DisablingReason string
+
+const (
+	DisablingReasonNoUsersSchema     DisablingReason = "No users schema"
+	DisablingReasonNoGroupsSchema    DisablingReason = "No groups schema"
+	DisablingReasonAlreadyHaveAction DisablingReason = "Already have action"
+)
+
+// ActionTypes returns the action types for the connection.
+func (this *Connection) ActionTypes() ([]*ActionType, error) {
+	var actionTypes []*ActionType
+	c := this.connection
+	var haveUsersAction, haveGroupsAction, haveEventsActionNoEventType bool
+	for _, a := range c.Actions() {
+		switch {
+		case a.Target == state.UsersTarget:
+			haveUsersAction = true
+		case a.Target == state.GroupsTarget:
+			haveGroupsAction = true
+		case a.Target == state.EventsTarget && a.EventType == "":
+			haveEventsActionNoEventType = true
+		}
+	}
+	wsSchemas := this.connection.Workspace().Schemas
+	targets := c.Connector().Targets
+	if targets.Contains(state.UsersTarget) {
+		var name = "Import users"
+		var description = "Import the users"
+		if c.Role == state.DestinationRole {
+			name = "Export users"
+			description = "Export the users"
+		}
+		at := &ActionType{
+			Name:        name,
+			Description: description,
+			Target:      UsersTarget,
+		}
+		if haveUsersAction {
+			at.Disabled = true
+			reason := DisablingReasonAlreadyHaveAction
+			at.DisablingReason = &reason
+		} else if _, haveUsersSchema := wsSchemas["users"]; !haveUsersSchema {
+			at.Disabled = true
+			reason := DisablingReasonNoUsersSchema
+			at.DisablingReason = &reason
+		}
+		actionTypes = append(actionTypes, at)
+	}
+	if targets.Contains(state.GroupsTarget) {
+		var name = "Import groups"
+		var description = "Import the groups"
+		if c.Role == state.DestinationRole {
+			name = "Export groups"
+			description = "Export the groups"
+		}
+		at := &ActionType{
+			Name:        name,
+			Description: description,
+			Target:      GroupsTarget,
+		}
+		if haveGroupsAction {
+			at.Disabled = true
+			reason := DisablingReasonAlreadyHaveAction
+			at.DisablingReason = &reason
+		} else if _, haveGroupsSchema := wsSchemas["groups"]; !haveGroupsSchema {
+			at.Disabled = true
+			reason := DisablingReasonNoGroupsSchema
+			at.DisablingReason = &reason
+		}
+		actionTypes = append(actionTypes, at)
+	}
+	if targets.Contains(state.EventsTarget) {
+		switch typ := c.Connector().Type; typ {
+		case state.MobileType, state.ServerType, state.WebsiteType:
+			if c.Role == state.SourceRole {
+				description := "Receive events from the "
+				switch typ {
+				case state.MobileType:
+					description += "mobile app"
+				case state.ServerType:
+					description += "server"
+				case state.WebsiteType:
+					description += "website"
+				}
+				at := &ActionType{
+					Name:        "Receive events",
+					Description: description,
+					Target:      EventsTarget,
+				}
+				if haveEventsActionNoEventType {
+					at.Disabled = true
+					reason := DisablingReasonAlreadyHaveAction
+					at.DisablingReason = &reason
+				}
+				actionTypes = append(actionTypes, at)
+			}
+		default:
+			eventTypes, err := this.fetchEventTypes()
+			if err != nil {
+				return nil, err
+			}
+			for _, et := range eventTypes {
+				id := et.ID
+				actionTypes = append(actionTypes, &ActionType{
+					Name:        et.Name,
+					Description: et.Description,
+					Target:      EventsTarget,
+					EventType:   &id,
+				})
+			}
+		}
+	}
+	if actionTypes == nil {
+		actionTypes = []*ActionType{}
+	}
+	return actionTypes, nil
+}
+
+// ActionTypeInformation holds the necessary information to instantiate an
+// action.
+type ActionTypeInformation struct {
+
+	// InputSchema is the input schema which must be mapped or transformed. May
+	// be the invalid schema if the action type does not require mappings nor
+	// transformations.
+	InputSchema types.Type
+
+	// OutputSchema is the output schema to which the properties of the input
+	// schema must be mapped or transformed to. May be the invalid schema if the
+	// action type does not require mappings nor transformations.
+	OutputSchema types.Type
+
+	// Supports lists the supported functionalities for the action type.
+	Supports []ActionSupport
+}
+
+// ActionSupport represents a functionality supported by an action type.
+type ActionSupport string
+
+const (
+	ActionSupportFilter  ActionSupport = "Filter"
+	ActionSupportMapping ActionSupport = "Mapping"
+	ActionSupportQuery   ActionSupport = "Query"
+)
+
+// ActionTypeInformation returns information for the given action target and
+// event type.
+//
+// It returns an errors.UnprocessableError error with code
+//   - NoUsersSchema, if target is Users and the users schema does not exist.
+//   - NoGroupsSchema, if target is Groups and the groups schema does not
+//     exist.
+//   - EventTypeNotExists, if the target is Events and the event type does not
+//     exist.
+func (this *Connection) ActionTypeInformation(target ActionTarget, eventType string) (ActionTypeInformation, error) {
+
+	connector := this.connection.Connector()
+	at := ActionTypeInformation{}
+	switch target {
+
+	case UsersTarget:
+		if !connector.Targets.Contains(state.UsersTarget) {
+			return ActionTypeInformation{}, errors.BadRequest("connection does not support users")
+		}
+		switch connector.Type {
+		case state.AppType:
+			appSchema, err := this.fetchAppSchema(state.UsersTarget, "")
+			if err != nil {
+				return ActionTypeInformation{}, err
+			}
+			usersSchema, ok := this.connection.Workspace().Schemas["users"]
+			if !ok {
+				return ActionTypeInformation{}, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
+			}
+			if this.connection.Role == state.SourceRole {
+				at.InputSchema = appSchema
+				at.OutputSchema = *usersSchema
+			} else {
+				at.InputSchema = *usersSchema
+				at.OutputSchema = appSchema
+			}
+			at.Supports = []ActionSupport{
+				ActionSupportMapping,
+			}
+		case state.DatabaseType:
+			usersSchema, ok := this.connection.Workspace().Schemas["users"]
+			if !ok {
+				return ActionTypeInformation{}, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
+			}
+			at.OutputSchema = *usersSchema
+			at.Supports = []ActionSupport{
+				ActionSupportMapping,
+				ActionSupportQuery,
+			}
+		case state.FileType:
+			fileSchema, err := this.fetchFileSchema()
+			if err != nil {
+				return ActionTypeInformation{}, err
+			}
+			usersSchema, ok := this.connection.Workspace().Schemas["users"]
+			if !ok {
+				return ActionTypeInformation{}, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
+			}
+			if this.connection.Role == state.SourceRole {
+				at.InputSchema = fileSchema
+				at.OutputSchema = *usersSchema
+			} else {
+				at.InputSchema = *usersSchema
+				at.OutputSchema = fileSchema
+			}
+			at.Supports = []ActionSupport{
+				ActionSupportMapping,
+			}
+		}
+
+	case GroupsTarget:
+		if !connector.Targets.Contains(state.GroupsTarget) {
+			return ActionTypeInformation{}, errors.BadRequest("connection does not support groups")
+		}
+		switch connector.Type {
+		case state.AppType:
+			appSchema, err := this.fetchAppSchema(state.GroupsTarget, "")
+			if err != nil {
+				return ActionTypeInformation{}, err
+			}
+			groupsSchema, ok := this.connection.Workspace().Schemas["groups"]
+			if !ok {
+				return ActionTypeInformation{}, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
+			}
+			if this.connection.Role == state.SourceRole {
+				at.InputSchema = appSchema
+				at.OutputSchema = *groupsSchema
+			} else {
+				at.InputSchema = *groupsSchema
+				at.OutputSchema = appSchema
+			}
+			at.Supports = []ActionSupport{
+				ActionSupportMapping,
+			}
+		case state.DatabaseType:
+			at.Supports = []ActionSupport{
+				ActionSupportMapping,
+				ActionSupportQuery,
+			}
+		case state.FileType:
+			fileSchema, err := this.fetchFileSchema()
+			if err != nil {
+				return ActionTypeInformation{}, err
+			}
+			groupsSchema, ok := this.connection.Workspace().Schemas["groups"]
+			if !ok {
+				return ActionTypeInformation{}, errors.Unprocessable(NoUsersSchema, "groups schema not loaded from data warehouse")
+			}
+			if this.connection.Role == state.SourceRole {
+				at.InputSchema = fileSchema
+				at.OutputSchema = *groupsSchema
+			} else {
+				at.InputSchema = *groupsSchema
+				at.OutputSchema = fileSchema
+			}
+			at.Supports = []ActionSupport{
+				ActionSupportMapping,
+			}
+		}
+
+	case EventsTarget:
+		if !connector.Targets.Contains(state.EventsTarget) {
+			return ActionTypeInformation{}, errors.BadRequest("connection does not support events")
+		}
+		at.Supports = []ActionSupport{}
+		typ := connector.Type
+		role := this.connection.Role
+		receiveEvents := role == state.SourceRole &&
+			(typ == state.MobileType || typ == state.ServerType || typ == state.WebsiteType)
+		if !receiveEvents {
+			eventTypes, err := this.fetchEventTypes()
+			if err != nil {
+				return ActionTypeInformation{}, err
+			}
+			var et *_connector.EventType
+			for _, e := range eventTypes {
+				if e.ID == eventType {
+					et = e
+					break
+				}
+			}
+			if et == nil {
+				return ActionTypeInformation{}, errors.Unprocessable(EventTypeNotExists, "event type %q not found", eventType)
+			}
+			etSchema, err := this.fetchAppSchema(state.EventsTarget, eventType)
+			if err != nil {
+				return ActionTypeInformation{}, err
+			}
+			at.Supports = append(at.Supports, ActionSupportFilter)
+			if this.connection.Role == state.DestinationRole && etSchema.Valid() {
+				at.InputSchema = events.Schema
+				at.OutputSchema = etSchema
+				at.Supports = append(at.Supports, ActionSupportMapping)
+			}
+		}
+
+	default:
+		return ActionTypeInformation{}, errors.New("invalid action target")
+	}
+
+	return at, nil
+}
+
+// AddAction adds action to the connection returning the identifier of the
+// added action. target is the target of the action and must be supported by the
+// connector of the connection.
+//
+// If target is Events and the connection has event types, evenType must be the
+// identifier of an event type of the connection. Otherwise, it must be an empty
+// string.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - PropertyNotExists, if a property of a mapping / transformation does not
+//     exist in the schema (except for properties of the event type schema,
+//     which is specified and thus returned as an errors.BadRequest error).
+//   - EventTypeNotExists, if the specified event type does not exist.
+//
+// It returns an errors.NotFoundError error if the connection does not exist
+// anymore.
+func (this *Connection) AddAction(target ActionTarget, eventType string, action ActionToSet) (int, error) {
+
+	c := this.connection
+
+	// Validate the arguments.
+	schema, err := this.validateAction(state.ActionTarget(target), eventType, action)
+	if err != nil {
+		return 0, err
+	}
+
+	n := state.AddActionNotification{
+		Connection:     c.ID,
+		Target:         state.ActionTarget(target),
+		Name:           action.Name,
+		Enabled:        action.Enabled,
+		EventType:      eventType,
+		ScheduleStart:  int16(mathrand.Intn(24 * 60)),
+		SchedulePeriod: 60,
+		Schema:         schema,
+		Mapping:        action.Mapping,
+		Transformation: (*state.Transformation)(action.Transformation),
+		Query:          action.Query,
+	}
+
+	// Marshal the filter.
+	var filter, mapping, tIn, tOut, tSource []byte
+	if action.Filter != nil {
+		n.Filter = &state.ActionFilter{
+			Logical:    state.ActionFilterLogical(action.Filter.Logical),
+			Conditions: make([]state.ActionFilterCondition, len(action.Filter.Conditions)),
+		}
+		for i, condition := range action.Filter.Conditions {
+			n.Filter.Conditions[i] = (state.ActionFilterCondition)(condition)
+		}
+		filter, err = json.Marshal(action.Filter)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	// Marshal the mapping.
+	if action.Mapping != nil {
+		mapping, err = json.Marshal(action.Mapping)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	// Marshal the transformation.
+	if t := action.Transformation; t != nil {
+		tIn, err = json.Marshal(t.In)
+		if err != nil {
+			return 0, err
+		}
+		tOut, err = json.Marshal(t.Out)
+		if err != nil {
+			return 0, err
+		}
+		tSource = []byte(t.PythonSource)
+	}
+
+	// Generate a random identifier.
+	n.ID, err = generateRandomID()
+	if err != nil {
+		return 0, err
+	}
+
+	// Marshal the schema.
+	rawSchema, err := schema.MarshalJSON()
+	if err != nil {
+		if eventType == "" {
+			return 0, fmt.Errorf("cannot marshal fetched schema for target %s of connection %d: %s", target, c.ID, err)
+		}
+		return 0, fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: %s", target, c.ID, err)
+	}
+	if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
+		if eventType == "" {
+			return 0, fmt.Errorf("cannot marshal fetched schema for target %s of connection %d: data is too large", target, c.ID)
+		}
+		return 0, fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: data is too large", target, c.ID)
+	}
+
+	// Add the action.
+	ctx := context.Background()
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		switch n.Target {
+		case state.EventsTarget:
+			switch typ := c.Connector().Type; typ {
+			case state.MobileType, state.ServerType, state.WebsiteType:
+				err = tx.QueryVoid(ctx, "SELECT FROM actions WHERE connection = $1 AND target = 'Events'", n.Connection)
+				if err != sql.ErrNoRows {
+					if err == nil {
+						err = errors.Unprocessable(TargetAlreadyExists,
+							"action with target %s already exists for %s connection %d", n.Target, typ, n.Connection)
+					}
+					return err
+				}
+			}
+		case state.UsersTarget, state.GroupsTarget:
+			// Check if an action already exists with the same target for the connection
+			// and make sure that when there are both a Users and a Groups action, they
+			// have the same schedule start.
+			err = tx.QueryScan(ctx, "SELECT target, schedule_start FROM actions WHERE connection = $1\n"+
+				" AND target IN ('Users', 'Groups')", n.Connection, func(rows *postgres.Rows) error {
+				for rows.Next() {
+					var target state.ActionTarget
+					if err := rows.Scan(&target, &n.ScheduleStart); err != nil {
+						return err
+					}
+					if target == n.Target {
+						return errors.Unprocessable(TargetAlreadyExists,
+							"action with target %s already exists for connection %d", n.Target, n.Connection)
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
+			"schedule_start, schedule_period, filter, schema, mapping,\n" +
+			"transformation.in_types, transformation.out_types, transformation.python_source, query)\n" +
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"
+		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType, n.Name,
+			n.Enabled, n.ScheduleStart, n.SchedulePeriod,
+			string(filter), rawSchema, string(mapping), string(tIn), string(tOut), string(tSource), n.Query)
+		if err != nil {
+			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {
+				err = errors.Unprocessable(ConnectorNotExists, "connection %d does not exist", n.Connection)
+			}
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return n.ID, nil
 }
 
 // Delete deletes the connection.
@@ -113,6 +607,136 @@ func (this *Connection) Delete() error {
 		return tx.Notify(ctx, n)
 	})
 	return err
+}
+
+// ExecQuery executes the given query on the connection and returns the
+// resulting schema and rows. The connection must be a source database
+// connection.
+//
+// query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
+// must contain the ':limit' placeholder between '[[' and ']]'. limit must be
+// between 1 and 100.
+//
+// If the connection does not exist, it returns an errors.NotFoundError error.
+// If the execution of the query fails, it returns an errors.UnprocessableError
+// with code QueryExecutionFailed.
+func (this *Connection) ExecQuery(query string, limit int) (types.Type, [][]string, error) {
+
+	if !utf8.ValidString(query) {
+		return types.Type{}, nil, errors.BadRequest("query is not UTF-8 encoded")
+	}
+	if utf8.RuneCountInString(query) > queryMaxSize {
+		return types.Type{}, nil, errors.BadRequest("query is longer than 16,777,215 runes")
+	}
+	if limit < 1 || limit > 100 {
+		return types.Type{}, nil, errors.BadRequest("limit %d is not valid", limit)
+	}
+
+	c := this.connection
+	connector := c.Connector()
+	if connector.Type != state.DatabaseType {
+		return types.Type{}, nil, errors.BadRequest("connection %d is not a database", c.ID)
+	}
+	if c.Role != state.SourceRole {
+		return types.Type{}, nil, errors.BadRequest("database %d is not a source", c.ID)
+	}
+
+	const cRole = _connector.SourceRole
+
+	// Execute the query.
+	var err error
+	query, err = compileActionQuery(query, limit)
+	if err != nil {
+		return types.Type{}, nil, err
+	}
+	fh := this.newFirehose(context.Background())
+	connection, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
+		Role:     cRole,
+		Settings: c.Settings,
+		Firehose: fh,
+	})
+	if err != nil {
+		return types.Type{}, nil, err
+	}
+	schema, rawRows, err := connection.Query(query)
+	if err != nil {
+		if err, ok := err.(*_connector.DatabaseQueryError); ok {
+			return types.Type{}, nil, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
+		}
+		return types.Type{}, nil, err
+	}
+
+	// Fill the rows.
+	var rows [][]string
+	propertiesNames := schema.PropertiesNames()
+	values := make([]any, len(propertiesNames))
+	for i := range values {
+		var value string
+		values[i] = &value
+	}
+	for rawRows.Next() {
+		if err := rawRows.Scan(values...); err != nil {
+			return types.Type{}, nil, err
+		}
+		row := make([]string, len(propertiesNames))
+		for i, v := range values {
+			row[i] = *(v.(*string))
+		}
+		rows = append(rows, row)
+	}
+	err = rawRows.Close()
+	if err != nil {
+		return types.Type{}, nil, err
+	}
+	if rows == nil {
+		rows = [][]string{}
+	}
+
+	return schema, rows, nil
+}
+
+// An Execution describes an action execution as returned by Executions.
+type Execution struct {
+	ID        int
+	Action    int
+	StartTime time.Time
+	EndTime   *time.Time
+	Error     string
+}
+
+// Executions returns a list of Execution describing all executions of the
+// actions of the connection.
+// The connection must be an app, database, or file connection.
+func (this *Connection) Executions() ([]*Execution, error) {
+	c := this.connection
+	connector := c.Connector()
+	switch connector.Type {
+	case state.AppType, state.DatabaseType, state.FileType, state.StreamType:
+	default:
+		return nil, errors.BadRequest("connection %d cannot have executions, it's a %s connection",
+			c.ID, strings.ToLower(connector.Type.String()))
+	}
+	executions := []*Execution{}
+	err := this.db.QueryScan(context.Background(),
+		"SELECT e.id, e.action, e.start_time, e.end_time, e.error\n"+
+			"FROM actions_executions e\n"+
+			"INNER JOIN actions a ON a.id = e.action\n"+
+			"WHERE a.connection = $1\n"+
+			"ORDER BY id DESC", c.ID, func(rows *postgres.Rows) error {
+			var err error
+			for rows.Next() {
+				var exe Execution
+				if err = rows.Scan(&exe.ID, &exe.Action, &exe.StartTime, &exe.EndTime, &exe.Error); err != nil {
+					return err
+				}
+				executions = append(executions, &exe)
+			}
+			return nil
+		})
+	if err != nil {
+		return nil, err
+	}
+	return executions, nil
 }
 
 // GenerateKey generates a new key for the connection. The connection must be a
@@ -182,48 +806,59 @@ func (this *Connection) Keys() ([]string, error) {
 	return slices.Clone(c.Keys), nil
 }
 
-// An Import describes a connection import as returned by Imports.
-type Import struct {
-	ID        int
-	StartTime time.Time
-	EndTime   *time.Time
-	Error     string
-}
-
-// Imports returns a list of Import describing all imports of the connection.
-// The connection must be a source app, database, or file connection.
-func (this *Connection) Imports() ([]*Import, error) {
+// Reload reloads the user, group and events schema for the actions of the
+// connection.
+func (this *Connection) Reload() error {
 	c := this.connection
 	connector := c.Connector()
-	switch connector.Type {
-	case state.AppType, state.DatabaseType, state.FileType, state.StreamType:
-	default:
-		return nil, errors.BadRequest("connection %d cannot have imports, it's a %s connection",
-			c.ID, strings.ToLower(connector.Type.String()))
-	}
-	if c.Role == state.DestinationRole {
-		return nil, errors.BadRequest("connection %d cannot have imports, it's a destination", c.ID)
-	}
-	imports := []*Import{}
-	err := this.db.QueryScan(context.Background(),
-		"SELECT id, start_time, end_time, error\n"+
-			"FROM connections_imports\n"+
-			"WHERE connection = $1\n"+
-			"ORDER BY id DESC", c.ID, func(rows *postgres.Rows) error {
-			var err error
-			for rows.Next() {
-				var imp Import
-				if err = rows.Scan(&imp.ID, &imp.StartTime, &imp.EndTime, &imp.Error); err != nil {
-					return err
-				}
-				imports = append(imports, &imp)
+	if connector.Targets.Contains(state.UsersTarget) {
+		t := connector.Type
+		if t == state.AppType ||
+			(t == state.DatabaseType && c.Role == state.SourceRole) ||
+			(t == state.FileType && c.Role == state.SourceRole) {
+			err := this.reloadUserSchema()
+			if err != nil {
+				return err
 			}
-			return nil
-		})
-	if err != nil {
-		return nil, err
+		}
 	}
-	return imports, nil
+	if connector.Targets.Contains(state.EventsTarget) {
+		err := this.reloadEventSchemas()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Rename renames the connection with the given new name.
+// name must be between 1 and 100 runes long.
+//
+// It returns an errors.NotFoundError error if the connection does not exist
+// anymore.
+func (this *Connection) Rename(name string) error {
+	if name == "" || utf8.RuneCountInString(name) > 100 {
+		return errors.BadRequest("name %q is not valid", name)
+	}
+	if name == this.connection.Name {
+		return nil
+	}
+	n := state.RenameConnectionNotification{
+		Connection: this.connection.ID,
+		Name:       name,
+	}
+	ctx := context.Background()
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1 WHERE id = $2", n.Name, n.Connection)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return errors.NotFound("connection %d does not exist", n.Connection)
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
 }
 
 // RevokeKey revokes the given key of the source server with identifier id. key
@@ -266,26 +901,12 @@ func (this *Connection) RevokeKey(key string) error {
 			return err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.Unprocessable(KeyNotExist, "key %q does not exist", key)
+			return errors.Unprocessable(KeyNotExists, "key %q does not exist", key)
 		}
 		return tx.Notify(ctx, n)
 	})
 
 	return err
-}
-
-// Schema returns the schema of the connection. The connection must be an app,
-// database, or file connection. If the connection does not have a schema, it
-// returns an invalid schema.
-func (this *Connection) Schema() (types.Type, error) {
-	c := this.connection
-	switch c.Connector().Type {
-	case state.StorageType:
-		return types.Type{}, errors.BadRequest("connection %d has no properties, it's a storage", c.ID)
-	case state.StreamType:
-		return types.Type{}, errors.BadRequest("connection %d has no properties, it's a stream", c.ID)
-	}
-	return c.Schema, nil
 }
 
 // SetStatus sets the status of the connection.
@@ -311,243 +932,12 @@ func (this *Connection) SetStatus(enabled bool) error {
 	return err
 }
 
-// Action returns the action with identifier id of the connection, which must be
-// a destination of type app.
-// It returns an errors.NotFound error if the action does not exist.
-func (this *Connection) Action(id int) (*Action, error) {
-	c := this.connection
-	if c.Role != state.DestinationRole {
-		return nil, errors.BadRequest("connection is not a destination")
-	}
-	connector := c.Connector()
-	if connector.Type != state.AppType {
-		return nil, errors.BadRequest("connection type is not app")
-	}
-	if id < 1 || id > maxInt32 {
-		return nil, errors.BadRequest("identifier %d is not a valid action identifier", id)
-	}
-	a, ok := this.connection.Action(id)
-	if !ok {
-		return nil, errors.NotFound("action %d does not exist", id)
-	}
-	action := Action{
-		db:             this.db,
-		action:         a,
-		connection:     this,
-		ID:             a.ID,
-		Connection:     this.connection.ID,
-		ActionType:     a.ActionType.ID,
-		Name:           a.Name,
-		Enabled:        a.Enabled,
-		Endpoint:       a.Endpoint,
-		Mapping:        a.Mapping,
-		Transformation: (*Transformation)(a.Transformation),
-	}
-	action.Filter.Logical = a.Filter.Logical
-	action.Filter.Conditions = make([]ActionFilterCondition, len(a.Filter.Conditions))
-	for i := range action.Filter.Conditions {
-		action.Filter.Conditions[i] = ActionFilterCondition(a.Filter.Conditions[i])
-	}
-	return &action, nil
-}
-
-// Actions returns the actions of the connection.
-func (this *Connection) Actions() ([]*Action, error) {
-	c := this.connection
-	if c.Role != state.DestinationRole {
-		return nil, errors.BadRequest("connection is not a destination")
-	}
-	connector := c.Connector()
-	if connector.Type != state.AppType {
-		return nil, errors.BadRequest("connection type is not app")
-	}
-	as := this.connection.Actions()
-	actions := make([]*Action, len(as))
-	for i, a := range as {
-		action := Action{
-			db:             this.db,
-			action:         a,
-			connection:     this,
-			ID:             a.ID,
-			Connection:     this.connection.ID,
-			ActionType:     a.ActionType.ID,
-			Name:           a.Name,
-			Enabled:        a.Enabled,
-			Endpoint:       a.Endpoint,
-			Mapping:        a.Mapping,
-			Transformation: (*Transformation)(a.Transformation),
-		}
-		action.Filter.Logical = a.Filter.Logical
-		action.Filter.Conditions = make([]ActionFilterCondition, len(a.Filter.Conditions))
-		for i := range action.Filter.Conditions {
-			action.Filter.Conditions[i] = ActionFilterCondition(a.Filter.Conditions[i])
-		}
-		actions[i] = &action
-	}
-	return actions, nil
-}
-
-// ActionTypes returns the action types of the connection, which must be a
-// destination of type app.
-func (this *Connection) ActionTypes() ([]*ActionType, error) {
-	c := this.connection
-	if c.Role != state.DestinationRole {
-		return nil, errors.BadRequest("connection is not a destination")
-	}
-	if c.Connector().Type != state.AppType {
-		return nil, errors.BadRequest("connection type is not app")
-	}
-	return this.actionTypes(), nil
-}
-
-// actionTypes returns the action types for this connection.
-func (this *Connection) actionTypes() []*ActionType {
-	connector := this.connection.Connector()
-	app := _connector.RegisteredApp(connector.Name)
-	stateActionTypes := this.connection.ActionTypes()
-	actionTypes := make([]*ActionType, len(stateActionTypes))
-	for i, at := range stateActionTypes {
-		var endpoints map[int]string
-		if app.Endpoints != nil {
-			endpoints = map[int]string{}
-			for _, e := range at.Endpoints {
-				endpoints[e] = app.Endpoints[e]
-			}
-		}
-		actionType := ActionType{
-			actionType:  at,
-			ID:          at.ID,
-			Name:        at.Name,
-			Description: at.Description,
-			Endpoints:   endpoints,
-			Schema:      at.Schema,
-		}
-		actionTypes[i] = &actionType
-	}
-	return actionTypes
-}
-
-// Query executes the given query on the connection and returns the resulting
-// schema and rows. The connection must be a source database connection.
-//
-// query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
-// must contain the ':limit' placeholder between '[[' and ']]'. limit must be
-// between 1 and 100.
-//
-// If the connection does not exist, it returns an errors.NotFoundError error.
-// If the execution of the query fails, it returns an errors.UnprocessableError
-// with code QueryExecutionFailed.
-func (this *Connection) Query(query string, limit int) (types.Type, [][]string, error) {
-
-	if !utf8.ValidString(query) {
-		return types.Type{}, nil, errors.BadRequest("query is not UTF-8 encoded")
-	}
-	if utf8.RuneCountInString(query) > queryMaxSize {
-		return types.Type{}, nil, errors.BadRequest("query is longer than 16,777,215 runes")
-	}
-	if limit < 1 || limit > 100 {
-		return types.Type{}, nil, errors.BadRequest("limit %d is not valid", limit)
-	}
-
-	c := this.connection
-	connector := c.Connector()
-	if connector.Type != state.DatabaseType {
-		return types.Type{}, nil, errors.BadRequest("connection %d is not a database", c.ID)
-	}
-	if c.Role != state.SourceRole {
-		return types.Type{}, nil, errors.BadRequest("database %d is not a source", c.ID)
-	}
-
-	const cRole = _connector.SourceRole
-
-	// Execute the query.
-	var err error
-	query, err = compileConnectionQuery(query, limit)
-	if err != nil {
-		return types.Type{}, nil, err
-	}
-	fh := this.newFirehose(context.Background())
-	connection, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
-		Role:     cRole,
-		Settings: c.Settings,
-		Firehose: fh,
-	})
-	if err != nil {
-		return types.Type{}, nil, err
-	}
-	schema, rawRows, err := connection.Query(query)
-	if err != nil {
-		if err, ok := err.(*_connector.DatabaseQueryError); ok {
-			return types.Type{}, nil, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
-		}
-		return types.Type{}, nil, err
-	}
-
-	// Fill the rows.
-	var rows [][]string
-	propertiesNames := schema.PropertiesNames()
-	values := make([]any, len(propertiesNames))
-	for i := range values {
-		var value string
-		values[i] = &value
-	}
-	for rawRows.Next() {
-		if err := rawRows.Scan(values...); err != nil {
-			return types.Type{}, nil, err
-		}
-		row := make([]string, len(propertiesNames))
-		for i, v := range values {
-			row[i] = *(v.(*string))
-		}
-		rows = append(rows, row)
-	}
-	err = rawRows.Close()
-	if err != nil {
-		return types.Type{}, nil, err
-	}
-	if rows == nil {
-		rows = [][]string{}
-	}
-
-	return schema, rows, nil
-}
-
-// Rename renames the connection with the given new name.
-// name must be between 1 and 100 runes long.
-//
-// It returns an errors.NotFoundError error if the connection does not exist
-// anymore.
-func (this *Connection) Rename(name string) error {
-	if name == "" || utf8.RuneCountInString(name) > 100 {
-		return errors.BadRequest("name %q is not valid", name)
-	}
-	if name == this.connection.Name {
-		return nil
-	}
-	n := state.RenameConnectionNotification{
-		Connection: this.connection.ID,
-		Name:       name,
-	}
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1 WHERE id = $2", n.Name, n.Connection)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			return errors.NotFound("connection %d does not exist", n.Connection)
-		}
-		return tx.Notify(ctx, n)
-	})
-	return err
-}
-
 // ServeUI serves the user interface for the connection. event is the event and
 // values contains the form values in JSON format.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If the event does not exist, it returns an errors.UnprocessableError error
-// with code EventNotExist.
+// with code EventNotExists.
 func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 
 	c := this.connection
@@ -573,12 +963,13 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 
 		fh := this.newFirehose(context.Background())
 		connection, err = _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
-			Role:         cRole,
-			Settings:     c.Settings,
-			Firehose:     fh,
-			ClientSecret: clientSecret,
-			Resource:     resourceCode,
-			AccessToken:  accessToken,
+			Role:          cRole,
+			Settings:      c.Settings,
+			Firehose:      fh,
+			ClientSecret:  clientSecret,
+			Resource:      resourceCode,
+			AccessToken:   accessToken,
+			PrivacyRegion: _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
 		})
 
 	default:
@@ -644,417 +1035,13 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 	form, alert, err := connectionUI.ServeUI(event, values)
 	if err != nil {
 		if err == ui.ErrEventNotExist {
-			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector",
+			err = errors.Unprocessable(EventNotExists, "UI event %q does not exist for %s connector",
 				event, connector.Name)
 		}
 		return nil, err
 	}
 
 	return marshalUIFormAlert(form, alert, ui.Role(c.Role))
-}
-
-// AddAction adds action to connection, returning the identifier of the added
-// action. The connection must be a destination of type app.
-//
-// The action name must be a non-empty valid UTF-8 encoded string and cannot be
-// longer than 60 runes. The action must have a mapping associated or a
-// function, and cannot have both.
-//
-// The action endpoint must be the identifier of one the endpoints supported by
-// the action type, if it supports them, otherwise must be 0.
-//
-// If it has a mapping, the names of the properties in which the values are
-// mapped (the keys of the map) must be present in the action type schema, while
-// the mapping properties (the values of the map) must be property names or
-// property selectors (property names separated by a dot '.').
-//
-// If it has a transformation, such transformation should have at least one
-// input and one output property, its source should be a valid Python source,
-// and the names of the properties in the output schema must be present in the
-// action type schema.
-// TODO(Gianluca): specify how this transformation function should be written,
-// depending on the use on the events dispatcher.
-//
-// It returns an errors.NotFoundError error if the connection does not exist
-// anymore.
-func (this *Connection) AddAction(action ActionToSet) (int, error) {
-	c := this.connection
-	if c.Role != state.DestinationRole {
-		return 0, errors.BadRequest("connection is not a destination")
-	}
-	connector := c.Connector()
-	if connector.Type != state.AppType {
-		return 0, errors.BadRequest("connection type is not app")
-	}
-	actionTypes := this.actionTypes()
-	err := validateAction(action, actionTypes)
-	if err != nil {
-		return 0, errors.BadRequest(err.Error())
-	}
-	n := state.AddConnectionActionNotification{
-		Connection:     c.ID,
-		ActionType:     action.ActionType,
-		Name:           action.Name,
-		Enabled:        action.Enabled,
-		Endpoint:       action.Endpoint,
-		Mapping:        action.Mapping,
-		Transformation: (*state.Transformation)(action.Transformation),
-	}
-	n.Filter.Logical = action.Filter.Logical
-	n.Filter.Conditions = make([]state.ActionFilterConditionNotification, len(action.Filter.Conditions))
-	for i := range n.Filter.Conditions {
-		n.Filter.Conditions[i] = (state.ActionFilterConditionNotification)(action.Filter.Conditions[i])
-	}
-	ctx := context.Background()
-	var filter, mapping, tIn, tOut, tSource []byte
-	filter, err = json.Marshal(action.Filter)
-	if err != nil {
-		return 0, err
-	}
-	if action.Mapping != nil {
-		mapping, err = json.Marshal(action.Mapping)
-		if err != nil {
-			return 0, err
-		}
-	}
-	if t := action.Transformation; t != nil {
-		tIn, err = json.Marshal(t.In)
-		if err != nil {
-			return 0, err
-		}
-		tOut, err = json.Marshal(t.Out)
-		if err != nil {
-			return 0, err
-		}
-		tSource = []byte(t.PythonSource)
-	}
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		query := "INSERT INTO actions (connection, action_type, name, enabled,\n" +
-			"endpoint, filter, mapping, transformation.in_types,\n" +
-			"transformation.out_types, transformation.python_source)\n" +
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)\n" +
-			"RETURNING id"
-		err := tx.QueryRow(ctx, query, n.Connection, n.ActionType, n.Name,
-			n.Enabled, n.Endpoint, string(filter), string(mapping), string(tIn),
-			string(tOut), string(tSource)).
-			Scan(&n.ID)
-		if err != nil {
-			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {
-				err = errors.Unprocessable(ConnectorNotExist, "connection %d does not exist", n.Connection)
-			}
-			return err
-		}
-		return tx.Notify(ctx, n)
-	})
-	return n.ID, err
-}
-
-// SetTransformation sets the transformation of the connection. The connection
-// must be an app, database or file connection. Calling this method with a nil
-// transformation removes the transformation associated to the connection.
-//
-// The transformation, when not nil, should have at least one input and one
-// output property, and its source should be a valid Python source declaring a
-// 'transform' function which takes and returns a Python dictionary as
-// parameter.
-//
-// It returns an errors.NotFoundError error if the connection does not exist
-// anymore.
-// It returns an errors.UnprocessableError error with code AlreadyHasMappings if
-// the connection has one or more mappings associated to it.
-func (this *Connection) SetTransformation(transformation *Transformation) error {
-
-	id := this.connection.ID
-
-	// Validate the connection type.
-	switch typ := this.connection.Connector().Type; typ {
-	case state.AppType, state.DatabaseType, state.FileType:
-		// Ok.
-	default:
-		return errors.BadRequest("connection %d has no type app, database or file", id)
-	}
-
-	// Remove the transformation, if it should be removed.
-	if transformation == nil {
-		n := state.SetConnectionTransformationNotification{
-			Connection:     id,
-			Transformation: nil,
-		}
-		ctx := context.Background()
-		err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
-			query := "UPDATE connections SET\n" +
-				"transformation.in_types = '',\n" +
-				"transformation.out_types = '',\n" +
-				"transformation.python_source = ''\n" +
-				"WHERE id = $1"
-			result, err := tx.Exec(ctx, query, n.Connection)
-			if err != nil {
-				return err
-			}
-			if result.RowsAffected() == 0 {
-				return errors.NotFound("connection %d does not exist", n.Connection)
-			}
-			return tx.Notify(ctx, n)
-		})
-		return err
-	}
-
-	// Validate the transformation.
-	err := validateTransformation(transformation)
-	if err != nil {
-		return errors.BadRequest(err.Error())
-	}
-
-	n := state.SetConnectionTransformationNotification{
-		Connection:     id,
-		Transformation: (*state.Transformation)(transformation),
-	}
-
-	ctx := context.Background()
-
-	// Prepare the input/output types to be written on the database.
-	inTypes, err := n.Transformation.In.MarshalJSON()
-	if err != nil {
-		return err
-	}
-	outTypes, err := n.Transformation.Out.MarshalJSON()
-	if err != nil {
-		return err
-	}
-
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
-
-		// Ensure that the connection does not already have associated mappings.
-		err := tx.QueryVoid(ctx,
-			"SELECT FROM connections_mappings WHERE connection = $1",
-			n.Connection)
-		if err == nil {
-			return errors.Unprocessable(AlreadyHasMappings,
-				"connection %d already has mappings associated", n.Connection)
-		}
-		if err != sql.ErrNoRows {
-			return err
-		}
-
-		// Write the transformation of the connection.
-		query := "UPDATE connections SET\n" +
-			"transformation.in_types = $1,\n" +
-			"transformation.out_types = $2,\n" +
-			"transformation.python_source = $3\n" +
-			"WHERE id = $4"
-		result, err := tx.Exec(ctx, query, inTypes, outTypes,
-			n.Transformation.PythonSource, n.Connection)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			return errors.NotFound("connection %d does not exist", n.Connection)
-		}
-
-		return tx.Notify(ctx, n)
-
-	})
-
-	return err
-
-}
-
-// SetMappings sets the mappings of the connection. The connection must be an
-// app, database or file connection.
-//
-// InProperties and OutProperties of a mapping should contain valid property
-// names and are both not-empty, and one of PredefinedFunc and MappingCustomFunc
-// are provided (or none, for "one to one" mappings).
-//
-// "One-to-one" mappings must have one input and one output properties.
-//
-// For mappings with non-nil PredefinedFunc, the pointed value must be the ID of
-// a predefined mapping function and the count of the input/output properties
-// must match the count of the input/output parameters of the referred
-// predefined function.
-//
-// For mappings with non-nil MappingCustomFunc, the pointed value must be a
-// descriptor of a custom transformation function, with a valid Python source
-// code, and the count of the input/output properties must match the count of
-// the input/output types of the referred custom function.
-//
-// It returns an errors.NotFoundError error if the connection does not exist
-// anymore.
-// It returns an errors.UnprocessableError error with code
-// AlreadyHasTransformation if one or more mappings are added when the
-// connection already has a transformation associated to it.
-func (this *Connection) SetMappings(mappings []*Mapping) error {
-
-	// Validate the connection type.
-	switch typ := this.connection.Connector().Type; typ {
-	case state.AppType, state.DatabaseType, state.FileType:
-		// Ok.
-	default:
-		return errors.BadRequest("cannot set mappings on a connection of type %q", typ)
-	}
-
-	// Validate the mappings.
-	for _, m := range mappings {
-
-		if m.PredefinedFunc != nil && m.CustomFunc != nil {
-			return errors.BadRequest("mapping cannot have both predefined function and custom function")
-		}
-
-		// Validate the property names.
-		for _, p := range m.InProperties {
-			if !types.IsValidPropertyName(p) {
-				return errors.BadRequest("input property name %q is not valid", p)
-			}
-		}
-		for _, p := range m.OutProperties {
-			if !types.IsValidPropertyName(p) {
-				return errors.BadRequest("output property name %q is not valid", p)
-			}
-		}
-
-		// Validate a "one-to-one" mapping.
-		if m.PredefinedFunc == nil && m.CustomFunc == nil {
-			if len(m.InProperties) != 1 {
-				return errors.BadRequest("one-to-one mapping should have one input property, got %d", len(m.InProperties))
-			}
-			if len(m.OutProperties) != 1 {
-				return errors.BadRequest("one-to-one mapping should have one output property, got %d", len(m.OutProperties))
-			}
-			continue
-		}
-
-		// Validate a mapping with predefined function.
-		if m.PredefinedFunc != nil {
-			funcID := *m.PredefinedFunc
-			f, ok := predefinedFuncDefinitionByID(state.PredefinedFunc(funcID))
-			if !ok {
-				return errors.BadRequest("predefined function with ID %d does not exist", funcID)
-			}
-			fInProps, fOutProps := f.In.Properties(), f.Out.Properties()
-			if len(fInProps) != len(m.InProperties) {
-				return errors.BadRequest("predefined function expects %d input properties, got %d", len(fInProps), len(m.InProperties))
-			}
-			if len(fOutProps) != len(m.OutProperties) {
-				return errors.BadRequest("predefined function expects %d output properties, got %d", len(fOutProps), len(m.OutProperties))
-			}
-			continue
-		}
-
-		// Validate a mapping with custom transformation function.
-		if m.CustomFunc.Source == "" {
-			return errors.BadRequest("custom function cannot have empty source code")
-		}
-		if len(m.CustomFunc.InTypes) == 0 {
-			return errors.BadRequest("custom function should have at least one input type")
-		}
-		if len(m.CustomFunc.OutTypes) == 0 {
-			return errors.BadRequest("custom function should have at least one output type")
-		}
-		// TODO(Gianluca): consider validating the Python source code.
-		if len(m.CustomFunc.InTypes) != len(m.InProperties) {
-			return errors.BadRequest("custom function expects %d input properties, got %d", len(m.CustomFunc.InTypes), len(m.InProperties))
-		}
-		if len(m.CustomFunc.OutTypes) != len(m.OutProperties) {
-			return errors.BadRequest("custom function expects %d output properties, got %d", len(m.CustomFunc.OutTypes), len(m.OutProperties))
-		}
-		inSchema, err := typesToSchema(m.CustomFunc.InTypes, m.InProperties)
-		if err != nil || !inSchema.Valid() {
-			return errors.BadRequest("invalid input types for custom function: %s", err)
-		}
-		outSchema, err := typesToSchema(m.CustomFunc.OutTypes, m.OutProperties)
-		if err != nil || !outSchema.Valid() {
-			return errors.BadRequest("invalid output types for custom function: %s", err)
-		}
-
-	}
-
-	n := state.SetConnectionMappingsNotification{Connection: this.connection.ID}
-
-	// Prepare the mappings for the notification and marshal the input types
-	// into JSON.
-	n.Mappings = make([]*state.Mapping, len(mappings))
-	customFuncInTypes := make([][]byte, len(mappings))
-	customFuncOutTypes := make([][]byte, len(mappings))
-	for i, m := range mappings {
-		n.Mappings[i] = &state.Mapping{
-			InProperties:   m.InProperties,
-			OutProperties:  m.OutProperties,
-			PredefinedFunc: (*state.PredefinedFunc)(m.PredefinedFunc),
-			CustomFunc:     (*state.MappingCustomFunc)(m.CustomFunc),
-		}
-		if m.CustomFunc != nil {
-			var err error
-			customFuncInTypes[i], err = json.Marshal(m.CustomFunc.InTypes)
-			if err != nil {
-				return err
-			}
-			customFuncOutTypes[i], err = json.Marshal(m.CustomFunc.OutTypes)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	ctx := context.Background()
-
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
-
-		// If adding one or more mappings, ensure that the connection does not
-		// already have an associated transformation.
-		if len(n.Mappings) > 0 {
-			err := tx.QueryVoid(ctx, "SELECT FROM connections WHERE id = $1 AND (transformation).in_types <> ''", n.Connection)
-			if err == nil {
-				return errors.Unprocessable(AlreadyHasTransformation, "connection already has a transformation associated")
-			}
-			if err != sql.ErrNoRows {
-				return err
-			}
-		}
-
-		_, err := tx.Exec(ctx, "DELETE FROM connections_mappings WHERE connection = $1", n.Connection)
-		if err != nil {
-			return err
-		}
-
-		stmt, err := tx.Prepare(ctx, "INSERT INTO connections_mappings\n"+
-			"(connection, position, in_properties, out_properties, predefined_func,\n"+
-			"custom_func.in_types, custom_func.out_types, custom_func.source)\n"+
-			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8)")
-		if err != nil {
-			return err
-		}
-		for i, m := range n.Mappings {
-			position := i + 1
-			var customFunc struct {
-				in_types  []byte
-				out_types []byte
-				source    string
-			}
-			if m.CustomFunc != nil {
-				customFunc.in_types = customFuncInTypes[i]
-				customFunc.out_types = customFuncOutTypes[i]
-				customFunc.source = m.CustomFunc.Source
-			}
-			_, err := stmt.Exec(ctx, n.Connection, position, m.InProperties, m.OutProperties,
-				m.PredefinedFunc, customFunc.in_types, customFunc.out_types, customFunc.source)
-			if err != nil {
-				if postgres.IsForeignKeyViolation(err) {
-					if postgres.ErrConstraintName(err) == "connections_mappings_connection_fkey" {
-						err = errors.NotFound("connection %d does not exist", n.Connection)
-					}
-				}
-				return err
-			}
-
-		}
-		err = stmt.Close()
-		if err != nil {
-			return err
-		}
-		return tx.Notify(ctx, n)
-	})
-
-	return err
 }
 
 // SetStorage sets the storage of the connection. The connection must be a file
@@ -1065,7 +1052,7 @@ func (this *Connection) SetMappings(mappings []*Mapping) error {
 // If the connection does not exist anymore, it returns an errors.NotFoundError
 // error.
 // If the storage does not exist, it returns an errors.UnprocessableError error
-// with code StorageNotExist.
+// with code StorageNotExists.
 func (this *Connection) SetStorage(storage int) error {
 
 	if storage < 0 || storage > maxInt32 {
@@ -1081,7 +1068,7 @@ func (this *Connection) SetStorage(storage int) error {
 		var ok bool
 		s, ok = c.Workspace().Connection(storage)
 		if !ok {
-			return errors.Unprocessable(StorageNotExist, "storage %d does not exist", storage)
+			return errors.Unprocessable(StorageNotExists, "storage %d does not exist", storage)
 		}
 		if s.Connector().Type != state.StorageType {
 			return errors.BadRequest("connection %d is not a storage", storage)
@@ -1106,81 +1093,13 @@ func (this *Connection) SetStorage(storage int) error {
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "connections_storage_fkey" {
-					err = errors.Unprocessable(StorageNotExist, "storage %d does not exist", storage)
+					err = errors.Unprocessable(StorageNotExists, "storage %d does not exist", storage)
 				}
 			}
 			return err
 		}
 		if result.RowsAffected() == 0 {
 			return errors.NotFound("connection %d does not exist", n.Connection)
-		}
-		return tx.Notify(ctx, n)
-	})
-
-	return err
-}
-
-// Reload reloads the schema for app and database source connections, the action
-// types for app destination connections, and it is a nop for any other
-// connection type/role.
-func (this *Connection) Reload() error {
-	c := this.connection
-	connector := c.Connector()
-	if c.Role == state.SourceRole {
-		if t := connector.Type; t == state.AppType || t == state.DatabaseType {
-			err := this.reloadSchema()
-			return err
-		}
-		return nil
-	}
-	// Destination.
-	if connector.Type == state.AppType {
-		err := this.reloadActionTypes()
-		return err
-	}
-	return nil
-}
-
-// SetUsersQuery sets the users query of connection. The connection must be a
-// database source connection. query must be UTF-8 encoded, it cannot be longer
-// than 16,777,215 runes and must contain the ':limit' placeholder.
-//
-// If the connection does not exist anymore, it returns an errors.NotFoundError
-// error.
-func (this *Connection) SetUsersQuery(query string) error {
-
-	if !utf8.ValidString(query) {
-		return errors.BadRequest("query is not UTF-8 encoded")
-	}
-	if utf8.RuneCountInString(query) > queryMaxSize {
-		return errors.BadRequest("query is longer than %d", queryMaxSize)
-	}
-	if !strings.Contains(query, ":limit") {
-		return errors.BadRequest("query does not contain the ':limit' placeholder")
-	}
-
-	c := this.connection
-	if c.Connector().Type != state.DatabaseType {
-		return errors.BadRequest("connection %d is not a database", c.ID)
-	}
-	if c.Role != state.SourceRole {
-		return errors.BadRequest("database %d is not a source", c.ID)
-	}
-
-	n := state.SetConnectionUserQueryNotification{
-		Connection: c.ID,
-		Query:      query,
-	}
-
-	ctx := context.Background()
-
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE connections\nSET users_query = $1 WHERE id = $2", query, c.ID)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			return errors.NotFound("connection %d does not exist", c.ID)
 		}
 		return tx.Notify(ctx, n)
 	})
@@ -1223,256 +1142,121 @@ func (this *Connection) Stats() (*ConnectionsStats, error) {
 	return stats, nil
 }
 
-// reloadActionTypes reloads the action types for the connection, which must be
-// a destination with type app.
-func (this *Connection) reloadActionTypes() error {
-
-	c := this.connection
-	connector := c.Connector()
-
-	cRole := _connector.Role(c.Role)
-
-	// Retrieve the resource secrets, if necessary.
-	var clientSecret, resourceCode, accessToken string
-	if r, ok := c.Resource(); ok {
-		clientSecret = connector.OAuth.ClientSecret
-		resourceCode = r.Code
-		var err error
-		accessToken, err = freshAccessToken(this.db, r)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Retrieve the app.
-	app := _connector.RegisteredApp(connector.Name)
-
-	// Instantiate a firehose.
-	fh := this.newFirehose(context.Background())
-	connection, err := app.Open(fh.ctx, &_connector.AppConfig{
-		Role:         cRole,
-		Settings:     c.Settings,
-		Firehose:     fh,
-		ClientSecret: clientSecret,
-		Resource:     resourceCode,
-		AccessToken:  accessToken,
-	})
-	if err != nil {
-		return err
-	}
-
-	// Retrieve the action types from the connection.
-	actionTypes, err := connection.ActionTypes()
-	if err != nil {
-		return err
-	}
-	usesEndpoints := app.Endpoints != nil
-	if usesEndpoints && len(app.Endpoints) == 0 {
-		return fmt.Errorf("map of endpoints must be nil or contain at least one value")
-	}
-	for _, at := range actionTypes {
-		if usesEndpoints {
-			if len(at.Endpoints) == 0 {
-				return fmt.Errorf("missing endpoints declarations in action type %d", at.ID)
-			}
-			for _, endpoint := range at.Endpoints {
-				if _, ok := app.Endpoints[endpoint]; !ok {
-					return fmt.Errorf("action type %d refers to endpoint %d, but it's not declared by the connector", at.ID, endpoint)
-				}
-			}
-		} else {
-			if at.Endpoints != nil {
-				return fmt.Errorf("action type %d declares endpoints while the connector does not declares them", at.ID)
-			}
-		}
-	}
-
-	n := state.SetConnectionActionTypesNotification{
-		Connection:  c.ID,
-		ActionTypes: make([]*state.ActionType, len(actionTypes)),
-	}
-	actionTypeOf := map[int]*state.ActionType{}
-	for i, at := range actionTypes {
-		actionType := &state.ActionType{
-			ID:          at.ID,
-			Name:        at.Name,
-			Description: at.Description,
-			Endpoints:   at.Endpoints,
-			Schema:      at.Schema,
-		}
-		n.ActionTypes[i] = actionType
-		actionTypeOf[at.ID] = actionType
-	}
-
-	rawActionTypes, err := json.Marshal(actionTypeOf)
-	if err != nil {
-		return err
-	}
-
-	ctx := context.Background()
-
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		_, err = tx.Exec(ctx, "UPDATE connections SET \"action_types\" = $1 WHERE id = $2", rawActionTypes, n.Connection)
-		if err != nil {
-			return err
-		}
-		return tx.Notify(ctx, n)
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // newFirehose returns a new Firehose.
 func (this *Connection) newFirehose(ctx context.Context) *firehose {
-	return this.newFirehoseForConnection(ctx, this.connection)
-}
-
-// newFirehose returns a new Firehose for the connection c.
-func (this *Connection) newFirehoseForConnection(ctx context.Context, c *state.Connection) *firehose {
 	var resource int
-	if r, ok := c.Resource(); ok {
+	if r, ok := this.connection.Resource(); ok {
 		resource = r.ID
 	}
 	fh := &firehose{
+		// TODO(Gianluca): here the action is not set, as the action is not
+		// available in contexts where this methods in called. Refactor the code
+		// and then change / review this method.
 		db:         this.db,
-		connection: c,
+		connection: this.connection,
 		resource:   resource,
 	}
 	fh.ctx, fh.cancel = context.WithCancel(ctx)
 	return fh
 }
 
-// readGRUsers reads the Golden Record users with the given IDs.
-func (this *Connection) readGRUsers(ids []int) ([]map[string]any, error) {
-	return nil, nil // TODO(Gianluca): implement.
-}
-
 var errRecordStop = errors.New("stop record")
 
-// reloadSchema reloads the schema of the connection. The connection must be a
-// source app, database or file connection.
-func (this *Connection) reloadSchema() error {
+// reloadEventSchemas reloads the events schemas of the connection.
+func (this *Connection) reloadEventSchemas() error {
+
+	for _, action := range this.connection.Actions() {
+		if action.Target != state.EventsTarget {
+			continue
+		}
+		// Fetch the schema.
+		schema, err := this.fetchAppSchema(state.EventsTarget, action.EventType)
+		if err != nil {
+			return err
+		}
+		if schema.EqualTo(action.Schema) {
+			continue
+		}
+		// Update the schema.
+		rawSchema, err := schema.MarshalJSON()
+		if err != nil {
+			return fmt.Errorf("cannot marshal fetched schema of action %d: %s", action.ID, err)
+		}
+		if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
+			return fmt.Errorf("cannot marshal fetched schema of the action %d: data is too large", action.ID)
+		}
+		n := state.SetActionSchemaNotification{
+			ID:     action.ID,
+			Schema: schema,
+		}
+		ctx := context.Background()
+		err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+			result, err := tx.Exec(ctx, "UPDATE actions SET \"schema\" = $1 WHERE id = $2 AND \"schema\" <> $1", rawSchema, n.ID)
+			if err != nil {
+				return err
+			}
+			if result.RowsAffected() == 0 {
+				return nil
+			}
+			return tx.Notify(ctx, n)
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// reloadUserSchema reloads the user schema of the connection. The connection
+// must be an app, a database or a file connection.
+//
+// It returns an errors.UnprocessableError error with code QueryExecutionFailed,
+// if the execution of the specified query fails.
+func (this *Connection) reloadUserSchema() error {
 
 	c := this.connection
 	connector := c.Connector()
-
-	cRole := _connector.Role(c.Role)
 
 	var schema types.Type
 
 	switch connector.Type {
 	case state.AppType:
 
-		var clientSecret, resourceCode, accessToken string
-		if r, ok := c.Resource(); ok {
-			clientSecret = connector.OAuth.ClientSecret
-			resourceCode = r.Code
-			var err error
-			accessToken, err = freshAccessToken(this.db, r)
-			if err != nil {
-				return err
-			}
-		}
-
-		fh := this.newFirehose(context.Background())
-		connection, err := _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
-			Role:         cRole,
-			Settings:     c.Settings,
-			Firehose:     fh,
-			ClientSecret: clientSecret,
-			Resource:     resourceCode,
-			AccessToken:  accessToken,
-		})
+		var err error
+		schema, err = this.fetchAppSchema(state.UsersTarget, "")
 		if err != nil {
 			return err
-		}
-		schema, _, err = connection.Schemas()
-		if err != nil {
-			return err
-		}
-		if !schema.Valid() {
-			return fmt.Errorf("connection %d returned an invalid schema", c.ID)
-		}
-		schema = schema.AsRole(types.Role(c.Role))
-		if !schema.Valid() {
-			return errors.New("connection has returned a schema without source properties")
 		}
 
 	case state.DatabaseType:
 
-		usersQuery, err := compileConnectionQuery(c.UsersQuery, 0)
-		if err != nil {
-			return err
+		var query string
+		for _, action := range c.Actions() {
+			if action.Target == state.UsersTarget {
+				query = action.Query
+				break
+			}
 		}
-		fh := this.newFirehose(context.Background())
-		connection, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
-			Role:     cRole,
-			Settings: c.Settings,
-			Firehose: fh,
-		})
-		if err != nil {
-			return err
+		if query == "" {
+			return nil
 		}
-		var rows _connector.Rows
-		schema, rows, err = connection.Query(usersQuery)
+		var err error
+		schema, err = this.fetchDatabaseSchema(query)
 		if err != nil {
-			return err
-		}
-		err = rows.Close()
-		if err != nil {
+			if _, ok := err.(*_connector.DatabaseQueryError); ok {
+				return errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
+			}
 			return err
 		}
 
 	case state.FileType:
 
-		var ctx = context.Background()
-
-		// Get the file reader.
-		var files *fileReader
-		{
-			s, ok := c.Storage()
-			if !ok {
-				return errors.New("file connection has not storage")
-			}
-			fh := this.newFirehose(ctx)
-			ctx = fh.ctx
-			connection, err := _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
-				Role:     cRole,
-				Settings: c.Settings,
-				Firehose: fh,
-			})
-			if err != nil {
-				return err
-			}
-			files = newFileReader(connection)
-		}
-
-		// Connect to the file connector and read only the columns.
-		fh := this.newFirehose(ctx)
-		file, err := _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
-			Role:     cRole,
-			Settings: c.Settings,
-			Firehose: fh,
-		})
+		var err error
+		schema, err = this.fetchFileSchema()
 		if err != nil {
 			return err
 		}
-
-		// Read only the columns.
-		records := fh.newRecordWriter(identityColumn, timestampColumn, true)
-		err = file.Read(files, records)
-		if err != nil && err != errRecordStop {
-			return err
-		}
-		properties := make([]types.Property, len(records.columns))
-		for i, col := range records.columns {
-			properties[i].Name = col.Name
-			properties[i].Type = col.Type
-		}
-		schema = types.Object(properties)
 
 	}
 
@@ -1485,86 +1269,29 @@ func (this *Connection) reloadSchema() error {
 		return fmt.Errorf("cannot marshal schema of the connection %d: data is too large", c.ID)
 	}
 
-	n := state.SetConnectionUserSchemaNotification{
-		Connection: c.ID,
-		Schema:     schema,
+	n := state.SetActionSchemaNotification{
+		Schema: schema,
 	}
 
 	ctx := context.Background()
 
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		_, err = tx.Exec(ctx, "UPDATE connections SET \"schema\" = $1 WHERE id = $2", rawSchema, n.Connection)
+		err := tx.QueryRow(ctx, "UPDATE actions\nSET \"schema\" = $1\n"+
+			"WHERE connection = $2 AND target = 'Users' AND \"schema\" <> $1\n"+
+			"RETURNING id", rawSchema, c.ID).Scan(&n.ID)
 		if err != nil {
 			return err
 		}
+		if n.ID == 0 {
+			return nil
+		}
 		return tx.Notify(ctx, n)
 	})
+	if err == sql.ErrNoRows {
+		err = nil
+	}
 
 	return err
-}
-
-// userSchema returns the user schema and the paths of the mapped properties of
-// the connection.
-func (this *Connection) userSchema() (types.Type, []_connector.PropertyPath, error) {
-
-	c := this.connection
-
-	// Collect the paths of the properties used in transformation or mappings.
-	var paths []_connector.PropertyPath
-	if t := c.Transformation(); t != nil {
-		for _, name := range t.In.PropertiesNames() {
-			paths = append(paths, []string{name})
-		}
-	}
-	for _, m := range c.Mappings() {
-		for _, in := range m.InProperties {
-			paths = append(paths, []string{in})
-		}
-	}
-
-	// Create a schema with only the properties mapped.
-	mapped := make(map[string]struct{}, len(paths))
-	for _, p := range paths {
-		mapped[p[0]] = struct{}{}
-	}
-	mappedProperties := make([]types.Property, 0, len(paths))
-	for _, property := range c.Schema.Properties() {
-		if _, ok := mapped[property.Name]; ok {
-			mappedProperties = append(mappedProperties, property)
-		}
-	}
-	schema := c.Schema
-	if mappedProperties != nil {
-		schema = types.Object(mappedProperties)
-	}
-
-	return schema, paths, nil
-}
-
-const noQueryLimit = -1
-
-// compileConnectionQuery compiles the given query and returns it. If limit is
-// noQueryLimit removes the ':limit' placeholder (along with '[[' and ']]');
-// otherwise, replaces the placeholders with limit.
-func compileConnectionQuery(query string, limit int) (string, error) {
-	p := strings.Index(query, ":limit")
-	if p == -1 {
-		return "", errors.BadRequest("query does not contain the ':limit' placeholder")
-	}
-	s1 := strings.Index(query[:p], "[[")
-	if s1 == -1 {
-		return "", errors.BadRequest("query does not contain '[['")
-	}
-	n := len(":limit")
-	s2 := strings.Index(query[p+n:], "]]")
-	if s2 == -1 {
-		return "", errors.BadRequest("query does not contain ']]'")
-	}
-	s2 += p + n + 2
-	if limit == noQueryLimit {
-		return query[:s1] + query[s2:], nil
-	}
-	return query[:s1] + strings.ReplaceAll(query[s1+2:s2-2], ":limit", strconv.Itoa(limit)) + query[s2:], nil
 }
 
 // fileReader implements the connector.FileReader interface.
@@ -1831,97 +1558,30 @@ func abbreviate(s string, n int) string {
 // exportUser returns a user to export (with the given ID) applying the given
 // mappings to the properties.
 //
-// TODO(Gianluca): note that this code has never been tested and misses some
-// validation parts, as the export procedure is still work in progress.
-//
-// TODO(Gianluca): when the export implementation will be discussed and
-// refactored, add support for output transformations.
-func exportUser(id string, properties map[string]any, mappings []*state.Mapping) (_connector.User, error) {
-
-	user := _connector.User{
-		ID:         id,
-		Properties: map[string]any{},
-	}
-
-	pool := transformations.NewPool()
-
-	for _, m := range mappings {
-
-		// Ensure that the input properties exist.
-		for _, p := range m.InProperties {
-			if _, ok := properties[p]; !ok {
-				return _connector.User{}, exportError{fmt.Errorf("property %q not found", p)}
-			}
-		}
-
-		if m.PredefinedFunc == nil && m.CustomFunc == nil {
-
-			// "One to one" mapping.
-			user.Properties[m.OutProperties[0]] = properties[m.InProperties[0]]
-
-		} else if m.PredefinedFunc != nil {
-
-			// Predefined transformation.
-			f, _ := predefinedFuncDefinitionByID(*m.PredefinedFunc)
-			in := make([]any, len(m.InProperties))
-			// TODO(Gianluca): this code that makes the validation can be
-			// simplified by changing the APIs of the 'types' package.
-			values := map[string]any{}
-			for i, p := range m.InProperties {
-				values[p] = properties[p]
-				in[i] = properties[m.InProperties[i]]
-			}
-			j, _ := json.Marshal(values)
-			_, err := types.Decode(bytes.NewReader(j), f.In)
-			if err != nil {
-				return _connector.User{}, exportError{err}
-			}
-			out := callPredefinedFunc(f, in)
-			for i, outName := range m.OutProperties {
-				user.Properties[outName] = out[i]
-			}
-
-		} else {
-
-			// Mapping with a custom transformation function.
-			in := make([]any, len(m.InProperties))
-			for i := range in {
-				in[i] = properties[m.InProperties[i]]
-			}
-			out, err := pool.Run(context.Background(), m.CustomFunc.Source, in)
-			if err != nil {
-				return _connector.User{}, exportError{fmt.Errorf("error while calling transformation function of mapping: %s", err)}
-			}
-			for i, name := range m.OutProperties {
-				user.Properties[name] = out[i]
-			}
-
-		}
-	}
-
-	return user, nil
-
+// TODO(Gianluca): this code must be rewritten on the actions.
+func exportUser(id string, properties map[string]any) (_connector.User, error) {
+	panic("not implemented")
 }
 
-// ConnectionHealth is an indicator of the current state of a connection.
-type ConnectionHealth int
+// Health is an indicator of the current state of a connection.
+type Health int
 
 const (
-	Healthy ConnectionHealth = iota
+	Healthy Health = iota
 	NoRecentData
 	RecentError
 	AccessDenied
 )
 
 // MarshalJSON implements the json.Marshaler interface.
-// It panics if health is not a valid ConnectionHealth value.
-func (health ConnectionHealth) MarshalJSON() ([]byte, error) {
+// It panics if health is not a valid Health value.
+func (health Health) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + health.String() + `"`), nil
 }
 
 // String returns the string representation of health.
-// It panics if health is not a valid ConnectionHealth value.
-func (health ConnectionHealth) String() string {
+// It panics if health is not a valid Health value.
+func (health Health) String() string {
 	switch health {
 	case Healthy:
 		return "Healthy"
@@ -1987,31 +1647,5 @@ func (role *ConnectionRole) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("invalid apis.ConnectionRole: %s", s)
 	}
 	*role = r
-	return nil
-}
-
-// validateTransformation validates the given not-nil transformation, returning
-// nil if the transformation is valid or an error with an error message
-// explaining why the transformation is invalid.
-func validateTransformation(t *Transformation) error {
-	if t == nil {
-		panic("t is nil")
-	}
-	if !t.In.Valid() || t.In.PhysicalType() != types.PtObject {
-		return errors.New("input schema is invalid")
-	}
-	if len(t.In.Properties()) == 0 {
-		return errors.New("input schema does not have properties")
-	}
-	if !t.Out.Valid() || t.Out.PhysicalType() != types.PtObject {
-		return errors.New("output schema is invalid")
-	}
-	if len(t.Out.Properties()) == 0 {
-		return errors.New("output schema does not have properties")
-	}
-	// TODO(Gianluca): do a proper validation of the Python source code.
-	if !strings.Contains(t.PythonSource, "def transform") {
-		return errors.New("Python source code does not contain 'transform' function")
-	}
 	return nil
 }

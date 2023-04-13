@@ -55,9 +55,11 @@ func (err MissingTimestampColumnError) Error() string {
 
 // File represents a file connector.
 type File struct {
-	Name string
-	Icon string // icon in SVG format
-	Open OpenFileFunc
+	Name                   string
+	SourceDescription      string // It should complete the sentence "Add an action to ..."
+	DestinationDescription string // It should complete the sentence "Add an action to ..."
+	Icon                   string // icon in SVG format
+	Open                   OpenFileFunc
 }
 
 // FileConfig represents the configuration of a file connection.

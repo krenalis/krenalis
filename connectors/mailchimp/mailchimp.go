@@ -36,12 +36,17 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+// Make sure it implements the AppUsersConnection interface.
+var _ connector.AppUsersConnection = &connection{}
+
 var Debug = false
 
 func init() {
 	connector.RegisterApp(connector.App{
-		Name: "Mailchimp",
-		Icon: icon,
+		Name:                   "Mailchimp",
+		SourceDescription:      "import contacts as users from Mailchimp",
+		DestinationDescription: "export users as contacts to Mailchimp",
+		Icon:                   icon,
 		OAuth: connector.OAuth{
 			URL:             "https://login.mailchimp.com/oauth2/authorize?response_type=code",
 			ForcedExpiresIn: "never",
@@ -88,16 +93,6 @@ func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnecti
 		}
 	}
 	return &c, nil
-}
-
-// ActionTypes returns the connection's action types.
-func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
-	return nil, nil
-}
-
-// Groups returns the groups starting from the given cursor.
-func (c *connection) Groups(cursor string, properties []connector.PropertyPath) error {
-	return nil
 }
 
 // ReceiveWebhook receives a webhook request and returns its events.
@@ -164,8 +159,190 @@ func (c *connection) Resource() (string, error) {
 	return resource, nil
 }
 
-// Schemas returns user and group schemas.
-func (c *connection) Schemas() (types.Type, types.Type, error) {
+// ServeUI serves the connector's user interface.
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
+
+	lists, err := c.getLists()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if c.settings.List != "" {
+		listName := ""
+		for _, l := range lists {
+			if l.ID == c.settings.List {
+				listName = l.Name
+			}
+		}
+		if listName == "" {
+			return nil, nil, ui.Errorf("List %q does not exists", c.settings.List)
+		}
+		return &ui.Form{
+			Fields: []ui.Component{
+				&ui.Text{Label: "Connected list", Text: listName},
+			},
+		}, nil, nil
+	}
+
+	switch event {
+	case "load":
+		options := []ui.Option{}
+		for _, l := range lists {
+			options = append(options, ui.Option{
+				Text:  l.Name,
+				Value: l.ID,
+			})
+		}
+		return &ui.Form{
+			Fields: []ui.Component{
+				&ui.Select{Name: "list", Label: "List", Placeholder: "", Options: options},
+			},
+			Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},
+		}, nil, nil
+	case "save":
+		var s map[string]string
+		err := json.Unmarshal(values, &s)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		lst := s["list"]
+
+		// Init webhooks
+		listName := ""
+		for _, l := range lists {
+			if l.ID == lst {
+				listName = l.Name
+				break
+			}
+		}
+		if listName == "" {
+			return nil, nil, ui.Errorf("List %q does not exists", lst)
+		}
+
+		// Check if the list already a webhook already set.
+		webhookBase := c.firehose.WebhookURL()
+		hasWebhook := false
+		secret := ""
+		hooks, err := c.getWebhooks(lst)
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, wh := range hooks {
+			// Check if the webhook has already been set up for the current connection.
+			if strings.HasPrefix(wh.URL, webhookBase) {
+				u, err := url.Parse(wh.URL)
+				if err != nil {
+					return nil, nil, err
+				}
+				secret = u.Query().Get("secret")
+				if wh.Events.Cleaned &&
+					wh.Events.Profile &&
+					wh.Events.Subscribe &&
+					wh.Events.Unsubscribe &&
+					wh.Events.Upemail &&
+					!wh.Events.Campaign {
+					// The correct webhook is already set.
+					hasWebhook = true
+					break
+				}
+				// Update the webhook to the correct settings.
+				_, err = c.setWebhook(lst, wh.ID)
+				if err != nil {
+					return nil, nil, err
+				}
+				hasWebhook = true
+			}
+		}
+		if !hasWebhook {
+			// Create a webhook.
+			secret, err = c.setWebhook(lst, "")
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+		c.settings.WebhookSecret = secret
+		c.settings.List = lst
+		newSettings, err := json.Marshal(c.settings)
+		if err != nil {
+			return nil, nil, err
+		}
+		err = c.firehose.SetSettings(newSettings)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return &ui.Form{
+			Fields: []ui.Component{
+				&ui.Text{Label: "Connected list", Text: listName},
+			},
+		}, nil, nil
+	default:
+		return nil, nil, ui.ErrEventNotExist
+	}
+
+}
+
+// SettingsUI obtains the settings from UI values and returns them.
+func (c *connection) SettingsUI(values []byte) ([]byte, error) {
+	return nil, errors.New("to be implemented")
+}
+
+// SetUsers sets the given users.
+func (c *connection) SetUsers(users []connector.User) error {
+
+	var r struct {
+		Operations []batchOperation `json:"operations"`
+	}
+	var basePath = "/lists/" + c.settings.List + "/members/"
+	for _, u := range users {
+		body, err := json.Marshal(u.Properties)
+		if err != nil {
+			return err
+		}
+		r.Operations = append(r.Operations, batchOperation{
+			Method: "PUT",
+			Path:   basePath + u.ID,
+			Params: map[string]string{"skip_merge_validation": "true"},
+			Body:   string(body),
+		})
+	}
+	rq, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
+
+	var response batchResponse
+	err = c.call("POST", "/batches", nil, bytes.NewReader(rq), 200, &response)
+	if err != nil {
+		return err
+	}
+
+	if response.Status != "finished" {
+		// Retrieve the batch at one minute intervals until it's status is finished.
+		path := "/batches/" + response.ID
+		response := batchResponse{}
+		for i := 0; i < 5; i++ {
+			time.Sleep(time.Minute)
+			err = c.call("GET", path, nil, bytes.NewReader(rq), 200, &response)
+			if err != nil {
+				return err
+			}
+			if response.Status != "finished" {
+				continue
+			}
+			if response.ErroredOperations != 0 {
+				return errors.New("could not update all users")
+			}
+		}
+		return errors.New("could not complete batch operation")
+	}
+
+	return nil
+}
+
+// UserSchema returns the user schema.
+func (c *connection) UserSchema() (types.Type, error) {
 	params := url.Values{
 		"fields": []string{"merge_fields.options.choices,merge_fields.name,merge_fields.tag,merge_fields.type"},
 	}
@@ -181,7 +358,7 @@ func (c *connection) Schemas() (types.Type, types.Type, error) {
 	}{}
 	err := c.call("GET", "/lists/"+c.settings.List+"/merge-fields", params, nil, 200, &res)
 	if err != nil {
-		return types.Type{}, types.Type{}, err
+		return types.Type{}, err
 	}
 
 	// Merge fields.
@@ -387,198 +564,10 @@ func (c *connection) Schemas() (types.Type, types.Type, error) {
 		},
 	})
 	if err != nil {
-		return types.Type{}, types.Type{}, fmt.Errorf("cannot create schema from properties: %s", err)
+		return types.Type{}, fmt.Errorf("cannot create schema from properties: %s", err)
 	}
 
-	return schema, types.Type{}, nil
-}
-
-// SendEvent sends event, along with the given mapped event, to the endpoint.
-// actionType specifies the action type corresponding to the event.
-func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, actionType, endpoint int) error {
-	return errors.New("not implemented")
-}
-
-// ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
-
-	lists, err := c.getLists()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if c.settings.List != "" {
-		listName := ""
-		for _, l := range lists {
-			if l.ID == c.settings.List {
-				listName = l.Name
-			}
-		}
-		if listName == "" {
-			return nil, nil, ui.Errorf("List %q does not exists", c.settings.List)
-		}
-		return &ui.Form{
-			Fields: []ui.Component{
-				&ui.Text{Label: "Connected list", Text: listName},
-			},
-		}, nil, nil
-	}
-
-	switch event {
-	case "load":
-		options := []ui.Option{}
-		for _, l := range lists {
-			options = append(options, ui.Option{
-				Text:  l.Name,
-				Value: l.ID,
-			})
-		}
-		return &ui.Form{
-			Fields: []ui.Component{
-				&ui.Select{Name: "list", Label: "List", Placeholder: "", Options: options},
-			},
-			Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},
-		}, nil, nil
-	case "save":
-		var s map[string]string
-		err := json.Unmarshal(values, &s)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		lst := s["list"]
-
-		// Init webhooks
-		listName := ""
-		for _, l := range lists {
-			if l.ID == lst {
-				listName = l.Name
-				break
-			}
-		}
-		if listName == "" {
-			return nil, nil, ui.Errorf("List %q does not exists", lst)
-		}
-
-		// Check if the list already a webhook already set.
-		webhookBase := c.firehose.WebhookURL()
-		hasWebhook := false
-		secret := ""
-		hooks, err := c.getWebhooks(lst)
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, wh := range hooks {
-			// Check if the webhook has already been set up for the current connection.
-			if strings.HasPrefix(wh.URL, webhookBase) {
-				u, err := url.Parse(wh.URL)
-				if err != nil {
-					return nil, nil, err
-				}
-				secret = u.Query().Get("secret")
-				if wh.Events.Cleaned &&
-					wh.Events.Profile &&
-					wh.Events.Subscribe &&
-					wh.Events.Unsubscribe &&
-					wh.Events.Upemail &&
-					!wh.Events.Campaign {
-					// The correct webhook is already set.
-					hasWebhook = true
-					break
-				}
-				// Update the webhook to the correct settings.
-				_, err = c.setWebhook(lst, wh.ID)
-				if err != nil {
-					return nil, nil, err
-				}
-				hasWebhook = true
-			}
-		}
-		if !hasWebhook {
-			// Create a webhook.
-			secret, err = c.setWebhook(lst, "")
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-		c.settings.WebhookSecret = secret
-		c.settings.List = lst
-		newSettings, err := json.Marshal(c.settings)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = c.firehose.SetSettings(newSettings)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		return &ui.Form{
-			Fields: []ui.Component{
-				&ui.Text{Label: "Connected list", Text: listName},
-			},
-		}, nil, nil
-	default:
-		return nil, nil, ui.ErrEventNotExist
-	}
-
-}
-
-// SettingsUI obtains the settings from UI values and returns them.
-func (c *connection) SettingsUI(values []byte) ([]byte, error) {
-	return nil, errors.New("to be implemented")
-}
-
-// SetUsers sets the given users.
-func (c *connection) SetUsers(users []connector.User) error {
-
-	var r struct {
-		Operations []batchOperation `json:"operations"`
-	}
-	var basePath = "/lists/" + c.settings.List + "/members/"
-	for _, u := range users {
-		body, err := json.Marshal(u.Properties)
-		if err != nil {
-			return err
-		}
-		r.Operations = append(r.Operations, batchOperation{
-			Method: "PUT",
-			Path:   basePath + u.ID,
-			Params: map[string]string{"skip_merge_validation": "true"},
-			Body:   string(body),
-		})
-	}
-	rq, err := json.Marshal(r)
-	if err != nil {
-		return err
-	}
-
-	var response batchResponse
-	err = c.call("POST", "/batches", nil, bytes.NewReader(rq), 200, &response)
-	if err != nil {
-		return err
-	}
-
-	if response.Status != "finished" {
-		// Retrieve the batch at one minute intervals until it's status is finished.
-		path := "/batches/" + response.ID
-		response := batchResponse{}
-		for i := 0; i < 5; i++ {
-			time.Sleep(time.Minute)
-			err = c.call("GET", path, nil, bytes.NewReader(rq), 200, &response)
-			if err != nil {
-				return err
-			}
-			if response.Status != "finished" {
-				continue
-			}
-			if response.ErroredOperations != 0 {
-				return errors.New("could not update all users")
-			}
-		}
-		return errors.New("could not complete batch operation")
-	}
-
-	return nil
+	return schema, nil
 }
 
 // Users returns the users starting from the given cursor.

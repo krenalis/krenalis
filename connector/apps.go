@@ -25,59 +25,98 @@ type PropertyPath []string
 
 // App represents an app connector.
 type App struct {
-	Name        string
-	Icon        string         // icon in SVG format
-	Endpoints   map[int]string // endpoints' names by their identifier. nil for connectors that do not use endpoints, otherwise contains at least one value.
-	OAuth       OAuth          // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
-	WebhooksPer WebhooksPer    // indicates if webhooks are per connector, resource or connection
-	Open        OpenAppFunc
+	Name                   string
+	SourceDescription      string      // It should complete the sentence "Add an action to ..."
+	DestinationDescription string      // It should complete the sentence "Add an action to ..."
+	Icon                   string      // icon in SVG format
+	OAuth                  OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
+	WebhooksPer            WebhooksPer // indicates if webhooks are per connector, resource or connection
+	Open                   OpenAppFunc
 }
 
 // AppConfig represents the configuration of an app connection.
 type AppConfig struct {
-	Role         Role
-	Settings     []byte
-	Firehose     Firehose
-	ClientSecret string
-	Resource     string
-	AccessToken  string
+	Role          Role
+	Settings      []byte
+	Firehose      Firehose
+	ClientSecret  string
+	Resource      string
+	AccessToken   string
+	PrivacyRegion PrivacyRegion
 }
+
+// PrivacyRegion represents a privacy region.
+type PrivacyRegion string
+
+const (
+	PrivacyRegionNotSpecified PrivacyRegion = ""
+	PrivacyRegionEurope       PrivacyRegion = "Europe"
+)
 
 // OpenAppFunc represents functions that open app connections. Such functions
 // are not blocking functions and the context is used by the app methods.
 type OpenAppFunc func(context.Context, *AppConfig) (AppConnection, error)
 
 // AppConnection is the interface implemented by app connections.
+//
+// An app connection also implements at least one of the interfaces
+// AppEventsConnection, AppUsersConnection, and AppUsersGroupsConnection.
 type AppConnection interface {
+	// Resource returns the resource.
+	Resource() (string, error)
+}
 
-	// ActionTypes returns the connection's action types.
-	ActionTypes() ([]*ActionType, error)
+// AppEventsConnection is the interface implemented by app connections to which
+// events can be sent.
+type AppEventsConnection interface {
+	AppConnection
+
+	// EventTypes returns the connection's event types.
+	EventTypes() ([]*EventType, error)
+
+	// SendEvent sends the event, along with the given mapped event.
+	// Can be used by multiple goroutines at the same time.
+	SendEvent(event Event, mappedEvent map[string]any, eventType string) error
+}
+
+// AppUsersConnection is the interface implemented by app connections that
+// manage users.
+type AppUsersConnection interface {
+	AppConnection
+
+	// ReceiveWebhook receives a webhook request and returns its events.
+	// It returns the ErrWebhookUnauthorized error is the request was not
+	// authorized.
+	ReceiveWebhook(r *http.Request) ([]WebhookEvent, error)
+
+	// SetUsers sets the given users.
+	SetUsers(users []User) error
+
+	// UserSchema returns the user schema.
+	UserSchema() (types.Type, error)
+
+	// Users returns the users starting from the given cursor.
+	Users(cursor string, properties []PropertyPath) error
+}
+
+// AppGroupsConnection is the interface implemented by app connections that
+// manage groups.
+type AppGroupsConnection interface {
+	AppConnection
+
+	// GroupSchema returns the group schema.
+	GroupSchema() (types.Type, error)
 
 	// Groups returns the groups starting from the given cursor.
 	Groups(cursor string, properties []PropertyPath) error
 
 	// ReceiveWebhook receives a webhook request and returns its events.
-	// It returns the ErrWebhookUnauthorized error is the request was not authorized.
+	// It returns the ErrWebhookUnauthorized error is the request was not
+	// authorized.
 	ReceiveWebhook(r *http.Request) ([]WebhookEvent, error)
 
-	// Resource returns the resource.
-	Resource() (string, error)
-
-	// Schemas returns user and group schemas.
-	Schemas() (types.Type, types.Type, error)
-
-	// SendEvent sends event, along with the given mapped event, to the
-	// endpoint. actionType specifies the action type corresponding to the
-	// event.
-	//
-	// SendEvent can be used by multiple goroutines at the same time.
-	SendEvent(event Event, mappedEvent map[string]any, actionType, endpoint int) error
-
-	// SetUsers sets the given users.
-	SetUsers(users []User) error
-
-	// Users returns the users starting from the given cursor.
-	Users(cursor string, properties []PropertyPath) error
+	// SetGroups sets the given groups.
+	SetGroups(groups []Group) error
 }
 
 // Event represents an event.

@@ -36,7 +36,6 @@ type State struct {
 	mu               *sync.Mutex
 	db               *postgres.DB
 	ctx              context.Context
-	keeping          bool // report whether Keep has been called.
 	syncing          bool // reports whether the keeper has started synchronizing the state.
 	election         election
 	accounts         map[int]*Account
@@ -48,15 +47,19 @@ type State struct {
 	resources        map[int]*Resource
 	notifications    <-chan postgres.Notification
 	listeners        struct {
-		AddConnection          []func(AddConnectionNotification)
-		AddImportInProgress    []func(AddImportInProgressNotification)
-		DeleteConnection       []func(DeleteConnectionNotification)
-		DeleteWorkspace        []func(DeleteWorkspaceNotification)
-		ElectLeader            []func(ElectLeaderNotification)
-		SetConnectionSettings  []func(SetConnectionSettingsNotification)
-		SetConnectionStatus    []func(SetConnectionStatusNotification)
-		SetConnectionUserQuery []func(SetConnectionUserQueryNotification)
-		SetWarehouseSettings   []func(SetWarehouseSettingsNotification)
+		AddAction                 []func(AddActionNotification)
+		AddConnection             []func(AddConnectionNotification)
+		DeleteAction              []func(DeleteActionNotification)
+		DeleteConnection          []func(DeleteConnectionNotification)
+		DeleteWorkspace           []func(DeleteWorkspaceNotification)
+		ElectLeader               []func(ElectLeaderNotification)
+		ExecuteAction             []func(ExecuteActionNotification)
+		SetAction                 []func(SetActionNotification)
+		SetActionSchedulePeriod   []func(SetActionSchedulePeriodNotification)
+		SetConnectionSettings     []func(SetConnectionSettingsNotification)
+		SetConnectionStatus       []func(SetConnectionStatusNotification)
+		SetWarehouseSettings      []func(SetWarehouseSettingsNotification)
+		SetWorkspacePrivacyRegion []func(SetWorkspacePrivacyRegion)
 	}
 }
 
@@ -83,6 +86,15 @@ func (state *State) Accounts() []*Account {
 		return accounts[i].ID < accounts[j].ID
 	})
 	return accounts
+}
+
+// Action returns the action with identifier id.
+// The boolean return value reports whether the action exists.
+func (state *State) Action(id int) (*Action, bool) {
+	state.mu.Lock()
+	a, ok := state.actions[id]
+	state.mu.Unlock()
+	return a, ok
 }
 
 // Actions returns all the actions from every connection.
@@ -203,14 +215,15 @@ func (account *Account) Workspaces() []*Workspace {
 
 // Workspace represents a workspace.
 type Workspace struct {
-	mu          *sync.Mutex
-	Warehouse   warehouses.Warehouse
-	Schemas     map[string]*types.Type
-	connections map[int]*Connection
-	ID          int
-	account     *Account
-	Name        string
-	resources   map[int]*Resource
+	mu            *sync.Mutex
+	Warehouse     warehouses.Warehouse
+	Schemas       map[string]*types.Type
+	connections   map[int]*Connection
+	ID            int
+	account       *Account
+	Name          string
+	resources     map[int]*Resource
+	PrivacyRegion PrivacyRegion
 }
 
 // Account returns the account of the workspace.
@@ -267,15 +280,48 @@ func (workspace *Workspace) ResourceByCode(code string) (*Resource, bool) {
 	return r, r != nil
 }
 
+// PrivacyRegion represents a privacy region.
+type PrivacyRegion string
+
+const (
+	PrivacyRegionNotSpecified PrivacyRegion = ""
+	PrivacyRegionEurope       PrivacyRegion = "Europe"
+)
+
 // Connector represents a connector.
 type Connector struct {
-	ID          int
-	Name        string
-	Type        ConnectorType
-	HasSettings bool
-	LogoURL     string
-	WebhooksPer WebhooksPer
-	OAuth       *ConnectorOAuth
+	ID                     int
+	Name                   string
+	SourceDescription      string
+	DestinationDescription string
+	Type                   ConnectorType
+	Targets                ConnectorTargets
+	HasSettings            bool
+	LogoURL                string
+	WebhooksPer            WebhooksPer
+	OAuth                  *ConnectorOAuth
+}
+
+// ConnectorTargets represents the targets of a connector.
+type ConnectorTargets int
+
+const (
+	EventsFlag = 1 << iota
+	UsersFlag
+	GroupsFlag
+)
+
+// Contains reports whether t contains the given action target.
+func (t ConnectorTargets) Contains(target ActionTarget) bool {
+	switch target {
+	case EventsTarget:
+		return t&EventsFlag != 0
+	case UsersTarget:
+		return t&UsersFlag != 0
+	case GroupsTarget:
+		return t&GroupsFlag != 0
+	}
+	panic("invalid action target")
 }
 
 // ConnectorType represents a connector type.
@@ -457,30 +503,25 @@ func (resource *Resource) Connector() *Connector {
 
 // Connection represents a connection.
 type Connection struct {
-	mu               *sync.Mutex
-	account          *Account
-	workspace        *Workspace
-	ID               int
-	Name             string
-	Role             ConnectionRole
-	Enabled          bool
-	connector        *Connector
-	storage          *Connection
-	resource         *Resource
-	WebsiteHost      string
-	Keys             []string
-	UserCursor       string
-	IdentityColumn   string
-	TimestampColumn  string
-	Settings         []byte
-	Schema           types.Type
-	UsersQuery       string
-	importInProgress *ImportInProgress
-	actions          map[int]*Action
-	actionTypes      map[int]*ActionType
-	mappings         []*Mapping
-	transformation   *Transformation
-	Health           ConnectionHealth
+	mu              *sync.Mutex
+	account         *Account
+	workspace       *Workspace
+	ID              int
+	Name            string
+	Role            ConnectionRole
+	Enabled         bool
+	connector       *Connector
+	storage         *Connection
+	resource        *Resource
+	WebsiteHost     string
+	Keys            []string
+	UserCursor      string
+	IdentityColumn  string
+	TimestampColumn string
+	Settings        []byte
+	UsersQuery      string
+	actions         map[int]*Action
+	Health          Health
 }
 
 // Account returns the account of the connection.
@@ -525,16 +566,6 @@ func (connection *Connection) Resource() (*Resource, bool) {
 	return r, r != nil
 }
 
-// ImportInProgress returns the import in progress of the connection.
-// The boolean return value reports whether the connection has an import in
-// progress.
-func (connection *Connection) ImportInProgress() (*ImportInProgress, bool) {
-	connection.mu.Lock()
-	im := connection.importInProgress
-	connection.mu.Unlock()
-	return im, im != nil
-}
-
 // Action returns the action of the connection with identifier id.
 // The boolean return value reports whether the action exists.
 func (connection *Connection) Action(id int) (*Action, bool) {
@@ -560,93 +591,23 @@ func (connection *Connection) Actions() []*Action {
 	return actions
 }
 
-// ActionType returns the action type of the connection with identifier id.
-// The boolean return value reports whether the action type exists.
-func (connection *Connection) ActionType(id int) (*ActionType, bool) {
-	connection.mu.Lock()
-	at, ok := connection.actionTypes[id]
-	connection.mu.Unlock()
-	return at, ok
-}
-
-// ActionTypes returns the action types of the connection.
-func (connection *Connection) ActionTypes() []*ActionType {
-	connection.mu.Lock()
-	actionTypes := make([]*ActionType, len(connection.actionTypes))
-	i := 0
-	for _, at := range connection.actionTypes {
-		actionTypes[i] = at
-		i++
-	}
-	connection.mu.Unlock()
-	sort.Slice(actionTypes, func(i, j int) bool {
-		return actionTypes[i].ID < actionTypes[j].ID
-	})
-	return actionTypes
-}
-
-// Mappings returns the mappings of the connection.
-// If there are no mappings, it returns an empty slice.
-func (connection *Connection) Mappings() []*Mapping {
-	connection.mu.Lock()
-	ms := connection.mappings
-	connection.mu.Unlock()
-	return ms
-}
-
-// Transformation returns the transformation of the connection, if it has one,
-// otherwise returns nil.
-func (connection *Connection) Transformation() *Transformation {
-	connection.mu.Lock()
-	t := connection.transformation
-	connection.mu.Unlock()
-	return t
-}
-
-// ImportInProgress represents a connection import in progress.
-type ImportInProgress struct {
-	mu         *sync.Mutex
-	ID         int
-	connection *Connection
-	storage    *Connection
-	Reimport   bool
-	StartTime  time.Time
-}
-
-// Connection returns the connection of the import.
-func (imp *ImportInProgress) Connection() *Connection {
-	imp.mu.Lock()
-	c := imp.connection
-	imp.mu.Unlock()
-	return c
-}
-
-// Storage returns the storage of the import.
-// The boolean return value reports whether the import has a storage.
-func (imp *ImportInProgress) Storage() (*Connection, bool) {
-	imp.mu.Lock()
-	s := imp.storage
-	imp.mu.Unlock()
-	return s, s != nil
-}
-
-// ConnectionHealth is an indicator of the current state of a connection.
-type ConnectionHealth int
+// Health is an indicator of the current state of an action or a connection.
+type Health int
 
 const (
-	Healthy ConnectionHealth = iota
+	Healthy Health = iota
 	NoRecentData
 	RecentError
 	AccessDenied
 )
 
 // Scan implements the sql.Scanner interface.
-func (health *ConnectionHealth) Scan(src any) error {
+func (health *Health) Scan(src any) error {
 	s, ok := src.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into an state.ConnectionHealth value", src)
+		return fmt.Errorf("cannot scan a %T value into an state.Health value", src)
 	}
-	var h ConnectionHealth
+	var h Health
 	switch s {
 	case "Healthy":
 		h = Healthy
@@ -657,15 +618,15 @@ func (health *ConnectionHealth) Scan(src any) error {
 	case "AccessDenied":
 		h = AccessDenied
 	default:
-		return fmt.Errorf("invalid state.ConnectionHealth: %s", s)
+		return fmt.Errorf("invalid state.Health: %s", s)
 	}
 	*health = h
 	return nil
 }
 
 // String returns the string representation of health.
-// It panics if health is not a valid ConnectionHealth value.
-func (health ConnectionHealth) String() string {
+// It panics if health is not a valid Health value.
+func (health Health) String() string {
 	switch health {
 	case Healthy:
 		return "Healthy"
@@ -680,8 +641,8 @@ func (health ConnectionHealth) String() string {
 }
 
 // Value implements driver.Valuer interface.
-// It returns an error if health is not a valid ConnectionHealth.
-func (health ConnectionHealth) Value() (driver.Value, error) {
+// It returns an error if health is not a valid Health.
+func (health Health) Value() (driver.Value, error) {
 	switch health {
 	case Healthy:
 		return "Healthy", nil
@@ -692,7 +653,7 @@ func (health ConnectionHealth) Value() (driver.Value, error) {
 	case AccessDenied:
 		return "AccessDenied", nil
 	}
-	return nil, fmt.Errorf("not a valid ConnectionHealth: %d", health)
+	return nil, fmt.Errorf("not a valid Health: %d", health)
 }
 
 // ConnectionRole represents a connection role.
@@ -747,7 +708,7 @@ func (role ConnectionRole) Value() (driver.Value, error) {
 }
 
 // Transformation represents a Python transformation which can be associated to
-// a connection.
+// an action.
 type Transformation struct {
 
 	// In is the input schema of the transformation, which should have at least
@@ -764,87 +725,121 @@ type Transformation struct {
 	PythonSource string
 }
 
-// Mapping represents a mapping from a kind of properties to another.
-type Mapping struct {
-	// InProperties contains the names of the input properties of the mapping.
-	// For “one-to-one” mappings, it contains just one name.
-	InProperties []string
-
-	// OutProperties contains the names of the output properties of the mapping.
-	// For “one-to-one” mappings, it contains just one name.
-	OutProperties []string
-
-	// PredefinedFunc, when not-nil, is the ID of the predefined function
-	// associated to this mapping, otherwise is nil.
-	PredefinedFunc *PredefinedFunc
-
-	// CustomFunc, when not-nil, is the custom function associated to this
-	// mapping, otherwise is nil.
-	CustomFunc *MappingCustomFunc
-}
-
-type MappingCustomFunc struct {
-	InTypes  []types.Type
-	OutTypes []types.Type
-	Source   string
-}
-
-type PredefinedFunc int
+// ActionTarget represents the action target of a connection.
+type ActionTarget int
 
 const (
-	TrimSpace PredefinedFunc = iota + 1
-	SplitName
-	UpperCase
-	LowerCase
+	EventsTarget ActionTarget = iota + 1
+	UsersTarget
+	GroupsTarget
 )
 
-// Action represents an action associated to a destination connection to send
-// events.
+// Scan implements the sql.Scanner interface.
+func (target *ActionTarget) Scan(src any) error {
+	s, ok := src.(string)
+	if !ok {
+		return fmt.Errorf("cannot scan a %T value into an state.ActionTarget value", src)
+	}
+	switch s {
+	case "Events":
+		*target = EventsTarget
+	case "Users":
+		*target = UsersTarget
+	case "Groups":
+		*target = GroupsTarget
+	default:
+		return fmt.Errorf("invalid state.ActionTarget: %s", s)
+	}
+	return nil
+}
+
+// String returns the string representation of target.
+// It panics if target is not a valid ActionTarget value.
+func (target ActionTarget) String() string {
+	switch target {
+	case EventsTarget:
+		return "Events"
+	case UsersTarget:
+		return "Users"
+	case GroupsTarget:
+		return "Groups"
+	}
+	panic("invalid action target")
+}
+
+// Value implements driver.Valuer interface.
+// It returns an error if target is not a valid ActionTarget.
+func (target ActionTarget) Value() (driver.Value, error) {
+	switch target {
+	case EventsTarget:
+		return "Events", nil
+	case UsersTarget:
+		return "Users", nil
+	case GroupsTarget:
+		return "Groups", nil
+	}
+	return nil, fmt.Errorf("not a valid ActionTarget: %d", target)
+}
+
 type Action struct {
-	mu *sync.Mutex
-
-	// ID is the identifier.
-	ID int
-
-	// connection is the connection of the action.
-	connection *Connection
-
-	// ActionType is the action type of the action.
-	ActionType *ActionType
-
-	// Name is the name of the action.
-	Name string
-
-	// Enabled indicates if this action is enabled or not.
-	Enabled bool
-
-	// Endpoint is the action type's endpoint chosen for this action.
-	Endpoint int
-
-	// Filter is the filter used to determine which events should be processed
-	// by this action.
-	Filter ActionFilter
-
-	// Mapping is the mapping associated to the action, if present, otherwise is
-	// nil. A connection cannot have both a mapping and a transformation.
-	Mapping map[string]string
-
-	// Transformation is the transformation associated to the action, if
-	// present, otherwise is nil. A connection cannot have both a mapping and a
-	// transformation.
+	mu             *sync.Mutex
+	ID             int
+	connection     *Connection
+	execution      *ActionExecution
+	Target         ActionTarget
+	Name           string
+	Enabled        bool
+	EventType      string
+	ScheduleStart  int16
+	SchedulePeriod int16
+	Filter         *ActionFilter
+	Schema         types.Type
+	Mapping        map[string]string
 	Transformation *Transformation
+	Query          string
+	Health         Health
 }
 
-// ActionFilter represents an action filter associated to an action.
+// ActionExecution represents an action execution.
+type ActionExecution struct {
+	mu        *sync.Mutex
+	ID        int
+	action    *Action
+	storage   *Connection
+	Reimport  bool
+	StartTime time.Time
+}
+
+// Action returns the action of the execution.
+func (ex *ActionExecution) Action() *Action {
+	ex.mu.Lock()
+	a := ex.action
+	ex.mu.Unlock()
+	return a
+}
+
+// Storage returns the storage of the execution.
+// The boolean return value reports whether the execution has a storage.
+func (ex *ActionExecution) Storage() (*Connection, bool) {
+	ex.mu.Lock()
+	s := ex.storage
+	ex.mu.Unlock()
+	return s, s != nil
+}
+
+// ActionFilter represents a filter of an action.
 type ActionFilter struct {
-	Logical    string // "all" or "any"
-	Conditions []ActionFilterCondition
+	Logical    ActionFilterLogical     // can be "all" or "any".
+	Conditions []ActionFilterCondition // cannot be empty.
 }
 
-// ActionFilterCondition represents an action filter condition associated to an
-// action's filter.
+// ActionFilterLogical represents the logical operator of an action filter.
+// It can be "all" or "any".
+type ActionFilterLogical string
+
+// ActionFilterCondition represents the condition of an action filter.
 type ActionFilterCondition struct {
-	Property string // "AnonymousID", "Event", "UserID".
+	Property string // A property identifier or selector (e.g. "street1" or "traits.address.street1").
 	Operator string // "is", "is not".
 	Value    string // "Track", "Page", ...
 }
@@ -857,11 +852,11 @@ func (action *Action) Connection() *Connection {
 	return c
 }
 
-// ActionType represents an action type for a connection.
-type ActionType struct {
-	ID          int
-	Name        string
-	Description string
-	Endpoints   []int // nil if the action type has no endpoints.
-	Schema      types.Type
+// Execution returns the execution of the action.
+// The boolean return value reports whether the action is running.
+func (action *Action) Execution() (*ActionExecution, bool) {
+	action.mu.Lock()
+	ex := action.execution
+	action.mu.Unlock()
+	return ex, ex != nil
 }

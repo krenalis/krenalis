@@ -142,6 +142,31 @@ sl-alert[variant='warning'] > * {
 	color: var(--text-onaccent);
 }
 
+sl-alert::part(base) {
+	color: var(--text-onaccent);
+	font-weight: 600;
+}
+
+sl-alert[variant='neutral']::part(base) {
+	background-color: var(--sl-color-neutral-600);
+}
+
+sl-alert[variant='primary']::part(base) {
+	background-color: var(--sl-color-primary-600);
+}
+
+sl-alert[variant='success']::part(base) {
+	background-color: var(--sl-color-success-600);
+}
+
+sl-alert[variant='danger']::part(base) {
+	background-color: var(--sl-color-danger-600);
+}
+
+sl-alert[variant='warning']::part(base) {
+	background-color: var(--sl-color-warning-600);
+}
+
 sl-breadcrumb-item {
 	position: relative;
 }
@@ -152,6 +177,45 @@ sl-breadcrumb-item > a {
 	top: 0;
 	width: calc(100% - 14px);
 	height: 100%;
+}
+
+sl-menu-item::part(base) {
+	padding-top: 5px;
+	padding-bottom: 5px;
+}
+
+sl-menu-item:hover::part(base) {
+	background-color: var(--sl-color-neutral-200);
+}
+
+sl-switch[checked]::part(control) {
+	background-color: var(--sl-color-success-600)!important;
+	border-color: var(--sl-color-success-600)!important;
+}
+
+sl-switch[checked]::part(thumb) {
+	border-color: var(--sl-color-success-600)!important;
+}
+
+sl-drawer[placement="bottom"]::part(panel) {
+	border-top-left-radius: 3% 6%;
+	border-top-right-radius: 3% 6%;
+	padding: 20px 30px 10px 30px;
+}
+
+/* TODO: why this doesn't work? */
+
+sl-drawer::part(body)::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+sl-drawer::part(body)::-webkit-scrollbar-thumb {
+    background: var(--sl-color-neutral-300);
+}
+
+sl-drawer::part(body)::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 /* || icons */
@@ -226,7 +290,7 @@ sl-dialog::part(base) {
 }
 
 .App .routeContent.schema { 
-	min-height: calc(100vh - 120px);
+	min-height: calc(100vh - 140px);
 }
 
 /* || Tab panels */

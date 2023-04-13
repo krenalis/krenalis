@@ -18,8 +18,8 @@ import (
 
 var reloadCmd = &cobra.Command{
 	Use:   "reload <connection>",
-	Short: "reloads schema and action types",
-	Long:  "reloads schema and action types",
+	Short: "reloads schema",
+	Long:  "reloads schema",
 	Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 		connection, _ := strconv.Atoi(args[0])

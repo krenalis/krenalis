@@ -1,35 +1,28 @@
-import React from 'react';
 import './Card.css';
 import { SlBadge } from '@shoelace-style/shoelace/dist/react/index.js';
 
-// TODO (@Andrea): implement description as a prop to replace 'lorem ipsum' hardcoded text.
-export default class Card extends React.Component {
-	render() {
-		return (
-			<div className='Card'>
-				<div className='top'>
-					<div className='logo'>
-						{this.props.logoURL === '' ? (
-							<div class='unknownLogo'>?</div>
-						) : (
-							<img alt={`${this.props.name}'s logo`} rel='noreferrer' src={this.props.logoURL} />
-						)}
-					</div>
-					<div className='name'>{this.props.name}</div>
-					{this.props.type && (
-						<SlBadge className='type' variant='neutral'>
-							{this.props.type}
-						</SlBadge>
+const Card = ({ logoURL, name, type, description, children }) => {
+	return (
+		<div className='Card'>
+			<div className='top'>
+				<div className='logo'>
+					{logoURL === '' ? (
+						<div class='unknownLogo'>?</div>
+					) : (
+						<img alt={`${name}'s logo`} rel='noreferrer' src={logoURL} />
 					)}
-					{this.props.role && (
-						<SlBadge className='role' variant='neutral'>
-							{this.props.role}
-						</SlBadge>
-					)}
-					<div className='description'>Lorem ipsum dolor, sit amet consectetur adipisicing elit</div>
 				</div>
-				<div className='body'>{this.props.children}</div>
+				<div className='name'>{name}</div>
+				{type && (
+					<SlBadge className='type' variant='neutral'>
+						{type}
+					</SlBadge>
+				)}
+				<div className='description'>{description}</div>
 			</div>
-		);
-	}
-}
+			<div className='body'>{children}</div>
+		</div>
+	);
+};
+
+export default Card;

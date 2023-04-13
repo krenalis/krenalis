@@ -25,7 +25,7 @@ const ConnectionForm = ({ connection: c }) => {
 					return;
 				}
 				if (err instanceof UnprocessableError) {
-					if (err.code === 'EventNotExist') {
+					if (err.code === 'EventNotExists') {
 						// TODO(@Andrea): find a way to show the full error message
 						// in the toast notification when the server is started with
 						// the CHICHI_DEBUG_UI environment variable set to 'true'.
@@ -62,7 +62,7 @@ const ConnectionForm = ({ connection: c }) => {
 				return;
 			}
 			if (err instanceof UnprocessableError) {
-				if (err.code === 'EventNotExist') {
+				if (err.code === 'EventNotExists') {
 					// TODO(@Andrea): find a way to show the full error message
 					// in the toast notification when the server is started with
 					// the CHICHI_DEBUG_UI environment variable set to 'true'.

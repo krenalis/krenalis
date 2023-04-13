@@ -10,12 +10,14 @@ package state
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
 
 	"chichi/apis/postgres"
 	"chichi/apis/types"
+	_connector "chichi/connector"
 
 	"github.com/google/uuid"
 )
@@ -56,19 +58,58 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all connectors.
 		state.connectors = map[int]*Connector{}
-		err = state.db.QueryScan(ctx, "SELECT id, name, type, has_settings, logo_url, webhooks_per, oauth_url, oauth_client_id,"+
-			" oauth_client_secret, oauth_token_endpoint, oauth_default_token_type, oauth_default_expires_in,"+
-			" oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
+		err = state.db.QueryScan(ctx, "SELECT id, name, type, targets, has_settings, logo_url, webhooks_per,"+
+			" oauth_url, oauth_client_id, oauth_client_secret, oauth_token_endpoint, oauth_default_token_type,"+
+			" oauth_default_expires_in, oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
 			for rows.Next() {
 				c := Connector{}
+				var targets []string
 				oauth := ConnectorOAuth{}
-				if err := rows.Scan(&c.ID, &c.Name, &c.Type, &c.HasSettings, &c.LogoURL, &c.WebhooksPer, &oauth.URL,
-					&oauth.ClientID, &oauth.ClientSecret, &oauth.TokenEndpoint, &oauth.DefaultTokenType,
+				if err := rows.Scan(&c.ID, &c.Name, &c.Type, &targets, &c.HasSettings, &c.LogoURL, &c.WebhooksPer,
+					&oauth.URL, &oauth.ClientID, &oauth.ClientSecret, &oauth.TokenEndpoint, &oauth.DefaultTokenType,
 					&oauth.DefaultExpiresIn, &oauth.ForcedExpiresIn); err != nil {
+					return err
+				}
+				c.Targets, err = deserializeConnectorTargets(targets)
+				if err != nil {
 					return err
 				}
 				if oauth.URL != "" {
 					c.OAuth = &oauth
+				}
+				switch c.Type {
+				case AppType:
+					app := _connector.RegisteredApp(c.Name)
+					c.SourceDescription = app.SourceDescription
+					c.DestinationDescription = app.DestinationDescription
+				case DatabaseType:
+					database := _connector.RegisteredDatabase(c.Name)
+					c.SourceDescription = database.SourceDescription
+					c.DestinationDescription = database.DestinationDescription
+				case FileType:
+					file := _connector.RegisteredFile(c.Name)
+					c.SourceDescription = file.SourceDescription
+					c.DestinationDescription = file.DestinationDescription
+				case MobileType:
+					mobile := _connector.RegisteredMobile(c.Name)
+					c.SourceDescription = mobile.SourceDescription
+					c.DestinationDescription = mobile.DestinationDescription
+				case ServerType:
+					server := _connector.RegisteredServer(c.Name)
+					c.SourceDescription = server.SourceDescription
+					c.DestinationDescription = server.DestinationDescription
+				case StorageType:
+					storage := _connector.RegisteredStorage(c.Name)
+					c.SourceDescription = storage.SourceDescription
+					c.DestinationDescription = storage.DestinationDescription
+				case StreamType:
+					stream := _connector.RegisteredStream(c.Name)
+					c.SourceDescription = stream.SourceDescription
+					c.DestinationDescription = stream.DestinationDescription
+				case WebsiteType:
+					website := _connector.RegisteredWebsite(c.Name)
+					c.SourceDescription = website.SourceDescription
+					c.DestinationDescription = website.DestinationDescription
 				}
 				state.connectors[c.ID] = &c
 			}
@@ -105,23 +146,25 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
-		err = state.db.QueryScan(ctx, "SELECT id, account, name, warehouse_type, warehouse_settings, schemas FROM workspaces",
+		err = state.db.QueryScan(ctx, "SELECT id, account, name, warehouse_type, warehouse_settings, privacy_region, schemas FROM workspaces",
 			func(rows *postgres.Rows) error {
 				var id, accountID int
 				var name string
+				var privacyRegion PrivacyRegion
 				var warehouseType *WarehouseType
 				var warehouseSettings, schemas []byte
 				for rows.Next() {
-					if err := rows.Scan(&id, &accountID, &name, &warehouseType, &warehouseSettings, &schemas); err != nil {
+					if err := rows.Scan(&id, &accountID, &name, &warehouseType, &warehouseSettings, &privacyRegion, &schemas); err != nil {
 						return err
 					}
 					account := state.accounts[accountID]
 					workspace := &Workspace{
-						mu:        new(sync.Mutex),
-						ID:        id,
-						account:   account,
-						Name:      name,
-						resources: map[int]*Resource{},
+						mu:            new(sync.Mutex),
+						ID:            id,
+						account:       account,
+						Name:          name,
+						resources:     map[int]*Resource{},
+						PrivacyRegion: privacyRegion,
 					}
 					if warehouseType != nil {
 						workspace.Warehouse, err = openWarehouse(*warehouseType, warehouseSettings)
@@ -173,17 +216,13 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		state.connections = map[int]*Connection{}
 		err = state.db.QueryScan(ctx, "SELECT id, workspace, name, role, enabled, connector,"+
 			" COALESCE(storage, 0), resource, website_host, user_cursor, identity_column, timestamp_column,"+
-			" (transformation).in_types, (transformation).out_types, (transformation).python_source,"+
-			" settings, schema, users_query, action_types, health FROM connections", func(rows *postgres.Rows) error {
+			" settings, health FROM connections", func(rows *postgres.Rows) error {
 			for rows.Next() {
 				var workspaceID, connector, storage, resource int
-				var transformIn, transformOut, transformSrc string
-				var rawSchema string
-				var rawActionTypes []byte
 				c := Connection{}
 				if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &c.Role, &c.Enabled, &connector, &storage, &resource,
 					&c.WebsiteHost, &c.UserCursor, &c.IdentityColumn, &c.TimestampColumn,
-					&transformIn, &transformOut, &transformSrc, &c.Settings, &rawSchema, &c.UsersQuery, &rawActionTypes, &c.Health); err != nil {
+					&c.Settings, &c.Health); err != nil {
 					return err
 				}
 				workspace := state.workspaces[workspaceID]
@@ -206,33 +245,6 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 				if c.connector.Type == ServerType {
 					c.Keys = []string{}
 				}
-				if len(rawSchema) > 0 {
-					c.Schema, err = types.Parse(rawSchema)
-					if err != nil {
-						// TODO(marco) disable the connection instead of returning an error
-						return err
-					}
-				}
-				if len(rawActionTypes) > 0 {
-					err = json.Unmarshal(rawActionTypes, &c.actionTypes)
-					if err != nil {
-						return err
-					}
-				}
-				// Load the connection's transformation, if present.
-				if transformIn != "" {
-					t := &Transformation{PythonSource: transformSrc}
-					err := json.Unmarshal([]byte(transformIn), &t.In)
-					if err != nil {
-						return err
-					}
-					err = json.Unmarshal([]byte(transformOut), &t.Out)
-					if err != nil {
-						return err
-					}
-					c.transformation = t
-				}
-				c.mappings = []*Mapping{}
 				connection, ok := state.connections[c.ID]
 				if ok {
 					*connection = c
@@ -268,35 +280,39 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 			return err
 		}
 
-		// Read the actions.
-		err = state.db.QueryScan(ctx, "SELECT id, connection, action_type, name,\n"+
-			"enabled, endpoint, filter, mapping, (transformation).in_types,\n"+
-			"(transformation).out_types, (transformation).python_source FROM actions",
+		// Read all actions.
+		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name,\n"+
+			"enabled, schedule_start, schedule_period, filter, schema, mapping,\n"+
+			"(transformation).in_types, (transformation).out_types,\n"+
+			"(transformation).python_source, query, health FROM actions",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
-					var id, connectionID, actionType int
-					var name string
-					var enabled bool
-					var endpoint int
-					var filter, mapping, transformIn, transformOut, pythonSource []byte
-					err := rows.Scan(&id, &connectionID, &actionType, &name, &enabled,
-						&endpoint, &filter, &mapping, &transformIn, &transformOut, &pythonSource)
+					var connectionID int
+					var eventType string
+					var filter, rawSchema, mapping, transformIn, transformOut, pythonSource []byte
+					action := Action{}
+					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
+						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &filter,
+						&rawSchema, &mapping, &transformIn, &transformOut, &pythonSource, &action.Query, &action.Health)
 					if err != nil {
 						return err
 					}
 					c := state.connections[connectionID]
-					action := &Action{
-						mu:         new(sync.Mutex),
-						ID:         id,
-						connection: c,
-						ActionType: c.actionTypes[actionType],
-						Name:       name,
-						Enabled:    enabled,
-						Endpoint:   endpoint,
+					action.mu = new(sync.Mutex)
+					action.connection = c
+					action.EventType = eventType
+					if len(filter) > 0 {
+						err = json.Unmarshal(filter, &action.Filter)
+						if err != nil {
+							return err
+						}
 					}
-					err = json.Unmarshal(filter, &action.Filter)
-					if err != nil {
-						return err
+					if len(rawSchema) > 0 {
+						err := action.Schema.UnmarshalJSON(rawSchema)
+						if err != nil {
+							// TODO(marco) disable the action instead of returning an error
+							return err
+						}
 					}
 					if len(mapping) > 0 {
 						err = json.Unmarshal(mapping, &action.Mapping)
@@ -316,8 +332,8 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 						}
 						action.Transformation = t
 					}
-					state.actions[id] = action
-					c.actions[id] = action
+					state.actions[action.ID] = &action
+					c.actions[action.ID] = &action
 				}
 				return nil
 			})
@@ -325,37 +341,26 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 			return err
 		}
 
-		// Read the mappings.
-		err = state.db.QueryScan(ctx, "SELECT connection, in_properties, out_properties, predefined_func,\n"+
-			"(custom_func).in_types, (custom_func).out_types, (custom_func).source\n"+
-			"FROM connections_mappings", func(rows *postgres.Rows) error {
-			for rows.Next() {
-				m := &Mapping{}
-				var connectionID int
-				var inTypes, outTypes []byte // custom func only.
-				var src string               // custom func only.
-				err := rows.Scan(&connectionID, &m.InProperties, &m.OutProperties, &m.PredefinedFunc,
-					&inTypes, &outTypes, &src)
-				if err != nil {
-					return err
-				}
-				if len(inTypes) > 0 { // custom func.
-					m.CustomFunc = &MappingCustomFunc{}
-					err := json.Unmarshal(inTypes, &m.CustomFunc.InTypes)
+		// Read the non-terminated action executions.
+		err = state.db.QueryScan(ctx, "SELECT id, action, storage, reimport, start_time\n"+
+			"FROM actions_executions\nWHERE end_time IS NULL",
+			func(rows *postgres.Rows) error {
+				for rows.Next() {
+					exe := ActionExecution{}
+					var actionID int
+					var storage *int
+					err := rows.Scan(&exe.ID, &actionID, &storage, &exe.Reimport, &exe.StartTime)
 					if err != nil {
 						return err
 					}
-					err = json.Unmarshal(outTypes, &m.CustomFunc.OutTypes)
-					if err != nil {
-						return err
+					exe.action = state.actions[actionID]
+					if storage != nil {
+						exe.storage = state.connections[*storage]
 					}
-					m.CustomFunc.Source = src
+					exe.action.execution = &exe
 				}
-				connection := state.connections[connectionID]
-				connection.mappings = append(connection.mappings, m)
-			}
-			return nil
-		})
+				return nil
+			})
 		if err != nil {
 			return err
 		}
@@ -367,4 +372,23 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 	}
 
 	return state, nil
+}
+
+// deserializeConnectorTargets deserializes the targets read from the database
+// and returns them as a ConnectorTargets value.
+func deserializeConnectorTargets(targets []string) (ConnectorTargets, error) {
+	var tt ConnectorTargets
+	for _, t := range targets {
+		switch t {
+		case "Events":
+			tt |= EventsFlag
+		case "Users":
+			tt |= UsersFlag
+		case "Groups":
+			tt |= GroupsFlag
+		default:
+			return 0, fmt.Errorf("unknown connector target %q", t)
+		}
+	}
+	return tt, nil
 }

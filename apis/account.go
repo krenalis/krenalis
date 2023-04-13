@@ -126,6 +126,7 @@ func (this *Account) Workspace(id int) (*Workspace, error) {
 		workspace:     ws,
 		ID:            ws.ID,
 		Name:          ws.Name,
+		PrivacyRegion: PrivacyRegion(ws.PrivacyRegion),
 	}
 	return &workspace, nil
 }
@@ -142,6 +143,7 @@ func (this *Account) Workspaces() []*Workspace {
 			workspace:     ws,
 			ID:            ws.ID,
 			Name:          ws.Name,
+			PrivacyRegion: PrivacyRegion(ws.PrivacyRegion),
 		}
 		infos[i] = &workspace
 	}

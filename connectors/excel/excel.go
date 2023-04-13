@@ -35,9 +35,10 @@ var _ connector.FileConnection = &connection{}
 
 func init() {
 	connector.RegisterFile(connector.File{
-		Name: "Excel",
-		Icon: icon,
-		Open: open,
+		Name:              "Excel",
+		SourceDescription: "import users from an Excel file",
+		Icon:              icon,
+		Open:              open,
 	})
 }
 

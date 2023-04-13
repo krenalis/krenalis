@@ -33,21 +33,28 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppConnection interface.
-var _ connector.AppConnection = &connection{}
+// Make sure it implements the AppEventsConnection and the AppUsersConnection
+// interfaces.
+var _ interface {
+	connector.AppEventsConnection
+	connector.AppUsersConnection
+} = &connection{}
 
 var Debug = false
 
 func init() {
 	connector.RegisterApp(connector.App{
-		Name: "Klaviyo",
-		Icon: icon,
-		Open: open,
+		Name:                   "Klaviyo",
+		SourceDescription:      "import clients as users from Klaviyo",
+		DestinationDescription: "export users as clients and send events to Klaviyo",
+		Icon:                   icon,
+		Open:                   open,
 	})
 }
 
 type connection struct {
 	ctx      context.Context
+	role     connector.Role
 	settings *settings
 	firehose connector.Firehose
 }
@@ -58,7 +65,11 @@ type settings struct {
 
 // open opens a Klaviyo connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
-	c := connection{ctx: ctx, firehose: conf.Firehose}
+	c := connection{
+		ctx:      ctx,
+		role:     conf.Role,
+		firehose: conf.Firehose,
+	}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -68,15 +79,14 @@ func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnecti
 	return &c, nil
 }
 
-const (
-	actionTypeCreateEvent = iota + 1
-)
-
-// ActionTypes returns the connection's action types.
-func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
-	actionTypes := []*connector.ActionType{
+// EventTypes returns the connection's event types.
+func (c *connection) EventTypes() ([]*connector.EventType, error) {
+	if c.role == connector.SourceRole {
+		return nil, nil
+	}
+	eventTypes := []*connector.EventType{
 		{
-			ID:          actionTypeCreateEvent,
+			ID:          "create_event",
 			Name:        "Create Event",
 			Description: "Create an Event on Klaviyo",
 			Schema: types.Object([]types.Property{
@@ -85,12 +95,7 @@ func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
 			}),
 		},
 	}
-	return actionTypes, nil
-}
-
-// Groups returns the groups starting from the given cursor.
-func (c *connection) Groups(cursor string, properties []connector.PropertyPath) error {
-	return nil
+	return eventTypes, nil
 }
 
 // ReceiveWebhook receives a webhook request and returns its events.
@@ -104,9 +109,108 @@ func (c *connection) Resource() (string, error) {
 	return "", nil
 }
 
-// Schemas returns user and group schemas.
-func (c *connection) Schemas() (types.Type, types.Type, error) {
-	userSchema := types.Object([]types.Property{
+// SendEvent sends the event, along with the given mapped event.
+// eventType specifies the event type corresponding to the event.
+func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, eventType string) error {
+	switch eventType {
+	case "create_event":
+		var msg struct {
+			Data struct {
+				Type       string `json:"type"`
+				Attributes struct {
+					Profile struct {
+						Email string `json:"$email"`
+					} `json:"profile"`
+					Metric struct {
+						Name string `json:"name"`
+					} `json:"metric"`
+					Properties map[string]any `json:"properties"`
+					Time       string         `json:"time"`
+					Value      any            `json:"value"`
+				} `json:"attributes"`
+			} `json:"data"`
+		}
+		msg.Data.Type = "event"
+		msg.Data.Attributes.Profile.Email = mappedEvent["email"].(string)
+		msg.Data.Attributes.Metric.Name = mappedEvent["metric_name"].(string)
+		msg.Data.Attributes.Properties = mappedEvent
+		msg.Data.Attributes.Time = event.Timestamp.Format(time.RFC3339)
+		body, err := json.Marshal(msg)
+		if err != nil {
+			return err
+		}
+		err = c.call("POST", "https://a.klaviyo.com/api/events/", bytes.NewReader(body), 202, nil)
+		return err
+	default:
+		panic(fmt.Sprintf("unsupported event type %q", eventType))
+	}
+}
+
+// SetUsers sets the users.
+func (c *connection) SetUsers(users []connector.User) error {
+	return errors.New("not implemented")
+}
+
+// ServeUI serves the connector's user interface.
+func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
+
+	switch event {
+	case "load":
+		// Load the Form.
+		var s settings
+		if c.settings != nil {
+			s = *c.settings
+		}
+		values, _ = json.Marshal(s)
+	case "save":
+		// Save the settings.
+		s, err := c.SettingsUI(values)
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, nil, c.firehose.SetSettings(s)
+	default:
+		return nil, nil, ui.ErrEventNotExist
+	}
+
+	form := &ui.Form{
+		Fields: []ui.Component{
+			&ui.Input{Name: "PrivateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
+		},
+		Values: values,
+		Actions: []ui.Action{
+			{Event: "save", Text: "Save", Variant: "primary"},
+		},
+	}
+
+	return form, nil, nil
+}
+
+// SettingsUI obtains the settings from UI values and returns them.
+func (c *connection) SettingsUI(values []byte) ([]byte, error) {
+	var s settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	if n := len(s.PrivateAPIKey); n < 37 {
+		return nil, ui.Errorf("private API key must be at least 37 characters long")
+	}
+	if !strings.HasPrefix(s.PrivateAPIKey, "pk_") {
+		return nil, ui.Errorf("private API key must begin with 'pk_'")
+	}
+	for i := 3; i < len(s.PrivateAPIKey); i++ {
+		c := s.PrivateAPIKey[i]
+		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
+			return nil, ui.Errorf("private API key after 'pk_' must contain only alphanumeric characters")
+		}
+	}
+	return json.Marshal(&s)
+}
+
+// UserSchema returns the user schema.
+func (c *connection) UserSchema() (types.Type, error) {
+	schema := types.Object([]types.Property{
 		{
 			Name:  "email",
 			Label: "Email",
@@ -215,106 +319,7 @@ func (c *connection) Schemas() (types.Type, types.Type, error) {
 				},
 			}),
 		}})
-	return userSchema, types.Type{}, nil
-}
-
-// SendEvent sends event, along with the given mapped event, to the endpoint.
-// actionType specifies the action type corresponding to the event.
-func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, actionType, endpoint int) error {
-	switch actionType {
-	case actionTypeCreateEvent:
-		var msg struct {
-			Data struct {
-				Type       string `json:"type"`
-				Attributes struct {
-					Profile struct {
-						Email string `json:"$email"`
-					} `json:"profile"`
-					Metric struct {
-						Name string `json:"name"`
-					} `json:"metric"`
-					Properties map[string]any `json:"properties"`
-					Time       string         `json:"time"`
-					Value      any            `json:"value"`
-				} `json:"attributes"`
-			} `json:"data"`
-		}
-		msg.Data.Type = "event"
-		msg.Data.Attributes.Profile.Email = mappedEvent["email"].(string)
-		msg.Data.Attributes.Metric.Name = mappedEvent["metric_name"].(string)
-		msg.Data.Attributes.Properties = mappedEvent
-		msg.Data.Attributes.Time = event.Timestamp.Format(time.RFC3339)
-		body, err := json.Marshal(msg)
-		if err != nil {
-			return err
-		}
-		err = c.call("POST", "https://a.klaviyo.com/api/events/", bytes.NewReader(body), 202, nil)
-		return err
-	default:
-		panic(fmt.Sprintf("unsupported action type %d", actionType))
-	}
-}
-
-// SetUsers sets the users.
-func (c *connection) SetUsers(users []connector.User) error {
-	return errors.New("not implemented")
-}
-
-// ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
-
-	switch event {
-	case "load":
-		// Load the Form.
-		var s settings
-		if c.settings != nil {
-			s = *c.settings
-		}
-		values, _ = json.Marshal(s)
-	case "save":
-		// Save the settings.
-		s, err := c.SettingsUI(values)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, nil, c.firehose.SetSettings(s)
-	default:
-		return nil, nil, ui.ErrEventNotExist
-	}
-
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "PrivateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
-		},
-		Values: values,
-		Actions: []ui.Action{
-			{Event: "save", Text: "Save", Variant: "primary"},
-		},
-	}
-
-	return form, nil, nil
-}
-
-// SettingsUI obtains the settings from UI values and returns them.
-func (c *connection) SettingsUI(values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	if n := len(s.PrivateAPIKey); n < 37 {
-		return nil, ui.Errorf("private API key must be at least 37 characters long")
-	}
-	if !strings.HasPrefix(s.PrivateAPIKey, "pk_") {
-		return nil, ui.Errorf("private API key must begin with 'pk_'")
-	}
-	for i := 3; i < len(s.PrivateAPIKey); i++ {
-		c := s.PrivateAPIKey[i]
-		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return nil, ui.Errorf("private API key after 'pk_' must contain only alphanumeric characters")
-		}
-	}
-	return json.Marshal(&s)
+	return schema, nil
 }
 
 // Users returns the users starting from the given cursor.

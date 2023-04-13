@@ -1,11 +1,17 @@
 .sl-toast-stack {
-	top: unset!important;
-	bottom: 0!important;
+    left: calc(50% + 140px);
+    transform: translateX(-50%);
+    overflow: visible!important;
+}
+
+body.fullScreen .sl-toast-stack {
+	left: 50%;
 }
 
 .sl-toast-stack sl-alert::part(base) {
 	color: var(--text-onaccent);
 	border: 0;
+	box-shadow: 2px 1px 19px 0px #00000060;
 }
 
 .sl-toast-stack sl-alert::part(icon) {
@@ -14,24 +20,4 @@
 
 .sl-toast-stack sl-alert::part(close-button__base) {
 	color: var(--text-onaccent);
-}
-
-.sl-toast-stack sl-alert[variant='neutral']::part(base) {
-	background-color: var(--sl-color-neutral-600);
-}
-
-.sl-toast-stack sl-alert[variant='primary']::part(base) {
-	background-color: var(--sl-color-primary-600);
-}
-
-.sl-toast-stack sl-alert[variant='success']::part(base) {
-	background-color: var(--sl-color-success-600);
-}
-
-.sl-toast-stack sl-alert[variant='danger']::part(base) {
-	background-color: var(--sl-color-danger-600);
-}
-
-.sl-toast-stack sl-alert[variant='warning']::part(base) {
-	background-color: var(--sl-color-warning-600);
 }

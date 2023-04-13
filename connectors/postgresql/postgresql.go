@@ -37,9 +37,10 @@ var _ connector.DatabaseConnection = &connection{}
 
 func init() {
 	connector.RegisterDatabase(connector.Database{
-		Name: "PostgreSQL",
-		Icon: icon,
-		Open: open,
+		Name:              "PostgreSQL",
+		SourceDescription: "import users and groups from a PostgreSQL database",
+		Icon:              icon,
+		Open:              open,
 	})
 }
 

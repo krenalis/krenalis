@@ -24,9 +24,10 @@ var _ connector.ServerConnection = &connection{}
 
 func init() {
 	connector.RegisterServer(connector.Server{
-		Name: "Server",
-		Icon: icon,
-		Open: open,
+		Name:              "Server",
+		SourceDescription: "receive events from a server",
+		Icon:              icon,
+		Open:              open,
 	})
 }
 

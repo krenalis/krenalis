@@ -5,24 +5,8 @@
     gap: 30px;
     padding: 10px 30px;
     border-bottom: 1px solid var(--sl-color-neutral-200);
-    height: 50px;
+    height: 70px;
     align-items: center;
     background-color: var(--bg-primary);
     z-index: 10;
-}
-
-.Toolbar sl-button::part(base) {
-    padding: 0;
-    align-items: center;
-    background-color: transparent!important;
-}
-
-.Toolbar sl-dropdown sl-button::part(base) {
-    border: 0;
-    color: var(--sl-color-primary-600);
-    font-weight: 600;
-}
-
-.Toolbar sl-dropdown sl-button sl-icon {
-    color: var(--sl-color-primary-600);
 }

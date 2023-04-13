@@ -1,8 +1,23 @@
 .Grid {
 	display: grid;
-    -webkit-user-select: none; /* Safari */
-    -ms-user-select: none; /* IE 10 and IE 11 */
-    user-select: none; /* Standard syntax */
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    overflow: auto;
+}
+
+.Grid::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.Grid::-webkit-scrollbar-thumb {
+    background: var(--sl-color-neutral-300);
+    border-radius: 5px;
+}
+
+.Grid::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .Grid .GridHeaderCell {
@@ -18,4 +33,13 @@
 .Grid .noRows {
     font-weight: 600;
     opacity: .5;
+    display: flex;
+    flex-flow: column;
+    gap: 7px;
+    align-items: center;
+    justify-content: center;
+}
+
+.Grid .noRows sl-icon {
+    font-size: 25px;
 }

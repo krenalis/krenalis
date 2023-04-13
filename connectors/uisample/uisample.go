@@ -21,9 +21,10 @@ var _ connector.StreamConnection = &connection{}
 
 func init() {
 	connector.RegisterStream(connector.Stream{
-		Name: "UISample",
-		Icon: "",
-		Open: open,
+		Name:              "UISample",
+		SourceDescription: "test the UI components",
+		Icon:              "",
+		Open:              open,
 	})
 }
 

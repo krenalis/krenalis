@@ -29,9 +29,11 @@ func NewDatabaseQueryError(msg string) error {
 
 // Database represents a database connector.
 type Database struct {
-	Name string
-	Icon string // icon in SVG format
-	Open OpenDatabaseFunc
+	Name                   string
+	SourceDescription      string // It should complete the sentence "Add an action to ..."
+	DestinationDescription string // It should complete the sentence "Add an action to ..."
+	Icon                   string // icon in SVG format
+	Open                   OpenDatabaseFunc
 }
 
 // DatabaseConfig represents the configuration of a database connection.

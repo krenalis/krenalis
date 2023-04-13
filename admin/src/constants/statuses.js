@@ -2,6 +2,9 @@ import * as variants from './variants';
 import * as icons from './icons';
 
 const statuses = {
+	genericNotFound: (message) => {
+		return [variants.DANGER, icons.NOT_FOUND, message];
+	},
 	connectionDoesNotExistAnymore: [variants.DANGER, icons.NOT_FOUND, 'The connection does not exist anymore'],
 	connectorDoesNotExistAnymore: [variants.DANGER, icons.NOT_FOUND, 'The connector does not exist anymore'],
 	workspaceDoesNotExistAnymore: [variants.DANGER, icons.NOT_FOUND, 'The workspace does not exist anymore'],
@@ -40,10 +43,15 @@ const statuses = {
 		'This connection already has a configured transformation',
 	],
 	alreadyHasMappings: [variants.DANGER, icons.FORBIDDEN, 'This connection already has configured mappings'],
+	noUsersSchema: [variants.DANGER, icons.NOT_FOUND, 'The user schema is not currently defined'],
+	noGroupsSchema: [variants.DANGER, icons.NOT_FOUND, 'The groups schema is not currently defined'],
+	eventTypeNotExists: [variants.DANGER, icons.NOT_FOUND, 'This event type does not exist enymore'],
+	actionExecutionInProgress: [variants.DANGER, icons.FORBIDDEN, 'This action is already in progress'],
 	importStarted: [variants.PRIMARY, icons.DOWNLOAD, 'Your import has been started'],
 	querySet: [variants.PRIMARY, icons.OK, 'Your query has been successfully saved'],
 	mappingsSaved: [variants.SUCCESS, icons.OK, 'Your mappings have been successfully saved'],
 	schemasReloaded: [variants.SUCCESS, icons.OK, 'The schemas have been reloaded successfully'],
+	schemaLoaded: [variants.SUCCESS, icons.OK, 'The schema has been loaded successfully'],
 	transformationSaved: [variants.SUCCESS, icons.OK, 'Your transformation has been successfully saved'],
 	transformationCleanedUp: [variants.SUCCESS, icons.OK, 'Your transformation has been successfully cleaned up'],
 	actionSaved: [variants.SUCCESS, icons.OK, 'Your action has been successfully saved'],

@@ -20,7 +20,7 @@ import (
 //   - the SQL in files "apis/warehouses/*/events.sql"
 //   - the function "applyActionMapping" in "apis/events/processor.go".
 //   - the fields of the type "Event" in "connector/apps.go" (and the functions
-//     that read/write it).
+//     that read/write it, as "collectedEventToMap").
 var Schema = types.Object([]types.Property{
 	{Name: "source", Type: types.Int()},
 	{Name: "event", Type: types.Text()},

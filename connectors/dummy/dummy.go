@@ -23,37 +23,46 @@ import (
 // entire data set.
 const exportOnly10Users = true
 
-// Make sure it implements the AppConnection interface.
-var _ connector.AppConnection = &connection{}
+// Make sure it implements the AppEventsConnection and the AppUsersConnection
+// interfaces.
+var _ interface {
+	connector.AppEventsConnection
+	connector.AppUsersConnection
+} = &connection{}
 
 func init() {
 	connector.RegisterApp(connector.App{
-		Name:      "Dummy",
-		Endpoints: map[int]string{1: "Europe", 2: "America"},
-		Open:      open,
+		Name:                   "Dummy",
+		SourceDescription:      "import users from Dummy",
+		DestinationDescription: "export users and send events to Dummy",
+		Open:                   open,
 	})
 }
 
 type connection struct {
+	role     connector.Role
 	firehose connector.Firehose
 }
 
 // open opens a Dummy connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
 	c := connection{
+		role:     conf.Role,
 		firehose: conf.Firehose,
 	}
 	return &c, nil
 }
 
-// ActionTypes returns the connection's action types.
-func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
-	actionTypes := []*connector.ActionType{
+// EventTypes returns the connection's event types.
+func (c *connection) EventTypes() ([]*connector.EventType, error) {
+	if c.role == connector.SourceRole {
+		return nil, nil
+	}
+	eventTypes := []*connector.EventType{
 		{
-			ID:          1,
+			ID:          "send_add_to_cart",
 			Name:        "Send Add to Cart",
 			Description: "Send an Add to Cart event to Dummy",
-			Endpoints:   []int{1, 2},
 			Schema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
 				{Name: "item_name", Type: types.Text()},
@@ -61,19 +70,17 @@ func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
 			}),
 		},
 		{
-			ID:          2,
+			ID:          "send_custom_event",
 			Name:        "Send custom event",
 			Description: "Send a custom event to Dummy",
-			Endpoints:   []int{2},
 			Schema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
 			}),
 		},
 		{
-			ID:          3,
+			ID:          "send_identity",
 			Name:        "Send Identity",
 			Description: "Send an Identity to Dummy",
-			Endpoints:   []int{1, 2},
 			Schema: types.Object([]types.Property{
 				{Name: "email", Required: true, Type: types.Text()},
 				{Name: "traits", Type: types.Object([]types.Property{
@@ -85,20 +92,15 @@ func (c *connection) ActionTypes() ([]*connector.ActionType, error) {
 			}),
 		},
 		{
-			ID:          4,
+			ID:          "send_generic_event",
 			Name:        "Send generic event",
 			Description: "Send a generic event, useful for testing",
-			Endpoints:   []int{1, 2},
 			Schema: types.Object([]types.Property{
 				{Name: "properties", Type: types.JSON()},
 			}),
 		},
 	}
-	return actionTypes, nil
-}
-
-func (c *connection) Groups(cursor string, properties []connector.PropertyPath) error {
-	panic("not implemented")
+	return eventTypes, nil
 }
 
 func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, error) {
@@ -109,21 +111,10 @@ func (c *connection) Resource() (string, error) {
 	return "", nil
 }
 
-func (c *connection) Schemas() (types.Type, types.Type, error) {
-	userSchema := types.Object([]types.Property{
-		{Name: "email", Type: types.Text()},
-		{Name: "first_name", Type: types.Text()},
-		{Name: "full_name", Type: types.Text()},
-		{Name: "last_name", Type: types.Text()},
-		{Name: "favourite_drink", Type: types.Text().WithEnum([]string{"tea", "beer", "wine", "water"})},
-	})
-	return userSchema, types.Type{}, nil
-}
-
-// SendEvent sends event, along with the given mapped event, to the endpoint.
-// actionType specifies the action type corresponding to the event.
-func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, actionType, endpoint int) error {
-	log.Printf("dummy: sending event %#v, %#v to the endpoint %d", event, mappedEvent, endpoint)
+// SendEvent sends the event, along with the given mapped event.
+// eventType specifies the event type corresponding to the event.
+func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, eventType string) error {
+	log.Printf("dummy: sending event %#v, %#v", event, mappedEvent)
 	time.Sleep(50 * time.Millisecond)
 	return nil
 }
@@ -137,6 +128,18 @@ var now = time.Now()
 
 func (c *connection) SetUsers(users []connector.User) error {
 	panic("not implemented")
+}
+
+// UserSchema returns the user schema.
+func (c *connection) UserSchema() (types.Type, error) {
+	schema := types.Object([]types.Property{
+		{Name: "email", Type: types.Text()},
+		{Name: "first_name", Type: types.Text()},
+		{Name: "full_name", Type: types.Text()},
+		{Name: "last_name", Type: types.Text()},
+		{Name: "favourite_drink", Type: types.Text().WithEnum([]string{"tea", "beer", "wine", "water"})},
+	})
+	return schema, nil
 }
 
 //go:embed users.json

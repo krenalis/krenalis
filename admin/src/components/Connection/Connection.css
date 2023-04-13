@@ -1,7 +1,3 @@
-.Connection .routeContent {
-    padding: 50px 100px;
-}
-
 .Connection .Breadcrumbs::part(base) {
     padding-left: var(--sl-spacing-large);
 }

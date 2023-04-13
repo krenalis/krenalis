@@ -294,6 +294,9 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		if sourceType != state.MobileType && sourceType != state.WebsiteType {
 			return errNotFound
 		}
+		if !c.state.HasEnabledActions(sourceID) {
+			return errNotFound
+		}
 	}
 
 	// Validate the server key.
@@ -308,6 +311,9 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 			return errUnauthorized
 		}
 		serverID = server.ID
+		if !c.state.HasEnabledActions(serverID) {
+			return errNotFound
+		}
 	}
 
 	var sourceID int

@@ -15,9 +15,11 @@ import (
 
 // Storage represents a storage connector.
 type Storage struct {
-	Name string
-	Icon string // icon in SVG format
-	Open OpenStorageFunc
+	Name                   string
+	SourceDescription      string // It should complete the sentence "Add an action to ..."
+	DestinationDescription string // It should complete the sentence "Add an action to ..."
+	Icon                   string // icon in SVG format
+	Open                   OpenStorageFunc
 }
 
 // StorageConfig represents the configuration of a storage connection.

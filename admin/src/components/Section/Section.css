@@ -8,8 +8,13 @@
 }
 
 .sectionContent {
-    background-color: var(--bg-primary);
     margin-top: 10px;
+    padding: 0 0 30px 0;
+}
+
+.sectionContent.padded {
+    background-color: var(--bg-primary);
     padding: 30px 50px;
     box-shadow: var(--sl-shadow-small);
+    border-radius: 10px;
 }

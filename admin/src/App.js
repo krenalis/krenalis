@@ -16,6 +16,7 @@ setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.85
 const App = () => {
 	let [status, setStatus] = useState(null);
 
+	const appRef = useRef();
 	const toastRef = useRef();
 	const navigate = useNavigate();
 
@@ -52,6 +53,16 @@ const App = () => {
 		return navigate(url);
 	};
 
+	// add the 'fullScreen' class to the body.
+	const updateIsFullScreen = (isFullScreen) => {
+		let body = appRef.current.closest('body');
+		if (isFullScreen) {
+			body.classList.add('fullScreen');
+		} else {
+			body.classList.remove('fullScreen');
+		}
+	};
+
 	// TODO(@Andrea): find a way not to hardcode the URL directly into the
 	// javascript.
 	let api = new API('https://localhost:9090');
@@ -64,11 +75,12 @@ const App = () => {
 				showError: showError,
 				showNotFound: showNotFound,
 				redirect: redirect,
+				updateIsFullScreen: updateIsFullScreen,
 			}}
 		>
-			<div className='App'>
+			<div className='App' ref={appRef}>
 				<Outlet />
-				<Toast reactRef={toastRef} status={status} />
+				<Toast toastRef={toastRef} status={status} />
 			</div>
 		</AppContext.Provider>
 	);

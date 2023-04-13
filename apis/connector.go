@@ -23,14 +23,36 @@ import (
 
 // Connector represents a connector.
 type Connector struct {
-	connector   *state.Connector
-	ID          int
-	Name        string
-	Type        ConnectorType
-	HasSettings bool
-	LogoURL     string
-	WebhooksPer WebhooksPer
-	OAuth       *ConnectorOAuth
+	connector              *state.Connector
+	ID                     int
+	Name                   string
+	SourceDescription      string
+	DestinationDescription string
+	Type                   ConnectorType
+	HasSettings            bool
+	LogoURL                string
+	WebhooksPer            WebhooksPer
+	OAuth                  *ConnectorOAuth
+}
+
+// ConnectorTargets represents connector targets.
+type ConnectorTargets int
+
+const (
+	EventsFlag = 1 << iota
+	UsersFlag
+	GroupsFlag
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+func (t ConnectorTargets) MarshalJSON() ([]byte, error) {
+	b := &bytes.Buffer{}
+	b.WriteString(`{`)
+	_, _ = fmt.Fprintf(b, "\"Events\":%t", t&EventsFlag != 0)
+	_, _ = fmt.Fprintf(b, ",\"Users\":%t", t&UsersFlag != 0)
+	_, _ = fmt.Fprintf(b, ",\"Groups\":%t", t&GroupsFlag != 0)
+	b.WriteString(`}`)
+	return b.Bytes(), nil
 }
 
 // A ConnectorOAuth represents OAuth data required to authenticate with a
@@ -134,7 +156,7 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 // required if the connector requires OAuth.
 //
 // If the event does not exist, it returns an errors.UnprocessableError error
-// with code EventNotExist.
+// with code EventNotExists.
 func (this *Connector) ServeUI(event string, values []byte, role ConnectionRole, oAuth string) ([]byte, error) {
 
 	c := this.connector
@@ -228,7 +250,7 @@ func (this *Connector) ServeUI(event string, values []byte, role ConnectionRole,
 	form, alert, err := connectionUI.ServeUI(event, values)
 	if err != nil {
 		if err == ui.ErrEventNotExist {
-			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, c.Name)
+			err = errors.Unprocessable(EventNotExists, "UI event %q does not exist for %s connector", event, c.Name)
 		}
 		return nil, err
 	}

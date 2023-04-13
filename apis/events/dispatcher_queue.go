@@ -14,7 +14,7 @@ import (
 // dispatcherQueue represents an event dispatcher warehouseQueue.
 type dispatcherQueue struct {
 	destination    int               // destination connection.
-	endpoint       int               // action's endpoint.
+	endpoint       int               // endpoint.
 	head           int               // offset of the head of the warehouseQueue.
 	events         []*processedEvent // events in the warehouseQueue.
 	sendingOffsets map[string]int    // maps the anonymousId of a sending event to its offset in the warehouseQueue.

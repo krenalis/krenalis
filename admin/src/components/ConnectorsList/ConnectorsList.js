@@ -53,7 +53,14 @@ const ConnectorsList = () => {
 				<div className='connectors'>
 					{connectors.map((c) => {
 						return (
-							<Card key={c.ID} name={c.Name} logoURL={c.LogoURL} type={c.Type}>
+							<Card
+								name={c.Name}
+								logoURL={c.LogoURL}
+								type={c.Type}
+								description={
+									connectionRole === 'Source' ? c.SourceDescription : c.DestinationDescription
+								}
+							>
 								<SlTooltip content={`Add ${c.Name}`}>
 									<SlButton
 										size='medium'

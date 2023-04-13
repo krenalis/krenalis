@@ -659,7 +659,7 @@ func (t Type) String() string {
 				if t.p > 0 {
 					s += ","
 				}
-				s += strconv.Itoa(int(t.p)) + " chars"
+				s += strconv.Itoa(int(t.s)) + " chars"
 			}
 			s += ")"
 		}

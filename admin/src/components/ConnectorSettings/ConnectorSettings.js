@@ -100,7 +100,7 @@ const ConnectorSettings = () => {
 					return;
 				}
 				if (err instanceof UnprocessableError) {
-					if (err.code === 'EventNotExist') {
+					if (err.code === 'EventNotExists') {
 						// TODO(@Andrea): find a way to show the full error message
 						// in the toast notification when the server is started with
 						// the CHICHI_DEBUG_UI environment variable set to 'true'.
@@ -140,14 +140,14 @@ const ConnectorSettings = () => {
 			if (err != null) {
 				if (err instanceof UnprocessableError) {
 					switch (err.code) {
-						case 'ConnectorNotExist':
+						case 'ConnectorNotExists':
 							redirect('/admin/connectors');
 							showStatus(statuses.connectorDoesNotExistAnymore);
 							break;
 						case 'InvalidSettings':
 							showStatus(statuses.settingsNotValid);
 							break;
-						case 'StorageNotExist':
+						case 'StorageNotExists':
 							showStatus(statuses.storageNotExist);
 							break;
 						default:
@@ -164,7 +164,7 @@ const ConnectorSettings = () => {
 		let [ui, err] = await API.connectors.uiEvent(connectorID, e, values, connectionRole, OAuthToken);
 		if (err != null) {
 			if (err instanceof UnprocessableError) {
-				if (err.code === 'EventNotExist') {
+				if (err.code === 'EventNotExists') {
 					// TODO(@Andrea): find a way to show the full error message
 					// in the toast notification when the server is started with
 					// the CHICHI_DEBUG_UI environment variable set to 'true'.
@@ -201,14 +201,14 @@ const ConnectorSettings = () => {
 		if (err != null) {
 			if (err instanceof UnprocessableError) {
 				switch (err.code) {
-					case 'ConnectorNotExist':
+					case 'ConnectorNotExists':
 						redirect('/admin/connectors');
 						showStatus(statuses.connectorDoesNotExistAnymore);
 						break;
 					case 'InvalidSettings':
 						showStatus(statuses.settingsNotValid);
 						break;
-					case 'StorageNotExist':
+					case 'StorageNotExists':
 						showStatus(statuses.storageNotExist);
 						break;
 					default:

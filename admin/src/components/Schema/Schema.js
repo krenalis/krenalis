@@ -10,7 +10,7 @@ import { UnprocessableError } from '../../api/errors';
 
 const Schema = () => {
 	let [properties, setProperties] = useState([]);
-	let [isLoading, setIsLoading] = useState(false);
+	let [isLoading, setIsLoading] = useState(true);
 
 	let { API, showError, showStatus } = useContext(AppContext);
 
@@ -28,7 +28,6 @@ const Schema = () => {
 			setProperties(schema.properties);
 			setTimeout(() => setIsLoading(false), 500);
 		};
-		setIsLoading(true);
 		fetchSchema();
 	}, []);
 
@@ -64,6 +63,7 @@ const Schema = () => {
 			showError(err);
 			return;
 		}
+		localStorage.removeItem('usersProperties');
 		setProperties(schema.properties);
 		setTimeout(() => {
 			setIsLoading(false);
@@ -117,7 +117,7 @@ const Schema = () => {
 	return (
 		<div className='Schema'>
 			<Toolbar>
-				<SlButton className='reloadSchemas' variant='text' onClick={onReloadSchemas}>
+				<SlButton className='reloadSchemas' variant='default' onClick={onReloadSchemas}>
 					<SlIcon name='arrow-clockwise' slot='prefix'></SlIcon>
 					Reload Schemas
 				</SlButton>

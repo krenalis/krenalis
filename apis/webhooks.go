@@ -192,7 +192,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	events, err := connection.ReceiveWebhook(r)
+	events, err := connection.(_connector.AppUsersConnection).ReceiveWebhook(r)
 	if err != nil {
 		return err
 	}

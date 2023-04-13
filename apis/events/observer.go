@@ -12,7 +12,6 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"math"
 	"math/rand"
 	"sort"
 	"sync"
@@ -20,128 +19,16 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
-	"chichi/apis/state"
 
 	"github.com/google/uuid"
 )
 
-var ErrEventListenerNotFound = errors.New("event listener does not exist")
-
-const (
-	maxEventListeners   = 100  // maximum number of event listeners.
-	maxEventsListenedTo = 1000 // maximum number of processed events listened to.
-	maxInt32            = math.MaxInt32
-)
+const MaxEventListeners = 100 // maximum number of event listeners.
 
 var (
-	ServerNotExist   errors.Code = "ServerNotExist"
-	SourceNotExist   errors.Code = "SourceNotExist"
-	StreamNotExist   errors.Code = "StreamNotExist"
-	TooManyListeners errors.Code = "TooManyListeners"
+	ErrEventListenerNotFound = errors.New("event listener does not exist")
+	ErrTooManyListeners      = errors.New("too many listeners")
 )
-
-type Listeners struct {
-	db        *postgres.DB
-	observer  *Observer
-	workspace *state.Workspace
-}
-
-func NewListeners(db *postgres.DB, observer *Observer, workspace *state.Workspace) *Listeners {
-	return &Listeners{db, observer, workspace}
-}
-
-// Add adds a listener that listen to processed events
-//
-//   - occurred on the mobile or website connection source, if source is not
-//     zero,
-//   - sent by the server connection server, if server is not zero,
-//   - received from the stream connection stream, if stream is not zero,
-//
-// and returns its identifier. size is the maximum number of events to return
-// for each call to the Events method, it must be in [1,1000].
-//
-// If the source, server, or stream does not exist, it returns an
-// errors.UnprocessableError error with code SourceNotExist, ServerNotExist,
-// and StreamNotExist respectively.
-// If there are already too many listeners, it returns an
-// errors.UnprocessableError error with code TooManyListeners.
-func (this *Listeners) Add(size, source, server, stream int) (string, error) {
-	if size < 1 || size > maxEventsListenedTo {
-		return "", errors.BadRequest("size %d is not valid", size)
-	}
-	if source < 0 || source > maxInt32 {
-		return "", errors.BadRequest("source identifier %d is not valid", source)
-	}
-	if server < 0 || server > maxInt32 {
-		return "", errors.BadRequest("server identifier %d is not valid", server)
-	}
-	if stream < 0 || stream > maxInt32 {
-		return "", errors.BadRequest("stream identifier %d is not valid", stream)
-	}
-	if source > 0 || server > 0 || stream > 0 {
-		var sourceExist, serverExist, streamExist bool
-		err := this.db.QueryScan(context.Background(), "SELECT id, type , role FROM connections\n"+
-			"WHERE id IN ($1, $2, $3) AND workspace = $4", source, server, stream, this.workspace.ID,
-			func(rows *postgres.Rows) error {
-				var id int
-				var typ state.ConnectorType
-				var role state.ConnectionRole
-				for rows.Next() {
-					if err := rows.Scan(&id, &typ, &role); err != nil {
-						return err
-					}
-					switch id {
-					case source:
-						if typ != state.MobileType && typ != state.WebsiteType {
-							return errors.BadRequest("connection %d is not a mobile or website", source)
-						}
-						sourceExist = true
-					case server:
-						if typ != state.ServerType {
-							return errors.BadRequest("connection %d is not a server", server)
-						}
-						serverExist = true
-					case stream:
-						if typ != state.StreamType {
-							return errors.BadRequest("connection %d is not a stream", stream)
-						}
-						streamExist = true
-					}
-					if role != state.SourceRole {
-						return errors.BadRequest("connection %d is not a source", id)
-					}
-				}
-				return nil
-			})
-		if err != nil {
-			return "", err
-		}
-		if source > 0 && !sourceExist {
-			return "", errors.Unprocessable(SourceNotExist, "source %d does not exist", source)
-		}
-		if server > 0 && !serverExist {
-			return "", errors.Unprocessable(ServerNotExist, "server %d does not exist", server)
-		}
-		if stream > 0 && !streamExist {
-			return "", errors.Unprocessable(StreamNotExist, "stream %d does not exist", stream)
-		}
-	}
-	return this.observer.AddListener(size, source, server, stream)
-}
-
-// Events returns the events listen to and the number of discarded events by
-// the listener with identifier id.
-//
-// If the listener does not exist, it returns an errors.NotFoundError error.
-func (this *Listeners) Events(id string) ([]json.RawMessage, int, error) {
-	return this.observer.Events(id)
-}
-
-// Remove removes the event listener with identifier id. If the listener does
-// not exist, it does nothing.
-func (this *Listeners) Remove(id string) {
-	this.observer.RemoveListener(id)
-}
 
 // Observer represents the event observer.
 type Observer struct {
@@ -384,8 +271,8 @@ func (observer *Observer) Events(listener string) ([]json.RawMessage, int, error
 	return nil, 0, ErrEventListenerNotFound
 }
 
-// AddListener adds a processed event listener.
-// See the (*Listeners).Add documentation for details.
+// AddListener adds a processed event listener. It returns the
+// ErrTooManyListeners error if there are already too many listeners.
 func (observer *Observer) AddListener(size, source, server, stream int) (string, error) {
 	id := uuid.New().String()
 	listener := listener{
@@ -398,8 +285,8 @@ func (observer *Observer) AddListener(size, source, server, stream int) (string,
 	}
 	observer.Lock()
 	defer observer.Unlock()
-	if len(observer.listeners) == maxEventListeners {
-		return "", errors.Unprocessable(TooManyListeners, "there are already %d listeners", maxEventListeners)
+	if len(observer.listeners) == MaxEventListeners {
+		return "", ErrTooManyListeners
 	}
 	observer.listeners = append(observer.listeners, &listener)
 	return id, nil

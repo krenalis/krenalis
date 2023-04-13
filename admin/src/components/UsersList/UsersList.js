@@ -1,9 +1,11 @@
-import { useState, useEffect, useContext, useRef } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import './UsersList.css';
 import statuses from '../../constants/statuses';
 import Toolbar from '../Toolbar/Toolbar';
+import StyledGrid from '../StyledGrid/StyledGrid';
 import { AppContext } from '../../context/AppContext';
 import { NavigationContext } from '../../context/NavigationContext';
+import { NotFoundError, UnprocessableError } from '../../api/errors';
 import {
 	SlButton,
 	SlDropdown,
@@ -12,12 +14,7 @@ import {
 	SlMenuItem,
 	SlSwitch,
 	SlSelect,
-	SlSpinner,
 } from '@shoelace-style/shoelace/dist/react/index.js';
-import { AgGridReact } from 'ag-grid-react';
-import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-alpine.css';
-import { NotFoundError, UnprocessableError } from '../../api/errors';
 
 const UsersList = () => {
 	let [columnDefs, setColumnDefs] = useState([]);
@@ -26,15 +23,13 @@ const UsersList = () => {
 	let [properties, setProperties] = useState([]);
 	let [pagination, setPagination] = useState({});
 	let [isLoading, setIsLoading] = useState(false);
+	let [refetch, setRefetch] = useState(false);
 	let [limit, setLimit] = useState(15);
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
 
 	let { setCurrentTitle } = useContext(NavigationContext);
-
 	setCurrentTitle('Golden Record users');
-
-	let gridRef = useRef();
 
 	useEffect(() => {
 		const fetchUsers = async () => {
@@ -58,7 +53,7 @@ const UsersList = () => {
 					return;
 				}
 				for (let p of schema.properties) {
-					properties[p.name] = { label: p.label, isUsed: true };
+					properties[p.name] = { isUsed: true };
 				}
 				localStorage.setItem('usersProperties', JSON.stringify(properties));
 			}
@@ -66,11 +61,13 @@ const UsersList = () => {
 
 			let propertiesNames = [];
 			for (let name in properties) {
-				propertiesNames.push(name);
+				if (properties[name].isUsed) {
+					propertiesNames.push(name);
+				}
 			}
 
 			setIsLoading(true);
-			let [{ count, users }, err] = await API.users.find(propertiesNames, 0, lim);
+			let [res, err] = await API.users.find(propertiesNames, 0, lim);
 			if (err != null) {
 				if (err instanceof NotFoundError) {
 					redirect('/admin');
@@ -79,8 +76,9 @@ const UsersList = () => {
 				}
 				if (err instanceof UnprocessableError) {
 					switch (err.code) {
-						case 'PropertyNotExist':
-							showStatus(statuses.propertyNotExist);
+						case 'PropertyNotExists':
+							localStorage.removeItem('usersProperties');
+							setRefetch(true);
 							break;
 						case 'WarehouseFailed':
 							showStatus(statuses.warehouseConnectionFailed);
@@ -96,41 +94,35 @@ const UsersList = () => {
 			}
 			setTimeout(() => setIsLoading(false), 500);
 
+			let { count, users } = res;
+
 			setUsersCount(count);
 			setPagination({ current: 1, last: Math.ceil(count / lim) });
+			setUsersRows(users);
 
 			let usersColumns = [];
 			for (let [name, property] of Object.entries(properties)) {
 				if (property.isUsed) {
 					usersColumns.push({
-						field: name,
-						headerName: property.label,
-						headerTooltip: property.description,
+						Name: name,
 					});
 				}
 			}
 			setColumnDefs(usersColumns);
-
-			let usersRows = [];
-			for (let u of users) {
-				if (u == null) continue;
-				let userRow = {};
-				for (let [i, p] of Object.keys(properties).entries()) {
-					userRow[p] = u[i];
-				}
-				usersRows.push(userRow);
-			}
-			setUsersRows(usersRows);
 		};
+		if (refetch) {
+			setRefetch(false);
+			return;
+		}
 		fetchUsers();
-	}, [limit]);
+	}, [refetch]);
 
-	const handlePageChange = async (page) => {
+	const onPageChange = async (page) => {
 		let propertiesNames = [];
 		for (let name in properties) propertiesNames.push(name);
 		let start = page * limit - limit;
 		setIsLoading(true);
-		let [{ count, users }, err] = await API.users.find(propertiesNames, start, start + limit);
+		let [res, err] = await API.users.find(propertiesNames, start, start + limit);
 		if (err != null) {
 			if (err instanceof NotFoundError) {
 				redirect('/admin');
@@ -139,7 +131,7 @@ const UsersList = () => {
 			}
 			if (err instanceof UnprocessableError) {
 				switch (err.code) {
-					case 'PropertyNotExist':
+					case 'PropertyNotExists':
 						showStatus(statuses.propertyNotExist);
 						break;
 					case 'WarehouseFailed':
@@ -156,6 +148,8 @@ const UsersList = () => {
 		}
 		setTimeout(() => setIsLoading(false), 500);
 
+		let { count, users } = res;
+
 		setUsersCount(count);
 		setPagination({ current: page, last: Math.ceil(count / limit) });
 
@@ -164,8 +158,6 @@ const UsersList = () => {
 			if (property.isUsed) {
 				usersColumns.push({
 					field: name,
-					headerName: property.label,
-					headerTooltip: property.description,
 				});
 			}
 		}
@@ -183,28 +175,28 @@ const UsersList = () => {
 		setUsersRows(usersRows);
 	};
 
-	const handleToggleColumn = (name) => {
+	const onToggleColumn = (name) => {
 		let props = { ...properties };
 		props[name].isUsed = !props[name].isUsed;
-		let usersColumns = [];
+		let columnDefs = [];
 		for (let [name, property] of Object.entries(props)) {
 			if (property.isUsed) {
-				usersColumns.push({
-					field: name,
-					headerName: property.label,
-					headerTooltip: property.description,
+				columnDefs.push({
+					Name: name,
 				});
 			}
 		}
-		gridRef.current.api.setColumnDefs(usersColumns);
-		setProperties(props);
 		localStorage.setItem('usersProperties', JSON.stringify(props));
+		setColumnDefs(columnDefs);
+		setProperties(props);
+		setRefetch(true);
 	};
 
-	const handleLimitChange = (e) => {
+	const onLimitChange = (e) => {
 		let value = e.currentTarget.value;
 		localStorage.setItem('usersLimit', value);
 		setLimit(value);
+		setRefetch(true);
 	};
 
 	return (
@@ -219,8 +211,12 @@ const UsersList = () => {
 						{Object.entries(properties).map(([name, property]) => {
 							return (
 								<SlMenuItem>
-									<SlSwitch onSlChange={() => handleToggleColumn(name)} checked={property.isUsed}>
-										{property.label}
+									<SlSwitch
+										size='small'
+										onSlChange={() => onToggleColumn(name)}
+										checked={property.isUsed}
+									>
+										{name}
 									</SlSwitch>
 								</SlMenuItem>
 							);
@@ -230,25 +226,18 @@ const UsersList = () => {
 			</Toolbar>
 			<div className='routeContent'>
 				<div className='gridContainer'>
-					<div className='grid ag-theme-alpine' style={{ height: '700px', width: '100%' }}>
-						<AgGridReact ref={gridRef} columnDefs={columnDefs} rowData={usersRows}></AgGridReact>
-						{isLoading && (
-							<div className='loading'>
-								<SlSpinner
-									style={{
-										fontSize: '3rem',
-										'--track-width': '6px',
-									}}
-								/>
-							</div>
-						)}
-					</div>
+					<StyledGrid
+						columns={columnDefs}
+						rows={usersRows}
+						isLoading={isLoading}
+						noRowsMessage={'No users to show'}
+					/>
 					<div className='footer'>
 						<div className='total'>
 							<div className='found'>Found {usersCount} users</div>
 							<div className='gridLimit'>
 								<span>Show:</span>
-								<SlSelect value={limit} placeholder={limit} onSlChange={handleLimitChange}>
+								<SlSelect value={limit} placeholder={limit} onSlChange={onLimitChange}>
 									<SlMenuItem value={15}>15</SlMenuItem>
 									<SlMenuItem value={30}>30</SlMenuItem>
 									<SlMenuItem value={50}>50</SlMenuItem>
@@ -262,7 +251,7 @@ const UsersList = () => {
 								<span
 									className='firstPage'
 									onClick={() => {
-										handlePageChange(1);
+										onPageChange(1);
 									}}
 								>
 									<SlIcon slot='suffix' name='chevron-double-left' />
@@ -271,7 +260,7 @@ const UsersList = () => {
 									<span
 										className='previousPage'
 										onClick={() => {
-											handlePageChange(pagination.current - 1);
+											onPageChange(pagination.current - 1);
 										}}
 									>
 										<SlIcon slot='suffix' name='chevron-left' />
@@ -284,7 +273,7 @@ const UsersList = () => {
 									<span
 										className='last'
 										onClick={() => {
-											handlePageChange(pagination.last);
+											onPageChange(pagination.last);
 										}}
 									>
 										{pagination.last}
@@ -294,7 +283,7 @@ const UsersList = () => {
 									<span
 										className='nextPage'
 										onClick={() => {
-											handlePageChange(pagination.current + 1);
+											onPageChange(pagination.current + 1);
 										}}
 									>
 										<SlIcon slot='suffix' name='chevron-right' />
@@ -303,7 +292,7 @@ const UsersList = () => {
 								<span
 									className='lastPage'
 									onClick={() => {
-										handlePageChange(pagination.last);
+										onPageChange(pagination.last);
 									}}
 								>
 									<SlIcon slot='suffix' name='chevron-double-right' />

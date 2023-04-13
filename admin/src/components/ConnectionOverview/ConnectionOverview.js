@@ -14,8 +14,8 @@ const ConnectionOverview = () => {
 	let [hasImports, setHasImports] = useState(true);
 	let [askImportConfirmation, setAskImportConfirmation] = useState(false);
 	let [selectedError, setSelectedError] = useState('');
-	let [isLoading, setIsLoading] = useState(true);
 	let [resetCursor, setResetCursor] = useState(false);
+	let [isLoading, setIsLoading] = useState(true);
 
 	const { API, showStatus, showError, redirect } = useContext(AppContext);
 	const { connection: c, setCurrentConnectionSection } = useContext(ConnectionContext);
@@ -121,7 +121,12 @@ const ConnectionOverview = () => {
 	if (isLoading) {
 		return (
 			<div className='ConnectionOverview loading'>
-				<SlSpinner></SlSpinner>
+				<SlSpinner
+					style={{
+						fontSize: '3rem',
+						'--track-width': '6px',
+					}}
+				></SlSpinner>
 			</div>
 		);
 	}

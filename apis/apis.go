@@ -27,6 +27,7 @@ type APIs struct {
 	db             *postgres.DB
 	state          *state.State
 	events         *events.Events
+	scheduler      *scheduler
 	eventProcessor *events.Processor
 }
 
@@ -77,8 +78,9 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 
 	// Listen to state changes.
 	apis.state.AddListener(apis.onAddConnection)
-	apis.state.AddListener(apis.onAddImportInProgress)
-	apis.state.AddListener(apis.onSetConnectionUserQuery)
+	apis.state.AddListener(apis.onElectLeader)
+	apis.state.AddListener(apis.onExecuteAction)
+	apis.state.AddListener(apis.onSetAction)
 
 	apis.events, err = events.New(ctx, db, apis.state)
 
@@ -204,6 +206,8 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 		connector.OAuth = &ConnectorOAuth{}
 		*connector.OAuth = ConnectorOAuth(*c.OAuth)
 	}
+	connector.SourceDescription = c.SourceDescription
+	connector.DestinationDescription = c.DestinationDescription
 	return &connector, nil
 }
 
@@ -225,6 +229,8 @@ func (apis *APIs) Connectors() []*Connector {
 			connector.OAuth = &ConnectorOAuth{}
 			*connector.OAuth = ConnectorOAuth(*c.OAuth)
 		}
+		connector.SourceDescription = c.SourceDescription
+		connector.DestinationDescription = c.DestinationDescription
 		connectors[i] = &connector
 	}
 	sort.Slice(connectors, func(i, j int) bool {
@@ -267,52 +273,55 @@ func (apis *APIs) onAddConnection(n state.AddConnectionNotification) {
 		return
 	}
 	connection, _ := apis.state.Connection(n.ID)
-	if conn := connection.Connector(); conn.Type != state.AppType {
+	connector := connection.Connector()
+	if connector.Type != state.AppType {
 		return
 	}
-	if connection.Role == state.SourceRole {
+	if connection.Role == state.SourceRole && connector.Targets.Contains(state.UsersTarget) {
 		go apis.reloadSchema(connection)
 		return
 	}
-	// DestinationRole.
-	go apis.reloadActionTypes(connection)
 }
 
-// onAddImportInProgress is called when an import in progress is added.
-func (apis *APIs) onAddImportInProgress(n state.AddImportInProgressNotification) {
+// onElectLeader is called when a leader is elected.
+func (apis *APIs) onElectLeader(n state.ElectLeaderNotification) {
+	if apis.state.IsLeader() {
+		apis.scheduler = newScheduler(apis.db, apis.state)
+		return
+	}
+	if apis.scheduler != nil {
+		apis.scheduler.stop()
+		apis.scheduler = nil
+	}
+}
+
+// onExecuteAction is called when an action is executed.
+func (apis *APIs) onExecuteAction(n state.ExecuteActionNotification) {
 	if !apis.state.IsLeader() {
 		return
 	}
-	connection, _ := apis.state.Connection(n.Connection)
-	c := &Connection{db: apis.db, connection: connection}
-	imp, _ := connection.ImportInProgress()
-	go c.startImport(imp)
+	action, _ := apis.state.Action(n.Action)
+	a := &Action{db: apis.db, action: action}
+	go a.exec()
 }
 
-// onSetConnectionUserQuery is called when a connection user query is changed.
-func (apis *APIs) onSetConnectionUserQuery(n state.SetConnectionUserQueryNotification) {
+// onSetAction is called when an action is changed.
+func (apis *APIs) onSetAction(n state.SetActionNotification) {
 	if !apis.state.IsLeader() {
 		return
 	}
-	connection, _ := apis.state.Connection(n.Connection)
-	go apis.reloadSchema(connection)
-}
-
-// reloadActionTypes reloads the action types for the connection, which must be
-// a destination of type app.
-func (apis *APIs) reloadActionTypes(connection *state.Connection) {
-	c := &Connection{db: apis.db, connection: connection}
-	err := c.reloadActionTypes()
-	if err != nil {
-		log.Printf("[error] cannot reload action types for connection %d: %s", c.ID, err)
+	if n.Query == "" {
+		return
 	}
+	action, _ := apis.state.Action(n.ID)
+	go apis.reloadSchema(action.Connection())
 }
 
 func (apis *APIs) reloadSchema(connection *state.Connection) {
 	c := &Connection{db: apis.db, connection: connection}
-	err := c.reloadSchema()
+	err := c.reloadUserSchema()
 	if err != nil {
-		log.Printf("[error] cannot reload schema for connection %d: %s", c.ID, err)
+		log.Printf("[error] cannot reload user schema for connection %d: %s", c.connection.ID, err)
 	}
 }
 
@@ -324,6 +333,7 @@ type Workspace struct {
 	workspace     *state.Workspace
 	ID            int
 	Name          string
+	PrivacyRegion PrivacyRegion
 }
 
 type AccountSort int
@@ -342,3 +352,11 @@ func (s AccountSort) String() string {
 	}
 	panic("invalid account sort")
 }
+
+// PrivacyRegion represents a privacy region.
+type PrivacyRegion string
+
+const (
+	PrivacyRegionNotSpecified PrivacyRegion = ""
+	PrivacyRegionEurope       PrivacyRegion = "Europe"
+)

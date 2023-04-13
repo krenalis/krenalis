@@ -32,9 +32,10 @@ var _ connector.FileConnection = &connection{}
 
 func init() {
 	connector.RegisterFile(connector.File{
-		Name: "CSV",
-		Icon: icon,
-		Open: open,
+		Name:              "CSV",
+		SourceDescription: "import users from a CSV file",
+		Icon:              icon,
+		Open:              open,
 	})
 }
 

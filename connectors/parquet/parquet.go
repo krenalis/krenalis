@@ -41,9 +41,10 @@ var _ connector.FileConnection = &connection{}
 
 func init() {
 	connector.RegisterFile(connector.File{
-		Name: "Parquet",
-		Icon: icon,
-		Open: open,
+		Name:              "Parquet",
+		SourceDescription: "import users and groups from a parquet file",
+		Icon:              icon,
+		Open:              open,
 	})
 }
 

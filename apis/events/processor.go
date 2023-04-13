@@ -8,17 +8,13 @@
 package events
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
-	"strings"
 	"sync"
 	"time"
 
+	"chichi/apis/mappings"
 	"chichi/apis/state"
-	"chichi/apis/transformations"
-	"chichi/apis/types"
 	"chichi/connector"
 )
 
@@ -41,7 +37,7 @@ type processedEvent struct {
 	*collectedEvent
 	action      *state.Action
 	destination int
-	actionType  int
+	eventType   string
 	endpoint    int
 	mappedEvent map[string]any
 	inEvent     connector.Event
@@ -79,10 +75,26 @@ func newProcessor(ctx context.Context, st *eventsState, eventLog *eventsLog, eve
 				select {
 				case event := <-events:
 					for _, action := range st.Actions() {
-						if !actionFilterApplies(action.Filter, event) {
+						if action.Target != state.EventsTarget {
 							continue
 						}
-						mappedEvent, err := applyActionMapping(action, action.ActionType, event)
+						// Convert the collectedEvent to a map of properties.
+						mapEvent, err := collectedEventToMap(event)
+						if err != nil {
+							eventLog.TransformationFailed(event.id, action.ID, err)
+							continue
+						}
+						// Check if the filter applies.
+						ok, err := mappings.ActionFilterApplies(action.Filter, mapEvent)
+						if err != nil {
+							eventLog.TransformationFailed(event.id, action.ID, err)
+							continue
+						}
+						if !ok {
+							continue
+						}
+						// Apply the mapping or the transformation.
+						mappedEvent, err := mappings.Apply(ctx, action, mapEvent, action.Schema)
 						if err != nil {
 							eventLog.TransformationFailed(event.id, action.ID, err)
 							continue
@@ -91,10 +103,14 @@ func newProcessor(ctx context.Context, st *eventsState, eventLog *eventsLog, eve
 							collectedEvent: event,
 							action:         action,
 							destination:    action.Connection().ID,
-							actionType:     action.ActionType.ID,
+							eventType:      action.EventType,
 							mappedEvent:    mappedEvent,
-							endpoint:       action.Endpoint,
-							inEvent:        eventToConnectorEvent(event),
+							// TODO(Gianluca): since the endpoints have been
+							// removed from the action, we do not have
+							// information about the endpoint. We should
+							// review/refactor this.
+							endpoint: 0,
+							inEvent:  eventToConnectorEvent(event),
 						}
 						processor.events.out <- ev
 					}
@@ -111,42 +127,6 @@ func newProcessor(ctx context.Context, st *eventsState, eventLog *eventsLog, eve
 // Events returns the processed events channel.
 func (processor *Processor) Events() <-chan *processedEvent {
 	return processor.events.out
-}
-
-// actionFilterApplies reports whether the action filter applies to the event.
-func actionFilterApplies(filter state.ActionFilter, event *collectedEvent) bool {
-	if len(filter.Conditions) == 0 {
-		return true // no conditions, so this filter always applies.
-	}
-	for _, cond := range filter.Conditions {
-		var value string
-		switch cond.Property {
-		case "AnonymousID":
-			value = event.AnonymousID
-		case "Event":
-			value = event.Event
-		case "UserID":
-			value = event.UserID
-		}
-		var conditionApplies bool
-		switch cond.Operator {
-		case "is":
-			conditionApplies = value == cond.Value
-		case "is not":
-			conditionApplies = value != cond.Value
-		}
-		if conditionApplies && filter.Logical == "any" {
-			return true
-		}
-		if !conditionApplies && filter.Logical == "all" {
-			return false
-		}
-	}
-	if filter.Logical == "any" {
-		return false // none of the conditions applied.
-	}
-	// All the conditions applied.
-	return true
 }
 
 // eventToConnectorEvent returns the connector.Event corresponding to event.
@@ -208,12 +188,10 @@ func eventToConnectorEvent(event *collectedEvent) connector.Event {
 	return e
 }
 
-// applyActionMapping applies the action mapping (or transformation) to the
-// event, returning the mapped event. actionType holds information about the
-// action type relative to the action.
-func applyActionMapping(action *state.Action, actionType *state.ActionType, event *collectedEvent) (map[string]any, error) {
+// collectedEventToMap returns a map built from the properties of the given
+// collectedEvent.
+func collectedEventToMap(event *collectedEvent) (map[string]any, error) {
 
-	// Convert the input event to a map.
 	// Keep in sync with the schema in "apis/events/schema.go".
 
 	var properties map[string]any
@@ -307,121 +285,5 @@ func applyActionMapping(action *state.Action, actionType *state.ActionType, even
 		"properties": properties,
 	}
 
-	var mappedEvent map[string]any
-
-	// Map using properties mapping.
-	if action.Mapping != nil {
-
-		mappedEvent = map[string]any{}
-		for out, in := range action.Mapping {
-			inputPropPath := strings.Split(in, ".")
-			value, ok := readPropertyFrom(mapEvent, inputPropPath)
-			if !ok {
-				continue
-			}
-			// TODO(Gianluca): handle conversions of values here, when the type
-			// checking rules will be defined.
-			outputPropPath := strings.Split(out, ".")
-			writePropertyTo(mappedEvent, outputPropPath, value)
-		}
-
-	} else if action.Transformation != nil {
-
-		// Map using the transformation function.
-		t := action.Transformation
-
-		// Prepare the event for the transformation.
-		inPropsNames := t.In.PropertiesNames()
-		inEvent := make(map[string]any, len(inPropsNames))
-		for _, name := range inPropsNames {
-			value, ok := mapEvent[name]
-			if !ok {
-				continue
-			}
-			inEvent[name] = value
-		}
-
-		// Validate the input properties according to the input schema.
-		err = validateProps(inEvent, t.In)
-		if err != nil {
-			return nil, fmt.Errorf("input schema validation failed: %s", err)
-		}
-
-		// Run the Python transformation function.
-		pool := transformations.NewPool()
-		ctx := context.Background()
-		mappedEvent, err = pool.Run2(ctx, t.PythonSource, inEvent)
-		if err != nil {
-			return nil, fmt.Errorf("error while calling the transformation function of the action: %s", err)
-		}
-
-		// Validate the properties returned by Python according to the output schema.
-		err = validateProps(mappedEvent, t.Out)
-		if err != nil {
-			return nil, fmt.Errorf("output schema validation failed: %s", err)
-		}
-
-	}
-
-	// If the action type schema is defined, then validate the mapped properties
-	// with it.
-	if actionType.Schema.Valid() {
-		err = validateProps(mappedEvent, actionType.Schema)
-		if err != nil {
-			return nil, fmt.Errorf("mapped properties validation failed: %s", err)
-		}
-	}
-
-	return mappedEvent, nil
-
-}
-
-// validateProps validate the given properties using schema, returning error if
-// the validation fails.
-func validateProps(props map[string]any, schema types.Type) error {
-	data, err := json.Marshal(props)
-	if err != nil {
-		return err
-	}
-	_, err = types.Decode(bytes.NewReader(data), schema)
-	return err
-}
-
-// readPropertyFrom reads the property with the given path from m, returning its
-// value (if found, otherwise nil) and a boolean indicating if the property path
-// corresponds to a value in m or not.
-func readPropertyFrom(m map[string]any, propPath []string) (any, bool) {
-	name := propPath[0]
-	v, ok := m[name]
-	if !ok {
-		return nil, false
-	}
-	if len(propPath) == 1 {
-		return v, ok
-	}
-	obj, ok := v.(map[string]any)
-	if !ok {
-		return nil, false
-	}
-	return readPropertyFrom(obj, propPath[1:])
-}
-
-// writePropertyTo writes the property value v into m at the given property
-// path.
-// m cannot be nil.
-func writePropertyTo(m map[string]any, propPath []string, v any) {
-	name := propPath[0]
-	if len(propPath) == 1 {
-		m[name] = v
-		return
-	}
-	_, ok := m[name]
-	if !ok {
-		m[name] = map[string]any{}
-	}
-	obj, ok := m[name].(map[string]any)
-	if !ok {
-		return
-	}
-	writePropertyTo(obj, propPath[1:], v)
+	return mapEvent, nil
 }

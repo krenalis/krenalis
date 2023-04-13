@@ -34,8 +34,8 @@
     border-left: 3px solid var(--sl-color-neutral-400);
     border-bottom: 3px solid var(--sl-color-neutral-400);
     left: var(--children-indentation); /* set in the component */
-    top: 40%;
-    transform: translateY(-50%) translateX(-30px);
+    top: 0;
+    transform: translateY(100%) translate(-30px);
     border-bottom-left-radius: 5px;
 }
 
@@ -47,6 +47,11 @@
 .GridNestedRows.expanded > .GridRow.children,
 .GridNestedRows.expanded > .GridNestedRows.children {
     display: grid;
+}
+
+.GridNestedRows .GridRow.children,
+.GridNestedRows .GridNestedRows .GridRow {
+    background-color: var(--bg-gray)!important;
 }
 
 .GridNestedRows .GridRow.children .GridCell,

@@ -45,9 +45,9 @@ const ConnectionEvents = () => {
 			if (err) {
 				if (err instanceof UnprocessableError) {
 					if (
-						err.code === 'SourceNotExist' ||
-						err.code === 'ServerNotExist' ||
-						err.code === 'StreamNotExist'
+						err.code === 'SourceNotExists' ||
+						err.code === 'ServerNotExists' ||
+						err.code === 'StreamNotExists'
 					) {
 						redirect('/admin/connections');
 						showStatus(statuses.connectionDoesNotExistAnymore);

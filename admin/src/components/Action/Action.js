@@ -1,10 +1,13 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import './Action.css';
 import Section from '../Section/Section';
 import AlertDialog from '../AlertDialog/AlertDialog';
 import statuses from '../../constants/statuses';
 import EditorWrapper from '../EditorWrapper/EditorWrapper';
+import IconWrapper from '../IconWrapper/IconWrapper';
+import StyledGrid from '../StyledGrid/StyledGrid';
+import { UnprocessableError, NotFoundError } from '../../api/errors';
 import { AppContext } from '../../context/AppContext';
 import { ConnectionContext } from '../../context/ConnectionContext';
 import {
@@ -15,50 +18,112 @@ import {
 	SlMenuItem,
 	SlDialog,
 	SlIconButton,
+	SlAlert,
+	SlDrawer,
 } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const defaultTransformationFunction = `def transform(event: dict) -> dict:
 	return event
 `;
 
-const Action = ({ actionTypeProp, actionProp, onClose }) => {
+const queryMaxSize = 16777215;
+
+const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => {
 	let [action, setAction] = useState(null);
 	let [actionType, setActionType] = useState(null);
 	let [propertiesMode, setPropertiesMode] = useState('');
-	let [eventsSchema, setEventsSchema] = useState([]);
-	let [isEventSchemaDialogOpen, setIsEventSchemaDialogOpen] = useState(false);
-	let [actionTypeSchema, setActionTypeSchema] = useState([]);
-	let [isActionTypeSchemaDialogOpen, setIsActionTypeSchemaDialogOpen] = useState(false);
+	let [inputSchema, setInputSchema] = useState(null);
+	let [isInputSchemaDialogOpen, setIsInputSchemaDialogOpen] = useState(false);
+	let [outputSchema, setOutputSchema] = useState(null);
+	let [isOutputSchemaDialogOpen, setIsOutputSchemaDialogOpen] = useState(false);
+	let [supports, setSupports] = useState([]);
+	let [previewTable, setPreviewTable] = useState(null);
 	let [isAlertOpen, setIsAlertOpen] = useState(false);
+	let [isNameEditable, setIsNameEditable] = useState(false);
 
-	let { API, showError, showStatus } = useContext(AppContext);
+	let { API, showError, showStatus, redirect } = useContext(AppContext);
 	let { connection: c } = useContext(ConnectionContext);
 
+	let initialQuery = useRef('');
+
 	useEffect(() => {
+		let actionType;
 		const fetchData = async () => {
-			let [eventsSchema, err] = await API.eventsSchema();
-			if (err != null) {
-				onClose();
-				showError(err);
-				return;
-			}
-			let action, actionType;
-			if (actionProp != null) {
-				action = { ...actionProp };
-				if (action.Mapping != null) setPropertiesMode('mappings');
-				else setPropertiesMode('transformation');
+			let a = actionProp == null ? null : { ...actionProp };
+			// get the action type
+			if (a != null) {
 				let [actionTypes, err] = await API.connections.actionTypes(c.ID);
 				if (err != null) {
 					onClose();
 					showError(err);
 					return;
 				}
-				actionType = actionTypes.find((a) => a.ID === action.ActionType);
-				if (action.Mapping != null) {
-					let mapping = getDefaultMappings(actionType);
+				for (let t of actionTypes) {
+					if (a.Target === 'Users' || a.Target === 'Groups') {
+						if (a.Target === t.Target) actionType = t;
+						continue;
+					}
+					if (a.EventType === t.EventType) actionType = t;
+				}
+			} else {
+				actionType = { ...actionTypeProp };
+			}
+			let actionTypeInfos, err;
+			if (actionType.Target === 'Users') {
+				[actionTypeInfos, err] = await API.connections.usersAction(c.ID);
+			} else if (actionType.Target === 'Groups') {
+				[actionTypeInfos, err] = await API.connections.groupsAction(c.ID);
+			} else {
+				if (actionType.EventType == null) {
+					[actionTypeInfos, err] = await API.connections.eventsAction(c.ID);
+				} else {
+					[actionTypeInfos, err] = await API.connections.eventAction(c.ID, actionType.EventType);
+				}
+			}
+			if (err != null) {
+				onClose();
+				if (err instanceof UnprocessableError) {
+					switch (err.code) {
+						case 'NoUsersSchema':
+							showStatus(statuses.noUsersSchema);
+							break;
+						case 'NoGroupsSchema':
+							showStatus(statuses.noGroupsSchema);
+							break;
+						case 'EventTypeNotExists':
+							showStatus(statuses.genericNotFound(err.message));
+							break;
+						default:
+							break;
+					}
+					return;
+				}
+				showError(err);
+				return;
+			}
+			setActionType(actionType);
+			setInputSchema(actionTypeInfos.InputSchema);
+			setOutputSchema(actionTypeInfos.OutputSchema);
+			setSupports(actionTypeInfos.Supports);
+
+			if (actionTypeInfos.Supports.includes('Query') && a != null) {
+				let res = await query(a.Query);
+				if (res == null) {
+					a.Query = null;
+				} else {
+					setInputSchema(res.Schema);
+				}
+			}
+
+			// get the action
+			let action;
+			if (a != null) {
+				if (a.Mapping != null) {
+					setPropertiesMode('mappings');
+					let mapping = getDefaultMappings(actionTypeInfos.OutputSchema);
 					for (let k in mapping) {
-						if (action.Mapping[k] != null) {
-							mapping[k].value = action.Mapping[k];
+						if (a.Mapping[k] != null) {
+							mapping[k].value = a.Mapping[k];
 							let { root, indentation } = mapping[k];
 							for (let k in mapping) {
 								if (mapping[k].root === root && mapping[k].indentation !== indentation) {
@@ -67,37 +132,33 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 							}
 						}
 					}
-					action.Mapping = mapping;
+					a.Mapping = mapping;
+				} else {
+					setPropertiesMode('transformation');
 				}
+				action = { ...a };
 			} else {
-				actionType = actionTypeProp;
-				let endpoint = 0;
-				if (actionType.Endpoints != null) {
-					endpoint = Number(Object.keys(actionType.Endpoints)[0]);
-				}
 				action = {
-					ID: 0,
-					Connection: c.ID,
-					ActionType: actionType.ID,
 					Name: actionType.Name,
-					Endpoint: endpoint,
-					Filter: { Logical: 'all', Conditions: [] },
 					Enabled: true,
+					Filter: null,
 					Mapping: null,
 					Transformation: null,
+					Query: null,
 				};
 			}
+			initialQuery.current = action.Query;
 			setAction(action);
-			setActionType(actionType);
-			setEventsSchema(eventsSchema);
-			setActionTypeSchema({ ...actionType.Schema });
 		};
 		fetchData();
 	}, []);
 
 	const onAddCondition = () => {
 		let a = { ...action };
-		a.Filter.Conditions = [...action.Filter.Conditions, { Property: '', Operator: '', Value: '' }];
+		if (a.Filter == null) {
+			a.Filter = { Logical: 'all', Conditions: [] };
+		}
+		a.Filter.Conditions = [...a.Filter.Conditions, { Property: '', Operator: '', Value: '' }];
 		setAction(a);
 	};
 
@@ -138,7 +199,7 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 				setPropertiesMode('transformation');
 			} else {
 				a.Transformation = null;
-				a.Mapping = getDefaultMappings(actionType);
+				a.Mapping = getDefaultMappings(outputSchema);
 				setAction(a);
 				setPropertiesMode('mappings');
 			}
@@ -184,15 +245,9 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 		setAction(a);
 	};
 
-	const onChangeEndpoint = (e) => {
-		let a = { ...action };
-		a.Endpoint = Number(e.currentTarget.value);
-		setAction(a);
-	};
-
 	const onSetMappingsMode = () => {
 		let a = { ...action };
-		a.Mapping = getDefaultMappings(actionType);
+		a.Mapping = getDefaultMappings(outputSchema);
 		setAction(a);
 		setPropertiesMode('mappings');
 	};
@@ -259,6 +314,80 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 		setAction(a);
 	};
 
+	const onUpdateQuery = async (value) => {
+		let a = { ...action };
+		a.Query = value;
+		setAction(a);
+	};
+
+	const query = async (query) => {
+		let a = { ...action };
+		let trimmed = query != null ? query : a.Query.trim();
+		if (trimmed.length > queryMaxSize) {
+			showError('You query is too long');
+			return;
+		}
+		if (!trimmed.includes(':limit')) {
+			showError(`Your query does not contain the ':limit' placeholder`);
+			return;
+		}
+		let [res, err] = await API.connections.query(c.ID, trimmed, 20); // TODO: make the limit dynamic by providing a select.
+		if (err !== null) {
+			if (err instanceof NotFoundError) {
+				redirect('/admin/connections');
+				showStatus(statuses.connectionDoesNotExistAnymore);
+				return;
+			}
+			if (err instanceof UnprocessableError) {
+				if (err.code === 'QueryExecutionFailed') {
+					showStatus(statuses.queryExecutionFailed);
+				}
+				return;
+			}
+			showError(err);
+			return;
+		}
+		if (Object.keys(res.Schema.properties).length === 0) {
+			showError('Your query did not return any columns');
+			return;
+		}
+		if (res.Rows.length === 0) {
+			showError('Your query did not return any rows');
+			return;
+		}
+		return res;
+	};
+
+	const onQueryPreview = async () => {
+		let res = await query();
+		if (res == null) {
+			return;
+		}
+		let columns = [];
+		for (let k in res.Schema.properties) {
+			columns.push({ Name: res.Schema.properties[k].name });
+		}
+		let table = { columns, rows: res.Rows };
+		setPreviewTable(table);
+	};
+
+	const onConfirmSchema = async () => {
+		let res = await query();
+		if (res == null) {
+			return;
+		}
+		setInputSchema(res.Schema);
+		let a = { ...action };
+		if (a.Schema != null) {
+			a.Schema = res.Schema;
+		}
+		if (propertiesMode === 'transformation') {
+			a.Transformation.In.properties = [];
+		}
+		setAction(a);
+		showStatus(statuses.schemaLoaded);
+	};
+
 	const onSave = async () => {
 		let a = { ...action };
 		if (a.Mapping != null) {
@@ -279,9 +408,24 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 		if (actionProp != null) {
 			[, err] = await API.connections.setAction(c.ID, a.ID, a);
 		} else {
-			[, err] = await API.connections.addAction(c.ID, a);
+			[, err] = await API.connections.addAction(c.ID, {
+				Target: actionType.Target,
+				EventType: actionType.EventType,
+				Action: a,
+			});
 		}
 		if (err != null) {
+			if (err instanceof UnprocessableError) {
+				switch (err.code) {
+					case 'EventTypeNotExists':
+					case 'PropertyNotExists':
+						showStatus(statuses.genericNotFound(err.message));
+						break;
+					default:
+						break;
+				}
+				return;
+			}
 			showError(err);
 			return;
 		}
@@ -289,7 +433,7 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 		onClose();
 	};
 
-	const getDefaultMappings = (actionType) => {
+	const getDefaultMappings = (schema) => {
 		const getSubProperties = (parentName, properties, indentation) => {
 			let subProperties = {};
 			indentation += 1;
@@ -309,7 +453,7 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 			return subProperties;
 		};
 		let defaultMappings = {};
-		for (let p of actionType.Schema.properties) {
+		for (let p of schema.properties) {
 			let indentation = 0;
 			defaultMappings[p.name] = { value: '', indentation: indentation, root: p.name, disabled: false };
 			if (p.type.name === 'Object') {
@@ -339,213 +483,307 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 	}
 
 	let conditions = [];
-	for (let [i, condition] of action.Filter.Conditions.entries()) {
-		conditions.push(
-			<div className='condition' data-id={i}>
-				<SlInput
-					data-fragment='Property'
-					size='small'
-					className='property'
-					value={condition.Property}
-					onSlInput={onUpdateConditionFragment}
-				/>
-				<SlInput
-					data-fragment='Operator'
-					size='small'
-					className='operator'
-					value={condition.Operator}
-					onSlInput={onUpdateConditionFragment}
-				/>
-				<SlInput
-					data-fragment='Value'
-					size='small'
-					className='value'
-					value={condition.Value}
-					onSlInput={onUpdateConditionFragment}
-				/>
-				<SlButton className='removeCondition' size='small' variant='danger' onClick={onRemoveCondition}>
-					<SlIcon name='trash' slot='prefix'></SlIcon>
-					Remove
+	if (action.Filter != null) {
+		for (let [i, condition] of action.Filter.Conditions.entries()) {
+			conditions.push(
+				<div className='condition' data-id={i}>
+					<SlInput
+						data-fragment='Property'
+						size='small'
+						className='property'
+						value={condition.Property}
+						onSlInput={onUpdateConditionFragment}
+					/>
+					<SlInput
+						data-fragment='Operator'
+						size='small'
+						className='operator'
+						value={condition.Operator}
+						onSlInput={onUpdateConditionFragment}
+					/>
+					<SlInput
+						data-fragment='Value'
+						size='small'
+						className='value'
+						value={condition.Value}
+						onSlInput={onUpdateConditionFragment}
+					/>
+					<SlButton className='removeCondition' size='small' variant='danger' onClick={onRemoveCondition}>
+						<SlIcon name='trash' slot='prefix'></SlIcon>
+						Remove
+					</SlButton>
+				</div>
+			);
+		}
+	}
+
+	let actionTypeIcon;
+	if (actionType.Target === 'Events') {
+		actionTypeIcon = <img src={c.LogoURL} alt={`${c.Name}'s logo`} className='actionTypeLogo' />;
+	} else if (actionType.Target === 'Users') {
+		actionTypeIcon = <IconWrapper name='person' size={40} />;
+	} else if (actionType.Target === 'Groups') {
+		actionTypeIcon = <IconWrapper name='people' size={40} />;
+	}
+
+	let propertiesSection = null;
+	if (supports.includes('Mapping')) {
+		let propertiesSectionActions = null;
+		if (propertiesMode !== '') {
+			let actionText;
+			if (propertiesMode === 'mappings') {
+				actionText = 'Switch to transformation function';
+			} else if (propertiesMode === 'transformation') {
+				actionText = 'Switch to mappings';
+			}
+			propertiesSectionActions = (
+				<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
+					{actionText}
 				</SlButton>
-			</div>
+			);
+		}
+
+		let isSectionPadded = false;
+		let propertiesSectionContent = null;
+		if (propertiesMode === '') {
+			if (c.Type === 'Database' && inputSchema == null) {
+				propertiesSectionContent = (
+					<SlAlert variant='warning' open>
+						<SlIcon slot='icon' name='exclamation-triangle' />
+						To enable mappings, you should first load a database schema in the "Query" section
+					</SlAlert>
+				);
+			} else {
+				isSectionPadded = true;
+				propertiesSectionContent = (
+					<div className='propertiesButtons'>
+						<SlButton variant='default' onClick={onSetMappingsMode}>
+							<SlIcon name='shuffle' slot='prefix'></SlIcon>
+							Map the properties
+						</SlButton>
+						<span>or</span>
+						<SlButton variant='default' onClick={onSetTransformationMode}>
+							<SlIcon name='filetype-py' slot='prefix'></SlIcon>
+							Write a transformation function
+						</SlButton>
+					</div>
+				);
+			}
+		} else if (propertiesMode === 'mappings') {
+			propertiesSectionContent = (
+				<div className='mappings'>
+					{Object.keys(action.Mapping).map((k) => {
+						return (
+							<div
+								className='mapping'
+								style={{
+									'--mapping-indentation': `${action.Mapping[k].indentation * 30}px`,
+								}}
+							>
+								<SlInput
+									size='small'
+									value={action.Mapping[k].value}
+									type='text'
+									name={k}
+									onSlInput={onMappingUpdate}
+									disabled={action.Mapping[k].disabled}
+									className='inputProperty'
+								/>
+								<div className='arrow'>
+									<SlIcon name='arrow-right' />
+								</div>
+								<SlInput
+									readonly
+									size='small'
+									value={k}
+									type='text'
+									name={k}
+									onSlInput={null}
+									className={`outputProperty${action.Mapping[k].indentation > 0 ? ' indented' : ''}`}
+								/>
+							</div>
+						);
+					})}
+				</div>
+			);
+		} else if (propertiesMode === 'transformation') {
+			propertiesSectionContent = (
+				<div className='transformation'>
+					<div className='inputProperties'>
+						{action.Transformation.In.properties.map((p) => {
+							return (
+								<div className='property'>
+									<div className='name'>{p.name}</div>
+									<div className='type'>{p.type.name}</div>
+									<SlButton
+										className='removeProperty'
+										size='small'
+										variant='danger'
+										outline
+										onClick={() => onRemoveTransformationProperty('input', p.name)}
+									>
+										<SlIcon name='trash'></SlIcon>
+									</SlButton>
+								</div>
+							);
+						})}
+						<SlButton
+							className='addProperty'
+							size='small'
+							variant='default'
+							onClick={() => setIsInputSchemaDialogOpen(true)}
+						>
+							<SlIcon name='plus' slot='prefix'></SlIcon>
+							Add new property
+						</SlButton>
+					</div>
+					<EditorWrapper
+						defaultLanguage='python'
+						height={400}
+						value={action.Transformation.PythonSource}
+						onChange={(value) => onChangeTransformationPythonSource(value)}
+					/>
+					<div className='outputProperties'>
+						{action.Transformation.Out.properties.map((p) => {
+							return (
+								<div className='property'>
+									<div className='name'>{p.name}</div>
+									<div className='type'>{p.type.name}</div>
+									<SlButton
+										className='removeProperty'
+										size='small'
+										variant='danger'
+										outline
+										onClick={() => onRemoveTransformationProperty('output', p.name)}
+									>
+										<SlIcon name='trash'></SlIcon>
+									</SlButton>
+								</div>
+							);
+						})}
+						<SlButton
+							className='addProperty'
+							size='small'
+							variant='default'
+							onClick={() => setIsOutputSchemaDialogOpen(true)}
+						>
+							<SlIcon name='plus' slot='prefix'></SlIcon>
+							Add new property
+						</SlButton>
+					</div>
+				</div>
+			);
+		}
+
+		propertiesSection = (
+			<Section
+				title='Properties'
+				description='The relation between the event properties and the action type properties'
+				actions={propertiesSectionActions}
+				padded={isSectionPadded}
+			>
+				{propertiesSectionContent}
+			</Section>
 		);
+	}
+
+	let isConfirmSchemaButtonDisabled = false;
+	if (initialQuery.current != null) {
+		if (action.Query.trim() === initialQuery.current.trim()) {
+			isConfirmSchemaButtonDisabled = true;
+		}
+	} else {
+		if (action.Query == null || action.Query.trim() === '') {
+			isConfirmSchemaButtonDisabled = true;
+		}
 	}
 
 	return (
 		<div className='action'>
-			<div className='actionType'>
-				<img src={c.LogoURL} alt={`${c.Name}'s logo`} className='actionTypeLogo' />
-				<div className='actionTypeName'>{actionProp != null ? actionProp.Name : actionType.Name}</div>
+			<div className='actionInfo'>
+				{actionTypeIcon}
+				<div className='actionName'>
+					{isNameEditable ? (
+						<span className='name'>
+							<SlInput
+								className='nameInput'
+								value={action != null ? action.Name : actionType.Name}
+								onSlInput={onUpdateName}
+							></SlInput>
+							<SlIconButton name='check-lg' label='Confirm' onClick={() => setIsNameEditable(false)} />
+						</span>
+					) : (
+						<span className='name'>
+							{action != null ? action.Name : actionType.Name}
+							<SlIconButton name='pencil' label='Edit' onClick={() => setIsNameEditable(true)} />
+						</span>
+					)}
+				</div>
 				<div className='actionTypeDescription'>{actionType.Description}</div>
 			</div>
-			<Section title='Name' description='The name that will be associated to the action'>
-				<SlInput className='nameInput' value={action.Name} onSlInput={onUpdateName} />
-			</Section>
-			<Section title='Filter' description='The filters that define the action'>
-				{action.Filter.Conditions.length > 1 && (
-					<SlSelect
-						className='logical'
-						size='small'
-						value={action.Filter.Logical}
-						onSlChange={onSwitchFilterLogical}
-					>
-						<SlMenuItem value='all'>All</SlMenuItem>
-						<SlMenuItem value='any'>Any</SlMenuItem>
-					</SlSelect>
-				)}
-				{conditions}
-				<SlButton className='addCondition' size='small' variant='default' onClick={onAddCondition}>
-					<SlIcon name='plus' slot='prefix'></SlIcon>
-					Add new condition
-				</SlButton>
-			</Section>
-			{actionType.Schema != null && (
-				<Section
-					title='Properties'
-					description='The relation between the event properties and the action type properties'
-					actions={
-						propertiesMode === '' ? null : propertiesMode === 'mappings' ? (
-							<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
-								Switch to transformation function
-							</SlButton>
-						) : (
-							<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
-								Switch to mappings
-							</SlButton>
-						)
-					}
-				>
-					{propertiesMode === '' ? (
-						<div className='propertiesButtons'>
-							<SlButton variant='default' onClick={onSetMappingsMode}>
-								<SlIcon name='shuffle' slot='prefix'></SlIcon>
-								Map the properties
-							</SlButton>
-							<span>or</span>
-							<SlButton variant='default' onClick={onSetTransformationMode}>
-								<SlIcon name='filetype-py' slot='prefix'></SlIcon>
-								Write a transformation function
-							</SlButton>
-						</div>
-					) : propertiesMode === 'mappings' ? (
-						<div className='mappings'>
-							{Object.keys(action.Mapping).map((k) => {
-								return (
-									<div
-										className='mapping'
-										style={{ '--mapping-indentation': `${action.Mapping[k].indentation * 30}px` }}
-									>
-										<SlInput
-											size='small'
-											value={action.Mapping[k].value}
-											type='text'
-											name={k}
-											onSlInput={onMappingUpdate}
-											disabled={action.Mapping[k].disabled}
-											className='inputProperty'
-										/>
-										<div className='arrow'>
-											<SlIcon name='arrow-right' />
-										</div>
-										<SlInput
-											readonly
-											size='small'
-											value={k}
-											type='text'
-											name={k}
-											onSlInput={null}
-											className={`outputProperty${
-												action.Mapping[k].indentation > 0 ? ' indented' : ''
-											}`}
-										/>
-									</div>
-								);
-							})}
-						</div>
-					) : (
-						<div className='transformation'>
-							<div className='inputProperties'>
-								{action.Transformation.In.properties.map((p) => {
-									return (
-										<div className='property'>
-											<div className='name'>{p.name}</div>
-											<div className='type'>{p.type.name}</div>
-											<SlButton
-												className='removeProperty'
-												size='small'
-												variant='danger'
-												outline
-												onClick={() => onRemoveTransformationProperty('input', p.name)}
-											>
-												<SlIcon name='trash'></SlIcon>
-											</SlButton>
-										</div>
-									);
-								})}
-								<SlButton
-									className='addProperty'
-									size='small'
-									variant='default'
-									onClick={() => setIsEventSchemaDialogOpen(true)}
-								>
-									<SlIcon name='plus' slot='prefix'></SlIcon>
-									Add new property
-								</SlButton>
-							</div>
-							<EditorWrapper
-								defaultLanguage='python'
-								height={400}
-								value={action.Transformation.PythonSource}
-								onChange={(value) => onChangeTransformationPythonSource(value)}
-							/>
-							<div className='outputProperties'>
-								{action.Transformation.Out.properties.map((p) => {
-									return (
-										<div className='property'>
-											<div className='name'>{p.name}</div>
-											<div className='type'>{p.type.name}</div>
-											<SlButton
-												className='removeProperty'
-												size='small'
-												variant='danger'
-												outline
-												onClick={() => onRemoveTransformationProperty('output', p.name)}
-											>
-												<SlIcon name='trash'></SlIcon>
-											</SlButton>
-										</div>
-									);
-								})}
-								<SlButton
-									className='addProperty'
-									size='small'
-									variant='default'
-									onClick={() => setIsActionTypeSchemaDialogOpen(true)}
-								>
-									<SlIcon name='plus' slot='prefix'></SlIcon>
-									Add new property
-								</SlButton>
-							</div>
-						</div>
+			{supports.includes('Filter') && (
+				<Section title='Filter' description='The filters that define the action' padded={true}>
+					{conditions.length > 1 && (
+						<SlSelect
+							className='logical'
+							size='small'
+							value={action.Filter.Logical}
+							onSlChange={onSwitchFilterLogical}
+						>
+							<SlMenuItem value='all'>All</SlMenuItem>
+							<SlMenuItem value='any'>Any</SlMenuItem>
+						</SlSelect>
 					)}
+					{conditions}
+					<SlButton className='addCondition' size='small' variant='default' onClick={onAddCondition}>
+						<SlIcon name='plus' slot='prefix'></SlIcon>
+						Add new condition
+					</SlButton>
 				</Section>
 			)}
-			{actionType.Endpoints != null && Object.keys(actionType.Endpoints).length > 1 && (
-				<Section
-					title='Endpoint'
-					description='The location of the server to which the action events will be sent'
-				>
-					<SlSelect
-						className='endpoint'
-						size='small'
-						value={String(action.Endpoint)}
-						onSlChange={onChangeEndpoint}
-					>
-						{Object.entries(actionType.Endpoints).map(([key, endpoint]) => {
-							return <SlMenuItem value={key}>{endpoint}</SlMenuItem>;
-						})}
-					</SlSelect>
+			{supports.includes('Query') && (
+				<Section title='Query' description='The query used to import the data'>
+					<EditorWrapper
+						defaultLanguage='sql'
+						height={400}
+						value={action.Query}
+						onChange={onUpdateQuery}
+					></EditorWrapper>
+					<div className='queryButtons'>
+						<SlButton variant='neutral' size='small' onClick={onQueryPreview}>
+							<SlIcon slot='prefix' name='eye' />
+							Preview
+						</SlButton>
+						<SlButton
+							variant='success'
+							size='small'
+							onClick={onConfirmSchema}
+							disabled={isConfirmSchemaButtonDisabled}
+						>
+							<SlIcon slot='prefix' name='check-lg' />
+							Confirm
+						</SlButton>
+					</div>
 				</Section>
+			)}
+			{propertiesSection}
+			{previewTable && (
+				<>
+					<SlDrawer
+						className='previewDrawer'
+						label='Preview'
+						open={true}
+						onSlAfterHide={() => setPreviewTable(null)}
+						placement='bottom'
+						style={{ '--size': '600px' }}
+					>
+						<StyledGrid
+							columns={previewTable.columns}
+							rows={previewTable.rows}
+							noRowsMessage={'Your query did not return data'}
+						/>
+					</SlDrawer>
+				</>
 			)}
 			{createPortal(
 				<AlertDialog
@@ -583,13 +821,13 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 			{action.Transformation != null &&
 				createPortal(
 					<SlDialog
-						className='eventSchemaDialog'
-						label='Event properties'
-						open={isEventSchemaDialogOpen}
-						onSlRequestClose={() => setIsEventSchemaDialogOpen(false)}
+						className='inputSchemaDialog'
+						label='Input properties'
+						open={isInputSchemaDialogOpen}
+						onSlRequestClose={() => setIsInputSchemaDialogOpen(false)}
 						style={{ '--width': '700px' }}
 					>
-						{eventsSchema.properties.map((p) => {
+						{inputSchema.properties.map((p) => {
 							let isUsed =
 								action.Transformation.In.properties.findIndex((prop) => prop.name === p.name) !== -1;
 							return (
@@ -614,13 +852,13 @@ const Action = ({ actionTypeProp, actionProp, onClose }) => {
 			{action.Transformation != null &&
 				createPortal(
 					<SlDialog
-						className='actionTypeSchemaDialog'
-						label='Action type properties'
-						open={isActionTypeSchemaDialogOpen}
-						onSlRequestClose={() => setIsActionTypeSchemaDialogOpen(false)}
+						className='outputSchemaDialog'
+						label='Output properties'
+						open={isOutputSchemaDialogOpen}
+						onSlRequestClose={() => setIsOutputSchemaDialogOpen(false)}
 						style={{ '--width': '700px' }}
 					>
-						{actionTypeSchema.properties.map((p) => {
+						{outputSchema.properties.map((p) => {
 							let isUsed =
 								action.Transformation.Out.properties.findIndex((prop) => prop.name === p.name) !== -1;
 							return (

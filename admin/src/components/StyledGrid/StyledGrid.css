@@ -1,18 +1,26 @@
 .StyledGrid {
+    background-color: var(--bg-primary);
     border-radius: var(--radius);
     border: 1px solid var(--sl-color-neutral-200);
     box-shadow: var(--sl-shadow-small);
+    overflow: hidden;
+}
+
+.StyledGrid .GridHeaderRow {
+    background-color: var(--bg-gray);
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
 }
 
 .StyledGrid .Grid .GridHeaderCell,
-.StyledGrid .Grid .GridCell,
-.StyledGrid .Grid .actions {
+.StyledGrid .Grid .GridCell {
     background-color: var(--bg-primary);
     padding: 15px 0;
 }
 
 .StyledGrid .cellContent {
     padding: 0 20px;
+    width: fit-content;
 }
 
 .StyledGrid .Grid .GridHeaderCell {
@@ -41,8 +49,16 @@
     font-size: 15px;
 }
 
+.StyledGrid .Grid .GridRow.even {
+    background-color: var(--bg-gray);
+}
+
+.StyledGrid .Grid .GridRow.last {
+    border-bottom-left-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+}
+
 .StyledGrid .Grid .GridRow.even .GridCell,
-.StyledGrid .Grid .GridRow.even .actions,
 .StyledGrid .Grid .GridNestedRows.even .GridRow.parent .GridCell {
     background-color: var(--bg-gray);
 }
@@ -56,18 +72,6 @@
 }
 
 .StyledGrid .Grid .GridRow.last .GridCell.last {
-    border-bottom-right-radius: var(--radius);
-}
-
-.StyledGrid .Grid .GridRow .actions {
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-}
-
-.StyledGrid .Grid .GridRow.last .actions {
     border-bottom-right-radius: var(--radius);
 }
 

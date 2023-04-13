@@ -13,9 +13,11 @@ import (
 
 // Server represents a server connector.
 type Server struct {
-	Name string
-	Icon string // icon in SVG format
-	Open OpenServerFunc
+	Name                   string
+	SourceDescription      string // It should complete the sentence "Add an action to ..."
+	DestinationDescription string // It should complete the sentence "Add an action to ..."
+	Icon                   string // icon in SVG format
+	Open                   OpenServerFunc
 }
 
 // ServerConfig represents the configuration of a server connection.

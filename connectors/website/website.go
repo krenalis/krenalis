@@ -24,9 +24,10 @@ var _ connector.WebsiteConnection = &connection{}
 
 func init() {
 	connector.RegisterWebsite(connector.Website{
-		Name: "Website",
-		Icon: icon,
-		Open: open,
+		Name:              "Website",
+		SourceDescription: "receive events from a website",
+		Icon:              icon,
+		Open:              open,
 	})
 }
 

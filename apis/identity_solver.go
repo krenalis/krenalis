@@ -94,32 +94,3 @@ func (ids *identitySolver) entityToIdentity(connection int, user string) (int, b
 	}
 	return goldenRecord, true, nil
 }
-
-// LookupSameEntities returns the entities which correspond to the Golden
-// Record's identity, in the form of a map from connection to the list of users
-// associated to that connection.
-func (ids *identitySolver) LookupSameEntities(connection int, user string) (map[int][]string, error) {
-	ws := ids.connection.Workspace()
-	query := "SELECT connection, \"user\" FROM connections_users\n" +
-		"WHERE connection <> $1 AND \"user\" <> $2 AND golden_record = \n" +
-		"(SELECT golden_record FROM connections_users WHERE connection = $1 AND \"user\" = $2)"
-	rows, err := ws.Warehouse.Query(ids.ctx, query, connection, user)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	sameEntities := map[int][]string{}
-	for rows.Next() {
-		var connection int
-		var user string
-		err := rows.Scan(&connection, &user)
-		if err != nil {
-			return nil, err
-		}
-		sameEntities[connection] = append(sameEntities[connection], user)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return sameEntities, nil
-}

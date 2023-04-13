@@ -109,32 +109,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Handle the "/export" endpoint.
-	if strings.HasPrefix(rpath, "/export") {
-		var req struct {
-			Connector int
-		}
-		err := json.NewDecoder(r.Body).Decode(&req)
-		if err != nil {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return
-		}
-		connection, err := workspace.Connection(req.Connector)
-		if err != nil {
-			log.Printf("[error] %v", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		err = connection.Export()
-		if err != nil {
-			log.Printf("[error] %v", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		_, _ = fmt.Fprint(w, `{"status":"ok"}`)
-		return
-	}
-
 	http.ServeFile(w, r, "./admin/public/index.html")
 
 }

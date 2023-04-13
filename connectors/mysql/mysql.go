@@ -35,9 +35,10 @@ var _ connector.DatabaseConnection = &connection{}
 
 func init() {
 	connector.RegisterDatabase(connector.Database{
-		Name: "MySQL",
-		Icon: icon,
-		Open: open,
+		Name:              "MySQL",
+		SourceDescription: "import users and groups from a MySQL database",
+		Icon:              icon,
+		Open:              open,
 	})
 }
 

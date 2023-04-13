@@ -42,7 +42,7 @@ const ConnectionStorage = ({ connection: c }) => {
 				return;
 			}
 			if (err instanceof UnprocessableError) {
-				if (err.code === 'StorageNotExist') {
+				if (err.code === 'StorageNotExists') {
 					showStatus(statuses.storageNotExist);
 				}
 				return;

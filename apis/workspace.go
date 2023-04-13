@@ -48,13 +48,13 @@ var (
 	InvalidSettings      errors.Code = "InvalidSettings"
 	NoWarehouse          errors.Code = "NoWarehouse"
 	NotConnected         errors.Code = "NotConnected"
-	OrderNotExist        errors.Code = "OrderNotExist"
+	OrderNotExists       errors.Code = "OrderNotExists"
 	OrderTypeNotSortable errors.Code = "OrderTypeNotSortable"
-	PropertyNotExist     errors.Code = "PropertyNotExist"
+	PropertyNotExists    errors.Code = "PropertyNotExists"
 	RepeatedPropertyName errors.Code = "RepeatedPropertyName"
-	ServerNotExist       errors.Code = "ServerNotExist"
-	SourceNotExist       errors.Code = "SourceNotExist"
-	StreamNotExist       errors.Code = "StreamNotExist"
+	ServerNotExists      errors.Code = "ServerNotExists"
+	SourceNotExists      errors.Code = "SourceNotExists"
+	StreamNotExists      errors.Code = "StreamNotExists"
 	TooManyListeners     errors.Code = "TooManyListeners"
 	WarehouseFailed      errors.Code = "WarehouseFailed"
 )
@@ -88,9 +88,9 @@ type ConnectionOptions struct {
 // options and returns its identifier.
 //
 // It returns an errors.UnprocessableError error with code
-//   - ConnectorNotExist, if the connector does not exist.
+//   - ConnectorNotExists, if the connector does not exist.
 //   - InvalidSettings, if the settings are not valid.
-//   - StorageNotExist, if the storage does not exist.
+//   - StorageNotExists, if the storage does not exist.
 func (this *Workspace) AddConnection(role ConnectionRole, connector int, settings []byte, opts ConnectionOptions) (int, error) {
 
 	if role != SourceRole && role != DestinationRole {
@@ -108,7 +108,7 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 
 	c, ok := this.state.Connector(connector)
 	if !ok {
-		return 0, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
+		return 0, errors.Unprocessable(ConnectorNotExists, "connector %d does not exist", connector)
 	}
 
 	n := state.AddConnectionNotification{
@@ -130,7 +130,7 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 		}
 		s, ok := this.workspace.Connection(opts.Storage)
 		if !ok {
-			return 0, errors.Unprocessable(StorageNotExist, "storage %d does not exist", opts.Storage)
+			return 0, errors.Unprocessable(StorageNotExists, "storage %d does not exist", opts.Storage)
 		}
 		if s.Connector().Type != state.StorageType {
 			return 0, errors.BadRequest("connection %d is not a storage", opts.Storage)
@@ -294,9 +294,9 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 				if postgres.IsForeignKeyViolation(err) {
 					switch postgres.ErrConstraintName(err) {
 					case "resources_workspace_fkey":
-						err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
+						err = errors.Unprocessable(WorkspaceNotExists, "workspace %d does not exist", n.Workspace)
 					case "resources_connector_fkey":
-						err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
+						err = errors.Unprocessable(ConnectorNotExists, "connector %d does not exist", n.Connector)
 					}
 				}
 				return err
@@ -312,11 +312,11 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 				if postgres.IsForeignKeyViolation(err) {
 					switch postgres.ErrConstraintName(err) {
 					case "connections_workspace_fkey":
-						err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
+						err = errors.Unprocessable(WorkspaceNotExists, "workspace %d does not exist", n.Workspace)
 					case "connections_connector_fkey":
-						err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
+						err = errors.Unprocessable(ConnectorNotExists, "connector %d does not exist", n.Connector)
 					case "connections_storage_fkey":
-						err = errors.Unprocessable(StorageNotExist, "storage %d does not exist", n.Storage)
+						err = errors.Unprocessable(StorageNotExists, "storage %d does not exist", n.Storage)
 					}
 				}
 			}
@@ -350,8 +350,8 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 // for each call to the Events method, it must be in [1,1000].
 //
 // If the source, server, or stream does not exist, it returns an
-// errors.UnprocessableError error with code SourceNotExist, ServerNotExist,
-// and StreamNotExist respectively.
+// errors.UnprocessableError error with code SourceNotExists, ServerNotExists,
+// and StreamNotExists respectively.
 // If there are already too many listeners, it returns an
 // errors.UnprocessableError error with code TooManyListeners.
 func (this *Workspace) AddEventListener(size, source, server, stream int) (string, error) {
@@ -409,18 +409,26 @@ func (this *Workspace) AddEventListener(size, source, server, stream int) (strin
 			return "", err
 		}
 		if source > 0 && !sourceExist {
-			return "", errors.Unprocessable(SourceNotExist, "source %d does not exist", source)
+			return "", errors.Unprocessable(SourceNotExists, "source %d does not exist", source)
 		}
 		if server > 0 && !serverExist {
-			return "", errors.Unprocessable(ServerNotExist, "server %d does not exist", server)
+			return "", errors.Unprocessable(ServerNotExists, "server %d does not exist", server)
 		}
 		if stream > 0 && !streamExist {
-			return "", errors.Unprocessable(StreamNotExist, "stream %d does not exist", stream)
+			return "", errors.Unprocessable(StreamNotExists, "stream %d does not exist", stream)
 		}
 
 	}
 
-	return this.eventObserver.AddListener(size, source, server, stream)
+	id, err := this.eventObserver.AddListener(size, source, server, stream)
+	if err != nil {
+		if err == _events.ErrTooManyListeners {
+			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", _events.MaxEventListeners)
+		}
+		return "", err
+	}
+
+	return id, nil
 }
 
 // Delete deletes the workspace with all its connections.
@@ -457,27 +465,17 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 	}
 	conn := c.Connector()
 	connection := Connection{
-		db:             this.db,
-		connection:     c,
-		ID:             c.ID,
-		Name:           c.Name,
-		Type:           ConnectorType(conn.Type),
-		Role:           ConnectionRole(c.Role),
-		HasSettings:    conn.HasSettings,
-		LogoURL:        conn.LogoURL,
-		Enabled:        c.Enabled,
-		UsersQuery:     c.UsersQuery,
-		Transformation: (*Transformation)(c.Transformation()),
-		Mappings:       []*Mapping{},
-		Health:         ConnectionHealth(c.Health),
-	}
-	for _, m := range c.Mappings() {
-		connection.Mappings = append(connection.Mappings, &Mapping{
-			InProperties:   m.InProperties,
-			OutProperties:  m.OutProperties,
-			PredefinedFunc: (*PredefinedFunc)(m.PredefinedFunc),
-			CustomFunc:     (*MappingCustomFunc)(m.CustomFunc),
-		})
+		db:          this.db,
+		connection:  c,
+		ID:          c.ID,
+		Name:        c.Name,
+		Type:        ConnectorType(conn.Type),
+		Role:        ConnectionRole(c.Role),
+		Connector:   conn.ID,
+		HasSettings: conn.HasSettings,
+		LogoURL:     conn.LogoURL,
+		Enabled:     c.Enabled,
+		Health:      Health(c.Health),
 	}
 	if s, ok := c.Storage(); ok {
 		connection.Storage = s.ID
@@ -495,26 +493,17 @@ func (this *Workspace) Connections() []*Connection {
 	for i, c := range connections {
 		conn := c.Connector()
 		connection := Connection{
-			db:             this.db,
-			connection:     c,
-			ID:             c.ID,
-			Name:           c.Name,
-			Type:           ConnectorType(conn.Type),
-			Role:           ConnectionRole(c.Role),
-			HasSettings:    conn.HasSettings,
-			LogoURL:        conn.LogoURL,
-			Enabled:        c.Enabled,
-			UsersQuery:     c.UsersQuery,
-			Health:         ConnectionHealth(c.Health),
-			Transformation: (*Transformation)(c.Transformation()),
-		}
-		for _, m := range c.Mappings() {
-			connection.Mappings = append(connection.Mappings, &Mapping{
-				InProperties:   m.InProperties,
-				OutProperties:  m.OutProperties,
-				PredefinedFunc: (*PredefinedFunc)(m.PredefinedFunc),
-				CustomFunc:     (*MappingCustomFunc)(m.CustomFunc),
-			})
+			db:          this.db,
+			connection:  c,
+			ID:          c.ID,
+			Name:        c.Name,
+			Type:        ConnectorType(conn.Type),
+			Role:        ConnectionRole(c.Role),
+			Connector:   conn.ID,
+			HasSettings: conn.HasSettings,
+			LogoURL:     conn.LogoURL,
+			Enabled:     c.Enabled,
+			Health:      Health(c.Health),
 		}
 		if s, ok := c.Storage(); ok {
 			connection.Storage = s.ID
@@ -646,7 +635,7 @@ type authorizedResource struct {
 // that can be used to add a new connection for the specified connector.
 //
 // It returns an errors.NotFound error if the workspace does not exist anymore.
-// It returns an errors.UnprocessableError error with code ConnectorNotExist if
+// It returns an errors.UnprocessableError error with code ConnectorNotExists if
 // the connector does not exist.
 func (this *Workspace) OAuthToken(authorizationCode string, connector int) (string, error) {
 
@@ -659,7 +648,7 @@ func (this *Workspace) OAuthToken(authorizationCode string, connector int) (stri
 
 	c, ok := this.state.Connector(connector)
 	if !ok {
-		return "", errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
+		return "", errors.Unprocessable(ConnectorNotExists, "connector %d does not exist", connector)
 	}
 	if c.OAuth == nil {
 		return "", errors.BadRequest("connector %d does not support OAuth", connector)
@@ -718,8 +707,9 @@ func (this *Workspace) OAuthToken(authorizationCode string, connector int) (stri
 	}
 
 	connection, err := _connector.RegisteredApp(c.Name).Open(context.Background(), &_connector.AppConfig{
-		ClientSecret: c.OAuth.ClientSecret,
-		AccessToken:  tokens.AccessToken,
+		ClientSecret:  c.OAuth.ClientSecret,
+		AccessToken:   tokens.AccessToken,
+		PrivacyRegion: _connector.PrivacyRegion(this.workspace.PrivacyRegion),
 	})
 	if err != nil {
 		return "", err
@@ -782,18 +772,19 @@ func (this *Workspace) ReloadSchemas() error {
 		Schemas:   map[string]*types.Type{},
 	}
 	for _, table := range tables {
-		// Check that the 'users' table contains the 'id' column.
-		if table.Name == "users" {
+		// Check that the 'users' and the 'groups' tables, when exist, contain
+		// the 'id' column.
+		if table.Name == "users" || table.Name == "groups" {
 			i := slices.IndexFunc(table.Columns, func(c *warehouses.Column) bool {
 				return c.Name == "id"
 			})
 			if i == -1 {
-				return errors.Unprocessable(InvalidSchemaTable, "'users' table has no 'id' column")
+				return errors.Unprocessable(InvalidSchemaTable, "'%s' table has no 'id' column", table.Name)
 			}
 			if c := table.Columns[i]; c.Type.PhysicalType() != types.PtInt {
-				return errors.Unprocessable(InvalidSchemaTable, "column 'users.id' does not have type Int")
+				return errors.Unprocessable(InvalidSchemaTable, "column '%s.id' does not have type Int", table.Name)
 			} else if c.Nullable {
-				return errors.Unprocessable(InvalidSchemaTable, "column 'users.id' must not be nullable")
+				return errors.Unprocessable(InvalidSchemaTable, "column '%s.id' must not be nullable", table.Name)
 			}
 			table.Columns = slices.Delete(table.Columns, i, i+1)
 		}
@@ -899,6 +890,31 @@ func (this *Workspace) Schema(name string) types.Type {
 	return *schema
 }
 
+// SetPrivacyRegion sets the privacy region of the workspace.
+func (this *Workspace) SetPrivacyRegion(region PrivacyRegion) error {
+	switch region {
+	case PrivacyRegionNotSpecified,
+		PrivacyRegionEurope:
+	default:
+		return errors.BadRequest("invalid privacy region %q", string(region))
+	}
+	ws := this.workspace
+	n := state.SetWorkspacePrivacyRegion{
+		Workspace:     ws.ID,
+		PrivacyRegion: state.PrivacyRegion(region),
+	}
+	ctx := context.Background()
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET privacy_region = $1 WHERE id = $2",
+			n.PrivacyRegion, n.Workspace)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
+}
+
 // SetWarehouseSettings sets the settings of the workspace's data warehouse.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist,
@@ -998,7 +1014,7 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 			if !types.IsValidPropertyName(name) {
 				return types.Type{}, nil, errors.BadRequest("property name %q is not valid", name)
 			}
-			return types.Type{}, nil, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
+			return types.Type{}, nil, errors.Unprocessable(PropertyNotExists, "property name %s does not exist", name)
 		}
 	}
 	var orderProperty types.Property
@@ -1008,7 +1024,7 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 		}
 		orderProperty, ok := propertyByName[order]
 		if !ok {
-			return types.Type{}, nil, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
+			return types.Type{}, nil, errors.Unprocessable(OrderNotExists, "order %s does not exist in schema", order)
 		}
 		switch orderProperty.Type.PhysicalType() {
 		case types.PtJSON, types.PtArray, types.PtObject, types.PtMap:
@@ -1041,6 +1057,11 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 		}
 		return types.Type{}, nil, err
 	}
+
+	// TODO(Gianluca): users should be grouped in objects where necessary.
+	// Currently, in case of flat object properties, the columns are not put
+	// together in objects and the count of properties of users and the
+	// properties in the schema does not match.
 
 	return schema, users, err
 }

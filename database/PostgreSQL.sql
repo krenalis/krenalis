@@ -12,12 +12,14 @@ INSERT INTO accounts (name, email, password) VALUES
     ('ACME inc', 'acme@open2b.com', '$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC'); -- Password: foopass2
 
 CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'Mobile', 'Server', 'Storage', 'Stream', 'Website');
+CREATE TYPE action_target AS ENUM ('Events', 'Users', 'Groups');
 CREATE TYPE webhooks_per AS ENUM ('None', 'Connector', 'Resource', 'Source');
 
 CREATE TABLE connectors (
     id SERIAL,
     name varchar(200) NOT NULL DEFAULT '',
     type connector_type NOT NULL DEFAULT 'App',
+    targets action_target[] NOT NULL DEFAULT '{}',
     has_settings boolean NOT NULL DEFAULT FALSE,
     logo_url varchar(500) NOT NULL DEFAULT '',
     webhooks_per webhooks_per NOT NULL DEFAULT 'None',
@@ -31,29 +33,29 @@ CREATE TABLE connectors (
     PRIMARY KEY (id)
 );
 
-INSERT INTO connectors (name, type, has_settings, logo_url, webhooks_per, oauth_url, oauth_client_id, oauth_client_secret, oauth_token_endpoint, oauth_forced_expires_in) VALUES
-    ('HubSpot', 'App', FALSE, 'https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/168_Hubspot_logo_logos-512.png', 'Connector', 'https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read', 'cef1005a-72be-4047-a301-ef6057588325', '136e50df-5b89-478f-bf01-4a71547fa668', 'https://api.hubapi.com/oauth/v1/token', 0),
-    ('MySQL', 'Database', TRUE, 'https://cdn4.iconfinder.com/data/icons/logos-3/181/MySQL-512.png', 'None', '', '', '', '', 0),
-    ('Dummy', 'App', FALSE, 'https://cdn3.iconfinder.com/data/icons/education-209/64/tube-lab-science-school-256.png', 'Connector', '', '', '', '', 0),
-    ('Mailchimp', 'App', TRUE, 'https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/mailchimp-512.png', 'Source', 'https://login.mailchimp.com/oauth2/authorize?response_type=code&client_id=631597222767&redirect_uri=https://127.0.0.1:9090/admin/oauth/authorize', '631597222767', '90c2d1a1383de35e5ecca5a73f0e2c19e751056d0e3cdd81ac', 'https://login.mailchimp.com/oauth2/token',2147483647),
-    ('CSV', 'File', TRUE, 'https://cdn3.iconfinder.com/data/icons/cad-database-presentation-spreadsheet-vector-fil-2/512/19-512.png', 'None', '', '', '', '', 0),
-    ('SFTP', 'Storage', TRUE, 'https://cdn2.iconfinder.com/data/icons/whcompare-servers-web-hosting/50/sftp-512.png', 'None', '', '', '', '', 0),
-    ('HTTP', 'Storage', TRUE, 'https://cdn4.iconfinder.com/data/icons/application-windows-3/32/HTTP-512.png', 'None', '', '', '', '', 0),
-    ('Excel', 'File', TRUE, 'https://cdn0.iconfinder.com/data/icons/logos-microsoft-office-365/128/Microsoft_Office-02-512.png', 'None', '', '', '', '', 0),
-    ('S3', 'Storage', TRUE, 'https://cdn2.iconfinder.com/data/icons/amazon-aws-stencils/100/Storage__Content_Delivery_Amazon_S3-512.png', 'None', '', '', '', '', 0),
-    ('PostgreSQL', 'Database', TRUE, 'https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/postgresql-512.png', 'None', '', '', '', '', 0),
-    ('Parquet', 'File', TRUE, '', 'None', '', '', '', '', 0),
-    ('Website', 'Website', FALSE, 'https://cdn2.iconfinder.com/data/icons/free-simple-line-mix/48/22-Website-512.png', 'None', '', '', '', '', 0),
-    ('Kafka', 'Stream', TRUE, 'https://cdn.icon-icons.com/icons2/2248/PNG/512/apache_kafka_icon_138937.png', 'None', '', '', '', '', 0),
-    ('RabbitMQ', 'Stream', TRUE, 'https://cdn.icon-icons.com/icons2/2699/PNG/512/rabbitmq_logo_icon_170810.png', 'None', '', '', '', '', 0),
-    ('UISample', 'Stream', TRUE, '', 'None', '', '', '', '', 0),
-    ('Server', 'Server', FALSE, 'https://cdn1.iconfinder.com/data/icons/unicons-line-vol-5/24/server-512.png', 'None', '', '', '', '', 0),
-    ('Klaviyo', 'App', TRUE, 'https://cdn3.iconfinder.com/data/icons/font-awesome-solid/512/k-256.png', 'None', '', '', '', '', 0),
-    ('Google Analytics 4', 'App', TRUE, 'https://cdn4.iconfinder.com/data/icons/social-media-logos-6/512/108-analytics_google_analytics_google-256.png', 'None', '', '', '', '', 0),
-    ('Filesystem', 'Storage', TRUE, 'https://cdn2.iconfinder.com/data/icons/audio-music-5/65/cd-case-256.png', 'None', '', '', '', '', 0);
-
+INSERT INTO connectors (name, type, targets, has_settings, logo_url, webhooks_per, oauth_url, oauth_client_id, oauth_client_secret, oauth_token_endpoint, oauth_forced_expires_in) VALUES
+    ('HubSpot', 'App', '{Users,Groups}', FALSE, 'https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/168_Hubspot_logo_logos-512.png', 'Connector', 'https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read', 'cef1005a-72be-4047-a301-ef6057588325', '136e50df-5b89-478f-bf01-4a71547fa668', 'https://api.hubapi.com/oauth/v1/token', 0),
+    ('MySQL', 'Database', '{Users,Groups}', TRUE, 'https://cdn4.iconfinder.com/data/icons/logos-3/181/MySQL-512.png', 'None', '', '', '', '', 0),
+    ('Dummy', 'App', '{Events,Users}', FALSE, 'https://cdn3.iconfinder.com/data/icons/education-209/64/tube-lab-science-school-256.png', 'Connector', '', '', '', '', 0),
+    ('Mailchimp', 'App', '{Users}', TRUE, 'https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/mailchimp-512.png', 'Source', 'https://login.mailchimp.com/oauth2/authorize?response_type=code&client_id=631597222767&redirect_uri=https://127.0.0.1:9090/admin/oauth/authorize', '631597222767', '90c2d1a1383de35e5ecca5a73f0e2c19e751056d0e3cdd81ac', 'https://login.mailchimp.com/oauth2/token',2147483647),
+    ('CSV', 'File', '{Users,Groups}', TRUE, 'https://cdn3.iconfinder.com/data/icons/cad-database-presentation-spreadsheet-vector-fil-2/512/19-512.png', 'None', '', '', '', '', 0),
+    ('SFTP', 'Storage', '{}', TRUE, 'https://cdn2.iconfinder.com/data/icons/whcompare-servers-web-hosting/50/sftp-512.png', 'None', '', '', '', '', 0),
+    ('HTTP', 'Storage', '{}', TRUE, 'https://cdn4.iconfinder.com/data/icons/application-windows-3/32/HTTP-512.png', 'None', '', '', '', '', 0),
+    ('Excel', 'File', '{Users,Groups}', TRUE, 'https://cdn0.iconfinder.com/data/icons/logos-microsoft-office-365/128/Microsoft_Office-02-512.png', 'None', '', '', '', '', 0),
+    ('S3', 'Storage', '{}', TRUE, 'https://cdn2.iconfinder.com/data/icons/amazon-aws-stencils/100/Storage__Content_Delivery_Amazon_S3-512.png', 'None', '', '', '', '', 0),
+    ('PostgreSQL', 'Database', '{Users,Groups}', TRUE, 'https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/postgresql-512.png', 'None', '', '', '', '', 0),
+    ('Parquet', 'File', '{Users,Groups}', TRUE, '', 'None', '', '', '', '', 0),
+    ('Website', 'Website', '{Events}', FALSE, 'https://cdn2.iconfinder.com/data/icons/free-simple-line-mix/48/22-Website-512.png', 'None', '', '', '', '', 0),
+    ('Kafka', 'Stream', '{Events}', TRUE, 'https://cdn.icon-icons.com/icons2/2248/PNG/512/apache_kafka_icon_138937.png', 'None', '', '', '', '', 0),
+    ('RabbitMQ', 'Stream', '{Events}', TRUE, 'https://cdn.icon-icons.com/icons2/2699/PNG/512/rabbitmq_logo_icon_170810.png', 'None', '', '', '', '', 0),
+    ('UISample', 'Stream', '{}', TRUE, '', 'None', '', '', '', '', 0),
+    ('Server', 'Server', '{Events}', FALSE, 'https://cdn1.iconfinder.com/data/icons/unicons-line-vol-5/24/server-512.png', 'None', '', '', '', '', 0),
+    ('Klaviyo', 'App', '{Events,Users}', TRUE, 'https://cdn3.iconfinder.com/data/icons/font-awesome-solid/512/k-256.png', 'None', '', '', '', '', 0),
+    ('Google Analytics 4', 'App', '{Events}', TRUE, 'https://cdn4.iconfinder.com/data/icons/social-media-logos-6/512/108-analytics_google_analytics_google-256.png', 'None', '', '', '', '', 0),
+    ('Filesystem', 'Storage', '{}', TRUE, 'https://cdn2.iconfinder.com/data/icons/audio-music-5/65/cd-case-256.png', 'None', '', '', '', '', 0);
 
 CREATE TYPE warehouse_type AS ENUM ('BigQuery', 'ClickHouse', 'PostgreSQL', 'Redshift', 'Snowflake');
+CREATE TYPE privacy_region AS ENUM ('', 'Europe');
 
 CREATE TABLE workspaces (
     id integer NOT NULL,
@@ -61,6 +63,7 @@ CREATE TABLE workspaces (
     name varchar(100) NOT NULL,
     warehouse_type warehouse_type DEFAULT NULL,
     warehouse_settings varchar(65535) NOT NULL DEFAULT '',
+    privacy_region privacy_region NOT NULL DEFAULT '',
     schemas text NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
@@ -70,13 +73,7 @@ VALUES (1, 1, 'Workspace', NULL, '');
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
-CREATE TYPE connection_health AS ENUM ('Healthy', 'NoRecentData', 'RecentError', 'AccessDenied');
-
-CREATE TYPE transformation AS (
-    in_types text,
-    out_types text,
-    python_source text
-);
+CREATE TYPE health AS ENUM ('Healthy', 'NoRecentData', 'RecentError', 'AccessDenied');
 
 CREATE TABLE connections (
     id integer NOT NULL,
@@ -92,42 +89,40 @@ CREATE TABLE connections (
     user_cursor varchar(500) NOT NULL DEFAULT '',
     identity_column varchar(100) NOT NULL DEFAULT '',
     timestamp_column varchar(100) NOT NULL DEFAULT '',
-    transformation transformation NOT NULL DEFAULT '("", "", "")',
     settings varchar(65535),
-    schema text NOT NULL DEFAULT '',
-    users_query text NOT NULL DEFAULT '',
-    action_types text NOT NULL DEFAULT '',
-    health connection_health NOT NULL DEFAULT 'Healthy',
+    health health NOT NULL DEFAULT 'Healthy',
     PRIMARY KEY (id)
+);
+
+CREATE TYPE transformation AS (
+    in_types text,
+    out_types text,
+    python_source text
 );
 
 CREATE TABLE actions (
     id SERIAL,
     connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
-    action_type int NOT NULL,
+    target action_target NOT NULL,
+    event_type varchar(100) NOT NULL,
     name varchar(60) NOT NULL DEFAULT '',
     enabled boolean NOT NULL DEFAULT FALSE,
-    endpoint int NOT NULL,
+    schedule_start smallint NOT NULL DEFAULT 0 CHECK (schedule_start >= 0 AND schedule_start < 1440),
+    schedule_period smallint NOT NULL DEFAULT 60 CHECK(schedule_period IN (5, 15, 30, 60, 120, 180, 360, 480, 720, 1140)),
     filter text NOT NULL DEFAULT '',
+    schema text NOT NULL DEFAULT '',
     mapping text NOT NULL DEFAULT '',
     transformation transformation NOT NULL DEFAULT '("", "", "")',
+    query text NOT NULL DEFAULT '',
+    health health NOT NULL DEFAULT 'Healthy',
     PRIMARY KEY (id)
 );
 
-CREATE TABLE connections_imports (
+CREATE TABLE actions_executions (
     id SERIAL,
-    connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
+    action integer NOT NULL REFERENCES actions ON DELETE CASCADE,
     storage integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
-    start_time timestamp NOT NULL,
-    end_time timestamp DEFAULT NULL,
-    error varchar(1000) NOT NULL DEFAULT '',
-    PRIMARY KEY (id)
-);
-
-CREATE TABLE connections_exports (
-    id SERIAL,
-    connection integer NOT NULL,
-    storage integer NOT NULL,
+    reimport boolean NOT NULL DEFAULT FALSE,
     start_time timestamp NOT NULL,
     end_time timestamp DEFAULT NULL,
     error varchar(1000) NOT NULL DEFAULT '',
@@ -215,22 +210,6 @@ CREATE TABLE resources (
 );
 
 CREATE INDEX ON resources (connector);
-
-CREATE TYPE mapping_custom_func AS (
-	in_types text,
-	out_types text,
-	source text
-);
-
-CREATE TABLE connections_mappings (
-	connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
-	position smallint,
-	in_properties varchar[],
-	out_properties varchar[],
-	predefined_func integer NULL,
-	custom_func mapping_custom_func NULL,
-	PRIMARY KEY (connection, position)
-);
 
 CREATE TYPE task_status AS ENUM ('pending', 'running', 'completed', 'failed');
 

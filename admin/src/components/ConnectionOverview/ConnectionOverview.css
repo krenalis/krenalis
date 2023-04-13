@@ -1,9 +1,10 @@
-.ConnectionOverview.loading {
+/* TODO: remove this */
+.ConnectionOverview.inProgress {
     text-align: center;
 }
 
-.ConnectionOverview.loading sl-spinner {
-    font-size: 50px;
+.ConnectionOverview.loading {
+    text-align: center;
 }
 
 .ConnectionOverview .chart .chartHead {
@@ -148,5 +149,5 @@
 
 .ConnectionOverview .nothingToShow {
     text-align: center;
-    font-size: 19px;
+    font-size: 16px;
 }

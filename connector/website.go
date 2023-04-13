@@ -13,9 +13,11 @@ import (
 
 // Website represents a website connector.
 type Website struct {
-	Name string
-	Icon string // icon in SVG format
-	Open OpenWebsiteFunc
+	Name                   string
+	SourceDescription      string // It should complete the sentence "Add an action to ..."
+	DestinationDescription string // It should complete the sentence "Add an action to ..."
+	Icon                   string // icon in SVG format
+	Open                   OpenWebsiteFunc
 }
 
 // WebsiteConfig represents the configuration of a website connection.

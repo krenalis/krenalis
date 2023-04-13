@@ -18,7 +18,6 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/events"
-	"chichi/apis/types"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -111,13 +110,17 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				var req ActionToSet
+				var req struct {
+					Target    ActionTarget
+					EventType string
+					Action    ActionToSet
+				}
 				err = json.NewDecoder(r.Body).Decode(&req)
 				if err != nil {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				actionID, err := connection.AddAction(req)
+				actionID, err := connection.AddAction(req.Target, req.EventType, req.Action)
 				if err != nil {
 					respond(w, err)
 					return
@@ -179,10 +182,63 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				err = action.Delete()
 				respond(w, err)
 			})
+			router.Post("/actions/{actionID}/execute", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				actionID, _ := strconv.Atoi(chi.URLParam(r, "actionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				action, err := connection.Action(actionID)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				var req struct {
+					Reimport bool
+				}
+				err = json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, errors.BadRequest("invalid JSON"))
+					return
+				}
+				err = action.Execute(req.Reimport)
+				respond(w, err)
+			})
+			router.Post("/actions/{actionID}/schedule-period", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				actionID, _ := strconv.Atoi(chi.URLParam(r, "actionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				action, err := connection.Action(actionID)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				var req struct {
+					SchedulePeriod SchedulePeriod
+				}
+				err = json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, errors.BadRequest("invalid JSON"))
+					return
+				}
+				err = action.SetSchedulePeriod(req.SchedulePeriod)
+				respond(w, err)
+			})
 			router.Post("/actions/{actionID}/status", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				actionID, _ := strconv.Atoi(chi.URLParam(r, "actionID"))
 				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				action, err := connection.Action(actionID)
 				if err != nil {
 					respond(w, err)
 					return
@@ -195,28 +251,86 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				action, err := connection.Action(actionID)
-				if err != nil {
-					respond(w, err)
-					return
-				}
 				err = action.SetStatus(req.Enabled)
 				respond(w, err)
 			})
-			router.Get("/action-types", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				actionTypes, err := connection.ActionTypes()
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				w.Header().Set("Content-Type", "application/json")
-				_ = json.NewEncoder(w).Encode(actionTypes)
+			router.Route("/action-types", func(router chi.Router) {
+				router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+					id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+					connection, err := workspace.Connection(id)
+					if err != nil {
+						respond(w, err)
+						return
+					}
+					actionTypes, err := connection.ActionTypes()
+					if err != nil {
+						respond(w, err)
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_ = json.NewEncoder(w).Encode(actionTypes)
+				})
+				router.Get("/Users", func(w http.ResponseWriter, r *http.Request) {
+					id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+					connection, err := workspace.Connection(id)
+					if err != nil {
+						respond(w, err)
+						return
+					}
+					actionTypes, err := connection.ActionTypeInformation(UsersTarget, "")
+					if err != nil {
+						respond(w, err)
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_ = json.NewEncoder(w).Encode(actionTypes)
+				})
+				router.Get("/Groups", func(w http.ResponseWriter, r *http.Request) {
+					id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+					connection, err := workspace.Connection(id)
+					if err != nil {
+						respond(w, err)
+						return
+					}
+					actionTypes, err := connection.ActionTypeInformation(GroupsTarget, "")
+					if err != nil {
+						respond(w, err)
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_ = json.NewEncoder(w).Encode(actionTypes)
+				})
+				router.Get("/Events", func(w http.ResponseWriter, r *http.Request) {
+					id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+					connection, err := workspace.Connection(id)
+					if err != nil {
+						respond(w, err)
+						return
+					}
+					actionTypes, err := connection.ActionTypeInformation(EventsTarget, "")
+					if err != nil {
+						respond(w, err)
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_ = json.NewEncoder(w).Encode(actionTypes)
+				})
+				router.Get("/Events/{eventType}", func(w http.ResponseWriter, r *http.Request) {
+					id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+					eventType := chi.URLParam(r, "eventType")
+					connection, err := workspace.Connection(id)
+					if err != nil {
+						respond(w, err)
+						return
+					}
+					actionTypes, err := connection.ActionTypeInformation(EventsTarget, eventType)
+					if err != nil {
+						respond(w, err)
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_ = json.NewEncoder(w).Encode(actionTypes)
+				})
 			})
 			router.Post("/status", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
@@ -236,25 +350,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				err = connection.SetStatus(req.Enabled)
 				respond(w, err)
 			})
-			router.Get("/schema", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				schema, err := connection.Schema()
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				w.Header().Set("Content-Type", "application/json")
-				if schema.Valid() {
-					_ = json.NewEncoder(w).Encode(schema)
-				} else {
-					_, _ = w.Write([]byte("null"))
-				}
-			})
 			router.Get("/imports", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
@@ -262,96 +357,14 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				imports, err := connection.Imports()
+				executions, err := connection.Executions()
 				if err != nil {
 					respond(w, err)
 					return
 				}
 				w.Header().Set("Content-Type", "application/json")
-				_ = json.NewEncoder(w).Encode(imports)
+				_ = json.NewEncoder(w).Encode(executions)
 
-			})
-			router.Post("/import", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				err = connection.Import(false)
-				respond(w, err)
-			})
-			router.Post("/export", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				err = connection.Export()
-				respond(w, err)
-			})
-			router.Post("/reimport", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				err = connection.Import(true)
-				respond(w, err)
-			})
-			router.Get("/transformation", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				w.Header().Set("Content-Type", "application/json")
-				_ = json.NewEncoder(w).Encode(connection.Transformation)
-			})
-			router.Put("/transformation", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				var transformation *Transformation
-				err = json.NewDecoder(r.Body).Decode(&transformation)
-				if err != nil {
-					respond(w, errors.BadRequest("invalid JSON"))
-					return
-				}
-				err = connection.SetTransformation(transformation)
-				respond(w, err)
-			})
-			router.Get("/mappings", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				w.Header().Set("Content-Type", "application/json")
-				_ = json.NewEncoder(w).Encode(connection.Mappings)
-			})
-			router.Put("/mappings", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				var mappings []*Mapping
-				err = json.NewDecoder(r.Body).Decode(&mappings)
-				if err != nil {
-					respond(w, errors.BadRequest("invalid JSON"))
-					return
-				}
-				err = connection.SetMappings(mappings)
-				respond(w, err)
 			})
 			router.Get("/stats", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
@@ -408,7 +421,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("Content-Type", "application/json")
 				_, _ = w.Write(form)
 			})
-			router.Post("/query", func(w http.ResponseWriter, r *http.Request) {
+			router.Post("/exec-query", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
@@ -424,22 +437,13 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				schema, rows, err := connection.Query(req.Query, req.Limit)
+				schema, rows, err := connection.ExecQuery(req.Query, req.Limit)
 				if err != nil {
 					respond(w, err)
 					return
 				}
-				properties := schema.Properties()
-				columns := make([]struct {
-					Name string
-					Type types.Type
-				}, len(properties))
-				for i, p := range properties {
-					columns[i].Name = p.Name
-					columns[i].Type = p.Type
-				}
 				w.Header().Add("Content-Type", "application/json")
-				_ = json.NewEncoder(w).Encode(map[string]any{"Columns": columns, "Rows": rows})
+				_ = json.NewEncoder(w).Encode(map[string]any{"Schema": schema, "Rows": rows})
 			})
 			router.Post("/reload", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
@@ -449,24 +453,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				err = connection.Reload()
-				respond(w, err)
-			})
-			router.Post("/set-users-query", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				var req struct {
-					Query string
-				}
-				err = json.NewDecoder(r.Body).Decode(&req)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				err = connection.SetUsersQuery(req.Query)
 				respond(w, err)
 			})
 			router.Get("/keys", func(w http.ResponseWriter, r *http.Request) {
@@ -784,24 +770,27 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(id)
 		})
 	})
+	router.Route("/api/workspace/privacy-region", func(router chi.Router) {
+		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(workspace.PrivacyRegion)
+		})
+		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+			var req struct {
+				PrivacyRegion PrivacyRegion
+			}
+			err := json.NewDecoder(r.Body).Decode(&req)
+			if err != nil {
+				respond(w, errors.BadRequest("invalid JSON"))
+				return
+			}
+			err = workspace.SetPrivacyRegion(req.PrivacyRegion)
+			respond(w, err)
+		})
+	})
 	router.Get("/api/events-schema", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(events.Schema)
-	})
-	router.Get("/api/predefined-mappings", func(w http.ResponseWriter, r *http.Request) {
-		funcs := make([]map[string]any, len(PredefinedMappingFuncs))
-		for i, f := range PredefinedMappingFuncs {
-			funcs[i] = map[string]any{
-				"ID":          f.ID,
-				"Name":        f.Name,
-				"Description": f.Description,
-				"Icon":        f.Icon,
-				"In":          f.In,
-				"Out":         f.Out,
-			}
-		}
-		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(funcs)
 	})
 	router.ServeHTTP(w, r)
 

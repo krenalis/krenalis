@@ -234,13 +234,14 @@ type User struct {
 	Properties Properties
 }
 
-type ActionType struct {
-	ID          int
+type Group struct {
+	ID         string
+	Properties Properties
+}
+
+type EventType struct {
+	ID          string
 	Name        string
 	Description string
-	// Endpoints are the endpoints of the action type. If the connector does not
-	// use endpoints this must be nil; otherwise it must contain at least one
-	// endpoint from the endpoints declared by the connector.
-	Endpoints []int
-	Schema    types.Type
+	Schema      types.Type
 }

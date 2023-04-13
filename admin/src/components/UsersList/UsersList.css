@@ -1,3 +1,8 @@
+.UsersList .Toolbar .toggleColumns sl-menu sl-menu-item sl-switch::part(base) {
+	font-size: 14px;
+	gap: 5px;
+}
+
 .UsersList .gridContainer .grid {
     margin: auto;
 	position: relative;
