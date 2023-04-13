@@ -47,6 +47,7 @@ func init() {
 		Name:                   "Klaviyo",
 		SourceDescription:      "import clients as users from Klaviyo",
 		DestinationDescription: "export users as clients and send events to Klaviyo",
+		TermForUsers:           "users",
 		Icon:                   icon,
 	}, open)
 }

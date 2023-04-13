@@ -53,6 +53,8 @@ func init() {
 		Name:                   "HubSpot",
 		SourceDescription:      "import contacts as users and companies as groups from HubSpot",
 		DestinationDescription: "export users as contacts and groups as companies to HubSpot",
+		TermForUsers:           "contacts",
+		TermForGroups:          "companies",
 		Icon:                   icon,
 		OAuth: connector.OAuth{
 			URL:   "https://app-eu1.hubspot.com/oauth/authorize",

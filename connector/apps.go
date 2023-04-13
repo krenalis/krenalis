@@ -27,8 +27,10 @@ type PropertyPath []string
 // App represents an app connector.
 type App struct {
 	Name                   string
-	SourceDescription      string      // It should complete the sentence "Add an action to ..."
-	DestinationDescription string      // It should complete the sentence "Add an action to ..."
+	SourceDescription      string // It should complete the sentence "Add an action to ..."
+	DestinationDescription string // It should complete the sentence "Add an action to ..."
+	TermForUsers           string
+	TermForGroups          string
 	Icon                   string      // icon in SVG format
 	OAuth                  OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
 	WebhooksPer            WebhooksPer // indicates if webhooks are per connector, resource or connection

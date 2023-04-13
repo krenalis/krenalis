@@ -46,6 +46,7 @@ func init() {
 		Name:                   "Mailchimp",
 		SourceDescription:      "import contacts as users from Mailchimp",
 		DestinationDescription: "export users as contacts to Mailchimp",
+		TermForUsers:           "contacts",
 		Icon:                   icon,
 		OAuth: connector.OAuth{
 			URL:             "https://login.mailchimp.com/oauth2/authorize?response_type=code",

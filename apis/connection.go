@@ -122,6 +122,7 @@ const (
 func (this *Connection) ActionTypes() ([]*ActionType, error) {
 	var actionTypes []*ActionType
 	c := this.connection
+	connector := c.Connector()
 	var haveUsersAction, haveGroupsAction, haveEventsActionNoEventType bool
 	for _, a := range c.Actions() {
 		switch {
@@ -134,13 +135,23 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 		}
 	}
 	wsSchemas := c.Workspace().Schemas
-	targets := c.Connector().Targets
+	targets := connector.Targets
 	if targets.Contains(state.UsersTarget) {
-		var name = "Import users"
-		var description = "Import the users"
-		if c.Role == state.DestinationRole {
-			name = "Export users"
-			description = "Export the users"
+		var name, description string
+		if c.Role == state.SourceRole {
+			name = "Import " + connector.TermForUsers
+			description = "Import the " + connector.TermForUsers
+			if connector.TermForUsers != "users" {
+				description += " as users"
+			}
+			description += " from " + connector.Name
+		} else {
+			name = "Export " + connector.TermForUsers
+			description = "Export the users "
+			if connector.TermForUsers != "users" {
+				description += " as " + connector.TermForUsers
+			}
+			description += " to " + connector.Name
 		}
 		at := &ActionType{
 			Name:        name,
@@ -159,11 +170,21 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 		actionTypes = append(actionTypes, at)
 	}
 	if targets.Contains(state.GroupsTarget) {
-		var name = "Import groups"
-		var description = "Import the groups"
-		if c.Role == state.DestinationRole {
-			name = "Export groups"
-			description = "Export the groups"
+		var name, description string
+		if c.Role == state.SourceRole {
+			name = "Import " + connector.TermForGroups
+			description = "Import the " + connector.TermForGroups
+			if connector.TermForGroups != "groups" {
+				description += " as groups"
+			}
+			description += " from " + connector.Name
+		} else {
+			name = "Export " + connector.TermForGroups
+			description = "Export the groups "
+			if connector.TermForGroups != "groups" {
+				description += " as " + connector.TermForGroups
+			}
+			description += " to " + connector.Name
 		}
 		at := &ActionType{
 			Name:        name,

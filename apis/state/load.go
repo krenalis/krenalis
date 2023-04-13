@@ -83,6 +83,8 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					app := _connector.RegisteredApp(c.Name)
 					c.SourceDescription = app.SourceDescription
 					c.DestinationDescription = app.DestinationDescription
+					c.TermForUsers = app.TermForUsers
+					c.TermForGroups = app.TermForGroups
 					t := app.ConnectionReflectType()
 					if t.Implements(appEventsConnectionType) {
 						c.Targets |= EventsFlag
@@ -97,11 +99,15 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					database := _connector.RegisteredDatabase(c.Name)
 					c.SourceDescription = database.SourceDescription
 					c.DestinationDescription = database.DestinationDescription
+					c.TermForUsers = "users"
+					c.TermForGroups = "groups"
 					c.Targets = UsersFlag | GroupsFlag
 				case FileType:
 					file := _connector.RegisteredFile(c.Name)
 					c.SourceDescription = file.SourceDescription
 					c.DestinationDescription = file.DestinationDescription
+					c.TermForUsers = "users"
+					c.TermForGroups = "groups"
 					c.Targets = UsersFlag | GroupsFlag
 				case MobileType:
 					mobile := _connector.RegisteredMobile(c.Name)

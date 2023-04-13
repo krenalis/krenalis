@@ -294,6 +294,8 @@ type Connector struct {
 	Name                   string
 	SourceDescription      string
 	DestinationDescription string
+	TermForUsers           string
+	TermForGroups          string
 	Type                   ConnectorType
 	Targets                ConnectorTargets
 	HasSettings            bool
