@@ -9,6 +9,7 @@ package connector
 
 import (
 	"context"
+	"reflect"
 
 	"chichi/apis/types"
 )
@@ -33,7 +34,16 @@ type Database struct {
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
 	Icon                   string // icon in SVG format
-	Open                   OpenDatabaseFunc
+
+	open reflect.Value
+}
+
+// Open opens a database connection.
+func (database Database) Open(ctx context.Context, conf *DatabaseConfig) (DatabaseConnection, error) {
+	out := database.open.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(conf)})
+	c := out[0].Interface().(DatabaseConnection)
+	err, _ := out[1].Interface().(error)
+	return c, err
 }
 
 // DatabaseConfig represents the configuration of a database connection.
@@ -44,7 +54,7 @@ type DatabaseConfig struct {
 }
 
 // OpenDatabaseFunc represents functions that open database connections.
-type OpenDatabaseFunc func(context.Context, *DatabaseConfig) (DatabaseConnection, error)
+type OpenDatabaseFunc[T DatabaseConnection] func(context.Context, *DatabaseConfig) (T, error)
 
 // DatabaseConnection is the interface implemented by database connections.
 type DatabaseConnection interface {

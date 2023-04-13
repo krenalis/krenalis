@@ -10,6 +10,7 @@ package connector
 import (
 	"context"
 	"io"
+	"reflect"
 	"time"
 )
 
@@ -19,7 +20,16 @@ type Storage struct {
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
 	Icon                   string // icon in SVG format
-	Open                   OpenStorageFunc
+
+	open reflect.Value
+}
+
+// Open opens a storage connection.
+func (storage Storage) Open(ctx context.Context, conf *StorageConfig) (StorageConnection, error) {
+	out := storage.open.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(conf)})
+	c := out[0].Interface().(StorageConnection)
+	err, _ := out[1].Interface().(error)
+	return c, err
 }
 
 // StorageConfig represents the configuration of a storage connection.
@@ -30,7 +40,7 @@ type StorageConfig struct {
 }
 
 // OpenStorageFunc represents functions that open storage connections.
-type OpenStorageFunc func(context.Context, *StorageConfig) (StorageConnection, error)
+type OpenStorageFunc[T StorageConnection] func(context.Context, *StorageConfig) (T, error)
 
 // StorageConnection is the interface implemented by storage connections.
 type StorageConnection interface {

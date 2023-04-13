@@ -37,15 +37,14 @@ var icon = "<svg></svg>"
 const sendToDebugServer = false
 
 // Make sure it implements the AppEventsConnection interface.
-var _ connector.AppEventsConnection = &connection{}
+var _ connector.AppEventsConnection = (*connection)(nil)
 
 func init() {
 	connector.RegisterApp(connector.App{
 		Name:                   "Google Analytics 4",
 		Icon:                   icon,
-		Open:                   open,
 		DestinationDescription: "send events to Google Analytics 4",
-	})
+	}, open)
 }
 
 type connection struct {
@@ -61,7 +60,7 @@ type settings struct {
 }
 
 // open opens a Google Analytics 4 connection and returns it.
-func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
+func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{
 		ctx:      ctx,
 		role:     conf.Role,

@@ -9,6 +9,7 @@ package connector
 
 import (
 	"context"
+	"reflect"
 )
 
 // Mobile represents a mobile connector.
@@ -17,7 +18,16 @@ type Mobile struct {
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
 	Icon                   string // icon in SVG format
-	Open                   OpenMobileFunc
+
+	open reflect.Value
+}
+
+// Open opens a mobile connection.
+func (mobile Mobile) Open(ctx context.Context, conf *MobileConfig) (MobileConnection, error) {
+	out := mobile.open.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(conf)})
+	c := out[0].Interface().(MobileConnection)
+	err, _ := out[1].Interface().(error)
+	return c, err
 }
 
 // MobileConfig represents the configuration of a mobile connection.
@@ -28,7 +38,7 @@ type MobileConfig struct {
 }
 
 // OpenMobileFunc represents functions that open mobile connections.
-type OpenMobileFunc func(context.Context, *MobileConfig) (MobileConnection, error)
+type OpenMobileFunc[T MobileConnection] func(context.Context, *MobileConfig) (T, error)
 
 // MobileConnection is the interface implemented by mobile connections.
 type MobileConnection interface{}

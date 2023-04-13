@@ -16,20 +16,16 @@ import (
 	"chichi/connector/ui"
 )
 
-// Make sure it implements the StreamConnection interface.
-var _ connector.StreamConnection = &connection{}
-
 func init() {
 	connector.RegisterStream(connector.Stream{
 		Name:              "UISample",
 		SourceDescription: "test the UI components",
 		Icon:              "",
-		Open:              open,
-	})
+	}, open)
 }
 
 // open opens a UISample connection and returns it.
-func open(ctx context.Context, conf *connector.StreamConfig) (connector.StreamConnection, error) {
+func open(ctx context.Context, conf *connector.StreamConfig) (*connection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

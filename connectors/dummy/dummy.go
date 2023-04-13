@@ -28,15 +28,14 @@ const exportOnly10Users = true
 var _ interface {
 	connector.AppEventsConnection
 	connector.AppUsersConnection
-} = &connection{}
+} = (*connection)(nil)
 
 func init() {
 	connector.RegisterApp(connector.App{
 		Name:                   "Dummy",
 		SourceDescription:      "import users from Dummy",
 		DestinationDescription: "export users and send events to Dummy",
-		Open:                   open,
-	})
+	}, open)
 }
 
 type connection struct {
@@ -44,12 +43,9 @@ type connection struct {
 	firehose connector.Firehose
 }
 
-// open opens a Dummy connection and returns it.
-func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
-	c := connection{
-		role:     conf.Role,
-		firehose: conf.Firehose,
-	}
+// open opens a Dummy connection.
+func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
+	c := connection{role: conf.Role, firehose: conf.Firehose}
 	return &c, nil
 }
 

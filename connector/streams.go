@@ -7,7 +7,10 @@
 
 package connector
 
-import "context"
+import (
+	"context"
+	"reflect"
+)
 
 // Stream represents a stream connector.
 type Stream struct {
@@ -15,7 +18,16 @@ type Stream struct {
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
 	Icon                   string // icon in SVG format
-	Open                   OpenStreamFunc
+
+	open reflect.Value
+}
+
+// Open opens a stream connection.
+func (stream Stream) Open(ctx context.Context, conf *StreamConfig) (StreamConnection, error) {
+	out := stream.open.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(conf)})
+	c := out[0].Interface().(StreamConnection)
+	err, _ := out[1].Interface().(error)
+	return c, err
 }
 
 // StreamConfig represents the configuration of a stream connection.
@@ -26,7 +38,7 @@ type StreamConfig struct {
 }
 
 // OpenStreamFunc represents functions that open stream connections.
-type OpenStreamFunc func(context.Context, *StreamConfig) (StreamConnection, error)
+type OpenStreamFunc[T StreamConnection] func(context.Context, *StreamConfig) (T, error)
 
 // SendOptions are the send options.
 type SendOptions struct {

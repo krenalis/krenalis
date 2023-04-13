@@ -38,7 +38,7 @@ var icon = "<svg></svg>"
 var _ interface {
 	connector.AppEventsConnection
 	connector.AppUsersConnection
-} = &connection{}
+} = (*connection)(nil)
 
 var Debug = false
 
@@ -48,8 +48,7 @@ func init() {
 		SourceDescription:      "import clients as users from Klaviyo",
 		DestinationDescription: "export users as clients and send events to Klaviyo",
 		Icon:                   icon,
-		Open:                   open,
-	})
+	}, open)
 }
 
 type connection struct {
@@ -64,7 +63,7 @@ type settings struct {
 }
 
 // open opens a Klaviyo connection and returns it.
-func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
+func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{
 		ctx:      ctx,
 		role:     conf.Role,

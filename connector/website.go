@@ -9,6 +9,7 @@ package connector
 
 import (
 	"context"
+	"reflect"
 )
 
 // Website represents a website connector.
@@ -17,7 +18,16 @@ type Website struct {
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
 	Icon                   string // icon in SVG format
-	Open                   OpenWebsiteFunc
+
+	open reflect.Value
+}
+
+// Open opens a website connection.
+func (website Website) Open(ctx context.Context, conf *WebsiteConfig) (WebsiteConnection, error) {
+	out := website.open.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(conf)})
+	c := out[0].Interface().(WebsiteConnection)
+	err, _ := out[1].Interface().(error)
+	return c, err
 }
 
 // WebsiteConfig represents the configuration of a website connection.
@@ -28,7 +38,7 @@ type WebsiteConfig struct {
 }
 
 // OpenWebsiteFunc represents functions that open website connections.
-type OpenWebsiteFunc func(context.Context, *WebsiteConfig) (WebsiteConnection, error)
+type OpenWebsiteFunc[T WebsiteConnection] func(context.Context, *WebsiteConfig) (T, error)
 
 // WebsiteConnection is the interface implemented by website connections.
 type WebsiteConnection interface{}

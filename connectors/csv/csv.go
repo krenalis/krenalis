@@ -27,16 +27,12 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the FileConnection interface.
-var _ connector.FileConnection = &connection{}
-
 func init() {
 	connector.RegisterFile(connector.File{
 		Name:              "CSV",
 		SourceDescription: "import users from a CSV file",
 		Icon:              icon,
-		Open:              open,
-	})
+	}, open)
 }
 
 type connection struct {
@@ -57,7 +53,7 @@ type settings struct {
 }
 
 // open opens a CSV connection and returns it.
-func open(ctx context.Context, conf *connector.FileConfig) (connector.FileConnection, error) {
+func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) {
 	c := connection{ctx: ctx, role: conf.Role, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

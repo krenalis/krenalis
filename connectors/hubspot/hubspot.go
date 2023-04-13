@@ -44,7 +44,7 @@ var icon = "<svg></svg>"
 var _ interface {
 	connector.AppUsersConnection
 	connector.AppGroupsConnection
-} = &connection{}
+} = (*connection)(nil)
 
 var Debug = false
 
@@ -59,8 +59,7 @@ func init() {
 			Scope: "crm.objects.contacts.read crm.objects.contacts.write crm.schemas.contacts.read",
 		},
 		WebhooksPer: connector.WebhooksPerConnector,
-		Open:        open,
-	})
+	}, open)
 }
 
 type connection struct {
@@ -72,7 +71,7 @@ type connection struct {
 }
 
 // open opens a HubSpot connection and returns it.
-func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
+func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{
 		ctx:          ctx,
 		firehose:     conf.Firehose,

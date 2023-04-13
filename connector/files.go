@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"time"
 
 	"chichi/apis/types"
@@ -59,7 +60,16 @@ type File struct {
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
 	Icon                   string // icon in SVG format
-	Open                   OpenFileFunc
+
+	open reflect.Value
+}
+
+// Open opens a file connection.
+func (file File) Open(ctx context.Context, conf *FileConfig) (FileConnection, error) {
+	out := file.open.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(conf)})
+	c := out[0].Interface().(FileConnection)
+	err, _ := out[1].Interface().(error)
+	return c, err
 }
 
 // FileConfig represents the configuration of a file connection.
@@ -70,7 +80,7 @@ type FileConfig struct {
 }
 
 // OpenFileFunc represents functions that open file connections.
-type OpenFileFunc func(context.Context, *FileConfig) (FileConnection, error)
+type OpenFileFunc[T FileConnection] func(context.Context, *FileConfig) (T, error)
 
 // FileConnection is the interface implemented by file connections.
 type FileConnection interface {

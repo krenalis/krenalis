@@ -9,7 +9,7 @@ package connector
 
 import (
 	"fmt"
-	"sort"
+	"reflect"
 	"sync"
 )
 
@@ -18,76 +18,32 @@ var (
 	registry   = struct {
 		apps      map[string]App
 		databases map[string]Database
-		streams   map[string]Stream
 		files     map[string]File
 		mobiles   map[string]Mobile
 		servers   map[string]Server
 		storages  map[string]Storage
+		streams   map[string]Stream
 		websites  map[string]Website
 	}{
 		apps:      make(map[string]App),
 		databases: make(map[string]Database),
-		streams:   make(map[string]Stream),
 		files:     make(map[string]File),
 		mobiles:   make(map[string]Mobile),
 		servers:   make(map[string]Server),
 		storages:  make(map[string]Storage),
+		streams:   make(map[string]Stream),
 		websites:  make(map[string]Website),
 	}
 )
 
-// Connector represents a connector.
-type Connector struct {
-	Name string
-	Type Type
-	Icon string
-}
-
-// Connectors returns a list sorted by name of the registered connectors.
-func Connectors() []Connector {
-	registryMu.Lock()
-	defer registryMu.Unlock()
-	n := len(registry.apps) + len(registry.databases) + len(registry.streams) +
-		len(registry.files) + len(registry.mobiles) + len(registry.servers) +
-		len(registry.storages) + len(registry.websites)
-	connectors := make([]Connector, 0, n)
-	for _, c := range registry.apps {
-		connectors = append(connectors, Connector{Name: c.Name, Type: AppType, Icon: c.Icon})
-	}
-	for _, c := range registry.databases {
-		connectors = append(connectors, Connector{Name: c.Name, Type: DatabaseType, Icon: c.Icon})
-	}
-	for _, c := range registry.streams {
-		connectors = append(connectors, Connector{Name: c.Name, Type: StreamType, Icon: c.Icon})
-	}
-	for _, c := range registry.files {
-		connectors = append(connectors, Connector{Name: c.Name, Type: FileType, Icon: c.Icon})
-	}
-	for _, c := range registry.mobiles {
-		connectors = append(connectors, Connector{Name: c.Name, Type: MobileType, Icon: c.Icon})
-	}
-	for _, c := range registry.servers {
-		connectors = append(connectors, Connector{Name: c.Name, Type: ServerType, Icon: c.Icon})
-	}
-	for _, c := range registry.storages {
-		connectors = append(connectors, Connector{Name: c.Name, Type: StorageType, Icon: c.Icon})
-	}
-	for _, c := range registry.websites {
-		connectors = append(connectors, Connector{Name: c.Name, Type: WebsiteType, Icon: c.Icon})
-	}
-	sort.Slice(connectors, func(i, j int) bool {
-		ci, cj := connectors[i], connectors[j]
-		return ci.Name < cj.Name || ci.Name == cj.Name && ci.Type < cj.Type
-	})
-	return connectors
-}
-
 // RegisterApp makes an app connector available by the provided name. If
 // RegisterApp is called twice with the same name or if fn is nil, it panics.
-func RegisterApp(app App) {
-	if app.Open == nil {
-		panic("connector: RegisterApp function is nil")
+func RegisterApp[T AppConnection](app App, open OpenAppFunc[T]) {
+	if open == nil {
+		panic("connector: open function is nil")
 	}
+	app.open = reflect.ValueOf(open)
+	app.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.apps[app.Name]; dup {
@@ -99,10 +55,11 @@ func RegisterApp(app App) {
 // RegisterDatabase makes a database connector available by the provided name.
 // If RegisterDatabase is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterDatabase(database Database) {
-	if database.Open == nil {
-		panic("connector: RegisterDatabase function is nil")
+func RegisterDatabase[T DatabaseConnection](database Database, open OpenDatabaseFunc[T]) {
+	if open == nil {
+		panic("connector: open function is nil")
 	}
+	database.open = reflect.ValueOf(open)
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.databases[database.Name]; dup {
@@ -111,27 +68,13 @@ func RegisterDatabase(database Database) {
 	registry.databases[database.Name] = database
 }
 
-// RegisterStream makes a stream connector available by the provided name.
-// If RegisterStream is called twice with the same name or if fn is nil, it
-// panics.
-func RegisterStream(stream Stream) {
-	if stream.Open == nil {
-		panic("connector: RegisterStream function is nil")
-	}
-	registryMu.Lock()
-	defer registryMu.Unlock()
-	if _, dup := registry.files[stream.Name]; dup {
-		panic("connector: RegisterStream called twice for connector " + stream.Name)
-	}
-	registry.streams[stream.Name] = stream
-}
-
 // RegisterFile makes a file connector available by the provided name. If
 // RegisterFile is called twice with the same name or if fn is nil, it panics.
-func RegisterFile(file File) {
-	if file.Open == nil {
-		panic("connector: RegisterFile function is nil")
+func RegisterFile[T FileConnection](file File, open OpenFileFunc[T]) {
+	if open == nil {
+		panic("connector: open function is nil")
 	}
+	file.open = reflect.ValueOf(open)
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.files[file.Name]; dup {
@@ -143,10 +86,11 @@ func RegisterFile(file File) {
 // RegisterMobile makes a mobile connector available by the provided name. If
 // RegisterDatabase is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterMobile(mobile Mobile) {
-	if mobile.Open == nil {
-		panic("connector: RegisterMobile function is nil")
+func RegisterMobile[T MobileConnection](mobile Mobile, open OpenMobileFunc[T]) {
+	if open == nil {
+		panic("connector: open function is nil")
 	}
+	mobile.open = reflect.ValueOf(open)
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.mobiles[mobile.Name]; dup {
@@ -158,10 +102,11 @@ func RegisterMobile(mobile Mobile) {
 // RegisterServer makes a server connector available by the provided name. If
 // RegisterServer is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterServer(server Server) {
-	if server.Open == nil {
-		panic("connector: RegisterServer function is nil")
+func RegisterServer[T ServerConnection](server Server, open OpenServerFunc[T]) {
+	if open == nil {
+		panic("connector: open function is nil")
 	}
+	server.open = reflect.ValueOf(open)
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.servers[server.Name]; dup {
@@ -173,10 +118,11 @@ func RegisterServer(server Server) {
 // RegisterStorage makes a storage connector available by the provided name. If
 // RegisterStorage is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterStorage(storage Storage) {
-	if storage.Open == nil {
-		panic("connector: RegisterStorage function is nil")
+func RegisterStorage[T StorageConnection](storage Storage, open OpenStorageFunc[T]) {
+	if open == nil {
+		panic("connector: open function is nil")
 	}
+	storage.open = reflect.ValueOf(open)
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.storages[storage.Name]; dup {
@@ -185,13 +131,30 @@ func RegisterStorage(storage Storage) {
 	registry.storages[storage.Name] = storage
 }
 
+// RegisterStream makes a stream connector available by the provided name.
+// If RegisterStream is called twice with the same name or if fn is nil, it
+// panics.
+func RegisterStream[T StreamConnection](stream Stream, open OpenStreamFunc[T]) {
+	if open == nil {
+		panic("connector: open function is nil")
+	}
+	stream.open = reflect.ValueOf(open)
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	if _, dup := registry.files[stream.Name]; dup {
+		panic("connector: RegisterStream called twice for connector " + stream.Name)
+	}
+	registry.streams[stream.Name] = stream
+}
+
 // RegisterWebsite makes a website connector available by the provided name. If
 // RegisterWebsite is called twice with the same name or if fn is nil, it
 // panics.
-func RegisterWebsite(website Website) {
-	if website.Open == nil {
-		panic("connector: RegisterWebsite function is nil")
+func RegisterWebsite[T WebsiteConnection](website Website, open OpenWebsiteFunc[T]) {
+	if open == nil {
+		panic("connector: open function is nil")
 	}
+	website.open = reflect.ValueOf(open)
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.websites[website.Name]; dup {

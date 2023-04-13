@@ -30,16 +30,12 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the FileConnection interface.
-var _ connector.FileConnection = &connection{}
-
 func init() {
 	connector.RegisterFile(connector.File{
 		Name:              "Excel",
 		SourceDescription: "import users from an Excel file",
 		Icon:              icon,
-		Open:              open,
-	})
+	}, open)
 }
 
 type connection struct {
@@ -54,7 +50,7 @@ type settings struct {
 }
 
 // open opens an Excel connection and returns it.
-func open(ctx context.Context, conf *connector.FileConfig) (connector.FileConnection, error) {
+func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

@@ -19,21 +19,17 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the WebsiteConnection interface.
-var _ connector.WebsiteConnection = &connection{}
-
 func init() {
 	connector.RegisterWebsite(connector.Website{
 		Name:              "Website",
 		SourceDescription: "receive events from a website",
 		Icon:              icon,
-		Open:              open,
-	})
+	}, open)
 }
 
 type connection struct{}
 
 // open opens a Website connection and returns it.
-func open(context.Context, *connector.WebsiteConfig) (connector.WebsiteConnection, error) {
+func open(context.Context, *connector.WebsiteConfig) (*connection, error) {
 	return &connection{}, nil
 }

@@ -32,20 +32,16 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the DatabaseConnection interface.
-var _ connector.DatabaseConnection = &connection{}
-
 func init() {
 	connector.RegisterDatabase(connector.Database{
 		Name:              "PostgreSQL",
 		SourceDescription: "import users and groups from a PostgreSQL database",
 		Icon:              icon,
-		Open:              open,
-	})
+	}, open)
 }
 
 // open opens a PostgreSQL connection and returns it.
-func open(ctx context.Context, conf *connector.DatabaseConfig) (connector.DatabaseConnection, error) {
+func open(ctx context.Context, conf *connector.DatabaseConfig) (*connection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

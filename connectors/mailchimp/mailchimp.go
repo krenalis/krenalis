@@ -37,7 +37,7 @@ import (
 var icon = "<svg></svg>"
 
 // Make sure it implements the AppUsersConnection interface.
-var _ connector.AppUsersConnection = &connection{}
+var _ connector.AppUsersConnection = (*connection)(nil)
 
 var Debug = false
 
@@ -52,8 +52,7 @@ func init() {
 			ForcedExpiresIn: "never",
 		},
 		WebhooksPer: connector.WebhooksPerSource,
-		Open:        open,
-	})
+	}, open)
 }
 
 type connection struct {
@@ -64,7 +63,7 @@ type connection struct {
 }
 
 // open opens a Mailchimp connection and returns it.
-func open(ctx context.Context, conf *connector.AppConfig) (connector.AppConnection, error) {
+func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{
 		ctx:         ctx,
 		firehose:    conf.Firehose,

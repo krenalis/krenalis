@@ -19,21 +19,17 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the ServerConnection interface.
-var _ connector.ServerConnection = &connection{}
-
 func init() {
 	connector.RegisterServer(connector.Server{
 		Name:              "Server",
 		SourceDescription: "receive events from a server",
 		Icon:              icon,
-		Open:              open,
-	})
+	}, open)
 }
 
 type connection struct{}
 
 // open opens a Server connection and returns it.
-func open(context.Context, *connector.ServerConfig) (connector.ServerConnection, error) {
+func open(context.Context, *connector.ServerConfig) (*connection, error) {
 	return &connection{}, nil
 }

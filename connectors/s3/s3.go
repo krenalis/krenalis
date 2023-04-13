@@ -32,15 +32,11 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the StorageConnection interface.
-var _ connector.StorageConnection = &connection{}
-
 func init() {
 	connector.RegisterStorage(connector.Storage{
 		Name: "S3",
 		Icon: icon,
-		Open: open,
-	})
+	}, open)
 }
 
 type connection struct {
@@ -57,7 +53,7 @@ type settings struct {
 }
 
 // open opens a S3 connection and returns it.
-func open(ctx context.Context, conf *connector.StorageConfig) (connector.StorageConnection, error) {
+func open(ctx context.Context, conf *connector.StorageConfig) (*connection, error) {
 	c := connection{ctx: ctx, firehose: conf.Firehose}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)

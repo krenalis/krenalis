@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"reflect"
 	"time"
 
 	"chichi/apis/types"
@@ -31,7 +32,23 @@ type App struct {
 	Icon                   string      // icon in SVG format
 	OAuth                  OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
 	WebhooksPer            WebhooksPer // indicates if webhooks are per connector, resource or connection
-	Open                   OpenAppFunc
+
+	open reflect.Value
+	ct   reflect.Type
+}
+
+// ConnectionReflectType returns the type of the value implementing the app
+// connection.
+func (app App) ConnectionReflectType() reflect.Type {
+	return app.ct
+}
+
+// Open opens an app connection.
+func (app App) Open(ctx context.Context, conf *AppConfig) (AppConnection, error) {
+	out := app.open.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(conf)})
+	c := out[0].Interface().(AppConnection)
+	err, _ := out[1].Interface().(error)
+	return c, err
 }
 
 // AppConfig represents the configuration of an app connection.
@@ -55,13 +72,14 @@ const (
 
 // OpenAppFunc represents functions that open app connections. Such functions
 // are not blocking functions and the context is used by the app methods.
-type OpenAppFunc func(context.Context, *AppConfig) (AppConnection, error)
+type OpenAppFunc[T AppConnection] func(context.Context, *AppConfig) (T, error)
 
 // AppConnection is the interface implemented by app connections.
 //
 // An app connection also implements at least one of the interfaces
 // AppEventsConnection, AppUsersConnection, and AppUsersGroupsConnection.
 type AppConnection interface {
+
 	// Resource returns the resource.
 	Resource() (string, error)
 }
