@@ -20,6 +20,13 @@ type Website struct {
 	Icon                   string // icon in SVG format
 
 	open reflect.Value
+	ct   reflect.Type
+}
+
+// ConnectionReflectType returns the type of the value implementing the website
+// connection.
+func (website Website) ConnectionReflectType() reflect.Type {
+	return website.ct
 }
 
 // Open opens a website connection.

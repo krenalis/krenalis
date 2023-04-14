@@ -22,6 +22,13 @@ type Storage struct {
 	Icon                   string // icon in SVG format
 
 	open reflect.Value
+	ct   reflect.Type
+}
+
+// ConnectionReflectType returns the type of the value implementing the storage
+// connection.
+func (storage Storage) ConnectionReflectType() reflect.Type {
+	return storage.ct
 }
 
 // Open opens a storage connection.

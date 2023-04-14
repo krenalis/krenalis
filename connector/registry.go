@@ -60,6 +60,7 @@ func RegisterDatabase[T DatabaseConnection](database Database, open OpenDatabase
 		panic("connector: open function is nil")
 	}
 	database.open = reflect.ValueOf(open)
+	database.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.databases[database.Name]; dup {
@@ -75,6 +76,7 @@ func RegisterFile[T FileConnection](file File, open OpenFileFunc[T]) {
 		panic("connector: open function is nil")
 	}
 	file.open = reflect.ValueOf(open)
+	file.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.files[file.Name]; dup {
@@ -91,6 +93,7 @@ func RegisterMobile[T MobileConnection](mobile Mobile, open OpenMobileFunc[T]) {
 		panic("connector: open function is nil")
 	}
 	mobile.open = reflect.ValueOf(open)
+	mobile.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.mobiles[mobile.Name]; dup {
@@ -107,6 +110,7 @@ func RegisterServer[T ServerConnection](server Server, open OpenServerFunc[T]) {
 		panic("connector: open function is nil")
 	}
 	server.open = reflect.ValueOf(open)
+	server.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.servers[server.Name]; dup {
@@ -123,6 +127,7 @@ func RegisterStorage[T StorageConnection](storage Storage, open OpenStorageFunc[
 		panic("connector: open function is nil")
 	}
 	storage.open = reflect.ValueOf(open)
+	storage.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.storages[storage.Name]; dup {
@@ -139,6 +144,7 @@ func RegisterStream[T StreamConnection](stream Stream, open OpenStreamFunc[T]) {
 		panic("connector: open function is nil")
 	}
 	stream.open = reflect.ValueOf(open)
+	stream.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.files[stream.Name]; dup {
@@ -155,6 +161,7 @@ func RegisterWebsite[T WebsiteConnection](website Website, open OpenWebsiteFunc[
 		panic("connector: open function is nil")
 	}
 	website.open = reflect.ValueOf(open)
+	website.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.websites[website.Name]; dup {

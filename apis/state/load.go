@@ -23,6 +23,7 @@ import (
 )
 
 var (
+	uiType                  = reflect.TypeOf((*_connector.UI)(nil)).Elem()
 	appEventsConnectionType = reflect.TypeOf((*_connector.AppEventsConnection)(nil)).Elem()
 	appUsersConnectionType  = reflect.TypeOf((*_connector.AppUsersConnection)(nil)).Elem()
 	appGroupsConnectionType = reflect.TypeOf((*_connector.AppGroupsConnection)(nil)).Elem()
@@ -64,20 +65,21 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all connectors.
 		state.connectors = map[int]*Connector{}
-		err = state.db.QueryScan(ctx, "SELECT id, name, type, has_settings, logo_url, webhooks_per,"+
+		err = state.db.QueryScan(ctx, "SELECT id, name, type, logo_url, webhooks_per,"+
 			" oauth_url, oauth_client_id, oauth_client_secret, oauth_token_endpoint, oauth_default_token_type,"+
 			" oauth_default_expires_in, oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
 			for rows.Next() {
 				c := Connector{}
 				oauth := ConnectorOAuth{}
-				if err := rows.Scan(&c.ID, &c.Name, &c.Type, &c.HasSettings, &c.LogoURL, &c.WebhooksPer,
-					&oauth.URL, &oauth.ClientID, &oauth.ClientSecret, &oauth.TokenEndpoint, &oauth.DefaultTokenType,
-					&oauth.DefaultExpiresIn, &oauth.ForcedExpiresIn); err != nil {
+				if err := rows.Scan(&c.ID, &c.Name, &c.Type, &c.LogoURL, &c.WebhooksPer, &oauth.URL, &oauth.ClientID,
+					&oauth.ClientSecret, &oauth.TokenEndpoint, &oauth.DefaultTokenType, &oauth.DefaultExpiresIn,
+					&oauth.ForcedExpiresIn); err != nil {
 					return err
 				}
 				if oauth.URL != "" {
 					c.OAuth = &oauth
 				}
+				var ct reflect.Type
 				switch c.Type {
 				case AppType:
 					app := _connector.RegisteredApp(c.Name)
@@ -85,14 +87,14 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					c.DestinationDescription = app.DestinationDescription
 					c.TermForUsers = app.TermForUsers
 					c.TermForGroups = app.TermForGroups
-					t := app.ConnectionReflectType()
-					if t.Implements(appEventsConnectionType) {
+					ct = app.ConnectionReflectType()
+					if ct.Implements(appEventsConnectionType) {
 						c.Targets |= EventsFlag
 					}
-					if t.Implements(appUsersConnectionType) {
+					if ct.Implements(appUsersConnectionType) {
 						c.Targets |= UsersFlag
 					}
-					if t.Implements(appGroupsConnectionType) {
+					if ct.Implements(appGroupsConnectionType) {
 						c.Targets |= GroupsFlag
 					}
 				case DatabaseType:
@@ -102,6 +104,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					c.TermForUsers = "users"
 					c.TermForGroups = "groups"
 					c.Targets = UsersFlag | GroupsFlag
+					ct = database.ConnectionReflectType()
 				case FileType:
 					file := _connector.RegisteredFile(c.Name)
 					c.SourceDescription = file.SourceDescription
@@ -109,31 +112,38 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					c.TermForUsers = "users"
 					c.TermForGroups = "groups"
 					c.Targets = UsersFlag | GroupsFlag
+					ct = file.ConnectionReflectType()
 				case MobileType:
 					mobile := _connector.RegisteredMobile(c.Name)
 					c.SourceDescription = mobile.SourceDescription
 					c.DestinationDescription = mobile.DestinationDescription
 					c.Targets = EventsFlag
+					ct = mobile.ConnectionReflectType()
 				case ServerType:
 					server := _connector.RegisteredServer(c.Name)
 					c.SourceDescription = server.SourceDescription
 					c.DestinationDescription = server.DestinationDescription
 					c.Targets = EventsFlag
+					ct = server.ConnectionReflectType()
 				case StorageType:
 					storage := _connector.RegisteredStorage(c.Name)
 					c.SourceDescription = storage.SourceDescription
 					c.DestinationDescription = storage.DestinationDescription
+					ct = storage.ConnectionReflectType()
 				case StreamType:
 					stream := _connector.RegisteredStream(c.Name)
 					c.SourceDescription = stream.SourceDescription
 					c.DestinationDescription = stream.DestinationDescription
 					c.Targets = EventsFlag
+					ct = stream.ConnectionReflectType()
 				case WebsiteType:
 					website := _connector.RegisteredWebsite(c.Name)
 					c.SourceDescription = website.SourceDescription
 					c.DestinationDescription = website.DestinationDescription
 					c.Targets = EventsFlag
+					ct = website.ConnectionReflectType()
 				}
+				c.HasSettings = ct.Implements(uiType)
 				state.connectors[c.ID] = &c
 			}
 			return nil

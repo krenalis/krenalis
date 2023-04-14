@@ -20,6 +20,13 @@ type Mobile struct {
 	Icon                   string // icon in SVG format
 
 	open reflect.Value
+	ct   reflect.Type
+}
+
+// ConnectionReflectType returns the type of the value implementing the mobile
+// connection.
+func (mobile Mobile) ConnectionReflectType() reflect.Type {
+	return mobile.ct
 }
 
 // Open opens a mobile connection.

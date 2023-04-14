@@ -62,6 +62,13 @@ type File struct {
 	Icon                   string // icon in SVG format
 
 	open reflect.Value
+	ct   reflect.Type
+}
+
+// ConnectionReflectType returns the type of the value implementing the file
+// connection.
+func (file File) ConnectionReflectType() reflect.Type {
+	return file.ct
 }
 
 // Open opens a file connection.

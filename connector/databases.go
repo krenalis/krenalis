@@ -36,6 +36,13 @@ type Database struct {
 	Icon                   string // icon in SVG format
 
 	open reflect.Value
+	ct   reflect.Type
+}
+
+// ConnectionReflectType returns the type of the value implementing the database
+// connection.
+func (database Database) ConnectionReflectType() reflect.Type {
+	return database.ct
 }
 
 // Open opens a database connection.

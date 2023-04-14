@@ -20,6 +20,13 @@ type Server struct {
 	Icon                   string // icon in SVG format
 
 	open reflect.Value
+	ct   reflect.Type
+}
+
+// ConnectionReflectType returns the type of the value implementing the server
+// connection.
+func (server Server) ConnectionReflectType() reflect.Type {
+	return server.ct
 }
 
 // Open opens a server connection.

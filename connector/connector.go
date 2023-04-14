@@ -9,11 +9,17 @@ package connector
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	"chichi/apis/types"
 	"chichi/connector/ui"
 )
+
+// Connector is the interface implemented by connectors.
+type Connector interface {
+	ConnectionReflectType() reflect.Type
+}
 
 // An AccessDeniedError error is returned by a connector method when it is
 // unable to access a requested resource due to insufficient permissions.

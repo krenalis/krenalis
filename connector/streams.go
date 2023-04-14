@@ -20,6 +20,13 @@ type Stream struct {
 	Icon                   string // icon in SVG format
 
 	open reflect.Value
+	ct   reflect.Type
+}
+
+// ConnectionReflectType returns the type of the value implementing the stream
+// connection.
+func (stream Stream) ConnectionReflectType() reflect.Type {
+	return stream.ct
 }
 
 // Open opens a stream connection.
