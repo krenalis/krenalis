@@ -20,7 +20,6 @@ CREATE TABLE connectors (
     name varchar(200) NOT NULL DEFAULT '',
     type connector_type NOT NULL DEFAULT 'App',
     logo_url varchar(500) NOT NULL DEFAULT '',
-    webhooks_per webhooks_per NOT NULL DEFAULT 'None',
     oauth_url varchar(500) NOT NULL DEFAULT '',
     oauth_client_id varchar(500) NOT NULL DEFAULT '',
     oauth_client_secret varchar(500) NOT NULL DEFAULT '',
@@ -31,26 +30,26 @@ CREATE TABLE connectors (
     PRIMARY KEY (id)
 );
 
-INSERT INTO connectors (name, type, logo_url, webhooks_per, oauth_url, oauth_client_id, oauth_client_secret, oauth_token_endpoint, oauth_forced_expires_in) VALUES
-    ('HubSpot', 'App', 'https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/168_Hubspot_logo_logos-512.png', 'Connector', 'https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read', 'cef1005a-72be-4047-a301-ef6057588325', '136e50df-5b89-478f-bf01-4a71547fa668', 'https://api.hubapi.com/oauth/v1/token', 0),
-    ('MySQL', 'Database', 'https://cdn4.iconfinder.com/data/icons/logos-3/181/MySQL-512.png', 'None', '', '', '', '', 0),
-    ('Dummy', 'App', 'https://cdn3.iconfinder.com/data/icons/education-209/64/tube-lab-science-school-256.png', 'Connector', '', '', '', '', 0),
-    ('Mailchimp', 'App', 'https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/mailchimp-512.png', 'Source', 'https://login.mailchimp.com/oauth2/authorize?response_type=code&client_id=631597222767&redirect_uri=https://127.0.0.1:9090/admin/oauth/authorize', '631597222767', '90c2d1a1383de35e5ecca5a73f0e2c19e751056d0e3cdd81ac', 'https://login.mailchimp.com/oauth2/token',2147483647),
-    ('CSV', 'File', 'https://cdn3.iconfinder.com/data/icons/cad-database-presentation-spreadsheet-vector-fil-2/512/19-512.png', 'None', '', '', '', '', 0),
-    ('SFTP', 'Storage', 'https://cdn2.iconfinder.com/data/icons/whcompare-servers-web-hosting/50/sftp-512.png', 'None', '', '', '', '', 0),
-    ('HTTP', 'Storage', 'https://cdn4.iconfinder.com/data/icons/application-windows-3/32/HTTP-512.png', 'None', '', '', '', '', 0),
-    ('Excel', 'File', 'https://cdn0.iconfinder.com/data/icons/logos-microsoft-office-365/128/Microsoft_Office-02-512.png', 'None', '', '', '', '', 0),
-    ('S3', 'Storage', 'https://cdn2.iconfinder.com/data/icons/amazon-aws-stencils/100/Storage__Content_Delivery_Amazon_S3-512.png', 'None', '', '', '', '', 0),
-    ('PostgreSQL', 'Database', 'https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/postgresql-512.png', 'None', '', '', '', '', 0),
-    ('Parquet', 'File', '', 'None', '', '', '', '', 0),
-    ('Website', 'Website', 'https://cdn2.iconfinder.com/data/icons/free-simple-line-mix/48/22-Website-512.png', 'None', '', '', '', '', 0),
-    ('Kafka', 'Stream', 'https://cdn.icon-icons.com/icons2/2248/PNG/512/apache_kafka_icon_138937.png', 'None', '', '', '', '', 0),
-    ('RabbitMQ', 'Stream', 'https://cdn.icon-icons.com/icons2/2699/PNG/512/rabbitmq_logo_icon_170810.png', 'None', '', '', '', '', 0),
-    ('UISample', 'Stream', '', 'None', '', '', '', '', 0),
-    ('Server', 'Server', 'https://cdn1.iconfinder.com/data/icons/unicons-line-vol-5/24/server-512.png', 'None', '', '', '', '', 0),
-    ('Klaviyo', 'App', 'https://cdn3.iconfinder.com/data/icons/font-awesome-solid/512/k-256.png', 'None', '', '', '', '', 0),
-    ('Google Analytics 4', 'App', 'https://cdn4.iconfinder.com/data/icons/social-media-logos-6/512/108-analytics_google_analytics_google-256.png', 'None', '', '', '', '', 0),
-    ('Filesystem', 'Storage', 'https://cdn2.iconfinder.com/data/icons/audio-music-5/65/cd-case-256.png', 'None', '', '', '', '', 0);
+INSERT INTO connectors (name, type, logo_url, oauth_url, oauth_client_id, oauth_client_secret, oauth_token_endpoint, oauth_forced_expires_in) VALUES
+    ('HubSpot', 'App', 'https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/168_Hubspot_logo_logos-512.png', 'https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read', 'cef1005a-72be-4047-a301-ef6057588325', '136e50df-5b89-478f-bf01-4a71547fa668', 'https://api.hubapi.com/oauth/v1/token', 0),
+    ('MySQL', 'Database', 'https://cdn4.iconfinder.com/data/icons/logos-3/181/MySQL-512.png', '', '', '', '', 0),
+    ('Dummy', 'App', 'https://cdn3.iconfinder.com/data/icons/education-209/64/tube-lab-science-school-256.png', '', '', '', '', 0),
+    ('Mailchimp', 'App', 'https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/mailchimp-512.png', 'https://login.mailchimp.com/oauth2/authorize?response_type=code&client_id=631597222767&redirect_uri=https://127.0.0.1:9090/admin/oauth/authorize', '631597222767', '90c2d1a1383de35e5ecca5a73f0e2c19e751056d0e3cdd81ac', 'https://login.mailchimp.com/oauth2/token',2147483647),
+    ('CSV', 'File', 'https://cdn3.iconfinder.com/data/icons/cad-database-presentation-spreadsheet-vector-fil-2/512/19-512.png', '', '', '', '', 0),
+    ('SFTP', 'Storage', 'https://cdn2.iconfinder.com/data/icons/whcompare-servers-web-hosting/50/sftp-512.png', '', '', '', '', 0),
+    ('HTTP', 'Storage', 'https://cdn4.iconfinder.com/data/icons/application-windows-3/32/HTTP-512.png', '', '', '', '', 0),
+    ('Excel', 'File', 'https://cdn0.iconfinder.com/data/icons/logos-microsoft-office-365/128/Microsoft_Office-02-512.png', '', '', '', '', 0),
+    ('S3', 'Storage', 'https://cdn2.iconfinder.com/data/icons/amazon-aws-stencils/100/Storage__Content_Delivery_Amazon_S3-512.png', '', '', '', '', 0),
+    ('PostgreSQL', 'Database', 'https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/postgresql-512.png', '', '', '', '', 0),
+    ('Parquet', 'File', '', '', '', '', '', 0),
+    ('Website', 'Website', 'https://cdn2.iconfinder.com/data/icons/free-simple-line-mix/48/22-Website-512.png', '', '', '', '', 0),
+    ('Kafka', 'Stream', 'https://cdn.icon-icons.com/icons2/2248/PNG/512/apache_kafka_icon_138937.png', '', '', '', '', 0),
+    ('RabbitMQ', 'Stream', 'https://cdn.icon-icons.com/icons2/2699/PNG/512/rabbitmq_logo_icon_170810.png', '', '', '', '', 0),
+    ('UISample', 'Stream', '', '', '', '', '', 0),
+    ('Server', 'Server', 'https://cdn1.iconfinder.com/data/icons/unicons-line-vol-5/24/server-512.png', '', '', '', '', 0),
+    ('Klaviyo', 'App', 'https://cdn3.iconfinder.com/data/icons/font-awesome-solid/512/k-256.png', '', '', '', '', 0),
+    ('Google Analytics 4', 'App', 'https://cdn4.iconfinder.com/data/icons/social-media-logos-6/512/108-analytics_google_analytics_google-256.png', '', '', '', '', 0),
+    ('Filesystem', 'Storage', 'https://cdn2.iconfinder.com/data/icons/audio-music-5/65/cd-case-256.png', '', '', '', '', 0);
 
 CREATE TYPE warehouse_type AS ENUM ('BigQuery', 'ClickHouse', 'PostgreSQL', 'Redshift', 'Snowflake');
 CREATE TYPE privacy_region AS ENUM ('', 'Europe');

@@ -65,13 +65,13 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all connectors.
 		state.connectors = map[int]*Connector{}
-		err = state.db.QueryScan(ctx, "SELECT id, name, type, logo_url, webhooks_per,"+
-			" oauth_url, oauth_client_id, oauth_client_secret, oauth_token_endpoint, oauth_default_token_type,"+
-			" oauth_default_expires_in, oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
+		err = state.db.QueryScan(ctx, "SELECT id, name, type, logo_url, oauth_url, oauth_client_id,"+
+			" oauth_client_secret, oauth_token_endpoint, oauth_default_token_type, oauth_default_expires_in,"+
+			" oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
 			for rows.Next() {
 				c := Connector{}
 				oauth := ConnectorOAuth{}
-				if err := rows.Scan(&c.ID, &c.Name, &c.Type, &c.LogoURL, &c.WebhooksPer, &oauth.URL, &oauth.ClientID,
+				if err := rows.Scan(&c.ID, &c.Name, &c.Type, &c.LogoURL, &oauth.URL, &oauth.ClientID,
 					&oauth.ClientSecret, &oauth.TokenEndpoint, &oauth.DefaultTokenType, &oauth.DefaultExpiresIn,
 					&oauth.ForcedExpiresIn); err != nil {
 					return err
@@ -97,6 +97,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					if ct.Implements(appGroupsConnectionType) {
 						c.Targets |= GroupsFlag
 					}
+					c.WebhooksPer = WebhooksPer(app.WebhooksPer)
 				case DatabaseType:
 					database := _connector.RegisteredDatabase(c.Name)
 					c.SourceDescription = database.SourceDescription
