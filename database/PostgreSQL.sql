@@ -13,7 +13,6 @@ INSERT INTO accounts (name, email, password) VALUES
 
 CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'Mobile', 'Server', 'Storage', 'Stream', 'Website');
 CREATE TYPE action_target AS ENUM ('Events', 'Users', 'Groups');
-CREATE TYPE webhooks_per AS ENUM ('None', 'Connector', 'Resource', 'Source');
 
 CREATE TABLE connectors (
     id SERIAL,
