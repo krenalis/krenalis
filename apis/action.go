@@ -949,7 +949,7 @@ func (this *Connection) fetchDatabaseSchema(query string) (types.Type, error) {
 	c := this.connection
 	connector := c.Connector()
 
-	usersQuery, err := compileActionQuery(query, 1)
+	usersQuery, err := compileActionQuery(query, 0)
 	if err != nil {
 		return types.Type{}, err
 	}

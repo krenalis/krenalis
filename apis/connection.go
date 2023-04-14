@@ -636,7 +636,7 @@ func (this *Connection) Delete() error {
 //
 // query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
 // must contain the ':limit' placeholder between '[[' and ']]'. limit must be
-// between 1 and 100.
+// in range [0, 100].
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If the execution of the query fails, it returns an errors.UnprocessableError
@@ -649,7 +649,7 @@ func (this *Connection) ExecQuery(query string, limit int) (types.Type, [][]stri
 	if utf8.RuneCountInString(query) > queryMaxSize {
 		return types.Type{}, nil, errors.BadRequest("query is longer than 16,777,215 runes")
 	}
-	if limit < 1 || limit > 100 {
+	if limit < 0 || limit > 100 {
 		return types.Type{}, nil, errors.BadRequest("limit %d is not valid", limit)
 	}
 
