@@ -16,6 +16,7 @@ CREATE TABLE users
     -- correctly.
     `PhoneNumbers` Array(String),
     `FoodPreferences_Fruit` Enum8('apple' = 1, 'orange' = 2, 'mango' = 3, 'peach' = 4, 'lime' = 5),
+    `updateTime` DateTime DEFAULT now(),
 )
 ENGINE = MergeTree
 PRIMARY KEY id

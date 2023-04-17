@@ -324,6 +324,7 @@ func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
 		values = append(values, value)
 		i++
 	}
+	query.WriteString(`, "updateTime" = now()`)
 	query.WriteString("\nWHERE id = $")
 	query.WriteString(strconv.Itoa(i))
 	values = append(values, id)

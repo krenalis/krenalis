@@ -32,5 +32,6 @@ CREATE TABLE users (
     "PhoneNumbers"          varchar(300)[],
     "FoodPreferences_Fruit" fruit,
     "FavouriteMovie"        movie,
+    "updateTime"            timestamp NOT NULL DEFAULT now(),
     PRIMARY KEY (id)
 );

@@ -773,20 +773,33 @@ func (this *Workspace) ReloadSchemas() error {
 	}
 	for _, table := range tables {
 		// Check that the 'users' and the 'groups' tables, when exist, contain
-		// the 'id' column.
+		// the 'id' and the 'updateTime' columns.
 		if table.Name == "users" || table.Name == "groups" {
-			i := slices.IndexFunc(table.Columns, func(c *warehouses.Column) bool {
+			// Check the 'id' column.
+			idIndex := slices.IndexFunc(table.Columns, func(c *warehouses.Column) bool {
 				return c.Name == "id"
 			})
-			if i == -1 {
+			if idIndex == -1 {
 				return errors.Unprocessable(InvalidSchemaTable, "'%s' table has no 'id' column", table.Name)
 			}
-			if c := table.Columns[i]; c.Type.PhysicalType() != types.PtInt {
+			if c := table.Columns[idIndex]; c.Type.PhysicalType() != types.PtInt {
 				return errors.Unprocessable(InvalidSchemaTable, "column '%s.id' does not have type Int", table.Name)
 			} else if c.Nullable {
 				return errors.Unprocessable(InvalidSchemaTable, "column '%s.id' must not be nullable", table.Name)
 			}
-			table.Columns = slices.Delete(table.Columns, i, i+1)
+			table.Columns = slices.Delete(table.Columns, idIndex, idIndex+1)
+			// Check the 'updateTime' column.
+			utIndex := slices.IndexFunc(table.Columns, func(c *warehouses.Column) bool {
+				return c.Name == "updateTime"
+			})
+			if utIndex == -1 {
+				return errors.Unprocessable(InvalidSchemaTable, "'%s' table has no 'updateTime' column", table.Name)
+			}
+			if c := table.Columns[utIndex]; c.Type.PhysicalType() != types.PtDateTime {
+				return errors.Unprocessable(InvalidSchemaTable, "column '%s.updateTime' does not have type DateTime", table.Name)
+			} else if c.Nullable {
+				return errors.Unprocessable(InvalidSchemaTable, "column '%s.updateTime' must not be nullable", table.Name)
+			}
 		}
 		if table.Name == "events" {
 			// The schema of the "events" table is hardcoded in the file
