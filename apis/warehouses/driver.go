@@ -56,13 +56,14 @@ type Warehouse interface {
 	// QueryRow executes a query that should return at most one row.
 	QueryRow(ctx context.Context, query string, args ...any) Row
 
-	// Users returns the users, with only the given columns, ordered by order if
-	// order is not the zero Property, and in range [first,first+limit] with
-	// first >= 0 and 0 < limit <= 1000.
+	// Select returns the rows from the given table that satisfies the where
+	// condition with only the given columns, ordered by order if order is not the
+	// zero Property, and in range [first,first+limit] with first >= 0 and
+	// 0 < limit <= 1000.
 	//
 	// If a query to the warehouse fails, it returns an Error value.
 	// If an argument is not valid, it panics.
-	Users(ctx context.Context, columns []Column, order types.Property, first, limit int) ([][]any, error)
+	Select(ctx context.Context, table string, columns []Column, where map[string]any, order types.Property, first, limit int) ([][]any, error)
 }
 
 // Batch is implemented by values returned by PrepareBatch.

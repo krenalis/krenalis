@@ -1061,7 +1061,7 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 
 	// Read the users.
 	columns := columnsOfProperties(requestedProperties)
-	users, err := ws.Warehouse.Users(context.Background(), columns, orderProperty, first, limit)
+	users, err := ws.Warehouse.Select(context.Background(), "users", columns, nil, orderProperty, first, limit)
 	if err != nil {
 		if err2, ok := err.(*warehouses.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.

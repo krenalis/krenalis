@@ -390,13 +390,18 @@ type pgTypeInfo struct {
 	scale      *string
 }
 
-// Users returns the users, with only the given columns, ordered by order if
-// order is not the zero Property, and in range [first,first+limit] with
-// first >= 0 and 0 < limit <= 1000.
+// Select returns the rows from the given table that satisfies the where
+// condition with only the given columns, ordered by order if order is not the
+// zero Property, and in range [first,first+limit] with first >= 0 and
+// 0 < limit <= 1000.
 //
 // If a query to the warehouse fails, it returns an Error value.
 // If an argument is not valid, it panics.
-func (warehouse *PostgreSQL) Users(ctx context.Context, columns []warehouses.Column, order types.Property, first, limit int) ([][]any, error) {
+func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns []warehouses.Column, where map[string]any, order types.Property, first, limit int) ([][]any, error) {
+
+	if !warehouses.IsValidIdentifier(table) {
+		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
+	}
 
 	db, err := warehouse.connection()
 	if err != nil {
@@ -415,7 +420,27 @@ func (warehouse *PostgreSQL) Users(ctx context.Context, columns []warehouses.Col
 		}
 		query.WriteString(c.Name)
 	}
-	query.WriteString(`" FROM users`)
+	query.WriteString(`" FROM "`)
+	query.WriteString(table)
+	query.WriteByte('"')
+	if len(where) > 0 {
+		query.WriteString(` WHERE `)
+		first := true
+		for c, v := range where {
+			if !warehouses.IsValidIdentifier(c) {
+				return nil, fmt.Errorf("column name %q is not a valid identifier", c)
+			}
+			if first {
+				query.WriteByte('"')
+				first = false
+			} else {
+				query.WriteString(` AND "`)
+			}
+			query.WriteString(c)
+			query.WriteString(`" = `)
+			quoteValue(&query, v)
+		}
+	}
 	if order.Name != "" {
 		if !types.IsValidPropertyName(order.Name) {
 			panic(fmt.Sprintf("invalid property name: %q", order.Name))

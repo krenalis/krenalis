@@ -232,13 +232,14 @@ func (warehouse *ClickHouse) QueryRow(ctx context.Context, query string, args ..
 	return warehouses.Row{}
 }
 
-// Users returns the users, with only the given columns, ordered by order if
-// order is not the zero Property, and in range [first,first+limit] with
-// first >= 0 and 0 < limit <= 1000.
+// Select returns the rows from the given table that satisfies the where
+// condition with only the given columns, ordered by order if order is not the
+// zero Property, and in range [first,first+limit] with first >= 0 and
+// 0 < limit <= 1000.
 //
 // If a query to the warehouse fails, it returns an Error value.
 // If an argument is not valid, it panics.
-func (warehouse *ClickHouse) Users(ctx context.Context, columns []warehouses.Column, order types.Property, first, limit int) ([][]any, error) {
+func (warehouse *ClickHouse) Select(ctx context.Context, table string, columns []warehouses.Column, where map[string]any, order types.Property, first, limit int) ([][]any, error) {
 
 	conn, err := warehouse.connection()
 	if err != nil {
@@ -257,7 +258,27 @@ func (warehouse *ClickHouse) Users(ctx context.Context, columns []warehouses.Col
 		}
 		query.WriteString(c.Name)
 	}
-	query.WriteString(`" FROM users`)
+	query.WriteString(`" FROM "`)
+	query.WriteString(table)
+	query.WriteByte('"')
+	if len(where) > 0 {
+		query.WriteString(` WHERE `)
+		first := true
+		for c, v := range where {
+			if !warehouses.IsValidIdentifier(c) {
+				return nil, fmt.Errorf("column name %q is not a valid identifier", c)
+			}
+			if first {
+				query.WriteByte('"')
+				first = false
+			} else {
+				query.WriteString(` AND "`)
+			}
+			query.WriteString(c)
+			query.WriteString(`" = `)
+			quoteValue(&query, v)
+		}
+	}
 	if order.Name != "" {
 		if !types.IsValidPropertyName(order.Name) {
 			panic(fmt.Sprintf("invalid property name: %q", order.Name))
@@ -437,4 +458,73 @@ func (batch *batch) Send() error {
 	}
 	batch.err = errors.New("the Send method has already been called")
 	return nil
+}
+
+// quoteValue quotes s as a string and writes it into b.
+func quoteString(b *strings.Builder, s string) {
+	if s == "" {
+		b.WriteString("''")
+		return
+	}
+	b.WriteByte('\'')
+	for {
+		p := strings.IndexAny(s, "\\'")
+		if p == -1 {
+			p = len(s)
+		}
+		b.WriteString(s[:p])
+		if p == len(s) {
+			break
+		}
+		b.WriteByte('\\')
+		b.WriteByte(s[p])
+		s = s[p+1:]
+		if len(s) == 0 {
+			break
+		}
+	}
+	b.WriteByte('\'')
+}
+
+// quoteValue quotes value and writes it into b.
+func quoteValue(b *strings.Builder, value any) {
+	if value == nil {
+		b.WriteString("NULL")
+		return
+	}
+	switch v := value.(type) {
+	case bool:
+		if v {
+			b.WriteString("true")
+		}
+		b.WriteString("false")
+	case int:
+		b.WriteString(strconv.FormatInt(int64(v), 10))
+	case int16:
+		b.WriteString(strconv.FormatInt(int64(v), 10))
+	case int32:
+		b.WriteString(strconv.FormatInt(int64(v), 10))
+	case int64:
+		b.WriteString(strconv.FormatInt(v, 10))
+	case uint:
+		b.WriteString(strconv.FormatUint(uint64(v), 10))
+	case uint16:
+		b.WriteString(strconv.FormatUint(uint64(v), 10))
+	case uint32:
+		b.WriteString(strconv.FormatUint(uint64(v), 10))
+	case uint64:
+		b.WriteString(strconv.FormatUint(v, 10))
+	case float32:
+		b.WriteString(strconv.FormatFloat(float64(v), 'G', -1, 32))
+	case float64:
+		b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
+	case string:
+		quoteString(b, v)
+	case time.Time:
+		b.WriteByte('\'')
+		b.WriteString(v.Format("2006-01-02 15:04:05"))
+		b.WriteByte('\'')
+	default:
+		panic(fmt.Errorf("unsupported type '%T'", v))
+	}
 }
