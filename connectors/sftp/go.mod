@@ -9,6 +9,6 @@ require (
 
 require (
 	github.com/kr/fs v0.1.0 // indirect
-	github.com/stretchr/testify v1.8.1 // indirect
+	github.com/stretchr/testify v1.8.2 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 )
