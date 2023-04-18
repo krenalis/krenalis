@@ -1064,6 +1064,24 @@ func (t Type) WithMaxItems(max int) Type {
 	return t
 }
 
+// Unflatten returns t but with all properties as not flat.
+func (t Type) Unflatten() Type {
+	switch t.pt {
+	case PtObject:
+		pp := t.Properties()
+		for i := 0; i < len(pp); i++ {
+			pp[i].Type = pp[i].Type.Unflatten()
+			pp[i].Flat = false
+		}
+		t.vl = pp
+	case PtArray:
+		t.vl = t.ItemType().Unflatten()
+	case PtMap:
+		t.vl = t.ValueType().Unflatten()
+	}
+	return t
+}
+
 // Unique reports whether the items of t are unique.
 // Panics if t is not an Array.
 func (t Type) Unique() bool {
