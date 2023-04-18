@@ -46,7 +46,7 @@ require (
 	chichi/connectors/website v0.0.0-00010101000000-000000000000
 	github.com/ClickHouse/clickhouse-go/v2 v2.9.0
 	github.com/cenkalti/backoff/v4 v4.2.1
-	github.com/evanw/esbuild v0.17.11
+	github.com/evanw/esbuild v0.17.17
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgpassfile v1.0.0
