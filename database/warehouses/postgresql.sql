@@ -25,12 +25,8 @@ CREATE TABLE users (
     "Email"                 varchar(300),
     "Gender"                gender,
     "FoodPreferences_Drink" drink,
-    -- TODO(Gianluca): "PhoneNumbers" has been put between
-    -- "FoodPreferences_Drink" and "FoodPreferences_Fruit" to avoid grouping
-    -- because the method "Workspace.Users" does not handle nested properties
-    -- correctly.
-    "PhoneNumbers"          varchar(300)[],
     "FoodPreferences_Fruit" fruit,
+    "PhoneNumbers"          varchar(300)[],
     "FavouriteMovie"        movie,
     "updateTime"            timestamp NOT NULL DEFAULT now(),
     PRIMARY KEY (id)

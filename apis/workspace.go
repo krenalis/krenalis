@@ -1061,7 +1061,7 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 
 	// Read the users.
 	columns := columnsOfProperties(requestedProperties)
-	users, err := ws.Warehouse.Select(context.Background(), "users", columns, nil, orderProperty, first, limit)
+	rows, err := ws.Warehouse.Select(context.Background(), "users", columns, nil, orderProperty, first, limit)
 	if err != nil {
 		if err2, ok := err.(*warehouses.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
@@ -1071,10 +1071,10 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 		return types.Type{}, nil, err
 	}
 
-	// TODO(Gianluca): users should be grouped in objects where necessary.
-	// Currently, in case of flat object properties, the columns are not put
-	// together in objects and the count of properties of users and the
-	// properties in the schema does not match.
+	users := make([][]any, len(rows))
+	for i, row := range rows {
+		users[i] = deserializeDataWarehouseRowAsSlice(requestedProperties, row)
+	}
 
 	return schema.Unflatten(), users, err
 }
@@ -1303,9 +1303,40 @@ func columnsOfProperties(properties []types.Property) []warehouses.Column {
 				column.Name = p.Name + "_" + column.Name
 				columns = append(columns, column)
 			}
-		} else {
-			columns = append(columns, warehouses.Column{Name: p.Name, Type: p.Type})
+			continue
 		}
+		columns = append(columns, warehouses.Column{Name: p.Name, Type: p.Type})
 	}
 	return columns
+}
+
+// deserializeDataWarehouseRowAsSlice deserializes a row returned by a data
+// warehouse as slice.
+func deserializeDataWarehouseRowAsSlice(properties []types.Property, row []any) []any {
+	values := make([]any, len(properties))
+	for i, p := range properties {
+		if p.Flat {
+			values[i], row = deserializeDataWarehouseRowAsMap(p.Type.Properties(), row)
+			continue
+		}
+		values[i] = row[0]
+		row = row[1:]
+	}
+	return values
+}
+
+// deserializeDataWarehouseRowAsMap deserializes a row returned by a data
+// warehouse as map. It returns the deserialized row and the remaining row
+// values to read.
+func deserializeDataWarehouseRowAsMap(properties []types.Property, row []any) (map[string]any, []any) {
+	values := make(map[string]any, len(properties))
+	for _, p := range properties {
+		if p.Flat {
+			values[p.Name], row = deserializeDataWarehouseRowAsMap(p.Type.Properties(), row)
+			continue
+		}
+		values[p.Name] = row[0]
+		row = row[1:]
+	}
+	return values, row
 }

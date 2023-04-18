@@ -10,13 +10,9 @@ CREATE TABLE users
     `Email` String,
     `Gender` Enum8('male' = 1, 'female' = 2, 'other' = 3),
     `FoodPreferences_Drink` Enum8('water' = 1, 'wine' = 2, 'beer' = 3, 'tea' = 4),
-    -- TODO(Gianluca): "PhoneNumbers" has been put between
-    -- "FoodPreferences_Drink" and "FoodPreferences_Fruit" to avoid grouping
-    -- because the method "Workspace.Users" does not handle nested properties
-    -- correctly.
-    `PhoneNumbers` Array(String),
     `FoodPreferences_Fruit` Enum8('apple' = 1, 'orange' = 2, 'mango' = 3, 'peach' = 4, 'lime' = 5),
-    `updateTime` DateTime DEFAULT now(),
+    `PhoneNumbers` Array(String),
+    `updateTime` DateTime DEFAULT now()
 )
 ENGINE = MergeTree
 PRIMARY KEY id
