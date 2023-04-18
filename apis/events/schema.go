@@ -40,6 +40,7 @@ var Schema = types.Object([]types.Property{
 			{Name: "bluetooth", Type: types.Boolean()},
 			{Name: "carrier", Type: types.Text()},
 		}),
+		Flat: true,
 	},
 	{
 		Name: "os",
@@ -47,6 +48,7 @@ var Schema = types.Object([]types.Property{
 			{Name: "name", Type: types.Text().WithEnum([]string{"Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other"})},
 			{Name: "version", Type: types.Text()},
 		}),
+		Flat: true,
 	},
 	{
 		Name: "app",
@@ -56,6 +58,7 @@ var Schema = types.Object([]types.Property{
 			{Name: "build", Type: types.Text()},
 			{Name: "namespace", Type: types.Text()},
 		}),
+		Flat: true,
 	},
 	{
 		Name: "screen",
@@ -64,6 +67,7 @@ var Schema = types.Object([]types.Property{
 			{Name: "width", Type: types.UInt16()},
 			{Name: "height", Type: types.UInt16()},
 		}),
+		Flat: true,
 	},
 	{Name: "user_agent", Type: types.Text()},
 	{
@@ -73,6 +77,7 @@ var Schema = types.Object([]types.Property{
 			{Name: "other", Type: types.Text()},
 			{Name: "version", Type: types.Text()},
 		}),
+		Flat: true,
 	},
 	{
 		Name: "device",
@@ -85,6 +90,7 @@ var Schema = types.Object([]types.Property{
 			{Name: "version", Type: types.Text()},
 			{Name: "advertising_id", Type: types.Text()},
 		}),
+		Flat: true,
 	},
 	{
 		Name: "location",
@@ -96,6 +102,7 @@ var Schema = types.Object([]types.Property{
 			{Name: "longitude", Type: types.Float()},
 			{Name: "speed", Type: types.Float()},
 		}),
+		Flat: true,
 	},
 	{Name: "device_type", Type: types.Text().WithEnum([]string{"desktop", "tablet", "mobile"})},
 	{Name: "locale", Type: types.Text(types.Chars(5))},
@@ -110,6 +117,7 @@ var Schema = types.Object([]types.Property{
 			{Name: "hash", Type: types.Text()},
 			{Name: "referrer", Type: types.Text()},
 		}),
+		Flat: true,
 	},
 	{
 		Name: "referrer",
@@ -119,6 +127,7 @@ var Schema = types.Object([]types.Property{
 			{Name: "url", Type: types.Text()},
 			{Name: "link", Type: types.Text()},
 		}),
+		Flat: true,
 	},
 	{
 		Name: "campaign",
@@ -129,6 +138,7 @@ var Schema = types.Object([]types.Property{
 			{Name: "term", Type: types.Text()},
 			{Name: "content", Type: types.Text()},
 		}),
+		Flat: true,
 	},
 	{
 		Name: "library",
@@ -136,6 +146,7 @@ var Schema = types.Object([]types.Property{
 			{Name: "name", Type: types.Text()},
 			{Name: "version", Type: types.Text()},
 		}),
+		Flat: true,
 	},
 	{Name: "properties", Type: types.JSON()},
 })
