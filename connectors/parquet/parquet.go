@@ -66,16 +66,22 @@ func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) 
 	return &c, nil
 }
 
+// ContentType returns the content type of the file.
+func (c *connection) ContentType() string {
+	return "" // TODO: implement file writing for Parquet.
+}
+
+// Path returns the path of the file.
+func (c *connection) Path() string {
+	return c.settings.Path
+}
+
+// Read reads the records from r, with their last update time, and writes
+// them to records.
 // Read reads the records from files and writes them to records.
-func (c *connection) Read(files connector.FileReader, records connector.RecordWriter) error {
+func (c *connection) Read(r io.Reader, updateTime time.Time, records connector.RecordWriter) error {
 
-	r, timestamp, err := files.Reader(c.settings.Path)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-
-	if err = records.Timestamp(timestamp); err != nil {
+	if err := records.Timestamp(updateTime); err != nil {
 		return err
 	}
 
@@ -93,7 +99,6 @@ func (c *connection) Read(files connector.FileReader, records connector.RecordWr
 	if err != nil {
 		return err
 	}
-	_ = r.Close()
 	_, err = fi.Seek(io.SeekStart, 0)
 	if err != nil {
 		return err
@@ -208,8 +213,8 @@ func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 	return json.Marshal(&s)
 }
 
-// Write writes to files the records read from records.
-func (c *connection) Write(files connector.FileWriter, records connector.RecordReader) error {
+// Write writes to w the records read from records.
+func (c *connection) Write(w io.Writer, records connector.RecordReader) error {
 	// TODO(marco)
 	return nil
 }

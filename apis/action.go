@@ -984,8 +984,8 @@ func (this *Connection) fetchFileSchema() (types.Type, error) {
 
 	var ctx = context.Background()
 
-	// Get the file reader.
-	var files *fileReader
+	// Retrieve the storage associated to the file connection.
+	var storage _connector.StorageConnection
 	{
 		s, ok := c.Storage()
 		if !ok {
@@ -993,7 +993,8 @@ func (this *Connection) fetchFileSchema() (types.Type, error) {
 		}
 		fh := this.newFirehose(ctx)
 		ctx = fh.ctx
-		connection, err := _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
+		var err error
+		storage, err = _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
 			Role:     cRole,
 			Settings: s.Settings,
 			Firehose: fh,
@@ -1001,7 +1002,6 @@ func (this *Connection) fetchFileSchema() (types.Type, error) {
 		if err != nil {
 			return types.Type{}, err
 		}
-		files = newFileReader(connection)
 	}
 
 	// Connect to the file connector and read only the columns.
@@ -1016,8 +1016,13 @@ func (this *Connection) fetchFileSchema() (types.Type, error) {
 	}
 
 	// Read only the columns.
+	rc, updateTime, err := storage.Reader(file.Path())
+	if err != nil {
+		return types.Type{}, err
+	}
+	defer rc.Close()
 	records := fh.newRecordWriter(identityColumn, timestampColumn, true)
-	err = file.Read(files, records)
+	err = file.Read(rc, updateTime, records)
 	if err != nil && err != errRecordStop {
 		return types.Type{}, err
 	}

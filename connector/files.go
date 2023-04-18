@@ -92,29 +92,18 @@ type OpenFileFunc[T FileConnection] func(context.Context, *FileConfig) (T, error
 // FileConnection is the interface implemented by file connections.
 type FileConnection interface {
 
-	// Read reads the records from files and writes them to records.
-	Read(files FileReader, records RecordWriter) error
+	// ContentType returns the content type of the file.
+	ContentType() string
 
-	// Write writes to files the records read from records.
-	Write(files FileWriter, records RecordReader) error
-}
+	// Path returns the path of the file.
+	Path() string
 
-// A FileReader interface is used by file connections to read files.
-type FileReader interface {
+	// Read reads the records from r, with their last update time, and writes
+	// them to records.
+	Read(r io.Reader, updateTime time.Time, records RecordWriter) error
 
-	// Reader returns a ReadCloser from which to read the file at the given
-	// path and its last update time.
-	// It is the caller's responsibility to close the returned reader.
-	Reader(path string) (io.ReadCloser, time.Time, error)
-}
-
-// A FileWriter interface is used by file connections to write files.
-type FileWriter interface {
-
-	// Writer returns a Writer that writes to the file with the given path.
-	// contentType is the file's content type.
-	// It is the caller's responsibility to close the returned writer.
-	Writer(path, contentType string) (io.WriteCloser, error)
+	// Write writes to w the records read from records.
+	Write(w io.Writer, records RecordReader) error
 }
 
 // A RecordReader interface is used by file connections to read the records to

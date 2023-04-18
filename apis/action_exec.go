@@ -386,13 +386,14 @@ func (ac *Action) importUsers() error {
 
 		var ctx = context.Background()
 
-		// Get the file reader.
-		var files *fileReader
+		// Retrieve the storage associated to the file connection.
+		var storage _connector.StorageConnection
 		{
 			s, _ := connection.Storage()
 			fh := ac.newFirehoseForConnection(ctx, s)
 			ctx = fh.ctx
-			c, err := _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
+			var err error
+			storage, err = _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
 				Role:     role,
 				Settings: s.Settings,
 				Firehose: fh,
@@ -400,7 +401,6 @@ func (ac *Action) importUsers() error {
 			if err != nil {
 				return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %s", err)}
 			}
-			files = newFileReader(c)
 		}
 
 		// Connect to the file connector.
@@ -415,10 +415,19 @@ func (ac *Action) importUsers() error {
 		}
 
 		// Read the records.
+		rc, updateTime, err := storage.Reader(file.Path())
+		if err != nil {
+			return actionExecutionError{fmt.Errorf("cannot get ReadCloser from storage: %s", err)}
+		}
+		defer rc.Close()
 		records := fh.newRecordWriter(identityColumn, timestampColumn, false)
-		err = file.Read(files, records)
+		err = file.Read(rc, updateTime, records)
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot read the file: %s", err)}
+		}
+		err = rc.Close()
+		if err != nil {
+			return actionExecutionError{fmt.Errorf("cannot close the storage: %s", err)}
 		}
 
 		// Handle errors occurred in the firehose.

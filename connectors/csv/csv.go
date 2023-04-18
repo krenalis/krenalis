@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"time"
 	"unicode/utf8"
 
 	"chichi/apis/types"
@@ -64,16 +65,21 @@ func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) 
 	return &c, nil
 }
 
-// Read reads the records from files and writes them to records.
-func (c *connection) Read(files connector.FileReader, records connector.RecordWriter) error {
+// ContentType returns the content type of the file.
+func (c *connection) ContentType() string {
+	return "text/csv; charset=UTF-8"
+}
 
-	r, timestamp, err := files.Reader(c.settings.Path)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
+// Path returns the path of the file.
+func (c *connection) Path() string {
+	return c.settings.Path
+}
 
-	if err = records.Timestamp(timestamp); err != nil {
+// Read reads the records from r, with their last update time, and writes them
+// to records.
+func (c *connection) Read(r io.Reader, updateTime time.Time, records connector.RecordWriter) error {
+
+	if err := records.Timestamp(updateTime); err != nil {
 		return err
 	}
 
@@ -213,14 +219,8 @@ func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 	return json.Marshal(&s)
 }
 
-// Write writes to files the records read from records.
-func (c *connection) Write(files connector.FileWriter, records connector.RecordReader) error {
-
-	w, err := files.Writer(c.settings.Path, "text/csv; charset=UTF-8")
-	if err != nil {
-		return err
-	}
-	defer w.Close()
+// Write writes to w the records read from records.
+func (c *connection) Write(w io.Writer, records connector.RecordReader) error {
 
 	v := csv.NewWriter(w)
 	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
@@ -232,7 +232,7 @@ func (c *connection) Write(files connector.FileWriter, records connector.RecordR
 	for i, c := range columns {
 		record[i] = c.Name
 	}
-	err = v.Write(record)
+	err := v.Write(record)
 	if err != nil {
 		return err
 	}
@@ -256,7 +256,6 @@ func (c *connection) Write(files connector.FileWriter, records connector.RecordR
 	if err := v.Error(); err != nil {
 		return err
 	}
-	err = w.Close()
 
 	return err
 }

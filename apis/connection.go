@@ -14,7 +14,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
 	"math"
 	mathrand "math/rand"
 	"reflect"
@@ -1313,23 +1312,6 @@ func (this *Connection) reloadUserSchema() error {
 	}
 
 	return err
-}
-
-// fileReader implements the connector.FileReader interface.
-type fileReader struct {
-	s _connector.StorageConnection
-}
-
-// newFileReader returns a new file reader for the given storage.
-func newFileReader(storage _connector.StorageConnection) *fileReader {
-	return &fileReader{s: storage}
-}
-
-// Reader returns a ReadCloser from which to read the file at the given
-// path and its last update time.
-// It is the caller's responsibility to close the returned reader.
-func (files *fileReader) Reader(path string) (io.ReadCloser, time.Time, error) {
-	return files.s.Reader(path)
 }
 
 // isServerKey reports whether key can be a server key.

@@ -18,6 +18,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"chichi/apis/types"
@@ -61,16 +62,21 @@ func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) 
 	return &c, nil
 }
 
-// Read reads the records from files and writes them to records.
-func (c *connection) Read(files connector.FileReader, records connector.RecordWriter) error {
+// ContentType returns the content type of the file.
+func (c *connection) ContentType() string {
+	return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+}
 
-	r, timestamp, err := files.Reader(c.settings.Path)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
+// Path returns the path of the file.
+func (c *connection) Path() string {
+	return c.settings.Path
+}
 
-	if err = records.Timestamp(timestamp); err != nil {
+// Read reads the records from r, with their last update time, and writes
+// them to records.
+func (c *connection) Read(r io.Reader, updateTime time.Time, records connector.RecordWriter) error {
+
+	if err := records.Timestamp(updateTime); err != nil {
 		return err
 	}
 
@@ -81,7 +87,6 @@ func (c *connection) Read(files connector.FileReader, records connector.RecordWr
 		return err
 	}
 	defer f.Close()
-	_ = r.Close()
 	sheetName := c.settings.SheetName
 	if sheetName == "" {
 		sheetName = f.GetSheetName(0)
@@ -196,8 +201,8 @@ func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 	return json.Marshal(&s)
 }
 
-// Write writes to files the records read from records.
-func (c *connection) Write(files connector.FileWriter, records connector.RecordReader) error {
+// Write writes to w the records read from records.
+func (c *connection) Write(w io.Writer, records connector.RecordReader) error {
 
 	f := excelize.NewFile()
 	defer f.Close()
@@ -239,16 +244,10 @@ func (c *connection) Write(files connector.FileWriter, records connector.RecordR
 	}
 
 	// Write the records into the destination file.
-	w, err := files.Writer(c.settings.Path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-	if err != nil {
-		return err
-	}
-	defer w.Close()
 	_, err = f.WriteTo(w)
 	if err != nil {
 		return err
 	}
-	err = w.Close()
 
 	return err
 }
