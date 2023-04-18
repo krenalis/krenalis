@@ -790,7 +790,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 	router.Get("/api/events-schema", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(events.Schema)
+		_ = json.NewEncoder(w).Encode(events.Schema.Unflatten())
 	})
 	router.ServeHTTP(w, r)
 

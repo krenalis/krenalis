@@ -900,7 +900,7 @@ func (this *Workspace) Schema(name string) types.Type {
 	if !ok {
 		return types.Type{}
 	}
-	return *schema
+	return schema.Unflatten()
 }
 
 // SetPrivacyRegion sets the privacy region of the workspace.
@@ -1076,7 +1076,7 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 	// together in objects and the count of properties of users and the
 	// properties in the schema does not match.
 
-	return schema, users, err
+	return schema.Unflatten(), users, err
 }
 
 // openWarehouse opens a data warehouse with the given type and settings.

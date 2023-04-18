@@ -306,9 +306,9 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 			}
 			if this.connection.Role == state.SourceRole {
 				at.InputSchema = appSchema
-				at.OutputSchema = *usersSchema
+				at.OutputSchema = usersSchema.Unflatten()
 			} else {
-				at.InputSchema = *usersSchema
+				at.InputSchema = usersSchema.Unflatten()
 				at.OutputSchema = appSchema
 			}
 			at.Supports = []ActionSupport{
@@ -319,7 +319,7 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 			if !ok {
 				return ActionTypeInformation{}, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 			}
-			at.OutputSchema = *usersSchema
+			at.OutputSchema = usersSchema.Unflatten()
 			at.Supports = []ActionSupport{
 				ActionSupportMapping,
 				ActionSupportQuery,
@@ -335,9 +335,9 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 			}
 			if this.connection.Role == state.SourceRole {
 				at.InputSchema = fileSchema
-				at.OutputSchema = *usersSchema
+				at.OutputSchema = usersSchema.Unflatten()
 			} else {
-				at.InputSchema = *usersSchema
+				at.InputSchema = usersSchema.Unflatten()
 				at.OutputSchema = fileSchema
 			}
 			at.Supports = []ActionSupport{
@@ -361,9 +361,9 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 			}
 			if this.connection.Role == state.SourceRole {
 				at.InputSchema = appSchema
-				at.OutputSchema = *groupsSchema
+				at.OutputSchema = groupsSchema.Unflatten()
 			} else {
-				at.InputSchema = *groupsSchema
+				at.InputSchema = groupsSchema.Unflatten()
 				at.OutputSchema = appSchema
 			}
 			at.Supports = []ActionSupport{
@@ -385,9 +385,9 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 			}
 			if this.connection.Role == state.SourceRole {
 				at.InputSchema = fileSchema
-				at.OutputSchema = *groupsSchema
+				at.OutputSchema = groupsSchema.Unflatten()
 			} else {
-				at.InputSchema = *groupsSchema
+				at.InputSchema = groupsSchema.Unflatten()
 				at.OutputSchema = fileSchema
 			}
 			at.Supports = []ActionSupport{
@@ -425,7 +425,7 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 			}
 			at.Supports = append(at.Supports, ActionSupportFilter)
 			if this.connection.Role == state.DestinationRole && etSchema.Valid() {
-				at.InputSchema = events.Schema
+				at.InputSchema = events.Schema.Unflatten()
 				at.OutputSchema = etSchema
 				at.Supports = append(at.Supports, ActionSupportMapping)
 			}
