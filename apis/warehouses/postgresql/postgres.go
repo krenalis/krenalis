@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/netip"
 	"reflect"
 	"strconv"
 	"strings"
@@ -487,9 +488,17 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns [
 			case types.PtTime, types.PtYear:
 				var v *int
 				user[i] = &v
-			case types.PtUUID, types.PtJSON, types.PtText, types.PtArray, types.PtObject, types.PtMap:
+			case types.PtUUID, types.PtText, types.PtArray, types.PtObject, types.PtMap:
 				var v *string
 				user[i] = &v
+			case types.PtJSON:
+				var v *json.RawMessage
+				user[i] = &v
+			case types.PtInet:
+				var v *netip.Addr
+				user[i] = &v
+			default:
+				panic(fmt.Sprintf("type %s is not supported", typ))
 			}
 		}
 		if err = rows.Scan(user...); err != nil {
