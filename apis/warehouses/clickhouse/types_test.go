@@ -32,7 +32,7 @@ func TestTypes(t *testing.T) {
 		{`Float32`, types.Float32(), false},
 		{`Float64`, types.Float(), false},
 		{`Decimal(12, 3)`, types.Decimal(12, 3), false},
-		{`Boolean`, types.Boolean(), false},
+		{`Bool`, types.Boolean(), false},
 		{`String`, types.Text(), false},
 		{`UUID`, types.UUID(), false},
 		{`Date`, types.Date(time.DateOnly), false},

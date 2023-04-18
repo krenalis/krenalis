@@ -61,7 +61,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 			t = types.Float32()
 		case "Float64":
 			t = types.Float()
-		case "Boolean":
+		case "Bool":
 			t = types.Boolean()
 		case "String":
 			t = types.Text()
