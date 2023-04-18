@@ -74,9 +74,6 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Array","minItems":2,"maxItems":8,"uniqueItems":true,"itemType":{"name":"Decimal"}}`,
 			Type: Array(Decimal(0, 0)).WithMinItems(2).WithMaxItems(8).WithUnique(),
 		}, {
-			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"}}],"flat":true}`,
-			Type: Object([]Property{{Name: "email", Type: Text()}}).WithFlat(),
-		}, {
 			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"}},{"name":"size","type":{"name":"Decimal"}}]}`,
 			Type: Object([]Property{{Name: "email", Type: Text()}, {Name: "size", Type: Decimal(0, 0)}}),
 		}, {
@@ -256,18 +253,18 @@ func sameType(t1, t2 Type) error {
 			if p1.Description != p2.Description {
 				return fmt.Errorf("expected property description %q, got %q", p1.Description, p2.Description)
 			}
-			if p1.Required != p2.Required {
-				return fmt.Errorf("expected property key 'required' with value %t, got %t", p1.Required, p2.Required)
-			}
 			if err := sameType(p1.Type, p2.Type); err != nil {
 				return err
+			}
+			if p1.Required != p2.Required {
+				return fmt.Errorf("expected property key 'required' with value %t, got %t", p1.Required, p2.Required)
 			}
 			if p1.Nullable != p2.Nullable {
 				return fmt.Errorf("expected property key 'nullable' with value %t, got %t", p1.Nullable, p2.Nullable)
 			}
-		}
-		if t1.flat != t2.flat {
-			return fmt.Errorf("expected flat to be %t, got %t", t1.flat, t2.flat)
+			if p1.Flat != p2.Flat {
+				return fmt.Errorf("expected property key 'flat' with value %t, got %t", p1.Flat, p2.Flat)
+			}
 		}
 	}
 	// Value type.

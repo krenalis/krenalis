@@ -251,17 +251,16 @@ type Property struct {
 	Label       string
 	Description string
 	Role        Role
-	Required    bool
 	Type        Type
+	Required    bool
 	Nullable    bool
+	Flat        bool
 }
 
 // Type represents a type.
 type Type struct {
 	pt PhysicalType
 	lt LogicalType
-
-	flat bool // flat reports whether the properties of an Object refer to flat database columns.
 
 	unique bool // unique reports whether the items of an Array must be unique.
 
@@ -501,14 +500,18 @@ func Object(properties []Property) Type {
 		if !property.Type.Valid() {
 			panic("invalid property type")
 		}
+		if property.Flat && property.Type.pt != PtObject {
+			panic("invalid property flat")
+		}
 		ps[i] = Property{
 			Name:        property.Name,
 			Aliases:     aliases,
 			Label:       normalizedUTF8(property.Label),
 			Description: normalizedUTF8(property.Description),
-			Required:    property.Required,
 			Type:        property.Type,
+			Required:    property.Required,
 			Nullable:    property.Nullable,
+			Flat:        property.Flat,
 		}
 	}
 	return Type{pt: PtObject, vl: ps}
@@ -1061,24 +1064,6 @@ func (t Type) WithMaxItems(max int) Type {
 	return t
 }
 
-// Flat reports whether t is marked as flat. Panics if t is not an Object.
-func (t Type) Flat() bool {
-	if t.pt != PtObject {
-		panic("cannot get flat of a non-Object type")
-	}
-	return t.flat
-}
-
-// WithFlat returns the type t but marked as flat. t must be an Object. Panics
-// if t is not an Object.
-func (t Type) WithFlat() Type {
-	if t.pt != PtObject {
-		panic("cannot set flat a non-Object type")
-	}
-	t.flat = true
-	return t
-}
-
 // Unique reports whether the items of t are unique.
 // Panics if t is not an Array.
 func (t Type) Unique() bool {
@@ -1225,10 +1210,6 @@ func (t Type) EqualTo(t2 Type) bool {
 			return false
 		}
 	}
-	// Flat objects.
-	if t.pt == PtObject && t.flat != t2.flat {
-		return false
-	}
 	// Properties.
 	if t.pt == PtObject {
 		properties1 := t.vl.([]Property)
@@ -1247,13 +1228,16 @@ func (t Type) EqualTo(t2 Type) bool {
 			if p1.Description != p2.Description {
 				return false
 			}
-			if p1.Required != p2.Required {
-				return false
-			}
 			if !p1.Type.EqualTo(p2.Type) {
 				return false
 			}
+			if p1.Required != p2.Required {
+				return false
+			}
 			if p1.Nullable != p2.Nullable {
+				return false
+			}
+			if p1.Flat != p2.Flat {
 				return false
 			}
 		}

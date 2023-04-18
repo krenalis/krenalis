@@ -225,20 +225,20 @@ func marshalType(b *bytes.Buffer, t Type) {
 				b.WriteString(`,"description":`)
 				_ = marshalString(b, p.Description)
 			}
+			b.WriteString(`,"type":`)
+			marshalType(b, p.Type)
 			if p.Required {
 				b.WriteString(`,"required":true`)
 			}
-			b.WriteString(`,"type":`)
-			marshalType(b, p.Type)
 			if p.Nullable {
 				b.WriteString(`,"nullable":true`)
+			}
+			if p.Flat {
+				b.WriteString(`,"flat":true`)
 			}
 			b.WriteByte('}')
 		}
 		b.WriteString("]")
-		if t.flat {
-			b.WriteString(`,"flat":true`)
-		}
 	case PtMap:
 		b.WriteString(`,"valueType":`)
 		marshalType(b, t.vl.(Type))
@@ -262,7 +262,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		return Type{}, errors.New("invalid type syntax")
 	}
 
-	var hasScale, hasLayout, hasMinItems, hasMaxItems, hasFlat, hasUniqueItems bool
+	var hasScale, hasLayout, hasMinItems, hasMaxItems, hasUniqueItems bool
 
 	var pt PhysicalType
 	var lt LogicalType
@@ -273,7 +273,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	var layout string
 	var itemType Type
 	var minItems, maxItems = 0, MaxItems
-	var flat, uniqueItems bool
+	var uniqueItems bool
 	var properties []Property
 	var valueType Type
 
@@ -474,15 +474,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return Type{}, errors.New("invalid max items")
 			}
 			hasMaxItems = true
-		case "flat":
-			if hasFlat {
-				return Type{}, errors.New("repeated 'flat' key")
-			}
-			flat, ok = tok.(bool)
-			if !ok {
-				return Type{}, errors.New("invalid value for 'flat' key")
-			}
-			hasFlat = true
 		case "uniqueItems":
 			if hasUniqueItems {
 				return Type{}, errors.New("repeated 'uniqueItems' key")
@@ -830,12 +821,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	if pt == PtArray {
 		t.s = int32(maxItems)
 	}
-	if hasFlat {
-		if pt != PtObject {
-			return Type{}, errors.New("unexpected flat for non-Object type")
-		}
-		t.flat = flat
-	}
 	if hasUniqueItems {
 		if pt != PtArray {
 			return Type{}, errors.New("unexpected uniqueItems for non-Array type")
@@ -909,7 +894,7 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 		}
 
 		var ok bool
-		var hasLabel, hasDescription, hasNullable, hasRequired, hasRole bool
+		var hasLabel, hasDescription, hasRole, hasRequired, hasNullable, hasFlat bool
 
 		switch key {
 		case "name":
@@ -976,15 +961,6 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 				return Property{}, 0, errors.New("unexpected value for property description")
 			}
 			hasDescription = true
-		case "required":
-			if hasRequired {
-				return Property{}, 0, errors.New("repeated 'required' key")
-			}
-			p.Required, ok = tok.(bool)
-			if !ok {
-				return Property{}, 0, errors.New("unexpected value for 'required' key of property")
-			}
-			hasRequired = true
 		case "role":
 			if !inSchema {
 				return Property{}, 0, errors.New("unknown property 'role'")
@@ -1002,6 +978,15 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 				return Property{}, 0, errors.New("unexpected value for property role")
 			}
 			hasRole = true
+		case "required":
+			if hasRequired {
+				return Property{}, 0, errors.New("repeated 'required' key")
+			}
+			p.Required, ok = tok.(bool)
+			if !ok {
+				return Property{}, 0, errors.New("unexpected value for 'required' key of property")
+			}
+			hasRequired = true
 		case "nullable":
 			if hasNullable {
 				return Property{}, 0, errors.New("repeated 'nullable' key")
@@ -1011,6 +996,15 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 				return Property{}, 0, errors.New("unexpected value for 'nullable' key of property")
 			}
 			hasNullable = true
+		case "flat":
+			if hasFlat {
+				return Property{}, 0, errors.New("repeated 'flat' key")
+			}
+			p.Flat, ok = tok.(bool)
+			if !ok {
+				return Property{}, 0, errors.New("unexpected value for 'flat' key of property")
+			}
+			hasFlat = true
 		default:
 			return Property{}, 0, fmt.Errorf("unknown property '%s'", key)
 		}

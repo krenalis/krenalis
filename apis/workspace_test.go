@@ -51,30 +51,30 @@ func TestPropertiesOfColumns(t *testing.T) {
 			{Name: "a", Type: typ},
 			{Name: "b", Type: typ},
 			{Name: "d", Type: typ},
-		}).WithFlat()},
+		}), Flat: true},
 		{Name: "dd", Type: types.Object([]types.Property{
 			{Name: "ee_f", Type: typ},
 			{Name: "ed_g", Type: typ},
-		}).WithFlat()},
+		}), Flat: true},
 		{Name: "e_f", Type: types.Object([]types.Property{
 			{Name: "g_h", Type: typ},
 			{Name: "i", Type: typ},
-		}).WithFlat()},
+		}), Flat: true},
 		{Name: "f", Type: types.Object([]types.Property{
 			{Name: "g", Type: typ},
 			{Name: "i", Type: typ},
 			{Name: "j_k", Type: typ},
-		}).WithFlat()},
+		}), Flat: true},
 		{Name: "h", Type: types.Object([]types.Property{
 			{Name: "b", Type: typ},
-		}).WithFlat()},
+		}), Flat: true},
 		{Name: "i", Type: types.Object([]types.Property{
 			{Name: "a", Type: types.Object([]types.Property{
 				{Name: "b", Type: typ},
 				{Name: "c", Type: typ},
-			}).WithFlat()},
+			}), Flat: true},
 			{Name: "b_c", Type: typ},
-		}).WithFlat()},
+		}), Flat: true},
 		{Name: "k", Type: typ},
 		{Name: "k_", Type: typ},
 		{Name: "k_a", Type: typ},
