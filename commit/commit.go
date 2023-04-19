@@ -62,9 +62,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Remove the 'go.sum' files from the repository.
+	// Re-create the 'go.sum' files in the repository.
 	for _, module := range modules {
 		removeGoSum(repo, module)
+		cmd("go", []string{"mod", "tidy"}, repo, module)
 	}
 
 	// Call command(s) on every module.
@@ -72,7 +73,6 @@ func main() {
 		cmd("go", []string{"fmt", "./..."}, repo, module)
 		cmd("go", []string{"vet", "./..."}, repo, module)
 		cmd("go", []string{"test", "./..."}, repo, module)
-		cmd("go", []string{"mod", "tidy"}, repo, module)
 	}
 
 	// Call command(s) on the workspace.
