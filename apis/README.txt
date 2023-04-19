@@ -34,6 +34,8 @@ PUT     /api/event-listeners/                                  Add a new event l
 DELETE  /api/event-listeners/{id}                              Remove an event listener
 GET     /api/event-listeners/{id}/events                       Returns the processed events
 POST    /api/users                                             List the Golden Records of the users and the schema
+GET     /api/users/{id}/events                                 List the events of a user
+GET     /api/users/{id}/traits                                 List the traits of a user
 POST    /api/workspace/connect-warehouse                       Connect a data warehouse
 POST    /api/workspace/disconnect-warehouse                    Disconnect a data warehouse
 POST    /api/workspace/reload-schemas                          Reload the schemas of the data warehouse

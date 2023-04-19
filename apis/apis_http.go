@@ -677,6 +677,40 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				"schema": schema,
 			})
 		})
+		router.Get("/{userID}/events", func(w http.ResponseWriter, r *http.Request) {
+			id, _ := strconv.Atoi(chi.URLParam(r, "userID"))
+			user, err := workspace.User(id)
+			if err != nil {
+				respond(w, err)
+				return
+			}
+			events, err := user.Events(10)
+			if err != nil {
+				respond(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"events": events,
+			})
+		})
+		router.Get("/{userID}/traits", func(w http.ResponseWriter, r *http.Request) {
+			id, _ := strconv.Atoi(chi.URLParam(r, "userID"))
+			user, err := workspace.User(id)
+			if err != nil {
+				respond(w, err)
+				return
+			}
+			traits, err := user.Traits()
+			if err != nil {
+				respond(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"traits": traits,
+			})
+		})
 	})
 	router.Route("/api/workspace/connect-warehouse", func(router chi.Router) {
 		router.Post("/", func(w http.ResponseWriter, r *http.Request) {

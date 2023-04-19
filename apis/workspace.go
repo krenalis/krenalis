@@ -980,6 +980,18 @@ func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) 
 	return err
 }
 
+// User returns the user with identifier id. If the user does not exist, the
+// error is deferred until methods of *User are called.
+func (this *Workspace) User(id int) (*User, error) {
+	if id < 1 || id > maxInt32 {
+		return nil, errors.BadRequest("user identifier %d is not valid", id)
+	}
+	return &User{
+		workspace: this.workspace,
+		id:        id,
+	}, nil
+}
+
 // Users returns the user schema and the users of the workspace. It returns
 // the users in range [first,first+limit] with first >= 0 and 0 < limit <= 1000
 // and only the given properties. properties cannot be empty.
