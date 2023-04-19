@@ -1,7 +1,8 @@
+import { isValidElement } from 'react';
 import './GridCell.css';
 
 const GridCell = ({ value, className }) => {
-	let isObject = typeof value === 'object' && !Array.isArray(value) && value !== null;
+	let isObject = typeof value === 'object' && !Array.isArray(value) && value !== null && !isValidElement(value);
 	if (isObject) {
 		value = JSON.stringify(value);
 	}
