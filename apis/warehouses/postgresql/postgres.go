@@ -462,50 +462,64 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns [
 	if err != nil {
 		return nil, warehouses.WrapError(err)
 	}
-	for rows.Next() {
-		row := make([]any, len(columns))
-		for i := range row {
-			typ := columns[i].Type
-			switch typ.PhysicalType() {
-			case types.PtBoolean:
-				var v *bool
-				row[i] = &v
-			case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
-				var v *int
-				row[i] = &v
-			case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
-				var v *uint
-				row[i] = &v
-			case types.PtFloat, types.PtFloat32:
-				var v *float64
-				row[i] = &v
-			case types.PtDecimal:
-				var v *decimal.Decimal
-				row[i] = &v
-			case types.PtDateTime, types.PtDate:
-				var v *time.Time
-				row[i] = &v
-			case types.PtTime, types.PtYear:
-				var v *int
-				row[i] = &v
-			case types.PtUUID, types.PtText, types.PtArray, types.PtObject, types.PtMap:
-				var v *string
-				row[i] = &v
-			case types.PtJSON:
-				var v *json.RawMessage
-				row[i] = &v
-			case types.PtInet:
-				var v *netip.Addr
-				row[i] = &v
-			default:
-				panic(fmt.Sprintf("type %s is not supported", typ))
-			}
+	row := make([]any, len(columns))
+	for i := range row {
+		c := columns[i]
+		switch c.Type.PhysicalType() {
+		case types.PtBoolean:
+			row[i] = initScan[bool](c.Nullable)
+		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
+			row[i] = initScan[int](c.Nullable)
+		case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64, types.PtTime, types.PtYear:
+			row[i] = initScan[uint](c.Nullable)
+		case types.PtFloat, types.PtFloat32:
+			row[i] = initScan[float64](c.Nullable)
+		case types.PtDecimal:
+			row[i] = initScan[decimal.Decimal](c.Nullable)
+		case types.PtDateTime, types.PtDate:
+			row[i] = initScan[time.Time](c.Nullable)
+		case types.PtUUID, types.PtText, types.PtArray, types.PtObject, types.PtMap:
+			row[i] = initScan[string](c.Nullable)
+		case types.PtJSON:
+			row[i] = initScan[json.RawMessage](c.Nullable)
+		case types.PtInet:
+			row[i] = initScan[netip.Addr](c.Nullable)
+		default:
+			panic(fmt.Sprintf("type %s is not supported", c.Type))
 		}
+	}
+	for rows.Next() {
 		if err = rows.Scan(row...); err != nil {
 			rows.Close()
 			return nil, warehouses.WrapError(err)
 		}
-		results = append(results, row)
+		result := make([]any, len(row))
+		for i, v := range row {
+			c := columns[i]
+			switch c.Type.PhysicalType() {
+			case types.PtBoolean:
+				result[i] = scan[bool](c.Nullable, v)
+			case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64, types.PtTime, types.PtYear:
+				result[i] = scan[int](c.Nullable, v)
+			case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+				result[i] = scan[uint](c.Nullable, v)
+			case types.PtFloat, types.PtFloat32:
+				result[i] = scan[float64](c.Nullable, v)
+			case types.PtDecimal:
+				result[i] = scan[decimal.Decimal](c.Nullable, v)
+			case types.PtDateTime, types.PtDate:
+				result[i] = scan[time.Time](c.Nullable, v)
+			case types.PtUUID, types.PtText, types.PtArray, types.PtObject, types.PtMap:
+				result[i] = scan[string](c.Nullable, v)
+			case types.PtJSON:
+				result[i] = scan[json.RawMessage](c.Nullable, v)
+			case types.PtInet:
+				result[i] = scan[netip.Addr](c.Nullable, v)
+			default:
+				panic(fmt.Sprintf("type %s is not supported", c.Type))
+			}
+		}
+		results = append(results, result)
 	}
 	if err = rows.Err(); err != nil {
 		return nil, warehouses.WrapError(err)
@@ -716,4 +730,23 @@ func quoteValue(b *strings.Builder, value any) {
 	default:
 		panic(fmt.Errorf("unsupported type '%T'", v))
 	}
+}
+
+func initScan[T any](nullable bool) any {
+	if nullable {
+		var v *T
+		return &v
+	}
+	var v T
+	return &v
+}
+
+func scan[T any](nullable bool, v any) any {
+	if !nullable {
+		return *(v.(*T))
+	}
+	if v := v.(**T); *v != nil {
+		return **v
+	}
+	return nil
 }
