@@ -62,9 +62,9 @@ var Schema = types.Object([]types.Property{
 	{
 		Name: "screen",
 		Type: types.Object([]types.Property{
-			{Name: "density", Type: types.UInt16()},
-			{Name: "width", Type: types.UInt16()},
-			{Name: "height", Type: types.UInt16()},
+			{Name: "density", Type: types.Int16()},
+			{Name: "width", Type: types.Int16()},
+			{Name: "height", Type: types.Int16()},
 		}),
 		Flat: true,
 	},

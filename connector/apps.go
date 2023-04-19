@@ -170,9 +170,9 @@ type Event struct {
 		Namespace string
 	}
 	Screen struct {
-		Density uint16
-		Width   uint16
-		Height  uint16
+		Density int16
+		Width   int16
+		Height  int16
 	}
 	UserAgent string
 	Browser   struct {

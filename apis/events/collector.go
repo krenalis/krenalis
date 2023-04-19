@@ -174,9 +174,9 @@ type collectedEvent struct {
 	properties string
 	receivedAt time.Time
 	screen     struct {
-		density uint16
-		width   uint16
-		height  uint16
+		density int16
+		width   int16
+		height  int16
 	}
 	sentAt    time.Time
 	source    int32
@@ -744,11 +744,11 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 
 	// Screen.
 	if d := event.Context.Screen.Density; 0 < d && d < 10 {
-		event.screen.density = uint16(math.Round(d * 100))
+		event.screen.density = int16(math.Round(d * 100))
 	}
 	if w, h := event.Context.Screen.Width, event.Context.Screen.Height; (0 < w && w <= math.MaxInt16) && (0 < h && h <= math.MaxInt16) {
-		event.screen.width = uint16(w)
-		event.screen.height = uint16(h)
+		event.screen.width = int16(w)
+		event.screen.height = int16(h)
 	}
 
 	// Timestamp and date.
