@@ -1,6 +1,11 @@
 import './GridCell.css';
 
 const GridCell = ({ value, className }) => {
+	let isObject = typeof value === 'object' && !Array.isArray(value) && value !== null;
+	if (isObject) {
+		value = JSON.stringify(value);
+	}
+
 	return (
 		<div className={className}>
 			<div className='cellContent'>{value}</div>
