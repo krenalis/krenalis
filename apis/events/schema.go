@@ -18,7 +18,6 @@ import (
 // Keep in sync with:
 //
 //   - the SQL in files "apis/warehouses/*/events.sql"
-//   - the function "applyActionMapping" in "apis/events/processor.go".
 //   - the fields of the type "Event" in "connector/apps.go" (and the functions
 //     that read/write it, as "collectedEventToMap").
 var Schema = types.Object([]types.Property{
