@@ -715,7 +715,7 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 
 	// Locale.
 	if event.Context.Locale != "" {
-		event.Context.Locale = culture.Locale(event.Context.Locale).LanguageCode()
+		event.Context.Locale = culture.Locale(event.Context.Locale).Name()
 	}
 
 	// IP.
