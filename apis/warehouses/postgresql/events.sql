@@ -51,7 +51,7 @@ CREATE TABLE events (
     location_latitude double precision NOT NULL,
     location_longitude double precision NOT NULL,
     location_speed double precision NOT NULL,
-    locale char(5) NOT NULL,
+    locale varchar(5) NOT NULL,
     timezone varchar NOT NULL,
     page_url varchar NOT NULL,
     page_path varchar NOT NULL,

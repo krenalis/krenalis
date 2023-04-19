@@ -49,7 +49,7 @@ CREATE TABLE events
     `location_latitude` Float64,
     `location_longitude` Float64,
     `location_speed` Float64,
-    `locale` FixedString(5),
+    `locale` String,
     `timezone` String,
     `page_url` String,
     `page_path` String,
