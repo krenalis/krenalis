@@ -294,47 +294,47 @@ func (warehouse *ClickHouse) Select(ctx context.Context, table string, columns [
 	}
 
 	// Execute the query.
-	var users [][]any
+	var results [][]any
 	rows, err := conn.Query(ctx, query.String())
 	if err != nil {
 		return nil, warehouses.WrapError(err)
 	}
 	for rows.Next() {
-		user := make([]any, len(columns))
-		for i := range user {
+		row := make([]any, len(columns))
+		for i := range row {
 			typ := columns[i].Type
 			switch typ.PhysicalType() {
 			case types.PtBoolean:
 				var v *bool
-				user[i] = &v
+				row[i] = &v
 			case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
 				var v *int
-				user[i] = &v
+				row[i] = &v
 			case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
 				var v *uint
-				user[i] = &v
+				row[i] = &v
 			case types.PtFloat, types.PtFloat32:
 				var v *float64
-				user[i] = &v
+				row[i] = &v
 			case types.PtDecimal:
 				var v *decimal.Decimal
-				user[i] = &v
+				row[i] = &v
 			case types.PtDateTime, types.PtDate:
 				var v *time.Time
-				user[i] = &v
+				row[i] = &v
 			case types.PtTime, types.PtYear:
 				var v *int
-				user[i] = &v
+				row[i] = &v
 			case types.PtUUID, types.PtJSON, types.PtText, types.PtArray, types.PtObject, types.PtMap:
 				var v *string
-				user[i] = &v
+				row[i] = &v
 			}
 		}
-		if err = rows.Scan(user...); err != nil {
+		if err = rows.Scan(row...); err != nil {
 			_ = rows.Close()
 			return nil, warehouses.WrapError(err)
 		}
-		users = append(users, user)
+		results = append(results, row)
 	}
 	if err = rows.Err(); err != nil {
 		return nil, warehouses.WrapError(err)
@@ -343,11 +343,11 @@ func (warehouse *ClickHouse) Select(ctx context.Context, table string, columns [
 	if err != nil {
 		log.Printf("[error] cannot close rows: %s", err)
 	}
-	if users == nil {
-		users = [][]any{}
+	if results == nil {
+		results = [][]any{}
 	}
 
-	return users, nil
+	return results, nil
 }
 
 // connection returns the database connection.
