@@ -9,14 +9,7 @@ import { AppContext } from '../../context/AppContext';
 import { NavigationContext } from '../../context/NavigationContext';
 import statuses from '../../constants/statuses';
 import { NavLink, Navigate } from 'react-router-dom';
-import {
-	SlButton,
-	SlInput,
-	SlSelect,
-	SlSwitch,
-	SlMenuItem,
-	SlIcon,
-} from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlButton, SlInput, SlSelect, SlSwitch, SlOption, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 
 const ConnectorSettings = () => {
@@ -290,7 +283,7 @@ const ConnectorSettings = () => {
 										onSlChange={(e) => setStorage(e.currentTarget.value)}
 									>
 										{storages.map((s) => {
-											return <SlMenuItem value={s.ID}>{s.Name}</SlMenuItem>;
+											return <SlOption value={s.ID}>{s.Name}</SlOption>;
 										})}
 									</SlSelect>
 								)}

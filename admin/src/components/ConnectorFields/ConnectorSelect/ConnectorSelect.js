@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import './ConnectorSelect.css';
-import { SlSelect, SlMenuItem } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlSelect, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectorSelect = ({ name, label, placeholder, helpText, options, error, val, onChange }) => {
 	const [value, setValue] = useState(val);
@@ -26,7 +26,7 @@ const ConnectorSelect = ({ name, label, placeholder, helpText, options, error, v
 				onSlChange={onSelectChange}
 			>
 				{options.map((opt) => {
-					return <SlMenuItem value={opt.Value}>{opt.Text}</SlMenuItem>;
+					return <SlOption value={opt.Value}>{opt.Text}</SlOption>;
 				})}
 			</SlSelect>
 			{error !== '' && <div className='error'>{error}</div>}

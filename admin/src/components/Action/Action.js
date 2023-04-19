@@ -15,7 +15,7 @@ import {
 	SlInput,
 	SlIcon,
 	SlSelect,
-	SlMenuItem,
+	SlOption,
 	SlDialog,
 	SlIconButton,
 	SlAlert,
@@ -730,8 +730,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							value={action.Filter.Logical}
 							onSlChange={onSwitchFilterLogical}
 						>
-							<SlMenuItem value='all'>All</SlMenuItem>
-							<SlMenuItem value='any'>Any</SlMenuItem>
+							<SlOption value='all'>All</SlOption>
+							<SlOption value='any'>Any</SlOption>
 						</SlSelect>
 					)}
 					{conditions}

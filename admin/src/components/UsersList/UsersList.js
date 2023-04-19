@@ -11,7 +11,7 @@ import {
 	SlDropdown,
 	SlIcon,
 	SlMenu,
-	SlMenuItem,
+	SlOption,
 	SlSwitch,
 	SlSelect,
 } from '@shoelace-style/shoelace/dist/react/index.js';
@@ -210,7 +210,7 @@ const UsersList = () => {
 					<SlMenu>
 						{Object.entries(properties).map(([name, property]) => {
 							return (
-								<SlMenuItem>
+								<SlOption>
 									<SlSwitch
 										size='small'
 										onSlChange={() => onToggleColumn(name)}
@@ -218,7 +218,7 @@ const UsersList = () => {
 									>
 										{name}
 									</SlSwitch>
-								</SlMenuItem>
+								</SlOption>
 							);
 						})}
 					</SlMenu>
@@ -238,11 +238,11 @@ const UsersList = () => {
 							<div className='gridLimit'>
 								<span>Show:</span>
 								<SlSelect value={limit} placeholder={limit} onSlChange={onLimitChange}>
-									<SlMenuItem value={15}>15</SlMenuItem>
-									<SlMenuItem value={30}>30</SlMenuItem>
-									<SlMenuItem value={50}>50</SlMenuItem>
-									<SlMenuItem value={70}>70</SlMenuItem>
-									<SlMenuItem value={100}>100</SlMenuItem>
+									<SlOption value={15}>15</SlOption>
+									<SlOption value={30}>30</SlOption>
+									<SlOption value={50}>50</SlOption>
+									<SlOption value={70}>70</SlOption>
+									<SlOption value={100}>100</SlOption>
 								</SlSelect>
 							</div>
 						</div>

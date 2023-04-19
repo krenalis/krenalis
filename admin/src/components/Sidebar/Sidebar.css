@@ -77,8 +77,15 @@
     max-width: unset;
 }
 
-.Sidebar .workspace .workspaceSelector sl-menu-item::part(label) {
+.Sidebar .workspace .workspaceSelector::part(combobox) {
+    padding: 0;
+    border: 0;
     font-size: 14px;
+    min-height: unset;
+}
+
+.Sidebar .workspace .workspaceSelector sl-option::part(label) {
+    font-size: 13px;
 }
 
 .Sidebar .item {

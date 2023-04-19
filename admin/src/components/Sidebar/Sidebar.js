@@ -2,7 +2,7 @@ import { useState } from 'react';
 import './Sidebar.css';
 import Flex from '../Flex/Flex';
 import { NavLink, Navigate } from 'react-router-dom';
-import { SlIcon, SlSelect, SlMenuItem } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlIcon, SlSelect, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const Sidebar = ({ route }) => {
 	let [isLoggedOut, setIsLoggedOut] = useState(false);
@@ -32,10 +32,10 @@ const Sidebar = ({ route }) => {
 						</div>
 						<div className='workspace'>
 							<SlSelect className='workspaceSelector' label='Workspace' value='1'>
-								<SlMenuItem value='1' selected>
+								<SlOption value='1' selected>
 									Mock workspace 1
-								</SlMenuItem>
-								<SlMenuItem value='2'>Mock workspace 2</SlMenuItem>
+								</SlOption>
+								<SlOption value='2'>Mock workspace 2</SlOption>
 							</SlSelect>
 						</div>
 					</Flex>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './ConnectorAlternativeFieldSets.css';
 import ConnectorFieldSet from '../ConnectorFieldSet/ConnectorFieldSet';
-import { SlSelect, SlMenuItem } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlSelect, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectorAlternativeFieldSets = ({ label, helpText, sets, val, onChange }) => {
 	let initialSet;
@@ -37,7 +37,7 @@ const ConnectorAlternativeFieldSets = ({ label, helpText, sets, val, onChange })
 			<div className='label'>{label}</div>
 			<SlSelect value={selected} onSlChange={onSelectChange}>
 				{sets.map((s) => (
-					<SlMenuItem value={s.Name}>{s.Label}</SlMenuItem>
+					<SlOption value={s.Name}>{s.Label}</SlOption>
 				))}
 			</SlSelect>
 			{fieldSet}
