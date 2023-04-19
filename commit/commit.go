@@ -8,6 +8,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"log"
@@ -61,6 +62,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Remove the 'go.sum' files from the repository.
+	for _, module := range modules {
+		removeGoSum(repo, module)
+	}
+
 	// Call command(s) on every module.
 	for _, module := range modules {
 		cmd("go", []string{"fmt", "./..."}, repo, module)
@@ -80,9 +86,21 @@ func cmd(name string, arg []string, repo, moduleDir string) {
 	cmd.Dir = filepath.Join(repo, moduleDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	fmt.Printf("%-30s%s\n", moduleDir, strings.Join(append([]string{name}, arg...), " "))
+	logCmd(moduleDir, strings.Join(append([]string{name}, arg...), " "))
 	err := cmd.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func removeGoSum(repo, module string) {
+	logCmd(module, "rm go.sum")
+	err := os.Remove(filepath.Join(repo, module, "go.sum"))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Fatal(err)
+	}
+}
+
+func logCmd(dir, cmd string) {
+	fmt.Printf("%-30s%s\n", dir, cmd)
 }
