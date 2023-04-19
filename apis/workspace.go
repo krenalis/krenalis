@@ -1305,7 +1305,7 @@ func columnsOfProperties(properties []types.Property) []warehouses.Column {
 			}
 			continue
 		}
-		columns = append(columns, warehouses.Column{Name: p.Name, Type: p.Type})
+		columns = append(columns, warehouses.Column{Name: p.Name, Type: p.Type, Nullable: p.Nullable})
 	}
 	return columns
 }
