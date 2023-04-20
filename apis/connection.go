@@ -865,28 +865,27 @@ func (this *Connection) Keys() ([]string, error) {
 }
 
 // Reload reloads the user, group and events schema for the actions of the
-// connection.
+// connection. If the actions do not have schemas to reload, it does nothing.
 func (this *Connection) Reload() error {
 	c := this.connection
 	connector := c.Connector()
+	var err error
 	if connector.Targets.Contains(state.UsersTarget) {
-		t := connector.Type
-		if t == state.AppType ||
-			(t == state.DatabaseType && c.Role == state.SourceRole) ||
-			(t == state.FileType && c.Role == state.SourceRole) {
-			err := this.reloadUserSchema()
-			if err != nil {
-				return err
+		switch connector.Type {
+		case state.AppType, state.DatabaseType, state.FileType:
+			if c.Role == state.SourceRole {
+				err = this.reloadUserSchema()
 			}
 		}
 	}
 	if connector.Targets.Contains(state.EventsTarget) {
-		err := this.reloadEventSchemas()
-		if err != nil {
-			return err
+		if connector.Type == state.AppType {
+			if c.Role == state.DestinationRole {
+				err = this.reloadEventSchemas()
+			}
 		}
 	}
-	return nil
+	return err
 }
 
 // Rename renames the connection with the given new name.
