@@ -278,9 +278,9 @@ const ConnectorSettings = () => {
 								) : (
 									<SlSelect
 										name='storage'
-										value={storage}
+										value={String(storage)}
 										label='Storage'
-										onSlChange={(e) => setStorage(e.currentTarget.value)}
+										onSlChange={(e) => setStorage(Number(e.currentTarget.value))}
 									>
 										{storages.map((s) => {
 											return <SlOption value={s.ID}>{s.Name}</SlOption>;
