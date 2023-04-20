@@ -152,12 +152,6 @@ CREATE TABLE connections_stats_events (
 CREATE INDEX ON connections_stats_events (server);
 CREATE INDEX ON connections_stats_events (stream);
 
-CREATE TABLE domains (
-    source integer NOT NULL,
-    name varchar(255) NOT NULL,
-    PRIMARY KEY (source, name)
-);
-
 CREATE TABLE election (
     number integer NOT NULL,
     leader uuid NOT NULL,
