@@ -1168,7 +1168,7 @@ func (this *Connection) SetStorage(storage int) error {
 // ConnectionsStats represents the statistics on a connection for the last 24
 // hours.
 type ConnectionsStats struct {
-	UsersIn [24]int // ingested users per hour
+	Users [24]int // ingested or loaded users per hour
 }
 
 // Stats returns statistics on the connection for the last 24 hours.
@@ -1180,17 +1180,17 @@ func (this *Connection) Stats() (*ConnectionsStats, error) {
 	toSlot := statsTimeSlot(now)
 	fromSlot := toSlot - 23
 	stats := &ConnectionsStats{
-		UsersIn: [24]int{},
+		Users: [24]int{},
 	}
-	query := "SELECT time_slot, users_in\nFROM connections_stats\nWHERE connection = $1 AND time_slot BETWEEN $2 AND $3"
+	query := "SELECT time_slot, users\nFROM connections_stats\nWHERE connection = $1 AND time_slot BETWEEN $2 AND $3"
 	err := this.db.QueryScan(context.Background(), query, this.connection.ID, fromSlot, toSlot, func(rows *postgres.Rows) error {
 		var err error
-		var slot, usersIn int
+		var slot, users int
 		for rows.Next() {
-			if err = rows.Scan(&slot, &usersIn); err != nil {
+			if err = rows.Scan(&slot, &users); err != nil {
 				return err
 			}
-			stats.UsersIn[slot-fromSlot] = usersIn
+			stats.Users[slot-fromSlot] = users
 		}
 		return nil
 	})

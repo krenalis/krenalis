@@ -52,7 +52,7 @@ const ConnectionOverview = () => {
 			let userStats = [];
 			// compute the last 24 hours.
 			var ts = Math.round(new Date().getTime());
-			for (let [i, userCount] of stats.UsersIn.entries()) {
+			for (let [i, userCount] of stats.Users.entries()) {
 				let relativeTs = ts + (i + 1) * 3600 * 1000;
 				let d = new Date(relativeTs);
 				let hour = d.getHours();
