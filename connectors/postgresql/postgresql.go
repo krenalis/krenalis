@@ -86,9 +86,11 @@ func (c *connection) Query(query string) (types.Type, connector.Rows, error) {
 			_ = db.Close()
 			return types.Type{}, nil, err
 		}
+		nullable, ok := c.Nullable()
 		properties[i] = types.Property{
-			Name: c.Name(),
-			Type: typ,
+			Name:     c.Name(),
+			Type:     typ,
+			Nullable: nullable || !ok,
 		}
 	}
 	return types.Object(properties), rows, nil
