@@ -620,15 +620,49 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 
 	// Fetch the schema with which to validate an action to be added.
 	var schema types.Type
-	if c.Role == state.SourceRole {
-		switch connector.Type {
-		case state.AppType:
+	switch connector.Type {
+	case state.AppType:
+		switch target {
+		case
+			state.UsersTarget,
+			state.GroupsTarget:
+			if !connector.Targets.Contains(target) {
+				return types.Type{}, errors.BadRequest("connection %d does not have target %s", c.ID, target)
+			}
 			s, err := this.fetchAppSchema(target, eventType)
 			if err != nil {
 				return types.Type{}, err
 			}
 			schema = s
-		case state.DatabaseType:
+		case state.EventsTarget:
+			if !connector.Targets.Contains(state.EventsTarget) {
+				return types.Type{}, errors.BadRequest("connection %d cannot have actions on events", c.ID)
+			}
+			switch connector.Type {
+			case state.AppType:
+				eventTypes, err := this.fetchEventTypes()
+				if err != nil {
+					return types.Type{}, err
+				}
+				var et *_connector.EventType
+				for _, e := range eventTypes {
+					if e.ID == eventType {
+						et = e
+						break
+					}
+				}
+				if et == nil {
+					return types.Type{}, errors.Unprocessable(EventNotExists, "connection %d does not have event type %q", c.ID, eventType)
+				}
+				schema = et.Schema // invalid if the event type has no schema.
+			case state.MobileType, state.ServerType, state.WebsiteType:
+				if eventType != "" {
+					return types.Type{}, errors.Unprocessable(EventNotExists, "connection %d does not have event type %q", c.ID, eventType)
+				}
+			}
+		}
+	case state.DatabaseType:
+		if c.Role == state.SourceRole {
 			s, err := this.fetchDatabaseSchema(action.Query)
 			if err != nil {
 				if _, ok := err.(*_connector.DatabaseQueryError); ok {
@@ -637,7 +671,9 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 				return types.Type{}, err
 			}
 			schema = s
-		case state.FileType:
+		}
+	case state.FileType:
+		if c.Role == state.SourceRole {
 			s, err := this.fetchFileSchema()
 			if err != nil {
 				return types.Type{}, err
@@ -646,14 +682,10 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 	}
 
-	// Determine the input and the output schema and check if the connector has
-	// the action target.
+	// Determine the input and the output schema.
 	var inSchema, outSchema types.Type
 	switch target {
 	case state.UsersTarget, state.GroupsTarget:
-		if !connector.Targets.Contains(target) {
-			return types.Type{}, errors.BadRequest("connection %d does not have target %s", c.ID, target)
-		}
 		ws := c.Workspace()
 		schemaName := strings.ToLower(target.String())
 		grSchema, ok := ws.Schemas[schemaName]
@@ -668,29 +700,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			outSchema = schema
 		}
 	case state.EventsTarget:
-		if !connector.Targets.Contains(state.EventsTarget) {
-			return types.Type{}, errors.BadRequest("connection %d cannot have actions on events", c.ID)
-		}
-		switch connector.Type {
-		case state.MobileType, state.ServerType, state.WebsiteType:
-			if eventType != "" {
-				return types.Type{}, errors.Unprocessable(EventNotExists, "connection %d does not have event type %q", c.ID, eventType)
-			}
-		default:
-			eventTypes, err := this.fetchEventTypes()
-			if err != nil {
-				return types.Type{}, err
-			}
-			var et *_connector.EventType
-			for _, e := range eventTypes {
-				if e.ID == eventType {
-					et = e
-					break
-				}
-			}
-			if et == nil {
-				return types.Type{}, errors.Unprocessable(EventNotExists, "connection %d does not have event type %q", c.ID, eventType)
-			}
+		if connector.Type == state.AppType {
 			inSchema = events.Schema
 			outSchema = schema // if there is not a schema, it is the invalid schema.
 		}
