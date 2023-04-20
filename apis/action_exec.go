@@ -79,15 +79,20 @@ func (ac *Action) exec() {
 
 	connection := ac.action.Connection()
 	execution, _ := ac.action.Execution()
+	connector := connection.Connector()
 
 	var err error
 	if ac.Target == GroupsTarget {
 		err = actionExecutionError{fmt.Errorf("groups import and export are not implemented")}
 	} else {
-		if connection.Role == state.SourceRole {
-			err = ac.importUsers()
+		if connector.Type == state.DatabaseType {
+			err = ac.importFromDatabase()
 		} else {
-			err = ac.exportUsers()
+			if connection.Role == state.SourceRole {
+				err = ac.importUsers()
+			} else {
+				err = ac.exportUsers()
+			}
 		}
 	}
 	endTime := time.Now().UTC()
@@ -255,7 +260,6 @@ func (ac *Action) exportUsers() error {
 // importUsers imports the users for the action.
 func (ac *Action) importUsers() error {
 
-	const noColumn = -1
 	const role = _connector.SourceRole
 
 	connection := ac.action.Connection()
@@ -305,78 +309,6 @@ func (ac *Action) importUsers() error {
 			return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
 		}
 
-		// Handle errors occurred in the firehose.
-		if fh.err != nil {
-			return fh.err
-		}
-
-	case state.DatabaseType:
-
-		usersQuery, err := compileActionQuery(ac.action.Query, noQueryLimit)
-		if err != nil {
-			return actionExecutionError{err}
-		}
-		fh := ac.newFirehose(context.Background())
-		c, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
-			Role:     role,
-			Settings: connection.Settings,
-			Firehose: fh,
-		})
-		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
-		}
-		schema, rows, err := c.Query(usersQuery)
-		if err != nil {
-			if err, ok := err.(*_connector.DatabaseQueryError); ok {
-				return actionExecutionError{err}
-			}
-			return err
-		}
-		defer rows.Close()
-		propertiesNames := schema.PropertiesNames()
-		identityIndex := noColumn
-		timestampIndex := noColumn
-		for i, name := range propertiesNames {
-			switch name {
-			case identityColumn:
-				identityIndex = i
-			case timestampColumn:
-				timestampIndex = i
-			}
-		}
-		if identityIndex == noColumn {
-			return actionExecutionError{fmt.Errorf("missing identity column %q", identityColumn)}
-		}
-		var now time.Time
-		if timestampIndex == noColumn {
-			now = time.Now().UTC()
-		}
-		row := make([]any, len(propertiesNames))
-		for rows.Next() {
-			for i := range row {
-				var v string
-				row[i] = &v
-			}
-			if err = rows.Scan(row...); err != nil {
-				return actionExecutionError{fmt.Errorf("cannot read users from database: %s", err)}
-			}
-			identity := row[identityIndex].(*string)
-			var ts time.Time
-			if timestampIndex == noColumn {
-				ts = now
-			} else {
-				ts = row[timestampIndex].(time.Time)
-			}
-			user := map[string]any{}
-			for i, name := range propertiesNames {
-				v := row[i].(*string)
-				user[name] = *v
-			}
-			fh.SetUser(*identity, user, ts, nil)
-		}
-		if err = rows.Err(); err != nil {
-			return actionExecutionError{fmt.Errorf("an error occurred closing the database: %s", err)}
-		}
 		// Handle errors occurred in the firehose.
 		if fh.err != nil {
 			return fh.err
