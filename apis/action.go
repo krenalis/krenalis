@@ -217,17 +217,21 @@ func (ac *Action) Execute(reimport bool) error {
 
 // Set sets action.
 //
+// Refer to the specifications in the file "connector/Actions support.md" for
+// more details.
+//
 // It returns an errors.UnprocessableError error with code
 //
 //   - PropertyNotExists, if a property of a mapping / transformation does not
 //     exist in the schema (except for properties of the event type schema,
 //     which is specified and thus returned as an errors.BadRequest error).
+//   - QueryExecutionFailed, if the execution of the specified query fails.
 func (ac *Action) Set(action ActionToSet) error {
 	connection := &Connection{
 		db:         ac.db,
 		connection: ac.action.Connection(),
 	}
-	schema, err := connection.validateAction(ac.action.Target, ac.action.EventType, action)
+	schema, err := connection.validateActionToSet(action, ac.action.Target, ac.action.EventType)
 	if err != nil {
 		return err
 	}
@@ -365,13 +369,8 @@ func (ac *Action) SetStatus(enabled bool) error {
 // action (using the method Connection.AddAction) or updating an existing one
 // (using the method Action.Set).
 //
-// Currently, it is possible to define action on:
-//
-// - source and destination app connections
-// - source database connections
-//
-// Each type of connection requires some fields and reject others; see the
-// documentation of the fields below.
+// Refer to the specifications in the file "connector/Actions support.md" for
+// more details.
 type ActionToSet struct {
 
 	// Name must be a non-empty valid UTF-8 encoded string and cannot be longer
@@ -381,14 +380,14 @@ type ActionToSet struct {
 	// Enabled indicates whether the action is enabled or not.
 	Enabled bool
 
-	// Filter filters the data in input to action. Filter is supported only for
-	// events actions with an associated event type.
+	// Filter is the filter of the action, if it has one, otherwise is nil.
 	Filter *ActionFilter
 
 	// Mapping is the mapping of the action, if it has one, otherwise is nil.
-	// Every action must have an associated mapping or a transformation, which
-	// are mutually exclusive.
-	// Actions on database connections cannot have a mapping.
+	//
+	// Every action that supports mappings / transformation must have an
+	// associated mapping or a transformation, which are mutually exclusive.
+	//
 	// If it has a mapping, the names of the properties in which the values are
 	// mapped (the keys of the map) must be present in the output schema of the
 	// action, while the mapping properties (the values of the map) must be
@@ -398,9 +397,8 @@ type ActionToSet struct {
 
 	// Transformation is the transformation of the action, if it has one,
 	// otherwise is nil.
-	// Every action must have an associated mapping or a transformation, which
-	// are mutually exclusive.
-	// Actions on database connections cannot have a transformation.
+	// Every action that supports mappings / transformation must have an
+	// associated mapping or a transformation, which are mutually exclusive.
 	//
 	// If it has a transformation:
 	//
@@ -413,7 +411,8 @@ type ActionToSet struct {
 	//   present in the output schema of the transformation
 	Transformation *Transformation
 
-	// Query is the query for actions defined on source database connections.
+	// Query is the query of the action, if it has one, otherwise it is the
+	// empty string.
 	Query string
 }
 
@@ -498,10 +497,11 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// validateAction validates the action with the given target and event type.
+// validateActionToSet validates the action to set (when adding or setting an
+// action) for the given target and event type.
 //
-// Refer to the documentation of ActionToSet for documentation on accepted
-// actions.
+// Refer to the specifications in the file "connector/Actions support.md" for
+// more details.
 //
 // It returns an errors.UnprocessableError error with code
 //
@@ -510,20 +510,10 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 //     exist in the schema (except for properties of the event type schema,
 //     which is specified and thus returned as an errors.BadRequest error).
 //   - QueryExecutionFailed, if the execution of the specified query fails.
-func (this *Connection) validateAction(target state.ActionTarget, eventType string, action ActionToSet) (types.Type, error) {
+func (this *Connection) validateActionToSet(action ActionToSet, target state.ActionTarget, eventType string) (types.Type, error) {
 
 	// First, do formal validations.
 
-	// Validate the target.
-	switch target {
-	case state.EventsTarget:
-	case state.UsersTarget, state.GroupsTarget:
-		if eventType != "" {
-			return types.Type{}, errors.BadRequest("users and groups actions cannot have an event type")
-		}
-	default:
-		return types.Type{}, errors.BadRequest("target %q is not valid", target)
-	}
 	// Validate the name.
 	if action.Name == "" {
 		return types.Type{}, errors.BadRequest("name is empty")
@@ -609,7 +599,7 @@ func (this *Connection) validateAction(target state.ActionTarget, eventType stri
 	c := this.connection
 	connector := c.Connector()
 
-	// Validate the query.
+	// Check if the query is allowed.
 	if connector.Type == state.DatabaseType {
 		if action.Query == "" {
 			return types.Type{}, errors.BadRequest("query cannot be empty for database actions")
@@ -620,99 +610,49 @@ func (this *Connection) validateAction(target state.ActionTarget, eventType stri
 		}
 	}
 
-	// Fetch the schema with which to validate an action to be added.
-	var schema types.Type
-	switch connector.Type {
-	case state.AppType:
-		s, err := this.fetchAppSchema(target, eventType)
-		if err != nil {
-			return types.Type{}, err
-		}
-		schema = s
-	case state.DatabaseType:
-		s, err := this.fetchDatabaseSchema(action.Query)
-		if err != nil {
-			if _, ok := err.(*_connector.DatabaseQueryError); ok {
-				return types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
-			}
-			return types.Type{}, err
-		}
-		schema = s
-	case state.FileType:
-		s, err := this.fetchFileSchema()
-		if err != nil {
-			return types.Type{}, err
-		}
-		schema = s
-	case state.WebsiteType:
-		schema = types.Type{}
+	// Check if the filters are allowed.
+	filtersAllowed := connector.Type == state.AppType &&
+		c.Role == state.DestinationRole &&
+		target == state.EventsTarget
+	if action.Filter != nil && !filtersAllowed {
+		return types.Type{}, errors.BadRequest("filters are not allowed")
 	}
 
-	var inSchema, outSchema types.Type // inSchema -> mapping / transformation -> outSchema.
-	switch target {
-	case state.EventsTarget:
-		// Validate the target.
-		if !connector.Targets.Contains(state.EventsTarget) {
-			return types.Type{}, errors.BadRequest("connection %d cannot have actions on events", c.ID)
-		}
+	// Fetch the schema with which to validate an action to be added.
+	var schema types.Type
+	if c.Role == state.SourceRole {
 		switch connector.Type {
-		case state.MobileType, state.ServerType, state.WebsiteType:
-			if eventType != "" {
-				return types.Type{}, errors.Unprocessable(EventNotExists, "connection %d does not have event type %q", c.ID, eventType)
-			}
-			if c.Role == state.DestinationRole {
-				return types.Type{}, errors.BadRequest("connection %d cannot have target %s because is a %s connection", c.ID, target, c.Role)
-			}
-			if action.Filter != nil {
-				// TODO: implement filter for mobile, server and website actions
-				return types.Type{}, errors.BadRequest("filter cannot be provided because connection %d is a %s connection", c.ID, c.Role)
-			}
-			if action.Mapping != nil {
-				return types.Type{}, errors.BadRequest("mapping cannot be provided because connection %d is a %s connection", c.ID, c.Role)
-			}
-			if action.Transformation != nil {
-				return types.Type{}, errors.BadRequest("transformation cannot be provided because connection %d is a %s connection", c.ID, c.Role)
-			}
-		default:
-			// Validate the event type.
-			eventTypes, err := this.fetchEventTypes()
+		case state.AppType:
+			s, err := this.fetchAppSchema(target, eventType)
 			if err != nil {
 				return types.Type{}, err
 			}
-			var et *_connector.EventType
-			for _, e := range eventTypes {
-				if e.ID == eventType {
-					et = e
-					break
+			schema = s
+		case state.DatabaseType:
+			s, err := this.fetchDatabaseSchema(action.Query)
+			if err != nil {
+				if _, ok := err.(*_connector.DatabaseQueryError); ok {
+					return types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 				}
+				return types.Type{}, err
 			}
-			if et == nil {
-				return types.Type{}, errors.Unprocessable(EventNotExists, "connection %d does not have event type %q", c.ID, eventType)
+			schema = s
+		case state.FileType:
+			s, err := this.fetchFileSchema()
+			if err != nil {
+				return types.Type{}, err
 			}
-			// Validate the mapping.
-			if schema.Valid() {
-				if action.Mapping == nil && action.Transformation == nil {
-					return types.Type{}, errors.BadRequest("mapping or transformation is required because event type %q has a schema", eventType)
-				}
-			} else {
-				if action.Mapping != nil {
-					return types.Type{}, errors.BadRequest("mapping cannot be provided because event type %q does not have a schema", eventType)
-				}
-				if action.Transformation != nil {
-					return types.Type{}, errors.BadRequest("transformation cannot be provided because event type %q does not have a schema", eventType)
-				}
-			}
-			inSchema = events.Schema
-			outSchema = schema // if there is not a schema, it is the invalid schema.
+			schema = s
 		}
+	}
+
+	// Determine the input and the output schema and check if the connector has
+	// the action target.
+	var inSchema, outSchema types.Type
+	switch target {
 	case state.UsersTarget, state.GroupsTarget:
-		// Validate the target.
 		if !connector.Targets.Contains(target) {
 			return types.Type{}, errors.BadRequest("connection %d does not have target %s", c.ID, target)
-		}
-		// Validate the mapping and the transformation.
-		if action.Mapping == nil && action.Transformation == nil {
-			return types.Type{}, errors.BadRequest("mapping or transformation is required for %s actions", strings.ToLower(target.String()))
 		}
 		ws := c.Workspace()
 		schemaName := strings.ToLower(target.String())
@@ -727,13 +667,64 @@ func (this *Connection) validateAction(target state.ActionTarget, eventType stri
 			inSchema = *grSchema
 			outSchema = schema
 		}
+	case state.EventsTarget:
+		if !connector.Targets.Contains(state.EventsTarget) {
+			return types.Type{}, errors.BadRequest("connection %d cannot have actions on events", c.ID)
+		}
+		switch connector.Type {
+		case state.MobileType, state.ServerType, state.WebsiteType:
+			if eventType != "" {
+				return types.Type{}, errors.Unprocessable(EventNotExists, "connection %d does not have event type %q", c.ID, eventType)
+			}
+		default:
+			eventTypes, err := this.fetchEventTypes()
+			if err != nil {
+				return types.Type{}, err
+			}
+			var et *_connector.EventType
+			for _, e := range eventTypes {
+				if e.ID == eventType {
+					et = e
+					break
+				}
+			}
+			if et == nil {
+				return types.Type{}, errors.Unprocessable(EventNotExists, "connection %d does not have event type %q", c.ID, eventType)
+			}
+			inSchema = events.Schema
+			outSchema = schema // if there is not a schema, it is the invalid schema.
+		}
 	}
 
-	// Validate the filter.
-	if action.Filter != nil {
-		if target != state.EventsTarget || eventType == "" {
-			return types.Type{}, errors.BadRequest("filters are supported only by Events actions with an associated event type")
+	// Check if the mapping (and the transformations) are allowed and required
+	// for this action.
+	var requiresMapping bool
+	switch connector.Type {
+	case
+		state.AppType,
+		state.DatabaseType,
+		state.FileType:
+		if c.Role == state.SourceRole {
+			requiresMapping = target == state.UsersTarget || target == state.GroupsTarget
+		} else {
+			requiresMapping = target == state.EventsTarget && schema.Valid()
 		}
+	}
+	if requiresMapping {
+		if action.Mapping == nil && action.Transformation == nil {
+			return types.Type{}, errors.BadRequest("mapping (or transformation) is required")
+		}
+	} else {
+		if action.Mapping != nil {
+			return types.Type{}, errors.BadRequest("mapping not allowed")
+		}
+		if action.Transformation != nil {
+			return types.Type{}, errors.BadRequest("transformation not allowed")
+		}
+	}
+
+	// Validate the filter properties.
+	if action.Filter != nil {
 		for i, cond := range action.Filter.Conditions {
 			if existsInObject(conditionProperties[i], inSchema) {
 				continue
@@ -1034,6 +1025,35 @@ func (this *Connection) fetchFileSchema() (types.Type, error) {
 	schema := types.Object(properties)
 
 	return schema, nil
+}
+
+// allowsActionTarget reports whether a connection with the given connector type
+// and role supports an action with the given target.
+//
+// Refer to the specifications in the file "connector/Actions support.md" for
+// more details.
+func allowsActionTarget(typ state.ConnectorType, role _connector.Role, target state.ActionTarget) bool {
+	isSource := role == _connector.SourceRole
+	usersOrGroups := target == state.UsersTarget || target == state.GroupsTarget
+	switch typ {
+	case state.AppType:
+		if isSource {
+			return usersOrGroups
+		} else {
+			return target == state.EventsTarget
+		}
+	case
+		state.DatabaseType,
+		state.FileType:
+		return isSource && usersOrGroups
+	case
+		state.ServerType,
+		state.StreamType,
+		state.WebsiteType:
+		return !isSource && target == state.EventsTarget
+	default:
+		return false
+	}
 }
 
 const noQueryLimit = -1

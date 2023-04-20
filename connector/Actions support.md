@@ -2,7 +2,7 @@
 
 This file specifies the support for actions in Chichi.
 
-## Actions support
+## Action targets support
 
 Warning: support for groups, even where stated as implemented, may be not yet implemented nor tested.
 
@@ -14,7 +14,7 @@ Warning: support for groups, even where stated as implemented, may be not yet im
 | **Database** (destination)                  | -                | -                 | -               |
 | **File** (source)                           | Import users     | Import groups     | -               |
 | **File** (destination)                      | -                | -                 | -               |
-| **Server / Stream / Website** (source)      | -                | -                 | Import events   |
+| **Server / Stream / Website** (source)      | -                | -                 | Receive events  |
 | **Server / Stream / Website** (destination) | -                | -                 | -               |
 | **Storage** (source/destination)            | -                | -                 | -               |
 

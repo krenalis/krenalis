@@ -118,6 +118,9 @@ const (
 )
 
 // ActionTypes returns the action types for the connection.
+//
+// Refer to the specifications in the file "connector/Actions support.md" for
+// more details.
 func (this *Connection) ActionTypes() ([]*ActionType, error) {
 	var actionTypes []*ActionType
 	c := this.connection
@@ -135,71 +138,61 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 	}
 	wsSchemas := c.Workspace().Schemas
 	targets := connector.Targets
-	if targets.Contains(state.UsersTarget) {
-		var name, description string
-		if c.Role == state.SourceRole {
-			name = "Import " + connector.TermForUsers
-			description = "Import the " + connector.TermForUsers
+	if targets.Contains(state.UsersTarget) && c.Role == state.SourceRole {
+		switch typ := c.Connector().Type; typ {
+		case
+			state.AppType,
+			state.DatabaseType,
+			state.FileType:
+			description := "Import the " + connector.TermForUsers
 			if connector.TermForUsers != "users" {
 				description += " as users"
 			}
 			description += " from " + connector.Name
-		} else {
-			name = "Export " + connector.TermForUsers
-			description = "Export the users "
-			if connector.TermForUsers != "users" {
-				description += " as " + connector.TermForUsers
+			at := &ActionType{
+				Name:        "Import " + connector.TermForUsers,
+				Description: description,
+				Target:      UsersTarget,
 			}
-			description += " to " + connector.Name
+			if haveUsersAction {
+				at.Disabled = true
+				reason := DisablingReasonAlreadyHaveAction
+				at.DisablingReason = &reason
+			} else if _, haveUsersSchema := wsSchemas["users"]; !haveUsersSchema {
+				at.Disabled = true
+				reason := DisablingReasonNoUsersSchema
+				at.DisablingReason = &reason
+			}
+			actionTypes = append(actionTypes, at)
 		}
-		at := &ActionType{
-			Name:        name,
-			Description: description,
-			Target:      UsersTarget,
-		}
-		if haveUsersAction {
-			at.Disabled = true
-			reason := DisablingReasonAlreadyHaveAction
-			at.DisablingReason = &reason
-		} else if _, haveUsersSchema := wsSchemas["users"]; !haveUsersSchema {
-			at.Disabled = true
-			reason := DisablingReasonNoUsersSchema
-			at.DisablingReason = &reason
-		}
-		actionTypes = append(actionTypes, at)
 	}
-	if targets.Contains(state.GroupsTarget) {
-		var name, description string
-		if c.Role == state.SourceRole {
-			name = "Import " + connector.TermForGroups
-			description = "Import the " + connector.TermForGroups
+	if targets.Contains(state.GroupsTarget) && c.Role == state.SourceRole {
+		switch typ := c.Connector().Type; typ {
+		case
+			state.AppType,
+			state.DatabaseType,
+			state.FileType:
+			description := "Import the " + connector.TermForGroups
 			if connector.TermForGroups != "groups" {
 				description += " as groups"
 			}
 			description += " from " + connector.Name
-		} else {
-			name = "Export " + connector.TermForGroups
-			description = "Export the groups "
-			if connector.TermForGroups != "groups" {
-				description += " as " + connector.TermForGroups
+			at := &ActionType{
+				Name:        "Import " + connector.TermForGroups,
+				Description: description,
+				Target:      GroupsTarget,
 			}
-			description += " to " + connector.Name
+			if haveGroupsAction {
+				at.Disabled = true
+				reason := DisablingReasonAlreadyHaveAction
+				at.DisablingReason = &reason
+			} else if _, haveGroupsSchema := wsSchemas["groups"]; !haveGroupsSchema {
+				at.Disabled = true
+				reason := DisablingReasonNoGroupsSchema
+				at.DisablingReason = &reason
+			}
+			actionTypes = append(actionTypes, at)
 		}
-		at := &ActionType{
-			Name:        name,
-			Description: description,
-			Target:      GroupsTarget,
-		}
-		if haveGroupsAction {
-			at.Disabled = true
-			reason := DisablingReasonAlreadyHaveAction
-			at.DisablingReason = &reason
-		} else if _, haveGroupsSchema := wsSchemas["groups"]; !haveGroupsSchema {
-			at.Disabled = true
-			reason := DisablingReasonNoGroupsSchema
-			at.DisablingReason = &reason
-		}
-		actionTypes = append(actionTypes, at)
 	}
 	if targets.Contains(state.EventsTarget) {
 		switch typ := c.Connector().Type; typ {
@@ -226,7 +219,7 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 				}
 				actionTypes = append(actionTypes, at)
 			}
-		default:
+		case state.AppType:
 			eventTypes, err := this.fetchEventTypes()
 			if err != nil {
 				return nil, err
@@ -278,6 +271,9 @@ const (
 // ActionTypeInformation returns information for the given action target and
 // event type.
 //
+// Refer to the specifications in the file "connector/Actions support.md" for
+// more details.
+//
 // It returns an errors.UnprocessableError error with code
 //   - NoUsersSchema, if target is Users and the users schema does not exist.
 //   - NoGroupsSchema, if target is Groups and the groups schema does not
@@ -287,124 +283,79 @@ const (
 func (this *Connection) ActionTypeInformation(target ActionTarget, eventType string) (ActionTypeInformation, error) {
 
 	connector := this.connection.Connector()
-	at := ActionTypeInformation{}
-	switch target {
+	role := _connector.Role(this.connection.Role)
 
-	case UsersTarget:
-		if !connector.Targets.Contains(state.UsersTarget) {
-			return ActionTypeInformation{}, errors.BadRequest("connection does not support users")
+	// Validate the target.
+	switch target {
+	case UsersTarget, GroupsTarget, EventsTarget:
+		ok := allowsActionTarget(connector.Type, role, state.ActionTarget(target))
+		if !ok {
+			return ActionTypeInformation{}, errors.NotFound("target not supported")
 		}
-		switch connector.Type {
-		case state.AppType:
+	default:
+		return ActionTypeInformation{}, errors.BadRequest("invalid target")
+	}
+	if !connector.Targets.Contains(state.ActionTarget(target)) {
+		return ActionTypeInformation{}, errors.NotFound("connection does not support %s", target)
+	}
+
+	// Validate the event type.
+	if target != EventsTarget && eventType != "" {
+		return ActionTypeInformation{}, errors.NotFound("%s target does not support event types", target)
+	}
+
+	at := ActionTypeInformation{}
+
+	switch connector.Type {
+
+	case state.AppType:
+		switch target {
+		case UsersTarget:
+			var err error
 			appSchema, err := this.fetchAppSchema(state.UsersTarget, "")
 			if err != nil {
 				return ActionTypeInformation{}, err
 			}
-			usersSchema, ok := this.connection.Workspace().Schemas["users"]
+			var ok bool
+			grSchema, ok := this.connection.Workspace().Schemas["users"]
 			if !ok {
 				return ActionTypeInformation{}, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 			}
 			if this.connection.Role == state.SourceRole {
 				at.InputSchema = appSchema
-				at.OutputSchema = usersSchema.Unflatten()
+				at.OutputSchema = grSchema.Unflatten()
 			} else {
-				at.InputSchema = usersSchema.Unflatten()
+				at.InputSchema = grSchema.Unflatten()
 				at.OutputSchema = appSchema
 			}
 			at.Supports = []ActionSupport{
 				ActionSupportMapping,
 			}
-		case state.DatabaseType:
-			usersSchema, ok := this.connection.Workspace().Schemas["users"]
-			if !ok {
-				return ActionTypeInformation{}, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
-			}
-			at.OutputSchema = usersSchema.Unflatten()
-			at.Supports = []ActionSupport{
-				ActionSupportMapping,
-				ActionSupportQuery,
-			}
-		case state.FileType:
-			fileSchema, err := this.fetchFileSchema()
-			if err != nil {
-				return ActionTypeInformation{}, err
-			}
-			usersSchema, ok := this.connection.Workspace().Schemas["users"]
-			if !ok {
-				return ActionTypeInformation{}, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
-			}
-			if this.connection.Role == state.SourceRole {
-				at.InputSchema = fileSchema
-				at.OutputSchema = usersSchema.Unflatten()
-			} else {
-				at.InputSchema = usersSchema.Unflatten()
-				at.OutputSchema = fileSchema
-			}
-			at.Supports = []ActionSupport{
-				ActionSupportMapping,
-			}
-		}
-
-	case GroupsTarget:
-		if !connector.Targets.Contains(state.GroupsTarget) {
-			return ActionTypeInformation{}, errors.BadRequest("connection does not support groups")
-		}
-		switch connector.Type {
-		case state.AppType:
+		case GroupsTarget:
+			var err error
 			appSchema, err := this.fetchAppSchema(state.GroupsTarget, "")
 			if err != nil {
 				return ActionTypeInformation{}, err
 			}
-			groupsSchema, ok := this.connection.Workspace().Schemas["groups"]
+			var ok bool
+			grSchema, ok := this.connection.Workspace().Schemas["groups"]
 			if !ok {
 				return ActionTypeInformation{}, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 			}
 			if this.connection.Role == state.SourceRole {
 				at.InputSchema = appSchema
-				at.OutputSchema = groupsSchema.Unflatten()
+				at.OutputSchema = grSchema.Unflatten()
 			} else {
-				at.InputSchema = groupsSchema.Unflatten()
+				at.InputSchema = grSchema.Unflatten()
 				at.OutputSchema = appSchema
 			}
 			at.Supports = []ActionSupport{
 				ActionSupportMapping,
 			}
-		case state.DatabaseType:
-			at.Supports = []ActionSupport{
-				ActionSupportMapping,
-				ActionSupportQuery,
+		case EventsTarget:
+			if eventType == "" {
+				return ActionTypeInformation{}, errors.NotFound("an event type is required")
 			}
-		case state.FileType:
-			fileSchema, err := this.fetchFileSchema()
-			if err != nil {
-				return ActionTypeInformation{}, err
-			}
-			groupsSchema, ok := this.connection.Workspace().Schemas["groups"]
-			if !ok {
-				return ActionTypeInformation{}, errors.Unprocessable(NoUsersSchema, "groups schema not loaded from data warehouse")
-			}
-			if this.connection.Role == state.SourceRole {
-				at.InputSchema = fileSchema
-				at.OutputSchema = groupsSchema.Unflatten()
-			} else {
-				at.InputSchema = groupsSchema.Unflatten()
-				at.OutputSchema = fileSchema
-			}
-			at.Supports = []ActionSupport{
-				ActionSupportMapping,
-			}
-		}
-
-	case EventsTarget:
-		if !connector.Targets.Contains(state.EventsTarget) {
-			return ActionTypeInformation{}, errors.BadRequest("connection does not support events")
-		}
-		at.Supports = []ActionSupport{}
-		typ := connector.Type
-		role := this.connection.Role
-		receiveEvents := role == state.SourceRole &&
-			(typ == state.MobileType || typ == state.ServerType || typ == state.WebsiteType)
-		if !receiveEvents {
 			eventTypes, err := this.fetchEventTypes()
 			if err != nil {
 				return ActionTypeInformation{}, err
@@ -424,15 +375,84 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 				return ActionTypeInformation{}, err
 			}
 			at.Supports = append(at.Supports, ActionSupportFilter)
-			if this.connection.Role == state.DestinationRole && etSchema.Valid() {
+			if etSchema.Valid() {
 				at.InputSchema = events.Schema.Unflatten()
 				at.OutputSchema = etSchema
 				at.Supports = append(at.Supports, ActionSupportMapping)
 			}
 		}
 
-	default:
-		return ActionTypeInformation{}, errors.New("invalid action target")
+	case state.DatabaseType:
+		switch target {
+		case UsersTarget:
+			usersSchema, ok := this.connection.Workspace().Schemas["users"]
+			if !ok {
+				return ActionTypeInformation{}, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
+			}
+			at.OutputSchema = usersSchema.Unflatten()
+			at.Supports = []ActionSupport{
+				ActionSupportMapping,
+				ActionSupportQuery,
+			}
+		case GroupsTarget:
+			groupsSchema, ok := this.connection.Workspace().Schemas["groups"]
+			if !ok {
+				return ActionTypeInformation{}, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
+			}
+			at.OutputSchema = groupsSchema.Unflatten()
+			at.Supports = []ActionSupport{
+				ActionSupportMapping,
+				ActionSupportQuery,
+			}
+		}
+
+	case state.FileType:
+		switch target {
+		case UsersTarget:
+			fileSchema, err := this.fetchFileSchema()
+			if err != nil {
+				return ActionTypeInformation{}, err
+			}
+			usersSchema, ok := this.connection.Workspace().Schemas["users"]
+			if !ok {
+				return ActionTypeInformation{}, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
+			}
+			if this.connection.Role == state.SourceRole {
+				at.InputSchema = fileSchema
+				at.OutputSchema = usersSchema.Unflatten()
+			} else {
+				at.InputSchema = usersSchema.Unflatten()
+				at.OutputSchema = fileSchema
+			}
+			at.Supports = []ActionSupport{
+				ActionSupportMapping,
+			}
+		case GroupsTarget:
+			fileSchema, err := this.fetchFileSchema()
+			if err != nil {
+				return ActionTypeInformation{}, err
+			}
+			groupsSchema, ok := this.connection.Workspace().Schemas["groups"]
+			if !ok {
+				return ActionTypeInformation{}, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
+			}
+			if this.connection.Role == state.SourceRole {
+				at.InputSchema = fileSchema
+				at.OutputSchema = groupsSchema.Unflatten()
+			} else {
+				at.InputSchema = groupsSchema.Unflatten()
+				at.OutputSchema = fileSchema
+			}
+			at.Supports = []ActionSupport{
+				ActionSupportMapping,
+			}
+		}
+
+	case state.ServerType, state.StreamType, state.WebsiteType:
+		if eventType != "" {
+			return ActionTypeInformation{}, errors.NotFound("event type not expected")
+		}
+
 	}
 
 	return at, nil
@@ -442,16 +462,16 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 // added action. target is the target of the action and must be supported by the
 // connector of the connection.
 //
-// If target is Events and the connection has event types, evenType must be the
-// identifier of an event type of the connection. Otherwise, it must be an empty
-// string.
+// Refer to the specifications in the file "connector/Actions support.md" for
+// more details.
 //
 // It returns an errors.UnprocessableError error with code
 //
+//   - EventTypeNotExists, if the specified event type does not exist.
 //   - PropertyNotExists, if a property of a mapping / transformation does not
 //     exist in the schema (except for properties of the event type schema,
 //     which is specified and thus returned as an errors.BadRequest error).
-//   - EventTypeNotExists, if the specified event type does not exist.
+//   - QueryExecutionFailed, if the execution of the specified query fails.
 //
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore.
@@ -459,8 +479,26 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 
 	c := this.connection
 
+	// Validate the target and the event type.
+	switch target {
+	case EventsTarget:
+	case UsersTarget, GroupsTarget:
+		if eventType != "" {
+			return 0, errors.BadRequest("users and groups actions cannot have an event type")
+		}
+	default:
+		return 0, errors.BadRequest("target %q is not valid", target)
+	}
+
+	// Check if the connection, with its connector type and role, allows the
+	// given target.
+	ok := allowsActionTarget(c.Connector().Type, _connector.Role(c.Role), state.ActionTarget(target))
+	if !ok {
+		return 0, errors.BadRequest("target %q is not supported", target)
+	}
+
 	// Validate the arguments.
-	schema, err := this.validateAction(state.ActionTarget(target), eventType, action)
+	schema, err := this.validateActionToSet(action, state.ActionTarget(target), eventType)
 	if err != nil {
 		return 0, err
 	}
