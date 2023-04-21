@@ -232,6 +232,8 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		return types.Float32(), nil
 	case "FLOAT8":
 		return types.Float(), nil
+	case "INET":
+		return types.Inet(), nil
 	case "INT2":
 		return types.Int16(), nil
 	case "INT4":
