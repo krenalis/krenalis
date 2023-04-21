@@ -22,6 +22,11 @@
     margin-top: 20px;
 }
 
+.ConnectionActions .StyledGrid .actionName .description {
+    font-size: 13px;
+    opacity: .7;
+}
+
 .ConnectionActions .title {
     padding-left: 12px;
     font-weight: 600;

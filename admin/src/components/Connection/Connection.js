@@ -66,6 +66,13 @@ const Connection = () => {
 	return (
 		<div className='Connection'>
 			<div className='links'>
+				{
+					<div className={`link${currentSection === 'actions' ? ' selected' : ''}`}>
+						<NavLink to='actions'></NavLink>
+						<SlIcon name='send-exclamation'></SlIcon>
+						Actions
+					</div>
+				}
 				<div className={`link${currentSection === 'overview' ? ' selected' : ''}`}>
 					<NavLink to='overview'></NavLink>
 					<SlIcon name='activity'></SlIcon>
@@ -78,13 +85,6 @@ const Connection = () => {
 						Live events
 					</div>
 				)}
-				{
-					<div className={`link${currentSection === 'actions' ? ' selected' : ''}`}>
-						<NavLink to='actions'></NavLink>
-						<SlIcon name='send-exclamation'></SlIcon>
-						Actions
-					</div>
-				}
 				<div className={`link${currentSection === 'settings' ? ' selected' : ''}`}>
 					<NavLink to='settings'></NavLink>
 					<SlIcon name='sliders2'></SlIcon>

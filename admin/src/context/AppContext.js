@@ -7,7 +7,7 @@ const defaultAppContext = {
 	showError: () => {},
 	showNotFound: () => {},
 	redirect: () => {},
-	setIsFullScreen: () => {},
+	updateIsFullScreen: () => {},
 };
 
 export const AppContext = createContext(defaultAppContext);

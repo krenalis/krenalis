@@ -66,6 +66,7 @@ const EditorWrapper = ({ defaultLanguage, width, height, value, onChange, ...del
 							verticalSliderSize: 8,
 							horizontalScrollbarSize: 8,
 							horizontalSliderSize: 8,
+							alwaysConsumeMouseWheel: false,
 						},
 						lineHeight: 25,
 						fontSize: 16,

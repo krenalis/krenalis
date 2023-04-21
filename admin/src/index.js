@@ -16,11 +16,8 @@ import OAuth from './components/OAuth/OAuth';
 import OAuthError from './components/OAuthError/OAuthError';
 import NotFound from './components/NotFound/NotFound';
 import ConnectionOverview from './components/ConnectionOverview/ConnectionOverview';
-import ConnectionSQL from './components/ConnectionSQL/ConnectionSQL';
 import ConnectionEvents from './components/ConnectionEvents/ConnectionEvents';
 import ConnectionActions from './components/ConnectionActions/ConnectionActions';
-import ConnectionMappings from './components/ConnectionMappings/ConnectionMappings';
-import ConnectionTransformation from './components/ConnectionTransformation/ConnectionTransformation';
 import ConnectionSettings from './components/ConnectionSettings/ConnectionSettings';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
@@ -35,12 +32,9 @@ root.render(
 						<Route path='connectors/:id' element={<ConnectorSettings />} />
 						<Route path='connectors' element={<ConnectorsList />} />
 						<Route path='connections/:id' element={<Connection />}>
-							<Route path='overview' element={<ConnectionOverview />} />
-							<Route path='sql' element={<ConnectionSQL />} />
-							<Route path='events' element={<ConnectionEvents />} />
 							<Route path='actions' element={<ConnectionActions />} />
-							<Route path='mappings' element={<ConnectionMappings />} />
-							<Route path='transformation' element={<ConnectionTransformation />} />
+							<Route path='overview' element={<ConnectionOverview />} />
+							<Route path='events' element={<ConnectionEvents />} />
 							<Route path='settings' element={<ConnectionSettings />} />
 						</Route>
 						<Route path='connections' element={<ConnectionsMap />} />

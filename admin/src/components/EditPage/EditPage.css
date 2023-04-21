@@ -33,15 +33,23 @@
     width: 100%;
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
     padding: 20px 40px;
     background-color: var(--bg-primary);
     border-bottom: 1px solid var(--border-primary);
     z-index: 10;
+    height: 90px;
+}
+
+.EditPage .header .actions {
+    display: flex;
+    align-items: center;
+    justify-content: end;
+    gap: 20px;
 }
 
 .EditPage .editPageContent {
     max-width: 1200px;
     margin: auto;
-    margin-top: 80px;
+    margin-top: 70px;
 }

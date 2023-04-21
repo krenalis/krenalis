@@ -1,12 +1,10 @@
 import { useState, useEffect, useContext } from 'react';
-import { createPortal } from 'react-dom';
 import './ConnectionActions.css';
 import LittleLogo from '../LittleLogo/LittleLogo';
 import Flex from '../Flex/Flex';
 import ListTile from '../ListTile/ListTile';
 import IconWrapper from '../IconWrapper/IconWrapper';
 import StyledGrid from '../StyledGrid/StyledGrid';
-import EditPage from '../EditPage/EditPage';
 import Action from '../Action/Action';
 import statuses from '../../constants/statuses';
 import { UnprocessableError } from '../../api/errors';
@@ -19,7 +17,7 @@ let ConnectionActions = () => {
 	let [actionTypes, setActionTypes] = useState([]);
 	let [isDialogOpen, setIsDialogOpen] = useState(false);
 	let [selectedActionType, setSelectedActionType] = useState(null);
-	let [actionToEdit, setActionToEdit] = useState(null);
+	let [selectedAction, setSelectedAction] = useState(null);
 	let [description, setDescription] = useState(null);
 	let [isLoading, setIsLoading] = useState(true);
 
@@ -125,7 +123,7 @@ let ConnectionActions = () => {
 
 	const refresh = async () => {
 		setSelectedActionType(null);
-		setActionToEdit(null);
+		setSelectedAction(null);
 		let actionTypes, err;
 		[actionTypes, err] = await API.connections.actionTypes(c.ID);
 		if (err != null) {
@@ -155,31 +153,38 @@ let ConnectionActions = () => {
 		);
 	}
 
-	let columns = [{ Name: 'Name' }, { Name: 'Filter' }, { Name: 'Type' }, { Name: 'Enabled' }, { Name: '' }];
+	let columns = [{ Name: 'Action' }, { Name: 'Filter' }, { Name: 'Enabled' }, { Name: '' }];
 
 	let rows = [];
 	for (let a of actions) {
-		let name = a.Name;
-		let conditions = [];
+		let linkedActionType;
+		for (let t of actionTypes) {
+			if (a.Target === 'Users' || a.Target === 'Groups') {
+				if (a.Target === t.Target) linkedActionType = t;
+				continue;
+			}
+			if (a.EventType === t.EventType) linkedActionType = t;
+		}
+		let nameCell = (
+			<div className='actionName'>
+				<div className='name'>{a.Name}</div>
+				<div className='description'>{linkedActionType.Description}</div>
+			</div>
+		);
+		let conditionsCell = [];
 		if (a.Filter != null) {
 			for (let c of a.Filter.Conditions) {
-				conditions.push(
+				conditionsCell.push(
 					<div>
 						{c.Property} {c.Operator} {c.Value}
 					</div>
 				);
 			}
+		} else {
+			conditionsCell.push('-');
 		}
-		let actionType;
-		for (let t of actionTypes) {
-			if (a.Target === 'Users' || a.Target === 'Groups') {
-				if (a.Target === t.Target) actionType = t.Name;
-				continue;
-			}
-			if (a.EventType === t.EventType) actionType = t.Name;
-		}
-		let enabled = <SlSwitch onSlChange={() => onActionStatusSwitch(a.ID)} checked={a.Enabled}></SlSwitch>;
-		let actions = (
+		let enabledCell = <SlSwitch onSlChange={() => onActionStatusSwitch(a.ID)} checked={a.Enabled}></SlSwitch>;
+		let actionsCell = (
 			<div className='actionButtons'>
 				{(a.Target === 'Users' || a.Target === 'Groups') && (
 					<SlButton variant='default' size='small' onClick={() => executeAction(a.ID)}>
@@ -187,7 +192,7 @@ let ConnectionActions = () => {
 						Execute
 					</SlButton>
 				)}
-				<SlButton variant='default' size='small' onClick={() => setActionToEdit(a)}>
+				<SlButton variant='default' size='small' onClick={() => setSelectedAction(a)}>
 					<SlIcon slot='prefix' name='pencil' />
 					Edit
 				</SlButton>
@@ -197,41 +202,19 @@ let ConnectionActions = () => {
 				</SlButton>
 			</div>
 		);
-		rows.push([name, conditions, actionType, enabled, actions]);
+		rows.push([nameCell, conditionsCell, enabledCell, actionsCell]);
 	}
 
-	if (selectedActionType !== null) {
-		return (
-			<EditPage title={`Add "${selectedActionType.Name}" action`} onCancel={() => setSelectedActionType(null)}>
-				<Action actionType={selectedActionType} onClose={refresh}></Action>
-			</EditPage>
-		);
-	}
-
-	if (actionToEdit !== null) {
-		return (
-			<EditPage title={`Edit "${actionToEdit.Name}" action`} onCancel={() => setActionToEdit(null)}>
-				<Action action={actionToEdit} onClose={refresh}></Action>
-			</EditPage>
-		);
+	if (selectedActionType !== null || selectedAction !== null) {
+		return <Action actionType={selectedActionType} action={selectedAction} onClose={refresh}></Action>;
 	}
 
 	let standardActionTypes = [];
 	let eventActionTypes = [];
 	for (let t of actionTypes) {
-		let icon;
-		if (t.Target === 'Users') {
-			icon = <SlIcon name='person' />;
-		}
-		if (t.Target === 'Groups') {
-			icon = <SlIcon name='people' />;
-		}
-		if (t.Target === 'Events') {
-			icon = <LittleLogo url={c.LogoURL} alternativeText={`${c.Name}'s logo`}></LittleLogo>;
-		}
 		let tile = (
 			<ListTile
-				icon={icon}
+				icon={<LittleLogo url={c.LogoURL} alternativeText={`${c.Name}'s logo`}></LittleLogo>}
 				name={t.Name}
 				description={t.Description}
 				disabled={t.Disabled}
@@ -258,7 +241,7 @@ let ConnectionActions = () => {
 							<IconWrapper name='send-exclamation' size={40} />
 							<div className='description'>Add an action to {description}</div>
 							<SlButton
-								variant='neutral'
+								variant='primary'
 								onClick={() => {
 									setIsDialogOpen(true);
 								}}
@@ -272,7 +255,7 @@ let ConnectionActions = () => {
 					<>
 						<Flex justifyContent={'end'} alignItems={'center'}>
 							<SlButton
-								variant='default'
+								variant='primary'
 								onClick={() => {
 									setIsDialogOpen(true);
 								}}

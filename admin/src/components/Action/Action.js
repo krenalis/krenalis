@@ -3,10 +3,12 @@ import { createPortal } from 'react-dom';
 import './Action.css';
 import Section from '../Section/Section';
 import AlertDialog from '../AlertDialog/AlertDialog';
+import LittleLogo from '../LittleLogo/LittleLogo';
+import EditPage from '../EditPage/EditPage';
 import statuses from '../../constants/statuses';
 import EditorWrapper from '../EditorWrapper/EditorWrapper';
-import IconWrapper from '../IconWrapper/IconWrapper';
 import StyledGrid from '../StyledGrid/StyledGrid';
+import { ComboBoxList, ComboBoxInput } from '../ComboBox/ComboBox';
 import { UnprocessableError, NotFoundError } from '../../api/errors';
 import { AppContext } from '../../context/AppContext';
 import { ConnectionContext } from '../../context/ConnectionContext';
@@ -16,17 +18,23 @@ import {
 	SlIcon,
 	SlSelect,
 	SlOption,
+	SlMenuItem,
 	SlDialog,
 	SlIconButton,
 	SlAlert,
 	SlDrawer,
 } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const defaultTransformationFunction = `def transform(event: dict) -> dict:
-	return event
-`;
-
 const queryMaxSize = 16777215;
+
+const rawTransformationFunction = `def transform($parameterName: dict) -> dict:
+	return {}
+;`;
+
+const operatorOptions = {
+	1: 'is',
+	2: 'is not',
+};
 
 const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => {
 	let [action, setAction] = useState(null);
@@ -40,11 +48,20 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let [previewTable, setPreviewTable] = useState(null);
 	let [isAlertOpen, setIsAlertOpen] = useState(false);
 	let [isNameEditable, setIsNameEditable] = useState(false);
+	let [isPropertiesListOpen, setIsPropertiesListOpen] = useState(false);
+	let [isConditionListOpen, setIsConditionListOpen] = useState(false);
+	let [focusedProperty, setFocusedProperty] = useState(null);
+	let [focusedCondition, setFocusedCondition] = useState(null);
+	let [propertySearchTerm, setPropertySearchTerm] = useState('');
+	let [conditionSearchTerm, setConditionSearchTerm] = useState('');
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
 	let { connection: c } = useContext(ConnectionContext);
 
 	let initialQuery = useRef('');
+	let defaultTransformationFunction = useRef('');
+	let propertiesListRef = useRef(null);
+	let conditionListRef = useRef(null);
 
 	useEffect(() => {
 		let actionType;
@@ -149,9 +166,34 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			}
 			initialQuery.current = action.Query;
 			setAction(action);
+
+			// set the default transformation function
+			let parameterName;
+			if (actionType.Target === 'Users') {
+				parameterName = 'user';
+			} else if (actionType.Target === 'Groups') {
+				parameterName = 'group';
+			} else {
+				parameterName = 'event';
+			}
+			defaultTransformationFunction.current = rawTransformationFunction.replace('$parameterName', parameterName);
 		};
 		fetchData();
 	}, []);
+
+	useEffect(() => {
+		if (focusedProperty == null) {
+			return;
+		}
+		setPropertySearchTerm(focusedProperty.value);
+	}, [focusedProperty]);
+
+	useEffect(() => {
+		if (focusedCondition == null) {
+			return;
+		}
+		setConditionSearchTerm(focusedCondition.value);
+	}, [focusedCondition]);
 
 	const onAddCondition = () => {
 		let a = { ...action };
@@ -164,17 +206,36 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 
 	const onRemoveCondition = (e) => {
 		let a = { ...action };
-		let id = e.currentTarget.parentElement.dataset.id;
+		let id = e.currentTarget.closest('.condition').dataset.id;
 		a.Filter.Conditions.splice(id, 1);
 		setAction(a);
 	};
 
 	const onUpdateConditionFragment = (e) => {
 		let a = { ...action };
-		let id = e.currentTarget.parentElement.dataset.id;
+		let id = e.currentTarget.closest('.condition').dataset.id;
 		let fragment = e.currentTarget.dataset.fragment;
-		a.Filter.Conditions[id][fragment] = e.currentTarget.value;
+		let value;
+		if (fragment === 'Operator') {
+			value = operatorOptions[e.currentTarget.value];
+		} else {
+			value = e.currentTarget.value;
+		}
+		a.Filter.Conditions[id][fragment] = value;
+		if (fragment === 'Property') {
+			setConditionSearchTerm(value);
+		}
 		setAction(a);
+	};
+
+	const onSelectConditionListItem = (value) => {
+		let a = { ...action };
+		let id = focusedCondition.closest('.condition').dataset.id;
+		a.Filter.Conditions[id]['Property'] = value;
+		setAction(a);
+		setConditionSearchTerm(value);
+		setIsConditionListOpen(false);
+		focusedCondition.focus();
 	};
 
 	const onSwitchFilterLogical = () => {
@@ -259,7 +320,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setPropertiesMode('transformation');
 	};
 
-	const onMappingUpdate = (e) => {
+	const updateProperty = (name, value) => {
 		const getAlternativeProperties = (name, mapping) => {
 			let indentation = mapping[name].indentation;
 			let parentProperties = [];
@@ -278,7 +339,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		};
 
 		let a = { ...action };
-		let { name, value } = e.currentTarget;
 		if (a.Mapping[name].value === '' && value !== '') {
 			let alternativeProperties = getAlternativeProperties(name, a.Mapping);
 			// disable
@@ -314,6 +374,19 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setAction(a);
 	};
 
+	const onPropertyChange = (e) => {
+		let { name, value } = e.currentTarget;
+		updateProperty(name, value);
+		setPropertySearchTerm(e.currentTarget.value);
+	};
+
+	const onSelectPropertiesListItem = (value) => {
+		updateProperty(focusedProperty.name, value);
+		setPropertySearchTerm(value);
+		setIsPropertiesListOpen(false);
+		focusedProperty.focus();
+	};
+
 	const onUpdateQuery = async (value) => {
 		let a = { ...action };
 		a.Query = value;
@@ -331,7 +404,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			showError(`Your query does not contain the ':limit' placeholder`);
 			return;
 		}
-		let [res, err] = await API.connections.query(c.ID, trimmed, 20); // TODO: make the limit dynamic by providing a select.
+		let [res, err] = await API.connections.query(c.ID, trimmed, 0);
 		if (err !== null) {
 			if (err instanceof NotFoundError) {
 				redirect('/admin/connections');
@@ -349,10 +422,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		}
 		if (Object.keys(res.Schema.properties).length === 0) {
 			showError('Your query did not return any columns');
-			return;
-		}
-		if (res.Rows.length === 0) {
-			showError('Your query did not return any rows');
 			return;
 		}
 		return res;
@@ -404,6 +473,10 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			let trimmed = a.Transformation.PythonSource.trim();
 			a.Transformation.PythonSource = trimmed;
 		}
+		if (a.Query != null) {
+			let trimmed = a.Query.trim();
+			a.Query = trimmed;
+		}
 		let err;
 		if (actionProp != null) {
 			[, err] = await API.connections.setAction(c.ID, a.ID, a);
@@ -444,6 +517,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					indentation: indentation,
 					root: key.substring(0, key.indexOf('.')),
 					disabled: false,
+					required: subP.required != null ? subP.required : false,
+					type: subP.type.name,
 				};
 				if (subP.type.name === 'Object') {
 					let nestedSubProperties = getSubProperties(key, subP.type.properties, indentation);
@@ -455,7 +530,14 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		let defaultMappings = {};
 		for (let p of schema.properties) {
 			let indentation = 0;
-			defaultMappings[p.name] = { value: '', indentation: indentation, root: p.name, disabled: false };
+			defaultMappings[p.name] = {
+				value: '',
+				indentation: indentation,
+				root: p.name,
+				disabled: false,
+				required: p.required != null ? p.required : false,
+				type: p.type.name,
+			};
 			if (p.type.name === 'Object') {
 				let subProperties = getSubProperties(p.name, p.type.properties, indentation);
 				defaultMappings = { ...defaultMappings, ...subProperties };
@@ -474,8 +556,28 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				name: 'Object',
 				properties: [],
 			},
-			PythonSource: defaultTransformationFunction,
+			PythonSource: defaultTransformationFunction.current,
 		};
+	};
+
+	const getPropertiesList = (onSelect) => {
+		if (inputSchema == null) {
+			return;
+		}
+		let properties = getDefaultMappings(inputSchema);
+		let propertiesList = [];
+		for (let k in properties) {
+			propertiesList.push({
+				content: (
+					<SlMenuItem className='propertiesItem' onClick={() => onSelect(k)}>
+						<div className='propertiesItemName'>{k}</div>
+						<div className='propertiesItemType'>{properties[k].type}</div>
+					</SlMenuItem>
+				),
+				searchableTerm: k,
+			});
+		}
+		return propertiesList;
 	};
 
 	if (action === null || actionType === null) {
@@ -485,29 +587,47 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let conditions = [];
 	if (action.Filter != null) {
 		for (let [i, condition] of action.Filter.Conditions.entries()) {
+			let conditionInput, operatorSelect, valueInput;
+			conditionInput = (
+				<ComboBoxInput
+					comboBoxListRef={conditionListRef}
+					onInput={onUpdateConditionFragment}
+					openComboBoxList={() => setIsConditionListOpen(true)}
+					closeComboBoxList={() => setIsConditionListOpen(false)}
+					setFocused={setFocusedCondition}
+					value={condition.Property}
+					className='property'
+					size='small'
+					data-fragment='Property'
+				/>
+			);
+			operatorSelect = (
+				<SlSelect
+					data-fragment='Operator'
+					size='small'
+					className='operator'
+					value={Object.keys(operatorOptions).find((key) => operatorOptions[key] === condition.Operator)}
+					onSlChange={onUpdateConditionFragment}
+				>
+					{Object.keys(operatorOptions).map((k) => (
+						<SlOption value={k}>{operatorOptions[k]}</SlOption>
+					))}
+				</SlSelect>
+			);
+			valueInput = (
+				<SlInput
+					data-fragment='Value'
+					size='small'
+					className='value'
+					value={condition.Value}
+					onSlInput={onUpdateConditionFragment}
+				/>
+			);
 			conditions.push(
 				<div className='condition' data-id={i}>
-					<SlInput
-						data-fragment='Property'
-						size='small'
-						className='property'
-						value={condition.Property}
-						onSlInput={onUpdateConditionFragment}
-					/>
-					<SlInput
-						data-fragment='Operator'
-						size='small'
-						className='operator'
-						value={condition.Operator}
-						onSlInput={onUpdateConditionFragment}
-					/>
-					<SlInput
-						data-fragment='Value'
-						size='small'
-						className='value'
-						value={condition.Value}
-						onSlInput={onUpdateConditionFragment}
-					/>
+					{conditionInput}
+					{operatorSelect}
+					{valueInput}
 					<SlButton className='removeCondition' size='small' variant='danger' onClick={onRemoveCondition}>
 						<SlIcon name='trash' slot='prefix'></SlIcon>
 						Remove
@@ -515,15 +635,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				</div>
 			);
 		}
-	}
-
-	let actionTypeIcon;
-	if (actionType.Target === 'Events') {
-		actionTypeIcon = <img src={c.LogoURL} alt={`${c.Name}'s logo`} className='actionTypeLogo' />;
-	} else if (actionType.Target === 'Users') {
-		actionTypeIcon = <IconWrapper name='person' size={40} />;
-	} else if (actionType.Target === 'Groups') {
-		actionTypeIcon = <IconWrapper name='people' size={40} />;
 	}
 
 	let propertiesSection = null;
@@ -557,12 +668,12 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				isSectionPadded = true;
 				propertiesSectionContent = (
 					<div className='propertiesButtons'>
-						<SlButton variant='default' onClick={onSetMappingsMode}>
+						<SlButton size='small' variant='primary' onClick={onSetMappingsMode}>
 							<SlIcon name='shuffle' slot='prefix'></SlIcon>
 							Map the properties
 						</SlButton>
 						<span>or</span>
-						<SlButton variant='default' onClick={onSetTransformationMode}>
+						<SlButton size='small' variant='primary' onClick={onSetTransformationMode}>
 							<SlIcon name='filetype-py' slot='prefix'></SlIcon>
 							Write a transformation function
 						</SlButton>
@@ -576,24 +687,31 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						return (
 							<div
 								className='mapping'
+								data-key={k}
 								style={{
 									'--mapping-indentation': `${action.Mapping[k].indentation * 30}px`,
 								}}
 							>
-								<SlInput
-									size='small'
+								<ComboBoxInput
+									comboBoxListRef={propertiesListRef}
+									onInput={onPropertyChange}
+									openComboBoxList={() => setIsPropertiesListOpen(true)}
+									closeComboBoxList={() => setIsPropertiesListOpen(false)}
+									setFocused={setFocusedProperty}
 									value={action.Mapping[k].value}
-									type='text'
 									name={k}
-									onSlInput={onMappingUpdate}
 									disabled={action.Mapping[k].disabled}
 									className='inputProperty'
-								/>
+									size='small'
+								>
+									{action.Mapping[k].required && <SlIcon name='asterisk' slot='prefix'></SlIcon>}
+								</ComboBoxInput>
 								<div className='arrow'>
 									<SlIcon name='arrow-right' />
 								</div>
 								<SlInput
 									readonly
+									disabled
 									size='small'
 									value={k}
 									type='text'
@@ -604,6 +722,12 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							</div>
 						);
 					})}
+					<ComboBoxList
+						ref={propertiesListRef}
+						isOpen={isPropertiesListOpen}
+						searchTerm={propertySearchTerm}
+						comboBoxItems={getPropertiesList(onSelectPropertiesListItem)}
+					/>
 				</div>
 			);
 		} else if (propertiesMode === 'transformation') {
@@ -699,197 +823,221 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	}
 
 	return (
-		<div className='action'>
-			<div className='actionInfo'>
-				{actionTypeIcon}
-				<div className='actionName'>
-					{isNameEditable ? (
-						<span className='name'>
-							<SlInput
-								className='nameInput'
-								value={action != null ? action.Name : actionType.Name}
-								onSlInput={onUpdateName}
-							></SlInput>
-							<SlIconButton name='check-lg' label='Confirm' onClick={() => setIsNameEditable(false)} />
-						</span>
-					) : (
-						<span className='name'>
-							{action != null ? action.Name : actionType.Name}
-							<SlIconButton name='pencil' label='Edit' onClick={() => setIsNameEditable(true)} />
-						</span>
-					)}
-				</div>
-				<div className='actionTypeDescription'>{actionType.Description}</div>
-			</div>
-			{supports.includes('Filter') && (
-				<Section title='Filter' description='The filters that define the action' padded={true}>
-					{conditions.length > 1 && (
-						<SlSelect
-							className='logical'
-							size='small'
-							value={action.Filter.Logical}
-							onSlChange={onSwitchFilterLogical}
-						>
-							<SlOption value='all'>All</SlOption>
-							<SlOption value='any'>Any</SlOption>
-						</SlSelect>
-					)}
-					{conditions}
-					<SlButton className='addCondition' size='small' variant='default' onClick={onAddCondition}>
-						<SlIcon name='plus' slot='prefix'></SlIcon>
-						Add new condition
-					</SlButton>
-				</Section>
-			)}
-			{supports.includes('Query') && (
-				<Section title='Query' description='The query used to import the data'>
-					<EditorWrapper
-						defaultLanguage='sql'
-						height={400}
-						value={action.Query}
-						onChange={onUpdateQuery}
-					></EditorWrapper>
-					<div className='queryButtons'>
-						<SlButton variant='neutral' size='small' onClick={onQueryPreview}>
-							<SlIcon slot='prefix' name='eye' />
-							Preview
-						</SlButton>
-						<SlButton
-							variant='success'
-							size='small'
-							onClick={onConfirmSchema}
-							disabled={isConfirmSchemaButtonDisabled}
-						>
-							<SlIcon slot='prefix' name='check-lg' />
-							Confirm
-						</SlButton>
-					</div>
-				</Section>
-			)}
-			{propertiesSection}
-			{previewTable && (
-				<>
-					<SlDrawer
-						className='previewDrawer'
-						label='Preview'
-						open={true}
-						onSlAfterHide={() => setPreviewTable(null)}
-						placement='bottom'
-						style={{ '--size': '600px' }}
-					>
-						<StyledGrid
-							columns={previewTable.columns}
-							rows={previewTable.rows}
-							noRowsMessage={'Your query did not return data'}
-						/>
-					</SlDrawer>
-				</>
-			)}
-			{createPortal(
-				<AlertDialog
-					variant='danger'
-					isOpen={isAlertOpen}
-					onClose={() => setIsAlertOpen(false)}
-					title={'You will lose your work'}
-					actions={
-						<>
-							<SlButton variant='neutral' onClick={() => setIsAlertOpen(false)}>
-								Cancel
-							</SlButton>
-							<SlButton variant='danger' onClick={onSwitchPropertiesMode}>
-								Continue
-							</SlButton>
-						</>
-					}
-				>
-					<div style={{ textAlign: 'center' }}>
-						{propertiesMode === 'mappings' ? (
-							<p>
-								If you switch to the transformation function you will <b>PERMANENTLY</b> lose the
-								mappings you have currently created
-							</p>
+		<EditPage
+			title={
+				<div className='actionTitle'>
+					<LittleLogo url={c.LogoURL} alternativeText={`${c.Name}'s logo`} />
+					<div className='actionName'>
+						{isNameEditable ? (
+							<span className='name'>
+								<SlInput
+									className='nameInput'
+									value={action != null ? action.Name : actionType.Name}
+									onSlInput={onUpdateName}
+								></SlInput>
+								<SlIconButton
+									name='check-lg'
+									label='Confirm'
+									onClick={() => setIsNameEditable(false)}
+								/>
+							</span>
 						) : (
-							<p>
-								If you switch to the mappings you will <b>PERMANENTLY</b> lose the transformation code
-								you have currently written
-							</p>
+							<span className='name'>
+								{action != null ? action.Name : actionType.Name}
+								<SlIconButton name='pencil' label='Edit' onClick={() => setIsNameEditable(true)} />
+							</span>
 						)}
 					</div>
-				</AlertDialog>,
-				document.body
-			)}
-			{action.Transformation != null &&
-				createPortal(
-					<SlDialog
-						className='inputSchemaDialog'
-						label='Input properties'
-						open={isInputSchemaDialogOpen}
-						onSlRequestClose={() => setIsInputSchemaDialogOpen(false)}
-						style={{ '--width': '700px' }}
-					>
-						{inputSchema.properties.map((p) => {
-							let isUsed =
-								action.Transformation.In.properties.findIndex((prop) => prop.name === p.name) !== -1;
-							return (
-								<div className={`property${isUsed ? ' used' : ''}`}>
-									<div>
-										<div className='name'>{p.name}</div>
-										<div className='type'>{p.type.name}</div>
-									</div>
-									{!isUsed && (
-										<SlIconButton
-											name='plus-circle'
-											label='Add property'
-											onClick={() => onAddTransformationProperty('input', p)}
-										/>
-									)}
-								</div>
-							);
-						})}
-					</SlDialog>,
-					document.body
-				)}
-			{action.Transformation != null &&
-				createPortal(
-					<SlDialog
-						className='outputSchemaDialog'
-						label='Output properties'
-						open={isOutputSchemaDialogOpen}
-						onSlRequestClose={() => setIsOutputSchemaDialogOpen(false)}
-						style={{ '--width': '700px' }}
-					>
-						{outputSchema.properties.map((p) => {
-							let isUsed =
-								action.Transformation.Out.properties.findIndex((prop) => prop.name === p.name) !== -1;
-							return (
-								<div className={`property${isUsed ? ' used' : ''}`}>
-									<div>
-										<div className='name'>{p.name}</div>
-										<div className='type'>{p.type.name}</div>
-									</div>
-									{!isUsed && (
-										<SlIconButton
-											name='plus-circle'
-											label='Add property'
-											onClick={() => onAddTransformationProperty('output', p)}
-										/>
-									)}
-								</div>
-							);
-						})}
-					</SlDialog>,
-					document.body
-				)}
-			<div className='saveWrapper'>
+					{!isNameEditable && <div className='actionTypeDescription'>{actionType.Description}</div>}
+				</div>
+			}
+			onCancel={onClose}
+			actions={
 				<SlButton
+					className='saveAction'
 					variant='primary'
 					disabled={actionType.Schema != null && propertiesMode === ''}
 					onClick={onSave}
 				>
-					Save
+					{actionProp != null ? (
+						<SlIcon slot='prefix' name='save' />
+					) : (
+						<SlIcon slot='prefix' name='plus-circle' />
+					)}
+					{actionProp != null ? 'Save' : 'Add'}
 				</SlButton>
+			}
+		>
+			<div className='action'>
+				{supports.includes('Filter') && (
+					<Section title='Filter' description='The filters that define the action' padded={true}>
+						{conditions.length > 1 && (
+							<SlSelect
+								className='logical'
+								size='small'
+								value={action.Filter.Logical}
+								onSlChange={onSwitchFilterLogical}
+							>
+								<SlOption value='all'>All</SlOption>
+								<SlOption value='any'>Any</SlOption>
+							</SlSelect>
+						)}
+						{conditions}
+						<ComboBoxList
+							ref={conditionListRef}
+							isOpen={isConditionListOpen}
+							searchTerm={conditionSearchTerm}
+							comboBoxItems={getPropertiesList(onSelectConditionListItem)}
+						/>
+						<SlButton className='addCondition' size='small' variant='neutral' onClick={onAddCondition}>
+							<SlIcon name='plus' slot='prefix'></SlIcon>
+							Add new condition
+						</SlButton>
+					</Section>
+				)}
+				{supports.includes('Query') && (
+					<Section title='Query' description='The query used to import the data'>
+						<EditorWrapper
+							defaultLanguage='sql'
+							height={400}
+							value={action.Query}
+							onChange={onUpdateQuery}
+						></EditorWrapper>
+						<div className='queryButtons'>
+							<SlButton variant='neutral' size='small' onClick={onQueryPreview}>
+								<SlIcon slot='prefix' name='eye' />
+								Preview
+							</SlButton>
+							<SlButton
+								variant='success'
+								size='small'
+								onClick={onConfirmSchema}
+								disabled={isConfirmSchemaButtonDisabled}
+							>
+								<SlIcon slot='prefix' name='check-lg' />
+								Confirm
+							</SlButton>
+						</div>
+					</Section>
+				)}
+				{propertiesSection}
+				{supports.includes('Query') && (
+					<SlDrawer
+						className='previewDrawer'
+						label='Preview'
+						open={previewTable != null}
+						onSlAfterHide={() => setPreviewTable(null)}
+						placement='bottom'
+						style={{ '--size': '600px' }}
+					>
+						{previewTable != null && (
+							<StyledGrid
+								columns={previewTable.columns}
+								rows={previewTable.rows}
+								noRowsMessage={'Your query did not return data'}
+							/>
+						)}
+					</SlDrawer>
+				)}
+				{createPortal(
+					<AlertDialog
+						variant='danger'
+						isOpen={isAlertOpen}
+						onClose={() => setIsAlertOpen(false)}
+						title={'You will lose your work'}
+						actions={
+							<>
+								<SlButton variant='neutral' onClick={() => setIsAlertOpen(false)}>
+									Cancel
+								</SlButton>
+								<SlButton variant='danger' onClick={onSwitchPropertiesMode}>
+									Continue
+								</SlButton>
+							</>
+						}
+					>
+						<div style={{ textAlign: 'center' }}>
+							{propertiesMode === 'mappings' ? (
+								<p>
+									If you switch to the transformation function you will <b>PERMANENTLY</b> lose the
+									mappings you have currently created
+								</p>
+							) : (
+								<p>
+									If you switch to the mappings you will <b>PERMANENTLY</b> lose the transformation
+									code you have currently written
+								</p>
+							)}
+						</div>
+					</AlertDialog>,
+					document.body
+				)}
+				{action.Transformation != null &&
+					createPortal(
+						<SlDialog
+							className='inputSchemaDialog'
+							label='Input properties'
+							open={isInputSchemaDialogOpen}
+							onSlRequestClose={() => setIsInputSchemaDialogOpen(false)}
+							style={{ '--width': '700px' }}
+						>
+							{inputSchema.properties.map((p) => {
+								let isUsed =
+									action.Transformation.In.properties.findIndex((prop) => prop.name === p.name) !==
+									-1;
+								return (
+									<div className={`property${isUsed ? ' used' : ''}`}>
+										<div>
+											<div className='name'>{p.name}</div>
+											<div className='type'>{p.type.name}</div>
+										</div>
+										{!isUsed && (
+											<SlIconButton
+												name='plus-circle'
+												label='Add property'
+												onClick={() => onAddTransformationProperty('input', p)}
+											/>
+										)}
+									</div>
+								);
+							})}
+						</SlDialog>,
+						document.body
+					)}
+				{action.Transformation != null &&
+					createPortal(
+						<SlDialog
+							className='outputSchemaDialog'
+							label='Output properties'
+							open={isOutputSchemaDialogOpen}
+							onSlRequestClose={() => setIsOutputSchemaDialogOpen(false)}
+							style={{ '--width': '700px' }}
+						>
+							{outputSchema.properties.map((p) => {
+								let isUsed =
+									action.Transformation.Out.properties.findIndex((prop) => prop.name === p.name) !==
+									-1;
+								return (
+									<div className={`property${isUsed ? ' used' : ''}`}>
+										<div>
+											<div className='name'>{p.name}</div>
+											<div className='type'>{p.type.name}</div>
+										</div>
+										{!isUsed && (
+											<SlIconButton
+												name='plus-circle'
+												label='Add property'
+												onClick={() => onAddTransformationProperty('output', p)}
+											/>
+										)}
+									</div>
+								);
+							})}
+						</SlDialog>,
+						document.body
+					)}
 			</div>
-		</div>
+		</EditPage>
 	);
 };
 

@@ -5,7 +5,7 @@ import Flex from '../Flex/Flex';
 import getConnectionStatusInfos from '../../utils/getConnectionStatusInfos';
 import StatusDot from '../StatusDot/StatusDot';
 import { NavLink } from 'react-router-dom';
-import { SlTooltip, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectionBlock = ({ connection: c, isNew }) => {
 	let logo;
@@ -28,7 +28,7 @@ const ConnectionBlock = ({ connection: c, isNew }) => {
 					<StatusDot statusText={statusText} statusVariant={statusVariant} />
 				</SlTooltip>
 			</Flex>
-			<NavLink to={`/admin/connections/${c.ID}/overview`}></NavLink>
+			<NavLink to={`/admin/connections/${c.ID}/actions`}></NavLink>
 		</div>
 	);
 };

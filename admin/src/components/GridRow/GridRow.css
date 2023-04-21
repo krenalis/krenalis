@@ -1,4 +1,5 @@
 .GridRow {
     display: grid;
     grid-template-columns: var(--grid-columns);
+    align-items: center;
 }

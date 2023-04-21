@@ -1,0 +1,26 @@
+.comboBoxList {
+    visibility: hidden;
+    opacity: 0;
+    transform: scale(.75);
+    height: 0;
+    width: 0;
+    position: absolute;
+    left: 0;
+    top: 30px;
+    max-height: 300px;
+    transition: opacity .5s transform .5s;
+    z-index: 10;
+    box-shadow: var(--sl-shadow-medium);
+}
+
+.comboBoxList[data-isOpen="true"] {
+    visibility: visible;
+    opacity: 1;
+    transform: scale(1);
+    width: 100%;
+    height: auto;
+}
+
+.comboBoxInput {
+    position: relative;
+}
