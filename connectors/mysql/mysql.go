@@ -240,6 +240,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "MEDIUMINT":
 		return types.Int24(), nil
 	case "JSON":
+		// The driver seems to return the json type as VARCHAR instead of JSON.
 		return types.JSON(), nil
 	case "UNSIGNED INT":
 		return types.UInt(), nil
@@ -270,7 +271,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		}
 		return types.Text(types.Bytes(length)), nil
 	case "TIME":
-		return types.Text(types.Bytes(10)), nil
+		return types.Time(), nil
 	case "TIMESTAMP":
 		return types.DateTime(time.RFC3339), nil
 	case "UNSIGNED TINYINT":
