@@ -202,8 +202,6 @@ sl-switch[checked]::part(thumb) {
 }
 
 sl-drawer[placement="bottom"]::part(panel) {
-	border-top-left-radius: 3% 6%;
-	border-top-right-radius: 3% 6%;
 	padding: 20px 30px 10px 30px;
 }
 
