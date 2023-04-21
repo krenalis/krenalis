@@ -124,7 +124,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			setSupports(actionTypeInfos.Supports);
 
 			if (actionTypeInfos.Supports.includes('Query') && a != null) {
-				let res = await query(a.Query);
+				let res = await query(a.Query, 0);
 				if (res == null) {
 					a.Query = null;
 				} else {
@@ -393,7 +393,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setAction(a);
 	};
 
-	const query = async (query) => {
+	const query = async (query, limit) => {
 		let a = { ...action };
 		let trimmed = query != null ? query : a.Query.trim();
 		if (trimmed.length > queryMaxSize) {
@@ -404,7 +404,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			showError(`Your query does not contain the ':limit' placeholder`);
 			return;
 		}
-		let [res, err] = await API.connections.query(c.ID, trimmed, 0);
+		let [res, err] = await API.connections.query(c.ID, trimmed, limit);
 		if (err !== null) {
 			if (err instanceof NotFoundError) {
 				redirect('/admin/connections');
@@ -428,7 +428,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	};
 
 	const onQueryPreview = async () => {
-		let res = await query();
+		let res = await query(null, 20);
 		if (res == null) {
 			return;
 		}
@@ -441,7 +441,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	};
 
 	const onConfirmSchema = async () => {
-		let res = await query();
+		let res = await query(null, 0);
 		if (res == null) {
 			return;
 		}
