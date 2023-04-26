@@ -26,11 +26,10 @@ const ComboBoxList = forwardRef(({ isOpen, searchTerm, comboBoxItems }, ref) => 
 	for (let item of comboBoxItems) {
 		let term = item.searchableTerm;
 		if (
-			(term.includes(searchTerm) ||
-				term.includes(searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1)) ||
-				term.includes(searchTerm.toUpperCase) ||
-				term.includes(searchTerm.toLowerCase)) &&
-			searchTerm !== term
+			term.includes(searchTerm) ||
+			term.includes(searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1)) ||
+			term.includes(searchTerm.toUpperCase) ||
+			term.includes(searchTerm.toLowerCase)
 		) {
 			searchResults.push(item.content);
 		}

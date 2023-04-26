@@ -237,7 +237,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setAction(a);
 		setConditionSearchTerm(value);
 		setIsConditionListOpen(false);
-		focusedCondition.focus();
 	};
 
 	const onSwitchFilterLogical = () => {
@@ -386,7 +385,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		updateProperty(focusedProperty.name, value);
 		setPropertySearchTerm(value);
 		setIsPropertiesListOpen(false);
-		focusedProperty.focus();
 	};
 
 	const onUpdateQuery = async (value) => {
