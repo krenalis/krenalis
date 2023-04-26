@@ -2,9 +2,6 @@ import * as variants from './variants';
 import * as icons from './icons';
 
 const statuses = {
-	genericNotFound: (message) => {
-		return [variants.DANGER, icons.NOT_FOUND, message];
-	},
 	connectionDoesNotExistAnymore: [variants.DANGER, icons.NOT_FOUND, 'The connection does not exist anymore'],
 	connectorDoesNotExistAnymore: [variants.DANGER, icons.NOT_FOUND, 'The connector does not exist anymore'],
 	workspaceDoesNotExistAnymore: [variants.DANGER, icons.NOT_FOUND, 'The workspace does not exist anymore'],
@@ -35,7 +32,6 @@ const statuses = {
 	propertyNotExist: [variants.DANGER, icons.NOT_FOUND, 'One of the schema properties does not exist'],
 	settingsNotValid: [variants.DANGER, icons.INVALID_INSERTED_VALUE, 'These settings are not valid'],
 	listenerDoesNotExist: [variants.DANGER, icons.NOT_FOUND, 'The listener does not exist'],
-	queryExecutionFailed: [variants.DANGER, icons.CODE_ERROR, 'The inserted query returns an error'],
 	tooManyListeners: [variants.DANGER, icons.FORBIDDEN, 'You have exceeded the number of event listeners allowed'],
 	alreadyHasTransformation: [
 		variants.DANGER,

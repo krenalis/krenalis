@@ -6,6 +6,8 @@ import AlertDialog from '../AlertDialog/AlertDialog';
 import LittleLogo from '../LittleLogo/LittleLogo';
 import EditPage from '../EditPage/EditPage';
 import statuses from '../../constants/statuses';
+import * as variants from '../../constants/variants';
+import * as icons from '../../constants/icons';
 import EditorWrapper from '../EditorWrapper/EditorWrapper';
 import StyledGrid from '../StyledGrid/StyledGrid';
 import { ComboBoxList, ComboBoxInput } from '../ComboBox/ComboBox';
@@ -108,7 +110,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							showStatus(statuses.noGroupsSchema);
 							break;
 						case 'EventTypeNotExists':
-							showStatus(statuses.genericNotFound(err.message));
+							showStatus([variants.DANGER, icons.NOT_FOUND, err.message]);
 							break;
 						default:
 							break;
@@ -413,7 +415,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			}
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'QueryExecutionFailed') {
-					showStatus(statuses.queryExecutionFailed);
+					showStatus([variants.DANGER, icons.CODE_ERROR, err.cause]);
 				}
 				return;
 			}
@@ -492,7 +494,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				switch (err.code) {
 					case 'EventTypeNotExists':
 					case 'PropertyNotExists':
-						showStatus(statuses.genericNotFound(err.message));
+						showStatus([variants.DANGER, icons.NOT_FOUND, err.message]);
 						break;
 					default:
 						break;
