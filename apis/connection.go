@@ -725,20 +725,22 @@ func (this *Connection) ExecQuery(query string, limit int) (types.Type, [][]stri
 	}
 
 	// Fill the rows.
-	var rows [][]string
-	propertiesNames := schema.PropertiesNames()
-	values := make([]any, len(propertiesNames))
-	for i := range values {
-		var value string
-		values[i] = &value
-	}
+	properties := schema.Properties()
+	dest := make([]any, len(properties))
+
+	var rows []map[string]any
 	for rawRows.Next() {
-		if err := rawRows.Scan(values...); err != nil {
-			return types.Type{}, nil, err
+		row := make(map[string]any, len(properties))
+		for i, p := range properties {
+			dest[i] = databaseScanValue{property: p, row: row}
 		}
-		row := make([]string, len(propertiesNames))
-		for i, v := range values {
-			row[i] = *(v.(*string))
+		if err := rawRows.Scan(dest...); err != nil {
+			if err := errors.Unwrap(err); err != nil {
+				if err, ok := err.(*_connector.DatabaseQueryError); ok {
+					return types.Type{}, nil, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
+				}
+			}
+			return types.Type{}, nil, err
 		}
 		rows = append(rows, row)
 	}
@@ -746,11 +748,18 @@ func (this *Connection) ExecQuery(query string, limit int) (types.Type, [][]stri
 	if err != nil {
 		return types.Type{}, nil, err
 	}
-	if rows == nil {
-		rows = [][]string{}
+
+	stringRows := make([][]string, len(rows))
+	for i, row := range rows {
+		stringRows[i] = make([]string, len(properties))
+		for j, n := range properties {
+			if row[n.Name] != nil {
+				stringRows[i][j] = fmt.Sprintf("%v", row[n.Name])
+			}
+		}
 	}
 
-	return schema, rows, nil
+	return schema, stringRows, nil
 }
 
 // An Execution describes an action execution as returned by Executions.
