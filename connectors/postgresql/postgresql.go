@@ -225,7 +225,10 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		if !ok {
 			return types.Type{}, errors.New("cannot get length")
 		}
-		return types.Text(types.Chars(length)), nil
+		if length > 0 {
+			return types.Text(types.Chars(length)), nil
+		}
+		return types.Text(), nil
 	case "DATE":
 		return types.Date(""), nil // TODO(marco) set the layout
 	case "FLOAT4":
