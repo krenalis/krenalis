@@ -227,9 +227,10 @@ func (ac *Action) Execute(reimport bool) error {
 //     which is specified and thus returned as an errors.BadRequest error).
 //   - QueryExecutionFailed, if the execution of the specified query fails.
 func (ac *Action) Set(action ActionToSet) error {
+	c := ac.action.Connection()
 	connection := &Connection{
 		db:         ac.db,
-		connection: ac.action.Connection(),
+		connection: c,
 	}
 	schema, err := connection.validateActionToSet(action, ac.action.Target, ac.action.EventType)
 	if err != nil {
@@ -239,10 +240,12 @@ func (ac *Action) Set(action ActionToSet) error {
 		ID:             ac.action.ID,
 		Name:           action.Name,
 		Enabled:        action.Enabled,
-		Schema:         schema,
 		Mapping:        action.Mapping,
 		Transformation: (*state.Transformation)(action.Transformation),
 		Query:          action.Query,
+	}
+	if shouldStoreActionSchema(c.Connector().Type, c.Role, ac.action.Target) {
+		n.Schema = schema
 	}
 	var filter, mapping, tIn, tOut, tSource []byte
 	if action.Filter != nil {
@@ -276,20 +279,24 @@ func (ac *Action) Set(action ActionToSet) error {
 		tSource = []byte(t.PythonSource)
 	}
 	ctx := context.Background()
-	c := ac.action.Connection()
 	// Marshal the schema.
-	rawSchema, err := schema.MarshalJSON()
-	if err != nil {
-		if ac.EventType == nil {
-			return fmt.Errorf("cannot marshal fetched schema for action %d of connection %d: %s", ac.ID, c.ID, err)
+	var rawSchema []byte
+	if n.Schema.Valid() {
+		rawSchema, err := n.Schema.MarshalJSON()
+		if err != nil {
+			if ac.EventType == nil {
+				return fmt.Errorf("cannot marshal fetched schema for action %d of connection %d: %s", ac.ID, c.ID, err)
+			}
+			return fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: %s", *ac.EventType, c.ID, err)
 		}
-		return fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: %s", *ac.EventType, c.ID, err)
-	}
-	if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
-		if ac.EventType == nil {
-			return fmt.Errorf("cannot marshal fetched schema for action %d of connection %d: data is too large", ac.ID, c.ID)
+		if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
+			if ac.EventType == nil {
+				return fmt.Errorf("cannot marshal fetched schema for action %d of connection %d: data is too large", ac.ID, c.ID)
+			}
+			return fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: data is too large", *ac.EventType, c.ID)
 		}
-		return fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: data is too large", *ac.EventType, c.ID)
+	} else {
+		rawSchema = []byte{}
 	}
 	err = ac.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
@@ -1152,4 +1159,17 @@ func parsePropertyExpression(p string) ([]string, bool) {
 	}
 
 	return []string{p}, true
+}
+
+// shouldStoreActionSchema reports whether the schema for an action with the
+// given connector type, connection role and target should be stored with the
+// action.
+func shouldStoreActionSchema(typ state.ConnectorType, role state.ConnectionRole, target state.ActionTarget) bool {
+	if typ != state.AppType {
+		return false
+	}
+	if role == state.SourceRole {
+		return target == state.UsersTarget || target == state.GroupsTarget
+	}
+	return target == state.EventsTarget
 }

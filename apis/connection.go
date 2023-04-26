@@ -478,6 +478,7 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 func (this *Connection) AddAction(target ActionTarget, eventType string, action ActionToSet) (int, error) {
 
 	c := this.connection
+	connector := c.Connector()
 
 	// Validate the target and the event type.
 	switch target {
@@ -492,7 +493,7 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 
 	// Check if the connection, with its connector type and role, allows the
 	// given target.
-	ok := allowsActionTarget(c.Connector().Type, _connector.Role(c.Role), state.ActionTarget(target))
+	ok := allowsActionTarget(connector.Type, _connector.Role(c.Role), state.ActionTarget(target))
 	if !ok {
 		return 0, errors.BadRequest("target %q is not supported", target)
 	}
@@ -511,10 +512,12 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		EventType:      eventType,
 		ScheduleStart:  int16(mathrand.Intn(24 * 60)),
 		SchedulePeriod: 60,
-		Schema:         schema,
 		Mapping:        action.Mapping,
 		Transformation: (*state.Transformation)(action.Transformation),
 		Query:          action.Query,
+	}
+	if shouldStoreActionSchema(connector.Type, c.Role, n.Target) {
+		n.Schema = schema
 	}
 
 	// Marshal the filter.
@@ -561,18 +564,23 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 	}
 
 	// Marshal the schema.
-	rawSchema, err := schema.MarshalJSON()
-	if err != nil {
-		if eventType == "" {
-			return 0, fmt.Errorf("cannot marshal fetched schema for target %s of connection %d: %s", target, c.ID, err)
+	var rawSchema []byte
+	if n.Schema.Valid() {
+		rawSchema, err = n.Schema.MarshalJSON()
+		if err != nil {
+			if eventType == "" {
+				return 0, fmt.Errorf("cannot marshal fetched schema for target %s of connection %d: %s", target, c.ID, err)
+			}
+			return 0, fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: %s", target, c.ID, err)
 		}
-		return 0, fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: %s", target, c.ID, err)
-	}
-	if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
-		if eventType == "" {
-			return 0, fmt.Errorf("cannot marshal fetched schema for target %s of connection %d: data is too large", target, c.ID)
+		if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
+			if eventType == "" {
+				return 0, fmt.Errorf("cannot marshal fetched schema for target %s of connection %d: data is too large", target, c.ID)
+			}
+			return 0, fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: data is too large", target, c.ID)
 		}
-		return 0, fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: data is too large", target, c.ID)
+	} else {
+		rawSchema = []byte{}
 	}
 
 	// Add the action.
@@ -878,23 +886,19 @@ func (this *Connection) Keys() ([]string, error) {
 func (this *Connection) Reload() error {
 	c := this.connection
 	connector := c.Connector()
-	var err error
-	if connector.Targets.Contains(state.UsersTarget) {
-		switch connector.Type {
-		case state.AppType, state.DatabaseType, state.FileType:
-			if c.Role == state.SourceRole {
-				err = this.reloadUserSchema()
-			}
+	if connector.Targets.Contains(state.UsersTarget) && shouldStoreActionSchema(connector.Type, c.Role, state.UsersTarget) {
+		err := this.reloadUserSchema()
+		if err != nil {
+			return err
 		}
 	}
-	if connector.Targets.Contains(state.EventsTarget) {
-		if connector.Type == state.AppType {
-			if c.Role == state.DestinationRole {
-				err = this.reloadEventSchemas()
-			}
+	if connector.Targets.Contains(state.EventsTarget) && shouldStoreActionSchema(connector.Type, c.Role, state.EventsTarget) {
+		err := this.reloadEventSchemas()
+		if err != nil {
+			return err
 		}
 	}
-	return err
+	return nil
 }
 
 // Rename renames the connection with the given new name.
@@ -1275,55 +1279,18 @@ func (this *Connection) reloadEventSchemas() error {
 }
 
 // reloadUserSchema reloads the user schema of the connection. The connection
-// must be an app, a database or a file connection.
-//
-// It returns an errors.UnprocessableError error with code QueryExecutionFailed,
-// if the execution of the specified query fails.
+// must be an app connection.
 func (this *Connection) reloadUserSchema() error {
 
 	c := this.connection
-	connector := c.Connector()
+	if typ := c.Connector().Type; typ != state.AppType {
+		return fmt.Errorf("cannot reload user schema for %s connections", typ)
+	}
 
-	var schema types.Type
-
-	switch connector.Type {
-	case state.AppType:
-
-		var err error
-		schema, err = this.fetchAppSchema(state.UsersTarget, "")
-		if err != nil {
-			return err
-		}
-
-	case state.DatabaseType:
-
-		var query string
-		for _, action := range c.Actions() {
-			if action.Target == state.UsersTarget {
-				query = action.Query
-				break
-			}
-		}
-		if query == "" {
-			return nil
-		}
-		var err error
-		schema, err = this.fetchDatabaseSchema(query)
-		if err != nil {
-			if _, ok := err.(*_connector.DatabaseQueryError); ok {
-				return errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
-			}
-			return err
-		}
-
-	case state.FileType:
-
-		var err error
-		schema, err = this.fetchFileSchema()
-		if err != nil {
-			return err
-		}
-
+	// Fetch the schema.
+	schema, err := this.fetchAppSchema(state.UsersTarget, "")
+	if err != nil {
+		return err
 	}
 
 	// Update the schema.

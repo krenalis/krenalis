@@ -11,7 +11,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"sort"
 
 	"chichi/apis/errors"
@@ -77,10 +76,8 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 	}
 
 	// Listen to state changes.
-	apis.state.AddListener(apis.onAddConnection)
 	apis.state.AddListener(apis.onElectLeader)
 	apis.state.AddListener(apis.onExecuteAction)
-	apis.state.AddListener(apis.onSetAction)
 
 	apis.events, err = events.New(ctx, db, apis.state)
 
@@ -267,22 +264,6 @@ func (apis *APIs) CountAccounts() int {
 	return len(apis.state.Accounts())
 }
 
-// onAddConnection is called when a connection is added.
-func (apis *APIs) onAddConnection(n state.AddConnectionNotification) {
-	if !apis.state.IsLeader() {
-		return
-	}
-	connection, _ := apis.state.Connection(n.ID)
-	connector := connection.Connector()
-	if connector.Type != state.AppType {
-		return
-	}
-	if connection.Role == state.SourceRole && connector.Targets.Contains(state.UsersTarget) {
-		go apis.reloadSchema(connection)
-		return
-	}
-}
-
 // onElectLeader is called when a leader is elected.
 func (apis *APIs) onElectLeader(n state.ElectLeaderNotification) {
 	if apis.state.IsLeader() {
@@ -303,26 +284,6 @@ func (apis *APIs) onExecuteAction(n state.ExecuteActionNotification) {
 	action, _ := apis.state.Action(n.Action)
 	a := &Action{db: apis.db, action: action}
 	go a.exec()
-}
-
-// onSetAction is called when an action is changed.
-func (apis *APIs) onSetAction(n state.SetActionNotification) {
-	if !apis.state.IsLeader() {
-		return
-	}
-	if n.Query == "" {
-		return
-	}
-	action, _ := apis.state.Action(n.ID)
-	go apis.reloadSchema(action.Connection())
-}
-
-func (apis *APIs) reloadSchema(connection *state.Connection) {
-	c := &Connection{db: apis.db, connection: connection}
-	err := c.reloadUserSchema()
-	if err != nil {
-		log.Printf("[error] cannot reload user schema for connection %d: %s", c.connection.ID, err)
-	}
 }
 
 // Workspace represents a workspace.
