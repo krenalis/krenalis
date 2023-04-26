@@ -92,11 +92,9 @@ const ConnectionSQL = () => {
 				></EditorWrapper>
 				<div className='buttons'>
 					<SlButton className='previewButton' variant='neutral' size='medium' onClick={handlePreview}>
-						<SlIcon slot='prefix' name='eye' />
 						Preview
 					</SlButton>
 					<SlButton className='saveButton' variant='primary' size='medium' onClick={saveQuery}>
-						<SlIcon slot='prefix' name='save' />
 						Save
 					</SlButton>
 				</div>

@@ -270,8 +270,7 @@ const ConnectorSettings = () => {
 											Currently there are no storage {connectionRole.toLowerCase()}s available
 										</div>
 										<SlButton variant='neutral'>
-											<SlIcon name='plus-circle' slot='suffix'></SlIcon>
-											Create one
+											Create one...
 											<NavLink to={`/admin/connectors?role=${connectionRole}`}></NavLink>
 										</SlButton>
 									</div>

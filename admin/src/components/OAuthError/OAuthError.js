@@ -9,7 +9,6 @@ const OAuthError = () => {
 				<SlIcon name='exclamation-circle-fill'></SlIcon>
 				<div className='text'>Something went wrong during the OAuth authentication</div>
 				<SlButton variant='default'>
-					<SlIcon slot='suffix' name='arrow-right-circle'></SlIcon>
 					Go to connections map
 					<NavLink to='/admin/connections'></NavLink>
 				</SlButton>

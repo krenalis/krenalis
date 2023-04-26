@@ -2,7 +2,7 @@ import { useContext, useState } from 'react';
 import './ConnectionReload.css';
 import { AppContext } from '../../context/AppContext';
 import { ConnectionContext } from '../../context/ConnectionContext';
-import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 import statuses from '../../constants/statuses';
 
 const ConnectionReload = () => {
@@ -31,7 +31,6 @@ const ConnectionReload = () => {
 				Click to reload the schema and the action types of <b>{c.Name}</b>
 			</p>
 			<SlButton variant='primary' onClick={reloadConnection} loading={isLoading}>
-				<SlIcon slot='prefix' name='arrow-clockwise'></SlIcon>
 				Reload
 			</SlButton>
 		</div>

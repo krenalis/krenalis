@@ -1,7 +1,7 @@
 import { useContext, useEffect } from 'react';
 import './EditPage.css';
 import { AppContext } from '../../context/AppContext';
-import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const EditPage = ({ title, actions, onCancel, children }) => {
 	let { updateIsFullScreen } = useContext(AppContext);
@@ -44,7 +44,6 @@ const EditPage = ({ title, actions, onCancel, children }) => {
 				<div className='title'>{title}</div>
 				<div className='actions'>
 					<SlButton variant='default' onClick={onCancel}>
-						<SlIcon name='x' slot='prefix'></SlIcon>
 						Cancel
 					</SlButton>
 					{actions}

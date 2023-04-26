@@ -188,16 +188,13 @@ let ConnectionActions = () => {
 			<div className='actionButtons'>
 				{(a.Target === 'Users' || a.Target === 'Groups') && (
 					<SlButton variant='default' size='small' onClick={() => executeAction(a.ID)}>
-						<SlIcon slot='prefix' name='play' />
 						Execute
 					</SlButton>
 				)}
 				<SlButton variant='default' size='small' onClick={() => setSelectedAction(a)}>
-					<SlIcon slot='prefix' name='pencil' />
-					Edit
+					Edit...
 				</SlButton>
 				<SlButton className='removeAction' variant='danger' size='small' onClick={() => onRemoveAction(a.ID)}>
-					<SlIcon slot='prefix' name='trash' />
 					Remove
 				</SlButton>
 			</div>
@@ -246,8 +243,7 @@ let ConnectionActions = () => {
 									setIsDialogOpen(true);
 								}}
 							>
-								<SlIcon name='plus-lg' slot='prefix'></SlIcon>
-								Add action
+								Add action...
 							</SlButton>
 						</div>
 					</>
@@ -255,13 +251,13 @@ let ConnectionActions = () => {
 					<>
 						<Flex justifyContent={'end'} alignItems={'center'}>
 							<SlButton
-								variant='primary'
+								variant='text'
 								onClick={() => {
 									setIsDialogOpen(true);
 								}}
 							>
-								<SlIcon name='plus-lg' slot='prefix'></SlIcon>
-								Add action
+								<SlIcon slot='suffix' name='plus-circle' />
+								Add a new action
 							</SlButton>
 						</Flex>
 						<StyledGrid rows={rows} columns={columns} noRowsMessage='No actions to show'></StyledGrid>

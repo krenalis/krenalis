@@ -1,5 +1,5 @@
 import './SelectedPropertyMessage.css';
-import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const SelectedPropertyMessage = ({ selectedProperty: sp, onClose }) => {
 	return (
@@ -10,7 +10,6 @@ const SelectedPropertyMessage = ({ selectedProperty: sp, onClose }) => {
 				<span className='name'>"{sp.label === '' || sp.label == null ? sp.name : sp.label}"</span>
 			</div>
 			<SlButton className='removeSelectedProperty' variant='neutral' onClick={onClose}>
-				<SlIcon slot='prefix' name='x-lg' />
 				Close
 			</SlButton>
 		</div>

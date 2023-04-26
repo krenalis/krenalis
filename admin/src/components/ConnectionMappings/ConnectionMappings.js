@@ -320,7 +320,7 @@ const ConnectionMappings = () => {
 						disabled={sp != null}
 						onClick={() => setIsInputDialogOpen(true)}
 					>
-						Add property
+						Add property...
 					</SlButton>
 					{usedInputProperties.map(({ name, label, type }) => {
 						let role = 'input';
@@ -351,7 +351,6 @@ const ConnectionMappings = () => {
 						disabled={sp != null}
 						onClick={onSave}
 					>
-						<SlIcon slot='prefix' name='save' />
 						Save
 					</SlButton>
 					{mappings.map((m) => {
@@ -420,7 +419,7 @@ const ConnectionMappings = () => {
 						disabled={sp != null}
 						onClick={() => setIsOutputDialogOpen(true)}
 					>
-						Add property
+						Add property...
 					</SlButton>
 					{usedOutputProperties.map(({ name, label, type }) => {
 						let role = 'output';

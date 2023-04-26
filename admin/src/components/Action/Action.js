@@ -629,7 +629,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					{operatorSelect}
 					{valueInput}
 					<SlButton className='removeCondition' size='small' variant='danger' onClick={onRemoveCondition}>
-						<SlIcon name='trash' slot='prefix'></SlIcon>
 						Remove
 					</SlButton>
 				</div>
@@ -642,13 +641,17 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		let propertiesSectionActions = null;
 		if (propertiesMode !== '') {
 			let actionText;
+			let actionIcon;
 			if (propertiesMode === 'mappings') {
 				actionText = 'Switch to transformation function';
+				actionIcon = <SlIcon name='shuffle' slot='prefix'></SlIcon>;
 			} else if (propertiesMode === 'transformation') {
 				actionText = 'Switch to mappings';
+				actionIcon = <SlIcon name='filetype-py' slot='prefix'></SlIcon>;
 			}
 			propertiesSectionActions = (
 				<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
+					{actionIcon}
 					{actionText}
 				</SlButton>
 			);
@@ -757,8 +760,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							variant='default'
 							onClick={() => setIsInputSchemaDialogOpen(true)}
 						>
-							<SlIcon name='plus' slot='prefix'></SlIcon>
-							Add new property
+							Add new property...
 						</SlButton>
 					</div>
 					<EditorWrapper
@@ -791,8 +793,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							variant='default'
 							onClick={() => setIsOutputSchemaDialogOpen(true)}
 						>
-							<SlIcon name='plus' slot='prefix'></SlIcon>
-							Add new property
+							Add new property...
 						</SlButton>
 					</div>
 				</div>
@@ -859,11 +860,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					disabled={actionType.Schema != null && propertiesMode === ''}
 					onClick={onSave}
 				>
-					{actionProp != null ? (
-						<SlIcon slot='prefix' name='save' />
-					) : (
-						<SlIcon slot='prefix' name='plus-circle' />
-					)}
 					{actionProp != null ? 'Save' : 'Add'}
 				</SlButton>
 			}
@@ -890,7 +886,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							comboBoxItems={getPropertiesList(onSelectConditionListItem)}
 						/>
 						<SlButton className='addCondition' size='small' variant='neutral' onClick={onAddCondition}>
-							<SlIcon name='plus' slot='prefix'></SlIcon>
 							Add new condition
 						</SlButton>
 					</Section>
@@ -905,7 +900,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						></EditorWrapper>
 						<div className='queryButtons'>
 							<SlButton variant='neutral' size='small' onClick={onQueryPreview}>
-								<SlIcon slot='prefix' name='eye' />
 								Preview
 							</SlButton>
 							<SlButton
@@ -914,7 +908,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 								onClick={onConfirmSchema}
 								disabled={isConfirmSchemaButtonDisabled}
 							>
-								<SlIcon slot='prefix' name='check-lg' />
 								Confirm
 							</SlButton>
 						</div>

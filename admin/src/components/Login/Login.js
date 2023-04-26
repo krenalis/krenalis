@@ -69,7 +69,6 @@ export default class Login extends React.Component {
 								<span>foopass2</span>
 							</div>
 							<SlButton className='loginButton' variant='primary' onClick={this.handleLogin}>
-								<SlIcon slot='suffix' name='box-arrow-in-right' />
 								Login
 							</SlButton>
 						</form>

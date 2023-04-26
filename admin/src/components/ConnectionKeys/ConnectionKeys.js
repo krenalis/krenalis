@@ -86,7 +86,6 @@ const ConnectionKeys = ({ connection: c }) => {
 						<Flex alignItems='center' gap={30}>
 							<div className='key'>{key}</div>
 							<SlButton variant='danger' onClick={() => onRevokeKey(key)}>
-								<SlIcon slot='prefix' name='x' />
 								Revoke
 							</SlButton>
 						</Flex>
@@ -94,7 +93,6 @@ const ConnectionKeys = ({ connection: c }) => {
 				})}
 			</div>
 			<SlButton variant='neutral' onClick={onAddKey}>
-				<SlIcon slot='prefix' name='plus' />
 				Generate new Key
 			</SlButton>
 		</>

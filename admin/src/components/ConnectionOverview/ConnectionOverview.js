@@ -145,11 +145,9 @@ const ConnectionOverview = () => {
 							<SlButton
 								className='importButton'
 								variant='text'
-								size='large'
 								onClick={() => setAskImportConfirmation(true)}
 							>
-								<SlIcon slot='suffix' name='cloud-download' />
-								Start a new import
+								Start a new import...
 							</SlButton>
 						</Flex>
 						<BarChart width={1400} height={350} data={userStats}>
@@ -217,7 +215,6 @@ const ConnectionOverview = () => {
 					})}
 				</div>
 				<SlButton variant='primary' size='large' onClick={onImportConfirmation}>
-					<SlIcon slot='suffix' name='cloud-download' />
 					Start import
 				</SlButton>
 			</SlDialog>

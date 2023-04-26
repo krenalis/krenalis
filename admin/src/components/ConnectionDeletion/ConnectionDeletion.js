@@ -38,7 +38,6 @@ const ConnectionDeletion = ({ connection: c, onDelete }) => {
 						variant='danger'
 						onClick={() => setAskDeletionConfirmation(true)}
 					>
-						<SlIcon slot='suffix' name='trash3' />
 						Delete
 					</SlButton>
 				</Flex>
@@ -52,11 +51,9 @@ const ConnectionDeletion = ({ connection: c, onDelete }) => {
 			>
 				<div className='buttons'>
 					<SlButton variant='neutral' onClick={() => setAskDeletionConfirmation(false)}>
-						<SlIcon slot='suffix' name='x-lg' />
 						Cancel
 					</SlButton>
 					<SlButton variant='danger' onClick={onDeletionConfirmation}>
-						<SlIcon slot='suffix' name='trash3' />
 						Remove
 					</SlButton>
 				</div>

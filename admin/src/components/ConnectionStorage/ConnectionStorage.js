@@ -81,14 +81,12 @@ const ConnectionStorage = ({ connection: c }) => {
 					<Flex className='storageContainer' alignItems='center' gap={30}>
 						<div className='storage'>{currentStorage.Name}</div>
 						<SlButton variant='danger' onClick={onRemoveStorage}>
-							<SlIcon slot='prefix' name='x' />
 							Remove
 						</SlButton>
 					</Flex>
 				</>
 			)}
 			<SlButton variant='neutral' onClick={() => setShowStorages(true)}>
-				<SlIcon slot='prefix' name={c.Storage === 0 ? 'plus' : 'pencil-fill'} />
 				{c.Storage === 0 ? 'Add a storage' : 'Change the storage'}
 			</SlButton>
 			<SlDialog
