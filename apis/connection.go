@@ -44,6 +44,7 @@ var (
 	ConnectorNotExists  errors.Code = "ConnectorNotExists"
 	EventNotExists      errors.Code = "EventNotExists"
 	EventTypeNotExists  errors.Code = "EventTypeNotExists"
+	FetchSchemaFailed   errors.Code = "FetchSchemaFailed"
 	InvalidRefreshToken errors.Code = "InvalidRefreshToken"
 	KeyNotExists        errors.Code = "KeyNotExists"
 	NoGroupsSchema      errors.Code = "NoGroupsSchema"
@@ -121,6 +122,10 @@ const (
 //
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - FetchSchemaFailed, if an error occurred fetching the schema.
 func (this *Connection) ActionTypes() ([]*ActionType, error) {
 	var actionTypes []*ActionType
 	c := this.connection
@@ -222,7 +227,7 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 		case state.AppType:
 			eventTypes, err := this.fetchEventTypes()
 			if err != nil {
-				return nil, err
+				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			for _, et := range eventTypes {
 				id := et.ID
@@ -275,10 +280,12 @@ const (
 // more details.
 //
 // It returns an errors.UnprocessableError error with code
+//
+//   - EventTypeNotExists, if the target is Events and the event type does not
+//     exist.
+//   - FetchSchemaFailed, if an error occurred fetching the schema.
 //   - NoUsersSchema, if target is Users and the users schema does not exist.
 //   - NoGroupsSchema, if target is Groups and the groups schema does not
-//     exist.
-//   - EventTypeNotExists, if the target is Events and the event type does not
 //     exist.
 func (this *Connection) ActionTypeInformation(target ActionTarget, eventType string) (ActionTypeInformation, error) {
 
@@ -314,7 +321,7 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 			var err error
 			appSchema, err := this.fetchAppSchema(state.UsersTarget, "")
 			if err != nil {
-				return ActionTypeInformation{}, err
+				return ActionTypeInformation{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			var ok bool
 			grSchema, ok := this.connection.Workspace().Schemas["users"]
@@ -335,7 +342,7 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 			var err error
 			appSchema, err := this.fetchAppSchema(state.GroupsTarget, "")
 			if err != nil {
-				return ActionTypeInformation{}, err
+				return ActionTypeInformation{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			var ok bool
 			grSchema, ok := this.connection.Workspace().Schemas["groups"]
@@ -358,7 +365,7 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 			}
 			eventTypes, err := this.fetchEventTypes()
 			if err != nil {
-				return ActionTypeInformation{}, err
+				return ActionTypeInformation{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			var et *_connector.EventType
 			for _, e := range eventTypes {
@@ -372,7 +379,7 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 			}
 			etSchema, err := this.fetchAppSchema(state.EventsTarget, eventType)
 			if err != nil {
-				return ActionTypeInformation{}, err
+				return ActionTypeInformation{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			at.Supports = append(at.Supports, ActionSupportFilter)
 			if etSchema.Valid() {
@@ -411,7 +418,7 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 		case UsersTarget:
 			fileSchema, err := this.fetchFileSchema()
 			if err != nil {
-				return ActionTypeInformation{}, err
+				return ActionTypeInformation{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			usersSchema, ok := this.connection.Workspace().Schemas["users"]
 			if !ok {
@@ -430,7 +437,7 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 		case GroupsTarget:
 			fileSchema, err := this.fetchFileSchema()
 			if err != nil {
-				return ActionTypeInformation{}, err
+				return ActionTypeInformation{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			groupsSchema, ok := this.connection.Workspace().Schemas["groups"]
 			if !ok {
@@ -1225,6 +1232,10 @@ func (this *Connection) newFirehose(ctx context.Context) *firehose {
 var errRecordStop = errors.New("stop record")
 
 // reloadEventSchemas reloads the events schemas of the connection.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - FetchSchemaFailed, if an error occurred fetching the schema.
 func (this *Connection) reloadEventSchemas() error {
 
 	for _, action := range this.connection.Actions() {
@@ -1234,7 +1245,7 @@ func (this *Connection) reloadEventSchemas() error {
 		// Fetch the schema.
 		schema, err := this.fetchAppSchema(state.EventsTarget, action.EventType)
 		if err != nil {
-			return err
+			return errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 		}
 		if schema.EqualTo(action.Schema) {
 			continue
@@ -1272,6 +1283,10 @@ func (this *Connection) reloadEventSchemas() error {
 
 // reloadUserSchema reloads the user schema of the connection. The connection
 // must be an app connection.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - FetchSchemaFailed, if an error occurred fetching the schema.
 func (this *Connection) reloadUserSchema() error {
 
 	c := this.connection
@@ -1282,7 +1297,7 @@ func (this *Connection) reloadUserSchema() error {
 	// Fetch the schema.
 	schema, err := this.fetchAppSchema(state.UsersTarget, "")
 	if err != nil {
-		return err
+		return errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 	}
 
 	// Update the schema.

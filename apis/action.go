@@ -513,6 +513,7 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 // It returns an errors.UnprocessableError error with code
 //
 //   - EventTypeNotExists, if the specified event type does not exist.
+//   - FetchSchemaFailed, if an error occurred fetching the schema.
 //   - PropertyNotExists, if a property of a mapping / transformation does not
 //     exist in the schema (except for properties of the event type schema,
 //     which is specified and thus returned as an errors.BadRequest error).
@@ -638,7 +639,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			}
 			s, err := this.fetchAppSchema(target, eventType)
 			if err != nil {
-				return types.Type{}, err
+				return types.Type{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			schema = s
 		case state.EventsTarget:
@@ -649,7 +650,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			case state.AppType:
 				eventTypes, err := this.fetchEventTypes()
 				if err != nil {
-					return types.Type{}, err
+					return types.Type{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 				}
 				var et *_connector.EventType
 				for _, e := range eventTypes {
@@ -672,7 +673,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if c.Role == state.SourceRole {
 			s, err := this.fetchDatabaseSchema(action.Query)
 			if err != nil {
-				return types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
+				return types.Type{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			schema = s
 		}
@@ -680,7 +681,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if c.Role == state.SourceRole {
 			s, err := this.fetchFileSchema()
 			if err != nil {
-				return types.Type{}, err
+				return types.Type{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			schema = s
 		}
