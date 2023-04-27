@@ -135,9 +135,12 @@ func (c *connection) Write(r io.Reader, path, contentType string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 	_, err = io.Copy(f, r)
-	return err
+	err2 := f.Close()
+	if err != nil {
+		return err
+	}
+	return err2
 }
 
 // filesystemPath returns the path on the filesystem for the path relative to
