@@ -31,9 +31,19 @@ const ComboBoxList = forwardRef(({ isOpen, searchTerm, comboBoxItems }, ref) => 
 			term.includes(searchTerm.toUpperCase) ||
 			term.includes(searchTerm.toLowerCase)
 		) {
-			searchResults.push(item.content);
+			searchResults.push(item);
 		}
 	}
+
+	searchResults.sort((a, b) => {
+		let aTerm = a.searchableTerm;
+		let bTerm = b.searchableTerm;
+		if (aTerm === searchTerm) return -1;
+		if (bTerm === searchTerm) return 1;
+		if (aTerm.startsWith(searchTerm) && !bTerm.startsWith(searchTerm)) return -1;
+		else if (!aTerm.startsWith(searchTerm) && bTerm.startsWith(searchTerm)) return 1;
+		return 0;
+	});
 
 	return (
 		<SlMenu
@@ -44,7 +54,7 @@ const ComboBoxList = forwardRef(({ isOpen, searchTerm, comboBoxItems }, ref) => 
 			data-isOpen={isOpen && searchResults.length > 0}
 			onMouseDown={onMouseDown}
 		>
-			{searchResults}
+			{searchResults.map((item) => item.content)}
 		</SlMenu>
 	);
 });
