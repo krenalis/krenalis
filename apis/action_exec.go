@@ -85,9 +85,12 @@ func (ac *Action) exec() {
 	if ac.Target == GroupsTarget {
 		err = actionExecutionError{fmt.Errorf("groups import and export are not implemented")}
 	} else {
-		if connector.Type == state.DatabaseType {
+		switch connector.Type {
+		case state.DatabaseType:
 			err = ac.importFromDatabase()
-		} else {
+		case state.FileType:
+			err = ac.importFromFile()
+		default:
 			if connection.Role == state.SourceRole {
 				err = ac.importUsers()
 			} else {
@@ -307,59 +310,6 @@ func (ac *Action) importUsers() error {
 		err = c.(_connector.AppUsersConnection).Users(cursor, properties)
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
-		}
-
-		// Handle errors occurred in the firehose.
-		if fh.err != nil {
-			return fh.err
-		}
-
-	case state.FileType:
-
-		var ctx = context.Background()
-
-		// Retrieve the storage associated to the file connection.
-		var storage _connector.StorageConnection
-		{
-			s, _ := connection.Storage()
-			fh := ac.newFirehoseForConnection(ctx, s)
-			ctx = fh.ctx
-			var err error
-			storage, err = _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
-				Role:     role,
-				Settings: s.Settings,
-				Firehose: fh,
-			})
-			if err != nil {
-				return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %s", err)}
-			}
-		}
-
-		// Connect to the file connector.
-		fh := ac.newFirehose(context.Background())
-		file, err := _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
-			Role:     role,
-			Settings: connection.Settings,
-			Firehose: fh,
-		})
-		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot connect to the file connector: %s", err)}
-		}
-
-		// Read the records.
-		rc, timestamp, err := storage.Reader(file.Path())
-		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot get ReadCloser from storage: %s", err)}
-		}
-		defer rc.Close()
-		records := fh.newRecordWriter(identityColumn, timestampColumn, timestamp, false)
-		err = file.Read(rc, records)
-		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot read the file: %s", err)}
-		}
-		err = rc.Close()
-		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot close the storage: %s", err)}
 		}
 
 		// Handle errors occurred in the firehose.
