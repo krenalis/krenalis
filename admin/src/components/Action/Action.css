@@ -70,14 +70,15 @@
     margin: 10px 25px;
 }
 
-.action .condition sl-menu-item:focus-visible .propertiesItemName,
-.action .condition sl-menu-item:focus-visible .propertiesItemType {
-    color: var(--color-accent);
-}
-
 .action .condition .propertiesItemName {
     font-size: 14px;
     font-weight: 600;
+}
+
+.action .condition .propertiesItemName .name {
+    font-weight: 400;
+    font-size: 13px;
+    opacity: .7;
 }
 
 .action .condition .propertiesItemType {
@@ -108,14 +109,15 @@
     margin-bottom: 0;
 }
 
-.action .mappings .mapping sl-menu-item:focus-visible .propertiesItemName,
-.action .mappings .mapping sl-menu-item:focus-visible .propertiesItemType {
-    color: var(--color-accent);
-}
-
 .action .mappings .propertiesItemName {
     font-size: 14px;
     font-weight: 600;
+}
+
+.action .mappings .propertiesItemName .name {
+    font-weight: 400;
+    font-size: 13px;
+    opacity: .7;
 }
 
 .action .mappings .propertiesItemType {

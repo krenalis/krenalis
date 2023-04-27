@@ -519,6 +519,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					disabled: false,
 					required: subP.required != null ? subP.required : false,
 					type: subP.type.name,
+					label: subP.label,
 				};
 				if (subP.type.name === 'Object') {
 					let nestedSubProperties = getSubProperties(key, subP.type.properties, indentation);
@@ -537,6 +538,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				disabled: false,
 				required: p.required != null ? p.required : false,
 				type: p.type.name,
+				label: p.label,
 			};
 			if (p.type.name === 'Object') {
 				let subProperties = getSubProperties(p.name, p.type.properties, indentation);
@@ -567,13 +569,25 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		let properties = getDefaultMappings(inputSchema);
 		let propertiesList = [];
 		for (let k in properties) {
+			let name;
+			if (properties[k].label != null) {
+				name = (
+					<div className='propertiesItemName'>
+						<div className='label'>{properties[k].label}</div>
+						<div className='name'>{k}</div>
+					</div>
+				);
+			} else {
+				name = <div className='propertiesItemName'>{k}</div>;
+			}
+			let content = (
+				<SlMenuItem className='propertiesItem' onClick={() => onSelect(k)}>
+					{name}
+					<div className='propertiesItemType'>{properties[k].type}</div>
+				</SlMenuItem>
+			);
 			propertiesList.push({
-				content: (
-					<SlMenuItem className='propertiesItem' onClick={() => onSelect(k)}>
-						<div className='propertiesItemName'>{k}</div>
-						<div className='propertiesItemType'>{properties[k].type}</div>
-					</SlMenuItem>
-				),
+				content: content,
 				searchableTerm: k,
 			});
 		}

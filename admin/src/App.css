@@ -188,6 +188,10 @@ sl-menu-item:focus-visible::part(base) {
 	color: var(--text-onaccent)!important;
 }
 
+sl-menu-item:focus-visible * {
+	color: var(--text-onaccent)!important;
+}
+
 sl-menu-item:hover::part(base) {
 	background-color: var(--sl-color-neutral-200);
 }
