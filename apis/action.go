@@ -1031,14 +1031,8 @@ func (this *Connection) fetchFileSchema() (types.Type, error) {
 	if err != nil && err != errRecordStop {
 		return types.Type{}, err
 	}
-	properties := make([]types.Property, len(records.columns))
-	for i, col := range records.columns {
-		properties[i].Name = col.Name
-		properties[i].Type = col.Type
-	}
-	schema := types.Object(properties)
 
-	return schema, nil
+	return types.ObjectOf(records.columns)
 }
 
 // allowsActionTarget reports whether a connection with the given connector type

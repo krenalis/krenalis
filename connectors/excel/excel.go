@@ -106,7 +106,7 @@ func (c *connection) Read(r io.Reader, updateTime time.Time, records connector.R
 		}
 		// Writes the columns.
 		if first {
-			columns := make([]connector.Column, len(record))
+			columns := make([]types.Property, len(record))
 			for i, c := range columns {
 				// Set the name.
 				c.Name = "column" + strconv.Itoa(i+1)

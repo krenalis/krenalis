@@ -358,7 +358,7 @@ func (fh *firehose) newRecordWriter(identityColumn, timestampColumn string, only
 type recordWriter struct {
 	fh              *firehose
 	onlyColumns     bool
-	columns         []connector.Column
+	columns         []types.Property
 	identityColumn  string
 	timestampColumn string
 	identityIndex   int
@@ -367,9 +367,9 @@ type recordWriter struct {
 	setUserCalled   bool
 }
 
-// Columns sets the columns of the records.
+// Columns sets the columns of the records as properties.
 // Columns must be called before Record, RecordMap and RecordString.
-func (rw *recordWriter) Columns(columns []connector.Column) error {
+func (rw *recordWriter) Columns(columns []types.Property) error {
 	if len(columns) == 0 {
 		return connector.ErrNoColumns
 	}

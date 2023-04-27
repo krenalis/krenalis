@@ -112,7 +112,7 @@ func (c *connection) Read(r io.Reader, updateTime time.Time, records connector.R
 	// Read the columns.
 	var int96Columns []string
 	parquetColumns := fr.Columns()
-	columns := make([]connector.Column, len(parquetColumns))
+	columns := make([]types.Property, len(parquetColumns))
 	for i, c := range parquetColumns {
 		name := strings.Join(c.Path(), ".")
 		element := c.Element()

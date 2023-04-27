@@ -110,8 +110,8 @@ type FileConnection interface {
 // be written.
 type RecordReader interface {
 
-	// Columns returns the columns of the records.
-	Columns() []Column
+	// Columns returns the columns of the records as properties.
+	Columns() []types.Property
 
 	// Record returns the next record as a slice of any.
 	// It returns nil and io.EOF if there are no more records.
@@ -125,9 +125,9 @@ type RecordReader interface {
 // A RecordWriter interface is used by file connections to write read records.
 type RecordWriter interface {
 
-	// Columns sets the columns of the records.
+	// Columns sets the columns of the records as properties.
 	// Columns must be called before Record, RecordMap and RecordString.
-	Columns([]Column) error
+	Columns([]types.Property) error
 
 	// Record writes a record as a slice of any.
 	Record([]any) error
@@ -142,10 +142,4 @@ type RecordWriter interface {
 	// If ts is zero time, it means that the timestamp is unknown.
 	// Timestamp can be called before Record, RecordMap and RecordString.
 	Timestamp(ts time.Time) error
-}
-
-// Column represents a column returned by RecordWriter.Columns.
-type Column struct {
-	Name string
-	Type types.Type
 }
