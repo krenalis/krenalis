@@ -491,38 +491,3 @@ func (rw *recordWriter) Timestamp(ts time.Time) error {
 	rw.timestamp = ts
 	return nil
 }
-
-func keys[K comparable, V any](m map[K]V) []K {
-	keys := make([]K, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-// mostRecentTimestamp returns the most recent timestamp referred by a property.
-// If there are no timestamps or properties, returns 'time.Time{}'.
-func mostRecentTimestamp(timestamps map[string]time.Time, props []string) time.Time {
-	var recent time.Time
-	for _, p := range props {
-		t := timestamps[p]
-		if t.After(recent) {
-			recent = t
-		}
-	}
-	return recent
-}
-
-func typesToSchema(ts []types.Type, names []string) (types.Type, error) {
-	if len(ts) != len(names) {
-		panic("different lengths")
-	}
-	props := make([]types.Property, len(ts))
-	for i := range props {
-		props[i] = types.Property{
-			Name: names[i],
-			Type: ts[i],
-		}
-	}
-	return types.ObjectOf(props)
-}
