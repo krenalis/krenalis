@@ -413,10 +413,12 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 // Record receives a record and calls the SetUser of the Firehose.
 func (rw *recordWriter) Record(record []any) error {
 	if rw.columns == nil {
-		return fmt.Errorf("connector %d did not call the Columns method before calling Record", rw.fh.connection.Connector().ID)
+		c := rw.fh.connection.Connector()
+		return fmt.Errorf("connector %d did not call the Columns method before calling Record", c.ID)
 	}
 	if len(record) != len(rw.columns) {
-		return errors.New("connector %q has returned records with different lengths")
+		c := rw.fh.connection.Connector()
+		return fmt.Errorf("connector %d has returned records with different lengths", c.ID)
 	}
 	properties := map[string]any{}
 	for i, c := range rw.columns {
@@ -458,10 +460,12 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 // RecordString receives a record and calls the SetUser of the Firehose.
 func (rw *recordWriter) RecordString(record []string) error {
 	if rw.columns == nil {
-		return fmt.Errorf("connector %d did not call the Columns method before calling RecordString", rw.fh.connection.Connector().ID)
+		c := rw.fh.connection.Connector()
+		return fmt.Errorf("connector %d did not call the Columns method before calling RecordString", c.ID)
 	}
 	if len(record) != len(rw.columns) {
-		return errors.New("connector %q has returned records with different lengths")
+		c := rw.fh.connection.Connector()
+		return fmt.Errorf("connector %d has returned records with different lengths", c.ID)
 	}
 	properties := map[string]any{}
 	for i, c := range rw.columns {
