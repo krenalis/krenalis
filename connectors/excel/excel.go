@@ -97,7 +97,7 @@ func (c *connection) Read(r io.Reader, updateTime time.Time, records connector.R
 	}
 	defer rows.Close()
 
-	var first bool
+	first := true
 	for rows.Next() {
 		// Read a record.
 		record, err := rows.Columns()
@@ -120,7 +120,7 @@ func (c *connection) Read(r io.Reader, updateTime time.Time, records connector.R
 				if err != nil {
 					return err
 				}
-				c.Type, err = columnType(c.Name, t)
+				columns[i].Type, err = columnType(c.Name, t)
 				if err != nil {
 					return err
 				}
@@ -130,6 +130,7 @@ func (c *connection) Read(r io.Reader, updateTime time.Time, records connector.R
 				return err
 			}
 			first = false
+			continue
 		}
 		// Write the record.
 		err = records.RecordString(record)
