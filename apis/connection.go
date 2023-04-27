@@ -683,7 +683,7 @@ func (this *Connection) Delete() error {
 }
 
 // ExecQuery executes the given query on the connection and returns the
-// resulting schema and rows. The connection must be a source database
+// resulting rows and schema. The connection must be a source database
 // connection.
 //
 // query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
@@ -693,25 +693,25 @@ func (this *Connection) Delete() error {
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If the execution of the query fails, it returns an errors.UnprocessableError
 // with code QueryExecutionFailed.
-func (this *Connection) ExecQuery(query string, limit int) (types.Type, [][]string, error) {
+func (this *Connection) ExecQuery(query string, limit int) ([][]string, types.Type, error) {
 
 	if !utf8.ValidString(query) {
-		return types.Type{}, nil, errors.BadRequest("query is not UTF-8 encoded")
+		return nil, types.Type{}, errors.BadRequest("query is not UTF-8 encoded")
 	}
 	if utf8.RuneCountInString(query) > queryMaxSize {
-		return types.Type{}, nil, errors.BadRequest("query is longer than 16,777,215 runes")
+		return nil, types.Type{}, errors.BadRequest("query is longer than 16,777,215 runes")
 	}
 	if limit < 0 || limit > 100 {
-		return types.Type{}, nil, errors.BadRequest("limit %d is not valid", limit)
+		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
 	}
 
 	c := this.connection
 	connector := c.Connector()
 	if connector.Type != state.DatabaseType {
-		return types.Type{}, nil, errors.BadRequest("connection %d is not a database", c.ID)
+		return nil, types.Type{}, errors.BadRequest("connection %d is not a database", c.ID)
 	}
 	if c.Role != state.SourceRole {
-		return types.Type{}, nil, errors.BadRequest("database %d is not a source", c.ID)
+		return nil, types.Type{}, errors.BadRequest("database %d is not a source", c.ID)
 	}
 
 	const cRole = _connector.SourceRole
@@ -720,7 +720,7 @@ func (this *Connection) ExecQuery(query string, limit int) (types.Type, [][]stri
 	var err error
 	query, err = compileActionQuery(query, limit)
 	if err != nil {
-		return types.Type{}, nil, err
+		return nil, types.Type{}, err
 	}
 	fh := this.newFirehose(context.Background())
 	connection, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
@@ -729,15 +729,20 @@ func (this *Connection) ExecQuery(query string, limit int) (types.Type, [][]stri
 		Firehose: fh,
 	})
 	if err != nil {
-		return types.Type{}, nil, err
+		return nil, types.Type{}, err
 	}
-	schema, rawRows, err := connection.Query(query)
+	rawRows, properties, err := connection.Query(query)
 	if err != nil {
-		return types.Type{}, nil, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
+		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
+	}
+
+	schema, err := types.ObjectOf(properties)
+	if err != nil {
+		_ = rawRows.Close()
+		return nil, types.Type{}, err
 	}
 
 	// Fill the rows.
-	properties := schema.Properties()
 	dest := make([]any, len(properties))
 
 	var rows []map[string]any
@@ -747,13 +752,13 @@ func (this *Connection) ExecQuery(query string, limit int) (types.Type, [][]stri
 			dest[i] = databaseScanValue{property: p, row: row}
 		}
 		if err := rawRows.Scan(dest...); err != nil {
-			return types.Type{}, nil, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
+			return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 		}
 		rows = append(rows, row)
 	}
 	err = rawRows.Close()
 	if err != nil {
-		return types.Type{}, nil, err
+		return nil, types.Type{}, err
 	}
 
 	stringRows := make([][]string, len(rows))
@@ -766,7 +771,7 @@ func (this *Connection) ExecQuery(query string, limit int) (types.Type, [][]stri
 		}
 	}
 
-	return schema, stringRows, nil
+	return stringRows, schema, nil
 }
 
 // An Execution describes an action execution as returned by Executions.

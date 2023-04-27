@@ -52,8 +52,8 @@ type OpenDatabaseFunc[T DatabaseConnection] func(context.Context, *DatabaseConfi
 // DatabaseConnection is the interface implemented by database connections.
 type DatabaseConnection interface {
 
-	// Query executes the given query and returns the resulting schema and rows.
-	Query(query string) (types.Type, Rows, error)
+	// Query executes the given query and returns the resulting rows and properties.
+	Query(query string) (Rows, []types.Property, error)
 }
 
 // Rows is the result of a database query. Its cursor starts before the first

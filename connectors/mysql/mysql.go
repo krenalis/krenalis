@@ -56,24 +56,24 @@ type connection struct {
 	firehose connector.Firehose
 }
 
-// Query executes the given query and returns the resulting rows.
-func (c *connection) Query(query string) (types.Type, connector.Rows, error) {
+// Query executes the given query and returns the resulting rows and properties.
+func (c *connection) Query(query string) (connector.Rows, []types.Property, error) {
 	mysqlConnector, err := mysql.NewConnector(c.settings.config())
 	if err != nil {
-		return types.Type{}, nil, err
+		return nil, nil, err
 	}
 	db := sql.OpenDB(mysqlConnector)
 	db.SetMaxIdleConns(0)
 	rows, err := db.QueryContext(c.ctx, query)
 	if err != nil {
 		_ = db.Close()
-		return types.Type{}, nil, err
+		return nil, nil, err
 	}
 	columnTypes, err := rows.ColumnTypes()
 	if err != nil {
 		_ = rows.Close()
 		_ = db.Close()
-		return types.Type{}, nil, err
+		return nil, nil, err
 	}
 	properties := make([]types.Property, len(columnTypes))
 	for i, c := range columnTypes {
@@ -81,7 +81,7 @@ func (c *connection) Query(query string) (types.Type, connector.Rows, error) {
 		if err != nil {
 			_ = rows.Close()
 			_ = db.Close()
-			return types.Type{}, nil, fmt.Errorf("cannot get type for property %q: %s", c.Name(), err)
+			return nil, nil, fmt.Errorf("cannot get type for property %q: %s", c.Name(), err)
 		}
 		nullable, ok := c.Nullable()
 		properties[i] = types.Property{
@@ -90,7 +90,7 @@ func (c *connection) Query(query string) (types.Type, connector.Rows, error) {
 			Nullable: nullable || !ok,
 		}
 	}
-	return types.Object(properties), rows, nil
+	return rows, properties, nil
 }
 
 // ServeUI serves the connector's user interface.

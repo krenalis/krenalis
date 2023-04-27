@@ -42,12 +42,11 @@ func (ac *Action) importFromDatabase() error {
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
-	schema, rawRows, err := c.Query(query)
+	rawRows, properties, err := c.Query(query)
 	if err != nil {
 		return actionExecutionError{err}
 	}
 	defer rawRows.Close()
-	properties := schema.Properties()
 	var hasIdentity bool
 	var hasTimestamp bool
 	for _, p := range properties {

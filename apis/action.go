@@ -968,7 +968,7 @@ func (this *Connection) fetchDatabaseSchema(query string) (types.Type, error) {
 		return types.Type{}, err
 	}
 	var rows _connector.Rows
-	schema, rows, err := connection.Query(usersQuery)
+	rows, properties, err := connection.Query(usersQuery)
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -977,7 +977,7 @@ func (this *Connection) fetchDatabaseSchema(query string) (types.Type, error) {
 		return types.Type{}, err
 	}
 
-	return schema, nil
+	return types.ObjectOf(properties)
 }
 
 // fetchFileSchema fetches the schema of a file connection.

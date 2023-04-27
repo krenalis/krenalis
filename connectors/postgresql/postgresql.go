@@ -57,17 +57,17 @@ type connection struct {
 	firehose connector.Firehose
 }
 
-// Query executes the given query and returns the resulting rows.
-func (c *connection) Query(query string) (types.Type, connector.Rows, error) {
+// Query executes the given query and returns the resulting rows and properties.
+func (c *connection) Query(query string) (connector.Rows, []types.Property, error) {
 	db, err := sql.Open("pgx", c.settings.dsn())
 	if err != nil {
-		return types.Type{}, nil, err
+		return nil, nil, err
 	}
 	db.SetMaxIdleConns(0)
 	rows, err := db.QueryContext(c.ctx, query)
 	if err != nil {
 		_ = db.Close()
-		return types.Type{}, nil, err
+		return nil, nil, err
 	}
 	columnTypes, err := rows.ColumnTypes()
 	if err != nil {
@@ -80,7 +80,7 @@ func (c *connection) Query(query string) (types.Type, connector.Rows, error) {
 		if err != nil {
 			_ = rows.Close()
 			_ = db.Close()
-			return types.Type{}, nil, err
+			return nil, nil, err
 		}
 		nullable, ok := c.Nullable()
 		properties[i] = types.Property{
@@ -89,7 +89,7 @@ func (c *connection) Query(query string) (types.Type, connector.Rows, error) {
 			Nullable: nullable || !ok,
 		}
 	}
-	return types.Object(properties), rows, nil
+	return rows, properties, nil
 }
 
 // ServeUI serves the connector's user interface.

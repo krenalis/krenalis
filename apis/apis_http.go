@@ -437,13 +437,13 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				schema, rows, err := connection.ExecQuery(req.Query, req.Limit)
+				rows, schema, err := connection.ExecQuery(req.Query, req.Limit)
 				if err != nil {
 					respond(w, err)
 					return
 				}
 				w.Header().Add("Content-Type", "application/json")
-				_ = json.NewEncoder(w).Encode(map[string]any{"Schema": schema, "Rows": rows})
+				_ = json.NewEncoder(w).Encode(map[string]any{"Rows": rows, "Schema": schema})
 			})
 			router.Post("/reload", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
