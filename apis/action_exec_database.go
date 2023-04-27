@@ -16,7 +16,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/apis/errors"
 	"chichi/apis/types"
 	_connector "chichi/connector"
 
@@ -45,10 +44,7 @@ func (ac *Action) importFromDatabase() error {
 	}
 	schema, rawRows, err := c.Query(query)
 	if err != nil {
-		if err, ok := err.(*_connector.DatabaseQueryError); ok {
-			return actionExecutionError{err}
-		}
-		return err
+		return actionExecutionError{err}
 	}
 	defer rawRows.Close()
 	properties := schema.Properties()
@@ -73,12 +69,7 @@ func (ac *Action) importFromDatabase() error {
 			dest[i] = databaseScanValue{property: p, row: row}
 		}
 		if err := rawRows.Scan(dest...); err != nil {
-			if err := errors.Unwrap(err); err != nil {
-				if err, ok := err.(*_connector.DatabaseQueryError); ok {
-					return actionExecutionError{fmt.Errorf("query execution failed: %w", err)}
-				}
-			}
-			return err
+			return actionExecutionError{fmt.Errorf("query execution failed: %s", err)}
 		}
 		ts := now
 		if hasTimestamp {
@@ -98,9 +89,7 @@ func (ac *Action) importFromDatabase() error {
 }
 
 // databaseScanValue implements the sql.Scanner interface to read the database
-// values from a database connector. The Scan method returns a
-// *connector.DatabaseQueryError value if an error occurs parsing or validating
-// a value.
+// values from a database connector.
 type databaseScanValue struct {
 	property types.Property
 	row      map[string]any
@@ -110,8 +99,7 @@ func (sv databaseScanValue) Scan(src any) error {
 	name := sv.property.Name
 	if src == nil {
 		if !sv.property.Nullable {
-			return _connector.NewDatabaseQueryError(
-				fmt.Sprintf("column %s is non-nullable, but the database returned a NULL value", name))
+			return fmt.Errorf("column %s is non-nullable, but the database returned a NULL value", name)
 		}
 		sv.row[name] = nil
 		return nil
@@ -139,9 +127,8 @@ func (sv databaseScanValue) Scan(src any) error {
 		if valid {
 			min, max := typ.IntRange()
 			if v < min || v > max {
-				return _connector.NewDatabaseQueryError(
-					fmt.Sprintf("database returnd a value of %d for column %s which is not within the expected range of [%d, %d]",
-						v, name, min, max))
+				return fmt.Errorf("database returnd a value of %d for column %s which is not within the expected range of [%d, %d]", v,
+					name, min, max)
 			}
 			value = int(v)
 		}
@@ -156,9 +143,8 @@ func (sv databaseScanValue) Scan(src any) error {
 		if valid {
 			min, max := typ.UIntRange()
 			if v < min || v > max {
-				return _connector.NewDatabaseQueryError(
-					fmt.Sprintf("database returnd a value of %d for column %s which is not within the expected range of [%d, %d]",
-						v, name, min, max))
+				return fmt.Errorf("database returnd a value of %d for column %s which is not within the expected range of [%d, %d]",
+					v, name, min, max)
 			}
 			value = uint(v)
 		}
@@ -180,9 +166,8 @@ func (sv databaseScanValue) Scan(src any) error {
 		if valid {
 			min, max := typ.FloatRange()
 			if v < min || v > max {
-				return _connector.NewDatabaseQueryError(
-					fmt.Sprintf("database returnd a value of %f for column %s which is not within the expected range of [%f, %f]",
-						v, name, min, max))
+				return fmt.Errorf("database returnd a value of %f for column %s which is not within the expected range of [%f, %f]",
+					v, name, min, max)
 			}
 			value = v
 		}
@@ -201,9 +186,8 @@ func (sv databaseScanValue) Scan(src any) error {
 		if valid {
 			min, max := typ.DecimalRange()
 			if v.LessThan(min) || v.GreaterThan(max) {
-				return _connector.NewDatabaseQueryError(
-					fmt.Sprintf("database returnd a value of %s for column %s which is not within the expected range of [%s, %s]",
-						v, name, min, max))
+				return fmt.Errorf("database returnd a value of %s for column %s which is not within the expected range of [%s, %s]",
+					v, name, min, max)
 			}
 			value = v
 		}
@@ -259,27 +243,23 @@ func (sv databaseScanValue) Scan(src any) error {
 		}
 		if valid {
 			if !utf8.ValidString(v) {
-				return _connector.NewDatabaseQueryError(
-					fmt.Sprintf("database returned a value of %q for column %s, which does not contain valid UTF-8 characters",
-						abbreviate(v, 20), name))
+				return fmt.Errorf("database returned a value of %q for column %s, which does not contain valid UTF-8 characters",
+					abbreviate(v, 20), name)
 			}
 			if l, ok := typ.ByteLen(); ok && len(v) > l {
-				return _connector.NewDatabaseQueryError(
-					fmt.Sprintf("database returned a value of %q for column %s, which is longer than %d bytes",
-						abbreviate(v, 20), name, l))
+				return fmt.Errorf("database returned a value of %q for column %s, which is longer than %d bytes",
+					abbreviate(v, 20), name, l)
 			}
 			if l, ok := typ.CharLen(); ok && utf8.RuneCountInString(v) > l {
-				return _connector.NewDatabaseQueryError(
-					fmt.Sprintf("database returned a value of %q for column %s, which is longer than %d characters",
-						abbreviate(v, 20), name, l))
+				return fmt.Errorf("database returned a value of %q for column %s, which is longer than %d characters",
+					abbreviate(v, 20), name, l)
 			}
 			value = v
 		}
 	}
 	if !valid {
-		return _connector.NewDatabaseQueryError(
-			fmt.Sprintf("database returned a value of %v for column %s, but it cannot be converted to the %s type",
-				src, name, typ.PhysicalType()))
+		return fmt.Errorf("database returned a value of %v for column %s, but it cannot be converted to the %s type",
+			src, name, typ.PhysicalType())
 	}
 	sv.row[name] = value
 	return nil

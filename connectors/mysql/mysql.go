@@ -67,9 +67,6 @@ func (c *connection) Query(query string) (types.Type, connector.Rows, error) {
 	rows, err := db.QueryContext(c.ctx, query)
 	if err != nil {
 		_ = db.Close()
-		if err, ok := err.(*mysql.MySQLError); ok {
-			return types.Type{}, nil, connector.NewDatabaseQueryError(err.Message)
-		}
 		return types.Type{}, nil, err
 	}
 	columnTypes, err := rows.ColumnTypes()

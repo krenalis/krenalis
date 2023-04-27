@@ -726,10 +726,7 @@ func (this *Connection) ExecQuery(query string, limit int) (types.Type, [][]stri
 	}
 	schema, rawRows, err := connection.Query(query)
 	if err != nil {
-		if err, ok := err.(*_connector.DatabaseQueryError); ok {
-			return types.Type{}, nil, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
-		}
-		return types.Type{}, nil, err
+		return types.Type{}, nil, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 	}
 
 	// Fill the rows.
@@ -743,12 +740,7 @@ func (this *Connection) ExecQuery(query string, limit int) (types.Type, [][]stri
 			dest[i] = databaseScanValue{property: p, row: row}
 		}
 		if err := rawRows.Scan(dest...); err != nil {
-			if err := errors.Unwrap(err); err != nil {
-				if err, ok := err.(*_connector.DatabaseQueryError); ok {
-					return types.Type{}, nil, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
-				}
-			}
-			return types.Type{}, nil, err
+			return types.Type{}, nil, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 		}
 		rows = append(rows, row)
 	}

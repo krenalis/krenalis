@@ -14,20 +14,6 @@ import (
 	"chichi/apis/types"
 )
 
-// A DatabaseQueryError error is returned from a database connector if an error
-// occurs when executing a query.
-type DatabaseQueryError struct {
-	Message string
-}
-
-func (err *DatabaseQueryError) Error() string {
-	return err.Message
-}
-
-func NewDatabaseQueryError(msg string) error {
-	return &DatabaseQueryError{Message: msg}
-}
-
 // Database represents a database connector.
 type Database struct {
 	Name                   string

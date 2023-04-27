@@ -25,7 +25,6 @@ import (
 	"chichi/apis/types"
 	"chichi/connector"
 	"chichi/connector/ui"
-	"chichi/pkg/pgx/pgconn"
 	_ "chichi/pkg/pgx/stdlib"
 )
 
@@ -68,9 +67,6 @@ func (c *connection) Query(query string) (types.Type, connector.Rows, error) {
 	rows, err := db.QueryContext(c.ctx, query)
 	if err != nil {
 		_ = db.Close()
-		if err, ok := err.(*pgconn.PgError); ok {
-			return types.Type{}, nil, connector.NewDatabaseQueryError(err.Message)
-		}
 		return types.Type{}, nil, err
 	}
 	columnTypes, err := rows.ColumnTypes()

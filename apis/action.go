@@ -672,10 +672,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if c.Role == state.SourceRole {
 			s, err := this.fetchDatabaseSchema(action.Query)
 			if err != nil {
-				if _, ok := err.(*_connector.DatabaseQueryError); ok {
-					return types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
-				}
-				return types.Type{}, err
+				return types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 			}
 			schema = s
 		}
@@ -950,8 +947,7 @@ func (this *Connection) fetchAppSchema(target state.ActionTarget, eventType stri
 }
 
 // fetchDatabaseSchema fetches the schema of a database connection executing the
-// given query. It returns a *connectors.DatabaseQueryError error if the database
-// returns an error executing the query.
+// given query.
 func (this *Connection) fetchDatabaseSchema(query string) (types.Type, error) {
 
 	c := this.connection
