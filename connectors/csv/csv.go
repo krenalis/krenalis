@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 	"time"
 	"unicode/utf8"
 
@@ -107,7 +108,8 @@ func (c *connection) Read(r io.Reader, updateTime time.Time, records connector.R
 		if first {
 			columns := make([]types.Property, len(record))
 			for i := range columns {
-				columns[i].Name = record[i]
+				columns[i].Name = "column" + strconv.Itoa(i+1)
+				columns[i].Label = record[i]
 				columns[i].Type = types.Text()
 			}
 			err = records.Columns(columns)

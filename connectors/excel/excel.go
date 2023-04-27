@@ -108,8 +108,9 @@ func (c *connection) Read(r io.Reader, updateTime time.Time, records connector.R
 		if first {
 			columns := make([]types.Property, len(record))
 			for i, c := range columns {
-				// Set the name.
-				c.Name = "column" + strconv.Itoa(i+1)
+				// Set the name and the label.
+				columns[i].Name = "column" + strconv.Itoa(i+1)
+				columns[i].Label = record[i]
 				// Set the type.
 				axis, err := excelize.CoordinatesToCellName(i+1, 1)
 				if err != nil {

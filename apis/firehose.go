@@ -373,7 +373,8 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 	if len(columns) == 0 {
 		return connector.ErrNoColumns
 	}
-	index := make(map[string]int, len(columns))
+	labelIndex := make(map[string]int, len(columns))
+	hasName := make(map[string]struct{}, len(columns))
 	for i, c := range columns {
 		if c.Name == "" {
 			return connector.ErrEmptyColumnName
@@ -381,20 +382,23 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		if !utf8.ValidString(c.Name) {
 			return connector.ErrInvalidEncodedColumnName
 		}
-		if _, ok := index[c.Name]; ok {
+		if _, ok := hasName[c.Name]; ok {
 			return connector.SameColumnNameError{Name: c.Name}
 		}
-		index[c.Name] = i
+		hasName[c.Name] = struct{}{}
+		if _, ok := labelIndex[c.Label]; !ok {
+			labelIndex[c.Label] = i
+		}
 		if !c.Type.Valid() {
 			return fmt.Errorf("connector %d returned an invalid type", rw.fh.connection.Connector().ID)
 		}
 	}
 	var ok bool
-	if rw.identityIndex, ok = index[rw.identityColumn]; !ok {
+	if rw.identityIndex, ok = labelIndex[rw.identityColumn]; !ok {
 		return connector.MissingIdentityColumnError{Column: rw.identityColumn}
 	}
 	if rw.timestampColumn != "" {
-		rw.timestampIndex, ok = index[rw.timestampColumn]
+		rw.timestampIndex, ok = labelIndex[rw.timestampColumn]
 		if !ok {
 			return connector.MissingTimestampColumnError{Column: rw.timestampColumn}
 		}
