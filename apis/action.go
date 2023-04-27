@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"chichi/apis/errors"
@@ -1021,13 +1022,13 @@ func (this *Connection) fetchFileSchema() (types.Type, error) {
 	}
 
 	// Read only the columns.
-	rc, updateTime, err := storage.Reader(file.Path())
+	rc, _, err := storage.Reader(file.Path())
 	if err != nil {
 		return types.Type{}, err
 	}
 	defer rc.Close()
-	records := fh.newRecordWriter(identityColumn, timestampColumn, true)
-	err = file.Read(rc, updateTime, records)
+	records := fh.newRecordWriter(identityColumn, timestampColumn, time.Time{}, true)
+	err = file.Read(rc, records)
 	if err != nil && err != errRecordStop {
 		return types.Type{}, err
 	}

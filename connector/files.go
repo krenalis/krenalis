@@ -98,9 +98,8 @@ type FileConnection interface {
 	// Path returns the path of the file.
 	Path() string
 
-	// Read reads the records from r, with their last update time, and writes
-	// them to records.
-	Read(r io.Reader, updateTime time.Time, records RecordWriter) error
+	// Read reads the records from r and writes them to records.
+	Read(r io.Reader, records RecordWriter) error
 
 	// Write writes to w the records read from records.
 	Write(w io.Writer, records RecordReader) error

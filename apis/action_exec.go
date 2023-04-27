@@ -347,13 +347,13 @@ func (ac *Action) importUsers() error {
 		}
 
 		// Read the records.
-		rc, updateTime, err := storage.Reader(file.Path())
+		rc, timestamp, err := storage.Reader(file.Path())
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot get ReadCloser from storage: %s", err)}
 		}
 		defer rc.Close()
-		records := fh.newRecordWriter(identityColumn, timestampColumn, false)
-		err = file.Read(rc, updateTime, records)
+		records := fh.newRecordWriter(identityColumn, timestampColumn, timestamp, false)
+		err = file.Read(rc, records)
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot read the file: %s", err)}
 		}

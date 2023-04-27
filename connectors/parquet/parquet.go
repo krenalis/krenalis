@@ -76,14 +76,8 @@ func (c *connection) Path() string {
 	return c.settings.Path
 }
 
-// Read reads the records from r, with their last update time, and writes
-// them to records.
-// Read reads the records from files and writes them to records.
-func (c *connection) Read(r io.Reader, updateTime time.Time, records connector.RecordWriter) error {
-
-	if err := records.Timestamp(updateTime); err != nil {
-		return err
-	}
+// Read reads the records from r and writes them to records.
+func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 
 	// Copy data read from r to a temporary file.
 	dir := os.TempDir()

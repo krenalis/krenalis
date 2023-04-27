@@ -344,13 +344,14 @@ func (fh *firehose) writeToGoldenRecord(id int, props map[string]any) error {
 }
 
 // newRecordWriter returns a new record writer.
-func (fh *firehose) newRecordWriter(identityColumn, timestampColumn string, onlyColumns bool) *recordWriter {
+func (fh *firehose) newRecordWriter(identityColumn, timestampColumn string, timestamp time.Time, onlyColumns bool) *recordWriter {
 	return &recordWriter{
 		fh:              fh,
 		onlyColumns:     onlyColumns,
 		identityColumn:  identityColumn,
 		timestampColumn: timestampColumn,
 		timestampIndex:  noColumn,
+		timestamp:       timestamp,
 	}
 }
 
