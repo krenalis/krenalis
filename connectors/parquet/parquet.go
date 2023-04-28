@@ -257,7 +257,7 @@ func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error
 			return types.Decimal(0, 0), nil
 		}
 		if lt.DATE != nil {
-			return types.DateTime(""), nil // TODO(marco) set the layout
+			return types.Date(""), nil // TODO(marco) set the layout
 		}
 		if lt.TIMESTAMP != nil {
 			return types.DateTime(""), nil // TODO(marco) set the layout
