@@ -800,6 +800,7 @@ func (this *Workspace) ReloadSchemas() error {
 			} else if c.Nullable {
 				return errors.Unprocessable(InvalidSchemaTable, "column '%s.updateTime' must not be nullable", table.Name)
 			}
+			table.Columns = slices.Delete(table.Columns, utIndex, utIndex+1)
 		}
 		if table.Name == "events" {
 			// The schema of the "events" table is hardcoded in the file
