@@ -112,6 +112,7 @@ func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 		element := c.Element()
 		columns[i].Name = name
 		columns[i].Type, err = propertyType(name, element)
+		columns[i].Nullable = true
 		if err != nil {
 			return err
 		}
@@ -136,9 +137,17 @@ func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 		}
 		// Convert int96 type values from []byte to time.Time.
 		for _, name := range int96Columns {
-			record[name], err = convertInt96(record[name])
-			if err != nil {
-				return fmt.Errorf("cannot convert value of column %q: %s", name, err)
+			if v, ok := record[name]; ok {
+				record[name], err = convertInt96(v)
+				if err != nil {
+					return fmt.Errorf("cannot convert value of column %q: %s", name, err)
+				}
+			}
+		}
+		// Add fields with a nil value.
+		for _, c := range columns {
+			if _, ok := record[c.Name]; !ok {
+				record[c.Name] = nil
 			}
 		}
 		// Write the record.
