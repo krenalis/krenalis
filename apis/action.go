@@ -1027,7 +1027,7 @@ func (this *Connection) fetchFileSchema() (types.Type, error) {
 		return types.Type{}, err
 	}
 	defer rc.Close()
-	records := fh.newRecordWriter(identityColumn, timestampColumn, time.Time{}, true)
+	records := newRecordWriter(fh, identityColumn, timestampColumn, time.Time{}, true)
 	err = file.Read(rc, records)
 	if err != nil && err != errRecordStop {
 		return types.Type{}, err
