@@ -152,7 +152,11 @@ func (this *User) Events(limit int) ([]Event, error) {
 
 	// Read the events.
 	columns := columnsOfProperties(events.Schema.Properties())
-	where := map[string]any{"user_id": strconv.Itoa(this.id)}
+	where := warehouses.NewBaseExpr(
+		warehouses.ExprColumn{Name: "user_id", Type: types.PtText},
+		warehouses.OperatorEqual,
+		strconv.Itoa(this.id),
+	)
 	rows, err := ws.Warehouse.Select(context.Background(), "events", columns, where, types.Property{}, 0, limit)
 	if err != nil {
 		if err2, ok := err.(*warehouses.Error); ok {
@@ -337,7 +341,11 @@ func (this *User) Traits() (map[string]any, error) {
 	}
 
 	columns := columnsOfProperties(properties)
-	where := map[string]any{"id": this.id}
+	where := warehouses.NewBaseExpr(
+		warehouses.ExprColumn{Name: "id", Type: types.PtInt},
+		warehouses.OperatorEqual,
+		this.id,
+	)
 	rows, err := ws.Warehouse.Select(context.Background(), "users", columns, where, types.Property{}, 0, 1)
 	if err != nil {
 		if err2, ok := err.(*warehouses.Error); ok {

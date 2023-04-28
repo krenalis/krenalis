@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/netip"
 	"reflect"
 	"strconv"
 	"strings"
@@ -239,7 +240,7 @@ func (warehouse *ClickHouse) QueryRow(ctx context.Context, query string, args ..
 //
 // If a query to the warehouse fails, it returns an Error value.
 // If an argument is not valid, it panics.
-func (warehouse *ClickHouse) Select(ctx context.Context, table string, columns []warehouses.Column, where map[string]any, order types.Property, first, limit int) ([][]any, error) {
+func (warehouse *ClickHouse) Select(ctx context.Context, table string, columns []warehouses.Column, where warehouses.Where, order types.Property, first, limit int) ([][]any, error) {
 
 	conn, err := warehouse.connection()
 	if err != nil {
@@ -261,23 +262,13 @@ func (warehouse *ClickHouse) Select(ctx context.Context, table string, columns [
 	query.WriteString(`" FROM "`)
 	query.WriteString(table)
 	query.WriteByte('"')
-	if len(where) > 0 {
+	if where != nil {
 		query.WriteString(` WHERE `)
-		first := true
-		for c, v := range where {
-			if !warehouses.IsValidIdentifier(c) {
-				return nil, fmt.Errorf("column name %q is not a valid identifier", c)
-			}
-			if first {
-				query.WriteByte('"')
-				first = false
-			} else {
-				query.WriteString(` AND "`)
-			}
-			query.WriteString(c)
-			query.WriteString(`" = `)
-			quoteValue(&query, v)
+		expr, err := renderExpr(where)
+		if err != nil {
+			return nil, fmt.Errorf("cannot build WHERE expression: %s", err)
 		}
+		query.WriteString(expr)
 	}
 	if order.Name != "" {
 		if !types.IsValidPropertyName(order.Name) {
@@ -518,6 +509,8 @@ func quoteValue(b *strings.Builder, value any) {
 		b.WriteString(strconv.FormatFloat(float64(v), 'G', -1, 32))
 	case float64:
 		b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
+	case netip.Addr:
+		quoteString(b, v.String())
 	case string:
 		quoteString(b, v)
 	case time.Time:

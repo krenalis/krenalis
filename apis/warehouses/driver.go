@@ -63,7 +63,7 @@ type Warehouse interface {
 	//
 	// If a query to the warehouse fails, it returns an Error value.
 	// If an argument is not valid, it panics.
-	Select(ctx context.Context, table string, columns []Column, where map[string]any, order types.Property, first, limit int) ([][]any, error)
+	Select(ctx context.Context, table string, columns []Column, where Where, order types.Property, first, limit int) ([][]any, error)
 }
 
 // Batch is implemented by values returned by PrepareBatch.

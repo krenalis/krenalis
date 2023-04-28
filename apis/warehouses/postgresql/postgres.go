@@ -25,6 +25,7 @@ import (
 	"chichi/apis/types"
 	"chichi/apis/warehouses"
 
+	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"golang.org/x/exp/slices"
 )
@@ -398,7 +399,7 @@ type pgTypeInfo struct {
 //
 // If a query to the warehouse fails, it returns an Error value.
 // If an argument is not valid, it panics.
-func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns []warehouses.Column, where map[string]any, order types.Property, first, limit int) ([][]any, error) {
+func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns []warehouses.Column, where warehouses.Where, order types.Property, first, limit int) ([][]any, error) {
 
 	if !warehouses.IsValidIdentifier(table) {
 		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
@@ -424,24 +425,16 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns [
 	query.WriteString(`" FROM "`)
 	query.WriteString(table)
 	query.WriteByte('"')
-	if len(where) > 0 {
+
+	if where != nil {
 		query.WriteString(` WHERE `)
-		first := true
-		for c, v := range where {
-			if !warehouses.IsValidIdentifier(c) {
-				return nil, fmt.Errorf("column name %q is not a valid identifier", c)
-			}
-			if first {
-				query.WriteByte('"')
-				first = false
-			} else {
-				query.WriteString(` AND "`)
-			}
-			query.WriteString(c)
-			query.WriteString(`" = `)
-			quoteValue(&query, v)
+		expr, err := renderExpr(where)
+		if err != nil {
+			return nil, fmt.Errorf("cannot build WHERE expression: %s", err)
 		}
+		query.WriteString(expr)
 	}
+
 	if order.Name != "" {
 		if !types.IsValidPropertyName(order.Name) {
 			panic(fmt.Sprintf("invalid property name: %q", order.Name))
@@ -721,12 +714,16 @@ func quoteValue(b *strings.Builder, value any) {
 		b.WriteString(strconv.FormatFloat(float64(v), 'G', -1, 32))
 	case float64:
 		b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
+	case netip.Addr:
+		quoteString(b, v.String())
 	case string:
 		quoteString(b, v)
 	case time.Time:
 		b.WriteByte('\'')
 		b.WriteString(v.Format("2006-01-02 15:04:05.999999"))
 		b.WriteByte('\'')
+	case uuid.UUID:
+		b.WriteString(v.String())
 	default:
 		panic(fmt.Errorf("unsupported type '%T'", v))
 	}
