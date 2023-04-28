@@ -63,7 +63,7 @@ func TestTypeSerialization(t *testing.T) {
 			Type: Decimal(10, 8),
 		}, {
 			Data: `{"name":"DateTime","layout":"2006-01-02T15:04"}`,
-			Type: DateTime("2006-01-02T15:04"),
+			Type: DateTime().WithLayout("2006-01-02T15:04"),
 		}, {
 			Data: `{"name":"Array","itemType":{"name":"Text"}}`,
 			Type: Array(Text()),

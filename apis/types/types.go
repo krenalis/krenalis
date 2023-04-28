@@ -378,26 +378,14 @@ func Decimal(precision, scale int) Type {
 	return Type{pt: PtDecimal, p: int32(precision), s: int32(scale)}
 }
 
-// DateTime returns the DateTime type with the given layout.
-//
-// A layout is a specific pattern used when a DateTime value is represented
-// as a string or an integer. For strings, layout can be any time package
-// layout string. For integers, layout can be Nanoseconds, Microseconds,
-// Milliseconds and Seconds, and the value is relative to the Unix epoc.
-//
-// It panics if layout is not a valid UTF-8-encoded string.
-func DateTime(layout string) Type {
-	return Type{pt: PtDateTime, vl: normalizedUTF8(layout)}
+// DateTime returns the DateTime type.
+func DateTime() Type {
+	return Type{pt: PtDateTime}
 }
 
-// Date returns the Date type with the given layout.
-//
-// A layout is a specific pattern used when a Date value is represented as a
-// string. It can be any time package layout string.
-//
-// It panics if layout is not a valid UTF-8-encoded string.
-func Date(layout string) Type {
-	return Type{pt: PtDate, vl: normalizedUTF8(layout)}
+// Date returns the Date type.
+func Date() Type {
+	return Type{pt: PtDate}
 }
 
 // Time returns the Time type.
@@ -922,6 +910,28 @@ func (t Type) Layout() string {
 		panic("cannot get layout of a non-DateTime or non-Date type")
 	}
 	return t.vl.(string)
+}
+
+// WithLayout returns t but with the given layout. Panics if t is not a DateTime
+// or Date type, or layout is not a valid non-empty UTF-8-encoded string, or t
+// has already a layout.
+//
+// A layout is a specific pattern used when a DateTime value is represented
+// as a string or an integer. For strings, layout can be any time package
+// layout string. For integers, layout can be Nanoseconds, Microseconds,
+// Milliseconds and Seconds, and the value is relative to the Unix epoc.
+func (t Type) WithLayout(layout string) Type {
+	if t.pt != PtDateTime && t.pt != PtDate {
+		panic("cannot get layout of a non-DateTime or non-Date type")
+	}
+	if layout == "" {
+		panic("layout cannot be an empty string")
+	}
+	if t.vl != nil {
+		panic("t already has a layout")
+	}
+	t.vl = normalizedUTF8(layout)
+	return t
 }
 
 // ByteLen returns the maximum length in bytes of a Text type and true.

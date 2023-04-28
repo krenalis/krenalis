@@ -654,9 +654,9 @@ func propertyType(c, t string) (types.Type, error) {
 	case "bool":
 		return types.Boolean(), nil
 	case "date":
-		return types.Date(time.RFC3339), nil
+		return types.Date().WithLayout(time.RFC3339), nil
 	case "datetime":
-		return types.DateTime(types.Milliseconds), nil
+		return types.DateTime().WithLayout(types.Milliseconds), nil
 	case "enumeration":
 		return types.Text(), nil
 	case "number":

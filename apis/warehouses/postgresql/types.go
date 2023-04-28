@@ -86,9 +86,9 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, resolver composi
 	case "text":
 		t = types.Text()
 	case "timestamp without time zone", "timestamp with time zone":
-		t = types.DateTime("2006-01-02 15:04:05.999999")
+		t = types.DateTime().WithLayout("2006-01-02 15:04:05.999999")
 	case "date":
-		t = types.Date(time.DateOnly)
+		t = types.Date().WithLayout(time.DateOnly)
 	case "time without time zone":
 		t = types.Time()
 	case "boolean":

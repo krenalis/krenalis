@@ -257,16 +257,16 @@ func (c *connection) UserSchema() (types.Type, error) {
 		{
 			Name:  "created",
 			Label: "Profile Created",
-			Type:  types.DateTime(time.RFC3339),
+			Type:  types.DateTime().WithLayout(time.RFC3339),
 		},
 		{
 			Name:  "updated",
 			Label: "Profile Updated",
-			Type:  types.DateTime(time.RFC3339),
+			Type:  types.DateTime().WithLayout(time.RFC3339),
 		},
 		{
 			Name: "last_event_date",
-			Type: types.DateTime(time.RFC3339),
+			Type: types.DateTime().WithLayout(time.RFC3339),
 		},
 		{
 			Name:  "location",

@@ -217,9 +217,9 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "TEXT", "BLOB":
 		return types.Text(types.Bytes(65535)), nil
 	case "DATE":
-		return types.Date(time.DateOnly), nil
+		return types.Date().WithLayout(time.DateOnly), nil
 	case "DATETIME":
-		return types.DateTime(time.RFC3339), nil
+		return types.DateTime().WithLayout(time.RFC3339), nil
 	case "DECIMAL":
 		precision, scale, ok := t.DecimalSize()
 		if !ok {
@@ -270,7 +270,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "TIME":
 		return types.Time(), nil
 	case "TIMESTAMP":
-		return types.DateTime(time.RFC3339), nil
+		return types.DateTime().WithLayout(time.RFC3339), nil
 	case "UNSIGNED TINYINT":
 		return types.UInt8(), nil
 	case "TINYINT":

@@ -68,11 +68,11 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		case "UUID":
 			t = types.UUID()
 		case "Date":
-			t = types.Date(time.DateOnly)
+			t = types.Date().WithLayout(time.DateOnly)
 		case "Date32":
 			t = types.Int()
 		case "DateTime":
-			t = types.DateTime(time.DateTime)
+			t = types.DateTime().WithLayout(time.DateTime)
 		case "JSON":
 			t = types.JSON()
 		case "IPv4":
@@ -110,7 +110,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		if !ok || s == "" {
 			return types.Type{}, false, ""
 		}
-		return types.DateTime(time.DateTime), false, s[1:]
+		return types.DateTime().WithLayout(time.DateTime), false, s[1:]
 	case "DateTime64":
 		n, s, ok := parseUint(s[i+1:])
 		if !ok || n > 9 {
@@ -130,7 +130,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		if s == "" {
 			return types.Type{}, false, ""
 		}
-		return types.DateTime(layout), false, s[1:]
+		return types.DateTime().WithLayout(layout), false, s[1:]
 	case "Enum8", "Enum16":
 		s = s[i+1:]
 		var enum []string

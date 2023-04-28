@@ -66,17 +66,17 @@ func TestDecode(t *testing.T) {
 		},
 		{
 			Data:  `1669113414031`,
-			Type:  DateTime("ms"),
+			Type:  DateTime().WithLayout("ms"),
 			Value: time.UnixMilli(1669113414031).UTC(),
 		},
 		{
 			Data:  `"2022-11-22T11:51:49+01:00"`,
-			Type:  DateTime(time.RFC3339),
+			Type:  DateTime().WithLayout(time.RFC3339),
 			Value: time.Date(2022, 11, 22, 10, 51, 49, 0, time.UTC),
 		},
 		{
 			Data:  `"2022-11-22"`,
-			Type:  Date(time.DateOnly),
+			Type:  Date().WithLayout(time.DateOnly),
 			Value: time.Date(2022, 11, 22, 0, 0, 0, 0, time.UTC),
 		},
 		{
@@ -170,7 +170,7 @@ func TestDecode(t *testing.T) {
 					Name:     "birthday",
 					Label:    "Birthday",
 					Required: true,
-					Type:     Date(time.DateOnly),
+					Type:     Date().WithLayout(time.DateOnly),
 				},
 				{
 					Name:     "phone",
