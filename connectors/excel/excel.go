@@ -94,30 +94,17 @@ func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 	first := true
 	for rows.Next() {
 		// Read a record.
-		record, err := rows.Columns()
+		record, err := rows.Columns(excelize.Options{RawCellValue: true})
 		if err != nil {
 			return err
 		}
 		// Writes the columns.
 		if first {
 			columns := make([]types.Property, len(record))
-			for i, c := range columns {
-				// Set the name and the label.
+			for i := range columns {
 				columns[i].Name = "column" + strconv.Itoa(i+1)
 				columns[i].Label = record[i]
-				// Set the type.
-				axis, err := excelize.CoordinatesToCellName(i+1, 1)
-				if err != nil {
-					return err
-				}
-				t, err := f.GetCellType(sheetName, axis)
-				if err != nil {
-					return err
-				}
-				columns[i].Type, err = columnType(c.Name, t)
-				if err != nil {
-					return err
-				}
+				columns[i].Type = types.Text()
 			}
 			err = records.Columns(columns)
 			if err != nil {
@@ -246,20 +233,4 @@ func (c *connection) Write(w io.Writer, records connector.RecordReader) error {
 	}
 
 	return err
-}
-
-// columnType returns the column type from an Excel column.
-func columnType(c string, t excelize.CellType) (types.Type, error) {
-	switch t {
-	case excelize.CellTypeBool:
-		return types.Boolean(), nil
-	case excelize.CellTypeDate:
-		return types.Date(""), nil // TODO(marco) set the layout
-	case excelize.CellTypeNumber:
-		return types.Decimal(0, 0), nil
-	case excelize.CellTypeUnset, excelize.CellTypeError, excelize.CellTypeInlineString, excelize.CellTypeSharedString:
-		return types.Text(), nil
-	default:
-		return types.Type{}, connector.NewNotSupportedTypeError(c, strconv.Itoa(int(t)))
-	}
 }
