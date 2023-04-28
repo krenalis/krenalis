@@ -86,6 +86,7 @@ func newRecordWriter(fh *firehose, identityColumn, timestampColumn string, times
 		timestampColumn: timestampColumn,
 		timestampIndex:  noColumn,
 		timestamp:       timestamp,
+		textColumnsOnly: true,
 	}
 }
 
@@ -94,17 +95,22 @@ type recordWriter struct {
 	fh              *firehose
 	onlyColumns     bool
 	columns         []types.Property
+	columnByName    map[string]types.Property
 	identityColumn  string
 	timestampColumn string
 	identityIndex   int
 	timestampIndex  int
 	timestamp       time.Time
 	setUserCalled   bool
+	textColumnsOnly bool
 }
 
 // Columns sets the columns of the records as properties.
 // Columns must be called before Record, RecordMap and RecordString.
 func (rw *recordWriter) Columns(columns []types.Property) error {
+	if rw.columns != nil {
+		return fmt.Errorf("connector %d has called Columns twice", rw.fh.connection.Connector().ID)
+	}
 	if len(columns) == 0 {
 		return _connector.ErrNoColumns
 	}
@@ -126,6 +132,9 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		}
 		if !c.Type.Valid() {
 			return fmt.Errorf("connector %d returned an invalid type", rw.fh.connection.Connector().ID)
+		}
+		if rw.textColumnsOnly {
+			rw.textColumnsOnly = c.Type.PhysicalType() == types.PtText
 		}
 	}
 	var ok bool
@@ -157,7 +166,11 @@ func (rw *recordWriter) Record(record []any) error {
 	}
 	properties := map[string]any{}
 	for i, c := range rw.columns {
-		properties[c.Name] = record[i]
+		v, err := normalizePropertyValue(c, record[i])
+		if err != nil {
+			return err
+		}
+		properties[c.Name] = v
 	}
 	ts := rw.timestamp
 	if rw.timestampIndex != noColumn {
@@ -178,13 +191,30 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 	if rw.columns == nil {
 		return fmt.Errorf("connector %d did not call the Columns method before calling RecordMap", rw.fh.connection.Connector().ID)
 	}
+	var err error
 	ts := rw.timestamp
 	if rw.timestampIndex != noColumn {
-		var err error
 		ts, err = time.Parse(time.DateTime, record[rw.timestampColumn].(string))
 		if err != nil {
 			return fmt.Errorf("invalid timestamp column value: %s", ts)
 		}
+	}
+	if rw.columnByName == nil {
+		rw.columnByName = make(map[string]types.Property, len(rw.columns))
+		for _, c := range rw.columns {
+			rw.columnByName[c.Name] = c
+		}
+	}
+	for _, c := range rw.columns {
+		v, ok := record[c.Name]
+		if !ok {
+			continue
+		}
+		v, err = normalizePropertyValue(c, v)
+		if err != nil {
+			return err
+		}
+		record[c.Name] = v
 	}
 	user := fmt.Sprintf("%s", record[rw.identityColumn])
 	rw.fh.SetUser(user, record, ts, nil)
@@ -202,9 +232,27 @@ func (rw *recordWriter) RecordString(record []string) error {
 		c := rw.fh.connection.Connector()
 		return fmt.Errorf("connector %d has returned records with different lengths", c.ID)
 	}
+	if !rw.textColumnsOnly {
+		c := rw.fh.connection.Connector()
+		return fmt.Errorf("connector %d has called RecordString when there are non-text columns", c.ID)
+	}
 	properties := map[string]any{}
 	for i, c := range rw.columns {
-		properties[c.Name] = record[i]
+		s := record[i]
+		// Normalize the string as does the normalizePropertyValue function.
+		if !utf8.ValidString(s) {
+			return fmt.Errorf("database returned a value of %q for column %s, which does not contain valid UTF-8 characters",
+				abbreviate(s, 20), c.Name)
+		}
+		if l, ok := c.Type.ByteLen(); ok && len(s) > l {
+			return fmt.Errorf("database returned a value of %q for column %s, which is longer than %d bytes",
+				abbreviate(s, 20), c.Name, l)
+		}
+		if l, ok := c.Type.CharLen(); ok && utf8.RuneCountInString(s) > l {
+			return fmt.Errorf("database returned a value of %q for column %s, which is longer than %d characters",
+				abbreviate(s, 20), c.Name, l)
+		}
+		properties[c.Name] = s
 	}
 	ts := rw.timestamp
 	if rw.timestampIndex != noColumn {
