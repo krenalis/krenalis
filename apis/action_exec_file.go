@@ -54,7 +54,7 @@ func (ac *Action) importFromFile() error {
 	}
 
 	// Read the records.
-	rc, timestamp, err := storage.Reader(file.Path())
+	rc, timestamp, err := storage.Open(file.Path())
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot get ReadCloser from storage: %s", err)}
 	}

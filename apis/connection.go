@@ -1224,7 +1224,7 @@ func (this *Connection) Sheets(path string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	r, _, err := storage.Reader(path)
+	r, _, err := storage.Open(path)
 	if err != nil {
 		return nil, err
 	}

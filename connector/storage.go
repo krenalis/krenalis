@@ -52,10 +52,10 @@ type OpenStorageFunc[T StorageConnection] func(context.Context, *StorageConfig) 
 // StorageConnection is the interface implemented by storage connections.
 type StorageConnection interface {
 
-	// Reader returns a ReadCloser from which to read the file with the given path
-	// and its last update time.
+	// Open opens the file at the given path and returns a ReadCloser from which to
+	// read the file and its last update time.
 	// It is the caller's responsibility to close the returned reader.
-	Reader(path string) (io.ReadCloser, time.Time, error)
+	Open(path string) (io.ReadCloser, time.Time, error)
 
 	// Write writes the data read from p into the file with the given path.
 	// contentType is the file's content type.

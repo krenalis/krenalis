@@ -1022,7 +1022,7 @@ func (this *Connection) fetchFileSchema() (types.Type, error) {
 	}
 
 	// Read only the columns.
-	rc, _, err := storage.Reader(file.Path())
+	rc, _, err := storage.Open(file.Path())
 	if err != nil {
 		return types.Type{}, err
 	}

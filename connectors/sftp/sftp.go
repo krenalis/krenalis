@@ -63,10 +63,10 @@ func open(ctx context.Context, conf *connector.StorageConfig) (*connection, erro
 	return &c, nil
 }
 
-// Reader returns a ReadCloser from which to read the file with the given path
-// and its last update time.
+// Open opens the file at the given path and returns a ReadCloser from which to
+// read the file and its last update time.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Reader(path string) (io.ReadCloser, time.Time, error) {
+func (c *connection) Open(path string) (io.ReadCloser, time.Time, error) {
 	if path == "" {
 		return nil, time.Time{}, ui.Errorf("path is empty")
 	}
