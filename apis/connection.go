@@ -1181,6 +1181,57 @@ func (this *Connection) SetStorage(storage int) error {
 	return err
 }
 
+// Sheets returns the sheets of the file at the given path. The connection must
+// be a file connection with multi sheets support and path must be a not empty
+// UTF-8 encoded string.
+//
+// If the connection does not exist anymore, it returns an errors.NotFoundError
+// error.
+// If the file connection does not have a storage, it returns an
+// errors.UnprocessableError error with code NoStorage,
+func (this *Connection) Sheets(path string) ([]string, error) {
+	c := this.connection
+	connector := c.Connector()
+	if connector.Type != state.FileType {
+		return nil, errors.BadRequest("connection %d is not a file", c.ID)
+	}
+	if path == "" {
+		return nil, errors.BadRequest("path is empty")
+	}
+	if !utf8.ValidString(path) {
+		return nil, errors.BadRequest("path is not UTF-8 encoded")
+	}
+	ctx := context.Background()
+	f, err := _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
+		Role:     _connector.Role(c.Role),
+		Settings: c.Settings,
+	})
+	if err != nil {
+		return nil, err
+	}
+	file, ok := f.(_connector.Sheets)
+	if !ok {
+		return nil, errors.BadRequest("file connection %d does not support multiple sheet", c.ID)
+	}
+	s, ok := c.Storage()
+	if !ok {
+		return nil, errors.Unprocessable(NoStorage, "file connection %d does not have a storage", c.ID)
+	}
+	storage, err := _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
+		Role:     _connector.Role(s.Role),
+		Settings: s.Settings,
+	})
+	if err != nil {
+		return nil, err
+	}
+	r, _, err := storage.Reader(path)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	return file.Sheets(r)
+}
+
 // ConnectionsStats represents the statistics on a connection for the last 24
 // hours.
 type ConnectionsStats struct {
