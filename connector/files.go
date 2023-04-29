@@ -105,6 +105,14 @@ type FileConnection interface {
 	Write(w io.Writer, records RecordReader) error
 }
 
+// Sheets is implemented by file connectors that support multiple sheets.
+type Sheets interface {
+	FileConnection
+
+	// Sheets returns the sheets of the file read from r.
+	Sheets(r io.Reader) ([]string, error)
+}
+
 // A RecordReader interface is used by file connections to read the records to
 // be written.
 type RecordReader interface {

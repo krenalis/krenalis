@@ -30,6 +30,9 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+// Make sure it implements the Sheets interface.
+var _ connector.Sheets = (*connection)(nil)
+
 func init() {
 	connector.RegisterFile(connector.File{
 		Name:              "Excel",
@@ -182,6 +185,16 @@ func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 		return nil, ui.Errorf("sheet name cannot be longer than 31 characters and cannot contain :, \\, /, ?, *, [ and ]")
 	}
 	return json.Marshal(&s)
+}
+
+// Sheets returns the sheets of the file read from r.
+func (c *connection) Sheets(r io.Reader) ([]string, error) {
+	f, err := excelize.OpenReader(r)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return f.GetSheetList(), nil
 }
 
 // Write writes to w the records read from records.
