@@ -90,7 +90,7 @@ func (ac *Action) fromState(db *postgres.DB, action *state.Action) {
 			PythonSource: t.PythonSource,
 		}
 	}
-	if typ := c.Connector().Type; typ == state.DatabaseType {
+	if action.Query != "" {
 		query := action.Query
 		ac.Query = &query
 	}
