@@ -298,6 +298,7 @@ type Connector struct {
 	TermForGroups          string
 	Type                   ConnectorType
 	Targets                ConnectorTargets
+	HasSheets              bool
 	HasSettings            bool
 	LogoURL                string
 	WebhooksPer            WebhooksPer

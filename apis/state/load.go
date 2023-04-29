@@ -27,6 +27,7 @@ var (
 	appEventsConnectionType = reflect.TypeOf((*_connector.AppEventsConnection)(nil)).Elem()
 	appUsersConnectionType  = reflect.TypeOf((*_connector.AppUsersConnection)(nil)).Elem()
 	appGroupsConnectionType = reflect.TypeOf((*_connector.AppGroupsConnection)(nil)).Elem()
+	sheetsType              = reflect.TypeOf((*_connector.Sheets)(nil)).Elem()
 )
 
 // Load loads the state and returns it.
@@ -114,6 +115,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					c.TermForGroups = "groups"
 					c.Targets = UsersFlag | GroupsFlag
 					ct = file.ConnectionReflectType()
+					c.HasSheets = ct.Implements(sheetsType)
 				case MobileType:
 					mobile := _connector.RegisteredMobile(c.Name)
 					c.SourceDescription = mobile.SourceDescription

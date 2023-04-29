@@ -29,6 +29,7 @@ type Connector struct {
 	SourceDescription      string
 	DestinationDescription string
 	Type                   ConnectorType
+	HasSheets              bool
 	HasSettings            bool
 	LogoURL                string
 	WebhooksPer            WebhooksPer
