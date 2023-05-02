@@ -265,16 +265,16 @@ type Type struct {
 	unique bool // unique reports whether the items of an Array must be unique.
 
 	// p represents
-	//   - minimum value of Int, Int8, In16 and Int24 types
-	//   - minimum value, as uint32(p), of UInt, UInt8, UIn16 and UInt24 types
+	//   - minimum value of Int, Int8, Int16 and Int24 types
+	//   - minimum value, as uint32(p), of UInt, UInt8, UInt16 and UInt24 types
 	//   - precision of a Decimal type
 	//   - length in bytes of a Text type
 	//   - minimum length of an Array type
 	p int32
 
 	// s represents
-	//   - maximum value for Int, Int8, In16 and Int24
-	//   - maximum value, as uint32(s), for UInt, UInt8, UIn16 and UInt24
+	//   - maximum value for Int, Int8, Int16 and Int24
+	//   - maximum value, as uint32(s), for UInt, UInt8, UInt16 and UInt24
 	//   - scale for Decimal
 	//   - length in characters for Text
 	//   - maximum length for Array
