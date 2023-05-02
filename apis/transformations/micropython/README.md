@@ -7,9 +7,10 @@
 
 ## How to build/update `micropython.wasm`
 
-1. Pull the https://github.com/micropython/micropython repository
-2. Follow the instructions in the README.md under `ports/webassembly`
-3. Copy the file `ports/webassembly/build/firmware.wasm` over the WASM file `wasm/micropython.wasm` in this repository
+1. Install the Emscripten tools following the instructions at https://emscripten.org/docs/getting_started/downloads.html.
+2. Pull the https://github.com/micropython/micropython repository
+3. Follow the instructions in the README.md under `ports/webassembly`
+4. Copy the file `ports/webassembly/build/firmware.wasm` over the WASM file `wasm/micropython.wasm` in this repository
 
 ## Build the MicroPython executable
 
