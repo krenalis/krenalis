@@ -64,7 +64,7 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 		Schema:   ps.Schema,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("cannot connect to PostreSQL: %s", err)
+		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 
 	apis := &APIs{db: db}
