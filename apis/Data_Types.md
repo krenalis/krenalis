@@ -1,32 +1,32 @@
 
 # Data Types
 
-| Physical type  | Go              | PostgreSQL | MySQL      | Parquet      | json.Unmarshal
-|----------------|-----------------|------------|------------|--------------|------------------------------
-| Boolean        | bool            | bool       | -          | bool         | bool                
-| Int            | int             | int64      | []byte     | int32        | float64, json.Number
-| Int8           | int             | int64      | []byte     |              | float64, json.Number
-| Int16          | int             | int64      | []byte     |              | float64, json.Number
-| Int24          | int             | int64      | []byte     | -            | float64, json.Number
-| Int64          | int             | int64      | []byte     | int64        | float64, json.Number
-| UInt           | uint            | -          | []byte     |              | float64, json.Number
-| UInt8          | uint            | -          | []byte     |              | float64, json.Number
-| UInt16         | uint            | -          | []byte     |              | float64, json.Number
-| UInt24         | uint            | -          | []byte     | -            | float64, json.Number
-| UInt64         | uint            | -          | []byte     |              | float64, json.Number
-| Float          | float64         | float64    | []byte     | float64      | float64, json.Number
-| Float32        | float64         | float64    | []byte     | float32      | float64, json.Number
-| Decimal        | decimal.Decimal | string     | []byte     | int32, int64 | string, float64, json.Number
-| DateTime       | time.Time       | time.Time  | time.Time  | time.Time    | string, float64, json.Number 
-| Date           | time.Time       | time.Time  | time.Time  |              | string, float64, json.Number
-| Time           | time.Time       | -          | []byte     |              | string, float64, json.Number
-| Year           | int             | int64      | []byte     | -            | float64, json.Number
-| UUID           | uuid.UUID       | string     | -          |              | string
-| JSON           | json.RawMessage | []byte     | - [^1]     |              | string, json.RawMessage
-| Inet           | netip.Addr      | string     | -          | -            | string
-| Text           | string          | string     | []byte     | []byte       | string
-| Array(T)       | []T             | -          | -          | -            | []any
-| Object         | map[string]any  | -          | -          | -            | map[string]any
-| Map(T)         | map[string]T    | -          | -          | -            | map[string]any
+| Physical type  | Go              | json.Unmarshal               | PostgreSQL | MySQL      | Parquet      |
+|----------------|-----------------|------------------------------|------------|------------|--------------|
+| Boolean        | bool            | bool                         | bool       | -          | bool         |
+| Int            | int             | float64, json.Number         | int64      | []byte     | int32        |
+| Int8           | int             | float64, json.Number         | int64      | []byte     |              |
+| Int16          | int             | float64, json.Number         | int64      | []byte     |              |
+| Int24          | int             | float64, json.Number         | int64      | []byte     | -            |
+| Int64          | int             | float64, json.Number         | int64      | []byte     | int64        |
+| UInt           | uint            | float64, json.Number         | -          | []byte     |              |
+| UInt8          | uint            | float64, json.Number         | -          | []byte     |              |
+| UInt16         | uint            | float64, json.Number         | -          | []byte     |              |
+| UInt24         | uint            | float64, json.Number         | -          | []byte     | -            |
+| UInt64         | uint            | float64, json.Number         | -          | []byte     |              |
+| Float          | float64         | float64, json.Number         | float64    | []byte     | float64      |
+| Float32        | float64         | float64, json.Number         | float64    | []byte     | float32      |
+| Decimal        | decimal.Decimal | string, float64, json.Number | string     | []byte     | int32, int64 |
+| DateTime       | time.Time       | string, float64, json.Number | time.Time  | time.Time  | time.Time    |
+| Date           | time.Time       | string, float64, json.Number | time.Time  | time.Time  |              |
+| Time           | time.Time       | string, float64, json.Number | -          | []byte     |              |
+| Year           | int             | float64, json.Number         | int64      | []byte     | -            |
+| UUID           | uuid.UUID       | string                       | string     | -          |              |
+| JSON           | json.RawMessage | string, json.RawMessage      | []byte     | - [^1]     |              |
+| Inet           | netip.Addr      | string                       | string     | -          | -            |
+| Text           | string          | string                       | string     | []byte     | []byte       |
+| Array(T)       | []T             | []any                        | -          | -          | -            |
+| Object         | map[string]any  | map[string]any               | -          | -          | -            |
+| Map(T)         | map[string]T    | map[string]any               | -          | -          | -            |
 
 [^1]: Even by declaring a column as type `json`, the MySQL driver returns the type `VARCHAR` instead of `JSON`.
