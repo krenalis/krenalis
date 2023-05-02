@@ -217,14 +217,10 @@ func marshalType(b *bytes.Buffer, t Type) {
 				}
 				b.WriteByte(']')
 			}
-			if p.Label != "" {
-				b.WriteString(`,"label":`)
-				_ = marshalString(b, p.Label)
-			}
-			if p.Description != "" {
-				b.WriteString(`,"description":`)
-				_ = marshalString(b, p.Description)
-			}
+			b.WriteString(`,"label":`)
+			_ = marshalString(b, p.Label)
+			b.WriteString(`,"description":`)
+			_ = marshalString(b, p.Description)
 			b.WriteString(`,"type":`)
 			marshalType(b, p.Type)
 			if p.Required {
@@ -232,6 +228,8 @@ func marshalType(b *bytes.Buffer, t Type) {
 			}
 			if p.Nullable {
 				b.WriteString(`,"nullable":true`)
+			} else {
+				b.WriteString(`,"nullable":false`)
 			}
 			if p.Flat {
 				b.WriteString(`,"flat":true`)
