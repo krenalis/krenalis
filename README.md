@@ -3,7 +3,7 @@
 <img src="https://static.wikia.nocookie.net/dragonballaf/images/c/c3/Chichi_foto8.jpg/revision/latest?cb=20120616090846&path-prefix=it" width=260px/>
 
 - [Before commit](#before-commit)
-  - [Rapid tests during development](#rapid-tests-during-development)
+  - [Short tests during development](#short-tests-during-development)
   - [Troubleshooting](#troubleshooting)
 - [How to execute Chichi](#how-to-execute-chichi)
   - [1. Install React and other dependencies](#1-install-react-and-other-dependencies)
@@ -28,17 +28,16 @@ From the root of this repository, run:
 go run commit/commit.go
 ```
 
-### Rapid tests during development
+### Short tests during development
 
-For rapid tests during development you can also use the command:
+For short tests during development you can also use the command:
 
 ```
 go run commit/commit.go -short
 ```
 
-but you still need to run the command `go run commit/commit.go` without
-arguments before committing changes to the `main` branch.
-
+Note: don't use the option `-short` before committing because it runs only a
+subset of the tests.
 
 ### Troubleshooting
 
