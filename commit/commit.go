@@ -9,6 +9,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io/fs"
 	"log"
@@ -21,6 +22,10 @@ import (
 )
 
 func main() {
+
+	var short bool
+	flag.BoolVar(&short, "short", false, "pass the '-short' flag to 'go test'")
+	flag.Parse()
 
 	start := time.Now()
 
@@ -72,7 +77,11 @@ func main() {
 	for _, module := range modules {
 		cmd("go", []string{"fmt", "./..."}, repo, module)
 		cmd("go", []string{"vet", "./..."}, repo, module)
-		cmd("go", []string{"test", "./..."}, repo, module)
+		if short {
+			cmd("go", []string{"test", "-short", "./..."}, repo, module)
+		} else {
+			cmd("go", []string{"test", "./..."}, repo, module)
+		}
 	}
 
 	// Call command(s) on the workspace.

@@ -11,25 +11,15 @@ import (
 	"context"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
 
-	"chichi/admin"
-	"chichi/apis"
+	"chichi/server"
 
 	"gopkg.in/gcfg.v1"
 )
-
-type Settings struct {
-	Main struct {
-		Host                         string
-		PrintESBuildWarningsOnStderr bool
-	}
-	PostgreSQL apis.PostgreSQLConfig
-}
 
 func main() {
 
@@ -51,7 +41,7 @@ func main() {
 	if len(os.Args) > 1 {
 		settingsFile = os.Args[1]
 	}
-	var settings Settings
+	var settings server.Settings
 	err = gcfg.ReadFileInto(&settings, settingsFile)
 	if err != nil {
 		p, err2 := filepath.Abs(settingsFile)
@@ -69,53 +59,9 @@ func main() {
 		cancel()
 	}()
 
-	apis, err := apis.New(ctx, &apis.Config{
-		PostgreSQL: settings.PostgreSQL,
-	})
-	if err != nil {
-		if err == context.Canceled {
-			select {
-			case <-ctx.Done():
-				os.Exit(0)
-			}
-		}
-		log.Fatalf("[error] %s", err)
-	}
-	admin := admin.New(apis)
-
-	http.HandleFunc("/admin/", admin.ServeHTTP)
-	http.HandleFunc("/api/", apis.ServeHTTP)
-	http.HandleFunc("/webhook/", apis.ServeWebhook)
-	http.Handle("/trace-events-script/", http.FileServer(http.Dir(".")))
-
-	addr := settings.Main.Host
-	if addr == "" {
-		addr = "127.0.0.1:9090"
-	}
-	httpServer := http.Server{
-		Addr: addr,
-	}
-	go func() {
-		<-ctx.Done()
-		err := httpServer.Shutdown(context.Background())
-		if err != nil {
-			log.Printf("[error] shutting down HTTP server: %s", err)
-		}
-	}()
-
-	certPem, err := filepath.Abs("cert.pem")
+	err = server.Run(ctx, &settings)
 	if err != nil {
 		log.Printf("[error] %s", err)
-		return
-	}
-	keyPem, err := filepath.Abs("key.pem")
-	if err != nil {
-		log.Printf("[error] %s", err)
-		return
-	}
-	err = httpServer.ListenAndServeTLS(certPem, keyPem)
-	if err != nil && err != http.ErrServerClosed {
-		log.Fatal("ListenAndServe: ", err)
 	}
 
 }
