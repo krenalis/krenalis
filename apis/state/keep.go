@@ -295,6 +295,8 @@ type AddActionNotification struct {
 	Mapping        map[string]string
 	Transformation *Transformation
 	Query          string
+	Path           string
+	Sheet          string
 }
 
 // addAction adds a new action.
@@ -319,6 +321,8 @@ func (state *State) addAction(n postgres.Notification) {
 		Mapping:        e.Mapping,
 		Transformation: e.Transformation,
 		Query:          e.Query,
+		Path:           e.Path,
+		Sheet:          e.Sheet,
 	}
 	state.mu.Lock()
 	state.actions[e.ID] = action
@@ -800,6 +804,8 @@ type SetActionNotification struct {
 	Mapping        map[string]string
 	Transformation *Transformation
 	Query          string
+	Path           string
+	Sheet          string
 }
 
 // setAction sets an action.
@@ -816,6 +822,8 @@ func (state *State) setAction(n postgres.Notification) {
 		a.Mapping = e.Mapping
 		a.Transformation = e.Transformation
 		a.Query = e.Query
+		a.Path = e.Path
+		a.Sheet = e.Sheet
 	})
 	for _, listener := range state.listeners.SetAction {
 		listener(e)

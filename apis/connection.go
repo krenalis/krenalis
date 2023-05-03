@@ -14,6 +14,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	mathrand "math/rand"
 	"reflect"
@@ -416,39 +417,27 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 	case state.FileType:
 		switch target {
 		case UsersTarget:
-			fileSchema, err := this.fetchFileSchema()
-			if err != nil {
-				return ActionTypeInformation{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
-			}
 			usersSchema, ok := this.connection.Workspace().Schemas["users"]
 			if !ok {
 				return ActionTypeInformation{}, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 			}
 			if this.connection.Role == state.SourceRole {
-				at.InputSchema = fileSchema
 				at.OutputSchema = usersSchema.Unflatten()
 			} else {
 				at.InputSchema = usersSchema.Unflatten()
-				at.OutputSchema = fileSchema
 			}
 			at.Supports = []ActionSupport{
 				ActionSupportMapping,
 			}
 		case GroupsTarget:
-			fileSchema, err := this.fetchFileSchema()
-			if err != nil {
-				return ActionTypeInformation{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
-			}
 			groupsSchema, ok := this.connection.Workspace().Schemas["groups"]
 			if !ok {
 				return ActionTypeInformation{}, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
 			}
 			if this.connection.Role == state.SourceRole {
-				at.InputSchema = fileSchema
 				at.OutputSchema = groupsSchema.Unflatten()
 			} else {
 				at.InputSchema = groupsSchema.Unflatten()
-				at.OutputSchema = fileSchema
 			}
 			at.Supports = []ActionSupport{
 				ActionSupportMapping,
@@ -522,6 +511,8 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		Mapping:        action.Mapping,
 		Transformation: (*state.Transformation)(action.Transformation),
 		Query:          action.Query,
+		Path:           action.Path,
+		Sheet:          action.Sheet,
 	}
 	if shouldStoreActionSchema(connector.Type, c.Role, n.Target) {
 		n.Schema = schema
@@ -630,11 +621,13 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, filter, schema, mapping,\n" +
-			"transformation.in_types, transformation.out_types, transformation.python_source, query)\n" +
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"
+			"transformation.in_types, transformation.out_types, transformation.python_source,\n" +
+			"query, path, sheet)\n" +
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType, n.Name,
 			n.Enabled, n.ScheduleStart, n.SchedulePeriod,
-			string(filter), rawSchema, string(mapping), string(tIn), string(tOut), string(tSource), n.Query)
+			string(filter), rawSchema, string(mapping), string(tIn), string(tOut), string(tSource),
+			n.Query, n.Path, n.Sheet)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {
 				err = errors.Unprocessable(ConnectorNotExists, "connection %d does not exist", n.Connection)
@@ -883,6 +876,93 @@ func (this *Connection) Keys() ([]string, error) {
 		return nil, errors.NotFound("server %d is not a source", c.ID)
 	}
 	return slices.Clone(c.Keys), nil
+}
+
+// Records returns the records and the schema of the file with the given path
+// for the connection, that must be a file connection. path must be UTF-8
+// encoded with a length in range [1, 1024]. If the connection has multiple
+// sheets, sheet is the sheet name and must be UTF-8 encoded with a length in
+// range [1, 100], otherwise must be an empty string. limit limits the number of
+// records to return and must be in range [0, 100].
+func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.Type, error) {
+
+	c := this.connection
+	connector := c.Connector()
+
+	// Validate the connection type.
+	if connector.Type != state.FileType {
+		return nil, types.Type{}, errors.BadRequest("connection %d is not a file connection", c.ID)
+	}
+	// Validate the path.
+	if path == "" {
+		return nil, types.Type{}, errors.BadRequest("path cannot be empty")
+	}
+	if !utf8.ValidString(path) {
+		return nil, types.Type{}, errors.BadRequest("path is not UTF-8 encoded")
+	}
+	if n := utf8.RuneCountInString(path); n > 1024 {
+		return nil, types.Type{}, errors.BadRequest("path is longer than 1024 runes")
+	}
+	// Validate the sheet.
+	if connector.HasSheets {
+		if sheet == "" {
+			return nil, types.Type{}, errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
+		}
+		if !utf8.ValidString(sheet) {
+			return nil, types.Type{}, errors.BadRequest("sheet is not UTF-8 encoded")
+		}
+		if n := utf8.RuneCountInString(sheet); n > 100 {
+			return nil, types.Type{}, errors.BadRequest("sheet is longer than 100 runes")
+		}
+	} else {
+		if sheet != "" {
+			return nil, types.Type{}, errors.BadRequest("sheet must be empty because connection %d does not have sheets", c.ID)
+		}
+	}
+
+	// Connect to the file connector.
+	ctx := context.Background()
+	fh := this.newFirehose(ctx)
+	file, err := _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
+		Role:     _connector.SourceRole,
+		Settings: c.Settings,
+		Firehose: fh,
+	})
+	if err != nil {
+		return nil, types.Type{}, err
+	}
+
+	// Open the file.
+	var r io.ReadCloser
+	{
+		s, _ := c.Storage()
+		fh := this.newFirehoseForConnection(ctx, s)
+		ctx = fh.ctx
+		var storage _connector.StorageConnection
+		storage, err = _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
+			Role:     _connector.SourceRole,
+			Settings: s.Settings,
+			Firehose: fh,
+		})
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		r, _, err = storage.Open(path)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		defer r.Close()
+	}
+
+	// Read the records.
+	rw := newRecordWriter(c.ID, identityLabel, timestampLabel, limit, nil)
+	err = file.Read(r, sheet, rw)
+	if err != nil && err != errRecordStop {
+		return nil, types.Type{}, err
+	}
+	schema := types.Object(rw.columns)
+
+	return rw.records, schema, nil
 }
 
 // Reload reloads the user, group and events schema for the actions of the
@@ -1265,6 +1345,21 @@ func (this *Connection) Stats() (*ConnectionsStats, error) {
 		return nil, err
 	}
 	return stats, nil
+}
+
+// newFirehoseForConnection returns a new Firehose for the connection c.
+func (this *Connection) newFirehoseForConnection(ctx context.Context, c *state.Connection) *firehose {
+	var resource int
+	if r, ok := c.Resource(); ok {
+		resource = r.ID
+	}
+	fh := &firehose{
+		db:         this.db,
+		connection: c,
+		resource:   resource,
+	}
+	fh.ctx, fh.cancel = context.WithCancel(ctx)
+	return fh
 }
 
 // newFirehose returns a new Firehose.

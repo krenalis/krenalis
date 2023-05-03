@@ -66,13 +66,17 @@ class Connections {
 		});
 	};
 
-	setUsersQuery = async (connection, query) => {
+	records = async (connection, path, sheet, limit) => {
+		let queryString = `?limit=${limit}`;
+		if (path != null) {
+			queryString += `&path=${encodeURIComponent(path)}`;
+		}
+		if (sheet != null) {
+			queryString += `&sheet=${encodeURIComponent(sheet)}`;
+		}
 		return await call(
-			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/set-users-query`,
-			http.POST,
-			{
-				query: query,
-			}
+			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/records${queryString}`,
+			http.GET
 		);
 	};
 

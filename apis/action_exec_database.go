@@ -43,15 +43,15 @@ func (ac *Action) importFromDatabase() error {
 	var hasIdentity bool
 	var hasTimestamp bool
 	for _, p := range properties {
-		if p.Name == identityColumn {
+		if p.Name == identityLabel {
 			hasIdentity = true
 		}
-		if p.Name == timestampColumn {
+		if p.Name == timestampLabel {
 			hasTimestamp = true
 		}
 	}
 	if !hasIdentity {
-		return actionExecutionError{fmt.Errorf("missing identity column %q", identityColumn)}
+		return actionExecutionError{fmt.Errorf("missing identity column %q", identityLabel)}
 	}
 	now := time.Now().UTC()
 	dest := make([]any, len(properties))
@@ -65,9 +65,9 @@ func (ac *Action) importFromDatabase() error {
 		}
 		ts := now
 		if hasTimestamp {
-			ts = row[timestampColumn].(time.Time)
+			ts = row[timestampLabel].(time.Time)
 		}
-		fh.SetUser(row[identityColumn].(string), row, ts, nil)
+		fh.SetUser(row[identityLabel].(string), row, ts, nil)
 	}
 	if err = rawRows.Err(); err != nil {
 		return actionExecutionError{fmt.Errorf("an error occurred closing the database: %s", err)}

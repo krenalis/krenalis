@@ -110,6 +110,8 @@ CREATE TABLE actions (
     mapping text NOT NULL DEFAULT '',
     transformation transformation NOT NULL DEFAULT '("", "", "")',
     query text NOT NULL DEFAULT '',
+    path varchar(1024) NOT NULL DEFAULT '',
+    sheet varchar(100) NOT NULL DEFAULT '',
     health health NOT NULL DEFAULT 'Healthy',
     PRIMARY KEY (id)
 );

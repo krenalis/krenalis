@@ -95,17 +95,16 @@ type FileConnection interface {
 	// ContentType returns the content type of the file.
 	ContentType() string
 
-	// Path returns the path of the file.
-	Path() string
+	// Read reads the records from r and writes them to records. If the connection
+	// has multiple sheets, sheet is the name of the sheet to be read.
+	Read(r io.Reader, sheet string, records RecordWriter) error
 
-	// Read reads the records from r and writes them to records.
-	Read(r io.Reader, records RecordWriter) error
-
-	// Write writes to w the records read from records.
-	Write(w io.Writer, records RecordReader) error
+	// Write writes to w the records read from records. If the connection has
+	// multiple sheets, sheet is the name of the sheet to be written to.
+	Write(w io.Writer, sheet string, records RecordReader) error
 }
 
-// Sheets is implemented by file connectors that support multiple sheets.
+// Sheets is implemented by file connectors that have multiple sheets.
 type Sheets interface {
 	FileConnection
 

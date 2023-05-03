@@ -47,7 +47,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let [outputSchema, setOutputSchema] = useState(null);
 	let [isOutputSchemaDialogOpen, setIsOutputSchemaDialogOpen] = useState(false);
 	let [supports, setSupports] = useState([]);
-	let [previewTable, setPreviewTable] = useState(null);
+	let [queryPreviewTable, setQueryPreviewTable] = useState(null);
+	let [filePreviewTable, setFilePreviewTable] = useState(null);
 	let [isAlertOpen, setIsAlertOpen] = useState(false);
 	let [isNameEditable, setIsNameEditable] = useState(false);
 	let [isPropertiesListOpen, setIsPropertiesListOpen] = useState(false);
@@ -61,6 +62,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let { connection: c } = useContext(ConnectionContext);
 
 	let initialQuery = useRef('');
+	let initialPath = useRef('');
+	let initialSheet = useRef('');
 	let defaultTransformationFunction = useRef('');
 	let propertiesListRef = useRef(null);
 	let conditionListRef = useRef(null);
@@ -120,9 +123,23 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				showError(err);
 				return;
 			}
+
 			setActionType(actionType);
 			setInputSchema(actionTypeInfos.InputSchema);
 			setOutputSchema(actionTypeInfos.OutputSchema);
+
+			if (c.Type === 'File') {
+				actionTypeInfos.Supports.push('Path');
+				// check if has sheet.
+				let [connector, err] = await API.connectors.get(c.Connector);
+				if (err != null) {
+					showError(err);
+					return;
+				}
+				if (connector.HasSheets) {
+					actionTypeInfos.Supports.push('Sheet');
+				}
+			}
 			setSupports(actionTypeInfos.Supports);
 
 			if (actionTypeInfos.Supports.includes('Query') && a != null) {
@@ -132,6 +149,15 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				} else {
 					setInputSchema(res.Schema);
 				}
+			}
+
+			if (actionTypeInfos.Supports.includes('Path') && a != null) {
+				let [res, err] = await API.connections.records(c.ID, a.Path, a.Sheet, 0);
+				if (err != null) {
+					showError(err); // TODO: show the errors directly under the mapping fields if they are missing as a result of a change to the file.
+					return;
+				}
+				setInputSchema(res.schema);
 			}
 
 			// get the action
@@ -164,9 +190,13 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					Mapping: null,
 					Transformation: null,
 					Query: null,
+					Path: actionTypeInfos.Supports.includes('Path') ? '' : null,
+					Sheet: actionTypeInfos.Supports.includes('Sheet') ? '' : null,
 				};
 			}
 			initialQuery.current = action.Query;
+			initialPath.current = action.Path;
+			initialSheet.current = action.Sheet;
 			setAction(action);
 
 			// set the default transformation function
@@ -437,10 +467,10 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			columns.push({ Name: res.Schema.properties[k].name });
 		}
 		let table = { columns, rows: res.Rows };
-		setPreviewTable(table);
+		setQueryPreviewTable(table);
 	};
 
-	const onConfirmSchema = async () => {
+	const onConfirmQuery = async () => {
 		let res = await query(null, 0);
 		if (res == null) {
 			return;
@@ -449,6 +479,52 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		let a = { ...action };
 		if (a.Schema != null) {
 			a.Schema = res.Schema;
+		}
+		if (propertiesMode === 'transformation') {
+			a.Transformation.In.properties = [];
+		}
+		setAction(a);
+		showStatus(statuses.schemaLoaded);
+	};
+
+	const onUpdatePath = (e) => {
+		let a = { ...action };
+		let path = e.currentTarget.value;
+		a.Path = path;
+		setAction(a);
+	};
+
+	const onUpdateSheet = (e) => {
+		let a = { ...action };
+		let sheet = e.currentTarget.value;
+		a.Sheet = sheet;
+		setAction(a);
+	};
+
+	const onFilePreview = async () => {
+		let [res, err] = await API.connections.records(c.ID, action.Path, action.Sheet, 20);
+		if (err != null) {
+			showError(err);
+			return;
+		}
+		let columns = [];
+		for (let k in res.schema.properties) {
+			columns.push({ Name: res.schema.properties[k].name });
+		}
+		let table = { columns, rows: res.records };
+		setFilePreviewTable(table);
+	};
+
+	const onConfirmFile = async () => {
+		let [res, err] = await API.connections.records(c.ID, action.Path, action.Sheet, 0);
+		if (err != null) {
+			showError(err);
+			return;
+		}
+		setInputSchema(res.schema);
+		let a = { ...action };
+		if (a.Schema != null) {
+			a.Schema = res.schema;
 		}
 		if (propertiesMode === 'transformation') {
 			a.Transformation.In.properties = [];
@@ -562,7 +638,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		};
 	};
 
-	const getPropertiesList = (onSelect) => {
+	const getPropertiesMenuItem = (onSelect) => {
 		if (inputSchema == null) {
 			return;
 		}
@@ -674,11 +750,19 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		let isSectionPadded = false;
 		let propertiesSectionContent = null;
 		if (propertiesMode === '') {
-			if (c.Type === 'Database' && inputSchema == null) {
+			if (supports.includes('Query') && inputSchema == null) {
 				propertiesSectionContent = (
 					<SlAlert variant='warning' open>
 						<SlIcon slot='icon' name='exclamation-triangle' />
 						To enable mappings, you should first load a database schema in the "Query" section
+					</SlAlert>
+				);
+			} else if (supports.includes('Path') && inputSchema == null) {
+				propertiesSectionContent = (
+					<SlAlert variant='warning' open>
+						<SlIcon slot='icon' name='exclamation-triangle' />
+						To enable mappings, you should first load a file schema by inserting the file path
+						{supports.includes('Sheet') && ' and sheet'}
 					</SlAlert>
 				);
 			} else {
@@ -743,7 +827,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						ref={propertiesListRef}
 						isOpen={isPropertiesListOpen}
 						searchTerm={propertySearchTerm}
-						comboBoxItems={getPropertiesList(onSelectPropertiesListItem)}
+						comboBoxItems={getPropertiesMenuItem(onSelectPropertiesListItem)}
 					/>
 				</div>
 			);
@@ -826,14 +910,27 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		);
 	}
 
-	let isConfirmSchemaButtonDisabled = false;
+	let isConfirmQueryButtonDisabled = false;
 	if (initialQuery.current != null) {
 		if (action.Query.trim() === initialQuery.current.trim()) {
-			isConfirmSchemaButtonDisabled = true;
+			isConfirmQueryButtonDisabled = true;
 		}
 	} else {
 		if (action.Query == null || action.Query.trim() === '') {
-			isConfirmSchemaButtonDisabled = true;
+			isConfirmQueryButtonDisabled = true;
+		}
+	}
+
+	let isConfirmFileButtonDisabled = false;
+	if (initialPath.current != null) {
+		if (action.Path.trim() === initialPath.current.trim()) {
+			isConfirmFileButtonDisabled = true;
+		}
+
+		if (initialSheet.current != null) {
+			if (action.Sheet.trim() !== initialSheet.current.trim()) {
+				isConfirmFileButtonDisabled = false;
+			}
 		}
 	}
 
@@ -897,7 +994,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							ref={conditionListRef}
 							isOpen={isConditionListOpen}
 							searchTerm={conditionSearchTerm}
-							comboBoxItems={getPropertiesList(onSelectConditionListItem)}
+							comboBoxItems={getPropertiesMenuItem(onSelectConditionListItem)}
 						/>
 						<SlButton className='addCondition' size='small' variant='neutral' onClick={onAddCondition}>
 							Add new condition
@@ -919,8 +1016,47 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							<SlButton
 								variant='success'
 								size='small'
-								onClick={onConfirmSchema}
-								disabled={isConfirmSchemaButtonDisabled}
+								onClick={onConfirmQuery}
+								disabled={isConfirmQueryButtonDisabled}
+							>
+								Confirm
+							</SlButton>
+						</div>
+					</Section>
+				)}
+				{supports.includes('Path') && (
+					<Section
+						title={`Path${supports.includes('Sheet') ? ' and Sheet' : ''}`}
+						description={`The path${supports.includes('Sheet') ? ' and sheet' : ''} of the file`}
+						padded
+					>
+						<SlInput
+							className='pathInput'
+							name='path'
+							value={action.Path}
+							label={supports.includes('Sheet') ? 'Path' : null}
+							type='text'
+							onSlInput={onUpdatePath}
+						/>
+						{supports.includes('Sheet') && (
+							<SlInput
+								className='sheetInput'
+								name='sheet'
+								value={action.Sheet}
+								label='Sheet'
+								type='text'
+								onSlInput={onUpdateSheet}
+							/>
+						)}
+						<div className='fileButtons'>
+							<SlButton variant='neutral' size='small' onClick={onFilePreview}>
+								Preview
+							</SlButton>
+							<SlButton
+								variant='success'
+								size='small'
+								onClick={onConfirmFile}
+								disabled={isConfirmFileButtonDisabled}
 							>
 								Confirm
 							</SlButton>
@@ -931,17 +1067,35 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				{supports.includes('Query') && (
 					<SlDrawer
 						className='previewDrawer'
-						label='Preview'
-						open={previewTable != null}
-						onSlAfterHide={() => setPreviewTable(null)}
+						label='Query Preview'
+						open={queryPreviewTable != null}
+						onSlAfterHide={() => setQueryPreviewTable(null)}
 						placement='bottom'
 						style={{ '--size': '600px' }}
 					>
-						{previewTable != null && (
+						{queryPreviewTable != null && (
 							<StyledGrid
-								columns={previewTable.columns}
-								rows={previewTable.rows}
+								columns={queryPreviewTable.columns}
+								rows={queryPreviewTable.rows}
 								noRowsMessage={'Your query did not return data'}
+							/>
+						)}
+					</SlDrawer>
+				)}
+				{supports.includes('Path') && (
+					<SlDrawer
+						className='previewDrawer'
+						label='File Preview'
+						open={filePreviewTable != null}
+						onSlAfterHide={() => setFilePreviewTable(null)}
+						placement='bottom'
+						style={{ '--size': '600px' }}
+					>
+						{filePreviewTable != null && (
+							<StyledGrid
+								columns={filePreviewTable.columns}
+								rows={filePreviewTable.rows}
+								noRowsMessage={'Your file did not return data'}
 							/>
 						)}
 					</SlDrawer>
@@ -993,8 +1147,15 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 									action.Transformation.In.properties.findIndex((prop) => prop.name === p.name) !==
 									-1;
 								return (
-									<div className={`property${isUsed ? ' used' : ''}`}>
+									<div
+										className={`property${isUsed ? ' used' : ''}${
+											p.label != null && p.label !== '' ? ' hasLabel' : ''
+										}`}
+									>
 										<div>
+											{p.label != null && p.label !== '' && (
+												<div className='label'>{p.label}</div>
+											)}
 											<div className='name'>{p.name}</div>
 											<div className='type'>{p.type.name}</div>
 										</div>
@@ -1025,8 +1186,15 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 									action.Transformation.Out.properties.findIndex((prop) => prop.name === p.name) !==
 									-1;
 								return (
-									<div className={`property${isUsed ? ' used' : ''}`}>
+									<div
+										className={`property${isUsed ? ' used' : ''}${
+											p.label != null && p.label !== '' ? ' hasLabel' : ''
+										}`}
+									>
 										<div>
+											{p.label != null && p.label !== '' && (
+												<div className='label'>{p.label}</div>
+											)}
 											<div className='name'>{p.name}</div>
 											<div className='type'>{p.type.name}</div>
 										</div>

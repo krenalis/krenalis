@@ -13,16 +13,11 @@ package excel
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
-	"errors"
 	"io"
 	"strconv"
-	"strings"
-	"unicode/utf8"
 
 	"chichi/apis/types"
 	"chichi/connector"
-	"chichi/connector/ui"
 
 	"github.com/xuri/excelize/v2"
 )
@@ -43,25 +38,12 @@ func init() {
 
 type connection struct {
 	ctx      context.Context
-	settings *settings
 	firehose connector.Firehose
-}
-
-type settings struct {
-	Path      string
-	SheetName string
 }
 
 // open opens an Excel connection and returns it.
 func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) {
-	c := connection{ctx: ctx, firehose: conf.Firehose}
-	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Excel connection")
-		}
-	}
-	return &c, nil
+	return &connection{ctx: ctx, firehose: conf.Firehose}, nil
 }
 
 // ContentType returns the content type of the file.
@@ -69,13 +51,9 @@ func (c *connection) ContentType() string {
 	return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 }
 
-// Path returns the path of the file.
-func (c *connection) Path() string {
-	return c.settings.Path
-}
-
 // Read reads the records from r and writes them to records.
-func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
+// sheet is the name of the sheet to be read.
+func (c *connection) Read(r io.Reader, sheet string, records connector.RecordWriter) error {
 
 	f, err := excelize.OpenReader(r, excelize.Options{
 		RawCellValue: true,
@@ -84,11 +62,7 @@ func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 		return err
 	}
 	defer f.Close()
-	sheetName := c.settings.SheetName
-	if sheetName == "" {
-		sheetName = f.GetSheetName(0)
-	}
-	rows, err := f.Rows(sheetName)
+	rows, err := f.Rows(sheet)
 	if err != nil {
 		return err
 	}
@@ -126,67 +100,6 @@ func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 	return nil
 }
 
-// ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
-
-	switch event {
-	case "load":
-		// Load the Form.
-		var s settings
-		if c.settings != nil {
-			s = *c.settings
-		}
-		values, _ = json.Marshal(s)
-	case "save":
-		// Save the settings.
-		s, err := c.SettingsUI(values)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = c.firehose.SetSettings(s)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, ui.SuccessAlert("Settings saved"), nil
-	default:
-		return nil, nil, ui.ErrEventNotExist
-	}
-
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "path", Label: "Path", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1000},
-			&ui.Input{Name: "sheetName", Label: "Sheet name", Placeholder: "Sheet 1", Type: "text", MinLength: 1, MaxLength: 31},
-		},
-		Values: values,
-		Actions: []ui.Action{
-			{Event: "save", Text: "Save", Variant: "primary"},
-		},
-	}
-
-	return form, nil, nil
-}
-
-// SettingsUI obtains the settings from UI values and returns them.
-func (c *connection) SettingsUI(values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	// Validate Path.
-	if s.Path == "" {
-		return nil, ui.Errorf("path cannot be empty")
-	}
-	if utf8.RuneCountInString(s.Path) > 1000 {
-		return nil, ui.Errorf("path cannot be longer that 1000 characters")
-	}
-	// Validate SheetName.
-	if name := s.SheetName; name == "" || utf8.RuneCountInString(name) > 31 || strings.ContainsAny(name, ":\\/?*[]") {
-		return nil, ui.Errorf("sheet name cannot be longer than 31 characters and cannot contain :, \\, /, ?, *, [ and ]")
-	}
-	return json.Marshal(&s)
-}
-
 // Sheets returns the sheets of the file read from r.
 func (c *connection) Sheets(r io.Reader) ([]string, error) {
 	f, err := excelize.OpenReader(r)
@@ -198,11 +111,12 @@ func (c *connection) Sheets(r io.Reader) ([]string, error) {
 }
 
 // Write writes to w the records read from records.
-func (c *connection) Write(w io.Writer, records connector.RecordReader) error {
+// sheet is the name of the sheet to be written to.
+func (c *connection) Write(w io.Writer, sheet string, records connector.RecordReader) error {
 
 	f := excelize.NewFile()
 	defer f.Close()
-	sw, err := f.NewStreamWriter(c.settings.SheetName)
+	sw, err := f.NewStreamWriter(sheet)
 	if err != nil {
 		return err
 	}

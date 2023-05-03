@@ -17,6 +17,7 @@ GET     /api/connections/{id}/action-types/Groups              Get information a
 GET     /api/connections/{id}/action-types/Events              Get information about the Events action type with no event type.
 GET     /api/connections/{id}/action-types/Events/{eventType}  Get information about the Events action type for the event type.
 POST    /api/connections/{id}/exec-query                       Execute the query of a database connection.
+GET     /api/connections/{id}/records                          Return the records and the schema of a file of a multiple sheets file connection
 GET     /api/connections/{id}/sheets                           List the sheets of a multiple sheets file connection
 POST    /api/connections/{id}/status                           Set the status of a connection
 GET     /api/connections/{id}/stats                            Get the stats of a connection

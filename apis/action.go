@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	"chichi/apis/errors"
@@ -45,6 +44,8 @@ type Action struct {
 	Mapping        map[string]string
 	Transformation *Transformation
 	Query          *string
+	Path           *string
+	Sheet          *string
 }
 
 // fromState serializes action into ac.
@@ -93,6 +94,14 @@ func (ac *Action) fromState(db *postgres.DB, action *state.Action) {
 	if action.Query != "" {
 		query := action.Query
 		ac.Query = &query
+	}
+	if action.Path != "" {
+		path := action.Path
+		ac.Path = &path
+	}
+	if action.Sheet != "" {
+		sheet := action.Sheet
+		ac.Sheet = &sheet
 	}
 }
 
@@ -244,6 +253,8 @@ func (ac *Action) Set(action ActionToSet) error {
 		Mapping:        action.Mapping,
 		Transformation: (*state.Transformation)(action.Transformation),
 		Query:          action.Query,
+		Path:           action.Path,
+		Sheet:          action.Sheet,
 	}
 	if shouldStoreActionSchema(c.Connector().Type, c.Role, ac.action.Target) {
 		n.Schema = schema
@@ -303,9 +314,9 @@ func (ac *Action) Set(action ActionToSet) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
 			"name = $1, enabled = $2, filter = $3, schema = $4, mapping = $5,\n"+
 			"transformation.in_types = $6, transformation.out_types = $7,\n"+
-			"transformation.python_source = $8, query = $9 WHERE id = $10",
+			"transformation.python_source = $8, query = $9, path = $10, sheet = $11 WHERE id = $12",
 			n.Name, n.Enabled, string(filter), rawSchema, string(mapping),
-			string(tIn), string(tOut), string(tSource), n.Query, n.ID,
+			string(tIn), string(tOut), string(tSource), n.Query, n.Path, n.Sheet, n.ID,
 		)
 		if err != nil {
 			return err
@@ -422,6 +433,15 @@ type ActionToSet struct {
 	// Query is the query of the action, if it has one, otherwise it is the
 	// empty string.
 	Query string
+
+	// Path is the path of the file. It cannot be longer than 1024 runes,
+	// and it is empty for non-file actions.
+	Path string
+
+	// Sheet if the sheet name for multiple sheets file actions. It cannot
+	// be longer than 100 runes, and it is empty for non-file and non-multipart
+	// sheets actions.
+	Sheet string
 }
 
 // SchedulePeriod represents a scheduler period in minutes.
@@ -602,6 +622,24 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			return types.Type{}, errors.BadRequest("Python source code of transformation does not contain 'transform' function")
 		}
 	}
+	// Validate the path.
+	if action.Path != "" {
+		if !utf8.ValidString(action.Path) {
+			return types.Type{}, errors.BadRequest("path is not UTF-8 encoded")
+		}
+		if n := utf8.RuneCountInString(action.Path); n > 1024 {
+			return types.Type{}, errors.BadRequest("path is longer than 1024 runes")
+		}
+	}
+	// Validate the sheet.
+	if action.Sheet != "" {
+		if !utf8.ValidString(action.Sheet) {
+			return types.Type{}, errors.BadRequest("sheet is not UTF-8 encoded")
+		}
+		if n := utf8.RuneCountInString(action.Sheet); n > 100 {
+			return types.Type{}, errors.BadRequest("sheet is longer than 100 runes")
+		}
+	}
 
 	// Second, do validations based on the connection.
 
@@ -625,6 +663,26 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		target == state.EventsTarget
 	if action.Filter != nil && !filtersAllowed {
 		return types.Type{}, errors.BadRequest("filters are not allowed")
+	}
+
+	// Check if the path and the sheet are allowed.
+	if connector.Type == state.FileType {
+		if action.Path == "" {
+			return types.Type{}, errors.BadRequest("path cannot be empty for file actions")
+		}
+		if connector.HasSheets && action.Sheet == "" {
+			return types.Type{}, errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
+		}
+		if !connector.HasSheets && action.Sheet != "" {
+			return types.Type{}, errors.BadRequest("connection %d does not have sheets", c.ID)
+		}
+	} else {
+		if action.Path != "" {
+			return types.Type{}, errors.BadRequest("%s actions cannot have a path", connector.Type)
+		}
+		if action.Sheet != "" {
+			return types.Type{}, errors.BadRequest("%s actions cannot have a sheet", connector.Type)
+		}
 	}
 
 	// Fetch the schema with which to validate an action to be added.
@@ -680,7 +738,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 	case state.FileType:
 		if c.Role == state.SourceRole {
-			s, err := this.fetchFileSchema()
+			s, err := this.fetchFileSchema(action.Path, action.Sheet)
 			if err != nil {
 				return types.Type{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
@@ -982,7 +1040,7 @@ func (this *Connection) fetchDatabaseSchema(query string) (types.Type, error) {
 }
 
 // fetchFileSchema fetches the schema of a file connection.
-func (this *Connection) fetchFileSchema() (types.Type, error) {
+func (this *Connection) fetchFileSchema(path, sheet string) (types.Type, error) {
 
 	c := this.connection
 	connector := c.Connector()
@@ -1022,18 +1080,18 @@ func (this *Connection) fetchFileSchema() (types.Type, error) {
 	}
 
 	// Read only the columns.
-	rc, _, err := storage.Open(file.Path())
+	rc, _, err := storage.Open(path)
 	if err != nil {
 		return types.Type{}, err
 	}
 	defer rc.Close()
-	records := newRecordWriter(fh, identityColumn, timestampColumn, time.Time{}, true)
-	err = file.Read(rc, records)
+	rw := newRecordWriter(c.ID, identityLabel, timestampLabel, 0, nil)
+	err = file.Read(rc, sheet, rw)
 	if err != nil && err != errRecordStop {
 		return types.Type{}, err
 	}
 
-	return types.ObjectOf(records.columns)
+	return types.ObjectOf(rw.columns)
 }
 
 // allowsActionTarget reports whether a connection with the given connector type

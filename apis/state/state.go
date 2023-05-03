@@ -800,6 +800,8 @@ type Action struct {
 	Mapping        map[string]string
 	Transformation *Transformation
 	Query          string
+	Path           string
+	Sheet          string
 	Health         Health
 }
 

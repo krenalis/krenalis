@@ -320,7 +320,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name,\n"+
 			"enabled, schedule_start, schedule_period, filter, schema, mapping,\n"+
 			"(transformation).in_types, (transformation).out_types,\n"+
-			"(transformation).python_source, query, health FROM actions",
+			"(transformation).python_source, query, path, sheet, health FROM actions",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					var connectionID int
@@ -329,7 +329,8 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					action := Action{}
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &filter,
-						&rawSchema, &mapping, &transformIn, &transformOut, &pythonSource, &action.Query, &action.Health)
+						&rawSchema, &mapping, &transformIn, &transformOut, &pythonSource, &action.Query,
+						&action.Path, &action.Sheet, &action.Health)
 					if err != nil {
 						return err
 					}

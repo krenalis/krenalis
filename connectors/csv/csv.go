@@ -44,7 +44,6 @@ type connection struct {
 }
 
 type settings struct {
-	Path             string
 	Comma            string
 	Comment          string
 	FieldsPerRecord  int
@@ -70,13 +69,8 @@ func (c *connection) ContentType() string {
 	return "text/csv; charset=UTF-8"
 }
 
-// Path returns the path of the file.
-func (c *connection) Path() string {
-	return c.settings.Path
-}
-
 // Read reads the records from r and writes them to records.
-func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
+func (c *connection) Read(r io.Reader, _ string, records connector.RecordWriter) error {
 
 	// Create a CSV reader.
 	v := csv.NewReader(r)
@@ -153,7 +147,6 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 	form := &ui.Form{
 		Fields: []ui.Component{
-			&ui.Input{Name: "path", Label: "Path", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1000},
 			&ui.Input{Name: "comma", Label: "Comma", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
 			&ui.Input{Name: "comment", Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Role: ui.SourceRole},
 			&ui.Input{Name: "fieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", Role: ui.SourceRole},
@@ -175,13 +168,6 @@ func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 	err := json.Unmarshal(values, &s)
 	if err != nil {
 		return nil, err
-	}
-	// Validate Path.
-	if s.Path == "" {
-		return nil, ui.Errorf("path cannot be empty")
-	}
-	if utf8.RuneCountInString(s.Path) > 1000 {
-		return nil, ui.Errorf("path cannot be longer that 1000 characters")
 	}
 	// Validate Comma.
 	if utf8.RuneCountInString(s.Comma) != 1 {
@@ -216,7 +202,7 @@ func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 }
 
 // Write writes to w the records read from records.
-func (c *connection) Write(w io.Writer, records connector.RecordReader) error {
+func (c *connection) Write(w io.Writer, _ string, records connector.RecordReader) error {
 
 	v := csv.NewWriter(w)
 	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)

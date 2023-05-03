@@ -332,6 +332,24 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					_ = json.NewEncoder(w).Encode(actionTypes)
 				})
 			})
+			router.Get("/records", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				path := r.URL.Query().Get("path")
+				sheet := r.URL.Query().Get("sheet")
+				limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+				records, schema, err := connection.Records(path, sheet, limit)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{"records": records, "schema": schema})
+			})
 			router.Get("/sheets", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)

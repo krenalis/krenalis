@@ -179,7 +179,6 @@ inherit the disabled style */
 
 .action .transformation .property {
     border: 1px solid var(--border-primary);
-    font-size: 14px;
     border-radius: var(--radius);
     padding: 10px;
     position: relative;
@@ -191,6 +190,7 @@ inherit the disabled style */
 
 .action .transformation .property .type {
     opacity: .7;
+    font-size: 14px;
 }
 
 .action .transformation .property .removeProperty {
@@ -237,8 +237,11 @@ inherit the disabled style */
     margin-bottom: 0;
 }
 
-.inputSchemaDialog .property.used .name,
-.outputSchemaDialog .property.used .name {
+.inputSchemaDialog .property .label,
+.outputSchemaDialog .property .label,
+.inputSchemaDialog .property .name,
+.outputSchemaDialog .property .name {
+    font-size: 14px;
     font-weight: 600;
 }
 
@@ -248,15 +251,23 @@ inherit the disabled style */
 }
 
 .inputSchemaDialog .property .type,
-.outputSchemaDialog .property .type {
+.outputSchemaDialog .property .type,
+.inputSchemaDialog .property.hasLabel .name,
+.outputSchemaDialog .property.hasLabel .name {
+    font-weight: 400;
     opacity: .7;
     font-size: 14px;
 }
 
-.action .queryButtons {
+.action .queryButtons,
+.action .fileButtons {
     margin-top: 15px;
     display: flex;
     gap: 15px;
+}
+
+.action .sheetInput {
+    margin-top: 20px;
 }
 
 .action .setSchemaFirst {

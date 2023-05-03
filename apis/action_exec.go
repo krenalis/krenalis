@@ -30,8 +30,8 @@ import (
 )
 
 const (
-	identityColumn  = "identity"
-	timestampColumn = "timestamp"
+	identityLabel  = "identity"
+	timestampLabel = "timestamp"
 )
 
 var ExecutionInProgress errors.Code = "ExecutionInProgress"
@@ -608,4 +608,22 @@ func normalizePropertyValue(property types.Property, src any) (any, error) {
 			src, name, typ.PhysicalType())
 	}
 	return value, nil
+}
+
+// validateStringProperty validates a string property like
+// normalizePropertyValue does.
+func validateStringProperty(p types.Property, s string) error {
+	if !utf8.ValidString(s) {
+		return fmt.Errorf("database returned a value of %q for column %s, which does not contain valid UTF-8 characters",
+			abbreviate(s, 20), p.Name)
+	}
+	if l, ok := p.Type.ByteLen(); ok && len(s) > l {
+		return fmt.Errorf("database returned a value of %q for column %s, which is longer than %d bytes",
+			abbreviate(s, 20), p.Name, l)
+	}
+	if l, ok := p.Type.CharLen(); ok && utf8.RuneCountInString(s) > l {
+		return fmt.Errorf("database returned a value of %q for column %s, which is longer than %d characters",
+			abbreviate(s, 20), p.Name, l)
+	}
+	return nil
 }

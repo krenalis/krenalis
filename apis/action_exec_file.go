@@ -10,6 +10,8 @@ package apis
 import (
 	"context"
 	"fmt"
+	"io"
+	"math"
 	"time"
 	"unicode/utf8"
 
@@ -20,19 +22,29 @@ import (
 // importFromFile imports the users from a file.
 func (ac *Action) importFromFile() error {
 
-	connection := ac.action.Connection()
-	connector := connection.Connector()
+	c := ac.action.Connection()
+	connector := c.Connector()
 
-	var ctx = context.Background()
+	// Connect to the file connector.
+	ctx := context.Background()
+	fh := ac.newFirehose(ctx)
+	file, err := _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
+		Role:     _connector.SourceRole,
+		Settings: c.Settings,
+		Firehose: fh,
+	})
+	if err != nil {
+		return actionExecutionError{fmt.Errorf("cannot connect to the file connector: %s", err)}
+	}
 
-	// Retrieve the storage associated to the file connection.
-	var storage _connector.StorageConnection
+	// Open the file.
+	var r io.ReadCloser
 	{
-		s, _ := connection.Storage()
+		s, _ := c.Storage()
 		fh := ac.newFirehoseForConnection(ctx, s)
 		ctx = fh.ctx
 		var err error
-		storage, err = _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
+		storage, err := _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
 			Role:     _connector.SourceRole,
 			Settings: s.Settings,
 			Firehose: fh,
@@ -40,31 +52,29 @@ func (ac *Action) importFromFile() error {
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %s", err)}
 		}
-	}
-
-	// Connect to the file connector.
-	fh := ac.newFirehose(context.Background())
-	file, err := _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
-		Role:     _connector.SourceRole,
-		Settings: connection.Settings,
-		Firehose: fh,
-	})
-	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot connect to the file connector: %s", err)}
+		r, _, err = storage.Open(ac.action.Path)
+		if err != nil {
+			return actionExecutionError{fmt.Errorf("cannot get ReadCloser from storage: %s", err)}
+		}
+		defer r.Close()
 	}
 
 	// Read the records.
-	rc, timestamp, err := storage.Open(file.Path())
-	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot get ReadCloser from storage: %s", err)}
-	}
-	defer rc.Close()
-	records := newRecordWriter(fh, identityColumn, timestampColumn, timestamp, false)
-	err = file.Read(rc, records)
+	var rw *recordWriter
+	rw = newRecordWriter(c.ID, identityLabel, timestampLabel, math.MaxInt, func(record map[string]any) error {
+		user := fmt.Sprintf("%s", record[rw.identityColumn])
+		timestamp, err := time.Parse(time.DateTime, record[rw.timestampColumn].(string))
+		if err != nil {
+			return fmt.Errorf("invalid timestamp column value: %s", record[rw.timestampColumn])
+		}
+		fh.SetUser(user, record, timestamp, nil)
+		return fh.err
+	})
+	err = file.Read(r, ac.action.Sheet, rw)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot read the file: %s", err)}
 	}
-	err = rc.Close()
+	err = r.Close()
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot close the storage: %s", err)}
 	}
@@ -77,46 +87,55 @@ func (ac *Action) importFromFile() error {
 	return nil
 }
 
-// newRecordWriter returns a new record writer.
-func newRecordWriter(fh *firehose, identityColumn, timestampColumn string, timestamp time.Time, onlyColumns bool) *recordWriter {
-	return &recordWriter{
-		fh:              fh,
-		onlyColumns:     onlyColumns,
-		identityColumn:  identityColumn,
-		timestampColumn: timestampColumn,
-		timestampIndex:  noColumn,
-		timestamp:       timestamp,
+// newRecordWriter returns a new record writer that writes at most limit
+// records. If write is not nil, it calls the write function for each record
+// written, otherwise it stores the records in the records field.
+func newRecordWriter(connector int, identityLabel, timestampLabel string, limit int, write func(record map[string]any) error) *recordWriter {
+	rw := recordWriter{
+		connector:      connector,
+		limit:          limit,
+		write:          write,
+		identityLabel:  identityLabel,
+		timestampLabel: timestampLabel,
+
 		textColumnsOnly: true,
 	}
+	if write == nil {
+		rw.records = [][]any{}
+	}
+	return &rw
 }
 
 // recordWriter implements the connector.RecordWriter interface.
 type recordWriter struct {
-	fh              *firehose
-	onlyColumns     bool
+	connector       int
+	limit           int
+	write           func(record map[string]any) error
 	columns         []types.Property
-	columnByName    map[string]types.Property
-	identityColumn  string
-	timestampColumn string
-	identityIndex   int
-	timestampIndex  int
 	timestamp       time.Time
+	columnByName    map[string]types.Property
+	identityLabel   string
+	identityColumn  string
+	timestampLabel  string
+	timestampColumn string
 	setUserCalled   bool
 	textColumnsOnly bool
+	records         [][]any
+	err             error
 }
 
 // Columns sets the columns of the records as properties.
 // Columns must be called before Record, RecordMap and RecordString.
 func (rw *recordWriter) Columns(columns []types.Property) error {
 	if rw.columns != nil {
-		return fmt.Errorf("connector %d has called Columns twice", rw.fh.connection.Connector().ID)
+		return fmt.Errorf("connector %d has called Columns twice", rw.connector)
 	}
 	if len(columns) == 0 {
 		return _connector.ErrNoColumns
 	}
-	labelIndex := make(map[string]int, len(columns))
+	labelToName := make(map[string]string, len(columns))
 	hasName := make(map[string]struct{}, len(columns))
-	for i, c := range columns {
+	for _, c := range columns {
 		if c.Name == "" {
 			return _connector.ErrEmptyColumnName
 		}
@@ -127,144 +146,160 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 			return _connector.SameColumnNameError{Name: c.Name}
 		}
 		hasName[c.Name] = struct{}{}
-		if _, ok := labelIndex[c.Label]; !ok {
-			labelIndex[c.Label] = i
+		if _, ok := labelToName[c.Label]; !ok {
+			labelToName[c.Label] = c.Name
 		}
 		if !c.Type.Valid() {
-			return fmt.Errorf("connector %d returned an invalid type", rw.fh.connection.Connector().ID)
+			return fmt.Errorf("connector %d returned an invalid type", rw.connector)
 		}
 		if rw.textColumnsOnly {
 			rw.textColumnsOnly = c.Type.PhysicalType() == types.PtText
 		}
-	}
-	var ok bool
-	if rw.identityIndex, ok = labelIndex[rw.identityColumn]; !ok {
-		return _connector.MissingIdentityColumnError{Column: rw.identityColumn}
-	}
-	if rw.timestampColumn != "" {
-		rw.timestampIndex, ok = labelIndex[rw.timestampColumn]
-		if !ok {
-			return _connector.MissingTimestampColumnError{Column: rw.timestampColumn}
+		if c.Label == rw.identityLabel {
+			rw.identityColumn = c.Name
+		}
+		if c.Label == rw.timestampLabel {
+			rw.timestampColumn = c.Name
 		}
 	}
+	if rw.identityColumn == "" {
+		return _connector.MissingIdentityColumnError{Column: rw.identityLabel}
+	}
+	if rw.timestampLabel != "" && rw.timestampColumn == "" {
+		return _connector.MissingTimestampColumnError{Column: rw.timestampLabel}
+	}
 	rw.columns = columns
-	if rw.onlyColumns {
+	if rw.limit == 0 {
 		return errRecordStop
 	}
 	return nil
 }
 
-// Record receives a record and calls the SetUser of the Firehose.
+// Record writes a record.
 func (rw *recordWriter) Record(record []any) error {
 	if rw.columns == nil {
-		c := rw.fh.connection.Connector()
-		return fmt.Errorf("connector %d did not call the Columns method before calling Record", c.ID)
+		return fmt.Errorf("connector %d did not call the Columns method before calling Record", rw.connector)
 	}
 	if len(record) != len(rw.columns) {
-		c := rw.fh.connection.Connector()
-		return fmt.Errorf("connector %d has returned records with different lengths", c.ID)
+		return fmt.Errorf("connector %d has returned records with different lengths", rw.connector)
 	}
-	properties := map[string]any{}
+	var err error
+	if rw.write == nil {
+		// Store the record in the records field.
+		rd := make([]any, len(rw.columns))
+		for i, c := range rw.columns {
+			rd[i], err = normalizePropertyValue(c, record[i])
+			if err != nil {
+				return err
+			}
+		}
+		rw.records = append(rw.records, rd)
+		return nil
+	}
+	// Call the rw.write function to store the record.
+	rd := map[string]any{}
 	for i, c := range rw.columns {
-		v, err := normalizePropertyValue(c, record[i])
+		rd[c.Name], err = normalizePropertyValue(c, record[i])
 		if err != nil {
 			return err
 		}
-		properties[c.Name] = v
 	}
-	ts := rw.timestamp
-	if rw.timestampIndex != noColumn {
-		var err error
-		ts, err = time.Parse(time.DateTime, record[rw.timestampIndex].(string))
-		if err != nil {
-			return fmt.Errorf("invalid timestamp column value: %s", ts)
-		}
+	err = rw.write(rd)
+	if err != nil {
+		return err
 	}
-	user := fmt.Sprintf("%s", record[rw.identityIndex])
-	rw.fh.SetUser(user, properties, ts, nil)
-	rw.setUserCalled = true
+	rw.limit--
+	if rw.limit == 0 {
+		return errRecordStop
+	}
 	return nil
 }
 
-// RecordMap receives a record and calls the SetUser of the Firehose.
+// RecordMap writes a record as a map.
 func (rw *recordWriter) RecordMap(record map[string]any) error {
 	if rw.columns == nil {
-		return fmt.Errorf("connector %d did not call the Columns method before calling RecordMap", rw.fh.connection.Connector().ID)
+		return fmt.Errorf("connector %d did not call the Columns method before calling RecordMap", rw.connector)
 	}
 	var err error
-	ts := rw.timestamp
-	if rw.timestampIndex != noColumn {
-		ts, err = time.Parse(time.DateTime, record[rw.timestampColumn].(string))
-		if err != nil {
-			return fmt.Errorf("invalid timestamp column value: %s", ts)
-		}
-	}
 	if rw.columnByName == nil {
 		rw.columnByName = make(map[string]types.Property, len(rw.columns))
 		for _, c := range rw.columns {
 			rw.columnByName[c.Name] = c
 		}
 	}
-	for _, c := range rw.columns {
-		v, ok := record[c.Name]
-		if !ok {
-			continue
+	if rw.write == nil {
+		// Store the record in the records field.
+		rd := make([]any, len(rw.columns))
+		for i, c := range rw.columns {
+			rd[i], err = normalizePropertyValue(c, record[c.Name])
+			if err != nil {
+				return err
+			}
 		}
-		v, err = normalizePropertyValue(c, v)
+		rw.records = append(rw.records, rd)
+		return nil
+	}
+	// Call the rw.write function to store the record.
+	for _, c := range rw.columns {
+		v, err := normalizePropertyValue(c, record[c.Name])
 		if err != nil {
 			return err
 		}
 		record[c.Name] = v
 	}
-	user := fmt.Sprintf("%s", record[rw.identityColumn])
-	rw.fh.SetUser(user, record, ts, nil)
-	rw.setUserCalled = true
+	err = rw.write(record)
+	if err != nil {
+		return err
+	}
+	rw.limit--
+	if rw.limit == 0 {
+		return errRecordStop
+	}
 	return nil
 }
 
-// RecordString receives a record and calls the SetUser of the Firehose.
+// RecordString writes a record as a string slice.
 func (rw *recordWriter) RecordString(record []string) error {
 	if rw.columns == nil {
-		c := rw.fh.connection.Connector()
-		return fmt.Errorf("connector %d did not call the Columns method before calling RecordString", c.ID)
+		return fmt.Errorf("connector %d did not call the Columns method before calling RecordString", rw.connector)
 	}
 	if len(record) != len(rw.columns) {
-		c := rw.fh.connection.Connector()
-		return fmt.Errorf("connector %d has returned records with different lengths", c.ID)
+		return fmt.Errorf("connector %d has returned records with different lengths", rw.connector)
 	}
 	if !rw.textColumnsOnly {
-		c := rw.fh.connection.Connector()
-		return fmt.Errorf("connector %d has called RecordString when there are non-text columns", c.ID)
+		return fmt.Errorf("connector %d has called RecordString when there are non-text columns", rw.connector)
 	}
-	properties := map[string]any{}
+	var err error
+	if rw.write == nil {
+		// Store the record in the records field.
+		rd := make([]any, len(rw.columns))
+		for i, c := range rw.columns {
+			err = validateStringProperty(c, record[i])
+			if err != nil {
+				return err
+			}
+			rd[i] = record[i]
+		}
+		rw.records = append(rw.records, rd)
+		return nil
+	}
+	// Call the rw.write function to store the record.
+	rd := map[string]any{}
 	for i, c := range rw.columns {
-		s := record[i]
-		// Normalize the string as does the normalizePropertyValue function.
-		if !utf8.ValidString(s) {
-			return fmt.Errorf("database returned a value of %q for column %s, which does not contain valid UTF-8 characters",
-				abbreviate(s, 20), c.Name)
-		}
-		if l, ok := c.Type.ByteLen(); ok && len(s) > l {
-			return fmt.Errorf("database returned a value of %q for column %s, which is longer than %d bytes",
-				abbreviate(s, 20), c.Name, l)
-		}
-		if l, ok := c.Type.CharLen(); ok && utf8.RuneCountInString(s) > l {
-			return fmt.Errorf("database returned a value of %q for column %s, which is longer than %d characters",
-				abbreviate(s, 20), c.Name, l)
-		}
-		properties[c.Name] = s
-	}
-	ts := rw.timestamp
-	if rw.timestampIndex != noColumn {
-		var err error
-		ts, err = time.Parse(time.DateTime, record[rw.timestampIndex])
+		err = validateStringProperty(c, record[i])
 		if err != nil {
-			return fmt.Errorf("invalid timestamp column value: %s", ts)
+			return err
 		}
+		rd[c.Name] = record[i]
 	}
-	user := fmt.Sprintf("%s", record[rw.identityIndex])
-	rw.fh.SetUser(user, properties, ts, nil)
-	rw.setUserCalled = true
+	err = rw.write(rd)
+	if err != nil {
+		return err
+	}
+	rw.limit--
+	if rw.limit == 0 {
+		return errRecordStop
+	}
 	return nil
 }
 
@@ -273,7 +308,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 // Timestamp can be called before Record, RecordMap and RecordString.
 func (rw *recordWriter) Timestamp(ts time.Time) error {
 	if rw.setUserCalled {
-		return fmt.Errorf("connector %d called the Timestamp method after a record method", rw.fh.connection.Connector().ID)
+		return fmt.Errorf("connector %d called the Timestamp method after a record method", rw.connector)
 	}
 	rw.timestamp = ts
 	return nil

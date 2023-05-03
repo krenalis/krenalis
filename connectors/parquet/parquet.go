@@ -14,7 +14,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -23,11 +22,9 @@ import (
 	"reflect"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"chichi/apis/types"
 	"chichi/connector"
-	"chichi/connector/ui"
 
 	goparquet "github.com/fraugster/parquet-go"
 	"github.com/fraugster/parquet-go/parquet"
@@ -46,24 +43,12 @@ func init() {
 
 type connection struct {
 	ctx      context.Context
-	settings *settings
 	firehose connector.Firehose
-}
-
-type settings struct {
-	Path string
 }
 
 // open opens a Parquet connection and returns it.
 func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) {
-	c := connection{ctx: ctx, firehose: conf.Firehose}
-	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Excel connection")
-		}
-	}
-	return &c, nil
+	return &connection{ctx: ctx, firehose: conf.Firehose}, nil
 }
 
 // ContentType returns the content type of the file.
@@ -71,13 +56,8 @@ func (c *connection) ContentType() string {
 	return "" // TODO: implement file writing for Parquet.
 }
 
-// Path returns the path of the file.
-func (c *connection) Path() string {
-	return c.settings.Path
-}
-
 // Read reads the records from r and writes them to records.
-func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
+func (c *connection) Read(r io.Reader, _ string, records connector.RecordWriter) error {
 
 	// Copy data read from r to a temporary file.
 	dir := os.TempDir()
@@ -160,64 +140,8 @@ func (c *connection) Read(r io.Reader, records connector.RecordWriter) error {
 	return nil
 }
 
-// ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
-
-	switch event {
-	case "load":
-		// Load the Form.
-		var s settings
-		if c.settings != nil {
-			s = *c.settings
-		}
-		values, _ = json.Marshal(s)
-	case "save":
-		// Save the settings.
-		s, err := c.SettingsUI(values)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = c.firehose.SetSettings(s)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, ui.SuccessAlert("Settings saved"), nil
-	default:
-		return nil, nil, ui.ErrEventNotExist
-	}
-
-	form := &ui.Form{
-		Fields: []ui.Component{
-			&ui.Input{Name: "path", Label: "Path", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1000},
-		},
-		Values: values,
-		Actions: []ui.Action{
-			{Event: "save", Text: "Save", Variant: "primary"},
-		},
-	}
-
-	return form, nil, nil
-}
-
-// SettingsUI obtains the settings from UI values and returns them.
-func (c *connection) SettingsUI(values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	// Validate Path.
-	if s.Path == "" {
-		return nil, ui.Errorf("path cannot be empty")
-	}
-	if utf8.RuneCountInString(s.Path) > 1000 {
-		return nil, ui.Errorf("path cannot be longer that 1000")
-	}
-	return json.Marshal(&s)
-}
-
 // Write writes to w the records read from records.
-func (c *connection) Write(w io.Writer, records connector.RecordReader) error {
+func (c *connection) Write(w io.Writer, _ string, records connector.RecordReader) error {
 	// TODO(marco)
 	return nil
 }
