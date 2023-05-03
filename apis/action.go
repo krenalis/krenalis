@@ -608,14 +608,8 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if !t.In.Valid() || t.In.PhysicalType() != types.PtObject {
 			return types.Type{}, errors.BadRequest("input schema of transformation is not valid")
 		}
-		if len(t.In.Properties()) == 0 {
-			return types.Type{}, errors.BadRequest("input schema of transformation does not have properties")
-		}
 		if !t.Out.Valid() || t.Out.PhysicalType() != types.PtObject {
 			return types.Type{}, errors.BadRequest("output schema of transformation is not valid")
-		}
-		if len(t.Out.Properties()) == 0 {
-			return types.Type{}, errors.BadRequest("output schema of transformation does not have properties")
 		}
 		// TODO(Gianluca): do a proper validation of the Python source code.
 		if !strings.Contains(t.PythonSource, "def transform") {
