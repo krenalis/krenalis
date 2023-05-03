@@ -25,8 +25,8 @@
 | JSON           | json.RawMessage | string, json.RawMessage      | []byte     | - [^1]     |              | -      | -      |
 | Inet           | netip.Addr      | string                       | string     | -          | -            | -      | -      |
 | Text           | string          | string                       | string     | []byte     | []byte       | string | string |
-| Array(T)       | []T             | []any                        | -          | -          | -            | -      | -      |
+| Array          | []any           | []any                        | -          | -          | -            | -      | -      |
 | Object         | map[string]any  | map[string]any               | -          | -          | -            | -      | -      |
-| Map(T)         | map[string]T    | map[string]any               | -          | -          | -            | -      | -      |
+| Map            | map[string]any  | map[string]any               | -          | -          | -            | -      | -      |
 
 [^1]: Even by declaring a column as type `json`, the MySQL driver returns the type `VARCHAR` instead of `JSON`.
