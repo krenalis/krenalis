@@ -18,7 +18,7 @@
 | Float32        | float64         | float64, json.Number         | float64    | []byte     | float32      | -      | -      |
 | Decimal        | decimal.Decimal | string, float64, json.Number | string     | []byte     | int32, int64 | -      | -      |
 | DateTime       | time.Time       | string, float64, json.Number | time.Time  | time.Time  | time.Time    | -      | -      |
-| Date           | time.Time       | string, float64, json.Number | time.Time  | time.Time  |              | -      | -      |
+| Date           | time.Time       | string                       | time.Time  | time.Time  |              | -      | -      |
 | Time           | time.Time       | string, float64, json.Number | -          | []byte     |              | -      | -      |
 | Year           | int             | float64, json.Number         | int64      | []byte     | -            | -      | -      |
 | UUID           | uuid.UUID       | string                       | string     | -          |              | -      | -      |
