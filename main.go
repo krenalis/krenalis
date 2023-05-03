@@ -102,8 +102,20 @@ func main() {
 			log.Printf("[error] shutting down HTTP server: %s", err)
 		}
 	}()
-	err = httpServer.ListenAndServeTLS("cert.pem", "key.pem")
+
+	certPem, err := filepath.Abs("cert.pem")
+	if err != nil {
+		log.Printf("[error] %s", err)
+		return
+	}
+	keyPem, err := filepath.Abs("key.pem")
+	if err != nil {
+		log.Printf("[error] %s", err)
+		return
+	}
+	err = httpServer.ListenAndServeTLS(certPem, keyPem)
 	if err != nil && err != http.ErrServerClosed {
 		log.Fatal("ListenAndServe: ", err)
 	}
+
 }
