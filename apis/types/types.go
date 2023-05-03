@@ -909,6 +909,9 @@ func (t Type) Layout() string {
 	if t.pt != PtDateTime && t.pt != PtDate && t.pt != PtTime {
 		panic("cannot get layout of a non-DateTime, non-Date or non-Time type")
 	}
+	if t.vl == nil {
+		return ""
+	}
 	return t.vl.(string)
 }
 
