@@ -12,11 +12,11 @@ import (
 	"fmt"
 	"net/netip"
 	"strings"
-	"time"
 
 	"chichi/apis/postgres"
 	"chichi/apis/types"
 	wh "chichi/apis/warehouses"
+	_connector "chichi/connector"
 
 	"github.com/google/uuid"
 	"github.com/open2b/nuts/decimal"
@@ -140,22 +140,24 @@ func renderExpr(expr wh.Expr) (string, error) {
 				return "", fmt.Errorf("expecting value of type decimal.Dec, got %T", baseExpr.Value)
 			}
 			s.WriteString(d.String())
-		case
-			types.PtDateTime,
-			types.PtDate,
-			types.PtTime:
-			t, ok := baseExpr.Value.(time.Time)
+		case types.PtDateTime:
+			t, ok := baseExpr.Value.(_connector.DateTime)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type time.Time, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expecting value of type connector.DateTime, got %T", baseExpr.Value)
 			}
-			switch pt {
-			case types.PtDateTime:
-				quoteValue(&s, t.Format("2006-01-02 15:04:05.999999"))
-			case types.PtDate:
-				quoteValue(&s, t.Format(time.DateOnly))
-			case types.PtTime:
-				quoteValue(&s, t.Format("15:04:05.999999"))
+			quoteValue(&s, t.Format("2006-01-02 15:04:05.999999"))
+		case types.PtDate:
+			t, ok := baseExpr.Value.(_connector.Date)
+			if !ok {
+				return "", fmt.Errorf("expecting value of type connector.Date, got %T", baseExpr.Value)
 			}
+			quoteValue(&s, t.String())
+		case types.PtTime:
+			t, ok := baseExpr.Value.(_connector.Time)
+			if !ok {
+				return "", fmt.Errorf("expecting value of type connector.Time, got %T", baseExpr.Value)
+			}
+			quoteValue(&s, t.Format("15:04:05.999999"))
 		case types.PtYear:
 			year, ok := baseExpr.Value.(int)
 			if !ok {

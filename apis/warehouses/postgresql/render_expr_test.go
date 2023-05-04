@@ -14,6 +14,7 @@ import (
 
 	"chichi/apis/types"
 	wh "chichi/apis/warehouses"
+	"chichi/connector"
 )
 
 func Test_renderExpr(t *testing.T) {
@@ -54,14 +55,14 @@ func Test_renderExpr(t *testing.T) {
 			query: `"count" >= 3289`,
 		},
 		{
-			expr:  wh.NewBaseExpr(timestamp, wh.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 940253000, time.UTC)),
+			expr:  wh.NewBaseExpr(timestamp, wh.OperatorLess, connector.MustDateTime(time.Date(1900, 1, 2, 23, 32, 11, 940253000, time.UTC))),
 			query: `"timestamp" < '1900-01-02 23:32:11.940253'`,
 		},
 		{
 			expr: wh.NewMultiExpr(
 				wh.LogicalOperatorAnd,
 				[]wh.Expr{
-					wh.NewBaseExpr(timestamp, wh.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 870000000, time.UTC)),
+					wh.NewBaseExpr(timestamp, wh.OperatorLess, connector.MustDateTime(time.Date(1900, 1, 2, 23, 32, 11, 870000000, time.UTC))),
 				}),
 			query: `"timestamp" < '1900-01-02 23:32:11.87'`,
 		},
@@ -69,8 +70,8 @@ func Test_renderExpr(t *testing.T) {
 			expr: wh.NewMultiExpr(
 				wh.LogicalOperatorAnd,
 				[]wh.Expr{
-					wh.NewBaseExpr(timestamp, wh.OperatorGreater, time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC)),
-					wh.NewBaseExpr(timestamp, wh.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
+					wh.NewBaseExpr(timestamp, wh.OperatorGreater, connector.MustDateTime(time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC))),
+					wh.NewBaseExpr(timestamp, wh.OperatorLess, connector.MustDateTime(time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC))),
 				}),
 			query: `"timestamp" > '1700-01-02 23:32:11' AND "timestamp" < '1900-01-02 23:32:11'`,
 		},
@@ -78,8 +79,8 @@ func Test_renderExpr(t *testing.T) {
 			expr: wh.NewMultiExpr(
 				wh.LogicalOperatorOr,
 				[]wh.Expr{
-					wh.NewBaseExpr(timestamp, wh.OperatorGreater, time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC)),
-					wh.NewBaseExpr(timestamp, wh.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
+					wh.NewBaseExpr(timestamp, wh.OperatorGreater, connector.MustDateTime(time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC))),
+					wh.NewBaseExpr(timestamp, wh.OperatorLess, connector.MustDateTime(time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC))),
 				}),
 			query: `"timestamp" > '1700-01-02 23:32:11' OR "timestamp" < '1900-01-02 23:32:11'`,
 		},

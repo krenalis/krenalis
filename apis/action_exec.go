@@ -537,15 +537,22 @@ func normalizePropertyValue(property types.Property, src any) (any, error) {
 			}
 			value = v
 		}
-	case types.PtDate, types.PtDateTime:
-		if _, ok := src.(time.Time); ok {
-			value = src
-			valid = true
+	case types.PtDateTime:
+		if t, ok := src.(time.Time); ok {
+			var err error
+			value, err = _connector.AsDateTime(t)
+			valid = err == nil
+		}
+	case types.PtDate:
+		if t, ok := src.(time.Time); ok {
+			var err error
+			value, err = _connector.AsDate(t)
+			valid = err == nil
 		}
 	case types.PtTime:
-		if src, ok := src.([]byte); ok {
+		if s, ok := src.([]byte); ok {
 			var err error
-			value, err = time.Parse(time.TimeOnly, string(src))
+			value, err = _connector.ParseTime(string(s))
 			valid = err == nil
 		}
 	case types.PtYear:
