@@ -150,11 +150,11 @@ func renderExpr(expr wh.Expr) (string, error) {
 			}
 			switch pt {
 			case types.PtDateTime:
-				quoteValue(&s, t.Format(time.DateTime))
+				quoteValue(&s, t.Format("2006-01-02 15:04:05.999999"))
 			case types.PtDate:
 				quoteValue(&s, t.Format(time.DateOnly))
 			case types.PtTime:
-				quoteValue(&s, t.Format(time.TimeOnly))
+				quoteValue(&s, t.Format("15:04:05.999999"))
 			}
 		case types.PtYear:
 			year, ok := baseExpr.Value.(int)

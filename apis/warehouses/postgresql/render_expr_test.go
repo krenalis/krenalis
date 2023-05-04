@@ -54,16 +54,16 @@ func Test_renderExpr(t *testing.T) {
 			query: `"count" >= 3289`,
 		},
 		{
-			expr:  wh.NewBaseExpr(timestamp, wh.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
-			query: `"timestamp" < '1900-01-02 23:32:11'`,
+			expr:  wh.NewBaseExpr(timestamp, wh.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 940253000, time.UTC)),
+			query: `"timestamp" < '1900-01-02 23:32:11.940253'`,
 		},
 		{
 			expr: wh.NewMultiExpr(
 				wh.LogicalOperatorAnd,
 				[]wh.Expr{
-					wh.NewBaseExpr(timestamp, wh.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
+					wh.NewBaseExpr(timestamp, wh.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 870000000, time.UTC)),
 				}),
-			query: `"timestamp" < '1900-01-02 23:32:11'`,
+			query: `"timestamp" < '1900-01-02 23:32:11.87'`,
 		},
 		{
 			expr: wh.NewMultiExpr(
