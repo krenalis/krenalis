@@ -21,9 +21,9 @@
 | Date           | connector.Date     | string                       | time.Time  | time.Time  |              | -      | -      |
 | Time           | connector.Time     | string, float64, json.Number | -          | []byte     |              | -      | -      |
 | Year           | int                | float64, json.Number         | int64      | []byte     | -            | -      | -      |
-| UUID           | uuid.UUID          | string                       | string     | -          |              | -      | -      |
+| UUID           | string             | string                       | string     | -          |              | -      | -      |
 | JSON           | json.RawMessage    | string, json.RawMessage      | []byte     | - [^1]     |              | -      | -      |
-| Inet           | netip.Addr         | string                       | string     | -          | -            | -      | -      |
+| Inet           | string             | string                       | string     | -          | -            | -      | -      |
 | Text           | string             | string                       | string     | []byte     | []byte       | string | string |
 | Array          | []any              | []any                        | -          | -          | -            | -      | -      |
 | Object         | map[string]any     | map[string]any               | -          | -          | -            | -      | -      |

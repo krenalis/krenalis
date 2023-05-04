@@ -10,7 +10,6 @@ package postgresql
 import (
 	"encoding/json"
 	"fmt"
-	"net/netip"
 	"strings"
 
 	"chichi/apis/postgres"
@@ -18,7 +17,6 @@ import (
 	wh "chichi/apis/warehouses"
 	_connector "chichi/connector"
 
-	"github.com/google/uuid"
 	"github.com/open2b/nuts/decimal"
 )
 
@@ -164,8 +162,8 @@ func renderExpr(expr wh.Expr) (string, error) {
 				return "", fmt.Errorf("expecting value of type int, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, year)
-		case types.PtUUID:
-			u, ok := baseExpr.Value.(uuid.UUID)
+		case types.PtUUID, types.PtInet, types.PtText:
+			u, ok := baseExpr.Value.(string)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type uuid.UUID, got %T", baseExpr.Value)
 			}
@@ -176,18 +174,6 @@ func renderExpr(expr wh.Expr) (string, error) {
 				return "", fmt.Errorf("expecting value of type json.RawMessage, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, string(j))
-		case types.PtInet:
-			ip, ok := baseExpr.Value.(netip.Addr)
-			if !ok {
-				return "", fmt.Errorf("expecting value of type netip.Addr, got %T", baseExpr.Value)
-			}
-			quoteValue(&s, ip)
-		case types.PtText:
-			str, ok := baseExpr.Value.(string)
-			if !ok {
-				return "", fmt.Errorf("expecting value of type string, got %T", baseExpr.Value)
-			}
-			quoteValue(&s, str)
 		default:
 			return "", fmt.Errorf("unexpected column with type %q", pt)
 		}

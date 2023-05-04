@@ -568,9 +568,10 @@ func normalizePropertyValue(property types.Property, src any) (any, error) {
 		}
 	case types.PtUUID:
 		if s, ok := src.(string); ok {
-			var err error
-			value, err = uuid.Parse(s)
-			valid = err == nil
+			if v, err := uuid.Parse(s); err == nil {
+				value = v.String()
+				valid = true
+			}
 		}
 	case types.PtJSON:
 		if s, ok := src.([]byte); ok {
@@ -580,9 +581,10 @@ func normalizePropertyValue(property types.Property, src any) (any, error) {
 		}
 	case types.PtInet:
 		if s, ok := src.(string); ok {
-			var err error
-			value, err = netip.ParseAddr(s)
-			valid = err == nil
+			if v, err := netip.ParseAddr(s); err == nil {
+				value = v.String()
+				valid = true
+			}
 		}
 	case types.PtText:
 		var v string

@@ -8,7 +8,6 @@
 package postgresql
 
 import (
-	"net/netip"
 	"testing"
 	"time"
 
@@ -35,7 +34,7 @@ func Test_renderExpr(t *testing.T) {
 			query: `"id" = 'qwerty'`,
 		},
 		{
-			expr:  wh.NewBaseExpr(ipAddr, wh.OperatorEqual, netip.MustParseAddr("127.0.0.1")),
+			expr:  wh.NewBaseExpr(ipAddr, wh.OperatorEqual, "127.0.0.1"),
 			query: `"ip_addr" = '127.0.0.1'`,
 		},
 		{
