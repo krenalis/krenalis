@@ -1,6 +1,7 @@
 import { forwardRef, useRef, useEffect } from 'react';
 import './ComboBox.css';
-import { SlInput, SlMenu } from '@shoelace-style/shoelace/dist/react/index.js';
+import { debounce } from '../../utils/debounce';
+import { SlInput, SlMenu, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
 //
 // const selectItem(value) {
@@ -66,6 +67,7 @@ const ComboBoxInput = ({
 	closeComboBoxList,
 	setFocused,
 	children,
+	error,
 	...delegated
 }) => {
 	const onKeyUpRef = useRef(null);
@@ -93,12 +95,16 @@ const ComboBoxInput = ({
 		});
 	};
 
-	const debouncedOnInput = (e) => {
-		// TODO: implement debouncing.
-		onInput(e);
+	const debouncedOnInput = debounce(onInput, 300);
+
+	const handleInput = (e) => {
+		debouncedOnInput(e);
 	};
 
 	const onInputBlur = (e) => {
+		if (e != null) {
+			onInput(e);
+		}
 		window.removeEventListener('keyup', onKeyUpRef.current);
 		setTimeout(() => {
 			let isComboBoxListFocused = document.activeElement.closest('[data-is-combobox-list]');
@@ -124,7 +130,7 @@ const ComboBoxInput = ({
 		<div className='comboBoxInput'>
 			<SlInput
 				data-is-combobox-input
-				onSlInput={debouncedOnInput}
+				onSlInput={handleInput}
 				onSlFocus={onInputFocus}
 				onSlBlur={onInputBlur}
 				onClick={onClick}
@@ -132,7 +138,9 @@ const ComboBoxInput = ({
 				{...delegated}
 			>
 				{children}
+				{error && <SlIcon name='exclamation-circle' slot='prefix'></SlIcon>}
 			</SlInput>
+			{error && <div className='error'>{error}</div>}
 		</div>
 	);
 };

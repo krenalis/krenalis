@@ -97,12 +97,35 @@
     align-items: baseline;
 }
 
+.action .mappings .mappingsDisabledAlert {
+    margin-bottom: 20px;
+}
+
+.action .mappings .mappingsDisabledAlert::part(base) { 
+    background-color: transparent;
+    border: 0;
+    color: var(--sl-color-danger-600);
+}
+
+.action .mappings .mappingsDisabledAlert::part(icon) { 
+    padding: 0;
+    padding-right: 10px;
+}
+
+.action .mappings .mappingsDisabledAlert::part(message) { 
+    padding: 0;
+}
+
+.action .mappings .mappingsDisabledAlert sl-icon {
+    color: var(--sl-color-danger-600);
+}
+
 .action .mappings .mapping {
     display: grid;
     grid-template-columns: 1fr 30px 1fr;
     gap: 20px;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 23px;
 }
 
 .action .mappings .mapping:last-child { 

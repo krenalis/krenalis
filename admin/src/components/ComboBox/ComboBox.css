@@ -24,3 +24,12 @@
 .comboBoxInput {
     position: relative;
 }
+
+.comboBoxInput .error {
+    position: absolute;
+    font-size: 11px;
+}
+
+.comboBoxInput .error {
+    color: var(--sl-color-danger-500);
+}

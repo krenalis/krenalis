@@ -145,7 +145,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			if (actionTypeInfos.Supports.includes('Query') && a != null) {
 				let res = await query(a.Query, 0);
 				if (res == null) {
-					a.Query = null;
+					setInputSchema(null);
 				} else {
 					setInputSchema(res.Schema);
 				}
@@ -406,9 +406,9 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	};
 
 	const onPropertyChange = (e) => {
-		let { name, value } = e.currentTarget;
+		let { name, value } = e.currentTarget || e.target;
 		updateProperty(name, value);
-		setPropertySearchTerm(e.currentTarget.value);
+		setPropertySearchTerm(value);
 	};
 
 	const onSelectPropertiesListItem = (value) => {
@@ -423,7 +423,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setAction(a);
 	};
 
-	const query = async (query, limit) => {
+	const query = async (query, limit, isConfirmation) => {
 		let a = { ...action };
 		let trimmed = query != null ? query : a.Query.trim();
 		if (trimmed.length > queryMaxSize) {
@@ -454,6 +454,9 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			showError('Your query did not return any columns');
 			return;
 		}
+		if (isConfirmation) {
+			initialQuery.current = trimmed;
+		}
 		return res;
 	};
 
@@ -471,7 +474,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	};
 
 	const onConfirmQuery = async () => {
-		let res = await query(null, 0);
+		let res = await query(null, 0, true);
 		if (res == null) {
 			return;
 		}
@@ -583,6 +586,9 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	};
 
 	const getDefaultMappings = (schema) => {
+		if (schema == null) {
+			return {};
+		}
 		const getSubProperties = (parentName, properties, indentation) => {
 			let subProperties = {};
 			indentation += 1;
@@ -640,7 +646,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 
 	const getPropertiesMenuItem = (onSelect) => {
 		if (inputSchema == null) {
-			return;
+			return [];
 		}
 		let properties = getDefaultMappings(inputSchema);
 		let propertiesList = [];
@@ -782,47 +788,70 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				);
 			}
 		} else if (propertiesMode === 'mappings') {
+			let mappings = [];
+			let isSectionDisabled;
+			if (c.Type === 'Database' && inputSchema == null) {
+				isSectionDisabled = true;
+			}
+			let defaultMappings = getDefaultMappings(inputSchema);
+			for (let k of Object.keys(action.Mapping)) {
+				let error;
+				let value = action.Mapping[k].value;
+				if (!isSectionDisabled && value !== '') {
+					let doesValueExist = defaultMappings[value] != null;
+					if (!doesValueExist) {
+						error = `"${value}" does not exist in ${c.Type.toLowerCase()}'s schema`;
+					}
+				}
+				mappings.push(
+					<div
+						className='mapping'
+						data-key={k}
+						style={{
+							'--mapping-indentation': `${action.Mapping[k].indentation * 30}px`,
+						}}
+					>
+						<ComboBoxInput
+							comboBoxListRef={propertiesListRef}
+							onInput={onPropertyChange}
+							openComboBoxList={() => setIsPropertiesListOpen(true)}
+							closeComboBoxList={() => setIsPropertiesListOpen(false)}
+							setFocused={setFocusedProperty}
+							value={value}
+							name={k}
+							disabled={isSectionDisabled || action.Mapping[k].disabled}
+							className='inputProperty'
+							size='small'
+							error={error}
+						>
+							{action.Mapping[k].required && <SlIcon name='asterisk' slot='prefix'></SlIcon>}
+						</ComboBoxInput>
+						<div className='arrow'>
+							<SlIcon name='arrow-right' />
+						</div>
+						<SlInput
+							readonly
+							disabled
+							size='small'
+							value={k}
+							type='text'
+							name={k}
+							onSlInput={null}
+							className={`outputProperty${action.Mapping[k].indentation > 0 ? ' indented' : ''}`}
+						/>
+					</div>
+				);
+			}
 			propertiesSectionContent = (
 				<div className='mappings'>
-					{Object.keys(action.Mapping).map((k) => {
-						return (
-							<div
-								className='mapping'
-								data-key={k}
-								style={{
-									'--mapping-indentation': `${action.Mapping[k].indentation * 30}px`,
-								}}
-							>
-								<ComboBoxInput
-									comboBoxListRef={propertiesListRef}
-									onInput={onPropertyChange}
-									openComboBoxList={() => setIsPropertiesListOpen(true)}
-									closeComboBoxList={() => setIsPropertiesListOpen(false)}
-									setFocused={setFocusedProperty}
-									value={action.Mapping[k].value}
-									name={k}
-									disabled={action.Mapping[k].disabled}
-									className='inputProperty'
-									size='small'
-								>
-									{action.Mapping[k].required && <SlIcon name='asterisk' slot='prefix'></SlIcon>}
-								</ComboBoxInput>
-								<div className='arrow'>
-									<SlIcon name='arrow-right' />
-								</div>
-								<SlInput
-									readonly
-									disabled
-									size='small'
-									value={k}
-									type='text'
-									name={k}
-									onSlInput={null}
-									className={`outputProperty${action.Mapping[k].indentation > 0 ? ' indented' : ''}`}
-								/>
-							</div>
-						);
-					})}
+					{isSectionDisabled && (
+						<SlAlert variant='danger' className='mappingsDisabledAlert' open>
+							<SlIcon slot='icon' name='exclamation-circle' />
+							Mappings are disabled since the query returned an error. Fix the query before proceding to
+							mappings.
+						</SlAlert>
+					)}
+					{mappings}
 					<ComboBoxList
 						ref={propertiesListRef}
 						isOpen={isPropertiesListOpen}
