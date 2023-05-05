@@ -297,6 +297,7 @@ func (c *connection) UserSchema() (types.Type, error) {
 			Label:       r.Label,
 			Description: r.Description,
 			Type:        typ,
+			Nullable:    true,
 		}
 		if r.Calculated {
 			property.Role = types.SourceRole
