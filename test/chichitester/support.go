@@ -11,13 +11,13 @@ import "strconv"
 
 // This file contains support methods which reduce verbosity of tests.
 
-func (c *Chichi) AddConnection(data map[string]any) int {
-	id := c.MustCall("POST", "/api/workspace/add-connection", data).(float64)
+func (c *Chichi) AddAction(connection int, data map[string]any) int {
+	id := c.MustCall("POST", "/api/connections/"+strconv.Itoa(connection)+"/actions", data).(float64)
 	return int(id)
 }
 
-func (c *Chichi) AddAction(connection int, data map[string]any) int {
-	id := c.MustCall("POST", "/api/connections/"+strconv.Itoa(connection)+"/actions", data).(float64)
+func (c *Chichi) AddConnection(data map[string]any) int {
+	id := c.MustCall("POST", "/api/workspace/add-connection", data).(float64)
 	return int(id)
 }
 
