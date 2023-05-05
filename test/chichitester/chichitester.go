@@ -296,14 +296,14 @@ func execQueries(ctx context.Context, db *postgres.DB, queriesFile string) error
 
 }
 
-var databaseNameRegexp = regexp.MustCompile(`^[a-zA-Z0-9_]+_test$`)
+var databaseNameRegexp = regexp.MustCompile(`^test_[a-zA-Z0-9_]+$`)
 
 // validDatabaseNameForTests returns an error if name is not a valid database
 // name for tests.
 func validDatabaseNameForTests(name string) error {
 	valid := databaseNameRegexp.MatchString(name)
 	if !valid {
-		return fmt.Errorf("invalid database name %q, it must match the regexp: ^[a-zA-Z0-9_]+_test$", name)
+		return fmt.Errorf("invalid database name %q, it must match the regexp: ^test_[a-zA-Z0-9_]+$", name)
 	}
 	return nil
 }

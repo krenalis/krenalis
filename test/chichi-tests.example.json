@@ -10,7 +10,7 @@
         "Port": 5432,
         "Username": "user",
         "Password": "pass",
-        "Database": "chichi_test",
+        "Database": "test_chichi",
         "Schema": "public"
     },
     "WarehouseType": "PostgreSQL",
@@ -19,7 +19,7 @@
         "Port": 5432,
         "Username": "user",
         "Password": "pass",
-        "Database": "warehouse_test",
+        "Database": "test_warehouse",
         "Schema": "public"
     }
 }
