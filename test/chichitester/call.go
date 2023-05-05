@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"runtime/debug"
 	"strings"
 )
 
@@ -47,7 +48,8 @@ func (c *Chichi) Call(httpMethod, method string, body any) (any, error) {
 func (c *Chichi) MustCall(httpMethod, method string, body any) any {
 	out, err := c.call(httpMethod, method, body)
 	if err != nil {
-		c.t.Fatal(err)
+		c.t.Logf("an error occurred: %s. The stack trace is:\n%s", err, string(debug.Stack()))
+		c.t.Fatal("the test failed. See the error message and the stack trace above")
 	}
 	return out
 }
