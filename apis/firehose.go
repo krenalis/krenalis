@@ -138,6 +138,28 @@ func (fh *firehose) SetSettings(settings []byte) error {
 }
 
 func (fh *firehose) SetUser(user string, properties map[string]any, timestamp time.Time, timestamps map[string]time.Time) {
+	// Normalize the properties.
+	propertyOf := map[string]types.Property{}
+	for _, p := range fh.action.Schema.Properties() {
+		propertyOf[p.Name] = p
+	}
+	for name, value := range properties {
+		p, ok := propertyOf[name]
+		if !ok {
+			fh.setError(fmt.Errorf("connector %d has returned an unknown property %q", fh.connection.ID, name))
+			return
+		}
+		value, err := normalizeAppPropertyValue(name, p.Nullable, p.Type, value)
+		if err != nil {
+			fh.setError(err)
+			return
+		}
+		properties[name] = value
+	}
+	fh.setUser(user, properties, timestamp, timestamps)
+}
+
+func (fh *firehose) setUser(user string, properties map[string]any, timestamp time.Time, timestamps map[string]time.Time) {
 
 	// Return if the context has expired.
 	select {

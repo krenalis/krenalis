@@ -67,7 +67,7 @@ func (ac *Action) importFromFile() error {
 		if err != nil {
 			return fmt.Errorf("invalid timestamp column value: %s", record[rw.timestampColumn])
 		}
-		fh.SetUser(user, record, timestamp, nil)
+		fh.setUser(user, record, timestamp, nil)
 		return fh.err
 	})
 	err = file.Read(r, ac.action.Sheet, rw)

@@ -67,7 +67,7 @@ func (ac *Action) importFromDatabase() error {
 		if hasTimestamp {
 			ts = row[timestampLabel].(time.Time)
 		}
-		fh.SetUser(row[identityLabel].(string), row, ts, nil)
+		fh.setUser(row[identityLabel].(string), row, ts, nil)
 	}
 	if err = rawRows.Err(); err != nil {
 		return actionExecutionError{fmt.Errorf("an error occurred closing the database: %s", err)}
