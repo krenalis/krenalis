@@ -30,24 +30,24 @@ const (
 var ExecutionInProgress errors.Code = "ExecutionInProgress"
 
 // addExecution adds an execution to the action.
-func (ac *Action) addExecution(reimport bool) error {
+func (this *Action) addExecution(reimport bool) error {
 
 	n := state.ExecuteActionNotification{
-		Action:    ac.action.ID,
+		Action:    this.action.ID,
 		Reimport:  reimport,
 		StartTime: time.Now().UTC(),
 	}
-	c := ac.action.Connection()
+	c := this.action.Connection()
 	if storage, ok := c.Storage(); ok {
 		n.Storage = storage.ID
 	}
 
 	ctx := context.Background()
-	err := ac.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		err := tx.QueryVoid(ctx, "SELECT FROM actions_executions WHERE action = $1 AND end_time IS NULL", n.Action)
 		if err != sql.ErrNoRows {
 			if err == nil {
-				err = errors.Unprocessable(ExecutionInProgress, "execution of action %d is in progress", ac.action.ID)
+				err = errors.Unprocessable(ExecutionInProgress, "execution of action %d is in progress", this.action.ID)
 			}
 			return err
 		}
@@ -75,26 +75,26 @@ func (ac *Action) addExecution(reimport bool) error {
 // It is called in its own goroutine and the action have an execution to
 // execute. In case of error, it writes the error with the execution status in
 // the actions_executions table.
-func (ac *Action) exec() {
+func (this *Action) exec() {
 
-	connection := ac.action.Connection()
-	execution, _ := ac.action.Execution()
+	connection := this.action.Connection()
+	execution, _ := this.action.Execution()
 	connector := connection.Connector()
 
 	var err error
-	if ac.Target == GroupsTarget {
+	if this.Target == GroupsTarget {
 		err = actionExecutionError{fmt.Errorf("groups import and export are not implemented")}
 	} else {
 		switch connector.Type {
 		case state.DatabaseType:
-			err = ac.importFromDatabase()
+			err = this.importFromDatabase()
 		case state.FileType:
-			err = ac.importFromFile()
+			err = this.importFromFile()
 		default:
 			if connection.Role == state.SourceRole {
-				err = ac.importUsers()
+				err = this.importUsers()
 			} else {
-				err = ac.exportUsers()
+				err = this.exportUsers()
 			}
 		}
 	}
@@ -111,7 +111,7 @@ func (ac *Action) exec() {
 				health = state.AccessDenied
 			}
 		} else {
-			log.Printf("[error] cannot execute action %d, execution %d failed: %s", ac.action.ID, execution.ID, err)
+			log.Printf("[error] cannot execute action %d, execution %d failed: %s", this.action.ID, execution.ID, err)
 			errorMessage = "an internal error has occurred"
 		}
 	}
@@ -123,7 +123,7 @@ func (ac *Action) exec() {
 
 	// TODO(marco) retry if the transaction fails.
 	ctx := context.Background()
-	err = ac.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		_, err := tx.Exec(ctx, "UPDATE actions_executions SET end_time = $1, error = $2 WHERE id = $3",
 			endTime, errorMessage, n.ID)
 		if err != nil {
@@ -131,7 +131,7 @@ func (ac *Action) exec() {
 		}
 		var exists bool
 		err = tx.QueryRow(ctx, "UPDATE actions SET health = $1 WHERE id = $2 RETURNING true",
-			n.Health, ac.action.ID).Scan(&exists)
+			n.Health, this.action.ID).Scan(&exists)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				// The action does not exist anymore.
@@ -143,7 +143,7 @@ func (ac *Action) exec() {
 	})
 	if err != nil {
 		log.Printf("[error] cannot update the status of the execution %d of action %d: %s",
-			execution.ID, ac.action.ID, err)
+			execution.ID, this.action.ID, err)
 	}
 
 }
@@ -151,11 +151,11 @@ func (ac *Action) exec() {
 // exportUsers exports the users of action.
 // Note that this method is only a draft, and its code may be wrong and/or
 // partially implemented.
-func (ac *Action) exportUsers() error {
+func (this *Action) exportUsers() error {
 
 	const role = _connector.SourceRole
 
-	connection := ac.action.Connection()
+	connection := this.action.Connection()
 	connector := connection.Connector()
 
 	ctx := context.Background()
@@ -168,7 +168,7 @@ func (ac *Action) exportUsers() error {
 		var connector, resource int
 		var settings []byte
 		var expiration time.Time
-		err := ac.db.QueryRow(ctx,
+		err := this.db.QueryRow(ctx,
 			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, `c`.`webhooksPer` - 1, `r`.`code`,"+
 				" `r`.`oAuthAccessToken`, `r`.`oAuthRefreshToken`, `r`.`oAuthExpiresIn`, `s`.`connector`,"+
 				" `s`.`resource`, `s`.`settings`\n"+
@@ -185,8 +185,8 @@ func (ac *Action) exportUsers() error {
 			return err
 		}
 
-		fh := ac.newFirehose(context.Background())
-		ws := ac.action.Connection().Workspace()
+		fh := this.newFirehose(context.Background())
+		ws := this.action.Connection().Workspace()
 		c, err := _connector.RegisteredApp(name).Open(fh.ctx, &_connector.AppConfig{
 			Role:          role,
 			Settings:      settings,
@@ -205,7 +205,7 @@ func (ac *Action) exportUsers() error {
 		{
 			// TODO(Gianluca): populate this map:
 			internalToExternalID := map[int]string{}
-			rows, err := ac.db.Query(ctx, "SELECT user, goldenRecord FROM connection_users WHERE connection = $1", connection.ID)
+			rows, err := this.db.Query(ctx, "SELECT user, goldenRecord FROM connection_users WHERE connection = $1", connection.ID)
 			if err != nil {
 				return err
 			}
@@ -225,7 +225,7 @@ func (ac *Action) exportUsers() error {
 			}
 			// Read the users from the Golden Record and apply the
 			// transformation functions on them.
-			grUsers, err := ac.readGRUsers(toRead)
+			grUsers, err := this.readGRUsers(toRead)
 			if err != nil {
 				return err
 			}
@@ -261,13 +261,13 @@ func (ac *Action) exportUsers() error {
 }
 
 // importUsers imports the users for the action.
-func (ac *Action) importUsers() error {
+func (this *Action) importUsers() error {
 
 	const role = _connector.SourceRole
 
-	connection := ac.action.Connection()
+	connection := this.action.Connection()
 	connector := connection.Connector()
-	execution, _ := ac.action.Execution()
+	execution, _ := this.action.Execution()
 
 	switch connector.Type {
 	case state.AppType:
@@ -277,20 +277,20 @@ func (ac *Action) importUsers() error {
 			clientSecret = connector.OAuth.ClientSecret
 			resourceCode = r.Code
 			var err error
-			accessToken, err = freshAccessToken(ac.db, r)
+			accessToken, err = freshAccessToken(this.db, r)
 			if err != nil {
 				return actionExecutionError{fmt.Errorf("cannot retrive the OAuth access token: %s", err)}
 			}
 		}
 
 		// Read the properties to read.
-		_, properties, err := ac.schema()
+		_, properties, err := this.schema()
 		if err != nil {
 			return fmt.Errorf("cannot read user schema: %s", err)
 		}
 
-		fh := ac.newFirehose(context.Background())
-		ws := ac.action.Connection().Workspace()
+		fh := this.newFirehose(context.Background())
+		ws := this.action.Connection().Workspace()
 		c, err := _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
 			Role:          role,
 			Settings:      connection.Settings,
@@ -343,16 +343,16 @@ func (ac *Action) importUsers() error {
 
 // schema returns the schema and the paths of the mapped properties of
 // the connection.
-func (ac *Action) schema() (types.Type, []_connector.PropertyPath, error) {
+func (this *Action) schema() (types.Type, []_connector.PropertyPath, error) {
 
 	// Collect the paths of the properties used in transformation or mappings.
 	var paths []_connector.PropertyPath
-	if t := ac.action.Transformation; t != nil {
+	if t := this.action.Transformation; t != nil {
 		for _, name := range t.In.PropertiesNames() {
 			paths = append(paths, []string{name})
 		}
 	}
-	for _, left := range ac.action.Mapping {
+	for _, left := range this.action.Mapping {
 		paths = append(paths, strings.Split(left, "."))
 	}
 
@@ -362,7 +362,7 @@ func (ac *Action) schema() (types.Type, []_connector.PropertyPath, error) {
 		mapped[p[0]] = struct{}{}
 	}
 	mappedProperties := make([]types.Property, 0, len(paths))
-	schema := ac.action.Schema
+	schema := this.action.Schema
 	for _, property := range schema.Properties() {
 		if _, ok := mapped[property.Name]; ok {
 			mappedProperties = append(mappedProperties, property)
@@ -376,18 +376,18 @@ func (ac *Action) schema() (types.Type, []_connector.PropertyPath, error) {
 }
 
 // readGRUsers reads the Golden Record users with the given IDs.
-func (ac *Action) readGRUsers(ids []int) ([]map[string]any, error) {
+func (this *Action) readGRUsers(ids []int) ([]map[string]any, error) {
 	return nil, nil // TODO(Gianluca): implement.
 }
 
 // newFirehoseForConnection returns a new Firehose for the connection c.
-func (ac *Action) newFirehoseForConnection(ctx context.Context, c *state.Connection) *firehose {
+func (this *Action) newFirehoseForConnection(ctx context.Context, c *state.Connection) *firehose {
 	var resource int
 	if r, ok := c.Resource(); ok {
 		resource = r.ID
 	}
 	fh := &firehose{
-		db:         ac.db,
+		db:         this.db,
 		connection: c,
 		resource:   resource,
 	}
@@ -396,15 +396,15 @@ func (ac *Action) newFirehoseForConnection(ctx context.Context, c *state.Connect
 }
 
 // newFirehose returns a new Firehose for the action.
-func (ac *Action) newFirehose(ctx context.Context) *firehose {
+func (this *Action) newFirehose(ctx context.Context) *firehose {
 	var resource int
-	if r, ok := ac.action.Connection().Resource(); ok {
+	if r, ok := this.action.Connection().Resource(); ok {
 		resource = r.ID
 	}
 	fh := &firehose{
-		db:         ac.db,
-		action:     ac.action,
-		connection: ac.action.Connection(),
+		db:         this.db,
+		action:     this.action,
+		connection: this.action.Connection(),
 		resource:   resource,
 	}
 	fh.ctx, fh.cancel = context.WithCancel(ctx)

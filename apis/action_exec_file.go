@@ -20,14 +20,14 @@ import (
 )
 
 // importFromFile imports the users from a file.
-func (ac *Action) importFromFile() error {
+func (this *Action) importFromFile() error {
 
-	c := ac.action.Connection()
+	c := this.action.Connection()
 	connector := c.Connector()
 
 	// Connect to the file connector.
 	ctx := context.Background()
-	fh := ac.newFirehose(ctx)
+	fh := this.newFirehose(ctx)
 	file, err := _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
 		Role:     _connector.SourceRole,
 		Settings: c.Settings,
@@ -41,7 +41,7 @@ func (ac *Action) importFromFile() error {
 	var r io.ReadCloser
 	{
 		s, _ := c.Storage()
-		fh := ac.newFirehoseForConnection(ctx, s)
+		fh := this.newFirehoseForConnection(ctx, s)
 		ctx = fh.ctx
 		var err error
 		storage, err := _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
@@ -52,7 +52,7 @@ func (ac *Action) importFromFile() error {
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %s", err)}
 		}
-		r, _, err = storage.Open(ac.action.Path)
+		r, _, err = storage.Open(this.action.Path)
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot get ReadCloser from storage: %s", err)}
 		}
@@ -70,7 +70,7 @@ func (ac *Action) importFromFile() error {
 		fh.setUser(user, record, timestamp, nil)
 		return fh.err
 	})
-	err = file.Read(r, ac.action.Sheet, rw)
+	err = file.Read(r, this.action.Sheet, rw)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot read the file: %s", err)}
 	}

@@ -49,43 +49,43 @@ type Action struct {
 }
 
 // fromState serializes action into ac.
-func (ac *Action) fromState(db *postgres.DB, action *state.Action) {
+func (this *Action) fromState(db *postgres.DB, action *state.Action) {
 	c := action.Connection()
-	ac.db = db
-	ac.action = action
-	ac.ID = action.ID
-	ac.Connection = c.ID
-	ac.Target = ActionTarget(action.Target)
-	ac.Name = action.Name
-	ac.Enabled = action.Enabled
+	this.db = db
+	this.action = action
+	this.ID = action.ID
+	this.Connection = c.ID
+	this.Target = ActionTarget(action.Target)
+	this.Name = action.Name
+	this.Enabled = action.Enabled
 	if action.EventType != "" {
 		et := action.EventType
-		ac.EventType = &et
+		this.EventType = &et
 	}
 	if action.Target == state.UsersTarget || action.Target == state.GroupsTarget {
 		start := int(action.ScheduleStart)
 		period := SchedulePeriod(action.SchedulePeriod)
-		ac.ScheduleStart = &start
-		ac.SchedulePeriod = &period
+		this.ScheduleStart = &start
+		this.SchedulePeriod = &period
 	}
 	if action.Filter != nil {
-		ac.Filter = &ActionFilter{
+		this.Filter = &ActionFilter{
 			Logical:    ActionFilterLogical(action.Filter.Logical),
 			Conditions: make([]ActionFilterCondition, len(action.Filter.Conditions)),
 		}
 		for i, condition := range action.Filter.Conditions {
-			ac.Filter.Conditions[i] = ActionFilterCondition(condition)
+			this.Filter.Conditions[i] = ActionFilterCondition(condition)
 		}
 	}
-	ac.Schema = action.Schema
+	this.Schema = action.Schema
 	if action.Mapping != nil {
-		ac.Mapping = make(map[string]string, len(action.Mapping))
+		this.Mapping = make(map[string]string, len(action.Mapping))
 		for out, in := range action.Mapping {
-			ac.Mapping[out] = in
+			this.Mapping[out] = in
 		}
 	}
 	if t := action.Transformation; t != nil {
-		ac.Transformation = &Transformation{
+		this.Transformation = &Transformation{
 			In:           t.In,
 			Out:          t.Out,
 			PythonSource: t.PythonSource,
@@ -93,15 +93,15 @@ func (ac *Action) fromState(db *postgres.DB, action *state.Action) {
 	}
 	if action.Query != "" {
 		query := action.Query
-		ac.Query = &query
+		this.Query = &query
 	}
 	if action.Path != "" {
 		path := action.Path
-		ac.Path = &path
+		this.Path = &path
 	}
 	if action.Sheet != "" {
 		sheet := action.Sheet
-		ac.Sheet = &sheet
+		this.Sheet = &sheet
 	}
 }
 
@@ -176,13 +176,13 @@ type ActionFilterCondition struct {
 // Delete deletes the action.
 // It returns an errors.NotFoundError error if the action does not exist
 // anymore.
-func (ac *Action) Delete() error {
+func (this *Action) Delete() error {
 	n := state.DeleteActionNotification{
-		Connection: ac.action.Connection().ID,
-		ID:         ac.action.ID,
+		Connection: this.action.Connection().ID,
+		ID:         this.action.ID,
 	}
 	ctx := context.Background()
-	err := ac.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "DELETE FROM actions WHERE id = $1", n.ID)
 		if err != nil {
 			return err
@@ -209,20 +209,20 @@ type Transformation struct {
 // It returns an errors.UnprocessableError error with code
 //   - ExecutionInProgress, if the action is already in progress.
 //   - NoStorage, if the connection of the action is a file and has no storage.
-func (ac *Action) Execute(reimport bool) error {
-	if _, ok := ac.action.Execution(); ok {
-		return errors.Unprocessable(ExecutionInProgress, "action %d is already in progress", ac.action.ID)
+func (this *Action) Execute(reimport bool) error {
+	if _, ok := this.action.Execution(); ok {
+		return errors.Unprocessable(ExecutionInProgress, "action %d is already in progress", this.action.ID)
 	}
-	if t := ac.action.Target; t != state.UsersTarget && t != state.GroupsTarget {
-		return errors.BadRequest("action %d with target %s cannot be executed", ac.action.ID, t)
+	if t := this.action.Target; t != state.UsersTarget && t != state.GroupsTarget {
+		return errors.BadRequest("action %d with target %s cannot be executed", this.action.ID, t)
 	}
-	c := ac.action.Connection()
+	c := this.action.Connection()
 	if c.Connector().Type == state.FileType {
 		if _, ok := c.Storage(); !ok {
 			return errors.Unprocessable(NoStorage, "file connection %d does not have a storage", c.ID)
 		}
 	}
-	return ac.addExecution(reimport)
+	return this.addExecution(reimport)
 }
 
 // Set sets action.
@@ -236,18 +236,18 @@ func (ac *Action) Execute(reimport bool) error {
 //     exist in the schema (except for properties of the event type schema,
 //     which is specified and thus returned as an errors.BadRequest error).
 //   - QueryExecutionFailed, if the execution of the specified query fails.
-func (ac *Action) Set(action ActionToSet) error {
-	c := ac.action.Connection()
+func (this *Action) Set(action ActionToSet) error {
+	c := this.action.Connection()
 	connection := &Connection{
-		db:         ac.db,
+		db:         this.db,
 		connection: c,
 	}
-	schema, err := connection.validateActionToSet(action, ac.action.Target, ac.action.EventType)
+	schema, err := connection.validateActionToSet(action, this.action.Target, this.action.EventType)
 	if err != nil {
 		return err
 	}
 	n := state.SetActionNotification{
-		ID:             ac.action.ID,
+		ID:             this.action.ID,
 		Name:           action.Name,
 		Enabled:        action.Enabled,
 		Mapping:        action.Mapping,
@@ -256,7 +256,7 @@ func (ac *Action) Set(action ActionToSet) error {
 		Path:           action.Path,
 		Sheet:          action.Sheet,
 	}
-	if shouldStoreActionSchema(c.Connector().Type, c.Role, ac.action.Target) {
+	if shouldStoreActionSchema(c.Connector().Type, c.Role, this.action.Target) {
 		n.Schema = schema
 	}
 	var filter, mapping, tIn, tOut, tSource []byte
@@ -296,21 +296,21 @@ func (ac *Action) Set(action ActionToSet) error {
 	if n.Schema.Valid() {
 		rawSchema, err := n.Schema.MarshalJSON()
 		if err != nil {
-			if ac.EventType == nil {
-				return fmt.Errorf("cannot marshal fetched schema for action %d of connection %d: %s", ac.ID, c.ID, err)
+			if this.EventType == nil {
+				return fmt.Errorf("cannot marshal fetched schema for action %d of connection %d: %s", this.ID, c.ID, err)
 			}
-			return fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: %s", *ac.EventType, c.ID, err)
+			return fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: %s", *this.EventType, c.ID, err)
 		}
 		if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
-			if ac.EventType == nil {
-				return fmt.Errorf("cannot marshal fetched schema for action %d of connection %d: data is too large", ac.ID, c.ID)
+			if this.EventType == nil {
+				return fmt.Errorf("cannot marshal fetched schema for action %d of connection %d: data is too large", this.ID, c.ID)
 			}
-			return fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: data is too large", *ac.EventType, c.ID)
+			return fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: data is too large", *this.EventType, c.ID)
 		}
 	} else {
 		rawSchema = []byte{}
 	}
-	err = ac.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
 			"name = $1, enabled = $2, filter = $3, schema = $4, mapping = $5,\n"+
 			"transformation.in_types = $6, transformation.out_types = $7,\n"+
@@ -332,11 +332,11 @@ func (ac *Action) Set(action ActionToSet) error {
 // SetSchedulePeriod sets the schedule period, in minutes, of the action. The
 // action must be a Users or Groups action and period can be 5, 15, 30, 60, 120,
 // 180, 360, 480, 720, or 1440.
-func (ac *Action) SetSchedulePeriod(period SchedulePeriod) error {
-	switch ac.action.Target {
+func (this *Action) SetSchedulePeriod(period SchedulePeriod) error {
+	switch this.action.Target {
 	case state.UsersTarget, state.GroupsTarget:
 	default:
-		return errors.BadRequest("cannot set schedule period of a %s action", ac.action.Target)
+		return errors.BadRequest("cannot set schedule period of a %s action", this.action.Target)
 	}
 	switch period {
 	case 5, 15, 30, 60, 120, 180, 360, 480, 720, 1440:
@@ -344,11 +344,11 @@ func (ac *Action) SetSchedulePeriod(period SchedulePeriod) error {
 		return errors.BadRequest("schedule period %d is not valid", period)
 	}
 	n := state.SetActionSchedulePeriodNotification{
-		ID:             ac.action.ID,
+		ID:             this.action.ID,
 		SchedulePeriod: int16(period),
 	}
 	ctx := context.Background()
-	err := ac.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET schedule_period = $1 WHERE id = $2 AND schedule_period <> $1", n.SchedulePeriod, n.ID)
 		if err != nil {
 			return err
@@ -362,16 +362,16 @@ func (ac *Action) SetSchedulePeriod(period SchedulePeriod) error {
 }
 
 // SetStatus sets the status of the action.
-func (ac *Action) SetStatus(enabled bool) error {
-	if enabled == ac.action.Enabled {
+func (this *Action) SetStatus(enabled bool) error {
+	if enabled == this.action.Enabled {
 		return nil
 	}
 	n := state.SetActionStatusNotification{
-		ID:      ac.action.ID,
+		ID:      this.action.ID,
 		Enabled: enabled,
 	}
 	ctx := context.Background()
-	err := ac.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.ID)
 		if err != nil {
 			return err

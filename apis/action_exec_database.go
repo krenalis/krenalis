@@ -17,16 +17,16 @@ import (
 )
 
 // importFromDatabase imports the users from a database.
-func (ac *Action) importFromDatabase() error {
+func (this *Action) importFromDatabase() error {
 
-	connection := ac.action.Connection()
+	connection := this.action.Connection()
 	connector := connection.Connector()
 
-	query, err := compileActionQuery(ac.action.Query, noQueryLimit)
+	query, err := compileActionQuery(this.action.Query, noQueryLimit)
 	if err != nil {
 		return actionExecutionError{err}
 	}
-	fh := ac.newFirehose(context.Background())
+	fh := this.newFirehose(context.Background())
 	c, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
 		Role:     _connector.SourceRole,
 		Settings: connection.Settings,
