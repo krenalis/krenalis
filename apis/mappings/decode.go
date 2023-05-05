@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package types
+package mappings
 
 import (
 	"encoding/json"
@@ -17,19 +17,21 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/types"
+
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"golang.org/x/text/unicode/norm"
 )
 
-// Decode decodes a JSON-encoded data, read from r, validates it according to t
+// decode decodes a JSON-encoded data, read from r, validates it according to t
 // and returns the decoded value.
 // Returns error if t is not valid.
-func Decode(r io.Reader, t Type) (map[string]any, error) {
+func decode(r io.Reader, t types.Type) (map[string]any, error) {
 	if !t.Valid() {
 		return nil, errors.New("type is not valid")
 	}
-	if t.pt != PtObject {
+	if t.PhysicalType() != types.PtObject {
 		return nil, errors.New("type is not an object")
 	}
 	dec := json.NewDecoder(norm.NFC.Reader(r))
@@ -44,7 +46,7 @@ func Decode(r io.Reader, t Type) (map[string]any, error) {
 // decodeByType decodes a JSON-encoded value, read from dec, validates it
 // according to t and returns the decoded value.
 // If tok is not nil, it does not read the first token from dec but uses tok.
-func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
+func decodeByType(dec *json.Decoder, tok json.Token, t types.Type) (any, error) {
 	var err error
 	if tok == nil {
 		tok, err = dec.Token()
@@ -55,74 +57,74 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 			return nil, errors.New("null not allowed")
 		}
 	}
-	switch t.pt {
-	case PtBoolean:
+	switch pt := t.PhysicalType(); pt {
+	case types.PtBoolean:
 		b, ok := tok.(bool)
 		if !ok {
 			return nil, errors.New("not a Boolean value")
 		}
 		return b, nil
-	case PtInt, PtInt8, PtInt16, PtInt24, PtInt64:
+	case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
 		n, ok := tok.(json.Number)
 		if !ok {
-			return nil, fmt.Errorf("expected %s, got a %T value", t.pt, tok)
+			return nil, fmt.Errorf("expected %s, got a %T value", pt, tok)
 		}
 		i, err := n.Int64()
 		if err != nil {
-			return nil, fmt.Errorf("%s is not an %s", n, t.pt)
+			return nil, fmt.Errorf("%s is not an %s", n, pt)
 		}
 		if min, max := t.IntRange(); i < min || i > max {
 			return nil, fmt.Errorf("value must be in [%d,%d]", min, max)
 		}
 		return int(i), nil
-	case PtUInt, PtUInt8, PtUInt16, PtUInt24, PtUInt64:
+	case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
 		n, ok := tok.(json.Number)
 		if !ok {
-			return nil, fmt.Errorf("expected %s, got a %T value", t.pt, tok)
+			return nil, fmt.Errorf("expected %s, got a %T value", pt, tok)
 		}
 		i, err := strconv.ParseUint(string(n), 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("%s is not an %s", n, t.pt)
+			return nil, fmt.Errorf("%s is not an %s", n, pt)
 		}
 		if min, max := t.UIntRange(); i < min || i > max {
 			return nil, fmt.Errorf("value must be in [%d,%d]", min, max)
 		}
 		return uint(i), nil
-	case PtFloat, PtFloat32:
+	case types.PtFloat, types.PtFloat32:
 		n, ok := tok.(json.Number)
 		if !ok {
-			return nil, fmt.Errorf("expected %s, got a %T value", t.pt, tok)
+			return nil, fmt.Errorf("expected %s, got a %T value", pt, tok)
 		}
 		bitSize := 64
-		if t.pt == PtFloat32 {
+		if pt == types.PtFloat32 {
 			bitSize = 32
 		}
 		f, err := strconv.ParseFloat(string(n), bitSize)
 		if err != nil {
-			return nil, fmt.Errorf("%s is not a %s", n, t.pt)
+			return nil, fmt.Errorf("%s is not a %s", n, pt)
 		}
 		if min, max := t.FloatRange(); f < min || f > max {
 			return nil, fmt.Errorf("value must be in [%f,%f]", min, max)
 		}
 		return f, nil
-	case PtDecimal:
+	case types.PtDecimal:
 		n, ok := tok.(json.Number)
 		if !ok {
-			return nil, fmt.Errorf("expected %s, got a %T value", t.pt, tok)
+			return nil, fmt.Errorf("expected %s, got a %T value", pt, tok)
 		}
 		d, err := decimal.NewFromString(string(n))
 		if err != nil {
-			return nil, fmt.Errorf("%s is not a %s", n, t.pt)
+			return nil, fmt.Errorf("%s is not a %s", n, pt)
 		}
 		if min, max := t.DecimalRange(); d.LessThan(min) || d.GreaterThan(d) {
 			return nil, fmt.Errorf("value must be in [%s,%s]", min, max)
 		}
 		return d, nil
-	case PtDateTime:
+	case types.PtDateTime:
 		var tm time.Time
 		layout := t.Layout()
 		switch layout {
-		case Nanoseconds, Microseconds, Milliseconds, Seconds:
+		case types.Nanoseconds, types.Microseconds, types.Milliseconds, types.Seconds:
 			var s string
 			switch v := tok.(type) {
 			case string:
@@ -135,13 +137,13 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 				return nil, errors.New("not a DateTime value")
 			}
 			switch layout {
-			case Nanoseconds:
+			case types.Nanoseconds:
 				tm = time.Unix(0, d.IntPart())
-			case Microseconds:
+			case types.Microseconds:
 				tm = time.UnixMicro(d.IntPart())
-			case Milliseconds:
+			case types.Milliseconds:
 				tm = time.UnixMilli(d.IntPart())
-			case Seconds:
+			case types.Seconds:
 				tm = time.Unix(d.IntPart(), 0)
 			}
 		default:
@@ -155,11 +157,11 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 			}
 		}
 		tm = tm.UTC()
-		if year := tm.Year(); year < MinYear || year > MaxYear {
+		if year := tm.Year(); year < types.MinYear || year > types.MaxYear {
 			return nil, errors.New("not a DateTime value")
 		}
 		return tm, nil
-	case PtDate:
+	case types.PtDate:
 		s, ok := tok.(string)
 		if !ok {
 			return nil, errors.New("not a Date value")
@@ -169,11 +171,11 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 			return nil, errors.New("not a Date value")
 		}
 		tm = tm.UTC()
-		if year := tm.Year(); year < MinYear || year > MaxYear {
+		if year := tm.Year(); year < types.MinYear || year > types.MaxYear {
 			return nil, errors.New("not a Date value")
 		}
 		return tm, nil
-	case PtTime:
+	case types.PtTime:
 		s, ok := tok.(string)
 		if !ok {
 			return nil, errors.New("not a Time value")
@@ -183,7 +185,7 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 			return nil, errors.New("not a Time value")
 		}
 		return s, nil
-	case PtYear:
+	case types.PtYear:
 		s, ok := tok.(json.Number)
 		if !ok {
 			return nil, errors.New("not an Year value")
@@ -192,11 +194,11 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 		if err != nil {
 			return nil, errors.New("not an Year value")
 		}
-		if y < MinYear || y > MaxYear {
-			return nil, fmt.Errorf("year must be in [%d,%d]", MinYear, MaxYear)
+		if y < types.MinYear || y > types.MaxYear {
+			return nil, fmt.Errorf("year must be in [%d,%d]", types.MinYear, types.MaxYear)
 		}
 		return y, nil
-	case PtUUID:
+	case types.PtUUID:
 		s, ok := tok.(string)
 		if !ok {
 			return nil, errors.New("not a UUID value")
@@ -206,7 +208,7 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 			return nil, errors.New("not a UUID value")
 		}
 		return s, nil
-	case PtJSON:
+	case types.PtJSON:
 		s, ok := tok.(string)
 		if !ok {
 			return nil, errors.New("not a JSON value")
@@ -215,7 +217,7 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 			return nil, errors.New("not a valid JSON value")
 		}
 		return s, nil
-	case PtInet:
+	case types.PtInet:
 		s, ok := tok.(string)
 		if !ok {
 			return nil, errors.New("not an Inet value")
@@ -224,7 +226,7 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 			return nil, errors.New("not a valid Inet value")
 		}
 		return s, nil
-	case PtText:
+	case types.PtText:
 		s, ok := tok.(string)
 		if !ok {
 			return nil, errors.New("not a Text value")
@@ -236,7 +238,7 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 			return nil, fmt.Errorf("is more than %d characters long", l)
 		}
 		return s, nil
-	case PtArray:
+	case types.PtArray:
 		if tok != json.Delim('[') {
 			return nil, errors.New("not an array value")
 		}
@@ -260,23 +262,23 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 			}
 			items = append(items, item)
 		}
-		if len(items) < int(t.p) {
-			return nil, fmt.Errorf("array contains less than %d items", t.p)
+		if len(items) < t.MinItems() {
+			return nil, fmt.Errorf("array contains less than %d items", t.MinItems())
 		}
-		if len(items) > int(t.s) {
-			return nil, fmt.Errorf("array contains more than %d items", t.s)
+		if len(items) > t.MaxItems() {
+			return nil, fmt.Errorf("array contains more than %d items", t.MaxItems())
 		}
-		if t.unique && !unique(items, it) {
+		if t.Unique() && !unique(items, it) {
 			return nil, errors.New("an array item is repeated")
 		}
 		return items, nil
-	case PtObject:
+	case types.PtObject:
 		if tok != json.Delim('{') {
 			return nil, errors.New("not a JSON object")
 		}
-		propertyByName := map[string]Property{}
+		propertyByName := map[string]types.Property{}
 		requiredProperties := map[string]struct{}{}
-		for _, p := range t.vl.([]Property) {
+		for _, p := range t.Properties() {
 			propertyByName[p.Name] = p
 			for _, alias := range p.Aliases {
 				propertyByName[alias] = p
@@ -318,7 +320,7 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 			if name == "" {
 				return nil, errors.New("property name is empty")
 			}
-			if !IsValidPropertyName(name) {
+			if !types.IsValidPropertyName(name) {
 				return nil, errors.New("invalid property name")
 			}
 			return nil, fmt.Errorf("unknown property name %q", name)
@@ -333,7 +335,7 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 			return nil, fmt.Errorf("required property %s not found", name)
 		}
 		return object, nil
-	case PtMap:
+	case types.PtMap:
 		if tok != json.Delim('{') {
 			return nil, errors.New("not a JSON object")
 		}
@@ -359,18 +361,18 @@ func decodeByType(dec *json.Decoder, tok json.Token, t Type) (any, error) {
 		}
 		return values, nil
 	default:
-		panic(fmt.Sprintf("unexpected type %d", t.pt))
+		panic(fmt.Sprintf("unexpected type %d", pt))
 	}
 
 }
 
 // unique reports whether items, with the same type t, contain unique values.
-func unique(items []any, t Type) bool {
+func unique(items []any, t types.Type) bool {
 	n := len(items)
 	if n < 2 {
 		return true
 	}
-	if t.pt == PtDecimal {
+	if t.PhysicalType() == types.PtDecimal {
 		for i, a := range items[:n-1] {
 			a, ok := a.(decimal.Decimal)
 			if ok {

@@ -152,7 +152,7 @@ func validateProps(props map[string]any, schema types.Type) error {
 	if err != nil {
 		return err
 	}
-	_, err = types.Decode(bytes.NewReader(data), schema)
+	_, err = decode(bytes.NewReader(data), schema)
 	return err
 }
 

@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package types
+package mappings
 
 import (
 	"encoding/json"
@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"chichi/apis/types"
+
 	"github.com/shopspring/decimal"
 )
 
@@ -21,148 +23,148 @@ func TestDecode(t *testing.T) {
 
 	tests := []struct {
 		Data  string
-		Type  Type
+		Type  types.Type
 		Value any
 	}{
 		{
 			Data:  `1`,
-			Type:  Int(),
+			Type:  types.Int(),
 			Value: 1,
 		},
 		{
 			Data:  `5`,
-			Type:  Int8().WithIntRange(3, 6),
+			Type:  types.Int8().WithIntRange(3, 6),
 			Value: 5,
 		},
 		{
 			Data:  `-12`,
-			Type:  Int8().WithIntRange(-12, 5),
+			Type:  types.Int8().WithIntRange(-12, 5),
 			Value: -12,
 		},
 		{
 			Data:  `127`,
-			Type:  Int8(),
+			Type:  types.Int8(),
 			Value: 127,
 		},
 		{
 			Data:  `-128`,
-			Type:  Int8(),
+			Type:  types.Int8(),
 			Value: -128,
 		},
 		{
 			Data:  `255`,
-			Type:  UInt8(),
+			Type:  types.UInt8(),
 			Value: uint(255),
 		},
 		{
 			Data:  `3.14`,
-			Type:  Float(),
+			Type:  types.Float(),
 			Value: 3.14,
 		},
 		{
 			Data:  `3.14`,
-			Type:  Decimal(3, 2),
+			Type:  types.Decimal(3, 2),
 			Value: decimal.RequireFromString("3.14"),
 		},
 		{
 			Data:  `1669113414031`,
-			Type:  DateTime().WithLayout("ms"),
+			Type:  types.DateTime().WithLayout("ms"),
 			Value: time.UnixMilli(1669113414031).UTC(),
 		},
 		{
 			Data:  `"2022-11-22T11:51:49+01:00"`,
-			Type:  DateTime().WithLayout(time.RFC3339),
+			Type:  types.DateTime().WithLayout(time.RFC3339),
 			Value: time.Date(2022, 11, 22, 10, 51, 49, 0, time.UTC),
 		},
 		{
 			Data:  `"2022-11-22"`,
-			Type:  Date().WithLayout(time.DateOnly),
+			Type:  types.Date().WithLayout(time.DateOnly),
 			Value: time.Date(2022, 11, 22, 0, 0, 0, 0, time.UTC),
 		},
 		{
 			Data:  `"11:39:24"`,
-			Type:  Time(),
+			Type:  types.Time(),
 			Value: "11:39:24",
 		},
 		{
 			Data:  `"11:39:24.623901"`,
-			Type:  Time(),
+			Type:  types.Time(),
 			Value: "11:39:24.623901",
 		},
 		{
 			Data:  `2022`,
-			Type:  Year(),
+			Type:  types.Year(),
 			Value: 2022,
 		},
 		{
 			Data:  `"f18c2024-beaf-4c7f-b4e1-0dc2d6468b6a"`,
-			Type:  UUID(),
+			Type:  types.UUID(),
 			Value: "f18c2024-beaf-4c7f-b4e1-0dc2d6468b6a",
 		},
 		{
 			Data:  `"{\"name\":\"John\"}"`,
-			Type:  JSON(),
+			Type:  types.JSON(),
 			Value: `{"name":"John"}`,
 		},
 		{
 			Data:  `"192.0.2.235"`,
-			Type:  Inet(),
+			Type:  types.Inet(),
 			Value: `192.0.2.235`,
 		},
 		{
 			Data:  `"::FFFF:192.0.2.235"`,
-			Type:  Inet(),
+			Type:  types.Inet(),
 			Value: `::FFFF:192.0.2.235`,
 		},
 		{
 			Data:  `"2001:db8::8a2e:370:7334"`,
-			Type:  Inet(),
+			Type:  types.Inet(),
 			Value: `2001:db8::8a2e:370:7334`,
 		},
 		{
 			Data:  `"abc"`,
-			Type:  Text(Chars(5)),
+			Type:  types.Text(types.Chars(5)),
 			Value: "abc",
 		},
 		{
 			Data:  `[]`,
-			Type:  Array(Text()),
+			Type:  types.Array(types.Text()),
 			Value: []any{},
 		},
 		{
 			Data:  `[3,8,11,2]`,
-			Type:  Array(Int()),
+			Type:  types.Array(types.Int()),
 			Value: []any{3, 8, 11, 2},
 		},
 		{
 			Data: `{"first_name":"John Smith","values":[3, 8, 1],"billing_address":{"city":"Venice","country":"IT"},"birthday":"2006-01-02","phone":null}`,
-			Type: Object([]Property{
+			Type: types.Object([]types.Property{
 				{
 					Name:        "first_name",
 					Label:       "First name",
 					Description: "The first name of a customer",
-					Type:        Text(),
+					Type:        types.Text(),
 				},
 				{
 					Name:  "values",
 					Label: "Values",
-					Type:  Array(Int()),
+					Type:  types.Array(types.Int()),
 				},
 				{
 					Name:    "address",
 					Aliases: []string{"billing_address"},
 					Label:   "address",
-					Type: Object([]Property{
+					Type: types.Object([]types.Property{
 						{
 							Name:        "city",
 							Label:       "City",
 							Description: "The city of the address",
-							Type:        Text(),
+							Type:        types.Text(),
 						},
 						{
 							Name:  "country",
 							Label: "Country",
-							Type:  Text(),
+							Type:  types.Text(),
 						},
 					}),
 				},
@@ -170,12 +172,12 @@ func TestDecode(t *testing.T) {
 					Name:     "birthday",
 					Label:    "Birthday",
 					Required: true,
-					Type:     Date().WithLayout(time.DateOnly),
+					Type:     types.Date().WithLayout(time.DateOnly),
 				},
 				{
 					Name:     "phone",
 					Label:    "Phone number",
-					Type:     Text(),
+					Type:     types.Text(),
 					Nullable: true,
 				},
 			}),
@@ -192,7 +194,7 @@ func TestDecode(t *testing.T) {
 		},
 		{
 			Data:  `{"first":1,"second":2}`,
-			Type:  Map(Int()),
+			Type:  types.Map(types.Int()),
 			Value: map[string]any{"first": 1, "second": 2},
 		},
 	}
