@@ -39,11 +39,22 @@ type Chichi struct {
 	done   chan struct{}
 }
 
+var chichiAlreadyLaunched bool
+
 // InitAndLaunch initializes and launches an instance of Chichi in a separate
 // goroutine.
 // After calling InitAndLaunch, the "Stop" method must be called on the returned
 // instance of Chichi to stop the instance and shutdown the server.
 func InitAndLaunch(t *testing.T) *Chichi {
+
+	if !launchChichiExternally {
+		if chichiAlreadyLaunched {
+			msg := "aborting test: in this process Chichi has already been launched and this may lead to inconsistencies." +
+				" Maybe you forgot the 'launchChichiExternally' variable set to false before running tests?"
+			t.Fatal(msg)
+		}
+		chichiAlreadyLaunched = true
+	}
 
 	err := loadTestConfig()
 	if err != nil {
