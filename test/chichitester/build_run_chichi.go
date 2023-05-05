@@ -43,7 +43,7 @@ func buildChichi(ctx context.Context, setts *server.Settings) error {
 	}
 
 	// Build Chichi.
-	cmd := exec.CommandContext(ctx, "go", "build", "-tags", "osusergo,netgo", "-trimpath", "-o", filepath.Join(chichiDir, chichiExecFilename()))
+	cmd := exec.CommandContext(ctx, "go", "build", "-tags", "osusergo,netgo", "-o", filepath.Join(chichiDir, chichiExecFilename()))
 	cmd.Dir = repo
 	err = cmd.Run()
 	if err != nil {
