@@ -89,16 +89,16 @@ func (this *Action) exec() {
 		err = actionExecutionError{fmt.Errorf("groups import and export are not implemented")}
 	} else {
 		switch connector.Type {
+		case state.AppType:
+			if connection.Role == state.SourceRole {
+				err = this.importFromApp()
+			} else {
+				err = this.exportToApp()
+			}
 		case state.DatabaseType:
 			err = this.importFromDatabase()
 		case state.FileType:
 			err = this.importFromFile()
-		default:
-			if connection.Role == state.SourceRole {
-				err = this.importUsers()
-			} else {
-				err = this.exportUsers()
-			}
 		}
 	}
 	endTime := time.Now().UTC()
@@ -149,200 +149,6 @@ func (this *Action) exec() {
 			execution.ID, this.action.ID, err)
 	}
 
-}
-
-// exportUsers exports the users of action.
-// Note that this method is only a draft, and its code may be wrong and/or
-// partially implemented.
-func (this *Action) exportUsers() error {
-
-	const role = _connector.SourceRole
-
-	connection := this.action.Connection()
-	connector := connection.Connector()
-
-	ctx := context.Background()
-
-	switch connector.Type {
-	case state.AppType:
-
-		var name, clientSecret, resourceCode, accessToken, refreshToken string
-		var webhooksPer WebhooksPer
-		var connector, resource int
-		var settings []byte
-		var expiration time.Time
-		err := this.db.QueryRow(ctx,
-			"SELECT `c`.`name`, `c`.`oAuthClientSecret`, `c`.`webhooksPer` - 1, `r`.`code`,"+
-				" `r`.`oAuthAccessToken`, `r`.`oAuthRefreshToken`, `r`.`oAuthExpiresIn`, `s`.`connector`,"+
-				" `s`.`resource`, `s`.`settings`\n"+
-				"FROM `connections` AS `s`\n"+
-				"INNER JOIN `connectors` AS `c` ON `c`.`id` = `s`.`connector`\n"+
-				"INNER JOIN `resources` AS `r` ON `r`.`id` = `s`.`resource`\n"+
-				"WHERE `s`.`id` = ?", connection.ID).Scan(
-			&name, &clientSecret, &webhooksPer, &resourceCode, &accessToken, &refreshToken, &expiration, &connector,
-			&resource, &settings)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil
-			}
-			return err
-		}
-
-		fh := this.newFirehose(context.Background())
-		ws := this.action.Connection().Workspace()
-
-		c, err := _connector.RegisteredApp(name).Open(fh.ctx, &_connector.AppConfig{
-			Role:          role,
-			Settings:      settings,
-			Firehose:      fh,
-			ClientSecret:  clientSecret,
-			Resource:      resourceCode,
-			AccessToken:   accessToken,
-			PrivacyRegion: _connector.PrivacyRegion(ws.PrivacyRegion),
-		})
-		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
-		}
-
-		// Prepare the users to export to the connection.
-		users := []_connector.User{}
-		{
-			// TODO(Gianluca): populate this map:
-			internalToExternalID := map[int]string{}
-			rows, err := this.db.Query(ctx, "SELECT user, goldenRecord FROM connection_users WHERE connection = $1", connection.ID)
-			if err != nil {
-				return err
-			}
-			defer rows.Close()
-			toRead := []int{}
-			for rows.Next() {
-				var user string
-				var goldenRecord int
-				err := rows.Scan(&user, &goldenRecord)
-				if err != nil {
-					return err
-				}
-				toRead = append(toRead, goldenRecord)
-			}
-			if err := rows.Err(); err != nil {
-				return err
-			}
-			// Read the users from the Golden Record and apply the
-			// transformation functions on them.
-			grUsers, err := this.readGRUsers(toRead)
-			if err != nil {
-				return err
-			}
-			for _, user := range grUsers {
-				id := internalToExternalID[user["id"].(int)]
-				user, err := exportUser(id, user)
-				if err != nil {
-					return err
-				}
-				users = append(users, user)
-			}
-		}
-
-		// Export the users to the connection.
-		log.Printf("[info] exporting %d user(s) to the connection %d", len(users), connection.ID)
-		err = c.(_connector.AppUsersConnection).SetUsers(users)
-		if err != nil {
-			return errors.New("cannot export users")
-		}
-
-		// Handle errors occurred in the firehose.
-		if fh.err != nil {
-			return fh.err
-		}
-
-	default:
-
-		panic(fmt.Sprintf("export to %q not implemented", connector.Type))
-
-	}
-
-	return nil
-}
-
-// importUsers imports the users for the action.
-func (this *Action) importUsers() error {
-
-	const role = _connector.SourceRole
-
-	connection := this.action.Connection()
-	connector := connection.Connector()
-	execution, _ := this.action.Execution()
-
-	switch connector.Type {
-	case state.AppType:
-
-		var clientSecret, resourceCode, accessToken string
-		if r, ok := connection.Resource(); ok {
-			clientSecret = connector.OAuth.ClientSecret
-			resourceCode = r.Code
-			var err error
-			accessToken, err = freshAccessToken(this.db, r)
-			if err != nil {
-				return actionExecutionError{fmt.Errorf("cannot retrive the OAuth access token: %s", err)}
-			}
-		}
-
-		// Read the properties to read.
-		_, properties, err := this.schema()
-		if err != nil {
-			return fmt.Errorf("cannot read user schema: %s", err)
-		}
-
-		fh := this.newFirehose(context.Background())
-		ws := this.action.Connection().Workspace()
-		c, err := _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
-			Role:          role,
-			Settings:      connection.Settings,
-			Firehose:      fh,
-			ClientSecret:  clientSecret,
-			Resource:      resourceCode,
-			AccessToken:   accessToken,
-			PrivacyRegion: _connector.PrivacyRegion(ws.PrivacyRegion),
-		})
-		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
-		}
-		cursor := connection.UserCursor
-		if execution.Reimport {
-			cursor = ""
-		}
-		err = c.(_connector.AppUsersConnection).Users(cursor, properties)
-		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
-		}
-
-		// Handle errors occurred in the firehose.
-		if fh.err != nil {
-			return fh.err
-		}
-
-	case state.StreamType:
-
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		c, err := _connector.RegisteredStream(connector.Name).Open(ctx, &_connector.StreamConfig{
-			Role:     role,
-			Settings: connection.Settings,
-		})
-		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
-		}
-		defer c.Close()
-		event, ack, err := c.Receive()
-		if err != nil {
-			return err
-		}
-		ack()
-		log.Printf("[info] received event: %s", event)
-
-	}
-
-	return nil
 }
 
 // schema returns the schema and the paths of the mapped properties of
