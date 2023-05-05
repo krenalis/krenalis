@@ -16,8 +16,8 @@ import (
 	"io"
 	"strconv"
 
-	"chichi/apis/types"
 	"chichi/connector"
+	"chichi/connector/types"
 
 	"github.com/xuri/excelize/v2"
 )

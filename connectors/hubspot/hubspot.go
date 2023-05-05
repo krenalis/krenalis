@@ -30,8 +30,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/apis/types"
 	"chichi/connector"
+	"chichi/connector/types"
 
 	"github.com/open2b/nuts/capture"
 )

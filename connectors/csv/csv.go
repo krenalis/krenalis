@@ -20,8 +20,8 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	"chichi/apis/types"
 	"chichi/connector"
+	"chichi/connector/types"
 	"chichi/connector/ui"
 )
 

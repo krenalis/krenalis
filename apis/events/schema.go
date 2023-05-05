@@ -10,7 +10,7 @@ package events
 import (
 	"time"
 
-	"chichi/apis/types"
+	"chichi/connector/types"
 )
 
 // Schema is the schema of an event.

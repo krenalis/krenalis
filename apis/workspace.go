@@ -27,11 +27,11 @@ import (
 	_events "chichi/apis/events"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/apis/types"
 	"chichi/apis/warehouses"
 	"chichi/apis/warehouses/clickhouse"
 	"chichi/apis/warehouses/postgresql"
 	_connector "chichi/connector"
+	"chichi/connector/types"
 
 	"github.com/jxskiss/base62"
 	"golang.org/x/exp/slices"

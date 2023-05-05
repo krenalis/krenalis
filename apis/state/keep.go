@@ -17,10 +17,10 @@ import (
 	"time"
 
 	"chichi/apis/postgres"
-	"chichi/apis/types"
 	"chichi/apis/warehouses"
 	"chichi/apis/warehouses/clickhouse"
 	"chichi/apis/warehouses/postgresql"
+	"chichi/connector/types"
 
 	"github.com/google/uuid"
 )

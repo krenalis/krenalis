@@ -10,8 +10,8 @@ package apis
 import (
 	"testing"
 
-	"chichi/apis/types"
 	"chichi/apis/warehouses"
+	"chichi/connector/types"
 )
 
 func TestPropertiesOfColumns(t *testing.T) {

@@ -16,8 +16,8 @@ import (
 	"sync"
 
 	"chichi/apis/postgres"
-	"chichi/apis/types"
 	_connector "chichi/connector"
+	"chichi/connector/types"
 
 	"github.com/google/uuid"
 )

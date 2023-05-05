@@ -18,8 +18,8 @@ import (
 
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/apis/types"
 	"chichi/connector"
+	"chichi/connector/types"
 )
 
 // Make sure it implements the Firehose interface.

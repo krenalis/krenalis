@@ -23,8 +23,8 @@ import (
 	"time"
 	_ "time/tzdata" // workaround for clickhouse-go issue #162
 
-	"chichi/apis/types"
 	"chichi/apis/warehouses"
+	"chichi/connector/types"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"

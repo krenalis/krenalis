@@ -20,8 +20,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/apis/types"
 	"chichi/connector"
+	"chichi/connector/types"
 	"chichi/connector/ui"
 
 	"github.com/go-sql-driver/mysql"

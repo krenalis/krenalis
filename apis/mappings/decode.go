@@ -17,7 +17,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/apis/types"
+	"chichi/connector/types"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"

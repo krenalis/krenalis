@@ -7,7 +7,7 @@
 
 package warehouses
 
-import "chichi/apis/types"
+import "chichi/connector/types"
 
 // Where represents a Where clause when executing a Select query on a data
 // warehouse.

@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"chichi/apis/types"
+	"chichi/connector/types"
 )
 
 func TestTypes(t *testing.T) {

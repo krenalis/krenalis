@@ -15,8 +15,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/apis/types"
 	_connector "chichi/connector"
+	"chichi/connector/types"
 )
 
 // importFromFile imports the users from a file.

@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"time"
 
-	"chichi/apis/types"
 	_connector "chichi/connector"
+	"chichi/connector/types"
 )
 
 // importFromDatabase imports the users from a database.

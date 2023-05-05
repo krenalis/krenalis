@@ -21,8 +21,8 @@ import (
 	"chichi/apis/mappings"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/apis/types"
 	_connector "chichi/connector"
+	"chichi/connector/types"
 )
 
 const (

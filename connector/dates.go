@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"chichi/apis/types"
+	"chichi/connector/types"
 )
 
 // MaxTime represents the maximum value for a Time value.

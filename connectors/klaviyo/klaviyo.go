@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"chichi/apis/types"
 	"chichi/connector"
+	"chichi/connector/types"
 	"chichi/connector/ui"
 
 	"github.com/open2b/nuts/capture"

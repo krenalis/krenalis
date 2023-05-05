@@ -15,8 +15,8 @@ import (
 	"net/http"
 	"time"
 
-	"chichi/apis/types"
 	"chichi/connector"
+	"chichi/connector/types"
 )
 
 // exportOnly10Users, when true, makes Dummy export only 10 users instead of the

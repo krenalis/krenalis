@@ -18,8 +18,8 @@ import (
 	"chichi/apis/errors"
 	"chichi/apis/events"
 	"chichi/apis/state"
-	"chichi/apis/types"
 	"chichi/apis/warehouses"
+	"chichi/connector/types"
 )
 
 // User represents a user.

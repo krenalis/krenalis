@@ -26,8 +26,8 @@ import (
 	"chichi/apis/events"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/apis/types"
 	_connector "chichi/connector"
+	"chichi/connector/types"
 	"chichi/connector/ui"
 
 	"github.com/jxskiss/base62"

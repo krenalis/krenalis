@@ -11,7 +11,7 @@ import (
 	"context"
 	"reflect"
 
-	"chichi/apis/types"
+	"chichi/connector/types"
 )
 
 // Database represents a database connector.

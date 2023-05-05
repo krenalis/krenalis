@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"chichi/apis/types"
 	"chichi/connector"
+	"chichi/connector/types"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/shopspring/decimal"

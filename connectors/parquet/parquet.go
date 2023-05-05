@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"chichi/apis/types"
 	"chichi/connector"
+	"chichi/connector/types"
 
 	goparquet "github.com/fraugster/parquet-go"
 	"github.com/fraugster/parquet-go/parquet"

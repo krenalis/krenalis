@@ -12,7 +12,7 @@ import (
 	"errors"
 
 	"chichi/apis/postgres"
-	"chichi/apis/types"
+	"chichi/connector/types"
 )
 
 // compositeTypeResolver represents a function which resolves composite types

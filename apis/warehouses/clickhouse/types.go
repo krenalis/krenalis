@@ -13,7 +13,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"chichi/apis/types"
+	"chichi/connector/types"
 )
 
 // columnType returns the types.Type corresponding to the ClickHouse type typ

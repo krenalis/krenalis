@@ -12,7 +12,7 @@ import (
 	"reflect"
 	"time"
 
-	"chichi/apis/types"
+	"chichi/connector/types"
 	"chichi/connector/ui"
 )
 

@@ -16,7 +16,7 @@ import (
 
 	"chichi/apis/state"
 	"chichi/apis/transformations"
-	"chichi/apis/types"
+	"chichi/connector/types"
 )
 
 // ActionFilterApplies reports whether the action filter applies to the event.

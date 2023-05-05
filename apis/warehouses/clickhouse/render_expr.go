@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"chichi/apis/types"
 	wh "chichi/apis/warehouses"
 	_connector "chichi/connector"
+	"chichi/connector/types"
 
 	"github.com/open2b/nuts/decimal"
 )

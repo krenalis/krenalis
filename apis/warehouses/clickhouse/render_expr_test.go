@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"chichi/apis/types"
 	wh "chichi/apis/warehouses"
 	"chichi/connector"
+	"chichi/connector/types"
 )
 
 func Test_renderExpr(t *testing.T) {

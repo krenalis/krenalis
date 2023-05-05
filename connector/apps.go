@@ -14,7 +14,7 @@ import (
 	"reflect"
 	"time"
 
-	"chichi/apis/types"
+	"chichi/connector/types"
 )
 
 // ErrWebhookUnauthorized is returned by the ReceiveWebhook method if the

@@ -20,8 +20,8 @@ import (
 	_url "net/url"
 	"strings"
 
-	"chichi/apis/types"
 	"chichi/connector"
+	"chichi/connector/types"
 	"chichi/connector/ui"
 )
 

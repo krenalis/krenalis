@@ -15,7 +15,7 @@ import (
 	"reflect"
 	"time"
 
-	"chichi/apis/types"
+	"chichi/connector/types"
 )
 
 var (

@@ -15,7 +15,7 @@ import (
 	"sync"
 
 	"chichi/apis/postgres"
-	"chichi/apis/types"
+	"chichi/connector/types"
 )
 
 // Warehouse is the interface implemented by data warehouses.

@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"chichi/apis/postgres"
-	"chichi/apis/types"
 	"chichi/apis/warehouses"
+	"chichi/connector/types"
 
 	"github.com/google/uuid"
 	"golang.org/x/exp/maps"

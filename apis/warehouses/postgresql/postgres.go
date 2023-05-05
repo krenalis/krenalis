@@ -22,8 +22,8 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/postgres"
-	"chichi/apis/types"
 	"chichi/apis/warehouses"
+	"chichi/connector/types"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
