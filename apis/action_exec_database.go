@@ -88,7 +88,7 @@ type databaseScanValue struct {
 }
 
 func (sv databaseScanValue) Scan(src any) error {
-	value, err := normalizePropertyValue(sv.property, src)
+	value, err := normalizeDatabaseFilePropertyValue(sv.property, src)
 	if err != nil {
 		return err
 	}

@@ -48,6 +48,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/evanw/esbuild v0.17.17
 	github.com/go-chi/chi/v5 v5.0.8
+	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgpassfile v1.0.0
 	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b

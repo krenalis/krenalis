@@ -16,6 +16,9 @@ import (
 	"chichi/apis/types"
 )
 
+// MaxTime represents the maximum value for a Time value.
+const MaxTime = Time(24*time.Hour) - 1
+
 // DateTime represents a date and time.
 type DateTime struct {
 	time.Time

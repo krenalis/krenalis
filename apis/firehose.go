@@ -152,6 +152,25 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 		return
 	}
 
+	// Normalize the properties.
+	propertyOf := map[string]types.Property{}
+	for _, p := range fh.action.Schema.Properties() {
+		propertyOf[p.Name] = p
+	}
+	for name, value := range properties {
+		p, ok := propertyOf[name]
+		if !ok {
+			fh.setError(fmt.Errorf("connector %d has returned an unknown property %q", fh.connection.ID, name))
+			return
+		}
+		value, err := normalizeAppPropertyValue(name, p.Nullable, p.Type, value)
+		if err != nil {
+			fh.setError(err)
+			return
+		}
+		properties[name] = value
+	}
+
 	// Write the user properties to the database.
 	if timestamps == nil {
 		timestamps = map[string]time.Time{}
