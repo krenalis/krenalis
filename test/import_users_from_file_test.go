@@ -1,0 +1,93 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2023 Open2b
+//
+
+package test
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"chichi/test/chichitester"
+)
+
+func TestImportUsersFromFile(t *testing.T) {
+
+	// Test's header (copy-paste me in other tests).
+	if testing.Short() {
+		t.Skip()
+	}
+	c := chichitester.InitAndLaunch(t)
+	defer c.Stop()
+
+	// Determine the storage directory and assert that such directory exists.
+	storageDir, err := filepath.Abs("testdata/storage")
+	if err != nil {
+		t.Fatal(err)
+	}
+	stat, err := os.Stat(storageDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !stat.IsDir() {
+		t.Fatalf("%q is not a dir", storageDir)
+	}
+
+	// Create the Filesystem connection.
+	fsID := c.AddConnection(map[string]any{
+		"Connector": 19, // Filesystem.
+		"Role":      "Source",
+		"Options": map[string]any{
+			"Name":    "Filesystem",
+			"Enabled": true,
+		},
+		"Settings": map[string]any{
+			"Root": storageDir,
+		},
+	})
+
+	// Create the CSV connection.
+	csvID := c.AddConnection(map[string]any{
+		"Connector": 5, // CSV.
+		"Role":      "Source",
+		"Options": map[string]any{
+			"Name":    "CSV",
+			"Enabled": true,
+			"Storage": fsID,
+		},
+		"Settings": map[string]any{
+			"Comma": ",",
+		},
+	})
+
+	// Add an action to the CSV for importing the users.
+	importUsersActionID := c.AddAction(csvID, map[string]any{
+		"Target": "Users",
+		"Action": map[string]any{
+			"Name": "Import users from CSV on Filesystem",
+			"Path": "users.csv",
+			"Mapping": map[string]string{
+				"Email": "column4",
+			},
+		},
+	})
+
+	// Execute the action that imports users.
+	c.ExecuteAction(csvID, importUsersActionID, true)
+
+	// Wait some seconds to make the import complete.
+	time.Sleep(5 * time.Second)
+
+	// Retrive the users.
+	ret := c.Users([]string{"Email"}, 0, 100)
+	count := int(ret["count"].(float64))
+	if count != 2 {
+		t.Fatalf("expecting %d users, got %d", 2, count)
+	}
+
+}
