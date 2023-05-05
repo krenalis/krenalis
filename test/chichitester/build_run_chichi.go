@@ -65,6 +65,10 @@ func buildChichi(ctx context.Context, setts *server.Settings) error {
 	}
 
 	// Write the configuration.
+	err = validDatabaseNameForTests(setts.PostgreSQL.Database)
+	if err != nil {
+		return err
+	}
 	conf := &bytes.Buffer{}
 	conf.WriteString("[Main]\n")
 	conf.WriteString("Host=" + setts.Main.Host + "\n")

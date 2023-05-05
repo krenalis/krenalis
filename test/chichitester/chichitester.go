@@ -104,6 +104,10 @@ func InitAndLaunch(t *testing.T) *Chichi {
 			c.done <- struct{}{}
 		}()
 	} else {
+		err = validDatabaseNameForTests(setts.PostgreSQL.Database)
+		if err != nil {
+			t.Fatal(err)
+		}
 		go func() {
 			err := server.Run(ctxWithCancel, &setts)
 			if err != nil {
@@ -180,6 +184,10 @@ func resetDatabase(ctx context.Context, dbSetts *DBSettings) error {
 	if err != nil {
 		return fmt.Errorf("cannot recreate database: %s", err)
 	}
+	err = validDatabaseNameForTests(dbSetts.Database)
+	if err != nil {
+		return err
+	}
 	db, err := postgres.Open(&postgres.Options{
 		Host:     dbSetts.Host,
 		Port:     dbSetts.Port,
@@ -204,6 +212,10 @@ func resetWarehouse(ctx context.Context, warehouse *DBSettings) error {
 	if err != nil {
 		return fmt.Errorf("cannot recreate database: %s", err)
 	}
+	err = validDatabaseNameForTests(warehouse.Database)
+	if err != nil {
+		return err
+	}
 	db, err := postgres.Open(&postgres.Options{
 		Host:     warehouse.Host,
 		Port:     warehouse.Port,
@@ -223,8 +235,6 @@ func resetWarehouse(ctx context.Context, warehouse *DBSettings) error {
 	return nil
 }
 
-var databaseNameRegexp = regexp.MustCompile(`^[a-zA-Z0-9_]+_test$`)
-
 func recreateDatabase(ctx context.Context, host string, port int, username, password, database string) error {
 	db, err := postgres.Open(&postgres.Options{
 		Host:     host,
@@ -237,8 +247,9 @@ func recreateDatabase(ctx context.Context, host string, port int, username, pass
 		return fmt.Errorf("cannot connect to database: %s", err)
 	}
 	defer db.Close()
-	if !databaseNameRegexp.MatchString(database) {
-		return fmt.Errorf("invalid database name %q, it must match the regexp: ^[a-zA-Z0-9_]+_test$", database)
+	err = validDatabaseNameForTests(database)
+	if err != nil {
+		return err
 	}
 	_, err = db.Exec(ctx, "DROP DATABASE IF EXISTS "+database)
 	if err != nil {
@@ -283,4 +294,16 @@ func execQueries(ctx context.Context, db *postgres.DB, queriesFile string) error
 
 	return nil
 
+}
+
+var databaseNameRegexp = regexp.MustCompile(`^[a-zA-Z0-9_]+_test$`)
+
+// validDatabaseNameForTests returns an error if name is not a valid database
+// name for tests.
+func validDatabaseNameForTests(name string) error {
+	valid := databaseNameRegexp.MatchString(name)
+	if !valid {
+		return fmt.Errorf("invalid database name %q, it must match the regexp: ^[a-zA-Z0-9_]+_test$", name)
+	}
+	return nil
 }
