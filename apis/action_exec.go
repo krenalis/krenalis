@@ -10,12 +10,15 @@ package apis
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
 	"chichi/apis/errors"
+	"chichi/apis/mappings"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/types"
@@ -187,6 +190,7 @@ func (this *Action) exportUsers() error {
 
 		fh := this.newFirehose(context.Background())
 		ws := this.action.Connection().Workspace()
+
 		c, err := _connector.RegisteredApp(name).Open(fh.ctx, &_connector.AppConfig{
 			Role:          role,
 			Settings:      settings,
@@ -375,6 +379,119 @@ func (this *Action) schema() (types.Type, []_connector.PropertyPath, error) {
 	return schema, paths, nil
 }
 
+// setUser sets a user. id is the identifier of the user for the connector, user
+// contains the values of the properties to be set, and timestamps are the dates
+// of the last modification of the properties. If a user with the identifier id
+// does not exist, it is created.
+func (this *Action) setUser(id string, user map[string]any, timestamps map[string]time.Time) error {
+
+	c := this.action.Connection()
+
+	ctx := context.Background()
+
+	// Write the user properties to the database.
+	err := this.writeConnectionUsers(ctx, c.ID, id, user, timestamps)
+	if err != nil {
+		return err
+	}
+
+	// Apply the mapping (or the transformation).
+	candidateData, err := mappings.Apply(ctx, this.action, user, types.Type{})
+	if err != nil {
+		return fmt.Errorf("cannot apply mapping or transformation: %s", err)
+	}
+
+	// Resolve the entity of this user.
+	ids := identitySolver{ctx, c}
+	email, _ := candidateData["Email"].(string)
+	if email == "" {
+		return fmt.Errorf("expecting 'Email' to be a non-empty string, got %#v (of type %T)", candidateData["Email"], candidateData["Email"])
+	}
+	goldenRecordID, err := ids.ResolveEntity(c.ID, id, email)
+	if err != nil {
+		return err
+	}
+
+	// Write the data to the Golden Record, if necessary.
+	if len(candidateData) > 0 {
+		err = this.writeToGoldenRecord(ctx, goldenRecordID, candidateData)
+		if err != nil {
+			return err
+		}
+		log.Printf("[info] properties for user %q written to the Golden Record", candidateData["Email"])
+	}
+
+	return nil
+}
+
+// writeConnectionUsers writes the given connection users to the database.
+func (this *Action) writeConnectionUsers(ctx context.Context, connection int, id string, user map[string]any, timestamps map[string]time.Time) error {
+	data, err := json.Marshal(user)
+	if err != nil {
+		return err
+	}
+	jsonTimestamps, err := json.Marshal(timestamps)
+	if err != nil {
+		return err
+	}
+	ws := this.action.Connection().Workspace()
+	_, err = ws.Warehouse.Exec(ctx, "INSERT INTO connections_users (connection, \"user\", data, timestamps)\n"+
+		"VALUES ($1, $2, $3, $4)\n"+
+		"ON CONFLICT (connection, \"user\") DO UPDATE SET data = $3, timestamps = $4",
+		connection, id, data, jsonTimestamps)
+	if err != nil {
+		return err
+	}
+	_, err = this.db.Exec(ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, users)\n"+
+		"VALUES ($1, $2, 1)\n"+
+		"ON CONFLICT (connection, time_slot) DO UPDATE SET users = cs.users + 1",
+		connection, statsTimeSlot(time.Now()))
+	return err
+}
+
+// writeToGoldenRecord writes the given properties to the Golden Record.
+func (this *Action) writeToGoldenRecord(ctx context.Context, id int, props map[string]any) error {
+
+	// TODO(Gianluca):
+	for _, v := range props {
+		if _, ok := v.(map[string]interface{}); ok {
+			return errors.New("writeToGoldenRecord is still partially implemented and does not support objects")
+		}
+	}
+
+	query := &strings.Builder{}
+	query.WriteString("UPDATE users SET\n")
+	var values []any
+	i := 1
+	for prop, value := range props {
+		if i > 1 {
+			query.WriteString(", ")
+		}
+		query.WriteString(postgres.QuoteIdent(prop))
+		query.WriteString(" = $")
+		query.WriteString(strconv.Itoa(i))
+		values = append(values, value)
+		i++
+	}
+	query.WriteString(`, "updateTime" = now()`)
+	query.WriteString("\nWHERE id = $")
+	query.WriteString(strconv.Itoa(i))
+	values = append(values, id)
+	ws := this.action.Connection().Workspace()
+	res, err := ws.Warehouse.Exec(ctx, query.String(), values...)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return fmt.Errorf("BUG: one row should be affected, got %d", affected)
+	}
+	return nil
+}
+
 // readGRUsers reads the Golden Record users with the given IDs.
 func (this *Action) readGRUsers(ids []int) ([]map[string]any, error) {
 	return nil, nil // TODO(Gianluca): implement.
@@ -403,7 +520,7 @@ func (this *Action) newFirehose(ctx context.Context) *firehose {
 	}
 	fh := &firehose{
 		db:         this.db,
-		action:     this.action,
+		action:     this,
 		connection: this.action.Connection(),
 		resource:   resource,
 	}

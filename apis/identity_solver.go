@@ -8,13 +8,17 @@
 package apis
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+
+	"chichi/apis/state"
 )
 
 // An identitySolver performs the identity resolution process.
 type identitySolver struct {
-	*firehose
+	ctx        context.Context
+	connection *state.Connection
 }
 
 // ResolveEntity resolves the user entity, from the given connection, matching

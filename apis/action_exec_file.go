@@ -63,12 +63,15 @@ func (this *Action) importFromFile() error {
 	var rw *recordWriter
 	rw = newRecordWriter(c.ID, identityLabel, timestampLabel, math.MaxInt, func(record map[string]any) error {
 		user := fmt.Sprintf("%s", record[rw.identityColumn])
-		timestamp, err := time.Parse(time.DateTime, record[rw.timestampColumn].(string))
+		ts, err := time.Parse(time.DateTime, record[rw.timestampColumn].(string))
 		if err != nil {
 			return fmt.Errorf("invalid timestamp column value: %s", record[rw.timestampColumn])
 		}
-		fh.setUser(user, record, timestamp, nil)
-		return fh.err
+		timestamps := map[string]time.Time{}
+		for name := range record {
+			timestamps[name] = ts
+		}
+		return this.setUser(user, record, timestamps)
 	})
 	err = file.Read(r, this.action.Sheet, rw)
 	if err != nil {

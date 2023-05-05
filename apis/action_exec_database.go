@@ -67,7 +67,14 @@ func (this *Action) importFromDatabase() error {
 		if hasTimestamp {
 			ts = row[timestampLabel].(time.Time)
 		}
-		fh.setUser(row[identityLabel].(string), row, ts, nil)
+		timestamps := map[string]time.Time{}
+		for _, p := range properties {
+			timestamps[p.Name] = ts
+		}
+		err = this.setUser(row[identityLabel].(string), row, timestamps)
+		if err != nil {
+			return err
+		}
 	}
 	if err = rawRows.Err(); err != nil {
 		return actionExecutionError{fmt.Errorf("an error occurred closing the database: %s", err)}
