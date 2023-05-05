@@ -26,6 +26,11 @@ func (c *Chichi) ExecuteAction(connection, action int, reimport bool) {
 	c.MustCall("POST", method, map[string]any{"Reimport": reimport})
 }
 
+func (c *Chichi) Imports(connection int) []any {
+	method := "/api/connections/" + strconv.Itoa(connection) + "/imports"
+	return c.MustCall("GET", method, nil).([]any)
+}
+
 func (c *Chichi) Users(properties []string, start, end int) map[string]any {
 	req := map[string]any{
 		"Properties": properties,

@@ -80,8 +80,18 @@ func TestImportUsersFromFile(t *testing.T) {
 	// Execute the action that imports users.
 	c.ExecuteAction(csvID, importUsersActionID, true)
 
-	// Wait some seconds to make the import complete.
-	time.Sleep(5 * time.Second)
+	// Wait for the import to finish.
+	time.Sleep(500 * time.Millisecond)
+	for {
+		imports := c.Imports(csvID)
+		if len(imports) > 0 {
+			imp := imports[0].(map[string]any)
+			if imp["EndTime"] != nil {
+				break
+			}
+		}
+		time.Sleep(1 * time.Second)
+	}
 
 	// Retrive the users.
 	ret := c.Users([]string{"Email"}, 0, 100)
