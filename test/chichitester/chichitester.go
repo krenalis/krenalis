@@ -22,11 +22,21 @@ import (
 	"chichi/server"
 )
 
+// launchChichiExternally determines if Chichi should be launched externally
+// when testing.
+//
+//   - Set this to true when testing Chichi using 'go run commit/commit.go' or
+//     'go test'.
+//
+//   - Set this to false when debugging a single Chichi test.
+const launchChichiExternally = true
+
 // Chichi represents an instance of Chichi which responds to HTTP requests and
 // exposes methods to make calls to the APIs.
 type Chichi struct {
 	cancel func()
 	t      *testing.T
+	done   chan struct{}
 }
 
 // InitAndLaunch initializes and launches an instance of Chichi in a separate
@@ -52,8 +62,11 @@ func InitAndLaunch(t *testing.T) *Chichi {
 		t.Fatalf("cannot reset warehouse: %s", err)
 	}
 
-	// Launch Chichi.
-	ctxWithCancel, cancel := context.WithCancel(ctx)
+	c := Chichi{
+		t:    t,
+		done: make(chan struct{}, 1),
+	}
+
 	setts := server.Settings{}
 	setts.Main.Host = testsSettings.ChichiHost
 	setts.PostgreSQL.Host = testsSettings.Database.Host
@@ -62,21 +75,36 @@ func InitAndLaunch(t *testing.T) *Chichi {
 	setts.PostgreSQL.Password = testsSettings.Database.Password
 	setts.PostgreSQL.Database = testsSettings.Database.Database
 	setts.PostgreSQL.Schema = testsSettings.Database.Schema
-	go func() {
-		err := server.Run(ctxWithCancel, &setts)
+
+	// Launch Chichi.
+	ctxWithCancel, cancel := context.WithCancel(ctx)
+	c.cancel = cancel
+
+	if launchChichiExternally {
+		err := buildChichi(ctxWithCancel, &setts)
 		if err != nil {
-			log.Printf("[error] %s", err)
-			return
+			t.Fatalf("cannot build Chichi: %s", err)
 		}
-	}()
+		go func() {
+			err := launchChichi(ctxWithCancel)
+			if err != nil {
+				log.Printf("[error] %s", err)
+			}
+			c.done <- struct{}{}
+		}()
+	} else {
+		go func() {
+			err := server.Run(ctxWithCancel, &setts)
+			if err != nil {
+				log.Printf("[error] %s", err)
+				return
+			}
+			c.done <- struct{}{}
+		}()
+	}
 
 	// Wait some time for Chichi to load.
 	time.Sleep(1 * time.Second)
-
-	c := Chichi{
-		cancel: cancel,
-		t:      t,
-	}
 
 	// Connect the data warehouse.
 	err = c.connectWarehouse(testsSettings.WarehouseType, testsSettings.Warehouse)
@@ -96,12 +124,16 @@ func InitAndLaunch(t *testing.T) *Chichi {
 		t.Fatalf("cannot reload schemas: %s", err)
 	}
 
+	// Wait some time for the leader election.
+	time.Sleep(3 * time.Second)
+
 	return &c
 }
 
 // Stop stops the execution of Chichi.
 func (c *Chichi) Stop() {
 	c.cancel()
+	<-c.done
 }
 
 func (c *Chichi) connectWarehouse(whType string, whSettings *DBSettings) error {
@@ -133,7 +165,6 @@ func (c *Chichi) reloadSchemas() error {
 }
 
 func resetDatabase(ctx context.Context, dbSetts *DBSettings) error {
-
 	err := recreateDatabase(ctx, dbSetts.Host, dbSetts.Port, dbSetts.Username, dbSetts.Password, dbSetts.Database)
 	if err != nil {
 		return fmt.Errorf("cannot recreate database: %s", err)
@@ -173,7 +204,6 @@ func resetWarehouse(ctx context.Context, warehouse *DBSettings) error {
 	if err != nil {
 		return fmt.Errorf("cannot establish connection to warehouse: %s", err)
 	}
-
 	defer db.Close()
 	err = execQueries(ctx, db, "../database/warehouses/postgresql.sql")
 	if err != nil {
