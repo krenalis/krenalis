@@ -29,15 +29,14 @@ func TestConnections(t *testing.T) {
 	}
 
 	// Create a Dummy (source) connection.
-	connection := map[string]any{
+	c.AddConnection(map[string]any{
 		"Connector": 3, // Dummy.
 		"Role":      "Source",
 		"Options": map[string]any{
 			"Name":    "Dummy (source)",
 			"Enabled": true,
 		},
-	}
-	c.MustCall("POST", "/api/workspace/add-connection", connection)
+	})
 
 	// Check if the Dummy connection has been created successfully.
 	connections = c.MustCall("GET", "/api/connections", nil).([]any)
