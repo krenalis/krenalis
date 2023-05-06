@@ -39,10 +39,10 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 		{types.Int(), json.Number("-9261"), -9261},
 		{types.Int(), json.Number("-9261.0"), -9261},
 		// Int16.
-		{types.Int8(), -6, -6},
-		{types.Int8(), -6.0, -6},
-		{types.Int8(), json.Number("-6"), -6},
-		{types.Int8(), json.Number("-6.0"), -6},
+		{types.Int16(), -6, -6},
+		{types.Int16(), -6.0, -6},
+		{types.Int16(), json.Number("-6"), -6},
+		{types.Int16(), json.Number("-6.0"), -6},
 		// UInt.
 		{types.UInt(), uint(47303), uint(47303)},
 		{types.UInt(), 47303.0, uint(47303)},
