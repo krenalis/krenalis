@@ -7,7 +7,7 @@
 | Int            | int                | float64, json.Number         | int64      | []byte     | int32        | -      | -      |
 | Int8           | int                | float64, json.Number         | int64      | []byte     |              | -      | -      |
 | Int16          | int                | float64, json.Number         | int64      | []byte     |              | -      | -      |
-| Int24          | int                | float64, json.Number         | int64      | []byte     | -            | -      | -      |
+| Int24          | int                | float64, json.Number         | -          | []byte     | -            | -      | -      |
 | Int64          | int                | float64, json.Number         | int64      | []byte     | int64        | -      | -      |
 | UInt           | uint               | float64, json.Number         | -          | []byte     |              | -      | -      |
 | UInt8          | uint               | float64, json.Number         | -          | []byte     |              | -      | -      |
