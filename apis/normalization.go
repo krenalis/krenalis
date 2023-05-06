@@ -397,6 +397,12 @@ func normalizeDatabaseFilePropertyValue(property types.Property, src any) (any, 
 	case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
 		var v int64
 		switch src := src.(type) {
+		case int8:
+			v = int64(src)
+			valid = true
+		case int16:
+			v = int64(src)
+			valid = true
 		case int32:
 			v = int64(src)
 			valid = true
@@ -419,6 +425,18 @@ func normalizeDatabaseFilePropertyValue(property types.Property, src any) (any, 
 	case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
 		var v uint64
 		switch src := src.(type) {
+		case uint8:
+			v = uint64(src)
+			valid = true
+		case uint16:
+			v = uint64(src)
+			valid = true
+		case uint32:
+			v = uint64(src)
+			valid = true
+		case uint64:
+			v = src
+			valid = true
 		case []byte:
 			var err error
 			v, err = strconv.ParseUint(string(src), 10, 64)
@@ -474,6 +492,9 @@ func normalizeDatabaseFilePropertyValue(property types.Property, src any) (any, 
 			valid = true
 		case int64:
 			v = decimal.NewFromInt(src)
+			valid = true
+		case decimal.Decimal:
+			v = src
 			valid = true
 		}
 		if valid {

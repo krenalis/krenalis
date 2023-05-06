@@ -48,7 +48,8 @@ INSERT INTO connectors (name, type, logo_url, oauth_url, oauth_client_id, oauth_
     ('Server', 'Server', 'https://cdn1.iconfinder.com/data/icons/unicons-line-vol-5/24/server-512.png', '', '', '', '', 0),
     ('Klaviyo', 'App', 'https://cdn3.iconfinder.com/data/icons/font-awesome-solid/512/k-256.png', '', '', '', '', 0),
     ('Google Analytics 4', 'App', 'https://cdn4.iconfinder.com/data/icons/social-media-logos-6/512/108-analytics_google_analytics_google-256.png', '', '', '', '', 0),
-    ('Filesystem', 'Storage', 'https://cdn2.iconfinder.com/data/icons/audio-music-5/65/cd-case-256.png', '', '', '', '', 0);
+    ('Filesystem', 'Storage', 'https://cdn2.iconfinder.com/data/icons/audio-music-5/65/cd-case-256.png', '', '', '', '', 0),
+    ('ClickHouse', 'Database', 'https://cdn.icon-icons.com/icons2/3911/PNG/512/clickhouse_logo_icon_247349.png', '', '', '', '', 0);
 
 CREATE TYPE warehouse_type AS ENUM ('BigQuery', 'ClickHouse', 'PostgreSQL', 'Redshift', 'Snowflake');
 CREATE TYPE privacy_region AS ENUM ('', 'Europe');

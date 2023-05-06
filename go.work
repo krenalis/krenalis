@@ -3,6 +3,7 @@ go 1.19
 use (
 	.
 	./chichi-cli
+	./connectors/clickhouse
 	./connectors/csv
 	./connectors/dummy
 	./connectors/excel

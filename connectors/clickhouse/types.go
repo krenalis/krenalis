@@ -5,8 +5,8 @@
 // Copyright (c) 2023 Open2b
 //
 
-// There is a copy of this file in '/connectors/clickhouse/types.go'.
-//Keep the copy synchronized.
+// This file is a copy of the file '/apis/warehouses/clickhouse/types.go'.
+// Keep them synchronized.
 
 package clickhouse
 

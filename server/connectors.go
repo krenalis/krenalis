@@ -8,6 +8,7 @@
 package server
 
 import (
+	_ "chichi/connectors/clickhouse"
 	_ "chichi/connectors/csv"
 	_ "chichi/connectors/dummy"
 	_ "chichi/connectors/excel"

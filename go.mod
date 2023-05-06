@@ -3,6 +3,7 @@ module chichi
 go 1.20
 
 replace (
+	chichi/connectors/clickhouse => ./connectors/clickhouse
 	chichi/connectors/csv => ./connectors/csv
 	chichi/connectors/dummy => ./connectors/dummy
 	chichi/connectors/excel => ./connectors/excel
@@ -25,6 +26,7 @@ replace (
 )
 
 require (
+	chichi/connectors/clickhouse v0.0.0-00010101000000-000000000000
 	chichi/connectors/csv v0.0.0-00010101000000-000000000000
 	chichi/connectors/dummy v0.0.0-00010101000000-000000000000
 	chichi/connectors/excel v0.0.0-00010101000000-000000000000
@@ -44,7 +46,7 @@ require (
 	chichi/connectors/sftp v0.0.0-00010101000000-000000000000
 	chichi/connectors/uisample v0.0.0-00010101000000-000000000000
 	chichi/connectors/website v0.0.0-00010101000000-000000000000
-	github.com/ClickHouse/clickhouse-go/v2 v2.9.0
+	github.com/ClickHouse/clickhouse-go/v2 v2.9.1
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/evanw/esbuild v0.17.17
 	github.com/go-chi/chi/v5 v5.0.8
