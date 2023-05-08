@@ -192,7 +192,7 @@ func (rw *recordWriter) Record(record []any) error {
 		// Store the record in the records field.
 		rd := make([]any, len(rw.columns))
 		for i, c := range rw.columns {
-			rd[i], err = normalization.NormalizeDatabaseFileProperty(c, record[i])
+			rd[i], err = normalization.NormalizeDatabaseFileProperty(c.Name, c.Nullable, c.Type, record[i])
 			if err != nil {
 				return err
 			}
@@ -203,7 +203,7 @@ func (rw *recordWriter) Record(record []any) error {
 	// Call the rw.write function to store the record.
 	rd := map[string]any{}
 	for i, c := range rw.columns {
-		rd[c.Name], err = normalization.NormalizeDatabaseFileProperty(c, record[i])
+		rd[c.Name], err = normalization.NormalizeDatabaseFileProperty(c.Name, c.Nullable, c.Type, record[i])
 		if err != nil {
 			return err
 		}
@@ -235,7 +235,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		// Store the record in the records field.
 		rd := make([]any, len(rw.columns))
 		for i, c := range rw.columns {
-			rd[i], err = normalization.NormalizeDatabaseFileProperty(c, record[c.Name])
+			rd[i], err = normalization.NormalizeDatabaseFileProperty(c.Name, c.Nullable, c.Type, record[c.Name])
 			if err != nil {
 				return err
 			}
@@ -245,7 +245,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 	}
 	// Call the rw.write function to store the record.
 	for _, c := range rw.columns {
-		v, err := normalization.NormalizeDatabaseFileProperty(c, record[c.Name])
+		v, err := normalization.NormalizeDatabaseFileProperty(c.Name, c.Nullable, c.Type, record[c.Name])
 		if err != nil {
 			return err
 		}

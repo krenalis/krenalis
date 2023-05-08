@@ -339,7 +339,7 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 				v := iter.Value().Interface()
 				p, ok := propertyByName[k]
 				if !ok {
-					return nil, fmt.Errorf("app returned a non-existent property %s for for object property %s", k, name)
+					return nil, fmt.Errorf("app returned a non-existent property %s for object property %s", k, name)
 				}
 				obj[k], err = NormalizeAppProperty(name, p.Nullable, p.Type, v)
 				if err != nil {
@@ -379,15 +379,13 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 // NormalizeDatabaseFileProperty normalizes a property value returned by a
 // database connector, a file connector, or a data warehouse and returns its
 // normalized value. If the value is not valid it returns an error.
-func NormalizeDatabaseFileProperty(property types.Property, src any) (any, error) {
-	name := property.Name
+func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, src any) (any, error) {
 	if src == nil {
-		if !property.Nullable {
+		if !nullable {
 			return nil, fmt.Errorf("column %s is non-nullable, but the database returned a NULL value", name)
 		}
 		return nil, nil
 	}
-	typ := property.Type
 	var value any
 	var valid bool
 	switch typ.PhysicalType() {
@@ -584,6 +582,46 @@ func NormalizeDatabaseFileProperty(property types.Property, src any) (any, error
 					abbreviate(v, 20), name, l)
 			}
 			value = v
+		}
+	case types.PtArray:
+		rv := reflect.ValueOf(src)
+		if rv.Type().Kind() == reflect.Slice {
+			var err error
+			n := rv.Len()
+			if n < typ.MinItems() || n > typ.MaxItems() {
+				return nil, fmt.Errorf("database returned an array with %d items for property %s, which is not within the expected range of [%d, %d]",
+					n, name, typ.MinItems(), typ.MaxItems())
+			}
+			a := make([]any, n)
+			t := typ.ItemType()
+			for i := 0; i < n; i++ {
+				v := rv.Index(i).Interface()
+				a[i], err = NormalizeDatabaseFileProperty(name, false, t, v)
+				if err != nil {
+					return nil, err
+				}
+			}
+			value = a
+			valid = true
+		}
+	case types.PtMap:
+		rv := reflect.ValueOf(src)
+		if rv.Type().Kind() == reflect.Map {
+			var err error
+			n := rv.Len()
+			m := make(map[string]any, n)
+			t := typ.ValueType()
+			iter := rv.MapRange()
+			for iter.Next() {
+				k := iter.Key().String()
+				v := iter.Value().Interface()
+				m[k], err = NormalizeDatabaseFileProperty(name, false, t, v)
+				if err != nil {
+					return nil, err
+				}
+			}
+			value = m
+			valid = true
 		}
 	}
 	if !valid {
