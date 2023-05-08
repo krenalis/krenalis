@@ -58,16 +58,15 @@ func open(ctx context.Context, conf *connector.StorageConfig) (*connection, erro
 // It is the caller's responsibility to close the returned reader.
 func (c *connection) Open(path string) (io.ReadCloser, time.Time, error) {
 	filePath := c.filesystemPath(path)
-	stat, err := os.Stat(filePath)
-	if err != nil {
-		return nil, time.Time{}, err
-	}
-	lastUpdateTime := stat.ModTime()
 	f, err := os.Open(filePath)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	return f, lastUpdateTime, nil
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	return f, fi.ModTime(), nil
 }
 
 // ServeUI serves the connector's user interface.
