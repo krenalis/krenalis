@@ -787,7 +787,6 @@ func (this *Workspace) ReloadSchemas() error {
 			} else if c.Nullable {
 				return errors.Unprocessable(InvalidSchemaTable, "column '%s.id' must not be nullable", table.Name)
 			}
-			table.Columns = slices.Delete(table.Columns, idIndex, idIndex+1)
 			// Check the 'timestamp' column.
 			tsIndex := slices.IndexFunc(table.Columns, func(c *warehouses.Column) bool {
 				return c.Name == "timestamp"
@@ -800,7 +799,6 @@ func (this *Workspace) ReloadSchemas() error {
 			} else if c.Nullable {
 				return errors.Unprocessable(InvalidSchemaTable, "column '%s.timestamp' must not be nullable", table.Name)
 			}
-			table.Columns = slices.Delete(table.Columns, tsIndex, tsIndex+1)
 		}
 		if table.Name == "events" {
 			// The schema of the "events" table is hardcoded in the file
