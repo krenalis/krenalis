@@ -1,6 +1,6 @@
 module excel
 
-go 1.19
+go 1.20
 
 require github.com/xuri/excelize/v2 v2.7.1
 
