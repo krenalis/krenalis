@@ -3,7 +3,7 @@
 
 | Physical type  | Go                 | json.Unmarshal               | ClickHouse      | PostgreSQL | MySQL      | Parquet      | CSV    | Excel  |
 |----------------|--------------------|------------------------------|-----------------|------------|------------|--------------|--------|--------|
-| Boolean        | bool               | bool                         | - [^3]          | bool       | -          | bool         | -      | -      |
+| Boolean        | bool               | bool                         | bool            | bool       | -          | bool         | -      | -      |
 | Int            | int                | float64, json.Number         | int32           | int64      | []byte     | int32        | -      | -      |
 | Int8           | int                | float64, json.Number         | int8            | int64      | []byte     |              | -      | -      |
 | Int16          | int                | float64, json.Number         | int16           | int64      | []byte     |              | -      | -      |
@@ -22,8 +22,8 @@
 | Time           | connector.Time     | string, float64, json.Number | -               | -          | []byte     |              | -      | -      |
 | Year           | int                | float64, json.Number         | -               | int64      | []byte     | -            | -      | -      |
 | UUID           | string             | string                       | string          | string     | -          |              | -      | -      |
-| JSON           | json.RawMessage    | string, json.RawMessage      | - [^4]          | []byte     | - [^1]     |              | -      | -      |
-| Inet           | string             | string                       | - [^3]          | string     | -          | -            | -      | -      |
+| JSON           | json.RawMessage    | string, json.RawMessage      | - [^3]          | []byte     | - [^1]     |              | -      | -      |
+| Inet           | string             | string                       | net.IP          | string     | -          | -            | -      | -      |
 | Text           | string             | string                       | string          | string     | []byte     | []byte       | string | string |
 | Array          | []any              | []any                        | -               | -          | -          | -            | -      | -      |
 | Object         | map[string]any     | map[string]any               | -               | -          | -          | -            | -      | -      |
@@ -33,6 +33,4 @@
 
 [^2]: the ClickHouse driver, for the `Date32` type, returns a `time.Time` value not corresponding to the stored value.
 
-[^3]: the ClickHouse driver, for `Bool`, `IPv4` and `IPv6` types, does not support the `sql.Scanner` interface.
-
-[^4]: the `JSON` type in ClickHouse is experimental.
+[^3]: the `JSON` type in ClickHouse is experimental.

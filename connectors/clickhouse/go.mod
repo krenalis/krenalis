@@ -4,6 +4,8 @@ go 1.19
 
 require github.com/ClickHouse/clickhouse-go/v2 v2.9.1
 
+replace github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.9.1-fix2
+
 require (
 	github.com/ClickHouse/ch-go v0.52.1 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect

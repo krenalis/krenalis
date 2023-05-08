@@ -78,9 +78,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 			t = types.DateTime().WithLayout(time.DateTime)
 		case "JSON":
 			t = types.JSON()
-		case "IPv4":
-			t = types.UInt()
-		case "IPv6":
+		case "IPv4", "IPv6":
 			t = types.Inet()
 		default:
 			return types.Type{}, false, ""

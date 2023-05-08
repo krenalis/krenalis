@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/netip"
 	"reflect"
 	"strconv"
@@ -548,11 +549,15 @@ func normalizeDatabaseFilePropertyValue(property types.Property, src any) (any, 
 			}
 		}
 	case types.PtInet:
-		if s, ok := src.(string); ok {
-			if v, err := netip.ParseAddr(s); err == nil {
+		switch src := src.(type) {
+		case string:
+			if v, err := netip.ParseAddr(src); err == nil {
 				value = v.String()
 				valid = true
 			}
+		case net.IP:
+			value = src.String()
+			valid = true
 		}
 	case types.PtText:
 		var v string

@@ -53,7 +53,7 @@ func TestTypes(t *testing.T) {
 		{`Array(Array(Enum8('hello' = 1, 'world' = 2)))`, types.Array(types.Array(types.Text().WithEnum([]string{"hello", "world"}))), false},
 		{`Array(String)`, types.Array(types.Text()), false},
 		{`JSON`, types.JSON(), false},
-		{`IPv4`, types.UInt(), false},
+		{`IPv4`, types.Inet(), false},
 		{`IPv6`, types.Inet(), false},
 		{`FixedString(10)`, types.Text(types.Bytes(10)), false},
 		{`Map(String, Int32)`, types.Map(types.Int()), false},

@@ -2,6 +2,8 @@ module chichi
 
 go 1.20
 
+replace github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.9.1-fix2
+
 replace (
 	chichi/connectors/clickhouse => ./connectors/clickhouse
 	chichi/connectors/csv => ./connectors/csv
@@ -98,7 +100,7 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/klauspost/compress v1.15.15 // indirect
 	github.com/kr/fs v0.1.0 // indirect
-	github.com/kr/pretty v0.3.0 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/oschwald/maxminddb-golang v1.10.0 // indirect
 	github.com/paulmach/orb v0.9.0 // indirect
@@ -108,7 +110,6 @@ require (
 	github.com/rabbitmq/amqp091-go v1.5.0 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.3 // indirect
-	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/twmb/franz-go v1.11.0 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.2.0 // indirect
@@ -121,7 +122,6 @@ require (
 	golang.org/x/net v0.9.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
-	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
