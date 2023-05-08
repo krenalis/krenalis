@@ -773,7 +773,7 @@ func (this *Workspace) ReloadSchemas() error {
 	}
 	for _, table := range tables {
 		// Check that the 'users' and the 'groups' tables, when exist, contain
-		// the 'id' and the 'updateTime' columns.
+		// the 'id' and the 'timestamp' columns.
 		if table.Name == "users" || table.Name == "groups" {
 			// Check the 'id' column.
 			idIndex := slices.IndexFunc(table.Columns, func(c *warehouses.Column) bool {
@@ -788,19 +788,19 @@ func (this *Workspace) ReloadSchemas() error {
 				return errors.Unprocessable(InvalidSchemaTable, "column '%s.id' must not be nullable", table.Name)
 			}
 			table.Columns = slices.Delete(table.Columns, idIndex, idIndex+1)
-			// Check the 'updateTime' column.
-			utIndex := slices.IndexFunc(table.Columns, func(c *warehouses.Column) bool {
-				return c.Name == "updateTime"
+			// Check the 'timestamp' column.
+			tsIndex := slices.IndexFunc(table.Columns, func(c *warehouses.Column) bool {
+				return c.Name == "timestamp"
 			})
-			if utIndex == -1 {
-				return errors.Unprocessable(InvalidSchemaTable, "'%s' table has no 'updateTime' column", table.Name)
+			if tsIndex == -1 {
+				return errors.Unprocessable(InvalidSchemaTable, "'%s' table has no 'timestamp' column", table.Name)
 			}
-			if c := table.Columns[utIndex]; c.Type.PhysicalType() != types.PtDateTime {
-				return errors.Unprocessable(InvalidSchemaTable, "column '%s.updateTime' does not have type DateTime", table.Name)
+			if c := table.Columns[tsIndex]; c.Type.PhysicalType() != types.PtDateTime {
+				return errors.Unprocessable(InvalidSchemaTable, "column '%s.timestamp' does not have type DateTime", table.Name)
 			} else if c.Nullable {
-				return errors.Unprocessable(InvalidSchemaTable, "column '%s.updateTime' must not be nullable", table.Name)
+				return errors.Unprocessable(InvalidSchemaTable, "column '%s.timestamp' must not be nullable", table.Name)
 			}
-			table.Columns = slices.Delete(table.Columns, utIndex, utIndex+1)
+			table.Columns = slices.Delete(table.Columns, tsIndex, tsIndex+1)
 		}
 		if table.Name == "events" {
 			// The schema of the "events" table is hardcoded in the file

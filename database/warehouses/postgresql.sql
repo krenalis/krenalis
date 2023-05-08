@@ -28,6 +28,6 @@ CREATE TABLE users (
     "FoodPreferences_Fruit" fruit,
     "PhoneNumbers"          varchar(300)[],
     "FavouriteMovie"        movie,
-    "updateTime"            timestamp NOT NULL DEFAULT now(),
+    "timestamp"             timestamp NOT NULL DEFAULT now(),
     PRIMARY KEY (id)
 );

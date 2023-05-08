@@ -279,7 +279,7 @@ func (this *Action) writeToGoldenRecord(ctx context.Context, id int, props map[s
 		values = append(values, value)
 		i++
 	}
-	query.WriteString(`, "updateTime" = now()`)
+	query.WriteString(`, "timestamp" = now()`)
 	query.WriteString("\nWHERE id = $")
 	query.WriteString(strconv.Itoa(i))
 	values = append(values, id)

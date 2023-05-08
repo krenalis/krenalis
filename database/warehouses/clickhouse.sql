@@ -12,7 +12,7 @@ CREATE TABLE users
     `FoodPreferences_Drink` Enum8('water' = 1, 'wine' = 2, 'beer' = 3, 'tea' = 4),
     `FoodPreferences_Fruit` Enum8('apple' = 1, 'orange' = 2, 'mango' = 3, 'peach' = 4, 'lime' = 5),
     `PhoneNumbers` Array(String),
-    `updateTime` DateTime DEFAULT now()
+    `timestamp` DateTime DEFAULT now()
 )
 ENGINE = MergeTree
 PRIMARY KEY id
