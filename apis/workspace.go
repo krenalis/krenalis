@@ -1308,8 +1308,8 @@ Columns:
 }
 
 // columnsOfProperties returns the warehouse columns of properties.
-func columnsOfProperties(properties []types.Property) []warehouses.Column {
-	columns := make([]warehouses.Column, 0, len(properties))
+func columnsOfProperties(properties []types.Property) []types.Property {
+	columns := make([]types.Property, 0, len(properties))
 	for _, p := range properties {
 		if p.Flat {
 			for _, column := range columnsOfProperties(p.Type.Properties()) {
@@ -1318,7 +1318,7 @@ func columnsOfProperties(properties []types.Property) []warehouses.Column {
 			}
 			continue
 		}
-		columns = append(columns, warehouses.Column{Name: p.Name, Type: p.Type, Nullable: p.Nullable})
+		columns = append(columns, types.Property{Name: p.Name, Type: p.Type, Nullable: p.Nullable})
 	}
 	return columns
 }

@@ -16,6 +16,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/normalization"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/connector"
@@ -159,7 +160,7 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 			fh.setError(fmt.Errorf("connector %d has returned an unknown property %q", fh.connection.ID, name))
 			return
 		}
-		value, err := normalizeAppPropertyValue(name, p.Nullable, p.Type, value)
+		value, err := normalization.NormalizeAppProperty(name, p.Nullable, p.Type, value)
 		if err != nil {
 			fh.setError(err)
 			return

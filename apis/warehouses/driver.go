@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"sync"
 
+	"chichi/apis/normalization"
 	"chichi/apis/postgres"
 	"chichi/connector/types"
 )
@@ -63,7 +64,7 @@ type Warehouse interface {
 	//
 	// If a query to the warehouse fails, it returns an Error value.
 	// If an argument is not valid, it panics.
-	Select(ctx context.Context, table string, columns []Column, where Where, order types.Property, first, limit int) ([][]any, error)
+	Select(ctx context.Context, table string, columns []types.Property, where Where, order types.Property, first, limit int) ([][]any, error)
 }
 
 // Batch is implemented by values returned by PrepareBatch.
@@ -221,4 +222,42 @@ func ColumnsIndex(t reflect.Type) (map[string][]int, error) {
 	}
 	columnsIndexes.Store(t, index)
 	return index, nil
+}
+
+// ScanValue implements the sql.Scanner interface to read the database values.
+type ScanValue struct {
+	property    types.Property
+	rows        *[][]any
+	columnIndex int
+	columnCount int
+}
+
+// NewScanValues returns a slice containing scan values to be used to scan rows.
+func NewScanValues(properties []types.Property, rows *[][]any) []any {
+	values := make([]any, len(properties))
+	for i, p := range properties {
+		values[i] = ScanValue{
+			property:    p,
+			rows:        rows,
+			columnIndex: i,
+			columnCount: len(properties),
+		}
+	}
+	return values
+}
+
+func (sv ScanValue) Scan(src any) error {
+	value, err := normalization.NormalizeDatabaseFileProperty(sv.property, src)
+	if err != nil {
+		return err
+	}
+	var row []any
+	if sv.columnIndex == 0 {
+		row = make([]any, sv.columnCount)
+		*sv.rows = append(*sv.rows, row)
+	} else {
+		row = (*sv.rows)[len(*sv.rows)-1]
+	}
+	row[sv.columnIndex] = value
+	return nil
 }

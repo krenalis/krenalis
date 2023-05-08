@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package apis
+package normalization
 
 import (
 	"encoding/json"
@@ -15,6 +15,7 @@ import (
 	"net/netip"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -31,10 +32,10 @@ var (
 	mapType    = objectType
 )
 
-// normalizeAppPropertyValue normalizes a property value returned by an app
+// NormalizeAppProperty normalizes a property value returned by an app
 // connector, and returns its normalized value. If the value is not valid
 // it returns an error.
-func normalizeAppPropertyValue(name string, nullable bool, typ types.Type, src any) (any, error) {
+func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (any, error) {
 	if src == nil {
 		if !nullable {
 			return nil, fmt.Errorf("property %s is non-nullable, but the app returned a nil value", name)
@@ -313,7 +314,7 @@ func normalizeAppPropertyValue(name string, nullable bool, typ types.Type, src a
 			t := typ.ItemType()
 			for i := 0; i < n; i++ {
 				v := rv.Index(i).Interface()
-				a[i], err = normalizeAppPropertyValue(name, false, t, v)
+				a[i], err = NormalizeAppProperty(name, false, t, v)
 				if err != nil {
 					return nil, err
 				}
@@ -340,7 +341,7 @@ func normalizeAppPropertyValue(name string, nullable bool, typ types.Type, src a
 				if !ok {
 					return nil, fmt.Errorf("app returned a non-existent property %s for for object property %s", k, name)
 				}
-				obj[k], err = normalizeAppPropertyValue(name, p.Nullable, p.Type, v)
+				obj[k], err = NormalizeAppProperty(name, p.Nullable, p.Type, v)
 				if err != nil {
 					return nil, err
 				}
@@ -359,7 +360,7 @@ func normalizeAppPropertyValue(name string, nullable bool, typ types.Type, src a
 			for iter.Next() {
 				k := iter.Key().String()
 				v := iter.Value().Interface()
-				m[k], err = normalizeAppPropertyValue(name, false, t, v)
+				m[k], err = NormalizeAppProperty(name, false, t, v)
 				if err != nil {
 					return nil, err
 				}
@@ -375,10 +376,10 @@ func normalizeAppPropertyValue(name string, nullable bool, typ types.Type, src a
 	return value, nil
 }
 
-// normalizeDatabaseFilePropertyValue normalizes a property value returned by a
-// database or file connector, and returns its normalized value. If the value is
-// not valid it returns an error.
-func normalizeDatabaseFilePropertyValue(property types.Property, src any) (any, error) {
+// NormalizeDatabaseFileProperty normalizes a property value returned by a
+// database connector, a file connector, or a data warehouse and returns its
+// normalized value. If the value is not valid it returns an error.
+func NormalizeDatabaseFileProperty(property types.Property, src any) (any, error) {
 	name := property.Name
 	if src == nil {
 		if !property.Nullable {
@@ -592,9 +593,9 @@ func normalizeDatabaseFilePropertyValue(property types.Property, src any) (any, 
 	return value, nil
 }
 
-// validateStringProperty validates a string property like
-// normalizeDatabaseFilePropertyValue does.
-func validateStringProperty(p types.Property, s string) error {
+// ValidateStringProperty validates a string property like
+// NormalizeDatabaseFileProperty does.
+func ValidateStringProperty(p types.Property, s string) error {
 	if !utf8.ValidString(s) {
 		return fmt.Errorf("database returned a value of %q for column %s, which does not contain valid UTF-8 characters",
 			abbreviate(s, 20), p.Name)
@@ -684,4 +685,40 @@ func normalizeTimeFloat(layout string, src float64) (_connector.Time, error) {
 		return 0, errors.New("time overflow")
 	}
 	return t, nil
+}
+
+// abbreviate abbreviates s to almost n runes. If s is longer than n runes,
+// the abbreviated string terminates with "...".
+func abbreviate(s string, n int) string {
+	const spaces = " \n\r\t\f" // https://infra.spec.whatwg.org/#ascii-whitespace
+	s = strings.TrimRight(s, spaces)
+	if len(s) <= n {
+		return s
+	}
+	if n < 3 {
+		return ""
+	}
+	p := 0
+	n2 := 0
+	for i := range s {
+		switch p {
+		case n - 2:
+			n2 = i
+		case n:
+			break
+		}
+		p++
+	}
+	if p < n {
+		return s
+	}
+	if p = strings.LastIndexAny(s[:n2], spaces); p > 0 {
+		s = strings.TrimRight(s[:p], spaces)
+	} else {
+		s = ""
+	}
+	if l := len(s) - 1; l >= 0 && (s[l] == '.' || s[l] == ',') {
+		s = s[:l]
+	}
+	return s + "..."
 }

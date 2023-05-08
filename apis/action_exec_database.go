@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"time"
 
+	"chichi/apis/normalization"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 )
@@ -95,7 +96,7 @@ type databaseScanValue struct {
 }
 
 func (sv databaseScanValue) Scan(src any) error {
-	value, err := normalizeDatabaseFilePropertyValue(sv.property, src)
+	value, err := normalization.NormalizeDatabaseFileProperty(sv.property, src)
 	if err != nil {
 		return err
 	}

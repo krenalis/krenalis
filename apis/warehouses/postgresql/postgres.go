@@ -26,7 +26,6 @@ import (
 	"chichi/connector/types"
 
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
 	"golang.org/x/exp/slices"
 )
 
@@ -399,7 +398,7 @@ type pgTypeInfo struct {
 //
 // If a query to the warehouse fails, it returns an Error value.
 // If an argument is not valid, it panics.
-func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns []warehouses.Column, where warehouses.Where, order types.Property, first, limit int) ([][]any, error) {
+func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns []types.Property, where warehouses.Where, order types.Property, first, limit int) ([][]any, error) {
 
 	if !warehouses.IsValidIdentifier(table) {
 		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
@@ -450,79 +449,27 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns [
 	}
 
 	// Execute the query.
-	var results [][]any
-	rows, err := db.Query(ctx, query.String())
+	rawRows, err := db.Query(ctx, query.String())
 	if err != nil {
 		return nil, warehouses.WrapError(err)
 	}
-	row := make([]any, len(columns))
-	for i := range row {
-		c := columns[i]
-		switch c.Type.PhysicalType() {
-		case types.PtBoolean:
-			row[i] = initScan[bool](c.Nullable)
-		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
-			row[i] = initScan[int](c.Nullable)
-		case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64, types.PtTime, types.PtYear:
-			row[i] = initScan[uint](c.Nullable)
-		case types.PtFloat, types.PtFloat32:
-			row[i] = initScan[float64](c.Nullable)
-		case types.PtDecimal:
-			row[i] = initScan[decimal.Decimal](c.Nullable)
-		case types.PtDateTime, types.PtDate:
-			row[i] = initScan[time.Time](c.Nullable)
-		case types.PtUUID, types.PtText, types.PtArray, types.PtObject, types.PtMap:
-			row[i] = initScan[string](c.Nullable)
-		case types.PtJSON:
-			row[i] = initScan[json.RawMessage](c.Nullable)
-		case types.PtInet:
-			row[i] = initScan[netip.Addr](c.Nullable)
-		default:
-			panic(fmt.Sprintf("type %s is not supported", c.Type))
-		}
-	}
-	for rows.Next() {
-		if err = rows.Scan(row...); err != nil {
-			rows.Close()
+	var rows [][]any
+	values := warehouses.NewScanValues(columns, &rows)
+	for rawRows.Next() {
+		if err = rawRows.Scan(values...); err != nil {
+			rawRows.Close()
 			return nil, warehouses.WrapError(err)
 		}
-		result := make([]any, len(row))
-		for i, v := range row {
-			c := columns[i]
-			switch c.Type.PhysicalType() {
-			case types.PtBoolean:
-				result[i] = scan[bool](c.Nullable, v)
-			case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64, types.PtTime, types.PtYear:
-				result[i] = scan[int](c.Nullable, v)
-			case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
-				result[i] = scan[uint](c.Nullable, v)
-			case types.PtFloat, types.PtFloat32:
-				result[i] = scan[float64](c.Nullable, v)
-			case types.PtDecimal:
-				result[i] = scan[decimal.Decimal](c.Nullable, v)
-			case types.PtDateTime, types.PtDate:
-				result[i] = scan[time.Time](c.Nullable, v)
-			case types.PtUUID, types.PtText, types.PtArray, types.PtObject, types.PtMap:
-				result[i] = scan[string](c.Nullable, v)
-			case types.PtJSON:
-				result[i] = scan[json.RawMessage](c.Nullable, v)
-			case types.PtInet:
-				result[i] = scan[netip.Addr](c.Nullable, v)
-			default:
-				panic(fmt.Sprintf("type %s is not supported", c.Type))
-			}
-		}
-		results = append(results, result)
 	}
-	if err = rows.Err(); err != nil {
+	if err = rawRows.Err(); err != nil {
 		return nil, warehouses.WrapError(err)
 	}
-	rows.Close()
-	if results == nil {
-		results = [][]any{}
+	rawRows.Close()
+	if rows == nil {
+		rows = [][]any{}
 	}
 
-	return results, nil
+	return rows, nil
 }
 
 // connection returns the database connection.
@@ -727,23 +674,4 @@ func quoteValue(b *strings.Builder, value any) {
 	default:
 		panic(fmt.Errorf("unsupported type '%T'", v))
 	}
-}
-
-func initScan[T any](nullable bool) any {
-	if nullable {
-		var v *T
-		return &v
-	}
-	var v T
-	return &v
-}
-
-func scan[T any](nullable bool, v any) any {
-	if !nullable {
-		return *(v.(*T))
-	}
-	if v := v.(**T); *v != nil {
-		return **v
-	}
-	return nil
 }

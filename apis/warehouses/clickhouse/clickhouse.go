@@ -28,7 +28,6 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
-	"github.com/shopspring/decimal"
 	"golang.org/x/exp/slices"
 )
 
@@ -240,7 +239,7 @@ func (warehouse *ClickHouse) QueryRow(ctx context.Context, query string, args ..
 //
 // If a query to the warehouse fails, it returns an Error value.
 // If an argument is not valid, it panics.
-func (warehouse *ClickHouse) Select(ctx context.Context, table string, columns []warehouses.Column, where warehouses.Where, order types.Property, first, limit int) ([][]any, error) {
+func (warehouse *ClickHouse) Select(ctx context.Context, table string, columns []types.Property, where warehouses.Where, order types.Property, first, limit int) ([][]any, error) {
 
 	conn, err := warehouse.connection()
 	if err != nil {
@@ -285,60 +284,30 @@ func (warehouse *ClickHouse) Select(ctx context.Context, table string, columns [
 	}
 
 	// Execute the query.
-	var results [][]any
-	rows, err := conn.Query(ctx, query.String())
+	rawRows, err := conn.Query(ctx, query.String())
 	if err != nil {
 		return nil, warehouses.WrapError(err)
 	}
-	for rows.Next() {
-		row := make([]any, len(columns))
-		for i := range row {
-			typ := columns[i].Type
-			switch typ.PhysicalType() {
-			case types.PtBoolean:
-				var v *bool
-				row[i] = &v
-			case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
-				var v *int
-				row[i] = &v
-			case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
-				var v *uint
-				row[i] = &v
-			case types.PtFloat, types.PtFloat32:
-				var v *float64
-				row[i] = &v
-			case types.PtDecimal:
-				var v *decimal.Decimal
-				row[i] = &v
-			case types.PtDateTime, types.PtDate:
-				var v *time.Time
-				row[i] = &v
-			case types.PtTime, types.PtYear:
-				var v *int
-				row[i] = &v
-			case types.PtUUID, types.PtJSON, types.PtText, types.PtArray, types.PtObject, types.PtMap:
-				var v *string
-				row[i] = &v
-			}
-		}
-		if err = rows.Scan(row...); err != nil {
-			_ = rows.Close()
+	var rows [][]any
+	values := warehouses.NewScanValues(columns, &rows)
+	for rawRows.Next() {
+		if err = rawRows.Scan(values...); err != nil {
+			_ = rawRows.Close()
 			return nil, warehouses.WrapError(err)
 		}
-		results = append(results, row)
 	}
-	if err = rows.Err(); err != nil {
+	if err = rawRows.Err(); err != nil {
 		return nil, warehouses.WrapError(err)
 	}
-	err = rows.Close()
+	err = rawRows.Close()
 	if err != nil {
 		log.Printf("[error] cannot close rows: %s", err)
 	}
-	if results == nil {
-		results = [][]any{}
+	if rows == nil {
+		rows = [][]any{}
 	}
 
-	return results, nil
+	return rows, nil
 }
 
 // connection returns the database connection.

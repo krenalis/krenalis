@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package apis
+package normalization
 
 import (
 	"encoding/json"
@@ -120,7 +120,7 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := normalizeAppPropertyValue("k", false, test.t, test.v)
+		got, err := NormalizeAppProperty("k", false, test.t, test.v)
 		if err != nil {
 			t.Fatal(err)
 		}

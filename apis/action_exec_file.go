@@ -15,6 +15,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/normalization"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 )
@@ -191,7 +192,7 @@ func (rw *recordWriter) Record(record []any) error {
 		// Store the record in the records field.
 		rd := make([]any, len(rw.columns))
 		for i, c := range rw.columns {
-			rd[i], err = normalizeDatabaseFilePropertyValue(c, record[i])
+			rd[i], err = normalization.NormalizeDatabaseFileProperty(c, record[i])
 			if err != nil {
 				return err
 			}
@@ -202,7 +203,7 @@ func (rw *recordWriter) Record(record []any) error {
 	// Call the rw.write function to store the record.
 	rd := map[string]any{}
 	for i, c := range rw.columns {
-		rd[c.Name], err = normalizeDatabaseFilePropertyValue(c, record[i])
+		rd[c.Name], err = normalization.NormalizeDatabaseFileProperty(c, record[i])
 		if err != nil {
 			return err
 		}
@@ -234,7 +235,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		// Store the record in the records field.
 		rd := make([]any, len(rw.columns))
 		for i, c := range rw.columns {
-			rd[i], err = normalizeDatabaseFilePropertyValue(c, record[c.Name])
+			rd[i], err = normalization.NormalizeDatabaseFileProperty(c, record[c.Name])
 			if err != nil {
 				return err
 			}
@@ -244,7 +245,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 	}
 	// Call the rw.write function to store the record.
 	for _, c := range rw.columns {
-		v, err := normalizeDatabaseFilePropertyValue(c, record[c.Name])
+		v, err := normalization.NormalizeDatabaseFileProperty(c, record[c.Name])
 		if err != nil {
 			return err
 		}
@@ -277,7 +278,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 		// Store the record in the records field.
 		rd := make([]any, len(rw.columns))
 		for i, c := range rw.columns {
-			err = validateStringProperty(c, record[i])
+			err = normalization.ValidateStringProperty(c, record[i])
 			if err != nil {
 				return err
 			}
@@ -289,7 +290,7 @@ func (rw *recordWriter) RecordString(record []string) error {
 	// Call the rw.write function to store the record.
 	rd := map[string]any{}
 	for i, c := range rw.columns {
-		err = validateStringProperty(c, record[i])
+		err = normalization.ValidateStringProperty(c, record[i])
 		if err != nil {
 			return err
 		}
