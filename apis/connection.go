@@ -464,10 +464,11 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 // It returns an errors.UnprocessableError error with code
 //
 //   - EventTypeNotExists, if the specified event type does not exist.
+//   - FetchSchemaFailed, if an error occurred fetching the action's schema.
 //   - PropertyNotExists, if a property of a mapping / transformation does not
 //     exist in the schema (except for properties of the event type schema,
 //     which is specified and thus returned as an errors.BadRequest error).
-//   - QueryExecutionFailed, if the execution of the specified query fails.
+//   - QueryExecutionFailed, if the execution of the action's query fails.
 //
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore.

@@ -232,10 +232,11 @@ func (this *Action) Execute(reimport bool) error {
 //
 // It returns an errors.UnprocessableError error with code
 //
+//   - FetchSchemaFailed, if an error occurred fetching the action's schema.
 //   - PropertyNotExists, if a property of a mapping / transformation does not
 //     exist in the schema (except for properties of the event type schema,
 //     which is specified and thus returned as an errors.BadRequest error).
-//   - QueryExecutionFailed, if the execution of the specified query fails.
+//   - QueryExecutionFailed, if the execution of the action's query fails.
 func (this *Action) Set(action ActionToSet) error {
 	c := this.action.Connection()
 	connection := &Connection{
@@ -726,7 +727,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if c.Role == state.SourceRole {
 			s, err := this.fetchDatabaseSchema(action.Query)
 			if err != nil {
-				return types.Type{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
+				return types.Type{}, err
 			}
 			schema = s
 		}
@@ -1002,6 +1003,9 @@ func (this *Connection) fetchAppSchema(target state.ActionTarget, eventType stri
 
 // fetchDatabaseSchema fetches the schema of a database connection executing the
 // given query.
+//
+// It returns an errors.UnprocessableError error with code QueryExecutionFailed
+// if the execution of the specified query fails.
 func (this *Connection) fetchDatabaseSchema(query string) (types.Type, error) {
 
 	c := this.connection
@@ -1023,7 +1027,7 @@ func (this *Connection) fetchDatabaseSchema(query string) (types.Type, error) {
 	var rows _connector.Rows
 	rows, properties, err := connection.Query(usersQuery)
 	if err != nil {
-		return types.Type{}, err
+		return types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 	}
 	err = rows.Close()
 	if err != nil {
