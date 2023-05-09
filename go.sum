@@ -114,8 +114,8 @@ github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826/go.mod h1:TaXosZuwd
 github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe/go.mod h1:wL8QJuTMNUDYhXwkmfOly8iTdp5TEcJFWZD2D7SIkUc=
 github.com/mssola/useragent v1.0.0 h1:WRlDpXyxHDNfvZaPEut5Biveq86Ze4o4EMffyMxmH5o=
 github.com/mssola/useragent v1.0.0/go.mod h1:hz9Cqz4RXusgg1EdI4Al0INR62kP7aPSRNHnpU+b85Y=
-github.com/open2b/clickhouse-go/v2 v2.9.1-fix3 h1:WRswvM2XvjlRxhpsB0sRxHIA5wTqHUxEmWH54ZR0ZVk=
-github.com/open2b/clickhouse-go/v2 v2.9.1-fix3/go.mod h1:/6iQulg7wTRBOXcbLllk+INdIVt1lsjGGi+B5eC1SYs=
+github.com/open2b/clickhouse-go/v2 v2.9.1-fix4 h1:TOrAR0tlOMsnnhrhmtJ6OeqdEcAyfHzVoJ/w5LUY7Kc=
+github.com/open2b/clickhouse-go/v2 v2.9.1-fix4/go.mod h1:/6iQulg7wTRBOXcbLllk+INdIVt1lsjGGi+B5eC1SYs=
 github.com/open2b/nuts v1.5.3 h1:98iQaCYoGSRbqESuolHpsLnUPerWrqu+0WqvRe5WGjI=
 github.com/open2b/nuts v1.5.3/go.mod h1:3H0bVzhUKOgpIVvN9qLj/R4rs27rDv1rL6WpeLLxmzc=
 github.com/oschwald/geoip2-golang v1.8.0 h1:KfjYB8ojCEn/QLqsDU0AzrJ3R5Qa9vFlx3z6SLNcKTs=

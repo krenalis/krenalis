@@ -2,7 +2,7 @@ module chichi
 
 go 1.20
 
-replace github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.9.1-fix3
+replace github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.9.1-fix4
 
 replace (
 	chichi/connectors/clickhouse => ./connectors/clickhouse

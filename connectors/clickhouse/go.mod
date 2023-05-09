@@ -4,7 +4,7 @@ go 1.20
 
 require github.com/ClickHouse/clickhouse-go/v2 v2.9.1
 
-replace github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.9.1-fix3
+replace github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.9.1-fix4
 
 require (
 	github.com/ClickHouse/ch-go v0.52.1 // indirect
