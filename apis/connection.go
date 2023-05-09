@@ -681,7 +681,7 @@ func (this *Connection) Delete() error {
 // connection.
 //
 // query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
-// must contain the ':limit' placeholder between '[[' and ']]'. limit must be
+// must contain the '$limit' variable (between '{{' and '}}'). limit must be
 // in range [0, 100].
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.

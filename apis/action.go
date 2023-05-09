@@ -1124,27 +1124,27 @@ func allowsActionTarget(typ state.ConnectorType, role _connector.Role, target st
 const noQueryLimit = -1
 
 // compileActionQuery compiles the given query and returns it. If limit is
-// noQueryLimit removes the ':limit' placeholder (along with '[[' and ']]');
-// otherwise, replaces the placeholders with limit.
+// noQueryLimit removes the $limit variable (along with '{{' and '}}');
+// otherwise, replaces the variable with limit.
 func compileActionQuery(query string, limit int) (string, error) {
-	p := strings.Index(query, ":limit")
+	p := strings.Index(query, "$limit")
 	if p == -1 {
-		return "", errors.BadRequest("query does not contain the ':limit' placeholder")
+		return "", errors.BadRequest("query does not contain the $limit variable")
 	}
-	s1 := strings.Index(query[:p], "[[")
+	s1 := strings.Index(query[:p], "{{")
 	if s1 == -1 {
-		return "", errors.BadRequest("query does not contain '[['")
+		return "", errors.BadRequest("query does not contain '{{'")
 	}
-	n := len(":limit")
-	s2 := strings.Index(query[p+n:], "]]")
+	n := len("$limit")
+	s2 := strings.Index(query[p+n:], "}}")
 	if s2 == -1 {
-		return "", errors.BadRequest("query does not contain ']]'")
+		return "", errors.BadRequest("query does not contain '}}'")
 	}
 	s2 += p + n + 2
 	if limit == noQueryLimit {
 		return query[:s1] + query[s2:], nil
 	}
-	return query[:s1] + strings.ReplaceAll(query[s1+2:s2-2], ":limit", strconv.Itoa(limit)) + query[s2:], nil
+	return query[:s1] + strings.ReplaceAll(query[s1+2:s2-2], "$limit", strconv.Itoa(limit)) + query[s2:], nil
 }
 
 // existsInObject reports whether a property, denoted by its path - for example

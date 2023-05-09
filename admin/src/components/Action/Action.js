@@ -430,8 +430,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			showError('You query is too long');
 			return;
 		}
-		if (!trimmed.includes(':limit')) {
-			showError(`Your query does not contain the ':limit' placeholder`);
+		if (!trimmed.includes('$limit')) {
+			showError(`Your query does not contain the $limit variable`);
 			return;
 		}
 		let [res, err] = await API.connections.query(c.ID, trimmed, limit);
