@@ -116,7 +116,7 @@ func decodeByType(dec *json.Decoder, tok json.Token, t types.Type) (any, error) 
 		if err != nil {
 			return nil, fmt.Errorf("%s is not a %s", n, pt)
 		}
-		if min, max := t.DecimalRange(); d.LessThan(min) || d.GreaterThan(d) {
+		if min, max := t.DecimalRange(); d.LessThan(min) || d.GreaterThan(max) {
 			return nil, fmt.Errorf("value must be in [%s,%s]", min, max)
 		}
 		return d, nil
