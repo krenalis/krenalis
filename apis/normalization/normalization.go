@@ -267,14 +267,20 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 			}
 		}
 	case types.PtJSON:
+		var v json.RawMessage
 		switch src := src.(type) {
 		case json.RawMessage:
-			value = src
-			valid = json.Valid(src)
+			v = src
 		case string:
-			v := json.RawMessage(src)
+			v = json.RawMessage(src)
+		}
+		valid = json.Valid(v)
+		if valid {
+			if l, ok := typ.CharLen(); ok && utf8.RuneCount(v) > l {
+				return nil, fmt.Errorf("app returned a value of %q for property %s, which is longer than %d characters",
+					abbreviate(string(v), 20), name, l)
+			}
 			value = v
-			valid = json.Valid(v)
 		}
 	case types.PtInet:
 		if s, ok := src.(string); ok {
@@ -542,10 +548,17 @@ func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, s
 			}
 		}
 	case types.PtJSON:
+		var v json.RawMessage
 		if s, ok := src.([]byte); ok {
-			if valid = json.Valid(s); valid {
-				value = json.RawMessage(s)
+			v = s
+		}
+		valid = json.Valid(v)
+		if valid {
+			if l, ok := typ.CharLen(); ok && utf8.RuneCount(v) > l {
+				return nil, fmt.Errorf("app returned a value of %q for property %s, which is longer than %d characters",
+					abbreviate(string(v), 20), name, l)
 			}
+			value = v
 		}
 	case types.PtInet:
 		switch src := src.(type) {

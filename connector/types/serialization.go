@@ -156,6 +156,11 @@ func marshalType(b *bytes.Buffer, t Type) {
 	case PtDateTime, PtDate:
 		b.WriteString(`,"layout":`)
 		marshalString(b, t.vl.(string))
+	case PtJSON:
+		if t.s > 0 {
+			b.WriteString(`,"charLen":`)
+			b.WriteString(strconv.Itoa(int(t.s)))
+		}
 	case PtText:
 		if t.p > 0 {
 			b.WriteString(`,"byteLen":`)
@@ -769,8 +774,8 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		t.p = int32(byteLen)
 	}
 	if charLen > 0 {
-		if pt != PtText {
-			return Type{}, errors.New("unexpected length in characters for non-Text type")
+		if pt != PtJSON && pt != PtText {
+			return Type{}, errors.New("unexpected length in characters for non-JSON and non-Text types")
 		}
 		t.s = int32(charLen)
 	}

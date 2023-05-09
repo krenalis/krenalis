@@ -38,6 +38,12 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Text","enum":["a","b"]}`,
 			Type: Text().WithEnum([]string{"a", "b"}),
 		}, {
+			Data: `{"name":"Text","charLen":10000}`,
+			Type: Text().WithCharLen(10000),
+		}, {
+			Data: `{"name":"JSON","charLen":10000}`,
+			Type: JSON().WithCharLen(10000),
+		}, {
 			Data: `{"name":"Int8","minimum":10}`,
 			Type: Int8().WithIntRange(10, MaxInt8),
 		}, {

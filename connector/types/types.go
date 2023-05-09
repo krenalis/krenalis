@@ -276,7 +276,7 @@ type Type struct {
 	//   - maximum value for Int, Int8, Int16 and Int24
 	//   - maximum value, as uint32(s), for UInt, UInt8, UInt16 and UInt24
 	//   - scale for Decimal
-	//   - length in characters for Text
+	//   - length in characters for JSON and Text types
 	//   - maximum length for Array
 	s int32
 
@@ -947,14 +947,50 @@ func (t Type) ByteLen() (int, bool) {
 	return int(t.p), t.p > 0
 }
 
-// CharLen returns the maximum length in characters of a Text type and true.
-// If t has no maximum length in characters, it returns 0 and false.
-// Panics if t is not a Text type.
-func (t Type) CharLen() (int, bool) {
+// WithByteLen returns t with a maximum length of l of a Text type. l must be in
+// range [1, MaxTextLen].
+// Panics if t is not a Text type, or if l is not in range, or if t has already
+// a byte length.
+func (t Type) WithByteLen(l int) Type {
 	if t.pt != PtText {
-		panic("cannot get character length of a non-Text type")
+		panic("cannot set byte length of a non-Text type")
+	}
+	if t.s > 0 {
+		panic("repeated length in bytes")
+	}
+	if l <= 0 || l > MaxTextLen {
+		panic("invalid text length")
+	}
+	t.p = int32(l)
+	return t
+}
+
+// CharLen returns the maximum length in characters of JSON and Text types and
+// true. If t has no maximum length in characters, it returns 0 and false.
+// Panics if t is not a JSON or Text type.
+func (t Type) CharLen() (int, bool) {
+	if t.pt != PtJSON && t.pt != PtText {
+		panic("cannot get character length of non-JSON and non-Text types")
 	}
 	return int(t.s), t.s > 0
+}
+
+// WithCharLen returns t with a maximum length of l of a JSON and Text type. l
+// must be in range [1, MaxTextLen].
+// Panics if t is not a JSON or Text type, or if l is not in range, or if t has
+// already a char length.
+func (t Type) WithCharLen(l int) Type {
+	if t.pt != PtJSON && t.pt != PtText {
+		panic("cannot set character length of non-JSON and non-Text types")
+	}
+	if t.s > 0 {
+		panic("repeated length in characters")
+	}
+	if l <= 0 || l > MaxTextLen {
+		panic("invalid text length")
+	}
+	t.s = int32(l)
+	return t
 }
 
 // Regexp returns the regular expression of t. If t has no regular expression,
