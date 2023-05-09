@@ -72,7 +72,7 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 		if valid {
 			min, max := typ.IntRange()
 			if v < min || v > max {
-				return nil, fmt.Errorf("app returnd a value of %d for property %s which is not within the expected range of [%d, %d]",
+				return nil, fmt.Errorf("app returned a value of %d for property %s which is not within the expected range of [%d, %d]",
 					v, name, min, max)
 			}
 			value = int(v)
@@ -99,7 +99,7 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 		if valid {
 			min, max := typ.UIntRange()
 			if v < min || v > max {
-				return nil, fmt.Errorf("app returnd a value of %d for property %s which is not within the expected range of [%d, %d]",
+				return nil, fmt.Errorf("app returned a value of %d for property %s which is not within the expected range of [%d, %d]",
 					v, name, min, max)
 			}
 			value = uint(v)
@@ -118,7 +118,7 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 		if valid {
 			min, max := typ.FloatRange()
 			if v < min || v > max {
-				return nil, fmt.Errorf("app returnd a value of %f for property %s which is not within the expected range of [%f, %f]",
+				return nil, fmt.Errorf("app returned a value of %f for property %s which is not within the expected range of [%f, %f]",
 					v, name, min, max)
 			}
 			value = v
@@ -144,7 +144,7 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 		if valid {
 			min, max := typ.DecimalRange()
 			if v.LessThan(min) || v.GreaterThan(max) {
-				return nil, fmt.Errorf("app returnd a value of %s for property %s which is not within the expected range of [%s, %s]",
+				return nil, fmt.Errorf("app returned a value of %s for property %s which is not within the expected range of [%s, %s]",
 					v, name, min, max)
 			}
 			value = v
@@ -417,7 +417,7 @@ func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, s
 		if valid {
 			min, max := typ.IntRange()
 			if v < min || v > max {
-				return nil, fmt.Errorf("database returnd a value of %d for column %s which is not within the expected range of [%d, %d]",
+				return nil, fmt.Errorf("database returned a value of %d for column %s which is not within the expected range of [%d, %d]",
 					v, name, min, max)
 			}
 			value = int(v)
@@ -445,7 +445,7 @@ func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, s
 		if valid {
 			min, max := typ.UIntRange()
 			if v < min || v > max {
-				return nil, fmt.Errorf("database returnd a value of %d for column %s which is not within the expected range of [%d, %d]",
+				return nil, fmt.Errorf("database returned a value of %d for column %s which is not within the expected range of [%d, %d]",
 					v, name, min, max)
 			}
 			value = uint(v)
@@ -471,7 +471,7 @@ func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, s
 		if valid {
 			min, max := typ.FloatRange()
 			if v < min || v > max {
-				return nil, fmt.Errorf("database returnd a value of %f for column %s which is not within the expected range of [%f, %f]",
+				return nil, fmt.Errorf("database returned a value of %f for column %s which is not within the expected range of [%f, %f]",
 					v, name, min, max)
 			}
 			value = v
@@ -500,7 +500,7 @@ func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, s
 		if valid {
 			min, max := typ.DecimalRange()
 			if v.LessThan(min) || v.GreaterThan(max) {
-				return nil, fmt.Errorf("database returnd a value of %s for column %s which is not within the expected range of [%s, %s]",
+				return nil, fmt.Errorf("database returned a value of %s for column %s which is not within the expected range of [%s, %s]",
 					v, name, min, max)
 			}
 			value = v
