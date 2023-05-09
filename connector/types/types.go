@@ -413,32 +413,9 @@ func Inet() Type {
 	return Type{pt: PtInet}
 }
 
-// Text returns the Text type with the given lengths.
-// Panics if a length is not greater than zero and panics if there is more than
-// one length in bytes or more than one length in characters.
-func Text(lengths ...Length) Type {
-	t := Type{pt: PtText}
-	for _, length := range lengths {
-		switch l := length.(type) {
-		case Bytes:
-			if t.p > 0 {
-				panic("repeated length in bytes")
-			}
-			if l <= 0 || l > MaxTextLen {
-				panic("invalid text length")
-			}
-			t.p = int32(l)
-		case Chars:
-			if t.s > 0 {
-				panic("repeated length in characters")
-			}
-			if l <= 0 || l > MaxTextLen {
-				panic("invalid text length")
-			}
-			t.s = int32(l)
-		}
-	}
-	return t
+// Text returns a Text type.
+func Text() Type {
+	return Type{pt: PtText}
 }
 
 // Array returns an Array type with items of type t.
@@ -1315,21 +1292,6 @@ func (t Type) EqualTo(t2 Type) bool {
 	}
 	return true
 }
-
-// Length represents a Text length.
-type Length interface {
-	length() int
-}
-
-// Chars represents a length in characters.
-type Chars int
-
-func (l Chars) length() int { return int(l) }
-
-// Bytes represents a length in bytes.
-type Bytes int
-
-func (l Bytes) length() int { return int(l) }
 
 // normalizedUTF8 returns s as a normalized UTF-8 encoded string.
 // Panics if s is not a valid UTF-8 encoded string.

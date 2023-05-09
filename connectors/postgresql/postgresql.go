@@ -222,7 +222,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 			return types.Type{}, errors.New("cannot get length")
 		}
 		if length > 0 {
-			return types.Text(types.Chars(length)), nil
+			return types.Text().WithCharLen(int(length)), nil
 		}
 		return types.Text(), nil
 	case "DATE":

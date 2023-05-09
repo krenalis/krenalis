@@ -55,7 +55,7 @@ func TestTypes(t *testing.T) {
 		{`JSON`, types.JSON(), false},
 		{`IPv4`, types.Inet(), false},
 		{`IPv6`, types.Inet(), false},
-		{`FixedString(10)`, types.Text(types.Bytes(10)), false},
+		{`FixedString(10)`, types.Text().WithByteLen(10), false},
 		{`Map(String, Int32)`, types.Map(types.Int()), false},
 		{`Map(String, Array(String))`, types.Map(types.Array(types.Text())), false},
 		{`Nullable(Int8)`, types.Int8(), true},

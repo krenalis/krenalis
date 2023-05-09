@@ -21,8 +21,8 @@ func TestUnflatten(t *testing.T) {
 			Flatten:   Boolean(),
 			Unflatten: Boolean(),
 		}, {
-			Flatten:   Text(Chars(10)),
-			Unflatten: Text(Chars(10)),
+			Flatten:   Text().WithCharLen(10),
+			Unflatten: Text().WithCharLen(10),
 		}, {
 			Flatten:   Text().WithEnum([]string{"a", "b"}),
 			Unflatten: Text().WithEnum([]string{"a", "b"}),

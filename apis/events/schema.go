@@ -104,7 +104,7 @@ var Schema = types.Object([]types.Property{
 		Flat: true,
 	},
 	{Name: "device_type", Type: types.Text().WithEnum([]string{"desktop", "tablet", "mobile"})},
-	{Name: "locale", Type: types.Text(types.Chars(5))},
+	{Name: "locale", Type: types.Text().WithCharLen(5)},
 	{Name: "timezone", Type: types.Text()},
 	{
 		Name: "page",

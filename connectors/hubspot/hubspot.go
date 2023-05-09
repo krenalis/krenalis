@@ -663,7 +663,7 @@ func propertyType(c, t string) (types.Type, error) {
 	case "number":
 		return types.Decimal(types.MaxDecimalPrecision-1, 1), nil
 	case "string", "phone_number":
-		return types.Text(types.Chars(65536)), nil
+		return types.Text().WithCharLen(65536), nil
 	}
 	return types.Type{}, connector.NewNotSupportedTypeError(c, t)
 }

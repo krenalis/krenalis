@@ -215,7 +215,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "BIT":
 		return types.Boolean(), nil
 	case "TEXT", "BLOB":
-		return types.Text(types.Bytes(65535)), nil
+		return types.Text().WithByteLen(65535), nil
 	case "DATE":
 		return types.Date().WithLayout(time.DateOnly), nil
 	case "DATETIME":
@@ -244,13 +244,13 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "INT":
 		return types.Int(), nil
 	case "LONGTEXT", "LONGBLOB":
-		return types.Text(types.Bytes(4294967295)), nil
+		return types.Text().WithByteLen(4294967295), nil
 	case "UNSIGNED BIGINT":
 		return types.UInt64(), nil
 	case "BIGINT":
 		return types.Int64(), nil
 	case "MEDIUMTEXT", "MEDIUMBLOB":
-		return types.Text(types.Bytes(16777216)), nil
+		return types.Text().WithByteLen(16777216), nil
 	case "UNSIGNED SMALLINT":
 		return types.UInt16(), nil
 	case "SMALLINT":
@@ -260,13 +260,13 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		if !ok {
 			return types.Text(), nil
 		}
-		return types.Text(types.Chars(length)), nil
+		return types.Text().WithCharLen(int(length)), nil
 	case "VARBINARY", "BINARY":
 		length, ok := t.Length()
 		if !ok {
 			return types.Text(), nil
 		}
-		return types.Text(types.Bytes(length)), nil
+		return types.Text().WithByteLen(int(length)), nil
 	case "TIME":
 		return types.Time(), nil
 	case "TIMESTAMP":
@@ -276,7 +276,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "TINYINT":
 		return types.Int8(), nil
 	case "TINYTEXT", "TINYBLOB":
-		return types.Text(types.Bytes(255)), nil
+		return types.Text().WithByteLen(255), nil
 	case "YEAR":
 		return types.Year(), nil
 	}

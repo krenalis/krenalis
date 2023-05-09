@@ -79,7 +79,7 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, resolver composi
 			if chars < 1 {
 				return types.Type{}, fmt.Errorf("character_maximum_length value %q is not valid", *column.charLength)
 			}
-			t = types.Text(types.Chars(chars))
+			t = types.Text().WithCharLen(chars)
 		} else {
 			t = types.Text()
 		}
@@ -119,7 +119,7 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, resolver composi
 				if length < 1 {
 					return types.Type{}, fmt.Errorf("atttypmod value %d is not valid", *attTypMod)
 				}
-				t = types.Text(types.Chars(length))
+				t = types.Text().WithCharLen(length)
 			} else {
 				t = types.Text()
 			}

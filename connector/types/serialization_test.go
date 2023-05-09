@@ -27,13 +27,13 @@ func TestTypeSerialization(t *testing.T) {
 			Type: Text(),
 		}, {
 			Data: `{"name":"Text","charLen":10}`,
-			Type: Text(Chars(10)),
+			Type: Text().WithCharLen(10),
 		}, {
 			Data: `{"name":"Text","byteLen":24}`,
-			Type: Text(Bytes(24)),
+			Type: Text().WithByteLen(24),
 		}, {
 			Data: `{"name":"Text","byteLen":80,"charLen":100}`,
-			Type: Text(Chars(100), Bytes(80)),
+			Type: Text().WithByteLen(80).WithCharLen(100),
 		}, {
 			Data: `{"name":"Text","enum":["a","b"]}`,
 			Type: Text().WithEnum([]string{"a", "b"}),

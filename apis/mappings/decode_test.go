@@ -123,7 +123,7 @@ func TestDecode(t *testing.T) {
 		},
 		{
 			Data:  `"abc"`,
-			Type:  types.Text(types.Chars(5)),
+			Type:  types.Text().WithCharLen(5),
 			Value: "abc",
 		},
 		{
