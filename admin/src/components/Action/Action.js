@@ -652,7 +652,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		let propertiesList = [];
 		for (let k in properties) {
 			let name;
-			if (properties[k].label != null) {
+			if (properties[k].label != null && properties[k].label !== '') {
 				name = (
 					<div className='propertiesItemName'>
 						<div className='label'>{properties[k].label}</div>
