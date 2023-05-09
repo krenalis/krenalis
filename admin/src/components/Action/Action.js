@@ -732,6 +732,32 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		}
 	}
 
+	let isQueryChanged = false;
+	if (initialQuery.current != null) {
+		if (initialQuery.current.trim() !== action.Query.trim()) {
+			isQueryChanged = true;
+		}
+	} else {
+		if (action.Query != null && action.Query.trim() !== '') {
+			isQueryChanged = true;
+		}
+	}
+
+	let isConfirmFileButtonDisabled = false;
+	if (initialPath.current != null) {
+		if (action.Path.trim() === initialPath.current.trim()) {
+			isConfirmFileButtonDisabled = true;
+		}
+
+		if (initialSheet.current != null) {
+			if (action.Sheet.trim() !== initialSheet.current.trim()) {
+				isConfirmFileButtonDisabled = false;
+			}
+		}
+	}
+
+	let hasQueryError = c.Type === 'Database' && inputSchema == null;
+	let isPropertiesSectionDisabled = hasQueryError || isQueryChanged;
 	let propertiesSection = null;
 	if (supports.includes('Mapping')) {
 		let propertiesSectionActions = null;
@@ -789,15 +815,11 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			}
 		} else if (propertiesMode === 'mappings') {
 			let mappings = [];
-			let isSectionDisabled;
-			if (c.Type === 'Database' && inputSchema == null) {
-				isSectionDisabled = true;
-			}
 			let defaultMappings = getDefaultMappings(inputSchema);
 			for (let k of Object.keys(action.Mapping)) {
 				let error;
 				let value = action.Mapping[k].value;
-				if (!isSectionDisabled && value !== '') {
+				if (!isPropertiesSectionDisabled && value !== '') {
 					let doesValueExist = defaultMappings[value] != null;
 					if (!doesValueExist) {
 						error = `"${value}" does not exist in ${c.Type.toLowerCase()}'s schema`;
@@ -819,7 +841,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							setFocused={setFocusedProperty}
 							value={value}
 							name={k}
-							disabled={isSectionDisabled || action.Mapping[k].disabled}
+							disabled={isPropertiesSectionDisabled || action.Mapping[k].disabled}
 							className='inputProperty'
 							size='small'
 							error={error}
@@ -844,11 +866,12 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			}
 			propertiesSectionContent = (
 				<div className='mappings'>
-					{isSectionDisabled && (
+					{isPropertiesSectionDisabled && (
 						<SlAlert variant='danger' className='mappingsDisabledAlert' open>
 							<SlIcon slot='icon' name='exclamation-circle' />
-							Mappings are disabled since the query returned an error. Fix the query before proceding to
-							mappings.
+							{hasQueryError
+								? 'Mappings are disabled since the query returned an error. Fix the query before proceding to mappings.'
+								: 'Mappings are disabled since you have modified the query. Confirm the query or undo the changes before proceding to mappings'}
 						</SlAlert>
 					)}
 					{mappings}
@@ -939,30 +962,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		);
 	}
 
-	let isConfirmQueryButtonDisabled = false;
-	if (initialQuery.current != null) {
-		if (action.Query.trim() === initialQuery.current.trim()) {
-			isConfirmQueryButtonDisabled = true;
-		}
-	} else {
-		if (action.Query == null || action.Query.trim() === '') {
-			isConfirmQueryButtonDisabled = true;
-		}
-	}
-
-	let isConfirmFileButtonDisabled = false;
-	if (initialPath.current != null) {
-		if (action.Path.trim() === initialPath.current.trim()) {
-			isConfirmFileButtonDisabled = true;
-		}
-
-		if (initialSheet.current != null) {
-			if (action.Sheet.trim() !== initialSheet.current.trim()) {
-				isConfirmFileButtonDisabled = false;
-			}
-		}
-	}
-
 	return (
 		<EditPage
 			title={
@@ -997,7 +996,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				<SlButton
 					className='saveAction'
 					variant='primary'
-					disabled={actionType.Schema != null && propertiesMode === ''}
+					disabled={(actionType.Schema != null && propertiesMode === '') || isPropertiesSectionDisabled}
 					onClick={onSave}
 				>
 					{actionProp != null ? 'Save' : 'Add'}
@@ -1046,7 +1045,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 								variant='success'
 								size='small'
 								onClick={onConfirmQuery}
-								disabled={isConfirmQueryButtonDisabled}
+								disabled={!isQueryChanged}
 							>
 								Confirm
 							</SlButton>

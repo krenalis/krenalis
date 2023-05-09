@@ -68,6 +68,7 @@ const ComboBoxInput = ({
 	setFocused,
 	children,
 	error,
+	disabled,
 	...delegated
 }) => {
 	const onKeyUpRef = useRef(null);
@@ -130,11 +131,12 @@ const ComboBoxInput = ({
 		<div className='comboBoxInput'>
 			<SlInput
 				data-is-combobox-input
-				onSlInput={handleInput}
-				onSlFocus={onInputFocus}
-				onSlBlur={onInputBlur}
-				onClick={onClick}
+				onSlInput={disabled ? null : handleInput}
+				onSlFocus={disabled ? null : onInputFocus}
+				onSlBlur={disabled ? null : onInputBlur}
+				onClick={disabled ? null : onClick}
 				autocomplete='off'
+				disabled={disabled}
 				{...delegated}
 			>
 				{children}
