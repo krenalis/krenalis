@@ -20,6 +20,7 @@ CREATE TYPE movie AS (
 
 CREATE TABLE users (
     id                      SERIAL,
+    "timestamp"             timestamp NOT NULL DEFAULT now(),
     "FirstName"             varchar(300),
     "LastName"              varchar(300),
     "Email"                 varchar(300),
@@ -28,6 +29,5 @@ CREATE TABLE users (
     "FoodPreferences_Fruit" fruit,
     "PhoneNumbers"          varchar(300)[],
     "FavouriteMovie"        movie,
-    "timestamp"             timestamp NOT NULL DEFAULT now(),
     PRIMARY KEY (id)
 );

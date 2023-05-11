@@ -5,14 +5,14 @@
 CREATE TABLE users
 (
     `id` Int32,
+    `timestamp` DateTime DEFAULT now(),
     `FirstName` String,
     `LastName` String,
     `Email` String,
     `Gender` Enum8('male' = 1, 'female' = 2, 'other' = 3),
     `FoodPreferences_Drink` Enum8('water' = 1, 'wine' = 2, 'beer' = 3, 'tea' = 4),
     `FoodPreferences_Fruit` Enum8('apple' = 1, 'orange' = 2, 'mango' = 3, 'peach' = 4, 'lime' = 5),
-    `PhoneNumbers` Array(String),
-    `timestamp` DateTime DEFAULT now()
+    `PhoneNumbers` Array(String)
 )
 ENGINE = MergeTree
 PRIMARY KEY id
