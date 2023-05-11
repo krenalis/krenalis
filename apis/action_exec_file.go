@@ -61,18 +61,8 @@ func (this *Action) importFromFile() error {
 	}
 
 	// Read the records.
-	var rw *recordWriter
-	rw = newRecordWriter(c.ID, identityLabel, timestampLabel, math.MaxInt, func(record map[string]any) error {
-		user := fmt.Sprintf("%s", record[rw.identityColumn])
-		ts, err := time.Parse(time.DateTime, record[rw.timestampColumn].(string))
-		if err != nil {
-			return fmt.Errorf("invalid timestamp column value: %s", record[rw.timestampColumn])
-		}
-		timestamps := map[string]time.Time{}
-		for name := range record {
-			timestamps[name] = ts
-		}
-		return this.setUser(user, record, timestamps)
+	rw := newRecordWriter(c.ID, math.MaxInt, func(record map[string]any) error {
+		return this.setUser(record, nil)
 	})
 	err = file.Read(r, this.action.Sheet, rw)
 	if err != nil {
@@ -94,14 +84,11 @@ func (this *Action) importFromFile() error {
 // newRecordWriter returns a new record writer that writes at most limit
 // records. If write is not nil, it calls the write function for each record
 // written, otherwise it stores the records in the records field.
-func newRecordWriter(connector int, identityLabel, timestampLabel string, limit int, write func(record map[string]any) error) *recordWriter {
+func newRecordWriter(connector int, limit int, write func(record map[string]any) error) *recordWriter {
 	rw := recordWriter{
-		connector:      connector,
-		limit:          limit,
-		write:          write,
-		identityLabel:  identityLabel,
-		timestampLabel: timestampLabel,
-
+		connector:       connector,
+		limit:           limit,
+		write:           write,
 		textColumnsOnly: true,
 	}
 	if write == nil {
@@ -118,10 +105,6 @@ type recordWriter struct {
 	columns         []types.Property
 	timestamp       time.Time
 	columnByName    map[string]types.Property
-	identityLabel   string
-	identityColumn  string
-	timestampLabel  string
-	timestampColumn string
 	setUserCalled   bool
 	textColumnsOnly bool
 	records         [][]any
@@ -159,18 +142,6 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		if rw.textColumnsOnly {
 			rw.textColumnsOnly = c.Type.PhysicalType() == types.PtText
 		}
-		if c.Label == rw.identityLabel {
-			rw.identityColumn = c.Name
-		}
-		if c.Label == rw.timestampLabel {
-			rw.timestampColumn = c.Name
-		}
-	}
-	if rw.identityColumn == "" {
-		return _connector.MissingIdentityColumnError{Column: rw.identityLabel}
-	}
-	if rw.timestampLabel != "" && rw.timestampColumn == "" {
-		return _connector.MissingTimestampColumnError{Column: rw.timestampLabel}
 	}
 	rw.columns = columns
 	if rw.limit == 0 {

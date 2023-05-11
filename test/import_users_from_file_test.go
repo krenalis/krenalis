@@ -72,7 +72,9 @@ func TestImportUsersFromFile(t *testing.T) {
 			"Name": "Import users from CSV on Filesystem",
 			"Path": "users.csv",
 			"Mapping": map[string]string{
-				"Email": "column4",
+				"id":        "column1",
+				"Email":     "column4",
+				"timestamp": "column5",
 			},
 		},
 	})

@@ -744,12 +744,25 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	// Determine the input and the output schema.
 	var inSchema, outSchema types.Type
 	switch target {
-	case state.UsersTarget, state.GroupsTarget:
+	case state.UsersTarget:
 		ws := c.Workspace()
-		schemaName := strings.ToLower(target.String())
-		grSchema, ok := ws.Schemas[schemaName]
+		grSchema, ok := ws.Schemas["users"]
 		if !ok {
-			return types.Type{}, errors.BadRequest("workspace %d of connection %d does not have %s schema", ws.ID, c.ID, schemaName)
+			return types.Type{}, errors.BadRequest("workspace %d of connection %d does not have users schema", ws.ID, c.ID)
+		}
+		connSchema := usersSchemaToConnectionSchema(*grSchema, c.Connector().Type)
+		if c.Role == state.SourceRole {
+			inSchema = schema
+			outSchema = connSchema
+		} else {
+			inSchema = connSchema
+			outSchema = schema
+		}
+	case state.GroupsTarget:
+		ws := c.Workspace()
+		grSchema, ok := ws.Schemas["groups"]
+		if !ok {
+			return types.Type{}, errors.BadRequest("workspace %d of connection %d does not have groups schema", ws.ID, c.ID)
 		}
 		if c.Role == state.SourceRole {
 			inSchema = schema
@@ -1083,7 +1096,7 @@ func (this *Connection) fetchFileSchema(path, sheet string) (types.Type, error) 
 		return types.Type{}, err
 	}
 	defer rc.Close()
-	rw := newRecordWriter(c.ID, identityLabel, timestampLabel, 0, nil)
+	rw := newRecordWriter(c.ID, 0, nil)
 	err = file.Read(rc, sheet, rw)
 	if err != nil && err != errRecordStop {
 		return types.Type{}, err
@@ -1220,4 +1233,41 @@ func shouldStoreActionSchema(typ state.ConnectorType, role state.ConnectionRole,
 		return target == state.UsersTarget || target == state.GroupsTarget
 	}
 	return target == state.EventsTarget
+}
+
+// usersSchemaToConnectionSchema returns the users schema of a connection
+// corresponding to the users schema of the Golden Record, which is transformed
+// depending on the connection type.
+func usersSchemaToConnectionSchema(users types.Type, connTyp state.ConnectorType) types.Type {
+	usersProps := users.Properties()
+	var props []types.Property
+	switch connTyp {
+	case
+		state.AppType:
+		// Remove the "id" and "timestamp" properties from the schema, which
+		// cannot be mapped explicitly by the user but are mapped implicitly by
+		// Chichi.
+		props = make([]types.Property, 0, len(usersProps)-2)
+		for _, p := range users.Properties() {
+			if p.Name == "id" || p.Name == "timestamp" {
+				continue
+			}
+			props = append(props, p)
+		}
+	case
+		state.DatabaseType,
+		state.FileType:
+		// Replace the "id" property with a required property "id" with type
+		// Text instead of Int.
+		props = make([]types.Property, 0, len(usersProps))
+		for _, p := range users.Unflatten().Properties() {
+			if p.Name == "id" {
+				p = types.Property{Name: "id", Label: "ID", Type: types.Text(), Required: true}
+			}
+			props = append(props, p)
+		}
+	default:
+		panic(fmt.Sprintf("unexpected connection type %d", connTyp))
+	}
+	return types.Object(props)
 }

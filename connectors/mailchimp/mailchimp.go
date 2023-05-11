@@ -52,7 +52,9 @@ func init() {
 			URL:             "https://login.mailchimp.com/oauth2/authorize?response_type=code",
 			ForcedExpiresIn: "never",
 		},
-		WebhooksPer: connector.WebhooksPerSource,
+		WebhooksPer:       connector.WebhooksPerSource,
+		IdentityProperty:  "ID",
+		TimestampProperty: "LastChanged",
 	}, open)
 }
 
@@ -289,20 +291,20 @@ func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 }
 
 // SetUsers sets the given users.
-func (c *connection) SetUsers(users []connector.User) error {
+func (c *connection) SetUsers(users []connector.Properties) error {
 
 	var r struct {
 		Operations []batchOperation `json:"operations"`
 	}
 	var basePath = "/lists/" + c.settings.List + "/members/"
 	for _, u := range users {
-		body, err := json.Marshal(u.Properties)
+		body, err := json.Marshal(u)
 		if err != nil {
 			return err
 		}
 		r.Operations = append(r.Operations, batchOperation{
 			Method: "PUT",
-			Path:   basePath + u.ID,
+			Path:   basePath + u["id"].(string),
 			Params: map[string]string{"skip_merge_validation": "true"},
 			Body:   string(body),
 		})
@@ -604,7 +606,7 @@ func (c *connection) Users(cursor string, properties []connector.PropertyPath) e
 			return err
 		}
 		for _, m := range response.Members {
-			c.firehose.SetUser(m.ID, m.Properties(), m.LastChanged, nil)
+			c.firehose.SetUser(m.Properties(), nil)
 		}
 		done := offset+len(response.Members) >= response.TotalItems
 		if len(response.Members) > 0 {

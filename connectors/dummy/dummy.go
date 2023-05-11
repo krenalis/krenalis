@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"chichi/connector"
@@ -36,6 +37,7 @@ func init() {
 		SourceDescription:      "import users from Dummy",
 		DestinationDescription: "export users and send events to Dummy",
 		TermForUsers:           "users",
+		IdentityProperty:       "dummy_id",
 	}, open)
 }
 
@@ -121,15 +123,14 @@ type user struct {
 	Properties map[string]any
 }
 
-var now = time.Now()
-
-func (c *connection) SetUsers(users []connector.User) error {
+func (c *connection) SetUsers(users []connector.Properties) error {
 	panic("not implemented")
 }
 
 // UserSchema returns the user schema.
 func (c *connection) UserSchema() (types.Type, error) {
 	schema := types.Object([]types.Property{
+		{Name: "dummy_id", Type: types.Text()},
 		{Name: "email", Type: types.Text()},
 		{Name: "first_name", Type: types.Text()},
 		{Name: "full_name", Type: types.Text()},
@@ -151,8 +152,11 @@ func (c *connection) Users(cursor string, properties []connector.PropertyPath) e
 	if exportOnly10Users {
 		users = users[:10]
 	}
+	id := 1
 	for _, user := range users {
-		c.firehose.SetUser(user.ID, user.Properties, now, nil)
+		user.Properties["dummy_id"] = strconv.Itoa(id)
+		c.firehose.SetUser(user.Properties, nil)
+		id++
 	}
 	return nil
 }

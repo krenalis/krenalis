@@ -10,7 +10,6 @@ package apis
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"chichi/apis/normalization"
 	_connector "chichi/connector"
@@ -41,20 +40,6 @@ func (this *Action) importFromDatabase() error {
 		return actionExecutionError{err}
 	}
 	defer rawRows.Close()
-	var hasIdentity bool
-	var hasTimestamp bool
-	for _, p := range properties {
-		if p.Name == identityLabel {
-			hasIdentity = true
-		}
-		if p.Name == timestampLabel {
-			hasTimestamp = true
-		}
-	}
-	if !hasIdentity {
-		return actionExecutionError{fmt.Errorf("missing identity column %q", identityLabel)}
-	}
-	now := time.Now().UTC()
 	dest := make([]any, len(properties))
 	for rawRows.Next() {
 		row := make(map[string]any, len(properties))
@@ -64,15 +49,7 @@ func (this *Action) importFromDatabase() error {
 		if err := rawRows.Scan(dest...); err != nil {
 			return actionExecutionError{fmt.Errorf("query execution failed: %s", err)}
 		}
-		ts := now
-		if hasTimestamp {
-			ts = row[timestampLabel].(time.Time)
-		}
-		timestamps := map[string]time.Time{}
-		for _, p := range properties {
-			timestamps[p.Name] = ts
-		}
-		err = this.setUser(row[identityLabel].(string), row, timestamps)
+		err = this.setUser(row, nil)
 		if err != nil {
 			return err
 		}

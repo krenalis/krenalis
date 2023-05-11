@@ -10,6 +10,7 @@ package state
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"reflect"
 	"strings"
@@ -94,6 +95,11 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					}
 					if ct.Implements(appUsersConnectionType) {
 						c.Targets |= UsersFlag
+						if app.IdentityProperty == "" {
+							return fmt.Errorf("app %q: empty IdentityProperty", c.Name)
+						}
+						c.IdentityProperty = app.IdentityProperty
+						c.TimestampProperty = app.TimestampProperty
 					}
 					if ct.Implements(appGroupsConnectionType) {
 						c.Targets |= GroupsFlag

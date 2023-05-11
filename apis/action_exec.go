@@ -25,11 +25,6 @@ import (
 	"chichi/connector/types"
 )
 
-const (
-	identityLabel  = "identity"
-	timestampLabel = "timestamp"
-)
-
 var ExecutionInProgress errors.Code = "ExecutionInProgress"
 
 // addExecution adds an execution to the action.
@@ -185,26 +180,93 @@ func (this *Action) schema() (types.Type, []_connector.PropertyPath, error) {
 	return schema, paths, nil
 }
 
-// setUser sets a user. id is the identifier of the user for the connector, user
-// contains the values of the properties to be set, and timestamps are the dates
-// of the last modification of the properties. If a user with the identifier id
-// does not exist, it is created.
-func (this *Action) setUser(id string, user map[string]any, timestamps map[string]time.Time) error {
+// setUser sets the user.
+//
+// timestamps are the timestamps for the single properties imported by app
+// connections. If timestamps is nil or a property timestamp is not found within
+// timestamps, the timestamp of the entire user is used.
+func (this *Action) setUser(user map[string]any, timestamps map[string]time.Time) error {
 
 	c := this.action.Connection()
+	connector := c.Connector()
 
 	ctx := context.Background()
-
-	// Write the user properties to the database.
-	err := this.writeConnectionUsers(ctx, c.ID, id, user, timestamps)
-	if err != nil {
-		return err
-	}
 
 	// Apply the mapping (or the transformation).
 	candidateData, err := mappings.Apply(ctx, this.action, user, types.Type{})
 	if err != nil {
 		return fmt.Errorf("cannot apply mapping or transformation: %s", err)
+	}
+
+	// Add the "id" and "timestamp" properties to the candidate data, if
+	// necessary.
+	switch connector.Type {
+	case state.AppType:
+
+		// Identity.
+		id, ok := user[connector.IdentityProperty].(string)
+		if !ok {
+			return fmt.Errorf("missing or invalid identity property %q", connector.IdentityProperty)
+		}
+		candidateData["id"] = id
+
+		// Timestamp.
+		var timestamp _connector.DateTime
+		if connector.TimestampProperty != "" {
+			timestamp, ok = user[connector.TimestampProperty].(_connector.DateTime)
+		}
+		if !ok {
+			timestamp = _connector.DateTime{Time: time.Now().UTC()}
+		}
+		candidateData["timestamp"] = timestamp
+
+	case
+		state.DatabaseType,
+		state.FileType:
+
+		// The property "id" has already been mapped because it's mandatory, so
+		// here only the "timestamp" property is handled.
+		ts, ok := candidateData["timestamp"]
+		if ok {
+			switch ts := ts.(type) {
+			case _connector.DateTime:
+				// Ok.
+			case string:
+				// TODO(Gianluca): remove this code when support for conversions
+				// will be implemented.
+				t, err := time.Parse(time.DateTime, ts)
+				if err != nil {
+					return fmt.Errorf("bad timestamp %q parsed: %s", ts, err)
+				}
+				candidateData["timestamp"], err = _connector.AsDateTime(t)
+				if err != nil {
+					return fmt.Errorf("bad time.Time %s parsed: %s", t, err)
+				}
+			}
+		} else {
+			candidateData["timestamp"] = _connector.DateTime{Time: time.Now().UTC()}
+		}
+	}
+
+	id := candidateData["id"].(string)
+	timestamp := candidateData["timestamp"].(_connector.DateTime).Time
+	delete(candidateData, "id")
+	delete(candidateData, "timestamp")
+
+	// Write the user properties and timestamps to the database.
+	{
+		timestampsToWrite := map[string]time.Time{}
+		for prop := range user {
+			ts, ok := timestamps[prop]
+			if !ok {
+				ts = timestamp
+			}
+			timestampsToWrite[prop] = ts
+		}
+		err = this.writeConnectionUsers(ctx, c.ID, id, user, timestampsToWrite)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Resolve the entity of this user.

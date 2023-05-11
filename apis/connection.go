@@ -331,7 +331,7 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 			}
 			if this.connection.Role == state.SourceRole {
 				at.InputSchema = appSchema
-				at.OutputSchema = grSchema.Unflatten()
+				at.OutputSchema = usersSchemaToConnectionSchema(grSchema.Unflatten(), state.AppType)
 			} else {
 				at.InputSchema = grSchema.Unflatten()
 				at.OutputSchema = appSchema
@@ -397,7 +397,7 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 			if !ok {
 				return ActionTypeInformation{}, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 			}
-			at.OutputSchema = usersSchema.Unflatten()
+			at.OutputSchema = usersSchemaToConnectionSchema(usersSchema.Unflatten(), state.DatabaseType)
 			at.Supports = []ActionSupport{
 				ActionSupportMapping,
 				ActionSupportQuery,
@@ -422,7 +422,7 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 				return ActionTypeInformation{}, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 			}
 			if this.connection.Role == state.SourceRole {
-				at.OutputSchema = usersSchema.Unflatten()
+				at.OutputSchema = usersSchemaToConnectionSchema(usersSchema.Unflatten(), state.FileType)
 			} else {
 				at.InputSchema = usersSchema.Unflatten()
 			}
@@ -956,7 +956,7 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 	}
 
 	// Read the records.
-	rw := newRecordWriter(c.ID, identityLabel, timestampLabel, limit, nil)
+	rw := newRecordWriter(c.ID, limit, nil)
 	err = file.Read(r, sheet, rw)
 	if err != nil && err != errRecordStop {
 		return nil, types.Type{}, err
@@ -1734,7 +1734,7 @@ func abbreviate(s string, n int) string {
 // mappings to the properties.
 //
 // TODO(Gianluca): this code must be rewritten on the actions.
-func exportUser(id string, properties map[string]any) (_connector.User, error) {
+func exportUser(id string, properties map[string]any) (_connector.Properties, error) {
 	panic("not implemented")
 }
 

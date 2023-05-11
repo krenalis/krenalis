@@ -134,7 +134,7 @@ func (fh *firehose) SetSettings(settings []byte) error {
 	return nil
 }
 
-func (fh *firehose) SetUser(user string, properties map[string]any, timestamp time.Time, timestamps map[string]time.Time) {
+func (fh *firehose) SetUser(user map[string]any, timestamps map[string]time.Time) {
 
 	// Return if the context has expired.
 	select {
@@ -149,12 +149,12 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 		return
 	}
 
-	// Normalize the properties.
+	// Normalize the user properties.
 	propertyOf := map[string]types.Property{}
 	for _, p := range fh.action.action.Schema.Properties() {
 		propertyOf[p.Name] = p
 	}
-	for name, value := range properties {
+	for name, value := range user {
 		p, ok := propertyOf[name]
 		if !ok {
 			fh.setError(fmt.Errorf("connector %d has returned an unknown property %q", fh.connection.ID, name))
@@ -165,19 +165,10 @@ func (fh *firehose) SetUser(user string, properties map[string]any, timestamp ti
 			fh.setError(err)
 			return
 		}
-		properties[name] = value
+		user[name] = value
 	}
 
-	if timestamps == nil {
-		timestamps = map[string]time.Time{}
-	}
-	for name := range properties {
-		if _, ok := timestamps[name]; !ok {
-			timestamps[name] = timestamp
-		}
-	}
-
-	err := fh.action.setUser(user, properties, timestamps)
+	err := fh.action.setUser(user, timestamps)
 	if err != nil {
 		fh.setError(err)
 		return

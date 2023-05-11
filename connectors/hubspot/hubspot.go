@@ -60,7 +60,9 @@ func init() {
 			URL:   "https://app-eu1.hubspot.com/oauth/authorize",
 			Scope: "crm.objects.contacts.read crm.objects.contacts.write crm.schemas.contacts.read",
 		},
-		WebhooksPer: connector.WebhooksPerConnector,
+		WebhooksPer:       connector.WebhooksPerConnector,
+		IdentityProperty:  "hubspot_user_id",
+		TimestampProperty: "lastmodifieddate",
 	}, open)
 }
 
@@ -234,7 +236,7 @@ func (c *connection) SetGroups(groups []connector.Group) error {
 
 // SetUsers sets the users.
 // It requires the "crm.objects.contacts.write" scope.
-func (c *connection) SetUsers(users []connector.User) error {
+func (c *connection) SetUsers(users []connector.Properties) error {
 
 	var body bytes.Buffer
 	body.WriteString(`{"inputs":[`)
@@ -243,11 +245,11 @@ func (c *connection) SetUsers(users []connector.User) error {
 		if i > 0 {
 			body.WriteString(`,`)
 		}
-		id, _ := json.Marshal(user.ID)
+		id, _ := json.Marshal(user["id"])
 		body.WriteString(`{"id":`)
 		body.Write(id)
 		body.WriteString(`,"properties":`)
-		err := json.NewEncoder(&body).Encode(user.Properties)
+		err := json.NewEncoder(&body).Encode(user)
 		if err != nil {
 			return err
 		}
@@ -282,10 +284,11 @@ func (c *connection) UserSchema() (types.Type, error) {
 		return types.Type{}, err
 	}
 
-	properties := []types.Property{}
+	properties := []types.Property{
+		{Name: "hubspot_user_id", Label: "ID", Type: types.Text()},
+	}
 	for _, r := range response.Results {
-		switch r.Name {
-		case "createdate", "lastmodifieddate", "hs_object_id":
+		if r.Name == "createdate" {
 			continue
 		}
 		typ, err := propertyType(r.Name, r.Type)
@@ -353,7 +356,8 @@ func (c *connection) Users(cursor string, properties []connector.PropertyPath) e
 			break
 		}
 		for _, obj := range objects {
-			c.firehose.SetUser(obj.ID, obj.Properties, time.UnixMilli(obj.LastModifiedDate).UTC(), nil)
+			obj.Properties["hubspot_user_id"] = obj.ID
+			c.firehose.SetUser(obj.Properties, nil)
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
 		c.firehose.SetCursor(serializeCursor(fromDate))
@@ -511,8 +515,6 @@ func (it *iter) next() ([]object, error) {
 			return nil, fmt.Errorf("invalid updateAt returned by HubSpot: %q", date)
 		}
 		delete(result.Properties, "createdate")
-		delete(result.Properties, "lastmodifieddate")
-		delete(result.Properties, "hs_object_id")
 		objects[i] = object{
 			ID:               result.ID,
 			Properties:       result.Properties,

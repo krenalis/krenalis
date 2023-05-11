@@ -49,6 +49,8 @@ func init() {
 		DestinationDescription: "export users as clients and send events to Klaviyo",
 		TermForUsers:           "users",
 		Icon:                   icon,
+		IdentityProperty:       "id",
+		TimestampProperty:      "updated",
 	}, open)
 }
 
@@ -147,7 +149,7 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 }
 
 // SetUsers sets the users.
-func (c *connection) SetUsers(users []connector.User) error {
+func (c *connection) SetUsers(users []connector.Properties) error {
 	return errors.New("not implemented")
 }
 
@@ -211,6 +213,11 @@ func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 // UserSchema returns the user schema.
 func (c *connection) UserSchema() (types.Type, error) {
 	schema := types.Object([]types.Property{
+		{
+			Name:  "id",
+			Label: "ID",
+			Type:  types.Text(),
+		},
 		{
 			Name:  "email",
 			Label: "Email",
@@ -338,7 +345,8 @@ func (c *connection) Users(cursor string, properties []connector.PropertyPath) e
 			break
 		}
 		for _, profile := range profiles {
-			c.firehose.SetUser(profile.ID, profile.Attributes, profile.timestamp, nil)
+			profile.Attributes["id"] = profile.ID
+			c.firehose.SetUser(profile.Attributes, nil)
 		}
 	}
 
@@ -469,7 +477,6 @@ type iter struct {
 type profile struct {
 	ID         string
 	Attributes map[string]any
-	timestamp  time.Time
 }
 
 // next returns the next objects or nil if there are no objects.
@@ -497,22 +504,6 @@ func (it *iter) next() ([]profile, error) {
 
 	it.Next = response.Links.Next
 	it.Terminated = it.Next == ""
-
-	if len(response.Data) == 0 {
-		return nil, nil
-	}
-
-	for i, p := range response.Data {
-		updated, _ := p.Attributes["updated"].(string)
-		t, err := time.Parse(time.RFC3339, updated)
-		if err != nil {
-			return nil, fmt.Errorf("Klaviyo has returned a missing or invalid \"updated\" attribute: %q", updated)
-		}
-		response.Data[i].timestamp = t.UTC()
-		if !it.HasUpdatedProperty {
-			delete(p.Attributes, "updated")
-		}
-	}
 
 	return response.Data, nil
 }
