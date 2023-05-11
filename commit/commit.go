@@ -78,9 +78,9 @@ func main() {
 		cmd("go", []string{"fmt", "./..."}, repo, module)
 		cmd("go", []string{"vet", "./..."}, repo, module)
 		if short {
-			cmd("go", []string{"test", "-short", "./...", "-p", "1"}, repo, module)
+			cmd("go", []string{"test", "-short", "./..."}, repo, module)
 		} else {
-			cmd("go", []string{"test", "./...", "-p", "1"}, repo, module)
+			cmd("go", []string{"test", "./..."}, repo, module)
 		}
 	}
 
