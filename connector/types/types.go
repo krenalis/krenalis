@@ -1091,6 +1091,24 @@ func (t Type) WithUnique() Type {
 	return t
 }
 
+// Property returns the property with the given name and a boolean value
+// indicating if the property exists.
+// Panics if t is not an Object type or name is not a valid property name.
+func (t Type) Property(name string) (Property, bool) {
+	if t.pt != PtObject {
+		panic("cannot get the properties of a non-Object type")
+	}
+	for _, p := range t.vl.([]Property) {
+		if p.Name == name {
+			return p, true
+		}
+	}
+	if !IsValidPropertyName(name) {
+		panic("invalid property name")
+	}
+	return Property{}, false
+}
+
 // Properties returns the properties of the Object type t.
 // Panics if t is not an Object type.
 func (t Type) Properties() []Property {
