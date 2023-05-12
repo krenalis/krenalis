@@ -210,18 +210,6 @@ func marshalType(b *bytes.Buffer, t Type) {
 			b.WriteByte('"')
 			b.WriteString(p.Name)
 			b.WriteByte('"')
-			if p.Aliases != nil {
-				b.WriteString(`,"aliases":[`)
-				for i, alias := range p.Aliases {
-					if i > 0 {
-						b.WriteByte(',')
-					}
-					b.WriteByte('"')
-					b.WriteString(alias)
-					b.WriteByte('"')
-				}
-				b.WriteByte(']')
-			}
 			b.WriteString(`,"label":`)
 			_ = marshalString(b, p.Label)
 			b.WriteString(`,"description":`)
@@ -515,12 +503,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 					return Type{}, errors.New("repeated property name")
 				}
 				exists[property.Name] = struct{}{}
-				for _, alias := range property.Aliases {
-					if _, ok := exists[alias]; ok {
-						return Type{}, errors.New("property alias already named")
-					}
-					exists[alias] = struct{}{}
-				}
 				properties = append(properties, property)
 			}
 			if properties == nil {
@@ -913,38 +895,6 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 			}
 			if !IsValidPropertyName(p.Name) {
 				return Property{}, 0, errors.New("invalid property name")
-			}
-		case "aliases":
-			if p.Aliases != nil {
-				return Property{}, 0, errors.New("repeated 'aliases' key")
-			}
-			p.Aliases = []string{}
-			if tok != json.Delim('[') {
-				return Property{}, 0, errors.New("invalid aliases")
-			}
-		Aliases:
-			for {
-				tok, err = dec.Token()
-				if err != nil {
-					return Property{}, 0, err
-				}
-				switch alias := tok.(type) {
-				case string:
-					if alias == "" {
-						return Property{}, 0, errors.New("property alias is empty")
-					}
-					if !IsValidPropertyName(alias) {
-						return Property{}, 0, errors.New("invalid property alias")
-					}
-					p.Aliases = append(p.Aliases, alias)
-				case json.Delim:
-					break Aliases
-				default:
-					return Property{}, 0, errors.New("invalid value in aliases")
-				}
-			}
-			if len(p.Aliases) == 0 {
-				return Property{}, 0, errors.New("invalid empty aliases")
 			}
 		case "label":
 			if hasLabel {

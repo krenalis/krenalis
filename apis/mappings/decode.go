@@ -280,9 +280,6 @@ func decodeByType(dec *json.Decoder, tok json.Token, t types.Type) (any, error) 
 		requiredProperties := map[string]struct{}{}
 		for _, p := range t.Properties() {
 			propertyByName[p.Name] = p
-			for _, alias := range p.Aliases {
-				propertyByName[alias] = p
-			}
 			if p.Required {
 				requiredProperties[p.Name] = struct{}{}
 			}

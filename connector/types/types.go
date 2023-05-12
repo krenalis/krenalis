@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"math"
 	"regexp"
-	"sort"
 	"strconv"
 	"unicode/utf8"
 
@@ -247,7 +246,6 @@ func (role Role) String() string {
 // Property represents an object property.
 type Property struct {
 	Name        string
-	Aliases     []string
 	Label       string
 	Description string
 	Role        Role
@@ -444,24 +442,6 @@ func Object(properties []Property) Type {
 			panic("property name is repeated")
 		}
 		exists[property.Name] = struct{}{}
-		var aliases []string
-		if len(property.Aliases) > 0 {
-			aliases = make([]string, len(property.Aliases))
-			for i, alias := range property.Aliases {
-				if alias == "" {
-					panic("property alias is empty")
-				}
-				if !IsValidPropertyName(alias) {
-					panic("invalid property alias")
-				}
-				if _, ok := exists[alias]; ok {
-					panic("property alias already named")
-				}
-				aliases[i] = alias
-				exists[alias] = struct{}{}
-			}
-			sort.Strings(aliases)
-		}
 		if !property.Type.Valid() {
 			panic("invalid property type")
 		}
@@ -470,7 +450,6 @@ func Object(properties []Property) Type {
 		}
 		ps[i] = Property{
 			Name:        property.Name,
-			Aliases:     aliases,
 			Label:       normalizedUTF8(property.Label),
 			Description: normalizedUTF8(property.Description),
 			Type:        property.Type,
@@ -508,24 +487,6 @@ func ObjectOf(properties []Property) (Type, error) {
 			return Type{}, errors.New("property name is repeated")
 		}
 		exists[property.Name] = struct{}{}
-		var aliases []string
-		if len(property.Aliases) > 0 {
-			aliases = make([]string, len(property.Aliases))
-			for i, alias := range property.Aliases {
-				if alias == "" {
-					return Type{}, errors.New("property alias is empty")
-				}
-				if !IsValidPropertyName(alias) {
-					return Type{}, errors.New("invalid property alias")
-				}
-				if _, ok := exists[alias]; ok {
-					return Type{}, errors.New("property alias already named")
-				}
-				aliases[i] = alias
-				exists[alias] = struct{}{}
-			}
-			sort.Strings(aliases)
-		}
 		if property.Role < BothRole || property.Role > DestinationRole {
 			return Type{}, errors.New("invalid property role")
 		}
@@ -534,7 +495,6 @@ func ObjectOf(properties []Property) (Type, error) {
 		}
 		ps[i] = Property{
 			Name:        property.Name,
-			Aliases:     aliases,
 			Label:       normalizedUTF8(property.Label),
 			Description: normalizedUTF8(property.Description),
 			Role:        property.Role,
@@ -1137,11 +1097,7 @@ func (t Type) Properties() []Property {
 	if t.pt != PtObject {
 		panic("cannot get the properties of a non-Object type")
 	}
-	properties := slices.Clone(t.vl.([]Property))
-	for _, property := range properties {
-		property.Aliases = slices.Clone(property.Aliases)
-	}
-	return properties
+	return slices.Clone(t.vl.([]Property))
 }
 
 // PropertiesNames returns the names of the properties of the Object t.
