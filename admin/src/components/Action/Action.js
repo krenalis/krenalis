@@ -743,19 +743,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		}
 	}
 
-	let isConfirmFileButtonDisabled = false;
-	if (initialPath.current != null) {
-		if (action.Path.trim() === initialPath.current.trim()) {
-			isConfirmFileButtonDisabled = true;
-		}
-
-		if (initialSheet.current != null) {
-			if (action.Sheet.trim() !== initialSheet.current.trim()) {
-				isConfirmFileButtonDisabled = false;
-			}
-		}
-	}
-
 	let hasQueryError = c.Type === 'Database' && inputSchema == null;
 	let isPropertiesSectionDisabled = hasQueryError || isQueryChanged;
 	let propertiesSection = null;
@@ -1041,12 +1028,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							<SlButton variant='neutral' size='small' onClick={onQueryPreview}>
 								Preview
 							</SlButton>
-							<SlButton
-								variant='success'
-								size='small'
-								onClick={onConfirmQuery}
-								disabled={!isQueryChanged}
-							>
+							<SlButton variant='success' size='small' onClick={onConfirmQuery}>
 								Confirm
 							</SlButton>
 						</div>
@@ -1080,12 +1062,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							<SlButton variant='neutral' size='small' onClick={onFilePreview}>
 								Preview
 							</SlButton>
-							<SlButton
-								variant='success'
-								size='small'
-								onClick={onConfirmFile}
-								disabled={isConfirmFileButtonDisabled}
-							>
+							<SlButton variant='success' size='small' onClick={onConfirmFile}>
 								Confirm
 							</SlButton>
 						</div>
