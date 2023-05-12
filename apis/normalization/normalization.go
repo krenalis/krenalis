@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"net/netip"
 	"reflect"
@@ -116,10 +117,16 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 			valid = err == nil
 		}
 		if valid {
-			min, max := typ.FloatRange()
-			if v < min || v > max {
-				return nil, fmt.Errorf("app returned a value of %f for property %s which is not within the expected range of [%f, %f]",
-					v, name, min, max)
+			if math.IsNaN(v) {
+				if typ.IsReal() {
+					return nil, fmt.Errorf("app returned NaN for property %s but its type does not allow it", name)
+				}
+			} else {
+				min, max := typ.FloatRange()
+				if v < min || v > max {
+					return nil, fmt.Errorf("app returned a value of %f for property %s which is not within the expected range of [%f, %f]",
+						v, name, min, max)
+				}
 			}
 			value = v
 		}
@@ -475,10 +482,16 @@ func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, s
 			valid = err == nil
 		}
 		if valid {
-			min, max := typ.FloatRange()
-			if v < min || v > max {
-				return nil, fmt.Errorf("database returned a value of %f for column %s which is not within the expected range of [%f, %f]",
-					v, name, min, max)
+			if math.IsNaN(v) {
+				if typ.IsReal() {
+					return nil, fmt.Errorf("database returned NaN for property %s but its type does not allow it", name)
+				}
+			} else {
+				min, max := typ.FloatRange()
+				if v < min || v > max {
+					return nil, fmt.Errorf("database returned a value of %f for column %s which is not within the expected range of [%f, %f]",
+						v, name, min, max)
+				}
 			}
 			value = v
 		}

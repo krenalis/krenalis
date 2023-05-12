@@ -9,6 +9,7 @@ package normalization
 
 import (
 	"encoding/json"
+	"math"
 	"strconv"
 	"testing"
 	"time"
@@ -57,10 +58,12 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 		{types.Float(), 12.7902743017496882, 12.7902743017496882},
 		{types.Float(), json.Number("12"), 12.0},
 		{types.Float(), json.Number("12.79027430174968829"), 12.79027430174968829},
+		{types.Float(), math.NaN(), math.NaN()},
 		// Float32.
 		{types.Float32(), 12.79, 12.79},
 		{types.Float32(), json.Number("12"), 12.0},
 		{types.Float32(), json.Number("12.79"), 12.79},
+		{types.Float32(), math.NaN(), math.NaN()},
 		// Decimal.
 		{types.Decimal(10, 3), decimal.NewFromFloat(6.639), decimal.NewFromFloat(6.639)},
 		{types.Decimal(10, 3), "6.639", decimal.NewFromFloat(6.639)},
@@ -126,6 +129,11 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 		}
 		expected := test.e
 		if !cmp.Equal(got, expected) {
+			if f, ok := expected.(float64); ok && math.IsNaN(f) {
+				if f, ok := got.(float64); ok && math.IsNaN(f) {
+					continue
+				}
+			}
 			t.Fatalf("expected %#v, got %#v", expected, got)
 		}
 	}
