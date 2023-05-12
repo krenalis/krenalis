@@ -65,9 +65,6 @@ const (
 	MinInt24  = -1 << 23
 	MinInt64  = math.MinInt64
 	MinInt8   = math.MinInt8
-
-	MaxFloat   = math.MaxFloat64
-	MaxFloat32 = math.MaxFloat32
 )
 
 type PhysicalType int8
@@ -637,15 +634,12 @@ func (t Type) FloatRange() (min, max float64) {
 	if f, ok := t.vl.(floatRange); ok {
 		return f.min, f.max
 	}
-	if t.pt == PtFloat32 {
-		return -MaxFloat32, MaxFloat32
-	}
-	return -MaxFloat, MaxFloat
+	return math.Inf(-1), math.Inf(1)
 }
 
 // WithFloatRange returns t but with values in [min,max]. t must be a Float or
-// Float32 type. min cannot be greater than max.min and max cannot be NaN and
-// ±Inf. It panics if previous restrictions are not met.
+// Float32 type. min cannot be greater than max. min and max cannot be NaN.
+// It panics if previous restrictions are not met.
 func (t Type) WithFloatRange(min, max float64) Type {
 	if t.pt != PtFloat && t.pt != PtFloat32 {
 		panic("type is not a Float or Float32 type")
@@ -653,39 +647,26 @@ func (t Type) WithFloatRange(min, max float64) Type {
 	if math.IsNaN(min) || math.IsNaN(max) {
 		panic("min and max cannot be NaN")
 	}
-	if math.IsInf(min, 0) || math.IsInf(max, 0) {
-		panic("min and max cannot be Inf")
-	}
-	Max := MaxFloat
-	if t.pt == PtFloat32 {
-		Max = MaxFloat32
-	}
-	if min == -Max && max == Max {
+	if math.IsInf(min, -1) && math.IsInf(max, 1) {
 		return t
-	}
-	if min < -Max || min > Max {
-		panic(fmt.Sprintf("min is not in range [%f,%f]", -Max, Max))
 	}
 	if max < min {
 		panic("max cannot be less than min")
 	}
-	if max > Max {
-		panic(fmt.Sprintf("max cannot be greater than %f", Max))
-	}
 	var minS, maxS string
 	if t.pt == PtFloat32 {
 		min, max = float64(float32(min)), float64(float32(max))
-		if min != -MaxFloat32 {
+		if !math.IsInf(min, -1) {
 			minS = decimal.NewFromFloat32(float32(min)).String()
 		}
-		if max != MaxFloat32 {
+		if !math.IsInf(max, 1) {
 			maxS = decimal.NewFromFloat32(float32(max)).String()
 		}
 	} else {
-		if min != -MaxFloat {
+		if !math.IsInf(min, -1) {
 			minS = decimal.NewFromFloat(min).String()
 		}
-		if max != MaxFloat {
+		if !math.IsInf(max, 1) {
 			maxS = decimal.NewFromFloat(max).String()
 		}
 	}
