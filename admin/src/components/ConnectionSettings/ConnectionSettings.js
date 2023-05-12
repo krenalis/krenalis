@@ -6,6 +6,7 @@ import ConnectionEnabling from '../../components/ConnectionEnabling/ConnectionEn
 import ConnectionKeys from '../../components/ConnectionKeys/ConnectionKeys';
 import ConnectionStorage from '../../components/ConnectionStorage/ConnectionStorage';
 import ConnectionReload from '../../components/ConnectionReload/ConnectionReload';
+import ConnectionSnippet from '../ConnectionSnippet/ConnectionSnippet';
 import { AppContext } from '../../context/AppContext';
 import { ConnectionContext } from '../../context/ConnectionContext';
 import { SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelace/dist/react/index.js';
@@ -26,6 +27,18 @@ const ConnectionSettings = () => {
 	return (
 		<div className='ConnectionSettings'>
 			<SlTabGroup className='settings' placement='start'>
+				{/* Snippet */}
+				{(c.Type === 'Website' || c.Type === 'Mobile') && c.Role === 'Source' && (
+					<>
+						<SlTab slot='nav' panel='snippet'>
+							Snippet
+						</SlTab>
+						<SlTabPanel name='snippet'>
+							<div className='panelTitle'>Snippet</div>
+							<ConnectionSnippet />
+						</SlTabPanel>
+					</>
+				)}
 				{/* Connection */}
 				{c.HasSettings && (
 					<>
@@ -38,7 +51,6 @@ const ConnectionSettings = () => {
 						</SlTabPanel>
 					</>
 				)}
-
 				{/* API Keys */}
 				{c.Type === 'Server' && c.Role === 'Source' && (
 					<>
