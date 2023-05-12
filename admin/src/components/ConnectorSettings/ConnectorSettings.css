@@ -2,9 +2,9 @@
     justify-content: center;
 }
 
-.ConnectorSettings .routeContent {
-    padding-left: 400px; 
-    padding-right: 400px;
+.ConnectorSettings .settings {
+    max-width: 1200px;
+    margin: auto;
 }
 
 .ConnectorSettings .basic .inputWrapper {

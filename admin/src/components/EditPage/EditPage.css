@@ -22,8 +22,7 @@
     z-index: 20;
     animation: fade-in 300ms;
     overflow: auto;
-    padding-bottom: 80px;
-    padding-top: 80px;
+    padding: 60px 20px 20px 20px;
 }
 
 .EditPage .header {

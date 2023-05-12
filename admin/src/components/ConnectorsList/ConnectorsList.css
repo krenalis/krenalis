@@ -4,8 +4,6 @@
 
 .ConnectorsList .routeContent {
 	margin: auto;
-	padding-left: 300px;
-	padding-right: 300px;
 }
 
 .ConnectorsList h1 {
@@ -14,9 +12,16 @@
 }
 
 .ConnectorsList .connectors {
-	display: grid;
-	grid-template-columns: 1fr 1fr 1fr;
+    margin: auto;
+    max-width: 1200px;
+    display: flex;
+    flex-flow: row wrap;
 	gap: 30px;
+	justify-content: center;
+}
+
+.ConnectorsList .connectors .Card {
+	width: clamp(350px,calc(33% - 30px),500px);
 }
 
 .ConnectorsList sl-dialog::part(body) {

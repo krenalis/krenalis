@@ -1,3 +1,7 @@
+.ConnectionSettings {
+    max-width: 1200px;
+}
+
 .ConnectionSettings .settings::part(nav) {
 	flex-basis: 300px;
 }
@@ -7,7 +11,7 @@
 }
 
 .ConnectionSettings .settings > sl-tab-panel::part(base) {
-    padding: 0 150px;
+    padding-left: 60px;
 }
 
 .ConnectionSettings .panelTitle {
