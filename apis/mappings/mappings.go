@@ -57,12 +57,12 @@ func ActionFilterApplies(filter *state.ActionFilter, event map[string]any) (bool
 // through that schema before being returned.
 func Apply(ctx context.Context, action *state.Action, properties map[string]any, outSchema types.Type) (map[string]any, error) {
 
-	var mappedEvent map[string]any
+	var mappedProperties map[string]any
 
 	// Map using properties mapping.
 	if action.Mapping != nil {
 
-		mappedEvent = map[string]any{}
+		mappedProperties = map[string]any{}
 		for out, in := range action.Mapping {
 			inputPropPath := strings.Split(in, ".")
 			value, ok := readPropertyFrom(properties, inputPropPath)
@@ -72,7 +72,7 @@ func Apply(ctx context.Context, action *state.Action, properties map[string]any,
 			// TODO(Gianluca): handle conversions of values here, when the type
 			// checking rules will be defined.
 			outputPropPath := strings.Split(out, ".")
-			writePropertyTo(mappedEvent, outputPropPath, value)
+			writePropertyTo(mappedProperties, outputPropPath, value)
 		}
 
 	} else if action.Transformation != nil {
@@ -100,14 +100,14 @@ func Apply(ctx context.Context, action *state.Action, properties map[string]any,
 
 		// Run the Python transformation function.
 		pool := transformations.NewPool()
-		mappedEvent, err = pool.Run(ctx, t.PythonSource, inProps)
+		mappedProperties, err = pool.Run(ctx, t.PythonSource, inProps)
 		if err != nil {
 			return nil, fmt.Errorf("error while calling the transformation function: %s", err)
 		}
 
 		// Validate the properties returned by Python according to the
 		// transformation's output schema.
-		err = validateProps(mappedEvent, t.Out)
+		err = validateProps(mappedProperties, t.Out)
 		if err != nil {
 			return nil, fmt.Errorf("output schema validation failed: %s", err)
 		}
@@ -117,13 +117,13 @@ func Apply(ctx context.Context, action *state.Action, properties map[string]any,
 	// If outSchema is a valid schema, then validate the mapped properties with
 	// it.
 	if outSchema.Valid() {
-		err := validateProps(mappedEvent, outSchema)
+		err := validateProps(mappedProperties, outSchema)
 		if err != nil {
 			return nil, fmt.Errorf("mapped properties validation failed: %s", err)
 		}
 	}
 
-	return mappedEvent, nil
+	return mappedProperties, nil
 }
 
 // readPropertyFrom reads the property with the given path from m, returning its
