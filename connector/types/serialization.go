@@ -73,11 +73,6 @@ func marshalType(b *bytes.Buffer, t Type) {
 	b.WriteString(`{"name":"`)
 	b.WriteString(t.pt.String())
 	b.WriteString(`"`)
-	if t.lt > 0 {
-		b.WriteString(`,"logical":"`)
-		b.WriteString(t.lt.String())
-		b.WriteString(`"`)
-	}
 	switch t.pt {
 	case PtInt, PtInt8, PtInt16, PtInt24:
 		if min := int64(t.p); min > minInt[t.pt-PtInt] {
@@ -256,7 +251,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	var hasScale, hasLayout, hasMinItems, hasMaxItems, hasUniqueItems bool
 
 	var pt PhysicalType
-	var lt LogicalType
 	var minimum, maximum json.Number
 	var precision, scale, byteLen, charLen int
 	var re *regexp.Regexp
@@ -312,14 +306,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			pt, ok = PhysicalTypeByName(tok.(string))
 			if !ok {
 				return Type{}, errors.New("invalid physical type")
-			}
-		case "logical":
-			if lt.Valid() {
-				return Type{}, errors.New("repeated 'logical' key")
-			}
-			lt, ok = LogicalTypeByName(tok.(string))
-			if !ok {
-				return Type{}, errors.New("invalid logical type")
 			}
 		case "minimum":
 			if minimum != "" {
@@ -523,9 +509,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		return Type{}, errors.New("missing 'name' key")
 	}
 	t.pt = pt
-	if lt.Valid() {
-		t.lt = lt
-	}
 	if minimum == "" {
 		if PtInt <= t.pt && t.pt <= PtInt24 {
 			t.p = int32(minInt[t.pt-PtInt])

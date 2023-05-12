@@ -120,16 +120,6 @@ func sameType(t1, t2 Type) error {
 		}
 		return fmt.Errorf("expected physical type %d, got %d", t1.pt, t2.pt)
 	}
-	// Logical type.
-	if t1.lt != t2.lt {
-		if t2.lt == 0 {
-			return fmt.Errorf("expected logical type %d, got no logical type", t1.lt)
-		}
-		if !t2.lt.Valid() {
-			return fmt.Errorf("unknown logical type %d", t2.lt)
-		}
-		return fmt.Errorf("expected logical type %d, got %d", t1.lt, t2.lt)
-	}
 	// Minimum and maximum.
 	switch t1.pt {
 	case PtInt, PtInt8, PtInt16, PtInt24:

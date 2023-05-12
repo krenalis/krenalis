@@ -152,74 +152,6 @@ func PhysicalTypeByName(name string) (PhysicalType, bool) {
 	return 0, false
 }
 
-// LogicalType represents a logical type.
-type LogicalType int8
-
-const (
-	LtPersonFirstName LogicalType = 1 + iota
-	LtPersonMiddleName
-	LtPersonLastName
-	LtPersonFullName
-	LtPersonEmail
-	LtPersonLanguage
-	LtPersonTimeZone
-	LtPersonBirthDate
-
-	LtLocationAddress
-	LtLocationStreet1
-	LtLocationStreet2
-	LtLocationStreet3
-	LtLocationCity
-	LtLocationPostalCode
-	LtLocationStateProv
-	LtLocationCountry
-)
-
-var logicalName = []string{
-	// Person
-	"Person.FirstName",
-	"Person.MiddleName",
-	"Person.LastName",
-	"Person.FullName",
-	"Person.Email",
-	"Person.Language",
-	"Person.TimeZone",
-	"Person.BirthDate",
-	// Location
-	"Location.Address",
-	"Location.Street1",
-	"Location.Street2",
-	"Location.Street3",
-	"Location.City",
-	"Location.PostalCode",
-	"Location.StateProv",
-	"Location.Country",
-}
-
-// String returns the name of lt. Panics if lt is not a logical type.
-func (lt LogicalType) String() string {
-	if !lt.Valid() {
-		panic("invalid logical type")
-	}
-	return logicalName[lt-1]
-}
-
-// Valid reports whether lt is a valid logical type.
-func (lt LogicalType) Valid() bool {
-	return 1 <= lt && int(lt) <= len(logicalName)
-}
-
-// LogicalTypeByName returns a logical type by its name. The second return
-// parameter reports whether a logical type with the given name exists.
-func LogicalTypeByName(name string) (LogicalType, bool) {
-	for i, n := range logicalName {
-		if n == name {
-			return LogicalType(i + 1), true
-		}
-	}
-	return 0, false
-}
-
 // Role represents the role of a property.
 type Role int
 
@@ -258,7 +190,6 @@ type Property struct {
 // Type represents a type.
 type Type struct {
 	pt PhysicalType
-	lt LogicalType
 
 	unique bool // unique reports whether the items of an Array must be unique.
 
@@ -592,31 +523,12 @@ func (t Type) String() string {
 			s += ")"
 		}
 	}
-	if t.lt > 0 {
-		s += " [" + t.lt.String() + "]"
-	}
 	return s
 }
 
 // PhysicalType returns the physical type of t.
 func (t Type) PhysicalType() PhysicalType {
 	return t.pt
-}
-
-// LogicalType returns the logical type of t and true.
-// If t has no logical type, it returns false.
-func (t Type) LogicalType() (LogicalType, bool) {
-	return t.lt, t.lt > 0
-}
-
-// WithLogicalType returns the type t but with the logical type lt.
-// Panics if lt is not a logical type.
-func (t Type) WithLogicalType(lt LogicalType) Type {
-	if !lt.Valid() {
-		panic("invalid logical type")
-	}
-	t.lt = lt
-	return t
 }
 
 type intRange struct{ min, max int64 }
@@ -1145,10 +1057,6 @@ func (t Type) ValueType() Type {
 func (t Type) EqualTo(t2 Type) bool {
 	// Physical type.
 	if t.pt != t2.pt {
-		return false
-	}
-	// Logical type.
-	if t.lt != t2.lt {
 		return false
 	}
 	// Minimum and maximum.
