@@ -53,6 +53,9 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Float32","minimum":3.99,"maximum":5.31}`,
 			Type: Float32().WithFloatRange(3.99, 5.31),
 		}, {
+			Data: `{"name":"Float","real":true}`,
+			Type: Float().AsReal(),
+		}, {
 			Data: `{"name":"Decimal"}`,
 			Type: Decimal(0, 0),
 		}, {
@@ -149,6 +152,10 @@ func sameType(t1, t2 Type) error {
 		} else if t2.vl != nil {
 			return fmt.Errorf("expected no-range, got range %v", t2.vl)
 		}
+	}
+	// Real.
+	if t1.real != t2.real {
+		return fmt.Errorf("expected real %t, got %t", t1.real, t2.real)
 	}
 	// Precision, byte length or items minimum length.
 	if t1.p != t2.p {

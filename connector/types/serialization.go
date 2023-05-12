@@ -116,6 +116,9 @@ func marshalType(b *bytes.Buffer, t Type) {
 			}
 		}
 	case PtFloat, PtFloat32:
+		if t.real {
+			b.WriteString(`,"real":true`)
+		}
 		if f, ok := t.vl.(floatRange); ok {
 			if !math.IsInf(f.min, -1) {
 				b.WriteString(`,"minimum":`)
@@ -245,10 +248,11 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		return Type{}, errors.New("invalid type syntax")
 	}
 
-	var hasScale, hasLayout, hasMinItems, hasMaxItems, hasUniqueItems bool
+	var hasReal, hasScale, hasLayout, hasMinItems, hasMaxItems, hasUniqueItems bool
 
 	var pt PhysicalType
 	var minimum, maximum json.Number
+	var real bool
 	var precision, scale, byteLen, charLen int
 	var re *regexp.Regexp
 	var enum []string
@@ -320,6 +324,15 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			if !ok {
 				return Type{}, errors.New("invalid maximum")
 			}
+		case "real":
+			if hasReal {
+				return Type{}, errors.New("repeated 'real' key")
+			}
+			real, ok = tok.(bool)
+			if !ok {
+				return Type{}, errors.New("invalid real")
+			}
+			hasReal = true
 		case "regexp":
 			if re != nil {
 				return Type{}, errors.New("repeated 'regexp' key")
@@ -701,6 +714,12 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		default:
 			return Type{}, errors.New("unexpected maximum for non-number type")
 		}
+	}
+	if hasReal {
+		if pt != PtFloat && pt != PtFloat32 {
+			return Type{}, errors.New("unexpected real for non-Float type")
+		}
+		t.real = real
 	}
 	if re != nil {
 		if pt != PtText {
