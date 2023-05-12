@@ -8,9 +8,20 @@ import StyledGrid from '../StyledGrid/StyledGrid';
 import Action from '../Action/Action';
 import statuses from '../../constants/statuses';
 import { UnprocessableError } from '../../api/errors';
+import { schedulePeriods } from '../../utils/schedulePeriods';
 import { AppContext } from '../../context/AppContext';
 import { ConnectionContext } from '../../context/ConnectionContext';
-import { SlButton, SlIcon, SlDialog, SlSwitch, SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
+import {
+	SlButton,
+	SlIcon,
+	SlDialog,
+	SlSwitch,
+	SlSpinner,
+	SlDropdown,
+	SlMenu,
+	SlRadio,
+	SlRadioGroup,
+} from '@shoelace-style/shoelace/dist/react/index.js';
 
 let ConnectionActions = () => {
 	let [actions, setActions] = useState([]);
@@ -121,6 +132,15 @@ let ConnectionActions = () => {
 		showStatus(statuses.importStarted);
 	};
 
+	const onSchedulerPeriodChange = async (e, actionID) => {
+		let period = schedulePeriods[e.currentTarget.value];
+		let [, err] = await API.connections.setActionSchedulePeriod(c.ID, actionID, period);
+		if (err != null) {
+			showError(err);
+			return;
+		}
+	};
+
 	const refresh = async () => {
 		setSelectedActionType(null);
 		setSelectedAction(null);
@@ -187,9 +207,30 @@ let ConnectionActions = () => {
 		let actionsCell = (
 			<div className='actionButtons'>
 				{(a.Target === 'Users' || a.Target === 'Groups') && (
-					<SlButton variant='default' size='small' onClick={() => executeAction(a.ID)}>
-						Execute
-					</SlButton>
+					<>
+						<SlDropdown>
+							<SlButton slot='trigger' variant='default' size='small'>
+								<SlIcon slot='prefix' name='clock' />
+								Scheduler
+							</SlButton>
+							<SlMenu className='schedulerOptions'>
+								<SlRadioGroup
+									size='small'
+									onSlChange={(e) => onSchedulerPeriodChange(e, a.ID)}
+									value={Object.keys(schedulePeriods).find(
+										(k) => schedulePeriods[k] === a.SchedulePeriod
+									)}
+								>
+									{Object.entries(schedulePeriods).map(([value, time]) => (
+										<SlRadio value={value}>{time}</SlRadio>
+									))}
+								</SlRadioGroup>
+							</SlMenu>
+						</SlDropdown>
+						<SlButton variant='default' size='small' onClick={() => executeAction(a.ID)}>
+							Execute
+						</SlButton>
+					</>
 				)}
 				<SlButton variant='default' size='small' onClick={() => setSelectedAction(a)}>
 					Edit...

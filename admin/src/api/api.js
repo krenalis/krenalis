@@ -214,6 +214,16 @@ class Connections {
 		);
 	};
 
+	setActionSchedulePeriod = async (connection, action, schedulePeriod) => {
+		return await call(
+			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(
+				action
+			)}/schedule-period`,
+			http.POST,
+			{ SchedulePeriod: schedulePeriod }
+		);
+	};
+
 	executeAction = async (connection, action, reimport) => {
 		return await call(
 			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(

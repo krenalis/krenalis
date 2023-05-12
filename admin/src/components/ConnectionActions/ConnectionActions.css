@@ -39,6 +39,11 @@
     justify-content: end;
 }
 
+.ConnectionActions .schedulerOptions {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
 .actionDialog::part(body) {
     padding-bottom: 30px;
 }
