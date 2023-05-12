@@ -189,6 +189,7 @@ type Type struct {
 	pt PhysicalType
 
 	unique bool // unique reports whether the items of an Array must be unique.
+	real   bool // real reports whether NaN, +Inf and -Inf are allowed for Float and Float32 types.
 
 	// p represents
 	//   - minimum value of Int, Int8, Int16 and Int24 types
@@ -491,6 +492,33 @@ func (t Type) AsRole(role Role) Type {
 	return Type{pt: PtObject, vl: roleProperties}
 }
 
+// AsReal returns t but as a real number. As a real number, t does not allow
+// NaN, +Inf and -Inf values. t must be a Float or a Float32 type. t cannot be
+// already real and cannot have a range.
+// It panics if previous restrictions are not met.
+func (t Type) AsReal() Type {
+	if t.pt != PtFloat && t.pt != PtFloat32 {
+		panic("type is not a Float or Float32 type")
+	}
+	if t.real {
+		panic("type is already real")
+	}
+	if _, ok := t.vl.(floatRange); ok {
+		panic("type has a range")
+	}
+	t.real = true
+	return t
+}
+
+// IsReal reports whether t is real.
+// Panics if t is not a Float or a Float32 type.
+func (t Type) IsReal() bool {
+	if t.pt != PtFloat && t.pt != PtFloat32 {
+		panic("type is not a Float or Float32 type")
+	}
+	return t.real
+}
+
 // Valid indicates if t is valid.
 func (t Type) Valid() bool {
 	return t.pt != 0
@@ -634,11 +662,18 @@ func (t Type) FloatRange() (min, max float64) {
 	if f, ok := t.vl.(floatRange); ok {
 		return f.min, f.max
 	}
+	if t.real {
+		if t.pt == PtFloat32 {
+			return -math.MaxFloat32, math.MaxFloat32
+		}
+		return -math.MaxFloat64, math.MaxFloat64
+	}
 	return math.Inf(-1), math.Inf(1)
 }
 
 // WithFloatRange returns t but with values in [min,max]. t must be a Float or
-// Float32 type. min cannot be greater than max. min and max cannot be NaN.
+// Float32 type. min cannot be greater than max. min and max cannot be NaN, and
+// if r is real they cannot be ±Inf.
 // It panics if previous restrictions are not met.
 func (t Type) WithFloatRange(min, max float64) Type {
 	if t.pt != PtFloat && t.pt != PtFloat32 {
@@ -646,6 +681,9 @@ func (t Type) WithFloatRange(min, max float64) Type {
 	}
 	if math.IsNaN(min) || math.IsNaN(max) {
 		panic("min and max cannot be NaN")
+	}
+	if t.real && (math.IsInf(min, 0) || math.IsInf(max, 0)) {
+		panic("min and max cannot be ±Inf")
 	}
 	if math.IsInf(min, -1) && math.IsInf(max, 1) {
 		return t
