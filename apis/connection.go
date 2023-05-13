@@ -51,6 +51,7 @@ var (
 	NoGroupsSchema      errors.Code = "NoGroupsSchema"
 	NoStorage           errors.Code = "NoStorage"
 	NoUsersSchema       errors.Code = "NoUsersSchema"
+	ReadFileFailed      errors.Code = "ReadFileFailed"
 	StorageNotExists    errors.Code = "StorageNotExists"
 	TargetAlreadyExists errors.Code = "TargetAlreadyExists"
 	TooManyKeys         errors.Code = "TooManyKeys"
@@ -885,6 +886,9 @@ func (this *Connection) Keys() ([]string, error) {
 // sheets, sheet is the sheet name and must be UTF-8 encoded with a length in
 // range [1, 100], otherwise must be an empty string. limit limits the number of
 // records to return and must be in range [0, 100].
+//
+// It returns an errors.UnprocessableError error with code ReadFileFailed, if
+// an error occurred reading the file.
 func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.Type, error) {
 
 	c := this.connection
@@ -950,7 +954,7 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 		}
 		r, _, err = storage.Open(path)
 		if err != nil {
-			return nil, types.Type{}, err
+			return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
 		}
 		defer r.Close()
 	}
@@ -959,7 +963,7 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 	rw := newRecordWriter(c.ID, limit, nil)
 	err = file.Read(r, sheet, rw)
 	if err != nil && err != errRecordStop {
-		return nil, types.Type{}, err
+		return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
 	schema := types.Object(rw.columns)
 
