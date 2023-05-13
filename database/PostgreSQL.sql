@@ -105,7 +105,7 @@ CREATE TABLE actions (
     name varchar(60) NOT NULL DEFAULT '',
     enabled boolean NOT NULL DEFAULT FALSE,
     schedule_start smallint NOT NULL DEFAULT 0 CHECK (schedule_start >= 0 AND schedule_start < 1440),
-    schedule_period smallint NOT NULL DEFAULT 60 CHECK(schedule_period IN (5, 15, 30, 60, 120, 180, 360, 480, 720, 1140)),
+    schedule_period smallint NOT NULL DEFAULT 60 CHECK(schedule_period IN (5, 15, 30, 60, 120, 180, 360, 480, 720, 1440)),
     filter text NOT NULL DEFAULT '',
     schema text NOT NULL DEFAULT '',
     mapping text NOT NULL DEFAULT '',
