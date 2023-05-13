@@ -169,19 +169,19 @@ func (rw *recordWriter) Record(record []any) error {
 			}
 		}
 		rw.records = append(rw.records, rd)
-		return nil
-	}
-	// Call the rw.write function to store the record.
-	rd := map[string]any{}
-	for i, c := range rw.columns {
-		rd[c.Name], err = normalization.NormalizeDatabaseFileProperty(c.Name, c.Nullable, c.Type, record[i])
+	} else {
+		// Call the rw.write function to store the record.
+		rd := map[string]any{}
+		for i, c := range rw.columns {
+			rd[c.Name], err = normalization.NormalizeDatabaseFileProperty(c.Name, c.Nullable, c.Type, record[i])
+			if err != nil {
+				return err
+			}
+		}
+		err = rw.write(rd)
 		if err != nil {
 			return err
 		}
-	}
-	err = rw.write(rd)
-	if err != nil {
-		return err
 	}
 	rw.limit--
 	if rw.limit == 0 {
@@ -212,19 +212,19 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 			}
 		}
 		rw.records = append(rw.records, rd)
-		return nil
-	}
-	// Call the rw.write function to store the record.
-	for _, c := range rw.columns {
-		v, err := normalization.NormalizeDatabaseFileProperty(c.Name, c.Nullable, c.Type, record[c.Name])
+	} else {
+		// Call the rw.write function to store the record.
+		for _, c := range rw.columns {
+			v, err := normalization.NormalizeDatabaseFileProperty(c.Name, c.Nullable, c.Type, record[c.Name])
+			if err != nil {
+				return err
+			}
+			record[c.Name] = v
+		}
+		err = rw.write(record)
 		if err != nil {
 			return err
 		}
-		record[c.Name] = v
-	}
-	err = rw.write(record)
-	if err != nil {
-		return err
 	}
 	rw.limit--
 	if rw.limit == 0 {
@@ -256,20 +256,20 @@ func (rw *recordWriter) RecordString(record []string) error {
 			rd[i] = record[i]
 		}
 		rw.records = append(rw.records, rd)
-		return nil
-	}
-	// Call the rw.write function to store the record.
-	rd := map[string]any{}
-	for i, c := range rw.columns {
-		err = normalization.ValidateStringProperty(c, record[i])
+	} else {
+		// Call the rw.write function to store the record.
+		rd := map[string]any{}
+		for i, c := range rw.columns {
+			err = normalization.ValidateStringProperty(c, record[i])
+			if err != nil {
+				return err
+			}
+			rd[c.Name] = record[i]
+		}
+		err = rw.write(rd)
 		if err != nil {
 			return err
 		}
-		rd[c.Name] = record[i]
-	}
-	err = rw.write(rd)
-	if err != nil {
-		return err
 	}
 	rw.limit--
 	if rw.limit == 0 {
