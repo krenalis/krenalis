@@ -105,6 +105,7 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 		// JSON.
 		{types.JSON(), json.RawMessage(`{"a":5}`), json.RawMessage(`{"a":5}`)},
 		{types.JSON(), `{"a":5}`, json.RawMessage(`{"a":5}`)},
+		{types.JSON(), map[string]any{"a": 5}, json.RawMessage(`{"a":5}`)},
 		// Inet.
 		{types.Inet(), "127.0.0.1", "127.0.0.1"},
 		{types.Inet(), "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329"},

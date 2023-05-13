@@ -8,6 +8,7 @@
 package normalization
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -278,10 +279,22 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 		switch src := src.(type) {
 		case json.RawMessage:
 			v = src
+			valid = json.Valid(v)
 		case string:
 			v = json.RawMessage(src)
+			valid = json.Valid(v)
+		default:
+			var err error
+			var b bytes.Buffer
+			enc := json.NewEncoder(&b)
+			enc.SetEscapeHTML(false)
+			err = enc.Encode(src)
+			valid = err == nil
+			if valid {
+				v = b.Bytes()
+				v = v[:len(v)-1]
+			}
 		}
-		valid = json.Valid(v)
 		if valid {
 			if l, ok := typ.CharLen(); ok && utf8.RuneCount(v) > l {
 				return nil, fmt.Errorf("app returned a value of %q for property %s, which is longer than %d characters",
