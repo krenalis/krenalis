@@ -68,9 +68,6 @@ func open(ctx context.Context, conf *connector.StorageConfig) (*connection, erro
 // read the file and its last update time.
 // It is the caller's responsibility to close the returned reader.
 func (c *connection) Open(path string) (io.ReadCloser, time.Time, error) {
-	if path == "" {
-		return nil, time.Time{}, ui.Errorf("object key is empty")
-	}
 	if len(path) > 1024 {
 		return nil, time.Time{}, ui.Errorf("object key cannot be longer than 1024 bytes")
 	}
@@ -191,9 +188,6 @@ func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 // Write writes the data read from p into the file with the given path.
 // contentType is the file's content type.
 func (c *connection) Write(p io.Reader, path, contentType string) error {
-	if path == "" {
-		return ui.Errorf("object key is empty")
-	}
 	if len(path) > 1024 {
 		return ui.Errorf("object key cannot be longer than 1024 bytes")
 	}

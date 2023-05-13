@@ -67,9 +67,6 @@ func open(ctx context.Context, conf *connector.StorageConfig) (*connection, erro
 // read the file and its last update time.
 // It is the caller's responsibility to close the returned reader.
 func (c *connection) Open(path string) (io.ReadCloser, time.Time, error) {
-	if path == "" {
-		return nil, time.Time{}, ui.Errorf("path is empty")
-	}
 	sshClient, sftpClient, err := openConnection(c.settings)
 	if err != nil {
 		return nil, time.Time{}, err
@@ -170,9 +167,6 @@ func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 
 // Write writes the data read from p into the file with the given path.
 func (c *connection) Write(r io.Reader, path, _ string) error {
-	if path == "" {
-		return ui.Errorf("path is empty")
-	}
 	sshClient, sftpClient, err := openConnection(c.settings)
 	if err != nil {
 		return err

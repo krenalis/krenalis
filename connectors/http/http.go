@@ -189,9 +189,6 @@ func (c *connection) Write(r io.Reader, path, contentType string) error {
 
 // requestURL returns a request URL given the path.
 func (c *connection) requestURL(path string) (string, error) {
-	if path == "" {
-		return "", fmt.Errorf("path cannot be empty")
-	}
 	p, err := url.Parse(path)
 	if err != nil || p.Scheme != "" || p.Host != "" {
 		return "", fmt.Errorf("path is not an URL path: %s", err)
