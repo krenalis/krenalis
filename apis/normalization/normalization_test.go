@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"chichi/connector"
 	"chichi/connector/types"
 
 	"github.com/google/go-cmp/cmp"
@@ -23,9 +22,8 @@ import (
 
 func TestNormalizeAppPropertyValue(t *testing.T) {
 
-	aDateTime := connector.MustDateTime(time.Date(2023, 5, 3, 15, 47, 22, 769802537, time.UTC))
-	aDate := connector.MustDate(time.Date(2023, 5, 3, 0, 0, 0, 0, time.UTC))
-	aTime, _ := connector.ParseTime("17:36:19.4016849239")
+	aDateTime := time.Date(2023, 5, 3, 15, 47, 22, 769802537, time.UTC)
+	aDate := time.Date(2023, 5, 3, 0, 0, 0, 0, time.UTC)
 
 	tests := []struct {
 		t types.Type
@@ -71,31 +69,27 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 		{types.Decimal(10, 3), json.Number("6.639"), decimal.NewFromFloat(6.639)},
 		// DateTime.
 		{types.DateTime(), aDateTime, aDateTime},
-		{types.DateTime().WithLayout("s"), strconv.FormatInt(aDateTime.Unix(), 10), connector.MustDateTime(time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC))},
-		{types.DateTime().WithLayout("ms"), strconv.FormatInt(aDateTime.UnixMilli(), 10), connector.MustDateTime(time.Date(2023, 5, 3, 15, 47, 22, 769000000, time.UTC))},
-		{types.DateTime().WithLayout("us"), strconv.FormatInt(aDateTime.UnixMicro(), 10), connector.MustDateTime(time.Date(2023, 5, 3, 15, 47, 22, 769802000, time.UTC))},
+		{types.DateTime().WithLayout("s"), strconv.FormatInt(aDateTime.Unix(), 10), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC)},
+		{types.DateTime().WithLayout("ms"), strconv.FormatInt(aDateTime.UnixMilli(), 10), time.Date(2023, 5, 3, 15, 47, 22, 769000000, time.UTC)},
+		{types.DateTime().WithLayout("us"), strconv.FormatInt(aDateTime.UnixMicro(), 10), time.Date(2023, 5, 3, 15, 47, 22, 769802000, time.UTC)},
 		{types.DateTime().WithLayout("ns"), strconv.FormatInt(aDateTime.UnixNano(), 10), aDateTime},
-		{types.DateTime().WithLayout(time.DateTime), "2023-05-03 15:47:22", connector.MustDateTime(time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC))},
-		{types.DateTime().WithLayout(time.DateOnly), "2023-05-03", connector.MustDateTime(time.Date(2023, 5, 3, 0, 0, 0, 0, time.UTC))},
-		{types.DateTime().WithLayout("s"), float64(aDateTime.Unix()), connector.MustDateTime(time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC))},
-		{types.DateTime().WithLayout("ms"), float64(aDateTime.UnixMilli()), connector.MustDateTime(time.Date(2023, 5, 3, 15, 47, 22, 769000000, time.UTC))},
-		{types.DateTime().WithLayout("us"), float64(aDateTime.UnixMicro()), connector.MustDateTime(time.Date(2023, 5, 3, 15, 47, 22, 769802000, time.UTC))},
-		{types.DateTime().WithLayout("ns"), float64(aDateTime.UnixNano()), connector.MustDateTime(time.Date(2023, 5, 3, 15, 47, 22, 769802496, time.UTC))},
-		{types.DateTime().WithLayout("s"), json.Number(strconv.FormatInt(aDateTime.Unix(), 10)), connector.MustDateTime(time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC))},
+		{types.DateTime().WithLayout(time.DateTime), "2023-05-03 15:47:22", time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC)},
+		{types.DateTime().WithLayout(time.DateOnly), "2023-05-03", time.Date(2023, 5, 3, 0, 0, 0, 0, time.UTC)},
+		{types.DateTime().WithLayout("s"), float64(aDateTime.Unix()), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC)},
+		{types.DateTime().WithLayout("ms"), float64(aDateTime.UnixMilli()), time.Date(2023, 5, 3, 15, 47, 22, 769000000, time.UTC)},
+		{types.DateTime().WithLayout("us"), float64(aDateTime.UnixMicro()), time.Date(2023, 5, 3, 15, 47, 22, 769802000, time.UTC)},
+		{types.DateTime().WithLayout("ns"), float64(aDateTime.UnixNano()), time.Date(2023, 5, 3, 15, 47, 22, 769802496, time.UTC)},
+		{types.DateTime().WithLayout("s"), json.Number(strconv.FormatInt(aDateTime.Unix(), 10)), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC)},
 		// Date.
 		{types.Date(), aDate, aDate},
 		{types.Date(), "2023-05-03", aDate},
 		{types.Date().WithLayout(time.DateOnly), "2023-05-03", aDate},
 		{types.Date().WithLayout("Mon, 02 Jan 2006"), "Wed, 03 May 2023", aDate},
 		// Time.
-		{types.Time(), aTime, aTime},
-		{types.Time().WithLayout("s"), float64(48192), connector.Time(48192 * time.Second)},
-		{types.Time().WithLayout("ms"), float64(48192517), connector.Time(48192517 * time.Millisecond)},
-		{types.Time().WithLayout("us"), float64(48192517065), connector.Time(48192517065 * time.Microsecond)},
-		{types.Time().WithLayout("ns"), float64(48192517065128), connector.Time(48192517065128)},
-		{types.Time(), "09:43:22.305129745", connector.Time(35002305129745)},
-		{types.Time().WithLayout("15"), "10", connector.Time(10 * time.Hour)},
-		{types.Time().WithLayout("s"), json.Number("72204"), connector.Time(72204 * time.Second)},
+		{types.Time(), time.Date(2023, 5, 3, 17, 34, 41, 804019312, time.UTC), time.Date(1970, 1, 1, 17, 34, 41, 804019312, time.UTC)},
+		{types.Time(), "00:00:00", time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{types.Time(), "13:16:47.801", time.Date(1970, 1, 1, 13, 16, 47, 801000000, time.UTC)},
+		{types.Time(), "23:59:59.999999999", time.Date(1970, 1, 1, 23, 59, 59, 999999999, time.UTC)},
 		// Year.
 		{types.Year(), 2023, 2023},
 		{types.Year(), 2023.0, 2023},

@@ -771,11 +771,11 @@ func (t Type) Scale() int {
 	return int(t.s)
 }
 
-// Layout returns the layout of DateTime, Date and Time types.
-// Panics if t is not a DateTime, Date or Time type.
+// Layout returns the layout of DateTime and Date types.
+// Panics if t is not a DateTime or Date type.
 func (t Type) Layout() string {
-	if t.pt != PtDateTime && t.pt != PtDate && t.pt != PtTime {
-		panic("cannot get layout of a non-DateTime, non-Date or non-Time type")
+	if t.pt != PtDateTime && t.pt != PtDate {
+		panic("cannot get layout of a non-DateTime or non-Date type")
 	}
 	if t.vl == nil {
 		return ""
@@ -784,16 +784,16 @@ func (t Type) Layout() string {
 }
 
 // WithLayout returns t but with the given layout. Panics if t is not a
-// DateTime, Date or Time type, or layout is not a valid non-empty UTF-8-encoded
+// DateTime or Date type, or layout is not a valid non-empty UTF-8-encoded
 // string, or t has already a layout.
 //
-// A layout is a specific pattern used when a DateTime, Date and Time value is
+// A layout is a specific pattern used when a DateTime and Date value is
 // represented as a string or an integer. For strings, layout can be any time
 // package layout string. For integers, layout can be Nanoseconds, Microseconds,
 // Milliseconds and Seconds, and the value is relative to the Unix epoc.
 func (t Type) WithLayout(layout string) Type {
-	if t.pt != PtDateTime && t.pt != PtDate && t.pt != PtTime {
-		panic("cannot get layout of a non-DateTime, non-Date or non-Time type")
+	if t.pt != PtDateTime && t.pt != PtDate {
+		panic("cannot get layout of a non-DateTime or non-Date type")
 	}
 	if layout == "" {
 		panic("layout cannot be an empty string")

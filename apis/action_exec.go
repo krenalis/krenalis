@@ -211,12 +211,12 @@ func (this *Action) setUser(user map[string]any, timestamps map[string]time.Time
 		candidateData["id"] = id
 
 		// Timestamp.
-		var timestamp _connector.DateTime
+		var timestamp time.Time
 		if connector.TimestampProperty != "" {
-			timestamp, ok = user[connector.TimestampProperty].(_connector.DateTime)
+			timestamp, ok = user[connector.TimestampProperty].(time.Time)
 		}
 		if !ok {
-			timestamp = _connector.DateTime{Time: time.Now().UTC()}
+			timestamp = time.Now().UTC()
 		}
 		candidateData["timestamp"] = timestamp
 
@@ -229,7 +229,7 @@ func (this *Action) setUser(user map[string]any, timestamps map[string]time.Time
 		ts, ok := candidateData["timestamp"]
 		if ok {
 			switch ts := ts.(type) {
-			case _connector.DateTime:
+			case time.Time:
 				// Ok.
 			case string:
 				// TODO(Gianluca): remove this code when support for conversions
@@ -238,18 +238,15 @@ func (this *Action) setUser(user map[string]any, timestamps map[string]time.Time
 				if err != nil {
 					return fmt.Errorf("bad timestamp %q parsed: %s", ts, err)
 				}
-				candidateData["timestamp"], err = _connector.AsDateTime(t)
-				if err != nil {
-					return fmt.Errorf("bad time.Time %s parsed: %s", t, err)
-				}
+				candidateData["timestamp"] = t
 			}
 		} else {
-			candidateData["timestamp"] = _connector.DateTime{Time: time.Now().UTC()}
+			candidateData["timestamp"] = time.Now().UTC()
 		}
 	}
 
 	id := candidateData["id"].(string)
-	timestamp := candidateData["timestamp"].(_connector.DateTime).Time
+	timestamp := candidateData["timestamp"].(time.Time)
 	delete(candidateData, "id")
 	delete(candidateData, "timestamp")
 

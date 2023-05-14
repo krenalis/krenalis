@@ -10,7 +10,6 @@ package normalization
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -21,7 +20,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	_connector "chichi/connector"
 	"chichi/connector/types"
 
 	"github.com/google/uuid"
@@ -158,98 +156,72 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 			value = v
 		}
 	case types.PtDateTime:
-		var err error
+		var t time.Time
 		switch src := src.(type) {
-		case _connector.DateTime:
-			value = src
+		case time.Time:
+			t = src
 			valid = true
 		case float64:
-			switch typ.Layout() {
-			case types.Nanoseconds, types.Microseconds, types.Milliseconds, types.Seconds:
-				value, err = normalizeDateTimeFloat(typ.Layout(), src)
-				valid = err == nil
-			}
+			t, valid = dateTimeFromUnixFloat(src, typ.Layout())
 		case string:
 			layout := typ.Layout()
-			if layout == "" {
-				layout = time.DateTime
-			}
 			switch layout {
-			case types.Nanoseconds, types.Microseconds, types.Milliseconds, types.Seconds:
+			case types.Seconds, types.Milliseconds, types.Microseconds, types.Nanoseconds:
 				n, err := strconv.ParseInt(src, 10, 64)
 				if err == nil {
-					value, err = normalizeDateTimeInt(layout, n)
-					valid = err == nil
+					t, valid = dateTimeFromUnixInt(n, layout)
 				}
 			default:
-				if t, err := time.Parse(layout, src); err == nil {
-					value, err = _connector.AsDateTime(t)
-					valid = err == nil
+				if layout == "" {
+					layout = time.DateTime
 				}
+				var err error
+				t, err = time.Parse(layout, src)
+				valid = err == nil
 			}
 		case json.Number:
 			if n, err := src.Int64(); err == nil {
-				value, err = normalizeDateTimeInt(typ.Layout(), n)
-				valid = err == nil
+				t, valid = dateTimeFromUnixInt(n, typ.Layout())
 			} else if f, err := src.Float64(); err == nil {
-				value, err = normalizeDateTimeFloat(typ.Layout(), f)
-				valid = err == nil
+				t, valid = dateTimeFromUnixFloat(f, typ.Layout())
 			}
 		}
+		if valid {
+			t = t.UTC()
+			if y := t.Year(); y < 1 || y > 9999 {
+				return nil, fmt.Errorf("app returned a value of %q for property %s, with year %d not in range [1, 9999]", src, name, y)
+			}
+			value = t
+		}
 	case types.PtDate:
+		var t time.Time
 		switch src := src.(type) {
-		case _connector.Date:
-			value = src
+		case time.Time:
+			t = src
 			valid = true
 		case string:
 			layout := typ.Layout()
 			if layout == "" {
 				layout = time.DateOnly
 			}
-			if t, err := time.Parse(layout, src); err == nil {
-				value, err = _connector.AsDate(t)
-				valid = err == nil
+			var err error
+			t, err = time.Parse(layout, src)
+			valid = err == nil
+		}
+		if valid {
+			t = t.UTC()
+			if y := t.Year(); y < 1 || y > 9999 {
+				return nil, fmt.Errorf("app returned a value of %q for property %s, with year %d not in range [1, 9999]", src, name, y)
 			}
+			value = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 		}
 	case types.PtTime:
 		switch src := src.(type) {
-		case _connector.Time:
-			value = src
+		case time.Time:
+			value = time.Date(1970, 1, 1, src.Hour(), src.Minute(), src.Second(), src.Nanosecond(), time.UTC)
 			valid = true
-		case float64:
-			switch layout := typ.Layout(); layout {
-			case types.Nanoseconds, types.Microseconds, types.Milliseconds, types.Seconds:
-				var err error
-				value, err = normalizeTimeFloat(layout, src)
-				valid = err == nil
-			}
 		case string:
-			layout := typ.Layout()
-			if layout == "" {
-				layout = "15:04:05.999999999"
-			}
-			switch layout {
-			case types.Nanoseconds, types.Microseconds, types.Milliseconds, types.Seconds:
-				n, err := strconv.ParseInt(src, 10, 64)
-				if err == nil {
-					value, err = normalizeTimeInt(layout, n)
-					valid = err == nil
-				}
-			default:
-				if t, err := time.Parse(layout, src); err == nil {
-					t = time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
-					value = _connector.Time(t.UnixNano())
-					valid = true
-				}
-			}
-		case json.Number:
-			if n, err := src.Int64(); err == nil {
-				value, err = normalizeTimeInt(typ.Layout(), n)
-				valid = err == nil
-			} else if f, err := src.Float64(); err == nil {
-				value, err = normalizeTimeFloat(typ.Layout(), f)
-				valid = err == nil
-			}
+			value, valid = parseTime(src)
 		}
 	case types.PtYear:
 		var v int64
@@ -539,26 +511,28 @@ func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, s
 		}
 	case types.PtDateTime:
 		if t, ok := src.(time.Time); ok {
-			var err error
-			value, err = _connector.AsDateTime(t)
-			valid = err == nil
+			t = t.UTC()
+			if y := t.Year(); y < 1 || y > 9999 {
+				return nil, fmt.Errorf("database returned a value of %q for property %s, with year %d not in range [1, 9999]", src, name, y)
+			}
+			value = t
+			valid = true
 		}
 	case types.PtDate:
 		if t, ok := src.(time.Time); ok {
-			var err error
-			value, err = _connector.AsDate(t)
-			valid = err == nil
+			t = t.UTC()
+			if y := t.Year(); y < 1 || y > 9999 {
+				return nil, fmt.Errorf("database returned a value of %q for property %s, with year %d not in range [1, 9999]", src, name, y)
+			}
+			value = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+			valid = true
 		}
 	case types.PtTime:
 		switch src := src.(type) {
 		case []byte:
-			var err error
-			value, err = _connector.ParseTime(string(src))
-			valid = err == nil
+			value, valid = parseTime(src)
 		case string:
-			var err error
-			value, err = _connector.ParseTime(src)
-			valid = err == nil
+			value, valid = parseTime(src)
 		}
 	case types.PtYear:
 		switch y := src.(type) {
@@ -693,80 +667,79 @@ func ValidateStringProperty(p types.Property, s string) error {
 	return nil
 }
 
-func normalizeDateTimeInt(layout string, src int64) (_connector.DateTime, error) {
+// dateTimeFromUnixInt returns the local Time corresponding to the given Unix
+// time. Unix time is expressed in seconds, milliseconds, microseconds or
+// nanoseconds according to layout.
+// The second return value reports whether the layout is appropriate.
+func dateTimeFromUnixInt(n int64, layout string) (time.Time, bool) {
 	switch layout {
-	case types.Nanoseconds:
-		return _connector.AsDateTime(time.Unix(0, src))
-	case types.Microseconds:
-		return _connector.AsDateTime(time.UnixMicro(src).UTC())
-	case types.Milliseconds:
-		return _connector.AsDateTime(time.UnixMilli(src).UTC())
 	case types.Seconds:
-		return _connector.AsDateTime(time.Unix(src, 0).UTC())
+		return time.Unix(n, 0), true
+	case types.Milliseconds:
+		return time.UnixMilli(n), true
+	case types.Microseconds:
+		return time.UnixMicro(n), true
+	case types.Nanoseconds:
+		return time.Unix(0, n), true
 	}
-	panic(errors.New("invalid layout"))
+	return time.Time{}, false
 }
 
-func normalizeDateTimeFloat(layout string, src float64) (_connector.DateTime, error) {
+// dateTimeFromUnixFloat returns the local Time corresponding to the given Unix
+// time. Unix time is expressed in seconds, milliseconds, microseconds or
+// nanoseconds according to layout.
+// The second return value reports whether the layout is appropriate.
+func dateTimeFromUnixFloat(n float64, layout string) (time.Time, bool) {
 	switch layout {
-	case types.Nanoseconds:
-		return _connector.AsDateTime(time.Unix(0, int64(src)))
-	case types.Microseconds:
-		return _connector.AsDateTime(time.UnixMicro(int64(src)))
-	case types.Milliseconds:
-		return _connector.AsDateTime(time.UnixMilli(int64(src)))
 	case types.Seconds:
-		sec := int64(src)
-		nsec := int64((src - float64(sec)) * 1e9)
-		return _connector.AsDateTime(time.Unix(sec, nsec))
+		sec := int64(n)
+		nsec := int64((n - float64(sec)) * 1e9)
+		return time.Unix(sec, nsec), true
+	case types.Milliseconds:
+		return time.UnixMilli(int64(n)), true
+	case types.Microseconds:
+		return time.UnixMicro(int64(n)), true
+	case types.Nanoseconds:
+		return time.Unix(0, int64(n)), true
 	}
-	panic(errors.New("invalid layout"))
+	return time.Time{}, false
 }
 
-func normalizeTimeInt(layout string, src int64) (_connector.Time, error) {
-	if src < 0 {
-		return 0, errors.New("time overflow")
+// parseTime parses a time formatted as "hh:nn:ss.nnnnnnnnn" and returns it as
+// the time on January 1, 1970 UTC. The sub-second part can contain from 1 to 9
+// digits or can be missing. The hour must be in range [0, 23], minute and second
+// must be in range [0, 59], and any trailing characters are discarded.
+// The boolean return value indicates whether the time was successfully parsed.
+func parseTime[bytes []byte | string](p bytes) (t time.Time, ok bool) {
+	if len(p) < 8 {
+		return
 	}
-	var t _connector.Time
-	switch layout {
-	case types.Nanoseconds:
-		t = _connector.Time(src)
-	case types.Microseconds:
-		t = _connector.Time(src * int64(time.Microsecond))
-	case types.Milliseconds:
-		t = _connector.Time(src * int64(time.Millisecond))
-	case types.Seconds:
-		t = _connector.Time(src * int64(time.Second))
-	default:
-		panic(errors.New("invalid layout"))
+	parse := func(n bytes) int {
+		if n[0] < '0' || n[0] > '9' || n[1] < '0' || n[1] > '9' {
+			return -1
+		}
+		return int(n[0]-'0')*10 + int(n[1]-'0')
 	}
-	if t < 0 || t > _connector.MaxTime {
-		return 0, errors.New("time overflow")
+	h, m, s := parse(p[0:2]), parse(p[3:5]), parse(p[6:8])
+	if h < 0 || h > 23 || p[2] != ':' || m < 0 || m > 59 || p[5] != ':' || s < 0 || s > 59 {
+		return
 	}
-	return t, nil
-}
-
-func normalizeTimeFloat(layout string, src float64) (_connector.Time, error) {
-	if src < 0 {
-		return 0, errors.New("time overflow")
+	p = p[8:]
+	var ns int
+	if len(p) > 0 && p[0] == '.' {
+		p = p[1:]
+		var i int
+		for ; i < 9 && i < len(p) && '0' <= p[i] && p[i] <= '9'; i++ {
+			ns = ns*10 + int(p[i]-'0')
+		}
+		if i == 0 {
+			return
+		}
+		for ; i < 9; i++ {
+			ns *= 10
+		}
 	}
-	var t _connector.Time
-	switch layout {
-	case types.Nanoseconds:
-		t = _connector.Time(int64(src))
-	case types.Microseconds:
-		t = _connector.Time(int64(src * float64(time.Microsecond)))
-	case types.Milliseconds:
-		t = _connector.Time(int64(src * float64(time.Millisecond)))
-	case types.Seconds:
-		t = _connector.Time(int64(src * float64(time.Second)))
-	default:
-		panic(errors.New("invalid layout"))
-	}
-	if t < 0 || t > _connector.MaxTime {
-		return 0, errors.New("time overflow")
-	}
-	return t, nil
+	return time.Date(1970, 1, 1, h, m, s, ns, time.UTC), true
 }
 
 // abbreviate abbreviates s to almost n runes. If s is longer than n runes,

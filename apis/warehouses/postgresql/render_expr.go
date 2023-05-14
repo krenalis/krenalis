@@ -11,10 +11,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"chichi/apis/postgres"
 	wh "chichi/apis/warehouses"
-	_connector "chichi/connector"
 	"chichi/connector/types"
 
 	"github.com/open2b/nuts/decimal"
@@ -139,19 +139,19 @@ func renderExpr(expr wh.Expr) (string, error) {
 			}
 			s.WriteString(d.String())
 		case types.PtDateTime:
-			t, ok := baseExpr.Value.(_connector.DateTime)
+			t, ok := baseExpr.Value.(time.Time)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type connector.DateTime, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, t.Format("2006-01-02 15:04:05.999999"))
 		case types.PtDate:
-			t, ok := baseExpr.Value.(_connector.Date)
+			t, ok := baseExpr.Value.(time.Time)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type connector.Date, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, t.String())
 		case types.PtTime:
-			t, ok := baseExpr.Value.(_connector.Time)
+			t, ok := baseExpr.Value.(time.Time)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type connector.Time, got %T", baseExpr.Value)
 			}
