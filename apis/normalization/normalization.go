@@ -550,9 +550,14 @@ func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, s
 			valid = err == nil
 		}
 	case types.PtTime:
-		if s, ok := src.([]byte); ok {
+		switch src := src.(type) {
+		case []byte:
 			var err error
-			value, err = _connector.ParseTime(string(s))
+			value, err = _connector.ParseTime(string(src))
+			valid = err == nil
+		case string:
+			var err error
+			value, err = _connector.ParseTime(src)
 			valid = err == nil
 		}
 	case types.PtYear:

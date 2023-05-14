@@ -19,7 +19,7 @@
 | Decimal       | decimal.Decimal    | string, float64, json.Number      | decimal.Decimal | string     | []byte     | int32, int64 | -      | -      |
 | DateTime      | connector.DateTime | string, float64, json.Number      | time.Time       | time.Time  | time.Time  | time.Time    | -      | -      |
 | Date          | connector.Date     | string                            | time.Time [^2]  | time.Time  | time.Time  |              | -      | -      |
-| Time          | connector.Time     | string, float64, json.Number      | -               | -          | []byte     |              | -      | -      |
+| Time          | connector.Time     | string, float64, json.Number      | -               | string     | []byte     |              | -      | -      |
 | Year          | int                | float64, json.Number              | -               | int64      | []byte     | -            | -      | -      |
 | UUID          | string             | string                            | string          | string     | -          |              | -      | -      |
 | JSON          | json.RawMessage    | string, json.RawMessage, any [^4] | - [^3]          | []byte     | - [^1]     |              | -      | -      |
