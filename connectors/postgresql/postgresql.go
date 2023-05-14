@@ -251,7 +251,8 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 				t.DatabaseTypeName(), precision, scale)
 		}
 		return types.Decimal(int(precision), int(scale)), nil
-	case "TIME":
+	case "TIME", "1266":
+		// 1266: time with time zone.
 		return types.Time(), nil
 	case "TIMESTAMP", "TIMESTAMPTZ":
 		return types.DateTime(), nil // TODO(marco) set the layout
