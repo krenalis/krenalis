@@ -61,9 +61,9 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
 	let { connection: c } = useContext(ConnectionContext);
 
-	let initialQuery = useRef('');
-	let initialPath = useRef('');
-	let initialSheet = useRef('');
+	let queryRef = useRef('');
+	let pathRef = useRef('');
+	let sheetRef = useRef('');
 	let defaultTransformationFunction = useRef('');
 	let propertiesListRef = useRef(null);
 	let conditionListRef = useRef(null);
@@ -152,12 +152,10 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			}
 
 			if (actionTypeInfos.Supports.includes('Path') && a != null) {
-				let [res, err] = await API.connections.records(c.ID, a.Path, a.Sheet, 0);
-				if (err != null) {
-					showError(err); // TODO: show the errors directly under the mapping fields if they are missing as a result of a change to the file.
-					return;
+				let res = await records(a.Path, a.Sheet, 0);
+				if (res != null) {
+					setInputSchema(res.schema);
 				}
-				setInputSchema(res.schema);
 			}
 
 			// get the action
@@ -194,9 +192,9 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					Sheet: actionTypeInfos.Supports.includes('Sheet') ? '' : null,
 				};
 			}
-			initialQuery.current = action.Query;
-			initialPath.current = action.Path;
-			initialSheet.current = action.Sheet;
+			queryRef.current = action.Query;
+			pathRef.current = action.Path;
+			sheetRef.current = action.Sheet;
 			setAction(action);
 
 			// set the default transformation function
@@ -455,7 +453,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			return;
 		}
 		if (isConfirmation) {
-			initialQuery.current = trimmed;
+			queryRef.current = trimmed;
 		}
 		return res;
 	};
@@ -504,10 +502,32 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setAction(a);
 	};
 
-	const onFilePreview = async () => {
-		let [res, err] = await API.connections.records(c.ID, action.Path, action.Sheet, 20);
+	const records = async (path, sheet, limit, isConfirmation) => {
+		let [res, err] = await API.connections.records(c.ID, path, sheet, limit);
 		if (err != null) {
+			if (err instanceof UnprocessableError) {
+				switch (err.code) {
+					case 'ReadFileFailed':
+						showStatus([variants.DANGER, icons.INVALID_INSERTED_VALUE, err.message]);
+						break;
+					default:
+						break;
+				}
+				return;
+			}
 			showError(err);
+			return;
+		}
+		if (isConfirmation) {
+			pathRef.current = path;
+			sheetRef.current = sheet;
+		}
+		return res;
+	};
+
+	const onFilePreview = async () => {
+		let res = await records(action.Path, action.Sheet, 20);
+		if (res == null) {
 			return;
 		}
 		let columns = [];
@@ -519,9 +539,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	};
 
 	const onConfirmFile = async () => {
-		let [res, err] = await API.connections.records(c.ID, action.Path, action.Sheet, 0);
-		if (err != null) {
-			showError(err);
+		let res = await records(action.Path, action.Sheet, 0, true);
+		if (res == null) {
 			return;
 		}
 		setInputSchema(res.schema);
@@ -733,8 +752,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	}
 
 	let isQueryChanged = false;
-	if (initialQuery.current != null) {
-		if (initialQuery.current.trim() !== action.Query.trim()) {
+	if (queryRef.current != null) {
+		if (queryRef.current.trim() !== action.Query.trim()) {
 			isQueryChanged = true;
 		}
 	} else {
@@ -743,8 +762,29 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		}
 	}
 
+	let isFileChanged = false;
+	if (pathRef.current != null) {
+		if (pathRef.current.trim() !== action.Path.trim()) {
+			isFileChanged = true;
+		}
+	} else {
+		if (action.Path != null && action.Path.trim() !== '') {
+			isFileChanged = true;
+		}
+	}
+	if (sheetRef.current != null) {
+		if (sheetRef.current.trim() !== action.Sheet.trim()) {
+			isFileChanged = true;
+		}
+	} else {
+		if (action.Sheet != null && action.Sheet.trim() !== '') {
+			isFileChanged = true;
+		}
+	}
+
 	let hasQueryError = c.Type === 'Database' && inputSchema == null;
-	let isPropertiesSectionDisabled = hasQueryError || isQueryChanged;
+	let hasRecordsError = c.Type === 'File' && inputSchema == null;
+	let isPropertiesSectionDisabled = hasQueryError || isQueryChanged || hasRecordsError || isFileChanged;
 	let propertiesSection = null;
 	if (supports.includes('Mapping')) {
 		let propertiesSectionActions = null;
@@ -858,7 +898,11 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							<SlIcon slot='icon' name='exclamation-circle' />
 							{hasQueryError
 								? 'Mappings are disabled since the query returned an error. Fix the query before proceding to mappings.'
-								: 'Mappings are disabled since you have modified the query. Confirm the query or undo the changes before proceding to mappings'}
+								: hasRecordsError
+								? 'Mappings are disabled since the file fetch returned an error. Fix the file informations before proceding to mappings.'
+								: c.Type === 'Database'
+								? 'Mappings are disabled since you have modified the query. Confirm the query or undo the changes before proceding to mappings'
+								: 'Mappings are disabled since you have modified the file informations. Confirm the new informations or undo the changes before proceding to mappings'}
 						</SlAlert>
 					)}
 					{mappings}
