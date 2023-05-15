@@ -94,7 +94,7 @@ func newProcessor(ctx context.Context, st *eventsState, eventLog *eventsLog, eve
 							continue
 						}
 						// Apply the mapping or the transformation.
-						mappedEvent, err := mappings.Apply(ctx, action, mapEvent, action.Schema)
+						mappedEvent, err := mappings.Apply(ctx, action.Mapping, action.Transformation, mapEvent, Schema, action.Schema)
 						if err != nil {
 							eventLog.TransformationFailed(event.id, action.ID, err)
 							continue

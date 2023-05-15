@@ -133,10 +133,10 @@ type Firehose interface {
 	// SetSettings sets the given settings of the connection.
 	SetSettings(settings []byte) error
 
-	// SetUser sets an user given its properties. The last update time of a
+	// SetUser sets the properties of the given user. The last update time of a
 	// property is the time in timestamps with the property name as key. If no
 	// such key exists, the last update time is timestamp.
-	SetUser(user map[string]any, timestamps map[string]time.Time)
+	SetUser(user string, properties map[string]any, timestamp time.Time, timestamps map[string]time.Time)
 
 	// SetUserGroups sets the groups of a user.
 	SetUserGroups(user string, groups []string)
@@ -232,6 +232,12 @@ type Property struct {
 type PropertyOption struct {
 	Label string
 	Value string
+}
+
+type User struct {
+	ID         string
+	Groups     []string
+	Properties Properties
 }
 
 type Group struct {

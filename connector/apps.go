@@ -34,8 +34,6 @@ type App struct {
 	Icon                   string      // icon in SVG format
 	OAuth                  OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
 	WebhooksPer            WebhooksPer // indicates if webhooks are per connector, resource or connection
-	IdentityProperty       string      // property that contains the app ID of imported users.
-	TimestampProperty      string      // property that contains the timestamp of imported users. When empty, it means that no timestamp properties exist.
 
 	open reflect.Value
 	ct   reflect.Type
@@ -112,7 +110,7 @@ type AppUsersConnection interface {
 	ReceiveWebhook(r *http.Request) ([]WebhookEvent, error)
 
 	// SetUsers sets the given users.
-	SetUsers(users []Properties) error
+	SetUsers(users []User) error
 
 	// UserSchema returns the user schema.
 	UserSchema() (types.Type, error)

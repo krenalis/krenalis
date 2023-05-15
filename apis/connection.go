@@ -15,9 +15,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	mathrand "math/rand"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -1738,7 +1740,7 @@ func abbreviate(s string, n int) string {
 // mappings to the properties.
 //
 // TODO(Gianluca): this code must be rewritten on the actions.
-func exportUser(id string, properties map[string]any) (_connector.Properties, error) {
+func exportUser(id string, properties map[string]any) (_connector.User, error) {
 	panic("not implemented")
 }
 
@@ -1827,4 +1829,105 @@ func (role *ConnectionRole) UnmarshalJSON(data []byte) error {
 	}
 	*role = r
 	return nil
+}
+
+// setUsers sets the user with the given ID into the database and into the data
+// warehouse.
+func (this *Connection) setUser(ctx context.Context, id string, user map[string]any) error {
+
+	// Resolve the entity of this user.
+	ids := identitySolver{ctx, this.connection}
+	email, _ := user["Email"].(string)
+	if email == "" {
+		return fmt.Errorf("expecting 'Email' to be a non-empty string, got %#v (of type %T)", user["Email"], user["Email"])
+	}
+	goldenRecordID, err := ids.ResolveEntity(this.connection.ID, id, email)
+	if err != nil {
+		return err
+	}
+
+	// TODO(Gianluca):
+	for _, v := range user {
+		if _, ok := v.(map[string]interface{}); ok {
+			return errors.New("setUser is still partially implemented and does not support objects")
+		}
+	}
+
+	query := &strings.Builder{}
+	query.WriteString("UPDATE users SET\n")
+	var values []any
+	i := 1
+	for prop, value := range user {
+		if i > 1 {
+			query.WriteString(", ")
+		}
+		query.WriteString(postgres.QuoteIdent(prop))
+		query.WriteString(" = $")
+		query.WriteString(strconv.Itoa(i))
+		values = append(values, value)
+		i++
+	}
+	query.WriteString(`, "timestamp" = now()`)
+	query.WriteString("\nWHERE id = $")
+	query.WriteString(strconv.Itoa(i))
+	values = append(values, goldenRecordID)
+	ws := this.connection.Workspace()
+	res, err := ws.Warehouse.Exec(ctx, query.String(), values...)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return fmt.Errorf("BUG: one row should be affected, got %d", affected)
+	}
+
+	log.Printf("[info] user %q written to the data warehouse", email)
+
+	return nil
+}
+
+// writeConnectionUsers writes the user properties (before being mapped) with
+// the given ID and the relative timestamps to the database.
+// It also updates the statistics about the connection.
+// timestamp refers to the entire set of user properties, while timestamp may
+// contain timestamps for specific properties.
+func (this *Connection) writeConnectionUsers(ctx context.Context, id string, user map[string]any, timestamp time.Time, timestamps map[string]time.Time) error {
+
+	// Prepare the data that will be written to the database.
+	data, err := json.Marshal(user)
+	if err != nil {
+		return err
+	}
+	timestampsToWrite := map[string]time.Time{}
+	for prop := range user {
+		ts, ok := timestamps[prop]
+		if !ok {
+			ts = timestamp
+		}
+		timestampsToWrite[prop] = ts
+	}
+	jsonTimestamps, err := json.Marshal(timestampsToWrite)
+	if err != nil {
+		return err
+	}
+
+	// Write to the database.
+	ws := this.connection.Workspace()
+	connection := this.connection.ID
+	_, err = ws.Warehouse.Exec(ctx, "INSERT INTO connections_users (connection, \"user\", data, timestamps)\n"+
+		"VALUES ($1, $2, $3, $4)\n"+
+		"ON CONFLICT (connection, \"user\") DO UPDATE SET data = $3, timestamps = $4",
+		connection, id, data, jsonTimestamps)
+	if err != nil {
+		return err
+	}
+	_, err = this.db.Exec(ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, users)\n"+
+		"VALUES ($1, $2, 1)\n"+
+		"ON CONFLICT (connection, time_slot) DO UPDATE SET users = cs.users + 1",
+		connection, statsTimeSlot(time.Now()))
+
+	return err
 }

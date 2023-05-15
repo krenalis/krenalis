@@ -116,7 +116,7 @@ func (this *Action) exportToApp() error {
 	}
 
 	// Prepare the users to export to the connection.
-	users := []_connector.Properties{}
+	users := []_connector.User{}
 	{
 		// TODO(Gianluca): populate this map:
 		internalToExternalID := map[int]string{}

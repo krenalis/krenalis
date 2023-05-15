@@ -10,8 +10,12 @@ package apis
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"chichi/apis/errors"
+	"chichi/apis/mappings"
 	"chichi/apis/normalization"
+	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 )
@@ -22,11 +26,15 @@ func (this *Action) importFromDatabase() error {
 	connection := this.action.Connection()
 	connector := connection.Connector()
 
+	// Compile the query.
 	query, err := compileActionQuery(this.action.Query, noQueryLimit)
 	if err != nil {
 		return actionExecutionError{err}
 	}
-	fh := this.newFirehose(context.Background())
+
+	// Instantiate a new firehose.
+	ctx := context.Background()
+	fh := this.newFirehose(ctx)
 	c, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
 		Role:     _connector.SourceRole,
 		Settings: connection.Settings,
@@ -35,13 +43,33 @@ func (this *Action) importFromDatabase() error {
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
+
+	// Execute the query and get the results and the properties.
 	rawRows, properties, err := c.Query(query)
 	if err != nil {
 		return actionExecutionError{err}
 	}
 	defer rawRows.Close()
+
+	// Determine the input and the output schema.
+	apisConn := &Connection{
+		db:         this.db,
+		connection: this.action.Connection(),
+	}
+	inputSchema, err := types.ObjectOf(properties)
+	if err != nil {
+		return actionExecutionError{err}
+	}
+	usersSchema, ok := this.action.Connection().Workspace().Schemas["users"]
+	if !ok {
+		return actionExecutionError{errors.New("users schema not loaded")}
+	}
+	outSchema := usersSchemaToConnectionSchema(*usersSchema, state.DatabaseType)
+
+	// Iterate over the database rows.
 	dest := make([]any, len(properties))
 	for rawRows.Next() {
+
 		row := make(map[string]any, len(properties))
 		for i, p := range properties {
 			dest[i] = databaseScanValue{property: p, row: row}
@@ -49,14 +77,41 @@ func (this *Action) importFromDatabase() error {
 		if err := rawRows.Scan(dest...); err != nil {
 			return actionExecutionError{fmt.Errorf("query execution failed: %s", err)}
 		}
-		err = this.setUser(row, nil)
+
+		// Apply the mapping or the transformation.
+		mappedUser, err := mappings.Apply(ctx, this.action.Mapping, this.action.Transformation, row, inputSchema, outSchema)
 		if err != nil {
 			return err
 		}
+
+		// Estrapolate the ID and the timestamp for the user.
+		err = applyTimestampWorkaround(mappedUser)
+		if err != nil {
+			return err
+		}
+		id := mappedUser["id"].(string)
+		delete(mappedUser, "id")
+		timestamp, ok := mappedUser["timestamp"].(time.Time)
+		if !ok {
+			timestamp = time.Now().UTC()
+		}
+		delete(mappedUser, "timestamp")
+
+		// Write the user and the mapped user on the database.
+		err = apisConn.writeConnectionUsers(ctx, id, row, timestamp, nil)
+		if err != nil {
+			return err
+		}
+		err = apisConn.setUser(ctx, id, mappedUser)
+		if err != nil {
+			return err
+		}
+
 	}
 	if err = rawRows.Err(); err != nil {
 		return actionExecutionError{fmt.Errorf("an error occurred closing the database: %s", err)}
 	}
+
 	// Handle errors occurred in the firehose.
 	if fh.err != nil {
 		return fh.err

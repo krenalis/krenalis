@@ -37,7 +37,6 @@ func init() {
 		SourceDescription:      "import users from Dummy",
 		DestinationDescription: "export users and send events to Dummy",
 		TermForUsers:           "users",
-		IdentityProperty:       "dummy_id",
 	}, open)
 }
 
@@ -123,7 +122,9 @@ type user struct {
 	Properties map[string]any
 }
 
-func (c *connection) SetUsers(users []connector.Properties) error {
+var now = time.Now()
+
+func (c *connection) SetUsers(users []connector.User) error {
 	panic("not implemented")
 }
 
@@ -154,8 +155,9 @@ func (c *connection) Users(cursor string, properties []connector.PropertyPath) e
 	}
 	id := 1
 	for _, user := range users {
-		user.Properties["dummy_id"] = strconv.Itoa(id)
-		c.firehose.SetUser(user.Properties, nil)
+		dummyID := strconv.Itoa(id)
+		user.Properties["dummy_id"] = dummyID
+		c.firehose.SetUser(dummyID, user.Properties, now, nil)
 		id++
 	}
 	return nil

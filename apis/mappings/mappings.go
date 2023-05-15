@@ -52,20 +52,21 @@ func ActionFilterApplies(filter *state.ActionFilter, event map[string]any) (bool
 	return true, nil
 }
 
-// Apply applies the mapping or the transformation to the properties.
-// If outSchema is a valid schema, the resulting properties are validated
-// through that schema before being returned.
-func Apply(ctx context.Context, action *state.Action, properties map[string]any, outSchema types.Type) (map[string]any, error) {
+// Apply applies the mapping or the transformation to the properties, returning
+// the mapped properties.
+// t1 is the input schema while t2 is the output schema; if t2 is a valid
+// schema, then the mapped properties are validated against it.
+func Apply(ctx context.Context, mapp map[string]string, transf *state.Transformation, props map[string]any, t1, t2 types.Type) (map[string]any, error) {
 
 	var mappedProperties map[string]any
 
 	// Map using properties mapping.
-	if action.Mapping != nil {
+	if mapp != nil {
 
 		mappedProperties = map[string]any{}
-		for out, in := range action.Mapping {
+		for out, in := range mapp {
 			inputPropPath := strings.Split(in, ".")
-			value, ok := readPropertyFrom(properties, inputPropPath)
+			value, ok := readPropertyFrom(props, inputPropPath)
 			if !ok {
 				continue
 			}
@@ -75,16 +76,16 @@ func Apply(ctx context.Context, action *state.Action, properties map[string]any,
 			writePropertyTo(mappedProperties, outputPropPath, value)
 		}
 
-	} else if action.Transformation != nil {
+	} else if transf != nil {
 
 		// Map using the transformation function.
-		t := action.Transformation
+		t := transf
 
 		// Prepare the properties for the transformation.
 		inPropsNames := t.In.PropertiesNames()
 		inProps := make(map[string]any, len(inPropsNames))
 		for _, name := range inPropsNames {
-			value, ok := properties[name]
+			value, ok := props[name]
 			if !ok {
 				continue
 			}
@@ -114,10 +115,9 @@ func Apply(ctx context.Context, action *state.Action, properties map[string]any,
 
 	}
 
-	// If outSchema is a valid schema, then validate the mapped properties with
-	// it.
-	if outSchema.Valid() {
-		err := validateProps(mappedProperties, outSchema)
+	// If t2 is a valid schema, then validate the mapped properties with it.
+	if t2.Valid() {
+		err := validateProps(mappedProperties, t2)
 		if err != nil {
 			return nil, fmt.Errorf("mapped properties validation failed: %s", err)
 		}

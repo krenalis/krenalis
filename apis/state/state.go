@@ -303,8 +303,6 @@ type Connector struct {
 	LogoURL                string
 	WebhooksPer            WebhooksPer
 	OAuth                  *ConnectorOAuth
-	IdentityProperty       string
-	TimestampProperty      string
 }
 
 // ConnectorTargets represents the targets of a connector.

@@ -15,7 +15,10 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/errors"
+	"chichi/apis/mappings"
 	"chichi/apis/normalization"
+	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 )
@@ -60,9 +63,51 @@ func (this *Action) importFromFile() error {
 		defer r.Close()
 	}
 
+	// Determine the input and the output schema.
+	apisConn := &Connection{
+		db:         this.db,
+		connection: this.action.Connection(),
+	}
+	inputSchema, err := apisConn.fetchFileSchema(this.action.Path, this.action.Sheet)
+	if err != nil {
+		return actionExecutionError{fmt.Errorf("an error occurred fetching the schema: %s", err)}
+	}
+	usersSchema, ok := this.action.Connection().Workspace().Schemas["users"]
+	if !ok {
+		return actionExecutionError{errors.New("users schema not loaded")}
+	}
+	outputSchema := usersSchemaToConnectionSchema(*usersSchema, state.DatabaseType)
+
 	// Read the records.
 	rw := newRecordWriter(c.ID, math.MaxInt, func(record map[string]any) error {
-		return this.setUser(record, nil)
+
+		// Apply the mapping or the transformation.
+		mappedUser, err := mappings.Apply(ctx, this.action.Mapping, this.action.Transformation, record, inputSchema, outputSchema)
+		if err != nil {
+			return err
+		}
+
+		// Estrapolate the ID and the timestamp for the user.
+		err = applyTimestampWorkaround(mappedUser)
+		if err != nil {
+			return err
+		}
+		id := mappedUser["id"].(string)
+		delete(mappedUser, "id")
+		timestamp, ok := mappedUser["timestamp"].(time.Time)
+		if !ok {
+			timestamp = time.Now().UTC()
+		}
+		delete(mappedUser, "timestamp")
+
+		// Write the user and the mapped user on the database.
+		err = apisConn.writeConnectionUsers(ctx, id, record, timestamp, nil)
+		if err != nil {
+			return err
+		}
+		err = apisConn.setUser(ctx, id, mappedUser)
+
+		return err
 	})
 	err = file.Read(r, this.action.Sheet, rw)
 	if err != nil {

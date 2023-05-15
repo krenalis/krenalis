@@ -10,15 +10,12 @@ package apis
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 	"time"
 
 	"chichi/apis/errors"
-	"chichi/apis/mappings"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	_connector "chichi/connector"
@@ -180,183 +177,6 @@ func (this *Action) schema() (types.Type, []_connector.PropertyPath, error) {
 	return schema, paths, nil
 }
 
-// setUser sets the user.
-//
-// timestamps are the timestamps for the single properties imported by app
-// connections. If timestamps is nil or a property timestamp is not found within
-// timestamps, the timestamp of the entire user is used.
-func (this *Action) setUser(user map[string]any, timestamps map[string]time.Time) error {
-
-	c := this.action.Connection()
-	connector := c.Connector()
-
-	ctx := context.Background()
-
-	// Apply the mapping (or the transformation).
-	candidateData, err := mappings.Apply(ctx, this.action, user, types.Type{})
-	if err != nil {
-		return fmt.Errorf("cannot apply mapping or transformation: %s", err)
-	}
-
-	// Add the "id" and "timestamp" properties to the candidate data, if
-	// necessary.
-	switch connector.Type {
-	case state.AppType:
-
-		// Identity.
-		id, ok := user[connector.IdentityProperty].(string)
-		if !ok {
-			return fmt.Errorf("missing or invalid identity property %q", connector.IdentityProperty)
-		}
-		candidateData["id"] = id
-
-		// Timestamp.
-		var timestamp time.Time
-		if connector.TimestampProperty != "" {
-			timestamp, ok = user[connector.TimestampProperty].(time.Time)
-		}
-		if !ok {
-			timestamp = time.Now().UTC()
-		}
-		candidateData["timestamp"] = timestamp
-
-	case
-		state.DatabaseType,
-		state.FileType:
-
-		// The property "id" has already been mapped because it's mandatory, so
-		// here only the "timestamp" property is handled.
-		ts, ok := candidateData["timestamp"]
-		if ok {
-			switch ts := ts.(type) {
-			case time.Time:
-				// Ok.
-			case string:
-				// TODO(Gianluca): remove this code when support for conversions
-				// will be implemented.
-				t, err := time.Parse(time.DateTime, ts)
-				if err != nil {
-					return fmt.Errorf("bad timestamp %q parsed: %s", ts, err)
-				}
-				candidateData["timestamp"] = t
-			}
-		} else {
-			candidateData["timestamp"] = time.Now().UTC()
-		}
-	}
-
-	id := candidateData["id"].(string)
-	timestamp := candidateData["timestamp"].(time.Time)
-	delete(candidateData, "id")
-	delete(candidateData, "timestamp")
-
-	// Write the user properties and timestamps to the database.
-	{
-		timestampsToWrite := map[string]time.Time{}
-		for prop := range user {
-			ts, ok := timestamps[prop]
-			if !ok {
-				ts = timestamp
-			}
-			timestampsToWrite[prop] = ts
-		}
-		err = this.writeConnectionUsers(ctx, c.ID, id, user, timestampsToWrite)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Resolve the entity of this user.
-	ids := identitySolver{ctx, c}
-	email, _ := candidateData["Email"].(string)
-	if email == "" {
-		return fmt.Errorf("expecting 'Email' to be a non-empty string, got %#v (of type %T)", candidateData["Email"], candidateData["Email"])
-	}
-	goldenRecordID, err := ids.ResolveEntity(c.ID, id, email)
-	if err != nil {
-		return err
-	}
-
-	// Write the data to the Golden Record, if necessary.
-	if len(candidateData) > 0 {
-		err = this.writeToGoldenRecord(ctx, goldenRecordID, candidateData)
-		if err != nil {
-			return err
-		}
-		log.Printf("[info] properties for user %q written to the Golden Record", candidateData["Email"])
-	}
-
-	return nil
-}
-
-// writeConnectionUsers writes the given connection users to the database.
-func (this *Action) writeConnectionUsers(ctx context.Context, connection int, id string, user map[string]any, timestamps map[string]time.Time) error {
-	data, err := json.Marshal(user)
-	if err != nil {
-		return err
-	}
-	jsonTimestamps, err := json.Marshal(timestamps)
-	if err != nil {
-		return err
-	}
-	ws := this.action.Connection().Workspace()
-	_, err = ws.Warehouse.Exec(ctx, "INSERT INTO connections_users (connection, \"user\", data, timestamps)\n"+
-		"VALUES ($1, $2, $3, $4)\n"+
-		"ON CONFLICT (connection, \"user\") DO UPDATE SET data = $3, timestamps = $4",
-		connection, id, data, jsonTimestamps)
-	if err != nil {
-		return err
-	}
-	_, err = this.db.Exec(ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, users)\n"+
-		"VALUES ($1, $2, 1)\n"+
-		"ON CONFLICT (connection, time_slot) DO UPDATE SET users = cs.users + 1",
-		connection, statsTimeSlot(time.Now()))
-	return err
-}
-
-// writeToGoldenRecord writes the given properties to the Golden Record.
-func (this *Action) writeToGoldenRecord(ctx context.Context, id int, props map[string]any) error {
-
-	// TODO(Gianluca):
-	for _, v := range props {
-		if _, ok := v.(map[string]interface{}); ok {
-			return errors.New("writeToGoldenRecord is still partially implemented and does not support objects")
-		}
-	}
-
-	query := &strings.Builder{}
-	query.WriteString("UPDATE users SET\n")
-	var values []any
-	i := 1
-	for prop, value := range props {
-		if i > 1 {
-			query.WriteString(", ")
-		}
-		query.WriteString(postgres.QuoteIdent(prop))
-		query.WriteString(" = $")
-		query.WriteString(strconv.Itoa(i))
-		values = append(values, value)
-		i++
-	}
-	query.WriteString(`, "timestamp" = now()`)
-	query.WriteString("\nWHERE id = $")
-	query.WriteString(strconv.Itoa(i))
-	values = append(values, id)
-	ws := this.action.Connection().Workspace()
-	res, err := ws.Warehouse.Exec(ctx, query.String(), values...)
-	if err != nil {
-		return err
-	}
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if affected != 1 {
-		return fmt.Errorf("BUG: one row should be affected, got %d", affected)
-	}
-	return nil
-}
-
 // readGRUsers reads the Golden Record users with the given IDs.
 func (this *Action) readGRUsers(ids []int) ([]map[string]any, error) {
 	return nil, nil // TODO(Gianluca): implement.
@@ -400,4 +220,18 @@ type actionExecutionError struct {
 
 func (err actionExecutionError) Error() string {
 	return err.err.Error()
+}
+
+// applyTimestampWorkaround applies a workaround on the "timestamp" property
+// until the normalization / conversion is implemented.
+// TODO(Gianluca):
+func applyTimestampWorkaround(mappedUser map[string]any) error {
+	if ts, ok := mappedUser["timestamp"].(string); ok {
+		t, err := time.Parse(time.DateTime, ts)
+		if err != nil {
+			return fmt.Errorf("bad timestamp %q parsed: %s", ts, err)
+		}
+		mappedUser["timestamp"] = t
+	}
+	return nil
 }

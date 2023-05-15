@@ -16,6 +16,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/mappings"
 	"chichi/apis/normalization"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
@@ -134,7 +135,7 @@ func (fh *firehose) SetSettings(settings []byte) error {
 	return nil
 }
 
-func (fh *firehose) SetUser(user map[string]any, timestamps map[string]time.Time) {
+func (fh *firehose) SetUser(id string, user map[string]any, timestamp time.Time, timestamps map[string]time.Time) {
 
 	// Return if the context has expired.
 	select {
@@ -168,7 +169,28 @@ func (fh *firehose) SetUser(user map[string]any, timestamps map[string]time.Time
 		user[name] = value
 	}
 
-	err := fh.action.setUser(user, timestamps)
+	ctx := context.Background()
+	usersSchema, ok := fh.connection.Workspace().Schemas["users"]
+	if !ok {
+		fh.setError(errors.New("users schema not loaded"))
+		return
+	}
+	outputSchema := usersSchemaToConnectionSchema(*usersSchema, state.AppType)
+	mappedUser, err := mappings.Apply(ctx, fh.action.action.Mapping, fh.action.action.Transformation, user, fh.action.action.Schema, outputSchema)
+	if err != nil {
+		fh.setError(err)
+		return
+	}
+	connection := &Connection{
+		db:         fh.db,
+		connection: fh.connection,
+	}
+	err = connection.writeConnectionUsers(ctx, id, user, timestamp, timestamps)
+	if err != nil {
+		fh.setError(err)
+		return
+	}
+	err = connection.setUser(ctx, id, mappedUser)
 	if err != nil {
 		fh.setError(err)
 		return
