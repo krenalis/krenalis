@@ -295,7 +295,7 @@ func (this *Action) Set(action ActionToSet) error {
 	// Marshal the schema.
 	var rawSchema []byte
 	if n.Schema.Valid() {
-		rawSchema, err := n.Schema.MarshalJSON()
+		rawSchema, err = n.Schema.MarshalJSON()
 		if err != nil {
 			if this.EventType == nil {
 				return fmt.Errorf("cannot marshal fetched schema for action %d of connection %d: %s", this.ID, c.ID, err)
