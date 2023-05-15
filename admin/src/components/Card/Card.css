@@ -10,7 +10,7 @@
 	border: 1px solid var(--sl-color-neutral-200);
 }
 
-.Card .logo > img {
+.Card .logo > svg {
 	max-height: 70px;
 	width: auto;
 	padding: 5px;

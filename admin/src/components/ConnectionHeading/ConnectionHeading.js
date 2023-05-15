@@ -1,14 +1,28 @@
+import { useContext } from 'react';
 import './ConnectionHeading.css';
+import { AppContext } from '../../context/AppContext';
+import UnknownLogo from '../UnknownLogo/UnknownLogo';
+import LittleLogo from '../LittleLogo/LittleLogo';
 import getConnectionStatusInfos from '../../utils/getConnectionStatusInfos';
 import { SlBadge } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectionHeading = ({ connection: c }) => {
+	let { connectors } = useContext(AppContext);
+
 	let { text: statusText, variant: statusVariant } = getConnectionStatusInfos(c);
+
+	let connector = connectors.find((connector) => connector.ID === c.Connector);
+	let logo;
+	if (connector.Icon === '') {
+		logo = <UnknownLogo size={21} />;
+	} else {
+		logo = <LittleLogo icon={connector.Icon} />;
+	}
 
 	return (
 		<div className='ConnectionHeading'>
 			<div className='title'>
-				{c.LogoURL !== '' && <img className='littleLogo' src={c.LogoURL} alt={`${c.Name}'s logo`} />}
+				{logo}
 				<div className='text'>{c.Name}</div>
 			</div>
 			<div className='badges'>

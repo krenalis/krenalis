@@ -6,10 +6,9 @@ import { NavigationContext } from '../../context/NavigationContext';
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectorsList = () => {
-	let [connectors, setConnectors] = useState([]);
 	let [goToConnectorSettings, setGoToConnectorSettings] = useState(0);
 
-	let { API, showError, redirect } = useContext(AppContext);
+	let { redirect, connectors } = useContext(AppContext);
 	let { setCurrentTitle, setPreviousRoute } = useContext(NavigationContext);
 	setPreviousRoute('/admin/connections');
 
@@ -22,18 +21,6 @@ const ConnectorsList = () => {
 	}
 
 	setCurrentTitle(`Add a ${connectionRole.toLocaleLowerCase()} connection`);
-
-	useEffect(() => {
-		const fetchConnectors = async () => {
-			let [connectors, err] = await API.connectors.find();
-			if (err != null) {
-				showError(err);
-				return;
-			}
-			setConnectors(connectors);
-		};
-		fetchConnectors();
-	}, []);
 
 	const authorizeWithOAuth = (c) => {
 		localStorage.setItem('addConnectionID', c.ID);
@@ -55,7 +42,7 @@ const ConnectorsList = () => {
 						return (
 							<Card
 								name={c.Name}
-								logoURL={c.LogoURL}
+								icon={c.Icon}
 								type={c.Type}
 								description={
 									connectionRole === 'Source' ? c.SourceDescription : c.DestinationDescription

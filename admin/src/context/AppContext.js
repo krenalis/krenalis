@@ -8,6 +8,7 @@ const defaultAppContext = {
 	showNotFound: () => {},
 	redirect: () => {},
 	updateIsFullScreen: () => {},
+	connectors: [],
 };
 
 export const AppContext = createContext(defaultAppContext);

@@ -473,7 +473,6 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 		Role:        ConnectionRole(c.Role),
 		Connector:   conn.ID,
 		HasSettings: conn.HasSettings,
-		LogoURL:     conn.LogoURL,
 		Enabled:     c.Enabled,
 		Health:      Health(c.Health),
 	}
@@ -501,7 +500,6 @@ func (this *Workspace) Connections() []*Connection {
 			Role:        ConnectionRole(c.Role),
 			Connector:   conn.ID,
 			HasSettings: conn.HasSettings,
-			LogoURL:     conn.LogoURL,
 			Enabled:     c.Enabled,
 			Health:      Health(c.Health),
 		}

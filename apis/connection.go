@@ -73,7 +73,6 @@ type Connection struct {
 	Storage     int    // zero if the connection is not a file or does not have a storage.
 	OAuthURL    string // empty if the connection does not use OAuth.
 	HasSettings bool
-	LogoURL     string
 	Enabled     bool
 	Health      Health
 }

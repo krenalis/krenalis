@@ -66,15 +66,14 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all connectors.
 		state.connectors = map[int]*Connector{}
-		err = state.db.QueryScan(ctx, "SELECT id, name, type, logo_url, oauth_url, oauth_client_id,"+
+		err = state.db.QueryScan(ctx, "SELECT id, name, type, oauth_url, oauth_client_id,"+
 			" oauth_client_secret, oauth_token_endpoint, oauth_default_token_type, oauth_default_expires_in,"+
 			" oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
 			for rows.Next() {
 				c := Connector{}
 				oauth := ConnectorOAuth{}
-				if err := rows.Scan(&c.ID, &c.Name, &c.Type, &c.LogoURL, &oauth.URL, &oauth.ClientID,
-					&oauth.ClientSecret, &oauth.TokenEndpoint, &oauth.DefaultTokenType, &oauth.DefaultExpiresIn,
-					&oauth.ForcedExpiresIn); err != nil {
+				if err := rows.Scan(&c.ID, &c.Name, &c.Type, &oauth.URL, &oauth.ClientID, &oauth.ClientSecret,
+					&oauth.TokenEndpoint, &oauth.DefaultTokenType, &oauth.DefaultExpiresIn, &oauth.ForcedExpiresIn); err != nil {
 					return err
 				}
 				if oauth.URL != "" {
@@ -98,6 +97,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					if ct.Implements(appGroupsConnectionType) {
 						c.Targets |= GroupsFlag
 					}
+					c.Icon = app.Icon
 					c.WebhooksPer = WebhooksPer(app.WebhooksPer)
 				case DatabaseType:
 					database := _connector.RegisteredDatabase(c.Name)
@@ -106,6 +106,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					c.TermForUsers = "users"
 					c.TermForGroups = "groups"
 					c.Targets = UsersFlag | GroupsFlag
+					c.Icon = database.Icon
 					ct = database.ConnectionReflectType()
 				case FileType:
 					file := _connector.RegisteredFile(c.Name)
@@ -114,6 +115,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					c.TermForUsers = "users"
 					c.TermForGroups = "groups"
 					c.Targets = UsersFlag | GroupsFlag
+					c.Icon = file.Icon
 					ct = file.ConnectionReflectType()
 					c.HasSheets = ct.Implements(sheetsType)
 				case MobileType:
@@ -121,29 +123,34 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					c.SourceDescription = mobile.SourceDescription
 					c.DestinationDescription = mobile.DestinationDescription
 					c.Targets = EventsFlag
+					c.Icon = mobile.Icon
 					ct = mobile.ConnectionReflectType()
 				case ServerType:
 					server := _connector.RegisteredServer(c.Name)
 					c.SourceDescription = server.SourceDescription
 					c.DestinationDescription = server.DestinationDescription
 					c.Targets = EventsFlag
+					c.Icon = server.Icon
 					ct = server.ConnectionReflectType()
 				case StorageType:
 					storage := _connector.RegisteredStorage(c.Name)
 					c.SourceDescription = storage.SourceDescription
 					c.DestinationDescription = storage.DestinationDescription
+					c.Icon = storage.Icon
 					ct = storage.ConnectionReflectType()
 				case StreamType:
 					stream := _connector.RegisteredStream(c.Name)
 					c.SourceDescription = stream.SourceDescription
 					c.DestinationDescription = stream.DestinationDescription
 					c.Targets = EventsFlag
+					c.Icon = stream.Icon
 					ct = stream.ConnectionReflectType()
 				case WebsiteType:
 					website := _connector.RegisteredWebsite(c.Name)
 					c.SourceDescription = website.SourceDescription
 					c.DestinationDescription = website.DestinationDescription
 					c.Targets = EventsFlag
+					c.Icon = website.Icon
 					ct = website.ConnectionReflectType()
 				}
 				c.HasSettings = ct.Implements(uiType)

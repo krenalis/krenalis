@@ -197,7 +197,7 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 		Type:        ConnectorType(c.Type),
 		HasSheets:   c.HasSheets,
 		HasSettings: c.HasSettings,
-		LogoURL:     c.LogoURL,
+		Icon:        c.Icon,
 		WebhooksPer: WebhooksPer(c.WebhooksPer),
 	}
 	if c.OAuth != nil {
@@ -221,7 +221,7 @@ func (apis *APIs) Connectors() []*Connector {
 			Type:        ConnectorType(c.Type),
 			HasSheets:   c.HasSheets,
 			HasSettings: c.HasSettings,
-			LogoURL:     c.LogoURL,
+			Icon:        c.Icon,
 			WebhooksPer: WebhooksPer(c.WebhooksPer),
 		}
 		if c.OAuth != nil {

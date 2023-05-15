@@ -3,13 +3,14 @@ import './ConnectorSettings.css';
 import ConnectorField from '../ConnectorFields/ConnectorField';
 import NotFound from '../NotFound/NotFound';
 import Flex from '../Flex/Flex';
+import UnknownLogo from '../UnknownLogo/UnknownLogo';
 import LittleLogo from '../LittleLogo/LittleLogo';
 import { SettingsContext } from '../../context/SettingsContext';
 import { AppContext } from '../../context/AppContext';
 import { NavigationContext } from '../../context/NavigationContext';
 import statuses from '../../constants/statuses';
 import { NavLink, Navigate } from 'react-router-dom';
-import { SlButton, SlInput, SlSelect, SlSwitch, SlOption, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlButton, SlInput, SlSelect, SlSwitch, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 
 const ConnectorSettings = () => {
@@ -59,11 +60,15 @@ const ConnectorSettings = () => {
 				return;
 			}
 			setConnector(connector);
+			let logo;
+			if (connector.Icon === '') {
+				logo = <UnknownLogo size={21} />;
+			} else {
+				logo = <LittleLogo icon={connector.Icon} />;
+			}
 			setCurrentTitle(
 				<Flex alignItems='baseline' gap='10px'>
-					<span style={{ position: 'relative', top: '3px' }}>
-						<LittleLogo url={connector.LogoURL} alternativeText={`${connector.Name}'s logo`}></LittleLogo>
-					</span>
+					<span style={{ position: 'relative', top: '3px' }}>{logo}</span>
 					<span>
 						Add {connector.Name} {connectionRole.toLowerCase()} connection
 					</span>

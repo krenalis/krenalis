@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './App.css';
 import Toast from './components/Toast/Toast';
 import API from './api/api';
@@ -15,6 +15,7 @@ setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.85
 
 const App = () => {
 	let [status, setStatus] = useState(null);
+	let [connectors, setConnectors] = useState(null);
 
 	const appRef = useRef();
 	const toastRef = useRef();
@@ -67,6 +68,22 @@ const App = () => {
 	// javascript.
 	let api = new API('https://localhost:9090');
 
+	useEffect(() => {
+		const fetchConnectors = async () => {
+			let [connectors, err] = await api.connectors.find();
+			if (err != null) {
+				showError(err);
+				return;
+			}
+			setConnectors(connectors);
+		};
+		fetchConnectors();
+	}, []);
+
+	if (connectors == null) {
+		return;
+	}
+
 	return (
 		<AppContext.Provider
 			value={{
@@ -76,6 +93,7 @@ const App = () => {
 				showNotFound: showNotFound,
 				redirect: redirect,
 				updateIsFullScreen: updateIsFullScreen,
+				connectors: connectors,
 			}}
 		>
 			<div className='App' ref={appRef}>

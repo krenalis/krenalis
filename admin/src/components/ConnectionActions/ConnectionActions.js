@@ -4,6 +4,7 @@ import LittleLogo from '../LittleLogo/LittleLogo';
 import Flex from '../Flex/Flex';
 import ListTile from '../ListTile/ListTile';
 import IconWrapper from '../IconWrapper/IconWrapper';
+import UnknownLogo from '../UnknownLogo/UnknownLogo';
 import StyledGrid from '../StyledGrid/StyledGrid';
 import Action from '../Action/Action';
 import statuses from '../../constants/statuses';
@@ -32,7 +33,7 @@ let ConnectionActions = () => {
 	let [description, setDescription] = useState(null);
 	let [isLoading, setIsLoading] = useState(true);
 
-	let { API, showError, showStatus } = useContext(AppContext);
+	let { API, showError, showStatus, connectors } = useContext(AppContext);
 	let { connection: c, setCurrentConnectionSection } = useContext(ConnectionContext);
 
 	setCurrentConnectionSection('actions');
@@ -247,12 +248,20 @@ let ConnectionActions = () => {
 		return <Action actionType={selectedActionType} action={selectedAction} onClose={refresh}></Action>;
 	}
 
+	let connector = connectors.find((connector) => connector.ID === c.Connector);
+	let logo;
+	if (connector.Icon === '') {
+		logo = <UnknownLogo size={21} />;
+	} else {
+		logo = <LittleLogo icon={connector.Icon} />;
+	}
+
 	let standardActionTypes = [];
 	let eventActionTypes = [];
 	for (let t of actionTypes) {
 		let tile = (
 			<ListTile
-				icon={<LittleLogo url={c.LogoURL} alternativeText={`${c.Name}'s logo`}></LittleLogo>}
+				icon={logo}
 				name={t.Name}
 				description={t.Description}
 				disabled={t.Disabled}

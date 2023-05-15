@@ -20,6 +20,9 @@ import (
 	"chichi/connector/types"
 )
 
+// Connector icon.
+var icon = "<svg></svg>"
+
 // exportOnly10Users, when true, makes Dummy export only 10 users instead of the
 // entire data set.
 const exportOnly10Users = true
@@ -37,6 +40,7 @@ func init() {
 		SourceDescription:      "import users from Dummy",
 		DestinationDescription: "export users and send events to Dummy",
 		TermForUsers:           "users",
+		Icon:                   icon,
 	}, open)
 }
 

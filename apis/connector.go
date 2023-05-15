@@ -31,7 +31,7 @@ type Connector struct {
 	Type                   ConnectorType
 	HasSheets              bool
 	HasSettings            bool
-	LogoURL                string
+	Icon                   string
 	WebhooksPer            WebhooksPer
 	OAuth                  *ConnectorOAuth
 }

@@ -2,6 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import './Connection.css';
 import getConnectionStatusInfos from '../../utils/getConnectionStatusInfos';
 import LittleLogo from '../LittleLogo/LittleLogo';
+import UnknownLogo from '../UnknownLogo/UnknownLogo';
 import Flex from '../Flex/Flex';
 import StatusDot from '../StatusDot/StatusDot';
 import { NotFoundError } from '../../api/errors';
@@ -15,7 +16,7 @@ const Connection = () => {
 	let [connection, setConnection] = useState(null);
 	let [currentSection, setCurrentSection] = useState('');
 
-	const { API, showError, showNotFound } = useContext(AppContext);
+	const { API, showError, showNotFound, connectors } = useContext(AppContext);
 	const { setCurrentTitle, setPreviousRoute } = useContext(NavigationContext);
 
 	setPreviousRoute('/admin/connections');
@@ -42,11 +43,18 @@ const Connection = () => {
 			setConnection(connection);
 			let c = connection;
 			let { text: statusText, variant: statusVariant } = getConnectionStatusInfos(c);
+
+			let connector = connectors.find((connector) => connector.ID === c.Connector);
+			let logo;
+			if (connector.Icon === '') {
+				logo = <UnknownLogo size={21} />;
+			} else {
+				logo = <LittleLogo icon={connector.Icon} />;
+			}
+
 			setCurrentTitle(
 				<Flex alignItems='baseline' gap='10px'>
-					<span style={{ position: 'relative', top: '3px' }}>
-						<LittleLogo url={c.LogoURL} alternativeText={`${c.Name}'s logo`}></LittleLogo>
-					</span>
+					<span style={{ position: 'relative', top: '3px' }}>{logo}</span>
 					<div className='text'>{c.Name}</div>
 					<StatusDot statusText={statusText} statusVariant={statusVariant} />
 					<SlBadge className='type' variant='neutral'>

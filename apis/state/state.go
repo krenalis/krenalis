@@ -300,7 +300,7 @@ type Connector struct {
 	Targets                ConnectorTargets
 	HasSheets              bool
 	HasSettings            bool
-	LogoURL                string
+	Icon                   string
 	WebhooksPer            WebhooksPer
 	OAuth                  *ConnectorOAuth
 }

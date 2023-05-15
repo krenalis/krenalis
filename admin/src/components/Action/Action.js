@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import './Action.css';
 import Section from '../Section/Section';
 import AlertDialog from '../AlertDialog/AlertDialog';
+import UnknownLogo from '../UnknownLogo/UnknownLogo';
 import LittleLogo from '../LittleLogo/LittleLogo';
 import EditPage from '../EditPage/EditPage';
 import statuses from '../../constants/statuses';
@@ -58,7 +59,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let [propertySearchTerm, setPropertySearchTerm] = useState('');
 	let [conditionSearchTerm, setConditionSearchTerm] = useState('');
 
-	let { API, showError, showStatus, redirect } = useContext(AppContext);
+	let { API, showError, showStatus, redirect, connectors } = useContext(AppContext);
 	let { connection: c } = useContext(ConnectionContext);
 
 	let queryRef = useRef('');
@@ -993,11 +994,19 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		);
 	}
 
+	let connector = connectors.find((connector) => connector.ID === c.Connector);
+	let logo;
+	if (connector.Icon === '') {
+		logo = <UnknownLogo size={21} />;
+	} else {
+		logo = <LittleLogo icon={connector.Icon} />;
+	}
+
 	return (
 		<EditPage
 			title={
 				<div className='actionTitle'>
-					<LittleLogo url={c.LogoURL} alternativeText={`${c.Name}'s logo`} />
+					{logo}
 					<div className='actionName'>
 						{isNameEditable ? (
 							<span className='name'>
