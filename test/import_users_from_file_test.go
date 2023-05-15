@@ -95,7 +95,7 @@ func TestImportUsersFromFile(t *testing.T) {
 		time.Sleep(1 * time.Second)
 	}
 
-	// Retrive the users.
+	// Retrieve the users.
 	ret := c.Users([]string{"Email"}, 0, 100)
 	count := int(ret["count"].(float64))
 	if count != 2 {
