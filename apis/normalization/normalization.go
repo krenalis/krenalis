@@ -710,6 +710,8 @@ func dateTimeFromUnixFloat(n float64, layout string) (time.Time, bool) {
 // digits or can be missing. The hour must be in range [0, 23], minute and second
 // must be in range [0, 59], and any trailing characters are discarded.
 // The boolean return value indicates whether the time was successfully parsed.
+//
+// Keep in sync with the parseTime function in the mappings package.
 func parseTime[bytes []byte | string](p bytes) (t time.Time, ok bool) {
 	if len(p) < 8 {
 		return

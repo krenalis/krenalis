@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"chichi/apis/errors"
+	"chichi/apis/mappings"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	_connector "chichi/connector"
@@ -198,9 +199,10 @@ func (this *Action) newFirehoseForConnection(ctx context.Context, c *state.Conne
 }
 
 // newFirehose returns a new Firehose for the action.
-func (this *Action) newFirehose(ctx context.Context) *firehose {
+func (this *Action) newFirehose(ctx context.Context) (*firehose, error) {
+	c := this.action.Connection()
 	var resource int
-	if r, ok := this.action.Connection().Resource(); ok {
+	if r, ok := c.Resource(); ok {
 		resource = r.ID
 	}
 	fh := &firehose{
@@ -209,8 +211,20 @@ func (this *Action) newFirehose(ctx context.Context) *firehose {
 		connection: this.action.Connection(),
 		resource:   resource,
 	}
+	if c.Connector().Type == state.AppType {
+		usersSchema, ok := c.Workspace().Schemas["users"]
+		if !ok {
+			return nil, errors.New("users schema not loaded")
+		}
+		outputSchema := usersSchemaToConnectionSchema(*usersSchema, state.AppType)
+		mapping, err := mappings.New(this.action.Schema, outputSchema, this.action.Mapping, this.action.Transformation)
+		if err != nil {
+			return nil, err
+		}
+		fh.mapping = mapping
+	}
 	fh.ctx, fh.cancel = context.WithCancel(ctx)
-	return fh
+	return fh, nil
 }
 
 // actionExecutionError represents a non-internal error during action execution.

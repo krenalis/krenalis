@@ -34,7 +34,10 @@ func (this *Action) importFromDatabase() error {
 
 	// Instantiate a new firehose.
 	ctx := context.Background()
-	fh := this.newFirehose(ctx)
+	fh, err := this.newFirehose(ctx)
+	if err != nil {
+		return err
+	}
 	c, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
 		Role:     _connector.SourceRole,
 		Settings: connection.Settings,
@@ -66,6 +69,11 @@ func (this *Action) importFromDatabase() error {
 	}
 	outSchema := usersSchemaToConnectionSchema(*usersSchema, state.DatabaseType)
 
+	mapping, err := mappings.New(inputSchema, outSchema, this.action.Mapping, this.action.Transformation)
+	if err != nil {
+		return err
+	}
+
 	// Iterate over the database rows.
 	dest := make([]any, len(properties))
 	for rawRows.Next() {
@@ -79,7 +87,7 @@ func (this *Action) importFromDatabase() error {
 		}
 
 		// Apply the mapping or the transformation.
-		mappedUser, err := mappings.Apply(ctx, this.action.Mapping, this.action.Transformation, row, inputSchema, outSchema)
+		mappedUser, err := mapping.Apply(ctx, row)
 		if err != nil {
 			return err
 		}

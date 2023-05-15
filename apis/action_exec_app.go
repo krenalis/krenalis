@@ -41,7 +41,10 @@ func (this *Action) importFromApp() error {
 		return fmt.Errorf("cannot read user schema: %s", err)
 	}
 
-	fh := this.newFirehose(context.Background())
+	fh, err := this.newFirehose(context.Background())
+	if err != nil {
+		return err
+	}
 	ws := this.action.Connection().Workspace()
 	c, err := _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
 		Role:          _connector.SourceRole,
@@ -99,7 +102,10 @@ func (this *Action) exportToApp() error {
 		return err
 	}
 
-	fh := this.newFirehose(context.Background())
+	fh, err := this.newFirehose(context.Background())
+	if err != nil {
+		return err
+	}
 	ws := this.action.Connection().Workspace()
 
 	c, err := _connector.RegisteredApp(name).Open(fh.ctx, &_connector.AppConfig{

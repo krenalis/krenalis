@@ -38,6 +38,7 @@ type firehose struct {
 	ctx         context.Context
 	cancel      context.CancelFunc
 	webhooksPer WebhooksPer
+	mapping     *mappings.Mapping
 	err         error
 }
 
@@ -169,14 +170,7 @@ func (fh *firehose) SetUser(id string, user map[string]any, timestamp time.Time,
 		user[name] = value
 	}
 
-	ctx := context.Background()
-	usersSchema, ok := fh.connection.Workspace().Schemas["users"]
-	if !ok {
-		fh.setError(errors.New("users schema not loaded"))
-		return
-	}
-	outputSchema := usersSchemaToConnectionSchema(*usersSchema, state.AppType)
-	mappedUser, err := mappings.Apply(ctx, fh.action.action.Mapping, fh.action.action.Transformation, user, fh.action.action.Schema, outputSchema)
+	mappedUser, err := fh.mapping.Apply(fh.ctx, user)
 	if err != nil {
 		fh.setError(err)
 		return
@@ -185,12 +179,12 @@ func (fh *firehose) SetUser(id string, user map[string]any, timestamp time.Time,
 		db:         fh.db,
 		connection: fh.connection,
 	}
-	err = connection.writeConnectionUsers(ctx, id, user, timestamp, timestamps)
+	err = connection.writeConnectionUsers(fh.ctx, id, user, timestamp, timestamps)
 	if err != nil {
 		fh.setError(err)
 		return
 	}
-	err = connection.setUser(ctx, id, mappedUser)
+	err = connection.setUser(fh.ctx, id, mappedUser)
 	if err != nil {
 		fh.setError(err)
 		return

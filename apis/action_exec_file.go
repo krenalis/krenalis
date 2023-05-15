@@ -31,7 +31,10 @@ func (this *Action) importFromFile() error {
 
 	// Connect to the file connector.
 	ctx := context.Background()
-	fh := this.newFirehose(ctx)
+	fh, err := this.newFirehose(ctx)
+	if err != nil {
+		return err
+	}
 	file, err := _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
 		Role:     _connector.SourceRole,
 		Settings: c.Settings,
@@ -78,11 +81,16 @@ func (this *Action) importFromFile() error {
 	}
 	outputSchema := usersSchemaToConnectionSchema(*usersSchema, state.DatabaseType)
 
+	mapping, err := mappings.New(inputSchema, outputSchema, this.action.Mapping, this.action.Transformation)
+	if err != nil {
+		return err
+	}
+
 	// Read the records.
 	rw := newRecordWriter(c.ID, math.MaxInt, func(record map[string]any) error {
 
 		// Apply the mapping or the transformation.
-		mappedUser, err := mappings.Apply(ctx, this.action.Mapping, this.action.Transformation, record, inputSchema, outputSchema)
+		mappedUser, err := mapping.Apply(ctx, record)
 		if err != nil {
 			return err
 		}
