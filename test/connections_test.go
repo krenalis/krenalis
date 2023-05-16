@@ -8,8 +8,10 @@
 package test
 
 import (
+	"fmt"
 	"testing"
 
+	"chichi/apis"
 	"chichi/test/chichitester"
 )
 
@@ -29,7 +31,7 @@ func TestConnections(t *testing.T) {
 	}
 
 	// Create a Dummy (source) connection.
-	c.AddConnection(map[string]any{
+	dummyID := c.AddConnection(map[string]any{
 		"Connector": 3, // Dummy.
 		"Role":      "Source",
 		"Options": map[string]any{
@@ -50,4 +52,29 @@ func TestConnections(t *testing.T) {
 		t.Fatalf("expecting name %q, got %q", expectedName, gotName)
 	}
 
+	// Retrieve the input and the output schema, which must me both valid.
+	schemas := c.ActionSchemas(dummyID, apis.UsersTarget, "")
+	if err := isValidSchema(schemas["In"]); err != nil {
+		t.Fatal(err)
+	}
+	if err := isValidSchema(schemas["Out"]); err != nil {
+		t.Fatal(err)
+	}
+
+}
+
+func isValidSchema(schema any) error {
+	s, ok := schema.(map[string]any)
+	if !ok {
+		return fmt.Errorf("unexpected type %T", schema)
+	}
+	name := s["name"]
+	if name != "Object" {
+		return fmt.Errorf("expecting name %q, got %q", "Object", name)
+	}
+	props := s["properties"].([]any)
+	if len(props) == 0 {
+		return fmt.Errorf("expecting at least one property")
+	}
+	return nil
 }

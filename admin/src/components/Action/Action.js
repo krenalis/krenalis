@@ -44,10 +44,10 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let [actionType, setActionType] = useState(null);
 	let [propertiesMode, setPropertiesMode] = useState('');
 	let [inputSchema, setInputSchema] = useState(null);
+	let [fields, setFields] = useState([]);
 	let [isInputSchemaDialogOpen, setIsInputSchemaDialogOpen] = useState(false);
 	let [outputSchema, setOutputSchema] = useState(null);
 	let [isOutputSchemaDialogOpen, setIsOutputSchemaDialogOpen] = useState(false);
-	let [supports, setSupports] = useState([]);
 	let [queryPreviewTable, setQueryPreviewTable] = useState(null);
 	let [filePreviewTable, setFilePreviewTable] = useState(null);
 	let [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -73,7 +73,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		let actionType;
 		const fetchData = async () => {
 			let a = actionProp == null ? null : { ...actionProp };
-			// get the action type
+
+			// get the action type.
 			if (a != null) {
 				let [actionTypes, err] = await API.connections.actionTypes(c.ID);
 				if (err != null) {
@@ -81,28 +82,50 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					showError(err);
 					return;
 				}
-				for (let t of actionTypes) {
-					if (a.Target === 'Users' || a.Target === 'Groups') {
-						if (a.Target === t.Target) actionType = t;
-						continue;
-					}
-					if (a.EventType === t.EventType) actionType = t;
+				if (a.Target === 'Events') {
+					actionType = actionTypes.find((t) => t.EventType === a.EventType);
+				} else {
+					actionType = actionTypes.find((t) => t.Target === a.Target);
 				}
 			} else {
 				actionType = { ...actionTypeProp };
 			}
-			let actionTypeInfos, err;
-			if (actionType.Target === 'Users') {
-				[actionTypeInfos, err] = await API.connections.usersAction(c.ID);
-			} else if (actionType.Target === 'Groups') {
-				[actionTypeInfos, err] = await API.connections.groupsAction(c.ID);
-			} else {
-				if (actionType.EventType == null) {
-					[actionTypeInfos, err] = await API.connections.eventsAction(c.ID);
-				} else {
-					[actionTypeInfos, err] = await API.connections.eventAction(c.ID, actionType.EventType);
+			setActionType(actionType);
+
+			// set the default transformation function.
+			let parameterName = actionType.Target.toLowerCase();
+			defaultTransformationFunction.current = rawTransformationFunction.replace('$parameterName', parameterName);
+
+			// check which fields are supported by the action.
+			let fields = [];
+			if (c.Type === 'App' && c.Role === 'Destination' && actionType.Target === 'Events') {
+				fields.push('Filter');
+			}
+			if (
+				c.Type === 'App' ||
+				(c.Type === 'Database' && c.Role === 'Source') ||
+				(c.Type === 'File' && c.Role === 'Source')
+			) {
+				fields.push('Mapping');
+			}
+			if (c.Type === 'Database' && c.Role === 'Source') {
+				fields.push('Query');
+			}
+			if (c.Type === 'File') {
+				fields.push('Path');
+				let [connector, err] = await API.connectors.get(c.Connector);
+				if (err != null) {
+					showError(err);
+					return;
+				}
+				if (connector.HasSheets) {
+					fields.push('Sheet');
 				}
 			}
+			setFields(fields);
+
+			// get the action schemas.
+			let [schemas, err] = await API.connections.actionSchemas(c.ID, actionType.Target, actionType.EventType);
 			if (err != null) {
 				onClose();
 				if (err instanceof UnprocessableError) {
@@ -124,47 +147,29 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				showError(err);
 				return;
 			}
+			setInputSchema(schemas.In);
+			setOutputSchema(schemas.Out);
 
-			setActionType(actionType);
-			setInputSchema(actionTypeInfos.InputSchema);
-			setOutputSchema(actionTypeInfos.OutputSchema);
-
-			if (c.Type === 'File') {
-				actionTypeInfos.Supports.push('Path');
-				// check if has sheet.
-				let [connector, err] = await API.connectors.get(c.Connector);
-				if (err != null) {
-					showError(err);
-					return;
-				}
-				if (connector.HasSheets) {
-					actionTypeInfos.Supports.push('Sheet');
-				}
-			}
-			setSupports(actionTypeInfos.Supports);
-
-			if (actionTypeInfos.Supports.includes('Query') && a != null) {
+			// if the action is on a database or file source, the schema must be
+			// fetched from the linked database / file.
+			if (fields.includes('Query') && a != null) {
 				let res = await query(a.Query, 0);
-				if (res == null) {
-					setInputSchema(null);
-				} else {
+				if (res != null) {
 					setInputSchema(res.Schema);
 				}
-			}
-
-			if (actionTypeInfos.Supports.includes('Path') && a != null) {
+			} else if (fields.includes('Path') && a != null) {
 				let res = await records(a.Path, a.Sheet, 0);
 				if (res != null) {
 					setInputSchema(res.schema);
 				}
 			}
 
-			// get the action
+			// generate the action.
 			let action;
 			if (a != null) {
 				if (a.Mapping != null) {
 					setPropertiesMode('mappings');
-					let mapping = getDefaultMappings(actionTypeInfos.OutputSchema);
+					let mapping = getDefaultMappings(schemas.Out);
 					for (let k in mapping) {
 						if (a.Mapping[k] != null) {
 							mapping[k].value = a.Mapping[k];
@@ -189,25 +194,14 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					Mapping: null,
 					Transformation: null,
 					Query: null,
-					Path: actionTypeInfos.Supports.includes('Path') ? '' : null,
-					Sheet: actionTypeInfos.Supports.includes('Sheet') ? '' : null,
+					Path: fields.includes('Path') ? '' : null,
+					Sheet: fields.includes('Sheet') ? '' : null,
 				};
 			}
 			queryRef.current = action.Query;
 			pathRef.current = action.Path;
 			sheetRef.current = action.Sheet;
 			setAction(action);
-
-			// set the default transformation function
-			let parameterName;
-			if (actionType.Target === 'Users') {
-				parameterName = 'user';
-			} else if (actionType.Target === 'Groups') {
-				parameterName = 'group';
-			} else {
-				parameterName = 'event';
-			}
-			defaultTransformationFunction.current = rawTransformationFunction.replace('$parameterName', parameterName);
 		};
 		fetchData();
 	}, []);
@@ -239,6 +233,9 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		let a = { ...action };
 		let id = e.currentTarget.closest('.condition').dataset.id;
 		a.Filter.Conditions.splice(id, 1);
+		if (a.Filter.Conditions.length === 0) {
+			a.Filter = null;
+		}
 		setAction(a);
 	};
 
@@ -787,7 +784,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let hasRecordsError = c.Type === 'File' && inputSchema == null;
 	let isPropertiesSectionDisabled = hasQueryError || isQueryChanged || hasRecordsError || isFileChanged;
 	let propertiesSection = null;
-	if (supports.includes('Mapping')) {
+	if (fields.includes('Mapping')) {
 		let propertiesSectionActions = null;
 		if (propertiesMode !== '') {
 			let actionText;
@@ -810,19 +807,19 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		let isSectionPadded = false;
 		let propertiesSectionContent = null;
 		if (propertiesMode === '') {
-			if (supports.includes('Query') && inputSchema == null) {
+			if (fields.includes('Query') && inputSchema == null) {
 				propertiesSectionContent = (
 					<SlAlert variant='warning' open>
 						<SlIcon slot='icon' name='exclamation-triangle' />
 						To enable mappings, you should first load a database schema in the "Query" section
 					</SlAlert>
 				);
-			} else if (supports.includes('Path') && inputSchema == null) {
+			} else if (fields.includes('Path') && inputSchema == null) {
 				propertiesSectionContent = (
 					<SlAlert variant='warning' open>
 						<SlIcon slot='icon' name='exclamation-triangle' />
 						To enable mappings, you should first load a file schema by inserting the file path
-						{supports.includes('Sheet') && ' and sheet'}
+						{fields.includes('Sheet') && ' and sheet'}
 					</SlAlert>
 				);
 			} else {
@@ -1044,7 +1041,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			}
 		>
 			<div className='action'>
-				{supports.includes('Filter') && (
+				{fields.includes('Filter') && (
 					<Section title='Filter' description='The filters that define the action' padded={true}>
 						{conditions.length > 1 && (
 							<SlSelect
@@ -1069,7 +1066,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						</SlButton>
 					</Section>
 				)}
-				{supports.includes('Query') && (
+				{fields.includes('Query') && (
 					<Section title='Query' description='The query used to import the data'>
 						<EditorWrapper
 							defaultLanguage='sql'
@@ -1087,21 +1084,21 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						</div>
 					</Section>
 				)}
-				{supports.includes('Path') && (
+				{fields.includes('Path') && (
 					<Section
-						title={`Path${supports.includes('Sheet') ? ' and Sheet' : ''}`}
-						description={`The path${supports.includes('Sheet') ? ' and sheet' : ''} of the file`}
+						title={`Path${fields.includes('Sheet') ? ' and Sheet' : ''}`}
+						description={`The path${fields.includes('Sheet') ? ' and sheet' : ''} of the file`}
 						padded
 					>
 						<SlInput
 							className='pathInput'
 							name='path'
 							value={action.Path}
-							label={supports.includes('Sheet') ? 'Path' : null}
+							label={fields.includes('Sheet') ? 'Path' : null}
 							type='text'
 							onSlInput={onUpdatePath}
 						/>
-						{supports.includes('Sheet') && (
+						{fields.includes('Sheet') && (
 							<SlInput
 								className='sheetInput'
 								name='sheet'
@@ -1122,7 +1119,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					</Section>
 				)}
 				{propertiesSection}
-				{supports.includes('Query') && (
+				{fields.includes('Query') && (
 					<SlDrawer
 						className='previewDrawer'
 						label='Query Preview'
@@ -1140,7 +1137,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						)}
 					</SlDrawer>
 				)}
-				{supports.includes('Path') && (
+				{fields.includes('Path') && (
 					<SlDrawer
 						className='previewDrawer'
 						label='File Preview'

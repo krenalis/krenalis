@@ -7,7 +7,10 @@
 
 package chichitester
 
-import "strconv"
+import (
+	"chichi/apis"
+	"strconv"
+)
 
 // This file contains support methods which reduce verbosity of tests.
 
@@ -19,6 +22,14 @@ func (c *Chichi) AddAction(connection int, data map[string]any) int {
 func (c *Chichi) AddConnection(data map[string]any) int {
 	id := c.MustCall("POST", "/api/workspace/add-connection", data).(float64)
 	return int(id)
+}
+
+func (c *Chichi) ActionSchemas(conn int, target apis.ActionTarget, eventType string) map[string]any {
+	url := "/api/connections/" + strconv.Itoa(conn) + "/action-schemas/" + target.String()
+	if eventType != "" {
+		url += "/" + eventType
+	}
+	return c.MustCall("GET", url, nil).(map[string]any)
 }
 
 func (c *Chichi) ExecuteAction(connection, action int, reimport bool) {

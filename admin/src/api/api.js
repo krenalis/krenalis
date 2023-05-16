@@ -147,34 +147,22 @@ class Connections {
 		return await call(`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/action-types`, http.GET);
 	};
 
-	usersAction = async (connection) => {
-		return await call(
-			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/action-types/Users`,
-			http.GET
-		);
-	};
-
-	groupsAction = async (connection) => {
-		return await call(
-			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/action-types/Groups`,
-			http.GET
-		);
-	};
-
-	eventsAction = async (connection) => {
-		return await call(
-			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/action-types/Events`,
-			http.GET
-		);
-	};
-
-	eventAction = async (connection, eventType) => {
-		return await call(
-			`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/action-types/Events/${encodeURIComponent(
-				eventType
-			)}`,
-			http.GET
-		);
+	actionSchemas = async (connection, target, eventType) => {
+		if (eventType != null) {
+			return await call(
+				`${this.baseURL}/api/connections/${encodeURIComponent(
+					connection
+				)}/action-schemas/Events/${encodeURIComponent(eventType)}`,
+				http.GET
+			);
+		} else {
+			return await call(
+				`${this.baseURL}/api/connections/${encodeURIComponent(connection)}/action-schemas/${encodeURIComponent(
+					target
+				)}`,
+				http.GET
+			);
+		}
 	};
 
 	actions = async (connection) => {
