@@ -1,4 +1,5 @@
 import './GridCell.css';
+import toJSDateString from '../../utils/toJSDateString';
 
 const GridCell = ({ cell, className }) => {
 	let value, date;
@@ -7,15 +8,15 @@ const GridCell = ({ cell, className }) => {
 			value = JSON.stringify(cell.value);
 			break;
 		case 'DateTime':
-			date = new Date(cell.value);
+			date = new Date(toJSDateString(cell.value));
 			value = date.toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
 			break;
 		case 'Date':
-			date = new Date(cell.value);
+			date = new Date(toJSDateString(cell.value));
 			value = date.toLocaleDateString('it-IT', { timeZone: 'Europe/Rome' });
 			break;
 		case 'Time':
-			date = new Date(cell.value);
+			date = new Date(toJSDateString(cell.value));
 			value = date.toLocaleTimeString('it-IT', { timeZone: 'Europe/Rome' });
 			break;
 		default:
