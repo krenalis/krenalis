@@ -104,11 +104,11 @@ func (this *Connection) Actions() ([]Action, error) {
 
 // ActionType represents an action type.
 type ActionType struct {
-	Name        string
-	Description string
-	Target      ActionTarget
-	EventType   *string
-	HasSchema   bool
+	Name          string
+	Description   string
+	Target        ActionTarget
+	EventType     *string
+	MissingSchema bool
 }
 
 // ActionTypes returns the action types for the connection.
@@ -137,10 +137,10 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 			}
 			description += " from " + connector.Name
 			at := &ActionType{
-				Name:        "Import " + connector.TermForUsers,
-				Description: description,
-				Target:      UsersTarget,
-				HasSchema:   wsSchemas["users"] != nil,
+				Name:          "Import " + connector.TermForUsers,
+				Description:   description,
+				Target:        UsersTarget,
+				MissingSchema: wsSchemas["users"] == nil,
 			}
 			actionTypes = append(actionTypes, at)
 		}
@@ -157,10 +157,10 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 			}
 			description += " from " + connector.Name
 			at := &ActionType{
-				Name:        "Import " + connector.TermForGroups,
-				Description: description,
-				Target:      GroupsTarget,
-				HasSchema:   wsSchemas["groups"] != nil,
+				Name:          "Import " + connector.TermForGroups,
+				Description:   description,
+				Target:        GroupsTarget,
+				MissingSchema: wsSchemas["groups"] == nil,
 			}
 			actionTypes = append(actionTypes, at)
 		}
@@ -182,7 +182,6 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 					Name:        "Receive events",
 					Description: description,
 					Target:      EventsTarget,
-					HasSchema:   true,
 				}
 				actionTypes = append(actionTypes, at)
 			}
@@ -198,7 +197,6 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 					Description: et.Description,
 					Target:      EventsTarget,
 					EventType:   &id,
-					HasSchema:   true,
 				})
 			}
 		}

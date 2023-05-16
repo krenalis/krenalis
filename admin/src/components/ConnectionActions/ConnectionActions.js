@@ -264,7 +264,7 @@ let ConnectionActions = () => {
 				icon={logo}
 				name={t.Name}
 				description={t.Description}
-				hasSchema={t.HasSchema}
+				missingSchema={t.MissingSchema}
 				onClick={() => {
 					setIsDialogOpen(false);
 					setSelectedActionType(t);
