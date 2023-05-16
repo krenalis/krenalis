@@ -1128,7 +1128,7 @@ func allowsActionTarget(typ state.ConnectorType, role _connector.Role, target st
 		state.ServerType,
 		state.StreamType,
 		state.WebsiteType:
-		return !isSource && target == state.EventsTarget
+		return isSource && target == state.EventsTarget
 	default:
 		return false
 	}
