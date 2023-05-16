@@ -111,7 +111,7 @@ const Schema = () => {
 		return rows;
 	};
 
-	let columns = [{ Name: 'name' }, { Name: 'type' }];
+	let columns = [{ name: 'name' }, { name: 'type' }];
 	let rows = getPropertiesRows(properties);
 
 	return (

@@ -3,7 +3,7 @@ import './GridNestedRows.css';
 import GridRow from '../GridRow/GridRow';
 import { SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const GridNestedRows = ({ rows, className, nesting }) => {
+const GridNestedRows = ({ rows, columns, className, nesting }) => {
 	let [isExpanded, setIsExpanded] = useState(false);
 
 	let icon = (
@@ -19,18 +19,25 @@ const GridNestedRows = ({ rows, className, nesting }) => {
 	let rws = [];
 	for (let [i, cells] of rows.entries()) {
 		if (Array.isArray(cells[0])) {
-			rws.push(<GridNestedRows rows={cells} className='GridNestedRows children' nesting={nesting + 1} />);
+			rws.push(
+				<GridNestedRows
+					rows={cells}
+					columns={columns}
+					className='GridNestedRows children'
+					nesting={nesting + 1}
+				/>
+			);
 		} else {
 			let row;
 			if (i === 0) {
 				row = (
 					<>
 						{icon}
-						<GridRow cells={cells} className='GridRow parent' />
+						<GridRow cells={cells} columns={columns} className='GridRow parent' />
 					</>
 				);
 			} else {
-				row = <GridRow cells={cells} className='GridRow children' />;
+				row = <GridRow cells={cells} columns={columns} className='GridRow children' />;
 			}
 			rws.push(row);
 		}

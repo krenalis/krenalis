@@ -462,8 +462,14 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			return;
 		}
 		let columns = [];
-		for (let k in res.Schema.properties) {
-			columns.push({ Name: res.Schema.properties[k].name });
+		for (let prop of res.Schema.properties) {
+			let name;
+			if (prop.label != null && prop.label !== '') {
+				name = prop.label;
+			} else {
+				name = prop.name;
+			}
+			columns.push({ name: name, type: prop.type.name });
 		}
 		let table = { columns, rows: res.Rows };
 		setQueryPreviewTable(table);
@@ -529,8 +535,14 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			return;
 		}
 		let columns = [];
-		for (let k in res.schema.properties) {
-			columns.push({ Name: res.schema.properties[k].name });
+		for (let prop of res.schema.properties) {
+			let name;
+			if (prop.label != null && prop.label !== '') {
+				name = prop.label;
+			} else {
+				name = prop.name;
+			}
+			columns.push({ name: name, type: prop.type.name });
 		}
 		let table = { columns, rows: res.records };
 		setFilePreviewTable(table);

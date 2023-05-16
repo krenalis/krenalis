@@ -1,10 +1,26 @@
-import { isValidElement } from 'react';
 import './GridCell.css';
 
-const GridCell = ({ value, className }) => {
-	let isObject = typeof value === 'object' && !Array.isArray(value) && value !== null && !isValidElement(value);
-	if (isObject) {
-		value = JSON.stringify(value);
+const GridCell = ({ cell, className }) => {
+	let value, date;
+	switch (cell.type) {
+		case 'Object':
+			value = JSON.stringify(cell.value);
+			break;
+		case 'DateTime':
+			date = new Date(cell.value);
+			value = date.toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
+			break;
+		case 'Date':
+			date = new Date(cell.value);
+			value = date.toLocaleDateString('it-IT', { timeZone: 'Europe/Rome' });
+			break;
+		case 'Time':
+			date = new Date(cell.value);
+			value = date.toLocaleTimeString('it-IT', { timeZone: 'Europe/Rome' });
+			break;
+		default:
+			value = cell.value;
+			break;
 	}
 
 	return (

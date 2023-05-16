@@ -7,7 +7,7 @@ import getChildIndexClassname from '../../utils/getChildIndexClassname';
 import { SlSpinner, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const Grid = ({ columns, rows, isLoading, noRowsMessage }) => {
-	let [gridColumns, setGridColumns] = useState('');
+	let [columnsWidths, setColumnsWidths] = useState('');
 
 	let gridRef = useRef();
 
@@ -32,15 +32,15 @@ const Grid = ({ columns, rows, isLoading, noRowsMessage }) => {
 				let widths = widthsOfColumn[k];
 				maxWidths.push(Math.max(...widths) + 40); // 40 is the left/right padding of the cells.
 			}
-			let gridColumns = '';
+			let columnsWidths = '';
 			for (let i = 0; i < maxWidths.length; i++) {
 				if (i === 0) {
-					gridColumns += `${maxWidths[i]}px`;
+					columnsWidths += `${maxWidths[i]}px`;
 				} else {
-					gridColumns += ` ${maxWidths[i]}px`;
+					columnsWidths += ` ${maxWidths[i]}px`;
 				}
 			}
-			setGridColumns(gridColumns);
+			setColumnsWidths(columnsWidths);
 		}, 0); // queue the execution in case the grid is contained within a modal in the redering phase.
 	}, [isLoading, rows, columns]);
 
@@ -48,14 +48,16 @@ const Grid = ({ columns, rows, isLoading, noRowsMessage }) => {
 	for (let [i, cells] of rows.entries()) {
 		let className = getChildIndexClassname(i, rows.length);
 		if (Array.isArray(cells[0])) {
-			gridRows.push(<GridNestedRows rows={cells} className={`GridNestedRows ${className}`} nesting={1} />);
+			gridRows.push(
+				<GridNestedRows rows={cells} columns={columns} className={`GridNestedRows ${className}`} nesting={1} />
+			);
 			continue;
 		}
-		gridRows.push(<GridRow cells={cells} className={`GridRow ${className}`} />);
+		gridRows.push(<GridRow cells={cells} columns={columns} className={`GridRow ${className}`} />);
 	}
 
 	return (
-		<div ref={gridRef} className='Grid' style={{ '--grid-columns': gridColumns }}>
+		<div ref={gridRef} className='Grid' style={{ '--grid-columns': columnsWidths }}>
 			{isLoading ? (
 				<div className='loading'>
 					<SlSpinner

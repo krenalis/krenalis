@@ -174,7 +174,7 @@ let ConnectionActions = () => {
 		);
 	}
 
-	let columns = [{ Name: 'Action' }, { Name: 'Filter' }, { Name: 'Enabled' }, { Name: '' }];
+	let columns = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: null }];
 
 	let rows = [];
 	for (let a of actions) {

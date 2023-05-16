@@ -53,7 +53,7 @@ const UsersList = () => {
 					return;
 				}
 				for (let p of schema.properties) {
-					properties[p.name] = { isUsed: true };
+					properties[p.name] = { isUsed: true, type: p.type.name };
 				}
 				localStorage.setItem('usersProperties', JSON.stringify(properties));
 			}
@@ -104,7 +104,8 @@ const UsersList = () => {
 			for (let [name, property] of Object.entries(properties)) {
 				if (property.isUsed) {
 					usersColumns.push({
-						Name: name,
+						name: name,
+						type: property.type,
 					});
 				}
 			}
@@ -157,7 +158,8 @@ const UsersList = () => {
 		for (let [name, property] of Object.entries(properties)) {
 			if (property.isUsed) {
 				usersColumns.push({
-					field: name,
+					name: name,
+					type: property.type,
 				});
 			}
 		}
@@ -182,7 +184,8 @@ const UsersList = () => {
 		for (let [name, property] of Object.entries(props)) {
 			if (property.isUsed) {
 				columnDefs.push({
-					Name: name,
+					name: name,
+					type: property.type,
 				});
 			}
 		}
