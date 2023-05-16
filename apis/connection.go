@@ -471,6 +471,8 @@ func (this *Connection) ActionTypeInformation(target ActionTarget, eventType str
 //     exist in the schema (except for properties of the event type schema,
 //     which is specified and thus returned as an errors.BadRequest error).
 //   - QueryExecutionFailed, if the execution of the action's query fails.
+//   - TargetAlreadyExists, if the connection already has an action with the
+//     same target.
 //
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore.
