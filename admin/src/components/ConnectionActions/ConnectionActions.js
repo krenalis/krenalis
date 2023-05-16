@@ -264,8 +264,7 @@ let ConnectionActions = () => {
 				icon={logo}
 				name={t.Name}
 				description={t.Description}
-				disabled={t.Disabled}
-				disablingReason={t.DisablingReason}
+				hasSchema={t.HasSchema}
 				onClick={() => {
 					setIsDialogOpen(false);
 					setSelectedActionType(t);

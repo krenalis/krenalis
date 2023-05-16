@@ -104,22 +104,12 @@ func (this *Connection) Actions() ([]Action, error) {
 
 // ActionType represents an action type.
 type ActionType struct {
-	Name            string
-	Description     string
-	Target          ActionTarget
-	EventType       *string
-	Disabled        bool
-	DisablingReason *DisablingReason
+	Name        string
+	Description string
+	Target      ActionTarget
+	EventType   *string
+	HasSchema   bool
 }
-
-// DisablingReason represents a reason for which an action type may be disabled.
-type DisablingReason string
-
-const (
-	DisablingReasonNoUsersSchema     DisablingReason = "No users schema"
-	DisablingReasonNoGroupsSchema    DisablingReason = "No groups schema"
-	DisablingReasonAlreadyHaveAction DisablingReason = "Already have action"
-)
 
 // ActionTypes returns the action types for the connection.
 //
@@ -133,17 +123,6 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 	var actionTypes []*ActionType
 	c := this.connection
 	connector := c.Connector()
-	var haveUsersAction, haveGroupsAction, haveEventsActionNoEventType bool
-	for _, a := range c.Actions() {
-		switch {
-		case a.Target == state.UsersTarget:
-			haveUsersAction = true
-		case a.Target == state.GroupsTarget:
-			haveGroupsAction = true
-		case a.Target == state.EventsTarget && a.EventType == "":
-			haveEventsActionNoEventType = true
-		}
-	}
 	wsSchemas := c.Workspace().Schemas
 	targets := connector.Targets
 	if targets.Contains(state.UsersTarget) && c.Role == state.SourceRole {
@@ -161,15 +140,7 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 				Name:        "Import " + connector.TermForUsers,
 				Description: description,
 				Target:      UsersTarget,
-			}
-			if haveUsersAction {
-				at.Disabled = true
-				reason := DisablingReasonAlreadyHaveAction
-				at.DisablingReason = &reason
-			} else if _, haveUsersSchema := wsSchemas["users"]; !haveUsersSchema {
-				at.Disabled = true
-				reason := DisablingReasonNoUsersSchema
-				at.DisablingReason = &reason
+				HasSchema:   wsSchemas["users"] != nil,
 			}
 			actionTypes = append(actionTypes, at)
 		}
@@ -189,15 +160,7 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 				Name:        "Import " + connector.TermForGroups,
 				Description: description,
 				Target:      GroupsTarget,
-			}
-			if haveGroupsAction {
-				at.Disabled = true
-				reason := DisablingReasonAlreadyHaveAction
-				at.DisablingReason = &reason
-			} else if _, haveGroupsSchema := wsSchemas["groups"]; !haveGroupsSchema {
-				at.Disabled = true
-				reason := DisablingReasonNoGroupsSchema
-				at.DisablingReason = &reason
+				HasSchema:   wsSchemas["groups"] != nil,
 			}
 			actionTypes = append(actionTypes, at)
 		}
@@ -219,11 +182,7 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 					Name:        "Receive events",
 					Description: description,
 					Target:      EventsTarget,
-				}
-				if haveEventsActionNoEventType {
-					at.Disabled = true
-					reason := DisablingReasonAlreadyHaveAction
-					at.DisablingReason = &reason
+					HasSchema:   true,
 				}
 				actionTypes = append(actionTypes, at)
 			}
@@ -239,6 +198,7 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 					Description: et.Description,
 					Target:      EventsTarget,
 					EventType:   &id,
+					HasSchema:   true,
 				})
 			}
 		}
@@ -603,24 +563,10 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 				}
 			}
 		case state.UsersTarget, state.GroupsTarget:
-			// Check if an action already exists with the same target for the connection
-			// and make sure that when there are both a Users and a Groups action, they
-			// have the same schedule start.
-			err = tx.QueryScan(ctx, "SELECT target, schedule_start FROM actions WHERE connection = $1\n"+
-				" AND target IN ('Users', 'Groups')", n.Connection, func(rows *postgres.Rows) error {
-				for rows.Next() {
-					var target state.ActionTarget
-					if err := rows.Scan(&target, &n.ScheduleStart); err != nil {
-						return err
-					}
-					if target == n.Target {
-						return errors.Unprocessable(TargetAlreadyExists,
-							"action with target %s already exists for connection %d", n.Target, n.Connection)
-					}
-				}
-				return nil
-			})
-			if err != nil {
+			// Make sure that users and groups actions have the same schedule start.
+			err = tx.QueryRow(ctx, "SELECT schedule_start FROM actions WHERE connection = $1\n"+
+				" AND target IN ('Users', 'Groups') LIMIT 1", n.Connection).Scan(&n.ScheduleStart)
+			if err != nil && err != sql.ErrNoRows {
 				return err
 			}
 		}

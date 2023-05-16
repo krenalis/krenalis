@@ -1,16 +1,16 @@
 import './ListTile.css';
 import { SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ListTile = ({ icon, name, description, disabled, disablingReason, onClick }) => {
+const ListTile = ({ icon, name, description, hasSchema, onClick }) => {
 	return (
-		<div className={`listTile${disabled ? ' disabled' : ''}`} onClick={disabled ? null : onClick}>
+		<div className={`listTile${hasSchema ? '' : ' disabled'}`} onClick={hasSchema ? onClick : null}>
 			<div className='tileIcon'>{icon}</div>
 			<div className='tileName'>{name}</div>
 			<div className='tileDescription'>
 				{description}
-				{disabled && disablingReason !== '' && <div className='disablingReason'>{disablingReason}</div>}
+				{!hasSchema && <div className='disablingReason'>No schema</div>}
 			</div>
-			{disabled ? null : <SlIcon className='tileChevron' name='chevron-right' />}
+			{hasSchema ? <SlIcon className='tileChevron' name='chevron-right' /> : null}
 		</div>
 	);
 };
