@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
+	"sync"
 	"time"
 
 	"chichi/connector"
@@ -23,9 +23,40 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// exportOnly10Users, when true, makes Dummy export only 10 users instead of the
+var (
+	users     map[string]properties
+	usersLock sync.Mutex
+)
+
+type properties map[string]any
+
+// loadOnly10Users, when true, makes Dummy to load only 10 users instead of the
 // entire data set.
-const exportOnly10Users = true
+const loadOnly10Users = true
+
+//go:embed users.json
+var jsonUsers []byte
+
+func init() {
+	var rawUsers []struct {
+		ID         string
+		Properties map[string]any
+	}
+	err := json.Unmarshal(jsonUsers, &rawUsers)
+	if err != nil {
+		panic(err)
+	}
+	if loadOnly10Users {
+		rawUsers = rawUsers[:10]
+	}
+	usersLock.Lock()
+	users = make(map[string]properties, len(rawUsers))
+	for _, u := range rawUsers {
+		u.Properties["dummy_id"] = u.ID
+		users[u.ID] = u.Properties
+	}
+	usersLock.Unlock()
+}
 
 // Make sure it implements the AppEventsConnection and the AppUsersConnection
 // interfaces.
@@ -121,13 +152,6 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 	return nil
 }
 
-type user struct {
-	ID         string
-	Properties map[string]any
-}
-
-var now = time.Now()
-
 func (c *connection) SetUser(user connector.User) error {
 	panic("not implemented")
 }
@@ -145,24 +169,13 @@ func (c *connection) UserSchema() (types.Type, error) {
 	return schema, nil
 }
 
-//go:embed users.json
-var jsonUsers []byte
+var now = time.Now()
 
 func (c *connection) Users(cursor string, properties []connector.PropertyPath) error {
-	var users []user
-	err := json.Unmarshal(jsonUsers, &users)
-	if err != nil {
-		panic(err)
-	}
-	if exportOnly10Users {
-		users = users[:10]
-	}
-	id := 1
-	for _, user := range users {
-		dummyID := strconv.Itoa(id)
-		user.Properties["dummy_id"] = dummyID
-		c.firehose.SetUser(dummyID, user.Properties, now, nil)
-		id++
+	usersLock.Lock()
+	defer usersLock.Unlock()
+	for id, props := range users {
+		c.firehose.SetUser(id, props, now, nil)
 	}
 	return nil
 }
