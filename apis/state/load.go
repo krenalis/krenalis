@@ -258,13 +258,13 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		// Read all connections.
 		state.connections = map[int]*Connection{}
 		err = state.db.QueryScan(ctx, "SELECT id, workspace, name, role, enabled, connector,"+
-			" COALESCE(storage, 0), resource, website_host, user_cursor, identity_column, timestamp_column,"+
+			" COALESCE(storage, 0), resource, website_host, identity_column, timestamp_column,"+
 			" settings, health FROM connections", func(rows *postgres.Rows) error {
 			for rows.Next() {
 				var workspaceID, connector, storage, resource int
 				c := Connection{}
 				if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &c.Role, &c.Enabled, &connector, &storage, &resource,
-					&c.WebsiteHost, &c.UserCursor, &c.IdentityColumn, &c.TimestampColumn,
+					&c.WebsiteHost, &c.IdentityColumn, &c.TimestampColumn,
 					&c.Settings, &c.Health); err != nil {
 					return err
 				}
@@ -327,7 +327,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name,\n"+
 			"enabled, schedule_start, schedule_period, filter, schema, mapping,\n"+
 			"(transformation).in_types, (transformation).out_types,\n"+
-			"(transformation).python_source, query, path, sheet, health FROM actions",
+			"(transformation).python_source, query, path, sheet, user_cursor, health FROM actions",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					var connectionID int
@@ -337,7 +337,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &filter,
 						&rawSchema, &mapping, &transformIn, &transformOut, &pythonSource, &action.Query,
-						&action.Path, &action.Sheet, &action.Health)
+						&action.Path, &action.Sheet, &action.UserCursor, &action.Health)
 					if err != nil {
 						return err
 					}

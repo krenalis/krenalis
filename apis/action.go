@@ -330,6 +330,25 @@ func (this *Action) Set(action ActionToSet) error {
 	return err
 }
 
+// setUserCursor sets the user cursor of the action.
+func (this *Action) setUserCursor(ctx context.Context, cursor string) error {
+	n := state.SetActionUserCursorNotification{
+		ID:         this.action.ID,
+		UserCursor: cursor,
+	}
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE actions SET user_cursor = $1 WHERE id = $2", n.UserCursor, n.ID)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return nil
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
+}
+
 // SetSchedulePeriod sets the schedule period, in minutes, of the action. The
 // action must be a Users or Groups action and period can be 5, 15, 30, 60, 120,
 // 180, 360, 480, 720, or 1440.

@@ -518,7 +518,6 @@ type Connection struct {
 	resource        *Resource
 	WebsiteHost     string
 	Keys            []string
-	UserCursor      string
 	IdentityColumn  string
 	TimestampColumn string
 	Settings        []byte
@@ -802,6 +801,7 @@ type Action struct {
 	Query          string
 	Path           string
 	Sheet          string
+	UserCursor     string
 	Health         Health
 }
 

@@ -58,7 +58,7 @@ func (this *Action) importFromApp() error {
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
-	cursor := connection.UserCursor
+	cursor := this.action.UserCursor
 	execution, _ := this.action.Execution()
 	if execution.Reimport {
 		cursor = ""

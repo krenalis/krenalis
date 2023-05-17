@@ -126,6 +126,8 @@ func (state *State) keepState() {
 			state.setActionSchema(n)
 		case "SetActionStatus":
 			state.setActionStatus(n)
+		case "SetActionUserCursor":
+			state.setActionUserCursor(n)
 		case "SetConnectionSettings":
 			state.setConnectionSettings(n)
 		case "SetConnectionStorage":
@@ -884,6 +886,24 @@ func (state *State) setActionStatus(n postgres.Notification) {
 	}
 	state.replaceAction(e.ID, func(a *Action) {
 		a.Enabled = e.Enabled
+	})
+}
+
+// SetActionUserCursorNotification is the notification sent when the user cursor
+// of an action is set.
+type SetActionUserCursorNotification struct {
+	ID         int
+	UserCursor string
+}
+
+// setActionUserCursor sets the user cursor of an action.
+func (state *State) setActionUserCursor(n postgres.Notification) {
+	e := SetActionUserCursorNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceAction(e.ID, func(a *Action) {
+		a.UserCursor = e.UserCursor
 	})
 }
 

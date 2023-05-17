@@ -65,13 +65,11 @@ func (fh *firehose) SetCursor(cursor string) {
 	default:
 	}
 
-	result, err := fh.db.Exec(fh.ctx, "UPDATE connections SET user_cursor = $1 WHERE id = $2", cursor, fh.connection.ID)
+	// Set the user cursor of the action.
+	err := fh.action.setUserCursor(fh.ctx, cursor)
 	if err != nil {
 		fh.setError(err)
 		return
-	}
-	if result.RowsAffected() == 0 {
-		fh.cancel()
 	}
 
 }

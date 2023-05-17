@@ -82,7 +82,6 @@ CREATE TABLE connections (
     storage integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
     resource integer NOT NULL DEFAULT 0,
     website_host varchar(261) NOT NULL DEFAULT '',
-    user_cursor varchar(500) NOT NULL DEFAULT '',
     identity_column varchar(100) NOT NULL DEFAULT '',
     timestamp_column varchar(100) NOT NULL DEFAULT '',
     settings varchar(65535),
@@ -112,6 +111,7 @@ CREATE TABLE actions (
     query text NOT NULL DEFAULT '',
     path varchar(1024) NOT NULL DEFAULT '',
     sheet varchar(100) NOT NULL DEFAULT '',
+    user_cursor varchar(500) NOT NULL DEFAULT '',
     health health NOT NULL DEFAULT 'Healthy',
     PRIMARY KEY (id)
 );
