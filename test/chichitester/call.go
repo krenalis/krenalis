@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"runtime/debug"
 	"strings"
@@ -71,6 +72,7 @@ func (c *Chichi) call(httpMethod, method string, body any) (any, error) {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{Transport: tr}
+	log.Printf("[info] %s %s", httpMethod, url)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
