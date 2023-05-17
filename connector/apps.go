@@ -109,8 +109,8 @@ type AppUsersConnection interface {
 	// authorized.
 	ReceiveWebhook(r *http.Request) ([]WebhookEvent, error)
 
-	// SetUsers sets the given users.
-	SetUsers(users []User) error
+	// SetUser sets the given user.
+	SetUser(user User) error
 
 	// UserSchema returns the user schema.
 	UserSchema() (types.Type, error)
@@ -135,8 +135,8 @@ type AppGroupsConnection interface {
 	// authorized.
 	ReceiveWebhook(r *http.Request) ([]WebhookEvent, error)
 
-	// SetGroups sets the given groups.
-	SetGroups(groups []Group) error
+	// SetGroup sets the given group.
+	SetGroup(group Group) error
 }
 
 // Event represents an event.

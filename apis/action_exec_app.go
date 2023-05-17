@@ -162,9 +162,11 @@ func (this *Action) exportToApp() error {
 
 	// Export the users to the connection.
 	log.Printf("[info] exporting %d user(s) to the connection %d", len(users), connection.ID)
-	err = c.(_connector.AppUsersConnection).SetUsers(users)
-	if err != nil {
-		return errors.New("cannot export users")
+	for _, user := range users {
+		err = c.(_connector.AppUsersConnection).SetUser(user)
+		if err != nil {
+			return errors.New("cannot export user")
+		}
 	}
 
 	return fh.err

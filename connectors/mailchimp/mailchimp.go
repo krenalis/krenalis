@@ -288,25 +288,23 @@ func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 	return nil, errors.New("to be implemented")
 }
 
-// SetUsers sets the given users.
-func (c *connection) SetUsers(users []connector.User) error {
+// SetUser sets the given user.
+func (c *connection) SetUser(user connector.User) error {
 
 	var r struct {
 		Operations []batchOperation `json:"operations"`
 	}
 	var basePath = "/lists/" + c.settings.List + "/members/"
-	for _, u := range users {
-		body, err := json.Marshal(u.Properties)
-		if err != nil {
-			return err
-		}
-		r.Operations = append(r.Operations, batchOperation{
-			Method: "PUT",
-			Path:   basePath + u.ID,
-			Params: map[string]string{"skip_merge_validation": "true"},
-			Body:   string(body),
-		})
+	body, err := json.Marshal(user.Properties)
+	if err != nil {
+		return err
 	}
+	r.Operations = append(r.Operations, batchOperation{
+		Method: "PUT",
+		Path:   basePath + user.ID,
+		Params: map[string]string{"skip_merge_validation": "true"},
+		Body:   string(body),
+	})
 	rq, err := json.Marshal(r)
 	if err != nil {
 		return err

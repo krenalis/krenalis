@@ -226,35 +226,27 @@ func (c *connection) Resource() (string, error) {
 	return strconv.Itoa(res.PortalId), nil
 }
 
-// SetGroups sets the given groups.
-func (c *connection) SetGroups(groups []connector.Group) error {
+// SetGroup sets the given groups.
+func (c *connection) SetGroup(group connector.Group) error {
 	// TODO(marco): implement
 	return nil
 }
 
-// SetUsers sets the users.
+// SetUser sets the user.
 // It requires the "crm.objects.contacts.write" scope.
-func (c *connection) SetUsers(users []connector.User) error {
+func (c *connection) SetUser(user connector.User) error {
 
 	var body bytes.Buffer
 	body.WriteString(`{"inputs":[`)
-
-	for i, user := range users {
-		if i > 0 {
-			body.WriteString(`,`)
-		}
-		id, _ := json.Marshal(user.ID)
-		body.WriteString(`{"id":`)
-		body.Write(id)
-		body.WriteString(`,"properties":`)
-		err := json.NewEncoder(&body).Encode(user.Properties)
-		if err != nil {
-			return err
-		}
-		body.WriteString(`}`)
+	id, _ := json.Marshal(user.ID)
+	body.WriteString(`{"id":`)
+	body.Write(id)
+	body.WriteString(`,"properties":`)
+	err := json.NewEncoder(&body).Encode(user.Properties)
+	if err != nil {
+		return err
 	}
-
-	body.WriteString(`]}`)
+	body.WriteString(`}]}`)
 
 	return c.call("POST", "/crm/v3/objects/contacts/batch/update", &body, 200, nil)
 }

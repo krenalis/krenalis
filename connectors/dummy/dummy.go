@@ -128,7 +128,7 @@ type user struct {
 
 var now = time.Now()
 
-func (c *connection) SetUsers(users []connector.User) error {
+func (c *connection) SetUser(user connector.User) error {
 	panic("not implemented")
 }
 

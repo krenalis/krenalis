@@ -83,7 +83,7 @@ If webhooksPer is "Connection":
 * Settings
 * PrivacyRegion
 
-### SetGroups
+### SetGroup
 
 * Settings
 * Firehose
@@ -92,7 +92,7 @@ If webhooksPer is "Connection":
 * AccessToken
 * PrivacyRegion
 
-### SetUsers
+### SetUser
 
 * Settings
 * Firehose

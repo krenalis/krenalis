@@ -146,8 +146,8 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 	}
 }
 
-// SetUsers sets the users.
-func (c *connection) SetUsers(users []connector.User) error {
+// SetUser sets the user.
+func (c *connection) SetUser(user connector.User) error {
 	return errors.New("not implemented")
 }
 
