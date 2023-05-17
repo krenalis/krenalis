@@ -140,7 +140,7 @@ func retrieveOAuthToken(ctx context.Context, connector *state.Connector, authori
 		expiration = now
 	}
 	expiresIn := connector.OAuth.ExpiresIn
-	if expiresIn == 0 {
+	if expiresIn <= 0 {
 		if tokens.ExpiresIn == nil {
 			return "", "", time.Time{}, fmt.Errorf("the OAuth provider for connector %d did not returned expires_in", connector.ID)
 		}
@@ -148,11 +148,12 @@ func retrieveOAuthToken(ctx context.Context, connector *state.Connector, authori
 		if s < 1 {
 			return "", "", time.Time{}, fmt.Errorf("the OAuth provider for connector %d returned an invalid expires_in = %q", connector.ID, tokens.ExpiresIn)
 		}
+		expiresIn = int32(s)
 		if s > math.MaxInt32 {
-			s = math.MaxInt32
+			expiresIn = math.MaxInt32
 		}
-		expiresIn = time.Duration(s) * time.Second
 	}
+	expiration = expiration.Add(time.Duration(expiresIn) * time.Second)
 
-	return tokens.AccessToken, tokens.RefreshToken, expiration.Add(expiresIn), nil
+	return tokens.AccessToken, tokens.RefreshToken, expiration, nil
 }

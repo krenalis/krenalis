@@ -69,9 +69,9 @@ type OAuth struct {
 
 	Scopes []string
 
-	// The lifetime in seconds of the access token in range [0, math.MaxInt32].
-	// If 0, the lifetime is returned by the TokenURL endpoint.
-	ExpiresIn time.Duration
+	// The lifetime in seconds of the access token.
+	// If zero or negative, the lifetime is returned by the TokenURL endpoint.
+	ExpiresIn int32
 }
 
 // WebhooksPer values indicates if webhooks are per connector, resource or
