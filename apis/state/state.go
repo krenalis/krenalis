@@ -17,6 +17,7 @@ import (
 
 	"chichi/apis/postgres"
 	"chichi/apis/warehouses"
+	_connector "chichi/connector"
 	"chichi/connector/types"
 
 	"github.com/google/uuid"
@@ -302,7 +303,7 @@ type Connector struct {
 	HasSettings            bool
 	Icon                   string
 	WebhooksPer            WebhooksPer
-	OAuth                  *ConnectorOAuth
+	OAuth                  *OAuth
 }
 
 // ConnectorTargets represents the targets of a connector.
@@ -464,16 +465,11 @@ func (per WebhooksPer) Value() (driver.Value, error) {
 	return nil, fmt.Errorf("not a valid WebhooksPer: %d", per)
 }
 
-// A ConnectorOAuth represents OAuth data required to authenticate with a
-// connector.
-type ConnectorOAuth struct {
-	URL              string
-	ClientID         string
-	ClientSecret     string
-	TokenEndpoint    string
-	DefaultTokenType string
-	DefaultExpiresIn int
-	ForcedExpiresIn  int
+// An OAuth represents OAuth data required to authenticate with a connector.
+type OAuth struct {
+	_connector.OAuth
+	ClientID     string
+	ClientSecret string
 }
 
 // Resource represents a resource.

@@ -12,6 +12,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strings"
 
 	"chichi/apis/errors"
 	"chichi/apis/state"
@@ -33,7 +35,7 @@ type Connector struct {
 	HasSettings            bool
 	Icon                   string
 	WebhooksPer            WebhooksPer
-	OAuth                  *ConnectorOAuth
+	OAuth                  bool
 }
 
 // ConnectorTargets represents connector targets.
@@ -54,18 +56,6 @@ func (t ConnectorTargets) MarshalJSON() ([]byte, error) {
 	_, _ = fmt.Fprintf(b, ",\"Groups\":%t", t&GroupsFlag != 0)
 	b.WriteString(`}`)
 	return b.Bytes(), nil
-}
-
-// A ConnectorOAuth represents OAuth data required to authenticate with a
-// connector.
-type ConnectorOAuth struct {
-	URL              string
-	ClientID         string
-	ClientSecret     string
-	TokenEndpoint    string
-	DefaultTokenType string
-	DefaultExpiresIn int
-	ForcedExpiresIn  int
 }
 
 // ConnectorType represents a connector type.
@@ -149,6 +139,34 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 	}
 	*typ = t
 	return nil
+}
+
+// AuthCodeURL returns a URL that directs to the consent page of an OAuth 2.0
+// provider. This page requests explicit permissions for the required scopes.
+// After that, the provider redirects to the URL specified by redirectURI.
+func (this *Connector) AuthCodeURL(redirectURI string) (string, error) {
+	oauth := this.connector.OAuth
+	if oauth == nil {
+		return "", errors.BadRequest("connector %d does not support OAuth", this.connector.ID)
+	}
+	var b strings.Builder
+	b.WriteString(oauth.AuthURL)
+	v := url.Values{
+		"response_type": {"code"},
+		"client_id":     {oauth.ClientID},
+		"redirect_uri":  {redirectURI},
+		"state":         {"state"},
+	}
+	if len(oauth.Scopes) > 0 {
+		v.Set("scope", strings.Join(oauth.Scopes, " "))
+	}
+	if strings.Contains(oauth.AuthURL, "?") {
+		b.WriteByte('&')
+	} else {
+		b.WriteByte('?')
+	}
+	b.WriteString(v.Encode())
+	return b.String(), nil
 }
 
 // ServeUI serves the user interface for the connector with the given role.

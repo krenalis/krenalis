@@ -13,7 +13,6 @@ import UsersList from './components/UsersList/UsersList';
 import SchemaWrapper from './components/SchemaWrapper/SchemaWrapper';
 import Schema from './components/Schema/Schema';
 import OAuth from './components/OAuth/OAuth';
-import OAuthError from './components/OAuthError/OAuthError';
 import NotFound from './components/NotFound/NotFound';
 import ConnectionOverview from './components/ConnectionOverview/ConnectionOverview';
 import ConnectionEvents from './components/ConnectionEvents/ConnectionEvents';
@@ -38,8 +37,7 @@ root.render(
 							<Route path='settings' element={<ConnectionSettings />} />
 						</Route>
 						<Route path='connections' element={<ConnectionsMap />} />
-						<Route path='oauth' element={<OAuth />} />
-						<Route path='oauth/error' element={<OAuthError />} />
+						<Route path='oauth/authorize' element={<OAuth />} />
 					</Route>
 					<Route element={<UsersWrapper />}>
 						<Route path='users' element={<UsersList />} />

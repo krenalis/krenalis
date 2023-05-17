@@ -56,11 +56,12 @@ func init() {
 		TermForUsers:           "contacts",
 		TermForGroups:          "companies",
 		Icon:                   icon,
+		WebhooksPer:            connector.WebhooksPerConnector,
 		OAuth: connector.OAuth{
-			URL:   "https://app-eu1.hubspot.com/oauth/authorize",
-			Scope: "crm.objects.contacts.read crm.objects.contacts.write crm.schemas.contacts.read",
+			AuthURL:  "https://app-eu1.hubspot.com/oauth/authorize",
+			TokenURL: "https://api.hubapi.com/oauth/v1/token",
+			Scopes:   []string{"crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
 		},
-		WebhooksPer: connector.WebhooksPerConnector,
 	}, open)
 }
 

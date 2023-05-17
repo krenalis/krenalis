@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -48,11 +49,12 @@ func init() {
 		DestinationDescription: "export users as contacts to Mailchimp",
 		TermForUsers:           "contacts",
 		Icon:                   icon,
+		WebhooksPer:            connector.WebhooksPerSource,
 		OAuth: connector.OAuth{
-			URL:             "https://login.mailchimp.com/oauth2/authorize?response_type=code",
-			ForcedExpiresIn: "never",
+			AuthURL:   "https://login.mailchimp.com/oauth2/authorize?response_type=code",
+			TokenURL:  "https://login.mailchimp.com/oauth2/token",
+			ExpiresIn: math.MaxInt32,
 		},
-		WebhooksPer: connector.WebhooksPerSource,
 	}, open)
 }
 
@@ -72,22 +74,6 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// TODO: the 'open' function should return as soon as possible. Refactor
-		// this implementation.
-		var err error
-		c.settings.DataCenter, _, err = c.getMetadata()
-		if err != nil {
-			return nil, err
-		}
-		s, err := json.Marshal(c.settings)
-		if err != nil {
-			return nil, err
-		}
-		err = c.firehose.SetSettings(s)
 		if err != nil {
 			return nil, err
 		}
@@ -741,7 +727,10 @@ func serializeProperties(properties []connector.PropertyPath) string {
 func (c *connection) call(method, path string, params url.Values, body io.Reader, expectedStatus int, response any) error {
 
 	if c.settings.DataCenter == "" {
-		return errors.New("invalid datacenter")
+		err := c.setDataCenter()
+		if err != nil {
+			return err
+		}
 	}
 
 	var callPath = "https://" + c.settings.DataCenter + ".api.mailchimp.com/3.0/" + path[1:]
@@ -871,6 +860,22 @@ func (c *connection) getWebhooks(list string) ([]webhook, error) {
 		return nil, err
 	}
 	return response.Webhooks, nil
+}
+
+// setDataCenter sets the data center.
+func (c *connection) setDataCenter() error {
+	dc, _, err := c.getMetadata()
+	if err != nil {
+		return err
+	}
+	c.settings.DataCenter = dc
+	if c.firehose != nil {
+		var s []byte
+		if s, err = json.Marshal(c.settings); err == nil {
+			err = c.firehose.SetSettings(s)
+		}
+	}
+	return err
 }
 
 // setWebhook creates or updates a webhook for the list.

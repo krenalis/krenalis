@@ -70,8 +70,7 @@ type Connection struct {
 	Type        ConnectorType
 	Role        ConnectionRole
 	Connector   int
-	Storage     int    // zero if the connection is not a file or does not have a storage.
-	OAuthURL    string // empty if the connection does not use OAuth.
+	Storage     int // zero if the connection is not a file or does not have a storage.
 	HasSettings bool
 	Enabled     bool
 	Health      Health

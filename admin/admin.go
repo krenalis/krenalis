@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -88,17 +87,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if !isLoggedIn {
 		http.Redirect(w, r, "/admin/", http.StatusTemporaryRedirect)
-	}
-
-	if strings.HasPrefix(rpath, "/oauth/authorize") {
-		oauthCode := r.URL.Query().Get("code")
-		if oauthCode == "" {
-			log.Printf("[error] %v", errors.New("missing OAuth code from redirect URL"))
-			http.Redirect(w, r, "/admin/oauth/error", http.StatusTemporaryRedirect)
-			return
-		}
-		http.Redirect(w, r, "/admin/oauth"+fmt.Sprintf("?oauthCode=%s", url.QueryEscape(oauthCode)), http.StatusTemporaryRedirect)
-		return
 	}
 
 	// Handle the "/group-schema-properties" endpoint.

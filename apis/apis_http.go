@@ -600,6 +600,22 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("Content-Type", "application/json")
 				_, _ = w.Write(form)
 			})
+			router.Get("/auth-code-url", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
+				connector, err := apis.Connector(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				redirectURI := r.URL.Query().Get("redirecturi")
+				url, err := connector.AuthCodeURL(redirectURI)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Add("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{"url": url})
+			})
 			router.Post("/ui-event", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
 				connector, err := apis.Connector(id)
@@ -789,15 +805,16 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	router.Route("/api/workspace/oauth-token", func(router chi.Router) {
 		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 			var req struct {
-				Connector int
-				OAuthCode string
+				Connector   int
+				OAuthCode   string
+				RedirectURI string
 			}
 			err := json.NewDecoder(r.Body).Decode(&req)
 			if err != nil {
 				respond(w, errors.BadRequest("invalid JSON"))
 				return
 			}
-			oauthToken, err := workspace.OAuthToken(req.OAuthCode, req.Connector)
+			oauthToken, err := workspace.OAuthToken(req.OAuthCode, req.RedirectURI, req.Connector)
 			if err != nil {
 				respond(w, err)
 				return

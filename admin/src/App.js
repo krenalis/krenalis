@@ -64,9 +64,8 @@ const App = () => {
 		}
 	};
 
-	// TODO(@Andrea): find a way not to hardcode the URL directly into the
-	// javascript.
-	let api = new API('https://localhost:9090');
+	let baseURL = window.location.origin;
+	let api = new API(baseURL);
 
 	useEffect(() => {
 		const fetchConnectors = async () => {

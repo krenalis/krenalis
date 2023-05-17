@@ -13,10 +13,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -479,9 +476,6 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 	if s, ok := c.Storage(); ok {
 		connection.Storage = s.ID
 	}
-	if conn.OAuth != nil {
-		connection.OAuthURL = conn.OAuth.URL
-	}
 	return &connection, nil
 }
 
@@ -505,9 +499,6 @@ func (this *Workspace) Connections() []*Connection {
 		}
 		if s, ok := c.Storage(); ok {
 			connection.Storage = s.ID
-		}
-		if conn.OAuth != nil {
-			connection.OAuthURL = conn.OAuth.URL
 		}
 		infos[i] = &connection
 	}
@@ -629,13 +620,14 @@ type authorizedResource struct {
 	ExpiresIn    time.Time
 }
 
-// OAuthToken returns an OAuth token, given an OAuth authorization code,
-// that can be used to add a new connection for the specified connector.
+// OAuthToken returns an OAuth token, given an OAuth authorization code and the
+// redirect URL used to obtain that code, that can be used to add a new
+// connection for the specified connector.
 //
 // It returns an errors.NotFound error if the workspace does not exist anymore.
 // It returns an errors.UnprocessableError error with code ConnectorNotExists if
 // the connector does not exist.
-func (this *Workspace) OAuthToken(authorizationCode string, connector int) (string, error) {
+func (this *Workspace) OAuthToken(authorizationCode, redirectURI string, connector int) (string, error) {
 
 	if authorizationCode == "" {
 		return "", errors.BadRequest("authorization code is empty")
@@ -652,61 +644,14 @@ func (this *Workspace) OAuthToken(authorizationCode string, connector int) (stri
 		return "", errors.BadRequest("connector %d does not support OAuth", connector)
 	}
 
-	// Retrieve the refresh and access tokens.
-	body := url.Values{}
-	body.Set("grant_type", "authorization_code")
-	body.Set("client_id", c.OAuth.ClientID)
-	body.Set("client_secret", c.OAuth.ClientSecret)
-	body.Set("redirect_uri", "https://localhost:9090/admin/oauth/authorize")
-	body.Set("code", authorizationCode)
-
-	req, err := http.NewRequest("POST", c.OAuth.TokenEndpoint, strings.NewReader(body.Encode()))
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	accessToken, refreshToken, expiresIn, err := retrieveOAuthToken(context.Background(), c, authorizationCode, redirectURI, "")
 	if err != nil {
 		return "", err
 	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("cannot retrieve the refresh and access tokens from connector %d: %s", c.ID, err)
-	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, resp.Body)
-		_ = resp.Body.Close()
-	}()
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("cannot retrieve the refresh and access tokens from connector %d: server responded with status %d", c.ID, resp.StatusCode)
-	}
-
-	tokens := struct {
-		// TODO(carlo): add Scope field and validate it
-		AccessToken  string       `json:"access_token"`
-		TokenType    string       `json:"token_type"` // TODO(carlo): validate the value
-		ExpiresIn    *json.Number `json:"expires_in"` // TODO(carlo): validate the value
-		RefreshToken string       `json:"refresh_token"`
-	}{}
-	err = json.NewDecoder(resp.Body).Decode(&tokens)
-	if err != nil {
-		return "", fmt.Errorf("cannot decode response from OAuth server of connector %d: %s", c.ID, err)
-	}
-
-	// TODO(carlo): compute the token type to use
-
-	// Compute the access token expire time.
-	expiresIn := time.Now()
-	if c.OAuth.ForcedExpiresIn > 0 {
-		expiresIn = expiresIn.Add(time.Duration(c.OAuth.ForcedExpiresIn) * time.Second)
-	} else if tokens.ExpiresIn != nil {
-		seconds, _ := tokens.ExpiresIn.Int64()
-		expiresIn = expiresIn.Add(time.Duration(seconds) * time.Second)
-	} else if c.OAuth.DefaultExpiresIn != 0 {
-		expiresIn = expiresIn.Add(time.Duration(c.OAuth.DefaultExpiresIn) * time.Second)
-	}
-
 	connection, err := _connector.RegisteredApp(c.Name).Open(context.Background(), &_connector.AppConfig{
 		ClientSecret:  c.OAuth.ClientSecret,
-		AccessToken:   tokens.AccessToken,
+		AccessToken:   accessToken,
 		PrivacyRegion: _connector.PrivacyRegion(this.workspace.PrivacyRegion),
 	})
 	if err != nil {
@@ -721,8 +666,8 @@ func (this *Workspace) OAuthToken(authorizationCode string, connector int) (stri
 		Workspace:    this.workspace.ID,
 		Connector:    connector,
 		Code:         code,
-		AccessToken:  tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 		ExpiresIn:    expiresIn,
 	})
 

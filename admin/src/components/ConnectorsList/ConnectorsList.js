@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useContext } from 'react';
 import './ConnectorsList.css';
 import Card from '../Card/Card';
 import { AppContext } from '../../context/AppContext';
@@ -8,7 +8,7 @@ import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react
 const ConnectorsList = () => {
 	let [goToConnectorSettings, setGoToConnectorSettings] = useState(0);
 
-	let { redirect, connectors } = useContext(AppContext);
+	let { redirect, connectors, API, showError } = useContext(AppContext);
 	let { setCurrentTitle, setPreviousRoute } = useContext(NavigationContext);
 	setPreviousRoute('/admin/connections');
 
@@ -22,10 +22,15 @@ const ConnectorsList = () => {
 
 	setCurrentTitle(`Add a ${connectionRole.toLocaleLowerCase()} connection`);
 
-	const authorizeWithOAuth = (c) => {
-		localStorage.setItem('addConnectionID', c.ID);
+	const authorizeWithOAuth = async (connectorID) => {
+		localStorage.setItem('addConnectionID', connectorID);
 		localStorage.setItem('addConnectionRole', connectionRole);
-		window.location = c.OAuth.URL;
+		let [res, err] = await API.connectors.authCodeURL(connectorID);
+		if (err != null) {
+			showError(err);
+			return;
+		}
+		window.location = res.url;
 		return;
 	};
 
@@ -53,9 +58,9 @@ const ConnectorsList = () => {
 										size='medium'
 										variant='default'
 										onClick={
-											c.OAuth == null
-												? () => setGoToConnectorSettings(c.ID)
-												: () => authorizeWithOAuth(c)
+											c.OAuth
+												? () => authorizeWithOAuth(c.ID)
+												: () => setGoToConnectorSettings(c.ID)
 										}
 										circle
 									>

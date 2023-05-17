@@ -64,11 +64,14 @@ const (
 
 // OAuth represents the connector OAuth 2.0 info.
 type OAuth struct {
-	URL              string
-	Scope            string
-	DefaultTokenType string
-	DefaultExpiresIn int
-	ForcedExpiresIn  string
+	AuthURL  string
+	TokenURL string
+
+	Scopes []string
+
+	// The lifetime in seconds of the access token in range [0, math.MaxInt32].
+	// If 0, the lifetime is returned by the TokenURL endpoint.
+	ExpiresIn time.Duration
 }
 
 // WebhooksPer values indicates if webhooks are per connector, resource or

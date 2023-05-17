@@ -66,18 +66,12 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all connectors.
 		state.connectors = map[int]*Connector{}
-		err = state.db.QueryScan(ctx, "SELECT id, name, type, oauth_url, oauth_client_id,"+
-			" oauth_client_secret, oauth_token_endpoint, oauth_default_token_type, oauth_default_expires_in,"+
-			" oauth_forced_expires_in FROM connectors", func(rows *postgres.Rows) error {
+		err = state.db.QueryScan(ctx, "SELECT id, name, type, oauth_client_id, oauth_client_secret FROM connectors", func(rows *postgres.Rows) error {
 			for rows.Next() {
 				c := Connector{}
-				oauth := ConnectorOAuth{}
-				if err := rows.Scan(&c.ID, &c.Name, &c.Type, &oauth.URL, &oauth.ClientID, &oauth.ClientSecret,
-					&oauth.TokenEndpoint, &oauth.DefaultTokenType, &oauth.DefaultExpiresIn, &oauth.ForcedExpiresIn); err != nil {
+				var oauthClientID, oauthClientSecret string
+				if err := rows.Scan(&c.ID, &c.Name, &c.Type, &oauthClientID, &oauthClientSecret); err != nil {
 					return err
-				}
-				if oauth.URL != "" {
-					c.OAuth = &oauth
 				}
 				var ct reflect.Type
 				switch c.Type {
@@ -99,6 +93,13 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					}
 					c.Icon = app.Icon
 					c.WebhooksPer = WebhooksPer(app.WebhooksPer)
+					if app.OAuth.AuthURL != "" {
+						c.OAuth = &OAuth{
+							OAuth:        app.OAuth,
+							ClientSecret: oauthClientSecret,
+							ClientID:     oauthClientID,
+						}
+					}
 				case DatabaseType:
 					database := _connector.RegisteredDatabase(c.Name)
 					c.SourceDescription = database.SourceDescription

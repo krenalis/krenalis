@@ -18,37 +18,32 @@ CREATE TABLE connectors (
     id SERIAL,
     name varchar(200) NOT NULL DEFAULT '',
     type connector_type NOT NULL DEFAULT 'App',
-    oauth_url varchar(500) NOT NULL DEFAULT '',
     oauth_client_id varchar(500) NOT NULL DEFAULT '',
     oauth_client_secret varchar(500) NOT NULL DEFAULT '',
-    oauth_token_endpoint varchar(500) NOT NULL DEFAULT '',
-    oauth_default_token_type varchar(10) NOT NULL DEFAULT '',
-    oauth_default_expires_in integer NOT NULL DEFAULT 0,
-    oauth_forced_expires_in integer NOT NULL DEFAULT 0,
     PRIMARY KEY (id)
 );
 
-INSERT INTO connectors (name, type, oauth_url, oauth_client_id, oauth_client_secret, oauth_token_endpoint, oauth_forced_expires_in) VALUES
-    ('HubSpot', 'App', 'https://app-eu1.hubspot.com/oauth/authorize?client_id=cef1005a-72be-4047-a301-ef6057588325&redirect_uri=https://localhost:9090/admin/oauth/authorize&scope=crm.objects.contacts.read%20crm.objects.contacts.write%20crm.schemas.contacts.read', 'cef1005a-72be-4047-a301-ef6057588325', '136e50df-5b89-478f-bf01-4a71547fa668', 'https://api.hubapi.com/oauth/v1/token', 0),
-    ('MySQL', 'Database', '', '', '', '', 0),
-    ('Dummy', 'App', '', '', '', '', 0),
-    ('Mailchimp', 'App', 'https://login.mailchimp.com/oauth2/authorize?response_type=code&client_id=631597222767&redirect_uri=https://127.0.0.1:9090/admin/oauth/authorize', '631597222767', '90c2d1a1383de35e5ecca5a73f0e2c19e751056d0e3cdd81ac', 'https://login.mailchimp.com/oauth2/token',2147483647),
-    ('CSV', 'File', '', '', '', '', 0),
-    ('SFTP', 'Storage', '', '', '', '', 0),
-    ('HTTP', 'Storage', '', '', '', '', 0),
-    ('Excel', 'File', '', '', '', '', 0),
-    ('S3', 'Storage', '', '', '', '', 0),
-    ('PostgreSQL', 'Database', '', '', '', '', 0),
-    ('Parquet', 'File', '', '', '', '', 0),
-    ('Website', 'Website', '', '', '', '', 0),
-    ('Kafka', 'Stream', '', '', '', '', 0),
-    ('RabbitMQ', 'Stream', '', '', '', '', 0),
-    ('UISample', 'Stream', '', '', '', '', 0),
-    ('Server', 'Server', '', '', '', '', 0),
-    ('Klaviyo', 'App', '', '', '', '', 0),
-    ('Google Analytics 4', 'App', '', '', '', '', 0),
-    ('Filesystem', 'Storage', '', '', '', '', 0),
-    ('ClickHouse', 'Database', '', '', '', '', 0);
+INSERT INTO connectors (name, type, oauth_client_id, oauth_client_secret) VALUES
+    ('HubSpot', 'App', 'cef1005a-72be-4047-a301-ef6057588325', '136e50df-5b89-478f-bf01-4a71547fa668'),
+    ('MySQL', 'Database', '', ''),
+    ('Dummy', 'App', '', ''),
+    ('Mailchimp', 'App', '631597222767', '90c2d1a1383de35e5ecca5a73f0e2c19e751056d0e3cdd81ac'),
+    ('CSV', 'File', '', ''),
+    ('SFTP', 'Storage', '', ''),
+    ('HTTP', 'Storage', '', ''),
+    ('Excel', 'File', '', ''),
+    ('S3', 'Storage', '', ''),
+    ('PostgreSQL', 'Database', '', ''),
+    ('Parquet', 'File', '', ''),
+    ('Website', 'Website', '', ''),
+    ('Kafka', 'Stream', '', ''),
+    ('RabbitMQ', 'Stream', '', ''),
+    ('UISample', 'Stream', '', ''),
+    ('Server', 'Server', '', ''),
+    ('Klaviyo', 'App', '', ''),
+    ('Google Analytics 4', 'App', '', ''),
+    ('Filesystem', 'Storage', '', ''),
+    ('ClickHouse', 'Database', '', '');
 
 CREATE TYPE warehouse_type AS ENUM ('BigQuery', 'ClickHouse', 'PostgreSQL', 'Redshift', 'Snowflake');
 CREATE TYPE privacy_region AS ENUM ('', 'Europe');

@@ -33,6 +33,7 @@ GET     /api/connectors                                          List the connec
 GET     /api/connectors/{id}                                     Get a connector
 POST    /api/connectors/{id}/ui                                  Get the user interface of a connector
 POST    /api/connectors/{id}/ui-event                            Execute the user interface event of a connector
+GET     /api/connectors/{id}/auth-code-url                       Return the URL that directs to the consent page of an OAuth 2.0 provider.
 PUT     /api/event-listeners/                                    Add a new event listener
 DELETE  /api/event-listeners/{id}                                Remove an event listener
 GET     /api/event-listeners/{id}/events                         Returns the processed events

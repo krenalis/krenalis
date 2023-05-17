@@ -199,10 +199,7 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 		HasSettings: c.HasSettings,
 		Icon:        c.Icon,
 		WebhooksPer: WebhooksPer(c.WebhooksPer),
-	}
-	if c.OAuth != nil {
-		connector.OAuth = &ConnectorOAuth{}
-		*connector.OAuth = ConnectorOAuth(*c.OAuth)
+		OAuth:       c.OAuth != nil,
 	}
 	connector.SourceDescription = c.SourceDescription
 	connector.DestinationDescription = c.DestinationDescription
@@ -223,10 +220,7 @@ func (apis *APIs) Connectors() []*Connector {
 			HasSettings: c.HasSettings,
 			Icon:        c.Icon,
 			WebhooksPer: WebhooksPer(c.WebhooksPer),
-		}
-		if c.OAuth != nil {
-			connector.OAuth = &ConnectorOAuth{}
-			*connector.OAuth = ConnectorOAuth(*c.OAuth)
+			OAuth:       c.OAuth != nil,
 		}
 		connector.SourceDescription = c.SourceDescription
 		connector.DestinationDescription = c.DestinationDescription
