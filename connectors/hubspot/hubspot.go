@@ -562,10 +562,7 @@ func (c *connection) call(method, path string, body io.Reader, expectedStatus in
 
 	if response != nil {
 		dec := json.NewDecoder(res.Body)
-		err = dec.Decode(response)
-		if err != nil {
-			return err
-		}
+		return dec.Decode(response)
 	}
 
 	return nil
