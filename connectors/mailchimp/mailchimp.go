@@ -1038,6 +1038,9 @@ func (c *connection) getMetadata() (string, string, error) {
 		_, _ = io.Copy(io.Discard, res.Body)
 		_ = res.Body.Close()
 	}()
+	if res.StatusCode != 200 {
+		return "", "", fmt.Errorf("fetching metadata, MailChimp returned a %d status code", res.StatusCode)
+	}
 	r := struct {
 		DC     string `json:"dc"`
 		UserID int    `json:"user_id"`
