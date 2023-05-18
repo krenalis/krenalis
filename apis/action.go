@@ -708,7 +708,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		switch *action.ExportMode {
 		case CreateOnly, UpdateOnly, CreateOrUpdate:
 		default:
-			return types.Type{}, errors.BadRequest("invalid export mode")
+			return types.Type{}, errors.BadRequest("export mode %q is not valid", *action.ExportMode)
 		}
 	}
 	if action.MatchingProperties != nil {
@@ -776,17 +776,17 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		targetUsersOrGroups
 	if needsExportOptions {
 		if action.ExportMode == nil {
-			return types.Type{}, errors.BadRequest("missing export mode")
+			return types.Type{}, errors.BadRequest("export mode cannot be nil")
 		}
 		if action.MatchingProperties == nil {
-			return types.Type{}, errors.BadRequest("missing export matching properties")
+			return types.Type{}, errors.BadRequest("matching properties cannot be nil")
 		}
 	} else {
 		if action.ExportMode != nil {
-			return types.Type{}, errors.BadRequest("unexpected action mode")
+			return types.Type{}, errors.BadRequest("export mode must be nil")
 		}
 		if action.MatchingProperties != nil {
-			return types.Type{}, errors.BadRequest("unexpected export matching properties")
+			return types.Type{}, errors.BadRequest("matching properties must be nil")
 		}
 	}
 
