@@ -736,11 +736,7 @@ func (c *connection) call(method, path string, params url.Values, body io.Reader
 
 	if res.StatusCode != expectedStatus {
 		mcErr := &mailchimpError{Status: res.StatusCode}
-		b, err := io.ReadAll(res.Body)
-		if err != nil {
-			return err
-		}
-		dec := json.NewDecoder(bytes.NewReader(b))
+		dec := json.NewDecoder(res.Body)
 		_ = dec.Decode(mcErr)
 		return mcErr
 	}
