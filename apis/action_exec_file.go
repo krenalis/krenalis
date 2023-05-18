@@ -134,6 +134,52 @@ func (this *Action) importFromFile() error {
 	return nil
 }
 
+// newRecordReader returns a new record reader that read records.
+func newRecordReader(columns []types.Property, records [][]any) *recordReader {
+	return &recordReader{
+		columns: columns,
+		records: records,
+	}
+}
+
+// recordReader implements the connector.RecordReader interface.
+type recordReader struct {
+	columns []types.Property
+	records [][]any
+	cursor  int
+}
+
+// Columns returns the columns of the records.
+func (rr *recordReader) Columns() []types.Property {
+	return rr.columns
+}
+
+// Record returns the next record as a slice of any. It returns nil and io.EOF
+// if there are no more records.
+func (rr *recordReader) Record() ([]any, error) {
+	if rr.cursor >= len(rr.records) {
+		return nil, io.EOF
+	}
+	record := rr.records[rr.cursor]
+	rr.cursor++
+	return record, nil
+}
+
+// RecordString returns the next record as a string slice. It returns nil and
+// io.EOF if there are no more records.
+func (rr *recordReader) RecordString() ([]string, error) {
+	if rr.cursor >= len(rr.records) {
+		return nil, io.EOF
+	}
+	record := rr.records[rr.cursor]
+	records := make([]string, len(record))
+	for i, prop := range record {
+		records[i] = fmt.Sprintf("%v", prop) // TODO(Marco): revise
+	}
+	rr.cursor++
+	return records, nil
+}
+
 // newRecordWriter returns a new record writer that writes at most limit
 // records. If write is not nil, it calls the write function for each record
 // written, otherwise it stores the records in the records field.

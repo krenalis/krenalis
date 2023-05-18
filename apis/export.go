@@ -228,7 +228,7 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 		}
 		usersSlices[i] = userSlice
 	}
-	var records _connector.RecordReader = fh.newRecordReader(columns, usersSlices)
+	records := newRecordReader(columns, usersSlices)
 
 	// Write the file on the storage.
 	err = writeFile(storage, c, this.action.Path, this.action.Sheet, c.ContentType(), records)

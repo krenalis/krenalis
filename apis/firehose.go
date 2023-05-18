@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"strconv"
 	"time"
@@ -256,48 +255,4 @@ func (fh *firehose) setError(err error) {
 func statsTimeSlot(t time.Time) int {
 	epoc := int(t.Unix())
 	return epoc / (60 * 60)
-}
-
-type recordReader struct {
-	columns []types.Property
-	users   [][]any
-	cursor  int
-}
-
-func (fh *firehose) newRecordReader(columns []types.Property, users [][]any) *recordReader {
-	return &recordReader{
-		columns: columns,
-		users:   users,
-	}
-}
-
-// Columns returns the columns of the records.
-func (rr *recordReader) Columns() []types.Property {
-	return rr.columns
-}
-
-// Record returns the next record as a slice of any. It returns nil and io.EOF
-// if there are no more records.
-func (rr *recordReader) Record() ([]any, error) {
-	if rr.cursor >= len(rr.users) {
-		return nil, io.EOF
-	}
-	user := rr.users[rr.cursor]
-	rr.cursor++
-	return user, nil
-}
-
-// RecordString returns the next record as a string slice. It returns nil and
-// io.EOF if there are no more records.
-func (rr *recordReader) RecordString() ([]string, error) {
-	if rr.cursor >= len(rr.users) {
-		return nil, io.EOF
-	}
-	u := rr.users[rr.cursor]
-	users := make([]string, len(u))
-	for i, prop := range u {
-		users[i] = fmt.Sprintf("%v", prop)
-	}
-	rr.cursor++
-	return users, nil
 }
