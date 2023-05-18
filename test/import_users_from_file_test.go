@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"chichi/test/chichitester"
 )
@@ -83,17 +82,7 @@ func TestImportUsersFromFile(t *testing.T) {
 	c.ExecuteAction(csvID, importUsersActionID, true)
 
 	// Wait for the import to finish.
-	time.Sleep(500 * time.Millisecond)
-	for {
-		imports := c.Imports(csvID)
-		if len(imports) > 0 {
-			imp := imports[0].(map[string]any)
-			if imp["EndTime"] != nil {
-				break
-			}
-		}
-		time.Sleep(1 * time.Second)
-	}
+	c.WaitActionsToFinish(csvID)
 
 	// Retrieve the users.
 	ret := c.Users([]string{"Email"}, 0, 100)

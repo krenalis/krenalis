@@ -30,6 +30,12 @@ import {
 
 const queryMaxSize = 16777215;
 
+const exportModeOptions = {
+	CreateOnly: 'Create only',
+	UpdateOnly: 'Update only',
+	CreateOrUpdate: 'Create and update',
+};
+
 const rawTransformationFunction = `def transform($parameterName: dict) -> dict:
 	return {}
 ;`;
@@ -108,6 +114,15 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			) {
 				fields.push('Mapping');
 			}
+			if (
+				c.Type === 'App' &&
+				c.Role === 'Destination' &&
+				(actionType.Target === 'Users' || actionType.Target === 'Groups')
+			) {
+				fields.push('ExportMatchingProperties');
+				fields.push('ExportMode');
+				fields.push('Filter');
+			};
 			if (c.Type === 'Database' && c.Role === 'Source') {
 				fields.push('Query');
 			}
@@ -197,6 +212,12 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					Path: fields.includes('Path') ? '' : null,
 					Sheet: fields.includes('Sheet') ? '' : null,
 				};
+				if (fields.includes('ExportMode')) {
+					action.ExportMode = Object.keys(exportModeOptions)[0];
+				}
+				if (fields.includes('ExportMatchingProperties')) {
+					action.ExportMatchingProperties = { Internal: '', External: '' };
+				}
 			}
 			queryRef.current = action.Query;
 			pathRef.current = action.Path;
@@ -490,6 +511,18 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		}
 		setAction(a);
 		showStatus(statuses.schemaLoaded);
+	};
+
+	const onChangeExportMode = (e) => {
+		let a = { ...action };
+		a.ExportMode = e.currentTarget.value;
+		setAction(a);
+	};
+
+	const onChangeExportMatchingProperties = (e) => {
+		let a = { ...action };
+		a.ExportMatchingProperties[e.currentTarget.dataset.type] = e.currentTarget.value;
+		setAction(a);
 	};
 
 	const onUpdatePath = (e) => {
@@ -1131,6 +1164,40 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					</Section>
 				)}
 				{propertiesSection}
+				{fields.includes('ExportMode') && (
+				<Section title='Export Mode' description='The mode used to export the data' padded={true}>
+					<SlSelect size='medium' value={action.ExportMode} onSlChange={onChangeExportMode}>
+						{Object.keys(exportModeOptions).map((k) => (
+							<SlOption value={k}>{exportModeOptions[k]}</SlOption>
+						))}
+					</SlSelect>
+				</Section>
+				)}
+				{fields.includes('ExportMatchingProperties') && (
+					<Section
+						title={`Matching properties`}
+						description='The properties used to identify and match the resources'
+						padded={true}
+					>
+						<div className='exportMatchingProperties'>
+							<SlInput
+								label='Golden record property'
+								data-type='Internal'
+								value={action.ExportMatchingProperties.Internal}
+								onSlChange={onChangeExportMatchingProperties}
+							/>
+							<div className='arrow'>
+								<SlIcon name='arrow-left-right' />
+							</div>
+							<SlInput
+								label={`${c.Name}'s property`}
+								data-type='External'
+								value={action.ExportMatchingProperties.External}
+								onSlChange={onChangeExportMatchingProperties}
+							/>
+						</div>
+					</Section>
+				)}
 				{fields.includes('Query') && (
 					<SlDrawer
 						className='previewDrawer'

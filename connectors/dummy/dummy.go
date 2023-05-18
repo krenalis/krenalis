@@ -153,13 +153,34 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 }
 
 func (c *connection) SetUser(user connector.User) error {
-	panic("not implemented")
+
+	// Write the user on the log.
+	userDump, err := json.Marshal(user)
+	if err != nil {
+		return err
+	}
+	log.Printf("[info] Dummy: SetUser(%v)", string(userDump))
+
+	// Update the in-memory users.
+	usersLock.Lock()
+	defer usersLock.Unlock()
+	u, ok := users[user.ID]
+	if !ok {
+		u = properties{}
+	}
+	u["dummy_id"] = user.ID
+	for name, value := range user.Properties {
+		u[name] = value
+	}
+	users[user.ID] = u
+
+	return nil
 }
 
 // UserSchema returns the user schema.
 func (c *connection) UserSchema() (types.Type, error) {
 	schema := types.Object([]types.Property{
-		{Name: "dummy_id", Type: types.Text()},
+		{Name: "dummy_id", Type: types.Text(), Role: types.SourceRole},
 		{Name: "email", Type: types.Text()},
 		{Name: "first_name", Type: types.Text()},
 		{Name: "full_name", Type: types.Text()},

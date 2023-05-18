@@ -20,17 +20,18 @@ import (
 	"chichi/connector/types"
 )
 
-// ActionFilterApplies reports whether the action filter applies to the event.
-// Returns error if one of the properties of the filter are not found within the
-// event.
-func ActionFilterApplies(filter *state.ActionFilter, event map[string]any) (bool, error) {
+// ActionFilterApplies reports whether the action filter applies to the props,
+// which can be an event or an user.
+// Returns error if one of the properties of the filter are not found within
+// props.
+func ActionFilterApplies(filter *state.ActionFilter, props map[string]any) (bool, error) {
 	if filter == nil {
 		return true, nil
 	}
 	for _, cond := range filter.Conditions {
-		value, ok := readPropertyFrom(event, strings.Split(cond.Property, "."))
+		value, ok := readPropertyFrom(props, strings.Split(cond.Property, "."))
 		if !ok {
-			return false, fmt.Errorf("property %q not found in event", cond.Property)
+			return false, fmt.Errorf("property %q not found", cond.Property)
 		}
 		var conditionApplies bool
 		switch cond.Operator {

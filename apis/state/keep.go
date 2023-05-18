@@ -284,21 +284,23 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 
 // AddActionNotification is the notification event sent when an action is added.
 type AddActionNotification struct {
-	ID             int
-	Connection     int
-	Target         ActionTarget
-	EventType      string
-	Name           string
-	Enabled        bool
-	ScheduleStart  int16
-	SchedulePeriod int16
-	Filter         *ActionFilter
-	Schema         types.Type
-	Mapping        map[string]string
-	Transformation *Transformation
-	Query          string
-	Path           string
-	Sheet          string
+	ID                       int
+	Connection               int
+	Target                   ActionTarget
+	EventType                string
+	Name                     string
+	Enabled                  bool
+	ScheduleStart            int16
+	SchedulePeriod           int16
+	Filter                   *ActionFilter
+	Schema                   types.Type
+	Mapping                  map[string]string
+	Transformation           *Transformation
+	Query                    string
+	Path                     string
+	Sheet                    string
+	ExportMode               *ExportMode
+	ExportMatchingProperties *ExportMatchingProperties
 }
 
 // addAction adds a new action.
@@ -309,22 +311,24 @@ func (state *State) addAction(n postgres.Notification) {
 	}
 	c := state.connections[e.Connection]
 	action := &Action{
-		mu:             new(sync.Mutex),
-		ID:             e.ID,
-		connection:     c,
-		Target:         e.Target,
-		Name:           e.Name,
-		Enabled:        e.Enabled,
-		EventType:      e.EventType,
-		ScheduleStart:  e.ScheduleStart,
-		SchedulePeriod: e.SchedulePeriod,
-		Filter:         e.Filter,
-		Schema:         e.Schema,
-		Mapping:        e.Mapping,
-		Transformation: e.Transformation,
-		Query:          e.Query,
-		Path:           e.Path,
-		Sheet:          e.Sheet,
+		mu:                       new(sync.Mutex),
+		ID:                       e.ID,
+		connection:               c,
+		Target:                   e.Target,
+		Name:                     e.Name,
+		Enabled:                  e.Enabled,
+		EventType:                e.EventType,
+		ScheduleStart:            e.ScheduleStart,
+		SchedulePeriod:           e.SchedulePeriod,
+		Filter:                   e.Filter,
+		Schema:                   e.Schema,
+		Mapping:                  e.Mapping,
+		Transformation:           e.Transformation,
+		Query:                    e.Query,
+		Path:                     e.Path,
+		Sheet:                    e.Sheet,
+		ExportMode:               e.ExportMode,
+		ExportMatchingProperties: e.ExportMatchingProperties,
 	}
 	state.mu.Lock()
 	state.actions[e.ID] = action
@@ -798,16 +802,18 @@ func (state *State) seeLeader(n postgres.Notification) {
 
 // SetActionNotification is the notification sent when an action is set.
 type SetActionNotification struct {
-	ID             int
-	Name           string
-	Enabled        bool
-	Filter         *ActionFilter
-	Schema         types.Type
-	Mapping        map[string]string
-	Transformation *Transformation
-	Query          string
-	Path           string
-	Sheet          string
+	ID                       int
+	Name                     string
+	Enabled                  bool
+	Filter                   *ActionFilter
+	Schema                   types.Type
+	Mapping                  map[string]string
+	Transformation           *Transformation
+	Query                    string
+	Path                     string
+	Sheet                    string
+	ExportMode               *ExportMode
+	ExportMatchingProperties *ExportMatchingProperties
 }
 
 // setAction sets an action.
@@ -826,6 +832,8 @@ func (state *State) setAction(n postgres.Notification) {
 		a.Query = e.Query
 		a.Path = e.Path
 		a.Sheet = e.Sheet
+		a.ExportMode = e.ExportMode
+		a.ExportMatchingProperties = e.ExportMatchingProperties
 	})
 	for _, listener := range state.listeners.SetAction {
 		listener(e)

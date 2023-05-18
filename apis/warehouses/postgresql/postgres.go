@@ -32,6 +32,9 @@ import (
 //go:embed connections_users.sql
 var createConnectionsUsersTable string
 
+//go:embed destinations_users.sql
+var createDestinationUsersTable string
+
 //go:embed events.sql
 var createEventsTable string
 
@@ -129,6 +132,10 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 		return err
 	}
 	_, err = conn.Exec(ctx, createConnectionsUsersTable)
+	if err != nil {
+		return warehouses.WrapError(err)
+	}
+	_, err = conn.Exec(ctx, createDestinationUsersTable)
 	if err != nil {
 		return warehouses.WrapError(err)
 	}

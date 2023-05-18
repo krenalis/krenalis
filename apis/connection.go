@@ -124,44 +124,92 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 	connector := c.Connector()
 	wsSchemas := c.Workspace().Schemas
 	targets := connector.Targets
-	if targets.Contains(state.UsersTarget) && c.Role == state.SourceRole {
+	if targets.Contains(state.UsersTarget) {
 		switch typ := c.Connector().Type; typ {
 		case
 			state.AppType,
-			state.DatabaseType,
 			state.FileType:
-			description := "Import the " + connector.TermForUsers
-			if connector.TermForUsers != "users" {
-				description += " as users"
+			var name, description string
+			if c.Role == state.SourceRole {
+				name = "Import " + connector.TermForUsers
+				description = "Import the " + connector.TermForUsers
+				if connector.TermForUsers != "users" {
+					description += " as users"
+				}
+				description += " from " + connector.Name
+			} else {
+				name = "Export " + connector.TermForUsers
+				description = "Export the users "
+				if connector.TermForUsers != "users" {
+					description += " as " + connector.TermForUsers
+				}
+				description += " to " + connector.Name
 			}
-			description += " from " + connector.Name
 			at := &ActionType{
-				Name:          "Import " + connector.TermForUsers,
+				Name:          name,
 				Description:   description,
 				Target:        UsersTarget,
 				MissingSchema: wsSchemas["users"] == nil,
 			}
 			actionTypes = append(actionTypes, at)
+		case state.DatabaseType:
+			if c.Role == state.SourceRole {
+				description := "Import the " + connector.TermForUsers
+				if connector.TermForUsers != "users" {
+					description += " as users"
+				}
+				description += " from " + connector.Name
+				at := &ActionType{
+					Name:        "Import " + connector.TermForUsers,
+					Description: description,
+					Target:      UsersTarget,
+				}
+				actionTypes = append(actionTypes, at)
+			}
 		}
 	}
-	if targets.Contains(state.GroupsTarget) && c.Role == state.SourceRole {
+	if targets.Contains(state.GroupsTarget) {
 		switch typ := c.Connector().Type; typ {
 		case
 			state.AppType,
-			state.DatabaseType,
 			state.FileType:
-			description := "Import the " + connector.TermForGroups
-			if connector.TermForGroups != "groups" {
-				description += " as groups"
+			var name, description string
+			if c.Role == state.SourceRole {
+				name = "Import " + connector.TermForGroups
+				description = "Import the " + connector.TermForGroups
+				if connector.TermForGroups != "groups" {
+					description += " as groups"
+				}
+				description += " from " + connector.Name
+			} else {
+				name = "Export " + connector.TermForGroups
+				description = "Export the groups "
+				if connector.TermForGroups != "groups" {
+					description += " as " + connector.TermForGroups
+				}
+				description += " to " + connector.Name
 			}
-			description += " from " + connector.Name
 			at := &ActionType{
-				Name:          "Import " + connector.TermForGroups,
+				Name:          name,
 				Description:   description,
 				Target:        GroupsTarget,
 				MissingSchema: wsSchemas["groups"] == nil,
 			}
 			actionTypes = append(actionTypes, at)
+		case state.DatabaseType:
+			if c.Role == state.SourceRole {
+				description := "Import the " + connector.TermForGroups
+				if connector.TermForGroups != "groups" {
+					description += " as groups"
+				}
+				description += " from " + connector.Name
+				at := &ActionType{
+					Name:        "Import " + connector.TermForGroups,
+					Description: description,
+					Target:      GroupsTarget,
+				}
+				actionTypes = append(actionTypes, at)
+			}
 		}
 	}
 	if targets.Contains(state.EventsTarget) {
@@ -425,6 +473,7 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		Query:          action.Query,
 		Path:           action.Path,
 		Sheet:          action.Sheet,
+		ExportMode:     (*state.ExportMode)(action.ExportMode),
 	}
 	if shouldStoreActionSchema(connector.Type, c.Role, n.Target) {
 		n.Schema = schema
@@ -493,6 +542,14 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		rawSchema = []byte{}
 	}
 
+	// Handle the export matching properties.
+	if props := action.ExportMatchingProperties; props != nil {
+		n.ExportMatchingProperties = &state.ExportMatchingProperties{
+			Internal: props.Internal,
+			External: props.External,
+		}
+	}
+
 	// Add the action.
 	ctx := context.Background()
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
@@ -517,15 +574,24 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 				return err
 			}
 		}
+		var exportMode, matchPropInternal, matchPropExternal string
+		if n.ExportMode != nil {
+			exportMode = string(*n.ExportMode)
+		}
+		if n.ExportMatchingProperties != nil {
+			matchPropInternal = n.ExportMatchingProperties.Internal
+			matchPropExternal = n.ExportMatchingProperties.External
+		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, filter, schema, mapping,\n" +
 			"transformation.in_types, transformation.out_types, transformation.python_source,\n" +
-			"query, path, sheet)\n" +
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)"
+			"query, path, sheet,\n" +
+			"export_mode, export_matching_properties_internal, export_matching_properties_external)\n" +
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType, n.Name,
 			n.Enabled, n.ScheduleStart, n.SchedulePeriod,
 			string(filter), rawSchema, string(mapping), string(tIn), string(tOut), string(tSource),
-			n.Query, n.Path, n.Sheet)
+			n.Query, n.Path, n.Sheet, exportMode, matchPropInternal, matchPropExternal)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {
 				err = errors.Unprocessable(ConnectorNotExists, "connection %d does not exist", n.Connection)
@@ -1630,14 +1696,6 @@ func abbreviate(s string, n int) string {
 	return s + "..."
 }
 
-// exportUser returns a user to export (with the given ID) applying the given
-// mappings to the properties.
-//
-// TODO(Gianluca): this code must be rewritten on the actions.
-func exportUser(id string, properties map[string]any) (_connector.User, error) {
-	panic("not implemented")
-}
-
 // Health is an indicator of the current state of a connection.
 type Health int
 
@@ -1778,7 +1836,7 @@ func (this *Connection) setUser(ctx context.Context, id string, user map[string]
 		return fmt.Errorf("BUG: one row should be affected, got %d", affected)
 	}
 
-	log.Printf("[info] user %q written to the data warehouse", email)
+	log.Printf("[info] user %q written to the data warehouse: %#v", email, user)
 
 	return nil
 }

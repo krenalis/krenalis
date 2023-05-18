@@ -77,6 +77,8 @@ func (this *Action) exec() {
 	execution, _ := this.action.Execution()
 	connector := connection.Connector()
 
+	ctx := context.Background()
+
 	var err error
 	if this.Target == GroupsTarget {
 		err = actionExecutionError{fmt.Errorf("groups import and export are not implemented")}
@@ -86,12 +88,16 @@ func (this *Action) exec() {
 			if connection.Role == state.SourceRole {
 				err = this.importFromApp()
 			} else {
-				err = this.exportToApp()
+				err = this.exportUsersToApp(ctx)
 			}
 		case state.DatabaseType:
 			err = this.importFromDatabase()
 		case state.FileType:
-			err = this.importFromFile()
+			if connection.Role == state.SourceRole {
+				err = this.importFromFile()
+			} else {
+				err = this.exportUsersToFile(ctx)
+			}
 		}
 	}
 	endTime := time.Now().UTC()
@@ -118,7 +124,6 @@ func (this *Action) exec() {
 	}
 
 	// TODO(marco) retry if the transaction fails.
-	ctx := context.Background()
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		_, err := tx.Exec(ctx, "UPDATE actions_executions SET end_time = $1, error = $2 WHERE id = $3",
 			endTime, errorMessage, n.ID)
@@ -211,7 +216,7 @@ func (this *Action) newFirehose(ctx context.Context) (*firehose, error) {
 		connection: this.action.Connection(),
 		resource:   resource,
 	}
-	if c.Connector().Type == state.AppType {
+	if c.Connector().Type == state.AppType && c.Role == state.SourceRole {
 		usersSchema, ok := c.Workspace().Schemas["users"]
 		if !ok {
 			return nil, errors.New("users schema not loaded")

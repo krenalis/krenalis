@@ -241,6 +241,32 @@ inherit the disabled style */
     color: var(--sl-color-danger-600);
 }
 
+.action .exportMatchingProperties {
+    display: grid;
+    grid-template-columns: 1fr 100px 1fr;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+}
+
+.action .exportMatchingProperties sl-input::part(form-control-label) {
+    font-size: 13px;
+}
+
+.action .exportMatchingProperties .arrow {
+    display: flex;
+    justify-content: center;
+    align-items: end;
+    height: 100%;
+    padding-bottom: 8px;
+}
+
+.action .exportMatchingProperties .arrow sl-icon {
+    font-size: 25px;
+    position: relative;
+    right: 1px;
+}
+
 .inputSchemaDialog::part(panel),
 .outputSchemaDialog::part(panel) {
     max-height: 600px;

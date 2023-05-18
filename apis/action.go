@@ -29,24 +29,35 @@ var QueryExecutionFailed errors.Code = "QueryExecutionFailed"
 // Action represents an action associated to a destination connection to send
 // events.
 type Action struct {
-	db             *postgres.DB
-	action         *state.Action
-	ID             int
-	Connection     int
-	Target         ActionTarget
-	Name           string
-	Enabled        bool
-	EventType      *string
-	ScheduleStart  *int
-	SchedulePeriod *SchedulePeriod
-	Filter         *ActionFilter
-	Schema         types.Type
-	Mapping        map[string]string
-	Transformation *Transformation
-	Query          *string
-	Path           *string
-	Sheet          *string
+	db                       *postgres.DB
+	action                   *state.Action
+	ID                       int
+	Connection               int
+	Target                   ActionTarget
+	Name                     string
+	Enabled                  bool
+	EventType                *string
+	ScheduleStart            *int
+	SchedulePeriod           *SchedulePeriod
+	Filter                   *ActionFilter
+	Schema                   types.Type
+	Mapping                  map[string]string
+	Transformation           *Transformation
+	Query                    *string
+	Path                     *string
+	Sheet                    *string
+	ExportMode               *ExportMode
+	ExportMatchingProperties *ExportMatchingProperties
 }
+
+// ExportMode represents one of the three export modes.
+type ExportMode string
+
+const (
+	CreateOnly     ExportMode = "CreateOnly"
+	UpdateOnly     ExportMode = "UpdateOnly"
+	CreateOrUpdate ExportMode = "CreateOrUpdate"
+)
 
 // fromState serializes action into ac.
 func (this *Action) fromState(db *postgres.DB, action *state.Action) {
@@ -102,6 +113,13 @@ func (this *Action) fromState(db *postgres.DB, action *state.Action) {
 	if action.Sheet != "" {
 		sheet := action.Sheet
 		this.Sheet = &sheet
+	}
+	this.ExportMode = (*ExportMode)(action.ExportMode)
+	if props := action.ExportMatchingProperties; props != nil {
+		this.ExportMatchingProperties = &ExportMatchingProperties{
+			Internal: props.Internal,
+			External: props.External,
+		}
 	}
 }
 
@@ -256,6 +274,7 @@ func (this *Action) Set(action ActionToSet) error {
 		Query:          action.Query,
 		Path:           action.Path,
 		Sheet:          action.Sheet,
+		ExportMode:     (*state.ExportMode)(action.ExportMode),
 	}
 	if shouldStoreActionSchema(c.Connector().Type, c.Role, this.action.Target) {
 		n.Schema = schema
@@ -291,6 +310,12 @@ func (this *Action) Set(action ActionToSet) error {
 		}
 		tSource = []byte(t.PythonSource)
 	}
+	if props := action.ExportMatchingProperties; props != nil {
+		n.ExportMatchingProperties = &state.ExportMatchingProperties{
+			Internal: props.Internal,
+			External: props.External,
+		}
+	}
 	ctx := context.Background()
 	// Marshal the schema.
 	var rawSchema []byte
@@ -311,13 +336,24 @@ func (this *Action) Set(action ActionToSet) error {
 	} else {
 		rawSchema = []byte{}
 	}
+	var exportMode, matchPropInternal, matchPropExternal string
+	if n.ExportMode != nil {
+		exportMode = string(*n.ExportMode)
+	}
+	if n.ExportMatchingProperties != nil {
+		matchPropInternal = n.ExportMatchingProperties.Internal
+		matchPropExternal = n.ExportMatchingProperties.External
+	}
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
 			"name = $1, enabled = $2, filter = $3, schema = $4, mapping = $5,\n"+
 			"transformation.in_types = $6, transformation.out_types = $7,\n"+
-			"transformation.python_source = $8, query = $9, path = $10, sheet = $11 WHERE id = $12",
+			"transformation.python_source = $8, query = $9, path = $10, sheet = $11,\n",
+			"export_mode = $12, export_matching_properties_internal = $13,\n"+
+				"export_matching_properties_external = $14 WHERE id = $15",
 			n.Name, n.Enabled, string(filter), rawSchema, string(mapping),
-			string(tIn), string(tOut), string(tSource), n.Query, n.Path, n.Sheet, n.ID,
+			string(tIn), string(tOut), string(tSource), n.Query, n.Path, n.Sheet,
+			exportMode, matchPropInternal, matchPropExternal, n.ID,
 		)
 		if err != nil {
 			return err
@@ -462,6 +498,22 @@ type ActionToSet struct {
 	// be longer than 100 runes, and it is empty for non-file and non-multipart
 	// sheets actions.
 	Sheet string
+
+	// ExportMode is the export mode, if it has one.
+	ExportMode *ExportMode
+
+	// ExportMatchingProperties are the internal and external properties used
+	// for matching users during export to apps.
+	ExportMatchingProperties *ExportMatchingProperties
+}
+
+// ExportMatchingProperties contains an internal property (belonging to the
+// Golden Record) and an external property (belonging to the app) which are used
+// to match identities of users in the data warehouse with users on the external
+// app, during export.
+type ExportMatchingProperties struct {
+	Internal string
+	External string
 }
 
 // SchedulePeriod represents a scheduler period in minutes.
@@ -654,6 +706,23 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			return types.Type{}, errors.BadRequest("sheet is longer than 100 runes")
 		}
 	}
+	// Validate the export options.
+	if action.ExportMode != nil {
+		switch *action.ExportMode {
+		case CreateOnly, UpdateOnly, CreateOrUpdate:
+		default:
+			return types.Type{}, errors.BadRequest("invalid export mode")
+		}
+	}
+	if action.ExportMatchingProperties != nil {
+		props := *action.ExportMatchingProperties
+		if !types.IsValidPropertyName(props.Internal) {
+			return types.Type{}, errors.BadRequest("internal matching property %q is not a valid property name", props.Internal)
+		}
+		if !types.IsValidPropertyName(props.External) {
+			return types.Type{}, errors.BadRequest("external matching property %q is not a valid property name", props.External)
+		}
+	}
 
 	// Second, do validations based on the connection.
 
@@ -672,9 +741,14 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	}
 
 	// Check if the filters are allowed.
-	filtersAllowed := connector.Type == state.AppType &&
-		c.Role == state.DestinationRole &&
-		target == state.EventsTarget
+	targetUsersOrGroups := target == state.UsersTarget || target == state.GroupsTarget
+	var filtersAllowed bool
+	switch connector.Type {
+	case state.AppType:
+		filtersAllowed = c.Role == state.DestinationRole
+	case state.FileType:
+		filtersAllowed = targetUsersOrGroups && c.Role == state.DestinationRole
+	}
 	if action.Filter != nil && !filtersAllowed {
 		return types.Type{}, errors.BadRequest("filters are not allowed")
 	}
@@ -696,6 +770,26 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 		if action.Sheet != "" {
 			return types.Type{}, errors.BadRequest("%s actions cannot have a sheet", connector.Type)
+		}
+	}
+
+	// Check if the export options are needed.
+	needsExportOptions := connector.Type == state.AppType &&
+		c.Role == state.DestinationRole &&
+		targetUsersOrGroups
+	if needsExportOptions {
+		if action.ExportMode == nil {
+			return types.Type{}, errors.BadRequest("missing export mode")
+		}
+		if action.ExportMatchingProperties == nil {
+			return types.Type{}, errors.BadRequest("missing export matching properties")
+		}
+	} else {
+		if action.ExportMode != nil {
+			return types.Type{}, errors.BadRequest("unexpected action mode")
+		}
+		if action.ExportMatchingProperties != nil {
+			return types.Type{}, errors.BadRequest("unexpected export matching properties")
 		}
 	}
 
@@ -801,15 +895,12 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	// for this action.
 	var requiresMapping bool
 	switch connector.Type {
+	case state.AppType:
+		requiresMapping = targetUsersOrGroups || (target == state.EventsTarget && schema.Valid())
 	case
-		state.AppType,
 		state.DatabaseType,
 		state.FileType:
-		if c.Role == state.SourceRole {
-			requiresMapping = target == state.UsersTarget || target == state.GroupsTarget
-		} else {
-			requiresMapping = target == state.EventsTarget && schema.Valid()
-		}
+		requiresMapping = c.Role == state.SourceRole && targetUsersOrGroups
 	}
 	if requiresMapping {
 		if action.Mapping == nil && action.Transformation == nil {
@@ -1134,15 +1225,11 @@ func allowsActionTarget(typ state.ConnectorType, role _connector.Role, target st
 	usersOrGroups := target == state.UsersTarget || target == state.GroupsTarget
 	switch typ {
 	case state.AppType:
-		if isSource {
-			return usersOrGroups
-		} else {
-			return target == state.EventsTarget
-		}
-	case
-		state.DatabaseType,
-		state.FileType:
+		return !isSource || (isSource && usersOrGroups)
+	case state.DatabaseType:
 		return isSource && usersOrGroups
+	case state.FileType:
+		return usersOrGroups
 	case
 		state.ServerType,
 		state.StreamType,
@@ -1248,10 +1335,10 @@ func shouldStoreActionSchema(typ state.ConnectorType, role state.ConnectionRole,
 	if typ != state.AppType {
 		return false
 	}
-	if role == state.SourceRole {
-		return target == state.UsersTarget || target == state.GroupsTarget
+	if target == state.EventsTarget {
+		return role == state.DestinationRole
 	}
-	return target == state.EventsTarget
+	return true
 }
 
 // usersSchemaToConnectionSchema returns the users schema of a connection

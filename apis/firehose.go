@@ -9,8 +9,10 @@ package apis
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"strconv"
 	"time"
@@ -149,6 +151,22 @@ func (fh *firehose) SetUser(id string, user map[string]any, timestamp time.Time,
 		return
 	}
 
+	// Importing users from a destination to match identities for the export.
+	if fh.connection.Role == state.DestinationRole {
+		externalPropName := fh.action.action.ExportMatchingProperties.External
+		externalProp, ok := user[externalPropName]
+		if !ok {
+			fh.err = fmt.Errorf("user does not contain property %q", externalPropName)
+			return
+		}
+		err := fh.writeDestinationUsers(id, externalProp)
+		if err != nil {
+			fh.setError(err)
+			return
+		}
+		return
+	}
+
 	// Normalize the user properties.
 	propertyOf := map[string]types.Property{}
 	for _, p := range fh.action.action.Schema.Properties() {
@@ -188,6 +206,27 @@ func (fh *firehose) SetUser(id string, user map[string]any, timestamp time.Time,
 		return
 	}
 
+}
+
+// writeDestinationUsers writes an association between the external user ID and
+// the external user property in the data warehouse.
+// TODO(Gianluca): this method should not execute a query; instead, it should
+// call a method of the data warehouse.
+func (fh *firehose) writeDestinationUsers(externalUserID string, externalUserProperty any) error {
+	c := fh.connection
+	ws := c.Workspace()
+	p, err := json.Marshal(externalUserProperty)
+	if err != nil {
+		return err
+	}
+	_, err = ws.Warehouse.Exec(fh.ctx, "INSERT INTO destinations_users (connection, \"user\", property)\n"+
+		"VALUES ($1, $2, $3)\n"+
+		"ON CONFLICT (connection, \"user\") DO UPDATE SET property = $3",
+		c.ID, externalUserID, p)
+	if err != nil {
+		return err
+	}
+	return err
 }
 
 func (fh *firehose) SetUserGroups(user string, groups []string) {
@@ -232,4 +271,48 @@ func (fh *firehose) setError(err error) {
 func statsTimeSlot(t time.Time) int {
 	epoc := int(t.Unix())
 	return epoc / (60 * 60)
+}
+
+type recordReader struct {
+	columns []types.Property
+	users   [][]any
+	cursor  int
+}
+
+func (fh *firehose) newRecordReader(columns []types.Property, users [][]any) *recordReader {
+	return &recordReader{
+		columns: columns,
+		users:   users,
+	}
+}
+
+// Columns returns the columns of the records.
+func (rr *recordReader) Columns() []types.Property {
+	return rr.columns
+}
+
+// Record returns the next record as a slice of any. It returns nil and io.EOF
+// if there are no more records.
+func (rr *recordReader) Record() ([]any, error) {
+	if rr.cursor >= len(rr.users) {
+		return nil, io.EOF
+	}
+	user := rr.users[rr.cursor]
+	rr.cursor++
+	return user, nil
+}
+
+// RecordString returns the next record as a string slice. It returns nil and
+// io.EOF if there are no more records.
+func (rr *recordReader) RecordString() ([]string, error) {
+	if rr.cursor >= len(rr.users) {
+		return nil, io.EOF
+	}
+	u := rr.users[rr.cursor]
+	users := make([]string, len(u))
+	for i, prop := range u {
+		users[i] = fmt.Sprintf("%v", prop)
+	}
+	rr.cursor++
+	return users, nil
 }

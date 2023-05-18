@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"chichi/apis"
+	"chichi/connector"
 	"chichi/test/chichitester"
 )
 
@@ -31,14 +32,7 @@ func TestConnections(t *testing.T) {
 	}
 
 	// Create a Dummy (source) connection.
-	dummyID := c.AddConnection(map[string]any{
-		"Connector": 3, // Dummy.
-		"Role":      "Source",
-		"Options": map[string]any{
-			"Name":    "Dummy (source)",
-			"Enabled": true,
-		},
-	})
+	dummyID := c.AddDummy("Dummy (source)", connector.SourceRole)
 
 	// Check if the Dummy connection has been created successfully.
 	connections = c.MustCall("GET", "/api/connections", nil).([]any)

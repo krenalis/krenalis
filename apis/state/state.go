@@ -780,25 +780,45 @@ func (target ActionTarget) Value() (driver.Value, error) {
 }
 
 type Action struct {
-	mu             *sync.Mutex
-	ID             int
-	connection     *Connection
-	execution      *ActionExecution
-	Target         ActionTarget
-	Name           string
-	Enabled        bool
-	EventType      string
-	ScheduleStart  int16
-	SchedulePeriod int16
-	Filter         *ActionFilter
-	Schema         types.Type
-	Mapping        map[string]string
-	Transformation *Transformation
-	Query          string
-	Path           string
-	Sheet          string
-	UserCursor     string
-	Health         Health
+	mu                       *sync.Mutex
+	ID                       int
+	connection               *Connection
+	execution                *ActionExecution
+	Target                   ActionTarget
+	Name                     string
+	Enabled                  bool
+	EventType                string
+	ScheduleStart            int16
+	SchedulePeriod           int16
+	Filter                   *ActionFilter
+	Schema                   types.Type
+	Mapping                  map[string]string
+	Transformation           *Transformation
+	Query                    string
+	Path                     string
+	Sheet                    string
+	UserCursor               string
+	Health                   Health
+	ExportMode               *ExportMode
+	ExportMatchingProperties *ExportMatchingProperties
+}
+
+// ExportMode represents one of the three export modes.
+type ExportMode string
+
+const (
+	CreateOnly     ExportMode = "CreateOnly"
+	UpdateOnly     ExportMode = "UpdateOnly"
+	CreateOrUpdate ExportMode = "CreateOrUpdate"
+)
+
+// ExportMatchingProperties contains an internal property (belonging to the
+// Golden Record) and an external property (belonging to the app) which are used
+// to match identities of users in the data warehouse with users on the external
+// app, during export.
+type ExportMatchingProperties struct {
+	Internal string
+	External string
 }
 
 // ActionExecution represents an action execution.
