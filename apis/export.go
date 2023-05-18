@@ -134,7 +134,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		// Set the user to the app.
 		err = c.(_connector.AppUsersConnection).SetUser(userToSet)
 		if err != nil {
-			return errors.New("cannot export users")
+			return actionExecutionError{fmt.Errorf("cannot set user: %s", err)}
 		}
 
 		// Handle errors occurred in the firehose.
