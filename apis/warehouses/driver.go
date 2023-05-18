@@ -26,6 +26,11 @@ type Warehouse interface {
 	// waits for the current ones to finish.
 	Close() error
 
+	// DestinationUser returns the external ID of the destination user for the
+	// connection that matches with the corresponding property. If it cannot be
+	// found, then the empty string and false are returned.
+	DestinationUser(ctx context.Context, connection int, property string) (string, bool, error)
+
 	// Exec executes a query without returning any rows. args are the placeholders.
 	// If the query fails, it returns an Error value.
 	Exec(ctx context.Context, query string, args ...any) (Result, error)
@@ -41,6 +46,10 @@ type Warehouse interface {
 	// batch and returns it. table specifies the table in which the rows will be
 	// inserted, and columns specifies the columns.
 	PrepareBatch(ctx context.Context, table string, columns []string) (Batch, error)
+
+	// SetDestinationUser sets the destination user in the connection with the
+	// given external user ID and external property.
+	SetDestinationUser(ctx context.Context, connection int, externalUserID, externalProperty string) error
 
 	// Settings returns the data warehouse settings.
 	Settings() []byte

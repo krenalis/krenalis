@@ -298,46 +298,22 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 // its external ID and true, if resolved, or the empty string and false if such
 // user does not exist on the remote app.
 func (this *Action) resolveExternalIdentity(user userToExport) (string, bool, error) {
-
 	internalPropName := this.action.ExportMatchingProperties.Internal
 	property, ok := user.Properties[internalPropName]
 	if !ok {
 		return "", false, fmt.Errorf("property %q not found", internalPropName)
 	}
-
 	p, err := json.Marshal(property)
 	if err != nil {
 		return "", false, err
 	}
-
 	ctx := context.Background()
-
-	// TODO(Gianluca): don't exec a query here; instead, implement and use a
-	// method of the data warehouse.
-
 	wh := this.action.Connection().Workspace().Warehouse
-	rows, err := wh.Query(ctx, `SELECT "user" FROM destinations_users WHERE connection = $1 AND property = $2`, this.action.Connection().ID, p)
+	externalID, ok, err := wh.DestinationUser(ctx, this.action.Connection().ID, string(p))
 	if err != nil {
 		return "", false, err
 	}
-	var externalID string
-	for rows.Next() {
-		if externalID != "" {
-			return "", false, fmt.Errorf("too many users matching when using property")
-		}
-		err := rows.Scan(&externalID)
-		if err != nil {
-			return "", false, err
-		}
-	}
-	if rows.Err() != nil {
-		return "", false, err
-	}
-	if externalID == "" {
-		return "", false, fmt.Errorf("user not found when using property")
-	}
-
-	return externalID, true, nil
+	return externalID, ok, nil
 }
 
 // readUsersFromDataWarehouse reads the users with the given IDs from the data

@@ -111,6 +111,37 @@ func (warehouse *PostgreSQL) Close() error {
 	return err
 }
 
+// DestinationUser returns the external ID of the destination user for the
+// connection that matches with the corresponding property. If it cannot be
+// found, then the empty string and false are returned.
+func (warehouse *PostgreSQL) DestinationUser(ctx context.Context, connection int, property string) (string, bool, error) {
+	db, err := warehouse.connection()
+	if err != nil {
+		return "", false, err
+	}
+	rows, err := db.Query(ctx, `SELECT "user" FROM destinations_users WHERE connection = $1 AND property = $2`, connection, property)
+	if err != nil {
+		return "", false, err
+	}
+	var externalID string
+	for rows.Next() {
+		if externalID != "" {
+			// TODO(Gianluca): improve the handling of this error. This happens
+			// when a property on the external app has the same value for more
+			// than one user.
+			return "", false, fmt.Errorf("too many users matching when using property")
+		}
+		err := rows.Scan(&externalID)
+		if err != nil {
+			return "", false, err
+		}
+	}
+	if rows.Err() != nil {
+		return "", false, err
+	}
+	return externalID, externalID != "", nil
+}
+
 // Exec executes a query without returning any rows. args are the placeholders.
 // If the query fails, it returns an Error value.
 func (warehouse *PostgreSQL) Exec(ctx context.Context, query string, args ...any) (warehouses.Result, error) {
@@ -209,6 +240,20 @@ func (warehouse *PostgreSQL) QueryRow(ctx context.Context, query string, args ..
 	}
 	row := db.QueryRow(ctx, query, args...)
 	return warehouses.Row{Row: row}
+}
+
+// SetDestinationUser sets the destination user in the connection with the given
+// external user ID and external property.
+func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, connection int, externalUserID, externalProperty string) error {
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(ctx, "INSERT INTO destinations_users (connection, \"user\", property)\n"+
+		"VALUES ($1, $2, $3)\n"+
+		"ON CONFLICT (connection, \"user\") DO UPDATE SET property = $3",
+		connection, externalUserID, externalProperty)
+	return err
 }
 
 // Settings returns the data warehouse settings.

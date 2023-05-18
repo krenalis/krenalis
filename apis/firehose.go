@@ -156,10 +156,16 @@ func (fh *firehose) SetUser(id string, user map[string]any, timestamp time.Time,
 		externalPropName := fh.action.action.ExportMatchingProperties.External
 		externalProp, ok := user[externalPropName]
 		if !ok {
-			fh.err = fmt.Errorf("user does not contain property %q", externalPropName)
+			// TODO(Gianluca): handle this error properly.
+			fh.setError(fmt.Errorf("user does not contain property %q", externalPropName))
 			return
 		}
-		err := fh.writeDestinationUsers(id, externalProp)
+		p, err := json.Marshal(externalProp)
+		if err != nil {
+			fh.setError(err)
+			return
+		}
+		err = ws.Warehouse.SetDestinationUser(fh.ctx, fh.connection.ID, id, string(p))
 		if err != nil {
 			fh.setError(err)
 			return
@@ -206,27 +212,6 @@ func (fh *firehose) SetUser(id string, user map[string]any, timestamp time.Time,
 		return
 	}
 
-}
-
-// writeDestinationUsers writes an association between the external user ID and
-// the external user property in the data warehouse.
-// TODO(Gianluca): this method should not execute a query; instead, it should
-// call a method of the data warehouse.
-func (fh *firehose) writeDestinationUsers(externalUserID string, externalUserProperty any) error {
-	c := fh.connection
-	ws := c.Workspace()
-	p, err := json.Marshal(externalUserProperty)
-	if err != nil {
-		return err
-	}
-	_, err = ws.Warehouse.Exec(fh.ctx, "INSERT INTO destinations_users (connection, \"user\", property)\n"+
-		"VALUES ($1, $2, $3)\n"+
-		"ON CONFLICT (connection, \"user\") DO UPDATE SET property = $3",
-		c.ID, externalUserID, p)
-	if err != nil {
-		return err
-	}
-	return err
 }
 
 func (fh *firehose) SetUserGroups(user string, groups []string) {
