@@ -127,6 +127,9 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				fields.push('Query');
 			}
 			if (c.Type === 'File') {
+				if (c.Role === 'Destination') {
+					fields.push('Filter');
+				}
 				fields.push('Path');
 				let [connector, err] = await API.connectors.get(c.Connector);
 				if (err != null) {
