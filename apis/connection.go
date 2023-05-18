@@ -542,9 +542,9 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		rawSchema = []byte{}
 	}
 
-	// Handle the export matching properties.
-	if props := action.ExportMatchingProperties; props != nil {
-		n.ExportMatchingProperties = &state.ExportMatchingProperties{
+	// Handle the matching properties.
+	if props := action.MatchingProperties; props != nil {
+		n.MatchingProperties = &state.MatchingProperties{
 			Internal: props.Internal,
 			External: props.External,
 		}
@@ -575,15 +575,15 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 			}
 		}
 		var matchPropInternal, matchPropExternal string
-		if n.ExportMatchingProperties != nil {
-			matchPropInternal = n.ExportMatchingProperties.Internal
-			matchPropExternal = n.ExportMatchingProperties.External
+		if n.MatchingProperties != nil {
+			matchPropInternal = n.MatchingProperties.Internal
+			matchPropExternal = n.MatchingProperties.External
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, filter, schema, mapping,\n" +
 			"transformation.in_types, transformation.out_types, transformation.python_source,\n" +
 			"query, path, sheet,\n" +
-			"export_mode, export_matching_properties_internal, export_matching_properties_external)\n" +
+			"export_mode, matching_properties_internal, matching_properties_external)\n" +
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType, n.Name,
 			n.Enabled, n.ScheduleStart, n.SchedulePeriod,

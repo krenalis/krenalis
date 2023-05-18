@@ -152,7 +152,7 @@ func (fh *firehose) SetUser(id string, user map[string]any, timestamp time.Time,
 
 	// Importing users from a destination to match identities for the export.
 	if fh.connection.Role == state.DestinationRole {
-		externalPropName := fh.action.action.ExportMatchingProperties.External
+		externalPropName := fh.action.action.MatchingProperties.External
 		externalProp, ok := user[externalPropName]
 		if !ok {
 			// TODO(Gianluca): handle this error properly.

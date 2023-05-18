@@ -52,7 +52,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 					"last_name": "Email", // this is intended.
 				},
 				"ExportMode": "CreateOrUpdate",
-				"ExportMatchingProperties": map[string]string{
+				"MatchingProperties": map[string]string{
 					"Internal": "Email",
 					"External": "email",
 				},

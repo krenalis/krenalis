@@ -29,25 +29,25 @@ var QueryExecutionFailed errors.Code = "QueryExecutionFailed"
 // Action represents an action associated to a destination connection to send
 // events.
 type Action struct {
-	db                       *postgres.DB
-	action                   *state.Action
-	ID                       int
-	Connection               int
-	Target                   ActionTarget
-	Name                     string
-	Enabled                  bool
-	EventType                *string
-	ScheduleStart            *int
-	SchedulePeriod           *SchedulePeriod
-	Filter                   *ActionFilter
-	Schema                   types.Type
-	Mapping                  map[string]string
-	Transformation           *Transformation
-	Query                    *string
-	Path                     *string
-	Sheet                    *string
-	ExportMode               *ExportMode
-	ExportMatchingProperties *ExportMatchingProperties
+	db                 *postgres.DB
+	action             *state.Action
+	ID                 int
+	Connection         int
+	Target             ActionTarget
+	Name               string
+	Enabled            bool
+	EventType          *string
+	ScheduleStart      *int
+	SchedulePeriod     *SchedulePeriod
+	Filter             *ActionFilter
+	Schema             types.Type
+	Mapping            map[string]string
+	Transformation     *Transformation
+	Query              *string
+	Path               *string
+	Sheet              *string
+	ExportMode         *ExportMode
+	MatchingProperties *MatchingProperties
 }
 
 // ExportMode represents one of the three export modes.
@@ -115,8 +115,8 @@ func (this *Action) fromState(db *postgres.DB, action *state.Action) {
 		this.Sheet = &sheet
 	}
 	this.ExportMode = (*ExportMode)(action.ExportMode)
-	if props := action.ExportMatchingProperties; props != nil {
-		this.ExportMatchingProperties = &ExportMatchingProperties{
+	if props := action.MatchingProperties; props != nil {
+		this.MatchingProperties = &MatchingProperties{
 			Internal: props.Internal,
 			External: props.External,
 		}
@@ -310,8 +310,8 @@ func (this *Action) Set(action ActionToSet) error {
 		}
 		tSource = []byte(t.PythonSource)
 	}
-	if props := action.ExportMatchingProperties; props != nil {
-		n.ExportMatchingProperties = &state.ExportMatchingProperties{
+	if props := action.MatchingProperties; props != nil {
+		n.MatchingProperties = &state.MatchingProperties{
 			Internal: props.Internal,
 			External: props.External,
 		}
@@ -337,17 +337,17 @@ func (this *Action) Set(action ActionToSet) error {
 		rawSchema = []byte{}
 	}
 	var matchPropInternal, matchPropExternal string
-	if n.ExportMatchingProperties != nil {
-		matchPropInternal = n.ExportMatchingProperties.Internal
-		matchPropExternal = n.ExportMatchingProperties.External
+	if n.MatchingProperties != nil {
+		matchPropInternal = n.MatchingProperties.Internal
+		matchPropExternal = n.MatchingProperties.External
 	}
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
 			"name = $1, enabled = $2, filter = $3, schema = $4, mapping = $5,\n"+
 			"transformation.in_types = $6, transformation.out_types = $7,\n"+
 			"transformation.python_source = $8, query = $9, path = $10, sheet = $11,\n"+
-			"export_mode = $12, export_matching_properties_internal = $13,\n"+
-			"export_matching_properties_external = $14 WHERE id = $15",
+			"export_mode = $12, matching_properties_internal = $13,\n"+
+			"matching_properties_external = $14 WHERE id = $15",
 			n.Name, n.Enabled, string(filter), rawSchema, string(mapping),
 			string(tIn), string(tOut), string(tSource), n.Query, n.Path, n.Sheet,
 			n.ExportMode, matchPropInternal, matchPropExternal, n.ID,
@@ -499,16 +499,16 @@ type ActionToSet struct {
 	// ExportMode is the export mode, if it has one.
 	ExportMode *ExportMode
 
-	// ExportMatchingProperties are the internal and external properties used
-	// for matching users during export to apps.
-	ExportMatchingProperties *ExportMatchingProperties
+	// MatchingProperties are the internal and external properties used for matching
+	// users during export to apps.
+	MatchingProperties *MatchingProperties
 }
 
-// ExportMatchingProperties contains an internal property (belonging to the
-// Golden Record) and an external property (belonging to the app) which are used
-// to match identities of users in the data warehouse with users on the external
+// MatchingProperties contains an internal property (belonging to the Golden
+// Record) and an external property (belonging to the app) which are used to
+// match identities of users in the data warehouse with users on the external
 // app, during export.
-type ExportMatchingProperties struct {
+type MatchingProperties struct {
 	Internal string
 	External string
 }
@@ -711,8 +711,8 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			return types.Type{}, errors.BadRequest("invalid export mode")
 		}
 	}
-	if action.ExportMatchingProperties != nil {
-		props := *action.ExportMatchingProperties
+	if action.MatchingProperties != nil {
+		props := *action.MatchingProperties
 		if !types.IsValidPropertyName(props.Internal) {
 			return types.Type{}, errors.BadRequest("internal matching property %q is not a valid property name", props.Internal)
 		}
@@ -778,14 +778,14 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if action.ExportMode == nil {
 			return types.Type{}, errors.BadRequest("missing export mode")
 		}
-		if action.ExportMatchingProperties == nil {
+		if action.MatchingProperties == nil {
 			return types.Type{}, errors.BadRequest("missing export matching properties")
 		}
 	} else {
 		if action.ExportMode != nil {
 			return types.Type{}, errors.BadRequest("unexpected action mode")
 		}
-		if action.ExportMatchingProperties != nil {
+		if action.MatchingProperties != nil {
 			return types.Type{}, errors.BadRequest("unexpected export matching properties")
 		}
 	}

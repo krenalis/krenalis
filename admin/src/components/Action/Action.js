@@ -121,7 +121,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				c.Role === 'Destination' &&
 				(actionType.Target === 'Users' || actionType.Target === 'Groups')
 			) {
-				fields.push('ExportMatchingProperties');
+				fields.push('MatchingProperties');
 				fields.push('ExportMode');
 				fields.push('Filter');
 			}
@@ -220,8 +220,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				if (fields.includes('ExportMode')) {
 					action.ExportMode = Object.keys(exportModeOptions)[0];
 				}
-				if (fields.includes('ExportMatchingProperties')) {
-					action.ExportMatchingProperties = { Internal: '', External: '' };
+				if (fields.includes('MatchingProperties')) {
+					action.MatchingProperties = { Internal: '', External: '' };
 				}
 			}
 			queryRef.current = action.Query;
@@ -524,9 +524,9 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setAction(a);
 	};
 
-	const onChangeExportMatchingProperties = (e) => {
+	const onChangeMatchingProperties = (e) => {
 		let a = { ...action };
-		a.ExportMatchingProperties[e.currentTarget.dataset.type] = e.currentTarget.value;
+		a.MatchingProperties[e.currentTarget.dataset.type] = e.currentTarget.value;
 		setAction(a);
 	};
 
@@ -1180,18 +1180,18 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						</SlSelect>
 					</Section>
 				)}
-				{fields.includes('ExportMatchingProperties') && (
+				{fields.includes('MatchingProperties') && (
 					<Section
 						title={`Matching properties`}
 						description='The properties used to identify and match the resources'
 						padded={true}
 					>
-						<div className='exportMatchingProperties'>
+						<div className='matchingProperties'>
 							<SlInput
 								label='Golden record property'
 								data-type='Internal'
-								value={action.ExportMatchingProperties.Internal}
-								onSlChange={onChangeExportMatchingProperties}
+								value={action.MatchingProperties.Internal}
+								onSlChange={onChangeMatchingProperties}
 							/>
 							<div className='arrow'>
 								<SlIcon name='arrow-left-right' />
@@ -1199,8 +1199,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							<SlInput
 								label={`${c.Name}'s property`}
 								data-type='External'
-								value={action.ExportMatchingProperties.External}
-								onSlChange={onChangeExportMatchingProperties}
+								value={action.MatchingProperties.External}
+								onSlChange={onChangeMatchingProperties}
 							/>
 						</div>
 					</Section>

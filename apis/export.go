@@ -279,7 +279,7 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 
 	// Read the users from the app.
 	properties := []_connector.PropertyPath{
-		{this.action.ExportMatchingProperties.External},
+		{this.action.MatchingProperties.External},
 	}
 	err = c.(_connector.AppUsersConnection).Users(this.action.UserCursor, properties)
 	if err != nil {
@@ -298,7 +298,7 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 // its external ID and true, if resolved, or the empty string and false if such
 // user does not exist on the remote app.
 func (this *Action) resolveExternalIdentity(user userToExport) (string, bool, error) {
-	internalPropName := this.action.ExportMatchingProperties.Internal
+	internalPropName := this.action.MatchingProperties.Internal
 	property, ok := user.Properties[internalPropName]
 	if !ok {
 		return "", false, fmt.Errorf("property %q not found", internalPropName)

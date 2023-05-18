@@ -329,7 +329,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 			"enabled, schedule_start, schedule_period, filter, schema, mapping,\n"+
 			"(transformation).in_types, (transformation).out_types,\n"+
 			"(transformation).python_source, query, path, sheet, user_cursor, health, export_mode,\n"+
-			"export_matching_properties_internal, export_matching_properties_external FROM actions",
+			"matching_properties_internal, matching_properties_external FROM actions",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					var connectionID int
@@ -380,7 +380,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 						action.Transformation = t
 					}
 					if matchPropInternal != "" {
-						action.ExportMatchingProperties = &ExportMatchingProperties{
+						action.MatchingProperties = &MatchingProperties{
 							Internal: matchPropInternal,
 							External: matchPropExternal,
 						}
