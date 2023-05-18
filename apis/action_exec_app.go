@@ -63,6 +63,9 @@ func (this *Action) importFromApp() error {
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
 	}
+	if fh.err != nil {
+		return actionExecutionError{fh.err}
+	}
 
-	return fh.err
+	return nil
 }
