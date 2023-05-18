@@ -484,11 +484,14 @@ func (t Type) AsRole(role Role) Type {
 		}
 		start = i + 1
 	}
-	if roleProperties == nil {
+	if start == 0 {
 		return t
 	}
-	if start < len(roleProperties) {
-		roleProperties = append(roleProperties, roleProperties[start:]...)
+	if start < len(properties) {
+		roleProperties = append(roleProperties, properties[start:]...)
+	}
+	if roleProperties == nil {
+		return Type{}
 	}
 	return Type{pt: PtObject, vl: roleProperties}
 }
