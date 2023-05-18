@@ -164,17 +164,7 @@ const UsersList = () => {
 			}
 		}
 		setColumnDefs(usersColumns);
-
-		let usersRows = [];
-		for (let u of users) {
-			if (u == null) continue;
-			let userRow = {};
-			for (let [i, p] of Object.keys(properties).entries()) {
-				userRow[p] = u[i];
-			}
-			usersRows.push(userRow);
-		}
-		setUsersRows(usersRows);
+		setUsersRows(users);
 	};
 
 	const onToggleColumn = (name) => {
@@ -190,7 +180,6 @@ const UsersList = () => {
 			}
 		}
 		localStorage.setItem('usersProperties', JSON.stringify(props));
-		setColumnDefs(columnDefs);
 		setProperties(props);
 		setRefetch(true);
 	};
