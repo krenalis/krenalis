@@ -75,6 +75,37 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		return err
 	}
 
+	// Open a connection to the app.
+	connection := this.action.Connection()
+	connector := connection.Connector()
+	var clientSecret, resourceCode, accessToken string
+	if r, ok := connection.Resource(); ok {
+		clientSecret = connector.OAuth.ClientSecret
+		resourceCode = r.Code
+		var err error
+		accessToken, err = freshAccessToken(this.db, r)
+		if err != nil {
+			return actionExecutionError{fmt.Errorf("cannot retrive the OAuth access token: %s", err)}
+		}
+	}
+	fh, err := this.newFirehose(ctx)
+	if err != nil {
+		return actionExecutionError{err}
+	}
+	ws := this.action.Connection().Workspace()
+	c, err := _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
+		Role:          _connector.DestinationRole,
+		Settings:      connection.Settings,
+		Firehose:      fh,
+		ClientSecret:  clientSecret,
+		Resource:      resourceCode,
+		AccessToken:   accessToken,
+		PrivacyRegion: _connector.PrivacyRegion(ws.PrivacyRegion),
+	})
+	if err != nil {
+		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
+	}
+
 	for _, user := range users {
 
 		// Resolve the external identity.
@@ -101,37 +132,6 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		}
 
 		// Set the user to the app.
-		const role = _connector.DestinationRole
-		connection := this.action.Connection()
-		connector := connection.Connector()
-		var clientSecret, resourceCode, accessToken string
-		if r, ok := connection.Resource(); ok {
-			clientSecret = connector.OAuth.ClientSecret
-			resourceCode = r.Code
-			var err error
-			accessToken, err = freshAccessToken(this.db, r)
-			if err != nil {
-				return actionExecutionError{fmt.Errorf("cannot retrive the OAuth access token: %s", err)}
-			}
-		}
-		fh, err := this.newFirehose(ctx)
-		if err != nil {
-			return err
-		}
-		ws := this.action.Connection().Workspace()
-		// TODO(Gianluca): should we open this app just once for every user?
-		c, err := _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
-			Role:          role,
-			Settings:      connection.Settings,
-			Firehose:      fh,
-			ClientSecret:  clientSecret,
-			Resource:      resourceCode,
-			AccessToken:   accessToken,
-			PrivacyRegion: _connector.PrivacyRegion(ws.PrivacyRegion),
-		})
-		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
-		}
 		err = c.(_connector.AppUsersConnection).SetUser(userToSet)
 		if err != nil {
 			return errors.New("cannot export users")
