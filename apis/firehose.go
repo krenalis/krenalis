@@ -33,15 +33,14 @@ const maxSettingsLen = 10_000 // Maximum length of settings in runes.
 
 // firehose is the Firehose API used by the connectors.
 type firehose struct {
-	db          *postgres.DB
-	connection  *state.Connection
-	action      *Action
-	resource    int
-	ctx         context.Context
-	cancel      context.CancelFunc
-	webhooksPer WebhooksPer
-	mapping     *mappings.Mapping
-	err         error
+	db         *postgres.DB
+	connection *state.Connection
+	action     *Action
+	resource   int
+	ctx        context.Context
+	cancel     context.CancelFunc
+	mapping    *mappings.Mapping
+	err        error
 }
 
 func (fh *firehose) ReceiveEvent(event connector.WebhookEvent) {
@@ -231,15 +230,16 @@ func (fh *firehose) SetUserGroups(user string, groups []string) {
 // If the connector does not support webhooks, it returns an empty string.
 func (fh *firehose) WebhookURL() string {
 	c := fh.connection
+	conn := c.Connector()
 	u := "https://localhost:9090/webhook/"
-	switch fh.webhooksPer {
-	case WebhooksPerNone:
+	switch conn.WebhooksPer {
+	case state.WebhooksPerNone:
 		return ""
-	case WebhooksPerConnector:
-		return u + "c/" + strconv.Itoa(c.Connector().ID) + "/"
-	case WebhooksPerResource:
+	case state.WebhooksPerConnector:
+		return u + "c/" + strconv.Itoa(conn.ID) + "/"
+	case state.WebhooksPerResource:
 		return u + "r/" + strconv.Itoa(fh.resource) + "/"
-	case WebhooksPerSource:
+	case state.WebhooksPerSource:
 		return u + "s/" + strconv.Itoa(c.ID) + "/"
 	}
 	panic("unexpected webhooksPer value")
