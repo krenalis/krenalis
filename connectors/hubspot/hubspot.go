@@ -276,7 +276,7 @@ func (c *connection) UserSchema() (types.Type, error) {
 	}
 
 	properties := []types.Property{
-		{Name: "hubspot_user_id", Label: "ID", Type: types.Text()},
+		{Name: "hubspot_user_id", Label: "ID", Role: types.SourceRole, Type: types.Text()},
 	}
 	for _, r := range response.Results {
 		switch r.Name {
