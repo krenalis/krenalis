@@ -75,6 +75,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let propertiesListRef = useRef(null);
 	let conditionListRef = useRef(null);
 
+	let isImport = c.Role === 'Source';
+
 	useEffect(() => {
 		let actionType;
 		const fetchData = async () => {
@@ -122,7 +124,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				fields.push('ExportMatchingProperties');
 				fields.push('ExportMode');
 				fields.push('Filter');
-			};
+			}
 			if (c.Type === 'Database' && c.Role === 'Source') {
 				fields.push('Query');
 			}
@@ -175,7 +177,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				if (res != null) {
 					setInputSchema(res.Schema);
 				}
-			} else if (fields.includes('Path') && a != null) {
+			} else if (fields.includes('Path') && a != null && isImport) {
 				let res = await records(a.Path, a.Sheet, 0);
 				if (res != null) {
 					setInputSchema(res.schema);
@@ -830,7 +832,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 
 	let hasQueryError = c.Type === 'Database' && inputSchema == null;
 	let hasRecordsError = c.Type === 'File' && inputSchema == null;
-	let isPropertiesSectionDisabled = hasQueryError || isQueryChanged || hasRecordsError || isFileChanged;
+	let isPropertiesSectionDisabled = hasQueryError || isQueryChanged || hasRecordsError || (isFileChanged && isImport);
 	let propertiesSection = null;
 	if (fields.includes('Mapping')) {
 		let propertiesSectionActions = null;
@@ -1156,25 +1158,27 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 								onSlInput={onUpdateSheet}
 							/>
 						)}
-						<div className='fileButtons'>
-							<SlButton variant='neutral' size='small' onClick={onFilePreview}>
-								Preview
-							</SlButton>
-							<SlButton variant='success' size='small' onClick={onConfirmFile}>
-								Confirm
-							</SlButton>
-						</div>
+						{isImport && (
+							<div className='fileButtons'>
+								<SlButton variant='neutral' size='small' onClick={onFilePreview}>
+									Preview
+								</SlButton>
+								<SlButton variant='success' size='small' onClick={onConfirmFile}>
+									Confirm
+								</SlButton>
+							</div>
+						)}
 					</Section>
 				)}
 				{propertiesSection}
 				{fields.includes('ExportMode') && (
-				<Section title='Export Mode' description='The mode used to export the data' padded={true}>
-					<SlSelect size='medium' value={action.ExportMode} onSlChange={onChangeExportMode}>
-						{Object.keys(exportModeOptions).map((k) => (
-							<SlOption value={k}>{exportModeOptions[k]}</SlOption>
-						))}
-					</SlSelect>
-				</Section>
+					<Section title='Export Mode' description='The mode used to export the data' padded={true}>
+						<SlSelect size='medium' value={action.ExportMode} onSlChange={onChangeExportMode}>
+							{Object.keys(exportModeOptions).map((k) => (
+								<SlOption value={k}>{exportModeOptions[k]}</SlOption>
+							))}
+						</SlSelect>
+					</Section>
 				)}
 				{fields.includes('ExportMatchingProperties') && (
 					<Section
