@@ -44,6 +44,7 @@ const statuses = {
 	eventTypeNotExists: [variants.DANGER, icons.NOT_FOUND, 'This event type does not exist enymore'],
 	actionExecutionInProgress: [variants.DANGER, icons.FORBIDDEN, 'This action is already in progress'],
 	importStarted: [variants.PRIMARY, icons.DOWNLOAD, 'Your import has been started'],
+	exportStarted: [variants.PRIMARY, icons.DOWNLOAD, 'Your export has been started'],
 	querySet: [variants.PRIMARY, icons.OK, 'Your query has been successfully saved'],
 	mappingsSaved: [variants.SUCCESS, icons.OK, 'Your mappings have been successfully saved'],
 	schemasReloaded: [variants.SUCCESS, icons.OK, 'The schemas have been reloaded successfully'],

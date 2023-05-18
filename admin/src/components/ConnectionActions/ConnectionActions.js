@@ -130,7 +130,11 @@ let ConnectionActions = () => {
 			showError(err);
 			return;
 		}
-		showStatus(statuses.importStarted);
+		if (c.Role === 'Source') {
+			showStatus(statuses.importStarted);
+		} else {
+			showStatus(statuses.exportStarted);
+		}
 	};
 
 	const onSchedulerPeriodChange = async (e, actionID) => {
