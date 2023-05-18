@@ -25,7 +25,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"chichi/connector"
 	"chichi/connector/types"
@@ -60,7 +59,7 @@ func init() {
 
 type connection struct {
 	ctx         context.Context
-	settings    settings
+	settings    *settings
 	firehose    connector.Firehose
 	accessToken string
 }
@@ -75,8 +74,13 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
-			return nil, err
+			return nil, errors.New("cannot unmarshal settings of Mailchimp connection")
 		}
+		// TODO(marco): re-enable webhooks when a public IP is used.
+		//err = c.initWebhooks()
+		//if err != nil {
+		//		return nil, err
+		//}
 	}
 	return &c, nil
 }
@@ -136,142 +140,93 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, 
 	return events, nil
 }
 
-// Resource returns the resource from a client token.
+// Resource returns the resource.
 func (c *connection) Resource() (string, error) {
-	_, resource, err := c.getMetadata()
-	if err != nil {
-		return "", err
-	}
-	return resource, nil
+	_, resource, err := c.metadata()
+	return resource, err
 }
 
 // ServeUI serves the connector's user interface.
 func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
-	lists, err := c.getLists()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if c.settings.List != "" {
-		listName := ""
-		for _, l := range lists {
-			if l.ID == c.settings.List {
-				listName = l.Name
-			}
-		}
-		if listName == "" {
-			return nil, nil, ui.Errorf("List %q does not exists", c.settings.List)
-		}
-		return &ui.Form{
-			Fields: []ui.Component{
-				&ui.Text{Label: "Connected list", Text: listName},
-			},
-		}, nil, nil
-	}
-
 	switch event {
 	case "load":
-		options := []ui.Option{}
-		for _, l := range lists {
-			options = append(options, ui.Option{
-				Text:  l.Name,
-				Value: l.ID,
-			})
+		// Load the Form.
+		var s settings
+		if c.settings != nil {
+			s = *c.settings
 		}
-		return &ui.Form{
-			Fields: []ui.Component{
-				&ui.Select{Name: "list", Label: "List", Placeholder: "", Options: options},
-			},
-			Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},
-		}, nil, nil
+		values, _ = json.Marshal(s)
 	case "save":
-		var s map[string]string
-		err := json.Unmarshal(values, &s)
+		// Save the settings.
+		s, err := c.SettingsUI(values)
 		if err != nil {
 			return nil, nil, err
 		}
-
-		lst := s["list"]
-
-		// Init webhooks
-		listName := ""
-		for _, l := range lists {
-			if l.ID == lst {
-				listName = l.Name
-				break
-			}
-		}
-		if listName == "" {
-			return nil, nil, ui.Errorf("List %q does not exists", lst)
-		}
-
-		// Check if the list already a webhook already set.
-		webhookBase := c.firehose.WebhookURL()
-		hasWebhook := false
-		secret := ""
-		hooks, err := c.getWebhooks(lst)
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, wh := range hooks {
-			// Check if the webhook has already been set up for the current connection.
-			if strings.HasPrefix(wh.URL, webhookBase) {
-				u, err := url.Parse(wh.URL)
-				if err != nil {
-					return nil, nil, err
-				}
-				secret = u.Query().Get("secret")
-				if wh.Events.Cleaned &&
-					wh.Events.Profile &&
-					wh.Events.Subscribe &&
-					wh.Events.Unsubscribe &&
-					wh.Events.Upemail &&
-					!wh.Events.Campaign {
-					// The correct webhook is already set.
-					hasWebhook = true
-					break
-				}
-				// Update the webhook to the correct settings.
-				_, err = c.setWebhook(lst, wh.ID)
-				if err != nil {
-					return nil, nil, err
-				}
-				hasWebhook = true
-			}
-		}
-		if !hasWebhook {
-			// Create a webhook.
-			secret, err = c.setWebhook(lst, "")
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-		c.settings.WebhookSecret = secret
-		c.settings.List = lst
-		newSettings, err := json.Marshal(c.settings)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = c.firehose.SetSettings(newSettings)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		return &ui.Form{
-			Fields: []ui.Component{
-				&ui.Text{Label: "Connected list", Text: listName},
-			},
-		}, nil, nil
+		return nil, nil, c.firehose.SetSettings(s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}
 
+	// Get the lists.
+	lists, err := c.lists()
+	if err != nil {
+		return nil, nil, err
+	}
+	options := make([]ui.Option, len(lists))
+	for i, list := range lists {
+		options[i] = ui.Option{
+			Text:  list.Name,
+			Value: list.ID,
+		}
+	}
+
+	form := &ui.Form{
+		Fields: []ui.Component{
+			&ui.Select{Name: "list", Label: "List", Options: options},
+		},
+		Actions: []ui.Action{{Event: "save", Text: "Save", Variant: "primary"}},
+	}
+
+	return form, nil, nil
 }
 
-// SettingsUI obtains the settings from UI values and returns them.
+// SettingsUI obtains settings from UI values and return them.
 func (c *connection) SettingsUI(values []byte) ([]byte, error) {
-	return nil, errors.New("to be implemented")
+	var s struct {
+		List string
+	}
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	if s.List == "" || len(s.List) > 100 {
+		return nil, ui.Errorf("list length must be in range [1, 100]")
+	}
+	// Check if the list exists.
+	lists, err := c.lists()
+	if err != nil {
+		return nil, err
+	}
+	var found bool
+	for _, list := range lists {
+		if list.ID == s.List {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, ui.Errorf("list does not exist")
+	}
+	dataCenter, _, err := c.metadata()
+	if err != nil {
+		return nil, err
+	}
+	settings := settings{
+		List:       s.List,
+		DataCenter: dataCenter,
+	}
+	return json.Marshal(&settings)
 }
 
 // SetUser sets the given user.
@@ -330,7 +285,7 @@ func (c *connection) UserSchema() (types.Type, error) {
 	params := url.Values{
 		"fields": []string{"merge_fields.options.choices,merge_fields.name,merge_fields.tag,merge_fields.type"},
 	}
-	res := struct {
+	var res struct {
 		MergeFields []struct {
 			Options struct {
 				Choices []string
@@ -339,7 +294,7 @@ func (c *connection) UserSchema() (types.Type, error) {
 			Tag  string
 			Type string
 		} `json:"merge_fields"`
-	}{}
+	}
 	err := c.call("GET", "/lists/"+c.settings.List+"/merge-fields", params, nil, 200, &res)
 	if err != nil {
 		return types.Type{}, err
@@ -351,11 +306,10 @@ func (c *connection) UserSchema() (types.Type, error) {
 		field := types.Property{
 			Name:  mf.Tag,
 			Label: mf.Name,
-			Type:  types.Text(),
 		}
 		switch mf.Type {
 		case "address":
-			mergeFields[i].Type = types.JSON()
+			field.Type = types.JSON()
 		case "radio", "dropdown":
 			field.Type = types.Text().WithEnum(mf.Options.Choices)
 		default:
@@ -566,10 +520,7 @@ func (c *connection) Users(cursor string, properties []connector.PropertyPath) e
 	if len(properties) > 0 {
 		params.Set("fields", serializeProperties(properties))
 	}
-	sinceLastChange, offset, err := parseCursor(cursor)
-	if err != nil {
-		return err
-	}
+	sinceLastChange, offset := parseCursor(cursor)
 	for {
 		if sinceLastChange != "" {
 			params.Set("since_last_changed", sinceLastChange)
@@ -609,10 +560,10 @@ func (c *connection) Users(cursor string, properties []connector.PropertyPath) e
 }
 
 type batchOperation struct {
-	Method string            `json:"method"`
-	Path   string            `json:"path"`
-	Params map[string]string `json:"params"`
-	Body   string            `json:"body"`
+	Method string
+	Path   string
+	Params map[string]string
+	Body   string
 }
 
 type batchResponse struct {
@@ -628,10 +579,22 @@ type mailchimpError struct {
 	Status   int
 	Detail   string
 	Instance string
+	Errors   []struct {
+		Field   string
+		Message string
+	}
 }
 
 func (err *mailchimpError) Error() string {
-	return fmt.Sprintf("unexpected error from Mailchimp: (%d) %s - %s", err.Status, err.Detail, err.Instance)
+	s := err.Title
+	if len(err.Errors) == 0 {
+		s += " " + err.Detail
+	} else {
+		for _, e := range err.Errors {
+			s += "\n\t" + e.Field + ": " + e.Message
+		}
+	}
+	return s
 }
 
 type settings struct {
@@ -645,7 +608,7 @@ type settings struct {
 func serializeProperties(properties []connector.PropertyPath) string {
 	var hasID, hasLastChange bool
 	for _, p := range properties {
-		realName := ""
+		var realName string
 		switch p[0] {
 		case "ConsentsToOneToOneMessaging":
 			realName = "consents_to_one_to_one_messaging"
@@ -710,15 +673,15 @@ func serializeProperties(properties []connector.PropertyPath) string {
 		}
 		p[0] = "members." + realName
 	}
-	plist := []string{}
+	var plist []string
 	if !hasID {
 		plist = append(plist, "members.id")
 	}
 	if !hasLastChange {
 		plist = append(plist, "members.last_changed")
 	}
-	for _, ps := range properties {
-		plist = append(plist, strings.Join(ps, "."))
+	for _, p := range properties {
+		plist = append(plist, strings.Join(p, "."))
 	}
 	return strings.Join(plist, ",")
 }
@@ -726,25 +689,27 @@ func serializeProperties(properties []connector.PropertyPath) string {
 // call calls the Mailchimp API.
 func (c *connection) call(method, path string, params url.Values, body io.Reader, expectedStatus int, response any) error {
 
-	if c.settings.DataCenter == "" {
-		err := c.setDataCenter()
+	var dataCenter string
+	if c.settings == nil {
+		var err error
+		dataCenter, _, err = c.metadata()
 		if err != nil {
 			return err
 		}
+	} else {
+		dataCenter = c.settings.DataCenter
 	}
 
-	var callPath = "https://" + c.settings.DataCenter + ".api.mailchimp.com/3.0/" + path[1:]
+	var u = "https://" + dataCenter + ".api.mailchimp.com/3.0/" + path[1:]
 	if params != nil {
-		callPath += "?" + params.Encode()
+		u += "?" + params.Encode()
 	}
 
-	req, err := http.NewRequestWithContext(c.ctx, method, callPath, body)
+	req, err := http.NewRequestWithContext(c.ctx, method, u, body)
 	if err != nil {
 		return err
 	}
-
 	req.SetBasicAuth("anystring", c.accessToken)
-
 	req.Header.Set("Content-Type", "application/json")
 
 	var dump *bufio.Writer
@@ -770,18 +735,19 @@ func (c *connection) call(method, path string, params url.Values, body io.Reader
 	}
 
 	if res.StatusCode != expectedStatus {
-		hsErr := &mailchimpError{Status: res.StatusCode}
-		dec := json.NewDecoder(res.Body)
-		_ = dec.Decode(hsErr)
-		return hsErr
+		mcErr := &mailchimpError{Status: res.StatusCode}
+		b, err := io.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		dec := json.NewDecoder(bytes.NewReader(b))
+		_ = dec.Decode(mcErr)
+		return mcErr
 	}
 
 	if response != nil {
 		dec := json.NewDecoder(res.Body)
-		err = dec.Decode(response)
-		if err != nil {
-			return err
-		}
+		return dec.Decode(response)
 	}
 
 	return nil
@@ -791,13 +757,13 @@ type list struct {
 	ID, Name string
 }
 
-// getLists returns all the lists.
-func (c *connection) getLists() ([]list, error) {
-	var params = url.Values{
-		"fields":     []string{"lists.name,lists.id"},
-		"count":      []string{"1000"},
-		"sort_field": []string{"date_created"},
-		"sort_dir":   []string{"ASC"},
+// lists returns the lists.
+func (c *connection) lists() ([]list, error) {
+	params := url.Values{
+		"fields":     {"lists.name,lists.id"},
+		"count":      {"1000"},
+		"sort_field": {"date_created"},
+		"sort_dir":   {"ASC"},
 	}
 	var lists []list
 	for {
@@ -813,123 +779,151 @@ func (c *connection) getLists() ([]list, error) {
 		}
 		lists = append(lists, response.Lists...)
 		if len(response.Lists) < 1000 {
-			return lists, nil
+			break
 		}
 	}
+	return lists, nil
 }
 
 type webhook struct {
 	Events struct {
-		Campaign    bool `json:"campaign"`
-		Cleaned     bool `json:"cleaned"`
-		Profile     bool `json:"profile"`
-		Subscribe   bool `json:"subscribe"`
-		Unsubscribe bool `json:"unsubscribe"`
-		Upemail     bool `json:"upemail"`
-	} `json:"events"`
-	ID      string `json:"id"`
+		Campaign    bool
+		Cleaned     bool
+		Profile     bool
+		Subscribe   bool
+		Unsubscribe bool
+		Upemail     bool
+	}
+	ID      string
 	Sources struct {
-		Admin bool `json:"admin"`
-		API   bool `json:"api"`
-		User  bool `json:"user"`
-	} `json:"sources"`
-	URL string `json:"url"`
+		Admin bool
+		API   bool
+		User  bool
+	}
+	URL string
 }
 
-// deleteWebhook removes a webhook.
-func (c *connection) deleteWebhook(webhook string) error {
-	err := c.call("DELETE", "/lists/"+c.settings.List+"/webhooks/"+webhook, nil, nil, 204, nil)
+// initWebhooks initializes webhooks.
+func (c *connection) initWebhooks() error {
+	if c.firehose == nil || c.settings.WebhookSecret != "" {
+		return nil
+	}
+	baseURL := c.firehose.WebhookURL()
+	webhooks, err := c.webhooks(c.settings.List)
 	if err != nil {
-		if e, ok := err.(*mailchimpError); ok {
-			if e.Status == 404 {
-				return nil
-			}
-		}
 		return err
 	}
-	return nil
+	var secret string
+	for _, webhook := range webhooks {
+		u, err := url.Parse(webhook.URL)
+		if err != nil {
+			return fmt.Errorf("Mailchimp has returned an invalid webhook URL")
+		}
+		if strings.HasPrefix(u.String(), baseURL) {
+			continue
+		}
+		if secret == "" {
+			sec := u.Query().Get("secret")
+			if len(sec) == 20 {
+				secret = sec
+				if !(webhook.Events.Cleaned &&
+					webhook.Events.Profile &&
+					webhook.Events.Subscribe &&
+					webhook.Events.Unsubscribe &&
+					webhook.Events.Upemail &&
+					!webhook.Events.Campaign) {
+					err = c.updateWebhook(c.settings.List, webhook.ID)
+					if err != nil {
+						return err
+					}
+				}
+				continue
+			}
+		}
+		_ = c.deleteWebhook(c.settings.List, webhook.ID)
+	}
+	if secret == "" {
+		secret, err = c.createWebhook(c.settings.List)
+		if err != nil {
+			return fmt.Errorf("cannot create webhook: %s", err)
+		}
+	}
+	c.settings.WebhookSecret = secret
+	b, err := json.Marshal(&c.settings)
+	if err != nil {
+		return err
+	}
+	return c.firehose.SetSettings(b)
 }
 
-// getWebhooks returns all the webhooks for the list.
-func (c *connection) getWebhooks(list string) ([]webhook, error) {
+var errListNotExist = errors.New("list does not exist")
+
+// webhooks returns the webhooks for list.
+// If list does not exist, it returns the errListNotExist error.
+func (c *connection) webhooks(list string) ([]webhook, error) {
 	var response struct {
 		Webhooks []webhook
 	}
-	err := c.call("GET", "/lists/"+list+"/webhooks", nil, nil, 200, &response)
+	err := c.call("GET", "/lists/"+url.PathEscape(list)+"/webhooks", nil, nil, 200, &response)
 	if err != nil {
+		if err, ok := err.(*mailchimpError); ok && err.Status == 404 {
+			return nil, errListNotExist
+		}
 		return nil, err
 	}
 	return response.Webhooks, nil
 }
 
-// setDataCenter sets the data center.
-func (c *connection) setDataCenter() error {
-	dc, _, err := c.getMetadata()
+// createWebhook creates a webhook for list and returns its secret.
+func (c *connection) createWebhook(list string) (string, error) {
+	path := "/lists/" + url.PathEscape(list) + "/webhooks"
+	secret, err := generateRandomString(20)
 	if err != nil {
-		return err
+		return "", err
 	}
-	c.settings.DataCenter = dc
-	if c.firehose != nil {
-		var s []byte
-		if s, err = json.Marshal(c.settings); err == nil {
-			err = c.firehose.SetSettings(s)
-		}
-	}
-	return err
-}
-
-// setWebhook creates or updates a webhook for the list.
-// Returns the secret for the webhook if the webhook has been created, otherwise
-// returns an empty string.
-func (c *connection) setWebhook(list, webhook string) (string, error) {
-	method := "POST"
-	path := "/lists/" + list + "/webhooks"
-	bodyContent := `{"events":{"subscribe":true,"unsubscribe":true,"profile":true,"cleaned":true,"upemail":true,"campaign":false},` +
-		`"sources":{"user":true,"admin":true,"api":true}`
-	var secret string
-	if webhook == "" {
-		secret = randomString(20)
-		webhookURL := c.firehose.WebhookURL() + "?secret=" + secret
-		bodyContent += `,"url":"` + webhookURL + `"}`
-	} else {
-		method = "PATCH"
-		path += "/" + webhook
-		bodyContent += `}`
-	}
-	err := c.call(method, path, nil, bytes.NewBuffer([]byte(bodyContent)), 200, nil)
+	webhookURL, _ := json.Marshal(c.firehose.WebhookURL() + "?secret=" + url.QueryEscape(secret))
+	body := `{"events":{"subscribe":true,"unsubscribe":true,"profile":true,"cleaned":true,"upemail":true,"campaign":false},` +
+		`"sources":{"user":true,"admin":true,"api":true},"url":` + string(webhookURL) + `}`
+	err = c.call("POST", path, nil, strings.NewReader(body), 200, nil)
 	if err != nil {
 		return "", err
 	}
 	return secret, nil
 }
 
+// deleteWebhook deletes webhook. It does nothing if the webhook does not exist.
+func (c *connection) deleteWebhook(list, webhook string) error {
+	err := c.call("DELETE", "/lists/"+url.PathEscape(list)+"/webhooks/"+url.PathEscape(webhook), nil, nil, 204, nil)
+	if e, ok := err.(*mailchimpError); ok && e.Status == 404 {
+		err = nil
+	}
+	return err
+}
+
+// updateWebhook updates the webhook for list.
+func (c *connection) updateWebhook(list, webhook string) error {
+	path := "/lists/" + url.PathEscape(list) + "/webhooks/" + url.PathEscape(webhook)
+	body := `{"events":{"subscribe":true,"unsubscribe":true,"profile":true,"cleaned":true,"upemail":true,"campaign":false},` +
+		`"sources":{"user":true,"admin":true,"api":true}`
+	return c.call("PATCH", path, nil, strings.NewReader(body), 200, nil)
+}
+
 // parseCursor parses a cursor and returns the last modified datetime and offset.
-func parseCursor(cursor string) (string, int, error) {
+func parseCursor(cursor string) (string, int) {
 	if cursor == "" {
-		return "", 0, nil
+		return "", 0
 	}
 	parts := strings.SplitN(cursor, "/", 2)
 	offset, err := strconv.ParseInt(parts[1], 10, 64)
 	if err != nil {
-		return "", 0, fmt.Errorf("invalid cursor: %q", cursor)
+		return "", 0
 	}
-	return parts[0], int(offset), nil
+	return parts[0], int(offset)
 }
 
-// serializeCursor serializes a time and an offset as cursor.
+// serializeCursor serializes time and an offset as cursor.
 func serializeCursor(time string, offset int) string {
 	return time + "/" + strconv.Itoa(offset)
-}
-
-// getMember returns a list member.
-func (c *connection) getMember(id string) (*Member, error) {
-	path := "/lists/" + c.settings.List + "/members/" + id
-	var m Member
-	err := c.call("GET", path, nil, nil, 200, &m)
-	if err != nil {
-		return nil, err
-	}
-	return &m, nil
 }
 
 type Member struct {
@@ -1026,8 +1020,8 @@ func (m *Member) Properties() map[string]any {
 	}
 }
 
-// getMetadata returns the datacenter and the account id.
-func (c *connection) getMetadata() (string, string, error) {
+// metadata returns the datacenter and the account id.
+func (c *connection) metadata() (string, string, error) {
 	// Retrieve the datacenter calling the Metadata endpoint.
 	// https://mailchimp.com/developer/marketing/guides/access-user-data-oauth-2/#implement-the-oauth-2-workflow-on-your-server
 	req, err := http.NewRequest("GET", "https://login.mailchimp.com/oauth2/metadata", nil)
@@ -1047,8 +1041,8 @@ func (c *connection) getMetadata() (string, string, error) {
 		return "", "", fmt.Errorf("fetching metadata, MailChimp returned a %d status code", res.StatusCode)
 	}
 	r := struct {
-		DC     string `json:"dc"`
-		UserID int    `json:"user_id"`
+		DC     string
+		UserID int `json:"user_id"`
 	}{}
 	err = json.NewDecoder(res.Body).Decode(&r)
 	if err != nil {
@@ -1057,19 +1051,18 @@ func (c *connection) getMetadata() (string, string, error) {
 	return r.DC, strconv.Itoa(r.UserID), nil
 }
 
-// randomString returns a random string.
-func randomString(length int) string {
-	g := big.NewInt(0)
-	max := big.NewInt(130)
-	bs := make([]byte, length)
-	for i, _ := range bs {
-		g, _ = rand.Int(rand.Reader, max)
-		r := rune(g.Int64())
-		for !unicode.IsNumber(r) && !unicode.IsLetter(r) {
-			g, _ = rand.Int(rand.Reader, max)
-			r = rune(g.Int64())
+// generateRandomString generates a random string of length characters, composed
+// of random letters and numbers.
+func generateRandomString(length int) (string, error) {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	max := big.NewInt(int64(len(charset)))
+	s := make([]byte, length)
+	for i := range s {
+		n, err := rand.Int(rand.Reader, max)
+		if err != nil {
+			return "", err
 		}
-		bs[i] = byte(g.Int64())
+		s[i] = charset[n.Int64()]
 	}
-	return string(bs)
+	return string(s), nil
 }
