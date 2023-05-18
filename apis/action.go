@@ -1106,7 +1106,7 @@ func (this *Connection) fetchAppSchema(target state.ActionTarget, eventType stri
 		}
 		schema = schema.AsRole(types.Role(c.Role))
 		if !schema.Valid() {
-			return types.Type{}, errors.New("connection has returned a schema without source properties")
+			return types.Type{}, fmt.Errorf("connection has returned a schema without %s properties", strings.ToLower(c.Role.String()))
 		}
 	case state.GroupsTarget:
 		schema, err = app.(_connector.AppGroupsConnection).GroupSchema()
@@ -1118,7 +1118,7 @@ func (this *Connection) fetchAppSchema(target state.ActionTarget, eventType stri
 		}
 		schema = schema.AsRole(types.Role(c.Role))
 		if !schema.Valid() {
-			return types.Type{}, errors.New("connection has returned a schema without source properties")
+			return types.Type{}, fmt.Errorf("connection has returned a schema without %s properties", strings.ToLower(c.Role.String()))
 		}
 	}
 	return schema, nil
