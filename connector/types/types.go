@@ -381,6 +381,7 @@ func Object(properties []Property) Type {
 			Name:        property.Name,
 			Label:       normalizedUTF8(property.Label),
 			Description: normalizedUTF8(property.Description),
+			Role:        property.Role,
 			Type:        property.Type,
 			Required:    property.Required,
 			Nullable:    property.Nullable,
