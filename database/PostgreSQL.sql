@@ -111,8 +111,8 @@ CREATE TABLE actions (
     user_cursor varchar(500) NOT NULL DEFAULT '',
     health health NOT NULL DEFAULT 'Healthy',
     export_mode export_mode DEFAULT NULL,
-    matching_properties_internal varchar(200) NOT NULL,
-    matching_properties_external varchar(200) NOT NULL,
+    matching_properties_internal text NOT NULL,
+    matching_properties_external text NOT NULL,
     PRIMARY KEY (id)
 );
 
