@@ -312,6 +312,9 @@ func (this *Action) resolveExternalIdentity(user userToExport) (string, bool, er
 
 	ctx := context.Background()
 
+	// TODO(Gianluca): don't exec a query here; instead, implement and use a
+	// method of the data warehouse.
+
 	wh := this.action.Connection().Workspace().Warehouse
 	rows, err := wh.Query(ctx, `SELECT "user" FROM destinations_users WHERE connection = $1 AND property = $2`, this.action.Connection().ID, p)
 	if err != nil {
