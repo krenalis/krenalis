@@ -60,6 +60,12 @@ func TestExportUsersToFile(t *testing.T) {
 	exportedFilename := "exported-users.tmp.csv"
 	exportFilePath := filepath.Join(storageDir, exportedFilename)
 
+	// Remove the export file, if exists.
+	err = os.Remove(exportFilePath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		t.Fatal(err)
+	}
+
 	// Create the Filesystem connection.
 	fsID := c.AddConnection(map[string]any{
 		"Connector": 19, // Filesystem.
@@ -95,12 +101,6 @@ func TestExportUsersToFile(t *testing.T) {
 			"Path": exportedFilename,
 		},
 	})
-
-	// Remove the export file, if exists.
-	err = os.Remove(exportFilePath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		t.Fatal(err)
-	}
 
 	// Execute the action that imports users.
 	c.ExecuteAction(csvID, exportUsersActionID, true)
