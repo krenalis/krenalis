@@ -348,9 +348,9 @@ func (this *Action) Set(action ActionToSet) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
 			"name = $1, enabled = $2, filter = $3, schema = $4, mapping = $5,\n"+
 			"transformation.in_types = $6, transformation.out_types = $7,\n"+
-			"transformation.python_source = $8, query = $9, path = $10, sheet = $11,\n",
+			"transformation.python_source = $8, query = $9, path = $10, sheet = $11,\n"+
 			"export_mode = $12, export_matching_properties_internal = $13,\n"+
-				"export_matching_properties_external = $14 WHERE id = $15",
+			"export_matching_properties_external = $14 WHERE id = $15",
 			n.Name, n.Enabled, string(filter), rawSchema, string(mapping),
 			string(tIn), string(tOut), string(tSource), n.Query, n.Path, n.Sheet,
 			exportMode, matchPropInternal, matchPropExternal, n.ID,
