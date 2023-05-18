@@ -336,10 +336,7 @@ func (this *Action) Set(action ActionToSet) error {
 	} else {
 		rawSchema = []byte{}
 	}
-	var exportMode, matchPropInternal, matchPropExternal string
-	if n.ExportMode != nil {
-		exportMode = string(*n.ExportMode)
-	}
+	var matchPropInternal, matchPropExternal string
 	if n.ExportMatchingProperties != nil {
 		matchPropInternal = n.ExportMatchingProperties.Internal
 		matchPropExternal = n.ExportMatchingProperties.External
@@ -353,7 +350,7 @@ func (this *Action) Set(action ActionToSet) error {
 			"export_matching_properties_external = $14 WHERE id = $15",
 			n.Name, n.Enabled, string(filter), rawSchema, string(mapping),
 			string(tIn), string(tOut), string(tSource), n.Query, n.Path, n.Sheet,
-			exportMode, matchPropInternal, matchPropExternal, n.ID,
+			n.ExportMode, matchPropInternal, matchPropExternal, n.ID,
 		)
 		if err != nil {
 			return err

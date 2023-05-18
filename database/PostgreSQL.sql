@@ -90,7 +90,7 @@ CREATE TYPE transformation AS (
     python_source text
 );
 
-CREATE TYPE export_mode AS ENUM ('', 'CreateOnly', 'UpdateOnly', 'CreateOrUpdate');
+CREATE TYPE export_mode AS ENUM ('CreateOnly', 'UpdateOnly', 'CreateOrUpdate');
 
 CREATE TABLE actions (
     id SERIAL,
@@ -110,7 +110,7 @@ CREATE TABLE actions (
     sheet varchar(100) NOT NULL DEFAULT '',
     user_cursor varchar(500) NOT NULL DEFAULT '',
     health health NOT NULL DEFAULT 'Healthy',
-    export_mode export_mode NOT NULL,
+    export_mode export_mode DEFAULT NULL,
     export_matching_properties_internal varchar(200) NOT NULL,
     export_matching_properties_external varchar(200) NOT NULL,
     PRIMARY KEY (id)

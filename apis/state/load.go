@@ -335,12 +335,12 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					var connectionID int
 					var eventType string
 					var filter, rawSchema, mapping, transformIn, transformOut, pythonSource []byte
-					var exportMode, matchPropInternal, matchPropExternal string
+					var matchPropInternal, matchPropExternal string
 					action := Action{}
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &filter,
 						&rawSchema, &mapping, &transformIn, &transformOut, &pythonSource, &action.Query,
-						&action.Path, &action.Sheet, &action.UserCursor, &action.Health, &exportMode, &matchPropInternal, &matchPropExternal)
+						&action.Path, &action.Sheet, &action.UserCursor, &action.Health, &action.ExportMode, &matchPropInternal, &matchPropExternal)
 					if err != nil {
 						return err
 					}
@@ -378,9 +378,6 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 							return err
 						}
 						action.Transformation = t
-					}
-					if exportMode != "" {
-						action.ExportMode = (*ExportMode)(&exportMode)
 					}
 					if matchPropInternal != "" {
 						action.ExportMatchingProperties = &ExportMatchingProperties{

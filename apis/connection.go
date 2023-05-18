@@ -574,10 +574,7 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 				return err
 			}
 		}
-		var exportMode, matchPropInternal, matchPropExternal string
-		if n.ExportMode != nil {
-			exportMode = string(*n.ExportMode)
-		}
+		var matchPropInternal, matchPropExternal string
 		if n.ExportMatchingProperties != nil {
 			matchPropInternal = n.ExportMatchingProperties.Internal
 			matchPropExternal = n.ExportMatchingProperties.External
@@ -591,7 +588,7 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType, n.Name,
 			n.Enabled, n.ScheduleStart, n.SchedulePeriod,
 			string(filter), rawSchema, string(mapping), string(tIn), string(tOut), string(tSource),
-			n.Query, n.Path, n.Sheet, exportMode, matchPropInternal, matchPropExternal)
+			n.Query, n.Path, n.Sheet, n.ExportMode, matchPropInternal, matchPropExternal)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {
 				err = errors.Unprocessable(ConnectorNotExists, "connection %d does not exist", n.Connection)
