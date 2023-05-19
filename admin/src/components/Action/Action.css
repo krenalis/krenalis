@@ -132,18 +132,18 @@
     margin-bottom: 0;
 }
 
-.action .mappings .propertiesItemName {
+.action .propertiesItemName {
     font-size: 14px;
     font-weight: 600;
 }
 
-.action .mappings .propertiesItemName .name {
+.action .propertiesItemName .name {
     font-weight: 400;
     font-size: 13px;
     opacity: .7;
 }
 
-.action .mappings .propertiesItemType {
+.action .propertiesItemType {
     font-size: 13px;
     opacity: .7;
 }

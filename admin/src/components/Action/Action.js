@@ -67,6 +67,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let defaultTransformationFunction = useRef('');
 	let propertiesListRef = useRef(null);
 	let conditionListRef = useRef(null);
+	let internalMatchingPropertyListRef = useRef(null);
+	let externalMatchingPropertyListRef = useRef(null);
 
 	let isImport = c.Role === 'Source';
 
@@ -495,9 +497,15 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setAction(a);
 	};
 
-	const onChangeMatchingProperties = (e) => {
+	const onUpdateMatchingProperties = (e) => {
 		let a = { ...action };
-		a.MatchingProperties[e.currentTarget.dataset.type] = e.currentTarget.value;
+		a.MatchingProperties[e.target.dataset.type] = e.target.value;
+		setAction(a);
+	};
+
+	const onSelectMatchingProperties = (input, value) => {
+		let a = { ...action };
+		a.MatchingProperties[input.dataset.type] = value;
 		setAction(a);
 	};
 
@@ -682,11 +690,13 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		};
 	};
 
-	const getPropertiesItems = () => {
-		if (inputSchema == null) {
+	const getSchemaComboboxItems = (side) => {
+		let isInput = side === 'input';
+		let schema = isInput ? inputSchema : outputSchema;
+		if (schema == null) {
 			return [];
 		}
-		let properties = getDefaultMappings(inputSchema);
+		let properties = getDefaultMappings(schema);
 		let propertiesList = [];
 		for (let k in properties) {
 			let name;
@@ -921,7 +931,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					{mappings}
 					<ComboBoxList
 						ref={propertiesListRef}
-						items={getPropertiesItems()}
+						items={getSchemaComboboxItems('input')}
 						onSelect={onSelectPropertiesListItem}
 					/>
 				</div>
@@ -1071,7 +1081,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						{conditions}
 						<ComboBoxList
 							ref={conditionListRef}
-							items={getPropertiesItems()}
+							items={getSchemaComboboxItems('input')}
 							onSelect={onSelectConditionListItem}
 						/>
 						<SlButton className='addCondition' size='small' variant='neutral' onClick={onAddCondition}>
@@ -1149,18 +1159,31 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						padded={true}
 					>
 						<div className='matchingProperties'>
-							<SlInput
+							<ComboBoxInput
+								comboBoxListRef={internalMatchingPropertyListRef}
+								onInput={onUpdateMatchingProperties}
+								value={action.MatchingProperties.Internal}
 								label='Golden record property'
 								data-type='Internal'
-								value={action.MatchingProperties.Internal}
-								onSlChange={onChangeMatchingProperties}
+								className='inputProperty'
+							></ComboBoxInput>
+							<ComboBoxList
+								ref={internalMatchingPropertyListRef}
+								items={getSchemaComboboxItems('input')}
+								onSelect={onSelectMatchingProperties}
 							/>
 							<div className='equal'>=</div>
-							<SlInput
+							<ComboBoxInput
+								comboBoxListRef={externalMatchingPropertyListRef}
+								onInput={onUpdateMatchingProperties}
 								label={`${c.Name}'s property`}
-								data-type='External'
 								value={action.MatchingProperties.External}
-								onSlChange={onChangeMatchingProperties}
+								data-type='External'
+							></ComboBoxInput>
+							<ComboBoxList
+								ref={externalMatchingPropertyListRef}
+								items={getSchemaComboboxItems('output')}
+								onSelect={onSelectMatchingProperties}
 							/>
 						</div>
 					</Section>
