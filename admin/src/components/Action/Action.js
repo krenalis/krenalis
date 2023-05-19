@@ -1192,9 +1192,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 								value={action.MatchingProperties.Internal}
 								onSlChange={onChangeMatchingProperties}
 							/>
-							<div className='arrow'>
-								<SlIcon name='arrow-left-right' />
-							</div>
+							<div className='equal'>=</div>
 							<SlInput
 								label={`${c.Name}'s property`}
 								data-type='External'
