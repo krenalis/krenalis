@@ -24,11 +24,9 @@ import (
 var icon = "<svg></svg>"
 
 var (
-	users     map[string]properties
+	users     map[string]connector.Properties
 	usersLock sync.Mutex
 )
-
-type properties map[string]any
 
 // loadOnly10Users, when true, makes Dummy to load only 10 users instead of the
 // entire data set.
@@ -50,7 +48,7 @@ func init() {
 		rawUsers = rawUsers[:10]
 	}
 	usersLock.Lock()
-	users = make(map[string]properties, len(rawUsers))
+	users = make(map[string]connector.Properties, len(rawUsers))
 	for _, u := range rawUsers {
 		u.Properties["dummy_id"] = u.ID
 		users[u.ID] = u.Properties
@@ -166,7 +164,7 @@ func (c *connection) SetUser(user connector.User) error {
 	defer usersLock.Unlock()
 	u, ok := users[user.ID]
 	if !ok {
-		u = properties{}
+		u = connector.Properties{}
 	}
 	u["dummy_id"] = user.ID
 	for name, value := range user.Properties {
