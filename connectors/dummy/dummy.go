@@ -84,6 +84,11 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	return &c, nil
 }
 
+// CreateUsers creates a user with the given properties.
+func (c *connection) CreateUser(properties connector.Properties) error {
+	panic("TODO: not implemented")
+}
+
 // EventTypes returns the connection's event types.
 func (c *connection) EventTypes() ([]*connector.EventType, error) {
 	if c.role == connector.SourceRole {
@@ -150,27 +155,28 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 	return nil
 }
 
-func (c *connection) SetUser(user connector.User) error {
+// UpdateUser updates the user with identifier id setting the given properties.
+func (c *connection) UpdateUser(id string, properties connector.Properties) error {
 
 	// Write the user on the log.
-	userDump, err := json.Marshal(user)
+	propsDump, err := json.Marshal(properties)
 	if err != nil {
 		return err
 	}
-	log.Printf("[info] Dummy: SetUser(%v)", string(userDump))
+	log.Printf("[info] Dummy: UpdateUser(%q, %v)", id, string(propsDump))
 
 	// Update the in-memory users.
 	usersLock.Lock()
 	defer usersLock.Unlock()
-	u, ok := users[user.ID]
+	u, ok := users[id]
 	if !ok {
 		u = connector.Properties{}
 	}
-	u["dummy_id"] = user.ID
-	for name, value := range user.Properties {
+	u["dummy_id"] = id
+	for name, value := range properties {
 		u[name] = value
 	}
-	users[user.ID] = u
+	users[id] = u
 
 	return nil
 }

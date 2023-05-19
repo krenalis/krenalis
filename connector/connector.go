@@ -237,12 +237,6 @@ type PropertyOption struct {
 	Value string
 }
 
-type User struct {
-	ID         string
-	Groups     []string
-	Properties Properties
-}
-
 type Group struct {
 	ID         string
 	Properties Properties

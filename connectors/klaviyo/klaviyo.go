@@ -79,6 +79,11 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	return &c, nil
 }
 
+// CreateUsers creates a user with the given properties.
+func (c *connection) CreateUser(properties connector.Properties) error {
+	panic("TODO: not implemented")
+}
+
 // EventTypes returns the connection's event types.
 func (c *connection) EventTypes() ([]*connector.EventType, error) {
 	if c.role == connector.SourceRole {
@@ -146,9 +151,9 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 	}
 }
 
-// SetUser sets the user.
-func (c *connection) SetUser(user connector.User) error {
-	return errors.New("not implemented")
+// UpdateUser updates the user with identifier id setting the given properties.
+func (c *connection) UpdateUser(id string, properties connector.Properties) error {
+	panic("TODO: not implemented")
 }
 
 // ServeUI serves the connector's user interface.

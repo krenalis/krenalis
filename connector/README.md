@@ -19,6 +19,15 @@
 
 ## AppConnection
 
+### CreateUser
+
+* Settings
+* Firehose
+* ClientSecret
+* Resource
+* AccessToken
+* PrivacyRegion
+
 ### EventTypes
 
 * Settings
@@ -92,7 +101,7 @@ If webhooksPer is "Connection":
 * AccessToken
 * PrivacyRegion
 
-### SetUser
+### UpdateUser
 
 * Settings
 * Firehose

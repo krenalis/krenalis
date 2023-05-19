@@ -85,6 +85,11 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	return &c, nil
 }
 
+// CreateUsers creates a user with the given properties.
+func (c *connection) CreateUser(properties connector.Properties) error {
+	panic("TODO: not implemented")
+}
+
 // ReceiveWebhook receives a webhook request and returns its events.
 // It returns the ErrWebhookUnauthorized error is the request was not authorized.
 func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, error) {
@@ -229,20 +234,20 @@ func (c *connection) SettingsUI(values []byte) ([]byte, error) {
 	return json.Marshal(&settings)
 }
 
-// SetUser sets the given user.
-func (c *connection) SetUser(user connector.User) error {
+// UpdateUser updates the user with identifier id setting the given properties.
+func (c *connection) UpdateUser(id string, properties connector.Properties) error {
 
 	var r struct {
 		Operations []batchOperation `json:"operations"`
 	}
 	var basePath = "/lists/" + c.settings.List + "/members/"
-	body, err := json.Marshal(user.Properties)
+	body, err := json.Marshal(properties)
 	if err != nil {
 		return err
 	}
 	r.Operations = append(r.Operations, batchOperation{
 		Method: "PUT",
-		Path:   basePath + user.ID,
+		Path:   basePath + id,
 		Params: map[string]string{"skip_merge_validation": "true"},
 		Body:   string(body),
 	})

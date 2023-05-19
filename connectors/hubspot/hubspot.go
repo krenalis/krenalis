@@ -85,6 +85,11 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	return &c, nil
 }
 
+// CreateUsers creates a user with the given properties.
+func (c *connection) CreateUser(properties connector.Properties) error {
+	panic("TODO: not implemented")
+}
+
 // EventTypes returns the connection's event types.
 func (c *connection) EventTypes() ([]*connector.EventType, error) {
 	return nil, nil
@@ -233,17 +238,17 @@ func (c *connection) SetGroup(group connector.Group) error {
 	return nil
 }
 
-// SetUser sets the user.
+// UpdateUser updates the user with identifier id setting the given properties.
 // It requires the "crm.objects.contacts.write" scope.
-func (c *connection) SetUser(user connector.User) error {
+func (c *connection) UpdateUser(id string, properties connector.Properties) error {
 
 	var body bytes.Buffer
 	body.WriteString(`{"inputs":[`)
-	id, _ := json.Marshal(user.ID)
+	idJSON, _ := json.Marshal(id)
 	body.WriteString(`{"id":`)
-	body.Write(id)
+	body.Write(idJSON)
 	body.WriteString(`,"properties":`)
-	err := json.NewEncoder(&body).Encode(user.Properties)
+	err := json.NewEncoder(&body).Encode(properties)
 	if err != nil {
 		return err
 	}

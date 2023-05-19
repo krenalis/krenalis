@@ -126,15 +126,18 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		userToSet := _connector.User{
-			ID:         id,
-			Properties: props,
-		}
 
-		// Set the user to the app.
-		err = c.(_connector.AppUsersConnection).SetUser(userToSet)
-		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot set user: %s", err)}
+		// Update the user, if it already exists on the app, or create it.
+		if exists {
+			err := c.(_connector.AppUsersConnection).UpdateUser(id, props)
+			if err != nil {
+				return actionExecutionError{fmt.Errorf("cannot update user: %s", err)}
+			}
+		} else {
+			err := c.(_connector.AppUsersConnection).CreateUser(props)
+			if err != nil {
+				return actionExecutionError{fmt.Errorf("cannot create user: %s", err)}
+			}
 		}
 
 		// Handle errors occurred in the firehose.
