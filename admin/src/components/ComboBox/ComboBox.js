@@ -1,7 +1,7 @@
-import { forwardRef, useRef, useEffect } from 'react';
+import { forwardRef, useRef, useEffect, useState, useImperativeHandle } from 'react';
 import './ComboBox.css';
 import { debounce } from '../../utils/debounce';
-import { SlInput, SlMenu, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlInput, SlMenu, SlMenuItem, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
 //
 // const selectItem(value) {
@@ -15,7 +15,31 @@ import { SlInput, SlMenu, SlIcon } from '@shoelace-style/shoelace/dist/react/ind
 // }
 //
 
-const ComboBoxList = forwardRef(({ isOpen, searchTerm, comboBoxItems }, ref) => {
+const ComboBoxList = forwardRef(({ items, onSelect }, ref) => {
+	let [isOpen, setIsOpen] = useState(false);
+	let [searchTerm, setSearchTerm] = useState('');
+	let [currentComboboxInput, setCurrentComboboxInput] = useState(null);
+
+	let comboBoxListMenuRef = useRef(null);
+
+	useImperativeHandle(ref, () => {
+		return {
+			...comboBoxListMenuRef.current,
+			open() {
+				setIsOpen(true);
+			},
+			close() {
+				setIsOpen(false);
+			},
+			updateSearchTerm(term) {
+				setSearchTerm(term);
+			},
+			updateCurrentComboboxInput(input) {
+				setCurrentComboboxInput(input);
+			},
+		};
+	});
+
 	const onMouseDown = (e) => {
 		// prevent ComboBoxInput from losing focus
 		if (document.activeElement.dataset.isComboboxInput) {
@@ -24,7 +48,7 @@ const ComboBoxList = forwardRef(({ isOpen, searchTerm, comboBoxItems }, ref) => 
 	};
 
 	let searchResults = [];
-	for (let item of comboBoxItems) {
+	for (let item of items) {
 		let term = item.searchableTerm;
 		if (
 			term.includes(searchTerm) ||
@@ -49,37 +73,39 @@ const ComboBoxList = forwardRef(({ isOpen, searchTerm, comboBoxItems }, ref) => 
 	return (
 		<SlMenu
 			tabIndex='-1' // menu items must be selected only via "ArrowDown" key. "Tab" press must instead focus the next input.
-			ref={ref}
+			ref={comboBoxListMenuRef}
 			data-is-combobox-list
 			className='comboBoxList'
 			data-isOpen={isOpen && searchResults.length > 0}
 			onMouseDown={onMouseDown}
 		>
-			{searchResults.map((item) => item.content)}
+			{searchResults.map((item) => {
+				return (
+					<SlMenuItem
+						onClick={() => {
+							setSearchTerm(item.searchableTerm);
+							onSelect(currentComboboxInput, item.searchableTerm);
+							setIsOpen(false);
+						}}
+					>
+						{item.content}
+					</SlMenuItem>
+				);
+			})}
 		</SlMenu>
 	);
 });
 
-const ComboBoxInput = ({
-	comboBoxListRef,
-	onInput,
-	openComboBoxList,
-	closeComboBoxList,
-	setFocused,
-	children,
-	error,
-	disabled,
-	...delegated
-}) => {
+const ComboBoxInput = ({ comboBoxListRef, onInput: onInputProp, children, error, disabled, ...delegated }) => {
 	const onKeyUpRef = useRef(null);
-	const previousListSibling = useRef(null);
+	const previousListSiblingRef = useRef(null);
 
 	const onKeyUp = (e) => {
 		if (e.key === 'Escape') {
 			onInputBlur();
 		}
 		if (e.key === 'ArrowDown') {
-			let menuItems = comboBoxListRef.current.querySelectorAll('sl-menu-item');
+			let menuItems = comboBoxListRef.current.renderRoot.host.querySelectorAll('sl-menu-item');
 			if (menuItems.length > 0) {
 				menuItems[0].focus();
 			}
@@ -88,50 +114,51 @@ const ComboBoxInput = ({
 
 	const onInputFocus = (e) => {
 		window.addEventListener('keyup', onKeyUpRef.current);
-		let input = e.currentTarget;
+		let input = e.target;
+		comboBoxListRef.current.updateCurrentComboboxInput(input);
+		comboBoxListRef.current.updateSearchTerm(input.value);
 		setTimeout(() => {
-			input.after(comboBoxListRef.current);
-			openComboBoxList();
-			setFocused(input);
+			input.after(comboBoxListRef.current.renderRoot.host);
+			comboBoxListRef.current.open();
 		});
-	};
-
-	const debouncedOnInput = debounce(onInput, 300);
-
-	const handleInput = (e) => {
-		debouncedOnInput(e);
 	};
 
 	const onInputBlur = (e) => {
 		if (e != null) {
-			onInput(e);
+			onInputProp(e);
 		}
 		window.removeEventListener('keyup', onKeyUpRef.current);
 		setTimeout(() => {
 			let isComboBoxListFocused = document.activeElement.closest('[data-is-combobox-list]');
 			if (!isComboBoxListFocused) {
-				closeComboBoxList();
-				previousListSibling.current.after(comboBoxListRef.current);
-				setFocused(null);
+				comboBoxListRef.current.close();
+				previousListSiblingRef.current.after(comboBoxListRef.current.renderRoot.host);
 			}
 		});
 	};
 
 	const onClick = () => {
 		window.addEventListener('keyup', onKeyUpRef.current);
-		openComboBoxList();
+		comboBoxListRef.current.open();
 	};
+
+	const onInput = (e) => {
+		comboBoxListRef.current.updateSearchTerm(e.target.value);
+		onInputProp(e);
+	};
+
+	const debouncedOnInput = debounce(onInput, 300);
 
 	useEffect(() => {
 		onKeyUpRef.current = onKeyUp;
-		previousListSibling.current = comboBoxListRef.current.previousSibling;
+		previousListSiblingRef.current = comboBoxListRef.current.renderRoot.host.previousSibling;
 	}, []);
 
 	return (
 		<div className='comboBoxInput'>
 			<SlInput
 				data-is-combobox-input
-				onSlInput={disabled ? null : handleInput}
+				onSlInput={disabled ? null : debouncedOnInput}
 				onSlFocus={disabled ? null : onInputFocus}
 				onSlBlur={disabled ? null : onInputBlur}
 				onClick={disabled ? null : onClick}

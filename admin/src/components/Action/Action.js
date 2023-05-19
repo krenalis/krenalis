@@ -21,7 +21,6 @@ import {
 	SlIcon,
 	SlSelect,
 	SlOption,
-	SlMenuItem,
 	SlDialog,
 	SlIconButton,
 	SlAlert,
@@ -49,8 +48,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let [action, setAction] = useState(null);
 	let [actionType, setActionType] = useState(null);
 	let [propertiesMode, setPropertiesMode] = useState('');
-	let [inputSchema, setInputSchema] = useState(null);
 	let [fields, setFields] = useState([]);
+	let [inputSchema, setInputSchema] = useState(null);
 	let [isInputSchemaDialogOpen, setIsInputSchemaDialogOpen] = useState(false);
 	let [outputSchema, setOutputSchema] = useState(null);
 	let [isOutputSchemaDialogOpen, setIsOutputSchemaDialogOpen] = useState(false);
@@ -58,12 +57,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let [filePreviewTable, setFilePreviewTable] = useState(null);
 	let [isAlertOpen, setIsAlertOpen] = useState(false);
 	let [isNameEditable, setIsNameEditable] = useState(false);
-	let [isPropertiesListOpen, setIsPropertiesListOpen] = useState(false);
-	let [isConditionListOpen, setIsConditionListOpen] = useState(false);
-	let [focusedProperty, setFocusedProperty] = useState(null);
-	let [focusedCondition, setFocusedCondition] = useState(null);
-	let [propertySearchTerm, setPropertySearchTerm] = useState('');
-	let [conditionSearchTerm, setConditionSearchTerm] = useState('');
 
 	let { API, showError, showStatus, redirect, connectors } = useContext(AppContext);
 	let { connection: c } = useContext(ConnectionContext);
@@ -232,20 +225,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		fetchData();
 	}, []);
 
-	useEffect(() => {
-		if (focusedProperty == null) {
-			return;
-		}
-		setPropertySearchTerm(focusedProperty.value);
-	}, [focusedProperty]);
-
-	useEffect(() => {
-		if (focusedCondition == null) {
-			return;
-		}
-		setConditionSearchTerm(focusedCondition.value);
-	}, [focusedCondition]);
-
 	const onAddCondition = () => {
 		let a = { ...action };
 		if (a.Filter == null) {
@@ -267,28 +246,23 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 
 	const onUpdateConditionFragment = (e) => {
 		let a = { ...action };
-		let id = e.currentTarget.closest('.condition').dataset.id;
-		let fragment = e.currentTarget.dataset.fragment;
+		let id = e.target.closest('.condition').dataset.id;
+		let fragment = e.target.dataset.fragment;
 		let value;
 		if (fragment === 'Operator') {
-			value = operatorOptions[e.currentTarget.value];
+			value = operatorOptions[e.target.value];
 		} else {
-			value = e.currentTarget.value;
+			value = e.target.value;
 		}
 		a.Filter.Conditions[id][fragment] = value;
-		if (fragment === 'Property') {
-			setConditionSearchTerm(value);
-		}
 		setAction(a);
 	};
 
-	const onSelectConditionListItem = (value) => {
+	const onSelectConditionListItem = (input, value) => {
 		let a = { ...action };
-		let id = focusedCondition.closest('.condition').dataset.id;
+		let id = input.closest('.condition').dataset.id;
 		a.Filter.Conditions[id]['Property'] = value;
 		setAction(a);
-		setConditionSearchTerm(value);
-		setIsConditionListOpen(false);
 	};
 
 	const onSwitchFilterLogical = () => {
@@ -427,16 +401,13 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setAction(a);
 	};
 
-	const onPropertyChange = (e) => {
+	const onUpdateProperty = (e) => {
 		let { name, value } = e.currentTarget || e.target;
 		updateProperty(name, value);
-		setPropertySearchTerm(value);
 	};
 
-	const onSelectPropertiesListItem = (value) => {
-		updateProperty(focusedProperty.name, value);
-		setPropertySearchTerm(value);
-		setIsPropertiesListOpen(false);
+	const onSelectPropertiesListItem = (input, value) => {
+		updateProperty(input.name, value);
 	};
 
 	const onUpdateQuery = async (value) => {
@@ -711,7 +682,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		};
 	};
 
-	const getPropertiesMenuItem = (onSelect) => {
+	const getPropertiesItems = () => {
 		if (inputSchema == null) {
 			return [];
 		}
@@ -730,10 +701,10 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				name = <div className='propertiesItemName'>{k}</div>;
 			}
 			let content = (
-				<SlMenuItem className='propertiesItem' onClick={() => onSelect(k)}>
+				<>
 					{name}
 					<div className='propertiesItemType'>{properties[k].type}</div>
-				</SlMenuItem>
+				</>
 			);
 			propertiesList.push({
 				content: content,
@@ -755,9 +726,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				<ComboBoxInput
 					comboBoxListRef={conditionListRef}
 					onInput={onUpdateConditionFragment}
-					openComboBoxList={() => setIsConditionListOpen(true)}
-					closeComboBoxList={() => setIsConditionListOpen(false)}
-					setFocused={setFocusedCondition}
 					value={condition.Property}
 					className='property'
 					size='small'
@@ -910,10 +878,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					>
 						<ComboBoxInput
 							comboBoxListRef={propertiesListRef}
-							onInput={onPropertyChange}
-							openComboBoxList={() => setIsPropertiesListOpen(true)}
-							closeComboBoxList={() => setIsPropertiesListOpen(false)}
-							setFocused={setFocusedProperty}
+							onInput={onUpdateProperty}
 							value={value}
 							name={k}
 							disabled={isPropertiesSectionDisabled || action.Mapping[k].disabled}
@@ -956,9 +921,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					{mappings}
 					<ComboBoxList
 						ref={propertiesListRef}
-						isOpen={isPropertiesListOpen}
-						searchTerm={propertySearchTerm}
-						comboBoxItems={getPropertiesMenuItem(onSelectPropertiesListItem)}
+						items={getPropertiesItems()}
+						onSelect={onSelectPropertiesListItem}
 					/>
 				</div>
 			);
@@ -1107,9 +1071,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						{conditions}
 						<ComboBoxList
 							ref={conditionListRef}
-							isOpen={isConditionListOpen}
-							searchTerm={conditionSearchTerm}
-							comboBoxItems={getPropertiesMenuItem(onSelectConditionListItem)}
+							items={getPropertiesItems()}
+							onSelect={onSelectConditionListItem}
 						/>
 						<SlButton className='addCondition' size='small' variant='neutral' onClick={onAddCondition}>
 							Add new condition
