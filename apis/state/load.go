@@ -117,6 +117,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					c.TermForGroups = "groups"
 					c.Targets = UsersFlag | GroupsFlag
 					c.Icon = file.Icon
+					c.FileExtension = file.Extension
 					ct = file.ConnectionReflectType()
 					c.HasSheets = ct.Implements(sheetsType)
 				case MobileType:

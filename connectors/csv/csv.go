@@ -33,6 +33,7 @@ func init() {
 		Name:              "CSV",
 		SourceDescription: "import users from a CSV file",
 		Icon:              icon,
+		Extension:         "csv",
 	}, open)
 }
 

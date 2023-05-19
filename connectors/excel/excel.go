@@ -33,6 +33,7 @@ func init() {
 		Name:              "Excel",
 		SourceDescription: "import users from an Excel file",
 		Icon:              icon,
+		Extension:         "xlsx",
 	}, open)
 }
 

@@ -191,15 +191,16 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 		return nil, errors.NotFound("connector %d does not exist", id)
 	}
 	connector := Connector{
-		connector:   c,
-		ID:          c.ID,
-		Name:        c.Name,
-		Type:        ConnectorType(c.Type),
-		HasSheets:   c.HasSheets,
-		HasSettings: c.HasSettings,
-		Icon:        c.Icon,
-		WebhooksPer: WebhooksPer(c.WebhooksPer),
-		OAuth:       c.OAuth != nil,
+		connector:     c,
+		ID:            c.ID,
+		Name:          c.Name,
+		Type:          ConnectorType(c.Type),
+		HasSheets:     c.HasSheets,
+		HasSettings:   c.HasSettings,
+		Icon:          c.Icon,
+		FileExtension: c.FileExtension,
+		WebhooksPer:   WebhooksPer(c.WebhooksPer),
+		OAuth:         c.OAuth != nil,
 	}
 	connector.SourceDescription = c.SourceDescription
 	connector.DestinationDescription = c.DestinationDescription
@@ -212,15 +213,16 @@ func (apis *APIs) Connectors() []*Connector {
 	connectors := make([]*Connector, len(cc))
 	for i, c := range cc {
 		connector := Connector{
-			connector:   c,
-			ID:          c.ID,
-			Name:        c.Name,
-			Type:        ConnectorType(c.Type),
-			HasSheets:   c.HasSheets,
-			HasSettings: c.HasSettings,
-			Icon:        c.Icon,
-			WebhooksPer: WebhooksPer(c.WebhooksPer),
-			OAuth:       c.OAuth != nil,
+			connector:     c,
+			ID:            c.ID,
+			Name:          c.Name,
+			Type:          ConnectorType(c.Type),
+			HasSheets:     c.HasSheets,
+			HasSettings:   c.HasSettings,
+			Icon:          c.Icon,
+			FileExtension: c.FileExtension,
+			WebhooksPer:   WebhooksPer(c.WebhooksPer),
+			OAuth:         c.OAuth != nil,
 		}
 		connector.SourceDescription = c.SourceDescription
 		connector.DestinationDescription = c.DestinationDescription

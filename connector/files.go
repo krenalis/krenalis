@@ -60,6 +60,7 @@ type File struct {
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
 	Icon                   string // icon in SVG format
+	Extension              string // default extension of the file
 
 	open reflect.Value
 	ct   reflect.Type

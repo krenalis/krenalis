@@ -38,6 +38,7 @@ func init() {
 		Name:              "Parquet",
 		SourceDescription: "import users and groups from a parquet file",
 		Icon:              icon,
+		Extension:         "parquet",
 	}, open)
 }
 

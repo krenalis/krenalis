@@ -34,6 +34,7 @@ type Connector struct {
 	HasSheets              bool
 	HasSettings            bool
 	Icon                   string
+	FileExtension          string
 	WebhooksPer            WebhooksPer
 	OAuth                  bool
 }
