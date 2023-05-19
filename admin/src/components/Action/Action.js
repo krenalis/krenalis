@@ -1170,7 +1170,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						)}
 					</Section>
 				)}
-				{propertiesSection}
 				{fields.includes('ExportMode') && (
 					<Section title='Export Mode' description='The mode used to export the data' padded={true}>
 						<SlSelect size='medium' value={action.ExportMode} onSlChange={onChangeExportMode}>
@@ -1241,6 +1240,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						)}
 					</SlDrawer>
 				)}
+				{propertiesSection}
 				{createPortal(
 					<AlertDialog
 						variant='danger'
