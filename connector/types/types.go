@@ -214,8 +214,8 @@ type Type struct {
 	//   - decimalRange value for Decimal
 	//   - string value representing a layout for DateTime, Date and Time
 	//   - *regexp.Regexp value for Text
-	//   - []string with the enum values for Text
-	//   - []Property for Object
+	//   - *[]string with the enum values for Text
+	//   - *[]Property for Object
 	//   - Type of the item for Array
 	//   - Type of the value for Map
 	vl any
@@ -388,7 +388,7 @@ func Object(properties []Property) Type {
 			Flat:        property.Flat,
 		}
 	}
-	return Type{pt: PtObject, vl: ps}
+	return Type{pt: PtObject, vl: &ps}
 }
 
 // Map returns a Map type with value type t.
@@ -433,7 +433,7 @@ func ObjectOf(properties []Property) (Type, error) {
 			Nullable:    property.Nullable,
 		}
 	}
-	return Type{pt: PtObject, vl: ps}, nil
+	return Type{pt: PtObject, vl: &ps}, nil
 }
 
 // IsValidPropertyName reports whether name is a valid property name.
@@ -474,26 +474,26 @@ func (t Type) AsRole(role Role) Type {
 	}
 	start := 0
 	var roleProperties []Property
-	properties := t.vl.([]Property)
-	for i, p := range properties {
+	properties := t.vl.(*[]Property)
+	for i, p := range *properties {
 		if p.Role == BothRole || p.Role == role {
 			continue
 		}
 		if start < i {
-			roleProperties = append(roleProperties, properties[start:i]...)
+			roleProperties = append(roleProperties, (*properties)[start:i]...)
 		}
 		start = i + 1
 	}
 	if start == 0 {
 		return t
 	}
-	if start < len(properties) {
-		roleProperties = append(roleProperties, properties[start:]...)
+	if start < len(*properties) {
+		roleProperties = append(roleProperties, (*properties)[start:]...)
 	}
 	if roleProperties == nil {
 		return Type{}
 	}
-	return Type{pt: PtObject, vl: roleProperties}
+	return Type{pt: PtObject, vl: &roleProperties}
 }
 
 // AsReal returns t but as a real number. As a real number, t does not allow
@@ -883,7 +883,7 @@ func (t Type) WithRegexp(re *regexp.Regexp) Type {
 		panic("cannot set regular expression for a non-Text type")
 	}
 	switch t.vl.(type) {
-	case []string:
+	case *[]string:
 		panic("cannot set regular expression when t has an enum")
 	case *regexp.Regexp:
 		panic("t already has a regular expression")
@@ -907,9 +907,9 @@ func (t Type) Enum() []string {
 	if t.pt != PtText {
 		panic("cannot get enum for a non-Text type")
 	}
-	if vl, ok := t.vl.([]string); ok {
-		enum := make([]string, len(vl))
-		copy(enum, vl)
+	if vl, ok := t.vl.(*[]string); ok {
+		enum := make([]string, len(*vl))
+		copy(enum, *vl)
 		return enum
 	}
 	return nil
@@ -926,7 +926,7 @@ func (t Type) WithEnum(enum []string) Type {
 		panic("enum is empty")
 	}
 	switch t.vl.(type) {
-	case []string:
+	case *[]string:
 		panic("t already has an enum")
 	case *regexp.Regexp:
 		panic("cannot set enum when t has a regular expression")
@@ -935,7 +935,7 @@ func (t Type) WithEnum(enum []string) Type {
 	for i, s := range enum {
 		vl[i] = normalizedUTF8(s)
 	}
-	t.vl = vl
+	t.vl = &vl
 	return t
 }
 
@@ -994,7 +994,7 @@ func (t Type) Unflatten() Type {
 			pp[i].Type = pp[i].Type.Unflatten()
 			pp[i].Flat = false
 		}
-		t.vl = pp
+		t.vl = &pp
 	case PtArray:
 		t.vl = t.ItemType().Unflatten()
 	case PtMap:
@@ -1033,7 +1033,7 @@ func (t Type) Property(name string) (Property, bool) {
 	if t.pt != PtObject {
 		panic("cannot get the properties of a non-Object type")
 	}
-	for _, p := range t.vl.([]Property) {
+	for _, p := range *t.vl.(*[]Property) {
 		if p.Name == name {
 			return p, true
 		}
@@ -1050,7 +1050,7 @@ func (t Type) Properties() []Property {
 	if t.pt != PtObject {
 		panic("cannot get the properties of a non-Object type")
 	}
-	return slices.Clone(t.vl.([]Property))
+	return slices.Clone(*t.vl.(*[]Property))
 }
 
 // PropertiesNames returns the names of the properties of the Object t.
@@ -1059,9 +1059,9 @@ func (t Type) PropertiesNames() []string {
 	if t.pt != PtObject {
 		panic("cannot get the properties names of a non-Object type")
 	}
-	properties := t.vl.([]Property)
-	names := make([]string, len(properties))
-	for i, p := range properties {
+	properties := t.vl.(*[]Property)
+	names := make([]string, len(*properties))
+	for i, p := range *properties {
 		names[i] = p.Name
 	}
 	return names
@@ -1078,6 +1078,9 @@ func (t Type) ValueType() Type {
 
 // EqualTo reports whether t is equals to t2.
 func (t Type) EqualTo(t2 Type) bool {
+	if t == t2 {
+		return true
+	}
 	// Physical type.
 	if t.pt != t2.pt {
 		return false
@@ -1132,19 +1135,19 @@ func (t Type) EqualTo(t2 Type) bool {
 			if vl1.String() != vl2.String() {
 				return false
 			}
-		case []string:
+		case *[]string:
 			if t2.vl == nil {
 				return false
 			}
-			vl2, ok := t2.vl.([]string)
+			vl2, ok := t2.vl.(*[]string)
 			if !ok {
 				return false
 			}
-			if len(vl1) != len(vl2) {
+			if len(*vl1) != len(*vl2) {
 				return false
 			}
-			for i, v1 := range vl1 {
-				if v2 := vl2[i]; v1 != v2 {
+			for i, v1 := range *vl1 {
+				if v2 := (*vl2)[i]; v1 != v2 {
 					return false
 				}
 			}
@@ -1161,13 +1164,13 @@ func (t Type) EqualTo(t2 Type) bool {
 	}
 	// Properties.
 	if t.pt == PtObject {
-		properties1 := t.vl.([]Property)
-		properties2 := t2.vl.([]Property)
-		if len(properties1) != len(properties2) {
+		properties1 := t.vl.(*[]Property)
+		properties2 := t2.vl.(*[]Property)
+		if len(*properties1) != len(*properties2) {
 			return false
 		}
-		for i, p1 := range properties1 {
-			p2 := properties2[i]
+		for i, p1 := range *properties1 {
+			p2 := (*properties2)[i]
 			if p1.Name != p2.Name {
 				return false
 			}

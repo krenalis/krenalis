@@ -116,6 +116,9 @@ func TestTypeSerialization(t *testing.T) {
 // sameType reports whether t1 and t2 are the same type. It compares t2 against
 // t1.
 func sameType(t1, t2 Type) error {
+	if t1 == t2 {
+		return nil
+	}
 	// Physical type.
 	if t1.pt != t2.pt {
 		if !t2.pt.Valid() {
@@ -199,19 +202,22 @@ func sameType(t1, t2 Type) error {
 			if vl1.String() != vl2.String() {
 				return fmt.Errorf("expected regular expression %s, got %s", vl1, vl2)
 			}
-		case []string:
+		case *[]string:
 			if t2.vl == nil {
 				return errors.New("expected enum, got nil")
 			}
-			vl2, ok := t2.vl.([]string)
+			vl2, ok := t2.vl.(*[]string)
 			if !ok {
 				return fmt.Errorf("expected enum, got %T value", t2.vl)
 			}
-			if len(vl1) != len(vl2) {
-				return fmt.Errorf("expected %d enum values, got %d", len(vl1), len(vl2))
+			if vl2 == nil {
+				return fmt.Errorf("expected not nil, got nil")
 			}
-			for i, v1 := range vl1 {
-				if v2 := vl2[i]; v1 != v2 {
+			if len(*vl1) != len(*vl2) {
+				return fmt.Errorf("expected %d enum values, got %d", len(*vl1), len(*vl2))
+			}
+			for i, v1 := range *vl1 {
+				if v2 := (*vl2)[i]; v1 != v2 {
 					return fmt.Errorf("expected enum value %q, got %q", v1, v2)
 				}
 			}
@@ -237,16 +243,19 @@ func sameType(t1, t2 Type) error {
 		if t2.vl == nil {
 			return errors.New("expected properties, got nil")
 		}
-		properties2, ok := t2.vl.([]Property)
+		properties2, ok := t2.vl.(*[]Property)
 		if !ok {
 			return fmt.Errorf("expected properties, got a %T value", t2.vl)
 		}
-		properties1 := t1.vl.([]Property)
-		if len(properties1) != len(properties2) {
-			return fmt.Errorf("expected %d properties, got %d", len(properties1), len(properties2))
+		if properties2 == nil {
+			return fmt.Errorf("expected not nil, got nil")
 		}
-		for i, p1 := range properties1 {
-			p2 := properties2[i]
+		properties1 := t1.vl.(*[]Property)
+		if len(*properties1) != len(*properties2) {
+			return fmt.Errorf("expected %d properties, got %d", len(*properties1), len(*properties2))
+		}
+		for i, p1 := range *properties1 {
+			p2 := (*properties2)[i]
 			if p1.Name != p2.Name {
 				return fmt.Errorf("expected property name %q, got %q", p1.Name, p2.Name)
 			}
