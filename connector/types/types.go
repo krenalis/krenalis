@@ -472,23 +472,23 @@ func (t Type) AsRole(role Role) Type {
 	if role == BothRole {
 		return t
 	}
-	start := 0
+	last := 0
 	var roleProperties []Property
 	properties := t.vl.(*[]Property)
 	for i, p := range *properties {
 		if p.Role == BothRole || p.Role == role {
 			continue
 		}
-		if start < i {
-			roleProperties = append(roleProperties, (*properties)[start:i]...)
+		if last < i {
+			roleProperties = append(roleProperties, (*properties)[last:i]...)
 		}
-		start = i + 1
+		last = i + 1
 	}
-	if start == 0 {
+	if last == 0 {
 		return t
 	}
-	if start < len(*properties) {
-		roleProperties = append(roleProperties, (*properties)[start:]...)
+	if last < len(*properties) {
+		roleProperties = append(roleProperties, (*properties)[last:]...)
 	}
 	if roleProperties == nil {
 		return Type{}
