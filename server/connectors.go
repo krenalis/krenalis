@@ -16,6 +16,7 @@ import (
 	_ "chichi/connectors/googleanalytics4"
 	_ "chichi/connectors/http"
 	_ "chichi/connectors/hubspot"
+	_ "chichi/connectors/json"
 	_ "chichi/connectors/kafka"
 	_ "chichi/connectors/klaviyo"
 	_ "chichi/connectors/mailchimp"

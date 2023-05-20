@@ -43,7 +43,8 @@ INSERT INTO connectors (name, type, oauth_client_id, oauth_client_secret) VALUES
     ('Klaviyo', 'App', '', ''),
     ('Google Analytics 4', 'App', '', ''),
     ('Filesystem', 'Storage', '', ''),
-    ('ClickHouse', 'Database', '', '');
+    ('ClickHouse', 'Database', '', ''),
+    ('JSON', 'File', '', '');
 
 CREATE TYPE warehouse_type AS ENUM ('BigQuery', 'ClickHouse', 'PostgreSQL', 'Redshift', 'Snowflake');
 CREATE TYPE privacy_region AS ENUM ('', 'Europe');

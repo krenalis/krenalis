@@ -13,6 +13,7 @@ replace (
 	chichi/connectors/googleanalytics4 => ./connectors/googleanalytics4
 	chichi/connectors/http => ./connectors/http
 	chichi/connectors/hubspot => ./connectors/hubspot
+	chichi/connectors/json => ./connectors/json
 	chichi/connectors/kafka => ./connectors/kafka
 	chichi/connectors/klaviyo => ./connectors/klaviyo
 	chichi/connectors/mailchimp => ./connectors/mailchimp
@@ -36,6 +37,7 @@ require (
 	chichi/connectors/googleanalytics4 v0.0.0-00010101000000-000000000000
 	chichi/connectors/http v0.0.0-00010101000000-000000000000
 	chichi/connectors/hubspot v0.0.0-00010101000000-000000000000
+	chichi/connectors/json v0.0.0-00010101000000-000000000000
 	chichi/connectors/kafka v0.0.0-00010101000000-000000000000
 	chichi/connectors/klaviyo v0.0.0-00010101000000-000000000000
 	chichi/connectors/mailchimp v0.0.0-00010101000000-000000000000
