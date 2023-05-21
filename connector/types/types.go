@@ -70,7 +70,8 @@ const (
 type PhysicalType int8
 
 const (
-	PtBoolean PhysicalType = 1 + iota
+	PtInvalid PhysicalType = iota
+	PtBoolean
 	PtInt
 	PtInt8
 	PtInt16
@@ -525,7 +526,7 @@ func (t Type) IsReal() bool {
 
 // Valid indicates if t is valid.
 func (t Type) Valid() bool {
-	return t.pt != 0
+	return t.pt != PtInvalid
 }
 
 // String returns a string representation of t.
@@ -556,6 +557,7 @@ func (t Type) String() string {
 }
 
 // PhysicalType returns the physical type of t.
+// Returns PtInvalid if t is not valid.
 func (t Type) PhysicalType() PhysicalType {
 	return t.pt
 }
