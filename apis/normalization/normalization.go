@@ -252,9 +252,6 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 		case json.RawMessage:
 			v = src
 			valid = json.Valid(v)
-		case string:
-			v = json.RawMessage(src)
-			valid = json.Valid(v)
 		default:
 			var err error
 			var b bytes.Buffer

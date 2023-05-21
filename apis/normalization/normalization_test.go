@@ -98,7 +98,7 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 		{types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000"},
 		// JSON.
 		{types.JSON(), json.RawMessage(`{"a":5}`), json.RawMessage(`{"a":5}`)},
-		{types.JSON(), `{"a":5}`, json.RawMessage(`{"a":5}`)},
+		{types.JSON(), `{"a":5}`, json.RawMessage(`"{\"a\":5}"`)},
 		{types.JSON(), map[string]any{"a": 5}, json.RawMessage(`{"a":5}`)},
 		// Inet.
 		{types.Inet(), "127.0.0.1", "127.0.0.1"},
