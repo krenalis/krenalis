@@ -551,10 +551,22 @@ func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, s
 		}
 	case types.PtJSON:
 		var v json.RawMessage
-		if s, ok := src.([]byte); ok {
-			v = s
+		switch src := src.(type) {
+		case []byte:
+			v = src
+			valid = json.Valid(v)
+		default:
+			var err error
+			var b bytes.Buffer
+			enc := json.NewEncoder(&b)
+			enc.SetEscapeHTML(false)
+			err = enc.Encode(src)
+			valid = err == nil
+			if valid {
+				v = b.Bytes()
+				v = v[:len(v)-1]
+			}
 		}
-		valid = json.Valid(v)
 		if valid {
 			if l, ok := typ.CharLen(); ok && utf8.RuneCount(v) > l {
 				return nil, fmt.Errorf("database returned a value of %q for property %s, which is longer than %d characters",

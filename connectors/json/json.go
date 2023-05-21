@@ -15,6 +15,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 
 	"chichi/connector"
@@ -66,6 +67,89 @@ func (c *connection) ContentType() string {
 
 // Read reads the records from r and writes them to records.
 func (c *connection) Read(r io.Reader, _ string, records connector.RecordWriter) error {
+
+	var err error
+	var tok json.Token
+
+	dec := json.NewDecoder(r)
+
+	// Read "[{".
+	for {
+		tok, err = dec.Token()
+		if err != nil {
+			break
+		}
+		if tok == json.Delim('[') {
+			tok, err = dec.Token()
+			if err != nil || tok == json.Delim('{') {
+				break
+			}
+		}
+	}
+	if err != nil {
+		if err == io.EOF {
+			return nil
+		}
+		return err
+	}
+
+	// Read the records.
+	columns := make([]types.Property, 0, 10)
+	record := map[string]any{}
+Records:
+	for {
+		tok, err = dec.Token()
+		if err != nil {
+			break
+		}
+		switch tok := tok.(type) {
+		case string:
+			var name = tok
+			var value any
+			err = dec.Decode(&value)
+			if err != nil {
+				break Records
+			}
+			record[name] = value
+			if columns != nil {
+				columns = append(columns, types.Property{
+					Name:     name,
+					Type:     types.JSON(),
+					Nullable: true,
+				})
+			}
+		case json.Delim:
+			switch tok {
+			case '}':
+				if columns != nil {
+					err = records.Columns(columns)
+					if err != nil {
+						return err
+					}
+					columns = nil
+				}
+				err = records.RecordMap(record)
+				if err != nil {
+					return err
+				}
+			case '{':
+				for k := range record {
+					delete(record, k)
+				}
+			case ']':
+				break Records
+			}
+		default:
+			panic("unreachable code")
+		}
+	}
+	for err == nil {
+		_, err = dec.Token()
+	}
+	if err != nil && err != io.EOF {
+		return fmt.Errorf("file contains invalid JSON: %s", err)
+	}
+
 	return nil
 }
 
@@ -97,9 +181,9 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 	form := &ui.Form{
 		Fields: []ui.Component{
-			&ui.Switch{Name: "indent", Label: "Indent the generated output"},
-			&ui.Switch{Name: "generateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode"},
-			&ui.Switch{Name: "allowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values"},
+			&ui.Switch{Name: "indent", Label: "Indent the generated output", Role: ui.DestinationRole},
+			&ui.Switch{Name: "generateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: ui.DestinationRole},
+			&ui.Switch{Name: "allowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: ui.DestinationRole},
 		},
 		Values: values,
 		Actions: []ui.Action{
