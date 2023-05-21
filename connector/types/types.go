@@ -1083,124 +1083,45 @@ func (t Type) EqualTo(t2 Type) bool {
 	if t == t2 {
 		return true
 	}
-	// Physical type.
-	if t.pt != t2.pt {
+	vl1 := t.vl
+	t.vl = nil
+	vl2 := t2.vl
+	t2.vl = nil
+	if t != t2 {
 		return false
 	}
-	// Minimum and maximum.
-	switch t.pt {
-	case PtInt, PtInt8, PtInt16, PtInt24:
-		if t.p != t2.p || t.s != t2.s {
+	switch vl1 := vl1.(type) {
+	case Type:
+		return vl1.EqualTo(vl2.(Type))
+	case *[]Property:
+		vl2 := vl2.(*[]Property)
+		if len(*vl1) != len(*vl2) {
 			return false
 		}
-	case PtUInt, PtUInt8, PtUInt16, PtUInt24:
-		if t.p != t2.p || t.s != t2.s {
-			return false
-		}
-	case PtInt64, PtUInt64, PtFloat, PtFloat32:
-		if t.vl != t2.vl {
-			return false
-		}
-	case PtDecimal:
-		if vl1, ok := t.vl.(decimalRange); ok {
-			vl2, ok := t2.vl.(decimalRange)
-			if !ok || !vl1.min.Equal(vl2.min) || !vl1.max.Equal(vl2.max) {
+		for i, p1 := range *vl1 {
+			p2 := (*vl2)[i]
+			if p1 == p2 {
+				continue
+			}
+			if p1.Name != p2.Name || p1.Label != p2.Label || p1.Description != p2.Description {
 				return false
 			}
-		} else if t2.vl != nil {
-			return false
-		}
-	}
-	// Precision, byte length or items minimum length.
-	if t.p != t2.p {
-		return false
-	}
-	// Scale, character length or items maximum length.
-	if t.s != t2.s {
-		return false
-	}
-	// Regular expression or values.
-	if t.pt == PtText {
-		switch vl1 := t.vl.(type) {
-		case nil:
-			if t2.vl != nil {
-				return false
-			}
-		case *regexp.Regexp:
-			if t2.vl == nil {
-				return false
-			}
-			vl2, ok := t2.vl.(*regexp.Regexp)
-			if !ok {
-				return false
-			}
-			if vl1.String() != vl2.String() {
-				return false
-			}
-		case *[]string:
-			if t2.vl == nil {
-				return false
-			}
-			vl2, ok := t2.vl.(*[]string)
-			if !ok {
-				return false
-			}
-			if len(*vl1) != len(*vl2) {
-				return false
-			}
-			for i, v1 := range *vl1 {
-				if v2 := (*vl2)[i]; v1 != v2 {
-					return false
-				}
-			}
-		}
-	}
-	// Unique items and item type.
-	if t.pt == PtArray {
-		if t.unique != t2.unique {
-			return false
-		}
-		if !t.vl.(Type).EqualTo(t2.vl.(Type)) {
-			return false
-		}
-	}
-	// Properties.
-	if t.pt == PtObject {
-		properties1 := t.vl.(*[]Property)
-		properties2 := t2.vl.(*[]Property)
-		if len(*properties1) != len(*properties2) {
-			return false
-		}
-		for i, p1 := range *properties1 {
-			p2 := (*properties2)[i]
-			if p1.Name != p2.Name {
-				return false
-			}
-			if p1.Label != p2.Label {
-				return false
-			}
-			if p1.Description != p2.Description {
+			if p1.Required != p2.Required || p1.Nullable != p2.Nullable || p1.Flat != p2.Flat {
 				return false
 			}
 			if !p1.Type.EqualTo(p2.Type) {
 				return false
 			}
-			if p1.Required != p2.Required {
-				return false
-			}
-			if p1.Nullable != p2.Nullable {
-				return false
-			}
-			if p1.Flat != p2.Flat {
-				return false
-			}
 		}
+		return true
+	case *[]string:
+		vl2, ok := vl2.(*[]string)
+		return ok && slices.Equal(*vl1, *vl2)
+	case *regexp.Regexp:
+		vl2, ok := vl2.(*regexp.Regexp)
+		return ok && vl1.String() == vl2.String()
 	}
-	// Value type.
-	if t.pt == PtMap && !t.vl.(Type).EqualTo(t2.vl.(Type)) {
-		return false
-	}
-	return true
+	panic("unreachable code")
 }
 
 // normalizedUTF8 returns s as a normalized UTF-8 encoded string.
