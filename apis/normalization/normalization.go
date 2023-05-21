@@ -560,7 +560,7 @@ func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, s
 		valid = json.Valid(v)
 		if valid {
 			if l, ok := typ.CharLen(); ok && utf8.RuneCount(v) > l {
-				return nil, fmt.Errorf("app returned a value of %q for property %s, which is longer than %d characters",
+				return nil, fmt.Errorf("database returned a value of %q for property %s, which is longer than %d characters",
 					abbreviate(string(v), 20), name, l)
 			}
 			value = v
