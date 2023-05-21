@@ -56,9 +56,9 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 	case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
 		return strconv.AppendUint(b, uint64(v.(uint)), 10)
 	case types.PtFloat, types.PtFloat32:
-		bitSize := 64
+		bits := 64
 		if pt == types.PtFloat32 {
-			bitSize = 32
+			bits = 32
 		}
 		v := v.(float64)
 		switch {
@@ -72,7 +72,7 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 				return append(b, "Infinity"...)
 			}
 			v = math.MaxFloat64
-			if bitSize == 32 {
+			if bits == 32 {
 				v = math.MaxFloat32
 			}
 		case math.IsInf(v, -1):
@@ -80,11 +80,11 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 				return append(b, "-Infinity"...)
 			}
 			v = -math.MaxFloat64
-			if bitSize == 32 {
+			if bits == 32 {
 				v = -math.MaxFloat32
 			}
 		}
-		return strconv.AppendFloat(b, v, 'f', -1, bitSize)
+		return enc.appendFloat(b, v, bits)
 	case types.PtDecimal:
 		return append(b, v.(decimal.Decimal).String()...)
 	case types.PtDateTime:
@@ -303,6 +303,37 @@ func (enc *encoder) appendIndentation(b []byte) []byte {
 	b = append(b, '\n')
 	for i := 0; i < enc.depth; i++ {
 		b = append(b, '\t')
+	}
+	return b
+}
+
+// appendFloat appends the JSON representation of f to b and returns the
+// extended buffer.
+//
+// The code of this method is taken form the floatEncoder.encode method of the
+// json package in the Go standard library, and it is copyright The Go Authors.
+func (enc *encoder) appendFloat(b []byte, f float64, bits int) []byte {
+	// Convert as if by ES6 number to string conversion.
+	// This matches most other JSON generators.
+	// See golang.org/issue/6384 and golang.org/issue/14135.
+	// Like fmt %g, but the exponent cutoffs are different
+	// and exponents themselves are not padded to two digits.
+	abs := math.Abs(f)
+	fmt := byte('f')
+	// Note: Must use float32 comparisons for underlying float32 value to get precise cutoffs right.
+	if abs != 0 {
+		if bits == 64 && (abs < 1e-6 || abs >= 1e21) || bits == 32 && (float32(abs) < 1e-6 || float32(abs) >= 1e21) {
+			fmt = 'e'
+		}
+	}
+	b = strconv.AppendFloat(b, f, fmt, -1, int(bits))
+	if fmt == 'e' {
+		// clean up e-09 to e-9
+		n := len(b)
+		if n >= 4 && b[n-4] == 'e' && b[n-3] == '-' && b[n-2] == '0' {
+			b[n-2] = b[n-1]
+			b = b[:n-1]
+		}
 	}
 	return b
 }
