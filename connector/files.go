@@ -34,26 +34,6 @@ func (err SameColumnNameError) Error() string {
 	return fmt.Sprintf("there are two columns with the same name: %s", err.Name)
 }
 
-// A MissingIdentityColumnError error is returned by the FileConnector.Read method when
-// the identity column is missing.
-type MissingIdentityColumnError struct {
-	Column string
-}
-
-func (err MissingIdentityColumnError) Error() string {
-	return fmt.Sprintf("identity column is missing: %s", err.Column)
-}
-
-// A MissingTimestampColumnError error is returned by the FileConnector.Read method when
-// the timestamp column is missing.
-type MissingTimestampColumnError struct {
-	Column string
-}
-
-func (err MissingTimestampColumnError) Error() string {
-	return fmt.Sprintf("timestamp column is missing: %s", err.Column)
-}
-
 // File represents a file connector.
 type File struct {
 	Name                   string
