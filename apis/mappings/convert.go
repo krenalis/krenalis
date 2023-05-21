@@ -292,19 +292,21 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			return u, nil
 		}
 	case types.PtJSON:
-		if pt1 == types.PtText {
-			s := json.RawMessage(v.(string))
+		var s json.RawMessage
+		switch pt1 {
+		case types.PtJSON:
+			s = v.(json.RawMessage)
+		case types.PtText:
+			s = json.RawMessage(v.(string))
 			if !json.Valid(s) {
 				return nil, errInvalidConversion
 			}
-			if l, ok := t2.CharLen(); ok && utf8.RuneCount(s) > l {
+		default:
+			var err error
+			s, err = json.Marshal(v)
+			if err != nil {
 				return nil, errInvalidConversion
 			}
-			return s, nil
-		}
-		s, err := json.Marshal(v)
-		if err != nil {
-			return nil, errInvalidConversion
 		}
 		if l, ok := t2.CharLen(); ok && utf8.RuneCount(s) > l {
 			return nil, errInvalidConversion
