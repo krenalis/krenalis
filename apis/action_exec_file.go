@@ -23,6 +23,22 @@ import (
 	"chichi/connector/types"
 )
 
+var (
+	errNoColumns                = errors.New("file does not contain columns")
+	errEmptyColumnName          = errors.New("file contains an empty column name")
+	errInvalidEncodedColumnName = errors.New("file contains a column name with an invalid UTF-8 encoding")
+)
+
+// A sameColumnNameError error is returned by the recordWriter.Columns method
+// when two columns have the same name.
+type sameColumnNameError struct {
+	name string
+}
+
+func (err sameColumnNameError) Error() string {
+	return fmt.Sprintf("file contains columns with the same name: %s", err.name)
+}
+
 // importFromFile imports the users from a file.
 func (this *Action) importFromFile() error {
 
@@ -217,19 +233,19 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		return fmt.Errorf("connector %d has called Columns twice", rw.connector)
 	}
 	if len(columns) == 0 {
-		return _connector.ErrNoColumns
+		return errNoColumns
 	}
 	labelToName := make(map[string]string, len(columns))
 	hasName := make(map[string]struct{}, len(columns))
 	for _, c := range columns {
 		if c.Name == "" {
-			return _connector.ErrEmptyColumnName
+			return errEmptyColumnName
 		}
 		if !utf8.ValidString(c.Name) {
-			return _connector.ErrInvalidEncodedColumnName
+			return errInvalidEncodedColumnName
 		}
 		if _, ok := hasName[c.Name]; ok {
-			return _connector.SameColumnNameError{Name: c.Name}
+			return sameColumnNameError{c.Name}
 		}
 		hasName[c.Name] = struct{}{}
 		if _, ok := labelToName[c.Label]; !ok {

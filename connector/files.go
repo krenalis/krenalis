@@ -9,30 +9,12 @@ package connector
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"io"
 	"reflect"
 	"time"
 
 	"chichi/connector/types"
 )
-
-var (
-	ErrNoColumns                = errors.New("file does not contain columns")
-	ErrEmptyColumnName          = errors.New("file contains an empty column name")
-	ErrInvalidEncodedColumnName = errors.New("file contains a column name with an invalid UTF-8 encoding")
-)
-
-// A SameColumnNameError error is returned by the FileConnector.Read method when
-// two columns have the same name.
-type SameColumnNameError struct {
-	Name string
-}
-
-func (err SameColumnNameError) Error() string {
-	return fmt.Sprintf("there are two columns with the same name: %s", err.Name)
-}
 
 // File represents a file connector.
 type File struct {
