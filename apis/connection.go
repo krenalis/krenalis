@@ -924,6 +924,9 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 	if err != nil && err != errRecordStop {
 		return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
+	if rw.columns == nil {
+		return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", errNoColumns)
+	}
 	schema := types.Object(rw.columns)
 
 	return rw.records, schema, nil

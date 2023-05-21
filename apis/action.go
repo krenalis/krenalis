@@ -1208,6 +1208,9 @@ func (this *Connection) fetchFileSchema(path, sheet string) (types.Type, error) 
 	if err != nil && err != errRecordStop {
 		return types.Type{}, err
 	}
+	if rw.columns == nil {
+		return types.Type{}, errNoColumns
+	}
 
 	return types.ObjectOf(rw.columns)
 }
