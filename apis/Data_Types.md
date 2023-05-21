@@ -35,4 +35,4 @@
 
 [^3]: the `JSON` type in ClickHouse is experimental.
 
-[^4]: `json.RawMessage` values represent JSON code, any other value will be marshalled into JSON. `nil` represents a `nil` value and not the JSON `null`.
+[^4]: `json.RawMessage` values represent JSON code. `bool`, `string`, `json.Number`, `map[string]any` and `[]any` values are marshalled into JSON. `nil` represents a `nil` value, not the JSON `null`.
