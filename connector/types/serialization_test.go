@@ -265,6 +265,9 @@ func sameType(t1, t2 Type) error {
 			if p1.Description != p2.Description {
 				return fmt.Errorf("expected property description %q, got %q", p1.Description, p2.Description)
 			}
+			if p1.Role != p2.Role {
+				return fmt.Errorf("expected property key 'role' with value %s, got %s", p1.Role, p2.Role)
+			}
 			if err := sameType(p1.Type, p2.Type); err != nil {
 				return err
 			}
