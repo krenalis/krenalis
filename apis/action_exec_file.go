@@ -13,7 +13,6 @@ import (
 	"io"
 	"math"
 	"time"
-	"unicode/utf8"
 
 	"chichi/apis/errors"
 	"chichi/apis/mappings"
@@ -24,10 +23,19 @@ import (
 )
 
 var (
-	errNoColumns                = errors.New("file does not contain columns")
-	errEmptyColumnName          = errors.New("file contains an empty column name")
-	errInvalidEncodedColumnName = errors.New("file contains a column name with an invalid UTF-8 encoding")
+	errNoColumns       = errors.New("file does not contain columns")
+	errEmptyColumnName = errors.New("file contains an empty column name")
 )
+
+// An invalidColumnNameError error is returned by the recordWriter.Columns
+// method when a column name is not valid.
+type invalidColumnNameError struct {
+	name string
+}
+
+func (err invalidColumnNameError) Error() string {
+	return fmt.Sprintf("file contains an invalid column name: %q", err.name)
+}
 
 // A sameColumnNameError error is returned by the recordWriter.Columns method
 // when two columns have the same name.
@@ -241,8 +249,8 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		if c.Name == "" {
 			return errEmptyColumnName
 		}
-		if !utf8.ValidString(c.Name) {
-			return errInvalidEncodedColumnName
+		if !types.IsValidPropertyName(c.Name) {
+			return invalidColumnNameError{c.Name}
 		}
 		if _, ok := hasName[c.Name]; ok {
 			return sameColumnNameError{c.Name}
