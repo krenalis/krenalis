@@ -435,14 +435,14 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			if err != nil {
 				return nil, errInvalidConversion
 			}
-			return u, nil
+			return u.String(), nil
 		case types.PtJSON:
 			if v := v.(json.RawMessage); v[0] == '"' {
 				u, err := uuid.ParseBytes(v[1 : len(v)-2])
 				if err != nil {
 					return nil, errInvalidConversion
 				}
-				return u, nil
+				return u.String(), nil
 			}
 		case types.PtInvalid:
 			v, ok := v.(string)
@@ -453,7 +453,7 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			if err != nil {
 				return nil, errInvalidConversion
 			}
-			return u, nil
+			return u.String(), nil
 		}
 	case types.PtJSON:
 		var s json.RawMessage
