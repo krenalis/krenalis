@@ -1,9 +1,9 @@
 
 CREATE TABLE destinations_users (
-    connection Int32,
+    action Int32,
     user String,
     property String
 )
 ENGINE = MergeTree()
-PRIMARY KEY (connection, user)
-ORDER BY (connection, user);
+PRIMARY KEY (action, user)
+ORDER BY (action, user);

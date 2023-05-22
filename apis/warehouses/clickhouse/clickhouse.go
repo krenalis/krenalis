@@ -99,10 +99,10 @@ func (warehouse *ClickHouse) Close() error {
 	return err
 }
 
-// DestinationUser returns the external ID of the destination user for the
-// connection that matches with the corresponding property. If it cannot be
-// found, then the empty string and false are returned.
-func (warehouse *ClickHouse) DestinationUser(ctx context.Context, connection int, property string) (string, bool, error) {
+// DestinationUser returns the external ID of the destination user of the action
+// that matches with the corresponding property. If it cannot be found, then the
+// empty string and false are returned.
+func (warehouse *ClickHouse) DestinationUser(ctx context.Context, action int, property string) (string, bool, error) {
 	panic("TODO: not implemented")
 }
 
@@ -176,8 +176,8 @@ func (warehouse *ClickHouse) PrepareBatch(ctx context.Context, table string, col
 	return batch, nil
 }
 
-// SetDestinationUser sets the destination user in the connection with the given
-// external user ID and external property.
+// SetDestinationUser sets the destination user relative to the action, with the
+// given external user ID and external property.
 func (warehouse *ClickHouse) SetDestinationUser(ctx context.Context, connection int, externalUserID, externalProperty string) error {
 	panic("TODO: not implemented")
 }

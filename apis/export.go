@@ -312,7 +312,7 @@ func (this *Action) resolveExternalIdentity(user userToExport) (string, bool, er
 	}
 	ctx := context.Background()
 	wh := this.action.Connection().Workspace().Warehouse
-	externalID, ok, err := wh.DestinationUser(ctx, this.action.Connection().ID, string(p))
+	externalID, ok, err := wh.DestinationUser(ctx, this.action.ID, string(p))
 	if err != nil {
 		return "", false, err
 	}

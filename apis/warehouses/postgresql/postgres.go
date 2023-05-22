@@ -111,15 +111,15 @@ func (warehouse *PostgreSQL) Close() error {
 	return err
 }
 
-// DestinationUser returns the external ID of the destination user for the
-// connection that matches with the corresponding property. If it cannot be
-// found, then the empty string and false are returned.
-func (warehouse *PostgreSQL) DestinationUser(ctx context.Context, connection int, property string) (string, bool, error) {
+// DestinationUser returns the external ID of the destination user of the action
+// that matches with the corresponding property. If it cannot be found, then the
+// empty string and false are returned.
+func (warehouse *PostgreSQL) DestinationUser(ctx context.Context, action int, property string) (string, bool, error) {
 	db, err := warehouse.connection()
 	if err != nil {
 		return "", false, err
 	}
-	rows, err := db.Query(ctx, `SELECT "user" FROM destinations_users WHERE connection = $1 AND property = $2`, connection, property)
+	rows, err := db.Query(ctx, `SELECT "user" FROM destinations_users WHERE action = $1 AND property = $2`, action, property)
 	if err != nil {
 		return "", false, err
 	}
@@ -242,17 +242,17 @@ func (warehouse *PostgreSQL) QueryRow(ctx context.Context, query string, args ..
 	return warehouses.Row{Row: row}
 }
 
-// SetDestinationUser sets the destination user in the connection with the given
-// external user ID and external property.
-func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, connection int, externalUserID, externalProperty string) error {
+// SetDestinationUser sets the destination user relative to the action, with the
+// given external user ID and external property.
+func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
 	db, err := warehouse.connection()
 	if err != nil {
 		return err
 	}
-	_, err = db.Exec(ctx, "INSERT INTO destinations_users (connection, \"user\", property)\n"+
+	_, err = db.Exec(ctx, "INSERT INTO destinations_users (action, \"user\", property)\n"+
 		"VALUES ($1, $2, $3)\n"+
-		"ON CONFLICT (connection, \"user\") DO UPDATE SET property = $3",
-		connection, externalUserID, externalProperty)
+		"ON CONFLICT (action, \"user\") DO UPDATE SET property = $3",
+		action, externalUserID, externalProperty)
 	return err
 }
 

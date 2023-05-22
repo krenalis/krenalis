@@ -163,7 +163,7 @@ func (fh *firehose) SetUser(id string, user map[string]any, timestamp time.Time,
 			fh.setError(err)
 			return
 		}
-		err = ws.Warehouse.SetDestinationUser(fh.ctx, fh.connection.ID, id, string(p))
+		err = ws.Warehouse.SetDestinationUser(fh.ctx, fh.action.action.ID, id, string(p))
 		if err != nil {
 			fh.setError(err)
 			return
