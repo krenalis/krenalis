@@ -4,6 +4,7 @@ import toJSDateString from '../../utils/toJSDateString';
 const GridCell = ({ cell, className }) => {
 	let value, date;
 	switch (cell.type) {
+		case 'JSON':
 		case 'Object':
 			value = JSON.stringify(cell.value);
 			break;
