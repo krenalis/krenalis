@@ -574,7 +574,7 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 		switch pt1 {
 		case types.PtArray:
 			s := v.([]any)
-			if len(s) < t2.MinItems() {
+			if len(s) < t2.MinItems() || len(s) > t2.MaxItems() {
 				return nil, errInvalidConversion
 			}
 			it1 := t1.ItemType()
@@ -604,7 +604,7 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			if !ok {
 				return nil, errInvalidConversion
 			}
-			if len(v) < t2.MinItems() {
+			if len(v) < t2.MinItems() || len(v) > t2.MaxItems() {
 				return nil, errInvalidConversion
 			}
 			it2 := t2.ItemType()
