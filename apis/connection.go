@@ -300,7 +300,7 @@ func (this *Connection) ActionSchemas(target ActionTarget, eventType string) (*A
 				return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 			}
 			if this.connection.Role == state.SourceRole {
-				outputSchema := usersSchemaToConnectionSchema(grSchema.Unflatten(), state.AppType)
+				outputSchema := sourceMappingSchema(*grSchema, state.AppType)
 				return &ActionSchemas{In: appSchema, Out: outputSchema}, nil
 			} else {
 				return &ActionSchemas{In: grSchema.Unflatten(), Out: appSchema}, nil
@@ -356,7 +356,7 @@ func (this *Connection) ActionSchemas(target ActionTarget, eventType string) (*A
 			if !ok {
 				return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 			}
-			out := usersSchemaToConnectionSchema(users.Unflatten(), state.DatabaseType)
+			out := sourceMappingSchema(*users, state.DatabaseType)
 			return &ActionSchemas{Out: out}, nil
 		case GroupsTarget:
 			groups, ok := this.connection.Workspace().Schemas["groups"]
@@ -377,7 +377,7 @@ func (this *Connection) ActionSchemas(target ActionTarget, eventType string) (*A
 			}
 			schemas := &ActionSchemas{}
 			if this.connection.Role == state.SourceRole {
-				schemas.Out = usersSchemaToConnectionSchema(users.Unflatten(), state.FileType)
+				schemas.Out = sourceMappingSchema(*users, state.FileType)
 			} else {
 				schemas.In = users.Unflatten()
 			}

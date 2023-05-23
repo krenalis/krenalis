@@ -67,10 +67,9 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	if !ok {
 		return actionExecutionError{errors.New("users schema not loaded")}
 	}
-	inSchema := usersSchemaToConnectionSchema(*usersSchema, state.DatabaseType)
 
 	// Instantiate a new mapping.
-	mapping, err := mappings.New(inSchema, this.action.Schema, this.action.Mapping, this.action.Transformation)
+	mapping, err := mappings.New(*usersSchema, this.action.Schema, this.action.Mapping, this.action.Transformation)
 	if err != nil {
 		return err
 	}

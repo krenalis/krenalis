@@ -860,12 +860,11 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if !ok {
 			return types.Type{}, errors.BadRequest("workspace %d of connection %d does not have users schema", ws.ID, c.ID)
 		}
-		connSchema := usersSchemaToConnectionSchema(*grSchema, c.Connector().Type)
 		if c.Role == state.SourceRole {
 			inSchema = schema
-			outSchema = connSchema
+			outSchema = sourceMappingSchema(*grSchema, c.Connector().Type)
 		} else {
-			inSchema = connSchema
+			inSchema = grSchema.Unflatten()
 			outSchema = schema
 		}
 	case state.GroupsTarget:
@@ -1341,10 +1340,9 @@ func shouldStoreActionSchema(typ state.ConnectorType, role state.ConnectionRole,
 	return true
 }
 
-// usersSchemaToConnectionSchema returns the users schema of a connection
-// corresponding to the users schema of the Golden Record, which is transformed
-// depending on the connection type.
-func usersSchemaToConnectionSchema(users types.Type, connTyp state.ConnectorType) types.Type {
+// sourceMappingSchema returns the users schema to use in mappings for source
+// connections.
+func sourceMappingSchema(users types.Type, connTyp state.ConnectorType) types.Type {
 	usersProps := users.Properties()
 	var props []types.Property
 	switch connTyp {
@@ -1354,7 +1352,7 @@ func usersSchemaToConnectionSchema(users types.Type, connTyp state.ConnectorType
 		// cannot be mapped explicitly by the user but are mapped implicitly by
 		// Chichi.
 		props = make([]types.Property, 0, len(usersProps)-2)
-		for _, p := range users.Properties() {
+		for _, p := range users.Unflatten().Properties() {
 			if p.Name == "id" || p.Name == "timestamp" {
 				continue
 			}

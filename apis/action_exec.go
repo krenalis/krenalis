@@ -221,7 +221,7 @@ func (this *Action) newFirehose(ctx context.Context) (*firehose, error) {
 		if !ok {
 			return nil, errors.New("users schema not loaded")
 		}
-		outputSchema := usersSchemaToConnectionSchema(*usersSchema, state.AppType)
+		outputSchema := sourceMappingSchema(*usersSchema, state.AppType)
 		mapping, err := mappings.New(this.action.Schema, outputSchema, this.action.Mapping, this.action.Transformation)
 		if err != nil {
 			return nil, err

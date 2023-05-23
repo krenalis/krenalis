@@ -67,7 +67,7 @@ func (this *Action) importFromDatabase() error {
 	if !ok {
 		return actionExecutionError{errors.New("users schema not loaded")}
 	}
-	outSchema := usersSchemaToConnectionSchema(*usersSchema, state.DatabaseType)
+	outSchema := sourceMappingSchema(*usersSchema, state.DatabaseType)
 
 	mapping, err := mappings.New(inputSchema, outSchema, this.action.Mapping, this.action.Transformation)
 	if err != nil {
