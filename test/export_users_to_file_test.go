@@ -114,7 +114,7 @@ func TestExportUsersToFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	expectedStrings := []string{
-		"id,timestamp,FirstName,LastName,Email,Gender,FoodPreferences,PhoneNumbers,FavouriteMovie",
+		"id,creation_time,timestamp,FirstName,LastName,Email,Gender,FoodPreferences,PhoneNumbers,FavouriteMovie",
 		"Janifer,Sharpin,jsharpin8@example.com,<nil>,map[Drink:<nil> Fruit:<nil>],<nil>,<nil>",
 	}
 	for _, expected := range expectedStrings {

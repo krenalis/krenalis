@@ -5,6 +5,7 @@
 CREATE TABLE users
 (
     `id` Int32,
+    `creation_time` DateTime DEFAULT now(),
     `timestamp` DateTime DEFAULT now(),
     `FirstName` String,
     `LastName` String,

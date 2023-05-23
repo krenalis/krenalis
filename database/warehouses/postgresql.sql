@@ -20,6 +20,7 @@ CREATE TYPE movie AS (
 
 CREATE TABLE users (
     id                      SERIAL,
+    "creation_time"         timestamp NOT NULL DEFAULT now(),
     "timestamp"             timestamp NOT NULL DEFAULT now(),
     "FirstName"             varchar(300),
     "LastName"              varchar(300),

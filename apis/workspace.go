@@ -730,17 +730,19 @@ func (this *Workspace) ReloadSchemas() error {
 			} else if c.Nullable {
 				return errors.Unprocessable(InvalidSchemaTable, "column '%s.id' must not be nullable", table.Name)
 			}
-			// Check the 'timestamp' column.
-			tsIndex := slices.IndexFunc(table.Columns, func(c *warehouses.Column) bool {
-				return c.Name == "timestamp"
-			})
-			if tsIndex == -1 {
-				return errors.Unprocessable(InvalidSchemaTable, "'%s' table has no 'timestamp' column", table.Name)
-			}
-			if c := table.Columns[tsIndex]; c.Type.PhysicalType() != types.PtDateTime {
-				return errors.Unprocessable(InvalidSchemaTable, "column '%s.timestamp' does not have type DateTime", table.Name)
-			} else if c.Nullable {
-				return errors.Unprocessable(InvalidSchemaTable, "column '%s.timestamp' must not be nullable", table.Name)
+			// Check the 'creation_time' and 'timestamp' columns.
+			for _, column := range []string{"creation_time", "timestamp"} {
+				colIndex := slices.IndexFunc(table.Columns, func(c *warehouses.Column) bool {
+					return c.Name == column
+				})
+				if colIndex == -1 {
+					return errors.Unprocessable(InvalidSchemaTable, "'%s' table has no '%s' column", column, table.Name)
+				}
+				if c := table.Columns[colIndex]; c.Type.PhysicalType() != types.PtDateTime {
+					return errors.Unprocessable(InvalidSchemaTable, "column '%s.%s' does not have type DateTime", table.Name, column)
+				} else if c.Nullable {
+					return errors.Unprocessable(InvalidSchemaTable, "column '%s.%s' must not be nullable", table.Name, column)
+				}
 			}
 		}
 		if table.Name == "events" {

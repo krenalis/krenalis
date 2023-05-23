@@ -1348,12 +1348,12 @@ func sourceMappingSchema(users types.Type, connTyp state.ConnectorType) types.Ty
 	switch connTyp {
 	case
 		state.AppType:
-		// Remove the "id" and "timestamp" properties from the schema, which
-		// cannot be mapped explicitly by the user but are mapped implicitly by
-		// Chichi.
 		props = make([]types.Property, 0, len(usersProps)-2)
 		for _, p := range users.Unflatten().Properties() {
-			if p.Name == "id" || p.Name == "timestamp" {
+			// Skip the "id", "creation_time" and "timestamp" properties, which
+			// cannot be mapped explicitly by the user.
+			switch p.Name {
+			case "id", "creation_time", "timestamp":
 				continue
 			}
 			props = append(props, p)
@@ -1361,10 +1361,16 @@ func sourceMappingSchema(users types.Type, connTyp state.ConnectorType) types.Ty
 	case
 		state.DatabaseType,
 		state.FileType:
-		// Replace the "id" property with a required property "id" with type
-		// Text instead of Int.
+
 		props = make([]types.Property, 0, len(usersProps))
 		for _, p := range users.Unflatten().Properties() {
+			// The "creation_time" property cannot be set by the user, while the
+			// "timestamp".
+			if p.Name == "creation_time" {
+				continue
+			}
+			// Replace the "id" property with a required property "id" with type
+			// Text instead of Int.
 			if p.Name == "id" {
 				p = types.Property{Name: "id", Label: "ID", Type: types.Text(), Required: true}
 			}
