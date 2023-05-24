@@ -674,7 +674,7 @@ func (this *Connection) ExecQuery(query string, limit int) ([][]string, types.Ty
 	var err error
 	query, err = compileActionQuery(query, limit)
 	if err != nil {
-		return nil, types.Type{}, err
+		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 	}
 	fh := this.newFirehose(context.Background())
 	connection, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
@@ -693,7 +693,12 @@ func (this *Connection) ExecQuery(query string, limit int) ([][]string, types.Ty
 	schema, err := types.ObjectOf(properties)
 	if err != nil {
 		_ = rawRows.Close()
-		return nil, types.Type{}, err
+		for _, p := range properties {
+			if !types.IsValidPropertyName(p.Name) {
+				return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "database has returned an invalid column name: %q", p.Name)
+			}
+		}
+		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "%w", err)
 	}
 
 	// Fill the rows.
@@ -712,7 +717,7 @@ func (this *Connection) ExecQuery(query string, limit int) ([][]string, types.Ty
 	}
 	err = rawRows.Close()
 	if err != nil {
-		return nil, types.Type{}, err
+		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 	}
 
 	stringRows := make([][]string, len(rows))
