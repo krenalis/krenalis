@@ -204,7 +204,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			} else {
 				action = {
 					Name: actionType.Name,
-					Enabled: true,
+					Enabled: false,
 					Filter: null,
 					Mapping: null,
 					Transformation: null,
