@@ -14,8 +14,8 @@ const Sidebar = ({ route }) => {
 
 	let topItems = [
 		{ name: 'connections', label: 'Connections', link: '/admin/connections', icon: 'plug' },
-		{ name: 'users', label: 'Users', link: '/admin/users', icon: 'people' },
 		{ name: 'schema', label: 'Schema', link: '/admin/schema', icon: 'database' },
+		{ name: 'users', label: 'Users', link: '/admin/users', icon: 'people' },
 	];
 
 	if (isLoggedOut) {
