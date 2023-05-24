@@ -87,7 +87,16 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 
 // CreateUsers creates a user with the given properties.
 func (c *connection) CreateUser(properties connector.Properties) error {
-	panic("TODO: not implemented")
+
+	var body bytes.Buffer
+	body.WriteString(`{"properties":`)
+	err := json.NewEncoder(&body).Encode(properties)
+	if err != nil {
+		return err
+	}
+	body.WriteString("}")
+
+	return c.call("POST", "/crm/v3/objects/contacts", &body, 201, nil)
 }
 
 // EventTypes returns the connection's event types.
