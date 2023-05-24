@@ -19,7 +19,6 @@ const ConnectorSettings = () => {
 	let [storage, setStorage] = useState(0);
 	let [storages, setStorages] = useState([]);
 	let [websiteHost, setWebsiteHost] = useState('');
-	let [isEnabled, setIsEnabled] = useState(true);
 	let [fields, setFields] = useState([]);
 	let [actions, setActions] = useState([]);
 	let [values, setValues] = useState(null);
@@ -130,7 +129,7 @@ const ConnectorSettings = () => {
 		if (e === 'save') {
 			let [id, err] = await API.workspace.addConnection(connectorID, connectionRole, values, {
 				Name: name,
-				Enabled: isEnabled,
+				Enabled: true,
 				Storage: storage,
 				WebsiteHost: websiteHost,
 				OAuth: OAuthToken,
@@ -191,7 +190,7 @@ const ConnectorSettings = () => {
 	const onSave = async () => {
 		let [id, err] = await API.workspace.addConnection(connectorID, connectionRole, values, {
 			Name: name,
-			Enabled: isEnabled,
+			Enabled: true,
 			Storage: storage,
 			WebsiteHost: websiteHost,
 			OAuth: OAuthToken,
@@ -307,11 +306,6 @@ const ConnectorSettings = () => {
 								</div>
 							</>
 						)}
-						<div className='switchWrapper'>
-							<SlSwitch checked={isEnabled} onSlChange={(e) => setIsEnabled(!isEnabled)}>
-								Enable the connection after creation
-							</SlSwitch>
-						</div>
 					</div>
 					{(fieldsToRender.length > 0 || actionsToRender.length > 0) && (
 						<div className='form'>
