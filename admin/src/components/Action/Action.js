@@ -1120,6 +1120,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							label={fields.includes('Sheet') ? 'Path' : null}
 							type='text'
 							onSlInput={onUpdatePath}
+							placeholder={`${actionType.Target.toLowerCase()}.${connector.FileExtension}`}
 						/>
 						{fields.includes('Sheet') && (
 							<SlInput
