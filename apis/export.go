@@ -132,13 +132,13 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 			if err != nil {
 				return actionExecutionError{fmt.Errorf("cannot update user: %s", err)}
 			}
-			log.Printf("[info] user %q updated on %s", id, connector.Name)
+			log.Printf("[info] user %q updated on %s: %#v", id, connector.Name, user)
 		} else {
 			err := c.(_connector.AppUsersConnection).CreateUser(props)
 			if err != nil {
 				return actionExecutionError{fmt.Errorf("cannot create user: %s", err)}
 			}
-			log.Printf("[info] user %q created on %s", id, connector.Name)
+			log.Printf("[info] a new user has been created on %s: %#v", connector.Name, user)
 		}
 
 		// Handle errors occurred in the firehose.
