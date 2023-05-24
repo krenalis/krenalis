@@ -285,7 +285,9 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 	properties := []_connector.PropertyPath{
 		{this.action.MatchingProperties.External},
 	}
-	err = c.(_connector.AppUsersConnection).Users(this.action.UserCursor, properties)
+	// TODO(Gianluca): here the cursor is set to "" as a workaround. See the
+	// issue https://github.com/open2b/chichi/issues/183.
+	err = c.(_connector.AppUsersConnection).Users("", properties)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
 	}
