@@ -8,7 +8,6 @@
 package normalization
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -247,29 +246,12 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 			}
 		}
 	case types.PtJSON:
-		var v json.RawMessage
-		switch src := src.(type) {
-		case json.RawMessage:
-			v = src
-			valid = json.Valid(v)
+		switch src.(type) {
+		case bool, float64, string, map[string]any, []any, json.Number, json.RawMessage:
+			value = src
+			valid = true
 		default:
-			var err error
-			var b bytes.Buffer
-			enc := json.NewEncoder(&b)
-			enc.SetEscapeHTML(false)
-			err = enc.Encode(src)
-			valid = err == nil
-			if valid {
-				v = b.Bytes()
-				v = v[:len(v)-1]
-			}
-		}
-		if valid {
-			if l, ok := typ.CharLen(); ok && utf8.RuneCount(v) > l {
-				return nil, fmt.Errorf("app returned a value of %q for property %s, which is longer than %d characters",
-					abbreviate(string(v), 20), name, l)
-			}
-			value = v
+			return nil, fmt.Errorf("app returned an invalid type %T for JSON property %s", src, name)
 		}
 	case types.PtInet:
 		if s, ok := src.(string); ok {
@@ -550,29 +532,18 @@ func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, s
 			}
 		}
 	case types.PtJSON:
-		var v json.RawMessage
 		switch src := src.(type) {
 		case []byte:
-			v = src
-			valid = json.Valid(v)
+			if !json.Valid(src) {
+				return nil, fmt.Errorf("database returned an invalid JSON for property %s", name)
+			}
+			value = json.RawMessage(src)
+			valid = true
+		case bool, float64, string, map[string]any, []any, json.Number, json.RawMessage:
+			value = src
+			valid = true
 		default:
-			var err error
-			var b bytes.Buffer
-			enc := json.NewEncoder(&b)
-			enc.SetEscapeHTML(false)
-			err = enc.Encode(src)
-			valid = err == nil
-			if valid {
-				v = b.Bytes()
-				v = v[:len(v)-1]
-			}
-		}
-		if valid {
-			if l, ok := typ.CharLen(); ok && utf8.RuneCount(v) > l {
-				return nil, fmt.Errorf("database returned a value of %q for property %s, which is longer than %d characters",
-					abbreviate(string(v), 20), name, l)
-			}
-			value = v
+			return nil, fmt.Errorf("database returned an invalid type %T for JSON property %s", src, name)
 		}
 	case types.PtInet:
 		switch src := src.(type) {

@@ -29,17 +29,34 @@ var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 
 var errInvalidConversion = errors.New("cannot convert")
 
+const (
+	// Range of Float values convertible to Int64: [-9223372036854776000.0, 9223372036854775000.0].
+	// These are the same limits that PostgreSQL uses when converting a double precision value to a bigint.
+	minFloatConvertibleToInt64 = -9223372036854776000.0 // converted to -9223372036854775808
+	maxFloatConvertibleToInt64 = 9223372036854775000.0  // converted to 9223372036854774784
+
+	// Range of Float values convertible to UInt64: [0, 18446744073709550000].
+	maxFloatConvertibleToUInt64 = 18446744073709550000.0 // converted to 18446744073709549568
+)
+
+var (
+	minIntDecimal  = decimal.NewFromInt(math.MinInt64)
+	maxIntDecimal  = decimal.NewFromInt(math.MaxInt64)
+	maxUIntDecimal = decimal.RequireFromString("18446744073709551615")
+)
+
 // convert converts v from type t1 to type t2 and returns the converted value.
 // For Array, Object, and Map values, it can modify the argument v.
 //
-// As a special case, to convert a JSON value to any other type, convert
-// recursively calls itself with the value obtained from unmarshaling v,
-// using json.Number for numbers, an invalid t1, and an unchanged t2.
-//
-// It returns an error if v cannot be converted and panics if v is nil.
+// It returns an error if v cannot be converted, and panics if v is nil.
 func convert(v any, t1, t2 types.Type) (any, error) {
 	pt1 := t1.PhysicalType()
 	pt2 := t2.PhysicalType()
+	if pt1 == types.PtJSON && pt2 != types.PtJSON {
+		if v, ok := v.(json.RawMessage); ok && v[0] == 'n' {
+			return nil, nil
+		}
+	}
 	switch pt2 {
 	case types.PtBoolean:
 		switch pt1 {
@@ -53,17 +70,7 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 				return true, nil
 			}
 		case types.PtJSON:
-			s := v.(json.RawMessage)
-			if s[0] == 'f' {
-				return false, nil
-			}
-			if s[0] == 't' {
-				return true, nil
-			}
-		case types.PtInvalid:
-			if v, ok := v.(bool); ok {
-				return v, nil
-			}
+			return jsonToBoolean(v)
 		}
 	case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
 		var err error
@@ -74,40 +81,21 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 		case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
 			u := v.(uint)
 			if u > math.MaxInt64 {
-				return nil, errInvalidConversion
+				err = errInvalidConversion
 			}
 			n = int(u)
 		case types.PtFloat, types.PtFloat32:
-			f := v.(float64)
-			switch {
-			case math.IsNaN(f):
-				return nil, errInvalidConversion
-			case math.IsInf(f, 0):
-				min, max := t2.IntRange()
-				if f < 0 {
-					n = int(min)
-				} else {
-					n = int(max)
-				}
-			default:
-				n = int(f)
-			}
+			n, err = floatToInt(v.(float64))
 		case types.PtDecimal:
-			n = int(v.(decimal.Decimal).Round(0).IntPart())
+			n, err = decimalToInt(v.(decimal.Decimal))
 		case types.PtYear:
 			n = v.(int)
 		case types.PtText:
 			n, err = strconv.Atoi(v.(string))
 		case types.PtJSON:
-			n, err = strconv.Atoi(string(v.(json.RawMessage)))
-		case types.PtInvalid:
-			v, ok := v.(json.Number)
-			if !ok {
-				return nil, errInvalidConversion
-			}
-			n, err = strconv.Atoi(string(v))
+			n, err = jsonToInt(v)
 		default:
-			return nil, errInvalidConversion
+			err = errInvalidConversion
 		}
 		if err != nil {
 			return nil, errInvalidConversion
@@ -117,6 +105,7 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 		}
 		return n, nil
 	case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+		var err error
 		var n uint
 		switch pt1 {
 		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
@@ -128,56 +117,25 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 		case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
 			n = v.(uint)
 		case types.PtFloat, types.PtFloat32:
-			f := v.(float64)
-			switch {
-			case math.IsNaN(f):
-				return nil, errInvalidConversion
-			case math.IsInf(f, 0):
-				min, max := t2.IntRange()
-				if f < 0 {
-					n = uint(min)
-				} else {
-					n = uint(max)
-				}
-			default:
-				n = uint(f)
-			}
+			n, err = floatToUInt(v.(float64))
 		case types.PtDecimal:
-			i := v.(decimal.Decimal).Round(0).IntPart()
-			if i < 0 {
-				return nil, errInvalidConversion
-			}
-			n = uint(i)
+			n, err = decimalToUInt(v.(decimal.Decimal))
 		case types.PtYear:
 			n = uint(v.(int))
 		case types.PtText:
-			u, err := strconv.ParseUint(v.(string), 10, 64)
-			if err != nil {
-				return nil, errInvalidConversion
-			}
+			var u uint64
+			u, err = strconv.ParseUint(v.(string), 10, 64)
 			n = uint(u)
 		case types.PtJSON:
-			var err error
-			u, err := strconv.ParseUint(string(v.(json.RawMessage)), 10, 64)
-			if err != nil {
-				return nil, errInvalidConversion
-			}
-			n = uint(u)
-		case types.PtInvalid:
-			v, ok := v.(json.Number)
-			if !ok {
-				return nil, errInvalidConversion
-			}
-			var err error
-			u, err := strconv.ParseUint(string(v), 10, 64)
-			if err != nil {
-				return nil, errInvalidConversion
-			}
-			n = uint(u)
+			n, err = jsonToUInt(v)
 		default:
 			return nil, errInvalidConversion
 		}
-		if min, max := t2.UIntRange(); uint64(n) < min || uint64(n) > max {
+		if err != nil {
+			return nil, errInvalidConversion
+		}
+		min, max := t2.UIntRange()
+		if uint64(n) < min || uint64(n) > max {
 			return nil, errInvalidConversion
 		}
 		return n, nil
@@ -202,27 +160,17 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 				n = float64(float32(n))
 			}
 		case types.PtText:
-			bitSize := 64
+			bits := 64
 			if pt2 == types.PtFloat32 {
-				bitSize = 32
+				bits = 32
 			}
-			n, err = strconv.ParseFloat(v.(string), bitSize)
+			n, err = strconv.ParseFloat(v.(string), bits)
 		case types.PtJSON:
-			bitSize := 64
+			bits := 64
 			if pt2 == types.PtFloat32 {
-				bitSize = 32
+				bits = 32
 			}
-			n, err = strconv.ParseFloat(string(v.(json.RawMessage)), bitSize)
-		case types.PtInvalid:
-			v, ok := v.(json.Number)
-			if !ok {
-				return nil, errInvalidConversion
-			}
-			bitSize := 64
-			if pt2 == types.PtFloat32 {
-				bitSize = 32
-			}
-			n, err = strconv.ParseFloat(string(v), bitSize)
+			n, err = jsonToFloat(v, bits)
 		default:
 			return nil, errInvalidConversion
 		}
@@ -245,30 +193,14 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			n, _ = decimal.NewFromString(strconv.FormatUint(uint64(v.(uint)), 10))
 		case types.PtFloat, types.PtFloat32:
 			f := v.(float64)
-			if math.IsNaN(f) {
+			if math.IsNaN(f) || math.IsInf(f, 0) {
 				return nil, errInvalidConversion
-			}
-			if math.IsInf(f, 0) {
-				neg := f < 0
-				f = math.MaxFloat64
-				if pt1 == types.PtFloat32 {
-					f = math.MaxFloat32
-				}
-				if neg {
-					f = -f
-				}
 			}
 			n = decimal.NewFromFloat(f)
 		case types.PtText:
 			n, err = decimal.NewFromString(v.(string))
 		case types.PtJSON:
-			n, err = decimal.NewFromString(string(v.(json.RawMessage)))
-		case types.PtInvalid:
-			v, ok := v.(json.Number)
-			if !ok {
-				return nil, errInvalidConversion
-			}
-			n, err = decimal.NewFromString(string(v))
+			n, err = jsonToDecimal(v)
 		default:
 			return nil, errInvalidConversion
 		}
@@ -284,33 +216,13 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 		case types.PtDateTime, types.PtDate:
 			return v.(time.Time), nil
 		case types.PtText:
-			t, err := time.Parse(time.DateTime, v.(string))
+			t, err := time.Parse(time.RFC3339Nano, v.(string))
 			if err != nil {
 				return nil, errInvalidConversion
 			}
 			return t.UTC(), nil
 		case types.PtJSON:
-			v := v.(json.RawMessage)
-			var s string
-			err := json.Unmarshal(v, &s)
-			if err != nil {
-				return nil, errInvalidConversion
-			}
-			t, err := iso8601.ParseString(s)
-			if err != nil {
-				return nil, errInvalidConversion
-			}
-			return t.UTC(), nil
-		case types.PtInvalid:
-			v, ok := v.(string)
-			if !ok {
-				return nil, errInvalidConversion
-			}
-			t, err := iso8601.ParseString(v)
-			if err != nil {
-				return nil, errInvalidConversion
-			}
-			return t.UTC(), nil
+			return jsonToDateTime(v)
 		}
 	case types.PtDate:
 		switch pt1 {
@@ -326,27 +238,7 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			}
 			return d, nil
 		case types.PtJSON:
-			v := v.(json.RawMessage)
-			var s string
-			err := json.Unmarshal(v, &s)
-			if err != nil {
-				return nil, errInvalidConversion
-			}
-			t, err := time.Parse(time.DateTime, s)
-			if err != nil {
-				return nil, errInvalidConversion
-			}
-			return t.UTC(), nil
-		case types.PtInvalid:
-			v, ok := v.(string)
-			if !ok {
-				return nil, errInvalidConversion
-			}
-			t, err := time.Parse(time.DateTime, v)
-			if err != nil {
-				return nil, errInvalidConversion
-			}
-			return t.UTC(), nil
+			return jsonToDate(v)
 		}
 	case types.PtTime:
 		switch pt1 {
@@ -356,33 +248,11 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			t := v.(time.Time)
 			return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
 		case types.PtText:
-			t, ok := parseTime(v.(string))
-			if !ok {
-				return nil, errInvalidConversion
+			if t, ok := parseTime(v.(string)); ok {
+				return t, nil
 			}
-			return t, nil
 		case types.PtJSON:
-			v := v.(json.RawMessage)
-			var s string
-			err := json.Unmarshal(v, &s)
-			if err != nil {
-				return nil, errInvalidConversion
-			}
-			t, ok := parseTime(s)
-			if !ok {
-				return nil, errInvalidConversion
-			}
-			return t, nil
-		case types.PtInvalid:
-			v, ok := v.(string)
-			if !ok {
-				return nil, errInvalidConversion
-			}
-			t, ok := parseTime(v)
-			if !ok {
-				return nil, errInvalidConversion
-			}
-			return t, nil
+			return jsonToTime(v)
 		}
 	case types.PtYear:
 		var err error
@@ -400,32 +270,18 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			n = int(u)
 		case types.PtText:
 			s := v.(string)
-			if len(s) == 0 || s[0] < '0' || s[1] < '9' {
+			if l := len(s); l == 0 || l > 4 || s[0] == '+' || s[0] == '-' || s[0] == '0' {
 				return nil, errInvalidConversion
 			}
 			n, err = strconv.Atoi(s)
 		case types.PtJSON:
-			s := string(v.(json.RawMessage))
-			if s[0] == '"' {
-				s = s[1 : len(s)-2]
-			}
-			n, err = strconv.Atoi(string(s[1 : len(s)-2]))
-		case types.PtInvalid:
-			switch v := v.(type) {
-			case string:
-				n, err = strconv.Atoi(v)
-			case json.Number:
-				n, err = strconv.Atoi(string(v))
-			default:
-				return nil, errInvalidConversion
-			}
+			n, err = jsonToYear(v)
 		default:
 			return nil, errInvalidConversion
 		}
-		if err != nil || n < 1 || n > 9999 {
-			return nil, errInvalidConversion
+		if err == nil && 1 <= n && n <= 9999 {
+			return n, nil
 		}
-		return n, nil
 	case types.PtUUID:
 		switch pt1 {
 		case types.PtUUID:
@@ -437,45 +293,19 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			}
 			return u.String(), nil
 		case types.PtJSON:
-			if v := v.(json.RawMessage); v[0] == '"' {
-				u, err := uuid.ParseBytes(v[1 : len(v)-2])
-				if err != nil {
-					return nil, errInvalidConversion
-				}
-				return u.String(), nil
-			}
-		case types.PtInvalid:
-			v, ok := v.(string)
-			if !ok {
-				return nil, errInvalidConversion
-			}
-			u, err := uuid.Parse(v)
-			if err != nil {
-				return nil, errInvalidConversion
-			}
-			return u.String(), nil
+			return jsonToUUID(v)
 		}
 	case types.PtJSON:
-		var s json.RawMessage
-		switch pt1 {
-		case types.PtJSON:
-			s = v.(json.RawMessage)
-		case types.PtText:
-			s = json.RawMessage(v.(string))
-			if !json.Valid(s) {
-				return nil, errInvalidConversion
-			}
+		switch v := v.(type) {
+		case json.RawMessage:
+			return v, nil
 		default:
-			var err error
-			s, err = json.Marshal(v)
+			b, err := json.Marshal(v)
 			if err != nil {
 				return nil, errInvalidConversion
 			}
+			return json.RawMessage(b), nil
 		}
-		if l, ok := t2.CharLen(); ok && utf8.RuneCount(s) > l {
-			return nil, errInvalidConversion
-		}
-		return s, nil
 	case types.PtInet:
 		switch pt1 {
 		case types.PtInet:
@@ -487,24 +317,7 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			}
 			return ip.String(), nil
 		case types.PtJSON:
-			v := v.(json.RawMessage)
-			if v[0] == '"' {
-				ip, err := netip.ParseAddr(string(v))
-				if err != nil {
-					return nil, errInvalidConversion
-				}
-				return ip.String(), nil
-			}
-		case types.PtInvalid:
-			v, ok := v.(string)
-			if !ok {
-				return nil, errInvalidConversion
-			}
-			ip, err := netip.ParseAddr(v)
-			if err != nil {
-				return nil, errInvalidConversion
-			}
-			return ip.String(), nil
+			return jsonToInet(v)
 		}
 	case types.PtText:
 		var s string
@@ -521,15 +334,15 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 		case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
 			s = strconv.FormatUint(uint64(v.(uint)), 10)
 		case types.PtFloat, types.PtFloat32:
-			bitSize := 64
+			bits := 64
 			if pt1 == types.PtFloat32 {
-				bitSize = 32
+				bits = 32
 			}
-			s = strconv.FormatFloat(v.(float64), 'e', -1, bitSize)
+			s = strconv.FormatFloat(v.(float64), 'g', -1, bits)
 		case types.PtDecimal:
 			s = v.(decimal.Decimal).String()
 		case types.PtDateTime:
-			s = v.(time.Time).Format(time.DateTime)
+			s = v.(time.Time).Format(time.RFC3339Nano)
 		case types.PtDate:
 			s = v.(time.Time).Format(time.DateOnly)
 		case types.PtTime:
@@ -539,19 +352,9 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 		case types.PtUUID, types.PtInet:
 			s = v.(string)
 		case types.PtJSON:
-			s = string(v.(json.RawMessage))
-		case types.PtInvalid:
-			switch v := v.(type) {
-			case bool:
-				s = "false"
-				if v {
-					s = "true"
-				}
-			case string:
-				s = v
-			case json.Number:
-				s = string(v)
-			default:
+			var err error
+			s, err = jsonToText(v)
+			if err != nil {
 				return nil, errInvalidConversion
 			}
 		default:
@@ -591,31 +394,21 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			}
 			return s, nil
 		case types.PtJSON:
-			dec := json.NewDecoder(bytes.NewReader(v.(json.RawMessage)))
-			dec.UseNumber()
-			var s []any
-			err := dec.Decode(&s)
+			s, err := jsonToArray(v)
 			if err != nil {
 				return nil, errInvalidConversion
 			}
-			return convert(s, types.Type{}, t2)
-		case types.PtInvalid:
-			v, ok := v.([]any)
-			if !ok {
-				return nil, errInvalidConversion
-			}
-			if len(v) < t2.MinItems() || len(v) > t2.MaxItems() {
+			if len(s) < t2.MinItems() || len(s) > t2.MaxItems() {
 				return nil, errInvalidConversion
 			}
 			it2 := t2.ItemType()
-			var err error
-			for i, item := range v {
-				v[i], err = convert(item, types.Type{}, it2)
+			for i, item := range s {
+				s[i], err = convert(item, types.JSON(), it2)
 				if err != nil {
 					return nil, err
 				}
 			}
-			return v, nil
+			return s, nil
 		}
 	case types.PtObject:
 		switch pt1 {
@@ -648,23 +441,14 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			}
 			return obj, nil
 		case types.PtJSON:
-			dec := json.NewDecoder(bytes.NewReader(v.(json.RawMessage)))
-			dec.UseNumber()
-			var s map[string]any
-			err := dec.Decode(&s)
+			s, err := jsonToMap(v)
 			if err != nil {
 				return nil, errInvalidConversion
 			}
-			return convert(s, types.Type{}, t2)
-		case types.PtInvalid:
-			obj, ok := v.(map[string]any)
-			if !ok {
-				return nil, errInvalidConversion
-			}
-			for name, value := range obj {
+			for name, value := range s {
 				p2, ok := t2.Property(name)
 				if !ok {
-					delete(obj, name)
+					delete(s, name)
 					continue
 				}
 				if value == nil {
@@ -674,12 +458,12 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 					continue
 				}
 				var err error
-				obj[name], err = convert(value, types.Type{}, p2.Type)
+				s[name], err = convert(value, types.JSON(), p2.Type)
 				if err != nil {
 					return nil, err
 				}
 			}
-			return obj, nil
+			return s, nil
 		}
 	case types.PtMap:
 		switch pt1 {
@@ -699,23 +483,13 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			}
 			return m, nil
 		case types.PtJSON:
-			dec := json.NewDecoder(bytes.NewReader(v.(json.RawMessage)))
-			dec.UseNumber()
-			var s map[string]any
-			err := dec.Decode(&s)
+			s, err := jsonToMap(v)
 			if err != nil {
 				return nil, errInvalidConversion
 			}
-			return convert(s, types.Type{}, t2)
-		case types.PtInvalid:
-			s, ok := v.(map[string]any)
-			if !ok {
-				return nil, errInvalidConversion
-			}
 			vt2 := t2.ValueType()
-			var err error
 			for key, value := range s {
-				s[key], err = convert(value, types.Type{}, vt2)
+				s[key], err = convert(value, types.JSON(), vt2)
 				if err != nil {
 					return nil, err
 				}
@@ -724,6 +498,327 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 		}
 	}
 	return nil, errInvalidConversion
+}
+
+// jsonToBoolean converts v of type JSON to Boolean.
+func jsonToBoolean(v any) (bool, error) {
+	switch v := v.(type) {
+	case bool:
+		return v, nil
+	case json.RawMessage:
+		if v[0] == 'f' {
+			return false, nil
+		}
+		if v[0] == 't' {
+			return true, nil
+		}
+	}
+	return false, errInvalidConversion
+}
+
+// jsonToInt converts v of type JSON to Int.
+func jsonToInt(v any) (int, error) {
+	switch v := v.(type) {
+	case float64:
+		if v < minFloatConvertibleToInt64 || v > maxFloatConvertibleToInt64 {
+			return 0, errInvalidConversion
+		}
+		return int(math.Round(v)), nil
+	case json.Number:
+		return strconv.Atoi(string(v))
+	case json.RawMessage:
+		return strconv.Atoi(string(v))
+	}
+	return 0, errInvalidConversion
+}
+
+// jsonToUInt converts v of type JSON to UInt.
+func jsonToUInt(v any) (uint, error) {
+	switch v := v.(type) {
+	case float64:
+		if v < 0 || v > maxFloatConvertibleToUInt64 {
+			return 0, errInvalidConversion
+		}
+		return uint(math.Round(v)), nil
+	case json.Number:
+		n, err := strconv.ParseUint(string(v), 10, 64)
+		if err == nil {
+			return uint(n), nil
+		}
+		var f float64
+		f, err = strconv.ParseFloat(string(v), 64)
+		if err == nil {
+			return uint(f), nil
+		}
+		var d decimal.Decimal
+		d, err = decimal.NewFromString(string(v))
+		if err == nil {
+			f, _ = d.Float64()
+			return uint(f), nil
+		}
+	case json.RawMessage:
+		return jsonToUInt(json.Number(v))
+	}
+	return 0, errInvalidConversion
+}
+
+// jsonToFloat converts v of type JSON to Float or Float64 depending on bitSize
+// bits (32 for Float32, 64 for Float).
+func jsonToFloat(v any, bitSize int) (float64, error) {
+	switch v := v.(type) {
+	case float64:
+		if bitSize == 32 {
+			return float64(float32(v)), nil
+		}
+		return v, nil
+	case json.Number:
+		n, err := strconv.ParseFloat(string(v), bitSize)
+		if err == nil {
+			return n, nil
+		}
+		d, err := decimal.NewFromString(string(v))
+		if err == nil {
+			n, _ = d.Float64()
+			if bitSize == 32 {
+				n = float64(float32(n))
+			}
+			return n, nil
+		}
+	case json.RawMessage:
+		return jsonToFloat(json.Number(v), bitSize)
+	}
+	return 0, errInvalidConversion
+}
+
+// jsonToDecimal converts v of type JSON to Decimal.
+func jsonToDecimal(v any) (decimal.Decimal, error) {
+	switch v := v.(type) {
+	case float64:
+		if !math.IsNaN(v) && !math.IsInf(v, 0) {
+			return decimal.NewFromFloat(v), nil
+		}
+	case json.Number:
+		return decimal.NewFromString(string(v))
+	case json.RawMessage:
+		return decimal.NewFromString(string(v))
+	}
+	return decimal.Decimal{}, errInvalidConversion
+}
+
+// jsonToDateTime converts v of type JSON to DateTime.
+func jsonToDateTime(v any) (time.Time, error) {
+	switch v := v.(type) {
+	case string:
+		t, err := iso8601.ParseString(v)
+		if err == nil {
+			return t.UTC(), nil
+		}
+	case json.RawMessage:
+		enc := json.NewDecoder(bytes.NewReader(v))
+		var s any
+		err := enc.Decode(&s)
+		if err == nil {
+			return jsonToDateTime(s)
+		}
+	}
+	return time.Time{}, errInvalidConversion
+}
+
+// jsonToDate converts v of type JSON to Date.
+func jsonToDate(v any) (time.Time, error) {
+	switch v := v.(type) {
+	case string:
+		t, err := time.Parse(time.DateOnly, v)
+		if err == nil {
+			return t.UTC(), nil
+		}
+	case json.RawMessage:
+		enc := json.NewDecoder(bytes.NewReader(v))
+		var s any
+		err := enc.Decode(&s)
+		if err == nil {
+			return jsonToDate(s)
+		}
+	}
+	return time.Time{}, errInvalidConversion
+}
+
+// jsonToTime converts v of type JSON to Time.
+func jsonToTime(v any) (time.Time, error) {
+	switch v := v.(type) {
+	case string:
+		t, ok := parseTime(v)
+		if ok {
+			return t, nil
+		}
+	case json.RawMessage:
+		enc := json.NewDecoder(bytes.NewReader(v))
+		var s any
+		err := enc.Decode(&s)
+		if err == nil {
+			return jsonToTime(s)
+		}
+	}
+	return time.Time{}, errInvalidConversion
+}
+
+// jsonToYear converts v of type JSON to Year.
+func jsonToYear(v any) (int, error) {
+	switch v := v.(type) {
+	case float64:
+		if 1 <= v && v <= 9999 {
+			return int(math.Round(v)), nil
+		}
+	case json.Number:
+		n, err := strconv.Atoi(string(v))
+		if err == nil {
+			return n, nil
+		}
+		f, err := strconv.ParseFloat(string(v), 64)
+		if err == nil && 1 <= f && f <= 9999 {
+			return int(math.Round(f)), nil
+		}
+	case json.RawMessage:
+		return jsonToYear(json.Number(v))
+	}
+	return 0, errInvalidConversion
+}
+
+// jsonToText converts v of type JSON to Text.
+func jsonToText(v any) (string, error) {
+	switch v := v.(type) {
+	case string:
+		return v, nil
+	case float64:
+		return strconv.FormatFloat(v, 'g', -1, 64), nil
+	case json.Number:
+		return string(v), nil
+	case bool:
+		if v {
+			return "true", nil
+		}
+		return "false", nil
+	case json.RawMessage:
+		enc := json.NewDecoder(bytes.NewReader(v))
+		enc.UseNumber()
+		var s any
+		err := enc.Decode(&s)
+		if err == nil {
+			return jsonToText(s)
+		}
+	}
+	return "", errInvalidConversion
+}
+
+// jsonToUUID converts v of type JSON to UUID.
+func jsonToUUID(v any) (string, error) {
+	switch v := v.(type) {
+	case string:
+		if u, err := uuid.Parse(v); err == nil {
+			return u.String(), nil
+		}
+	case json.RawMessage:
+		enc := json.NewDecoder(bytes.NewReader(v))
+		var s string
+		err := enc.Decode(&s)
+		if err == nil {
+			return jsonToUUID(s)
+		}
+	}
+	return "", errInvalidConversion
+}
+
+// jsonToInet converts v of type JSON to Inet.
+func jsonToInet(v any) (string, error) {
+	switch v := v.(type) {
+	case string:
+		if ip, err := netip.ParseAddr(v); err == nil {
+			return ip.String(), nil
+		}
+	case json.RawMessage:
+		enc := json.NewDecoder(bytes.NewReader(v))
+		var s string
+		err := enc.Decode(&s)
+		if err == nil {
+			return jsonToInet(s)
+		}
+	}
+	return "", errInvalidConversion
+}
+
+// jsonToArray converts v of type JSON to Array.
+func jsonToArray(v any) ([]any, error) {
+	switch v := v.(type) {
+	case []any:
+		return v, nil
+	case json.RawMessage:
+		enc := json.NewDecoder(bytes.NewReader(v))
+		enc.UseNumber()
+		var s []any
+		err := enc.Decode(&s)
+		if err == nil {
+			return s, nil
+		}
+	}
+	return nil, errInvalidConversion
+}
+
+// jsonToMap converts v of type JSON to Object/Map.
+func jsonToMap(v any) (map[string]any, error) {
+	switch v := v.(type) {
+	case map[string]any:
+		return v, nil
+	case json.RawMessage:
+		enc := json.NewDecoder(bytes.NewReader(v))
+		enc.UseNumber()
+		var s map[string]any
+		err := enc.Decode(&s)
+		if err == nil {
+			return s, nil
+		}
+	}
+	return nil, errInvalidConversion
+}
+
+func decimalToInt(n decimal.Decimal) (int, error) {
+	if !n.IsInteger() {
+		return 0, errInvalidConversion
+	}
+	if n.LessThan(minIntDecimal) {
+		return 0, errInvalidConversion
+	}
+	if n.GreaterThan(maxIntDecimal) {
+		return 0, errInvalidConversion
+	}
+	return int(n.IntPart()), nil
+}
+
+func decimalToUInt(n decimal.Decimal) (uint, error) {
+	if !n.IsInteger() || n.IsNegative() || n.GreaterThan(maxUIntDecimal) {
+		return 0, errInvalidConversion
+	}
+	if n.LessThanOrEqual(maxIntDecimal) {
+		return uint(n.IntPart()), nil
+	}
+	u, err := strconv.ParseUint(n.String(), 10, 64)
+	if err != nil {
+		return 0, errInvalidConversion
+	}
+	return uint(u), nil
+}
+
+func floatToInt(n float64) (int, error) {
+	if math.IsNaN(n) || n < minFloatConvertibleToInt64 || n > maxFloatConvertibleToInt64 {
+		return 0, errInvalidConversion
+	}
+	return int(math.Round(n)), nil
+}
+
+func floatToUInt(n float64) (uint, error) {
+	if math.IsNaN(n) || n < 0 || n > maxFloatConvertibleToUInt64 {
+		return 0, errInvalidConversion
+	}
+	return uint(math.Round(n)), nil
 }
 
 func parseUint(s string) int {
