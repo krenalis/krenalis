@@ -233,6 +233,7 @@ func (st *eventsState) openDestination(c *state.Connection) error {
 	// use a different authorization mechanism.
 	// We have to implement a way to retrieve - and maintain up-to-date - the
 	// OAuth parameters.
+	// See https://github.com/open2b/chichi/issues/187.
 	connection, err := app.Open(st.ctx, &connector.AppConfig{
 		Role:          cRole,
 		Settings:      c.Settings,
