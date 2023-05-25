@@ -681,6 +681,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			return types.Type{}, errors.BadRequest("output schema of transformation is not valid")
 		}
 		// TODO(Gianluca): do a proper validation of the Python source code.
+		// See the issue https://github.com/open2b/chichi/issues/188.
 		if !strings.Contains(t.PythonSource, "def transform") {
 			return types.Type{}, errors.BadRequest("Python source code of transformation does not contain 'transform' function")
 		}
