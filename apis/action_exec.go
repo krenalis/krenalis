@@ -183,11 +183,6 @@ func (this *Action) schema() (types.Type, []_connector.PropertyPath, error) {
 	return schema, paths, nil
 }
 
-// readGRUsers reads the Golden Record users with the given IDs.
-func (this *Action) readGRUsers(ids []int) ([]map[string]any, error) {
-	return nil, nil // TODO(Gianluca): implement.
-}
-
 // newFirehoseForConnection returns a new Firehose for the connection c.
 func (this *Action) newFirehoseForConnection(ctx context.Context, c *state.Connection) *firehose {
 	var resource int
