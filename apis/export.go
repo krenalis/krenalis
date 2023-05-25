@@ -339,7 +339,7 @@ func (this *Action) readUsersFromDataWarehouse(ids []int) ([]userToExport, error
 	}
 
 	// Read the users.
-	columns := columnsOfProperties(schema.Properties())
+	columns := warehouses.PropertiesToColumns(schema.Properties())
 
 	var where warehouses.Expr
 	if len(ids) > 0 {
@@ -370,7 +370,7 @@ func (this *Action) readUsersFromDataWarehouse(ids []int) ([]userToExport, error
 
 	exportUsers := make([]userToExport, len(users))
 	for i, user := range users {
-		props, _ := deserializeDataWarehouseRowAsMap(schema.Properties(), user)
+		props, _ := warehouses.DeserializeRowAsMap(schema.Properties(), user)
 		gid, ok := props["id"].(int)
 		if !ok {
 			return nil, errors.New("missing or invalid GID")

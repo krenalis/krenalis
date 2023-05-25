@@ -5,20 +5,19 @@
 // Copyright (c) 2023 Open2b
 //
 
-package apis
+package warehouses
 
 import (
 	"testing"
 
-	"chichi/apis/warehouses"
 	"chichi/connector/types"
 )
 
-func TestPropertiesOfColumns(t *testing.T) {
+func TestColumnsToProperties(t *testing.T) {
 
 	typ := types.Int()
 
-	columns := []*warehouses.Column{
+	columns := []*Column{
 		{Name: "a", Type: typ},
 		{Name: "b", Type: typ},
 		{Name: "c_a", Type: typ},
@@ -80,7 +79,7 @@ func TestPropertiesOfColumns(t *testing.T) {
 		{Name: "k_a", Type: typ},
 	}
 
-	properties, err := propertiesOfColumns(columns)
+	properties, err := ColumnsToProperties(columns)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,9 +132,9 @@ func TestColumnsCommonPrefix(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		columns := make([]*warehouses.Column, len(test.names))
+		columns := make([]*Column, len(test.names))
 		for i, name := range test.names {
-			columns[i] = &warehouses.Column{Name: name}
+			columns[i] = &Column{Name: name}
 		}
 		prefix, n := columnsCommonPrefix(columns)
 		if n != test.n {

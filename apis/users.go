@@ -151,7 +151,7 @@ func (this *User) Events(limit int) ([]Event, error) {
 	}
 
 	// Read the events.
-	columns := columnsOfProperties(events.Schema.Properties())
+	columns := warehouses.PropertiesToColumns(events.Schema.Properties())
 	where := warehouses.NewBaseExpr(
 		warehouses.ExprColumn{Name: "user_id", Type: types.PtText},
 		warehouses.OperatorEqual,
@@ -340,7 +340,7 @@ func (this *User) Traits() (map[string]any, error) {
 		return nil, errors.Unprocessable(NoUsersSchema, "workspace %d does not have users schema", this.workspace.ID)
 	}
 
-	columns := columnsOfProperties(properties)
+	columns := warehouses.PropertiesToColumns(properties)
 	where := warehouses.NewBaseExpr(
 		warehouses.ExprColumn{Name: "id", Type: types.PtInt},
 		warehouses.OperatorEqual,
@@ -359,7 +359,7 @@ func (this *User) Traits() (map[string]any, error) {
 		return nil, errors.NotFound("user %d does not exist", this.id)
 	}
 
-	traits, _ := deserializeDataWarehouseRowAsMap(properties, rows[0])
+	traits, _ := warehouses.DeserializeRowAsMap(properties, rows[0])
 
 	return traits, nil
 }

@@ -750,10 +750,10 @@ func (this *Workspace) ReloadSchemas() error {
 			// "apis/events/schema.go".
 			continue
 		}
-		properties, err := propertiesOfColumns(table.Columns)
-		if err, ok := err.(repeatedPropertyNameError); ok {
+		properties, err := warehouses.ColumnsToProperties(table.Columns)
+		if err, ok := err.(warehouses.RepeatedPropertyNameError); ok {
 			return errors.Unprocessable(RepeatedPropertyName,
-				"column %s.%s results in a repeated property named %s", table.Name, err.column, err.property)
+				"column %s.%s results in a repeated property named %s", table.Name, err.Column, err.Property)
 		}
 		schema := types.Object(properties)
 		n.Schemas[table.Name] = &schema
@@ -1016,7 +1016,7 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 	schema := types.Object(requestedProperties)
 
 	// Read the users.
-	columns := columnsOfProperties(requestedProperties)
+	columns := warehouses.PropertiesToColumns(requestedProperties)
 	rows, err := ws.Warehouse.Select(context.Background(), "users", columns, nil, orderProperty, first, limit)
 	if err != nil {
 		if err2, ok := err.(*warehouses.Error); ok {
@@ -1029,7 +1029,7 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 
 	users := make([][]any, len(rows))
 	for i, row := range rows {
-		users[i] = deserializeDataWarehouseRowAsSlice(requestedProperties, row)
+		users[i] = warehouses.DeserializeRowAsSlice(requestedProperties, row)
 	}
 
 	return schema.Unflatten(), users, err
@@ -1126,173 +1126,4 @@ func (typ *WarehouseType) UnmarshalJSON(data []byte) error {
 	}
 	*typ = t
 	return nil
-}
-
-// A repeatedPropertyNameError value is returned from propertiesOfColumns when
-// grouped columns result in a repeated property name.
-type repeatedPropertyNameError struct {
-	column, property string
-}
-
-func (err repeatedPropertyNameError) Error() string {
-	return fmt.Sprintf("column %s results in a repeated property named %s", err.column, err.property)
-}
-
-// propertiesOfColumns returns the type properties of columns.
-// Consecutive columns with a common prefix are grouped into a single object
-// property. It could change the columns slice and the column names.
-//
-// Columns starting with an underscore ('_'), are grouped as if the underscore
-// were not present but are not returned as properties.
-//
-// Grouping columns can result in properties with the same name. In this case,
-// it returns a repeatedPropertyNameError error.
-func propertiesOfColumns(columns []*warehouses.Column) ([]types.Property, error) {
-	var properties []types.Property
-	for i := 0; i < len(columns); i++ {
-		c := columns[i]
-		var property types.Property
-		// group the columns with the same prefix.
-		if prefix, n := columnsCommonPrefix(columns[i:]); prefix != "" {
-			group := columns[i : i+n]
-			i += n - 1
-			for j := 0; j < n; j++ {
-				column := group[j]
-				// remove from the group the columns with an underscore prefix.
-				if column.Name[0] == '_' {
-					copy(group[j:], group[j+1:])
-					j--
-					n--
-					continue
-				}
-				// remove the prefix from the column names.
-				column.Name = strings.TrimPrefix(column.Name, prefix)
-			}
-			if n == 0 {
-				continue
-			}
-			props, err := propertiesOfColumns(group[:n])
-			if err != nil {
-				return nil, err
-			}
-			property = types.Property{
-				Name: strings.TrimSuffix(prefix, "_"),
-				Type: types.Object(props),
-				Flat: true,
-			}
-		} else {
-			if c.Name[0] == '_' {
-				continue
-			}
-			property = types.Property{
-				Name:        c.Name,
-				Description: c.Description,
-				Type:        c.Type,
-				Nullable:    c.Nullable,
-			}
-			if !c.IsUpdatable {
-				property.Role = types.SourceRole
-			}
-		}
-		for _, p := range properties {
-			if p.Name == property.Name {
-				return nil, repeatedPropertyNameError{c.Name, p.Name}
-			}
-		}
-		properties = append(properties, property)
-	}
-	return properties, nil
-}
-
-// columnsCommonPrefix returns the common prefix between the first column in
-// columns and the successive consecutive columns. A common prefix, if exists,
-// ends with an underscore character ('_').
-//
-// If a common prefix exists, it returns the prefix, and the number of
-// consecutive columns having the common prefix, starting from the first
-// column, otherwise it returns an empty string and zero.
-//
-// See TestColumnsCommonPrefix for some examples.
-func columnsCommonPrefix(columns []*warehouses.Column) (string, int) {
-	first := columns[0].Name
-	if first[0] == '_' {
-		first = first[1:]
-	}
-	var prefix string
-	var n = len(columns)
-Columns:
-	for i := 0; i < len(first)-1; i++ {
-		c := first[i]
-		for k := 1; k < n; k++ {
-			name := columns[k].Name
-			if name[0] == '_' {
-				name = name[1:]
-			}
-			if i < len(name)-1 && name[i] == c {
-				// continue with the next column.
-				if c == '_' {
-					prefix = first[:i+1]
-				}
-				continue
-			}
-			if prefix == "" {
-				// continue only with the previous columns.
-				n = k
-				continue Columns
-			}
-			// break and return the prefix.
-			break Columns
-		}
-	}
-	if prefix == "" {
-		n = 0
-	}
-	return prefix, n
-}
-
-// columnsOfProperties returns the warehouse columns of properties.
-func columnsOfProperties(properties []types.Property) []types.Property {
-	columns := make([]types.Property, 0, len(properties))
-	for _, p := range properties {
-		if p.Flat {
-			for _, column := range columnsOfProperties(p.Type.Properties()) {
-				column.Name = p.Name + "_" + column.Name
-				columns = append(columns, column)
-			}
-			continue
-		}
-		columns = append(columns, types.Property{Name: p.Name, Type: p.Type, Nullable: p.Nullable})
-	}
-	return columns
-}
-
-// deserializeDataWarehouseRowAsSlice deserializes a row returned by a data
-// warehouse as slice.
-func deserializeDataWarehouseRowAsSlice(properties []types.Property, row []any) []any {
-	values := make([]any, len(properties))
-	for i, p := range properties {
-		if p.Flat {
-			values[i], row = deserializeDataWarehouseRowAsMap(p.Type.Properties(), row)
-			continue
-		}
-		values[i] = row[0]
-		row = row[1:]
-	}
-	return values
-}
-
-// deserializeDataWarehouseRowAsMap deserializes a row returned by a data
-// warehouse as map. It returns the deserialized row and the remaining row
-// values to read.
-func deserializeDataWarehouseRowAsMap(properties []types.Property, row []any) (map[string]any, []any) {
-	values := make(map[string]any, len(properties))
-	for _, p := range properties {
-		if p.Flat {
-			values[p.Name], row = deserializeDataWarehouseRowAsMap(p.Type.Properties(), row)
-			continue
-		}
-		values[p.Name] = row[0]
-		row = row[1:]
-	}
-	return values, row
 }
