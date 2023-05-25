@@ -438,7 +438,13 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			}
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'QueryExecutionFailed') {
-					showStatus([variants.DANGER, icons.CODE_ERROR, err.cause]);
+					let statusMessage;
+					if (err.cause && err.cause !== '') {
+						statusMessage = err.cause;
+					} else {
+						statusMessage = err.message;
+					}
+					showStatus([variants.DANGER, icons.CODE_ERROR, statusMessage]);
 				}
 				return;
 			}
