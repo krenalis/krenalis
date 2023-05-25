@@ -1,30 +1,27 @@
 class NotFoundError extends Error {
-	constructor(code, message, details) {
+	constructor(message) {
 		super();
 		this.name = 'NotFoundError';
-		this.code = code;
 		this.message = message;
-		this.cause = details;
 	}
 }
 
 class BadRequestError extends Error {
-	constructor(code, message, details) {
+	constructor(message, cause) {
 		super();
 		this.name = 'BadRequestError';
-		this.code = code;
 		this.message = message;
-		this.cause = details;
+		this.cause = cause;
 	}
 }
 
 class UnprocessableError extends Error {
-	constructor(code, message, details) {
+	constructor(code, message, cause) {
 		super();
 		this.name = 'UnprocessableError';
 		this.code = code;
 		this.message = message;
-		this.cause = details;
+		this.cause = cause;
 	}
 }
 

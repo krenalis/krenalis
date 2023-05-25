@@ -27,13 +27,13 @@ const call = async (url, method, body) => {
 			case 404:
 			case 422:
 				let parsed = await res.json();
-				let { code, message, details } = parsed.error;
+				let { code, message, cause } = parsed.error;
 				if (res.status === 400) {
-					error = new BadRequestError(code, message, details);
+					error = new BadRequestError(message, cause);
 				} else if (res.status === 404) {
-					error = new NotFoundError(code, message, details);
+					error = new NotFoundError(message);
 				} else if (res.status === 422) {
-					error = new UnprocessableError(code, message, details);
+					error = new UnprocessableError(code, message, cause);
 				}
 				break;
 			default:

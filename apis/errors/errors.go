@@ -54,7 +54,7 @@ type ResponseWriterTo interface {
 //
 // If format includes a %w verb with an error operand, BadRequest returns an
 // error that implements an Unwrap method returning the operand, and the
-// WriteTo method reports the error message in the "details" key.
+// WriteTo method reports the error message in the "cause" key.
 //
 // It can be used when an invalid call is received. For example, it could be
 // used if a required argument is empty or if the provided data is not formally
@@ -83,15 +83,15 @@ func (e *badRequestError) Unwrap() error {
 
 // WriteTo implements the ResponseWriterTo interface.
 func (e *badRequestError) WriteTo(w http.ResponseWriter) error {
-	var details string
+	var cause string
 	if e.err != nil {
-		details = e.err.Error()
+		cause = e.err.Error()
 	}
 	var message string
 	if v := os.Getenv("CHICHI_DEBUG_UI"); v == "true" {
 		message = e.s
 	}
-	return writeTo(w, http.StatusBadRequest, "BadRequest", message, details)
+	return writeTo(w, http.StatusBadRequest, "BadRequest", message, cause)
 }
 
 // NotFound returns an error that formats as the given text, and its WriteTo
@@ -126,7 +126,7 @@ func (e *NotFoundError) WriteTo(w http.ResponseWriter) error {
 //
 // If format includes a %w verb with an error operand, Unprocessable returns
 // an error that implements an Unwrap method returning the operand, and the
-// WriteTo method reports the error message in the "details" key.
+// WriteTo method reports the error message in the "cause" key.
 //
 // Unprocessable function should be used when the request cannot be satisfied
 // not due to formal errors with the arguments, but due to argument values that
@@ -157,11 +157,11 @@ func (e *UnprocessableError) Unwrap() error {
 
 // WriteTo implements the ResponseWriterTo interface.
 func (e *UnprocessableError) WriteTo(w http.ResponseWriter) error {
-	var details string
+	var cause string
 	if e.Err != nil {
-		details = e.Err.Error()
+		cause = e.Err.Error()
 	}
-	return writeTo(w, http.StatusUnprocessableEntity, e.Code, e.Message, details)
+	return writeTo(w, http.StatusUnprocessableEntity, e.Code, e.Message, cause)
 }
 
 // marshalString marshals s as a JSON string and returns the result.
@@ -170,18 +170,18 @@ func marshalString(s string) string {
 	return string(b)
 }
 
-// writeTo writes code, message and, details as JSON to w with status as HTTP
+// writeTo writes code, message and, cause as JSON to w with status as HTTP
 // response status code. It returns an error from the json package if an error
 // occurs marshalling data and another error if an error occurs writing to w.
-func writeTo(w http.ResponseWriter, status int, code Code, message, details string) error {
+func writeTo(w http.ResponseWriter, status int, code Code, message, cause string) error {
 	var b bytes.Buffer
 	b.WriteString(`{"error":{"code":`)
 	b.WriteString(marshalString(string(code)))
 	b.WriteString(`,"message":`)
 	b.WriteString(marshalString(message))
-	if details != "" {
-		b.WriteString(`,"details":`)
-		b.WriteString(marshalString(details))
+	if cause != "" {
+		b.WriteString(`,"cause":`)
+		b.WriteString(marshalString(cause))
 	}
 	b.WriteString(`}}`)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
