@@ -189,21 +189,6 @@ func (rr *recordReader) Record() ([]any, error) {
 	return record, nil
 }
 
-// RecordString returns the next record as a string slice. It returns nil and
-// io.EOF if there are no more records.
-func (rr *recordReader) RecordString() ([]string, error) {
-	if rr.cursor >= len(rr.records) {
-		return nil, io.EOF
-	}
-	record := rr.records[rr.cursor]
-	records := make([]string, len(record))
-	for i, prop := range record {
-		records[i] = fmt.Sprintf("%v", prop) // TODO(Marco): revise
-	}
-	rr.cursor++
-	return records, nil
-}
-
 // newRecordWriter returns a new record writer that writes at most limit
 // records. If write is not nil, it calls the write function for each record
 // written, otherwise it stores the records in the records field.
