@@ -120,16 +120,7 @@ func WrapError(err error) error {
 // Table represents a table.
 type Table struct {
 	Name    string
-	Columns []*Column
-}
-
-// Column represents a table column.
-type Column struct {
-	Name        string
-	Description string
-	Type        types.Type
-	Nullable    bool
-	IsUpdatable bool
+	Columns []types.Property
 }
 
 // Row returns a single row as a result of calling QueryRow.

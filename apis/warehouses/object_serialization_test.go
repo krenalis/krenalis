@@ -17,7 +17,7 @@ func TestColumnsToProperties(t *testing.T) {
 
 	typ := types.Int()
 
-	columns := []*Column{
+	columns := []types.Property{
 		{Name: "a", Type: typ},
 		{Name: "b", Type: typ},
 		{Name: "c_a", Type: typ},
@@ -132,9 +132,9 @@ func TestColumnsCommonPrefix(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		columns := make([]*Column, len(test.names))
+		columns := make([]types.Property, len(test.names))
 		for i, name := range test.names {
-			columns[i] = &Column{Name: name}
+			columns[i] = types.Property{Name: name}
 		}
 		prefix, n := columnsCommonPrefix(columns)
 		if n != test.n {

@@ -33,7 +33,7 @@ func (err RepeatedPropertyNameError) Error() string {
 //
 // Grouping columns can result in properties with the same name. In this case,
 // it returns a RepeatedPropertyNameError error.
-func ColumnsToProperties(columns []*Column) ([]types.Property, error) {
+func ColumnsToProperties(columns []types.Property) ([]types.Property, error) {
 	var properties []types.Property
 	for i := 0; i < len(columns); i++ {
 		c := columns[i]
@@ -52,7 +52,7 @@ func ColumnsToProperties(columns []*Column) ([]types.Property, error) {
 					continue
 				}
 				// remove the prefix from the column names.
-				column.Name = strings.TrimPrefix(column.Name, prefix)
+				group[j].Name = strings.TrimPrefix(column.Name, prefix)
 			}
 			if n == 0 {
 				continue
@@ -70,15 +70,7 @@ func ColumnsToProperties(columns []*Column) ([]types.Property, error) {
 			if c.Name[0] == '_' {
 				continue
 			}
-			property = types.Property{
-				Name:        c.Name,
-				Description: c.Description,
-				Type:        c.Type,
-				Nullable:    c.Nullable,
-			}
-			if !c.IsUpdatable {
-				property.Role = types.SourceRole
-			}
+			property = c
 		}
 		for _, p := range properties {
 			if p.Name == property.Name {
@@ -99,7 +91,7 @@ func ColumnsToProperties(columns []*Column) ([]types.Property, error) {
 // column, otherwise it returns an empty string and zero.
 //
 // See TestColumnsCommonPrefix for some examples.
-func columnsCommonPrefix(columns []*Column) (string, int) {
+func columnsCommonPrefix(columns []types.Property) (string, int) {
 	first := columns[0].Name
 	if first[0] == '_' {
 		first = first[1:]

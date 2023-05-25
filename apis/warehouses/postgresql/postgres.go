@@ -395,10 +395,14 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			if isUpdatable == nil {
 				return errors.New("data warehouse has returned NULL as updatability of column")
 			}
-			column := &warehouses.Column{
-				Name:        row.column,
-				IsUpdatable: *isUpdatable == "YES",
-				Nullable:    *isNullable == "YES",
+			var role types.Role
+			if *isUpdatable != "YES" {
+				role = types.SourceRole
+			}
+			column := types.Property{
+				Name:     row.column,
+				Role:     role,
+				Nullable: *isNullable == "YES",
 			}
 			column.Type, err = columnType(row, enums, ctResolver, attTypMods)
 			if err != nil {

@@ -715,11 +715,11 @@ func (this *Workspace) ReloadSchemas() error {
 		Schemas:   map[string]*types.Type{},
 	}
 	for _, table := range tables {
-		// Check that the 'users' and the 'groups' tables, when exist, contain
+		// Check that the 'users' and the 'groups' tables, when exists, contain
 		// the 'id' and the 'timestamp' columns.
 		if table.Name == "users" || table.Name == "groups" {
 			// Check the 'id' column.
-			idIndex := slices.IndexFunc(table.Columns, func(c *warehouses.Column) bool {
+			idIndex := slices.IndexFunc(table.Columns, func(c types.Property) bool {
 				return c.Name == "id"
 			})
 			if idIndex == -1 {
@@ -732,7 +732,7 @@ func (this *Workspace) ReloadSchemas() error {
 			}
 			// Check the 'creation_time' and 'timestamp' columns.
 			for _, column := range []string{"creation_time", "timestamp"} {
-				colIndex := slices.IndexFunc(table.Columns, func(c *warehouses.Column) bool {
+				colIndex := slices.IndexFunc(table.Columns, func(c types.Property) bool {
 					return c.Name == column
 				})
 				if colIndex == -1 {

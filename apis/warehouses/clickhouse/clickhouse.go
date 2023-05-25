@@ -220,7 +220,7 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 		if !types.IsValidPropertyName(columnName) {
 			return nil, warehouses.NewError("column name %q is not supported", columnName)
 		}
-		column := &warehouses.Column{
+		column := types.Property{
 			Name:        columnName,
 			Description: comment,
 		}
