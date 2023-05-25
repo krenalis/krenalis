@@ -104,7 +104,7 @@ type AppEventsConnection interface {
 type AppUsersConnection interface {
 	AppConnection
 
-	// CreateUsers creates a user with the given properties.
+	// CreateUser creates a user with the given properties.
 	CreateUser(properties Properties) error
 
 	// ReceiveWebhook receives a webhook request and returns its events.

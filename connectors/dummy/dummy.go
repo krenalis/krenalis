@@ -84,7 +84,7 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	return &c, nil
 }
 
-// CreateUsers creates a user with the given properties.
+// CreateUser creates a user with the given properties.
 func (c *connection) CreateUser(properties connector.Properties) error {
 	panic("TODO: not implemented")
 }
