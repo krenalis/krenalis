@@ -853,7 +853,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	}
 
 	// Determine the input and the output schema.
-	var inSchema, outSchema types.Type
+	var inSchema types.Type
 	switch target {
 	case state.UsersTarget:
 		ws := c.Workspace()
@@ -863,10 +863,8 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 		if c.Role == state.SourceRole {
 			inSchema = schema
-			outSchema = sourceMappingSchema(*grSchema, c.Connector().Type)
 		} else {
 			inSchema = grSchema.Unflatten()
-			outSchema = schema
 		}
 	case state.GroupsTarget:
 		ws := c.Workspace()
@@ -876,15 +874,12 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 		if c.Role == state.SourceRole {
 			inSchema = schema
-			outSchema = *grSchema
 		} else {
 			inSchema = *grSchema
-			outSchema = schema
 		}
 	case state.EventsTarget:
 		if connector.Type == state.AppType {
 			inSchema = events.Schema
-			outSchema = schema // if there is not a schema, it is the invalid schema.
 		}
 	}
 
@@ -924,83 +919,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			}
 			return types.Type{}, errors.Unprocessable(PropertyNotExists, msg)
 		}
-	}
-
-	// Collect the top-level required properties in the action's output schema,
-	// which must be necessarily mapped by mappings or by the Python transformation.
-	var requiredOutProperties map[string]struct{}
-	if outSchema.Valid() {
-		requiredOutProperties = map[string]struct{}{}
-		for _, p := range outSchema.Properties() {
-			if p.Required {
-				requiredOutProperties[p.Name] = struct{}{}
-			}
-		}
-	}
-
-	// Validate the mapping.
-	if action.Mapping != nil {
-		i := 0
-		for out, in := range action.Mapping {
-			// Validate the input property expression.
-			if !existsInObject(mappingInPaths[i], inSchema) {
-				msg := fmt.Sprintf("input property %q does not exist in schema", in)
-				if target == state.EventsTarget {
-					return types.Type{}, errors.BadRequest(msg)
-				}
-				return types.Type{}, errors.Unprocessable(PropertyNotExists, msg)
-			}
-			// Validate the output property expression.
-			if !existsInObject(mappingOutPaths[i], outSchema) {
-				return types.Type{}, errors.Unprocessable(PropertyNotExists, "output property %q does not exist in schema", out)
-			}
-			delete(requiredOutProperties, mappingOutPaths[i][0])
-			i++
-		}
-	}
-
-	// Validate the transformation.
-	if action.Transformation != nil {
-		// Validate the input properties.
-		inProps := map[string]types.Property{}
-		for _, prop := range inSchema.Properties() {
-			inProps[prop.Name] = prop
-		}
-		for _, in := range action.Transformation.In.Properties() {
-			p, ok := inProps[in.Name]
-			if !ok {
-				return types.Type{}, errors.BadRequest("property name %q does not exist in schema", in.Name)
-			}
-			if !p.Type.EqualTo(in.Type) {
-				return types.Type{}, errors.BadRequest("expecting type %s for property %q, got %s", p.Type, p.Name, in.Type)
-			}
-		}
-		// Validate the output properties.
-		outProps := map[string]types.Property{}
-		for _, prop := range outSchema.Properties() {
-			outProps[prop.Name] = prop
-		}
-		for _, out := range action.Transformation.Out.Properties() {
-			p, ok := outProps[out.Name]
-			if !ok {
-				return types.Type{}, errors.BadRequest("property name %q does not exist", out.Name)
-			}
-			if !p.Type.EqualTo(out.Type) {
-				return types.Type{}, errors.BadRequest("expecting type %s for property %q, got %s", p.Type, p.Name, out.Type)
-			}
-			delete(requiredOutProperties, out.Name)
-		}
-	}
-
-	// Check if every required property has been mapped/transformed.
-	if len(requiredOutProperties) > 0 {
-		var name string
-		for p := range requiredOutProperties {
-			if name == "" || p < name {
-				name = p
-			}
-		}
-		return types.Type{}, errors.BadRequest("schema property %q is required but is not mapped", name)
 	}
 
 	return schema, nil
