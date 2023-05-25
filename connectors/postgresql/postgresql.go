@@ -25,7 +25,8 @@ import (
 	"chichi/connector"
 	"chichi/connector/types"
 	"chichi/connector/ui"
-	_ "chichi/pkg/pgx/stdlib"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // Connector icon.

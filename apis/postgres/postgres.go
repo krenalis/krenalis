@@ -19,10 +19,10 @@ import (
 	"strings"
 	"time"
 
-	"chichi/pkg/pgx"
-	"chichi/pkg/pgx/pgconn"
-	"chichi/pkg/pgx/pgxpool"
-	_ "chichi/pkg/pgx/stdlib" // PostgreSQL driver
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 )
 
 type RowsScanner interface {
