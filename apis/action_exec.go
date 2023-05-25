@@ -238,7 +238,7 @@ func (err actionExecutionError) Error() string {
 
 // applyTimestampWorkaround applies a workaround on the "timestamp" property
 // until the normalization / conversion is implemented.
-// TODO(Gianluca):
+// TODO(Gianluca): see https://github.com/open2b/chichi/issues/186.
 func applyTimestampWorkaround(mappedUser map[string]any) error {
 	if ts, ok := mappedUser["timestamp"].(string); ok {
 		t, err := time.Parse(time.DateTime, ts)
