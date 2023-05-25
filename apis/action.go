@@ -17,7 +17,6 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/errors"
-	"chichi/apis/events"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	_connector "chichi/connector"
@@ -852,37 +851,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 	}
 
-	// Determine the input and the output schema.
-	var inSchema types.Type
-	switch target {
-	case state.UsersTarget:
-		ws := c.Workspace()
-		grSchema, ok := ws.Schemas["users"]
-		if !ok {
-			return types.Type{}, errors.BadRequest("workspace %d of connection %d does not have users schema", ws.ID, c.ID)
-		}
-		if c.Role == state.SourceRole {
-			inSchema = schema
-		} else {
-			inSchema = grSchema.Unflatten()
-		}
-	case state.GroupsTarget:
-		ws := c.Workspace()
-		grSchema, ok := ws.Schemas["groups"]
-		if !ok {
-			return types.Type{}, errors.BadRequest("workspace %d of connection %d does not have groups schema", ws.ID, c.ID)
-		}
-		if c.Role == state.SourceRole {
-			inSchema = schema
-		} else {
-			inSchema = *grSchema
-		}
-	case state.EventsTarget:
-		if connector.Type == state.AppType {
-			inSchema = events.Schema
-		}
-	}
-
 	// Check if the mapping (and the transformations) are allowed and required
 	// for this action.
 	var requiresMapping bool
@@ -904,20 +872,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 		if action.Transformation != nil {
 			return types.Type{}, errors.BadRequest("transformation not allowed")
-		}
-	}
-
-	// Validate the filter properties.
-	if action.Filter != nil {
-		for i, cond := range action.Filter.Conditions {
-			if existsInObject(conditionProperties[i], inSchema) {
-				continue
-			}
-			msg := fmt.Sprintf("property expression %q of filter condition does not exist", cond.Property)
-			if target == state.EventsTarget {
-				return types.Type{}, errors.BadRequest(msg)
-			}
-			return types.Type{}, errors.Unprocessable(PropertyNotExists, msg)
 		}
 	}
 
