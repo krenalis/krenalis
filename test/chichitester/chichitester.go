@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -98,7 +99,7 @@ func InitAndLaunch(t *testing.T) *Chichi {
 		}
 		go func() {
 			err := launchChichi(ctxWithCancel)
-			if err != nil {
+			if err != nil && !isSignalKilledError(err) {
 				log.Printf("[error] %s", err)
 			}
 			c.done <- struct{}{}
@@ -306,4 +307,9 @@ func validDatabaseNameForTests(name string) error {
 		return fmt.Errorf("invalid database name %q, it must match the regexp: ^test_[a-zA-Z0-9_]+$", name)
 	}
 	return nil
+}
+
+func isSignalKilledError(err error) bool {
+	ee, ok := err.(*exec.ExitError)
+	return ok && ee.Error() == "signal: killed"
 }
