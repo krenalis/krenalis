@@ -665,7 +665,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setTimeout(() => {
 			setIsSaveButtonLoading(false);
 			onClose();
-		}, 500);
+		}, 200);
 	};
 
 	const getDefaultMappings = (schema) => {
