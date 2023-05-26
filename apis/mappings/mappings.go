@@ -133,10 +133,11 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 			if value == nil {
 				if !property.out.nullable {
 					log.Printf("property path %s is not nullable", strings.Join(property.out.path, "."))
+					continue
 				}
 			} else {
 				v, err := convert(value, property.in.typ, property.out.typ)
-				if err != nil {
+				if err != nil || v == nil && !property.out.nullable {
 					path := strings.Join(property.out.path, ".")
 					log.Printf("cannot convert %#v (type %s) to type %s for property at path %q", value, property.in.typ, property.out.typ, path)
 					continue
