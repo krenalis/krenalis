@@ -23,6 +23,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"
 	"github.com/shopspring/decimal"
+	"golang.org/x/exp/slices"
 )
 
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
@@ -359,6 +360,23 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			}
 		default:
 			return nil, errInvalidConversion
+		}
+		if enum := t2.Enum(); enum != nil {
+			if s == "" {
+				return nil, nil
+			}
+			if slices.Contains(enum, s) {
+				return s, nil
+			}
+			return nil, errInvalidConversion
+		}
+		if re := t2.Regexp(); re != nil {
+			if !re.MatchString(s) {
+				if s == "" {
+					return nil, nil
+				}
+				return nil, errInvalidConversion
+			}
 		}
 		if l, ok := t2.ByteLen(); ok && l < len(s) {
 			return nil, errInvalidConversion

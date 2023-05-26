@@ -10,6 +10,7 @@ package mappings
 import (
 	"encoding/json"
 	"math"
+	"regexp"
 	"testing"
 	"time"
 
@@ -173,6 +174,8 @@ func TestConvert(t *testing.T) {
 
 		// Text.
 		{types.Text(), types.Text(), "foo", "foo"},
+		{types.Text(), types.Text().WithEnum([]string{"foo", "boo"}), "boo", "boo"},
+		{types.Text(), types.Text().WithRegexp(regexp.MustCompile(`^bo+$`)), "boo", "boo"},
 		{types.Boolean(), types.Text(), true, "true"},
 		{types.Int(), types.Text(), -603, "-603"},
 		{types.Float(), types.Text(), 7928301735.704827, "7.928301735704827e+09"},
