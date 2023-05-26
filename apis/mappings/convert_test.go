@@ -238,7 +238,7 @@ func TestConvert(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := convert(test.v, test.t1, test.t2)
+		got, err := convert(test.v, test.t1, test.t2, true)
 		if err != nil {
 			t.Fatalf("cannot convert %s<%v> to type %s", test.t1, test.v, test.t2)
 		}

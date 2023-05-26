@@ -47,15 +47,19 @@ var (
 )
 
 // convert converts v from type t1 to type t2 and returns the converted value.
+// nullable reports whether nil is allowed as return value.
 // For Array, Object, and Map values, it can modify the argument v.
 //
 // It returns an error if v cannot be converted, and panics if v is nil.
-func convert(v any, t1, t2 types.Type) (any, error) {
+func convert(v any, t1, t2 types.Type, nullable bool) (any, error) {
 	pt1 := t1.PhysicalType()
 	pt2 := t2.PhysicalType()
 	if pt1 == types.PtJSON && pt2 != types.PtJSON {
 		if v, ok := v.(json.RawMessage); ok && v[0] == 'n' {
-			return nil, nil
+			if nullable {
+				return nil, nil
+			}
+			return nil, errInvalidConversion
 		}
 	}
 	switch pt2 {
@@ -362,7 +366,7 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			return nil, errInvalidConversion
 		}
 		if enum := t2.Enum(); enum != nil {
-			if s == "" {
+			if s == "" && nullable {
 				return nil, nil
 			}
 			if slices.Contains(enum, s) {
@@ -372,7 +376,7 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 		}
 		if re := t2.Regexp(); re != nil {
 			if !re.MatchString(s) {
-				if s == "" {
+				if s == "" && nullable {
 					return nil, nil
 				}
 				return nil, errInvalidConversion
@@ -405,7 +409,7 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			}
 			var err error
 			for i, item := range s {
-				s[i], err = convert(item, it1, it2)
+				s[i], err = convert(item, it1, it2, false)
 				if err != nil {
 					return nil, err
 				}
@@ -421,7 +425,7 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			}
 			it2 := t2.ItemType()
 			for i, item := range s {
-				s[i], err = convert(item, types.JSON(), it2)
+				s[i], err = convert(item, types.JSON(), it2, false)
 				if err != nil {
 					return nil, err
 				}
@@ -452,7 +456,7 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 				if !ok {
 					panic(fmt.Sprintf("unknown property %s", name))
 				}
-				obj[name], err = convert(value, p1.Type, p2.Type)
+				obj[name], err = convert(value, p1.Type, p2.Type, p2.Nullable)
 				if err != nil {
 					return nil, err
 				}
@@ -476,7 +480,7 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 					continue
 				}
 				var err error
-				s[name], err = convert(value, types.JSON(), p2.Type)
+				s[name], err = convert(value, types.JSON(), p2.Type, p2.Nullable)
 				if err != nil {
 					return nil, err
 				}
@@ -494,7 +498,7 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			}
 			var err error
 			for key, value := range m {
-				m[key], err = convert(value, vt1, vt2)
+				m[key], err = convert(value, vt1, vt2, false)
 				if err != nil {
 					return nil, err
 				}
@@ -507,7 +511,7 @@ func convert(v any, t1, t2 types.Type) (any, error) {
 			}
 			vt2 := t2.ValueType()
 			for key, value := range s {
-				s[key], err = convert(value, types.JSON(), vt2)
+				s[key], err = convert(value, types.JSON(), vt2, false)
 				if err != nil {
 					return nil, err
 				}

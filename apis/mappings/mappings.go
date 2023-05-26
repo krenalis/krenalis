@@ -136,8 +136,8 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 					continue
 				}
 			} else {
-				v, err := convert(value, property.in.typ, property.out.typ)
-				if err != nil || v == nil && !property.out.nullable {
+				v, err := convert(value, property.in.typ, property.out.typ, property.out.nullable)
+				if err != nil {
 					path := strings.Join(property.out.path, ".")
 					log.Printf("cannot convert %#v (type %s) to type %s for property at path %q", value, property.in.typ, property.out.typ, path)
 					continue
