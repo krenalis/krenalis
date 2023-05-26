@@ -191,6 +191,7 @@ type Type struct {
 
 	unique bool // unique reports whether the items of an Array must be unique.
 	real   bool // real reports whether NaN, +Inf and -Inf are allowed for Float and Float32 types.
+	flat   bool // flat reports whether contains, at any level, a flat property.
 
 	// p represents
 	//   - minimum value of Int, Int8, Int16 and Int24 types
@@ -348,7 +349,7 @@ func Text() Type {
 
 // Array returns an Array type with items of type t.
 func Array(t Type) Type {
-	return Type{pt: PtArray, s: MaxItems, vl: t}
+	return Type{pt: PtArray, flat: t.flat, s: MaxItems, vl: t}
 }
 
 // Object returns an Object type with the given properties.
@@ -361,6 +362,7 @@ func Object(properties []Property) Type {
 	}
 	exists := make(map[string]struct{}, len(properties))
 	ps := make([]Property, len(properties))
+	flat := false
 	for i, property := range properties {
 		if property.Name == "" {
 			panic("property name is empty")
@@ -388,13 +390,14 @@ func Object(properties []Property) Type {
 			Nullable:    property.Nullable,
 			Flat:        property.Flat,
 		}
+		flat = flat || property.Flat || property.Type.flat
 	}
-	return Type{pt: PtObject, vl: &ps}
+	return Type{pt: PtObject, flat: flat, vl: &ps}
 }
 
 // Map returns a Map type with value type t.
 func Map(t Type) Type {
-	return Type{pt: PtMap, vl: t}
+	return Type{pt: PtMap, flat: t.flat, vl: t}
 }
 
 // ObjectOf returns a new object type with the given properties.
@@ -407,6 +410,7 @@ func ObjectOf(properties []Property) (Type, error) {
 	}
 	exists := make(map[string]struct{}, len(properties))
 	ps := make([]Property, len(properties))
+	flat := false
 	for i, property := range properties {
 		if property.Name == "" {
 			return Type{}, errors.New("property name is empty")
@@ -433,8 +437,9 @@ func ObjectOf(properties []Property) (Type, error) {
 			Type:        property.Type,
 			Nullable:    property.Nullable,
 		}
+		flat = flat || property.Flat || property.Type.flat
 	}
-	return Type{pt: PtObject, vl: &ps}, nil
+	return Type{pt: PtObject, flat: flat, vl: &ps}, nil
 }
 
 // IsValidPropertyName reports whether name is a valid property name.
@@ -987,8 +992,17 @@ func (t Type) WithMaxItems(max int) Type {
 	return t
 }
 
+// HasFlatProperties reports whether t contains flat properties.
+func (t Type) HasFlatProperties() bool {
+	return t.flat
+}
+
 // Unflatten returns t but with all properties as not flat.
+// It returns t if t has no flat properties.
 func (t Type) Unflatten() Type {
+	if !t.flat {
+		return t
+	}
 	switch t.pt {
 	case PtObject:
 		pp := t.Properties()
@@ -1002,6 +1016,7 @@ func (t Type) Unflatten() Type {
 	case PtMap:
 		t.vl = t.ValueType().Unflatten()
 	}
+	t.flat = false
 	return t
 }
 

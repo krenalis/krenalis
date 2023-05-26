@@ -175,3 +175,75 @@ func TestAsRole(t *testing.T) {
 	}
 
 }
+
+func TestHasFlatProperties(t *testing.T) {
+
+	tests := []struct {
+		Type     types.Type
+		Expected bool
+	}{
+		{types.Boolean(), false},
+		{types.Object([]types.Property{{Name: "email", Type: types.Text()}}), false},
+		{types.Object([]types.Property{
+			{Name: "address", Type: types.Object([]types.Property{
+				{Name: "street1", Type: types.Text()},
+				{Name: "street2", Type: types.Text()},
+			})},
+		}), false},
+		{types.Object([]types.Property{
+			{Name: "address", Type: types.Object([]types.Property{
+				{Name: "street1", Type: types.Text()},
+				{Name: "street2", Type: types.Text()},
+			}), Flat: true},
+		}), true},
+		{types.Array(types.Float()), false},
+		{types.Array(types.Object([]types.Property{{Name: "email", Type: types.Text()}})), false},
+		{types.Array(types.Object([]types.Property{
+			{Name: "name", Type: types.Object([]types.Property{
+				{Name: "first", Type: types.Text()},
+			})},
+		})), false},
+		{types.Array(types.Object([]types.Property{
+			{Name: "address", Type: types.Object([]types.Property{
+				{Name: "street1", Type: types.Text()},
+				{Name: "street2", Type: types.Text()},
+			}), Flat: true},
+		})), true},
+		{types.Map(types.Int()), false},
+		{types.Map(types.Object([]types.Property{{Name: "email", Type: types.Text()}})), false},
+		{types.Map(types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+			{Name: "address", Type: types.Object([]types.Property{
+				{Name: "street1", Type: types.Text()},
+				{Name: "street2", Type: types.Text()},
+			}), Flat: true},
+		})), true},
+		{types.Map(types.Array(types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+			{Name: "address", Type: types.Object([]types.Property{
+				{Name: "street", Type: types.Object([]types.Property{
+					{Name: "line1", Type: types.Text()},
+					{Name: "line2", Type: types.Text()},
+				}), Flat: true},
+				{Name: "City", Type: types.Text()},
+			}), Flat: true},
+		}))), true},
+		{types.Map(types.Array(types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+			{Name: "address", Type: types.Object([]types.Property{
+				{Name: "street", Type: types.Object([]types.Property{
+					{Name: "line1", Type: types.Text()},
+					{Name: "line2", Type: types.Text()},
+				}), Flat: true},
+				{Name: "City", Type: types.Text()},
+			}), Flat: true},
+		}))).Unflatten(), false},
+	}
+
+	for i, test := range tests {
+		if got := test.Type.HasFlatProperties(); got != test.Expected {
+			t.Errorf("test %d: expected %t, got %t", i, test.Expected, got)
+		}
+	}
+
+}
