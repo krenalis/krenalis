@@ -48,6 +48,10 @@
     font-size: 16px;
 }
 
+.ConnectionActions .runButton > sl-spinner {
+    font-size: 16px;
+}
+
 .ConnectionActions .runButton::part(label) {
     padding-left: 5px;
 }
