@@ -73,11 +73,12 @@ const Schema = () => {
 
 	const getPropertiesRows = (properties) => {
 		const getNestedRows = (p) => {
-			let nestedRows = [[p.name, p.type.name]];
+			let nestedRows = [{ cells: [p.name, p.type.name] }];
 			for (let pr of p.type.properties) {
 				if (pr.type.name === 'Object') {
 					let nr = getNestedRows(pr);
 					nestedRows.push(nr);
+					continue;
 				} else {
 					let name = pr.type.name;
 					if (name === 'Array' && 'itemType' in pr.type) {
@@ -86,7 +87,7 @@ const Schema = () => {
 					if ('enum' in pr.type) {
 						name += ' (enum with values: ' + pr.type.enum.join(', ') + ')';
 					}
-					nestedRows.push([pr.name, name]);
+					nestedRows.push({ cells: [pr.name, name] });
 				}
 			}
 			return nestedRows;
@@ -96,6 +97,7 @@ const Schema = () => {
 			if (p.type.name === 'Object') {
 				let nestedRows = getNestedRows(p);
 				rows.push(nestedRows);
+				continue;
 			} else {
 				let name = p.type.name;
 				if (name === 'Array' && 'itemType' in p.type) {
@@ -104,7 +106,7 @@ const Schema = () => {
 				if ('enum' in p.type) {
 					name += ' (enum with values: ' + p.type.enum.join(', ') + ')';
 				}
-				let row = [p.name, name];
+				let row = { cells: [p.name, name] };
 				rows.push(row);
 			}
 		}

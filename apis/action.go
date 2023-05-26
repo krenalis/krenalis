@@ -36,6 +36,7 @@ type Action struct {
 	Name               string
 	Enabled            bool
 	EventType          *string
+	Running            bool
 	ScheduleStart      *int
 	SchedulePeriod     *SchedulePeriod
 	Filter             *ActionFilter
@@ -72,6 +73,7 @@ func (this *Action) fromState(db *postgres.DB, action *state.Action) {
 		et := action.EventType
 		this.EventType = &et
 	}
+	_, this.Running = this.action.Execution()
 	if action.Target == state.UsersTarget || action.Target == state.GroupsTarget {
 		start := int(action.ScheduleStart)
 		period := SchedulePeriod(action.SchedulePeriod)

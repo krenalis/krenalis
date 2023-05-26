@@ -4,7 +4,7 @@
     overflow: visible!important;
 }
 
-body.fullScreen .sl-toast-stack {
+body.isFullscreen .sl-toast-stack {
 	left: 50%;
 }
 

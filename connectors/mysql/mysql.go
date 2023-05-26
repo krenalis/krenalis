@@ -115,7 +115,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 			return nil, ui.DangerAlert(err.Error()), nil
 		}
 		if event == "test" {
-			return nil, ui.SuccessAlert("Connection established"), nil
+			return nil, nil, nil
 		}
 		err = c.firehose.SetSettings(s)
 		if err != nil {
@@ -136,7 +136,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		},
 		Values: values,
 		Actions: []ui.Action{
-			{Event: "test", Text: "Test Connection", Variant: "neutral"},
+			{Event: "test", Text: "Test Connection", Variant: "neutral", Confirm: true},
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
 	}

@@ -45,15 +45,15 @@ const Grid = ({ columns, rows, isLoading, noRowsMessage }) => {
 	}, [isLoading, rows, columns]);
 
 	let gridRows = [];
-	for (let [i, cells] of rows.entries()) {
+	for (let [i, row] of rows.entries()) {
 		let className = getChildIndexClassname(i, rows.length);
-		if (Array.isArray(cells[0])) {
+		if (Array.isArray(row)) {
 			gridRows.push(
-				<GridNestedRows rows={cells} columns={columns} className={`GridNestedRows ${className}`} nesting={1} />
+				<GridNestedRows rows={row} columns={columns} className={`GridNestedRows ${className}`} nesting={1} />
 			);
 			continue;
 		}
-		gridRows.push(<GridRow cells={cells} columns={columns} className={`GridRow ${className}`} />);
+		gridRows.push(<GridRow row={row} columns={columns} className={`GridRow ${className}`} />);
 	}
 
 	return (

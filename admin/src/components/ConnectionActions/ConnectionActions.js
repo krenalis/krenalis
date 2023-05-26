@@ -1,9 +1,10 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import './ConnectionActions.css';
 import LittleLogo from '../LittleLogo/LittleLogo';
 import Flex from '../Flex/Flex';
 import ListTile from '../ListTile/ListTile';
 import IconWrapper from '../IconWrapper/IconWrapper';
+import Fullscreen from '../Fullscreen/Fullscreen';
 import UnknownLogo from '../UnknownLogo/UnknownLogo';
 import StyledGrid from '../StyledGrid/StyledGrid';
 import Action from '../Action/Action';
@@ -37,6 +38,9 @@ let ConnectionActions = () => {
 	let { connection: c, setCurrentConnectionSection } = useContext(ConnectionContext);
 
 	setCurrentConnectionSection('actions');
+
+	let newActionID = useRef(0);
+	let fetchActionsIntervalID = useRef(0);
 
 	useEffect(() => {
 		const stopLoading = () => {
@@ -74,9 +78,36 @@ let ConnectionActions = () => {
 			}
 			setDescription(description);
 			stopLoading();
+			fetchActionsIntervalID.current = setInterval(async () => {
+				[actions, err] = await API.connections.actions(c.ID);
+				if (err != null) {
+					return;
+				}
+				setActions(actions);
+			}, 3000);
 		};
 		fetchData();
+		return async () => {
+			clearInterval(fetchActionsIntervalID.current);
+		};
 	}, []);
+
+	useEffect(() => {
+		let isEditingMode = selectedAction != null || selectedActionType != null;
+		if (isEditingMode) {
+			clearInterval(fetchActionsIntervalID.current);
+			return;
+		}
+
+		if (fetchActionsIntervalID.current === 0) return;
+		fetchActionsIntervalID.current = setInterval(async () => {
+			let [actions, err] = await API.connections.actions(c.ID);
+			if (err != null) {
+				return;
+			}
+			setActions(actions);
+		}, 3000);
+	}, [selectedAction, selectedActionType]);
 
 	const onActionStatusSwitch = async (actionID) => {
 		let a = [...actions];
@@ -130,11 +161,10 @@ let ConnectionActions = () => {
 			showError(err);
 			return;
 		}
-		if (c.Role === 'Source') {
-			showStatus(statuses.importStarted);
-		} else {
-			showStatus(statuses.exportStarted);
-		}
+		let a = [...actions];
+		let i = a.findIndex((a) => a.ID === actionID);
+		a[i].Running = true;
+		setActions(a);
 	};
 
 	const onSchedulerPeriodChange = async (e, actionID) => {
@@ -144,14 +174,21 @@ let ConnectionActions = () => {
 			showError(err);
 			return;
 		}
+		let a = [...actions];
+		let i = a.findIndex((a) => a.ID === actionID);
+		a[i].SchedulePeriod = period;
+		setActions(a);
 	};
 
 	const refresh = async () => {
-		setSelectedActionType(null);
-		setSelectedAction(null);
+		const close = () => {
+			setSelectedActionType(null);
+			setSelectedAction(null);
+		};
 		let actionTypes, err;
 		[actionTypes, err] = await API.connections.actionTypes(c.ID);
 		if (err != null) {
+			close();
 			showError(err);
 			return;
 		}
@@ -159,10 +196,17 @@ let ConnectionActions = () => {
 		let actions;
 		[actions, err] = await API.connections.actions(c.ID);
 		if (err != null) {
+			close();
 			showError(err);
 			return;
 		}
+		let id = sessionStorage.getItem('newAction');
+		if (id) {
+			newActionID.current = Number(id);
+			sessionStorage.removeItem('newAction');
+		}
 		setActions(actions);
+		close();
 	};
 
 	if (isLoading) {
@@ -216,7 +260,7 @@ let ConnectionActions = () => {
 						<SlDropdown>
 							<SlButton slot='trigger' variant='default' size='small'>
 								<SlIcon slot='prefix' name='clock' />
-								Scheduler
+								Schedule: {a.SchedulePeriod}
 							</SlButton>
 							<SlMenu className='schedulerOptions'>
 								<SlRadioGroup
@@ -232,8 +276,15 @@ let ConnectionActions = () => {
 								</SlRadioGroup>
 							</SlMenu>
 						</SlDropdown>
-						<SlButton variant='default' size='small' onClick={() => executeAction(a.ID)}>
-							Execute
+						<SlButton
+							disabled={a.Running}
+							variant='default'
+							className='runButton'
+							size='small'
+							onClick={() => executeAction(a.ID)}
+						>
+							{a.Running ? <SlSpinner slot='prefix' /> : <SlIcon slot='prefix' name='play' />}
+							Run now
 						</SlButton>
 					</>
 				)}
@@ -245,11 +296,12 @@ let ConnectionActions = () => {
 				</SlButton>
 			</div>
 		);
-		rows.push([nameCell, conditionsCell, enabledCell, actionsCell]);
-	}
-
-	if (selectedActionType !== null || selectedAction !== null) {
-		return <Action actionType={selectedActionType} action={selectedAction} onClose={refresh}></Action>;
+		let row = { cells: [nameCell, conditionsCell, enabledCell, actionsCell], key: a.ID };
+		if (a.ID === newActionID.current && actions.length > 1) {
+			row.animation = 'fade-in';
+			newActionID.current = 0;
+		}
+		rows.push(row);
 	}
 
 	let connector = connectors.find((connector) => connector.ID === c.Connector);
@@ -317,6 +369,9 @@ let ConnectionActions = () => {
 					</>
 				)}
 			</div>
+			<Fullscreen isOpen={selectedActionType != null || selectedAction != null}>
+				<Action actionType={selectedActionType} action={selectedAction} onClose={refresh} />
+			</Fullscreen>
 			<SlDialog
 				label='Add action'
 				className='actionDialog'

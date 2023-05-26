@@ -1,6 +1,7 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import './ConnectionForm.css';
 import ConnectorField from '../ConnectorFields/ConnectorField';
+import ConfirmationButton from '../ConfirmationButton/ConfirmationButton';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 import { AppContext } from '../../context/AppContext';
 import statuses from '../../constants/statuses';
@@ -14,6 +15,8 @@ const ConnectionForm = ({ connection: c }) => {
 	let [values, setValues] = useState(null);
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
+
+	const confirmationButtonsRef = useRef([]);
 
 	useEffect(() => {
 		const fetchUI = async () => {
@@ -46,7 +49,9 @@ const ConnectionForm = ({ connection: c }) => {
 		fetchUI();
 	}, []);
 
-	const onActionClick = async (e) => {
+	const onActionClick = async (eventName, confirmationButtonIndex) => {
+		let confirmationButton = confirmationButtonsRef.current[confirmationButtonIndex];
+
 		// remove the errors
 		let fls = [];
 		for (let f of fields) {
@@ -54,7 +59,13 @@ const ConnectionForm = ({ connection: c }) => {
 			fls.push(f);
 		}
 		setFields(fls);
-		let [ui, err] = await API.connections.uiEvent(c.ID, e, values);
+		if (confirmationButton != null) {
+			confirmationButton.load();
+		}
+		let [ui, err] = await API.connections.uiEvent(c.ID, eventName, values);
+		if (confirmationButton != null) {
+			confirmationButton.stop();
+		}
 		if (err) {
 			if (err instanceof NotFoundError) {
 				redirect('/admin/connections');
@@ -66,7 +77,9 @@ const ConnectionForm = ({ connection: c }) => {
 					// TODO(@Andrea): find a way to show the full error message
 					// in the toast notification when the server is started with
 					// the CHICHI_DEBUG_UI environment variable set to 'true'.
-					console.error(`Unprocessable: connection does not implement the ${e} event in its ServeUI method`);
+					console.error(
+						`Unprocessable: connection does not implement the ${eventName} event in its ServeUI method`
+					);
 					showError('Unexpected error. Contact the administrator for more informations.');
 				}
 				return;
@@ -74,8 +87,14 @@ const ConnectionForm = ({ connection: c }) => {
 			showError(err);
 			return;
 		}
-		if (e === 'save') {
+		if (eventName === 'save') {
 			showStatus(statuses.connectionSaved);
+			return;
+		}
+		if (ui == null) {
+			if (confirmationButton != null) {
+				confirmationButton.confirm();
+			}
 			return;
 		}
 		if (ui.Alert != null) {
@@ -98,17 +117,33 @@ const ConnectionForm = ({ connection: c }) => {
 	}
 
 	let actionsToRender = [];
-	for (let a of actions) {
-		actionsToRender.push(
-			<SlButton
-				variant={a.Variant}
-				onClick={async () => {
-					await onActionClick(a.Event);
-				}}
-			>
-				{a.Text}
-			</SlButton>
-		);
+	for (let [i, a] of actions.entries()) {
+		if (a.Confirm) {
+			actionsToRender.push(
+				<ConfirmationButton
+					variant={a.Variant}
+					onClick={async () => {
+						await onActionClick(a.Event, i);
+					}}
+					ref={(ref) => {
+						confirmationButtonsRef.current[i] = ref;
+					}}
+				>
+					{a.Text}
+				</ConfirmationButton>
+			);
+		} else {
+			actionsToRender.push(
+				<SlButton
+					variant={a.Variant}
+					onClick={async () => {
+						await onActionClick(a.Event);
+					}}
+				>
+					{a.Text}
+				</SlButton>
+			);
+		}
 	}
 
 	return (

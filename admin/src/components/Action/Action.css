@@ -1,4 +1,19 @@
-.actionTitle  {
+.action .header {
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    background-color: var(--bg-primary);
+    border-bottom: 1px solid var(--border-primary);
+    z-index: 10;
+    height: 90px;
+}
+
+.action .header .actionTitle  {
     display: grid;
     grid-template-columns: 30px 1fr;
     grid-template-areas:
@@ -8,44 +23,57 @@
     align-items: center;
 }
 
-.actionTitle .LittleLogo {
+.action .header .actionTitle .LittleLogo {
     grid-area: logo;
 }
 
-.actionTitle .LittleLogo img {
+.action .header .actionTitle .LittleLogo img {
     height: 35px;
 }
 
-.actionTitle .actionName {
+.action .header .actionTitle .actionName {
     grid-area: name;
 }
 
-.actionTitle .actionTypeDescription {
+.action .header .actionTitle .actionTypeDescription {
     font-size: 13px;
     grid-area: description;
 }
 
-.actionTitle .name {
+.action .header .actionTitle .name {
     font-weight: 600;
 }
 
-.actionTitle .name .nameInput {
+.action .header .actionTitle .name .nameInput {
     max-width: 180px;
     display: inline-block;
     margin: auto;
     margin-bottom: 5px;
 }
 
-.actionTitle .name .nameInput::part(base) {
+.action .header .actionTitle .name .nameInput::part(base) {
     font-size: 14px;
 }
 
-.actionTitle .name sl-icon-button {
+.action .header .actionTitle .name sl-icon-button {
     font-size: 14px;
 }
 
-.saveAction::part(base) {
+.action .header .headerButtons {
+    display: flex;
+    align-items: center;
+    justify-content: end;
+    gap: 20px;
+}
+
+.action .header .headerButtons .saveAction::part(base) {
     min-width: 200px;
+}
+
+.action .body {
+    max-width: 1200px;
+    margin: auto;
+    margin-top: 50px;
 }
 
 .action .section {

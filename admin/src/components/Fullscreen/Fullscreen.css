@@ -1,0 +1,38 @@
+@keyframes fullscreenFadeIn {
+    0% {
+        opacity: 0;
+        transform: scale(.98);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes fullscreenFadeOut {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(.98);
+    }
+}
+
+.fullscreen {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-gray);
+    z-index: 20;
+    overflow: auto;
+    animation-fill-mode: both;
+    opacity: 0;
+}
+
+.fullscreen.isOpen {
+    opacity: 1;
+}

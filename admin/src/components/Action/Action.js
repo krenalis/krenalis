@@ -5,7 +5,7 @@ import Section from '../Section/Section';
 import AlertDialog from '../AlertDialog/AlertDialog';
 import UnknownLogo from '../UnknownLogo/UnknownLogo';
 import LittleLogo from '../LittleLogo/LittleLogo';
-import EditPage from '../EditPage/EditPage';
+import ConfirmationButton from '../ConfirmationButton/ConfirmationButton';
 import statuses from '../../constants/statuses';
 import * as variants from '../../constants/variants';
 import * as icons from '../../constants/icons';
@@ -44,10 +44,12 @@ const operatorOptions = {
 	2: 'is not',
 };
 
+const CONFIRM_ANIMATION_DURATION = 1200;
+
 const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => {
 	let [action, setAction] = useState(null);
 	let [actionType, setActionType] = useState(null);
-	let [propertiesMode, setPropertiesMode] = useState('');
+	let [propertiesMode, setPropertiesMode] = useState('mappings');
 	let [fields, setFields] = useState([]);
 	let [inputSchema, setInputSchema] = useState(null);
 	let [isInputSchemaDialogOpen, setIsInputSchemaDialogOpen] = useState(false);
@@ -57,6 +59,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let [filePreviewTable, setFilePreviewTable] = useState(null);
 	let [isAlertOpen, setIsAlertOpen] = useState(false);
 	let [isNameEditable, setIsNameEditable] = useState(false);
+	let [isSaveButtonLoading, setIsSaveButtonLoading] = useState(false);
 
 	let { API, showError, showStatus, redirect, connectors } = useContext(AppContext);
 	let { connection: c } = useContext(ConnectionContext);
@@ -69,13 +72,17 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let conditionListRef = useRef(null);
 	let internalMatchingPropertyListRef = useRef(null);
 	let externalMatchingPropertyListRef = useRef(null);
+	let propertiesSectionRef = useRef(null);
+	let queryConfirmButtonRef = useRef(null);
+	let fileConfirmButtonRef = useRef(null);
 
-	let isImport = c.Role === 'Source';
+	const isImport = c.Role === 'Source';
+	const isEditing = actionProp != null;
 
 	useEffect(() => {
 		let actionType;
 		const fetchData = async () => {
-			let a = actionProp == null ? null : { ...actionProp };
+			let a = isEditing ? { ...actionProp } : null;
 
 			// get the action type.
 			if (a != null) {
@@ -206,7 +213,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					Name: actionType.Name,
 					Enabled: false,
 					Filter: null,
-					Mapping: null,
+					Mapping: getDefaultMappings(schemas.Out),
 					Transformation: null,
 					Query: null,
 					Path: fields.includes('Path') ? '' : null,
@@ -333,20 +340,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			a.Transformation.Out.properties.push(property);
 		}
 		setAction(a);
-	};
-
-	const onSetMappingsMode = () => {
-		let a = { ...action };
-		a.Mapping = getDefaultMappings(outputSchema);
-		setAction(a);
-		setPropertiesMode('mappings');
-	};
-
-	const onSetTransformationMode = () => {
-		let a = { ...action };
-		a.Transformation = getDefaultTransformation();
-		setAction(a);
-		setPropertiesMode('transformation');
 	};
 
 	const updateProperty = (name, value) => {
@@ -476,16 +469,21 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			}
 			columns.push({ name: name, type: prop.type.name });
 		}
-		let table = { columns, rows: res.Rows };
+		let rows = [];
+		for (let row of res.Rows) {
+			rows.push({ cells: row });
+		}
+		let table = { columns, rows };
 		setQueryPreviewTable(table);
 	};
 
 	const onConfirmQuery = async () => {
+		queryConfirmButtonRef.current.load();
 		let res = await query(null, 0, true);
 		if (res == null) {
+			queryConfirmButtonRef.current.stop();
 			return;
 		}
-		setInputSchema(res.Schema);
 		let a = { ...action };
 		if (a.Schema != null) {
 			a.Schema = res.Schema;
@@ -493,8 +491,19 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		if (propertiesMode === 'transformation') {
 			a.Transformation.In.properties = [];
 		}
-		setAction(a);
-		showStatus(statuses.schemaLoaded);
+		queryConfirmButtonRef.current.confirm();
+		setTimeout(() => {
+			setAction(a);
+			setInputSchema(res.Schema);
+			setTimeout(() => {
+				let top = propertiesSectionRef.current.getBoundingClientRect().top;
+				propertiesSectionRef.current.closest('.fullscreen').scrollBy({
+					top: top - 130,
+					left: 0,
+					behavior: 'smooth',
+				});
+			});
+		}, CONFIRM_ANIMATION_DURATION);
 	};
 
 	const onChangeExportMode = (e) => {
@@ -567,16 +576,21 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			}
 			columns.push({ name: name, type: prop.type.name });
 		}
-		let table = { columns, rows: res.records };
+		let rows = [];
+		for (let row of res.records) {
+			rows.push({ cells: row });
+		}
+		let table = { columns, rows };
 		setFilePreviewTable(table);
 	};
 
 	const onConfirmFile = async () => {
+		fileConfirmButtonRef.current.load();
 		let res = await records(action.Path, action.Sheet, 0, true);
 		if (res == null) {
+			fileConfirmButtonRef.current.stop();
 			return;
 		}
-		setInputSchema(res.schema);
 		let a = { ...action };
 		if (a.Schema != null) {
 			a.Schema = res.schema;
@@ -584,8 +598,19 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		if (propertiesMode === 'transformation') {
 			a.Transformation.In.properties = [];
 		}
-		setAction(a);
-		showStatus(statuses.schemaLoaded);
+		fileConfirmButtonRef.current.confirm();
+		setTimeout(() => {
+			setAction(a);
+			setInputSchema(res.schema);
+			setTimeout(() => {
+				let top = propertiesSectionRef.current.getBoundingClientRect().top;
+				propertiesSectionRef.current.closest('.fullscreen').scrollBy({
+					top: top - 130,
+					left: 0,
+					behavior: 'smooth',
+				});
+			});
+		}, CONFIRM_ANIMATION_DURATION);
 	};
 
 	const onSave = async () => {
@@ -608,11 +633,11 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			let trimmed = a.Query.trim();
 			a.Query = trimmed;
 		}
-		let err;
+		let id, err;
 		if (actionProp != null) {
 			[, err] = await API.connections.setAction(c.ID, a.ID, a);
 		} else {
-			[, err] = await API.connections.addAction(c.ID, {
+			[id, err] = await API.connections.addAction(c.ID, {
 				Target: actionType.Target,
 				EventType: actionType.EventType,
 				Action: a,
@@ -633,8 +658,14 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			showError(err);
 			return;
 		}
-		showStatus(statuses.actionSaved);
-		onClose();
+		if (id) {
+			sessionStorage.setItem('newAction', id);
+		}
+		setIsSaveButtonLoading(true);
+		setTimeout(() => {
+			setIsSaveButtonLoading(false);
+			onClose();
+		}, 500);
 	};
 
 	const getDefaultMappings = (schema) => {
@@ -814,65 +845,33 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		}
 	}
 
-	let hasQueryError = c.Type === 'Database' && inputSchema == null;
-	let hasRecordsError = c.Type === 'File' && inputSchema == null;
+	let mustComputeSchema = (c.Type === 'Database' || c.Type === 'File') && inputSchema == null && !isEditing;
+	let hasQueryError = c.Type === 'Database' && inputSchema == null && isEditing;
+	let hasRecordsError = c.Type === 'File' && inputSchema == null && isEditing;
 	let isPropertiesSectionDisabled = hasQueryError || isQueryChanged || hasRecordsError || (isFileChanged && isImport);
+
 	let propertiesSection = null;
-	if (fields.includes('Mapping')) {
+	if (fields.includes('Mapping') && !mustComputeSchema) {
 		let propertiesSectionActions = null;
-		if (propertiesMode !== '') {
-			let actionText;
-			let actionIcon;
-			if (propertiesMode === 'mappings') {
-				actionText = 'Switch to transformation function';
-				actionIcon = <SlIcon name='shuffle' slot='prefix'></SlIcon>;
-			} else if (propertiesMode === 'transformation') {
-				actionText = 'Switch to mappings';
-				actionIcon = <SlIcon name='filetype-py' slot='prefix'></SlIcon>;
-			}
-			propertiesSectionActions = (
-				<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
-					{actionIcon}
-					{actionText}
-				</SlButton>
-			);
+		let actionText;
+		let actionIcon;
+		if (propertiesMode === 'mappings') {
+			actionText = 'Switch to transformation function';
+			actionIcon = <SlIcon name='shuffle' slot='prefix'></SlIcon>;
+		} else if (propertiesMode === 'transformation') {
+			actionText = 'Switch to mappings';
+			actionIcon = <SlIcon name='filetype-py' slot='prefix'></SlIcon>;
 		}
+		propertiesSectionActions = (
+			<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
+				{actionIcon}
+				{actionText}
+			</SlButton>
+		);
 
 		let isSectionPadded = false;
 		let propertiesSectionContent = null;
-		if (propertiesMode === '') {
-			if (fields.includes('Query') && inputSchema == null) {
-				propertiesSectionContent = (
-					<SlAlert variant='warning' open>
-						<SlIcon slot='icon' name='exclamation-triangle' />
-						To enable mappings, you should first load a database schema in the "Query" section
-					</SlAlert>
-				);
-			} else if (fields.includes('Path') && inputSchema == null) {
-				propertiesSectionContent = (
-					<SlAlert variant='warning' open>
-						<SlIcon slot='icon' name='exclamation-triangle' />
-						To enable mappings, you should first load a file schema by inserting the file path
-						{fields.includes('Sheet') && ' and sheet'}
-					</SlAlert>
-				);
-			} else {
-				isSectionPadded = true;
-				propertiesSectionContent = (
-					<div className='propertiesButtons'>
-						<SlButton size='small' variant='primary' onClick={onSetMappingsMode}>
-							<SlIcon name='shuffle' slot='prefix'></SlIcon>
-							Map the properties
-						</SlButton>
-						<span>or</span>
-						<SlButton size='small' variant='primary' onClick={onSetTransformationMode}>
-							<SlIcon name='filetype-py' slot='prefix'></SlIcon>
-							Write a transformation function
-						</SlButton>
-					</div>
-				);
-			}
-		} else if (propertiesMode === 'mappings') {
+		if (propertiesMode === 'mappings') {
 			let mappings = [];
 			let defaultMappings = getDefaultMappings(inputSchema);
 			for (let k of Object.keys(action.Mapping)) {
@@ -942,7 +941,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					/>
 				</div>
 			);
-		} else if (propertiesMode === 'transformation') {
+		} else {
 			propertiesSectionContent = (
 				<div className='transformation'>
 					<div className='inputProperties'>
@@ -1011,6 +1010,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 
 		propertiesSection = (
 			<Section
+				ref={propertiesSectionRef}
 				title='Properties'
 				description='The relation between the event properties and the action type properties'
 				actions={propertiesSectionActions}
@@ -1030,47 +1030,51 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	}
 
 	return (
-		<EditPage
-			title={
-				<div className='actionTitle'>
-					{logo}
-					<div className='actionName'>
-						{isNameEditable ? (
-							<span className='name'>
-								<SlInput
-									className='nameInput'
-									value={action != null ? action.Name : actionType.Name}
-									onSlInput={onUpdateName}
-								></SlInput>
-								<SlIconButton
-									name='check-lg'
-									label='Confirm'
-									onClick={() => setIsNameEditable(false)}
-								/>
-							</span>
-						) : (
-							<span className='name'>
-								{action != null ? action.Name : actionType.Name}
-								<SlIconButton name='pencil' label='Edit' onClick={() => setIsNameEditable(true)} />
-							</span>
-						)}
+		<div className='action'>
+			<div className='header'>
+				<div className='title'>
+					<div className='actionTitle'>
+						{logo}
+						<div className='actionName'>
+							{isNameEditable ? (
+								<span className='name'>
+									<SlInput
+										className='nameInput'
+										value={action != null ? action.Name : actionType.Name}
+										onSlInput={onUpdateName}
+									></SlInput>
+									<SlIconButton
+										name='check-lg'
+										label='Confirm'
+										onClick={() => setIsNameEditable(false)}
+									/>
+								</span>
+							) : (
+								<span className='name'>
+									{action != null ? action.Name : actionType.Name}
+									<SlIconButton name='pencil' label='Edit' onClick={() => setIsNameEditable(true)} />
+								</span>
+							)}
+						</div>
+						{!isNameEditable && <div className='actionTypeDescription'>{actionType.Description}</div>}
 					</div>
-					{!isNameEditable && <div className='actionTypeDescription'>{actionType.Description}</div>}
 				</div>
-			}
-			onCancel={onClose}
-			actions={
-				<SlButton
-					className='saveAction'
-					variant='primary'
-					disabled={(actionType.Schema != null && propertiesMode === '') || isPropertiesSectionDisabled}
-					onClick={onSave}
-				>
-					{actionProp != null ? 'Save' : 'Add'}
-				</SlButton>
-			}
-		>
-			<div className='action'>
+				<div className='headerButtons'>
+					<SlButton variant='default' onClick={onClose}>
+						Cancel
+					</SlButton>
+					<SlButton
+						className='saveAction'
+						variant='primary'
+						disabled={(actionType.Schema != null && propertiesMode === '') || isPropertiesSectionDisabled}
+						onClick={onSave}
+						loading={isSaveButtonLoading}
+					>
+						{actionProp != null ? 'Save' : 'Add'}
+					</SlButton>
+				</div>
+			</div>
+			<div className='body'>
 				{fields.includes('Filter') && (
 					<Section title='Filter' description='The filters that define the action' padded={true}>
 						{conditions.length > 1 && (
@@ -1107,9 +1111,15 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							<SlButton variant='neutral' size='small' onClick={onQueryPreview}>
 								Preview
 							</SlButton>
-							<SlButton variant='success' size='small' onClick={onConfirmQuery}>
+							<ConfirmationButton
+								ref={queryConfirmButtonRef}
+								variant='success'
+								size='small'
+								onClick={onConfirmQuery}
+								animationDuration={CONFIRM_ANIMATION_DURATION}
+							>
 								Confirm
-							</SlButton>
+							</ConfirmationButton>
 						</div>
 					</Section>
 				)}
@@ -1143,9 +1153,15 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 								<SlButton variant='neutral' size='small' onClick={onFilePreview}>
 									Preview
 								</SlButton>
-								<SlButton variant='success' size='small' onClick={onConfirmFile}>
+								<ConfirmationButton
+									ref={fileConfirmButtonRef}
+									variant='success'
+									size='small'
+									onClick={onConfirmFile}
+									animationDuration={CONFIRM_ANIMATION_DURATION}
+								>
 									Confirm
-								</SlButton>
+								</ConfirmationButton>
 							</div>
 						)}
 					</Section>
@@ -1344,7 +1360,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						document.body
 					)}
 			</div>
-		</EditPage>
+		</div>
 	);
 };
 

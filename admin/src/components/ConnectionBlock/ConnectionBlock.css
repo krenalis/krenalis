@@ -14,13 +14,13 @@
     border: 1px solid var(--sl-color-neutral-200);
 }
 
-@keyframes fade-in {
+@keyframes connection-block-fade-in {
     0% { transform: scale(.75); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
 }
 
 .ConnectionBlock.new {
-    animation: fade-in 2000ms;
+    animation: connection-block-fade-in 2000ms;
     animation-fill-mode: both;
 }
 

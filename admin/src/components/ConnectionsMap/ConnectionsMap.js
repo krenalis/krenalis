@@ -18,7 +18,7 @@ const ConnectionsMap = () => {
 	setCurrentTitle('Connections');
 	setPreviousRoute('');
 
-	let newConnection = Number(new URL(document.location).searchParams.get('new'));
+	let newConnection = Number(new URL(document.location).searchParams.get('newConnection'));
 
 	useEffect(() => {
 		const fetchConnections = async () => {

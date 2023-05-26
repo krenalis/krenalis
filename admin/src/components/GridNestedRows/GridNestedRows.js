@@ -18,7 +18,7 @@ const GridNestedRows = ({ rows, columns, className, nesting }) => {
 
 	let rws = [];
 	for (let [i, cells] of rows.entries()) {
-		if (Array.isArray(cells[0])) {
+		if (Array.isArray(cells)) {
 			rws.push(
 				<GridNestedRows
 					rows={cells}
@@ -33,11 +33,11 @@ const GridNestedRows = ({ rows, columns, className, nesting }) => {
 				row = (
 					<>
 						{icon}
-						<GridRow cells={cells} columns={columns} className='GridRow parent' />
+						<GridRow row={cells} columns={columns} className='GridRow parent' />
 					</>
 				);
 			} else {
-				row = <GridRow cells={cells} columns={columns} className='GridRow children' />;
+				row = <GridRow row={cells} columns={columns} className='GridRow children' />;
 			}
 			rws.push(row);
 		}

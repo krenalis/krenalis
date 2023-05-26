@@ -22,23 +22,27 @@ const ComboBoxList = forwardRef(({ items, onSelect }, ref) => {
 
 	let comboBoxListMenuRef = useRef(null);
 
-	useImperativeHandle(ref, () => {
-		return {
-			...comboBoxListMenuRef.current,
-			open() {
-				setIsOpen(true);
-			},
-			close() {
-				setIsOpen(false);
-			},
-			updateSearchTerm(term) {
-				setSearchTerm(term);
-			},
-			updateCurrentComboboxInput(input) {
-				setCurrentComboboxInput(input);
-			},
-		};
-	});
+	useImperativeHandle(
+		ref,
+		() => {
+			return {
+				...comboBoxListMenuRef.current,
+				open() {
+					setIsOpen(true);
+				},
+				close() {
+					setIsOpen(false);
+				},
+				updateSearchTerm(term) {
+					setSearchTerm(term);
+				},
+				updateCurrentComboboxInput(input) {
+					setCurrentComboboxInput(input);
+				},
+			};
+		},
+		[]
+	);
 
 	const onMouseDown = (e) => {
 		// prevent ComboBoxInput from losing focus

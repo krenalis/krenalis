@@ -1,6 +1,7 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import './ConnectorSettings.css';
 import ConnectorField from '../ConnectorFields/ConnectorField';
+import ConfirmationButton from '../ConfirmationButton/ConfirmationButton';
 import NotFound from '../NotFound/NotFound';
 import Flex from '../Flex/Flex';
 import UnknownLogo from '../UnknownLogo/UnknownLogo';
@@ -27,6 +28,8 @@ const ConnectorSettings = () => {
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
 	let { setCurrentTitle, setPreviousRoute } = useContext(NavigationContext);
+
+	const confirmationButtonsRef = useRef([]);
 
 	let connectorID, connectionRole, OAuthToken;
 	let url = new URL(document.location);
@@ -118,7 +121,9 @@ const ConnectorSettings = () => {
 		fetchData();
 	}, []);
 
-	const onActionClick = async (e) => {
+	const onActionClick = async (eventName, confirmationButtonIndex) => {
+		let confirmationButton = confirmationButtonsRef.current[confirmationButtonIndex];
+
 		// remove the errors
 		let fls = [];
 		for (let f of fields) {
@@ -126,7 +131,10 @@ const ConnectorSettings = () => {
 			fls.push(f);
 		}
 		setFields(fls);
-		if (e === 'save') {
+		if (confirmationButton != null) {
+			confirmationButton.load();
+		}
+		if (eventName === 'save') {
 			let [id, err] = await API.workspace.addConnection(connectorID, connectionRole, values, {
 				Name: name,
 				Enabled: true,
@@ -134,6 +142,9 @@ const ConnectorSettings = () => {
 				WebsiteHost: websiteHost,
 				OAuth: OAuthToken,
 			});
+			if (confirmationButton != null) {
+				confirmationButton.stop();
+			}
 			if (err != null) {
 				if (err instanceof UnprocessableError) {
 					switch (err.code) {
@@ -158,19 +169,30 @@ const ConnectorSettings = () => {
 			setNewConnectionID(id);
 			return;
 		}
-		let [ui, err] = await API.connectors.uiEvent(connectorID, e, values, connectionRole, OAuthToken);
+		let [ui, err] = await API.connectors.uiEvent(connectorID, eventName, values, connectionRole, OAuthToken);
+		if (confirmationButton != null) {
+			confirmationButton.stop();
+		}
 		if (err != null) {
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'EventNotExists') {
 					// TODO(@Andrea): find a way to show the full error message
 					// in the toast notification when the server is started with
 					// the CHICHI_DEBUG_UI environment variable set to 'true'.
-					console.error(`Unprocessable: connection does not implement the ${e} event in its ServeUI method`);
+					console.error(
+						`Unprocessable: connection does not implement the ${eventName} event in its ServeUI method`
+					);
 					showError('Unexpected error. Contact the administrator for more informations.');
 				}
 				return;
 			}
 			showError(err);
+			return;
+		}
+		if (ui == null) {
+			if (confirmationButton != null) {
+				confirmationButton.confirm();
+			}
 			return;
 		}
 		if (ui.Alert != null) {
@@ -226,17 +248,33 @@ const ConnectorSettings = () => {
 	}
 
 	let actionsToRender = [];
-	for (let a of actions) {
-		actionsToRender.push(
-			<SlButton
-				variant={a.Variant}
-				onClick={async () => {
-					await onActionClick(a.Event);
-				}}
-			>
-				{a.Text}
-			</SlButton>
-		);
+	for (let [i, a] of actions.entries()) {
+		if (a.Confirm) {
+			actionsToRender.push(
+				<ConfirmationButton
+					variant={a.Variant}
+					onClick={async () => {
+						await onActionClick(a.Event, i);
+					}}
+					ref={(ref) => {
+						confirmationButtonsRef.current[i] = ref;
+					}}
+				>
+					{a.Text}
+				</ConfirmationButton>
+			);
+		} else {
+			actionsToRender.push(
+				<SlButton
+					variant={a.Variant}
+					onClick={async () => {
+						await onActionClick(a.Event);
+					}}
+				>
+					{a.Text}
+				</SlButton>
+			);
+		}
 	}
 
 	if (notFound) {
@@ -244,7 +282,7 @@ const ConnectorSettings = () => {
 	}
 
 	if (newConnectionID > 0) {
-		return <Navigate to={`/admin/connections?new=${newConnectionID}`} />;
+		return <Navigate to={`/admin/connections?newConnection=${newConnectionID}`} />;
 	}
 
 	let c = connector;

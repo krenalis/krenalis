@@ -2,16 +2,20 @@ import './GridRow.css';
 import GridCell from '../GridCell/GridCell';
 import getChildIndexClassname from '../../utils/getChildIndexClassname';
 
-const GridRow = ({ cells, columns, className }) => {
+const GridRow = ({ row, columns, className }) => {
 	let gridCells = [];
-	for (let [i, cell] of cells.entries()) {
+	for (let [i, cell] of row.cells.entries()) {
 		let type = columns[i].type;
 		let typedCell = { value: cell, type: type };
-		let className = getChildIndexClassname(i, cells.length);
+		let className = getChildIndexClassname(i, row.cells.length);
 		gridCells.push(<GridCell cell={typedCell} className={`GridCell ${className}`} />);
 	}
 
-	return <div className={className}>{gridCells}</div>;
+	return (
+		<div key={row.key} className={className} data-animation={row.animation}>
+			{gridCells}
+		</div>
+	);
 };
 
 export default GridRow;

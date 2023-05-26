@@ -158,6 +158,7 @@ type Action struct {
 	Event   string
 	Text    string
 	Variant string // primary|neutral|danger|warning|success
+	Confirm bool   // if the event does not return an alert, the UI shows a confirmation
 	Role    Role
 }
 

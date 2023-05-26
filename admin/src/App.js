@@ -22,28 +22,34 @@ const App = () => {
 	const navigate = useNavigate();
 
 	const showStatus = ([variant, icon, text]) => {
-		setStatus({ variant: variant, icon: icon, text: text });
-		return toastRef.current.toast();
+		toastRef.current.hide();
+		setTimeout(() => {
+			setStatus({ variant: variant, icon: icon, text: text });
+			toastRef.current.toast();
+		}, 300);
 	};
 
 	const showError = (err) => {
-		if (err instanceof BadRequestError) {
-			console.error(`Bad Request: ${err.message}`);
-			let message = '';
-			if (err.message !== '') {
-				message = `[debug mode] Bad Request: ${err.message}`;
+		toastRef.current.hide();
+		setTimeout(() => {
+			if (err instanceof BadRequestError) {
+				console.error(`Bad Request: ${err.message}`);
+				let message = '';
+				if (err.message !== '') {
+					message = `[debug mode] Bad Request: ${err.message}`;
+				} else {
+					message = 'Unexpected error. Contact the administrator for more information.';
+				}
+				setStatus({
+					variant: variants.DANGER,
+					icon: icons.EXCLAMATION,
+					text: message,
+				});
 			} else {
-				message = 'Unexpected error. Contact the administrator for more information.';
+				setStatus({ variant: variants.DANGER, icon: icons.EXCLAMATION, text: err });
 			}
-			setStatus({
-				variant: variants.DANGER,
-				icon: icons.EXCLAMATION,
-				text: message,
-			});
-		} else {
-			setStatus({ variant: variants.DANGER, icon: icons.EXCLAMATION, text: err });
-		}
-		toastRef.current.toast();
+			toastRef.current.toast();
+		}, 300);
 	};
 
 	const showNotFound = () => {
@@ -54,13 +60,13 @@ const App = () => {
 		return navigate(url);
 	};
 
-	// add the 'fullScreen' class to the body.
+	// add the 'isFullscreen' class to the body.
 	const updateIsFullScreen = (isFullScreen) => {
 		let body = appRef.current.closest('body');
 		if (isFullScreen) {
-			body.classList.add('fullScreen');
+			body.classList.add('isFullscreen');
 		} else {
-			body.classList.remove('fullScreen');
+			body.classList.remove('isFullscreen');
 		}
 	};
 

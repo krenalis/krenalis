@@ -3,7 +3,8 @@
     -webkit-user-select: none;
     -ms-user-select: none;
     user-select: none;
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
 .Grid::-webkit-scrollbar {

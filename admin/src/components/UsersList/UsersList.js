@@ -98,7 +98,12 @@ const UsersList = () => {
 
 			setUsersCount(count);
 			setPagination({ current: 1, last: Math.ceil(count / lim) });
-			setUsersRows(users);
+
+			let rows = [];
+			for (let user of users) {
+				rows.push({ cells: user });
+			}
+			setUsersRows(rows);
 
 			let usersColumns = [];
 			for (let [name, property] of Object.entries(properties)) {
@@ -164,7 +169,13 @@ const UsersList = () => {
 			}
 		}
 		setColumnDefs(usersColumns);
-		setUsersRows(users);
+
+		let rows = [];
+		for (let user of users) {
+			rows.push({ cells: user });
+		}
+		setUsersRows(rows);
+		setUsersRows(usersRows);
 	};
 
 	const onToggleColumn = (name) => {

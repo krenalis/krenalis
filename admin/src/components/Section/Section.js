@@ -1,9 +1,10 @@
+import { forwardRef } from 'react';
 import Flex from '../Flex/Flex';
 import './Section.css';
 
-const Section = ({ title, description, actions, children, padded }) => {
+const Section = forwardRef(({ title, description, actions, children, padded }, ref) => {
 	return (
-		<div className='section'>
+		<div className='section' ref={ref}>
 			<Flex justifyContent='space-between' alignItems='center'>
 				<div className='sectionText'>
 					<div className='sectionTitle'>{title}</div>
@@ -16,6 +17,6 @@ const Section = ({ title, description, actions, children, padded }) => {
 			<div className={`sectionContent${padded ? ' padded' : ''}`}>{children}</div>
 		</div>
 	);
-};
+});
 
 export default Section;

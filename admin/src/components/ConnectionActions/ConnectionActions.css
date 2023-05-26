@@ -44,6 +44,14 @@
     padding-right: 20px;
 }
 
+.ConnectionActions .runButton > sl-icon {
+    font-size: 16px;
+}
+
+.ConnectionActions .runButton::part(label) {
+    padding-left: 5px;
+}
+
 .actionDialog::part(body) {
     padding-bottom: 30px;
 }
