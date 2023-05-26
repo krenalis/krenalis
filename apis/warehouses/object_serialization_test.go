@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"chichi/connector/types"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestColumnsToProperties(t *testing.T) {
@@ -144,4 +146,128 @@ func TestColumnsCommonPrefix(t *testing.T) {
 			t.Fatalf("%#v: expecting prefix %q, got %q", test.names, test.prefix, prefix)
 		}
 	}
+}
+
+func TestSerializeRow(t *testing.T) {
+
+	schema := types.Object([]types.Property{
+		{Name: "a", Type: types.Int()},
+		{Name: "b", Type: types.Object([]types.Property{
+			{Name: "c", Type: types.Text()},
+			{Name: "d", Type: types.Object([]types.Property{
+				{Name: "e", Type: types.Boolean()},
+				{Name: "f", Type: types.Text()},
+			})},
+			{Name: "g", Type: types.Array(types.Float())},
+			{Name: "h", Type: types.Array(types.Array(types.Text()))},
+			{Name: "i", Type: types.Array(types.Object([]types.Property{
+				{Name: "j", Type: types.UInt()},
+				{Name: "k", Flat: true, Type: types.Object([]types.Property{
+					{Name: "l", Type: types.Text()},
+					{Name: "m", Flat: true, Type: types.Object([]types.Property{
+						{Name: "n", Type: types.Text()},
+						{Name: "o", Type: types.Text()},
+					}),
+					}})},
+			}))},
+			{Name: "p", Type: types.Map(types.Text())},
+			{Name: "q", Type: types.Map(types.Object([]types.Property{
+				{Name: "r", Type: types.Text()},
+				{Name: "s", Flat: true, Type: types.Object([]types.Property{
+					{Name: "t", Type: types.Int()},
+					{Name: "u", Type: types.Int()},
+				})},
+			}))},
+		})},
+		{Name: "v", Flat: true, Type: types.Object([]types.Property{
+			{Name: "z", Type: types.Float32()},
+		})},
+	})
+
+	row := map[string]any{
+		"a": 56,
+		"b": map[string]any{
+			"c": "foo",
+			"d": map[string]any{
+				"e": true,
+				"f": "boo",
+			},
+			"g": []any{1.22, -5.96},
+			"h": []any{[]any{"foo", "boo"}, []any{"faa", "baa"}},
+			"i": []any{map[string]any{
+				"j": uint(84103),
+				"k": map[string]any{
+					"l": "foo",
+					"m": map[string]any{
+						"n": "foo",
+						"o": "boo",
+					},
+				},
+			}},
+			"p": map[string]any{"foo": "boo", "boo": "foo"},
+			"q": map[string]any{
+				"foo": map[string]any{
+					"r": "foo",
+					"s": map[string]any{
+						"t": 5,
+						"u": 3,
+					},
+				},
+				"boo": map[string]any{
+					"r": "boo",
+					"s": map[string]any{
+						"t": 3,
+						"u": -2,
+					},
+				},
+			},
+		},
+		"v": map[string]any{
+			"z": 3.14,
+		},
+	}
+
+	expected := map[string]any{
+		"a": 56,
+		"b": map[string]any{
+			"c": "foo",
+			"d": map[string]any{
+				"e": true,
+				"f": "boo",
+			},
+			"g": []any{1.22, -5.96},
+			"h": []any{[]any{"foo", "boo"}, []any{"faa", "baa"}},
+			"i": []any{
+				map[string]any{
+					"j":     uint(84103),
+					"k_l":   "foo",
+					"k_m_n": "foo",
+					"k_m_o": "boo",
+				},
+			},
+			"p": map[string]any{
+				"boo": "foo",
+				"foo": "boo",
+			},
+			"q": map[string]any{
+				"boo": map[string]any{
+					"r":   "boo",
+					"s_t": 3,
+					"s_u": -2,
+				},
+				"foo": map[string]any{
+					"r":   "foo",
+					"s_t": 5,
+					"s_u": 3,
+				},
+			},
+		},
+		"v_z": 3.14,
+	}
+
+	SerializeRow(row, schema)
+	if !cmp.Equal(row, expected) {
+		t.Fatalf("unexpected row")
+	}
+
 }

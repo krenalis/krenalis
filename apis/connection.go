@@ -28,6 +28,7 @@ import (
 	"chichi/apis/events"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
+	"chichi/apis/warehouses"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 	"chichi/connector/ui"
@@ -1803,12 +1804,14 @@ func (this *Connection) setUser(ctx context.Context, id string, user map[string]
 		return err
 	}
 
-	// TODO(Gianluca):
-	for _, v := range user {
-		if _, ok := v.(map[string]interface{}); ok {
-			return errors.New("setUser is still partially implemented and does not support objects")
-		}
+	ws := this.connection.Workspace()
+
+	// Serialize the row.
+	schema, ok := ws.Schemas["users"]
+	if !ok {
+		return errors.New("users schema not found")
 	}
+	warehouses.SerializeRow(user, *schema)
 
 	query := &strings.Builder{}
 	query.WriteString("UPDATE users SET\n")
@@ -1828,7 +1831,6 @@ func (this *Connection) setUser(ctx context.Context, id string, user map[string]
 	query.WriteString("\nWHERE id = $")
 	query.WriteString(strconv.Itoa(i))
 	values = append(values, goldenRecordID)
-	ws := this.connection.Workspace()
 	res, err := ws.Warehouse.Exec(ctx, query.String(), values...)
 	if err != nil {
 		return err

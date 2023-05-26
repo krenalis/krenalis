@@ -173,3 +173,57 @@ func DeserializeRowAsMap(properties []types.Property, row []any) (map[string]any
 	}
 	return values, row
 }
+
+// SerializeRow serializes a row to be passed to a data warehouse by flattening
+// fields based on the provided schema.
+func SerializeRow(row map[string]any, schema types.Type) {
+	serialize(row, schema)
+}
+
+// serialize serializes v with type t.
+func serialize(v any, t types.Type) {
+	if v == nil {
+		return
+	}
+	switch t.PhysicalType() {
+	case types.PtObject:
+		v := v.(map[string]any)
+		for _, p := range t.Properties() {
+			value, ok := v[p.Name]
+			if !ok {
+				continue
+			}
+			if p.Flat {
+				delete(v, p.Name)
+				flattenInto(v, value.(map[string]any), p.Name, p.Type)
+				continue
+			}
+			serialize(value, p.Type)
+			continue
+		}
+	case types.PtArray:
+		itemType := t.ItemType()
+		for _, value := range v.([]any) {
+			serialize(value, itemType)
+		}
+	case types.PtMap:
+		valueType := t.ValueType()
+		for _, value := range v.(map[string]any) {
+			serialize(value, valueType)
+		}
+	}
+}
+
+// flattenInto flattens the properties of obj with type t into dst with names
+// prefixed by prefix.
+func flattenInto(dst, obj map[string]any, prefix string, t types.Type) {
+	for name, value := range obj {
+		p, _ := t.Property(name)
+		if p.Flat {
+			flattenInto(dst, value.(map[string]any), prefix+"_"+name, p.Type)
+			continue
+		}
+		serialize(value, p.Type)
+		dst[prefix+"_"+name] = value
+	}
+}
