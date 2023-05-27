@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 	"unicode/utf8"
 
@@ -244,9 +245,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "INT":
 		return types.Int(), nil
 	case "LONGTEXT", "LONGBLOB":
-		// TODO(marco): the length in bytes of LONGTEXT and LONGBLOG types is 4294967295,
-		//  but the WithByteLen function currently allows a maximum value of types.MaxTextLen.
-		return types.Text().WithByteLen(types.MaxTextLen), nil
+		return types.Text().WithByteLen(math.MaxUint32), nil
 	case "UNSIGNED BIGINT":
 		return types.UInt64(), nil
 	case "BIGINT":

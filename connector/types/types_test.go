@@ -8,10 +8,49 @@
 package types_test
 
 import (
+	"math"
 	"testing"
 
 	"chichi/connector/types"
 )
+
+func TestLen(t *testing.T) {
+
+	type Expected struct {
+		OK  bool
+		Len int
+	}
+
+	tests := []struct {
+		Type     types.Type
+		Expected Expected
+	}{
+		{types.Text(), Expected{false, 0}},
+		{types.Text().WithByteLen(1).WithCharLen(1), Expected{true, 1}},
+		{types.Text().WithByteLen(math.MaxInt32).WithCharLen(math.MaxInt32), Expected{true, math.MaxInt32}},
+		{types.Text().WithByteLen(types.MaxTextLen).WithCharLen(types.MaxTextLen), Expected{true, types.MaxTextLen}},
+	}
+
+	for _, test := range tests {
+		got, ok := test.Type.ByteLen()
+		if ok == test.Expected.OK {
+			if got != test.Expected.Len {
+				t.Errorf("ByteLen(%d): expected %d, got %d", test.Expected.Len, test.Expected.Len, got)
+			}
+		} else {
+			t.Errorf("ByteLen(%d): expected %t, got %t", test.Expected.Len, test.Expected.OK, ok)
+		}
+		got, ok = test.Type.CharLen()
+		if ok == test.Expected.OK {
+			if got != test.Expected.Len {
+				t.Errorf("CharLen(%d): expected %d, got %d", test.Expected.Len, test.Expected.Len, got)
+			}
+		} else {
+			t.Errorf("CharLen(%d): expected %t, got %t", test.Expected.Len, test.Expected.OK, ok)
+		}
+	}
+
+}
 
 func TestAsRole(t *testing.T) {
 	cases := []struct {

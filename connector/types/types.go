@@ -43,12 +43,12 @@ const (
 )
 
 const (
-	MaxDecimalPrecision = 76       // Maximum precision for a Decimal type
-	MaxDecimalScale     = 38       // Maximum scale for a Decimal type
-	MaxItems            = MaxInt24 // Maximum number of items of an Array type
-	MaxTextLen          = MaxInt   // Maximum length in bytes and characters for a Text type
-	MaxYear             = 9999     // Maximum year for DataTime, Date and Year types
-	MinYear             = 1        // Minimum year for DataTime, Date and Year types
+	MaxDecimalPrecision = 76             // Maximum precision for a Decimal type
+	MaxDecimalScale     = 38             // Maximum scale for a Decimal type
+	MaxItems            = MaxInt24       // Maximum number of items of an Array type
+	MaxTextLen          = math.MaxUint32 // Maximum length in bytes and characters for a Text type
+	MaxYear             = 9999           // Maximum year for DataTime, Date and Year types
+	MinYear             = 1              // Minimum year for DataTime, Date and Year types
 
 	MaxInt    = math.MaxInt32
 	MaxInt16  = math.MaxInt16
@@ -823,7 +823,7 @@ func (t Type) ByteLen() (int, bool) {
 	if t.pt != PtText {
 		panic("cannot get byte length of a non-Text type")
 	}
-	return int(t.p), t.p > 0
+	return int(uint32(t.p)), t.p != 0
 }
 
 // WithByteLen returns t with a maximum length of l of a Text type. l must be in
@@ -837,10 +837,10 @@ func (t Type) WithByteLen(l int) Type {
 	if t.s > 0 {
 		panic("repeated length in bytes")
 	}
-	if l <= 0 || l > MaxTextLen {
+	if l < 1 || MaxTextLen < l {
 		panic("invalid text length")
 	}
-	t.p = int32(l)
+	t.p = int32(uint32(l))
 	return t
 }
 
@@ -851,7 +851,7 @@ func (t Type) CharLen() (int, bool) {
 	if t.pt != PtJSON && t.pt != PtText {
 		panic("cannot get character length of non-JSON and non-Text types")
 	}
-	return int(t.s), t.s > 0
+	return int(uint32(t.s)), t.s != 0
 }
 
 // WithCharLen returns t with a maximum length of l of a JSON and Text type. l
@@ -865,10 +865,10 @@ func (t Type) WithCharLen(l int) Type {
 	if t.s > 0 {
 		panic("repeated length in characters")
 	}
-	if l <= 0 || l > MaxTextLen {
+	if l < 1 || MaxTextLen < l {
 		panic("invalid text length")
 	}
-	t.s = int32(l)
+	t.s = int32(uint32(l))
 	return t
 }
 
