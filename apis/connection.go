@@ -26,6 +26,7 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/events"
+	"chichi/apis/oauth"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/warehouses"
@@ -66,6 +67,7 @@ var (
 type Connection struct {
 	db          *postgres.DB
 	connection  *state.Connection
+	oauth       *oauth.OAuth
 	ID          int
 	Name        string
 	Type        ConnectorType
@@ -88,7 +90,7 @@ func (this *Connection) Action(id int) (*Action, error) {
 		return nil, errors.NotFound("action %d does not exist", id)
 	}
 	var action Action
-	action.fromState(this.db, a)
+	action.fromState(this.db, this.oauth, a)
 	return &action, nil
 }
 
@@ -97,7 +99,7 @@ func (this *Connection) Actions() ([]Action, error) {
 	as := this.connection.Actions()
 	actions := make([]Action, len(as))
 	for i, a := range as {
-		actions[i].fromState(this.db, a)
+		actions[i].fromState(this.db, this.oauth, a)
 	}
 	return actions, nil
 }
@@ -1070,6 +1072,7 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 	c := this.connection
 	cRole := _connector.Role(c.Role)
 	connector := c.Connector()
+	ctx := context.Background()
 
 	var err error
 	var connection any
@@ -1082,13 +1085,13 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 			clientSecret = connector.OAuth.ClientSecret
 			resourceCode = r.Code
 			var err error
-			accessToken, err = freshAccessToken(this.db, r)
+			accessToken, err = this.oauth.AccessToken(ctx, r)
 			if err != nil {
 				return nil, fmt.Errorf("cannot retrive the OAuth access token: %s", err)
 			}
 		}
 
-		fh := this.newFirehose(context.Background())
+		fh := this.newFirehose(ctx)
 		connection, err = _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
 			Role:          cRole,
 			Settings:      c.Settings,

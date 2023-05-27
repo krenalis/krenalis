@@ -644,7 +644,7 @@ func (this *Workspace) OAuthToken(authorizationCode, redirectURI string, connect
 		return "", errors.BadRequest("connector %d does not support OAuth", connector)
 	}
 
-	accessToken, refreshToken, expiresIn, err := retrieveOAuthToken(context.Background(), c, authorizationCode, redirectURI, "")
+	accessToken, refreshToken, expiresIn, err := this.oauth.GrantAuthorizationCode(context.Background(), c.OAuth, authorizationCode, redirectURI)
 	if err != nil {
 		return "", err
 	}

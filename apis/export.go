@@ -82,7 +82,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		clientSecret = connector.OAuth.ClientSecret
 		resourceCode = r.Code
 		var err error
-		accessToken, err = freshAccessToken(this.db, r)
+		accessToken, err = this.oauth.AccessToken(ctx, r)
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot retrive the OAuth access token: %s", err)}
 		}
@@ -251,19 +251,20 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 
 	connection := this.action.Connection()
 	connector := connection.Connector()
+	ctx := context.Background()
 
 	var clientSecret, resourceCode, accessToken string
 	if r, ok := connection.Resource(); ok {
 		clientSecret = connector.OAuth.ClientSecret
 		resourceCode = r.Code
 		var err error
-		accessToken, err = freshAccessToken(this.db, r)
+		accessToken, err = this.oauth.AccessToken(ctx, r)
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot retrive the OAuth access token: %s", err)}
 		}
 	}
 
-	fh, err := this.newFirehose(context.Background())
+	fh, err := this.newFirehose(ctx)
 	if err != nil {
 		return actionExecutionError{err}
 	}

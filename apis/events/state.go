@@ -12,6 +12,7 @@ import (
 	"log"
 	"sync"
 
+	"chichi/apis/oauth"
 	"chichi/apis/state"
 	_warehouses "chichi/apis/warehouses"
 	"chichi/connector"
@@ -22,14 +23,16 @@ type eventsState struct {
 	sync.Mutex
 	ctx          context.Context
 	state        *state.State
+	oauth        *oauth.OAuth
 	destinations map[int]connector.AppEventsConnection
 }
 
 // newEventsState returns a new eventsState based on the st state.
-func newEventsState(ctx context.Context, st *state.State) *eventsState {
+func newEventsState(ctx context.Context, st *state.State, oauth *oauth.OAuth) *eventsState {
 	eventSt := &eventsState{
 		ctx:          ctx,
 		state:        st,
+		oauth:        oauth,
 		destinations: map[int]connector.AppEventsConnection{},
 	}
 	for _, c := range st.Connections() {
@@ -225,26 +228,35 @@ func (st *eventsState) onSetWorkspacePrivacyRegion(n state.SetWorkspacePrivacyRe
 // openDestination opens the destination from the connection c and sets it into
 // the state.
 func (st *eventsState) openDestination(c *state.Connection) error {
-	cName := c.Connector().Name
-	app := connector.RegisteredApp(cName)
-	cRole := connector.Role(c.Role)
-	// TODO(Gianluca): currently the OAuth access token is not provided to the
-	// opened app connection, so the events can only be sent to connectors that
-	// use a different authorization mechanism.
-	// We have to implement a way to retrieve - and maintain up-to-date - the
-	// OAuth parameters.
-	// See https://github.com/open2b/chichi/issues/187.
+
+	var clientSecret, resourceCode, accessToken string
+	if r, ok := c.Resource(); ok {
+		clientSecret = c.Connector().OAuth.ClientSecret
+		resourceCode = r.Code
+		var err error
+		accessToken, err = st.oauth.AccessToken(st.ctx, r)
+		if err != nil {
+			return err
+		}
+	}
+
+	app := connector.RegisteredApp(c.Connector().Name)
 	connection, err := app.Open(st.ctx, &connector.AppConfig{
-		Role:          cRole,
+		Role:          connector.Role(c.Role),
 		Settings:      c.Settings,
+		ClientSecret:  clientSecret,
+		Resource:      resourceCode,
+		AccessToken:   accessToken,
 		PrivacyRegion: connector.PrivacyRegion(c.Workspace().PrivacyRegion),
 	})
 	if err != nil {
 		return err
 	}
+
 	st.Lock()
 	st.destinations[c.ID] = connection.(connector.AppEventsConnection)
 	st.Unlock()
+
 	return nil
 }
 

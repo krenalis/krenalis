@@ -17,6 +17,7 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/errors"
+	"chichi/apis/oauth"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	_connector "chichi/connector"
@@ -30,6 +31,7 @@ var QueryExecutionFailed errors.Code = "QueryExecutionFailed"
 type Action struct {
 	db                 *postgres.DB
 	action             *state.Action
+	oauth              *oauth.OAuth
 	ID                 int
 	Connection         int
 	Target             ActionTarget
@@ -60,10 +62,11 @@ const (
 )
 
 // fromState serializes action into ac.
-func (this *Action) fromState(db *postgres.DB, action *state.Action) {
+func (this *Action) fromState(db *postgres.DB, oauth *oauth.OAuth, action *state.Action) {
 	c := action.Connection()
 	this.db = db
 	this.action = action
+	this.oauth = oauth
 	this.ID = action.ID
 	this.Connection = c.ID
 	this.Target = ActionTarget(action.Target)
@@ -885,18 +888,18 @@ func (this *Connection) fetchEventTypes() ([]*_connector.EventType, error) {
 
 	c := this.connection
 	connector := c.Connector()
+	ctx := context.Background()
 
 	var clientSecret, resourceCode, accessToken string
 	if r, ok := c.Resource(); ok {
 		clientSecret = connector.OAuth.ClientSecret
 		resourceCode = r.Code
 		var err error
-		accessToken, err = freshAccessToken(this.db, r)
+		accessToken, err = this.oauth.AccessToken(ctx, r)
 		if err != nil {
 			return nil, fmt.Errorf("cannot retrive the OAuth access token: %s", err)
 		}
 	}
-	ctx := context.Background()
 	app, err := _connector.RegisteredApp(connector.Name).Open(ctx, &_connector.AppConfig{
 		Role:          _connector.Role(c.Role),
 		Settings:      c.Settings,
@@ -924,18 +927,18 @@ func (this *Connection) fetchAppSchema(target state.ActionTarget, eventType stri
 
 	c := this.connection
 	connector := c.Connector()
+	ctx := context.Background()
 
 	var clientSecret, resourceCode, accessToken string
 	if r, ok := c.Resource(); ok {
 		clientSecret = connector.OAuth.ClientSecret
 		resourceCode = r.Code
 		var err error
-		accessToken, err = freshAccessToken(this.db, r)
+		accessToken, err = this.oauth.AccessToken(ctx, r)
 		if err != nil {
 			return types.Type{}, fmt.Errorf("cannot retrive the OAuth access token: %s", err)
 		}
 	}
-	ctx := context.Background()
 	app, err := _connector.RegisteredApp(connector.Name).Open(ctx, &_connector.AppConfig{
 		Role:          _connector.Role(c.Role),
 		Settings:      c.Settings,

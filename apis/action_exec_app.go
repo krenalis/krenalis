@@ -19,13 +19,14 @@ func (this *Action) importFromApp() error {
 
 	connection := this.action.Connection()
 	connector := connection.Connector()
+	ctx := context.Background()
 
 	var clientSecret, resourceCode, accessToken string
 	if r, ok := connection.Resource(); ok {
 		clientSecret = connector.OAuth.ClientSecret
 		resourceCode = r.Code
 		var err error
-		accessToken, err = freshAccessToken(this.db, r)
+		accessToken, err = this.oauth.AccessToken(ctx, r)
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot retrive the OAuth access token: %s", err)}
 		}
@@ -37,7 +38,7 @@ func (this *Action) importFromApp() error {
 		return fmt.Errorf("cannot read user schema: %s", err)
 	}
 
-	fh, err := this.newFirehose(context.Background())
+	fh, err := this.newFirehose(ctx)
 	if err != nil {
 		return err
 	}

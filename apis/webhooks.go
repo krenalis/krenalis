@@ -125,6 +125,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	}
 	var connector *state.Connector
 	var conf _connector.AppConfig
+	ctx := context.Background()
 	switch m[1] {
 	case "c":
 		id, _ := strconv.Atoi(m[2])
@@ -183,12 +184,12 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		conf.Settings = connection.Settings
 		conf.Resource = resource.Code
 		var err error
-		conf.AccessToken, err = freshAccessToken(apis.db, resource)
+		conf.AccessToken, err = apis.oauth.AccessToken(ctx, resource)
 		if err != nil {
 			return err
 		}
 	}
-	connection, err := _connector.RegisteredApp(connector.Name).Open(context.Background(), &conf)
+	connection, err := _connector.RegisteredApp(connector.Name).Open(ctx, &conf)
 	if err != nil {
 		return err
 	}

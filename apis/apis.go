@@ -15,6 +15,7 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/events"
+	"chichi/apis/oauth"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 
@@ -25,6 +26,7 @@ import (
 type APIs struct {
 	db             *postgres.DB
 	state          *state.State
+	oauth          *oauth.OAuth
 	events         *events.Events
 	scheduler      *scheduler
 	eventProcessor *events.Processor
@@ -67,7 +69,10 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 
-	apis := &APIs{db: db}
+	apis := &APIs{
+		db:    db,
+		oauth: oauth.New(db),
+	}
 
 	// Load the state.
 	apis.state, err = state.Load(ctx, db)
@@ -79,7 +84,7 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 	apis.state.AddListener(apis.onElectLeader)
 	apis.state.AddListener(apis.onExecuteAction)
 
-	apis.events, err = events.New(ctx, db, apis.state)
+	apis.events, err = events.New(ctx, db, apis.state, apis.oauth)
 
 	// Keep the state updated.
 	apis.state.Keep()
@@ -192,6 +197,7 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 	}
 	connector := Connector{
 		connector:     c,
+		oauth:         apis.oauth,
 		ID:            c.ID,
 		Name:          c.Name,
 		Type:          ConnectorType(c.Type),
@@ -214,6 +220,7 @@ func (apis *APIs) Connectors() []*Connector {
 	for i, c := range cc {
 		connector := Connector{
 			connector:     c,
+			oauth:         apis.oauth,
 			ID:            c.ID,
 			Name:          c.Name,
 			Type:          ConnectorType(c.Type),
@@ -265,7 +272,7 @@ func (apis *APIs) CountAccounts() int {
 // onElectLeader is called when a leader is elected.
 func (apis *APIs) onElectLeader(n state.ElectLeaderNotification) {
 	if apis.state.IsLeader() {
-		apis.scheduler = newScheduler(apis.db, apis.state)
+		apis.scheduler = newScheduler(apis.db, apis.state, apis.oauth)
 		return
 	}
 	if apis.scheduler != nil {
@@ -280,7 +287,7 @@ func (apis *APIs) onExecuteAction(n state.ExecuteActionNotification) {
 		return
 	}
 	action, _ := apis.state.Action(n.Action)
-	a := &Action{db: apis.db, action: action}
+	a := &Action{db: apis.db, action: action, oauth: apis.oauth}
 	go a.exec()
 }
 
@@ -288,6 +295,7 @@ func (apis *APIs) onExecuteAction(n state.ExecuteActionNotification) {
 type Workspace struct {
 	db            *postgres.DB
 	state         *state.State
+	oauth         *oauth.OAuth
 	eventObserver *events.Observer
 	workspace     *state.Workspace
 	ID            int

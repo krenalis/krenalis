@@ -90,6 +90,9 @@ If webhooksPer is "Connection":
 ### SendEvent
 
 * Settings
+* ClientSecret
+* Resource
+* AccessToken
 * PrivacyRegion
 
 ### SetGroup

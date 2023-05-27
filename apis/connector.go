@@ -12,10 +12,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
-	"strings"
 
 	"chichi/apis/errors"
+	"chichi/apis/oauth"
 	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/ui"
@@ -26,6 +25,7 @@ import (
 // Connector represents a connector.
 type Connector struct {
 	connector              *state.Connector
+	oauth                  *oauth.OAuth
 	ID                     int
 	Name                   string
 	SourceDescription      string
@@ -146,28 +146,10 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 // provider. This page requests explicit permissions for the required scopes.
 // After that, the provider redirects to the URL specified by redirectURI.
 func (this *Connector) AuthCodeURL(redirectURI string) (string, error) {
-	oauth := this.connector.OAuth
-	if oauth == nil {
+	if this.connector.OAuth == nil {
 		return "", errors.BadRequest("connector %d does not support OAuth", this.connector.ID)
 	}
-	var b strings.Builder
-	b.WriteString(oauth.AuthURL)
-	v := url.Values{
-		"response_type": {"code"},
-		"client_id":     {oauth.ClientID},
-		"redirect_uri":  {redirectURI},
-		"state":         {"state"},
-	}
-	if len(oauth.Scopes) > 0 {
-		v.Set("scope", strings.Join(oauth.Scopes, " "))
-	}
-	if strings.Contains(oauth.AuthURL, "?") {
-		b.WriteByte('&')
-	} else {
-		b.WriteByte('?')
-	}
-	b.WriteString(v.Encode())
-	return b.String(), nil
+	return this.oauth.AuthCodeURL(this.connector.OAuth, redirectURI)
 }
 
 // ServeUI serves the user interface for the connector with the given role.
