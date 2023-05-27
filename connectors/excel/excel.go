@@ -156,9 +156,6 @@ func (c *connection) Write(w io.Writer, sheet string, records connector.RecordRe
 
 	// Write the records into the destination file.
 	_, err = f.WriteTo(w)
-	if err != nil {
-		return err
-	}
 
 	return err
 }

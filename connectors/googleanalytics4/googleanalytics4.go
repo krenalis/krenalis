@@ -133,10 +133,7 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 	default:
 		panic(fmt.Sprintf("unsupported event type %q", eventType))
 	}
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // ServeUI serves the connector's user interface.

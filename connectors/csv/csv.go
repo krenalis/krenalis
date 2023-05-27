@@ -247,33 +247,27 @@ func (c *connection) Write(w io.Writer, _ string, records connector.RecordReader
 	}
 
 	v.Flush()
-	if err := v.Error(); err != nil {
-		return err
-	}
+	err = v.Error()
 
 	return err
 }
 
+// toString serializes v of type t as a string.
 func toString(v any, t types.Type) string {
 	if v == nil {
 		return ""
 	}
 	switch pt := t.PhysicalType(); pt {
 	case types.PtBoolean:
-		if v == true {
-			return "true"
-		}
-		return "false"
+		return strconv.FormatBool(v.(bool))
 	case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64, types.PtYear:
 		return strconv.Itoa(v.(int))
 	case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
 		return strconv.FormatUint(uint64(v.(uint)), 10)
-	case types.PtFloat, types.PtFloat32:
-		bits := 64
-		if pt == types.PtFloat32 {
-			bits = 32
-		}
-		return strconv.FormatFloat(v.(float64), 'g', -1, bits)
+	case types.PtFloat:
+		return strconv.FormatFloat(v.(float64), 'g', -1, 64)
+	case types.PtFloat32:
+		return strconv.FormatFloat(v.(float64), 'g', -1, 32)
 	case types.PtDecimal:
 		return v.(decimal.Decimal).String()
 	case types.PtDateTime:
@@ -282,14 +276,10 @@ func toString(v any, t types.Type) string {
 		return v.(time.Time).Format(time.DateOnly)
 	case types.PtTime:
 		return v.(time.Time).Format("15:04:05.999999999Z07:00")
-	case types.PtUUID:
+	case types.PtUUID, types.PtInet, types.PtText:
 		return v.(string)
 	case types.PtJSON:
 		return string(v.(json.RawMessage))
-	case types.PtInet:
-		return v.(string)
-	case types.PtText:
-		return v.(string)
 	case types.PtArray, types.PtObject, types.PtMap:
 		return string(connector.MarshalJSON(v, t))
 	default:
