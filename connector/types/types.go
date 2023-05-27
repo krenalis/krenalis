@@ -194,18 +194,18 @@ type Type struct {
 	flat   bool // flat reports whether contains, at any level, a flat property.
 
 	// p represents
-	//   - minimum value of Int, Int8, Int16 and Int24 types
-	//   - minimum value, as uint32(p), of UInt, UInt8, UInt16 and UInt24 types
-	//   - precision of a Decimal type
-	//   - length in bytes of a Text type
-	//   - minimum length of an Array type
+	//   - minimum value for Int, Int8, Int16 and Int24
+	//   - minimum value, as uint32(p), for UInt, UInt8, UInt16 and UInt24
+	//   - precision for Decimal
+	//   - length in bytes, as uint32(p), for Text
+	//   - minimum length for Array
 	p int32
 
 	// s represents
 	//   - maximum value for Int, Int8, Int16 and Int24
 	//   - maximum value, as uint32(s), for UInt, UInt8, UInt16 and UInt24
 	//   - scale for Decimal
-	//   - length in characters for JSON and Text types
+	//   - length in characters, as uint32(s), for Text
 	//   - maximum length for Array
 	s int32
 
@@ -214,7 +214,7 @@ type Type struct {
 	//   - uintRange value for UInt64
 	//   - floatRange value for Float and Float32
 	//   - decimalRange value for Decimal
-	//   - string value representing a layout for DateTime, Date and Time
+	//   - string value representing a layout for DateTime and Date
 	//   - *regexp.Regexp value for Text
 	//   - *[]string with the enum values for Text
 	//   - *[]Property for Object
