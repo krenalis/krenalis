@@ -341,7 +341,11 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				path := r.URL.Query().Get("path")
 				sheet := r.URL.Query().Get("sheet")
-				limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+				limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+				if err != nil {
+					respond(w, errors.BadRequest("limit is not valid"))
+					return
+				}
 				records, schema, err := connection.Records(path, sheet, limit)
 				if err != nil {
 					respond(w, err)

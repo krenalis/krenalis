@@ -891,6 +891,10 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 			return nil, types.Type{}, errors.BadRequest("sheet must be empty because connection %d does not have sheets", c.ID)
 		}
 	}
+	// Validate the limit.
+	if limit < 1 || limit > 100 {
+		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
+	}
 
 	// Connect to the file connector.
 	ctx := context.Background()
