@@ -45,10 +45,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var workspace *apis.Workspace
 	if isLoggedIn {
 		// get the account id
-		accountID, err = strconv.Atoi(cookie.Value)
-		if err != nil {
-			log.Print(err)
-		}
+		accountID, _ = strconv.Atoi(cookie.Value)
 
 		// instantiate the account API
 		account, err := admin.apis.Account(accountID)
