@@ -76,7 +76,7 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, resolver composi
 	case "character varying", "character":
 		if column.charLength != nil {
 			chars, _ := strconv.Atoi(*column.charLength)
-			if chars < 1 {
+			if chars < 1 || chars > types.MaxTextLen {
 				return types.Type{}, fmt.Errorf("character_maximum_length value %q is not valid", *column.charLength)
 			}
 			t = types.Text().WithCharLen(chars)

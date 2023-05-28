@@ -286,6 +286,9 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 	var source *state.Connection
 	if src != "" {
 		sourceID, _ := strconv.Atoi(src)
+		if sourceID < 1 || sourceID > math.MaxInt32 {
+			return errBadRequest
+		}
 		source, ok = c.state.Source(sourceID)
 		if !ok {
 			return errNotFound

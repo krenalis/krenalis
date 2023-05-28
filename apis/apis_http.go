@@ -12,6 +12,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -32,7 +33,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Read the workspace.
 	workspaceID, _ := strconv.Atoi(r.Header.Get("X-Workspace"))
-	if workspaceID <= 0 {
+	if workspaceID < 1 || workspaceID > math.MaxInt32 {
 		http.Error(w, "Bad Request (missing 'X-Workspace' header)", http.StatusBadRequest)
 		return
 	}
@@ -544,10 +545,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				storage, _ := strconv.Atoi(chi.URLParam(r, "storage"))
-				if storage < 0 {
-					respond(w, errors.BadRequest("invalid storage ID"))
-					return
-				}
 				err = connection.SetStorage(storage)
 				respond(w, err)
 			})

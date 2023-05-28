@@ -150,7 +150,7 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 		if h, p, found := strings.Cut(opts.WebsiteHost, ":"); h == "" || len(opts.WebsiteHost) > 255 {
 			return 0, errors.BadRequest("website host %q is not valid", opts.WebsiteHost)
 		} else if found {
-			if port, _ := strconv.Atoi(p); port <= 0 || port > 65535 {
+			if port, _ := strconv.Atoi(p); port < 1 || port > 65535 {
 				return 0, errors.BadRequest("website host %q is not valid", opts.WebsiteHost)
 			}
 		}

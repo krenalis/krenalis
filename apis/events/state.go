@@ -66,7 +66,7 @@ func (st *eventsState) Source(id int) (*state.Connection, bool) {
 }
 
 // Destination returns an open connection to the destination with identifier id
-// an true, if such destination has been opened, otherwise returns nil and
+// and true, if such destination has been opened, otherwise returns nil and
 // false.
 func (st *eventsState) Destination(id int) (connector.AppEventsConnection, bool) {
 	st.Lock()
