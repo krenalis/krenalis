@@ -54,12 +54,14 @@ var (
 func convert(v any, t1, t2 types.Type, nullable bool) (any, error) {
 	pt1 := t1.PhysicalType()
 	pt2 := t2.PhysicalType()
-	if pt1 == types.PtJSON && pt2 != types.PtJSON {
-		if v, ok := v.(json.RawMessage); ok && v[0] == 'n' {
-			if nullable {
+	if nullable {
+		switch {
+		case pt1 == types.PtJSON && pt2 != types.PtJSON:
+			if v, ok := v.(json.RawMessage); ok && v[0] == 'n' {
 				return nil, nil
 			}
-			return nil, errInvalidConversion
+		case v == "" && pt2 != types.PtText:
+			return nil, nil
 		}
 	}
 	switch pt2 {

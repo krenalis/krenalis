@@ -29,6 +29,7 @@ func TestConvert(t *testing.T) {
 	}{
 		// nil.
 		{types.JSON(), types.Text(), json.RawMessage("null"), nil},
+		{types.Text(), types.Int(), "", nil},
 		{types.Text(), types.Text().WithEnum([]string{"foo", "boo"}), "", nil},
 		{types.Text(), types.Text().WithRegexp(regexp.MustCompile(`^bo+$`)), "", nil},
 
