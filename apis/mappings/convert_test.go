@@ -203,6 +203,7 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.Text(), json.Number("812"), "812", true},
 		{types.JSON(), types.Text(), true, "true", true},
 		{types.JSON(), types.Text(), json.RawMessage("null"), nil, true},
+		{types.JSON(), types.Text(), json.RawMessage("null"), "", false},
 
 		// Array.
 		{types.Array(types.Int()), types.Array(types.Int()), []any{1, 2, 3}, []any{1, 2, 3}, true},

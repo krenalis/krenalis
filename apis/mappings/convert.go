@@ -731,6 +731,9 @@ func jsonToText(v any) (string, error) {
 		var s any
 		err := enc.Decode(&s)
 		if err == nil {
+			if s == nil {
+				return "", nil
+			}
 			return jsonToText(s)
 		}
 	}
