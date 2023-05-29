@@ -84,7 +84,7 @@ let ConnectionActions = () => {
 					return;
 				}
 				setActions(actions);
-			}, 3000);
+			}, 1500);
 		};
 		fetchData();
 		return async () => {
@@ -106,7 +106,7 @@ let ConnectionActions = () => {
 				return;
 			}
 			setActions(actions);
-		}, 3000);
+		}, 1500);
 	}, [selectedAction, selectedActionType]);
 
 	const onActionStatusSwitch = async (actionID) => {
