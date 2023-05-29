@@ -14,6 +14,7 @@ const UsersWrapper = () => {
 	let [columnDefs, setColumnDefs] = useState([]);
 	let [properties, setProperties] = useState([]);
 	let [pagination, setPagination] = useState({});
+	let [isLoading, setIsLoading] = useState(false);
 	let [limit, setLimit] = useState(15);
 	let [refetch, setRefetch] = useState(false);
 
@@ -29,6 +30,7 @@ const UsersWrapper = () => {
 
 	useEffect(() => {
 		const fetchUsers = async () => {
+			setIsLoading(true);
 			let lim;
 			let storageLimit = localStorage.getItem('usersLimit');
 			if (storageLimit != null) {
@@ -45,7 +47,11 @@ const UsersWrapper = () => {
 			} else {
 				let [schema, err] = await API.workspace.userSchema();
 				if (err) {
+					setTimeout(() => {
+						setIsLoading(false);
+					}, 300);
 					showError(err);
+
 					return;
 				}
 				for (let p of schema.properties) {
@@ -64,6 +70,9 @@ const UsersWrapper = () => {
 
 			let [res, err] = await API.users.find(propertiesNames, 0, lim);
 			if (err != null) {
+				setTimeout(() => {
+					setIsLoading(false);
+				}, 300);
 				if (err instanceof NotFoundError) {
 					redirect('/admin');
 					showStatus(statuses.workspaceDoesNotExistAnymore);
@@ -112,6 +121,9 @@ const UsersWrapper = () => {
 				}
 			}
 			setColumnDefs(usersColumns);
+			setTimeout(() => {
+				setIsLoading(false);
+			}, 300);
 		};
 		if (refetch) {
 			setRefetch(false);
@@ -135,6 +147,8 @@ const UsersWrapper = () => {
 				setPagination,
 				columnDefs,
 				setColumnDefs,
+				isLoading,
+				setIsLoading,
 				setRefetch,
 			}}
 		>

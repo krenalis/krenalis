@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useContext } from 'react';
 import './UsersList.css';
 import statuses from '../../constants/statuses';
 import Toolbar from '../Toolbar/Toolbar';
@@ -18,8 +18,6 @@ import {
 } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const UsersList = () => {
-	let [isLoading, setIsLoading] = useState(false);
-
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
 
 	let { setCurrentTitle } = useContext(NavigationContext);
@@ -39,17 +37,9 @@ const UsersList = () => {
 		setRefetch,
 		columnDefs,
 		setColumnDefs,
+		isLoading,
+		setIsLoading,
 	} = useContext(UsersContext);
-
-	useEffect(() => {
-		if (usersRows.length === 0) {
-			setIsLoading(true);
-		} else {
-			setTimeout(() => {
-				setIsLoading(false);
-			}, 300);
-		}
-	}, [usersRows]);
 
 	const onPageChange = async (page) => {
 		let propertiesNames = [];
