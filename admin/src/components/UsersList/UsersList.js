@@ -5,6 +5,7 @@ import Toolbar from '../Toolbar/Toolbar';
 import StyledGrid from '../StyledGrid/StyledGrid';
 import { AppContext } from '../../context/AppContext';
 import { NavigationContext } from '../../context/NavigationContext';
+import { UsersContext } from '../../context/UsersContext';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 import {
 	SlButton,
@@ -17,111 +18,38 @@ import {
 } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const UsersList = () => {
-	let [columnDefs, setColumnDefs] = useState([]);
-	let [usersRows, setUsersRows] = useState([]);
-	let [usersCount, setUsersCount] = useState(0);
-	let [properties, setProperties] = useState([]);
-	let [pagination, setPagination] = useState({});
 	let [isLoading, setIsLoading] = useState(false);
-	let [refetch, setRefetch] = useState(false);
-	let [limit, setLimit] = useState(15);
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
 
 	let { setCurrentTitle } = useContext(NavigationContext);
 	setCurrentTitle('Golden Record users');
 
+	let {
+		usersRows,
+		setUsersRows,
+		usersCount,
+		setUsersCount,
+		limit,
+		setLimit,
+		properties,
+		setProperties,
+		pagination,
+		setPagination,
+		setRefetch,
+		columnDefs,
+		setColumnDefs,
+	} = useContext(UsersContext);
+
 	useEffect(() => {
-		const fetchUsers = async () => {
-			let lim;
-			let storageLimit = localStorage.getItem('usersLimit');
-			if (storageLimit != null) {
-				lim = Number(JSON.parse(storageLimit));
-				setLimit(lim);
-			} else {
-				lim = limit;
-			}
-
-			let properties = {};
-			let storageProperties = localStorage.getItem('usersProperties');
-			if (storageProperties != null) {
-				properties = JSON.parse(storageProperties);
-			} else {
-				let [schema, err] = await API.workspace.userSchema();
-				if (err) {
-					showError(err);
-					return;
-				}
-				for (let p of schema.properties) {
-					properties[p.name] = { isUsed: true, type: p.type.name };
-				}
-				localStorage.setItem('usersProperties', JSON.stringify(properties));
-			}
-			setProperties(properties);
-
-			let propertiesNames = [];
-			for (let name in properties) {
-				if (properties[name].isUsed) {
-					propertiesNames.push(name);
-				}
-			}
-
+		if (usersRows.length === 0) {
 			setIsLoading(true);
-			let [res, err] = await API.users.find(propertiesNames, 0, lim);
-			if (err != null) {
-				if (err instanceof NotFoundError) {
-					redirect('/admin');
-					showStatus(statuses.workspaceDoesNotExistAnymore);
-					return;
-				}
-				if (err instanceof UnprocessableError) {
-					switch (err.code) {
-						case 'PropertyNotExists':
-							localStorage.removeItem('usersProperties');
-							setRefetch(true);
-							break;
-						case 'WarehouseFailed':
-							showStatus(statuses.warehouseConnectionFailed);
-							break;
-						default:
-							break;
-					}
-					return;
-				}
-				showError(err);
-				setTimeout(() => setIsLoading(false), 500);
-				return;
-			}
-			setTimeout(() => setIsLoading(false), 500);
-
-			let { count, users } = res;
-
-			setUsersCount(count);
-			setPagination({ current: 1, last: Math.ceil(count / lim) });
-
-			let rows = [];
-			for (let user of users) {
-				rows.push({ cells: user });
-			}
-			setUsersRows(rows);
-
-			let usersColumns = [];
-			for (let [name, property] of Object.entries(properties)) {
-				if (property.isUsed) {
-					usersColumns.push({
-						name: name,
-						type: property.type,
-					});
-				}
-			}
-			setColumnDefs(usersColumns);
-		};
-		if (refetch) {
-			setRefetch(false);
-			return;
+		} else {
+			setTimeout(() => {
+				setIsLoading(false);
+			}, 300);
 		}
-		fetchUsers();
-	}, [refetch]);
+	}, [usersRows]);
 
 	const onPageChange = async (page) => {
 		let propertiesNames = [];

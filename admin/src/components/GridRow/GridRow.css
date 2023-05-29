@@ -4,6 +4,10 @@
     align-items: center;
 }
 
+.GridRow.clickable {
+    cursor: pointer;
+}
+
 @keyframes rowFadeIn {
     from {
         max-height: 0;

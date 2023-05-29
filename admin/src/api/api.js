@@ -246,6 +246,14 @@ class Users {
 	find = async (properties, start, end) => {
 		return await call(`${this.apiURL}/users`, http.POST, { properties: properties, start: start, end: end });
 	};
+
+	events = async (user) => {
+		return await call(`${this.apiURL}/users/${encodeURIComponent(user)}/events`, http.GET);
+	};
+
+	traits = async (user) => {
+		return await call(`${this.apiURL}/users/${encodeURIComponent(user)}/traits`, http.GET);
+	};
 }
 
 class Workspace {

@@ -12,7 +12,12 @@ const GridRow = ({ row, columns, className }) => {
 	}
 
 	return (
-		<div key={row.key} className={className} data-animation={row.animation}>
+		<div
+			key={row.key}
+			className={`${className}${row.onClick ? ' clickable' : ''}`}
+			onClick={row.onClick}
+			data-animation={row.animation}
+		>
 			{gridCells}
 		</div>
 	);

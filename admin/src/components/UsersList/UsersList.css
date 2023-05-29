@@ -1,6 +1,48 @@
+.UsersList .routeContent {
+	padding: 0;
+	min-height: calc(100vh - 140px);
+}
+
+.UsersList .StyledGrid {
+	border-top: 0;
+	border-right: 0;
+	border-left: 0;
+	box-shadow: none;
+	border-radius: 0;
+	max-height: calc(100vh - 220px);
+	overflow-y: auto;
+}
+
+.UsersList .StyledGrid::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.UsersList .StyledGrid::-webkit-scrollbar-thumb {
+    background: var(--sl-color-neutral-300);
+    border-radius: 5px;
+}
+
+.UsersList .StyledGrid::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.UsersList .StyledGrid .GridHeaderRow {
+    border-radius: 0;
+}
+
+.UsersList .StyledGrid .Grid .GridRow.last {
+    border-radius: 0;
+}
+
 .UsersList .Toolbar .toggleColumns sl-menu sl-menu-item sl-switch::part(base) {
 	font-size: 14px;
 	gap: 5px;
+}
+
+.UsersList .gridContainer {
+	position: relative;
+	min-height: calc(100vh - 140px);
 }
 
 .UsersList .gridContainer .grid {
@@ -28,11 +70,18 @@
 }
 
 .UsersList .gridContainer .footer {
-    padding: 20px 0;
+    padding: 20px;
     display: flex;
     justify-content: space-between;
-	position: relative;
-	align-items: center;
+    align-items: center;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+	height: 80px;
+    background-color: var(--bg-primary);
+    border-top: 1px solid var(--sl-color-neutral-200);
+    z-index: 10;
 }
 
 .UsersList .gridContainer .footer .total {
@@ -97,7 +146,6 @@
 .UsersList .gridContainer .footer .pagination .firstPage,
 .UsersList .gridContainer .footer .pagination .lastPage {
 	cursor: pointer;
-	display: flex;
 	justify-content: center;
 	align-items: center;
 }

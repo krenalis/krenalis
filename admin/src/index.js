@@ -10,6 +10,7 @@ import ConnectionsMap from './components/ConnectionsMap/ConnectionsMap';
 import Connection from './components/Connection/Connection';
 import UsersWrapper from './components/UsersWrapper/UsersWrapper';
 import UsersList from './components/UsersList/UsersList';
+import User from './components/User/User';
 import SchemaWrapper from './components/SchemaWrapper/SchemaWrapper';
 import Schema from './components/Schema/Schema';
 import OAuth from './components/OAuth/OAuth';
@@ -40,6 +41,7 @@ root.render(
 						<Route path='oauth/authorize' element={<OAuth />} />
 					</Route>
 					<Route element={<UsersWrapper />}>
+						<Route path='users/:id' element={<User />} />
 						<Route path='users' element={<UsersList />} />
 					</Route>
 					<Route element={<SchemaWrapper />}>
