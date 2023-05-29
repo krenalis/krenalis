@@ -307,6 +307,9 @@ func convert(v any, t1, t2 types.Type, nullable bool) (any, error) {
 		case json.RawMessage:
 			return v, nil
 		default:
+			if v == "" {
+				return json.RawMessage("null"), nil
+			}
 			b, err := json.Marshal(v)
 			if err != nil {
 				return nil, errInvalidConversion
