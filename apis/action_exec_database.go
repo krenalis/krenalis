@@ -58,6 +58,7 @@ func (this *Action) importFromDatabase() error {
 	apisConn := &Connection{
 		db:         this.db,
 		connection: this.action.Connection(),
+		http:       this.http,
 	}
 	inputSchema, err := types.ObjectOf(properties)
 	if err != nil {

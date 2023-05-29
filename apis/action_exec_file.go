@@ -94,6 +94,7 @@ func (this *Action) importFromFile() error {
 	apisConn := &Connection{
 		db:         this.db,
 		connection: this.action.Connection(),
+		http:       this.http,
 	}
 	inputSchema, err := apisConn.fetchFileSchema(this.action.Path, this.action.Sheet)
 	if err != nil {

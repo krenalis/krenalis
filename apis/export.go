@@ -75,30 +75,23 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	}
 
 	// Open a connection to the app.
-	connection := this.action.Connection()
-	connector := connection.Connector()
-	var clientSecret, resourceCode, accessToken string
-	if r, ok := connection.Resource(); ok {
-		clientSecret = connector.OAuth.ClientSecret
-		resourceCode = r.Code
-		var err error
-		accessToken, err = this.oauth.AccessToken(ctx, r)
-		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot retrive the OAuth access token: %s", err)}
-		}
+	c := this.action.Connection()
+	connector := c.Connector()
+	var resource string
+	if r, ok := c.Resource(); ok {
+		resource = r.Code
 	}
 	fh, err := this.newFirehose(ctx)
 	if err != nil {
 		return actionExecutionError{err}
 	}
 	ws := this.action.Connection().Workspace()
-	c, err := _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
+	connection, err := _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
 		Role:          _connector.DestinationRole,
-		Settings:      connection.Settings,
+		Settings:      c.Settings,
 		Firehose:      fh,
-		ClientSecret:  clientSecret,
-		Resource:      resourceCode,
-		AccessToken:   accessToken,
+		Resource:      resource,
+		HTTPClient:    this.http.ConnectionClient(c.ID),
 		PrivacyRegion: _connector.PrivacyRegion(ws.PrivacyRegion),
 	})
 	if err != nil {
@@ -128,13 +121,13 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 
 		// Update the user, if it already exists on the app, or create it.
 		if exists {
-			err := c.(_connector.AppUsersConnection).UpdateUser(id, props)
+			err := connection.(_connector.AppUsersConnection).UpdateUser(id, props)
 			if err != nil {
 				return actionExecutionError{fmt.Errorf("cannot update user: %s", err)}
 			}
 			log.Printf("[info] user %q updated on %s: %#v", id, connector.Name, user)
 		} else {
-			err := c.(_connector.AppUsersConnection).CreateUser(props)
+			err := connection.(_connector.AppUsersConnection).CreateUser(props)
 			if err != nil {
 				return actionExecutionError{fmt.Errorf("cannot create user: %s", err)}
 			}
@@ -249,33 +242,24 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 
 	const role = _connector.SourceRole
 
-	connection := this.action.Connection()
-	connector := connection.Connector()
-	ctx := context.Background()
+	c := this.action.Connection()
 
-	var clientSecret, resourceCode, accessToken string
-	if r, ok := connection.Resource(); ok {
-		clientSecret = connector.OAuth.ClientSecret
-		resourceCode = r.Code
-		var err error
-		accessToken, err = this.oauth.AccessToken(ctx, r)
-		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot retrive the OAuth access token: %s", err)}
-		}
+	var resource string
+	if r, ok := c.Resource(); ok {
+		resource = r.Code
 	}
 
-	fh, err := this.newFirehose(ctx)
+	fh, err := this.newFirehose(context.Background())
 	if err != nil {
 		return actionExecutionError{err}
 	}
 	ws := this.action.Connection().Workspace()
-	c, err := _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
+	connection, err := _connector.RegisteredApp(c.Connector().Name).Open(fh.ctx, &_connector.AppConfig{
 		Role:          role,
-		Settings:      connection.Settings,
+		Settings:      c.Settings,
 		Firehose:      fh,
-		ClientSecret:  clientSecret,
-		Resource:      resourceCode,
-		AccessToken:   accessToken,
+		Resource:      resource,
+		HTTPClient:    this.http.ConnectionClient(c.ID),
 		PrivacyRegion: _connector.PrivacyRegion(ws.PrivacyRegion),
 	})
 	if err != nil {
@@ -288,7 +272,7 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 	}
 	// TODO(Gianluca): here the cursor is set to "" as a workaround. See the
 	// issue https://github.com/open2b/chichi/issues/183.
-	err = c.(_connector.AppUsersConnection).Users("", properties)
+	err = connection.(_connector.AppUsersConnection).Users("", properties)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
 	}

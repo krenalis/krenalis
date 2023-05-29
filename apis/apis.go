@@ -11,11 +11,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
+	"os"
 	"sort"
 
 	"chichi/apis/errors"
 	"chichi/apis/events"
-	"chichi/apis/oauth"
+	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 
@@ -26,7 +28,7 @@ import (
 type APIs struct {
 	db             *postgres.DB
 	state          *state.State
-	oauth          *oauth.OAuth
+	http           *httpclient.HTTP
 	events         *events.Events
 	scheduler      *scheduler
 	eventProcessor *events.Processor
@@ -69,10 +71,7 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 
-	apis := &APIs{
-		db:    db,
-		oauth: oauth.New(db),
-	}
+	apis := &APIs{db: db}
 
 	// Load the state.
 	apis.state, err = state.Load(ctx, db)
@@ -80,11 +79,15 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 		return nil, err
 	}
 
+	// Set the HTTP client.
+	apis.http = httpclient.New(db, apis.state, http.DefaultTransport)
+	apis.http.SetTrace(os.Stdout)
+
 	// Listen to state changes.
 	apis.state.AddListener(apis.onElectLeader)
 	apis.state.AddListener(apis.onExecuteAction)
 
-	apis.events, err = events.New(ctx, db, apis.state, apis.oauth)
+	apis.events, err = events.New(ctx, db, apis.state, apis.http)
 
 	// Keep the state updated.
 	apis.state.Keep()
@@ -107,6 +110,7 @@ func (apis *APIs) Account(id int) (*Account, error) {
 		db:            apis.db,
 		eventObserver: apis.events.Observer(),
 		state:         apis.state,
+		http:          apis.http,
 		account:       acc,
 		ID:            acc.ID,
 		Name:          acc.Name,
@@ -197,7 +201,7 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 	}
 	connector := Connector{
 		connector:     c,
-		oauth:         apis.oauth,
+		http:          apis.http,
 		ID:            c.ID,
 		Name:          c.Name,
 		Type:          ConnectorType(c.Type),
@@ -220,7 +224,7 @@ func (apis *APIs) Connectors() []*Connector {
 	for i, c := range cc {
 		connector := Connector{
 			connector:     c,
-			oauth:         apis.oauth,
+			http:          apis.http,
 			ID:            c.ID,
 			Name:          c.Name,
 			Type:          ConnectorType(c.Type),
@@ -272,7 +276,7 @@ func (apis *APIs) CountAccounts() int {
 // onElectLeader is called when a leader is elected.
 func (apis *APIs) onElectLeader(n state.ElectLeaderNotification) {
 	if apis.state.IsLeader() {
-		apis.scheduler = newScheduler(apis.db, apis.state, apis.oauth)
+		apis.scheduler = newScheduler(apis.db, apis.state, apis.http)
 		return
 	}
 	if apis.scheduler != nil {
@@ -287,7 +291,7 @@ func (apis *APIs) onExecuteAction(n state.ExecuteActionNotification) {
 		return
 	}
 	action, _ := apis.state.Action(n.Action)
-	a := &Action{db: apis.db, action: action, oauth: apis.oauth}
+	a := &Action{db: apis.db, action: action, http: apis.http}
 	go a.exec()
 }
 
@@ -295,7 +299,7 @@ func (apis *APIs) onExecuteAction(n state.ExecuteActionNotification) {
 type Workspace struct {
 	db            *postgres.DB
 	state         *state.State
-	oauth         *oauth.OAuth
+	http          *httpclient.HTTP
 	eventObserver *events.Observer
 	workspace     *state.Workspace
 	ID            int

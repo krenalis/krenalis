@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"chichi/apis/errors"
-	"chichi/apis/oauth"
+	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 
@@ -52,7 +52,7 @@ type scheduler struct {
 //
 // It is called during an elect leader notification if the current node is
 // elected as leader.
-func newScheduler(db *postgres.DB, st *state.State, oauth *oauth.OAuth) *scheduler {
+func newScheduler(db *postgres.DB, st *state.State, http *httpclient.HTTP) *scheduler {
 
 	sc := &scheduler{
 		db:      db,
@@ -96,7 +96,7 @@ func newScheduler(db *postgres.DB, st *state.State, oauth *oauth.OAuth) *schedul
 					sc.mu.Unlock()
 					for _, action := range actions {
 						if sc.toExecute(action) {
-							a := &Action{db: db, action: action, oauth: oauth}
+							a := &Action{db: db, action: action, http: http}
 							go func() {
 								err := a.addExecution(false)
 								if err != nil {

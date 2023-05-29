@@ -173,21 +173,17 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		if connection == nil {
 			return errNotFound
 		}
-		resource, ok := connection.Resource()
-		if !ok {
-			return errNotFound
-		}
 		connector = connection.Connector()
 		if connector.WebhooksPer != state.WebhooksPerSource {
 			return errNotFound
 		}
+		resource, ok := connection.Resource()
+		if !ok {
+			return errNotFound
+		}
 		conf.Settings = connection.Settings
 		conf.Resource = resource.Code
-		var err error
-		conf.AccessToken, err = apis.oauth.AccessToken(ctx, resource)
-		if err != nil {
-			return err
-		}
+		conf.HTTPClient = apis.http.ConnectionClient(connection.ID)
 	}
 	connection, err := _connector.RegisteredApp(connector.Name).Open(ctx, &conf)
 	if err != nil {

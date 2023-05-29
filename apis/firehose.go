@@ -198,6 +198,7 @@ func (fh *firehose) SetUser(id string, user map[string]any, timestamp time.Time,
 	connection := &Connection{
 		db:         fh.db,
 		connection: fh.connection,
+		http:       fh.action.http,
 	}
 	err = connection.writeConnectionUsers(fh.ctx, id, user, timestamp, timestamps)
 	if err != nil {

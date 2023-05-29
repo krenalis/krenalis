@@ -58,9 +58,8 @@ type AppConfig struct {
 	Role          Role
 	Settings      []byte
 	Firehose      Firehose
-	ClientSecret  string
 	Resource      string
-	AccessToken   string
+	HTTPClient    HTTPClient
 	PrivacyRegion PrivacyRegion
 }
 

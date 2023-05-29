@@ -200,15 +200,15 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 		var err error
 		switch c.Type {
 		case state.AppType:
-			var clientSecret string
+			var clientSecret, accessToken string
 			if c.OAuth != nil {
 				clientSecret = c.OAuth.ClientSecret
+				accessToken = n.Resource.AccessToken
 			}
 			connection, err = _connector.RegisteredApp(c.Name).Open(ctx, &_connector.AppConfig{
-				Role:         _connector.Role(role),
-				ClientSecret: clientSecret,
-				Resource:     n.Resource.Code,
-				AccessToken:  n.Resource.AccessToken,
+				Role:       _connector.Role(role),
+				Resource:   n.Resource.Code,
+				HTTPClient: this.http.Client(clientSecret, accessToken),
 			})
 		case state.DatabaseType:
 			connection, err = _connector.RegisteredDatabase(c.Name).Open(ctx, &_connector.DatabaseConfig{
@@ -464,6 +464,7 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 	connection := Connection{
 		db:          this.db,
 		connection:  c,
+		http:        this.http,
 		ID:          c.ID,
 		Name:        c.Name,
 		Type:        ConnectorType(conn.Type),
@@ -488,6 +489,7 @@ func (this *Workspace) Connections() []*Connection {
 		connection := Connection{
 			db:          this.db,
 			connection:  c,
+			http:        this.http,
 			ID:          c.ID,
 			Name:        c.Name,
 			Type:        ConnectorType(conn.Type),
@@ -644,14 +646,13 @@ func (this *Workspace) OAuthToken(authorizationCode, redirectURI string, connect
 		return "", errors.BadRequest("connector %d does not support OAuth", connector)
 	}
 
-	accessToken, refreshToken, expiresIn, err := this.oauth.GrantAuthorizationCode(context.Background(), c.OAuth, authorizationCode, redirectURI)
+	accessToken, refreshToken, expiresIn, err := this.http.GrantAuthorization(context.Background(), c.OAuth, authorizationCode, redirectURI)
 	if err != nil {
 		return "", err
 	}
 
 	connection, err := _connector.RegisteredApp(c.Name).Open(context.Background(), &_connector.AppConfig{
-		ClientSecret:  c.OAuth.ClientSecret,
-		AccessToken:   accessToken,
+		HTTPClient:    this.http.Client(c.OAuth.ClientSecret, accessToken),
 		PrivacyRegion: _connector.PrivacyRegion(this.workspace.PrivacyRegion),
 	})
 	if err != nil {

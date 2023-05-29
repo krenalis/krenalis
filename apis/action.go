@@ -17,7 +17,7 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/errors"
-	"chichi/apis/oauth"
+	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	_connector "chichi/connector"
@@ -31,7 +31,7 @@ var QueryExecutionFailed errors.Code = "QueryExecutionFailed"
 type Action struct {
 	db                 *postgres.DB
 	action             *state.Action
-	oauth              *oauth.OAuth
+	http               *httpclient.HTTP
 	ID                 int
 	Connection         int
 	Target             ActionTarget
@@ -62,11 +62,11 @@ const (
 )
 
 // fromState serializes action into ac.
-func (this *Action) fromState(db *postgres.DB, oauth *oauth.OAuth, action *state.Action) {
+func (this *Action) fromState(db *postgres.DB, http *httpclient.HTTP, action *state.Action) {
 	c := action.Connection()
 	this.db = db
 	this.action = action
-	this.oauth = oauth
+	this.http = http
 	this.ID = action.ID
 	this.Connection = c.ID
 	this.Target = ActionTarget(action.Target)
@@ -264,6 +264,7 @@ func (this *Action) Set(action ActionToSet) error {
 	connection := &Connection{
 		db:         this.db,
 		connection: c,
+		http:       this.http,
 	}
 	schema, err := connection.validateActionToSet(action, this.action.Target, this.action.EventType)
 	if err != nil {
@@ -887,25 +888,18 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 func (this *Connection) fetchEventTypes() ([]*_connector.EventType, error) {
 
 	c := this.connection
-	connector := c.Connector()
-	ctx := context.Background()
 
-	var clientSecret, resourceCode, accessToken string
+	var resource string
 	if r, ok := c.Resource(); ok {
-		clientSecret = connector.OAuth.ClientSecret
-		resourceCode = r.Code
-		var err error
-		accessToken, err = this.oauth.AccessToken(ctx, r)
-		if err != nil {
-			return nil, fmt.Errorf("cannot retrive the OAuth access token: %s", err)
-		}
+		resource = r.Code
 	}
-	app, err := _connector.RegisteredApp(connector.Name).Open(ctx, &_connector.AppConfig{
+
+	ctx := context.Background()
+	app, err := _connector.RegisteredApp(c.Connector().Name).Open(ctx, &_connector.AppConfig{
 		Role:          _connector.Role(c.Role),
 		Settings:      c.Settings,
-		ClientSecret:  clientSecret,
-		Resource:      resourceCode,
-		AccessToken:   accessToken,
+		Resource:      resource,
+		HTTPClient:    this.http.ConnectionClient(c.ID),
 		PrivacyRegion: _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
 	})
 	if err != nil {
@@ -923,33 +917,26 @@ func (this *Connection) fetchEventTypes() ([]*_connector.EventType, error) {
 // and eventType.
 func (this *Connection) fetchAppSchema(target state.ActionTarget, eventType string) (types.Type, error) {
 
-	var schema types.Type
-
 	c := this.connection
-	connector := c.Connector()
-	ctx := context.Background()
 
-	var clientSecret, resourceCode, accessToken string
+	var resource string
 	if r, ok := c.Resource(); ok {
-		clientSecret = connector.OAuth.ClientSecret
-		resourceCode = r.Code
-		var err error
-		accessToken, err = this.oauth.AccessToken(ctx, r)
-		if err != nil {
-			return types.Type{}, fmt.Errorf("cannot retrive the OAuth access token: %s", err)
-		}
+		resource = r.Code
 	}
-	app, err := _connector.RegisteredApp(connector.Name).Open(ctx, &_connector.AppConfig{
+
+	ctx := context.Background()
+	app, err := _connector.RegisteredApp(c.Connector().Name).Open(ctx, &_connector.AppConfig{
 		Role:          _connector.Role(c.Role),
 		Settings:      c.Settings,
-		ClientSecret:  clientSecret,
-		Resource:      resourceCode,
-		AccessToken:   accessToken,
+		Resource:      resource,
+		HTTPClient:    this.http.ConnectionClient(c.ID),
 		PrivacyRegion: _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
 	})
 	if err != nil {
 		return types.Type{}, fmt.Errorf("cannot connect to the connector: %s", err)
 	}
+
+	var schema types.Type
 
 	switch target {
 	case state.EventsTarget:

@@ -12,7 +12,7 @@ import (
 	"log"
 	"sync"
 
-	"chichi/apis/oauth"
+	"chichi/apis/httpclient"
 	"chichi/apis/state"
 	_warehouses "chichi/apis/warehouses"
 	"chichi/connector"
@@ -23,16 +23,16 @@ type eventsState struct {
 	sync.Mutex
 	ctx          context.Context
 	state        *state.State
-	oauth        *oauth.OAuth
+	http         *httpclient.HTTP
 	destinations map[int]connector.AppEventsConnection
 }
 
 // newEventsState returns a new eventsState based on the st state.
-func newEventsState(ctx context.Context, st *state.State, oauth *oauth.OAuth) *eventsState {
+func newEventsState(ctx context.Context, st *state.State, http *httpclient.HTTP) *eventsState {
 	eventSt := &eventsState{
 		ctx:          ctx,
 		state:        st,
-		oauth:        oauth,
+		http:         http,
 		destinations: map[int]connector.AppEventsConnection{},
 	}
 	for _, c := range st.Connections() {
@@ -229,24 +229,17 @@ func (st *eventsState) onSetWorkspacePrivacyRegion(n state.SetWorkspacePrivacyRe
 // the state.
 func (st *eventsState) openDestination(c *state.Connection) error {
 
-	var clientSecret, resourceCode, accessToken string
+	var resource string
 	if r, ok := c.Resource(); ok {
-		clientSecret = c.Connector().OAuth.ClientSecret
-		resourceCode = r.Code
-		var err error
-		accessToken, err = st.oauth.AccessToken(st.ctx, r)
-		if err != nil {
-			return err
-		}
+		resource = r.Code
 	}
 
 	app := connector.RegisteredApp(c.Connector().Name)
 	connection, err := app.Open(st.ctx, &connector.AppConfig{
 		Role:          connector.Role(c.Role),
 		Settings:      c.Settings,
-		ClientSecret:  clientSecret,
-		Resource:      resourceCode,
-		AccessToken:   accessToken,
+		Resource:      resource,
+		HTTPClient:    st.http.ConnectionClient(c.ID),
 		PrivacyRegion: connector.PrivacyRegion(c.Workspace().PrivacyRegion),
 	})
 	if err != nil {

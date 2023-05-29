@@ -48,10 +48,11 @@ func init() {
 }
 
 type connection struct {
-	ctx      context.Context
-	role     connector.Role
-	settings *settings
-	firehose connector.Firehose
+	ctx        context.Context
+	role       connector.Role
+	settings   *settings
+	firehose   connector.Firehose
+	httpClient connector.HTTPClient
 }
 
 type settings struct {
@@ -62,9 +63,10 @@ type settings struct {
 // open opens a Google Analytics 4 connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{
-		ctx:      ctx,
-		role:     conf.Role,
-		firehose: conf.Firehose,
+		ctx:        ctx,
+		role:       conf.Role,
+		firehose:   conf.Firehose,
+		httpClient: conf.HTTPClient,
 	}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -235,7 +237,12 @@ func (c *connection) collect(anonymousID, userID, eventName string, eventParams 
 	}
 
 	// Issue the POST request to www.google-analytics.com.
-	resp, err := http.Post(url.String(), "application/json", body)
+	req, err := http.NewRequest("POST", url.String(), body)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}

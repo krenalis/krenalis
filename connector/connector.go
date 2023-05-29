@@ -8,7 +8,9 @@
 package connector
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"reflect"
 	"time"
 
@@ -61,6 +63,22 @@ const (
 	StreamType
 	WebsiteType
 )
+
+// HTTPClient is the interface implemented by the HTTP client used by
+// connections.
+type HTTPClient interface {
+
+	// Do sends an HTTP request with an Authorization header if required. It
+	// returns the response and ensures that the request body is closed, even in
+	// the case of errors. Redirects are not followed.
+	Do(req *http.Request) (res *http.Response, err error)
+
+	// ClientSecret returns the OAuth client secret of the HTTP client.
+	ClientSecret() (string, error)
+
+	// AccessToken returns an OAuth access token.
+	AccessToken(ctx context.Context) (string, error)
+}
 
 // OAuth represents the connector OAuth 2.0 info.
 type OAuth struct {

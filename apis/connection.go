@@ -26,7 +26,7 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/events"
-	"chichi/apis/oauth"
+	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/warehouses"
@@ -67,7 +67,7 @@ var (
 type Connection struct {
 	db          *postgres.DB
 	connection  *state.Connection
-	oauth       *oauth.OAuth
+	http        *httpclient.HTTP
 	ID          int
 	Name        string
 	Type        ConnectorType
@@ -90,7 +90,7 @@ func (this *Connection) Action(id int) (*Action, error) {
 		return nil, errors.NotFound("action %d does not exist", id)
 	}
 	var action Action
-	action.fromState(this.db, this.oauth, a)
+	action.fromState(this.db, this.http, a)
 	return &action, nil
 }
 
@@ -99,7 +99,7 @@ func (this *Connection) Actions() ([]Action, error) {
 	as := this.connection.Actions()
 	actions := make([]Action, len(as))
 	for i, a := range as {
-		actions[i].fromState(this.db, this.oauth, a)
+		actions[i].fromState(this.db, this.http, a)
 	}
 	return actions, nil
 }
@@ -1074,9 +1074,8 @@ func (this *Connection) SetStatus(enabled bool) error {
 func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 
 	c := this.connection
-	cRole := _connector.Role(c.Role)
+	role := _connector.Role(c.Role)
 	connector := c.Connector()
-	ctx := context.Background()
 
 	var err error
 	var connection any
@@ -1084,25 +1083,18 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 	switch connector.Type {
 	case state.AppType:
 
-		var clientSecret, resourceCode, accessToken string
+		var resource string
 		if r, ok := c.Resource(); ok {
-			clientSecret = connector.OAuth.ClientSecret
-			resourceCode = r.Code
-			var err error
-			accessToken, err = this.oauth.AccessToken(ctx, r)
-			if err != nil {
-				return nil, fmt.Errorf("cannot retrive the OAuth access token: %s", err)
-			}
+			resource = r.Code
 		}
 
-		fh := this.newFirehose(ctx)
+		fh := this.newFirehose(context.Background())
 		connection, err = _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
-			Role:          cRole,
+			Role:          role,
 			Settings:      c.Settings,
 			Firehose:      fh,
-			ClientSecret:  clientSecret,
-			Resource:      resourceCode,
-			AccessToken:   accessToken,
+			Resource:      resource,
+			HTTPClient:    this.http.ConnectionClient(c.ID),
 			PrivacyRegion: _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
 		})
 
@@ -1113,43 +1105,43 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 		switch connector.Type {
 		case state.DatabaseType:
 			connection, err = _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
-				Role:     cRole,
+				Role:     role,
 				Settings: c.Settings,
 				Firehose: fh,
 			})
 		case state.FileType:
 			connection, err = _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
-				Role:     cRole,
+				Role:     role,
 				Settings: c.Settings,
 				Firehose: fh,
 			})
 		case state.MobileType:
 			connection, err = _connector.RegisteredMobile(connector.Name).Open(fh.ctx, &_connector.MobileConfig{
-				Role:     cRole,
+				Role:     role,
 				Settings: c.Settings,
 				Firehose: fh,
 			})
 		case state.ServerType:
 			connection, err = _connector.RegisteredServer(connector.Name).Open(fh.ctx, &_connector.ServerConfig{
-				Role:     cRole,
+				Role:     role,
 				Settings: c.Settings,
 				Firehose: fh,
 			})
 		case state.StorageType:
 			connection, err = _connector.RegisteredStorage(connector.Name).Open(fh.ctx, &_connector.StorageConfig{
-				Role:     cRole,
+				Role:     role,
 				Settings: c.Settings,
 				Firehose: fh,
 			})
 		case state.StreamType:
 			connection, err = _connector.RegisteredStream(connector.Name).Open(fh.ctx, &_connector.StreamConfig{
-				Role:     cRole,
+				Role:     role,
 				Settings: c.Settings,
 				Firehose: fh,
 			})
 		case state.WebsiteType:
 			connection, err = _connector.RegisteredWebsite(connector.Name).Open(fh.ctx, &_connector.WebsiteConfig{
-				Role:     cRole,
+				Role:     role,
 				Settings: c.Settings,
 				Firehose: fh,
 			})

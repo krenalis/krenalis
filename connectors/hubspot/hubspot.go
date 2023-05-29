@@ -11,7 +11,6 @@ package hubspot
 // (https://developers.hubspot.com/docs/api/crm/understanding-the-crm)
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto/hmac"
@@ -25,15 +24,12 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"time"
 	"unicode/utf8"
 
 	"chichi/connector"
 	"chichi/connector/types"
-
-	"github.com/open2b/nuts/capture"
 )
 
 // Connector icon.
@@ -66,19 +62,17 @@ func init() {
 }
 
 type connection struct {
-	ctx          context.Context
-	clientSecret string
-	firehose     connector.Firehose
-	accessToken  string
+	ctx        context.Context
+	firehose   connector.Firehose
+	httpClient connector.HTTPClient
 }
 
 // open opens a HubSpot connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{
-		ctx:          ctx,
-		firehose:     conf.Firehose,
-		clientSecret: conf.ClientSecret,
-		accessToken:  conf.AccessToken,
+		ctx:        ctx,
+		firehose:   conf.Firehose,
+		httpClient: conf.HTTPClient,
 	}
 	return &c, nil
 }
@@ -150,7 +144,11 @@ func (c *connection) Groups(cursor string, properties []connector.PropertyPath) 
 func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, error) {
 
 	// Check if the webhook is valid.
-	if !isValidWebhook(c.clientSecret, r) {
+	clientSecret, err := c.httpClient.ClientSecret()
+	if err != nil {
+		return nil, err
+	}
+	if !isValidWebhook(clientSecret, r) {
 		return nil, connector.ErrWebhookUnauthorized
 	}
 
@@ -165,7 +163,7 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, 
 		PropertyValue    string
 		SubscriptionType string
 	}
-	err := json.NewDecoder(r.Body).Decode(&requests)
+	err = json.NewDecoder(r.Body).Decode(&requests)
 	if err != nil {
 		return nil, err
 	}
@@ -534,23 +532,12 @@ func (it *iter) next() ([]object, error) {
 }
 
 func (c *connection) call(method, path string, body io.Reader, expectedStatus int, response any) error {
-
 	req, err := http.NewRequestWithContext(c.ctx, method, "https://api.hubapi.com/"+path[1:], body)
 	if err != nil {
 		return err
 	}
-
-	req.Header.Set("Authorization", "Bearer "+c.accessToken)
 	req.Header.Set("Content-Type", "application/json")
-
-	var dump *bufio.Writer
-	if Debug {
-		dump = bufio.NewWriter(os.Stdout)
-		dump.WriteString("\nRequest:\n------\n")
-		capture.Request(req, dump, true, true)
-	}
-
-	res, err := http.DefaultTransport.RoundTrip(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -558,25 +545,16 @@ func (c *connection) call(method, path string, body io.Reader, expectedStatus in
 		_, _ = io.Copy(io.Discard, res.Body)
 		_ = res.Body.Close()
 	}()
-
-	if Debug {
-		dump.Reset(os.Stdout)
-		dump.WriteString("\n\n\nResponse:\n------\n")
-		capture.Response(res, dump, true, true)
-	}
-
 	if res.StatusCode != expectedStatus {
 		hsErr := &hubspotError{statusCode: res.StatusCode}
 		dec := json.NewDecoder(res.Body)
 		_ = dec.Decode(hsErr)
 		return hsErr
 	}
-
 	if response != nil {
 		dec := json.NewDecoder(res.Body)
 		return dec.Decode(response)
 	}
-
 	return nil
 }
 

@@ -11,7 +11,7 @@ import (
 	"context"
 	"net/http"
 
-	"chichi/apis/oauth"
+	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 )
@@ -21,8 +21,8 @@ type Events struct {
 	observer  *Observer
 }
 
-func New(ctx context.Context, db *postgres.DB, st *state.State, oauth *oauth.OAuth) (*Events, error) {
-	state := newEventsState(ctx, st, oauth)
+func New(ctx context.Context, db *postgres.DB, st *state.State, http *httpclient.HTTP) (*Events, error) {
+	state := newEventsState(ctx, st, http)
 	eventLog := newEventsLog(ctx, db)
 	observer := newObserver(db)
 	warehouse := newWarehouses(state)

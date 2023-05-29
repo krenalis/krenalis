@@ -8,7 +8,6 @@
 package klaviyo
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	_ "embed"
@@ -18,7 +17,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -26,8 +24,6 @@ import (
 	"chichi/connector"
 	"chichi/connector/types"
 	"chichi/connector/ui"
-
-	"github.com/open2b/nuts/capture"
 )
 
 // Connector icon.
@@ -40,8 +36,6 @@ var _ interface {
 	connector.AppUsersConnection
 } = (*connection)(nil)
 
-var Debug = false
-
 func init() {
 	connector.RegisterApp(connector.App{
 		Name:                   "Klaviyo",
@@ -53,10 +47,11 @@ func init() {
 }
 
 type connection struct {
-	ctx      context.Context
-	role     connector.Role
-	settings *settings
-	firehose connector.Firehose
+	ctx        context.Context
+	role       connector.Role
+	settings   *settings
+	firehose   connector.Firehose
+	httpClient connector.HTTPClient
 }
 
 type settings struct {
@@ -66,9 +61,10 @@ type settings struct {
 // open opens a Klaviyo connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{
-		ctx:      ctx,
-		role:     conf.Role,
-		firehose: conf.Firehose,
+		ctx:        ctx,
+		role:       conf.Role,
+		firehose:   conf.Firehose,
+		httpClient: conf.HTTPClient,
 	}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -421,26 +417,9 @@ func (c *connection) call(method, url string, body io.Reader, expectedStatus int
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Revision", "2023-01-24")
 
-	var dump *bufio.Writer
-	if Debug {
-		dump = bufio.NewWriter(os.Stdout)
-		dump.WriteString("\nRequest:\n------\n")
-		capture.Request(req, dump, true, true)
-	}
-
-	res, err := http.DefaultTransport.RoundTrip(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
-	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, res.Body)
-		_ = res.Body.Close()
-	}()
-
-	if Debug {
-		dump.Reset(os.Stdout)
-		dump.WriteString("\n\n\nResponse:\n------\n")
-		capture.Response(res, dump, true, true)
 	}
 
 	if res.StatusCode != expectedStatus {

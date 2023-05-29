@@ -14,7 +14,7 @@ import (
 	"fmt"
 
 	"chichi/apis/errors"
-	"chichi/apis/oauth"
+	"chichi/apis/httpclient"
 	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/ui"
@@ -25,7 +25,7 @@ import (
 // Connector represents a connector.
 type Connector struct {
 	connector              *state.Connector
-	oauth                  *oauth.OAuth
+	http                   *httpclient.HTTP
 	ID                     int
 	Name                   string
 	SourceDescription      string
@@ -149,7 +149,7 @@ func (this *Connector) AuthCodeURL(redirectURI string) (string, error) {
 	if this.connector.OAuth == nil {
 		return "", errors.BadRequest("connector %d does not support OAuth", this.connector.ID)
 	}
-	return this.oauth.AuthCodeURL(this.connector.OAuth, redirectURI)
+	return this.http.AuthCodeURL(this.connector.OAuth, redirectURI)
 }
 
 // ServeUI serves the user interface for the connector with the given role.
@@ -189,18 +189,17 @@ func (this *Connector) ServeUI(event string, values []byte, role ConnectionRole,
 	switch c.Type {
 	case state.AppType:
 
-		var clientSecret, resourceCode, accessToken string
+		var resource, clientSecret, accessToken string
 		if oAuth != "" {
+			resource = r.Code
 			clientSecret = c.OAuth.ClientSecret
-			resourceCode = r.Code
 			accessToken = r.AccessToken
 		}
 
 		connection, err = _connector.RegisteredApp(c.Name).Open(context.Background(), &_connector.AppConfig{
-			Role:         _connector.Role(role),
-			ClientSecret: clientSecret,
-			Resource:     resourceCode,
-			AccessToken:  accessToken,
+			Role:       _connector.Role(role),
+			Resource:   resource,
+			HTTPClient: this.http.Client(clientSecret, accessToken),
 		})
 
 	default:

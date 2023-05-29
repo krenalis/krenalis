@@ -8,7 +8,6 @@
 package mailchimp
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto/rand"
@@ -21,7 +20,6 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -29,8 +27,6 @@ import (
 	"chichi/connector"
 	"chichi/connector/types"
 	"chichi/connector/ui"
-
-	"github.com/open2b/nuts/capture"
 )
 
 // Connector icon.
@@ -58,18 +54,18 @@ func init() {
 }
 
 type connection struct {
-	ctx         context.Context
-	settings    *settings
-	firehose    connector.Firehose
-	accessToken string
+	ctx        context.Context
+	settings   *settings
+	firehose   connector.Firehose
+	httpClient connector.HTTPClient
 }
 
 // open opens a Mailchimp connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{
-		ctx:         ctx,
-		firehose:    conf.Firehose,
-		accessToken: conf.AccessToken,
+		ctx:        ctx,
+		firehose:   conf.Firehose,
+		httpClient: conf.HTTPClient,
 	}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -714,17 +710,9 @@ func (c *connection) call(method, path string, params url.Values, body io.Reader
 	if err != nil {
 		return err
 	}
-	req.SetBasicAuth("anystring", c.accessToken)
 	req.Header.Set("Content-Type", "application/json")
 
-	var dump *bufio.Writer
-	if Debug {
-		dump = bufio.NewWriter(os.Stdout)
-		dump.WriteString("\nRequest:\n------\n")
-		capture.Request(req, dump, true, true)
-	}
-
-	res, err := http.DefaultTransport.RoundTrip(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -732,12 +720,6 @@ func (c *connection) call(method, path string, params url.Values, body io.Reader
 		_, _ = io.Copy(io.Discard, res.Body)
 		_ = res.Body.Close()
 	}()
-
-	if Debug {
-		dump.Reset(os.Stdout)
-		dump.WriteString("\n\n\nResponse:\n------\n")
-		capture.Response(res, dump, true, true)
-	}
 
 	if res.StatusCode != expectedStatus {
 		mcErr := &mailchimpError{Status: res.StatusCode}
@@ -1029,8 +1011,7 @@ func (c *connection) metadata() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	req.Header.Set("Authorization", "OAuth "+c.accessToken)
-	res, err := http.DefaultTransport.RoundTrip(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return "", "", err
 	}

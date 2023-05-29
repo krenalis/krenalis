@@ -17,7 +17,7 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/events"
-	"chichi/apis/oauth"
+	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 )
@@ -31,7 +31,7 @@ type Account struct {
 	db            *postgres.DB
 	eventObserver *events.Observer
 	state         *state.State
-	oauth         *oauth.OAuth
+	http          *httpclient.HTTP
 	account       *state.Account
 	ID            int
 	Name          string
@@ -124,7 +124,7 @@ func (this *Account) Workspace(id int) (*Workspace, error) {
 	workspace := Workspace{
 		db:            this.db,
 		state:         this.state,
-		oauth:         this.oauth,
+		http:          this.http,
 		eventObserver: this.eventObserver,
 		workspace:     ws,
 		ID:            ws.ID,
@@ -142,7 +142,7 @@ func (this *Account) Workspaces() []*Workspace {
 		workspace := Workspace{
 			db:            this.db,
 			state:         this.state,
-			oauth:         this.oauth,
+			http:          this.http,
 			eventObserver: this.eventObserver,
 			workspace:     ws,
 			ID:            ws.ID,

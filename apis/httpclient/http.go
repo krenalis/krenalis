@@ -5,7 +5,8 @@
 // Copyright (c) 2023 Open2b
 //
 
-// Package oauth provides support to grant, retrieve, and refresh access tokens.
+// Package httpclient provides an HTTP client with OAuth support for
+// connections.
 //
 // How OAuth works:
 //
@@ -20,7 +21,7 @@
 //  6. The UI displays the connector settings interface.
 //  7. The UI calls the (*Workspace).AddConnection method to add the new connection,
 //     passing the string of the authorized resource as one of the arguments.
-package oauth
+package httpclient
 
 import (
 	"context"
@@ -37,62 +38,32 @@ import (
 	"chichi/apis/state"
 )
 
-// OAuth implements the methods to grant, retrieve, and refresh access tokens.
-type OAuth struct {
-	db *postgres.DB
+// HTTP allows creating HTTP clients for connections and enables granting,
+// retrieving, and refreshing OAuth access tokens.
+type HTTP struct {
+	db        *postgres.DB
+	state     *state.State
+	transport http.RoundTripper
+	trace     io.Writer
 }
 
-// New returns a new *OAuth value.
-func New(db *postgres.DB) *OAuth {
-	return &OAuth{db}
+// New returns an HTTP instance given the db, the state and the transport to use
+// for HTTP connections.
+func New(db *postgres.DB, state *state.State, transport http.RoundTripper) *HTTP {
+	return &HTTP{
+		db:        db,
+		state:     state,
+		transport: transport,
+	}
 }
 
-// AccessToken returns an access token for the resource r. If r does not have an
-// access token or the existing token is expiring, it generates a new access
-// token and returns it.
-func (oauth *OAuth) AccessToken(ctx context.Context, r *state.Resource) (string, error) {
-
-	if r.AccessToken != "" {
-		expired := time.Now().UTC().Add(15 * time.Minute).After(r.ExpiresIn)
-		if !expired {
-			return r.AccessToken, nil
-		}
-	}
-
-	c := r.Connector()
-	accessToken, refreshToken, expiresIn, err := oauth.retrieveOAuthToken(ctx, c.OAuth, "", "", r.RefreshToken)
-	if err != nil {
-		return "", err
-	}
-
-	n := state.SetResourceNotification{
-		ID:           r.ID,
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		ExpiresIn:    expiresIn,
-	}
-
-	err = oauth.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		_, err = tx.Exec(ctx,
-			"UPDATE resources SET access_token = $1, refresh_token = $2, expires_in = $3 WHERE id = $4",
-			n.AccessToken, n.RefreshToken, n.ExpiresIn, n.ID)
-		if err != nil {
-			return err
-		}
-		return tx.Notify(ctx, n)
-	})
-	if err != nil {
-		return "", err
-	}
-
-	return n.AccessToken, nil
-}
-
-// AuthCodeURL returns a URL that directs to the consent page of the provider.
-// This page requests explicit permissions for the required scopes. After that,
-// the provider redirects to the URL specified by redirectURI.
-// After acquiring the authorization code, call GrantAuthorizationCode.
-func (oauth *OAuth) AuthCodeURL(auth *state.OAuth, redirectURI string) (string, error) {
+// AuthCodeURL returns a URL that directs to the consent page of the OAuth
+// provider. This page requests explicit permissions for the required scopes.
+// After that, the provider redirects to the URL specified by redirectURI.
+//
+// After acquiring the authorization code, call GrantAuthorization to get the
+// resulting access token, refresh token and expiration time.
+func (h *HTTP) AuthCodeURL(auth *state.OAuth, redirectURI string) (string, error) {
 	var b strings.Builder
 	b.WriteString(auth.AuthURL)
 	v := url.Values{
@@ -113,11 +84,37 @@ func (oauth *OAuth) AuthCodeURL(auth *state.OAuth, redirectURI string) (string, 
 	return b.String(), nil
 }
 
-// GrantAuthorizationCode grants an authorization code and returns the access
+// Client returns an HTTP client with the provided OAuth client secret and
+// access token. If the client does not need to support OAuth, clientSecret
+// and accessToken can be left empty.
+func (h *HTTP) Client(clientSecret, accessToken string) *Client {
+	return &Client{
+		http:         h,
+		clientSecret: clientSecret,
+		accessToken:  accessToken,
+	}
+}
+
+// ConnectionClient returns an HTTP client capable of retrieving OAuth
+// credentials from the given connection if it supports OAuth.
+func (h *HTTP) ConnectionClient(connection int) *Client {
+	return &Client{
+		http:       h,
+		connection: connection,
+	}
+}
+
+// GrantAuthorization grants an OAuth authorization code and returns the access
 // token, the refresh token and the expiration time. redirectURI is the redirect
 // URL previously passed to AuthCodeURL.
-func (oauth *OAuth) GrantAuthorizationCode(ctx context.Context, auth *state.OAuth, authorizationCode, redirectURI string) (string, string, time.Time, error) {
-	return oauth.retrieveOAuthToken(ctx, auth, authorizationCode, redirectURI, "")
+func (h *HTTP) GrantAuthorization(ctx context.Context, auth *state.OAuth, authorizationCode, redirectURI string) (string, string, time.Time, error) {
+	return h.retrieveOAuthToken(ctx, auth, authorizationCode, redirectURI, "")
+}
+
+// SetTrace sets w as the output destination for tracing HTTP request and
+// responses in HTTP clients.
+func (h *HTTP) SetTrace(w io.Writer) {
+	h.trace = w
 }
 
 // retrieveOAuthToken retrieves an OAuth token and returns the access token,
@@ -127,7 +124,7 @@ func (oauth *OAuth) GrantAuthorizationCode(ctx context.Context, auth *state.OAut
 // To retrieve an authorization code for the first time, both authorizationCode
 // and redirectURI are required. To refresh the token, only the refreshToken
 // is required.
-func (oauth *OAuth) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, authorizationCode, redirectURI, refreshToken string) (string, string, time.Time, error) {
+func (h *HTTP) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, authorizationCode, redirectURI, refreshToken string) (string, string, time.Time, error) {
 
 	v := url.Values{
 		"client_id":     {auth.ClientID},
