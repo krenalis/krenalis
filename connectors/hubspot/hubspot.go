@@ -69,7 +69,6 @@ type connection struct {
 	ctx          context.Context
 	clientSecret string
 	firehose     connector.Firehose
-	resource     string
 	accessToken  string
 }
 
@@ -79,7 +78,6 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 		ctx:          ctx,
 		firehose:     conf.Firehose,
 		clientSecret: conf.ClientSecret,
-		resource:     conf.Resource,
 		accessToken:  conf.AccessToken,
 	}
 	return &c, nil
