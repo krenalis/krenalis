@@ -1,181 +1,52 @@
 
-## Connection
+## App connections
 
-### ServeUI
+| Method         | Role | Settings       | Firehose | Resource                | HTTPClient     | PrivacyRegion |
+|----------------|------|----------------|----------|-------------------------|----------------|---------------|
+| CreateUser     | ✓    | ✓              | ✓        | ✓                       | ✓              | ✓             |
+| EventTypes     | ✓    | ✓              | -        | ✓                       | ✓              | ✓             |
+| Groups         | ✓    | ✓              | ✓        | ✓                       | ✓              | ✓             |
+| GroupSchema    | ✓    | ✓              | -        | ✓                       | ✓              | ✓             |
+| ReceiveWebhook | -    | ✓ (connection) | -        | ✓ (connection,resource) | ✓ (connection) | -             |
+| Resource       | -    | -              | -        | -                       | ✓              | ✓             |
+| SendEvent      | ✓    | ✓              | -        | ✓                       | ✓              | ✓             |
+| ServeUI        | ✓    | -/✓            | -/✓      | ✓                       | ✓              | -/✓           |
+| SettingsUI     | ✓    | -              | -        | ✓                       | ✓              | -             |
+| SetGroup       | ✓    | ✓              | ✓        | ✓                       | ✓              | ✓             |
+| UpdateUser     | ✓    | ✓              | ✓        | ✓                       | ✓              | ✓             |
+| Users          | ✓    | ✓              | ✓        | ✓                       | ✓              | ✓             |
+| UserSchema     | ✓    | ✓              | -        | ✓                       | ✓              | ✓             |
 
-* Settings
-* Firehose
-* ClientSecret (only for app connections)
-* Resource     (only for app connections)
-* AccessToken  (only for app connections)
 
-### SettingsUI
+## Database connections
 
-* Settings
-* Firehose
-* ClientSecret (only for app connections)
-* Resource     (only for app connections)
-* AccessToken  (only for app connections)
+| Method | Role | Settings | Firehose | Resource | HTTPClient | PrivacyRegion |
+|--------|------|----------|----------|----------|------------|---------------|
+| Query  | ✓    | ✓        | ✓        | -        | -          | -             |
 
-## AppConnection
 
-### CreateUser
+## File connections
 
-* Settings
-* Firehose
-* ClientSecret
-* Resource
-* AccessToken
-* PrivacyRegion
+| Method      | Role | Settings | Firehose | Resource | HTTPClient | PrivacyRegion |
+|-------------|------|----------|----------|----------|------------|---------------|
+| ContentType | ✓    | ✓        | ✓        | -        | -          | -             |
+| Read        | ✓    | ✓        | ✓        | -        | -          | -             |
+| Write       | ✓    | ✓        | ✓        | -        | -          | -             |
 
-### EventTypes
 
-* Settings
-* ClientSecret
-* Resource
-* AccessToken
-* PrivacyRegion
+## Storage connections
 
-### EventTypeSchema
+| Method | Role | Settings | Firehose | Resource | HTTPClient | PrivacyRegion |
+|--------|------|----------|----------|----------|------------|---------------|
+| Open   | ✓    | ✓        | -/✓      | -        | -          | -             |
+| Write  | ✓    | ✓        | ✓        | -        | -          | -             |
 
-* Settings
-* ClientSecret
-* Resource
-* AccessToken
-* PrivacyRegion
 
-### GroupSchema
+## Stream connections
 
-* Settings
-* ClientSecret
-* Resource
-* AccessToken
-* PrivacyRegion
-
-### Groups
-
-* Settings
-* Firehose
-* ClientSecret
-* Resource
-* AccessToken
-* PrivacyRegion
-
-### ReceiveWebhook
-
-If webhooksPer is "Connector":
-
-* ClientSecret
-
-If webhooksPer is "Resource":
-
-* ClientSecret
-* Resource
-* AccessToken
-
-If webhooksPer is "Connection":
-
-* Settings
-* Firehose
-* ClientSecret
-* Resource
-* AccessToken
-
-### Resource
-
-* ClientSecret
-* AccessToken
-* PrivacyRegion
-
-### SendEvent
-
-* Settings
-* ClientSecret
-* Resource
-* AccessToken
-* PrivacyRegion
-
-### SetGroup
-
-* Settings
-* Firehose
-* ClientSecret
-* Resource
-* AccessToken
-* PrivacyRegion
-
-### UpdateUser
-
-* Settings
-* Firehose
-* ClientSecret
-* Resource
-* AccessToken
-* PrivacyRegion
-
-### UserSchema
-
-* Settings
-* ClientSecret
-* Resource
-* AccessToken
-* PrivacyRegio
-
-### Users
-
-* Settings
-* Firehose
-* ClientSecret
-* Resource
-* AccessToken
-* PrivacyRegion
-
-## DatabaseConnection
-
-### Query
-
-* Settings
-* Firehose
-
-## StorageConnection
-
-### Reader
-
-* Settings
-* Firehose
-
-### Writer
-
-* Settings
-* Firehose
-
-## StreamConnection
-
-### Close
-
-* Settings
-
-### Commit
-
-* Settings
-
-### Send
-
-* Settings
-
-### Receive
-
-* Settings
-
-## FileConnection
-
-### Read
-
-* Settings
-* Firehose
-
-### Write
-
-* Settings
-* Firehose
+| Method  | Role | Settings | Firehose | Resource | HTTPClient | PrivacyRegion |
+|---------|------|----------|----------|----------|------------|---------------|
+| Close   | -    | -        | -        | -        | -          | -             |
+| Receive | -    | ✓        | -        | -        | -          | -             |
+| Send    | -    | ✓        | -        | -        | -          | -             |
 
