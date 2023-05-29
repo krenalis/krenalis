@@ -24,8 +24,9 @@ import (
 var icon = "<svg></svg>"
 
 var (
-	users     map[string]connector.Properties
-	usersLock sync.Mutex
+	users           map[string]connector.Properties
+	usersTimestamps map[string]time.Time
+	usersLock       sync.Mutex
 )
 
 // loadOnly10Users, when true, makes Dummy to load only 10 users instead of the
@@ -49,9 +50,11 @@ func init() {
 	}
 	usersLock.Lock()
 	users = make(map[string]connector.Properties, len(rawUsers))
+	usersTimestamps = make(map[string]time.Time, len(rawUsers))
 	for _, u := range rawUsers {
 		u.Properties["dummy_id"] = u.ID
 		users[u.ID] = u.Properties
+		usersTimestamps[u.ID] = time.Now().UTC()
 	}
 	usersLock.Unlock()
 }
@@ -177,6 +180,7 @@ func (c *connection) UpdateUser(id string, properties connector.Properties) erro
 		u[name] = value
 	}
 	users[id] = u
+	usersTimestamps[id] = time.Now().UTC()
 
 	return nil
 }
@@ -194,13 +198,12 @@ func (c *connection) UserSchema() (types.Type, error) {
 	return schema, nil
 }
 
-var now = time.Now()
-
 func (c *connection) Users(cursor string, properties []connector.PropertyPath) error {
 	usersLock.Lock()
 	defer usersLock.Unlock()
 	for id, props := range users {
-		c.firehose.SetUser(id, props, now, nil)
+		timestamp := usersTimestamps[id]
+		c.firehose.SetUser(id, props, timestamp, nil)
 	}
 	return nil
 }
