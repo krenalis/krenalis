@@ -670,7 +670,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 
 	const getDefaultMappings = (schema) => {
 		if (schema == null) {
-			return {};
+			return null;
 		}
 		const getSubProperties = (parentName, properties, indentation) => {
 			let subProperties = {};
