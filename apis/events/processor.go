@@ -114,6 +114,9 @@ func newProcessor(ctx context.Context, st *eventsState, eventLog *eventsLog, eve
 							// removed from the action, we do not have
 							// information about the endpoint. We should
 							// review/refactor this.
+							//
+							// See the issue https://github.com/open2b/chichi/issues/194.
+							//
 							endpoint: 0,
 							inEvent:  eventToConnectorEvent(event),
 						}
