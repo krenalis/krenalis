@@ -1,12 +1,9 @@
 import { useContext } from 'react';
 import './UsersList.css';
-import statuses from '../../constants/statuses';
 import Toolbar from '../Toolbar/Toolbar';
 import StyledGrid from '../StyledGrid/StyledGrid';
-import { AppContext } from '../../context/AppContext';
 import { NavigationContext } from '../../context/NavigationContext';
 import { UsersContext } from '../../context/UsersContext';
-import { NotFoundError, UnprocessableError } from '../../api/errors';
 import {
 	SlButton,
 	SlDropdown,
@@ -18,106 +15,39 @@ import {
 } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const UsersList = () => {
-	let { API, showError, showStatus, redirect } = useContext(AppContext);
-
 	let { setCurrentTitle } = useContext(NavigationContext);
 	setCurrentTitle('Golden Record users');
 
-	let {
-		usersRows,
-		setUsersRows,
-		usersCount,
-		setUsersCount,
-		limit,
-		setLimit,
-		properties,
-		setProperties,
-		pagination,
-		setPagination,
-		setRefetch,
-		columnDefs,
-		setColumnDefs,
-		isLoading,
-		setIsLoading,
-	} = useContext(UsersContext);
+	let { usersRows, usersCount, limit, properties, pagination, columnDefs, isLoading, fetchUsers } =
+		useContext(UsersContext);
 
 	const onPageChange = async (page) => {
-		let propertiesNames = [];
-		for (let name in properties) propertiesNames.push(name);
-		let start = page * limit - limit;
-		setIsLoading(true);
-		let [res, err] = await API.users.find(propertiesNames, start, start + limit);
-		if (err != null) {
-			if (err instanceof NotFoundError) {
-				redirect('/admin');
-				showStatus(statuses.workspaceDoesNotExistAnymore);
-				return;
-			}
-			if (err instanceof UnprocessableError) {
-				switch (err.code) {
-					case 'PropertyNotExists':
-						showStatus(statuses.propertyNotExist);
-						break;
-					case 'WarehouseFailed':
-						showStatus(statuses.warehouseConnectionFailed);
-						break;
-					default:
-						break;
-				}
-				return;
-			}
-			showError(err);
-			setTimeout(() => setIsLoading(false), 500);
-			return;
-		}
-		setTimeout(() => setIsLoading(false), 500);
-
-		let { count, users } = res;
-
-		setUsersCount(count);
-		setPagination({ current: page, last: Math.ceil(count / limit) });
-
-		let usersColumns = [];
-		for (let [name, property] of Object.entries(properties)) {
-			if (property.isUsed) {
-				usersColumns.push({
-					name: name,
-					type: property.type,
-				});
-			}
-		}
-		setColumnDefs(usersColumns);
-
-		let rows = [];
-		for (let user of users) {
-			rows.push({ cells: user });
-		}
-		setUsersRows(rows);
-		setUsersRows(usersRows);
+		fetchUsers(page);
 	};
 
 	const onToggleColumn = (name) => {
-		let props = { ...properties };
-		props[name].isUsed = !props[name].isUsed;
+		let props = [...properties];
+		for (let p of props) {
+			if (p.name === name) p.isUsed = !p.isUsed;
+		}
 		let columnDefs = [];
-		for (let [name, property] of Object.entries(props)) {
-			if (property.isUsed) {
+		for (let p of props) {
+			if (p.isUsed) {
 				columnDefs.push({
-					name: name,
-					type: property.type,
+					name: p.name,
+					type: p.type,
 				});
 			}
 		}
 		localStorage.setItem('usersProperties', JSON.stringify(props));
-		setProperties(props);
-		setRefetch(true);
+		fetchUsers(pagination.current);
 	};
 
 	const onLimitChange = (e) => {
 		let value = e.currentTarget.value;
 		localStorage.setItem('usersLimit', value);
-		setLimit(value);
-		setRefetch(true);
+		// setLimit(value);
+		fetchUsers(pagination.current);
 	};
 
 	return (
@@ -129,15 +59,11 @@ const UsersList = () => {
 						Toggle columns
 					</SlButton>
 					<SlMenu>
-						{Object.entries(properties).map(([name, property]) => {
+						{properties.map((p) => {
 							return (
 								<SlOption>
-									<SlSwitch
-										size='small'
-										onSlChange={() => onToggleColumn(name)}
-										checked={property.isUsed}
-									>
-										{name}
+									<SlSwitch size='small' onSlChange={() => onToggleColumn(p.name)} checked={p.isUsed}>
+										{p.name}
 									</SlSwitch>
 								</SlOption>
 							);

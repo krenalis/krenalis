@@ -11,7 +11,7 @@ import { SlIcon, SlButton, SlSkeleton } from '@shoelace-style/shoelace/dist/reac
 const User = () => {
 	let [user, setUser] = useState(null);
 
-	let { usersRows } = useContext(UsersContext);
+	let { userIDList } = useContext(UsersContext);
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
 
 	let { setCurrentTitle } = useContext(NavigationContext);
@@ -107,19 +107,19 @@ const User = () => {
 		let urlFragments = String(window.location).split('/');
 		let fragmentIndex = urlFragments.findIndex((f) => f === 'users');
 		let userID = Number(urlFragments[fragmentIndex + 1]);
-		let i = usersRows.findIndex((row) => row.cells[0] === userID);
+		let i = userIDList.findIndex((id) => id === userID);
 		let navigationID;
 		if (direction === 'previous') {
 			if (i - 1 < 0) {
-				navigationID = usersRows[usersRows.length - 1].cells[0];
+				navigationID = userIDList[userIDList.length - 1];
 			} else {
-				navigationID = usersRows[i - 1].cells[0];
+				navigationID = userIDList[i - 1];
 			}
 		} else if (direction === 'next') {
-			if (i + 1 >= usersRows.length) {
-				navigationID = usersRows[0].cells[0];
+			if (i + 1 >= userIDList.length) {
+				navigationID = userIDList[0];
 			} else {
-				navigationID = usersRows[i + 1].cells[0];
+				navigationID = userIDList[i + 1];
 			}
 		}
 		navigate(`/admin/users/${navigationID}`);
