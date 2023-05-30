@@ -130,11 +130,8 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 			if !ok {
 				continue
 			}
-			if value == nil {
-				if !property.out.nullable {
-					log.Printf("property path %s is not nullable", strings.Join(property.out.path, "."))
-					continue
-				}
+			if value == nil && property.out.nullable {
+				// Conversion is not necessary.
 			} else {
 				v, err := convert(value, property.in.typ, property.out.typ, property.out.nullable)
 				if err != nil {

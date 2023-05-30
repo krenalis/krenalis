@@ -47,15 +47,19 @@ var (
 )
 
 // convert converts v from type t1 to type t2 and returns the converted value.
-// nullable reports whether nil is allowed as return value.
+// nullable reports whether nil is allowed as return value. If v is nil and
+// nullable is true, it returns nil.
 // For Array, Object, and Map values, it can modify the argument v.
 //
-// It returns an error if v cannot be converted, and panics if v is nil.
+// It returns an error if v cannot be converted.
 func convert(v any, t1, t2 types.Type, nullable bool) (any, error) {
 	pt1 := t1.PhysicalType()
 	pt2 := t2.PhysicalType()
+	// Convert between nil and other values.
 	if nullable {
 		switch {
+		case v == nil:
+			return nil, nil
 		case pt1 == types.PtJSON && pt2 != types.PtJSON:
 			if v, ok := v.(json.RawMessage); ok && v[0] == 'n' {
 				return nil, nil
@@ -63,7 +67,16 @@ func convert(v any, t1, t2 types.Type, nullable bool) (any, error) {
 		case v == "" && pt2 != types.PtText:
 			return nil, nil
 		}
+	} else if v == nil {
+		switch pt2 {
+		case types.PtText:
+			return "", nil
+		case types.PtJSON:
+			return json.RawMessage("null"), nil
+		}
+		return nil, errInvalidConversion
 	}
+	// Convert the remaining cases, v is not nil.
 	switch pt2 {
 	case types.PtBoolean:
 		switch pt1 {

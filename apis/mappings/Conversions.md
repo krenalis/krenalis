@@ -28,7 +28,15 @@
 | Object   |         |     |      |       |       |       |      |       |        |        |        |       |         |         |          |      |      |      |      | ✓    |      |      |          | ✓      |        |
 | Map(T)   |         |     |      |       |       |       |      |       |        |        |        |       |         |         |          |      |      |      |      | ✓    |      |      |          |        | ✓      |
 
-## Nil
+# From nil
+
+If the destination property is nullable, `nil` is converted to `nil`; otherwise:
+
+* if the destination type is **Text**, `nil` is converted to an empty string
+* if the destination type is **JSON**, `nil` is converted to **JSON** `null`
+* in all other cases, it cannot be converted.
+
+## To nil
 
 A value `v` is converted to `nil` if the destination property is nullable and one of the following conditions is true:
 
@@ -37,3 +45,4 @@ A value `v` is converted to `nil` if the destination property is nullable and on
 * `v` is an empty **Text**, and the destination type is not **Text**
 * `v` is an empty **Text**, and the destination type is **Text** with enums
 * `v` is an empty **Text**, and the destination type is **Text** with a regular expression, and `v` does not match
+

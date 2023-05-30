@@ -28,11 +28,6 @@ func TestConvert(t *testing.T) {
 		e        any
 		nullable bool
 	}{
-		// nil.
-		{types.JSON(), types.Text(), json.RawMessage("null"), nil, true},
-		{types.Text(), types.Int(), "", nil, true},
-		{types.Text(), types.Text().WithEnum([]string{"foo", "boo"}), "", nil, true},
-		{types.Text(), types.Text().WithRegexp(regexp.MustCompile(`^bo+$`)), "", nil, true},
 
 		// Boolean.
 		{types.Boolean(), types.Boolean(), true, true, true},
@@ -77,6 +72,7 @@ func TestConvert(t *testing.T) {
 		{types.Decimal(60, 0), types.Int64(), maxIntDecimal, math.MaxInt64, true},
 		{types.Year(), types.Int16(), 2020, 2020, true},
 		{types.Text(), types.Int(), "502842", 502842, true},
+		{types.Text(), types.Int(), "", nil, true},
 		{types.JSON(), types.Int(), 12.627, 13, true},
 		{types.JSON(), types.Int(), json.Number("-15"), -15, true},
 		{types.JSON(), types.Int(), json.RawMessage("-2"), -2, true},
@@ -164,6 +160,9 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.UUID(), json.RawMessage(`"123e4567-e89b-12d3-a456-426614174000"`), "123e4567-e89b-12d3-a456-426614174000", true},
 
 		// JSON.
+		{types.Int(), types.JSON(), nil, nil, true},
+		{types.Int(), types.JSON(), nil, json.RawMessage(`null`), false},
+		{types.JSON(), types.JSON(), json.RawMessage(`{"foo":5}`), json.RawMessage(`{"foo":5}`), true},
 		{types.JSON(), types.JSON(), json.RawMessage(`{"foo":5}`), json.RawMessage(`{"foo":5}`), true},
 		{types.JSON(), types.JSON(), json.RawMessage(`null`), json.RawMessage(`null`), true},
 		{types.Text(), types.JSON(), "", json.RawMessage("null"), false},
@@ -181,8 +180,12 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.Inet(), json.RawMessage(`"2001:0db8:0000:0000:0000:ff00:0042:8329"`), "2001:db8::ff00:42:8329", true},
 
 		// Text.
+		{types.Int(), types.Text(), nil, nil, true},
+		{types.Int(), types.Text(), nil, "", false},
 		{types.Text(), types.Text(), "foo", "foo", true},
+		{types.Text(), types.Text().WithEnum([]string{"foo", "boo"}), "", nil, true},
 		{types.Text(), types.Text().WithEnum([]string{"foo", "boo"}), "boo", "boo", true},
+		{types.Text(), types.Text().WithRegexp(regexp.MustCompile(`^bo+$`)), "", nil, true},
 		{types.Text(), types.Text().WithRegexp(regexp.MustCompile(`^bo+$`)), "boo", "boo", true},
 		{types.Boolean(), types.Text(), true, "true", true},
 		{types.Int(), types.Text(), -603, "-603", true},
