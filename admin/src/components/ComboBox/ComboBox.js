@@ -120,7 +120,7 @@ const ComboBoxInput = ({ comboBoxListRef, onInput: onInputProp, children, error,
 		window.addEventListener('keyup', onKeyUpRef.current);
 		let input = e.target;
 		comboBoxListRef.current.updateCurrentComboboxInput(input);
-		comboBoxListRef.current.updateSearchTerm(input.value);
+		comboBoxListRef.current.updateSearchTerm('');
 		setTimeout(() => {
 			input.after(comboBoxListRef.current.renderRoot.host);
 			comboBoxListRef.current.open();
@@ -143,6 +143,7 @@ const ComboBoxInput = ({ comboBoxListRef, onInput: onInputProp, children, error,
 
 	const onClick = () => {
 		window.addEventListener('keyup', onKeyUpRef.current);
+		comboBoxListRef.current.updateSearchTerm('');
 		comboBoxListRef.current.open();
 	};
 
