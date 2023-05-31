@@ -141,10 +141,9 @@ const ComboBoxInput = ({ comboBoxListRef, onInput: onInputProp, children, error,
 		});
 	};
 
-	const onClick = () => {
-		window.addEventListener('keyup', onKeyUpRef.current);
-		comboBoxListRef.current.updateSearchTerm('');
-		comboBoxListRef.current.open();
+	const onClick = (e) => {
+		let input = e.target;
+		input.focus();
 	};
 
 	const onInput = (e) => {
