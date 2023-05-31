@@ -33,7 +33,7 @@
 
 .Grid .noRows {
     font-weight: 600;
-    opacity: .5;
+    color: var(--sl-color-neutral-400);
     display: flex;
     flex-flow: column;
     gap: 7px;
@@ -42,5 +42,6 @@
 }
 
 .Grid .noRows sl-icon {
+    color: var(--sl-color-neutral-400);
     font-size: 25px;
 }
