@@ -285,11 +285,8 @@ func (c *connection) UserSchema() (types.Type, error) {
 		return types.Type{}, err
 	}
 
-	properties := make([]types.Property, 0, len(response.Results)-2)
+	properties := make([]types.Property, 0, len(response.Results))
 	for _, r := range response.Results {
-		if r.Name == "createdate" || r.Name == "lastmodifieddate" {
-			continue
-		}
 		typ, err := propertyType(r.Name, r.Type)
 		if err != nil {
 			return types.Type{}, err
@@ -512,8 +509,6 @@ func (it *iter) next() ([]object, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid updateAt returned by HubSpot: %q", date)
 		}
-		delete(result.Properties, "createdate")
-		delete(result.Properties, "lastmodifieddate")
 		objects[i] = object{
 			ID:               result.ID,
 			Properties:       result.Properties,
