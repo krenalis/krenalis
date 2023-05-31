@@ -272,10 +272,12 @@ func (c *connection) UserSchema() (types.Type, error) {
 				Value  string
 				Hidden bool
 			}
-			Label       string
-			Description string
-			Calculated  bool
-			Type        string
+			Label                string
+			Description          string
+			Type                 string
+			ModificationMetadata struct {
+				ReadOnlyValue bool
+			}
 		}
 	}
 	err := c.call("GET", "/crm/v3/properties/contact", nil, 200, &response)
@@ -299,7 +301,7 @@ func (c *connection) UserSchema() (types.Type, error) {
 			Type:        typ,
 			Nullable:    true,
 		}
-		if r.Calculated || r.Name == "hs_object_id" {
+		if r.ModificationMetadata.ReadOnlyValue {
 			property.Role = types.SourceRole
 		}
 		if typ.PhysicalType() == types.PtText {
