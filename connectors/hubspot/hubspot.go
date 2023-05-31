@@ -285,12 +285,9 @@ func (c *connection) UserSchema() (types.Type, error) {
 		return types.Type{}, err
 	}
 
-	properties := []types.Property{
-		{Name: "hubspot_user_id", Label: "ID", Role: types.SourceRole, Type: types.Text()},
-	}
+	properties := make([]types.Property, 0, len(response.Results)-2)
 	for _, r := range response.Results {
-		switch r.Name {
-		case "createdate", "lastmodifieddate", "hs_object_id":
+		if r.Name == "createdate" || r.Name == "lastmodifieddate" {
 			continue
 		}
 		typ, err := propertyType(r.Name, r.Type)
@@ -304,7 +301,7 @@ func (c *connection) UserSchema() (types.Type, error) {
 			Type:        typ,
 			Nullable:    true,
 		}
-		if r.Calculated {
+		if r.Calculated || r.Name == "hs_object_id" {
 			property.Role = types.SourceRole
 		}
 		if typ.PhysicalType() == types.PtText {
@@ -358,7 +355,6 @@ func (c *connection) Users(cursor string, properties []connector.PropertyPath) e
 			break
 		}
 		for _, obj := range objects {
-			obj.Properties["hubspot_user_id"] = obj.ID
 			c.firehose.SetUser(obj.ID, obj.Properties, time.UnixMilli(obj.LastModifiedDate).UTC(), nil)
 		}
 		fromDate = objects[len(objects)-1].LastModifiedDate
@@ -518,7 +514,6 @@ func (it *iter) next() ([]object, error) {
 		}
 		delete(result.Properties, "createdate")
 		delete(result.Properties, "lastmodifieddate")
-		delete(result.Properties, "hs_object_id")
 		objects[i] = object{
 			ID:               result.ID,
 			Properties:       result.Properties,
