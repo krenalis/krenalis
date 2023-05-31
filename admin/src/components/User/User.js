@@ -1,12 +1,14 @@
-import { useContext, useEffect, useState } from 'react';
+/* eslint-disable no-restricted-globals */
+import { useContext, useEffect, useState, useRef } from 'react';
 import './User.css';
 import { NavigationContext } from '../../context/NavigationContext';
 import { UsersContext } from '../../context/UsersContext';
 import { AppContext } from '../../context/AppContext';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 import statuses from '../../constants/statuses';
-import { useNavigate } from 'react-router';
 import { SlIcon, SlButton, SlSkeleton } from '@shoelace-style/shoelace/dist/react/index.js';
+
+const MAX_FETCH_TIME = 200;
 
 const User = () => {
 	let [user, setUser] = useState(null);
@@ -16,7 +18,7 @@ const User = () => {
 
 	let { setCurrentTitle } = useContext(NavigationContext);
 
-	const navigate = useNavigate();
+	let fetchTimeoutID = useRef(null);
 
 	useEffect(() => {
 		if (user == null) {
@@ -34,76 +36,95 @@ const User = () => {
 	}, [user]);
 
 	useEffect(() => {
-		const fetchData = async () => {
-			let urlFragments = String(window.location).split('/');
-			let fragmentIndex = urlFragments.findIndex((f) => f === 'users');
-			let userID = Number(urlFragments[fragmentIndex + 1]);
-			let u = {
-				id: userID,
-			};
+		fetchUser();
 
-			let err, res;
+		return () => {
+			clearTimeout(fetchTimeoutID.current);
+		};
+	}, []);
 
-			// Fetch the user's events.
-			[res, err] = await API.users.events(userID);
-			if (err != null) {
-				if (err instanceof NotFoundError) {
-					showStatus(statuses.usersNotFound);
-					redirect('/admin/users');
-					return;
-				}
-				if (err instanceof UnprocessableError) {
-					if (err.code === 'NoWarehouse') {
-						showStatus(statuses.noWarehouse);
-						return;
-					}
-					if (err.code === 'WarehouseFailed') {
-						showStatus(statuses.warehouseConnectionFailed);
-						return;
-					}
-				}
-				showError(err);
+	const fetchUser = async () => {
+		let urlFragments = String(window.location).split('/');
+		let fragmentIndex = urlFragments.findIndex((f) => f === 'users');
+		let userID = Number(urlFragments[fragmentIndex + 1]);
+		let u = {
+			id: userID,
+		};
+
+		// Show the skeletons if the response is slow.
+		let isLoading = false;
+		fetchTimeoutID.current = setTimeout(() => {
+			clearTimeout(fetchTimeoutID.current);
+			isLoading = true;
+			setUser(null);
+		}, MAX_FETCH_TIME + 1);
+
+		let err, res;
+
+		// Fetch the user's events.
+		[res, err] = await API.users.events(userID);
+		if (err != null) {
+			if (err instanceof NotFoundError) {
+				showStatus(statuses.usersNotFound);
+				redirect('/admin/users');
 				return;
 			}
-			u.events = { ...res.events };
-
-			// Fetch the user's traits.
-			[res, err] = await API.users.traits(userID);
-			if (err != null) {
-				if (err instanceof NotFoundError) {
-					showStatus(statuses.usersNotFound);
-					redirect('/admin/users');
+			if (err instanceof UnprocessableError) {
+				if (err.code === 'NoWarehouse') {
+					showStatus(statuses.noWarehouse);
 					return;
 				}
-				if (err instanceof UnprocessableError) {
-					if (err.code === 'NoUsersSchema') {
-						showStatus(statuses.noUsersSchema);
-						return;
-					}
-					if (err.code === 'NoWarehouse') {
-						showStatus(statuses.noWarehouse);
-						return;
-					}
-					if (err.code === 'WarehouseFailed') {
-						showStatus(statuses.warehouseConnectionFailed);
-						return;
-					}
+				if (err.code === 'WarehouseFailed') {
+					showStatus(statuses.warehouseConnectionFailed);
+					return;
 				}
-				showError(err);
+			}
+			showError(err);
+			return;
+		}
+		u.events = { ...res.events };
+
+		// Fetch the user's traits.
+		[res, err] = await API.users.traits(userID);
+		if (err != null) {
+			if (err instanceof NotFoundError) {
+				showStatus(statuses.usersNotFound);
+				redirect('/admin/users');
 				return;
 			}
-			u.traits = { ...res.traits };
+			if (err instanceof UnprocessableError) {
+				if (err.code === 'NoUsersSchema') {
+					showStatus(statuses.noUsersSchema);
+					return;
+				}
+				if (err.code === 'NoWarehouse') {
+					showStatus(statuses.noWarehouse);
+					return;
+				}
+				if (err.code === 'WarehouseFailed') {
+					showStatus(statuses.warehouseConnectionFailed);
+					return;
+				}
+			}
+			showError(err);
+			return;
+		}
+		u.traits = { ...res.traits };
+
+		clearTimeout(fetchTimeoutID.current);
+
+		if (isLoading) {
+			// If the skeletons are showing, delay the rendering to prevent
+			// flashes of content.
 			setTimeout(() => {
 				setUser(u);
-			}, 200);
-		};
-		if (user == null) {
-			fetchData();
+			}, 300);
+		} else {
+			setUser(u);
 		}
-	}, [user]);
+	};
 
-	const onNavigate = (direction) => {
-		setUser(null);
+	const onNavigate = async (direction) => {
 		let urlFragments = String(window.location).split('/');
 		let fragmentIndex = urlFragments.findIndex((f) => f === 'users');
 		let userID = Number(urlFragments[fragmentIndex + 1]);
@@ -122,7 +143,8 @@ const User = () => {
 				navigationID = userIDList[i + 1];
 			}
 		}
-		navigate(`/admin/users/${navigationID}`);
+		history.pushState({}, '', `/admin/users/${navigationID}`);
+		await fetchUser();
 	};
 
 	let traits = [];
