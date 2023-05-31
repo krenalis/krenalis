@@ -42,8 +42,6 @@ var _ interface {
 	connector.AppGroupsConnection
 } = (*connection)(nil)
 
-var Debug = false
-
 func init() {
 	connector.RegisterApp(connector.App{
 		Name:                   "HubSpot",
