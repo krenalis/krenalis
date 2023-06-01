@@ -131,16 +131,12 @@
 	margin: 0 5px;
 }
 
-.UsersList .gridContainer .footer .pagination .pages .last {
-	color: var(--color-primary-600);
-	cursor: pointer;
-}
-
 .UsersList .gridContainer .footer .pagination .previousPage,
 .UsersList .gridContainer .footer .pagination .nextPage,
 .UsersList .gridContainer .footer .pagination .firstPage,
 .UsersList .gridContainer .footer .pagination .lastPage {
 	cursor: pointer;
+	display: flex;
 	justify-content: center;
 	align-items: center;
 }

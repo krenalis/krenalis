@@ -117,14 +117,7 @@ const UsersList = () => {
 									Page
 									<span className='current'>{pagination.current}</span>
 									of
-									<span
-										className='last'
-										onClick={() => {
-											onPageChange(pagination.last);
-										}}
-									>
-										{pagination.last}
-									</span>
+									<span className='last'>{pagination.last}</span>
 								</div>
 								{pagination.current !== pagination.last && (
 									<span
