@@ -609,9 +609,11 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 //
 //   - EventTypeNotExists, if the specified event type does not exist.
 //   - FetchSchemaFailed, if an error occurred fetching the schema.
+//   - NoStorage, if the file connection does not have a storage.
 //   - PropertyNotExists, if a property of a mapping / transformation does not
 //     exist in the schema (except for properties of the event type schema,
 //     which is specified and thus returned as an errors.BadRequest error).
+//   - ReadFileFailed, if an error occurred reading the file.
 //   - QueryExecutionFailed, if the execution of the specified query fails.
 func (this *Connection) validateActionToSet(action ActionToSet, target state.ActionTarget, eventType string) (types.Type, error) {
 
@@ -851,7 +853,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if c.Role == state.SourceRole {
 			s, err := this.fetchFileSchema(action.Path, action.Sheet)
 			if err != nil {
-				return types.Type{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
+				return types.Type{}, err
 			}
 			schema = s
 		}
@@ -1022,6 +1024,11 @@ func (this *Connection) fetchDatabaseSchema(query string) (types.Type, error) {
 }
 
 // fetchFileSchema fetches the schema of a file connection.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - NoStorage, if the file connection does not have a storage.
+//   - ReadFileFailed, if an error occurred reading the file.
 func (this *Connection) fetchFileSchema(path, sheet string) (types.Type, error) {
 
 	c := this.connection
@@ -1035,7 +1042,7 @@ func (this *Connection) fetchFileSchema(path, sheet string) (types.Type, error) 
 	{
 		s, ok := c.Storage()
 		if !ok {
-			return types.Type{}, errors.New("file connection has not storage")
+			return types.Type{}, errors.Unprocessable(NoStorage, "file connection %d does not have a storage", c.ID)
 		}
 		fh := this.newFirehose(ctx)
 		ctx = fh.ctx
@@ -1046,7 +1053,7 @@ func (this *Connection) fetchFileSchema(path, sheet string) (types.Type, error) 
 			Firehose: fh,
 		})
 		if err != nil {
-			return types.Type{}, err
+			return types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
 		}
 	}
 
@@ -1058,22 +1065,22 @@ func (this *Connection) fetchFileSchema(path, sheet string) (types.Type, error) 
 		Firehose: fh,
 	})
 	if err != nil {
-		return types.Type{}, err
+		return types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
 
 	// Read only the columns.
 	rc, _, err := storage.Open(path)
 	if err != nil {
-		return types.Type{}, err
+		return types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
 	defer rc.Close()
 	rw := newRecordWriter(c.ID, 0, nil)
 	err = file.Read(rc, sheet, rw)
 	if err != nil && err != errRecordStop {
-		return types.Type{}, err
+		return types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
 	if rw.columns == nil {
-		return types.Type{}, errNoColumns
+		return types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", errNoColumns)
 	}
 
 	return types.ObjectOf(rw.columns)

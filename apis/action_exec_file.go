@@ -98,7 +98,7 @@ func (this *Action) importFromFile() error {
 	}
 	inputSchema, err := apisConn.fetchFileSchema(this.action.Path, this.action.Sheet)
 	if err != nil {
-		return actionExecutionError{fmt.Errorf("an error occurred fetching the schema: %s", err)}
+		return actionExecutionError{err}
 	}
 	usersSchema, ok := this.action.Connection().Workspace().Schemas["users"]
 	if !ok {

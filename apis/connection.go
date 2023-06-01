@@ -1239,8 +1239,11 @@ func (this *Connection) SetStorage(storage int) error {
 //
 // If the connection does not exist anymore, it returns an errors.NotFoundError
 // error.
-// If the file connection does not have a storage, it returns an
-// errors.UnprocessableError error with code NoStorage,
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - NoStorage, if the file connection does not have a storage.
+//   - ReadFileFailed, if an error occurred reading the file.
 func (this *Connection) Sheets(path string) ([]string, error) {
 	c := this.connection
 	connector := c.Connector()
@@ -1278,10 +1281,14 @@ func (this *Connection) Sheets(path string) ([]string, error) {
 	}
 	r, _, err := storage.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
 	defer r.Close()
-	return file.Sheets(r)
+	sheets, err := file.Sheets(r)
+	if err != nil {
+		return nil, errors.Unprocessable(ReadFileFailed, "%w", err)
+	}
+	return sheets, nil
 }
 
 // ConnectionsStats represents the statistics on a connection for the last 24
