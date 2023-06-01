@@ -334,7 +334,7 @@ inherit the disabled style */
 
 .action .queryButtons,
 .action .fileButtons {
-    margin-top: 15px;
+    margin-top: 30px;
     display: flex;
     gap: 15px;
 }
