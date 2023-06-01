@@ -351,8 +351,8 @@ inherit the disabled style */
     width: 100%;
 }
 
-.action .sheetsSelect::part(listbox) {
-    padding: 0!important;
+.action .sheetsSelect.hideListbox::part(listbox) {
+    display: none;
 }
 
 .action .sheetsError {

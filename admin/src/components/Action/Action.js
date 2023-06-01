@@ -548,9 +548,9 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		let path = e.currentTarget.value;
 		pathRef.current.lastUpdate = path;
 		a.Path = path;
+		a.Sheet = '';
 		setAction(a);
 		setSheetsError('');
-		setSheets([]);
 	};
 
 	const onUpdateSheet = (e) => {
@@ -565,6 +565,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		let a = { ...action };
 		a.Sheet = '';
 		setAction(a);
+		sheetsSelectRef.current.classList.add('hideListbox'); // prevent the listbox from flashing.
 		setAreSheetsLoading(true);
 		setSheetsError('');
 		pathRef.current.lastSheetFetch = pathRef.current.lastUpdate;
@@ -577,6 +578,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					showError(err);
 					setSheetsError(`${err}. Please try again.`);
 				}
+				sheetsSelectRef.current.classList.remove('hideListbox');
 				setAreSheetsLoading(false);
 			}, 300);
 			return;
@@ -584,6 +586,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setTimeout(() => {
 			setAreSheetsLoading(false);
 			setSheets(res.sheets);
+			sheetsSelectRef.current.classList.remove('hideListbox');
 			setTimeout(() => {
 				sheetsSelectRef.current.show();
 			});
@@ -591,7 +594,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	};
 
 	const onSheetsLoad = async () => {
-		if (pathRef.current.lastSheetFetch === pathRef.current.lastUpdate && !sheets.length === 0) {
+		if (pathRef.current.lastSheetFetch === pathRef.current.lastUpdate) {
 			return;
 		}
 		await loadSheets();
