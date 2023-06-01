@@ -19,6 +19,7 @@ import {
 	SlButton,
 	SlInput,
 	SlIcon,
+	SlSpinner,
 	SlSelect,
 	SlOption,
 	SlDialog,
@@ -52,6 +53,9 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let [propertiesMode, setPropertiesMode] = useState('mappings');
 	let [fields, setFields] = useState([]);
 	let [inputSchema, setInputSchema] = useState(null);
+	let [sheets, setSheets] = useState([]);
+	let [areSheetsLoading, setAreSheetsLoading] = useState(false);
+	let [sheetsError, setSheetsError] = useState('');
 	let [isInputSchemaDialogOpen, setIsInputSchemaDialogOpen] = useState(false);
 	let [outputSchema, setOutputSchema] = useState(null);
 	let [isOutputSchemaDialogOpen, setIsOutputSchemaDialogOpen] = useState(false);
@@ -65,9 +69,17 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let { connection: c } = useContext(ConnectionContext);
 
 	let queryRef = useRef('');
-	let pathRef = useRef('');
-	let sheetRef = useRef('');
+	let pathRef = useRef({
+		lastConfirmation: '',
+		lastUpdate: '',
+		lastSheetFetch: '',
+	});
+	let sheetRef = useRef({
+		lastConfirmation: '',
+		lastUpdate: '',
+	});
 	let defaultTransformationFunction = useRef('');
+	let sheetSelectRef = useRef(null);
 	let propertiesListRef = useRef(null);
 	let conditionListRef = useRef(null);
 	let internalMatchingPropertyListRef = useRef(null);
@@ -227,8 +239,15 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				}
 			}
 			queryRef.current = action.Query;
-			pathRef.current = action.Path;
-			sheetRef.current = action.Sheet;
+			pathRef.current = {
+				...pathRef.current,
+				lastConfirmation: action.Path,
+				lastUpdate: action.Path,
+			};
+			sheetRef.current = {
+				lastConfirmation: action.Sheet,
+				lastUpdate: action.Sheet,
+			};
 			setAction(action);
 		};
 		fetchData();
@@ -527,15 +546,48 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	const onUpdatePath = (e) => {
 		let a = { ...action };
 		let path = e.currentTarget.value;
+		pathRef.current.lastUpdate = path;
 		a.Path = path;
 		setAction(a);
+		setSheetsError('');
+		setSheets([]);
 	};
 
 	const onUpdateSheet = (e) => {
 		let a = { ...action };
 		let sheet = e.currentTarget.value;
+		sheetRef.current.lastUpdate = sheet;
 		a.Sheet = sheet;
 		setAction(a);
+	};
+
+	const onSheetLoad = async () => {
+		if (pathRef.current.lastSheetFetch === pathRef.current.lastUpdate) {
+			return;
+		}
+		let a = { ...action };
+		a.Sheet = '';
+		setAction(a);
+		setAreSheetsLoading(true);
+		pathRef.current.lastSheetFetch = pathRef.current.lastUpdate;
+		let [res, err] = await API.connections.sheets(c.ID, action.Path);
+		if (err != null) {
+			setTimeout(() => {
+				if (!(err instanceof UnprocessableError)) {
+					showError(err);
+				}
+				setSheetsError(err);
+				setAreSheetsLoading(false);
+			}, 300);
+			return;
+		}
+		setTimeout(() => {
+			setAreSheetsLoading(false);
+			setSheets(res.sheets);
+			setTimeout(() => {
+				sheetSelectRef.current.show();
+			});
+		}, 300);
 	};
 
 	const records = async (path, sheet, limit, isConfirmation) => {
@@ -555,8 +607,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			return;
 		}
 		if (isConfirmation) {
-			pathRef.current = path;
-			sheetRef.current = sheet;
+			pathRef.current.lastConfirmation = path;
+			sheetRef.current.lastConfirmation = sheet;
 		}
 		return res;
 	};
@@ -825,25 +877,9 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		}
 	}
 
-	let isFileChanged = false;
-	if (pathRef.current != null) {
-		if (pathRef.current.trim() !== action.Path.trim()) {
-			isFileChanged = true;
-		}
-	} else {
-		if (action.Path != null && action.Path.trim() !== '') {
-			isFileChanged = true;
-		}
-	}
-	if (sheetRef.current != null) {
-		if (sheetRef.current.trim() !== action.Sheet.trim()) {
-			isFileChanged = true;
-		}
-	} else {
-		if (action.Sheet != null && action.Sheet.trim() !== '') {
-			isFileChanged = true;
-		}
-	}
+	let isFileChanged =
+		pathRef.current.lastUpdate !== pathRef.current.lastConfirmation ||
+		sheetRef.current.lastUpdate !== sheetRef.current.lastConfirmation;
 
 	let mustComputeSchema = (c.Type === 'Database' || c.Type === 'File') && inputSchema == null && !isEditing;
 	let hasQueryError = c.Type === 'Database' && inputSchema == null && isEditing;
@@ -1139,14 +1175,34 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							placeholder={`${actionType.Target.toLowerCase()}.${connector.FileExtension}`}
 						/>
 						{fields.includes('Sheet') && (
-							<SlInput
-								className='sheetInput'
-								name='sheet'
-								value={action.Sheet}
-								label='Sheet'
-								type='text'
-								onSlInput={onUpdateSheet}
-							/>
+							<>
+								<SlSelect
+									onSlFocus={onSheetLoad}
+									className='sheetSelect'
+									ref={sheetSelectRef}
+									name='sheet'
+									value={action.Sheet}
+									label='Sheet'
+									onSlChange={onUpdateSheet}
+									disabled={
+										action.Path == null ||
+										action.Path === '' ||
+										areSheetsLoading ||
+										sheetsError !== ''
+									}
+								>
+									{areSheetsLoading && <SlSpinner slot='prefix' />}
+									{sheets.map((sheet) => {
+										let name = sheet.toLowerCase();
+										return (
+											<SlOption key={name} value={name}>
+												{sheet}
+											</SlOption>
+										);
+									})}
+								</SlSelect>
+								{sheetsError !== '' && <div className='sheetsError'>{sheetsError}</div>}
+							</>
 						)}
 						{isImport && (
 							<div className='fileButtons'>

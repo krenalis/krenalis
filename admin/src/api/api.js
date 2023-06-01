@@ -81,6 +81,12 @@ class Connections {
 		);
 	};
 
+	sheets = async (connection, path) => {
+		return await call(
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/sheets?path=${encodeURIComponent(path)}`
+		);
+	};
+
 	setStorage = async (connection, storage) => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/storage/${storage}`, http.PUT);
 	};

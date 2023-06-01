@@ -339,8 +339,19 @@ inherit the disabled style */
     gap: 15px;
 }
 
-.action .sheetInput {
+.action .sheetSelect {
     margin-top: 20px;
+}
+
+.action .sheetSelect::part(listbox) {
+    padding: 0!important;
+}
+
+.action .sheetsError {
+    font-size: 13px;
+    color: var(--sl-color-danger-500);
+    margin-top: 3px;
+    font-weight: 600;
 }
 
 .action .setSchemaFirst {
