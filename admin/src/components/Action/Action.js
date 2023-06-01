@@ -12,7 +12,7 @@ import * as icons from '../../constants/icons';
 import EditorWrapper from '../EditorWrapper/EditorWrapper';
 import StyledGrid from '../StyledGrid/StyledGrid';
 import { ComboBoxList, ComboBoxInput } from '../ComboBox/ComboBox';
-import { UnprocessableError, NotFoundError } from '../../api/errors';
+import { UnprocessableError, NotFoundError, BadRequestError } from '../../api/errors';
 import { AppContext } from '../../context/AppContext';
 import { ConnectionContext } from '../../context/ConnectionContext';
 import {
@@ -79,7 +79,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		lastUpdate: '',
 	});
 	let defaultTransformationFunction = useRef('');
-	let sheetSelectRef = useRef(null);
+	let sheetsSelectRef = useRef(null);
 	let propertiesListRef = useRef(null);
 	let conditionListRef = useRef(null);
 	let internalMatchingPropertyListRef = useRef(null);
@@ -561,22 +561,22 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setAction(a);
 	};
 
-	const onSheetLoad = async () => {
-		if (pathRef.current.lastSheetFetch === pathRef.current.lastUpdate) {
-			return;
-		}
+	const loadSheets = async () => {
 		let a = { ...action };
 		a.Sheet = '';
 		setAction(a);
 		setAreSheetsLoading(true);
+		setSheetsError('');
 		pathRef.current.lastSheetFetch = pathRef.current.lastUpdate;
 		let [res, err] = await API.connections.sheets(c.ID, action.Path);
 		if (err != null) {
 			setTimeout(() => {
-				if (!(err instanceof UnprocessableError)) {
+				if (err instanceof UnprocessableError || err instanceof BadRequestError) {
+					setSheetsError(err.message);
+				} else {
 					showError(err);
+					setSheetsError(`${err}. Please try again.`);
 				}
-				setSheetsError(err);
 				setAreSheetsLoading(false);
 			}, 300);
 			return;
@@ -585,9 +585,20 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			setAreSheetsLoading(false);
 			setSheets(res.sheets);
 			setTimeout(() => {
-				sheetSelectRef.current.show();
+				sheetsSelectRef.current.show();
 			});
 		}, 300);
+	};
+
+	const onSheetsLoad = async () => {
+		if (pathRef.current.lastSheetFetch === pathRef.current.lastUpdate && !sheets.length === 0) {
+			return;
+		}
+		await loadSheets();
+	};
+
+	const onSheetsReload = async () => {
+		await loadSheets();
 	};
 
 	const records = async (path, sheet, limit, isConfirmation) => {
@@ -1176,31 +1187,39 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						/>
 						{fields.includes('Sheet') && (
 							<>
-								<SlSelect
-									onSlFocus={onSheetLoad}
-									className='sheetSelect'
-									ref={sheetSelectRef}
-									name='sheet'
-									value={action.Sheet}
-									label='Sheet'
-									onSlChange={onUpdateSheet}
-									disabled={
-										action.Path == null ||
-										action.Path === '' ||
-										areSheetsLoading ||
-										sheetsError !== ''
-									}
-								>
-									{areSheetsLoading && <SlSpinner slot='prefix' />}
-									{sheets.map((sheet) => {
-										let name = sheet.toLowerCase();
-										return (
-											<SlOption key={name} value={name}>
-												{sheet}
-											</SlOption>
-										);
-									})}
-								</SlSelect>
+								<div className='sheetsSelectWrapper'>
+									<SlSelect
+										onSlFocus={onSheetsLoad}
+										className='sheetsSelect'
+										ref={sheetsSelectRef}
+										name='sheet'
+										value={action.Sheet}
+										label='Sheet'
+										onSlChange={onUpdateSheet}
+										disabled={
+											action.Path == null ||
+											action.Path === '' ||
+											areSheetsLoading ||
+											sheetsError !== ''
+										}
+									>
+										{areSheetsLoading && <SlSpinner slot='prefix' />}
+										{sheets.map((sheet) => {
+											let name = sheet.toLowerCase();
+											return (
+												<SlOption key={name} value={name}>
+													{sheet}
+												</SlOption>
+											);
+										})}
+									</SlSelect>
+									<SlButton
+										onClick={onSheetsReload}
+										disabled={action.Path == null || action.Path === '' || areSheetsLoading}
+									>
+										<SlIcon name='arrow-clockwise' />
+									</SlButton>
+								</div>
 								{sheetsError !== '' && <div className='sheetsError'>{sheetsError}</div>}
 							</>
 						)}
