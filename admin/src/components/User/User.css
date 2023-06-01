@@ -27,7 +27,17 @@
     display: flex;
     justify-content: start;
     align-items: center;
-    gap: 20px;
+    gap: 25px;
+}
+
+.user .navigation sl-icon {
+    color: var(--sl-color-neutral-600);
+    font-size: 19px;
+}
+
+.user .navigation sl-button::part(base),
+.user .navigation sl-button::part(label) {
+    padding: 0;
 }
 
 .user .traits {

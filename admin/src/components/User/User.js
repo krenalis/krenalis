@@ -209,13 +209,11 @@ const User = () => {
 	return (
 		<div className='user'>
 			<div className='navigation'>
-				<SlButton variant='default' onClick={() => onNavigate('previous')}>
+				<SlButton variant='text' onClick={() => onNavigate('previous')}>
 					<SlIcon name='chevron-left' slot='prefix' />
-					Previous
 				</SlButton>
-				<SlButton variant='default' onClick={() => onNavigate('next')}>
+				<SlButton variant='text' onClick={() => onNavigate('next')}>
 					<SlIcon name='chevron-right' slot='suffix' />
-					Next
 				</SlButton>
 			</div>
 			<div className='traits'>
