@@ -55,7 +55,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let [inputSchema, setInputSchema] = useState(null);
 	let [sheets, setSheets] = useState([]);
 	let [areSheetsLoading, setAreSheetsLoading] = useState(false);
-	let [sheetsError, setSheetsError] = useState('');
+	let [hasSheetsError, setHasSheetsError] = useState(false);
 	let [isInputSchemaDialogOpen, setIsInputSchemaDialogOpen] = useState(false);
 	let [outputSchema, setOutputSchema] = useState(null);
 	let [isOutputSchemaDialogOpen, setIsOutputSchemaDialogOpen] = useState(false);
@@ -550,7 +550,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		a.Path = path;
 		a.Sheet = '';
 		setAction(a);
-		setSheetsError('');
+		setHasSheetsError(false);
 	};
 
 	const onUpdateSheet = (e) => {
@@ -567,18 +567,18 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setAction(a);
 		sheetsSelectRef.current.classList.add('hideListbox'); // prevent the listbox from flashing.
 		setAreSheetsLoading(true);
-		setSheetsError('');
+		setHasSheetsError(false);
 		pathRef.current.lastSheetFetch = pathRef.current.lastUpdate;
 		let [res, err] = await API.connections.sheets(c.ID, action.Path);
 		if (err != null) {
 			setTimeout(() => {
 				if (err instanceof UnprocessableError || err instanceof BadRequestError) {
-					setSheetsError(err.message);
+					showError(err.message);
 				} else {
 					showError(err);
-					setSheetsError(`${err}. Please try again.`);
 				}
 				sheetsSelectRef.current.classList.remove('hideListbox');
+				setHasSheetsError(true);
 				setAreSheetsLoading(false);
 			}, 300);
 			return;
@@ -1203,7 +1203,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 											action.Path == null ||
 											action.Path === '' ||
 											areSheetsLoading ||
-											sheetsError !== ''
+											hasSheetsError
 										}
 									>
 										{areSheetsLoading && <SlSpinner slot='prefix' />}
@@ -1223,7 +1223,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 										<SlIcon name='arrow-clockwise' />
 									</SlButton>
 								</div>
-								{sheetsError !== '' && <div className='sheetsError'>{sheetsError}</div>}
 							</>
 						)}
 						{isImport && (
