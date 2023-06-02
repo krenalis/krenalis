@@ -240,7 +240,11 @@ func convert(v any, t1, t2 types.Type, nullable bool) (any, error) {
 			if err != nil {
 				return nil, errInvalidConversion
 			}
-			return t.UTC(), nil
+			t = t.UTC()
+			if y := t.Year(); y < 1 || y > 9999 {
+				return nil, errInvalidConversion
+			}
+			return t, nil
 		case types.PtJSON:
 			return jsonToDateTime(v)
 		}
@@ -651,7 +655,10 @@ func jsonToDateTime(v any) (time.Time, error) {
 	case string:
 		t, err := iso8601.ParseString(v)
 		if err == nil {
-			return t.UTC(), nil
+			t = t.UTC()
+			if y := t.Year(); 1 <= y && y <= 9999 {
+				return t, nil
+			}
 		}
 	case json.RawMessage:
 		enc := json.NewDecoder(bytes.NewReader(v))
@@ -670,7 +677,10 @@ func jsonToDate(v any) (time.Time, error) {
 	case string:
 		t, err := time.Parse(time.DateOnly, v)
 		if err == nil {
-			return t.UTC(), nil
+			t = t.UTC()
+			if y := t.Year(); 1 <= y && y <= 9999 {
+				return t, nil
+			}
 		}
 	case json.RawMessage:
 		enc := json.NewDecoder(bytes.NewReader(v))
