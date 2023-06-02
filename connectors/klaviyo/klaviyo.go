@@ -423,18 +423,15 @@ func (c *connection) call(method, url string, body io.Reader, expectedStatus int
 	}
 
 	if res.StatusCode != expectedStatus {
-		hsErr := &klaviyoError{statusCode: res.StatusCode}
+		kErr := &klaviyoError{statusCode: res.StatusCode}
 		dec := json.NewDecoder(res.Body)
-		_ = dec.Decode(hsErr)
-		return hsErr
+		_ = dec.Decode(kErr)
+		return kErr
 	}
 
 	if response != nil {
 		dec := json.NewDecoder(res.Body)
-		err = dec.Decode(response)
-		if err != nil {
-			return err
-		}
+		return dec.Decode(response)
 	}
 
 	return nil
