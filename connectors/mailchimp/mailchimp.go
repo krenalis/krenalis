@@ -35,8 +35,6 @@ var icon = "<svg></svg>"
 // Make sure it implements the AppUsersConnection interface.
 var _ connector.AppUsersConnection = (*connection)(nil)
 
-var Debug = false
-
 func init() {
 	connector.RegisterApp(connector.App{
 		Name:                   "Mailchimp",
