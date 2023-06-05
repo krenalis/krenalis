@@ -74,6 +74,13 @@ func (c *Chichi) WaitActionsToFinish(conn int) {
 		stillRunning := false
 		for _, exec := range c.Imports(conn) {
 			e := exec.(map[string]any)
+			// If the action execution ended with an error,
+			// make the test fail.
+			if err := e["Error"].(string); err != "" {
+				actionID := int(e["Action"].(float64))
+				connID := int(e["ID"].(float64))
+				c.t.Fatalf("an error occurred when running action %d on connection %d: %s", actionID, connID, err)
+			}
 			if e["EndTime"] == nil {
 				stillRunning = true
 				break
