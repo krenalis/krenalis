@@ -550,7 +550,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		a.Path = path;
 		a.Sheet = '';
 		setAction(a);
-		setHasSheetsError(false);
 	};
 
 	const onUpdateSheet = (e) => {
@@ -566,8 +565,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		a.Sheet = '';
 		setAction(a);
 		sheetsSelectRef.current.classList.add('hideListbox'); // prevent the listbox from flashing.
+		setSheets([]);
 		setAreSheetsLoading(true);
-		setHasSheetsError(false);
 		pathRef.current.lastSheetFetch = pathRef.current.lastUpdate;
 		let [res, err] = await API.connections.sheets(c.ID, action.Path);
 		if (err != null) {
@@ -584,6 +583,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			return;
 		}
 		setTimeout(() => {
+			setHasSheetsError(false);
 			setAreSheetsLoading(false);
 			setSheets(res.sheets);
 			sheetsSelectRef.current.classList.remove('hideListbox');
@@ -1219,7 +1219,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 											action.Path == null ||
 											action.Path === '' ||
 											areSheetsLoading ||
-											hasSheetsError
+											(pathRef.current.lastSheetFetch === pathRef.current.lastUpdate &&
+												hasSheetsError)
 										}
 									>
 										{areSheetsLoading && <SlSpinner slot='prefix' />}
