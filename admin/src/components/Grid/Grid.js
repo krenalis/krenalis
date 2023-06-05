@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useLayoutEffect, useRef } from 'react';
 import './Grid.css';
 import GridHeaderRow from '../GridHeaderRow/GridHeaderRow';
 import GridRow from '../GridRow/GridRow';
@@ -11,37 +11,35 @@ const Grid = ({ columns, rows, isLoading, noRowsMessage }) => {
 
 	let gridRef = useRef();
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		if (isLoading) {
 			return;
 		}
-		setTimeout(() => {
-			let widthsOfColumn = {};
-			for (let i = 0; i < columns.length; i++) {
-				widthsOfColumn[i] = [];
+		let widthsOfColumn = {};
+		for (let i = 0; i < columns.length; i++) {
+			widthsOfColumn[i] = [];
+		}
+		let rows = gridRef.current.querySelectorAll('.GridHeaderRow, .GridRow');
+		for (let r of rows) {
+			let contents = r.querySelectorAll('.cellContent');
+			for (let [i, c] of contents.entries()) {
+				widthsOfColumn[i].push(c.offsetWidth);
 			}
-			let rows = gridRef.current.querySelectorAll('.GridHeaderRow, .GridRow');
-			for (let r of rows) {
-				let contents = r.querySelectorAll('.cellContent');
-				for (let [i, c] of contents.entries()) {
-					widthsOfColumn[i].push(c.offsetWidth);
-				}
+		}
+		let maxWidths = [];
+		for (let k in widthsOfColumn) {
+			let widths = widthsOfColumn[k];
+			maxWidths.push(Math.max(...widths) + 40); // 40 is the left/right padding of the cells.
+		}
+		let columnsWidths = '';
+		for (let i = 0; i < maxWidths.length; i++) {
+			if (i === 0) {
+				columnsWidths += `${maxWidths[i]}px`;
+			} else {
+				columnsWidths += ` ${maxWidths[i]}px`;
 			}
-			let maxWidths = [];
-			for (let k in widthsOfColumn) {
-				let widths = widthsOfColumn[k];
-				maxWidths.push(Math.max(...widths) + 40); // 40 is the left/right padding of the cells.
-			}
-			let columnsWidths = '';
-			for (let i = 0; i < maxWidths.length; i++) {
-				if (i === 0) {
-					columnsWidths += `${maxWidths[i]}px`;
-				} else {
-					columnsWidths += ` ${maxWidths[i]}px`;
-				}
-			}
-			setColumnsWidths(columnsWidths);
-		}, 0); // queue the execution in case the grid is contained within a modal in the redering phase.
+		}
+		setColumnsWidths(columnsWidths);
 	}, [isLoading, rows, columns]);
 
 	let gridRows = [];

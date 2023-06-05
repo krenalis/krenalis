@@ -60,7 +60,9 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let [outputSchema, setOutputSchema] = useState(null);
 	let [isOutputSchemaDialogOpen, setIsOutputSchemaDialogOpen] = useState(false);
 	let [queryPreviewTable, setQueryPreviewTable] = useState(null);
+	let [isQueryPreviewDrawerOpen, setIsQueryPreviewDrawerOpen] = useState(false);
 	let [filePreviewTable, setFilePreviewTable] = useState(null);
+	let [isFilePreviewDrawerOpen, setIsFilePreviewDrawerOpen] = useState(false);
 	let [isAlertOpen, setIsAlertOpen] = useState(false);
 	let [isNameEditable, setIsNameEditable] = useState(false);
 	let [isSaveButtonLoading, setIsSaveButtonLoading] = useState(false);
@@ -1310,16 +1312,27 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						className='previewDrawer'
 						label='Query Preview'
 						open={queryPreviewTable != null}
-						onSlAfterHide={() => setQueryPreviewTable(null)}
+						onSlAfterShow={() => setIsQueryPreviewDrawerOpen(true)}
+						onSlAfterHide={() => {
+							setQueryPreviewTable(null);
+							setIsQueryPreviewDrawerOpen(false);
+						}}
 						placement='bottom'
 						style={{ '--size': '600px' }}
 					>
-						{queryPreviewTable != null && (
+						{isQueryPreviewDrawerOpen ? (
 							<StyledGrid
 								columns={queryPreviewTable.columns}
 								rows={queryPreviewTable.rows}
 								noRowsMessage={'Your query did not return data'}
 							/>
+						) : (
+							<SlSpinner
+								style={{
+									fontSize: '3rem',
+									'--track-width': '6px',
+								}}
+							></SlSpinner>
 						)}
 					</SlDrawer>
 				)}
@@ -1328,16 +1341,27 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						className='previewDrawer'
 						label='File Preview'
 						open={filePreviewTable != null}
-						onSlAfterHide={() => setFilePreviewTable(null)}
+						onSlAfterShow={() => setIsFilePreviewDrawerOpen(true)}
+						onSlAfterHide={() => {
+							setFilePreviewTable(null);
+							setIsFilePreviewDrawerOpen(false);
+						}}
 						placement='bottom'
 						style={{ '--size': '600px' }}
 					>
-						{filePreviewTable != null && (
+						{isFilePreviewDrawerOpen ? (
 							<StyledGrid
 								columns={filePreviewTable.columns}
 								rows={filePreviewTable.rows}
 								noRowsMessage={'Your file did not return data'}
 							/>
+						) : (
+							<SlSpinner
+								style={{
+									fontSize: '3rem',
+									'--track-width': '6px',
+								}}
+							></SlSpinner>
 						)}
 					</SlDrawer>
 				)}

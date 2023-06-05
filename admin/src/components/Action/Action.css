@@ -382,3 +382,9 @@ inherit the disabled style */
     padding-bottom: 0!important;
     line-height: 2;
 }
+
+.action sl-drawer sl-spinner {
+    display: block;
+    margin: auto;
+    margin-top: 50px!important;
+}
