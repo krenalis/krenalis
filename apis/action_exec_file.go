@@ -120,7 +120,7 @@ func (this *Action) importFromFile() error {
 			return err
 		}
 
-		// Estrapolate the ID and the timestamp for the user.
+		// Extrapolate the ID and the timestamp for the user.
 		err = applyTimestampWorkaround(mappedUser)
 		if err != nil {
 			return err
