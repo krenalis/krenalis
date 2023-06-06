@@ -50,8 +50,8 @@ func InitAndLaunch(t *testing.T) *Chichi {
 
 	if !launchChichiExternally {
 		if chichiAlreadyLaunched {
-			msg := "aborting test: in this process Chichi has already been launched and this may lead to inconsistencies." +
-				" Maybe you forgot the 'launchChichiExternally' variable set to false before running tests?"
+			msg := "aborting tests: you are executing more than one test, consequently the 'launchChichiExternally'" +
+				" constant cannot be false. It can be false only when executing a single test"
 			t.Fatal(msg)
 		}
 		chichiAlreadyLaunched = true
