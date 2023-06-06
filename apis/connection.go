@@ -51,7 +51,6 @@ var (
 	EventNotExists      errors.Code = "EventNotExists"
 	EventTypeNotExists  errors.Code = "EventTypeNotExists"
 	FetchSchemaFailed   errors.Code = "FetchSchemaFailed"
-	InvalidRefreshToken errors.Code = "InvalidRefreshToken"
 	KeyNotExists        errors.Code = "KeyNotExists"
 	NoGroupsSchema      errors.Code = "NoGroupsSchema"
 	NoStorage           errors.Code = "NoStorage"
