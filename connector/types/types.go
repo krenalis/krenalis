@@ -1046,6 +1046,44 @@ func (t Type) WithUnique() Type {
 	return t
 }
 
+// PropertyByPath returns the property with the given path and a boolean value
+// indicating if the property with the given path exists.
+// Panics if t is not an Object type, path is empty or a property name within it
+// is not a valid.
+func (t Type) PropertyByPath(path Path) (Property, bool) {
+	if t.pt != PtObject {
+		panic("cannot get the properties of a non-Object type")
+	}
+	if len(path) == 0 {
+		panic("path must contain at least one name")
+	}
+	last := len(path) - 1
+	var i int
+	var name string
+	for i, name = range path {
+		if t.pt != PtObject {
+			break
+		}
+		for _, prop := range *t.vl.(*[]Property) {
+			if prop.Name != name {
+				continue
+			}
+			if i == last {
+				return prop, true
+			}
+			t = prop.Type
+			break
+		}
+	}
+	// Not found.
+	for _, p := range path[i:] {
+		if !IsValidPropertyName(p) {
+			panic("invalid property path")
+		}
+	}
+	return Property{}, false
+}
+
 // Property returns the property with the given name and a boolean value
 // indicating if the property exists.
 // Panics if t is not an Object type or name is not a valid property name.

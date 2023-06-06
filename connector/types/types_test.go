@@ -286,3 +286,137 @@ func TestHasFlatProperties(t *testing.T) {
 	}
 
 }
+
+func Test_PropertyByPath(t *testing.T) {
+	cases := []struct {
+		name         string
+		t            types.Type
+		path         types.Path
+		expectedProp types.Property
+		expectedOk   bool
+	}{
+		{
+			name: "path with single component - property (of type Text) exists",
+			t: types.Object([]types.Property{
+				{Name: "first_name", Type: types.Text()},
+			}),
+			path:         types.Path{"first_name"},
+			expectedProp: types.Property{Name: "first_name", Type: types.Text()},
+			expectedOk:   true,
+		},
+		{
+			name: "path with single component - property does not exist",
+			t: types.Object([]types.Property{
+				{Name: "first_name", Type: types.Text()},
+			}),
+			path:         types.Path{"email"},
+			expectedProp: types.Property{},
+			expectedOk:   false,
+		},
+		{
+			name: "path with single component - property (of type Object) exists",
+			t: types.Object([]types.Property{
+				{Name: "billing_address", Type: types.Object([]types.Property{
+					{Name: "street", Type: types.Text()},
+				})},
+			}),
+			path: types.Path{"billing_address"},
+			expectedProp: types.Property{
+				Name: "billing_address", Type: types.Object([]types.Property{
+					{Name: "street", Type: types.Text()},
+				})},
+			expectedOk: true,
+		},
+		{
+			name: "path with two components - property (of type Text) exists",
+			t: types.Object([]types.Property{
+				{Name: "billing_address", Type: types.Object([]types.Property{
+					{Name: "street", Type: types.Text()},
+				})},
+			}),
+			path:         types.Path{"billing_address", "street"},
+			expectedProp: types.Property{Name: "street", Type: types.Text()},
+			expectedOk:   true,
+		},
+		{
+			name: "path with two components - property does not exist",
+			t: types.Object([]types.Property{
+				{Name: "billing_address", Type: types.Object([]types.Property{
+					{Name: "street", Type: types.Text()},
+				})},
+			}),
+			path:         types.Path{"billing_address", "city"},
+			expectedProp: types.Property{},
+			expectedOk:   false,
+		},
+		{
+			name: "path with three components - property (Text within an Object within an Object) exists",
+			t: types.Object([]types.Property{
+				{Name: "movie", Type: types.Object([]types.Property{
+					{Name: "director", Type: types.Object([]types.Property{
+						{Name: "name", Type: types.Text()},
+						{Name: "last_name", Type: types.Text()},
+					})},
+				})},
+			}),
+			path:         types.Path{"movie", "director", "last_name"},
+			expectedProp: types.Property{Name: "last_name", Type: types.Text()},
+			expectedOk:   true,
+		},
+		{
+			name: "path with three components - second component of path is not an Object",
+			t: types.Object([]types.Property{
+				{Name: "movie", Type: types.Object([]types.Property{
+					{Name: "director", Type: types.Object([]types.Property{
+						{Name: "name", Type: types.Text()},
+						{Name: "last_name", Type: types.Text()},
+					})},
+					{Name: "writer", Type: types.Text()},
+				})},
+			}),
+			path:         types.Path{"movie", "writer", "last_name"},
+			expectedProp: types.Property{},
+			expectedOk:   false,
+		},
+	}
+	for _, cas := range cases {
+		t.Run(cas.name, func(t *testing.T) {
+			gotProp, gotOk := cas.t.PropertyByPath(cas.path)
+			if cas.expectedOk != gotOk {
+				t.Fatalf("expecting ok = %t, got %t", cas.expectedOk, gotOk)
+			}
+			if !equalProps(cas.expectedProp, gotProp) {
+				t.Fatalf("expecting property: %#v, got: %#v", cas.expectedProp, gotProp)
+			}
+		})
+	}
+}
+
+// equalProps reports whether the properties p1 and p2 are equal.
+func equalProps(p1, p2 types.Property) bool {
+	if p1.Name != p2.Name {
+		return false
+	}
+	if p1.Label != p2.Label {
+		return false
+	}
+	if p1.Description != p2.Description {
+		return false
+	}
+	if p1.Role != p2.Role {
+		return false
+	}
+	if !p1.Type.EqualTo(p2.Type) {
+		return false
+	}
+	if p1.Required != p2.Required {
+		return false
+	}
+	if p1.Nullable != p2.Nullable {
+		return false
+	}
+	if p1.Flat != p2.Flat {
+		return false
+	}
+	return true
+}
