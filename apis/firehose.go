@@ -39,19 +39,6 @@ type firehose struct {
 	err        error
 }
 
-func (fh *firehose) ReceiveEvent(event connector.WebhookEvent) {
-
-	// Return if the context has expired.
-	select {
-	case <-fh.ctx.Done():
-		return
-	default:
-	}
-
-	// TODO.
-
-}
-
 // SetSettings sets the given settings of the connection.
 func (fh *firehose) SetSettings(settings []byte) error {
 

@@ -136,10 +136,6 @@ type UI interface {
 // Firehose is the interface implemented by a Firehose.
 type Firehose interface {
 
-	// ReceiveEvent receives the given event for the connection.
-	// The event.Resource field must be empty.
-	ReceiveEvent(event WebhookEvent)
-
 	// SetSettings sets the given settings of the connection.
 	SetSettings(settings []byte) error
 
