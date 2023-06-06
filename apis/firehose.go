@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strconv"
 	"time"
 	"unicode/utf8"
 
@@ -71,25 +70,6 @@ func (fh *firehose) SetSettings(settings []byte) error {
 		return errors.New("cannot set settings")
 	}
 	return nil
-}
-
-// WebhookURL returns the URL of the webhook.
-// If the connector does not support webhooks, it returns an empty string.
-func (fh *firehose) WebhookURL() string {
-	c := fh.connection
-	conn := c.Connector()
-	u := "https://localhost:9090/webhook/"
-	switch conn.WebhooksPer {
-	case state.WebhooksPerNone:
-		return ""
-	case state.WebhooksPerConnector:
-		return u + "c/" + strconv.Itoa(conn.ID) + "/"
-	case state.WebhooksPerResource:
-		return u + "r/" + strconv.Itoa(fh.resource) + "/"
-	case state.WebhooksPerSource:
-		return u + "s/" + strconv.Itoa(c.ID) + "/"
-	}
-	panic("unexpected webhooksPer value")
 }
 
 // setError sets fh.err and cancels the context.

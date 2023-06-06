@@ -61,6 +61,7 @@ type AppConfig struct {
 	Resource      string
 	HTTPClient    HTTPClient
 	PrivacyRegion PrivacyRegion
+	WebhookURL    string
 }
 
 // PrivacyRegion represents a privacy region.

@@ -138,9 +138,6 @@ type Firehose interface {
 
 	// SetSettings sets the given settings of the connection.
 	SetSettings(settings []byte) error
-
-	// WebhookURL returns the URL of the webhook.
-	WebhookURL() string
 }
 
 type WebhookEvent interface {

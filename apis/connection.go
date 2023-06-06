@@ -1896,3 +1896,22 @@ func (this *Connection) writeConnectionUsers(ctx context.Context, id string, use
 
 	return err
 }
+
+// webhookURL returns the URL of the webhook for the given connection and
+// resource.
+// If the connector does not support webhooks, it returns an empty string.
+func webhookURL(connection *state.Connection, resource int) string {
+	connector := connection.Connector()
+	u := "https://localhost:9090/webhook/"
+	switch connector.WebhooksPer {
+	case state.WebhooksPerNone:
+		return ""
+	case state.WebhooksPerConnector:
+		return u + "c/" + strconv.Itoa(connector.ID) + "/"
+	case state.WebhooksPerResource:
+		return u + "r/" + strconv.Itoa(resource) + "/"
+	case state.WebhooksPerSource:
+		return u + "s/" + strconv.Itoa(connection.ID) + "/"
+	}
+	panic("unexpected webhooksPer value")
+}

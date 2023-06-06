@@ -56,6 +56,7 @@ type connection struct {
 	settings   *settings
 	firehose   connector.Firehose
 	httpClient connector.HTTPClient
+	webhookURL string
 }
 
 // open opens a Mailchimp connection and returns it.
@@ -64,6 +65,7 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 		ctx:        ctx,
 		firehose:   conf.Firehose,
 		httpClient: conf.HTTPClient,
+		webhookURL: conf.WebhookURL,
 	}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -791,7 +793,7 @@ func (c *connection) initWebhooks() error {
 	if c.firehose == nil || c.settings.WebhookSecret != "" {
 		return nil
 	}
-	baseURL := c.firehose.WebhookURL()
+	baseURL := c.webhookURL
 	webhooks, err := c.webhooks(c.settings.List)
 	if err != nil {
 		return err
@@ -864,7 +866,7 @@ func (c *connection) createWebhook(list string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	webhookURL, _ := json.Marshal(c.firehose.WebhookURL() + "?secret=" + url.QueryEscape(secret))
+	webhookURL, _ := json.Marshal(c.webhookURL + "?secret=" + url.QueryEscape(secret))
 	body := `{"events":{"subscribe":true,"unsubscribe":true,"profile":true,"cleaned":true,"upemail":true,"campaign":false},` +
 		`"sources":{"user":true,"admin":true,"api":true},"url":` + string(webhookURL) + `}`
 	err = c.call("POST", path, nil, strings.NewReader(body), 200, nil)

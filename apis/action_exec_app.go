@@ -22,9 +22,11 @@ func (this *Action) importFromApp() error {
 
 	c := this.action.Connection()
 
-	var resource string
+	var resourceID int
+	var resourceCode string
 	if r, ok := c.Resource(); ok {
-		resource = r.Code
+		resourceID = r.ID
+		resourceCode = r.Code
 	}
 
 	ctx := context.Background()
@@ -37,9 +39,10 @@ func (this *Action) importFromApp() error {
 		Role:          _connector.SourceRole,
 		Settings:      c.Settings,
 		Firehose:      fh,
-		Resource:      resource,
+		Resource:      resourceCode,
 		HTTPClient:    this.http.ConnectionClient(c.ID),
 		PrivacyRegion: _connector.PrivacyRegion(ws.PrivacyRegion),
+		WebhookURL:    webhookURL(c, resourceID),
 	})
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}

@@ -77,9 +77,11 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	// Open a connection to the app.
 	c := this.action.Connection()
 	connector := c.Connector()
-	var resource string
+	var resourceID int
+	var resourceCode string
 	if r, ok := c.Resource(); ok {
-		resource = r.Code
+		resourceID = r.ID
+		resourceCode = r.Code
 	}
 	fh, err := this.newFirehose(ctx)
 	if err != nil {
@@ -90,9 +92,10 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		Role:          _connector.DestinationRole,
 		Settings:      c.Settings,
 		Firehose:      fh,
-		Resource:      resource,
+		Resource:      resourceCode,
 		HTTPClient:    this.http.ConnectionClient(c.ID),
 		PrivacyRegion: _connector.PrivacyRegion(ws.PrivacyRegion),
+		WebhookURL:    webhookURL(c, resourceID),
 	})
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
@@ -244,9 +247,11 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 
 	c := this.action.Connection()
 
-	var resource string
+	var resourceID int
+	var resourceCode string
 	if r, ok := c.Resource(); ok {
-		resource = r.Code
+		resourceID = r.ID
+		resourceCode = r.Code
 	}
 
 	ctx := context.Background()
@@ -259,9 +264,10 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 		Role:          role,
 		Settings:      c.Settings,
 		Firehose:      fh,
-		Resource:      resource,
+		Resource:      resourceCode,
 		HTTPClient:    this.http.ConnectionClient(c.ID),
 		PrivacyRegion: _connector.PrivacyRegion(ws.PrivacyRegion),
+		WebhookURL:    webhookURL(c, resourceID),
 	})
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
