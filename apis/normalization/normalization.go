@@ -347,7 +347,7 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 		}
 	}
 	if !valid {
-		return nil, fmt.Errorf("app returned a value of %v for property %s, but it cannot be converted to the %s type",
+		return nil, fmt.Errorf("app returned a value of '%v' for property %s, but it cannot be converted to the %s type",
 			src, name, typ.PhysicalType())
 	}
 	return value, nil
@@ -623,7 +623,7 @@ func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, s
 		}
 	}
 	if !valid {
-		return nil, fmt.Errorf("database returned a value of %v for column %s, but it cannot be converted to the %s type",
+		return nil, fmt.Errorf("database returned a value of '%v' for column %s, but it cannot be converted to the %s type",
 			src, name, typ.PhysicalType())
 	}
 	return value, nil
