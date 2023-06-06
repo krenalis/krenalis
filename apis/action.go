@@ -1003,11 +1003,11 @@ func (this *Connection) fetchDatabaseSchema(query string) (types.Type, error) {
 	if err != nil {
 		return types.Type{}, err
 	}
-	fh := this.newFirehose(context.Background())
-	connection, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
-		Role:     _connector.Role(c.Role),
-		Settings: c.Settings,
-		Firehose: fh,
+	ctx := context.Background()
+	connection, err := _connector.RegisteredDatabase(connector.Name).Open(ctx, &_connector.DatabaseConfig{
+		Role:        _connector.Role(c.Role),
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
 	})
 	if err != nil {
 		return types.Type{}, err
@@ -1046,13 +1046,13 @@ func (this *Connection) fetchFileSchema(path, sheet string) (types.Type, error) 
 		if !ok {
 			return types.Type{}, errors.Unprocessable(NoStorage, "file connection %d does not have a storage", c.ID)
 		}
-		fh := this.newFirehose(ctx)
-		ctx = fh.ctx
 		var err error
 		storage, err = _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
 			Role:     cRole,
 			Settings: s.Settings,
-			Firehose: fh,
+			SetSettings: func(settings []byte) error {
+				return setSettings(ctx, this.db, s.ID, settings)
+			},
 		})
 		if err != nil {
 			return types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
@@ -1060,11 +1060,10 @@ func (this *Connection) fetchFileSchema(path, sheet string) (types.Type, error) 
 	}
 
 	// Connect to the file connector and read only the columns.
-	fh := this.newFirehose(ctx)
-	file, err := _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
-		Role:     cRole,
-		Settings: c.Settings,
-		Firehose: fh,
+	file, err := _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
+		Role:        cRole,
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
 	})
 	if err != nil {
 		return types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
@@ -1086,6 +1085,14 @@ func (this *Connection) fetchFileSchema(path, sheet string) (types.Type, error) 
 	}
 
 	return types.ObjectOf(rw.columns)
+}
+
+// setSettingsFunc returns a connector.SetSettingsFunc function that sets the
+// settings for the action's connection.
+func (this *Action) setSettingsFunc(ctx context.Context) _connector.SetSettingsFunc {
+	return func(settings []byte) error {
+		return setSettings(ctx, this.db, this.action.Connection().ID, settings)
+	}
 }
 
 // allowsActionTarget reports whether a connection with the given connector type

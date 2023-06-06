@@ -58,18 +58,18 @@ func init() {
 }
 
 type connection struct {
-	ctx        context.Context
-	firehose   connector.Firehose
-	httpClient connector.HTTPClient
-	buf        bytes.Buffer
+	ctx         context.Context
+	setSettings connector.SetSettingsFunc
+	httpClient  connector.HTTPClient
+	buf         bytes.Buffer
 }
 
 // open opens a HubSpot connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{
-		ctx:        ctx,
-		firehose:   conf.Firehose,
-		httpClient: conf.HTTPClient,
+		ctx:         ctx,
+		setSettings: conf.SetSettings,
+		httpClient:  conf.HTTPClient,
 	}
 	return &c, nil
 }

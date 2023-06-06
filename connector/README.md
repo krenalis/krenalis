@@ -1,52 +1,52 @@
 
 ## App connections
 
-| Method         | Role | Settings       | Firehose | Resource                | HTTPClient     | PrivacyRegion |
-|----------------|------|----------------|----------|-------------------------|----------------|---------------|
-| CreateUser     | ✓    | ✓              | ✓        | ✓                       | ✓              | ✓             |
-| EventTypes     | ✓    | ✓              | -        | ✓                       | ✓              | ✓             |
-| Groups         | ✓    | ✓              | ✓        | ✓                       | ✓              | ✓             |
-| GroupSchema    | ✓    | ✓              | -        | ✓                       | ✓              | ✓             |
-| ReceiveWebhook | -    | ✓ (connection) | -        | ✓ (connection,resource) | ✓ (connection) | -             |
-| Resource       | -    | -              | -        | -                       | ✓              | ✓             |
-| SendEvent      | ✓    | ✓              | -        | ✓                       | ✓              | ✓             |
-| ServeUI        | ✓    | -/✓            | -/✓      | ✓                       | ✓              | -/✓           |
-| SettingsUI     | ✓    | -              | -        | ✓                       | ✓              | -             |
-| SetGroup       | ✓    | ✓              | ✓        | ✓                       | ✓              | ✓             |
-| UpdateUser     | ✓    | ✓              | ✓        | ✓                       | ✓              | ✓             |
-| Users          | ✓    | ✓              | ✓        | ✓                       | ✓              | ✓             |
-| UserSchema     | ✓    | ✓              | -        | ✓                       | ✓              | ✓             |
+| Method         | Role | Settings       | SetSettings | Resource                | HTTPClient     | PrivacyRegion |
+|----------------|------|----------------|-------------|-------------------------|----------------|---------------|
+| CreateUser     | ✓    | ✓              | ✓           | ✓                       | ✓              | ✓             |
+| EventTypes     | ✓    | ✓              | -           | ✓                       | ✓              | ✓             |
+| Groups         | ✓    | ✓              | ✓           | ✓                       | ✓              | ✓             |
+| GroupSchema    | ✓    | ✓              | -           | ✓                       | ✓              | ✓             |
+| ReceiveWebhook | -    | ✓ (connection) | -           | ✓ (connection,resource) | ✓ (connection) | -             |
+| Resource       | -    | -              | -           | -                       | ✓              | ✓             |
+| SendEvent      | ✓    | ✓              | -           | ✓                       | ✓              | ✓             |
+| ServeUI        | ✓    | -/✓            | -/✓         | ✓                       | ✓              | -/✓           |
+| SettingsUI     | ✓    | -              | -           | ✓                       | ✓              | -             |
+| SetGroup       | ✓    | ✓              | ✓           | ✓                       | ✓              | ✓             |
+| UpdateUser     | ✓    | ✓              | ✓           | ✓                       | ✓              | ✓             |
+| Users          | ✓    | ✓              | ✓           | ✓                       | ✓              | ✓             |
+| UserSchema     | ✓    | ✓              | -           | ✓                       | ✓              | ✓             |
 
 
 ## Database connections
 
-| Method | Role | Settings | Firehose | Resource | HTTPClient | PrivacyRegion |
-|--------|------|----------|----------|----------|------------|---------------|
-| Query  | ✓    | ✓        | ✓        | -        | -          | -             |
+| Method | Role | Settings | SetSettings | Resource | HTTPClient | PrivacyRegion |
+|--------|------|----------|-------------|----------|------------|---------------|
+| Query  | ✓    | ✓        | ✓           | -        | -          | -             |
 
 
 ## File connections
 
-| Method      | Role | Settings | Firehose | Resource | HTTPClient | PrivacyRegion |
-|-------------|------|----------|----------|----------|------------|---------------|
-| ContentType | ✓    | ✓        | ✓        | -        | -          | -             |
-| Read        | ✓    | ✓        | ✓        | -        | -          | -             |
-| Write       | ✓    | ✓        | ✓        | -        | -          | -             |
+| Method      | Role | Settings | SetSettings | Resource | HTTPClient | PrivacyRegion |
+|-------------|------|----------|-------------|----------|------------|---------------|
+| ContentType | ✓    | ✓        | ✓           | -        | -          | -             |
+| Read        | ✓    | ✓        | ✓           | -        | -          | -             |
+| Write       | ✓    | ✓        | ✓           | -        | -          | -             |
 
 
 ## Storage connections
 
-| Method | Role | Settings | Firehose | Resource | HTTPClient | PrivacyRegion |
-|--------|------|----------|----------|----------|------------|---------------|
-| Open   | ✓    | ✓        | -/✓      | -        | -          | -             |
-| Write  | ✓    | ✓        | ✓        | -        | -          | -             |
+| Method | Role | Settings | SetSettings | Resource | HTTPClient | PrivacyRegion |
+|--------|------|----------|-------------|----------|------------|---------------|
+| Open   | ✓    | ✓        | -/✓         | -        | -          | -             |
+| Write  | ✓    | ✓        | ✓           | -        | -          | -             |
 
 
 ## Stream connections
 
-| Method  | Role | Settings | Firehose | Resource | HTTPClient | PrivacyRegion |
-|---------|------|----------|----------|----------|------------|---------------|
-| Close   | -    | -        | -        | -        | -          | -             |
-| Receive | -    | ✓        | -        | -        | -          | -             |
-| Send    | -    | ✓        | -        | -        | -          | -             |
+| Method  | Role | Settings | SetSettings | Resource | HTTPClient | PrivacyRegion |
+|---------|------|----------|-------------|----------|------------|---------------|
+| Close   | -    | -        | -           | -        | -          | -             |
+| Receive | -    | ✓        | -           | -        | -          | -             |
+| Send    | -    | ✓        | -           | -        | -          | -             |
 

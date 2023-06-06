@@ -52,20 +52,20 @@ func init() {
 }
 
 type connection struct {
-	ctx        context.Context
-	settings   *settings
-	firehose   connector.Firehose
-	httpClient connector.HTTPClient
-	webhookURL string
+	ctx         context.Context
+	settings    *settings
+	setSettings connector.SetSettingsFunc
+	httpClient  connector.HTTPClient
+	webhookURL  string
 }
 
 // open opens a Mailchimp connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{
-		ctx:        ctx,
-		firehose:   conf.Firehose,
-		httpClient: conf.HTTPClient,
-		webhookURL: conf.WebhookURL,
+		ctx:         ctx,
+		setSettings: conf.SetSettings,
+		httpClient:  conf.HTTPClient,
+		webhookURL:  conf.WebhookURL,
 	}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -164,7 +164,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.firehose.SetSettings(s)
+		return nil, nil, c.setSettings(s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}
@@ -790,7 +790,7 @@ type webhook struct {
 
 // initWebhooks initializes webhooks.
 func (c *connection) initWebhooks() error {
-	if c.firehose == nil || c.settings.WebhookSecret != "" {
+	if c.setSettings == nil || c.settings.WebhookSecret != "" {
 		return nil
 	}
 	baseURL := c.webhookURL
@@ -838,7 +838,7 @@ func (c *connection) initWebhooks() error {
 	if err != nil {
 		return err
 	}
-	return c.firehose.SetSettings(b)
+	return c.setSettings(b)
 }
 
 var errListNotExist = errors.New("list does not exist")

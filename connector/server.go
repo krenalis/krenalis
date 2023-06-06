@@ -39,9 +39,9 @@ func (server Server) Open(ctx context.Context, conf *ServerConfig) (ServerConnec
 
 // ServerConfig represents the configuration of a server connection.
 type ServerConfig struct {
-	Role     Role
-	Settings []byte
-	Firehose Firehose
+	Role        Role
+	Settings    []byte
+	SetSettings SetSettingsFunc
 }
 
 // OpenServerFunc represents functions that open server connections.

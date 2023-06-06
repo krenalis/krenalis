@@ -55,14 +55,10 @@ func (this *Action) importFromFile() error {
 
 	// Connect to the file connector.
 	ctx := context.Background()
-	fh, err := this.newFirehose(ctx)
-	if err != nil {
-		return err
-	}
-	file, err := _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
-		Role:     _connector.SourceRole,
-		Settings: c.Settings,
-		Firehose: fh,
+	file, err := _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
+		Role:        _connector.SourceRole,
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
 	})
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the file connector: %s", err)}
@@ -72,13 +68,13 @@ func (this *Action) importFromFile() error {
 	var r io.ReadCloser
 	{
 		s, _ := c.Storage()
-		fh := this.newFirehoseForConnection(ctx, s)
-		ctx = fh.ctx
 		var err error
 		storage, err := _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
 			Role:     _connector.SourceRole,
 			Settings: s.Settings,
-			Firehose: fh,
+			SetSettings: func(settings []byte) error {
+				return setSettings(ctx, this.db, s.ID, settings)
+			},
 		})
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %s", err)}
@@ -149,11 +145,6 @@ func (this *Action) importFromFile() error {
 	err = r.Close()
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot close the storage: %s", err)}
-	}
-
-	// Handle errors occurred in the firehose.
-	if fh.err != nil {
-		return fh.err
 	}
 
 	return nil

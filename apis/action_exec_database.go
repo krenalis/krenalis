@@ -32,16 +32,11 @@ func (this *Action) importFromDatabase() error {
 		return actionExecutionError{err}
 	}
 
-	// Instantiate a new firehose.
 	ctx := context.Background()
-	fh, err := this.newFirehose(ctx)
-	if err != nil {
-		return err
-	}
-	c, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
-		Role:     _connector.SourceRole,
-		Settings: connection.Settings,
-		Firehose: fh,
+	c, err := _connector.RegisteredDatabase(connector.Name).Open(ctx, &_connector.DatabaseConfig{
+		Role:        _connector.SourceRole,
+		Settings:    connection.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
 	})
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
@@ -119,11 +114,6 @@ func (this *Action) importFromDatabase() error {
 	}
 	if err = rawRows.Err(); err != nil {
 		return actionExecutionError{fmt.Errorf("an error occurred closing the database: %s", err)}
-	}
-
-	// Handle errors occurred in the firehose.
-	if fh.err != nil {
-		return fh.err
 	}
 
 	return nil

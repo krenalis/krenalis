@@ -45,11 +45,11 @@ func init() {
 }
 
 type connection struct {
-	ctx        context.Context
-	role       connector.Role
-	settings   *settings
-	firehose   connector.Firehose
-	httpClient connector.HTTPClient
+	ctx         context.Context
+	role        connector.Role
+	settings    *settings
+	setSettings connector.SetSettingsFunc
+	httpClient  connector.HTTPClient
 }
 
 type settings struct {
@@ -59,10 +59,10 @@ type settings struct {
 // open opens a Klaviyo connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{
-		ctx:        ctx,
-		role:       conf.Role,
-		firehose:   conf.Firehose,
-		httpClient: conf.HTTPClient,
+		ctx:         ctx,
+		role:        conf.Role,
+		setSettings: conf.SetSettings,
+		httpClient:  conf.HTTPClient,
 	}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -167,7 +167,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.firehose.SetSettings(s)
+		return nil, nil, c.setSettings(s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}

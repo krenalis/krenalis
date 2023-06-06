@@ -37,7 +37,7 @@ func init() {
 
 // open opens a RabbitMQ connection and returns it.
 func open(ctx context.Context, conf *connector.StreamConfig) (*connection, error) {
-	c := connection{ctx: ctx, firehose: conf.Firehose}
+	c := connection{ctx: ctx, setSettings: conf.SetSettings}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -48,12 +48,12 @@ func open(ctx context.Context, conf *connector.StreamConfig) (*connection, error
 }
 
 type connection struct {
-	ctx        context.Context
-	settings   *settings
-	firehose   connector.Firehose
-	conn       *amqp.Connection
-	ch         *amqp.Channel
-	deliveries <-chan amqp.Delivery
+	ctx         context.Context
+	settings    *settings
+	setSettings connector.SetSettingsFunc
+	conn        *amqp.Connection
+	ch          *amqp.Channel
+	deliveries  <-chan amqp.Delivery
 }
 
 // Close closes the stream. When Close is called, no other calls to connection
@@ -149,7 +149,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
 		}
-		err = c.firehose.SetSettings(s)
+		err = c.setSettings(s)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -36,10 +36,10 @@ func init() {
 }
 
 type connection struct {
-	ctx      context.Context
-	role     connector.Role
-	settings *settings
-	firehose connector.Firehose
+	ctx         context.Context
+	role        connector.Role
+	settings    *settings
+	setSettings connector.SetSettingsFunc
 }
 
 type settings struct {
@@ -50,7 +50,7 @@ type settings struct {
 
 // open opens a JSON connection and returns it.
 func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) {
-	c := connection{ctx: ctx, role: conf.Role, firehose: conf.Firehose}
+	c := connection{ctx: ctx, role: conf.Role, setSettings: conf.SetSettings}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -170,7 +170,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if err != nil {
 			return nil, nil, err
 		}
-		err = c.firehose.SetSettings(s)
+		err = c.setSettings(s)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -57,7 +57,7 @@ func (app App) Open(ctx context.Context, conf *AppConfig) (AppConnection, error)
 type AppConfig struct {
 	Role          Role
 	Settings      []byte
-	Firehose      Firehose
+	SetSettings   SetSettingsFunc
 	Resource      string
 	HTTPClient    HTTPClient
 	PrivacyRegion PrivacyRegion

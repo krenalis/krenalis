@@ -44,9 +44,9 @@ func (file File) Open(ctx context.Context, conf *FileConfig) (FileConnection, er
 
 // FileConfig represents the configuration of a file connection.
 type FileConfig struct {
-	Role     Role
-	Settings []byte
-	Firehose Firehose
+	Role        Role
+	Settings    []byte
+	SetSettings SetSettingsFunc
 }
 
 // OpenFileFunc represents functions that open file connections.

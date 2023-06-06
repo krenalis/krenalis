@@ -38,13 +38,13 @@ func init() {
 }
 
 type connection struct {
-	ctx      context.Context
-	firehose connector.Firehose
+	ctx         context.Context
+	setSettings connector.SetSettingsFunc
 }
 
 // open opens an Excel connection and returns it.
 func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) {
-	return &connection{ctx: ctx, firehose: conf.Firehose}, nil
+	return &connection{ctx: ctx, setSettings: conf.SetSettings}, nil
 }
 
 // ContentType returns the content type of the file.

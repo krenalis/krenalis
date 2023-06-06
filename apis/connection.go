@@ -39,7 +39,8 @@ import (
 )
 
 const (
-	maxKeysPerServer = 20 // maximum number of keys per server.
+	maxSettingsLen   = 10_000 // maximum length of settings in runes.
+	maxKeysPerServer = 20     // maximum number of keys per server.
 	maxInt32         = math.MaxInt32
 	rawSchemaMaxSize = 16_777_215 // maximum size in runes of the 'schema' column of the 'connections' table.
 	queryMaxSize     = 16_777_215 // maximum size in runes of a connection query.
@@ -679,11 +680,11 @@ func (this *Connection) ExecQuery(query string, limit int) ([][]string, types.Ty
 	if err != nil {
 		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 	}
-	fh := this.newFirehose(context.Background())
-	connection, err := _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
-		Role:     cRole,
-		Settings: c.Settings,
-		Firehose: fh,
+	ctx := context.Background()
+	connection, err := _connector.RegisteredDatabase(connector.Name).Open(ctx, &_connector.DatabaseConfig{
+		Role:        cRole,
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
 	})
 	if err != nil {
 		return nil, types.Type{}, err
@@ -898,11 +899,10 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 
 	// Connect to the file connector.
 	ctx := context.Background()
-	fh := this.newFirehose(ctx)
-	file, err := _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
-		Role:     _connector.SourceRole,
-		Settings: c.Settings,
-		Firehose: fh,
+	file, err := _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
+		Role:        _connector.SourceRole,
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
 	})
 	if err != nil {
 		return nil, types.Type{}, err
@@ -912,13 +912,13 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 	var r io.ReadCloser
 	{
 		s, _ := c.Storage()
-		fh := this.newFirehoseForConnection(ctx, s)
-		ctx = fh.ctx
 		var storage _connector.StorageConnection
 		storage, err = _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
 			Role:     _connector.SourceRole,
 			Settings: s.Settings,
-			Firehose: fh,
+			SetSettings: func(settings []byte) error {
+				return setSettings(ctx, this.db, s.ID, settings)
+			},
 		})
 		if err != nil {
 			return nil, types.Type{}, err
@@ -1077,6 +1077,9 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 	role := _connector.Role(c.Role)
 	connector := c.Connector()
 
+	ctx := context.Background()
+	setSettings := this.setSettingsFunc(ctx)
+
 	var err error
 	var connection any
 
@@ -1088,11 +1091,10 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 			resource = r.Code
 		}
 
-		fh := this.newFirehose(context.Background())
-		connection, err = _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
+		connection, err = _connector.RegisteredApp(connector.Name).Open(ctx, &_connector.AppConfig{
 			Role:          role,
 			Settings:      c.Settings,
-			Firehose:      fh,
+			SetSettings:   setSettings,
 			Resource:      resource,
 			HTTPClient:    this.http.ConnectionClient(c.ID),
 			PrivacyRegion: _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
@@ -1100,50 +1102,48 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 
 	default:
 
-		fh := this.newFirehose(context.Background())
-
 		switch connector.Type {
 		case state.DatabaseType:
-			connection, err = _connector.RegisteredDatabase(connector.Name).Open(fh.ctx, &_connector.DatabaseConfig{
-				Role:     role,
-				Settings: c.Settings,
-				Firehose: fh,
+			connection, err = _connector.RegisteredDatabase(connector.Name).Open(ctx, &_connector.DatabaseConfig{
+				Role:        role,
+				Settings:    c.Settings,
+				SetSettings: setSettings,
 			})
 		case state.FileType:
-			connection, err = _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
-				Role:     role,
-				Settings: c.Settings,
-				Firehose: fh,
+			connection, err = _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
+				Role:        role,
+				Settings:    c.Settings,
+				SetSettings: setSettings,
 			})
 		case state.MobileType:
-			connection, err = _connector.RegisteredMobile(connector.Name).Open(fh.ctx, &_connector.MobileConfig{
-				Role:     role,
-				Settings: c.Settings,
-				Firehose: fh,
+			connection, err = _connector.RegisteredMobile(connector.Name).Open(ctx, &_connector.MobileConfig{
+				Role:        role,
+				Settings:    c.Settings,
+				SetSettings: setSettings,
 			})
 		case state.ServerType:
-			connection, err = _connector.RegisteredServer(connector.Name).Open(fh.ctx, &_connector.ServerConfig{
-				Role:     role,
-				Settings: c.Settings,
-				Firehose: fh,
+			connection, err = _connector.RegisteredServer(connector.Name).Open(ctx, &_connector.ServerConfig{
+				Role:        role,
+				Settings:    c.Settings,
+				SetSettings: setSettings,
 			})
 		case state.StorageType:
-			connection, err = _connector.RegisteredStorage(connector.Name).Open(fh.ctx, &_connector.StorageConfig{
-				Role:     role,
-				Settings: c.Settings,
-				Firehose: fh,
+			connection, err = _connector.RegisteredStorage(connector.Name).Open(ctx, &_connector.StorageConfig{
+				Role:        role,
+				Settings:    c.Settings,
+				SetSettings: setSettings,
 			})
 		case state.StreamType:
-			connection, err = _connector.RegisteredStream(connector.Name).Open(fh.ctx, &_connector.StreamConfig{
-				Role:     role,
-				Settings: c.Settings,
-				Firehose: fh,
+			connection, err = _connector.RegisteredStream(connector.Name).Open(ctx, &_connector.StreamConfig{
+				Role:        role,
+				Settings:    c.Settings,
+				SetSettings: setSettings,
 			})
 		case state.WebsiteType:
-			connection, err = _connector.RegisteredWebsite(connector.Name).Open(fh.ctx, &_connector.WebsiteConfig{
-				Role:     role,
-				Settings: c.Settings,
-				Firehose: fh,
+			connection, err = _connector.RegisteredWebsite(connector.Name).Open(ctx, &_connector.WebsiteConfig{
+				Role:        role,
+				Settings:    c.Settings,
+				SetSettings: setSettings,
 			})
 		}
 
@@ -1324,39 +1324,6 @@ func (this *Connection) Stats() (*ConnectionsStats, error) {
 		return nil, err
 	}
 	return stats, nil
-}
-
-// newFirehoseForConnection returns a new Firehose for the connection c.
-func (this *Connection) newFirehoseForConnection(ctx context.Context, c *state.Connection) *firehose {
-	var resource int
-	if r, ok := c.Resource(); ok {
-		resource = r.ID
-	}
-	fh := &firehose{
-		db:         this.db,
-		connection: c,
-		resource:   resource,
-	}
-	fh.ctx, fh.cancel = context.WithCancel(ctx)
-	return fh
-}
-
-// newFirehose returns a new Firehose.
-func (this *Connection) newFirehose(ctx context.Context) *firehose {
-	var resource int
-	if r, ok := this.connection.Resource(); ok {
-		resource = r.ID
-	}
-	fh := &firehose{
-		// TODO(Gianluca): here the action is not set, as the action is not
-		// available in contexts where this methods in called. Refactor the code
-		// and then change / review this method.
-		db:         this.db,
-		connection: this.connection,
-		resource:   resource,
-	}
-	fh.ctx, fh.cancel = context.WithCancel(ctx)
-	return fh
 }
 
 var errRecordStop = errors.New("stop record")
@@ -1795,6 +1762,14 @@ func (role *ConnectionRole) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// setSettingsFunc returns a connector.SetSettingsFunc function that sets the
+// settings for the connection.
+func (this *Connection) setSettingsFunc(ctx context.Context) _connector.SetSettingsFunc {
+	return func(settings []byte) error {
+		return setSettings(ctx, this.db, this.connection.ID, settings)
+	}
+}
+
 // setUsers sets the user with the given ID into the database and into the data
 // warehouse.
 func (this *Connection) setUser(ctx context.Context, id string, user map[string]any) error {
@@ -1895,6 +1870,35 @@ func (this *Connection) writeConnectionUsers(ctx context.Context, id string, use
 		connection, statsTimeSlot(time.Now()))
 
 	return err
+}
+
+// setSettings sets the given settings of the given connection.
+func setSettings(ctx context.Context, db *postgres.DB, connection int, settings []byte) error {
+	if !utf8.Valid(settings) {
+		return errors.New("settings is not valid UTF-8")
+	}
+	if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
+		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
+	}
+	n := state.SetConnectionSettingsNotification{
+		Connection: connection,
+		Settings:   settings,
+	}
+	err := db.Transaction(ctx, func(tx *postgres.Tx) error {
+		_, err := tx.Exec(ctx, "UPDATE connections SET settings = $1 WHERE id = $2", n.Settings, n.Connection)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
+}
+
+// statsTimeSlot returns the stats time slot for the time t.
+// t must be a UTC time.
+func statsTimeSlot(t time.Time) int {
+	epoc := int(t.Unix())
+	return epoc / (60 * 60)
 }
 
 // webhookURL returns the URL of the webhook for the given connection and

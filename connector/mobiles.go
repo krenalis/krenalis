@@ -39,9 +39,9 @@ func (mobile Mobile) Open(ctx context.Context, conf *MobileConfig) (MobileConnec
 
 // MobileConfig represents the configuration of a mobile connection.
 type MobileConfig struct {
-	Role     Role
-	Settings []byte
-	Firehose Firehose
+	Role        Role
+	Settings    []byte
+	SetSettings SetSettingsFunc
 }
 
 // OpenMobileFunc represents functions that open mobile connections.

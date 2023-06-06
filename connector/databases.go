@@ -41,9 +41,9 @@ func (database Database) Open(ctx context.Context, conf *DatabaseConfig) (Databa
 
 // DatabaseConfig represents the configuration of a database connection.
 type DatabaseConfig struct {
-	Role     Role
-	Settings []byte
-	Firehose Firehose
+	Role        Role
+	Settings    []byte
+	SetSettings SetSettingsFunc
 }
 
 // OpenDatabaseFunc represents functions that open database connections.

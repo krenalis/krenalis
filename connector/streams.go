@@ -39,9 +39,9 @@ func (stream Stream) Open(ctx context.Context, conf *StreamConfig) (StreamConnec
 
 // StreamConfig represents the configuration of a stream connection.
 type StreamConfig struct {
-	Role     Role
-	Settings []byte
-	Firehose Firehose
+	Role        Role
+	Settings    []byte
+	SetSettings SetSettingsFunc
 }
 
 // OpenStreamFunc represents functions that open stream connections.

@@ -83,15 +83,11 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		resourceID = r.ID
 		resourceCode = r.Code
 	}
-	fh, err := this.newFirehose(ctx)
-	if err != nil {
-		return actionExecutionError{err}
-	}
 	ws := this.action.Connection().Workspace()
-	connection, err := _connector.RegisteredApp(connector.Name).Open(fh.ctx, &_connector.AppConfig{
+	connection, err := _connector.RegisteredApp(connector.Name).Open(ctx, &_connector.AppConfig{
 		Role:          _connector.DestinationRole,
 		Settings:      c.Settings,
-		Firehose:      fh,
+		SetSettings:   this.setSettingsFunc(ctx),
 		Resource:      resourceCode,
 		HTTPClient:    this.http.ConnectionClient(c.ID),
 		PrivacyRegion: _connector.PrivacyRegion(ws.PrivacyRegion),
@@ -137,11 +133,6 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 			log.Printf("[info] a new user has been created on %s: %#v", connector.Name, user)
 		}
 
-		// Handle errors occurred in the firehose.
-		if fh.err != nil {
-			return fh.err
-		}
-
 	}
 
 	return nil
@@ -179,27 +170,23 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	var storage _connector.StorageConnection
 	{
 		s, _ := connection.Storage()
-		fh := this.newFirehoseForConnection(ctx, s)
-		ctx = fh.ctx
 		var err error
 		storage, err = _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
 			Role:     role,
 			Settings: s.Settings,
-			Firehose: fh,
+			SetSettings: func(settings []byte) error {
+				return setSettings(ctx, this.db, s.ID, settings)
+			},
 		})
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %s", err)}
 		}
 	}
 
-	fh, err := this.newFirehose(ctx)
-	if err != nil {
-		return err
-	}
-	c, err := _connector.RegisteredFile(connector.Name).Open(fh.ctx, &_connector.FileConfig{
-		Role:     role,
-		Settings: connection.Settings,
-		Firehose: fh,
+	c, err := _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
+		Role:        role,
+		Settings:    connection.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
 	})
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
@@ -255,15 +242,11 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 	}
 
 	ctx := context.Background()
-	fh, err := this.newFirehose(ctx)
-	if err != nil {
-		return actionExecutionError{err}
-	}
 	ws := this.action.Connection().Workspace()
-	connection, err := _connector.RegisteredApp(c.Connector().Name).Open(fh.ctx, &_connector.AppConfig{
+	connection, err := _connector.RegisteredApp(c.Connector().Name).Open(ctx, &_connector.AppConfig{
 		Role:          role,
 		Settings:      c.Settings,
-		Firehose:      fh,
+		SetSettings:   this.setSettingsFunc(ctx),
 		Resource:      resourceCode,
 		HTTPClient:    this.http.ConnectionClient(c.ID),
 		PrivacyRegion: _connector.PrivacyRegion(ws.PrivacyRegion),
@@ -300,7 +283,7 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 
 		for _, user := range users {
 
-			externalPropName := fh.action.action.MatchingProperties.External
+			externalPropName := this.action.MatchingProperties.External
 			externalProp, ok := user.Properties[externalPropName]
 			if !ok {
 				// TODO(Gianluca): handle this error properly.

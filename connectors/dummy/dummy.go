@@ -78,13 +78,12 @@ func init() {
 }
 
 type connection struct {
-	role     connector.Role
-	firehose connector.Firehose
+	role connector.Role
 }
 
 // open opens a Dummy connection.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
-	c := connection{role: conf.Role, firehose: conf.Firehose}
+	c := connection{role: conf.Role}
 	return &c, nil
 }
 

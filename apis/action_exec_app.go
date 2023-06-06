@@ -9,10 +9,13 @@ package apis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 
+	"chichi/apis/mappings"
 	"chichi/apis/normalization"
+	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 )
@@ -30,15 +33,11 @@ func (this *Action) importFromApp() error {
 	}
 
 	ctx := context.Background()
-	fh, err := this.newFirehose(ctx)
-	if err != nil {
-		return err
-	}
-	ws := this.action.Connection().Workspace()
-	connector, err := _connector.RegisteredApp(c.Connector().Name).Open(fh.ctx, &_connector.AppConfig{
+	ws := c.Workspace()
+	connector, err := _connector.RegisteredApp(c.Connector().Name).Open(ctx, &_connector.AppConfig{
 		Role:          _connector.SourceRole,
 		Settings:      c.Settings,
-		Firehose:      fh,
+		SetSettings:   this.setSettingsFunc(ctx),
 		Resource:      resourceCode,
 		HTTPClient:    this.http.ConnectionClient(c.ID),
 		PrivacyRegion: _connector.PrivacyRegion(ws.PrivacyRegion),
@@ -57,6 +56,16 @@ func (this *Action) importFromApp() error {
 	_, propertiesPaths, err := this.schema()
 	if err != nil {
 		return fmt.Errorf("cannot read user schema: %s", err)
+	}
+
+	usersSchema, ok := ws.Schemas["users"]
+	if !ok {
+		return actionExecutionError{errors.New("users schema not loaded")}
+	}
+	outputSchema := sourceMappingSchema(*usersSchema, state.AppType)
+	mapping, err := mappings.New(this.action.Schema, outputSchema, this.action.Mapping, this.action.Transformation)
+	if err != nil {
+		return actionExecutionError{err}
 	}
 
 	properties := this.action.Schema.Properties()
@@ -85,7 +94,7 @@ func (this *Action) importFromApp() error {
 			for name, value := range user.Properties {
 				p, ok := propertyOf[name]
 				if !ok {
-					return actionExecutionError{fmt.Errorf("connector %d has returned an unknown property %q", fh.connection.ID, name)}
+					return actionExecutionError{fmt.Errorf("connector %d has returned an unknown property %q", c.Connector().ID, name)}
 				}
 				value, err := normalization.NormalizeAppProperty(name, p.Nullable, p.Type, value)
 				if err != nil {
@@ -95,14 +104,14 @@ func (this *Action) importFromApp() error {
 			}
 
 			// Map properties.
-			mappedUser, err := fh.mapping.Apply(ctx, user.Properties)
+			mappedUser, err := mapping.Apply(ctx, user.Properties)
 			if err != nil {
 				return actionExecutionError{err}
 			}
 			connection := &Connection{
-				db:         fh.db,
-				connection: fh.connection,
-				http:       fh.action.http,
+				db:         this.db,
+				connection: c,
+				http:       this.http,
 			}
 			err = connection.writeConnectionUsers(ctx, user.ID, user.Properties, user.Timestamp.UTC(), nil)
 			if err != nil {

@@ -39,9 +39,9 @@ func (website Website) Open(ctx context.Context, conf *WebsiteConfig) (WebsiteCo
 
 // WebsiteConfig represents the configuration of a website connection.
 type WebsiteConfig struct {
-	Role     Role
-	Settings []byte
-	Firehose Firehose
+	Role        Role
+	Settings    []byte
+	SetSettings SetSettingsFunc
 }
 
 // OpenWebsiteFunc represents functions that open website connections.

@@ -41,9 +41,9 @@ func (storage Storage) Open(ctx context.Context, conf *StorageConfig) (StorageCo
 
 // StorageConfig represents the configuration of a storage connection.
 type StorageConfig struct {
-	Role     Role
-	Settings []byte
-	Firehose Firehose
+	Role        Role
+	Settings    []byte
+	SetSettings SetSettingsFunc
 }
 
 // OpenStorageFunc represents functions that open storage connections.

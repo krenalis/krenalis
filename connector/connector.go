@@ -64,6 +64,9 @@ const (
 	WebsiteType
 )
 
+// A SetSettingsFunc value is a function used by connectors to set settings.
+type SetSettingsFunc func([]byte) error
+
 // HTTPClient is the interface implemented by the HTTP client used by
 // connections.
 type HTTPClient interface {
@@ -131,13 +134,6 @@ type UI interface {
 
 	// SettingsUI obtains settings from UI values and return them.
 	SettingsUI(values []byte) ([]byte, error)
-}
-
-// Firehose is the interface implemented by a Firehose.
-type Firehose interface {
-
-	// SetSettings sets the given settings of the connection.
-	SetSettings(settings []byte) error
 }
 
 type WebhookEvent interface {
