@@ -900,11 +900,11 @@ func (this *Connection) fetchEventTypes() ([]*_connector.EventType, error) {
 
 	ctx := context.Background()
 	app, err := _connector.RegisteredApp(c.Connector().Name).Open(ctx, &_connector.AppConfig{
-		Role:          _connector.Role(c.Role),
-		Settings:      c.Settings,
-		Resource:      resource,
-		HTTPClient:    this.http.ConnectionClient(c.ID),
-		PrivacyRegion: _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
+		Role:       _connector.Role(c.Role),
+		Settings:   c.Settings,
+		Resource:   resource,
+		HTTPClient: this.http.ConnectionClient(c.ID),
+		Region:     _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to the connector: %s", err)
@@ -930,11 +930,11 @@ func (this *Connection) fetchAppSchema(target state.ActionTarget, eventType stri
 
 	ctx := context.Background()
 	app, err := _connector.RegisteredApp(c.Connector().Name).Open(ctx, &_connector.AppConfig{
-		Role:          _connector.Role(c.Role),
-		Settings:      c.Settings,
-		Resource:      resource,
-		HTTPClient:    this.http.ConnectionClient(c.ID),
-		PrivacyRegion: _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
+		Role:       _connector.Role(c.Role),
+		Settings:   c.Settings,
+		Resource:   resource,
+		HTTPClient: this.http.ConnectionClient(c.ID),
+		Region:     _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
 	})
 	if err != nil {
 		return types.Type{}, fmt.Errorf("cannot connect to the connector: %s", err)

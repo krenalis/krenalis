@@ -85,13 +85,13 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	}
 	ws := this.action.Connection().Workspace()
 	connection, err := _connector.RegisteredApp(connector.Name).Open(ctx, &_connector.AppConfig{
-		Role:          _connector.DestinationRole,
-		Settings:      c.Settings,
-		SetSettings:   this.setSettingsFunc(ctx),
-		Resource:      resourceCode,
-		HTTPClient:    this.http.ConnectionClient(c.ID),
-		PrivacyRegion: _connector.PrivacyRegion(ws.PrivacyRegion),
-		WebhookURL:    webhookURL(c, resourceID),
+		Role:        _connector.DestinationRole,
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
+		Resource:    resourceCode,
+		HTTPClient:  this.http.ConnectionClient(c.ID),
+		Region:      _connector.PrivacyRegion(ws.PrivacyRegion),
+		WebhookURL:  webhookURL(c, resourceID),
 	})
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
@@ -244,13 +244,13 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 	ctx := context.Background()
 	ws := this.action.Connection().Workspace()
 	connection, err := _connector.RegisteredApp(c.Connector().Name).Open(ctx, &_connector.AppConfig{
-		Role:          role,
-		Settings:      c.Settings,
-		SetSettings:   this.setSettingsFunc(ctx),
-		Resource:      resourceCode,
-		HTTPClient:    this.http.ConnectionClient(c.ID),
-		PrivacyRegion: _connector.PrivacyRegion(ws.PrivacyRegion),
-		WebhookURL:    webhookURL(c, resourceID),
+		Role:        role,
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
+		Resource:    resourceCode,
+		HTTPClient:  this.http.ConnectionClient(c.ID),
+		Region:      _connector.PrivacyRegion(ws.PrivacyRegion),
+		WebhookURL:  webhookURL(c, resourceID),
 	})
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}

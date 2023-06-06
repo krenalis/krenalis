@@ -236,11 +236,11 @@ func (st *eventsState) openDestination(c *state.Connection) error {
 
 	app := connector.RegisteredApp(c.Connector().Name)
 	connection, err := app.Open(st.ctx, &connector.AppConfig{
-		Role:          connector.Role(c.Role),
-		Settings:      c.Settings,
-		Resource:      resource,
-		HTTPClient:    st.http.ConnectionClient(c.ID),
-		PrivacyRegion: connector.PrivacyRegion(c.Workspace().PrivacyRegion),
+		Role:       connector.Role(c.Role),
+		Settings:   c.Settings,
+		Resource:   resource,
+		HTTPClient: st.http.ConnectionClient(c.ID),
+		Region:     connector.PrivacyRegion(c.Workspace().PrivacyRegion),
 	})
 	if err != nil {
 		return err

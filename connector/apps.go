@@ -52,13 +52,13 @@ func (app App) Open(ctx context.Context, conf *AppConfig) (AppConnection, error)
 
 // AppConfig represents the configuration of an app connection.
 type AppConfig struct {
-	Role          Role
-	Settings      []byte
-	SetSettings   SetSettingsFunc
-	Resource      string
-	HTTPClient    HTTPClient
-	PrivacyRegion PrivacyRegion
-	WebhookURL    string
+	Role        Role
+	Settings    []byte
+	SetSettings SetSettingsFunc
+	Resource    string
+	HTTPClient  HTTPClient
+	Region      PrivacyRegion
+	WebhookURL  string
 }
 
 // PrivacyRegion represents a privacy region.

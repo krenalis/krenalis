@@ -1092,12 +1092,12 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 		}
 
 		connection, err = _connector.RegisteredApp(connector.Name).Open(ctx, &_connector.AppConfig{
-			Role:          role,
-			Settings:      c.Settings,
-			SetSettings:   setSettings,
-			Resource:      resource,
-			HTTPClient:    this.http.ConnectionClient(c.ID),
-			PrivacyRegion: _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
+			Role:        role,
+			Settings:    c.Settings,
+			SetSettings: setSettings,
+			Resource:    resource,
+			HTTPClient:  this.http.ConnectionClient(c.ID),
+			Region:      _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
 		})
 
 	default:

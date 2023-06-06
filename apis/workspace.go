@@ -652,8 +652,8 @@ func (this *Workspace) OAuthToken(authorizationCode, redirectURI string, connect
 	}
 
 	connection, err := _connector.RegisteredApp(c.Name).Open(context.Background(), &_connector.AppConfig{
-		HTTPClient:    this.http.Client(c.OAuth.ClientSecret, accessToken),
-		PrivacyRegion: _connector.PrivacyRegion(this.workspace.PrivacyRegion),
+		HTTPClient: this.http.Client(c.OAuth.ClientSecret, accessToken),
+		Region:     _connector.PrivacyRegion(this.workspace.PrivacyRegion),
 	})
 	if err != nil {
 		return "", err

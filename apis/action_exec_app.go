@@ -35,13 +35,13 @@ func (this *Action) importFromApp() error {
 	ctx := context.Background()
 	ws := c.Workspace()
 	connector, err := _connector.RegisteredApp(c.Connector().Name).Open(ctx, &_connector.AppConfig{
-		Role:          _connector.SourceRole,
-		Settings:      c.Settings,
-		SetSettings:   this.setSettingsFunc(ctx),
-		Resource:      resourceCode,
-		HTTPClient:    this.http.ConnectionClient(c.ID),
-		PrivacyRegion: _connector.PrivacyRegion(ws.PrivacyRegion),
-		WebhookURL:    webhookURL(c, resourceID),
+		Role:        _connector.SourceRole,
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
+		Resource:    resourceCode,
+		HTTPClient:  this.http.ConnectionClient(c.ID),
+		Region:      _connector.PrivacyRegion(ws.PrivacyRegion),
+		WebhookURL:  webhookURL(c, resourceID),
 	})
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
