@@ -510,7 +510,7 @@ func (c *connection) UserSchema() (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(properties []connector.PropertyPath, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) Users(properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
 
 	path := "/lists/" + c.settings.List + "/members"
 	values := url.Values{
@@ -608,7 +608,7 @@ type settings struct {
 
 // serializeProperties serializes the properties in the Mailchimp "fields"
 // parameter format
-func serializeProperties(properties []connector.PropertyPath) string {
+func serializeProperties(properties []types.Path) string {
 	var hasID, hasLastChange bool
 	for _, p := range properties {
 		var realName string

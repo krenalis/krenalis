@@ -199,7 +199,7 @@ func (c *connection) UserSchema() (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(properties []connector.PropertyPath, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) Users(properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
 	usersLock.Lock()
 	defer usersLock.Unlock()
 	objects := make([]connector.Object, 0, len(users))

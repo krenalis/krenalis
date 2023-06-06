@@ -185,6 +185,9 @@ type Property struct {
 	Flat        bool
 }
 
+// Path represents a property path.
+type Path []string
+
 // Type represents a type.
 type Type struct {
 	pt PhysicalType

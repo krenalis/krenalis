@@ -150,10 +150,10 @@ func (this *Action) exec() {
 
 // schema returns the schema and the paths of the mapped properties of
 // the connection.
-func (this *Action) schema() (types.Type, []_connector.PropertyPath, error) {
+func (this *Action) schema() (types.Type, []types.Path, error) {
 
 	// Collect the paths of the properties used in transformation or mappings.
-	var paths []_connector.PropertyPath
+	var paths []types.Path
 	if t := this.action.Transformation; t != nil {
 		for _, name := range t.In.PropertiesNames() {
 			paths = append(paths, []string{name})

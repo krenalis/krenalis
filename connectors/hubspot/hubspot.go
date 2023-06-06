@@ -100,7 +100,7 @@ func (c *connection) GroupSchema() (types.Type, error) {
 }
 
 // Groups returns the groups starting from the given cursor.
-func (c *connection) Groups(properties []connector.PropertyPath, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) Groups(properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
 	objects, after, err := c.objects("Company", properties, cursor)
 	for _, object := range objects {
 		contacts, err := c.companyContacts(object.ID)
@@ -309,13 +309,13 @@ func (c *connection) UserSchema() (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(properties []connector.PropertyPath, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) Users(properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
 	return c.objects("Contact", properties, cursor)
 }
 
 // objects returns the contacts, if typ is "Contact", or the companies, if typ
 // is "Company", starting from the given cursor.
-func (c *connection) objects(typ string, properties []connector.PropertyPath, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) objects(typ string, properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
 
 	path := "/crm/v3/objects/"
 	var propertyName string

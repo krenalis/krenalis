@@ -258,7 +258,7 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 	app := connection.(_connector.AppUsersConnection)
 
 	// Read the users from the app.
-	properties := []_connector.PropertyPath{
+	properties := []types.Path{
 		{this.action.MatchingProperties.External},
 	}
 
