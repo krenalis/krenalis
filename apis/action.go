@@ -369,13 +369,15 @@ func (this *Action) Set(action ActionToSet) error {
 }
 
 // setUserCursor sets the user cursor of the action.
-func (this *Action) setUserCursor(ctx context.Context, cursor string) error {
+func (this *Action) setUserCursor(ctx context.Context, cursor _connector.Cursor) error {
 	n := state.SetActionUserCursorNotification{
 		ID:         this.action.ID,
 		UserCursor: cursor,
 	}
 	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE actions SET user_cursor = $1 WHERE id = $2", n.UserCursor, n.ID)
+		result, err := tx.Exec(ctx, "UPDATE actions\n"+
+			"SET user_cursor.id = $1, user_cursor.timestamp = $2, user_cursor.next = $3 WHERE id = $4",
+			n.UserCursor.ID, n.UserCursor.Timestamp, n.UserCursor.Next, n.ID)
 		if err != nil {
 			return err
 		}

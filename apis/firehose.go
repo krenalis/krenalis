@@ -9,7 +9,6 @@ package apis
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -18,11 +17,9 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/mappings"
-	"chichi/apis/normalization"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/connector"
-	"chichi/connector/types"
 )
 
 // Make sure it implements the Firehose interface.
@@ -43,51 +40,6 @@ type firehose struct {
 }
 
 func (fh *firehose) ReceiveEvent(event connector.WebhookEvent) {
-
-	// Return if the context has expired.
-	select {
-	case <-fh.ctx.Done():
-		return
-	default:
-	}
-
-	// TODO.
-
-}
-
-// SetCursor sets the user cursor.
-func (fh *firehose) SetCursor(cursor string) {
-
-	// Return if the context has expired.
-	select {
-	case <-fh.ctx.Done():
-		return
-	default:
-	}
-
-	// Set the user cursor of the action.
-	err := fh.action.setUserCursor(fh.ctx, cursor)
-	if err != nil {
-		fh.setError(err)
-		return
-	}
-
-}
-
-func (fh *firehose) SetGroup(group string, properties map[string]any, timestamp time.Time, timestamps map[string]time.Time) {
-
-	// Return if the context has expired.
-	select {
-	case <-fh.ctx.Done():
-		return
-	default:
-	}
-
-	// TODO.
-
-}
-
-func (fh *firehose) SetGroupUsers(group string, users []string) {
 
 	// Return if the context has expired.
 	select {
@@ -132,98 +84,6 @@ func (fh *firehose) SetSettings(settings []byte) error {
 		return errors.New("cannot set settings")
 	}
 	return nil
-}
-
-func (fh *firehose) SetUser(id string, user map[string]any, timestamp time.Time, timestamps map[string]time.Time) {
-
-	// Return if the context has expired.
-	select {
-	case <-fh.ctx.Done():
-		return
-	default:
-	}
-
-	ws := fh.connection.Workspace()
-	if ws.Warehouse == nil {
-		fh.err = fmt.Errorf("workspace %d does not have a warehouse", ws.ID)
-		return
-	}
-
-	// Importing users from a destination to match identities for the export.
-	if fh.connection.Role == state.DestinationRole {
-		externalPropName := fh.action.action.MatchingProperties.External
-		externalProp, ok := user[externalPropName]
-		if !ok {
-			// TODO(Gianluca): handle this error properly.
-			fh.setError(fmt.Errorf("user does not contain property %q", externalPropName))
-			return
-		}
-		p, err := json.Marshal(externalProp)
-		if err != nil {
-			fh.setError(err)
-			return
-		}
-		err = ws.Warehouse.SetDestinationUser(fh.ctx, fh.action.action.ID, id, string(p))
-		if err != nil {
-			fh.setError(err)
-			return
-		}
-		return
-	}
-
-	// Normalize the user properties.
-	propertyOf := map[string]types.Property{}
-	for _, p := range fh.action.action.Schema.Properties() {
-		propertyOf[p.Name] = p
-	}
-	for name, value := range user {
-		p, ok := propertyOf[name]
-		if !ok {
-			fh.setError(fmt.Errorf("connector %d has returned an unknown property %q", fh.connection.ID, name))
-			return
-		}
-		value, err := normalization.NormalizeAppProperty(name, p.Nullable, p.Type, value)
-		if err != nil {
-			fh.setError(err)
-			return
-		}
-		user[name] = value
-	}
-
-	mappedUser, err := fh.mapping.Apply(fh.ctx, user)
-	if err != nil {
-		fh.setError(err)
-		return
-	}
-	connection := &Connection{
-		db:         fh.db,
-		connection: fh.connection,
-		http:       fh.action.http,
-	}
-	err = connection.writeConnectionUsers(fh.ctx, id, user, timestamp, timestamps)
-	if err != nil {
-		fh.setError(err)
-		return
-	}
-	err = connection.setUser(fh.ctx, id, mappedUser)
-	if err != nil {
-		fh.setError(err)
-		return
-	}
-
-}
-
-func (fh *firehose) SetUserGroups(user string, groups []string) {
-
-	// Return if the context has expired.
-	select {
-	case <-fh.ctx.Done():
-		return
-	default:
-	}
-
-	// TODO.
-
 }
 
 // WebhookURL returns the URL of the webhook.

@@ -249,7 +249,8 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 		resource = r.Code
 	}
 
-	fh, err := this.newFirehose(context.Background())
+	ctx := context.Background()
+	fh, err := this.newFirehose(ctx)
 	if err != nil {
 		return actionExecutionError{err}
 	}
@@ -265,21 +266,63 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
+	app := connection.(_connector.AppUsersConnection)
 
 	// Read the users from the app.
 	properties := []_connector.PropertyPath{
 		{this.action.MatchingProperties.External},
 	}
-	// TODO(Gianluca): here the cursor is set to "" as a workaround. See the
-	// issue https://github.com/open2b/chichi/issues/183.
-	err = connection.(_connector.AppUsersConnection).Users("", properties)
-	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
-	}
 
-	// Handle errors occurred in the firehose.
-	if fh.err != nil {
-		return fh.err
+	// TODO(Gianluca): here cursor.Next is set to "" as a workaround. See the
+	// issue https://github.com/open2b/chichi/issues/183.
+	var cursor _connector.Cursor
+
+	var eof bool
+
+	// Importing users from a destination to match identities for the export.
+	for !eof {
+
+		users, next, err := app.Users(properties, cursor)
+		if err != nil && err != io.EOF {
+			return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
+		}
+		if err == io.EOF {
+			eof = true
+		} else if len(users) == 0 {
+			return actionExecutionError{fmt.Errorf("connector %d has returned an empty users without returning EOF", c.Connector().ID)}
+		}
+
+		for _, user := range users {
+
+			externalPropName := fh.action.action.MatchingProperties.External
+			externalProp, ok := user.Properties[externalPropName]
+			if !ok {
+				// TODO(Gianluca): handle this error properly.
+				return actionExecutionError{fmt.Errorf("user does not contain property %q", externalPropName)}
+			}
+			p, err := json.Marshal(externalProp)
+			if err != nil {
+				return actionExecutionError{err}
+			}
+			err = ws.Warehouse.SetDestinationUser(ctx, this.action.ID, user.ID, string(p))
+			if err != nil {
+				return actionExecutionError{err}
+			}
+
+		}
+
+		// Set the user cursor.
+		if len(users) > 0 {
+			last := users[len(users)-1]
+			cursor.ID = last.ID
+			cursor.Timestamp = last.Timestamp
+		}
+		cursor.Next = next
+		err = this.setUserCursor(ctx, cursor)
+		if err != nil {
+			return actionExecutionError{err}
+		}
+
 	}
 
 	return nil

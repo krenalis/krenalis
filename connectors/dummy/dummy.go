@@ -11,6 +11,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"sync"
@@ -198,12 +199,17 @@ func (c *connection) UserSchema() (types.Type, error) {
 	return schema, nil
 }
 
-func (c *connection) Users(cursor string, properties []connector.PropertyPath) error {
+// Users returns the users starting from the given cursor.
+func (c *connection) Users(properties []connector.PropertyPath, cursor connector.Cursor) ([]connector.Object, string, error) {
 	usersLock.Lock()
 	defer usersLock.Unlock()
+	objects := make([]connector.Object, 0, len(users))
 	for id, props := range users {
-		timestamp := usersTimestamps[id]
-		c.firehose.SetUser(id, props, timestamp, nil)
+		objects = append(objects, connector.Object{
+			ID:         id,
+			Properties: props,
+			Timestamp:  usersTimestamps[id],
+		})
 	}
-	return nil
+	return objects, "", io.EOF
 }

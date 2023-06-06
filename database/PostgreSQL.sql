@@ -91,6 +91,12 @@ CREATE TYPE transformation AS (
     python_source text
 );
 
+CREATE TYPE cursor AS (
+    id text,
+    timestamp timestamptz(6),
+    next text
+);
+
 CREATE TYPE export_mode AS ENUM ('CreateOnly', 'UpdateOnly', 'CreateOrUpdate');
 
 CREATE TABLE actions (
@@ -109,7 +115,7 @@ CREATE TABLE actions (
     query text NOT NULL DEFAULT '',
     path varchar(1024) NOT NULL DEFAULT '',
     sheet varchar(100) NOT NULL DEFAULT '',
-    user_cursor varchar(500) NOT NULL DEFAULT '',
+    user_cursor cursor NOT NULL DEFAULT '("", "0001-01-01 00:00:00+00", "")',
     health health NOT NULL DEFAULT 'Healthy',
     export_mode export_mode DEFAULT NULL,
     matching_properties_internal text NOT NULL,

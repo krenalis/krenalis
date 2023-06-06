@@ -16,8 +16,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -357,27 +355,73 @@ func (c *connection) UserSchema() (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(cursor string, properties []connector.PropertyPath) error {
+func (c *connection) Users(properties []connector.PropertyPath, cursor connector.Cursor) ([]connector.Object, string, error) {
 
-	it, err := c.newIterator(properties, 100)
+	var hasUpdatedProperty bool
+
+	url := cursor.Next
+	if url == "" {
+		var b strings.Builder
+		b.WriteString("https://a.klaviyo.com/api/profiles/?fields%5Bprofile%5D=")
+		for i, p := range properties {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteString(p[0])
+			if p[0] == "updated" {
+				hasUpdatedProperty = true
+			}
+		}
+		if !hasUpdatedProperty {
+			b.WriteString(",updated")
+		}
+		b.WriteString("&page%5Bsize%5D=100&sort=created")
+		url = b.String()
+	}
+
+	var response struct {
+		Data []struct {
+			ID         string
+			Attributes map[string]any
+		}
+		Links struct {
+			Next string
+		}
+	}
+
+	err := c.call("GET", url, nil, 200, &response)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
-	for {
-		profiles, err := it.next()
+	if response.Links.Next != "" && !strings.HasPrefix(response.Links.Next, "https://a.klaviyo.com/") {
+		return nil, "", fmt.Errorf("unexpected links.next URL %q", response.Links.Next)
+	}
+	if len(response.Data) == 0 {
+		return nil, "", io.EOF
+	}
+
+	objects := make([]connector.Object, len(response.Data))
+	for i, data := range response.Data {
+		updated, _ := data.Attributes["updated"].(string)
+		timestamp, err := time.Parse(time.RFC3339, updated)
 		if err != nil {
-			return err
+			return nil, "", fmt.Errorf("Klaviyo has returned a missing or invalid \"updated\" attribute: %q", updated)
 		}
-		if len(profiles) == 0 {
-			break
+		if !hasUpdatedProperty {
+			delete(data.Attributes, "updated")
 		}
-		for _, profile := range profiles {
-			profile.Attributes["id"] = profile.ID
-			c.firehose.SetUser(profile.ID, profile.Attributes, profile.timestamp, nil)
+		objects[i] = connector.Object{
+			ID:         data.ID,
+			Properties: data.Attributes,
+			Timestamp:  timestamp,
 		}
 	}
 
-	return nil
+	if response.Links.Next == "" {
+		return objects, "", io.EOF
+	}
+
+	return objects, response.Links.Next, nil
 }
 
 type klaviyoError struct {
@@ -435,99 +479,4 @@ func (c *connection) call(method, url string, body io.Reader, expectedStatus int
 	}
 
 	return nil
-}
-
-// pageSize must be in [1, 100].
-func (c *connection) newIterator(properties []connector.PropertyPath, pageSize int) (*iter, error) {
-
-	if pageSize < 0 || pageSize > 100 {
-		return nil, errors.New("invalid page size")
-	}
-
-	it := iter{
-		connection: c,
-	}
-
-	// Encode the URL query parameters.
-	var b strings.Builder
-	b.WriteString("https://a.klaviyo.com/api/profiles/?")
-	b.WriteString("fields%5Bprofile%5D=")
-	for i, p := range properties {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteString(url.QueryEscape(p[0]))
-		if p[0] == "updated" {
-			it.HasUpdatedProperty = true
-		}
-	}
-	if !it.HasUpdatedProperty {
-		b.WriteString(",updated")
-	}
-
-	b.WriteString("&page%5Bsize%5D=")
-	b.WriteString(strconv.Itoa(pageSize))
-	b.WriteString("&sort=created")
-
-	it.Next = b.String()
-
-	return &it, nil
-}
-
-type iter struct {
-	*connection
-	HasUpdatedProperty bool
-	Next               string
-	Terminated         bool
-}
-
-type profile struct {
-	ID         string
-	Attributes map[string]any
-	timestamp  time.Time
-}
-
-// next returns the next objects or nil if there are no objects.
-func (it *iter) next() ([]profile, error) {
-
-	if it.Terminated {
-		return nil, nil
-	}
-
-	var response struct {
-		Data  []profile
-		Links struct {
-			Next string
-		}
-	}
-
-	err := it.call("GET", it.Next, nil, 200, &response)
-	if err != nil {
-		return nil, err
-	}
-
-	if response.Links.Next != "" && !strings.HasPrefix(response.Links.Next, "https://a.klaviyo.com/") {
-		return nil, fmt.Errorf("unexpected links.next URL %q", response.Links.Next)
-	}
-
-	it.Next = response.Links.Next
-	it.Terminated = it.Next == ""
-
-	if len(response.Data) == 0 {
-		return nil, nil
-	}
-
-	for i, p := range response.Data {
-		updated, _ := p.Attributes["updated"].(string)
-		t, err := time.Parse(time.RFC3339, updated)
-		if err != nil {
-			return nil, fmt.Errorf("Klaviyo has returned a missing or invalid \"updated\" attribute: %q", updated)
-		}
-		response.Data[i].timestamp = t.UTC()
-		if !it.HasUpdatedProperty {
-			delete(p.Attributes, "updated")
-		}
-	}
-
-	return response.Data, nil
 }

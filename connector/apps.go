@@ -98,6 +98,24 @@ type AppEventsConnection interface {
 	SendEvent(event Event, mappedEvent map[string]any, eventType string) error
 }
 
+// Object represents either a user or a group.
+type Object struct {
+	ID         string         // Identifier.
+	Properties map[string]any // Properties.
+	Timestamp  time.Time      // Last modification time, not necessarily in UTC.
+
+	// Associations contains the identifiers of the user's groups or the group's users.
+	// It is not significant if it is nil.
+	Associations []string
+}
+
+// Cursor represents a cursor used to implement pagination.
+type Cursor struct {
+	ID        string    // Identifier of the last returned user or group.
+	Timestamp time.Time // Timestamp of the last returned user or group, with preserved Location.
+	Next      string    // Returned string value of the last call to Users or Groups.
+}
+
 // AppUsersConnection is the interface implemented by app connections that
 // manage users.
 type AppUsersConnection interface {
@@ -119,7 +137,7 @@ type AppUsersConnection interface {
 	UpdateUser(id string, properties Properties) error
 
 	// Users returns the users starting from the given cursor.
-	Users(cursor string, properties []PropertyPath) error
+	Users(properties []PropertyPath, cursor Cursor) (users []Object, next string, err error)
 }
 
 // AppGroupsConnection is the interface implemented by app connections that
@@ -131,7 +149,7 @@ type AppGroupsConnection interface {
 	GroupSchema() (types.Type, error)
 
 	// Groups returns the groups starting from the given cursor.
-	Groups(cursor string, properties []PropertyPath) error
+	Groups(properties []PropertyPath, after Cursor) (groups []Object, cursor string, err error)
 
 	// ReceiveWebhook receives a webhook request and returns its events.
 	// It returns the ErrWebhookUnauthorized error is the request was not

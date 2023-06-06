@@ -508,54 +508,56 @@ func (c *connection) UserSchema() (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(cursor string, properties []connector.PropertyPath) error {
+func (c *connection) Users(properties []connector.PropertyPath, cursor connector.Cursor) ([]connector.Object, string, error) {
 
 	path := "/lists/" + c.settings.List + "/members"
-	params := url.Values{
-		"sort_field": []string{"last_changed"},
-		"sort_dir":   []string{"ASC"},
-		"count":      []string{"1000"},
+	values := url.Values{
+		"fields":     {serializeProperties(properties)},
+		"sort_field": {"last_changed"},
+		"sort_dir":   {"ASC"},
+		"count":      {"1000"},
 	}
-	if len(properties) > 0 {
-		params.Set("fields", serializeProperties(properties))
+	if !cursor.Timestamp.IsZero() {
+		values.Set("since_last_changed", cursor.Timestamp.Format(time.RFC3339))
 	}
-	sinceLastChange, offset := parseCursor(cursor)
-	for {
-		if sinceLastChange != "" {
-			params.Set("since_last_changed", sinceLastChange)
-		}
-		if offset > 0 {
-			params.Set("offset", strconv.Itoa(offset))
-		} else {
-			params.Del("offset")
-		}
-		var response struct {
-			Members    []Member
-			TotalItems int `json:"total_items"`
-		}
-		err := c.call("GET", path, params, nil, 200, &response)
-		if err != nil {
-			return err
-		}
-		for _, m := range response.Members {
-			c.firehose.SetUser(m.ID, m.Properties(), m.LastChanged, nil)
-		}
-		done := offset+len(response.Members) >= response.TotalItems
-		if len(response.Members) > 0 {
-			if slc := response.Members[len(response.Members)-1].LastChanged.Format(time.RFC3339); slc != sinceLastChange {
-				sinceLastChange = slc
-				offset = 0
-			} else {
-				offset += len(response.Members)
-			}
-			c.firehose.SetCursor(serializeCursor(sinceLastChange, offset))
-		}
-		if done {
-			break
+	if cursor.Next != "" {
+		values.Set("offset", cursor.Next)
+	}
+
+	var response struct {
+		Members    []Member
+		TotalItems int `json:"total_items"`
+	}
+
+	err := c.call("GET", path, values, nil, 200, &response)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(response.Members) == 0 {
+		return nil, "", io.EOF
+	}
+
+	objects := make([]connector.Object, len(response.Members))
+	for i, member := range response.Members {
+		objects[i] = connector.Object{
+			ID:         member.ID,
+			Properties: member.Properties(),
+			Timestamp:  member.LastChanged,
 		}
 	}
 
-	return nil
+	offset, _ := strconv.Atoi(cursor.Next)
+	eof := offset+len(response.Members) >= response.TotalItems
+	if last := objects[len(objects)-1]; last.Timestamp.Equal(cursor.Timestamp) {
+		offset += len(response.Members)
+	} else {
+		offset = 0
+	}
+	if eof {
+		return objects, strconv.Itoa(offset), io.EOF
+	}
+
+	return objects, strconv.Itoa(offset), nil
 }
 
 type batchOperation struct {

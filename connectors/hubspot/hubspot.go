@@ -18,10 +18,8 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -63,6 +61,7 @@ type connection struct {
 	ctx        context.Context
 	firehose   connector.Firehose
 	httpClient connector.HTTPClient
+	buf        bytes.Buffer
 }
 
 // open opens a HubSpot connection and returns it.
@@ -101,38 +100,16 @@ func (c *connection) GroupSchema() (types.Type, error) {
 }
 
 // Groups returns the groups starting from the given cursor.
-func (c *connection) Groups(cursor string, properties []connector.PropertyPath) error {
-
-	fromDate, err := parseCursor(cursor)
-	if err != nil {
-		return err
-	}
-
-	it, err := c.newIterator("Company", properties, fromDate, 100)
-	if err != nil {
-		return err
-	}
-	for {
-		objects, err := it.next()
+func (c *connection) Groups(properties []connector.PropertyPath, cursor connector.Cursor) ([]connector.Object, string, error) {
+	objects, after, err := c.objects("Company", properties, cursor)
+	for _, object := range objects {
+		contacts, err := c.companyContacts(object.ID)
 		if err != nil {
-			return err
+			return nil, "", err
 		}
-		if objects == nil {
-			break
-		}
-		for _, obj := range objects {
-			c.firehose.SetGroup(obj.ID, obj.Properties, time.UnixMilli(obj.LastModifiedDate).UTC(), nil)
-			contacts, err := c.companyContacts(obj.ID)
-			if err != nil {
-				return err
-			}
-			c.firehose.SetGroupUsers(obj.ID, contacts)
-		}
-		fromDate = objects[len(objects)-1].LastModifiedDate
-		c.firehose.SetCursor(strconv.FormatInt(fromDate, 10))
+		object.Associations = contacts
 	}
-
-	return nil
+	return objects, after, err
 }
 
 // ReceiveWebhook receives a webhook request and returns its events.
@@ -332,33 +309,82 @@ func (c *connection) UserSchema() (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(cursor string, properties []connector.PropertyPath) error {
+func (c *connection) Users(properties []connector.PropertyPath, cursor connector.Cursor) ([]connector.Object, string, error) {
+	return c.objects("Contact", properties, cursor)
+}
 
-	fromDate, err := parseCursor(cursor)
-	if err != nil {
-		return err
+// objects returns the contacts, if typ is "Contact", or the companies, if typ
+// is "Company", starting from the given cursor.
+func (c *connection) objects(typ string, properties []connector.PropertyPath, cursor connector.Cursor) ([]connector.Object, string, error) {
+
+	path := "/crm/v3/objects/"
+	var propertyName string
+	if typ == "Contact" {
+		path += "contacts/search"
+		propertyName = "lastmodifieddate"
+	} else {
+		path += "companies/search"
+		propertyName = "hs_lastmodifieddate"
 	}
 
-	it, err := c.newIterator("Contact", properties, fromDate, 100)
-	if err != nil {
-		return err
+	c.buf.Reset()
+	c.buf.WriteString(`{"filterGroups":[{"filters":[{"value":"`)
+	if cursor.Timestamp.IsZero() {
+		c.buf.WriteByte('0')
+	} else {
+		c.buf.WriteString(strconv.FormatInt(cursor.Timestamp.UnixMilli(), 10))
 	}
-	for {
-		objects, err := it.next()
+	c.buf.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
+		`]}],"sorts":["` + propertyName + `"],"limit":100,"properties":[`)
+	for i, p := range properties {
+		if i > 0 {
+			c.buf.WriteByte(',')
+		}
+		c.buf.WriteByte('"')
+		c.buf.WriteString(p[0])
+		c.buf.WriteByte('"')
+	}
+	c.buf.WriteString(`]}`)
+
+	var response struct {
+		Results []struct {
+			ID         string
+			Properties map[string]any
+			UpdatedAt  string
+		}
+		Paging struct {
+			Next struct {
+				After string
+			}
+		}
+	}
+
+	err := c.call("POST", path, &c.buf, 200, &response)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(response.Results) == 0 {
+		return nil, "", io.EOF
+	}
+
+	objects := make([]connector.Object, len(response.Results))
+	for i, result := range response.Results {
+		updatedAt, err := time.Parse(time.RFC3339, result.UpdatedAt)
 		if err != nil {
-			return err
+			return nil, "", fmt.Errorf("invalid updatedAt returned by HubSpot: %q", updatedAt)
 		}
-		if len(objects) == 0 {
-			break
+		objects[i] = connector.Object{
+			ID:         result.ID,
+			Properties: result.Properties,
+			Timestamp:  updatedAt,
 		}
-		for _, obj := range objects {
-			c.firehose.SetUser(obj.ID, obj.Properties, time.UnixMilli(obj.LastModifiedDate).UTC(), nil)
-		}
-		fromDate = objects[len(objects)-1].LastModifiedDate
-		c.firehose.SetCursor(serializeCursor(fromDate))
 	}
 
-	return nil
+	if response.Paging.Next.After == "" {
+		return objects, "", io.EOF
+	}
+
+	return objects, "", nil
 }
 
 // companyContacts returns the contacts of the given company.
@@ -395,130 +421,6 @@ func (c *connection) companyContacts(company string) ([]string, error) {
 		}
 	}
 	return contacts, nil
-}
-
-type iter struct {
-	*connection
-	Type       string
-	Path       string
-	Properties []byte
-	FromDate   int64
-	Limit      int
-	Body       bytes.Buffer
-	Terminated bool
-}
-
-// newIterator returns an iterator to iterates on objects of type typ. typ can
-// be "Company" or "Contact".
-// Requires the "crm.objects.contacts.read" scope for contacts and the
-// "crm.objects.companies.read" for companies.
-func (c *connection) newIterator(typ string, properties []connector.PropertyPath, fromDate int64, limit int) (*iter, error) {
-
-	path := "/crm/v3/"
-	switch typ {
-	case "Company":
-		path += "objects/companies/search"
-	case "Contact":
-		path += "objects/contacts/search"
-	default:
-		return nil, errors.New("invalid type")
-	}
-	if limit < 0 || limit > math.MaxInt32 {
-		return nil, errors.New("invalid limit")
-	}
-
-	it := iter{
-		connection: c,
-		Type:       typ,
-		Path:       path,
-		FromDate:   fromDate,
-		Limit:      limit,
-	}
-
-	// Marshal the properties.
-	props := make([]string, len(properties))
-	for i, p := range properties {
-		props[i] = p[0]
-	}
-	var err error
-	it.Properties, err = json.Marshal(props)
-	if err != nil {
-		return nil, err
-	}
-
-	return &it, nil
-}
-
-type object struct {
-	ID               string
-	Properties       map[string]any
-	LastModifiedDate int64
-}
-
-// next returns the next objects or nil if there are no objects.
-func (it *iter) next() ([]object, error) {
-
-	if it.Terminated {
-		return nil, nil
-	}
-
-	propertyName := "hs_lastmodifieddate"
-	if it.Type == "Contact" {
-		propertyName = propertyName[3:] // "lastmodifieddate"
-	}
-
-	it.Body.Reset()
-	it.Body.WriteString(`{"filterGroups":[{"filters":[{"value":"`)
-	it.Body.WriteString(strconv.FormatInt(it.FromDate, 10))
-	it.Body.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
-		`]}],"sorts":["` + propertyName + `"]`)
-	if it.Limit != 0 {
-		it.Body.WriteString(`,"limit":`)
-		it.Body.WriteString(strconv.Itoa(it.Limit))
-	}
-	it.Body.WriteString(`,"properties":`)
-	it.Body.Write(it.Properties)
-	it.Body.WriteString(`}`)
-
-	var response struct {
-		Results []struct {
-			ID         string
-			Properties map[string]any
-			UpdatedAt  string
-			Archived   bool
-		}
-		Paging struct {
-			Next struct {
-				After string
-			}
-		}
-	}
-
-	err := it.call("POST", it.Path, &it.Body, 200, &response)
-	if err != nil {
-		return nil, err
-	}
-	it.Terminated = response.Paging.Next.After == ""
-	if len(response.Results) == 0 {
-		return nil, nil
-	}
-
-	objects := make([]object, len(response.Results))
-	for i, result := range response.Results {
-		date, err := time.Parse(time.RFC3339, result.UpdatedAt)
-		if err != nil {
-			return nil, fmt.Errorf("invalid updateAt returned by HubSpot: %q", date)
-		}
-		objects[i] = object{
-			ID:               result.ID,
-			Properties:       result.Properties,
-			LastModifiedDate: date.UnixMilli(),
-		}
-	}
-
-	it.FromDate = objects[len(objects)-1].LastModifiedDate + 1
-
-	return objects, nil
 }
 
 func (c *connection) call(method, path string, body io.Reader, expectedStatus int, response any) error {
@@ -586,23 +488,6 @@ func isValidWebhook(clientSecret string, r *http.Request) bool {
 	_, _ = io.WriteString(mac, r.Header.Get("X-HubSpot-Request-Timestamp"))
 	// The signature of the request must be the same as the computed signature.
 	return hmac.Equal(signature, mac.Sum(nil))
-}
-
-// parseCursor parses a cursor and returns the last modified date.
-func parseCursor(cursor string) (int64, error) {
-	if cursor == "" {
-		return 0, nil
-	}
-	fromDate, err := strconv.ParseInt(cursor, 10, 64)
-	if err != nil || fromDate < 0 {
-		return 0, fmt.Errorf("invalid cursor: %q", cursor)
-	}
-	return fromDate, nil
-}
-
-// serializeCursor serialize a cursor.
-func serializeCursor(fromDate int64) string {
-	return strconv.FormatInt(fromDate, 10)
 }
 
 type hubspotError struct {

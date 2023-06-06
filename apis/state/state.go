@@ -798,7 +798,7 @@ type Action struct {
 	Query              string
 	Path               string
 	Sheet              string
-	UserCursor         string
+	UserCursor         connector.Cursor
 	Health             Health
 	ExportMode         *ExportMode
 	MatchingProperties *MatchingProperties

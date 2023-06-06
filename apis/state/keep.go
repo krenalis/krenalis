@@ -20,6 +20,7 @@ import (
 	"chichi/apis/warehouses"
 	"chichi/apis/warehouses/clickhouse"
 	"chichi/apis/warehouses/postgresql"
+	"chichi/connector"
 	"chichi/connector/types"
 
 	"github.com/google/uuid"
@@ -901,7 +902,7 @@ func (state *State) setActionStatus(n postgres.Notification) {
 // of an action is set.
 type SetActionUserCursorNotification struct {
 	ID         int
-	UserCursor string
+	UserCursor connector.Cursor
 }
 
 // setActionUserCursor sets the user cursor of an action.
