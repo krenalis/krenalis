@@ -132,8 +132,9 @@ type UI interface {
 	// ServeUI serves the connector's user interface.
 	ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error)
 
-	// SettingsUI obtains settings from UI values and return them.
-	SettingsUI(values []byte) ([]byte, error)
+	// ValidateSettings validates the settings received from the UI and returns them
+	// in a format suitable for storage.
+	ValidateSettings(values []byte) ([]byte, error)
 }
 
 type WebhookEvent interface {

@@ -1,60 +1,60 @@
 
 ## App connections
 
-| Method         | Role | Settings       | SetSettings    | Resource                | HTTPClient              | Region                  |
-|----------------|------|----------------|----------------|-------------------------|-------------------------|-------------------------|
-| CreateUser     | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| EventTypes     | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
-| Groups         | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| GroupSchema    | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
-| ReceiveWebhook | ✓    | ✓ (connection) | ✓ (connection) | ✓ (connection,resource) | ✓ (connection,resource) | ✓ (connection,resource) |
-| Resource       | -    | -              | -              | -                       | ✓                       | ✓                       |
-| SendEvent      | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
-| ServeUI        | ✓    | -/✓            | -/✓            | ✓                       | ✓                       | -/✓                     |
-| SettingsUI     | ✓    | -              | -              | ✓                       | ✓                       | -                       |
-| SetGroup       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| UpdateUser     | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| Users          | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| UserSchema     | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
+| Method           | Role | Settings       | SetSettings    | Resource                | HTTPClient              | Region                  |
+|------------------|------|----------------|----------------|-------------------------|-------------------------|-------------------------|
+| CreateUser       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| EventTypes       | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
+| Groups           | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| GroupSchema      | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
+| ReceiveWebhook   | ✓    | ✓ (connection) | ✓ (connection) | ✓ (connection,resource) | ✓ (connection,resource) | ✓ (connection,resource) |
+| Resource         | -    | -              | -              | -                       | ✓                       | ✓                       |
+| SendEvent        | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
+| ServeUI          | ✓    | -/✓            | -/✓            | ✓                       | ✓                       | -/✓                     |
+| SetGroup         | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| UpdateUser       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| Users            | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| UserSchema       | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
+| ValidateSettings | ✓    | -              | -              | ✓                       | ✓                       | -                       |
 
 
 ## Database connections
 
-| Method      | Role | Settings | SetSettings |
-|-------------|------|----------|-------------|
-| Query       | ✓    | ✓        | ✓           |
-| ServeUI     | ✓    | -/✓      | -/✓         |
-| SettingsUI  | ✓    | -        | -           |
+| Method           | Role | Settings | SetSettings |
+|------------------|------|----------|-------------|
+| Query            | ✓    | ✓        | ✓           |
+| ServeUI          | ✓    | -/✓      | -/✓         |
+| ValidateSettings | ✓    | -        | -           |
 
 
 ## File connections
 
-| Method      | Role | Settings | SetSettings |
-|-------------|------|----------|-------------|
-| ContentType | ✓    | ✓        | ✓           |
-| Read        | ✓    | ✓        | ✓           |
-| ServeUI     | ✓    | -/✓      | -/✓         |
-| SettingsUI  | ✓    | -        | -           |
-| Write       | ✓    | ✓        | ✓           |
+| Method           | Role | Settings | SetSettings |
+|------------------|------|----------|-------------|
+| ContentType      | ✓    | ✓        | ✓           |
+| Read             | ✓    | ✓        | ✓           |
+| ServeUI          | ✓    | -/✓      | -/✓         |
+| ValidateSettings | ✓    | -        | -           |
+| Write            | ✓    | ✓        | ✓           |
 
 
 ## Storage connections
 
-| Method     | Role | Settings | SetSettings |
-|------------|------|----------|-------------|
-| Open       | ✓    | ✓        | -/✓         |
-| ServeUI    | ✓    | -/✓      | -/✓         |
-| SettingsUI | ✓    | -        | -           |
-| Write      | ✓    | ✓        | ✓           |
+| Method           | Role | Settings | SetSettings |
+|------------------|------|----------|-------------|
+| Open             | ✓    | ✓        | -/✓         |
+| ServeUI          | ✓    | -/✓      | -/✓         |
+| ValidateSettings | ✓    | -        | -           |
+| Write            | ✓    | ✓        | ✓           |
 
 
 ## Stream connections
 
-| Method     | Role | Settings | SetSettings |
-|------------|------|----------|-------------|
-| Close      | -    | -        | -           |
-| Receive    | -    | ✓        | -           |
-| Send       | -    | ✓        | -           |
-| ServeUI    | ✓    | -/✓      | -/✓         |
-| SettingsUI | ✓    | -        | -           |
+| Method           | Role | Settings | SetSettings |
+|------------------|------|----------|-------------|
+| Close            | -    | -        | -           |
+| Receive          | -    | ✓        | -           |
+| Send             | -    | ✓        | -           |
+| ServeUI          | ✓    | -/✓      | -/✓         |
+| ValidateSettings | ✓    | -        | -           |
 

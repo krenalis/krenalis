@@ -151,7 +151,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		s, err := c.SettingsUI(values)
+		s, err := c.ValidateSettings(values)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -175,8 +175,9 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 }
 
-// SettingsUI obtains the settings from UI values and returns them.
-func (c *connection) SettingsUI(values []byte) ([]byte, error) {
+// ValidateSettings validates the settings received from the UI and returns them
+// in a format suitable for storage.
+func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {

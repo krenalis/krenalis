@@ -246,7 +246,7 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 		if !ok {
 			return 0, errors.BadRequest("connector %d does not have a UI", c.ID)
 		}
-		n.Settings, err = connectionUI.SettingsUI(settings)
+		n.Settings, err = connectionUI.ValidateSettings(settings)
 		if err != nil {
 			return 0, errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
 		}
