@@ -22,7 +22,7 @@ type Events struct {
 }
 
 func New(ctx context.Context, db *postgres.DB, st *state.State, http *httpclient.HTTP) (*Events, error) {
-	state := newEventsState(ctx, st, http)
+	state := newEventsState(ctx, db, st, http)
 	eventLog := newEventsLog(ctx, db)
 	observer := newObserver(db)
 	warehouse := newWarehouses(state)

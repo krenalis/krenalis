@@ -9,28 +9,38 @@ package events
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"sync"
+	"unicode/utf8"
 
 	"chichi/apis/httpclient"
+	"chichi/apis/postgres"
 	"chichi/apis/state"
 	_warehouses "chichi/apis/warehouses"
 	"chichi/connector"
 )
 
+// maxSettingsLen is the maximum length of settings in runes.
+// Keep in sync with the apis.maxSettingsLen constant.
+const maxSettingsLen = 10_000
+
 // eventsState holds the state for the events.
 type eventsState struct {
 	sync.Mutex
 	ctx          context.Context
+	db           *postgres.DB
 	state        *state.State
 	http         *httpclient.HTTP
 	destinations map[int]connector.AppEventsConnection
 }
 
 // newEventsState returns a new eventsState based on the st state.
-func newEventsState(ctx context.Context, st *state.State, http *httpclient.HTTP) *eventsState {
+func newEventsState(ctx context.Context, db *postgres.DB, st *state.State, http *httpclient.HTTP) *eventsState {
 	eventSt := &eventsState{
 		ctx:          ctx,
+		db:           db,
 		state:        st,
 		http:         http,
 		destinations: map[int]connector.AppEventsConnection{},
@@ -236,8 +246,11 @@ func (st *eventsState) openDestination(c *state.Connection) error {
 
 	app := connector.RegisteredApp(c.Connector().Name)
 	connection, err := app.Open(st.ctx, &connector.AppConfig{
-		Role:       connector.Role(c.Role),
-		Settings:   c.Settings,
+		Role:     connector.Role(c.Role),
+		Settings: c.Settings,
+		SetSettings: func(settings []byte) error {
+			return setSettings(st.ctx, st.db, c.ID, settings)
+		},
 		Resource:   resource,
 		HTTPClient: st.http.ConnectionClient(c.ID),
 		Region:     connector.PrivacyRegion(c.Workspace().PrivacyRegion),
@@ -269,4 +282,27 @@ func isDestination(c *state.Connection) bool {
 	return c.Enabled && c.Role == state.DestinationRole &&
 		conn.Type == state.AppType && c.Workspace().Warehouse != nil &&
 		conn.Targets.Contains(state.EventsTarget)
+}
+
+// setSettings sets the given settings of the given connection.
+// It is a copy of the apis.setSettings function, so keep in sync.
+func setSettings(ctx context.Context, db *postgres.DB, connection int, settings []byte) error {
+	if !utf8.Valid(settings) {
+		return errors.New("settings is not valid UTF-8")
+	}
+	if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
+		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
+	}
+	n := state.SetConnectionSettingsNotification{
+		Connection: connection,
+		Settings:   settings,
+	}
+	err := db.Transaction(ctx, func(tx *postgres.Tx) error {
+		_, err := tx.Exec(ctx, "UPDATE connections SET settings = $1 WHERE id = $2", n.Settings, n.Connection)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
 }

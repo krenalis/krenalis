@@ -9,7 +9,7 @@
 | GroupSchema      | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | ReceiveWebhook   | ✓    | ✓ (connection) | ✓ (connection) | ✓ (connection,resource) | ✓ (connection,resource) | ✓ (connection,resource) |
 | Resource         | -    | -              | -              | -                       | ✓                       | ✓                       |
-| SendEvent        | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
+| SendEvent        | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | ServeUI          | ✓    | -/✓            | -/✓            | ✓                       | ✓                       | -/✓                     |
 | SetGroup         | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | UpdateUser       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |

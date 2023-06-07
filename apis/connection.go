@@ -38,9 +38,12 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+// maxSettingsLen is the maximum length of settings in runes.
+// Keep in sync with the events.maxSettingsLen constant.
+const maxSettingsLen = 10_000
+
 const (
-	maxSettingsLen   = 10_000 // maximum length of settings in runes.
-	maxKeysPerServer = 20     // maximum number of keys per server.
+	maxKeysPerServer = 20 // maximum number of keys per server.
 	maxInt32         = math.MaxInt32
 	rawSchemaMaxSize = 16_777_215 // maximum size in runes of the 'schema' column of the 'connections' table.
 	queryMaxSize     = 16_777_215 // maximum size in runes of a connection query.
@@ -1876,6 +1879,7 @@ func (this *Connection) writeConnectionUsers(ctx context.Context, id string, use
 }
 
 // setSettings sets the given settings of the given connection.
+// It is a copy of the apis.setSettings function, so keep in sync.
 func setSettings(ctx context.Context, db *postgres.DB, connection int, settings []byte) error {
 	if !utf8.Valid(settings) {
 		return errors.New("settings is not valid UTF-8")
