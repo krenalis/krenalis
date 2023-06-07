@@ -27,6 +27,9 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+// Make sure it implements the UI interface.
+var _ connector.UI = (*connection)(nil)
+
 func init() {
 	connector.RegisterStream(connector.Stream{
 		Name: "RabbitMQ",

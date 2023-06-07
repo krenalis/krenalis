@@ -25,6 +25,9 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+// Make sure it implements the UI interface.
+var _ connector.UI = (*connection)(nil)
+
 func init() {
 	connector.RegisterStorage(connector.Storage{
 		Name: "Filesystem",

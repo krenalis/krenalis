@@ -17,6 +17,9 @@ import (
 	"chichi/connector/ui"
 )
 
+// Make sure it implements the UI interface.
+var _ connector.UI = (*connection)(nil)
+
 func init() {
 	connector.RegisterStream(connector.Stream{
 		Name:              "UISample",

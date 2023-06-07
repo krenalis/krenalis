@@ -38,8 +38,11 @@ var icon = "<svg></svg>"
 // https://developers.google.com/analytics/devguides/collection/protocol/ga4/validating-events?client_type=firebase
 const sendToDebugServer = false
 
-// Make sure it implements the AppEventsConnection interface.
-var _ connector.AppEventsConnection = (*connection)(nil)
+// Make sure it implements the UI and the AppEventsConnection interfaces.
+var _ interface {
+	connector.UI
+	connector.AppEventsConnection
+} = (*connection)(nil)
 
 func init() {
 	connector.RegisterApp(connector.App{

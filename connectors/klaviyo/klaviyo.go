@@ -29,9 +29,10 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the AppEventsConnection and the AppUsersConnection
-// interfaces.
+// Make sure it implements the UI, the AppEventsConnection, and the
+// AppUsersConnection interfaces.
 var _ interface {
+	connector.UI
 	connector.AppEventsConnection
 	connector.AppUsersConnection
 } = (*connection)(nil)
