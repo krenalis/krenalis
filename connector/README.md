@@ -1,21 +1,21 @@
 
 ## App connections
 
-| Method         | Role | Settings       | SetSettings | Resource                | HTTPClient     | Region |
-|----------------|------|----------------|-------------|-------------------------|----------------|--------|
-| CreateUser     | ✓    | ✓              | ✓           | ✓                       | ✓              | ✓      |
-| EventTypes     | ✓    | ✓              | -           | ✓                       | ✓              | ✓      |
-| Groups         | ✓    | ✓              | ✓           | ✓                       | ✓              | ✓      |
-| GroupSchema    | ✓    | ✓              | -           | ✓                       | ✓              | ✓      |
-| ReceiveWebhook | -    | ✓ (connection) | -           | ✓ (connection,resource) | ✓ (connection) | -      |
-| Resource       | -    | -              | -           | -                       | ✓              | ✓      |
-| SendEvent      | ✓    | ✓              | -           | ✓                       | ✓              | ✓      |
-| ServeUI        | ✓    | -/✓            | -/✓         | ✓                       | ✓              | -/✓    |
-| SettingsUI     | ✓    | -              | -           | ✓                       | ✓              | -      |
-| SetGroup       | ✓    | ✓              | ✓           | ✓                       | ✓              | ✓      |
-| UpdateUser     | ✓    | ✓              | ✓           | ✓                       | ✓              | ✓      |
-| Users          | ✓    | ✓              | ✓           | ✓                       | ✓              | ✓      |
-| UserSchema     | ✓    | ✓              | -           | ✓                       | ✓              | ✓      |
+| Method         | Role | Settings       | SetSettings    | Resource                | HTTPClient              | Region                  |
+|----------------|------|----------------|----------------|-------------------------|-------------------------|-------------------------|
+| CreateUser     | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| EventTypes     | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
+| Groups         | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| GroupSchema    | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
+| ReceiveWebhook | ✓    | ✓ (connection) | ✓ (connection) | ✓ (connection,resource) | ✓ (connection,resource) | ✓ (connection,resource) |
+| Resource       | -    | -              | -              | -                       | ✓                       | ✓                       |
+| SendEvent      | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
+| ServeUI        | ✓    | -/✓            | -/✓            | ✓                       | ✓                       | -/✓                     |
+| SettingsUI     | ✓    | -              | -              | ✓                       | ✓                       | -                       |
+| SetGroup       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| UpdateUser     | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| Users          | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| UserSchema     | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
 
 
 ## Database connections

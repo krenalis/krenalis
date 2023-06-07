@@ -124,7 +124,9 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		return errBadRequest
 	}
 	var connector *state.Connector
-	var conf _connector.AppConfig
+	conf := _connector.AppConfig{
+		Role: _connector.SourceRole,
+	}
 	ctx := context.Background()
 	switch m[1] {
 	case "c":
@@ -142,12 +144,13 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		if id < 1 || id > maxInt32 {
 			return errBadRequest
 		}
+		var resource *state.Resource
 	Resource:
 		for _, a := range apis.state.Accounts() {
 			for _, ws := range a.Workspaces() {
 				if r, ok := ws.Resource(id); ok {
 					connector = r.Connector()
-					conf.Resource = r.Code
+					resource = r
 					break Resource
 				}
 			}
@@ -155,6 +158,11 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		if connector == nil || connector.WebhooksPer != state.WebhooksPerResource {
 			return errNotFound
 		}
+		conf.Resource = resource.Code
+		if connector.OAuth != nil {
+			conf.HTTPClient = apis.http.Client(connector.OAuth.ClientSecret, resource.AccessToken)
+		}
+		conf.Region = _connector.PrivacyRegion(resource.Workspace().PrivacyRegion)
 	case "s":
 		id, _ := strconv.Atoi(m[2])
 		if id < 1 || id > maxInt32 {
@@ -182,8 +190,12 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 			return errNotFound
 		}
 		conf.Settings = connection.Settings
+		conf.SetSettings = func(settings []byte) error {
+			return setSettings(ctx, apis.db, id, settings)
+		}
 		conf.Resource = resource.Code
 		conf.HTTPClient = apis.http.ConnectionClient(connection.ID)
+		conf.Region = _connector.PrivacyRegion(connection.Workspace().PrivacyRegion)
 	}
 	connection, err := _connector.RegisteredApp(connector.Name).Open(ctx, &conf)
 	if err != nil {
