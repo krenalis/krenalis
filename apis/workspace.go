@@ -209,6 +209,7 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 				Role:       _connector.Role(role),
 				Resource:   n.Resource.Code,
 				HTTPClient: this.http.Client(clientSecret, accessToken),
+				Region:     _connector.PrivacyRegion(this.workspace.PrivacyRegion),
 			})
 		case state.DatabaseType:
 			connection, err = _connector.RegisteredDatabase(c.Name).Open(ctx, &_connector.DatabaseConfig{

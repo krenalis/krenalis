@@ -15,7 +15,7 @@
 | UpdateUser       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | Users            | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | UserSchema       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| ValidateSettings | ✓    | -              | -              | ✓                       | ✓                       | -                       |
+| ValidateSettings | ✓    | -              | -              | ✓                       | ✓                       | ✓                       |
 
 
 ## Database connections
