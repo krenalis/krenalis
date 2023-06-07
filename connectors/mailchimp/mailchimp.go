@@ -192,45 +192,6 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 	return form, nil, nil
 }
 
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
-	var s struct {
-		List string
-	}
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	if s.List == "" || len(s.List) > 100 {
-		return nil, ui.Errorf("list length must be in range [1, 100]")
-	}
-	// Check if the list exists.
-	lists, err := c.lists()
-	if err != nil {
-		return nil, err
-	}
-	var found bool
-	for _, list := range lists {
-		if list.ID == s.List {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return nil, ui.Errorf("list does not exist")
-	}
-	dataCenter, _, err := c.metadata()
-	if err != nil {
-		return nil, err
-	}
-	settings := settings{
-		List:       s.List,
-		DataCenter: dataCenter,
-	}
-	return json.Marshal(&settings)
-}
-
 // UpdateUser updates the user with identifier id setting the given properties.
 func (c *connection) UpdateUser(id string, properties connector.Properties) error {
 
@@ -561,6 +522,45 @@ func (c *connection) Users(properties []types.Path, cursor connector.Cursor) ([]
 	}
 
 	return objects, strconv.Itoa(offset), nil
+}
+
+// ValidateSettings validates the settings received from the UI and returns them
+// in a format suitable for storage.
+func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
+	var s struct {
+		List string
+	}
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	if s.List == "" || len(s.List) > 100 {
+		return nil, ui.Errorf("list length must be in range [1, 100]")
+	}
+	// Check if the list exists.
+	lists, err := c.lists()
+	if err != nil {
+		return nil, err
+	}
+	var found bool
+	for _, list := range lists {
+		if list.ID == s.List {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, ui.Errorf("list does not exist")
+	}
+	dataCenter, _, err := c.metadata()
+	if err != nil {
+		return nil, err
+	}
+	settings := settings{
+		List:       s.List,
+		DataCenter: dataCenter,
+	}
+	return json.Marshal(&settings)
 }
 
 type batchOperation struct {

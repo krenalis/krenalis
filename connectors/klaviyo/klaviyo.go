@@ -185,29 +185,6 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 	return form, nil, nil
 }
 
-// ValidateSettings validates the settings received from the UI and returns them
-// in a format suitable for storage.
-func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
-	var s settings
-	err := json.Unmarshal(values, &s)
-	if err != nil {
-		return nil, err
-	}
-	if n := len(s.PrivateAPIKey); n < 37 {
-		return nil, ui.Errorf("private API key must be at least 37 characters long")
-	}
-	if !strings.HasPrefix(s.PrivateAPIKey, "pk_") {
-		return nil, ui.Errorf("private API key must begin with 'pk_'")
-	}
-	for i := 3; i < len(s.PrivateAPIKey); i++ {
-		c := s.PrivateAPIKey[i]
-		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return nil, ui.Errorf("private API key after 'pk_' must contain only alphanumeric characters")
-		}
-	}
-	return json.Marshal(&s)
-}
-
 // UserSchema returns the user schema.
 func (c *connection) UserSchema() (types.Type, error) {
 	// The fields which are not marked as "required" in the documentation
@@ -423,6 +400,29 @@ func (c *connection) Users(properties []types.Path, cursor connector.Cursor) ([]
 	}
 
 	return objects, response.Links.Next, nil
+}
+
+// ValidateSettings validates the settings received from the UI and returns them
+// in a format suitable for storage.
+func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
+	var s settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	if n := len(s.PrivateAPIKey); n < 37 {
+		return nil, ui.Errorf("private API key must be at least 37 characters long")
+	}
+	if !strings.HasPrefix(s.PrivateAPIKey, "pk_") {
+		return nil, ui.Errorf("private API key must begin with 'pk_'")
+	}
+	for i := 3; i < len(s.PrivateAPIKey); i++ {
+		c := s.PrivateAPIKey[i]
+		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
+			return nil, ui.Errorf("private API key after 'pk_' must contain only alphanumeric characters")
+		}
+	}
+	return json.Marshal(&s)
 }
 
 type klaviyoError struct {
