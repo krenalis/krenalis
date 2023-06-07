@@ -5,6 +5,8 @@
 // Copyright (c) 2022 Open2b
 //
 
+// Package mailchimp implements the Mailchimp connector.
+// (https://mailchimp.com/developer/)
 package mailchimp
 
 import (

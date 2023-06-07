@@ -5,10 +5,9 @@
 // Copyright (c) 2022 Open2b
 //
 
-package excel
-
-// This package is the Excel connector.
+// Package excel implements the Excel connector.
 // (http://www.office.microsoft.com/excel)
+package excel
 
 import (
 	"context"

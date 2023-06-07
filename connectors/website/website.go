@@ -5,6 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
+// Package website implements the Website connector.
 package website
 
 // This package is the Website connector.

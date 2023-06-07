@@ -5,10 +5,9 @@
 // Copyright (c) 2022 Open2b
 //
 
-package postgresql
-
-// This package is the PostgreSQL connector.
+// Package postgresql implements the PostgreSQL connector.
 // (https://www.postgresql.org/docs/15/)
+package postgresql
 
 import (
 	"context"

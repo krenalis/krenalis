@@ -5,10 +5,9 @@
 // Copyright (c) 2022 Open2b
 //
 
-package csv
-
-// This package is the CSV connector.
+// Package csv implements the CSV connector.
 // (https://www.ietf.org/rfc/rfc4180.txt)
+package csv
 
 import (
 	"context"

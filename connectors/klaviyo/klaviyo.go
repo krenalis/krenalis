@@ -5,6 +5,8 @@
 // Copyright (c) 2023 Open2b
 //
 
+// Package klaviyo implements the Klaviyo connector.
+// (https://developers.klaviyo.com/)
 package klaviyo
 
 import (

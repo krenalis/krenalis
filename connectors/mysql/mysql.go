@@ -5,10 +5,9 @@
 // Copyright (c) 2022 Open2b
 //
 
-package mysql
-
-// This package is the MySQL connector.
+// Package mysql implements the MySQL connector.
 // (https://dev.mysql.com/doc/refman/8.0/en/)
+package mysql
 
 import (
 	"context"

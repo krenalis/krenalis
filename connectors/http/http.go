@@ -5,10 +5,9 @@
 // Copyright (c) 2022 Open2b
 //
 
-package http
-
-// This package is the HTTP connector.
+// Package http implements the HTTP connector.
 // (https://datatracker.ietf.org/doc/html/rfc7540)
+package http
 
 import (
 	"context"

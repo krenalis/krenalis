@@ -5,6 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
+// Package dummy implements the Dummy connector.
 package dummy
 
 import (

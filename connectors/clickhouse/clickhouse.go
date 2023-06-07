@@ -5,10 +5,9 @@
 // Copyright (c) 2023 Open2b
 //
 
-package clickhouse
-
-// This package is the ClickHouse connector.
+// Package clickhouse implements the ClickHouse connector.
 // (https://clickhouse.com/docs/)
+package clickhouse
 
 import (
 	"context"

@@ -5,6 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
+// Package filesystem implements the Filesystem connector.
 package filesystem
 
 import (

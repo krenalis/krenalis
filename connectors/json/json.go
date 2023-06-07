@@ -5,10 +5,9 @@
 // Copyright (c) 2023 Open2b
 //
 
-package json
-
-// This package is the JSON connector.
+// Package json implements the JSON connector.
 // (https://datatracker.ietf.org/doc/html/rfc8259)
+package json
 
 import (
 	"context"

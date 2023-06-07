@@ -5,10 +5,9 @@
 // Copyright (c) 2022 Open2b
 //
 
-package sftp
-
-// This package is the SFTP connector.
+// Package sftp implements the SFTP connector.
 // (https://datatracker.ietf.org/doc/html/draft-ietf-secsh-filexfer-02)
+package sftp
 
 import (
 	"context"

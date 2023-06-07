@@ -5,9 +5,8 @@
 // Copyright (c) 2022 Open2b
 //
 
+// Package server implements the Server connector.
 package server
-
-// This package is the Server connector.
 
 import (
 	"context"

@@ -5,6 +5,8 @@
 // Copyright (c) 2023 Open2b
 //
 
+// Package googleanalytics4 implements the Google Analytics 4 connector.
+// (https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference)
 package googleanalytics4
 
 import (
@@ -202,7 +204,6 @@ func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
 }
 
 func (c *connection) collect(anonymousID, userID, eventName string, eventParams map[string]any) error {
-	// See https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference.
 
 	// Build the URL.
 	url := &_url.URL{

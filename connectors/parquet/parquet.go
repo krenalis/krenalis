@@ -5,10 +5,9 @@
 // Copyright (c) 2022 Open2b
 //
 
-package parquet
-
-// This package is the Parquet connector.
+// Package parquet implements the Parquet connector.
 // (https://github.com/apache/parquet-format)
+package parquet
 
 import (
 	"context"

@@ -5,10 +5,9 @@
 // Copyright (c) 2022 Open2b
 //
 
-package rabbitmq
-
-// This package is the RabbitMQ connector.
+// Package rabbitmq implements the RabbitMQ connector.
 // (https://www.rabbitmq.com/documentation.html)
+package rabbitmq
 
 import (
 	"context"

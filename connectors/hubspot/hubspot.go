@@ -5,10 +5,9 @@
 // Copyright (c) 2022 Open2b
 //
 
-package hubspot
-
-// This package is the HubSpot connector.
+// Package hubspot implements the HubSpot connector.
 // (https://developers.hubspot.com/docs/api/crm/understanding-the-crm)
+package hubspot
 
 import (
 	"bytes"

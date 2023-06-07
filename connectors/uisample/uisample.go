@@ -5,6 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
+// Package uisample implements the UISample connector.
 package uisample
 
 import (

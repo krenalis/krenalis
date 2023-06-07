@@ -5,10 +5,9 @@
 // Copyright (c) 2022 Open2b
 //
 
+// Package s3 implements the S3 connector.
+// (https://docs.aws.amazon.com/AmazonS3/latest/API/)
 package s3
-
-// This package is the S3 connector.
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/Welcome.html)
 
 import (
 	"context"
