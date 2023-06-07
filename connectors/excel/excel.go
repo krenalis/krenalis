@@ -37,13 +37,12 @@ func init() {
 }
 
 type connection struct {
-	ctx         context.Context
-	setSettings connector.SetSettingsFunc
+	ctx context.Context
 }
 
 // open opens an Excel connection and returns it.
 func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) {
-	return &connection{ctx: ctx, setSettings: conf.SetSettings}, nil
+	return &connection{ctx: ctx}, nil
 }
 
 // ContentType returns the content type of the file.
