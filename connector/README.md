@@ -42,7 +42,7 @@
 
 | Method           | Role | Settings | SetSettings |
 |------------------|------|----------|-------------|
-| Open             | ✓    | ✓        | -/✓         |
+| Open             | ✓    | ✓        | ✓           |
 | ServeUI          | ✓    | -/✓      | -/✓         |
 | ValidateSettings | ✓    | -        | -           |
 | Write            | ✓    | ✓        | ✓           |

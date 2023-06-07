@@ -1274,6 +1274,9 @@ func (this *Connection) Sheets(path string) ([]string, error) {
 	storage, err := _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
 		Role:     _connector.Role(s.Role),
 		Settings: s.Settings,
+		SetSettings: func(settings []byte) error {
+			return setSettings(ctx, this.db, s.ID, settings)
+		},
 	})
 	if err != nil {
 		return nil, err
