@@ -38,29 +38,6 @@ const loadOnly10Users = true
 //go:embed users.json
 var jsonUsers []byte
 
-func init() {
-	var rawUsers []struct {
-		ID         string
-		Properties map[string]any
-	}
-	err := json.Unmarshal(jsonUsers, &rawUsers)
-	if err != nil {
-		panic(err)
-	}
-	if loadOnly10Users {
-		rawUsers = rawUsers[:10]
-	}
-	usersLock.Lock()
-	users = make(map[string]connector.Properties, len(rawUsers))
-	usersTimestamps = make(map[string]time.Time, len(rawUsers))
-	for _, u := range rawUsers {
-		u.Properties["dummy_id"] = u.ID
-		users[u.ID] = u.Properties
-		usersTimestamps[u.ID] = time.Now().UTC()
-	}
-	usersLock.Unlock()
-}
-
 // Make sure it implements the AppEventsConnection and the AppUsersConnection
 // interfaces.
 var _ interface {
@@ -212,4 +189,27 @@ func (c *connection) Users(properties []types.Path, cursor connector.Cursor) ([]
 		})
 	}
 	return objects, "", io.EOF
+}
+
+func init() {
+	var rawUsers []struct {
+		ID         string
+		Properties map[string]any
+	}
+	err := json.Unmarshal(jsonUsers, &rawUsers)
+	if err != nil {
+		panic(err)
+	}
+	if loadOnly10Users {
+		rawUsers = rawUsers[:10]
+	}
+	usersLock.Lock()
+	users = make(map[string]connector.Properties, len(rawUsers))
+	usersTimestamps = make(map[string]time.Time, len(rawUsers))
+	for _, u := range rawUsers {
+		u.Properties["dummy_id"] = u.ID
+		users[u.ID] = u.Properties
+		usersTimestamps[u.ID] = time.Now().UTC()
+	}
+	usersLock.Unlock()
 }
