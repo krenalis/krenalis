@@ -16,7 +16,7 @@ const Schema = () => {
 
 	let { setCurrentTitle } = useContext(NavigationContext);
 
-	setCurrentTitle('Golden Record schema');
+	setCurrentTitle('Schema');
 
 	useEffect(() => {
 		const fetchSchema = async () => {

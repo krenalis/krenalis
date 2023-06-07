@@ -16,7 +16,7 @@ import {
 
 const UsersList = () => {
 	let { setCurrentTitle } = useContext(NavigationContext);
-	setCurrentTitle('Golden Record users');
+	setCurrentTitle('Users');
 
 	let { usersRows, usersCount, limit, properties, pagination, columnDefs, isLoading, fetchUsers } =
 		useContext(UsersContext);
