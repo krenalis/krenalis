@@ -56,13 +56,6 @@ func init() {
 	}, open)
 }
 
-type connection struct {
-	ctx         context.Context
-	setSettings connector.SetSettingsFunc
-	httpClient  connector.HTTPClient
-	buf         bytes.Buffer
-}
-
 // open opens a HubSpot connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{
@@ -71,6 +64,13 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 		httpClient:  conf.HTTPClient,
 	}
 	return &c, nil
+}
+
+type connection struct {
+	ctx         context.Context
+	setSettings connector.SetSettingsFunc
+	httpClient  connector.HTTPClient
+	buf         bytes.Buffer
 }
 
 // CreateUser creates a user with the given properties.

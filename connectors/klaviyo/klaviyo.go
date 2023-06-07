@@ -46,16 +46,6 @@ func init() {
 	}, open)
 }
 
-type connection struct {
-	ctx      context.Context
-	conf     *connector.AppConfig
-	settings *settings
-}
-
-type settings struct {
-	PrivateAPIKey string
-}
-
 // open opens a Klaviyo connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{ctx: ctx, conf: conf}
@@ -66,6 +56,16 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 		}
 	}
 	return &c, nil
+}
+
+type connection struct {
+	ctx      context.Context
+	conf     *connector.AppConfig
+	settings *settings
+}
+
+type settings struct {
+	PrivateAPIKey string
 }
 
 // CreateUser creates a user with the given properties.

@@ -34,6 +34,18 @@ func init() {
 	}, open)
 }
 
+// open opens a JSON connection and returns it.
+func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) {
+	c := connection{ctx: ctx, role: conf.Role, setSettings: conf.SetSettings}
+	if len(conf.Settings) > 0 {
+		err := json.Unmarshal(conf.Settings, &c.settings)
+		if err != nil {
+			return nil, errors.New("cannot unmarshal settings of JSON connection")
+		}
+	}
+	return &c, nil
+}
+
 type connection struct {
 	ctx         context.Context
 	role        connector.Role
@@ -45,18 +57,6 @@ type settings struct {
 	Indent             bool
 	GenerateASCII      bool
 	AllowSpecialFloats bool
-}
-
-// open opens a JSON connection and returns it.
-func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) {
-	c := connection{ctx: ctx, role: conf.Role, setSettings: conf.SetSettings}
-	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of JSON connection")
-		}
-	}
-	return &c, nil
 }
 
 // ContentType returns the content type of the file.

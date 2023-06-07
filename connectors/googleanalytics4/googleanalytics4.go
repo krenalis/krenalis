@@ -49,17 +49,6 @@ func init() {
 	}, open)
 }
 
-type connection struct {
-	ctx      context.Context
-	conf     *connector.AppConfig
-	settings *settings
-}
-
-type settings struct {
-	MeasurementID string
-	APISecret     string
-}
-
 // open opens a Google Analytics 4 connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{ctx: ctx, conf: conf}
@@ -70,6 +59,17 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 		}
 	}
 	return &c, nil
+}
+
+type connection struct {
+	ctx      context.Context
+	conf     *connector.AppConfig
+	settings *settings
+}
+
+type settings struct {
+	MeasurementID string
+	APISecret     string
 }
 
 // EventTypes returns the connection's event types.

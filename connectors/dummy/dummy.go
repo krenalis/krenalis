@@ -78,14 +78,14 @@ func init() {
 	}, open)
 }
 
-type connection struct {
-	conf *connector.AppConfig
-}
-
 // open opens a Dummy connection.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{conf: conf}
 	return &c, nil
+}
+
+type connection struct {
+	conf *connector.AppConfig
 }
 
 // CreateUser creates a user with the given properties.

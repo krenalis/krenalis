@@ -53,12 +53,6 @@ func init() {
 	}, open)
 }
 
-type connection struct {
-	ctx      context.Context
-	conf     *connector.AppConfig
-	settings *settings
-}
-
 // open opens a Mailchimp connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 	c := connection{ctx: ctx, conf: conf}
@@ -74,6 +68,12 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 		//}
 	}
 	return &c, nil
+}
+
+type connection struct {
+	ctx      context.Context
+	conf     *connector.AppConfig
+	settings *settings
 }
 
 // CreateUser creates a user with the given properties.

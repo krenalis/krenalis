@@ -28,9 +28,9 @@ func init() {
 	}, open)
 }
 
-type connection struct{}
-
 // open opens a Website connection and returns it.
 func open(context.Context, *connector.WebsiteConfig) (*connection, error) {
 	return &connection{}, nil
 }
+
+type connection struct{}

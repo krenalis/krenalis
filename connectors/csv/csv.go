@@ -40,6 +40,18 @@ func init() {
 	}, open)
 }
 
+// open opens a CSV connection and returns it.
+func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) {
+	c := connection{ctx: ctx, conf: conf}
+	if len(conf.Settings) > 0 {
+		err := json.Unmarshal(conf.Settings, &c.settings)
+		if err != nil {
+			return nil, errors.New("cannot unmarshal settings of CSV connection")
+		}
+	}
+	return &c, nil
+}
+
 type connection struct {
 	ctx      context.Context
 	conf     *connector.FileConfig
@@ -53,18 +65,6 @@ type settings struct {
 	LazyQuotes       bool
 	TrimLeadingSpace bool
 	UseCRLF          bool
-}
-
-// open opens a CSV connection and returns it.
-func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) {
-	c := connection{ctx: ctx, conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of CSV connection")
-		}
-	}
-	return &c, nil
 }
 
 // ContentType returns the content type of the file.

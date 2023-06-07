@@ -37,6 +37,18 @@ func init() {
 	}, open)
 }
 
+// open opens a SFTP connection and returns it.
+func open(ctx context.Context, conf *connector.StorageConfig) (*connection, error) {
+	c := connection{ctx: ctx, conf: conf}
+	if len(conf.Settings) > 0 {
+		err := json.Unmarshal(conf.Settings, &c.settings)
+		if err != nil {
+			return nil, errors.New("cannot unmarshal settings of SFTP connection")
+		}
+	}
+	return &c, nil
+}
+
 type connection struct {
 	ctx      context.Context
 	conf     *connector.StorageConfig
@@ -48,18 +60,6 @@ type settings struct {
 	Port     int
 	Username string
 	Password string
-}
-
-// open opens a SFTP connection and returns it.
-func open(ctx context.Context, conf *connector.StorageConfig) (*connection, error) {
-	c := connection{ctx: ctx, conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of SFTP connection")
-		}
-	}
-	return &c, nil
 }
 
 // Open opens the file at the given path and returns a ReadCloser from which to

@@ -26,9 +26,9 @@ func init() {
 	}, open)
 }
 
-type connection struct{}
-
 // open opens a Server connection and returns it.
 func open(context.Context, *connector.ServerConfig) (*connection, error) {
 	return &connection{}, nil
 }
+
+type connection struct{}

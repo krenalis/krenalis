@@ -38,6 +38,18 @@ func init() {
 	}, open)
 }
 
+// open opens a S3 connection and returns it.
+func open(ctx context.Context, conf *connector.StorageConfig) (*connection, error) {
+	c := connection{ctx: ctx, conf: conf}
+	if len(conf.Settings) > 0 {
+		err := json.Unmarshal(conf.Settings, &c.settings)
+		if err != nil {
+			return nil, errors.New("cannot unmarshal settings of S3 connection")
+		}
+	}
+	return &c, nil
+}
+
 type connection struct {
 	ctx      context.Context
 	conf     *connector.StorageConfig
@@ -49,18 +61,6 @@ type settings struct {
 	SecretAccessKey string
 	Region          string
 	Bucket          string
-}
-
-// open opens a S3 connection and returns it.
-func open(ctx context.Context, conf *connector.StorageConfig) (*connection, error) {
-	c := connection{ctx: ctx, conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of S3 connection")
-		}
-	}
-	return &c, nil
 }
 
 // Open opens the file at the given path and returns a ReadCloser from which to

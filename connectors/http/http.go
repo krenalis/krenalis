@@ -37,18 +37,6 @@ func init() {
 	}, open)
 }
 
-type connection struct {
-	ctx      context.Context
-	conf     *connector.StorageConfig
-	settings *settings
-}
-
-type settings struct {
-	Host    string
-	Port    int
-	Headers map[string]string
-}
-
 // open opens an HTTP connection and returns it.
 func open(ctx context.Context, conf *connector.StorageConfig) (*connection, error) {
 	c := connection{ctx: ctx, conf: conf}
@@ -59,6 +47,18 @@ func open(ctx context.Context, conf *connector.StorageConfig) (*connection, erro
 		}
 	}
 	return &c, nil
+}
+
+type connection struct {
+	ctx      context.Context
+	conf     *connector.StorageConfig
+	settings *settings
+}
+
+type settings struct {
+	Host    string
+	Port    int
+	Headers map[string]string
 }
 
 // Open opens the file at the given path and returns a ReadCloser from which to
