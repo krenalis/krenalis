@@ -99,7 +99,7 @@ func (c *Chichi) call(httpMethod, method string, body any) (any, error) {
 	// TODO(Gianluca): add a brief timeout to mitigate the possibility that the
 	// state of Chichi has still not been updated after receiving this call. For
 	// more details see the issue https://github.com/open2b/chichi/issues/193.
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(30 * time.Millisecond)
 
 	return out, nil
 }
