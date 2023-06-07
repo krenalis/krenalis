@@ -1257,8 +1257,9 @@ func (this *Connection) Sheets(path string) ([]string, error) {
 	}
 	ctx := context.Background()
 	f, err := _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
-		Role:     _connector.Role(c.Role),
-		Settings: c.Settings,
+		Role:        _connector.Role(c.Role),
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
 	})
 	if err != nil {
 		return nil, err
