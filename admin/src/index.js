@@ -7,6 +7,7 @@ import ConnectionsWrapper from './components/ConnectionsWrapper/ConnectionsWrapp
 import ConnectorsList from './components/ConnectorsList/ConnectorsList';
 import ConnectorSettings from './components/ConnectorSettings/ConnectorSettings';
 import ConnectionsMap from './components/ConnectionsMap/ConnectionsMap';
+import ConnectionsList from './components/ConnectionsList/ConnectionsList';
 import Connection from './components/Connection/Connection';
 import UsersWrapper from './components/UsersWrapper/UsersWrapper';
 import UsersList from './components/UsersList/UsersList';
@@ -31,6 +32,8 @@ root.render(
 					<Route element={<ConnectionsWrapper />}>
 						<Route path='connectors/:id' element={<ConnectorSettings />} />
 						<Route path='connectors' element={<ConnectorsList />} />
+						<Route path='connections/sources' element={<ConnectionsList />}></Route>
+						<Route path='connections/destinations' element={<ConnectionsList />}></Route>
 						<Route path='connections/:id' element={<Connection />}>
 							<Route path='actions' element={<ConnectionActions />} />
 							<Route path='overview' element={<ConnectionOverview />} />

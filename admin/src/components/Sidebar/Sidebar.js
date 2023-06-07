@@ -4,6 +4,31 @@ import Flex from '../Flex/Flex';
 import { NavLink, Navigate } from 'react-router-dom';
 import { SlIcon, SlSelect, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
 
+let sidebarItems = [
+	{
+		name: 'connections',
+		label: 'Connections',
+		link: '/admin/connections',
+		icon: 'plug',
+		subItems: [
+			{
+				name: 'connections/sources',
+				label: 'Sources',
+				link: '/admin/connections/sources',
+				icon: 'file-arrow-down',
+			},
+			{
+				name: 'connections/destinations',
+				label: 'Destinations',
+				link: '/admin/connections/destinations',
+				icon: 'file-arrow-up',
+			},
+		],
+	},
+	{ name: 'schema', label: 'Schema', link: '/admin/schema', icon: 'database' },
+	{ name: 'users', label: 'Users', link: '/admin/users', icon: 'people' },
+];
+
 const Sidebar = ({ route }) => {
 	let [isLoggedOut, setIsLoggedOut] = useState(false);
 
@@ -12,14 +37,48 @@ const Sidebar = ({ route }) => {
 		setIsLoggedOut(true);
 	};
 
-	let topItems = [
-		{ name: 'connections', label: 'Connections', link: '/admin/connections', icon: 'plug' },
-		{ name: 'schema', label: 'Schema', link: '/admin/schema', icon: 'database' },
-		{ name: 'users', label: 'Users', link: '/admin/users', icon: 'people' },
-	];
-
 	if (isLoggedOut) {
 		return <Navigate to='/admin' />;
+	}
+
+	let items = [];
+	for (let item of sidebarItems) {
+		let isSelected = item.name === route;
+		let hasSubItems = item.subItems != null;
+
+		let isChildrenSelected = false;
+		if (!isSelected && hasSubItems) {
+			for (let subItem of item.subItems) {
+				if (subItem.name === route) {
+					isChildrenSelected = true;
+					break;
+				}
+			}
+		}
+
+		items.push(
+			<div
+				key={item.name}
+				className={`item${isSelected ? ' selected' : isChildrenSelected ? ' isChildrenSelected' : ''}`}
+			>
+				<SlIcon name={item.icon} />
+				<div className='text'>{item.label}</div>
+				<NavLink to={item.link}></NavLink>
+			</div>
+		);
+
+		if (hasSubItems && (isSelected || isChildrenSelected)) {
+			for (let subItem of item.subItems) {
+				let isSelected = subItem.name === route;
+				items.push(
+					<div key={subItem.name} className={`subItem${isSelected ? ' selected' : ''}`}>
+						<SlIcon name={subItem.icon} />
+						<div className='text'>{subItem.label}</div>
+						<NavLink to={subItem.link}></NavLink>
+					</div>
+				);
+			}
+		}
 	}
 
 	return (
@@ -40,15 +99,7 @@ const Sidebar = ({ route }) => {
 						</div>
 					</Flex>
 					<div className='logo'></div>
-					{topItems.map((i) => {
-						return (
-							<div className={`item${i.name === route ? ' selected' : ''}`}>
-								<SlIcon name={i.icon} />
-								<div className='text'>{i.label}</div>
-								<NavLink to={i.link}></NavLink>
-							</div>
-						);
-					})}
+					{items}
 				</div>
 				<div className='Bottom'>
 					<div className='item' onClick={onLogout}>

@@ -462,18 +462,20 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 		return nil, errors.NotFound("connection %d does not exist", id)
 	}
 	conn := c.Connector()
+
 	connection := Connection{
-		db:          this.db,
-		connection:  c,
-		http:        this.http,
-		ID:          c.ID,
-		Name:        c.Name,
-		Type:        ConnectorType(conn.Type),
-		Role:        ConnectionRole(c.Role),
-		Connector:   conn.ID,
-		HasSettings: conn.HasSettings,
-		Enabled:     c.Enabled,
-		Health:      Health(c.Health),
+		db:           this.db,
+		connection:   c,
+		http:         this.http,
+		ID:           c.ID,
+		Name:         c.Name,
+		Type:         ConnectorType(conn.Type),
+		Role:         ConnectionRole(c.Role),
+		Connector:    conn.ID,
+		HasSettings:  conn.HasSettings,
+		Enabled:      c.Enabled,
+		ActionsCount: len(c.Actions()),
+		Health:       Health(c.Health),
 	}
 	if s, ok := c.Storage(); ok {
 		connection.Storage = s.ID
@@ -488,17 +490,18 @@ func (this *Workspace) Connections() []*Connection {
 	for i, c := range connections {
 		conn := c.Connector()
 		connection := Connection{
-			db:          this.db,
-			connection:  c,
-			http:        this.http,
-			ID:          c.ID,
-			Name:        c.Name,
-			Type:        ConnectorType(conn.Type),
-			Role:        ConnectionRole(c.Role),
-			Connector:   conn.ID,
-			HasSettings: conn.HasSettings,
-			Enabled:     c.Enabled,
-			Health:      Health(c.Health),
+			db:           this.db,
+			connection:   c,
+			http:         this.http,
+			ID:           c.ID,
+			Name:         c.Name,
+			Type:         ConnectorType(conn.Type),
+			Role:         ConnectionRole(c.Role),
+			Connector:    conn.ID,
+			HasSettings:  conn.HasSettings,
+			Enabled:      c.Enabled,
+			ActionsCount: len(c.Actions()),
+			Health:       Health(c.Health),
 		}
 		if s, ok := c.Storage(); ok {
 			connection.Storage = s.ID

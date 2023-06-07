@@ -68,18 +68,19 @@ var (
 
 // Connection represents a connection.
 type Connection struct {
-	db          *postgres.DB
-	connection  *state.Connection
-	http        *httpclient.HTTP
-	ID          int
-	Name        string
-	Type        ConnectorType
-	Role        ConnectionRole
-	Connector   int
-	Storage     int // zero if the connection is not a file or does not have a storage.
-	HasSettings bool
-	Enabled     bool
-	Health      Health
+	db           *postgres.DB
+	connection   *state.Connection
+	http         *httpclient.HTTP
+	ID           int
+	Name         string
+	Type         ConnectorType
+	Role         ConnectionRole
+	Connector    int
+	Storage      int // zero if the connection is not a file or does not have a storage.
+	HasSettings  bool
+	Enabled      bool
+	ActionsCount int
+	Health       Health
 }
 
 // Action returns the action with identifier id of the connection.
