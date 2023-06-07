@@ -77,45 +77,27 @@ type Mapping struct {
 // the given mapping or transformation.
 func New(inSchema, outSchema types.Type, mapp map[string]string, transf *state.Transformation) (*Mapping, error) {
 	if mapp != nil {
-		var err error
 		properties := make([]propertyMapping, 0, len(mapp))
 		for out, in := range mapp {
 			var pm propertyMapping
 			pm.in.path = strings.Split(in, ".")
 			pm.out.path = strings.Split(out, ".")
-			pm.in.typ, _, err = propertyByPath(pm.in.path, inSchema)
-			if err != nil {
-				return nil, err
+			prop, ok := inSchema.PropertyByPath(pm.in.path)
+			if !ok {
+				return nil, fmt.Errorf("property %s does not exist", in)
 			}
-			pm.out.typ, pm.out.nullable, err = propertyByPath(pm.out.path, outSchema)
-			if err != nil {
-				return nil, err
+			pm.in.typ = prop.Type
+			prop, ok = outSchema.PropertyByPath(pm.out.path)
+			if !ok {
+				return nil, fmt.Errorf("property %s does not exist", out)
 			}
+			pm.out.typ = prop.Type
+			pm.out.nullable = prop.Nullable
 			properties = append(properties, pm)
 		}
 		return &Mapping{properties: properties}, nil
 	}
 	return &Mapping{transformation: transf}, nil
-}
-
-// propertyByPath returns the property at the given path of the Object t.
-// If the property does not exist, it returns an error.
-func propertyByPath(path []string, t types.Type) (types.Type, bool, error) {
-	last := len(path) - 1
-	for i, name := range path {
-		p, ok := t.Property(name)
-		if !ok {
-			return types.Type{}, false, fmt.Errorf("property %s does not exist", strings.Join(path[:i+1], "."))
-		}
-		if i == last {
-			return p.Type, p.Nullable, nil
-		}
-		if t.PhysicalType() != types.PtObject {
-			return types.Type{}, false, fmt.Errorf("property %s is not an object", strings.Join(path[:i+1], "."))
-		}
-		t = p.Type
-	}
-	panic("unreachable")
 }
 
 // Apply applies the mapping to values and returns the mapped values or an error
