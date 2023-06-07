@@ -38,9 +38,9 @@ func init() {
 }
 
 type connection struct {
-	ctx         context.Context
-	settings    *settings
-	setSettings connector.SetSettingsFunc
+	ctx      context.Context
+	conf     *connector.StorageConfig
+	settings *settings
 }
 
 type settings struct {
@@ -52,7 +52,7 @@ type settings struct {
 
 // open opens a SFTP connection and returns it.
 func open(ctx context.Context, conf *connector.StorageConfig) (*connection, error) {
-	c := connection{ctx: ctx, setSettings: conf.SetSettings}
+	c := connection{ctx: ctx, conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -108,7 +108,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
 		}
-		err = c.setSettings(s)
+		err = c.conf.SetSettings(s)
 		if err != nil {
 			return nil, nil, err
 		}

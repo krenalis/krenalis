@@ -54,21 +54,14 @@ func init() {
 }
 
 type connection struct {
-	ctx         context.Context
-	settings    *settings
-	setSettings connector.SetSettingsFunc
-	httpClient  connector.HTTPClient
-	webhookURL  string
+	ctx      context.Context
+	conf     *connector.AppConfig
+	settings *settings
 }
 
 // open opens a Mailchimp connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
-	c := connection{
-		ctx:         ctx,
-		setSettings: conf.SetSettings,
-		httpClient:  conf.HTTPClient,
-		webhookURL:  conf.WebhookURL,
-	}
+	c := connection{ctx: ctx, conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -166,7 +159,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.setSettings(s)
+		return nil, nil, c.conf.SetSettings(s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}
@@ -717,7 +710,7 @@ func (c *connection) call(method, path string, params url.Values, body io.Reader
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	res, err := c.httpClient.Do(req)
+	res, err := c.conf.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -793,10 +786,10 @@ type webhook struct {
 
 // initWebhooks initializes webhooks.
 func (c *connection) initWebhooks() error {
-	if c.setSettings == nil || c.settings.WebhookSecret != "" {
+	if c.conf.SetSettings == nil || c.settings.WebhookSecret != "" {
 		return nil
 	}
-	baseURL := c.webhookURL
+	baseURL := c.conf.WebhookURL
 	webhooks, err := c.webhooks(c.settings.List)
 	if err != nil {
 		return err
@@ -841,7 +834,7 @@ func (c *connection) initWebhooks() error {
 	if err != nil {
 		return err
 	}
-	return c.setSettings(b)
+	return c.conf.SetSettings(b)
 }
 
 var errListNotExist = errors.New("list does not exist")
@@ -869,7 +862,7 @@ func (c *connection) createWebhook(list string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	webhookURL, _ := json.Marshal(c.webhookURL + "?secret=" + url.QueryEscape(secret))
+	webhookURL, _ := json.Marshal(c.conf.WebhookURL + "?secret=" + url.QueryEscape(secret))
 	body := `{"events":{"subscribe":true,"unsubscribe":true,"profile":true,"cleaned":true,"upemail":true,"campaign":false},` +
 		`"sources":{"user":true,"admin":true,"api":true},"url":` + string(webhookURL) + `}`
 	err = c.call("POST", path, nil, strings.NewReader(body), 200, nil)
@@ -1016,7 +1009,7 @@ func (c *connection) metadata() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	res, err := c.httpClient.Do(req)
+	res, err := c.conf.HTTPClient.Do(req)
 	if err != nil {
 		return "", "", err
 	}

@@ -79,12 +79,12 @@ func init() {
 }
 
 type connection struct {
-	role connector.Role
+	conf *connector.AppConfig
 }
 
 // open opens a Dummy connection.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
-	c := connection{role: conf.Role}
+	c := connection{conf: conf}
 	return &c, nil
 }
 
@@ -95,7 +95,7 @@ func (c *connection) CreateUser(properties connector.Properties) error {
 
 // EventTypes returns the connection's event types.
 func (c *connection) EventTypes() ([]*connector.EventType, error) {
-	if c.role == connector.SourceRole {
+	if c.conf.Role == connector.SourceRole {
 		return nil, nil
 	}
 	eventTypes := []*connector.EventType{

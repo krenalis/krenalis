@@ -47,11 +47,9 @@ func init() {
 }
 
 type connection struct {
-	ctx         context.Context
-	role        connector.Role
-	settings    *settings
-	setSettings connector.SetSettingsFunc
-	httpClient  connector.HTTPClient
+	ctx      context.Context
+	conf     *connector.AppConfig
+	settings *settings
 }
 
 type settings struct {
@@ -60,12 +58,7 @@ type settings struct {
 
 // open opens a Klaviyo connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
-	c := connection{
-		ctx:         ctx,
-		role:        conf.Role,
-		setSettings: conf.SetSettings,
-		httpClient:  conf.HTTPClient,
-	}
+	c := connection{ctx: ctx, conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -82,7 +75,7 @@ func (c *connection) CreateUser(properties connector.Properties) error {
 
 // EventTypes returns the connection's event types.
 func (c *connection) EventTypes() ([]*connector.EventType, error) {
-	if c.role == connector.SourceRole {
+	if c.conf.Role == connector.SourceRole {
 		return nil, nil
 	}
 	eventTypes := []*connector.EventType{
@@ -169,7 +162,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.setSettings(s)
+		return nil, nil, c.conf.SetSettings(s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}
@@ -464,7 +457,7 @@ func (c *connection) call(method, url string, body io.Reader, expectedStatus int
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Revision", "2023-01-24")
 
-	res, err := c.httpClient.Do(req)
+	res, err := c.conf.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}

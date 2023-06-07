@@ -39,9 +39,9 @@ func init() {
 }
 
 type connection struct {
-	ctx         context.Context
-	settings    *settings
-	setSettings connector.SetSettingsFunc
+	ctx      context.Context
+	conf     *connector.StorageConfig
+	settings *settings
 }
 
 type settings struct {
@@ -53,7 +53,7 @@ type settings struct {
 
 // open opens a S3 connection and returns it.
 func open(ctx context.Context, conf *connector.StorageConfig) (*connection, error) {
-	c := connection{ctx: ctx, setSettings: conf.SetSettings}
+	c := connection{ctx: ctx, conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -106,7 +106,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.setSettings(s)
+		return nil, nil, c.conf.SetSettings(s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}

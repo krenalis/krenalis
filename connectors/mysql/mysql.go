@@ -40,7 +40,7 @@ func init() {
 
 // open opens a MySQL connection and returns it.
 func open(ctx context.Context, conf *connector.DatabaseConfig) (*connection, error) {
-	c := connection{ctx: ctx, setSettings: conf.SetSettings}
+	c := connection{ctx: ctx, conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -51,9 +51,9 @@ func open(ctx context.Context, conf *connector.DatabaseConfig) (*connection, err
 }
 
 type connection struct {
-	ctx         context.Context
-	settings    *settings
-	setSettings connector.SetSettingsFunc
+	ctx      context.Context
+	conf     *connector.DatabaseConfig
+	settings *settings
 }
 
 // Query executes the given query and returns the resulting rows and properties.
@@ -117,7 +117,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if event == "test" {
 			return nil, nil, nil
 		}
-		err = c.setSettings(s)
+		err = c.conf.SetSettings(s)
 		if err != nil {
 			return nil, nil, err
 		}
