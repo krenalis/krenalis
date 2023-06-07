@@ -53,9 +53,9 @@
 
 | Method           | Role | Settings | SetSettings |
 |------------------|------|----------|-------------|
-| Close            | -    | -        | -           |
-| Receive          | -    | ✓        | -           |
-| Send             | -    | ✓        | -           |
+| Close            | ✓    | ✓        | ✓           |
+| Receive          | ✓    | ✓        | ✓           |
+| Send             | ✓    | ✓        | ✓           |
 | ServeUI          | ✓    | -/✓      | -/✓         |
 | ValidateSettings | ✓    | -        | -           |
 
