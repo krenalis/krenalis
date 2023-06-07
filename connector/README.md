@@ -4,9 +4,9 @@
 | Method           | Role | Settings       | SetSettings    | Resource                | HTTPClient              | Region                  |
 |------------------|------|----------------|----------------|-------------------------|-------------------------|-------------------------|
 | CreateUser       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| EventTypes       | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
+| EventTypes       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | Groups           | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| GroupSchema      | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
+| GroupSchema      | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | ReceiveWebhook   | ✓    | ✓ (connection) | ✓ (connection) | ✓ (connection,resource) | ✓ (connection,resource) | ✓ (connection,resource) |
 | Resource         | -    | -              | -              | -                       | ✓                       | ✓                       |
 | SendEvent        | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
@@ -14,7 +14,7 @@
 | SetGroup         | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | UpdateUser       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | Users            | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
-| UserSchema       | ✓    | ✓              | -              | ✓                       | ✓                       | ✓                       |
+| UserSchema       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | ValidateSettings | ✓    | -              | -              | ✓                       | ✓                       | -                       |
 
 
