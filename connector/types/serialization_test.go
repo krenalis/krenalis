@@ -74,6 +74,15 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"DateTime","layout":"2006-01-02T15:04"}`,
 			Type: DateTime().WithLayout("2006-01-02T15:04"),
 		}, {
+			Data: `{"name":"Date","layout":"2006-01-02"}`,
+			Type: Date().WithLayout("2006-01-02"),
+		}, {
+			Data: `{"name":"DateTime"}`,
+			Type: DateTime(),
+		}, {
+			Data: `{"name":"Date"}`,
+			Type: Date(),
+		}, {
 			Data: `{"name":"Array","itemType":{"name":"Text"}}`,
 			Type: Array(Text()),
 		}, {

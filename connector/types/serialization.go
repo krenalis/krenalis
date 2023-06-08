@@ -149,8 +149,10 @@ func marshalType(b *bytes.Buffer, t Type) {
 			b.WriteString(strconv.Itoa(int(t.s)))
 		}
 	case PtDateTime, PtDate:
-		b.WriteString(`,"layout":`)
-		marshalString(b, t.vl.(string))
+		if layout, ok := t.vl.(string); ok {
+			b.WriteString(`,"layout":`)
+			marshalString(b, layout)
+		}
 	case PtJSON:
 		if t.s > 0 {
 			b.WriteString(`,"charLen":`)
@@ -733,13 +735,11 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 		t.vl = &enum
 	}
-	if pt == PtDateTime || pt == PtDate {
-		if !hasLayout {
-			return Type{}, errors.New("missing 'layout' key")
+	if hasLayout {
+		if pt != PtDateTime && pt != PtDate {
+			return Type{}, errors.New("unexpected layout for non-time type")
 		}
 		t.vl = layout
-	} else if hasLayout {
-		return Type{}, errors.New("unexpected layout for non-time type")
 	}
 	if byteLen > 0 {
 		if pt != PtText {
