@@ -3,7 +3,6 @@ This file contains the documentation for the REST APIs of Chichi.
 GET     /api/connections                                         List the connections
 GET     /api/connections/{id}                                    Get a connection
 DELETE  /api/connections/{id}                                    Delete a connection
-GET     /api/connections/{id}/actions                            List the actions of a connection.
 POST    /api/connections/{id}/actions                            Add an action to a connection.
 GET     /api/connections/{id}/actions/{id}                       Get the action of a connection.
 PUT     /api/connections/{id}/actions/{id}                       Update the action of a connection.
@@ -11,7 +10,6 @@ DELETE  /api/connections/{id}/actions/{id}                       Delete the acti
 POST    /api/connections/{id}/actions/{id}/execute               Execute an action of a connection.
 POST    /api/connections/{id}/actions/{id}/schedule-period       Set the schedule period of an action of a connection
 POST    /api/connections/{id}/actions/{id}/status                Set the status of an action of a connection
-GET     /api/connections/{id}/action-types                       List the action types of a connection.
 GET     /api/connections/{id}/action-schemas/Users               Get the input and output schemas of the Users action type.
 GET     /api/connections/{id}/action-schemas/Groups              Get the input and output schemas of the Groups action type.
 GET     /api/connections/{id}/action-schemas/Events              Get the input and output schemas of the Events action type with no event type.

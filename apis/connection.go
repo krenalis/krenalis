@@ -81,6 +81,10 @@ type Connection struct {
 	Enabled      bool
 	ActionsCount int
 	Health       Health
+
+	// ActionTypes and Actions are populated only by the (*Workspace).Connection method.
+	ActionTypes *[]ActionType `json:",omitempty"`
+	Actions     *[]Action     `json:",omitempty"`
 }
 
 // Action returns the action with identifier id of the connection.
@@ -98,16 +102,6 @@ func (this *Connection) Action(id int) (*Action, error) {
 	return &action, nil
 }
 
-// Actions returns the actions of the connection.
-func (this *Connection) Actions() ([]Action, error) {
-	as := this.connection.Actions()
-	actions := make([]Action, len(as))
-	for i, a := range as {
-		actions[i].fromState(this.db, this.http, a)
-	}
-	return actions, nil
-}
-
 // ActionType represents an action type.
 type ActionType struct {
 	Name          string
@@ -117,7 +111,7 @@ type ActionType struct {
 	MissingSchema bool
 }
 
-// ActionTypes returns the action types for the connection.
+// actionTypes returns the action types for the connection.
 //
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
@@ -125,8 +119,8 @@ type ActionType struct {
 // It returns an errors.UnprocessableError error with code
 //
 //   - FetchSchemaFailed, if an error occurred fetching the schema.
-func (this *Connection) ActionTypes() ([]*ActionType, error) {
-	var actionTypes []*ActionType
+func (this *Connection) actionTypes() ([]ActionType, error) {
+	var actionTypes []ActionType
 	c := this.connection
 	connector := c.Connector()
 	wsSchemas := c.Workspace().Schemas
@@ -152,7 +146,7 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 				}
 				description += " to " + connector.Name
 			}
-			at := &ActionType{
+			at := ActionType{
 				Name:          name,
 				Description:   description,
 				Target:        UsersTarget,
@@ -166,7 +160,7 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 					description += " as users"
 				}
 				description += " from " + connector.Name
-				at := &ActionType{
+				at := ActionType{
 					Name:        "Import " + connector.TermForUsers,
 					Description: description,
 					Target:      UsersTarget,
@@ -196,7 +190,7 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 				}
 				description += " to " + connector.Name
 			}
-			at := &ActionType{
+			at := ActionType{
 				Name:          name,
 				Description:   description,
 				Target:        GroupsTarget,
@@ -210,7 +204,7 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 					description += " as groups"
 				}
 				description += " from " + connector.Name
-				at := &ActionType{
+				at := ActionType{
 					Name:        "Import " + connector.TermForGroups,
 					Description: description,
 					Target:      GroupsTarget,
@@ -232,7 +226,7 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 				case state.WebsiteType:
 					description += "website"
 				}
-				at := &ActionType{
+				at := ActionType{
 					Name:        "Receive events",
 					Description: description,
 					Target:      EventsTarget,
@@ -246,7 +240,7 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 			}
 			for _, et := range eventTypes {
 				id := et.ID
-				actionTypes = append(actionTypes, &ActionType{
+				actionTypes = append(actionTypes, ActionType{
 					Name:        et.Name,
 					Description: et.Description,
 					Target:      EventsTarget,
@@ -256,7 +250,7 @@ func (this *Connection) ActionTypes() ([]*ActionType, error) {
 		}
 	}
 	if actionTypes == nil {
-		actionTypes = []*ActionType{}
+		actionTypes = []ActionType{}
 	}
 	return actionTypes, nil
 }

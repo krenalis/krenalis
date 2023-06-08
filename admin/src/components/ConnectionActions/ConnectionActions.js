@@ -26,13 +26,13 @@ import {
 } from '@shoelace-style/shoelace/dist/react/index.js';
 
 let ConnectionActions = () => {
-	let [actions, setActions] = useState([]);
+	let [actions, setActions] = useState(null);
 	let [actionTypes, setActionTypes] = useState([]);
 	let [isDialogOpen, setIsDialogOpen] = useState(false);
 	let [selectedActionType, setSelectedActionType] = useState(null);
 	let [selectedAction, setSelectedAction] = useState(null);
 	let [description, setDescription] = useState(null);
-	let [isLoading, setIsLoading] = useState(true);
+	let [isLoading, setIsLoading] = useState(false);
 
 	let { API, showError, showStatus, connectors } = useContext(AppContext);
 	let { connection: c, setCurrentConnectionSection } = useContext(ConnectionContext);
@@ -40,31 +40,24 @@ let ConnectionActions = () => {
 	setCurrentConnectionSection('actions');
 
 	let newActionID = useRef(0);
+	let isLoadingTimeoutID = useRef(0);
 	let fetchActionsIntervalID = useRef(0);
 
 	useEffect(() => {
 		const stopLoading = () => {
 			setTimeout(() => {
 				setIsLoading(false);
-			}, 500);
+			}, 300);
 		};
 		const fetchData = async () => {
-			let err, actionTypes, actions, connector;
-			[actionTypes, err] = await API.connections.actionTypes(c.ID);
-			if (err != null) {
-				showError(err);
-				stopLoading();
-				return;
-			}
-			setActionTypes(actionTypes);
-			[actions, err] = await API.connections.actions(c.ID);
-			if (err != null) {
-				showError(err);
-				stopLoading();
-				return;
-			}
-			setActions(actions);
+			isLoadingTimeoutID.current = setTimeout(() => {
+				setIsLoading(true);
+			}, 100);
+			let err, connector;
+			setActionTypes(c.ActionTypes);
+			setActions(c.Actions);
 			[connector, err] = await API.connectors.get(c.Connector);
+			clearTimeout(isLoadingTimeoutID.current);
 			if (err != null) {
 				showError(err);
 				stopLoading();
@@ -79,15 +72,16 @@ let ConnectionActions = () => {
 			setDescription(description);
 			stopLoading();
 			fetchActionsIntervalID.current = setInterval(async () => {
-				[actions, err] = await API.connections.actions(c.ID);
+				let [connection, err] = await API.connections.get(c.ID);
 				if (err != null) {
 					return;
 				}
-				setActions(actions);
+				setActions(connection.Actions);
 			}, 1500);
 		};
 		fetchData();
 		return async () => {
+			clearTimeout(isLoadingTimeoutID.current);
 			clearInterval(fetchActionsIntervalID.current);
 		};
 	}, []);
@@ -101,11 +95,11 @@ let ConnectionActions = () => {
 
 		if (fetchActionsIntervalID.current === 0) return;
 		fetchActionsIntervalID.current = setInterval(async () => {
-			let [actions, err] = await API.connections.actions(c.ID);
+			let [connection, err] = await API.connections.get(c.ID);
 			if (err != null) {
 				return;
 			}
-			setActions(actions);
+			setActions(connection.Actions);
 		}, 1500);
 	}, [selectedAction, selectedActionType]);
 
@@ -132,13 +126,13 @@ let ConnectionActions = () => {
 		let a = [...actions];
 		let filtered = a.filter((a) => a.ID !== actionID);
 		setActions(filtered);
-		let actionTypes;
-		[actionTypes, err] = await API.connections.actionTypes(c.ID);
+		let connection;
+		[connection, err] = await API.connections.get(c.ID);
 		if (err != null) {
 			showError(err);
 			return;
 		}
-		setActionTypes(actionTypes);
+		setActionTypes(connection.ActionTypes);
 	};
 
 	const executeAction = async (actionID) => {
@@ -185,29 +179,26 @@ let ConnectionActions = () => {
 			setSelectedActionType(null);
 			setSelectedAction(null);
 		};
-		let actionTypes, err;
-		[actionTypes, err] = await API.connections.actionTypes(c.ID);
+		let connection, err;
+		[connection, err] = await API.connections.get(c.ID);
 		if (err != null) {
 			close();
 			showError(err);
 			return;
 		}
-		setActionTypes(actionTypes);
-		let actions;
-		[actions, err] = await API.connections.actions(c.ID);
-		if (err != null) {
-			close();
-			showError(err);
-			return;
-		}
+		setActionTypes(connection.ActionTypes);
 		let id = sessionStorage.getItem('newAction');
 		if (id) {
 			newActionID.current = Number(id);
 			sessionStorage.removeItem('newAction');
 		}
-		setActions(actions);
+		setActions(connection.Actions);
 		close();
 	};
+
+	if (actions == null) {
+		return;
+	}
 
 	if (isLoading) {
 		return (

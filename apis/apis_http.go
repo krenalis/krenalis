@@ -89,21 +89,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				err = connection.Delete()
 				respond(w, err)
 			})
-			router.Get("/actions", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				w.Header().Set("Content-Type", "application/json")
-				actions, err := connection.Actions()
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				_ = json.NewEncoder(w).Encode(actions)
-			})
 			router.Post("/actions", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
@@ -254,21 +239,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				err = action.SetStatus(req.Enabled)
 				respond(w, err)
-			})
-			router.Get("/action-types", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				actionTypes, err := connection.ActionTypes()
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				w.Header().Set("Content-Type", "application/json")
-				_ = json.NewEncoder(w).Encode(actionTypes)
 			})
 			router.Route("/action-schemas", func(router chi.Router) {
 				router.Get("/Users", func(w http.ResponseWriter, r *http.Request) {

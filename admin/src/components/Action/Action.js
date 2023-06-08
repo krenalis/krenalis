@@ -100,16 +100,16 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 
 			// get the action type.
 			if (a != null) {
-				let [actionTypes, err] = await API.connections.actionTypes(c.ID);
+				let [connection, err] = await API.connections.get(c.ID);
 				if (err != null) {
 					onClose();
 					showError(err);
 					return;
 				}
 				if (a.Target === 'Events') {
-					actionType = actionTypes.find((t) => t.EventType === a.EventType);
+					actionType = connection.ActionTypes.find((t) => t.EventType === a.EventType);
 				} else {
-					actionType = actionTypes.find((t) => t.Target === a.Target);
+					actionType = connection.ActionTypes.find((t) => t.Target === a.Target);
 				}
 			} else {
 				actionType = { ...actionTypeProp };

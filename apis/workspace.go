@@ -453,6 +453,9 @@ func (this *Workspace) Delete() error {
 // Connection returns the connection with identifier id of the workspace ws.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
+// It returns an errors.UnprocessableError error with code
+//
+//   - FetchSchemaFailed, if an error occurred fetching the schema.
 func (this *Workspace) Connection(id int) (*Connection, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("connection identifier %d is not valid", id)
@@ -477,8 +480,22 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 		ActionsCount: len(c.Actions()),
 		Health:       Health(c.Health),
 	}
+	// Set the storage.
 	if s, ok := c.Storage(); ok {
 		connection.Storage = s.ID
+	}
+	// Set the action types.
+	ts, err := (&Connection{db: this.db, connection: c, http: this.http}).actionTypes()
+	if err != nil {
+		return nil, err
+	}
+	connection.ActionTypes = &ts
+	// Set the actions.
+	actions := c.Actions()
+	a := make([]Action, len(actions))
+	connection.Actions = &a
+	for i, a := range actions {
+		(*connection.Actions)[i].fromState(this.db, this.http, a)
 	}
 	return &connection, nil
 }

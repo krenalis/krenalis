@@ -143,10 +143,6 @@ class Connections {
 		);
 	};
 
-	actionTypes = async (connection) => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/action-types`, http.GET);
-	};
-
 	actionSchemas = async (connection, target, eventType) => {
 		if (eventType != null) {
 			return await call(
@@ -163,10 +159,6 @@ class Connections {
 				http.GET
 			);
 		}
-	};
-
-	actions = async (connection) => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions`, http.GET);
 	};
 
 	addAction = async (connection, actionObject) => {
