@@ -114,7 +114,7 @@ func (st *eventsState) Actions() []*state.Action {
 			continue
 		}
 		c := action.Connection()
-		if !c.Enabled || c.Role == state.SourceRole || c.Connector().Type != state.AppType {
+		if !c.Enabled || c.Role != state.DestinationRole || c.Connector().Type != state.AppType {
 			continue
 		}
 		actions = append(actions, action)
