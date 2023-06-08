@@ -234,6 +234,9 @@ let ConnectionActions = () => {
 			}
 			if (a.EventType === t.EventType) linkedActionType = t;
 		}
+		if (linkedActionType === undefined) {
+			throw Error(`Event type '${a.EventType}' of action ${a.ID} does not exist anymore`);
+		}
 		let nameCell = (
 			<div className='actionName'>
 				<div className='name'>{a.Name}</div>
