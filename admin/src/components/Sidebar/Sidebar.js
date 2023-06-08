@@ -15,13 +15,11 @@ let sidebarItems = [
 				name: 'connections/sources',
 				label: 'Sources',
 				link: '/admin/connections/sources',
-				icon: 'file-arrow-down',
 			},
 			{
 				name: 'connections/destinations',
 				label: 'Destinations',
 				link: '/admin/connections/destinations',
-				icon: 'file-arrow-up',
 			},
 		],
 	},
@@ -72,7 +70,7 @@ const Sidebar = ({ route }) => {
 				let isSelected = subItem.name === route;
 				items.push(
 					<div key={subItem.name} className={`subItem${isSelected ? ' selected' : ''}`}>
-						<SlIcon name={subItem.icon} />
+						{subItem.icon && <SlIcon name={subItem.icon} />}
 						<div className='text'>{subItem.label}</div>
 						<NavLink to={subItem.link}></NavLink>
 					</div>

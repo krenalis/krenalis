@@ -136,7 +136,7 @@
     align-items: center;
     gap: 15px;
     padding: 15px;
-    padding-left: 30px;
+    padding-left: 60px;
     color: var(--sl-color-neutral-700);
     user-select: none;
 }
@@ -147,7 +147,7 @@
 }
 
 .Sidebar .subItem .text {
-	font-size: 14px;
+	font-size: 13px;
     font-weight: 600;
 }
 
