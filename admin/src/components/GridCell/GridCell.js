@@ -26,7 +26,7 @@ const GridCell = ({ cell, className }) => {
 	}
 
 	return (
-		<div className={className}>
+		<div className={`${className}${cell.alignment != null ? ` ${cell.alignment}` : ''}`}>
 			<div className='cellContent'>{value}</div>
 		</div>
 	);

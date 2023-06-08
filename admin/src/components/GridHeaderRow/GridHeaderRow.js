@@ -6,7 +6,13 @@ const GridHeaderRow = ({ columns }) => {
 	let gridHeaderCells = [];
 	for (let [i, column] of columns.entries()) {
 		let className = getChildIndexClassname(i, columns.length);
-		gridHeaderCells.push(<GridHeaderCell value={column.name} className={`GridHeaderCell ${className}`} />);
+		gridHeaderCells.push(
+			<GridHeaderCell
+				className={`GridHeaderCell ${className}`}
+				value={column.name}
+				alignment={column.alignment}
+			/>
+		);
 	}
 
 	return <div className='GridHeaderRow'>{gridHeaderCells}</div>;

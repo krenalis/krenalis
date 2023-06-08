@@ -6,7 +6,8 @@ const GridRow = ({ row, columns, className }) => {
 	let gridCells = [];
 	for (let [i, cell] of row.cells.entries()) {
 		let type = columns[i].type;
-		let typedCell = { value: cell, type: type };
+		let alignment = columns[i].alignment;
+		let typedCell = { value: cell, type: type, alignment: alignment };
 		let className = getChildIndexClassname(i, row.cells.length);
 		gridCells.push(<GridCell cell={typedCell} className={`GridCell ${className}`} />);
 	}

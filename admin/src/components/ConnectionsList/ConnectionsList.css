@@ -29,3 +29,14 @@
 .connectionsList .connectionNameCell svg {
     height: 21px;
 }
+
+.connectionsList .connectionStatusCell {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.connectionsList .StatusDot .hoverArea {
+    width: unset;
+    height: unset;
+}

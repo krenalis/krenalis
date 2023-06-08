@@ -23,13 +23,19 @@
     width: fit-content;
 }
 
+.StyledGrid .GridHeaderCell.center .cellContent,
+.StyledGrid .GridCell.center .cellContent {
+    margin: auto;
+}
+
+.StyledGrid .GridHeaderCell.right .cellContent,
+.StyledGrid .GridCell.right .cellContent {
+    margin-left: auto;
+}
+
 .StyledGrid .Grid .GridHeaderCell {
     font-size: 13px;
     background-color: var(--bg-gray);
-}
-
-.StyledGrid .Grid .GridHeaderCell .cellContent {
-    border-left: 3px solid var(--border-primary);
 }
 
 .StyledGrid .Grid .GridHeaderCell.first .cellContent,

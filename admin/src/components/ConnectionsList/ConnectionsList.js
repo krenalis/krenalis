@@ -25,7 +25,8 @@ const GRID_COLUMNS = [
 		name: 'Health',
 	},
 	{
-		name: 'Actions count',
+		name: 'Actions',
+		alignment: 'center',
 	},
 ];
 
@@ -76,9 +77,10 @@ const ConnectionsList = () => {
 						</div>,
 						c.Type,
 						connector.Name,
-						<SlTooltip content={statusText}>
-							<StatusDot statusText={statusText} statusVariant={statusVariant} />
-						</SlTooltip>,
+						<div className='connectionStatusCell'>
+							<StatusDot statusVariant={statusVariant} />
+							{statusText}
+						</div>,
 						c.ActionsCount,
 					],
 					onClick: () => {
