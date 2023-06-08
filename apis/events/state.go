@@ -110,7 +110,11 @@ func (st *eventsState) Warehouse(workspace int) (_warehouses.Warehouse, bool) {
 func (st *eventsState) Actions() []*state.Action {
 	var actions []*state.Action
 	for _, action := range st.state.Actions() {
-		if !action.Enabled || !action.Connection().Enabled {
+		if !action.Enabled || action.Target != state.EventsTarget {
+			continue
+		}
+		c := action.Connection()
+		if !c.Enabled || c.Role == state.SourceRole || c.Connector().Type != state.AppType {
 			continue
 		}
 		actions = append(actions, action)
