@@ -108,6 +108,11 @@
     border-left: 4px solid var(--color-primary-500);
 }
 
+.Sidebar .item.isChildrenSelected sl-icon,
+.Sidebar .item.isChildrenSelected .text {
+    color: var(--sl-color-primary-500);
+}
+
 .Sidebar .item:hover {
     background-color: var(--sl-color-neutral-50);
 }
