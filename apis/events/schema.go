@@ -23,6 +23,7 @@ import (
 var Schema = types.Object([]types.Property{
 	{Name: "source", Type: types.Int()},
 	{Name: "event", Type: types.Text()},
+	{Name: "name", Type: types.Text()},
 	{Name: "message_id", Type: types.Text()},
 	{Name: "anonymous_id", Type: types.UUID()},
 	{Name: "user_id", Type: types.Text()},

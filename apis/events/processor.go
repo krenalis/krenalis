@@ -174,6 +174,7 @@ func eventToConnectorEvent(event *collectedEvent) connector.Event {
 	e.Location.Longitude = event.Context.Location.Longitude
 	e.Location.Speed = event.Context.Location.Speed
 	e.Event = event.Event
+	e.Name = event.Name
 	e.Locale = event.Context.Locale
 	e.Page.URL = event.page.url
 	e.Page.Path = event.page.path
@@ -263,6 +264,7 @@ func collectedEventToMap(event *collectedEvent) (map[string]any, error) {
 			"speed":     event.Context.Location.Speed,
 		},
 		"event":    event.Event,
+		"name":     event.Name,
 		"locale":   event.Context.Locale,
 		"timezone": event.Context.Timezone,
 		"page": map[string]any{

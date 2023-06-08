@@ -164,6 +164,7 @@ type AppGroupsConnection interface {
 type Event struct {
 	Source      int32
 	Event       string
+	Name        string
 	MessageID   string
 	AnonymousID string
 	UserID      string

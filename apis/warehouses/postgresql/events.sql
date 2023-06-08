@@ -13,6 +13,7 @@ CREATE TYPE event_browser_name AS ENUM ('Chrome', 'Safari', 'Edge', 'Firefox', '
 CREATE TABLE events (
     source integer NOT NULL,
     event varchar NOT NULL,
+    name varchar NOT NULL,
     message_id varchar NOT NULL,
     anonymous_id uuid NOT NULL,
     user_id varchar NOT NULL,

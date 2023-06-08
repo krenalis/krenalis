@@ -11,6 +11,7 @@ CREATE TABLE events
 (
     `source` Int32,
     `event` String,
+    `name` String,
     `message_id` String,
     `anonymous_id` UUID,
     `user_id` String,
