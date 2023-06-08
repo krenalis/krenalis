@@ -1248,7 +1248,7 @@ func sourceMappingSchema(users types.Type, connTyp state.ConnectorType) types.Ty
 		props = make([]types.Property, 0, len(usersProps))
 		for _, p := range users.Unflatten().Properties() {
 			// The "creation_time" property cannot be set by the user, while the
-			// "timestamp".
+			// "timestamp" may be manually set by them.
 			if p.Name == "creation_time" {
 				continue
 			}
