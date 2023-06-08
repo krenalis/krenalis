@@ -28,6 +28,9 @@
 | Object   |         |     |      |       |       |       |      |       |        |        |        |       |         |         |          |      |      |      |      | ✓    |      |      |          | ✓      |        |
 | Map(T)   |         |     |      |       |       |       |      |       |        |        |        |       |         |         |          |      |      |      |      | ✓    |      |      |          |        | ✓      |
 
+Note: keep this table in sync with the matrix within the package `mappings`,
+which holds information about valid conversions.
+
 # From nil
 
 If the destination property is nullable, `nil` is converted to `nil`; otherwise:
