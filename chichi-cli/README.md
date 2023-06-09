@@ -7,7 +7,6 @@ interface.
 - [How to compile](#how-to-compile)
 - [Alternative: install `chichi-cli` (tested on Linux only)](#alternative-install-chichi-cli-tested-on-linux-only)
 - [Usage](#usage)
-- [Commands which may be implemented in the future](#commands-which-may-be-implemented-in-the-future)
 
 ## Configuration
 
@@ -58,12 +57,3 @@ to get information about a specific subcommand, for example:
 ```
 chichi-cli help connections
 ```
-
-## Commands which may be implemented in the future
-
-Note that these subcommands are still not implemented:
-
-- `chichi-cli connectors`
-- `chichi-cli schemas show { user | group | event }`
-- `chichi-cli schemas properties { user | group | event }`
-- `chichi-cli users`
