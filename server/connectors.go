@@ -20,6 +20,7 @@ import (
 	_ "chichi/connectors/kafka"
 	_ "chichi/connectors/klaviyo"
 	_ "chichi/connectors/mailchimp"
+	_ "chichi/connectors/mixpanel"
 	_ "chichi/connectors/mysql"
 	_ "chichi/connectors/parquet"
 	_ "chichi/connectors/postgresql"

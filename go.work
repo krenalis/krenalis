@@ -15,6 +15,7 @@ use (
 	./connectors/kafka
 	./connectors/klaviyo
 	./connectors/mailchimp
+	./connectors/mixpanel
 	./connectors/mysql
 	./connectors/parquet
 	./connectors/postgresql
