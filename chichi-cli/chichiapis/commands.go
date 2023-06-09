@@ -87,27 +87,6 @@ func ListConnectionsProperties(connection int) {
 	}
 }
 
-func ImportUsersFromConnection(connection int, reimport bool) {
-	path := "api/connections/" + strconv.Itoa(connection)
-	if reimport {
-		path += "/reimport"
-	} else {
-		path += "/import"
-	}
-	err := callAPI("POST", path, nil, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func ExportUsersToConnection(connection int) {
-	path := "api/connections/" + strconv.Itoa(connection) + "/export"
-	err := callAPI("POST", path, nil, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
 func AddEventListener(size, source, server, stream int) string {
 	req := struct {
 		Size   int `json:"size"`
