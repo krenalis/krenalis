@@ -86,13 +86,8 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/admin/", http.StatusTemporaryRedirect)
 	}
 
-	// Handle the "/group-schema-properties" endpoint.
-	if strings.HasPrefix(rpath, "/group-schema-properties") {
-		schema := workspace.Schema("groups")
-		w.Header().Add("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(schema.PropertiesNames())
-		return
-	}
+	// TODO(Gianluca): use the 'workspace' variable or just remove it.
+	_ = workspace
 
 	http.ServeFile(w, r, "./admin/public/index.html")
 
