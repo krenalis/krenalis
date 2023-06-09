@@ -776,15 +776,15 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 	event.receivedAt = event.header.ReceivedAt
 
 	// Location.
-	if loc := event.Context.Location; loc.Country == "" || loc.City == "" {
+	if loc := event.Context.Location; loc.Country == "" && loc.Region == "" && loc.City == "" {
 		if c.geoLiteDB != nil {
 			city, err := c.geoLiteDB.City(requestIP)
 			if err == nil {
-				event.Context.Location.City = city.City.Names["en"]
-				c := culture.Country(loc.Country)
-				if c != nil {
-					event.Context.Location.Country = c.Code()
+				country := culture.Country(city.Country.IsoCode)
+				if country != nil {
+					event.Context.Location.Country = country.Code()
 				}
+				event.Context.Location.City = city.City.Names["en"]
 				event.Context.Location.Latitude = city.Location.Latitude
 				event.Context.Location.Longitude = city.Location.Longitude
 			}
