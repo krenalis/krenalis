@@ -50,8 +50,8 @@ type connection struct {
 	ctx context.Context
 }
 
-// ContentType returns the content type of the file.
-func (c *connection) ContentType() string {
+// MimeType returns the mime type of the file.
+func (c *connection) MimeType() string {
 	return "" // TODO: implement file writing for Parquet.
 }
 
