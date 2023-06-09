@@ -43,7 +43,7 @@ func (c *Chichi) Call(httpMethod, method string, body any) (any, error) {
 	return c.call(httpMethod, method, body)
 }
 
-// Call calls the API method serializing the given body.
+// MustCall calls the API method serializing the given body.
 //
 // Calls (*testing.T).Fatal if the call returns an error, or if the HTTP
 // response's status code is not 200.
