@@ -17,6 +17,10 @@ var rootCmd = &cobra.Command{
 	Use: "chichi-cli",
 }
 
+func init() {
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
+}
+
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
