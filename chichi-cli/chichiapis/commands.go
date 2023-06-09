@@ -69,24 +69,6 @@ func ListConnections() {
 	}
 }
 
-// Property represents a connection property.
-type Property struct {
-	Name  string
-	Type  string
-	Label string
-}
-
-func ListConnectionsProperties(connection int) {
-	var properties []*Property
-	err := callAPI("GET", "api/connections/"+strconv.Itoa(connection)+"/properties", nil, &properties)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, property := range properties {
-		fmt.Printf("%-50s %-40s %s\n", property.Label, property.Name, property.Type)
-	}
-}
-
 func AddEventListener(size, source, server, stream int) string {
 	req := struct {
 		Size   int `json:"size"`
