@@ -965,7 +965,7 @@ type SetConnectionStorageNotification struct {
 	Storage    int
 }
 
-// setConnectionStorages sets the storage of a connection.
+// setConnectionStorage sets the storage of a connection.
 func (state *State) setConnectionStorage(n postgres.Notification) {
 	e := SetConnectionStorageNotification{}
 	if !decodeNotification(n, &e) {
