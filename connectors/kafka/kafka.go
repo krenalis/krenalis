@@ -5,10 +5,9 @@
 // Copyright (c) 2022 Open2b
 //
 
-package kafka
-
-// This package is the Kafka connector.
+// Package kafka implements the Kafka connector.
 // (https://kafka.apache.org/documentation/)
+package kafka
 
 import (
 	"context"
