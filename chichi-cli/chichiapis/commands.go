@@ -14,7 +14,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -106,36 +105,6 @@ func ExportUsersToConnection(connection int) {
 	err := callAPI("POST", path, nil, nil)
 	if err != nil {
 		log.Fatal(err)
-	}
-}
-
-func ListUsers() {
-	resp, err := callAdmin("admin/list-users", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	users := resp.([]any)
-	if len(users) == 0 {
-		return
-	}
-	columns := []string{}
-	for k := range users[0].(map[string]any) {
-		columns = append(columns, k)
-	}
-	sort.Strings(columns)
-	for _, column := range columns {
-		fmt.Printf("%-30s", column)
-	}
-	fmt.Printf("\n")
-	for range columns {
-		fmt.Printf("%-30s", "------")
-	}
-	fmt.Printf("\n")
-	for _, user := range users {
-		for _, column := range columns {
-			fmt.Printf("%-30v", user.(map[string]any)[column])
-		}
-		fmt.Printf("\n")
 	}
 }
 
