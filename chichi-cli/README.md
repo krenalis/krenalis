@@ -1,5 +1,8 @@
 # chichi-cli
 
+`chichi-cli` is a tool that lets you interact with Chichi using a command line
+interface.
+
 - [Configuration](#configuration)
 - [How to compile](#how-to-compile)
 - [Alternative: install `chichi-cli` (tested on Linux only)](#alternative-install-chichi-cli-tested-on-linux-only)
