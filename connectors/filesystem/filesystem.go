@@ -25,8 +25,11 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the UI interface.
-var _ connector.UI = (*connection)(nil)
+// Make sure it implements the UI and the StorageConnection interfaces.
+var _ interface {
+	connector.UI
+	connector.StorageConnection
+} = (*connection)(nil)
 
 func init() {
 	connector.RegisterStorage(connector.Storage{
