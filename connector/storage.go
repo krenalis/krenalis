@@ -57,7 +57,7 @@ type StorageConnection interface {
 	// It is the caller's responsibility to close the returned reader.
 	Open(path string) (io.ReadCloser, time.Time, error)
 
-	// Write writes the data read from p into the file with the given path.
+	// Write writes the data read from r into the file with the given path.
 	// contentType is the file's content type.
-	Write(p io.Reader, path, contentType string) error
+	Write(r io.Reader, path, contentType string) error
 }

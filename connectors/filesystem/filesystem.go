@@ -134,7 +134,7 @@ func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
 	return json.Marshal(&s)
 }
 
-// Write writes the data read from p into the file with the given path.
+// Write writes the data read from r into the file with the given path.
 // contentType is the file's content type.
 func (c *connection) Write(r io.Reader, path, contentType string) error {
 	filePath := c.filesystemPath(path)
