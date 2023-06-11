@@ -71,6 +71,10 @@ type ConnectionOptions struct {
 	// connection is not a file or has no storage.
 	Storage int
 
+	// Compression is the compression for file connections. It must be
+	// NoCompression if there is no storage.
+	Compression Compression
+
 	// WebsiteHost is the host, in the form "host:port", of a website
 	// connection. It must be empty if the connection is not a website. It
 	// cannot be longer than 261 runes.
@@ -101,6 +105,14 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 	}
 	if opts.Storage < 0 || opts.Storage > maxInt32 {
 		return 0, errors.BadRequest("storage identifier %d is not valid", opts.Storage)
+	}
+	switch opts.Compression {
+	case NoCompression, ZipCompression, GzipCompression, SnappyCompression:
+	default:
+		return 0, errors.BadRequest("compression %q is not valid", opts.Compression)
+	}
+	if opts.Storage == 0 && opts.Compression != NoCompression {
+		return 0, errors.BadRequest("compression requires a storage")
 	}
 
 	c, ok := this.state.Connector(connector)
@@ -139,6 +151,7 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 			return 0, errors.BadRequest("storage %d is not a destination", opts.Storage)
 		}
 		n.Storage = opts.Storage
+		n.Compression = state.Compression(opts.Compression)
 	}
 
 	// Validate the website host.
@@ -302,9 +315,9 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 		}
 		// Insert the connection.
 		_, err = tx.Exec(ctx, "INSERT INTO connections "+
-			"(id, workspace, name, type, role, enabled, connector, storage, resource, website_host, settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, 0), $9, $10, $11)", n.ID, n.Workspace,
-			n.Name, c.Type, n.Role, n.Enabled, n.Connector, n.Storage, n.Resource.ID, n.WebsiteHost, string(n.Settings))
+			"(id, workspace, name, type, role, enabled, connector, storage, compression, resource, website_host, settings)"+
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, 0), $9, $10, $11, $12)", n.ID, n.Workspace, n.Name, c.Type,
+			n.Role, n.Enabled, n.Connector, n.Storage, n.Compression, n.Resource.ID, n.WebsiteHost, string(n.Settings))
 		if err != nil {
 			if err != nil {
 				if postgres.IsForeignKeyViolation(err) {

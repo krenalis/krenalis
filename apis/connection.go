@@ -1205,19 +1205,28 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 	return marshalUIFormAlert(form, alert, ui.Role(c.Role))
 }
 
-// SetStorage sets the storage of the connection. The connection must be a file
-// connection. storage is the storage connection. The connection and the
-// storage must have the same role. As a special case, the current storage of
-// the file, if there is one, is removed if the storage argument is 0.
+// SetStorage sets the storage and the compression of the connection. The
+// connection must be a file connection. storage is the storage connection. The
+// connection and the storage must have the same role. As a special case, if the
+// storage argument is 0, compression can only be NoCompression and the current
+// storage of the file, if there is one, will be removed.
 //
 // If the connection does not exist anymore, it returns an errors.NotFoundError
 // error.
 // If the storage does not exist, it returns an errors.UnprocessableError error
 // with code StorageNotExists.
-func (this *Connection) SetStorage(storage int) error {
+func (this *Connection) SetStorage(storage int, compression Compression) error {
 
 	if storage < 0 || storage > maxInt32 {
 		return errors.BadRequest("storage identifier %d is not valid", storage)
+	}
+	switch compression {
+	case NoCompression, ZipCompression, GzipCompression, SnappyCompression:
+	default:
+		return errors.BadRequest("compression %q is not valid", compression)
+	}
+	if storage == 0 && compression != NoCompression {
+		return errors.BadRequest("compression requires a storage")
 	}
 
 	c := this.connection
@@ -1240,17 +1249,21 @@ func (this *Connection) SetStorage(storage int) error {
 			}
 			return errors.BadRequest("storage %d is not a destination", storage)
 		}
+	} else if compression != NoCompression {
+		return errors.BadRequest("file cannot be compressed without a storage")
 	}
 
 	n := state.SetConnectionStorageNotification{
-		Connection: c.ID,
-		Storage:    storage,
+		Connection:  c.ID,
+		Storage:     storage,
+		Compression: state.Compression(compression),
 	}
 
 	ctx := context.Background()
 
 	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE connections SET storage = NULLIF($1, 0) WHERE id = $2", n.Storage, n.Connection)
+		result, err := tx.Exec(ctx, "UPDATE connections SET storage = NULLIF($1, 0), compression = $2\n"+
+			"WHERE id = $3", n.Storage, n.Compression, n.Connection)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "connections_storage_fkey" {
@@ -1713,6 +1726,16 @@ func abbreviate(s string, n int) string {
 	}
 	return s + "..."
 }
+
+// Compression represents the compression of a file connection.
+type Compression string
+
+const (
+	NoCompression     Compression = ""
+	ZipCompression    Compression = "Zip"
+	GzipCompression   Compression = "Gzip"
+	SnappyCompression Compression = "Snappy"
+)
 
 // Health is an indicator of the current state of a connection.
 type Health int

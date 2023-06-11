@@ -65,6 +65,10 @@ func (c *Chichi) Users(properties []string, start, end int) map[string]any {
 	return c.MustCall("POST", "/api/users", req).(map[string]any)
 }
 
+func (c *Chichi) SetAction(connection, action int, data map[string]any) {
+	c.MustCall("PUT", "/api/connections/"+strconv.Itoa(connection)+"/actions/"+strconv.Itoa(action), data)
+}
+
 func (c *Chichi) WaitActionsToFinish(conn int) {
 	time.Sleep(500 * time.Millisecond)
 	for {

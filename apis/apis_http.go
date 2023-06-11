@@ -523,15 +523,23 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				err = connection.RevokeKey(key)
 				respond(w, err)
 			})
-			router.Put("/storage/{storage}", func(w http.ResponseWriter, r *http.Request) {
+			router.Post("/storage", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
 				if err != nil {
 					respond(w, err)
 					return
 				}
-				storage, _ := strconv.Atoi(chi.URLParam(r, "storage"))
-				err = connection.SetStorage(storage)
+				var req struct {
+					Storage     int
+					Compression string
+				}
+				err = json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				err = connection.SetStorage(req.Storage, Compression(req.Compression))
 				respond(w, err)
 			})
 		})

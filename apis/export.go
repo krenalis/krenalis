@@ -167,11 +167,10 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	connector := connection.Connector()
 
 	// Retrieve the storage associated to the file connection.
-	var storage _connector.StorageConnection
+	var storage *compressorStorage
 	{
 		s, _ := connection.Storage()
-		var err error
-		storage, err = _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
+		st, err := _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
 			Role:     role,
 			Settings: s.Settings,
 			SetSettings: func(settings []byte) error {
@@ -181,9 +180,10 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %s", err)}
 		}
+		storage = newCompressedStorage(st, connection.Compression)
 	}
 
-	c, err := _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
+	file, err := _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
 		Role:        role,
 		Settings:    connection.Settings,
 		SetSettings: this.setSettingsFunc(ctx),
@@ -217,8 +217,15 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	}
 	records := newRecordReader(columns, usersSlices)
 
-	// Write the file on the storage.
-	err = writeFile(storage, c, this.action.Path, this.action.Sheet, c.ContentType(), records)
+	// Write the file to the storage.
+	w, err := storage.Writer(this.action.Path, file.ContentType())
+	if err != nil {
+		return actionExecutionError{fmt.Errorf("cannot write file: %s", err)}
+	}
+	err = file.Write(w, this.action.Sheet, records)
+	if err2 := w.CloseWithError(err); err2 != nil && err == nil {
+		err = err2
+	}
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot write file: %s", err)}
 	}
@@ -399,37 +406,4 @@ func (this *Action) readUsersFromDataWarehouse(ids []int) ([]userToExport, error
 	}
 
 	return exportUsers, nil
-}
-
-func writeFile(storage _connector.StorageConnection, file _connector.FileConnection, path, sheet, contentType string, records _connector.RecordReader) error {
-	r, w := io.Pipe()
-	var err2 error
-	ch := make(chan struct{})
-	var interruptErr = errors.New("interrupt")
-	go func() {
-		err2 = storage.Write(r, path, contentType)
-		if err2 == interruptErr {
-			err2 = nil
-		}
-		if err2 != nil {
-			_ = r.CloseWithError(interruptErr)
-		} else {
-			_ = r.Close()
-		}
-		ch <- struct{}{}
-	}()
-	err := file.Write(w, sheet, records)
-	if err == interruptErr {
-		err = nil
-	}
-	if err != nil {
-		_ = w.CloseWithError(interruptErr)
-	} else {
-		_ = w.Close()
-	}
-	<-ch
-	if err != nil {
-		return err
-	}
-	return err2
 }

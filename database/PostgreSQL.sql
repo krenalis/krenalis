@@ -68,6 +68,8 @@ CREATE TYPE role AS ENUM ('Source', 'Destination');
 
 CREATE TYPE health AS ENUM ('Healthy', 'NoRecentData', 'RecentError', 'AccessDenied');
 
+CREATE TYPE compression AS ENUM ('', 'Zip', 'Gzip', 'Snappy');
+
 CREATE TABLE connections (
     id integer NOT NULL,
     workspace integer NOT NULL REFERENCES workspaces ON DELETE CASCADE,
@@ -77,6 +79,7 @@ CREATE TABLE connections (
     enabled boolean NOT NULL DEFAULT false,
     connector integer NOT NULL REFERENCES connectors ON DELETE RESTRICT,
     storage integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
+    compression compression NOT NULL DEFAULT '',
     resource integer NOT NULL DEFAULT 0,
     website_host varchar(261) NOT NULL DEFAULT '',
     identity_column varchar(100) NOT NULL DEFAULT '',

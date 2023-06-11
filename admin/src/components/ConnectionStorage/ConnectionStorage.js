@@ -33,7 +33,7 @@ const ConnectionStorage = ({ connection: c }) => {
 	}, []);
 
 	const onChangeStorage = async (storage) => {
-		let [, err] = await API.connections.setStorage(c.ID, storage);
+		let [, err] = await API.connections.setStorage(c.ID, storage, '');
 		setShowStorages(false);
 		if (err !== null) {
 			if (err instanceof NotFoundError) {
@@ -56,7 +56,7 @@ const ConnectionStorage = ({ connection: c }) => {
 	};
 
 	const onRemoveStorage = async () => {
-		let [, err] = await API.connections.setStorage(c.ID, 0);
+		let [, err] = await API.connections.setStorage(c.ID, 0, '');
 		if (err !== null) {
 			if (err instanceof NotFoundError) {
 				redirect('/admin/connections');

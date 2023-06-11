@@ -345,14 +345,15 @@ func (state *State) addAction(n postgres.Notification) {
 // AddConnectionNotification is the notification event sent when a new
 // connection is added.
 type AddConnectionNotification struct {
-	Workspace int            // workspace identifier
-	ID        int            // identifier
-	Name      string         // name
-	Role      ConnectionRole // role
-	Enabled   bool           // enabled or disabled
-	Connector int            // connector identifier
-	Storage   int            // storage identifier, can be zero
-	Resource  struct {       // resource.
+	Workspace   int            // workspace identifier
+	ID          int            // identifier
+	Name        string         // name
+	Role        ConnectionRole // role
+	Enabled     bool           // enabled or disabled
+	Connector   int            // connector identifier
+	Storage     int            // storage identifier, can be zero
+	Compression Compression    // compression
+	Resource    struct {       // resource.
 		ID           int       // identifier, can be zero
 		Code         string    // code, can be empty.
 		AccessToken  string    // access token, can be empty.
@@ -417,6 +418,7 @@ func (state *State) addConnection(n postgres.Notification) {
 		Enabled:     e.Enabled,
 		connector:   connector,
 		storage:     state.connections[e.Storage],
+		Compression: e.Compression,
 		resource:    r,
 		WebsiteHost: e.WebsiteHost,
 		Settings:    e.Settings,
@@ -961,11 +963,12 @@ func (state *State) setConnectionStatus(n postgres.Notification) {
 // SetConnectionStorageNotification is the notification event sent when the
 // storage of a connection is changed.
 type SetConnectionStorageNotification struct {
-	Connection int
-	Storage    int
+	Connection  int
+	Storage     int
+	Compression Compression
 }
 
-// setConnectionStorage sets the storage of a connection.
+// setConnectionStorage sets the storage and the compression of a connection.
 func (state *State) setConnectionStorage(n postgres.Notification) {
 	e := SetConnectionStorageNotification{}
 	if !decodeNotification(n, &e) {
@@ -975,6 +978,7 @@ func (state *State) setConnectionStorage(n postgres.Notification) {
 	storage := state.connections[e.Storage]
 	c.mu.Lock()
 	c.storage = storage
+	c.Compression = e.Compression
 	c.mu.Unlock()
 }
 

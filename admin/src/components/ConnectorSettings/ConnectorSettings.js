@@ -19,6 +19,7 @@ const ConnectorSettings = () => {
 	let [name, setName] = useState('');
 	let [storage, setStorage] = useState(0);
 	let [storages, setStorages] = useState([]);
+	let [compression, setCompression] = useState('');
 	let [websiteHost, setWebsiteHost] = useState('');
 	let [fields, setFields] = useState([]);
 	let [actions, setActions] = useState([]);
@@ -139,6 +140,7 @@ const ConnectorSettings = () => {
 				Name: name,
 				Enabled: true,
 				Storage: storage,
+				Compression: compression,
 				WebsiteHost: websiteHost,
 				OAuth: OAuthToken,
 			});
@@ -330,6 +332,22 @@ const ConnectorSettings = () => {
 								)}
 							</div>
 						)}
+						{c.Type === 'File' &&
+							<div className='inputWrapper'>
+								<SlSelect
+									name='compression'
+									value={compression}
+									label='Compression'
+									disabled={storage === 0}
+									onSlChange={(e)=> setCompression(e.currentTarget.value)}
+								>
+									<SlOption value=''>None</SlOption>
+									<SlOption value='Zip'>Zip</SlOption>
+									<SlOption value='Gzip'>Gzip</SlOption>
+									<SlOption value='Snappy'>Snappy</SlOption>
+								</SlSelect>
+							</div>
+						}
 						{c.Type === 'Website' && (
 							<>
 								<div className='inputWrapper'>

@@ -8,14 +8,22 @@
 package test
 
 import (
+	"archive/zip"
 	"bytes"
+	"compress/gzip"
 	"errors"
+	"io"
+	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
+	"chichi/apis"
 	"chichi/connector"
 	"chichi/test/chichitester"
+
+	"github.com/golang/snappy"
 )
 
 func TestExportUsersToFile(t *testing.T) {
@@ -57,14 +65,6 @@ func TestExportUsersToFile(t *testing.T) {
 	if !stat.IsDir() {
 		t.Fatalf("%q is not a dir", storageDir)
 	}
-	exportedFilename := "exported-users.tmp.csv"
-	exportFilePath := filepath.Join(storageDir, exportedFilename)
-
-	// Remove the export file, if exists.
-	err = os.Remove(exportFilePath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		t.Fatal(err)
-	}
 
 	// Create the Filesystem connection.
 	fsID := c.AddConnection(map[string]any{
@@ -93,6 +93,9 @@ func TestExportUsersToFile(t *testing.T) {
 		},
 	})
 
+	exportedFilename := "exported-users.tmp.csv"
+	exportFilePath := filepath.Join(storageDir, exportedFilename)
+
 	// Add an action to the CSV for exporting the users.
 	exportUsersActionID := c.AddAction(csvID, map[string]any{
 		"Target": "Users",
@@ -102,25 +105,87 @@ func TestExportUsersToFile(t *testing.T) {
 		},
 	})
 
-	// Execute the action that imports users.
-	c.ExecuteAction(csvID, exportUsersActionID, true)
-
-	// Wait for the import to finish.
-	c.WaitActionsToFinish(csvID)
-
-	// Check if the file has been created successfully.
-	content, err := os.ReadFile(exportFilePath)
-	if err != nil {
-		t.Fatal(err)
+	compressions := []apis.Compression{
+		apis.NoCompression,
+		apis.ZipCompression,
+		apis.GzipCompression,
+		apis.SnappyCompression,
 	}
-	expectedStrings := []string{
-		"id,creation_time,timestamp,FirstName,LastName,Email,Gender,FoodPreferences,PhoneNumbers,FavouriteMovie",
-		`Janifer,Sharpin,jsharpin8@example.com,,"{""Drink"":null,""Fruit"":null}",,`,
-	}
-	for _, expected := range expectedStrings {
-		if !bytes.Contains(content, []byte(expected)) {
-			t.Fatalf("string %q not found in file %q", expected, exportFilePath)
+
+	for _, compression := range compressions {
+
+		log.Printf("[info] export %s compressed file", compression)
+
+		var ext string
+		switch compression {
+		case apis.ZipCompression:
+			ext = ".zip"
+		case apis.GzipCompression:
+			ext = ".gz"
+		case apis.SnappyCompression:
+			ext = ".sz"
 		}
+
+		// Remove the export file, if exists.
+		err = os.Remove(exportFilePath + ext)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			t.Fatal(err)
+		}
+
+		c.MustCall("POST", "/api/connections/"+strconv.Itoa(csvID)+"/storage", map[string]any{
+			"Storage":     fsID,
+			"Compression": compression,
+		})
+
+		// Execute the action that export users.
+		c.ExecuteAction(csvID, exportUsersActionID, true)
+
+		// Wait for the import to finish.
+		c.WaitActionsToFinish(csvID)
+
+		// Check if the file has been created successfully.
+		fi, err := os.Open(exportFilePath + ext)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var r io.Reader = fi
+		switch compression {
+		case apis.ZipCompression:
+			st, err := fi.Stat()
+			if err != nil {
+				t.Fatal(err)
+			}
+			zr, err := zip.NewReader(fi, st.Size())
+			if err != nil {
+				t.Fatal(err)
+			}
+			r, err = zr.Open(exportedFilename)
+			if err != nil {
+				t.Fatal(err)
+			}
+		case apis.GzipCompression:
+			r, err = gzip.NewReader(fi)
+			if err != nil {
+				t.Fatal(err)
+			}
+		case apis.SnappyCompression:
+			r = snappy.NewReader(fi)
+		}
+		content, err := io.ReadAll(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expectedStrings := []string{
+			"id,creation_time,timestamp,FirstName,LastName,Email,Gender,FoodPreferences,PhoneNumbers,FavouriteMovie",
+			`Janifer,Sharpin,jsharpin8@example.com,,"{""Drink"":null,""Fruit"":null}",,`,
+		}
+		for _, expected := range expectedStrings {
+			if !bytes.Contains(content, []byte(expected)) {
+				t.Fatalf("string %q not found in file %q", expected, exportFilePath)
+			}
+		}
+
 	}
 
 }

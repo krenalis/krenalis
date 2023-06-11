@@ -25,7 +25,7 @@ POST    /api/connections/{id}/reload                             Reload the sche
 GET     /api/connections/{id}/keys                               Get the API keys of a connection
 POST    /api/connections/{id}/keys                               Generate a new API key for a connection
 DELETE  /api/connections/{id}/keys/{id}                          Delete the API key of a connection
-PUT     /api/connections/{id}/storage/{id}                       Set the storage of a connection
+POST    /api/connections/{id}/storage                            Set the storage and the compression of a connection
 GET     /api/connections/{id}/ui                                 Get the user interface of a connection
 POST    /api/connections/{id}/ui-event                           Execute the user interface event of a connection
 GET     /api/connectors                                          List the connectors

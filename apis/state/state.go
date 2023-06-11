@@ -512,6 +512,7 @@ type Connection struct {
 	Enabled         bool
 	connector       *Connector
 	storage         *Connection
+	Compression     Compression
 	resource        *Resource
 	WebsiteHost     string
 	Keys            []string
@@ -705,6 +706,16 @@ func (role ConnectionRole) Value() (driver.Value, error) {
 	}
 	return nil, fmt.Errorf("not a valid ConnectionRole: %d", role)
 }
+
+// Compression represents the compression of a file connection.
+type Compression string
+
+const (
+	NoCompression     Compression = ""
+	ZipCompression    Compression = "Zip"
+	GzipCompression   Compression = "Gzip"
+	SnappyCompression Compression = "Snappy"
+)
 
 // Transformation represents a Python transformation which can be associated to
 // an action.
