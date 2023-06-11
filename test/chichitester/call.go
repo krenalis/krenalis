@@ -87,6 +87,11 @@ func (c *Chichi) call(httpMethod, method string, body any) (any, error) {
 		return nil, &StatusCodeError{Code: resp.StatusCode, ResponseText: string(text)}
 	}
 
+	// TODO(Gianluca): add a brief timeout to mitigate the possibility that the
+	// state of Chichi has still not been updated after receiving this call. For
+	// more details see the issue https://github.com/open2b/chichi/issues/193.
+	time.Sleep(30 * time.Millisecond)
+
 	var out any
 	err = json.NewDecoder(resp.Body).Decode(&out)
 	if err != nil {
@@ -95,11 +100,6 @@ func (c *Chichi) call(httpMethod, method string, body any) (any, error) {
 		}
 		return nil, err
 	}
-
-	// TODO(Gianluca): add a brief timeout to mitigate the possibility that the
-	// state of Chichi has still not been updated after receiving this call. For
-	// more details see the issue https://github.com/open2b/chichi/issues/193.
-	time.Sleep(30 * time.Millisecond)
 
 	return out, nil
 }
