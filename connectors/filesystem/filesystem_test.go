@@ -15,6 +15,7 @@ import (
 
 func TestPathConvert(t *testing.T) {
 	c := &connection{settings: &settings{Root: "/"}}
+	c2 := &connection{settings: &settings{Root: "/root"}}
 	tests := []connector.CompletePathTest{
 		{Name: "a", Expected: "/a"},
 		{Name: "a.e", Expected: "/a.e"},
@@ -27,17 +28,10 @@ func TestPathConvert(t *testing.T) {
 		{Name: "a/.."},
 		{Name: "../a"},
 		{Name: "a/"},
+		{Name: "a", Expected: "/root/a", Connection: c2},
+		{Name: "/a", Expected: "/root/a", Connection: c2},
 	}
 	err := connector.TestCompletePath(c, tests)
-	if err != nil {
-		t.Errorf("Filesystem connector: %s", err)
-	}
-	c = &connection{settings: &settings{Root: "/root"}}
-	tests = []connector.CompletePathTest{
-		{Name: "a", Expected: "/root/a"},
-		{Name: "/a", Expected: "/root/a"},
-	}
-	err = connector.TestCompletePath(c, tests)
 	if err != nil {
 		t.Errorf("Filesystem connector: %s", err)
 	}

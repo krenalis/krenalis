@@ -11,15 +11,20 @@ import "fmt"
 
 // CompletePathTest is a test for StorageConnection.CompletePath.
 type CompletePathTest struct {
-	Name     string
-	Expected string
+	Name       string            // path name.
+	Expected   string            // expected complete path.
+	Connection StorageConnection // connection to use, if not nil.
 }
 
 // TestCompletePath tests StorageConnection.CompletePath of connection executing
 // the given tests. It returns an error if a test fails.
 func TestCompletePath(connection StorageConnection, tests []CompletePathTest) error {
 	for _, test := range tests {
-		got, err := connection.CompletePath(test.Name)
+		c := connection
+		if test.Connection != nil {
+			c = test.Connection
+		}
+		got, err := c.CompletePath(test.Name)
 		if err != nil {
 			_, ok := err.(InvalidPathError)
 			if !ok {
