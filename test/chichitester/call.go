@@ -101,5 +101,13 @@ func (c *Chichi) call(httpMethod, method string, body any) (any, error) {
 		return nil, err
 	}
 
+	extraneous, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if len(bytes.TrimSpace(extraneous)) > 0 {
+		return nil, fmt.Errorf("server returned extraneous data in response body: %q", string(extraneous))
+	}
+
 	return out, nil
 }
