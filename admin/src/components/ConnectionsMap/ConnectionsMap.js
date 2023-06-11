@@ -85,7 +85,7 @@ const ConnectionsMap = () => {
 					<div className='sources'>{renderConnections(sources)}</div>
 					<div className='main'>
 						<div className='centralLogo' id='centralLogo'>
-							Logo
+							CDP
 						</div>
 						<div className='databases'>
 							<div className='database users' id='usersDatabase'>
