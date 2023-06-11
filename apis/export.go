@@ -218,7 +218,7 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	records := newRecordReader(columns, usersSlices)
 
 	// Write the file on the storage.
-	err = writeFile(storage, c, this.action.Path, this.action.Sheet, c.MimeType(), records)
+	err = writeFile(storage, c, this.action.Path, this.action.Sheet, c.ContentType(), records)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot write file: %s", err)}
 	}

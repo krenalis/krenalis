@@ -55,8 +55,8 @@ type OpenFileFunc[T FileConnection] func(context.Context, *FileConfig) (T, error
 // FileConnection is the interface implemented by file connections.
 type FileConnection interface {
 
-	// MimeType returns the mime type of the file.
-	MimeType() string
+	// ContentType returns the content type of the file.
+	ContentType() string
 
 	// Read reads the records from r and writes them to records. If the connection
 	// has multiple sheets, sheet is the name of the sheet to be read.

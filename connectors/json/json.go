@@ -62,8 +62,8 @@ type settings struct {
 	AllowSpecialFloats bool
 }
 
-// MimeType returns the mime type of the file.
-func (c *connection) MimeType() string {
+// ContentType returns the content type of the file.
+func (c *connection) ContentType() string {
 	return "application/json; charset=UTF-8"
 }
 
