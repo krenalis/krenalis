@@ -54,6 +54,7 @@ var (
 	EventNotExists      errors.Code = "EventNotExists"
 	EventTypeNotExists  errors.Code = "EventTypeNotExists"
 	FetchSchemaFailed   errors.Code = "FetchSchemaFailed"
+	InvalidPath         errors.Code = "InvalidPath"
 	KeyNotExists        errors.Code = "KeyNotExists"
 	NoGroupsSchema      errors.Code = "NoGroupsSchema"
 	NoStorage           errors.Code = "NoStorage"
@@ -603,6 +604,43 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 	}
 
 	return n.ID, nil
+}
+
+// CompletePath returns the complete representation of the given path, based
+// on the connector that must be a storage. path cannot be empty, cannot be
+// longer than 1024 runes, and must be UTF-8 encoded.
+//
+// If path is not valid for the storage connector, it returns an
+// errors.UnprocessableError with code InvalidPath.
+func (this *Connection) CompletePath(path string) (string, error) {
+	if path == "" {
+		return "", errors.BadRequest("path is empty")
+	}
+	if !utf8.ValidString(path) {
+		return "", errors.BadRequest("path is not UTF-8 encoded")
+	}
+	if n := utf8.RuneCountInString(path); n > 1024 {
+		return "", errors.BadRequest("path is longer than 1024 runes")
+	}
+	c := this.connection
+	connector := c.Connector()
+	if connector.Type != state.StorageType {
+		return "", errors.BadRequest("connection %d is not a storage connection", c.ID)
+	}
+	ctx := context.Background()
+	storage, err := _connector.RegisteredStorage(connector.Name).Open(ctx, &_connector.StorageConfig{
+		Role:        _connector.Role(c.Role),
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
+	})
+	if err != nil {
+		return "", err
+	}
+	path, err = storage.CompletePath(path)
+	if err, ok := err.(_connector.InvalidPathError); ok {
+		return "", errors.Unprocessable(InvalidPath, "%s", err)
+	}
+	return path, err
 }
 
 // Delete deletes the connection.

@@ -9,10 +9,27 @@ package connector
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"reflect"
 	"time"
 )
+
+// An InvalidPathError value is returned by StorageConnection.CompletePath when
+// the path name is not valid for the storage connection.
+type InvalidPathError struct {
+	err error
+}
+
+// InvalidPathErrorf formats according to a format specifier and returns a
+// InvalidPathError value.
+func InvalidPathErrorf(format string, a ...any) error {
+	return InvalidPathError{fmt.Errorf(format, a...)}
+}
+
+func (err InvalidPathError) Error() string {
+	return err.err.Error()
+}
 
 // Storage represents a storage connector.
 type Storage struct {
@@ -52,12 +69,18 @@ type OpenStorageFunc[T StorageConnection] func(context.Context, *StorageConfig) 
 // StorageConnection is the interface implemented by storage connections.
 type StorageConnection interface {
 
-	// Open opens the file at the given path and returns a ReadCloser from which to
-	// read the file and its last update time.
-	// It is the caller's responsibility to close the returned reader.
-	Open(path string) (io.ReadCloser, time.Time, error)
+	// CompletePath returns the complete representation of the given path name or an
+	// InvalidPathError if name is not valid for use in calls to Open and Write.
+	//
+	// name's length in runes will be in range [1, 1024].
+	CompletePath(name string) (string, error)
 
-	// Write writes the data read from r into the file with the given path.
+	// Open opens the file at the given path name and returns a ReadCloser from
+	// which to read the file and its last update time.
+	// It is the caller's responsibility to close the returned reader.
+	Open(name string) (io.ReadCloser, time.Time, error)
+
+	// Write writes the data read from r into the file with the given path name.
 	// contentType is the file's content type.
-	Write(r io.Reader, path, contentType string) error
+	Write(r io.Reader, name, contentType string) error
 }

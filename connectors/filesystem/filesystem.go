@@ -14,8 +14,8 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"io/fs"
 	"os"
-	"path/filepath"
 	"time"
 
 	"chichi/connector"
@@ -60,12 +60,34 @@ type settings struct {
 	Root string
 }
 
-// Open opens the file at the given path and returns a ReadCloser from which to
-// read the file and its last update time.
+// CompletePath returns the complete representation of the given path name or an
+// InvalidPathError if name is not valid for use in calls to Open and Write.
+func (c *connection) CompletePath(name string) (string, error) {
+	if name[0] == '/' {
+		if name == "/" {
+			return "", connector.InvalidPathErrorf("path cannot be “/“")
+		}
+		name = name[1:]
+	}
+	if name[len(name)-1] == '/' {
+		return "", connector.InvalidPathErrorf("path name cannot end with a slash")
+	}
+	if name == "." || !fs.ValidPath(name) {
+		return "", connector.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
+	}
+	root := c.settings.Root
+	if root[len(root)-1] != '/' {
+		root += "/"
+	}
+	return root + name, nil
+}
+
+// Open opens the file at the given path name and returns a ReadCloser from
+// which to read the file and its last update time.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Open(path string) (io.ReadCloser, time.Time, error) {
-	filePath := c.filesystemPath(path)
-	f, err := os.Open(filePath)
+func (c *connection) Open(name string) (io.ReadCloser, time.Time, error) {
+	path, _ := c.CompletePath(name)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -125,20 +147,30 @@ func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
 		return nil, err
 	}
 	// Validate Root.
-	if n := len(s.Root); n == 0 || n > 253 {
+	root := s.Root
+	if n := len(root); n == 0 || n > 253 {
 		return nil, ui.Errorf("root path length in bytes must be in range [1,253]")
 	}
-	if _, err := os.Stat(s.Root); os.IsNotExist(err) {
+	if root[0] != '/' {
+		return nil, ui.Errorf(`root path must start with "/"`)
+	}
+	if root[len(root)-1] == '/' {
+		root = root[:len(root)-1]
+	}
+	if !fs.ValidPath(root[1:]) {
+		return nil, ui.Errorf("path name cannot contains “.” or “..” or empty elements")
+	}
+	if _, err := os.Stat(root + "/"); os.IsNotExist(err) {
 		return nil, ui.Errorf("root path does not exist")
 	}
 	return json.Marshal(&s)
 }
 
-// Write writes the data read from r into the file with the given path.
+// Write writes the data read from r into the file with the given path name.
 // contentType is the file's content type.
-func (c *connection) Write(r io.Reader, path, contentType string) error {
-	filePath := c.filesystemPath(path)
-	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+func (c *connection) Write(r io.Reader, name, contentType string) error {
+	path, _ := c.CompletePath(name)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
@@ -148,13 +180,4 @@ func (c *connection) Write(r io.Reader, path, contentType string) error {
 		return err
 	}
 	return err2
-}
-
-// filesystemPath returns the path on the filesystem for the path relative to
-// the storage.
-func (c *connection) filesystemPath(path string) string {
-	if c.settings.Root == "" {
-		panic("invalid or corrupted settings")
-	}
-	return filepath.Join(c.settings.Root, path)
 }

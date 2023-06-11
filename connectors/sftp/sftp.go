@@ -15,6 +15,8 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -68,15 +70,29 @@ type settings struct {
 	Password string
 }
 
-// Open opens the file at the given path and returns a ReadCloser from which to
-// read the file and its last update time.
+// CompletePath returns the complete representation of the given path name or an
+// InvalidPathError if name is not valid for use in calls to Open and Write.
+func (c *connection) CompletePath(name string) (string, error) {
+	u := url.URL{
+		Scheme: "sftp",
+		Host:   net.JoinHostPort(c.settings.Host, strconv.Itoa(c.settings.Port)),
+		Path:   name,
+	}
+	return u.String(), nil
+}
+
+// Open opens the file at the given path name and returns a ReadCloser from
+// which to read the file and its last update time.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Open(path string) (io.ReadCloser, time.Time, error) {
+func (c *connection) Open(name string) (io.ReadCloser, time.Time, error) {
 	sshClient, sftpClient, err := openConnection(c.settings)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	f, err := sftpClient.Open(path)
+	if name[0] != '/' {
+		name = "/" + name
+	}
+	f, err := sftpClient.Open(name)
 	if err != nil {
 		_ = closeConnection(sshClient, sftpClient)
 		return nil, time.Time{}, err
@@ -171,14 +187,17 @@ func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
 	return json.Marshal(&s)
 }
 
-// Write writes the data read from r into the file with the given path.
+// Write writes the data read from r into the file with the given path name.
 // contentType is the file's content type.
-func (c *connection) Write(r io.Reader, path, _ string) error {
+func (c *connection) Write(r io.Reader, name, _ string) error {
 	sshClient, sftpClient, err := openConnection(c.settings)
 	if err != nil {
 		return err
 	}
-	f, err := sftpClient.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+	if name[0] != '/' {
+		name = "/" + name
+	}
+	f, err := sftpClient.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
 		_ = closeConnection(sshClient, sftpClient)
 		return err

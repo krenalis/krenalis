@@ -43,6 +43,7 @@
 
 | Method           | Role | Settings | SetSettings |
 |------------------|------|----------|-------------|
+| CompletePath     | ✓    | ✓        | ✓           |
 | Open             | ✓    | ✓        | ✓           |
 | ServeUI          | ✓    | -/✓      | -/✓         |
 | ValidateSettings | ✓    | -        | -           |

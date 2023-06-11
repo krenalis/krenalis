@@ -69,17 +69,29 @@ type settings struct {
 	Bucket          string
 }
 
-// Open opens the file at the given path and returns a ReadCloser from which to
-// read the file and its last update time.
+// CompletePath returns the complete representation of the given path name or an
+// InvalidPathError if name is not valid for use in calls to Open and Write.
+func (c *connection) CompletePath(name string) (string, error) {
+	if len(name) > 1024 {
+		return "", connector.InvalidPathErrorf("path name cannot be longer than 1024 bytes")
+	}
+	if name[0] == '/' {
+		name = name[1:]
+	}
+	return "s3://" + c.settings.Bucket + "/" + name, nil
+}
+
+// Open opens the file at the given path name and returns a ReadCloser from
+// which to read the file and its last update time.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Open(path string) (io.ReadCloser, time.Time, error) {
-	if len(path) > 1024 {
+func (c *connection) Open(name string) (io.ReadCloser, time.Time, error) {
+	if len(name) > 1024 {
 		return nil, time.Time{}, ui.Errorf("object key cannot be longer than 1024 bytes")
 	}
 	client := c.client()
 	res, err := client.GetObject(c.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(c.settings.Bucket),
-		Key:    aws.String(path),
+		Key:    aws.String(name),
 	})
 	if err != nil {
 		return nil, time.Time{}, err
@@ -191,16 +203,19 @@ func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
 	return json.Marshal(&s)
 }
 
-// Write writes the data read from r into the file with the given path.
+// Write writes the data read from r into the file with the given path name.
 // contentType is the file's content type.
-func (c *connection) Write(p io.Reader, path, contentType string) error {
-	if len(path) > 1024 {
+func (c *connection) Write(p io.Reader, name, contentType string) error {
+	if len(name) > 1024 {
 		return ui.Errorf("object key cannot be longer than 1024 bytes")
+	}
+	if name[0] == '/' {
+		name = name[1:]
 	}
 	client := c.client()
 	_, err := client.PutObject(c.ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(c.settings.Bucket),
-		Key:         aws.String(path),
+		Key:         aws.String(name),
 		Body:        p,
 		ContentType: &contentType,
 	})

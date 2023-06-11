@@ -67,11 +67,45 @@ type settings struct {
 	Headers map[string]string
 }
 
-// Open opens the file at the given path and returns a ReadCloser from which to
-// read the file and its last update time.
+// CompletePath returns the complete representation of the given path name or an
+// InvalidPathError if name is not valid for use in calls to Open and Write.
+func (c *connection) CompletePath(name string) (string, error) {
+	if name[0] != '/' {
+		return "", connector.InvalidPathErrorf("path must start with a slash")
+	}
+	path, query := name, ""
+	parsingQuery := false
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if c == '#' || (!parsingQuery && (c < ' ' || c == 0x7f)) {
+			return "", connector.InvalidPathErrorf("path cannot contains “#“, and control characters")
+		}
+		if c == '%' && (i+2 < len(name) || !ishex(name[i+1]) || !ishex(name[i+2])) {
+			return "", connector.InvalidPathErrorf("path contains an invalid escape sequence")
+		}
+		if c == '?' && !parsingQuery {
+			path, query = name[:i], name[i+1:]
+			parsingQuery = true
+		}
+	}
+	host := c.settings.Host
+	if c.settings.Port != 443 {
+		host = net.JoinHostPort(host, strconv.Itoa(c.settings.Port))
+	}
+	u := url.URL{
+		Scheme:   "https",
+		Host:     host,
+		Path:     path,
+		RawQuery: query,
+	}
+	return u.String(), nil
+}
+
+// Open opens the file at the given path name and returns a ReadCloser from
+// which to read the file and its last update time.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Open(path string) (io.ReadCloser, time.Time, error) {
-	u, err := c.requestURL(path)
+func (c *connection) Open(name string) (io.ReadCloser, time.Time, error) {
+	u, err := c.CompletePath(name)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -166,10 +200,10 @@ func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
 	return json.Marshal(&s)
 }
 
-// Write writes the data read from r into the file with the given path.
+// Write writes the data read from r into the file with the given path name.
 // contentType is the file's content type.
-func (c *connection) Write(r io.Reader, path, contentType string) error {
-	u, err := c.requestURL(path)
+func (c *connection) Write(r io.Reader, name, contentType string) error {
+	u, err := c.CompletePath(name)
 	if err != nil {
 		return err
 	}
@@ -193,17 +227,6 @@ func (c *connection) Write(r io.Reader, path, contentType string) error {
 	return nil
 }
 
-// requestURL returns a request URL given the path.
-func (c *connection) requestURL(path string) (string, error) {
-	p, err := url.Parse(path)
-	if err != nil || p.Scheme != "" || p.Host != "" {
-		return "", fmt.Errorf("path is not an URL path: %s", err)
-	}
-	u := url.URL{
-		Scheme:   "https",
-		Host:     net.JoinHostPort(c.settings.Host, strconv.Itoa(c.settings.Port)),
-		Path:     p.Path,
-		RawQuery: p.RawQuery,
-	}
-	return u.String(), nil
+func ishex(c byte) bool {
+	return '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F'
 }

@@ -303,6 +303,22 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					_ = json.NewEncoder(w).Encode(schemas)
 				})
 			})
+			router.Get("/complete-path/{path}", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				path := chi.URLParam(r, "path")
+				completePath, err := connection.CompletePath(path)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{"path": completePath})
+			})
 			router.Get("/records", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)
