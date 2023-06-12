@@ -57,7 +57,7 @@ func TestConvertibleTo(t *testing.T) {
 	for pt := types.PtInt; pt <= types.PtUInt24; pt++ {
 		cases = append(cases, testCase{from: pt, to: types.PtYear, expected: true})
 	}
-	// Every type can be converted to itself (this tests the matrix main
+	// Every type can be converted to itself (this tests the matrix's main
 	// diagonal).
 	for pt := types.PtBoolean; pt <= types.PtMap; pt++ {
 		cases = append(cases, testCase{from: pt, to: pt, expected: true})
