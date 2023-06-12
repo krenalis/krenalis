@@ -1049,7 +1049,7 @@ func (t Type) WithUnique() Type {
 // PropertyByPath returns the property with the given path and a boolean value
 // indicating if the property with the given path exists.
 // Panics if t is not an Object type, path is empty or a property name within it
-// is not a valid.
+// is not a valid property name.
 func (t Type) PropertyByPath(path Path) (Property, bool) {
 	if t.pt != PtObject {
 		panic("cannot get the properties of a non-Object type")
