@@ -17,7 +17,7 @@ const Connection = () => {
 	let [currentSection, setCurrentSection] = useState('');
 
 	const { API, showError, showNotFound, connectors } = useContext(AppContext);
-	const { setCurrentTitle, setPreviousRoute } = useContext(NavigationContext);
+	const { setCurrentTitle, setCurrentRoute, setPreviousRoute } = useContext(NavigationContext);
 
 	setPreviousRoute('/admin/connections');
 
@@ -71,6 +71,10 @@ const Connection = () => {
 
 	let c = connection;
 	if (c == null) return;
+
+	let currentRoute = c.Role === 'Source' ? 'connections/sources' : 'connections/destinations';
+	setCurrentRoute(currentRoute);
+
 	return (
 		<div className='Connection'>
 			<div className='links'>
