@@ -60,7 +60,17 @@
     border-bottom-right-radius: var(--radius);
 }
 
-    .StyledGrid .Grid .GridRow.last .GridCell.first {
+.StyledGrid .Grid .GridRow,
+.StyledGrid .Grid .GridRow .GridCell {
+    transition: background-color .3s;
+}
+
+.StyledGrid .Grid .GridRow.clickable:hover,
+.StyledGrid .Grid .GridRow.clickable:hover .GridCell {
+    background-color: var(--bg-gray);
+}
+
+.StyledGrid .Grid .GridRow.last .GridCell.first {
     border-bottom-left-radius: var(--radius);
 }
 
