@@ -1,36 +1,19 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useContext } from 'react';
 import './ConnectionStorage.css';
 import Flex from '../Flex/Flex';
 import { AppContext } from '../../context/AppContext';
 import { ConnectionContext } from '../../context/ConnectionContext';
+import { ConnectionsContext } from '../../context/ConnectionsContext';
 import statuses from '../../constants/statuses';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectionStorage = ({ connection: c }) => {
-	let [storages, setStorages] = useState([]);
 	let [showStorages, setShowStorages] = useState(false);
 
 	let { API, redirect, showError, showStatus } = useContext(AppContext);
 	let { setConnection } = useContext(ConnectionContext);
-
-	useEffect(() => {
-		const fetchStorages = async () => {
-			let [connections, err] = await API.connections.find();
-			if (err) {
-				showError(err);
-				return;
-			}
-			let storages = [];
-			for (let cn of connections) {
-				if (cn.Type === 'Storage' && cn.Role === c.Role) {
-					storages.push(cn);
-				}
-			}
-			setStorages(storages);
-		};
-		fetchStorages();
-	}, []);
+	let { connections } = useContext(ConnectionsContext);
 
 	const onChangeStorage = async (storage) => {
 		let [, err] = await API.connections.setStorage(c.ID, storage, '');
@@ -70,6 +53,13 @@ const ConnectionStorage = ({ connection: c }) => {
 		cn.Storage = 0;
 		setConnection(cn);
 	};
+
+	let storages = [];
+	for (let cn of connections) {
+		if (cn.Type === 'Storage' && cn.Role === c.Role) {
+			storages.push(cn);
+		}
+	}
 
 	let currentStorage = storages.find((s) => s.ID === c.Storage);
 	let dialogStorages = storages.filter((s) => s.ID !== c.Storage);

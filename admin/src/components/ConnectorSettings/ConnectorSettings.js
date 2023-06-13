@@ -7,11 +7,12 @@ import Flex from '../Flex/Flex';
 import UnknownLogo from '../UnknownLogo/UnknownLogo';
 import LittleLogo from '../LittleLogo/LittleLogo';
 import { SettingsContext } from '../../context/SettingsContext';
+import { ConnectionsContext } from '../../context/ConnectionsContext';
 import { AppContext } from '../../context/AppContext';
 import { NavigationContext } from '../../context/NavigationContext';
 import statuses from '../../constants/statuses';
 import { NavLink, Navigate } from 'react-router-dom';
-import { SlButton, SlInput, SlSelect, SlSwitch, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlButton, SlInput, SlSelect, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NotFoundError, UnprocessableError } from '../../api/errors';
 
 const ConnectorSettings = () => {
@@ -29,6 +30,7 @@ const ConnectorSettings = () => {
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
 	let { setCurrentTitle, setPreviousRoute } = useContext(NavigationContext);
+	let { connections, setAreConnectionsStale } = useContext(ConnectionsContext);
 
 	const confirmationButtonsRef = useRef([]);
 
@@ -80,12 +82,6 @@ const ConnectorSettings = () => {
 			setName(connector.Name);
 			let storages = [];
 			if (connector.Type === 'File') {
-				let connections;
-				[connections, err] = await API.connections.find();
-				if (err) {
-					showError(err);
-					return;
-				}
 				for (let c of connections) {
 					if (c.Type === 'Storage' && c.Role === connectionRole) storages.push(c);
 				}
@@ -169,6 +165,7 @@ const ConnectorSettings = () => {
 				return;
 			}
 			setNewConnectionID(id);
+			setAreConnectionsStale(true);
 			return;
 		}
 		let [ui, err] = await API.connectors.uiEvent(connectorID, eventName, values, connectionRole, OAuthToken);
@@ -241,6 +238,7 @@ const ConnectorSettings = () => {
 			return;
 		}
 		setNewConnectionID(id);
+		setAreConnectionsStale(true);
 		return;
 	};
 
@@ -332,14 +330,14 @@ const ConnectorSettings = () => {
 								)}
 							</div>
 						)}
-						{c.Type === 'File' &&
+						{c.Type === 'File' && (
 							<div className='inputWrapper'>
 								<SlSelect
 									name='compression'
 									value={compression}
 									label='Compression'
 									disabled={storage === 0}
-									onSlChange={(e)=> setCompression(e.currentTarget.value)}
+									onSlChange={(e) => setCompression(e.currentTarget.value)}
 								>
 									<SlOption value=''>None</SlOption>
 									<SlOption value='Zip'>Zip</SlOption>
@@ -347,7 +345,7 @@ const ConnectorSettings = () => {
 									<SlOption value='Snappy'>Snappy</SlOption>
 								</SlSelect>
 							</div>
-						}
+						)}
 						{c.Type === 'Website' && (
 							<>
 								<div className='inputWrapper'>

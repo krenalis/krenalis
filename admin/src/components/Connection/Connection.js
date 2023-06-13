@@ -8,6 +8,7 @@ import StatusDot from '../StatusDot/StatusDot';
 import { NotFoundError } from '../../api/errors';
 import { AppContext } from '../../context/AppContext';
 import { NavigationContext } from '../../context/NavigationContext';
+import { ConnectionsContext } from '../../context/ConnectionsContext';
 import { ConnectionContext } from '../../context/ConnectionContext';
 import { Outlet, NavLink } from 'react-router-dom';
 import { SlBadge, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
@@ -18,6 +19,7 @@ const Connection = () => {
 
 	const { API, showError, showNotFound, connectors } = useContext(AppContext);
 	const { setCurrentTitle, setCurrentRoute, setPreviousRoute } = useContext(NavigationContext);
+	const { connections } = useContext(ConnectionsContext);
 
 	setPreviousRoute('/admin/connections');
 
@@ -25,9 +27,9 @@ const Connection = () => {
 	let fragmentIndex = urlFragments.findIndex((f) => f === 'connections');
 	let connectionID = Number(urlFragments[fragmentIndex + 1]);
 
-	const setCurrentConnectionSection = (section) => {
-		setCurrentSection(section);
-	};
+	let connectionRole = connections.find((c) => c.ID === connectionID).Role;
+	let currentRoute = connectionRole === 'Source' ? 'connections/sources' : 'connections/destinations';
+	setCurrentRoute(currentRoute);
 
 	useEffect(() => {
 		const fetchConnection = async () => {
@@ -43,7 +45,6 @@ const Connection = () => {
 			setConnection(connection);
 			let c = connection;
 			let { text: statusText, variant: statusVariant } = getConnectionStatusInfos(c);
-
 			let connector = connectors.find((connector) => connector.ID === c.Connector);
 			let logo;
 			if (connector.Icon === '') {
@@ -51,7 +52,6 @@ const Connection = () => {
 			} else {
 				logo = <LittleLogo icon={connector.Icon} />;
 			}
-
 			setCurrentTitle(
 				<Flex alignItems='baseline' gap='10px'>
 					<span style={{ position: 'relative', top: '3px' }}>{logo}</span>
@@ -70,10 +70,9 @@ const Connection = () => {
 	}, []);
 
 	let c = connection;
-	if (c == null) return;
-
-	let currentRoute = c.Role === 'Source' ? 'connections/sources' : 'connections/destinations';
-	setCurrentRoute(currentRoute);
+	if (c == null) {
+		return;
+	}
 
 	return (
 		<div className='Connection'>
@@ -107,7 +106,7 @@ const Connection = () => {
 				<ConnectionContext.Provider
 					value={{
 						connection: c,
-						setCurrentConnectionSection: setCurrentConnectionSection,
+						setCurrentConnectionSection: setCurrentSection,
 						setConnection: setConnection,
 					}}
 				>

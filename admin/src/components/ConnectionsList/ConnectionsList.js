@@ -7,8 +7,9 @@ import LittleLogo from '../LittleLogo/LittleLogo';
 import StatusDot from '../StatusDot/StatusDot';
 import getConnectionStatusInfos from '../../utils/getConnectionStatusInfos';
 import { NavigationContext } from '../../context/NavigationContext';
+import { ConnectionsContext } from '../../context/ConnectionsContext';
 import { AppContext } from '../../context/AppContext';
-import { SlSpinner, SlTooltip, SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 import { useNavigate } from 'react-router-dom';
 
 const GRID_COLUMNS = [
@@ -31,69 +32,56 @@ const GRID_COLUMNS = [
 ];
 
 const ConnectionsList = () => {
-	let [connectionsRows, setConnectionsRows] = useState([]);
-	let [isLoading, setIsLoading] = useState(true);
+	let [connectionsRows, setConnectionsRows] = useState(null);
 	let [role, setRole] = useState('');
 
 	let navigate = useNavigate();
 
 	let { setCurrentTitle, setCurrentRoute, setPreviousRoute } = useContext(NavigationContext);
-	let { API, showError, connectors } = useContext(AppContext);
+	let { connectors } = useContext(AppContext);
+	let { connections } = useContext(ConnectionsContext);
 
 	useEffect(() => {
-		const fetchConnections = async () => {
-			let [connections, err] = await API.connections.find();
-			if (err) {
-				showError(err);
-				setTimeout(() => setIsLoading(false), 300);
-				return;
-			}
-			let roleConnections = [];
-			for (let c of connections) {
-				if (c.Role === role) {
-					roleConnections.push(c);
-				}
-			}
-			if (roleConnections.length === 0) {
-				setConnectionsRows([]);
-				setTimeout(() => setIsLoading(false), 300);
-				return;
-			}
-
-			let rows = [];
-			for (let c of roleConnections) {
-				let connector = connectors.find((con) => con.ID === c.Connector);
-				let logo;
-				if (connector.Icon === '') {
-					logo = <UnknownLogo size={21} />;
-				} else {
-					logo = <LittleLogo icon={connector.Icon} />;
-				}
-				let { text: statusText, variant: statusVariant } = getConnectionStatusInfos(c);
-				rows.push({
-					cells: [
-						<div className='connectionNameCell'>
-							{logo} {c.Name}
-						</div>,
-						c.Type,
-						connector.Name,
-						<div className='connectionStatusCell'>
-							<StatusDot statusVariant={statusVariant} />
-							{statusText}
-						</div>,
-						c.ActionsCount,
-					],
-					onClick: () => {
-						navigate(`/admin/connections/${c.ID}/actions`);
-					},
-				});
-			}
-			setConnectionsRows(rows);
-			setTimeout(() => setIsLoading(false), 300);
-		};
 		setCurrentTitle(`${role}s`);
-		setIsLoading(true);
-		fetchConnections();
+		let roleConnections = [];
+		for (let c of connections) {
+			if (c.Role === role) {
+				roleConnections.push(c);
+			}
+		}
+		if (roleConnections.length === 0) {
+			setConnectionsRows([]);
+			return;
+		}
+		let rows = [];
+		for (let c of roleConnections) {
+			let connector = connectors.find((con) => con.ID === c.Connector);
+			let logo;
+			if (connector.Icon === '') {
+				logo = <UnknownLogo size={21} />;
+			} else {
+				logo = <LittleLogo icon={connector.Icon} />;
+			}
+			let { text: statusText, variant: statusVariant } = getConnectionStatusInfos(c);
+			rows.push({
+				cells: [
+					<div className='connectionNameCell'>
+						{logo} {c.Name}
+					</div>,
+					c.Type,
+					connector.Name,
+					<div className='connectionStatusCell'>
+						<StatusDot statusVariant={statusVariant} />
+						{statusText}
+					</div>,
+					c.ActionsCount,
+				],
+				onClick: () => {
+					navigate(`/admin/connections/${c.ID}/actions`);
+				},
+			});
+		}
+		setConnectionsRows(rows);
 	}, [role]);
 
 	let path = window.location.pathname;
@@ -111,18 +99,14 @@ const ConnectionsList = () => {
 		setRole(r);
 	}
 
+	if (connectionsRows == null) {
+		return;
+	}
+
 	return (
 		<div className='connectionsList'>
 			<div className='routeContent'>
-				{isLoading ? (
-					<SlSpinner
-						className='connectionsListSpinner'
-						style={{
-							fontSize: '3rem',
-							'--track-width': '6px',
-						}}
-					></SlSpinner>
-				) : connectionsRows.length === 0 ? (
+				{connectionsRows.length === 0 ? (
 					<div className='noConnection'>
 						<IconWrapper name={role === 'Source' ? 'file-arrow-down' : 'file-arrow-up'} size={40} />
 						<div className='noConnectionText'>You don't have any {role.toLowerCase()} installed</div>

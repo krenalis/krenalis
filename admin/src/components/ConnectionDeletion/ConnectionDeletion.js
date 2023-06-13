@@ -1,15 +1,17 @@
 import { useState, useContext } from 'react';
 import './ConnectionDeletion.css';
 import Flex from '../Flex/Flex';
-import { AppContext } from '../../context/AppContext';
 import statuses from '../../constants/statuses';
-import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { AppContext } from '../../context/AppContext';
+import { ConnectionsContext } from '../../context/ConnectionsContext';
+import { SlButton, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NotFoundError } from '../../api/errors';
 
 const ConnectionDeletion = ({ connection: c, onDelete }) => {
 	let [askDeletionConfirmation, setAskDeletionConfirmation] = useState(false);
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
+	let { setAreConnectionsStale } = useState(ConnectionsContext);
 
 	const onDeletionConfirmation = async () => {
 		let [, err] = await API.connections.delete(c.ID);
@@ -24,6 +26,7 @@ const ConnectionDeletion = ({ connection: c, onDelete }) => {
 		}
 		setAskDeletionConfirmation(false);
 		onDelete();
+		setAreConnectionsStale(true);
 	};
 
 	return (
