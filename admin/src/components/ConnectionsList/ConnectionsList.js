@@ -37,7 +37,7 @@ const ConnectionsList = () => {
 
 	let navigate = useNavigate();
 
-	let { setCurrentTitle, setCurrentRoute, setPreviousRoute } = useContext(NavigationContext);
+	let { setCurrentTitle, setCurrentRoute } = useContext(NavigationContext);
 	let { connectors } = useContext(AppContext);
 	let { connections } = useContext(ConnectionsContext);
 
@@ -88,7 +88,6 @@ const ConnectionsList = () => {
 	let splitted = path.split('/');
 	let urlRole = splitted[splitted.length - 1];
 	setCurrentRoute(`connections/${urlRole}`);
-	setPreviousRoute('connections');
 	let r;
 	if (urlRole === 'sources') {
 		r = 'Source';

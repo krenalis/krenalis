@@ -1,21 +1,11 @@
 import './Header.css';
 import IconWrapper from '../IconWrapper/IconWrapper';
-import { SlAvatar, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
-import { useNavigate } from 'react-router';
+import { SlAvatar } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const Header = ({ title, previousRoute }) => {
-	const navigate = useNavigate();
-
-	const onGoBackIconClick = () => {
-		return navigate(previousRoute);
-	};
-
+const Header = ({ title }) => {
 	return (
 		<div className='Header' justifyContent='space-between' alignItems='center'>
 			<div className='title'>
-				{previousRoute !== '' && (
-					<SlIcon className='goBackIcon' name='arrow-90deg-up' onClick={onGoBackIconClick}></SlIcon>
-				)}
 				<span>{title}</span>
 			</div>
 			<div className='account'>

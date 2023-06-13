@@ -8,11 +8,10 @@ import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NavLink } from 'react-router-dom';
 
 const ConnectionsMap = () => {
-	let { setCurrentTitle, setPreviousRoute } = useContext(NavigationContext);
+	let { setCurrentTitle } = useContext(NavigationContext);
 	let { connections } = useContext(ConnectionsContext);
 
 	setCurrentTitle('Connections');
-	setPreviousRoute('');
 
 	let newConnectionID = Number(new URL(document.location).searchParams.get('newConnection'));
 	let sources = [];

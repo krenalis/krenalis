@@ -9,8 +9,7 @@ const ConnectorsList = () => {
 	let [goToConnectorSettings, setGoToConnectorSettings] = useState(0);
 
 	let { redirect, connectors, API, showError } = useContext(AppContext);
-	let { setCurrentTitle, setPreviousRoute } = useContext(NavigationContext);
-	setPreviousRoute('/admin/connections');
+	let { setCurrentTitle } = useContext(NavigationContext);
 
 	let connectionRole;
 	let roleParam = new URL(document.location).searchParams.get('role');

@@ -8,19 +8,17 @@ import { Outlet } from 'react-router-dom';
 const NavigationWrapper = () => {
 	let [currentRoute, setCurrentRoute] = useState('');
 	let [currentTitle, setCurrentTitle] = useState('');
-	let [previousRoute, setPreviousRoute] = useState('');
 
 	return (
 		<NavigationContext.Provider
 			value={{
 				setCurrentRoute: setCurrentRoute,
 				setCurrentTitle: setCurrentTitle,
-				setPreviousRoute: setPreviousRoute,
 			}}
 		>
 			<div className='NavigationWrapper'>
 				<Sidebar route={currentRoute} />
-				<Header title={currentTitle} previousRoute={previousRoute} />
+				<Header title={currentTitle} />
 				<Outlet />
 			</div>
 		</NavigationContext.Provider>

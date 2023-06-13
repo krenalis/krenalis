@@ -29,7 +29,7 @@ const ConnectorSettings = () => {
 	let [notFound, setNotFound] = useState(false);
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
-	let { setCurrentTitle, setPreviousRoute } = useContext(NavigationContext);
+	let { setCurrentTitle } = useContext(NavigationContext);
 	let { connections, setAreConnectionsStale } = useContext(ConnectionsContext);
 
 	const confirmationButtonsRef = useRef([]);
@@ -44,8 +44,6 @@ const ConnectorSettings = () => {
 		connectionRole = roleParam;
 	}
 	OAuthToken = url.searchParams.get('oauthToken') == null ? '' : url.searchParams.get('oauthToken');
-
-	setPreviousRoute(`/admin/connectors?role=${connectionRole}`);
 
 	useEffect(() => {
 		const fetchData = async () => {

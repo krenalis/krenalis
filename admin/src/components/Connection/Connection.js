@@ -11,17 +11,15 @@ import { NavigationContext } from '../../context/NavigationContext';
 import { ConnectionsContext } from '../../context/ConnectionsContext';
 import { ConnectionContext } from '../../context/ConnectionContext';
 import { Outlet, NavLink } from 'react-router-dom';
-import { SlBadge, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const Connection = () => {
 	let [connection, setConnection] = useState(null);
 	let [currentSection, setCurrentSection] = useState('');
 
 	const { API, showError, showNotFound, connectors } = useContext(AppContext);
-	const { setCurrentTitle, setCurrentRoute, setPreviousRoute } = useContext(NavigationContext);
+	const { setCurrentTitle, setCurrentRoute } = useContext(NavigationContext);
 	const { connections } = useContext(ConnectionsContext);
-
-	setPreviousRoute('/admin/connections');
 
 	let urlFragments = String(window.location).split('/');
 	let fragmentIndex = urlFragments.findIndex((f) => f === 'connections');
