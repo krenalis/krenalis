@@ -163,9 +163,7 @@ Set the `CHICHI_DEBUG_UI` to `true` to display clearer error messages in the UI.
 
 ## How test events
 
-1. Add a Website source with host `localhost:9090`
-2. Copy the source identifier into the `data-source` attribute of the script in the `trace-events-script/website-for-testing/index.html` file
-3. Visit https://localhost:9090/trace-events-script/website-for-testing/
+See the documentation in [README.md](trace-events-script/README.md) in the directory [trace-events-script](trace-events-script/).
 
 ## Interact with Chichi using `chichi-cli`
 
