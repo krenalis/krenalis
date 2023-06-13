@@ -925,10 +925,10 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		let actionIcon;
 		if (propertiesMode === 'mappings') {
 			actionText = 'Switch to transformation function';
-			actionIcon = <SlIcon name='shuffle' slot='prefix'></SlIcon>;
+			actionIcon = <SlIcon name='filetype-py' slot='prefix'></SlIcon>;
 		} else if (propertiesMode === 'transformation') {
 			actionText = 'Switch to mappings';
-			actionIcon = <SlIcon name='filetype-py' slot='prefix'></SlIcon>;
+			actionIcon = <SlIcon name='shuffle' slot='prefix'></SlIcon>;
 		}
 		propertiesSectionActions = (
 			<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
