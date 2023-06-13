@@ -117,7 +117,18 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			setActionType(actionType);
 
 			// set the default transformation function.
-			let parameterName = actionType.Target.toLowerCase();
+			let parameterName;
+			switch (actionType.Target) {
+				case "Users":
+					parameterName = "user";
+					break;
+				case "Groups":
+					parameterName = "group";
+					break;
+				case "Events":
+					parameterName = "event";
+					break;
+			}
 			defaultTransformationFunction.current = rawTransformationFunction.replace('$parameterName', parameterName);
 
 			// check which fields are supported by the action.
