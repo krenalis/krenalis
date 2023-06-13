@@ -38,7 +38,7 @@ const exportModeOptions = {
 
 const rawTransformationFunction = `def transform($parameterName: dict) -> dict:
 	return {}
-;`;
+`;
 
 const operatorOptions = {
 	1: 'is',
