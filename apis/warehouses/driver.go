@@ -248,7 +248,7 @@ func NewScanValues(properties []types.Property, rows *[][]any) []any {
 
 func (sv ScanValue) Scan(src any) error {
 	p := sv.property
-	value, err := normalization.NormalizeDatabaseFileProperty(p.Name, p.Nullable, p.Type, src)
+	value, err := normalization.NormalizeDatabaseFileProperty(p.Name, p.Type, src, p.Nullable)
 	if err != nil {
 		return err
 	}

@@ -62,14 +62,12 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		return err
 	}
 
-	// Load the users schema.
-	usersSchema, ok := this.action.Connection().Workspace().Schemas["users"]
-	if !ok {
-		return actionExecutionError{errors.New("users schema not loaded")}
-	}
+	// TODO(Gianluca): here we assume that the user read from the data warehouse
+	// is correctly normalized. We should investigate and discuss about this
+	// behavior, and eventually add an additional normalization step.
 
 	// Instantiate a new mapping.
-	mapping, err := mappings.New(*usersSchema, this.action.Schema, this.action.Mapping, this.action.Transformation)
+	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.PythonSource, true)
 	if err != nil {
 		return err
 	}
@@ -97,6 +95,8 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
 
+	inSchemaProps := this.action.InSchema.PropertiesNames()
+
 	for _, user := range users {
 
 		// Resolve the external identity.
@@ -112,26 +112,48 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 			continue
 		}
 
-		// Apply the mapping (or the transformation).
-		props, err := mapping.Apply(ctx, user.Properties)
-		if err != nil {
-			return err
+		// Take only the necessary properties.
+		props := make(map[string]any, len(inSchemaProps))
+		for _, name := range inSchemaProps {
+			props[name] = user.Properties[name]
 		}
 
-		// Update the user, if it already exists on the app, or create it.
+		// Normalize the user properties (read from the data warehouse) using
+		// the action's mapping input schema.
+		props, err = normalize(props, this.action.InSchema)
+		if err != nil {
+			return actionExecutionError{err}
+		}
+
+		// Map the properties of the user.
+		props, err = mapping.Apply(ctx, props)
+		if err != nil {
+			return actionExecutionError{err}
+		}
+
+		// Normalize the user properties with the action schema before sending
+		// it to the connector.
+		props, err = normalize(props, this.action.Schema)
+		if err != nil {
+			return actionExecutionError{err}
+		}
+
+		// Update the user, if it already exists on the app.
 		if exists {
 			err := connection.(_connector.AppUsersConnection).UpdateUser(id, props)
 			if err != nil {
 				return actionExecutionError{fmt.Errorf("cannot update user: %s", err)}
 			}
 			log.Printf("[info] user %q updated on %s: %#v", id, connector.Name, user)
-		} else {
-			err := connection.(_connector.AppUsersConnection).CreateUser(props)
-			if err != nil {
-				return actionExecutionError{fmt.Errorf("cannot create user: %s", err)}
-			}
-			log.Printf("[info] a new user has been created on %s: %#v", connector.Name, user)
+			continue
 		}
+
+		// Create the user.
+		err = connection.(_connector.AppUsersConnection).CreateUser(props)
+		if err != nil {
+			return actionExecutionError{fmt.Errorf("cannot create user: %s", err)}
+		}
+		log.Printf("[info] a new user has been created on %s: %#v", connector.Name, user)
 
 	}
 

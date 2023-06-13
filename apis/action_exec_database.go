@@ -12,10 +12,8 @@ import (
 	"fmt"
 	"time"
 
-	"chichi/apis/errors"
 	"chichi/apis/mappings"
 	"chichi/apis/normalization"
-	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 )
@@ -49,31 +47,24 @@ func (this *Action) importFromDatabase() error {
 	}
 	defer rawRows.Close()
 
-	// Determine the input and the output schema.
+	mapping, err := mappings.New(this.action.OutSchema, this.action.InSchema, this.action.Mapping, this.action.PythonSource, false)
+	if err != nil {
+		return err
+	}
+
 	apisConn := &Connection{
 		db:         this.db,
 		connection: this.action.Connection(),
 		http:       this.http,
 	}
-	inputSchema, err := types.ObjectOf(properties)
-	if err != nil {
-		return actionExecutionError{err}
-	}
-	usersSchema, ok := this.action.Connection().Workspace().Schemas["users"]
-	if !ok {
-		return actionExecutionError{errors.New("users schema not loaded")}
-	}
-	outSchema := sourceMappingSchema(*usersSchema, state.DatabaseType)
 
-	mapping, err := mappings.New(inputSchema, outSchema, this.action.Mapping, this.action.Transformation)
-	if err != nil {
-		return err
-	}
+	inSchemaProps := this.action.InSchema.PropertiesNames()
 
 	// Iterate over the database rows.
 	dest := make([]any, len(properties))
 	for rawRows.Next() {
 
+		// Scan values into a map.
 		row := make(map[string]any, len(properties))
 		for i, p := range properties {
 			dest[i] = databaseScanValue{property: p, row: row}
@@ -82,8 +73,23 @@ func (this *Action) importFromDatabase() error {
 			return actionExecutionError{fmt.Errorf("query execution failed: %s", err)}
 		}
 
-		// Apply the mapping or the transformation.
-		mappedUser, err := mapping.Apply(ctx, row)
+		// Take only the necessary properties.
+		props := make(map[string]any, len(inSchemaProps))
+		for _, name := range inSchemaProps {
+			if v, ok := row[name]; ok {
+				props[name] = v
+			}
+		}
+
+		// Normalize the user properties (read from the database) using the
+		// action's mapping input schema.
+		props, err := normalize(props, this.action.InSchema)
+		if err != nil {
+			return actionExecutionError{err}
+		}
+
+		// Map the properties of the user.
+		mappedUser, err := mapping.Apply(ctx, props)
 		if err != nil {
 			return err
 		}
@@ -128,7 +134,7 @@ type databaseScanValue struct {
 
 func (sv databaseScanValue) Scan(src any) error {
 	p := sv.property
-	value, err := normalization.NormalizeDatabaseFileProperty(p.Name, p.Nullable, p.Type, src)
+	value, err := normalization.NormalizeDatabaseFileProperty(p.Name, p.Type, src, p.Nullable)
 	if err != nil {
 		return err
 	}

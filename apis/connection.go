@@ -27,6 +27,7 @@ import (
 	"chichi/apis/errors"
 	"chichi/apis/events"
 	"chichi/apis/httpclient"
+	"chichi/apis/normalization"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/warehouses"
@@ -45,7 +46,7 @@ const maxSettingsLen = 10_000
 const (
 	maxKeysPerServer = 20 // maximum number of keys per server.
 	maxInt32         = math.MaxInt32
-	rawSchemaMaxSize = 16_777_215 // maximum size in runes of the 'schema' column of the 'connections' table.
+	rawSchemaMaxSize = 16_777_215 // maximum size in runes for schemas stored in PostgreSQL.
 	queryMaxSize     = 16_777_215 // maximum size in runes of a connection query.
 )
 
@@ -470,8 +471,10 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		EventType:      eventType,
 		ScheduleStart:  int16(mathrand.Intn(24 * 60)),
 		SchedulePeriod: 60,
+		InSchema:       action.InSchema,
+		OutSchema:      action.OutSchema,
 		Mapping:        action.Mapping,
-		Transformation: (*state.Transformation)(action.Transformation),
+		PythonSource:   action.PythonSource,
 		Query:          action.Query,
 		Path:           action.Path,
 		Sheet:          action.Sheet,
@@ -482,7 +485,7 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 	}
 
 	// Marshal the filter.
-	var filter, mapping, tIn, tOut, tSource []byte
+	var filter, mapping []byte
 	if action.Filter != nil {
 		n.Filter = &state.ActionFilter{
 			Logical:    state.ActionFilterLogical(action.Filter.Logical),
@@ -505,19 +508,6 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		}
 	}
 
-	// Marshal the transformation.
-	if t := action.Transformation; t != nil {
-		tIn, err = json.Marshal(t.In)
-		if err != nil {
-			return 0, err
-		}
-		tOut, err = json.Marshal(t.Out)
-		if err != nil {
-			return 0, err
-		}
-		tSource = []byte(t.PythonSource)
-	}
-
 	// Generate a random identifier.
 	n.ID, err = generateRandomID()
 	if err != nil {
@@ -527,21 +517,31 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 	// Marshal the schema.
 	var rawSchema []byte
 	if n.Schema.Valid() {
-		rawSchema, err = n.Schema.MarshalJSON()
+		rawSchema, err = marshalSchema(n.Schema)
 		if err != nil {
-			if eventType == "" {
-				return 0, fmt.Errorf("cannot marshal fetched schema for target %s of connection %d: %s", target, c.ID, err)
-			}
-			return 0, fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: %s", target, c.ID, err)
-		}
-		if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
-			if eventType == "" {
-				return 0, fmt.Errorf("cannot marshal fetched schema for target %s of connection %d: data is too large", target, c.ID)
-			}
-			return 0, fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: data is too large", target, c.ID)
+			return 0, err
 		}
 	} else {
 		rawSchema = []byte{}
+	}
+
+	// Marshal the input and output schemas.
+	var rawInSchema, rawOutSchema []byte
+	if action.InSchema.Valid() {
+		rawInSchema, err = marshalSchema(action.InSchema)
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		rawInSchema = []byte(`null`)
+	}
+	if action.OutSchema.Valid() {
+		rawOutSchema, err = marshalSchema(action.OutSchema)
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		rawOutSchema = []byte(`null`)
 	}
 
 	// Handle the matching properties.
@@ -582,14 +582,13 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 			matchPropExternal = n.MatchingProperties.External
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
-			"schedule_start, schedule_period, filter, schema, mapping,\n" +
-			"transformation.in_types, transformation.out_types, transformation.python_source,\n" +
-			"query, path, sheet,\n" +
+			"schedule_start, schedule_period, filter, schema, in_schema, out_schema, mapping,\n" +
+			"python_source, query, path, sheet,\n" +
 			"export_mode, matching_properties_internal, matching_properties_external)\n" +
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType, n.Name,
 			n.Enabled, n.ScheduleStart, n.SchedulePeriod,
-			string(filter), rawSchema, string(mapping), string(tIn), string(tOut), string(tSource),
+			string(filter), rawSchema, rawInSchema, rawOutSchema, mapping, action.PythonSource,
 			n.Query, n.Path, n.Sheet, n.ExportMode, matchPropInternal, matchPropExternal)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {
@@ -1854,6 +1853,13 @@ func (this *Connection) setUser(ctx context.Context, id string, user map[string]
 	if !ok {
 		return errors.New("users schema not found")
 	}
+
+	// Normalize the incoming user according to the "users" schema.
+	user, err = normalize(user, *schema)
+	if err != nil {
+		return err
+	}
+
 	warehouses.SerializeRow(user, *schema)
 
 	query := &strings.Builder{}
@@ -1932,6 +1938,35 @@ func (this *Connection) writeConnectionUsers(ctx context.Context, id string, use
 		connection, statsTimeSlot(time.Now()))
 
 	return err
+}
+
+// marshalSchema marshals the given schema, which must be a valid schema.
+func marshalSchema(schema types.Type) ([]byte, error) {
+	rawSchema, err := schema.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
+		return nil, errors.New("data is too large")
+	}
+	return rawSchema, nil
+}
+
+func normalize(values map[string]any, schema types.Type) (map[string]any, error) {
+	out := make(map[string]any, len(values))
+	for name, value := range values {
+		prop, ok := schema.Property(name)
+		if !ok {
+			return nil, fmt.Errorf("property %q not found", name)
+		}
+		// TODO(Gianluca): call the proper normalization function.
+		v, err := normalization.NormalizeAppProperty(name, prop.Type, value, prop.Nullable)
+		if err != nil {
+			return nil, err
+		}
+		out[name] = v
+	}
+	return out, nil
 }
 
 // setSettings sets the given settings of the given connection.

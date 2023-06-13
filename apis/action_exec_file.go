@@ -17,7 +17,6 @@ import (
 	"chichi/apis/errors"
 	"chichi/apis/mappings"
 	"chichi/apis/normalization"
-	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 )
@@ -92,28 +91,35 @@ func (this *Action) importFromFile() error {
 		connection: this.action.Connection(),
 		http:       this.http,
 	}
-	inputSchema, err := apisConn.fetchFileSchema(this.action.Path, this.action.Sheet)
-	if err != nil {
-		return actionExecutionError{err}
-	}
-	usersSchema, ok := this.action.Connection().Workspace().Schemas["users"]
-	if !ok {
-		return actionExecutionError{errors.New("users schema not loaded")}
-	}
-	outputSchema := sourceMappingSchema(*usersSchema, state.DatabaseType)
-
-	mapping, err := mappings.New(inputSchema, outputSchema, this.action.Mapping, this.action.Transformation)
+	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.PythonSource, false)
 	if err != nil {
 		return err
 	}
 
+	inSchemaProps := this.action.InSchema.PropertiesNames()
+
 	// Read the records.
 	rw := newRecordWriter(c.ID, math.MaxInt, func(record map[string]any) error {
 
-		// Apply the mapping or the transformation.
-		mappedUser, err := mapping.Apply(ctx, record)
+		// Take only the necessary properties.
+		props := make(map[string]any, len(inSchemaProps))
+		for _, name := range inSchemaProps {
+			if v, ok := record[name]; ok {
+				props[name] = v
+			}
+		}
+
+		// Normalize the user properties (read from the file) using the action's
+		// mapping input schema.
+		props, err := normalize(props, this.action.InSchema)
 		if err != nil {
-			return err
+			return actionExecutionError{err}
+		}
+
+		// Map the properties of the user.
+		mappedUser, err := mapping.Apply(ctx, props)
+		if err != nil {
+			return actionExecutionError{err}
 		}
 
 		// Extrapolate the ID and the timestamp for the user.
@@ -132,11 +138,14 @@ func (this *Action) importFromFile() error {
 		// Write the user and the mapped user on the database.
 		err = apisConn.writeConnectionUsers(ctx, id, record, timestamp, nil)
 		if err != nil {
-			return err
+			return actionExecutionError{err}
 		}
 		err = apisConn.setUser(ctx, id, mappedUser)
+		if err != nil {
+			return actionExecutionError{err}
+		}
 
-		return err
+		return nil
 	})
 	err = file.Read(r, this.action.Sheet, rw)
 	if err != nil {
@@ -263,7 +272,7 @@ func (rw *recordWriter) Record(record []any) error {
 		// Store the record in the records field.
 		rd := make([]any, len(rw.columns))
 		for i, c := range rw.columns {
-			rd[i], err = normalization.NormalizeDatabaseFileProperty(c.Name, c.Nullable, c.Type, record[i])
+			rd[i], err = normalization.NormalizeDatabaseFileProperty(c.Name, c.Type, record[i], c.Nullable)
 			if err != nil {
 				return err
 			}
@@ -273,7 +282,7 @@ func (rw *recordWriter) Record(record []any) error {
 		// Call the rw.write function to store the record.
 		rd := map[string]any{}
 		for i, c := range rw.columns {
-			rd[c.Name], err = normalization.NormalizeDatabaseFileProperty(c.Name, c.Nullable, c.Type, record[i])
+			rd[c.Name], err = normalization.NormalizeDatabaseFileProperty(c.Name, c.Type, record[i], c.Nullable)
 			if err != nil {
 				return err
 			}
@@ -306,7 +315,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 		// Store the record in the records field.
 		rd := make([]any, len(rw.columns))
 		for i, c := range rw.columns {
-			rd[i], err = normalization.NormalizeDatabaseFileProperty(c.Name, c.Nullable, c.Type, record[c.Name])
+			rd[i], err = normalization.NormalizeDatabaseFileProperty(c.Name, c.Type, record[c.Name], c.Nullable)
 			if err != nil {
 				return err
 			}
@@ -315,7 +324,7 @@ func (rw *recordWriter) RecordMap(record map[string]any) error {
 	} else {
 		// Call the rw.write function to store the record.
 		for _, c := range rw.columns {
-			v, err := normalization.NormalizeDatabaseFileProperty(c.Name, c.Nullable, c.Type, record[c.Name])
+			v, err := normalization.NormalizeDatabaseFileProperty(c.Name, c.Type, record[c.Name], c.Nullable)
 			if err != nil {
 				return err
 			}

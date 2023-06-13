@@ -9,15 +9,11 @@ package apis
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 
 	"chichi/apis/mappings"
-	"chichi/apis/normalization"
-	"chichi/apis/state"
 	_connector "chichi/connector"
-	"chichi/connector/types"
 )
 
 // importFromApp imports the users from an app.
@@ -58,17 +54,10 @@ func (this *Action) importFromApp() error {
 		return fmt.Errorf("cannot read user schema: %s", err)
 	}
 
-	usersSchema, ok := ws.Schemas["users"]
-	if !ok {
-		return actionExecutionError{errors.New("users schema not loaded")}
-	}
-	outputSchema := sourceMappingSchema(*usersSchema, state.AppType)
-	mapping, err := mappings.New(this.action.Schema, outputSchema, this.action.Mapping, this.action.Transformation)
+	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.PythonSource, false)
 	if err != nil {
 		return actionExecutionError{err}
 	}
-
-	properties := this.action.Schema.Properties()
 
 	var eof bool
 
@@ -84,30 +73,36 @@ func (this *Action) importFromApp() error {
 			return actionExecutionError{fmt.Errorf("connector %d has returned an empty users without returning EOF", c.Connector().ID)}
 		}
 
+		// TODO(Gianluca):
+		if !this.action.InSchema.Valid() {
+			panic("import from app with no properties should be discussed and implemented")
+		}
+		inSchemaProps := this.action.InSchema.PropertiesNames()
+
 		for _, user := range users {
 
-			// Normalize properties.
-			propertyOf := map[string]types.Property{}
-			for _, p := range properties {
-				propertyOf[p.Name] = p
-			}
-			for name, value := range user.Properties {
-				p, ok := propertyOf[name]
-				if !ok {
-					return actionExecutionError{fmt.Errorf("connector %d has returned an unknown property %q", c.Connector().ID, name)}
+			// Take only the necessary properties.
+			props := make(map[string]any, len(inSchemaProps))
+			for _, name := range inSchemaProps {
+				if v, ok := user.Properties[name]; ok {
+					props[name] = v
 				}
-				value, err := normalization.NormalizeAppProperty(name, p.Nullable, p.Type, value)
-				if err != nil {
-					return actionExecutionError{err}
-				}
-				user.Properties[name] = value
 			}
 
-			// Map properties.
-			mappedUser, err := mapping.Apply(ctx, user.Properties)
+			// Normalize the user properties (read from the app) using the
+			// action's mapping input schema.
+			userProps, err := normalize(props, this.action.InSchema)
 			if err != nil {
 				return actionExecutionError{err}
 			}
+
+			// Map the properties of the user.
+			mappedUser, err := mapping.Apply(ctx, userProps)
+			if err != nil {
+				return actionExecutionError{err}
+			}
+
+			// Write the user.
 			connection := &Connection{
 				db:         this.db,
 				connection: c,

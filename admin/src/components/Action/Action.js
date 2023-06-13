@@ -228,7 +228,9 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					Enabled: false,
 					Filter: null,
 					Mapping: getDefaultMappings(schemas.Out),
-					Transformation: null,
+					InSchema: null,
+					OutSchema: null,
+					PythonSource: null,
 					Query: null,
 					Path: fields.includes('Path') ? '' : null,
 					Sheet: fields.includes('Sheet') ? '' : null,
@@ -310,14 +312,16 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setIsAlertOpen(false);
 		setTimeout(() => {
 			let a = { ...action };
+			a.InSchema = null;
+			a.OutSchema = null;
 			if (propertiesMode === 'mappings') {
 				a.Mapping = null;
-				a.Transformation = getDefaultTransformation();
+				a.PythonSource = defaultTransformationFunction.current;
 				setAction(a);
 				setPropertiesMode('transformation');
 			} else {
-				a.Transformation = null;
 				a.Mapping = getDefaultMappings(outputSchema);
+				a.PythonSource = null;
 				setAction(a);
 				setPropertiesMode('mappings');
 			}
@@ -332,35 +336,16 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 
 	const onChangeTransformationPythonSource = (value) => {
 		let a = { ...action };
-		a.Transformation.PythonSource = value;
+		a.PythonSource = value;
 		setAction(a);
 	};
 
 	const onRemoveTransformationProperty = (side, propertyName) => {
-		let a = { ...action };
-		let properties;
-		if (side === 'input') {
-			properties = a.Transformation.In.properties;
-		} else {
-			properties = a.Transformation.Out.properties;
-		}
-		let filtered = properties.filter((p) => p.name !== propertyName);
-		if (side === 'input') {
-			a.Transformation.In.properties = filtered;
-		} else {
-			a.Transformation.Out.properties = filtered;
-		}
-		setAction(a);
+		removeActionSchemaProperty(side, propertyName);
 	};
 
 	const onAddTransformationProperty = (side, property) => {
-		let a = { ...action };
-		if (side === 'input') {
-			a.Transformation.In.properties.push(property);
-		} else {
-			a.Transformation.Out.properties.push(property);
-		}
-		setAction(a);
+		addActionSchemaProperty(side, property);
 	};
 
 	const updateProperty = (name, value) => {
@@ -413,8 +398,64 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				}
 			}
 		}
+
+		let oldValue = a.Mapping[name].value;
 		a.Mapping[name].value = value;
 		setAction(a);
+
+		const removeActionSchemaProperties = () => {
+			if (a.InSchema == null) return;
+			let isInputPropertyStillUsed =
+				Object.keys(a.Mapping).filter((k) => a.Mapping[k].value === oldValue).length > 0;
+			if (!isInputPropertyStillUsed) {
+				removeActionSchemaProperty('input', oldValue);
+			}
+			if (name.includes('.')) {
+				name = name.substring(0, name.indexOf('.'));
+			}
+			let outputPropertyFamily = [];
+			for (let k in a.Mapping) {
+				if (k.startsWith(name)) {
+					outputPropertyFamily.push(k);
+				}
+			}
+			let isOutputPropertyStillUsed = false;
+			for (let p of outputPropertyFamily) {
+				let v = a.Mapping[p].value;
+				if (v !== '' && outputSchema.properties.findIndex((p) => p.name === v) !== -1) {
+					isOutputPropertyStillUsed = true;
+				}
+			}
+			if (!isOutputPropertyStillUsed) {
+				removeActionSchemaProperty('output', name);
+			}
+		};
+
+		if (value === '') {
+			removeActionSchemaProperties();
+		} else {
+			if (value.includes('.')) {
+				value = value.substring(0, value.indexOf('.'));
+			}
+			let inputProperty = inputSchema.properties.find((p) => p.name === value);
+			if (inputProperty != null) {
+				let isInInputSchema = a.InSchema && a.InSchema.properties.findIndex((p) => p.name === value) !== -1;
+				if (!isInInputSchema) {
+					addActionSchemaProperty('input', inputProperty);
+				}
+				// update the output schema of the action.
+				if (name.includes('.')) {
+					name = name.substring(0, name.indexOf('.'));
+				}
+				let isInOutputSchema = a.OutSchema && a.OutSchema.properties.findIndex((p) => p.name === name) !== -1;
+				if (!isInOutputSchema) {
+					let property = outputSchema.properties.find((p) => p.name === name);
+					addActionSchemaProperty('output', property);
+				}
+			} else {
+				removeActionSchemaProperties();
+			}
+		}
 	};
 
 	const onUpdateProperty = (e) => {
@@ -505,16 +546,11 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			queryConfirmButtonRef.current.stop();
 			return;
 		}
-		let a = { ...action };
-		if (a.Schema != null) {
-			a.Schema = res.Schema;
-		}
-		if (propertiesMode === 'transformation') {
-			a.Transformation.In.properties = [];
+		if (propertiesMode === 'mappings') {
+			reloadActionMappingSchemas(res.Schema);
 		}
 		queryConfirmButtonRef.current.confirm();
 		setTimeout(() => {
-			setAction(a);
 			setInputSchema(res.Schema);
 			setTimeout(() => {
 				let top = propertiesSectionRef.current.getBoundingClientRect().top;
@@ -675,16 +711,11 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			fileConfirmButtonRef.current.stop();
 			return;
 		}
-		let a = { ...action };
-		if (a.Schema != null) {
-			a.Schema = res.schema;
-		}
-		if (propertiesMode === 'transformation') {
-			a.Transformation.In.properties = [];
+		if (propertiesMode === 'mappings') {
+			reloadActionMappingSchemas(res.Schema);
 		}
 		fileConfirmButtonRef.current.confirm();
 		setTimeout(() => {
-			setAction(a);
 			setInputSchema(res.schema);
 			setTimeout(() => {
 				let top = propertiesSectionRef.current.getBoundingClientRect().top;
@@ -709,9 +740,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			}
 			a.Mapping = mappingToSave;
 		}
-		if (a.Transformation != null) {
-			let trimmed = a.Transformation.PythonSource.trim();
-			a.Transformation.PythonSource = trimmed;
+		if (a.PythonSource != null) {
+			a.PythonSource = a.PythonSource.trim();
 		}
 		if (a.Query != null) {
 			let trimmed = a.Query.trim();
@@ -797,18 +827,86 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		return defaultMappings;
 	};
 
-	const getDefaultTransformation = () => {
-		return {
-			In: {
-				name: 'Object',
-				properties: [],
-			},
-			Out: {
-				name: 'Object',
-				properties: [],
-			},
-			PythonSource: defaultTransformationFunction.current,
-		};
+	const reloadActionMappingSchemas = (newSchema) => {
+		let a = { ...action };
+		a.InSchema = null;
+		a.OutSchema = null;
+		for (let mappedName in a.Mapping) {
+			let value = a.Mapping[mappedName].value;
+			if (value === '') {
+				continue;
+			}
+			if (value.includes('.')) {
+				value = value.substring(0, value.indexOf('.'));
+			}
+			let fullInputProperty = newSchema.properties.find((p2) => p2.name === value);
+			let doesValueStillExist = fullInputProperty != null;
+			let isValueAlreadyInSchema =
+				a.InSchema && a.InSchema.properties.findIndex((p2) => p2.name === value) !== -1;
+			if (doesValueStillExist && !isValueAlreadyInSchema) {
+				if (a.InSchema == null) {
+					a.InSchema = { name: 'Object', properties: [{ ...fullInputProperty }] };
+				} else {
+					a.InSchema.properties.push({ ...fullInputProperty });
+				}
+			}
+			if (mappedName.includes('.')) {
+				mappedName = value.substring(0, value.indexOf('.'));
+			}
+			let isMappedNameAlreadyInSchema =
+				a.OutSchema && a.OutSchema.properties.findIndex((p2) => p2.name === mappedName) !== -1;
+			if (!isMappedNameAlreadyInSchema && doesValueStillExist) {
+				let fullOutputProperty = outputSchema.properties.find((p2) => p2.name === mappedName);
+				if (a.OutSchema == null) {
+					a.OutSchema = { name: 'Object', properties: [{ ...fullOutputProperty }] };
+				} else {
+					a.OutSchema.properties.push({ ...fullOutputProperty });
+				}
+			}
+		}
+		setAction(a);
+	};
+
+	const addActionSchemaProperty = (side, property) => {
+		setAction((prevAction) => {
+			let a = { ...prevAction };
+			if (side === 'input') {
+				if (a.InSchema == null) {
+					a.InSchema = { name: 'Object', properties: [{ ...property }] };
+				} else {
+					a.InSchema.properties.push({ ...property });
+				}
+			} else {
+				if (a.OutSchema == null) {
+					a.OutSchema = { name: 'Object', properties: [{ ...property }] };
+				} else {
+					a.OutSchema.properties.push({ ...property });
+				}
+			}
+			return a;
+		});
+	};
+
+	const removeActionSchemaProperty = (side, propertyName) => {
+		setAction((prevAction) => {
+			let a = { ...prevAction };
+			if (side === 'input') {
+				let filtered = a.InSchema.properties.filter((p) => p.name !== propertyName);
+				if (filtered.length === 0) {
+					a.InSchema = null;
+				} else {
+					a.InSchema.properties = filtered;
+				}
+			} else {
+				let filtered = a.OutSchema.properties.filter((p) => p.name !== propertyName);
+				if (filtered.length === 0) {
+					a.OutSchema = null;
+				} else {
+					a.OutSchema.properties = filtered;
+				}
+			}
+			return a;
+		});
 	};
 
 	const getSchemaComboboxItems = (side) => {
@@ -1013,23 +1111,24 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			propertiesSectionContent = (
 				<div className='transformation'>
 					<div className='inputProperties'>
-						{action.Transformation.In.properties.map((p) => {
-							return (
-								<div className='property'>
-									<div className='name'>{p.name}</div>
-									<div className='type'>{p.type.name}</div>
-									<SlButton
-										className='removeProperty'
-										size='small'
-										variant='danger'
-										outline
-										onClick={() => onRemoveTransformationProperty('input', p.name)}
-									>
-										<SlIcon name='trash'></SlIcon>
-									</SlButton>
-								</div>
-							);
-						})}
+						{action.InSchema &&
+							action.InSchema.properties.map((p) => {
+								return (
+									<div className='property'>
+										<div className='name'>{p.name}</div>
+										<div className='type'>{p.type.name}</div>
+										<SlButton
+											className='removeProperty'
+											size='small'
+											variant='danger'
+											outline
+											onClick={() => onRemoveTransformationProperty('input', p.name)}
+										>
+											<SlIcon name='trash'></SlIcon>
+										</SlButton>
+									</div>
+								);
+							})}
 						<SlButton
 							className='addProperty'
 							size='small'
@@ -1042,27 +1141,28 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					<EditorWrapper
 						defaultLanguage='python'
 						height={400}
-						value={action.Transformation.PythonSource}
+						value={action.PythonSource}
 						onChange={(value) => onChangeTransformationPythonSource(value)}
 					/>
 					<div className='outputProperties'>
-						{action.Transformation.Out.properties.map((p) => {
-							return (
-								<div className='property'>
-									<div className='name'>{p.name}</div>
-									<div className='type'>{p.type.name}</div>
-									<SlButton
-										className='removeProperty'
-										size='small'
-										variant='danger'
-										outline
-										onClick={() => onRemoveTransformationProperty('output', p.name)}
-									>
-										<SlIcon name='trash'></SlIcon>
-									</SlButton>
-								</div>
-							);
-						})}
+						{action.OutSchema &&
+							action.OutSchema.properties.map((p) => {
+								return (
+									<div className='property'>
+										<div className='name'>{p.name}</div>
+										<div className='type'>{p.type.name}</div>
+										<SlButton
+											className='removeProperty'
+											size='small'
+											variant='danger'
+											outline
+											onClick={() => onRemoveTransformationProperty('output', p.name)}
+										>
+											<SlIcon name='trash'></SlIcon>
+										</SlButton>
+									</div>
+								);
+							})}
 						<SlButton
 							className='addProperty'
 							size='small'
@@ -1399,7 +1499,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 					</AlertDialog>,
 					document.body
 				)}
-				{action.Transformation != null &&
+				{action.PythonSource != null &&
 					createPortal(
 						<SlDialog
 							className='inputSchemaDialog'
@@ -1410,8 +1510,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						>
 							{inputSchema.properties.map((p) => {
 								let isUsed =
-									action.Transformation.In.properties.findIndex((prop) => prop.name === p.name) !==
-									-1;
+									action.InSchema &&
+									action.InSchema.properties.findIndex((prop) => prop.name === p.name) !== -1;
 								return (
 									<div
 										className={`property${isUsed ? ' used' : ''}${
@@ -1438,7 +1538,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						</SlDialog>,
 						document.body
 					)}
-				{action.Transformation != null &&
+				{action.PythonSource != null &&
 					createPortal(
 						<SlDialog
 							className='outputSchemaDialog'
@@ -1449,8 +1549,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						>
 							{outputSchema.properties.map((p) => {
 								let isUsed =
-									action.Transformation.Out.properties.findIndex((prop) => prop.name === p.name) !==
-									-1;
+									action.OutSchema &&
+									action.OutSchema.properties.findIndex((prop) => prop.name === p.name) !== -1;
 								return (
 									<div
 										className={`property${isUsed ? ' used' : ''}${

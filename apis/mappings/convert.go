@@ -49,10 +49,13 @@ var (
 // convert converts v from type t1 to type t2 and returns the converted value.
 // nullable reports whether nil is allowed as return value. If v is nil and
 // nullable is true, it returns nil.
-// For Array, Object, and Map values, it can modify the argument v.
 //
-// It returns an error if v cannot be converted.
-func convert(v any, t1, t2 types.Type, nullable bool) (any, error) {
+// formatTime reports whether DateTime and Date values should be formatted based
+// on the layout of t2, if any.
+//
+// For Array, Object, and Map values, it can modify the argument v. It returns
+// an error if v cannot be converted.
+func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 	pt1 := t1.PhysicalType()
 	pt2 := t2.PhysicalType()
 	// Convert between nil and other values.
@@ -232,11 +235,13 @@ func convert(v any, t1, t2 types.Type, nullable bool) (any, error) {
 		}
 		return n, nil
 	case types.PtDateTime:
+		var t time.Time
+		var err error
 		switch pt1 {
 		case types.PtDateTime, types.PtDate:
-			return v.(time.Time), nil
+			t = v.(time.Time)
 		case types.PtText:
-			t, err := time.Parse(time.RFC3339Nano, v.(string))
+			t, err = time.Parse(time.RFC3339Nano, v.(string))
 			if err != nil {
 				return nil, errInvalidConversion
 			}
@@ -244,26 +249,55 @@ func convert(v any, t1, t2 types.Type, nullable bool) (any, error) {
 			if y := t.Year(); y < 1 || y > 9999 {
 				return nil, errInvalidConversion
 			}
-			return t, nil
 		case types.PtJSON:
-			return jsonToDateTime(v)
-		}
-	case types.PtDate:
-		switch pt1 {
-		case types.PtDate:
-			return v.(time.Time), nil
-		case types.PtDateTime:
-			t := v.(time.Time)
-			return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
-		case types.PtText:
-			d, ok := convertTextToDate(v.(string))
-			if !ok {
+			t, err = jsonToDateTime(v)
+			if err != nil {
 				return nil, errInvalidConversion
 			}
-			return d, nil
-		case types.PtJSON:
-			return jsonToDate(v)
+		default:
+			return nil, errInvalidConversion
 		}
+		if layout := t2.Layout(); layout != "" && formatTime {
+			switch layout {
+			case types.Seconds:
+				return t.Unix(), nil
+			case types.Milliseconds:
+				return t.UnixMilli(), nil
+			case types.Microseconds:
+				return t.UnixMicro(), nil
+			case types.Nanoseconds:
+				return t.UnixNano(), nil
+			default:
+				return t.Format(layout), nil
+			}
+		}
+		return t, nil
+	case types.PtDate:
+		var t time.Time
+		var err error
+		switch pt1 {
+		case types.PtDate:
+			t = v.(time.Time)
+		case types.PtDateTime:
+			t = v.(time.Time)
+			t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+		case types.PtText:
+			t, err = convertTextToDate(v.(string))
+			if err != nil {
+				return nil, errInvalidConversion
+			}
+		case types.PtJSON:
+			t, err = jsonToDate(v)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, errInvalidConversion
+		}
+		if layout := t2.Layout(); layout != "" && formatTime {
+			return t.Format(layout), nil
+		}
+		return t, nil
 	case types.PtTime:
 		switch pt1 {
 		case types.PtTime:
@@ -431,7 +465,7 @@ func convert(v any, t1, t2 types.Type, nullable bool) (any, error) {
 			}
 			var err error
 			for i, item := range s {
-				s[i], err = convert(item, it1, it2, false)
+				s[i], err = convert(item, it1, it2, false, formatTime)
 				if err != nil {
 					return nil, err
 				}
@@ -447,7 +481,7 @@ func convert(v any, t1, t2 types.Type, nullable bool) (any, error) {
 			}
 			it2 := t2.ItemType()
 			for i, item := range s {
-				s[i], err = convert(item, types.JSON(), it2, false)
+				s[i], err = convert(item, types.JSON(), it2, false, formatTime)
 				if err != nil {
 					return nil, err
 				}
@@ -478,7 +512,7 @@ func convert(v any, t1, t2 types.Type, nullable bool) (any, error) {
 				if !ok {
 					panic(fmt.Sprintf("unknown property %s", name))
 				}
-				obj[name], err = convert(value, p1.Type, p2.Type, p2.Nullable)
+				obj[name], err = convert(value, p1.Type, p2.Type, p2.Nullable, formatTime)
 				if err != nil {
 					return nil, err
 				}
@@ -502,7 +536,7 @@ func convert(v any, t1, t2 types.Type, nullable bool) (any, error) {
 					continue
 				}
 				var err error
-				s[name], err = convert(value, types.JSON(), p2.Type, p2.Nullable)
+				s[name], err = convert(value, types.JSON(), p2.Type, p2.Nullable, formatTime)
 				if err != nil {
 					return nil, err
 				}
@@ -520,7 +554,7 @@ func convert(v any, t1, t2 types.Type, nullable bool) (any, error) {
 			}
 			var err error
 			for key, value := range m {
-				m[key], err = convert(value, vt1, vt2, false)
+				m[key], err = convert(value, vt1, vt2, false, formatTime)
 				if err != nil {
 					return nil, err
 				}
@@ -533,7 +567,7 @@ func convert(v any, t1, t2 types.Type, nullable bool) (any, error) {
 			}
 			vt2 := t2.ValueType()
 			for key, value := range s {
-				s[key], err = convert(value, types.JSON(), vt2, false)
+				s[key], err = convert(value, types.JSON(), vt2, false, formatTime)
 				if err != nil {
 					return nil, err
 				}
@@ -908,7 +942,7 @@ func isSimpleFloat(s string) bool {
 	return true
 }
 
-func convertTextToDate(s string) (t time.Time, ok bool) {
+func convertTextToDate(s string) (time.Time, error) {
 	month, day, year := -1, -1, -1
 	if len(s) == 10 {
 		if s[4] == '-' && s[7] == '-' {
@@ -927,25 +961,26 @@ func convertTextToDate(s string) (t time.Time, ok bool) {
 		// https://support.microsoft.com/en-us/office/datevalue-function-df8b07d4-7761-4a93-bc33-b7471bbff252
 		days, err := strconv.ParseFloat(s, 64)
 		if err != nil {
-			return
+			return time.Time{}, errInvalidConversion
 		}
 		if days == 60 {
-			return // 1900-02-29 does not exist. Excel returns it for compatibility with Lotus 1-2-3.
+			// 1900-02-29 does not exist. Excel returns it for compatibility with Lotus 1-2-3.
+			return time.Time{}, errInvalidConversion
 		}
 		if days > 60 {
 			days--
 		}
-		t = excelEpoch.Add(time.Duration(days) * 24 * time.Hour)
-		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), true
+		t := excelEpoch.Add(time.Duration(days) * 24 * time.Hour)
+		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
 	}
 	if year < 0 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31 {
-		return
+		return time.Time{}, errInvalidConversion
 	}
-	t = time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+	t := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
 	if t.Year() != year || int(t.Month()) != month || t.Day() != day {
-		return
+		return time.Time{}, errInvalidConversion
 	}
-	return t, true
+	return t, nil
 }
 
 // parseTime parses a time formatted as "hh:nn:ss.nnnnnnnnn" and returns it as

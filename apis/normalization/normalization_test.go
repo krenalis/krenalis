@@ -119,7 +119,7 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := NormalizeAppProperty("k", false, test.t, test.v)
+		got, err := NormalizeAppProperty("k", test.t, test.v, false)
 		if err != nil {
 			t.Fatal(err)
 		}

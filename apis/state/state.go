@@ -717,24 +717,6 @@ const (
 	SnappyCompression Compression = "Snappy"
 )
 
-// Transformation represents a Python transformation which can be associated to
-// an action.
-type Transformation struct {
-
-	// In is the input schema of the transformation, which should have at least
-	// one property in it.
-	In types.Type
-
-	// Out is the output schema of the transformation, which should have at
-	// least one property in it.
-	Out types.Type
-
-	// PythonSource is the Python source code of this transformation, which
-	// declares the 'transform' function which takes in input and returns a
-	// Python dictionary.
-	PythonSource string
-}
-
 // ActionTarget represents the action target of a connection.
 type ActionTarget int
 
@@ -804,8 +786,10 @@ type Action struct {
 	SchedulePeriod     int16
 	Filter             *ActionFilter
 	Schema             types.Type
+	InSchema           types.Type
+	OutSchema          types.Type
 	Mapping            map[string]string
-	Transformation     *Transformation
+	PythonSource       string
 	Query              string
 	Path               string
 	Sheet              string

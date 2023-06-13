@@ -295,8 +295,10 @@ type AddActionNotification struct {
 	SchedulePeriod     int16
 	Filter             *ActionFilter
 	Schema             types.Type
+	InSchema           types.Type
+	OutSchema          types.Type
 	Mapping            map[string]string
-	Transformation     *Transformation
+	PythonSource       string
 	Query              string
 	Path               string
 	Sheet              string
@@ -323,8 +325,10 @@ func (state *State) addAction(n postgres.Notification) {
 		SchedulePeriod:     e.SchedulePeriod,
 		Filter:             e.Filter,
 		Schema:             e.Schema,
+		InSchema:           e.InSchema,
+		OutSchema:          e.OutSchema,
 		Mapping:            e.Mapping,
-		Transformation:     e.Transformation,
+		PythonSource:       e.PythonSource,
 		Query:              e.Query,
 		Path:               e.Path,
 		Sheet:              e.Sheet,
@@ -810,8 +814,10 @@ type SetActionNotification struct {
 	Enabled            bool
 	Filter             *ActionFilter
 	Schema             types.Type
+	InSchema           types.Type
+	OutSchema          types.Type
 	Mapping            map[string]string
-	Transformation     *Transformation
+	PythonSource       string
 	Query              string
 	Path               string
 	Sheet              string
@@ -830,8 +836,10 @@ func (state *State) setAction(n postgres.Notification) {
 		a.Enabled = e.Enabled
 		a.Filter = e.Filter
 		a.Schema = e.Schema
+		a.InSchema = e.InSchema
+		a.OutSchema = e.OutSchema
 		a.Mapping = e.Mapping
-		a.Transformation = e.Transformation
+		a.PythonSource = e.PythonSource
 		a.Query = e.Query
 		a.Path = e.Path
 		a.Sheet = e.Sheet

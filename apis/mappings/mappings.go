@@ -8,13 +8,12 @@
 package mappings
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
 
+	"chichi/apis/normalization"
 	"chichi/apis/state"
 	"chichi/apis/transformations"
 	"chichi/connector/types"
@@ -69,13 +68,25 @@ type propertyMapping struct {
 
 // Mapping represents a mapping.
 type Mapping struct {
-	properties     []propertyMapping
-	transformation *state.Transformation
+	inSchema, outSchema types.Type
+	properties          []propertyMapping
+	pythonSource        string
+	formatTime          bool
 }
 
 // New returns a new mapping that maps properties of inSchema to outSchema using
-// the given mapping or transformation.
-func New(inSchema, outSchema types.Type, mapp map[string]string, transf *state.Transformation) (*Mapping, error) {
+// the given mapping or, in case of a transformation function, the Python
+// source.
+// Panics if none or both the mapping and the Python source are provided.
+func New(inSchema, outSchema types.Type, mapp map[string]string, pythonSource string, formatTime bool) (*Mapping, error) {
+
+	if (mapp == nil) == (pythonSource == "") {
+		panic("one and only one of mapping and Python source must be provided")
+	}
+
+	m := Mapping{inSchema: inSchema, outSchema: outSchema, formatTime: formatTime}
+
+	// Mapping.
 	if mapp != nil {
 		properties := make([]propertyMapping, 0, len(mapp))
 		for out, in := range mapp {
@@ -95,9 +106,14 @@ func New(inSchema, outSchema types.Type, mapp map[string]string, transf *state.T
 			pm.out.nullable = prop.Nullable
 			properties = append(properties, pm)
 		}
-		return &Mapping{properties: properties}, nil
+		m.properties = properties
+		return &m, nil
 	}
-	return &Mapping{transformation: transf}, nil
+
+	// Transformation function.
+	m.pythonSource = pythonSource
+
+	return &m, nil
 }
 
 // Apply applies the mapping to values and returns the mapped values or an error
@@ -115,7 +131,7 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 			if value == nil && property.out.nullable {
 				// Conversion is not necessary.
 			} else {
-				v, err := convert(value, property.in.typ, property.out.typ, property.out.nullable)
+				v, err := convert(value, property.in.typ, property.out.typ, property.out.nullable, m.formatTime)
 				if err != nil {
 					path := strings.Join(property.out.path, ".")
 					log.Printf("cannot convert %#v (type %s) to type %s for property at path %q", value, property.in.typ, property.out.typ, path)
@@ -129,12 +145,13 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 	}
 
 	// Map using the transformation function.
-	t := m.transformation
 
 	// Prepare the properties for the transformation.
-	inPropsNames := t.In.PropertiesNames()
-	inProps := make(map[string]any, len(inPropsNames))
-	for _, name := range inPropsNames {
+	// TODO(Gianluca): this may be no longer necessary. Review when refactoring
+	// the normalization of properties.
+	inPropNames := m.inSchema.PropertiesNames()
+	inProps := make(map[string]any, len(inPropNames))
+	for _, name := range inPropNames {
 		value, ok := values[name]
 		if !ok {
 			continue
@@ -142,28 +159,41 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 		inProps[name] = value
 	}
 
-	// Validate the input properties according to the transformation's input
-	// schema.
-	err := validateProps(inProps, t.In)
-	if err != nil {
-		return nil, fmt.Errorf("input schema validation failed: %s", err)
-	}
-
 	// Run the Python transformation function.
 	pool := transformations.NewPool()
-	outValues, err := pool.Run(ctx, t.PythonSource, inProps)
+	outValues, err := pool.Run(ctx, m.pythonSource, inProps)
 	if err != nil {
 		return nil, fmt.Errorf("error while calling the transformation function: %s", err)
 	}
 
-	// Validate the properties returned by Python according to the
-	// transformation's output schema.
-	err = validateProps(outValues, t.Out)
+	// Normalize the Python output according to the mapping's output schema.
+	outValues, err = normalizePythonOutput(outValues, m.outSchema, m.formatTime)
 	if err != nil {
-		return nil, fmt.Errorf("output schema validation failed: %s", err)
+		return nil, err
 	}
 
 	return outValues, nil
+}
+
+// normalizePythonOutput normalizes the values returned by Python according to
+// the given schema.
+//
+// formatTime reports whether DateTime and Date values should be formatted based
+// on the layout, if any.
+func normalizePythonOutput(values map[string]any, schema types.Type, formatTime bool) (map[string]any, error) {
+	out := make(map[string]any, len(values))
+	for name, value := range values {
+		prop, ok := schema.Property(name)
+		if !ok {
+			return nil, fmt.Errorf("property %q not found", name)
+		}
+		v, err := normalization.NormalizePythonProperty(name, prop.Type, value, prop.Nullable, formatTime)
+		if err != nil {
+			return nil, err
+		}
+		out[name] = v
+	}
+	return out, nil
 }
 
 // readPropertyFrom reads the property with the given path from m, returning its
@@ -183,17 +213,6 @@ func readPropertyFrom(m map[string]any, propPath []string) (any, bool) {
 		return nil, false
 	}
 	return readPropertyFrom(obj, propPath[1:])
-}
-
-// validateProps validate the given properties using schema, returning error if
-// the validation fails.
-func validateProps(props map[string]any, schema types.Type) error {
-	data, err := json.Marshal(props)
-	if err != nil {
-		return err
-	}
-	_, err = decode(bytes.NewReader(data), schema)
-	return err
 }
 
 // writePropertyTo writes the property value v into m at the given property

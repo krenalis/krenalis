@@ -148,14 +148,17 @@ func (this *Action) exec() {
 
 }
 
-// schema returns the schema and the paths of the mapped properties of
-// the connection.
+// schema returns the schema and the paths of the mapped properties of the
+// connection.
+//
+// TODO(Gianluca): review this method. Is this still necessary? Can be
+// rewritten/optimized in some way?
 func (this *Action) schema() (types.Type, []types.Path, error) {
 
 	// Collect the paths of the properties used in transformation or mappings.
 	var paths []types.Path
-	if t := this.action.Transformation; t != nil {
-		for _, name := range t.In.PropertiesNames() {
+	if t := this.action.PythonSource; t != "" {
+		for _, name := range this.action.InSchema.PropertiesNames() {
 			paths = append(paths, []string{name})
 		}
 	}
@@ -169,14 +172,16 @@ func (this *Action) schema() (types.Type, []types.Path, error) {
 		mapped[p[0]] = struct{}{}
 	}
 	mappedProperties := make([]types.Property, 0, len(paths))
-	schema := this.action.Schema
-	for _, property := range schema.Properties() {
-		if _, ok := mapped[property.Name]; ok {
-			mappedProperties = append(mappedProperties, property)
+	schema := this.action.InSchema
+	if schema.Valid() {
+		for _, property := range schema.Properties() {
+			if _, ok := mapped[property.Name]; ok {
+				mappedProperties = append(mappedProperties, property)
+			}
 		}
-	}
-	if len(mappedProperties) > 0 {
-		schema = types.Object(mappedProperties)
+		if len(mappedProperties) > 0 {
+			schema = types.Object(mappedProperties)
+		}
 	}
 
 	return schema, paths, nil

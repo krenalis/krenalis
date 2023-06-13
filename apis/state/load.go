@@ -327,8 +327,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all actions.
 		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name,\n"+
-			"enabled, schedule_start, schedule_period, filter, schema, mapping,\n"+
-			"(transformation).in_types, (transformation).out_types, (transformation).python_source,\n"+
+			"enabled, schedule_start, schedule_period, filter, schema, in_schema, out_schema, mapping, python_source,\n"+
 			"query, path, sheet, (user_cursor).id, (user_cursor).timestamp, (user_cursor).next,\n"+
 			"health, export_mode, matching_properties_internal, matching_properties_external\n"+
 			"FROM actions",
@@ -336,12 +335,12 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 				for rows.Next() {
 					var connectionID int
 					var eventType string
-					var filter, rawSchema, mapping, transformIn, transformOut, pythonSource []byte
+					var filter, rawSchema, rawInSchema, rawOutSchema, mapping, pythonSource []byte
 					var matchPropInternal, matchPropExternal string
 					action := Action{}
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &filter,
-						&rawSchema, &mapping, &transformIn, &transformOut, &pythonSource, &action.Query,
+						&rawSchema, &rawInSchema, &rawOutSchema, &mapping, &pythonSource, &action.Query,
 						&action.Path, &action.Sheet, &action.UserCursor.ID, &action.UserCursor.Timestamp,
 						&action.UserCursor.Next, &action.Health, &action.ExportMode, &matchPropInternal,
 						&matchPropExternal)
@@ -365,23 +364,21 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 							return err
 						}
 					}
+					err = action.InSchema.UnmarshalJSON(rawInSchema)
+					if err != nil {
+						// TODO(marco) disable the action instead of returning an error
+						return err
+					}
+					err = action.OutSchema.UnmarshalJSON(rawOutSchema)
+					if err != nil {
+						// TODO(marco) disable the action instead of returning an error
+						return err
+					}
 					if len(mapping) > 0 {
 						err = json.Unmarshal(mapping, &action.Mapping)
 						if err != nil {
 							return err
 						}
-					}
-					if len(transformIn) > 0 {
-						t := &Transformation{PythonSource: string(pythonSource)}
-						err := json.Unmarshal(transformIn, &t.In)
-						if err != nil {
-							return err
-						}
-						err = json.Unmarshal(transformOut, &t.Out)
-						if err != nil {
-							return err
-						}
-						action.Transformation = t
 					}
 					if matchPropInternal != "" {
 						action.MatchingProperties = &MatchingProperties{

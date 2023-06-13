@@ -18,6 +18,7 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/httpclient"
+	"chichi/apis/mappings"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	_connector "chichi/connector"
@@ -43,8 +44,10 @@ type Action struct {
 	SchedulePeriod     *SchedulePeriod
 	Filter             *ActionFilter
 	Schema             types.Type
+	InSchema           types.Type
+	OutSchema          types.Type
 	Mapping            map[string]string
-	Transformation     *Transformation
+	PythonSource       string
 	Query              *string
 	Path               *string
 	Sheet              *string
@@ -93,19 +96,15 @@ func (this *Action) fromState(db *postgres.DB, http *httpclient.HTTP, action *st
 		}
 	}
 	this.Schema = action.Schema
+	this.InSchema = action.InSchema
+	this.OutSchema = action.OutSchema
 	if action.Mapping != nil {
 		this.Mapping = make(map[string]string, len(action.Mapping))
 		for out, in := range action.Mapping {
 			this.Mapping[out] = in
 		}
 	}
-	if t := action.Transformation; t != nil {
-		this.Transformation = &Transformation{
-			In:           t.In,
-			Out:          t.Out,
-			PythonSource: t.PythonSource,
-		}
-	}
+	this.PythonSource = action.PythonSource
 	if action.Query != "" {
 		query := action.Query
 		this.Query = &query
@@ -217,13 +216,6 @@ func (this *Action) Delete() error {
 	return err
 }
 
-// Transformation represents the transformation of an action.
-type Transformation struct {
-	In           types.Type
-	Out          types.Type
-	PythonSource string
-}
-
 // Execute executes the action.
 //
 // It returns an errors.NotFoundError error if the action does not exist
@@ -271,20 +263,22 @@ func (this *Action) Set(action ActionToSet) error {
 		return err
 	}
 	n := state.SetActionNotification{
-		ID:             this.action.ID,
-		Name:           action.Name,
-		Enabled:        action.Enabled,
-		Mapping:        action.Mapping,
-		Transformation: (*state.Transformation)(action.Transformation),
-		Query:          action.Query,
-		Path:           action.Path,
-		Sheet:          action.Sheet,
-		ExportMode:     (*state.ExportMode)(action.ExportMode),
+		ID:           this.action.ID,
+		Name:         action.Name,
+		Enabled:      action.Enabled,
+		InSchema:     action.InSchema,
+		OutSchema:    action.OutSchema,
+		Mapping:      action.Mapping,
+		PythonSource: action.PythonSource,
+		Query:        action.Query,
+		Path:         action.Path,
+		Sheet:        action.Sheet,
+		ExportMode:   (*state.ExportMode)(action.ExportMode),
 	}
 	if shouldStoreActionSchema(c.Connector().Type, c.Role, this.action.Target) {
 		n.Schema = schema
 	}
-	var filter, mapping, tIn, tOut, tSource []byte
+	var filter, mapping []byte
 	if action.Filter != nil {
 		n.Filter = &state.ActionFilter{
 			Logical:    state.ActionFilterLogical(action.Filter.Logical),
@@ -298,23 +292,7 @@ func (this *Action) Set(action ActionToSet) error {
 			return err
 		}
 	}
-	if action.Mapping != nil {
-		mapping, err = json.Marshal(action.Mapping)
-		if err != nil {
-			return err
-		}
-	}
-	if t := action.Transformation; t != nil {
-		tIn, err = json.Marshal(t.In)
-		if err != nil {
-			return err
-		}
-		tOut, err = json.Marshal(t.Out)
-		if err != nil {
-			return err
-		}
-		tSource = []byte(t.PythonSource)
-	}
+
 	if props := action.MatchingProperties; props != nil {
 		n.MatchingProperties = &state.MatchingProperties{
 			Internal: props.Internal,
@@ -322,25 +300,42 @@ func (this *Action) Set(action ActionToSet) error {
 		}
 	}
 	ctx := context.Background()
-	// Marshal the schema.
+
+	// Marshal the schemas.
 	var rawSchema []byte
 	if n.Schema.Valid() {
-		rawSchema, err = n.Schema.MarshalJSON()
+		rawSchema, err = marshalSchema(n.Schema)
 		if err != nil {
-			if this.EventType == nil {
-				return fmt.Errorf("cannot marshal fetched schema for action %d of connection %d: %s", this.ID, c.ID, err)
-			}
-			return fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: %s", *this.EventType, c.ID, err)
-		}
-		if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
-			if this.EventType == nil {
-				return fmt.Errorf("cannot marshal fetched schema for action %d of connection %d: data is too large", this.ID, c.ID)
-			}
-			return fmt.Errorf("cannot marshal fetched schema for event type %q of connection %d: data is too large", *this.EventType, c.ID)
+			return err
 		}
 	} else {
 		rawSchema = []byte{}
 	}
+	var rawInSchema, rawOutSchema []byte
+	if action.InSchema.Valid() {
+		rawInSchema, err = marshalSchema(action.InSchema)
+		if err != nil {
+			return err
+		}
+	} else {
+		rawInSchema = []byte(`null`)
+	}
+	if action.OutSchema.Valid() {
+		rawOutSchema, err = marshalSchema(action.OutSchema)
+		if err != nil {
+			return err
+		}
+	} else {
+		rawOutSchema = []byte(`null`)
+	}
+	// Marshal the mapping.
+	if action.Mapping != nil {
+		mapping, err = json.Marshal(action.Mapping)
+		if err != nil {
+			return err
+		}
+	}
+	// Matching properties.
 	var matchPropInternal, matchPropExternal string
 	if n.MatchingProperties != nil {
 		matchPropInternal = n.MatchingProperties.Internal
@@ -348,14 +343,13 @@ func (this *Action) Set(action ActionToSet) error {
 	}
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
-			"name = $1, enabled = $2, filter = $3, schema = $4, mapping = $5,\n"+
-			"transformation.in_types = $6, transformation.out_types = $7,\n"+
-			"transformation.python_source = $8, query = $9, path = $10, sheet = $11,\n"+
+			"name = $1, enabled = $2, filter = $3, schema = $4, in_schema = $5, out_schema = $6,\n"+
+			"mapping = $7, python_source = $8, query = $9, path = $10, sheet = $11,\n"+
 			"export_mode = $12, matching_properties_internal = $13,\n"+
 			"matching_properties_external = $14 WHERE id = $15",
-			n.Name, n.Enabled, string(filter), rawSchema, string(mapping),
-			string(tIn), string(tOut), string(tSource), n.Query, n.Path, n.Sheet,
-			n.ExportMode, matchPropInternal, matchPropExternal, n.ID,
+			n.Name, n.Enabled, string(filter), rawSchema, rawInSchema, rawOutSchema, mapping,
+			n.PythonSource, n.Query, n.Path, n.Sheet, n.ExportMode, matchPropInternal,
+			matchPropExternal, n.ID,
 		)
 		if err != nil {
 			return err
@@ -462,6 +456,12 @@ type ActionToSet struct {
 	// Filter is the filter of the action, if it has one, otherwise is nil.
 	Filter *ActionFilter
 
+	// InSchema is the input schema of the mappings (of the transformation).
+	InSchema types.Type
+
+	// OutSchema is the output schema of the mappings (of the transformation).
+	OutSchema types.Type
+
 	// Mapping is the mapping of the action, if it has one, otherwise is nil.
 	//
 	// Every action that supports mappings / transformation must have an
@@ -474,21 +474,9 @@ type ActionToSet struct {
 	// '.').
 	Mapping map[string]string
 
-	// Transformation is the transformation of the action, if it has one,
-	// otherwise is nil.
-	// Every action that supports mappings / transformation must have an
-	// associated mapping or a transformation, which are mutually exclusive.
-	//
-	// If it has a transformation:
-	//
-	// - it must have at least one input and one output property
-	// - the names of the properties in the input schema of the transformation
-	//   must be present in the input schema of the action.
-	// - the names of the properties in the output schema of the transformation
-	//   must be present in the output schema of the action.
-	// - every required property in the output schema of the action must be
-	//   present in the output schema of the transformation
-	Transformation *Transformation
+	// PythonSource is the source code for the Python transformation function of
+	// the action, if it has one, otherwise is the empty string.
+	PythonSource string
 
 	// Query is the query of the action, if it has one, otherwise it is the
 	// empty string.
@@ -659,7 +647,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 	}
 	// Validate the mapping and the transformation.
-	if action.Mapping != nil && action.Transformation != nil {
+	if action.Mapping != nil && action.PythonSource != "" {
 		return types.Type{}, errors.BadRequest("action can not have both mapping and transformation")
 	}
 	var mappingInPaths [][]string
@@ -682,16 +670,8 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			mappingOutPaths = append(mappingOutPaths, path)
 		}
 	}
-	if t := action.Transformation; t != nil {
-		if !t.In.Valid() || t.In.PhysicalType() != types.PtObject {
-			return types.Type{}, errors.BadRequest("input schema of transformation is not valid")
-		}
-		if !t.Out.Valid() || t.Out.PhysicalType() != types.PtObject {
-			return types.Type{}, errors.BadRequest("output schema of transformation is not valid")
-		}
-		// TODO(Gianluca): do a proper validation of the Python source code.
-		// See the issue https://github.com/open2b/chichi/issues/188.
-		if !strings.Contains(t.PythonSource, "def transform") {
+	if action.PythonSource != "" {
+		if !strings.Contains(action.PythonSource, "def transform") {
 			return types.Type{}, errors.BadRequest("Python source code of transformation does not contain 'transform' function")
 		}
 	}
@@ -862,7 +842,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	}
 
 	// Check if the mapping (and the transformations) are allowed and required
-	// for this action.
+	// for this action; in that case, validate them.
 	var requiresMapping bool
 	switch connector.Type {
 	case state.AppType:
@@ -873,15 +853,56 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		requiresMapping = c.Role == state.SourceRole && targetUsersOrGroups
 	}
 	if requiresMapping {
-		if action.Mapping == nil && action.Transformation == nil {
+		if action.Mapping == nil && action.PythonSource == "" {
 			return types.Type{}, errors.BadRequest("mapping (or transformation) is required")
 		}
+		// If there is at least one property mapped, or a Python transformation
+		// function is provided, then there must be both a valid input and
+		// output schema.
+		if requiresSchemas := len(action.Mapping) > 0 || action.PythonSource != ""; requiresSchemas {
+			if !action.InSchema.Valid() {
+				return types.Type{}, errors.BadRequest("input schema must be valid")
+			}
+			if action.InSchema.PhysicalType() != types.PtObject {
+				return types.Type{}, errors.BadRequest("input schema must have physical type Object")
+			}
+			if !action.OutSchema.Valid() {
+				return types.Type{}, errors.BadRequest("output schema must be valid")
+			}
+			if action.OutSchema.PhysicalType() != types.PtObject {
+				return types.Type{}, errors.BadRequest("output schema must have physical type Object")
+			}
+			for i, inPath := range mappingInPaths {
+				outPath := mappingOutPaths[i]
+				inProp, ok := action.InSchema.PropertyByPath(inPath)
+				if !ok {
+					return types.Type{}, errors.BadRequest("mapped property %q not found in input schema", strings.Join(inPath, "."))
+				}
+				outProp, ok := action.OutSchema.PropertyByPath(outPath)
+				if !ok {
+					return types.Type{}, errors.BadRequest("mapped property %q not found in output schema", strings.Join(outPath, "."))
+				}
+				ok = mappings.ConvertibleTo(inProp.Type.PhysicalType(), outProp.Type.PhysicalType())
+				if !ok {
+					return types.Type{}, errors.BadRequest("property %q (with type %s) cannot be mapped and converted to property %q (with type %s)", inProp.Name, inProp.Type, outProp.Name, outProp.Type)
+				}
+			}
+		}
+		// TODO(Gianluca): should we return an error if the input or the output
+		// schema has a property not mapped by the mapping? If so, how should we
+		// handle that in case of transformation functions?
 	} else {
 		if action.Mapping != nil {
 			return types.Type{}, errors.BadRequest("mapping not allowed")
 		}
-		if action.Transformation != nil {
+		if action.PythonSource != "" {
 			return types.Type{}, errors.BadRequest("transformation not allowed")
+		}
+		if action.InSchema.Valid() {
+			return types.Type{}, errors.BadRequest("input schema not expected")
+		}
+		if action.OutSchema.Valid() {
+			return types.Type{}, errors.BadRequest("output schema not expected")
 		}
 	}
 

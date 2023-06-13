@@ -11,7 +11,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"chichi/connector/types"
 	"chichi/test/chichitester"
 )
 
@@ -70,11 +72,20 @@ func TestImportUsersFromFile(t *testing.T) {
 		"Action": map[string]any{
 			"Name": "Import users from CSV on Filesystem",
 			"Path": "users.csv",
+			"InSchema": types.Object([]types.Property{
+				{Name: "column1", Type: types.Text()},
+				{Name: "column4", Type: types.Text()},
+				{Name: "column5", Type: types.Text()},
+			}),
+			"OutSchema": types.Object([]types.Property{
+				{Name: "id", Type: types.Text()},
+				{Name: "Email", Type: types.Text()},
+				{Name: "timestamp", Type: types.DateTime().WithLayout(time.DateTime)},
+			}),
 			"Mapping": map[string]string{
-				"id":              "column1",
-				"Email":           "column4",
-				"timestamp":       "column5",
-				"FoodPreferences": "column6",
+				"id":        "column1",
+				"Email":     "column4",
+				"timestamp": "column5",
 			},
 		},
 	})

@@ -34,7 +34,7 @@ var (
 // NormalizeAppProperty normalizes a property value returned by an app
 // connector, and returns its normalized value. If the value is not valid
 // it returns an error.
-func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (any, error) {
+func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool) (any, error) {
 	if src == nil {
 		if !nullable {
 			return nil, fmt.Errorf("property %s is non-nullable, but the app returned a nil value", name)
@@ -291,7 +291,7 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 			t := typ.ItemType()
 			for i := 0; i < n; i++ {
 				v := rv.Index(i).Interface()
-				a[i], err = NormalizeAppProperty(name, false, t, v)
+				a[i], err = NormalizeAppProperty(name, t, v, false)
 				if err != nil {
 					return nil, err
 				}
@@ -318,7 +318,7 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 				if !ok {
 					return nil, fmt.Errorf("app returned a non-existent property %s for object property %s", k, name)
 				}
-				obj[k], err = NormalizeAppProperty(name, p.Nullable, p.Type, v)
+				obj[k], err = NormalizeAppProperty(name, p.Type, v, p.Nullable)
 				if err != nil {
 					return nil, err
 				}
@@ -337,7 +337,7 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 			for iter.Next() {
 				k := iter.Key().String()
 				v := iter.Value().Interface()
-				m[k], err = NormalizeAppProperty(name, false, t, v)
+				m[k], err = NormalizeAppProperty(name, t, v, false)
 				if err != nil {
 					return nil, err
 				}
@@ -356,7 +356,7 @@ func NormalizeAppProperty(name string, nullable bool, typ types.Type, src any) (
 // NormalizeDatabaseFileProperty normalizes a property value returned by a
 // database connector, a file connector, or a data warehouse and returns its
 // normalized value. If the value is not valid it returns an error.
-func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, src any) (any, error) {
+func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullable bool) (any, error) {
 	if src == nil {
 		if !nullable {
 			return nil, fmt.Errorf("column %s is non-nullable, but the database returned a NULL value", name)
@@ -594,7 +594,7 @@ func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, s
 			t := typ.ItemType()
 			for i := 0; i < n; i++ {
 				v := rv.Index(i).Interface()
-				a[i], err = NormalizeDatabaseFileProperty(name, false, t, v)
+				a[i], err = NormalizeDatabaseFileProperty(name, t, v, false)
 				if err != nil {
 					return nil, err
 				}
@@ -613,7 +613,7 @@ func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, s
 			for iter.Next() {
 				k := iter.Key().String()
 				v := iter.Value().Interface()
-				m[k], err = NormalizeDatabaseFileProperty(name, false, t, v)
+				m[k], err = NormalizeDatabaseFileProperty(name, t, v, false)
 				if err != nil {
 					return nil, err
 				}
@@ -627,6 +627,12 @@ func NormalizeDatabaseFileProperty(name string, nullable bool, typ types.Type, s
 			src, name, typ.PhysicalType())
 	}
 	return value, nil
+}
+
+// TODO(Gianluca): correctly implement this function; currently it just calls
+// 'NormalizeAppProperty'.
+func NormalizePythonProperty(name string, typ types.Type, src any, nullable, formatTime bool) (any, error) {
+	return NormalizeAppProperty(name, typ, src, nullable)
 }
 
 // ValidateStringProperty validates a string property like

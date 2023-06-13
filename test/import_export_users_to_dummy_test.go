@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"chichi/connector"
+	"chichi/connector/types"
 	"chichi/test/chichitester"
 )
 
@@ -30,6 +31,14 @@ func TestImportExportUsersToDummy(t *testing.T) {
 			"Target": "Users",
 			"Action": map[string]any{
 				"Name": "Import users from Dummy",
+				"InSchema": types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+					{Name: "first_name", Type: types.Text()},
+				}),
+				"OutSchema": types.Object([]types.Property{
+					{Name: "Email", Type: types.Text()},
+					{Name: "FirstName", Type: types.Text()},
+				}),
 				"Mapping": map[string]string{
 					"Email":     "email",
 					"FirstName": "first_name",
@@ -47,6 +56,13 @@ func TestImportExportUsersToDummy(t *testing.T) {
 			"Target": "Users",
 			"Action": map[string]any{
 				"Name": "Export users to Dummy",
+				"InSchema": types.Object([]types.Property{
+					{Name: "Email", Type: types.Text()},
+				}),
+				"OutSchema": types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+					{Name: "last_name", Type: types.Text()},
+				}),
 				"Mapping": map[string]string{
 					"email":     "Email",
 					"last_name": "Email", // this is intended.
@@ -70,6 +86,16 @@ func TestImportExportUsersToDummy(t *testing.T) {
 			"Target": "Users",
 			"Action": map[string]any{
 				"Name": "Import users from Dummy",
+				"InSchema": types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+					{Name: "first_name", Type: types.Text()},
+					{Name: "last_name", Type: types.Text()},
+				}),
+				"OutSchema": types.Object([]types.Property{
+					{Name: "Email", Type: types.Text()},
+					{Name: "FirstName", Type: types.Text()},
+					{Name: "LastName", Type: types.Text()},
+				}),
 				"Mapping": map[string]string{
 					"Email":     "email",
 					"FirstName": "first_name",
