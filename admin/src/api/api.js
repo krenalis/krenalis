@@ -88,7 +88,7 @@ class Connections {
 	};
 
 	setStorage = async (connection, storage, compression) => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/storage/${storage}`, http.POST, {
+		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/storage`, http.POST, {
 			storage: storage,
 			compression: compression,
 		});
