@@ -57,12 +57,6 @@ const Connection = () => {
 					<span style={{ position: 'relative', top: '3px' }}>{logo}</span>
 					<div className='text'>{c.Name}</div>
 					<StatusDot statusText={statusText} statusVariant={statusVariant} />
-					<SlBadge className='type' variant='neutral'>
-						{c.Type}
-					</SlBadge>
-					<SlBadge className='role' variant='neutral'>
-						{c.Role}
-					</SlBadge>
 				</Flex>
 			);
 		};
