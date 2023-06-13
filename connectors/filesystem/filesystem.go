@@ -16,6 +16,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"time"
 
 	"chichi/connector"
@@ -63,9 +64,11 @@ type settings struct {
 // CompletePath returns the complete representation of the given path name or an
 // InvalidPathError if name is not valid for use in calls to Open and Write.
 func (c *connection) CompletePath(name string) (string, error) {
+	originalName := name
+	name = filepath.ToSlash(name)
 	if name[0] == '/' {
 		if name == "/" {
-			return "", connector.InvalidPathErrorf("path cannot be “/“")
+			return "", connector.InvalidPathErrorf("path name cannot be “" + originalName + "“")
 		}
 		name = name[1:]
 	}
@@ -75,11 +78,7 @@ func (c *connection) CompletePath(name string) (string, error) {
 	if name == "." || !fs.ValidPath(name) {
 		return "", connector.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
 	}
-	root := c.settings.Root
-	if root[len(root)-1] != '/' {
-		root += "/"
-	}
-	return root + name, nil
+	return filepath.Join(c.settings.Root, name), nil
 }
 
 // Open opens the file at the given path name and returns a ReadCloser from
@@ -151,17 +150,15 @@ func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
 	if n := len(root); n == 0 || n > 253 {
 		return nil, ui.Errorf("root path length in bytes must be in range [1,253]")
 	}
-	if root[0] != '/' {
-		return nil, ui.Errorf(`root path must start with "/"`)
+	if !filepath.IsAbs(root) {
+		return nil, ui.Errorf(`root path must be absolute`)
 	}
-	if root[len(root)-1] == '/' {
-		root = root[:len(root)-1]
-	}
-	if !fs.ValidPath(root[1:]) {
-		return nil, ui.Errorf("path name cannot contains “.” or “..” or empty elements")
-	}
-	if _, err := os.Stat(root + "/"); os.IsNotExist(err) {
+	st, err := os.Stat(root)
+	if os.IsNotExist(err) {
 		return nil, ui.Errorf("root path does not exist")
+	}
+	if !st.IsDir() {
+		return nil, ui.Errorf("root path is not a directory")
 	}
 	return json.Marshal(&s)
 }

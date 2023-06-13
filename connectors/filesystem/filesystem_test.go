@@ -1,3 +1,5 @@
+//go:build !windows
+
 //
 // SPDX-License-Identifier: Elastic-2.0
 //
