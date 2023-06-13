@@ -681,6 +681,9 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 
 	now := time.Now().UTC()
 
+	// Source.
+	event.source = int32(event.header.source)
+
 	// MessageID.
 	if event.MessageID == "" {
 		event.MessageID = uuid.NewString()
