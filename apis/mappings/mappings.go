@@ -56,11 +56,11 @@ func ActionFilterApplies(filter *state.ActionFilter, props map[string]any) (bool
 // propertyMapping represents a property to map.
 type propertyMapping struct {
 	in struct {
-		path []string
+		path types.Path
 		typ  types.Type
 	}
 	out struct {
-		path     []string
+		path     types.Path
 		typ      types.Type
 		nullable bool
 	}
@@ -202,28 +202,28 @@ func normalizePythonOutput(values map[string]any, schema types.Type, formatTime 
 // readPropertyFrom reads the property with the given path from m, returning its
 // value (if found, otherwise nil) and a boolean indicating if the property path
 // corresponds to a value in m or not.
-func readPropertyFrom(m map[string]any, propPath []string) (any, bool) {
-	name := propPath[0]
+func readPropertyFrom(m map[string]any, path types.Path) (any, bool) {
+	name := path[0]
 	v, ok := m[name]
 	if !ok {
 		return nil, false
 	}
-	if len(propPath) == 1 {
+	if len(path) == 1 {
 		return v, ok
 	}
 	obj, ok := v.(map[string]any)
 	if !ok {
 		return nil, false
 	}
-	return readPropertyFrom(obj, propPath[1:])
+	return readPropertyFrom(obj, path[1:])
 }
 
 // writePropertyTo writes the property value v into m at the given property
 // path.
 // m cannot be nil.
-func writePropertyTo(m map[string]any, propPath []string, v any) {
-	name := propPath[0]
-	if len(propPath) == 1 {
+func writePropertyTo(m map[string]any, path types.Path, v any) {
+	name := path[0]
+	if len(path) == 1 {
 		m[name] = v
 		return
 	}
@@ -235,5 +235,5 @@ func writePropertyTo(m map[string]any, propPath []string, v any) {
 	if !ok {
 		return
 	}
-	writePropertyTo(obj, propPath[1:], v)
+	writePropertyTo(obj, path[1:], v)
 }

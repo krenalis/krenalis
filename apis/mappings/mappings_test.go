@@ -10,48 +10,50 @@ package mappings
 import (
 	"reflect"
 	"testing"
+
+	"chichi/connector/types"
 )
 
 func Test_readPropertyFrom(t *testing.T) {
 	cases := []struct {
 		m          map[string]any
-		prop       []string
+		prop       types.Path
 		expectedV  any
 		expectedOk bool
 	}{
 		{
 			m:          map[string]any{},
-			prop:       []string{"email"},
+			prop:       types.Path{"email"},
 			expectedV:  nil,
 			expectedOk: false,
 		},
 		{
 			m:          map[string]any{"email": "hello@example.com"},
-			prop:       []string{"email"},
+			prop:       types.Path{"email"},
 			expectedV:  "hello@example.com",
 			expectedOk: true,
 		},
 		{
 			m:          map[string]any{"traits": map[string]any{"email": "world@example.com"}},
-			prop:       []string{"traits", "email"},
+			prop:       types.Path{"traits", "email"},
 			expectedV:  "world@example.com",
 			expectedOk: true,
 		},
 		{
 			m:          map[string]any{"traits": nil},
-			prop:       []string{"traits", "email"},
+			prop:       types.Path{"traits", "email"},
 			expectedV:  nil,
 			expectedOk: false,
 		},
 		{
 			m:          map[string]any{"traits": 42},
-			prop:       []string{"traits", "email"},
+			prop:       types.Path{"traits", "email"},
 			expectedV:  nil,
 			expectedOk: false,
 		},
 		{
 			m:          map[string]any{"traits": map[string]any{"email": "world@example.com"}},
-			prop:       []string{"traits", "name"},
+			prop:       types.Path{"traits", "name"},
 			expectedV:  nil,
 			expectedOk: false,
 		},
@@ -72,31 +74,31 @@ func Test_readPropertyFrom(t *testing.T) {
 func Test_writePropertyTo(t *testing.T) {
 	cases := []struct {
 		m         map[string]any
-		prop      []string
+		prop      types.Path
 		v         any
 		expectedM map[string]any
 	}{
 		{
 			m:         map[string]any{},
-			prop:      []string{"Email"},
+			prop:      types.Path{"Email"},
 			v:         "test@example.com",
 			expectedM: map[string]any{"Email": "test@example.com"},
 		},
 		{
 			m:         map[string]any{},
-			prop:      []string{"User", "Email"},
+			prop:      types.Path{"User", "Email"},
 			v:         "test@example.com",
 			expectedM: map[string]any{"User": map[string]any{"Email": "test@example.com"}},
 		},
 		{
 			m:         map[string]any{"User": nil},
-			prop:      []string{"User", "Email"},
+			prop:      types.Path{"User", "Email"},
 			v:         "test@example.com",
 			expectedM: map[string]any{"User": nil},
 		},
 		{
 			m:         map[string]any{"User": 42},
-			prop:      []string{"User", "Email"},
+			prop:      types.Path{"User", "Email"},
 			v:         "test@example.com",
 			expectedM: map[string]any{"User": 42},
 		},

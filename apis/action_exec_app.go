@@ -59,7 +59,7 @@ func (this *Action) importFromApp() error {
 	var propertiesPaths []types.Path
 	if this.action.PythonSource != "" { // Transformation function.
 		for _, name := range this.action.InSchema.PropertiesNames() {
-			propertiesPaths = append(propertiesPaths, []string{name})
+			propertiesPaths = append(propertiesPaths, types.Path{name})
 		}
 	} else { // Mappings.
 		for _, in := range this.action.Mapping {

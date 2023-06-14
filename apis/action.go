@@ -620,7 +620,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		return types.Type{}, errors.BadRequest("name is longer than 60 runes")
 	}
 	// Validate the filter.
-	var conditionProperties [][]string
+	var conditionProperties []types.Path
 	if action.Filter != nil {
 		if l := action.Filter.Logical; l != "all" && l != "any" {
 			return types.Type{}, errors.BadRequest("filter logical operator %q is not valid", action.Filter.Logical)
@@ -628,7 +628,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if len(action.Filter.Conditions) == 0 {
 			return types.Type{}, errors.BadRequest("filter does not contain conditions")
 		}
-		conditionProperties = make([][]string, len(action.Filter.Conditions))
+		conditionProperties = make([]types.Path, len(action.Filter.Conditions))
 		for i, condition := range action.Filter.Conditions {
 			property, ok := parsePropertyExpression(condition.Property)
 			if !ok {
@@ -650,11 +650,11 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	if action.Mapping != nil && action.PythonSource != "" {
 		return types.Type{}, errors.BadRequest("action can not have both mapping and transformation")
 	}
-	var mappingInPaths [][]string
-	var mappingOutPaths [][]string
+	var mappingInPaths []types.Path
+	var mappingOutPaths []types.Path
 	if action.Mapping != nil {
-		mappingInPaths = make([][]string, 0, len(action.Mapping))
-		mappingOutPaths = make([][]string, 0, len(action.Mapping))
+		mappingInPaths = make([]types.Path, 0, len(action.Mapping))
+		mappingOutPaths = make([]types.Path, 0, len(action.Mapping))
 		for out, in := range action.Mapping {
 			// Validate the input property expression.
 			path, ok := parsePropertyExpression(in)
@@ -1178,12 +1178,12 @@ func compileActionQuery(query string, limit int) (string, error) {
 	return query[:s1] + strings.ReplaceAll(query[s1+2:s2-2], "$limit", strconv.Itoa(limit)) + query[s2:], nil
 }
 
-// parsePropertyExpression parses the property expression p, returning a slice
-// with a single element, if p is an identifier, or a slice with the components
-// of the selector.
+// parsePropertyExpression parses the property expression p, returning a
+// property path with a single element, if p is an identifier, or a path with
+// the components of the selector.
 // The boolean return parameter reports whether p is a valid property expression
-// or not; when not valid, the returned slice is nil.
-func parsePropertyExpression(p string) ([]string, bool) {
+// or not; when not valid, the returned path is nil.
+func parsePropertyExpression(p string) (types.Path, bool) {
 
 	// A selector.
 	if strings.Contains(p, ".") {
@@ -1202,7 +1202,7 @@ func parsePropertyExpression(p string) ([]string, bool) {
 		return nil, false
 	}
 
-	return []string{p}, true
+	return types.Path{p}, true
 }
 
 // shouldStoreActionSchema reports whether the schema for an action with the

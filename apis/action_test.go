@@ -10,18 +10,20 @@ package apis
 import (
 	"reflect"
 	"testing"
+
+	"chichi/connector/types"
 )
 
 func Test_parsePropertyExpression(t *testing.T) {
 	cases := []struct {
 		p             string
-		expectedSlice []string
+		expectedSlice types.Path
 		expectedOk    bool
 	}{
 		// Valid property expressions.
-		{"street1", []string{"street1"}, true},
-		{"address_street1", []string{"address_street1"}, true},
-		{"address.street1", []string{"address", "street1"}, true},
+		{"street1", types.Path{"street1"}, true},
+		{"address_street1", types.Path{"address_street1"}, true},
+		{"address.street1", types.Path{"address", "street1"}, true},
 
 		// Invalid property expressions.
 		{"", nil, false},
