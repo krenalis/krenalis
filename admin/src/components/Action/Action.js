@@ -131,13 +131,39 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			}
 			defaultTransformationFunction.current = rawTransformationFunction.replace('$parameterName', parameterName);
 
+			// get the action schemas.
+			let [schemas, err] = await API.connections.actionSchemas(c.ID, actionType.Target, actionType.EventType);
+			if (err != null) {
+				onClose();
+				if (err instanceof UnprocessableError) {
+					switch (err.code) {
+						case 'NoUsersSchema':
+							showStatus(statuses.noUsersSchema);
+							break;
+						case 'NoGroupsSchema':
+							showStatus(statuses.noGroupsSchema);
+							break;
+						case 'EventTypeNotExists':
+							showStatus([variants.DANGER, icons.NOT_FOUND, err.message]);
+							break;
+						default:
+							break;
+					}
+					return;
+				}
+				showError(err);
+				return;
+			}
+			setInputSchema(schemas.In);
+			setOutputSchema(schemas.Out);
+
 			// check which fields are supported by the action.
 			let fields = [];
 			if (c.Type === 'App' && c.Role === 'Destination' && actionType.Target === 'Events') {
 				fields.push('Filter');
 			}
 			if (
-				c.Type === 'App' ||
+				(c.Type === 'App' && schemas.In != null && schemas.Out != null) ||
 				(c.Type === 'Database' && c.Role === 'Source') ||
 				(c.Type === 'File' && c.Role === 'Source')
 			) {
@@ -170,32 +196,6 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				}
 			}
 			setFields(fields);
-
-			// get the action schemas.
-			let [schemas, err] = await API.connections.actionSchemas(c.ID, actionType.Target, actionType.EventType);
-			if (err != null) {
-				onClose();
-				if (err instanceof UnprocessableError) {
-					switch (err.code) {
-						case 'NoUsersSchema':
-							showStatus(statuses.noUsersSchema);
-							break;
-						case 'NoGroupsSchema':
-							showStatus(statuses.noGroupsSchema);
-							break;
-						case 'EventTypeNotExists':
-							showStatus([variants.DANGER, icons.NOT_FOUND, err.message]);
-							break;
-						default:
-							break;
-					}
-					return;
-				}
-				showError(err);
-				return;
-			}
-			setInputSchema(schemas.In);
-			setOutputSchema(schemas.Out);
 
 			// if the action is on a database or file source, the schema must be
 			// fetched from the linked database / file.
