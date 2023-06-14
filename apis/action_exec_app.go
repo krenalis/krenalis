@@ -11,9 +11,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"chichi/apis/mappings"
 	_connector "chichi/connector"
+	"chichi/connector/types"
 )
 
 // importFromApp imports the users from an app.
@@ -48,15 +50,21 @@ func (this *Action) importFromApp() error {
 	}
 	app := connector.(_connector.AppUsersConnection)
 
-	// Read the properties to read.
-	_, propertiesPaths, err := this.schema()
-	if err != nil {
-		return fmt.Errorf("cannot read user schema: %s", err)
-	}
-
 	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.PythonSource, false)
 	if err != nil {
 		return actionExecutionError{err}
+	}
+
+	// Determine the properties to import.
+	var propertiesPaths []types.Path
+	if this.action.PythonSource != "" { // Transformation function.
+		for _, name := range this.action.InSchema.PropertiesNames() {
+			propertiesPaths = append(propertiesPaths, []string{name})
+		}
+	} else { // Mappings.
+		for _, in := range this.action.Mapping {
+			propertiesPaths = append(propertiesPaths, strings.Split(in, "."))
+		}
 	}
 
 	var eof bool
