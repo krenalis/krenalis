@@ -1178,41 +1178,6 @@ func compileActionQuery(query string, limit int) (string, error) {
 	return query[:s1] + strings.ReplaceAll(query[s1+2:s2-2], "$limit", strconv.Itoa(limit)) + query[s2:], nil
 }
 
-// existsInObject reports whether a property, denoted by its path - for example
-// ["traits", "address", "street1"] - exists in the given object type (which may
-// be, in the previous example, an object type with property "traits", which
-// contains an object with a property "address", which contains a property with
-// name "street1").
-// object must have an object physical type.
-// If one of the sub-properties has type map or JSON, it is assumed that such
-// property exists (the validation can be done only at runtime, with the
-// effective value).
-func existsInObject(propPath []string, object types.Type) bool {
-	if object.PhysicalType() != types.PtObject {
-		panic("not an object")
-	}
-	name := propPath[0]
-	for _, prop := range object.Properties() {
-		if prop.Name != name {
-			continue
-		}
-		// Found.
-		rest := propPath[1:]
-		if len(rest) == 0 {
-			return true
-		}
-		switch prop.Type.PhysicalType() {
-		case types.PtObject:
-			return existsInObject(rest, prop.Type)
-		case types.PtMap, types.PtJSON:
-			return true
-		default:
-			return false
-		}
-	}
-	return false
-}
-
 // parsePropertyExpression parses the property expression p, returning a slice
 // with a single element, if p is an identifier, or a slice with the components
 // of the selector.
