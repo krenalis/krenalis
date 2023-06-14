@@ -14,7 +14,7 @@ GET     /api/connections/{id}/action-schemas/Users               Get the input a
 GET     /api/connections/{id}/action-schemas/Groups              Get the input and output schemas of the Groups action type.
 GET     /api/connections/{id}/action-schemas/Events              Get the input and output schemas of the Events action type with no event type.
 GET     /api/connections/{id}/action-schemas/Events/{eventType}  Get the input and output schemas of the Events action type for the event type.
-GET     /api/connections/{id}/complete-path/{path}               Return the complete representation of a path.
+GET     /api/connections/{id}/complete-path/{path}               Return the complete representation of a path for a connection storage.
 POST    /api/connections/{id}/exec-query                         Execute the query of a database connection.
 GET     /api/connections/{id}/imports                            Return the executions of a connection.
 GET     /api/connections/{id}/records                            Return the records and the schema of a file of a multiple sheets file connection
