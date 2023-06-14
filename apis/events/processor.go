@@ -145,11 +145,9 @@ func (processor *Processor) Events() <-chan *processedEvent {
 func eventToConnectorEvent(event *collectedEvent) connector.Event {
 	// Keep in sync with the schema in "apis/events/schema.go".
 	e := connector.Event{}
-	e.Source = event.source
 	e.MessageID = event.MessageID
 	e.AnonymousID = event.AnonymousID
 	e.UserID = event.UserID
-	e.Date = event.date
 	e.Timestamp = event.timestamp
 	e.SentAt = event.sentAt
 	e.ReceivedAt = event.receivedAt
@@ -197,7 +195,6 @@ func eventToConnectorEvent(event *collectedEvent) connector.Event {
 	e.Campaign.Content = event.Context.Campaign.Content
 	e.Library.Name = event.Context.Library.Name
 	e.Library.Version = event.Context.Library.Version
-	e.Properties = event.Properties
 	return e
 }
 

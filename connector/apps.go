@@ -159,16 +159,16 @@ type AppGroupsConnection interface {
 }
 
 // Event represents an event.
-//
-// Keep these fields in sync with the schema in "apis/events/schema.go".
 type Event struct {
-	Source      int32
+
+	// Keep these fields in sync with the schema in "apis/events/schema.go" except for
+	// the 'Source', 'Date', and 'Properties' fields, which a connector should not directly access.
+
 	Event       string
 	Name        string
 	MessageID   string
 	AnonymousID string
 	UserID      string
-	Date        string
 	Timestamp   time.Time
 	SentAt      time.Time
 	ReceivedAt  time.Time
@@ -244,5 +244,4 @@ type Event struct {
 		Name    string
 		Version string
 	}
-	Properties map[string]any
 }
