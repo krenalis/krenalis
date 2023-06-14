@@ -5,6 +5,10 @@ import Arrow from '../../components/Arrow/Arrow';
 const renderConnectionsBlocks = (connections, newConnectionID) => {
 	const blocks = [];
 	for (const c of connections) {
+		const isFile = c.Storage !== 0;
+		if (isFile) {
+			continue;
+		}
 		if (c.Type === 'Storage') {
 			const files = connections.filter((cn) => cn.Storage === c.ID);
 			blocks.push(
