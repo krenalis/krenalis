@@ -17,7 +17,7 @@ class Sender {
 	}
 
 	send(event) {
-		this.#events.push(JSON.stringify(event));
+		this.#events.push(event);
 		if (this.#events.length === 1) {
 			this.#timeoutID = setTimeout(() => {
 				this.flush(false);
@@ -33,15 +33,16 @@ class Sender {
 
 		let messageID = uuid();
 		let sentAt = new Date();
-		let body = '{"messageId":"' + messageID + '","sentAt":"' + sentAt.toJSON() + '","batch":[';
+		let body = '{"messageId":"' + messageID + '","batch":[';
 		for (let i = 0; i < this.#events.length; i++) {
 			if (i > 0) {
 				body += ',';
 			}
-			body += this.#events[i];
+			let event = this.#events[i];
+			event.sentAt = sentAt;
+			body += JSON.stringify(event);
 		}
 		body += ']}';
-
 		try {
 			post(this.#endpoint, this.#source, body, keepalive, (res) => {
 				if (res instanceof Error) {

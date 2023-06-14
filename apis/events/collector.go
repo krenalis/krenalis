@@ -62,7 +62,6 @@ type collectedHeader struct {
 type batchEvents struct {
 	Batch   []*collectedEvent `json:"batch"`
 	Context *eventContext     `json:"context,omitempty"`
-	SentAt  string            `json:"sentAt,omitempty"`
 }
 
 type eventContext struct {
@@ -149,6 +148,7 @@ type collectedEvent struct {
 	Name         string          `json:"name,omitempty"`
 	PreviousID   string          `json:"previousId,omitempty"`
 	Properties   json.RawMessage `json:"properties,omitempty"`
+	SentAt       string          `json:"sentAt,omitempty"`
 	Timestamp    string          `json:"timestamp,omitempty"`
 	Traits       json.RawMessage `json:"traits,omitempty"`
 	Type         *string         `json:"type"`
@@ -679,8 +679,6 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 // enrichEvent enriches the given event.
 func (c *collector) enrichEvent(event *collectedEvent) {
 
-	now := time.Now().UTC()
-
 	// Source.
 	event.source = int32(event.header.source)
 
@@ -757,22 +755,23 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 		event.screen.height = int16(h)
 	}
 
-	// Timestamp and date.
-	if event.Timestamp == "" {
-		event.timestamp = event.header.ReceivedAt
-	} else {
-		event.timestamp, _ = iso8601.ParseString(event.Timestamp)
-		event.timestamp = event.timestamp.UTC()
-		if event.header.server > 0 {
-			if event.timestamp.After(now) {
-				event.timestamp = event.header.ReceivedAt
-			}
-		} else {
-			if t := event.timestamp; t.Add(-15*time.Minute).Before(now) || t.After(now) {
-				event.timestamp = event.header.ReceivedAt
-			}
-		}
+	// SentAt.
+	var err error
+	event.sentAt, err = iso8601.ParseString(event.SentAt)
+	if err != nil {
+		event.sentAt = event.header.ReceivedAt
 	}
+	event.sentAt = event.sentAt.UTC()
+
+	// Timestamp.
+	event.timestamp, err = iso8601.ParseString(event.Timestamp)
+	if err != nil {
+		event.timestamp = event.sentAt
+	}
+	skew := event.header.ReceivedAt.Sub(event.sentAt)
+	event.timestamp = event.timestamp.UTC().Add(skew)
+
+	// Date.
 	event.date = event.timestamp.Format(time.DateOnly)
 
 	// ReceivedAt.
