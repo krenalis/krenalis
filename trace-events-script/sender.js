@@ -31,9 +31,8 @@ class Sender {
 		}
 		this.#flushing = true;
 
-		let messageID = uuid();
 		let sentAt = new Date();
-		let body = '{"messageId":"' + messageID + '","batch":[';
+		let body = '{"batch":[';
 		for (let i = 0; i < this.#events.length; i++) {
 			if (i > 0) {
 				body += ',';

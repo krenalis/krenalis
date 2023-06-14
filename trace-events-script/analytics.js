@@ -349,6 +349,8 @@ class Analytics {
 			event.timestamp = new Date();
 		}
 
+		event.messageId = uuid();
+
 		let anonymousID = this.#storage.getAnonymousID();
 		if (anonymousID == null) {
 			anonymousID = uuid();
