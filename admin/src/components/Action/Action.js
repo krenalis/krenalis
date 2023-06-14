@@ -119,15 +119,18 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			// set the default transformation function.
 			let parameterName;
 			switch (actionType.Target) {
-				case "Users":
-					parameterName = "user";
+				case 'Users':
+					parameterName = 'user';
 					break;
-				case "Groups":
-					parameterName = "group";
+				case 'Groups':
+					parameterName = 'group';
 					break;
-				case "Events":
-					parameterName = "event";
+				case 'Events':
+					parameterName = 'event';
 					break;
+				default:
+					console.error('Unexpected action type target');
+					return;
 			}
 			defaultTransformationFunction.current = rawTransformationFunction.replace('$parameterName', parameterName);
 
