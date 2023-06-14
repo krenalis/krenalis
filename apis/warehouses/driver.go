@@ -83,10 +83,12 @@ type Batch interface {
 	Abort() error
 
 	// Append appends the values of a row to batch.
+	// It must not retain the values in v.
 	Append(v ...interface{}) error
 
 	// AppendStruct appends the values of a row, read from the fields of the struct
 	// v, to batch. It returns an error if v is not a struct.
+	// It must not retain the values in v.
 	AppendStruct(v interface{}) error
 
 	// Send sends the batch to the data warehouse.
