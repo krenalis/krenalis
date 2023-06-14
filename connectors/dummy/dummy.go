@@ -116,6 +116,11 @@ func (c *connection) EventTypes() ([]*connector.EventType, error) {
 				{Name: "properties", Type: types.JSON()},
 			}),
 		},
+		{
+			ID:          "send_event_with_no_schema",
+			Name:        "Send event with no schema",
+			Description: "Send an event which does not require mapping",
+		},
 	}
 	return eventTypes, nil
 }
