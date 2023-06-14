@@ -244,5 +244,5 @@ type Event struct {
 		Name    string
 		Version string
 	}
-	Properties string
+	Properties map[string]any
 }

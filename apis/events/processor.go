@@ -9,7 +9,6 @@ package events
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 	"time"
 
@@ -198,7 +197,7 @@ func eventToConnectorEvent(event *collectedEvent) connector.Event {
 	e.Campaign.Content = event.Context.Campaign.Content
 	e.Library.Name = event.Context.Library.Name
 	e.Library.Version = event.Context.Library.Version
-	e.Properties = event.properties
+	e.Properties = event.Properties
 	return e
 }
 
@@ -208,11 +207,6 @@ func collectedEventToMap(event *collectedEvent) (map[string]any, error) {
 
 	// Keep in sync with the schema in "apis/events/schema.go".
 
-	var properties map[string]any
-	err := json.Unmarshal([]byte(event.properties), &properties)
-	if err != nil {
-		return nil, err
-	}
 	// TODO(Gianluca): define datetime layout and parse/convert the values.
 	mapEvent := map[string]any{
 		"source":       event.source,
@@ -297,7 +291,7 @@ func collectedEventToMap(event *collectedEvent) (map[string]any, error) {
 			"name":    event.Context.Library.Name,
 			"version": event.Context.Library.Version,
 		},
-		"properties": properties,
+		"properties": event.Properties,
 	}
 
 	return mapEvent, nil

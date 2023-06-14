@@ -8,7 +8,9 @@
 package events
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"log"
 	"math/rand"
 	"strings"
@@ -174,7 +176,16 @@ RETRY:
 			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
 			continue
 		}
+		var properties bytes.Buffer
+		enc := json.NewEncoder(&properties)
+		enc.SetEscapeHTML(false)
 		for _, e := range events {
+			properties.Reset()
+			err = enc.Encode(e.Properties)
+			if err != nil {
+				log.Printf("[error] cannot marshal event: %s", err)
+				continue
+			}
 			err = batch.Append(
 				e.source,
 				e.MessageID,
@@ -236,7 +247,7 @@ RETRY:
 				e.Context.Campaign.Content,
 				e.Context.Library.Name,
 				e.Context.Library.Version,
-				e.properties,
+				properties.Bytes(),
 			)
 			if err != nil {
 				log.Printf("[error] cannot log events: %s", err)

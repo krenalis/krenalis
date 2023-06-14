@@ -147,7 +147,7 @@ type collectedEvent struct {
 	MessageID    string          `json:"messageId,omitempty"`
 	Name         string          `json:"name,omitempty"`
 	PreviousID   string          `json:"previousId,omitempty"`
-	Properties   json.RawMessage `json:"properties,omitempty"`
+	Properties   map[string]any  `json:"properties,omitempty"`
 	SentAt       string          `json:"sentAt,omitempty"`
 	Timestamp    string          `json:"timestamp,omitempty"`
 	Traits       json.RawMessage `json:"traits,omitempty"`
@@ -171,7 +171,6 @@ type collectedEvent struct {
 		title    string
 		referrer string
 	}
-	properties string
 	receivedAt time.Time
 	screen     struct {
 		density int16
@@ -474,13 +473,8 @@ func validateEvent(method string, event *collectedEvent) error {
 	}
 
 	// Properties.
-	if event.Properties != nil {
-		if event.Properties[0] != '{' {
-			return errors.New("properties is not a JSON object")
-		}
-		if !isPage && !isScreen && !isTrack {
-			return errors.New("unexpected event properties")
-		}
+	if event.Properties != nil && !isPage && !isScreen && !isTrack {
+		return errors.New("unexpected event properties")
 	}
 
 	// Traits.
@@ -693,28 +687,8 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 	}
 
 	// Properties.
-	if len(event.Properties) > 0 && !bytes.Equal(event.Properties, emptyProperties) {
-		// Decode the properties.
-		dec := json.NewDecoder(bytes.NewReader(event.Properties))
-		dec.UseNumber()
-		event.Properties = nil
-		var properties map[string]any
-		err := dec.Decode(&properties)
-		if err == nil {
-			// Encode the properties.
-			var b strings.Builder
-			enc := json.NewEncoder(&b)
-			enc.SetIndent("", "")
-			enc.SetEscapeHTML(false)
-			err = enc.Encode(properties)
-			if err == nil {
-				s := b.String()
-				event.properties = s[:len(s)-1] // remove the new line.
-			}
-		}
-	}
-	if len(event.properties) == 0 {
-		event.properties = "{}"
+	if t := *event.Type; (t == "page" || t == "screen" || t == "track") && event.Properties == nil {
+		event.Properties = map[string]any{}
 	}
 
 	// Locale.

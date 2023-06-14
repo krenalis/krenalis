@@ -8,6 +8,7 @@
 package postgresql
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -658,7 +659,7 @@ func (batch *batch) Send() error {
 	return nil
 }
 
-// quoteValue quotes s as a string and writes it into b.
+// quoteString quotes s as a string and writes it into b.
 func quoteString(b *strings.Builder, s string) {
 	if s == "" {
 		b.WriteString("''")
@@ -671,6 +672,33 @@ func quoteString(b *strings.Builder, s string) {
 			p = len(s)
 		}
 		b.WriteString(s[:p])
+		if p == len(s) {
+			break
+		}
+		if s[p] == '\'' {
+			b.WriteByte('\'')
+		}
+		s = s[p+1:]
+		if len(s) == 0 {
+			break
+		}
+	}
+	b.WriteByte('\'')
+}
+
+// quoteBytes quotes s as a string and writes it into b.
+func quoteBytes(b *strings.Builder, s []byte) {
+	if len(s) == 0 {
+		b.WriteString("''")
+		return
+	}
+	b.WriteByte('\'')
+	for {
+		p := bytes.IndexAny(s, "\x00'")
+		if p == -1 {
+			p = len(s)
+		}
+		b.Write(s[:p])
 		if p == len(s) {
 			break
 		}
@@ -721,6 +749,8 @@ func quoteValue(b *strings.Builder, value any) {
 		quoteString(b, v.String())
 	case string:
 		quoteString(b, v)
+	case []byte:
+		quoteBytes(b, v)
 	case time.Time:
 		b.WriteByte('\'')
 		b.WriteString(v.Format("2006-01-02 15:04:05.999999"))
