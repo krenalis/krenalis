@@ -841,6 +841,15 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 	}
 
+	// Validate empty mappings.
+	if action.Mapping != nil && len(action.Mapping) == 0 {
+		if target == state.EventsTarget && schema.Valid() {
+			// This is the only case when an empty mapping is allowed.
+		} else {
+			return types.Type{}, errors.BadRequest("action has a mapping with no mapped properties")
+		}
+	}
+
 	// Check if the mapping (and the transformations) are allowed and required
 	// for this action; in that case, validate them.
 	var requiresMapping bool

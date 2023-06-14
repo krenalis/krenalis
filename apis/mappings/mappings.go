@@ -83,6 +83,9 @@ func New(inSchema, outSchema types.Type, mapp map[string]string, pythonSource st
 	if (mapp == nil) == (pythonSource == "") {
 		panic("one and only one of mapping and Python source must be provided")
 	}
+	if !inSchema.Valid() || !outSchema.Valid() {
+		panic("input and output schemas must be valid")
+	}
 
 	m := Mapping{inSchema: inSchema, outSchema: outSchema, formatTime: formatTime}
 

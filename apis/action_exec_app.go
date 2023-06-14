@@ -81,10 +81,6 @@ func (this *Action) importFromApp() error {
 			return actionExecutionError{fmt.Errorf("connector %d has returned an empty users without returning EOF", c.Connector().ID)}
 		}
 
-		// TODO(Gianluca): see https://github.com/open2b/chichi/issues/203.
-		if !this.action.InSchema.Valid() {
-			panic("import from app with no properties should be discussed and implemented")
-		}
 		inSchemaProps := this.action.InSchema.PropertiesNames()
 
 		for _, user := range users {
