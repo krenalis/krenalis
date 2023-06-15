@@ -889,8 +889,10 @@ func (this *Connection) Keys() ([]string, error) {
 // range [1, 100], otherwise must be an empty string. limit limits the number of
 // records to return and must be in range [0, 100].
 //
-// It returns an errors.UnprocessableError error with code ReadFileFailed, if
-// an error occurred reading the file.
+// It returns an errors.UnprocessableError error with code
+//
+//   - NoStorage, if the connection does not have a storage.
+//   - ReadFileFailed, if an error occurred reading the file.
 func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.Type, error) {
 
 	c := this.connection
@@ -929,6 +931,10 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 	// Validate the limit.
 	if limit < 1 || limit > 100 {
 		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
+	}
+	// Validate the storage.
+	if _, ok := c.Storage(); !ok {
+		return nil, types.Type{}, errors.Unprocessable(NoStorage, "connection %d does not have a storage", c.ID)
 	}
 
 	// Connect to the file connector.
