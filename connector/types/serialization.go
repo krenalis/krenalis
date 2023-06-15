@@ -839,6 +839,7 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 
 	var p Property
 	var role Role
+	var hasLabel, hasDescription, hasRole, hasRequired, hasNullable, hasFlat bool
 
 	// Read property keys and values.
 	for {
@@ -871,7 +872,6 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 		}
 
 		var ok bool
-		var hasLabel, hasDescription, hasRole, hasRequired, hasNullable, hasFlat bool
 
 		switch key {
 		case "name":
