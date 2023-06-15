@@ -214,6 +214,15 @@ class Connections {
 			{ Reimport: reimport }
 		);
 	};
+
+	completePath = async (storageConnection, path) => {
+		return await call(
+			`${this.apiURL}/connections/${encodeURIComponent(storageConnection)}/complete-path/${encodeURIComponent(
+				path
+			)}`,
+			http.GET
+		);
+	};
 }
 
 class Eventlisteners {

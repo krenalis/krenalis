@@ -66,6 +66,8 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let [isAlertOpen, setIsAlertOpen] = useState(false);
 	let [isNameEditable, setIsNameEditable] = useState(false);
 	let [isSaveButtonLoading, setIsSaveButtonLoading] = useState(false);
+	let [completePath, setCompletePath] = useState('');
+	let [completePathError, setCompletePathError] = useState('');
 
 	let { API, showError, showStatus, redirect, connectors } = useContext(AppContext);
 	let { connection: c } = useContext(ConnectionContext);
@@ -89,6 +91,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let propertiesSectionRef = useRef(null);
 	let queryConfirmButtonRef = useRef(null);
 	let fileConfirmButtonRef = useRef(null);
+	let getCompletePathTimeoutID = useRef(null);
 
 	const isImport = c.Role === 'Source';
 	const isEditing = actionProp != null;
@@ -595,13 +598,31 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setAction(a);
 	};
 
-	const onUpdatePath = (e) => {
+	const onUpdatePath = async (e) => {
+		clearTimeout(getCompletePathTimeoutID.current);
 		let a = { ...action };
 		let path = e.currentTarget.value;
 		pathRef.current.lastUpdate = path;
 		a.Path = path;
 		a.Sheet = '';
 		setAction(a);
+		setCompletePath('');
+		setCompletePathError('');
+		if (path === '') {
+			return;
+		}
+		getCompletePathTimeoutID.current = setTimeout(async () => {
+			let [res, err] = await API.connections.completePath(c.Storage, path);
+			if (err != null) {
+				if (err instanceof UnprocessableError && err.code === 'InvalidPath') {
+					setCompletePathError(err.message);
+					return;
+				}
+				showError(err);
+				return;
+			}
+			setCompletePath(res.path);
+		}, 300);
 	};
 
 	const onUpdateSheet = (e) => {
@@ -1320,6 +1341,13 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 							onSlInput={onUpdatePath}
 							placeholder={`${actionType.Target.toLowerCase()}.${connector.FileExtension}`}
 						/>
+						{completePathError !== '' ? (
+							<div className='completePathError'>{completePathError}</div>
+						) : completePath !== '' ? (
+							<div className='completePath'>{completePath}</div>
+						) : (
+							''
+						)}
 						{fields.includes('Sheet') && (
 							<>
 								<div className='sheetsSelectWrapper'>
@@ -1334,6 +1362,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 										disabled={
 											action.Path == null ||
 											action.Path === '' ||
+											completePathError !== '' ||
 											areSheetsLoading ||
 											(pathRef.current.lastSheetFetch === pathRef.current.lastUpdate &&
 												hasSheetsError)

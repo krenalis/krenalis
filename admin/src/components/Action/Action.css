@@ -339,6 +339,16 @@ inherit the disabled style */
     gap: 15px;
 }
 
+.action .completePath,
+.action .completePathError {
+    font-size: 13px;
+    margin-top: 3px;
+}
+
+.action .completePathError {
+    color: var(--sl-color-danger-500);
+}
+
 .action .sheetsSelectWrapper {
     display: flex;
     align-items: end;
