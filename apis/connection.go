@@ -639,7 +639,7 @@ func (this *Connection) CompletePath(path string) (string, error) {
 	if err, ok := err.(_connector.InvalidPathError); ok {
 		return "", errors.Unprocessable(InvalidPath, "%s", err)
 	}
-	return path, err
+	return path + c.Compression.Ext(), err
 }
 
 // Delete deletes the connection.
@@ -929,7 +929,7 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 		}
 	}
 	// Validate the limit.
-	if limit < 1 || limit > 100 {
+	if limit < 0 || limit > 100 {
 		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
 	}
 	// Validate the storage.
