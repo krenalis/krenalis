@@ -11,7 +11,7 @@ const ConnectionDeletion = ({ connection: c, onDelete }) => {
 	let [askDeletionConfirmation, setAskDeletionConfirmation] = useState(false);
 
 	let { API, showError, showStatus, redirect } = useContext(AppContext);
-	let { setAreConnectionsStale } = useState(ConnectionsContext);
+	let { setAreConnectionsStale } = useContext(ConnectionsContext);
 
 	const onDeletionConfirmation = async () => {
 		let [, err] = await API.connections.delete(c.ID);
@@ -25,8 +25,8 @@ const ConnectionDeletion = ({ connection: c, onDelete }) => {
 			return;
 		}
 		setAskDeletionConfirmation(false);
-		onDelete();
 		setAreConnectionsStale(true);
+		onDelete();
 	};
 
 	return (
