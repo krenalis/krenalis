@@ -1332,22 +1332,21 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 						description={`The path${fields.includes('Sheet') ? ' and sheet' : ''} of the file`}
 						padded
 					>
-						<SlInput
-							className='pathInput'
-							name='path'
-							value={action.Path}
-							label={fields.includes('Sheet') ? 'Path' : null}
-							type='text'
-							onSlInput={onUpdatePath}
-							placeholder={`${actionType.Target.toLowerCase()}.${connector.FileExtension}`}
-						/>
-						{completePathError !== '' ? (
-							<div className='completePathError'>{completePathError}</div>
-						) : completePath !== '' ? (
-							<div className='completePath'>{completePath}</div>
-						) : (
-							''
-						)}
+						<div className='pathInputWrapper'>
+							<SlInput
+								className='pathInput'
+								name='path'
+								value={action.Path}
+								label={fields.includes('Sheet') ? 'Path' : null}
+								type='text'
+								onSlInput={onUpdatePath}
+								placeholder={`${actionType.Target.toLowerCase()}.${connector.FileExtension}`}
+							/>
+							<div className={`completePathError${completePathError !== '' ? ' visible' : ''}`}>
+								{completePathError}
+							</div>
+							<div className={`completePath${completePath !== '' ? ' visible' : ''}`}>{completePath}</div>
+						</div>
 						{fields.includes('Sheet') && (
 							<>
 								<div className='sheetsSelectWrapper'>

@@ -339,10 +339,25 @@ inherit the disabled style */
     gap: 15px;
 }
 
+.action .pathInputWrapper {
+    position: relative;
+    margin-bottom: 20px;
+}
+
 .action .completePath,
 .action .completePathError {
+    position: absolute;
+    left: 5px;
+    font-family: monospace;
     font-size: 13px;
-    margin-top: 3px;
+    margin-top: 5px;
+    opacity: 0;
+    transition: opacity .3s;
+}
+
+.action .completePath.visible,
+.action .completePathError.visible {
+    opacity: 1;
 }
 
 .action .completePathError {
