@@ -356,9 +356,9 @@ func Array(t Type) Type {
 }
 
 // Object returns an Object type with the given properties.
-// Panics if properties is empty, or if a property name pr alias is empty or
-// repeated, or if a property string field is not UTF-8 encoded or if a
-// property type is not valid.
+// Panics if properties is empty, or if a property name is empty or repeated,
+// or if a property string field is not UTF-8 encoded or if a property type is
+// not valid.
 func Object(properties []Property) Type {
 	t, err := ObjectOf(properties)
 	if err != nil {
