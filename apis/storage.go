@@ -47,14 +47,8 @@ func newCompressedStorage(s connector.StorageConnection, c state.Compression) *c
 // It is the caller's responsibility to close the returned reader.
 func (cs compressorStorage) Open(path string) (io.ReadCloser, time.Time, error) {
 	originalPath := path
-	switch cs.compression {
-	case state.ZipCompression:
-		path += ".zip"
-	case state.GzipCompression:
-		path += ".gz"
-	case state.SnappyCompression:
-		path += ".sz"
-	}
+	ext := cs.compression.Ext()
+	path += ext
 	r, t, err := cs.storage.Open(path)
 	if err != nil {
 		return nil, time.Time{}, err
@@ -148,16 +142,14 @@ func (cs compressorStorage) Writer(path, contentType string) (*storageWriteClose
 			return nil, err
 		}
 		w = zipWriter{Writer: zw, z: z}
-		path += ".zip"
-		contentType = "application/zip"
 	case state.GzipCompression:
 		w = gzip.NewWriter(pw)
-		path += ".gz"
-		contentType = "application/gzip"
 	case state.SnappyCompression:
 		w = snappy.NewBufferedWriter(pw)
-		path += ".sz"
-		contentType = "application/x-snappy-framed"
+	}
+	path += cs.compression.Ext()
+	if ct := cs.compression.ContentType(); ct != "" {
+		contentType = ct
 	}
 	ch := make(chan error)
 	go func() {

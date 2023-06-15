@@ -717,6 +717,38 @@ const (
 	SnappyCompression Compression = "Snappy"
 )
 
+// ContentType returns the content type to use for a file compressed with
+// compression c. It returns an empty string if c is NoCompression.
+func (c Compression) ContentType() string {
+	switch c {
+	case NoCompression:
+		return ""
+	case ZipCompression:
+		return "application/zip"
+	case GzipCompression:
+		return "application/gzip"
+	case SnappyCompression:
+		return "application/x-snappy-framed"
+	}
+	panic(fmt.Sprintf("invalid state.Compression: %s", c))
+}
+
+// Ext returns the file extension to use when the file is compressed with
+// compression c. It returns an empty string if c is NoCompression.
+func (c Compression) Ext() string {
+	switch c {
+	case NoCompression:
+		return ""
+	case ZipCompression:
+		return ".zip"
+	case GzipCompression:
+		return ".gz"
+	case SnappyCompression:
+		return ".sz"
+	}
+	panic(fmt.Sprintf("invalid state.Compression: %s", c))
+}
+
 // ActionTarget represents the action target of a connection.
 type ActionTarget int
 
