@@ -360,42 +360,11 @@ func Array(t Type) Type {
 // repeated, or if a property string field is not UTF-8 encoded or if a
 // property type is not valid.
 func Object(properties []Property) Type {
-	if len(properties) == 0 {
-		panic("no property in object")
+	t, err := ObjectOf(properties)
+	if err != nil {
+		panic(err)
 	}
-	exists := make(map[string]struct{}, len(properties))
-	ps := make([]Property, len(properties))
-	flat := false
-	for i, property := range properties {
-		if property.Name == "" {
-			panic("property name is empty")
-		}
-		if !IsValidPropertyName(property.Name) {
-			panic("invalid property name")
-		}
-		if _, ok := exists[property.Name]; ok {
-			panic("property name is repeated")
-		}
-		exists[property.Name] = struct{}{}
-		if !property.Type.Valid() {
-			panic("invalid property type")
-		}
-		if property.Flat && property.Type.pt != PtObject {
-			panic("invalid property flat")
-		}
-		ps[i] = Property{
-			Name:        property.Name,
-			Label:       normalizedUTF8(property.Label),
-			Description: normalizedUTF8(property.Description),
-			Role:        property.Role,
-			Type:        property.Type,
-			Required:    property.Required,
-			Nullable:    property.Nullable,
-			Flat:        property.Flat,
-		}
-		flat = flat || property.Flat || property.Type.flat
-	}
-	return Type{pt: PtObject, flat: flat, vl: &ps}
+	return t
 }
 
 // Map returns a Map type with value type t.
@@ -403,10 +372,7 @@ func Map(t Type) Type {
 	return Type{pt: PtMap, flat: t.flat, vl: t}
 }
 
-// ObjectOf returns a new object type with the given properties.
-// It returns an error if properties is empty, or if a property name or alias
-// is empty or repeated, or if a property string field is not UTF-8 encoded, or
-// if a property type and role are not valid.
+// ObjectOf is like Object but returns an error instead of panicking if any.
 func ObjectOf(properties []Property) (Type, error) {
 	if len(properties) == 0 {
 		return Type{}, errors.New("no property in type")
@@ -431,14 +397,18 @@ func ObjectOf(properties []Property) (Type, error) {
 		if !property.Type.Valid() {
 			return Type{}, errors.New("invalid property type")
 		}
+		if property.Flat && property.Type.pt != PtObject {
+			return Type{}, errors.New("invalid property flat")
+		}
 		ps[i] = Property{
 			Name:        property.Name,
 			Label:       normalizedUTF8(property.Label),
 			Description: normalizedUTF8(property.Description),
 			Role:        property.Role,
-			Required:    property.Required,
 			Type:        property.Type,
+			Required:    property.Required,
 			Nullable:    property.Nullable,
+			Flat:        property.Flat,
 		}
 		flat = flat || property.Flat || property.Type.flat
 	}
