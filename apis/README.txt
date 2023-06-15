@@ -24,7 +24,7 @@ GET     /api/connections/{id}/stats                              Get the stats o
 POST    /api/connections/{id}/reload                             Reload the schemas of the actions of a connection.
 GET     /api/connections/{id}/keys                               Get the API keys of a connection
 POST    /api/connections/{id}/keys                               Generate a new API key for a connection
-DELETE  /api/connections/{id}/keys/{id}                          Delete the API key of a connection
+DELETE  /api/connections/{id}/keys/{key}                         Delete the API key of a connection
 POST    /api/connections/{id}/storage                            Set the storage and the compression of a connection
 GET     /api/connections/{id}/ui                                 Get the user interface of a connection
 POST    /api/connections/{id}/ui-event                           Execute the user interface event of a connection
