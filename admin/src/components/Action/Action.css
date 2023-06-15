@@ -350,7 +350,7 @@ inherit the disabled style */
     left: 5px;
     font-family: monospace;
     font-size: 13px;
-    margin-top: 5px;
+    margin-top: 8px;
     opacity: 0;
     transition: opacity .3s;
 }
