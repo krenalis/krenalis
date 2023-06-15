@@ -49,6 +49,11 @@ const statuses = {
 	actionSaved: [variants.SUCCESS, icons.OK, 'Your action has been successfully saved'],
 	connectionReloaded: [variants.SUCCESS, icons.OK, 'The connection has been reloaded successfully'],
 	connectionSaved: [variants.SUCCESS, icons.OK, 'The connection settings have been saved successfully'],
+	linkedStorageDoesNotExistAnymore: [
+		variants.DANGER,
+		icons.NOT_FOUND,
+		'The storage of this file connection does not exist anymore',
+	],
 };
 
 export default statuses;

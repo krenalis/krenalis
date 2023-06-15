@@ -70,7 +70,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 	let [completePathError, setCompletePathError] = useState('');
 
 	let { API, showError, showStatus, redirect, connectors } = useContext(AppContext);
-	let { connection: c } = useContext(ConnectionContext);
+	let { connection: c, setConnection } = useContext(ConnectionContext);
 
 	let queryRef = useRef('');
 	let pathRef = useRef({
@@ -608,7 +608,7 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 		setAction(a);
 		setCompletePath('');
 		setCompletePathError('');
-		if (path === '') {
+		if (path === '' || c.Storage === 0) {
 			return;
 		}
 		getCompletePathTimeoutID.current = setTimeout(async () => {
@@ -616,6 +616,13 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 			if (err != null) {
 				if (err instanceof UnprocessableError && err.code === 'InvalidPath') {
 					setCompletePathError(err.message);
+					return;
+				}
+				if (err instanceof NotFoundError) {
+					showStatus(statuses.linkedStorageDoesNotExistAnymore);
+					let cn = { ...c };
+					cn.Storage = 0;
+					setConnection(cn);
 					return;
 				}
 				showError(err);
@@ -684,6 +691,9 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				switch (err.code) {
 					case 'ReadFileFailed':
 						showStatus([variants.DANGER, icons.INVALID_INSERTED_VALUE, err.message]);
+						break;
+					case 'NoStorage':
+						showStatus(statuses.linkedStorageDoesNotExistAnymore);
 						break;
 					default:
 						break;
