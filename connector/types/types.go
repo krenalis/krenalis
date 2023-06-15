@@ -391,6 +391,14 @@ func ObjectOf(properties []Property) (Type, error) {
 			return Type{}, errors.New("property name is repeated")
 		}
 		exists[property.Name] = struct{}{}
+		label, err := normalizedUTF8(property.Label)
+		if err != nil {
+			return Type{}, err
+		}
+		description, err := normalizedUTF8(property.Description)
+		if err != nil {
+			return Type{}, err
+		}
 		if property.Role < BothRole || property.Role > DestinationRole {
 			return Type{}, errors.New("invalid property role")
 		}
@@ -402,8 +410,8 @@ func ObjectOf(properties []Property) (Type, error) {
 		}
 		ps[i] = Property{
 			Name:        property.Name,
-			Label:       normalizedUTF8(property.Label),
-			Description: normalizedUTF8(property.Description),
+			Label:       label,
+			Description: description,
 			Role:        property.Role,
 			Type:        property.Type,
 			Required:    property.Required,
@@ -785,7 +793,11 @@ func (t Type) WithLayout(layout string) Type {
 	if t.vl != nil {
 		panic("t already has a layout")
 	}
-	t.vl = normalizedUTF8(layout)
+	vl, err := normalizedUTF8(layout)
+	if err != nil {
+		panic(err)
+	}
+	t.vl = vl
 	return t
 }
 
@@ -913,7 +925,11 @@ func (t Type) WithEnum(enum []string) Type {
 	}
 	vl := make([]string, len(enum))
 	for i, s := range enum {
-		vl[i] = normalizedUTF8(s)
+		v, err := normalizedUTF8(s)
+		if err != nil {
+			panic(err)
+		}
+		vl[i] = v
 	}
 	t.vl = &vl
 	return t
@@ -1151,10 +1167,10 @@ func (t Type) EqualTo(t2 Type) bool {
 }
 
 // normalizedUTF8 returns s as a normalized UTF-8 encoded string.
-// Panics if s is not a valid UTF-8 encoded string.
-func normalizedUTF8(s string) string {
+// Returns an error if s is not a valid UTF-8 encoded string.
+func normalizedUTF8(s string) (string, error) {
 	if !utf8.ValidString(s) {
-		panic("invalid UTF-8 encoding")
+		return "", errors.New("invalid UTF-8 encoding")
 	}
-	return norm.NFC.String(s)
+	return norm.NFC.String(s), nil
 }
