@@ -14,6 +14,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -289,6 +290,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				router.Get("/Events/{eventType}", func(w http.ResponseWriter, r *http.Request) {
 					id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 					eventType := chi.URLParam(r, "eventType")
+					// Workaround for the issue of Chi https://github.com/go-chi/chi/issues/642.
+					eventType, err = url.PathUnescape(eventType)
+					if err != nil {
+						respond(w, errors.BadRequest("invalid event type"))
+						return
+					}
 					connection, err := workspace.Connection(id)
 					if err != nil {
 						respond(w, err)
@@ -311,6 +318,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				path := chi.URLParam(r, "path")
+				// Workaround for the issue of Chi https://github.com/go-chi/chi/issues/642.
+				path, err = url.PathUnescape(path)
+				if err != nil {
+					respond(w, errors.BadRequest("invalid path"))
+					return
+				}
 				completePath, err := connection.CompletePath(path)
 				if err != nil {
 					respond(w, err)
