@@ -387,7 +387,7 @@ func Test_PropertyByPath(t *testing.T) {
 				t.Fatalf("expecting ok = %t, got %t", cas.expectedOk, gotOk)
 			}
 			if err := sameProperty(cas.expectedProp, gotProp); err != nil {
-				t.Fatalf("expecting property: %#v, got: %#v", cas.expectedProp, gotProp)
+				t.Fatal(err)
 			}
 		})
 	}
