@@ -793,6 +793,13 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 				return errors.BadRequest("property %q (with type %s) cannot be mapped and converted to property %q (with type %s)", inProp.Name, inProp.Type, outProp.Name, outProp.Type)
 			}
 		}
+	} else {
+		if action.InSchema.Valid() {
+			return errors.BadRequest("input schema cannot be provided")
+		}
+		if action.OutSchema.Valid() {
+			return errors.BadRequest("output schema cannot be provided")
+		}
 	}
 
 	// TODO(Gianluca): should we return an error if the input or the output
