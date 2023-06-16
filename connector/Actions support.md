@@ -23,7 +23,7 @@ Warning: support for groups, even where stated as implemented, may be not yet im
 
 ## Action fields support
 
-Mappings (and transformations) support is implicit where there is an input and output valid schema.
+Mappings (and transformations) support is implicit where there are both an input and output valid schemas.
 
 | Connection / Role / Target                       | Filter                                  | Schema (input)                   | Schema (output)             | Query | Export options                      |
 |--------------------------------------------------|-----------------------------------------|----------------------------------|-----------------------------|-------|-------------------------------------|
