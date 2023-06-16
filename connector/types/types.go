@@ -224,6 +224,8 @@ type Type struct {
 	//   - Type of the item for Array
 	//   - Type of the value for Map
 	vl any
+
+	_ []int // make Type non-comparable.
 }
 
 // Boolean returns the Boolean type.
