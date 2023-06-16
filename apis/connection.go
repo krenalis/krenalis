@@ -500,23 +500,22 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		return 0, err
 	}
 
-	// Marshal the input and output schemas.
-	var rawInSchema, rawOutSchema []byte
-	if action.InSchema.Valid() {
-		rawInSchema, err = marshalSchema(action.InSchema)
-		if err != nil {
-			return 0, err
-		}
-	} else {
-		rawInSchema = []byte(`null`)
+	// Marshal the input and the output schemas.
+	rawInSchema, err := marshalSchema(action.InSchema)
+	if err != nil {
+		return 0, err
 	}
-	if action.OutSchema.Valid() {
-		rawOutSchema, err = marshalSchema(action.OutSchema)
+	rawOutSchema, err := marshalSchema(action.OutSchema)
+	if err != nil {
+		return 0, err
+	}
+
+	// Marshal the mapping.
+	if action.Mapping != nil {
+		mapping, err = json.Marshal(action.Mapping)
 		if err != nil {
 			return 0, err
 		}
-	} else {
-		rawOutSchema = []byte(`null`)
 	}
 
 	// Handle the matching properties.
@@ -1798,7 +1797,8 @@ func (this *Connection) writeConnectionUsers(ctx context.Context, id string, use
 	return err
 }
 
-// marshalSchema marshals the given schema, which must be a valid schema.
+// marshalSchema marshals the given schema.
+// If schema is invalid, returns []byte("null") and no errors.
 func marshalSchema(schema types.Type) ([]byte, error) {
 	rawSchema, err := schema.MarshalJSON()
 	if err != nil {

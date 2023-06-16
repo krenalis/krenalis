@@ -288,24 +288,16 @@ func (this *Action) Set(action ActionToSet) error {
 	}
 	ctx := context.Background()
 
-	// Marshal the schemas.
-	var rawInSchema, rawOutSchema []byte
-	if action.InSchema.Valid() {
-		rawInSchema, err = marshalSchema(action.InSchema)
-		if err != nil {
-			return err
-		}
-	} else {
-		rawInSchema = []byte(`null`)
+	// Marshal the input and the output schemas.
+	rawInSchema, err := marshalSchema(action.InSchema)
+	if err != nil {
+		return err
 	}
-	if action.OutSchema.Valid() {
-		rawOutSchema, err = marshalSchema(action.OutSchema)
-		if err != nil {
-			return err
-		}
-	} else {
-		rawOutSchema = []byte(`null`)
+	rawOutSchema, err := marshalSchema(action.OutSchema)
+	if err != nil {
+		return err
 	}
+
 	// Marshal the mapping.
 	if action.Mapping != nil {
 		mapping, err = json.Marshal(action.Mapping)
@@ -313,6 +305,7 @@ func (this *Action) Set(action ActionToSet) error {
 			return err
 		}
 	}
+
 	// Matching properties.
 	var matchPropInternal, matchPropExternal string
 	if n.MatchingProperties != nil {
@@ -337,6 +330,7 @@ func (this *Action) Set(action ActionToSet) error {
 		}
 		return tx.Notify(ctx, n)
 	})
+
 	return err
 }
 
