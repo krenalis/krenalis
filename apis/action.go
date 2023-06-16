@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -23,6 +24,8 @@ import (
 	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/types"
+
+	"golang.org/x/exp/maps"
 )
 
 var QueryExecutionFailed errors.Code = "QueryExecutionFailed"
@@ -793,6 +796,14 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 				return errors.BadRequest("property %q (with type %s) cannot be mapped and converted to property %q (with type %s)", inProp.Name, inProp.Type, outProp.Name, outProp.Type)
 			}
 		}
+		// Ensure that every property in the input and output schemas have been
+		// mapped.
+		if props := unmappedProperties(action.InSchema, mappingInPaths); props != nil {
+			return errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
+		}
+		if props := unmappedProperties(action.OutSchema, mappingOutPaths); props != nil {
+			return errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
+		}
 	} else {
 		if action.InSchema.Valid() {
 			return errors.BadRequest("input schema cannot be provided")
@@ -801,10 +812,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			return errors.BadRequest("output schema cannot be provided")
 		}
 	}
-
-	// TODO(Gianluca): should we return an error if the input or the output
-	// schema has a property not mapped by the mapping? If so, how should we
-	// handle that in case of transformation functions?
 
 	return nil
 }
@@ -866,6 +873,26 @@ func compileActionQuery(query string, limit int) (string, error) {
 		return query[:s1] + query[s2:], nil
 	}
 	return query[:s1] + strings.ReplaceAll(query[s1+2:s2-2], "$limit", strconv.Itoa(limit)) + query[s2:], nil
+}
+
+// unmappedProperties returns the names of the unmapped properties in schema, if
+// there is at least one, otherwise returns nil, nil.
+// schema must be valid.
+func unmappedProperties(schema types.Type, mapped []types.Path) []string {
+	schemaProps := schema.PropertiesNames()
+	notMapped := make(map[string]struct{}, len(schemaProps))
+	for _, p := range schemaProps {
+		notMapped[p] = struct{}{}
+	}
+	for _, path := range mapped {
+		delete(notMapped, path[0])
+	}
+	if len(notMapped) == 0 {
+		return nil
+	}
+	props := maps.Keys(notMapped)
+	sort.Strings(props)
+	return props
 }
 
 // parsePropertyExpression parses the property expression p, returning a
