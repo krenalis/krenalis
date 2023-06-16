@@ -758,23 +758,8 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		state.FileType:
 		mappingIsMandatory = c.Role == state.SourceRole && targetUsersOrGroups
 	}
-	if mappingIsMandatory {
-		if action.Mapping == nil && action.PythonSource == "" {
-			return errors.BadRequest("mapping (or transformation) is required")
-		}
-	} else {
-		if action.Mapping != nil {
-			return errors.BadRequest("mapping not allowed")
-		}
-		if action.PythonSource != "" {
-			return errors.BadRequest("transformation not allowed")
-		}
-		if action.InSchema.Valid() {
-			return errors.BadRequest("input schema not expected")
-		}
-		if action.OutSchema.Valid() {
-			return errors.BadRequest("output schema not expected")
-		}
+	if mappingIsMandatory && action.Mapping == nil && action.PythonSource == "" {
+		return errors.BadRequest("mapping (or transformation) is required")
 	}
 
 	// If there is at least one property mapped, or a Python transformation
