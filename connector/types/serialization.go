@@ -20,6 +20,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/shopspring/decimal"
+	"golang.org/x/exp/maps"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -211,6 +212,24 @@ func marshalType(b *bytes.Buffer, t Type) {
 			_ = marshalString(b, p.Label)
 			b.WriteString(`,"description":`)
 			_ = marshalString(b, p.Description)
+			switch ph := p.Placeholder.(type) {
+			case nil:
+				b.WriteString(`,"placeholder":null`)
+			case string:
+				b.WriteString(`,"placeholder":`)
+				_ = marshalString(b, ph)
+			case map[string]string:
+				b.WriteString(`,"placeholder":{`)
+				for i, k := range maps.Keys(ph) {
+					if i > 0 {
+						b.WriteByte(',')
+					}
+					_ = marshalString(b, k)
+					b.WriteByte(':')
+					_ = marshalString(b, ph[k])
+				}
+				b.WriteByte('}')
+			}
 			b.WriteString(`,"type":`)
 			marshalType(b, p.Type)
 			if p.Required {
@@ -839,7 +858,7 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 
 	var p Property
 	var role Role
-	var hasLabel, hasDescription, hasRole, hasRequired, hasNullable, hasFlat bool
+	var hasLabel, hasDescription, hasPlaceholder, hasRole, hasRequired, hasNullable, hasFlat bool
 
 	// Read property keys and values.
 	for {
@@ -906,6 +925,42 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 				return Property{}, 0, errors.New("unexpected value for property description")
 			}
 			hasDescription = true
+		case "placeholder":
+			if hasPlaceholder {
+				return Property{}, 0, errors.New("repeated 'placeholder' key")
+			}
+			switch tok.(type) {
+			case nil:
+			case string:
+				p.Placeholder = tok
+			case json.Delim:
+				if tok != json.Delim('{') {
+					return Property{}, 0, errors.New("unexpected value for property placeholder")
+				}
+				placeholder := map[string]string{}
+				for {
+					tok, err = dec.Token()
+					if err != nil {
+						return Property{}, 0, err
+					}
+					if tok == json.Delim('}') {
+						break
+					}
+					k := tok.(string)
+					tok, err = dec.Token()
+					if err != nil {
+						return Property{}, 0, err
+					}
+					v, ok := tok.(string)
+					if !ok {
+						return Property{}, 0, errors.New("unexpected value for property placeholder")
+					}
+					placeholder[k] = v
+				}
+				p.Placeholder = placeholder
+			default:
+				return Property{}, 0, errors.New("unexpected value for property placeholder")
+			}
 		case "role":
 			if !inSchema {
 				return Property{}, 0, errors.New("unknown property 'role'")
@@ -961,6 +1016,11 @@ func unmarshalProperty(dec *json.Decoder, inSchema bool) (Property, Role, error)
 	}
 	if !p.Type.Valid() {
 		return Property{}, 0, errors.New("missing property type")
+	}
+	if hasPlaceholder {
+		if _, ok := p.Placeholder.(map[string]string); ok && p.Type.PhysicalType() != PtMap {
+			return Property{}, 0, errors.New("invalid placeholder value")
+		}
 	}
 
 	return p, role, nil

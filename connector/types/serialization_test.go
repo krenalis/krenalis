@@ -89,14 +89,22 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Array","minItems":2,"maxItems":8,"uniqueItems":true,"itemType":{"name":"Decimal"}}`,
 			Type: Array(Decimal(0, 0)).WithMinItems(2).WithMaxItems(8).WithUnique(),
 		}, {
-			Data: `{"name":"Object","properties":[{"name":"email","label":"","description":"","type":{"name":"Text"},"nullable":false},{"name":"size","label":"","description":"","type":{"name":"Decimal"},"nullable":false}]}`,
+			Data: `{"name":"Object","properties":[{"name":"email","label":"","description":"","placeholder":null,"type":{"name":"Text"},"nullable":false},{"name":"size","label":"","description":"","placeholder":null,"type":{"name":"Decimal"},"nullable":false}]}`,
 			Type: Object([]Property{{Name: "email", Type: Text()}, {Name: "size", Type: Decimal(0, 0)}}),
 		}, {
-			Data: `{"name":"Object","properties":[{"name":"email","label":"","description":"","type":{"name":"Text"},"nullable":true}]}`,
+			Data: `{"name":"Object","properties":[{"name":"email","label":"","description":"","placeholder":null,"type":{"name":"Text"},"nullable":true}]}`,
 			Type: Object([]Property{{Name: "email", Type: Text(), Nullable: true}}),
+		}, {
+			Data: `{"name":"Object","properties":[{"name":"birthday","label":"","description":"","placeholder":null,"type":{"name":"Date"},"nullable":false}]}`,
+			Type: Object([]Property{{Name: "birthday", Type: Date()}}),
+		}, {
+			Data: `{"name":"Object","properties":[{"name":"birthday","label":"","description":"","placeholder":"mm/dd/yyyy","type":{"name":"Date"},"nullable":false}]}`,
+			Type: Object([]Property{{Name: "birthday", Placeholder: "mm/dd/yyyy", Type: Date()}}),
+		}, {
+			Data: `{"name":"Object","properties":[{"name":"values","label":"","description":"","placeholder":{"a":"1","b":"2"},"type":{"name":"Map","valueType":{"name":"Int"}},"nullable":false}]}`,
+			Type: Object([]Property{{Name: "values", Placeholder: map[string]string{"a": "1", "b": "2"}, Type: Map(Int())}}),
 		},
 	}
-
 	for _, test := range tests {
 		got, err := Parse(test.Data)
 		if err != nil {
@@ -113,7 +121,7 @@ func TestTypeSerialization(t *testing.T) {
 			continue
 		}
 		if data := string(b); test.Data != data {
-			t.Errorf("expecting %q, got %q", test.Data, data)
+			t.Errorf("\nexpecting\t%s\ngot\t\t\t%s", test.Data, data)
 		}
 	}
 

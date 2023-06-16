@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/shopspring/decimal"
+	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"golang.org/x/text/unicode/norm"
 )
@@ -173,11 +174,17 @@ func (role Role) String() string {
 	panic("invalid role")
 }
 
+// Placeholder represents a property placeholder. It can hold nil or a string
+// value. In the case of maps, it can also hold a non-nil map[string]string
+// value where the keys correspond to the keys of the map.
+type Placeholder any
+
 // Property represents an object property.
 type Property struct {
 	Name        string
 	Label       string
 	Description string
+	Placeholder Placeholder
 	Role        Role
 	Type        Type
 	Required    bool
@@ -407,6 +414,10 @@ func ObjectOf(properties []Property) (Type, error) {
 		if !property.Type.Valid() {
 			return Type{}, errors.New("invalid property type")
 		}
+		placeholder, err := clonePlaceholder(property.Placeholder, property.Type)
+		if err != nil {
+			return Type{}, err
+		}
 		if property.Flat && property.Type.pt != PtObject {
 			return Type{}, errors.New("invalid property flat")
 		}
@@ -414,6 +425,7 @@ func ObjectOf(properties []Property) (Type, error) {
 			Name:        property.Name,
 			Label:       label,
 			Description: description,
+			Placeholder: placeholder,
 			Role:        property.Role,
 			Type:        property.Type,
 			Required:    property.Required,
@@ -1149,6 +1161,7 @@ func (t Type) EqualTo(t2 Type) bool {
 			if p1.Name != p2.Name ||
 				p1.Label != p2.Label ||
 				p1.Description != p2.Description ||
+				!equalPlaceholder(p1.Placeholder, p2.Placeholder) ||
 				p1.Role != p2.Role ||
 				p1.Required != p2.Required ||
 				p1.Nullable != p2.Nullable ||
@@ -1168,6 +1181,39 @@ func (t Type) EqualTo(t2 Type) bool {
 	panic("unreachable code")
 }
 
+// clonePlaceholder clones and validates a placeholder for a property of type t
+// and returns the cloned placeholder or an error if it is not valid.
+func clonePlaceholder(placeholder any, t Type) (Placeholder, error) {
+	switch placeholder := placeholder.(type) {
+	case nil:
+		return nil, nil
+	case string:
+		return normalizedUTF8(placeholder)
+	case map[string]string:
+		if t.PhysicalType() != PtMap {
+			return nil, fmt.Errorf("invalid placeholder type")
+		}
+		if placeholder == nil {
+			return nil, fmt.Errorf("invalid placeholder value")
+		}
+		var err error
+		m := make(map[string]string, len(placeholder))
+		for key, value := range placeholder {
+			key, err = normalizedUTF8(key)
+			if err != nil {
+				return nil, err
+			}
+			value, err = normalizedUTF8(value)
+			if err != nil {
+				return nil, err
+			}
+			m[key] = value
+		}
+		return m, nil
+	}
+	return nil, fmt.Errorf("invalid placeholder type")
+}
+
 // normalizedUTF8 returns s as a normalized UTF-8 encoded string.
 // Returns an error if s is not a valid UTF-8 encoded string.
 func normalizedUTF8(s string) (string, error) {
@@ -1175,4 +1221,13 @@ func normalizedUTF8(s string) (string, error) {
 		return "", errors.New("invalid UTF-8 encoding")
 	}
 	return norm.NFC.String(s), nil
+}
+
+// equalPlaceholder reports whether ph and ph2 are equal.
+func equalPlaceholder(ph, ph2 Placeholder) bool {
+	if ph, ok := ph.(map[string]string); ok {
+		ph2, ok := ph2.(map[string]string)
+		return ok && maps.Equal(ph, ph2)
+	}
+	return ph == ph2
 }
