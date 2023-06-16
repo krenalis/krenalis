@@ -131,13 +131,6 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 			return actionExecutionError{err}
 		}
 
-		// Normalize the user properties with the action schema before sending
-		// it to the connector.
-		props, err = normalize(props, this.action.Schema)
-		if err != nil {
-			return actionExecutionError{err}
-		}
-
 		// Update the user, if it already exists on the app.
 		if exists {
 			err := connection.(_connector.AppUsersConnection).UpdateUser(id, props)

@@ -123,8 +123,6 @@ func (state *State) keepState() {
 			state.setAction(n)
 		case "SetActionSchedulePeriod":
 			state.setActionSchedulePeriod(n)
-		case "SetActionSchema":
-			state.setActionSchema(n)
 		case "SetActionStatus":
 			state.setActionStatus(n)
 		case "SetActionUserCursor":
@@ -294,7 +292,6 @@ type AddActionNotification struct {
 	ScheduleStart      int16
 	SchedulePeriod     int16
 	Filter             *ActionFilter
-	Schema             types.Type
 	InSchema           types.Type
 	OutSchema          types.Type
 	Mapping            map[string]string
@@ -324,7 +321,6 @@ func (state *State) addAction(n postgres.Notification) {
 		ScheduleStart:      e.ScheduleStart,
 		SchedulePeriod:     e.SchedulePeriod,
 		Filter:             e.Filter,
-		Schema:             e.Schema,
 		InSchema:           e.InSchema,
 		OutSchema:          e.OutSchema,
 		Mapping:            e.Mapping,
@@ -813,7 +809,6 @@ type SetActionNotification struct {
 	Name               string
 	Enabled            bool
 	Filter             *ActionFilter
-	Schema             types.Type
 	InSchema           types.Type
 	OutSchema          types.Type
 	Mapping            map[string]string
@@ -835,7 +830,6 @@ func (state *State) setAction(n postgres.Notification) {
 		a.Name = e.Name
 		a.Enabled = e.Enabled
 		a.Filter = e.Filter
-		a.Schema = e.Schema
 		a.InSchema = e.InSchema
 		a.OutSchema = e.OutSchema
 		a.Mapping = e.Mapping
@@ -870,24 +864,6 @@ func (state *State) setActionSchedulePeriod(n postgres.Notification) {
 	for _, listener := range state.listeners.SetActionSchedulePeriod {
 		listener(e)
 	}
-}
-
-// SetActionSchemaNotification is the notification event sent when the schema of
-// an action is changed.
-type SetActionSchemaNotification struct {
-	ID     int
-	Schema types.Type
-}
-
-// setActionSchema sets the schema of an action.
-func (state *State) setActionSchema(n postgres.Notification) {
-	e := SetActionSchemaNotification{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceAction(e.ID, func(a *Action) {
-		a.Schema = e.Schema
-	})
 }
 
 // SetActionStatusNotification is the notification sent when the status of an

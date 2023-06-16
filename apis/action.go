@@ -43,7 +43,6 @@ type Action struct {
 	ScheduleStart      *int
 	SchedulePeriod     *SchedulePeriod
 	Filter             *ActionFilter
-	Schema             types.Type
 	InSchema           types.Type
 	OutSchema          types.Type
 	Mapping            map[string]string
@@ -95,7 +94,6 @@ func (this *Action) fromState(db *postgres.DB, http *httpclient.HTTP, action *st
 			this.Filter.Conditions[i] = ActionFilterCondition(condition)
 		}
 	}
-	this.Schema = action.Schema
 	this.InSchema = action.InSchema
 	this.OutSchema = action.OutSchema
 	if action.Mapping != nil {
@@ -243,14 +241,6 @@ func (this *Action) Execute(reimport bool) error {
 //
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
-//
-// It returns an errors.UnprocessableError error with code
-//
-//   - FetchSchemaFailed, if an error occurred fetching the action's schema.
-//   - PropertyNotExists, if a property of a mapping / transformation does not
-//     exist in the schema (except for properties of the event type schema,
-//     which is specified and thus returned as an errors.BadRequest error).
-//   - QueryExecutionFailed, if the execution of the action's query fails.
 func (this *Action) Set(action ActionToSet) error {
 	c := this.action.Connection()
 	connection := &Connection{
@@ -258,7 +248,7 @@ func (this *Action) Set(action ActionToSet) error {
 		connection: c,
 		http:       this.http,
 	}
-	schema, err := connection.validateActionToSet(action, this.action.Target, this.action.EventType)
+	err := connection.validateActionToSet(action, this.action.Target, this.action.EventType)
 	if err != nil {
 		return err
 	}
@@ -274,9 +264,6 @@ func (this *Action) Set(action ActionToSet) error {
 		Path:         action.Path,
 		Sheet:        action.Sheet,
 		ExportMode:   (*state.ExportMode)(action.ExportMode),
-	}
-	if shouldStoreActionSchema(c.Connector().Type, c.Role, this.action.Target) {
-		n.Schema = schema
 	}
 	var filter, mapping []byte
 	if action.Filter != nil {
@@ -302,15 +289,6 @@ func (this *Action) Set(action ActionToSet) error {
 	ctx := context.Background()
 
 	// Marshal the schemas.
-	var rawSchema []byte
-	if n.Schema.Valid() {
-		rawSchema, err = marshalSchema(n.Schema)
-		if err != nil {
-			return err
-		}
-	} else {
-		rawSchema = []byte{}
-	}
 	var rawInSchema, rawOutSchema []byte
 	if action.InSchema.Valid() {
 		rawInSchema, err = marshalSchema(action.InSchema)
@@ -343,11 +321,11 @@ func (this *Action) Set(action ActionToSet) error {
 	}
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
-			"name = $1, enabled = $2, filter = $3, schema = $4, in_schema = $5, out_schema = $6,\n"+
-			"mapping = $7, python_source = $8, query = $9, path = $10, sheet = $11,\n"+
-			"export_mode = $12, matching_properties_internal = $13,\n"+
-			"matching_properties_external = $14 WHERE id = $15",
-			n.Name, n.Enabled, string(filter), rawSchema, rawInSchema, rawOutSchema, mapping,
+			"name = $1, enabled = $2, filter = $3, in_schema = $4, out_schema = $5,\n"+
+			"mapping = $6, python_source = $7, query = $8, path = $9, sheet = $10,\n"+
+			"export_mode = $11, matching_properties_internal = $12,\n"+
+			"matching_properties_external = $13 WHERE id = $14",
+			n.Name, n.Enabled, string(filter), rawInSchema, rawOutSchema, mapping,
 			n.PythonSource, n.Query, n.Path, n.Sheet, n.ExportMode, matchPropInternal,
 			matchPropExternal, n.ID,
 		)
@@ -594,61 +572,50 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 //
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
-//
-// It returns an errors.UnprocessableError error with code
-//
-//   - EventTypeNotExists, if the specified event type does not exist.
-//   - FetchSchemaFailed, if an error occurred fetching the schema.
-//   - NoStorage, if the file connection does not have a storage.
-//   - PropertyNotExists, if a property of a mapping / transformation does not
-//     exist in the schema (except for properties of the event type schema,
-//     which is specified and thus returned as an errors.BadRequest error).
-//   - ReadFileFailed, if an error occurred reading the file.
-//   - QueryExecutionFailed, if the execution of the specified query fails.
-func (this *Connection) validateActionToSet(action ActionToSet, target state.ActionTarget, eventType string) (types.Type, error) {
+func (this *Connection) validateActionToSet(action ActionToSet, target state.ActionTarget, eventType string) error {
 
 	// First, do formal validations.
 
 	// Validate the name.
 	if action.Name == "" {
-		return types.Type{}, errors.BadRequest("name is empty")
+		return errors.BadRequest("name is empty")
 	}
 	if !utf8.ValidString(action.Name) {
-		return types.Type{}, errors.BadRequest("name is not UTF-8 encoded")
+		return errors.BadRequest("name is not UTF-8 encoded")
 	}
 	if n := utf8.RuneCountInString(action.Name); n > 60 {
-		return types.Type{}, errors.BadRequest("name is longer than 60 runes")
+		return errors.BadRequest("name is longer than 60 runes")
 	}
 	// Validate the filter.
 	var conditionProperties []types.Path
 	if action.Filter != nil {
 		if l := action.Filter.Logical; l != "all" && l != "any" {
-			return types.Type{}, errors.BadRequest("filter logical operator %q is not valid", action.Filter.Logical)
+			return errors.BadRequest("filter logical operator %q is not valid", action.Filter.Logical)
 		}
 		if len(action.Filter.Conditions) == 0 {
-			return types.Type{}, errors.BadRequest("filter does not contain conditions")
+			return errors.BadRequest("filter does not contain conditions")
 		}
 		conditionProperties = make([]types.Path, len(action.Filter.Conditions))
 		for i, condition := range action.Filter.Conditions {
 			property, ok := parsePropertyExpression(condition.Property)
 			if !ok {
-				return types.Type{}, errors.BadRequest("filter condition property expression %q is not valid", condition.Property)
+				return errors.BadRequest("filter condition property expression %q is not valid", condition.Property)
 			}
 			conditionProperties[i] = property
 			if op := condition.Operator; op != "is" && op != "is not" {
-				return types.Type{}, errors.BadRequest("filter condition operator %q is not valid", op)
+				return errors.BadRequest("filter condition operator %q is not valid", op)
 			}
 			if !utf8.ValidString(condition.Value) {
-				return types.Type{}, errors.BadRequest("filter condition value is not UTF-8 encoded")
+				return errors.BadRequest("filter condition value is not UTF-8 encoded")
 			}
 			if n := utf8.RuneCountInString(condition.Value); n > 60 {
-				return types.Type{}, errors.BadRequest("filter condition value is longer than 60 runes")
+				return errors.BadRequest("filter condition value is longer than 60 runes")
 			}
 		}
 	}
 	// Validate the mapping and the transformation.
 	if action.Mapping != nil && action.PythonSource != "" {
-		return types.Type{}, errors.BadRequest("action can not have both mapping and transformation")
+		return errors.BadRequest("action can not have both mapping and transformation")
 	}
 	var mappingInPaths []types.Path
 	var mappingOutPaths []types.Path
@@ -659,38 +626,38 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			// Validate the input property expression.
 			path, ok := parsePropertyExpression(in)
 			if !ok {
-				return types.Type{}, errors.BadRequest("input property expression %q of mapping is not valid", in)
+				return errors.BadRequest("input property expression %q of mapping is not valid", in)
 			}
 			mappingInPaths = append(mappingInPaths, path)
 			// Validate the output property expression.
 			path, ok = parsePropertyExpression(out)
 			if !ok {
-				return types.Type{}, errors.BadRequest("output property expression %q of mapping is not valid", out)
+				return errors.BadRequest("output property expression %q of mapping is not valid", out)
 			}
 			mappingOutPaths = append(mappingOutPaths, path)
 		}
 	}
 	if action.PythonSource != "" {
 		if !strings.Contains(action.PythonSource, "def transform") {
-			return types.Type{}, errors.BadRequest("Python source code of transformation does not contain 'transform' function")
+			return errors.BadRequest("Python source code of transformation does not contain 'transform' function")
 		}
 	}
 	// Validate the path.
 	if action.Path != "" {
 		if !utf8.ValidString(action.Path) {
-			return types.Type{}, errors.BadRequest("path is not UTF-8 encoded")
+			return errors.BadRequest("path is not UTF-8 encoded")
 		}
 		if n := utf8.RuneCountInString(action.Path); n > 1024 {
-			return types.Type{}, errors.BadRequest("path is longer than 1024 runes")
+			return errors.BadRequest("path is longer than 1024 runes")
 		}
 	}
 	// Validate the sheet.
 	if action.Sheet != "" {
 		if !utf8.ValidString(action.Sheet) {
-			return types.Type{}, errors.BadRequest("sheet is not UTF-8 encoded")
+			return errors.BadRequest("sheet is not UTF-8 encoded")
 		}
 		if n := utf8.RuneCountInString(action.Sheet); n > 100 {
-			return types.Type{}, errors.BadRequest("sheet is longer than 100 runes")
+			return errors.BadRequest("sheet is longer than 100 runes")
 		}
 	}
 	// Validate the export options.
@@ -698,16 +665,16 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		switch *action.ExportMode {
 		case CreateOnly, UpdateOnly, CreateOrUpdate:
 		default:
-			return types.Type{}, errors.BadRequest("export mode %q is not valid", *action.ExportMode)
+			return errors.BadRequest("export mode %q is not valid", *action.ExportMode)
 		}
 	}
 	if action.MatchingProperties != nil {
 		props := *action.MatchingProperties
 		if !types.IsValidPropertyName(props.Internal) {
-			return types.Type{}, errors.BadRequest("internal matching property %q is not a valid property name", props.Internal)
+			return errors.BadRequest("internal matching property %q is not a valid property name", props.Internal)
 		}
 		if !types.IsValidPropertyName(props.External) {
-			return types.Type{}, errors.BadRequest("external matching property %q is not a valid property name", props.External)
+			return errors.BadRequest("external matching property %q is not a valid property name", props.External)
 		}
 	}
 
@@ -719,11 +686,11 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	// Check if the query is allowed.
 	if connector.Type == state.DatabaseType {
 		if action.Query == "" {
-			return types.Type{}, errors.BadRequest("query cannot be empty for database actions")
+			return errors.BadRequest("query cannot be empty for database actions")
 		}
 	} else {
 		if action.Query != "" {
-			return types.Type{}, errors.BadRequest("%s actions cannot have a query", connector.Type)
+			return errors.BadRequest("%s actions cannot have a query", connector.Type)
 		}
 	}
 
@@ -737,26 +704,26 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		filtersAllowed = targetUsersOrGroups && c.Role == state.DestinationRole
 	}
 	if action.Filter != nil && !filtersAllowed {
-		return types.Type{}, errors.BadRequest("filters are not allowed")
+		return errors.BadRequest("filters are not allowed")
 	}
 
 	// Check if the path and the sheet are allowed.
 	if connector.Type == state.FileType {
 		if action.Path == "" {
-			return types.Type{}, errors.BadRequest("path cannot be empty for file actions")
+			return errors.BadRequest("path cannot be empty for file actions")
 		}
 		if connector.HasSheets && action.Sheet == "" {
-			return types.Type{}, errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
+			return errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
 		}
 		if !connector.HasSheets && action.Sheet != "" {
-			return types.Type{}, errors.BadRequest("connection %d does not have sheets", c.ID)
+			return errors.BadRequest("connection %d does not have sheets", c.ID)
 		}
 	} else {
 		if action.Path != "" {
-			return types.Type{}, errors.BadRequest("%s actions cannot have a path", connector.Type)
+			return errors.BadRequest("%s actions cannot have a path", connector.Type)
 		}
 		if action.Sheet != "" {
-			return types.Type{}, errors.BadRequest("%s actions cannot have a sheet", connector.Type)
+			return errors.BadRequest("%s actions cannot have a sheet", connector.Type)
 		}
 	}
 
@@ -766,159 +733,98 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		targetUsersOrGroups
 	if needsExportOptions {
 		if action.ExportMode == nil {
-			return types.Type{}, errors.BadRequest("export mode cannot be nil")
+			return errors.BadRequest("export mode cannot be nil")
 		}
 		if action.MatchingProperties == nil {
-			return types.Type{}, errors.BadRequest("matching properties cannot be nil")
+			return errors.BadRequest("matching properties cannot be nil")
 		}
 	} else {
 		if action.ExportMode != nil {
-			return types.Type{}, errors.BadRequest("export mode must be nil")
+			return errors.BadRequest("export mode must be nil")
 		}
 		if action.MatchingProperties != nil {
-			return types.Type{}, errors.BadRequest("matching properties must be nil")
+			return errors.BadRequest("matching properties must be nil")
 		}
 	}
 
-	// Fetch the schema with which to validate an action to be added.
-	var schema types.Type
+	// Validate empty mappings; they are allowed only when sending events,
+	// because the user may want to leave every property of the output schema
+	// unmapped.
+	if action.Mapping != nil && len(action.Mapping) == 0 && target != state.EventsTarget {
+		return errors.BadRequest("action has a mapping with no mapped properties")
+	}
+
+	// Check if the mapping (or the transformation) is mandatory.
+	var mappingIsMandatory bool
 	switch connector.Type {
 	case state.AppType:
-		switch target {
-		case
-			state.UsersTarget,
-			state.GroupsTarget:
-			if !connector.Targets.Contains(target) {
-				return types.Type{}, errors.BadRequest("connection %d does not have target %s", c.ID, target)
-			}
-			s, err := this.fetchAppSchema(target, eventType)
-			if err != nil {
-				return types.Type{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
-			}
-			schema = s
-		case state.EventsTarget:
-			if !connector.Targets.Contains(state.EventsTarget) {
-				return types.Type{}, errors.BadRequest("connection %d cannot have actions on events", c.ID)
-			}
-			switch connector.Type {
-			case state.AppType:
-				eventTypes, err := this.fetchEventTypes()
-				if err != nil {
-					return types.Type{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
-				}
-				var et *_connector.EventType
-				for _, e := range eventTypes {
-					if e.ID == eventType {
-						et = e
-						break
-					}
-				}
-				if et == nil {
-					return types.Type{}, errors.Unprocessable(EventNotExists, "connection %d does not have event type %q", c.ID, eventType)
-				}
-				schema = et.Schema // invalid if the event type has no schema.
-			case state.MobileType, state.ServerType, state.WebsiteType:
-				if eventType != "" {
-					return types.Type{}, errors.Unprocessable(EventNotExists, "connection %d does not have event type %q", c.ID, eventType)
-				}
-			}
-		}
-	case state.DatabaseType:
-		if c.Role == state.SourceRole {
-			s, err := this.fetchDatabaseSchema(action.Query)
-			if err != nil {
-				return types.Type{}, err
-			}
-			schema = s
-		}
-	case state.FileType:
-		if c.Role == state.SourceRole {
-			s, err := this.fetchFileSchema(action.Path, action.Sheet)
-			if err != nil {
-				return types.Type{}, err
-			}
-			schema = s
-		}
-	}
-
-	// Validate empty mappings.
-	if action.Mapping != nil && len(action.Mapping) == 0 {
-		if target == state.EventsTarget && schema.Valid() {
-			// This is the only case when an empty mapping is allowed.
-		} else {
-			return types.Type{}, errors.BadRequest("action has a mapping with no mapped properties")
-		}
-	}
-
-	// Check if the mapping (and the transformations) are allowed and required
-	// for this action; in that case, validate them.
-	var requiresMapping bool
-	switch connector.Type {
-	case state.AppType:
-		requiresMapping = targetUsersOrGroups || (target == state.EventsTarget && schema.Valid())
+		mappingIsMandatory = targetUsersOrGroups
 	case
 		state.DatabaseType,
 		state.FileType:
-		requiresMapping = c.Role == state.SourceRole && targetUsersOrGroups
+		mappingIsMandatory = c.Role == state.SourceRole && targetUsersOrGroups
 	}
-	if requiresMapping {
+	if mappingIsMandatory {
 		if action.Mapping == nil && action.PythonSource == "" {
-			return types.Type{}, errors.BadRequest("mapping (or transformation) is required")
+			return errors.BadRequest("mapping (or transformation) is required")
 		}
-		// If there is at least one property mapped, or a Python transformation
-		// function is provided, then there must be both a valid input and
-		// output schema.
-		if requiresSchemas := len(action.Mapping) > 0 || action.PythonSource != ""; requiresSchemas {
-			if !action.InSchema.Valid() {
-				return types.Type{}, errors.BadRequest("input schema must be valid")
-			}
-			if action.InSchema.PhysicalType() != types.PtObject {
-				return types.Type{}, errors.BadRequest("input schema must have physical type Object")
-			}
-			if !action.OutSchema.Valid() {
-				return types.Type{}, errors.BadRequest("output schema must be valid")
-			}
-			if action.OutSchema.PhysicalType() != types.PtObject {
-				return types.Type{}, errors.BadRequest("output schema must have physical type Object")
-			}
-			for i, inPath := range mappingInPaths {
-				outPath := mappingOutPaths[i]
-				inProp, ok := action.InSchema.PropertyByPath(inPath)
-				if !ok {
-					return types.Type{}, errors.BadRequest("mapped property %q not found in input schema", strings.Join(inPath, "."))
-				}
-				outProp, ok := action.OutSchema.PropertyByPath(outPath)
-				if !ok {
-					return types.Type{}, errors.BadRequest("mapped property %q not found in output schema", strings.Join(outPath, "."))
-				}
-				ok = mappings.ConvertibleTo(inProp.Type.PhysicalType(), outProp.Type.PhysicalType())
-				if !ok {
-					return types.Type{}, errors.BadRequest("property %q (with type %s) cannot be mapped and converted to property %q (with type %s)", inProp.Name, inProp.Type, outProp.Name, outProp.Type)
-				}
-			}
-		}
-		// TODO(Gianluca): should we return an error if the input or the output
-		// schema has a property not mapped by the mapping? If so, how should we
-		// handle that in case of transformation functions?
 	} else {
 		if action.Mapping != nil {
-			return types.Type{}, errors.BadRequest("mapping not allowed")
+			return errors.BadRequest("mapping not allowed")
 		}
 		if action.PythonSource != "" {
-			return types.Type{}, errors.BadRequest("transformation not allowed")
+			return errors.BadRequest("transformation not allowed")
 		}
 		if action.InSchema.Valid() {
-			return types.Type{}, errors.BadRequest("input schema not expected")
+			return errors.BadRequest("input schema not expected")
 		}
 		if action.OutSchema.Valid() {
-			return types.Type{}, errors.BadRequest("output schema not expected")
+			return errors.BadRequest("output schema not expected")
 		}
 	}
 
-	return schema, nil
+	// If there is at least one property mapped, or a Python transformation
+	// function is provided, then there must be both a valid input and output
+	// schema.
+	if requiresSchemas := len(action.Mapping) > 0 || action.PythonSource != ""; requiresSchemas {
+		if !action.InSchema.Valid() {
+			return errors.BadRequest("input schema must be valid")
+		}
+		if action.InSchema.PhysicalType() != types.PtObject {
+			return errors.BadRequest("input schema must have physical type Object")
+		}
+		if !action.OutSchema.Valid() {
+			return errors.BadRequest("output schema must be valid")
+		}
+		if action.OutSchema.PhysicalType() != types.PtObject {
+			return errors.BadRequest("output schema must have physical type Object")
+		}
+		for i, inPath := range mappingInPaths {
+			outPath := mappingOutPaths[i]
+			inProp, ok := action.InSchema.PropertyByPath(inPath)
+			if !ok {
+				return errors.BadRequest("mapped property %q not found in input schema", strings.Join(inPath, "."))
+			}
+			outProp, ok := action.OutSchema.PropertyByPath(outPath)
+			if !ok {
+				return errors.BadRequest("mapped property %q not found in output schema", strings.Join(outPath, "."))
+			}
+			ok = mappings.ConvertibleTo(inProp.Type.PhysicalType(), outProp.Type.PhysicalType())
+			if !ok {
+				return errors.BadRequest("property %q (with type %s) cannot be mapped and converted to property %q (with type %s)", inProp.Name, inProp.Type, outProp.Name, outProp.Type)
+			}
+		}
+	}
+
+	// TODO(Gianluca): should we return an error if the input or the output
+	// schema has a property not mapped by the mapping? If so, how should we
+	// handle that in case of transformation functions?
+
+	return nil
 }
 
 // fetchEventTypes fetches the event types for the connection.
+// TODO(Gianluca): consider moving this method in 'connection.go'.
 func (this *Connection) fetchEventTypes() ([]*_connector.EventType, error) {
 
 	c := this.connection
@@ -950,6 +856,7 @@ func (this *Connection) fetchEventTypes() ([]*_connector.EventType, error) {
 
 // fetchAppSchema fetches the schema of an app connection for the given target
 // and eventType.
+// TODO(Gianluca): consider moving this method in 'connection.go'.
 func (this *Connection) fetchAppSchema(target state.ActionTarget, eventType string) (types.Type, error) {
 
 	c := this.connection
@@ -1019,104 +926,6 @@ func (this *Connection) fetchAppSchema(target state.ActionTarget, eventType stri
 		}
 	}
 	return schema, nil
-}
-
-// fetchDatabaseSchema fetches the schema of a database connection executing the
-// given query.
-//
-// It returns an errors.UnprocessableError error with code QueryExecutionFailed
-// if the execution of the specified query fails.
-func (this *Connection) fetchDatabaseSchema(query string) (types.Type, error) {
-
-	c := this.connection
-	connector := c.Connector()
-
-	usersQuery, err := compileActionQuery(query, 0)
-	if err != nil {
-		return types.Type{}, err
-	}
-	ctx := context.Background()
-	connection, err := _connector.RegisteredDatabase(connector.Name).Open(ctx, &_connector.DatabaseConfig{
-		Role:        _connector.Role(c.Role),
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-	})
-	if err != nil {
-		return types.Type{}, err
-	}
-	var rows _connector.Rows
-	rows, properties, err := connection.Query(usersQuery)
-	if err != nil {
-		return types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
-	}
-	err = rows.Close()
-	if err != nil {
-		return types.Type{}, err
-	}
-
-	return types.ObjectOf(properties)
-}
-
-// fetchFileSchema fetches the schema of a file connection.
-//
-// It returns an errors.UnprocessableError error with code
-//
-//   - NoStorage, if the file connection does not have a storage.
-//   - ReadFileFailed, if an error occurred reading the file.
-func (this *Connection) fetchFileSchema(path, sheet string) (types.Type, error) {
-
-	c := this.connection
-	connector := c.Connector()
-	cRole := _connector.Role(c.Role)
-
-	var ctx = context.Background()
-
-	// Retrieve the storage associated to the file connection.
-	var storage _connector.StorageConnection
-	{
-		s, ok := c.Storage()
-		if !ok {
-			return types.Type{}, errors.Unprocessable(NoStorage, "file connection %d does not have a storage", c.ID)
-		}
-		var err error
-		storage, err = _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
-			Role:     cRole,
-			Settings: s.Settings,
-			SetSettings: func(settings []byte) error {
-				return setSettings(ctx, this.db, s.ID, settings)
-			},
-		})
-		if err != nil {
-			return types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
-		}
-	}
-
-	// Connect to the file connector and read only the columns.
-	file, err := _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
-		Role:        cRole,
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-	})
-	if err != nil {
-		return types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
-	}
-
-	// Read only the columns.
-	rc, _, err := storage.Open(path)
-	if err != nil {
-		return types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
-	}
-	defer rc.Close()
-	rw := newRecordWriter(c.ID, 0, nil)
-	err = file.Read(rc, sheet, rw)
-	if err != nil && err != errRecordStop {
-		return types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
-	}
-	if rw.columns == nil {
-		return types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", errNoColumns)
-	}
-
-	return types.ObjectOf(rw.columns)
 }
 
 // setSettingsFunc returns a connector.SetSettingsFunc function that sets the
@@ -1203,19 +1012,6 @@ func parsePropertyExpression(p string) (types.Path, bool) {
 	}
 
 	return types.Path{p}, true
-}
-
-// shouldStoreActionSchema reports whether the schema for an action with the
-// given connector type, connection role and target should be stored with the
-// action.
-func shouldStoreActionSchema(typ state.ConnectorType, role state.ConnectionRole, target state.ActionTarget) bool {
-	if typ != state.AppType {
-		return false
-	}
-	if target == state.EventsTarget {
-		return role == state.DestinationRole
-	}
-	return true
 }
 
 // sourceMappingSchema returns the users schema to use in mappings for source

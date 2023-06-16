@@ -421,17 +421,6 @@ func (this *Connection) ActionSchemas(target ActionTarget, eventType string) (*A
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
 //
-// It returns an errors.UnprocessableError error with code
-//
-//   - EventTypeNotExists, if the specified event type does not exist.
-//   - FetchSchemaFailed, if an error occurred fetching the action's schema.
-//   - PropertyNotExists, if a property of a mapping / transformation does not
-//     exist in the schema (except for properties of the event type schema,
-//     which is specified and thus returned as an errors.BadRequest error).
-//   - QueryExecutionFailed, if the execution of the action's query fails.
-//   - TargetAlreadyExists, if the connection already has an action with the
-//     same target.
-//
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore.
 func (this *Connection) AddAction(target ActionTarget, eventType string, action ActionToSet) (int, error) {
@@ -458,7 +447,7 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 	}
 
 	// Validate the arguments.
-	schema, err := this.validateActionToSet(action, state.ActionTarget(target), eventType)
+	err := this.validateActionToSet(action, state.ActionTarget(target), eventType)
 	if err != nil {
 		return 0, err
 	}
@@ -479,9 +468,6 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		Path:           action.Path,
 		Sheet:          action.Sheet,
 		ExportMode:     (*state.ExportMode)(action.ExportMode),
-	}
-	if shouldStoreActionSchema(connector.Type, c.Role, n.Target) {
-		n.Schema = schema
 	}
 
 	// Marshal the filter.
@@ -512,17 +498,6 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 	n.ID, err = generateRandomID()
 	if err != nil {
 		return 0, err
-	}
-
-	// Marshal the schema.
-	var rawSchema []byte
-	if n.Schema.Valid() {
-		rawSchema, err = marshalSchema(n.Schema)
-		if err != nil {
-			return 0, err
-		}
-	} else {
-		rawSchema = []byte{}
 	}
 
 	// Marshal the input and output schemas.
@@ -582,13 +557,13 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 			matchPropExternal = n.MatchingProperties.External
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
-			"schedule_start, schedule_period, filter, schema, in_schema, out_schema, mapping,\n" +
+			"schedule_start, schedule_period, filter, in_schema, out_schema, mapping,\n" +
 			"python_source, query, path, sheet,\n" +
 			"export_mode, matching_properties_internal, matching_properties_external)\n" +
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType, n.Name,
 			n.Enabled, n.ScheduleStart, n.SchedulePeriod,
-			string(filter), rawSchema, rawInSchema, rawOutSchema, mapping, action.PythonSource,
+			string(filter), rawInSchema, rawOutSchema, mapping, action.PythonSource,
 			n.Query, n.Path, n.Sheet, n.ExportMode, matchPropInternal, matchPropExternal)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {
@@ -984,26 +959,6 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 	return rw.records, schema, nil
 }
 
-// Reload reloads the user, group and events schema for the actions of the
-// connection. If the actions do not have schemas to reload, it does nothing.
-func (this *Connection) Reload() error {
-	c := this.connection
-	connector := c.Connector()
-	if connector.Targets.Contains(state.UsersTarget) && shouldStoreActionSchema(connector.Type, c.Role, state.UsersTarget) {
-		err := this.reloadUserSchema()
-		if err != nil {
-			return err
-		}
-	}
-	if connector.Targets.Contains(state.EventsTarget) && shouldStoreActionSchema(connector.Type, c.Role, state.EventsTarget) {
-		err := this.reloadEventSchemas()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // Rename renames the connection with the given new name.
 // name must be between 1 and 100 runes long.
 //
@@ -1384,109 +1339,6 @@ func (this *Connection) Stats() (*ConnectionsStats, error) {
 }
 
 var errRecordStop = errors.New("stop record")
-
-// reloadEventSchemas reloads the events schemas of the connection.
-//
-// It returns an errors.UnprocessableError error with code
-//
-//   - FetchSchemaFailed, if an error occurred fetching the schema.
-func (this *Connection) reloadEventSchemas() error {
-
-	for _, action := range this.connection.Actions() {
-		if action.Target != state.EventsTarget {
-			continue
-		}
-		// Fetch the schema.
-		schema, err := this.fetchAppSchema(state.EventsTarget, action.EventType)
-		if err != nil {
-			return errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
-		}
-		if schema.EqualTo(action.Schema) {
-			continue
-		}
-		// Update the schema.
-		rawSchema, err := schema.MarshalJSON()
-		if err != nil {
-			return fmt.Errorf("cannot marshal fetched schema of action %d: %s", action.ID, err)
-		}
-		if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
-			return fmt.Errorf("cannot marshal fetched schema of the action %d: data is too large", action.ID)
-		}
-		n := state.SetActionSchemaNotification{
-			ID:     action.ID,
-			Schema: schema,
-		}
-		ctx := context.Background()
-		err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
-			result, err := tx.Exec(ctx, "UPDATE actions SET \"schema\" = $1 WHERE id = $2 AND \"schema\" <> $1", rawSchema, n.ID)
-			if err != nil {
-				return err
-			}
-			if result.RowsAffected() == 0 {
-				return nil
-			}
-			return tx.Notify(ctx, n)
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// reloadUserSchema reloads the user schema of the connection. The connection
-// must be an app connection.
-//
-// It returns an errors.UnprocessableError error with code
-//
-//   - FetchSchemaFailed, if an error occurred fetching the schema.
-func (this *Connection) reloadUserSchema() error {
-
-	c := this.connection
-	if typ := c.Connector().Type; typ != state.AppType {
-		return fmt.Errorf("cannot reload user schema for %s connections", typ)
-	}
-
-	// Fetch the schema.
-	schema, err := this.fetchAppSchema(state.UsersTarget, "")
-	if err != nil {
-		return errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
-	}
-
-	// Update the schema.
-	rawSchema, err := schema.MarshalJSON()
-	if err != nil {
-		return fmt.Errorf("cannot marshal schema of connection %d: %s", c.ID, err)
-	}
-	if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
-		return fmt.Errorf("cannot marshal schema of the connection %d: data is too large", c.ID)
-	}
-
-	n := state.SetActionSchemaNotification{
-		Schema: schema,
-	}
-
-	ctx := context.Background()
-
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		err := tx.QueryRow(ctx, "UPDATE actions\nSET \"schema\" = $1\n"+
-			"WHERE connection = $2 AND target = 'Users' AND \"schema\" <> $1\n"+
-			"RETURNING id", rawSchema, c.ID).Scan(&n.ID)
-		if err != nil {
-			return err
-		}
-		if n.ID == 0 {
-			return nil
-		}
-		return tx.Notify(ctx, n)
-	})
-	if err == sql.ErrNoRows {
-		err = nil
-	}
-
-	return err
-}
 
 // isServerKey reports whether key can be a server key.
 func isServerKey(key string) bool {

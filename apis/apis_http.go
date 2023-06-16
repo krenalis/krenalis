@@ -483,16 +483,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(map[string]any{"Rows": rows, "Schema": schema})
 			})
-			router.Post("/reload", func(w http.ResponseWriter, r *http.Request) {
-				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
-				if err != nil {
-					respond(w, err)
-					return
-				}
-				err = connection.Reload()
-				respond(w, err)
-			})
 			router.Get("/keys", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)

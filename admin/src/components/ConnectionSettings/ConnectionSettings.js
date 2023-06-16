@@ -5,7 +5,6 @@ import ConnectionDeletion from '../../components/ConnectionDeletion/ConnectionDe
 import ConnectionEnabling from '../../components/ConnectionEnabling/ConnectionEnabling';
 import ConnectionKeys from '../../components/ConnectionKeys/ConnectionKeys';
 import ConnectionStorage from '../../components/ConnectionStorage/ConnectionStorage';
-import ConnectionReload from '../../components/ConnectionReload/ConnectionReload';
 import ConnectionSnippet from '../ConnectionSnippet/ConnectionSnippet';
 import { AppContext } from '../../context/AppContext';
 import { ConnectionContext } from '../../context/ConnectionContext';
@@ -84,15 +83,6 @@ const ConnectionSettings = () => {
 				<SlTabPanel name='enabling'>
 					<div className='panelTitle'>Enabling</div>
 					<ConnectionEnabling connection={c} />
-				</SlTabPanel>
-
-				{/* Reload */}
-				<SlTab slot='nav' panel='reload'>
-					Reload
-				</SlTab>
-				<SlTabPanel name='reload'>
-					<div className='panelTitle'>Reload</div>
-					<ConnectionReload />
 				</SlTabPanel>
 
 				{/* Deletion */}

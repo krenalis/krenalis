@@ -817,7 +817,6 @@ type Action struct {
 	ScheduleStart      int16
 	SchedulePeriod     int16
 	Filter             *ActionFilter
-	Schema             types.Type
 	InSchema           types.Type
 	OutSchema          types.Type
 	Mapping            map[string]string
