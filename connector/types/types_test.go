@@ -396,7 +396,12 @@ func Test_PropertyByPath(t *testing.T) {
 // sameType reports whether t1 and t2 are the same type. It compares t2 against
 // t1.
 func sameType(t1, t2 Type) error {
-	if t1 == t2 {
+	if t1.pt == t2.pt &&
+		t1.unique == t2.unique &&
+		t1.real == t2.real &&
+		t1.flat == t2.flat &&
+		t1.p == t2.p &&
+		t1.vl == nil && t2.vl == nil {
 		return nil
 	}
 	// Physical type.
@@ -480,24 +485,24 @@ func sameType(t1, t2 Type) error {
 				return fmt.Errorf("expected regular expression, got a %T value", t2.vl)
 			}
 			if vl1.String() != vl2.String() {
-				return fmt.Errorf("expected regular expression %s, got %s", vl1, vl2)
+				return fmt.Errorf("expected regular expression %s, got %s", vl1.String(), vl2.String())
 			}
-		case *[]string:
+		case []string:
 			if t2.vl == nil {
 				return errors.New("expected enum, got nil")
 			}
-			vl2, ok := t2.vl.(*[]string)
+			vl2, ok := t2.vl.([]string)
 			if !ok {
 				return fmt.Errorf("expected enum, got %T value", t2.vl)
 			}
 			if vl2 == nil {
-				return fmt.Errorf("expected not nil, got nil")
+				return fmt.Errorf("unexpected []string(nil)")
 			}
-			if len(*vl1) != len(*vl2) {
-				return fmt.Errorf("expected %d enum values, got %d", len(*vl1), len(*vl2))
+			if len(vl1) != len(vl2) {
+				return fmt.Errorf("expected %d enum values, got %d", len(vl1), len(vl2))
 			}
-			for i, v1 := range *vl1 {
-				if v2 := (*vl2)[i]; v1 != v2 {
+			for i, v1 := range vl1 {
+				if v2 := (vl2)[i]; v1 != v2 {
 					return fmt.Errorf("expected enum value %q, got %q", v1, v2)
 				}
 			}
@@ -523,19 +528,19 @@ func sameType(t1, t2 Type) error {
 		if t2.vl == nil {
 			return errors.New("expected properties, got nil")
 		}
-		properties2, ok := t2.vl.(*[]Property)
+		properties2, ok := t2.vl.([]Property)
 		if !ok {
 			return fmt.Errorf("expected properties, got a %T value", t2.vl)
 		}
 		if properties2 == nil {
-			return fmt.Errorf("expected not nil, got nil")
+			return fmt.Errorf("unexpected []Property(nil)")
 		}
-		properties1 := t1.vl.(*[]Property)
-		if len(*properties1) != len(*properties2) {
-			return fmt.Errorf("expected %d properties, got %d", len(*properties1), len(*properties2))
+		properties1 := t1.vl.([]Property)
+		if len(properties1) != len(properties2) {
+			return fmt.Errorf("expected %d properties, got %d", len(properties1), len(properties2))
 		}
-		for i, p1 := range *properties1 {
-			p2 := (*properties2)[i]
+		for i, p1 := range properties1 {
+			p2 := properties2[i]
 			err := sameProperty(p1, p2)
 			if err != nil {
 				return err

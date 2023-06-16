@@ -219,8 +219,8 @@ type Type struct {
 	//   - decimalRange value for Decimal
 	//   - string value representing a layout for DateTime and Date
 	//   - *regexp.Regexp value for Text
-	//   - *[]string with the enum values for Text
-	//   - *[]Property for Object
+	//   - []string with the enum values for Text
+	//   - []Property for Object
 	//   - Type of the item for Array
 	//   - Type of the value for Map
 	vl any
@@ -420,7 +420,7 @@ func ObjectOf(properties []Property) (Type, error) {
 		}
 		flat = flat || property.Flat || property.Type.flat
 	}
-	return Type{pt: PtObject, flat: flat, vl: &ps}, nil
+	return Type{pt: PtObject, flat: flat, vl: ps}, nil
 }
 
 // IsValidPropertyName reports whether name is a valid property name.
@@ -461,26 +461,26 @@ func (t Type) AsRole(role Role) Type {
 	}
 	last := 0
 	var roleProperties []Property
-	properties := t.vl.(*[]Property)
-	for i, p := range *properties {
+	properties := t.vl.([]Property)
+	for i, p := range properties {
 		if p.Role == BothRole || p.Role == role {
 			continue
 		}
 		if last < i {
-			roleProperties = append(roleProperties, (*properties)[last:i]...)
+			roleProperties = append(roleProperties, properties[last:i]...)
 		}
 		last = i + 1
 	}
 	if last == 0 {
 		return t
 	}
-	if last < len(*properties) {
-		roleProperties = append(roleProperties, (*properties)[last:]...)
+	if last < len(properties) {
+		roleProperties = append(roleProperties, properties[last:]...)
 	}
 	if roleProperties == nil {
 		return Type{}
 	}
-	return Type{pt: PtObject, vl: &roleProperties}
+	return Type{pt: PtObject, vl: roleProperties}
 }
 
 // AsReal returns t but as a real number. As a real number, t does not allow
@@ -875,7 +875,7 @@ func (t Type) WithRegexp(re *regexp.Regexp) Type {
 		panic("cannot set regular expression for a non-Text type")
 	}
 	switch t.vl.(type) {
-	case *[]string:
+	case []string:
 		panic("cannot set regular expression when t has an enum")
 	case *regexp.Regexp:
 		panic("t already has a regular expression")
@@ -899,9 +899,9 @@ func (t Type) Enum() []string {
 	if t.pt != PtText {
 		panic("cannot get enum for a non-Text type")
 	}
-	if vl, ok := t.vl.(*[]string); ok {
-		enum := make([]string, len(*vl))
-		copy(enum, *vl)
+	if vl, ok := t.vl.([]string); ok {
+		enum := make([]string, len(vl))
+		copy(enum, vl)
 		return enum
 	}
 	return nil
@@ -918,7 +918,7 @@ func (t Type) WithEnum(enum []string) Type {
 		panic("enum is empty")
 	}
 	switch t.vl.(type) {
-	case *[]string:
+	case []string:
 		panic("t already has an enum")
 	case *regexp.Regexp:
 		panic("cannot set enum when t has a regular expression")
@@ -931,7 +931,7 @@ func (t Type) WithEnum(enum []string) Type {
 		}
 		vl[i] = v
 	}
-	t.vl = &vl
+	t.vl = vl
 	return t
 }
 
@@ -999,7 +999,7 @@ func (t Type) Unflatten() Type {
 			pp[i].Type = pp[i].Type.Unflatten()
 			pp[i].Flat = false
 		}
-		t.vl = &pp
+		t.vl = pp
 	case PtArray:
 		t.vl = t.ItemType().Unflatten()
 	case PtMap:
@@ -1050,7 +1050,7 @@ func (t Type) PropertyByPath(path Path) (Property, bool) {
 		if t.pt != PtObject {
 			break
 		}
-		for _, prop := range *t.vl.(*[]Property) {
+		for _, prop := range t.vl.([]Property) {
 			if prop.Name != name {
 				continue
 			}
@@ -1077,7 +1077,7 @@ func (t Type) Property(name string) (Property, bool) {
 	if t.pt != PtObject {
 		panic("cannot get the properties of a non-Object type")
 	}
-	for _, p := range *t.vl.(*[]Property) {
+	for _, p := range t.vl.([]Property) {
 		if p.Name == name {
 			return p, true
 		}
@@ -1094,7 +1094,7 @@ func (t Type) Properties() []Property {
 	if t.pt != PtObject {
 		panic("cannot get the properties of a non-Object type")
 	}
-	return slices.Clone(*t.vl.(*[]Property))
+	return slices.Clone(t.vl.([]Property))
 }
 
 // PropertiesNames returns the names of the properties of the Object t.
@@ -1103,9 +1103,9 @@ func (t Type) PropertiesNames() []string {
 	if t.pt != PtObject {
 		panic("cannot get the properties names of a non-Object type")
 	}
-	properties := t.vl.(*[]Property)
-	names := make([]string, len(*properties))
-	for i, p := range *properties {
+	properties := t.vl.([]Property)
+	names := make([]string, len(properties))
+	for i, p := range properties {
 		names[i] = p.Name
 	}
 	return names
@@ -1122,45 +1122,45 @@ func (t Type) ValueType() Type {
 
 // EqualTo reports whether t is equals to t2.
 func (t Type) EqualTo(t2 Type) bool {
-	if t == t2 {
-		return true
-	}
-	vl1 := t.vl
-	t.vl = nil
-	vl2 := t2.vl
-	t2.vl = nil
-	if t != t2 {
+	almostEqual := t.pt == t2.pt && t.unique == t2.unique && t.real == t2.real && t.flat == t2.flat && t.p == t2.p
+	if !almostEqual {
 		return false
 	}
-	switch vl1 := vl1.(type) {
+	if t.vl == nil && t2.vl == nil {
+		return true
+	}
+	if (t.vl == nil) != (t2.vl == nil) {
+		return false
+	}
+	switch vl1 := t.vl.(type) {
 	case Type:
-		return vl1.EqualTo(vl2.(Type))
-	case *[]Property:
-		vl2 := vl2.(*[]Property)
-		if len(*vl1) != len(*vl2) {
+		return vl1.EqualTo(t2.vl.(Type))
+	case intRange, uintRange, floatRange, decimalRange, string:
+		return vl1 == t2.vl
+	case []Property:
+		vl2 := t2.vl.([]Property)
+		if len(vl1) != len(vl2) {
 			return false
 		}
-		for i, p1 := range *vl1 {
-			p2 := (*vl2)[i]
-			if p1 == p2 {
-				continue
-			}
-			if p1.Name != p2.Name || p1.Label != p2.Label || p1.Description != p2.Description {
-				return false
-			}
-			if p1.Required != p2.Required || p1.Nullable != p2.Nullable || p1.Flat != p2.Flat {
-				return false
-			}
-			if !p1.Type.EqualTo(p2.Type) {
+		for i, p1 := range vl1 {
+			p2 := (vl2)[i]
+			if p1.Name != p2.Name ||
+				p1.Label != p2.Label ||
+				p1.Description != p2.Description ||
+				p1.Role != p2.Role ||
+				p1.Required != p2.Required ||
+				p1.Nullable != p2.Nullable ||
+				p1.Flat != p2.Flat ||
+				!p1.Type.EqualTo(p2.Type) {
 				return false
 			}
 		}
 		return true
-	case *[]string:
-		vl2, ok := vl2.(*[]string)
-		return ok && slices.Equal(*vl1, *vl2)
+	case []string:
+		vl2, ok := t2.vl.([]string)
+		return ok && slices.Equal(vl1, vl2)
 	case *regexp.Regexp:
-		vl2, ok := vl2.(*regexp.Regexp)
+		vl2, ok := t2.vl.(*regexp.Regexp)
 		return ok && vl1.String() == vl2.String()
 	}
 	panic("unreachable code")

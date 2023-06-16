@@ -34,7 +34,6 @@ type jsonEncoder struct {
 	indent             bool
 	generateASCII      bool
 	allowSpecialFloats bool
-	propertiesOf       map[types.Type][]types.Property
 	keys               []string
 	Depth              int
 }
@@ -143,19 +142,11 @@ func (enc *jsonEncoder) Append(b []byte, t types.Type, v any) []byte {
 		}
 		return append(b, ']')
 	case types.PtObject:
-		if enc.propertiesOf == nil {
-			enc.propertiesOf = map[types.Type][]types.Property{}
-		}
-		properties, ok := enc.propertiesOf[t]
-		if !ok {
-			properties = t.Properties()
-			enc.propertiesOf[t] = properties
-		}
 		b = append(b, '{')
 		enc.Depth++
 		switch v := v.(type) {
 		case []any:
-			for i, p := range properties {
+			for i, p := range t.Properties() {
 				if i > 0 {
 					b = append(b, ',')
 				}
@@ -171,7 +162,7 @@ func (enc *jsonEncoder) Append(b []byte, t types.Type, v any) []byte {
 				b = enc.Append(b, p.Type, v[i])
 			}
 		case map[string]any:
-			for i, p := range properties {
+			for i, p := range t.Properties() {
 				if i > 0 {
 					b = append(b, ',')
 				}

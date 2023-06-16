@@ -172,9 +172,9 @@ func marshalType(b *bytes.Buffer, t Type) {
 			b.WriteString(`,"regexp":"`)
 			b.WriteString(vl.String())
 			b.WriteString(`"`)
-		case *[]string:
+		case []string:
 			b.WriteString(`,"enum":[`)
-			for i, v := range *vl {
+			for i, v := range vl {
 				if i > 0 {
 					b.WriteByte(',')
 				}
@@ -198,8 +198,8 @@ func marshalType(b *bytes.Buffer, t Type) {
 		marshalType(b, t.vl.(Type))
 	case PtObject:
 		b.WriteString(`,"properties":[`)
-		properties := t.vl.(*[]Property)
-		for i, p := range *properties {
+		properties := t.vl.([]Property)
+		for i, p := range properties {
 			if i > 0 {
 				b.WriteString(",")
 			}
@@ -733,7 +733,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if pt != PtText {
 			return Type{}, errors.New("unexpected enum for non-Text type")
 		}
-		t.vl = &enum
+		t.vl = enum
 	}
 	if hasLayout {
 		if pt != PtDateTime && pt != PtDate {
@@ -815,7 +815,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if pt != PtObject {
 			return Type{}, errors.New("unexpected properties for non-Object type")
 		}
-		t.vl = &properties
+		t.vl = properties
 	}
 	if valueType.Valid() {
 		if pt != PtMap {
