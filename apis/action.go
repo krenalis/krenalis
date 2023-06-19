@@ -594,7 +594,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 		conditionProperties = make([]types.Path, len(action.Filter.Conditions))
 		for i, condition := range action.Filter.Conditions {
-			property, ok := parsePropertyExpression(condition.Property)
+			property, ok := parsePropertyPath(condition.Property)
 			if !ok {
 				return errors.BadRequest("filter condition property expression %q is not valid", condition.Property)
 			}
@@ -620,14 +620,14 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		mappingInPaths = make([]types.Path, 0, len(action.Mapping))
 		mappingOutPaths = make([]types.Path, 0, len(action.Mapping))
 		for out, in := range action.Mapping {
-			// Validate the input property expression.
-			path, ok := parsePropertyExpression(in)
+			// Validate the input property path.
+			path, ok := parsePropertyPath(in)
 			if !ok {
 				return errors.BadRequest("input property expression %q of mapping is not valid", in)
 			}
 			mappingInPaths = append(mappingInPaths, path)
-			// Validate the output property expression.
-			path, ok = parsePropertyExpression(out)
+			// Validate the output property path.
+			path, ok = parsePropertyPath(out)
 			if !ok {
 				return errors.BadRequest("output property expression %q of mapping is not valid", out)
 			}
@@ -895,12 +895,12 @@ func unmappedProperties(schema types.Type, mapped []types.Path) []string {
 	return props
 }
 
-// parsePropertyExpression parses the property expression p, returning a
-// property path with a single element, if p is an identifier, or a path with
-// the components of the selector.
-// The boolean return parameter reports whether p is a valid property expression
-// or not; when not valid, the returned path is nil.
-func parsePropertyExpression(p string) (types.Path, bool) {
+// parsePropertyPath parses the property path p, returning a property path with
+// a single element, if p is an identifier, or a path with the components of the
+// path, if p is a selector.
+// The boolean return parameter reports whether p is a valid property path or
+// not; when not valid, the returned path is nil.
+func parsePropertyPath(p string) (types.Path, bool) {
 
 	// A selector.
 	if strings.Contains(p, ".") {

@@ -60,18 +60,18 @@ func Test_unmappedProperties(t *testing.T) {
 	}
 }
 
-func Test_parsePropertyExpression(t *testing.T) {
+func Test_parsePropertyPath(t *testing.T) {
 	cases := []struct {
 		p             string
 		expectedSlice types.Path
 		expectedOk    bool
 	}{
-		// Valid property expressions.
+		// Valid property paths.
 		{"street1", types.Path{"street1"}, true},
 		{"address_street1", types.Path{"address_street1"}, true},
 		{"address.street1", types.Path{"address", "street1"}, true},
 
-		// Invalid property expressions.
+		// Invalid property paths.
 		{"", nil, false},
 		{".", nil, false},
 		{"222.", nil, false},
@@ -84,7 +84,7 @@ func Test_parsePropertyExpression(t *testing.T) {
 	}
 	for _, cas := range cases {
 		t.Run(cas.p, func(t *testing.T) {
-			gotSlice, gotOk := parsePropertyExpression(cas.p)
+			gotSlice, gotOk := parsePropertyPath(cas.p)
 			if !reflect.DeepEqual(cas.expectedSlice, gotSlice) {
 				t.Fatalf("expected %#v, got %#v", cas.expectedSlice, gotSlice)
 			}
