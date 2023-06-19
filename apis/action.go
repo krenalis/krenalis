@@ -876,7 +876,7 @@ func compileActionQuery(query string, limit int) (string, error) {
 }
 
 // unmappedProperties returns the names of the unmapped properties in schema, if
-// there is at least one, otherwise returns nil, nil.
+// there is at least one, otherwise returns nil.
 // schema must be valid.
 func unmappedProperties(schema types.Type, mapped []types.Path) []string {
 	schemaProps := schema.PropertiesNames()
