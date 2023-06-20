@@ -15,6 +15,7 @@ import (
 	"io"
 	"math"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -220,7 +221,9 @@ func marshalType(b *bytes.Buffer, t Type) {
 				_ = marshalString(b, ph)
 			case map[string]string:
 				b.WriteString(`,"placeholder":{`)
-				for i, k := range maps.Keys(ph) {
+				keys := maps.Keys(ph)
+				sort.Strings(keys)
+				for i, k := range keys {
 					if i > 0 {
 						b.WriteByte(',')
 					}
