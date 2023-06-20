@@ -13,6 +13,7 @@ import (
 	"math"
 	"regexp"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/shopspring/decimal"
@@ -194,6 +195,11 @@ type Property struct {
 
 // Path represents a property path.
 type Path []string
+
+// String returns the string representation of p.
+func (p Path) String() string {
+	return strings.Join(p, ".")
+}
 
 // Type represents a type.
 type Type struct {
