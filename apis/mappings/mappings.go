@@ -96,14 +96,14 @@ func New(inSchema, outSchema types.Type, mapp map[string]string, pythonSource st
 			var pm propertyMapping
 			pm.in.path = strings.Split(in, ".")
 			pm.out.path = strings.Split(out, ".")
-			prop, ok := inSchema.PropertyByPath(pm.in.path)
-			if !ok {
-				return nil, fmt.Errorf("property %s does not exist", in)
+			prop, err := inSchema.PropertyByPath(pm.in.path)
+			if err != nil {
+				return nil, err
 			}
 			pm.in.typ = prop.Type
-			prop, ok = outSchema.PropertyByPath(pm.out.path)
-			if !ok {
-				return nil, fmt.Errorf("property %s does not exist", out)
+			prop, err = outSchema.PropertyByPath(pm.out.path)
+			if err != nil {
+				return nil, err
 			}
 			pm.out.typ = prop.Type
 			pm.out.nullable = prop.Nullable

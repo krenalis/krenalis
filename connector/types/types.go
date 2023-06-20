@@ -22,6 +22,15 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+// PathNotExistError is returned by PropertyByPath when the path does not exist.
+type PathNotExistError struct {
+	Path Path
+}
+
+func (err PathNotExistError) Error() string {
+	return fmt.Sprintf("property path %q does not exist", err.Path)
+}
+
 // one is the decimal.Decimal 1.
 var one = decimal.New(1, 0)
 
@@ -1052,11 +1061,11 @@ func (t Type) WithUnique() Type {
 	return t
 }
 
-// PropertyByPath returns the property with the given path and a boolean value
-// indicating if the property with the given path exists.
+// PropertyByPath returns the property with the given path, or a
+// PathNotExistError error if the path does not exist.
 // Panics if t is not an Object type, path is empty or a property name within it
 // is not a valid property name.
-func (t Type) PropertyByPath(path Path) (Property, bool) {
+func (t Type) PropertyByPath(path Path) (Property, error) {
 	if t.pt != PtObject {
 		panic("cannot get the properties of a non-Object type")
 	}
@@ -1075,7 +1084,7 @@ func (t Type) PropertyByPath(path Path) (Property, bool) {
 				continue
 			}
 			if i == last {
-				return prop, true
+				return prop, nil
 			}
 			t = prop.Type
 			break
@@ -1087,7 +1096,7 @@ func (t Type) PropertyByPath(path Path) (Property, bool) {
 			panic("invalid property path")
 		}
 	}
-	return Property{}, false
+	return Property{}, PathNotExistError{path[:i+1]}
 }
 
 // Property returns the property with the given name and a boolean value

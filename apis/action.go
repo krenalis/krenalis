@@ -783,15 +783,17 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 		for i, inPath := range mappingInPaths {
 			outPath := mappingOutPaths[i]
-			inProp, ok := action.InSchema.PropertyByPath(inPath)
-			if !ok {
-				return errors.BadRequest("mapped property %q not found in input schema", strings.Join(inPath, "."))
+			inProp, err := action.InSchema.PropertyByPath(inPath)
+			if err != nil {
+				err := err.(types.PathNotExistError)
+				return errors.BadRequest("mapped property %q not found in input schema", err.Path)
 			}
-			outProp, ok := action.OutSchema.PropertyByPath(outPath)
-			if !ok {
-				return errors.BadRequest("mapped property %q not found in output schema", strings.Join(outPath, "."))
+			outProp, err := action.OutSchema.PropertyByPath(outPath)
+			if err != nil {
+				err := err.(types.PathNotExistError)
+				return errors.BadRequest("mapped property %q not found in output schema", err.Path)
 			}
-			ok = mappings.ConvertibleTo(inProp.Type.PhysicalType(), outProp.Type.PhysicalType())
+			ok := mappings.ConvertibleTo(inProp.Type.PhysicalType(), outProp.Type.PhysicalType())
 			if !ok {
 				return errors.BadRequest("property %q (with type %s) cannot be mapped and converted to property %q (with type %s)", inProp.Name, inProp.Type, outProp.Name, outProp.Type)
 			}

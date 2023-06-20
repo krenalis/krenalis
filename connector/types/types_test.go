@@ -292,29 +292,29 @@ func TestHasFlatProperties(t *testing.T) {
 
 func Test_PropertyByPath(t *testing.T) {
 	cases := []struct {
-		name         string
-		t            Type
-		path         Path
-		expectedProp Property
-		expectedOk   bool
+		name     string
+		t        Type
+		path     Path
+		expected Property
+		err      error
 	}{
 		{
 			name: "path with single component - property (of type Text) exists",
 			t: Object([]Property{
 				{Name: "first_name", Type: Text()},
 			}),
-			path:         Path{"first_name"},
-			expectedProp: Property{Name: "first_name", Type: Text()},
-			expectedOk:   true,
+			path:     Path{"first_name"},
+			expected: Property{Name: "first_name", Type: Text()},
+			err:      nil,
 		},
 		{
 			name: "path with single component - property does not exist",
 			t: Object([]Property{
 				{Name: "first_name", Type: Text()},
 			}),
-			path:         Path{"email"},
-			expectedProp: Property{},
-			expectedOk:   false,
+			path:     Path{"email"},
+			expected: Property{},
+			err:      errors.New("property path \"email\" does not exist"),
 		},
 		{
 			name: "path with single component - property (of type Object) exists",
@@ -324,11 +324,11 @@ func Test_PropertyByPath(t *testing.T) {
 				})},
 			}),
 			path: Path{"billing_address"},
-			expectedProp: Property{
+			expected: Property{
 				Name: "billing_address", Type: Object([]Property{
 					{Name: "street", Type: Text()},
 				})},
-			expectedOk: true,
+			err: nil,
 		},
 		{
 			name: "path with two components - property (of type Text) exists",
@@ -337,9 +337,9 @@ func Test_PropertyByPath(t *testing.T) {
 					{Name: "street", Type: Text()},
 				})},
 			}),
-			path:         Path{"billing_address", "street"},
-			expectedProp: Property{Name: "street", Type: Text()},
-			expectedOk:   true,
+			path:     Path{"billing_address", "street"},
+			expected: Property{Name: "street", Type: Text()},
+			err:      nil,
 		},
 		{
 			name: "path with two components - property does not exist",
@@ -348,9 +348,9 @@ func Test_PropertyByPath(t *testing.T) {
 					{Name: "street", Type: Text()},
 				})},
 			}),
-			path:         Path{"billing_address", "city"},
-			expectedProp: Property{},
-			expectedOk:   false,
+			path:     Path{"billing_address", "city"},
+			expected: Property{},
+			err:      errors.New("property path \"billing_address.city\" does not exist"),
 		},
 		{
 			name: "path with three components - property (Text within an Object within an Object) exists",
@@ -362,9 +362,9 @@ func Test_PropertyByPath(t *testing.T) {
 					})},
 				})},
 			}),
-			path:         Path{"movie", "director", "last_name"},
-			expectedProp: Property{Name: "last_name", Type: Text()},
-			expectedOk:   true,
+			path:     Path{"movie", "director", "last_name"},
+			expected: Property{Name: "last_name", Type: Text()},
+			err:      nil,
 		},
 		{
 			name: "path with three components - second component of path is not an Object",
@@ -377,18 +377,27 @@ func Test_PropertyByPath(t *testing.T) {
 					{Name: "writer", Type: Text()},
 				})},
 			}),
-			path:         Path{"movie", "writer", "last_name"},
-			expectedProp: Property{},
-			expectedOk:   false,
+			path:     Path{"movie", "writer", "last_name"},
+			expected: Property{},
+			err:      errors.New("property path \"movie.writer.last_name\" does not exist"),
 		},
 	}
 	for _, cas := range cases {
 		t.Run(cas.name, func(t *testing.T) {
-			gotProp, gotOk := cas.t.PropertyByPath(cas.path)
-			if cas.expectedOk != gotOk {
-				t.Fatalf("expecting ok = %t, got %t", cas.expectedOk, gotOk)
+			got, err := cas.t.PropertyByPath(cas.path)
+			if err != nil {
+				if cas.err == nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+				if err.Error() != cas.err.Error() {
+					t.Fatalf("expected error %q, got error %q", cas.err.Error(), err.Error())
+				}
+				return
 			}
-			if err := sameProperty(cas.expectedProp, gotProp); err != nil {
+			if cas.err != nil {
+				t.Fatalf("expected error %q, got no error", cas.err)
+			}
+			if err := sameProperty(cas.expected, got); err != nil {
 				t.Fatal(err)
 			}
 		})
