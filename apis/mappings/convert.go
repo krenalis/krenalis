@@ -357,6 +357,8 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 		switch v := v.(type) {
 		case json.RawMessage:
 			return v, nil
+		case decimal.Decimal:
+			return json.RawMessage(v.String()), nil
 		default:
 			if v == "" {
 				return json.RawMessage("null"), nil
