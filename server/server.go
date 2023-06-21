@@ -61,6 +61,9 @@ func Run(ctx context.Context, settings *Settings) error {
 		case strings.HasPrefix(r.URL.Path, "/trace-events-script/"):
 			http.FileServer(http.Dir(".")).ServeHTTP(w, r)
 			return
+		default:
+			http.NotFound(w, r)
+			return
 		}
 	})
 	httpServer := http.Server{
