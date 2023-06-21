@@ -32,31 +32,31 @@ func TestEval(t *testing.T) {
 	dt := types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
 
 	tests := []struct {
-		expression    []expr
+		expr          []part
 		expectedValue any
 		expectedType  types.Type
 		err           error
 	}{
-		{[]expr{{text: ``}}, "", types.Text(), nil},
-		{[]expr{{text: `a`}}, "a", types.Text(), nil},
-		{[]expr{{value: n, typ: dt}}, n, dt, nil},
-		{[]expr{{path: types.Path{"a"}, typ: types.Int()}}, 165, types.Int(), nil},
-		{[]expr{{path: types.Path{"b", "c"}, typ: types.Text()}}, "foo", types.Text(), nil},
-		{[]expr{{path: types.Path{"b", "e"}, typ: types.Int()}}, 1024, types.Int(), nil},
-		{[]expr{{text: `a`, path: types.Path{"a"}, typ: types.Int()}}, "a165", types.Text(), nil},
-		{[]expr{{path: types.Path{"coalesce"}, args: [][]expr{
+		{[]part{{text: ``}}, "", types.Text(), nil},
+		{[]part{{text: `a`}}, "a", types.Text(), nil},
+		{[]part{{value: n, typ: dt}}, n, dt, nil},
+		{[]part{{path: types.Path{"a"}, typ: types.Int()}}, 165, types.Int(), nil},
+		{[]part{{path: types.Path{"b", "c"}, typ: types.Text()}}, "foo", types.Text(), nil},
+		{[]part{{path: types.Path{"b", "e"}, typ: types.Int()}}, 1024, types.Int(), nil},
+		{[]part{{text: `a`, path: types.Path{"a"}, typ: types.Int()}}, "a165", types.Text(), nil},
+		{[]part{{path: types.Path{"coalesce"}, args: [][]part{
 			{{path: types.Path{"a"}, typ: types.Int()}, {text: " boo"}},
 			{{text: "foo"}},
 		}}}, "165 boo", types.Text(), nil},
-		{[]expr{{path: types.Path{"coalesce"}, args: [][]expr{
+		{[]part{{path: types.Path{"coalesce"}, args: [][]part{
 			{{path: types.Path{"d"}, typ: types.Text()}},
 			{{path: types.Path{"a"}, typ: types.Int()}, {text: " boo"}},
 		}}}, "165 boo", types.Text(), nil},
-		{[]expr{{text: ``}, {path: types.Path{"a"}, typ: types.Int()}}, "165", types.Text(), nil},
+		{[]part{{text: ``}, {path: types.Path{"a"}, typ: types.Int()}}, "165", types.Text(), nil},
 	}
 
 	for i, test := range tests {
-		got, typ, err := eval(test.expression, values)
+		got, typ, err := eval(test.expr, values)
 		if err != nil {
 			if test.err == nil {
 				t.Fatalf("%d. unexpected error: %s", i+1, err)

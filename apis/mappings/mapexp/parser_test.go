@@ -37,34 +37,34 @@ func TestParseExpression(t *testing.T) {
 
 	tests := []struct {
 		src      string
-		expected []expr
+		expected []part
 		unparsed string
 		err      error
 	}{
-		{`"Page View"`, []expr{{text: `Page View`}}, ``, nil},
-		{` 'Page View' `, []expr{{text: `Page View`}}, ``, nil},
-		{`51`, []expr{{value: n1, typ: dt}}, ``, nil},
-		{`-6.803`, []expr{{value: n2, typ: dt}}, ``, nil},
-		{`true`, []expr{{value: true, typ: types.Boolean()}}, ``, nil},
-		{`false`, []expr{{value: false, typ: types.Boolean()}}, ``, nil},
-		{`null`, []expr{{value: nil, typ: types.JSON()}}, ``, nil},
-		{`name`, []expr{{path: types.Path{`name`}, typ: types.Text()}}, ``, nil},
-		{`.name`, []expr{{path: types.Path{`name`}, typ: types.Text()}}, ``, nil},
-		{`context.os.version`, []expr{{path: types.Path{`context`, `os`, `version`}, typ: types.Text()}}, ``, nil},
-		{`.context.os.version`, []expr{{path: types.Path{`context`, `os`, `version`}, typ: types.Text()}}, ``, nil},
-		{`"Page " name`, []expr{{text: `Page `, path: types.Path{`name`}, typ: types.Text()}}, ``, nil},
-		{`"OS " context.os.name " (" context.os.version ")"`, []expr{
+		{`"Page View"`, []part{{text: `Page View`}}, ``, nil},
+		{` 'Page View' `, []part{{text: `Page View`}}, ``, nil},
+		{`51`, []part{{value: n1, typ: dt}}, ``, nil},
+		{`-6.803`, []part{{value: n2, typ: dt}}, ``, nil},
+		{`true`, []part{{value: true, typ: types.Boolean()}}, ``, nil},
+		{`false`, []part{{value: false, typ: types.Boolean()}}, ``, nil},
+		{`null`, []part{{value: nil, typ: types.JSON()}}, ``, nil},
+		{`name`, []part{{path: types.Path{`name`}, typ: types.Text()}}, ``, nil},
+		{`.name`, []part{{path: types.Path{`name`}, typ: types.Text()}}, ``, nil},
+		{`context.os.version`, []part{{path: types.Path{`context`, `os`, `version`}, typ: types.Text()}}, ``, nil},
+		{`.context.os.version`, []part{{path: types.Path{`context`, `os`, `version`}, typ: types.Text()}}, ``, nil},
+		{`"Page " name`, []part{{text: `Page `, path: types.Path{`name`}, typ: types.Text()}}, ``, nil},
+		{`"OS " context.os.name " (" context.os.version ")"`, []part{
 			{text: `OS `, path: types.Path{`context`, `os`, `name`}, typ: types.Text()},
 			{text: ` (`, path: types.Path{`context`, `os`, `version`}, typ: types.Text()},
 			{text: `)`},
 		}, ``, nil},
-		{`coalesce(event, 'Page ' true)`, []expr{
-			{path: types.Path{`coalesce`}, args: [][]expr{
+		{`coalesce(event, 'Page ' true)`, []part{
+			{path: types.Path{`coalesce`}, args: [][]part{
 				{{path: types.Path{`event`}, typ: types.Text()}},
 				{{text: `Page true`}},
 			}},
 		}, ``, nil},
-		{`"" event`, []expr{{text: ``}, {path: types.Path{"event"}, typ: types.Text()}}, ``, nil},
+		{`"" event`, []part{{text: ``}, {path: types.Path{"event"}, typ: types.Text()}}, ``, nil},
 	}
 
 	for _, test := range tests {
@@ -316,20 +316,20 @@ func TestParseArgs(t *testing.T) {
 
 	tests := []struct {
 		src      string
-		expected [][]expr
+		expected [][]part
 		unparsed string
 		err      error
 	}{
-		{`()`, [][]expr{}, ``, nil},
-		{`(  )`, [][]expr{}, ``, nil},
-		{`(a)`, [][]expr{{{path: types.Path{`a`}, typ: types.Int()}}}, ``, nil},
-		{`(a, 'b')`, [][]expr{{{path: types.Path{`a`}, typ: types.Int()}}, {{text: `b`}}}, ``, nil},
-		{`(5, 'a', coalesce(b))`, [][]expr{{{value: n, typ: dt}}, {{text: `a`}}, {{path: types.Path{`coalesce`}, args: [][]expr{{{path: types.Path{`b`}, typ: types.Date()}}}}}}, ``, nil},
-		{`("a" coalesce(b, 5) c)`, [][]expr{
-			{{text: `a`, path: types.Path{`coalesce`}, args: [][]expr{{{path: types.Path{`b`}, typ: types.Date()}}, {{value: n, typ: dt}}}}, {path: types.Path{`c`}, typ: types.Float32()}},
+		{`()`, [][]part{}, ``, nil},
+		{`(  )`, [][]part{}, ``, nil},
+		{`(a)`, [][]part{{{path: types.Path{`a`}, typ: types.Int()}}}, ``, nil},
+		{`(a, 'b')`, [][]part{{{path: types.Path{`a`}, typ: types.Int()}}, {{text: `b`}}}, ``, nil},
+		{`(5, 'a', coalesce(b))`, [][]part{{{value: n, typ: dt}}, {{text: `a`}}, {{path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`b`}, typ: types.Date()}}}}}}, ``, nil},
+		{`("a" coalesce(b, 5) c)`, [][]part{
+			{{text: `a`, path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`b`}, typ: types.Date()}}, {{value: n, typ: dt}}}}, {path: types.Path{`c`}, typ: types.Float32()}},
 		}, ``, nil},
-		{`( coalesce ( x , 5 ) )`, [][]expr{
-			{{path: types.Path{`coalesce`}, args: [][]expr{{{path: types.Path{`x`}, typ: types.UUID()}}, {{value: n, typ: dt}}}}},
+		{`( coalesce ( x , 5 ) )`, [][]part{
+			{{path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`x`}, typ: types.UUID()}}, {{value: n, typ: dt}}}}},
 		}, ``, nil},
 		{`( , )`, nil, ``, errors.New("missing function call argument")},
 		{`(a, )`, nil, ``, errors.New("missing function call argument")},

@@ -32,33 +32,57 @@ func (err *InvalidConversionError) Error() string {
 	return fmt.Sprintf("cannot convert %#v (type %s) to type %s", err.Value, err.SourceType, err.DestinationType)
 }
 
+// Expression represents a mapping expression used to transform data from a
+// source to a destination. An Expression can contain strings, numbers, true,
+// false, null, property paths and function calls.
 type Expression struct {
-	e        []expr
-	dt       types.Type
-	nullable bool
+	parts    []part     // expression parts.
+	dt       types.Type // destination type.
+	nullable bool       // reports whether the resulting value can be nil.
 }
 
-type expr struct {
-	text  string     // Text that starts the expression
-	value any        // Value, can be true, false, null or a decimal.Decimal value. Is nil is path is not nil.
-	path  types.Path // Property path or function name. Is nil is value is not nil.
-	args  [][]expr   // Function call arguments. It is nil if Path is nil or refers to a property
+// part represents an expression part within an Expression. An expression part
+// can take different forms:
+//
+//   - text              example: "foo"
+//   - value             example: true
+//   - path              example: x
+//   - path(args)        example: add(x, 5)
+//   - text value        example: "foo" 23.56
+//   - text path         example: 'foo' a.b
+//   - test path(args)   example: "foo" coalesce(a.b, c)
+//
+// For instance, the Expression `"foo" x " " true a.b` is parsed as
+// `"foo" x`, `" " true`, `a.b`.
+//
+// As a special case, if an Expression starts with an empty text and has a path
+// or a value, it is parsed as two parts. For example, `"" x` is parsed as `""`
+// and `x`.
+//
+// During evaluation, the texts, values, and paths in the expression are
+// converted to strings and concatenated, unless the expression consists of only
+// one part without text, such as `a.b` and `5.3`.
+type part struct {
+	text  string     // Text that starts the expression part.
+	value any        // Value in the expression part, can be true, false, null or a decimal.Decimal value.
+	path  types.Path // Property path or function name.
+	args  [][]part   // Function call arguments.
 	typ   types.Type // Type of the value or the type of the property at path.
 }
 
-// TextOnly reports whether the expression contains only text.
-func (e expr) TextOnly() bool {
-	return !e.typ.Valid() && e.args == nil
+// TextOnly reports whether the expression part contains only text.
+func (p part) TextOnly() bool {
+	return !p.typ.Valid() && p.args == nil
 }
 
-// ValueOnly reports whether the expression contains only a value.
-func (e expr) ValueOnly() bool {
-	return e.typ.Valid() && e.path == nil
+// ValueOnly reports whether the expression part contains only a value.
+func (p part) ValueOnly() bool {
+	return p.typ.Valid() && p.path == nil
 }
 
-// PathOnly reports whether the expression contains only a path.
-func (e expr) PathOnly() bool {
-	return e.path != nil && e.text == ""
+// PathOnly reports whether the expression part contains only a path.
+func (p part) PathOnly() bool {
+	return p.path != nil && p.text == ""
 }
 
 // Compile parses a map expression and returns an Expression value that can be
@@ -75,18 +99,18 @@ func Compile(expr string, schema types.Type, dt types.Type, nullable bool) (*Exp
 	if !dt.Valid() {
 		return nil, errors.New("destination type is not valid")
 	}
-	e, src, err := parseExpression(expr, schema)
+	parts, src, err := parseExpression(expr, schema)
 	if err != nil {
 		return nil, err
 	}
 	if src != "" {
 		return nil, fmt.Errorf("unexpected character %v", strconv.QuoteRuneToGraphic(rune(src[0])))
 	}
-	if !convertible(e, dt.PhysicalType()) {
+	if !convertible(parts, dt.PhysicalType()) {
 		return nil, ErrNotConvertible
 	}
 	expression := &Expression{
-		e:        e,
+		parts:    parts,
 		dt:       dt,
 		nullable: nullable,
 	}
@@ -99,7 +123,7 @@ func Compile(expr string, schema types.Type, dt types.Type, nullable bool) (*Exp
 // If the evaluation succeeds but cannot be converted to the destination type,
 // it returns an InvalidConversionError error.
 func (expr *Expression) Eval(values map[string]any, formatTime bool) (any, error) {
-	v, st, err := eval(expr.e, values)
+	v, st, err := eval(expr.parts, values)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +144,7 @@ func (expr *Expression) Eval(values map[string]any, formatTime bool) (any, error
 // their appearance order in the expression. The returned paths are guaranteed
 // to be unique. If no property paths are present, it returns nil.
 func (expr *Expression) PropertyPaths() []types.Path {
-	paths := appendPropertyPaths(nil, expr.e)
+	paths := appendPropertyPaths(nil, expr.parts)
 	if paths == nil {
 		return nil
 	}
@@ -156,7 +180,7 @@ func equalPaths(p1 types.Path, p2 types.Path) bool {
 }
 
 // appendPropertyPaths appends to the property paths in expression to paths.
-func appendPropertyPaths(paths []types.Path, expression []expr) []types.Path {
+func appendPropertyPaths(paths []types.Path, expression []part) []types.Path {
 	for _, expr := range expression {
 		if expr.path == nil {
 			continue
@@ -172,32 +196,32 @@ func appendPropertyPaths(paths []types.Path, expression []expr) []types.Path {
 	return paths
 }
 
-// eval evaluates expr and returns its value and type. values contains the
+// eval evaluates expression and returns its value and type. values contains the
 // property values.
-func eval(expr []expr, values map[string]any) (any, types.Type, error) {
+func eval(expression []part, values map[string]any) (any, types.Type, error) {
 
 	// Evaluate the most common cases that does not require a buffer.
-	if len(expr) == 1 {
-		expr := expr[0]
-		if expr.PathOnly() {
-			if len(expr.path) == 1 {
-				name := expr.path[0]
-				if expr.args == nil {
-					return values[name], expr.typ, nil
+	if len(expression) == 1 {
+		part := expression[0]
+		if part.PathOnly() {
+			if len(part.path) == 1 {
+				name := part.path[0]
+				if part.args == nil {
+					return values[name], part.typ, nil
 				}
-				return evalCall(name, expr.args, values)
+				return evalCall(name, part.args, values)
 			}
-			value, err := valueOf(expr.path, values)
+			value, err := valueOf(part.path, values)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
-			return value, expr.typ, nil
+			return value, part.typ, nil
 		}
-		if expr.ValueOnly() {
-			return expr.value, expr.typ, nil
+		if part.ValueOnly() {
+			return part.value, part.typ, nil
 		}
-		if expr.TextOnly() {
-			return expr.text, types.Text(), nil
+		if part.TextOnly() {
+			return part.text, types.Text(), nil
 		}
 	}
 
@@ -206,19 +230,19 @@ func eval(expr []expr, values map[string]any) (any, types.Type, error) {
 	var vt types.Type
 	var buf []byte
 
-	for _, exp := range expr {
-		buf = append(buf, exp.text...)
-		if exp.path == nil {
+	for _, part := range expression {
+		buf = append(buf, part.text...)
+		if part.path == nil {
 			continue
 		}
-		if args := exp.args; args == nil {
-			v, err = valueOf(exp.path, values)
+		if args := part.args; args == nil {
+			v, err = valueOf(part.path, values)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
-			vt = exp.typ
+			vt = part.typ
 		} else {
-			v, vt, err = evalCall(exp.path[0], args, values)
+			v, vt, err = evalCall(part.path[0], args, values)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -255,7 +279,7 @@ func valueOf(path types.Path, values map[string]any) (any, error) {
 
 // evalCall evaluates a call to the function named name with arguments args, and
 // returns its value and type. values contains the property values.
-func evalCall(name string, args [][]expr, values map[string]any) (any, types.Type, error) {
+func evalCall(name string, args [][]part, values map[string]any) (any, types.Type, error) {
 	switch name {
 	case "coalesce":
 		for _, arg := range args {
@@ -272,22 +296,22 @@ func evalCall(name string, args [][]expr, values map[string]any) (any, types.Typ
 	panic("unknown function")
 }
 
-// convertible reports whether expression is convertible to a type with physical
-// type dt.
-func convertible(expression []expr, dt types.PhysicalType) bool {
-	if len(expression) > 1 || expression[0].text != "" {
+// convertible reports whether expr is convertible to a type with physical type
+// dt.
+func convertible(expr []part, dt types.PhysicalType) bool {
+	if len(expr) > 1 || expr[0].text != "" {
 		return convertibleTo(types.PtText, dt)
 	}
-	exp := expression[0]
-	if exp.args == nil {
-		if exp.path == nil {
+	part := expr[0]
+	if part.args == nil {
+		if part.path == nil {
 			return convertibleTo(types.PtDecimal, dt)
 		}
-		return convertibleTo(exp.typ.PhysicalType(), dt)
+		return convertibleTo(part.typ.PhysicalType(), dt)
 	}
-	switch exp.path[0] {
+	switch part.path[0] {
 	case "coalesce":
-		for _, arg := range exp.args {
+		for _, arg := range part.args {
 			if !convertible(arg, dt) {
 				return false
 			}

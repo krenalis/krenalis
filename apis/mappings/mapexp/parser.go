@@ -31,13 +31,13 @@ var (
 // returns the parsed expression along with the remaining unparsed source.
 // If no expression is found, it returns nil. Leading and trailing spaces are
 // trimmed, except when they occur within a string.
-func parseExpression(src string, schema types.Type) ([]expr, string, error) {
-	var expression []expr
+func parseExpression(src string, schema types.Type) ([]part, string, error) {
+	var expression []part
 	var err error
 	var dot bool
 Expression:
 	for src != "" {
-		var expr expr
+		var part part
 		hasText := false
 	Expr:
 		for src != "" {
@@ -50,7 +50,7 @@ Expression:
 				if err != nil {
 					return nil, "", err
 				}
-				expr.text += s
+				part.text += s
 				hasText = true
 			case '.':
 				src = src[1:]
@@ -68,15 +68,15 @@ Expression:
 					return nil, "", err
 				}
 				if !hasText && len(expression) == 0 {
-					expr.value = n
-					expr.typ = types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
+					part.value = n
+					part.typ = types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
 					break Expr
 				}
-				expr.text += n.String()
+				part.text += n.String()
 			default:
 				if !('a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z') {
-					if expr.text != "" {
-						expression = append(expression, expr)
+					if part.text != "" {
+						expression = append(expression, part)
 					}
 					break Expression
 				}
@@ -86,59 +86,59 @@ Expression:
 					v, t, src = parsePredeclaredIdentifier(src)
 					if t.Valid() {
 						if !hasText && len(expression) == 0 {
-							expr.value = v
-							expr.typ = t
+							part.value = v
+							part.typ = t
 							break Expr
 						}
 						switch v {
 						case true:
-							expr.text += "true"
+							part.text += "true"
 						case false:
-							expr.text += "false"
+							part.text += "false"
 						}
 						continue Expr
 					}
 				}
 				dot = false
 				// Handle the Special case: "" a.b
-				if hasText && expr.text == "" {
-					expression = append(expression, expr)
+				if hasText && part.text == "" {
+					expression = append(expression, part)
 					hasText = false
 				}
-				expr.path, src, err = parsePath(src)
+				part.path, src, err = parsePath(src)
 				if err != nil {
 					return nil, "", err
 				}
 				src = skipSpaces(src)
 				if len(src) > 0 && src[0] == '(' {
-					if len(expr.path) > 1 {
+					if len(part.path) > 1 {
 						return nil, "", errors.New("function name is not valid")
 					}
-					switch name := expr.path[0]; name {
+					switch name := part.path[0]; name {
 					case "coalesce":
 					default:
 						return nil, "", fmt.Errorf("function %q does not exist", name)
 					}
-					expr.args, src, err = parseArgs(src, schema)
+					part.args, src, err = parseArgs(src, schema)
 					if err != nil {
 						return nil, "", err
 					}
 				} else {
-					p, err := schema.PropertyByPath(expr.path)
+					p, err := schema.PropertyByPath(part.path)
 					if err != nil {
 						return nil, "", err
 					}
 					if hasText || len(expression) > 0 {
 						if pt := p.Type.PhysicalType(); !convertibleTo(pt, types.PtText) {
-							return nil, "", fmt.Errorf("cannot convert %q of type %s to Text", expr.path, pt)
+							return nil, "", fmt.Errorf("cannot convert %q of type %s to Text", part.path, pt)
 						}
 					}
-					expr.typ = p.Type
+					part.typ = p.Type
 				}
 				break Expr
 			}
 		}
-		expression = append(expression, expr)
+		expression = append(expression, part)
 	}
 
 	return expression, src, nil
@@ -332,12 +332,12 @@ func parsePath(src string) (types.Path, string, error) {
 
 // parseArgs parses call arguments and returns the parsed arguments along with
 // the remaining unparsed source. It expects the source to start with a '('.
-func parseArgs(src string, schema types.Type) ([][]expr, string, error) {
-	args := make([][]expr, 0)
+func parseArgs(src string, schema types.Type) ([][]part, string, error) {
+	args := make([][]part, 0)
 	var err error
 	src = src[1:]
 	for {
-		var arg []expr
+		var arg []part
 		arg, src, err = parseExpression(src, schema)
 		if err != nil {
 			return nil, "", err
