@@ -1,0 +1,361 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2023 Open2b
+//
+
+package mapexp
+
+import (
+	"errors"
+	"reflect"
+	"testing"
+
+	"chichi/connector/types"
+
+	"github.com/shopspring/decimal"
+)
+
+func TestParseExpression(t *testing.T) {
+
+	schema := types.Object([]types.Property{
+		{Name: "event", Type: types.Text()},
+		{Name: "name", Type: types.Text()},
+		{Name: "context", Type: types.Object([]types.Property{
+			{Name: "os", Type: types.Object([]types.Property{
+				{Name: "name", Type: types.Text()},
+				{Name: "version", Type: types.Text()},
+			})},
+		})},
+	})
+
+	n1 := decimal.NewFromInt(51)
+	n2 := decimal.RequireFromString(`-6.803`)
+
+	dt := types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
+
+	tests := []struct {
+		src      string
+		expected []expr
+		unparsed string
+		err      error
+	}{
+		{`"Page View"`, []expr{{text: `Page View`}}, ``, nil},
+		{` 'Page View' `, []expr{{text: `Page View`}}, ``, nil},
+		{`51`, []expr{{value: n1, typ: dt}}, ``, nil},
+		{`-6.803`, []expr{{value: n2, typ: dt}}, ``, nil},
+		{`true`, []expr{{value: true, typ: types.Boolean()}}, ``, nil},
+		{`false`, []expr{{value: false, typ: types.Boolean()}}, ``, nil},
+		{`null`, []expr{{value: nil, typ: types.JSON()}}, ``, nil},
+		{`name`, []expr{{path: types.Path{`name`}, typ: types.Text()}}, ``, nil},
+		{`.name`, []expr{{path: types.Path{`name`}, typ: types.Text()}}, ``, nil},
+		{`context.os.version`, []expr{{path: types.Path{`context`, `os`, `version`}, typ: types.Text()}}, ``, nil},
+		{`.context.os.version`, []expr{{path: types.Path{`context`, `os`, `version`}, typ: types.Text()}}, ``, nil},
+		{`"Page " name`, []expr{{text: `Page `, path: types.Path{`name`}, typ: types.Text()}}, ``, nil},
+		{`"OS " context.os.name " (" context.os.version ")"`, []expr{
+			{text: `OS `, path: types.Path{`context`, `os`, `name`}, typ: types.Text()},
+			{text: ` (`, path: types.Path{`context`, `os`, `version`}, typ: types.Text()},
+			{text: `)`},
+		}, ``, nil},
+		{`coalesce(event, 'Page ' true)`, []expr{
+			{path: types.Path{`coalesce`}, args: [][]expr{
+				{{path: types.Path{`event`}, typ: types.Text()}},
+				{{text: `Page true`}},
+			}},
+		}, ``, nil},
+		{`"" event`, []expr{{text: ``}, {path: types.Path{"event"}, typ: types.Text()}}, ``, nil},
+	}
+
+	for _, test := range tests {
+		got, src, err := parseExpression(test.src, schema)
+		if err != nil {
+			if test.err == nil {
+				t.Fatalf("%q. unexpected error: %s", test.src, err)
+			}
+			if err.Error() != test.err.Error() {
+				t.Fatalf("%q. expected error %q, got error %q", test.src, test.err.Error(), err.Error())
+			}
+			continue
+		}
+		if test.err != nil {
+			t.Fatalf("%q. expected error %q, got no error", test.src, test.err)
+		}
+		if !reflect.DeepEqual(got, test.expected) {
+			t.Fatalf("%q. unexpected expression\nexpected %#v\ngot      %#v", test.src, test.expected, got)
+		}
+		if src != test.unparsed {
+			t.Fatalf("%q. expected unparsed string %q, got %q", test.src, test.unparsed, src)
+		}
+	}
+
+}
+
+func TestParseString(t *testing.T) {
+
+	tests := []struct {
+		src      string
+		expected string
+		unparsed string
+		err      error
+	}{
+		{`"`, ``, ``, errNoTerminatedString},
+		{`'`, ``, ``, errNoTerminatedString},
+		{`""`, ``, ``, nil},
+		{`''`, ``, ``, nil},
+		{`"a"`, `a`, ``, nil},
+		{`'a'`, `a`, ``, nil},
+		{`"hello world"`, `hello world`, ``, nil},
+		{`"hello world`, ``, ``, errNoTerminatedString},
+		{`"\a \b \f \n \r \t \v \\ \' \""`, "\a \b \f \n \r \t \v \\ ' \"", ``, nil},
+		{`"\a`, ``, ``, errNoTerminatedString},
+		{"\"\\t \x00\"", ``, ``, errZeroByteInString},
+		{"\"\x00\"", ``, ``, errZeroByteInString},
+		{`"\u0000"`, ``, ``, errZeroByteInString},
+		{`"\u123`, ``, ``, errNoTerminatedString},
+		{`"\u1234`, ``, ``, errNoTerminatedString},
+		{`"\U00000000"`, ``, ``, errZeroByteInString},
+		{`"\U1234567`, ``, ``, errNoTerminatedString},
+		{`"hello" foo "word"`, `hello`, ` foo "word"`, nil},
+		{`'hello' foo 'word'`, `hello`, ` foo 'word'`, nil},
+		{`"à" ò`, `à`, ` ò`, nil},
+	}
+
+	for _, test := range tests {
+		got, src, err := parseString(test.src)
+		if err != nil {
+			if test.err == nil {
+				t.Fatalf("%q. unexpected error: %s", test.src, err)
+			}
+			if err.Error() != test.err.Error() {
+				t.Fatalf("%q. expected error %q, got error %q", test.src, test.err.Error(), err.Error())
+			}
+			continue
+		}
+		if test.err != nil {
+			t.Fatalf("%q. expected error %q, got no error", test.src, test.err)
+		}
+		if got != test.expected {
+			t.Fatalf("%q. expected string %q, got %q", test.src, test.expected, got)
+		}
+		if src != test.unparsed {
+			t.Fatalf("%q. expected unparsed string %q, got %q", test.src, test.unparsed, src)
+		}
+	}
+
+}
+
+func TestParseNumber(t *testing.T) {
+
+	tests := []struct {
+		src      string
+		expected string
+		unparsed string
+		err      error
+	}{
+		{`0`, `0`, ``, nil},
+		{`000`, `0`, ``, nil},
+		{`682`, `682`, ``, nil},
+		{`-4992`, `-4992`, ``, nil},
+		{`0554`, `554`, ``, nil},
+		{`0.`, `0`, ``, nil},
+		{`00.`, `0`, ``, nil},
+		{`.0`, `0`, ``, nil},
+		{`.00`, `0`, ``, nil},
+		{`-.0`, `0`, ``, nil},
+		{`.652`, `0.652`, ``, nil},
+		{`0.1`, `0.1`, ``, nil},
+		{`00.14`, `00.14`, ``, nil},
+		{`9.0134`, `9.0134`, ``, nil},
+		{`0622.9350`, `622.935`, ``, nil},
+		{`0e0`, `0`, ``, nil},
+		{`551e3`, `551e3`, ``, nil},
+		{`7e-2`, `7e-2`, ``, nil},
+		{`13.5E012`, `13.5e12`, ``, nil},
+		{`819.6520e3`, `819.652e3`, ``, nil},
+		{`-7.0284710e-3`, `-7.028471e-3`, ``, nil},
+		{`0 a`, `0`, ` a`, nil},
+		{"207.35\t a", `207.35`, "\t a", nil},
+		{"1\n\ta", `1`, "\n\ta", nil},
+		{`0.02"a"`, `0.02`, `"a"`, nil},
+		{`-3'a'`, `-3`, `'a'`, nil},
+		{`5, `, `5`, `, `, nil},
+		{`-3)`, `-3`, `)`, nil},
+		{`3e`, ``, ``, errInvalidNumber},
+		{`2.7name`, ``, ``, errInvalidNumber},
+		{`1.x`, ``, ``, errInvalidNumber},
+		{`1e a`, ``, ``, errInvalidNumber},
+		{`1_000`, ``, ``, errInvalidNumber},
+		{`0x123`, ``, ``, errInvalidNumber},
+	}
+
+	for _, test := range tests {
+		got, src, err := parseNumber(test.src)
+		if err != nil {
+			if test.err == nil {
+				t.Fatalf("%q. unexpected error: %s", test.src, err)
+			}
+			if err.Error() != test.err.Error() {
+				t.Fatalf("%q. expected error %q, got error %q", test.src, test.err.Error(), err.Error())
+			}
+			continue
+		}
+		if test.err != nil {
+			t.Fatalf("%q. expected error %q, got no error", test.src, test.err)
+		}
+		if got.Cmp(decimal.RequireFromString(test.expected)) != 0 {
+			t.Fatalf("%q. expected number %s, got %s", test.src, test.expected, got)
+		}
+		if src != test.unparsed {
+			t.Fatalf("%q. expected unparsed string %q, got %q", test.src, test.unparsed, src)
+		}
+	}
+
+}
+
+func TestParseValue(t *testing.T) {
+
+	tests := []struct {
+		src           string
+		expectedValue any
+		expectedType  types.Type
+		unparsed      string
+	}{
+		{`true`, true, types.Boolean(), ``},
+		{`false`, false, types.Boolean(), ``},
+		{`null`, nil, types.JSON(), ``},
+		{`null.`, nil, types.JSON(), `.`},
+		{`true a.b`, true, types.Boolean(), ` a.b`},
+		{`false"foo"`, false, types.Boolean(), `"foo"`},
+		{`null()`, nil, types.JSON(), `()`},
+		{`truevalue`, nil, types.Type{}, `truevalue`},
+	}
+
+	for _, test := range tests {
+		got, typ, src := parsePredeclaredIdentifier(test.src)
+		if got != test.expectedValue {
+			t.Fatalf("%q. expected value %#v, got %#v", test.src, test.expectedValue, got)
+		}
+		if !typ.EqualTo(test.expectedType) {
+			if typ.Valid() {
+				t.Fatalf("%q. expected type %s, got %s", test.src, test.expectedType, typ)
+			}
+			t.Fatalf("%q. expected type %s, got invalid type", test.src, test.expectedType)
+		}
+		if src != test.unparsed {
+			t.Fatalf("%q. expected unparsed string %q, got %q", test.src, test.unparsed, src)
+		}
+	}
+
+}
+
+func TestParsePath(t *testing.T) {
+
+	tests := []struct {
+		src      string
+		expected types.Path
+		unparsed string
+		err      error
+	}{
+		{`_`, types.Path{`_`}, ``, nil},
+		{`a`, types.Path{`a`}, ``, nil},
+		{`foo`, types.Path{`foo`}, ``, nil},
+		{`_foo`, types.Path{`_foo`}, ``, nil},
+		{`foo53`, types.Path{`foo53`}, ``, nil},
+		{`_8`, types.Path{`_8`}, ``, nil},
+		{`foo.boo`, types.Path{`foo`, `boo`}, ``, nil},
+		{`foo.boo foo`, types.Path{`foo`, `boo`}, ` foo`, nil},
+		{`_._`, types.Path{`_`, `_`}, ``, nil},
+		{`a.`, nil, ``, errUnterminatedPath},
+		{`a.b.`, nil, ``, errUnterminatedPath},
+		{`a..`, nil, ``, errUnexpectedPeriod},
+		{`a.b..`, nil, ``, errUnexpectedPeriod},
+	}
+
+	for _, test := range tests {
+		got, src, err := parsePath(test.src)
+		if err != nil {
+			if test.err == nil {
+				t.Fatalf("%q. unexpected error: %s", test.src, err)
+			}
+			if err.Error() != test.err.Error() {
+				t.Fatalf("%q. expected error %q, got error %q", test.src, test.err.Error(), err.Error())
+			}
+			continue
+		}
+		if test.err != nil {
+			t.Fatalf("%q. expected error %q, got no error", test.src, test.err)
+		}
+		if len(got) != len(test.expected) {
+			t.Fatalf("%q. expected path length %d, got %d", test.src, len(test.expected), len(got))
+		}
+		for i, expected := range test.expected {
+			if got[i] != expected {
+				t.Fatalf("%q. expected path component %q, got %q", test.src, expected, got[i])
+			}
+		}
+		if src != test.unparsed {
+			t.Fatalf("%q. expected unparsed string %q, got %q", test.src, test.unparsed, src)
+		}
+
+	}
+
+}
+
+func TestParseArgs(t *testing.T) {
+
+	schema := types.Object([]types.Property{
+		{Name: "a", Type: types.Int()},
+		{Name: "b", Type: types.Date()},
+		{Name: "c", Type: types.Float32()},
+		{Name: "x", Type: types.UUID()},
+	})
+
+	n := decimal.NewFromInt(5)
+	dt := types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
+
+	tests := []struct {
+		src      string
+		expected [][]expr
+		unparsed string
+		err      error
+	}{
+		{`()`, [][]expr{}, ``, nil},
+		{`(  )`, [][]expr{}, ``, nil},
+		{`(a)`, [][]expr{{{path: types.Path{`a`}, typ: types.Int()}}}, ``, nil},
+		{`(a, 'b')`, [][]expr{{{path: types.Path{`a`}, typ: types.Int()}}, {{text: `b`}}}, ``, nil},
+		{`(5, 'a', coalesce(b))`, [][]expr{{{value: n, typ: dt}}, {{text: `a`}}, {{path: types.Path{`coalesce`}, args: [][]expr{{{path: types.Path{`b`}, typ: types.Date()}}}}}}, ``, nil},
+		{`("a" coalesce(b, 5) c)`, [][]expr{
+			{{text: `a`, path: types.Path{`coalesce`}, args: [][]expr{{{path: types.Path{`b`}, typ: types.Date()}}, {{value: n, typ: dt}}}}, {path: types.Path{`c`}, typ: types.Float32()}},
+		}, ``, nil},
+		{`( coalesce ( x , 5 ) )`, [][]expr{
+			{{path: types.Path{`coalesce`}, args: [][]expr{{{path: types.Path{`x`}, typ: types.UUID()}}, {{value: n, typ: dt}}}}},
+		}, ``, nil},
+		{`( , )`, nil, ``, errors.New("missing function call argument")},
+		{`(a, )`, nil, ``, errors.New("missing function call argument")},
+		{`( @`, nil, ``, errors.New("unexpected '@', expecting function call argument")},
+	}
+
+	for _, test := range tests {
+		got, src, err := parseArgs(test.src, schema)
+		if err != nil {
+			if test.err == nil {
+				t.Fatalf("%q. unexpected error: %s", test.src, err)
+			}
+			if err.Error() != test.err.Error() {
+				t.Fatalf("%q. expected error %q, got error %q", test.src, test.err.Error(), err.Error())
+			}
+			continue
+		}
+		if test.err != nil {
+			t.Fatalf("%q. expected error %q, got no error", test.src, test.err)
+		}
+		if !reflect.DeepEqual(got, test.expected) {
+			t.Fatalf("%q. unexpected expressions\nexpected %#v\ngot      %#v", test.src, test.expected, got)
+		}
+		if src != test.unparsed {
+			t.Fatalf("%q. expected unparsed string %q, got %q", test.src, test.unparsed, src)
+		}
+	}
+
+}

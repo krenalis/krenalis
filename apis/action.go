@@ -19,7 +19,7 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/httpclient"
-	"chichi/apis/mappings"
+	"chichi/apis/mappings/mapexp"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	_connector "chichi/connector"
@@ -444,9 +444,7 @@ type ActionToSet struct {
 	//
 	// If it has a mapping, the names of the properties in which the values are
 	// mapped (the keys of the map) must be present in the output schema of the
-	// action, while the mapping properties (the values of the map) must be
-	// property names or property selectors (property names separated by a dot
-	// '.').
+	// action, while the values of the map must be valid mapping expressions.
 	Mapping map[string]string
 
 	// PythonSource is the source code for the Python transformation function of
@@ -614,26 +612,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	if action.Mapping != nil && action.PythonSource != "" {
 		return errors.BadRequest("action can not have both mapping and transformation")
 	}
-	var mappingInPaths []types.Path
-	var mappingOutPaths []types.Path
-	if action.Mapping != nil {
-		mappingInPaths = make([]types.Path, 0, len(action.Mapping))
-		mappingOutPaths = make([]types.Path, 0, len(action.Mapping))
-		for out, in := range action.Mapping {
-			// Validate the input property path.
-			path, ok := parsePropertyPath(in)
-			if !ok {
-				return errors.BadRequest("input property expression %q of mapping is not valid", in)
-			}
-			mappingInPaths = append(mappingInPaths, path)
-			// Validate the output property path.
-			path, ok = parsePropertyPath(out)
-			if !ok {
-				return errors.BadRequest("output property expression %q of mapping is not valid", out)
-			}
-			mappingOutPaths = append(mappingOutPaths, path)
-		}
-	}
 	if action.PythonSource != "" {
 		if !strings.Contains(action.PythonSource, "def transform") {
 			return errors.BadRequest("Python source code of transformation does not contain 'transform' function")
@@ -781,29 +759,31 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if action.OutSchema.PhysicalType() != types.PtObject {
 			return errors.BadRequest("output schema must have physical type Object")
 		}
-		for i, inPath := range mappingInPaths {
-			outPath := mappingOutPaths[i]
-			inProp, err := action.InSchema.PropertyByPath(inPath)
-			if err != nil {
-				err := err.(types.PathNotExistError)
-				return errors.BadRequest("mapped property %q not found in input schema", err.Path)
+		mappingsInPaths := []types.Path{}
+		mappingsOutPaths := []types.Path{}
+		for out, expr := range action.Mapping {
+			outPath, ok := parsePropertyPath(out)
+			if !ok {
+				return errors.BadRequest("output mapped property %q is not valid", out)
 			}
+			mappingsOutPaths = append(mappingsOutPaths, outPath)
 			outProp, err := action.OutSchema.PropertyByPath(outPath)
 			if err != nil {
 				err := err.(types.PathNotExistError)
-				return errors.BadRequest("mapped property %q not found in output schema", err.Path)
+				return errors.BadRequest("output mapped property %q not found in output schema", err.Path)
 			}
-			ok := mappings.ConvertibleTo(inProp.Type.PhysicalType(), outProp.Type.PhysicalType())
-			if !ok {
-				return errors.BadRequest("property %q (with type %s) cannot be mapped and converted to property %q (with type %s)", inProp.Name, inProp.Type, outProp.Name, outProp.Type)
+			expr, err := mapexp.Compile(expr, action.InSchema, outProp.Type, outProp.Nullable)
+			if err != nil {
+				return errors.BadRequest("invalid expression mapped to %q: %s", out, err)
 			}
+			mappingsInPaths = append(mappingsInPaths, expr.PropertyPaths()...)
 		}
 		// Ensure that every property in the input and output schemas have been
 		// mapped.
-		if props := unmappedProperties(action.InSchema, mappingInPaths); props != nil {
+		if props := unmappedProperties(action.InSchema, mappingsInPaths); props != nil {
 			return errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
 		}
-		if props := unmappedProperties(action.OutSchema, mappingOutPaths); props != nil {
+		if props := unmappedProperties(action.OutSchema, mappingsOutPaths); props != nil {
 			return errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
 		}
 	} else {

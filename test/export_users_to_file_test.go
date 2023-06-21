@@ -52,11 +52,13 @@ func TestExportUsersToFile(t *testing.T) {
 					{Name: "Email", Type: types.Text()},
 					{Name: "FirstName", Type: types.Text()},
 					{Name: "LastName", Type: types.Text()},
+					{Name: "Gender", Type: types.Text().WithEnum([]string{"male", "female", "other"})},
 				}),
 				"Mapping": map[string]string{
-					"Email":     "email",
+					"Email":     "coalesce(email, 'default.email@example.com')",
 					"FirstName": "first_name",
 					"LastName":  "last_name",
+					"Gender":    "'male'",
 				},
 			},
 		})
@@ -189,7 +191,7 @@ func TestExportUsersToFile(t *testing.T) {
 
 		expectedStrings := []string{
 			"id,creation_time,timestamp,FirstName,LastName,Email,Gender,FoodPreferences,PhoneNumbers,FavouriteMovie",
-			`Janifer,Sharpin,jsharpin8@example.com,,"{""Drink"":null,""Fruit"":null}",,`,
+			`Janifer,Sharpin,jsharpin8@example.com,male,"{""Drink"":null,""Fruit"":null}",,`,
 		}
 		for _, expected := range expectedStrings {
 			if !bytes.Contains(content, []byte(expected)) {

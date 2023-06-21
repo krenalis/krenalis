@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package mappings
+package mapexp
 
 import (
 	"bytes"
@@ -55,23 +55,23 @@ var (
 //
 // For Array, Object, and Map values, it can modify the argument v. It returns
 // an error if v cannot be converted.
-func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
-	pt1 := t1.PhysicalType()
-	pt2 := t2.PhysicalType()
+func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
+	spt := st.PhysicalType()
+	dpt := dt.PhysicalType()
 	// Convert between nil and other values.
 	if nullable {
 		switch {
 		case v == nil:
 			return nil, nil
-		case pt1 == types.PtJSON && pt2 != types.PtJSON:
+		case spt == types.PtJSON && dpt != types.PtJSON:
 			if v, ok := v.(json.RawMessage); ok && v[0] == 'n' {
 				return nil, nil
 			}
-		case v == "" && pt2 != types.PtText:
+		case v == "" && dpt != types.PtText:
 			return nil, nil
 		}
 	} else if v == nil {
-		switch pt2 {
+		switch dpt {
 		case types.PtText:
 			return "", nil
 		case types.PtJSON:
@@ -79,10 +79,10 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 		}
 		return nil, errInvalidConversion
 	}
-	// Convert the remaining cases, v is not nil.
-	switch pt2 {
+	// Convert the unparsed cases, v is not nil.
+	switch dpt {
 	case types.PtBoolean:
-		switch pt1 {
+		switch spt {
 		case types.PtBoolean:
 			return v.(bool), nil
 		case types.PtText:
@@ -98,7 +98,7 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 	case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
 		var err error
 		var n int
-		switch pt1 {
+		switch spt {
 		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
 			n = v.(int)
 		case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
@@ -123,14 +123,14 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 		if err != nil {
 			return nil, errInvalidConversion
 		}
-		if min, max := t2.IntRange(); int64(n) < min || int64(n) > max {
+		if min, max := dt.IntRange(); int64(n) < min || int64(n) > max {
 			return nil, errInvalidConversion
 		}
 		return n, nil
 	case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
 		var err error
 		var n uint
-		switch pt1 {
+		switch spt {
 		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
 			i := v.(int)
 			if i < 0 {
@@ -157,7 +157,7 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 		if err != nil {
 			return nil, errInvalidConversion
 		}
-		min, max := t2.UIntRange()
+		min, max := dt.UIntRange()
 		if uint64(n) < min || uint64(n) > max {
 			return nil, errInvalidConversion
 		}
@@ -165,10 +165,10 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 	case types.PtFloat, types.PtFloat32:
 		var err error
 		var n float64
-		switch pt1 {
+		switch spt {
 		case types.PtFloat:
 			n = v.(float64)
-			if pt2 == types.PtFloat32 {
+			if dpt == types.PtFloat32 {
 				n = float64(float32(n))
 			}
 		case types.PtFloat32:
@@ -179,18 +179,18 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 			n = float64(v.(uint))
 		case types.PtDecimal:
 			n, _ = v.(decimal.Decimal).Float64()
-			if pt2 == types.PtFloat32 {
+			if dpt == types.PtFloat32 {
 				n = float64(float32(n))
 			}
 		case types.PtText:
 			bits := 64
-			if pt2 == types.PtFloat32 {
+			if dpt == types.PtFloat32 {
 				bits = 32
 			}
 			n, err = strconv.ParseFloat(v.(string), bits)
 		case types.PtJSON:
 			bits := 64
-			if pt2 == types.PtFloat32 {
+			if dpt == types.PtFloat32 {
 				bits = 32
 			}
 			n, err = jsonToFloat(v, bits)
@@ -200,14 +200,14 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 		if err != nil {
 			return nil, errInvalidConversion
 		}
-		if min, max := t2.FloatRange(); n < min || n > max {
+		if min, max := dt.FloatRange(); n < min || n > max {
 			return nil, errInvalidConversion
 		}
 		return n, nil
 	case types.PtDecimal:
 		var err error
 		var n decimal.Decimal
-		switch pt1 {
+		switch spt {
 		case types.PtDecimal:
 			n, _ = v.(decimal.Decimal)
 		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
@@ -230,14 +230,14 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 		if err != nil {
 			return nil, errInvalidConversion
 		}
-		if min, max := t2.DecimalRange(); n.LessThan(min) || n.GreaterThan(max) {
+		if min, max := dt.DecimalRange(); n.LessThan(min) || n.GreaterThan(max) {
 			return nil, errInvalidConversion
 		}
 		return n, nil
 	case types.PtDateTime:
 		var t time.Time
 		var err error
-		switch pt1 {
+		switch spt {
 		case types.PtDateTime, types.PtDate:
 			t = v.(time.Time)
 		case types.PtText:
@@ -257,7 +257,7 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 		default:
 			return nil, errInvalidConversion
 		}
-		if layout := t2.Layout(); layout != "" && formatTime {
+		if layout := dt.Layout(); layout != "" && formatTime {
 			switch layout {
 			case types.Seconds:
 				return t.Unix(), nil
@@ -275,7 +275,7 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 	case types.PtDate:
 		var t time.Time
 		var err error
-		switch pt1 {
+		switch spt {
 		case types.PtDate:
 			t = v.(time.Time)
 		case types.PtDateTime:
@@ -294,12 +294,12 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 		default:
 			return nil, errInvalidConversion
 		}
-		if layout := t2.Layout(); layout != "" && formatTime {
+		if layout := dt.Layout(); layout != "" && formatTime {
 			return t.Format(layout), nil
 		}
 		return t, nil
 	case types.PtTime:
-		switch pt1 {
+		switch spt {
 		case types.PtTime:
 			return v.(time.Time), nil
 		case types.PtDateTime:
@@ -315,7 +315,7 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 	case types.PtYear:
 		var err error
 		var n int
-		switch pt1 {
+		switch spt {
 		case types.PtYear:
 			return v.(int), nil
 		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
@@ -341,7 +341,7 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 			return n, nil
 		}
 	case types.PtUUID:
-		switch pt1 {
+		switch spt {
 		case types.PtUUID:
 			return v.(string), nil
 		case types.PtText:
@@ -370,7 +370,7 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 			return json.RawMessage(b), nil
 		}
 	case types.PtInet:
-		switch pt1 {
+		switch spt {
 		case types.PtInet:
 			return v.(string), nil
 		case types.PtText:
@@ -384,7 +384,7 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 		}
 	case types.PtText:
 		var s string
-		switch pt1 {
+		switch spt {
 		case types.PtText:
 			s = v.(string)
 		case types.PtBoolean:
@@ -398,7 +398,7 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 			s = strconv.FormatUint(uint64(v.(uint)), 10)
 		case types.PtFloat, types.PtFloat32:
 			bits := 64
-			if pt1 == types.PtFloat32 {
+			if spt == types.PtFloat32 {
 				bits = 32
 			}
 			s = strconv.FormatFloat(v.(float64), 'g', -1, bits)
@@ -423,7 +423,7 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 		default:
 			return nil, errInvalidConversion
 		}
-		if enum := t2.Enum(); enum != nil {
+		if enum := dt.Enum(); enum != nil {
 			if s == "" && nullable {
 				return nil, nil
 			}
@@ -432,7 +432,7 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 			}
 			return nil, errInvalidConversion
 		}
-		if re := t2.Regexp(); re != nil {
+		if re := dt.Regexp(); re != nil {
 			if !re.MatchString(s) {
 				if s == "" && nullable {
 					return nil, nil
@@ -440,12 +440,12 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 				return nil, errInvalidConversion
 			}
 		}
-		if l, ok := t2.ByteLen(); ok && l < len(s) {
+		if l, ok := dt.ByteLen(); ok && l < len(s) {
 			return nil, errInvalidConversion
 		}
-		if l, ok := t2.CharLen(); ok {
+		if l, ok := dt.CharLen(); ok {
 			runes := len(s)
-			if pt1 == types.PtJSON || pt1 == types.PtText {
+			if spt == types.PtJSON || spt == types.PtText {
 				runes = utf8.RuneCountInString(s)
 			}
 			if runes > l {
@@ -454,14 +454,14 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 		}
 		return s, nil
 	case types.PtArray:
-		switch pt1 {
+		switch spt {
 		case types.PtArray:
 			s := v.([]any)
-			if len(s) < t2.MinItems() || len(s) > t2.MaxItems() {
+			if len(s) < dt.MinItems() || len(s) > dt.MaxItems() {
 				return nil, errInvalidConversion
 			}
-			it1 := t1.ItemType()
-			it2 := t2.ItemType()
+			it1 := st.ItemType()
+			it2 := dt.ItemType()
 			if it1.EqualTo(it2) {
 				return s, nil
 			}
@@ -478,10 +478,10 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 			if err != nil {
 				return nil, errInvalidConversion
 			}
-			if len(s) < t2.MinItems() || len(s) > t2.MaxItems() {
+			if len(s) < dt.MinItems() || len(s) > dt.MaxItems() {
 				return nil, errInvalidConversion
 			}
-			it2 := t2.ItemType()
+			it2 := dt.ItemType()
 			for i, item := range s {
 				s[i], err = convert(item, types.JSON(), it2, false, formatTime)
 				if err != nil {
@@ -491,14 +491,14 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 			return s, nil
 		}
 	case types.PtObject:
-		switch pt1 {
+		switch spt {
 		case types.PtObject:
 			obj := v.(map[string]any)
-			if t1.EqualTo(t2) {
+			if st.EqualTo(dt) {
 				return obj, nil
 			}
 			for name, value := range obj {
-				p2, ok := t2.Property(name)
+				p2, ok := dt.Property(name)
 				if !ok {
 					delete(obj, name)
 					continue
@@ -510,7 +510,7 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 					continue
 				}
 				var err error
-				p1, ok := t1.Property(name)
+				p1, ok := st.Property(name)
 				if !ok {
 					panic(fmt.Sprintf("unknown property %s", name))
 				}
@@ -526,7 +526,7 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 				return nil, errInvalidConversion
 			}
 			for name, value := range s {
-				p2, ok := t2.Property(name)
+				p2, ok := dt.Property(name)
 				if !ok {
 					delete(s, name)
 					continue
@@ -546,10 +546,10 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 			return s, nil
 		}
 	case types.PtMap:
-		switch pt1 {
+		switch spt {
 		case types.PtMap:
-			vt1 := t1.ValueType()
-			vt2 := t2.ValueType()
+			vt1 := st.ValueType()
+			vt2 := dt.ValueType()
 			m := v.(map[string]any)
 			if vt1.EqualTo(vt2) {
 				return m, nil
@@ -567,7 +567,7 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 			if err != nil {
 				return nil, errInvalidConversion
 			}
-			vt2 := t2.ValueType()
+			vt2 := dt.ValueType()
 			for key, value := range s {
 				s[key], err = convert(value, types.JSON(), vt2, false, formatTime)
 				if err != nil {
@@ -578,6 +578,55 @@ func convert(v any, t1, t2 types.Type, nullable, formatTime bool) (any, error) {
 		}
 	}
 	return nil, errInvalidConversion
+}
+
+// appendAsString appends v to b after converting it to a string.
+// Calling appendAsString(b, v, t) is the same of calling
+// convert(v, t, types.Text(), false, false) and appending the result to b.
+func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
+	if v == nil {
+		return b, nil
+	}
+	if s, ok := v.(string); ok {
+		return append(b, s...), nil
+	}
+	switch pt := t.PhysicalType(); pt {
+	case types.PtBoolean:
+		strconv.AppendBool(b, v.(bool))
+	case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64, types.PtYear:
+		return strconv.AppendInt(b, int64(v.(int)), 10), nil
+	case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
+		return strconv.AppendUint(b, uint64(v.(uint)), 10), nil
+	case types.PtFloat, types.PtFloat32:
+		bits := 64
+		if pt == types.PtFloat32 {
+			bits = 32
+		}
+		return strconv.AppendFloat(b, v.(float64), 'g', -1, bits), nil
+	case types.PtDecimal:
+		return append(b, v.(decimal.Decimal).String()...), nil
+	case types.PtDateTime:
+		return v.(time.Time).AppendFormat(b, time.RFC3339Nano), nil
+	case types.PtDate:
+		return v.(time.Time).AppendFormat(b, time.DateOnly), nil
+	case types.PtTime:
+		return v.(time.Time).AppendFormat(b, "15:04:05.999999999"), nil
+	case types.PtJSON:
+		switch v := v.(type) {
+		case float64:
+			return strconv.AppendFloat(b, v, 'g', -1, 64), nil
+		case json.Number:
+			return append(b, v...), nil
+		case bool:
+			strconv.AppendBool(b, v)
+		case json.RawMessage:
+			s, err := jsonToText(v)
+			if err == nil {
+				return append(b, s...), nil
+			}
+		}
+	}
+	return b, errInvalidConversion
 }
 
 // jsonToBoolean converts v of type JSON to Boolean.

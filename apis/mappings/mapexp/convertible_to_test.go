@@ -5,13 +5,12 @@
 // Copyright (c) 2023 Open2b
 //
 
-package mappings_test
+package mapexp
 
 import (
 	"fmt"
 	"testing"
 
-	"chichi/apis/mappings"
 	"chichi/connector/types"
 )
 
@@ -64,7 +63,7 @@ func TestConvertibleTo(t *testing.T) {
 	}
 	for _, cas := range cases {
 		t.Run(fmt.Sprintf("%s to %s", cas.from, cas.to), func(t *testing.T) {
-			got := mappings.ConvertibleTo(cas.from, cas.to)
+			got := convertibleTo(cas.from, cas.to)
 			if cas.expected != got {
 				t.Fatalf("expecting ConvertibleTo(%s, %s) = %t, got %t", cas.from, cas.to, cas.expected, got)
 			}

@@ -13,6 +13,7 @@ import (
 	"log"
 	"strings"
 
+	"chichi/apis/mappings/mapexp"
 	"chichi/apis/normalization"
 	"chichi/apis/state"
 	"chichi/apis/transformations"
@@ -55,15 +56,8 @@ func ActionFilterApplies(filter *state.ActionFilter, props map[string]any) (bool
 
 // propertyMapping represents a property to map.
 type propertyMapping struct {
-	in struct {
-		path types.Path
-		typ  types.Type
-	}
-	out struct {
-		path     types.Path
-		typ      types.Type
-		nullable bool
-	}
+	expression *mapexp.Expression
+	outPath    types.Path
 }
 
 // Mapping represents a mapping.
@@ -78,9 +72,9 @@ type Mapping struct {
 // the given mapping or, in case of a transformation function, the Python
 // source.
 // Panics if none or both the mapping and the Python source are provided.
-func New(inSchema, outSchema types.Type, mapp map[string]string, pythonSource string, formatTime bool) (*Mapping, error) {
+func New(inSchema, outSchema types.Type, mappings map[string]string, pythonSource string, formatTime bool) (*Mapping, error) {
 
-	if (mapp == nil) == (pythonSource == "") {
+	if (mappings == nil) == (pythonSource == "") {
 		panic("one and only one of mapping and Python source must be provided")
 	}
 	if !inSchema.Valid() || !outSchema.Valid() {
@@ -90,26 +84,20 @@ func New(inSchema, outSchema types.Type, mapp map[string]string, pythonSource st
 	m := Mapping{inSchema: inSchema, outSchema: outSchema, formatTime: formatTime}
 
 	// Mapping.
-	if mapp != nil {
-		properties := make([]propertyMapping, 0, len(mapp))
-		for out, in := range mapp {
-			var pm propertyMapping
-			pm.in.path = strings.Split(in, ".")
-			pm.out.path = strings.Split(out, ".")
-			prop, err := inSchema.PropertyByPath(pm.in.path)
+	if mappings != nil {
+		m.properties = make([]propertyMapping, 0, len(mappings))
+		for path, expression := range mappings {
+			property := propertyMapping{outPath: strings.Split(path, ".")}
+			outProperty, err := outSchema.PropertyByPath(property.outPath)
 			if err != nil {
 				return nil, err
 			}
-			pm.in.typ = prop.Type
-			prop, err = outSchema.PropertyByPath(pm.out.path)
+			property.expression, err = mapexp.Compile(expression, inSchema, outProperty.Type, outProperty.Nullable)
 			if err != nil {
 				return nil, err
 			}
-			pm.out.typ = prop.Type
-			pm.out.nullable = prop.Nullable
-			properties = append(properties, pm)
+			m.properties = append(m.properties, property)
 		}
-		m.properties = properties
 		return &m, nil
 	}
 
@@ -127,21 +115,15 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 	if m.properties != nil {
 		outValues := map[string]any{}
 		for _, property := range m.properties {
-			value, ok := readPropertyFrom(values, property.in.path)
-			if !ok {
-				continue
-			}
-			if value == nil && property.out.nullable {
-				// Conversion is not necessary.
-			} else {
-				v, err := convert(value, property.in.typ, property.out.typ, property.out.nullable, m.formatTime)
-				if err != nil {
-					log.Printf("cannot convert %#v (type %s) to type %s for property at path %q", value, property.in.typ, property.out.typ, property.out.path)
+			v, err := property.expression.Eval(values, m.formatTime)
+			if err != nil {
+				if err, ok := err.(*mapexp.InvalidConversionError); ok {
+					log.Print(err)
 					continue
 				}
-				value = v
+				return nil, err
 			}
-			writePropertyTo(outValues, property.out.path, value)
+			writePropertyTo(outValues, property.outPath, v)
 		}
 		return outValues, nil
 	}

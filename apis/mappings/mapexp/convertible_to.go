@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package mappings
+package mapexp
 
 import "chichi/connector/types"
 
@@ -50,9 +50,9 @@ var convertMatrix = [...]int32{
 	/* Map      */ 0b_0_00000_00000_000_000_00_100_001,
 }
 
-// ConvertibleTo reports whether the physical type "from" can be converted to
+// convertibleTo reports whether the physical type "from" can be converted to
 // the physical type "to".
-func ConvertibleTo(from, to types.PhysicalType) bool {
+func convertibleTo(from, to types.PhysicalType) bool {
 	mask := int32(1 << (types.PtMap - to))
 	return convertMatrix[from-1]&mask > 0
 }
