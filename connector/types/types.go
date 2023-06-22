@@ -239,7 +239,7 @@ type Type struct {
 	//   - uintRange value for UInt64
 	//   - floatRange value for Float and Float32
 	//   - decimalRange value for Decimal
-	//   - string value representing a layout for DateTime and Date
+	//   - string value representing a layout for DateTime, Date and Time
 	//   - *regexp.Regexp value for Text
 	//   - []string with the enum values for Text
 	//   - []Property for Object
@@ -792,11 +792,11 @@ func (t Type) Scale() int {
 	return int(t.s)
 }
 
-// Layout returns the layout of DateTime and Date types.
-// Panics if t is not a DateTime or Date type.
+// Layout returns the layout of DateTime, Date and Time types.
+// Panics if t is not a DateTime, Date or Time type.
 func (t Type) Layout() string {
-	if t.pt != PtDateTime && t.pt != PtDate {
-		panic("cannot get layout of a non-DateTime or non-Date type")
+	if t.pt != PtDateTime && t.pt != PtDate && t.pt != PtTime {
+		panic("cannot get layout of a non-time types")
 	}
 	if t.vl == nil {
 		return ""
@@ -805,16 +805,17 @@ func (t Type) Layout() string {
 }
 
 // WithLayout returns t but with the given layout. Panics if t is not a
-// DateTime or Date type, or layout is not a valid non-empty UTF-8-encoded
+// DateTime, Date or Time type, or layout is not a valid non-empty UTF-8-encoded
 // string, or t has already a layout.
 //
-// A layout is a specific pattern used when a DateTime and Date value is
-// represented as a string or an integer. For strings, layout can be any time
-// package layout string. For integers, layout can be Nanoseconds, Microseconds,
-// Milliseconds and Seconds, and the value is relative to the Unix epoc.
+// A layout is a specific pattern used when a DateTime, Date or Time value is
+// represented as a string or, only for DateTime, an integer. For strings,
+// layout can be any time package layout string. For integers, layout can be
+// Nanoseconds, Microseconds, Milliseconds and Seconds, and the value is
+// relative to the Unix epoc.
 func (t Type) WithLayout(layout string) Type {
-	if t.pt != PtDateTime && t.pt != PtDate {
-		panic("cannot get layout of a non-DateTime or non-Date type")
+	if t.pt != PtDateTime && t.pt != PtDate && t.pt != PtTime {
+		panic("cannot get layout of a non-time types")
 	}
 	if layout == "" {
 		panic("layout cannot be an empty string")

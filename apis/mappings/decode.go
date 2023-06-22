@@ -180,7 +180,11 @@ func decodeByType(dec *json.Decoder, tok json.Token, t types.Type) (any, error) 
 		if !ok {
 			return nil, errors.New("not a Time value")
 		}
-		_, err := time.Parse("15:04:05.999999999", s)
+		layout := t.Layout()
+		if layout == "" {
+			layout = "15:04:05.999999999"
+		}
+		_, err := time.Parse(layout, s)
 		if err != nil {
 			return nil, errors.New("not a Time value")
 		}

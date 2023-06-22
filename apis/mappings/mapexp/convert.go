@@ -299,19 +299,30 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 		}
 		return t, nil
 	case types.PtTime:
+		var t time.Time
+		var err error
 		switch spt {
 		case types.PtTime:
-			return v.(time.Time), nil
+			t = v.(time.Time)
 		case types.PtDateTime:
-			t := v.(time.Time)
-			return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
+			t = v.(time.Time)
+			t = time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
 		case types.PtText:
-			if t, ok := parseTime(v.(string)); ok {
-				return t, nil
+			var ok bool
+			t, ok = parseTime(v.(string))
+			if !ok {
+				return nil, errInvalidConversion
 			}
 		case types.PtJSON:
-			return jsonToTime(v)
+			t, err = jsonToTime(v)
+			if err != nil {
+				return nil, err
+			}
 		}
+		if layout := dt.Layout(); layout != "" && formatTime {
+			return t.Format(layout), nil
+		}
+		return t, nil
 	case types.PtYear:
 		var err error
 		var n int

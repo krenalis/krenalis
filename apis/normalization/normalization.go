@@ -220,7 +220,15 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool) (
 			value = time.Date(1970, 1, 1, src.Hour(), src.Minute(), src.Second(), src.Nanosecond(), time.UTC)
 			valid = true
 		case string:
-			value, valid = parseTime(src)
+			layout := typ.Layout()
+			if layout == "" {
+				value, valid = parseTime(src)
+			} else {
+				t, err := time.Parse(layout, src)
+				if valid = err == nil; valid {
+					value = time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
+				}
+			}
 		}
 	case types.PtYear:
 		var v int64

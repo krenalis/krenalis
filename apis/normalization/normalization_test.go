@@ -90,6 +90,8 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 		{types.Time(), "00:00:00", time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)},
 		{types.Time(), "13:16:47.801", time.Date(1970, 1, 1, 13, 16, 47, 801000000, time.UTC)},
 		{types.Time(), "23:59:59.999999999", time.Date(1970, 1, 1, 23, 59, 59, 999999999, time.UTC)},
+		{types.Time().WithLayout("15:04:05.000"), "09:22:51.834", time.Date(1970, 1, 1, 9, 22, 51, 834000000, time.UTC)},
+		{types.Time().WithLayout("15h 04m 05s"), "09h 31m 13s", time.Date(1970, 1, 1, 9, 31, 13, 0, time.UTC)},
 		// Year.
 		{types.Year(), 2023, 2023},
 		{types.Year(), 2023.0, 2023},

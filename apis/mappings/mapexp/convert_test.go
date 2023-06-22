@@ -152,6 +152,8 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.Time(), "09:01:57.49361409Z", time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), true, false},
 		{types.JSON(), types.Time(), "09:01:57", time.Date(1970, 1, 1, 9, 1, 57, 0, time.UTC), true, false},
 		{types.JSON(), types.Time(), json.RawMessage(`"09:01:57.49361409Z"`), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), true, false},
+		{types.Time(), types.Time().WithLayout("15:04:05.999999"), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), "09:01:57.493614", true, true},
+		{types.Time(), types.Time().WithLayout("15:04:05.999999"), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), true, false},
 
 		// Year.
 		{types.Year(), types.Year(), 2023, 2023, true, false},
