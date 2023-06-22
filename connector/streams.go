@@ -56,7 +56,7 @@ type SendOptions struct {
 }
 
 // StreamConnection is the interface implemented by stream connections.
-// A StreamConnection value can be use for sending or receiving but not both.
+// A StreamConnection value can be used for sending or receiving but not both.
 type StreamConnection interface {
 
 	// Close closes the stream. When Close is called, no other calls to connection
