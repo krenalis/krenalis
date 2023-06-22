@@ -759,32 +759,37 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if action.OutSchema.PhysicalType() != types.PtObject {
 			return errors.BadRequest("output schema must have physical type Object")
 		}
-		mappingsInPaths := []types.Path{}
-		mappingsOutPaths := []types.Path{}
-		for out, expr := range action.Mapping {
-			outPath, ok := parsePropertyPath(out)
-			if !ok {
-				return errors.BadRequest("output mapped property %q is not valid", out)
+		// In case of mappings, validate the mapped properties and ensure that
+		// every property in the input and output schemas have been referenced
+		// in the mappings.
+		if len(action.Mapping) > 0 {
+			var mappingsInPaths []types.Path
+			var mappingsOutPaths []types.Path
+			for out, expr := range action.Mapping {
+				outPath, ok := parsePropertyPath(out)
+				if !ok {
+					return errors.BadRequest("output mapped property %q is not valid", out)
+				}
+				mappingsOutPaths = append(mappingsOutPaths, outPath)
+				outProp, err := action.OutSchema.PropertyByPath(outPath)
+				if err != nil {
+					err := err.(types.PathNotExistError)
+					return errors.BadRequest("output mapped property %q not found in output schema", err.Path)
+				}
+				expr, err := mapexp.Compile(expr, action.InSchema, outProp.Type, outProp.Nullable)
+				if err != nil {
+					return errors.BadRequest("invalid expression mapped to %q: %s", out, err)
+				}
+				mappingsInPaths = append(mappingsInPaths, expr.PropertyPaths()...)
 			}
-			mappingsOutPaths = append(mappingsOutPaths, outPath)
-			outProp, err := action.OutSchema.PropertyByPath(outPath)
-			if err != nil {
-				err := err.(types.PathNotExistError)
-				return errors.BadRequest("output mapped property %q not found in output schema", err.Path)
+			// Ensure that every property in the input and output schemas have been
+			// mapped.
+			if props := unmappedProperties(action.InSchema, mappingsInPaths); props != nil {
+				return errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
 			}
-			expr, err := mapexp.Compile(expr, action.InSchema, outProp.Type, outProp.Nullable)
-			if err != nil {
-				return errors.BadRequest("invalid expression mapped to %q: %s", out, err)
+			if props := unmappedProperties(action.OutSchema, mappingsOutPaths); props != nil {
+				return errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
 			}
-			mappingsInPaths = append(mappingsInPaths, expr.PropertyPaths()...)
-		}
-		// Ensure that every property in the input and output schemas have been
-		// mapped.
-		if props := unmappedProperties(action.InSchema, mappingsInPaths); props != nil {
-			return errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
-		}
-		if props := unmappedProperties(action.OutSchema, mappingsOutPaths); props != nil {
-			return errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
 		}
 	} else {
 		if action.InSchema.Valid() {
