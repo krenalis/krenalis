@@ -15,6 +15,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 
@@ -193,6 +194,7 @@ func (c *connection) Users(properties []types.Path, cursor connector.Cursor) ([]
 			Timestamp:  usersTimestamps[id],
 		})
 	}
+	sort.Slice(objects, func(i, j int) bool { return objects[i].ID < objects[j].ID })
 	return objects, "", io.EOF
 }
 
