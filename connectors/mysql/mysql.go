@@ -216,8 +216,6 @@ func testConnection(ctx context.Context, settings *settings) error {
 // propertyType returns the property type of the column with type t.
 func propertyType(t *sql.ColumnType) (types.Type, error) {
 	switch t.DatabaseTypeName() {
-	case "BIT":
-		return types.Boolean(), nil
 	case "TEXT", "BLOB":
 		return types.Text().WithByteLen(65535), nil
 	case "DATE":
