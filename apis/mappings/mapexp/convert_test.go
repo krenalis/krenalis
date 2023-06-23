@@ -33,6 +33,11 @@ func TestConvert(t *testing.T) {
 		// Boolean.
 		{types.Boolean(), types.Boolean(), true, true, true, false},
 		{types.Boolean(), types.Boolean(), false, false, true, false},
+		{types.Int8(), types.Boolean(), 0, false, true, false},
+		{types.Int8(), types.Boolean(), 1, true, true, false},
+		{types.Int8(), types.Boolean(), -1, true, true, false},
+		{types.UInt8(), types.Boolean(), uint(0), false, true, false},
+		{types.UInt8(), types.Boolean(), uint(1), true, true, false},
 		{types.Text(), types.Boolean(), "false", false, true, false},
 		{types.Text(), types.Boolean(), "False", false, true, false},
 		{types.Text(), types.Boolean(), "FALSE", false, true, false},
@@ -77,6 +82,8 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.Int(), 12.627, 13, true, false},
 		{types.JSON(), types.Int(), json.Number("-15"), -15, true, false},
 		{types.JSON(), types.Int(), json.RawMessage("-2"), -2, true, false},
+		{types.Boolean(), types.Int8(), false, 0, true, false},
+		{types.Boolean(), types.Int8(), true, 1, true, false},
 
 		// UInt, UInt8, UInt16, UInt24 and UInt64.
 		{types.Int(), types.UInt(), 831, uint(831), true, false},
@@ -94,6 +101,8 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.UInt64(), maxFloatConvertibleToUInt64, uint(18446744073709549568), true, false},
 		{types.JSON(), types.UInt(), json.Number("15"), uint(15), true, false},
 		{types.JSON(), types.UInt(), json.RawMessage("2"), uint(2), true, false},
+		{types.Boolean(), types.UInt8(), false, uint(0), true, false},
+		{types.Boolean(), types.UInt8(), true, uint(1), true, false},
 
 		// Float and Float32.
 		{types.Float(), types.Float(), 701.502830285, 701.502830285, true, false},

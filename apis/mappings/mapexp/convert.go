@@ -85,6 +85,10 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 		switch spt {
 		case types.PtBoolean:
 			return v.(bool), nil
+		case types.PtInt8:
+			return v.(int) != 0, nil
+		case types.PtUInt8:
+			return v.(uint) > 0, nil
 		case types.PtText:
 			switch v.(string) {
 			case "false", "False", "FALSE", "no", "No", "NO":
@@ -99,6 +103,13 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 		var err error
 		var n int
 		switch spt {
+		case types.PtBoolean:
+			if v.(bool) {
+				n = 1
+			}
+			if dpt != types.PtInt8 {
+				err = errInvalidConversion
+			}
 		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
 			n = v.(int)
 		case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
@@ -131,6 +142,13 @@ func convert(v any, st, dt types.Type, nullable, formatTime bool) (any, error) {
 		var err error
 		var n uint
 		switch spt {
+		case types.PtBoolean:
+			if v.(bool) {
+				n = 1
+			}
+			if dpt != types.PtUInt8 {
+				err = errInvalidConversion
+			}
 		case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
 			i := v.(int)
 			if i < 0 {
