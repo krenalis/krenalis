@@ -14,15 +14,15 @@ import "chichi/connector/types"
 // NOTE: keep this in sync with the content of the file
 // 'apis/mappings/Conversions.md'.
 var convertMatrix = [...]int32{
-	//                ┌─── Bool
-	//                │ ┌────── Ints
-	//                │ │     ┌──── UInts
+	//                ┌─── Boolean
+	//                │ ┌────── Int
+	//                │ │     ┌──── UInt
 	//                │ │     │     ┌── Float
 	//                │ │     │     │   ┌─ DateTime
 	//                │ │     │     │   │   ┌─ Year
 	//                │ │     │     │   │   │  ┌── JSON
 	//                │ │     │     │   │   │  │   ┌── Array
-	//                │ ├───┐ ├───┐ │   │   │  │   │
+	//                │ │     │     │   │   │  │   │
 	/* Boolean  */ 0b_1_00000_00000_000_000_00_101_000,
 	/* Int      */ 0b_0_11111_11111_111_000_10_101_000,
 	/* Int8     */ 0b_0_11111_11111_111_000_10_101_000,
