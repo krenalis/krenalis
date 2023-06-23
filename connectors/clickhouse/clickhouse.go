@@ -89,7 +89,7 @@ func (c *connection) Columns(table string) ([]types.Property, error) {
 
 // Query executes the given query and returns the resulting rows and columns.
 func (c *connection) Query(query string) (connector.Rows, []types.Property, error) {
-	return c.Query(query)
+	return c.query(query)
 }
 
 // ServeUI serves the connector's user interface.
