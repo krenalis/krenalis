@@ -208,9 +208,12 @@ func (this *Connector) ServeUI(event string, values []byte, role ConnectionRole,
 
 		switch c.Type {
 		case state.DatabaseType:
-			connection, err = _connector.RegisteredDatabase(c.Name).Open(ctx, &_connector.DatabaseConfig{
+			var database _connector.DatabaseConnection
+			database, err = _connector.RegisteredDatabase(c.Name).Open(ctx, &_connector.DatabaseConfig{
 				Role: _connector.Role(role),
 			})
+			defer database.Close()
+			connection = database
 		case state.FileType:
 			connection, err = _connector.RegisteredFile(c.Name).Open(ctx, &_connector.FileConfig{
 				Role: _connector.Role(role),

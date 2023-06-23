@@ -483,6 +483,28 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(map[string]any{"Rows": rows, "Schema": schema})
 			})
+			router.Get("/tables/{table}/schema", func(w http.ResponseWriter, r *http.Request) {
+				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+				table := chi.URLParam(r, "table")
+				// Workaround for the issue of Chi https://github.com/go-chi/chi/issues/642.
+				table, err = url.PathUnescape(table)
+				if err != nil {
+					respond(w, errors.BadRequest("invalid table name"))
+					return
+				}
+				connection, err := workspace.Connection(id)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				schema, err := connection.TableSchema(table)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(schema)
+			})
 			router.Get("/keys", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				connection, err := workspace.Connection(id)

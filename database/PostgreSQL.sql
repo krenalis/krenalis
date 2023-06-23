@@ -119,6 +119,7 @@ CREATE TABLE actions (
     python_source text NOT NULL DEFAULT '',
     query text NOT NULL DEFAULT '',
     path varchar(1024) NOT NULL DEFAULT '',
+    table_name varchar(1024) NOT NULL DEFAULT '',
     sheet varchar(100) NOT NULL DEFAULT '',
     user_cursor cursor NOT NULL DEFAULT '("", "0001-01-01 00:00:00+00", "")',
     health health NOT NULL DEFAULT 'Healthy',

@@ -328,7 +328,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		// Read all actions.
 		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name,\n"+
 			"enabled, schedule_start, schedule_period, filter, in_schema, out_schema, mapping, python_source,\n"+
-			"query, path, sheet, (user_cursor).id, (user_cursor).timestamp, (user_cursor).next,\n"+
+			"query, path, table_name, sheet, (user_cursor).id, (user_cursor).timestamp, (user_cursor).next,\n"+
 			"health, export_mode, matching_properties_internal, matching_properties_external\n"+
 			"FROM actions",
 			func(rows *postgres.Rows) error {
@@ -341,7 +341,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &filter,
 						&rawInSchema, &rawOutSchema, &mapping, &pythonSource, &action.Query,
-						&action.Path, &action.Sheet, &action.UserCursor.ID, &action.UserCursor.Timestamp,
+						&action.Path, &action.TableName, &action.Sheet, &action.UserCursor.ID, &action.UserCursor.Timestamp,
 						&action.UserCursor.Next, &action.Health, &action.ExportMode, &matchPropInternal,
 						&matchPropExternal)
 					if err != nil {

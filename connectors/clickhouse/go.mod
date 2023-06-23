@@ -2,7 +2,10 @@ module clickhouse
 
 go 1.20
 
-require github.com/ClickHouse/clickhouse-go/v2 v2.9.1
+require (
+	github.com/ClickHouse/clickhouse-go/v2 v2.9.1
+	github.com/shopspring/decimal v1.3.1
+)
 
 replace github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.9.1-fix4
 
@@ -19,7 +22,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
-	github.com/shopspring/decimal v1.3.1 // indirect
 	go.opentelemetry.io/otel v1.13.0 // indirect
 	go.opentelemetry.io/otel/trace v1.13.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect

@@ -19,6 +19,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"chichi/connector"
@@ -58,42 +59,39 @@ type connection struct {
 	ctx      context.Context
 	conf     *connector.DatabaseConfig
 	settings *settings
+	db       *sql.DB
+}
+
+// Close closes the database. When Close is called, no other calls to connection
+// methods are in progress and no more will be made.
+func (c *connection) Close() error {
+	if c.db == nil {
+		return nil
+	}
+	return c.db.Close()
+}
+
+// Columns returns the columns of the given table.
+func (c *connection) Columns(table string) ([]types.Property, error) {
+	var err error
+	table, err = quoteTable(table)
+	if err != nil {
+		return nil, err
+	}
+	rows, columns, err := c.query("SELECT * FROM " + table)
+	if err != nil {
+		return nil, err
+	}
+	err = rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	return columns, nil
 }
 
 // Query executes the given query and returns the resulting rows and properties.
 func (c *connection) Query(query string) (connector.Rows, []types.Property, error) {
-	db, err := sql.Open("pgx", c.settings.dsn())
-	if err != nil {
-		return nil, nil, err
-	}
-	db.SetMaxIdleConns(0)
-	rows, err := db.QueryContext(c.ctx, query)
-	if err != nil {
-		_ = db.Close()
-		return nil, nil, err
-	}
-	columnTypes, err := rows.ColumnTypes()
-	if err != nil {
-		_ = rows.Close()
-		_ = db.Close()
-		return nil, nil, err
-	}
-	properties := make([]types.Property, len(columnTypes))
-	for i, c := range columnTypes {
-		typ, err := propertyType(c)
-		if err != nil {
-			_ = rows.Close()
-			_ = db.Close()
-			return nil, nil, err
-		}
-		nullable, ok := c.Nullable()
-		properties[i] = types.Property{
-			Name:     c.Name(),
-			Type:     typ,
-			Nullable: nullable || !ok,
-		}
-	}
-	return rows, properties, nil
+	return c.query(query)
 }
 
 // ServeUI serves the connector's user interface.
@@ -146,6 +144,64 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 	}
 
 	return form, nil, nil
+}
+
+// Upsert creates or updates the provided rows in the specified table.
+// The columns parameter specifies the columns of the rows, including a column
+// named "id" that serves as the table's key.
+func (c *connection) Upsert(table string, rows [][]any, columns []types.Property) error {
+
+	var err error
+	table, err = quoteTable(table)
+	if err != nil {
+		return err
+	}
+	var b strings.Builder
+	b.WriteString("INSERT INTO ")
+	b.WriteString(table)
+	b.WriteString(" (")
+	for i, column := range columns {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteByte('"')
+		b.WriteString(column.Name)
+		b.WriteByte('"')
+	}
+	b.WriteString(") VALUES ")
+	for i, row := range rows {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString("(")
+		for j, v := range row {
+			if j > 0 {
+				b.WriteByte(',')
+			}
+			pt := columns[j].Type.PhysicalType()
+			quoteValue(&b, v, pt)
+		}
+		b.WriteByte(')')
+	}
+	b.WriteString(` ON CONFLICT ("id") DO UPDATE SET `)
+	for i, column := range columns {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteByte('"')
+		b.WriteString(column.Name)
+		b.WriteString(`" = EXCLUDED."`)
+		b.WriteString(column.Name)
+		b.WriteByte('"')
+	}
+	query := b.String()
+
+	if err = c.openDB(); err != nil {
+		return err
+	}
+	_, err = c.db.ExecContext(c.ctx, query)
+
+	return err
 }
 
 // ValidateSettings validates the settings received from the UI and returns them
@@ -202,6 +258,51 @@ func (s *settings) dsn() string {
 	return u.String()
 }
 
+// openDB opens the database. If the database is already open it does nothing.
+func (c *connection) openDB() error {
+	if c.db != nil {
+		return nil
+	}
+	db, err := sql.Open("pgx", c.settings.dsn())
+	if err != nil {
+		return err
+	}
+	db.SetMaxIdleConns(0)
+	c.db = db
+	return nil
+}
+
+// query executes the given query and returns the resulting rows and properties.
+func (c *connection) query(query string) (connector.Rows, []types.Property, error) {
+	if err := c.openDB(); err != nil {
+		return nil, nil, err
+	}
+	rows, err := c.db.QueryContext(c.ctx, query)
+	if err != nil {
+		return nil, nil, err
+	}
+	columnTypes, err := rows.ColumnTypes()
+	if err != nil {
+		_ = rows.Close()
+		return nil, nil, err
+	}
+	properties := make([]types.Property, len(columnTypes))
+	for i, column := range columnTypes {
+		typ, err := propertyType(column)
+		if err != nil {
+			_ = rows.Close()
+			return nil, nil, err
+		}
+		nullable, ok := column.Nullable()
+		properties[i] = types.Property{
+			Name:     column.Name(),
+			Type:     typ,
+			Nullable: nullable || !ok,
+		}
+	}
+	return rows, properties, nil
+}
+
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
 func testConnection(ctx context.Context, settings *settings) error {
@@ -231,7 +332,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		}
 		return types.Text(), nil
 	case "DATE":
-		return types.Date(), nil // TODO(marco) set the layout
+		return types.Date().WithLayout("2006-01-02"), nil
 	case "FLOAT4":
 		return types.Float32(), nil
 	case "FLOAT8":
@@ -258,9 +359,9 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		return types.Decimal(int(precision), int(scale)), nil
 	case "TIME", "1266":
 		// 1266: time with time zone.
-		return types.Time(), nil
+		return types.Time().WithLayout("15:04:05.999999"), nil
 	case "TIMESTAMP", "TIMESTAMPTZ":
-		return types.DateTime(), nil // TODO(marco) set the layout
+		return types.DateTime().WithLayout("2006-01-02 15:04:05.999999"), nil
 	case "UUID":
 		return types.UUID(), nil
 	}

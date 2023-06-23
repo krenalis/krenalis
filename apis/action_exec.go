@@ -88,7 +88,11 @@ func (this *Action) exec() {
 				err = this.exportUsersToApp(ctx)
 			}
 		case state.DatabaseType:
-			err = this.importFromDatabase()
+			if connection.Role == state.SourceRole {
+				err = this.importFromDatabase()
+			} else {
+				err = this.exportUsersToDatabase(ctx)
+			}
 		case state.FileType:
 			if connection.Role == state.SourceRole {
 				err = this.importFromFile()

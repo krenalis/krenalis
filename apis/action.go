@@ -52,6 +52,7 @@ type Action struct {
 	PythonSource       string
 	Query              *string
 	Path               *string
+	Table              *string
 	Sheet              *string
 	ExportMode         *ExportMode
 	MatchingProperties *MatchingProperties
@@ -113,6 +114,10 @@ func (this *Action) fromState(db *postgres.DB, http *httpclient.HTTP, action *st
 	if action.Path != "" {
 		path := action.Path
 		this.Path = &path
+	}
+	if action.TableName != "" {
+		table := action.TableName
+		this.Table = &table
 	}
 	if action.Sheet != "" {
 		sheet := action.Sheet
@@ -265,6 +270,7 @@ func (this *Action) Set(action ActionToSet) error {
 		PythonSource: action.PythonSource,
 		Query:        action.Query,
 		Path:         action.Path,
+		TableName:    action.TableName,
 		Sheet:        action.Sheet,
 		ExportMode:   (*state.ExportMode)(action.ExportMode),
 	}
@@ -318,11 +324,11 @@ func (this *Action) Set(action ActionToSet) error {
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
 			"name = $1, enabled = $2, filter = $3, in_schema = $4, out_schema = $5,\n"+
-			"mapping = $6, python_source = $7, query = $8, path = $9, sheet = $10,\n"+
-			"export_mode = $11, matching_properties_internal = $12,\n"+
-			"matching_properties_external = $13 WHERE id = $14",
+			"mapping = $6, python_source = $7, query = $8, path = $9, table_name = $10, sheet = $11,\n"+
+			"export_mode = $12, matching_properties_internal = $13,\n"+
+			"matching_properties_external = $14 WHERE id = $15",
 			n.Name, n.Enabled, string(filter), rawInSchema, rawOutSchema, mapping,
-			n.PythonSource, n.Query, n.Path, n.Sheet, n.ExportMode, matchPropInternal,
+			n.PythonSource, n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode, matchPropInternal,
 			matchPropExternal, n.ID,
 		)
 		if err != nil {
@@ -458,6 +464,11 @@ type ActionToSet struct {
 	// Path is the path of the file. It cannot be longer than 1024 runes,
 	// and it is empty for non-file actions.
 	Path string
+
+	// TableName is the name of the table for the export and it is defined for
+	// destination database-actions; in any other case, it is the empty string.
+	// It cannot be longer than 1024 runes.
+	TableName string
 
 	// Sheet if the sheet name for multiple sheets file actions. It cannot
 	// be longer than 100 runes, and it is empty for non-file and non-multipart
@@ -626,6 +637,15 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			return errors.BadRequest("path is longer than 1024 runes")
 		}
 	}
+	// Validate the table name.
+	if action.TableName != "" {
+		if !utf8.ValidString(action.TableName) {
+			return errors.BadRequest("table name is not UTF-8 encoded")
+		}
+		if n := utf8.RuneCountInString(action.TableName); n > 1024 {
+			return errors.BadRequest("table name is longer than 1024 runes")
+		}
+	}
 	// Validate the sheet.
 	if action.Sheet != "" {
 		if !utf8.ValidString(action.Sheet) {
@@ -659,7 +679,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	connector := c.Connector()
 
 	// Check if the query is allowed.
-	if connector.Type == state.DatabaseType {
+	if needsQuery := connector.Type == state.DatabaseType && c.Role == state.SourceRole; needsQuery {
 		if action.Query == "" {
 			return errors.BadRequest("query cannot be empty for database actions")
 		}
@@ -674,6 +694,8 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	var filtersAllowed bool
 	switch connector.Type {
 	case state.AppType:
+		filtersAllowed = c.Role == state.DestinationRole
+	case state.DatabaseType:
 		filtersAllowed = c.Role == state.DestinationRole
 	case state.FileType:
 		filtersAllowed = targetUsersOrGroups && c.Role == state.DestinationRole
@@ -700,6 +722,14 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if action.Sheet != "" {
 			return errors.BadRequest("%s actions cannot have a sheet", connector.Type)
 		}
+	}
+
+	// Check if the table name is allowed.
+	needsTableName := connector.Type == state.DatabaseType && c.Role == state.DestinationRole
+	if needsTableName && action.TableName == "" {
+		return errors.BadRequest("table name cannot be empty for destination database actions")
+	} else if !needsTableName && action.TableName != "" {
+		return errors.BadRequest("table name is not allowed")
 	}
 
 	// Check if the export options are needed.
@@ -823,7 +853,7 @@ func allowsActionTarget(typ state.ConnectorType, role _connector.Role, target st
 	case state.AppType:
 		return !isSource || (isSource && usersOrGroups)
 	case state.DatabaseType:
-		return isSource && usersOrGroups
+		return usersOrGroups
 	case state.FileType:
 		return usersOrGroups
 	case

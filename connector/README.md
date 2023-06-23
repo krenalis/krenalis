@@ -22,8 +22,11 @@
 
 | Method           | Role | Settings | SetSettings |
 |------------------|------|----------|-------------|
+| Close            | ✓    | -/✓      | -/✓         |
+| Columns          | ✓    | ✓        | ✓           |
 | Query            | ✓    | ✓        | ✓           |
 | ServeUI          | ✓    | -/✓      | -/✓         |
+| Upsert           | ✓    | ✓        | ✓           |
 | ValidateSettings | ✓    | -        | -           |
 
 

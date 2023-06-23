@@ -10,10 +10,12 @@ package apis
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"chichi/apis/mappings"
 	"chichi/apis/normalization"
+	"chichi/apis/warehouses"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 )
@@ -39,6 +41,7 @@ func (this *Action) importFromDatabase() error {
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
+	defer c.Close()
 
 	// Execute the query and get the results and the properties.
 	rawRows, properties, err := c.Query(query)
@@ -140,4 +143,91 @@ func (sv databaseScanValue) Scan(src any) error {
 	}
 	sv.row[sv.property.Name] = value
 	return nil
+}
+
+// exportUsersToDatabase exports the users to the database of the action.
+func (this *Action) exportUsersToDatabase(ctx context.Context) error {
+
+	connection := this.action.Connection()
+	connector := connection.Connector()
+
+	users, err := this.readUsersFromDataWarehouse(nil)
+	if err != nil {
+		return err
+	}
+
+	// Filter the users.
+	if this.action.Filter != nil {
+		filteredUsers := []userToExport{}
+		for _, user := range users {
+			ok, err := mappings.ActionFilterApplies(this.action.Filter, user.Properties)
+			if err != nil {
+				return err
+			}
+			if ok {
+				filteredUsers = append(filteredUsers, user)
+			}
+		}
+		users = filteredUsers
+	}
+
+	// Instantiate a new mapping.
+	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.PythonSource, true)
+	if err != nil {
+		return err
+	}
+
+	inSchemaProps := this.action.InSchema.Properties()
+	outSchemaProps := this.action.OutSchema.Properties()
+
+	var rows [][]any
+
+	for _, user := range users {
+
+		// Take only the necessary properties.
+		props := make(map[string]any, len(inSchemaProps))
+		for _, p := range inSchemaProps {
+			props[p.Name] = user.Properties[p.Name]
+		}
+
+		// Normalize the user properties (read from the data warehouse) using
+		// the action's mapping input schema.
+		props, err = normalize(props, this.action.InSchema)
+		if err != nil {
+			return actionExecutionError{err}
+		}
+
+		// Map the properties of the user.
+		props, err = mapping.Apply(ctx, props)
+		if err != nil {
+			return actionExecutionError{err}
+		}
+
+		// Serialize the props into column values.
+		warehouses.SerializeRow(props, this.action.OutSchema)
+		row := make([]any, len(outSchemaProps)+1)
+		row[0] = user.GID
+		for i, p := range outSchemaProps {
+			row[i+1] = props[p.Name]
+		}
+		rows = append(rows, row)
+	}
+
+	columns := append([]types.Property{{Name: "id", Type: types.Int()}},
+		warehouses.PropertiesToColumns(outSchemaProps)...)
+
+	c, err := _connector.RegisteredDatabase(connector.Name).Open(ctx, &_connector.DatabaseConfig{
+		Role:        _connector.SourceRole,
+		Settings:    connection.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
+	})
+	if err != nil {
+		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
+	}
+	err = c.Upsert(this.action.TableName, rows, columns)
+	_ = c.Close()
+
+	log.Printf("[info] %d user(s) exported to database on the table %q", len(users), this.action.TableName)
+
+	return err
 }

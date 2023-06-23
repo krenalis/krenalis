@@ -56,6 +56,7 @@ var (
 	EventTypeNotExists  errors.Code = "EventTypeNotExists"
 	FetchSchemaFailed   errors.Code = "FetchSchemaFailed"
 	InvalidPath         errors.Code = "InvalidPath"
+	InvalidTable        errors.Code = "InvalidTable"
 	KeyNotExists        errors.Code = "KeyNotExists"
 	NoGroupsSchema      errors.Code = "NoGroupsSchema"
 	NoStorage           errors.Code = "NoStorage"
@@ -359,8 +360,13 @@ func (this *Connection) ActionSchemas(target ActionTarget, eventType string) (*A
 			if !ok {
 				return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
 			}
-			out := sourceMappingSchema(*users, state.DatabaseType)
-			return &ActionSchemas{Out: out}, nil
+			if this.connection.Role == state.SourceRole {
+				out := sourceMappingSchema(*users, state.DatabaseType)
+				return &ActionSchemas{Out: out}, nil
+			} else {
+				in := users.Unflatten()
+				return &ActionSchemas{In: in}, nil
+			}
 		case GroupsTarget:
 			groups, ok := this.connection.Workspace().Schemas["groups"]
 			if !ok {
@@ -466,6 +472,7 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		PythonSource:   action.PythonSource,
 		Query:          action.Query,
 		Path:           action.Path,
+		TableName:      action.TableName,
 		Sheet:          action.Sheet,
 		ExportMode:     (*state.ExportMode)(action.ExportMode),
 	}
@@ -557,13 +564,13 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, filter, in_schema, out_schema, mapping,\n" +
-			"python_source, query, path, sheet,\n" +
+			"python_source, query, path, table_name, sheet,\n" +
 			"export_mode, matching_properties_internal, matching_properties_external)\n" +
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType, n.Name,
 			n.Enabled, n.ScheduleStart, n.SchedulePeriod,
 			string(filter), rawInSchema, rawOutSchema, mapping, action.PythonSource,
-			n.Query, n.Path, n.Sheet, n.ExportMode, matchPropInternal, matchPropExternal)
+			n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode, matchPropInternal, matchPropExternal)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {
 				err = errors.Unprocessable(ConnectorNotExists, "connection %d does not exist", n.Connection)
@@ -697,6 +704,7 @@ func (this *Connection) ExecQuery(query string, limit int) ([][]string, types.Ty
 	if err != nil {
 		return nil, types.Type{}, err
 	}
+	defer connection.Close()
 	rawRows, properties, err := connection.Query(query)
 	if err != nil {
 		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
@@ -1098,11 +1106,14 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 
 		switch connector.Type {
 		case state.DatabaseType:
-			connection, err = _connector.RegisteredDatabase(connector.Name).Open(ctx, &_connector.DatabaseConfig{
+			var database _connector.DatabaseConnection
+			database, err = _connector.RegisteredDatabase(connector.Name).Open(ctx, &_connector.DatabaseConfig{
 				Role:        role,
 				Settings:    c.Settings,
 				SetSettings: setSettings,
 			})
+			defer database.Close()
+			connection = database
 		case state.FileType:
 			connection, err = _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
 				Role:        role,
@@ -1335,6 +1346,68 @@ func (this *Connection) Stats() (*ConnectionsStats, error) {
 		return nil, err
 	}
 	return stats, nil
+}
+
+// TableSchema returns the schema of the given table for the connection.
+// connection must be a destination database connection, and table must be UTF-8
+// encoded with a length in range [1, 1024].
+//
+// It returns an error.Unprocessable error with code InvalidTable if the table
+// does not contain an unsigned 32-bit column named "id" or if there are no
+// other columns apart from "id".
+func (this *Connection) TableSchema(table string) (types.Type, error) {
+	c := this.connection
+	connector := c.Connector()
+	if connector.Type != state.DatabaseType {
+		return types.Type{}, errors.BadRequest("connection %d is not a database", c.ID)
+	}
+	if c.Role != state.DestinationRole {
+		return types.Type{}, errors.BadRequest("database %d is not a destination", c.ID)
+	}
+	if table == "" || utf8.RuneCountInString(table) > 1024 {
+		return types.Type{}, errors.BadRequest("table name is not valid")
+	}
+	const cRole = _connector.DestinationRole
+	ctx := context.Background()
+	connection, err := _connector.RegisteredDatabase(connector.Name).Open(ctx, &_connector.DatabaseConfig{
+		Role:        cRole,
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
+	})
+	if err != nil {
+		return types.Type{}, err
+	}
+	columns, err := connection.Columns(table)
+	_ = connection.Close()
+	if err != nil {
+		return types.Type{}, err
+	}
+	var hasID bool
+	for i, column := range columns {
+		if column.Name == "id" {
+			if column.Type.PhysicalType() != types.PtInt {
+				return types.Type{}, errors.Unprocessable(InvalidTable, "column \"id\" of table %q is not a signed 32 bit integer", table)
+			}
+			columns = slices.Delete(columns, i, i+1)
+			hasID = true
+			break
+		}
+	}
+	if !hasID {
+		return types.Type{}, errors.Unprocessable(InvalidTable, "table %q does not have a signed 32-bit integer column named \"id\"", table)
+	}
+	if len(columns) == 0 {
+		return types.Type{}, errors.Unprocessable(InvalidTable, "table %q only has the \"id\" column and no additional columns", table)
+	}
+	properties, err := warehouses.ColumnsToProperties(columns)
+	if err != nil {
+		return types.Type{}, err
+	}
+	schema, err := types.ObjectOf(properties)
+	if err != nil {
+		return types.Type{}, err
+	}
+	return schema, nil
 }
 
 var errRecordStop = errors.New("stop record")

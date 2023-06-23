@@ -52,8 +52,20 @@ type OpenDatabaseFunc[T DatabaseConnection] func(context.Context, *DatabaseConfi
 // DatabaseConnection is the interface implemented by database connections.
 type DatabaseConnection interface {
 
+	// Close closes the database. When Close is called, no other calls to connection
+	// methods are in progress and no more will be made.
+	Close() error
+
+	// Columns returns the columns of the given table.
+	Columns(table string) ([]types.Property, error)
+
 	// Query executes the given query and returns the resulting rows and properties.
 	Query(query string) (Rows, []types.Property, error)
+
+	// Upsert creates or updates the provided rows in the specified table.
+	// The columns parameter specifies the columns of the rows, including a column
+	// named "id" that serves as the table's key.
+	Upsert(table string, rows [][]any, columns []types.Property) error
 }
 
 // Rows is the result of a database query. Its cursor starts before the first

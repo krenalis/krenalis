@@ -298,6 +298,7 @@ type AddActionNotification struct {
 	PythonSource       string
 	Query              string
 	Path               string
+	TableName          string
 	Sheet              string
 	ExportMode         *ExportMode
 	MatchingProperties *MatchingProperties
@@ -327,6 +328,7 @@ func (state *State) addAction(n postgres.Notification) {
 		PythonSource:       e.PythonSource,
 		Query:              e.Query,
 		Path:               e.Path,
+		TableName:          e.TableName,
 		Sheet:              e.Sheet,
 		ExportMode:         e.ExportMode,
 		MatchingProperties: e.MatchingProperties,
@@ -815,6 +817,7 @@ type SetActionNotification struct {
 	PythonSource       string
 	Query              string
 	Path               string
+	TableName          string
 	Sheet              string
 	ExportMode         *ExportMode
 	MatchingProperties *MatchingProperties
@@ -836,6 +839,7 @@ func (state *State) setAction(n postgres.Notification) {
 		a.PythonSource = e.PythonSource
 		a.Query = e.Query
 		a.Path = e.Path
+		a.TableName = e.TableName
 		a.Sheet = e.Sheet
 		a.ExportMode = e.ExportMode
 		a.MatchingProperties = e.MatchingProperties

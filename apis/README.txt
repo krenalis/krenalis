@@ -21,6 +21,7 @@ GET     /api/connections/{id}/records                            Return the reco
 GET     /api/connections/{id}/sheets                             List the sheets of a multiple sheets file connection.
 POST    /api/connections/{id}/status                             Set the status of a connection.
 GET     /api/connections/{id}/stats                              Get the stats of a connection.
+GET     /api/connections/{id}/tables/{table}/schema              Return the schema of the given table of a database connection.
 GET     /api/connections/{id}/keys                               Get the API keys of a connection.
 POST    /api/connections/{id}/keys                               Generate a new API key for a connection.
 DELETE  /api/connections/{id}/keys/{key}                         Delete the API key of a connection.

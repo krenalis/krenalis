@@ -823,6 +823,7 @@ type Action struct {
 	PythonSource       string
 	Query              string
 	Path               string
+	TableName          string
 	Sheet              string
 	UserCursor         connector.Cursor
 	Health             Health
