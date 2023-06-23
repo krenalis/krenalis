@@ -216,7 +216,7 @@ func testConnection(ctx context.Context, settings *settings) error {
 // propertyType returns the property type of the column with type t.
 func propertyType(t *sql.ColumnType) (types.Type, error) {
 	switch t.DatabaseTypeName() {
-	case "TEXT", "BLOB":
+	case "BLOB":
 		return types.Text().WithByteLen(65535), nil
 	case "DATE":
 		return types.Date().WithLayout(time.DateOnly), nil
@@ -245,8 +245,10 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		return types.UInt(), nil
 	case "INT":
 		return types.Int(), nil
-	case "LONGTEXT", "LONGBLOB":
+	case "LONGBLOB":
 		return types.Text().WithByteLen(math.MaxUint32), nil
+	case "LONGTEXT":
+		return types.Text().WithCharLen(math.MaxUint32), nil
 	case "UNSIGNED BIGINT":
 		return types.UInt64(), nil
 	case "BIGINT":
@@ -269,6 +271,8 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 			return types.Text(), nil
 		}
 		return types.Text().WithByteLen(int(length)), nil
+	case "TEXT":
+		return types.Text().WithCharLen(65535), nil
 	case "TIME":
 		return types.Time(), nil
 	case "TIMESTAMP":
@@ -277,8 +281,10 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		return types.UInt8(), nil
 	case "TINYINT":
 		return types.Int8(), nil
-	case "TINYTEXT", "TINYBLOB":
+	case "TINYBLOB":
 		return types.Text().WithByteLen(255), nil
+	case "TINYTEXT":
+		return types.Text().WithCharLen(255), nil
 	case "YEAR":
 		return types.Year(), nil
 	}
