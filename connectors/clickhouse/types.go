@@ -117,10 +117,6 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		if !ok || n > 9 {
 			return types.Type{}, false, ""
 		}
-		layout := time.DateTime
-		if n > 0 {
-			layout += "." + strings.Repeat("9", n)
-		}
 		// Skip the timezone if present.
 		if s, ok := trimComma(s); ok {
 			_, s, ok = parseString(s)
@@ -131,7 +127,11 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		if s == "" {
 			return types.Type{}, false, ""
 		}
-		return types.DateTime().WithLayout(layout), false, s[1:]
+		const layout = time.DateTime + ".999999999"
+		if n > 0 {
+			n++
+		}
+		return types.DateTime().WithLayout(layout[:len(time.DateTime)+n]), false, s[1:]
 	case "Enum8", "Enum16":
 		s = s[i+1:]
 		var enum []string
