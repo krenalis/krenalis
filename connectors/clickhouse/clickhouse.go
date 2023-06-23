@@ -73,6 +73,7 @@ func (c *connection) Query(query string) (connector.Rows, []types.Property, erro
 	if err != nil {
 		_ = rows.Close()
 		_ = conn.Close()
+		return nil, nil, err
 	}
 	properties := make([]types.Property, len(columnTypes))
 	for i, c := range columnTypes {
