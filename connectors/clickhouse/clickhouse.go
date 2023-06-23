@@ -239,26 +239,6 @@ func (c *connection) openDB() error {
 	return nil
 }
 
-type settings struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database string
-}
-
-// options returns the connection options, from s.
-func (s *settings) options() *clickhouse.Options {
-	return &clickhouse.Options{
-		Addr: []string{net.JoinHostPort(s.Host, strconv.Itoa(s.Port))},
-		Auth: clickhouse.Auth{
-			Database: s.Database,
-			Username: s.Username,
-			Password: s.Password,
-		},
-	}
-}
-
 // query executes the given query and returns the resulting rows and columns.
 func (c *connection) query(query string) (connector.Rows, []types.Property, error) {
 	if err := c.openDB(); err != nil {
@@ -287,6 +267,26 @@ func (c *connection) query(query string) (connector.Rows, []types.Property, erro
 		}
 	}
 	return rows, columns, nil
+}
+
+type settings struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	Database string
+}
+
+// options returns the connection options, from s.
+func (s *settings) options() *clickhouse.Options {
+	return &clickhouse.Options{
+		Addr: []string{net.JoinHostPort(s.Host, strconv.Itoa(s.Port))},
+		Auth: clickhouse.Auth{
+			Database: s.Database,
+			Username: s.Username,
+			Password: s.Password,
+		},
+	}
 }
 
 // testConnection tests a connection with the given settings.
