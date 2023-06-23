@@ -59,7 +59,7 @@ type DatabaseConnection interface {
 	// Columns returns the columns of the given table.
 	Columns(table string) ([]types.Property, error)
 
-	// Query executes the given query and returns the resulting rows and properties.
+	// Query executes the given query and returns the resulting rows and columns.
 	Query(query string) (Rows, []types.Property, error)
 
 	// Upsert creates or updates the provided rows in the specified table.

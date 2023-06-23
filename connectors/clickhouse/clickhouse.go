@@ -87,7 +87,7 @@ func (c *connection) Columns(table string) ([]types.Property, error) {
 	return columns, nil
 }
 
-// Query executes the given query and returns the resulting rows and properties.
+// Query executes the given query and returns the resulting rows and columns.
 func (c *connection) Query(query string) (connector.Rows, []types.Property, error) {
 	return c.Query(query)
 }
@@ -259,7 +259,7 @@ func (s *settings) options() *clickhouse.Options {
 	}
 }
 
-// query executes the given query and returns the resulting rows and properties.
+// query executes the given query and returns the resulting rows and columns.
 func (c *connection) query(query string) (connector.Rows, []types.Property, error) {
 	if err := c.openDB(); err != nil {
 		return nil, nil, err
@@ -273,20 +273,20 @@ func (c *connection) query(query string) (connector.Rows, []types.Property, erro
 		_ = rows.Close()
 		return nil, nil, err
 	}
-	properties := make([]types.Property, len(columnTypes))
+	columns := make([]types.Property, len(columnTypes))
 	for i, c := range columnTypes {
 		typ, nullable, err := propertyType(c)
 		if err != nil {
 			_ = rows.Close()
 			return nil, nil, err
 		}
-		properties[i] = types.Property{
+		columns[i] = types.Property{
 			Name:     c.Name(),
 			Type:     typ,
 			Nullable: nullable,
 		}
 	}
-	return rows, properties, nil
+	return rows, columns, nil
 }
 
 // testConnection tests a connection with the given settings.

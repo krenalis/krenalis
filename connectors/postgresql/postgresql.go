@@ -89,7 +89,7 @@ func (c *connection) Columns(table string) ([]types.Property, error) {
 	return columns, nil
 }
 
-// Query executes the given query and returns the resulting rows and properties.
+// Query executes the given query and returns the resulting rows and columns.
 func (c *connection) Query(query string) (connector.Rows, []types.Property, error) {
 	return c.query(query)
 }
@@ -272,7 +272,7 @@ func (c *connection) openDB() error {
 	return nil
 }
 
-// query executes the given query and returns the resulting rows and properties.
+// query executes the given query and returns the resulting rows and columns.
 func (c *connection) query(query string) (connector.Rows, []types.Property, error) {
 	if err := c.openDB(); err != nil {
 		return nil, nil, err
@@ -286,7 +286,7 @@ func (c *connection) query(query string) (connector.Rows, []types.Property, erro
 		_ = rows.Close()
 		return nil, nil, err
 	}
-	properties := make([]types.Property, len(columnTypes))
+	columns := make([]types.Property, len(columnTypes))
 	for i, column := range columnTypes {
 		typ, err := propertyType(column)
 		if err != nil {
@@ -294,13 +294,13 @@ func (c *connection) query(query string) (connector.Rows, []types.Property, erro
 			return nil, nil, err
 		}
 		nullable, ok := column.Nullable()
-		properties[i] = types.Property{
+		columns[i] = types.Property{
 			Name:     column.Name(),
 			Type:     typ,
 			Nullable: nullable || !ok,
 		}
 	}
-	return rows, properties, nil
+	return rows, columns, nil
 }
 
 // testConnection tests a connection with the given settings.
