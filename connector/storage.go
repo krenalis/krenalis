@@ -75,10 +75,10 @@ type StorageConnection interface {
 	// name's length in runes will be in range [1, 1024].
 	CompletePath(name string) (string, error)
 
-	// Open opens the file at the given path name and returns a ReadCloser from
+	// Reader opens the file at the given path name and returns a ReadCloser from
 	// which to read the file and its last update time.
 	// It is the caller's responsibility to close the returned reader.
-	Open(name string) (io.ReadCloser, time.Time, error)
+	Reader(name string) (io.ReadCloser, time.Time, error)
 
 	// Write writes the data read from r into the file with the given path name.
 	// contentType is the file's content type.

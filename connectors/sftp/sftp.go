@@ -81,10 +81,10 @@ func (c *connection) CompletePath(name string) (string, error) {
 	return u.String(), nil
 }
 
-// Open opens the file at the given path name and returns a ReadCloser from
+// Reader opens the file at the given path name and returns a ReadCloser from
 // which to read the file and its last update time.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Open(name string) (io.ReadCloser, time.Time, error) {
+func (c *connection) Reader(name string) (io.ReadCloser, time.Time, error) {
 	sshClient, sftpClient, err := openConnection(c.settings)
 	if err != nil {
 		return nil, time.Time{}, err

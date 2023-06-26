@@ -42,14 +42,14 @@ func newCompressedStorage(s connector.StorageConnection, c state.Compression) *c
 	return &compressorStorage{s, c}
 }
 
-// Open opens the file at the given path and returns a ReadCloser from which to
-// read the file and its last update time.
+// Reader opens the file at the given path name and returns a ReadCloser from
+// which to read the file and its last update time.
 // It is the caller's responsibility to close the returned reader.
-func (cs compressorStorage) Open(path string) (io.ReadCloser, time.Time, error) {
-	originalPath := path
+func (cs compressorStorage) Reader(name string) (io.ReadCloser, time.Time, error) {
+	originalName := name
 	ext := cs.compression.Ext()
-	path += ext
-	r, t, err := cs.storage.Open(path)
+	name += ext
+	r, t, err := cs.storage.Reader(name)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -77,7 +77,7 @@ func (cs compressorStorage) Open(path string) (io.ReadCloser, time.Time, error) 
 		if err != nil {
 			return nil, time.Time{}, err
 		}
-		name := pkgPath.Base(originalPath)
+		name := pkgPath.Base(originalName)
 		r3, err := z.Open(name)
 		if err != nil {
 			return nil, time.Time{}, err

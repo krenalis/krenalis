@@ -62,7 +62,7 @@ func (this *Action) importFromFile() error {
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %s", err)}
 		}
-		r, _, err = storage.Open(this.action.Path)
+		r, _, err = storage.Reader(this.action.Path)
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot get ReadCloser from storage: %s", err)}
 		}

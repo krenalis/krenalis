@@ -921,7 +921,7 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 		if err != nil {
 			return nil, types.Type{}, err
 		}
-		r, _, err = storage.Open(path)
+		r, _, err = storage.Reader(path)
 		if err != nil {
 			return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
 		}
@@ -1218,7 +1218,7 @@ func (this *Connection) Sheets(path string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	r, _, err := storage.Open(path)
+	r, _, err := storage.Reader(path)
 	if err != nil {
 		return nil, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
