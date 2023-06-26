@@ -282,15 +282,16 @@ func parseNumber(src string) (decimal.Decimal, string, error) {
 	var i int
 Number:
 	for i < len(src) {
-		switch src[i] {
+		switch c := src[i]; c {
 		case '-':
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		case '.':
 		case 'e', 'E':
-		case ' ', '\t', '\n', '\r', '\'', '"', ',', ')':
-			break Number
 		default:
-			return decimal.Decimal{}, "", errInvalidNumber
+			if isPathByte(c) {
+				return decimal.Decimal{}, "", errInvalidNumber
+			}
+			break Number
 		}
 		i++
 	}

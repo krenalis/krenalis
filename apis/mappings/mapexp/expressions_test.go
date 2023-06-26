@@ -149,6 +149,7 @@ func TestExpressions(t *testing.T) {
 		{expr: "not true", dt: types.Boolean(), compileErr: errors.New(`property path "not" does not exist`)},
 		{expr: "passenger", dt: types.Text(), compileErr: errors.New(`property path "passenger" does not exist`)},
 		{expr: "true && false", dt: types.Boolean(), compileErr: errors.New(`unexpected character '&'`)},
+		{expr: "1,000", dt: types.Int(), compileErr: errors.New(`unexpected character ','`)},
 
 		// Eval errors.
 		{expr: "manufacturer", dt: types.Int(), evalErr: errors.New(`cannot convert "MyPlaneCompany" (type Text) to type Int`)},
