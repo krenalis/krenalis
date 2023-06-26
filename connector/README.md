@@ -47,7 +47,7 @@
 | Method           | Role | Settings | SetSettings |
 |------------------|------|----------|-------------|
 | CompletePath     | ✓    | ✓        | ✓           |
-| Open             | ✓    | ✓        | ✓           |
+| Reader           | ✓    | ✓        | ✓           |
 | ServeUI          | ✓    | -/✓      | -/✓         |
 | ValidateSettings | ✓    | -        | -           |
 | Write            | ✓    | ✓        | ✓           |
