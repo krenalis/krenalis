@@ -1063,10 +1063,7 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 	case state.AppType:
 		connection, err = this.openApp(ctx)
 	case state.DatabaseType:
-		var database _connector.DatabaseConnection
-		database, err = this.openDatabase(ctx)
-		defer database.Close()
-		connection = database
+		connection, err = this.openDatabase(ctx)
 	case state.FileType:
 		connection, err = this.openFile(ctx)
 	case state.MobileType:
@@ -1083,6 +1080,9 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 
 	if err != nil {
 		return nil, err
+	}
+	if c, ok := connection.(io.Closer); ok {
+		defer c.Close()
 	}
 	connectionUI, ok := connection.(_connector.UI)
 	if !ok {
@@ -1361,6 +1361,9 @@ func (this *Connection) openAppUsers(ctx context.Context) (_connector.AppUsersCo
 }
 
 // openDatabase opens a database connection.
+//
+// It is the caller's responsibility to call the Close method on the returned
+// value.
 func (this *Connection) openDatabase(ctx context.Context) (_connector.DatabaseConnection, error) {
 	c := this.connection
 	database, err := _connector.RegisteredDatabase(c.Connector().Name).Open(ctx, &_connector.DatabaseConfig{
@@ -1419,6 +1422,9 @@ func (this *Connection) openStorage(ctx context.Context) (_connector.StorageConn
 }
 
 // openStream opens a stream connection.
+//
+// It is the caller's responsibility to call the Close method on the returned
+// value.
 func (this *Connection) openStream(ctx context.Context) (_connector.StreamConnection, error) {
 	c := this.connection
 	database, err := _connector.RegisteredStream(c.Connector().Name).Open(ctx, &_connector.StreamConfig{

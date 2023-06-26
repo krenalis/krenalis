@@ -13,6 +13,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"sort"
 	"strconv"
@@ -222,6 +223,9 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 			return 0, errors.BadRequest("connector %d does not have a UI", c.ID)
 		}
 		n.Settings, err = connectionUI.ValidateSettings(settings)
+		if c, ok := connectionUI.(io.Closer); ok {
+			_ = c.Close()
+		}
 		if err != nil {
 			return 0, errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
 		}

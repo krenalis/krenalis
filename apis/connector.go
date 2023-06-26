@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"chichi/apis/errors"
 	"chichi/apis/httpclient"
@@ -198,6 +199,9 @@ func (this *Connector) ServeUI(event string, values []byte, role ConnectionRole,
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
 	form, alert, err := connectionUI.ServeUI(event, values)
+	if c, ok := connectionUI.(io.Closer); ok {
+		_ = c.Close()
+	}
 	if err != nil {
 		if err == ui.ErrEventNotExist {
 			err = errors.Unprocessable(EventNotExists, "UI event %q does not exist for %s connector", event, c.Name)
@@ -210,6 +214,9 @@ func (this *Connector) ServeUI(event string, values []byte, role ConnectionRole,
 
 // openUI opens the UI of the connector, and returns the UI or nil if the
 // connector does not have the UI.
+//
+// If the returned value implements the io.Close interface, it is the caller's
+// responsibility to call the Close method
 func (this *Connector) openUI(ctx context.Context, role ConnectionRole, resource, clientSecret, accessToken string) (_connector.UI, error) {
 	var err error
 	var connection any
@@ -255,6 +262,12 @@ func (this *Connector) openUI(ctx context.Context, role ConnectionRole, resource
 	if err != nil {
 		return nil, err
 	}
-	connectorUI, _ := connection.(_connector.UI)
+	connectorUI, ok := connection.(_connector.UI)
+	if !ok {
+		if c, ok := connection.(io.Closer); ok {
+			_ = c.Close()
+		}
+		return nil, nil
+	}
 	return connectorUI, nil
 }
