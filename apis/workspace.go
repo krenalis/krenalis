@@ -209,58 +209,16 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 
 	// Validate the settings.
 	if c.HasSettings {
-		var connection any
-		var err error
-		switch c.Type {
-		case state.AppType:
-			var clientSecret, accessToken string
-			if c.OAuth != nil {
-				clientSecret = c.OAuth.ClientSecret
-				accessToken = n.Resource.AccessToken
-			}
-			connection, err = _connector.RegisteredApp(c.Name).Open(ctx, &_connector.AppConfig{
-				Role:       _connector.Role(role),
-				Resource:   n.Resource.Code,
-				HTTPClient: this.http.Client(clientSecret, accessToken),
-				Region:     _connector.PrivacyRegion(this.workspace.PrivacyRegion),
-			})
-		case state.DatabaseType:
-			var database _connector.DatabaseConnection
-			database, err = _connector.RegisteredDatabase(c.Name).Open(ctx, &_connector.DatabaseConfig{
-				Role: _connector.Role(role),
-			})
-			defer database.Close()
-			connection = database
-		case state.FileType:
-			connection, err = _connector.RegisteredFile(c.Name).Open(ctx, &_connector.FileConfig{
-				Role: _connector.Role(role),
-			})
-		case state.MobileType:
-			connection, err = _connector.RegisteredMobile(c.Name).Open(ctx, &_connector.MobileConfig{
-				Role: _connector.Role(role),
-			})
-		case state.ServerType:
-			connection, err = _connector.RegisteredServer(c.Name).Open(ctx, &_connector.ServerConfig{
-				Role: _connector.Role(role),
-			})
-		case state.StorageType:
-			connection, err = _connector.RegisteredStorage(c.Name).Open(ctx, &_connector.StorageConfig{
-				Role: _connector.Role(role),
-			})
-		case state.StreamType:
-			connection, err = _connector.RegisteredStream(c.Name).Open(ctx, &_connector.StreamConfig{
-				Role: _connector.Role(role),
-			})
-		case state.WebsiteType:
-			connection, err = _connector.RegisteredWebsite(c.Name).Open(ctx, &_connector.WebsiteConfig{
-				Role: _connector.Role(role),
-			})
+		var clientSecret string
+		if c.OAuth != nil {
+			clientSecret = c.OAuth.ClientSecret
 		}
+		connector := &Connector{connector: c, http: this.http}
+		connectionUI, err := connector.openUI(ctx, role, n.Resource.Code, clientSecret, n.Resource.AccessToken)
 		if err != nil {
 			return 0, err
 		}
-		connectionUI, ok := connection.(_connector.UI)
-		if !ok {
+		if connectionUI == nil {
 			return 0, errors.BadRequest("connector %d does not have a UI", c.ID)
 		}
 		n.Settings, err = connectionUI.ValidateSettings(settings)

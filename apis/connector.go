@@ -183,69 +183,15 @@ func (this *Connector) ServeUI(event string, values []byte, role ConnectionRole,
 		}
 	}
 
-	var err error
-	var connection any
-
-	switch c.Type {
-	case state.AppType:
-
-		var resource, clientSecret, accessToken string
-		if oAuth != "" {
-			resource = r.Code
-			clientSecret = c.OAuth.ClientSecret
-			accessToken = r.AccessToken
-		}
-
-		connection, err = _connector.RegisteredApp(c.Name).Open(context.Background(), &_connector.AppConfig{
-			Role:       _connector.Role(role),
-			Resource:   resource,
-			HTTPClient: this.http.Client(clientSecret, accessToken),
-		})
-
-	default:
-
-		ctx := context.Background()
-
-		switch c.Type {
-		case state.DatabaseType:
-			var database _connector.DatabaseConnection
-			database, err = _connector.RegisteredDatabase(c.Name).Open(ctx, &_connector.DatabaseConfig{
-				Role: _connector.Role(role),
-			})
-			defer database.Close()
-			connection = database
-		case state.FileType:
-			connection, err = _connector.RegisteredFile(c.Name).Open(ctx, &_connector.FileConfig{
-				Role: _connector.Role(role),
-			})
-		case state.MobileType:
-			connection, err = _connector.RegisteredMobile(c.Name).Open(ctx, &_connector.MobileConfig{
-				Role: _connector.Role(role),
-			})
-		case state.ServerType:
-			connection, err = _connector.RegisteredServer(c.Name).Open(ctx, &_connector.ServerConfig{
-				Role: _connector.Role(role),
-			})
-		case state.StorageType:
-			connection, err = _connector.RegisteredStorage(c.Name).Open(ctx, &_connector.StorageConfig{
-				Role: _connector.Role(role),
-			})
-		case state.StreamType:
-			connection, err = _connector.RegisteredStream(c.Name).Open(ctx, &_connector.StreamConfig{
-				Role: _connector.Role(role),
-			})
-		case state.WebsiteType:
-			connection, err = _connector.RegisteredWebsite(c.Name).Open(ctx, &_connector.WebsiteConfig{
-				Role: _connector.Role(role),
-			})
-		}
-
+	var clientSecret string
+	if oAuth != "" {
+		clientSecret = c.OAuth.ClientSecret
 	}
+	connectionUI, err := this.openUI(context.Background(), role, r.Code, clientSecret, r.AccessToken)
 	if err != nil {
 		return nil, err
 	}
-	connectionUI, ok := connection.(_connector.UI)
-	if !ok {
+	if connectionUI == nil {
 		return nil, errors.BadRequest("connector %d does not have a UI", c.ID)
 	}
 
@@ -260,4 +206,55 @@ func (this *Connector) ServeUI(event string, values []byte, role ConnectionRole,
 	}
 
 	return marshalUIFormAlert(form, alert, ui.Role(role))
+}
+
+// openUI opens the UI of the connector, and returns the UI or nil if the
+// connector does not have the UI.
+func (this *Connector) openUI(ctx context.Context, role ConnectionRole, resource, clientSecret, accessToken string) (_connector.UI, error) {
+	var err error
+	var connection any
+	switch c := this.connector; c.Type {
+	case state.AppType:
+		connection, err = _connector.RegisteredApp(c.Name).Open(context.Background(), &_connector.AppConfig{
+			Role:       _connector.Role(role),
+			Resource:   resource,
+			HTTPClient: this.http.Client(clientSecret, accessToken),
+		})
+	case state.DatabaseType:
+		var database _connector.DatabaseConnection
+		database, err = _connector.RegisteredDatabase(c.Name).Open(ctx, &_connector.DatabaseConfig{
+			Role: _connector.Role(role),
+		})
+		defer database.Close()
+		connection = database
+	case state.FileType:
+		connection, err = _connector.RegisteredFile(c.Name).Open(ctx, &_connector.FileConfig{
+			Role: _connector.Role(role),
+		})
+	case state.MobileType:
+		connection, err = _connector.RegisteredMobile(c.Name).Open(ctx, &_connector.MobileConfig{
+			Role: _connector.Role(role),
+		})
+	case state.ServerType:
+		connection, err = _connector.RegisteredServer(c.Name).Open(ctx, &_connector.ServerConfig{
+			Role: _connector.Role(role),
+		})
+	case state.StorageType:
+		connection, err = _connector.RegisteredStorage(c.Name).Open(ctx, &_connector.StorageConfig{
+			Role: _connector.Role(role),
+		})
+	case state.StreamType:
+		connection, err = _connector.RegisteredStream(c.Name).Open(ctx, &_connector.StreamConfig{
+			Role: _connector.Role(role),
+		})
+	case state.WebsiteType:
+		connection, err = _connector.RegisteredWebsite(c.Name).Open(ctx, &_connector.WebsiteConfig{
+			Role: _connector.Role(role),
+		})
+	}
+	if err != nil {
+		return nil, err
+	}
+	connectorUI, _ := connection.(_connector.UI)
+	return connectorUI, nil
 }
