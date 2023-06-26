@@ -54,7 +54,7 @@ require (
 	chichi/connectors/website v0.0.0-00010101000000-000000000000
 	github.com/ClickHouse/clickhouse-go/v2 v2.9.1
 	github.com/cenkalti/backoff/v4 v4.2.1
-	github.com/evanw/esbuild v0.18.0
+	github.com/evanw/esbuild v0.18.9
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/golang/snappy v0.0.4
 	github.com/google/go-cmp v0.5.9
