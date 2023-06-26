@@ -96,7 +96,8 @@ func newScheduler(db *postgres.DB, st *state.State, http *httpclient.HTTP) *sche
 					sc.mu.Unlock()
 					for _, action := range actions {
 						if sc.toExecute(action) {
-							a := &Action{db: db, action: action, http: http}
+							c := &Connection{db: db, connection: action.Connection(), http: http}
+							a := &Action{db: db, action: action, connection: c}
 							go func() {
 								err := a.addExecution(false)
 								if err != nil {

@@ -16,15 +16,11 @@ import (
 	"chichi/apis/mappings"
 	"chichi/apis/normalization"
 	"chichi/apis/warehouses"
-	_connector "chichi/connector"
 	"chichi/connector/types"
 )
 
 // importFromDatabase imports the users from a database.
 func (this *Action) importFromDatabase() error {
-
-	connection := this.action.Connection()
-	connector := connection.Connector()
 
 	// Compile the query.
 	query, err := compileActionQuery(this.action.Query, noQueryLimit)
@@ -33,18 +29,14 @@ func (this *Action) importFromDatabase() error {
 	}
 
 	ctx := context.Background()
-	c, err := _connector.RegisteredDatabase(connector.Name).Open(ctx, &_connector.DatabaseConfig{
-		Role:        _connector.SourceRole,
-		Settings:    connection.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-	})
+	database, err := this.connection.openDatabase(ctx)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
-	defer c.Close()
+	defer database.Close()
 
 	// Execute the query and get the results and the properties.
-	rawRows, properties, err := c.Query(query)
+	rawRows, properties, err := database.Query(query)
 	if err != nil {
 		return actionExecutionError{err}
 	}
@@ -53,12 +45,6 @@ func (this *Action) importFromDatabase() error {
 	mapping, err := mappings.New(this.action.OutSchema, this.action.InSchema, this.action.Mapping, this.action.PythonSource, false)
 	if err != nil {
 		return err
-	}
-
-	apisConn := &Connection{
-		db:         this.db,
-		connection: this.action.Connection(),
-		http:       this.http,
 	}
 
 	inSchemaProps := this.action.InSchema.PropertiesNames()
@@ -111,11 +97,11 @@ func (this *Action) importFromDatabase() error {
 		delete(mappedUser, "timestamp")
 
 		// Write the user and the mapped user on the database.
-		err = apisConn.writeConnectionUsers(ctx, id, row, timestamp, nil)
+		err = this.connection.writeConnectionUsers(ctx, id, row, timestamp, nil)
 		if err != nil {
 			return err
 		}
-		err = apisConn.setUser(ctx, id, mappedUser)
+		err = this.connection.setUser(ctx, id, mappedUser)
 		if err != nil {
 			return err
 		}
@@ -147,9 +133,6 @@ func (sv databaseScanValue) Scan(src any) error {
 
 // exportUsersToDatabase exports the users to the database of the action.
 func (this *Action) exportUsersToDatabase(ctx context.Context) error {
-
-	connection := this.action.Connection()
-	connector := connection.Connector()
 
 	users, err := this.readUsersFromDataWarehouse(nil)
 	if err != nil {
@@ -216,16 +199,12 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 	columns := append([]types.Property{{Name: "id", Type: types.Int()}},
 		warehouses.PropertiesToColumns(outSchemaProps)...)
 
-	c, err := _connector.RegisteredDatabase(connector.Name).Open(ctx, &_connector.DatabaseConfig{
-		Role:        _connector.SourceRole,
-		Settings:    connection.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-	})
+	database, err := this.connection.openDatabase(ctx)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
-	err = c.Upsert(this.action.TableName, rows, columns)
-	_ = c.Close()
+	err = database.Upsert(this.action.TableName, rows, columns)
+	_ = database.Close()
 
 	log.Printf("[info] %d user(s) exported to database on the table %q", len(users), this.action.TableName)
 

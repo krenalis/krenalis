@@ -607,12 +607,7 @@ func (this *Connection) CompletePath(path string) (string, error) {
 	if connector.Type != state.StorageType {
 		return "", errors.BadRequest("connection %d is not a storage connection", c.ID)
 	}
-	ctx := context.Background()
-	storage, err := _connector.RegisteredStorage(connector.Name).Open(ctx, &_connector.StorageConfig{
-		Role:        _connector.Role(c.Role),
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-	})
+	storage, err := this.openStorage(context.Background())
 	if err != nil {
 		return "", err
 	}
@@ -687,25 +682,18 @@ func (this *Connection) ExecQuery(query string, limit int) ([][]string, types.Ty
 		return nil, types.Type{}, errors.BadRequest("database %d is not a source", c.ID)
 	}
 
-	const cRole = _connector.SourceRole
-
 	// Execute the query.
 	var err error
 	query, err = compileActionQuery(query, limit)
 	if err != nil {
 		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 	}
-	ctx := context.Background()
-	connection, err := _connector.RegisteredDatabase(connector.Name).Open(ctx, &_connector.DatabaseConfig{
-		Role:        cRole,
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-	})
+	database, err := this.openDatabase(context.Background())
 	if err != nil {
 		return nil, types.Type{}, err
 	}
-	defer connection.Close()
-	rawRows, properties, err := connection.Query(query)
+	defer database.Close()
+	rawRows, properties, err := database.Query(query)
 	if err != nil {
 		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 	}
@@ -921,11 +909,7 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 
 	// Connect to the file connector.
 	ctx := context.Background()
-	file, err := _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
-		Role:        _connector.SourceRole,
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-	})
+	file, err := this.openFile(ctx)
 	if err != nil {
 		return nil, types.Type{}, err
 	}
@@ -933,15 +917,7 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 	// Open the file.
 	var r io.ReadCloser
 	{
-		s, _ := c.Storage()
-		var storage _connector.StorageConnection
-		storage, err = _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
-			Role:     _connector.SourceRole,
-			Settings: s.Settings,
-			SetSettings: func(settings []byte) error {
-				return setSettings(ctx, this.db, s.ID, settings)
-			},
-		})
+		storage, err := this.openStorage(context.Background())
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -1076,83 +1052,35 @@ func (this *Connection) SetStatus(enabled bool) error {
 func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 
 	c := this.connection
-	role := _connector.Role(c.Role)
 	connector := c.Connector()
 
 	ctx := context.Background()
-	setSettings := this.setSettingsFunc(ctx)
 
 	var err error
 	var connection any
 
 	switch connector.Type {
 	case state.AppType:
-
-		var resource string
-		if r, ok := c.Resource(); ok {
-			resource = r.Code
-		}
-
-		connection, err = _connector.RegisteredApp(connector.Name).Open(ctx, &_connector.AppConfig{
-			Role:        role,
-			Settings:    c.Settings,
-			SetSettings: setSettings,
-			Resource:    resource,
-			HTTPClient:  this.http.ConnectionClient(c.ID),
-			Region:      _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
-		})
-
-	default:
-
-		switch connector.Type {
-		case state.DatabaseType:
-			var database _connector.DatabaseConnection
-			database, err = _connector.RegisteredDatabase(connector.Name).Open(ctx, &_connector.DatabaseConfig{
-				Role:        role,
-				Settings:    c.Settings,
-				SetSettings: setSettings,
-			})
-			defer database.Close()
-			connection = database
-		case state.FileType:
-			connection, err = _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
-				Role:        role,
-				Settings:    c.Settings,
-				SetSettings: setSettings,
-			})
-		case state.MobileType:
-			connection, err = _connector.RegisteredMobile(connector.Name).Open(ctx, &_connector.MobileConfig{
-				Role:        role,
-				Settings:    c.Settings,
-				SetSettings: setSettings,
-			})
-		case state.ServerType:
-			connection, err = _connector.RegisteredServer(connector.Name).Open(ctx, &_connector.ServerConfig{
-				Role:        role,
-				Settings:    c.Settings,
-				SetSettings: setSettings,
-			})
-		case state.StorageType:
-			connection, err = _connector.RegisteredStorage(connector.Name).Open(ctx, &_connector.StorageConfig{
-				Role:        role,
-				Settings:    c.Settings,
-				SetSettings: setSettings,
-			})
-		case state.StreamType:
-			connection, err = _connector.RegisteredStream(connector.Name).Open(ctx, &_connector.StreamConfig{
-				Role:        role,
-				Settings:    c.Settings,
-				SetSettings: setSettings,
-			})
-		case state.WebsiteType:
-			connection, err = _connector.RegisteredWebsite(connector.Name).Open(ctx, &_connector.WebsiteConfig{
-				Role:        role,
-				Settings:    c.Settings,
-				SetSettings: setSettings,
-			})
-		}
-
+		connection, err = this.openApp(ctx)
+	case state.DatabaseType:
+		var database _connector.DatabaseConnection
+		database, err = this.openDatabase(ctx)
+		defer database.Close()
+		connection = database
+	case state.FileType:
+		connection, err = this.openFile(ctx)
+	case state.MobileType:
+		connection, err = this.openMobile(ctx)
+	case state.ServerType:
+		connection, err = this.openServer(ctx)
+	case state.StorageType:
+		connection, err = this.openStorage(ctx)
+	case state.StreamType:
+		connection, err = this.openStream(ctx)
+	case state.WebsiteType:
+		connection, err = this.openWebsite(ctx)
 	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -1275,11 +1203,7 @@ func (this *Connection) Sheets(path string) ([]string, error) {
 		return nil, errors.BadRequest("path is not UTF-8 encoded")
 	}
 	ctx := context.Background()
-	f, err := _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
-		Role:        _connector.Role(c.Role),
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-	})
+	f, err := this.openFile(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1287,17 +1211,10 @@ func (this *Connection) Sheets(path string) ([]string, error) {
 	if !ok {
 		return nil, errors.BadRequest("file connection %d does not support multiple sheet", c.ID)
 	}
-	s, ok := c.Storage()
-	if !ok {
+	if _, ok := c.Storage(); !ok {
 		return nil, errors.Unprocessable(NoStorage, "file connection %d does not have a storage", c.ID)
 	}
-	storage, err := _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
-		Role:     _connector.Role(s.Role),
-		Settings: s.Settings,
-		SetSettings: func(settings []byte) error {
-			return setSettings(ctx, this.db, s.ID, settings)
-		},
-	})
+	storage, err := this.openStorage(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1367,18 +1284,12 @@ func (this *Connection) TableSchema(table string) (types.Type, error) {
 	if table == "" || utf8.RuneCountInString(table) > 1024 {
 		return types.Type{}, errors.BadRequest("table name is not valid")
 	}
-	const cRole = _connector.DestinationRole
-	ctx := context.Background()
-	connection, err := _connector.RegisteredDatabase(connector.Name).Open(ctx, &_connector.DatabaseConfig{
-		Role:        cRole,
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-	})
+	database, err := this.openDatabase(context.Background())
 	if err != nil {
 		return types.Type{}, err
 	}
-	columns, err := connection.Columns(table)
-	_ = connection.Close()
+	columns, err := database.Columns(table)
+	_ = database.Close()
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -1408,6 +1319,125 @@ func (this *Connection) TableSchema(table string) (types.Type, error) {
 		return types.Type{}, err
 	}
 	return schema, nil
+}
+
+// openApp opens an app connection.
+func (this *Connection) openApp(ctx context.Context) (_connector.AppConnection, error) {
+	c := this.connection
+	var resourceID int
+	var resourceCode string
+	if r, ok := c.Resource(); ok {
+		resourceID = r.ID
+		resourceCode = r.Code
+	}
+	app, err := _connector.RegisteredApp(c.Connector().Name).Open(ctx, &_connector.AppConfig{
+		Role:        _connector.Role(c.Role),
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
+		Resource:    resourceCode,
+		HTTPClient:  this.http.ConnectionClient(c.ID),
+		Region:      _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
+		WebhookURL:  webhookURL(c, resourceID),
+	})
+	return app, err
+}
+
+// openAppEvents opens an app events connection.
+func (this *Connection) openAppEvents(ctx context.Context) (_connector.AppEventsConnection, error) {
+	app, err := this.openApp(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return app.(_connector.AppEventsConnection), nil
+}
+
+// openAppUsers opens an app users connection.
+func (this *Connection) openAppUsers(ctx context.Context) (_connector.AppUsersConnection, error) {
+	app, err := this.openApp(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return app.(_connector.AppUsersConnection), nil
+}
+
+// openDatabase opens a database connection.
+func (this *Connection) openDatabase(ctx context.Context) (_connector.DatabaseConnection, error) {
+	c := this.connection
+	database, err := _connector.RegisteredDatabase(c.Connector().Name).Open(ctx, &_connector.DatabaseConfig{
+		Role:        _connector.Role(c.Role),
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
+	})
+	return database, err
+}
+
+// openFile opens a file connection.
+func (this *Connection) openFile(ctx context.Context) (_connector.FileConnection, error) {
+	c := this.connection
+	file, err := _connector.RegisteredFile(c.Connector().Name).Open(ctx, &_connector.FileConfig{
+		Role:        _connector.Role(c.Role),
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
+	})
+	return file, err
+}
+
+// openMobile opens a mobile connection.
+func (this *Connection) openMobile(ctx context.Context) (_connector.MobileConnection, error) {
+	c := this.connection
+	mobile, err := _connector.RegisteredMobile(c.Connector().Name).Open(ctx, &_connector.MobileConfig{
+		Role:        _connector.Role(c.Role),
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
+	})
+	return mobile, err
+}
+
+// openServer opens a server connection.
+func (this *Connection) openServer(ctx context.Context) (_connector.ServerConnection, error) {
+	c := this.connection
+	server, err := _connector.RegisteredServer(c.Connector().Name).Open(ctx, &_connector.ServerConfig{
+		Role:        _connector.Role(c.Role),
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
+	})
+	return server, err
+}
+
+// openStorage opens a storage connection.
+func (this *Connection) openStorage(ctx context.Context) (_connector.StorageConnection, error) {
+	c := this.connection
+	if c.Connector().Type == state.FileType {
+		c, _ = c.Storage()
+	}
+	storage, err := _connector.RegisteredStorage(c.Connector().Name).Open(ctx, &_connector.StorageConfig{
+		Role:        _connector.Role(c.Role),
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
+	})
+	return storage, err
+}
+
+// openStream opens a stream connection.
+func (this *Connection) openStream(ctx context.Context) (_connector.StreamConnection, error) {
+	c := this.connection
+	database, err := _connector.RegisteredStream(c.Connector().Name).Open(ctx, &_connector.StreamConfig{
+		Role:        _connector.Role(c.Role),
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
+	})
+	return database, err
+}
+
+// openWebsite opens a website connection.
+func (this *Connection) openWebsite(ctx context.Context) (_connector.WebsiteConnection, error) {
+	c := this.connection
+	website, err := _connector.RegisteredWebsite(c.Connector().Name).Open(ctx, &_connector.WebsiteConfig{
+		Role:        _connector.Role(c.Role),
+		Settings:    c.Settings,
+		SetSettings: this.setSettingsFunc(ctx),
+	})
+	return website, err
 }
 
 var errRecordStop = errors.New("stop record")
@@ -1757,25 +1787,13 @@ func (role *ConnectionRole) UnmarshalJSON(data []byte) error {
 // and eventType.
 func (this *Connection) fetchAppSchema(target state.ActionTarget, eventType string) (types.Type, error) {
 
-	c := this.connection
-
-	var resource string
-	if r, ok := c.Resource(); ok {
-		resource = r.Code
-	}
-
 	ctx := context.Background()
-	app, err := _connector.RegisteredApp(c.Connector().Name).Open(ctx, &_connector.AppConfig{
-		Role:        _connector.Role(c.Role),
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-		Resource:    resource,
-		HTTPClient:  this.http.ConnectionClient(c.ID),
-		Region:      _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
-	})
+	app, err := this.openApp(ctx)
 	if err != nil {
 		return types.Type{}, fmt.Errorf("cannot connect to the connector: %s", err)
 	}
+
+	c := this.connection
 
 	var schema types.Type
 
@@ -1828,32 +1846,11 @@ func (this *Connection) fetchAppSchema(target state.ActionTarget, eventType stri
 
 // fetchEventTypes fetches the event types for the connection.
 func (this *Connection) fetchEventTypes() ([]*_connector.EventType, error) {
-
-	c := this.connection
-
-	var resource string
-	if r, ok := c.Resource(); ok {
-		resource = r.Code
-	}
-
-	ctx := context.Background()
-	app, err := _connector.RegisteredApp(c.Connector().Name).Open(ctx, &_connector.AppConfig{
-		Role:        _connector.Role(c.Role),
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-		Resource:    resource,
-		HTTPClient:  this.http.ConnectionClient(c.ID),
-		Region:      _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
-	})
+	app, err := this.openAppEvents(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to the connector: %s", err)
 	}
-	eventTypes, err := app.(_connector.AppEventsConnection).EventTypes()
-	if err != nil {
-		return nil, err
-	}
-
-	return eventTypes, nil
+	return app.EventTypes()
 }
 
 // setSettingsFunc returns a connector.SetSettingsFunc function that sets the

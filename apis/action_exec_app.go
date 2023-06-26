@@ -21,26 +21,8 @@ import (
 // importFromApp imports the users from an app.
 func (this *Action) importFromApp() error {
 
-	c := this.action.Connection()
-
-	var resourceID int
-	var resourceCode string
-	if r, ok := c.Resource(); ok {
-		resourceID = r.ID
-		resourceCode = r.Code
-	}
-
 	ctx := context.Background()
-	ws := c.Workspace()
-	connector, err := _connector.RegisteredApp(c.Connector().Name).Open(ctx, &_connector.AppConfig{
-		Role:        _connector.SourceRole,
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-		Resource:    resourceCode,
-		HTTPClient:  this.http.ConnectionClient(c.ID),
-		Region:      _connector.PrivacyRegion(ws.PrivacyRegion),
-		WebhookURL:  webhookURL(c, resourceID),
-	})
+	app, err := this.connection.openAppUsers(ctx)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
@@ -48,7 +30,6 @@ func (this *Action) importFromApp() error {
 	if exe, _ := this.action.Execution(); exe.Reimport {
 		cursor = _connector.Cursor{}
 	}
-	app := connector.(_connector.AppUsersConnection)
 
 	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.PythonSource, false)
 	if err != nil {
@@ -78,7 +59,8 @@ func (this *Action) importFromApp() error {
 		if err == io.EOF {
 			eof = true
 		} else if len(users) == 0 {
-			return actionExecutionError{fmt.Errorf("connector %d has returned an empty users without returning EOF", c.Connector().ID)}
+			connector := this.action.Connection().Connector()
+			return actionExecutionError{fmt.Errorf("connector %d has returned an empty users without returning EOF", connector.ID)}
 		}
 
 		inSchemaProps := this.action.InSchema.PropertiesNames()
@@ -107,16 +89,11 @@ func (this *Action) importFromApp() error {
 			}
 
 			// Write the user.
-			connection := &Connection{
-				db:         this.db,
-				connection: c,
-				http:       this.http,
-			}
-			err = connection.writeConnectionUsers(ctx, user.ID, user.Properties, user.Timestamp.UTC(), nil)
+			err = this.connection.writeConnectionUsers(ctx, user.ID, user.Properties, user.Timestamp.UTC(), nil)
 			if err != nil {
 				return actionExecutionError{err}
 			}
-			err = connection.setUser(ctx, user.ID, mappedUser)
+			err = this.connection.setUser(ctx, user.ID, mappedUser)
 			if err != nil {
 				return actionExecutionError{err}
 			}

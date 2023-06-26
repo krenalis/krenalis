@@ -17,7 +17,6 @@ import (
 	"chichi/apis/errors"
 	"chichi/apis/mappings"
 	"chichi/apis/normalization"
-	_connector "chichi/connector"
 	"chichi/connector/types"
 )
 
@@ -49,16 +48,9 @@ func (err sameColumnNameError) Error() string {
 // importFromFile imports the users from a file.
 func (this *Action) importFromFile() error {
 
-	c := this.action.Connection()
-	connector := c.Connector()
-
 	// Connect to the file connector.
 	ctx := context.Background()
-	file, err := _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
-		Role:        _connector.SourceRole,
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-	})
+	file, err := this.connection.openFile(ctx)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the file connector: %s", err)}
 	}
@@ -66,15 +58,7 @@ func (this *Action) importFromFile() error {
 	// Open the file.
 	var r io.ReadCloser
 	{
-		s, _ := c.Storage()
-		var err error
-		storage, err := _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
-			Role:     _connector.SourceRole,
-			Settings: s.Settings,
-			SetSettings: func(settings []byte) error {
-				return setSettings(ctx, this.db, s.ID, settings)
-			},
-		})
+		storage, err := this.connection.openStorage(ctx)
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %s", err)}
 		}
@@ -86,11 +70,6 @@ func (this *Action) importFromFile() error {
 	}
 
 	// Determine the input and the output schema.
-	apisConn := &Connection{
-		db:         this.db,
-		connection: this.action.Connection(),
-		http:       this.http,
-	}
 	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.PythonSource, false)
 	if err != nil {
 		return err
@@ -99,7 +78,8 @@ func (this *Action) importFromFile() error {
 	inSchemaProps := this.action.InSchema.PropertiesNames()
 
 	// Read the records.
-	rw := newRecordWriter(c.ID, math.MaxInt, func(record map[string]any) error {
+	connection := this.action.Connection()
+	rw := newRecordWriter(connection.ID, math.MaxInt, func(record map[string]any) error {
 
 		// Take only the necessary properties.
 		props := make(map[string]any, len(inSchemaProps))
@@ -136,11 +116,11 @@ func (this *Action) importFromFile() error {
 		delete(mappedUser, "timestamp")
 
 		// Write the user and the mapped user on the database.
-		err = apisConn.writeConnectionUsers(ctx, id, record, timestamp, nil)
+		err = this.connection.writeConnectionUsers(ctx, id, record, timestamp, nil)
 		if err != nil {
 			return actionExecutionError{err}
 		}
-		err = apisConn.setUser(ctx, id, mappedUser)
+		err = this.connection.setUser(ctx, id, mappedUser)
 		if err != nil {
 			return actionExecutionError{err}
 		}

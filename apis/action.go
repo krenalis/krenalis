@@ -35,7 +35,7 @@ var QueryExecutionFailed errors.Code = "QueryExecutionFailed"
 type Action struct {
 	db                 *postgres.DB
 	action             *state.Action
-	http               *httpclient.HTTP
+	connection         *Connection
 	ID                 int
 	Connection         int
 	Target             ActionTarget
@@ -72,7 +72,7 @@ func (this *Action) fromState(db *postgres.DB, http *httpclient.HTTP, action *st
 	c := action.Connection()
 	this.db = db
 	this.action = action
-	this.http = http
+	this.connection = &Connection{db: db, connection: c, http: http}
 	this.ID = action.ID
 	this.Connection = c.ID
 	this.Target = ActionTarget(action.Target)
@@ -250,13 +250,7 @@ func (this *Action) Execute(reimport bool) error {
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
 func (this *Action) Set(action ActionToSet) error {
-	c := this.action.Connection()
-	connection := &Connection{
-		db:         this.db,
-		connection: c,
-		http:       this.http,
-	}
-	err := connection.validateActionToSet(action, this.action.Target, this.action.EventType)
+	err := this.connection.validateActionToSet(action, this.action.Target, this.action.EventType)
 	if err != nil {
 		return err
 	}

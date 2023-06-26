@@ -291,7 +291,8 @@ func (apis *APIs) onExecuteAction(n state.ExecuteActionNotification) {
 		return
 	}
 	action, _ := apis.state.Action(n.Action)
-	a := &Action{db: apis.db, action: action, http: apis.http}
+	connection := &Connection{db: apis.db, connection: action.Connection(), http: apis.http}
+	a := &Action{db: apis.db, action: action, connection: connection}
 	go a.exec()
 }
 

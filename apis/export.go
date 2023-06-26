@@ -73,28 +73,12 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	}
 
 	// Open a connection to the app.
-	c := this.action.Connection()
-	connector := c.Connector()
-	var resourceID int
-	var resourceCode string
-	if r, ok := c.Resource(); ok {
-		resourceID = r.ID
-		resourceCode = r.Code
-	}
-	ws := this.action.Connection().Workspace()
-	connection, err := _connector.RegisteredApp(connector.Name).Open(ctx, &_connector.AppConfig{
-		Role:        _connector.DestinationRole,
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-		Resource:    resourceCode,
-		HTTPClient:  this.http.ConnectionClient(c.ID),
-		Region:      _connector.PrivacyRegion(ws.PrivacyRegion),
-		WebhookURL:  webhookURL(c, resourceID),
-	})
+	app, err := this.connection.openAppUsers(ctx)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
 
+	connector := this.action.Connection().Connector()
 	inSchemaProps := this.action.InSchema.PropertiesNames()
 
 	for _, user := range users {
@@ -133,7 +117,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 
 		// Update the user, if it already exists on the app.
 		if exists {
-			err := connection.(_connector.AppUsersConnection).UpdateUser(id, props)
+			err := app.UpdateUser(id, props)
 			if err != nil {
 				return actionExecutionError{fmt.Errorf("cannot update user: %s", err)}
 			}
@@ -142,7 +126,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		}
 
 		// Create the user.
-		err = connection.(_connector.AppUsersConnection).CreateUser(props)
+		err = app.CreateUser(props)
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot create user: %s", err)}
 		}
@@ -179,30 +163,18 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	const role = _connector.DestinationRole
 
 	connection := this.action.Connection()
-	connector := connection.Connector()
 
 	// Retrieve the storage associated to the file connection.
 	var storage *compressorStorage
 	{
-		s, _ := connection.Storage()
-		st, err := _connector.RegisteredStorage(s.Connector().Name).Open(ctx, &_connector.StorageConfig{
-			Role:     role,
-			Settings: s.Settings,
-			SetSettings: func(settings []byte) error {
-				return setSettings(ctx, this.db, s.ID, settings)
-			},
-		})
+		st, err := this.connection.openStorage(ctx)
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %s", err)}
 		}
 		storage = newCompressedStorage(st, connection.Compression)
 	}
 
-	file, err := _connector.RegisteredFile(connector.Name).Open(ctx, &_connector.FileConfig{
-		Role:        role,
-		Settings:    connection.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-	})
+	file, err := this.connection.openFile(ctx)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
@@ -252,32 +224,11 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 // resolving the external identity.
 func (this *Action) downloadUsersForIdentityMatch() error {
 
-	const role = _connector.SourceRole
-
-	c := this.action.Connection()
-
-	var resourceID int
-	var resourceCode string
-	if r, ok := c.Resource(); ok {
-		resourceID = r.ID
-		resourceCode = r.Code
-	}
-
 	ctx := context.Background()
-	ws := this.action.Connection().Workspace()
-	connection, err := _connector.RegisteredApp(c.Connector().Name).Open(ctx, &_connector.AppConfig{
-		Role:        role,
-		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
-		Resource:    resourceCode,
-		HTTPClient:  this.http.ConnectionClient(c.ID),
-		Region:      _connector.PrivacyRegion(ws.PrivacyRegion),
-		WebhookURL:  webhookURL(c, resourceID),
-	})
+	app, err := this.connection.openAppUsers(ctx)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
-	app := connection.(_connector.AppUsersConnection)
 
 	// Read the users from the app.
 	properties := []types.Path{
@@ -287,6 +238,9 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 	// TODO(Gianluca): here cursor.Next is set to "" as a workaround. See the
 	// issue https://github.com/open2b/chichi/issues/183.
 	var cursor _connector.Cursor
+
+	c := this.action.Connection()
+	ws := c.Workspace()
 
 	var eof bool
 
