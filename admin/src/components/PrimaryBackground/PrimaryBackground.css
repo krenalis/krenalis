@@ -1,8 +1,0 @@
-.PrimaryBackground {
-    display: block;
-    width: 100%;
-    padding: 30px 100px;
-    background: rgb(55,48,163);
-    background: linear-gradient(90deg, #3730a3, #3730a4, #3830a5, #3a2fa8, #3b2eab, #3d2eaf, #3f2db2, #412cb6, #432cb8, #452bba, #452bbb);
-    box-shadow: 0 2px 10px 1px #00000030;
-}

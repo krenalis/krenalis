@@ -1,0 +1,38 @@
+.header {
+	padding: 15px 30px;
+	display: grid;
+	grid-template-areas: "title account";
+	border-bottom: 1px solid var(--sl-color-neutral-200);
+	justify-content: space-between;
+	align-items: baseline;
+	height: 70px;
+}
+
+.header .title {
+	grid-area: title;
+	font-size: 17px;
+	display: flex;
+	align-items: baseline;
+	gap: 15px;
+}
+
+.header .title .goBackIcon {
+	cursor: pointer;
+}
+
+.header .account {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	grid-area: account;
+}
+
+.header .account sl-avatar::part(base) {
+	background-color: transparent;
+	width: 50px;
+	height: 50px;
+}
+
+.header .account sl-avatar::part(image) {
+	border: 2px solid var(--bg-transparent);
+}

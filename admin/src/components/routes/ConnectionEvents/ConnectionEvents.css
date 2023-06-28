@@ -1,0 +1,170 @@
+@keyframes events-fade-in {
+    from { opacity: 0 }
+    to { opacity: 1 }
+}
+
+@keyframes loading-ellipsis {
+    0% {
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+.connectionEvents {
+    display: grid;
+    align-items: start;
+    grid-template-columns: 1fr 1fr;
+    gap: 50px;
+}
+
+.connectionEvents .eventList {
+    background-color: var(--bg-primary);
+    box-shadow: var(--sl-shadow-large);
+    border-radius: var(--radius);
+    min-height: 100%;
+}
+
+.connectionEvents .eventList .noEvents {
+    padding: 30px;
+    text-align: center;
+    font-size: 14px;
+    opacity: .7;
+    border-top: 1px solid var(--border-primary);
+}
+
+.connectionEvents .eventList .loadingEllipsis > span {
+    animation: loading-ellipsis 1000ms infinite;
+    animation-fill-mode: both;
+}   
+
+.connectionEvents .eventList .loadingEllipsis .ellipsis2 {
+    animation-delay: 200ms;
+}
+
+.connectionEvents .eventList .loadingEllipsis .ellipsis3 {
+    animation-delay: 400ms;
+}
+
+.connectionEvents .eventList .heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 20px 30px;
+}
+
+.connectionEvents .eventList .title {
+    background-color: var(--bg-primary);
+    border-radius: var(--radius);
+    min-height: 100%;
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+}
+
+.connectionEvents .eventList .discarded {
+    color: var(--sl-color-neutral-400);
+    font-size: 14px;
+}
+
+.connectionEvents .eventList .discarded .count {
+    padding-right: 5px;
+}
+
+.connectionEvents .eventList .body {
+    max-height: 500px;
+    overflow: auto;
+}
+
+.connectionEvents .eventList .event {
+    padding: 17px 30px;
+    border-top: 1px solid var(--border-primary);
+    font-size: 13px;
+    display: flex;
+    gap: 10px;
+    cursor: pointer;
+    animation: events-fade-in 500ms;
+    animation-fill-mode: both;
+    will-change: border-left;
+    transition: border-left 200ms;
+}
+
+.connectionEvents .eventList .event.selected {
+    border-left: 5px solid var(--color-primary-600)
+}
+
+.connectionEvents .eventList .event.selected:last-child {
+    border-bottom-left-radius: var(--radius);
+}
+
+.connectionEvents .eventList .event .name {
+    min-width: 150px;
+    font-weight: 600;
+}
+
+.connectionEvents .eventList .event .path {
+    min-width: 250px;
+}
+
+.connectionEvents .eventList .event .time {
+    width: 100%;
+    text-align: right;
+}
+
+.connectionEvents .eventList .event .error {
+    min-width: 17px;
+}
+
+.connectionEvents .eventList .event .error sl-icon {
+    font-size: 17px;
+    position: relative;
+    top: .5px;
+}
+
+.connectionEvents .eventList .event .error sl-icon.iconError {
+    color: var(--sl-color-danger-600);
+}
+
+.connectionEvents .eventList .event .error sl-icon.iconSuccess {
+    color: var(--sl-color-success-600);
+}
+
+.connectionEvents .panel {
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius);
+    min-height: 585px;
+    padding: 30px;
+}
+
+.connectionEvents .panel.unselected {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.connectionEvents .panel .selectEventMessage {
+    width: 350px;
+    text-align: center;
+}
+
+.connectionEvents .panel .selectEventMessage .title {
+    font-size: 19px;
+    margin-top: 8px;
+    margin-bottom: 3px;
+}
+
+.connectionEvents .panel .selectEventMessage .description {
+    font-size: 14px;
+    opacity: .7;
+}
+
+.connectionEvents .panel .fullEvent {
+    animation: events-fade-in 500ms;
+}
+.connectionEvents .panel .fullEvent {
+    font-size: 14px;
+}

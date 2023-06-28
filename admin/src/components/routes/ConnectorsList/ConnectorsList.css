@@ -1,0 +1,63 @@
+.connectorsList sl-breadcrumb::part(base) {
+	justify-content: center;
+}
+
+.connectorsList .routeContent {
+	margin: auto;
+}
+
+.connectorsList h1 {
+	text-align: center;
+	margin-bottom: 30px;
+}
+
+.connectorsList .connectors {
+    margin: auto;
+    max-width: 1200px;
+    display: flex;
+    flex-flow: row wrap;
+	gap: 30px;
+	justify-content: center;
+}
+
+.connectorsList .connectors .card {
+	width: clamp(350px,calc(33% - 30px),500px);
+}
+
+.connectorsList sl-dialog::part(body) {
+	padding: 10px 30px 20px 30px;
+}
+
+.connectorsList sl-dialog .no-storage {
+	text-align: center;
+	padding-bottom: 15px;
+}
+
+.connectorsList sl-dialog .storage {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 15px;
+}
+
+.connectorsList sl-dialog .storage sl-button::part(base) {
+	border-radius: 100%;
+	width: 35px;
+	height: 35px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.connectorsList sl-dialog  .websiteInfo {
+	padding: 0 10px 20px 10px;
+}
+
+.connectorsList sl-dialog .websiteInfo .hostInput {
+	margin-bottom: 20px;
+}
+
+.connectorsList sl-dialog .websiteInfo .addWebsite  {
+    display: block;
+    margin: 30px auto 0 auto;
+}

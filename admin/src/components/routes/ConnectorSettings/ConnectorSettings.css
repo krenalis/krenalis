@@ -1,0 +1,36 @@
+.connectorSettings .settings {
+    max-width: 1200px;
+    margin: auto;
+}
+
+.connectorSettings .basic .inputWrapper {
+    margin-bottom: 30px;
+}
+
+.connectorSettings .basic .switchWrapper {
+    margin: 50px 0;
+}
+
+.connectorSettings .basic .noStorages {
+    display: flex;
+    gap: 20px;
+    align-items: baseline;
+    margin: 50px 0;
+}
+
+.connectorSettings .settings {
+    background-color: var(--bg-primary);
+    border-radius: var(--radius);
+    box-shadow: var(--sl-shadow-small);
+    padding: 50px 80px;
+    border: 1px solid var(--sl-color-neutral-200);
+}
+
+.connectorSettings .saveWrapper {
+    text-align: center;
+}
+
+.connectorSettings .saveButton {
+    min-width: 180px;
+    display: inline-block;
+}

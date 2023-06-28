@@ -65,10 +65,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// handle requests to login page.
 	if rpath == "/" {
-		if isLoggedIn {
-			http.Redirect(w, r, "/admin/connectors", http.StatusTemporaryRedirect)
-			return
-		}
 		if r.Method == "POST" {
 			admin.login(w, r)
 			return
@@ -166,7 +162,9 @@ func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
 	accountID, err := admin.apis.AuthenticateAccount(loginData.Email, loginData.Password)
 	if err != nil {
 		if err, ok := err.(*errors.UnprocessableError); ok && err.Code == apis.AuthenticationFailed {
-			enc.Encode([]any{0, "AuthenticationFailedError"})
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			enc.Encode([]any{0, "AuthenticationFailed"})
 			return
 		}
 		if err, ok := err.(errors.ResponseWriterTo); ok {
@@ -179,6 +177,7 @@ func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.SetCookie(w, &http.Cookie{Name: "session", Value: strconv.Itoa(accountID), Path: "/"})
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	enc.Encode([]any{accountID, nil})
 }

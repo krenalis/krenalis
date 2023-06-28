@@ -1,0 +1,45 @@
+.oauth {
+    padding: 30px;
+	background-color: var(--bg-gray);
+	min-height: calc(100vh - 70px);
+}
+
+.oauth .loading {
+    max-width: 800px;
+    margin: auto;
+    background-color: var(--bg-primary);
+    padding: 80px;
+    height: 250px;
+    text-align: center;
+    border-radius: var(--radius);
+    box-shadow: var(--sl-shadow-small);
+    border: 1px solid var(--sl-color-neutral-200);
+    margin-top: 20px;
+}
+
+.oauth .loading .text {
+    margin-bottom: 20px;
+}
+
+.oauth .error {
+    max-width: 800px;
+    margin: auto;
+    background-color: var(--bg-primary);
+    padding: 50px;
+    height: 250px;
+    text-align: center;
+    border-radius: var(--radius);
+    box-shadow: var(--sl-shadow-small);
+    border: 1px solid var(--sl-color-neutral-200);
+    margin-top: 20px;
+}
+
+.oauth .error > sl-icon {
+    font-size: 35px;
+    color: var(--sl-color-danger-600);
+}
+
+.oauth .error .text {
+    margin: 15px 0 25px 0;
+}
+

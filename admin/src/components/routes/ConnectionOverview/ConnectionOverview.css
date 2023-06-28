@@ -1,0 +1,153 @@
+/* TODO: remove this */
+.connectionOverview.inProgress {
+    text-align: center;
+}
+
+.connectionOverview.loading {
+    text-align: center;
+}
+
+.connectionOverview .chart .chartHead {
+    margin-bottom: 20px;
+}
+
+.connectionOverview .chart .title {
+    padding-left: 40px;
+    font-weight: 600;
+}
+
+.connectionOverview .chart .recharts-wrapper {
+    margin: auto;
+    position: relative;
+    left: -20px;
+}
+
+.connectionOverview .importsWrapper {
+    margin: 100px auto 20px auto;
+}
+
+.connectionOverview .importsWrapper .title {
+    margin-bottom: 20px;
+    padding-left: 40px;
+    font-weight: 600;
+}
+
+.connectionOverview .importsList {
+    display: grid;
+    grid-template-columns: 1fr 2fr 2fr 3fr;
+    max-width: 1350px;
+    margin: 0 auto;
+    border-radius: var(--radius);
+    background-color: var(--bg-primary);
+    box-shadow: var(--sl-shadow-small);
+}
+
+.connectionOverview .importsList > div {
+    padding: 10px 15px;
+    border-left: 1px solid var(--border-primary);
+    border-bottom: 1px solid var(--border-primary)
+}
+
+.connectionOverview .importsList > div.headCell {
+    font-weight: 600;
+}
+
+.connectionOverview .importsList > div:first-child {
+    border-top: 1px solid var(--border-primary);
+    border-top-left-radius: var(--radius);
+}
+
+.connectionOverview .importsList > div:nth-child(2),
+.connectionOverview .importsList > div:nth-child(3) {
+    border-top: 1px solid var(--border-primary);
+}
+
+.connectionOverview .importsList > div:nth-child(4) {
+    border-top: 1px solid var(--border-primary);
+    border-right: 1px solid var(--border-primary);
+    border-top-right-radius: var(--radius);
+}
+
+.connectionOverview .importsList > div:nth-child(8),
+.connectionOverview .importsList > div:nth-child(12) {
+    border-right: 1px solid var(--border-primary);
+}
+
+.connectionOverview .importsList > div:nth-last-child(4) {
+    border-bottom-left-radius: var(--radius);
+}
+
+.connectionOverview .importsList > div:last-child {
+    border-bottom-right-radius: var(--radius);
+    border-right: 1px solid var(--border-primary);
+}
+
+.connectionOverview .importsList .cell.error { 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.connectionOverview .noImport {
+    text-align: center;
+    background-color: var(--bg-primary);
+    border-radius: var(--radius);
+    padding: 50px 30px;
+    max-width: 1350px;
+    margin: auto;
+    box-shadow: var(--sl-shadow-small);
+}
+
+.connectionOverview sl-dialog.askImportConfirmationDialog::part(body) {
+	text-align: center;
+	padding-bottom: 50px;
+	padding-top: 0;
+}
+
+.connectionOverview sl-dialog.askImportConfirmationDialog .resetCursorOptions {
+    width: 450px;
+    margin: 30px auto;
+}
+
+.connectionOverview sl-dialog.askImportConfirmationDialog .resetCursorOption {
+	display: grid;
+    grid-template-columns: 40px 1fr;
+    grid-template-areas: "icon name";
+    border: 1px solid var(--border-primary);
+    align-items: center;
+    text-align: left;
+    column-gap: 20px;
+	padding: 20px 25px;
+	cursor: pointer;
+}
+
+.connectionOverview sl-dialog.askImportConfirmationDialog .resetCursorOption.selected {
+	color: var(--color-primary-600)
+}
+
+.connectionOverview sl-dialog.askImportConfirmationDialog .resetCursorOption:first-child {
+	border-top-left-radius: var(--radius);
+	border-top-right-radius: var(--radius);
+}
+
+.connectionOverview sl-dialog.askImportConfirmationDialog .resetCursorOption:last-child {
+	border-top: 0;
+	border-bottom-left-radius: var(--radius);
+	border-bottom-right-radius: var(--radius);
+}
+
+.connectionOverview sl-dialog.askImportConfirmationDialog .resetCursorOption sl-icon {
+	grid-area: icon;
+	margin: auto;
+	font-size: 23px;
+}
+
+.connectionOverview sl-dialog.askImportConfirmationDialog .resetCursorOption .name {
+	grid-area: name;
+}
+
+.connectionOverview .nothingToShow {
+    text-align: center;
+    font-size: 16px;
+}

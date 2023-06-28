@@ -92,8 +92,9 @@ body {
 	padding: 0;
 }
 
-#root > .App {
+#root > .app {
 	background-color: var(--bg-primary);
+	padding-left: 280px;
 }
 
 /* || buttons and links */
@@ -224,43 +225,6 @@ sl-drawer::part(body)::-webkit-scrollbar-track {
     background: transparent;
 }
 
-/* || icons */
-
-.codicon,
-.codicon::before {
-	font-family: 'codicon' !important;
-}
-
-/* ag-grid */
-
-.ag-icon,
-.ag-icon::before,
-.ag-icon::after,
-.ag-radio-button-input-wrapper::before,
-.ag-radio-button-input-wrapper::after {
-	font-family: agGridAlpine!important;
-	line-height: initial;
-}
-
-.ag-root-wrapper {
-	border: 1px solid var(--sl-color-neutral-200)!important;
-	border-radius: var(--radius);
-	box-shadow: var(--sl-shadow-small);
-}
-
-.ag-header {
-	background-color: var(--bg-primary)!important;
-	border-bottom: 1px solid var(--border-primary)!important;
-}
-
-.ag-header-container {
-	width: 100%;
-}
-
-.ag-center-cols-container {
-	min-width: 100%;
-}
-
 /* || Forms */
 
 sl-select::part(control) {
@@ -282,23 +246,19 @@ sl-dialog::part(base) {
 	padding-left: 280px;
 }
 
-body.isFullscreen sl-dialog::part(base) {
-	padding-left: 0;
-}
-
 /* || Content */
 
-.App .routeContent {
+.app .routeContent {
 	padding: 30px;
 	background-color: var(--bg-gray);
 	min-height: calc(100vh - 70px);
 }
 
-.App .routeContent.connection { 
+.app .routeContent.connection { 
 	min-height: calc(100vh - 140px);
 }
 
-.App .routeContent.schema { 
+.app .routeContent.schema { 
 	min-height: calc(100vh - 140px);
 }
 

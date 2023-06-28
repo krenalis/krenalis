@@ -1,0 +1,16 @@
+@keyframes arrow-fade-in {
+	0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+.arrow.new {
+    animation: arrow-fade-in 2000ms;
+    animation-delay: 1000ms;
+    animation-fill-mode: both;
+}
+
+.arrow > div {
+    width: -moz-available;
+	width: -webkit-fill-available;
+	width: fill-available;
+}

@@ -1,0 +1,53 @@
+.login {
+	min-height: 100vh;
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.login .container {
+	width: 500px;
+	transform: translateY(-80px);
+}
+
+.login .container .heading {
+	text-align: center;
+}
+
+.login .container .heading h1 {
+	font-weight: 600;
+	margin-top: 0;
+}
+
+.login .container .loginForm {
+	display: flex;
+	flex-flow: column;
+}
+
+.login .container #emailInput::part(base) {
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+	border-bottom: 0;
+}
+
+.login .container #passwordInput::part(base) {
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
+}
+
+.login .container .loginForm .note {
+	margin: 10px 10px 0px 10px;
+	font-size: 13px !important;
+	opacity: 0.9;
+	text-align: center;
+}
+
+.login .container .loginForm .note span {
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.login .container .loginForm .loginButton {
+	margin-top: 30px;
+}

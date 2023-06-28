@@ -1,0 +1,163 @@
+.connectionSettings {
+    max-width: 1200px;
+}
+
+.connectionSettings .settings::part(nav) {
+	flex-basis: 300px;
+}
+
+.connectionSettings .settings::part(body) {
+	overflow: visible;
+}
+
+.connectionSettings .settings > sl-tab-panel::part(base) {
+    padding-left: 60px;
+}
+
+.connectionSettings .panelTitle {
+    font-size: 21px;
+    font-weight: 600;
+    margin-bottom: 30px;
+}
+
+.connectionSettings .form {
+	grid-area: form;
+}
+
+.connectionSettings .form .fields > * {
+	margin-bottom: 30px;
+}
+
+.connectionSettings .form .fields > * .error {
+	color: var(--sl-color-danger-500);
+    font-weight: 600;
+    margin-top: 5px;
+    font-size: 14px;
+}
+
+.connectionSettings .form .fields > * > *::part(form-control-help-text) {
+	margin-top: 5px;
+	opacity: .7;
+}
+
+.connectionSettings .form .fields sl-radio-group sl-radio {
+	margin-bottom: 7px;
+}
+
+.connectionSettings .form .fields sl-radio-group sl-radio:last-of-type {
+	margin-bottom: 0;
+}
+
+.connectionSettings .form .actions {
+	margin-top: 70px;
+	display: flex;
+	justify-content: center;
+	gap: 30px;
+}
+
+.connectionSettings .form .actions sl-button {
+	min-width: 150px;
+}
+
+.connectionSettings .keys {
+    margin-bottom: 30px;
+}
+
+.connectionSettings .keys .flex {
+    margin-bottom: 20px;
+}
+
+.connectionSettings .keys .key {
+    border: 1px solid var(--border-primary);
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    padding: 0 20px;
+    font-size: 14px;
+    border-radius: 5px;
+    min-width: 320px;
+}
+
+.connectionSettings .clipboardInput {
+    margin-top: 10px;
+}
+
+.connectionSettings .storage {
+    border: 1px solid var(--border-primary);
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    padding: 0 20px;
+    font-size: 14px;
+    border-radius: 5px;
+    min-width: 320px;
+    margin-bottom: 30px;
+}
+
+.connectionSettings sl-button.deleteConnectionButton {
+    margin-right: 20px;
+}
+
+.connectionSettings .storageDialog::part(body) {
+    padding: 10px 30px 20px;
+}
+
+.connectionSettings .storageDialog .noStorage {
+    text-align: center;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.connectionSettings .storageDialog .storage {
+    margin-bottom: 15px;
+}
+
+.connectionSettings .storageDialog .changeStorageButton::part(base) {
+    border-radius: 100%;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.connectionSettings .dangerZone {
+    border: 1px solid var(--sl-color-danger-500);
+    border-radius: var(--radius);
+    padding: 30px;
+    position: relative;
+    margin-top: 50px;
+}
+
+.connectionSettings .dangerZone .heading {
+    position: absolute;
+    left: 20px;
+    top: 0;
+    transform: translateY(-60%);
+    background-color: var(--bg-gray);
+    padding: 0 10px;
+    color: var(--sl-color-danger-500);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.connectionSettings .dangerZone .label {
+	font-weight: 600;
+}
+
+.connectionSettings .dangerZone .description {
+	font-size: 14px;
+}
+
+.connectionSettings .deletionDialog::part(body) {
+	padding-bottom: 40px;
+}
+
+.connectionSettings .deletionDialog .buttons {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    align-items: center;
+}

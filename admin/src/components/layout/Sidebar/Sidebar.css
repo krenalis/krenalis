@@ -1,0 +1,149 @@
+.sidebar {
+    width: 280px;
+    height: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 20;
+    padding: 20px 0;
+    display: flex;
+    flex-flow: column;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.sidebar .items {
+    margin-top: 0;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-flow: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0 25px;
+    border-right: 1px solid var(--sl-color-neutral-200);
+}
+
+.sidebar .items > div {
+	width: 100%;
+}
+
+.sidebar .logoAndWorkspace {
+	margin-bottom: 50px;
+}
+
+.sidebar .logo .image {
+    font-size: 12px;
+    background-color: var(--color-primary-600);
+    color: var(--text-onaccent);
+    width: 50px;
+    height: 50px;
+    border-radius: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 600;
+}
+
+.sidebar .workspace .workspaceSelector::part(form-control-label) {
+    font-size: 14px;
+    padding-bottom: 0;
+    margin-bottom: 0;
+    margin-bottom: -3px;
+    display: block;
+}
+
+.sidebar .workspace .workspaceSelector::part(control) {
+    padding: 0;
+    border: 0;
+    background-color: transparent;
+    min-width: unset;
+    min-height: unset;
+}
+
+.sidebar .workspace .workspaceSelector::part(display-label) {
+    margin-left: 0;
+    margin-right: 8px;
+    font-size: 14px;
+}
+
+.sidebar .workspace .workspaceSelector::part(icon) {
+    font-size: 12px;
+    margin: 0;
+}
+
+.sidebar .workspace .workspaceSelector::part(menu) {
+    width: unset;
+    max-width: unset;
+}
+
+.sidebar .workspace .workspaceSelector::part(combobox) {
+    padding: 0;
+    border: 0;
+    font-size: 14px;
+    min-height: unset;
+}
+
+.sidebar .workspace .workspaceSelector sl-option::part(label) {
+    font-size: 13px;
+}
+
+.sidebar .item {
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    transition: border .3s,background-color .3s;
+	border-radius: 5px;
+	margin-top: 10px;
+	color: var(--sl-color-neutral-700);
+    user-select: none;
+    border-left: 4px solid transparent;
+}
+
+.sidebar .item.selected {
+    background-color: var(--sl-color-neutral-50);
+    border-left: 4px solid var(--color-primary-500);
+}
+
+.sidebar .item.isChildrenSelected sl-icon,
+.sidebar .item.isChildrenSelected .text {
+    color: var(--sl-color-primary-500);
+}
+
+.sidebar .item:hover {
+    background-color: var(--sl-color-neutral-50);
+}
+
+.sidebar .item sl-icon {
+	font-size: 25px;
+}
+
+.sidebar .item .text {
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.sidebar .subItem {
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    padding-left: 60px;
+    color: var(--sl-color-neutral-700);
+    user-select: none;
+}
+
+.sidebar .subItem.selected > sl-icon,
+.sidebar .subItem.selected > .text {
+    color: var(--color-primary-500);
+}
+
+.sidebar .subItem .text {
+	font-size: 13px;
+    font-weight: 600;
+}

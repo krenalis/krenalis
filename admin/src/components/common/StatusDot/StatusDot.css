@@ -1,0 +1,25 @@
+.statusDot .hoverArea {
+    position: relative;
+    z-index: 2;
+    width: 30px;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.statusDot sl-icon {
+    font-size: 9px;
+}
+
+.statusDot sl-icon.success {
+    color: var(--sl-color-success-600);
+}
+
+.statusDot sl-icon.neutral {
+    color: var(--sl-color-neutral-300);
+}
+
+.statusDot sl-icon.danger {
+    color: var(--sl-color-danger-600);
+}

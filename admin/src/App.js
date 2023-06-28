@@ -1,25 +1,42 @@
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
-import Toast from './components/Toast/Toast';
-import API from './api/api';
-import { AppContext } from './context/AppContext';
+import Toast from './components/common/Toast/Toast';
+import Sidebar from './components/layout/Sidebar/Sidebar';
+import Header from './components/layout/Header/Header';
+import Login from './components/routes/Login/Login';
+import API from './lib/api/api';
 import * as variants from './constants/variants';
 import * as icons from './constants/icons';
+import checkSessionCookie from './lib/auth/checkSessionCookie';
+import { adminBasePath } from './constants/path';
+import ConnectionsMap from './components/routes/ConnectionsMap/ConnectionsMap';
+import { BadRequestError } from './lib/api/errors';
+import { AppProvider } from './providers/AppProvider';
 import { Outlet } from 'react-router-dom';
-import { useNavigate } from 'react-router';
-import '@shoelace-style/shoelace/dist/themes/light.css';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { setBasePath } from '@shoelace-style/shoelace/dist/utilities/base-path.js';
-import { BadRequestError } from './api/errors';
+import '@shoelace-style/shoelace/dist/themes/light.css';
 
 setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.85/dist/');
 
 const App = () => {
-	let [status, setStatus] = useState(null);
-	let [connectors, setConnectors] = useState(null);
+	const [isLoading, setIsLoading] = useState(true);
+	const [isLoggedIn, setIsLoggedIn] = useState(false);
+	const [status, setStatus] = useState(null);
+	const [title, setTitle] = useState('');
+	const [account, setAccount] = useState(null);
 
-	const appRef = useRef();
 	const toastRef = useRef();
 	const navigate = useNavigate();
+	const location = useLocation();
+
+	useEffect(() => {
+		const hasSessionCookie = checkSessionCookie();
+		if (hasSessionCookie) {
+			setIsLoggedIn(true);
+		}
+		setIsLoading(false);
+	}, []);
 
 	const showStatus = ([variant, icon, text]) => {
 		toastRef.current.hide();
@@ -53,60 +70,59 @@ const App = () => {
 	};
 
 	const showNotFound = () => {
-		return navigate('/admin/not-found');
+		return navigate(`${adminBasePath}not-found`);
 	};
 
 	const redirect = (url) => {
-		return navigate(url);
+		toastRef.current.hide();
+		return navigate(`${adminBasePath}${url}`);
 	};
 
-	// add the 'isFullscreen' class to the body.
-	const updateIsFullScreen = (isFullScreen) => {
-		let body = appRef.current.closest('body');
-		if (isFullScreen) {
-			body.classList.add('isFullscreen');
-		} else {
-			body.classList.remove('isFullscreen');
-		}
-	};
+	const baseURL = window.location.origin;
+	const api = new API(baseURL);
 
-	let baseURL = window.location.origin;
-	let api = new API(baseURL);
-
-	useEffect(() => {
-		const fetchConnectors = async () => {
-			let [connectors, err] = await api.connectors.find();
-			if (err != null) {
-				showError(err);
-				return;
-			}
-			setConnectors(connectors);
-		};
-		fetchConnectors();
-	}, []);
-
-	if (connectors == null) {
+	if (isLoading) {
 		return;
 	}
 
-	return (
-		<AppContext.Provider
-			value={{
-				API: api,
-				showStatus: showStatus,
-				showError: showError,
-				showNotFound: showNotFound,
-				redirect: redirect,
-				updateIsFullScreen: updateIsFullScreen,
-				connectors: connectors,
-			}}
-		>
-			<div className='App' ref={appRef}>
-				<Outlet />
-				<Toast toastRef={toastRef} status={status} />
-			</div>
-		</AppContext.Provider>
-	);
+	if (isLoggedIn) {
+		let isBasePath = location.pathname === adminBasePath;
+		return (
+			<>
+				<AppProvider
+					setTitle={setTitle}
+					api={api}
+					showError={showError}
+					showStatus={showStatus}
+					showNotFound={showNotFound}
+					redirect={redirect}
+					account={account}
+				>
+					<div className='app'>
+						<Sidebar setIsLoggedIn={setIsLoggedIn} />
+						<Header title={title} />
+						{isBasePath ? <ConnectionsMap /> : <Outlet />}
+					</div>
+				</AppProvider>
+				<Toast ref={toastRef} status={status} />
+			</>
+		);
+	}
+
+	if (!isLoggedIn) {
+		return (
+			<>
+				<Login
+					setIsLoggedIn={setIsLoggedIn}
+					api={api}
+					showStatus={showStatus}
+					showError={showError}
+					setAccount={setAccount}
+				/>
+				<Toast ref={toastRef} status={status} />
+			</>
+		);
+	}
 };
 
 export default App;
