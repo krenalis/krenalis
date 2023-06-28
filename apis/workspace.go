@@ -610,6 +610,21 @@ func (this *Workspace) InitWarehouse() error {
 	return ws.Warehouse.Init(context.Background())
 }
 
+// ListenedEvents returns the events listen to by the specified listener and
+// the number of discarded events.
+//
+// It returns an errors.NotFoundError error, if the listener does not exist.
+func (this *Workspace) ListenedEvents(listener string) ([]json.RawMessage, int, error) {
+	events, discarded, err := this.eventObserver.Events(listener)
+	if err != nil {
+		if err == _events.ErrEventListenerNotFound {
+			return nil, 0, errors.NotFound("event listener %q does not exist", listener)
+		}
+		return nil, 0, err
+	}
+	return events, discarded, nil
+}
+
 // authorizedResource represents an authorized resource that can be used to
 // create a new connection.
 type authorizedResource struct {
@@ -674,21 +689,6 @@ func (this *Workspace) OAuthToken(authorizationCode, redirectURI string, connect
 	// TODO(marco): Encrypt the token.
 
 	return base62.EncodeToString(resource), nil
-}
-
-// ListenedEvents returns the events listen to by the specified listener and
-// the number of discarded events.
-//
-// It returns an errors.NotFoundError error, if the listener does not exist.
-func (this *Workspace) ListenedEvents(listener string) ([]json.RawMessage, int, error) {
-	events, discarded, err := this.eventObserver.Events(listener)
-	if err != nil {
-		if err == _events.ErrEventListenerNotFound {
-			return nil, 0, errors.NotFound("event listener %q does not exist", listener)
-		}
-		return nil, 0, err
-	}
-	return events, discarded, nil
 }
 
 // ReloadSchemas reloads the schemas of the workspace.
