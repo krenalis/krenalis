@@ -108,6 +108,7 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					c.TermForGroups = "groups"
 					c.Targets = UsersFlag | GroupsFlag
 					c.Icon = database.Icon
+					c.SampleQuery = database.SampleQuery
 					ct = database.ConnectionReflectType()
 				case FileType:
 					file := connector.RegisteredFile(c.Name)

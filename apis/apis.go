@@ -209,6 +209,7 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 		HasSettings:   c.HasSettings,
 		Icon:          c.Icon,
 		FileExtension: c.FileExtension,
+		SampleQuery:   c.SampleQuery,
 		WebhooksPer:   WebhooksPer(c.WebhooksPer),
 		OAuth:         c.OAuth != nil,
 	}
@@ -232,6 +233,7 @@ func (apis *APIs) Connectors() []*Connector {
 			HasSettings:   c.HasSettings,
 			Icon:          c.Icon,
 			FileExtension: c.FileExtension,
+			SampleQuery:   c.SampleQuery,
 			WebhooksPer:   WebhooksPer(c.WebhooksPer),
 			OAuth:         c.OAuth != nil,
 		}

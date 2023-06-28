@@ -37,6 +37,7 @@ func init() {
 	connector.RegisterDatabase(connector.Database{
 		Name:              "MySQL",
 		SourceDescription: "import users and groups from a MySQL database",
+		SampleQuery:       "SELECT * FROM users {{ LIMIT $limit }}",
 		Icon:              icon,
 	}, open)
 }

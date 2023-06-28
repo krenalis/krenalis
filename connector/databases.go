@@ -19,6 +19,7 @@ type Database struct {
 	Name                   string
 	SourceDescription      string // It should complete the sentence "Add an action to ..."
 	DestinationDescription string // It should complete the sentence "Add an action to ..."
+	SampleQuery            string // sample query
 	Icon                   string // icon in SVG format
 
 	open reflect.Value

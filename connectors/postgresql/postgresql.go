@@ -39,6 +39,7 @@ func init() {
 	connector.RegisterDatabase(connector.Database{
 		Name:              "PostgreSQL",
 		SourceDescription: "import users and groups from a PostgreSQL database",
+		SampleQuery:       "SELECT * FROM users {{ LIMIT $limit }}",
 		Icon:              icon,
 	}, open)
 }

@@ -36,6 +36,7 @@ type Connector struct {
 	HasSettings            bool
 	Icon                   string
 	FileExtension          string
+	SampleQuery            string
 	WebhooksPer            WebhooksPer
 	OAuth                  bool
 }

@@ -37,6 +37,7 @@ func init() {
 	connector.RegisterDatabase(connector.Database{
 		Name:              "ClickHouse",
 		SourceDescription: "import users and groups from a ClickHouse database",
+		SampleQuery:       "SELECT * FROM users {{ LIMIT $limit }}",
 		Icon:              icon,
 	}, open)
 }
