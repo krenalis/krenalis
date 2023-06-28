@@ -962,12 +962,10 @@ func (state *State) setConnectionStorage(n postgres.Notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	c := state.connections[e.Connection]
-	storage := state.connections[e.Storage]
-	c.mu.Lock()
-	c.storage = storage
-	c.Compression = e.Compression
-	c.mu.Unlock()
+	state.replaceConnection(e.Connection, func(c *Connection) {
+		c.storage = state.connections[e.Storage]
+		c.Compression = e.Compression
+	})
 }
 
 // SetResourceNotification is the notification event sent when a resource is
