@@ -10,7 +10,7 @@ import EditorWrapper from '../../../common/EditorWrapper/EditorWrapper';
 import Grid from '../../../common/Grid/Grid';
 import ActionMapping from './ActionMapping';
 import { ComboBoxList, ComboBoxInput } from '../../../common/ComboBox/ComboBox';
-import { getDefaultMappings, getSchemaComboboxItems, getExpressionVariables } from './action.helpers';
+import { getDefaultMappings, getSchemaComboboxItems, getExpressionVariables } from './Action.helpers';
 import { AppContext } from '../../../../providers/AppProvider';
 import { ConnectionContext } from '../../../../providers/ConnectionProvider';
 import { UnprocessableError, NotFoundError, BadRequestError } from '../../../../lib/api/errors';

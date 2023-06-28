@@ -8,7 +8,7 @@ import {
 	addPropertyToActionSchema,
 	removePropertyFromActionSchema,
 	getExpressionVariables,
-} from './action.helpers';
+} from './Action.helpers';
 import AlertDialog from '../../../common/AlertDialog/AlertDialog';
 import { ComboBoxInput, ComboBoxList } from '../../../common/ComboBox/ComboBox';
 import Section from '../../../common/Section/Section';
