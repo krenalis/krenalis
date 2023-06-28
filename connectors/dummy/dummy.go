@@ -12,6 +12,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"chichi/apis/normalization"
 	"chichi/connector"
 	"chichi/connector/types"
 )
@@ -145,6 +147,12 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 // UpdateUser updates the user with identifier id setting the given properties.
 func (c *connection) UpdateUser(id string, properties connector.Properties) error {
 
+	// Normalize and validate the properties.
+	properties, err := normalize(properties, userSchema)
+	if err != nil {
+		return err
+	}
+
 	// Write the user on the log.
 	propsDump, err := json.Marshal(properties)
 	if err != nil {
@@ -169,17 +177,18 @@ func (c *connection) UpdateUser(id string, properties connector.Properties) erro
 	return nil
 }
 
+var userSchema = types.Object([]types.Property{
+	{Name: "dummy_id", Type: types.Text(), Role: types.SourceRole},
+	{Name: "email", Type: types.Text()},
+	{Name: "first_name", Type: types.Text()},
+	{Name: "full_name", Type: types.Text()},
+	{Name: "last_name", Type: types.Text()},
+	{Name: "favourite_drink", Type: types.Text().WithEnum([]string{"tea", "beer", "wine", "water"})},
+})
+
 // UserSchema returns the user schema.
 func (c *connection) UserSchema() (types.Type, error) {
-	schema := types.Object([]types.Property{
-		{Name: "dummy_id", Type: types.Text(), Role: types.SourceRole},
-		{Name: "email", Type: types.Text()},
-		{Name: "first_name", Type: types.Text()},
-		{Name: "full_name", Type: types.Text()},
-		{Name: "last_name", Type: types.Text()},
-		{Name: "favourite_drink", Type: types.Text().WithEnum([]string{"tea", "beer", "wine", "water"})},
-	})
-	return schema, nil
+	return userSchema, nil
 }
 
 // Users returns the users starting from the given cursor.
@@ -219,4 +228,20 @@ func init() {
 		usersTimestamps[u.ID] = time.Now().UTC()
 	}
 	usersLock.Unlock()
+}
+
+func normalize(values map[string]any, schema types.Type) (map[string]any, error) {
+	out := make(map[string]any, len(values))
+	for name, value := range values {
+		prop, ok := schema.Property(name)
+		if !ok {
+			return nil, fmt.Errorf("property %q not found", name)
+		}
+		v, err := normalization.NormalizeAppProperty(name, prop.Type, value, prop.Nullable)
+		if err != nil {
+			return nil, err
+		}
+		out[name] = v
+	}
+	return out, nil
 }
