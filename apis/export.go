@@ -121,7 +121,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 			if err != nil {
 				return actionExecutionError{fmt.Errorf("cannot update user: %s", err)}
 			}
-			log.Printf("[info] user %q updated on %s: %#v", id, connector.Name, user)
+			log.Printf("[info] user %q updated on %s: %#v", id, connector.Name, props)
 			continue
 		}
 
