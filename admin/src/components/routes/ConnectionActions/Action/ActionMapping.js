@@ -7,6 +7,7 @@ import {
 	getSchemaComboboxItems,
 	addPropertyToActionSchema,
 	removePropertyFromActionSchema,
+	getExpressionVariables,
 } from './action.helpers';
 import AlertDialog from '../../../common/AlertDialog/AlertDialog';
 import { ComboBoxInput, ComboBoxList } from '../../../common/ComboBox/ComboBox';
@@ -106,9 +107,13 @@ const ActionMapping = forwardRef(
 				let error;
 				const value = action.Mapping[k].value;
 				if (!disabled && value !== '') {
-					const doesValueExist = defaultMappings[value] != null;
-					if (!doesValueExist) {
-						error = `"${value}" does not exist in ${connection.type.toLowerCase()}'s schema`;
+					const variables = getExpressionVariables(value);
+					for (const variable of variables) {
+						const doesValueExist = defaultMappings[variable] != null;
+						if (!doesValueExist) {
+							error = `"${variable}" does not exist in ${connection.type.toLowerCase()}'s schema`;
+							break;
+						}
 					}
 				}
 				mappings.push(

@@ -174,6 +174,19 @@ const removePropertyFromActionSchema = (action, side, propertyName) => {
 	return a;
 };
 
+function getExpressionVariables(expression) {
+	const regex = /(["'])(?:\\.|(?!\1)[^\\])*\1|\b([a-zA-Z_][a-zA-Z0-9_]*\b)(?!\s*\()/g;
+	const variables = [];
+	let match;
+	while ((match = regex.exec(expression)) !== null) {
+		if (match[2]) {
+			const variable = match[2].split('.')[0];
+			variables.push(variable);
+		}
+	}
+	return variables;
+}
+
 export {
 	getDefaultMappings,
 	rawTransformationFunction,
@@ -181,4 +194,5 @@ export {
 	getSchemaComboboxItems,
 	addPropertyToActionSchema,
 	removePropertyFromActionSchema,
+	getExpressionVariables,
 };

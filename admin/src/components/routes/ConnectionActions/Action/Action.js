@@ -10,7 +10,7 @@ import EditorWrapper from '../../../common/EditorWrapper/EditorWrapper';
 import Grid from '../../../common/Grid/Grid';
 import ActionMapping from './ActionMapping';
 import { ComboBoxList, ComboBoxInput } from '../../../common/ComboBox/ComboBox';
-import { getDefaultMappings, getSchemaComboboxItems } from './action.helpers';
+import { getDefaultMappings, getSchemaComboboxItems, getExpressionVariables } from './action.helpers';
 import { AppContext } from '../../../../providers/AppProvider';
 import { ConnectionContext } from '../../../../providers/ConnectionProvider';
 import { UnprocessableError, NotFoundError, BadRequestError } from '../../../../lib/api/errors';
@@ -591,19 +591,20 @@ const Action = ({ actionType: actionTypeProp, action: actionProp, onClose }) => 
 				if (v.value === '') {
 					continue;
 				}
+				const variables = getExpressionVariables(v.value);
+				for (const variable of variables) {
+					const property = flattenedInputSchema[variable];
+					if (property == null) {
+						showError(`${v.value} does not exist in the schema`);
+						return;
+					}
+					const fullProperty = property.full;
+					const isPropertyAlreadyInSchema = inSchema.properties.find((p) => p.name === fullProperty.name);
+					if (!isPropertyAlreadyInSchema) {
+						inSchema.properties.push(fullProperty);
+					}
+				}
 				mappingToSave[k] = v.value;
-				const valueProperty = flattenedInputSchema[v.value];
-				if (valueProperty == null) {
-					showError(`${v.value} does not exist in the schema`);
-					return;
-				}
-				const fullValueProperty = valueProperty.full;
-				const isValuePropertyAlreadyInSchema = inSchema.properties.find(
-					(p) => p.name === fullValueProperty.name
-				);
-				if (!isValuePropertyAlreadyInSchema) {
-					inSchema.properties.push(fullValueProperty);
-				}
 				const fullKeyProperty = flattenedOutputSchema[k].full;
 				const isKeyPropertyAlreadyInSchema = outSchema.properties.find((p) => p.name === fullKeyProperty.name);
 				if (!isKeyPropertyAlreadyInSchema) {
