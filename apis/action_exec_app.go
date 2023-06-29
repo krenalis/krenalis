@@ -19,9 +19,8 @@ import (
 )
 
 // importFromApp imports the users from an app.
-func (this *Action) importFromApp() error {
+func (this *Action) importFromApp(ctx context.Context) error {
 
-	ctx := context.Background()
 	app, err := this.connection.openAppUsers(ctx)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}

@@ -46,10 +46,9 @@ func (err sameColumnNameError) Error() string {
 }
 
 // importFromFile imports the users from a file.
-func (this *Action) importFromFile() error {
+func (this *Action) importFromFile(ctx context.Context) error {
 
 	// Connect to the file connector.
-	ctx := context.Background()
 	file, err := this.connection.openFile(ctx)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the file connector: %s", err)}

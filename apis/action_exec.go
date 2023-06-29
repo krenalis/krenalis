@@ -83,19 +83,19 @@ func (this *Action) exec() {
 		switch connector.Type {
 		case state.AppType:
 			if connection.Role == state.SourceRole {
-				err = this.importFromApp()
+				err = this.importFromApp(ctx)
 			} else {
 				err = this.exportUsersToApp(ctx)
 			}
 		case state.DatabaseType:
 			if connection.Role == state.SourceRole {
-				err = this.importFromDatabase()
+				err = this.importFromDatabase(ctx)
 			} else {
 				err = this.exportUsersToDatabase(ctx)
 			}
 		case state.FileType:
 			if connection.Role == state.SourceRole {
-				err = this.importFromFile()
+				err = this.importFromFile(ctx)
 			} else {
 				err = this.exportUsersToFile(ctx)
 			}

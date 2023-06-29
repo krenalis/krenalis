@@ -20,7 +20,7 @@ import (
 )
 
 // importFromDatabase imports the users from a database.
-func (this *Action) importFromDatabase() error {
+func (this *Action) importFromDatabase(ctx context.Context) error {
 
 	// Compile the query.
 	query, err := compileActionQuery(this.action.Query, noQueryLimit)
@@ -28,7 +28,6 @@ func (this *Action) importFromDatabase() error {
 		return actionExecutionError{err}
 	}
 
-	ctx := context.Background()
 	database, err := this.connection.openDatabase(ctx)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
