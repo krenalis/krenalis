@@ -70,7 +70,7 @@ const ConnectionActions = () => {
 								Add a new action
 							</SlButton>
 						</Flex>
-						<ActionsGrid connection={connection} onSelectAction={setSelectedAction} />
+						<ActionsGrid actions={connection.actions} onSelectAction={setSelectedAction} />
 					</>
 				)}
 			</div>

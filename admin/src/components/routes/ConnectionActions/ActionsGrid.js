@@ -1,7 +1,8 @@
-import { useMemo, useRef, useContext } from 'react';
+import { useRef, useContext, useState, useEffect } from 'react';
 import Action from '../../../lib/connections/action';
 import Grid from '../../common/Grid/Grid';
 import { AppContext } from '../../../providers/AppProvider';
+import { ConnectionContext } from '../../../providers/ConnectionProvider';
 import { UnprocessableError } from '../../../lib/api/errors';
 import * as statuses from '../../../constants/statuses';
 import {
@@ -17,10 +18,23 @@ import {
 
 const GRID_COLUMNS = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: null }];
 
-const ActionsGrid = ({ connection, onSelectAction }) => {
-	const newActionID = useRef(0);
+const ActionsGrid = ({ actions, onSelectAction }) => {
+	const [runningActions, setRunningActions] = useState([]);
 
 	const { api, showError, showStatus, setAreConnectionsStale } = useContext(AppContext);
+	const { connection } = useContext(ConnectionContext);
+
+	const newActionID = useRef(0);
+
+	useEffect(() => {
+		const running = [];
+		for (const a of actions) {
+			if (a.Running) {
+				running.push(a.ID);
+			}
+		}
+		setRunningActions(running);
+	}, [actions]);
 
 	const onActionStatusSwitch = async (actionID) => {
 		const index = connection.actions.findIndex((a) => a.ID === actionID);
@@ -43,6 +57,7 @@ const ActionsGrid = ({ connection, onSelectAction }) => {
 	};
 
 	const executeAction = async (actionID) => {
+		setRunningActions([...runningActions, actionID]);
 		const [, err] = await api.connections.executeAction(connection.id, actionID, true); // TODO: handle the reimport bool.
 		if (err != null) {
 			if (err instanceof UnprocessableError) {
@@ -61,7 +76,6 @@ const ActionsGrid = ({ connection, onSelectAction }) => {
 			showError(err);
 			return;
 		}
-		setAreConnectionsStale(true);
 	};
 
 	const onSchedulerPeriodChange = async (e, actionID) => {
@@ -74,96 +88,94 @@ const ActionsGrid = ({ connection, onSelectAction }) => {
 		setAreConnectionsStale(true);
 	};
 
-	return useMemo(() => {
-		const rows = [];
-		for (const a of connection.actions) {
-			let linkedActionType;
-			for (const t of connection.actionTypes) {
-				if (a.Target === 'Users' || a.Target === 'Groups') {
-					if (a.Target === t.Target) linkedActionType = t;
-					continue;
-				}
-				if (a.EventType === t.EventType) linkedActionType = t;
+	const rows = [];
+	for (const a of actions) {
+		let linkedActionType;
+		for (const t of connection.actionTypes) {
+			if (a.Target === 'Users' || a.Target === 'Groups') {
+				if (a.Target === t.Target) linkedActionType = t;
+				continue;
 			}
-			if (linkedActionType === undefined) {
-				throw Error(`Event type '${a.EventType}' of action ${a.ID} does not exist anymore`);
-			}
-			const nameCell = (
-				<div className='actionName'>
-					<div className='name'>{a.Name}</div>
-					<div className='description'>{linkedActionType.Description}</div>
-				</div>
-			);
-			const conditionsCell = [];
-			if (a.Filter != null) {
-				for (const c of a.Filter.Conditions) {
-					conditionsCell.push(
-						<div>
-							{c.Property} {c.Operator} {c.Value}
-						</div>
-					);
-				}
-			} else {
-				conditionsCell.push('-');
-			}
-			const enabledCell = <SlSwitch onSlChange={() => onActionStatusSwitch(a.ID)} checked={a.Enabled}></SlSwitch>;
-			const actionsCell = (
-				<div className='actionButtons'>
-					{(a.Target === 'Users' || a.Target === 'Groups') && (
-						<>
-							<SlDropdown>
-								<SlButton slot='trigger' variant='default' size='small'>
-									<SlIcon slot='prefix' name='clock' />
-									Schedule: {a.SchedulePeriod}
-								</SlButton>
-								<SlMenu className='schedulerOptions'>
-									<SlRadioGroup
-										size='small'
-										onSlChange={(e) => onSchedulerPeriodChange(e, a.ID)}
-										value={Object.keys(Action.SCHEDULE_PERIODS).find(
-											(k) => Action.SCHEDULE_PERIODS[k] === a.SchedulePeriod
-										)}
-									>
-										{Object.entries(Action.SCHEDULE_PERIODS).map(([value, time]) => (
-											<SlRadio value={value}>{time}</SlRadio>
-										))}
-									</SlRadioGroup>
-								</SlMenu>
-							</SlDropdown>
-							<SlButton
-								disabled={a.Running}
-								variant='default'
-								className='runButton'
-								size='small'
-								onClick={() => executeAction(a.ID)}
-							>
-								{a.Running ? <SlSpinner slot='prefix' /> : <SlIcon slot='prefix' name='play' />}
-								Run now
-							</SlButton>
-						</>
-					)}
-					<SlButton variant='default' size='small' onClick={() => onSelectAction(a)}>
-						Edit...
-					</SlButton>
-					<SlButton
-						className='removeAction'
-						variant='danger'
-						size='small'
-						onClick={() => onRemoveAction(a.ID)}
-					>
-						Remove
-					</SlButton>
-				</div>
-			);
-			const row = { cells: [nameCell, conditionsCell, enabledCell, actionsCell], key: a.ID };
-			if (a.ID === newActionID.current && connection.actions.length > 1) {
-				row.animation = 'fade-in';
-				newActionID.current = 0;
-			}
-			rows.push(row);
+			if (a.EventType === t.EventType) linkedActionType = t;
 		}
-		return <Grid rows={rows} columns={GRID_COLUMNS} noRowsMessage='No actions to show'></Grid>;
-	}, [connection]);
+		if (linkedActionType === undefined) {
+			throw Error(`Event type '${a.EventType}' of action ${a.ID} does not exist anymore`);
+		}
+		const nameCell = (
+			<div className='actionName'>
+				<div className='name'>{a.Name}</div>
+				<div className='description'>{linkedActionType.Description}</div>
+			</div>
+		);
+		const conditionsCell = [];
+		if (a.Filter != null) {
+			for (const c of a.Filter.Conditions) {
+				conditionsCell.push(
+					<div>
+						{c.Property} {c.Operator} {c.Value}
+					</div>
+				);
+			}
+		} else {
+			conditionsCell.push('-');
+		}
+		const enabledCell = <SlSwitch onSlChange={() => onActionStatusSwitch(a.ID)} checked={a.Enabled}></SlSwitch>;
+		const actionsCell = (
+			<div className='actionButtons'>
+				{(a.Target === 'Users' || a.Target === 'Groups') && (
+					<>
+						<SlDropdown>
+							<SlButton slot='trigger' variant='default' size='small'>
+								<SlIcon slot='prefix' name='clock' />
+								Schedule: {a.SchedulePeriod}
+							</SlButton>
+							<SlMenu className='schedulerOptions'>
+								<SlRadioGroup
+									size='small'
+									onSlChange={(e) => onSchedulerPeriodChange(e, a.ID)}
+									value={Object.keys(Action.SCHEDULE_PERIODS).find(
+										(k) => Action.SCHEDULE_PERIODS[k] === a.SchedulePeriod
+									)}
+								>
+									{Object.entries(Action.SCHEDULE_PERIODS).map(([value, time]) => (
+										<SlRadio value={value}>{time}</SlRadio>
+									))}
+								</SlRadioGroup>
+							</SlMenu>
+						</SlDropdown>
+						<SlButton
+							disabled={runningActions.includes(a.ID)}
+							variant='default'
+							className='runButton'
+							size='small'
+							onClick={() => executeAction(a.ID)}
+						>
+							{runningActions.includes(a.ID) ? (
+								<SlSpinner slot='prefix' />
+							) : (
+								<SlIcon slot='prefix' name='play' />
+							)}
+							Run now
+						</SlButton>
+					</>
+				)}
+				<SlButton variant='default' size='small' onClick={() => onSelectAction(a)}>
+					Edit...
+				</SlButton>
+				<SlButton className='removeAction' variant='danger' size='small' onClick={() => onRemoveAction(a.ID)}>
+					Remove
+				</SlButton>
+			</div>
+		);
+		const row = { cells: [nameCell, conditionsCell, enabledCell, actionsCell], key: a.ID };
+		if (a.ID === newActionID.current && connection.actions.length > 1) {
+			row.animation = 'fade-in';
+			newActionID.current = 0;
+		}
+		rows.push(row);
+	}
+
+	return <Grid rows={rows} columns={GRID_COLUMNS} noRowsMessage='No actions to show'></Grid>;
 };
 
 export default ActionsGrid;
