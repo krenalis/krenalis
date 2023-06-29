@@ -24,14 +24,13 @@ const defaultAppContext = {
 const AppContext = createContext(defaultAppContext);
 
 const AppProvider = ({ api, showError, children, ...delegated }) => {
-	const [connectors, setConnectors] = useState(null);
-	const [connections, setConnections] = useState(null);
+	const [connectors, setConnectors] = useState([]);
+	const [connections, setConnections] = useState([]);
 	const [areConnectionsStale, setAreConnectionsStale] = useState(false);
 
 	useEffect(() => {
-		const fetchData = async () => {
-			let fetchedConnectors, fetchedConnections, err;
-			[fetchedConnectors, err] = await api.connectors.find();
+		const fetchConnectors = async () => {
+			const [fetchedConnectors, err] = await api.connectors.find();
 			if (err != null) {
 				showError(err);
 				return;
@@ -41,7 +40,14 @@ const AppProvider = ({ api, showError, children, ...delegated }) => {
 				connector.logo = getConnectorLogo(connector.icon);
 			}
 			setConnectors(connectors);
-			[fetchedConnections, err] = await api.connections.find();
+			setAreConnectionsStale(true);
+		};
+		fetchConnectors();
+	}, []);
+
+	useEffect(() => {
+		const fetchData = async () => {
+			const [fetchedConnections, err] = await api.connections.find();
 			if (err) {
 				setConnections([]);
 				showError(err);
@@ -60,15 +66,10 @@ const AppProvider = ({ api, showError, children, ...delegated }) => {
 			setConnections(connections);
 			setAreConnectionsStale(false);
 		};
-
-		if (connections == null || areConnectionsStale) {
+		if (areConnectionsStale) {
 			fetchData();
 		}
 	}, [areConnectionsStale]);
-
-	if (connections == null) {
-		return;
-	}
 
 	return (
 		<AppContext.Provider value={{ connectors, connections, setAreConnectionsStale, api, showError, ...delegated }}>

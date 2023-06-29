@@ -30,6 +30,9 @@ const ConnectionProvider = () => {
 				return;
 			}
 			const providedConnection = connections.find((c) => c.id === connectionID);
+			if (providedConnection == null) {
+				return;
+			}
 			// enrich the provided connection with the additional fetched data.
 			const connection = { ...providedConnection };
 			connection.actionTypes = fetchedConnection.ActionTypes;

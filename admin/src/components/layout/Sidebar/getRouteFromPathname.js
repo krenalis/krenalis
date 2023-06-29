@@ -21,10 +21,12 @@ const getRouteFromPathname = (route, connections) => {
 			} else {
 				const connectionID = Number(resource);
 				const connection = connections.find((c) => c.id === connectionID);
-				if (connection.isSource) {
-					currentRoute = 'connections/sources';
-				} else {
-					currentRoute = 'connections/destinations';
+				if (connection != null) {
+					if (connection.isSource) {
+						currentRoute = 'connections/sources';
+					} else {
+						currentRoute = 'connections/destinations';
+					}
 				}
 			}
 		}
