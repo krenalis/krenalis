@@ -67,7 +67,7 @@ const (
 	CreateOrUpdate ExportMode = "CreateOrUpdate"
 )
 
-// fromState serializes action into ac.
+// fromState serializes action into this.
 func (this *Action) fromState(db *postgres.DB, http *httpclient.HTTP, action *state.Action) {
 	c := action.Connection()
 	this.db = db
