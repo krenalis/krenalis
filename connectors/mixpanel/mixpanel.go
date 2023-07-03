@@ -75,28 +75,30 @@ func (c *connection) EventTypes() ([]*connector.EventType, error) {
 	if c.conf.Role != connector.DestinationRole {
 		return nil, nil
 	}
-	schema := types.Object([]types.Property{
-		{Name: "event", Label: "Event Name", Type: types.Text().WithCharLen(255), Required: true},
-		{Name: "properties", Label: "Your Properties", Type: types.Map(types.JSON()), Required: true},
-	})
+	schema := func(placeholder string) types.Type {
+		return types.Object([]types.Property{
+			{Name: "event", Label: "Event Name", Placeholder: placeholder, Type: types.Text().WithCharLen(255), Required: true},
+			{Name: "properties", Label: "Your Properties", Type: types.Map(types.JSON()), Required: true},
+		})
+	}
 	eventTypes := []*connector.EventType{
 		{
 			ID:          "track",
 			Name:        "Send track events",
 			Description: "Send track events to Mixpanel",
-			Schema:      schema,
+			Schema:      schema("event"),
 		},
 		{
 			ID:          "page",
 			Name:        "Send page events",
 			Description: "Send page events to Mixpanel",
-			Schema:      schema,
+			Schema:      schema(`"Page View"`),
 		},
 		{
 			ID:          "screen",
 			Name:        "Send screen events",
 			Description: "Send screen events to Mixpanel",
-			Schema:      schema,
+			Schema:      schema(`"Screen View"`),
 		},
 	}
 	return eventTypes, nil
@@ -112,7 +114,7 @@ func (c *connection) Resource() (string, error) {
 func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, eventType string) error {
 
 	if e := mappedEvent["event"].(string); e == "" {
-		mappedEvent["event"] = "$mp_web_page_view"
+		return errors.New("event cannot be empty")
 	}
 
 	p := mappedEvent["properties"].(map[string]any)
