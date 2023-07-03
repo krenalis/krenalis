@@ -912,25 +912,10 @@ func unmappedProperties(schema types.Type, mapped []types.Path) []string {
 // The boolean return parameter reports whether p is a valid property path or
 // not; when not valid, the returned path is nil.
 func parsePropertyPath(p string) (types.Path, bool) {
-
-	// A selector.
-	if strings.Contains(p, ".") {
-		parts := strings.Split(p, ".")
-		for _, c := range parts {
-			if !types.IsValidPropertyName(c) {
-				return nil, false
-			}
-		}
-		return parts, true
-	}
-
-	// An identifier.
-	ok := types.IsValidPropertyName(p)
-	if !ok {
+	if !types.IsValidPropertyPath(p) {
 		return nil, false
 	}
-
-	return types.Path{p}, true
+	return strings.Split(p, "."), true
 }
 
 // sourceMappingSchema returns the users schema to use in mappings for source
