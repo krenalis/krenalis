@@ -569,7 +569,7 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType, n.Name,
 			n.Enabled, n.ScheduleStart, n.SchedulePeriod,
-			string(filter), rawInSchema, rawOutSchema, mapping, action.PythonSource,
+			string(filter), rawInSchema, rawOutSchema, mapping, n.PythonSource,
 			n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode, matchPropInternal, matchPropExternal)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {
