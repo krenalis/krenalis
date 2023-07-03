@@ -469,6 +469,25 @@ func IsValidPropertyName(name string) bool {
 	return true
 }
 
+// IsValidPropertyPath reports whether path is a valid property path.
+// A property path is formed by property names separated by periods.
+func IsValidPropertyPath(path string) bool {
+	for path != "" {
+		i := strings.IndexByte(path, '.')
+		if i == -1 {
+			i = len(path)
+		}
+		if !IsValidPropertyName(path[:i]) {
+			return false
+		}
+		if i == len(path) {
+			return true
+		}
+		path = path[i+1:]
+	}
+	return false
+}
+
 // AsRole returns an object type with the properties of typ but that are
 // compatible with role. It returns typ if all properties are compatible and
 // an invalid type if there are no compatible properties.

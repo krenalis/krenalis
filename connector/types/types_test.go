@@ -290,6 +290,27 @@ func TestHasFlatProperties(t *testing.T) {
 
 }
 
+func Test_IsValidPropertyPath(t *testing.T) {
+	tests := []struct {
+		path     string
+		expected bool
+	}{
+		{"", false},
+		{".", false},
+		{"a", true},
+		{"a.b", true},
+		{"a.b.c", true},
+		{"a..b", false},
+		{"a.b.", false},
+		{".a.b", false},
+	}
+	for _, test := range tests {
+		if got := IsValidPropertyPath(test.path); got != test.expected {
+			t.Errorf("test %q: expected %t, got %t", test.path, test.expected, got)
+		}
+	}
+}
+
 func Test_PropertyByPath(t *testing.T) {
 	cases := []struct {
 		name     string
