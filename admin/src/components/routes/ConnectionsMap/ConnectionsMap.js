@@ -1,23 +1,31 @@
-import { useContext } from 'react';
+import { useState, useContext, useEffect, useLayoutEffect } from 'react';
 import './ConnectionsMap.css';
 import Arrow from '../../common/Arrow/Arrow';
-import useConnectionsBlocks from './useConnectionsBlocks';
-import useConnectionsArrows from './useConnectionsArrows';
-import { splitConnectionsByRole } from '../../../lib/connections/helpers';
+import { getConnectionsBlocks } from './ConnectionsMap.helpers';
 import { AppContext } from '../../../providers/AppProvider';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectionsMap = () => {
+	const [databaseArrows, setDatabaseArrows] = useState([]);
+
 	const { redirect, connections, setTitle } = useContext(AppContext);
 
-	setTitle('Connections');
+	useLayoutEffect(() => {
+		setTitle('Connections');
+	}, []);
 
-	const newConnectionID = Number(new URL(document.location).searchParams.get('newConnection'));
-	const splittedByRole = splitConnectionsByRole(connections);
-	const sourcesBlocks = useConnectionsBlocks(splittedByRole.sources, newConnectionID);
-	const sourcesArrows = useConnectionsArrows(splittedByRole.sources, newConnectionID);
-	const destinationsBlocks = useConnectionsBlocks(splittedByRole.destinations, newConnectionID);
-	const destinationsArrows = useConnectionsArrows(splittedByRole.destinations, newConnectionID);
+	useEffect(() => {
+		// Must wait for the map to be painted and styled before proceding with
+		// the render of the database's arrow.
+		setTimeout(() => {
+			setDatabaseArrows(
+				<>
+					<Arrow start='centralLogo' end='usersDatabase' startAnchor='bottom' endAnchor='top' />
+					<Arrow start='centralLogo' end='eventsDatabase' startAnchor='bottom' endAnchor='top' />
+				</>
+			);
+		}, 0);
+	}, []);
 
 	const onAddNewSourceClick = () => {
 		return redirect(`connectors?role=Source`);
@@ -30,6 +38,16 @@ const ConnectionsMap = () => {
 	const onUsersDatabaseClick = () => {
 		return redirect(`users`);
 	};
+
+	const newConnectionID = Number(new URL(document.location).searchParams.get('newConnection'));
+	const sources = [];
+	const destinations = [];
+	for (const c of connections) {
+		if (c.role === 'Source') sources.push(c);
+		if (c.role === 'Destination') destinations.push(c);
+	}
+	const sourcesBlocks = getConnectionsBlocks(sources, newConnectionID);
+	const destinationsBlocks = getConnectionsBlocks(destinations, newConnectionID);
 
 	return (
 		<div className='connectionsMap'>
@@ -60,15 +78,10 @@ const ConnectionsMap = () => {
 								<div className='name'>Events</div>
 							</div>
 						</div>
+						{databaseArrows}
 					</div>
 					<div className='destinations'>{destinationsBlocks}</div>
 				</div>
-			</div>
-			<div className='arrows'>
-				{sourcesArrows}
-				{destinationsArrows}
-				<Arrow start='centralLogo' end='usersDatabase' startAnchor='bottom' endAnchor='top' />
-				<Arrow start='centralLogo' end='eventsDatabase' startAnchor='bottom' endAnchor='top' />
 			</div>
 		</div>
 	);

@@ -1,7 +1,7 @@
 import './Arrow.css';
 import Xarrow from 'react-xarrows';
 
-const Arrow = ({ start, end, startAnchor, endAnchor, isNew }) => {
+const Arrow = ({ start, end, startAnchor, endAnchor, dashness, color, isNew }) => {
 	return (
 		<div className={`arrow${isNew ? ' new' : ''}`}>
 			<Xarrow
@@ -10,8 +10,10 @@ const Arrow = ({ start, end, startAnchor, endAnchor, isNew }) => {
 				startAnchor={startAnchor}
 				endAnchor={endAnchor}
 				showHead={false}
-				color='#cacad6'
+				color={color ? color : '#cacad6'}
 				strokeWidth={1}
+				curveness={0.7}
+				dashness={dashness}
 			/>
 		</div>
 	);

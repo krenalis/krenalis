@@ -43,6 +43,7 @@
     justify-content: center;
     align-items: center;
     font-weight: 600;
+    font-family: monospace;
 }
 
 .sidebar .workspace .workspaceSelector::part(form-control-label) {

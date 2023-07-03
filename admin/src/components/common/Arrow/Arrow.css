@@ -4,7 +4,7 @@
 }
 
 .arrow.new {
-    animation: arrow-fade-in 2000ms;
+    animation: arrow-fade-in 500ms;
     animation-delay: 1000ms;
     animation-fill-mode: both;
 }
@@ -13,4 +13,6 @@
     width: -moz-available;
 	width: -webkit-fill-available;
 	width: fill-available;
+    position: static!important;
+    z-index: unset!important;
 }

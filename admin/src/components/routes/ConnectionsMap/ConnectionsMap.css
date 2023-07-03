@@ -40,6 +40,7 @@
     animation: pulse 2s infinite;
     border: 12px solid var(--color-primary-400);
     font-weight: 600;
+    font-family: monospace;
 }
 
 @keyframes pulse {
@@ -75,6 +76,10 @@
 	position: relative;
 }
 
+.connectionsMap .map .main .databases .database.users {
+    cursor: pointer;
+}
+
 .connectionsMap .map .main .databases .database sl-icon {
 	font-size: 40px;
 	margin-bottom: 15px;
@@ -108,15 +113,21 @@
     font-size: 14px;
     border: 1px solid var(--sl-color-neutral-200);
     cursor: pointer;
+    will-change: transform;
+}
+
+.connectionsMap .connectionBlock[data-is-hovered="true"] {
+    border: 1px dashed var(--sl-color-primary-600);
+    background-color: var(--sl-color-primary-50);
 }
 
 @keyframes connection-block-fade-in {
-    0% { transform: scale(.75); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
+    0% {  opacity: 0 }
+    100% {  opacity: 1 }
 }
 
 .connectionsMap .connectionBlock.new {
-    animation: connection-block-fade-in 2000ms;
+    animation: connection-block-fade-in 1000ms;
     animation-fill-mode: both;
 }
 
