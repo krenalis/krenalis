@@ -1881,6 +1881,8 @@ func (this *Action) setUser(ctx context.Context, id string, user map[string]any)
 
 	// TODO(Gianluca): replace 'identityProperties' with the identity properties
 	// specified in the action, when it will be implemented.
+	//
+	// See https://github.com/open2b/chichi/issues/217.
 	identityProperties := []string{"Email"}
 
 	index := index.Open(this.redis)
