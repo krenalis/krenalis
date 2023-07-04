@@ -210,6 +210,19 @@ func (p Path) String() string {
 	return strings.Join(p, ".")
 }
 
+// Equals reports whether path is equal to p.
+func (p Path) Equals(path Path) bool {
+	if len(p) != len(path) {
+		return false
+	}
+	for i, name := range p {
+		if name != path[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // Type represents a type.
 type Type struct {
 	pt PhysicalType
