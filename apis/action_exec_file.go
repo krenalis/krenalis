@@ -69,7 +69,7 @@ func (this *Action) importFromFile(ctx context.Context) error {
 	}
 
 	// Determine the input and the output schema.
-	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.PythonSource, false)
+	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.Transformation, false)
 	if err != nil {
 		return err
 	}

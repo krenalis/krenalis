@@ -41,7 +41,7 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 	}
 	defer rawRows.Close()
 
-	mapping, err := mappings.New(this.action.OutSchema, this.action.InSchema, this.action.Mapping, this.action.PythonSource, false)
+	mapping, err := mappings.New(this.action.OutSchema, this.action.InSchema, this.action.Mapping, this.action.Transformation, false)
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 	}
 
 	// Instantiate a new mapping.
-	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.PythonSource, true)
+	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.Transformation, true)
 	if err != nil {
 		return err
 	}

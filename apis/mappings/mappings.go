@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 
 	"chichi/apis/mappings/mapexp"
@@ -18,6 +19,8 @@ import (
 	"chichi/apis/state"
 	"chichi/apis/transformations"
 	"chichi/connector/types"
+
+	"golang.org/x/exp/maps"
 )
 
 // ActionFilterApplies reports whether the action filter applies to the props,
@@ -64,7 +67,7 @@ type propertyMapping struct {
 type Mapping struct {
 	inSchema, outSchema types.Type
 	properties          []propertyMapping
-	pythonSource        string
+	transformation      *state.Transformation
 	formatTime          bool
 }
 
@@ -72,11 +75,8 @@ type Mapping struct {
 // the given mapping or, in case of a transformation function, the Python
 // source.
 // Panics if none or both the mapping and the Python source are provided.
-func New(inSchema, outSchema types.Type, mappings map[string]string, pythonSource string, formatTime bool) (*Mapping, error) {
+func New(inSchema, outSchema types.Type, mappings map[string]string, transformation *state.Transformation, formatTime bool) (*Mapping, error) {
 
-	if (mappings == nil) == (pythonSource == "") {
-		panic("one and only one of mapping and Python source must be provided")
-	}
 	if !inSchema.Valid() || !outSchema.Valid() {
 		panic("input and output schemas must be valid")
 	}
@@ -101,8 +101,8 @@ func New(inSchema, outSchema types.Type, mappings map[string]string, pythonSourc
 		return &m, nil
 	}
 
-	// Transformation function.
-	m.pythonSource = pythonSource
+	// Transformation.
+	m.transformation = transformation
 
 	return &m, nil
 }
@@ -111,9 +111,10 @@ func New(inSchema, outSchema types.Type, mappings map[string]string, pythonSourc
 // if values cannot be mapped.
 func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]any, error) {
 
+	outValues := map[string]any{}
+
 	// Map using properties mapping.
 	if m.properties != nil {
-		outValues := map[string]any{}
 		for _, property := range m.properties {
 			v, err := property.expression.Eval(values, m.formatTime)
 			if err != nil {
@@ -125,6 +126,9 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 			}
 			writePropertyTo(outValues, property.outPath, v)
 		}
+	}
+
+	if m.transformation == nil {
 		return outValues, nil
 	}
 
@@ -133,9 +137,8 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 	// Prepare the properties for the transformation.
 	// TODO(Gianluca): this may be no longer necessary. Review when refactoring
 	// the normalization of properties.
-	inPropNames := m.inSchema.PropertiesNames()
-	inProps := make(map[string]any, len(inPropNames))
-	for _, name := range inPropNames {
+	inProps := make(map[string]any, len(m.transformation.In))
+	for _, name := range m.transformation.In {
 		value, ok := values[name]
 		if !ok {
 			continue
@@ -145,16 +148,42 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 
 	// Run the Python transformation function.
 	pool := transformations.NewPool()
-	outValues, err := pool.Run(ctx, m.pythonSource, inProps)
+	transformationOutValues, err := pool.Run(ctx, m.transformation.Func, inProps)
 	if err != nil {
 		return nil, fmt.Errorf("error while calling the transformation function: %s", err)
 	}
 
+	// Verify that the transformation function has returned all the expected out
+	// properties and no additional ones.
+	for _, name := range m.transformation.Out {
+		if _, ok := transformationOutValues[name]; !ok {
+			return nil, fmt.Errorf("transformation function has not returned the property %s", name)
+		}
+	}
+	if len(m.transformation.Out) != len(transformationOutValues) {
+		names := maps.Keys(transformationOutValues)
+		sort.Strings(names)
+		for _, got := range names {
+			found := false
+			for _, expected := range m.transformation.Out {
+				if got == expected {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return nil, fmt.Errorf("transformation function has returned the unexpected property %q", got)
+			}
+		}
+	}
+
 	// Normalize the Python output according to the mapping's output schema.
-	outValues, err = normalizePythonOutput(outValues, m.outSchema, m.formatTime)
+	transformationOutValues, err = normalizePythonOutput(transformationOutValues, m.outSchema, m.formatTime)
 	if err != nil {
 		return nil, err
 	}
+
+	maps.Copy(outValues, transformationOutValues)
 
 	return outValues, nil
 }

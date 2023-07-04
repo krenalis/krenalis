@@ -294,8 +294,9 @@ type AddActionNotification struct {
 	Filter             *ActionFilter
 	InSchema           types.Type
 	OutSchema          types.Type
+	IdentityProperties []string
 	Mapping            map[string]string
-	PythonSource       string
+	Transformation     *Transformation
 	Query              string
 	Path               string
 	TableName          string
@@ -324,8 +325,9 @@ func (state *State) addAction(n postgres.Notification) {
 		Filter:             e.Filter,
 		InSchema:           e.InSchema,
 		OutSchema:          e.OutSchema,
+		IdentityProperties: e.IdentityProperties,
 		Mapping:            e.Mapping,
-		PythonSource:       e.PythonSource,
+		Transformation:     e.Transformation,
 		Query:              e.Query,
 		Path:               e.Path,
 		TableName:          e.TableName,
@@ -813,8 +815,9 @@ type SetActionNotification struct {
 	Filter             *ActionFilter
 	InSchema           types.Type
 	OutSchema          types.Type
+	IdentityProperties []string
 	Mapping            map[string]string
-	PythonSource       string
+	Transformation     *Transformation
 	Query              string
 	Path               string
 	TableName          string
@@ -835,8 +838,9 @@ func (state *State) setAction(n postgres.Notification) {
 		a.Filter = e.Filter
 		a.InSchema = e.InSchema
 		a.OutSchema = e.OutSchema
+		a.IdentityProperties = e.IdentityProperties
 		a.Mapping = e.Mapping
-		a.PythonSource = e.PythonSource
+		a.Transformation = e.Transformation
 		a.Query = e.Query
 		a.Path = e.Path
 		a.TableName = e.TableName

@@ -43,7 +43,8 @@ func TestImportWithTransformation(t *testing.T) {
 				{Name: "FirstName", Type: types.Text()},
 				{Name: "Gender", Type: types.Text().WithEnum([]string{"male", "female", "other"})},
 			}),
-			"PythonSource": `
+			"Transformation": map[string]any{
+				"Func": `
 def transform(user: dict) -> dict:
 	if user["first_name"] == "Jerad":
 		gender = "male"
@@ -54,6 +55,9 @@ def transform(user: dict) -> dict:
 		"FirstName": user["first_name"],
 		"Gender": gender,
 	}`,
+				"In":  []string{"first_name", "email"},
+				"Out": []string{"Email", "FirstName", "Gender"},
+			},
 		},
 	})
 	c.ExecuteAction(dummyID, importUsersID, true)

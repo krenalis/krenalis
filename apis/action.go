@@ -27,6 +27,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 )
 
 var QueryExecutionFailed errors.Code = "QueryExecutionFailed"
@@ -50,14 +51,22 @@ type Action struct {
 	Filter             *ActionFilter
 	InSchema           types.Type
 	OutSchema          types.Type
+	IdentityProperties []string
 	Mapping            map[string]string
-	PythonSource       string
+	Transformation     *Transformation
 	Query              *string
 	Path               *string
 	Table              *string
 	Sheet              *string
 	ExportMode         *ExportMode
 	MatchingProperties *MatchingProperties
+}
+
+// Transformation represents a transformation.
+type Transformation struct {
+	Func string   // Source code of the Python function.
+	In   []string // Input properties.
+	Out  []string // Output properties.
 }
 
 // ExportMode represents one of the three export modes.
@@ -103,13 +112,14 @@ func (this *Action) fromState(db *postgres.DB, redis *redis.Client, http *httpcl
 	}
 	this.InSchema = action.InSchema
 	this.OutSchema = action.OutSchema
+	this.IdentityProperties = slices.Clone(action.IdentityProperties)
 	if action.Mapping != nil {
 		this.Mapping = make(map[string]string, len(action.Mapping))
 		for out, in := range action.Mapping {
 			this.Mapping[out] = in
 		}
 	}
-	this.PythonSource = action.PythonSource
+	this.Transformation = (*Transformation)(action.Transformation)
 	if action.Query != "" {
 		query := action.Query
 		this.Query = &query
@@ -258,18 +268,18 @@ func (this *Action) Set(action ActionToSet) error {
 		return err
 	}
 	n := state.SetActionNotification{
-		ID:           this.action.ID,
-		Name:         action.Name,
-		Enabled:      action.Enabled,
-		InSchema:     action.InSchema,
-		OutSchema:    action.OutSchema,
-		Mapping:      action.Mapping,
-		PythonSource: action.PythonSource,
-		Query:        action.Query,
-		Path:         action.Path,
-		TableName:    action.TableName,
-		Sheet:        action.Sheet,
-		ExportMode:   (*state.ExportMode)(action.ExportMode),
+		ID:             this.action.ID,
+		Name:           action.Name,
+		Enabled:        action.Enabled,
+		InSchema:       action.InSchema,
+		OutSchema:      action.OutSchema,
+		Mapping:        action.Mapping,
+		Transformation: (*state.Transformation)(action.Transformation),
+		Query:          action.Query,
+		Path:           action.Path,
+		TableName:      action.TableName,
+		Sheet:          action.Sheet,
+		ExportMode:     (*state.ExportMode)(action.ExportMode),
 	}
 	var filter, mapping []byte
 	if action.Filter != nil {
@@ -318,15 +328,19 @@ func (this *Action) Set(action ActionToSet) error {
 		matchPropInternal = n.MatchingProperties.Internal
 		matchPropExternal = n.MatchingProperties.External
 	}
+	var transformation state.Transformation
+	if n.Transformation != nil {
+		transformation = *n.Transformation
+	}
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
-			"name = $1, enabled = $2, filter = $3, in_schema = $4, out_schema = $5,\n"+
-			"mapping = $6, python_source = $7, query = $8, path = $9, table_name = $10, sheet = $11,\n"+
-			"export_mode = $12, matching_properties_internal = $13,\n"+
-			"matching_properties_external = $14 WHERE id = $15",
-			n.Name, n.Enabled, string(filter), rawInSchema, rawOutSchema, mapping,
-			n.PythonSource, n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode, matchPropInternal,
-			matchPropExternal, n.ID,
+			"name = $1, enabled = $2, filter = $3, in_schema = $4, out_schema = $5, mapping = $6,\n"+
+			"transformation_func = $7, transformation_in = $8, transformation_out = $9, query = $10, path = $11,"+
+			"table_name = $12, sheet = $13, export_mode = $14, matching_properties_internal = $15,\n"+
+			"matching_properties_external = $16 WHERE id = $17",
+			n.Name, n.Enabled, string(filter), rawInSchema, rawOutSchema, mapping, transformation.Func,
+			transformation.In, transformation.Out, n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode,
+			matchPropInternal, matchPropExternal, n.ID,
 		)
 		if err != nil {
 			return err
@@ -440,6 +454,11 @@ type ActionToSet struct {
 	// OutSchema is the output schema of the mappings (of the transformation).
 	OutSchema types.Type
 
+	// IdentityProperties represents the property paths upon which identity
+	// resolution is executed. All identity properties must be present as keys
+	// in the action's Mapping.
+	IdentityProperties []string
+
 	// Mapping is the mapping of the action, if it has one, otherwise is nil.
 	//
 	// Every action that supports mappings / transformation must have an
@@ -450,9 +469,10 @@ type ActionToSet struct {
 	// action, while the values of the map must be valid mapping expressions.
 	Mapping map[string]string
 
-	// PythonSource is the source code for the Python transformation function of
-	// the action, if it has one, otherwise is the empty string.
-	PythonSource string
+	// Transformation contains the source code of the Python function used to
+	// transform source values into destination values, and the input and output
+	// properties. It is nil if the action does not have a transformation.
+	Transformation *Transformation
 
 	// Query is the query of the action, if it has one, otherwise it is the
 	// empty string.
@@ -616,13 +636,43 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			}
 		}
 	}
-	// Validate the mapping and the transformation.
-	if action.Mapping != nil && action.PythonSource != "" {
-		return errors.BadRequest("action can not have both mapping and transformation")
+	// Validate identity properties.
+	if action.IdentityProperties != nil {
+		if len(action.IdentityProperties) == 0 {
+			return errors.BadRequest("identity properties, if not null, cannot be empty")
+		}
+		for _, path := range action.IdentityProperties {
+			if !types.IsValidPropertyPath(path) {
+				return errors.BadRequest("identity property %q is not a valid path", path)
+			}
+			if action.Mapping != nil {
+				if _, ok := action.Mapping[path]; ok {
+					continue
+				}
+			}
+			return errors.BadRequest("identity property %s does not exist in mapping", path)
+		}
 	}
-	if action.PythonSource != "" {
-		if !strings.Contains(action.PythonSource, "def transform") {
+	// Validate the mapping and the transformation.
+	if action.Transformation != nil {
+		if !strings.Contains(action.Transformation.Func, "def transform") {
 			return errors.BadRequest("Python source code of transformation does not contain 'transform' function")
+		}
+		if len(action.Transformation.In) == 0 {
+			return errors.BadRequest("transformation function does not have input properties")
+		}
+		for _, name := range action.Transformation.In {
+			if !types.IsValidPropertyName(name) {
+				return errors.BadRequest("input property %q of transformation function is not valid", name)
+			}
+		}
+		if len(action.Transformation.Out) == 0 {
+			return errors.BadRequest("transformation function does not have output properties")
+		}
+		for _, name := range action.Transformation.Out {
+			if !types.IsValidPropertyName(name) {
+				return errors.BadRequest("output property %q of transformation function is not valid", name)
+			}
 		}
 	}
 	// Validate the path.
@@ -766,14 +816,14 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		state.FileType:
 		mappingIsMandatory = c.Role == state.SourceRole && targetUsersOrGroups
 	}
-	if mappingIsMandatory && action.Mapping == nil && action.PythonSource == "" {
+	if mappingIsMandatory && action.Mapping == nil && action.Transformation == nil {
 		return errors.BadRequest("mapping (or transformation) is required")
 	}
 
 	// If there is at least one property mapped, or a Python transformation
 	// function is provided, then there must be both a valid input and output
 	// schema.
-	if requiresSchemas := len(action.Mapping) > 0 || action.PythonSource != ""; requiresSchemas {
+	if requiresSchemas := len(action.Mapping) > 0 || action.Transformation != nil; requiresSchemas {
 		if !action.InSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
 		}

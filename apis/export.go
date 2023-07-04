@@ -67,7 +67,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	// behavior, and eventually add an additional normalization step.
 
 	// Instantiate a new mapping.
-	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.PythonSource, true)
+	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.Transformation, true)
 	if err != nil {
 		return err
 	}

@@ -820,8 +820,9 @@ type Action struct {
 	Filter             *ActionFilter
 	InSchema           types.Type
 	OutSchema          types.Type
+	IdentityProperties []string
 	Mapping            map[string]string
-	PythonSource       string
+	Transformation     *Transformation
 	Query              string
 	Path               string
 	TableName          string
@@ -830,6 +831,13 @@ type Action struct {
 	Health             Health
 	ExportMode         *ExportMode
 	MatchingProperties *MatchingProperties
+}
+
+// Transformation represents a transformation.
+type Transformation struct {
+	Func string   // Source code of the Python function.
+	In   []string // Input properties.
+	Out  []string // Output properties.
 }
 
 // ExportMode represents one of the three export modes.

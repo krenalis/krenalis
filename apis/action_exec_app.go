@@ -30,20 +30,21 @@ func (this *Action) importFromApp(ctx context.Context) error {
 		cursor = _connector.Cursor{}
 	}
 
-	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.PythonSource, false)
+	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.Transformation, false)
 	if err != nil {
 		return actionExecutionError{err}
 	}
 
 	// Determine the properties to import.
-	var propertiesPaths []types.Path
-	if this.action.PythonSource != "" { // Transformation function.
-		for _, name := range this.action.InSchema.PropertiesNames() {
-			propertiesPaths = append(propertiesPaths, types.Path{name})
-		}
-	} else { // Mappings.
-		for _, in := range this.action.Mapping {
-			propertiesPaths = append(propertiesPaths, strings.Split(in, "."))
+	var properties []types.Path
+	for _, path := range this.action.Mapping {
+		properties = append(properties, strings.Split(path, "."))
+	}
+	if this.action.Transformation != nil {
+		for _, name := range this.action.Transformation.In {
+			if _, ok := this.action.Mapping[name]; !ok {
+				properties = append(properties, types.Path{name})
+			}
 		}
 	}
 
@@ -51,7 +52,7 @@ func (this *Action) importFromApp(ctx context.Context) error {
 
 	for !eof {
 
-		users, next, err := app.Users(propertiesPaths, cursor)
+		users, next, err := app.Users(properties, cursor)
 		if err != nil && err != io.EOF {
 			return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
 		}
