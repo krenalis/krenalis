@@ -336,12 +336,12 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 				for rows.Next() {
 					var connectionID int
 					var eventType string
-					var filter, rawInSchema, rawOutSchema, mapping, pythonSource []byte
+					var filter, rawInSchema, rawOutSchema, mapping []byte
 					var matchPropInternal, matchPropExternal string
 					action := Action{}
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &filter,
-						&rawInSchema, &rawOutSchema, &mapping, &pythonSource, &action.Query,
+						&rawInSchema, &rawOutSchema, &mapping, &action.PythonSource, &action.Query,
 						&action.Path, &action.TableName, &action.Sheet, &action.UserCursor.ID, &action.UserCursor.Timestamp,
 						&action.UserCursor.Next, &action.Health, &action.ExportMode, &matchPropInternal,
 						&matchPropExternal)
