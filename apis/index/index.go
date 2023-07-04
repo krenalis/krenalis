@@ -58,6 +58,7 @@ func (i *Index) SetUser(ctx context.Context, gid int, properties map[string]any)
 		return err
 	}
 	// TODO(Gianluca): find a better way to implement persistency.
+	// See https://github.com/open2b/chichi/issues/215.
 	err = i.client.Save(ctx).Err()
 	return err
 }
