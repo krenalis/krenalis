@@ -155,7 +155,7 @@ func (expr *Expression) PropertyPaths() []types.Path {
 	for _, path := range paths {
 		var exists bool
 		for _, p := range uniquePaths {
-			if equalPaths(path, p) {
+			if p.Equals(path) {
 				exists = true
 				break
 			}
@@ -165,18 +165,6 @@ func (expr *Expression) PropertyPaths() []types.Path {
 		}
 	}
 	return uniquePaths
-}
-
-func equalPaths(p1 types.Path, p2 types.Path) bool {
-	if len(p1) != len(p2) {
-		return false
-	}
-	for i, name := range p1 {
-		if name != p2[i] {
-			return false
-		}
-	}
-	return true
 }
 
 // appendPropertyPaths appends to the property paths in expression to paths.
