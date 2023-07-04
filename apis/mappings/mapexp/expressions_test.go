@@ -229,7 +229,7 @@ func TestPropertyPaths(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%q. unexpected compilation error: %s", test.src, err)
 		}
-		got := expression.PropertyPaths()
+		got := expression.Properties()
 		if !reflect.DeepEqual(got, test.expected) {
 			t.Fatalf("%q. unexpected paths\nexpected %v\ngot      %v", test.src, test.expected, got)
 		}

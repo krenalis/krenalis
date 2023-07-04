@@ -140,48 +140,48 @@ func (expr *Expression) Eval(values map[string]any, formatTime bool) (any, error
 	return v, err
 }
 
-// PropertyPaths returns the property paths found in the expression, sorted by
-// their appearance order in the expression. The returned paths are guaranteed
-// to be unique. If no property paths are present, it returns nil.
-func (expr *Expression) PropertyPaths() []types.Path {
-	paths := appendPropertyPaths(nil, expr.parts)
-	if paths == nil {
+// Properties returns the properties found in the expression, sorted by their
+// appearance order in the expression. The returned properties are guaranteed to
+// be unique. If no property are present, it returns nil.
+func (expr *Expression) Properties() []types.Path {
+	properties := appendProperties(nil, expr.parts)
+	if properties == nil {
 		return nil
 	}
-	if len(paths) == 1 {
-		return paths
+	if len(properties) == 1 {
+		return properties
 	}
-	uniquePaths := make([]types.Path, 0, len(paths))
-	for _, path := range paths {
+	uniqueProperties := make([]types.Path, 0, len(properties))
+	for _, property := range properties {
 		var exists bool
-		for _, p := range uniquePaths {
-			if p.Equals(path) {
+		for _, p := range uniqueProperties {
+			if p.Equals(property) {
 				exists = true
 				break
 			}
 		}
 		if !exists {
-			uniquePaths = append(uniquePaths, path)
+			uniqueProperties = append(uniqueProperties, property)
 		}
 	}
-	return uniquePaths
+	return uniqueProperties
 }
 
-// appendPropertyPaths appends to the property paths in expression to paths.
-func appendPropertyPaths(paths []types.Path, expression []part) []types.Path {
+// appendProperties appends the properties in expression to properties.
+func appendProperties(properties []types.Path, expression []part) []types.Path {
 	for _, expr := range expression {
 		if expr.path == nil {
 			continue
 		}
 		if expr.args == nil {
-			paths = append(paths, expr.path)
+			properties = append(properties, expr.path)
 			continue
 		}
 		for _, arg := range expr.args {
-			paths = appendPropertyPaths(paths, arg)
+			properties = appendProperties(properties, arg)
 		}
 	}
-	return paths
+	return properties
 }
 
 // eval evaluates expression and returns its value and type. values contains the

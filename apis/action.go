@@ -804,7 +804,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 				if err != nil {
 					return errors.BadRequest("invalid expression mapped to %q: %s", out, err)
 				}
-				mappingsInPaths = append(mappingsInPaths, expr.PropertyPaths()...)
+				mappingsInPaths = append(mappingsInPaths, expr.Properties()...)
 			}
 			// Ensure that every property in the input and output schemas have been
 			// mapped.
