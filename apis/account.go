@@ -20,6 +20,8 @@ import (
 	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
+
+	"github.com/redis/go-redis/v9"
 )
 
 var AuthenticationFailed errors.Code = "AuthenticationFailed"
@@ -29,6 +31,7 @@ var emailRegExp = regexp.MustCompile(`^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.
 // Account represents an account.
 type Account struct {
 	db            *postgres.DB
+	redis         *redis.Client
 	eventObserver *events.Observer
 	state         *state.State
 	http          *httpclient.HTTP
@@ -123,6 +126,7 @@ func (this *Account) Workspace(id int) (*Workspace, error) {
 	}
 	workspace := Workspace{
 		db:            this.db,
+		redis:         this.redis,
 		state:         this.state,
 		http:          this.http,
 		eventObserver: this.eventObserver,
@@ -141,6 +145,7 @@ func (this *Account) Workspaces() []*Workspace {
 	for i, ws := range workspaces {
 		workspace := Workspace{
 			db:            this.db,
+			redis:         this.redis,
 			state:         this.state,
 			http:          this.http,
 			eventObserver: this.eventObserver,

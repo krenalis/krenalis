@@ -25,12 +25,14 @@ type Settings struct {
 		PrintESBuildWarningsOnStderr bool
 	}
 	PostgreSQL apis.PostgreSQLConfig
+	Redis      apis.RedisConfig
 }
 
 func Run(ctx context.Context, settings *Settings) error {
 
 	apis, err := apis.New(ctx, &apis.Config{
 		PostgreSQL: settings.PostgreSQL,
+		Redis:      settings.Redis,
 	})
 	if err != nil {
 		if err == context.Canceled {

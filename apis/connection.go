@@ -27,6 +27,7 @@ import (
 	"chichi/apis/errors"
 	"chichi/apis/events"
 	"chichi/apis/httpclient"
+	"chichi/apis/index"
 	"chichi/apis/normalization"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
@@ -36,6 +37,7 @@ import (
 	"chichi/connector/ui"
 
 	"github.com/jxskiss/base62"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/slices"
 )
 
@@ -72,6 +74,7 @@ var (
 // Connection represents a connection.
 type Connection struct {
 	db           *postgres.DB
+	redis        *redis.Client
 	connection   *state.Connection
 	http         *httpclient.HTTP
 	ID           int
@@ -101,7 +104,7 @@ func (this *Connection) Action(id int) (*Action, error) {
 		return nil, errors.NotFound("action %d does not exist", id)
 	}
 	var action Action
-	action.fromState(this.db, this.http, a)
+	action.fromState(this.db, this.redis, this.http, a)
 	return &action, nil
 }
 
@@ -1869,20 +1872,52 @@ func (this *Connection) setSettingsFunc(ctx context.Context) _connector.SetSetti
 
 // setUsers sets the user with the given ID into the database and into the data
 // warehouse.
-func (this *Connection) setUser(ctx context.Context, id string, user map[string]any) error {
+func (this *Action) setUser(ctx context.Context, id string, user map[string]any) error {
 
-	// Resolve the entity of this user.
-	ids := identitySolver{ctx, this.connection}
-	email, _ := user["Email"].(string)
-	if email == "" {
-		return fmt.Errorf("expecting 'Email' to be a non-empty string, got %#v (of type %T)", user["Email"], user["Email"])
-	}
-	goldenRecordID, err := ids.ResolveEntity(this.connection.ID, id, email)
-	if err != nil {
-		return err
-	}
+	// TODO(Gianluca): move this method to another file after merging this branch to
+	// main.
 
-	ws := this.connection.Workspace()
+	ws := this.connection.connection.Workspace()
+
+	// TODO(Gianluca): replace 'identityProperties' with the identity properties
+	// specified in the action, when it will be implemented.
+	identityProperties := []string{"Email"}
+
+	index := index.Open(this.redis)
+
+	var gid int
+	lastProperty := len(identityProperties) - 1
+propsLoop:
+	for i, property := range identityProperties {
+		value, ok := user[property]
+		if !ok {
+			continue
+		}
+		gids, err := index.UsersByPropertyValue(ctx, property, value)
+		if err != nil {
+			return err
+		}
+		switch len(gids) {
+		case 1:
+			gid = gids[0]
+			break propsLoop
+		case 0:
+			// Continue to the next property, if there is one, otherwise exit
+			// from the loop and create an empty golden record.
+		default:
+			if i == lastProperty {
+				// Merge users?
+				panic("TODO: merging of users not implemented")
+			}
+		}
+	}
+	if gid == 0 {
+		var err error
+		gid, err = createEmptyGoldenRecord(ctx, ws)
+		if err != nil {
+			return err
+		}
+	}
 
 	// Serialize the row.
 	schema, ok := ws.Schemas["users"]
@@ -1891,7 +1926,7 @@ func (this *Connection) setUser(ctx context.Context, id string, user map[string]
 	}
 
 	// Normalize the incoming user according to the "users" schema.
-	user, err = normalize(user, *schema)
+	user, err := normalize(user, *schema)
 	if err != nil {
 		return err
 	}
@@ -1915,7 +1950,7 @@ func (this *Connection) setUser(ctx context.Context, id string, user map[string]
 	query.WriteString(`, "timestamp" = now()`)
 	query.WriteString("\nWHERE id = $")
 	query.WriteString(strconv.Itoa(i))
-	values = append(values, goldenRecordID)
+	values = append(values, gid)
 	res, err := ws.Warehouse.Exec(ctx, query.String(), values...)
 	if err != nil {
 		return err
@@ -1928,7 +1963,12 @@ func (this *Connection) setUser(ctx context.Context, id string, user map[string]
 		return fmt.Errorf("BUG: one row should be affected, got %d", affected)
 	}
 
-	log.Printf("[info] user %q written to the data warehouse: %#v", email, user)
+	err = index.SetUser(ctx, gid, user)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("[info] user (GID %d) written to the data warehouse: %#v", gid, user)
 
 	return nil
 }
@@ -1938,6 +1978,9 @@ func (this *Connection) setUser(ctx context.Context, id string, user map[string]
 // It also updates the statistics about the connection.
 // timestamp refers to the entire set of user properties, while timestamp may
 // contain timestamps for specific properties.
+//
+// TODO(Gianluca): consider removing this function, or changing to a function
+// that only updates stats.
 func (this *Connection) writeConnectionUsers(ctx context.Context, id string, user map[string]any, timestamp time.Time, timestamps map[string]time.Time) error {
 
 	// Prepare the data that will be written to the database.

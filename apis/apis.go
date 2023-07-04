@@ -21,12 +21,14 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/exp/slices"
 )
 
 type APIs struct {
 	db             *postgres.DB
+	redis          *redis.Client
 	state          *state.State
 	http           *httpclient.HTTP
 	events         *events.Events
@@ -38,6 +40,7 @@ var hasBeenCalled bool
 
 type Config struct {
 	PostgreSQL PostgreSQLConfig
+	Redis      RedisConfig
 }
 
 type PostgreSQLConfig struct {
@@ -47,6 +50,14 @@ type PostgreSQLConfig struct {
 	Password string
 	Database string
 	Schema   string
+}
+
+type RedisConfig struct {
+	Network  string
+	Addr     string
+	Username string
+	Password string
+	DB       int
 }
 
 // New returns an API instance. It can only be called once.
@@ -71,7 +82,16 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 
-	apis := &APIs{db: db}
+	// Instantiate a new client for Redis.
+	redisClient := redis.NewClient(&redis.Options{
+		Network:  conf.Redis.Network,
+		Addr:     conf.Redis.Addr,
+		Username: conf.Redis.Username,
+		Password: conf.Redis.Password,
+		DB:       conf.Redis.DB,
+	})
+
+	apis := &APIs{db: db, redis: redisClient}
 
 	// Load the state.
 	apis.state, err = state.Load(ctx, db)
@@ -108,6 +128,7 @@ func (apis *APIs) Account(id int) (*Account, error) {
 	}
 	account := Account{
 		db:            apis.db,
+		redis:         apis.redis,
 		eventObserver: apis.events.Observer(),
 		state:         apis.state,
 		http:          apis.http,
@@ -278,7 +299,7 @@ func (apis *APIs) CountAccounts() int {
 // onElectLeader is called when a leader is elected.
 func (apis *APIs) onElectLeader(n state.ElectLeaderNotification) {
 	if apis.state.IsLeader() {
-		apis.scheduler = newScheduler(apis.db, apis.state, apis.http)
+		apis.scheduler = newScheduler(apis.db, apis.redis, apis.state, apis.http)
 		return
 	}
 	if apis.scheduler != nil {
@@ -293,14 +314,15 @@ func (apis *APIs) onExecuteAction(n state.ExecuteActionNotification) {
 		return
 	}
 	action, _ := apis.state.Action(n.Action)
-	connection := &Connection{db: apis.db, connection: action.Connection(), http: apis.http}
-	a := &Action{db: apis.db, action: action, connection: connection}
+	connection := &Connection{db: apis.db, redis: apis.redis, connection: action.Connection(), http: apis.http}
+	a := &Action{db: apis.db, redis: apis.redis, action: action, connection: connection}
 	go a.exec()
 }
 
 // Workspace represents a workspace.
 type Workspace struct {
 	db            *postgres.DB
+	redis         *redis.Client
 	state         *state.State
 	http          *httpclient.HTTP
 	eventObserver *events.Observer

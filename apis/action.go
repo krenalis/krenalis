@@ -25,6 +25,7 @@ import (
 	_connector "chichi/connector"
 	"chichi/connector/types"
 
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/maps"
 )
 
@@ -34,6 +35,7 @@ var QueryExecutionFailed errors.Code = "QueryExecutionFailed"
 // events.
 type Action struct {
 	db                 *postgres.DB
+	redis              *redis.Client
 	action             *state.Action
 	connection         *Connection
 	ID                 int
@@ -68,11 +70,12 @@ const (
 )
 
 // fromState serializes action into this.
-func (this *Action) fromState(db *postgres.DB, http *httpclient.HTTP, action *state.Action) {
+func (this *Action) fromState(db *postgres.DB, redis *redis.Client, http *httpclient.HTTP, action *state.Action) {
 	c := action.Connection()
 	this.db = db
 	this.action = action
-	this.connection = &Connection{db: db, connection: c, http: http}
+	this.redis = redis
+	this.connection = &Connection{db: db, redis: redis, connection: c, http: http}
 	this.ID = action.ID
 	this.Connection = c.ID
 	this.Target = ActionTarget(action.Target)

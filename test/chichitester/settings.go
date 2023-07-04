@@ -19,6 +19,7 @@ import (
 type TestsSettings struct {
 	ChichiHost    string
 	Database      *DBSettings
+	Redis         *RedisSettings
 	WarehouseType string
 	Warehouse     *DBSettings
 }
@@ -30,6 +31,14 @@ type DBSettings struct {
 	Password string
 	Database string
 	Schema   string
+}
+
+type RedisSettings struct {
+	Network  string
+	Addr     string
+	Username string
+	Password string
+	DB       int
 }
 
 var testsSettings *TestsSettings
@@ -56,6 +65,12 @@ func loadTestConfig() error {
 
 	if setts.ChichiHost == "" {
 		return errors.New("missing value for 'ChichiHost'")
+	}
+	if setts.Redis == nil {
+		return errors.New("missing value for 'Redis'")
+	}
+	if setts.Redis.DB == 0 {
+		return errors.New("'Redis.DB' cannot be zero")
 	}
 	if setts.WarehouseType == "" {
 		return errors.New("missing value for 'WarehouseType'")

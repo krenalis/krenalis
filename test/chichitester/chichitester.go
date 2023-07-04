@@ -21,6 +21,8 @@ import (
 
 	"chichi/apis/postgres"
 	"chichi/server"
+
+	"github.com/redis/go-redis/v9"
 )
 
 // launchChichiExternally determines if Chichi should be launched externally
@@ -74,6 +76,11 @@ func InitAndLaunch(t *testing.T) *Chichi {
 		t.Fatalf("cannot reset warehouse: %s", err)
 	}
 
+	err = resetRedis(ctx, testsSettings.Redis)
+	if err != nil {
+		t.Fatalf("cannot reset Redis: %s", err)
+	}
+
 	c := Chichi{
 		t:    t,
 		done: make(chan struct{}, 1),
@@ -87,6 +94,11 @@ func InitAndLaunch(t *testing.T) *Chichi {
 	setts.PostgreSQL.Password = testsSettings.Database.Password
 	setts.PostgreSQL.Database = testsSettings.Database.Database
 	setts.PostgreSQL.Schema = testsSettings.Database.Schema
+	setts.Redis.Network = testsSettings.Redis.Network
+	setts.Redis.Addr = testsSettings.Redis.Addr
+	setts.Redis.Username = testsSettings.Redis.Username
+	setts.Redis.Password = testsSettings.Redis.Password
+	setts.Redis.DB = testsSettings.Redis.DB
 
 	// Set CHICHI_DEBUG_UI=true.
 	err = os.Setenv("CHICHI_DEBUG_UI", "true")
@@ -244,6 +256,18 @@ func resetWarehouse(ctx context.Context, warehouse *DBSettings) error {
 		return err
 	}
 	return nil
+}
+
+func resetRedis(ctx context.Context, conf *RedisSettings) error {
+	c := redis.NewClient(&redis.Options{
+		Network:  conf.Network,
+		Addr:     conf.Addr,
+		Username: conf.Username,
+		Password: conf.Password,
+		DB:       conf.DB,
+	})
+	err := c.FlushAll(ctx).Err()
+	return err
 }
 
 func recreateDatabase(ctx context.Context, host string, port int, username, password, database string) error {

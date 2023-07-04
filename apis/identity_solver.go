@@ -16,6 +16,8 @@ import (
 )
 
 // An identitySolver performs the identity resolution process.
+//
+// TODO(Gianluca): remove this type and also consider removing this file.
 type identitySolver struct {
 	ctx        context.Context
 	connection *state.Connection
@@ -66,6 +68,17 @@ func (ids *identitySolver) ResolveEntity(connection int, user string, email stri
 	}
 	return goldenRecordID, nil
 
+}
+
+// createEmptyGoldenRecord creates a new empty golden record on the workspace's
+// warehouse, returning its GID.
+func createEmptyGoldenRecord(ctx context.Context, ws *state.Workspace) (int, error) {
+	var id int
+	err := ws.Warehouse.QueryRow(ctx, "INSERT INTO users DEFAULT VALUES RETURNING id").Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 // createIdentity creates a new identity.

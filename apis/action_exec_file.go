@@ -119,7 +119,7 @@ func (this *Action) importFromFile(ctx context.Context) error {
 		if err != nil {
 			return actionExecutionError{err}
 		}
-		err = this.connection.setUser(ctx, id, mappedUser)
+		err = this.setUser(ctx, id, mappedUser)
 		if err != nil {
 			return actionExecutionError{err}
 		}

@@ -92,7 +92,7 @@ func (this *Action) importFromApp(ctx context.Context) error {
 			if err != nil {
 				return actionExecutionError{err}
 			}
-			err = this.connection.setUser(ctx, user.ID, mappedUser)
+			err = this.setUser(ctx, user.ID, mappedUser)
 			if err != nil {
 				return actionExecutionError{err}
 			}

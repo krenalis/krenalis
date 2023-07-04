@@ -446,6 +446,7 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 
 	connection := Connection{
 		db:           this.db,
+		redis:        this.redis,
 		connection:   c,
 		http:         this.http,
 		ID:           c.ID,
@@ -463,7 +464,7 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 		connection.Storage = s.ID
 	}
 	// Set the action types.
-	ts, err := (&Connection{db: this.db, connection: c, http: this.http}).actionTypes()
+	ts, err := (&Connection{db: this.db, redis: this.redis, connection: c, http: this.http}).actionTypes()
 	if err != nil {
 		return nil, err
 	}
@@ -473,7 +474,7 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 	a := make([]Action, len(actions))
 	connection.Actions = &a
 	for i, a := range actions {
-		(*connection.Actions)[i].fromState(this.db, this.http, a)
+		(*connection.Actions)[i].fromState(this.db, this.redis, this.http, a)
 	}
 	return &connection, nil
 }
@@ -486,6 +487,7 @@ func (this *Workspace) Connections() []*Connection {
 		conn := c.Connector()
 		connection := Connection{
 			db:           this.db,
+			redis:        this.redis,
 			connection:   c,
 			http:         this.http,
 			ID:           c.ID,
