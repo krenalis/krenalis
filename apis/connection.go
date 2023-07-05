@@ -459,6 +459,14 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		return 0, err
 	}
 
+	// TODO(Gianluca): remove this "if" statement when support for
+	// IdentityProperties in the UI will be added.
+	if len(action.IdentityProperties) == 0 &&
+		target == UsersTarget &&
+		c.Role == state.SourceRole {
+		action.IdentityProperties = []string{"Email"}
+	}
+
 	n := state.AddActionNotification{
 		Connection:         c.ID,
 		Target:             state.ActionTarget(target),

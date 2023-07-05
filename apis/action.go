@@ -270,6 +270,13 @@ func (this *Action) Set(action ActionToSet) error {
 	if err != nil {
 		return err
 	}
+	// TODO(Gianluca): remove this "if" statement when support for
+	// IdentityProperties in the UI will be added.
+	if len(action.IdentityProperties) == 0 &&
+		this.action.Target == state.UsersTarget &&
+		this.connection.connection.Role == state.SourceRole {
+		action.IdentityProperties = []string{"Email"}
+	}
 	n := state.SetActionNotification{
 		ID:                 this.action.ID,
 		Name:               action.Name,
@@ -366,18 +373,14 @@ func (this *Action) setUser(ctx context.Context, id string, user map[string]any)
 
 	ws := this.connection.connection.Workspace()
 
-	// TODO(Gianluca): replace 'identityProperties' with the identity properties
-	// specified in the action, when it will be implemented.
-	//
-	// See https://github.com/open2b/chichi/issues/217.
-	identityProperties := []string{"Email"}
-
 	index := index.Open(this.redis)
 
 	var gid int
-	lastProperty := len(identityProperties) - 1
+
+	irProps := this.action.IdentityProperties
+	lastProperty := len(irProps) - 1
 propsLoop:
-	for i, property := range identityProperties {
+	for i, property := range irProps {
 		value, ok := user[property]
 		if !ok {
 			continue
