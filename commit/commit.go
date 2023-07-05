@@ -19,12 +19,16 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"golang.org/x/exp/slices"
 )
 
 func main() {
 
 	var short bool
+	var verbose bool
 	flag.BoolVar(&short, "short", false, "pass the '-short' flag to 'go test'")
+	flag.BoolVar(&verbose, "v", false, "verbose output")
 	flag.Parse()
 
 	start := time.Now()
@@ -40,24 +44,17 @@ func main() {
 		}
 		return nil
 	})
-	sort.Strings(modules)
 	if err != nil {
 		log.Fatal(err)
 	}
+	sort.Strings(modules)
 
 	// Check if the command has been executed correctly basing on modules which
 	// certainly should be found.
 	for _, mod := range []string{".", "chichi-cli"} {
-		found := false
-		for _, mod2 := range modules {
-			if mod2 == mod {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !slices.Contains(modules, mod) {
 			log.Fatalf("module %q not found, maybe you ran this script incorrectly"+
-				"or this script is out-of-date", mod)
+				" or this script is out-of-date", mod)
 		}
 	}
 
@@ -67,43 +64,51 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Re-create the 'go.sum' files in the repository.
+	fmt.Println("Running 'go mod tidy' in every module and regenerating 'go.sum' files")
 	for _, module := range modules {
-		removeGoSum(repo, module)
-		cmd("go", []string{"mod", "tidy"}, repo, module)
+		removeGoSum(repo, module, verbose)
+		cmd("go", []string{"mod", "tidy"}, repo, module, verbose)
+	}
+
+	fmt.Println("Running 'go fmt' and 'go vet' in every module")
+	for _, module := range modules {
+		cmd("go", []string{"fmt", "./..."}, repo, module, verbose)
+		cmd("go", []string{"vet", "./..."}, repo, module, verbose)
 	}
 
 	// Call command(s) on every module.
 	for _, module := range modules {
-		cmd("go", []string{"fmt", "./..."}, repo, module)
-		cmd("go", []string{"vet", "./..."}, repo, module)
 		if short {
-			cmd("go", []string{"test", "-short", "./..."}, repo, module)
+			cmd("go", []string{"test", "-short", "./..."}, repo, module, verbose)
 		} else {
-			cmd("go", []string{"test", "./..."}, repo, module)
+			cmd("go", []string{"test", "./..."}, repo, module, verbose)
 		}
 	}
 
 	// Call command(s) on the workspace.
-	cmd("go", []string{"work", "sync"}, repo, ".")
+	cmd("go", []string{"work", "sync"}, repo, ".", true)
 
 	fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
 }
 
-func cmd(name string, arg []string, repo, moduleDir string) {
+func cmd(name string, arg []string, repo, moduleDir string, echo bool) {
 	cmd := exec.Command(name, arg...)
 	cmd.Dir = filepath.Join(repo, moduleDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	logCmd(moduleDir, strings.Join(append([]string{name}, arg...), " "))
+	if echo {
+		logCmd(moduleDir, strings.Join(append([]string{name}, arg...), " "))
+	}
 	err := cmd.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func removeGoSum(repo, module string) {
-	logCmd(module, "rm go.sum")
+func removeGoSum(repo, module string, verbose bool) {
+	if verbose {
+		logCmd(module, "rm go.sum")
+	}
 	err := os.Remove(filepath.Join(repo, module, "go.sum"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.Fatal(err)
