@@ -158,17 +158,3 @@ type actionExecutionError struct {
 func (err actionExecutionError) Error() string {
 	return err.err.Error()
 }
-
-// applyTimestampWorkaround applies a workaround on the "timestamp" property
-// until the normalization / conversion is implemented.
-// TODO(Gianluca): see https://github.com/open2b/chichi/issues/186.
-func applyTimestampWorkaround(mappedUser map[string]any) error {
-	if ts, ok := mappedUser["timestamp"].(string); ok {
-		t, err := time.Parse(time.DateTime, ts)
-		if err != nil {
-			return fmt.Errorf("bad timestamp %q parsed: %s", ts, err)
-		}
-		mappedUser["timestamp"] = t
-	}
-	return nil
-}

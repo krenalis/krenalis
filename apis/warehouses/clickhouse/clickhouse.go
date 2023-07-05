@@ -31,9 +31,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-//go:embed connections_users.sql
-var createConnectionsUsersTable string
-
 //go:embed destinations_users.sql
 var createDestinationUsersTable string
 
@@ -117,10 +114,6 @@ func (warehouse *ClickHouse) Init(ctx context.Context) error {
 	conn, err := warehouse.connection()
 	if err != nil {
 		return err
-	}
-	err = conn.Exec(ctx, createConnectionsUsersTable)
-	if err != nil {
-		return warehouses.WrapError(err)
 	}
 	err = conn.Exec(ctx, createDestinationUsersTable)
 	if err != nil {

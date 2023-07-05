@@ -88,12 +88,14 @@ func (this *Action) importFromApp(ctx context.Context) error {
 				return actionExecutionError{err}
 			}
 
-			// Write the user.
-			err = this.connection.writeConnectionUsers(ctx, user.ID, user.Properties, user.Timestamp.UTC(), nil)
+			// Write the user into the data warehouse.
+			err = this.setUser(ctx, user.ID, mappedUser)
 			if err != nil {
 				return actionExecutionError{err}
 			}
-			err = this.setUser(ctx, user.ID, mappedUser)
+
+			// Update the connection stats.
+			err = this.connection.updateConnectionsStats(ctx)
 			if err != nil {
 				return actionExecutionError{err}
 			}

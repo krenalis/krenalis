@@ -11,7 +11,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"chichi/apis/mappings"
 	"chichi/apis/normalization"
@@ -82,25 +81,16 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 			return err
 		}
 
-		// Extrapolate the ID and the timestamp for the user.
-		err = applyTimestampWorkaround(mappedUser)
-		if err != nil {
-			return err
-		}
+		// Write the user into the data warehouse.
 		id := mappedUser["id"].(string)
 		delete(mappedUser, "id")
-		timestamp, ok := mappedUser["timestamp"].(time.Time)
-		if !ok {
-			timestamp = time.Now().UTC()
-		}
-		delete(mappedUser, "timestamp")
-
-		// Write the user and the mapped user on the database.
-		err = this.connection.writeConnectionUsers(ctx, id, row, timestamp, nil)
+		err = this.setUser(ctx, id, mappedUser)
 		if err != nil {
 			return err
 		}
-		err = this.setUser(ctx, id, mappedUser)
+
+		// Update the connection stats.
+		err = this.connection.updateConnectionsStats(ctx)
 		if err != nil {
 			return err
 		}

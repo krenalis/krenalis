@@ -1874,49 +1874,13 @@ func (this *Connection) setSettingsFunc(ctx context.Context) _connector.SetSetti
 	}
 }
 
-// writeConnectionUsers writes the user properties (before being mapped) with
-// the given ID and the relative timestamps to the database.
-// It also updates the statistics about the connection.
-// timestamp refers to the entire set of user properties, while timestamp may
-// contain timestamps for specific properties.
-//
-// TODO(Gianluca): consider removing this function, or changing to a function
-// that only updates stats.
-func (this *Connection) writeConnectionUsers(ctx context.Context, id string, user map[string]any, timestamp time.Time, timestamps map[string]time.Time) error {
-
-	// Prepare the data that will be written to the database.
-	data, err := json.Marshal(user)
-	if err != nil {
-		return err
-	}
-	timestampsToWrite := map[string]time.Time{}
-	for prop := range user {
-		ts, ok := timestamps[prop]
-		if !ok {
-			ts = timestamp
-		}
-		timestampsToWrite[prop] = ts
-	}
-	jsonTimestamps, err := json.Marshal(timestampsToWrite)
-	if err != nil {
-		return err
-	}
-
-	// Write to the database.
-	ws := this.connection.Workspace()
+// updateConnectionsStats updates the statistics about the connection.
+func (this *Connection) updateConnectionsStats(ctx context.Context) error {
 	connection := this.connection.ID
-	_, err = ws.Warehouse.Exec(ctx, "INSERT INTO connections_users (connection, \"user\", data, timestamps)\n"+
-		"VALUES ($1, $2, $3, $4)\n"+
-		"ON CONFLICT (connection, \"user\") DO UPDATE SET data = $3, timestamps = $4",
-		connection, id, data, jsonTimestamps)
-	if err != nil {
-		return err
-	}
-	_, err = this.db.Exec(ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, users)\n"+
+	_, err := this.db.Exec(ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, users)\n"+
 		"VALUES ($1, $2, 1)\n"+
 		"ON CONFLICT (connection, time_slot) DO UPDATE SET users = cs.users + 1",
 		connection, statsTimeSlot(time.Now()))
-
 	return err
 }
 
