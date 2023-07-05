@@ -469,9 +469,9 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		SchedulePeriod:     60,
 		InSchema:           action.InSchema,
 		OutSchema:          action.OutSchema,
-		IdentityProperties: action.IdentityProperties,
 		Mapping:            action.Mapping,
 		Transformation:     (*state.Transformation)(action.Transformation),
+		IdentityProperties: action.IdentityProperties,
 		Query:              action.Query,
 		Path:               action.Path,
 		TableName:          action.TableName,
@@ -570,14 +570,14 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 			matchPropExternal = n.MatchingProperties.External
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
-			"schedule_start, schedule_period, filter, in_schema, out_schema, identity_properties, mapping,\n" +
-			"transformation_func, transformation_in, transformation_out, query, path, table_name, sheet,\n" +
+			"schedule_start, schedule_period, in_schema, out_schema, filter, mapping, transformation_func,\n" +
+			"transformation_in, transformation_out, identity_properties, query, path, table_name, sheet,\n" +
 			"export_mode, matching_properties_internal, matching_properties_external)\n" +
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType, n.Name, n.Enabled, n.ScheduleStart,
-			n.SchedulePeriod, string(filter), rawInSchema, rawOutSchema, n.IdentityProperties, mapping,
-			transformation.Func, transformation.In, transformation.Out, n.Query, n.Path, n.TableName, n.Sheet,
-			n.ExportMode, matchPropInternal, matchPropExternal)
+			n.SchedulePeriod, rawInSchema, rawOutSchema, string(filter), mapping, transformation.Func, transformation.In,
+			transformation.Out, n.IdentityProperties, n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode,
+			matchPropInternal, matchPropExternal)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {
 				err = errors.Unprocessable(ConnectorNotExists, "connection %d does not exist", n.Connection)

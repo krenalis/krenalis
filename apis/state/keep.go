@@ -291,12 +291,12 @@ type AddActionNotification struct {
 	Enabled            bool
 	ScheduleStart      int16
 	SchedulePeriod     int16
-	Filter             *ActionFilter
 	InSchema           types.Type
 	OutSchema          types.Type
-	IdentityProperties []string
+	Filter             *ActionFilter
 	Mapping            map[string]string
 	Transformation     *Transformation
+	IdentityProperties []string
 	Query              string
 	Path               string
 	TableName          string
@@ -322,12 +322,12 @@ func (state *State) addAction(n postgres.Notification) {
 		EventType:          e.EventType,
 		ScheduleStart:      e.ScheduleStart,
 		SchedulePeriod:     e.SchedulePeriod,
-		Filter:             e.Filter,
 		InSchema:           e.InSchema,
 		OutSchema:          e.OutSchema,
-		IdentityProperties: e.IdentityProperties,
+		Filter:             e.Filter,
 		Mapping:            e.Mapping,
 		Transformation:     e.Transformation,
+		IdentityProperties: e.IdentityProperties,
 		Query:              e.Query,
 		Path:               e.Path,
 		TableName:          e.TableName,
@@ -812,12 +812,12 @@ type SetActionNotification struct {
 	ID                 int
 	Name               string
 	Enabled            bool
-	Filter             *ActionFilter
 	InSchema           types.Type
 	OutSchema          types.Type
-	IdentityProperties []string
+	Filter             *ActionFilter
 	Mapping            map[string]string
 	Transformation     *Transformation
+	IdentityProperties []string
 	Query              string
 	Path               string
 	TableName          string
@@ -835,12 +835,12 @@ func (state *State) setAction(n postgres.Notification) {
 	state.replaceAction(e.ID, func(a *Action) {
 		a.Name = e.Name
 		a.Enabled = e.Enabled
-		a.Filter = e.Filter
 		a.InSchema = e.InSchema
 		a.OutSchema = e.OutSchema
-		a.IdentityProperties = e.IdentityProperties
+		a.Filter = e.Filter
 		a.Mapping = e.Mapping
 		a.Transformation = e.Transformation
+		a.IdentityProperties = e.IdentityProperties
 		a.Query = e.Query
 		a.Path = e.Path
 		a.TableName = e.TableName

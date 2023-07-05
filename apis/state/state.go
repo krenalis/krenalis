@@ -817,12 +817,12 @@ type Action struct {
 	EventType          string
 	ScheduleStart      int16
 	SchedulePeriod     int16
-	Filter             *ActionFilter
 	InSchema           types.Type
 	OutSchema          types.Type
-	IdentityProperties []string
+	Filter             *ActionFilter
 	Mapping            map[string]string
 	Transformation     *Transformation
+	IdentityProperties []string
 	Query              string
 	Path               string
 	TableName          string

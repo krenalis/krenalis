@@ -51,12 +51,12 @@ type Action struct {
 	Running            bool
 	ScheduleStart      *int
 	SchedulePeriod     *SchedulePeriod
-	Filter             *ActionFilter
 	InSchema           types.Type
 	OutSchema          types.Type
-	IdentityProperties []string
+	Filter             *ActionFilter
 	Mapping            map[string]string
 	Transformation     *Transformation
+	IdentityProperties []string
 	Query              *string
 	Path               *string
 	Table              *string
@@ -104,6 +104,8 @@ func (this *Action) fromState(db *postgres.DB, redis *redis.Client, http *httpcl
 		this.ScheduleStart = &start
 		this.SchedulePeriod = &period
 	}
+	this.InSchema = action.InSchema
+	this.OutSchema = action.OutSchema
 	if action.Filter != nil {
 		this.Filter = &ActionFilter{
 			Logical:    ActionFilterLogical(action.Filter.Logical),
@@ -113,9 +115,6 @@ func (this *Action) fromState(db *postgres.DB, redis *redis.Client, http *httpcl
 			this.Filter.Conditions[i] = ActionFilterCondition(condition)
 		}
 	}
-	this.InSchema = action.InSchema
-	this.OutSchema = action.OutSchema
-	this.IdentityProperties = slices.Clone(action.IdentityProperties)
 	if action.Mapping != nil {
 		this.Mapping = make(map[string]string, len(action.Mapping))
 		for out, in := range action.Mapping {
@@ -123,6 +122,7 @@ func (this *Action) fromState(db *postgres.DB, redis *redis.Client, http *httpcl
 		}
 	}
 	this.Transformation = (*Transformation)(action.Transformation)
+	this.IdentityProperties = slices.Clone(action.IdentityProperties)
 	if action.Query != "" {
 		query := action.Query
 		this.Query = &query
@@ -276,9 +276,9 @@ func (this *Action) Set(action ActionToSet) error {
 		Enabled:            action.Enabled,
 		InSchema:           action.InSchema,
 		OutSchema:          action.OutSchema,
-		IdentityProperties: action.IdentityProperties,
 		Mapping:            action.Mapping,
 		Transformation:     (*state.Transformation)(action.Transformation),
+		IdentityProperties: action.IdentityProperties,
 		Query:              action.Query,
 		Path:               action.Path,
 		TableName:          action.TableName,
@@ -340,12 +340,12 @@ func (this *Action) Set(action ActionToSet) error {
 	}
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
-			"name = $1, enabled = $2, filter = $3, in_schema = $4, out_schema = $5, identity_properties = $6,\n"+
-			"mapping = $7, transformation_func = $8, transformation_in = $9, transformation_out = $10, query = $11,\n"+
-			"path = $12, table_name = $13, sheet = $14, export_mode = $15, matching_properties_internal = $16,\n"+
-			"matching_properties_external = $17 WHERE id = $18",
-			n.Name, n.Enabled, string(filter), rawInSchema, rawOutSchema, n.IdentityProperties, mapping,
-			transformation.Func, transformation.In, transformation.Out, n.Query, n.Path, n.TableName, n.Sheet,
+			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, mapping = $6,\n"+
+			"transformation_func = $7, transformation_in = $8, transformation_out = $9, identity_properties = $10,\n"+
+			"query = $11, path = $12, table_name = $13, sheet = $14, export_mode = $15,\n"+
+			"matching_properties_internal = $16, matching_properties_external = $17 WHERE id = $18",
+			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping, transformation.Func,
+			transformation.In, transformation.Out, n.IdentityProperties, n.Query, n.Path, n.TableName, n.Sheet,
 			n.ExportMode, matchPropInternal, matchPropExternal, n.ID,
 		)
 		if err != nil {
@@ -717,9 +717,19 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	if n := utf8.RuneCountInString(action.Name); n > 60 {
 		return errors.BadRequest("name is longer than 60 runes")
 	}
+	// Validate the schemas.
+	if action.InSchema.Valid() && action.InSchema.PhysicalType() != types.PtObject {
+		return errors.BadRequest("input schema, if provided, must be an object")
+	}
+	if action.OutSchema.Valid() && action.OutSchema.PhysicalType() != types.PtObject {
+		return errors.BadRequest("out schema, if provided, must be an object")
+	}
 	// Validate the filter.
 	var conditionProperties []types.Path
 	if action.Filter != nil {
+		if !action.InSchema.Valid() {
+			return errors.BadRequest("input schema is required by the filter")
+		}
 		if l := action.Filter.Logical; l != "all" && l != "any" {
 			return errors.BadRequest("filter logical operator %q is not valid", action.Filter.Logical)
 		}
@@ -744,27 +754,44 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			}
 		}
 	}
-	// Validate identity properties.
-	if action.IdentityProperties != nil {
-		if len(action.IdentityProperties) == 0 {
-			return errors.BadRequest("identity properties, if not null, cannot be empty")
+	// Validate the mapping.
+	var inPaths []types.Path
+	var outPaths []types.Path
+	if action.Mapping != nil && len(action.Mapping) > 0 {
+		if !action.InSchema.Valid() {
+			return errors.BadRequest("input schema is required by the mapping")
 		}
-		for _, path := range action.IdentityProperties {
-			if !types.IsValidPropertyPath(path) {
-				return errors.BadRequest("identity property %q is not a valid path", path)
+		if !action.OutSchema.Valid() {
+			return errors.BadRequest("output schema is required by the mapping")
+		}
+		for path, expr := range action.Mapping {
+			outPath, ok := parsePropertyPath(path)
+			if !ok {
+				return errors.BadRequest("output mapped property %q is not valid", path)
 			}
-			if action.Mapping != nil {
-				if _, ok := action.Mapping[path]; ok {
-					continue
-				}
+			outPaths = append(outPaths, outPath)
+			p, err := action.OutSchema.PropertyByPath(outPath)
+			if err != nil {
+				err := err.(types.PathNotExistError)
+				return errors.BadRequest("output mapped property %q not found in output schema", err.Path)
 			}
-			return errors.BadRequest("identity property %s does not exist in mapping", path)
+			expr, err := mapexp.Compile(expr, action.InSchema, p.Type, p.Nullable)
+			if err != nil {
+				return errors.BadRequest("invalid expression mapped to %q: %s", path, err)
+			}
+			inPaths = append(inPaths, expr.Properties()...)
 		}
 	}
-	// Validate the mapping and the transformation.
+	// Validate the transformation.
 	if action.Transformation != nil {
-		if !strings.Contains(action.Transformation.Func, "def transform") {
-			return errors.BadRequest("Python source code of transformation does not contain 'transform' function")
+		if !action.InSchema.Valid() {
+			return errors.BadRequest("input schema is required by the transformation")
+		}
+		if !action.OutSchema.Valid() {
+			return errors.BadRequest("output schema is required by the transformation")
+		}
+		if action.Transformation.Func == "" {
+			return errors.BadRequest("transformation function is empty")
 		}
 		if len(action.Transformation.In) == 0 {
 			return errors.BadRequest("transformation function does not have input properties")
@@ -773,6 +800,10 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			if !types.IsValidPropertyName(name) {
 				return errors.BadRequest("input property %q of transformation function is not valid", name)
 			}
+			if _, ok := action.InSchema.Property(name); !ok {
+				return errors.BadRequest("transformation input property %s not found in schema", name)
+			}
+			inPaths = append(inPaths, types.Path{name})
 		}
 		if len(action.Transformation.Out) == 0 {
 			return errors.BadRequest("transformation function does not have output properties")
@@ -781,6 +812,36 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			if !types.IsValidPropertyName(name) {
 				return errors.BadRequest("output property %q of transformation function is not valid", name)
 			}
+			if _, ok := action.OutSchema.Property(name); !ok {
+				return errors.BadRequest("transformation output property %s not found in schema", name)
+			}
+			outPaths = append(outPaths, types.Path{name})
+		}
+	}
+	// Validate identity properties.
+	if action.IdentityProperties != nil {
+		if len(action.IdentityProperties) == 0 {
+			return errors.BadRequest("identity properties, if provided, cannot be empty")
+		}
+		if action.Mapping == nil {
+			return errors.BadRequest("mapping is required by identity properties")
+		}
+		for _, path := range action.IdentityProperties {
+			if !types.IsValidPropertyPath(path) {
+				return errors.BadRequest("identity property %q is not a valid path", path)
+			}
+			if _, ok := action.Mapping[path]; !ok {
+				return errors.BadRequest("identity property %s does not exist in mapping", path)
+			}
+		}
+	}
+	if inPaths != nil {
+		// Ensure that every property in the input and output schemas have been mapped.
+		if props := unmappedProperties(action.InSchema, inPaths); props != nil {
+			return errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
+		}
+		if props := unmappedProperties(action.OutSchema, outPaths); props != nil {
+			return errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
 		}
 	}
 	// Validate the path.
@@ -926,63 +987,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	}
 	if mappingIsMandatory && action.Mapping == nil && action.Transformation == nil {
 		return errors.BadRequest("mapping (or transformation) is required")
-	}
-
-	// If there is at least one property mapped, or a Python transformation
-	// function is provided, then there must be both a valid input and output
-	// schema.
-	if requiresSchemas := len(action.Mapping) > 0 || action.Transformation != nil; requiresSchemas {
-		if !action.InSchema.Valid() {
-			return errors.BadRequest("input schema must be valid")
-		}
-		if action.InSchema.PhysicalType() != types.PtObject {
-			return errors.BadRequest("input schema must have physical type Object")
-		}
-		if !action.OutSchema.Valid() {
-			return errors.BadRequest("output schema must be valid")
-		}
-		if action.OutSchema.PhysicalType() != types.PtObject {
-			return errors.BadRequest("output schema must have physical type Object")
-		}
-		// In case of mappings, validate the mapped properties and ensure that
-		// every property in the input and output schemas have been referenced
-		// in the mappings.
-		if len(action.Mapping) > 0 {
-			var mappingsInPaths []types.Path
-			var mappingsOutPaths []types.Path
-			for out, expr := range action.Mapping {
-				outPath, ok := parsePropertyPath(out)
-				if !ok {
-					return errors.BadRequest("output mapped property %q is not valid", out)
-				}
-				mappingsOutPaths = append(mappingsOutPaths, outPath)
-				outProp, err := action.OutSchema.PropertyByPath(outPath)
-				if err != nil {
-					err := err.(types.PathNotExistError)
-					return errors.BadRequest("output mapped property %q not found in output schema", err.Path)
-				}
-				expr, err := mapexp.Compile(expr, action.InSchema, outProp.Type, outProp.Nullable)
-				if err != nil {
-					return errors.BadRequest("invalid expression mapped to %q: %s", out, err)
-				}
-				mappingsInPaths = append(mappingsInPaths, expr.Properties()...)
-			}
-			// Ensure that every property in the input and output schemas have been
-			// mapped.
-			if props := unmappedProperties(action.InSchema, mappingsInPaths); props != nil {
-				return errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
-			}
-			if props := unmappedProperties(action.OutSchema, mappingsOutPaths); props != nil {
-				return errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
-			}
-		}
-	} else {
-		if action.InSchema.Valid() {
-			return errors.BadRequest("input schema cannot be provided")
-		}
-		if action.OutSchema.Valid() {
-			return errors.BadRequest("output schema cannot be provided")
-		}
 	}
 
 	return nil

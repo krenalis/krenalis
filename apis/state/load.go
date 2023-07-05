@@ -328,8 +328,8 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all actions.
 		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
-			"schedule_period, filter, in_schema, out_schema, identity_properties, mapping, transformation_func,\n"+
-			"transformation_in, transformation_out, query, path, table_name, sheet, (user_cursor).id,\n"+
+			"schedule_period, in_schema, out_schema, filter, mapping, transformation_func, transformation_in,\n"+
+			"transformation_out, identity_properties, query, path, table_name, sheet, (user_cursor).id,\n"+
 			"(user_cursor).timestamp, (user_cursor).next, health, export_mode, matching_properties_internal,\n"+
 			"matching_properties_external\n"+
 			"FROM actions",
@@ -337,14 +337,14 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 				for rows.Next() {
 					var connectionID int
 					var eventType string
-					var filter, rawInSchema, rawOutSchema, mapping []byte
-					var matchPropInternal, matchPropExternal string
+					var rawInSchema, rawOutSchema, filter, mapping []byte
 					var transformation Transformation
+					var matchPropInternal, matchPropExternal string
 					action := Action{}
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
-						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &filter,
-						&rawInSchema, &rawOutSchema, &action.IdentityProperties, &mapping, &transformation.Func,
-						&transformation.In, &transformation.Out, &action.Query, &action.Path, &action.TableName,
+						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &rawInSchema, &rawOutSchema,
+						&filter, &mapping, &transformation.Func, &transformation.In, &transformation.Out,
+						&action.IdentityProperties, &action.Query, &action.Path, &action.TableName,
 						&action.Sheet, &action.UserCursor.ID, &action.UserCursor.Timestamp, &action.UserCursor.Next,
 						&action.Health, &action.ExportMode, &matchPropInternal, &matchPropExternal)
 					if err != nil {
