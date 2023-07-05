@@ -27,20 +27,33 @@ func main() {
 
 	var short bool
 	var verbose bool
+	var testPackages bool
 	flag.BoolVar(&short, "short", false, "pass the '-short' flag to 'go test'")
 	flag.BoolVar(&verbose, "v", false, "verbose output")
+	flag.BoolVar(&testPackages, "pkg", false, "run tests on every single package"+
+		" instead of every module (used in conjunction with option '-v', may"+
+		" help spotting problems in tests)")
 	flag.Parse()
 
 	start := time.Now()
 
-	// Find modules in this repository.
+	// Find modules and packages in this repository.
 	var modules []string
+	var packages []string
 	err := filepath.Walk(".", func(path string, _ fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
+		// Module found.
 		if filepath.Base(path) == "go.mod" {
 			modules = append(modules, filepath.Dir(path))
+		}
+		// Package found.
+		if filepath.Ext(path) == ".go" {
+			dir := filepath.Dir(path)
+			if !slices.Contains(packages, dir) {
+				packages = append(packages, dir)
+			}
 		}
 		return nil
 	})
@@ -48,6 +61,7 @@ func main() {
 		log.Fatal(err)
 	}
 	sort.Strings(modules)
+	sort.Strings(packages)
 
 	// Check if the command has been executed correctly basing on modules which
 	// certainly should be found.
@@ -55,6 +69,15 @@ func main() {
 		if !slices.Contains(modules, mod) {
 			log.Fatalf("module %q not found, maybe you ran this script incorrectly"+
 				" or this script is out-of-date", mod)
+		}
+	}
+
+	// Check if the command has been executed correctly basing on packages which
+	// certainly should be found.
+	for _, pkg := range []string{".", "apis", "chichi-cli"} {
+		if !slices.Contains(packages, pkg) {
+			log.Fatalf("package %q not found, maybe you ran this script incorrectly"+
+				" or this script is out-of-date", pkg)
 		}
 	}
 
@@ -76,16 +99,23 @@ func main() {
 		cmd("go", []string{"vet", "./..."}, repo, module, verbose)
 	}
 
-	// Call command(s) on every module.
-	for _, module := range modules {
-		args := []string{"test", "./..."}
-		if short {
-			args = append(args, "-short")
+	// Test single packages or modules.
+	args := []string{"test"}
+	if short {
+		args = append(args, "-short")
+	}
+	if verbose {
+		args = append(args, "-v")
+	}
+	if testPackages {
+		for _, pkg := range packages {
+			cmd("go", args, repo, pkg, verbose)
 		}
-		if verbose {
-			args = append(args, "-v")
+	} else {
+		args = append(args, "./...")
+		for _, module := range modules {
+			cmd("go", args, repo, module, verbose)
 		}
-		cmd("go", args, repo, module, verbose)
 	}
 
 	// Call command(s) on the workspace.
