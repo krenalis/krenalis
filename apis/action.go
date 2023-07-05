@@ -777,11 +777,11 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			p, err := action.OutSchema.PropertyByPath(outPath)
 			if err != nil {
 				err := err.(types.PathNotExistError)
-				return errors.BadRequest("output mapped property %q not found in output schema", err.Path)
+				return errors.BadRequest("output mapped property %s not found in output schema", err.Path)
 			}
 			expr, err := mapexp.Compile(expr, action.InSchema, p.Type, p.Nullable)
 			if err != nil {
-				return errors.BadRequest("invalid expression mapped to %q: %s", path, err)
+				return errors.BadRequest("invalid expression mapped to %s: %s", path, err)
 			}
 			inPaths = append(inPaths, expr.Properties()...)
 		}
@@ -814,7 +814,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 		for _, name := range action.Transformation.Out {
 			if !types.IsValidPropertyName(name) {
-				return errors.BadRequest("output property %q of transformation function is not valid", name)
+				return errors.BadRequest("output property %s of transformation function is not valid", name)
 			}
 			if _, ok := action.OutSchema.Property(name); !ok {
 				return errors.BadRequest("transformation output property %s not found in schema", name)
@@ -830,12 +830,24 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if action.Mapping == nil {
 			return errors.BadRequest("mapping is required by identifiers")
 		}
-		for _, path := range action.Identifiers {
-			if !types.IsValidPropertyPath(path) {
-				return errors.BadRequest("identifier %q is not a valid path", path)
+		for _, identifier := range action.Identifiers {
+			if !types.IsValidPropertyPath(identifier) {
+				return errors.BadRequest("identifier %q is not a valid path", identifier)
 			}
-			if _, ok := action.Mapping[path]; !ok {
-				return errors.BadRequest("identifier %s does not exist in mapping", path)
+			if _, ok := action.Mapping[identifier]; !ok {
+				return errors.BadRequest("identifier %s does not exist in mapping", identifier)
+			}
+			property, err := action.OutSchema.PropertyByPath(strings.Split(identifier, "."))
+			if err != nil {
+				return fmt.Errorf("unexpected error validating action identifier %s: %s", identifier, err)
+			}
+			t := property.Type
+			if t.PhysicalType() == types.PtArray {
+				t = t.ItemType()
+			}
+			switch t.PhysicalType() {
+			case types.PtJSON, types.PtArray, types.PtObject, types.PtMap:
+				return errors.BadRequest("identifier %s has unsupported type %s", identifier, property.Type)
 			}
 		}
 	}
