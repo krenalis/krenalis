@@ -480,7 +480,7 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 	}
 
 	// Marshal the filter.
-	var filter, mapping []byte
+	var filter []byte
 	if action.Filter != nil {
 		n.Filter = &state.ActionFilter{
 			Logical:    state.ActionFilterLogical(action.Filter.Logical),
@@ -496,6 +496,7 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 	}
 
 	// Marshal the mapping.
+	var mapping []byte
 	if action.Mapping != nil {
 		mapping, err = json.Marshal(action.Mapping)
 		if err != nil {
