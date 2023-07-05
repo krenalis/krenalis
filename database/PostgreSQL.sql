@@ -119,7 +119,7 @@ CREATE TABLE actions (
     transformation_func text NOT NULL DEFAULT '',
     transformation_in text[] DEFAULT NULL,
     transformation_out text[] DEFAULT NULL,
-    identity_properties varchar[] DEFAULT NULL,
+    identifiers varchar[] DEFAULT NULL,
     query text NOT NULL DEFAULT '',
     path varchar(1024) NOT NULL DEFAULT '',
     table_name varchar(1024) NOT NULL DEFAULT '',

@@ -56,7 +56,7 @@ type Action struct {
 	Filter             *ActionFilter
 	Mapping            map[string]string
 	Transformation     *Transformation
-	IdentityProperties []string
+	Identifiers        []string
 	Query              *string
 	Path               *string
 	Table              *string
@@ -122,7 +122,7 @@ func (this *Action) fromState(db *postgres.DB, redis *redis.Client, http *httpcl
 		}
 	}
 	this.Transformation = (*Transformation)(action.Transformation)
-	this.IdentityProperties = slices.Clone(action.IdentityProperties)
+	this.Identifiers = slices.Clone(action.Identifiers)
 	if action.Query != "" {
 		query := action.Query
 		this.Query = &query
@@ -271,28 +271,28 @@ func (this *Action) Set(action ActionToSet) error {
 		return err
 	}
 	// TODO(Gianluca): remove this "if" statement when support for
-	// IdentityProperties in the UI will be added.
+	// Identifiers in the UI will be added.
 	//
 	// See the issue https://github.com/open2b/chichi/issues/220.
-	if len(action.IdentityProperties) == 0 &&
+	if len(action.Identifiers) == 0 &&
 		this.action.Target == state.UsersTarget &&
 		this.connection.connection.Role == state.SourceRole {
-		action.IdentityProperties = []string{"Email"}
+		action.Identifiers = []string{"Email"}
 	}
 	n := state.SetActionNotification{
-		ID:                 this.action.ID,
-		Name:               action.Name,
-		Enabled:            action.Enabled,
-		InSchema:           action.InSchema,
-		OutSchema:          action.OutSchema,
-		Mapping:            action.Mapping,
-		Transformation:     (*state.Transformation)(action.Transformation),
-		IdentityProperties: action.IdentityProperties,
-		Query:              action.Query,
-		Path:               action.Path,
-		TableName:          action.TableName,
-		Sheet:              action.Sheet,
-		ExportMode:         (*state.ExportMode)(action.ExportMode),
+		ID:             this.action.ID,
+		Name:           action.Name,
+		Enabled:        action.Enabled,
+		InSchema:       action.InSchema,
+		OutSchema:      action.OutSchema,
+		Mapping:        action.Mapping,
+		Transformation: (*state.Transformation)(action.Transformation),
+		Identifiers:    action.Identifiers,
+		Query:          action.Query,
+		Path:           action.Path,
+		TableName:      action.TableName,
+		Sheet:          action.Sheet,
+		ExportMode:     (*state.ExportMode)(action.ExportMode),
 	}
 	// Add the filter to the notification and marshal it.
 	var filter []byte
@@ -350,11 +350,11 @@ func (this *Action) Set(action ActionToSet) error {
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
 			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, mapping = $6,\n"+
-			"transformation_func = $7, transformation_in = $8, transformation_out = $9, identity_properties = $10,\n"+
+			"transformation_func = $7, transformation_in = $8, transformation_out = $9, identifiers = $10,\n"+
 			"query = $11, path = $12, table_name = $13, sheet = $14, export_mode = $15,\n"+
 			"matching_properties_internal = $16, matching_properties_external = $17 WHERE id = $18",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping, transformation.Func,
-			transformation.In, transformation.Out, n.IdentityProperties, n.Query, n.Path, n.TableName, n.Sheet,
+			transformation.In, transformation.Out, n.Identifiers, n.Query, n.Path, n.TableName, n.Sheet,
 			n.ExportMode, matchPropInternal, matchPropExternal, n.ID,
 		)
 		if err != nil {
@@ -378,27 +378,27 @@ func (this *Action) setUser(ctx context.Context, user map[string]any) error {
 
 	// Resolve the identity of the user.
 	var gid int
-	irProps := this.action.IdentityProperties
-	lastProperty := len(irProps) - 1
-propsLoop:
-	for i, property := range irProps {
-		value, ok := user[property]
+	identifiers := this.action.Identifiers
+	last := len(identifiers) - 1
+Identifiers:
+	for i, identifier := range identifiers {
+		value, ok := user[identifier]
 		if !ok {
 			continue
 		}
-		gids, err := index.UsersByPropertyValue(ctx, property, value)
+		gids, err := index.UsersByPropertyValue(ctx, identifier, value)
 		if err != nil {
 			return err
 		}
 		switch len(gids) {
 		case 1:
 			gid = gids[0]
-			break propsLoop
+			break Identifiers
 		case 0:
-			// Continue to the next property, if there is one, otherwise exit
+			// Continue to the next identifier, if there is one, otherwise exit
 			// from the loop and create an empty golden record.
 		default:
-			if i == lastProperty {
+			if i == last {
 				// Merge users?
 				panic("TODO: merging of users not implemented")
 			}
@@ -566,10 +566,10 @@ type ActionToSet struct {
 	// OutSchema is the output schema of the mappings (of the transformation).
 	OutSchema types.Type
 
-	// IdentityProperties represents the property paths upon which identity
-	// resolution is executed. All identity properties must be present as keys
-	// in the action's Mapping.
-	IdentityProperties []string
+	// Identifiers represents the property paths upon which identity resolution
+	// is executed. All identifiers must be present as keys in the action's
+	// Mapping.
+	Identifiers []string
 
 	// Mapping is the mapping of the action, if it has one, otherwise is nil.
 	//
@@ -822,20 +822,20 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			outPaths = append(outPaths, types.Path{name})
 		}
 	}
-	// Validate identity properties.
-	if action.IdentityProperties != nil {
-		if len(action.IdentityProperties) == 0 {
-			return errors.BadRequest("identity properties, if provided, cannot be empty")
+	// Validate the identifiers.
+	if action.Identifiers != nil {
+		if len(action.Identifiers) == 0 {
+			return errors.BadRequest("identifiers, if provided, cannot be empty")
 		}
 		if action.Mapping == nil {
-			return errors.BadRequest("mapping is required by identity properties")
+			return errors.BadRequest("mapping is required by identifiers")
 		}
-		for _, path := range action.IdentityProperties {
+		for _, path := range action.Identifiers {
 			if !types.IsValidPropertyPath(path) {
-				return errors.BadRequest("identity property %q is not a valid path", path)
+				return errors.BadRequest("identifier %q is not a valid path", path)
 			}
 			if _, ok := action.Mapping[path]; !ok {
-				return errors.BadRequest("identity property %s does not exist in mapping", path)
+				return errors.BadRequest("identifier %s does not exist in mapping", path)
 			}
 		}
 	}

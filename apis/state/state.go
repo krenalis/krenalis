@@ -822,7 +822,7 @@ type Action struct {
 	Filter             *ActionFilter
 	Mapping            map[string]string
 	Transformation     *Transformation
-	IdentityProperties []string
+	Identifiers        []string
 	Query              string
 	Path               string
 	TableName          string

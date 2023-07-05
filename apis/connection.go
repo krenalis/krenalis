@@ -460,33 +460,33 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 	}
 
 	// TODO(Gianluca): remove this "if" statement when support for
-	// IdentityProperties in the UI will be added.
+	// Identifiers in the UI will be added.
 	//
 	// See the issue https://github.com/open2b/chichi/issues/220.
-	if len(action.IdentityProperties) == 0 &&
+	if len(action.Identifiers) == 0 &&
 		target == UsersTarget &&
 		c.Role == state.SourceRole {
-		action.IdentityProperties = []string{"Email"}
+		action.Identifiers = []string{"Email"}
 	}
 
 	n := state.AddActionNotification{
-		Connection:         c.ID,
-		Target:             state.ActionTarget(target),
-		Name:               action.Name,
-		Enabled:            action.Enabled,
-		EventType:          eventType,
-		ScheduleStart:      int16(mathrand.Intn(24 * 60)),
-		SchedulePeriod:     60,
-		InSchema:           action.InSchema,
-		OutSchema:          action.OutSchema,
-		Mapping:            action.Mapping,
-		Transformation:     (*state.Transformation)(action.Transformation),
-		IdentityProperties: action.IdentityProperties,
-		Query:              action.Query,
-		Path:               action.Path,
-		TableName:          action.TableName,
-		Sheet:              action.Sheet,
-		ExportMode:         (*state.ExportMode)(action.ExportMode),
+		Connection:     c.ID,
+		Target:         state.ActionTarget(target),
+		Name:           action.Name,
+		Enabled:        action.Enabled,
+		EventType:      eventType,
+		ScheduleStart:  int16(mathrand.Intn(24 * 60)),
+		SchedulePeriod: 60,
+		InSchema:       action.InSchema,
+		OutSchema:      action.OutSchema,
+		Mapping:        action.Mapping,
+		Transformation: (*state.Transformation)(action.Transformation),
+		Identifiers:    action.Identifiers,
+		Query:          action.Query,
+		Path:           action.Path,
+		TableName:      action.TableName,
+		Sheet:          action.Sheet,
+		ExportMode:     (*state.ExportMode)(action.ExportMode),
 	}
 
 	// Add the filter to the notification and marshal it.
@@ -581,13 +581,13 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, in_schema, out_schema, filter, mapping, transformation_func,\n" +
-			"transformation_in, transformation_out, identity_properties, query, path, table_name, sheet,\n" +
-			"export_mode, matching_properties_internal, matching_properties_external)\n" +
+			"transformation_in, transformation_out, identifiers, query, path, table_name, sheet, export_mode,\n" +
+			"matching_properties_internal, matching_properties_external)\n" +
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType, n.Name, n.Enabled, n.ScheduleStart,
 			n.SchedulePeriod, rawInSchema, rawOutSchema, string(filter), mapping, transformation.Func, transformation.In,
-			transformation.Out, n.IdentityProperties, n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode,
-			matchPropInternal, matchPropExternal)
+			transformation.Out, n.Identifiers, n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode, matchPropInternal,
+			matchPropExternal)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {
 				err = errors.Unprocessable(ConnectorNotExists, "connection %d does not exist", n.Connection)
