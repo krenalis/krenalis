@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"sort"
 	"sync"
@@ -68,9 +69,45 @@ type connection struct {
 	conf *connector.AppConfig
 }
 
+var randGenerator = rand.New(rand.NewSource(time.Now().Unix()))
+
+func newUserID() string {
+	b := make([]rune, 12)
+	for i := range b {
+		b[i] = rune(randGenerator.Intn(20) + 'a')
+	}
+	return "dummy_" + string(b)
+}
+
 // CreateUser creates a user with the given properties.
 func (c *connection) CreateUser(properties connector.Properties) error {
-	panic("TODO: not implemented")
+
+	// Normalize and validate the properties.
+	properties, err := normalize(properties, userSchema)
+	if err != nil {
+		return err
+	}
+
+	// Write the user on the log.
+	propsDump, err := json.Marshal(properties)
+	if err != nil {
+		return err
+	}
+	log.Printf("[info] Dummy: CreateUser(%v)", string(propsDump))
+
+	// Update the in-memory users.
+	usersLock.Lock()
+	defer usersLock.Unlock()
+	u := connector.Properties{}
+	id := newUserID()
+	u["dummy_id"] = id
+	for name, value := range properties {
+		u[name] = value
+	}
+	users[id] = u
+	usersTimestamps[id] = time.Now().UTC()
+
+	return nil
 }
 
 // EventTypes returns the connection's event types.
