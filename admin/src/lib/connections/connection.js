@@ -107,6 +107,14 @@ class Connection {
 	get isDestination() {
 		return this.role === 'Destination';
 	}
+
+	actionTypeByAction(action) {
+		if (action.Target === 'Events') {
+			return this.actionTypes.find((t) => t.EventType === action.EventType);
+		} else {
+			return this.actionTypes.find((t) => t.Target === action.Target);
+		}
+	}
 }
 
 export default Connection;

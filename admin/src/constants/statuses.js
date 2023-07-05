@@ -36,8 +36,6 @@ const statuses = {
 		'This connection already has a configured transformation',
 	],
 	alreadyHasMappings: [variants.DANGER, icons.FORBIDDEN, 'This connection already has configured mappings'],
-	noUsersSchema: [variants.DANGER, icons.NOT_FOUND, 'The user schema is not currently defined'],
-	noGroupsSchema: [variants.DANGER, icons.NOT_FOUND, 'The groups schema is not currently defined'],
 	eventTypeNotExists: [variants.DANGER, icons.NOT_FOUND, 'This event type does not exist enymore'],
 	actionExecutionInProgress: [variants.DANGER, icons.FORBIDDEN, 'This action is already in progress'],
 	querySet: [variants.PRIMARY, icons.OK, 'Your query has been successfully saved'],

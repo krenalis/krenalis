@@ -1,0 +1,141 @@
+import { useRef } from 'react';
+import Section from '../../../common/Section/Section';
+import { ComboBoxInput, ComboBoxList } from '../../../common/ComboBox/ComboBox';
+import { getSchemaComboboxItems } from './Action.helpers';
+import { SlButton, SlSelect, SlInput, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
+
+const operatorOptions = {
+	1: 'is',
+	2: 'is not',
+};
+
+const ActionFilters = ({ action, setAction, inputSchema }) => {
+	const conditionListRef = useRef(null);
+
+	const onAddCondition = () => {
+		const a = { ...action };
+		if (a.Filter == null) {
+			a.Filter = { Logical: 'all', Conditions: [] };
+		}
+		a.Filter.Conditions = [...a.Filter.Conditions, { Property: '', Operator: '', Value: '' }];
+		setAction(a);
+	};
+
+	const onRemoveCondition = (e) => {
+		const a = { ...action };
+		const id = e.currentTarget.closest('.condition').dataset.id;
+		a.Filter.Conditions.splice(id, 1);
+		if (a.Filter.Conditions.length === 0) {
+			a.Filter = null;
+		}
+		setAction(a);
+	};
+
+	const onUpdateConditionFragment = (e) => {
+		const a = { ...action };
+		const id = e.target.closest('.condition').dataset.id;
+		const fragment = e.target.dataset.fragment;
+		let value;
+		if (fragment === 'Operator') {
+			value = operatorOptions[e.target.value];
+		} else {
+			value = e.target.value;
+		}
+		a.Filter.Conditions[id][fragment] = value;
+		setAction(a);
+	};
+
+	const onSelectConditionListItem = (input, value) => {
+		const a = { ...action };
+		const id = input.closest('.condition').dataset.id;
+		a.Filter.Conditions[id]['Property'] = value;
+		setAction(a);
+	};
+
+	const onSwitchFilterLogical = () => {
+		const a = { ...action };
+		const logical = a.Filter.Logical;
+		if (logical === 'all') {
+			a.Filter.Logical = 'any';
+		} else {
+			a.Filter.Logical = 'all';
+		}
+		setAction(a);
+	};
+
+	const conditions = [];
+	if (action.Filter != null) {
+		for (const [i, condition] of action.Filter.Conditions.entries()) {
+			let conditionInput, operatorSelect, valueInput;
+			conditionInput = (
+				<ComboBoxInput
+					comboBoxListRef={conditionListRef}
+					onInput={onUpdateConditionFragment}
+					value={condition.Property}
+					className='property'
+					size='small'
+					data-fragment='Property'
+				/>
+			);
+			operatorSelect = (
+				<SlSelect
+					data-fragment='Operator'
+					size='small'
+					className='operator'
+					value={Object.keys(operatorOptions).find((key) => operatorOptions[key] === condition.Operator)}
+					onSlChange={onUpdateConditionFragment}
+				>
+					{Object.keys(operatorOptions).map((k) => (
+						<SlOption value={k}>{operatorOptions[k]}</SlOption>
+					))}
+				</SlSelect>
+			);
+			valueInput = (
+				<SlInput
+					data-fragment='Value'
+					size='small'
+					className='value'
+					value={condition.Value}
+					onSlInput={onUpdateConditionFragment}
+				/>
+			);
+			conditions.push(
+				<div className='condition' data-id={i}>
+					{conditionInput}
+					{operatorSelect}
+					{valueInput}
+					<SlButton className='removeCondition' size='small' variant='danger' onClick={onRemoveCondition}>
+						Remove
+					</SlButton>
+				</div>
+			);
+		}
+	}
+
+	return (
+		<Section title='Filter' description='The filters that define the action' padded={true}>
+			{conditions.length > 1 && (
+				<SlSelect
+					className='logical'
+					size='small'
+					value={action.Filter.Logical}
+					onSlChange={onSwitchFilterLogical}
+				>
+					<SlOption value='all'>All</SlOption>
+					<SlOption value='any'>Any</SlOption>
+				</SlSelect>
+			)}
+			{conditions}
+			<ComboBoxList
+				ref={conditionListRef}
+				items={getSchemaComboboxItems(inputSchema)}
+				onSelect={onSelectConditionListItem}
+			/>
+			<SlButton className='addCondition' size='small' variant='neutral' onClick={onAddCondition}>
+				Add new condition
+			</SlButton>
+		</Section>
+	);
+};
+
+export default ActionFilters;

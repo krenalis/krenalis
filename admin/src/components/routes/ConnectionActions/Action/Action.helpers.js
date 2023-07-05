@@ -1,53 +1,4 @@
-const rawTransformationFunction = `def transform($parameterName: dict) -> dict:
-	return {}
-`;
-
-const getDefaultMappings = (schema) => {
-	if (schema == null) {
-		return null;
-	}
-	const getSubProperties = (parentName, properties, indentation) => {
-		let subProperties = {};
-		indentation += 1;
-		for (const subP of properties) {
-			const key = `${parentName}.${subP.name}`;
-			subProperties[key] = {
-				value: '',
-				indentation: indentation,
-				root: key.substring(0, key.indexOf('.')),
-				disabled: false,
-				required: subP.required != null ? subP.required : false,
-				type: subP.type.name,
-				label: subP.label,
-				full: subP,
-			};
-			if (subP.type.name === 'Object') {
-				const nestedSubProperties = getSubProperties(key, subP.type.properties, indentation);
-				subProperties = { ...subProperties, ...nestedSubProperties };
-			}
-		}
-		return subProperties;
-	};
-	let defaultMappings = {};
-	for (const p of schema.properties) {
-		const indentation = 0;
-		defaultMappings[p.name] = {
-			value: '',
-			indentation: indentation,
-			root: p.name,
-			disabled: false,
-			required: p.required != null ? p.required : false,
-			type: p.type.name,
-			label: p.label,
-			full: p,
-		};
-		if (p.type.name === 'Object') {
-			const subProperties = getSubProperties(p.name, p.type.properties, indentation);
-			defaultMappings = { ...defaultMappings, ...subProperties };
-		}
-	}
-	return defaultMappings;
-};
+import { flattenSchema } from '../../../../lib/connections/action';
 
 const updateMappingProperty = (action, name, value) => {
 	const getAlternativeProperties = (name, mapping) => {
@@ -108,7 +59,7 @@ const getSchemaComboboxItems = (schema) => {
 	if (schema == null) {
 		return [];
 	}
-	const properties = getDefaultMappings(schema);
+	const properties = flattenSchema(schema);
 	const propertiesList = [];
 	for (const k in properties) {
 		let name;
@@ -174,25 +125,4 @@ const removePropertyFromActionSchema = (action, side, propertyName) => {
 	return a;
 };
 
-function getExpressionVariables(expression) {
-	const regex = /(["'])(?:\\.|(?!\1)[^\\])*\1|\b([a-zA-Z_][a-zA-Z0-9_]*\b)(?!\s*\()/g;
-	const variables = [];
-	let match;
-	while ((match = regex.exec(expression)) !== null) {
-		if (match[2]) {
-			const variable = match[2].split('.')[0];
-			variables.push(variable);
-		}
-	}
-	return variables;
-}
-
-export {
-	getDefaultMappings,
-	rawTransformationFunction,
-	updateMappingProperty,
-	getSchemaComboboxItems,
-	addPropertyToActionSchema,
-	removePropertyFromActionSchema,
-	getExpressionVariables,
-};
+export { updateMappingProperty, getSchemaComboboxItems, addPropertyToActionSchema, removePropertyFromActionSchema };

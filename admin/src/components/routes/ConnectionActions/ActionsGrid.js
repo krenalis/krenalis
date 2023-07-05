@@ -1,6 +1,6 @@
 import { useRef, useContext, useState, useEffect } from 'react';
-import Action from '../../../lib/connections/action';
 import Grid from '../../common/Grid/Grid';
+import { SCHEDULE_PERIODS } from '../../../lib/connections/action';
 import { AppContext } from '../../../providers/AppProvider';
 import { ConnectionContext } from '../../../providers/ConnectionProvider';
 import { UnprocessableError } from '../../../lib/api/errors';
@@ -79,7 +79,7 @@ const ActionsGrid = ({ actions, onSelectAction }) => {
 	};
 
 	const onSchedulerPeriodChange = async (e, actionID) => {
-		const period = Action.SCHEDULE_PERIODS[e.currentTarget.value];
+		const period = SCHEDULE_PERIODS[e.currentTarget.value];
 		const [, err] = await api.connections.setActionSchedulePeriod(connection.id, actionID, period);
 		if (err != null) {
 			showError(err);
@@ -133,11 +133,11 @@ const ActionsGrid = ({ actions, onSelectAction }) => {
 								<SlRadioGroup
 									size='small'
 									onSlChange={(e) => onSchedulerPeriodChange(e, a.ID)}
-									value={Object.keys(Action.SCHEDULE_PERIODS).find(
-										(k) => Action.SCHEDULE_PERIODS[k] === a.SchedulePeriod
+									value={Object.keys(SCHEDULE_PERIODS).find(
+										(k) => SCHEDULE_PERIODS[k] === a.SchedulePeriod
 									)}
 								>
-									{Object.entries(Action.SCHEDULE_PERIODS).map(([value, time]) => (
+									{Object.entries(SCHEDULE_PERIODS).map(([value, time]) => (
 										<SlRadio value={value}>{time}</SlRadio>
 									))}
 								</SlRadioGroup>

@@ -1,14 +1,13 @@
 import { useState, useRef, useContext, useEffect, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-	getDefaultMappings,
-	rawTransformationFunction,
 	updateMappingProperty,
 	getSchemaComboboxItems,
 	addPropertyToActionSchema,
 	removePropertyFromActionSchema,
-	getExpressionVariables,
 } from './Action.helpers';
+import { flattenSchema, getExpressionVariables } from '../../../../lib/connections/action';
+import { rawTransformationFunction } from './Action.constants';
 import AlertDialog from '../../../common/AlertDialog/AlertDialog';
 import { ComboBoxInput, ComboBoxList } from '../../../common/ComboBox/ComboBox';
 import Section from '../../../common/Section/Section';
@@ -64,7 +63,7 @@ const ActionMapping = forwardRef(
 					setAction(a);
 					setMode('transformation');
 				} else {
-					a.Mapping = getDefaultMappings(outputSchema);
+					a.Mapping = flattenSchema(outputSchema);
 					a.PythonSource = null;
 					setAction(a);
 					setMode('mappings');
@@ -94,7 +93,7 @@ const ActionMapping = forwardRef(
 			setAction(updatedAction);
 		};
 
-		const onSelectPropertiesListItem = (input, value) => {
+		const onSelectProperty = (input, value) => {
 			const updatedAction = updateMappingProperty(action, input.name, value);
 			setAction(updatedAction);
 		};
@@ -102,7 +101,7 @@ const ActionMapping = forwardRef(
 		let mappingContent = null;
 		if (mode === 'mappings') {
 			const mappings = [];
-			const defaultMappings = getDefaultMappings(inputSchema);
+			const defaultMappings = flattenSchema(inputSchema);
 			for (const k of Object.keys(action.Mapping)) {
 				let error;
 				const value = action.Mapping[k].value;
@@ -129,7 +128,7 @@ const ActionMapping = forwardRef(
 							onInput={onUpdateProperty}
 							value={value}
 							name={k}
-							disabled={disabled || action.Mapping[k].disabled}
+							disabled={disabled || action.Mapping[k].disabled === true}
 							className='inputProperty'
 							size='small'
 							error={error}
@@ -164,7 +163,7 @@ const ActionMapping = forwardRef(
 					<ComboBoxList
 						ref={propertiesListRef}
 						items={getSchemaComboboxItems(inputSchema)}
-						onSelect={onSelectPropertiesListItem}
+						onSelect={onSelectProperty}
 					/>
 				</div>
 			);
