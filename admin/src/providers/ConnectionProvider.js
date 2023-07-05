@@ -34,7 +34,7 @@ const ConnectionProvider = () => {
 				return;
 			}
 			// enrich the provided connection with the additional fetched data.
-			const connection = { ...providedConnection };
+			const connection = Object.assign(providedConnection);
 			connection.actionTypes = fetchedConnection.ActionTypes;
 			connection.actions = fetchedConnection.Actions;
 			setConnection(connection);
