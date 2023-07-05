@@ -69,9 +69,9 @@ require (
 	github.com/segmentio/ksuid v1.0.4
 	github.com/shopspring/decimal v1.3.1
 	github.com/tetratelabs/wazero v1.0.2
-	golang.org/x/crypto v0.10.0
+	golang.org/x/crypto v0.11.0
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
-	golang.org/x/text v0.10.0
+	golang.org/x/text v0.11.0
 	gopkg.in/gcfg.v1 v1.2.3
 )
 
@@ -128,7 +128,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.13.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.9.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
