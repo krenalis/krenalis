@@ -461,6 +461,8 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 
 	// TODO(Gianluca): remove this "if" statement when support for
 	// IdentityProperties in the UI will be added.
+	//
+	// See the issue https://github.com/open2b/chichi/issues/220.
 	if len(action.IdentityProperties) == 0 &&
 		target == UsersTarget &&
 		c.Role == state.SourceRole {
