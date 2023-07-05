@@ -78,11 +78,14 @@ func main() {
 
 	// Call command(s) on every module.
 	for _, module := range modules {
+		args := []string{"test", "./..."}
 		if short {
-			cmd("go", []string{"test", "-short", "./..."}, repo, module, verbose)
-		} else {
-			cmd("go", []string{"test", "./..."}, repo, module, verbose)
+			args = append(args, "-short")
 		}
+		if verbose {
+			args = append(args, "-v")
+		}
+		cmd("go", args, repo, module, verbose)
 	}
 
 	// Call command(s) on the workspace.
