@@ -285,7 +285,8 @@ func (this *Action) Set(action ActionToSet) error {
 		Sheet:              action.Sheet,
 		ExportMode:         (*state.ExportMode)(action.ExportMode),
 	}
-	var filter, mapping []byte
+	// Add the filter to the notification and marshal it.
+	var filter []byte
 	if action.Filter != nil {
 		n.Filter = &state.ActionFilter{
 			Logical:    state.ActionFilterLogical(action.Filter.Logical),
@@ -319,6 +320,7 @@ func (this *Action) Set(action ActionToSet) error {
 	}
 
 	// Marshal the mapping.
+	var mapping []byte
 	if action.Mapping != nil {
 		mapping, err = json.Marshal(action.Mapping)
 		if err != nil {
