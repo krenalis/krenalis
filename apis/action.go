@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -19,9 +20,11 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/httpclient"
+	"chichi/apis/index"
 	"chichi/apis/mappings/mapexp"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
+	"chichi/apis/warehouses"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 
@@ -352,6 +355,108 @@ func (this *Action) Set(action ActionToSet) error {
 	})
 
 	return err
+}
+
+// setUsers sets the user with the given ID into the database and into the data
+// warehouse.
+func (this *Action) setUser(ctx context.Context, id string, user map[string]any) error {
+
+	ws := this.connection.connection.Workspace()
+
+	// TODO(Gianluca): replace 'identityProperties' with the identity properties
+	// specified in the action, when it will be implemented.
+	//
+	// See https://github.com/open2b/chichi/issues/217.
+	identityProperties := []string{"Email"}
+
+	index := index.Open(this.redis)
+
+	var gid int
+	lastProperty := len(identityProperties) - 1
+propsLoop:
+	for i, property := range identityProperties {
+		value, ok := user[property]
+		if !ok {
+			continue
+		}
+		gids, err := index.UsersByPropertyValue(ctx, property, value)
+		if err != nil {
+			return err
+		}
+		switch len(gids) {
+		case 1:
+			gid = gids[0]
+			break propsLoop
+		case 0:
+			// Continue to the next property, if there is one, otherwise exit
+			// from the loop and create an empty golden record.
+		default:
+			if i == lastProperty {
+				// Merge users?
+				panic("TODO: merging of users not implemented")
+			}
+		}
+	}
+	if gid == 0 {
+		var err error
+		gid, err = createEmptyGoldenRecord(ctx, ws)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Serialize the row.
+	schema, ok := ws.Schemas["users"]
+	if !ok {
+		return errors.New("users schema not found")
+	}
+
+	// Normalize the incoming user according to the "users" schema.
+	user, err := normalize(user, *schema)
+	if err != nil {
+		return err
+	}
+
+	warehouses.SerializeRow(user, *schema)
+
+	query := &strings.Builder{}
+	query.WriteString("UPDATE users SET\n")
+	var values []any
+	i := 1
+	for prop, value := range user {
+		if i > 1 {
+			query.WriteString(", ")
+		}
+		query.WriteString(postgres.QuoteIdent(prop))
+		query.WriteString(" = $")
+		query.WriteString(strconv.Itoa(i))
+		values = append(values, value)
+		i++
+	}
+	query.WriteString(`, "timestamp" = now()`)
+	query.WriteString("\nWHERE id = $")
+	query.WriteString(strconv.Itoa(i))
+	values = append(values, gid)
+	res, err := ws.Warehouse.Exec(ctx, query.String(), values...)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return fmt.Errorf("BUG: one row should be affected, got %d", affected)
+	}
+
+	err = index.SetUser(ctx, gid, user)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("[info] user (GID %d) written to the data warehouse: %#v", gid, user)
+
+	return nil
 }
 
 // setUserCursor sets the user cursor of the action.
