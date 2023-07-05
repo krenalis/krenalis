@@ -89,7 +89,7 @@ func (this *Action) importFromApp(ctx context.Context) error {
 			}
 
 			// Write the user into the data warehouse.
-			err = this.setUser(ctx, user.ID, mappedUser)
+			err = this.setUser(ctx, mappedUser)
 			if err != nil {
 				return actionExecutionError{err}
 			}

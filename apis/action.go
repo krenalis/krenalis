@@ -369,9 +369,8 @@ func (this *Action) Set(action ActionToSet) error {
 	return err
 }
 
-// setUsers sets the user with the given ID into the database and into the data
-// warehouse.
-func (this *Action) setUser(ctx context.Context, id string, user map[string]any) error {
+// setUsers sets the given user into the data warehouse.
+func (this *Action) setUser(ctx context.Context, user map[string]any) error {
 
 	ws := this.connection.connection.Workspace()
 

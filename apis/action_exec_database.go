@@ -81,10 +81,12 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 			return err
 		}
 
-		// Write the user into the data warehouse.
-		id := mappedUser["id"].(string)
+		// TODO(Gianluca): handle the "id" output property correctly; here it is
+		// just removed to make the code work.
 		delete(mappedUser, "id")
-		err = this.setUser(ctx, id, mappedUser)
+
+		// Write the user into the data warehouse.
+		err = this.setUser(ctx, mappedUser)
 		if err != nil {
 			return err
 		}
