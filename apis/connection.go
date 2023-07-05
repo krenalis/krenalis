@@ -479,7 +479,7 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		ExportMode:         (*state.ExportMode)(action.ExportMode),
 	}
 
-	// Marshal the filter.
+	// Add the filter to the notification and marshal it.
 	var filter []byte
 	if action.Filter != nil {
 		n.Filter = &state.ActionFilter{
