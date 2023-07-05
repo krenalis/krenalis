@@ -376,8 +376,8 @@ func (this *Action) setUser(ctx context.Context, user map[string]any) error {
 
 	index := index.Open(this.redis)
 
+	// Resolve the identity of the user.
 	var gid int
-
 	irProps := this.action.IdentityProperties
 	lastProperty := len(irProps) - 1
 propsLoop:
