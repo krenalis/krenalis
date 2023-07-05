@@ -271,18 +271,19 @@ func (this *Action) Set(action ActionToSet) error {
 		return err
 	}
 	n := state.SetActionNotification{
-		ID:             this.action.ID,
-		Name:           action.Name,
-		Enabled:        action.Enabled,
-		InSchema:       action.InSchema,
-		OutSchema:      action.OutSchema,
-		Mapping:        action.Mapping,
-		Transformation: (*state.Transformation)(action.Transformation),
-		Query:          action.Query,
-		Path:           action.Path,
-		TableName:      action.TableName,
-		Sheet:          action.Sheet,
-		ExportMode:     (*state.ExportMode)(action.ExportMode),
+		ID:                 this.action.ID,
+		Name:               action.Name,
+		Enabled:            action.Enabled,
+		InSchema:           action.InSchema,
+		OutSchema:          action.OutSchema,
+		IdentityProperties: action.IdentityProperties,
+		Mapping:            action.Mapping,
+		Transformation:     (*state.Transformation)(action.Transformation),
+		Query:              action.Query,
+		Path:               action.Path,
+		TableName:          action.TableName,
+		Sheet:              action.Sheet,
+		ExportMode:         (*state.ExportMode)(action.ExportMode),
 	}
 	var filter, mapping []byte
 	if action.Filter != nil {
@@ -337,13 +338,13 @@ func (this *Action) Set(action ActionToSet) error {
 	}
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
-			"name = $1, enabled = $2, filter = $3, in_schema = $4, out_schema = $5, mapping = $6,\n"+
-			"transformation_func = $7, transformation_in = $8, transformation_out = $9, query = $10, path = $11,"+
-			"table_name = $12, sheet = $13, export_mode = $14, matching_properties_internal = $15,\n"+
-			"matching_properties_external = $16 WHERE id = $17",
-			n.Name, n.Enabled, string(filter), rawInSchema, rawOutSchema, mapping, transformation.Func,
-			transformation.In, transformation.Out, n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode,
-			matchPropInternal, matchPropExternal, n.ID,
+			"name = $1, enabled = $2, filter = $3, in_schema = $4, out_schema = $5, identity_properties = $6,\n"+
+			"mapping = $7, transformation_func = $8, transformation_in = $9, transformation_out = $10, query = $11,\n"+
+			"path = $12, table_name = $13, sheet = $14, export_mode = $15, matching_properties_internal = $16,\n"+
+			"matching_properties_external = $17 WHERE id = $18",
+			n.Name, n.Enabled, string(filter), rawInSchema, rawOutSchema, n.IdentityProperties, mapping,
+			transformation.Func, transformation.In, transformation.Out, n.Query, n.Path, n.TableName, n.Sheet,
+			n.ExportMode, matchPropInternal, matchPropExternal, n.ID,
 		)
 		if err != nil {
 			return err
