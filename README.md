@@ -3,6 +3,7 @@
 <img src="https://static.wikia.nocookie.net/dragonballaf/images/c/c3/Chichi_foto8.jpg/revision/latest?cb=20120616090846&path-prefix=it" width=260px/>
 
 - [Before commit](#before-commit)
+  - [Troubleshoot tests](#troubleshoot-tests)
   - [Short tests during development](#short-tests-during-development)
   - [Troubleshooting](#troubleshooting)
 - [How to execute Chichi](#how-to-execute-chichi)
@@ -27,6 +28,17 @@ From the root of this repository, run:
 ```
 go run commit/commit.go
 ```
+
+### Troubleshoot tests
+
+If you encounter problems running tests, you can run:
+
+```
+go run commit/commit.go -pkg -v
+```
+
+to execute tests on every package printing verbose output. This should help
+troubleshooting bad tests.
 
 ### Short tests during development
 
