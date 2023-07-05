@@ -13,7 +13,6 @@ import (
 	"compress/gzip"
 	"errors"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -127,7 +126,7 @@ func TestExportUsersToFile(t *testing.T) {
 
 	for _, compression := range compressions {
 
-		log.Printf("[info] export %s compressed file", compression)
+		t.Logf("[info] export %s compressed file", compression)
 
 		var ext string
 		switch compression {
