@@ -70,17 +70,6 @@ func (ids *identitySolver) ResolveEntity(connection int, user string, email stri
 
 }
 
-// createEmptyGoldenRecord creates a new empty golden record on the workspace's
-// warehouse, returning its GID.
-func createEmptyGoldenRecord(ctx context.Context, ws *state.Workspace) (int, error) {
-	var id int
-	err := ws.Warehouse.QueryRow(ctx, "INSERT INTO users DEFAULT VALUES RETURNING id").Scan(&id)
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
-}
-
 // createIdentity creates a new identity.
 func (ids *identitySolver) createIdentity() (int, error) {
 	var id int

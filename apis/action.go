@@ -1044,6 +1044,17 @@ func compileActionQuery(query string, limit int) (string, error) {
 	return query[:s1] + strings.ReplaceAll(query[s1+2:s2-2], "$limit", strconv.Itoa(limit)) + query[s2:], nil
 }
 
+// createEmptyGoldenRecord creates a new empty golden record on the workspace's
+// warehouse, returning its GID.
+func createEmptyGoldenRecord(ctx context.Context, ws *state.Workspace) (int, error) {
+	var id int
+	err := ws.Warehouse.QueryRow(ctx, "INSERT INTO users DEFAULT VALUES RETURNING id").Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
 // unmappedProperties returns the names of the unmapped properties in schema, if
 // there is at least one, otherwise returns nil.
 // schema must be valid.
