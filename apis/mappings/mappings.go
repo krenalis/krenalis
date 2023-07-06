@@ -72,16 +72,16 @@ type Mapping struct {
 }
 
 // New returns a new mapping that maps properties of inSchema to outSchema using
-// the given mapping or, in case of a transformation function, the Python
-// source.
-// Panics if none or both the mapping and the Python source are provided.
+// the given mapping and, in case a transformation function is provided, also
+// uses such transformation.
 func New(inSchema, outSchema types.Type, mappings map[string]string, transformation *state.Transformation, formatTime bool) (*Mapping, error) {
 
 	if !inSchema.Valid() || !outSchema.Valid() {
 		panic("input and output schemas must be valid")
 	}
 
-	m := Mapping{inSchema: inSchema, outSchema: outSchema, formatTime: formatTime}
+	m := Mapping{inSchema: inSchema, outSchema: outSchema,
+		transformation: transformation, formatTime: formatTime}
 
 	// Mapping.
 	if mappings != nil {
@@ -98,11 +98,7 @@ func New(inSchema, outSchema types.Type, mappings map[string]string, transformat
 			}
 			m.properties = append(m.properties, property)
 		}
-		return &m, nil
 	}
-
-	// Transformation.
-	m.transformation = transformation
 
 	return &m, nil
 }
