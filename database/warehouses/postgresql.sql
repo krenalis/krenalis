@@ -22,6 +22,7 @@ CREATE TABLE users (
     id                      SERIAL,
     "creation_time"         timestamp NOT NULL DEFAULT now(),
     "timestamp"             timestamp NOT NULL DEFAULT now(),
+    "dummy_id"              text,
     "FirstName"             varchar(300),
     "LastName"              varchar(300),
     "Email"                 varchar(300),
