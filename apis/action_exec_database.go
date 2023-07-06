@@ -83,6 +83,8 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 
 		// TODO(Gianluca): handle the "id" output property correctly; here it is
 		// just removed to make the code work.
+		//
+		// See the issue https://github.com/open2b/chichi/issues/221.
 		delete(mappedUser, "id")
 
 		// Write the user into the data warehouse.
