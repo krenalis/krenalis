@@ -31,14 +31,14 @@ go run commit/commit.go
 
 ### Troubleshoot tests
 
-If you encounter problems running tests, you can run:
+To troubleshoot bad tests, for example if they block indefinitely, you can run:
 
 ```
 go run commit/commit.go -pkg -v
 ```
 
 to execute tests on every package printing verbose output. This should help
-troubleshooting bad tests.
+locating the problem.
 
 ### Short tests during development
 
