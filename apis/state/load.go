@@ -194,41 +194,34 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		state.workspaces = map[int]*Workspace{}
 		err = state.db.QueryScan(ctx, "SELECT id, account, name, warehouse_type, warehouse_settings, privacy_region, schemas FROM workspaces",
 			func(rows *postgres.Rows) error {
-				var id, accountID int
-				var name string
-				var privacyRegion PrivacyRegion
+				ws := &Workspace{
+					mu:          new(sync.Mutex),
+					connections: map[int]*Connection{},
+					resources:   map[int]*Resource{},
+				}
+				var accountID int
 				var warehouseType *WarehouseType
 				var warehouseSettings, schemas []byte
 				for rows.Next() {
-					if err := rows.Scan(&id, &accountID, &name, &warehouseType, &warehouseSettings, &privacyRegion, &schemas); err != nil {
+					if err := rows.Scan(&ws.ID, &accountID, &ws.Name, &warehouseType, &warehouseSettings, &ws.PrivacyRegion, &schemas); err != nil {
 						return err
 					}
-					account := state.accounts[accountID]
-					workspace := &Workspace{
-						mu:            new(sync.Mutex),
-						ID:            id,
-						account:       account,
-						Name:          name,
-						resources:     map[int]*Resource{},
-						PrivacyRegion: privacyRegion,
-					}
+					ws.account = state.accounts[accountID]
 					if warehouseType != nil {
-						workspace.Warehouse, err = openWarehouse(*warehouseType, warehouseSettings)
+						ws.Warehouse, err = openWarehouse(*warehouseType, warehouseSettings)
 						if err != nil {
 							log.Fatalf("cannot open data warehouse of workspace %d: %s", id, err)
 						}
-						workspace.Schemas = map[string]*types.Type{}
+						ws.Schemas = map[string]*types.Type{}
 						if len(schemas) > 0 {
-							err = json.Unmarshal(schemas, &workspace.Schemas)
+							err = json.Unmarshal(schemas, &ws.Schemas)
 							if err != nil {
 								log.Fatalf("cannot unmarshal schemas of workspace %d: %s", id, err)
 							}
 						}
 					}
-					workspace.connections = map[int]*Connection{}
-					//workspace.EventListeners = &EventListeners{workspace}  // TODO(marco)
-					account.workspaces[id] = workspace
-					state.workspaces[id] = workspace
+					ws.account.workspaces[ws.ID] = ws
+					state.workspaces[ws.ID] = ws
 				}
 				return nil
 			})
