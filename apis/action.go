@@ -821,9 +821,12 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if action.Mapping == nil {
 			return errors.BadRequest("mapping is required by identifiers")
 		}
-		for _, identifier := range action.Identifiers {
+		for i, identifier := range action.Identifiers {
 			if !types.IsValidPropertyPath(identifier) {
 				return errors.BadRequest("identifier %q is not a valid path", identifier)
+			}
+			if slices.Contains(action.Identifiers[i+1:], identifier) {
+				return errors.BadRequest("identifier %s is repeated", identifier)
 			}
 			if _, ok := action.Mapping[identifier]; !ok {
 				return errors.BadRequest("identifier %s does not exist in mapping", identifier)
