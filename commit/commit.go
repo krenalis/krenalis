@@ -87,19 +87,24 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Running 'go mod tidy' in every module and regenerating 'go.sum' files")
+	fmt.Println("Tidying modules")
 	for _, module := range modules {
 		removeGoSum(repo, module, verbose)
 		cmd("go", []string{"mod", "tidy"}, repo, module, verbose)
 	}
 
-	fmt.Println("Running 'go fmt' and 'go vet' in every module")
+	fmt.Println("Formatting modules")
 	for _, module := range modules {
 		cmd("go", []string{"fmt", "./..."}, repo, module, verbose)
+	}
+
+	fmt.Println("Running 'go vet' on every module")
+	for _, module := range modules {
 		cmd("go", []string{"vet", "./..."}, repo, module, verbose)
 	}
 
 	// Test single packages or modules.
+	fmt.Println("Running Go tests")
 	args := []string{"test"}
 	if short {
 		args = append(args, "-short")
