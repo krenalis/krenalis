@@ -84,7 +84,6 @@ const ActionQuery = ({ connection, action, setAction, setInputSchema, mappingSec
 	const query = async (limit, isConfirmation) => {
 		const a = { ...action };
 		const trimmed = a.Query.trim();
-		console.log(trimmed);
 		if (trimmed.length > queryMaxSize) {
 			showError('You query is too long');
 			return;

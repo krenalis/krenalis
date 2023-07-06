@@ -70,7 +70,6 @@ const ActionPath = ({
 		const a = { ...action };
 		const path = e.currentTarget.value;
 		pathRef.current.lastUpdate = path;
-		console.log(pathRef.current.lastConfirmation);
 		if (
 			pathRef.current.lastUpdate !== pathRef.current.lastConfirmation &&
 			pathRef.current.lastConfirmation !== ''

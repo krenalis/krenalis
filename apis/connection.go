@@ -459,16 +459,6 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 		return 0, err
 	}
 
-	// TODO(Gianluca): remove this "if" statement when support for
-	// Identifiers in the UI will be added.
-	//
-	// See the issue https://github.com/open2b/chichi/issues/220.
-	if len(action.Identifiers) == 0 &&
-		target == UsersTarget &&
-		c.Role == state.SourceRole {
-		action.Identifiers = []string{"Email"}
-	}
-
 	n := state.AddActionNotification{
 		Connection:     c.ID,
 		Target:         state.ActionTarget(target),

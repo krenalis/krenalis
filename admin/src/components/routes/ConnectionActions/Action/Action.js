@@ -8,8 +8,10 @@ import ActionQuery from './ActionQuery';
 import ActionFilters from './ActionFilters';
 import ActionExportMode from './ActionExportMode';
 import ActionMatchingProperties from './ActionMatchingProperties';
+import ActionIdentifiers from './ActionIdentifiers';
 import {
 	convertActionMapping,
+	convertActionIdentifiers,
 	computeDefaultAction,
 	computeActionFields,
 	flattenSchema,
@@ -149,8 +151,17 @@ const Action = ({ actionType: providedActionType, action: providedAction, onClos
 			// Compute the action in a UI-friendly format.
 			let action;
 			if (isEditing) {
+				// TODO: merge all this conversion inside a `convertToUIFormat`
+				// method in a new `Action` class and also define a
+				// `convertToServerFormat` method.
 				if (providedAction.Mapping != null) {
 					providedAction.Mapping = convertActionMapping(providedAction.Mapping, schemas.Out);
+				}
+				if (providedAction.Identifiers != null) {
+					providedAction.Identifiers = convertActionIdentifiers(
+						providedAction.Identifiers,
+						providedAction.Mapping
+					);
 				}
 				action = { ...providedAction };
 			} else {
@@ -168,15 +179,60 @@ const Action = ({ actionType: providedActionType, action: providedAction, onClos
 	};
 
 	const onSave = async () => {
-		const a = { ...action };
-		if (a.Mapping != null) {
+		const actionToSet = { ...action };
+		const flattenedInputSchema = flattenSchema(inputSchema);
+		const flattenedOutputSchema = flattenSchema(outputSchema);
+		// TODO: extract validation in lib/action.js.
+		if (fields.includes('Identifiers')) {
+			if (actionToSet.Identifiers.length === 0) {
+				showError(`You must define at least one identifier`);
+				return;
+			} else {
+				if (actionToSet.Mapping == null) {
+					actionToSet.Mapping = flattenedOutputSchema;
+				}
+				for (let i = 0; i < actionToSet.Identifiers.length; i++) {
+					const [inputIdentifier, outputIdentifier] = actionToSet.Identifiers[i];
+					if (inputIdentifier === '' || outputIdentifier === '') {
+						showError(`You cannot use an empty value in the identifiers`);
+						return;
+					}
+					const variables = getExpressionVariables(inputIdentifier);
+					for (const variable of variables) {
+						if (!(variable in flattenedInputSchema)) {
+							showError(`Property ${variable} used in identifiers doesn't exist`);
+							return;
+						}
+					}
+					if (!(outputIdentifier in flattenedOutputSchema)) {
+						showError(`Property ${outputIdentifier} used as identifier doesn't exist`);
+						return;
+					}
+					const otherIdentifiers = [
+						...actionToSet.Identifiers.slice(0, i),
+						...actionToSet.Identifiers.slice(i + 1),
+					];
+					for (const [otherInputIdentifier, otherOutputIdenifier] of otherIdentifiers) {
+						if (outputIdentifier === otherOutputIdenifier) {
+							showError(`Property ${outputIdentifier} is used more than once in the identifiers`);
+							return;
+						}
+					}
+					actionToSet.Mapping[outputIdentifier].value = inputIdentifier;
+				}
+				actionToSet.Identifiers = actionToSet.Identifiers.map(
+					([inputIdentifier, outputIdentifier]) => outputIdentifier
+				);
+			}
+		}
+
+		const inSchema = { name: 'Object', properties: [] };
+		const outSchema = { name: 'Object', properties: [] };
+
+		if (actionToSet.Mapping != null) {
 			const mappingToSave = {};
-			const inSchema = { name: 'Object', properties: [] };
-			const outSchema = { name: 'Object', properties: [] };
-			const flattenedInputSchema = flattenSchema(inputSchema);
-			const flattenedOutputSchema = flattenSchema(outputSchema);
-			for (const k in a.Mapping) {
-				const v = a.Mapping[k];
+			for (const k in actionToSet.Mapping) {
+				const v = actionToSet.Mapping[k];
 				if (v.value === '') {
 					continue;
 				}
@@ -200,25 +256,42 @@ const Action = ({ actionType: providedActionType, action: providedAction, onClos
 					outSchema.properties.push(fullKeyProperty);
 				}
 			}
-			a.InSchema = inSchema;
-			a.OutSchema = outSchema;
-			a.Mapping = mappingToSave;
+			actionToSet.Mapping = mappingToSave;
 		}
-		if (a.PythonSource != null) {
-			a.PythonSource = a.PythonSource.trim();
+
+		if (actionToSet.Transformation != null) {
+			for (const propertyName of actionToSet.Transformation.In) {
+				const isPropertyAlreadyInSchema = inSchema.properties.find((p) => p.name === propertyName);
+				if (!isPropertyAlreadyInSchema) {
+					const fullProperty = flattenedInputSchema[propertyName].full;
+					inSchema.properties.push(fullProperty);
+				}
+			}
+			for (const propertyName of actionToSet.Transformation.Out) {
+				const isPropertyAlreadyInSchema = inSchema.properties.find((p) => p.name === propertyName);
+				if (!isPropertyAlreadyInSchema) {
+					const fullProperty = flattenedOutputSchema[propertyName].full;
+					outSchema.properties.push(fullProperty);
+				}
+			}
+			actionToSet.Transformation.Func = actionToSet.Transformation.Func.trim();
 		}
-		if (a.Query != null) {
-			const trimmed = a.Query.trim();
-			a.Query = trimmed;
+
+		actionToSet.InSchema = inSchema;
+		actionToSet.OutSchema = outSchema;
+
+		if (actionToSet.Query != null) {
+			actionToSet.Query = actionToSet.Query.trim();
 		}
+
 		let id, err;
-		if (providedAction != null) {
-			[, err] = await api.connections.setAction(connection.id, a.ID, a);
+		if (isEditing) {
+			[, err] = await api.connections.setAction(connection.id, actionToSet.ID, actionToSet);
 		} else {
 			[id, err] = await api.connections.addAction(connection.id, {
 				Target: actionType.Target,
 				EventType: actionType.EventType,
-				Action: a,
+				Action: actionToSet,
 			});
 		}
 		if (err != null) {
@@ -236,9 +309,11 @@ const Action = ({ actionType: providedActionType, action: providedAction, onClos
 			showError(err);
 			return;
 		}
+
 		if (id) {
 			sessionStorage.setItem('newAction', id);
 		}
+
 		setIsSaveButtonLoading(true);
 		setTimeout(() => {
 			setIsSaveButtonLoading(false);
@@ -353,6 +428,14 @@ const Action = ({ actionType: providedActionType, action: providedAction, onClos
 						outputSchema={outputSchema}
 					/>
 				)}
+				{fields.includes('Identifiers') && (
+					<ActionIdentifiers
+						action={action}
+						setAction={setAction}
+						inputSchema={inputSchema}
+						outputSchema={outputSchema}
+					/>
+				)}
 				{fields.includes('Mapping') && !mustComputeSchema && (
 					<ActionMapping
 						ref={mappingSectionRef}
@@ -365,6 +448,7 @@ const Action = ({ actionType: providedActionType, action: providedAction, onClos
 						actionType={actionType}
 						mode={mode}
 						setMode={setMode}
+						fields={fields}
 					/>
 				)}
 			</div>

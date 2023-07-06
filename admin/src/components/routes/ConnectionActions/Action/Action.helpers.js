@@ -87,42 +87,4 @@ const getSchemaComboboxItems = (schema) => {
 	return propertiesList;
 };
 
-const addPropertyToActionSchema = (action, side, property) => {
-	let a = { ...action };
-	if (side === 'input') {
-		if (a.InSchema == null) {
-			a.InSchema = { name: 'Object', properties: [{ ...property }] };
-		} else {
-			a.InSchema.properties.push({ ...property });
-		}
-	} else {
-		if (a.OutSchema == null) {
-			a.OutSchema = { name: 'Object', properties: [{ ...property }] };
-		} else {
-			a.OutSchema.properties.push({ ...property });
-		}
-	}
-	return a;
-};
-
-const removePropertyFromActionSchema = (action, side, propertyName) => {
-	let a = { ...action };
-	if (side === 'input') {
-		let filtered = a.InSchema.properties.filter((p) => p.name !== propertyName);
-		if (filtered.length === 0) {
-			a.InSchema = null;
-		} else {
-			a.InSchema.properties = filtered;
-		}
-	} else {
-		let filtered = a.OutSchema.properties.filter((p) => p.name !== propertyName);
-		if (filtered.length === 0) {
-			a.OutSchema = null;
-		} else {
-			a.OutSchema.properties = filtered;
-		}
-	}
-	return a;
-};
-
-export { updateMappingProperty, getSchemaComboboxItems, addPropertyToActionSchema, removePropertyFromActionSchema };
+export { updateMappingProperty, getSchemaComboboxItems };

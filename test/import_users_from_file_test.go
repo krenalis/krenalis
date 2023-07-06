@@ -82,6 +82,7 @@ func TestImportUsersFromFile(t *testing.T) {
 				{Name: "Email", Type: types.Text()},
 				{Name: "timestamp", Type: types.DateTime().WithLayout(time.DateTime)},
 			}),
+			"Identifiers": []string{"Email"},
 			"Mapping": map[string]string{
 				"id":        "column1",
 				"Email":     "column4",

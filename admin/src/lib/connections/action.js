@@ -17,6 +17,11 @@ const EXPORT_MODE_OPTIONS = {
 	CreateOrUpdate: 'Create and update',
 };
 
+// TODO: do not set the value and the required values here (this should only
+// return the flattened schema). Add a new 'getDefaultMapping' function that
+// takes the flatten schema and add values, and disableds. In
+// 'convertActionMapping' set the values or set ''. This should only return the
+// list of flattened keys mapping to the full property object.
 const flattenSchema = (schema) => {
 	if (schema == null) return null;
 
@@ -86,6 +91,10 @@ const convertActionMapping = (mapping, outputSchema) => {
 	return properties;
 };
 
+const convertActionIdentifiers = (identifiers, mapping) => {
+	return identifiers.map((outputProperty) => [mapping[outputProperty].value, outputProperty]);
+};
+
 const computeDefaultAction = (actionType, outputSchema, fields) => {
 	const action = {
 		Name: actionType.Name,
@@ -94,7 +103,7 @@ const computeDefaultAction = (actionType, outputSchema, fields) => {
 		Mapping: flattenSchema(outputSchema),
 		InSchema: null,
 		OutSchema: null,
-		PythonSource: null,
+		Transformation: null,
 	};
 	if (fields.includes('Query')) {
 		action.Query = '';
@@ -110,6 +119,9 @@ const computeDefaultAction = (actionType, outputSchema, fields) => {
 	}
 	if (fields.includes('MatchingProperties')) {
 		action.MatchingProperties = { Internal: '', External: '' };
+	}
+	if (fields.includes('Identifiers')) {
+		action.Identifiers = [['', '']];
 	}
 	return action;
 };
@@ -135,6 +147,7 @@ const computeActionFields = (connection, actionType, schemas) => {
 		fields.push('ExportMode');
 		fields.push('Filter');
 	}
+
 	if (connection.type === 'Database' && connection.role === 'Source') {
 		fields.push('Query');
 	}
@@ -146,6 +159,13 @@ const computeActionFields = (connection, actionType, schemas) => {
 		if (connection.connector.hasSheets) {
 			fields.push('Sheet');
 		}
+	}
+	if (
+		connection.role === 'Source' &&
+		(connection.type === 'App' || connection.type === 'Database' || connection.type === 'File') &&
+		(actionType.Target === 'Users' || actionType.Target === 'Groups')
+	) {
+		fields.push('Identifiers');
 	}
 	return fields;
 };
@@ -168,6 +188,7 @@ export {
 	EXPORT_MODE_OPTIONS,
 	flattenSchema,
 	convertActionMapping,
+	convertActionIdentifiers,
 	computeDefaultAction,
 	computeActionFields,
 	getExpressionVariables,

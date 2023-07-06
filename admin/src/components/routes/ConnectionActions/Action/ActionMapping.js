@@ -1,11 +1,6 @@
 import { useState, useRef, useContext, useEffect, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
-import {
-	updateMappingProperty,
-	getSchemaComboboxItems,
-	addPropertyToActionSchema,
-	removePropertyFromActionSchema,
-} from './Action.helpers';
+import { updateMappingProperty, getSchemaComboboxItems } from './Action.helpers';
 import { flattenSchema, getExpressionVariables } from '../../../../lib/connections/action';
 import { rawTransformationFunction } from './Action.constants';
 import AlertDialog from '../../../common/AlertDialog/AlertDialog';
@@ -29,7 +24,10 @@ const defaultTransformationParameterByTarget = {
 };
 
 const ActionMapping = forwardRef(
-	({ disabled, disabledReason, action, setAction, inputSchema, outputSchema, actionType, mode, setMode }, ref) => {
+	(
+		{ disabled, disabledReason, action, setAction, inputSchema, outputSchema, actionType, mode, setMode, fields },
+		ref
+	) => {
 		const [isAlertOpen, setIsAlertOpen] = useState(false);
 		const [isInputSchemaDialogOpen, setIsInputSchemaDialogOpen] = useState(false);
 		const [isOutputSchemaDialogOpen, setIsOutputSchemaDialogOpen] = useState(false);
@@ -40,10 +38,10 @@ const ActionMapping = forwardRef(
 		const propertiesListRef = useRef(null);
 
 		useEffect(() => {
-			if (action.Mapping != null) {
-				setMode('mappings');
-			} else {
+			if (action.Transformation != null) {
 				setMode('transformation');
+			} else {
+				setMode('mappings');
 			}
 			defaultTransformationFunction.current = rawTransformationFunction.replace(
 				'$parameterName',
@@ -59,32 +57,44 @@ const ActionMapping = forwardRef(
 				a.OutSchema = null;
 				if (mode === 'mappings') {
 					a.Mapping = null;
-					a.PythonSource = defaultTransformationFunction.current;
+					a.Transformation = { Func: defaultTransformationFunction.current, In: [], Out: [] };
 					setAction(a);
 					setMode('transformation');
 				} else {
 					a.Mapping = flattenSchema(outputSchema);
-					a.PythonSource = null;
+					a.Transformation = null;
 					setAction(a);
 					setMode('mappings');
 				}
 			}, 150);
 		};
 
-		const onChangeTransformationPythonSource = (value) => {
+		const onChangeTransformationFunction = (value) => {
 			const a = { ...action };
-			a.PythonSource = value;
+			a.Transformation.Func = value;
 			setAction(a);
 		};
 
 		const onRemoveTransformationProperty = (side, propertyName) => {
-			const updatedAction = removePropertyFromActionSchema(action, side, propertyName);
-			setAction(updatedAction);
+			const a = { ...action };
+			if (side === 'input') {
+				const inputProperties = a.Transformation.In;
+				a.Transformation.In = inputProperties.filter((p) => p !== propertyName);
+			} else {
+				const outputProperties = a.Transformation.Out;
+				a.Transformation.Out = outputProperties.filter((p) => p !== propertyName);
+			}
+			setAction(a);
 		};
 
-		const onAddTransformationProperty = (side, property) => {
-			const updatedAction = addPropertyToActionSchema(action, side, property);
-			setAction(updatedAction);
+		const onAddTransformationProperty = (side, propertyName) => {
+			const a = { ...action };
+			if (side === 'input') {
+				a.Transformation.In.push(propertyName);
+			} else {
+				a.Transformation.Out.push(propertyName);
+			}
+			setAction(a);
 		};
 
 		const onUpdateProperty = (e) => {
@@ -98,7 +108,7 @@ const ActionMapping = forwardRef(
 			setAction(updatedAction);
 		};
 
-		let mappingContent = null;
+		let content = null;
 		if (mode === 'mappings') {
 			const mappings = [];
 			const defaultMappings = flattenSchema(inputSchema);
@@ -115,6 +125,15 @@ const ActionMapping = forwardRef(
 						}
 					}
 				}
+				let isAlreadyMappedInIdentity = false;
+				if (fields.includes('Identifiers')) {
+					for (const [inputIdentifiers, outputIdentifiers] of action.Identifiers) {
+						if (outputIdentifiers === k) {
+							isAlreadyMappedInIdentity = true;
+						}
+					}
+				}
+				if (isAlreadyMappedInIdentity) continue;
 				mappings.push(
 					<div
 						className='mapping'
@@ -151,7 +170,7 @@ const ActionMapping = forwardRef(
 					</div>
 				);
 			}
-			mappingContent = (
+			content = (
 				<div className='mappings'>
 					{disabled && (
 						<SlAlert variant='danger' className='mappingsDisabledAlert' open>
@@ -167,28 +186,28 @@ const ActionMapping = forwardRef(
 					/>
 				</div>
 			);
-		} else {
-			mappingContent = (
+		} else if (mode === 'transformation') {
+			content = (
 				<div className='transformation'>
 					<div className='inputProperties'>
-						{action.InSchema &&
-							action.InSchema.properties.map((p) => {
-								return (
-									<div className='property'>
-										<div className='name'>{p.name}</div>
-										<div className='type'>{p.type.name}</div>
-										<SlButton
-											className='removeProperty'
-											size='small'
-											variant='danger'
-											outline
-											onClick={() => onRemoveTransformationProperty('input', p.name)}
-										>
-											<SlIcon name='trash'></SlIcon>
-										</SlButton>
-									</div>
-								);
-							})}
+						{action.Transformation.In.map((propertyName) => {
+							const fullProperty = flattenSchema(inputSchema)[propertyName];
+							return (
+								<div className='property'>
+									<div className='name'>{fullProperty.full.name}</div>
+									<div className='type'>{fullProperty.full.type.name}</div>
+									<SlButton
+										className='removeProperty'
+										size='small'
+										variant='danger'
+										outline
+										onClick={() => onRemoveTransformationProperty('input', fullProperty.full.name)}
+									>
+										<SlIcon name='trash'></SlIcon>
+									</SlButton>
+								</div>
+							);
+						})}
 						<SlButton
 							className='addProperty'
 							size='small'
@@ -201,28 +220,28 @@ const ActionMapping = forwardRef(
 					<EditorWrapper
 						defaultLanguage='python'
 						height={400}
-						value={action.PythonSource}
-						onChange={(value) => onChangeTransformationPythonSource(value)}
+						value={action.Transformation.Func}
+						onChange={(value) => onChangeTransformationFunction(value)}
 					/>
 					<div className='outputProperties'>
-						{action.OutSchema &&
-							action.OutSchema.properties.map((p) => {
-								return (
-									<div className='property'>
-										<div className='name'>{p.name}</div>
-										<div className='type'>{p.type.name}</div>
-										<SlButton
-											className='removeProperty'
-											size='small'
-											variant='danger'
-											outline
-											onClick={() => onRemoveTransformationProperty('output', p.name)}
-										>
-											<SlIcon name='trash'></SlIcon>
-										</SlButton>
-									</div>
-								);
-							})}
+						{action.Transformation.Out.map((propertyName) => {
+							const fullProperty = flattenSchema(outputSchema)[propertyName];
+							return (
+								<div className='property'>
+									<div className='name'>{fullProperty.full.name}</div>
+									<div className='type'>{fullProperty.full.type.name}</div>
+									<SlButton
+										className='removeProperty'
+										size='small'
+										variant='danger'
+										outline
+										onClick={() => onRemoveTransformationProperty('output', fullProperty.full.name)}
+									>
+										<SlIcon name='trash'></SlIcon>
+									</SlButton>
+								</div>
+							);
+						})}
 						<SlButton
 							className='addProperty'
 							size='small'
@@ -254,7 +273,7 @@ const ActionMapping = forwardRef(
 					}
 					padded={false}
 				>
-					{mappingContent}
+					{content}
 				</Section>
 				{createPortal(
 					<AlertDialog
@@ -289,7 +308,7 @@ const ActionMapping = forwardRef(
 					</AlertDialog>,
 					document.body
 				)}
-				{action.PythonSource != null &&
+				{mode === 'transformation' &&
 					createPortal(
 						<SlDialog
 							className='inputSchemaDialog'
@@ -300,8 +319,8 @@ const ActionMapping = forwardRef(
 						>
 							{inputSchema.properties.map((p) => {
 								const isUsed =
-									action.InSchema &&
-									action.InSchema.properties.findIndex((prop) => prop.name === p.name) !== -1;
+									action.Transformation.In.findIndex((propertyName) => propertyName === p.name) !==
+									-1;
 								return (
 									<div
 										className={`property${isUsed ? ' used' : ''}${
@@ -319,7 +338,7 @@ const ActionMapping = forwardRef(
 											<SlIconButton
 												name='plus-circle'
 												label='Add property'
-												onClick={() => onAddTransformationProperty('input', p)}
+												onClick={() => onAddTransformationProperty('input', p.name)}
 											/>
 										)}
 									</div>
@@ -328,7 +347,7 @@ const ActionMapping = forwardRef(
 						</SlDialog>,
 						document.body
 					)}
-				{action.PythonSource != null &&
+				{mode === 'transformation' &&
 					createPortal(
 						<SlDialog
 							className='outputSchemaDialog'
@@ -339,8 +358,8 @@ const ActionMapping = forwardRef(
 						>
 							{outputSchema.properties.map((p) => {
 								const isUsed =
-									action.OutSchema &&
-									action.OutSchema.properties.findIndex((prop) => prop.name === p.name) !== -1;
+									action.Transformation.Out.findIndex((propertyName) => propertyName === p.name) !==
+									-1;
 								return (
 									<div
 										className={`property${isUsed ? ' used' : ''}${
@@ -358,7 +377,7 @@ const ActionMapping = forwardRef(
 											<SlIconButton
 												name='plus-circle'
 												label='Add property'
-												onClick={() => onAddTransformationProperty('output', p)}
+												onClick={() => onAddTransformationProperty('output', p.name)}
 											/>
 										)}
 									</div>

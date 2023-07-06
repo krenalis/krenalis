@@ -270,15 +270,6 @@ func (this *Action) Set(action ActionToSet) error {
 	if err != nil {
 		return err
 	}
-	// TODO(Gianluca): remove this "if" statement when support for
-	// Identifiers in the UI will be added.
-	//
-	// See the issue https://github.com/open2b/chichi/issues/220.
-	if len(action.Identifiers) == 0 &&
-		this.action.Target == state.UsersTarget &&
-		this.connection.connection.Role == state.SourceRole {
-		action.Identifiers = []string{"Email"}
-	}
 	n := state.SetActionNotification{
 		ID:             this.action.ID,
 		Name:           action.Name,
@@ -1003,6 +994,22 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	}
 	if mappingIsMandatory && action.Mapping == nil && action.Transformation == nil {
 		return errors.BadRequest("mapping (or transformation) is required")
+	}
+
+	// Check if the identifiers for the identity resolution are mandatory.
+	var needsIdentifiers bool
+	switch connector.Type {
+	case
+		state.AppType,
+		state.DatabaseType,
+		state.FileType:
+		needsIdentifiers = c.Role == state.SourceRole && targetUsersOrGroups
+	}
+	if needsIdentifiers && action.Identifiers == nil {
+		return errors.BadRequest("identifiers are required")
+	}
+	if !needsIdentifiers && action.Identifiers != nil {
+		return errors.BadRequest("unexpected identifiers")
 	}
 
 	return nil

@@ -39,6 +39,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 					{Name: "Email", Type: types.Text()},
 					{Name: "FirstName", Type: types.Text()},
 				}),
+				"Identifiers": []string{"Email"},
 				"Mapping": map[string]string{
 					"Email":     "email",
 					"FirstName": "first_name",
@@ -96,6 +97,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 					{Name: "FirstName", Type: types.Text()},
 					{Name: "LastName", Type: types.Text()},
 				}),
+				"Identifiers": []string{"Email"},
 				"Mapping": map[string]string{
 					"Email":     "email",
 					"FirstName": "first_name",

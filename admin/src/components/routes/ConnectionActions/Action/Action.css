@@ -153,7 +153,7 @@
     grid-template-columns: 1fr 30px 1fr;
     gap: 20px;
     align-items: center;
-    margin-bottom: 23px;
+    margin-bottom: 20px;
 }
 
 .action .mappings .mapping:last-child { 
@@ -412,3 +412,53 @@ inherit the disabled style */
     margin: auto;
     margin-top: 50px!important;
 }
+
+.action .actionIdentifiers .identifiers {
+    display: grid;
+    grid-template-columns: 35px 1fr 70px 1fr 35px;
+    margin-bottom: 20px;
+    align-items: center;
+}
+
+.action .actionIdentifiers .identifiers .position {
+    background-color: var(--sl-color-neutral-400);
+    color: var(--text-onaccent);
+    width: 25px;
+    height: 25px;
+    border-radius: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+}
+
+.action .actionIdentifiers .identifiers .arrow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.action .actionIdentifiers .identifiers sl-dropdown {
+    text-align: right;
+}
+
+.action .actionIdentifiers .identifiers sl-dropdown sl-menu sl-menu-item::part(label) {
+    text-align: left;
+}
+
+.action .actionIdentifiers .identifiers sl-dropdown sl-menu sl-menu-item.removeIdentifiers::part(label) {
+    color: var(--sl-color-danger-600)
+}
+
+.action .actionIdentifiers .identifiers sl-dropdown sl-menu sl-menu-item.removeIdentifiers sl-icon {
+    color: var(--sl-color-danger-600)
+}
+
+.action .actionIdentifiers .addNewIdentifiers {
+    display: block;
+    width: max-content;
+    margin: auto;
+    margin-bottom: 20px;
+}
+
+
