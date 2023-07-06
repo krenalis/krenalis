@@ -415,7 +415,7 @@ inherit the disabled style */
 
 .action .actionIdentifiers .identifiers {
     display: grid;
-    grid-template-columns: 35px 1fr 70px 1fr 35px;
+    grid-template-columns: 42px 1fr 70px 1fr 35px;
     margin-bottom: 20px;
     align-items: center;
 }
