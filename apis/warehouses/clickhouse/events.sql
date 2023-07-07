@@ -13,7 +13,7 @@ CREATE TABLE events
     `event` String,
     `name` String,
     `message_id` String,
-    `anonymous_id` UUID,
+    `anonymous_id` String,
     `user_id` String,
     `date` Date,
     `timestamp` DateTime,

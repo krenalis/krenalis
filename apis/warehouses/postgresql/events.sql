@@ -15,7 +15,7 @@ CREATE TABLE events (
     event varchar NOT NULL,
     name varchar NOT NULL,
     message_id varchar NOT NULL,
-    anonymous_id uuid NOT NULL,
+    anonymous_id varchar NOT NULL,
     user_id varchar NOT NULL,
     date date NOT NULL,
     timestamp timestamp(3) NOT NULL,

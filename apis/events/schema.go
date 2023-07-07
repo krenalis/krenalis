@@ -25,7 +25,7 @@ var Schema = types.Object([]types.Property{
 	{Name: "event", Type: types.Text()},
 	{Name: "name", Type: types.Text()},
 	{Name: "message_id", Type: types.Text()},
-	{Name: "anonymous_id", Type: types.UUID()},
+	{Name: "anonymous_id", Type: types.Text()},
 	{Name: "user_id", Type: types.Text()},
 	{Name: "date", Type: types.Date().WithLayout(time.DateOnly)},
 	{Name: "timestamp", Type: types.DateTime().WithLayout(time.StampMilli)},
