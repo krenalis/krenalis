@@ -1,0 +1,63 @@
+.sortableMapping .correlation {
+    display: grid;
+    grid-template-columns: 35px 1fr 70px 1fr 35px;
+    margin-bottom: 20px;
+    align-items: center;
+}
+
+.sortableMapping .correlation .position {
+    background-color: var(--sl-color-neutral-400);
+    color: var(--text-onaccent);
+    width: 25px;
+    height: 25px;
+    border-radius: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+}
+
+.sortableMapping .correlation .arrow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.sortableMapping .correlation sl-dropdown {
+    text-align: right;
+}
+
+.sortableMapping .correlation sl-dropdown sl-menu sl-menu-item::part(label) {
+    text-align: left;
+}
+
+.sortableMapping .correlation sl-dropdown sl-menu sl-menu-item.removeCorrelation::part(label) {
+    color: var(--sl-color-danger-600)
+}
+
+.sortableMapping .correlation sl-dropdown sl-menu sl-menu-item.removeCorrelation sl-icon {
+    color: var(--sl-color-danger-600)
+}
+
+.sortableMapping .addCorrelation {
+    display: block;
+    width: max-content;
+    margin: auto;
+    margin-bottom: 20px;
+}
+
+.sortableMapping .propertiesItemName {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.sortableMapping .propertiesItemName .name {
+    font-weight: 400;
+    font-size: 13px;
+    opacity: .7;
+}
+
+.sortableMapping .propertiesItemType {
+    font-size: 13px;
+    opacity: .7;
+}

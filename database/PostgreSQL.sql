@@ -56,6 +56,8 @@ CREATE TABLE workspaces (
     name varchar(100) NOT NULL,
     warehouse_type warehouse_type DEFAULT NULL,
     warehouse_settings varchar(65535) NOT NULL DEFAULT '',
+    anonymous_identifiers_priority text[] NOT NULL DEFAULT '{}',
+    anonymous_identifiers_mapping jsonb NOT NULL DEFAULT '{}'::jsonb,
     privacy_region privacy_region NOT NULL DEFAULT '',
     schemas text NOT NULL DEFAULT '',
     PRIMARY KEY (id)

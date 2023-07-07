@@ -125,15 +125,16 @@ func (this *Account) Workspace(id int) (*Workspace, error) {
 		return nil, errors.NotFound("workspace %d does not exist", id)
 	}
 	workspace := Workspace{
-		db:            this.db,
-		redis:         this.redis,
-		state:         this.state,
-		http:          this.http,
-		eventObserver: this.eventObserver,
-		workspace:     ws,
-		ID:            ws.ID,
-		Name:          ws.Name,
-		PrivacyRegion: PrivacyRegion(ws.PrivacyRegion),
+		db:                   this.db,
+		redis:                this.redis,
+		state:                this.state,
+		http:                 this.http,
+		eventObserver:        this.eventObserver,
+		workspace:            ws,
+		ID:                   ws.ID,
+		Name:                 ws.Name,
+		AnonymousIdentifiers: AnonymousIdentifiers(ws.AnonymousIdentifiers),
+		PrivacyRegion:        PrivacyRegion(ws.PrivacyRegion),
 	}
 	return &workspace, nil
 }
@@ -144,15 +145,16 @@ func (this *Account) Workspaces() []*Workspace {
 	infos := make([]*Workspace, len(workspaces))
 	for i, ws := range workspaces {
 		workspace := Workspace{
-			db:            this.db,
-			redis:         this.redis,
-			state:         this.state,
-			http:          this.http,
-			eventObserver: this.eventObserver,
-			workspace:     ws,
-			ID:            ws.ID,
-			Name:          ws.Name,
-			PrivacyRegion: PrivacyRegion(ws.PrivacyRegion),
+			db:                   this.db,
+			redis:                this.redis,
+			state:                this.state,
+			http:                 this.http,
+			eventObserver:        this.eventObserver,
+			workspace:            ws,
+			ID:                   ws.ID,
+			Name:                 ws.Name,
+			AnonymousIdentifiers: AnonymousIdentifiers(ws.AnonymousIdentifiers),
+			PrivacyRegion:        PrivacyRegion(ws.PrivacyRegion),
 		}
 		infos[i] = &workspace
 	}

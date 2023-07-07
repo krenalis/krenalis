@@ -34,6 +34,8 @@ const getRouteFromPathname = (route, connections) => {
 		currentRoute = 'users';
 	} else if (fragments.includes('schema')) {
 		currentRoute = 'schema';
+	} else if (fragments.includes('anonymous-identity')) {
+		currentRoute = 'anonymousIdentity';
 	}
 
 	return currentRoute;

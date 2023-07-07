@@ -27,6 +27,7 @@ const sidebarItems = [
 	},
 	{ name: 'schema', label: 'Schema', link: 'schema', icon: 'database' },
 	{ name: 'users', label: 'Users', link: 'users', icon: 'people' },
+	{ name: 'anonymousIdentity', label: 'Anonymous IDs', link: 'anonymous-identity', icon: 'intersect' },
 ];
 
 const Sidebar = ({ setIsLoggedIn }) => {

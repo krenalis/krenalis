@@ -782,115 +782,135 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 		})
 	})
-	router.Route("/api/workspace/connect-warehouse", func(router chi.Router) {
-		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			req := struct {
-				Type     WarehouseType
-				Settings json.RawMessage
-			}{}
-			err := json.NewDecoder(r.Body).Decode(&req)
-			if err != nil {
-				respond(w, errors.BadRequest("invalid JSON"))
-				return
-			}
-			err = workspace.ConnectWarehouse(req.Type, req.Settings)
-			respond(w, err)
-		})
-	})
-	router.Route("/api/workspace/disconnect-warehouse", func(router chi.Router) {
-		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			err = workspace.DisconnectWarehouse()
-			respond(w, err)
-		})
-	})
-	router.Route("/api/workspace/init-warehouse", func(router chi.Router) {
-		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			err = workspace.InitWarehouse()
-			respond(w, err)
-		})
-	})
-	router.Route("/api/workspace/reload-schemas", func(router chi.Router) {
-		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			err = workspace.ReloadSchemas()
-			respond(w, err)
-		})
-	})
-	router.Route("/api/workspace/user-schema", func(router chi.Router) {
+	router.Route("/api/workspace", func(router chi.Router) {
 		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			schema := workspace.Schema("users")
-			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(schema)
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(workspace)
 		})
-	})
-	router.Route("/api/workspace/oauth-token", func(router chi.Router) {
-		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			var req struct {
-				Connector   int
-				OAuthCode   string
-				RedirectURI string
-			}
-			err := json.NewDecoder(r.Body).Decode(&req)
-			if err != nil {
-				respond(w, errors.BadRequest("invalid JSON"))
-				return
-			}
-			oauthToken, err := workspace.OAuthToken(req.OAuthCode, req.RedirectURI, req.Connector)
-			if err != nil {
+		router.Route("/anonymous-identifiers", func(router chi.Router) {
+			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				req := struct {
+					AnonymousIdentifiers AnonymousIdentifiers
+				}{}
+				err := json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, errors.BadRequest("invalid JSON"))
+					return
+				}
+				err = workspace.SetAnonymousIdentifiers(req.AnonymousIdentifiers)
 				respond(w, err)
-				return
-			}
-			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(oauthToken)
+			})
 		})
-	})
-	router.Route("/api/workspace/add-connection", func(router chi.Router) {
-		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			var req struct {
-				Connector int
-				Role      string
-				Settings  json.RawMessage
-				Options   ConnectionOptions
-			}
-			err := json.NewDecoder(r.Body).Decode(&req)
-			if err != nil {
-				respond(w, errors.BadRequest("invalid JSON"))
-				return
-			}
-			var role ConnectionRole
-			switch req.Role {
-			case "Source":
-				role = SourceRole
-			case "Destination":
-				role = DestinationRole
-			default:
-				respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
-				return
-			}
-			id, err := workspace.AddConnection(role, req.Connector, req.Settings, req.Options)
-			if err != nil {
+		router.Route("/connect-warehouse", func(router chi.Router) {
+			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				req := struct {
+					Type     WarehouseType
+					Settings json.RawMessage
+				}{}
+				err := json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, errors.BadRequest("invalid JSON"))
+					return
+				}
+				err = workspace.ConnectWarehouse(req.Type, req.Settings)
 				respond(w, err)
-				return
-			}
-			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(id)
+			})
 		})
-	})
-	router.Route("/api/workspace/privacy-region", func(router chi.Router) {
-		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Add("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(workspace.PrivacyRegion)
+		router.Route("/disconnect-warehouse", func(router chi.Router) {
+			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				err = workspace.DisconnectWarehouse()
+				respond(w, err)
+			})
 		})
-		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			var req struct {
-				PrivacyRegion PrivacyRegion
-			}
-			err := json.NewDecoder(r.Body).Decode(&req)
-			if err != nil {
-				respond(w, errors.BadRequest("invalid JSON"))
-				return
-			}
-			err = workspace.SetPrivacyRegion(req.PrivacyRegion)
-			respond(w, err)
+		router.Route("/init-warehouse", func(router chi.Router) {
+			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				err = workspace.InitWarehouse()
+				respond(w, err)
+			})
+		})
+		router.Route("/reload-schemas", func(router chi.Router) {
+			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				err = workspace.ReloadSchemas()
+				respond(w, err)
+			})
+		})
+		router.Route("/user-schema", func(router chi.Router) {
+			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				schema := workspace.Schema("users")
+				w.Header().Add("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(schema)
+			})
+		})
+		router.Route("/oauth-token", func(router chi.Router) {
+			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				var req struct {
+					Connector   int
+					OAuthCode   string
+					RedirectURI string
+				}
+				err := json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, errors.BadRequest("invalid JSON"))
+					return
+				}
+				oauthToken, err := workspace.OAuthToken(req.OAuthCode, req.RedirectURI, req.Connector)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Add("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(oauthToken)
+			})
+		})
+		router.Route("/add-connection", func(router chi.Router) {
+			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				var req struct {
+					Connector int
+					Role      string
+					Settings  json.RawMessage
+					Options   ConnectionOptions
+				}
+				err := json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, errors.BadRequest("invalid JSON"))
+					return
+				}
+				var role ConnectionRole
+				switch req.Role {
+				case "Source":
+					role = SourceRole
+				case "Destination":
+					role = DestinationRole
+				default:
+					respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
+					return
+				}
+				id, err := workspace.AddConnection(role, req.Connector, req.Settings, req.Options)
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Add("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(id)
+			})
+		})
+		router.Route("/privacy-region", func(router chi.Router) {
+			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Add("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(workspace.PrivacyRegion)
+			})
+			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				var req struct {
+					PrivacyRegion PrivacyRegion
+				}
+				err := json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, errors.BadRequest("invalid JSON"))
+					return
+				}
+				err = workspace.SetPrivacyRegion(req.PrivacyRegion)
+				respond(w, err)
+			})
 		})
 	})
 	router.Get("/api/events-schema", func(w http.ResponseWriter, r *http.Request) {

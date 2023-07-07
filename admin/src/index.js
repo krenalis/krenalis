@@ -18,6 +18,7 @@ import ConnectionOverview from './components/routes/ConnectionOverview/Connectio
 import ConnectionEvents from './components/routes/ConnectionEvents/ConnectionEvents';
 import ConnectionActions from './components/routes/ConnectionActions/ConnectionActions';
 import ConnectionSettings from './components/routes/ConnectionSettings/ConnectionSettings';
+import AnonymousIdentity from './components/routes/AnonymousIdentity/AnonymousIdentity';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -44,6 +45,7 @@ root.render(
 					<Route path='users' element={<UsersList />} />
 				</Route>
 				<Route path='schema' element={<Schema />} />
+				<Route path='anonymous-identity' element={<AnonymousIdentity />} />
 				<Route path='*' element={<NotFound />} />
 			</Route>
 		</Routes>

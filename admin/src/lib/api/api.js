@@ -277,6 +277,10 @@ class Workspace {
 		this.apiURL = apiURL;
 	}
 
+	get = async () => {
+		return await call(`${this.apiURL}/workspace`, http.GET);
+	};
+
 	userSchema = async () => {
 		return await call(`${this.apiURL}/workspace/user-schema`, http.GET);
 	};
@@ -300,6 +304,12 @@ class Workspace {
 			connector: connector,
 			oauthCode: oauthCode,
 			redirectURI: redirectURI,
+		});
+	};
+
+	anonymousIdentifiers = async (identifiers) => {
+		return await call(`${this.apiURL}/workspace/anonymous-identifiers`, http.POST, {
+			AnonymousIdentifiers: identifiers,
 		});
 	};
 }

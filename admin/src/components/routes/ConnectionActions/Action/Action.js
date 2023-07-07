@@ -182,7 +182,8 @@ const Action = ({ actionType: providedActionType, action: providedAction, onClos
 		const actionToSet = { ...action };
 		const flattenedInputSchema = flattenSchema(inputSchema);
 		const flattenedOutputSchema = flattenSchema(outputSchema);
-		// TODO: extract validation in lib/action.js.
+		// TODO: extract validation and data transformation / conversion in
+		// lib/action.js.
 		if (fields.includes('Identifiers')) {
 			if (actionToSet.Identifiers.length === 0) {
 				showError(`You must define at least one identifier`);

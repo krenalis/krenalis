@@ -321,15 +321,16 @@ func (apis *APIs) onExecuteAction(n state.ExecuteActionNotification) {
 
 // Workspace represents a workspace.
 type Workspace struct {
-	db            *postgres.DB
-	redis         *redis.Client
-	state         *state.State
-	http          *httpclient.HTTP
-	eventObserver *events.Observer
-	workspace     *state.Workspace
-	ID            int
-	Name          string
-	PrivacyRegion PrivacyRegion
+	db                   *postgres.DB
+	redis                *redis.Client
+	state                *state.State
+	http                 *httpclient.HTTP
+	eventObserver        *events.Observer
+	workspace            *state.Workspace
+	ID                   int
+	Name                 string
+	AnonymousIdentifiers AnonymousIdentifiers
+	PrivacyRegion        PrivacyRegion
 }
 
 type AccountSort int
@@ -347,6 +348,12 @@ func (s AccountSort) String() string {
 		return "email"
 	}
 	panic("invalid account sort")
+}
+
+// AnonymousIdentifiers represents the anonymous identifiers of a workspace.
+type AnonymousIdentifiers struct {
+	Priority []string
+	Mapping  map[string]string
 }
 
 // PrivacyRegion represents a privacy region.

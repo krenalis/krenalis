@@ -192,7 +192,9 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
-		err = state.db.QueryScan(ctx, "SELECT id, account, name, warehouse_type, warehouse_settings, privacy_region, schemas FROM workspaces",
+		err = state.db.QueryScan(ctx, "SELECT id, account, name, warehouse_type, warehouse_settings,\n"+
+			"anonymous_identifiers_priority, anonymous_identifiers_mapping, privacy_region, schemas\n"+
+			"FROM workspaces",
 			func(rows *postgres.Rows) error {
 				ws := &Workspace{
 					mu:          new(sync.Mutex),
@@ -201,9 +203,10 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 				}
 				var accountID int
 				var warehouseType *WarehouseType
-				var warehouseSettings, schemas []byte
+				var warehouseSettings, mapping, schemas []byte
 				for rows.Next() {
-					if err := rows.Scan(&ws.ID, &accountID, &ws.Name, &warehouseType, &warehouseSettings, &ws.PrivacyRegion, &schemas); err != nil {
+					if err := rows.Scan(&ws.ID, &accountID, &ws.Name, &warehouseType, &warehouseSettings,
+						&ws.AnonymousIdentifiers.Priority, &mapping, &ws.PrivacyRegion, &schemas); err != nil {
 						return err
 					}
 					ws.account = state.accounts[accountID]
@@ -219,6 +222,10 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 								log.Fatalf("cannot unmarshal schemas of workspace %d: %s", id, err)
 							}
 						}
+					}
+					err = json.Unmarshal(mapping, &ws.AnonymousIdentifiers.Mapping)
+					if err != nil {
+						return err
 					}
 					ws.account.workspaces[ws.ID] = ws
 					state.workspaces[ws.ID] = ws

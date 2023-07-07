@@ -137,6 +137,8 @@ func (state *State) keepState() {
 			state.setResource(n)
 		case "SetWarehouseSettings":
 			state.setWarehouseSettings(n)
+		case "SetWorkspaceAnonymousIdentifiers":
+			state.setWorkspaceAnonymousIdentifiers(n)
 		case "SetWorkspaceSchemas":
 			state.setWorkspaceSchemas(n)
 		case "SetWorkspacePrivacyRegion":
@@ -1035,6 +1037,25 @@ func (state *State) setWarehouseSettings(n postgres.Notification) {
 			}
 		}()
 	}
+}
+
+// SetWorkspaceAnonymousIdentifiersNotification is the notification event sent
+// when the anonymous identifiers of a workspace are changed.
+type SetWorkspaceAnonymousIdentifiersNotification struct {
+	Workspace            int
+	AnonymousIdentifiers AnonymousIdentifiers
+}
+
+// setWorkspaceAnonymousIdentifiers sets the anonymous identifier of a
+// workspace.
+func (state *State) setWorkspaceAnonymousIdentifiers(n postgres.Notification) {
+	e := SetWorkspaceAnonymousIdentifiersNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.AnonymousIdentifiers = e.AnonymousIdentifiers
+	})
 }
 
 // SetWorkspaceSchemasNotification is the notification event sent when schemas

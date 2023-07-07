@@ -39,6 +39,8 @@ GET     /api/event-listeners/{id}/events                         Returns the pro
 POST    /api/users                                               List the Golden Records of the users and the schema.
 GET     /api/users/{id}/events                                   List the events of a user.
 GET     /api/users/{id}/traits                                   List the traits of a user.
+GET     /api/workspace                                           Get the workspace.
+POST    /api/workspace/anonymous-identifiers                     Set the anonymous identifiers of the workspace.
 POST    /api/workspace/connect-warehouse                         Connect a data warehouse.
 POST    /api/workspace/disconnect-warehouse                      Disconnect a data warehouse.
 POST    /api/workspace/reload-schemas                            Reload the schemas of the data warehouse.

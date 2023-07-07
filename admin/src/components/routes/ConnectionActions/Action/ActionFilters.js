@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import Section from '../../../common/Section/Section';
 import { ComboBoxInput, ComboBoxList } from '../../../common/ComboBox/ComboBox';
-import { getSchemaComboboxItems } from './Action.helpers';
+import { getSchemaComboboxItems } from '../../../../helpers/getSchemaComboBoxItems';
 import { SlButton, SlSelect, SlInput, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const operatorOptions = {

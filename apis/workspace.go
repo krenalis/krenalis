@@ -22,7 +22,8 @@ import (
 	"unicode/utf8"
 
 	"chichi/apis/errors"
-	_events "chichi/apis/events"
+	"chichi/apis/events"
+	"chichi/apis/mappings/mapexp"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/warehouses"
@@ -32,6 +33,7 @@ import (
 	"chichi/connector/types"
 
 	"github.com/jxskiss/base62"
+	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 )
 
@@ -398,8 +400,8 @@ func (this *Workspace) AddEventListener(size, source, server, stream int) (strin
 
 	id, err := this.eventObserver.AddListener(size, source, server, stream)
 	if err != nil {
-		if err == _events.ErrTooManyListeners {
-			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", _events.MaxEventListeners)
+		if err == events.ErrTooManyListeners {
+			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", events.MaxEventListeners)
 		}
 		return "", err
 	}
@@ -617,14 +619,14 @@ func (this *Workspace) InitWarehouse() error {
 //
 // It returns an errors.NotFoundError error, if the listener does not exist.
 func (this *Workspace) ListenedEvents(listener string) ([]json.RawMessage, int, error) {
-	events, discarded, err := this.eventObserver.Events(listener)
+	listenedEvents, discarded, err := this.eventObserver.Events(listener)
 	if err != nil {
-		if err == _events.ErrEventListenerNotFound {
+		if err == events.ErrEventListenerNotFound {
 			return nil, 0, errors.NotFound("event listener %q does not exist", listener)
 		}
 		return nil, 0, err
 	}
-	return events, discarded, nil
+	return listenedEvents, discarded, nil
 }
 
 // authorizedResource represents an authorized resource that can be used to
@@ -847,6 +849,54 @@ func (this *Workspace) Schema(name string) types.Type {
 		return types.Type{}
 	}
 	return schema.Unflatten()
+}
+
+// SetAnonymousIdentifiers sets the anonymous identifiers of the workspace.
+func (this *Workspace) SetAnonymousIdentifiers(ids AnonymousIdentifiers) error {
+	for i, id := range ids.Priority {
+		if !types.IsValidPropertyPath(id) {
+			return errors.BadRequest("anonymous identifier %q is not a valid property path", id)
+		}
+		if slices.Contains(ids.Priority[i+1:], id) {
+			return errors.BadRequest("anonymous identifier %s is repeated", id)
+		}
+		expr, ok := ids.Mapping[id]
+		if !ok {
+			return errors.BadRequest("anonymous identifier %s does not have a mapped expression", id)
+		}
+		_, err := mapexp.Compile(expr, events.Schema, types.JSON(), true)
+		if err != nil {
+			return errors.BadRequest("expression of anonymous identifier %s is not valid: %w", id, err)
+		}
+	}
+	if len(ids.Priority) != len(ids.Mapping) {
+		for _, id := range ids.Priority {
+			delete(ids.Mapping, id)
+		}
+		keys := maps.Keys(ids.Mapping)
+		sort.Strings(keys)
+		return errors.BadRequest("anonymous identifier %q does not exist in mapping", keys[0])
+	}
+	ws := this.workspace
+	n := state.SetWorkspaceAnonymousIdentifiersNotification{
+		Workspace:            ws.ID,
+		AnonymousIdentifiers: state.AnonymousIdentifiers(ids),
+	}
+	mapping, err := json.Marshal(ids.Mapping)
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		_, err := tx.Exec(ctx, "UPDATE workspaces\n"+
+			"SET anonymous_identifiers_priority = $1, anonymous_identifiers_mapping = $2\n"+
+			"WHERE id = $3", n.AnonymousIdentifiers.Priority, mapping, n.Workspace)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
 }
 
 // SetPrivacyRegion sets the privacy region of the workspace.

@@ -216,15 +216,16 @@ func (account *Account) Workspaces() []*Workspace {
 
 // Workspace represents a workspace.
 type Workspace struct {
-	mu            *sync.Mutex
-	Warehouse     warehouses.Warehouse
-	Schemas       map[string]*types.Type
-	connections   map[int]*Connection
-	ID            int
-	account       *Account
-	Name          string
-	resources     map[int]*Resource
-	PrivacyRegion PrivacyRegion
+	mu                   *sync.Mutex
+	Warehouse            warehouses.Warehouse
+	Schemas              map[string]*types.Type
+	connections          map[int]*Connection
+	ID                   int
+	account              *Account
+	Name                 string
+	resources            map[int]*Resource
+	AnonymousIdentifiers AnonymousIdentifiers
+	PrivacyRegion        PrivacyRegion
 }
 
 // Account returns the account of the workspace.
@@ -279,6 +280,12 @@ func (workspace *Workspace) ResourceByCode(code string) (*Resource, bool) {
 	}
 	workspace.mu.Unlock()
 	return r, r != nil
+}
+
+// AnonymousIdentifiers represents the anonymous identifiers of a workspace.
+type AnonymousIdentifiers struct {
+	Priority []string
+	Mapping  map[string]string
 }
 
 // PrivacyRegion represents a privacy region.

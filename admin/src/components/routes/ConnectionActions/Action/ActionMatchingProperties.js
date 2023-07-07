@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import Section from '../../../common/Section/Section';
 import { ComboBoxInput, ComboBoxList } from '../../../common/ComboBox/ComboBox';
-import { getSchemaComboboxItems } from './Action.helpers';
+import { getSchemaComboboxItems } from '../../../../helpers/getSchemaComboBoxItems';
 
 const ActionMatchingProperties = ({ connection, action, setAction, inputSchema, outputSchema }) => {
 	const internalMatchingPropertyListRef = useRef(null);
