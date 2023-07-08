@@ -52,8 +52,8 @@ func TestConvertibleTo(t *testing.T) {
 	for pt := types.PtBoolean; pt <= types.PtMap; pt++ {
 		cases = append(cases, testCase{from: pt, to: types.PtJSON, expected: true})
 	}
-	// Every int/uint type (except for Uint64) can be converted to Year.
-	for pt := types.PtInt; pt <= types.PtUInt24; pt++ {
+	// Every int/uint type can be converted to Year.
+	for pt := types.PtInt; pt <= types.PtUInt64; pt++ {
 		cases = append(cases, testCase{from: pt, to: types.PtYear, expected: true})
 	}
 	// Every type can be converted to itself (this tests the matrix's main
