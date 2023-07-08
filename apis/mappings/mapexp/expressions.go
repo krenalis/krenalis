@@ -106,7 +106,7 @@ func Compile(expr string, schema types.Type, dt types.Type, nullable bool) (*Exp
 	if src != "" {
 		return nil, fmt.Errorf("unexpected character %v", strconv.QuoteRuneToGraphic(rune(src[0])))
 	}
-	if !convertible(parts, dt.PhysicalType()) {
+	if !convertible(parts, dt) {
 		return nil, ErrNotConvertible
 	}
 	expression := &Expression{
@@ -286,16 +286,16 @@ func evalCall(name string, args [][]part, values map[string]any) (any, types.Typ
 
 // convertible reports whether expr is convertible to a type with physical type
 // dt.
-func convertible(expr []part, dt types.PhysicalType) bool {
+func convertible(expr []part, dt types.Type) bool {
 	if len(expr) > 1 || expr[0].text != "" {
-		return convertibleTo(types.PtText, dt)
+		return convertibleTo(types.Text(), dt)
 	}
 	part := expr[0]
 	if part.args == nil {
 		if part.path == nil {
-			return convertibleTo(types.PtDecimal, dt)
+			return convertibleTo(types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale), dt)
 		}
-		return convertibleTo(part.typ.PhysicalType(), dt)
+		return convertibleTo(part.typ, dt)
 	}
 	switch part.path[0] {
 	case "coalesce":

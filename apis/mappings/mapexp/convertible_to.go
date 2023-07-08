@@ -50,9 +50,33 @@ var convertMatrix = [...]int32{
 	/* Map      */ 0b_0_00000_00000_000_000_00_100_001,
 }
 
-// convertibleTo reports whether the physical type "from" can be converted to
-// the physical type "to".
-func convertibleTo(from, to types.PhysicalType) bool {
-	mask := int32(1 << (types.PtMap - to))
-	return convertMatrix[from-1]&mask > 0
+// convertibleTo reports whether a value of type st can be converted to type dt.
+func convertibleTo(st, dt types.Type) bool {
+	spt := st.PhysicalType()
+	dpt := dt.PhysicalType()
+	mask := int32(1 << (types.PtMap - dpt))
+	if convertMatrix[spt-1]&mask == 0 {
+		return false
+	}
+	if spt == types.PtJSON {
+		return true
+	}
+	switch dpt {
+	case types.PtArray:
+		return convertibleTo(st.ItemType(), dt.ItemType())
+	case types.PtObject:
+		var hasSameNameProperty bool
+		for _, sp := range st.Properties() {
+			if dp, ok := dt.Property(sp.Name); ok {
+				if !convertibleTo(sp.Type, dp.Type) {
+					return false
+				}
+				hasSameNameProperty = true
+			}
+		}
+		return hasSameNameProperty
+	case types.PtMap:
+		return convertibleTo(st.ValueType(), dt.ValueType())
+	}
+	return true
 }

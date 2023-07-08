@@ -129,8 +129,8 @@ Expression:
 						return nil, "", err
 					}
 					if hasText || len(expression) > 0 {
-						if pt := p.Type.PhysicalType(); !convertibleTo(pt, types.PtText) {
-							return nil, "", fmt.Errorf("cannot convert %q of type %s to Text", part.path, pt)
+						if !convertibleTo(p.Type, types.Text()) {
+							return nil, "", fmt.Errorf("cannot convert %q of type %s to Text", part.path, p.Type)
 						}
 					}
 					part.typ = p.Type
