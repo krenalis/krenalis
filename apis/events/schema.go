@@ -89,6 +89,7 @@ var Schema = types.Object([]types.Property{
 			{Name: "type", Type: types.Text()},
 			{Name: "version", Type: types.Text()},
 			{Name: "advertising_id", Type: types.Text()},
+			{Name: "token", Type: types.Text()},
 		}),
 		Flat: true,
 	},

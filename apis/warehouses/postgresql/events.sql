@@ -46,6 +46,7 @@ CREATE TABLE events (
     device_type varchar NOT NULL,
     device_version varchar NOT NULL,
     device_advertising_id varchar NOT NULL,
+    device_token varchar NOT NULL,
     location_city varchar NOT NULL,
     location_country varchar NOT NULL,
     location_region varchar NOT NULL,

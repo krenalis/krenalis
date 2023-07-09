@@ -250,6 +250,7 @@ func collectedEventToMap(event *collectedEvent) (map[string]any, error) {
 			"type":           event.Context.Device.Type,
 			"version":        event.Context.Device.Version,
 			"advertising_id": event.Context.Device.AdvertisingID,
+			"token":          event.Context.Device.Token,
 		},
 		"location": map[string]any{
 			"city":      event.Context.Location.City,

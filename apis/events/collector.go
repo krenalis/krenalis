@@ -86,6 +86,7 @@ type eventContext struct {
 		Type          string `json:"type,omitempty"`
 		Version       string `json:"version,omitempty"`
 		AdvertisingID string `json:"advertisingId,omitempty"`
+		Token         string `json:"token,omitempty"`
 	} `json:"device,omitempty"`
 	Direct  bool   `json:"direct,omitempty"`
 	IP      string `json:"ip,omitempty"`
@@ -555,6 +556,9 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 	}
 	if ctx.Device.AdvertisingID == "" {
 		ctx.Device.AdvertisingID = defaultCtx.Device.AdvertisingID
+	}
+	if ctx.Device.Token == "" {
+		ctx.Device.Token = defaultCtx.Device.Token
 	}
 	// Direct.
 	if !ctx.Direct {

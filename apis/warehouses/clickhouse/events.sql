@@ -44,6 +44,7 @@ CREATE TABLE events
     `device_type` String,
     `device_version` String,
     `device_advertising_id` String,
+    `device_token` String,
     `location_city` String,
     `location_country` String,
     `location_region` String,
