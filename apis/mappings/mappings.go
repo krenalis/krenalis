@@ -114,6 +114,9 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 		for _, property := range m.properties {
 			v, err := property.expression.Eval(values, m.formatTime)
 			if err != nil {
+				if err == mapexp.ErrVoid {
+					continue
+				}
 				if err, ok := err.(*mapexp.InvalidConversionError); ok {
 					log.Print(err)
 					continue

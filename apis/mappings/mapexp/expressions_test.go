@@ -179,6 +179,44 @@ func TestCompile(t *testing.T) {
 
 		// Eval errors.
 		{expr: "manufacturer", dt: types.Int(), evalErr: errors.New(`cannot convert "MyPlaneCompany" (type Text) to type Int`)},
+
+		// and.
+		{expr: "and(true, true)", dt: types.Boolean(), expectedValue: true},
+		{expr: "and(true, false)", dt: types.Boolean(), expectedValue: false},
+		{expr: "and(false, true)", dt: types.Boolean(), expectedValue: false},
+		{expr: "and(false, false)", dt: types.Boolean(), expectedValue: false},
+		{expr: "and(and(true, true), true)", dt: types.Boolean(), expectedValue: true},
+		{expr: "and(true, and(true, true))", dt: types.Boolean(), expectedValue: true},
+		{expr: "and(true, and(true, false))", dt: types.Boolean(), expectedValue: false},
+		{expr: "and(true)", dt: types.Boolean(), compileErr: errors.New("'and' function requires at least two argument")},
+		{expr: "and(1, true)", dt: types.Boolean(), compileErr: errors.New("cannot convert 1 (type Int) to Boolean")},
+		{expr: "and(true, true)", dt: types.Int(), compileErr: errors.New("cannot convert expression (type Boolean) to Int")},
+
+		// coalesce.
+		{expr: "coalesce(1, 2)", dt: types.Int(), nullable: true, expectedValue: 1},
+		{expr: "coalesce(1, null)", dt: types.Int(), nullable: true, expectedValue: 1},
+		{expr: "coalesce(null, 2)", dt: types.Int(), nullable: true, expectedValue: 2},
+		{expr: "0 coalesce(null, 2)", dt: types.Text(), nullable: true, expectedValue: "02"},
+		{expr: "coalesce(null, coalesce(null, 3))", dt: types.Int(), nullable: true, expectedValue: 3},
+		{expr: "coalesce()", dt: types.Int(), compileErr: errors.New("'coalesce' function requires at least one argument")},
+		{expr: "coalesce(null)", dt: types.Int(), compileErr: errors.New("cannot convert null to Int")},
+		{expr: "coalesce(1, coalesce(2, null))", dt: types.Int(), nullable: false, compileErr: errors.New("cannot convert null to Int")},
+
+		// eq.
+		{expr: "eq(1, 1)", dt: types.Boolean(), expectedValue: true},
+		{expr: "eq(1, 2)", dt: types.Boolean(), expectedValue: false},
+		{expr: "eq(1, '1')", dt: types.Boolean(), expectedValue: true},
+		{expr: "eq('1', 1)", dt: types.Boolean(), expectedValue: true},
+		{expr: "eq(1)", dt: types.Boolean(), compileErr: errors.New("'eq' function requires two arguments")},
+		{expr: "eq(1, 1)", dt: types.Int(), compileErr: errors.New("cannot convert expression (type Boolean) to Int")},
+
+		// when.
+		{expr: "when(true, 1)", dt: types.Int(), expectedValue: 1},
+		{expr: "when(false, 1)", dt: types.Int(), evalErr: ErrVoid},
+		{expr: "when(false)", dt: types.Int(), compileErr: errors.New("'when' function requires two arguments")},
+		{expr: "when(1, 2)", dt: types.Int(), compileErr: errors.New("cannot convert 1 (type Int) to Boolean")},
+		{expr: "when(false, null)", dt: types.Int(), compileErr: errors.New("cannot convert null to Int")},
+		{expr: "when(false, 2)", dt: types.Boolean(), compileErr: errors.New("cannot convert 2 (type Int) to Boolean")},
 	}
 
 	for _, test := range tests {

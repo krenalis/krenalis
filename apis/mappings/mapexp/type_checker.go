@@ -45,8 +45,16 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 		// Check the function call
 		var err error
 		switch p.path[0] {
+		case "and":
+			expr[i].typ, err = checkAnd(p.args, schema, t, n)
 		case "coalesce":
 			expr[i].typ, err = checkCoalesce(p.args, schema, t, n)
+		case "eq":
+			expr[i].typ, err = checkEq(p.args, schema, t, n)
+		case "when":
+			expr[i].typ, err = checkWhen(p.args, schema, t, n)
+		default:
+			panic(fmt.Errorf("unknown function %q", p.path[0]))
 		}
 		if err != nil {
 			return err
@@ -58,7 +66,10 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 		}
 	}
 
-	return asType(expr, dt, nullable)
+	if dt.Valid() {
+		return asType(expr, dt, nullable)
+	}
+	return nil
 }
 
 // asType reports whether expr can be converted to type dt. If expr contains
@@ -89,4 +100,13 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 		return fmt.Errorf("cannot convert expression (type %s) to %s", st, dt)
 	}
 	return nil
+}
+
+// typeOf returns the type of the expression expr.
+func typesOf(expr []part) types.Type {
+	p := expr[0]
+	if len(expr) > 0 || p.value != nil && p.path != nil {
+		return types.Text()
+	}
+	return p.typ
 }

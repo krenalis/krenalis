@@ -10,10 +10,15 @@ package mapexp
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 
 	"chichi/connector/types"
 )
+
+// ErrVoid is returned by the 'when' function when the first argument is false,
+// and in this case the destination property is not changed.
+var ErrVoid = errors.New("void")
 
 // ErrNotConvertible is the error returned by the Compile method of Expression
 // when the type of the expression cannot convert to the destination type.
@@ -246,6 +251,17 @@ func valueOf(path types.Path, values map[string]any) (any, error) {
 // type. values contains the property values.
 func evalCall(p part, values map[string]any) (any, types.Type, error) {
 	switch name := p.path[0]; name {
+	case "and":
+		for _, arg := range p.args {
+			v, _, err := eval(arg, values)
+			if err != nil {
+				return nil, types.Type{}, err
+			}
+			if !v.(bool) {
+				return false, types.Boolean(), nil
+			}
+		}
+		return true, types.Boolean(), nil
 	case "coalesce":
 		for _, arg := range p.args {
 			v, vt, err := eval(arg, values)
@@ -257,6 +273,38 @@ func evalCall(p part, values map[string]any) (any, types.Type, error) {
 			}
 		}
 		return nil, p.typ, nil
+	case "eq":
+		v0, t0, err := eval(p.args[0], values)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		v1, t1, err := eval(p.args[1], values)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		if !t0.EqualTo(t1) {
+			v0, err = convert(v0, t0, t1, true, false)
+			if err != nil {
+				if err == errInvalidConversion {
+					return false, types.Boolean(), nil
+				}
+				return nil, types.Type{}, err
+			}
+		}
+		return reflect.DeepEqual(v0, v1), types.Boolean(), nil
+	case "when":
+		v0, _, err := eval(p.args[0], values)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		if !v0.(bool) {
+			return nil, types.Type{}, ErrVoid
+		}
+		v1, t1, err := eval(p.args[1], values)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		return v1, t1, nil
 	}
-	panic("unknown function")
+	panic(fmt.Errorf("unknown function %q", p.path[0]))
 }
