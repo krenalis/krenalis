@@ -31,6 +31,18 @@ var Schema = types.Object([]types.Property{
 	{Name: "timestamp", Type: types.DateTime().WithLayout(time.StampMilli)},
 	{Name: "sent_at", Type: types.DateTime().WithLayout(time.StampMilli)},
 	{Name: "received_at", Type: types.DateTime().WithLayout(time.StampMilli)},
+	{
+		Name: "context",
+		Type: types.Object([]types.Property{
+			{
+				Name: "device",
+				Type: types.Object([]types.Property{
+					{Name: "id", Type: types.Text()},
+					{Name: "type", Type: types.Text()},
+				}),
+			},
+		}),
+	},
 	{Name: "ip", Type: types.Inet()},
 	{
 		Name: "network",
