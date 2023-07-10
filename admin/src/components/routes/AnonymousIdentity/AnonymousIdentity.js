@@ -6,7 +6,10 @@ import * as variants from '../../../constants/variants';
 import * as icons from '../../../constants/icons';
 import { useContext } from 'react';
 import { AppContext } from '../../../providers/AppProvider';
-import useTransformedAnonymousIdentifiers from '../../../hooks/useTransformedAnonymousIdentifiers';
+import {
+	transformAnonymousIdentifiers,
+	untransformAnonymousIdentifiers,
+} from '../../../lib/workspace/anonymousIdentifiers';
 import { SlButton, SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const AnonymousIdentity = () => {
@@ -29,7 +32,8 @@ const AnonymousIdentity = () => {
 				showError(err);
 				return;
 			}
-			setAnonymousIdentifiers(workspace.AnonymousIdentifiers);
+			const transformed = transformAnonymousIdentifiers(workspace.AnonymousIdentifiers);
+			setAnonymousIdentifiers(transformed);
 
 			let eventSchema;
 			[eventSchema, err] = await api.eventsSchema();
@@ -52,18 +56,14 @@ const AnonymousIdentity = () => {
 	}, []);
 
 	const onSave = async () => {
-		const [, err] = await api.workspace.anonymousIdentifiers(anonymousIdentifiers);
+		const untransformed = untransformAnonymousIdentifiers(anonymousIdentifiers);
+		const [, err] = await api.workspace.anonymousIdentifiers(untransformed);
 		if (err) {
 			showError(err);
 			return;
 		}
 		showStatus([variants.SUCCESS, icons.OK, 'Anonymous identifiers saved succesfully']);
 	};
-
-	const { transformedAnonymousIdentifiers, setTransformedAnonymousIdentifiers } = useTransformedAnonymousIdentifiers(
-		anonymousIdentifiers,
-		setAnonymousIdentifiers
-	);
 
 	return (
 		<div className='anonymousIdentity'>
@@ -80,8 +80,8 @@ const AnonymousIdentity = () => {
 					description='Define the identifiers used to resolve the identity of anonymous users'
 				>
 					<SortableMapping
-						mapping={transformedAnonymousIdentifiers}
-						setMapping={setTransformedAnonymousIdentifiers}
+						mapping={anonymousIdentifiers}
+						setMapping={setAnonymousIdentifiers}
 						inputSchema={eventSchema}
 						outputSchema={userSchema}
 					/>
