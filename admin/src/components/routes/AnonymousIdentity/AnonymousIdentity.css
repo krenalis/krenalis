@@ -4,8 +4,18 @@
     padding: 0 30px;
 }
 
+.anonymousIdentity > sl-spinner {
+    display: block;
+    margin: auto;
+}
+
 .anonymousIdentity .saveButton {
     max-width: 200px;
     display: block;
     margin: 50px auto 0 auto;
+}
+
+.anonymousIdentity .comboBoxInput sl-input sl-icon {
+    color: var(--sl-color-danger-500);
+    font-size: 9px;
 }

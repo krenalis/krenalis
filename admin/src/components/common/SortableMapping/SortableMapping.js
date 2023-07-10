@@ -2,6 +2,7 @@ import './SortableMapping.css';
 import { useContext, useRef, useMemo } from 'react';
 import { ComboBoxInput, ComboBoxList } from '../ComboBox/ComboBox';
 import { AppContext } from '../../../providers/AppProvider';
+import { checkInputValue, checkOutputValue } from './SortableMapping.helpers';
 import { getSchemaComboboxItems } from '../../../helpers/getSchemaComboBoxItems';
 import { SlButton, SlDropdown, SlMenu, SlMenuItem, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
@@ -93,6 +94,8 @@ const SortableMapping = ({ mapping, setMapping, inputSchema, outputSchema }) => 
 		<div className='sortableMapping'>
 			{mapping.map(([inputProperty, outputProperty], i) => {
 				const position = i + 1;
+				const inputError = checkInputValue(inputProperty, inputSchema);
+				const outputError = checkOutputValue(outputProperty, outputSchema);
 				return (
 					<div className='correlation'>
 						<div className='position'>{position}</div>
@@ -103,6 +106,7 @@ const SortableMapping = ({ mapping, setMapping, inputSchema, outputSchema }) => 
 							name={position}
 							className='inputProperty'
 							size='small'
+							error={inputError}
 						/>
 						<div className='arrow'>
 							<SlIcon name='arrow-right' />
@@ -114,6 +118,7 @@ const SortableMapping = ({ mapping, setMapping, inputSchema, outputSchema }) => 
 							name={position}
 							className='outputProperty'
 							size='small'
+							error={outputError}
 						/>
 						<SlDropdown>
 							<SlButton size='small' className='correlationMenu' slot='trigger'>

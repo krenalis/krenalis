@@ -7,12 +7,13 @@ import * as icons from '../../../constants/icons';
 import { useContext } from 'react';
 import { AppContext } from '../../../providers/AppProvider';
 import useTransformedAnonymousIdentifiers from '../../../hooks/useTransformedAnonymousIdentifiers';
-import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlButton, SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const AnonymousIdentity = () => {
 	const [anonymousIdentifiers, setAnonymousIdentifiers] = useState({ Priority: [], Mapping: {} });
 	const [eventSchema, setEventSchema] = useState(null);
 	const [userSchema, setUserSchema] = useState(null);
+	const [isLoading, setIsLoading] = useState(true);
 
 	const { setTitle, api, showError, showStatus } = useContext(AppContext);
 
@@ -45,6 +46,7 @@ const AnonymousIdentity = () => {
 				return;
 			}
 			setUserSchema(userSchema);
+			setIsLoading(false);
 		};
 		fetchData();
 	}, []);
@@ -65,20 +67,29 @@ const AnonymousIdentity = () => {
 
 	return (
 		<div className='anonymousIdentity'>
-			<Section
-				title='Anonymous Identifiers'
-				description='Define the identifiers used to resolve the identity of anonymous users'
-			>
-				<SortableMapping
-					mapping={transformedAnonymousIdentifiers}
-					setMapping={setTransformedAnonymousIdentifiers}
-					inputSchema={eventSchema}
-					outputSchema={userSchema}
-				/>
-				<SlButton className='saveButton' onClick={onSave} variant='primary'>
-					Save
-				</SlButton>
-			</Section>
+			{isLoading ? (
+				<SlSpinner
+					style={{
+						fontSize: '3rem',
+						'--track-width': '6px',
+					}}
+				></SlSpinner>
+			) : (
+				<Section
+					title='Anonymous Identifiers'
+					description='Define the identifiers used to resolve the identity of anonymous users'
+				>
+					<SortableMapping
+						mapping={transformedAnonymousIdentifiers}
+						setMapping={setTransformedAnonymousIdentifiers}
+						inputSchema={eventSchema}
+						outputSchema={userSchema}
+					/>
+					<SlButton className='saveButton' onClick={onSave} variant='primary'>
+						Save
+					</SlButton>
+				</Section>
+			)}
 		</div>
 	);
 };
