@@ -12,6 +12,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"chichi/connector/types"
 
@@ -37,22 +38,22 @@ func TestEval(t *testing.T) {
 		expectedType  types.Type
 		err           error
 	}{
-		{[]part{{text: ``}}, "", types.Text(), nil},
-		{[]part{{text: `a`}}, "a", types.Text(), nil},
+		{[]part{{value: ``, typ: types.Text()}}, "", types.Text(), nil},
+		{[]part{{value: `a`, typ: types.Text()}}, "a", types.Text(), nil},
 		{[]part{{value: n, typ: dt}}, n, dt, nil},
 		{[]part{{path: types.Path{"a"}, typ: types.Int()}}, 165, types.Int(), nil},
 		{[]part{{path: types.Path{"b", "c"}, typ: types.Text()}}, "foo", types.Text(), nil},
 		{[]part{{path: types.Path{"b", "e"}, typ: types.Int()}}, 1024, types.Int(), nil},
-		{[]part{{text: `a`, path: types.Path{"a"}, typ: types.Int()}}, "a165", types.Text(), nil},
+		{[]part{{value: `a`, path: types.Path{"a"}, typ: types.Int()}}, "a165", types.Text(), nil},
 		{[]part{{path: types.Path{"coalesce"}, args: [][]part{
-			{{path: types.Path{"a"}, typ: types.Int()}, {text: " boo"}},
-			{{text: "foo"}},
+			{{path: types.Path{"a"}, typ: types.Int()}, {value: " boo", typ: types.Text()}},
+			{{value: "foo", typ: types.Text()}},
 		}}}, "165 boo", types.Text(), nil},
 		{[]part{{path: types.Path{"coalesce"}, args: [][]part{
 			{{path: types.Path{"d"}, typ: types.Text()}},
-			{{path: types.Path{"a"}, typ: types.Int()}, {text: " boo"}},
+			{{path: types.Path{"a"}, typ: types.Int()}, {value: " boo", typ: types.Text()}},
 		}}}, "165 boo", types.Text(), nil},
-		{[]part{{text: ``}, {path: types.Path{"a"}, typ: types.Int()}}, "165", types.Text(), nil},
+		{[]part{{value: ``, typ: types.Text()}, {path: types.Path{"a"}, typ: types.Int()}}, "165", types.Text(), nil},
 	}
 
 	for i, test := range tests {
@@ -82,7 +83,10 @@ func TestEval(t *testing.T) {
 
 }
 
-func TestExpressions(t *testing.T) {
+func TestCompile(t *testing.T) {
+
+	d := time.Date(2023, 7, 8, 0, 0, 0, 0, time.UTC)
+	dt := time.Date(2023, 7, 8, 13, 38, 23, 0, time.UTC)
 
 	schema := types.Object([]types.Property{
 		{Name: "manufacturer", Type: types.Text()},
@@ -94,6 +98,9 @@ func TestExpressions(t *testing.T) {
 		})},
 		{Name: "cx", Type: types.Decimal(4, 3)},
 		{Name: "passengers", Type: types.Int()},
+		{Name: "revision_dates", Type: types.Array(types.DateTime())},
+		{Name: "map", Type: types.Map(types.Int())},
+		{Name: "other", Type: types.Int(), Nullable: true},
 	})
 
 	cx := decimal.NewFromFloat(0.142)
@@ -105,13 +112,20 @@ func TestExpressions(t *testing.T) {
 			"power":       uint(700),
 			"afterburner": nil,
 		},
-		"cx":         cx,
-		"passengers": 250,
+		"cx":             cx,
+		"passengers":     250,
+		"revision_dates": []any{dt},
+		"map": map[string]any{
+			"x": 1,
+			"y": 2,
+		},
+		"other": nil,
 	}
 
 	tests := []struct {
 		expr          string
 		dt            types.Type
+		nullable      bool
 		compileErr    error
 		evalErr       error
 		expectedValue any
@@ -127,7 +141,9 @@ func TestExpressions(t *testing.T) {
 		{expr: "42", dt: types.Int(), expectedValue: 42},
 		{expr: "42", dt: types.JSON(), expectedValue: json.RawMessage("42")},
 		{expr: "42", dt: types.Text(), expectedValue: "42"},
-		{expr: "coalesce()", dt: types.JSON(), expectedValue: json.RawMessage("null")},
+		{expr: "coalesce(1, 2)", dt: types.Int(), nullable: true, expectedValue: 1},
+		{expr: "coalesce(other, 2)", dt: types.Int(), nullable: true, expectedValue: 2},
+		{expr: "coalesce(coalesce(other, null), coalesce(other, 2))", dt: types.Int(), nullable: true, expectedValue: 2},
 		{expr: "cx cx", dt: types.Text(), expectedValue: "0.1420.142"},
 		{expr: "engine.name", dt: types.Text(), expectedValue: "TurboX"},
 		{expr: "engine.power ' x ' 1.36", dt: types.Text(), expectedValue: "700 x 1.36"},
@@ -136,20 +152,30 @@ func TestExpressions(t *testing.T) {
 		{expr: "manufacturer ' ' model", dt: types.Text(), expectedValue: "MyPlaneCompany SuperFast"},
 		{expr: "manufacturer", dt: types.JSON(), expectedValue: json.RawMessage("\"MyPlaneCompany\"")},
 		{expr: "manufacturer", dt: types.Text(), expectedValue: "MyPlaneCompany"},
+		{expr: "revision_dates", dt: types.Array(types.Date()), expectedValue: []any{d}},
+		{expr: "map", dt: types.Map(types.UInt()), expectedValue: map[string]any{"x": uint(1), "y": uint(2)}},
 		{expr: `""`, dt: types.JSON(), expectedValue: json.RawMessage("null")},
 
 		// Compile errors.
 		{expr: "!true", dt: types.Boolean(), compileErr: errors.New("unexpected character '!'")},
 		{expr: "'Engine power: ' (coalesce engine.power, 0)", dt: types.Text(), compileErr: errors.New("unexpected character '('")},
-		{expr: "'Engine power: ' coalesce engine.power, 0", dt: types.Text(), compileErr: errors.New(`property path "coalesce" does not exist`)},
+		{expr: "'Engine power: ' coalesce engine.power", dt: types.Text(), compileErr: errors.New(`property "coalesce" does not exist`)},
 		{expr: "'Engine power: engine.power", dt: types.Text(), compileErr: errors.New("string is not terminated")},
 		{expr: "1 + 2", dt: types.Int(), compileErr: errors.New("unexpected character '+'")},
 		{expr: "engine.power * 1.36", dt: types.Text(), compileErr: errors.New("unexpected character '*'")},
 		{expr: "len('hello')", dt: types.UInt(), compileErr: errors.New(`function "len" does not exist`)},
-		{expr: "not true", dt: types.Boolean(), compileErr: errors.New(`property path "not" does not exist`)},
-		{expr: "passenger", dt: types.Text(), compileErr: errors.New(`property path "passenger" does not exist`)},
+		{expr: "not true", dt: types.Boolean(), compileErr: errors.New(`property "not" does not exist`)},
+		{expr: "passenger", dt: types.Text(), compileErr: errors.New(`property "passenger" does not exist`)},
 		{expr: "true && false", dt: types.Boolean(), compileErr: errors.New(`unexpected character '&'`)},
 		{expr: "1,000", dt: types.Int(), compileErr: errors.New(`unexpected character ','`)},
+		{expr: "true", dt: types.Int(), compileErr: errors.New("cannot convert true (type Boolean) to Int")},
+		{expr: "engine", dt: types.Object([]types.Property{{Name: "notfound", Type: types.Text()}}), compileErr: errors.New("cannot convert expression (type Object) to Object")},
+		{expr: "engine", dt: types.Object([]types.Property{{Name: "power", Type: types.Boolean()}}), compileErr: errors.New("cannot convert expression (type Object) to Object")},
+		{expr: "revision_dates", dt: types.Array(types.Boolean()), compileErr: errors.New("cannot convert expression (type Array) to Array")},
+		{expr: "map", dt: types.Map(types.Date()), compileErr: errors.New("cannot convert expression (type Map) to Map")},
+		{expr: "coalesce()", dt: types.JSON(), compileErr: errors.New("'coalesce' function requires at least one argument")},
+		{expr: "coalesce(1, 2)", dt: types.Boolean(), nullable: true, compileErr: errors.New("cannot convert 1 (type Int) to Boolean")},
+		{expr: "coalesce(coalesce(other, null), coalesce(other, 2))", dt: types.Int(), compileErr: errors.New(`cannot convert null to Int`)},
 
 		// Eval errors.
 		{expr: "manufacturer", dt: types.Int(), evalErr: errors.New(`cannot convert "MyPlaneCompany" (type Text) to type Int`)},
@@ -159,7 +185,7 @@ func TestExpressions(t *testing.T) {
 		t.Run(test.expr, func(t *testing.T) {
 
 			// Test Compile.
-			expr, err := Compile(test.expr, schema, test.dt, false)
+			expr, err := Compile(test.expr, schema, test.dt, test.nullable)
 			if test.compileErr != nil {
 				if err == nil {
 					t.Fatalf("expecting compile error %s, got no errors", test.compileErr)
@@ -218,14 +244,14 @@ func TestPropertyPaths(t *testing.T) {
 		{`"a"`, nil},
 		{`a`, []types.Path{{"a"}}},
 		{`a.b.c`, []types.Path{{"a", "b", "c"}}},
-		{`a b c`, []types.Path{{"a"}, {"b"}, {"c"}}},
+		{`b c`, []types.Path{{"b"}, {"c"}}},
 		{`coalesce("a", 5)`, nil},
 		{`coalesce(a.b.c, 5) a.b.c b`, []types.Path{{"a", "b", "c"}, {"b"}}},
 		{`coalesce(a.b.c, coalesce(b)) a.b.c b`, []types.Path{{"a", "b", "c"}, {"b"}}},
 	}
 
 	for _, test := range tests {
-		expression, err := Compile(test.src, schema, types.JSON(), false)
+		expression, err := Compile(test.src, schema, types.JSON(), true)
 		if err != nil {
 			t.Fatalf("%q. unexpected compilation error: %s", test.src, err)
 		}
@@ -257,9 +283,9 @@ func TestValueOf(t *testing.T) {
 		{types.Path{"a"}, 5, nil},
 		{types.Path{"b", "c"}, "foo", nil},
 		{types.Path{"b", "d", "e"}, []any{1, 2, 3}, nil},
-		{types.Path{"f"}, nil, errors.New("cannot find value for property path \"f\"")},
-		{types.Path{"b", "g"}, nil, errors.New("cannot find value for property path \"b.g\"")},
-		{types.Path{"a", "f"}, nil, errors.New("cannot find value for property path \"a.f\" (\"a\" has type int)")},
+		{types.Path{"f"}, nil, errors.New("cannot find value for property \"f\"")},
+		{types.Path{"b", "g"}, nil, errors.New("cannot find value for property \"b.g\"")},
+		{types.Path{"a", "f"}, nil, errors.New("cannot find value for property \"a.f\" (\"a\" has type int)")},
 	}
 
 	for _, test := range tests {

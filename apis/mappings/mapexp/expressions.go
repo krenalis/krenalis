@@ -44,45 +44,23 @@ type Expression struct {
 // part represents an expression part within an Expression. An expression part
 // can take different forms:
 //
-//   - text              example: "foo"
-//   - value             example: true
+//   - value             example: "foo"
 //   - path              example: x
 //   - path(args)        example: add(x, 5)
-//   - text value        example: "foo" 23.56
-//   - text path         example: 'foo' a.b
-//   - test path(args)   example: "foo" coalesce(a.b, c)
+//   - value path         example: 5 a.b
+//   - value path(args)   example: "foo" coalesce(a.b, c)
 //
-// For instance, the Expression `"foo" x " " true a.b` is parsed as
-// `"foo" x`, `" " true`, `a.b`.
-//
-// As a special case, if an Expression starts with an empty text and has a path
-// or a value, it is parsed as two parts. For example, `"" x` is parsed as `""`
-// and `x`.
-//
-// During evaluation, the texts, values, and paths in the expression are
-// converted to strings and concatenated, unless the expression consists of only
-// one part without text, such as `a.b` and `5.3`.
+// For instance, the Expression `"foo" x " " true a.b` is parsed as `"foo" x`,
+// `" true" a.b`.
 type part struct {
-	text  string     // Text that starts the expression part.
-	value any        // Value in the expression part, can be true, false, null or a decimal.Decimal value.
+	value any        // Value. If there is a path, value, if present, can only be of type Text.
 	path  types.Path // Property path or function name.
 	args  [][]part   // Function call arguments.
-	typ   types.Type // Type of the value or the type of the property at path.
-}
 
-// TextOnly reports whether the expression part contains only text.
-func (p part) TextOnly() bool {
-	return !p.typ.Valid() && p.args == nil
-}
-
-// ValueOnly reports whether the expression part contains only a value.
-func (p part) ValueOnly() bool {
-	return p.typ.Valid() && p.path == nil
-}
-
-// PathOnly reports whether the expression part contains only a path.
-func (p part) PathOnly() bool {
-	return p.path != nil && p.text == ""
+	// If there is a path, it represents the type of the property or the type of the function call.
+	// Otherwise, it represents the type of the value. For some function calls, as coalesce, it is
+	// the invalid type, indicating that the call can return different types.
+	typ types.Type
 }
 
 // Compile parses a map expression and returns an Expression value that can be
@@ -99,15 +77,16 @@ func Compile(expr string, schema types.Type, dt types.Type, nullable bool) (*Exp
 	if !dt.Valid() {
 		return nil, errors.New("destination type is not valid")
 	}
-	parts, src, err := parseExpression(expr, schema)
+	parts, src, err := parseExpression(expr)
 	if err != nil {
 		return nil, err
 	}
 	if src != "" {
 		return nil, fmt.Errorf("unexpected character %v", strconv.QuoteRuneToGraphic(rune(src[0])))
 	}
-	if !convertible(parts, dt) {
-		return nil, ErrNotConvertible
+	err = typeCheck(parts, schema, dt, nullable)
+	if err != nil {
+		return nil, err
 	}
 	expression := &Expression{
 		parts:    parts,
@@ -190,26 +169,22 @@ func eval(expression []part, values map[string]any) (any, types.Type, error) {
 
 	// Evaluate the most common cases that does not require a buffer.
 	if len(expression) == 1 {
-		part := expression[0]
-		if part.PathOnly() {
-			if len(part.path) == 1 {
-				name := part.path[0]
-				if part.args == nil {
-					return values[name], part.typ, nil
+		p := expression[0]
+		if p.path == nil {
+			return p.value, p.typ, nil
+		}
+		if p.value == nil {
+			if len(p.path) == 1 {
+				if p.args == nil {
+					return values[p.path[0]], p.typ, nil
 				}
-				return evalCall(name, part.args, values)
+				return evalCall(p, values)
 			}
-			value, err := valueOf(part.path, values)
+			value, err := valueOf(p.path, values)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
-			return value, part.typ, nil
-		}
-		if part.ValueOnly() {
-			return part.value, part.typ, nil
-		}
-		if part.TextOnly() {
-			return part.text, types.Text(), nil
+			return value, p.typ, nil
 		}
 	}
 
@@ -218,19 +193,21 @@ func eval(expression []part, values map[string]any) (any, types.Type, error) {
 	var vt types.Type
 	var buf []byte
 
-	for _, part := range expression {
-		buf = append(buf, part.text...)
-		if part.path == nil {
+	for _, p := range expression {
+		if s, _ := p.value.(string); s != "" {
+			buf = append(buf, s...)
+		}
+		if p.path == nil {
 			continue
 		}
-		if args := part.args; args == nil {
-			v, err = valueOf(part.path, values)
+		if p.args == nil {
+			v, err = valueOf(p.path, values)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
-			vt = part.typ
+			vt = p.typ
 		} else {
-			v, vt, err = evalCall(part.path[0], args, values)
+			v, vt, err = evalCall(p, values)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -253,24 +230,24 @@ func valueOf(path types.Path, values map[string]any) (any, error) {
 	for i, name := range path {
 		v, ok = values[name]
 		if !ok {
-			return nil, fmt.Errorf("cannot find value for property path %q", path[:i+1])
+			return nil, fmt.Errorf("cannot find value for property %q", path[:i+1])
 		}
 		if i != last {
 			values, ok = v.(map[string]any)
 			if !ok {
-				return nil, fmt.Errorf("cannot find value for property path %q (%q has type %T)", path[:i+2], path[:i+1], v)
+				return nil, fmt.Errorf("cannot find value for property %q (%q has type %T)", path[:i+2], path[:i+1], v)
 			}
 		}
 	}
 	return v, nil
 }
 
-// evalCall evaluates a call to the function named name with arguments args, and
-// returns its value and type. values contains the property values.
-func evalCall(name string, args [][]part, values map[string]any) (any, types.Type, error) {
-	switch name {
+// evalCall evaluates p representing a function call, and returns its value and
+// type. values contains the property values.
+func evalCall(p part, values map[string]any) (any, types.Type, error) {
+	switch name := p.path[0]; name {
 	case "coalesce":
-		for _, arg := range args {
+		for _, arg := range p.args {
 			v, vt, err := eval(arg, values)
 			if err != nil {
 				return nil, types.Type{}, err
@@ -279,32 +256,7 @@ func evalCall(name string, args [][]part, values map[string]any) (any, types.Typ
 				return v, vt, nil
 			}
 		}
-		return nil, types.JSON(), nil
-	}
-	panic("unknown function")
-}
-
-// convertible reports whether expr is convertible to a type with physical type
-// dt.
-func convertible(expr []part, dt types.Type) bool {
-	if len(expr) > 1 || expr[0].text != "" {
-		return convertibleTo(types.Text(), dt)
-	}
-	part := expr[0]
-	if part.args == nil {
-		if part.path == nil {
-			return convertibleTo(types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale), dt)
-		}
-		return convertibleTo(part.typ, dt)
-	}
-	switch part.path[0] {
-	case "coalesce":
-		for _, arg := range part.args {
-			if !convertible(arg, dt) {
-				return false
-			}
-		}
-		return true
+		return nil, p.typ, nil
 	}
 	panic("unknown function")
 }

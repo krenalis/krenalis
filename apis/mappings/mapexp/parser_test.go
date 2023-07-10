@@ -19,20 +19,7 @@ import (
 
 func TestParseExpression(t *testing.T) {
 
-	schema := types.Object([]types.Property{
-		{Name: "event", Type: types.Text()},
-		{Name: "name", Type: types.Text()},
-		{Name: "context", Type: types.Object([]types.Property{
-			{Name: "os", Type: types.Object([]types.Property{
-				{Name: "name", Type: types.Text()},
-				{Name: "version", Type: types.Text()},
-			})},
-		})},
-	})
-
-	n1 := decimal.NewFromInt(51)
-	n2 := decimal.RequireFromString(`-6.803`)
-
+	n := decimal.RequireFromString(`-6.803`)
 	dt := types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
 
 	tests := []struct {
@@ -41,34 +28,48 @@ func TestParseExpression(t *testing.T) {
 		unparsed string
 		err      error
 	}{
-		{`"Page View"`, []part{{text: `Page View`}}, ``, nil},
-		{` 'Page View' `, []part{{text: `Page View`}}, ``, nil},
-		{`51`, []part{{value: n1, typ: dt}}, ``, nil},
-		{`-6.803`, []part{{value: n2, typ: dt}}, ``, nil},
+		{`"Page View"`, []part{{value: `Page View`, typ: types.Text()}}, ``, nil},
+		{` 'Page View' `, []part{{value: `Page View`, typ: types.Text()}}, ``, nil},
+		{`51`, []part{{value: 51, typ: types.Int()}}, ``, nil},
+		{`-6.803`, []part{{value: n, typ: dt}}, ``, nil},
 		{`true`, []part{{value: true, typ: types.Boolean()}}, ``, nil},
 		{`false`, []part{{value: false, typ: types.Boolean()}}, ``, nil},
 		{`null`, []part{{value: nil, typ: types.JSON()}}, ``, nil},
-		{`name`, []part{{path: types.Path{`name`}, typ: types.Text()}}, ``, nil},
-		{`.name`, []part{{path: types.Path{`name`}, typ: types.Text()}}, ``, nil},
-		{`context.os.version`, []part{{path: types.Path{`context`, `os`, `version`}, typ: types.Text()}}, ``, nil},
-		{`.context.os.version`, []part{{path: types.Path{`context`, `os`, `version`}, typ: types.Text()}}, ``, nil},
-		{`"Page " name`, []part{{text: `Page `, path: types.Path{`name`}, typ: types.Text()}}, ``, nil},
+		{`name`, []part{{path: types.Path{`name`}}}, ``, nil},
+		{`.name`, []part{{path: types.Path{`name`}}}, ``, nil},
+		{`context.os.version`, []part{{path: types.Path{`context`, `os`, `version`}}}, ``, nil},
+		{`.context.os.version`, []part{{path: types.Path{`context`, `os`, `version`}}}, ``, nil},
+		{`"Page " name`, []part{{value: `Page `, path: types.Path{`name`}, typ: types.Text()}}, ``, nil},
 		{`"OS " context.os.name " (" context.os.version ")"`, []part{
-			{text: `OS `, path: types.Path{`context`, `os`, `name`}, typ: types.Text()},
-			{text: ` (`, path: types.Path{`context`, `os`, `version`}, typ: types.Text()},
-			{text: `)`},
+			{value: `OS `, path: types.Path{`context`, `os`, `name`}, typ: types.Text()},
+			{value: ` (`, path: types.Path{`context`, `os`, `version`}, typ: types.Text()},
+			{value: `)`, typ: types.Text()},
 		}, ``, nil},
 		{`coalesce(event, 'Page ' true)`, []part{
 			{path: types.Path{`coalesce`}, args: [][]part{
-				{{path: types.Path{`event`}, typ: types.Text()}},
-				{{text: `Page true`}},
+				{{path: types.Path{`event`}}},
+				{{value: `Page true`, typ: types.Text()}},
 			}},
 		}, ``, nil},
-		{`"" event`, []part{{text: ``}, {path: types.Path{"event"}, typ: types.Text()}}, ``, nil},
+		{`"" event`, []part{{value: ``, path: types.Path{"event"}, typ: types.Text()}}, ``, nil},
+		{`coalesce(a)`, []part{{path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`a`}}}}}}, ``, nil},
+		{`coalesce(a, 'b')`, []part{{path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`a`}}}, {{value: `b`, typ: types.Text()}}}}}, ``, nil},
+		{`coalesce(5, 'a', coalesce(b))`, []part{{path: types.Path{`coalesce`}, args: [][]part{
+			{{value: 5, typ: types.Int()}}, {{value: `a`, typ: types.Text()}}, {{path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`b`}}}}}},
+		}}}, ``, nil},
+		{`coalesce("a" coalesce(b, 5) c)`, []part{{path: types.Path{`coalesce`}, args: [][]part{
+			{{value: `a`, path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`b`}}}, {{value: 5, typ: types.Int()}}}, typ: types.Text()}, {path: types.Path{`c`}}},
+		}}}, ``, nil},
+		{`coalesce( coalesce ( x , 5 ) )`, []part{{path: types.Path{`coalesce`}, args: [][]part{
+			{{path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`x`}}}, {{value: 5, typ: types.Int()}}}}},
+		}}}, ``, nil},
+		{`coalesce( , )`, nil, ``, errors.New("unexpected ',', expecting argument")},
+		{`coalesce(a, )`, nil, ``, errors.New("unexpected ), expecting argument")},
+		{`coalesce( @`, nil, ``, errors.New("unexpected '@', expecting argument")},
 	}
 
 	for _, test := range tests {
-		got, src, err := parseExpression(test.src, schema)
+		got, src, err := parseExpression(test.src)
 		if err != nil {
 			if test.err == nil {
 				t.Fatalf("%q. unexpected error: %s", test.src, err)
@@ -82,7 +83,7 @@ func TestParseExpression(t *testing.T) {
 			t.Fatalf("%q. expected error %q, got no error", test.src, test.err)
 		}
 		if !reflect.DeepEqual(got, test.expected) {
-			t.Fatalf("%q. unexpected expression\nexpected %#v\ngot      %#v", test.src, test.expected, got)
+			t.Fatalf("%q\nexpected %#v\ngot      %#v", test.src, test.expected, got)
 		}
 		if src != test.unparsed {
 			t.Fatalf("%q. expected unparsed string %q, got %q", test.src, test.unparsed, src)
@@ -298,64 +299,6 @@ func TestParsePath(t *testing.T) {
 			t.Fatalf("%q. expected unparsed string %q, got %q", test.src, test.unparsed, src)
 		}
 
-	}
-
-}
-
-func TestParseArgs(t *testing.T) {
-
-	schema := types.Object([]types.Property{
-		{Name: "a", Type: types.Int()},
-		{Name: "b", Type: types.Date()},
-		{Name: "c", Type: types.Float32()},
-		{Name: "x", Type: types.UUID()},
-	})
-
-	n := decimal.NewFromInt(5)
-	dt := types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
-
-	tests := []struct {
-		src      string
-		expected [][]part
-		unparsed string
-		err      error
-	}{
-		{`()`, [][]part{}, ``, nil},
-		{`(  )`, [][]part{}, ``, nil},
-		{`(a)`, [][]part{{{path: types.Path{`a`}, typ: types.Int()}}}, ``, nil},
-		{`(a, 'b')`, [][]part{{{path: types.Path{`a`}, typ: types.Int()}}, {{text: `b`}}}, ``, nil},
-		{`(5, 'a', coalesce(b))`, [][]part{{{value: n, typ: dt}}, {{text: `a`}}, {{path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`b`}, typ: types.Date()}}}}}}, ``, nil},
-		{`("a" coalesce(b, 5) c)`, [][]part{
-			{{text: `a`, path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`b`}, typ: types.Date()}}, {{value: n, typ: dt}}}}, {path: types.Path{`c`}, typ: types.Float32()}},
-		}, ``, nil},
-		{`( coalesce ( x , 5 ) )`, [][]part{
-			{{path: types.Path{`coalesce`}, args: [][]part{{{path: types.Path{`x`}, typ: types.UUID()}}, {{value: n, typ: dt}}}}},
-		}, ``, nil},
-		{`( , )`, nil, ``, errors.New("missing function call argument")},
-		{`(a, )`, nil, ``, errors.New("missing function call argument")},
-		{`( @`, nil, ``, errors.New("unexpected '@', expecting function call argument")},
-	}
-
-	for _, test := range tests {
-		got, src, err := parseArgs(test.src, schema)
-		if err != nil {
-			if test.err == nil {
-				t.Fatalf("%q. unexpected error: %s", test.src, err)
-			}
-			if err.Error() != test.err.Error() {
-				t.Fatalf("%q. expected error %q, got error %q", test.src, test.err.Error(), err.Error())
-			}
-			continue
-		}
-		if test.err != nil {
-			t.Fatalf("%q. expected error %q, got no error", test.src, test.err)
-		}
-		if !reflect.DeepEqual(got, test.expected) {
-			t.Fatalf("%q. unexpected expressions\nexpected %#v\ngot      %#v", test.src, test.expected, got)
-		}
-		if src != test.unparsed {
-			t.Fatalf("%q. expected unparsed string %q, got %q", test.src, test.unparsed, src)
-		}
 	}
 
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 //
 //
-// Copyright (c) 2022 Open2b
+// Copyright (c) 2023 Open2b
 //
 
 package mapexp
@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	"chichi/connector/types"
@@ -31,14 +32,13 @@ var (
 // returns the parsed expression along with the remaining unparsed source.
 // If no expression is found, it returns nil. Leading and trailing spaces are
 // trimmed, except when they occur within a string.
-func parseExpression(src string, schema types.Type) ([]part, string, error) {
-	var expression []part
+func parseExpression(src string) ([]part, string, error) {
+	var expr []part
 	var err error
 	var dot bool
 Expression:
 	for src != "" {
-		var part part
-		hasText := false
+		var p part
 	Expr:
 		for src != "" {
 			switch c := src[0]; c {
@@ -50,8 +50,7 @@ Expression:
 				if err != nil {
 					return nil, "", err
 				}
-				part.text += s
-				hasText = true
+				p.value, p.typ = p.appendValue(s, len(expr) > 0)
 			case '.':
 				src = src[1:]
 				if len(src) == 0 {
@@ -67,81 +66,131 @@ Expression:
 				if err != nil {
 					return nil, "", err
 				}
-				if !hasText && len(expression) == 0 {
-					part.value = n
-					part.typ = types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
-					break Expr
-				}
-				part.text += n.String()
+				p.value, p.typ = p.appendValue(n, len(expr) > 0)
 			default:
 				if !('a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z') {
-					if part.text != "" {
-						expression = append(expression, part)
+					if p.typ.Valid() {
+						expr = append(expr, p)
 					}
 					break Expression
 				}
 				if !dot {
-					var v any
-					var t types.Type
-					v, t, src = parsePredeclaredIdentifier(src)
-					if t.Valid() {
-						if !hasText && len(expression) == 0 {
-							part.value = v
-							part.typ = t
-							break Expr
-						}
-						switch v {
-						case true:
-							part.text += "true"
-						case false:
-							part.text += "false"
-						}
+					if v, t, src2 := parsePredeclaredIdentifier(src); t.Valid() {
+						p.value, p.typ = p.appendValue(v, len(expr) > 0)
+						src = src2
 						continue Expr
 					}
 				}
 				dot = false
-				// Handle the Special case: "" a.b
-				if hasText && part.text == "" {
-					expression = append(expression, part)
-					hasText = false
+				// If there is a non-Text value, convert it to Text.
+				switch p.typ.PhysicalType() {
+				case types.PtBoolean:
+					p.value = strconv.FormatBool(p.value.(bool))
+				case types.PtInt:
+					p.value = strconv.Itoa(p.value.(int))
+				case types.PtDecimal:
+					p.value = p.value.(decimal.Decimal).String()
+				case types.PtJSON:
+					p.value = ""
 				}
-				part.path, src, err = parsePath(src)
+				// Parse the path.
+				p.path, src, err = parsePath(src)
 				if err != nil {
 					return nil, "", err
 				}
 				src = skipSpaces(src)
-				if len(src) > 0 && src[0] == '(' {
-					if len(part.path) > 1 {
-						return nil, "", errors.New("function name is not valid")
+				if len(src) == 0 || src[0] != '(' {
+					break Expr
+				}
+				// Parse function call.
+				src = src[1:]
+				name := p.path[0]
+				n, ok := numArguments[name]
+				if !ok || len(p.path) > 1 {
+					return nil, "", fmt.Errorf("function %q does not exist", p.path)
+				}
+				p.args = make([][]part, 0, n)
+				for {
+					src = skipSpaces(src)
+					if src == "" {
+						return nil, "", errNoTerminatedArgs
 					}
-					switch name := part.path[0]; name {
-					case "coalesce":
-					default:
-						return nil, "", fmt.Errorf("function %q does not exist", name)
+					if src[0] == ')' {
+						break
 					}
-					part.args, src, err = parseArgs(src, schema)
+					var arg []part
+					arg, src, err = parseExpression(src)
 					if err != nil {
 						return nil, "", err
 					}
-				} else {
-					p, err := schema.PropertyByPath(part.path)
-					if err != nil {
-						return nil, "", err
+					if arg == nil {
+						return nil, "", fmt.Errorf("unexpected %q, expecting argument", src[0])
 					}
-					if hasText || len(expression) > 0 {
-						if !convertibleTo(p.Type, types.Text()) {
-							return nil, "", fmt.Errorf("cannot convert %q of type %s to Text", part.path, p.Type)
+					src = skipSpaces(src)
+					if src != "" && src[0] == ',' {
+						src = skipSpaces(src[1:])
+						if src != "" && src[0] == ')' {
+							return nil, "", fmt.Errorf("unexpected ), expecting argument")
 						}
 					}
-					part.typ = p.Type
+					p.args = append(p.args, arg)
 				}
+				src = src[1:]
 				break Expr
 			}
 		}
-		expression = append(expression, part)
+		expr = append(expr, p)
 	}
+	return expr, src, nil
+}
 
-	return expression, src, nil
+// appendValue appends v to p.value, converting it to type Text is necessary,
+// and returns the appended value and its new type.
+// multipart reports whether p is a part of a multipart expression.
+func (p part) appendValue(v any, multipart bool) (any, types.Type) {
+	// If a value is not already present, it sets it.
+	if !multipart && p.typ.PhysicalType() == types.PtInvalid {
+		switch v := v.(type) {
+		case nil:
+			return nil, types.JSON()
+		case string:
+			return v, types.Text()
+		case decimal.Decimal:
+			i, err := decimalToInt(v)
+			if err != nil {
+				return v, types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
+			}
+			return i, types.Int()
+		case bool:
+			return v, types.Boolean()
+		}
+		panic("unexpected value type")
+	}
+	// Convert the value to Text.
+	var s string
+	switch v := v.(type) {
+	case string:
+		s = v
+	case bool:
+		s = strconv.FormatBool(v)
+	case decimal.Decimal:
+		s = v.String()
+	}
+	// Append the value.
+	t := types.Text()
+	switch p.typ.PhysicalType() {
+	case types.PtInvalid:
+		return s, t
+	case types.PtBoolean:
+		return strconv.FormatBool(p.value.(bool)) + s, t
+	case types.PtInt:
+		return strconv.Itoa(p.value.(int)) + s, t
+	case types.PtDecimal:
+		return p.value.(decimal.Decimal).String() + s, t
+	case types.PtText:
+		return p.value.(string) + s, t
+	}
+	panic("unexpected value type")
 }
 
 // parsePredeclaredIdentifier parses the predeclared identifiers true, false,
@@ -329,40 +378,4 @@ func parsePath(src string) (types.Path, string, error) {
 		path = append(path, src[s:i])
 	}
 	return path, src[i:], nil
-}
-
-// parseArgs parses call arguments and returns the parsed arguments along with
-// the remaining unparsed source. It expects the source to start with a '('.
-func parseArgs(src string, schema types.Type) ([][]part, string, error) {
-	args := make([][]part, 0)
-	var err error
-	src = src[1:]
-	for {
-		var arg []part
-		arg, src, err = parseExpression(src, schema)
-		if err != nil {
-			return nil, "", err
-		}
-		if src == "" {
-			return nil, "", errNoTerminatedArgs
-		}
-		if arg == nil {
-			if len(args) > 0 || src[0] == ',' {
-				return nil, "", errors.New("missing function call argument")
-			}
-			if len(args) == 0 && src[0] != ')' {
-				return nil, "", fmt.Errorf("unexpected %q, expecting function call argument", src[0])
-			}
-		} else {
-			args = append(args, arg)
-		}
-		if src[0] == ')' {
-			break
-		}
-		if src[0] != ',' {
-			return nil, "", fmt.Errorf("unexpected %q, expecting ','", src[0])
-		}
-		src = src[1:]
-	}
-	return args, src[1:], nil
 }
