@@ -292,6 +292,9 @@ func TestPropertyPaths(t *testing.T) {
 		})},
 		{Name: "b", Type: types.Text()},
 		{Name: "c", Type: types.Text()},
+		{Name: "d", Type: types.Map(types.Object([]types.Property{
+			{Name: "e", Type: types.Text()},
+		}))},
 	})
 
 	tests := []struct {
@@ -302,6 +305,8 @@ func TestPropertyPaths(t *testing.T) {
 		{`a`, []types.Path{{"a"}}},
 		{`a.b.c`, []types.Path{{"a", "b", "c"}}},
 		{`b c`, []types.Path{{"b"}, {"c"}}},
+		{`d['foo']`, []types.Path{{"d"}}},
+		{`d['boo'].e`, []types.Path{{"d", "e"}}},
 		{`coalesce("a", 5)`, nil},
 		{`coalesce(a.b.c, 5) a.b.c b`, []types.Path{{"a", "b", "c"}, {"b"}}},
 		{`coalesce(a.b.c, coalesce(b)) a.b.c b`, []types.Path{{"a", "b", "c"}, {"b"}}},

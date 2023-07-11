@@ -127,6 +127,9 @@ func (expr *Expression) Eval(values map[string]any, formatTime bool) (any, error
 // Properties returns the properties found in the expression, sorted by their
 // appearance order in the expression. The returned properties are guaranteed to
 // be unique. If no property are present, it returns nil.
+// If the expression contains a map indexing, Properties does not return the
+// key. For example, if the expression is a['b'], it returns {{"a"}}, and if the
+// expression is a['b'].c, it returns {{"a", "c"}}.
 func (expr *Expression) Properties() []types.Path {
 	properties := appendProperties(nil, expr.parts)
 	if properties == nil {
@@ -158,7 +161,13 @@ func appendProperties(properties []types.Path, expression []part) []types.Path {
 			continue
 		}
 		if expr.args == nil {
-			properties = append(properties, expr.path)
+			path := make(types.Path, 0, len(expr.path))
+			for _, name := range expr.path {
+				if name[0] != ':' {
+					path = append(path, name)
+				}
+			}
+			properties = append(properties, path)
 			continue
 		}
 		for _, arg := range expr.args {
