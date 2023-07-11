@@ -20,12 +20,13 @@ import (
 )
 
 var (
-	errNoTerminatedString = errors.New("string is not terminated")
+	errInvalidNumber      = errors.New("number syntax is not valid")
+	errNoStringMapKey     = errors.New("map key is not a string")
 	errNoTerminatedArgs   = errors.New("arguments are not terminated")
+	errNoTerminatedString = errors.New("string is not terminated")
 	errUnexpectedPeriod   = errors.New("unexpected period in path")
 	errUnterminatedPath   = errors.New("path is not terminated")
 	errZeroByteInString   = errors.New("character 0x00 is not allowed in strings")
-	errInvalidNumber      = errors.New("number syntax is not valid")
 )
 
 // parseExpression parses an expression from the provided source string and
@@ -366,6 +367,29 @@ func parsePath(src string) (types.Path, string, error) {
 			return nil, "", errUnexpectedPeriod
 		}
 		path = append(path, src[s:i])
+		for c == '[' {
+			src = skipSpaces(src[i+1:])
+			if len(src) == 0 {
+				return nil, "", errUnterminatedPath
+			}
+			if src[0] != '"' && src[0] != '\'' {
+				return nil, "", errNoStringMapKey
+			}
+			key, src2, err := parseString(src)
+			if err != nil {
+				return nil, "", err
+			}
+			src = skipSpaces(src2)
+			if len(src) == 0 || src[0] != ']' {
+				return nil, "", errUnterminatedPath
+			}
+			path = append(path, ":"+key)
+			i, s = 1, 1
+			if i == len(src) {
+				break
+			}
+			c = src[i]
+		}
 		s = i + 1
 		if c != '.' {
 			break

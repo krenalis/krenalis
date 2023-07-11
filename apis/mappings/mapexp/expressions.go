@@ -185,11 +185,11 @@ func eval(expression []part, values map[string]any) (any, types.Type, error) {
 				}
 				return evalCall(p, values)
 			}
-			value, err := valueOf(p.path, values)
+			v, err := valueOf(p.path, values)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
-			return value, p.typ, nil
+			return v, p.typ, nil
 		}
 	}
 
@@ -233,18 +233,38 @@ func valueOf(path types.Path, values map[string]any) (any, error) {
 	var ok bool
 	last := len(path) - 1
 	for i, name := range path {
+		isKey := name[0] == ':'
+		if isKey {
+			name = name[1:]
+		}
 		v, ok = values[name]
 		if !ok {
-			return nil, fmt.Errorf("cannot find value for property %q", path[:i+1])
+			if isKey {
+				return nil, ErrVoid
+			}
+			return nil, fmt.Errorf("cannot find value for property %q", stringifyPath(path[:i+1]))
 		}
 		if i != last {
 			values, ok = v.(map[string]any)
 			if !ok {
-				return nil, fmt.Errorf("cannot find value for property %q (%q has type %T)", path[:i+2], path[:i+1], v)
+				return nil, fmt.Errorf("cannot find value for property %q (%q has type %T)", stringifyPath(path[:i+2]), stringifyPath(path[:i+1]), v)
 			}
 		}
 	}
 	return v, nil
+}
+
+// stringifyPath returns path as a string.
+func stringifyPath(path []string) string {
+	s := path[0]
+	for _, n := range path[1:] {
+		if n[0] == ':' {
+			s += "[" + strconv.Quote(n[1:]) + "]"
+			continue
+		}
+		s += "." + n
+	}
+	return s
 }
 
 // evalCall evaluates p representing a function call, and returns its value and

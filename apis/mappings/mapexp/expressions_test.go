@@ -100,6 +100,9 @@ func TestCompile(t *testing.T) {
 		{Name: "passengers", Type: types.Int()},
 		{Name: "revision_dates", Type: types.Array(types.DateTime())},
 		{Name: "map", Type: types.Map(types.Int())},
+		{Name: "deep", Type: types.Map(types.Map(types.Object([]types.Property{
+			{Name: "p", Type: types.Map(types.Int())},
+		})))},
 		{Name: "other", Type: types.Int(), Nullable: true},
 	})
 
@@ -118,6 +121,16 @@ func TestCompile(t *testing.T) {
 		"map": map[string]any{
 			"x": 1,
 			"y": 2,
+		},
+		"deep": map[string]any{
+			"a": map[string]any{
+				"b": map[string]any{
+					"p": map[string]any{
+						"x": 1,
+						"y": 2,
+					},
+				},
+			},
 		},
 		"other": nil,
 	}
@@ -141,9 +154,6 @@ func TestCompile(t *testing.T) {
 		{expr: "42", dt: types.Int(), expectedValue: 42},
 		{expr: "42", dt: types.JSON(), expectedValue: json.RawMessage("42")},
 		{expr: "42", dt: types.Text(), expectedValue: "42"},
-		{expr: "coalesce(1, 2)", dt: types.Int(), nullable: true, expectedValue: 1},
-		{expr: "coalesce(other, 2)", dt: types.Int(), nullable: true, expectedValue: 2},
-		{expr: "coalesce(coalesce(other, null), coalesce(other, 2))", dt: types.Int(), nullable: true, expectedValue: 2},
 		{expr: "cx cx", dt: types.Text(), expectedValue: "0.1420.142"},
 		{expr: "engine.name", dt: types.Text(), expectedValue: "TurboX"},
 		{expr: "engine.power ' x ' 1.36", dt: types.Text(), expectedValue: "700 x 1.36"},
@@ -153,8 +163,16 @@ func TestCompile(t *testing.T) {
 		{expr: "manufacturer", dt: types.JSON(), expectedValue: json.RawMessage("\"MyPlaneCompany\"")},
 		{expr: "manufacturer", dt: types.Text(), expectedValue: "MyPlaneCompany"},
 		{expr: "revision_dates", dt: types.Array(types.Date()), expectedValue: []any{d}},
-		{expr: "map", dt: types.Map(types.UInt()), expectedValue: map[string]any{"x": uint(1), "y": uint(2)}},
+		{expr: "map", dt: types.Map(types.Int()), expectedValue: map[string]any{"x": 1, "y": 2}},
 		{expr: `""`, dt: types.JSON(), expectedValue: json.RawMessage("null")},
+
+		{expr: "map['x']", dt: types.Int(), expectedValue: 1},
+		{expr: "map['not-exist']", dt: types.UInt(), evalErr: ErrVoid},
+		{expr: "deep['a']", dt: types.JSON(), expectedValue: json.RawMessage(`{"b":{"p":{"x":1,"y":2}}}`)},
+		{expr: "deep['a']['b']", dt: types.JSON(), expectedValue: json.RawMessage(`{"p":{"x":1,"y":2}}`)},
+		{expr: "deep['a']['b'].p", dt: types.JSON(), expectedValue: json.RawMessage(`{"x":1,"y":2}`)},
+		{expr: "deep['a']['non-exist'].p", dt: types.JSON(), evalErr: ErrVoid},
+		{expr: "deep['a']['b'].p['x']", dt: types.Int(), expectedValue: 1},
 
 		// Compile errors.
 		{expr: "!true", dt: types.Boolean(), compileErr: errors.New("unexpected character '!'")},
@@ -173,9 +191,6 @@ func TestCompile(t *testing.T) {
 		{expr: "engine", dt: types.Object([]types.Property{{Name: "power", Type: types.Boolean()}}), compileErr: errors.New("cannot convert expression (type Object) to Object")},
 		{expr: "revision_dates", dt: types.Array(types.Boolean()), compileErr: errors.New("cannot convert expression (type Array) to Array")},
 		{expr: "map", dt: types.Map(types.Date()), compileErr: errors.New("cannot convert expression (type Map) to Map")},
-		{expr: "coalesce()", dt: types.JSON(), compileErr: errors.New("'coalesce' function requires at least one argument")},
-		{expr: "coalesce(1, 2)", dt: types.Boolean(), nullable: true, compileErr: errors.New("cannot convert 1 (type Int) to Boolean")},
-		{expr: "coalesce(coalesce(other, null), coalesce(other, 2))", dt: types.Int(), compileErr: errors.New(`cannot convert null to Int`)},
 
 		// Eval errors.
 		{expr: "manufacturer", dt: types.Int(), evalErr: errors.New(`cannot convert "MyPlaneCompany" (type Text) to type Int`)},
@@ -198,9 +213,13 @@ func TestCompile(t *testing.T) {
 		{expr: "coalesce(null, 2)", dt: types.Int(), nullable: true, expectedValue: 2},
 		{expr: "0 coalesce(null, 2)", dt: types.Text(), nullable: true, expectedValue: "02"},
 		{expr: "coalesce(null, coalesce(null, 3))", dt: types.Int(), nullable: true, expectedValue: 3},
+		{expr: "coalesce(other, 2)", dt: types.Int(), nullable: true, expectedValue: 2},
+		{expr: "coalesce(coalesce(other, null), coalesce(other, 2))", dt: types.Int(), nullable: true, expectedValue: 2},
 		{expr: "coalesce()", dt: types.Int(), compileErr: errors.New("'coalesce' function requires at least one argument")},
 		{expr: "coalesce(null)", dt: types.Int(), compileErr: errors.New("cannot convert null to Int")},
 		{expr: "coalesce(1, coalesce(2, null))", dt: types.Int(), nullable: false, compileErr: errors.New("cannot convert null to Int")},
+		{expr: "coalesce(1, 2)", dt: types.Boolean(), nullable: true, compileErr: errors.New("cannot convert 1 (type Int) to Boolean")},
+		{expr: "coalesce(coalesce(other, null), coalesce(other, 2))", dt: types.Int(), compileErr: errors.New(`cannot convert null to Int`)},
 
 		// eq.
 		{expr: "eq(1, 1)", dt: types.Boolean(), expectedValue: true},

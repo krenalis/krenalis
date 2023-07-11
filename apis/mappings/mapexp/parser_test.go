@@ -267,10 +267,20 @@ func TestParsePath(t *testing.T) {
 		{`foo.boo`, types.Path{`foo`, `boo`}, ``, nil},
 		{`foo.boo foo`, types.Path{`foo`, `boo`}, ` foo`, nil},
 		{`_._`, types.Path{`_`, `_`}, ``, nil},
+		{`a["k"]`, types.Path{`a`, `:k`}, ``, nil},
+		{`a["k"].b`, types.Path{`a`, `:k`, `b`}, ``, nil},
+		{`a[ "k"]["j" ]`, types.Path{`a`, `:k`, `:j`}, ``, nil},
+		{`a['k']["j"].b`, types.Path{`a`, `:k`, `:j`, `b`}, ``, nil},
+		{`a.b["k"]`, types.Path{`a`, `b`, `:k`}, ``, nil},
 		{`a.`, nil, ``, errUnterminatedPath},
 		{`a.b.`, nil, ``, errUnterminatedPath},
 		{`a..`, nil, ``, errUnexpectedPeriod},
 		{`a.b..`, nil, ``, errUnexpectedPeriod},
+		{`a.["k"]`, nil, ``, errUnexpectedPeriod},
+		{`a[k]`, nil, ``, errNoStringMapKey},
+		{`a["k]`, nil, ``, errNoTerminatedString},
+		{`a["k"`, nil, ``, errUnterminatedPath},
+		{`a['k')`, nil, ``, errUnterminatedPath},
 	}
 
 	for _, test := range tests {
