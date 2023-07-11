@@ -108,7 +108,7 @@ Expression:
 				name := p.path[0]
 				n, ok := numArguments[name]
 				if !ok || len(p.path) > 1 {
-					return nil, "", fmt.Errorf("function %q does not exist", p.path)
+					return nil, "", fmt.Errorf("function %q does not exist", stringifyPath(p.path))
 				}
 				p.args = make([][]part, 0, n)
 				for {

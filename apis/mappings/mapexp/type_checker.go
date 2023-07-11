@@ -45,7 +45,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 				if s < j {
 					property, err := t.PropertyByPath(p.path[s:j])
 					if err != nil {
-						return fmt.Errorf("property %q does not exist", p.path[:j])
+						return fmt.Errorf("property %q does not exist", stringifyPath(p.path[:j]))
 					}
 					t = property.Type
 				}
@@ -53,7 +53,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 					break
 				}
 				if t.PhysicalType() != types.PtMap {
-					return fmt.Errorf("cannot access to property %q (type %s) as a map", t, p.path[:j])
+					return fmt.Errorf("cannot access to property %q (type %s) as a map", t, stringifyPath(p.path[:j]))
 				}
 				t = t.ValueType()
 				j++
@@ -61,7 +61,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 			}
 
 			if concatenate && !convertibleTo(t, types.Text()) {
-				return fmt.Errorf("cannot convert property %s (type %s) to Text", p.path, t)
+				return fmt.Errorf("cannot convert property %s (type %s) to Text", stringifyPath(p.path), t)
 			}
 			expr[i].typ = t
 			continue
@@ -86,7 +86,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 		}
 		if concatenate {
 			if st := expr[i].typ; st.Valid() && !convertibleTo(st, types.Text()) {
-				return fmt.Errorf("cannot convert %s(...) (type %s) to Text", p.path, st)
+				return fmt.Errorf("cannot convert %s(...) (type %s) to Text", stringifyPath(p.path), st)
 			}
 		}
 	}
