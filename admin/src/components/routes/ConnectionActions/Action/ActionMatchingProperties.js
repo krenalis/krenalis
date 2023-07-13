@@ -1,11 +1,14 @@
-import { useRef } from 'react';
+import { useRef, useContext } from 'react';
 import Section from '../../../common/Section/Section';
 import { ComboBoxInput, ComboBoxList } from '../../../common/ComboBox/ComboBox';
 import { getSchemaComboboxItems } from '../../../../helpers/getSchemaComboBoxItems';
+import { ActionContext } from '../../../../context/ActionContext';
 
-const ActionMatchingProperties = ({ connection, action, setAction, inputSchema, outputSchema }) => {
+const ActionMatchingProperties = () => {
 	const internalMatchingPropertyListRef = useRef(null);
 	const externalMatchingPropertyListRef = useRef(null);
+
+	const { connection, action, setAction, actionType } = useContext(ActionContext);
 
 	const onUpdateMatchingProperties = (e) => {
 		const a = { ...action };
@@ -36,7 +39,7 @@ const ActionMatchingProperties = ({ connection, action, setAction, inputSchema, 
 				></ComboBoxInput>
 				<ComboBoxList
 					ref={internalMatchingPropertyListRef}
-					items={getSchemaComboboxItems(inputSchema)}
+					items={getSchemaComboboxItems(actionType.InputSchema)}
 					onSelect={onSelectMatchingProperties}
 				/>
 				<div className='equal'>=</div>
@@ -49,7 +52,7 @@ const ActionMatchingProperties = ({ connection, action, setAction, inputSchema, 
 				></ComboBoxInput>
 				<ComboBoxList
 					ref={externalMatchingPropertyListRef}
-					items={getSchemaComboboxItems(outputSchema)}
+					items={getSchemaComboboxItems(actionType.OutputSchema)}
 					onSelect={onSelectMatchingProperties}
 				/>
 			</div>

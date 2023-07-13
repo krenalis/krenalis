@@ -1,8 +1,12 @@
+import { useContext } from 'react';
 import Section from '../../../common/Section/Section';
 import { EXPORT_MODE_OPTIONS } from '../../../../lib/connections/action';
+import { ActionContext } from '../../../../context/ActionContext';
 import { SlSelect, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ActionExportMode = ({ action, setAction }) => {
+const ActionExportMode = () => {
+	const { action, setAction } = useContext(ActionContext);
+
 	const onChangeExportMode = (e) => {
 		const a = { ...action };
 		a.ExportMode = e.currentTarget.value;

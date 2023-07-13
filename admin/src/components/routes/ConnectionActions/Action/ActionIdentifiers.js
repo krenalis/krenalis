@@ -1,7 +1,11 @@
+import { useContext } from 'react';
 import SortableMapping from '../../../common/SortableMapping/SortableMapping';
 import Section from '../../../common/Section/Section';
+import { ActionContext } from '../../../../context/ActionContext';
 
-const ActionIdentifiers = ({ action, setAction, inputSchema, outputSchema }) => {
+const ActionIdentifiers = () => {
+	const { action, setAction, actionType } = useContext(ActionContext);
+
 	const setIdentifiers = (identifiers) => {
 		const a = { ...action };
 		a.Identifiers = identifiers;
@@ -18,8 +22,8 @@ const ActionIdentifiers = ({ action, setAction, inputSchema, outputSchema }) => 
 				<SortableMapping
 					mapping={action.Identifiers}
 					setMapping={setIdentifiers}
-					inputSchema={inputSchema}
-					outputSchema={outputSchema}
+					inputSchema={actionType.InputSchema}
+					outputSchema={actionType.OutputSchema}
 				/>
 			</Section>
 		</div>

@@ -1,7 +1,8 @@
-import { useRef } from 'react';
+import { useRef, useContext } from 'react';
 import Section from '../../../common/Section/Section';
 import { ComboBoxInput, ComboBoxList } from '../../../common/ComboBox/ComboBox';
 import { getSchemaComboboxItems } from '../../../../helpers/getSchemaComboBoxItems';
+import { ActionContext } from '../../../../context/ActionContext';
 import { SlButton, SlSelect, SlInput, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const operatorOptions = {
@@ -9,8 +10,10 @@ const operatorOptions = {
 	2: 'is not',
 };
 
-const ActionFilters = ({ action, setAction, inputSchema }) => {
+const ActionFilters = () => {
 	const conditionListRef = useRef(null);
+
+	const { action, setAction, actionType } = useContext(ActionContext);
 
 	const onAddCondition = () => {
 		const a = { ...action };
@@ -128,7 +131,7 @@ const ActionFilters = ({ action, setAction, inputSchema }) => {
 			{conditions}
 			<ComboBoxList
 				ref={conditionListRef}
-				items={getSchemaComboboxItems(inputSchema)}
+				items={getSchemaComboboxItems(actionType.InputSchema)}
 				onSelect={onSelectConditionListItem}
 			/>
 			<SlButton className='addCondition' size='small' variant='neutral' onClick={onAddCondition}>

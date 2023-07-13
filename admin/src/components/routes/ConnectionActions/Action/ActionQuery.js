@@ -8,16 +8,19 @@ import * as variants from '../../../../constants/variants';
 import * as icons from '../../../../constants/icons';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
 import { NotFoundError, UnprocessableError } from '../../../../lib/api/errors';
+import { ActionContext } from '../../../../context/ActionContext';
 import { AppContext } from '../../../../providers/AppProvider';
 import { SlButton, SlSpinner, SlDrawer } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const queryMaxSize = 16777215;
 
-const ActionQuery = ({ connection, action, setAction, setInputSchema, mappingSectionRef, setIsQueryChanged }) => {
+const ActionQuery = () => {
 	const [queryPreviewTable, setQueryPreviewTable] = useState(null);
 	const [isQueryPreviewDrawerOpen, setIsQueryPreviewDrawerOpen] = useState(false);
 
 	const { redirect, showError, showStatus, api } = useContext(AppContext);
+	const { connection, action, setAction, actionType, setActionType, mappingSectionRef, setIsQueryChanged } =
+		useContext(ActionContext);
 
 	const queryConfirmButtonRef = useRef(null);
 	const lastQueryConfirmation = useRef('');
@@ -69,7 +72,9 @@ const ActionQuery = ({ connection, action, setAction, setInputSchema, mappingSec
 		}
 		queryConfirmButtonRef.current.confirm();
 		setTimeout(() => {
-			setInputSchema(res.Schema);
+			const actionTyp = { ...actionType };
+			actionTyp.InputSchema = res.Schema;
+			setActionType(actionTyp);
 			setTimeout(() => {
 				const top = mappingSectionRef.current.getBoundingClientRect().top;
 				mappingSectionRef.current.closest('.fullscreen').scrollBy({

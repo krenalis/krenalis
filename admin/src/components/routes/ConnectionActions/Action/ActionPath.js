@@ -3,6 +3,7 @@ import Section from '../../../common/Section/Section';
 import ConfirmationButton from '../../../common/ConfirmationButton/ConfirmationButton';
 import Grid from '../../../common/Grid/Grid';
 import { AppContext } from '../../../../providers/AppProvider';
+import { ActionContext } from '../../../../context/ActionContext';
 import { UnprocessableError, NotFoundError, BadRequestError } from '../../../../lib/api/errors';
 import * as statuses from '../../../../constants/statuses';
 import * as variants from '../../../../constants/variants';
@@ -18,17 +19,7 @@ import {
 	SlDrawer,
 } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const ActionPath = ({
-	fields,
-	connection,
-	action,
-	setAction,
-	actionType,
-	setInputSchema,
-	isImport,
-	mappingSectionRef,
-	setIsFileChanged,
-}) => {
+const ActionPath = () => {
 	const [sheets, setSheets] = useState([]);
 	const [areSheetsLoading, setAreSheetsLoading] = useState(false);
 	const [hasSheetsError, setHasSheetsError] = useState(false);
@@ -38,6 +29,8 @@ const ActionPath = ({
 	const [isFilePreviewDrawerOpen, setIsFilePreviewDrawerOpen] = useState(false);
 
 	const { showStatus, showError, api, setAreConnectionsStale } = useContext(AppContext);
+	const { connection, action, setAction, actionType, setActionType, isImport, mappingSectionRef, setIsFileChanged } =
+		useContext(ActionContext);
 
 	const getCompletePathTimeoutID = useRef(null);
 	const sheetsSelectRef = useRef(null);
@@ -168,11 +161,11 @@ const ActionPath = ({
 	};
 
 	const onFilePreview = async () => {
-		if (fields.includes('Path') && action.Path === '') {
+		if (actionType.Fields.includes('Path') && action.Path === '') {
 			showError('You must first enter a path');
 			return;
 		}
-		if (fields.includes('Sheet') && action.Sheet === '') {
+		if (actionType.Fields.includes('Sheet') && action.Sheet === '') {
 			showError('You must first enter a sheet');
 			return;
 		}
@@ -199,11 +192,11 @@ const ActionPath = ({
 	};
 
 	const onConfirmFile = async () => {
-		if (fields.includes('Path') && action.Path === '') {
+		if (actionType.Fields.includes('Path') && action.Path === '') {
 			showError('You must first enter a path');
 			return;
 		}
-		if (fields.includes('Sheet') && action.Sheet === '') {
+		if (actionType.Fields.includes('Sheet') && action.Sheet === '') {
 			showError('You must first enter a sheet');
 			return;
 		}
@@ -215,7 +208,9 @@ const ActionPath = ({
 		}
 		fileConfirmButtonRef.current.confirm();
 		setTimeout(() => {
-			setInputSchema(res.schema);
+			const actionTyp = { ...actionType };
+			actionTyp.InputSchema = res.schema;
+			setActionType(actionTyp);
 			setTimeout(() => {
 				const top = mappingSectionRef.current.getBoundingClientRect().top;
 				mappingSectionRef.current.closest('.fullscreen').scrollBy({
@@ -255,8 +250,8 @@ const ActionPath = ({
 
 	return (
 		<Section
-			title={`Path${fields.includes('Sheet') ? ' and Sheet' : ''}`}
-			description={`The path${fields.includes('Sheet') ? ' and sheet' : ''} of the file`}
+			title={`Path${actionType.Fields.includes('Sheet') ? ' and Sheet' : ''}`}
+			description={`The path${actionType.Fields.includes('Sheet') ? ' and sheet' : ''} of the file`}
 			padded
 		>
 			<div className='pathInputWrapper'>
@@ -264,7 +259,7 @@ const ActionPath = ({
 					className='pathInput'
 					name='path'
 					value={action.Path}
-					label={fields.includes('Sheet') ? 'Path' : null}
+					label={actionType.Fields.includes('Sheet') ? 'Path' : null}
 					type='text'
 					onSlInput={onUpdatePath}
 					placeholder={`${actionType.Target.toLowerCase()}.${connection.connector.fileExtension}`}
@@ -274,7 +269,7 @@ const ActionPath = ({
 				</div>
 				<div className={`completePath${completePath !== '' ? ' visible' : ''}`}>{completePath}</div>
 			</div>
-			{fields.includes('Sheet') && (
+			{actionType.Fields.includes('Sheet') && (
 				<>
 					<div className='sheetsSelectWrapper'>
 						<SlSelect

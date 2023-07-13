@@ -126,7 +126,7 @@ const computeDefaultAction = (actionType, outputSchema, fields) => {
 	return action;
 };
 
-const computeActionFields = (connection, actionType, schemas) => {
+const computeActionTypeFields = (connection, actionType, schemas) => {
 	const fields = [];
 	if (connection.type === 'App' && connection.role === 'Destination' && actionType.Target === 'Events') {
 		fields.push('Filter');
@@ -190,6 +190,6 @@ export {
 	convertActionMapping,
 	convertActionIdentifiers,
 	computeDefaultAction,
-	computeActionFields,
+	computeActionTypeFields,
 	getExpressionVariables,
 };
