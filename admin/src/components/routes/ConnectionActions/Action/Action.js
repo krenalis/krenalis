@@ -278,8 +278,13 @@ const Action = ({ actionType: providedActionType, action: providedAction, onClos
 			actionToSet.Transformation.Func = actionToSet.Transformation.Func.trim();
 		}
 
-		actionToSet.InSchema = inSchema;
-		actionToSet.OutSchema = outSchema;
+		if (inSchema.properties.length > 0 && outSchema.properties.length > 0) {
+			actionToSet.InSchema = inSchema;
+			actionToSet.OutSchema = outSchema;
+		} else {
+			actionToSet.InSchema = null;
+			actionToSet.OutSchema = null;
+		}
 
 		if (actionToSet.Query != null) {
 			actionToSet.Query = actionToSet.Query.trim();
