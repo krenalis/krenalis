@@ -1,5 +1,3 @@
-import { uuid } from './utils';
-
 class Sender {
 	#source = '';
 	#endpoint = '';
