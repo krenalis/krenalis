@@ -307,6 +307,9 @@ const Action = ({ actionType: providedActionType, action: providedAction, onClos
 					case 'PropertyNotExists':
 						showStatus([variants.DANGER, icons.NOT_FOUND, err.message]);
 						break;
+					case 'TargetAlreadyExists':
+						showStatus([variants.DANGER, icons.FORBIDDEN, err.message]);
+						break;
 					default:
 						break;
 				}
