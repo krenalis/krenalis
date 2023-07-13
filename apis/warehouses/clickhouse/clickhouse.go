@@ -469,8 +469,9 @@ func quoteValue(b *strings.Builder, value any) {
 	case bool:
 		if v {
 			b.WriteString("true")
+		} else {
+			b.WriteString("false")
 		}
-		b.WriteString("false")
 	case int:
 		b.WriteString(strconv.FormatInt(int64(v), 10))
 	case int16:
