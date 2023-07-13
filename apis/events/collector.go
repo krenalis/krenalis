@@ -132,9 +132,11 @@ type eventContext struct {
 		Width   int     `json:"width,omitempty"`
 		Height  int     `json:"height,omitempty"`
 	} `json:"screen,omitempty"`
-	Timezone  string          `json:"timezone,omitempty"`
-	Traits    json.RawMessage `json:"traits,omitempty"`
-	UserAgent string          `json:"userAgent,omitempty"`
+	SessionId    int64           `json:"sessionId,omitempty"`
+	SessionStart bool            `json:"SessionStart,omitempty"`
+	Timezone     string          `json:"timezone,omitempty"`
+	Traits       json.RawMessage `json:"traits,omitempty"`
+	UserAgent    string          `json:"userAgent,omitempty"`
 }
 
 type collectedEvent struct {
@@ -659,6 +661,14 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 	}
 	if ctx.Screen.Height == 0 {
 		ctx.Screen.Height = defaultCtx.Screen.Height
+	}
+	// SessionId.
+	if ctx.SessionId == 0 {
+		ctx.SessionId = defaultCtx.SessionId
+	}
+	// SessionStart.
+	if !ctx.SessionStart {
+		ctx.SessionStart = defaultCtx.SessionStart
 	}
 	// Timezone.
 	if ctx.Timezone == "" {

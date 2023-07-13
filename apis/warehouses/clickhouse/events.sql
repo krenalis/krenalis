@@ -19,6 +19,8 @@ CREATE TABLE events
     `timestamp` DateTime,
     `sent_at` DateTime,
     `received_at` DateTime,
+    `session_id` Int64,
+    `session_start` Bool,
     `ip` IPv6,
     `network_cellular` Bool,
     `network_wifi` Bool,

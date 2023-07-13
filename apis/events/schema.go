@@ -31,6 +31,8 @@ var Schema = types.Object([]types.Property{
 	{Name: "timestamp", Type: types.DateTime().WithLayout(time.StampMilli)},
 	{Name: "sent_at", Type: types.DateTime().WithLayout(time.StampMilli)},
 	{Name: "received_at", Type: types.DateTime().WithLayout(time.StampMilli)},
+	{Name: "session_id", Type: types.Int64()},
+	{Name: "session_start", Type: types.Boolean()},
 	{
 		Name: "context",
 		Type: types.Object([]types.Property{

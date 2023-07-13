@@ -1,4 +1,5 @@
 import Storage from './storage.js';
+import Session from './session.js';
 import Sender from './sender.js';
 import { campaign, uuid, typesOf } from './utils.js';
 
@@ -6,6 +7,7 @@ const version = '0.0.0';
 
 class Analytics {
 	#storage;
+	#session;
 	#sender;
 	#isReady = false;
 	#onReady;
@@ -16,6 +18,7 @@ class Analytics {
 
 	constructor(source, endpoint) {
 		this.#storage = new Storage();
+		this.#session = new Session(this.#storage);
 		this.#sender = new Sender(source, endpoint);
 		const onReady = this.#onReady;
 		if (onReady) {
@@ -32,9 +35,19 @@ class Analytics {
 		return this.#send('alias', this.#setAliasArguments, arguments);
 	}
 
+	endSession() {
+		this.#session.end();
+	}
+
 	// getAnonymousId returns the default Anonymous ID.
 	getAnonymousId() {
 		return this.#storage.getAnonymousID();
+	}
+
+	// getSessionId returns the current session ID, or null if there is no
+	// session.
+	getSessionId() {
+		return this.#session.get();
 	}
 
 	// group sends a group event.
@@ -87,6 +100,18 @@ class Analytics {
 		}
 		this.#storage.setAnonymousID(id);
 		return id;
+	}
+
+	// startSession starts a new session.
+	startSession(id) {
+		if (id) {
+			if (typeof id !== 'number' || id % 1 !== 0) {
+				throw new Error('sessionId must be a positive integer');
+			}
+		} else {
+			id = null;
+		}
+		this.#session.start(id);
 	}
 
 	// track sends a track event.
@@ -449,6 +474,12 @@ class Analytics {
 			if (option !== 'integrations' && options[option] !== void 0) {
 				event.context[option] = options[option];
 			}
+		}
+
+		let start = false;
+		[event.context.sessionId, start] = this.#session.getFresh();
+		if (start) {
+			event.context.sessionStart = true;
 		}
 
 		this.#sender.send(event);

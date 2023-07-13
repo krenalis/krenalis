@@ -164,16 +164,18 @@ type Event struct {
 	// Keep these fields in sync with the schema in "apis/events/schema.go" except for
 	// the 'Source', 'Date', and 'Properties' fields, which a connector should not directly access.
 
-	Event       string
-	Name        string
-	MessageID   string
-	AnonymousID string
-	UserID      string
-	Timestamp   time.Time
-	SentAt      time.Time
-	ReceivedAt  time.Time
-	IP          string
-	Network     struct {
+	Event        string
+	Name         string
+	MessageID    string
+	AnonymousID  string
+	UserID       string
+	Timestamp    time.Time
+	SentAt       time.Time
+	ReceivedAt   time.Time
+	SessionID    int64
+	SessionStart bool
+	IP           string
+	Network      struct {
 		Cellular  bool
 		WiFi      bool
 		Bluetooth bool

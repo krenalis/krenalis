@@ -17,6 +17,15 @@ class Storage {
 		return this.store.getItem('chichi_group_id');
 	}
 
+	getSession() {
+		let id = this.store.getItem('chichi_session_id');
+		if (id != null) {
+			id = Number(id);
+		}
+		const start = this.store.getItem('chichi_session_start') === 'true';
+		return [id, start];
+	}
+
 	getUserID() {
 		return this.store.getItem('chichi_user_id');
 	}
@@ -33,6 +42,16 @@ class Storage {
 
 	setGroupID(id) {
 		this.store.setItem('chichi_group_id', id);
+	}
+
+	setSession(id, start) {
+		if (id == null) {
+			this.store.removeItem('chichi_session_id');
+			this.store.removeItem('chichi_session_start');
+			return;
+		}
+		this.store.setItem('chichi_session_id', id);
+		this.store.setItem('chichi_session_start', start);
 	}
 
 	setUserID(id) {

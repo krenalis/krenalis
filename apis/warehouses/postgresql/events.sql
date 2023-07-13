@@ -21,6 +21,8 @@ CREATE TABLE events (
     timestamp timestamp(3) NOT NULL,
     sent_at timestamp(3) NOT NULL,
     received_at timestamp(3) NOT NULL,
+    session_id bigint NOT NULL,
+    session_start boolean NOT NULL,
     ip inet NOT NULL,
     network_cellular boolean NOT NULL,
     network_wifi boolean NOT NULL,
