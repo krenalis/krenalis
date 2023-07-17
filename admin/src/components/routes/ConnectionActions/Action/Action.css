@@ -208,8 +208,8 @@
 inherit the disabled style */
 .action .mappings .mapping .outputProperty[disabled]::part(base) {
     cursor: default;
-    background-color: var(--sl-input-background-color)!important;
-    border: solid var(--sl-input-border-width) var(--sl-input-border-color)!important;
+    background-color: transparent!important;
+    border: 0!important;
     opacity: 1!important;
 }
 
@@ -217,7 +217,7 @@ inherit the disabled style */
     content: "";
     display: block;
     position: absolute;
-    left: 0;
+    left: 15px;
     width: 15px;
     height: 15px;
     border-left: 3px solid var(--sl-color-neutral-400);
