@@ -29,9 +29,6 @@ const (
 // eventDateLayout is the layout used for dates in events.
 const eventDateLayout = "2006-01-02T15:04:05.999Z"
 
-// emptyProperties represents an empty event properties.
-var emptyProperties = []byte("{}")
-
 type processedEvent struct {
 	*collectedEvent
 	action      *state.Action
