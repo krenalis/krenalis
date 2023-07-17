@@ -92,7 +92,7 @@ const convertActionMapping = (mapping, outputSchema) => {
 };
 
 const convertActionIdentifiers = (identifiers, mapping) => {
-	return identifiers.map((outputProperty) => [mapping[outputProperty].value, outputProperty]);
+	return identifiers.map((identifier) => [{ value: mapping[identifier].value, error: '' }, { value: identifier }]);
 };
 
 const computeDefaultAction = (actionType, outputSchema, fields) => {
@@ -121,7 +121,7 @@ const computeDefaultAction = (actionType, outputSchema, fields) => {
 		action.MatchingProperties = { Internal: '', External: '' };
 	}
 	if (fields.includes('Identifiers')) {
-		action.Identifiers = [['', '']];
+		action.Identifiers = [[{ value: '', error: '' }, { value: '' }]];
 	}
 	return action;
 };
@@ -170,19 +170,6 @@ const computeActionTypeFields = (connection, actionType, schemas) => {
 	return fields;
 };
 
-function getExpressionVariables(expression) {
-	const regex = /(["'])(?:\\.|(?!\1)[^\\])*\1|\b([a-zA-Z_][a-zA-Z0-9_]*\b)(?!\s*\()/g;
-	const variables = [];
-	let match;
-	while ((match = regex.exec(expression)) !== null) {
-		if (match[2]) {
-			const variable = match[2].split('.')[0];
-			variables.push(variable);
-		}
-	}
-	return variables;
-}
-
 export {
 	SCHEDULE_PERIODS,
 	EXPORT_MODE_OPTIONS,
@@ -191,5 +178,4 @@ export {
 	convertActionIdentifiers,
 	computeDefaultAction,
 	computeActionTypeFields,
-	getExpressionVariables,
 };

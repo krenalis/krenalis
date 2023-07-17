@@ -7,6 +7,7 @@ import * as icons from '../../../constants/icons';
 import { useContext } from 'react';
 import { AppContext } from '../../../providers/AppProvider';
 import {
+	checkAnonymousIdentifiers,
 	transformAnonymousIdentifiers,
 	untransformAnonymousIdentifiers,
 } from '../../../lib/workspace/anonymousIdentifiers';
@@ -56,10 +57,14 @@ const AnonymousIdentity = () => {
 	}, []);
 
 	const onSave = async () => {
+		const areIdentifiersValid = checkAnonymousIdentifiers(anonymousIdentifiers);
+		if (!areIdentifiersValid) {
+			showError('You must fix the errors before saving');
+			return;
+		}
 		const untransformed = untransformAnonymousIdentifiers(anonymousIdentifiers);
 		const [, err] = await api.workspace.anonymousIdentifiers(untransformed);
 		if (err) {
-			showError(err);
 			return;
 		}
 		showStatus([variants.SUCCESS, icons.OK, 'Anonymous identifiers saved succesfully']);
@@ -80,6 +85,7 @@ const AnonymousIdentity = () => {
 					description='Define the identifiers used to resolve the identity of anonymous users'
 				>
 					<SortableMapping
+						api={api}
 						mapping={anonymousIdentifiers}
 						setMapping={setAnonymousIdentifiers}
 						inputSchema={eventSchema}

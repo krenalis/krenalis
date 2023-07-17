@@ -7,7 +7,7 @@ import { AppContext } from '../providers/AppProvider';
 import * as variants from '../constants/variants';
 import * as icons from '../constants/icons';
 import { getActionTypeFromConnection } from '../lib/connections/connection';
-import { flattenSchema, getExpressionVariables } from '../lib/connections/action';
+import { flattenSchema } from '../lib/connections/action';
 import { UnprocessableError, NotFoundError } from '../lib/api/errors';
 
 const useActionData = (onClose, connection, providedActionType, providedAction, setIsSaveButtonLoading) => {
@@ -170,20 +170,13 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 					actionToSet.Mapping = flattenedOutputSchema;
 				}
 				for (let i = 0; i < actionToSet.Identifiers.length; i++) {
-					const [inputIdentifier, outputIdentifier] = actionToSet.Identifiers[i];
-					if (inputIdentifier === '' || outputIdentifier === '') {
+					const [input, output] = actionToSet.Identifiers[i];
+					if (input.value === '' || output.value === '') {
 						showError(`You cannot use an empty value in the identifiers`);
 						return;
 					}
-					const variables = getExpressionVariables(inputIdentifier);
-					for (const variable of variables) {
-						if (!(variable in flattenedInputSchema)) {
-							showError(`Property ${variable} used in identifiers doesn't exist`);
-							return;
-						}
-					}
-					if (!(outputIdentifier in flattenedOutputSchema)) {
-						showError(`Property ${outputIdentifier} used as identifier doesn't exist`);
+					if (input.error !== '') {
+						showError(`You must fix the errors on the identifiers before saving`);
 						return;
 					}
 					const otherIdentifiers = [
@@ -191,15 +184,15 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 						...actionToSet.Identifiers.slice(i + 1),
 					];
 					for (const [otherInputIdentifier, otherOutputIdenifier] of otherIdentifiers) {
-						if (outputIdentifier === otherOutputIdenifier) {
-							showError(`Property ${outputIdentifier} is used more than once in the identifiers`);
+						if (output.value === otherOutputIdenifier.value) {
+							showError(`Property ${output.value} is used more than once in the identifiers`);
 							return;
 						}
 					}
-					actionToSet.Mapping[outputIdentifier].value = inputIdentifier;
+					actionToSet.Mapping[output.value].value = input.value;
 				}
 				actionToSet.Identifiers = actionToSet.Identifiers.map(
-					([inputIdentifier, outputIdentifier]) => outputIdentifier
+					([inputIdentifier, outputIdentifier]) => outputIdentifier.value
 				);
 			}
 		}
@@ -209,30 +202,36 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 
 		if (actionToSet.Mapping != null) {
 			const mappingToSave = {};
+			const expressions = [];
 			for (const k in actionToSet.Mapping) {
 				const v = actionToSet.Mapping[k];
 				if (v.value === '') {
 					continue;
 				}
-				const variables = getExpressionVariables(v.value);
-				for (const variable of variables) {
-					const property = flattenedInputSchema[variable];
-					if (property == null) {
-						showError(`${v.value} does not exist in the schema`);
-						return;
-					}
-					const fullProperty = property.full;
-					const isPropertyAlreadyInSchema = inSchema.properties.find((p) => p.name === fullProperty.name);
-					if (!isPropertyAlreadyInSchema) {
-						inSchema.properties.push(fullProperty);
-					}
+				if (v.error && v.error !== '') {
+					showError(`You must fix the errors on the mapping before saving`);
+					return;
 				}
-				mappingToSave[k] = v.value;
 				const fullKeyProperty = flattenedOutputSchema[k].full;
+				expressions.push({
+					value: v.value,
+					type: fullKeyProperty.type,
+					nullable: fullKeyProperty.nullable,
+				});
+				mappingToSave[k] = v.value;
 				const isKeyPropertyAlreadyInSchema = outSchema.properties.find((p) => p.name === fullKeyProperty.name);
 				if (!isKeyPropertyAlreadyInSchema) {
 					outSchema.properties.push(fullKeyProperty);
 				}
+			}
+			const [inputProperties, err] = await api.expressionsProperties(expressions, actionType.InputSchema);
+			if (err) {
+				showError(err);
+				return;
+			}
+			for (const prop of inputProperties) {
+				const fullProperty = flattenedInputSchema[prop].full;
+				inSchema.properties.push(fullProperty);
 			}
 			actionToSet.Mapping = mappingToSave;
 		}

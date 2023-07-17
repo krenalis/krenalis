@@ -2,14 +2,14 @@ import { useState, useRef, useContext, useEffect, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import { updateMappingProperty } from './Action.helpers';
 import { getSchemaComboboxItems } from '../../../../helpers/getSchemaComboBoxItems';
-import { flattenSchema, getExpressionVariables } from '../../../../lib/connections/action';
+import { flattenSchema } from '../../../../lib/connections/action';
 import { rawTransformationFunction } from './Action.constants';
 import AlertDialog from '../../../common/AlertDialog/AlertDialog';
 import { ComboBoxInput, ComboBoxList } from '../../../common/ComboBox/ComboBox';
 import Section from '../../../common/Section/Section';
 import EditorWrapper from '../../../common/EditorWrapper/EditorWrapper';
+import { AppContext } from '../../../../providers/AppProvider';
 import { ActionContext } from '../../../../context/ActionContext';
-import { ConnectionContext } from '../../../../providers/ConnectionProvider';
 import {
 	SlButton,
 	SlIcon,
@@ -30,7 +30,7 @@ const ActionMapping = forwardRef((props, ref) => {
 	const [isInputSchemaDialogOpen, setIsInputSchemaDialogOpen] = useState(false);
 	const [isOutputSchemaDialogOpen, setIsOutputSchemaDialogOpen] = useState(false);
 
-	const { connection } = useContext(ConnectionContext);
+	const { api, showError } = useContext(AppContext);
 	const { disabled, disabledReason, action, setAction, actionType, mode, setMode } = useContext(ActionContext);
 
 	const defaultTransformationFunction = useRef('');
@@ -96,39 +96,44 @@ const ActionMapping = forwardRef((props, ref) => {
 		setAction(a);
 	};
 
-	const onUpdateProperty = (e) => {
-		const { name, value } = e.currentTarget || e.target;
-		const updatedAction = updateMappingProperty(action, name, value);
+	const updateProperty = async (name, value) => {
+		let errorMessage = '';
+		if (value !== '') {
+			let err;
+			[errorMessage, err] = await api.validateExpression(
+				value,
+				actionType.InputSchema,
+				action.Mapping[name].full.type,
+				action.Mapping[name].full.nullable
+			);
+			if (err != null) {
+				showError(err);
+				return;
+			}
+		}
+		const updatedAction = updateMappingProperty(action, name, value, errorMessage);
 		setAction(updatedAction);
 	};
 
-	const onSelectProperty = (input, value) => {
-		const updatedAction = updateMappingProperty(action, input.name, value);
-		setAction(updatedAction);
+	const onUpdateProperty = async (e) => {
+		const { name, value } = e.currentTarget || e.target;
+		await updateProperty(name, value);
+	};
+
+	const onSelectProperty = async (input, value) => {
+		await updateProperty(input.name, value);
 	};
 
 	let content = null;
 	if (mode === 'mappings') {
 		const mappings = [];
-		const defaultMappings = flattenSchema(actionType.InputSchema);
 		for (const k of Object.keys(action.Mapping)) {
-			let error;
-			const value = action.Mapping[k].value;
-			if (!disabled && value !== '') {
-				const variables = getExpressionVariables(value);
-				for (const variable of variables) {
-					const doesValueExist = defaultMappings[variable] != null;
-					if (!doesValueExist) {
-						error = `"${variable}" does not exist in ${connection.type.toLowerCase()}'s schema`;
-						break;
-					}
-				}
-			}
 			let isAlreadyMappedInIdentity = false;
 			if (actionType.Fields.includes('Identifiers')) {
 				for (const [inputIdentifiers, outputIdentifiers] of action.Identifiers) {
-					if (outputIdentifiers === k) {
+					if (outputIdentifiers.value === k) {
 						isAlreadyMappedInIdentity = true;
+						break;
 					}
 				}
 			}
@@ -144,12 +149,12 @@ const ActionMapping = forwardRef((props, ref) => {
 					<ComboBoxInput
 						comboBoxListRef={propertiesListRef}
 						onInput={onUpdateProperty}
-						value={value}
+						value={action.Mapping[k].value}
 						name={k}
 						disabled={disabled || action.Mapping[k].disabled === true}
 						className='inputProperty'
 						size='small'
-						error={error}
+						error={action.Mapping[k].error}
 					>
 						{action.Mapping[k].required && <SlIcon name='asterisk' slot='prefix'></SlIcon>}
 					</ComboBoxInput>

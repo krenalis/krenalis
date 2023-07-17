@@ -51,3 +51,5 @@ POST    /api/workspace/add-connection                            Add a new conne
 GET     /api/workspace/privacy-region                            Get the workspace privacy region.
 POST    /api/workspace/privacy-region                            Set the workspace privacy region.
 GET     /api/events-schema                                       Get the events schema.
+POST    /api/validate-expression                                 Validate an expression.
+POST    /api/expressions-properties                              Return all the unique properties contained inside a list of expressions.

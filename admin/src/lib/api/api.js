@@ -24,6 +24,22 @@ class API {
 	eventsSchema = async () => {
 		return await call(`${this.apiURL}/events-schema`, http.GET);
 	};
+
+	validateExpression = async (expression, schema, destinationPropertyType, destinationPropertyNullable) => {
+		return await call(`${this.apiURL}/validate-expression`, http.POST, {
+			expression,
+			schema,
+			destinationPropertyType,
+			destinationPropertyNullable,
+		});
+	};
+
+	expressionsProperties = async (expressions, schema) => {
+		return await call(`${this.apiURL}/expressions-properties`, http.POST, {
+			expressions,
+			schema,
+		});
+	};
 }
 
 class Connections {

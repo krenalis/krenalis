@@ -1,4 +1,4 @@
-const updateMappingProperty = (action, name, value) => {
+const updateMappingProperty = (action, name, value, error) => {
 	const getAlternativeProperties = (name, mapping) => {
 		const indentation = mapping[name].indentation;
 		const parentProperties = [];
@@ -49,6 +49,7 @@ const updateMappingProperty = (action, name, value) => {
 		}
 	}
 
+	a.Mapping[name].error = error;
 	a.Mapping[name].value = value;
 	return a;
 };

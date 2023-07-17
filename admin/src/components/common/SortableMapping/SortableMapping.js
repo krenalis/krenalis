@@ -2,45 +2,77 @@ import './SortableMapping.css';
 import { useContext, useRef, useMemo } from 'react';
 import { ComboBoxInput, ComboBoxList } from '../ComboBox/ComboBox';
 import { AppContext } from '../../../providers/AppProvider';
-import { checkInputValue, checkOutputValue } from './SortableMapping.helpers';
 import { getSchemaComboboxItems } from '../../../helpers/getSchemaComboBoxItems';
 import { SlButton, SlDropdown, SlMenu, SlMenuItem, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import { flattenSchema } from '../../../lib/connections/action';
 
-const SortableMapping = ({ mapping, setMapping, inputSchema, outputSchema }) => {
+const SortableMapping = ({ api, mapping, setMapping, inputSchema, outputSchema }) => {
 	const { showError } = useContext(AppContext);
 
 	const inputPropertiesListRef = useRef(null);
 	const outputPropertiesListRef = useRef(null);
 
-	const onUpdateInputProperty = (e) => {
+	const flatOutputSchema = useMemo(() => flattenSchema(outputSchema), [outputSchema]);
+
+	const validateExpression = async (expression, schema, destinationProperty) => {
+		let errorMessage = '';
+		if (expression !== '') {
+			let err;
+			[errorMessage, err] = await api.validateExpression(
+				expression,
+				schema,
+				destinationProperty.type,
+				destinationProperty.nullable
+			);
+			if (err != null) {
+				showError(err);
+				return;
+			}
+		}
+		return errorMessage;
+	};
+
+	const updateInput = async (pos, value) => {
 		const m = [...mapping];
+		const relatedExpression = m[pos - 1][1].value;
+		const destinationProperty = flatOutputSchema[relatedExpression];
+		let errorMessage = '';
+		if (destinationProperty) {
+			errorMessage = await validateExpression(value, inputSchema, destinationProperty.full);
+		}
+		m[pos - 1][0].value = value;
+		m[pos - 1][0].error = errorMessage;
+		setMapping(m);
+	};
+
+	const updateOutput = async (pos, value) => {
+		const m = [...mapping];
+		m[pos - 1][1].value = value;
+		setMapping(m);
+		const relatedExpression = m[pos - 1][0].value;
+		await updateInput(pos, relatedExpression);
+	};
+
+	const onUpdateInputProperty = async (e) => {
 		const { name, value } = e.currentTarget || e.target;
 		const pos = Number(name);
-		m[pos - 1][0] = value;
-		setMapping(m);
+		await updateInput(pos, value);
 	};
 
-	const onUpdateOutputProperty = (e) => {
-		const m = [...mapping];
+	const onUpdateOutputProperty = async (e) => {
 		const { name, value } = e.currentTarget || e.target;
 		const pos = Number(name);
-		m[pos - 1][1] = value;
-		setMapping(m);
+		await updateOutput(pos, value);
 	};
 
-	const onSelectInputProperty = (input, value) => {
-		const m = [...mapping];
+	const onSelectInputProperty = async (input, value) => {
 		const pos = Number(input.name);
-		m[pos - 1][0] = value;
-
-		setMapping(m);
+		await updateInput(pos, value);
 	};
 
-	const onSelectOutputProperty = (input, value) => {
-		const m = [...mapping];
+	const onSelectOutputProperty = async (input, value) => {
 		const pos = Number(input.name);
-		m[pos - 1][1] = value;
-		setMapping(m);
+		await updateOutput(pos, value);
 	};
 
 	const onMoveCorrelationUp = (position) => {
@@ -78,35 +110,33 @@ const SortableMapping = ({ mapping, setMapping, inputSchema, outputSchema }) => 
 
 	const onAddCorrelation = () => {
 		const m = [...mapping];
-		m.push(['', '']);
+		m.push([{ value: '', error: '' }, { value: '' }]);
 		setMapping(m);
 	};
 
 	const alreadyUsedOutputProperties = useMemo(() => {
 		const used = [];
 		for (const [inputProperty, outputProperty] of mapping) {
-			used.push(outputProperty);
+			used.push(outputProperty.value);
 		}
 		return used;
 	}, [mapping]);
 
 	return (
 		<div className='sortableMapping'>
-			{mapping.map(([inputProperty, outputProperty], i) => {
+			{mapping.map(([input, output], i) => {
 				const position = i + 1;
-				const inputError = checkInputValue(inputProperty, inputSchema);
-				const outputError = checkOutputValue(outputProperty, outputSchema);
 				return (
 					<div className='correlation'>
 						<div className='position'>{position}</div>
 						<ComboBoxInput
 							comboBoxListRef={inputPropertiesListRef}
 							onInput={onUpdateInputProperty}
-							value={inputProperty}
+							value={input.value}
 							name={position}
 							className='inputProperty'
 							size='small'
-							error={inputError}
+							error={input.error}
 						/>
 						<div className='arrow'>
 							<SlIcon name='arrow-right' />
@@ -114,11 +144,10 @@ const SortableMapping = ({ mapping, setMapping, inputSchema, outputSchema }) => 
 						<ComboBoxInput
 							comboBoxListRef={outputPropertiesListRef}
 							onInput={onUpdateOutputProperty}
-							value={outputProperty}
+							value={output.value}
 							name={position}
 							className='outputProperty'
 							size='small'
-							error={outputError}
 						/>
 						<SlDropdown>
 							<SlButton size='small' className='correlationMenu' slot='trigger'>

@@ -18,8 +18,10 @@ import (
 	"chichi/apis/errors"
 	"chichi/apis/events"
 	"chichi/apis/httpclient"
+	"chichi/apis/mappings/mapexp"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
+	"chichi/connector/types"
 
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
@@ -58,6 +60,12 @@ type RedisConfig struct {
 	Username string
 	Password string
 	DB       int
+}
+
+type ExpressionToBeExtracted struct {
+	Value    string
+	Type     types.Type
+	Nullable bool
 }
 
 // New returns an API instance. It can only be called once.
@@ -317,6 +325,39 @@ func (apis *APIs) onExecuteAction(n state.ExecuteActionNotification) {
 	connection := &Connection{db: apis.db, redis: apis.redis, connection: action.Connection(), http: apis.http}
 	a := &Action{db: apis.db, redis: apis.redis, action: action, connection: connection}
 	go a.exec()
+}
+
+// validateExpression validates an expression.
+func (apis *APIs) validateExpression(expression string, schema types.Type, dtType types.Type, dtNullable bool) string {
+	_, err := mapexp.Compile(expression, schema, dtType, dtNullable)
+	if err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
+// expressionsProperties returns all the unique properties contained inside a
+// list of expressions.
+func (apis *APIs) expressionsProperties(expressions []ExpressionToBeExtracted, schema types.Type) ([]string, error) {
+	var properties []types.Path
+	for _, expression := range expressions {
+		exp, err := mapexp.Compile(expression.Value, schema, expression.Type, expression.Nullable)
+		if err != nil {
+			return nil, err
+		}
+		expressionProperties := exp.Properties()
+		properties = append(properties, expressionProperties...)
+	}
+	// Remove duplicated properties.
+	m := map[string]types.Path{}
+	for _, prop := range properties {
+		m[prop.String()] = prop
+	}
+	uniqueProperties := []string{}
+	for s := range m {
+		uniqueProperties = append(uniqueProperties, s)
+	}
+	return uniqueProperties, nil
 }
 
 // Workspace represents a workspace.

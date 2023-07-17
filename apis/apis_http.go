@@ -20,6 +20,7 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/events"
+	"chichi/connector/types"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -916,6 +917,40 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	router.Get("/api/events-schema", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(events.Schema.Unflatten())
+	})
+	router.Post("/api/validate-expression", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Expression                  string
+			Schema                      types.Type
+			DestinationPropertyType     types.Type
+			DestinationPropertyNullable bool
+		}
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			respond(w, errors.BadRequest("invalid JSON"))
+			return
+		}
+		w.Header().Add("Content-Type", "application/json")
+		message := apis.validateExpression(req.Expression, req.Schema, req.DestinationPropertyType, req.DestinationPropertyNullable)
+		_ = json.NewEncoder(w).Encode(message)
+	})
+	router.Post("/api/expressions-properties", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Expressions []ExpressionToBeExtracted
+			Schema      types.Type
+		}
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			respond(w, errors.BadRequest("invalid JSON"))
+			return
+		}
+		properties, err := apis.expressionsProperties(req.Expressions, req.Schema)
+		if err != nil {
+			respond(w, errors.BadRequest(err.Error()))
+			return
+		}
+		w.Header().Add("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(properties)
 	})
 	router.ServeHTTP(w, r)
 

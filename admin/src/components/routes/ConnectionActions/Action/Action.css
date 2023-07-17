@@ -194,7 +194,7 @@
     align-items: center;
 }
 
-.action .mappings .mapping .inputProperty sl-icon {
+.inputProperty sl-icon {
     color: var(--sl-color-danger-500);
     font-size: 9px;
 }
