@@ -182,7 +182,7 @@ const ActionMapping = forwardRef((props, ref) => {
 						{disabledReason}
 					</SlAlert>
 				)}
-				{mappings}
+				<div>{mappings}</div>
 				<ComboBoxList
 					ref={propertiesListRef}
 					items={getSchemaComboboxItems(actionType.InputSchema)}
