@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"log"
 	"math/rand"
-	"strings"
 	"sync"
 	"time"
 )
@@ -269,77 +268,4 @@ RETRY:
 		}
 		break
 	}
-}
-
-// isDeviceType reports whether t is a device type.
-func isDeviceType(t string) bool {
-	switch t {
-	case "Mobile", "Tablet", "Desktop":
-		return true
-	}
-	return false
-}
-
-// abbreviate abbreviates s to almost n runes. If s is longer than n runes,
-// the abbreviated string terminates with "...".
-func abbreviate(s string, n int) string {
-	const spaces = " \n\r\t\f" // https://infra.spec.whatwg.org/#ascii-whitespace
-	s = strings.TrimRight(s, spaces)
-	if len(s) <= n {
-		return s
-	}
-	if n < 3 {
-		return ""
-	}
-	p := 0
-	n2 := 0
-	for i := range s {
-		switch p {
-		case n - 2:
-			n2 = i
-		case n:
-			break
-		}
-		p++
-	}
-	if p < n {
-		return s
-	}
-	if p = strings.LastIndexAny(s[:n2], spaces); p > 0 {
-		s = strings.TrimRight(s[:p], spaces)
-	} else {
-		s = ""
-	}
-	if l := len(s) - 1; l >= 0 && (s[l] == '.' || s[l] == ',') {
-		s = s[:l]
-	}
-	return s + "..."
-}
-
-// asciiEqualFold is strings.EqualFold, ASCII only. It reports whether s and t
-// are equal, ASCII-case-insensitively.
-//
-// This function is the ascii.EqualFold internal function of the http package
-// of the Go standard library, copyright Go Authors.
-func asciiEqualFold(s, t string) bool {
-	if len(s) != len(t) {
-		return false
-	}
-	for i := 0; i < len(s); i++ {
-		if lower(s[i]) != lower(t[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-// lower returns the ASCII lowercase version of b.
-//
-// This function is the ascii.lower internal function of the http package of
-// the Go standard library, copyright Go Authors.
-func lower(b byte) byte {
-	if 'A' <= b && b <= 'Z' {
-		return b + ('a' - 'A')
-	}
-	return b
 }
