@@ -127,11 +127,11 @@ const ActionMapping = forwardRef((props, ref) => {
 	let content = null;
 	if (mode === 'mappings') {
 		const mappings = [];
-		for (const k of Object.keys(action.Mapping)) {
+		for (const k in action.Mapping) {
 			let isAlreadyMappedInIdentity = false;
 			if (actionType.Fields.includes('Identifiers')) {
-				for (const [inputIdentifiers, outputIdentifiers] of action.Identifiers) {
-					if (outputIdentifiers.value === k) {
+				for (const [, identifier] of action.Identifiers) {
+					if (identifier.value === k && !identifier.error) {
 						isAlreadyMappedInIdentity = true;
 						break;
 					}

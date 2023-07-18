@@ -1,36 +1,33 @@
 import { flattenSchema } from '../../lib/helpers/action';
 
-const getSchemaComboboxItems = (schema, disabledKeys) => {
+const getSchemaComboboxItems = (schema, nonSelectableProperties) => {
 	if (schema == null) {
 		return [];
 	}
-	const properties = flattenSchema(schema);
-	const propertiesList = [];
-	for (const k in properties) {
-		if (disabledKeys && disabledKeys.includes(k)) continue;
-		let name;
-		if (properties[k].label != null && properties[k].label !== '') {
-			name = (
-				<div className='propertiesItemName'>
-					<div className='label'>{properties[k].label}</div>
-					<div className='name'>{k}</div>
-				</div>
-			);
-		} else {
-			name = <div className='propertiesItemName'>{k}</div>;
-		}
-		const content = (
-			<>
-				{name}
-				<div className='propertiesItemType'>{properties[k].type}</div>
-			</>
-		);
-		propertiesList.push({
-			content: content,
-			searchableTerm: k,
+	const flatSchema = flattenSchema(schema);
+	const items = [];
+	for (const propertyName in flatSchema) {
+		if (nonSelectableProperties && nonSelectableProperties.includes(propertyName)) continue;
+		items.push({
+			content: (
+				<>
+					<div className='propertiesItemName'>
+						{flatSchema[propertyName].label != null && flatSchema[propertyName].label !== '' ? (
+							<>
+								<div className='label'>{flatSchema[propertyName].label}</div>
+								<div className='name'>{propertyName}</div>
+							</>
+						) : (
+							propertyName
+						)}
+					</div>
+					<div className='propertiesItemType'>{flatSchema[propertyName].type}</div>
+				</>
+			),
+			searchableTerm: propertyName,
 		});
 	}
-	return propertiesList;
+	return items;
 };
 
 export { getSchemaComboboxItems };

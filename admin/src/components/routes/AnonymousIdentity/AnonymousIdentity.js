@@ -1,13 +1,13 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
 import './AnonymousIdentity.css';
-import SortableMapping from '../../shared/SortableMapping/SortableMapping';
+import IdentifiersMapping from '../../shared/IdentifiersMapping/IdentifiersMapping';
 import Section from '../../shared/Section/Section';
 import * as variants from '../../../constants/variants';
 import * as icons from '../../../constants/icons';
 import { useContext } from 'react';
 import { AppContext } from '../../../context/providers/AppProvider';
 import {
-	checkAnonymousIdentifiers,
+	validateIdentifiersMapping,
 	transformAnonymousIdentifiers,
 	untransformAnonymousIdentifiers,
 } from '../../../lib/helpers/identifiers';
@@ -57,9 +57,9 @@ const AnonymousIdentity = () => {
 	}, []);
 
 	const onSave = async () => {
-		const areIdentifiersValid = checkAnonymousIdentifiers(anonymousIdentifiers);
-		if (!areIdentifiersValid) {
-			showError('You must fix the errors before saving');
+		const errorMessage = validateIdentifiersMapping(anonymousIdentifiers);
+		if (errorMessage) {
+			showError(errorMessage);
 			return;
 		}
 		const untransformed = untransformAnonymousIdentifiers(anonymousIdentifiers);
@@ -84,8 +84,7 @@ const AnonymousIdentity = () => {
 					title='Anonymous Identifiers'
 					description='Define the identifiers used to resolve the identity of anonymous users'
 				>
-					<SortableMapping
-						api={api}
+					<IdentifiersMapping
 						mapping={anonymousIdentifiers}
 						setMapping={setAnonymousIdentifiers}
 						inputSchema={eventSchema}

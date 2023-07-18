@@ -1,13 +1,19 @@
 import { useEffect, useState, useContext } from 'react';
-import { computeActionTypeFields } from '../lib/helpers/action';
-import { convertActionMapping } from '../lib/helpers/action';
-import { computeDefaultAction } from '../lib/helpers/action';
-import { convertActionIdentifiers } from '../lib/helpers/action';
+import {
+	flattenSchema,
+	convertActionMapping,
+	computeDefaultAction,
+	computeActionTypeFields,
+} from '../lib/helpers/action';
 import { AppContext } from '../context/providers/AppProvider';
 import * as variants from '../constants/variants';
 import * as icons from '../constants/icons';
 import { getActionTypeFromConnection } from '../lib/helpers/connection';
-import { flattenSchema } from '../lib/helpers/action';
+import {
+	transformActionIdentifiers,
+	untransformActionIdentifiers,
+	validateIdentifiersMapping,
+} from '../lib/helpers/identifiers';
 import { UnprocessableError, NotFoundError } from '../lib/api/errors';
 
 const useActionData = (onClose, connection, providedActionType, providedAction, setIsSaveButtonLoading) => {
@@ -140,7 +146,7 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 					providedAction.Mapping = convertActionMapping(providedAction.Mapping, schemas.Out);
 				}
 				if (providedAction.Identifiers != null) {
-					providedAction.Identifiers = convertActionIdentifiers(
+					providedAction.Identifiers = transformActionIdentifiers(
 						providedAction.Identifiers,
 						providedAction.Mapping
 					);
@@ -169,31 +175,15 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 				if (actionToSet.Mapping == null) {
 					actionToSet.Mapping = flattenedOutputSchema;
 				}
-				for (let i = 0; i < actionToSet.Identifiers.length; i++) {
-					const [input, output] = actionToSet.Identifiers[i];
-					if (input.value === '' || output.value === '') {
-						showError(`You cannot use an empty value in the identifiers`);
-						return;
-					}
-					if (input.error !== '') {
-						showError(`You must fix the errors on the identifiers before saving`);
-						return;
-					}
-					const otherIdentifiers = [
-						...actionToSet.Identifiers.slice(0, i),
-						...actionToSet.Identifiers.slice(i + 1),
-					];
-					for (const [otherInputIdentifier, otherOutputIdenifier] of otherIdentifiers) {
-						if (output.value === otherOutputIdenifier.value) {
-							showError(`Property ${output.value} is used more than once in the identifiers`);
-							return;
-						}
-					}
-					actionToSet.Mapping[output.value].value = input.value;
+				const errorMessage = validateIdentifiersMapping(actionToSet.Identifiers);
+				if (errorMessage) {
+					showError(errorMessage);
+					return;
 				}
-				actionToSet.Identifiers = actionToSet.Identifiers.map(
-					([inputIdentifier, outputIdentifier]) => outputIdentifier.value
-				);
+				for (const [mapped, identifier] of actionToSet.Identifiers) {
+					actionToSet.Mapping[identifier.value].value = mapped.value;
+				}
+				actionToSet.Identifiers = untransformActionIdentifiers(actionToSet.Identifiers);
 			}
 		}
 

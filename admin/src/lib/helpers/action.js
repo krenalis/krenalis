@@ -1,3 +1,5 @@
+import { DEFAULT_IDENTIFIERS_MAPPING } from './identifiers';
+
 const SCHEDULE_PERIODS = {
 	5: '5m',
 	15: '15m',
@@ -91,10 +93,6 @@ const convertActionMapping = (mapping, outputSchema) => {
 	return properties;
 };
 
-const convertActionIdentifiers = (identifiers, mapping) => {
-	return identifiers.map((identifier) => [{ value: mapping[identifier].value, error: '' }, { value: identifier }]);
-};
-
 const computeDefaultAction = (actionType, outputSchema, fields) => {
 	const action = {
 		Name: actionType.Name,
@@ -121,7 +119,7 @@ const computeDefaultAction = (actionType, outputSchema, fields) => {
 		action.MatchingProperties = { Internal: '', External: '' };
 	}
 	if (fields.includes('Identifiers')) {
-		action.Identifiers = [[{ value: '', error: '' }, { value: '' }]];
+		action.Identifiers = DEFAULT_IDENTIFIERS_MAPPING;
 	}
 	return action;
 };
@@ -175,7 +173,6 @@ export {
 	EXPORT_MODE_OPTIONS,
 	flattenSchema,
 	convertActionMapping,
-	convertActionIdentifiers,
 	computeDefaultAction,
 	computeActionTypeFields,
 };

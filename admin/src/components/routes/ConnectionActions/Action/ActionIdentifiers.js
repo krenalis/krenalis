@@ -1,12 +1,10 @@
 import { useContext } from 'react';
-import SortableMapping from '../../../shared/SortableMapping/SortableMapping';
+import IdentifiersMapping from '../../../shared/IdentifiersMapping/IdentifiersMapping';
 import Section from '../../../shared/Section/Section';
 import { ActionContext } from '../../../../context/ActionContext';
-import { AppContext } from '../../../../context/providers/AppProvider';
 
 const ActionIdentifiers = () => {
 	const { action, setAction, actionType } = useContext(ActionContext);
-	const { api } = useContext(AppContext);
 
 	const setIdentifiers = (identifiers) => {
 		const a = { ...action };
@@ -21,8 +19,7 @@ const ActionIdentifiers = () => {
 				description='The properties used to resolve the identity of the users'
 				padded={false}
 			>
-				<SortableMapping
-					api={api}
+				<IdentifiersMapping
 					mapping={action.Identifiers}
 					setMapping={setIdentifiers}
 					inputSchema={actionType.InputSchema}
