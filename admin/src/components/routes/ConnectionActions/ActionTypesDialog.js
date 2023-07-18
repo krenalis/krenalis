@@ -1,4 +1,4 @@
-import ListTile from '../../common/ListTile/ListTile';
+import ListTile from '../../shared/ListTile/ListTile';
 import { SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ActionTypesDialog = ({ isOpen, setIsOpen, actionTypes, connectionLogo, onSelectActionType }) => {

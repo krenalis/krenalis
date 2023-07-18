@@ -1,8 +1,8 @@
 import { useRef, useContext, useState, useEffect } from 'react';
-import Grid from '../../common/Grid/Grid';
-import { SCHEDULE_PERIODS } from '../../../lib/connections/action';
-import { AppContext } from '../../../providers/AppProvider';
-import { ConnectionContext } from '../../../providers/ConnectionProvider';
+import Grid from '../../shared/Grid/Grid';
+import { SCHEDULE_PERIODS } from '../../../lib/helpers/action';
+import { AppContext } from '../../../context/providers/AppProvider';
+import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { UnprocessableError } from '../../../lib/api/errors';
 import * as statuses from '../../../constants/statuses';
 import {

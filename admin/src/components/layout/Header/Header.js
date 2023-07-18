@@ -1,5 +1,5 @@
 import './Header.css';
-import IconWrapper from '../../common/IconWrapper/IconWrapper';
+import IconWrapper from '../../shared/IconWrapper/IconWrapper';
 import { SlAvatar } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const Header = ({ title }) => {

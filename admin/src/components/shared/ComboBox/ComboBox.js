@@ -1,6 +1,6 @@
 import { forwardRef, useRef, useEffect, useState, useImperativeHandle } from 'react';
 import './ComboBox.css';
-import { debounce } from '../../../utils/debounce';
+import { debounce } from '../../../lib/utils/debounce';
 import { SlInput, SlMenu, SlMenuItem, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
 //

@@ -1,15 +1,15 @@
 import { useState, useRef, useContext, useEffect } from 'react';
-import ConfirmationButton from '../../../common/ConfirmationButton/ConfirmationButton';
-import Grid from '../../../common/Grid/Grid';
-import Section from '../../../common/Section/Section';
-import EditorWrapper from '../../../common/EditorWrapper/EditorWrapper';
+import ConfirmationButton from '../../../shared/ConfirmationButton/ConfirmationButton';
+import Grid from '../../../shared/Grid/Grid';
+import Section from '../../../shared/Section/Section';
+import EditorWrapper from '../../../shared/EditorWrapper/EditorWrapper';
 import * as statuses from '../../../../constants/statuses';
 import * as variants from '../../../../constants/variants';
 import * as icons from '../../../../constants/icons';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
 import { NotFoundError, UnprocessableError } from '../../../../lib/api/errors';
 import { ActionContext } from '../../../../context/ActionContext';
-import { AppContext } from '../../../../providers/AppProvider';
+import { AppContext } from '../../../../context/providers/AppProvider';
 import { SlButton, SlSpinner, SlDrawer } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const queryMaxSize = 16777215;

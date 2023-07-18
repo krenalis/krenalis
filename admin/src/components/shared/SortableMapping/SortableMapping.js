@@ -1,10 +1,10 @@
 import './SortableMapping.css';
 import { useContext, useRef, useMemo } from 'react';
 import { ComboBoxInput, ComboBoxList } from '../ComboBox/ComboBox';
-import { AppContext } from '../../../providers/AppProvider';
-import { getSchemaComboboxItems } from '../../../helpers/getSchemaComboBoxItems';
+import { AppContext } from '../../../context/providers/AppProvider';
+import { getSchemaComboboxItems } from '../../../components/helpers/getSchemaComboBoxItems';
 import { SlButton, SlDropdown, SlMenu, SlMenuItem, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
-import { flattenSchema } from '../../../lib/connections/action';
+import { flattenSchema } from '../../../lib/helpers/action';
 
 const SortableMapping = ({ api, mapping, setMapping, inputSchema, outputSchema }) => {
 	const { showError } = useContext(AppContext);

@@ -1,4 +1,4 @@
-import { flattenSchema } from '../lib/connections/action';
+import { flattenSchema } from '../../lib/helpers/action';
 
 const getSchemaComboboxItems = (schema, disabledKeys) => {
 	if (schema == null) {

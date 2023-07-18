@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import './OAuth.css';
-import { AppContext } from '../../../providers/AppProvider';
+import { AppContext } from '../../../context/providers/AppProvider';
 import { SlSpinner, SlIcon, SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const errorMessageByOauthErrorCode = {

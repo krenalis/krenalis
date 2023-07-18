@@ -1,8 +1,8 @@
 import { useState, useContext, useEffect, useLayoutEffect } from 'react';
 import './ConnectionsMap.css';
-import Arrow from '../../common/Arrow/Arrow';
+import Arrow from '../../shared/Arrow/Arrow';
 import { getConnectionsBlocks } from './ConnectionsMap.helpers';
-import { AppContext } from '../../../providers/AppProvider';
+import { AppContext } from '../../../context/providers/AppProvider';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectionsMap = () => {

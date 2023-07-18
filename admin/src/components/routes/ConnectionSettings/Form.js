@@ -1,8 +1,8 @@
 import { useState, useEffect, useContext, useRef } from 'react';
-import ConnectorField from '../../common/ConnectorFields/ConnectorField';
-import ConfirmationButton from '../../common/ConfirmationButton/ConfirmationButton';
+import ConnectorField from '../../shared/ConnectorFields/ConnectorField';
+import ConfirmationButton from '../../shared/ConfirmationButton/ConfirmationButton';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import { AppContext } from '../../../providers/AppProvider';
+import { AppContext } from '../../../context/providers/AppProvider';
 import statuses from '../../../constants/statuses';
 import * as icons from '../../../constants/icons';
 import { SettingsContext } from '../../../context/SettingsContext';

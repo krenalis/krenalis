@@ -10,4 +10,4 @@ const checkSessionCookie = () => {
 	}
 };
 
-export default checkSessionCookie;
+export { checkSessionCookie };

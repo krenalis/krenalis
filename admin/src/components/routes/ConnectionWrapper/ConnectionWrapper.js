@@ -1,9 +1,9 @@
 import { useContext, useEffect } from 'react';
 import './ConnectionWrapper.css';
-import Flex from '../../common/Flex/Flex';
-import StatusDot from '../../common/StatusDot/StatusDot';
-import { ConnectionContext } from '../../../providers/ConnectionProvider';
-import { AppContext } from '../../../providers/AppProvider';
+import Flex from '../../shared/Flex/Flex';
+import StatusDot from '../../shared/StatusDot/StatusDot';
+import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
+import { AppContext } from '../../../context/providers/AppProvider';
 import { Outlet } from 'react-router-dom';
 import ConnectionTabs from './ConnectionTabs';
 

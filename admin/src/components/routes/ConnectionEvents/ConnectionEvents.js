@@ -1,8 +1,8 @@
 import { useEffect, useState, useContext } from 'react';
 import './ConnectionEvents.css';
-import IconWrapper from '../../common/IconWrapper/IconWrapper';
-import { AppContext } from '../../../providers/AppProvider';
-import { ConnectionContext } from '../../../providers/ConnectionProvider';
+import IconWrapper from '../../shared/IconWrapper/IconWrapper';
+import { AppContext } from '../../../context/providers/AppProvider';
+import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
 import SyntaxHighlighter from 'react-syntax-highlighter';

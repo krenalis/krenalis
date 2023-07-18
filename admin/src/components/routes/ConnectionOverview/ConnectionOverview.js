@@ -1,8 +1,8 @@
 import { useState, useEffect, useContext } from 'react';
 import './ConnectionOverview.css';
-import Flex from '../../common/Flex/Flex';
-import { AppContext } from '../../../providers/AppProvider';
-import { ConnectionContext } from '../../../providers/ConnectionProvider';
+import Flex from '../../shared/Flex/Flex';
+import { AppContext } from '../../../context/providers/AppProvider';
+import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
 import { BarChart, Bar, XAxis, Tooltip, YAxis, CartesianGrid } from 'recharts';

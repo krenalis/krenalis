@@ -1,5 +1,5 @@
 import './GridCell.css';
-import toJSDateString from '../../../../utils/toJSDateString';
+import toJSDateString from '../../../../lib/utils/toJSDateString';
 
 const GridCell = ({ cell, className }) => {
 	let value, date;

@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import './NotFound.css';
-import { AppContext } from '../../../providers/AppProvider';
+import { AppContext } from '../../../context/providers/AppProvider';
 import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const NotFound = () => {

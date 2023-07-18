@@ -1,13 +1,13 @@
 import { useEffect, useState, useContext } from 'react';
-import { computeActionTypeFields } from '../lib/connections/action';
-import { convertActionMapping } from '../lib/connections/action';
-import { computeDefaultAction } from '../lib/connections/action';
-import { convertActionIdentifiers } from '../lib/connections/action';
-import { AppContext } from '../providers/AppProvider';
+import { computeActionTypeFields } from '../lib/helpers/action';
+import { convertActionMapping } from '../lib/helpers/action';
+import { computeDefaultAction } from '../lib/helpers/action';
+import { convertActionIdentifiers } from '../lib/helpers/action';
+import { AppContext } from '../context/providers/AppProvider';
 import * as variants from '../constants/variants';
 import * as icons from '../constants/icons';
-import { getActionTypeFromConnection } from '../lib/connections/connection';
-import { flattenSchema } from '../lib/connections/action';
+import { getActionTypeFromConnection } from '../lib/helpers/connection';
+import { flattenSchema } from '../lib/helpers/action';
 import { UnprocessableError, NotFoundError } from '../lib/api/errors';
 
 const useActionData = (onClose, connection, providedActionType, providedAction, setIsSaveButtonLoading) => {

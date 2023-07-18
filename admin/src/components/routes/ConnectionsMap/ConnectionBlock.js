@@ -1,8 +1,8 @@
 import { useContext, useState, useEffect } from 'react';
-import Flex from '../../common/Flex/Flex';
-import Arrow from '../../common/Arrow/Arrow';
-import StatusDot from '../../common/StatusDot/StatusDot';
-import { AppContext } from '../../../providers/AppProvider';
+import Flex from '../../shared/Flex/Flex';
+import Arrow from '../../shared/Arrow/Arrow';
+import StatusDot from '../../shared/StatusDot/StatusDot';
+import { AppContext } from '../../../context/providers/AppProvider';
 import { SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectionBlock = ({ connection: c, isNew }) => {

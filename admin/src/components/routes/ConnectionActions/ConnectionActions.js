@@ -1,13 +1,13 @@
 import { useState, useEffect, useContext, useRef } from 'react';
 import './ConnectionActions.css';
-import Flex from '../../common/Flex/Flex';
-import IconWrapper from '../../common/IconWrapper/IconWrapper';
-import Fullscreen from '../../common/Fullscreen/Fullscreen';
+import Flex from '../../shared/Flex/Flex';
+import IconWrapper from '../../shared/IconWrapper/IconWrapper';
+import Fullscreen from '../../shared/Fullscreen/Fullscreen';
 import Action from './Action/Action';
 import ActionsGrid from './ActionsGrid';
 import ActionTypesDialog from './ActionTypesDialog';
-import { AppContext } from '../../../providers/AppProvider';
-import { ConnectionContext } from '../../../providers/ConnectionProvider';
+import { AppContext } from '../../../context/providers/AppProvider';
+import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectionActions = () => {

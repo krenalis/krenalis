@@ -1,7 +1,7 @@
 import { useContext } from 'react';
 import './Sidebar.css';
-import Flex from '../../common/Flex/Flex';
-import { AppContext } from '../../../providers/AppProvider';
+import Flex from '../../shared/Flex/Flex';
+import { AppContext } from '../../../context/providers/AppProvider';
 import { SlIcon, SlSelect, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
 import { useLocation } from 'react-router-dom';
 import getRouteFromPathname from './getRouteFromPathname';

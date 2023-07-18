@@ -1,9 +1,9 @@
 import { useState, useEffect, useContext } from 'react';
 import './ConnectionsList.css';
-import IconWrapper from '../../common/IconWrapper/IconWrapper';
-import Grid from '../../common/Grid/Grid';
-import StatusDot from '../../common/StatusDot/StatusDot';
-import { AppContext } from '../../../providers/AppProvider';
+import IconWrapper from '../../shared/IconWrapper/IconWrapper';
+import Grid from '../../shared/Grid/Grid';
+import StatusDot from '../../shared/StatusDot/StatusDot';
+import { AppContext } from '../../../context/providers/AppProvider';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const GRID_COLUMNS = [

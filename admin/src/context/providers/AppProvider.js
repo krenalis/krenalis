@@ -1,12 +1,12 @@
 import { createContext, useEffect, useState } from 'react';
-import getConnectionFullConnector from '../helpers/getConnectionFullConnector';
-import getConnectorLogo from '../helpers/getConnectorLogo';
-import getConnectionStatus from '../helpers/getConnectionStatus';
-import getConnectionDescription from '../helpers/getConnectionDescription';
-import getStorageFileConnections from '../helpers/getStorageFileConnections';
-import Connection from '../lib/connections/connection';
-import Connector from '../lib/connections/connector';
-import API from '../lib/api/api';
+import getConnectorLogo from '../../components/helpers/getConnectorLogo';
+import { getConnectionFullConnector } from '../../lib/helpers/connection';
+import { getConnectionStatus } from '../../lib/helpers/connection';
+import { getConnectionDescription } from '../../lib/helpers/connection';
+import { getStorageFileConnections } from '../../lib/helpers/connection';
+import Connection from '../../lib/helpers/connection';
+import Connector from '../../lib/helpers/connector';
+import API from '../../lib/api/api';
 
 const defaultAppContext = {
 	setTitle: () => {},

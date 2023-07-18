@@ -1,8 +1,8 @@
 import { useContext } from 'react';
-import SortableMapping from '../../../common/SortableMapping/SortableMapping';
-import Section from '../../../common/Section/Section';
+import SortableMapping from '../../../shared/SortableMapping/SortableMapping';
+import Section from '../../../shared/Section/Section';
 import { ActionContext } from '../../../../context/ActionContext';
-import { AppContext } from '../../../../providers/AppProvider';
+import { AppContext } from '../../../../context/providers/AppProvider';
 
 const ActionIdentifiers = () => {
 	const { action, setAction, actionType } = useContext(ActionContext);

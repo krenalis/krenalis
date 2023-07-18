@@ -1,8 +1,8 @@
 import { useState, useEffect, useContext } from 'react';
 import './Schema.css';
-import Grid from '../../common/Grid/Grid';
+import Grid from '../../shared/Grid/Grid';
 import Toolbar from '../../layout/Toolbar/Toolbar';
-import { AppContext } from '../../../providers/AppProvider';
+import { AppContext } from '../../../context/providers/AppProvider';
 import statuses from '../../../constants/statuses';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 import { UnprocessableError } from '../../../lib/api/errors';

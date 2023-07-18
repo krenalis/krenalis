@@ -1,7 +1,7 @@
 import { useRef, useContext } from 'react';
-import Section from '../../../common/Section/Section';
-import { ComboBoxInput, ComboBoxList } from '../../../common/ComboBox/ComboBox';
-import { getSchemaComboboxItems } from '../../../../helpers/getSchemaComboBoxItems';
+import Section from '../../../shared/Section/Section';
+import { ComboBoxInput, ComboBoxList } from '../../../shared/ComboBox/ComboBox';
+import { getSchemaComboboxItems } from '../../../../components/helpers/getSchemaComboBoxItems';
 import { ActionContext } from '../../../../context/ActionContext';
 import { SlButton, SlSelect, SlInput, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
 

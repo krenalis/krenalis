@@ -1,5 +1,5 @@
-import UnknownLogo from '../components/common/UnknownLogo/UnknownLogo';
-import LittleLogo from '../components/common/LittleLogo/LittleLogo';
+import UnknownLogo from '../shared/UnknownLogo/UnknownLogo';
+import LittleLogo from '../shared/LittleLogo/LittleLogo';
 
 const getConnectorLogo = (connectorIcon) => {
 	let logo;

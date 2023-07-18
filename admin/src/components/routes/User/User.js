@@ -3,7 +3,7 @@ import { useContext, useEffect, useState, useRef } from 'react';
 import './User.css';
 import { adminBasePath } from '../../../constants/path';
 import { UsersContext } from '../../../context/UsersContext';
-import { AppContext } from '../../../providers/AppProvider';
+import { AppContext } from '../../../context/providers/AppProvider';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
 import { SlIcon, SlButton, SlSkeleton } from '@shoelace-style/shoelace/dist/react/index.js';

@@ -3,7 +3,7 @@ import './Grid.css';
 import GridHeaderRow from './GridHeaderRow/GridHeaderRow';
 import GridRow from './GridRow/GridRow';
 import GridNestedRows from './GridNestedRows/GridNestedRows';
-import getChildIndexClassname from '../../../utils/getChildIndexClassname';
+import getChildIndexClassname from '../../../lib/utils/getChildIndexClassname';
 import { SlSpinner, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const Grid = ({ columns, rows, isLoading, noRowsMessage }) => {

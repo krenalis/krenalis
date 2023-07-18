@@ -1,8 +1,8 @@
 import { useContext } from 'react';
 import './UsersList.css';
 import Toolbar from '../../layout/Toolbar/Toolbar';
-import Grid from '../../common/Grid/Grid';
-import { AppContext } from '../../../providers/AppProvider';
+import Grid from '../../shared/Grid/Grid';
+import { AppContext } from '../../../context/providers/AppProvider';
 import { UsersContext } from '../../../context/UsersContext';
 import {
 	SlButton,

@@ -1,11 +1,11 @@
 import { useState, useEffect, useContext, useRef } from 'react';
 import './ConnectorSettings.css';
-import ConnectorField from '../../common/ConnectorFields/ConnectorField';
-import ConfirmationButton from '../../common/ConfirmationButton/ConfirmationButton';
+import ConnectorField from '../../shared/ConnectorFields/ConnectorField';
+import ConfirmationButton from '../../shared/ConfirmationButton/ConfirmationButton';
 import NotFound from '../NotFound/NotFound';
-import Flex from '../../common/Flex/Flex';
+import Flex from '../../shared/Flex/Flex';
 import { SettingsContext } from '../../../context/SettingsContext';
-import { AppContext } from '../../../providers/AppProvider';
+import { AppContext } from '../../../context/providers/AppProvider';
 import statuses from '../../../constants/statuses';
 import { SlButton, SlInput, SlSelect, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';

@@ -6,8 +6,8 @@ import Enabling from './Enabling';
 import Keys from './Keys';
 import Storage from './Storage';
 import Snippet from './Snippet';
-import { AppContext } from '../../../providers/AppProvider';
-import { ConnectionContext } from '../../../providers/ConnectionProvider';
+import { AppContext } from '../../../context/providers/AppProvider';
+import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectionSettings = () => {

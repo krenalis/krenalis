@@ -9,7 +9,7 @@ import ActionExportMode from './ActionExportMode';
 import ActionMatchingProperties from './ActionMatchingProperties';
 import ActionIdentifiers from './ActionIdentifiers';
 import useActionData from '../../../../hooks/useActionData';
-import { ConnectionContext } from '../../../../providers/ConnectionProvider';
+import { ConnectionContext } from '../../../../context/providers/ConnectionProvider';
 import { ActionContext } from '../../../../context/ActionContext';
 import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 

@@ -1,14 +1,14 @@
 import { useState, useRef, useContext, useEffect, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import { updateMappingProperty } from './Action.helpers';
-import { getSchemaComboboxItems } from '../../../../helpers/getSchemaComboBoxItems';
-import { flattenSchema } from '../../../../lib/connections/action';
+import { getSchemaComboboxItems } from '../../../../components/helpers/getSchemaComboBoxItems';
+import { flattenSchema } from '../../../../lib/helpers/action';
 import { rawTransformationFunction } from './Action.constants';
-import AlertDialog from '../../../common/AlertDialog/AlertDialog';
-import { ComboBoxInput, ComboBoxList } from '../../../common/ComboBox/ComboBox';
-import Section from '../../../common/Section/Section';
-import EditorWrapper from '../../../common/EditorWrapper/EditorWrapper';
-import { AppContext } from '../../../../providers/AppProvider';
+import AlertDialog from '../../../shared/AlertDialog/AlertDialog';
+import { ComboBoxInput, ComboBoxList } from '../../../shared/ComboBox/ComboBox';
+import Section from '../../../shared/Section/Section';
+import EditorWrapper from '../../../shared/EditorWrapper/EditorWrapper';
+import { AppContext } from '../../../../context/providers/AppProvider';
 import { ActionContext } from '../../../../context/ActionContext';
 import {
 	SlButton,

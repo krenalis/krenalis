@@ -1,6 +1,6 @@
 import { useContext } from 'react';
-import Section from '../../../common/Section/Section';
-import { EXPORT_MODE_OPTIONS } from '../../../../lib/connections/action';
+import Section from '../../../shared/Section/Section';
+import { EXPORT_MODE_OPTIONS } from '../../../../lib/helpers/action';
 import { ActionContext } from '../../../../context/ActionContext';
 import { SlSelect, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
 

@@ -1,6 +1,6 @@
 import './GridHeaderRow.css';
 import GridHeaderCell from '../GridHeaderCell/GridHeaderCell';
-import getChildIndexClassname from '../../../../utils/getChildIndexClassname';
+import getChildIndexClassname from '../../../../lib/utils/getChildIndexClassname';
 
 const GridHeaderRow = ({ columns }) => {
 	const gridHeaderCells = [];

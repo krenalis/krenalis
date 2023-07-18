@@ -1,6 +1,6 @@
 import './GridRow.css';
 import GridCell from '../GridCell/GridCell';
-import getChildIndexClassname from '../../../../utils/getChildIndexClassname';
+import getChildIndexClassname from '../../../../lib/utils/getChildIndexClassname';
 
 const GridRow = ({ row, columns, className }) => {
 	const gridCells = [];

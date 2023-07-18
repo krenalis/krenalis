@@ -1,3 +1,5 @@
+import * as variants from '../../constants/variants';
+
 class Connection {
 	constructor(
 		id,
@@ -119,5 +121,48 @@ const getActionTypeFromConnection = (connection, target, eventType) => {
 	return actionType;
 };
 
+const getConnectionDescription = (connection) => {
+	let description;
+	if (connection.isSource) {
+		description = connection.connector.sourceDescription;
+	} else {
+		description = connection.connector.destinationDescription;
+	}
+	return description;
+};
+
+const getConnectionFullConnector = (connectorID, connectors) => {
+	return connectors.find((c) => c.id === connectorID);
+};
+
+const getConnectionStatus = (connection) => {
+	if (!connection.enabled) {
+		return { text: 'Disabled', variant: variants.NEUTRAL };
+	} else {
+		switch (connection.health) {
+			case 'Healthy':
+				return { text: 'Working properly', variant: variants.SUCCESS };
+			case 'NoRecentData':
+				return { text: 'No recent Data', variant: variants.DANGER };
+			case 'RecentError':
+				return { text: 'Recent error', variant: variants.DANGER };
+			case 'AccessDenied':
+				return { text: 'Access denied', variant: variants.DANGER };
+			default:
+				return { text: null, variant: null };
+		}
+	}
+};
+
+const getStorageFileConnections = (storageID, connections) => {
+	return connections.filter((c) => c.storage === storageID);
+};
+
 export default Connection;
-export { getActionTypeFromConnection };
+export {
+	getActionTypeFromConnection,
+	getConnectionDescription,
+	getConnectionFullConnector,
+	getConnectionStatus,
+	getStorageFileConnections,
+};

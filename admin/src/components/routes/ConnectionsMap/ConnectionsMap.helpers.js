@@ -1,6 +1,6 @@
 import LinkedConnectionBlocks from './LinkedConnectionBlocks';
 import ConnectionBlock from './ConnectionBlock';
-import getStorageFileConnections from '../../../helpers/getStorageFileConnections';
+import { getStorageFileConnections } from '../../../lib/helpers/connection';
 
 const getConnectionsBlocks = (connections, newConnectionID) => {
 	const blocks = [];

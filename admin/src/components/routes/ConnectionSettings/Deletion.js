@@ -1,7 +1,7 @@
 import { useState, useContext } from 'react';
-import Flex from '../../common/Flex/Flex';
+import Flex from '../../shared/Flex/Flex';
 import statuses from '../../../constants/statuses';
-import { AppContext } from '../../../providers/AppProvider';
+import { AppContext } from '../../../context/providers/AppProvider';
 import { SlButton, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
 import { NotFoundError } from '../../../lib/api/errors';
 

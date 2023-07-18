@@ -1,16 +1,16 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
 import './AnonymousIdentity.css';
-import SortableMapping from '../../common/SortableMapping/SortableMapping';
-import Section from '../../common/Section/Section';
+import SortableMapping from '../../shared/SortableMapping/SortableMapping';
+import Section from '../../shared/Section/Section';
 import * as variants from '../../../constants/variants';
 import * as icons from '../../../constants/icons';
 import { useContext } from 'react';
-import { AppContext } from '../../../providers/AppProvider';
+import { AppContext } from '../../../context/providers/AppProvider';
 import {
 	checkAnonymousIdentifiers,
 	transformAnonymousIdentifiers,
 	untransformAnonymousIdentifiers,
-} from '../../../lib/workspace/anonymousIdentifiers';
+} from '../../../lib/helpers/identifiers';
 import { SlButton, SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const AnonymousIdentity = () => {

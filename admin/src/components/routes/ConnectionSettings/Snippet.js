@@ -1,6 +1,6 @@
 import { useContext } from 'react';
-import ClipboardInput from '../../common/ClipboardInput/ClipboardInput';
-import { ConnectionContext } from '../../../providers/ConnectionProvider';
+import ClipboardInput from '../../shared/ClipboardInput/ClipboardInput';
+import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 
 const Snippet = () => {
 	const { connection: c } = useContext(ConnectionContext);

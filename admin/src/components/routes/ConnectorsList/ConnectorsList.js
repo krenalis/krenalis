@@ -1,7 +1,7 @@
 import { useState, useContext } from 'react';
 import './ConnectorsList.css';
-import Card from '../../common/Card/Card';
-import { AppContext } from '../../../providers/AppProvider';
+import Card from '../../shared/Card/Card';
+import { AppContext } from '../../../context/providers/AppProvider';
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectorsList = () => {

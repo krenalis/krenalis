@@ -1,6 +1,6 @@
 import { useContext } from 'react';
-import { AppContext } from '../../../providers/AppProvider';
-import { ConnectionContext } from '../../../providers/ConnectionProvider';
+import { AppContext } from '../../../context/providers/AppProvider';
+import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { SlSwitch } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const Enabling = ({ connection: c }) => {

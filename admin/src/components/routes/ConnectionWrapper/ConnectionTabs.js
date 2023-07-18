@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { AppContext } from '../../../providers/AppProvider';
+import { AppContext } from '../../../context/providers/AppProvider';
 import { SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 import { useLocation } from 'react-router-dom';
 

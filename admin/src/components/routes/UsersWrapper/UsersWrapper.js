@@ -1,7 +1,7 @@
 import { useEffect, useContext, useState } from 'react';
 import './UsersWrapper.css';
 import { UsersContext } from '../../../context/UsersContext';
-import { AppContext } from '../../../providers/AppProvider';
+import { AppContext } from '../../../context/providers/AppProvider';
 import statuses from '../../../constants/statuses';
 import { adminBasePath } from '../../../constants/path';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';

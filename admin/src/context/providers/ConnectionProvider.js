@@ -1,6 +1,6 @@
 import { createContext, useState, useContext, useEffect } from 'react';
-import { AppContext } from '../providers/AppProvider';
-import { NotFoundError } from '../lib/api/errors';
+import { AppContext } from './AppProvider';
+import { NotFoundError } from '../../lib/api/errors';
 import { Outlet } from 'react-router-dom';
 
 const defaultConnectionContext = {

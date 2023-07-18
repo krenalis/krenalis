@@ -7,7 +7,7 @@ import ConnectorSettings from './components/routes/ConnectorSettings/ConnectorSe
 import ConnectionsMap from './components/routes/ConnectionsMap/ConnectionsMap';
 import ConnectionsList from './components/routes/ConnectionsList/ConnectionsList';
 import ConnectionWrapper from './components/routes/ConnectionWrapper/ConnectionWrapper';
-import { ConnectionProvider } from './providers/ConnectionProvider';
+import { ConnectionProvider } from './context/providers/ConnectionProvider';
 import UsersWrapper from './components/routes/UsersWrapper/UsersWrapper';
 import UsersList from './components/routes/UsersList/UsersList';
 import User from './components/routes/User/User';
