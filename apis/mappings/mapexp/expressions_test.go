@@ -104,36 +104,10 @@ func TestCompile(t *testing.T) {
 			{Name: "p", Type: types.Map(types.Int())},
 		})))},
 		{Name: "other", Type: types.Int(), Nullable: true},
+		{Name: "properties", Type: types.JSON(), Nullable: true},
 	})
 
 	cx := decimal.NewFromFloat(0.142)
-	values := map[string]any{
-		"manufacturer": "MyPlaneCompany",
-		"model":        "SuperFast",
-		"engine": map[string]any{
-			"name":        "TurboX",
-			"power":       uint(700),
-			"afterburner": nil,
-		},
-		"cx":             cx,
-		"passengers":     250,
-		"revision_dates": []any{dt},
-		"map": map[string]any{
-			"x": 1,
-			"y": 2,
-		},
-		"deep": map[string]any{
-			"a": map[string]any{
-				"b": map[string]any{
-					"p": map[string]any{
-						"x": 1,
-						"y": 2,
-					},
-				},
-			},
-		},
-		"other": nil,
-	}
 
 	tests := []struct {
 		expr          string
@@ -167,12 +141,19 @@ func TestCompile(t *testing.T) {
 		{expr: `""`, dt: types.JSON(), expectedValue: json.RawMessage("null")},
 
 		{expr: "map['x']", dt: types.Int(), expectedValue: 1},
+		{expr: "map.x", dt: types.Int(), expectedValue: 1},
 		{expr: "map['not-exist']", dt: types.UInt(), evalErr: ErrVoid},
 		{expr: "deep['a']", dt: types.JSON(), expectedValue: json.RawMessage(`{"b":{"p":{"x":1,"y":2}}}`)},
 		{expr: "deep['a']['b']", dt: types.JSON(), expectedValue: json.RawMessage(`{"p":{"x":1,"y":2}}`)},
 		{expr: "deep['a']['b'].p", dt: types.JSON(), expectedValue: json.RawMessage(`{"x":1,"y":2}`)},
+		{expr: "deep.a.b.p", dt: types.JSON(), expectedValue: json.RawMessage(`{"x":1,"y":2}`)},
 		{expr: "deep['a']['non-exist'].p", dt: types.JSON(), evalErr: ErrVoid},
 		{expr: "deep['a']['b'].p['x']", dt: types.Int(), expectedValue: 1},
+
+		{expr: "properties", dt: types.JSON(), expectedValue: json.RawMessage(`{"a":1,"b":{"c":[1,2]}}`)},
+		{expr: "properties.a", dt: types.Int(), expectedValue: 1},
+		{expr: "properties.b.c", dt: types.Array(types.Int()), expectedValue: []any{1, 2}},
+		{expr: "properties.b['c']", dt: types.Array(types.Int()), expectedValue: []any{1, 2}},
 
 		// Compile errors.
 		{expr: "!true", dt: types.Boolean(), compileErr: errors.New("unexpected character '!'")},
@@ -240,6 +221,40 @@ func TestCompile(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.expr, func(t *testing.T) {
+
+			values := map[string]any{
+				"manufacturer": "MyPlaneCompany",
+				"model":        "SuperFast",
+				"engine": map[string]any{
+					"name":        "TurboX",
+					"power":       uint(700),
+					"afterburner": nil,
+				},
+				"cx":             cx,
+				"passengers":     250,
+				"revision_dates": []any{dt},
+				"map": map[string]any{
+					"x": 1,
+					"y": 2,
+				},
+				"deep": map[string]any{
+					"a": map[string]any{
+						"b": map[string]any{
+							"p": map[string]any{
+								"x": 1,
+								"y": 2,
+							},
+						},
+					},
+				},
+				"other": nil,
+				"properties": map[string]any{
+					"a": 1.0,
+					"b": map[string]any{
+						"c": []any{1.0, 2.0},
+					},
+				},
+			}
 
 			// Test Compile.
 			expr, err := Compile(test.expr, schema, test.dt, test.nullable)
@@ -335,6 +350,8 @@ func TestValueOf(t *testing.T) {
 				"e": []any{1, 2, 3},
 			},
 		},
+		"f": nil,
+		"g": json.Number("12.53"),
 	}
 
 	tests := []struct {
@@ -345,9 +362,11 @@ func TestValueOf(t *testing.T) {
 		{types.Path{"a"}, 5, nil},
 		{types.Path{"b", "c"}, "foo", nil},
 		{types.Path{"b", "d", "e"}, []any{1, 2, 3}, nil},
-		{types.Path{"f"}, nil, errors.New("cannot find value for property \"f\"")},
-		{types.Path{"b", "g"}, nil, errors.New("cannot find value for property \"b.g\"")},
-		{types.Path{"a", "f"}, nil, errors.New("cannot find value for property \"a.f\" (\"a\" has type int)")},
+		{types.Path{"b", "c", "d"}, nil, errors.New(`invalid b.c.d: b.c is a JSON string, not a JSON object`)},
+		{types.Path{"f", "g"}, nil, errors.New(`invalid f.g: f is a JSON null, not a JSON object`)},
+		{types.Path{"b", "g"}, nil, nil},
+		{types.Path{"b", ":g"}, nil, ErrVoid},
+		{types.Path{"g", ":h"}, nil, errors.New(`invalid g["h"]: g is a JSON number, not a JSON object`)},
 	}
 
 	for _, test := range tests {

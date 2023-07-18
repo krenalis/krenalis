@@ -32,40 +32,35 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 		}
 		// Check the path.
 		if p.args == nil {
-
-			s := 0
-			j := 0
 			t := schema
-			for j < len(p.path) {
-				for ; j < len(p.path); j++ {
+		Path:
+			for j := 0; j < len(p.path); j++ {
+				switch t.PhysicalType() {
+				case types.PtJSON:
+					break Path
+				case types.PtObject:
 					if p.path[j][0] == ':' {
-						break
+						return fmt.Errorf("cannot use '[]' notation with %q (type %s)", t, stringifyPath(p.path[:j]))
 					}
-				}
-				if s < j {
-					property, err := t.PropertyByPath(p.path[s:j])
-					if err != nil {
-						return fmt.Errorf("property %q does not exist", stringifyPath(p.path[:j]))
+					property, ok := t.Property(p.path[j])
+					if !ok {
+						return fmt.Errorf("property %q does not exist", stringifyPath(p.path[:j+1]))
 					}
 					t = property.Type
+				case types.PtMap:
+					t = t.ValueType()
+				default:
+					if p.path[j][0] == ':' {
+						return fmt.Errorf("cannot use '[]' notation with %q (type %s)", t, stringifyPath(p.path[:j]))
+					}
+					return fmt.Errorf("cannot use dot notation with %q (type %s)", t, stringifyPath(p.path[:j]))
 				}
-				if j == len(p.path) {
-					break
-				}
-				if t.PhysicalType() != types.PtMap {
-					return fmt.Errorf("cannot access to property %q (type %s) as a map", t, stringifyPath(p.path[:j]))
-				}
-				t = t.ValueType()
-				j++
-				s = j
 			}
-
 			if concatenate && !convertibleTo(t, types.Text()) {
-				return fmt.Errorf("cannot convert property %s (type %s) to Text", stringifyPath(p.path), t)
+				return fmt.Errorf("cannot convert %s (type %s) to Text", stringifyPath(p.path), t)
 			}
 			expr[i].typ = t
 			continue
-
 		}
 		// Check the function call
 		var err error

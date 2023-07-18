@@ -8,6 +8,7 @@
 package mapexp
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -251,12 +252,25 @@ func valueOf(path types.Path, values map[string]any) (any, error) {
 			if isKey {
 				return nil, ErrVoid
 			}
-			return nil, fmt.Errorf("cannot find value for property %q", stringifyPath(path[:i+1]))
+			return nil, nil
 		}
 		if i != last {
 			values, ok = v.(map[string]any)
 			if !ok {
-				return nil, fmt.Errorf("cannot find value for property %q (%q has type %T)", stringifyPath(path[:i+2]), stringifyPath(path[:i+1]), v)
+				var t string
+				switch v.(type) {
+				case nil:
+					t = "null"
+				case bool:
+					t = "bool"
+				case float64, json.Number:
+					t = "number"
+				case string:
+					t = "string"
+				default:
+					t = "array"
+				}
+				return nil, fmt.Errorf("invalid %s: %s is a JSON %s, not a JSON object", stringifyPath(path[:i+2]), stringifyPath(path[:i+1]), t)
 			}
 		}
 	}
