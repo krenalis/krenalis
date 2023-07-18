@@ -114,9 +114,9 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 	switch eventType {
 	case "event_page_view":
 		err = c.collect(event.AnonymousID, event.UserID, "page_view", map[string]any{
-			"page_location": event.Page.URL,
-			"page_referrer": event.Page.Referrer,
-			"page_title":    event.Page.Title,
+			"page_location": event.Context.Page.URL,
+			"page_referrer": event.Context.Page.Referrer,
+			"page_title":    event.Context.Page.Title,
 		})
 	case "event_share":
 		params := map[string]any{}

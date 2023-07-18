@@ -94,70 +94,98 @@ func (q *warehouseQueue) add(events []*collectedEvent) {
 }
 
 var batchEventsColumns = []string{
-	"source",
-	"message_id",
+
 	"anonymous_id",
-	"user_id",
-	"date",
-	"timestamp",
-	"sent_at",
-	"received_at",
-	"session_id",
-	"session_start",
-	"ip",
-	"network_cellular",
-	"network_wifi",
-	"network_bluetooth",
-	"network_carrier",
-	"os_name",
-	"os_version",
+	"category",
+
+	// app.
 	"app_name",
 	"app_version",
 	"app_build",
 	"app_namespace",
-	"screen_density",
-	"screen_width",
-	"screen_height",
-	"user_agent",
+
+	// browser.
 	"browser_name",
 	"browser_other",
 	"browser_version",
-	"device_id",
-	"device_name",
-	"device_manufacturer",
-	"device_model",
-	"device_type",
-	"device_version",
-	"device_advertising_id",
-	"device_token",
-	"location_city",
-	"location_country",
-	"location_region",
-	"location_latitude",
-	"location_longitude",
-	"location_speed",
-	"event",
-	"name",
-	"locale",
-	"timezone",
-	"page_url",
-	"page_path",
-	"page_search",
-	"page_hash",
-	"page_title",
-	"page_referrer",
-	"referrer_type",
-	"referrer_name",
-	"referrer_url",
-	"referrer_link",
+
+	// campaign.
 	"campaign_name",
 	"campaign_source",
 	"campaign_medium",
 	"campaign_term",
 	"campaign_content",
+
+	// device.
+	"device_id",
+	"device_advertising_id",
+	"device_ad_tracking_enabled",
+	"device_manufacturer",
+	"device_model",
+	"device_name",
+	"device_type",
+	"device_token",
+
+	"ip",
+
+	// library.
 	"library_name",
 	"library_version",
+
+	"locale",
+
+	// location.
+	"location_city",
+	"location_country",
+	"location_latitude",
+	"location_longitude",
+	"location_speed",
+
+	// network.
+	"network_bluetooth",
+	"network_carrier",
+	"network_cellular",
+	"network_wifi",
+
+	// os.
+	"os_name",
+	"os_version",
+
+	// page.
+	"page_path",
+	"page_referrer",
+	"page_search",
+	"page_title",
+	"page_url",
+
+	// referrer.
+	"referrer_id",
+	"referrer_type",
+
+	// screen.
+	"screen_width",
+	"screen_height",
+	"screen_density",
+
+	// session.
+	"session_id",
+	"session_start",
+
+	"timezone",
+	"user_agent",
+
+	"event",
+	"group_id",
+	"message_id",
+	"name",
 	"properties",
+	"received_at",
+	"sent_at",
+	"source",
+	"timestamp",
+	"traits",
+	"type",
+	"user_id",
 }
 
 // flush flushes a batch of events to the data warehouse.
@@ -178,81 +206,126 @@ RETRY:
 			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
 			continue
 		}
+		var traits bytes.Buffer
+		traitsEnc := json.NewEncoder(&traits)
+		traitsEnc.SetEscapeHTML(false)
 		var properties bytes.Buffer
-		enc := json.NewEncoder(&properties)
-		enc.SetEscapeHTML(false)
+		propertiesEnc := json.NewEncoder(&properties)
+		propertiesEnc.SetEscapeHTML(false)
 		for _, e := range events {
-			properties.Reset()
-			err = enc.Encode(e.Properties)
+			traits.Reset()
+			if *e.Type == "identify" || *e.Type == "group" {
+				err = traitsEnc.Encode(e.Traits)
+			} else {
+				err = traitsEnc.Encode(e.Context.Traits)
+			}
 			if err != nil {
 				log.Printf("[error] cannot marshal event: %s", err)
 				continue
 			}
+			properties.Reset()
+			err = propertiesEnc.Encode(e.Properties)
+			if err != nil {
+				log.Printf("[error] cannot marshal event: %s", err)
+				continue
+			}
+			groupID := e.GroupID
+			if *e.Type != "group" {
+				groupID = e.Context.GroupID
+			}
 			err = batch.Append(
-				e.source,
-				e.MessageID,
+
 				e.AnonymousID,
-				e.UserID,
-				e.date,
-				e.timestamp,
-				e.sentAt,
-				e.receivedAt,
-				e.Context.SessionId,
-				e.Context.SessionStart,
-				e.ip,
-				e.Context.Network.Cellular,
-				e.Context.Network.WiFi,
-				e.Context.Network.Bluetooth,
-				e.Context.Network.Carrier,
-				e.Context.OS.Name,
-				e.Context.OS.Version,
+				e.Category,
+
+				// app.
 				e.Context.App.Name,
 				e.Context.App.Version,
 				e.Context.App.Build,
 				e.Context.App.Namespace,
-				e.screen.density,
-				e.screen.width,
-				e.screen.height,
-				e.userAgent,
-				e.browser.name,
-				e.browser.other,
-				e.browser.version,
-				e.Context.Device.ID,
-				e.Context.Device.Name,
-				e.Context.Device.Manufacturer,
-				e.Context.Device.Model,
-				e.Context.Device.Type,
-				e.Context.Device.Version,
-				e.Context.Device.AdvertisingID,
-				e.Context.Device.Token,
-				e.Context.Location.City,
-				e.Context.Location.Country,
-				e.Context.Location.Region,
-				e.Context.Location.Latitude,
-				e.Context.Location.Longitude,
-				e.Context.Location.Speed,
-				e.Event,
-				e.Name,
-				e.Context.Locale,
-				e.Context.Timezone,
-				e.page.url,
-				e.page.path,
-				e.page.search,
-				e.page.hash,
-				e.page.title,
-				e.page.referrer,
-				e.Context.Referrer.Type,
-				e.Context.Referrer.Name,
-				e.Context.Referrer.URL,
-				e.Context.Referrer.Link,
+
+				// browser.
+				e.Context.browser.Name,
+				e.Context.browser.Other,
+				e.Context.browser.Version,
+
+				// campaign.
 				e.Context.Campaign.Name,
 				e.Context.Campaign.Source,
 				e.Context.Campaign.Medium,
 				e.Context.Campaign.Term,
 				e.Context.Campaign.Content,
+
+				// device.
+				e.Context.Device.ID,
+				e.Context.Device.AdvertisingID,
+				e.Context.Device.AdTrackingEnabled,
+				e.Context.Device.Manufacturer,
+				e.Context.Device.Model,
+				e.Context.Device.Name,
+				e.Context.Device.Type,
+				e.Context.Device.Token,
+
+				e.Context.IP,
+
+				// library.
 				e.Context.Library.Name,
 				e.Context.Library.Version,
+
+				e.Context.Locale,
+
+				// location.
+				e.Context.Location.City,
+				e.Context.Location.Country,
+				e.Context.Location.Latitude,
+				e.Context.Location.Longitude,
+				e.Context.Location.Speed,
+
+				// network.
+				e.Context.Network.Bluetooth,
+				e.Context.Network.Carrier,
+				e.Context.Network.Cellular,
+				e.Context.Network.WiFi,
+
+				// os.
+				e.Context.OS.Name,
+				e.Context.OS.Version,
+
+				// page.
+				e.Context.Page.Path,
+				e.Context.Page.Referrer,
+				e.Context.Page.Search,
+				e.Context.Page.Title,
+				e.Context.Page.URL,
+
+				// referrer.
+				e.Context.Referrer.ID,
+				e.Context.Referrer.Type,
+
+				// screen.
+				int16(e.Context.Screen.Width),
+				int16(e.Context.Screen.Height),
+				int16(e.Context.Screen.Density),
+
+				// session.
+				e.Context.SessionID,
+				e.Context.SessionStart,
+
+				e.Context.Timezone,
+				e.Context.UserAgent,
+
+				e.Event,
+				groupID,
+				e.MessageID,
+				e.Name,
 				properties.Bytes(),
+				e.receivedAt,
+				e.SentAt,
+				e.source,
+				e.Timestamp,
+				traits.Bytes(),
+				*e.Type,
+				e.UserID,
 			)
 			if err != nil {
 				log.Printf("[error] cannot log events: %s", err)

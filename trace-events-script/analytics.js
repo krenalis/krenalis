@@ -451,9 +451,9 @@ class Analytics {
 			locale: n.language || n.userLanguage,
 			page: page,
 			screen: {
-				density: window.devicePixelRatio,
 				width: window.screen.width,
 				height: window.screen.height,
+				density: window.devicePixelRatio,
 			},
 			userAgent: n.userAgent,
 		};

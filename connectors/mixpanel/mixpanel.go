@@ -127,72 +127,64 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 	}
 	p["distinct_id"] = distinctID
 	p["$device_id"] = event.AnonymousID
-	if event.IP == "" {
-		if event.Location.Country != "" {
-			p["mp_country_code"] = event.Location.Country
+	if event.Context.IP == "" {
+		if event.Context.Location.Country != "" {
+			p["mp_country_code"] = event.Context.Location.Country
 		}
-		if event.Location.Region != "" {
-			p["$region"] = event.Location.Region
-		}
-		if event.Location.City != "" {
-			p["$city"] = event.Location.City
+		if event.Context.Location.City != "" {
+			p["$city"] = event.Context.Location.City
 		}
 	} else {
-		p["ip"] = event.IP
+		p["ip"] = event.Context.IP
 		// Supplying the 'ip' property, Mixpanel automatically enriches the event with country, region, and city
 		// if they are not supplied. Provide either all or none of these properties to ensure that Mixpanel's
 		// enrichment occurs for all or none of them.
-		if event.Location.Country != "" || event.Location.Region != "" || event.Location.City != "" {
-			if event.Location.Country != "" {
-				p["mp_country_code"] = event.Location.Country
+		if event.Context.Location.Country != "" || event.Context.Location.City != "" {
+			if event.Context.Location.Country != "" {
+				p["mp_country_code"] = event.Context.Location.Country
 			} else {
 				p["mp_country_code"] = nil
 			}
-			if event.Location.Region != "" {
-				p["$region"] = event.Location.Region
-			} else {
-				p["$region"] = nil
-			}
-			if event.Location.City != "" {
-				p["$city"] = event.Location.City
+			if event.Context.Location.City != "" {
+				p["$city"] = event.Context.Location.City
 			} else {
 				p["$city"] = nil
 			}
 		}
 	}
-	if event.OS.Name != "" {
-		p["$os"] = event.OS.Name
+	if event.Context.OS.Name != "" {
+		p["$os"] = event.Context.OS.Name
 	}
-	if event.Browser.Name != "" {
-		p["$browser"] = event.Browser.Name
-	} else if event.Browser.Other != "" {
-		p["$browser"] = event.Browser.Other
+	if event.Context.Browser.Name != "" {
+		p["$browser"] = event.Context.Browser.Name
+	} else if event.Context.Browser.Other != "" {
+		p["$browser"] = event.Context.Browser.Other
 	}
-	if event.Browser.Version != "" {
-		p["$browser_version"] = event.Browser.Version
+	if event.Context.Browser.Version != "" {
+		p["$browser_version"] = event.Context.Browser.Version
 	}
-	if event.Page.Referrer != "" {
-		u, err := url.Parse(event.Page.Referrer)
+	if event.Context.Page.Referrer != "" {
+		u, err := url.Parse(event.Context.Page.Referrer)
 		if err == nil {
-			p["$referrer"] = event.Page.Referrer
+			p["$referrer"] = event.Context.Page.Referrer
 			p["$referring_domain"] = u.Hostname()
 		}
 	}
-	if event.Page.URL != "" {
-		p["$current_url"] = event.Page.URL
-		p["current_page_title"] = event.Page.Title
-		u, err := url.Parse(event.Page.URL)
+	if event.Context.Page.URL != "" {
+		p["$current_url"] = event.Context.Page.URL
+		p["current_page_title"] = event.Context.Page.Title
+		u, err := url.Parse(event.Context.Page.URL)
 		if err == nil {
 			p["current_domain"] = u.Hostname()
 			p["current_url_path"] = u.Path
 			p["current_url_protocol"] = u.Scheme + ":"
 		}
 	}
-	if event.Screen.Width != 0 {
-		p["$screen_width"] = event.Screen.Width
+	if event.Context.Screen.Width != 0 {
+		p["$screen_width"] = event.Context.Screen.Width
 	}
-	if event.Screen.Height != 0 {
-		p["$screen_height"] = event.Screen.Height
+	if event.Context.Screen.Height != 0 {
+		p["$screen_height"] = event.Context.Screen.Height
 	}
 
 	// Send the event.

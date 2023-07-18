@@ -65,12 +65,18 @@ type batchEvents struct {
 }
 
 type eventContext struct {
-	App struct {
+	Active bool `json:"active,omitempty"`
+	App    struct {
 		Name      string `json:"name,omitempty"`
 		Version   string `json:"version,omitempty"`
 		Build     string `json:"build,omitempty"`
 		Namespace string `json:"namespace,omitempty"`
 	} `json:"app,omitempty"`
+	browser struct {
+		Name    string `json:"name,omitempty"`
+		Other   string `json:"other,omitempty"`
+		Version string `json:"version,omitempty"`
+	}
 	Campaign struct {
 		Name    string `json:"name,omitempty"`
 		Source  string `json:"source,omitempty"`
@@ -79,14 +85,14 @@ type eventContext struct {
 		Content string `json:"content,omitempty"`
 	} `json:"campaign,omitempty"`
 	Device struct {
-		ID            string `json:"id,omitempty"`
-		Name          string `json:"name,omitempty"`
-		Manufacturer  string `json:"manufacturer,omitempty"`
-		Model         string `json:"model,omitempty"`
-		Type          string `json:"type,omitempty"`
-		Version       string `json:"version,omitempty"`
-		AdvertisingID string `json:"advertisingId,omitempty"`
-		Token         string `json:"token,omitempty"`
+		ID                string `json:"id,omitempty"`
+		AdvertisingID     string `json:"advertisingId,omitempty"`
+		AdTrackingEnabled bool   `json:"adTrackingEnabled,omitempty"`
+		Manufacturer      string `json:"manufacturer,omitempty"`
+		Model             string `json:"model,omitempty"`
+		Name              string `json:"name,omitempty"`
+		Type              string `json:"type,omitempty"`
+		Token             string `json:"token,omitempty"`
 	} `json:"device,omitempty"`
 	Direct  bool   `json:"direct,omitempty"`
 	IP      string `json:"ip,omitempty"`
@@ -98,92 +104,69 @@ type eventContext struct {
 	Location struct {
 		City      string  `json:"city,omitempty"`
 		Country   string  `json:"country,omitempty"`
-		Region    string  `json:"region,omitempty"`
 		Latitude  float64 `json:"latitude,omitempty"`
 		Longitude float64 `json:"longitude,omitempty"`
 		Speed     float64 `json:"speed,omitempty"`
 	} `json:"location,omitempty"`
 	Network struct {
-		Cellular  bool   `json:"cellular,omitempty"`
-		WiFi      bool   `json:"wifi,omitempty"`
 		Bluetooth bool   `json:"bluetooth,omitempty"`
 		Carrier   string `json:"carrier,omitempty"`
+		Cellular  bool   `json:"cellular,omitempty"`
+		WiFi      bool   `json:"wifi,omitempty"`
 	} `json:"network,omitempty"`
 	OS struct {
 		Name    string `json:"name,omitempty"`
 		Version string `json:"version,omitempty"`
 	} `json:"os,omitempty"`
 	Page struct {
-		URL      string `json:"url,omitempty"`
 		Path     string `json:"path,omitempty"`
-		Search   string `json:"search,omitempty"`
-		Hash     string `json:"hash,omitempty"`
-		Title    string `json:"title,omitempty"`
 		Referrer string `json:"referrer,omitempty"`
+		Search   string `json:"search,omitempty"`
+		Title    string `json:"title,omitempty"`
+		URL      string `json:"url,omitempty"`
 	} `json:"page,omitempty"`
 	Referrer struct {
+		ID   string `json:"id,omitempty"`
 		Type string `json:"type,omitempty"`
-		Name string `json:"name,omitempty"`
-		URL  string `json:"url,omitempty"`
-		Link string `json:"link,omitempty"`
 	} `json:"referrer,omitempty"`
 	Screen struct {
-		Density float64 `json:"density,omitempty"`
 		Width   int     `json:"width,omitempty"`
 		Height  int     `json:"height,omitempty"`
+		Density float64 `json:"density,omitempty"`
 	} `json:"screen,omitempty"`
-	SessionId    int64           `json:"sessionId,omitempty"`
-	SessionStart bool            `json:"SessionStart,omitempty"`
-	Timezone     string          `json:"timezone,omitempty"`
-	Traits       json.RawMessage `json:"traits,omitempty"`
-	UserAgent    string          `json:"userAgent,omitempty"`
+	SessionID    int64          `json:"sessionId,omitempty"`
+	SessionStart bool           `json:"sessionStart,omitempty"`
+	GroupID      string         `json:"groupId,omitempty"`
+	Timezone     string         `json:"timezone,omitempty"`
+	Traits       map[string]any `json:"traits,omitempty"`
+	UserAgent    string         `json:"userAgent,omitempty"`
 }
 
 type collectedEvent struct {
 	header *collectedHeader
 
+	id     ksuid.KSUID
+	source int32
+
 	AnonymousID  string          `json:"anonymousId,omitempty"`
+	Category     string          `json:"category,omitempty"`
 	Context      eventContext    `json:"context,omitempty"`
-	Event        string          `json:"event,omitempty"`
+	Event        string          `json:"event,event"`
 	GroupID      string          `json:"groupId,omitempty"`
 	Integrations json.RawMessage `json:"integrations,omitempty"`
 	MessageID    string          `json:"messageId,omitempty"`
 	Name         string          `json:"name,omitempty"`
-	PreviousID   string          `json:"previousId,omitempty"`
-	Properties   map[string]any  `json:"properties,omitempty"`
-	SentAt       string          `json:"sentAt,omitempty"`
-	Timestamp    string          `json:"timestamp,omitempty"`
-	Traits       json.RawMessage `json:"traits,omitempty"`
-	Type         *string         `json:"type"`
-	UserID       string          `json:"userId,omitempty"`
-
-	browser struct {
-		name    string
-		other   string
-		version string
-	}
-	date   string
-	domain string
-	id     ksuid.KSUID
-	ip     string
-	page   struct {
-		url      string
-		path     string
-		search   string
-		hash     string
-		title    string
-		referrer string
-	}
-	receivedAt time.Time
-	screen     struct {
-		density int16
-		width   int16
-		height  int16
-	}
-	sentAt    time.Time
-	source    int32
-	timestamp time.Time
-	userAgent string
+	receivedAt   time.Time
+	SentAt       string `json:"sentAt,omitempty"`
+	sentAt       time.Time
+	Timestamp    string `json:"timestamp,omitempty"`
+	timestamp    time.Time
+	Traits       map[string]any `json:"traits,omitempty"`
+	Type         *string        `json:"type"`
+	UserID       string         `json:"userId,omitempty"`
+	PreviousID   string         `json:"previousId,omitempty"`
+	Properties   map[string]any `json:"properties,omitempty"`
+	version      int
 }
 
 // A collector collects events, store them in the event log and sends them to
@@ -446,6 +429,19 @@ func validateEvent(method string, event *collectedEvent) error {
 		isTrack    = typ == "track"
 	)
 
+	// AnonymousID and UserID.
+	if event.AnonymousID == "" && event.UserID == "" {
+		if isIdentify || isAlias {
+			return errors.New("missing event userId")
+		}
+		return errors.New("missing event anonymousId")
+	}
+
+	// Category.
+	if event.Category != "" && !isPage {
+		return errors.New("unexpected event category")
+	}
+
 	// Event.
 	if event.Event == "" && isTrack {
 		return errors.New("missing event name")
@@ -482,20 +478,9 @@ func validateEvent(method string, event *collectedEvent) error {
 
 	// Traits.
 	if event.Traits != nil {
-		if event.Traits[0] != '{' {
-			return errors.New("traits is not a JSON object")
-		}
 		if !isIdentify && !isGroup {
 			return errors.New("unexpected event traits")
 		}
-	}
-
-	// AnonymousID and UserID.
-	if event.AnonymousID == "" && event.UserID == "" {
-		if isIdentify || isAlias {
-			return errors.New("missing event userId")
-		}
-		return errors.New("missing event anonymousId")
 	}
 
 	return nil
@@ -506,6 +491,10 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 	if defaultCtx == nil {
 		return
 	}
+	// Active.
+	if !ctx.Active {
+		ctx.Active = defaultCtx.Active
+	}
 	// App.
 	if ctx.App.Name == "" {
 		ctx.App.Name = defaultCtx.App.Name
@@ -515,9 +504,6 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 	}
 	if ctx.App.Build == "" {
 		ctx.App.Build = defaultCtx.App.Build
-	}
-	if ctx.App.Namespace == "" {
-		ctx.App.Namespace = defaultCtx.App.Namespace
 	}
 	if ctx.App.Namespace == "" {
 		ctx.App.Namespace = defaultCtx.App.Namespace
@@ -538,11 +524,15 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 	if ctx.Campaign.Content == "" {
 		ctx.Campaign.Content = defaultCtx.Campaign.Content
 	}
+	// Device.
 	if ctx.Device.ID == "" {
 		ctx.Device.ID = defaultCtx.Device.ID
 	}
-	if ctx.Device.Name == "" {
-		ctx.Device.Name = defaultCtx.Device.Name
+	if ctx.Device.AdvertisingID == "" {
+		ctx.Device.AdvertisingID = defaultCtx.Device.AdvertisingID
+	}
+	if !ctx.Device.AdTrackingEnabled {
+		ctx.Device.AdTrackingEnabled = defaultCtx.Device.AdTrackingEnabled
 	}
 	if ctx.Device.Manufacturer == "" {
 		ctx.Device.Manufacturer = defaultCtx.Device.Manufacturer
@@ -550,14 +540,11 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 	if ctx.Device.Model == "" {
 		ctx.Device.Model = defaultCtx.Device.Model
 	}
+	if ctx.Device.Name == "" {
+		ctx.Device.Name = defaultCtx.Device.Name
+	}
 	if ctx.Device.Type == "" {
 		ctx.Device.Type = defaultCtx.Device.Type
-	}
-	if ctx.Device.Version == "" {
-		ctx.Device.Version = defaultCtx.Device.Version
-	}
-	if ctx.Device.AdvertisingID == "" {
-		ctx.Device.AdvertisingID = defaultCtx.Device.AdvertisingID
 	}
 	if ctx.Device.Token == "" {
 		ctx.Device.Token = defaultCtx.Device.Token
@@ -588,9 +575,6 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 	if ctx.Location.Country == "" {
 		ctx.Location.Country = defaultCtx.Location.Country
 	}
-	if ctx.Location.Region == "" {
-		ctx.Location.Region = defaultCtx.Location.Region
-	}
 	if ctx.Location.Latitude == 0 {
 		ctx.Location.Latitude = defaultCtx.Location.Latitude
 	}
@@ -601,17 +585,17 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 		ctx.Location.Speed = defaultCtx.Location.Speed
 	}
 	// Network.
-	if !ctx.Network.Cellular {
-		ctx.Network.Cellular = defaultCtx.Network.Cellular
-	}
-	if !ctx.Network.WiFi {
-		ctx.Network.WiFi = defaultCtx.Network.WiFi
-	}
 	if !ctx.Network.Bluetooth {
 		ctx.Network.Bluetooth = defaultCtx.Network.Bluetooth
 	}
 	if ctx.Network.Carrier == "" {
 		ctx.Network.Carrier = defaultCtx.Network.Carrier
+	}
+	if !ctx.Network.Cellular {
+		ctx.Network.Cellular = defaultCtx.Network.Cellular
+	}
+	if !ctx.Network.WiFi {
+		ctx.Network.WiFi = defaultCtx.Network.WiFi
 	}
 	// OS.
 	if ctx.OS.Name == "" {
@@ -621,54 +605,49 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 		ctx.OS.Version = defaultCtx.OS.Version
 	}
 	// Page.
-	if ctx.Page.URL == "" {
-		ctx.Page.URL = defaultCtx.Page.URL
-	}
 	if ctx.Page.Path == "" {
 		ctx.Page.Path = defaultCtx.Page.Path
-	}
-	if ctx.Page.Search == "" {
-		ctx.Page.Search = defaultCtx.Page.Search
-	}
-	if ctx.Page.Hash == "" {
-		ctx.Page.Hash = defaultCtx.Page.Hash
-	}
-	if ctx.Page.Title == "" {
-		ctx.Page.Title = defaultCtx.Page.Title
 	}
 	if ctx.Page.Referrer == "" {
 		ctx.Page.Referrer = defaultCtx.Page.Referrer
 	}
+	if ctx.Page.Search == "" {
+		ctx.Page.Search = defaultCtx.Page.Search
+	}
+	if ctx.Page.Title == "" {
+		ctx.Page.Title = defaultCtx.Page.Title
+	}
+	if ctx.Page.URL == "" {
+		ctx.Page.URL = defaultCtx.Page.URL
+	}
 	// Referrer.
+	if ctx.Referrer.ID == "" {
+		ctx.Referrer.ID = defaultCtx.Referrer.ID
+	}
 	if ctx.Referrer.Type == "" {
 		ctx.Referrer.Type = defaultCtx.Referrer.Type
 	}
-	if ctx.Referrer.Name == "" {
-		ctx.Referrer.Name = defaultCtx.Referrer.Name
-	}
-	if ctx.Referrer.URL == "" {
-		ctx.Referrer.URL = defaultCtx.Referrer.URL
-	}
-	if ctx.Referrer.Link == "" {
-		ctx.Referrer.Link = defaultCtx.Referrer.Link
-	}
 	// Screen.
-	if ctx.Screen.Density == 0 {
-		ctx.Screen.Density = defaultCtx.Screen.Density
-	}
 	if ctx.Screen.Width == 0 {
 		ctx.Screen.Width = defaultCtx.Screen.Width
 	}
 	if ctx.Screen.Height == 0 {
 		ctx.Screen.Height = defaultCtx.Screen.Height
 	}
-	// SessionId.
-	if ctx.SessionId == 0 {
-		ctx.SessionId = defaultCtx.SessionId
+	if ctx.Screen.Density == 0 {
+		ctx.Screen.Density = defaultCtx.Screen.Density
+	}
+	// SessionID.
+	if ctx.SessionID == 0 {
+		ctx.SessionID = defaultCtx.SessionID
 	}
 	// SessionStart.
 	if !ctx.SessionStart {
 		ctx.SessionStart = defaultCtx.SessionStart
+	}
+	// GroupID.
+	if ctx.GroupID == "" {
+		ctx.GroupID = defaultCtx.GroupID
 	}
 	// Timezone.
 	if ctx.Timezone == "" {
@@ -690,24 +669,60 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 	// Source.
 	event.source = int32(event.header.source)
 
-	// MessageID.
-	if event.MessageID == "" {
-		event.MessageID = uuid.NewString()
-	}
-
 	// AnonymousID.
 	if event.AnonymousID == "" {
 		event.AnonymousID = uuid.NewString()
 	}
 
-	// Properties.
-	if t := *event.Type; (t == "page" || t == "screen" || t == "track") && event.Properties == nil {
-		event.Properties = map[string]any{}
-	}
-
-	// Locale.
-	if event.Context.Locale != "" {
-		event.Context.Locale = culture.Locale(event.Context.Locale).Name()
+	// Browser and OS.
+	if event.header.sourceType != state.MobileType {
+		ua := useragent.New(event.Context.UserAgent)
+		browserName, browserVersion := ua.Browser()
+		switch browserName {
+		default:
+			event.Context.browser.Name = "Other"
+			if len(browserName) <= 25 {
+				event.Context.browser.Other = browserName
+			}
+		case "Chrome":
+			event.Context.browser.Name = "Chrome"
+		case "Safari":
+			event.Context.browser.Name = "Safari"
+		case "Edge":
+			event.Context.browser.Name = "Edge"
+		case "Firefox":
+			event.Context.browser.Name = "Firefox"
+		case "Samsung Internet":
+			event.Context.browser.Name = "Samsung Internet"
+		case "Opera":
+			event.Context.browser.Name = "Opera"
+		}
+		if event.Context.browser.Name != "Other" || event.Context.browser.Other != "" {
+			if strings.Contains(browserVersion, ".") {
+				parts := strings.SplitN(browserVersion, ".", 3)
+				if len(parts) == 3 {
+					browserVersion = parts[0] + "." + parts[1]
+				}
+				if utf8.RuneCountInString(browserVersion) > 10 {
+					browserVersion = parts[0]
+				}
+			}
+			if utf8.RuneCountInString(browserVersion) <= 10 {
+				event.Context.browser.Version = browserVersion
+			}
+		}
+		osInfo := ua.OSInfo()
+		switch osInfo.Name {
+		case "Mac OS X":
+			event.Context.OS.Name = "macOS"
+		case "Android", "Windows", "iOS", "Linux", "ChromeOS":
+			event.Context.OS.Name = osInfo.Name
+		default:
+			event.Context.OS.Name = "Other"
+		}
+		if utf8.RuneCountInString(osInfo.Version) <= 10 {
+			event.Context.OS.Version = osInfo.Version
+		}
 	}
 
 	// IP.
@@ -718,55 +733,15 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 	} else {
 		requestIP = net.ParseIP(event.Context.IP).To16()
 	}
-	event.ip = requestIP.String()
+	event.Context.IP = requestIP.String()
 
-	// page.
-	if event.header.sourceType != state.MobileType {
-		u, _ := url.Parse(event.Context.Page.URL)
-		event.page.url = u.String()
-		event.page.path = u.Path
-		event.page.search = u.RawQuery
-		event.page.hash = u.Fragment
-		event.page.title = event.Context.Page.Title
-		if event.Context.Page.Referrer != "" {
-			u, _ := url.Parse(event.Context.Page.Referrer)
-			event.page.referrer = u.String()
-		}
+	// Locale.
+	if event.Context.Locale != "" {
+		event.Context.Locale = culture.Locale(event.Context.Locale).Name()
 	}
-
-	// Screen.
-	if d := event.Context.Screen.Density; 0 < d && d < 10 {
-		event.screen.density = int16(math.Round(d * 100))
-	}
-	if w, h := event.Context.Screen.Width, event.Context.Screen.Height; (0 < w && w <= math.MaxInt16) && (0 < h && h <= math.MaxInt16) {
-		event.screen.width = int16(w)
-		event.screen.height = int16(h)
-	}
-
-	// SentAt.
-	var err error
-	event.sentAt, err = iso8601.ParseString(event.SentAt)
-	if err != nil {
-		event.sentAt = event.header.ReceivedAt
-	}
-	event.sentAt = event.sentAt.UTC()
-
-	// Timestamp.
-	event.timestamp, err = iso8601.ParseString(event.Timestamp)
-	if err != nil {
-		event.timestamp = event.sentAt
-	}
-	skew := event.header.ReceivedAt.Sub(event.sentAt)
-	event.timestamp = event.timestamp.UTC().Add(skew)
-
-	// Date.
-	event.date = event.timestamp.Format(time.DateOnly)
-
-	// ReceivedAt.
-	event.receivedAt = event.header.ReceivedAt
 
 	// Location.
-	if loc := event.Context.Location; loc.Country == "" && loc.Region == "" && loc.City == "" {
+	if loc := event.Context.Location; loc.Country == "" && loc.City == "" {
 		if c.geoLiteDB != nil {
 			city, err := c.geoLiteDB.City(requestIP)
 			if err == nil {
@@ -784,57 +759,71 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 		event.Context.Location.Country = c.Code()
 	}
 
-	// UserAgent, DeviceType and Browser.
+	// Page.
 	if event.header.sourceType != state.MobileType {
-		event.userAgent = event.header.Headers.Get("User-Agent")
-		ua := useragent.New(event.userAgent)
-		osInfo := ua.OSInfo()
-		switch osInfo.Name {
-		case "Mac OS X":
-			event.Context.OS.Name = "macOS"
-		case "Android", "Windows", "iOS", "Linux", "ChromeOS":
-			event.Context.OS.Name = osInfo.Name
-		default:
-			event.Context.OS.Name = "Other"
-		}
-		if utf8.RuneCountInString(osInfo.Version) <= 10 {
-			event.Context.OS.Version = osInfo.Version
-		}
-		browserName, browserVersion := ua.Browser()
-		switch browserName {
-		default:
-			event.browser.name = "Other"
-			if len(browserName) <= 25 {
-				event.browser.other = browserName
-			}
-		case "Chrome":
-			event.browser.name = "Chrome"
-		case "Safari":
-			event.browser.name = "Safari"
-		case "Edge":
-			event.browser.name = "Edge"
-		case "Firefox":
-			event.browser.name = "Firefox"
-		case "Samsung Internet":
-			event.browser.name = "Samsung Internet"
-		case "Opera":
-			event.browser.name = "Opera"
-		}
-		if event.browser.name != "Other" || event.browser.other != "" {
-			if strings.Contains(browserVersion, ".") {
-				parts := strings.SplitN(browserVersion, ".", 3)
-				if len(parts) == 3 {
-					browserVersion = parts[0] + "." + parts[1]
-				}
-				if utf8.RuneCountInString(browserVersion) > 10 {
-					browserVersion = parts[0]
-				}
-			}
-			if utf8.RuneCountInString(browserVersion) <= 10 {
-				event.browser.version = browserVersion
-			}
+		u, _ := url.Parse(event.Context.Page.URL)
+		event.Context.Page.URL = u.String()
+		event.Context.Page.Path = u.Path
+		event.Context.Page.Search = u.RawQuery
+		if event.Context.Page.Referrer != "" {
+			u, _ := url.Parse(event.Context.Page.Referrer)
+			event.Context.Page.Referrer = u.String()
 		}
 	}
+
+	// Screen.
+	if w, h := event.Context.Screen.Width, event.Context.Screen.Height; (0 < w && w <= math.MaxInt16) && (0 < h && h <= math.MaxInt16) {
+		event.Context.Screen.Width = w
+		event.Context.Screen.Height = h
+	}
+	if d := event.Context.Screen.Density; 0 < d && d < 10 {
+		event.Context.Screen.Density = math.Round(d * 100)
+	}
+
+	// UserAgent.
+	event.Context.UserAgent = event.header.Headers.Get("User-Agent")
+
+	// MessageID.
+	if event.MessageID == "" {
+		event.MessageID = uuid.NewString()
+	}
+
+	// ReceivedAt.
+	event.receivedAt = event.header.ReceivedAt
+
+	// SentAt.
+	var err error
+	event.sentAt, err = iso8601.ParseString(event.SentAt)
+	if err != nil {
+		event.sentAt = event.header.ReceivedAt
+	}
+	event.sentAt = event.sentAt.UTC()
+
+	// Timestamp.
+	event.timestamp, err = iso8601.ParseString(event.Timestamp)
+	if err != nil {
+		event.timestamp = event.sentAt
+	}
+	skew := event.header.ReceivedAt.Sub(event.sentAt)
+	event.timestamp = event.timestamp.UTC().Add(skew)
+
+	// Traits.
+	if t := *event.Type; (t == "identify" || t == "group") && event.Traits == nil {
+		event.Traits = map[string]any{}
+	}
+
+	// Context.Traits.
+	if t := *event.Type; t != "identify" && t != "group" && event.Context.Traits == nil {
+		event.Context.Traits = map[string]any{}
+	}
+
+	// Properties.
+	if t := *event.Type; (t == "page" || t == "screen" || t == "track") && event.Properties == nil {
+		event.Properties = map[string]any{}
+	}
+
+	// Version.
+	event.version = 2
 
 	return
 }

@@ -161,89 +161,93 @@ type AppGroupsConnection interface {
 // Event represents an event.
 type Event struct {
 
-	// Keep these fields in sync with the schema in "apis/events/schema.go" except for
-	// the 'Source', 'Date', and 'Properties' fields, which a connector should not directly access.
+	// Keep these fields in sync with the event schema, except for Properties,
+	// Source, Traits and Version fields.
 
-	Event        string
-	Name         string
-	MessageID    string
-	AnonymousID  string
-	UserID       string
-	Timestamp    time.Time
-	SentAt       time.Time
-	ReceivedAt   time.Time
-	SessionID    int64
-	SessionStart bool
-	IP           string
-	Network      struct {
-		Cellular  bool
-		WiFi      bool
-		Bluetooth bool
-		Carrier   string
+	AnonymousID string
+	Category    string
+	Context     struct {
+		Active bool
+		App    struct {
+			Name      string
+			Version   string
+			Build     string
+			Namespace string
+		}
+		Browser struct {
+			Name    string
+			Other   string
+			Version string
+		}
+		Campaign struct {
+			Name    string
+			Source  string
+			Medium  string
+			Term    string
+			Content string
+		}
+		Device struct {
+			ID                string
+			AdvertisingID     string
+			AdTrackingEnabled bool
+			Manufacturer      string
+			Model             string
+			Name              string
+			Type              string
+			Token             string
+		}
+		IP      string
+		Library struct {
+			Name    string
+			Version string
+		}
+		Locale   string
+		Location struct {
+			City      string
+			Country   string
+			Latitude  float64
+			Longitude float64
+			Speed     float64
+		}
+		Network struct {
+			Bluetooth bool
+			Carrier   string
+			Cellular  bool
+			WiFi      bool
+		}
+		OS struct {
+			Name    string
+			Version string
+		}
+		Page struct {
+			Path     string
+			Referrer string
+			Search   string
+			Title    string
+			URL      string
+		}
+		Referrer struct {
+			ID   string
+			Type string
+		}
+		Screen struct {
+			Width   int
+			Height  int
+			Density float64
+		}
+		SessionID    int64
+		SessionStart bool
+		GroupID      string
+		Timezone     string
+		UserAgent    string
 	}
-	OS struct {
-		Name    string
-		Version string
-	}
-	App struct {
-		Name      string
-		Version   string
-		Build     string
-		Namespace string
-	}
-	Screen struct {
-		Density int16
-		Width   int16
-		Height  int16
-	}
-	UserAgent string
-	Browser   struct {
-		Name    string
-		Other   string
-		Version string
-	}
-	Device struct {
-		ID            string
-		Name          string
-		Manufacturer  string
-		Model         string
-		Type          string
-		Version       string
-		AdvertisingID string
-	}
-	Location struct {
-		City      string
-		Country   string
-		Region    string
-		Latitude  float64
-		Longitude float64
-		Speed     float64
-	}
-	Locale   string
-	Timezone string
-	Page     struct {
-		URL      string
-		Path     string
-		Search   string
-		Hash     string
-		Title    string
-		Referrer string
-	}
-	Referrer struct {
-		Type string
-		Name string
-		URL  string
-		Link string
-	}
-	Campaign struct {
-		Name    string
-		Source  string
-		Medium  string
-		Term    string
-		Content string
-	}
-	Library struct {
-		Name    string
-		Version string
-	}
+	Event      string
+	GroupID    string
+	MessageID  string
+	Name       string
+	ReceivedAt time.Time
+	SentAt     time.Time
+	Timestamp  time.Time
+	Type       string
+	UserID     string
 }

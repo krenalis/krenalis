@@ -140,58 +140,68 @@ func (processor *Processor) Events() <-chan *processedEvent {
 
 // eventToConnectorEvent returns the connector.Event corresponding to event.
 func eventToConnectorEvent(event *collectedEvent) connector.Event {
-	// Keep in sync with the schema in "apis/events/schema.go".
+	// Keep in sync with the connector.Event type.
 	e := connector.Event{}
-	e.MessageID = event.MessageID
 	e.AnonymousID = event.AnonymousID
-	e.UserID = event.UserID
-	e.Timestamp = event.timestamp
-	e.SentAt = event.sentAt
-	e.ReceivedAt = event.receivedAt
-	e.IP = event.ip
-	e.Network.Cellular = event.Context.Network.Cellular
-	e.Network.WiFi = event.Context.Network.WiFi
-	e.Network.Bluetooth = event.Context.Network.Bluetooth
-	e.Network.Carrier = event.Context.Network.Carrier
-	e.OS.Name = event.Context.OS.Name
-	e.OS.Version = event.Context.OS.Version
-	e.App.Name = event.Context.App.Name
-	e.App.Version = event.Context.App.Version
-	e.App.Build = event.Context.App.Build
-	e.App.Namespace = event.Context.App.Namespace
-	e.UserAgent = event.userAgent
-	e.Screen.Density = event.screen.density
-	e.Screen.Width = event.screen.width
-	e.Screen.Height = event.screen.height
-	e.Browser.Name = event.browser.name
-	e.Browser.Other = event.browser.other
-	e.Browser.Version = event.browser.version
-	e.Location.City = event.Context.Location.City
-	e.Location.Country = event.Context.Location.Country
-	e.Location.Region = event.Context.Location.Region
-	e.Location.Latitude = event.Context.Location.Latitude
-	e.Location.Longitude = event.Context.Location.Longitude
-	e.Location.Speed = event.Context.Location.Speed
+	e.Category = event.Category
+	e.Context.Active = event.Context.Active
+	e.Context.App.Name = event.Context.App.Name
+	e.Context.App.Version = event.Context.App.Version
+	e.Context.App.Build = event.Context.App.Build
+	e.Context.App.Namespace = event.Context.App.Namespace
+	e.Context.Campaign.Name = event.Context.Campaign.Name
+	e.Context.Campaign.Source = event.Context.Campaign.Source
+	e.Context.Campaign.Medium = event.Context.Campaign.Medium
+	e.Context.Campaign.Term = event.Context.Campaign.Term
+	e.Context.Campaign.Content = event.Context.Campaign.Content
+	e.Context.Device.ID = event.Context.Device.ID
+	e.Context.Device.AdvertisingID = event.Context.Device.AdvertisingID
+	e.Context.Device.AdTrackingEnabled = event.Context.Device.AdTrackingEnabled
+	e.Context.Device.Manufacturer = event.Context.Device.Manufacturer
+	e.Context.Device.Model = event.Context.Device.Model
+	e.Context.Device.Name = event.Context.Device.Name
+	e.Context.Device.Type = event.Context.Device.Type
+	e.Context.Device.Token = event.Context.Device.Token
+	e.Context.Device.Token = event.Context.Device.Token
+	e.Context.IP = event.Context.IP
+	e.Context.Library.Name = event.Context.Library.Name
+	e.Context.Library.Version = event.Context.Library.Version
+	e.Context.Locale = event.Context.Locale
+	e.Context.Location.City = event.Context.Location.City
+	e.Context.Location.Country = event.Context.Location.Country
+	e.Context.Location.Latitude = event.Context.Location.Latitude
+	e.Context.Location.Longitude = event.Context.Location.Longitude
+	e.Context.Location.Speed = event.Context.Location.Speed
+	e.Context.Network.Bluetooth = event.Context.Network.Bluetooth
+	e.Context.Network.Carrier = event.Context.Network.Carrier
+	e.Context.Network.Cellular = event.Context.Network.Cellular
+	e.Context.Network.WiFi = event.Context.Network.WiFi
+	e.Context.OS.Name = event.Context.OS.Name
+	e.Context.OS.Version = event.Context.OS.Version
+	e.Context.Page.Path = event.Context.Page.Path
+	e.Context.Page.Referrer = event.Context.Page.Referrer
+	e.Context.Page.Search = event.Context.Page.Search
+	e.Context.Page.Title = event.Context.Page.Path
+	e.Context.Page.URL = event.Context.Page.URL
+	e.Context.Referrer.ID = event.Context.Referrer.ID
+	e.Context.Referrer.Type = event.Context.Referrer.Type
+	e.Context.Screen.Width = event.Context.Screen.Width
+	e.Context.Screen.Height = event.Context.Screen.Height
+	e.Context.Screen.Density = event.Context.Screen.Density
+	e.Context.SessionID = event.Context.SessionID
+	e.Context.SessionStart = event.Context.SessionStart
+	e.Context.GroupID = event.Context.GroupID
+	e.Context.Timezone = event.Context.Timezone
+	e.Context.UserAgent = event.Context.UserAgent
 	e.Event = event.Event
+	e.GroupID = event.GroupID
+	e.MessageID = event.MessageID
 	e.Name = event.Name
-	e.Locale = event.Context.Locale
-	e.Page.URL = event.page.url
-	e.Page.Path = event.page.path
-	e.Page.Search = event.page.search
-	e.Page.Hash = event.page.hash
-	e.Page.Title = event.page.title
-	e.Page.Referrer = event.page.referrer
-	e.Referrer.Type = event.Context.Referrer.Type
-	e.Referrer.Name = event.Context.Referrer.Name
-	e.Referrer.URL = event.Context.Referrer.URL
-	e.Referrer.Link = event.Context.Referrer.Link
-	e.Campaign.Name = event.Context.Campaign.Name
-	e.Campaign.Source = event.Context.Campaign.Source
-	e.Campaign.Medium = event.Context.Campaign.Medium
-	e.Campaign.Term = event.Context.Campaign.Term
-	e.Campaign.Content = event.Context.Campaign.Content
-	e.Library.Name = event.Context.Library.Name
-	e.Library.Version = event.Context.Library.Version
+	e.ReceivedAt = event.receivedAt
+	e.SentAt = event.sentAt
+	e.Timestamp = event.timestamp
+	e.Type = *event.Type
+	e.UserID = event.UserID
 	return e
 }
 
@@ -203,90 +213,97 @@ func collectedEventToMap(event *collectedEvent) (map[string]any, error) {
 
 	// TODO(Gianluca): define datetime layout and parse/convert the values.
 	mapEvent := map[string]any{
-		"source":       event.source,
-		"message_id":   event.MessageID,
 		"anonymous_id": event.AnonymousID,
-		"user_id":      event.UserID,
-		"date":         event.date,
-		"timestamp":    event.timestamp,
-		"sent_at":      event.sentAt,
-		"received_at":  event.receivedAt,
-		"ip":           event.ip,
-		"network": map[string]any{
-			"cellular":  event.Context.Network.Cellular,
-			"wifi":      event.Context.Network.WiFi,
-			"bluetooth": event.Context.Network.Bluetooth,
-			"carrier":   event.Context.Network.Carrier,
+		"category":     event.Category,
+		"context": map[string]any{
+			"active": event.Context.Active,
+			"app": map[string]any{
+				"name":      event.Context.App.Name,
+				"version":   event.Context.App.Version,
+				"build":     event.Context.App.Build,
+				"namespace": event.Context.App.Namespace,
+			},
+			"browser": map[string]any{
+				"name":    event.Context.browser.Name,
+				"other":   event.Context.browser.Other,
+				"version": event.Context.browser.Version,
+			},
+			"campaign": map[string]any{
+				"name":    event.Context.Campaign.Name,
+				"source":  event.Context.Campaign.Source,
+				"medium":  event.Context.Campaign.Medium,
+				"term":    event.Context.Campaign.Term,
+				"content": event.Context.Campaign.Content,
+			},
+			"device": map[string]any{
+				"id":                  event.Context.Device.Type,
+				"advertising_id":      event.Context.Device.AdvertisingID,
+				"ad_tracking_enabled": event.Context.Device.AdTrackingEnabled,
+				"manufacturer":        event.Context.Device.Manufacturer,
+				"model":               event.Context.Device.Model,
+				"name":                event.Context.Device.Name,
+				"type":                event.Context.Device.Type,
+				"token":               event.Context.Device.Token,
+			},
+			"ip": event.Context.IP,
+			"library": map[string]any{
+				"name":    event.Context.Library.Name,
+				"version": event.Context.Library.Version,
+			},
+			"locale": event.Context.Locale,
+			"location": map[string]any{
+				"city":      event.Context.Location.City,
+				"country":   event.Context.Location.Country,
+				"latitude":  event.Context.Location.Latitude,
+				"longitude": event.Context.Location.Longitude,
+				"speed":     event.Context.Location.Speed,
+			},
+			"network": map[string]any{
+				"bluetooth": event.Context.Network.Bluetooth,
+				"carrier":   event.Context.Network.Carrier,
+				"cellular":  event.Context.Network.Cellular,
+				"wifi":      event.Context.Network.WiFi,
+			},
+			"os": map[string]any{
+				"name":    event.Context.OS.Name,
+				"version": event.Context.OS.Version,
+			},
+			"page": map[string]any{
+				"path":     event.Context.Page.Path,
+				"referrer": event.Context.Page.Referrer,
+				"search":   event.Context.Page.Search,
+				"title":    event.Context.Page.Title,
+				"url":      event.Context.Page.URL,
+			},
+			"referrer": map[string]any{
+				"id":   event.Context.Referrer.ID,
+				"type": event.Context.Referrer.Type,
+			},
+			"screen": map[string]any{
+				"width":   event.Context.Screen.Width,
+				"height":  event.Context.Screen.Height,
+				"density": event.Context.Screen.Density,
+			},
+			"session_id":    event.Context.SessionID,
+			"session_start": event.Context.SessionStart,
+			"group_id":      event.Context.GroupID,
+			"timezone":      event.Context.Timezone,
+			"traits":        event.Context.Traits,
+			"user_agent":    event.Context.UserAgent,
 		},
-		"os": map[string]any{
-			"name":    event.Context.OS.Name,
-			"version": event.Context.OS.Version,
-		},
-		"app": map[string]any{
-			"name":      event.Context.App.Name,
-			"version":   event.Context.App.Version,
-			"build":     event.Context.App.Build,
-			"namespace": event.Context.App.Namespace,
-		},
-		"screen": map[string]any{
-			"density": event.screen.density,
-			"width":   event.screen.width,
-			"height":  event.screen.height,
-		},
-		"user_agent": event.userAgent,
-		"browser": map[string]any{
-			"name":    event.browser.name,
-			"other":   event.browser.other,
-			"version": event.browser.version,
-		},
-		"device": map[string]any{
-			"id":             event.Context.Device.Type,
-			"name":           event.Context.Device.Name,
-			"manufacturer":   event.Context.Device.Manufacturer,
-			"model":          event.Context.Device.Model,
-			"type":           event.Context.Device.Type,
-			"version":        event.Context.Device.Version,
-			"advertising_id": event.Context.Device.AdvertisingID,
-			"token":          event.Context.Device.Token,
-		},
-		"location": map[string]any{
-			"city":      event.Context.Location.City,
-			"country":   event.Context.Location.Country,
-			"region":    event.Context.Location.Region,
-			"latitude":  event.Context.Location.Latitude,
-			"longitude": event.Context.Location.Longitude,
-			"speed":     event.Context.Location.Speed,
-		},
-		"event":    event.Event,
-		"name":     event.Name,
-		"locale":   event.Context.Locale,
-		"timezone": event.Context.Timezone,
-		"page": map[string]any{
-			"url":      event.page.url,
-			"path":     event.page.path,
-			"search":   event.page.search,
-			"hash":     event.page.hash,
-			"title":    event.page.title,
-			"referrer": event.page.referrer,
-		},
-		"referrer": map[string]any{
-			"type": event.Context.Referrer.Type,
-			"name": event.Context.Referrer.Name,
-			"url":  event.Context.Referrer.URL,
-			"link": event.Context.Referrer.Link,
-		},
-		"campaign": map[string]any{
-			"name":    event.Context.Campaign.Name,
-			"source":  event.Context.Campaign.Source,
-			"medium":  event.Context.Campaign.Medium,
-			"term":    event.Context.Campaign.Term,
-			"content": event.Context.Campaign.Content,
-		},
-		"library": map[string]any{
-			"name":    event.Context.Library.Name,
-			"version": event.Context.Library.Version,
-		},
-		"properties": event.Properties,
+		"event":       event.Event,
+		"group_id":    event.GroupID,
+		"message_id":  event.MessageID,
+		"name":        event.Name,
+		"properties":  event.Properties,
+		"received_at": event.receivedAt,
+		"send_at":     event.sentAt,
+		"source":      event.source,
+		"timestamp":   event.timestamp,
+		"traits":      event.Traits,
+		"type":        event.Type,
+		"user_id":     event.UserID,
+		"version":     event.version,
 	}
 
 	return mapEvent, nil
