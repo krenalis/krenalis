@@ -17,7 +17,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { setBasePath } from '@shoelace-style/shoelace/dist/utilities/base-path.js';
 import '@shoelace-style/shoelace/dist/themes/light.css';
 
-setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.85/dist/');
+setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.5.2/dist/');
 
 const App = () => {
 	const [isLoading, setIsLoading] = useState(true);
