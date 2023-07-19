@@ -1042,6 +1042,7 @@ func allowsActionTarget(typ state.ConnectorType, role _connector.Role, target st
 	case state.FileType:
 		return usersOrGroups
 	case
+		state.MobileType,
 		state.ServerType,
 		state.StreamType,
 		state.WebsiteType:

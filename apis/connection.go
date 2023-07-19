@@ -408,7 +408,7 @@ func (this *Connection) ActionSchemas(target ActionTarget, eventType string) (*A
 			panic("unexpected target")
 		}
 
-	case state.ServerType, state.StreamType, state.WebsiteType:
+	case state.MobileType, state.ServerType, state.StreamType, state.WebsiteType:
 		if eventType != "" {
 			return nil, errors.NotFound("event type not expected")
 		}
