@@ -47,7 +47,7 @@ const Login = ({ setIsLoggedIn, api, showStatus, showError, setAccount }) => {
 						type='email'
 						id='emailInput'
 						inputMode='email'
-						onSlChange={onEmailChange}
+						onSlInput={onEmailChange}
 						name='email'
 						value={email}
 						placeholder='Your email'
@@ -56,7 +56,7 @@ const Login = ({ setIsLoggedIn, api, showStatus, showError, setAccount }) => {
 					<SlInput
 						type='password'
 						id='passwordInput'
-						onSlChange={onPaswordChange}
+						onSlInput={onPaswordChange}
 						name='password'
 						value={password}
 						placeholder='Your password'
