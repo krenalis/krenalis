@@ -85,44 +85,46 @@ const App = () => {
 		return;
 	}
 
+	let content;
 	if (isLoggedIn) {
 		let isBasePath = location.pathname === adminBasePath;
-		return (
-			<>
-				<AppProvider
-					setTitle={setTitle}
-					api={api}
-					showError={showError}
-					showStatus={showStatus}
-					showNotFound={showNotFound}
-					redirect={redirect}
-					account={account}
-				>
-					<div className='app'>
-						<Sidebar setIsLoggedIn={setIsLoggedIn} />
-						<Header title={title} />
-						{isBasePath ? <ConnectionsMap /> : <Outlet />}
-					</div>
-				</AppProvider>
-				<Toast ref={toastRef} status={status} />
-			</>
+		content = (
+			<AppProvider
+				setTitle={setTitle}
+				api={api}
+				showError={showError}
+				showStatus={showStatus}
+				showNotFound={showNotFound}
+				redirect={redirect}
+				account={account}
+			>
+				<div className='app'>
+					<Sidebar setIsLoggedIn={setIsLoggedIn} />
+					<Header title={title} />
+					{isBasePath ? <ConnectionsMap /> : <Outlet />}
+				</div>
+			</AppProvider>
+		);
+	} else {
+		content = (
+			<Login
+				setIsLoggedIn={setIsLoggedIn}
+				api={api}
+				showStatus={showStatus}
+				showError={showError}
+				setAccount={setAccount}
+			/>
 		);
 	}
 
-	if (!isLoggedIn) {
-		return (
-			<>
-				<Login
-					setIsLoggedIn={setIsLoggedIn}
-					api={api}
-					showStatus={showStatus}
-					showError={showError}
-					setAccount={setAccount}
-				/>
+	return (
+		<>
+			{content}
+			<div>
 				<Toast ref={toastRef} status={status} />
-			</>
-		);
-	}
+			</div>
+		</>
+	);
 };
 
 export default App;
