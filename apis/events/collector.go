@@ -9,6 +9,7 @@ package events
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,12 +26,15 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/mappings"
 	"chichi/apis/state"
+	"chichi/apis/userswarehouse"
 
 	"github.com/google/uuid"
 	"github.com/mssola/useragent"
 	"github.com/open2b/nuts/culture"
 	"github.com/oschwald/geoip2-golang"
+	"github.com/redis/go-redis/v9"
 	"github.com/relvacode/iso8601"
 	"github.com/segmentio/ksuid"
 	"golang.org/x/text/unicode/norm"
@@ -176,18 +180,20 @@ type collector struct {
 	eventLog  *eventsLog
 	events    chan *collectedEvent
 	observer  *Observer
+	redis     *redis.Client
 	warehouse *warehouses
 	geoLiteDB *geoip2.Reader
 }
 
 // newCollector returns a new event collector. It receives HTTP requests from
 // mobile, server and website sources and sends them to the eventsLog.
-func newCollector(st *eventsState, eventLog *eventsLog, observer *Observer, warehouse *warehouses) (*collector, error) {
+func newCollector(st *eventsState, eventLog *eventsLog, observer *Observer, redis *redis.Client, warehouse *warehouses) (*collector, error) {
 	var collector = collector{
 		state:     st,
 		eventLog:  eventLog,
 		events:    make(chan *collectedEvent, 1000),
 		observer:  observer,
+		redis:     redis,
 		warehouse: warehouse,
 	}
 	var err error
@@ -221,6 +227,47 @@ func (c *collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
 	}
+}
+
+// importUserTraits imports the user traits from the given events batch
+// collected on the source connection.
+func (c *collector) importUserTraits(ctx context.Context, source *state.Connection, eventsBatch []*collectedEvent) error {
+	usersSchema := *source.Workspace().Schemas["users"]
+	for _, action := range source.Actions() {
+		if !action.Enabled {
+			continue
+		}
+		if action.Target != state.UsersTarget {
+			continue
+		}
+		// Import the user traits for this event, if provided.
+		for _, event := range eventsBatch {
+			if len(event.Traits) == 0 && len(event.Context.Traits) == 0 {
+				continue
+			}
+			// TODO(Gianluca): shall we normalize the user properties before
+			// mapping?
+			mapping, err := mappings.New(Schema, usersSchema, action.Mapping, action.Transformation, false)
+			if err != nil {
+				return err
+			}
+			// Map the properties of the event.
+			collectedEvent, err := collectedEventToMap(event)
+			if err != nil {
+				return err
+			}
+			mappedUser, err := mapping.Apply(ctx, collectedEvent)
+			if err != nil {
+				return err
+			}
+			// Set the user into the data warehouse.
+			err = userswarehouse.SetUser(ctx, c.redis, source, action, mappedUser)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // serveHTTP is called by the ServeHTTP method to serve an event request.
@@ -396,6 +443,23 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 
 	// Send the events to the data warehouse.
 	c.warehouse.Add(events.Batch)
+
+	// In case there are user traits in some events, import the user from the
+	// events batch.
+	importUserTraits := false
+	for _, event := range events.Batch {
+		if len(event.Traits) > 0 || len(event.Context.Traits) > 0 {
+			importUserTraits = true
+			break
+		}
+	}
+	if importUserTraits {
+		ctx := context.Background()
+		err := c.importUserTraits(ctx, source, events.Batch)
+		if err != nil {
+			return err
+		}
+	}
 
 	// Send the events to the next stage.
 	for _, event := range events.Batch {

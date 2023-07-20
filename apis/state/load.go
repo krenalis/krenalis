@@ -125,14 +125,18 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					mobile := connector.RegisteredMobile(c.Name)
 					c.SourceDescription = mobile.SourceDescription
 					c.DestinationDescription = mobile.DestinationDescription
-					c.Targets = EventsFlag
+					c.TermForUsers = "users"
+					c.TermForGroups = "groups"
+					c.Targets = EventsFlag | UsersFlag | GroupsFlag
 					c.Icon = mobile.Icon
 					ct = mobile.ConnectionReflectType()
 				case ServerType:
 					server := connector.RegisteredServer(c.Name)
 					c.SourceDescription = server.SourceDescription
 					c.DestinationDescription = server.DestinationDescription
-					c.Targets = EventsFlag
+					c.TermForUsers = "users"
+					c.TermForGroups = "groups"
+					c.Targets = EventsFlag | UsersFlag | GroupsFlag
 					c.Icon = server.Icon
 					ct = server.ConnectionReflectType()
 				case StorageType:
@@ -152,7 +156,9 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					website := connector.RegisteredWebsite(c.Name)
 					c.SourceDescription = website.SourceDescription
 					c.DestinationDescription = website.DestinationDescription
-					c.Targets = EventsFlag
+					c.TermForUsers = "users"
+					c.TermForGroups = "groups"
+					c.Targets = EventsFlag | UsersFlag | GroupsFlag
 					c.Icon = website.Icon
 					ct = website.ConnectionReflectType()
 				}

@@ -176,7 +176,7 @@ Set the `CHICHI_DEBUG_UI` to `true` to display clearer error messages in the UI.
 ## How test events
 
 1. Add a Website source connection with host `localhost:9090`.
-2. Add an action with type "Receive events" and enable it.
+2. Add an action with type "Collect events" (or "Import users") and enable it.
 3. Add the content of the `trace-events-script/snippet.js` file into the `trace-events-script/website-for-testing/index.html`.
 4. In the pasted code, replace `123456789` with the ID of the website connection.
 5. Visit https://localhost:9090/trace-events-script/website-for-testing/.

@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState, useContext, useMemo } from 'react';
 import {
 	flattenSchema,
 	convertActionMapping,
@@ -161,6 +161,11 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 		fetchData();
 	}, [providedActionType, providedAction]);
 
+	const isTransformationAllowed = useMemo(
+		() => connection.type !== 'Website' && connection.type !== 'Mobile' && connection.type !== 'Server',
+		[connection, providedActionType, providedAction]
+	);
+
 	const saveAction = async () => {
 		const actionToSet = { ...action };
 		const flattenedInputSchema = flattenSchema(actionType.InputSchema);
@@ -220,8 +225,12 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 				return;
 			}
 			for (const prop of inputProperties) {
-				const fullProperty = flattenedInputSchema[prop].full;
-				inSchema.properties.push(fullProperty);
+				const parentName = prop.split('.')[0];
+				const isPropertyAlreadyInSchema = inSchema.properties.find((p) => p.name === parentName);
+				if (!isPropertyAlreadyInSchema) {
+					const fullProperty = flattenedInputSchema[parentName].full;
+					inSchema.properties.push(fullProperty);
+				}
 			}
 			actionToSet.Mapping = mappingToSave;
 		}
@@ -299,6 +308,7 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 	return {
 		isEditing,
 		isImport,
+		isTransformationAllowed,
 		action,
 		isLoading,
 		actionType,

@@ -21,7 +21,7 @@ var icon = "<svg></svg>"
 func init() {
 	connector.RegisterServer(connector.Server{
 		Name:              "Server",
-		SourceDescription: "receive events from a server",
+		SourceDescription: "collect events, and import users and groups from a server",
 		Icon:              icon,
 	}, open)
 }

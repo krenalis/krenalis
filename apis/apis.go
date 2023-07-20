@@ -115,7 +115,7 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 	apis.state.AddListener(apis.onElectLeader)
 	apis.state.AddListener(apis.onExecuteAction)
 
-	apis.events, err = events.New(ctx, db, apis.state, apis.http)
+	apis.events, err = events.New(ctx, db, redisClient, apis.state, apis.http)
 	if err != nil {
 		return nil, err
 	}

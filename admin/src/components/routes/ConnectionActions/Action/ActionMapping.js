@@ -31,7 +31,8 @@ const ActionMapping = forwardRef((props, ref) => {
 	const [isOutputSchemaDialogOpen, setIsOutputSchemaDialogOpen] = useState(false);
 
 	const { api, showError } = useContext(AppContext);
-	const { disabled, disabledReason, action, setAction, actionType, mode, setMode } = useContext(ActionContext);
+	const { disabled, disabledReason, isTransformationAllowed, action, setAction, actionType, mode, setMode } =
+		useContext(ActionContext);
 
 	const defaultTransformationFunction = useRef('');
 	const propertiesListRef = useRef(null);
@@ -266,14 +267,16 @@ const ActionMapping = forwardRef((props, ref) => {
 				title='Properties'
 				description='The relation between the event properties and the action type properties'
 				actions={
-					<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
-						{mode === 'mappings' ? (
-							<SlIcon name='filetype-py' slot='prefix'></SlIcon>
-						) : (
-							<SlIcon name='shuffle' slot='prefix'></SlIcon>
-						)}
-						{mode === 'mappings' ? 'Switch to transformation function' : 'Switch to mappings'}
-					</SlButton>
+					isTransformationAllowed && (
+						<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
+							{mode === 'mappings' ? (
+								<SlIcon name='filetype-py' slot='prefix'></SlIcon>
+							) : (
+								<SlIcon name='shuffle' slot='prefix'></SlIcon>
+							)}
+							{mode === 'mappings' ? 'Switch to transformation function' : 'Switch to mappings'}
+						</SlButton>
+					)
 				}
 				padded={false}
 			>

@@ -23,13 +23,17 @@ const Action = ({ actionType: providedActionType, action: providedAction, onClos
 
 	const mappingSectionRef = useRef(null);
 
-	const { isEditing, isImport, action, isLoading, actionType, setActionType, setAction, saveAction } = useActionData(
-		onClose,
-		connection,
-		providedActionType,
-		providedAction,
-		setIsSaveButtonLoading
-	);
+	const {
+		isEditing,
+		isImport,
+		isTransformationAllowed,
+		action,
+		isLoading,
+		actionType,
+		setActionType,
+		setAction,
+		saveAction,
+	} = useActionData(onClose, connection, providedActionType, providedAction, setIsSaveButtonLoading);
 
 	if (isLoading) {
 		return (
@@ -78,6 +82,7 @@ const Action = ({ actionType: providedActionType, action: providedAction, onClos
 				setActionType,
 				isEditing,
 				isImport,
+				isTransformationAllowed,
 				onClose,
 				mappingSectionRef,
 				isMappingSectionDisabled,

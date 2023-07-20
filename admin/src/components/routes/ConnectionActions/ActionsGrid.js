@@ -88,6 +88,9 @@ const ActionsGrid = ({ actions, onSelectAction }) => {
 		setAreConnectionsStale(true);
 	};
 
+	const isActionExecutionSupported =
+		connection.type !== 'Website' && connection.type !== 'Mobile' && connection.type !== 'Server';
+
 	const rows = [];
 	for (const a of actions) {
 		let linkedActionType;
@@ -122,7 +125,7 @@ const ActionsGrid = ({ actions, onSelectAction }) => {
 		const enabledCell = <SlSwitch onSlChange={() => onActionStatusSwitch(a.ID)} checked={a.Enabled}></SlSwitch>;
 		const actionsCell = (
 			<div className='actionButtons'>
-				{(a.Target === 'Users' || a.Target === 'Groups') && (
+				{(a.Target === 'Users' || a.Target === 'Groups') && isActionExecutionSupported && (
 					<>
 						<SlDropdown>
 							<SlButton slot='trigger' variant='default' size='small'>

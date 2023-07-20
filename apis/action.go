@@ -885,18 +885,30 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		return errors.BadRequest("action has a mapping with no mapped properties")
 	}
 
-	// Check if the mapping (or the transformation) is mandatory.
+	// Check if the mapping (or the transformation) is mandatory, and if the transformation is allowed.
 	var mappingIsMandatory bool
+	var transformationIsAllowed bool
 	switch connector.Type {
 	case state.AppType:
 		mappingIsMandatory = targetUsersOrGroups
+		transformationIsAllowed = mappingIsMandatory
+	case state.MobileType, state.ServerType, state.WebsiteType:
+		mappingIsMandatory = targetUsersOrGroups
+		transformationIsAllowed = false
 	case
 		state.DatabaseType,
 		state.FileType:
 		mappingIsMandatory = c.Role == state.SourceRole && targetUsersOrGroups
+		transformationIsAllowed = mappingIsMandatory
 	}
 	if mappingIsMandatory && action.Mapping == nil && action.Transformation == nil {
-		return errors.BadRequest("mapping (or transformation) is required")
+		if transformationIsAllowed {
+			return errors.BadRequest("mapping (or transformation) is required")
+		}
+		return errors.BadRequest("mapping is required")
+	}
+	if !transformationIsAllowed && action.Transformation != nil {
+		return errors.BadRequest("transformation is not allowed")
 	}
 
 	// Check if the identifiers for the identity resolution are mandatory.
@@ -905,7 +917,10 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	case
 		state.AppType,
 		state.DatabaseType,
-		state.FileType:
+		state.FileType,
+		state.MobileType,
+		state.ServerType,
+		state.WebsiteType:
 		needsIdentifiers = c.Role == state.SourceRole && targetUsersOrGroups
 	}
 	if needsIdentifiers && action.Identifiers == nil {
@@ -946,7 +961,7 @@ func allowsActionTarget(typ state.ConnectorType, role _connector.Role, target st
 		state.ServerType,
 		state.StreamType,
 		state.WebsiteType:
-		return isSource && target == state.EventsTarget
+		return isSource
 	default:
 		return false
 	}
@@ -1017,7 +1032,7 @@ func sourceMappingSchema(users types.Type, connTyp state.ConnectorType) types.Ty
 	var props []types.Property
 	switch connTyp {
 	case
-		state.AppType:
+		state.AppType, state.MobileType, state.ServerType, state.WebsiteType:
 		props = make([]types.Property, 0, len(usersProps)-2)
 		for _, p := range users.Unflatten().Properties() {
 			// Skip the "id", "creation_time" and "timestamp" properties, which

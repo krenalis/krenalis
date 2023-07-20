@@ -23,7 +23,7 @@ var icon = "<svg></svg>"
 func init() {
 	connector.RegisterWebsite(connector.Website{
 		Name:              "Website",
-		SourceDescription: "receive events from a website",
+		SourceDescription: "collect events, and import users and groups from a website",
 		Icon:              icon,
 	}, open)
 }

@@ -171,6 +171,19 @@ func (this *Connection) actionTypes() ([]ActionType, error) {
 				}
 				actionTypes = append(actionTypes, at)
 			}
+		case
+			state.MobileType,
+			state.ServerType,
+			state.WebsiteType:
+			if c.Role == state.SourceRole {
+				at := ActionType{
+					Name:          "Import users",
+					Description:   "Import users from the events of the " + connector.Name,
+					Target:        UsersTarget,
+					MissingSchema: wsSchemas["users"] == nil,
+				}
+				actionTypes = append(actionTypes, at)
+			}
 		}
 	}
 	if targets.Contains(state.GroupsTarget) {
@@ -215,13 +228,26 @@ func (this *Connection) actionTypes() ([]ActionType, error) {
 				}
 				actionTypes = append(actionTypes, at)
 			}
+		case
+			state.MobileType,
+			state.ServerType,
+			state.WebsiteType:
+			if c.Role == state.SourceRole {
+				at := ActionType{
+					Name:          "Import groups",
+					Description:   "Import groups from the events of the " + connector.Name,
+					Target:        GroupsTarget,
+					MissingSchema: wsSchemas["groups"] == nil,
+				}
+				actionTypes = append(actionTypes, at)
+			}
 		}
 	}
 	if targets.Contains(state.EventsTarget) {
 		switch typ := c.Connector().Type; typ {
 		case state.MobileType, state.ServerType, state.WebsiteType:
 			if c.Role == state.SourceRole {
-				description := "Receive events from the "
+				description := "Collect events from the "
 				switch typ {
 				case state.MobileType:
 					description += "mobile app"
@@ -231,7 +257,7 @@ func (this *Connection) actionTypes() ([]ActionType, error) {
 					description += "website"
 				}
 				at := ActionType{
-					Name:        "Receive events",
+					Name:        "Collect events",
 					Description: description,
 					Target:      EventsTarget,
 				}
@@ -411,6 +437,21 @@ func (this *Connection) ActionSchemas(target ActionTarget, eventType string) (*A
 	case state.MobileType, state.ServerType, state.StreamType, state.WebsiteType:
 		if eventType != "" {
 			return nil, errors.NotFound("event type not expected")
+		}
+		switch target {
+		case UsersTarget:
+			grSchema, ok := this.connection.Workspace().Schemas["users"]
+			if !ok {
+				return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
+			}
+			outputSchema := sourceMappingSchema(*grSchema, connector.Type)
+			return &ActionSchemas{In: events.Schema.Unflatten(), Out: outputSchema}, nil
+		case GroupsTarget:
+			grSchema, ok := this.connection.Workspace().Schemas["groups"]
+			if !ok {
+				return nil, errors.Unprocessable(NoUsersSchema, "groups schema not loaded from data warehouse")
+			}
+			return &ActionSchemas{In: events.Schema.Unflatten(), Out: grSchema.Unflatten()}, nil
 		}
 		return &ActionSchemas{}, nil
 

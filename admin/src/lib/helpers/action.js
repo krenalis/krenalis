@@ -132,7 +132,10 @@ const computeActionTypeFields = (connection, actionType, schemas) => {
 	if (
 		(connection.type === 'App' && schemas.In != null && schemas.Out != null) ||
 		(connection.type === 'Database' && connection.role === 'Source') ||
-		(connection.type === 'File' && connection.role === 'Source')
+		(connection.type === 'File' && connection.role === 'Source') ||
+		((connection.type === 'Mobile' || connection.type === 'Server' || connection.type === 'Website') &&
+			connection.role === 'Source' &&
+			(actionType.Target === 'Users' || actionType.Target === 'Groups'))
 	) {
 		fields.push('Mapping');
 	}
@@ -160,7 +163,12 @@ const computeActionTypeFields = (connection, actionType, schemas) => {
 	}
 	if (
 		connection.role === 'Source' &&
-		(connection.type === 'App' || connection.type === 'Database' || connection.type === 'File') &&
+		(connection.type === 'App' ||
+			connection.type === 'Database' ||
+			connection.type === 'File' ||
+			connection.type === 'Mobile' ||
+			connection.type === 'Server' ||
+			connection.type === 'Website') &&
 		(actionType.Target === 'Users' || actionType.Target === 'Groups')
 	) {
 		fields.push('Identifiers');

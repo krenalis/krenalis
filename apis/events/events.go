@@ -14,6 +14,8 @@ import (
 	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type Events struct {
@@ -21,12 +23,12 @@ type Events struct {
 	observer  *Observer
 }
 
-func New(ctx context.Context, db *postgres.DB, st *state.State, http *httpclient.HTTP) (*Events, error) {
+func New(ctx context.Context, db *postgres.DB, redis *redis.Client, st *state.State, http *httpclient.HTTP) (*Events, error) {
 	state := newEventsState(ctx, db, st, http)
 	eventLog := newEventsLog(ctx, db)
 	observer := newObserver(db)
 	warehouse := newWarehouses(state)
-	collector, err := newCollector(state, eventLog, observer, warehouse)
+	collector, err := newCollector(state, eventLog, observer, redis, warehouse)
 	if err != nil {
 		return nil, err
 	}
