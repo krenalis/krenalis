@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package apis
+package userswarehouse
 
 import (
 	"context"
@@ -21,21 +21,22 @@ import (
 	"chichi/apis/state"
 	"chichi/apis/warehouses"
 
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/slices"
 )
 
-// setUser sets the user U into the data warehouse by resolving its identity.
-func (this *Action) setUser(ctx context.Context, U map[string]any) error {
+// SetUser sets the user U into the data warehouse by resolving its identity.
+func SetUser(ctx context.Context, redis *redis.Client, connection *state.Connection, action *state.Action, U map[string]any) error {
 
-	ws := this.connection.connection.Workspace()
+	ws := connection.Workspace()
 
 	// Open the index on Redis.
-	index := index.Open(this.redis)
+	index := index.Open(redis)
 
 	// Instantiate a sorted set of identifiers (including anonymous identifiers)
 	// for this action.
-	P := make([]string, 0, len(this.action.Identifiers)+len(ws.AnonymousIdentifiers.Priority))
-	P = append(P, this.action.Identifiers...)
+	P := make([]string, 0, len(action.Identifiers)+len(ws.AnonymousIdentifiers.Priority))
+	P = append(P, action.Identifiers...)
 	P = append(P, ws.AnonymousIdentifiers.Priority...)
 	if len(P) == 0 {
 		return errors.New("BUG: cannot resolve identities as there are no identifiers")
@@ -48,11 +49,11 @@ func (this *Action) setUser(ctx context.Context, U map[string]any) error {
 
 	// Collect the non-anonymous identifiers for other actions.
 	var otherActionsIdents []string
-	for _, action := range this.connection.connection.Actions() {
-		if action.ID == this.action.ID {
+	for _, a := range connection.Actions() {
+		if a.ID == action.ID {
 			continue
 		}
-		idents := action.Identifiers
+		idents := a.Identifiers
 		for _, ident := range idents {
 			if slices.Contains(otherActionsIdents, ident) {
 				continue
@@ -64,7 +65,7 @@ func (this *Action) setUser(ctx context.Context, U map[string]any) error {
 	// Collect the non-anonymous identifiers for every action.
 	var allActionsIdents []string
 	allActionsIdents = append(allActionsIdents, otherActionsIdents...)
-	for _, id := range this.action.Identifiers {
+	for _, id := range action.Identifiers {
 		if slices.Contains(allActionsIdents, id) {
 			continue
 		}
@@ -148,7 +149,7 @@ identifiersLoop:
 		if err != nil {
 			return err
 		}
-		if this.canMerge(U, V, otherActionsIdents) {
+		if canMerge(U, V, action.Identifiers, otherActionsIdents) {
 			err := updateGR(ctx, ws, index, found[0], U)
 			if err != nil {
 				return err
@@ -181,7 +182,7 @@ identifiersLoop:
 			if err != nil {
 				return err
 			}
-			if this.canMerge(user, target, otherActionsIdents) {
+			if canMerge(user, target, action.Identifiers, otherActionsIdents) {
 				err := updateGR(ctx, ws, index, targetGID, user)
 				if err != nil {
 					return err
@@ -193,7 +194,7 @@ identifiersLoop:
 
 		// Merge U into target, if merge is possible, otherwise add U to the
 		// users.
-		if this.canMerge(U, target, otherActionsIdents) {
+		if canMerge(U, target, action.Identifiers, otherActionsIdents) {
 			err := updateGR(ctx, ws, index, targetGID, U)
 			if err != nil {
 				return err
@@ -222,14 +223,15 @@ identifiersLoop:
 }
 
 // canMerge reports whether the user V can be merged into the user W.
+// identifiers contains the not-anonymous identifiers for this action, while
 // otherIdentifiers contains the not-anonymous identifiers for other actions.
 //
 // TODO(Gianluca): this method can be extend to handle cases when a value can be
 // appended to a slice without losing information.
-func (this *Action) canMerge(U, W map[string]any, otherIdentifiers []string) bool {
+func canMerge(U, W map[string]any, identifiers, otherIdentifiers []string) bool {
 	for property := range U {
 		if isNotZeroValue(W[property]) &&
-			!slices.Contains(this.action.Identifiers, property) &&
+			!slices.Contains(identifiers, property) &&
 			slices.Contains(otherIdentifiers, property) {
 			return false
 		}
@@ -268,13 +270,10 @@ func updateGR(ctx context.Context, ws *state.Workspace, index *index.Index, gid 
 		return errors.New("users schema not found")
 	}
 
-	// Normalize the incoming user according to the "users" schema.
-	user, err := normalize(U, *schema)
-	if err != nil {
-		return err
-	}
+	warehouses.SerializeRow(U, *schema)
 
-	warehouses.SerializeRow(user, *schema)
+	// TODO(Gianluca): should the user be normalized before being written on the
+	// data warehouse?
 
 	// TODO(Gianluca): replace this query -- as well as the other queries in
 	// this file -- with calls to specific methods of the data warehouse, when
@@ -283,7 +282,7 @@ func updateGR(ctx context.Context, ws *state.Workspace, index *index.Index, gid 
 	query.WriteString("UPDATE users SET\n")
 	var values []any
 	i := 1
-	for prop, value := range user {
+	for prop, value := range U {
 		if i > 1 {
 			query.WriteString(", ")
 		}
@@ -309,7 +308,7 @@ func updateGR(ctx context.Context, ws *state.Workspace, index *index.Index, gid 
 		return fmt.Errorf("BUG: one row should be affected, got %d", affected)
 	}
 
-	err = index.SetUser(ctx, gid, user)
+	err = index.SetUser(ctx, gid, U)
 	if err != nil {
 		return err
 	}

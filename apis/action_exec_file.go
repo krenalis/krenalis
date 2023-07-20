@@ -17,6 +17,7 @@ import (
 	"chichi/apis/errors"
 	"chichi/apis/mappings"
 	"chichi/apis/normalization"
+	"chichi/apis/userswarehouse"
 	"chichi/connector/types"
 )
 
@@ -107,8 +108,8 @@ func (this *Action) importFromFile(ctx context.Context) error {
 		// See the issue https://github.com/open2b/chichi/issues/221.
 		delete(mappedUser, "id")
 
-		// Write the user into the data warehouse.
-		err = this.setUser(ctx, mappedUser)
+		// Set the user into the data warehouse.
+		err = userswarehouse.SetUser(ctx, this.redis, connection, this.action, mappedUser)
 		if err != nil {
 			return actionExecutionError{err}
 		}

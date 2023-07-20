@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"chichi/apis/mappings"
+	"chichi/apis/userswarehouse"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 )
@@ -88,8 +89,8 @@ func (this *Action) importFromApp(ctx context.Context) error {
 				return actionExecutionError{err}
 			}
 
-			// Write the user into the data warehouse.
-			err = this.setUser(ctx, mappedUser)
+			// Set the user into the data warehouse.
+			err = userswarehouse.SetUser(ctx, this.redis, this.connection.connection, this.action, mappedUser)
 			if err != nil {
 				return actionExecutionError{err}
 			}
