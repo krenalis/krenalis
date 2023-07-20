@@ -21,10 +21,6 @@ import (
 // and in this case the destination property is not changed.
 var ErrVoid = errors.New("void")
 
-// ErrNotConvertible is the error returned by the Compile method of Expression
-// when the type of the expression cannot convert to the destination type.
-var ErrNotConvertible = errors.New("expression is not convertible")
-
 // InvalidConversionError is the error returned by the Eval method of Expression
 // when a value resulted from an evaluation cannot be converted to the
 // destination type.
