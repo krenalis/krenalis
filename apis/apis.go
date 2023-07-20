@@ -116,6 +116,9 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 	apis.state.AddListener(apis.onExecuteAction)
 
 	apis.events, err = events.New(ctx, db, apis.state, apis.http)
+	if err != nil {
+		return nil, err
+	}
 
 	// Keep the state updated.
 	apis.state.Keep()
