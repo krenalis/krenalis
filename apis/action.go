@@ -12,7 +12,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,11 +19,9 @@ import (
 
 	"chichi/apis/errors"
 	"chichi/apis/httpclient"
-	"chichi/apis/index"
 	"chichi/apis/mappings/mapexp"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/apis/warehouses"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 
@@ -358,103 +355,6 @@ func (this *Action) Set(action ActionToSet) error {
 	})
 
 	return err
-}
-
-// setUsers sets the given user into the data warehouse.
-func (this *Action) setUser(ctx context.Context, user map[string]any) error {
-
-	ws := this.connection.connection.Workspace()
-
-	index := index.Open(this.redis)
-
-	// Resolve the identity of the user.
-	var gid int
-	identifiers := this.action.Identifiers
-	last := len(identifiers) - 1
-Identifiers:
-	for i, identifier := range identifiers {
-		value, ok := user[identifier]
-		if !ok {
-			continue
-		}
-		gids, err := index.UsersByPropertyValue(ctx, identifier, value)
-		if err != nil {
-			return err
-		}
-		switch len(gids) {
-		case 1:
-			gid = gids[0]
-			break Identifiers
-		case 0:
-			// Continue to the next identifier, if there is one, otherwise exit
-			// from the loop and create an empty golden record.
-		default:
-			if i == last {
-				// Merge users?
-				panic("TODO: merging of users not implemented")
-			}
-		}
-	}
-	if gid == 0 {
-		var err error
-		gid, err = createEmptyGoldenRecord(ctx, ws)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Serialize the row.
-	schema, ok := ws.Schemas["users"]
-	if !ok {
-		return errors.New("users schema not found")
-	}
-
-	// Normalize the incoming user according to the "users" schema.
-	user, err := normalize(user, *schema)
-	if err != nil {
-		return err
-	}
-
-	warehouses.SerializeRow(user, *schema)
-
-	query := &strings.Builder{}
-	query.WriteString("UPDATE users SET\n")
-	var values []any
-	i := 1
-	for prop, value := range user {
-		if i > 1 {
-			query.WriteString(", ")
-		}
-		query.WriteString(postgres.QuoteIdent(prop))
-		query.WriteString(" = $")
-		query.WriteString(strconv.Itoa(i))
-		values = append(values, value)
-		i++
-	}
-	query.WriteString(`, "timestamp" = now()`)
-	query.WriteString("\nWHERE id = $")
-	query.WriteString(strconv.Itoa(i))
-	values = append(values, gid)
-	res, err := ws.Warehouse.Exec(ctx, query.String(), values...)
-	if err != nil {
-		return err
-	}
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if affected != 1 {
-		return fmt.Errorf("BUG: one row should be affected, got %d", affected)
-	}
-
-	err = index.SetUser(ctx, gid, user)
-	if err != nil {
-		return err
-	}
-
-	log.Printf("[info] user (GID %d) written to the data warehouse: %#v", gid, user)
-
-	return nil
 }
 
 // setUserCursor sets the user cursor of the action.
@@ -1076,17 +976,6 @@ func compileActionQuery(query string, limit int) (string, error) {
 		return query[:s1] + query[s2:], nil
 	}
 	return query[:s1] + strings.ReplaceAll(query[s1+2:s2-2], "$limit", strconv.Itoa(limit)) + query[s2:], nil
-}
-
-// createEmptyGoldenRecord creates a new empty golden record on the workspace's
-// warehouse, returning its GID.
-func createEmptyGoldenRecord(ctx context.Context, ws *state.Workspace) (int, error) {
-	var id int
-	err := ws.Warehouse.QueryRow(ctx, "INSERT INTO users DEFAULT VALUES RETURNING id").Scan(&id)
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
 }
 
 // unmappedProperties returns the names of the unmapped properties in schema, if
