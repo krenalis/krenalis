@@ -55,7 +55,7 @@ require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.9.1
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/evanw/esbuild v0.18.15
-	github.com/go-chi/chi/v5 v5.0.8
+	github.com/go-chi/chi/v5 v5.0.10
 	github.com/golang/snappy v0.0.4
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
