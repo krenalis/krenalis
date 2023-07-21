@@ -177,6 +177,15 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 		return nil, err
 	}
 
+	// Ensure that the Python transformation function does not return any
+	// property value that has already been mapped by the mappings (i.e., it is
+	// an identifier for the action).
+	for p := range transformationOutValues {
+		if _, ok := outValues[p]; ok {
+			return nil, fmt.Errorf("property '%s' already used as identifier", p)
+		}
+	}
+
 	maps.Copy(outValues, transformationOutValues)
 
 	return outValues, nil
