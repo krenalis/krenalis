@@ -5,7 +5,7 @@
 -- Copyright (c) 2023 Open2b
 --
 
--- Keep in sync with the schema at "apis/events/schema.go".
+-- Keep in sync with the apis.eventColumns and events.batchEventsColumns variables.
 
 CREATE TABLE events
 (

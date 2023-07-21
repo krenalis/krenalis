@@ -5,7 +5,7 @@
 -- Copyright (c) 2023 Open2b
 --
 
--- Keep in sync with the schema at "apis/events/schema.go".
+-- Keep in sync with the apis.eventColumns and events.batchEventsColumns variables.
 
 CREATE TYPE event_os_name AS ENUM ('Android', 'Windows', 'iOS', 'macOS', 'Linux', 'Chrome OS', 'Other');
 CREATE TYPE event_browser_name AS ENUM ('Chrome', 'Safari', 'Edge', 'Firefox', 'Samsung Internet', 'Opera', 'Other');
