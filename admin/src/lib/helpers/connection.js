@@ -114,7 +114,11 @@ class Connection {
 const getActionTypeFromConnection = (connection, target, eventType) => {
 	let actionType;
 	if (target === 'Events') {
-		actionType = connection.actionTypes.find((t) => t.EventType === eventType);
+		if (eventType == null) {
+			actionType = connection.actionTypes.find((t) => t.Target === 'Events' && t.EventType === null);
+		} else {
+			actionType = connection.actionTypes.find((t) => t.EventType === eventType);
+		}
 	} else {
 		actionType = connection.actionTypes.find((t) => t.Target === target);
 	}
