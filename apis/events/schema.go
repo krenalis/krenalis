@@ -29,6 +29,14 @@ var Schema = types.Object([]types.Property{
 				}),
 			},
 			{
+				Name: "browser",
+				Type: types.Object([]types.Property{
+					{Name: "name", Type: types.Text().WithEnum([]string{"Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other"})},
+					{Name: "other", Type: types.Text()},
+					{Name: "version", Type: types.Text()},
+				}),
+			},
+			{
 				Name: "campaign",
 				Type: types.Object([]types.Property{
 					{Name: "name", Type: types.Text()},
