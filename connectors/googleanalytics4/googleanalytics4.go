@@ -113,7 +113,7 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 	var err error
 	switch eventType {
 	case "event_page_view":
-		err = c.collect(event.AnonymousID, event.UserID, "page_view", map[string]any{
+		err = c.collect(event.AnonymousId, event.UserId, "page_view", map[string]any{
 			"page_location": event.Context.Page.URL,
 			"page_referrer": event.Context.Page.Referrer,
 			"page_title":    event.Context.Page.Title,
@@ -129,7 +129,7 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 		if itemID, ok := mappedEvent["item_id"].(string); ok {
 			params["item_id"] = itemID
 		}
-		err = c.collect(event.AnonymousID, event.UserID, "share", params)
+		err = c.collect(event.AnonymousId, event.UserId, "share", params)
 	default:
 		panic(fmt.Sprintf("unsupported event type %q", eventType))
 	}

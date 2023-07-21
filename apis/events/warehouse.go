@@ -229,13 +229,13 @@ RETRY:
 				log.Printf("[error] cannot marshal event: %s", err)
 				continue
 			}
-			groupID := e.GroupID
+			groupID := e.GroupId
 			if *e.Type != "group" {
-				groupID = e.Context.GroupID
+				groupID = e.Context.GroupId
 			}
 			err = batch.Append(
 
-				e.AnonymousID,
+				e.AnonymousId,
 				e.Category,
 
 				// app.
@@ -257,8 +257,8 @@ RETRY:
 				e.Context.Campaign.Content,
 
 				// device.
-				e.Context.Device.ID,
-				e.Context.Device.AdvertisingID,
+				e.Context.Device.Id,
+				e.Context.Device.AdvertisingId,
 				e.Context.Device.AdTrackingEnabled,
 				e.Context.Device.Manufacturer,
 				e.Context.Device.Model,
@@ -299,7 +299,7 @@ RETRY:
 				e.Context.Page.URL,
 
 				// referrer.
-				e.Context.Referrer.ID,
+				e.Context.Referrer.Id,
 				e.Context.Referrer.Type,
 
 				// screen.
@@ -308,7 +308,7 @@ RETRY:
 				int16(e.Context.Screen.Density),
 
 				// session.
-				e.Context.SessionID,
+				e.Context.SessionId,
 				e.Context.SessionStart,
 
 				e.Context.Timezone,
@@ -316,7 +316,7 @@ RETRY:
 
 				e.Event,
 				groupID,
-				e.MessageID,
+				e.MessageId,
 				e.Name,
 				properties.Bytes(),
 				e.receivedAt,
@@ -325,7 +325,7 @@ RETRY:
 				e.Timestamp,
 				traits.Bytes(),
 				*e.Type,
-				e.UserID,
+				e.UserId,
 			)
 			if err != nil {
 				log.Printf("[error] cannot log events: %s", err)

@@ -142,7 +142,7 @@ func (processor *Processor) Events() <-chan *processedEvent {
 func eventToConnectorEvent(event *collectedEvent) connector.Event {
 	// Keep in sync with the connector.Event type.
 	e := connector.Event{}
-	e.AnonymousID = event.AnonymousID
+	e.AnonymousId = event.AnonymousId
 	e.Category = event.Category
 	e.Context.Active = event.Context.Active
 	e.Context.App.Name = event.Context.App.Name
@@ -154,8 +154,8 @@ func eventToConnectorEvent(event *collectedEvent) connector.Event {
 	e.Context.Campaign.Medium = event.Context.Campaign.Medium
 	e.Context.Campaign.Term = event.Context.Campaign.Term
 	e.Context.Campaign.Content = event.Context.Campaign.Content
-	e.Context.Device.ID = event.Context.Device.ID
-	e.Context.Device.AdvertisingID = event.Context.Device.AdvertisingID
+	e.Context.Device.Id = event.Context.Device.Id
+	e.Context.Device.AdvertisingId = event.Context.Device.AdvertisingId
 	e.Context.Device.AdTrackingEnabled = event.Context.Device.AdTrackingEnabled
 	e.Context.Device.Manufacturer = event.Context.Device.Manufacturer
 	e.Context.Device.Model = event.Context.Device.Model
@@ -183,25 +183,25 @@ func eventToConnectorEvent(event *collectedEvent) connector.Event {
 	e.Context.Page.Search = event.Context.Page.Search
 	e.Context.Page.Title = event.Context.Page.Path
 	e.Context.Page.URL = event.Context.Page.URL
-	e.Context.Referrer.ID = event.Context.Referrer.ID
+	e.Context.Referrer.Id = event.Context.Referrer.Id
 	e.Context.Referrer.Type = event.Context.Referrer.Type
 	e.Context.Screen.Width = event.Context.Screen.Width
 	e.Context.Screen.Height = event.Context.Screen.Height
 	e.Context.Screen.Density = event.Context.Screen.Density
-	e.Context.SessionID = event.Context.SessionID
+	e.Context.SessionId = event.Context.SessionId
 	e.Context.SessionStart = event.Context.SessionStart
-	e.Context.GroupID = event.Context.GroupID
+	e.Context.GroupId = event.Context.GroupId
 	e.Context.Timezone = event.Context.Timezone
 	e.Context.UserAgent = event.Context.UserAgent
 	e.Event = event.Event
-	e.GroupID = event.GroupID
-	e.MessageID = event.MessageID
+	e.GroupId = event.GroupId
+	e.MessageId = event.MessageId
 	e.Name = event.Name
 	e.ReceivedAt = event.receivedAt
 	e.SentAt = event.sentAt
 	e.Timestamp = event.timestamp
 	e.Type = *event.Type
-	e.UserID = event.UserID
+	e.UserId = event.UserId
 	return e
 }
 
@@ -213,7 +213,7 @@ func collectedEventToMap(event *collectedEvent) (map[string]any, error) {
 
 	// TODO(Gianluca): define datetime layout and parse/convert the values.
 	mapEvent := map[string]any{
-		"anonymous_id": event.AnonymousID,
+		"anonymous_id": event.AnonymousId,
 		"category":     event.Category,
 		"context": map[string]any{
 			"active": event.Context.Active,
@@ -237,7 +237,7 @@ func collectedEventToMap(event *collectedEvent) (map[string]any, error) {
 			},
 			"device": map[string]any{
 				"id":                  event.Context.Device.Type,
-				"advertising_id":      event.Context.Device.AdvertisingID,
+				"advertising_id":      event.Context.Device.AdvertisingId,
 				"ad_tracking_enabled": event.Context.Device.AdTrackingEnabled,
 				"manufacturer":        event.Context.Device.Manufacturer,
 				"model":               event.Context.Device.Model,
@@ -276,7 +276,7 @@ func collectedEventToMap(event *collectedEvent) (map[string]any, error) {
 				"url":      event.Context.Page.URL,
 			},
 			"referrer": map[string]any{
-				"id":   event.Context.Referrer.ID,
+				"id":   event.Context.Referrer.Id,
 				"type": event.Context.Referrer.Type,
 			},
 			"screen": map[string]any{
@@ -284,16 +284,16 @@ func collectedEventToMap(event *collectedEvent) (map[string]any, error) {
 				"height":  event.Context.Screen.Height,
 				"density": event.Context.Screen.Density,
 			},
-			"session_id":    event.Context.SessionID,
+			"session_id":    event.Context.SessionId,
 			"session_start": event.Context.SessionStart,
-			"group_id":      event.Context.GroupID,
+			"group_id":      event.Context.GroupId,
 			"timezone":      event.Context.Timezone,
 			"traits":        event.Context.Traits,
 			"user_agent":    event.Context.UserAgent,
 		},
 		"event":       event.Event,
-		"group_id":    event.GroupID,
-		"message_id":  event.MessageID,
+		"group_id":    event.GroupId,
+		"message_id":  event.MessageId,
 		"name":        event.Name,
 		"properties":  event.Properties,
 		"received_at": event.receivedAt,
@@ -302,7 +302,7 @@ func collectedEventToMap(event *collectedEvent) (map[string]any, error) {
 		"timestamp":   event.timestamp,
 		"traits":      event.Traits,
 		"type":        event.Type,
-		"user_id":     event.UserID,
+		"user_id":     event.UserId,
 		"version":     event.version,
 	}
 

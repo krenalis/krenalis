@@ -28,7 +28,7 @@ type User struct {
 
 // Event represents a user event.
 type Event struct {
-	AnonymousID string `json:"anonymousId,omitempty"`
+	AnonymousId string `json:"anonymousId,omitempty"`
 	Category    string `json:"category,omitempty"`
 	Context     struct {
 		Active       bool                  `json:"active,omitempty"`
@@ -45,14 +45,14 @@ type Event struct {
 		Page         *EventContextPage     `json:"page,omitempty"`
 		Referrer     *EventContextReferrer `json:"referrer,omitempty"`
 		Screen       *EventContextScreen   `json:"screen,omitempty"`
-		SessionID    string                `json:"sessionId,omitempty"`
+		SessionId    string                `json:"sessionId,omitempty"`
 		SessionStart bool                  `json:"sessionStart,omitempty"`
 		Timezone     string                `json:"timezone,omitempty"`
 		UserAgent    string                `json:"userAgent,omitempty"`
 	} `json:"context"`
 	Event      string          `json:"event,omitempty"`
-	GroupID    string          `json:"groupId,omitempty"`
-	MessageID  string          `json:"messageId,omitempty"`
+	GroupId    string          `json:"groupId,omitempty"`
+	MessageId  string          `json:"messageId,omitempty"`
 	Name       string          `json:"name,omitempty"`
 	Properties json.RawMessage `json:"properties,omitempty"`
 	ReceivedAt string          `json:"receivedAt,omitempty"`
@@ -61,7 +61,7 @@ type Event struct {
 	Timestamp  string          `json:"timestamp,omitempty"`
 	Traits     json.RawMessage `json:"traits,omitempty"`
 	Type       string          `json:"type,omitempty"`
-	UserID     string          `json:"userId,omitempty"`
+	UserId     string          `json:"userId,omitempty"`
 }
 
 type EventContextApp struct {
@@ -86,8 +86,8 @@ type EventContextCampaign struct {
 }
 
 type EventContextDevice struct {
-	ID                string `json:"id"`
-	AdvertisingID     string `json:"advertisingId"`
+	Id                string `json:"id"`
+	AdvertisingId     string `json:"advertisingId"`
 	AdTrackingEnabled bool   `json:"AdTrackingEnabled"`
 	Manufacturer      string `json:"manufacturer"`
 	Model             string `json:"model"`
@@ -130,7 +130,7 @@ type EventContextPage struct {
 }
 
 type EventContextReferrer struct {
-	ID   string `json:"id"`
+	Id   string `json:"id"`
 	Type string `json:"type"`
 }
 
@@ -244,7 +244,7 @@ func (this *User) Events(limit int) ([]Event, error) {
 
 		var e Event
 
-		e.AnonymousID = row[0].(string)
+		e.AnonymousId = row[0].(string)
 		e.Category = row[1].(string)
 
 		// App.
@@ -282,8 +282,8 @@ func (this *User) Events(limit int) ([]Event, error) {
 
 		// Device.
 		device := EventContextDevice{
-			ID:                row[14].(string),
-			AdvertisingID:     row[15].(string),
+			Id:                row[14].(string),
+			AdvertisingId:     row[15].(string),
 			AdTrackingEnabled: row[16].(bool),
 			Manufacturer:      row[17].(string),
 			Model:             row[18].(string),
@@ -356,7 +356,7 @@ func (this *User) Events(limit int) ([]Event, error) {
 
 		// Referrer.
 		referrer := EventContextReferrer{
-			ID:   row[42].(string),
+			Id:   row[42].(string),
 			Type: row[43].(string),
 		}
 		if referrer != (EventContextReferrer{}) {
@@ -373,14 +373,14 @@ func (this *User) Events(limit int) ([]Event, error) {
 			e.Context.Screen = &screen
 		}
 
-		e.Context.SessionID = strconv.Itoa(row[47].(int))
+		e.Context.SessionId = strconv.Itoa(row[47].(int))
 		e.Context.SessionStart = row[48].(bool)
 		e.Context.Timezone = row[49].(string)
 		e.Context.UserAgent = row[50].(string)
 
 		e.Event = row[51].(string)
-		e.GroupID = row[52].(string)
-		e.MessageID = row[53].(string)
+		e.GroupId = row[52].(string)
+		e.MessageId = row[53].(string)
 		e.Name = row[54].(string)
 		e.Properties = json.RawMessage(row[55].(string))
 		e.ReceivedAt = row[56].(time.Time).Format(time.RFC3339)
@@ -389,7 +389,7 @@ func (this *User) Events(limit int) ([]Event, error) {
 		e.Timestamp = row[59].(time.Time).Format(time.RFC3339)
 		e.Traits = json.RawMessage(row[60].(string))
 		e.Type = row[61].(string)
-		e.UserID = row[62].(string)
+		e.UserId = row[62].(string)
 
 		events[i] = e
 

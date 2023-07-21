@@ -119,14 +119,14 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 
 	p := mappedEvent["properties"].(map[string]any)
 
-	p["$insert_id"] = event.MessageID
+	p["$insert_id"] = event.MessageId
 	p["time"] = formatTimestamp(event.Timestamp)
-	distinctID := event.AnonymousID
-	if event.UserID != "" {
-		distinctID = event.UserID
+	distinctID := event.AnonymousId
+	if event.UserId != "" {
+		distinctID = event.UserId
 	}
 	p["distinct_id"] = distinctID
-	p["$device_id"] = event.AnonymousID
+	p["$device_id"] = event.AnonymousId
 	if event.Context.IP == "" {
 		if event.Context.Location.Country != "" {
 			p["mp_country_code"] = event.Context.Location.Country

@@ -164,7 +164,7 @@ type Event struct {
 	// Keep these fields in sync with the event schema, except for Properties,
 	// Source, Traits and Version fields.
 
-	AnonymousID string
+	AnonymousId string
 	Category    string
 	Context     struct {
 		Active bool
@@ -187,8 +187,8 @@ type Event struct {
 			Content string
 		}
 		Device struct {
-			ID                string
-			AdvertisingID     string
+			Id                string
+			AdvertisingId     string
 			AdTrackingEnabled bool
 			Manufacturer      string
 			Model             string
@@ -227,7 +227,7 @@ type Event struct {
 			URL      string
 		}
 		Referrer struct {
-			ID   string
+			Id   string
 			Type string
 		}
 		Screen struct {
@@ -235,19 +235,19 @@ type Event struct {
 			Height  int
 			Density float64
 		}
-		SessionID    int64
+		SessionId    int64
 		SessionStart bool
-		GroupID      string
+		GroupId      string
 		Timezone     string
 		UserAgent    string
 	}
 	Event      string
-	GroupID    string
-	MessageID  string
+	GroupId    string
+	MessageId  string
 	Name       string
 	ReceivedAt time.Time
 	SentAt     time.Time
 	Timestamp  time.Time
 	Type       string
-	UserID     string
+	UserId     string
 }

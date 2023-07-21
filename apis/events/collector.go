@@ -89,8 +89,8 @@ type eventContext struct {
 		Content string `json:"content,omitempty"`
 	} `json:"campaign,omitempty"`
 	Device struct {
-		ID                string `json:"id,omitempty"`
-		AdvertisingID     string `json:"advertisingId,omitempty"`
+		Id                string `json:"id,omitempty"`
+		AdvertisingId     string `json:"advertisingId,omitempty"`
 		AdTrackingEnabled bool   `json:"adTrackingEnabled,omitempty"`
 		Manufacturer      string `json:"manufacturer,omitempty"`
 		Model             string `json:"model,omitempty"`
@@ -130,7 +130,7 @@ type eventContext struct {
 		URL      string `json:"url,omitempty"`
 	} `json:"page,omitempty"`
 	Referrer struct {
-		ID   string `json:"id,omitempty"`
+		Id   string `json:"id,omitempty"`
 		Type string `json:"type,omitempty"`
 	} `json:"referrer,omitempty"`
 	Screen struct {
@@ -138,9 +138,9 @@ type eventContext struct {
 		Height  int     `json:"height,omitempty"`
 		Density float64 `json:"density,omitempty"`
 	} `json:"screen,omitempty"`
-	SessionID    int64          `json:"sessionId,omitempty"`
+	SessionId    int64          `json:"sessionId,omitempty"`
 	SessionStart bool           `json:"sessionStart,omitempty"`
-	GroupID      string         `json:"groupId,omitempty"`
+	GroupId      string         `json:"groupId,omitempty"`
 	Timezone     string         `json:"timezone,omitempty"`
 	Traits       map[string]any `json:"traits,omitempty"`
 	UserAgent    string         `json:"userAgent,omitempty"`
@@ -152,13 +152,13 @@ type collectedEvent struct {
 	id     ksuid.KSUID
 	source int32
 
-	AnonymousID  string          `json:"anonymousId,omitempty"`
+	AnonymousId  string          `json:"anonymousId,omitempty"`
 	Category     string          `json:"category,omitempty"`
 	Context      eventContext    `json:"context,omitempty"`
 	Event        string          `json:"event,event"`
-	GroupID      string          `json:"groupId,omitempty"`
+	GroupId      string          `json:"groupId,omitempty"`
 	Integrations json.RawMessage `json:"integrations,omitempty"`
-	MessageID    string          `json:"messageId,omitempty"`
+	MessageId    string          `json:"messageId,omitempty"`
 	Name         string          `json:"name,omitempty"`
 	receivedAt   time.Time
 	SentAt       string `json:"sentAt,omitempty"`
@@ -167,8 +167,8 @@ type collectedEvent struct {
 	timestamp    time.Time
 	Traits       map[string]any `json:"traits,omitempty"`
 	Type         *string        `json:"type"`
-	UserID       string         `json:"userId,omitempty"`
-	PreviousID   string         `json:"previousId,omitempty"`
+	UserId       string         `json:"userId,omitempty"`
+	PreviousId   string         `json:"previousId,omitempty"`
 	Properties   map[string]any `json:"properties,omitempty"`
 	version      int
 }
@@ -493,8 +493,8 @@ func validateEvent(method string, event *collectedEvent) error {
 		isTrack    = typ == "track"
 	)
 
-	// AnonymousID and UserID.
-	if event.AnonymousID == "" && event.UserID == "" {
+	// AnonymousId and UserId.
+	if event.AnonymousId == "" && event.UserId == "" {
 		if isIdentify || isAlias {
 			return errors.New("missing event userId")
 		}
@@ -514,11 +514,11 @@ func validateEvent(method string, event *collectedEvent) error {
 		return errors.New("unexpected event name")
 	}
 
-	// GroupID.
-	if event.GroupID == "" && isGroup {
+	// GroupId.
+	if event.GroupId == "" && isGroup {
 		return errors.New("missing event group")
 	}
-	if event.GroupID != "" && !isGroup {
+	if event.GroupId != "" && !isGroup {
 		return errors.New("unexpected event group")
 	}
 
@@ -527,11 +527,11 @@ func validateEvent(method string, event *collectedEvent) error {
 		return errors.New("unexpected screen or page name")
 	}
 
-	// PreviousID.
-	if event.PreviousID == "" && isAlias {
+	// PreviousId.
+	if event.PreviousId == "" && isAlias {
 		return errors.New("missing event previousId")
 	}
-	if event.PreviousID != "" && !isAlias {
+	if event.PreviousId != "" && !isAlias {
 		return errors.New("unexpected event previousId")
 	}
 
@@ -589,11 +589,11 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 		ctx.Campaign.Content = defaultCtx.Campaign.Content
 	}
 	// Device.
-	if ctx.Device.ID == "" {
-		ctx.Device.ID = defaultCtx.Device.ID
+	if ctx.Device.Id == "" {
+		ctx.Device.Id = defaultCtx.Device.Id
 	}
-	if ctx.Device.AdvertisingID == "" {
-		ctx.Device.AdvertisingID = defaultCtx.Device.AdvertisingID
+	if ctx.Device.AdvertisingId == "" {
+		ctx.Device.AdvertisingId = defaultCtx.Device.AdvertisingId
 	}
 	if !ctx.Device.AdTrackingEnabled {
 		ctx.Device.AdTrackingEnabled = defaultCtx.Device.AdTrackingEnabled
@@ -685,8 +685,8 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 		ctx.Page.URL = defaultCtx.Page.URL
 	}
 	// Referrer.
-	if ctx.Referrer.ID == "" {
-		ctx.Referrer.ID = defaultCtx.Referrer.ID
+	if ctx.Referrer.Id == "" {
+		ctx.Referrer.Id = defaultCtx.Referrer.Id
 	}
 	if ctx.Referrer.Type == "" {
 		ctx.Referrer.Type = defaultCtx.Referrer.Type
@@ -701,17 +701,17 @@ func mergeContexts(ctx, defaultCtx *eventContext) {
 	if ctx.Screen.Density == 0 {
 		ctx.Screen.Density = defaultCtx.Screen.Density
 	}
-	// SessionID.
-	if ctx.SessionID == 0 {
-		ctx.SessionID = defaultCtx.SessionID
+	// SessionId.
+	if ctx.SessionId == 0 {
+		ctx.SessionId = defaultCtx.SessionId
 	}
 	// SessionStart.
 	if !ctx.SessionStart {
 		ctx.SessionStart = defaultCtx.SessionStart
 	}
-	// GroupID.
-	if ctx.GroupID == "" {
-		ctx.GroupID = defaultCtx.GroupID
+	// GroupId.
+	if ctx.GroupId == "" {
+		ctx.GroupId = defaultCtx.GroupId
 	}
 	// Timezone.
 	if ctx.Timezone == "" {
@@ -733,9 +733,9 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 	// Source.
 	event.source = int32(event.header.source)
 
-	// AnonymousID.
-	if event.AnonymousID == "" {
-		event.AnonymousID = uuid.NewString()
+	// AnonymousId.
+	if event.AnonymousId == "" {
+		event.AnonymousId = uuid.NewString()
 	}
 
 	// Browser and OS.
@@ -847,9 +847,9 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 	// UserAgent.
 	event.Context.UserAgent = event.header.Headers.Get("User-Agent")
 
-	// MessageID.
-	if event.MessageID == "" {
-		event.MessageID = uuid.NewString()
+	// MessageId.
+	if event.MessageId == "" {
+		event.MessageId = uuid.NewString()
 	}
 
 	// ReceivedAt.

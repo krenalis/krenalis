@@ -24,7 +24,7 @@ var enableCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		connection, _ := strconv.Atoi(args[0])
 		if connection <= 0 {
-			log.Fatalf("invalid connection ID %q", args[0])
+			log.Fatalf("invalid connection Id %q", args[0])
 		}
 		chichiapis.EnableConnection(connection)
 	},
