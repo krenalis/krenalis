@@ -231,12 +231,6 @@ inherit the disabled style */
     border-bottom-left-radius: 5px;
 }
 
-.action .transformation {
-    display: grid;
-    grid-template-columns: .2fr 1fr .2fr;
-    gap: 30px;
-}
-
 .action .transformation .inputProperties, .action .transformation .outputProperties {
     display: flex;
     flex-flow: column;

@@ -192,10 +192,9 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 			}
 		}
 
-		const inSchema = { name: 'Object', properties: [] };
-		const outSchema = { name: 'Object', properties: [] };
-
 		if (actionToSet.Mapping != null) {
+			const inSchema = { name: 'Object', properties: [] };
+			const outSchema = { name: 'Object', properties: [] };
 			const mappingToSave = {};
 			const expressions = [];
 			for (const k in actionToSet.Mapping) {
@@ -233,32 +232,16 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 				}
 			}
 			actionToSet.Mapping = mappingToSave;
+			actionToSet.InSchema = inSchema;
+			actionToSet.OutSchema = outSchema;
 		}
 
 		if (actionToSet.Transformation != null) {
-			for (const propertyName of actionToSet.Transformation.In) {
-				const isPropertyAlreadyInSchema = inSchema.properties.find((p) => p.name === propertyName);
-				if (!isPropertyAlreadyInSchema) {
-					const fullProperty = flattenedInputSchema[propertyName].full;
-					inSchema.properties.push(fullProperty);
-				}
-			}
-			for (const propertyName of actionToSet.Transformation.Out) {
-				const isPropertyAlreadyInSchema = inSchema.properties.find((p) => p.name === propertyName);
-				if (!isPropertyAlreadyInSchema) {
-					const fullProperty = flattenedOutputSchema[propertyName].full;
-					outSchema.properties.push(fullProperty);
-				}
-			}
+			actionToSet.InSchema = actionType.InputSchema;
+			actionToSet.OutSchema = actionType.OutputSchema;
+			actionToSet.Transformation.In = actionType.InputSchema.properties.map((p) => p.name);
+			actionToSet.Transformation.Out = actionType.OutputSchema.properties.map((p) => p.name);
 			actionToSet.Transformation.Func = actionToSet.Transformation.Func.trim();
-		}
-
-		if (inSchema.properties.length > 0 && outSchema.properties.length > 0) {
-			actionToSet.InSchema = inSchema;
-			actionToSet.OutSchema = outSchema;
-		} else {
-			actionToSet.InSchema = null;
-			actionToSet.OutSchema = null;
 		}
 
 		if (actionToSet.Query != null) {

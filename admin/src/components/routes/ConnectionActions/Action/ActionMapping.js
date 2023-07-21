@@ -10,14 +10,7 @@ import Section from '../../../shared/Section/Section';
 import EditorWrapper from '../../../shared/EditorWrapper/EditorWrapper';
 import { AppContext } from '../../../../context/providers/AppProvider';
 import { ActionContext } from '../../../../context/ActionContext';
-import {
-	SlButton,
-	SlIcon,
-	SlDialog,
-	SlInput,
-	SlIconButton,
-	SlAlert,
-} from '@shoelace-style/shoelace/dist/react/index.js';
+import { SlButton, SlIcon, SlInput, SlAlert } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const defaultTransformationParameterByTarget = {
 	Users: 'user',
@@ -27,8 +20,6 @@ const defaultTransformationParameterByTarget = {
 
 const ActionMapping = forwardRef((props, ref) => {
 	const [isAlertOpen, setIsAlertOpen] = useState(false);
-	const [isInputSchemaDialogOpen, setIsInputSchemaDialogOpen] = useState(false);
-	const [isOutputSchemaDialogOpen, setIsOutputSchemaDialogOpen] = useState(false);
 
 	const { api, showError } = useContext(AppContext);
 	const { disabled, disabledReason, isTransformationAllowed, action, setAction, actionType, mode, setMode } =
@@ -72,28 +63,6 @@ const ActionMapping = forwardRef((props, ref) => {
 	const onChangeTransformationFunction = (value) => {
 		const a = { ...action };
 		a.Transformation.Func = value;
-		setAction(a);
-	};
-
-	const onRemoveTransformationProperty = (side, propertyName) => {
-		const a = { ...action };
-		if (side === 'input') {
-			const inputProperties = a.Transformation.In;
-			a.Transformation.In = inputProperties.filter((p) => p !== propertyName);
-		} else {
-			const outputProperties = a.Transformation.Out;
-			a.Transformation.Out = outputProperties.filter((p) => p !== propertyName);
-		}
-		setAction(a);
-	};
-
-	const onAddTransformationProperty = (side, propertyName) => {
-		const a = { ...action };
-		if (side === 'input') {
-			a.Transformation.In.push(propertyName);
-		} else {
-			a.Transformation.Out.push(propertyName);
-		}
 		setAction(a);
 	};
 
@@ -194,68 +163,12 @@ const ActionMapping = forwardRef((props, ref) => {
 	} else if (mode === 'transformation') {
 		content = (
 			<div className='transformation'>
-				<div className='inputProperties'>
-					{action.Transformation.In.map((propertyName) => {
-						const fullProperty = flattenSchema(actionType.InputSchema)[propertyName];
-						return (
-							<div className='property'>
-								<div className='name'>{fullProperty.full.name}</div>
-								<div className='type'>{fullProperty.full.type.name}</div>
-								<SlButton
-									className='removeProperty'
-									size='small'
-									variant='danger'
-									outline
-									onClick={() => onRemoveTransformationProperty('input', fullProperty.full.name)}
-								>
-									<SlIcon name='trash'></SlIcon>
-								</SlButton>
-							</div>
-						);
-					})}
-					<SlButton
-						className='addProperty'
-						size='small'
-						variant='default'
-						onClick={() => setIsInputSchemaDialogOpen(true)}
-					>
-						Add new property...
-					</SlButton>
-				</div>
 				<EditorWrapper
 					defaultLanguage='python'
 					height={400}
 					value={action.Transformation.Func}
 					onChange={(value) => onChangeTransformationFunction(value)}
 				/>
-				<div className='outputProperties'>
-					{action.Transformation.Out.map((propertyName) => {
-						const fullProperty = flattenSchema(actionType.OutputSchema)[propertyName];
-						return (
-							<div className='property'>
-								<div className='name'>{fullProperty.full.name}</div>
-								<div className='type'>{fullProperty.full.type.name}</div>
-								<SlButton
-									className='removeProperty'
-									size='small'
-									variant='danger'
-									outline
-									onClick={() => onRemoveTransformationProperty('output', fullProperty.full.name)}
-								>
-									<SlIcon name='trash'></SlIcon>
-								</SlButton>
-							</div>
-						);
-					})}
-					<SlButton
-						className='addProperty'
-						size='small'
-						variant='default'
-						onClick={() => setIsOutputSchemaDialogOpen(true)}
-					>
-						Add new property...
-					</SlButton>
-				</div>
 			</div>
 		);
 	}
@@ -315,78 +228,6 @@ const ActionMapping = forwardRef((props, ref) => {
 				</AlertDialog>,
 				document.body
 			)}
-			{mode === 'transformation' &&
-				createPortal(
-					<SlDialog
-						className='inputSchemaDialog'
-						label='Input properties'
-						open={isInputSchemaDialogOpen}
-						onSlRequestClose={() => setIsInputSchemaDialogOpen(false)}
-						style={{ '--width': '700px' }}
-					>
-						{actionType.InputSchema.properties.map((p) => {
-							const isUsed =
-								action.Transformation.In.findIndex((propertyName) => propertyName === p.name) !== -1;
-							return (
-								<div
-									className={`property${isUsed ? ' used' : ''}${
-										p.label != null && p.label !== '' ? ' hasLabel' : ''
-									}`}
-								>
-									<div>
-										{p.label != null && p.label !== '' && <div className='label'>{p.label}</div>}
-										<div className='name'>{p.name}</div>
-										<div className='type'>{p.type.name}</div>
-									</div>
-									{!isUsed && (
-										<SlIconButton
-											name='plus-circle'
-											label='Add property'
-											onClick={() => onAddTransformationProperty('input', p.name)}
-										/>
-									)}
-								</div>
-							);
-						})}
-					</SlDialog>,
-					document.body
-				)}
-			{mode === 'transformation' &&
-				createPortal(
-					<SlDialog
-						className='outputSchemaDialog'
-						label='Output properties'
-						open={isOutputSchemaDialogOpen}
-						onSlRequestClose={() => setIsOutputSchemaDialogOpen(false)}
-						style={{ '--width': '700px' }}
-					>
-						{actionType.OutputSchema.properties.map((p) => {
-							const isUsed =
-								action.Transformation.Out.findIndex((propertyName) => propertyName === p.name) !== -1;
-							return (
-								<div
-									className={`property${isUsed ? ' used' : ''}${
-										p.label != null && p.label !== '' ? ' hasLabel' : ''
-									}`}
-								>
-									<div>
-										{p.label != null && p.label !== '' && <div className='label'>{p.label}</div>}
-										<div className='name'>{p.name}</div>
-										<div className='type'>{p.type.name}</div>
-									</div>
-									{!isUsed && (
-										<SlIconButton
-											name='plus-circle'
-											label='Add property'
-											onClick={() => onAddTransformationProperty('output', p.name)}
-										/>
-									)}
-								</div>
-							);
-						})}
-					</SlDialog>,
-					document.body
-				)}
 		</>
 	);
 });
