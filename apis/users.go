@@ -225,9 +225,9 @@ func (this *User) Events(limit int) ([]Event, error) {
 
 	// Read the events.
 	where := warehouses.NewBaseExpr(
-		warehouses.ExprColumn{Name: "user_id", Type: types.PtText},
+		warehouses.ExprColumn{Name: "gid", Type: types.PtInt},
 		warehouses.OperatorEqual,
-		strconv.Itoa(this.id),
+		this.id,
 	)
 	rows, err := ws.Warehouse.Select(context.Background(), "events", eventColumns, where, types.Property{}, 0, limit)
 	if err != nil {

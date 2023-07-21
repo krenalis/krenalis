@@ -9,6 +9,7 @@
 
 CREATE TABLE events
 (
+    `gid` Int32,
     `anonymous_id` String,
     `category` String,
     `app_name` String,

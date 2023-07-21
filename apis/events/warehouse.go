@@ -95,6 +95,7 @@ func (q *warehouseQueue) add(events []*collectedEvent) {
 
 var batchEventsColumns = []string{
 
+	"gid",
 	"anonymous_id",
 	"category",
 
@@ -235,6 +236,7 @@ RETRY:
 			}
 			err = batch.Append(
 
+				0,
 				e.AnonymousId,
 				e.Category,
 
