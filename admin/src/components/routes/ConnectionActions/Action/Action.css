@@ -194,7 +194,11 @@
     align-items: center;
 }
 
-.inputProperty sl-icon {
+.action .mappings .mapping .inputProperty::part(base) {
+    font-family: monospace!important;
+} 
+
+.action .mappings .mapping .inputProperty sl-icon {
     color: var(--sl-color-danger-500);
     font-size: 9px;
 }

@@ -17,6 +17,10 @@
     font-size: 12px;
 }
 
+.identifiers-mapping__mapped-property::part(base) {
+    font-family: monospace!important;
+}
+
 .identifiers-mapping__mapped-property sl-icon,
 .identifiers-mapping__identifier sl-icon {
     color: var(--sl-color-danger-500);
