@@ -1,21 +1,37 @@
 # Chichi Analytics
 
-### Run Prettier
+- [Format files](#format-files)
+  - [Formatting files under `website-for-testing`](#formatting-files-under-website-for-testing)
+- [Build `dist/chichi.js`](#build-distchichijs)
+- [Add the snippet to an HTML page](#add-the-snippet-to-an-html-page)
+
+
+## Format files
+
+Run:
 
 ```sh
-$ npm run prettier
+npm run prettier
 ```
 
-### Build `dist/chichi.js`
+### Formatting files under `website-for-testing`
+
+Run:
 
 ```sh
-$ npm run build
-$ npm run bundle
+npm run prettier-test-website
+```
+
+## Build `dist/chichi.js`
+
+```sh
+npm run build
+npm run bundle
 ```
 
 These script commands create the `dist/chichi.js` file.
 
-### Add the snippet to an HTML page
+## Add the snippet to an HTML page
 
 Add the content of the `snippet.js` file to the HTML page:
 

@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "scripts": {
     "prettier": "npx prettier --print-width 120 --use-tabs --tab-width 4 --single-quote --jsx-single-quote --write *.js",
+    "prettier-test-website": "npx prettier --write ./website-for-testing/*",
     "build": "babel chichi.js -o chichi.build.js",
     "bundle": "webpack --config webpack.config.js"
   },
