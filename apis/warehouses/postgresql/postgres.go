@@ -461,17 +461,26 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns [
 
 	// Build the query.
 	var query strings.Builder
-	query.WriteString(`SELECT "`)
+	query.WriteString(`SELECT `)
 	for i, c := range columns {
 		if i > 0 {
-			query.WriteString(`", "`)
+			query.WriteString(", ")
 		}
 		if !types.IsValidPropertyName(c.Name) {
 			panic(fmt.Sprintf("invalid property name: %q", c.Name))
 		}
-		query.WriteString(c.Name)
+		switch c.Type.PhysicalType() {
+		default:
+			query.WriteByte('"')
+			query.WriteString(c.Name)
+			query.WriteByte('"')
+		case types.PtInet:
+			query.WriteString(`host("`)
+			query.WriteString(c.Name)
+			query.WriteString(`")`)
+		}
 	}
-	query.WriteString(`" FROM "`)
+	query.WriteString(` FROM "`)
 	query.WriteString(table)
 	query.WriteByte('"')
 
