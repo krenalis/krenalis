@@ -230,9 +230,9 @@ RETRY:
 				log.Printf("[error] cannot marshal event: %s", err)
 				continue
 			}
-			groupID := e.GroupId
+			groupId := e.GroupId
 			if *e.Type != "group" {
-				groupID = e.Context.GroupId
+				groupId = e.Context.GroupId
 			}
 			err = batch.Append(
 
@@ -317,7 +317,7 @@ RETRY:
 				e.Context.UserAgent,
 
 				e.Event,
-				groupID,
+				groupId,
 				e.MessageId,
 				e.Name,
 				properties.Bytes(),
