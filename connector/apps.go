@@ -237,7 +237,6 @@ type Event struct {
 		}
 		SessionId    int64
 		SessionStart bool
-		GroupId      string
 		Timezone     string
 		UserAgent    string
 	}

@@ -141,6 +141,10 @@ func (processor *Processor) Events() <-chan *processedEvent {
 // eventToConnectorEvent returns the connector.Event corresponding to event.
 func eventToConnectorEvent(event *collectedEvent) connector.Event {
 	// Keep in sync with the connector.Event type.
+	groupId := event.GroupId
+	if event.GroupId == "" {
+		groupId = event.Context.GroupId
+	}
 	e := connector.Event{}
 	e.AnonymousId = event.AnonymousId
 	e.Category = event.Category
@@ -190,11 +194,10 @@ func eventToConnectorEvent(event *collectedEvent) connector.Event {
 	e.Context.Screen.Density = event.Context.Screen.Density
 	e.Context.SessionId = event.Context.SessionId
 	e.Context.SessionStart = event.Context.SessionStart
-	e.Context.GroupId = event.Context.GroupId
 	e.Context.Timezone = event.Context.Timezone
 	e.Context.UserAgent = event.Context.UserAgent
 	e.Event = event.Event
-	e.GroupId = event.GroupId
+	e.GroupId = groupId
 	e.MessageId = event.MessageId
 	e.Name = event.Name
 	e.ReceivedAt = event.receivedAt
