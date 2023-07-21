@@ -11,12 +11,10 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"net/netip"
 	"strconv"
 	"time"
 
 	"chichi/apis/errors"
-	"chichi/apis/events"
 	"chichi/apis/state"
 	"chichi/apis/warehouses"
 	"chichi/connector/types"
@@ -31,32 +29,38 @@ type User struct {
 // Event represents a user event.
 type Event struct {
 	AnonymousID string `json:"anonymousId,omitempty"`
+	Category    string `json:"category,omitempty"`
 	Context     struct {
-		App       *EventContextApp      `json:"app,omitempty"`
-		Campaign  *EventContextCampaign `json:"campaign,omitempty"`
-		Device    *EventContextDevice   `json:"device,omitempty"`
-		IP        netip.Addr            `json:"ip,omitempty"`
-		Library   *EventContextLibrary  `json:"library,omitempty"`
-		Locale    string                `json:"locale,omitempty"`
-		Location  *EventContextLocation `json:"location,omitempty"`
-		Network   *EventContextNetwork  `json:"network,omitempty"`
-		OS        *EventContextOS       `json:"os,omitempty"`
-		Page      *EventContextPage     `json:"page,omitempty"`
-		Referrer  *EventContextReferrer `json:"referrer,omitempty"`
-		Screen    *EventContextScreen   `json:"screen,omitempty"`
-		Timezone  string                `json:"timezone,omitempty"`
-		Traits    json.RawMessage       `json:"traits,omitempty"`
-		UserAgent string                `json:"userAgent,omitempty"`
+		Active       bool                  `json:"active,omitempty"`
+		App          *EventContextApp      `json:"app,omitempty"`
+		Browser      *EventContextBrowser  `json:"browser,omitempty"`
+		Campaign     *EventContextCampaign `json:"campaign,omitempty"`
+		Device       *EventContextDevice   `json:"device,omitempty"`
+		IP           string                `json:"ip,omitempty"`
+		Library      *EventContextLibrary  `json:"library,omitempty"`
+		Locale       string                `json:"locale,omitempty"`
+		Location     *EventContextLocation `json:"location,omitempty"`
+		Network      *EventContextNetwork  `json:"network,omitempty"`
+		OS           *EventContextOS       `json:"os,omitempty"`
+		Page         *EventContextPage     `json:"page,omitempty"`
+		Referrer     *EventContextReferrer `json:"referrer,omitempty"`
+		Screen       *EventContextScreen   `json:"screen,omitempty"`
+		SessionID    string                `json:"sessionId,omitempty"`
+		SessionStart bool                  `json:"sessionStart,omitempty"`
+		Timezone     string                `json:"timezone,omitempty"`
+		UserAgent    string                `json:"userAgent,omitempty"`
 	} `json:"context"`
 	Event      string          `json:"event,omitempty"`
 	GroupID    string          `json:"groupId,omitempty"`
 	MessageID  string          `json:"messageId,omitempty"`
 	Name       string          `json:"name,omitempty"`
-	PreviousID string          `json:"previousId,omitempty"`
 	Properties json.RawMessage `json:"properties,omitempty"`
+	ReceivedAt string          `json:"receivedAt,omitempty"`
+	SentAt     string          `json:"sentAt,omitempty"`
+	Source     int             `json:"source,omitempty"`
 	Timestamp  string          `json:"timestamp,omitempty"`
 	Traits     json.RawMessage `json:"traits,omitempty"`
-	Type       *string         `json:"type,omitempty"`
+	Type       string          `json:"type,omitempty"`
 	UserID     string          `json:"userId,omitempty"`
 }
 
@@ -65,6 +69,12 @@ type EventContextApp struct {
 	Version   string `json:"version"`
 	Build     string `json:"build"`
 	Namespace string `json:"namespace"`
+}
+
+type EventContextBrowser struct {
+	Name    string `json:"name"`
+	Other   string `json:"other"`
+	Version string `json:"version"`
 }
 
 type EventContextCampaign struct {
@@ -76,13 +86,14 @@ type EventContextCampaign struct {
 }
 
 type EventContextDevice struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	Manufacturer  string `json:"manufacturer"`
-	Model         string `json:"model"`
-	Type          string `json:"type"`
-	Version       string `json:"version"`
-	AdvertisingID string `json:"advertisingId"`
+	ID                string `json:"id"`
+	AdvertisingID     string `json:"advertisingId"`
+	AdTrackingEnabled bool   `json:"AdTrackingEnabled"`
+	Manufacturer      string `json:"manufacturer"`
+	Model             string `json:"model"`
+	Name              string `json:"name"`
+	Type              string `json:"type"`
+	Token             string `json:"token"`
 }
 
 type EventContextLibrary struct {
@@ -93,17 +104,16 @@ type EventContextLibrary struct {
 type EventContextLocation struct {
 	City      string  `json:"city"`
 	Country   string  `json:"country"`
-	Region    string  `json:"region"`
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 	Speed     float64 `json:"speed"`
 }
 
 type EventContextNetwork struct {
-	Cellular  bool   `json:"cellular"`
-	WiFi      bool   `json:"wifi"`
 	Bluetooth bool   `json:"bluetooth"`
 	Carrier   string `json:"carrier"`
+	Cellular  bool   `json:"cellular"`
+	WiFi      bool   `json:"wifi"`
 }
 
 type EventContextOS struct {
@@ -112,25 +122,88 @@ type EventContextOS struct {
 }
 
 type EventContextPage struct {
-	URL      string `json:"url"`
 	Path     string `json:"path"`
-	Search   string `json:"search"`
-	Hash     string `json:"hash,omitempty"`
-	Title    string `json:"title"`
 	Referrer string `json:"referrer"`
+	Search   string `json:"search"`
+	Title    string `json:"title"`
+	URL      string `json:"url"`
 }
 
 type EventContextReferrer struct {
+	ID   string `json:"id"`
 	Type string `json:"type"`
-	Name string `json:"name"`
-	URL  string `json:"url"`
-	Link string `json:"link"`
 }
 
 type EventContextScreen struct {
-	Density int `json:"density"`
-	Width   int `json:"width"`
-	Height  int `json:"height"`
+	Width   int     `json:"width"`
+	Height  int     `json:"height"`
+	Density float64 `json:"density"`
+}
+
+var eventColumns = []types.Property{
+	{Name: "anonymous_id", Type: types.Text()},
+	{Name: "category", Type: types.Text()},
+	{Name: "app_name", Type: types.Text()},
+	{Name: "app_version", Type: types.Text()},
+	{Name: "app_build", Type: types.Text()},
+	{Name: "app_namespace", Type: types.Text()},
+	{Name: "browser_name", Type: types.Text()},
+	{Name: "browser_other", Type: types.Text()},
+	{Name: "browser_version", Type: types.Text()},
+	{Name: "campaign_name", Type: types.Text()},
+	{Name: "campaign_source", Type: types.Text()},
+	{Name: "campaign_medium", Type: types.Text()},
+	{Name: "campaign_term", Type: types.Text()},
+	{Name: "campaign_content", Type: types.Text()},
+	{Name: "device_id", Type: types.Text()},
+	{Name: "device_advertising_id", Type: types.Text()},
+	{Name: "device_ad_tracking_enabled", Type: types.Boolean()},
+	{Name: "device_manufacturer", Type: types.Text()},
+	{Name: "device_model", Type: types.Text()},
+	{Name: "device_name", Type: types.Text()},
+	{Name: "device_type", Type: types.Text()},
+	{Name: "device_token", Type: types.Text()},
+	{Name: "ip", Type: types.Inet()},
+	{Name: "library_name", Type: types.Text()},
+	{Name: "library_version", Type: types.Text()},
+	{Name: "locale", Type: types.Text()},
+	{Name: "location_city", Type: types.Text()},
+	{Name: "location_country", Type: types.Text()},
+	{Name: "location_latitude", Type: types.Float()},
+	{Name: "location_longitude", Type: types.Float()},
+	{Name: "location_speed", Type: types.Float()},
+	{Name: "network_bluetooth", Type: types.Boolean()},
+	{Name: "network_carrier", Type: types.Text()},
+	{Name: "network_cellular", Type: types.Boolean()},
+	{Name: "network_wifi", Type: types.Boolean()},
+	{Name: "os_name", Type: types.Text().WithEnum([]string{"Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other"})},
+	{Name: "os_version", Type: types.Text()},
+	{Name: "page_path", Type: types.Text()},
+	{Name: "page_referrer", Type: types.Text()},
+	{Name: "page_search", Type: types.Text()},
+	{Name: "page_title", Type: types.Text()},
+	{Name: "page_url", Type: types.Text()},
+	{Name: "referrer_id", Type: types.Text()},
+	{Name: "referrer_type", Type: types.Text()},
+	{Name: "screen_width", Type: types.Int16()},
+	{Name: "screen_height", Type: types.Int16()},
+	{Name: "screen_density", Type: types.Int16()},
+	{Name: "session_id", Type: types.Int64()},
+	{Name: "session_start", Type: types.Boolean()},
+	{Name: "timezone", Type: types.Text()},
+	{Name: "user_agent", Type: types.Text()},
+	{Name: "event", Type: types.Text()},
+	{Name: "group_id", Type: types.Text()},
+	{Name: "message_id", Type: types.Text()},
+	{Name: "name", Type: types.Text()},
+	{Name: "properties", Type: types.JSON()},
+	{Name: "received_at", Type: types.DateTime()},
+	{Name: "sent_at", Type: types.DateTime()},
+	{Name: "source", Type: types.Int()},
+	{Name: "timestamp", Type: types.DateTime()},
+	{Name: "traits", Type: types.JSON()},
+	{Name: "type", Type: types.Text()},
+	{Name: "user_id", Type: types.Text()},
 }
 
 // Events returns the events of the user. limit is the maximum number of events
@@ -151,13 +224,12 @@ func (this *User) Events(limit int) ([]Event, error) {
 	}
 
 	// Read the events.
-	columns := warehouses.PropertiesToColumns(events.Schema.Properties())
 	where := warehouses.NewBaseExpr(
 		warehouses.ExprColumn{Name: "user_id", Type: types.PtText},
 		warehouses.OperatorEqual,
 		strconv.Itoa(this.id),
 	)
-	rows, err := ws.Warehouse.Select(context.Background(), "events", columns, where, types.Property{}, 0, limit)
+	rows, err := ws.Warehouse.Select(context.Background(), "events", eventColumns, where, types.Property{}, 0, limit)
 	if err != nil {
 		if err2, ok := err.(*warehouses.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
@@ -167,36 +239,42 @@ func (this *User) Events(limit int) ([]Event, error) {
 		return nil, err
 	}
 
-	idx := make(map[string]int, len(columns))
-	for i, c := range columns {
-		idx[c.Name] = i
-	}
-
 	events := make([]Event, len(rows))
 	for i, row := range rows {
 
 		var e Event
 
-		e.AnonymousID = row[idx["anonymous_id"]].(string)
+		e.AnonymousID = row[0].(string)
+		e.Category = row[1].(string)
 
 		// App.
 		app := EventContextApp{
-			Name:      row[idx["app_name"]].(string),
-			Version:   row[idx["app_version"]].(string),
-			Build:     row[idx["app_build"]].(string),
-			Namespace: row[idx["app_namespace"]].(string),
+			Name:      row[2].(string),
+			Version:   row[3].(string),
+			Build:     row[4].(string),
+			Namespace: row[5].(string),
 		}
 		if app != (EventContextApp{}) {
 			e.Context.App = &app
 		}
 
+		// Browser.
+		browser := EventContextBrowser{
+			Name:    row[6].(string),
+			Other:   row[7].(string),
+			Version: row[8].(string),
+		}
+		if browser != (EventContextBrowser{}) {
+			e.Context.Browser = &browser
+		}
+
 		// Campaign.
 		campaign := EventContextCampaign{
-			Name:    row[idx["campaign_name"]].(string),
-			Source:  row[idx["campaign_source"]].(string),
-			Medium:  row[idx["campaign_medium"]].(string),
-			Term:    row[idx["campaign_term"]].(string),
-			Content: row[idx["campaign_content"]].(string),
+			Name:    row[9].(string),
+			Source:  row[10].(string),
+			Medium:  row[11].(string),
+			Term:    row[12].(string),
+			Content: row[13].(string),
 		}
 		if campaign != (EventContextCampaign{}) {
 			e.Context.Campaign = &campaign
@@ -204,41 +282,41 @@ func (this *User) Events(limit int) ([]Event, error) {
 
 		// Device.
 		device := EventContextDevice{
-			ID:            row[idx["device_id"]].(string),
-			Name:          row[idx["device_name"]].(string),
-			Manufacturer:  row[idx["device_manufacturer"]].(string),
-			Model:         row[idx["device_model"]].(string),
-			Type:          row[idx["device_type"]].(string),
-			Version:       row[idx["device_version"]].(string),
-			AdvertisingID: row[idx["device_advertising_id"]].(string),
+			ID:                row[14].(string),
+			AdvertisingID:     row[15].(string),
+			AdTrackingEnabled: row[16].(bool),
+			Manufacturer:      row[17].(string),
+			Model:             row[18].(string),
+			Name:              row[19].(string),
+			Type:              row[20].(string),
+			Token:             row[21].(string),
 		}
 		if device != (EventContextDevice{}) {
 			e.Context.Device = &device
 		}
 
 		// IP.
-		e.Context.IP = row[idx["ip"]].(netip.Addr)
+		e.Context.IP = row[22].(string)
 
 		// Library.
 		library := EventContextLibrary{
-			Name:    row[idx["library_name"]].(string),
-			Version: row[idx["library_version"]].(string),
+			Name:    row[23].(string),
+			Version: row[24].(string),
 		}
 		if library != (EventContextLibrary{}) {
 			e.Context.Library = &library
 		}
 
 		// Locale.
-		e.Context.Locale = row[idx["locale"]].(string)
+		e.Context.Locale = row[25].(string)
 
 		// Location.
 		location := EventContextLocation{
-			City:      row[idx["location_city"]].(string),
-			Country:   row[idx["location_country"]].(string),
-			Region:    row[idx["location_region"]].(string),
-			Latitude:  row[idx["location_latitude"]].(float64),
-			Longitude: row[idx["location_longitude"]].(float64),
-			Speed:     row[idx["location_speed"]].(float64),
+			City:      row[26].(string),
+			Country:   row[27].(string),
+			Latitude:  row[28].(float64),
+			Longitude: row[29].(float64),
+			Speed:     row[30].(float64),
 		}
 		if location != (EventContextLocation{}) {
 			e.Context.Location = &location
@@ -246,10 +324,10 @@ func (this *User) Events(limit int) ([]Event, error) {
 
 		// Network.
 		network := EventContextNetwork{
-			Cellular:  row[idx["network_cellular"]].(bool),
-			WiFi:      row[idx["network_wifi"]].(bool),
-			Bluetooth: row[idx["network_bluetooth"]].(bool),
-			Carrier:   row[idx["network_carrier"]].(string),
+			Bluetooth: row[31].(bool),
+			Carrier:   row[32].(string),
+			Cellular:  row[33].(bool),
+			WiFi:      row[34].(bool),
 		}
 		if network != (EventContextNetwork{}) {
 			e.Context.Network = &network
@@ -257,8 +335,8 @@ func (this *User) Events(limit int) ([]Event, error) {
 
 		// OS.
 		os := EventContextOS{
-			Name:    row[idx["os_name"]].(string),
-			Version: row[idx["os_version"]].(string),
+			Name:    row[35].(string),
+			Version: row[36].(string),
 		}
 		if os != (EventContextOS{}) {
 			e.Context.OS = &os
@@ -266,12 +344,11 @@ func (this *User) Events(limit int) ([]Event, error) {
 
 		// Page.
 		page := EventContextPage{
-			URL:      row[idx["page_url"]].(string),
-			Path:     row[idx["page_path"]].(string),
-			Search:   row[idx["page_search"]].(string),
-			Hash:     row[idx["page_hash"]].(string),
-			Title:    row[idx["page_title"]].(string),
-			Referrer: row[idx["page_referrer"]].(string),
+			Path:     row[37].(string),
+			Referrer: row[38].(string),
+			Search:   row[39].(string),
+			Title:    row[40].(string),
+			URL:      row[41].(string),
 		}
 		if page != (EventContextPage{}) {
 			e.Context.Page = &page
@@ -279,10 +356,8 @@ func (this *User) Events(limit int) ([]Event, error) {
 
 		// Referrer.
 		referrer := EventContextReferrer{
-			Type: row[idx["referrer_type"]].(string),
-			Name: row[idx["referrer_name"]].(string),
-			URL:  row[idx["referrer_url"]].(string),
-			Link: row[idx["referrer_link"]].(string),
+			ID:   row[42].(string),
+			Type: row[43].(string),
 		}
 		if referrer != (EventContextReferrer{}) {
 			e.Context.Referrer = &referrer
@@ -290,23 +365,31 @@ func (this *User) Events(limit int) ([]Event, error) {
 
 		// Screen.
 		screen := EventContextScreen{
-			Density: row[idx["screen_density"]].(int),
-			Width:   row[idx["screen_width"]].(int),
-			Height:  row[idx["screen_height"]].(int),
+			Width:   row[44].(int),
+			Height:  row[45].(int),
+			Density: float64(row[46].(int) / 100),
 		}
 		if screen != (EventContextScreen{}) {
 			e.Context.Screen = &screen
 		}
 
-		// Timezone.
-		e.Context.Timezone = row[idx["timezone"]].(string)
+		e.Context.SessionID = strconv.Itoa(row[47].(int))
+		e.Context.SessionStart = row[48].(bool)
+		e.Context.Timezone = row[49].(string)
+		e.Context.UserAgent = row[50].(string)
 
-		// UserAgent.
-		e.Context.UserAgent = row[idx["user_agent"]].(string)
-
-		e.Event = row[idx["event"]].(string)
-		e.MessageID = row[idx["message_id"]].(string)
-		e.Timestamp = row[idx["timestamp"]].(time.Time).Format(time.RFC3339)
+		e.Event = row[51].(string)
+		e.GroupID = row[52].(string)
+		e.MessageID = row[53].(string)
+		e.Name = row[54].(string)
+		e.Properties = json.RawMessage(row[55].(string))
+		e.ReceivedAt = row[56].(time.Time).Format(time.RFC3339)
+		e.SentAt = row[57].(time.Time).Format(time.RFC3339)
+		e.Source = row[58].(int)
+		e.Timestamp = row[59].(time.Time).Format(time.RFC3339)
+		e.Traits = json.RawMessage(row[60].(string))
+		e.Type = row[61].(string)
+		e.UserID = row[62].(string)
 
 		events[i] = e
 
