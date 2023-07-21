@@ -102,12 +102,6 @@ func (this *Action) importFromFile(ctx context.Context) error {
 			return actionExecutionError{err}
 		}
 
-		// TODO(Gianluca): handle the "id" output property correctly; here it is
-		// just removed to make the code work.
-		//
-		// See the issue https://github.com/open2b/chichi/issues/221.
-		delete(mappedUser, "id")
-
 		// Set the user into the data warehouse.
 		err = userswarehouse.SetUser(ctx, this.redis, connection, this.action, mappedUser)
 		if err != nil {
