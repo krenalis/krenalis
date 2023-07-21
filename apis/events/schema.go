@@ -129,7 +129,7 @@ var Schema = types.Object([]types.Property{
 	{Name: "source", Type: types.Int()},
 	{Name: "timestamp", Type: types.DateTime()},
 	{Name: "traits", Type: types.JSON()},
-	{Name: "type", Type: types.Text()},
+	{Name: "type", Type: types.Text().WithEnum([]string{"alias", "identify", "group", "page", "screen", "track"})},
 	{Name: "userId", Type: types.Text()},
 	{Name: "version", Type: types.Int()},
 })

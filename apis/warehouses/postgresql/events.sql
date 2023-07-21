@@ -9,6 +9,7 @@
 
 CREATE TYPE event_os_name AS ENUM ('Android', 'Windows', 'iOS', 'macOS', 'Linux', 'Chrome OS', 'Other');
 CREATE TYPE event_browser_name AS ENUM ('Chrome', 'Safari', 'Edge', 'Firefox', 'Samsung Internet', 'Opera', 'Other');
+CREATE TYPE event_type AS ENUM ('alias', 'identify', 'group', 'page', 'screen', 'track');
 
 CREATE TABLE events (
     anonymous_id varchar NOT NULL,
@@ -72,6 +73,6 @@ CREATE TABLE events (
     source integer NOT NULL,
     timestamp timestamp(3) NOT NULL,
     traits jsonb NOT NULL,
-    type varchar NOT NULL,
+    type event_type NOT NULL,
     user_id varchar NOT NULL
 )

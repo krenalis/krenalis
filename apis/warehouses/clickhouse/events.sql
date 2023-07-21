@@ -70,7 +70,7 @@ CREATE TABLE events
     `source` Int32,
     `timestamp` DateTime,
     `traits` String,
-    `type` String,
+    `type` Enum8('alias' = 1, 'identify' = 2, 'group' = 3, 'page' = 4, 'screen' = 5, 'track' = 6),
     `user_id` String
 )
 ENGINE = MergeTree

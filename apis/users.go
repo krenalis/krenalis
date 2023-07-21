@@ -202,7 +202,7 @@ var eventColumns = []types.Property{
 	{Name: "source", Type: types.Int()},
 	{Name: "timestamp", Type: types.DateTime()},
 	{Name: "traits", Type: types.JSON()},
-	{Name: "type", Type: types.Text()},
+	{Name: "type", Type: types.Text().WithEnum([]string{"alias", "identify", "group", "page", "screen", "track"})},
 	{Name: "user_id", Type: types.Text()},
 }
 
