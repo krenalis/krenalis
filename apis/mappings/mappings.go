@@ -152,13 +152,8 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 		return nil, fmt.Errorf("error while calling the transformation function: %s", err)
 	}
 
-	// Verify that the transformation function has returned all the expected out
-	// properties and no additional ones.
-	for _, name := range m.transformation.Out {
-		if _, ok := transformationOutValues[name]; !ok {
-			return nil, fmt.Errorf("transformation function has not returned the property %s", name)
-		}
-	}
+	// Verify that the transformation function hasn't returned property values
+	// that are not present in the output schema.
 	if len(m.transformation.Out) != len(transformationOutValues) {
 		names := maps.Keys(transformationOutValues)
 		sort.Strings(names)
