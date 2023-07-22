@@ -53,6 +53,9 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 		resources:        map[int]*Resource{},
 	}
 
+	// Keep the state updated.
+	go state.keepState()
+
 	n := LoadStateNotification{ID: state.id}
 
 	err = state.db.Transaction(ctx, func(tx *postgres.Tx) error {

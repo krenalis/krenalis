@@ -13,17 +13,25 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
+	"math"
+	"math/rand"
 	"reflect"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
+
+const maxIDLen = len("9223372036854775807")
 
 type Notification struct {
 	PID     uint32
 	Name    string
 	Payload string
+	Ack     chan<- struct{}
 }
 
 // Notify sends a notification.
@@ -54,7 +62,7 @@ func notify(ctx context.Context, conn Connection, payload any) error {
 	s := b.String()
 	s = s[:len(s)-1] // remove new line added by Encode.
 	s = escape(s)
-	if len(s) > 8000-2 {
+	if len(s) > 8000-maxIDLen-2 {
 		if db, ok := conn.(*DB); ok {
 			// Send within a transaction.
 			return db.Transaction(ctx, func(tx *Tx) error {
@@ -77,14 +85,19 @@ func notify(ctx context.Context, conn Connection, payload any) error {
 			return err
 		}
 		s = z.String()
-		for len(s) > 8000-2 {
-			const k = 8000 - 3
+		for len(s) > 8000-maxIDLen-2 {
+			const k = 8000 - maxIDLen - 3
 			_, err = conn.Exec(ctx, "NOTIFY chichi, '+"+s[:k]+"'")
 			if err != nil {
 				return err
 			}
 			s = s[k:]
 		}
+	}
+	if tx, ok := conn.(*Tx); ok {
+		id, ack := tx.acks.create()
+		tx.ack = ack
+		s += strconv.Itoa(id)
 	}
 	_, err = conn.Exec(ctx, "NOTIFY chichi, '"+s+"'")
 	return err
@@ -151,11 +164,15 @@ func (db *DB) ListenToNotifications(ctx context.Context) <-chan Notification {
 						payload = s.String()
 						b.Reset()
 					}
-					i := strings.IndexByte(payload, '{')
-					if i == -1 {
-						i = len(payload)
+					id, name, payload, err := parsePayload(payload)
+					if err != nil {
+						return err
 					}
-					ch <- Notification{n.PID, payload[:i], payload[i:]}
+					var ack chan<- struct{}
+					if id > 0 {
+						ack = db.acks.pop(id)
+					}
+					ch <- Notification{n.PID, name, payload, ack}
 				}
 			}()
 			if err != nil {
@@ -166,4 +183,73 @@ func (db *DB) ListenToNotifications(ctx context.Context) <-chan Notification {
 		}
 	}()
 	return ch
+}
+
+// parsePayload parses a notification payload and returns the identifier, name,
+// and effective payload of the notification. If there is no identifier, it
+// returns 0 as identifier.
+func parsePayload(s string) (id int, name, payload string, err error) {
+	i := strings.IndexByte(s, '{')
+	if i == -1 {
+		return 0, "", "", errors.New("missing payload")
+	}
+	if i == 0 {
+		return 0, "", "", errors.New("missing name")
+	}
+	name, s = s[:i], s[i:]
+	i = strings.LastIndexByte(s, '}')
+	if i == -1 {
+		return 0, "", "", errors.New("invalid payload")
+	}
+	payload, s = s[:i+1], s[i+1:]
+	if s == "" {
+		return
+	}
+	id, _ = strconv.Atoi(s)
+	if id < 1 {
+		return 0, "", "", errors.New("invalid identifier")
+	}
+	return
+}
+
+// acks contains channels used by transactions for which a notification has
+// been sent. These channels are used to receive an acknowledgment when the
+// notification has been received and processed.
+type acks struct {
+	sync.Mutex
+	ids map[int]chan struct{}
+}
+
+// newAcks returns a new empty acks.
+func newAcks() *acks {
+	return &acks{ids: map[int]chan struct{}{}}
+}
+
+// create creates a new ack channel and returns it with its identifier.
+func (acks *acks) create() (int, <-chan struct{}) {
+	var id int
+	var ack chan struct{}
+	for ack == nil {
+		id = rand.Intn(math.MaxInt-1) + 1
+		acks.Lock()
+		_, ok := acks.ids[id]
+		if !ok {
+			ack = make(chan struct{}, 1)
+			acks.ids[id] = ack
+		}
+		acks.Unlock()
+	}
+	return id, ack
+}
+
+// pop removes the ack channel with identifier id and returns it. Returns nil
+// if the ack channel does not exist.
+func (acks *acks) pop(id int) chan<- struct{} {
+	acks.Lock()
+	ack, ok := acks.ids[id]
+	if ok {
+		delete(acks.ids, id)
+	}
+	acks.Unlock()
+	return ack
 }

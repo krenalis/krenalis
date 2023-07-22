@@ -120,9 +120,6 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 		return nil, err
 	}
 
-	// Keep the state updated.
-	apis.state.Keep()
-
 	return apis, nil
 }
 

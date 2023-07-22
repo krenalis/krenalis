@@ -111,8 +111,9 @@ var (
 )
 
 type DB struct {
-	db  *pgxpool.Pool
-	log io.Writer
+	db   *pgxpool.Pool
+	acks *acks
+	log  io.Writer
 }
 
 type Options struct {
@@ -153,7 +154,7 @@ func Open(opts *Options) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &DB{conn, nil}, nil
+	return &DB{db: conn, acks: newAcks()}, nil
 }
 
 func (db *DB) Close() {
@@ -280,29 +281,33 @@ func (db *DB) Begin(ctx context.Context) (*Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Tx{tx, db.log, false, false}, nil
+	return &Tx{tx, db.acks, db.log, false, false, nil}, nil
 }
 
 func (db *DB) Transaction(ctx context.Context, f func(tx *Tx) error) error {
-	var tx, err = db.db.Begin(ctx)
+	pqTx, err := db.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	return func() error {
 		defer func() {
 			if err := recover(); err != nil {
-				_ = tx.Rollback(ctx)
+				_ = pqTx.Rollback(ctx)
 				panic(err)
 			}
 		}()
-		var err = f(&Tx{tx, db.log, true, false})
+		tx := &Tx{pqTx, db.acks, db.log, true, false, nil}
+		err := f(tx)
 		if err != nil {
-			_ = tx.Rollback(ctx)
+			_ = pqTx.Rollback(ctx)
 			return err
 		}
-		err = tx.Commit(ctx)
+		err = pqTx.Commit(ctx)
 		if err != nil && err != sql.ErrTxDone {
 			return err
+		}
+		if tx.ack != nil {
+			<-tx.ack
 		}
 		return nil
 	}()
@@ -518,9 +523,11 @@ func (c *Conn) Close(ctx context.Context) error {
 
 type Tx struct {
 	tx            pgx.Tx
+	acks          *acks
 	log           io.Writer
 	wrapped       bool
 	preparedQuery bool
+	ack           <-chan struct{}
 }
 
 func (tx *Tx) Exec(ctx context.Context, query string, args ...any) (*Result, error) {

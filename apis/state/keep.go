@@ -64,11 +64,6 @@ func (state *State) AddListener(listener any) {
 	}
 }
 
-// Keep keeps the state updated.
-func (state *State) Keep() {
-	go state.keepState()
-}
-
 // keepState keeps the state in sync with the database. It is called in its own
 // goroutine.
 func (state *State) keepState() {
@@ -86,6 +81,9 @@ func (state *State) keepState() {
 				n.PID, n.Name, n.Payload)
 		}
 		if !state.syncing && n.Name != "LoadState" {
+			if n.Ack != nil {
+				n.Ack <- struct{}{}
+			}
 			continue
 		}
 		switch n.Name {
@@ -145,6 +143,9 @@ func (state *State) keepState() {
 			state.setWorkspacePrivacyRegion(n)
 		default:
 			log.Printf("[warning] unknown notification %q received from %d: %s", n.Name, n.PID, n.Payload)
+		}
+		if n.Ack != nil {
+			n.Ack <- struct{}{}
 		}
 	}
 
