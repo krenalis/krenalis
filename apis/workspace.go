@@ -89,7 +89,7 @@ type ConnectionOptions struct {
 }
 
 // AddConnection adds a connection given its role, connector, settings, and
-// options and returns its identifier.
+// options to the workspace, and returns its identifier.
 //
 // It returns an errors.UnprocessableError error with code
 //   - ConnectorNotExists, if the connector does not exist.
@@ -317,7 +317,8 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 	return n.ID, nil
 }
 
-// AddEventListener adds a listener that listen to processed events
+// AddEventListener adds a listener to the workspace that listen to processed
+// events
 //
 //   - occurred on the mobile or website connection source, if source is not
 //     zero,
@@ -409,7 +410,7 @@ func (this *Workspace) AddEventListener(size, source, server, stream int) (strin
 	return id, nil
 }
 
-// Connection returns the connection with identifier id of the workspace ws.
+// Connection returns the connection with identifier id of the workspace.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // It returns an errors.UnprocessableError error with code
@@ -642,7 +643,7 @@ type authorizedResource struct {
 
 // OAuthToken returns an OAuth token, given an OAuth authorization code and the
 // redirect URL used to obtain that code, that can be used to add a new
-// connection for the specified connector.
+// connection to the workspace for the specified connector.
 //
 // It returns an errors.NotFound error if the workspace does not exist anymore.
 // It returns an errors.UnprocessableError error with code ConnectorNotExists if
@@ -804,8 +805,8 @@ func (this *Workspace) ReloadSchemas() error {
 	return err
 }
 
-// RemoveEventListener removes the given event listener. It does nothing if the
-// listener does not exist.
+// RemoveEventListener removes the given event listener from the workspace. It
+// does nothing if the listener does not exist.
 func (this *Workspace) RemoveEventListener(listener string) {
 	this.eventObserver.RemoveListener(listener)
 }
@@ -976,8 +977,8 @@ func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) 
 	return err
 }
 
-// User returns the user with identifier id. If the user does not exist, the
-// error is deferred until methods of *User are called.
+// User returns the user with identifier id of the workspace. If the user does
+// not exist, the error is deferred until methods of *User are called.
 func (this *Workspace) User(id int) (*User, error) {
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("user identifier %d is not valid", id)
