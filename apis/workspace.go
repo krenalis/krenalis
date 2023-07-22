@@ -409,27 +409,6 @@ func (this *Workspace) AddEventListener(size, source, server, stream int) (strin
 	return id, nil
 }
 
-// Delete deletes the workspace with all its connections.
-//
-// It returns an errors.NotFound error if the workspace does not exist anymore.
-func (this *Workspace) Delete() error {
-	n := state.DeleteWorkspaceNotification{
-		ID: this.workspace.ID,
-	}
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1", n.ID)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			return errors.NotFound("workspace %d does not exist", n.ID)
-		}
-		return tx.Notify(ctx, n)
-	})
-	return err
-}
-
 // Connection returns the connection with identifier id of the workspace ws.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
@@ -558,6 +537,27 @@ func (this *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) erro
 				return err
 			}
 			return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.ID)
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
+}
+
+// Delete deletes the workspace with all its connections.
+//
+// It returns an errors.NotFound error if the workspace does not exist anymore.
+func (this *Workspace) Delete() error {
+	n := state.DeleteWorkspaceNotification{
+		ID: this.workspace.ID,
+	}
+	ctx := context.Background()
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1", n.ID)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return errors.NotFound("workspace %d does not exist", n.ID)
 		}
 		return tx.Notify(ctx, n)
 	})
