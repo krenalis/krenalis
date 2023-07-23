@@ -33,27 +33,37 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 		// Check the path.
 		if p.args == nil {
 			t := schema
-		Path:
 			for j := 0; j < len(p.path); j++ {
+				name := p.path[j]
 				switch t.PhysicalType() {
 				case types.PtJSON:
-					break Path
+					p.path[j] = ":" + name
 				case types.PtObject:
-					if p.path[j][0] == ':' {
-						return fmt.Errorf("cannot use '[]' notation with %q (type %s)", t, stringifyPath(p.path[:j]))
+					if name[len(name)-1] == '?' {
+						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", stringifyPath(p.path[:j+1]))
 					}
-					property, ok := t.Property(p.path[j])
+					if name[0] == '[' {
+						name = name[1 : len(name)-1]
+						if !types.IsValidPropertyName(name) {
+							return fmt.Errorf("invalid %s: %q is not a valid property name", stringifyPath(p.path[:j+1]), name)
+						}
+					}
+					property, ok := t.Property(name)
 					if !ok {
-						return fmt.Errorf("property %q does not exist", stringifyPath(p.path[:j+1]))
+						if len(p.path) == 1 {
+							return fmt.Errorf("property %q does not exist", name)
+						}
+						return fmt.Errorf("invalid %s: property %q does not exist", stringifyPath(p.path[:j+1]), stringifyPath(p.path[:j]))
 					}
 					t = property.Type
 				case types.PtMap:
+					if name[len(name)-1] == '?' {
+						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", stringifyPath(p.path[:j+1]))
+					}
+					p.path[j] = ":" + name
 					t = t.ValueType()
 				default:
-					if p.path[j][0] == ':' {
-						return fmt.Errorf("cannot use '[]' notation with %q (type %s)", t, stringifyPath(p.path[:j]))
-					}
-					return fmt.Errorf("cannot use dot notation with %q (type %s)", t, stringifyPath(p.path[:j]))
+					return fmt.Errorf("invalid %s: %s (type %s) cannot have properties or keys", stringifyPath(p.path[:j+1]), stringifyPath(p.path[:j]), t)
 				}
 			}
 			if concatenate && !convertibleTo(t, types.Text()) {

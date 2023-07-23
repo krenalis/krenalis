@@ -267,11 +267,28 @@ func TestParsePath(t *testing.T) {
 		{`foo.boo`, types.Path{`foo`, `boo`}, ``, nil},
 		{`foo.boo foo`, types.Path{`foo`, `boo`}, ` foo`, nil},
 		{`_._`, types.Path{`_`, `_`}, ``, nil},
-		{`a["k"]`, types.Path{`a`, `:k`}, ``, nil},
-		{`a["k"].b`, types.Path{`a`, `:k`, `b`}, ``, nil},
-		{`a[ "k"]["j" ]`, types.Path{`a`, `:k`, `:j`}, ``, nil},
-		{`a['k']["j"].b`, types.Path{`a`, `:k`, `:j`, `b`}, ``, nil},
-		{`a.b["k"]`, types.Path{`a`, `b`, `:k`}, ``, nil},
+		{`a$`, types.Path{`a`}, `$`, nil},
+		{`a["k"]`, types.Path{`a`, `[k]`}, ``, nil},
+		{`a["k"].b`, types.Path{`a`, `[k]`, `b`}, ``, nil},
+		{`a["x.y"].b`, types.Path{`a`, `[x.y]`, `b`}, ``, nil},
+		{`a["[x"]`, types.Path{`a`, `[[x]`}, ``, nil},
+		{`a["x]"]`, types.Path{`a`, `[x]]`}, ``, nil},
+		{`a["[x]"]`, types.Path{`a`, `[[x]]`}, ``, nil},
+		{`a["x?"]`, types.Path{`a`, `[x?]`}, ``, nil},
+		{`a["[x?"]`, types.Path{`a`, `[[x?]`}, ``, nil},
+		{`a["x]?"]`, types.Path{`a`, `[x]?]`}, ``, nil},
+		{`a[":x"]`, types.Path{`a`, `[:x]`}, ``, nil},
+		{`a[":x?"]`, types.Path{`a`, `[:x?]`}, ``, nil},
+		{`a[ "k"]['j' ]`, types.Path{`a`, `[k]`, `[j]`}, ``, nil},
+		{`a['k']["j"].b`, types.Path{`a`, `[k]`, `[j]`, `b`}, ``, nil},
+		{`a.b["k"]`, types.Path{`a`, `b`, `[k]`}, ``, nil},
+		{`a.b?`, types.Path{`a`, `b?`}, ``, nil},
+		{`a.b?.c`, types.Path{`a`, `b?`, `c`}, ``, nil},
+		{`a['b']?`, types.Path{`a`, `[b]?`}, ``, nil},
+		{`a['b']?.c`, types.Path{`a`, `[b]?`, `c`}, ``, nil},
+		{`a['b']?`, types.Path{`a`, `[b]?`}, ``, nil},
+		{`a['?']?`, types.Path{`a`, `[?]?`}, ``, nil},
+		{`a['x?']?`, types.Path{`a`, `[x?]?`}, ``, nil},
 		{`a.`, nil, ``, errUnterminatedPath},
 		{`a.b.`, nil, ``, errUnterminatedPath},
 		{`a..`, nil, ``, errUnexpectedPeriod},
@@ -281,6 +298,10 @@ func TestParsePath(t *testing.T) {
 		{`a["k]`, nil, ``, errNoTerminatedString},
 		{`a["k"`, nil, ``, errUnterminatedPath},
 		{`a['k')`, nil, ``, errUnterminatedPath},
+		{`a[]`, nil, ``, errNoStringMapKey},
+		{`a[  ]`, nil, ``, errNoStringMapKey},
+		{`a.?`, nil, ``, errUnexpectedPeriod},
+		{`a[?`, nil, ``, errNoStringMapKey},
 	}
 
 	for _, test := range tests {
@@ -295,18 +316,18 @@ func TestParsePath(t *testing.T) {
 			continue
 		}
 		if test.err != nil {
-			t.Fatalf("%q. expected error %q, got no error", test.src, test.err)
+			t.Fatalf("%s. expected error %q, got no error", test.src, test.err)
 		}
 		if len(got) != len(test.expected) {
-			t.Fatalf("%q. expected path length %d, got %d", test.src, len(test.expected), len(got))
+			t.Fatalf("%s. expected path length %d, got %d", test.src, len(test.expected), len(got))
 		}
 		for i, expected := range test.expected {
 			if got[i] != expected {
-				t.Fatalf("%q. expected path component %q, got %q", test.src, expected, got[i])
+				t.Fatalf("%s. expected path component %q, got %q", test.src, expected, got[i])
 			}
 		}
 		if src != test.unparsed {
-			t.Fatalf("%q. expected unparsed string %q, got %q", test.src, test.unparsed, src)
+			t.Fatalf("%s. expected unparsed string %q, got %q", test.src, test.unparsed, src)
 		}
 
 	}

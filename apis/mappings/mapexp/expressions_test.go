@@ -131,7 +131,7 @@ func TestCompile(t *testing.T) {
 		{expr: "cx cx", dt: types.Text(), expectedValue: "0.1420.142"},
 		{expr: "engine.name", dt: types.Text(), expectedValue: "TurboX"},
 		{expr: "engine.power ' x ' 1.36", dt: types.Text(), expectedValue: "700 x 1.36"},
-		{expr: "engine.power", dt: types.Float(), expectedValue: 700.0},
+		{expr: "engine['power']", dt: types.Float(), expectedValue: 700.0},
 		{expr: "engine", dt: types.JSON(), expectedValue: json.RawMessage(`{"afterburner":null,"name":"TurboX","power":700}`)},
 		{expr: "manufacturer ' ' model", dt: types.Text(), expectedValue: "MyPlaneCompany SuperFast"},
 		{expr: "manufacturer", dt: types.JSON(), expectedValue: json.RawMessage("\"MyPlaneCompany\"")},
@@ -142,18 +142,29 @@ func TestCompile(t *testing.T) {
 
 		{expr: "map['x']", dt: types.Int(), expectedValue: 1},
 		{expr: "map.x", dt: types.Int(), expectedValue: 1},
-		{expr: "map['not-exist']", dt: types.UInt(), evalErr: ErrVoid},
+		{expr: "map['not-exist']", dt: types.Int(), evalErr: errors.New("cannot convert null to a non-nullable value")},
 		{expr: "deep['a']", dt: types.JSON(), expectedValue: json.RawMessage(`{"b":{"p":{"x":1,"y":2}}}`)},
 		{expr: "deep['a']['b']", dt: types.JSON(), expectedValue: json.RawMessage(`{"p":{"x":1,"y":2}}`)},
 		{expr: "deep['a']['b'].p", dt: types.JSON(), expectedValue: json.RawMessage(`{"x":1,"y":2}`)},
 		{expr: "deep.a.b.p", dt: types.JSON(), expectedValue: json.RawMessage(`{"x":1,"y":2}`)},
-		{expr: "deep['a']['non-exist'].p", dt: types.JSON(), evalErr: ErrVoid},
+		{expr: "deep['a']['non-exist'].p", dt: types.JSON(), expectedValue: json.RawMessage(`null`)},
 		{expr: "deep['a']['b'].p['x']", dt: types.Int(), expectedValue: 1},
 
-		{expr: "properties", dt: types.JSON(), expectedValue: json.RawMessage(`{"a":1,"b":{"c":[1,2]}}`)},
+		{expr: "properties", dt: types.JSON(), expectedValue: json.RawMessage(`{":":7,":x":8,"?":4,"[x":1,"[x]":3,"[x]?":6,"a":1,"b":{"c":[1,2]},"x?":5,"x]":2}`)},
 		{expr: "properties.a", dt: types.Int(), expectedValue: 1},
+		{expr: "properties.a.x", dt: types.Int(), evalErr: errors.New(`invalid properties.a.x: properties.a is not a JSON object, it is a JSON number`)},
+		{expr: "properties.a.x?", dt: types.Int(), evalErr: ErrVoid},
 		{expr: "properties.b.c", dt: types.Array(types.Int()), expectedValue: []any{1, 2}},
 		{expr: "properties.b['c']", dt: types.Array(types.Int()), expectedValue: []any{1, 2}},
+		{expr: "properties.b.x", dt: types.Array(types.Int()), evalErr: errors.New(`cannot convert null to a non-nullable value`)},
+		{expr: `properties["[x"]`, dt: types.Float(), expectedValue: 1.0},
+		{expr: `properties["x]"]`, dt: types.Float(), expectedValue: 2.0},
+		{expr: `properties["[x]"]`, dt: types.Float(), expectedValue: 3.0},
+		{expr: `properties["?"]`, dt: types.Float(), expectedValue: 4.0},
+		{expr: `properties["x?"]`, dt: types.Float(), expectedValue: 5.0},
+		{expr: `properties["[x]?"]`, dt: types.Float(), expectedValue: 6.0},
+		{expr: `properties[":"]`, dt: types.Float(), expectedValue: 7.0},
+		{expr: `properties[":x"]`, dt: types.Float(), expectedValue: 8.0},
 
 		// Compile errors.
 		{expr: "!true", dt: types.Boolean(), compileErr: errors.New("unexpected character '!'")},
@@ -161,6 +172,8 @@ func TestCompile(t *testing.T) {
 		{expr: "'Engine power: ' coalesce engine.power", dt: types.Text(), compileErr: errors.New(`property "coalesce" does not exist`)},
 		{expr: "'Engine power: engine.power", dt: types.Text(), compileErr: errors.New("string is not terminated")},
 		{expr: "1 + 2", dt: types.Int(), compileErr: errors.New("unexpected character '+'")},
+		{expr: "engine.name?", dt: types.Text(), compileErr: errors.New("invalid engine.name?: operator '?' can be used only with JSON")},
+		{expr: "engine['a name']", dt: types.Text(), compileErr: errors.New(`invalid engine["a name"]: "a name" is not a valid property name`)},
 		{expr: "engine.power * 1.36", dt: types.Text(), compileErr: errors.New("unexpected character '*'")},
 		{expr: "len('hello')", dt: types.UInt(), compileErr: errors.New(`function "len" does not exist`)},
 		{expr: "not true", dt: types.Boolean(), compileErr: errors.New(`property "not" does not exist`)},
@@ -172,6 +185,7 @@ func TestCompile(t *testing.T) {
 		{expr: "engine", dt: types.Object([]types.Property{{Name: "power", Type: types.Boolean()}}), compileErr: errors.New("cannot convert expression (type Object) to Object")},
 		{expr: "revision_dates", dt: types.Array(types.Boolean()), compileErr: errors.New("cannot convert expression (type Array) to Array")},
 		{expr: "map", dt: types.Map(types.Date()), compileErr: errors.New("cannot convert expression (type Map) to Map")},
+		{expr: "map.x?", dt: types.Int(), compileErr: errors.New("invalid map.x?: operator '?' can be used only with JSON")},
 
 		// Eval errors.
 		{expr: "manufacturer", dt: types.Int(), evalErr: errors.New(`cannot convert "MyPlaneCompany" (type Text) to type Int`)},
@@ -253,6 +267,14 @@ func TestCompile(t *testing.T) {
 					"b": map[string]any{
 						"c": []any{1.0, 2.0},
 					},
+					"[x":   1.0,
+					"x]":   2.0,
+					"[x]":  3.0,
+					"?":    4.0,
+					"x?":   5.0,
+					"[x]?": 6.0,
+					":":    7.0,
+					":x":   8.0,
 				},
 			}
 
@@ -310,6 +332,8 @@ func TestPropertyPaths(t *testing.T) {
 		{Name: "d", Type: types.Map(types.Object([]types.Property{
 			{Name: "e", Type: types.Text()},
 		}))},
+		{Name: "e", Type: types.JSON()},
+		{Name: "f", Type: types.Map(types.JSON())},
 	})
 
 	tests := []struct {
@@ -321,7 +345,12 @@ func TestPropertyPaths(t *testing.T) {
 		{`a.b.c`, []types.Path{{"a", "b", "c"}}},
 		{`b c`, []types.Path{{"b"}, {"c"}}},
 		{`d['foo']`, []types.Path{{"d"}}},
-		{`d['boo'].e`, []types.Path{{"d", "e"}}},
+		{`d.boo.e`, []types.Path{{"d", "e"}}},
+		{`e`, []types.Path{{"e"}}},
+		{`e.foo`, []types.Path{{"e"}}},
+		{`e.foo?.boo`, []types.Path{{"e"}}},
+		{`f.foo`, []types.Path{{"f"}}},
+		{`f.foo.boo`, []types.Path{{"f"}}},
 		{`coalesce("a", 5)`, nil},
 		{`coalesce(a.b.c, 5) a.b.c b`, []types.Path{{"a", "b", "c"}, {"b"}}},
 		{`coalesce(a.b.c, coalesce(b)) a.b.c b`, []types.Path{{"a", "b", "c"}, {"b"}}},
@@ -343,15 +372,24 @@ func TestPropertyPaths(t *testing.T) {
 func TestValueOf(t *testing.T) {
 
 	values := map[string]any{
-		"a": 5,
-		"b": map[string]any{
-			"c": "foo",
-			"d": map[string]any{
-				"e": []any{1, 2, 3},
+		"a": 5, // Int
+		"b": map[string]any{ // Object
+			"c": "foo", // Text
+			"d": map[string]any{ // Map(Array(Int))
+				"e":  []any{1},
+				":e": []any{2},
+				"e]": []any{3},
 			},
 		},
-		"f": nil,
-		"g": json.Number("12.53"),
+		"f": nil,                  // Text
+		"g": json.Number("12.53"), // JSON
+		"h": map[string]any{ // JSON
+			"i":   true,
+			"i?":  5,
+			":i?": "boo",
+			"[i":  "foo",
+			"i]":  "zoo",
+		},
 	}
 
 	tests := []struct {
@@ -360,31 +398,45 @@ func TestValueOf(t *testing.T) {
 		err      error
 	}{
 		{types.Path{"a"}, 5, nil},
+		{types.Path{"[a]"}, 5, nil},
 		{types.Path{"b", "c"}, "foo", nil},
-		{types.Path{"b", "d", "e"}, []any{1, 2, 3}, nil},
-		{types.Path{"b", "c", "d"}, nil, errors.New(`invalid b.c.d: b.c is a JSON string, not a JSON object`)},
-		{types.Path{"f", "g"}, nil, errors.New(`invalid f.g: f is a JSON null, not a JSON object`)},
-		{types.Path{"b", "g"}, nil, nil},
-		{types.Path{"b", ":g"}, nil, ErrVoid},
-		{types.Path{"g", ":h"}, nil, errors.New(`invalid g["h"]: g is a JSON number, not a JSON object`)},
+		{types.Path{"b", "[c]"}, "foo", nil},
+		{types.Path{"b", "d", ":e"}, []any{1}, nil},
+		{types.Path{"b", "d", ":[:e]"}, []any{2}, nil},
+		{types.Path{"b", "d", ":[e]]"}, []any{3}, nil},
+		{types.Path{"g"}, json.Number("12.53"), nil},
+		{types.Path{"g", ":x"}, nil, errors.New(`invalid g.x: g is not a JSON object, it is a JSON number`)},
+		{types.Path{"g", ":[x]"}, nil, errors.New(`invalid g["x"]: g is not a JSON object, it is a JSON number`)},
+		{types.Path{"h", ":i"}, true, nil},
+		{types.Path{"h", ":i?"}, true, nil},
+		{types.Path{"h", ":[i?]?"}, 5, nil},
+		{types.Path{"h", ":[:i?]"}, "boo", nil},
+		{types.Path{"h", ":[:i?]?"}, "boo", nil},
+		{types.Path{"h", ":[[i]"}, "foo", nil},
+		{types.Path{"h", ":[[i]?"}, "foo", nil},
+		{types.Path{"h", ":[i]]"}, "zoo", nil},
+		{types.Path{"h", ":[i]]?"}, "zoo", nil},
+		{types.Path{"h", ":i", ":x"}, nil, errors.New(`invalid h.i.x: h.i is not a JSON object, it is a JSON boolean`)},
+		{types.Path{"h", ":i", ":x?"}, nil, ErrVoid},
+		{types.Path{"h", ":i", ":[x]?"}, nil, ErrVoid},
 	}
 
 	for _, test := range tests {
 		got, err := valueOf(test.path, values)
 		if err != nil {
 			if test.err == nil {
-				t.Fatalf("%q. unexpected error: %s", test.path, err)
+				t.Fatalf("%s. unexpected error: %s", stringifyPath(test.path), err)
 			}
 			if err.Error() != test.err.Error() {
-				t.Fatalf("%q. expected error %q, got error %q", test.path, test.err.Error(), err.Error())
+				t.Fatalf("%s. expected error %q, got error %q", stringifyPath(test.path), test.err.Error(), err.Error())
 			}
 			continue
 		}
 		if test.err != nil {
-			t.Fatalf("%q. expected error %q, got no error", test.path, test.err)
+			t.Fatalf("%s. expected error %q, got no error", stringifyPath(test.path), test.err)
 		}
 		if !reflect.DeepEqual(got, test.expected) {
-			t.Fatalf("%q. unexpected value\nexpected %v (type %T)\ngot      %v (type %T)", test.path, test.expected, test.expected, got, got)
+			t.Fatalf("%s. unexpected value\nexpected %v (type %T)\ngot      %v (type %T)", stringifyPath(test.path), test.expected, test.expected, got, got)
 		}
 
 	}

@@ -31,6 +31,9 @@ type InvalidConversionError struct {
 }
 
 func (err *InvalidConversionError) Error() string {
+	if err.Value == nil {
+		return fmt.Sprintf("cannot convert null to a non-nullable value")
+	}
 	return fmt.Sprintf("cannot convert %#v (type %s) to type %s", err.Value, err.SourceType, err.DestinationType)
 }
 
@@ -55,9 +58,20 @@ type Expression struct {
 // For instance, the Expression `"foo" x " " true a.b` is parsed as `"foo" x`,
 // `" true" a.b`.
 type part struct {
-	value any        // Value. If there is a path, value, if present, can only be of type Text.
-	path  types.Path // Property path or function name.
-	args  [][]part   // Function call arguments.
+	// Value. If there is a path, value, if present, can only be of type Text.
+	value any
+
+	// Path or function name.
+	// If it represents a function name, it consists of only the function name.
+	// Otherwise, path elements follow these rules:
+	//   - If it represents a map or JSON key, it starts with ':'.
+	//   - If it was denoted with an indexing (e.g., a["b"]), it is enclosed in '[' and ']'.
+	//   - If it was denoted by '?', it ends with '?'.
+	// Examples of path elements: "x", "[x]" ":x", ":[$a]", ":x?", ":[x]?".
+	path []string
+
+	// Function call arguments.
+	args [][]part
 
 	// If there is a path, it represents the type of the property or the type of the function call.
 	// Otherwise, it represents the type of the value. For some function calls, as coalesce, it is
@@ -124,9 +138,10 @@ func (expr *Expression) Eval(values map[string]any, formatTime bool) (any, error
 // Properties returns the properties found in the expression, sorted by their
 // appearance order in the expression. The returned properties are guaranteed to
 // be unique. If no property are present, it returns nil.
-// If the expression contains a map indexing, Properties does not return the
-// key. For example, if the expression is a['b'], it returns {{"a"}}, and if the
-// expression is a['b'].c, it returns {{"a", "c"}}.
+//
+// If the expression contains a map or JSON indexing, Properties does not return
+// the key. For example, for the expression x.y.z, it returns {{"x"}} if x is a
+// JSON object, and returns {{"x", "z"}} if x is a map of objects.
 func (expr *Expression) Properties() []types.Path {
 	properties := appendProperties(nil, expr.parts)
 	if properties == nil {
@@ -161,6 +176,9 @@ func appendProperties(properties []types.Path, expression []part) []types.Path {
 			path := make(types.Path, 0, len(expr.path))
 			for _, name := range expr.path {
 				if name[0] != ':' {
+					if name[0] == '[' {
+						name = name[1 : len(name)-1]
+					}
 					path = append(path, name)
 				}
 			}
@@ -239,34 +257,39 @@ func valueOf(path types.Path, values map[string]any) (any, error) {
 	var ok bool
 	last := len(path) - 1
 	for i, name := range path {
-		isKey := name[0] == ':'
-		if isKey {
+		if name[0] == ':' {
 			name = name[1:]
+			if n := len(name) - 1; name[n] == '?' {
+				name = name[:n]
+			}
+		}
+		if name[0] == '[' {
+			name = name[1 : len(name)-1]
 		}
 		v, ok = values[name]
 		if !ok {
-			if isKey {
-				return nil, ErrVoid
-			}
 			return nil, nil
 		}
 		if i != last {
 			values, ok = v.(map[string]any)
 			if !ok {
+				if name := path[i+1]; name[len(name)-1] == '?' {
+					return nil, ErrVoid
+				}
 				var t string
 				switch v.(type) {
 				case nil:
-					t = "null"
+					t = "JSON null"
 				case bool:
-					t = "bool"
+					t = "a JSON boolean"
 				case float64, json.Number:
-					t = "number"
+					t = "a JSON number"
 				case string:
-					t = "string"
+					t = "a JSON string"
 				default:
-					t = "array"
+					t = "a JSON array"
 				}
-				return nil, fmt.Errorf("invalid %s: %s is a JSON %s, not a JSON object", stringifyPath(path[:i+2]), stringifyPath(path[:i+1]), t)
+				return nil, fmt.Errorf("invalid %s: %s is not a JSON object, it is %s", stringifyPath(path[:i+2]), stringifyPath(path[:i+1]), t)
 			}
 		}
 	}
@@ -276,12 +299,22 @@ func valueOf(path types.Path, values map[string]any) (any, error) {
 // stringifyPath returns path as a string.
 func stringifyPath(path []string) string {
 	s := path[0]
-	for _, n := range path[1:] {
-		if n[0] == ':' {
-			s += "[" + strconv.Quote(n[1:]) + "]"
-			continue
+	for _, name := range path[1:] {
+		if name[0] == ':' {
+			name = name[1:]
 		}
-		s += "." + n
+		question := name[len(name)-1] == '?'
+		if question {
+			name = name[:len(name)-1]
+		}
+		if name[0] == '[' {
+			s += "[" + strconv.Quote(name[1:len(name)-1]) + "]"
+		} else {
+			s += "." + name
+		}
+		if question {
+			s += "?"
+		}
 	}
 	return s
 }

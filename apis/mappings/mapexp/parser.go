@@ -366,6 +366,13 @@ func parsePath(src string) (types.Path, string, error) {
 		if s == i {
 			return nil, "", errUnexpectedPeriod
 		}
+		if c == '?' {
+			i++
+			if i == len(src) {
+				break
+			}
+			c = src[i]
+		}
 		path = append(path, src[s:i])
 		for c == '[' {
 			src = skipSpaces(src[i+1:])
@@ -379,16 +386,25 @@ func parsePath(src string) (types.Path, string, error) {
 			if err != nil {
 				return nil, "", err
 			}
+			key = "[" + key + "]"
+			path = append(path, key)
 			src = skipSpaces(src2)
 			if len(src) == 0 || src[0] != ']' {
 				return nil, "", errUnterminatedPath
 			}
-			path = append(path, ":"+key)
 			i, s = 1, 1
 			if i == len(src) {
 				break
 			}
 			c = src[i]
+			if c == '?' {
+				path[len(path)-1] = key + "?"
+				i++
+				if i == len(src) {
+					break
+				}
+				c = src[i]
+			}
 		}
 		s = i + 1
 		if c != '.' {
