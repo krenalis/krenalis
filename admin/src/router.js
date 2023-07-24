@@ -15,6 +15,7 @@ import NotFound from './components/routes/NotFound/NotFound';
 import ConnectionOverview from './components/routes/ConnectionOverview/ConnectionOverview';
 import ConnectionEvents from './components/routes/ConnectionEvents/ConnectionEvents';
 import ConnectionActions from './components/routes/ConnectionActions/ConnectionActions';
+import ActionWrapper from './components/routes/ConnectionActions/Action/ActionWrapper';
 import ConnectionSettings from './components/routes/ConnectionSettings/ConnectionSettings';
 import AnonymousIdentity from './components/routes/AnonymousIdentity/AnonymousIdentity';
 import { createBrowserRouter } from 'react-router-dom';
@@ -35,7 +36,16 @@ const router = createBrowserRouter([
 						path: 'connections/:id',
 						element: <ConnectionWrapper />,
 						children: [
-							{ path: 'actions', element: <ConnectionActions /> },
+							{
+								path: 'actions',
+								element: <ConnectionActions />,
+								children: [
+									{ path: 'edit/:action', element: <ActionWrapper /> },
+									{ path: 'add/event/:eventType', element: <ActionWrapper /> },
+									{ path: 'add/event', element: <ActionWrapper /> },
+									{ path: 'add/:actionTarget', element: <ActionWrapper /> },
+								],
+							},
 							{ path: 'overview', element: <ConnectionOverview /> },
 							{ path: 'events', element: <ConnectionEvents /> },
 							{ path: 'settings', element: <ConnectionSettings /> },

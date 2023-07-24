@@ -1,44 +1,69 @@
-import { useState, useEffect, useContext, useRef } from 'react';
+import { useState, useEffect, useContext, useRef, useLayoutEffect } from 'react';
 import './ConnectionActions.css';
 import Flex from '../../shared/Flex/Flex';
 import IconWrapper from '../../shared/IconWrapper/IconWrapper';
-import Fullscreen from '../../shared/Fullscreen/Fullscreen';
-import Action from './Action/Action';
 import ActionsGrid from './ActionsGrid';
 import ActionTypesDialog from './ActionTypesDialog';
 import { AppContext } from '../../../context/providers/AppProvider';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
+import { Outlet } from 'react-router-dom';
 import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const ConnectionActions = () => {
-	const [selectedActionType, setSelectedActionType] = useState(null);
-	const [selectedAction, setSelectedAction] = useState(null);
 	const [isActionTypesDialogOpen, setIsActionTypesDialogOpen] = useState(false);
+	const [isActionOpen, setIsActionOpen] = useState(false);
 
-	const { setAreConnectionsStale } = useContext(AppContext);
+	const { setAreConnectionsStale, redirect } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 
 	const refreshConnectionIntervalID = useRef(0);
+	const newActionID = useRef(0);
 
 	useEffect(() => {
-		const isEditing = selectedAction != null || selectedActionType != null;
-		if (isEditing) {
-			clearInterval(refreshConnectionIntervalID.current);
-			return;
-		} else {
+		if (!isActionOpen) {
 			refreshConnectionIntervalID.current = setInterval(async () => {
 				setAreConnectionsStale(true);
 			}, 1500);
-		}
-		return () => {
-			clearInterval(refreshConnectionIntervalID.current);
-		};
-	}, [selectedAction, selectedActionType]);
 
-	const onActionTypesDialogClose = async () => {
-		setAreConnectionsStale(true);
-		setSelectedActionType(null);
-		setSelectedAction(null);
+			return () => {
+				clearInterval(refreshConnectionIntervalID.current);
+			};
+		} else {
+			clearInterval(refreshConnectionIntervalID.current);
+		}
+	}, [isActionOpen]);
+
+	useLayoutEffect(() => {
+		if (!isActionOpen) {
+			const id = sessionStorage.getItem('newActionID');
+			if (id && id !== '') {
+				newActionID.current = Number(id);
+				sessionStorage.removeItem('newActionID');
+			}
+		}
+	}, [isActionOpen]);
+
+	const onSelectActionType = (actionType) => {
+		let name;
+		if (actionType.Target === 'Events') {
+			if (actionType.EventType) {
+				name = `event/${actionType.EventType}`;
+			} else {
+				name = 'event';
+			}
+		} else {
+			name = actionType.Target.toLowerCase();
+		}
+		const newLocation = `connections/${connection.id}/actions/add/${name}`;
+		setIsActionTypesDialogOpen(false);
+		setIsActionOpen(true);
+		redirect(newLocation);
+	};
+
+	const onSelectAction = (action) => {
+		const newLocation = `connections/${connection.id}/actions/edit/${action.ID}`;
+		setIsActionOpen(true);
+		redirect(newLocation);
 	};
 
 	return (
@@ -70,7 +95,11 @@ const ConnectionActions = () => {
 								Add a new action
 							</SlButton>
 						</Flex>
-						<ActionsGrid actions={connection.actions} onSelectAction={setSelectedAction} />
+						<ActionsGrid
+							newActionID={newActionID}
+							actions={connection.actions}
+							onSelectAction={onSelectAction}
+						/>
 					</>
 				)}
 			</div>
@@ -79,14 +108,9 @@ const ConnectionActions = () => {
 				setIsOpen={setIsActionTypesDialogOpen}
 				actionTypes={connection.actionTypes}
 				connectionLogo={connection.logo}
-				onSelectActionType={(type) => {
-					setIsActionTypesDialogOpen(false);
-					setSelectedActionType(type);
-				}}
+				onSelectActionType={onSelectActionType}
 			/>
-			<Fullscreen isOpen={selectedActionType != null || selectedAction != null}>
-				<Action actionType={selectedActionType} action={selectedAction} onClose={onActionTypesDialogClose} />
-			</Fullscreen>
+			<Outlet context={{ setIsActionOpen }} />
 		</>
 	);
 };

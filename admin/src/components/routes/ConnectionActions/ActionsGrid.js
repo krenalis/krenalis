@@ -1,4 +1,4 @@
-import { useRef, useContext, useState, useEffect } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import Grid from '../../shared/Grid/Grid';
 import { SCHEDULE_PERIODS } from '../../../lib/helpers/action';
 import { AppContext } from '../../../context/providers/AppProvider';
@@ -18,13 +18,11 @@ import {
 
 const GRID_COLUMNS = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: null }];
 
-const ActionsGrid = ({ actions, onSelectAction }) => {
+const ActionsGrid = ({ newActionID, actions, onSelectAction }) => {
 	const [runningActions, setRunningActions] = useState([]);
 
 	const { api, showError, showStatus, setAreConnectionsStale } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
-
-	const newActionID = useRef(0);
 
 	useEffect(() => {
 		const running = [];
@@ -173,7 +171,6 @@ const ActionsGrid = ({ actions, onSelectAction }) => {
 		const row = { cells: [nameCell, conditionsCell, enabledCell, actionsCell], key: a.ID };
 		if (a.ID === newActionID.current && connection.actions.length > 1) {
 			row.animation = 'fade-in';
-			newActionID.current = 0;
 		}
 		rows.push(row);
 	}

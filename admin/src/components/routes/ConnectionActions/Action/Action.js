@@ -10,18 +10,24 @@ import ActionMatchingProperties from './ActionMatchingProperties';
 import ActionIdentifiers from './ActionIdentifiers';
 import useActionData from '../../../../hooks/useActionData';
 import { ConnectionContext } from '../../../../context/providers/ConnectionProvider';
+import { FullscreenContext } from '../../../../context/FullscreenContext';
 import { ActionContext } from '../../../../context/ActionContext';
 import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const Action = ({ actionType: providedActionType, action: providedAction, onClose }) => {
+const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	const [mode, setMode] = useState('');
 	const [isSaveButtonLoading, setIsSaveButtonLoading] = useState(false);
 	const [isFileChanged, setIsFileChanged] = useState(false);
 	const [isQueryChanged, setIsQueryChanged] = useState(false);
 
 	const { connection } = useContext(ConnectionContext);
+	const { closeFullscreen } = useContext(FullscreenContext);
 
 	const mappingSectionRef = useRef(null);
+
+	const onClose = () => {
+		closeFullscreen();
+	};
 
 	const {
 		isEditing,

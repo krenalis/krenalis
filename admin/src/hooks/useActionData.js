@@ -277,10 +277,7 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 			return;
 		}
 
-		if (id) {
-			sessionStorage.setItem('newAction', id);
-		}
-
+		sessionStorage.setItem('newActionID', id);
 		setIsSaveButtonLoading(true);
 		setTimeout(() => {
 			setIsSaveButtonLoading(false);
