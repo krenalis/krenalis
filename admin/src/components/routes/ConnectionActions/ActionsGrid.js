@@ -46,6 +46,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }) => {
 	};
 
 	const onRemoveAction = async (actionID) => {
+		newActionID.current = 0; // avoid repainting with the animation on the new action's row
 		const [, err] = await api.connections.deleteAction(connection.id, actionID);
 		if (err != null) {
 			showError(err);
