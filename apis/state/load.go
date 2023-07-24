@@ -8,7 +8,6 @@
 package state
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"reflect"
@@ -18,8 +17,6 @@ import (
 	"chichi/apis/postgres"
 	"chichi/connector"
 	"chichi/connector/types"
-
-	"github.com/google/uuid"
 )
 
 var (
@@ -30,35 +27,17 @@ var (
 	sheetsType              = reflect.TypeOf((*connector.Sheets)(nil)).Elem()
 )
 
-// Load loads the state and returns it.
-func Load(ctx context.Context, db *postgres.DB) (*State, error) {
-
-	id, err := uuid.NewUUID()
-	if err != nil {
-		return nil, err
-	}
-
-	state := &State{
-		id:               id,
-		db:               db,
-		mu:               new(sync.Mutex),
-		ctx:              ctx,
-		notifications:    db.ListenToNotifications(ctx),
-		accounts:         map[int]*Account{},
-		connectors:       map[int]*Connector{},
-		workspaces:       map[int]*Workspace{},
-		connections:      map[int]*Connection{},
-		connectionsByKey: map[string]*Connection{},
-		actions:          map[int]*Action{},
-		resources:        map[int]*Resource{},
-	}
+// Load loads the state.
+func (state *State) Load() error {
 
 	// Keep the state updated.
 	go state.keepState()
 
 	n := LoadStateNotification{ID: state.id}
 
-	err = state.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	ctx := state.ctx
+
+	err := state.db.Transaction(ctx, func(tx *postgres.Tx) error {
 
 		// Read the latest election.
 		err := state.db.QueryRow(ctx, "SELECT number, leader FROM election LIMIT 1").
@@ -429,9 +408,6 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 
 		return tx.Notify(ctx, n)
 	})
-	if err != nil {
-		return nil, err
-	}
 
-	return state, nil
+	return err
 }

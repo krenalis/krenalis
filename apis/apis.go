@@ -101,19 +101,25 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 
 	apis := &APIs{db: db, redis: redisClient}
 
-	// Load the state.
-	apis.state, err = state.Load(ctx, db)
-	if err != nil {
-		return nil, err
-	}
-
 	// Set the HTTP client.
 	apis.http = httpclient.New(db, apis.state, http.DefaultTransport)
 	apis.http.SetTrace(os.Stdout)
 
+	// Instantiate the state.
+	apis.state, err = state.New(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+
 	// Listen to state changes.
 	apis.state.AddListener(apis.onElectLeader)
 	apis.state.AddListener(apis.onExecuteAction)
+
+	// Load the state.
+	err = apis.state.Load()
+	if err != nil {
+		return nil, err
+	}
 
 	apis.events, err = events.New(ctx, db, redisClient, apis.state, apis.http)
 	if err != nil {

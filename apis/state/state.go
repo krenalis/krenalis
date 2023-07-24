@@ -64,6 +64,32 @@ type State struct {
 	}
 }
 
+// New returns a *State instance.
+func New(ctx context.Context, db *postgres.DB) (*State, error) {
+
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return nil, err
+	}
+
+	state := &State{
+		id:               id,
+		db:               db,
+		mu:               new(sync.Mutex),
+		ctx:              ctx,
+		notifications:    db.ListenToNotifications(ctx),
+		accounts:         map[int]*Account{},
+		connectors:       map[int]*Connector{},
+		workspaces:       map[int]*Workspace{},
+		connections:      map[int]*Connection{},
+		connectionsByKey: map[string]*Connection{},
+		actions:          map[int]*Action{},
+		resources:        map[int]*Resource{},
+	}
+
+	return state, nil
+}
+
 // Account returns the account with identifier id.
 // The boolean return value reports whether the account exists.
 func (state *State) Account(id int) (*Account, bool) {
