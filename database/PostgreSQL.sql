@@ -63,8 +63,10 @@ CREATE TABLE workspaces (
     PRIMARY KEY (id)
 );
 
-INSERT INTO workspaces (id, account, name, warehouse_type, warehouse_settings)
-VALUES (1, 1, 'Workspace', NULL, '');
+INSERT INTO workspaces (id, account, name, warehouse_type, warehouse_settings, anonymous_identifiers_priority, anonymous_identifiers_mapping)
+VALUES (1, 1, 'Workspace', NULL, '',
+    '{anonymous_id,android.id,android.idfa,android.push_token,ios.id,ios.idfa,ios.push_token}',
+    '{"ios.id": "when(eq(context.device.type, \"ios\"), context.device.id)", "ios.idfa": "when(and(context.device.adTrackingEnabled, eq(context.device.type, \"ios\")), context.device.advertisingId)", "android.id": "when(eq(context.device.type, \"android\"), context.device.id)", "android.idfa": "when(and(context.device.adTrackingEnabled, eq(context.device.type, \"android\")), context.device.advertisingId)", "anonymous_id": "anonymousId", "ios.push_token": "when(eq(context.device.type, \"ios\"), context.device.token)", "android.push_token": "when(eq(context.device.type, \"android\"), context.device.token)"}');
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
