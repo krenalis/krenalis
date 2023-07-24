@@ -1,7 +1,7 @@
 import { useContext } from 'react';
-import IdentifiersMapping from '../../../shared/IdentifiersMapping/IdentifiersMapping';
-import Section from '../../../shared/Section/Section';
-import { ActionContext } from '../../../../context/ActionContext';
+import IdentifiersMapping from '../../shared/IdentifiersMapping/IdentifiersMapping';
+import Section from '../../shared/Section/Section';
+import { ActionContext } from '../../../context/ActionContext';
 
 const ActionIdentifiers = () => {
 	const { action, setAction, actionType } = useContext(ActionContext);

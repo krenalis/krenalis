@@ -8,10 +8,10 @@ import ActionFilters from './ActionFilters';
 import ActionExportMode from './ActionExportMode';
 import ActionMatchingProperties from './ActionMatchingProperties';
 import ActionIdentifiers from './ActionIdentifiers';
-import useActionData from '../../../../hooks/useActionData';
-import { ConnectionContext } from '../../../../context/providers/ConnectionProvider';
-import { FullscreenContext } from '../../../../context/FullscreenContext';
-import { ActionContext } from '../../../../context/ActionContext';
+import useActionData from '../../../hooks/useActionData';
+import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
+import { FullscreenContext } from '../../../context/FullscreenContext';
+import { ActionContext } from '../../../context/ActionContext';
 import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const Action = ({ actionType: providedActionType, action: providedAction }) => {

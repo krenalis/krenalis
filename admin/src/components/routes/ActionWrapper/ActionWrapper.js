@@ -1,8 +1,8 @@
 import { useState, useLayoutEffect, useContext } from 'react';
 import Action from './Action';
-import Fullscreen from '../../../shared/Fullscreen/Fullscreen';
-import { AppContext } from '../../../../context/providers/AppProvider';
-import { ConnectionContext } from '../../../../context/providers/ConnectionProvider';
+import Fullscreen from '../../shared/Fullscreen/Fullscreen';
+import { AppContext } from '../../../context/providers/AppProvider';
+import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { useParams, useLocation, useOutletContext } from 'react-router-dom';
 
 const ActionWrapper = () => {

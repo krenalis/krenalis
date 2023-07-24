@@ -1,8 +1,8 @@
 import { useRef, useContext } from 'react';
-import Section from '../../../shared/Section/Section';
-import { ComboBoxInput, ComboBoxList } from '../../../shared/ComboBox/ComboBox';
-import { getSchemaComboboxItems } from '../../../../components/helpers/getSchemaComboBoxItems';
-import { ActionContext } from '../../../../context/ActionContext';
+import Section from '../../shared/Section/Section';
+import { ComboBoxInput, ComboBoxList } from '../../shared/ComboBox/ComboBox';
+import { getSchemaComboboxItems } from '../../../components/helpers/getSchemaComboBoxItems';
+import { ActionContext } from '../../../context/ActionContext';
 
 const ActionMatchingProperties = () => {
 	const internalMatchingPropertyListRef = useRef(null);

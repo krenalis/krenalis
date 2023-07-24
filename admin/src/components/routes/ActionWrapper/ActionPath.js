@@ -1,13 +1,13 @@
 import { useState, useContext, useEffect, useRef } from 'react';
-import Section from '../../../shared/Section/Section';
-import ConfirmationButton from '../../../shared/ConfirmationButton/ConfirmationButton';
-import Grid from '../../../shared/Grid/Grid';
-import { AppContext } from '../../../../context/providers/AppProvider';
-import { ActionContext } from '../../../../context/ActionContext';
-import { UnprocessableError, NotFoundError, BadRequestError } from '../../../../lib/api/errors';
-import * as statuses from '../../../../constants/statuses';
-import * as variants from '../../../../constants/variants';
-import * as icons from '../../../../constants/icons';
+import Section from '../../shared/Section/Section';
+import ConfirmationButton from '../../shared/ConfirmationButton/ConfirmationButton';
+import Grid from '../../shared/Grid/Grid';
+import { AppContext } from '../../../context/providers/AppProvider';
+import { ActionContext } from '../../../context/ActionContext';
+import { UnprocessableError, NotFoundError, BadRequestError } from '../../../lib/api/errors';
+import * as statuses from '../../../constants/statuses';
+import * as variants from '../../../constants/variants';
+import * as icons from '../../../constants/icons';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
 import {
 	SlButton,

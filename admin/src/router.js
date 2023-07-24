@@ -15,7 +15,7 @@ import NotFound from './components/routes/NotFound/NotFound';
 import ConnectionOverview from './components/routes/ConnectionOverview/ConnectionOverview';
 import ConnectionEvents from './components/routes/ConnectionEvents/ConnectionEvents';
 import ConnectionActions from './components/routes/ConnectionActions/ConnectionActions';
-import ActionWrapper from './components/routes/ConnectionActions/Action/ActionWrapper';
+import ActionWrapper from './components/routes/ActionWrapper/ActionWrapper';
 import ConnectionSettings from './components/routes/ConnectionSettings/ConnectionSettings';
 import AnonymousIdentity from './components/routes/AnonymousIdentity/AnonymousIdentity';
 import { createBrowserRouter } from 'react-router-dom';
