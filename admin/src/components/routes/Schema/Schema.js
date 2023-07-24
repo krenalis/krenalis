@@ -79,10 +79,10 @@ const Schema = () => {
 				} else {
 					let name = pr.type.name;
 					if (name === 'Array') {
-						name = 'Array (of ' + pr.type.itemType.name + ' elements)';
+						name = 'Array(' + pr.type.itemType.name + ')';
 					}
 					if ('enum' in pr.type) {
-						name += ' (enum with values: ' + pr.type.enum.join(', ') + ')';
+						name += ' (' + pr.type.enum.map(e => '"' + e + '"').join(', ') + ')';
 					}
 					nestedRows.push({ cells: [pr.name, name] });
 				}
@@ -98,10 +98,10 @@ const Schema = () => {
 			} else {
 				let name = p.type.name;
 				if (name === 'Array') {
-					name = 'Array (of ' + p.type.itemType.name + ' elements)';
+					name = 'Array(' + p.type.itemType.name + ')';
 				}
 				if ('enum' in p.type) {
-					name += ' (enum with values: ' + p.type.enum.join(', ') + ')';
+					name += ' (' + p.type.enum.map(e => '"' + e + '"').join(', ') + ')';
 				}
 				const row = { cells: [p.name, name] };
 				rows.push(row);
