@@ -78,7 +78,7 @@ const Schema = () => {
 					continue;
 				} else {
 					let name = pr.type.name;
-					if (name === 'Array' && 'itemType' in pr.type) {
+					if (name === 'Array') {
 						name = 'Array (of ' + pr.type.itemType.name + ' elements)';
 					}
 					if ('enum' in pr.type) {
@@ -97,7 +97,7 @@ const Schema = () => {
 				continue;
 			} else {
 				let name = p.type.name;
-				if (name === 'Array' && 'itemType' in p.type) {
+				if (name === 'Array') {
 					name = 'Array (of ' + p.type.itemType.name + ' elements)';
 				}
 				if ('enum' in p.type) {
