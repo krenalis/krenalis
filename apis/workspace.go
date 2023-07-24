@@ -696,7 +696,7 @@ func (this *Workspace) OAuthToken(authorizationCode, redirectURI string, connect
 	return base62.EncodeToString(resource), nil
 }
 
-// ReloadSchemas reloads the schemas of the workspace.
+// ReloadSchemas reloads the users and groups schemas of the workspace.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist,
 // and it returns an errors.UnprocessableError error with code
@@ -720,40 +720,34 @@ func (this *Workspace) ReloadSchemas() error {
 		Schemas:   map[string]*types.Type{},
 	}
 	for _, table := range tables {
-		// Check that the 'users' and the 'groups' tables, when exists, contain
-		// the 'id' and the 'timestamp' columns.
-		if table.Name == "users" || table.Name == "groups" {
-			// Check the 'id' column.
-			idIndex := slices.IndexFunc(table.Columns, func(c types.Property) bool {
-				return c.Name == "id"
-			})
-			if idIndex == -1 {
-				return errors.Unprocessable(InvalidSchemaTable, "'%s' table has no 'id' column", table.Name)
-			}
-			if c := table.Columns[idIndex]; c.Type.PhysicalType() != types.PtInt {
-				return errors.Unprocessable(InvalidSchemaTable, "column '%s.id' does not have type Int", table.Name)
-			} else if c.Nullable {
-				return errors.Unprocessable(InvalidSchemaTable, "column '%s.id' must not be nullable", table.Name)
-			}
-			// Check the 'creation_time' and 'timestamp' columns.
-			for _, column := range []string{"creation_time", "timestamp"} {
-				colIndex := slices.IndexFunc(table.Columns, func(c types.Property) bool {
-					return c.Name == column
-				})
-				if colIndex == -1 {
-					return errors.Unprocessable(InvalidSchemaTable, "'%s' table has no '%s' column", column, table.Name)
-				}
-				if c := table.Columns[colIndex]; c.Type.PhysicalType() != types.PtDateTime {
-					return errors.Unprocessable(InvalidSchemaTable, "column '%s.%s' does not have type DateTime", table.Name, column)
-				} else if c.Nullable {
-					return errors.Unprocessable(InvalidSchemaTable, "column '%s.%s' must not be nullable", table.Name, column)
-				}
-			}
-		}
-		if table.Name == "events" {
-			// The schema of the "events" table is hardcoded in the file
-			// "apis/events/schema.go".
+		if table.Name != "users" && table.Name != "groups" {
 			continue
+		}
+		// Check the 'id' column.
+		idIndex := slices.IndexFunc(table.Columns, func(c types.Property) bool {
+			return c.Name == "id"
+		})
+		if idIndex == -1 {
+			return errors.Unprocessable(InvalidSchemaTable, "'%s' table has no 'id' column", table.Name)
+		}
+		if c := table.Columns[idIndex]; c.Type.PhysicalType() != types.PtInt {
+			return errors.Unprocessable(InvalidSchemaTable, "column '%s.id' does not have type Int", table.Name)
+		} else if c.Nullable {
+			return errors.Unprocessable(InvalidSchemaTable, "column '%s.id' must not be nullable", table.Name)
+		}
+		// Check the 'creation_time' and 'timestamp' columns.
+		for _, column := range []string{"creation_time", "timestamp"} {
+			colIndex := slices.IndexFunc(table.Columns, func(c types.Property) bool {
+				return c.Name == column
+			})
+			if colIndex == -1 {
+				return errors.Unprocessable(InvalidSchemaTable, "'%s' table has no '%s' column", column, table.Name)
+			}
+			if c := table.Columns[colIndex]; c.Type.PhysicalType() != types.PtDateTime {
+				return errors.Unprocessable(InvalidSchemaTable, "column '%s.%s' does not have type DateTime", table.Name, column)
+			} else if c.Nullable {
+				return errors.Unprocessable(InvalidSchemaTable, "column '%s.%s' must not be nullable", table.Name, column)
+			}
 		}
 		properties, err := warehouses.ColumnsToProperties(table.Columns)
 		if err, ok := err.(warehouses.RepeatedPropertyNameError); ok {
