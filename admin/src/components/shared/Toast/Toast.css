@@ -1,13 +1,19 @@
 .sl-toast-stack {
-    left: calc(50% + 140px);
+	left: 50%;
     transform: translateX(-50%);
     overflow: visible!important;
 }
 
 .sl-toast-stack sl-alert::part(base) {
+	position: relative;
+	left: calc(280px / 2); /* center the toast based on the sidebar width. TODO: use a CSS variable */
 	color: var(--text-onaccent);
 	border: 0;
 	box-shadow: 2px 1px 19px 0px #00000060;
+}
+
+.sl-toast-stack sl-alert.isFullscreen::part(base) {
+	left: 0;
 }
 
 .sl-toast-stack sl-alert::part(icon) {

@@ -30,13 +30,8 @@ const sidebarItems = [
 	{ name: 'anonymousIdentity', label: 'Anonymous IDs', link: 'anonymous-identity', icon: 'intersect' },
 ];
 
-const Sidebar = ({ setIsLoggedIn }) => {
+const Sidebar = ({ onLogout }) => {
 	const { redirect, connections } = useContext(AppContext);
-
-	const onLogout = () => {
-		document.cookie = 'session=; Max-Age=-99999999; Path=/';
-		setIsLoggedIn(false);
-	};
 
 	const location = useLocation();
 	const currentRoute = getRouteFromPathname(location.pathname, connections);

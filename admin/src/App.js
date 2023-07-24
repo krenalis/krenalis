@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import './App.css';
 import Toast from './components/shared/Toast/Toast';
 import Sidebar from './components/layout/Sidebar/Sidebar';
@@ -7,13 +7,13 @@ import Login from './components/routes/Login/Login';
 import API from './lib/api/api';
 import * as variants from './constants/variants';
 import * as icons from './constants/icons';
+import { FULLSCREEN_PATTERNS } from './lib/helpers/navigation';
 import { checkSessionCookie } from './lib/helpers/auth';
 import { adminBasePath } from './constants/path';
-import ConnectionsMap from './components/routes/ConnectionsMap/ConnectionsMap';
 import { BadRequestError } from './lib/api/errors';
 import { AppProvider } from './context/providers/AppProvider';
 import { Outlet } from 'react-router-dom';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { setBasePath } from '@shoelace-style/shoelace/dist/utilities/base-path.js';
 import '@shoelace-style/shoelace/dist/themes/light.css';
 
@@ -22,6 +22,7 @@ setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.5.2/dist/')
 const App = () => {
 	const [isLoading, setIsLoading] = useState(true);
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
+	const [isFullscreen, setIsFullscreen] = useState(false);
 	const [status, setStatus] = useState(null);
 	const [title, setTitle] = useState('');
 	const [account, setAccount] = useState(null);
@@ -30,13 +31,26 @@ const App = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		const hasSessionCookie = checkSessionCookie();
 		if (hasSessionCookie) {
 			setIsLoggedIn(true);
+		} else {
+			setIsLoggedIn(false);
 		}
 		setIsLoading(false);
-	}, []);
+	}, [location]);
+
+	useEffect(() => {
+		for (const pattern of FULLSCREEN_PATTERNS) {
+			const match = matchPath(pattern, location.pathname);
+			if (match != null) {
+				setTimeout(() => setIsFullscreen(true), 200);
+				return;
+			}
+		}
+		setTimeout(() => setIsFullscreen(false), 200);
+	}, [location]);
 
 	const showStatus = ([variant, icon, text]) => {
 		toastRef.current.hide();
@@ -78,16 +92,26 @@ const App = () => {
 		return navigate(`${adminBasePath}${url}`);
 	};
 
-	const baseURL = window.location.origin;
-	const api = new API(baseURL);
+	const onLogout = () => {
+		document.cookie = 'session=; Max-Age=-99999999; Path=/';
+		setIsLoggedIn(false);
+		redirect('');
+	};
 
 	if (isLoading) {
 		return;
 	}
 
+	const baseURL = window.location.origin;
+	const api = new API(baseURL);
+
 	let content;
 	if (isLoggedIn) {
 		let isBasePath = location.pathname === adminBasePath;
+		if (isBasePath) {
+			redirect('connections');
+			return;
+		}
 		content = (
 			<AppProvider
 				setTitle={setTitle}
@@ -99,9 +123,9 @@ const App = () => {
 				account={account}
 			>
 				<div className='app'>
-					<Sidebar setIsLoggedIn={setIsLoggedIn} />
+					<Sidebar onLogout={onLogout} />
 					<Header title={title} />
-					{isBasePath ? <ConnectionsMap /> : <Outlet />}
+					<Outlet />
 				</div>
 			</AppProvider>
 		);
@@ -121,7 +145,7 @@ const App = () => {
 		<>
 			{content}
 			<div>
-				<Toast ref={toastRef} status={status} />
+				<Toast ref={toastRef} status={status} isFullscreen={isFullscreen} />
 			</div>
 		</>
 	);
