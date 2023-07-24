@@ -3,7 +3,7 @@ import ConfirmationButton from '../../shared/ConfirmationButton/ConfirmationButt
 import Grid from '../../shared/Grid/Grid';
 import Section from '../../shared/Section/Section';
 import EditorWrapper from '../../shared/EditorWrapper/EditorWrapper';
-import * as statuses from '../../../constants/statuses';
+import statuses from '../../../constants/statuses';
 import * as variants from '../../../constants/variants';
 import * as icons from '../../../constants/icons';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';

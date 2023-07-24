@@ -4,7 +4,7 @@ import { SCHEDULE_PERIODS } from '../../../lib/helpers/action';
 import { AppContext } from '../../../context/providers/AppProvider';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { UnprocessableError } from '../../../lib/api/errors';
-import * as statuses from '../../../constants/statuses';
+import statuses from '../../../constants/statuses';
 import {
 	SlButton,
 	SlIcon,
