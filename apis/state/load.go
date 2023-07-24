@@ -222,13 +222,13 @@ func Load(ctx context.Context, db *postgres.DB) (*State, error) {
 					if warehouseType != nil {
 						ws.Warehouse, err = openWarehouse(*warehouseType, warehouseSettings)
 						if err != nil {
-							log.Fatalf("cannot open data warehouse of workspace %d: %s", id, err)
+							log.Fatalf("cannot open data warehouse of workspace %d: %s", ws.ID, err)
 						}
 						ws.Schemas = map[string]*types.Type{}
 						if len(schemas) > 0 {
 							err = json.Unmarshal(schemas, &ws.Schemas)
 							if err != nil {
-								log.Fatalf("cannot unmarshal schemas of workspace %d: %s", id, err)
+								log.Fatalf("cannot unmarshal schemas of workspace %d: %s", ws.ID, err)
 							}
 						}
 					}
