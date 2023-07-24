@@ -84,7 +84,7 @@ const ConnectionActions = () => {
 					</div>
 				) : (
 					<>
-						<Flex justifyContent={'end'} alignItems={'center'}>
+						<Flex alignItems={'center'}>
 							<SlButton
 								variant='text'
 								onClick={() => {
