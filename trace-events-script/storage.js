@@ -26,6 +26,14 @@ class Storage {
 		return [id, start];
 	}
 
+	getTraits() {
+		const traits = this.store.getItem('chichi_traits');
+		if (traits == null) {
+			return {};
+		}
+		return JSON.parse(traits);
+	}
+
 	getUserID() {
 		return this.store.getItem('chichi_user_id');
 	}
@@ -33,6 +41,7 @@ class Storage {
 	reset() {
 		this.store.getItem('chichi_anonymous_id');
 		this.store.removeItem('chichi_group_id');
+		this.store.removeItem('chichi_traits');
 		this.store.removeItem('chichi_user_id');
 	}
 
@@ -52,6 +61,12 @@ class Storage {
 		}
 		this.store.setItem('chichi_session_id', id);
 		this.store.setItem('chichi_session_start', start);
+	}
+
+	setTraits(traits) {
+		try {
+			this.store.setItem('chichi_traits', JSON.stringify(traits));
+		} catch (_) {}
 	}
 
 	setUserID(id) {

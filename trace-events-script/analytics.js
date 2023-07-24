@@ -12,8 +12,28 @@ class Analytics {
 	#isReady = false;
 	#onReady;
 	#user = {
-		id: (id) => this.#setUserId(id),
+		id: (id) => {
+			if (id === undefined) {
+				return this.#storage.getUserID();
+			}
+			let data = {};
+			this.#setUserId(data, id);
+			if ('id' in data) {
+				return data.id;
+			}
+			return null;
+		},
 		anonymousId: (id) => this.setAnonymousId(id),
+		traits: (traits) => {
+			if (traits === undefined) {
+				return this.#storage.getTraits();
+			}
+			if (typeof traits !== 'object') {
+				traits = {};
+			}
+			this.#storage.setTraits(traits);
+			return this.#storage.getTraits();
+		},
 	};
 
 	constructor(source, endpoint) {
@@ -78,7 +98,7 @@ class Analytics {
 		this.#onReady.push(callback);
 	}
 
-	// reset resets the user and group identifiers removing them from the storage.
+	// reset resets the user and group identifiers, and traits removing them from the storage.
 	reset() {
 		this.#storage.reset();
 	}
@@ -160,27 +180,27 @@ class Analytics {
 		let options;
 		switch (typesOf(a)) {
 			case '':
-				this.#setUser(data);
+				this.#setUserId(data);
 				break;
 			case 'string':
-				this.#setUser(data, a[0]);
+				this.#setUserId(data, a[0]);
 				break;
 			case 'object':
-				this.#setUser(data);
-				data.traits = a[0];
+				this.#setUserId(data);
+				this.#setTraits(data, a[0]);
 				break;
 			case 'string,object':
-				this.#setUser(data, a[0]);
-				data.traits = a[1];
+				this.#setUserId(data, a[0]);
+				this.#setTraits(data, a[1]);
 				break;
 			case 'object,object':
-				this.#setUser(data);
-				data.traits = a[0];
+				this.#setUserId(data);
+				this.#setTraits(data, a[0]);
 				options = a[1];
 				break;
 			case 'string,object,object':
-				this.#setUser(data, a[0]);
-				data.traits = a[1];
+				this.#setUserId(data, a[0]);
+				this.#setTraits(data, a[1]);
 				options = a[2];
 				break;
 			default:
@@ -287,19 +307,6 @@ class Analytics {
 		return options;
 	}
 
-	// setUserId sets the default User ID or, if id is undefined,
-	// returns the default User ID.
-	#setUserId(id) {
-		if (id === undefined) {
-			return this.#storage.getUserID();
-		}
-		if (!id) {
-			id = null;
-		}
-		this.#storage.setUserID(id);
-		return id;
-	}
-
 	// getAlias returns the userId or previousId arguments of the alias calls.
 	#getAlias(id) {
 		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
@@ -325,11 +332,32 @@ class Analytics {
 		}
 	}
 
-	// setUser sets the userId with id.
-	#setUser(data, id) {
+	// setTraits sets the traits merging the user traits with traits.
+	#setTraits(data, traits) {
+		data.traits = this.#storage.getTraits();
+		if (traits !== undefined) {
+			for (let k in traits) {
+				const v = traits[k];
+				if (v === undefined) {
+					delete data.traits[k];
+				} else {
+					data.traits[k] = v;
+				}
+			}
+		}
+		this.#storage.setTraits(data.traits);
+		data.traits = this.#storage.getTraits();
+	}
+
+	// setUserId sets the userId with id.
+	#setUserId(data, id) {
 		if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
 			data.userId = String(id);
-			this.#storage.setUserID(data.userId);
+			let userId = this.#storage.getUserID();
+			if (userId !== data.userId) {
+				this.#storage.setUserID(data.userId);
+				this.#storage.setTraits({});
+			}
 			return;
 		}
 		id = this.#storage.getUserID();
@@ -436,10 +464,10 @@ class Analytics {
 					}
 				}
 				event.properties = p;
-				this.#setUser(event);
+				this.#setUserId(event);
 				break;
 			case 'group':
-				this.#setUser(event);
+				this.#setUserId(event);
 		}
 
 		const n = window.navigator;
