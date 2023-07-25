@@ -90,7 +90,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (admin *admin) serveWithESBuild(w http.ResponseWriter, r *http.Request) {
-	file, err := filepath.Abs("admin/src/index.js")
+	file, err := filepath.Abs("admin/src/index.jsx")
 	if err != nil {
 		panic(err)
 	}
@@ -100,7 +100,6 @@ func (admin *admin) serveWithESBuild(w http.ResponseWriter, r *http.Request) {
 		Format:            api.FormatESModule,
 		JSX:               api.JSXAutomatic,
 		LegalComments:     api.LegalCommentsEndOfFile,
-		Loader:            map[string]api.Loader{".js": api.LoaderJSX},
 		MinifyIdentifiers: true,
 		MinifySyntax:      true,
 		MinifyWhitespace:  true,

@@ -1,7 +1,7 @@
 import { useState, useRef, useContext, useEffect, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import { updateMappingProperty } from './Action.helpers';
-import { getSchemaComboboxItems } from '../../../components/helpers/getSchemaComboBoxItems';
+import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import { flattenSchema } from '../../../lib/helpers/action';
 import { rawTransformationFunction } from './Action.constants';
 import AlertDialog from '../../shared/AlertDialog/AlertDialog';
