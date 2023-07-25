@@ -4,7 +4,7 @@ import { SlAvatar } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const Header = ({ title }) => {
 	return (
-		<div className='header' justifyContent='space-between' alignItems='center'>
+		<div className='header'>
 			<div className='title'>
 				<span>{title}</span>
 			</div>
