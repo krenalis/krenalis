@@ -26,6 +26,10 @@
     border: 1px solid var(--sl-color-neutral-200);
 }
 
+.connectorSettings .form .fields > * {
+	margin-bottom: 30px;
+}
+
 .connectorSettings .saveWrapper {
     text-align: center;
 }
