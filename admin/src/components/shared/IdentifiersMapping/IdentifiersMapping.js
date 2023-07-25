@@ -88,6 +88,7 @@ const IdentifiersMapping = ({ mapping, setMapping, inputSchema, outputSchema }) 
 								<SlMenuItem
 									className='identifiers-mapping__remove'
 									onClick={() => removeAssociation(position)}
+									disabled={position === 1}
 								>
 									<SlIcon slot='prefix' name='trash3' />
 									Remove
