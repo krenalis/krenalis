@@ -89,6 +89,11 @@ const App = () => {
 
 	const redirect = (url) => {
 		toastRef.current.hide();
+		const redirectURL = `${adminBasePath}${url}`;
+		if (redirectURL === location.pathname) {
+			navigate(0);
+			return;
+		}
 		return navigate(`${adminBasePath}${url}`);
 	};
 
