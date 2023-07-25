@@ -79,7 +79,7 @@ const ConnectorKeyValue = ({
 	const keyValueRows = [];
 	for (const r of rows) {
 		keyValueRows.push(
-			<div className='row' data-id={r.id} key={r.id}>
+			<div className='keyValueRow' data-id={r.id} key={r.id}>
 				<KeyContext.Provider value={{ value: r.key, onChange: onKeyChange }}>
 					<div className='key cell'>
 						<ConnectorField field={keyComponent} />
