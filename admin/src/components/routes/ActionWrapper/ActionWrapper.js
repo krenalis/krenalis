@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import Action from './Action';
 import Fullscreen from '../../shared/Fullscreen/Fullscreen';
 import { AppContext } from '../../../context/providers/AppProvider';
@@ -16,7 +16,7 @@ const ActionWrapper = () => {
 	const { setAreConnectionsStale, redirect } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 
-	useLayoutEffect(() => {
+	useEffect(() => {
 		const splitted = location.pathname.split('/');
 		const instructionsStartIndex = splitted.findIndex((fragment) => fragment === 'actions') + 1;
 		const instructions = splitted.slice(instructionsStartIndex);
@@ -51,8 +51,9 @@ const ActionWrapper = () => {
 		setIsActionOpen(false);
 	};
 
+	const isLoading = selectedActionType == null && selectedAction == null;
 	return (
-		<Fullscreen onClose={onClose}>
+		<Fullscreen onClose={onClose} isLoading={isLoading}>
 			<Action actionType={selectedActionType} action={selectedAction} />
 		</Fullscreen>
 	);

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { FullscreenContext } from '../../../context/FullscreenContext';
 import './Fullscreen.css';
+import { FullscreenContext } from '../../../context/FullscreenContext';
+import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const Fullscreen = ({ onClose, children }) => {
+const Fullscreen = ({ onClose, isLoading, children }) => {
 	const [isOpen, setIsOpen] = useState(true);
 
 	const onAnimationEnd = () => {
@@ -18,11 +19,20 @@ const Fullscreen = ({ onClose, children }) => {
 	return (
 		<FullscreenContext.Provider value={{ closeFullscreen }}>
 			<div
-				className={`fullscreen${isOpen ? ' isOpen' : ''}`}
+				className={`fullscreen${isOpen ? ' isOpen' : ''}${isLoading ? ' isLoading' : ''}`}
 				style={{ animation: `${isOpen ? 'fullscreenFadeIn' : 'fullscreenFadeOut'} .3s` }}
 				onAnimationEnd={onAnimationEnd}
 			>
-				{children}
+				{isLoading ? (
+					<SlSpinner
+						style={{
+							fontSize: '5rem',
+							'--track-width': '6px',
+						}}
+					/>
+				) : (
+					children
+				)}
 			</div>
 		</FullscreenContext.Provider>
 	);

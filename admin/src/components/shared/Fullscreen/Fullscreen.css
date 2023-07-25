@@ -36,3 +36,14 @@
 .fullscreen.isOpen {
     opacity: 1;
 }
+
+.fullscreen.isLoading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.fullscreen.isLoading sl-spinner {
+    position: relative;
+    top: -50px;
+}
