@@ -267,3 +267,12 @@ sl-dialog::part(base) {
 sl-tab-group::part(body) {
 	overflow: visible;
 }
+
+/* || Global spinner */
+
+.globalSpinner {
+	position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, calc(-50% - 100px));
+}

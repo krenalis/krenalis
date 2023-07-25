@@ -12,9 +12,6 @@ const ConnectionWrapper = () => {
 	const { setTitle } = useContext(AppContext);
 
 	useEffect(() => {
-		if (connection == null) {
-			return;
-		}
 		setTitle(
 			<Flex alignItems='baseline' gap='10px'>
 				<span style={{ position: 'relative', top: '3px' }}>{connection.logo}</span>
@@ -23,10 +20,6 @@ const ConnectionWrapper = () => {
 			</Flex>
 		);
 	}, [connection]);
-
-	if (connection == null) {
-		return;
-	}
 
 	return (
 		<div className='connectionWrapper'>

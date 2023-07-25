@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState } from 'react';
+import { createContext, useEffect, useState, useRef } from 'react';
 import getConnectorLogo from '../../components/helpers/getConnectorLogo';
 import { getConnectionFullConnector } from '../../lib/helpers/connection';
 import { getConnectionStatus } from '../../lib/helpers/connection';
@@ -7,6 +7,7 @@ import { getStorageFileConnections } from '../../lib/helpers/connection';
 import Connection from '../../lib/helpers/connection';
 import Connector from '../../lib/helpers/connector';
 import API from '../../lib/api/api';
+import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const defaultAppContext = {
 	setTitle: () => {},
@@ -24,9 +25,16 @@ const defaultAppContext = {
 const AppContext = createContext(defaultAppContext);
 
 const AppProvider = ({ api, showError, children, ...delegated }) => {
-	const [connectors, setConnectors] = useState([]);
-	const [connections, setConnections] = useState([]);
+	const [isLoading, setIsLoading] = useState(false);
+	const [connectors, setConnectors] = useState(null);
+	const [connections, setConnections] = useState(null);
 	const [areConnectionsStale, setAreConnectionsStale] = useState(false);
+
+	const isLoadingTimeoutID = useRef(0);
+
+	useEffect(() => {
+		isLoadingTimeoutID.current = setTimeout(() => setIsLoading(true), 100);
+	}, []);
 
 	useEffect(() => {
 		const fetchConnectors = async () => {
@@ -46,7 +54,7 @@ const AppProvider = ({ api, showError, children, ...delegated }) => {
 	}, []);
 
 	useEffect(() => {
-		const fetchData = async () => {
+		const fetchConnections = async () => {
 			const [fetchedConnections, err] = await api.connections.find();
 			if (err) {
 				setConnections([]);
@@ -67,13 +75,35 @@ const AppProvider = ({ api, showError, children, ...delegated }) => {
 			setAreConnectionsStale(false);
 		};
 		if (areConnectionsStale) {
-			fetchData();
+			fetchConnections();
 		}
 	}, [areConnectionsStale]);
 
+	useEffect(() => {
+		if (connectors == null || connections == null) {
+			return;
+		}
+		if (isLoading) {
+			setTimeout(() => setIsLoading(false), 300);
+		} else {
+			clearTimeout(isLoadingTimeoutID.current);
+		}
+	}, [connectors, connections]);
+
+	const canRender = connectors != null && connections != null;
 	return (
 		<AppContext.Provider value={{ connectors, connections, setAreConnectionsStale, api, showError, ...delegated }}>
-			{children}
+			{isLoading ? (
+				<SlSpinner
+					className='globalSpinner'
+					style={{
+						fontSize: '5rem',
+						'--track-width': '6px',
+					}}
+				/>
+			) : (
+				canRender && children
+			)}
 		</AppContext.Provider>
 	);
 };
