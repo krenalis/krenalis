@@ -17,6 +17,10 @@ const ActionWrapper = () => {
 	const { connection } = useContext(ConnectionContext);
 
 	useEffect(() => {
+		setIsActionOpen(true);
+	}, []);
+
+	useEffect(() => {
 		const splitted = location.pathname.split('/');
 		const instructionsStartIndex = splitted.findIndex((fragment) => fragment === 'actions') + 1;
 		const instructions = splitted.slice(instructionsStartIndex);

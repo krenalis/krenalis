@@ -56,13 +56,11 @@ const ConnectionActions = () => {
 		}
 		const newLocation = `connections/${connection.id}/actions/add/${name}`;
 		setIsActionTypesDialogOpen(false);
-		setIsActionOpen(true);
 		redirect(newLocation);
 	};
 
 	const onSelectAction = (action) => {
 		const newLocation = `connections/${connection.id}/actions/edit/${action.ID}`;
-		setIsActionOpen(true);
 		redirect(newLocation);
 	};
 
