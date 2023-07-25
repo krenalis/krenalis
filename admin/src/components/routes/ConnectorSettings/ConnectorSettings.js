@@ -184,7 +184,7 @@ const ConnectorSettings = () => {
 	};
 
 	const onCreateNewStorageClick = () => {
-		redirect(`/connectors?role=${connectionRole}`);
+		redirect(`connectors?role=${connectionRole}`);
 	};
 
 	const onSave = async () => {
