@@ -5,7 +5,7 @@
 |---------------|-----------------|-------------------------------|-----------------|------------|------------|--------------|-----------------|--------|--------|
 | Boolean       | bool            | bool                          | bool            | bool       | -          | bool         | -               | -      | -      |
 | Int           | int             | float64, json.Number          | int32           | int64      | []byte     | int32        | -               | -      | -      |
-| Int8          | int             | float64, json.Number          | int8            | int64      | []byte     |              | -               | -      | -      |
+| Int8          | int             | float64, json.Number          | int8            | -          | []byte     |              | -               | -      | -      |
 | Int16         | int             | float64, json.Number          | int16           | int64      | []byte     |              | -               | -      | -      |
 | Int24         | int             | float64, json.Number          | -               | -          | []byte     | -            | -               | -      | -      |
 | Int64         | int             | float64, json.Number          | int64           | int64      | []byte     | int64        | -               | -      | -      |
@@ -20,7 +20,7 @@
 | DateTime      | time.Time       | string, float64, json.Number  | time.Time       | time.Time  | time.Time  | time.Time    | -               | -      | -      |
 | Date          | time.Time       | string                        | time.Time [^2]  | time.Time  | time.Time  |              | -               | -      | -      |
 | Time          | time.Time       | string                        | -               | string     | []byte     |              | -               | -      | -      |
-| Year          | int             | float64, json.Number          | -               | int64      | []byte     | -            | -               | -      | -      |
+| Year          | int             | float64, json.Number          | -               | -          | []byte     | -            | -               | -      | -      |
 | UUID          | string          | string                        | string          | string     | -          |              | -               | -      | -      |
 | JSON          | JSON types [^4] | JSON types [^4]               | - [^3]          | []byte     | - [^1]     |              | JSON types [^4] | -      | -      |
 | Inet          | string          | string                        | net.IP          | string     | -          | -            | -               | -      | -      |
