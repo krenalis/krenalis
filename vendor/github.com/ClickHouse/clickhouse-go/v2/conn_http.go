@@ -25,16 +25,19 @@ import (
 	"context"
 	"database/sql/driver"
 	"fmt"
-	"github.com/ClickHouse/clickhouse-go/v2/resources"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ClickHouse/clickhouse-go/v2/resources"
 
 	"github.com/ClickHouse/ch-go/compress"
 	chproto "github.com/ClickHouse/ch-go/proto"
@@ -135,6 +138,15 @@ func (rw *HTTPReaderWriter) reset(pw *io.PipeWriter) io.WriteCloser {
 }
 
 func dialHttp(ctx context.Context, addr string, num int, opt *Options) (*httpConnect, error) {
+	var debugf = func(format string, v ...any) {}
+	if opt.Debug {
+		if opt.Debugf != nil {
+			debugf = opt.Debugf
+		} else {
+			debugf = log.New(os.Stdout, fmt.Sprintf("[clickhouse][conn=%d][%s]", num, addr), 0).Printf
+		}
+	}
+
 	if opt.scheme == "" {
 		switch opt.Protocol {
 		case HTTP:
@@ -189,6 +201,10 @@ func dialHttp(ctx context.Context, addr string, num int, opt *Options) (*httpCon
 	}
 
 	for k, v := range opt.Settings {
+		if cv, ok := v.(CustomSetting); ok {
+			v = cv.Value
+		}
+
 		query.Set(k, fmt.Sprint(v))
 	}
 
@@ -196,14 +212,20 @@ func dialHttp(ctx context.Context, addr string, num int, opt *Options) (*httpCon
 	u.RawQuery = query.Encode()
 
 	t := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
-			Timeout:   opt.DialTimeout,
-			KeepAlive: opt.ConnMaxLifetime,
+			Timeout: opt.DialTimeout,
 		}).DialContext,
 		MaxIdleConns:          1,
 		IdleConnTimeout:       opt.ConnMaxLifetime,
 		ResponseHeaderTimeout: opt.ReadTimeout,
 		TLSClientConfig:       opt.TLS,
+	}
+
+	if opt.DialContext != nil {
+		t.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return opt.DialContext(ctx, addr)
+		}
 	}
 
 	conn := &httpConnect{
@@ -228,7 +250,7 @@ func dialHttp(ctx context.Context, addr string, num int, opt *Options) (*httpCon
 			return nil, err
 		}
 		if !resources.ClientMeta.IsSupportedClickHouseVersion(version) {
-			fmt.Printf("WARNING: version %v of ClickHouse is not supported by this client\n", version)
+			debugf("WARNING: version %v of ClickHouse is not supported by this client\n", version)
 		}
 	}
 
@@ -387,7 +409,7 @@ func (h *httpConnect) readData(ctx context.Context, reader *chproto.Reader) (*pr
 }
 
 func (h *httpConnect) sendStreamQuery(ctx context.Context, r io.Reader, options *QueryOptions, headers map[string]string) (*http.Response, error) {
-	req, err := h.createRequest(ctx, r, options, headers)
+	req, err := h.createRequest(ctx, h.url.String(), r, options, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -440,8 +462,8 @@ func (h *httpConnect) readRawResponse(response *http.Response) (body []byte, err
 	return body, nil
 }
 
-func (h *httpConnect) createRequest(ctx context.Context, reader io.Reader, options *QueryOptions, headers map[string]string) (*http.Request, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, h.url.String(), reader)
+func (h *httpConnect) createRequest(ctx context.Context, requestUrl string, reader io.Reader, options *QueryOptions, headers map[string]string) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestUrl, reader)
 	if err != nil {
 		return nil, err
 	}
@@ -462,6 +484,9 @@ func (h *httpConnect) createRequest(ctx context.Context, reader io.Reader, optio
 			if key == "default_format" {
 				continue
 			}
+			if cv, ok := value.(CustomSetting); ok {
+				value = cv.Value
+			}
 			query.Set(key, fmt.Sprint(value))
 		}
 		for key, value := range options.parameters {
@@ -474,19 +499,17 @@ func (h *httpConnect) createRequest(ctx context.Context, reader io.Reader, optio
 
 func (h *httpConnect) prepareRequest(ctx context.Context, query string, options *QueryOptions, headers map[string]string) (*http.Request, error) {
 	if options == nil || len(options.external) == 0 {
-		return h.createRequest(ctx, strings.NewReader(query), options, headers)
+		return h.createRequest(ctx, h.url.String(), strings.NewReader(query), options, headers)
 	}
-	payloadBytes, err := h.createRequestPayloadWithExternalTables(ctx, query, options, headers)
-	if err != nil {
-		return nil, err
-	}
-	return h.createRequest(ctx, bytes.NewReader(payloadBytes), options, headers)
+	return h.createRequestWithExternalTables(ctx, query, options, headers)
 }
 
-func (h *httpConnect) createRequestPayloadWithExternalTables(ctx context.Context, query string, options *QueryOptions, headers map[string]string) ([]byte, error) {
+func (h *httpConnect) createRequestWithExternalTables(ctx context.Context, query string, options *QueryOptions, headers map[string]string) (*http.Request, error) {
 	payload := &bytes.Buffer{}
 	w := multipart.NewWriter(payload)
-	queryValues := h.url.Query()
+	currentUrl := new(url.URL)
+	*currentUrl = *h.url
+	queryValues := currentUrl.Query()
 	buf := &chproto.Buffer{}
 	for _, table := range options.external {
 		tableName := table.Name()
@@ -506,7 +529,7 @@ func (h *httpConnect) createRequestPayloadWithExternalTables(ctx context.Context
 			return nil, err
 		}
 	}
-	h.url.RawQuery = queryValues.Encode()
+	currentUrl.RawQuery = queryValues.Encode()
 	err := w.WriteField("query", query)
 	if err != nil {
 		return nil, err
@@ -516,7 +539,7 @@ func (h *httpConnect) createRequestPayloadWithExternalTables(ctx context.Context
 		return nil, err
 	}
 	headers["Content-Type"] = w.FormDataContentType()
-	return payload.Bytes(), nil
+	return h.createRequest(ctx, currentUrl.String(), bytes.NewReader(payload.Bytes()), options, headers)
 }
 
 func (h *httpConnect) executeRequest(req *http.Request) (*http.Response, error) {

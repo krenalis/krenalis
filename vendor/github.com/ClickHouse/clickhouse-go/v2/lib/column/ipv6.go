@@ -18,7 +18,6 @@
 package column
 
 import (
-	"database/sql"
 	"fmt"
 	"github.com/ClickHouse/ch-go/proto"
 	"net"
@@ -71,10 +70,27 @@ func (col *IPv6) ScanRow(dest any, row int) error {
 	case **net.IP:
 		*d = new(net.IP)
 		**d = col.row(row)
+	case *netip.Addr:
+		*d = col.rowAddr(row)
+	case **netip.Addr:
+		*d = new(netip.Addr)
+		**d = col.rowAddr(row)
+	case *[]byte:
+		*d = col.row(row)
+	case **[]byte:
+		*d = new([]byte)
+		**d = col.row(row)
+	case *proto.IPv6:
+		*d = col.col.Row(row)
+	case **proto.IPv6:
+		*d = new(proto.IPv6)
+		**d = col.col.Row(row)
+	case *[16]byte:
+		*d = col.col.Row(row)
+	case **[16]byte:
+		*d = new([16]byte)
+		**d = col.col.Row(row)
 	default:
-		if scan, ok := dest.(sql.Scanner); ok {
-			return scan.Scan(col.row(row))
-		}
 		return &ColumnConverterError{
 			Op:   "ScanRow",
 			To:   fmt.Sprintf("%T", dest),
@@ -155,7 +171,6 @@ func (col *IPv6) Append(v any) (nulls []uint8, err error) {
 	case []net.IP:
 		nulls = make([]uint8, len(v))
 		for _, v := range v {
-			nulls = make([]uint8, len(v))
 			col.col.Append(proto.ToIPv6(netip.AddrFrom16(IPv6ToBytes(v))))
 		}
 	case []*net.IP:
@@ -164,6 +179,52 @@ func (col *IPv6) Append(v any) (nulls []uint8, err error) {
 			switch {
 			case v != nil:
 				col.col.Append(proto.ToIPv6(netip.AddrFrom16(IPv6ToBytes(*v))))
+			default:
+				nulls[i] = 1
+				col.col.Append([16]byte{})
+			}
+		}
+	case [][]byte:
+		nulls = make([]uint8, len(v))
+		for _, v := range v {
+			col.col.Append(proto.ToIPv6(netip.AddrFrom16(IPv6ToBytes(v))))
+		}
+	case []*[]byte:
+		nulls = make([]uint8, len(v))
+		for i, v := range v {
+			switch {
+			case v != nil:
+				col.col.Append(proto.ToIPv6(netip.AddrFrom16(IPv6ToBytes(*v))))
+			default:
+				nulls[i] = 1
+				col.col.Append([16]byte{})
+			}
+		}
+	case [][16]byte:
+		for _, v := range v {
+			col.col.Append(v)
+		}
+	case []*[16]byte:
+		nulls = make([]uint8, len(v))
+		for i, v := range v {
+			switch {
+			case v != nil:
+				col.col.Append(*v)
+			default:
+				nulls[i] = 1
+				col.col.Append([16]byte{})
+			}
+		}
+	case []proto.IPv6:
+		for _, v := range v {
+			col.col.Append(v)
+		}
+	case []*proto.IPv6:
+		nulls = make([]uint8, len(v))
+		for i, v := range v {
+			switch {
+			case v != nil:
+				col.col.Append(*v)
 			default:
 				nulls[i] = 1
 				col.col.Append([16]byte{})
@@ -224,6 +285,33 @@ func (col *IPv6) AppendRow(v any) (err error) {
 		default:
 			col.col.Append([16]byte{})
 		}
+	case []byte:
+		col.col.Append(proto.ToIPv6(netip.AddrFrom16(IPv6ToBytes(v))))
+	case *[]byte:
+		switch {
+		case v != nil:
+			col.col.Append(proto.ToIPv6(netip.AddrFrom16(IPv6ToBytes(*v))))
+		default:
+			col.col.Append([16]byte{})
+		}
+	case [16]byte:
+		col.col.Append(v)
+	case *[16]byte:
+		switch {
+		case v != nil:
+			col.col.Append(*v)
+		default:
+			col.col.Append([16]byte{})
+		}
+	case proto.IPv6:
+		col.col.Append(v)
+	case *proto.IPv6:
+		switch {
+		case v != nil:
+			col.col.Append(*v)
+		default:
+			col.col.Append([16]byte{})
+		}
 	case nil:
 		col.col.Append([16]byte{})
 	default:
@@ -255,6 +343,10 @@ func IPv6ToBytes(ip net.IP) [16]byte {
 func (col *IPv6) row(i int) net.IP {
 	src := col.col.Row(i)
 	return src[:]
+}
+
+func (col *IPv6) rowAddr(i int) netip.Addr {
+	return col.col.Row(i).ToIP()
 }
 
 var _ Interface = (*IPv6)(nil)
