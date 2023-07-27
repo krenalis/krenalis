@@ -6,6 +6,7 @@ import ConnectionsMap from './components/routes/ConnectionsMap/ConnectionsMap';
 import ConnectionsList from './components/routes/ConnectionsList/ConnectionsList';
 import ConnectionWrapper from './components/routes/ConnectionWrapper/ConnectionWrapper';
 import { ConnectionProvider } from './context/providers/ConnectionProvider';
+import RootError from './components/routes/RootError/RootError';
 import UsersWrapper from './components/routes/UsersWrapper/UsersWrapper';
 import UsersList from './components/routes/UsersList/UsersList';
 import User from './components/routes/User/User';
@@ -24,6 +25,7 @@ const router = createBrowserRouter([
 	{
 		path: adminBasePath,
 		element: <App />,
+		errorElement: <RootError />,
 		children: [
 			{ path: 'connectors/:id', element: <ConnectorSettings /> },
 			{ path: 'connectors', element: <ConnectorsList /> },
