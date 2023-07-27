@@ -25,7 +25,7 @@
 | JSON          | JSON types [^4] | JSON types [^4]               | - [^3]          | []byte     | - [^1]     |              | JSON types [^4] | -      | -      |
 | Inet          | string          | string                        | net.IP          | string     | -          | -            | -               | -      | -      |
 | Text          | string          | string                        | string          | string     | []byte     | []byte       | -               | string | string |
-| Array(T)      | []any           | []any                         | []T             | -          | -          | -            | -               | -      | -      |
+| Array(T)      | []any           | []any                         | []T             | []T [^5]   | -          | -            | -               | -      | -      |
 | Object        | map[string]any  | map[string]any                | -               | -          | -          | -            | -               | -      | -      |
 | Map(T)        | map[string]any  | map[string]any                | map[string]T    | -          | -          | -            | -               | -      | -      |
 
@@ -36,3 +36,5 @@
 [^3]: the `JSON` type in ClickHouse is experimental.
 
 [^4]: JSON types: `json.RawMessage`, `bool`, `string`, `json.Number`, `float64`, `map[string]any`, and `[]any`. `nil` represents a `nil` value, not the JSON `null`.
+
+[^5]: Only the data warehouse driver supports arrays. Arrays of numeric, array, and composite types are not supported yet.
