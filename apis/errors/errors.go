@@ -35,7 +35,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 )
 
@@ -87,10 +86,7 @@ func (e *badRequestError) WriteTo(w http.ResponseWriter) error {
 	if e.err != nil {
 		cause = e.err.Error()
 	}
-	var message string
-	if v := os.Getenv("CHICHI_DEBUG_UI"); v == "true" {
-		message = e.s
-	}
+	message := e.s
 	return writeTo(w, http.StatusBadRequest, "BadRequest", message, cause)
 }
 

@@ -100,12 +100,6 @@ func InitAndLaunch(t *testing.T) *Chichi {
 	setts.Redis.Password = testsSettings.Redis.Password
 	setts.Redis.DB = testsSettings.Redis.DB
 
-	// Set CHICHI_DEBUG_UI=true.
-	err = os.Setenv("CHICHI_DEBUG_UI", "true")
-	if err != nil {
-		t.Logf("cannot set CHICHI_DEBUG_UI: %s", err)
-	}
-
 	// Launch Chichi.
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	c.cancel = cancel
@@ -168,10 +162,6 @@ func InitAndLaunch(t *testing.T) *Chichi {
 func (c *Chichi) Stop() {
 	c.cancel()
 	<-c.done
-	err := os.Unsetenv("CHICHI_DEBUG_UI")
-	if err != nil {
-		c.t.Logf("cannot unset CHICHI_DEBUG_UI: %s", err)
-	}
 }
 
 func (c *Chichi) connectWarehouse(whType string, whSettings *DBSettings) error {

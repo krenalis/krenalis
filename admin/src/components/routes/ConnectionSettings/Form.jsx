@@ -28,9 +28,6 @@ const Form = ({ connection: c }) => {
 				}
 				if (err instanceof UnprocessableError) {
 					if (err.code === 'EventNotExists') {
-						// TODO(@Andrea): find a way to show the full error message
-						// in the toast notification when the server is started with
-						// the CHICHI_DEBUG_UI environment variable set to 'true'.
 						console.error(
 							`Unprocessable: connection does not implement the 'load' event in its ServeUI method`
 						);
@@ -73,9 +70,6 @@ const Form = ({ connection: c }) => {
 			}
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'EventNotExists') {
-					// TODO(@Andrea): find a way to show the full error message
-					// in the toast notification when the server is started with
-					// the CHICHI_DEBUG_UI environment variable set to 'true'.
 					console.error(
 						`Unprocessable: connection does not implement the ${eventName} event in its ServeUI method`
 					);

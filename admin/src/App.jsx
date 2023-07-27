@@ -67,7 +67,7 @@ const App = () => {
 				console.error(`Bad Request: ${err.message}`);
 				let message = '';
 				if (err.message !== '') {
-					message = `[debug mode] Bad Request: ${err.message}`;
+					message = `Bad Request: ${err.message}`;
 				} else {
 					message = 'Unexpected error. Contact the administrator for more information.';
 				}
