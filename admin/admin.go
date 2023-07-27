@@ -139,8 +139,8 @@ func (admin *admin) serveWithESBuild(w http.ResponseWriter, r *http.Request) {
 			case ".map":
 				w.Header().Add("Content-Type", "application/json")
 			default:
-				log.Printf("[error] cannot determine Content-Type for %q", base)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				http.Error(w, "Bad Request: cannot determine Content-Type for this file type", http.StatusBadRequest)
+				return
 			}
 			w.Write(out.Contents)
 			return
