@@ -100,9 +100,11 @@ func (admin *admin) serveWithESBuild(w http.ResponseWriter, r *http.Request) {
 		Format:            api.FormatESModule,
 		JSX:               api.JSXAutomatic,
 		LegalComments:     api.LegalCommentsEndOfFile,
-		MinifyIdentifiers: true,
-		MinifySyntax:      true,
-		MinifyWhitespace:  true,
+		MinifyIdentifiers: false,               // TODO: review in production.
+		MinifySyntax:      false,               // TODO: review in production.
+		MinifyWhitespace:  false,               // TODO: review in production.
+		JSXDev:            true,                // TODO: review in production.
+		Sourcemap:         api.SourceMapLinked, // TODO: review in production.
 		Outdir:            "out",
 		Target:            api.ES2018,
 		TreeShaking:       api.TreeShakingTrue,
@@ -134,6 +136,8 @@ func (admin *admin) serveWithESBuild(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("Content-Type", "text/javascript")
 			case ".css":
 				w.Header().Add("Content-Type", "text/css")
+			case ".map":
+				w.Header().Add("Content-Type", "application/json")
 			default:
 				log.Printf("[error] cannot determine Content-Type for %q", base)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
