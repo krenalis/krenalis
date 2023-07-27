@@ -302,7 +302,7 @@ func (warehouse *ClickHouse) Select(ctx context.Context, table string, columns [
 		return nil, warehouses.WrapError(err)
 	}
 	var rows [][]any
-	values := warehouses.NewScanValues(columns, &rows)
+	values := newScanValues(columns, &rows)
 	for rawRows.Next() {
 		if err = rawRows.Scan(values...); err != nil {
 			_ = rawRows.Close()
