@@ -9,7 +9,6 @@ package postgresql
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"math"
 	"net/netip"
@@ -256,7 +255,7 @@ func (sv scanValue) scanArray(src any) (any, error) {
 		}
 		return values, nil
 	case 3802: // jsonb
-		values := make([]json.RawMessage, size)
+		values := make([][]byte, size)
 		for i := range values {
 			if len(data) < p+4 {
 				return nil, errPostgreSQLInvalidData
@@ -272,11 +271,8 @@ func (sv scanValue) scanArray(src any) (any, error) {
 			if data[p] != 1 {
 				return nil, errPostgreSQLInvalidData
 			}
-			v := make(json.RawMessage, l-1)
+			v := make([]byte, l-1)
 			copy(v, data[p+1:p+l])
-			if !json.Valid(v) {
-				return nil, errPostgreSQLInvalidData
-			}
 			values[i] = v
 			p += l
 		}
