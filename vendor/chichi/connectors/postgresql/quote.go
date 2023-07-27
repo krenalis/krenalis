@@ -1,0 +1,90 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2023 Open2b
+//
+
+package postgresql
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+
+	"chichi/connector/types"
+
+	"github.com/shopspring/decimal"
+)
+
+// quoteTable quotes a table name.
+func quoteTable(name string) (string, error) {
+	if strings.Contains(name, "\x00") {
+		return "", errors.New("table name contains a character with code zero")
+	}
+	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`, nil
+}
+
+// quoteString quotes s as a string and writes it into b.
+func quoteString(b *strings.Builder, s string) {
+	if s == "" {
+		b.WriteString("''")
+		return
+	}
+	b.WriteByte('\'')
+	for {
+		p := strings.IndexAny(s, "\x00'")
+		if p == -1 {
+			p = len(s)
+		}
+		b.WriteString(s[:p])
+		if p == len(s) {
+			break
+		}
+		if s[p] == '\'' {
+			b.WriteString("''")
+		}
+		s = s[p+1:]
+		if len(s) == 0 {
+			break
+		}
+	}
+	b.WriteByte('\'')
+}
+
+// quoteValue quotes value and writes it into b.
+func quoteValue(b *strings.Builder, v any, pt types.PhysicalType) {
+	switch v := v.(type) {
+	case nil:
+		b.WriteString("NULL")
+	case string:
+		if pt == types.PtText {
+			quoteString(b, v)
+		} else {
+			b.WriteByte('\'')
+			b.WriteString(v)
+			b.WriteByte('\'')
+		}
+	case int:
+		b.WriteString(strconv.FormatInt(int64(v), 10))
+	case float64:
+		bits := 64
+		if pt == types.PtFloat32 {
+			bits = 32
+		}
+		b.WriteString(strconv.FormatFloat(v, 'G', -1, bits))
+	case decimal.Decimal:
+		b.WriteString(v.String())
+	case bool:
+		if v {
+			b.WriteString("TRUE")
+		}
+		b.WriteString("FALSE")
+	case json.RawMessage:
+		quoteString(b, string(v))
+	default:
+		panic(fmt.Errorf("unsupported value type '%T'", v))
+	}
+}

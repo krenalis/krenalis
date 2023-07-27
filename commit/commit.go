@@ -87,10 +87,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Tidying modules")
+	fmt.Println("Tidying and vendoring modules")
 	for _, module := range modules {
 		removeGoSum(repo, module, verbose)
 		cmd("go", []string{"mod", "tidy"}, repo, module, verbose)
+		cmd("go", []string{"mod", "vendor"}, repo, module, verbose)
 	}
 
 	fmt.Println("Formatting modules")
