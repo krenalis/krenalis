@@ -119,7 +119,7 @@ const computeDefaultAction = (actionType, outputSchema, fields) => {
 		action.MatchingProperties = { Internal: '', External: '' };
 	}
 	if (fields.includes('Identifiers')) {
-		action.Identifiers = DEFAULT_IDENTIFIERS_MAPPING;
+		action.Identifiers = JSON.parse(JSON.stringify(DEFAULT_IDENTIFIERS_MAPPING));
 	}
 	return action;
 };
