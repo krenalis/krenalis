@@ -35,15 +35,27 @@ const App = () => {
 		const hasSessionCookie = checkSessionCookie();
 		if (hasSessionCookie) {
 			setIsLoggedIn(true);
-			let isBasePath = location.pathname === adminBasePath;
-			if (isBasePath) {
-				redirect('connections');
-			}
 		} else {
 			setIsLoggedIn(false);
 		}
 		setIsLoading(false);
 	}, [location]);
+
+	useEffect(() => {
+		if (isLoading) {
+			return;
+		}
+		if (isLoggedIn) {
+			let isBasePath = location.pathname === adminBasePath;
+			if (isBasePath) {
+				redirect('connections');
+			}
+		} else {
+			if (location.pathname !== adminBasePath) {
+				redirect('');
+			}
+		}
+	}, [isLoggedIn]);
 
 	useEffect(() => {
 		for (const pattern of FULLSCREEN_PATTERNS) {
@@ -106,7 +118,6 @@ const App = () => {
 	const onLogout = () => {
 		document.cookie = 'session=; Max-Age=-99999999; Path=/';
 		setIsLoggedIn(false);
-		redirect('');
 	};
 
 	if (isLoading) {
