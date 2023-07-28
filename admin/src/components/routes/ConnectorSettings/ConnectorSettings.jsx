@@ -4,7 +4,7 @@ import ConnectorField from '../../shared/ConnectorFields/ConnectorField';
 import ConfirmationButton from '../../shared/ConfirmationButton/ConfirmationButton';
 import NotFound from '../NotFound/NotFound';
 import Flex from '../../shared/Flex/Flex';
-import { SettingsContext } from '../../../context/SettingsContext';
+import SettingsForm from '../../shared/SettingsForm/SettingsForm';
 import { AppContext } from '../../../context/providers/AppProvider';
 import statuses from '../../../constants/statuses';
 import { SlButton, SlInput, SlSelect, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
@@ -334,12 +334,12 @@ const ConnectorSettings = () => {
 						)}
 					</div>
 					{(fieldsToRender.length > 0 || actionsToRender.length > 0) && (
-						<div className='form'>
-							<SettingsContext.Provider value={{ values: values, onChange: onFieldChange }}>
-								<div className='fields'>{fieldsToRender}</div>
-							</SettingsContext.Provider>
-							<div className='actions'>{actionsToRender}</div>
-						</div>
+						<SettingsForm
+							fields={fieldsToRender}
+							actions={actionsToRender}
+							values={values}
+							onChange={onFieldChange}
+						/>
 					)}
 					{fieldsToRender.length === 0 && actionsToRender.length === 0 && (
 						<div className='saveWrapper'>

@@ -5,7 +5,7 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { AppContext } from '../../../context/providers/AppProvider';
 import statuses from '../../../constants/statuses';
 import * as icons from '../../../constants/icons';
-import { SettingsContext } from '../../../context/SettingsContext';
+import SettingsForm from '../../shared/SettingsForm/SettingsForm';
 import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
 
 const Form = ({ connection: c }) => {
@@ -139,14 +139,7 @@ const Form = ({ connection: c }) => {
 		}
 	}
 
-	return (
-		<div className='form'>
-			<SettingsContext.Provider value={{ values: values, onChange: onFieldChange }}>
-				<div className='fields'>{fieldsToRender}</div>
-			</SettingsContext.Provider>
-			<div className='actions'>{actionsToRender}</div>
-		</div>
-	);
+	return <SettingsForm fields={fieldsToRender} actions={actionsToRender} values={values} onChange={onFieldChange} />;
 };
 
 export default Form;

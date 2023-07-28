@@ -20,43 +20,8 @@
     margin-bottom: 30px;
 }
 
-.connectionSettings .form {
+.connectionSettings .settings-form {
 	grid-area: form;
-}
-
-.connectionSettings .form .fields > * {
-	margin-bottom: 30px;
-}
-
-.connectionSettings .form .fields > * .error {
-	color: var(--sl-color-danger-500);
-    font-weight: 600;
-    margin-top: 5px;
-    font-size: 14px;
-}
-
-.connectionSettings .form .fields > * > *::part(form-control-help-text) {
-	margin-top: 5px;
-	opacity: .7;
-}
-
-.connectionSettings .form .fields sl-radio-group sl-radio {
-	margin-bottom: 7px;
-}
-
-.connectionSettings .form .fields sl-radio-group sl-radio:last-of-type {
-	margin-bottom: 0;
-}
-
-.connectionSettings .form .actions {
-	margin-top: 70px;
-	display: flex;
-	justify-content: center;
-	gap: 30px;
-}
-
-.connectionSettings .form .actions sl-button {
-	min-width: 150px;
 }
 
 .connectionSettings .keys {
