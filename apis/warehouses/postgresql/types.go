@@ -107,23 +107,48 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, resolver composi
 		// unspecified length.”
 		//
 		// so there's no way to limit the min/max number of array elements.
+		var et types.Type
 		switch column.udtName {
 		case "_bool":
-			t = types.Array(types.Boolean())
+			et = types.Boolean()
+		case "_date":
+			et = types.Date()
+		case "_float4":
+			et = types.Float32()
+		case "_float8":
+			et = types.Float()
+		case "_inet":
+			et = types.Inet()
+		case "_int2":
+			et = types.Int16()
 		case "_int4":
-			t = types.Array(types.Int())
-		case "_varchar":
+			et = types.Int()
+		case "_int8":
+			et = types.Int64()
+		case "_jsonb":
+			et = types.JSON()
+		case "_text":
+			et = types.Text()
+		case "_time":
+			et = types.Time()
+		case "_timestamp":
+			et = types.DateTime()
+		case "_uuid":
+			et = types.UUID()
+		case "_bpchar", "_varchar":
 			attTypMod := attTypMods[column.table][column.column]
 			if attTypMod != nil {
 				length := *attTypMod - 4 // See the function "_pg_char_max_length".
 				if length < 1 {
 					return types.Type{}, fmt.Errorf("atttypmod value %d is not valid", *attTypMod)
 				}
-				t = types.Text().WithCharLen(length)
+				et = types.Text().WithCharLen(length)
 			} else {
-				t = types.Text()
+				et = types.Text()
 			}
-			t = types.Array(t)
+		}
+		if et.Valid() {
+			t = types.Array(et)
 		}
 	case "USER-DEFINED":
 		// Check if the user-defined type is an enum.
