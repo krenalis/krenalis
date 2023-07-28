@@ -125,7 +125,7 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, resolver composi
 			et = types.Int()
 		case "_int8":
 			et = types.Int64()
-		case "_jsonb":
+		case "_json", "_jsonb":
 			et = types.JSON()
 		case "_text":
 			et = types.Text()

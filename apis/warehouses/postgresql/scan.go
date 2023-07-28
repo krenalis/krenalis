@@ -163,7 +163,7 @@ func (sv scanValue) scanArray(src any) (any, error) {
 			p += l
 			return values, nil
 		}
-	case 869: // inet **
+	case 869: // inet
 		if len(data) < p+12*size {
 			return nil, errPostgreSQLInvalidData
 		}
@@ -258,6 +258,29 @@ func (sv scanValue) scanArray(src any) (any, error) {
 			p += 4 // skip length
 			values[i] = uuid.Must(uuid.FromBytes(data[p : p+16])).String()
 			p += 16
+		}
+		return values, nil
+	case 114: // json
+		if len(data) < p+4*size {
+			return nil, errPostgreSQLInvalidData
+		}
+		values := make([][]byte, size)
+		for i := range values {
+			if len(data) < p+4 {
+				return nil, errPostgreSQLInvalidData
+			}
+			l := int(int32(binary.BigEndian.Uint32(data[p:])))
+			if l <= 0 {
+				return nil, errPostgreSQLInvalidData
+			}
+			p += 4
+			if len(data) < p+l {
+				return nil, errPostgreSQLInvalidData
+			}
+			v := make([]byte, l)
+			copy(v, data[p:p+l])
+			values[i] = v
+			p += l
 		}
 		return values, nil
 	case 3802: // jsonb
