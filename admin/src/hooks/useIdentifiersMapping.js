@@ -37,6 +37,15 @@ const useIdentifiersMapping = (mapping, setMapping, inputSchema, outputSchema) =
 		[unusableProperties, usedProperties]
 	);
 
+	const isRemoveButtonDisabled = useMemo(() => {
+		if (mapping.length === 1) {
+			const isFirstMappedPropertyEmpty = mapping[0][0].value === '';
+			const isFirstIdentifierEmpty = mapping[0][1].value === '';
+			if (isFirstMappedPropertyEmpty && isFirstIdentifierEmpty) return true;
+		}
+		return false;
+	}, [mapping]);
+
 	const validateExpression = async (expression, schema, destinationProperty) => {
 		let message = '';
 		if (expression !== '') {
@@ -111,10 +120,11 @@ const useIdentifiersMapping = (mapping, setMapping, inputSchema, outputSchema) =
 	const removeAssociation = (position) => {
 		const m = [...mapping];
 		if (m.length === 1) {
-			showError('You must define at least one mapping');
-			return;
+			m[0][0].value = '';
+			m[0][1].value = '';
+		} else {
+			m.splice(position - 1, 1);
 		}
-		m.splice(position - 1, 1);
 		setMapping(m);
 	};
 
@@ -126,6 +136,7 @@ const useIdentifiersMapping = (mapping, setMapping, inputSchema, outputSchema) =
 
 	return {
 		nonSelectableProperties,
+		isRemoveButtonDisabled,
 		updateMappedProperty,
 		updateIdentifier,
 		moveAssociationUp,
