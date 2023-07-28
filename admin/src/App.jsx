@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './App.css';
 import Toast from './components/shared/Toast/Toast';
 import Sidebar from './components/layout/Sidebar/Sidebar';
@@ -31,10 +31,14 @@ const App = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 
-	useLayoutEffect(() => {
+	useEffect(() => {
 		const hasSessionCookie = checkSessionCookie();
 		if (hasSessionCookie) {
 			setIsLoggedIn(true);
+			let isBasePath = location.pathname === adminBasePath;
+			if (isBasePath) {
+				redirect('connections');
+			}
 		} else {
 			setIsLoggedIn(false);
 		}
@@ -88,7 +92,9 @@ const App = () => {
 	};
 
 	const redirect = (url) => {
-		toastRef.current.hide();
+		if (toastRef.current) {
+			toastRef.current.hide();
+		}
 		const redirectURL = `${adminBasePath}${url}`;
 		if (redirectURL === location.pathname) {
 			navigate(0);
@@ -112,11 +118,6 @@ const App = () => {
 
 	let content;
 	if (isLoggedIn) {
-		let isBasePath = location.pathname === adminBasePath;
-		if (isBasePath) {
-			redirect('connections');
-			return;
-		}
 		content = (
 			<AppProvider
 				setTitle={setTitle}
