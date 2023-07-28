@@ -65,6 +65,7 @@ const AnonymousIdentity = () => {
 		const untransformed = untransformAnonymousIdentifiers(anonymousIdentifiers);
 		const [, err] = await api.workspace.anonymousIdentifiers(untransformed);
 		if (err) {
+			showError(err);
 			return;
 		}
 		showStatus([variants.SUCCESS, icons.OK, 'Anonymous identifiers saved succesfully']);
