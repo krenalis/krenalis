@@ -106,6 +106,9 @@ func (sv scanValue) scanArray(src any) (any, error) {
 		20, // int8
 		21, // in2
 		23: // int4
+		if len(data) < p+2*size {
+			return nil, errPostgreSQLInvalidData
+		}
 		var v int
 		values := make([]int, size)
 		for i := range values {
@@ -113,9 +116,6 @@ func (sv scanValue) scanArray(src any) (any, error) {
 				return nil, errPostgreSQLInvalidData
 			}
 			l := int(int32(binary.BigEndian.Uint32(data[p:])))
-			if l <= 0 {
-				return nil, errPostgreSQLInvalidData
-			}
 			p += 4
 			if len(data) < p+l {
 				return nil, errPostgreSQLInvalidData
@@ -137,6 +137,9 @@ func (sv scanValue) scanArray(src any) (any, error) {
 	case
 		700, // float4
 		701: // float8
+		if len(data) < p+4*size {
+			return nil, errPostgreSQLInvalidData
+		}
 		var v float64
 		values := make([]float64, size)
 		for i := range values {
@@ -144,9 +147,6 @@ func (sv scanValue) scanArray(src any) (any, error) {
 				return nil, errPostgreSQLInvalidData
 			}
 			l := int(int32(binary.BigEndian.Uint32(data[p:])))
-			if l <= 0 {
-				return nil, errPostgreSQLInvalidData
-			}
 			p += 4
 			if len(data) < p+l {
 				return nil, errPostgreSQLInvalidData
@@ -163,14 +163,17 @@ func (sv scanValue) scanArray(src any) (any, error) {
 			p += l
 			return values, nil
 		}
-	case 869: // inet
+	case 869: // inet **
+		if len(data) < p+12*size {
+			return nil, errPostgreSQLInvalidData
+		}
 		values := make([]string, size)
 		for i := range values {
 			if len(data) < p+4 {
 				return nil, errPostgreSQLInvalidData
 			}
 			l := int(int32(binary.BigEndian.Uint32(data[p:])))
-			if l <= 0 {
+			if l != 8 && l != 20 {
 				return nil, errPostgreSQLInvalidData
 			}
 			p += 4
@@ -189,6 +192,9 @@ func (sv scanValue) scanArray(src any) (any, error) {
 		25,   // text
 		1042, // bpchar
 		1043: // varchar
+		if len(data) < p+5*size {
+			return nil, errPostgreSQLInvalidData
+		}
 		values := make([]string, size)
 		for i := range values {
 			if len(data) < p+4 {
@@ -255,6 +261,9 @@ func (sv scanValue) scanArray(src any) (any, error) {
 		}
 		return values, nil
 	case 3802: // jsonb
+		if len(data) < p+5*size {
+			return nil, errPostgreSQLInvalidData
+		}
 		values := make([][]byte, size)
 		for i := range values {
 			if len(data) < p+4 {
