@@ -39,6 +39,15 @@
 	gap: 5px;
 }
 
+.usersList .toggleColumns::part(panel) {
+	max-height: calc(100vh - 220px)!important;
+	overflow: auto;
+}
+
+.usersList .toggleColumns sl-menu {
+	overflow: hidden;	
+}
+
 .usersList .gridContainer {
 	min-height: calc(100vh - 140px);
 	position: relative;
