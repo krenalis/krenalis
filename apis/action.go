@@ -24,6 +24,7 @@ import (
 	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/types"
+	"chichi/telemetry"
 
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/maps"
@@ -242,7 +243,9 @@ func (this *Action) Delete() error {
 // It returns an errors.UnprocessableError error with code
 //   - ExecutionInProgress, if the action is already in progress.
 //   - NoStorage, if the connection of the action is a file and has no storage.
-func (this *Action) Execute(reimport bool) error {
+func (this *Action) Execute(ctx context.Context, reimport bool) error {
+	ctx, span := telemetry.TraceSpan(ctx, "Action.Execute", "id", this.action.ID, "reimport", reimport)
+	defer span.End()
 	if _, ok := this.action.Execution(); ok {
 		return errors.Unprocessable(ExecutionInProgress, "action %d is already in progress", this.action.ID)
 	}
@@ -262,11 +265,14 @@ func (this *Action) Execute(reimport bool) error {
 //
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
-func (this *Action) Set(action ActionToSet) error {
+func (this *Action) Set(ctx context.Context, action ActionToSet) error {
+	ctx, span := telemetry.TraceSpan(ctx, "Action.Set", "action", this.action.ID)
+	defer span.End()
 	err := this.connection.validateActionToSet(action, this.action.Target, this.action.EventType)
 	if err != nil {
 		return err
 	}
+	span.Log("action validated successfully")
 	n := state.SetActionNotification{
 		ID:             this.action.ID,
 		Name:           action.Name,
@@ -304,7 +310,6 @@ func (this *Action) Set(action ActionToSet) error {
 			External: props.External,
 		}
 	}
-	ctx := context.Background()
 
 	// Marshal the input and the output schemas.
 	rawInSchema, err := marshalSchema(action.InSchema)
@@ -353,6 +358,7 @@ func (this *Action) Set(action ActionToSet) error {
 		}
 		return tx.Notify(ctx, n)
 	})
+	span.Log("action set successfully", "id", this.action.ID)
 
 	return err
 }

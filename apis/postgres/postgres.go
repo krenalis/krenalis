@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	"chichi/telemetry"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -285,6 +287,8 @@ func (db *DB) Begin(ctx context.Context) (*Tx, error) {
 }
 
 func (db *DB) Transaction(ctx context.Context, f func(tx *Tx) error) error {
+	ctx, span := telemetry.TraceSpan(ctx, "DB.Transaction")
+	defer span.End()
 	pqTx, err := db.db.Begin(ctx)
 	if err != nil {
 		return err

@@ -20,6 +20,7 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/warehouses"
+	"chichi/telemetry"
 
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/slices"
@@ -246,6 +247,7 @@ func isNotZeroValue(v any) bool {
 
 // createGR creates a new Golden Record for the user U and returns its GID.
 func createGR(ctx context.Context, ws *state.Workspace, index *index.Index, U map[string]any) (int, error) {
+	telemetry.IncrementCounter(ctx, "createGR", 1)
 	// Create an empty Golden Record.
 	var gid int
 	err := ws.Warehouse.QueryRow(ctx, "INSERT INTO users DEFAULT VALUES RETURNING id").Scan(&gid)
@@ -263,6 +265,8 @@ func createGR(ctx context.Context, ws *state.Workspace, index *index.Index, U ma
 // updateGR updates the Golden Record with the given GID using the properties of
 // U.
 func updateGR(ctx context.Context, ws *state.Workspace, index *index.Index, gid int, U map[string]any) error {
+
+	telemetry.IncrementCounter(ctx, "updateGR", 1)
 
 	// Serialize the row.
 	schema, ok := ws.Schemas["users"]
@@ -318,6 +322,7 @@ func updateGR(ctx context.Context, ws *state.Workspace, index *index.Index, gid 
 
 // deleteGR deletes the Golden Record with the given GID.
 func deleteGR(ctx context.Context, ws *state.Workspace, index *index.Index, gid int) error {
+	telemetry.IncrementCounter(ctx, "deleteGR", 1)
 	// Remove the Golden Record from the data warehouse.
 	_, err := ws.Warehouse.Query(ctx, "DELETE FROM `users` WHERE `id` = ?", gid)
 	if err != nil {

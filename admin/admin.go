@@ -8,6 +8,7 @@
 package admin
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -19,6 +20,7 @@ import (
 
 	"chichi/apis"
 	"chichi/apis/errors"
+	"chichi/telemetry"
 
 	"github.com/evanw/esbuild/pkg/api"
 )
@@ -32,6 +34,12 @@ func New(apis *apis.APIs) *admin {
 }
 
 func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	ctx, s := telemetry.TraceSpan(r.Context(), "admin.ServeHTTP", "urlPath", r.URL.Path)
+	defer s.End()
+
+	telemetry.IncrementCounter(ctx, "admin.ServeHTTP", 1)
+
 	rpath := r.URL.Path[6:]
 
 	// check the session cookie.
@@ -48,7 +56,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		accountID, _ = strconv.Atoi(cookie.Value)
 
 		// instantiate the account API
-		account, err := admin.apis.Account(accountID)
+		account, err := admin.apis.Account(ctx, accountID)
 		if err != nil {
 			http.NotFound(w, r)
 			return
@@ -74,7 +82,7 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strings.HasPrefix(rpath, "/src/") {
-		admin.serveWithESBuild(w, r)
+		admin.serveWithESBuild(ctx, w, r)
 		return
 	}
 
@@ -89,7 +97,9 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (admin *admin) serveWithESBuild(w http.ResponseWriter, r *http.Request) {
+func (admin *admin) serveWithESBuild(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	_, span := telemetry.TraceSpan(ctx, "admin.serveWithESBuild", "path", r.URL.Path)
+	defer span.End()
 	file, err := filepath.Abs("admin/src/index.jsx")
 	if err != nil {
 		panic(err)
@@ -162,7 +172,7 @@ func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	enc := json.NewEncoder(w)
-	accountID, err := admin.apis.AuthenticateAccount(loginData.Email, loginData.Password)
+	accountID, err := admin.apis.AuthenticateAccount(r.Context(), loginData.Email, loginData.Password)
 	if err != nil {
 		if err, ok := err.(*errors.UnprocessableError); ok && err.Code == apis.AuthenticationFailed {
 			w.Header().Set("Content-Type", "application/json")

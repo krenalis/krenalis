@@ -17,6 +17,7 @@ import (
 
 	"chichi/admin"
 	"chichi/apis"
+	"chichi/telemetry"
 )
 
 type Settings struct {
@@ -26,9 +27,19 @@ type Settings struct {
 	}
 	PostgreSQL apis.PostgreSQLConfig
 	Redis      apis.RedisConfig
+	Telemetry  struct {
+		Enable bool
+	}
 }
 
 func Run(ctx context.Context, settings *Settings) error {
+
+	if settings.Telemetry.Enable {
+		err := telemetry.Init(ctx)
+		if err != nil {
+			return err
+		}
+	}
 
 	apis, err := apis.New(ctx, &apis.Config{
 		PostgreSQL: settings.PostgreSQL,

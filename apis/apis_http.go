@@ -21,12 +21,18 @@ import (
 	"chichi/apis/errors"
 	"chichi/apis/events"
 	"chichi/connector/types"
+	"chichi/telemetry"
 
 	"github.com/go-chi/chi/v5"
 )
 
 // ServeHTTP servers the API methods from HTTP.
 func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	ctx, span := telemetry.TraceSpan(r.Context(), "apis.ServeHTTP", "ip", r.RemoteAddr, "urlPath", r.URL.Path)
+	defer span.End()
+
+	telemetry.IncrementCounter(ctx, "apis.ServeHTTP", 1)
 
 	if strings.HasPrefix(r.URL.Path, "/api/v1/") {
 		apis.events.ServeHTTP(w, r)
@@ -52,7 +58,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	account, err := apis.Account(accountID)
+	account, err := apis.Account(ctx, accountID)
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -108,7 +114,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				actionID, err := connection.AddAction(req.Target, req.EventType, req.Action)
+				actionID, err := connection.AddAction(ctx, req.Target, req.EventType, req.Action)
 				if err != nil {
 					respond(w, err)
 					return
@@ -124,7 +130,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				action, err := connection.Action(actionID)
+				action, err := connection.Action(ctx, actionID)
 				if err != nil {
 					respond(w, err)
 					return
@@ -146,12 +152,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				action, err := connection.Action(actionID)
+				action, err := connection.Action(ctx, actionID)
 				if err != nil {
 					respond(w, err)
 					return
 				}
-				err = action.Set(req)
+				err = action.Set(ctx, req)
 				respond(w, err)
 			})
 			router.Delete("/actions/{actionID}", func(w http.ResponseWriter, r *http.Request) {
@@ -162,7 +168,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				action, err := connection.Action(actionID)
+				action, err := connection.Action(ctx, actionID)
 				if err != nil {
 					respond(w, err)
 					return
@@ -178,7 +184,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				action, err := connection.Action(actionID)
+				action, err := connection.Action(ctx, actionID)
 				if err != nil {
 					respond(w, err)
 					return
@@ -191,7 +197,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				err = action.Execute(req.Reimport)
+				err = action.Execute(ctx, req.Reimport)
 				respond(w, err)
 			})
 			router.Post("/actions/{actionID}/schedule-period", func(w http.ResponseWriter, r *http.Request) {
@@ -202,7 +208,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				action, err := connection.Action(actionID)
+				action, err := connection.Action(ctx, actionID)
 				if err != nil {
 					respond(w, err)
 					return
@@ -226,7 +232,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				action, err := connection.Action(actionID)
+				action, err := connection.Action(ctx, actionID)
 				if err != nil {
 					respond(w, err)
 					return
@@ -250,7 +256,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						respond(w, err)
 						return
 					}
-					schemas, err := connection.ActionSchemas(UsersTarget, "")
+					schemas, err := connection.ActionSchemas(ctx, UsersTarget, "")
 					if err != nil {
 						respond(w, err)
 						return
@@ -265,7 +271,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						respond(w, err)
 						return
 					}
-					schemas, err := connection.ActionSchemas(GroupsTarget, "")
+					schemas, err := connection.ActionSchemas(ctx, GroupsTarget, "")
 					if err != nil {
 						respond(w, err)
 						return
@@ -280,7 +286,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						respond(w, err)
 						return
 					}
-					schemas, err := connection.ActionSchemas(EventsTarget, "")
+					schemas, err := connection.ActionSchemas(ctx, EventsTarget, "")
 					if err != nil {
 						respond(w, err)
 						return
@@ -302,7 +308,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						respond(w, err)
 						return
 					}
-					schemas, err := connection.ActionSchemas(EventsTarget, eventType)
+					schemas, err := connection.ActionSchemas(ctx, EventsTarget, eventType)
 					if err != nil {
 						respond(w, err)
 						return
@@ -572,14 +578,14 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 	router.Route("/api/connectors", func(router chi.Router) {
 		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			connectors := apis.Connectors()
+			connectors := apis.Connectors(ctx)
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(connectors)
 		})
 		router.Route("/{connectorID}", func(router chi.Router) {
 			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
-				connector, err := apis.Connector(id)
+				connector, err := apis.Connector(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -589,7 +595,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Post("/ui", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
-				connector, err := apis.Connector(id)
+				connector, err := apis.Connector(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -623,7 +629,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Get("/auth-code-url", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
-				connector, err := apis.Connector(id)
+				connector, err := apis.Connector(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -639,7 +645,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Post("/ui-event", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
-				connector, err := apis.Connector(id)
+				connector, err := apis.Connector(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return

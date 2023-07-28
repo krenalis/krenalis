@@ -33,6 +33,7 @@ import (
 	_connector "chichi/connector"
 	"chichi/connector/types"
 	"chichi/connector/ui"
+	"chichi/telemetry"
 
 	"github.com/jxskiss/base62"
 	"github.com/redis/go-redis/v9"
@@ -93,7 +94,9 @@ type Connection struct {
 
 // Action returns the action with identifier id of the connection.
 // It returns an errors.NotFound error if the action does not exist.
-func (this *Connection) Action(id int) (*Action, error) {
+func (this *Connection) Action(ctx context.Context, id int) (*Action, error) {
+	ctx, span := telemetry.TraceSpan(ctx, "Connection.Action", "id", id)
+	defer span.End()
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("identifier %d is not a valid action identifier", id)
 	}
@@ -291,7 +294,10 @@ type ActionSchemas struct {
 
 // ActionSchemas returns the input and the output schemas of an action with the
 // given target and event type.
-func (this *Connection) ActionSchemas(target ActionTarget, eventType string) (*ActionSchemas, error) {
+func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, eventType string) (*ActionSchemas, error) {
+
+	ctx, span := telemetry.TraceSpan(ctx, "Connection.ActionSchemas", "target", target, "eventType", eventType)
+	defer span.End()
 
 	connector := this.connection.Connector()
 	role := _connector.Role(this.connection.Role)
@@ -471,7 +477,10 @@ func (this *Connection) ActionSchemas(target ActionTarget, eventType string) (*A
 //
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore.
-func (this *Connection) AddAction(target ActionTarget, eventType string, action ActionToSet) (int, error) {
+func (this *Connection) AddAction(ctx context.Context, target ActionTarget, eventType string, action ActionToSet) (int, error) {
+
+	ctx, span := telemetry.TraceSpan(ctx, "Connection.AddAction", "target", target, "eventType", eventType)
+	defer span.End()
 
 	c := this.connection
 	connector := c.Connector()
@@ -499,6 +508,7 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 	if err != nil {
 		return 0, err
 	}
+	span.Log("action validated successfully")
 
 	n := state.AddActionNotification{
 		Connection:     c.ID,
@@ -582,7 +592,6 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 	}
 
 	// Add the action.
-	ctx := context.Background()
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		switch n.Target {
 		case state.EventsTarget:
@@ -630,6 +639,7 @@ func (this *Connection) AddAction(target ActionTarget, eventType string, action 
 	if err != nil {
 		return 0, err
 	}
+	span.Log("action created successfully", "id", n.ID)
 
 	return n.ID, nil
 }

@@ -1,3 +1,4 @@
+
 # chichi
 
 <img src="https://static.wikia.nocookie.net/dragonballaf/images/c/c3/Chichi_foto8.jpg/revision/latest?cb=20120616090846&path-prefix=it" width=260px/>
@@ -15,6 +16,9 @@
   - [6. Initialize the warehouse](#6-initialize-the-warehouse)
   - [7. Reload the schemas](#7-reload-the-schemas)
   - [8. Run and open the browser](#8-run-and-open-the-browser)
+- [Enable telemetry (optional)](#enable-telemetry-optional)
+  - [For the first time](#for-the-first-time)
+  - [If you already have configured and enabled telemetry](#if-you-already-have-configured-and-enabled-telemetry)
 - [Expose on the Internet (optional)](#expose-on-the-internet-optional)
 - [How test events](#how-test-events)
 - [Interact with Chichi using `chichi-cli`](#interact-with-chichi-using-chichi-cli)
@@ -159,6 +163,37 @@ $ chichi-cli reload-schemas
 ### 8. Run and open the browser
 
 Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit https://localhost:9090/admin/.
+
+## Enable telemetry (optional)
+
+### For the first time
+
+1. see the documentation in the [telemetry directory](./telemetry) to learn how
+   to install and run tools needed for telemetry.
+2. update your local configuration file `app.ini` according to the file
+   [app.example.ini](app.example.ini).
+
+### If you already have configured and enabled telemetry
+
+From the directory `telemetry` of this repository, run the following commands:
+
+To start the **OpenTelemetry Collector**:
+
+```bash
+otelcol --config confs/otelcol.yaml
+```
+
+To start **Jaeger**:
+
+```bash
+jaeger-all-in-one --collector.otlp.enabled=0
+```
+
+To start **Prometheus**:
+
+```bash
+prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095"
+```
 
 ## Expose on the Internet (optional)
 

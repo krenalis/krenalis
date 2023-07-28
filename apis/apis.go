@@ -22,6 +22,7 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/connector/types"
+	"chichi/telemetry"
 
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
@@ -132,7 +133,9 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 // Account returns the account with identifier id.
 //
 // It returns an errors.NoFound error if the account does not exist.
-func (apis *APIs) Account(id int) (*Account, error) {
+func (apis *APIs) Account(ctx context.Context, id int) (*Account, error) {
+	_, t := telemetry.TraceSpan(ctx, "apis.Account", "account_id", id)
+	defer t.End()
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("identifier %d is not a valid account identifier", id)
 	}
@@ -158,7 +161,9 @@ func (apis *APIs) Account(id int) (*Account, error) {
 // Accounts returns a list of Account, in the given order, describing all
 // accounts but starting from first and up to limit. first must be >= 0 and
 // limit must be > 0.
-func (apis *APIs) Accounts(order AccountSort, first, limit int) ([]*Account, error) {
+func (apis *APIs) Accounts(ctx context.Context, order AccountSort, first, limit int) ([]*Account, error) {
+	_, s := telemetry.TraceSpan(ctx, "apis.Connectors")
+	defer s.End()
 	if order != SortByName && order != SortByEmail {
 		return nil, errors.BadRequest("order %d is not valid", int(order))
 	}
@@ -203,7 +208,9 @@ func (apis *APIs) Accounts(order AccountSort, first, limit int) ([]*Account, err
 //
 // It returns an errors.UnprocessableError error with code
 // AuthenticationFailed, if the authentication fails.
-func (apis *APIs) AuthenticateAccount(email, password string) (int, error) {
+func (apis *APIs) AuthenticateAccount(ctx context.Context, email, password string) (int, error) {
+	_, t := telemetry.TraceSpan(ctx, "apis.Connectors")
+	defer t.End()
 	if !emailRegExp.MatchString(email) {
 		return 0, errors.BadRequest("email is not valid")
 	}
@@ -229,7 +236,9 @@ func (apis *APIs) AuthenticateAccount(email, password string) (int, error) {
 // Connector returns the connector with identifier id.
 //
 // It returns an errors.NotFoundError error if the connector does not exist.
-func (apis *APIs) Connector(id int) (*Connector, error) {
+func (apis *APIs) Connector(ctx context.Context, id int) (*Connector, error) {
+	_, t := telemetry.TraceSpan(ctx, "apis.Connector", "id", id)
+	defer t.End()
 	c, ok := apis.state.Connector(id)
 	if !ok {
 		return nil, errors.NotFound("connector %d does not exist", id)
@@ -254,7 +263,9 @@ func (apis *APIs) Connector(id int) (*Connector, error) {
 }
 
 // Connectors returns the collectors.
-func (apis *APIs) Connectors() []*Connector {
+func (apis *APIs) Connectors(ctx context.Context) []*Connector {
+	_, s := telemetry.TraceSpan(ctx, "apis.Connectors")
+	defer s.End()
 	cc := apis.state.Connectors()
 	connectors := make([]*Connector, len(cc))
 	for i, c := range cc {
@@ -285,7 +296,9 @@ func (apis *APIs) Connectors() []*Connector {
 
 // CreateAccount a new account given its email and password and returns its
 // identifier.
-func (apis *APIs) CreateAccount(email, password string) (int, error) {
+func (apis *APIs) CreateAccount(ctx context.Context, email, password string) (int, error) {
+	_, t := telemetry.TraceSpan(ctx, "apis.CreateAccount")
+	defer t.End()
 	if !emailRegExp.MatchString(email) {
 		return 0, errors.BadRequest("email is not valid")
 	}
@@ -306,7 +319,9 @@ func (apis *APIs) CreateAccount(email, password string) (int, error) {
 }
 
 // CountAccounts returns the total number of accounts.
-func (apis *APIs) CountAccounts() int {
+func (apis *APIs) CountAccounts(ctx context.Context) int {
+	_, s := telemetry.TraceSpan(ctx, "apis.CountAccounts")
+	defer s.End()
 	return len(apis.state.Accounts())
 }
 
