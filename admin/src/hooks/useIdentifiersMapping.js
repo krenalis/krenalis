@@ -6,7 +6,7 @@ import { isTypeSupportedAsIdentifier } from '../lib/helpers/identifiers';
 const MAPPED_INDEX = 0;
 const IDENTIFIER_INDEX = 1;
 
-const useIdentifiersMapping = (mapping, setMapping, inputSchema, outputSchema) => {
+const useIdentifiersMapping = (mapping, setMapping, inputSchema, outputSchema, onRemoveIdentifier) => {
 	const { api, showError } = useContext(AppContext);
 
 	const flatOutputSchema = useMemo(() => flattenSchema(outputSchema), [outputSchema]);
@@ -119,6 +119,9 @@ const useIdentifiersMapping = (mapping, setMapping, inputSchema, outputSchema) =
 
 	const removeAssociation = (position) => {
 		const m = [...mapping];
+		if (onRemoveIdentifier) {
+			onRemoveIdentifier(m[position - 1][1].value);
+		}
 		if (m.length === 1) {
 			m[0][0].value = '';
 			m[0][1].value = '';

@@ -1,11 +1,11 @@
-import './IdentifiersMapping.css';
 import { useRef } from 'react';
+import './IdentifiersMapping.css';
 import { ComboBoxInput, ComboBoxList } from '../ComboBox/ComboBox';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import useIdentifiersMapping from '../../../hooks/useIdentifiersMapping';
 import { SlButton, SlDropdown, SlMenu, SlMenuItem, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 
-const IdentifiersMapping = ({ mapping, setMapping, inputSchema, outputSchema }) => {
+const IdentifiersMapping = ({ mapping, setMapping, inputSchema, outputSchema, onRemoveIdentifier }) => {
 	const inputPropertiesListRef = useRef(null);
 	const outputPropertiesListRef = useRef(null);
 
@@ -18,7 +18,7 @@ const IdentifiersMapping = ({ mapping, setMapping, inputSchema, outputSchema }) 
 		moveAssociationDown,
 		removeAssociation,
 		addAssociation,
-	} = useIdentifiersMapping(mapping, setMapping, inputSchema, outputSchema);
+	} = useIdentifiersMapping(mapping, setMapping, inputSchema, outputSchema, onRemoveIdentifier);
 
 	const onUpdateMappedProperty = async (e) => {
 		const { name, value } = e.target;

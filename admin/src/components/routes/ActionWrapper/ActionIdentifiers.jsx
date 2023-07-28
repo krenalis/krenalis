@@ -12,6 +12,18 @@ const ActionIdentifiers = () => {
 		setAction(a);
 	};
 
+	const onRemoveIdentifier = (identifier) => {
+		if (identifier === '') {
+			return;
+		}
+		const a = { ...action };
+		const doesMappingExist = a.Mapping[identifier] != null;
+		if (doesMappingExist) {
+			a.Mapping[identifier].value = '';
+			setAction(a);
+		}
+	};
+
 	return (
 		<div className='actionIdentifiers'>
 			<Section
@@ -24,6 +36,7 @@ const ActionIdentifiers = () => {
 					setMapping={setIdentifiers}
 					inputSchema={actionType.InputSchema}
 					outputSchema={actionType.OutputSchema}
+					onRemoveIdentifier={onRemoveIdentifier}
 				/>
 			</Section>
 		</div>
