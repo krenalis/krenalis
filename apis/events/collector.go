@@ -181,13 +181,13 @@ type collector struct {
 	events    chan *collectedEvent
 	observer  *Observer
 	redis     *redis.Client
-	warehouse *warehouses
+	warehouse *warehouse
 	geoLiteDB *geoip2.Reader
 }
 
 // newCollector returns a new event collector. It receives HTTP requests from
 // mobile, server and website sources and sends them to the eventsLog.
-func newCollector(st *eventsState, eventLog *eventsLog, observer *Observer, redis *redis.Client, warehouse *warehouses) (*collector, error) {
+func newCollector(st *eventsState, eventLog *eventsLog, observer *Observer, redis *redis.Client, warehouse *warehouse) (*collector, error) {
 	var collector = collector{
 		state:     st,
 		eventLog:  eventLog,

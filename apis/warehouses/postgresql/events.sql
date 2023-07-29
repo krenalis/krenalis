@@ -75,5 +75,6 @@ CREATE TABLE events (
     timestamp timestamp(3) NOT NULL,
     traits jsonb NOT NULL,
     type event_type NOT NULL,
-    user_id varchar NOT NULL
+    user_id varchar NOT NULL,
+    PRIMARY KEY (message_id)
 )
