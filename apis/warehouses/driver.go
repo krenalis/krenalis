@@ -72,10 +72,6 @@ type Warehouse interface {
 	// prefix 'users_', 'groups_' and 'events_'.
 	Tables(ctx context.Context) ([]*Table, error)
 
-	// Query executes a query that returns rows. args are the placeholders.
-	// If the query fails, it returns an Error value.
-	Query(ctx context.Context, query string, args ...any) (*Rows, error)
-
 	// QueryRow executes a query that should return at most one row.
 	QueryRow(ctx context.Context, query string, args ...any) Row
 

@@ -243,12 +243,6 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 	return tables, nil
 }
 
-// Query executes a query that returns rows. args are the placeholders.
-// If the query fails, it returns an Error value.
-func (warehouse *ClickHouse) Query(ctx context.Context, query string, args ...any) (*warehouses.Rows, error) {
-	return nil, nil
-}
-
 // QueryRow executes a query that should return at most one row.
 func (warehouse *ClickHouse) QueryRow(ctx context.Context, query string, args ...any) warehouses.Row {
 	return warehouses.Row{}

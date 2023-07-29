@@ -338,20 +338,6 @@ func (warehouse *PostgreSQL) PrepareBatch(ctx context.Context, table string, col
 	return batch, nil
 }
 
-// Query executes a query that returns rows. args are the placeholders.
-// If the query fails, it returns an Error value.
-func (warehouse *PostgreSQL) Query(ctx context.Context, query string, args ...any) (*warehouses.Rows, error) {
-	db, err := warehouse.connection()
-	if err != nil {
-		return nil, err
-	}
-	rows, err := db.Query(ctx, query, args...)
-	if err != nil {
-		return nil, warehouses.WrapError(err)
-	}
-	return &warehouses.Rows{Rows: rows}, nil
-}
-
 // QueryRow executes a query that should return at most one row.
 // If the query fails, it returns an Error value.
 func (warehouse *PostgreSQL) QueryRow(ctx context.Context, query string, args ...any) warehouses.Row {
