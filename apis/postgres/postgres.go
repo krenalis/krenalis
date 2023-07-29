@@ -317,6 +317,22 @@ func (db *DB) Transaction(ctx context.Context, f func(tx *Tx) error) error {
 	}()
 }
 
+type Identifier []string
+
+type CopyFromSource interface {
+	Next() bool
+	Values() ([]any, error)
+	Err() error
+}
+
+func CopyFromRows(rows [][]any) CopyFromSource {
+	return pgx.CopyFromRows(rows)
+}
+
+func (db *DB) CopyFrom(ctx context.Context, tableName Identifier, columnNames []string, rowSrc CopyFromSource) (int64, error) {
+	return db.db.CopyFrom(ctx, pgx.Identifier(tableName), columnNames, pgx.CopyFromSource(rowSrc))
+}
+
 func (db *DB) Conn(ctx context.Context) (*Conn, error) {
 	conn, err := db.db.Acquire(ctx)
 	if err != nil {
