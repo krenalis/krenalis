@@ -177,6 +177,11 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 // rows or deleted can be empty but not both.
 func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTable, rows [][]any, deleted []any) error {
 
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+
 	var b strings.Builder
 
 	// Create the temporary table.
@@ -192,7 +197,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	b.WriteString(`false AS "$deleted" FROM "`)
 	b.WriteString(table.Name)
 	b.WriteString("\"\nWITH NO DATA")
-	_, err := warehouse.db.Exec(ctx, b.String())
+	_, err = db.Exec(ctx, b.String())
 	if err != nil {
 		return warehouses.WrapError(err)
 	}
@@ -209,7 +214,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 		for i, c := range table.Columns {
 			columnNames[i] = c.Name
 		}
-		_, err = warehouse.db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, postgres.CopyFromRows(rows))
+		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, postgres.CopyFromRows(rows))
 		if err != nil {
 			return warehouses.WrapError(err)
 		}
@@ -221,7 +226,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 		copy(columnNames, table.PrimaryKeys)
 		columnNames[len(columnNames)-1] = "$deleted"
 		rowSrc := newCopyForDeleteFrom(len(table.PrimaryKeys), deleted)
-		_, err = warehouse.db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, rowSrc)
+		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, rowSrc)
 		if err != nil {
 			return warehouses.WrapError(err)
 		}
@@ -287,7 +292,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	if len(deleted) > 0 {
 		b.WriteString("\nWHEN MATCHED THEN\n  DELETE")
 	}
-	_, err = warehouse.db.Exec(ctx, b.String())
+	_, err = db.Exec(ctx, b.String())
 	if err != nil {
 		return warehouses.WrapError(err)
 	}
