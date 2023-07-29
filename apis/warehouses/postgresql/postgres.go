@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,7 +28,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"golang.org/x/exp/slices"
 )
 
 //go:embed destinations_users.sql
@@ -39,7 +37,6 @@ var createDestinationUsersTable string
 var createEventsTable string
 
 var _ warehouses.Warehouse = &PostgreSQL{}
-var _ warehouses.Batch = &batch{}
 
 type PostgreSQL struct {
 	mu       sync.Mutex // for the db and closed fields
@@ -308,39 +305,6 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 		return err
 	}
 	return db.Ping(ctx)
-}
-
-// PrepareBatch creates a prepared batch statement for inserting rows in
-// batch and returns it. table specifies the table in which the rows will be
-// inserted, and columns specifies the columns.
-func (warehouse *PostgreSQL) PrepareBatch(ctx context.Context, table string, columns []string) (warehouses.Batch, error) {
-	if !warehouses.IsValidIdentifier(table) {
-		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
-	}
-	if len(columns) == 0 {
-		return nil, fmt.Errorf("columns cannot be empty")
-	}
-	batch := &batch{
-		warehouse: warehouse,
-		ctx:       ctx,
-		columns:   slices.Clone(columns),
-		buf:       strings.Builder{},
-	}
-	batch.buf.WriteString("INSERT INTO ")
-	batch.buf.WriteString(table)
-	batch.buf.WriteString(` ("`)
-	for i, column := range columns {
-		if i > 0 {
-			batch.buf.WriteString(`,"`)
-		}
-		if !warehouses.IsValidIdentifier(column) {
-			return nil, fmt.Errorf("column name %q is not a valid identifier", column)
-		}
-		batch.buf.WriteString(column)
-		batch.buf.WriteByte('"')
-	}
-	batch.buf.WriteString(") VALUES ")
-	return batch, nil
 }
 
 // QueryRow executes a query that should return at most one row.
@@ -679,104 +643,6 @@ func (s *psSettings) options() *postgres.Options {
 		Password: s.Password,
 		Database: s.Database,
 	}
-}
-
-// batch implements the Batch interface.
-type batch struct {
-	warehouse *PostgreSQL
-	ctx       context.Context
-	columns   []string
-	buf       strings.Builder
-	appended  bool
-	err       error
-}
-
-// Abort aborts the execution of the batch insert.
-func (batch *batch) Abort() error {
-	if batch.err != nil {
-		return batch.err
-	}
-	batch.err = errors.New("batch execution aborted")
-	return nil
-}
-
-// Append appends the values of a row to batch.
-func (batch *batch) Append(v ...any) error {
-	if batch.err != nil {
-		return batch.err
-	}
-	if len(v) != len(batch.columns) {
-		return fmt.Errorf("cannot append values: expected %d values, got %d", len(batch.columns), len(v))
-	}
-	if batch.appended {
-		batch.buf.WriteString(",(")
-	} else {
-		batch.buf.WriteString("(")
-		batch.appended = true
-	}
-	for i, value := range v {
-		if i > 0 {
-			batch.buf.WriteByte(',')
-		}
-		quoteValue(&batch.buf, value)
-	}
-	batch.buf.WriteString(")")
-	return nil
-}
-
-// AppendStruct appends the values of a row, read from the fields of the struct
-// v, to batch. It returns an error if v is not a struct or pointer to a struct.
-func (batch *batch) AppendStruct(v any) error {
-	if batch.err != nil {
-		return batch.err
-	}
-	if batch.appended {
-		batch.buf.WriteString(",(")
-	} else {
-		batch.buf.WriteString("(")
-		batch.appended = true
-	}
-	rv := reflect.Indirect(reflect.ValueOf(v))
-	if rv.Kind() != reflect.Struct {
-		return errors.New("v is not a struct or pointer to a struct")
-	}
-	rt := rv.Type()
-	indexOf, err := warehouses.ColumnsIndex(rt)
-	if err != nil {
-		return err
-	}
-	for i, name := range batch.columns {
-		if i > 0 {
-			batch.buf.WriteByte(',')
-		}
-		index, ok := indexOf[name]
-		if !ok {
-			batch.err = fmt.Errorf("cannot append struct: field for column %q does not exist", name)
-			return batch.err
-		}
-		value := rv.FieldByIndex(index)
-		quoteValue(&batch.buf, value.Interface())
-	}
-	batch.buf.WriteString(")")
-	return nil
-}
-
-// Send sends the batch to the data warehouse.
-func (batch *batch) Send() error {
-	if batch.err != nil {
-		return batch.err
-	}
-	db, err := batch.warehouse.connection()
-	if err != nil {
-		return err
-	}
-	_, err = db.Exec(batch.ctx, batch.buf.String())
-	if err != nil {
-		batch.err = warehouses.WrapError(err)
-		return batch.err
-	}
-	batch.err = errors.New("the Send method has already been called")
-	return nil
 }
 
 // copyForDeleteFrom implements the pgx.CopyFromSource interface.

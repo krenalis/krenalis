@@ -16,7 +16,6 @@ import (
 	"log"
 	"net"
 	"net/netip"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -28,7 +27,6 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
-	"golang.org/x/exp/slices"
 )
 
 //go:embed destinations_users.sql
@@ -38,7 +36,6 @@ var createDestinationUsersTable string
 var createEventsTable string
 
 var _ warehouses.Warehouse = &ClickHouse{}
-var _ warehouses.Batch = &batch{}
 
 type ClickHouse struct {
 	mu       sync.Mutex // for the conn and closed fields
@@ -140,42 +137,6 @@ func (warehouse *ClickHouse) Ping(ctx context.Context) error {
 		return err
 	}
 	return conn.Ping(ctx)
-}
-
-// PrepareBatch creates a prepared batch statement for inserting rows in
-// batch and returns it. table specifies the table in which the rows will be
-// inserted, and columns specifies the columns.
-func (warehouse *ClickHouse) PrepareBatch(ctx context.Context, table string, columns []string) (warehouses.Batch, error) {
-	conn, err := warehouse.connection()
-	if err != nil {
-		return nil, err
-	}
-	if !warehouses.IsValidIdentifier(table) {
-		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
-	}
-	if len(columns) == 0 {
-		return nil, fmt.Errorf("columns cannot be empty")
-	}
-	var b strings.Builder
-	b.WriteString("INSERT INTO `")
-	b.WriteString(table)
-	b.WriteString("` (`")
-	for i, column := range columns {
-		if i > 0 {
-			b.WriteString("`,`")
-		}
-		if !warehouses.IsValidIdentifier(column) {
-			return nil, fmt.Errorf("column name %q is not a valid identifier", column)
-		}
-		b.WriteString(column)
-	}
-	b.WriteString("`) VALUES ")
-	batch := &batch{columns: slices.Clone(columns)}
-	batch.batch, err = conn.PrepareBatch(ctx, b.String())
-	if err != nil {
-		return nil, err
-	}
-	return batch, nil
 }
 
 // SetDestinationUser sets the destination user relative to the action, with the
@@ -357,83 +318,6 @@ func (s *chSettings) options() *clickhouse.Options {
 			Password: s.Password,
 		},
 	}
-}
-
-// batch implements the Batch interface.
-type batch struct {
-	warehouse *ClickHouse
-	columns   []string
-	batch     chDriver.Batch
-	err       error
-}
-
-// Abort aborts the execution of the batch insert.
-func (batch *batch) Abort() error {
-	if batch.err != nil {
-		return batch.err
-	}
-	err := batch.batch.Abort()
-	if err != nil {
-		batch.err = warehouses.WrapError(err)
-		return batch.err
-	}
-	batch.err = errors.New("batch execution aborted")
-	return nil
-}
-
-// Append appends the values of a row to batch.
-func (batch *batch) Append(v ...any) error {
-	if batch.err != nil {
-		return batch.err
-	}
-	if err := batch.batch.Append(v...); err != nil {
-		batch.err = warehouses.WrapError(err)
-	}
-	return batch.err
-}
-
-// AppendStruct appends the values of a row, read from the fields of the struct
-// v, to batch. It returns an error if v is not a struct or pointer to a struct.
-func (batch *batch) AppendStruct(v any) error {
-	if batch.err != nil {
-		return batch.err
-	}
-	rv := reflect.Indirect(reflect.ValueOf(v))
-	if rv.Kind() != reflect.Struct {
-		return errors.New("v is not a struct or pointer to a struct")
-	}
-	rt := rv.Type()
-	indexOf, err := warehouses.ColumnsIndex(rt)
-	if err != nil {
-		return err
-	}
-	values := make([]any, len(batch.columns))
-	for i, name := range batch.columns {
-		index, ok := indexOf[name]
-		if !ok {
-			batch.err = fmt.Errorf("cannot append struct: field for column %q does not exist", name)
-			return batch.err
-		}
-		value := rv.FieldByIndex(index)
-		values[i] = value.Interface()
-	}
-	if err := batch.batch.Append(values...); err != nil {
-		batch.err = warehouses.WrapError(err)
-	}
-	return batch.err
-}
-
-// Send sends the batch to the data warehouse.
-func (batch *batch) Send() error {
-	if batch.err != nil {
-		return batch.err
-	}
-	if err := batch.batch.Send(); err != nil {
-		batch.err = warehouses.WrapError(err)
-		return batch.err
-	}
-	batch.err = errors.New("the Send method has already been called")
-	return nil
 }
 
 // quoteValue quotes s as a string and writes it into b.

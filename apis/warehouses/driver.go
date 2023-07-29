@@ -55,11 +55,6 @@ type Warehouse interface {
 	// necessary, establishes a new connection.
 	Ping(ctx context.Context) error
 
-	// PrepareBatch creates a prepared batch statement for inserting rows in
-	// batch and returns it. table specifies the table in which the rows will be
-	// inserted, and columns specifies the columns.
-	PrepareBatch(ctx context.Context, table string, columns []string) (Batch, error)
-
 	// SetDestinationUser sets the destination user relative to the action, with
 	// the given external user ID and external property.
 	SetDestinationUser(ctx context.Context, connection int, externalUserID, externalProperty string) error
@@ -83,25 +78,6 @@ type Warehouse interface {
 	// If a query to the warehouse fails, it returns an Error value.
 	// If an argument is not valid, it panics.
 	Select(ctx context.Context, table string, columns []types.Property, where Where, order types.Property, first, limit int) ([][]any, error)
-}
-
-// Batch is implemented by values returned by PrepareBatch.
-type Batch interface {
-
-	// Abort aborts the batch.
-	Abort() error
-
-	// Append appends the values of a row to batch.
-	// It must not retain the values in v.
-	Append(v ...interface{}) error
-
-	// AppendStruct appends the values of a row, read from the fields of the struct
-	// v, to batch. It returns an error if v is not a struct.
-	// It must not retain the values in v.
-	AppendStruct(v interface{}) error
-
-	// Send sends the batch to the data warehouse.
-	Send() error
 }
 
 // Error represents an error with a data warehouse. It could be for example an
