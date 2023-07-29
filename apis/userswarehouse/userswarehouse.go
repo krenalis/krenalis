@@ -324,7 +324,7 @@ func updateGR(ctx context.Context, ws *state.Workspace, index *index.Index, gid 
 func deleteGR(ctx context.Context, ws *state.Workspace, index *index.Index, gid int) error {
 	telemetry.IncrementCounter(ctx, "deleteGR", 1)
 	// Remove the Golden Record from the data warehouse.
-	_, err := ws.Warehouse.Query(ctx, "DELETE FROM `users` WHERE `id` = ?", gid)
+	_, err := ws.Warehouse.Exec(ctx, "DELETE FROM `users` WHERE `id` = ?", gid)
 	if err != nil {
 		return err
 	}
