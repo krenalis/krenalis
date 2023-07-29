@@ -18,6 +18,13 @@ import (
 	"chichi/connector/types"
 )
 
+// MergeTable represents a table in which rows will be merged.
+type MergeTable struct {
+	Name        string           // Name of the table
+	Columns     []types.Property // Columns to merge
+	PrimaryKeys []string         // Names of the primary keys
+}
+
 // Warehouse is the interface implemented by data warehouses.
 type Warehouse interface {
 
@@ -36,6 +43,13 @@ type Warehouse interface {
 
 	// Init initializes the data warehouse by creating the supporting tables.
 	Init(ctx context.Context) error
+
+	// Merge performs a table merge operation, handling row updates, inserts, and
+	// deletions. table specifies the target table for the merge operation, rows
+	// contains the rows to insert or update in the table, and deleted contains the
+	// key values of rows to delete, if they exist.
+	// rows or deleted can be empty but not both.
+	Merge(ctx context.Context, table MergeTable, rows [][]any, deleted []any) error
 
 	// Ping checks whether the connection to the data warehouse is active and, if
 	// necessary, establishes a new connection.

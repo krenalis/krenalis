@@ -123,6 +123,15 @@ func (warehouse *ClickHouse) Init(ctx context.Context) error {
 	return warehouses.WrapError(err)
 }
 
+// Merge performs a table merge operation, handling row updates, inserts, and
+// deletions. table specifies the target table for the merge operation, rows
+// contains the rows to insert or update in the table, and deleted contains the
+// key values of rows to delete, if they exist.
+// rows or deleted can be empty but not both.
+func (warehouse *ClickHouse) Merge(ctx context.Context, table warehouses.MergeTable, rows [][]any, deleted []any) error {
+	return errors.New("not implemented yet")
+}
+
 // Ping checks whether the connection to the data warehouse is active and, if
 // necessary, establishes a new connection.
 func (warehouse *ClickHouse) Ping(ctx context.Context) error {

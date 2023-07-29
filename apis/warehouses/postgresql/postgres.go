@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/netip"
 	"reflect"
 	"strconv"
@@ -27,6 +28,7 @@ import (
 	"chichi/connector/types"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/exp/slices"
 )
 
@@ -166,6 +168,131 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 	}
 	_, err = conn.Exec(ctx, createEventsTable)
 	return warehouses.WrapError(err)
+}
+
+// Merge performs a table merge operation, handling row updates, inserts, and
+// deletions. table specifies the target table for the merge operation, rows
+// contains the rows to insert or update in the table, and deleted contains the
+// key values of rows to delete, if they exist.
+// rows or deleted can be empty but not both.
+func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTable, rows [][]any, deleted []any) error {
+
+	var b strings.Builder
+
+	// Create the temporary table.
+	tempTableName := "temp_table_" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	b.WriteString(`CREATE UNLOGGED TABLE "`)
+	b.WriteString(tempTableName)
+	b.WriteString("\" AS\n  SELECT ")
+	for _, c := range table.Columns {
+		b.WriteByte('"')
+		b.WriteString(c.Name)
+		b.WriteString(`",`)
+	}
+	b.WriteString(`false AS "$deleted" FROM "`)
+	b.WriteString(table.Name)
+	b.WriteString("\"\nWITH NO DATA")
+	_, err := warehouse.db.Exec(ctx, b.String())
+	if err != nil {
+		return warehouses.WrapError(err)
+	}
+	defer func() {
+		_, err := warehouse.db.Exec(ctx, `DROP TABLE "`+tempTableName+`"`)
+		if err != nil {
+			log.Printf("cannot drop temporary table %q from data warehouse: %s", tempTableName, err)
+		}
+	}()
+
+	// Copy the rows into the temporary table.
+	if len(rows) > 0 {
+		columnNames := make([]string, len(table.Columns))
+		for i, c := range table.Columns {
+			columnNames[i] = c.Name
+		}
+		_, err = warehouse.db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, postgres.CopyFromRows(rows))
+		if err != nil {
+			return warehouses.WrapError(err)
+		}
+	}
+
+	// Copy the rows to delete into the temporary table.
+	if len(deleted) > 0 {
+		columnNames := make([]string, len(table.PrimaryKeys)+1)
+		copy(columnNames, table.PrimaryKeys)
+		columnNames[len(columnNames)-1] = "$deleted"
+		rowSrc := newCopyForDeleteFrom(len(table.PrimaryKeys), deleted)
+		_, err = warehouse.db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, rowSrc)
+		if err != nil {
+			return warehouses.WrapError(err)
+		}
+	}
+
+	// Merge the temporary table's rows with the destination table's rows.
+	b.Reset()
+	b.WriteString(`MERGE INTO "`)
+	b.WriteString(table.Name)
+	b.WriteString("\" d\nUSING \"")
+	b.WriteString(tempTableName)
+	b.WriteString("\" s\nON ")
+	for i, key := range table.PrimaryKeys {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(`d."`)
+		b.WriteString(key)
+		b.WriteString(`" = s."`)
+		b.WriteString(key)
+		b.WriteByte('"')
+	}
+	if len(rows) > 0 {
+		b.WriteString("\nWHEN MATCHED AND s.\"$deleted\" IS NULL THEN\n  UPDATE SET ")
+		i := 0
+	Set:
+		for _, c := range table.Columns {
+			for _, key := range table.PrimaryKeys {
+				if c.Name == key {
+					continue Set
+				}
+			}
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteByte('"')
+			b.WriteString(c.Name)
+			b.WriteString(`" = s."`)
+			b.WriteString(c.Name)
+			b.WriteByte('"')
+			i++
+		}
+		b.WriteString("\nWHEN NOT MATCHED AND s.\"$deleted\" IS NULL THEN\n  INSERT (")
+		for i, c := range table.Columns {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteByte('"')
+			b.WriteString(c.Name)
+			b.WriteByte('"')
+		}
+		b.WriteString(")\n  VALUES (")
+		for i, c := range table.Columns {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteString(`s."`)
+			b.WriteString(c.Name)
+			b.WriteByte('"')
+		}
+		b.WriteString(`)`)
+	}
+	if len(deleted) > 0 {
+		b.WriteString("\nWHEN MATCHED THEN\n  DELETE")
+	}
+	_, err = warehouse.db.Exec(ctx, b.String())
+	if err != nil {
+		return warehouses.WrapError(err)
+	}
+
+	return nil
 }
 
 // Ping checks whether the connection to the data warehouse is active and, if
@@ -658,6 +785,41 @@ func (batch *batch) Send() error {
 		return batch.err
 	}
 	batch.err = errors.New("the Send method has already been called")
+	return nil
+}
+
+// copyForDeleteFrom implements the pgx.CopyFromSource interface.
+type copyForDeleteFrom struct {
+	values []any
+	row    []any
+}
+
+// newCopyForDeleteFrom returns a pgx.CopyFromSource implementation used to
+// delete rows from a table. Rows are read from deleted, where each row contains
+// numColumns consecutive elements from deleted and true at the end.
+func newCopyForDeleteFrom(numColumns int, deleted []any) pgx.CopyFromSource {
+	c := &copyForDeleteFrom{
+		values: deleted,
+		row:    make([]any, numColumns+1),
+	}
+	c.row[numColumns] = true
+	return c
+}
+
+func (c *copyForDeleteFrom) Next() bool {
+	return len(c.values) > 0
+}
+
+func (c *copyForDeleteFrom) Values() ([]any, error) {
+	numKeys := len(c.row) - 1
+	for i := 0; i < numKeys; i++ {
+		c.row[i] = c.values[i]
+	}
+	c.values = c.values[numKeys:]
+	return c.row, nil
+}
+
+func (c *copyForDeleteFrom) Err() error {
 	return nil
 }
 
