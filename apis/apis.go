@@ -24,14 +24,12 @@ import (
 	"chichi/connector/types"
 	"chichi/telemetry"
 
-	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/exp/slices"
 )
 
 type APIs struct {
 	db             *postgres.DB
-	redis          *redis.Client
 	state          *state.State
 	http           *httpclient.HTTP
 	events         *events.Events
@@ -43,7 +41,6 @@ var hasBeenCalled bool
 
 type Config struct {
 	PostgreSQL PostgreSQLConfig
-	Redis      RedisConfig
 }
 
 type PostgreSQLConfig struct {
@@ -53,14 +50,6 @@ type PostgreSQLConfig struct {
 	Password string
 	Database string
 	Schema   string
-}
-
-type RedisConfig struct {
-	Network  string
-	Addr     string
-	Username string
-	Password string
-	DB       int
 }
 
 type ExpressionToBeExtracted struct {
@@ -91,16 +80,7 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 
-	// Instantiate a new client for Redis.
-	redisClient := redis.NewClient(&redis.Options{
-		Network:  conf.Redis.Network,
-		Addr:     conf.Redis.Addr,
-		Username: conf.Redis.Username,
-		Password: conf.Redis.Password,
-		DB:       conf.Redis.DB,
-	})
-
-	apis := &APIs{db: db, redis: redisClient}
+	apis := &APIs{db: db}
 
 	// Set the HTTP client.
 	apis.http = httpclient.New(db, apis.state, http.DefaultTransport)
@@ -122,7 +102,7 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 		return nil, err
 	}
 
-	apis.events, err = events.New(ctx, db, redisClient, apis.state, apis.http)
+	apis.events, err = events.New(ctx, db, apis.state, apis.http)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +125,6 @@ func (apis *APIs) Account(ctx context.Context, id int) (*Account, error) {
 	}
 	account := Account{
 		db:            apis.db,
-		redis:         apis.redis,
 		eventObserver: apis.events.Observer(),
 		state:         apis.state,
 		http:          apis.http,
@@ -328,7 +307,7 @@ func (apis *APIs) CountAccounts(ctx context.Context) int {
 // onElectLeader is called when a leader is elected.
 func (apis *APIs) onElectLeader(n state.ElectLeaderNotification) {
 	if apis.state.IsLeader() {
-		apis.scheduler = newScheduler(apis.db, apis.redis, apis.state, apis.http)
+		apis.scheduler = newScheduler(apis.db, apis.state, apis.http)
 		return
 	}
 	if apis.scheduler != nil {
@@ -343,8 +322,8 @@ func (apis *APIs) onExecuteAction(n state.ExecuteActionNotification) {
 		return
 	}
 	action, _ := apis.state.Action(n.Action)
-	connection := &Connection{db: apis.db, redis: apis.redis, connection: action.Connection(), http: apis.http}
-	a := &Action{db: apis.db, redis: apis.redis, action: action, connection: connection}
+	connection := &Connection{db: apis.db, connection: action.Connection(), http: apis.http}
+	a := &Action{db: apis.db, action: action, connection: connection}
 	go a.exec()
 }
 
@@ -384,7 +363,6 @@ func (apis *APIs) expressionsProperties(expressions []ExpressionToBeExtracted, s
 // Workspace represents a workspace.
 type Workspace struct {
 	db                   *postgres.DB
-	redis                *redis.Client
 	state                *state.State
 	http                 *httpclient.HTTP
 	eventObserver        *events.Observer

@@ -22,17 +22,16 @@ import (
 	"chichi/apis/warehouses"
 	"chichi/telemetry"
 
-	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/slices"
 )
 
 // SetUser sets the user U into the data warehouse by resolving its identity.
-func SetUser(ctx context.Context, redis *redis.Client, connection *state.Connection, action *state.Action, U map[string]any) error {
+func SetUser(ctx context.Context, connection *state.Connection, action *state.Action, U map[string]any) error {
 
 	ws := connection.Workspace()
 
 	// Open the index on Redis.
-	index := index.Open(redis)
+	index := index.Open(ws.Redis)
 
 	// Instantiate a sorted set of identifiers (including anonymous identifiers)
 	// for this action.

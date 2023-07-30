@@ -79,12 +79,6 @@ func buildChichi(ctx context.Context, setts *server.Settings) error {
 	conf.WriteString("Password=" + setts.PostgreSQL.Password + "\n")
 	conf.WriteString("Database=" + setts.PostgreSQL.Database + "\n")
 	conf.WriteString("Schema=" + setts.PostgreSQL.Schema + "\n")
-	conf.WriteString("[Redis]\n")
-	conf.WriteString("Network=" + setts.Redis.Network + "\n")
-	conf.WriteString("Addr=" + setts.Redis.Addr + "\n")
-	conf.WriteString("Username=" + setts.Redis.Username + "\n")
-	conf.WriteString("Password=" + setts.Redis.Password + "\n")
-	conf.WriteString("DB=" + strconv.Itoa(setts.Redis.DB) + "\n")
 	appIniPath := filepath.Join(chichiDir, "app.ini")
 	err = os.WriteFile(appIniPath, conf.Bytes(), 0644)
 	if err != nil {

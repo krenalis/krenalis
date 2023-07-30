@@ -103,7 +103,7 @@ func (this *Action) importFromFile(ctx context.Context) error {
 		}
 
 		// Set the user into the data warehouse.
-		err = userswarehouse.SetUser(ctx, this.redis, connection, this.action, mappedUser)
+		err = userswarehouse.SetUser(ctx, connection, this.action, mappedUser)
 		if err != nil {
 			return actionExecutionError{err}
 		}

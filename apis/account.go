@@ -20,8 +20,6 @@ import (
 	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-
-	"github.com/redis/go-redis/v9"
 )
 
 var AuthenticationFailed errors.Code = "AuthenticationFailed"
@@ -31,7 +29,6 @@ var emailRegExp = regexp.MustCompile(`^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.
 // Account represents an account.
 type Account struct {
 	db            *postgres.DB
-	redis         *redis.Client
 	eventObserver *events.Observer
 	state         *state.State
 	http          *httpclient.HTTP
@@ -42,20 +39,26 @@ type Account struct {
 	InternalIPs   []string
 }
 
+// Redis represents Redis database settings. It is used with AddWorkspace.
+type Redis struct {
+	Settings []byte
+}
+
 // Warehouse represents data warehouse settings. It is used with AddWorkspace.
 type Warehouse struct {
 	Type     WarehouseType
 	Settings []byte
 }
 
-// AddWorkspace adds a workspace with the given name and data warehouse, if not
-// nil, and returns the identifier. name must be between 1 and 100 runes long.
+// AddWorkspace adds a workspace with the given name, redis database, and data
+// warehouse, if not nil, and returns the identifier. name must be between 1 and
+// 100 runes long.
 //
 // It returns an errors.NotFoundError error if the account does not exist anymore.
 // It returns an errors.UnprocessableError error with code
 //   - ConnectionFailed, if the connection to the data warehouse fails.
 //   - InvalidSettings, if the warehouse settings are not valid.
-func (this *Account) AddWorkspace(name string, warehouse *Warehouse) (int, error) {
+func (this *Account) AddWorkspace(name string, redis *Redis, warehouse *Warehouse) (int, error) {
 
 	if name == "" || utf8.RuneCountInString(name) > 100 {
 		return 0, errors.BadRequest("name %q is not valid", name)
@@ -75,6 +78,9 @@ func (this *Account) AddWorkspace(name string, warehouse *Warehouse) (int, error
 	n := state.AddWorkspaceNotification{
 		Account: this.account.ID,
 		Name:    name,
+	}
+	if redis != nil {
+		n.Redis.Settings = redis.Settings
 	}
 	if warehouse != nil {
 		n.Warehouse.Type = state.WarehouseType(warehouse.Type)
@@ -126,7 +132,6 @@ func (this *Account) Workspace(id int) (*Workspace, error) {
 	}
 	workspace := Workspace{
 		db:                   this.db,
-		redis:                this.redis,
 		state:                this.state,
 		http:                 this.http,
 		eventObserver:        this.eventObserver,
@@ -146,7 +151,6 @@ func (this *Account) Workspaces() []*Workspace {
 	for i, ws := range workspaces {
 		workspace := Workspace{
 			db:                   this.db,
-			redis:                this.redis,
 			state:                this.state,
 			http:                 this.http,
 			eventObserver:        this.eventObserver,

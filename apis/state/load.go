@@ -180,7 +180,7 @@ func (state *State) Load() error {
 
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
-		err = state.db.QueryScan(ctx, "SELECT id, account, name, warehouse_type, warehouse_settings,\n"+
+		err = state.db.QueryScan(ctx, "SELECT id, account, name, redis_settings, warehouse_type, warehouse_settings,\n"+
 			"anonymous_identifiers_priority, anonymous_identifiers_mapping, privacy_region, schemas\n"+
 			"FROM workspaces",
 			func(rows *postgres.Rows) error {
@@ -191,13 +191,19 @@ func (state *State) Load() error {
 				}
 				var accountID int
 				var warehouseType *WarehouseType
-				var warehouseSettings, mapping, schemas []byte
+				var redisSettings, warehouseSettings, mapping, schemas []byte
 				for rows.Next() {
-					if err := rows.Scan(&ws.ID, &accountID, &ws.Name, &warehouseType, &warehouseSettings,
+					if err := rows.Scan(&ws.ID, &accountID, &ws.Name, &redisSettings, &warehouseType, &warehouseSettings,
 						&ws.AnonymousIdentifiers.Priority, &mapping, &ws.PrivacyRegion, &schemas); err != nil {
 						return err
 					}
 					ws.account = state.accounts[accountID]
+					if len(redisSettings) > 0 {
+						ws.Redis, err = openRedis(redisSettings)
+						if err != nil {
+							log.Fatalf("cannot open Redis database of workspace %d: %s", ws.ID, err)
+						}
+					}
 					if warehouseType != nil {
 						ws.Warehouse, err = openWarehouse(*warehouseType, warehouseSettings)
 						if err != nil {

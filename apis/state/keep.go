@@ -24,6 +24,7 @@ import (
 	"chichi/connector/types"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 // logNotifications controls the logging of notifications on the log.
@@ -131,6 +132,8 @@ func (state *State) keepState() {
 			state.setConnectionStorage(n)
 		case "SetConnectionStatus":
 			state.setConnectionStatus(n)
+		case "SetRedisSettings":
+			state.setRedisSettings(n)
 		case "SetResource":
 			state.setResource(n)
 		case "SetWarehouseSettings":
@@ -513,9 +516,12 @@ func (state *State) executeAction(n postgres.Notification) {
 // AddWorkspaceNotification is the notification event sent when a workspace is
 // added.
 type AddWorkspaceNotification struct {
-	ID        int
-	Account   int
-	Name      string
+	ID      int
+	Account int
+	Name    string
+	Redis   struct {
+		Settings json.RawMessage `json:",omitempty"`
+	}
 	Warehouse struct {
 		Type     WarehouseType
 		Settings json.RawMessage `json:",omitempty"`
@@ -536,6 +542,13 @@ func (state *State) addWorkspace(n postgres.Notification) {
 		connections: map[int]*Connection{},
 		ID:          e.ID,
 		account:     account,
+	}
+	if e.Redis.Settings != nil {
+		redis, err := openRedis(e.Redis.Settings)
+		if err != nil {
+			log.Printf("[error] cannot open Redis database of workspace %d: %s", e.ID, err)
+		}
+		ws.Redis = redis
 	}
 	if e.Warehouse.Settings != nil {
 		warehouse, err := openWarehouse(e.Warehouse.Type, e.Warehouse.Settings)
@@ -975,6 +988,45 @@ func (state *State) setConnectionStorage(n postgres.Notification) {
 	})
 }
 
+// SetRedisSettingsNotification is the notification event sent when the settings
+// of a Redis database are changed.
+type SetRedisSettingsNotification struct {
+	Workspace int
+	Settings  json.RawMessage `json:",omitempty"`
+}
+
+// setRedisSettings sets the settings of a Redis database.
+func (state *State) setRedisSettings(n postgres.Notification) {
+	e := SetRedisSettingsNotification{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	disconnected := state.workspaces[e.Workspace].Redis
+	if e.Settings == nil {
+		state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+			w.Redis = nil
+		})
+	} else {
+		var err error
+		state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+			w.Redis, err = openRedis(e.Settings)
+		})
+		if err != nil {
+			log.Printf("[error] cannot open Redis database of workspace %d: %s", e.Workspace, err)
+		}
+	}
+	// Close the disconnected Redis database.
+	if disconnected != nil {
+		go func() {
+			err := disconnected.Close()
+			if err != nil {
+				// TODO(marco): write the error into a workspace specific log
+				log.Printf("[error] error occurred disconnecting the Redis database: %s", err)
+			}
+		}()
+	}
+}
+
 // SetResourceNotification is the notification event sent when a resource is
 // changed.
 type SetResourceNotification struct {
@@ -1119,6 +1171,32 @@ func openWarehouse(typ WarehouseType, settings []byte) (warehouses.Warehouse, er
 		return clickhouse.Open(settings)
 	}
 	return nil, fmt.Errorf("warehouse type %d is not valid", typ)
+}
+
+// openRedis opens a Redis database with the given settings.
+// It returns an error if settings are not valid.
+func openRedis(settings []byte) (*redis.Client, error) {
+	type RedisConfig struct {
+		Network  string
+		Addr     string
+		Username string
+		Password string
+		DB       int
+	}
+	var s RedisConfig
+	err := json.Unmarshal(settings, &s)
+	if err != nil {
+		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
+	}
+	// Instantiate a new client for Redis.
+	client := redis.NewClient(&redis.Options{
+		Network:  s.Network,
+		Addr:     s.Addr,
+		Username: s.Username,
+		Password: s.Password,
+		DB:       s.DB,
+	})
+	return client, nil
 }
 
 // WarehouseType represents a data warehouse type.

@@ -187,13 +187,12 @@ type collector struct {
 
 // newCollector returns a new event collector. It receives HTTP requests from
 // mobile, server and website sources and sends them to the eventsLog.
-func newCollector(st *eventsState, eventLog *eventsLog, observer *Observer, redis *redis.Client, warehouse *warehouse) (*collector, error) {
+func newCollector(st *eventsState, eventLog *eventsLog, observer *Observer, warehouse *warehouse) (*collector, error) {
 	var collector = collector{
 		state:     st,
 		eventLog:  eventLog,
 		events:    make(chan *collectedEvent, 1000),
 		observer:  observer,
-		redis:     redis,
 		warehouse: warehouse,
 	}
 	var err error
@@ -261,7 +260,7 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 				return err
 			}
 			// Set the user into the data warehouse.
-			err = userswarehouse.SetUser(ctx, c.redis, source, action, mappedUser)
+			err = userswarehouse.SetUser(ctx, source, action, mappedUser)
 			if err != nil {
 				return err
 			}

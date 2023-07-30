@@ -21,6 +21,7 @@ import (
 	"chichi/connector/types"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/maps"
 )
 
@@ -243,6 +244,7 @@ func (account *Account) Workspaces() []*Workspace {
 // Workspace represents a workspace.
 type Workspace struct {
 	mu                   *sync.Mutex
+	Redis                *redis.Client
 	Warehouse            warehouses.Warehouse
 	Schemas              map[string]*types.Type
 	connections          map[int]*Connection

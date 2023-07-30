@@ -808,6 +808,20 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				respond(w, err)
 			})
 		})
+		router.Route("/connect-redis", func(router chi.Router) {
+			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				req := struct {
+					Settings json.RawMessage
+				}{}
+				err := json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, errors.BadRequest("invalid JSON"))
+					return
+				}
+				err = workspace.ConnectRedis(req.Settings)
+				respond(w, err)
+			})
+		})
 		router.Route("/connect-warehouse", func(router chi.Router) {
 			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 				req := struct {
@@ -820,6 +834,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				err = workspace.ConnectWarehouse(req.Type, req.Settings)
+				respond(w, err)
+			})
+		})
+		router.Route("/disconnect-redis", func(router chi.Router) {
+			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				err = workspace.DisconnectRedis()
 				respond(w, err)
 			})
 		})

@@ -17,7 +17,6 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 
-	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/slices"
 )
 
@@ -53,7 +52,7 @@ type scheduler struct {
 //
 // It is called during an elect leader notification if the current node is
 // elected as leader.
-func newScheduler(db *postgres.DB, redis *redis.Client, st *state.State, http *httpclient.HTTP) *scheduler {
+func newScheduler(db *postgres.DB, st *state.State, http *httpclient.HTTP) *scheduler {
 
 	sc := &scheduler{
 		db:      db,
@@ -97,8 +96,8 @@ func newScheduler(db *postgres.DB, redis *redis.Client, st *state.State, http *h
 					sc.mu.Unlock()
 					for _, action := range actions {
 						if sc.toExecute(action) {
-							c := &Connection{db: db, redis: redis, connection: action.Connection(), http: http}
-							a := &Action{db: db, redis: redis, action: action, connection: c}
+							c := &Connection{db: db, connection: action.Connection(), http: http}
+							a := &Action{db: db, action: action, connection: c}
 							go func() {
 								err := a.addExecution(false)
 								if err != nil {

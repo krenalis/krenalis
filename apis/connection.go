@@ -36,7 +36,6 @@ import (
 	"chichi/telemetry"
 
 	"github.com/jxskiss/base62"
-	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/slices"
 )
 
@@ -73,7 +72,6 @@ var (
 // Connection represents a connection.
 type Connection struct {
 	db           *postgres.DB
-	redis        *redis.Client
 	connection   *state.Connection
 	http         *httpclient.HTTP
 	ID           int
@@ -105,7 +103,7 @@ func (this *Connection) Action(ctx context.Context, id int) (*Action, error) {
 		return nil, errors.NotFound("action %d does not exist", id)
 	}
 	var action Action
-	action.fromState(this.db, this.redis, this.http, a)
+	action.fromState(this.db, this.http, a)
 	return &action, nil
 }
 

@@ -94,11 +94,6 @@ func InitAndLaunch(t *testing.T) *Chichi {
 	setts.PostgreSQL.Password = testsSettings.Database.Password
 	setts.PostgreSQL.Database = testsSettings.Database.Database
 	setts.PostgreSQL.Schema = testsSettings.Database.Schema
-	setts.Redis.Network = testsSettings.Redis.Network
-	setts.Redis.Addr = testsSettings.Redis.Addr
-	setts.Redis.Username = testsSettings.Redis.Username
-	setts.Redis.Password = testsSettings.Redis.Password
-	setts.Redis.DB = testsSettings.Redis.DB
 
 	// Launch Chichi.
 	ctxWithCancel, cancel := context.WithCancel(ctx)
@@ -134,6 +129,12 @@ func InitAndLaunch(t *testing.T) *Chichi {
 	// Wait some time for Chichi to load.
 	time.Sleep(1 * time.Second)
 
+	// Connect the Redis database.
+	err = c.connectRedis(testsSettings.Redis)
+	if err != nil {
+		t.Fatalf("cannot connect Redis database: %s", err)
+	}
+
 	// Connect the data warehouse.
 	err = c.connectWarehouse(testsSettings.WarehouseType, testsSettings.Warehouse)
 	if err != nil {
@@ -162,6 +163,17 @@ func InitAndLaunch(t *testing.T) *Chichi {
 func (c *Chichi) Stop() {
 	c.cancel()
 	<-c.done
+}
+
+func (c *Chichi) connectRedis(settings *RedisSettings) error {
+	body := map[string]any{
+		"Settings": settings,
+	}
+	_, err := c.call("POST", "/api/workspace/connect-redis", body)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Chichi) connectWarehouse(whType string, whSettings *DBSettings) error {

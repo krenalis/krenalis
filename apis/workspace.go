@@ -428,7 +428,6 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 
 	connection := Connection{
 		db:           this.db,
-		redis:        this.redis,
 		connection:   c,
 		http:         this.http,
 		ID:           c.ID,
@@ -446,7 +445,7 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 		connection.Storage = s.ID
 	}
 	// Set the action types.
-	ts, err := (&Connection{db: this.db, redis: this.redis, connection: c, http: this.http}).actionTypes()
+	ts, err := (&Connection{db: this.db, connection: c, http: this.http}).actionTypes()
 	if err != nil {
 		return nil, err
 	}
@@ -456,7 +455,7 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 	a := make([]Action, len(actions))
 	connection.Actions = &a
 	for i, a := range actions {
-		(*connection.Actions)[i].fromState(this.db, this.redis, this.http, a)
+		(*connection.Actions)[i].fromState(this.db, this.http, a)
 	}
 	return &connection, nil
 }
@@ -469,7 +468,6 @@ func (this *Workspace) Connections() []*Connection {
 		conn := c.Connector()
 		connection := Connection{
 			db:           this.db,
-			redis:        this.redis,
 			connection:   c,
 			http:         this.http,
 			ID:           c.ID,
@@ -494,8 +492,48 @@ func (this *Workspace) Connections() []*Connection {
 	return infos
 }
 
-// ConnectWarehouse connects a data warehouse, with the given settings, to the
-// workspace. It also creates the tables in the connected data warehouse.
+// ConnectRedis connects the workspace to a Redis database with the given
+// settings.
+//
+// It returns an errors.NotFoundError error, if the workspace does not exist
+// anymore, and it returns an errors.UnprocessableError error with code
+//   - AlreadyConnected, if the workspace is already connected to a Redis
+//     database.
+//   - InvalidSettings, if the settings are not valid.
+//   - ConnectionFailed, if the connection fails.
+func (this *Workspace) ConnectRedis(settings []byte) error {
+	ws := this.workspace
+	if ws.Redis != nil {
+		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a Redis database", ws.ID)
+	}
+	n := state.SetRedisSettingsNotification{
+		Workspace: ws.ID,
+		Settings:  settings,
+	}
+	ctx := context.Background()
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET redis_settings = $1 WHERE id = $2 AND redis_settings = ''",
+			string(n.Settings), n.Workspace)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			err = tx.QueryVoid(ctx, "SELECT FROM workspaces WHERE id = $1", n.Workspace)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					err = errors.NotFound("workspace %d does not exist", n.Workspace)
+				}
+				return err
+			}
+			return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a Redis database", ws.ID)
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
+}
+
+// ConnectWarehouse connects the workspace to a data warehouse, with the given
+// settings. It also creates the tables in the connected data warehouse.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore, and it returns an errors.UnprocessableError error with code
@@ -565,7 +603,43 @@ func (this *Workspace) Delete() error {
 	return err
 }
 
-// DisconnectWarehouse disconnects the data warehouse of the workspace.
+// DisconnectRedis disconnects the workspace from the Redis database.
+//
+// If the workspace does not exist anymore, it returns an errors.NotFoundError
+// error. If the workspace is not connected to a Redis database, it returns
+// an errors.UnprocessableError error with code NotConnected.
+func (this *Workspace) DisconnectRedis() error {
+	ws := this.workspace
+	if ws.Redis == nil {
+		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a Redis database", ws.ID)
+	}
+	n := state.SetRedisSettingsNotification{
+		Workspace: ws.ID,
+		Settings:  nil,
+	}
+	ctx := context.Background()
+	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET redis_settings = '' WHERE id = $1 AND redis_settings != ''",
+			n.Workspace)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			err = tx.QueryVoid(ctx, "SELECT FROM workspaces WHERE id = $1", n.Workspace)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					return errors.NotFound("workspace %d does not exist", n.Workspace)
+				}
+				return err
+			}
+			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a Redis database", n.Workspace)
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
+}
+
+// DisconnectWarehouse disconnects the workspace from the data warehouse.
 //
 // If the workspace does not exist anymore, it returns an errors.NotFoundError
 // error. If the workspace is not connected to a data warehouse, it returns an
