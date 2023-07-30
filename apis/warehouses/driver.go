@@ -11,8 +11,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"reflect"
-	"sync"
 
 	"chichi/apis/postgres"
 	"chichi/connector/types"
@@ -180,33 +178,4 @@ func IsValidIdentifier(name string) bool {
 // IsValidSchemaName reports whether name is a valid schema name.
 func IsValidSchemaName(name string) bool {
 	return IsValidIdentifier(name)
-}
-
-// columnsIndexes contains the column indexes of the struct passed as argument
-// to AppendStruct of Batch.
-var columnsIndexes = sync.Map{}
-
-// ColumnsIndex returns a map from a column name to its index in the struct t.
-func ColumnsIndex(t reflect.Type) (map[string][]int, error) {
-	idx, ok := columnsIndexes.Load(t)
-	if ok {
-		return idx.(map[string][]int), nil
-	}
-	index := map[string][]int{}
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		if field.PkgPath != "" {
-			continue
-		}
-		column := field.Tag.Get("column")
-		if column == "" {
-			column = field.Name
-		}
-		if !IsValidIdentifier(column) {
-			return nil, fmt.Errorf("column name %q is not a valid identifier", column)
-		}
-		index[column] = field.Index
-	}
-	columnsIndexes.Store(t, index)
-	return index, nil
 }
