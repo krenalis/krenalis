@@ -537,11 +537,13 @@ func (state *State) addWorkspace(n postgres.Notification) {
 	}
 	account := state.accounts[e.Account]
 	ws := Workspace{
-		mu:          &sync.Mutex{},
-		Schemas:     map[string]*types.Type{},
-		connections: map[int]*Connection{},
-		ID:          e.ID,
-		account:     account,
+		mu:            &sync.Mutex{},
+		Schemas:       map[string]*types.Type{},
+		connections:   map[int]*Connection{},
+		ID:            e.ID,
+		account:       account,
+		Name:          e.Name,
+		PrivacyRegion: e.PrivacyRegion,
 	}
 	if e.Redis.Settings != nil {
 		redis, err := openRedis(e.Redis.Settings)
