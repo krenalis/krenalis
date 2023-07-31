@@ -29,7 +29,7 @@ const flattenSchema = (schema) => {
 
 	const flattenProperty = (property) => {
 		return {
-			value: '',
+			value: property.placeholder || '',
 			required: property.required,
 			type: property.type.name,
 			label: property.label,
