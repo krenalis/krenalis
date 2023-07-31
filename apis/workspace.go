@@ -21,14 +21,15 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/datastore"
+	"chichi/apis/datastore/warehouses"
+	"chichi/apis/datastore/warehouses/clickhouse"
+	"chichi/apis/datastore/warehouses/postgresql"
 	"chichi/apis/errors"
 	"chichi/apis/events"
 	"chichi/apis/mappings/mapexp"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/apis/warehouses"
-	"chichi/apis/warehouses/clickhouse"
-	"chichi/apis/warehouses/postgresql"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 
@@ -428,6 +429,7 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 
 	connection := Connection{
 		db:           this.db,
+		store:        this.store,
 		connection:   c,
 		http:         this.http,
 		ID:           c.ID,
@@ -445,7 +447,7 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 		connection.Storage = s.ID
 	}
 	// Set the action types.
-	ts, err := (&Connection{db: this.db, connection: c, http: this.http}).actionTypes()
+	ts, err := (&Connection{db: this.db, connection: c, store: this.store, http: this.http}).actionTypes()
 	if err != nil {
 		return nil, err
 	}
@@ -455,7 +457,7 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 	a := make([]Action, len(actions))
 	connection.Actions = &a
 	for i, a := range actions {
-		(*connection.Actions)[i].fromState(this.db, this.http, a)
+		(*connection.Actions)[i].fromState(this.db, this.store, this.http, a)
 	}
 	return &connection, nil
 }
@@ -468,6 +470,7 @@ func (this *Workspace) Connections() []*Connection {
 		conn := c.Connector()
 		connection := Connection{
 			db:           this.db,
+			store:        this.store,
 			connection:   c,
 			http:         this.http,
 			ID:           c.ID,
@@ -506,14 +509,17 @@ func (this *Workspace) ConnectRedis(settings []byte) error {
 	if ws.Redis != nil {
 		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a Redis database", ws.ID)
 	}
-	n := state.SetRedisSettingsNotification{
+	// TODO(marco): validate settings
+	n := state.SetRedisNotification{
 		Workspace: ws.ID,
-		Settings:  settings,
+		Redis: &state.Redis{
+			Settings: settings,
+		},
 	}
 	ctx := context.Background()
 	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET redis_settings = $1 WHERE id = $2 AND redis_settings = ''",
-			string(n.Settings), n.Workspace)
+			string(n.Redis.Settings), n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -532,19 +538,19 @@ func (this *Workspace) ConnectRedis(settings []byte) error {
 	return err
 }
 
-// ConnectWarehouse connects the workspace to a data warehouse, with the given
-// settings. It also creates the tables in the connected data warehouse.
+// ConnectWarehouse connects the workspace to a data store, with the given
+// settings. It also creates the tables in the connected data store.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore, and it returns an errors.UnprocessableError error with code
 //   - AlreadyConnected, if the workspace is already connected to a data
-//     warehouse.
+//     store.
 //   - InvalidSettings, if the settings are not valid.
 //   - ConnectionFailed, if the connection fails.
 func (this *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) error {
 	ws := this.workspace
 	if ws.Warehouse != nil {
-		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.ID)
+		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data store", ws.ID)
 	}
 	warehouse, err := openWarehouse(typ, settings)
 	if err != nil {
@@ -552,18 +558,20 @@ func (this *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) erro
 	}
 	err = warehouse.Ping(context.Background())
 	if err != nil {
-		return errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
+		return errors.Unprocessable(ConnectionFailed, "cannot connect to the data store: %w", err)
 	}
-	n := state.SetWarehouseSettingsNotification{
+	n := state.SetWarehouseNotification{
 		Workspace: ws.ID,
-		Type:      state.WarehouseType(typ),
-		Settings:  warehouse.Settings(),
+		Warehouse: &state.Warehouse{
+			Type:     state.WarehouseType(typ),
+			Settings: warehouse.Settings(),
+		},
 	}
 	ctx := context.Background()
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = $1, warehouse_settings = $2 WHERE id = $3"+
 			" AND warehouse_type IS NULL",
-			n.Type, string(n.Settings), n.Workspace)
+			n.Warehouse.Type, string(n.Warehouse.Settings), n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -575,7 +583,7 @@ func (this *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) erro
 				}
 				return err
 			}
-			return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.ID)
+			return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data store", ws.ID)
 		}
 		return tx.Notify(ctx, n)
 	})
@@ -613,9 +621,9 @@ func (this *Workspace) DisconnectRedis() error {
 	if ws.Redis == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a Redis database", ws.ID)
 	}
-	n := state.SetRedisSettingsNotification{
+	n := state.SetRedisNotification{
 		Workspace: ws.ID,
-		Settings:  nil,
+		Redis:     nil,
 	}
 	ctx := context.Background()
 	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
@@ -639,19 +647,19 @@ func (this *Workspace) DisconnectRedis() error {
 	return err
 }
 
-// DisconnectWarehouse disconnects the workspace from the data warehouse.
+// DisconnectWarehouse disconnects the workspace from the data store.
 //
 // If the workspace does not exist anymore, it returns an errors.NotFoundError
-// error. If the workspace is not connected to a data warehouse, it returns an
+// error. If the workspace is not connected to a data store, it returns an
 // errors.UnprocessableError error with code NotConnected.
 func (this *Workspace) DisconnectWarehouse() error {
 	ws := this.workspace
 	if ws.Warehouse == nil {
-		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
+		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", ws.ID)
 	}
-	n := state.SetWarehouseSettingsNotification{
+	n := state.SetWarehouseNotification{
 		Workspace: ws.ID,
-		Settings:  nil,
+		Warehouse: nil,
 	}
 	ctx := context.Background()
 	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
@@ -664,7 +672,7 @@ func (this *Workspace) DisconnectWarehouse() error {
 			return err
 		}
 		if typ == nil {
-			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", n.Workspace)
+			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", n.Workspace)
 		}
 		_, err = tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = NULL, warehouse_settings = '', schemas = '' WHERE id = $1", n.Workspace)
 		if err != nil {
@@ -675,18 +683,17 @@ func (this *Workspace) DisconnectWarehouse() error {
 	return err
 }
 
-// InitWarehouse initializes the data warehouse of the workspace by creating
-// the supporting tables.
+// InitWarehouse initializes the data warehouse of the workspace by creating the
+// supporting tables.
 //
 // If the workspace does not exist, it returns an errors.NotFoundError error.
 // It returns an errors.UnprocessableError error with code NotConnected, if the
 // workspace is not connected to a data warehouse.
 func (this *Workspace) InitWarehouse() error {
-	ws := this.workspace
-	if ws.Warehouse == nil {
-		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
+	if this.store == nil {
+		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
 	}
-	return ws.Warehouse.Init(context.Background())
+	return this.store.Init(context.Background())
 }
 
 // ListenedEvents returns the events listen to by the specified listener and
@@ -774,23 +781,22 @@ func (this *Workspace) OAuthToken(authorizationCode, redirectURI string, connect
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist,
 // and it returns an errors.UnprocessableError error with code
-//   - NotConnected, if the workspace is not connected to a data warehouse.
-//   - WarehouseFailed, if the connection to the data warehouse failed.
+//   - NotConnected, if the workspace is not connected to a data store.
+//   - WarehouseFailed, if the connection to the data store failed.
 //   - InvalidSchemaTable, if a table of a schema is not valid.
 func (this *Workspace) ReloadSchemas() error {
-	ws := this.workspace
-	if ws.Warehouse == nil {
-		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
+	if this.store == nil {
+		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", this.workspace.ID)
 	}
-	tables, err := ws.Warehouse.Tables(context.Background())
+	tables, err := this.store.Tables(context.Background())
 	if err != nil {
-		if err, ok := err.(*warehouses.Error); ok {
-			return errors.Unprocessable(WarehouseFailed, "data warehouse has returned an error: %w", err.Err)
+		if err, ok := err.(*datastore.Error); ok {
+			return errors.Unprocessable(WarehouseFailed, "data store has returned an error: %w", err.Err)
 		}
 		return err
 	}
 	n := state.SetWorkspaceSchemasNotification{
-		Workspace: ws.ID,
+		Workspace: this.workspace.ID,
 		Schemas:   map[string]*types.Type{},
 	}
 	for _, table := range tables {
@@ -823,8 +829,8 @@ func (this *Workspace) ReloadSchemas() error {
 				return errors.Unprocessable(InvalidSchemaTable, "column '%s.%s' must not be nullable", table.Name, column)
 			}
 		}
-		properties, err := warehouses.ColumnsToProperties(table.Columns)
-		if err, ok := err.(warehouses.RepeatedPropertyNameError); ok {
+		properties, err := datastore.ColumnsToProperties(table.Columns)
+		if err, ok := err.(datastore.RepeatedPropertyNameError); ok {
 			return errors.Unprocessable(RepeatedPropertyName,
 				"column %s.%s results in a repeated property named %s", table.Name, err.Column, err.Property)
 		}
@@ -833,7 +839,7 @@ func (this *Workspace) ReloadSchemas() error {
 	}
 	newRawSchemas, err := json.Marshal(n.Schemas)
 	if err != nil {
-		return fmt.Errorf("cannot marshal data warehouse schema for workspace %d: %s", ws.ID, err)
+		return fmt.Errorf("cannot marshal data store schema for workspace %d: %s", this.workspace.ID, err)
 	}
 	ctx := context.Background()
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
@@ -847,7 +853,7 @@ func (this *Workspace) ReloadSchemas() error {
 			return err
 		}
 		if typ == nil {
-			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", n.Workspace)
+			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", n.Workspace)
 		}
 		if bytes.Equal(newRawSchemas, oldRawSchemas) {
 			return nil
@@ -993,22 +999,22 @@ func (this *Workspace) SetPrivacyRegion(region PrivacyRegion) error {
 	return err
 }
 
-// SetWarehouseSettings sets the settings of the workspace's data warehouse.
+// SetWarehouseSettings sets the settings of the workspace's data store.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist,
 // and it returns an errors.UnprocessableError error with code
-//   - NotConnected, if the workspace is not connected to a data warehouse.
+//   - NotConnected, if the workspace is not connected to a data store.
 //   - InvalidSettings, if the settings are not valid.
 //   - ConnectionFailed, if the connection fails.
 func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) error {
 	ws := this.workspace
 	if ws.Warehouse == nil {
-		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
+		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", ws.ID)
 	}
-	if typ != typeOfWarehouse(ws.Warehouse) {
+	if state.WarehouseType(typ) != ws.Warehouse.Type {
 		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", fmt.Errorf(
-			"workspace %d is connected to a %s data warehouse, but settings are for a %s data warehouse",
-			ws.ID, typeOfWarehouse(ws.Warehouse), typ))
+			"workspace %d is connected to a %s data store, but settings are for a %s data store",
+			ws.ID, ws.Warehouse.Type, typ))
 	}
 	warehouse, err := openWarehouse(typ, settings)
 	if err != nil {
@@ -1016,17 +1022,19 @@ func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) 
 	}
 	err = warehouse.Ping(context.Background())
 	if err != nil {
-		return errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
+		return errors.Unprocessable(ConnectionFailed, "cannot connect to the data store: %w", err)
 	}
-	n := state.SetWarehouseSettingsNotification{
+	n := state.SetWarehouseNotification{
 		Workspace: ws.ID,
-		Type:      state.WarehouseType(typ),
-		Settings:  warehouse.Settings(),
+		Warehouse: &state.Warehouse{
+			Type:     state.WarehouseType(typ),
+			Settings: warehouse.Settings(),
+		},
 	}
 	ctx := context.Background()
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_settings = $1 WHERE id = $2 AND warehouse_type = $3",
-			string(n.Settings), n.Workspace, n.Type)
+			string(n.Warehouse.Settings), n.Workspace, n.Warehouse.Type)
 		if err != nil {
 			return err
 		}
@@ -1038,7 +1046,7 @@ func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) 
 				}
 				return err
 			}
-			return errors.Unprocessable(NoWarehouse, "workspace %d is not connected to a PostgreSQL data warehouse", ws.ID)
+			return errors.Unprocessable(NoWarehouse, "workspace %d is not connected to a PostgreSQL data store", ws.ID)
 		}
 		return tx.Notify(ctx, n)
 	})
@@ -1053,6 +1061,7 @@ func (this *Workspace) User(id int) (*User, error) {
 	}
 	return &User{
 		workspace: this.workspace,
+		store:     this.store,
 		id:        id,
 	}, nil
 }
@@ -1068,18 +1077,18 @@ func (this *Workspace) User(id int) (*User, error) {
 // anymore.
 // It returns an errors.UnprocessableError error with code
 //
-//   - NoWarehouse, if the workspace does not have a data warehouse.
+//   - NoWarehouse, if the workspace does not have a data store.
 //   - OrderNotExist, if order does not exist in schema.
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
 //   - PropertyNotExist, if a property does not exist.
-//   - WarehouseFailed, if the data warehouse failed.
+//   - WarehouseFailed, if the data store failed.
 func (this *Workspace) Users(properties []string, order string, first, limit int) (types.Type, [][]any, error) {
 
 	ws := this.workspace
 
-	// Verify that the workspace has a data warehouse.
-	if ws.Warehouse == nil {
-		return types.Type{}, nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
+	// Verify that the workspace has a data store.
+	if this.store == nil {
+		return types.Type{}, nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data store", ws.ID)
 	}
 
 	// Read the schema.
@@ -1137,51 +1146,40 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 	schema := types.Object(requestedProperties)
 
 	// Read the users.
-	columns := warehouses.PropertiesToColumns(requestedProperties)
-	rows, err := ws.Warehouse.Select(context.Background(), "users", columns, nil, orderProperty, first, limit)
+	columns := datastore.PropertiesToColumns(requestedProperties)
+	rows, err := this.store.Select(context.Background(), "users", columns, nil, orderProperty, first, limit)
 	if err != nil {
-		if err2, ok := err.(*warehouses.Error); ok {
+		if err2, ok := err.(*datastore.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
-			log.Printf("[error] cannot get users from the data warehouse of the workspace %d: %s", ws.ID, err)
-			err = errors.Unprocessable(WarehouseFailed, "warehouse connection is failed: %w", err2.Err)
+			log.Printf("[error] cannot get users from the data store of the workspace %d: %s", ws.ID, err)
+			err = errors.Unprocessable(WarehouseFailed, "store connection is failed: %w", err2.Err)
 		}
 		return types.Type{}, nil, err
 	}
 
 	users := make([][]any, len(rows))
 	for i, row := range rows {
-		users[i] = warehouses.DeserializeRowAsSlice(requestedProperties, row)
+		users[i] = datastore.DeserializeRowAsSlice(requestedProperties, row)
 	}
 
 	return schema.Unflatten(), users, err
 }
 
-// openWarehouse opens a data warehouse with the given type and settings.
+// openWarehouse opens a data store with the given type and settings.
 // It returns an error if typ or settings are not valid.
 func openWarehouse(typ WarehouseType, settings []byte) (warehouses.Warehouse, error) {
 	switch typ {
 	case BigQuery, Redshift, Snowflake:
-		return nil, fmt.Errorf("warehouse type %s is not yet supported", typ)
+		return nil, fmt.Errorf("store type %s is not yet supported", typ)
 	case PostgreSQL:
 		return postgresql.Open(settings)
 	case ClickHouse:
 		return clickhouse.Open(settings)
 	}
-	return nil, fmt.Errorf("warehouse type %d is not valid", typ)
+	return nil, fmt.Errorf("store type %d is not valid", typ)
 }
 
-// typeOfWarehouse returns the type of the given data warehouse.
-func typeOfWarehouse(warehouse warehouses.Warehouse) WarehouseType {
-	switch warehouse.(type) {
-	case *clickhouse.ClickHouse:
-		return ClickHouse
-	case *postgresql.PostgreSQL:
-		return PostgreSQL
-	}
-	panic("unknown Warehouse")
-}
-
-// WarehouseType represents a data warehouse type.
+// WarehouseType represents a data store type.
 type WarehouseType int
 
 const (
@@ -1213,7 +1211,7 @@ func (typ WarehouseType) String() string {
 	case Snowflake:
 		return "Snowflake"
 	}
-	panic("invalid warehouse type")
+	panic("invalid store type")
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.

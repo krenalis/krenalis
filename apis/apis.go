@@ -15,6 +15,7 @@ import (
 	"os"
 	"sort"
 
+	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/events"
 	"chichi/apis/httpclient"
@@ -31,6 +32,7 @@ import (
 type APIs struct {
 	db             *postgres.DB
 	state          *state.State
+	datastore      *datastore.Datastore
 	http           *httpclient.HTTP
 	events         *events.Events
 	scheduler      *scheduler
@@ -102,7 +104,10 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 		return nil, err
 	}
 
-	apis.events, err = events.New(ctx, db, apis.state, apis.http)
+	// Init the datastore.
+	apis.datastore = datastore.New(apis.state)
+
+	apis.events, err = events.New(ctx, db, apis.state, apis.datastore, apis.http)
 	if err != nil {
 		return nil, err
 	}
@@ -125,6 +130,7 @@ func (apis *APIs) Account(ctx context.Context, id int) (*Account, error) {
 	}
 	account := Account{
 		db:            apis.db,
+		datastore:     apis.datastore,
 		eventObserver: apis.events.Observer(),
 		state:         apis.state,
 		http:          apis.http,
@@ -307,7 +313,7 @@ func (apis *APIs) CountAccounts(ctx context.Context) int {
 // onElectLeader is called when a leader is elected.
 func (apis *APIs) onElectLeader(n state.ElectLeaderNotification) {
 	if apis.state.IsLeader() {
-		apis.scheduler = newScheduler(apis.db, apis.state, apis.http)
+		apis.scheduler = newScheduler(apis.db, apis.state, apis.datastore, apis.http)
 		return
 	}
 	if apis.scheduler != nil {
@@ -322,7 +328,9 @@ func (apis *APIs) onExecuteAction(n state.ExecuteActionNotification) {
 		return
 	}
 	action, _ := apis.state.Action(n.Action)
-	connection := &Connection{db: apis.db, connection: action.Connection(), http: apis.http}
+	c := action.Connection()
+	store := apis.datastore.Store(c.Workspace().ID)
+	connection := &Connection{db: apis.db, connection: c, store: store, http: apis.http}
 	a := &Action{db: apis.db, action: action, connection: connection}
 	go a.exec()
 }
@@ -364,6 +372,7 @@ func (apis *APIs) expressionsProperties(expressions []ExpressionToBeExtracted, s
 type Workspace struct {
 	db                   *postgres.DB
 	state                *state.State
+	store                *datastore.Store
 	http                 *httpclient.HTTP
 	eventObserver        *events.Observer
 	workspace            *state.Workspace

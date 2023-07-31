@@ -12,10 +12,10 @@ import (
 	"fmt"
 	"log"
 
+	"chichi/apis/datastore"
 	"chichi/apis/mappings"
 	"chichi/apis/normalization"
 	"chichi/apis/userswarehouse"
-	"chichi/apis/warehouses"
 	"chichi/connector/types"
 )
 
@@ -83,7 +83,7 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 		}
 
 		// Set the user into the data warehouse.
-		err = userswarehouse.SetUser(ctx, this.connection.connection, this.action, mappedUser)
+		err = userswarehouse.SetUser(ctx, this.connection.store, this.action, mappedUser)
 		if err != nil {
 			return err
 		}
@@ -175,7 +175,7 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 		}
 
 		// Serialize the props into column values.
-		warehouses.SerializeRow(props, this.action.OutSchema)
+		datastore.SerializeRow(props, this.action.OutSchema)
 		row := make([]any, len(outSchemaProps)+1)
 		row[0] = user.GID
 		for i, p := range outSchemaProps {
@@ -185,7 +185,7 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 	}
 
 	columns := append([]types.Property{{Name: "id", Type: types.Int()}},
-		warehouses.PropertiesToColumns(outSchemaProps)...)
+		datastore.PropertiesToColumns(outSchemaProps)...)
 
 	database, err := this.connection.openDatabase(ctx)
 	if err != nil {

@@ -23,13 +23,13 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/events"
 	"chichi/apis/httpclient"
 	"chichi/apis/normalization"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/apis/warehouses"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 	"chichi/connector/ui"
@@ -73,6 +73,7 @@ var (
 type Connection struct {
 	db           *postgres.DB
 	connection   *state.Connection
+	store        *datastore.Store
 	http         *httpclient.HTTP
 	ID           int
 	Name         string
@@ -103,7 +104,7 @@ func (this *Connection) Action(ctx context.Context, id int) (*Action, error) {
 		return nil, errors.NotFound("action %d does not exist", id)
 	}
 	var action Action
-	action.fromState(this.db, this.http, a)
+	action.fromState(this.db, this.store, this.http, a)
 	return &action, nil
 }
 
@@ -1366,7 +1367,7 @@ func (this *Connection) TableSchema(table string) (types.Type, error) {
 	if len(columns) == 0 {
 		return types.Type{}, errors.Unprocessable(InvalidTable, "table %q only has the \"id\" column and no additional columns", table)
 	}
-	properties, err := warehouses.ColumnsToProperties(columns)
+	properties, err := datastore.ColumnsToProperties(columns)
 	if err != nil {
 		return types.Type{}, err
 	}

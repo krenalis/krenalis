@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	wh "chichi/apis/warehouses"
+	wh "chichi/apis/datastore/warehouses"
 	"chichi/connector/types"
 )
 

@@ -190,31 +190,30 @@ func (state *State) Load() error {
 					resources:   map[int]*Resource{},
 				}
 				var accountID int
+				var redis Redis
 				var warehouseType *WarehouseType
-				var redisSettings, warehouseSettings, mapping, schemas []byte
+				var warehouseSettings, mapping, schemas []byte
 				for rows.Next() {
-					if err := rows.Scan(&ws.ID, &accountID, &ws.Name, &redisSettings, &warehouseType, &warehouseSettings,
-						&ws.AnonymousIdentifiers.Priority, &mapping, &ws.PrivacyRegion, &schemas); err != nil {
+					if err := rows.Scan(&ws.ID, &accountID, &ws.Name, &redis.Settings, &warehouseType,
+						&warehouseSettings, &ws.AnonymousIdentifiers.Priority, &mapping, &ws.PrivacyRegion,
+						&schemas); err != nil {
 						return err
 					}
 					ws.account = state.accounts[accountID]
-					if len(redisSettings) > 0 {
-						ws.Redis, err = openRedis(redisSettings)
-						if err != nil {
-							log.Fatalf("cannot open Redis database of workspace %d: %s", ws.ID, err)
-						}
+					if len(redis.Settings) > 0 {
+						ws.Redis = &redis
 					}
 					if warehouseType != nil {
-						ws.Warehouse, err = openWarehouse(*warehouseType, warehouseSettings)
-						if err != nil {
-							log.Fatalf("cannot open data warehouse of workspace %d: %s", ws.ID, err)
+						ws.Warehouse = &Warehouse{
+							Type:     *warehouseType,
+							Settings: warehouseSettings,
 						}
-						ws.Schemas = map[string]*types.Type{}
-						if len(schemas) > 0 {
-							err = json.Unmarshal(schemas, &ws.Schemas)
-							if err != nil {
-								log.Fatalf("cannot unmarshal schemas of workspace %d: %s", ws.ID, err)
-							}
+					}
+					ws.Schemas = map[string]*types.Type{}
+					if len(schemas) > 0 {
+						err = json.Unmarshal(schemas, &ws.Schemas)
+						if err != nil {
+							log.Fatalf("cannot unmarshal schemas of workspace %d: %s", ws.ID, err)
 						}
 					}
 					err = json.Unmarshal(mapping, &ws.AnonymousIdentifiers.Mapping)

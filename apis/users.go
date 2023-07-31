@@ -14,15 +14,17 @@ import (
 	"strconv"
 	"time"
 
+	"chichi/apis/datastore"
+	"chichi/apis/datastore/warehouses"
 	"chichi/apis/errors"
 	"chichi/apis/state"
-	"chichi/apis/warehouses"
 	"chichi/connector/types"
 )
 
 // User represents a user.
 type User struct {
 	workspace *state.Workspace
+	store     *datastore.Store
 	id        int
 }
 
@@ -216,11 +218,9 @@ var eventColumns = []types.Property{
 //   - WarehouseFailed, if the data warehouse failed.
 func (this *User) Events(limit int) ([]Event, error) {
 
-	ws := this.workspace
-
 	// Verify that the workspace has a data warehouse.
-	if ws.Warehouse == nil {
-		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
+	if this.store == nil {
+		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
 
 	// Read the events.
@@ -229,11 +229,11 @@ func (this *User) Events(limit int) ([]Event, error) {
 		warehouses.OperatorEqual,
 		this.id,
 	)
-	rows, err := ws.Warehouse.Select(context.Background(), "events", eventColumns, where, types.Property{}, 0, limit)
+	rows, err := this.store.Select(context.Background(), "events", eventColumns, where, types.Property{}, 0, limit)
 	if err != nil {
-		if err2, ok := err.(*warehouses.Error); ok {
+		if err2, ok := err.(*datastore.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
-			log.Printf("[error] cannot get a user from the data warehouse of the workspace %d: %s", ws.ID, err)
+			log.Printf("[error] cannot get a user from the data warehouse of the workspace %d: %s", this.workspace.ID, err)
 			err = errors.Unprocessable(WarehouseFailed, "warehouse connection is failed: %w", err2.Err)
 		}
 		return nil, err
@@ -411,7 +411,7 @@ func (this *User) Traits() (map[string]any, error) {
 	ws := this.workspace
 
 	// Verify that the workspace has a data warehouse.
-	if ws.Warehouse == nil {
+	if this.store == nil {
 		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 
@@ -423,15 +423,15 @@ func (this *User) Traits() (map[string]any, error) {
 		return nil, errors.Unprocessable(NoUsersSchema, "workspace %d does not have users schema", this.workspace.ID)
 	}
 
-	columns := warehouses.PropertiesToColumns(properties)
+	columns := datastore.PropertiesToColumns(properties)
 	where := warehouses.NewBaseExpr(
 		warehouses.ExprColumn{Name: "id", Type: types.PtInt},
 		warehouses.OperatorEqual,
 		this.id,
 	)
-	rows, err := ws.Warehouse.Select(context.Background(), "users", columns, where, types.Property{}, 0, 1)
+	rows, err := this.store.Select(context.Background(), "users", columns, where, types.Property{}, 0, 1)
 	if err != nil {
-		if err2, ok := err.(*warehouses.Error); ok {
+		if err2, ok := err.(*datastore.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
 			log.Printf("[error] cannot get a user from the data warehouse of the workspace %d: %s", ws.ID, err)
 			err = errors.Unprocessable(WarehouseFailed, "warehouse connection is failed: %w", err2.Err)
@@ -442,7 +442,7 @@ func (this *User) Traits() (map[string]any, error) {
 		return nil, errors.NotFound("user %d does not exist", this.id)
 	}
 
-	traits, _ := warehouses.DeserializeRowAsMap(properties, rows[0])
+	traits, _ := datastore.DeserializeRowAsMap(properties, rows[0])
 
 	return traits, nil
 }

@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package clickhouse
+package postgresql
 
 import (
 	"encoding/json"
@@ -13,7 +13,8 @@ import (
 	"strings"
 	"time"
 
-	wh "chichi/apis/warehouses"
+	"chichi/apis/datastore/warehouses"
+	"chichi/apis/postgres"
 	"chichi/connector/types"
 
 	"github.com/open2b/nuts/decimal"
@@ -21,17 +22,17 @@ import (
 
 // renderExpr renders the expression expr returning a fragment of a query
 // representing a boolean expression.
-func renderExpr(expr wh.Expr) (string, error) {
+func renderExpr(expr warehouses.Expr) (string, error) {
 
 	s := strings.Builder{}
 
 	// Handle MultiExpr expression.
-	if multiExpr, ok := expr.(*wh.MultiExpr); ok {
+	if multiExpr, ok := expr.(*warehouses.MultiExpr); ok {
 		var op string
 		switch multiExpr.Operator {
-		case wh.LogicalOperatorAnd:
+		case warehouses.LogicalOperatorAnd:
 			op = " AND "
-		case wh.LogicalOperatorOr:
+		case warehouses.LogicalOperatorOr:
 			op = " OR "
 		default:
 			return "", fmt.Errorf("invalid operator %q", multiExpr.Operator)
@@ -40,7 +41,7 @@ func renderExpr(expr wh.Expr) (string, error) {
 			if i > 0 {
 				s.WriteString(op)
 			}
-			_, isMultiExpr := operand.(*wh.MultiExpr)
+			_, isMultiExpr := operand.(*warehouses.MultiExpr)
 			if isMultiExpr {
 				s.WriteByte('(')
 			}
@@ -57,40 +58,39 @@ func renderExpr(expr wh.Expr) (string, error) {
 	}
 
 	// Handle BaseExpr expressions.
-	baseExpr := expr.(*wh.BaseExpr)
+	baseExpr := expr.(*warehouses.BaseExpr)
 
 	// Validate the column name.
-	if !wh.IsValidIdentifier(baseExpr.Column.Name) {
+	if !warehouses.IsValidIdentifier(baseExpr.Column.Name) {
 		return "", fmt.Errorf("invalid column name %q", baseExpr.Column.Name)
 	}
 
 	// Render the column identifier.
-	s.WriteByte('`')
-	s.WriteString(baseExpr.Column.Name)
-	s.WriteString("` ")
+	s.WriteString(postgres.QuoteIdent(baseExpr.Column.Name))
+	s.WriteString(" ")
 
 	// Render the operator and, if necessary, the value.
 	switch baseExpr.Operator {
 	case
-		wh.OperatorEqual,
-		wh.OperatorNotEqual,
-		wh.OperatorGreater,
-		wh.OperatorGreaterEqual,
-		wh.OperatorLess,
-		wh.OperatorLessEqual:
+		warehouses.OperatorEqual,
+		warehouses.OperatorNotEqual,
+		warehouses.OperatorGreater,
+		warehouses.OperatorGreaterEqual,
+		warehouses.OperatorLess,
+		warehouses.OperatorLessEqual:
 
 		switch baseExpr.Operator {
-		case wh.OperatorEqual:
+		case warehouses.OperatorEqual:
 			s.WriteString("= ")
-		case wh.OperatorNotEqual:
+		case warehouses.OperatorNotEqual:
 			s.WriteString("<> ")
-		case wh.OperatorGreater:
+		case warehouses.OperatorGreater:
 			s.WriteString("> ")
-		case wh.OperatorGreaterEqual:
+		case warehouses.OperatorGreaterEqual:
 			s.WriteString(">= ")
-		case wh.OperatorLess:
+		case warehouses.OperatorLess:
 			s.WriteString("< ")
-		case wh.OperatorLessEqual:
+		case warehouses.OperatorLessEqual:
 			s.WriteString("<= ")
 		}
 
@@ -143,19 +143,19 @@ func renderExpr(expr wh.Expr) (string, error) {
 			if !ok {
 				return "", fmt.Errorf("expecting value of type connector.DateTime, got %T", baseExpr.Value)
 			}
-			quoteValue(&s, t.Format(time.DateTime))
+			quoteValue(&s, t.Format("2006-01-02 15:04:05.999999"))
 		case types.PtDate:
 			t, ok := baseExpr.Value.(time.Time)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type connector.Date, got %T", baseExpr.Value)
 			}
-			quoteValue(&s, t.Format(time.DateTime))
+			quoteValue(&s, t.String())
 		case types.PtTime:
 			t, ok := baseExpr.Value.(time.Time)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type connector.Time, got %T", baseExpr.Value)
 			}
-			quoteValue(&s, t.Format(time.TimeOnly))
+			quoteValue(&s, t.Format("15:04:05.999999"))
 		case types.PtYear:
 			year, ok := baseExpr.Value.(int)
 			if !ok {
@@ -177,9 +177,9 @@ func renderExpr(expr wh.Expr) (string, error) {
 		default:
 			return "", fmt.Errorf("unexpected column with type %q", pt)
 		}
-	case wh.OperatorIsNull:
+	case warehouses.OperatorIsNull:
 		s.WriteString("IS NULL")
-	case wh.OperatorIsNotNull:
+	case warehouses.OperatorIsNotNull:
 		s.WriteString("IS NOT NULL")
 	default:
 		return "", fmt.Errorf("invalid operator %q", baseExpr.Operator)

@@ -10,19 +10,18 @@ package state
 import (
 	"context"
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+	"golang.org/x/exp/maps"
+
 	"chichi/apis/postgres"
-	"chichi/apis/warehouses"
 	"chichi/connector"
 	"chichi/connector/types"
-
-	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
-	"golang.org/x/exp/maps"
 )
 
 // election represents a leader election.
@@ -60,7 +59,8 @@ type State struct {
 		SetActionSchedulePeriod   []func(SetActionSchedulePeriodNotification)
 		SetConnectionSettings     []func(SetConnectionSettingsNotification)
 		SetConnectionStatus       []func(SetConnectionStatusNotification)
-		SetWarehouseSettings      []func(SetWarehouseSettingsNotification)
+		SetRedis                  []func(SetRedisNotification)
+		SetWarehouse              []func(SetWarehouseNotification)
 		SetWorkspacePrivacyRegion []func(SetWorkspacePrivacyRegion)
 	}
 }
@@ -241,11 +241,20 @@ func (account *Account) Workspaces() []*Workspace {
 	return workspaces
 }
 
+type Redis struct {
+	Settings json.RawMessage
+}
+
+type Warehouse struct {
+	Type     WarehouseType
+	Settings json.RawMessage
+}
+
 // Workspace represents a workspace.
 type Workspace struct {
 	mu                   *sync.Mutex
-	Redis                *redis.Client
-	Warehouse            warehouses.Warehouse
+	Redis                *Redis
+	Warehouse            *Warehouse
 	Schemas              map[string]*types.Type
 	connections          map[int]*Connection
 	ID                   int

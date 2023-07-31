@@ -17,14 +17,10 @@ import (
 	"time"
 
 	"chichi/apis/postgres"
-	"chichi/apis/warehouses"
-	"chichi/apis/warehouses/clickhouse"
-	"chichi/apis/warehouses/postgresql"
 	"chichi/connector"
 	"chichi/connector/types"
 
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 )
 
 // logNotifications controls the logging of notifications on the log.
@@ -56,8 +52,10 @@ func (state *State) AddListener(listener any) {
 		state.listeners.SetConnectionSettings = append(state.listeners.SetConnectionSettings, l)
 	case func(SetConnectionStatusNotification):
 		state.listeners.SetConnectionStatus = append(state.listeners.SetConnectionStatus, l)
-	case func(SetWarehouseSettingsNotification):
-		state.listeners.SetWarehouseSettings = append(state.listeners.SetWarehouseSettings, l)
+	case func(SetRedisNotification):
+		state.listeners.SetRedis = append(state.listeners.SetRedis, l)
+	case func(SetWarehouseNotification):
+		state.listeners.SetWarehouse = append(state.listeners.SetWarehouse, l)
 	case func(SetWorkspacePrivacyRegion):
 		state.listeners.SetWorkspacePrivacyRegion = append(state.listeners.SetWorkspacePrivacyRegion, l)
 	default:
@@ -132,12 +130,12 @@ func (state *State) keepState() {
 			state.setConnectionStorage(n)
 		case "SetConnectionStatus":
 			state.setConnectionStatus(n)
-		case "SetRedisSettings":
-			state.setRedisSettings(n)
+		case "SetRedis":
+			state.setRedis(n)
 		case "SetResource":
 			state.setResource(n)
-		case "SetWarehouseSettings":
-			state.setWarehouseSettings(n)
+		case "SetWarehouse":
+			state.setWarehouse(n)
 		case "SetWorkspaceAnonymousIdentifiers":
 			state.setWorkspaceAnonymousIdentifiers(n)
 		case "SetWorkspaceSchemas":
@@ -516,16 +514,11 @@ func (state *State) executeAction(n postgres.Notification) {
 // AddWorkspaceNotification is the notification event sent when a workspace is
 // added.
 type AddWorkspaceNotification struct {
-	ID      int
-	Account int
-	Name    string
-	Redis   struct {
-		Settings json.RawMessage `json:",omitempty"`
-	}
-	Warehouse struct {
-		Type     WarehouseType
-		Settings json.RawMessage `json:",omitempty"`
-	}
+	ID            int
+	Account       int
+	Name          string
+	Redis         *Redis
+	Warehouse     *Warehouse
 	PrivacyRegion PrivacyRegion
 }
 
@@ -538,26 +531,14 @@ func (state *State) addWorkspace(n postgres.Notification) {
 	account := state.accounts[e.Account]
 	ws := Workspace{
 		mu:            &sync.Mutex{},
+		Redis:         e.Redis,
+		Warehouse:     e.Warehouse,
 		Schemas:       map[string]*types.Type{},
 		connections:   map[int]*Connection{},
 		ID:            e.ID,
 		account:       account,
 		Name:          e.Name,
 		PrivacyRegion: e.PrivacyRegion,
-	}
-	if e.Redis.Settings != nil {
-		redis, err := openRedis(e.Redis.Settings)
-		if err != nil {
-			log.Printf("[error] cannot open Redis database of workspace %d: %s", e.ID, err)
-		}
-		ws.Redis = redis
-	}
-	if e.Warehouse.Settings != nil {
-		warehouse, err := openWarehouse(e.Warehouse.Type, e.Warehouse.Settings)
-		if err != nil {
-			log.Printf("[error] cannot open data warehouse of workspace %d: %s", e.ID, err)
-		}
-		ws.Warehouse = warehouse
 	}
 	state.mu.Lock()
 	state.workspaces[e.ID] = &ws
@@ -990,42 +971,24 @@ func (state *State) setConnectionStorage(n postgres.Notification) {
 	})
 }
 
-// SetRedisSettingsNotification is the notification event sent when the settings
-// of a Redis database are changed.
-type SetRedisSettingsNotification struct {
+// SetRedisNotification is the notification event sent when the Redis database
+// is changed.
+type SetRedisNotification struct {
 	Workspace int
-	Settings  json.RawMessage `json:",omitempty"`
+	Redis     *Redis
 }
 
-// setRedisSettings sets the settings of a Redis database.
-func (state *State) setRedisSettings(n postgres.Notification) {
-	e := SetRedisSettingsNotification{}
+// setRedis sets a Redis database.
+func (state *State) setRedis(n postgres.Notification) {
+	e := SetRedisNotification{}
 	if !decodeNotification(n, &e) {
 		return
 	}
-	disconnected := state.workspaces[e.Workspace].Redis
-	if e.Settings == nil {
-		state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-			w.Redis = nil
-		})
-	} else {
-		var err error
-		state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-			w.Redis, err = openRedis(e.Settings)
-		})
-		if err != nil {
-			log.Printf("[error] cannot open Redis database of workspace %d: %s", e.Workspace, err)
-		}
-	}
-	// Close the disconnected Redis database.
-	if disconnected != nil {
-		go func() {
-			err := disconnected.Close()
-			if err != nil {
-				// TODO(marco): write the error into a workspace specific log
-				log.Printf("[error] error occurred disconnecting the Redis database: %s", err)
-			}
-		}()
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.Redis = e.Redis
+	})
+	for _, listener := range state.listeners.SetRedis {
+		listener(e)
 	}
 }
 
@@ -1051,46 +1014,24 @@ func (state *State) setResource(n postgres.Notification) {
 	})
 }
 
-// SetWarehouseSettingsNotification is the notification event sent when the
-// settings of a data warehouse are changed.
-type SetWarehouseSettingsNotification struct {
+// SetWarehouseNotification is the notification event sent when the settings of
+// a data warehouse are changed.
+type SetWarehouseNotification struct {
 	Workspace int
-	Type      WarehouseType
-	Settings  json.RawMessage `json:",omitempty"`
+	Warehouse *Warehouse
 }
 
-// setWarehouseSettings sets the settings of a data warehouse.
-func (state *State) setWarehouseSettings(n postgres.Notification) {
-	e := SetWarehouseSettingsNotification{}
+// setWarehouse sets the settings of a data warehouse.
+func (state *State) setWarehouse(n postgres.Notification) {
+	e := SetWarehouseNotification{}
 	if !decodeNotification(n, &e) {
 		return
 	}
-	disconnected := state.workspaces[e.Workspace].Warehouse
-	if e.Settings == nil {
-		state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-			w.Warehouse = nil
-		})
-	} else {
-		var err error
-		state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-			w.Warehouse, err = openWarehouse(e.Type, e.Settings)
-		})
-		if err != nil {
-			log.Printf("[error] cannot open data warehouse of workspace %d: %s", e.Workspace, err)
-		}
-	}
-	for _, listener := range state.listeners.SetWarehouseSettings {
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.Warehouse = e.Warehouse
+	})
+	for _, listener := range state.listeners.SetWarehouse {
 		listener(e)
-	}
-	// Close the disconnected warehouse.
-	if disconnected != nil {
-		go func() {
-			err := disconnected.Close()
-			if err != nil {
-				// TODO(marco): write the error into a workspace specific log
-				log.Printf("[error] error occurred disconnecting the warehouse: %s", err)
-			}
-		}()
 	}
 }
 
@@ -1159,46 +1100,6 @@ func (state *State) setWorkspacePrivacyRegion(n postgres.Notification) {
 	for _, listener := range state.listeners.SetWorkspacePrivacyRegion {
 		listener(e)
 	}
-}
-
-// openWarehouse opens a data warehouse with the given type and settings.
-// It returns an error if typ or settings are not valid.
-func openWarehouse(typ WarehouseType, settings []byte) (warehouses.Warehouse, error) {
-	switch typ {
-	case BigQuery, Redshift, Snowflake:
-		return nil, fmt.Errorf("warehouse type %s is not yet supported", typ)
-	case PostgreSQL:
-		return postgresql.Open(settings)
-	case ClickHouse:
-		return clickhouse.Open(settings)
-	}
-	return nil, fmt.Errorf("warehouse type %d is not valid", typ)
-}
-
-// openRedis opens a Redis database with the given settings.
-// It returns an error if settings are not valid.
-func openRedis(settings []byte) (*redis.Client, error) {
-	type RedisConfig struct {
-		Network  string
-		Addr     string
-		Username string
-		Password string
-		DB       int
-	}
-	var s RedisConfig
-	err := json.Unmarshal(settings, &s)
-	if err != nil {
-		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
-	}
-	// Instantiate a new client for Redis.
-	client := redis.NewClient(&redis.Options{
-		Network:  s.Network,
-		Addr:     s.Addr,
-		Username: s.Username,
-		Password: s.Password,
-		DB:       s.DB,
-	})
-	return client, nil
 }
 
 // WarehouseType represents a data warehouse type.

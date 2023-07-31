@@ -18,7 +18,6 @@ import (
 	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	_warehouses "chichi/apis/warehouses"
 	"chichi/connector"
 )
 
@@ -60,7 +59,7 @@ func newEventsState(ctx context.Context, db *postgres.DB, st *state.State, http 
 	st.AddListener(eventSt.onDeleteWorkspace)
 	st.AddListener(eventSt.onSetConnectionSettings)
 	st.AddListener(eventSt.onSetConnectionStatus)
-	st.AddListener(eventSt.onSetWarehouseSettings)
+	st.AddListener(eventSt.onSetWarehouse)
 	st.AddListener(eventSt.onSetWorkspacePrivacyRegion)
 	return eventSt
 }
@@ -94,16 +93,6 @@ func (st *eventsState) ServerByKey(key string) (*state.Connection, bool) {
 		return server, true
 	}
 	return nil, false
-}
-
-// Warehouse returns the warehouse of a workspace and true, if it exists and has
-// one, otherwise nil and false.
-func (st *eventsState) Warehouse(workspace int) (_warehouses.Warehouse, bool) {
-	ws, ok := st.state.Workspace(workspace)
-	if !ok || ws.Warehouse == nil {
-		return nil, false
-	}
-	return ws.Warehouse, true
 }
 
 // Actions returns the enabled actions for every enabled connection.
@@ -202,13 +191,13 @@ func (st *eventsState) onSetConnectionStatus(n state.SetConnectionStatusNotifica
 	st.deleteDestination(n.Connection)
 }
 
-// onSetWarehouseSettings is called when the warehouse settings of a workspace
-// are changed.
-func (st *eventsState) onSetWarehouseSettings(n state.SetWarehouseSettingsNotification) {
+// onSetWarehouse is called when the warehouse settings of a workspace are
+// changed.
+func (st *eventsState) onSetWarehouse(n state.SetWarehouseNotification) {
 	ws, _ := st.state.Workspace(n.Workspace)
 	for _, c := range ws.Connections() {
 		if c.Enabled && c.Role == state.DestinationRole {
-			if c.Workspace().Warehouse == nil {
+			if ws.Redis == nil || ws.Warehouse == nil {
 				st.deleteDestination(c.ID)
 				continue
 			}
@@ -283,8 +272,9 @@ func (st *eventsState) deleteDestination(id int) {
 // workspace with an associated warehouse.
 func isDestination(c *state.Connection) bool {
 	conn := c.Connector()
+	ws := c.Workspace()
 	return c.Enabled && c.Role == state.DestinationRole &&
-		conn.Type == state.AppType && c.Workspace().Warehouse != nil &&
+		conn.Type == state.AppType && ws.Redis != nil && ws.Warehouse != nil &&
 		conn.Targets.Contains(state.EventsTarget)
 }
 

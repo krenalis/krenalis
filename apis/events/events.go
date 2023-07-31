@@ -11,6 +11,7 @@ import (
 	"context"
 	"net/http"
 
+	"chichi/apis/datastore"
 	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
@@ -21,12 +22,11 @@ type Events struct {
 	observer  *Observer
 }
 
-func New(ctx context.Context, db *postgres.DB, st *state.State, http *httpclient.HTTP) (*Events, error) {
+func New(ctx context.Context, db *postgres.DB, st *state.State, ds *datastore.Datastore, http *httpclient.HTTP) (*Events, error) {
 	state := newEventsState(ctx, db, st, http)
 	eventLog := newEventsLog(ctx, db)
 	observer := newObserver(db)
-	warehouse := newWarehouses(state)
-	collector, err := newCollector(state, eventLog, observer, warehouse)
+	collector, err := newCollector(state, ds, eventLog, observer)
 	if err != nil {
 		return nil, err
 	}

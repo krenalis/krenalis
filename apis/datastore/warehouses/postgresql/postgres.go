@@ -22,8 +22,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/datastore/warehouses"
 	"chichi/apis/postgres"
-	"chichi/apis/warehouses"
 	"chichi/connector/types"
 
 	"github.com/google/uuid"

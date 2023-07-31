@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
@@ -52,7 +53,7 @@ type scheduler struct {
 //
 // It is called during an elect leader notification if the current node is
 // elected as leader.
-func newScheduler(db *postgres.DB, st *state.State, http *httpclient.HTTP) *scheduler {
+func newScheduler(db *postgres.DB, st *state.State, ds *datastore.Datastore, http *httpclient.HTTP) *scheduler {
 
 	sc := &scheduler{
 		db:      db,
@@ -96,7 +97,9 @@ func newScheduler(db *postgres.DB, st *state.State, http *httpclient.HTTP) *sche
 					sc.mu.Unlock()
 					for _, action := range actions {
 						if sc.toExecute(action) {
-							c := &Connection{db: db, connection: action.Connection(), http: http}
+							connection := action.Connection()
+							store := ds.Store(connection.Workspace().ID)
+							c := &Connection{db: db, connection: connection, store: store, http: http}
 							a := &Action{db: db, action: action, connection: c}
 							go func() {
 								err := a.addExecution(false)
@@ -193,7 +196,7 @@ func (sc *scheduler) toExecute(action *state.Action) bool {
 		}
 	}
 	ws := c.Workspace()
-	if ws.Warehouse == nil {
+	if ws.Redis == nil || ws.Warehouse == nil {
 		return false
 	}
 	if _, ok := action.Execution(); ok {

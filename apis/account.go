@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"unicode/utf8"
 
+	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/events"
 	"chichi/apis/httpclient"
@@ -31,6 +32,7 @@ type Account struct {
 	db            *postgres.DB
 	eventObserver *events.Observer
 	state         *state.State
+	datastore     *datastore.Datastore
 	http          *httpclient.HTTP
 	account       *state.Account
 	ID            int
@@ -56,8 +58,9 @@ type Warehouse struct {
 //
 // It returns an errors.NotFoundError error if the account does not exist anymore.
 // It returns an errors.UnprocessableError error with code
-//   - ConnectionFailed, if the connection to the data warehouse fails.
-//   - InvalidSettings, if the warehouse settings are not valid.
+//   - ConnectionFailed, if the connection to the Redis database, or the data
+//     warehouse fails.
+//   - InvalidSettings, if Redis or data warehouse settings are not valid.
 func (this *Account) AddWorkspace(name string, redis *Redis, warehouse *Warehouse) (int, error) {
 
 	if name == "" || utf8.RuneCountInString(name) > 100 {
@@ -133,6 +136,7 @@ func (this *Account) Workspace(id int) (*Workspace, error) {
 	workspace := Workspace{
 		db:                   this.db,
 		state:                this.state,
+		store:                this.datastore.Store(id),
 		http:                 this.http,
 		eventObserver:        this.eventObserver,
 		workspace:            ws,
@@ -152,6 +156,7 @@ func (this *Account) Workspaces() []*Workspace {
 		workspace := Workspace{
 			db:                   this.db,
 			state:                this.state,
+			store:                this.datastore.Store(ws.ID),
 			http:                 this.http,
 			eventObserver:        this.eventObserver,
 			workspace:            ws,

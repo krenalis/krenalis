@@ -26,6 +26,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/datastore"
 	"chichi/apis/mappings"
 	"chichi/apis/state"
 	"chichi/apis/userswarehouse"
@@ -34,7 +35,6 @@ import (
 	"github.com/mssola/useragent"
 	"github.com/open2b/nuts/culture"
 	"github.com/oschwald/geoip2-golang"
-	"github.com/redis/go-redis/v9"
 	"github.com/relvacode/iso8601"
 	"github.com/segmentio/ksuid"
 	"golang.org/x/exp/maps"
@@ -178,23 +178,22 @@ type collectedEvent struct {
 // the processor.
 type collector struct {
 	state     *eventsState
+	datastore *datastore.Datastore
 	eventLog  *eventsLog
 	events    chan *collectedEvent
 	observer  *Observer
-	redis     *redis.Client
-	warehouse *warehouse
 	geoLiteDB *geoip2.Reader
 }
 
 // newCollector returns a new event collector. It receives HTTP requests from
 // mobile, server and website sources and sends them to the eventsLog.
-func newCollector(st *eventsState, eventLog *eventsLog, observer *Observer, warehouse *warehouse) (*collector, error) {
+func newCollector(st *eventsState, ds *datastore.Datastore, eventLog *eventsLog, observer *Observer) (*collector, error) {
 	var collector = collector{
 		state:     st,
+		datastore: ds,
 		eventLog:  eventLog,
 		events:    make(chan *collectedEvent, 1000),
 		observer:  observer,
-		warehouse: warehouse,
 	}
 	var err error
 	collector.geoLiteDB, err = geoip2.Open(geoLite2Path)
@@ -265,7 +264,9 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 				return err
 			}
 			// Set the user into the data warehouse.
-			err = userswarehouse.SetUser(ctx, source, action, mappedUser)
+			ws := action.Connection().Workspace()
+			store := c.datastore.Store(ws.ID)
+			err = userswarehouse.SetUser(ctx, store, action, mappedUser)
 			if err != nil {
 				return err
 			}
@@ -445,8 +446,8 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("Content-Length", "21")
 	_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
 
-	// Send the events to the data warehouse.
-	c.warehouse.Add(events.Batch)
+	// Store the events into the data warehouse.
+	c.storeEvents(source.Workspace().ID, events.Batch)
 
 	// In case there are user traits in some events, import the user from the
 	// events batch.
@@ -892,6 +893,148 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 
 	// Version.
 	event.version = 2
+
+	return
+}
+
+// storeEvents store the events in the data warehouse.
+func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
+
+	store := c.datastore.Store(workspace)
+	if store == nil {
+		return
+	}
+
+	var traits bytes.Buffer
+	traitsEnc := json.NewEncoder(&traits)
+	traitsEnc.SetEscapeHTML(false)
+	var properties bytes.Buffer
+	propertiesEnc := json.NewEncoder(&properties)
+	propertiesEnc.SetEscapeHTML(false)
+
+	rows := make([][]any, len(events))
+
+	for i, e := range events {
+
+		traits.Reset()
+
+		var err error
+		if *e.Type == "identify" || *e.Type == "group" {
+			err = traitsEnc.Encode(e.Traits)
+		} else {
+			err = traitsEnc.Encode(e.Context.Traits)
+		}
+		if err != nil {
+			log.Printf("[error] cannot marshal event: %s", err)
+			continue
+		}
+		properties.Reset()
+		err = propertiesEnc.Encode(e.Properties)
+		if err != nil {
+			log.Printf("[error] cannot marshal event: %s", err)
+			continue
+		}
+		groupId := e.GroupId
+		if *e.Type != "group" {
+			groupId = e.Context.GroupId
+		}
+
+		rows[i] = []any{
+			e.AnonymousId,
+			e.Category,
+
+			// app.
+			e.Context.App.Name,
+			e.Context.App.Version,
+			e.Context.App.Build,
+			e.Context.App.Namespace,
+
+			// browser.
+			e.Context.browser.Name,
+			e.Context.browser.Other,
+			e.Context.browser.Version,
+
+			// campaign.
+			e.Context.Campaign.Name,
+			e.Context.Campaign.Source,
+			e.Context.Campaign.Medium,
+			e.Context.Campaign.Term,
+			e.Context.Campaign.Content,
+
+			// device.
+			e.Context.Device.Id,
+			e.Context.Device.AdvertisingId,
+			e.Context.Device.AdTrackingEnabled,
+			e.Context.Device.Manufacturer,
+			e.Context.Device.Model,
+			e.Context.Device.Name,
+			e.Context.Device.Type,
+			e.Context.Device.Token,
+
+			e.Context.IP,
+
+			// library.
+			e.Context.Library.Name,
+			e.Context.Library.Version,
+
+			e.Context.Locale,
+
+			// location.
+			e.Context.Location.City,
+			e.Context.Location.Country,
+			e.Context.Location.Latitude,
+			e.Context.Location.Longitude,
+			e.Context.Location.Speed,
+
+			// network.
+			e.Context.Network.Bluetooth,
+			e.Context.Network.Carrier,
+			e.Context.Network.Cellular,
+			e.Context.Network.WiFi,
+
+			// os.
+			e.Context.OS.Name,
+			e.Context.OS.Version,
+
+			// page.
+			e.Context.Page.Path,
+			e.Context.Page.Referrer,
+			e.Context.Page.Search,
+			e.Context.Page.Title,
+			e.Context.Page.URL,
+
+			// referrer.
+			e.Context.Referrer.Id,
+			e.Context.Referrer.Type,
+
+			// screen.
+			int16(e.Context.Screen.Width),
+			int16(e.Context.Screen.Height),
+			int16(e.Context.Screen.Density),
+
+			// session.
+			e.Context.SessionId,
+			e.Context.SessionStart,
+
+			e.Context.Timezone,
+			e.Context.UserAgent,
+
+			e.Event,
+			groupId,
+			e.MessageId,
+			e.Name,
+			properties.Bytes(),
+			e.receivedAt,
+			e.sentAt,
+			e.source,
+			e.timestamp,
+			traits.Bytes(),
+			*e.Type,
+			e.UserId,
+		}
+	}
+
+	store.AddEvents(rows)
 
 	return
 }

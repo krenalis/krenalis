@@ -10,7 +10,6 @@ package events
 import (
 	"context"
 	"sync"
-	"time"
 
 	"chichi/apis/mappings"
 	"chichi/apis/state"
@@ -20,10 +19,7 @@ import (
 const pipeSize = 100
 
 const (
-	flushQueueTimeout = 1 * time.Second // interval to flushEvents the warehouseQueue
-	geoLite2Path      = "GeoLite2-City.mmdb"
-	maxEventSize      = 32 * 1024
-	maxEventsQueueLen = 10000
+	geoLite2Path = "GeoLite2-City.mmdb"
 )
 
 // eventDateLayout is the layout used for dates in events.

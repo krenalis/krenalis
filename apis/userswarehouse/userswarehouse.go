@@ -15,23 +15,20 @@ import (
 	"strconv"
 	"strings"
 
+	"chichi/apis/datastore"
 	"chichi/apis/errors"
-	"chichi/apis/index"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	"chichi/apis/warehouses"
 	"chichi/telemetry"
 
 	"golang.org/x/exp/slices"
 )
 
 // SetUser sets the user U into the data warehouse by resolving its identity.
-func SetUser(ctx context.Context, connection *state.Connection, action *state.Action, U map[string]any) error {
+func SetUser(ctx context.Context, store *datastore.Store, action *state.Action, U map[string]any) error {
 
+	connection := action.Connection()
 	ws := connection.Workspace()
-
-	// Open the index on Redis.
-	index := index.Open(ws.Redis)
 
 	// Instantiate a sorted set of identifiers (including anonymous identifiers)
 	// for this action.
@@ -87,7 +84,7 @@ identifiersLoop:
 		}
 		v, ok := U[property]
 		if ok && isNotZeroValue(v) {
-			matching, err := index.UsersByPropertyValue(ctx, candidates, property, v)
+			matching, err := store.UsersByPropertyValue(ctx, candidates, property, v)
 			if err != nil {
 				return err
 			}
@@ -103,7 +100,7 @@ identifiersLoop:
 				anonymousUsers := []int{}
 			anonUsersLoop:
 				for _, userGID := range candidates {
-					user, err := index.GetUser(ctx, userGID)
+					user, err := store.User(ctx, userGID)
 					if err != nil {
 						return err
 					}
@@ -119,7 +116,7 @@ identifiersLoop:
 			}
 		} else {
 			var err error
-			candidates, err = index.UsersWithNoPropertyValue(ctx, candidates, property)
+			candidates, err = store.UsersWithNoPropertyValue(ctx, candidates, property)
 			if err != nil {
 				return err
 			}
@@ -138,25 +135,25 @@ identifiersLoop:
 
 	switch len(found) {
 	case 0:
-		gid, err := createGR(ctx, ws, index, U)
+		gid, err := createGR(ctx, ws, store, U)
 		if err != nil {
 			return err
 		}
 		log.Printf("[info] created a new Golden Record with GID %d", gid)
 	case 1:
 		// Merge U into V, if possible, otherwise add to U to the users.
-		V, err := index.GetUser(ctx, found[0])
+		V, err := store.User(ctx, found[0])
 		if err != nil {
 			return err
 		}
 		if canMerge(U, V, action.Identifiers, otherActionsIdents) {
-			err := updateGR(ctx, ws, index, found[0], U)
+			err := updateGR(ctx, ws, store, found[0], U)
 			if err != nil {
 				return err
 			}
 			log.Printf("[info] updated the Golden Record with GID %d", found[0])
 		} else {
-			gid, err := createGR(ctx, ws, index, U)
+			gid, err := createGR(ctx, ws, store, U)
 			if err != nil {
 				return err
 			}
@@ -168,7 +165,7 @@ identifiersLoop:
 
 		// Define target as the user within found with the lower GID.
 		targetGID := found[0]
-		target, err := index.GetUser(ctx, targetGID)
+		target, err := store.User(ctx, targetGID)
 		if err != nil {
 			return err
 		}
@@ -178,12 +175,12 @@ identifiersLoop:
 		// nothing.
 		merged := []int{}
 		for _, userGID := range found[1:] {
-			user, err := index.GetUser(ctx, userGID)
+			user, err := store.User(ctx, userGID)
 			if err != nil {
 				return err
 			}
 			if canMerge(user, target, action.Identifiers, otherActionsIdents) {
-				err := updateGR(ctx, ws, index, targetGID, user)
+				err := updateGR(ctx, ws, store, targetGID, user)
 				if err != nil {
 					return err
 				}
@@ -195,13 +192,13 @@ identifiersLoop:
 		// Merge U into target, if merge is possible, otherwise add U to the
 		// users.
 		if canMerge(U, target, action.Identifiers, otherActionsIdents) {
-			err := updateGR(ctx, ws, index, targetGID, U)
+			err := updateGR(ctx, ws, store, targetGID, U)
 			if err != nil {
 				return err
 			}
 			log.Printf("[info] updated the Golden Record with GID %d", targetGID)
 		} else {
-			gid, err := createGR(ctx, ws, index, U)
+			gid, err := createGR(ctx, ws, store, U)
 			if err != nil {
 				return err
 			}
@@ -210,7 +207,7 @@ identifiersLoop:
 
 		// Delete every merged user.
 		for _, user := range merged {
-			err := deleteGR(ctx, ws, index, user)
+			err := deleteGR(ctx, ws, store, user)
 			if err != nil {
 				return err
 			}
@@ -245,16 +242,16 @@ func isNotZeroValue(v any) bool {
 }
 
 // createGR creates a new Golden Record for the user U and returns its GID.
-func createGR(ctx context.Context, ws *state.Workspace, index *index.Index, U map[string]any) (int, error) {
+func createGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, U map[string]any) (int, error) {
 	telemetry.IncrementCounter(ctx, "createGR", 1)
 	// Create an empty Golden Record.
 	var gid int
-	err := ws.Warehouse.QueryRow(ctx, "INSERT INTO users DEFAULT VALUES RETURNING id").Scan(&gid)
+	err := store.QueryRow(ctx, "INSERT INTO users DEFAULT VALUES RETURNING id").Scan(&gid)
 	if err != nil {
 		return 0, err
 	}
 	// Update the Golden Record.
-	err = updateGR(ctx, ws, index, gid, U)
+	err = updateGR(ctx, ws, store, gid, U)
 	if err != nil {
 		return 0, err
 	}
@@ -263,7 +260,7 @@ func createGR(ctx context.Context, ws *state.Workspace, index *index.Index, U ma
 
 // updateGR updates the Golden Record with the given GID using the properties of
 // U.
-func updateGR(ctx context.Context, ws *state.Workspace, index *index.Index, gid int, U map[string]any) error {
+func updateGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, gid int, U map[string]any) error {
 
 	telemetry.IncrementCounter(ctx, "updateGR", 1)
 
@@ -273,7 +270,7 @@ func updateGR(ctx context.Context, ws *state.Workspace, index *index.Index, gid 
 		return errors.New("users schema not found")
 	}
 
-	warehouses.SerializeRow(U, *schema)
+	datastore.SerializeRow(U, *schema)
 
 	// TODO(Gianluca): should the user be normalized before being written on the
 	// data warehouse?
@@ -299,7 +296,7 @@ func updateGR(ctx context.Context, ws *state.Workspace, index *index.Index, gid 
 	query.WriteString("\nWHERE id = $")
 	query.WriteString(strconv.Itoa(i))
 	values = append(values, gid)
-	res, err := ws.Warehouse.Exec(ctx, query.String(), values...)
+	res, err := store.Exec(ctx, query.String(), values...)
 	if err != nil {
 		return err
 	}
@@ -311,7 +308,7 @@ func updateGR(ctx context.Context, ws *state.Workspace, index *index.Index, gid 
 		return fmt.Errorf("BUG: one row should be affected, got %d", affected)
 	}
 
-	err = index.SetUser(ctx, gid, U)
+	err = store.SetUser(ctx, gid, U)
 	if err != nil {
 		return err
 	}
@@ -320,14 +317,14 @@ func updateGR(ctx context.Context, ws *state.Workspace, index *index.Index, gid 
 }
 
 // deleteGR deletes the Golden Record with the given GID.
-func deleteGR(ctx context.Context, ws *state.Workspace, index *index.Index, gid int) error {
+func deleteGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, gid int) error {
 	telemetry.IncrementCounter(ctx, "deleteGR", 1)
 	// Remove the Golden Record from the data warehouse.
-	_, err := ws.Warehouse.Exec(ctx, "DELETE FROM `users` WHERE `id` = ?", gid)
+	_, err := store.Exec(ctx, "DELETE FROM `users` WHERE `id` = ?", gid)
 	if err != nil {
 		return err
 	}
 	// Delete the user's data from the Redis index.
-	err = index.DeleteUser(ctx, gid)
+	err = store.DeleteUser(ctx, gid)
 	return err
 }

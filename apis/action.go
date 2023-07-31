@@ -17,6 +17,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/httpclient"
 	"chichi/apis/mappings/mapexp"
@@ -78,11 +79,11 @@ const (
 )
 
 // fromState serializes action into this.
-func (this *Action) fromState(db *postgres.DB, http *httpclient.HTTP, action *state.Action) {
+func (this *Action) fromState(db *postgres.DB, store *datastore.Store, http *httpclient.HTTP, action *state.Action) {
 	c := action.Connection()
 	this.db = db
 	this.action = action
-	this.connection = &Connection{db: db, connection: c, http: http}
+	this.connection = &Connection{db: db, connection: c, store: store, http: http}
 	this.ID = action.ID
 	this.Connection = c.ID
 	this.Target = ActionTarget(action.Target)

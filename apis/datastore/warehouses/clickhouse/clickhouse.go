@@ -22,7 +22,7 @@ import (
 	"time"
 	_ "time/tzdata" // workaround for clickhouse-go issue #162
 
-	"chichi/apis/warehouses"
+	"chichi/apis/datastore/warehouses"
 	"chichi/connector/types"
 
 	"github.com/ClickHouse/clickhouse-go/v2"

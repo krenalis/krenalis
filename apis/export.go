@@ -14,10 +14,11 @@ import (
 	"io"
 	"log"
 
+	"chichi/apis/datastore"
+	"chichi/apis/datastore/warehouses"
 	"chichi/apis/errors"
 	"chichi/apis/mappings"
 	"chichi/apis/state"
-	"chichi/apis/warehouses"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 )
@@ -239,8 +240,7 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 	// issue https://github.com/open2b/chichi/issues/183.
 	var cursor _connector.Cursor
 
-	c := this.action.Connection()
-	ws := c.Workspace()
+	c := this.connection
 
 	var eof bool
 
@@ -254,7 +254,7 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 		if err == io.EOF {
 			eof = true
 		} else if len(users) == 0 {
-			return actionExecutionError{fmt.Errorf("connector %d has returned an empty users without returning EOF", c.Connector().ID)}
+			return actionExecutionError{fmt.Errorf("connector %d has returned an empty users without returning EOF", c.ID)}
 		}
 
 		for _, user := range users {
@@ -269,7 +269,7 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 			if err != nil {
 				return actionExecutionError{err}
 			}
-			err = ws.Warehouse.SetDestinationUser(ctx, this.action.ID, user.ID, string(p))
+			err = c.store.SetDestinationUser(ctx, this.action.ID, user.ID, string(p))
 			if err != nil {
 				return actionExecutionError{err}
 			}
@@ -306,9 +306,9 @@ func (this *Action) resolveExternalIdentity(user userToExport) (string, bool, er
 	if err != nil {
 		return "", false, err
 	}
+	c := this.connection
 	ctx := context.Background()
-	wh := this.action.Connection().Workspace().Warehouse
-	externalID, ok, err := wh.DestinationUser(ctx, this.action.ID, string(p))
+	externalID, ok, err := c.store.DestinationUser(ctx, this.action.ID, string(p))
 	if err != nil {
 		return "", false, err
 	}
@@ -332,11 +332,11 @@ func (this *Action) readUsersFromDataWarehouse(ids []int) ([]userToExport, error
 	}
 
 	// Read the users.
-	columns := warehouses.PropertiesToColumns(schema.Properties())
+	columns := datastore.PropertiesToColumns(schema.Properties())
 
-	var where warehouses.Expr
+	var where datastore.Expr
 	if len(ids) > 0 {
-		operands := make([]warehouses.Expr, len(ids))
+		operands := make([]datastore.Expr, len(ids))
 		for i := range ids {
 			operands[i] = warehouses.NewBaseExpr(
 				warehouses.ExprColumn{Name: "id", Type: types.PtInt},
@@ -351,9 +351,10 @@ func (this *Action) readUsersFromDataWarehouse(ids []int) ([]userToExport, error
 		return nil, errors.New("property 'id' not found in schema")
 	}
 
-	users, err := ws.Warehouse.Select(context.Background(), "users", columns, where, idProperty, 0, 1000)
+	store := this.connection.store
+	users, err := store.Select(context.Background(), "users", columns, where, idProperty, 0, 1000)
 	if err != nil {
-		if err2, ok := err.(*warehouses.Error); ok {
+		if err2, ok := err.(*datastore.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
 			log.Printf("[error] cannot get users from the data warehouse of the workspace %d: %s", ws.ID, err)
 			err = errors.Unprocessable(WarehouseFailed, "warehouse connection is failed: %w", err2.Err)
@@ -363,7 +364,7 @@ func (this *Action) readUsersFromDataWarehouse(ids []int) ([]userToExport, error
 
 	exportUsers := make([]userToExport, len(users))
 	for i, user := range users {
-		props, _ := warehouses.DeserializeRowAsMap(schema.Properties(), user)
+		props, _ := datastore.DeserializeRowAsMap(schema.Properties(), user)
 		gid, ok := props["id"].(int)
 		if !ok {
 			return nil, errors.New("missing or invalid GID")

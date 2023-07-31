@@ -78,8 +78,8 @@ func (this *Action) importFromFile(ctx context.Context) error {
 	inSchemaProps := this.action.InSchema.PropertiesNames()
 
 	// Read the records.
-	connection := this.action.Connection()
-	rw := newRecordWriter(connection.ID, math.MaxInt, func(record map[string]any) error {
+	c := this.connection
+	rw := newRecordWriter(c.ID, math.MaxInt, func(record map[string]any) error {
 
 		// Take only the necessary properties.
 		props := make(map[string]any, len(inSchemaProps))
@@ -103,7 +103,7 @@ func (this *Action) importFromFile(ctx context.Context) error {
 		}
 
 		// Set the user into the data warehouse.
-		err = userswarehouse.SetUser(ctx, connection, this.action, mappedUser)
+		err = userswarehouse.SetUser(ctx, c.store, this.action, mappedUser)
 		if err != nil {
 			return actionExecutionError{err}
 		}
