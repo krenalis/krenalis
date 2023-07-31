@@ -99,6 +99,14 @@ func InitAndLaunch(t *testing.T) *Chichi {
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	c.cancel = cancel
 
+	// In case of an error during the test initialization, stop Chichi.
+	var initOk bool
+	defer func() {
+		if !initOk {
+			c.Stop()
+		}
+	}()
+
 	if launchChichiExternally {
 		err := buildChichi(ctxWithCancel, &setts)
 		if err != nil {
@@ -155,6 +163,8 @@ func InitAndLaunch(t *testing.T) *Chichi {
 
 	// Wait some time for the leader election.
 	time.Sleep(3 * time.Second)
+
+	initOk = true
 
 	return &c
 }
