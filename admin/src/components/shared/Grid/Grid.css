@@ -3,13 +3,11 @@
     -webkit-user-select: none;
     -ms-user-select: none;
     user-select: none;
-    overflow-x: auto;
-    overflow-y: hidden;
     background-color: var(--bg-primary);
     border-radius: var(--radius);
     border: 1px solid var(--sl-color-neutral-200);
     box-shadow: var(--sl-shadow-small);
-    overflow: hidden;
+    overflow: auto;
 }
 
 .grid::-webkit-scrollbar {
