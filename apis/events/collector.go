@@ -156,7 +156,7 @@ type collectedEvent struct {
 	AnonymousId  string          `json:"anonymousId,omitempty"`
 	Category     string          `json:"category,omitempty"`
 	Context      eventContext    `json:"context,omitempty"`
-	Event        string          `json:"event,event"`
+	Event        string          `json:"event,omitempty"`
 	GroupId      string          `json:"groupId,omitempty"`
 	Integrations json.RawMessage `json:"integrations,omitempty"`
 	MessageId    string          `json:"messageId,omitempty"`
