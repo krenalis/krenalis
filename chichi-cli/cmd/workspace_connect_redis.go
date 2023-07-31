@@ -18,7 +18,7 @@ import (
 )
 
 var workspaceConnectRedisCmd = &cobra.Command{
-	Use:   "connect-redis <type> <file>",
+	Use:   "connect-redis <file>",
 	Short: "Connect the workspace to a Redis database",
 	Long: "Connect the workspace to a Redis database.\n\n" +
 		"<file> is a JSON file containing the Redis database settings",
