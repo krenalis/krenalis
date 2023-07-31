@@ -22,6 +22,7 @@ const flushEventsQueueTimeout = 1 * time.Second // interval to flush queued Even
 var eventsMergeTable = warehouses.MergeTable{
 	Name: "events",
 	Columns: []types.Property{
+		{Name: "gid", Type: types.Int()},
 		{Name: "anonymous_id", Type: types.Text()},
 		{Name: "category", Type: types.Text()},
 		{Name: "app_name", Type: types.Text()},

@@ -940,6 +940,7 @@ func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
 		}
 
 		rows[i] = []any{
+			0, // TODO: pass the correct GID.
 			e.AnonymousId,
 			e.Category,
 
