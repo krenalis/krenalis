@@ -12,18 +12,13 @@
     from {
         max-height: 0;
         opacity: 0;
-        transform: scale(.9);
     }
     to {
         opacity: 1;
         max-height: 200px;
-        transform: scale(1);
     }
 }
 
 .gridRow[data-animation='fade-in'] {
     animation: rowFadeIn 1s;
-    animation-fill-mode: both;
-    animation-delay: .3s;
-    will-change: transform;
 }
