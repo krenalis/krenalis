@@ -7,6 +7,7 @@ import { AppContext } from '../../../context/providers/AppProvider';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
 import { SlIcon, SlButton, SlSkeleton } from '@shoelace-style/shoelace/dist/react/index.js';
+import LittleLogo from '../../shared/LittleLogo/LittleLogo';
 
 const MAX_FETCH_TIME = 200;
 
@@ -14,7 +15,7 @@ const User = () => {
 	const [user, setUser] = useState(null);
 
 	const { userIDList } = useContext(UsersContext);
-	const { api, showError, showStatus, redirect, setTitle } = useContext(AppContext);
+	const { api, showError, showStatus, redirect, setTitle, connections } = useContext(AppContext);
 
 	const fetchTimeoutID = useRef(null);
 
@@ -35,7 +36,6 @@ const User = () => {
 
 	useEffect(() => {
 		fetchUser();
-
 		return () => {
 			clearTimeout(fetchTimeoutID.current);
 		};
@@ -80,7 +80,19 @@ const User = () => {
 			showError(err);
 			return;
 		}
-		u.events = { ...res.events };
+
+		const enrichedEvents = [];
+		for (const event of res.events) {
+			const e = { ...event };
+			const conn = connections.find((c) => c.id === event.source);
+			if (conn != null) {
+				e.logo = conn.logo;
+			} else {
+				e.logo = <LittleLogo icon='' />;
+			}
+			enrichedEvents.push(e);
+		}
+		u.events = enrichedEvents;
 
 		// Fetch the user's traits.
 		[res, err] = await api.users.traits(userID);
@@ -162,15 +174,13 @@ const User = () => {
 
 	const events = [];
 	if (user != null) {
-		for (const event in user.events) {
-			let value = user.events[event];
-			if (typeof value === 'object') {
-				value = JSON.stringify(value);
-			}
+		for (const event of user.events) {
 			events.push(
-				<div className='event'>
-					{event}: {value}
-				</div>
+				<>
+					<div className='eventLogo'>{event.logo}</div>
+					<div className='eventType'>{event.type}</div>
+					<div className='eventSentAt'>{event.sentAt}</div>
+				</>
 			);
 		}
 	}
@@ -244,7 +254,7 @@ const User = () => {
 				{user == null ? (
 					eventsSkeleton
 				) : events.length > 0 ? (
-					<div className='events'>events</div>
+					<div className='eventsList'>{events}</div>
 				) : (
 					<div className='noEvents'>No events associated to this user</div>
 				)}
