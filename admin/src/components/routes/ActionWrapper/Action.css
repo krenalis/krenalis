@@ -21,7 +21,7 @@
     padding: 20px 40px;
     background-color: var(--bg-primary);
     border-bottom: 1px solid var(--border-primary);
-    z-index: 10;
+    z-index: 20;
     height: 90px;
 }
 
