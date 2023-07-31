@@ -37,6 +37,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/relvacode/iso8601"
 	"github.com/segmentio/ksuid"
+	"golang.org/x/exp/maps"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -231,6 +232,7 @@ func (c *collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // importUserTraits imports the user traits from the given events batch
 // collected on the source connection.
 func (c *collector) importUserTraits(ctx context.Context, source *state.Connection, eventsBatch []*collectedEvent) error {
+	anonIdents := source.Workspace().AnonymousIdentifiers.Mapping
 	usersSchema := *source.Workspace().Schemas["users"]
 	for _, action := range source.Actions() {
 		if !action.Enabled {
@@ -246,7 +248,10 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 			}
 			// TODO(Gianluca): shall we normalize the user properties before
 			// mapping?
-			mapping, err := mappings.New(Schema, usersSchema, action.Mapping, action.Transformation, false)
+			mappingProps := make(map[string]string, len(action.Mapping)+len(anonIdents))
+			maps.Copy(mappingProps, action.Mapping)
+			maps.Copy(mappingProps, anonIdents)
+			mapping, err := mappings.New(Schema, usersSchema, mappingProps, action.Transformation, false)
 			if err != nil {
 				return err
 			}
