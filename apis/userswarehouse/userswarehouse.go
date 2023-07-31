@@ -305,7 +305,7 @@ func updateGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, 
 		return err
 	}
 	if affected != 1 {
-		return fmt.Errorf("BUG: one row should be affected, got %d", affected)
+		return fmt.Errorf("BUG: one row should be affected, got %d. Is the Redis index in sync with the content of the users table?", affected)
 	}
 
 	err = store.SetUser(ctx, gid, U)
