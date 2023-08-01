@@ -1067,15 +1067,11 @@ func (state *State) setWorkspaceSchemas(n postgres.Notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	var unchanged []string
-	for name, typ := range e.Schemas {
-		if typ == nil {
-			unchanged = append(unchanged, name)
-		}
-	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		for _, name := range unchanged {
-			e.Schemas[name] = w.Schemas[name]
+		for name, typ := range e.Schemas {
+			if typ == nil {
+				e.Schemas[name] = w.Schemas[name]
+			}
 		}
 		w.Schemas = e.Schemas
 	})
