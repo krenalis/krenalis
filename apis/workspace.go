@@ -693,7 +693,7 @@ func (this *Workspace) InitWarehouse() error {
 	if this.store == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
 	}
-	return this.store.Init(context.Background())
+	return this.store.InitWarehouse(context.Background())
 }
 
 // ListenedEvents returns the events listen to by the specified listener and
@@ -785,62 +785,76 @@ func (this *Workspace) OAuthToken(authorizationCode, redirectURI string, connect
 //   - WarehouseFailed, if the connection to the data store failed.
 //   - InvalidSchemaTable, if a table of a schema is not valid.
 func (this *Workspace) ReloadSchemas() error {
+
 	if this.store == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", this.workspace.ID)
 	}
-	tables, err := this.store.Tables(context.Background())
+
+	usersSchema, groupsSchema, err := this.store.Schemas(context.Background())
 	if err != nil {
-		if err, ok := err.(*datastore.Error); ok {
+		switch err := err.(type) {
+		case datastore.RepeatedPropertyNameError:
+			return errors.Unprocessable(RepeatedPropertyName,
+				"column %s results in a repeated property named %s", err.Column, err.Property)
+		case *datastore.Error:
 			return errors.Unprocessable(WarehouseFailed, "data store has returned an error: %w", err.Err)
 		}
 		return err
 	}
+
+	validateSchema := func(table string, schema types.Type) error {
+		properties := schema.Properties()
+		// Check the 'id' property.
+		idIndex := slices.IndexFunc(properties, func(p types.Property) bool {
+			return p.Name == "id"
+		})
+		if idIndex == -1 {
+			return errors.Unprocessable(InvalidSchemaTable, "'%s' schema has no 'id' property", table)
+		}
+		if p := properties[idIndex]; p.Type.PhysicalType() != types.PtInt {
+			return errors.Unprocessable(InvalidSchemaTable, "property '%s.id' does not have type Int", table)
+		} else if p.Nullable {
+			return errors.Unprocessable(InvalidSchemaTable, "property '%s.id' cannot be nullable", table)
+		}
+		// Check the 'creation_time' and 'timestamp' properties.
+		for _, property := range []string{"creation_time", "timestamp"} {
+			index := slices.IndexFunc(properties, func(p types.Property) bool {
+				return p.Name == property
+			})
+			if index == -1 {
+				return errors.Unprocessable(InvalidSchemaTable, "'%s' schema has no '%s' property", table, property)
+			}
+			if p := properties[index]; p.Type.PhysicalType() != types.PtDateTime {
+				return errors.Unprocessable(InvalidSchemaTable, "property '%s.%s' does not have type DateTime", table, property)
+			} else if p.Nullable {
+				return errors.Unprocessable(InvalidSchemaTable, "property '%s.%s' cannot be nullable", table, property)
+			}
+		}
+		return nil
+	}
+
 	n := state.SetWorkspaceSchemasNotification{
 		Workspace: this.workspace.ID,
 		Schemas:   map[string]*types.Type{},
 	}
-	for _, table := range tables {
-		if table.Name != "users" && table.Name != "groups" {
-			continue
+	if usersSchema.Valid() {
+		if err = validateSchema("users", usersSchema); err != nil {
+			return err
 		}
-		// Check the 'id' column.
-		idIndex := slices.IndexFunc(table.Columns, func(c types.Property) bool {
-			return c.Name == "id"
-		})
-		if idIndex == -1 {
-			return errors.Unprocessable(InvalidSchemaTable, "'%s' table has no 'id' column", table.Name)
-		}
-		if c := table.Columns[idIndex]; c.Type.PhysicalType() != types.PtInt {
-			return errors.Unprocessable(InvalidSchemaTable, "column '%s.id' does not have type Int", table.Name)
-		} else if c.Nullable {
-			return errors.Unprocessable(InvalidSchemaTable, "column '%s.id' must not be nullable", table.Name)
-		}
-		// Check the 'creation_time' and 'timestamp' columns.
-		for _, column := range []string{"creation_time", "timestamp"} {
-			colIndex := slices.IndexFunc(table.Columns, func(c types.Property) bool {
-				return c.Name == column
-			})
-			if colIndex == -1 {
-				return errors.Unprocessable(InvalidSchemaTable, "'%s' table has no '%s' column", column, table.Name)
-			}
-			if c := table.Columns[colIndex]; c.Type.PhysicalType() != types.PtDateTime {
-				return errors.Unprocessable(InvalidSchemaTable, "column '%s.%s' does not have type DateTime", table.Name, column)
-			} else if c.Nullable {
-				return errors.Unprocessable(InvalidSchemaTable, "column '%s.%s' must not be nullable", table.Name, column)
-			}
-		}
-		properties, err := datastore.ColumnsToProperties(table.Columns)
-		if err, ok := err.(datastore.RepeatedPropertyNameError); ok {
-			return errors.Unprocessable(RepeatedPropertyName,
-				"column %s.%s results in a repeated property named %s", table.Name, err.Column, err.Property)
-		}
-		schema := types.Object(properties)
-		n.Schemas[table.Name] = &schema
+		n.Schemas["users"] = &usersSchema
 	}
-	newRawSchemas, err := json.Marshal(n.Schemas)
+	if groupsSchema.Valid() {
+		if err = validateSchema("groups", groupsSchema); err != nil {
+			return err
+		}
+		n.Schemas["groups"] = &groupsSchema
+	}
+
+	rawSchemas, err := json.Marshal(n.Schemas)
 	if err != nil {
-		return fmt.Errorf("cannot marshal data store schema for workspace %d: %s", this.workspace.ID, err)
+		return fmt.Errorf("cannot marshal schemas for workspace %d: %s", this.workspace.ID, err)
 	}
+
 	ctx := context.Background()
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var typ *state.WarehouseType
@@ -853,12 +867,12 @@ func (this *Workspace) ReloadSchemas() error {
 			return err
 		}
 		if typ == nil {
-			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", n.Workspace)
+			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", n.Workspace)
 		}
-		if bytes.Equal(newRawSchemas, oldRawSchemas) {
+		if bytes.Equal(rawSchemas, oldRawSchemas) {
 			return nil
 		}
-		_, err = tx.Exec(ctx, "UPDATE workspaces SET schemas = $1 WHERE id = $2", newRawSchemas, n.Workspace)
+		_, err = tx.Exec(ctx, "UPDATE workspaces SET schemas = $1 WHERE id = $2", rawSchemas, n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -868,14 +882,15 @@ func (this *Workspace) ReloadSchemas() error {
 			if err != nil {
 				return fmt.Errorf("cannot parse schemas of workspace %d: %s", n.Workspace, err)
 			}
-			for name, t := range n.Schemas {
-				if t2, ok := oldSchemas[name]; ok && t.EqualTo(*t2) {
+			for name, schema := range n.Schemas {
+				if oldSchema, ok := oldSchemas[name]; ok && schema.EqualTo(*oldSchema) {
 					n.Schemas[name] = nil
 				}
 			}
 		}
 		return tx.Notify(ctx, n)
 	})
+
 	return err
 }
 
@@ -1146,8 +1161,7 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 	schema := types.Object(requestedProperties)
 
 	// Read the users.
-	columns := datastore.PropertiesToColumns(requestedProperties)
-	rows, err := this.store.Select(context.Background(), "users", columns, nil, orderProperty, first, limit)
+	users, err := this.store.UsersSlice(context.Background(), requestedProperties, nil, orderProperty, first, limit)
 	if err != nil {
 		if err2, ok := err.(*datastore.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
@@ -1155,11 +1169,6 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 			err = errors.Unprocessable(WarehouseFailed, "store connection is failed: %w", err2.Err)
 		}
 		return types.Type{}, nil, err
-	}
-
-	users := make([][]any, len(rows))
-	for i, row := range rows {
-		users[i] = datastore.DeserializeRowAsSlice(requestedProperties, row)
 	}
 
 	return schema.Unflatten(), users, err

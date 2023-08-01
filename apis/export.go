@@ -332,7 +332,6 @@ func (this *Action) readUsersFromDataWarehouse(ids []int) ([]userToExport, error
 	}
 
 	// Read the users.
-	columns := datastore.PropertiesToColumns(schema.Properties())
 
 	var where datastore.Expr
 	if len(ids) > 0 {
@@ -352,7 +351,7 @@ func (this *Action) readUsersFromDataWarehouse(ids []int) ([]userToExport, error
 	}
 
 	store := this.connection.store
-	users, err := store.Select(context.Background(), "users", columns, where, idProperty, 0, 1000)
+	users, err := store.Users(context.Background(), schema.Properties(), where, idProperty, 0, 1000)
 	if err != nil {
 		if err2, ok := err.(*datastore.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
@@ -364,14 +363,13 @@ func (this *Action) readUsersFromDataWarehouse(ids []int) ([]userToExport, error
 
 	exportUsers := make([]userToExport, len(users))
 	for i, user := range users {
-		props, _ := datastore.DeserializeRowAsMap(schema.Properties(), user)
-		gid, ok := props["id"].(int)
+		gid, ok := user["id"].(int)
 		if !ok {
 			return nil, errors.New("missing or invalid GID")
 		}
 		exportUsers[i] = userToExport{
 			GID:        gid,
-			Properties: props,
+			Properties: user,
 		}
 	}
 

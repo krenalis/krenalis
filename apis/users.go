@@ -229,7 +229,7 @@ func (this *User) Events(limit int) ([]Event, error) {
 		warehouses.OperatorEqual,
 		this.id,
 	)
-	rows, err := this.store.Select(context.Background(), "events", eventColumns, where, types.Property{}, 0, limit)
+	rows, err := this.store.Events(context.Background(), eventColumns, where, types.Property{}, 0, limit)
 	if err != nil {
 		if err2, ok := err.(*datastore.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
@@ -423,13 +423,12 @@ func (this *User) Traits() (map[string]any, error) {
 		return nil, errors.Unprocessable(NoUsersSchema, "workspace %d does not have users schema", this.workspace.ID)
 	}
 
-	columns := datastore.PropertiesToColumns(properties)
 	where := warehouses.NewBaseExpr(
 		warehouses.ExprColumn{Name: "id", Type: types.PtInt},
 		warehouses.OperatorEqual,
 		this.id,
 	)
-	rows, err := this.store.Select(context.Background(), "users", columns, where, types.Property{}, 0, 1)
+	rows, err := this.store.Users(context.Background(), properties, where, types.Property{}, 0, 1)
 	if err != nil {
 		if err2, ok := err.(*datastore.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
@@ -442,7 +441,7 @@ func (this *User) Traits() (map[string]any, error) {
 		return nil, errors.NotFound("user %d does not exist", this.id)
 	}
 
-	traits, _ := datastore.DeserializeRowAsMap(properties, rows[0])
+	traits := rows[0]
 
 	return traits, nil
 }

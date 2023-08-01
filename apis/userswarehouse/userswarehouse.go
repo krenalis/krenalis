@@ -9,18 +9,16 @@ package userswarehouse
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"sort"
-	"strconv"
-	"strings"
+	"time"
 
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
-	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/telemetry"
 
+	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 )
 
@@ -84,7 +82,7 @@ identifiersLoop:
 		}
 		v, ok := U[property]
 		if ok && isNotZeroValue(v) {
-			matching, err := store.UsersByPropertyValue(ctx, candidates, property, v)
+			matching, err := store.FilterCandidatesByProperty(ctx, candidates, property, v)
 			if err != nil {
 				return err
 			}
@@ -116,7 +114,7 @@ identifiersLoop:
 			}
 		} else {
 			var err error
-			candidates, err = store.UsersWithNoPropertyValue(ctx, candidates, property)
+			candidates, err = store.FilterCandidatesByProperty(ctx, candidates, property, nil)
 			if err != nil {
 				return err
 			}
@@ -207,7 +205,8 @@ identifiersLoop:
 
 		// Delete every merged user.
 		for _, user := range merged {
-			err := deleteGR(ctx, ws, store, user)
+			telemetry.IncrementCounter(ctx, "deleteGR", 1)
+			err = store.DeleteUser(ctx, user)
 			if err != nil {
 				return err
 			}
@@ -244,18 +243,23 @@ func isNotZeroValue(v any) bool {
 // createGR creates a new Golden Record for the user U and returns its GID.
 func createGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, U map[string]any) (int, error) {
 	telemetry.IncrementCounter(ctx, "createGR", 1)
-	// Create an empty Golden Record.
-	var gid int
-	err := store.QueryRow(ctx, "INSERT INTO users DEFAULT VALUES RETURNING id").Scan(&gid)
-	if err != nil {
-		return 0, err
+
+	// Serialize the row.
+	schema, ok := ws.Schemas["users"]
+	if !ok {
+		return 0, errors.New("users schema not found")
 	}
-	// Update the Golden Record.
-	err = updateGR(ctx, ws, store, gid, U)
-	if err != nil {
-		return 0, err
-	}
-	return gid, nil
+
+	datastore.SerializeRow(U, *schema)
+
+	// TODO(Gianluca): should the user be normalized before being written on the
+	// data store?
+
+	user := maps.Clone(U)
+	user["timestamp"] = time.Now().UTC()
+	id, err := store.CreateUser(ctx, user)
+
+	return id, err
 }
 
 // updateGR updates the Golden Record with the given GID using the properties of
@@ -273,58 +277,9 @@ func updateGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, 
 	datastore.SerializeRow(U, *schema)
 
 	// TODO(Gianluca): should the user be normalized before being written on the
-	// data warehouse?
+	// data store?
 
-	// TODO(Gianluca): replace this query -- as well as the other queries in
-	// this file -- with calls to specific methods of the data warehouse, when
-	// these will be implemented.
-	query := &strings.Builder{}
-	query.WriteString("UPDATE users SET\n")
-	var values []any
-	i := 1
-	for prop, value := range U {
-		if i > 1 {
-			query.WriteString(", ")
-		}
-		query.WriteString(postgres.QuoteIdent(prop))
-		query.WriteString(" = $")
-		query.WriteString(strconv.Itoa(i))
-		values = append(values, value)
-		i++
-	}
-	query.WriteString(`, "timestamp" = now()`)
-	query.WriteString("\nWHERE id = $")
-	query.WriteString(strconv.Itoa(i))
-	values = append(values, gid)
-	res, err := store.Exec(ctx, query.String(), values...)
-	if err != nil {
-		return err
-	}
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if affected != 1 {
-		return fmt.Errorf("BUG: one row should be affected, got %d. Is the Redis index in sync with the content of the users table?", affected)
-	}
+	err := store.UpdateUser(ctx, gid, U)
 
-	err = store.SetUser(ctx, gid, U)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// deleteGR deletes the Golden Record with the given GID.
-func deleteGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, gid int) error {
-	telemetry.IncrementCounter(ctx, "deleteGR", 1)
-	// Remove the Golden Record from the data warehouse.
-	_, err := store.Exec(ctx, "DELETE FROM `users` WHERE `id` = ?", gid)
-	if err != nil {
-		return err
-	}
-	// Delete the user's data from the Redis index.
-	err = store.DeleteUser(ctx, gid)
 	return err
 }

@@ -9,27 +9,29 @@ package datastore
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"chichi/apis/datastore/warehouses"
+	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/connector/types"
 
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/exp/maps"
 )
 
 type (
-	Expr   = warehouses.Expr
-	Result = warehouses.Result
-	Row    = warehouses.Row
-	Table  = warehouses.Table
-	Where  = warehouses.Where
-	Error  = warehouses.Error
+	Expr  = warehouses.Expr
+	Row   = warehouses.Row
+	Where = warehouses.Where
+	Error = warehouses.Error
 )
 
 type Store struct {
@@ -79,31 +81,61 @@ func newStore(ws *state.Workspace) (*Store, error) {
 	return store, nil
 }
 
-// AddEvents adds events to the data warehouse.
+// AddEvents adds events to the store.
 func (store *Store) AddEvents(events [][]any) {
 	store.events.Lock()
 	store.events.queue = append(store.events.queue, events...)
 	store.events.Unlock()
 }
 
-// DeleteUser deletes from the index the user with the given GID.
+// CreateUser creates a user with the given properties and returns its
+// identifier.
+func (store *Store) CreateUser(ctx context.Context, user map[string]any) (int, error) {
+	b := strings.Builder{}
+	b.WriteString("INSERT INTO users (")
+	properties := maps.Keys(user)
+	for i, name := range properties {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteByte('"')
+		b.WriteString(name)
+		b.WriteByte('"')
+	}
+	b.WriteString(") VALUES (")
+	values := make([]any, len(properties))
+	for i, name := range properties {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteByte('$')
+		b.WriteString(strconv.Itoa(i + 1))
+		values[i] = user[name]
+	}
+	b.WriteString(`) RETURNING "id"`)
+	var id int
+	err := store.warehouse.QueryRow(ctx, b.String(), values...).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	err = store.setRedisUserIndex(ctx, id, user)
+	if err != nil {
+		return 0, err
+	}
+	err = store.redis.Save(ctx).Err()
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+// DeleteUser deletes the user with identifier id.
 func (store *Store) DeleteUser(ctx context.Context, id int) error {
-	// Remove the user from the keys "props:<property>:<property value>" and
-	// "props:<property>:-".
-	key := userPropsKeysKey(id)
-	var keys []string
-	err := store.redis.LRange(ctx, key, 0, -1).ScanSlice(&keys)
+	err := store.deleteRedisUserIndex(ctx, id)
 	if err != nil {
 		return err
 	}
-	for _, key := range keys {
-		err := store.redis.LRem(ctx, key, 0, id).Err()
-		if err != nil {
-			return err
-		}
-	}
-	// Delete the key "user_prop_keys:<user GID>".
-	err = store.redis.Del(ctx, key).Err()
+	_, err = store.warehouse.Exec(ctx, "DELETE FROM `users` WHERE `id` = ?", id)
 	return err
 }
 
@@ -114,31 +146,45 @@ func (store *Store) DestinationUser(ctx context.Context, action int, property st
 	return store.warehouse.DestinationUser(ctx, action, property)
 }
 
-// Exec executes a query without returning any rows. args are the placeholders.
-// If the query fails, it returns an Error value.
-func (store *Store) Exec(ctx context.Context, query string, args ...any) (Result, error) {
-	return store.warehouse.Exec(ctx, query, args...)
-}
-
-// Init initializes the data warehouse by creating the supporting tables.
-func (store *Store) Init(ctx context.Context) error {
-	return store.warehouse.Init(ctx)
-}
-
-// QueryRow executes a query that should return at most one row.
-func (store *Store) QueryRow(ctx context.Context, query string, args ...any) Row {
-	return store.warehouse.QueryRow(ctx, query, args...)
-}
-
-// Select returns the rows from the given table that satisfies the where
-// condition with only the given columns, ordered by order if order is not the
-// zero Property, and in range [first,first+limit] with first >= 0 and
-// 0 < limit <= 1000.
+// Events returns the events that satisfy the where condition with only the
+// given columns, ordered by order if order is not the zero Property, and in
+// range [first,first+limit] with first >= 0 and 0 < limit <= 1000.
 //
 // If a query to the warehouse fails, it returns an Error value.
-// If an argument is not valid, it panics.
-func (store *Store) Select(ctx context.Context, table string, columns []types.Property, where Where, order types.Property, first, limit int) ([][]any, error) {
-	return store.warehouse.Select(ctx, table, columns, where, order, first, limit)
+func (store *Store) Events(ctx context.Context, columns []types.Property, where Where, order types.Property, first, limit int) ([][]any, error) {
+	return store.warehouse.Select(ctx, "events", columns, where, order, first, limit)
+}
+
+// FilterCandidatesByProperty filters candidate users based on the specified
+// property during identity resolution. It returns the users in candidates
+// who have the given value for the property. If the value argument is nil, it
+// returns users that have the zero value for the property. As a special case,
+// if the candidates argument is nil, it means that candidates contain every
+// user.
+//
+// property must be an anonymous identifier or an identifier for an action.
+func (store *Store) FilterCandidatesByProperty(ctx context.Context, candidates []int, property string, value any) ([]int, error) {
+	var key string
+	if value == nil {
+		key = redisPropsZeroKey(property)
+	} else {
+		key = redisPropsKey(property, value)
+	}
+	var users []int
+	err := store.redis.LRange(ctx, key, 0, -1).ScanSlice(&users)
+	if err != nil {
+		return nil, err
+	}
+	if candidates != nil {
+		users = intersection(users, candidates)
+	}
+	return users, nil
+}
+
+// InitWarehouse initializes the data warehouse creating the events and the
+// destinations_users tables.
+func (store *Store) InitWarehouse(ctx context.Context) error {
+	return store.warehouse.Init(ctx)
 }
 
 // SetDestinationUser sets the destination user relative to the action, with
@@ -147,37 +193,86 @@ func (store *Store) SetDestinationUser(ctx context.Context, connection int, exte
 	return store.warehouse.SetDestinationUser(ctx, connection, externalUserID, externalProperty)
 }
 
-// SetUser sets the user U with the given GID on the index. If an user with the
-// same GID already exists in the index, its property values are replaced with
-// the property values of U; otherwise, if it does not exist, a new user is
-// created in the index.
-func (store *Store) SetUser(ctx context.Context, id int, user map[string]any) error {
-	err := store.DeleteUser(ctx, id)
+// Schemas returns the schemas of users and groups for the relative tables.
+// If a table does not exist, it returns the invalid schema for that table.
+func (store *Store) Schemas(ctx context.Context) (types.Type, types.Type, error) {
+	tables, err := store.warehouse.Tables(ctx)
+	if err != nil {
+		return types.Type{}, types.Type{}, err
+	}
+	var usersSchema, groupsSchema types.Type
+	for _, table := range tables {
+		if table.Name != "users" && table.Name != "groups" {
+			continue
+		}
+		properties, err := ColumnsToProperties(table.Columns)
+		if err != nil {
+			return types.Type{}, types.Type{}, err
+		}
+		if table.Name == "users" {
+			usersSchema = types.Object(properties)
+		} else {
+			groupsSchema = types.Object(properties)
+		}
+	}
+	return usersSchema, groupsSchema, nil
+}
+
+// UpdateUser updates the properties of the user with identifier id.
+// Only the properties in users will be updated.
+func (store *Store) UpdateUser(ctx context.Context, id int, user map[string]any) error {
+	err := store.deleteRedisUserIndex(ctx, id)
 	if err != nil {
 		return err
 	}
-	err = store.setUser(ctx, id, user)
+	err = store.setRedisUserIndex(ctx, id, user)
 	if err != nil {
 		return err
 	}
 	// TODO(Gianluca): find a better way to implement persistency.
 	// See https://github.com/open2b/chichi/issues/215.
 	err = store.redis.Save(ctx).Err()
-	return err
+	if err != nil {
+		return err
+	}
+	query := &strings.Builder{}
+	query.WriteString("UPDATE users SET\n")
+	var values []any
+	i := 1
+	for prop, value := range user {
+		if i > 1 {
+			query.WriteString(", ")
+		}
+		query.WriteString(postgres.QuoteIdent(prop))
+		query.WriteString(" = $")
+		query.WriteString(strconv.Itoa(i))
+		values = append(values, value)
+		i++
+	}
+	query.WriteString(`, "timestamp" = now()`)
+	query.WriteString("\nWHERE id = $")
+	query.WriteString(strconv.Itoa(i))
+	values = append(values, id)
+	res, err := store.warehouse.Exec(ctx, query.String(), values...)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return fmt.Errorf("BUG: one row should be affected, got %d. Is the Redis index in sync with the content of the users table?", affected)
+	}
+	return nil
 }
 
-// Tables returns the tables of the data warehouse.
-// It returns only the tables 'users', 'groups', 'events', and the tables with
-// prefix 'users_', 'groups_' and 'events_'.
-func (store *Store) Tables(ctx context.Context) ([]*Table, error) {
-	return store.warehouse.Tables(ctx)
-}
-
-// User returns the non-zero property values of the user, with the given GID,
-// as a map[string]any.
+// User returns the non-zero property values of the user, with the given GID, as
+// a map[string]any.
+// TODO: revise this method. Investigate on change or remove this.
 func (store *Store) User(ctx context.Context, id int) (map[string]any, error) {
 	// Retrieve the keys for the user.
-	key := userPropsKeysKey(id)
+	key := redisUserPropsKeysKey(id)
 	var keys []string
 	err := store.redis.LRange(ctx, key, 0, -1).ScanSlice(&keys)
 	if err != nil {
@@ -196,40 +291,40 @@ func (store *Store) User(ctx context.Context, id int) (map[string]any, error) {
 		if rawPropValue == "-" {
 			continue
 		}
-		v := jsonDeserialize(rawPropValue)
+		v := redisJSONDeserialize(rawPropValue)
 		user[property] = v
 	}
 	return user, nil
 }
 
-// UsersByPropertyValue returns the GIDs of the candidates that have the given
-// property with the given value.
-// A nil value for candidates means every user.
-func (store *Store) UsersByPropertyValue(ctx context.Context, candidates []int, property string, value any) ([]int, error) {
-	key := propsKey(property, value)
-	var users []int
-	err := store.redis.LRange(ctx, key, 0, -1).ScanSlice(&users)
+// Users returns the users that satisfy the where condition with only the given
+// properties, ordered by order if order is not the zero Property, and in range
+// [first,first+limit] with first >= 0 and 0 < limit <= 1000.
+//
+// If a query fails, it returns an Error value.
+func (store *Store) Users(ctx context.Context, properties []types.Property, where Where, order types.Property, first, limit int) ([]map[string]any, error) {
+	columns := PropertiesToColumns(properties)
+	rows, err := store.warehouse.Select(ctx, "users", columns, where, order, first, limit)
 	if err != nil {
 		return nil, err
 	}
-	if candidates != nil {
-		users = intersection(users, candidates)
+	users := make([]map[string]any, len(rows))
+	for i, row := range rows {
+		users[i], _ = deserializeRowAsMap(properties, row)
 	}
 	return users, nil
 }
 
-// UsersWithNoPropertyValue returns the GIDs of the candidates that have a zero
-// value for the given property.
-// A nil value for candidates means every user.
-func (store *Store) UsersWithNoPropertyValue(ctx context.Context, candidates []int, property string) ([]int, error) {
-	key := propsZeroKey(property)
-	var users []int
-	err := store.redis.LRange(ctx, key, 0, -1).ScanSlice(&users)
+// UsersSlice is like Users but returns the users as a slice.
+func (store *Store) UsersSlice(ctx context.Context, properties []types.Property, where Where, order types.Property, first, limit int) ([][]any, error) {
+	columns := PropertiesToColumns(properties)
+	rows, err := store.warehouse.Select(ctx, "users", columns, where, order, first, limit)
 	if err != nil {
 		return nil, err
 	}
-	if candidates != nil {
-		users = intersection(users, candidates)
+	users := make([][]any, len(rows))
+	for i, row := range rows {
+		users[i] = deserializeRowAsSlice(properties, row)
 	}
 	return users, nil
 }
@@ -257,25 +352,97 @@ func (store *Store) close() error {
 	return err
 }
 
-func (store *Store) setUser(ctx context.Context, gid int, user map[string]any) error {
+// deleteRedisUserIndex deletes from the index the user with the given GID.
+func (store *Store) deleteRedisUserIndex(ctx context.Context, id int) error {
+	// Remove the user from the keys "props:<property>:<property value>" and
+	// "props:<property>:-".
+	key := redisUserPropsKeysKey(id)
+	var keys []string
+	err := store.redis.LRange(ctx, key, 0, -1).ScanSlice(&keys)
+	if err != nil {
+		return err
+	}
+	for _, key := range keys {
+		err := store.redis.LRem(ctx, key, 0, id).Err()
+		if err != nil {
+			return err
+		}
+	}
+	// Delete the key "user_prop_keys:<user GID>".
+	err = store.redis.Del(ctx, key).Err()
+	return err
+}
+
+func (store *Store) setRedisUserIndex(ctx context.Context, id int, user map[string]any) error {
 	// Write the user properties to the keys "props:<property>:<property value>"
 	// and "props:<property>:-".
 	userPropKeys := make([]any, 0, len(user))
 	for p, v := range user {
 		var key string
 		if zero(v) {
-			key = propsZeroKey(p)
+			key = redisPropsZeroKey(p)
 		} else {
-			key = propsKey(p, v)
+			key = redisPropsKey(p, v)
 		}
-		err := store.redis.LPush(ctx, key, gid).Err()
+		err := store.redis.LPush(ctx, key, id).Err()
 		if err != nil {
 			return err
 		}
 		userPropKeys = append(userPropKeys, key)
 	}
 	// Push the user's properties keys to "user_prop_keys:<user GID>".
-	key := userPropsKeysKey(gid)
+	key := redisUserPropsKeysKey(id)
 	err := store.redis.LPush(ctx, key, userPropKeys...).Err()
 	return err
+}
+
+// intersection returns the intersection between a and b.
+// The elements in the returned slice are ordered as they appear in a.
+func intersection[T comparable](a, b []T) []T {
+	out := []T{}
+	for _, v := range a {
+		for _, w := range b {
+			if w == v {
+				out = append(out, v)
+				break
+			}
+		}
+	}
+	return out
+}
+
+func redisJSONDeserialize(raw string) any {
+	// TODO: improve or remove this function.
+	var v any
+	err := json.Unmarshal([]byte(raw), &v)
+	if err != nil {
+		log.Panic(err)
+	}
+	return v
+}
+
+func redisJSONSerialize(v any) string {
+	// TODO: improve or remove this function.
+	data, err := json.Marshal(v)
+	if err != nil {
+		log.Panic(err)
+	}
+	return string(data)
+}
+
+func redisPropsKey(property string, value any) string {
+	v := redisJSONSerialize(value)
+	return fmt.Sprintf("props:%s:%s", property, v)
+}
+
+func redisUserPropsKeysKey(gid int) string {
+	return fmt.Sprintf("user_prop_keys:%d", gid)
+}
+
+func redisPropsZeroKey(property string) string {
+	return fmt.Sprintf("props:%s:-", property)
+}
+
+func zero(v any) bool {
+	return v == "" || v == 0 || v == nil
 }

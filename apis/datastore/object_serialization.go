@@ -144,13 +144,13 @@ func PropertiesToColumns(properties []types.Property) []types.Property {
 	return columns
 }
 
-// DeserializeRowAsSlice deserializes a row returned by a data warehouse as
+// deserializeRowAsSlice deserializes a row returned by a data warehouse as
 // slice.
-func DeserializeRowAsSlice(properties []types.Property, row []any) []any {
+func deserializeRowAsSlice(properties []types.Property, row []any) []any {
 	values := make([]any, len(properties))
 	for i, p := range properties {
 		if p.Flat {
-			values[i], row = DeserializeRowAsMap(p.Type.Properties(), row)
+			values[i], row = deserializeRowAsMap(p.Type.Properties(), row)
 			continue
 		}
 		values[i] = row[0]
@@ -159,13 +159,13 @@ func DeserializeRowAsSlice(properties []types.Property, row []any) []any {
 	return values
 }
 
-// DeserializeRowAsMap deserializes a row returned by a data warehouse as map.
+// deserializeRowAsMap deserializes a row returned by a data warehouse as map.
 // It returns the deserialized row and the remaining row values to read.
-func DeserializeRowAsMap(properties []types.Property, row []any) (map[string]any, []any) {
+func deserializeRowAsMap(properties []types.Property, row []any) (map[string]any, []any) {
 	values := make(map[string]any, len(properties))
 	for _, p := range properties {
 		if p.Flat {
-			values[p.Name], row = DeserializeRowAsMap(p.Type.Properties(), row)
+			values[p.Name], row = deserializeRowAsMap(p.Type.Properties(), row)
 			continue
 		}
 		values[p.Name] = row[0]
