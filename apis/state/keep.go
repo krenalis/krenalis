@@ -30,31 +30,31 @@ const logNotifications = false
 // It must be called before Keep is called or in a listener execution.
 func (state *State) AddListener(listener any) {
 	switch l := listener.(type) {
-	case func(AddActionNotification):
+	case func(AddAction):
 		state.listeners.AddAction = append(state.listeners.AddAction, l)
-	case func(AddConnectionNotification):
+	case func(AddConnection):
 		state.listeners.AddConnection = append(state.listeners.AddConnection, l)
-	case func(DeleteActionNotification):
+	case func(DeleteAction):
 		state.listeners.DeleteAction = append(state.listeners.DeleteAction, l)
-	case func(DeleteConnectionNotification):
+	case func(DeleteConnection):
 		state.listeners.DeleteConnection = append(state.listeners.DeleteConnection, l)
-	case func(DeleteWorkspaceNotification):
+	case func(DeleteWorkspace):
 		state.listeners.DeleteWorkspace = append(state.listeners.DeleteWorkspace, l)
-	case func(ElectLeaderNotification):
+	case func(ElectLeader):
 		state.listeners.ElectLeader = append(state.listeners.ElectLeader, l)
-	case func(ExecuteActionNotification):
+	case func(ExecuteAction):
 		state.listeners.ExecuteAction = append(state.listeners.ExecuteAction, l)
-	case func(SetActionNotification):
+	case func(SetAction):
 		state.listeners.SetAction = append(state.listeners.SetAction, l)
-	case func(SetActionSchedulePeriodNotification):
+	case func(SetActionSchedulePeriod):
 		state.listeners.SetActionSchedulePeriod = append(state.listeners.SetActionSchedulePeriod, l)
-	case func(SetConnectionSettingsNotification):
+	case func(SetConnectionSettings):
 		state.listeners.SetConnectionSettings = append(state.listeners.SetConnectionSettings, l)
-	case func(SetConnectionStatusNotification):
+	case func(SetConnectionStatus):
 		state.listeners.SetConnectionStatus = append(state.listeners.SetConnectionStatus, l)
-	case func(SetRedisNotification):
+	case func(SetRedis):
 		state.listeners.SetRedis = append(state.listeners.SetRedis, l)
-	case func(SetWarehouseNotification):
+	case func(SetWarehouse):
 		state.listeners.SetWarehouse = append(state.listeners.SetWarehouse, l)
 	case func(SetWorkspacePrivacyRegion):
 		state.listeners.SetWorkspacePrivacyRegion = append(state.listeners.SetWorkspacePrivacyRegion, l)
@@ -285,8 +285,8 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 	return ww
 }
 
-// AddActionNotification is the notification event sent when an action is added.
-type AddActionNotification struct {
+// AddAction is the event sent when an action is added.
+type AddAction struct {
 	ID                 int
 	Connection         int
 	Target             ActionTarget
@@ -311,7 +311,7 @@ type AddActionNotification struct {
 
 // addAction adds a new action.
 func (state *State) addAction(n postgres.Notification) {
-	e := AddActionNotification{}
+	e := AddAction{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -350,9 +350,8 @@ func (state *State) addAction(n postgres.Notification) {
 	}
 }
 
-// AddConnectionNotification is the notification event sent when a new
-// connection is added.
-type AddConnectionNotification struct {
+// AddConnection is the event sent when a new connection is added.
+type AddConnection struct {
 	Workspace   int            // workspace identifier
 	ID          int            // identifier
 	Name        string         // name
@@ -375,7 +374,7 @@ type AddConnectionNotification struct {
 
 // addConnection adds a new connection.
 func (state *State) addConnection(n postgres.Notification) {
-	e := AddConnectionNotification{}
+	e := AddConnection{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -450,9 +449,8 @@ func (state *State) addConnection(n postgres.Notification) {
 	}
 }
 
-// AddConnectionKeyNotification is the notification event sent when a
-// connection key is added.
-type AddConnectionKeyNotification struct {
+// AddConnectionKey is the event sent when a connection key is added.
+type AddConnectionKey struct {
 	Connection   int
 	Value        string
 	CreationTime time.Time
@@ -460,7 +458,7 @@ type AddConnectionKeyNotification struct {
 
 // addConnectionKey adds a new connection key.
 func (state *State) addConnectionKey(n postgres.Notification) {
-	e := AddConnectionKeyNotification{}
+	e := AddConnectionKey{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -475,9 +473,8 @@ func (state *State) addConnectionKey(n postgres.Notification) {
 	state.mu.Unlock()
 }
 
-// ExecuteActionNotification is the notification event sent when an action is
-// executed.
-type ExecuteActionNotification struct {
+// ExecuteAction is the event sent when an action is executed.
+type ExecuteAction struct {
 	ID        int
 	Action    int
 	Storage   int
@@ -487,7 +484,7 @@ type ExecuteActionNotification struct {
 
 // executeAction executes an action.
 func (state *State) executeAction(n postgres.Notification) {
-	e := ExecuteActionNotification{}
+	e := ExecuteAction{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -511,9 +508,8 @@ func (state *State) executeAction(n postgres.Notification) {
 	}
 }
 
-// AddWorkspaceNotification is the notification event sent when a workspace is
-// added.
-type AddWorkspaceNotification struct {
+// AddWorkspace is the event sent when a workspace is added.
+type AddWorkspace struct {
 	ID            int
 	Account       int
 	Name          string
@@ -524,7 +520,7 @@ type AddWorkspaceNotification struct {
 
 // addWorkspace adds a workspace.
 func (state *State) addWorkspace(n postgres.Notification) {
-	e := AddWorkspaceNotification{}
+	e := AddWorkspace{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -548,16 +544,15 @@ func (state *State) addWorkspace(n postgres.Notification) {
 	account.mu.Unlock()
 }
 
-// DeleteActionNotification is the notification event sent when an action is
-// deleted.
-type DeleteActionNotification struct {
+// DeleteAction is the event sent when an action is deleted.
+type DeleteAction struct {
 	Connection int
 	ID         int
 }
 
 // deleteAction deletes an action.
 func (state *State) deleteAction(n postgres.Notification) {
-	e := DeleteActionNotification{}
+	e := DeleteAction{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -573,15 +568,14 @@ func (state *State) deleteAction(n postgres.Notification) {
 	}
 }
 
-// DeleteConnectionNotification is the notification event sent when a
-// connection is deleted.
-type DeleteConnectionNotification struct {
+// DeleteConnection is the event sent when a connection is deleted.
+type DeleteConnection struct {
 	ID int
 }
 
 // deleteConnection deletes a connection.
 func (state *State) deleteConnection(n postgres.Notification) {
-	e := DeleteConnectionNotification{}
+	e := DeleteConnection{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -617,16 +611,15 @@ func (state *State) deleteConnection(n postgres.Notification) {
 	}
 }
 
-// EndActionExecutionNotification is the notification event sent when action
-// execution ends.
-type EndActionExecutionNotification struct {
+// EndActionExecution is the event sent when action execution ends.
+type EndActionExecution struct {
 	ID     int
 	Health Health
 }
 
 // endActionExecution ends an action execution in progress.
 func (state *State) endActionExecution(n postgres.Notification) {
-	e := EndActionExecutionNotification{}
+	e := EndActionExecution{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -641,15 +634,14 @@ func (state *State) endActionExecution(n postgres.Notification) {
 	}
 }
 
-// DeleteWorkspaceNotification is the notification event sent when a workspace
-// is deleted.
-type DeleteWorkspaceNotification struct {
+// DeleteWorkspace is the event sent when a workspace is deleted.
+type DeleteWorkspace struct {
 	ID int
 }
 
 // deleteWorkspace deletes a workspace.
 func (state *State) deleteWorkspace(n postgres.Notification) {
-	e := DeleteWorkspaceNotification{}
+	e := DeleteWorkspace{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -676,15 +668,15 @@ func (state *State) deleteWorkspace(n postgres.Notification) {
 	}
 }
 
-// ElectLeaderNotification is the notification sent when a leader is elected.
-type ElectLeaderNotification struct {
+// ElectLeader is the event sent when a leader is elected.
+type ElectLeader struct {
 	Number int
 	Leader uuid.UUID
 }
 
 // electLeader elects a leader.
 func (state *State) electLeader(n postgres.Notification) {
-	e := ElectLeaderNotification{}
+	e := ElectLeader{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -702,14 +694,14 @@ func (state *State) electLeader(n postgres.Notification) {
 	}
 }
 
-// LoadStateNotification is the notification sent when a state is loaded.
-type LoadStateNotification struct {
+// LoadState is the event sent when a state is loaded.
+type LoadState struct {
 	ID uuid.UUID
 }
 
 // loadState loads the state.
 func (state *State) loadState(n postgres.Notification) {
-	e := LoadStateNotification{}
+	e := LoadState{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -722,16 +714,15 @@ func (state *State) loadState(n postgres.Notification) {
 	}
 }
 
-// RenameConnectionNotification is the notification event sent when a
-// connection is renamed.
-type RenameConnectionNotification struct {
+// RenameConnection is the event sent when a connection is renamed.
+type RenameConnection struct {
 	Connection int
 	Name       string
 }
 
 // renameConnection renames a connection.
 func (state *State) renameConnection(n postgres.Notification) {
-	e := RenameConnectionNotification{}
+	e := RenameConnection{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -740,16 +731,15 @@ func (state *State) renameConnection(n postgres.Notification) {
 	})
 }
 
-// RenameWorkspaceNotification is the notification event sent when a
-// workspace is renamed.
-type RenameWorkspaceNotification struct {
+// RenameWorkspace is the event sent when a workspace is renamed.
+type RenameWorkspace struct {
 	Workspace int
 	Name      string
 }
 
 // renameWorkspace renames a workspace.
 func (state *State) renameWorkspace(n postgres.Notification) {
-	e := RenameWorkspaceNotification{}
+	e := RenameWorkspace{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -758,16 +748,15 @@ func (state *State) renameWorkspace(n postgres.Notification) {
 	})
 }
 
-// RevokeConnectionKeyNotification is the notification event sent when a
-// connection key is revoked.
-type RevokeConnectionKeyNotification struct {
+// RevokeConnectionKey is the event sent when a connection key is revoked.
+type RevokeConnectionKey struct {
 	Connection int
 	Value      string
 }
 
 // revokeConnectionKey revokes a connection key.
 func (state *State) revokeConnectionKey(n postgres.Notification) {
-	e := RevokeConnectionKeyNotification{}
+	e := RevokeConnectionKey{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -787,14 +776,14 @@ func (state *State) revokeConnectionKey(n postgres.Notification) {
 	state.mu.Unlock()
 }
 
-// SeeLeaderNotification is the notification sent when the leader is seen.
-type SeeLeaderNotification struct {
+// SeeLeader is the event sent when the leader is seen.
+type SeeLeader struct {
 	Election int
 }
 
 // seeLeader sees the leader.
 func (state *State) seeLeader(n postgres.Notification) {
-	e := SeeLeaderNotification{}
+	e := SeeLeader{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -806,8 +795,8 @@ func (state *State) seeLeader(n postgres.Notification) {
 	state.mu.Unlock()
 }
 
-// SetActionNotification is the notification sent when an action is set.
-type SetActionNotification struct {
+// SetAction is the event sent when an action is set.
+type SetAction struct {
 	ID                 int
 	Name               string
 	Enabled            bool
@@ -827,7 +816,7 @@ type SetActionNotification struct {
 
 // setAction sets an action.
 func (state *State) setAction(n postgres.Notification) {
-	e := SetActionNotification{}
+	e := SetAction{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -852,16 +841,16 @@ func (state *State) setAction(n postgres.Notification) {
 	}
 }
 
-// SetActionSchedulePeriodNotification is the notification sent when the
-// schedule period of an action is set.
-type SetActionSchedulePeriodNotification struct {
+// SetActionSchedulePeriod is the event sent when the schedule period of an
+// action is set.
+type SetActionSchedulePeriod struct {
 	ID             int
 	SchedulePeriod int16
 }
 
 // setActionSchedulePeriod sets the schedule period of an action.
 func (state *State) setActionSchedulePeriod(n postgres.Notification) {
-	e := SetActionSchedulePeriodNotification{}
+	e := SetActionSchedulePeriod{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -873,16 +862,15 @@ func (state *State) setActionSchedulePeriod(n postgres.Notification) {
 	}
 }
 
-// SetActionStatusNotification is the notification sent when the status of an
-// action is set.
-type SetActionStatusNotification struct {
+// SetActionStatus is the event sent when the status of an action is set.
+type SetActionStatus struct {
 	ID      int
 	Enabled bool
 }
 
 // setActionStatus sets the status of an action.
 func (state *State) setActionStatus(n postgres.Notification) {
-	e := SetActionStatusNotification{}
+	e := SetActionStatus{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -891,16 +879,16 @@ func (state *State) setActionStatus(n postgres.Notification) {
 	})
 }
 
-// SetActionUserCursorNotification is the notification sent when the user cursor
-// of an action is set.
-type SetActionUserCursorNotification struct {
+// SetActionUserCursor is the event sent when the user cursor of an action is
+// set.
+type SetActionUserCursor struct {
 	ID         int
 	UserCursor connector.Cursor
 }
 
 // setActionUserCursor sets the user cursor of an action.
 func (state *State) setActionUserCursor(n postgres.Notification) {
-	e := SetActionUserCursorNotification{}
+	e := SetActionUserCursor{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -909,16 +897,16 @@ func (state *State) setActionUserCursor(n postgres.Notification) {
 	})
 }
 
-// SetConnectionSettingsNotification is the notification event sent when the
-// settings of a connection is changed.
-type SetConnectionSettingsNotification struct {
+// SetConnectionSettings is the event sent when the settings of a connection is
+// changed.
+type SetConnectionSettings struct {
 	Connection int
 	Settings   []byte
 }
 
 // setConnectionSettings sets the settings of a connection.
 func (state *State) setConnectionSettings(n postgres.Notification) {
-	e := SetConnectionSettingsNotification{}
+	e := SetConnectionSettings{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -930,16 +918,15 @@ func (state *State) setConnectionSettings(n postgres.Notification) {
 	}
 }
 
-// SetConnectionStatusNotification is the notification event sent when a
-// connection status is changed.
-type SetConnectionStatusNotification struct {
+// SetConnectionStatus is the event sent when a connection status is changed.
+type SetConnectionStatus struct {
 	Connection int
 	Enabled    bool
 }
 
 // setConnectionStatus changes a connection status.
 func (state *State) setConnectionStatus(n postgres.Notification) {
-	e := SetConnectionStatusNotification{}
+	e := SetConnectionStatus{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -951,9 +938,9 @@ func (state *State) setConnectionStatus(n postgres.Notification) {
 	}
 }
 
-// SetConnectionStorageNotification is the notification event sent when the
-// storage of a connection is changed.
-type SetConnectionStorageNotification struct {
+// SetConnectionStorage is the event sent when the storage of a connection is
+// changed.
+type SetConnectionStorage struct {
 	Connection  int
 	Storage     int
 	Compression Compression
@@ -961,7 +948,7 @@ type SetConnectionStorageNotification struct {
 
 // setConnectionStorage sets the storage and the compression of a connection.
 func (state *State) setConnectionStorage(n postgres.Notification) {
-	e := SetConnectionStorageNotification{}
+	e := SetConnectionStorage{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -971,16 +958,15 @@ func (state *State) setConnectionStorage(n postgres.Notification) {
 	})
 }
 
-// SetRedisNotification is the notification event sent when the Redis database
-// is changed.
-type SetRedisNotification struct {
+// SetRedis is the event sent when the Redis database is changed.
+type SetRedis struct {
 	Workspace int
 	Redis     *Redis
 }
 
 // setRedis sets a Redis database.
 func (state *State) setRedis(n postgres.Notification) {
-	e := SetRedisNotification{}
+	e := SetRedis{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -992,9 +978,8 @@ func (state *State) setRedis(n postgres.Notification) {
 	}
 }
 
-// SetResourceNotification is the notification event sent when a resource is
-// changed.
-type SetResourceNotification struct {
+// SetResource is the event sent when a resource is changed.
+type SetResource struct {
 	ID           int
 	AccessToken  string
 	RefreshToken string
@@ -1003,7 +988,7 @@ type SetResourceNotification struct {
 
 // setResource sets a resource.
 func (state *State) setResource(n postgres.Notification) {
-	e := SetResourceNotification{}
+	e := SetResource{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -1014,16 +999,16 @@ func (state *State) setResource(n postgres.Notification) {
 	})
 }
 
-// SetWarehouseNotification is the notification event sent when the settings of
-// a data warehouse are changed.
-type SetWarehouseNotification struct {
+// SetWarehouse is the event sent when the settings of a data warehouse are
+// changed.
+type SetWarehouse struct {
 	Workspace int
 	Warehouse *Warehouse
 }
 
 // setWarehouse sets the settings of a data warehouse.
 func (state *State) setWarehouse(n postgres.Notification) {
-	e := SetWarehouseNotification{}
+	e := SetWarehouse{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -1035,9 +1020,9 @@ func (state *State) setWarehouse(n postgres.Notification) {
 	}
 }
 
-// SetWorkspaceAnonymousIdentifiersNotification is the notification event sent
-// when the anonymous identifiers of a workspace are changed.
-type SetWorkspaceAnonymousIdentifiersNotification struct {
+// SetWorkspaceAnonymousIdentifiers is the event sent when the anonymous
+// identifiers of a workspace are changed.
+type SetWorkspaceAnonymousIdentifiers struct {
 	Workspace            int
 	AnonymousIdentifiers AnonymousIdentifiers
 }
@@ -1045,7 +1030,7 @@ type SetWorkspaceAnonymousIdentifiersNotification struct {
 // setWorkspaceAnonymousIdentifiers sets the anonymous identifier of a
 // workspace.
 func (state *State) setWorkspaceAnonymousIdentifiers(n postgres.Notification) {
-	e := SetWorkspaceAnonymousIdentifiersNotification{}
+	e := SetWorkspaceAnonymousIdentifiers{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -1054,16 +1039,16 @@ func (state *State) setWorkspaceAnonymousIdentifiers(n postgres.Notification) {
 	})
 }
 
-// SetWorkspaceSchemasNotification is the notification event sent when schemas
-// of a workspace are changed.
-type SetWorkspaceSchemasNotification struct {
+// SetWorkspaceSchemas is the event sent when schemas of a workspace are
+// changed.
+type SetWorkspaceSchemas struct {
 	Workspace int
 	Schemas   map[string]*types.Type
 }
 
 // setWorkspaceSchemas sets the schemas of a workspace.
 func (state *State) setWorkspaceSchemas(n postgres.Notification) {
-	e := SetWorkspaceSchemasNotification{}
+	e := SetWorkspaceSchemas{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -1077,8 +1062,8 @@ func (state *State) setWorkspaceSchemas(n postgres.Notification) {
 	})
 }
 
-// SetWorkspacePrivacyRegion is the notification event sent when the privacy
-// region of a workspace is changed.
+// SetWorkspacePrivacyRegion is the event sent when the privacy region of a
+// workspace is changed.
 type SetWorkspacePrivacyRegion struct {
 	Workspace     int
 	PrivacyRegion PrivacyRegion

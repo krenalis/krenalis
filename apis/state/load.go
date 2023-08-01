@@ -33,7 +33,7 @@ func (state *State) Load() error {
 	// Keep the state updated.
 	go state.keepState()
 
-	n := LoadStateNotification{ID: state.id}
+	n := LoadState{ID: state.id}
 
 	ctx := state.ctx
 

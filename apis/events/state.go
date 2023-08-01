@@ -127,7 +127,7 @@ func (st *eventsState) HasEnabledActions(connection int) bool {
 }
 
 // onAddConnection is called when a connection is added.
-func (st *eventsState) onAddConnection(n state.AddConnectionNotification) {
+func (st *eventsState) onAddConnection(n state.AddConnection) {
 	c, _ := st.state.Connection(n.ID)
 	if !isDestination(c) {
 		return
@@ -140,12 +140,12 @@ func (st *eventsState) onAddConnection(n state.AddConnectionNotification) {
 }
 
 // onDeleteConnection is called when a connection is deleted.
-func (st *eventsState) onDeleteConnection(n state.DeleteConnectionNotification) {
+func (st *eventsState) onDeleteConnection(n state.DeleteConnection) {
 	st.deleteDestination(n.ID)
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.
-func (st *eventsState) onDeleteWorkspace(n state.DeleteWorkspaceNotification) {
+func (st *eventsState) onDeleteWorkspace(n state.DeleteWorkspace) {
 	toKeep := map[int]struct{}{}
 	for _, c := range st.state.Connections() {
 		toKeep[c.ID] = struct{}{}
@@ -161,7 +161,7 @@ func (st *eventsState) onDeleteWorkspace(n state.DeleteWorkspaceNotification) {
 
 // onSetConnectionSettings is called when the settings of a connections are
 // changed.
-func (st *eventsState) onSetConnectionSettings(n state.SetConnectionSettingsNotification) {
+func (st *eventsState) onSetConnectionSettings(n state.SetConnectionSettings) {
 	c, _ := st.state.Connection(n.Connection)
 	if !isDestination(c) {
 		return
@@ -174,7 +174,7 @@ func (st *eventsState) onSetConnectionSettings(n state.SetConnectionSettingsNoti
 }
 
 // onSetConnectionStatus is called when the status of a connection changes.
-func (st *eventsState) onSetConnectionStatus(n state.SetConnectionStatusNotification) {
+func (st *eventsState) onSetConnectionStatus(n state.SetConnectionStatus) {
 	if n.Enabled {
 		c, _ := st.state.Connection(n.Connection)
 		if !isDestination(c) {
@@ -193,7 +193,7 @@ func (st *eventsState) onSetConnectionStatus(n state.SetConnectionStatusNotifica
 
 // onSetWarehouse is called when the warehouse settings of a workspace are
 // changed.
-func (st *eventsState) onSetWarehouse(n state.SetWarehouseNotification) {
+func (st *eventsState) onSetWarehouse(n state.SetWarehouse) {
 	ws, _ := st.state.Workspace(n.Workspace)
 	for _, c := range ws.Connections() {
 		if c.Enabled && c.Role == state.DestinationRole {
@@ -287,7 +287,7 @@ func setSettings(ctx context.Context, db *postgres.DB, connection int, settings 
 	if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 	}
-	n := state.SetConnectionSettingsNotification{
+	n := state.SetConnectionSettings{
 		Connection: connection,
 		Settings:   settings,
 	}

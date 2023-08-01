@@ -78,7 +78,7 @@ func (this *Account) AddWorkspace(name string, redis *Redis, warehouse *Warehous
 		}
 	}
 
-	n := state.AddWorkspaceNotification{
+	n := state.AddWorkspace{
 		Account: this.account.ID,
 		Name:    name,
 	}

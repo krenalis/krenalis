@@ -48,19 +48,19 @@ type State struct {
 	resources        map[int]*Resource
 	notifications    <-chan postgres.Notification
 	listeners        struct {
-		AddAction                 []func(AddActionNotification)
-		AddConnection             []func(AddConnectionNotification)
-		DeleteAction              []func(DeleteActionNotification)
-		DeleteConnection          []func(DeleteConnectionNotification)
-		DeleteWorkspace           []func(DeleteWorkspaceNotification)
-		ElectLeader               []func(ElectLeaderNotification)
-		ExecuteAction             []func(ExecuteActionNotification)
-		SetAction                 []func(SetActionNotification)
-		SetActionSchedulePeriod   []func(SetActionSchedulePeriodNotification)
-		SetConnectionSettings     []func(SetConnectionSettingsNotification)
-		SetConnectionStatus       []func(SetConnectionStatusNotification)
-		SetRedis                  []func(SetRedisNotification)
-		SetWarehouse              []func(SetWarehouseNotification)
+		AddAction                 []func(AddAction)
+		AddConnection             []func(AddConnection)
+		DeleteAction              []func(DeleteAction)
+		DeleteConnection          []func(DeleteConnection)
+		DeleteWorkspace           []func(DeleteWorkspace)
+		ElectLeader               []func(ElectLeader)
+		ExecuteAction             []func(ExecuteAction)
+		SetAction                 []func(SetAction)
+		SetActionSchedulePeriod   []func(SetActionSchedulePeriod)
+		SetConnectionSettings     []func(SetConnectionSettings)
+		SetConnectionStatus       []func(SetConnectionStatus)
+		SetRedis                  []func(SetRedis)
+		SetWarehouse              []func(SetWarehouse)
 		SetWorkspacePrivacyRegion []func(SetWorkspacePrivacyRegion)
 	}
 }

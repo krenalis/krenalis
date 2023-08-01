@@ -63,7 +63,7 @@ func (state *State) keepElections() {
 		debugf("-- %d Leader\n", election.number)
 		for {
 			// Send the see leader notification.
-			err := state.db.Notify(state.ctx, SeeLeaderNotification{Election: election.number})
+			err := state.db.Notify(state.ctx, SeeLeader{Election: election.number})
 			if err == nil {
 				break
 			}
@@ -159,7 +159,7 @@ var errEndedElection = errors.New("ended election")
 // election. It returns an errEndedElection error if the given election is
 // ended.
 func (state *State) electAsLeader(election int) error {
-	n := ElectLeaderNotification{Leader: state.id, Number: election}
+	n := ElectLeader{Leader: state.id, Number: election}
 	var prevElection = election - 1
 	if prevElection == 0 {
 		prevElection = math.MaxInt32

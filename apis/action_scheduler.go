@@ -127,7 +127,7 @@ func newScheduler(db *postgres.DB, st *state.State, ds *datastore.Datastore, htt
 }
 
 // onAddAction is called when an action is added to the state.
-func (sc *scheduler) onAddAction(n state.AddActionNotification) {
+func (sc *scheduler) onAddAction(n state.AddAction) {
 	action, _ := sc.state.Action(n.ID)
 	if sc.toSchedule(action) {
 		sc.mu.Lock()
@@ -137,21 +137,21 @@ func (sc *scheduler) onAddAction(n state.AddActionNotification) {
 }
 
 // onDeleteAction is called when an action is deleted from the state.
-func (sc *scheduler) onDeleteAction(n state.DeleteActionNotification) {
+func (sc *scheduler) onDeleteAction(n state.DeleteAction) {
 	sc.mu.Lock()
 	sc._removeAction(n.ID)
 	sc.mu.Unlock()
 }
 
 // onDeleteConnection is called when a connection is deleted from the state.
-func (sc *scheduler) onDeleteConnection(n state.DeleteConnectionNotification) {
+func (sc *scheduler) onDeleteConnection(n state.DeleteConnection) {
 	sc.mu.Lock()
 	sc._removeActions()
 	sc.mu.Unlock()
 }
 
 // onDeleteWorkspace is called when a workspace is deleted from the state.
-func (sc *scheduler) onDeleteWorkspace(n state.DeleteWorkspaceNotification) {
+func (sc *scheduler) onDeleteWorkspace(n state.DeleteWorkspace) {
 	sc.mu.Lock()
 	sc._removeActions()
 	sc.mu.Unlock()
@@ -159,7 +159,7 @@ func (sc *scheduler) onDeleteWorkspace(n state.DeleteWorkspaceNotification) {
 
 // onSetActionSchedulePeriod is called when the schedule period of an action is
 // set.
-func (sc *scheduler) onSetActionSchedulePeriod(n state.SetActionSchedulePeriodNotification) {
+func (sc *scheduler) onSetActionSchedulePeriod(n state.SetActionSchedulePeriod) {
 	action, _ := sc.state.Action(n.ID)
 	index, ok := sc.indexes[n.ID]
 	if !ok {

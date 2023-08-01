@@ -62,13 +62,13 @@ func (ds *Datastore) Store(workspace int) *Store {
 	return store
 }
 
-func (ds *Datastore) onSetRedis(n state.SetRedisNotification) {
+func (ds *Datastore) onSetRedis(n state.SetRedis) {
 	ws, _ := ds.state.Workspace(n.Workspace)
 	go ds.setStore(ws)
 	return
 }
 
-func (ds *Datastore) onSetWarehouse(n state.SetWarehouseNotification) {
+func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) {
 	ws, _ := ds.state.Workspace(n.Workspace)
 	go ds.setStore(ws)
 	return

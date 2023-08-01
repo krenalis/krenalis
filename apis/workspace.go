@@ -124,7 +124,7 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 		return 0, errors.Unprocessable(ConnectorNotExists, "connector %d does not exist", connector)
 	}
 
-	n := state.AddConnectionNotification{
+	n := state.AddConnection{
 		Workspace: this.workspace.ID,
 		Name:      opts.Name,
 		Role:      state.ConnectionRole(role),
@@ -510,7 +510,7 @@ func (this *Workspace) ConnectRedis(settings []byte) error {
 		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a Redis database", ws.ID)
 	}
 	// TODO(marco): validate settings
-	n := state.SetRedisNotification{
+	n := state.SetRedis{
 		Workspace: ws.ID,
 		Redis: &state.Redis{
 			Settings: settings,
@@ -560,7 +560,7 @@ func (this *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) erro
 	if err != nil {
 		return errors.Unprocessable(ConnectionFailed, "cannot connect to the data store: %w", err)
 	}
-	n := state.SetWarehouseNotification{
+	n := state.SetWarehouse{
 		Workspace: ws.ID,
 		Warehouse: &state.Warehouse{
 			Type:     state.WarehouseType(typ),
@@ -594,7 +594,7 @@ func (this *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) erro
 //
 // It returns an errors.NotFound error if the workspace does not exist anymore.
 func (this *Workspace) Delete() error {
-	n := state.DeleteWorkspaceNotification{
+	n := state.DeleteWorkspace{
 		ID: this.workspace.ID,
 	}
 	ctx := context.Background()
@@ -621,7 +621,7 @@ func (this *Workspace) DisconnectRedis() error {
 	if ws.Redis == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a Redis database", ws.ID)
 	}
-	n := state.SetRedisNotification{
+	n := state.SetRedis{
 		Workspace: ws.ID,
 		Redis:     nil,
 	}
@@ -657,7 +657,7 @@ func (this *Workspace) DisconnectWarehouse() error {
 	if ws.Warehouse == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", ws.ID)
 	}
-	n := state.SetWarehouseNotification{
+	n := state.SetWarehouse{
 		Workspace: ws.ID,
 		Warehouse: nil,
 	}
@@ -833,7 +833,7 @@ func (this *Workspace) ReloadSchemas() error {
 		return nil
 	}
 
-	n := state.SetWorkspaceSchemasNotification{
+	n := state.SetWorkspaceSchemas{
 		Workspace: this.workspace.ID,
 		Schemas:   map[string]*types.Type{},
 	}
@@ -912,7 +912,7 @@ func (this *Workspace) Rename(name string) error {
 	if name == this.workspace.Name {
 		return nil
 	}
-	n := state.RenameWorkspaceNotification{
+	n := state.RenameWorkspace{
 		Workspace: this.workspace.ID,
 		Name:      name,
 	}
@@ -968,7 +968,7 @@ func (this *Workspace) SetAnonymousIdentifiers(ids AnonymousIdentifiers) error {
 		return errors.BadRequest("anonymous identifier %q does not exist in mapping", keys[0])
 	}
 	ws := this.workspace
-	n := state.SetWorkspaceAnonymousIdentifiersNotification{
+	n := state.SetWorkspaceAnonymousIdentifiers{
 		Workspace:            ws.ID,
 		AnonymousIdentifiers: state.AnonymousIdentifiers(ids),
 	}
@@ -1039,7 +1039,7 @@ func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) 
 	if err != nil {
 		return errors.Unprocessable(ConnectionFailed, "cannot connect to the data store: %w", err)
 	}
-	n := state.SetWarehouseNotification{
+	n := state.SetWarehouse{
 		Workspace: ws.ID,
 		Warehouse: &state.Warehouse{
 			Type:     state.WarehouseType(typ),

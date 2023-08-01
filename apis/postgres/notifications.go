@@ -50,9 +50,8 @@ func notify(ctx context.Context, conn Connection, payload any) error {
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
-	name := strings.TrimSuffix(t.Name(), "Notification")
 	var b bytes.Buffer
-	b.WriteString(name)
+	b.WriteString(t.Name())
 	enc := json.NewEncoder(&b)
 	enc.SetEscapeHTML(false)
 	err := enc.Encode(payload)

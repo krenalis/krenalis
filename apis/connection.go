@@ -509,7 +509,7 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 	}
 	span.Log("action validated successfully")
 
-	n := state.AddActionNotification{
+	n := state.AddAction{
 		Connection:     c.ID,
 		Target:         state.ActionTarget(target),
 		Name:           action.Name,
@@ -680,7 +680,7 @@ func (this *Connection) CompletePath(path string) (string, error) {
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore.
 func (this *Connection) Delete() error {
-	n := state.DeleteConnectionNotification{
+	n := state.DeleteConnection{
 		ID: this.connection.ID,
 	}
 	connector := this.connection.Connector()
@@ -861,7 +861,7 @@ func (this *Connection) GenerateKey() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	n := state.AddConnectionKeyNotification{
+	n := state.AddConnectionKey{
 		Connection:   c.ID,
 		Value:        value,
 		CreationTime: time.Now().UTC(),
@@ -1011,7 +1011,7 @@ func (this *Connection) Rename(name string) error {
 	if name == this.connection.Name {
 		return nil
 	}
-	n := state.RenameConnectionNotification{
+	n := state.RenameConnection{
 		Connection: this.connection.ID,
 		Name:       name,
 	}
@@ -1050,7 +1050,7 @@ func (this *Connection) RevokeKey(key string) error {
 	if c.Role != state.SourceRole {
 		return errors.BadRequest("server %d is not a source", c.ID)
 	}
-	n := state.RevokeConnectionKeyNotification{
+	n := state.RevokeConnectionKey{
 		Connection: c.ID,
 		Value:      key,
 	}
@@ -1082,7 +1082,7 @@ func (this *Connection) SetStatus(enabled bool) error {
 	if enabled == this.Enabled {
 		return nil
 	}
-	n := state.SetConnectionStatusNotification{
+	n := state.SetConnectionStatus{
 		Connection: this.connection.ID,
 		Enabled:    enabled,
 	}
@@ -1208,7 +1208,7 @@ func (this *Connection) SetStorage(storage int, compression Compression) error {
 		return errors.BadRequest("file cannot be compressed without a storage")
 	}
 
-	n := state.SetConnectionStorageNotification{
+	n := state.SetConnectionStorage{
 		Connection:  c.ID,
 		Storage:     storage,
 		Compression: state.Compression(compression),
@@ -1973,7 +1973,7 @@ func setSettings(ctx context.Context, db *postgres.DB, connection int, settings 
 	if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 	}
-	n := state.SetConnectionSettingsNotification{
+	n := state.SetConnectionSettings{
 		Connection: connection,
 		Settings:   settings,
 	}

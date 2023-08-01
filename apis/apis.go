@@ -311,7 +311,7 @@ func (apis *APIs) CountAccounts(ctx context.Context) int {
 }
 
 // onElectLeader is called when a leader is elected.
-func (apis *APIs) onElectLeader(n state.ElectLeaderNotification) {
+func (apis *APIs) onElectLeader(n state.ElectLeader) {
 	if apis.state.IsLeader() {
 		apis.scheduler = newScheduler(apis.db, apis.state, apis.datastore, apis.http)
 		return
@@ -323,7 +323,7 @@ func (apis *APIs) onElectLeader(n state.ElectLeaderNotification) {
 }
 
 // onExecuteAction is called when an action is executed.
-func (apis *APIs) onExecuteAction(n state.ExecuteActionNotification) {
+func (apis *APIs) onExecuteAction(n state.ExecuteAction) {
 	if !apis.state.IsLeader() {
 		return
 	}

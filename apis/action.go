@@ -216,7 +216,7 @@ type ActionFilterCondition struct {
 // It returns an errors.NotFoundError error if the action does not exist
 // anymore.
 func (this *Action) Delete() error {
-	n := state.DeleteActionNotification{
+	n := state.DeleteAction{
 		Connection: this.action.Connection().ID,
 		ID:         this.action.ID,
 	}
@@ -271,7 +271,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		return err
 	}
 	span.Log("action validated successfully")
-	n := state.SetActionNotification{
+	n := state.SetAction{
 		ID:             this.action.ID,
 		Name:           action.Name,
 		Enabled:        action.Enabled,
@@ -363,7 +363,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
 // setUserCursor sets the user cursor of the action.
 func (this *Action) setUserCursor(ctx context.Context, cursor _connector.Cursor) error {
-	n := state.SetActionUserCursorNotification{
+	n := state.SetActionUserCursor{
 		ID:         this.action.ID,
 		UserCursor: cursor,
 	}
@@ -396,7 +396,7 @@ func (this *Action) SetSchedulePeriod(period SchedulePeriod) error {
 	default:
 		return errors.BadRequest("schedule period %d is not valid", period)
 	}
-	n := state.SetActionSchedulePeriodNotification{
+	n := state.SetActionSchedulePeriod{
 		ID:             this.action.ID,
 		SchedulePeriod: int16(period),
 	}
@@ -419,7 +419,7 @@ func (this *Action) SetStatus(enabled bool) error {
 	if enabled == this.action.Enabled {
 		return nil
 	}
-	n := state.SetActionStatusNotification{
+	n := state.SetActionStatus{
 		ID:      this.action.ID,
 		Enabled: enabled,
 	}

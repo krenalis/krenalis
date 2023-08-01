@@ -25,7 +25,7 @@ var ExecutionInProgress errors.Code = "ExecutionInProgress"
 // addExecution adds an execution to the action.
 func (this *Action) addExecution(reimport bool) error {
 
-	n := state.ExecuteActionNotification{
+	n := state.ExecuteAction{
 		Action:    this.action.ID,
 		Reimport:  reimport,
 		StartTime: time.Now().UTC(),
@@ -119,7 +119,7 @@ func (this *Action) exec() {
 		}
 	}
 
-	n := state.EndActionExecutionNotification{
+	n := state.EndActionExecution{
 		ID:     execution.ID,
 		Health: health,
 	}

@@ -66,7 +66,7 @@ func (c *Client) AccessToken(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	n := state.SetResourceNotification{
+	n := state.SetResource{
 		ID:           r.ID,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
