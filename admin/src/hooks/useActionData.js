@@ -252,11 +252,12 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 		if (isEditing) {
 			[, err] = await api.connections.setAction(connection.id, actionToSet.ID, actionToSet);
 		} else {
-			[id, err] = await api.connections.addAction(connection.id, {
-				Target: actionType.Target,
-				EventType: actionType.EventType,
-				Action: actionToSet,
-			});
+			[id, err] = await api.connections.addAction(
+				connection.id,
+				actionType.Target,
+				actionType.EventType,
+				actionToSet
+			);
 		}
 		if (err != null) {
 			if (err instanceof UnprocessableError) {

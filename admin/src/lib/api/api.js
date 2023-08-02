@@ -147,19 +147,19 @@ class Connections {
 		}
 	};
 
-	addAction = async (connection, actionObject) => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions`,
-			http.POST,
-			actionObject
-		);
+	addAction = async (connection, target, eventType, actionToSet) => {
+		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions`, http.POST, {
+			target: target,
+			eventType: eventType,
+			action: actionToSet,
+		});
 	};
 
-	setAction = async (connection, action, actionObject) => {
+	setAction = async (connection, action, actionToSet) => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(action)}`,
 			http.PUT,
-			actionObject
+			actionToSet
 		);
 	};
 
