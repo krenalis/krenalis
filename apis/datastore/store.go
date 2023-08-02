@@ -278,6 +278,7 @@ func (store *Store) UpdateUser(ctx context.Context, id int, user map[string]any)
 // User returns the non-zero property values of the user, with the given GID, as
 // a map[string]any.
 // TODO: revise this method. Investigate on change or remove this.
+// See the issue https://github.com/open2b/chichi/issues/243.
 func (store *Store) User(ctx context.Context, id int) (map[string]any, error) {
 	// Retrieve the keys for the user.
 	key := redisUserPropsKeysKey(id)
