@@ -186,6 +186,7 @@ const ConnectorSettings = () => {
 			Name: name,
 			Enabled: true,
 			Storage: storage,
+			Compression: compression,
 			WebsiteHost: websiteHost,
 			OAuth: OAuthToken,
 		});
