@@ -221,11 +221,18 @@ func (store *Store) Schemas(ctx context.Context) (types.Type, types.Type, error)
 // UpdateUser updates the properties of the user with identifier id.
 // Only the properties in users will be updated.
 func (store *Store) UpdateUser(ctx context.Context, id int, user map[string]any) error {
-	err := store.deleteRedisUserIndex(ctx, id)
+	// Since the user contains only the properties to update, retrieve every
+	// property of the user, then update its index on Redis.
+	redisUser, err := store.User(ctx, id)
 	if err != nil {
 		return err
 	}
-	err = store.setRedisUserIndex(ctx, id, user)
+	maps.Copy(redisUser, user)
+	err = store.deleteRedisUserIndex(ctx, id)
+	if err != nil {
+		return err
+	}
+	err = store.setRedisUserIndex(ctx, id, redisUser)
 	if err != nil {
 		return err
 	}
@@ -235,6 +242,7 @@ func (store *Store) UpdateUser(ctx context.Context, id int, user map[string]any)
 	if err != nil {
 		return err
 	}
+	// Update only the properties of user.
 	b := &strings.Builder{}
 	b.WriteString("UPDATE users SET\n")
 	var values []any

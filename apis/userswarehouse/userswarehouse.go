@@ -262,24 +262,17 @@ func createGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, 
 	return id, err
 }
 
-// updateGR updates the Golden Record with the given GID using the properties of
-// U.
-func updateGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, gid int, U map[string]any) error {
-
+// updateGR updates the Golden Record with the given identifier. Only the
+// properties in users will be updated.
+func updateGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, gid int, user map[string]any) error {
 	telemetry.IncrementCounter(ctx, "updateGR", 1)
-
-	// Serialize the row.
 	schema, ok := ws.Schemas["users"]
 	if !ok {
 		return errors.New("users schema not found")
 	}
-
-	datastore.SerializeRow(U, *schema)
-
+	datastore.SerializeRow(user, *schema)
 	// TODO(Gianluca): should the user be normalized before being written on the
 	// data store?
-
-	err := store.UpdateUser(ctx, gid, U)
-
+	err := store.UpdateUser(ctx, gid, user)
 	return err
 }
