@@ -235,25 +235,25 @@ func (store *Store) UpdateUser(ctx context.Context, id int, user map[string]any)
 	if err != nil {
 		return err
 	}
-	query := &strings.Builder{}
-	query.WriteString("UPDATE users SET\n")
+	b := &strings.Builder{}
+	b.WriteString("UPDATE users SET\n")
 	var values []any
 	i := 1
 	for prop, value := range user {
 		if i > 1 {
-			query.WriteString(", ")
+			b.WriteString(", ")
 		}
-		query.WriteString(postgres.QuoteIdent(prop))
-		query.WriteString(" = $")
-		query.WriteString(strconv.Itoa(i))
+		b.WriteString(postgres.QuoteIdent(prop))
+		b.WriteString(" = $")
+		b.WriteString(strconv.Itoa(i))
 		values = append(values, value)
 		i++
 	}
-	query.WriteString(`, "timestamp" = now()`)
-	query.WriteString("\nWHERE id = $")
-	query.WriteString(strconv.Itoa(i))
+	b.WriteString(`, "timestamp" = now()`)
+	b.WriteString("\nWHERE id = $")
+	b.WriteString(strconv.Itoa(i))
 	values = append(values, id)
-	res, err := store.warehouse.Exec(ctx, query.String(), values...)
+	res, err := store.warehouse.Exec(ctx, b.String(), values...)
 	if err != nil {
 		return err
 	}
