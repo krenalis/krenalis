@@ -72,48 +72,50 @@ const ConnectionOverview = () => {
 		fetchData();
 	}, []);
 
+	// TODO: 'api.connections.import' doesn't exist anymore. The page isn't
+	// working currently and should be redesigned from scratch.
 	const onImportConfirmation = async (e) => {
-		const button = e.currentTarget;
-		button.setAttribute('loading', '');
-		const [, err] = await api.connections.import(c.id, resetCursor);
-		button.removeAttribute('loading');
-		if (err) {
-			if (err instanceof NotFoundError) {
-				redirect('connections');
-				showStatus(statuses.connectionDoesNotExistAnymore);
-				return;
-			}
-			if (err instanceof UnprocessableError) {
-				switch (err.code) {
-					case 'AlreadyInProgress':
-						showStatus(statuses.alreadyInProgress);
-						break;
-					case 'NoStorage':
-						showStatus(statuses.noStorage);
-						break;
-					case 'NoTransformationNorMappings':
-						showStatus(statuses.noTransformationNorMappings);
-						break;
-					case 'NoWarehouse':
-						showStatus(statuses.noWarehouse);
-						break;
-					case 'NotEnabled':
-						showStatus(statuses.notEnabled);
-						break;
-					case 'StorageNotEnabled':
-						showStatus(statuses.storageNotEnabled);
-						break;
-					default:
-						break;
-				}
-				return;
-			}
-			showError(err);
-			setAskImportConfirmation(false);
-			return;
-		}
-		setAskImportConfirmation(false);
-		showStatus(statuses.importStarted);
+		// const button = e.currentTarget;
+		// button.setAttribute('loading', '');
+		// const [, err] = await api.connections.import(c.id, resetCursor);
+		// button.removeAttribute('loading');
+		// if (err) {
+		// 	if (err instanceof NotFoundError) {
+		// 		redirect('connections');
+		// 		showStatus(statuses.connectionDoesNotExistAnymore);
+		// 		return;
+		// 	}
+		// 	if (err instanceof UnprocessableError) {
+		// 		switch (err.code) {
+		// 			case 'AlreadyInProgress':
+		// 				showStatus(statuses.alreadyInProgress);
+		// 				break;
+		// 			case 'NoStorage':
+		// 				showStatus(statuses.noStorage);
+		// 				break;
+		// 			case 'NoTransformationNorMappings':
+		// 				showStatus(statuses.noTransformationNorMappings);
+		// 				break;
+		// 			case 'NoWarehouse':
+		// 				showStatus(statuses.noWarehouse);
+		// 				break;
+		// 			case 'NotEnabled':
+		// 				showStatus(statuses.notEnabled);
+		// 				break;
+		// 			case 'StorageNotEnabled':
+		// 				showStatus(statuses.storageNotEnabled);
+		// 				break;
+		// 			default:
+		// 				break;
+		// 		}
+		// 		return;
+		// 	}
+		// 	showError(err);
+		// 	setAskImportConfirmation(false);
+		// 	return;
+		// }
+		// setAskImportConfirmation(false);
+		// showStatus(statuses.importStarted);
 	};
 
 	if (isLoading) {

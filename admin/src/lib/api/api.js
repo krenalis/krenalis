@@ -17,10 +17,6 @@ class API {
 		return await call(`${adminBasePath}`, http.POST, { email, password });
 	};
 
-	predefinedMappings = async () => {
-		return await call(`${this.apiURL}/predefined-mappings`, http.GET);
-	};
-
 	eventsSchema = async () => {
 		return await call(`${this.apiURL}/events-schema`, http.GET);
 	};
@@ -59,26 +55,12 @@ class Connections {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}`, http.DELETE);
 	};
 
-	reload = async (connection) => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/reload`, http.POST);
-	};
-
 	stats = async (connection) => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/stats`, http.GET);
 	};
 
-	schema = async (connection) => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/schema`, http.GET);
-	};
-
 	imports = async (connection) => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/imports`, http.GET);
-	};
-
-	import = async (connection, reimport) => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/import`, http.POST, {
-			reimport: reimport,
-		});
 	};
 
 	query = async (connection, query, limit) => {
@@ -119,26 +101,6 @@ class Connections {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/status`, http.POST, {
 			enabled: enabled,
 		});
-	};
-
-	mappings = async (connection) => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/mappings`, http.GET);
-	};
-
-	setMappings = async (connection, mappings) => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/mappings`, http.PUT, mappings);
-	};
-
-	transformation = async (connection) => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/transformation`, http.GET);
-	};
-
-	setTransformation = async (connection, transformation) => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/transformation`,
-			http.PUT,
-			transformation
-		);
 	};
 
 	ui = async (connection) => {
