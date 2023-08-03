@@ -14,14 +14,14 @@ const call = async (url, method, body) => {
 	try {
 		res = await fetch(url, request);
 	} catch (err) {
-		return [null, `error while fetching ${url}: ${err.message}`];
+		throw new Error(`error while fetching ${url}: ${err.message}`);
 	}
 
 	if (res.status !== 200) {
 		let error;
 		switch (res.status) {
 			case 500:
-				error = 'Internal server error';
+				error = new Error('Internal server error');
 				break;
 			case 400:
 			case 404:
@@ -37,25 +37,25 @@ const call = async (url, method, body) => {
 				}
 				break;
 			default:
-				error = 'Unknown error';
+				error = new Error('Unknown error');
 				break;
 		}
-		return [null, error];
+		throw error;
 	}
 
 	const contentType = res.headers.get('content-type');
 	if (!contentType || contentType.indexOf('application/json') === -1) {
-		return [null, null];
+		return null;
 	}
 
 	let data;
 	try {
 		data = await res.json();
 	} catch (err) {
-		return [null, `error while parsing json response from ${url}: ${err.message}`];
+		throw new Error(`error while parsing json response from ${url}: ${err.message}`);
 	}
 
-	return [data, null];
+	return data;
 };
 
 export default call;

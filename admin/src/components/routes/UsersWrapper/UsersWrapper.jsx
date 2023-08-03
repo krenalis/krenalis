@@ -40,8 +40,10 @@ const UsersWrapper = () => {
 		if (storageProperties != null) {
 			properties = JSON.parse(storageProperties);
 		} else {
-			const [schema, err] = await api.workspace.userSchema();
-			if (err) {
+			let schema;
+			try {
+				schema = await api.workspace.userSchema();
+			} catch (err) {
 				setTimeout(() => {
 					setIsLoading(false);
 				}, 300);
@@ -66,8 +68,10 @@ const UsersWrapper = () => {
 		}
 
 		const start = page * lim - lim;
-		const [res, err] = await api.users.find(propertiesNames, start, start + lim);
-		if (err != null) {
+		let res;
+		try {
+			res = await api.users.find(propertiesNames, start, start + lim);
+		} catch (err) {
 			setTimeout(() => {
 				setIsLoading(false);
 			}, 300);

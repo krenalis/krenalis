@@ -35,8 +35,9 @@ const ConnectionOverview = () => {
 			let err;
 			// get the stats.
 			let stats;
-			[stats, err] = await api.connections.stats(c.id);
-			if (err) {
+			try {
+				stats = await api.connections.stats(c.id);
+			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connections');
 					showStatus(statuses.connectionDoesNotExistAnymore);
@@ -60,8 +61,9 @@ const ConnectionOverview = () => {
 
 			// get the imports.
 			let imports;
-			[imports, err] = await api.connections.imports(c.id);
-			if (err) {
+			try {
+				imports = await api.connections.imports(c.id);
+			} catch (err) {
 				showError(err);
 				stopLoading();
 				return;

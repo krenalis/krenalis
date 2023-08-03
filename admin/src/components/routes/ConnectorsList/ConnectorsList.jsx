@@ -22,8 +22,10 @@ const ConnectorsList = () => {
 	const authorizeWithOAuth = async (connectorID) => {
 		localStorage.setItem('addConnectionID', connectorID);
 		localStorage.setItem('addConnectionRole', connectionRole);
-		const [res, err] = await api.connectors.authCodeURL(connectorID);
-		if (err != null) {
+		let res;
+		try {
+			res = await api.connectors.authCodeURL(connectorID);
+		} catch (err) {
 			showError(err);
 			return;
 		}

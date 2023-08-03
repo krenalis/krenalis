@@ -37,12 +37,10 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 			}
 
 			// Get the action type schemas.
-			const [schemas, err] = await api.connections.actionSchemas(
-				connection.id,
-				actionType.Target,
-				actionType.EventType
-			);
-			if (err != null) {
+			let schemas;
+			try {
+				schemas = await api.connections.actionSchemas(connection.id, actionType.Target, actionType.EventType);
+			} catch (err) {
 				onClose();
 				if (err instanceof UnprocessableError) {
 					switch (err.code) {
@@ -77,8 +75,10 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 			// If the action type is an import from a database source, the input
 			// schema is the schema of the database table itself.
 			if (fields.includes('Query') && isEditing) {
-				const [res, err] = await api.connections.query(connection.id, providedAction.Query, 0);
-				if (err !== null) {
+				let res;
+				try {
+					res = await api.connections.query(connection.id, providedAction.Query, 0);
+				} catch (err) {
 					if (err instanceof NotFoundError) {
 						redirect('connections');
 						showStatus([variants.DANGER, icons.NOT_FOUND, 'The connection does not exist anymore']);
@@ -105,13 +105,10 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 			// If the action type is an import from a file source, the input
 			// schema is the schema of the file itself.
 			if (fields.includes('Path') && isEditing && isImport) {
-				const [res, err] = await api.connections.records(
-					connection.id,
-					providedAction.Path,
-					providedAction.Sheet,
-					0
-				);
-				if (err != null) {
+				let res;
+				try {
+					res = await api.connections.records(connection.id, providedAction.Path, providedAction.Sheet, 0);
+				} catch (err) {
 					if (err instanceof UnprocessableError) {
 						switch (err.code) {
 							case 'ReadFileFailed':
@@ -218,8 +215,10 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 					outSchema.properties.push(fullKeyProperty);
 				}
 			}
-			const [inputProperties, err] = await api.expressionsProperties(expressions, actionType.InputSchema);
-			if (err) {
+			let inputProperties;
+			try {
+				inputProperties = await api.expressionsProperties(expressions, actionType.InputSchema);
+			} catch (err) {
 				showError(err);
 				return;
 			}
@@ -248,18 +247,19 @@ const useActionData = (onClose, connection, providedActionType, providedAction, 
 			actionToSet.Query = actionToSet.Query.trim();
 		}
 
-		let id, err;
-		if (isEditing) {
-			[, err] = await api.connections.setAction(connection.id, actionToSet.ID, actionToSet);
-		} else {
-			[id, err] = await api.connections.addAction(
-				connection.id,
-				actionType.Target,
-				actionType.EventType,
-				actionToSet
-			);
-		}
-		if (err != null) {
+		let id;
+		try {
+			if (isEditing) {
+				await api.connections.setAction(connection.id, actionToSet.ID, actionToSet);
+			} else {
+				id = await api.connections.addAction(
+					connection.id,
+					actionType.Target,
+					actionType.EventType,
+					actionToSet
+				);
+			}
+		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				switch (err.code) {
 					case 'EventTypeNotExists':

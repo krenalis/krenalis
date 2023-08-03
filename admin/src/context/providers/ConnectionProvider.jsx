@@ -20,8 +20,10 @@ const ConnectionProvider = () => {
 
 	useEffect(() => {
 		const fetchConnection = async () => {
-			const [fetchedConnection, err] = await api.connections.get(connectionID);
-			if (err) {
+			let fetchedConnection;
+			try {
+				fetchedConnection = await api.connections.get(connectionID);
+			} catch (err) {
 				if (err instanceof NotFoundError) {
 					showNotFound();
 					return;

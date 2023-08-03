@@ -51,8 +51,10 @@ const OAuth = () => {
 			const connectionRole = localStorage.getItem('addConnectionRole');
 			localStorage.removeItem('addConnectionID');
 			localStorage.removeItem('addConnectionRole');
-			const [oauthToken, err] = await api.workspace.oauthToken(Number(connectorID), oauthCode);
-			if (err != null) {
+			let oauthToken;
+			try {
+				oauthToken = await api.workspace.oauthToken(Number(connectorID), oauthCode);
+			} catch (err) {
 				console.error(err);
 				setErrorMessage(
 					'An internal error has occurred. Please try again later and if the issue persists contact our support.'

@@ -17,8 +17,10 @@ const Schema = () => {
 
 	useEffect(() => {
 		const fetchSchema = async () => {
-			const [schema, err] = await api.workspace.userSchema();
-			if (err) {
+			let schema;
+			try {
+				schema = await api.workspace.userSchema();
+			} catch (err) {
 				showError(err);
 				return;
 			}
@@ -29,10 +31,10 @@ const Schema = () => {
 	}, []);
 
 	const onReloadSchemas = async () => {
-		let err;
 		setIsLoading(true);
-		[, err] = await api.workspace.reloadSchemas();
-		if (err != null) {
+		try {
+			await api.workspace.reloadSchemas();
+		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				switch (err.code) {
 					case 'NotConnected':
@@ -54,8 +56,9 @@ const Schema = () => {
 			return;
 		}
 		let schema;
-		[schema, err] = await api.workspace.userSchema();
-		if (err) {
+		try {
+			schema = await api.workspace.userSchema();
+		} catch (err) {
 			setProperties([]);
 			showError(err);
 			return;
@@ -82,7 +85,7 @@ const Schema = () => {
 						name = 'Array(' + pr.type.itemType.name + ')';
 					}
 					if ('enum' in pr.type) {
-						name += ' (' + pr.type.enum.map(e => '"' + e + '"').join(', ') + ')';
+						name += ' (' + pr.type.enum.map((e) => '"' + e + '"').join(', ') + ')';
 					}
 					nestedRows.push({ cells: [pr.name, name] });
 				}
@@ -101,7 +104,7 @@ const Schema = () => {
 					name = 'Array(' + p.type.itemType.name + ')';
 				}
 				if ('enum' in p.type) {
-					name += ' (' + p.type.enum.map(e => '"' + e + '"').join(', ') + ')';
+					name += ' (' + p.type.enum.map((e) => '"' + e + '"').join(', ') + ')';
 				}
 				const row = { cells: [p.name, name] };
 				rows.push(row);

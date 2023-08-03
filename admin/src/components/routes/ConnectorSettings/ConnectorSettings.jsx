@@ -64,8 +64,10 @@ const ConnectorSettings = () => {
 			}
 			setStorages(storages);
 			if (connector.hasSettings === false) return;
-			const [ui, err] = await api.connectors.ui(connectorID, connectionRole, OAuthToken);
-			if (err) {
+			let ui;
+			try {
+				ui = await api.connectors.ui(connectorID, connectionRole, OAuthToken);
+			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connectors');
 					showStatus(statuses.connectorDoesNotExistAnymore);
@@ -104,18 +106,17 @@ const ConnectorSettings = () => {
 			confirmationButton.load();
 		}
 		if (eventName === 'save') {
-			const [id, err] = await api.workspace.addConnection(connectorID, connectionRole, values, {
-				Name: name,
-				Enabled: true,
-				Storage: storage,
-				Compression: compression,
-				WebsiteHost: websiteHost,
-				OAuth: OAuthToken,
-			});
-			if (confirmationButton != null) {
-				confirmationButton.stop();
-			}
-			if (err != null) {
+			let id;
+			try {
+				id = await api.workspace.addConnection(connectorID, connectionRole, values, {
+					Name: name,
+					Enabled: true,
+					Storage: storage,
+					Compression: compression,
+					WebsiteHost: websiteHost,
+					OAuth: OAuthToken,
+				});
+			} catch (err) {
 				if (err instanceof UnprocessableError) {
 					switch (err.code) {
 						case 'ConnectorNotExists':
@@ -133,18 +134,23 @@ const ConnectorSettings = () => {
 					}
 					return;
 				}
+				if (confirmationButton != null) {
+					confirmationButton.stop();
+				}
 				showError(err);
 				return;
+			}
+			if (confirmationButton != null) {
+				confirmationButton.stop();
 			}
 			setNewConnectionID(id);
 			setAreConnectionsStale(true);
 			return;
 		}
-		const [ui, err] = await api.connectors.uiEvent(connectorID, eventName, values, connectionRole, OAuthToken);
-		if (confirmationButton != null) {
-			confirmationButton.stop();
-		}
-		if (err != null) {
+		let ui;
+		try {
+			ui = await api.connectors.uiEvent(connectorID, eventName, values, connectionRole, OAuthToken);
+		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'EventNotExists') {
 					console.error(
@@ -155,7 +161,13 @@ const ConnectorSettings = () => {
 				return;
 			}
 			showError(err);
+			if (confirmationButton != null) {
+				confirmationButton.stop();
+			}
 			return;
+		}
+		if (confirmationButton != null) {
+			confirmationButton.stop();
 		}
 		if (ui == null) {
 			if (confirmationButton != null) {
@@ -182,15 +194,17 @@ const ConnectorSettings = () => {
 	};
 
 	const onSave = async () => {
-		const [id, err] = await api.workspace.addConnection(connectorID, connectionRole, values, {
-			Name: name,
-			Enabled: true,
-			Storage: storage,
-			Compression: compression,
-			WebsiteHost: websiteHost,
-			OAuth: OAuthToken,
-		});
-		if (err != null) {
+		let id;
+		try {
+			id = await api.workspace.addConnection(connectorID, connectionRole, values, {
+				Name: name,
+				Enabled: true,
+				Storage: storage,
+				Compression: compression,
+				WebsiteHost: websiteHost,
+				OAuth: OAuthToken,
+			});
+		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				switch (err.code) {
 					case 'ConnectorNotExists':

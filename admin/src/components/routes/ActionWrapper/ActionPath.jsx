@@ -80,8 +80,10 @@ const ActionPath = () => {
 			return;
 		}
 		getCompletePathTimeoutID.current = setTimeout(async () => {
-			const [res, err] = await api.connections.completePath(connection.storage, path);
-			if (err != null) {
+			let res;
+			try {
+				res = await api.connections.completePath(connection.storage, path);
+			} catch (err) {
 				if (err instanceof UnprocessableError && err.code === 'InvalidPath') {
 					setCompletePathError(err.message);
 					return;
@@ -124,8 +126,10 @@ const ActionPath = () => {
 		setSheets([]);
 		setAreSheetsLoading(true);
 		pathRef.current.lastSheetFetch = pathRef.current.lastUpdate;
-		const [res, err] = await api.connections.sheets(connection.id, action.Path);
-		if (err != null) {
+		let res;
+		try {
+			res = await api.connections.sheets(connection.id, action.Path);
+		} catch (err) {
 			setTimeout(() => {
 				if (err instanceof UnprocessableError || err instanceof BadRequestError) {
 					showError(err.message);
@@ -223,8 +227,10 @@ const ActionPath = () => {
 	};
 
 	const records = async (path, sheet, limit, isConfirmation) => {
-		const [res, err] = await api.connections.records(connection.id, path, sheet, limit);
-		if (err != null) {
+		let res;
+		try {
+			res = await api.connections.records(connection.id, path, sheet, limit);
+		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				switch (err.code) {
 					case 'ReadFileFailed':

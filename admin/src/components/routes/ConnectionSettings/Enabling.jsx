@@ -10,8 +10,9 @@ const Enabling = ({ connection: c }) => {
 	const onSwitchChange = async () => {
 		const cn = { ...c };
 		const v = !cn.enabled;
-		const [, err] = await api.connections.setStatus(c.id, v);
-		if (err != null) {
+		try {
+			await api.connections.setStatus(c.id, v);
+		} catch (err) {
 			showError(err);
 			return;
 		}

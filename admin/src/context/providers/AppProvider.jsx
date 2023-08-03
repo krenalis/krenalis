@@ -38,8 +38,10 @@ const AppProvider = ({ api, showError, children, ...delegated }) => {
 
 	useEffect(() => {
 		const fetchConnectors = async () => {
-			const [fetchedConnectors, err] = await api.connectors.find();
-			if (err != null) {
+			let fetchedConnectors;
+			try {
+				fetchedConnectors = await api.connectors.find();
+			} catch (err) {
 				showError(err);
 				return;
 			}
@@ -55,8 +57,10 @@ const AppProvider = ({ api, showError, children, ...delegated }) => {
 
 	useEffect(() => {
 		const fetchConnections = async () => {
-			const [fetchedConnections, err] = await api.connections.find();
-			if (err) {
+			let fetchedConnections;
+			try {
+				fetchedConnections = await api.connections.find();
+			} catch (err) {
 				setConnections([]);
 				showError(err);
 				return;

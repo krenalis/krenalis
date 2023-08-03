@@ -39,8 +39,10 @@ const ConnectionEvents = () => {
 				default:
 					source = c.id;
 			}
-			const [listener, err] = await api.eventlisteners.add(3, source, server, stream);
-			if (err) {
+			let listener;
+			try {
+				listener = await api.eventlisteners.add(3, source, server, stream);
+			} catch (err) {
 				if (err instanceof UnprocessableError) {
 					if (
 						err.code === 'SourceNotExists' ||
@@ -60,8 +62,10 @@ const ConnectionEvents = () => {
 			}
 			listenerID = listener.id;
 			interval = setInterval(async () => {
-				const [res, err] = await api.eventlisteners.events(listenerID);
-				if (err) {
+				let res;
+				try {
+					res = await api.eventlisteners.events(listenerID);
+				} catch (err) {
 					if (err instanceof NotFoundError) {
 						setIsListenerNotFound(true);
 						return;
@@ -91,8 +95,9 @@ const ConnectionEvents = () => {
 		startListener();
 		return async () => {
 			clearInterval(interval);
-			const [, err] = await api.eventlisteners.remove(listenerID);
-			if (err) {
+			try {
+				await api.eventlisteners.remove(listenerID);
+			} catch (err) {
 				showError(err);
 				return;
 			}

@@ -11,9 +11,9 @@ const Storage = ({ connection: c }) => {
 	const { api, redirect, showError, showStatus, connections, setAreConnectionsStale } = useContext(AppContext);
 
 	const onChangeStorage = async (storage) => {
-		const [, err] = await api.connections.setStorage(c.id, storage, '');
-		setShowStorages(false);
-		if (err !== null) {
+		try {
+			await api.connections.setStorage(c.id, storage, '');
+		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
 				showStatus(statuses.connectionDoesNotExistAnymore);
@@ -25,17 +25,20 @@ const Storage = ({ connection: c }) => {
 				}
 				return;
 			}
+			setShowStorages(false);
 			showError(err);
 			return;
 		}
+		setShowStorages(false);
 		const cn = { ...c };
 		cn.storage = storage;
 		setAreConnectionsStale(true);
 	};
 
 	const onRemoveStorage = async () => {
-		const [, err] = await api.connections.setStorage(c.id, 0, '');
-		if (err !== null) {
+		try {
+			await api.connections.setStorage(c.id, 0, '');
+		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
 				showStatus(statuses.connectionDoesNotExistAnymore);

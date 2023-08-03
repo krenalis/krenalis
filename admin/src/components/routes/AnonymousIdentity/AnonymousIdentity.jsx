@@ -27,9 +27,10 @@ const AnonymousIdentity = () => {
 
 	useEffect(() => {
 		const fetchData = async () => {
-			let workspace, err;
-			[workspace, err] = await api.workspace.get();
-			if (err) {
+			let workspace;
+			try {
+				workspace = await api.workspace.get();
+			} catch (err) {
 				showError(err);
 				return;
 			}
@@ -37,16 +38,18 @@ const AnonymousIdentity = () => {
 			setAnonymousIdentifiers(transformed);
 
 			let eventSchema;
-			[eventSchema, err] = await api.eventsSchema();
-			if (err) {
+			try {
+				eventSchema = await api.eventsSchema();
+			} catch (err) {
 				showError(err);
 				return;
 			}
 			setEventSchema(eventSchema);
 
 			let userSchema;
-			[userSchema, err] = await api.workspace.userSchema();
-			if (err) {
+			try {
+				userSchema = await api.workspace.userSchema();
+			} catch (err) {
 				showError(err);
 				return;
 			}
@@ -63,8 +66,9 @@ const AnonymousIdentity = () => {
 			return;
 		}
 		const untransformed = untransformAnonymousIdentifiers(anonymousIdentifiers);
-		const [, err] = await api.workspace.anonymousIdentifiers(untransformed);
-		if (err) {
+		try {
+			await api.workspace.anonymousIdentifiers(untransformed);
+		} catch (err) {
 			showError(err);
 			return;
 		}

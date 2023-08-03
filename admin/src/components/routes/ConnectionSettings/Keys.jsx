@@ -12,8 +12,10 @@ const Keys = ({ connection: c }) => {
 
 	useEffect(() => {
 		const fetchKeys = async () => {
-			const [keys, err] = await api.connections.keys(c.id);
-			if (err) {
+			let keys;
+			try {
+				keys = await api.connections.keys(c.id);
+			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connections');
 					showStatus(statuses.connectionDoesNotExistAnymore);
@@ -29,8 +31,10 @@ const Keys = ({ connection: c }) => {
 	}, []);
 
 	const onAddKey = async () => {
-		const [key, err] = await api.connections.generateKey(c.id);
-		if (err) {
+		let key;
+		try {
+			key = await api.connections.generateKey(c.id);
+		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
 				showStatus(statuses.connectionDoesNotExistAnymore);
@@ -50,8 +54,9 @@ const Keys = ({ connection: c }) => {
 	};
 
 	const onRevokeKey = async (key) => {
-		const [, err] = await api.connections.revokeKey(c.id, key);
-		if (err) {
+		try {
+			await api.connections.revokeKey(c.id, key);
+		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
 				showStatus(statuses.connectionDoesNotExistAnymore);

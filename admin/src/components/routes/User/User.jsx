@@ -57,11 +57,12 @@ const User = () => {
 			setUser(null);
 		}, MAX_FETCH_TIME + 1);
 
-		let err, res;
+		let res;
 
 		// Fetch the user's events.
-		[res, err] = await api.users.events(userID);
-		if (err != null) {
+		try {
+			res = await api.users.events(userID);
+		} catch (err) {
 			if (err instanceof NotFoundError) {
 				showStatus(statuses.usersNotFound);
 				redirect('users');
@@ -95,8 +96,9 @@ const User = () => {
 		u.events = enrichedEvents;
 
 		// Fetch the user's traits.
-		[res, err] = await api.users.traits(userID);
-		if (err != null) {
+		try {
+			res = await api.users.traits(userID);
+		} catch (err) {
 			if (err instanceof NotFoundError) {
 				showStatus(statuses.usersNotFound);
 				redirect('users');

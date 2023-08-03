@@ -37,8 +37,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }) => {
 	const onActionStatusSwitch = async (actionID) => {
 		const index = connection.actions.findIndex((a) => a.ID === actionID);
 		const enabledValue = connection.actions[index].Enabled;
-		const [, err] = await api.connections.setActionStatus(connection.id, actionID, !enabledValue);
-		if (err != null) {
+		try {
+			await api.connections.setActionStatus(connection.id, actionID, !enabledValue);
+		} catch (err) {
 			showError(err);
 			return;
 		}
@@ -47,8 +48,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }) => {
 
 	const onRemoveAction = async (actionID) => {
 		newActionID.current = 0; // avoid repainting with the animation on the new action's row
-		const [, err] = await api.connections.deleteAction(connection.id, actionID);
-		if (err != null) {
+		try {
+			await api.connections.deleteAction(connection.id, actionID);
+		} catch (err) {
 			showError(err);
 			return;
 		}
@@ -57,8 +59,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }) => {
 
 	const executeAction = async (actionID) => {
 		setRunningActions([...runningActions, actionID]);
-		const [, err] = await api.connections.executeAction(connection.id, actionID, true); // TODO: handle the reimport bool.
-		if (err != null) {
+		try {
+			await api.connections.executeAction(connection.id, actionID, true); // TODO: handle the reimport bool.
+		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				switch (err.code) {
 					case 'ExecutionInProgress':
@@ -79,8 +82,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }) => {
 
 	const onSchedulerPeriodChange = async (e, actionID) => {
 		const period = SCHEDULE_PERIODS[e.currentTarget.value];
-		const [, err] = await api.connections.setActionSchedulePeriod(connection.id, actionID, period);
-		if (err != null) {
+		try {
+			await api.connections.setActionSchedulePeriod(connection.id, actionID, period);
+		} catch (err) {
 			showError(err);
 			return;
 		}

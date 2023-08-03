@@ -19,8 +19,10 @@ const Form = ({ connection: c }) => {
 
 	useEffect(() => {
 		const fetchUI = async () => {
-			const [ui, err] = await api.connections.ui(c.id);
-			if (err) {
+			let ui;
+			try {
+				ui = await api.connections.ui(c.id);
+			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connections');
 					showStatus(statuses.connectionDoesNotExistAnymore);
@@ -58,11 +60,10 @@ const Form = ({ connection: c }) => {
 		if (confirmationButton != null) {
 			confirmationButton.load();
 		}
-		const [ui, err] = await api.connections.uiEvent(c.id, eventName, values);
-		if (confirmationButton != null) {
-			confirmationButton.stop();
-		}
-		if (err) {
+		let ui;
+		try {
+			ui = await api.connections.uiEvent(c.id, eventName, values);
+		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
 				showStatus(statuses.connectionDoesNotExistAnymore);
@@ -78,7 +79,13 @@ const Form = ({ connection: c }) => {
 				return;
 			}
 			showError(err);
+			if (confirmationButton != null) {
+				confirmationButton.stop();
+			}
 			return;
+		}
+		if (confirmationButton != null) {
+			confirmationButton.stop();
 		}
 		if (eventName === 'save') {
 			showStatus(statuses.connectionSaved);

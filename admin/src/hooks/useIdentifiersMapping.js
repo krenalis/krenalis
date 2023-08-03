@@ -49,14 +49,14 @@ const useIdentifiersMapping = (mapping, setMapping, inputSchema, outputSchema, o
 	const validateExpression = async (expression, schema, destinationProperty) => {
 		let message = '';
 		if (expression !== '') {
-			let err;
-			[message, err] = await api.validateExpression(
-				expression,
-				schema,
-				destinationProperty.type,
-				destinationProperty.nullable
-			);
-			if (err != null) {
+			try {
+				message = await api.validateExpression(
+					expression,
+					schema,
+					destinationProperty.type,
+					destinationProperty.nullable
+				);
+			} catch (err) {
 				showError(err);
 				return;
 			}

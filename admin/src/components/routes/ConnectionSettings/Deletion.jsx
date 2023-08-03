@@ -11,8 +11,9 @@ const Deletion = ({ connection: c, onDelete }) => {
 	const { api, showError, showStatus, redirect, setAreConnectionsStale } = useContext(AppContext);
 
 	const onDeletionConfirmation = async () => {
-		const [, err] = await api.connections.delete(c.id);
-		if (err !== null) {
+		try {
+			await api.connections.delete(c.id);
+		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
 				showStatus(statuses.connectionDoesNotExistAnymore);

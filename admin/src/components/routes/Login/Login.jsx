@@ -10,8 +10,10 @@ const Login = ({ setIsLoggedIn, api, showStatus, showError, setAccount }) => {
 	const onLogin = async (e) => {
 		e.preventDefault();
 		setIsLoading(true);
-		const [[accountID, authError], err] = await api.login(email, password);
-		if (err !== null) {
+		let accountID, authError;
+		try {
+			[accountID, authError] = await api.login(email, password);
+		} catch (err) {
 			setIsLoading(false);
 			showError(err);
 			return;

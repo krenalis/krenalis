@@ -97,8 +97,10 @@ const ActionQuery = () => {
 			showError(`Your query does not contain the $limit variable`);
 			return;
 		}
-		const [res, err] = await api.connections.query(connection.id, trimmed, limit);
-		if (err !== null) {
+		let res;
+		try {
+			res = await api.connections.query(connection.id, trimmed, limit);
+		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
 				showStatus(statuses.connectionDoesNotExistAnymore);
