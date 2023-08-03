@@ -79,22 +79,11 @@ const App = () => {
 	const showError = (err) => {
 		toastRef.current.hide();
 		setTimeout(() => {
-			if (err instanceof BadRequestError) {
-				console.error(`Bad Request: ${err.message}`);
-				let message = '';
-				if (err.message !== '') {
-					message = `Bad Request: ${err.message}`;
-				} else {
-					message = 'Unexpected error. Contact the administrator for more information.';
-				}
-				setStatus({
-					variant: variants.DANGER,
-					icon: icons.EXCLAMATION,
-					text: message,
-				});
-			} else {
-				setStatus({ variant: variants.DANGER, icon: icons.EXCLAMATION, text: err });
-			}
+			setStatus({
+				variant: variants.DANGER,
+				icon: icons.EXCLAMATION,
+				text: err instanceof Error ? err.message : err,
+			});
 			toastRef.current.toast();
 		}, 300);
 	};
