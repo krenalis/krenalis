@@ -9,15 +9,200 @@ package apis
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"strings"
 
 	"chichi/apis/mappings"
+	"chichi/apis/state"
 	"chichi/apis/userswarehouse"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 )
+
+// downloadUsersForIdentityMatch downloads the users of the external app for
+// resolving the external identity.
+func (this *Action) downloadUsersForIdentityMatch() error {
+
+	ctx := context.Background()
+	app, err := this.connection.openAppUsers(ctx)
+	if err != nil {
+		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
+	}
+
+	// Read the users from the app.
+	properties := []types.Path{
+		{this.action.MatchingProperties.External},
+	}
+
+	// TODO(Gianluca): here cursor.Next is set to "" as a workaround. See the
+	// issue https://github.com/open2b/chichi/issues/183.
+	var cursor _connector.Cursor
+
+	c := this.connection
+
+	var eof bool
+
+	// Importing users from a destination to match identities for the export.
+	for !eof {
+
+		users, next, err := app.Users(properties, cursor)
+		if err != nil && err != io.EOF {
+			return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
+		}
+		if err == io.EOF {
+			eof = true
+		} else if len(users) == 0 {
+			return actionExecutionError{fmt.Errorf("connector %d has returned an empty users without returning EOF", c.ID)}
+		}
+
+		for _, user := range users {
+
+			externalPropName := this.action.MatchingProperties.External
+			externalProp, ok := user.Properties[externalPropName]
+			if !ok {
+				// TODO(Gianluca): handle this error properly.
+				return actionExecutionError{fmt.Errorf("user does not contain property %q", externalPropName)}
+			}
+			p, err := json.Marshal(externalProp)
+			if err != nil {
+				return actionExecutionError{err}
+			}
+			err = c.store.SetDestinationUser(ctx, this.action.ID, user.ID, string(p))
+			if err != nil {
+				return actionExecutionError{err}
+			}
+
+		}
+
+		// Set the user cursor.
+		if len(users) > 0 {
+			last := users[len(users)-1]
+			cursor.ID = last.ID
+			cursor.Timestamp = last.Timestamp
+		}
+		cursor.Next = next
+		err = this.setUserCursor(ctx, cursor)
+		if err != nil {
+			return actionExecutionError{err}
+		}
+
+	}
+
+	return nil
+}
+
+// exportUsersToApp exports the users to the app.
+func (this *Action) exportUsersToApp(ctx context.Context) error {
+
+	// TODO(Gianluca): we should export only the users modified since last
+	// export.
+
+	users, err := this.readUsersFromDataWarehouse(nil)
+	if err != nil {
+		return err
+	}
+
+	// Filter the users.
+	if this.action.Filter != nil {
+		filteredUsers := []userToExport{}
+		for _, user := range users {
+			ok, err := mappings.ActionFilterApplies(this.action.Filter, user.Properties)
+			if err != nil {
+				return err
+			}
+			if ok {
+				filteredUsers = append(filteredUsers, user)
+			}
+		}
+		users = filteredUsers
+	}
+	if len(users) == 0 {
+		return nil
+	}
+
+	// Download the users from this connection to match the identities.
+	err = this.downloadUsersForIdentityMatch()
+	if err != nil {
+		return err
+	}
+
+	// TODO(Gianluca): here we assume that the user read from the data warehouse
+	// is correctly normalized. We should investigate and discuss about this
+	// behavior, and eventually add an additional normalization step.
+
+	// Instantiate a new mapping.
+	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.Transformation, true)
+	if err != nil {
+		return err
+	}
+
+	// Open a connection to the app.
+	app, err := this.connection.openAppUsers(ctx)
+	if err != nil {
+		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
+	}
+
+	connector := this.action.Connection().Connector()
+	inSchemaProps := this.action.InSchema.PropertiesNames()
+
+	for _, user := range users {
+
+		// Resolve the external identity.
+		id, exists, err := this.resolveExternalIdentity(user)
+		if err != nil {
+			return err
+		}
+
+		// Determine if this user must be exported or not.
+		mode := *this.action.ExportMode
+		if (mode == state.CreateOnly && exists) ||
+			(mode == state.UpdateOnly && !exists) {
+			continue
+		}
+
+		// Take only the necessary properties.
+		props := make(map[string]any, len(inSchemaProps))
+		for _, name := range inSchemaProps {
+			props[name] = user.Properties[name]
+		}
+
+		// Normalize the user properties (read from the data warehouse) using
+		// the action's mapping input schema.
+		props, err = normalize(props, this.action.InSchema)
+		if err != nil {
+			return actionExecutionError{err}
+		}
+
+		// Map the properties of the user.
+		props, err = mapping.Apply(ctx, props)
+		if err != nil {
+			return actionExecutionError{err}
+		}
+
+		// Update the user, if it already exists on the app.
+		if exists {
+			err := app.UpdateUser(id, props)
+			if err != nil {
+				return actionExecutionError{fmt.Errorf("cannot update user: %s", err)}
+			}
+			log.Printf("[info] user %q updated on %s: %#v", id, connector.Name, props)
+			continue
+		}
+
+		// Create the user.
+		err = app.CreateUser(props)
+		if err != nil {
+			return actionExecutionError{fmt.Errorf("cannot create user: %s", err)}
+		}
+		log.Printf("[info] a new user has been created on %s: %#v", connector.Name, user)
+
+	}
+
+	return nil
+}
 
 // importFromApp imports the users from an app.
 func (this *Action) importFromApp(ctx context.Context) error {
@@ -118,4 +303,26 @@ func (this *Action) importFromApp(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// resolveExternalIdentity resolves the external identity of user and returns
+// its external ID and true, if resolved, or the empty string and false if such
+// user does not exist on the remote app.
+func (this *Action) resolveExternalIdentity(user userToExport) (string, bool, error) {
+	internalPropName := this.action.MatchingProperties.Internal
+	property, ok := user.Properties[internalPropName]
+	if !ok {
+		return "", false, fmt.Errorf("property %q not found", internalPropName)
+	}
+	p, err := json.Marshal(property)
+	if err != nil {
+		return "", false, err
+	}
+	c := this.connection
+	ctx := context.Background()
+	externalID, ok, err := c.store.DestinationUser(ctx, this.action.ID, string(p))
+	if err != nil {
+		return "", false, err
+	}
+	return externalID, ok, nil
 }

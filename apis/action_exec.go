@@ -14,10 +14,13 @@ import (
 	"log"
 	"time"
 
+	"chichi/apis/datastore"
+	"chichi/apis/datastore/warehouses"
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	_connector "chichi/connector"
+	"chichi/connector/types"
 )
 
 var ExecutionInProgress errors.Code = "ExecutionInProgress"
@@ -148,6 +151,72 @@ func (this *Action) exec() {
 			execution.ID, this.action.ID, err)
 	}
 
+}
+
+type userToExport struct {
+	GID        int
+	Properties map[string]any
+}
+
+// readUsersFromDataWarehouse reads the users with the given IDs from the data
+// warehouse.
+//
+// TODO(Gianluca): this method returns at most 1000 users. This is wrong. We
+// should find an alternative way to implement this; maybe we could read one
+// user at a time.
+func (this *Action) readUsersFromDataWarehouse(ids []int) ([]userToExport, error) {
+
+	ws := this.action.Connection().Workspace()
+
+	// Read the schema.
+	schema, ok := ws.Schemas["users"]
+	if !ok {
+		return nil, errors.New("users schema not found")
+	}
+
+	// Read the users.
+
+	var where datastore.Expr
+	if len(ids) > 0 {
+		operands := make([]datastore.Expr, len(ids))
+		for i := range ids {
+			operands[i] = warehouses.NewBaseExpr(
+				warehouses.ExprColumn{Name: "id", Type: types.PtInt},
+				warehouses.OperatorEqual,
+				ids[i],
+			)
+		}
+		where = warehouses.NewMultiExpr(warehouses.LogicalOperatorOr, operands)
+	}
+	idProperty, ok := schema.Property("id")
+	if !ok {
+		return nil, errors.New("property 'id' not found in schema")
+	}
+
+	store := this.connection.store
+	users, err := store.Users(context.Background(), schema.Properties(), where, idProperty, 0, 1000)
+	if err != nil {
+		if err2, ok := err.(*datastore.Error); ok {
+			// TODO(marco): log the error in a log specific of the workspace.
+			log.Printf("[error] cannot get users from the data warehouse of the workspace %d: %s", ws.ID, err)
+			err = errors.Unprocessable(WarehouseFailed, "warehouse connection is failed: %w", err2.Err)
+		}
+		return nil, err
+	}
+
+	exportUsers := make([]userToExport, len(users))
+	for i, user := range users {
+		gid, ok := user["id"].(int)
+		if !ok {
+			return nil, errors.New("missing or invalid GID")
+		}
+		exportUsers[i] = userToExport{
+			GID:        gid,
+			Properties: user,
+		}
+	}
+
+	return exportUsers, nil
 }
 
 // actionExecutionError represents a non-internal error during action execution.

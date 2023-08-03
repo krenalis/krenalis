@@ -18,6 +18,7 @@ import (
 	"chichi/apis/mappings"
 	"chichi/apis/normalization"
 	"chichi/apis/userswarehouse"
+	_connector "chichi/connector"
 	"chichi/connector/types"
 )
 
@@ -44,6 +45,89 @@ type sameColumnNameError struct {
 
 func (err sameColumnNameError) Error() string {
 	return fmt.Sprintf("file contains columns with the same name: %s", err.name)
+}
+
+// exportUsersToFile exports the users to the file.
+func (this *Action) exportUsersToFile(ctx context.Context) error {
+
+	users, err := this.readUsersFromDataWarehouse(nil)
+	if err != nil {
+		return err
+	}
+
+	// Filter the users.
+	if this.action.Filter != nil {
+		filteredUsers := []userToExport{}
+		for _, user := range users {
+			ok, err := mappings.ActionFilterApplies(this.action.Filter, user.Properties)
+			if err != nil {
+				return err
+			}
+			if ok {
+				filteredUsers = append(filteredUsers, user)
+			}
+		}
+		users = filteredUsers
+	}
+
+	const role = _connector.DestinationRole
+
+	connection := this.action.Connection()
+
+	// Retrieve the storage associated to the file connection.
+	var storage *compressorStorage
+	{
+		st, err := this.connection.openStorage(ctx)
+		if err != nil {
+			return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %s", err)}
+		}
+		storage = newCompressedStorage(st, connection.Compression)
+	}
+
+	file, err := this.connection.openFile(ctx)
+	if err != nil {
+		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
+	}
+
+	// Determine the columns.
+	var columns []types.Property
+	if len(users) > 0 {
+		userSchema, ok := connection.Workspace().Schemas["users"]
+		if !ok {
+			return actionExecutionError{errors.New("'users' schema not found")}
+		}
+		for _, p := range userSchema.Properties() {
+			if _, ok := users[0].Properties[p.Name]; ok {
+				columns = append(columns, p)
+			}
+		}
+	}
+
+	// Prepare the users and the record reader.
+	usersSlices := make([][]any, len(users))
+	for i, u := range users {
+		userSlice := make([]any, len(columns))
+		for j, c := range columns {
+			userSlice[j] = u.Properties[c.Name]
+		}
+		usersSlices[i] = userSlice
+	}
+	records := newRecordReader(columns, usersSlices)
+
+	// Write the file to the storage.
+	w, err := storage.Writer(this.action.Path, file.ContentType())
+	if err != nil {
+		return actionExecutionError{fmt.Errorf("cannot write file: %s", err)}
+	}
+	err = file.Write(w, this.action.Sheet, records)
+	if err2 := w.CloseWithError(err); err2 != nil && err == nil {
+		err = err2
+	}
+	if err != nil {
+		return actionExecutionError{fmt.Errorf("cannot write file: %s", err)}
+	}
+
+	return nil
 }
 
 // importFromFile imports the users from a file.
