@@ -18,7 +18,7 @@ import (
 	"chichi/apis/mappings"
 	"chichi/apis/state"
 	"chichi/apis/userswarehouse"
-	_connector "chichi/connector"
+	"chichi/connector"
 	"chichi/connector/types"
 )
 
@@ -39,7 +39,7 @@ func (this *Action) downloadUsersForIdentityMatch() error {
 
 	// TODO(Gianluca): here cursor.Next is set to "" as a workaround. See the
 	// issue https://github.com/open2b/chichi/issues/183.
-	var cursor _connector.Cursor
+	var cursor connector.Cursor
 
 	c := this.connection
 
@@ -213,7 +213,7 @@ func (this *Action) importFromApp(ctx context.Context) error {
 	}
 	cursor := this.action.UserCursor
 	if exe, _ := this.action.Execution(); exe.Reimport {
-		cursor = _connector.Cursor{}
+		cursor = connector.Cursor{}
 	}
 
 	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.Transformation, false)

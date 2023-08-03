@@ -19,7 +19,7 @@ import (
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-	_connector "chichi/connector"
+	"chichi/connector"
 	"chichi/connector/types"
 )
 
@@ -75,7 +75,7 @@ func (this *Action) exec() {
 
 	connection := this.action.Connection()
 	execution, _ := this.action.Execution()
-	connector := connection.Connector()
+	c := connection.Connector()
 
 	ctx := context.Background()
 
@@ -83,7 +83,7 @@ func (this *Action) exec() {
 	if this.Target == GroupsTarget {
 		err = actionExecutionError{fmt.Errorf("groups import and export are not implemented")}
 	} else {
-		switch connector.Type {
+		switch c.Type {
 		case state.AppType:
 			if connection.Role == state.SourceRole {
 				err = this.importFromApp(ctx)
@@ -113,7 +113,7 @@ func (this *Action) exec() {
 		health = state.RecentError
 		if e, ok := err.(actionExecutionError); ok {
 			errorMessage = abbreviate(e.Error(), 1000)
-			if _, ok := e.err.(*_connector.AccessDeniedError); ok {
+			if _, ok := e.err.(*connector.AccessDeniedError); ok {
 				health = state.AccessDenied
 			}
 		} else {

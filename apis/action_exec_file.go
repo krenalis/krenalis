@@ -18,7 +18,6 @@ import (
 	"chichi/apis/mappings"
 	"chichi/apis/normalization"
 	"chichi/apis/userswarehouse"
-	_connector "chichi/connector"
 	"chichi/connector/types"
 )
 
@@ -69,8 +68,6 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 		}
 		users = filteredUsers
 	}
-
-	const role = _connector.DestinationRole
 
 	connection := this.action.Connection()
 
