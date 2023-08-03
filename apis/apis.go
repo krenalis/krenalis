@@ -370,6 +370,7 @@ func (apis *APIs) expressionsProperties(expressions []ExpressionToBeExtracted, s
 
 // Workspace represents a workspace.
 type Workspace struct {
+	account              *Account
 	db                   *postgres.DB
 	state                *state.State
 	store                *datastore.Store

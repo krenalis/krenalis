@@ -50,7 +50,7 @@ func newStore(ws *state.Workspace) (*Store, error) {
 		workspace: ws.ID,
 	}
 	var err error
-	store.redis, err = openRedis(ws.Redis.Settings)
+	store.redis, _, err = openRedis(ws.Redis.Settings)
 	if err != nil {
 		return nil, fmt.Errorf("cannot open Redis database: %s", err)
 	}

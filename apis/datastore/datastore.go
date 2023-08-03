@@ -8,6 +8,8 @@
 package datastore
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -20,6 +22,26 @@ import (
 
 	"github.com/redis/go-redis/v9"
 )
+
+// InvalidSettings is the error returned when the Redis database or data
+// warehouse settings are not valid.
+type InvalidSettings struct {
+	Err error
+}
+
+func (err InvalidSettings) Error() string {
+	return err.Err.Error()
+}
+
+// ConnectionFailed is the error returned when a connection to a Redis database
+// or to a data warehouse cannot be established.
+type ConnectionFailed struct {
+	Err error
+}
+
+func (err ConnectionFailed) Error() string {
+	return err.Err.Error()
+}
 
 type Datastore struct {
 	state *state.State
@@ -53,6 +75,61 @@ func New(st *state.State) *Datastore {
 		}
 	}
 	return ds
+}
+
+// ValidateRedisSettings validates Redis settings and tries to establish a
+// connection to the database with these settings.
+//
+// It returns an InvalidSettings error if the settings are not valid, and a
+// ConnectionFailed error if it cannot connect. If no error occurs, it returns
+// the settings in a canonical form.
+func (ds *Datastore) ValidateRedisSettings(ctx context.Context, settings []byte) ([]byte, error) {
+	r, s, err := openRedis(settings)
+	if err != nil {
+		return nil, InvalidSettings{err}
+	}
+	err = r.Ping(ctx).Err()
+	if err != nil {
+		_ = r.Close()
+		return nil, ConnectionFailed{err}
+	}
+	err = r.Close()
+	if err != nil {
+		return nil, ConnectionFailed{err}
+	}
+	// Return the settings in a canonical form.
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	err = enc.Encode(s)
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
+}
+
+// ValidateWarehouseSettings validates data warehouse settings and tries to
+// establish a connection to the data warehouse with these settings.
+//
+// It returns an InvalidSettings error if the settings are not valid, and a
+// ConnectionFailed error if it cannot connect. If no error occurs, it returns
+// the settings in a canonical form.
+func (ds *Datastore) ValidateWarehouseSettings(ctx context.Context, typ state.WarehouseType, settings []byte) ([]byte, error) {
+	dw, err := openWarehouse(typ, settings)
+	if err != nil {
+		return nil, InvalidSettings{err}
+	}
+	err = dw.Ping(ctx)
+	if err != nil {
+		_ = dw.Close()
+		return nil, ConnectionFailed{err}
+	}
+	err = dw.Close()
+	if err != nil {
+		return nil, ConnectionFailed{err}
+	}
+	// Return the settings in a canonical form.
+	return dw.Settings(), nil
 }
 
 func (ds *Datastore) Store(workspace int) *Store {
@@ -109,20 +186,21 @@ func openWarehouse(typ state.WarehouseType, settings []byte) (warehouses.Warehou
 	return nil, fmt.Errorf("warehouse type %d is not valid", typ)
 }
 
+type RedisConfig struct {
+	Network  string
+	Addr     string
+	Username string
+	Password string
+	DB       int
+}
+
 // openRedis opens a Redis database with the given settings.
 // It returns an error if settings are not valid.
-func openRedis(settings []byte) (*redis.Client, error) {
-	type RedisConfig struct {
-		Network  string
-		Addr     string
-		Username string
-		Password string
-		DB       int
-	}
+func openRedis(settings []byte) (*redis.Client, *RedisConfig, error) {
 	var s RedisConfig
 	err := json.Unmarshal(settings, &s)
 	if err != nil {
-		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
+		return nil, nil, fmt.Errorf("cannot unmarshal settings: %s", err)
 	}
 	// Instantiate a new client for Redis.
 	client := redis.NewClient(&redis.Options{
@@ -132,5 +210,5 @@ func openRedis(settings []byte) (*redis.Client, error) {
 		Password: s.Password,
 		DB:       s.DB,
 	})
-	return client, nil
+	return client, &s, nil
 }

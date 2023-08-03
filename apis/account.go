@@ -56,48 +56,60 @@ type Warehouse struct {
 // warehouse, if not nil, and returns the identifier. name must be between 1 and
 // 100 runes long.
 //
-// It returns an errors.NotFoundError error if the account does not exist anymore.
-// It returns an errors.UnprocessableError error with code
-//   - ConnectionFailed, if the connection to the Redis database, or the data
+// It returns an errors.NotFoundError error if the account does not exist
+// anymore. It returns an errors.UnprocessableError error with code
+//   - ConnectionFailed, if the connection to the Redis database, or to the data
 //     warehouse fails.
-//   - InvalidSettings, if Redis or data warehouse settings are not valid.
+//   - InvalidSettings, if Redis database, or data warehouse settings are not
+//     valid.
 func (this *Account) AddWorkspace(name string, redis *Redis, warehouse *Warehouse) (int, error) {
 
 	if name == "" || utf8.RuneCountInString(name) > 100 {
 		return 0, errors.BadRequest("name %q is not valid", name)
 	}
 
-	if warehouse != nil {
-		warehouse, err := openWarehouse(warehouse.Type, warehouse.Settings)
-		if err != nil {
-			return 0, errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
-		}
-		err = warehouse.Ping(context.Background())
-		if err != nil {
-			return 0, errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
-		}
-	}
-
 	n := state.AddWorkspace{
 		Account: this.account.ID,
 		Name:    name,
 	}
+
+	var err error
+	ctx := context.Background()
+
 	if redis != nil {
-		n.Redis.Settings = redis.Settings
+		n.Redis.Settings, err = this.datastore.ValidateRedisSettings(ctx, warehouse.Settings)
+		if err != nil {
+			switch err.(type) {
+			case datastore.InvalidSettings:
+				return 0, errors.Unprocessable(InvalidSettings, "Redis database settings are not valid: %w", err)
+			case datastore.ConnectionFailed:
+				return 0, errors.Unprocessable(ConnectionFailed, "cannot connect to the Redis database: %w", err)
+			}
+			return 0, err
+		}
 	}
+
 	if warehouse != nil {
 		n.Warehouse.Type = state.WarehouseType(warehouse.Type)
-		n.Warehouse.Settings = warehouse.Settings
+		n.Warehouse.Settings, err = this.datastore.ValidateWarehouseSettings(ctx, state.WarehouseType(warehouse.Type), warehouse.Settings)
+		if err != nil {
+			switch err.(type) {
+			case datastore.InvalidSettings:
+				return 0, errors.Unprocessable(InvalidSettings, "data warehouse settings are not valid: %w", err)
+			case datastore.ConnectionFailed:
+				return 0, errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
+			}
+			return 0, err
+		}
+
 	}
 
 	// Generate the identifier.
-	var err error
 	n.ID, err = generateRandomID()
 	if err != nil {
 		return 0, err
 	}
 
-	ctx := context.Background()
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var err error
 		if n.Warehouse.Settings == nil {
@@ -134,6 +146,7 @@ func (this *Account) Workspace(id int) (*Workspace, error) {
 		return nil, errors.NotFound("workspace %d does not exist", id)
 	}
 	workspace := Workspace{
+		account:              this,
 		db:                   this.db,
 		state:                this.state,
 		store:                this.datastore.Store(id),
@@ -154,6 +167,7 @@ func (this *Account) Workspaces() []*Workspace {
 	infos := make([]*Workspace, len(workspaces))
 	for i, ws := range workspaces {
 		workspace := Workspace{
+			account:              this,
 			db:                   this.db,
 			state:                this.state,
 			store:                this.datastore.Store(ws.ID),

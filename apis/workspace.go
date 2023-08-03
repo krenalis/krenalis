@@ -509,15 +509,24 @@ func (this *Workspace) ConnectRedis(settings []byte) error {
 	if ws.Redis != nil {
 		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a Redis database", ws.ID)
 	}
-	// TODO(marco): validate settings
+	ctx := context.Background()
+	settings, err := this.account.datastore.ValidateRedisSettings(ctx, settings)
+	if err != nil {
+		switch err.(type) {
+		case datastore.InvalidSettings:
+			return errors.Unprocessable(InvalidSettings, "Redis database settings are not valid: %w", err)
+		case datastore.ConnectionFailed:
+			return errors.Unprocessable(ConnectionFailed, "cannot connect to the Redis database: %w", err)
+		}
+		return err
+	}
 	n := state.SetRedis{
 		Workspace: ws.ID,
 		Redis: &state.Redis{
 			Settings: settings,
 		},
 	}
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET redis_settings = $1 WHERE id = $2 AND redis_settings = ''",
 			string(n.Redis.Settings), n.Workspace)
 		if err != nil {
@@ -552,22 +561,24 @@ func (this *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) erro
 	if ws.Warehouse != nil {
 		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data store", ws.ID)
 	}
-	warehouse, err := openWarehouse(typ, settings)
+	ctx := context.Background()
+	settings, err := this.account.datastore.ValidateWarehouseSettings(ctx, state.WarehouseType(typ), settings)
 	if err != nil {
-		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
-	}
-	err = warehouse.Ping(context.Background())
-	if err != nil {
-		return errors.Unprocessable(ConnectionFailed, "cannot connect to the data store: %w", err)
+		switch err.(type) {
+		case datastore.InvalidSettings:
+			return errors.Unprocessable(InvalidSettings, "data warehouse settings are not valid: %w", err)
+		case datastore.ConnectionFailed:
+			return errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
+		}
+		return err
 	}
 	n := state.SetWarehouse{
 		Workspace: ws.ID,
 		Warehouse: &state.Warehouse{
 			Type:     state.WarehouseType(typ),
-			Settings: warehouse.Settings(),
+			Settings: settings,
 		},
 	}
-	ctx := context.Background()
 	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = $1, warehouse_settings = $2 WHERE id = $3"+
 			" AND warehouse_type IS NULL",
