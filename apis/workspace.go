@@ -447,7 +447,7 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 		connection.Storage = s.ID
 	}
 	// Set the action types.
-	ts, err := (&Connection{db: this.db, connection: c, store: this.store, http: this.http}).actionTypes()
+	ts, err := connection.actionTypes()
 	if err != nil {
 		return nil, err
 	}
