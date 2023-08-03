@@ -855,6 +855,35 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				respond(w, err)
 			})
 		})
+		router.Route("/ping-redis", func(router chi.Router) {
+			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				req := struct {
+					Settings json.RawMessage
+				}{}
+				err := json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, errors.BadRequest("invalid JSON"))
+					return
+				}
+				err = workspace.PingRedis(req.Settings)
+				respond(w, err)
+			})
+		})
+		router.Route("/ping-warehouse", func(router chi.Router) {
+			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				req := struct {
+					Type     WarehouseType
+					Settings json.RawMessage
+				}{}
+				err := json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, errors.BadRequest("invalid JSON"))
+					return
+				}
+				err = workspace.PingWarehouse(req.Type, req.Settings)
+				respond(w, err)
+			})
+		})
 		router.Route("/reload-schemas", func(router chi.Router) {
 			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 				err = workspace.ReloadSchemas()

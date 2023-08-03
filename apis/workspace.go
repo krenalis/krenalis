@@ -1079,6 +1079,46 @@ func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) 
 	return err
 }
 
+// PingRedis pings the Redis database with the given settings, verifying that
+// the settings are valid and a connection can be established.
+//
+// It returns an errors.UnprocessableError error with code
+//   - InvalidSettings, if the settings are not valid.
+//   - ConnectionFailed, if the connection fails.
+func (this *Workspace) PingRedis(settings []byte) error {
+	ctx := context.Background()
+	_, err := this.account.datastore.ValidateRedisSettings(ctx, settings)
+	if err != nil {
+		switch err.(type) {
+		case datastore.InvalidSettings:
+			return errors.Unprocessable(InvalidSettings, "Redis database settings are not valid: %w", err)
+		case datastore.ConnectionFailed:
+			return errors.Unprocessable(ConnectionFailed, "cannot connect to the Redis database: %w", err)
+		}
+	}
+	return err
+}
+
+// PingWarehouse pings the data warehouse with the given settings, verifying
+// that the settings are valid and a connection can be established.
+//
+// It returns an errors.UnprocessableError error with code
+//   - InvalidSettings, if the settings are not valid.
+//   - ConnectionFailed, if the connection fails.
+func (this *Workspace) PingWarehouse(typ WarehouseType, settings []byte) error {
+	ctx := context.Background()
+	_, err := this.account.datastore.ValidateWarehouseSettings(ctx, state.WarehouseType(typ), settings)
+	if err != nil {
+		switch err.(type) {
+		case datastore.InvalidSettings:
+			return errors.Unprocessable(InvalidSettings, "data warehouse settings are not valid: %w", err)
+		case datastore.ConnectionFailed:
+			return errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
+		}
+	}
+	return err
+}
+
 // User returns the user with identifier id of the workspace. If the user does
 // not exist, the error is deferred until methods of *User are called.
 func (this *Workspace) User(id int) (*User, error) {

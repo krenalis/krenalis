@@ -45,6 +45,8 @@ POST    /api/workspace/connect-redis                             Connect the wor
 POST    /api/workspace/connect-warehouse                         Connect the workspace to a data warehouse.
 POST    /api/workspace/disconnect-redis                          Disconnect the Redis database.
 POST    /api/workspace/disconnect-warehouse                      Disconnect the data warehouse.
+POST    /api/workspace/ping-redis                                Ping a Redis database.
+POST    /api/workspace/ping-warehouse                            Ping a data warehouse.
 POST    /api/workspace/reload-schemas                            Reload the schemas of the data warehouse.
 POST    /api/workspace/init-warehouse                            Initialize the data warehouse.
 GET     /api/workspace/user-schema                               Get the user schema of the workspace.

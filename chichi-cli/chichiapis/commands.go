@@ -153,6 +153,31 @@ func WorkspaceInitWarehouse() {
 	}
 }
 
+func WorkspacePingRedis(settings []byte) {
+	req := struct {
+		Settings json.RawMessage
+	}{settings}
+	b := &bytes.Buffer{}
+	_ = json.NewEncoder(b).Encode(req)
+	err := callAPI("POST", "api/workspace/ping-redis", b, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func WorkspacePingWarehouse(typ string, settings []byte) {
+	req := struct {
+		Type     string
+		Settings json.RawMessage
+	}{typ, settings}
+	b := &bytes.Buffer{}
+	_ = json.NewEncoder(b).Encode(req)
+	err := callAPI("POST", "api/workspace/ping-warehouse", b, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func WorkspaceReloadSchemas() {
 	err := callAPI("POST", "api/workspace/reload-schemas", nil, nil)
 	if err != nil {
