@@ -77,7 +77,7 @@ func (this *Account) AddWorkspace(name string, redis *Redis, warehouse *Warehous
 	ctx := context.Background()
 
 	if redis != nil {
-		n.Redis.Settings, err = this.datastore.ValidateRedisSettings(ctx, warehouse.Settings)
+		n.Redis.Settings, err = this.datastore.PingRedis(ctx, warehouse.Settings)
 		if err != nil {
 			switch err.(type) {
 			case datastore.InvalidSettings:
@@ -91,7 +91,7 @@ func (this *Account) AddWorkspace(name string, redis *Redis, warehouse *Warehous
 
 	if warehouse != nil {
 		n.Warehouse.Type = state.WarehouseType(warehouse.Type)
-		n.Warehouse.Settings, err = this.datastore.ValidateWarehouseSettings(ctx, state.WarehouseType(warehouse.Type), warehouse.Settings)
+		n.Warehouse.Settings, err = this.datastore.PingWarehouse(ctx, state.WarehouseType(warehouse.Type), warehouse.Settings)
 		if err != nil {
 			switch err.(type) {
 			case datastore.InvalidSettings:

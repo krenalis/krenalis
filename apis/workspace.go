@@ -510,7 +510,7 @@ func (this *Workspace) ConnectRedis(settings []byte) error {
 		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a Redis database", ws.ID)
 	}
 	ctx := context.Background()
-	settings, err := this.account.datastore.ValidateRedisSettings(ctx, settings)
+	settings, err := this.account.datastore.PingRedis(ctx, settings)
 	if err != nil {
 		switch err.(type) {
 		case datastore.InvalidSettings:
@@ -562,7 +562,7 @@ func (this *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) erro
 		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data store", ws.ID)
 	}
 	ctx := context.Background()
-	settings, err := this.account.datastore.ValidateWarehouseSettings(ctx, state.WarehouseType(typ), settings)
+	settings, err := this.account.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
 	if err != nil {
 		switch err.(type) {
 		case datastore.InvalidSettings:
@@ -1087,7 +1087,7 @@ func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) 
 //   - ConnectionFailed, if the connection fails.
 func (this *Workspace) PingRedis(settings []byte) error {
 	ctx := context.Background()
-	_, err := this.account.datastore.ValidateRedisSettings(ctx, settings)
+	_, err := this.account.datastore.PingRedis(ctx, settings)
 	if err != nil {
 		switch err.(type) {
 		case datastore.InvalidSettings:
@@ -1107,7 +1107,7 @@ func (this *Workspace) PingRedis(settings []byte) error {
 //   - ConnectionFailed, if the connection fails.
 func (this *Workspace) PingWarehouse(typ WarehouseType, settings []byte) error {
 	ctx := context.Background()
-	_, err := this.account.datastore.ValidateWarehouseSettings(ctx, state.WarehouseType(typ), settings)
+	_, err := this.account.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
 	if err != nil {
 		switch err.(type) {
 		case datastore.InvalidSettings:

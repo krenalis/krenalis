@@ -77,13 +77,13 @@ func New(st *state.State) *Datastore {
 	return ds
 }
 
-// ValidateRedisSettings validates Redis settings and tries to establish a
+// PingRedis validates Redis settings and tries to establish a
 // connection to the database with these settings.
 //
 // It returns an InvalidSettings error if the settings are not valid, and a
 // ConnectionFailed error if it cannot connect. If no error occurs, it returns
 // the settings in a canonical form.
-func (ds *Datastore) ValidateRedisSettings(ctx context.Context, settings []byte) ([]byte, error) {
+func (ds *Datastore) PingRedis(ctx context.Context, settings []byte) ([]byte, error) {
 	r, s, err := openRedis(settings)
 	if err != nil {
 		return nil, InvalidSettings{err}
@@ -108,13 +108,13 @@ func (ds *Datastore) ValidateRedisSettings(ctx context.Context, settings []byte)
 	return b.Bytes(), nil
 }
 
-// ValidateWarehouseSettings validates data warehouse settings and tries to
+// PingWarehouse validates data warehouse settings and tries to
 // establish a connection to the data warehouse with these settings.
 //
 // It returns an InvalidSettings error if the settings are not valid, and a
 // ConnectionFailed error if it cannot connect. If no error occurs, it returns
 // the settings in a canonical form.
-func (ds *Datastore) ValidateWarehouseSettings(ctx context.Context, typ state.WarehouseType, settings []byte) ([]byte, error) {
+func (ds *Datastore) PingWarehouse(ctx context.Context, typ state.WarehouseType, settings []byte) ([]byte, error) {
 	dw, err := openWarehouse(typ, settings)
 	if err != nil {
 		return nil, InvalidSettings{err}
