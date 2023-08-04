@@ -229,21 +229,21 @@ func (apis *APIs) Connector(ctx context.Context, id int) (*Connector, error) {
 		return nil, errors.NotFound("connector %d does not exist", id)
 	}
 	connector := Connector{
-		connector:     c,
-		http:          apis.http,
-		ID:            c.ID,
-		Name:          c.Name,
-		Type:          ConnectorType(c.Type),
-		HasSheets:     c.HasSheets,
-		HasSettings:   c.HasSettings,
-		Icon:          c.Icon,
-		FileExtension: c.FileExtension,
-		SampleQuery:   c.SampleQuery,
-		WebhooksPer:   WebhooksPer(c.WebhooksPer),
-		OAuth:         c.OAuth != nil,
+		connector:              c,
+		http:                   apis.http,
+		ID:                     c.ID,
+		Name:                   c.Name,
+		SourceDescription:      c.SourceDescription,
+		DestinationDescription: c.DestinationDescription,
+		Type:                   ConnectorType(c.Type),
+		HasSheets:              c.HasSheets,
+		HasSettings:            c.HasSettings,
+		Icon:                   c.Icon,
+		FileExtension:          c.FileExtension,
+		SampleQuery:            c.SampleQuery,
+		WebhooksPer:            WebhooksPer(c.WebhooksPer),
+		OAuth:                  c.OAuth != nil,
 	}
-	connector.SourceDescription = c.SourceDescription
-	connector.DestinationDescription = c.DestinationDescription
 	return &connector, nil
 }
 
@@ -255,21 +255,21 @@ func (apis *APIs) Connectors(ctx context.Context) []*Connector {
 	connectors := make([]*Connector, len(cc))
 	for i, c := range cc {
 		connector := Connector{
-			connector:     c,
-			http:          apis.http,
-			ID:            c.ID,
-			Name:          c.Name,
-			Type:          ConnectorType(c.Type),
-			HasSheets:     c.HasSheets,
-			HasSettings:   c.HasSettings,
-			Icon:          c.Icon,
-			FileExtension: c.FileExtension,
-			SampleQuery:   c.SampleQuery,
-			WebhooksPer:   WebhooksPer(c.WebhooksPer),
-			OAuth:         c.OAuth != nil,
+			connector:              c,
+			http:                   apis.http,
+			ID:                     c.ID,
+			Name:                   c.Name,
+			SourceDescription:      c.SourceDescription,
+			DestinationDescription: c.DestinationDescription,
+			Type:                   ConnectorType(c.Type),
+			HasSheets:              c.HasSheets,
+			HasSettings:            c.HasSettings,
+			Icon:                   c.Icon,
+			FileExtension:          c.FileExtension,
+			SampleQuery:            c.SampleQuery,
+			WebhooksPer:            WebhooksPer(c.WebhooksPer),
+			OAuth:                  c.OAuth != nil,
 		}
-		connector.SourceDescription = c.SourceDescription
-		connector.DestinationDescription = c.DestinationDescription
 		connectors[i] = &connector
 	}
 	sort.Slice(connectors, func(i, j int) bool {
