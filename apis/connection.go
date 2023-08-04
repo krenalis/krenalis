@@ -135,6 +135,7 @@ func (this *Connection) actionTypes() ([]ActionType, error) {
 		switch typ := c.Connector().Type; typ {
 		case
 			state.AppType,
+			state.DatabaseType,
 			state.FileType:
 			var name, description string
 			if c.Role == state.SourceRole {
@@ -159,20 +160,6 @@ func (this *Connection) actionTypes() ([]ActionType, error) {
 				MissingSchema: wsSchemas["users"] == nil,
 			}
 			actionTypes = append(actionTypes, at)
-		case state.DatabaseType:
-			if c.Role == state.SourceRole {
-				description := "Import the " + connector.TermForUsers
-				if connector.TermForUsers != "users" {
-					description += " as users"
-				}
-				description += " from " + connector.Name
-				at := ActionType{
-					Name:        "Import " + connector.TermForUsers,
-					Description: description,
-					Target:      UsersTarget,
-				}
-				actionTypes = append(actionTypes, at)
-			}
 		case
 			state.MobileType,
 			state.ServerType,
@@ -192,6 +179,7 @@ func (this *Connection) actionTypes() ([]ActionType, error) {
 		switch typ := c.Connector().Type; typ {
 		case
 			state.AppType,
+			state.DatabaseType,
 			state.FileType:
 			var name, description string
 			if c.Role == state.SourceRole {
@@ -216,20 +204,6 @@ func (this *Connection) actionTypes() ([]ActionType, error) {
 				MissingSchema: wsSchemas["groups"] == nil,
 			}
 			actionTypes = append(actionTypes, at)
-		case state.DatabaseType:
-			if c.Role == state.SourceRole {
-				description := "Import the " + connector.TermForGroups
-				if connector.TermForGroups != "groups" {
-					description += " as groups"
-				}
-				description += " from " + connector.Name
-				at := ActionType{
-					Name:        "Import " + connector.TermForGroups,
-					Description: description,
-					Target:      GroupsTarget,
-				}
-				actionTypes = append(actionTypes, at)
-			}
 		case
 			state.MobileType,
 			state.ServerType,
