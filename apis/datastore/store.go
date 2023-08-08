@@ -163,6 +163,64 @@ func (store *Store) InitWarehouse(ctx context.Context) error {
 	return store.warehouse.Init(ctx)
 }
 
+// MatchingUsers returns the users matching with the given user.
+func (store *Store) MatchingUsers(ctx context.Context, user map[string]any) ([]IRUser, error) {
+
+	// Determine the identifier-value pairs to check on Redis.
+	identifierKeys := []string{}
+	for p, v := range user {
+		if !zero(v) {
+			key := redisPropertyKey(p, v)
+			identifierKeys = append(identifierKeys, key)
+		}
+	}
+
+	// Retrieve identifier-value pairs from Redis and collect the GIDs.
+	vals, err := store.redis.MGet(ctx, identifierKeys...).Result()
+	if err != nil {
+		return nil, err
+	}
+	gids := map[int]struct{}{}
+	for _, v := range vals {
+		if v == nil { // no matches for this property-value pair.
+			continue
+		}
+		ids, err := deserializeIDs(v.(string))
+		if err != nil {
+			return nil, err
+		}
+		for _, gid := range ids {
+			gids[gid] = struct{}{}
+		}
+	}
+	if len(gids) == 0 {
+		return []IRUser{}, nil
+	}
+
+	// Retrieve the identifiers for every user.
+	userKeys := make([]string, len(gids))
+	i := 0
+	for gid := range gids {
+		userKeys[i] = redisUserKey(gid)
+		i++
+	}
+	sort.Strings(userKeys)
+	rawUsers, err := store.redis.MGet(ctx, userKeys...).Result()
+	if err != nil {
+		return nil, err
+	}
+	users := make([]IRUser, len(rawUsers))
+	for i, user := range rawUsers {
+		u := IRUser{}
+		u.Identifiers = redisJSONDeserialize(user.(string)).(map[string]any)
+		u.ID = int(u.Identifiers["id"].(float64))
+		delete(u.Identifiers, "id")
+		users[i] = u
+	}
+
+	return users, nil
+}
+
 // SetDestinationUser sets the destination user relative to the action, with
 // the given external user ID and external property.
 func (store *Store) SetDestinationUser(ctx context.Context, connection int, externalUserID, externalProperty string) error {
@@ -246,74 +304,6 @@ func (store *Store) UpdateUser(ctx context.Context, target IRUser, user map[stri
 		return fmt.Errorf("BUG: one row should be affected, got %d. Is the Redis index in sync with the content of the users table?", affected)
 	}
 	return nil
-}
-
-// IRUser holds the information of a user necessary for the identity resolution
-// process.
-type IRUser struct {
-	ID          int
-	Identifiers map[string]any
-}
-
-// MatchingUsers returns the users matching with the given user.
-//
-// TODO(Gianluca): move this method in the correct position of this file after
-// merging the branch 'improve-it' into 'main'.
-func (store *Store) MatchingUsers(ctx context.Context, user map[string]any) ([]IRUser, error) {
-
-	// Determine the identifier-value pairs to check on Redis.
-	identifierKeys := []string{}
-	for p, v := range user {
-		if !zero(v) {
-			key := redisPropertyKey(p, v)
-			identifierKeys = append(identifierKeys, key)
-		}
-	}
-
-	// Retrieve identifier-value pairs from Redis and collect the GIDs.
-	vals, err := store.redis.MGet(ctx, identifierKeys...).Result()
-	if err != nil {
-		return nil, err
-	}
-	gids := map[int]struct{}{}
-	for _, v := range vals {
-		if v == nil { // no matches for this property-value pair.
-			continue
-		}
-		ids, err := deserializeIDs(v.(string))
-		if err != nil {
-			return nil, err
-		}
-		for _, gid := range ids {
-			gids[gid] = struct{}{}
-		}
-	}
-	if len(gids) == 0 {
-		return []IRUser{}, nil
-	}
-
-	// Retrieve the identifiers for every user.
-	userKeys := make([]string, len(gids))
-	i := 0
-	for gid := range gids {
-		userKeys[i] = redisUserKey(gid)
-		i++
-	}
-	sort.Strings(userKeys)
-	rawUsers, err := store.redis.MGet(ctx, userKeys...).Result()
-	if err != nil {
-		return nil, err
-	}
-	users := make([]IRUser, len(rawUsers))
-	for i, user := range rawUsers {
-		u := IRUser{}
-		u.Identifiers = redisJSONDeserialize(user.(string)).(map[string]any)
-		u.ID = int(u.Identifiers["id"].(float64))
-		delete(u.Identifiers, "id")
-		users[i] = u
-	}
-
-	return users, nil
 }
 
 // Users returns the users that satisfy the where condition with only the given
@@ -438,6 +428,29 @@ func (store *Store) setRedisUserIndex(ctx context.Context, user IRUser) error {
 	return err
 }
 
+// IRUser holds the information of a user necessary for the identity resolution
+// process.
+type IRUser struct {
+	ID          int
+	Identifiers map[string]any
+}
+
+func deserializeIDs(s string) ([]int, error) {
+	if s == "" {
+		return []int{}, nil
+	}
+	ids := []int{}
+	rawGids := strings.Split(s, ",")
+	for _, r := range rawGids {
+		gid, err := strconv.Atoi(r)
+		if err != nil {
+			return nil, errors.New("invalid IDs")
+		}
+		ids = append(ids, gid)
+	}
+	return ids, nil
+}
+
 func redisJSONDeserialize(raw string) any {
 	// TODO: improve or remove this function.
 	var v any
@@ -476,10 +489,6 @@ func redisUserKey(id int) string {
 	return "user:" + strconv.Itoa(id)
 }
 
-func zero(v any) bool {
-	return v == "" || v == 0 || v == nil
-}
-
 func serializeIDs(ids []int) string {
 	b := strings.Builder{}
 	for i, id := range ids {
@@ -491,18 +500,6 @@ func serializeIDs(ids []int) string {
 	return b.String()
 }
 
-func deserializeIDs(s string) ([]int, error) {
-	if s == "" {
-		return []int{}, nil
-	}
-	ids := []int{}
-	rawGids := strings.Split(s, ",")
-	for _, r := range rawGids {
-		gid, err := strconv.Atoi(r)
-		if err != nil {
-			return nil, errors.New("invalid IDs")
-		}
-		ids = append(ids, gid)
-	}
-	return ids, nil
+func zero(v any) bool {
+	return v == "" || v == 0 || v == nil
 }
