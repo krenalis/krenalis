@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 )
 
 type (
@@ -118,7 +120,7 @@ func (store *Store) CreateUser(ctx context.Context, user map[string]any) (int, e
 	if err != nil {
 		return 0, err
 	}
-	err = store.setRedisUserIndex(ctx, id, user)
+	err = store.setRedisUserIndex(ctx, IRUser{ID: id, Identifiers: user})
 	if err != nil {
 		return 0, err
 	}
@@ -153,32 +155,6 @@ func (store *Store) DestinationUser(ctx context.Context, action int, property st
 // If a query to the warehouse fails, it returns an Error value.
 func (store *Store) Events(ctx context.Context, columns []types.Property, where Where, order types.Property, first, limit int) ([][]any, error) {
 	return store.warehouse.Select(ctx, "events", columns, where, order, first, limit)
-}
-
-// FilterCandidatesByProperty filters candidate users based on the specified
-// property during identity resolution. It returns the users in candidates
-// who have the given value for the property. If the value argument is nil, it
-// returns users that have the zero value for the property. As a special case,
-// if the candidates argument is nil, it means that candidates contain every
-// user.
-//
-// property must be an anonymous identifier or an identifier for an action.
-func (store *Store) FilterCandidatesByProperty(ctx context.Context, candidates []int, property string, value any) ([]int, error) {
-	var key string
-	if value == nil {
-		key = redisPropsZeroKey(property)
-	} else {
-		key = redisPropsKey(property, value)
-	}
-	var users []int
-	err := store.redis.LRange(ctx, key, 0, -1).ScanSlice(&users)
-	if err != nil {
-		return nil, err
-	}
-	if candidates != nil {
-		users = intersection(users, candidates)
-	}
-	return users, nil
 }
 
 // InitWarehouse initializes the data warehouse creating the events and the
@@ -220,19 +196,16 @@ func (store *Store) Schemas(ctx context.Context) (types.Type, types.Type, error)
 
 // UpdateUser updates the properties of the user with identifier id.
 // Only the properties in users will be updated.
-func (store *Store) UpdateUser(ctx context.Context, id int, user map[string]any) error {
-	// Since the user contains only the properties to update, retrieve every
-	// property of the user, then update its index on Redis.
-	redisUser, err := store.User(ctx, id)
+func (store *Store) UpdateUser(ctx context.Context, target IRUser, user map[string]any) error {
+	// Since the user contains only the properties to update, merge its
+	// identifiers values with the identifiers values of target, then update its
+	// index on Redis.
+	maps.Copy(target.Identifiers, user)
+	err := store.deleteRedisUserIndex(ctx, target.ID)
 	if err != nil {
 		return err
 	}
-	maps.Copy(redisUser, user)
-	err = store.deleteRedisUserIndex(ctx, id)
-	if err != nil {
-		return err
-	}
-	err = store.setRedisUserIndex(ctx, id, redisUser)
+	err = store.setRedisUserIndex(ctx, target)
 	if err != nil {
 		return err
 	}
@@ -260,7 +233,7 @@ func (store *Store) UpdateUser(ctx context.Context, id int, user map[string]any)
 	b.WriteString(`, "timestamp" = now()`)
 	b.WriteString("\nWHERE id = $")
 	b.WriteString(strconv.Itoa(i))
-	values = append(values, id)
+	values = append(values, target.ID)
 	res, err := store.warehouse.Exec(ctx, b.String(), values...)
 	if err != nil {
 		return err
@@ -275,35 +248,72 @@ func (store *Store) UpdateUser(ctx context.Context, id int, user map[string]any)
 	return nil
 }
 
-// User returns the non-zero property values of the user, with the given GID, as
-// a map[string]any.
-// TODO: revise this method. Investigate on change or remove this.
-// See the issue https://github.com/open2b/chichi/issues/243.
-func (store *Store) User(ctx context.Context, id int) (map[string]any, error) {
-	// Retrieve the keys for the user.
-	key := redisUserPropsKeysKey(id)
-	var keys []string
-	err := store.redis.LRange(ctx, key, 0, -1).ScanSlice(&keys)
+// IRUser holds the information of a user necessary for the identity resolution
+// process.
+type IRUser struct {
+	ID          int
+	Identifiers map[string]any
+}
+
+// MatchingUsers returns the users matching with the given user.
+//
+// TODO(Gianluca): move this method in the correct position of this file after
+// merging the branch 'improve-it' into 'main'.
+func (store *Store) MatchingUsers(ctx context.Context, user map[string]any) ([]IRUser, error) {
+
+	// Determine the identifier-value pairs to check on Redis.
+	identifierKeys := []string{}
+	for p, v := range user {
+		if !zero(v) {
+			key := redisPropertyKey(p, v)
+			identifierKeys = append(identifierKeys, key)
+		}
+	}
+
+	// Retrieve identifier-value pairs from Redis and collect the GIDs.
+	vals, err := store.redis.MGet(ctx, identifierKeys...).Result()
 	if err != nil {
 		return nil, err
 	}
-	// Extract the property values from the keys.
-	user := map[string]any{}
-	for _, key := range keys {
-		key = strings.TrimPrefix(key, "props:")
-		parts := strings.SplitN(key, ":", 2)
-		if len(parts) != 2 {
-			return nil, errors.New("malformed key")
-		}
-		property := parts[0]
-		rawPropValue := strings.TrimPrefix(key, property+":")
-		if rawPropValue == "-" {
+	gids := map[int]struct{}{}
+	for _, v := range vals {
+		if v == nil { // no matches for this property-value pair.
 			continue
 		}
-		v := redisJSONDeserialize(rawPropValue)
-		user[property] = v
+		ids, err := deserializeIDs(v.(string))
+		if err != nil {
+			return nil, err
+		}
+		for _, gid := range ids {
+			gids[gid] = struct{}{}
+		}
 	}
-	return user, nil
+	if len(gids) == 0 {
+		return []IRUser{}, nil
+	}
+
+	// Retrieve the identifiers for every user.
+	userKeys := make([]string, len(gids))
+	i := 0
+	for gid := range gids {
+		userKeys[i] = redisUserKey(gid)
+		i++
+	}
+	sort.Strings(userKeys)
+	rawUsers, err := store.redis.MGet(ctx, userKeys...).Result()
+	if err != nil {
+		return nil, err
+	}
+	users := make([]IRUser, len(rawUsers))
+	for i, user := range rawUsers {
+		u := IRUser{}
+		u.Identifiers = redisJSONDeserialize(user.(string)).(map[string]any)
+		u.ID = int(u.Identifiers["id"].(float64))
+		delete(u.Identifiers, "id")
+		users[i] = u
+	}
+
+	return users, nil
 }
 
 // Users returns the users that satisfy the where condition with only the given
@@ -363,61 +373,69 @@ func (store *Store) close() error {
 
 // deleteRedisUserIndex deletes from the index the user with the given GID.
 func (store *Store) deleteRedisUserIndex(ctx context.Context, id int) error {
-	// Remove the user from the keys "props:<property>:<property value>" and
-	// "props:<property>:-".
-	key := redisUserPropsKeysKey(id)
-	var keys []string
-	err := store.redis.LRange(ctx, key, 0, -1).ScanSlice(&keys)
+
+	// Retrieve the user.
+	rawUser, err := store.redis.Get(ctx, redisUserKey(id)).Result()
 	if err != nil {
+		if err == redis.Nil {
+			err = nil
+		}
 		return err
 	}
-	for _, key := range keys {
-		err := store.redis.LRem(ctx, key, 0, id).Err()
+	user := redisJSONDeserialize(rawUser).(map[string]any)
+	delete(user, "id")
+
+	// Remove the user ID from the "property:" keys.
+	for k, v := range user {
+		key := redisPropertyKey(k, redisJSONSerialize(v))
+		err := store.redis.LRem(ctx, key, 1, id).Err()
 		if err != nil {
 			return err
 		}
 	}
-	// Delete the key "user_prop_keys:<user GID>".
-	err = store.redis.Del(ctx, key).Err()
+
+	// Remove the "user:<id>" key.
+	err = store.redis.Del(ctx, redisUserKey(id)).Err()
+
 	return err
 }
 
-func (store *Store) setRedisUserIndex(ctx context.Context, id int, user map[string]any) error {
-	// Write the user properties to the keys "props:<property>:<property value>"
-	// and "props:<property>:-".
-	userPropKeys := make([]any, 0, len(user))
-	for p, v := range user {
-		var key string
+func (store *Store) setRedisUserIndex(ctx context.Context, user IRUser) error {
+
+	// TODO(Gianluca): only the identifiers should be kept on Redis. See the
+	// issue: https://github.com/open2b/chichi/issues/243
+
+	// Write the "property:" keys.
+	for p, v := range user.Identifiers {
 		if zero(v) {
-			key = redisPropsZeroKey(p)
-		} else {
-			key = redisPropsKey(p, v)
+			continue
 		}
-		err := store.redis.LPush(ctx, key, id).Err()
+		key := redisPropertyKey(p, v)
+		current, err := store.redis.Get(ctx, key).Result()
+		if err != nil && err != redis.Nil {
+			return fmt.Errorf("cannot GET value from Redis: %s", err)
+		}
+		ids, err := deserializeIDs(current)
 		if err != nil {
 			return err
 		}
-		userPropKeys = append(userPropKeys, key)
-	}
-	// Push the user's properties keys to "user_prop_keys:<user GID>".
-	key := redisUserPropsKeysKey(id)
-	err := store.redis.LPush(ctx, key, userPropKeys...).Err()
-	return err
-}
-
-// intersection returns the intersection between a and b.
-// The elements in the returned slice are ordered as they appear in a.
-func intersection[T comparable](a, b []T) []T {
-	out := []T{}
-	for _, v := range a {
-		for _, w := range b {
-			if w == v {
-				out = append(out, v)
-				break
-			}
+		if !slices.Contains(ids, user.ID) {
+			ids = append(ids, user.ID)
+		}
+		newVal := serializeIDs(ids)
+		err = store.redis.Set(ctx, key, newVal, 0).Err()
+		if err != nil {
+			return fmt.Errorf("cannot SET value on Redis: %s", err)
 		}
 	}
-	return out
+
+	// Write the "user:" key.
+	userToSerialize := map[string]any{}
+	maps.Copy(userToSerialize, user.Identifiers)
+	userToSerialize["id"] = user.ID
+	err := store.redis.Set(ctx, redisUserKey(user.ID), redisJSONSerialize(userToSerialize), 0).Err()
+
+	return err
 }
 
 func redisJSONDeserialize(raw string) any {
@@ -439,19 +457,52 @@ func redisJSONSerialize(v any) string {
 	return string(data)
 }
 
-func redisPropsKey(property string, value any) string {
-	v := redisJSONSerialize(value)
-	return fmt.Sprintf("props:%s:%s", property, v)
+// redisPropertyKey returns a Redis key in the form:
+//
+//	property:<property>:<value>
+func redisPropertyKey(property string, value any) string {
+	b := strings.Builder{}
+	b.WriteString("property:")
+	b.WriteString(property)
+	b.WriteByte(':')
+	b.WriteString(redisJSONSerialize(value))
+	return b.String()
 }
 
-func redisUserPropsKeysKey(gid int) string {
-	return fmt.Sprintf("user_prop_keys:%d", gid)
-}
-
-func redisPropsZeroKey(property string) string {
-	return fmt.Sprintf("props:%s:-", property)
+// redisPropertyKey returns a Redis key in the form:
+//
+//	user:<id>
+func redisUserKey(id int) string {
+	return "user:" + strconv.Itoa(id)
 }
 
 func zero(v any) bool {
 	return v == "" || v == 0 || v == nil
+}
+
+func serializeIDs(ids []int) string {
+	b := strings.Builder{}
+	for i, id := range ids {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(strconv.Itoa(id))
+	}
+	return b.String()
+}
+
+func deserializeIDs(s string) ([]int, error) {
+	if s == "" {
+		return []int{}, nil
+	}
+	ids := []int{}
+	rawGids := strings.Split(s, ",")
+	for _, r := range rawGids {
+		gid, err := strconv.Atoi(r)
+		if err != nil {
+			return nil, errors.New("invalid IDs")
+		}
+		ids = append(ids, gid)
+	}
+	return ids, nil
 }

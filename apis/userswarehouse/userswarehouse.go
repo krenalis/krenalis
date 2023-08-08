@@ -69,8 +69,11 @@ func SetUser(ctx context.Context, store *datastore.Store, action *state.Action, 
 
 	// Resolve the identity of the user.
 	skipToFirstAnonProp := false
-	var candidates []int // nil means every user
-	found := []int{}
+	candidates, err := store.MatchingUsers(ctx, U)
+	if err != nil {
+		return err
+	}
+	found := []datastore.IRUser{}
 identifiersLoop:
 	for _, property := range P {
 		if skipToFirstAnonProp {
@@ -82,10 +85,7 @@ identifiersLoop:
 		}
 		v, ok := U[property]
 		if ok && isNotZeroValue(v) {
-			matching, err := store.FilterCandidatesByProperty(ctx, candidates, property, v)
-			if err != nil {
-				return err
-			}
+			matching := filterCandidatesByProperty(candidates, property, v)
 			if isAnonProp[property] {
 				candidates = matching
 				if len(candidates) == 1 {
@@ -95,39 +95,38 @@ identifiersLoop:
 				found = append(found, matching...)
 				// Collect the users which are anonymous for every action, then
 				// use them as candidates.
-				anonymousUsers := []int{}
+				anonymousUsers := []datastore.IRUser{}
 			anonUsersLoop:
-				for _, userGID := range candidates {
-					user, err := store.User(ctx, userGID)
-					if err != nil {
-						return err
-					}
-					for property, value := range user {
+				for _, user := range candidates {
+					for property, value := range user.Identifiers {
 						if isNotZeroValue(value) && slices.Contains(allActionsIdents, property) {
 							continue anonUsersLoop
 						}
 					}
-					anonymousUsers = append(anonymousUsers, userGID)
+					anonymousUsers = append(anonymousUsers, user)
 				}
 				candidates = anonymousUsers
 				skipToFirstAnonProp = true
 			}
 		} else {
-			var err error
-			candidates, err = store.FilterCandidatesByProperty(ctx, candidates, property, nil)
-			if err != nil {
-				return err
-			}
+			candidates = filterCandidatesByProperty(candidates, property, nil)
 			if len(candidates) == 0 {
 				break identifiersLoop
 			}
 		}
 	}
 
-	// Add users from candidates to found.
+	// Add users from candidates to found, if not already present.
 	for _, user := range found {
-		if !slices.Contains(candidates, user) {
-			candidates = append(candidates, user)
+		add := true
+		for _, c := range candidates {
+			if c.ID == user.ID {
+				add = false
+				break
+			}
+			if add {
+				candidates = append(candidates, user)
+			}
 		}
 	}
 
@@ -140,16 +139,13 @@ identifiersLoop:
 		log.Printf("[info] created a new Golden Record with GID %d", gid)
 	case 1:
 		// Merge U into V, if possible, otherwise add to U to the users.
-		V, err := store.User(ctx, found[0])
-		if err != nil {
-			return err
-		}
-		if canMerge(U, V, action.Identifiers, otherActionsIdents) {
-			err := updateGR(ctx, ws, store, found[0], U)
+		V := found[0]
+		if canMerge(U, V.Identifiers, action.Identifiers, otherActionsIdents) {
+			err := updateGR(ctx, ws, store, V, U)
 			if err != nil {
 				return err
 			}
-			log.Printf("[info] updated the Golden Record with GID %d", found[0])
+			log.Printf("[info] updated the Golden Record with GID %d", found[0].ID)
 		} else {
 			gid, err := createGR(ctx, ws, store, U)
 			if err != nil {
@@ -159,42 +155,35 @@ identifiersLoop:
 		}
 	default:
 
-		sort.Ints(found)
-
 		// Define target as the user within found with the lower GID.
-		targetGID := found[0]
-		target, err := store.User(ctx, targetGID)
-		if err != nil {
-			return err
-		}
+		sort.Slice(found, func(i, j int) bool {
+			return found[i].ID < found[j].ID
+		})
+		target := found[0]
 
 		// Merge every user in found (starting with the ones with lower GID and
 		// excluding target) into target, if merge is possible, otherwise do
 		// nothing.
 		merged := []int{}
-		for _, userGID := range found[1:] {
-			user, err := store.User(ctx, userGID)
-			if err != nil {
-				return err
-			}
-			if canMerge(user, target, action.Identifiers, otherActionsIdents) {
-				err := updateGR(ctx, ws, store, targetGID, user)
+		for _, user := range found[1:] {
+			if canMerge(user.Identifiers, target.Identifiers, action.Identifiers, otherActionsIdents) {
+				err := updateGR(ctx, ws, store, target, user.Identifiers)
 				if err != nil {
 					return err
 				}
-				log.Printf("[info] updated the Golden Record with GID %d", targetGID)
-				merged = append(merged, userGID)
+				log.Printf("[info] updated the Golden Record with GID %d", target.ID)
+				merged = append(merged, user.ID)
 			}
 		}
 
 		// Merge U into target, if merge is possible, otherwise add U to the
 		// users.
-		if canMerge(U, target, action.Identifiers, otherActionsIdents) {
-			err := updateGR(ctx, ws, store, targetGID, U)
+		if canMerge(U, target.Identifiers, action.Identifiers, otherActionsIdents) {
+			err := updateGR(ctx, ws, store, target, U)
 			if err != nil {
 				return err
 			}
-			log.Printf("[info] updated the Golden Record with GID %d", targetGID)
+			log.Printf("[info] updated the Golden Record with GID %d", target.ID)
 		} else {
 			gid, err := createGR(ctx, ws, store, U)
 			if err != nil {
@@ -206,7 +195,7 @@ identifiersLoop:
 		// Delete every merged user.
 		for _, user := range merged {
 			telemetry.IncrementCounter(ctx, "deleteGR", 1)
-			err = store.DeleteUser(ctx, user)
+			err := store.DeleteUser(ctx, user)
 			if err != nil {
 				return err
 			}
@@ -262,9 +251,30 @@ func createGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, 
 	return id, err
 }
 
+// filterCandidatesByProperty returns the candidates with the given property
+// value. As a special case, passing a nil value make this function return
+// candidates with no values for that property.
+func filterCandidatesByProperty(candidates []datastore.IRUser, prop string, value any) []datastore.IRUser {
+	filtered := make([]datastore.IRUser, 0, len(candidates))
+	if value == nil {
+		for _, c := range candidates {
+			if _, ok := c.Identifiers[prop]; !ok {
+				filtered = append(filtered, c)
+			}
+		}
+	} else {
+		for _, c := range candidates {
+			if c.Identifiers[prop] == value {
+				filtered = append(filtered, c)
+			}
+		}
+	}
+	return filtered
+}
+
 // updateGR updates the Golden Record with the given identifier. Only the
 // properties in users will be updated.
-func updateGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, gid int, user map[string]any) error {
+func updateGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, target datastore.IRUser, user map[string]any) error {
 	telemetry.IncrementCounter(ctx, "updateGR", 1)
 	schema, ok := ws.Schemas["users"]
 	if !ok {
@@ -273,6 +283,6 @@ func updateGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, 
 	datastore.SerializeRow(user, *schema)
 	// TODO(Gianluca): should the user be normalized before being written on the
 	// data store?
-	err := store.UpdateUser(ctx, gid, user)
+	err := store.UpdateUser(ctx, target, user)
 	return err
 }

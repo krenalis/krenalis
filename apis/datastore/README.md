@@ -1,14 +1,25 @@
 # apis/datastore
 
-- [Redis indexes](#redis-indexes)
+- [Redis indexes example](#redis-indexes-example)
 
 
-## Redis indexes
+## Redis indexes example
 
-On Redis we keep these indexes:
+Identifier-values pairs are stored as:
 
-| Key                                 | Value               | Note                                             |
-|-------------------------------------|---------------------|--------------------------------------------------|
-| `props:<property>:<property value>` | `[<user GID>, ...]` | For properties with non-zero values              |
-| `props:<property>:-`                | `[<user GID>, ...]` | For properties with zero values                  |
-| `user_prop_keys:<user GID>`         | `[<key 1>, ...]`    | For holding the keys of the properties of a user |
+| Key                           | Value | Type   |
+|-------------------------------|-------|--------|
+| property:firstname:"John"     | "1"   | string |
+| property:firstname:"Paul"     | "2"   | string |
+| property:lastname:"Lennon"    | "1"   | string |
+| property:lastname:"McCartney" | "2"   | string |
+| property:band:"The Beatles"   | "1,2" | string |
+
+While user identifiers are stored as:
+
+| Key    | Value                                                                    | Type   |
+|--------|--------------------------------------------------------------------------|--------|
+| user:1 | "{"id":1,"firstname":"John","lastname":"Lennon","band":"The Beatles}"    | string |
+| user:2 | "{"id":2,"firstname":"Paul","lastname":"McCartney","band":"The Beatles}" | string |
+
+
