@@ -40,31 +40,10 @@ func TestImportUsersFromFile(t *testing.T) {
 	}
 
 	// Create the Filesystem connection.
-	fsID := c.AddConnection(map[string]any{
-		"Connector": 19, // Filesystem.
-		"Role":      "Source",
-		"Options": map[string]any{
-			"Name":    "Filesystem",
-			"Enabled": true,
-		},
-		"Settings": map[string]any{
-			"Root": storageDir,
-		},
-	})
+	fsID := c.AddSourceFilesystem(storageDir)
 
 	// Create the CSV connection.
-	csvID := c.AddConnection(map[string]any{
-		"Connector": 5, // CSV.
-		"Role":      "Source",
-		"Options": map[string]any{
-			"Name":    "CSV",
-			"Enabled": true,
-			"Storage": fsID,
-		},
-		"Settings": map[string]any{
-			"Comma": ",",
-		},
-	})
+	csvID := c.AddSourceCSV(fsID)
 
 	// Add an action to the CSV for importing the users.
 	importUsersActionID := c.AddAction(csvID, map[string]any{
