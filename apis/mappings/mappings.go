@@ -11,7 +11,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sort"
+	"slices"
 	"strings"
 
 	"chichi/apis/mappings/mapexp"
@@ -156,7 +156,7 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 	// that are not present in the output schema.
 	if len(m.transformation.Out) != len(transformationOutValues) {
 		names := maps.Keys(transformationOutValues)
-		sort.Strings(names)
+		slices.Sort(names)
 		for _, got := range names {
 			found := false
 			for _, expected := range m.transformation.Out {

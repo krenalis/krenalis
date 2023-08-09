@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"log"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -204,7 +203,7 @@ func (store *Store) MatchingUsers(ctx context.Context, user map[string]any) ([]I
 		userKeys[i] = redisUserKey(gid)
 		i++
 	}
-	sort.Strings(userKeys)
+	slices.Sort(userKeys)
 	rawUsers, err := store.redis.MGet(ctx, userKeys...).Result()
 	if err != nil {
 		return nil, err

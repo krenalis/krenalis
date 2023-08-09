@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"sort"
+	"slices"
 	"strconv"
 	"time"
 	"unicode/utf16"
@@ -221,7 +221,7 @@ func (enc *encoder) sortKeys(v map[string]any) []string {
 		enc.keys[i] = key
 		i++
 	}
-	sort.Strings(enc.keys)
+	slices.Sort(enc.keys)
 	return enc.keys
 }
 

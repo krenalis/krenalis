@@ -17,7 +17,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 )
@@ -59,8 +58,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	sort.Strings(modules)
-	sort.Strings(packages)
+	slices.Sort(modules)
+	slices.Sort(packages)
 
 	// Check if the command has been executed correctly basing on modules which
 	// certainly should be found.

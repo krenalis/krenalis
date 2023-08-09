@@ -975,7 +975,7 @@ func (this *Workspace) SetAnonymousIdentifiers(ids AnonymousIdentifiers) error {
 			delete(ids.Mapping, id)
 		}
 		keys := maps.Keys(ids.Mapping)
-		sort.Strings(keys)
+		slices.Sort(keys)
 		return errors.BadRequest("anonymous identifier %q does not exist in mapping", keys[0])
 	}
 	ws := this.workspace

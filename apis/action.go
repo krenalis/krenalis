@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -1013,7 +1012,7 @@ func unmappedProperties(schema types.Type, mapped []types.Path) []string {
 		return nil
 	}
 	props := maps.Keys(notMapped)
-	sort.Strings(props)
+	slices.Sort(props)
 	return props
 }
 
