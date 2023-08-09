@@ -66,11 +66,22 @@ func TestExportUsersToFile(t *testing.T) {
 		c.WaitActionsToFinish(dummySrc)
 	}
 
-	// Determine the storage directory and assert that such directory exists.
-	storageDir, err := filepath.Abs("testdata/storage")
+	// Create the temporary directory for the storage.
+	storageDir, err := os.MkdirTemp("", "chichi-test")
 	if err != nil {
 		t.Fatal(err)
 	}
+	removeTempDirectory := false
+	defer func() {
+		if removeTempDirectory {
+			err := os.RemoveAll(storageDir)
+			if err != nil {
+				t.Logf("cannot remove the temporary directory used by the storage: %s", err)
+			}
+		} else {
+			t.Logf("the temporary directory for the storage %q has been kept for troubleshooting the test", storageDir)
+		}
+	}()
 	stat, err := os.Stat(storageDir)
 	if err != nil {
 		t.Fatal(err)
@@ -200,5 +211,9 @@ func TestExportUsersToFile(t *testing.T) {
 		}
 
 	}
+
+	// The test completed successfully, so the temporary directory for the
+	// storage can be removed.
+	removeTempDirectory = true
 
 }
