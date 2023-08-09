@@ -162,9 +162,8 @@ func TestIdentityResolution(t *testing.T) {
 		{"dummy_id": "AAA", "Email": "e@f"},
 	})
 
-	// TODO(Gianluca): this has been commented because it seems like we have a
-	// bug in the identity resolution or during the writing of a user into the
-	// data warehouse. Investigate on this.
+	// TODO(Gianluca): see the issue
+	// https://github.com/open2b/chichi/issues/254.
 	//
 	// importUser(irProps{"dummy_id": "AAA"})
 	// expectUsers([]irProps{
