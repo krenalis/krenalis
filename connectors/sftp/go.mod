@@ -1,6 +1,6 @@
 module sftp
 
-go 1.20
+go 1.21
 
 require (
 	github.com/pkg/sftp v1.13.5
