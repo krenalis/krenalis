@@ -10,6 +10,7 @@ package userswarehouse
 import (
 	"context"
 	"log"
+	"slices"
 	"sort"
 	"time"
 
@@ -19,7 +20,6 @@ import (
 	"chichi/telemetry"
 
 	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 )
 
 // SetUser sets the user U into the data warehouse by resolving its identity.

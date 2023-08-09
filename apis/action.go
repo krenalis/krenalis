@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -28,7 +29,6 @@ import (
 	"chichi/telemetry"
 
 	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 )
 
 var QueryExecutionFailed errors.Code = "QueryExecutionFailed"

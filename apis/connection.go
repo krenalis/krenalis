@@ -18,6 +18,7 @@ import (
 	"math"
 	mathrand "math/rand"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -36,7 +37,6 @@ import (
 	"chichi/telemetry"
 
 	"github.com/jxskiss/base62"
-	"golang.org/x/exp/slices"
 )
 
 // maxSettingsLen is the maximum length of settings in runes.

@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"math"
 	"net/netip"
+	"slices"
 	"strconv"
 	"time"
 	"unicode/utf8"
@@ -23,7 +24,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"
 	"github.com/shopspring/decimal"
-	"golang.org/x/exp/slices"
 )
 
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)

@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"slices"
 	"sort"
 
 	"chichi/apis/datastore"
@@ -26,7 +27,6 @@ import (
 	"chichi/telemetry"
 
 	"golang.org/x/crypto/bcrypt"
-	"golang.org/x/exp/slices"
 )
 
 type APIs struct {

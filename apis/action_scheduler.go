@@ -9,6 +9,7 @@ package apis
 
 import (
 	"log"
+	"slices"
 	"sync"
 	"time"
 
@@ -17,8 +18,6 @@ import (
 	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
-
-	"golang.org/x/exp/slices"
 )
 
 const numPeriods = 10
