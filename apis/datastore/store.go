@@ -174,6 +174,13 @@ func (store *Store) MatchingUsers(ctx context.Context, user map[string]any) ([]I
 		}
 	}
 
+	// TODO(Gianluca): remove this panic and handle the situation properly.
+	// See the issue https://github.com/open2b/chichi/issues/253.
+	if len(identifierKeys) == 0 {
+		panic("BUG: the incoming user has no valid identifiers (maybe it has the zero value for every identifier)\n" +
+			"See the issue https://github.com/open2b/chichi/issues/253")
+	}
+
 	// Retrieve identifier-value pairs from Redis and collect the GIDs.
 	vals, err := store.redis.MGet(ctx, identifierKeys...).Result()
 	if err != nil {
