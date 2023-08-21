@@ -64,7 +64,7 @@ require (
 	github.com/mssola/useragent v1.0.0
 	github.com/open2b/nuts v1.5.3
 	github.com/oschwald/geoip2-golang v1.9.0
-	github.com/redis/go-redis/v9 v9.0.5
+	github.com/redis/go-redis/v9 v9.1.0
 	github.com/relvacode/iso8601 v1.3.0
 	github.com/segmentio/ksuid v1.0.4
 	github.com/shopspring/decimal v1.3.1
