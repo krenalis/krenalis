@@ -16,12 +16,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
-	"golang.org/x/exp/maps"
-
 	"chichi/apis/postgres"
 	"chichi/connector"
 	"chichi/connector/types"
+
+	"github.com/google/uuid"
+	"golang.org/x/exp/maps"
 )
 
 // election represents a leader election.
