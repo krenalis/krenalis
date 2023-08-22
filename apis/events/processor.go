@@ -47,18 +47,24 @@ type Processor struct {
 		out chan *processedEvent
 	}
 	eventLog *eventsLog
+	close    struct {
+		ctx       context.Context
+		cancelCtx context.CancelFunc
+	}
 }
 
 // newProcessor returns a new processor.
-func newProcessor(ctx context.Context, st *eventsState, eventLog *eventsLog, events <-chan *collectedEvent) (*Processor, error) {
+func newProcessor(st *eventsState, eventLog *eventsLog, events <-chan *collectedEvent) (*Processor, error) {
 
 	processor := Processor{
-		ctx:      ctx,
 		state:    st,
 		eventLog: eventLog,
 	}
 	processor.events.in = events
 	processor.events.out = make(chan *processedEvent, pipeSize)
+	processor.close.ctx, processor.close.cancelCtx = context.WithCancel(context.Background())
+
+	ctx := processor.close.ctx
 
 	// Starts the workers.
 	for i := 0; i < 10; i++ {
@@ -127,6 +133,11 @@ func newProcessor(ctx context.Context, st *eventsState, eventLog *eventsLog, eve
 	}
 
 	return &processor, nil
+}
+
+// Close closes the processor.
+func (processor *Processor) Close() {
+	processor.close.cancelCtx()
 }
 
 // Events returns the processed events channel.

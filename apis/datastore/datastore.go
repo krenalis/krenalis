@@ -77,6 +77,19 @@ func New(st *state.State) *Datastore {
 	return ds
 }
 
+// Close closes the datastore.
+func (ds *Datastore) Close() {
+	var err error
+	ds.mu.Lock()
+	for _, store := range ds.store {
+		err = store.close()
+		if err != nil {
+			log.Printf("[warning] cannot close store: %s", err)
+		}
+	}
+	ds.mu.Unlock()
+}
+
 // PingRedis validates Redis settings and tries to establish a
 // connection to the database with these settings.
 //

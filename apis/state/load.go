@@ -35,7 +35,7 @@ func (state *State) Load() error {
 
 	n := LoadState{ID: state.id}
 
-	ctx := state.ctx
+	ctx := state.close.ctx
 
 	err := state.db.Transaction(ctx, func(tx *postgres.Tx) error {
 

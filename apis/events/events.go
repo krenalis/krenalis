@@ -8,7 +8,6 @@
 package events
 
 import (
-	"context"
 	"net/http"
 
 	"chichi/apis/datastore"
@@ -18,25 +17,39 @@ import (
 )
 
 type Events struct {
-	collector *collector
-	observer  *Observer
+	state       *eventsState
+	log         *eventsLog
+	observer    *Observer
+	collector   *collector
+	processor   *Processor
+	stopSenders chan<- struct{}
 }
 
-func New(ctx context.Context, db *postgres.DB, st *state.State, ds *datastore.Datastore, http *httpclient.HTTP) (*Events, error) {
-	state := newEventsState(ctx, db, st, http)
-	eventLog := newEventsLog(ctx, db)
-	observer := newObserver(db)
-	collector, err := newCollector(state, ds, eventLog, observer)
+func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, http *httpclient.HTTP) (*Events, error) {
+	events := &Events{}
+	events.state = newEventsState(db, st, http)
+	events.log = newEventsLog(db)
+	events.observer = newObserver(db)
+	var err error
+	events.collector, err = newCollector(events.state, ds, events.log, events.observer)
 	if err != nil {
 		return nil, err
 	}
-	p, err := newProcessor(ctx, state, eventLog, collector.Events())
+	events.processor, err = newProcessor(events.state, events.log, events.collector.Events())
 	if err != nil {
 		return nil, err
 	}
-	d := newDispatcher(eventLog, p.Events())
-	startSenders(ctx, d.Events(), d.Done(), state)
-	return &Events{collector: collector, observer: observer}, nil
+	d := newDispatcher(events.log, events.processor.Events())
+	events.stopSenders = startSenders(d.Events(), d.Done(), events.state)
+	return events, nil
+}
+
+// Close closes the events.
+func (events *Events) Close() {
+	close(events.stopSenders)
+	events.processor.Close()
+	events.log.Close()
+	events.state.Close()
 }
 
 // ServeHTTP serves an event request.

@@ -33,6 +33,8 @@ const (
 // It is called in its own goroutine after the state is loaded.
 func (state *State) keepElections() {
 
+	state.close.Add(1)
+
 	// Check if the CHICHI_DEBUG_ELECTION variable is set.
 	if v := os.Getenv("CHICHI_DEBUG_ELECTION"); v == "true" {
 		debugElection = true
@@ -63,7 +65,7 @@ func (state *State) keepElections() {
 		debugf("-- %d Leader\n", election.number)
 		for {
 			// Send the see leader notification.
-			err := state.db.Notify(state.ctx, SeeLeader{Election: election.number})
+			err := state.db.Notify(state.close.ctx, SeeLeader{Election: election.number})
 			if err == nil {
 				break
 			}
@@ -128,7 +130,7 @@ func (state *State) keepElections() {
 		}
 		if err == context.Canceled {
 			select {
-			case <-state.ctx.Done():
+			case <-state.close.ctx.Done():
 				return err
 			}
 		}
@@ -150,6 +152,8 @@ func (state *State) keepElections() {
 		}
 	}
 
+	state.close.Done()
+
 }
 
 // errEndedElection indicates that an election is ended.
@@ -164,9 +168,10 @@ func (state *State) electAsLeader(election int) error {
 	if prevElection == 0 {
 		prevElection = math.MaxInt32
 	}
-	err := state.db.Transaction(state.ctx, func(tx *postgres.Tx) error {
+	ctx := state.close.ctx
+	err := state.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var t bool
-		err := tx.QueryRow(state.ctx, "UPDATE election\n"+
+		err := tx.QueryRow(ctx, "UPDATE election\n"+
 			"SET number = $1, leader = $2, date = NOW()::timestamp\n"+
 			"WHERE number = $3 RETURNING true", n.Number, n.Leader, prevElection).Scan(&t)
 		if err != nil {
@@ -175,7 +180,7 @@ func (state *State) electAsLeader(election int) error {
 			}
 			return err
 		}
-		return tx.Notify(state.ctx, n)
+		return tx.Notify(ctx, n)
 	})
 	return err
 }
@@ -185,8 +190,8 @@ func (state *State) electAsLeader(election int) error {
 // context error.
 func (state *State) sleep(d time.Duration) error {
 	select {
-	case <-state.ctx.Done():
-		return state.ctx.Err()
+	case <-state.close.ctx.Done():
+		return state.close.ctx.Err()
 	case <-time.After(d):
 		return nil
 	}

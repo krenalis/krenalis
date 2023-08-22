@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	_log "log"
+	"sync"
 	"time"
 
 	"chichi/apis/postgres"
@@ -20,12 +21,18 @@ import (
 )
 
 type eventsLog struct {
-	ctx context.Context
-	db  *postgres.DB
+	db    *postgres.DB
+	close struct {
+		ctx       context.Context
+		cancelCtx context.CancelFunc
+		sync.WaitGroup
+	}
 }
 
-func newEventsLog(ctx context.Context, db *postgres.DB) *eventsLog {
-	return &eventsLog{ctx: ctx, db: db}
+func newEventsLog(db *postgres.DB) *eventsLog {
+	log := &eventsLog{db: db}
+	log.close.ctx, log.close.cancelCtx = context.WithCancel(context.Background())
+	return log
 }
 
 func (log *eventsLog) Append(events []*collectedEvent) <-chan error {
@@ -37,7 +44,9 @@ func (log *eventsLog) Append(events []*collectedEvent) <-chan error {
 		for _, event := range events {
 			_ = enc.Encode(event)
 			source := b.Bytes()
-			_, err := log.db.Exec(log.ctx, "INSERT INTO event_collected (id, source) VALUES ($1, $2)", event.id, source)
+			log.close.Add(1)
+			_, err := log.db.Exec(log.close.ctx, "INSERT INTO event_collected (id, source) VALUES ($1, $2)", event.id, source)
+			log.close.Done()
 			if err != nil {
 				ack <- err
 				return
@@ -49,16 +58,25 @@ func (log *eventsLog) Append(events []*collectedEvent) <-chan error {
 	return ack
 }
 
+// Close closes the events log.
+func (log *eventsLog) Close() {
+	log.close.cancelCtx()
+	log.close.Wait()
+	return
+}
+
 // Delivered sets the event, with identifier id, as delivered for the given
 // action.
 func (log *eventsLog) Delivered(id ksuid.KSUID, action int) {
 	now := time.Now().UTC()
 	go func() {
-		_, err := log.db.Exec(log.ctx, "INSERT INTO event_processed (id, action, timestamp, state)"+
+		log.close.Add(1)
+		_, err := log.db.Exec(log.close.ctx, "INSERT INTO event_processed (id, action, timestamp, state)"+
 			" VALUES ($1, $2, $3, 'Delivered')", id, action, now)
 		if err != nil {
 			_log.Printf("cannot set event as delivered (event = %q, action = %d)", id.String(), action)
 		}
+		log.close.Done()
 	}()
 }
 
@@ -72,8 +90,10 @@ func (log *eventsLog) TransformationFailed(id ksuid.KSUID, action int, err error
 			errString = err.Error()
 		}
 		_log.Printf("[warning] transformation failed when processing event %s with action %d: %q", id, action, errString)
-		_, err := log.db.Exec(log.ctx, "INSERT INTO event_processed (id, action, timestamp, state, error)"+
+		log.close.Add(1)
+		_, err := log.db.Exec(log.close.ctx, "INSERT INTO event_processed (id, action, timestamp, state, error)"+
 			" VALUES ($1, $2, $3, 'TransformationFailed', $4)", id, action, now, errString)
+		log.close.Done()
 		if err != nil {
 			_log.Printf("cannot log transformation failed (event = %q, action = %d)", id.String(), action)
 		}

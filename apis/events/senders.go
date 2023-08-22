@@ -8,13 +8,15 @@
 package events
 
 import (
-	"context"
 	"log"
 )
 
-// startSenders starts some senders which reads from events and writes on done
-// when the read events have been sent to the destination.
-func startSenders(ctx context.Context, events <-chan *processedEvent, done chan<- *processedEvent, st *eventsState) {
+// startSenders starts some senders that read from the events channel and write
+// to the done channel once the processed events have been sent to the
+// destination. It returns a channel that, when closed, stops the senders.
+func startSenders(events <-chan *processedEvent, done chan<- *processedEvent, st *eventsState) chan<- struct{} {
+
+	stop := make(chan struct{})
 
 	// Start the workers which send events.
 	for i := 0; i < 10; i++ {
@@ -34,11 +36,12 @@ func startSenders(ctx context.Context, events <-chan *processedEvent, done chan<
 						continue
 					}
 					done <- event
-				case <-ctx.Done():
+				case <-stop:
 					return
 				}
 			}
 		}()
 	}
 
+	return stop
 }

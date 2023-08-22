@@ -60,8 +60,8 @@ type ExpressionToBeExtracted struct {
 	Nullable bool
 }
 
-// New returns an API instance. It can only be called once.
-func New(ctx context.Context, conf *Config) (*APIs, error) {
+// New returns an *APIs instance. It can only be called once.
+func New(conf *Config) (*APIs, error) {
 
 	if hasBeenCalled {
 		return nil, errors.New("apis.New has already been called")
@@ -89,7 +89,7 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 	apis.http.SetTrace(os.Stdout)
 
 	// Instantiate the state.
-	apis.state, err = state.New(ctx, db)
+	apis.state, err = state.New(db)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func New(ctx context.Context, conf *Config) (*APIs, error) {
 	// Init the datastore.
 	apis.datastore = datastore.New(apis.state)
 
-	apis.events, err = events.New(ctx, db, apis.state, apis.datastore, apis.http)
+	apis.events, err = events.New(db, apis.state, apis.datastore, apis.http)
 	if err != nil {
 		return nil, err
 	}
@@ -216,6 +216,13 @@ func (apis *APIs) AuthenticateAccount(ctx context.Context, email, password strin
 		return 0, errors.Unprocessable(AuthenticationFailed, "authentication has failed")
 	}
 	return id, nil
+}
+
+// Close closes the APIs.
+func (apis *APIs) Close() {
+	apis.events.Close()
+	apis.datastore.Close()
+	apis.state.Close()
 }
 
 // Connector returns the connector with identifier id.

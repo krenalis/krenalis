@@ -28,22 +28,25 @@ const maxSettingsLen = 10_000
 // eventsState holds the state for the events.
 type eventsState struct {
 	sync.Mutex
-	ctx          context.Context
 	db           *postgres.DB
 	state        *state.State
 	http         *httpclient.HTTP
 	destinations map[int]connector.AppEventsConnection
+	close        struct {
+		ctx       context.Context
+		cancelCtx context.CancelFunc
+	}
 }
 
 // newEventsState returns a new eventsState based on the st state.
-func newEventsState(ctx context.Context, db *postgres.DB, st *state.State, http *httpclient.HTTP) *eventsState {
+func newEventsState(db *postgres.DB, st *state.State, http *httpclient.HTTP) *eventsState {
 	eventSt := &eventsState{
-		ctx:          ctx,
 		db:           db,
 		state:        st,
 		http:         http,
 		destinations: map[int]connector.AppEventsConnection{},
 	}
+	eventSt.close.ctx, eventSt.close.cancelCtx = context.WithCancel(context.Background())
 	for _, c := range st.Connections() {
 		if !isDestination(c) {
 			continue
@@ -62,6 +65,12 @@ func newEventsState(ctx context.Context, db *postgres.DB, st *state.State, http 
 	st.AddListener(eventSt.onSetWarehouse)
 	st.AddListener(eventSt.onSetWorkspacePrivacyRegion)
 	return eventSt
+}
+
+// Close closes the events state.
+func (st *eventsState) Close() {
+	// TODO(marco): Currently, it is not possible to wait for the termination of the called method on connections.
+	st.close.cancelCtx()
 }
 
 // Source returns the enabled source connection with the identifier id and true,
@@ -238,11 +247,11 @@ func (st *eventsState) openDestination(c *state.Connection) error {
 	}
 
 	app := connector.RegisteredApp(c.Connector().Name)
-	connection, err := app.Open(st.ctx, &connector.AppConfig{
+	connection, err := app.Open(st.close.ctx, &connector.AppConfig{
 		Role:     connector.Role(c.Role),
 		Settings: c.Settings,
 		SetSettings: func(settings []byte) error {
-			return setSettings(st.ctx, st.db, c.ID, settings)
+			return setSettings(st.close.ctx, st.db, c.ID, settings)
 		},
 		Resource:   resource,
 		HTTPClient: st.http.ConnectionClient(c.ID),

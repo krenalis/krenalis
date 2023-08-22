@@ -40,7 +40,7 @@ func Run(ctx context.Context, settings *Settings) error {
 		}
 	}
 
-	apis, err := apis.New(ctx, &apis.Config{
+	apis, err := apis.New(&apis.Config{
 		PostgreSQL: settings.PostgreSQL,
 	})
 	if err != nil {
@@ -87,6 +87,7 @@ func Run(ctx context.Context, settings *Settings) error {
 		if err != nil {
 			log.Printf("[error] shutting down HTTP server: %s", err)
 		}
+		apis.Close()
 	}()
 	certPem, err := filepath.Abs("cert.pem")
 	if err != nil {

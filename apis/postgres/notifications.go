@@ -102,10 +102,28 @@ func notify(ctx context.Context, conn Connection, payload any) error {
 	return err
 }
 
+type Notifications struct {
+	Channel   chan Notification
+	cancelCtx context.CancelFunc
+	stopped   chan struct{}
+}
+
+func (n *Notifications) Close() {
+	n.stopped = make(chan struct{})
+	n.cancelCtx()
+	<-n.stopped
+	close(n.Channel)
+}
+
 // ListenToNotifications listens to notifications in its goroutine and sends
 // them on the returned channel.
-func (db *DB) ListenToNotifications(ctx context.Context) <-chan Notification {
+func (db *DB) ListenToNotifications() *Notifications {
 	ch := make(chan Notification)
+	ctx, cancel := context.WithCancel(context.Background())
+	notifications := &Notifications{
+		Channel:   ch,
+		cancelCtx: cancel,
+	}
 	go func() {
 		var err error
 		var b bytes.Buffer
@@ -115,6 +133,7 @@ func (db *DB) ListenToNotifications(ctx context.Context) <-chan Notification {
 				if err == context.Canceled {
 					select {
 					case <-ctx.Done():
+						close(notifications.stopped)
 						return
 					}
 				}
@@ -183,7 +202,7 @@ func (db *DB) ListenToNotifications(ctx context.Context) <-chan Notification {
 			err = conn.Close(ctx)
 		}
 	}()
-	return ch
+	return notifications
 }
 
 // parsePayload parses a notification payload and returns the identifier, name,

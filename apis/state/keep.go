@@ -69,11 +69,13 @@ func (state *State) keepState() {
 
 	var n postgres.Notification
 
+	done := state.close.ctx.Done()
+
 	for {
 		select {
-		case <-state.ctx.Done():
+		case <-done:
 			return
-		case n = <-state.notifications:
+		case n = <-state.notifications.Channel:
 		}
 		if logNotifications {
 			log.Printf("[info] received notification from pid %d and name %q : %s",

@@ -36,7 +36,6 @@ type State struct {
 	id               uuid.UUID
 	mu               *sync.Mutex
 	db               *postgres.DB
-	ctx              context.Context
 	syncing          bool // reports whether the keeper has started synchronizing the state.
 	election         election
 	accounts         map[int]*Account
@@ -46,7 +45,7 @@ type State struct {
 	connectionsByKey map[string]*Connection
 	actions          map[int]*Action
 	resources        map[int]*Resource
-	notifications    <-chan postgres.Notification
+	notifications    *postgres.Notifications
 	listeners        struct {
 		AddAction                 []func(AddAction)
 		AddConnection             []func(AddConnection)
@@ -63,10 +62,15 @@ type State struct {
 		SetWarehouse              []func(SetWarehouse)
 		SetWorkspacePrivacyRegion []func(SetWorkspacePrivacyRegion)
 	}
+	close struct {
+		ctx       context.Context
+		CancelCtx context.CancelFunc
+		sync.WaitGroup
+	}
 }
 
 // New returns a *State instance.
-func New(ctx context.Context, db *postgres.DB) (*State, error) {
+func New(db *postgres.DB) (*State, error) {
 
 	id, err := uuid.NewUUID()
 	if err != nil {
@@ -77,8 +81,7 @@ func New(ctx context.Context, db *postgres.DB) (*State, error) {
 		id:               id,
 		db:               db,
 		mu:               new(sync.Mutex),
-		ctx:              ctx,
-		notifications:    db.ListenToNotifications(ctx),
+		notifications:    db.ListenToNotifications(),
 		accounts:         map[int]*Account{},
 		connectors:       map[int]*Connector{},
 		workspaces:       map[int]*Workspace{},
@@ -87,6 +90,8 @@ func New(ctx context.Context, db *postgres.DB) (*State, error) {
 		actions:          map[int]*Action{},
 		resources:        map[int]*Resource{},
 	}
+
+	state.close.ctx, state.close.CancelCtx = context.WithCancel(context.Background())
 
 	return state, nil
 }
@@ -139,6 +144,13 @@ func (state *State) Actions() []*Action {
 		return actions[i].ID < actions[j].ID
 	})
 	return actions
+}
+
+// Close closes the state.
+func (state *State) Close() {
+	state.close.CancelCtx()
+	state.close.Wait()
+	state.notifications.Close()
 }
 
 // ConnectionByKey returns the connection with the given key.
