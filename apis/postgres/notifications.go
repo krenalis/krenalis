@@ -123,7 +123,9 @@ func (db *DB) ListenToNotifications(ctx context.Context) <-chan Notification {
 			var conn *Conn
 			conn, err = db.Conn(ctx)
 			if err != nil {
-				time.Sleep(10 * time.Millisecond)
+				if err != context.Canceled {
+					time.Sleep(10 * time.Millisecond)
+				}
 				continue
 			}
 			_, err = conn.Exec(ctx, "LISTEN chichi")
