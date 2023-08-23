@@ -9,7 +9,6 @@ package server
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -52,6 +51,8 @@ func Run(ctx context.Context, settings *Settings) error {
 		}
 		return err
 	}
+	defer apis.Close()
+
 	admin := admin.New(apis)
 
 	apisServer := &apisServer{apis}
@@ -81,18 +82,11 @@ func Run(ctx context.Context, settings *Settings) error {
 			return
 		}
 	})
+
 	httpServer := http.Server{
 		Addr:    addr,
 		Handler: handler,
 	}
-	go func() {
-		<-ctx.Done()
-		err := httpServer.Shutdown(context.Background())
-		if err != nil {
-			log.Printf("[error] shutting down HTTP server: %s", err)
-		}
-		apis.Close()
-	}()
 	certPem, err := filepath.Abs("cert.pem")
 	if err != nil {
 		return err
@@ -101,9 +95,24 @@ func Run(ctx context.Context, settings *Settings) error {
 	if err != nil {
 		return err
 	}
-	err = httpServer.ListenAndServeTLS(certPem, keyPem)
+
+	exited := make(chan error)
+	go func() {
+		exited <- httpServer.ListenAndServeTLS(certPem, keyPem)
+	}()
+
+	select {
+	case <-ctx.Done():
+		err = httpServer.Shutdown(context.Background())
+		if err != nil {
+			return err
+		}
+		err = <-exited
+	case err = <-exited:
+	}
 	if err != nil && err != http.ErrServerClosed {
 		return err
 	}
+
 	return nil
 }
