@@ -125,6 +125,11 @@ func newScheduler(db *postgres.DB, st *state.State, ds *datastore.Datastore, htt
 	return sc
 }
 
+// Close closes the scheduler.
+func (sc *scheduler) Close() {
+	sc.st <- struct{}{}
+}
+
 // onAddAction is called when an action is added to the state.
 func (sc *scheduler) onAddAction(n state.AddAction) {
 	action, _ := sc.state.Action(n.ID)
@@ -171,13 +176,6 @@ func (sc *scheduler) onSetActionSchedulePeriod(n state.SetActionSchedulePeriod) 
 	sc._removeAction(n.ID)
 	sc._addAction(action)
 	sc.mu.Unlock()
-}
-
-// stop stops the scheduler.
-//
-// It is called during an elect leader notification.
-func (sc *scheduler) stop() {
-	sc.st <- struct{}{}
 }
 
 // toExecute reports whether action can be executed.

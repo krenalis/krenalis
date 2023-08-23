@@ -15,6 +15,7 @@ import (
 	"os"
 	"slices"
 	"sort"
+	"sync"
 
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
@@ -36,6 +37,7 @@ type APIs struct {
 	http           *httpclient.HTTP
 	events         *events.Events
 	scheduler      *scheduler
+	schedulerMu    sync.Mutex
 	eventProcessor *events.Processor
 }
 
@@ -220,6 +222,14 @@ func (apis *APIs) AuthenticateAccount(ctx context.Context, email, password strin
 
 // Close closes the APIs.
 func (apis *APIs) Close() {
+	// Close scheduler.
+	apis.schedulerMu.Lock()
+	if apis.scheduler != nil {
+		apis.scheduler.Close()
+		apis.scheduler = nil
+	}
+	apis.schedulerMu.Unlock()
+	// Close events, datastore and state.
 	apis.events.Close()
 	apis.datastore.Close()
 	apis.state.Close()
@@ -320,13 +330,17 @@ func (apis *APIs) CountAccounts(ctx context.Context) int {
 // onElectLeader is called when a leader is elected.
 func (apis *APIs) onElectLeader(n state.ElectLeader) {
 	if apis.state.IsLeader() {
+		apis.schedulerMu.Lock()
 		apis.scheduler = newScheduler(apis.db, apis.state, apis.datastore, apis.http)
+		apis.schedulerMu.Unlock()
 		return
 	}
+	apis.schedulerMu.Lock()
 	if apis.scheduler != nil {
-		apis.scheduler.stop()
+		apis.scheduler.Close()
 		apis.scheduler = nil
 	}
+	apis.schedulerMu.Unlock()
 }
 
 // onExecuteAction is called when an action is executed.
