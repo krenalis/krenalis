@@ -5,18 +5,17 @@
 // Copyright (c) 2022 Open2b
 //
 
-package apis
+package server
 
 import (
-	"database/sql"
 	"encoding/json"
 	"log"
 	"math"
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 
+	"chichi/apis"
 	"chichi/apis/errors"
 	"chichi/apis/events"
 	"chichi/connector/types"
@@ -25,19 +24,22 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// ServeHTTP servers the API methods from HTTP.
-// It panics if apis has been closed.
-func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+type apisServer struct {
+	apis *apis.APIs
+}
 
-	apis.mustBeOpen()
+// ServeHTTP servers the API methods from HTTP.
+func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx, span := telemetry.TraceSpan(r.Context(), "apis.ServeHTTP", "ip", r.RemoteAddr, "urlPath", r.URL.Path)
 	defer span.End()
 
 	telemetry.IncrementCounter(ctx, "apis.ServeHTTP", 1)
 
-	if strings.HasPrefix(r.URL.Path, "/api/v1/") {
-		apis.events.ServeHTTP(w, r)
+	// Read the account.
+	account, err := s.apis.Account(ctx, 1)
+	if err != nil {
+		http.NotFound(w, r)
 		return
 	}
 
@@ -45,24 +47,6 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	workspaceID, _ := strconv.Atoi(r.Header.Get("X-Workspace"))
 	if workspaceID < 1 || workspaceID > math.MaxInt32 {
 		http.Error(w, "Bad Request (missing 'X-Workspace' header)", http.StatusBadRequest)
-		return
-	}
-	// Read the account.
-	var accountID int
-	err := apis.db.QueryRow(ctx, "SELECT account FROM workspaces WHERE id = $1", workspaceID).Scan(&accountID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			http.Error(w, "Not Found", http.StatusNotFound)
-			return
-		}
-		log.Printf("[error] %s", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	account, err := apis.Account(ctx, accountID)
-	if err != nil {
-		http.NotFound(w, r)
 		return
 	}
 	workspace, err := account.Workspace(workspaceID)
@@ -107,9 +91,9 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				var req struct {
-					Target    ActionTarget
+					Target    apis.ActionTarget
 					EventType string
-					Action    ActionToSet
+					Action    apis.ActionToSet
 				}
 				err = json.NewDecoder(r.Body).Decode(&req)
 				if err != nil {
@@ -148,7 +132,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				var req ActionToSet
+				var req apis.ActionToSet
 				err = json.NewDecoder(r.Body).Decode(&req)
 				if err != nil {
 					respond(w, errors.BadRequest("invalid JSON"))
@@ -216,7 +200,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				var req struct {
-					SchedulePeriod SchedulePeriod
+					SchedulePeriod apis.SchedulePeriod
 				}
 				err = json.NewDecoder(r.Body).Decode(&req)
 				if err != nil {
@@ -258,7 +242,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						respond(w, err)
 						return
 					}
-					schemas, err := connection.ActionSchemas(ctx, UsersTarget, "")
+					schemas, err := connection.ActionSchemas(ctx, apis.UsersTarget, "")
 					if err != nil {
 						respond(w, err)
 						return
@@ -273,7 +257,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						respond(w, err)
 						return
 					}
-					schemas, err := connection.ActionSchemas(ctx, GroupsTarget, "")
+					schemas, err := connection.ActionSchemas(ctx, apis.GroupsTarget, "")
 					if err != nil {
 						respond(w, err)
 						return
@@ -288,7 +272,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						respond(w, err)
 						return
 					}
-					schemas, err := connection.ActionSchemas(ctx, EventsTarget, "")
+					schemas, err := connection.ActionSchemas(ctx, apis.EventsTarget, "")
 					if err != nil {
 						respond(w, err)
 						return
@@ -310,7 +294,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						respond(w, err)
 						return
 					}
-					schemas, err := connection.ActionSchemas(ctx, EventsTarget, eventType)
+					schemas, err := connection.ActionSchemas(ctx, apis.EventsTarget, eventType)
 					if err != nil {
 						respond(w, err)
 						return
@@ -420,7 +404,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				var stats *ConnectionsStats
+				var stats *apis.ConnectionsStats
 				stats, err = connection.Stats(ctx)
 				if err != nil {
 					respond(w, err)
@@ -573,21 +557,21 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				err = connection.SetStorage(ctx, req.Storage, Compression(req.Compression))
+				err = connection.SetStorage(ctx, req.Storage, apis.Compression(req.Compression))
 				respond(w, err)
 			})
 		})
 	})
 	router.Route("/api/connectors", func(router chi.Router) {
 		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			connectors := apis.Connectors(ctx)
+			connectors := s.apis.Connectors(ctx)
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(connectors)
 		})
 		router.Route("/{connectorID}", func(router chi.Router) {
 			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
-				connector, err := apis.Connector(ctx, id)
+				connector, err := s.apis.Connector(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -597,7 +581,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Post("/ui", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
-				connector, err := apis.Connector(ctx, id)
+				connector, err := s.apis.Connector(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -611,12 +595,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				var role ConnectionRole
+				var role apis.ConnectionRole
 				switch req.Role {
 				case "Source":
-					role = SourceRole
+					role = apis.SourceRole
 				case "Destination":
-					role = DestinationRole
+					role = apis.DestinationRole
 				default:
 					respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
 					return
@@ -631,7 +615,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Get("/auth-code-url", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
-				connector, err := apis.Connector(ctx, id)
+				connector, err := s.apis.Connector(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -647,7 +631,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Post("/ui-event", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectorID"))
-				connector, err := apis.Connector(ctx, id)
+				connector, err := s.apis.Connector(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -663,12 +647,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				var role ConnectionRole
+				var role apis.ConnectionRole
 				switch req.Role {
 				case "Source":
-					role = SourceRole
+					role = apis.SourceRole
 				case "Destination":
-					role = DestinationRole
+					role = apis.DestinationRole
 				default:
 					respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
 					return
@@ -799,7 +783,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		router.Route("/anonymous-identifiers", func(router chi.Router) {
 			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 				req := struct {
-					AnonymousIdentifiers AnonymousIdentifiers
+					AnonymousIdentifiers apis.AnonymousIdentifiers
 				}{}
 				err := json.NewDecoder(r.Body).Decode(&req)
 				if err != nil {
@@ -827,7 +811,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		router.Route("/connect-warehouse", func(router chi.Router) {
 			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 				req := struct {
-					Type     WarehouseType
+					Type     apis.WarehouseType
 					Settings json.RawMessage
 				}{}
 				err := json.NewDecoder(r.Body).Decode(&req)
@@ -874,7 +858,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		router.Route("/ping-warehouse", func(router chi.Router) {
 			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 				req := struct {
-					Type     WarehouseType
+					Type     apis.WarehouseType
 					Settings json.RawMessage
 				}{}
 				err := json.NewDecoder(r.Body).Decode(&req)
@@ -926,19 +910,19 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					Connector int
 					Role      string
 					Settings  json.RawMessage
-					Options   ConnectionOptions
+					Options   apis.ConnectionOptions
 				}
 				err := json.NewDecoder(r.Body).Decode(&req)
 				if err != nil {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				var role ConnectionRole
+				var role apis.ConnectionRole
 				switch req.Role {
 				case "Source":
-					role = SourceRole
+					role = apis.SourceRole
 				case "Destination":
-					role = DestinationRole
+					role = apis.DestinationRole
 				default:
 					respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
 					return
@@ -959,7 +943,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 				var req struct {
-					PrivacyRegion PrivacyRegion
+					PrivacyRegion apis.PrivacyRegion
 				}
 				err := json.NewDecoder(r.Body).Decode(&req)
 				if err != nil {
@@ -988,12 +972,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Add("Content-Type", "application/json")
-		message := apis.validateExpression(req.Expression, req.Schema, req.DestinationPropertyType, req.DestinationPropertyNullable)
+		message := s.apis.ValidateExpression(req.Expression, req.Schema, req.DestinationPropertyType, req.DestinationPropertyNullable)
 		_ = json.NewEncoder(w).Encode(message)
 	})
 	router.Post("/api/expressions-properties", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Expressions []ExpressionToBeExtracted
+			Expressions []apis.ExpressionToBeExtracted
 			Schema      types.Type
 		}
 		err := json.NewDecoder(r.Body).Decode(&req)
@@ -1001,7 +985,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			respond(w, errors.BadRequest("invalid JSON"))
 			return
 		}
-		properties, err := apis.expressionsProperties(req.Expressions, req.Schema)
+		properties, err := s.apis.ExpressionsProperties(req.Expressions, req.Schema)
 		if err != nil {
 			respond(w, errors.BadRequest(err.Error()))
 			return

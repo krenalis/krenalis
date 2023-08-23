@@ -54,6 +54,8 @@ func Run(ctx context.Context, settings *Settings) error {
 	}
 	admin := admin.New(apis)
 
+	apisServer := &apisServer{apis}
+
 	addr := settings.Main.Host
 	if addr == "" {
 		addr = "127.0.0.1:9090"
@@ -63,8 +65,10 @@ func Run(ctx context.Context, settings *Settings) error {
 		case strings.HasPrefix(r.URL.Path, "/admin/"):
 			admin.ServeHTTP(w, r)
 			return
+		case strings.HasPrefix(r.URL.Path, "/api/v1/"):
+			apis.ServeEvents(w, r)
 		case strings.HasPrefix(r.URL.Path, "/api/"):
-			apis.ServeHTTP(w, r)
+			apisServer.ServeHTTP(w, r)
 			return
 		case strings.HasPrefix(r.URL.Path, "/webhook/"):
 			apis.ServeWebhook(w, r)

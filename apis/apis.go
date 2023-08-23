@@ -343,6 +343,46 @@ func (apis *APIs) CountAccounts(ctx context.Context) int {
 	return len(apis.state.Accounts())
 }
 
+// ExpressionsProperties returns all the unique properties contained inside a
+// list of expressions.
+func (apis *APIs) ExpressionsProperties(expressions []ExpressionToBeExtracted, schema types.Type) ([]string, error) {
+	apis.mustBeOpen()
+	var properties []types.Path
+	for _, expression := range expressions {
+		exp, err := mapexp.Compile(expression.Value, schema, expression.Type, expression.Nullable)
+		if err != nil {
+			return nil, err
+		}
+		expressionProperties := exp.Properties()
+		properties = append(properties, expressionProperties...)
+	}
+	// Remove duplicated properties.
+	m := map[string]types.Path{}
+	for _, prop := range properties {
+		m[prop.String()] = prop
+	}
+	uniqueProperties := []string{}
+	for s := range m {
+		uniqueProperties = append(uniqueProperties, s)
+	}
+	return uniqueProperties, nil
+}
+
+func (apis *APIs) ServeEvents(w http.ResponseWriter, r *http.Request) {
+	apis.mustBeOpen()
+	apis.events.ServeHTTP(w, r)
+}
+
+// ValidateExpression validates an expression.
+func (apis *APIs) ValidateExpression(expression string, schema types.Type, dtType types.Type, dtNullable bool) string {
+	apis.mustBeOpen()
+	_, err := mapexp.Compile(expression, schema, dtType, dtNullable)
+	if err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
 // onElectLeader is called when a leader is elected.
 func (apis *APIs) onElectLeader(n state.ElectLeader) {
 	if apis.state.IsLeader() {
@@ -377,39 +417,6 @@ func (apis *APIs) onExecuteAction(n state.ExecuteAction) {
 		defer apis.close.Done()
 		a.exec(apis.close.ctx)
 	}()
-}
-
-// validateExpression validates an expression.
-func (apis *APIs) validateExpression(expression string, schema types.Type, dtType types.Type, dtNullable bool) string {
-	_, err := mapexp.Compile(expression, schema, dtType, dtNullable)
-	if err != nil {
-		return err.Error()
-	}
-	return ""
-}
-
-// expressionsProperties returns all the unique properties contained inside a
-// list of expressions.
-func (apis *APIs) expressionsProperties(expressions []ExpressionToBeExtracted, schema types.Type) ([]string, error) {
-	var properties []types.Path
-	for _, expression := range expressions {
-		exp, err := mapexp.Compile(expression.Value, schema, expression.Type, expression.Nullable)
-		if err != nil {
-			return nil, err
-		}
-		expressionProperties := exp.Properties()
-		properties = append(properties, expressionProperties...)
-	}
-	// Remove duplicated properties.
-	m := map[string]types.Path{}
-	for _, prop := range properties {
-		m[prop.String()] = prop
-	}
-	uniqueProperties := []string{}
-	for s := range m {
-		uniqueProperties = append(uniqueProperties, s)
-	}
-	return uniqueProperties, nil
 }
 
 // mustBeOpen panics if apis has been closed.
