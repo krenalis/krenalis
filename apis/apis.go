@@ -310,6 +310,14 @@ func (apis *APIs) Connectors(ctx context.Context) []*Connector {
 	return connectors
 }
 
+// CountAccounts returns the total number of accounts.
+func (apis *APIs) CountAccounts(ctx context.Context) int {
+	apis.mustBeOpen()
+	_, s := telemetry.TraceSpan(ctx, "apis.CountAccounts")
+	defer s.End()
+	return len(apis.state.Accounts())
+}
+
 // CreateAccount a new account given its email and password and returns its
 // identifier.
 func (apis *APIs) CreateAccount(ctx context.Context, email, password string) (int, error) {
@@ -333,14 +341,6 @@ func (apis *APIs) CreateAccount(ctx context.Context, email, password string) (in
 		return 0, err
 	}
 	return id, err
-}
-
-// CountAccounts returns the total number of accounts.
-func (apis *APIs) CountAccounts(ctx context.Context) int {
-	apis.mustBeOpen()
-	_, s := telemetry.TraceSpan(ctx, "apis.CountAccounts")
-	defer s.End()
-	return len(apis.state.Accounts())
 }
 
 // ExpressionsProperties returns all the unique properties contained inside a
@@ -368,6 +368,7 @@ func (apis *APIs) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 	return uniqueProperties, nil
 }
 
+// ServeEvents serves the events sent via HTTP.
 func (apis *APIs) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	apis.mustBeOpen()
 	apis.events.ServeHTTP(w, r)
@@ -381,6 +382,15 @@ func (apis *APIs) ValidateExpression(expression string, schema types.Type, dtTyp
 		return err.Error()
 	}
 	return ""
+}
+
+// mustBeOpen panics if apis has been closed.
+func (apis *APIs) mustBeOpen() {
+	apis.mu.Lock()
+	defer apis.mu.Unlock()
+	if apis.closed {
+		panic("apis is closed")
+	}
 }
 
 // onElectLeader is called when a leader is elected.
@@ -417,15 +427,6 @@ func (apis *APIs) onExecuteAction(n state.ExecuteAction) {
 		defer apis.close.Done()
 		a.exec(apis.close.ctx)
 	}()
-}
-
-// mustBeOpen panics if apis has been closed.
-func (apis *APIs) mustBeOpen() {
-	apis.mu.Lock()
-	defer apis.mu.Unlock()
-	if apis.closed {
-		panic("apis is closed")
-	}
 }
 
 // Workspace represents a workspace.
