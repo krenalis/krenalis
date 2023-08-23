@@ -44,9 +44,10 @@ func (err ConnectionFailed) Error() string {
 }
 
 type Datastore struct {
-	state *state.State
-	mu    sync.Mutex
-	store map[int]*Store
+	state  *state.State
+	mu     sync.Mutex // for store and closed fields
+	store  map[int]*Store
+	closed bool
 }
 
 // New returns a *Datastore instance.
@@ -79,15 +80,19 @@ func New(st *state.State) *Datastore {
 
 // Close closes the datastore.
 func (ds *Datastore) Close() {
-	var err error
 	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	if ds.closed {
+		return
+	}
+	var err error
 	for _, store := range ds.store {
 		err = store.close()
 		if err != nil {
 			log.Printf("[warning] cannot close store: %s", err)
 		}
 	}
-	ds.mu.Unlock()
+	ds.closed = true
 }
 
 // PingRedis validates Redis settings and tries to establish a
@@ -97,6 +102,7 @@ func (ds *Datastore) Close() {
 // ConnectionFailed error if it cannot connect. If no error occurs, it returns
 // the settings in a canonical form.
 func (ds *Datastore) PingRedis(ctx context.Context, settings []byte) ([]byte, error) {
+	ds.mustBeOpen()
 	r, s, err := openRedis(settings)
 	if err != nil {
 		return nil, InvalidSettings{err}
@@ -128,6 +134,7 @@ func (ds *Datastore) PingRedis(ctx context.Context, settings []byte) ([]byte, er
 // ConnectionFailed error if it cannot connect. If no error occurs, it returns
 // the settings in a canonical form.
 func (ds *Datastore) PingWarehouse(ctx context.Context, typ state.WarehouseType, settings []byte) ([]byte, error) {
+	ds.mustBeOpen()
 	dw, err := openWarehouse(typ, settings)
 	if err != nil {
 		return nil, InvalidSettings{err}
@@ -146,10 +153,20 @@ func (ds *Datastore) PingWarehouse(ctx context.Context, typ state.WarehouseType,
 }
 
 func (ds *Datastore) Store(workspace int) *Store {
+	ds.mustBeOpen()
 	ds.mu.Lock()
 	store := ds.store[workspace]
 	ds.mu.Unlock()
 	return store
+}
+
+// mustBeOpen panics if the datastore has been closed.
+func (ds *Datastore) mustBeOpen() {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	if ds.closed {
+		panic("apis/datastore is closed")
+	}
 }
 
 func (ds *Datastore) onSetRedis(n state.SetRedis) {

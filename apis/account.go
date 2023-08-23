@@ -17,8 +17,6 @@ import (
 
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
-	"chichi/apis/events"
-	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 )
@@ -29,16 +27,12 @@ var emailRegExp = regexp.MustCompile(`^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.
 
 // Account represents an account.
 type Account struct {
-	db            *postgres.DB
-	eventObserver *events.Observer
-	state         *state.State
-	datastore     *datastore.Datastore
-	http          *httpclient.HTTP
-	account       *state.Account
-	ID            int
-	Name          string
-	Email         string
-	InternalIPs   []string
+	apis        *APIs
+	account     *state.Account
+	ID          int
+	Name        string
+	Email       string
+	InternalIPs []string
 }
 
 // Redis represents Redis database settings. It is used with AddWorkspace.
@@ -62,7 +56,9 @@ type Warehouse struct {
 //     warehouse fails.
 //   - InvalidSettings, if Redis database, or data warehouse settings are not
 //     valid.
-func (this *Account) AddWorkspace(name string, redis *Redis, warehouse *Warehouse) (int, error) {
+func (this *Account) AddWorkspace(ctx context.Context, name string, redis *Redis, warehouse *Warehouse) (int, error) {
+
+	this.apis.mustBeOpen()
 
 	if name == "" || utf8.RuneCountInString(name) > 100 {
 		return 0, errors.BadRequest("name %q is not valid", name)
@@ -74,10 +70,9 @@ func (this *Account) AddWorkspace(name string, redis *Redis, warehouse *Warehous
 	}
 
 	var err error
-	ctx := context.Background()
 
 	if redis != nil {
-		n.Redis.Settings, err = this.datastore.PingRedis(ctx, warehouse.Settings)
+		n.Redis.Settings, err = this.apis.datastore.PingRedis(ctx, warehouse.Settings)
 		if err != nil {
 			switch err.(type) {
 			case datastore.InvalidSettings:
@@ -91,7 +86,7 @@ func (this *Account) AddWorkspace(name string, redis *Redis, warehouse *Warehous
 
 	if warehouse != nil {
 		n.Warehouse.Type = state.WarehouseType(warehouse.Type)
-		n.Warehouse.Settings, err = this.datastore.PingWarehouse(ctx, state.WarehouseType(warehouse.Type), warehouse.Settings)
+		n.Warehouse.Settings, err = this.apis.datastore.PingWarehouse(ctx, state.WarehouseType(warehouse.Type), warehouse.Settings)
 		if err != nil {
 			switch err.(type) {
 			case datastore.InvalidSettings:
@@ -110,7 +105,7 @@ func (this *Account) AddWorkspace(name string, redis *Redis, warehouse *Warehous
 		return 0, err
 	}
 
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var err error
 		if n.Warehouse.Settings == nil {
 			_, err = tx.Exec(ctx, "INSERT INTO workspaces (id, account, name) VALUES ($1, $2, $3)", n.ID, n.Account, n.Name)
@@ -138,6 +133,7 @@ func (this *Account) AddWorkspace(name string, redis *Redis, warehouse *Warehous
 //
 // It returns an errors.NotFound error if the workspace does not exist.
 func (this *Account) Workspace(id int) (*Workspace, error) {
+	this.apis.mustBeOpen()
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("identifier %d is not a valid workspace identifier", id)
 	}
@@ -146,12 +142,9 @@ func (this *Account) Workspace(id int) (*Workspace, error) {
 		return nil, errors.NotFound("workspace %d does not exist", id)
 	}
 	workspace := Workspace{
+		apis:                 this.apis,
 		account:              this,
-		db:                   this.db,
-		state:                this.state,
-		store:                this.datastore.Store(id),
-		http:                 this.http,
-		eventObserver:        this.eventObserver,
+		store:                this.apis.datastore.Store(id),
 		workspace:            ws,
 		ID:                   ws.ID,
 		Name:                 ws.Name,
@@ -163,16 +156,14 @@ func (this *Account) Workspace(id int) (*Workspace, error) {
 
 // Workspaces returns the workspaces of the account.
 func (this *Account) Workspaces() []*Workspace {
+	this.apis.mustBeOpen()
 	workspaces := this.account.Workspaces()
 	infos := make([]*Workspace, len(workspaces))
 	for i, ws := range workspaces {
 		workspace := Workspace{
+			apis:                 this.apis,
 			account:              this,
-			db:                   this.db,
-			state:                this.state,
-			store:                this.datastore.Store(ws.ID),
-			http:                 this.http,
-			eventObserver:        this.eventObserver,
+			store:                this.apis.datastore.Store(ws.ID),
 			workspace:            ws,
 			ID:                   ws.ID,
 			Name:                 ws.Name,

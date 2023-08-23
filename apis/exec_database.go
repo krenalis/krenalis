@@ -122,7 +122,7 @@ func (sv databaseScanValue) Scan(src any) error {
 // exportUsersToDatabase exports the users to the database of the action.
 func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 
-	users, err := this.readUsersFromDataWarehouse(nil)
+	users, err := this.readUsersFromDataWarehouse(ctx, nil)
 	if err != nil {
 		return err
 	}

@@ -8,7 +8,6 @@
 package apis
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"log"
@@ -27,7 +26,10 @@ import (
 )
 
 // ServeHTTP servers the API methods from HTTP.
+// It panics if apis has been closed.
 func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	apis.mustBeOpen()
 
 	ctx, span := telemetry.TraceSpan(r.Context(), "apis.ServeHTTP", "ip", r.RemoteAddr, "urlPath", r.URL.Path)
 	defer span.End()
@@ -47,7 +49,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	// Read the account.
 	var accountID int
-	err := apis.db.QueryRow(context.Background(), "SELECT account FROM workspaces WHERE id = $1", workspaceID).Scan(&accountID)
+	err := apis.db.QueryRow(ctx, "SELECT account FROM workspaces WHERE id = $1", workspaceID).Scan(&accountID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Not Found", http.StatusNotFound)
@@ -79,7 +81,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		router.Route("/{connectionID}", func(router chi.Router) {
 			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -89,17 +91,17 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Delete("/", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
 				}
-				err = connection.Delete()
+				err = connection.Delete(ctx)
 				respond(w, err)
 			})
 			router.Post("/actions", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -125,7 +127,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			router.Get("/actions/{actionID}", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				actionID, _ := strconv.Atoi(chi.URLParam(r, "actionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -141,7 +143,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			router.Put("/actions/{actionID}", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				actionID, _ := strconv.Atoi(chi.URLParam(r, "actionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -163,7 +165,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			router.Delete("/actions/{actionID}", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				actionID, _ := strconv.Atoi(chi.URLParam(r, "actionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -173,13 +175,13 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				err = action.Delete()
+				err = action.Delete(ctx)
 				respond(w, err)
 			})
 			router.Post("/actions/{actionID}/execute", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				actionID, _ := strconv.Atoi(chi.URLParam(r, "actionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -203,7 +205,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			router.Post("/actions/{actionID}/schedule-period", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				actionID, _ := strconv.Atoi(chi.URLParam(r, "actionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -221,13 +223,13 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				err = action.SetSchedulePeriod(req.SchedulePeriod)
+				err = action.SetSchedulePeriod(ctx, req.SchedulePeriod)
 				respond(w, err)
 			})
 			router.Post("/actions/{actionID}/status", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 				actionID, _ := strconv.Atoi(chi.URLParam(r, "actionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -245,13 +247,13 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				err = action.SetStatus(req.Enabled)
+				err = action.SetStatus(ctx, req.Enabled)
 				respond(w, err)
 			})
 			router.Route("/action-schemas", func(router chi.Router) {
 				router.Get("/Users", func(w http.ResponseWriter, r *http.Request) {
 					id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-					connection, err := workspace.Connection(id)
+					connection, err := workspace.Connection(ctx, id)
 					if err != nil {
 						respond(w, err)
 						return
@@ -266,7 +268,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				})
 				router.Get("/Groups", func(w http.ResponseWriter, r *http.Request) {
 					id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-					connection, err := workspace.Connection(id)
+					connection, err := workspace.Connection(ctx, id)
 					if err != nil {
 						respond(w, err)
 						return
@@ -281,7 +283,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				})
 				router.Get("/Events", func(w http.ResponseWriter, r *http.Request) {
 					id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-					connection, err := workspace.Connection(id)
+					connection, err := workspace.Connection(ctx, id)
 					if err != nil {
 						respond(w, err)
 						return
@@ -303,7 +305,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						respond(w, errors.BadRequest("invalid event type"))
 						return
 					}
-					connection, err := workspace.Connection(id)
+					connection, err := workspace.Connection(ctx, id)
 					if err != nil {
 						respond(w, err)
 						return
@@ -319,7 +321,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Get("/complete-path/{path}", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -331,7 +333,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid path"))
 					return
 				}
-				completePath, err := connection.CompletePath(path)
+				completePath, err := connection.CompletePath(ctx, path)
 				if err != nil {
 					respond(w, err)
 					return
@@ -341,7 +343,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Get("/records", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -353,7 +355,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("limit is not valid"))
 					return
 				}
-				records, schema, err := connection.Records(path, sheet, limit)
+				records, schema, err := connection.Records(ctx, path, sheet, limit)
 				if err != nil {
 					respond(w, err)
 					return
@@ -363,13 +365,13 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Get("/sheets", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
 				}
 				path := r.URL.Query().Get("path")
-				sheets, err := connection.Sheets(path)
+				sheets, err := connection.Sheets(ctx, path)
 				if err != nil {
 					respond(w, err)
 					return
@@ -379,7 +381,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Post("/status", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -392,17 +394,17 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				err = connection.SetStatus(req.Enabled)
+				err = connection.SetStatus(ctx, req.Enabled)
 				respond(w, err)
 			})
 			router.Get("/imports", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
 				}
-				executions, err := connection.Executions()
+				executions, err := connection.Executions(ctx)
 				if err != nil {
 					respond(w, err)
 					return
@@ -413,13 +415,13 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Get("/stats", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
 				}
 				var stats *ConnectionsStats
-				stats, err = connection.Stats()
+				stats, err = connection.Stats(ctx)
 				if err != nil {
 					respond(w, err)
 					return
@@ -429,12 +431,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Get("/ui", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
 				}
-				form, err := connection.ServeUI("load", nil)
+				form, err := connection.ServeUI(ctx, "load", nil)
 				if err != nil {
 					respond(w, err)
 					return
@@ -444,7 +446,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Post("/ui-event", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -458,7 +460,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				form, err := connection.ServeUI(req.Event, req.Values)
+				form, err := connection.ServeUI(ctx, req.Event, req.Values)
 				if err != nil {
 					respond(w, err)
 					return
@@ -468,7 +470,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Post("/exec-query", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -482,7 +484,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				rows, schema, err := connection.ExecQuery(req.Query, req.Limit)
+				rows, schema, err := connection.ExecQuery(ctx, req.Query, req.Limit)
 				if err != nil {
 					respond(w, err)
 					return
@@ -499,12 +501,12 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid table name"))
 					return
 				}
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
 				}
-				schema, err := connection.TableSchema(table)
+				schema, err := connection.TableSchema(ctx, table)
 				if err != nil {
 					respond(w, err)
 					return
@@ -514,7 +516,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Get("/keys", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -530,13 +532,13 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Post("/keys", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
 				}
 				var key string
-				key, err = connection.GenerateKey()
+				key, err = connection.GenerateKey(ctx)
 				if err != nil {
 					respond(w, err)
 					return
@@ -546,18 +548,18 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			router.Delete("/keys/{key}", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
 				}
 				key := chi.URLParam(r, "key")
-				err = connection.RevokeKey(key)
+				err = connection.RevokeKey(ctx, key)
 				respond(w, err)
 			})
 			router.Post("/storage", func(w http.ResponseWriter, r *http.Request) {
 				id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
-				connection, err := workspace.Connection(id)
+				connection, err := workspace.Connection(ctx, id)
 				if err != nil {
 					respond(w, err)
 					return
@@ -571,7 +573,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, err)
 					return
 				}
-				err = connection.SetStorage(req.Storage, Compression(req.Compression))
+				err = connection.SetStorage(ctx, req.Storage, Compression(req.Compression))
 				respond(w, err)
 			})
 		})
@@ -619,7 +621,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
 					return
 				}
-				form, err := connector.ServeUI("load", nil, role, req.OAuthToken)
+				form, err := connector.ServeUI(ctx, "load", nil, role, req.OAuthToken)
 				if err != nil {
 					respond(w, err)
 					return
@@ -671,7 +673,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
 					return
 				}
-				form, err := connector.ServeUI(req.Event, req.Values, role, req.OAuthToken)
+				form, err := connector.ServeUI(ctx, req.Event, req.Values, role, req.OAuthToken)
 				if err != nil {
 					respond(w, err)
 					return
@@ -698,7 +700,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if req.Size != nil {
 				size = *req.Size
 			}
-			id, err := workspace.AddEventListener(size, req.Source, req.Server, req.Stream)
+			id, err := workspace.AddEventListener(ctx, size, req.Source, req.Server, req.Stream)
 			if err != nil {
 				respond(w, err)
 				return
@@ -736,7 +738,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				respond(w, errors.BadRequest("invalid JSON"))
 				return
 			}
-			schema, users, err := workspace.Users(req.Properties, "", 0, 1000)
+			schema, users, err := workspace.Users(ctx, req.Properties, "", 0, 1000)
 			if err != nil {
 				respond(w, err)
 				return
@@ -761,7 +763,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				respond(w, err)
 				return
 			}
-			events, err := user.Events(10)
+			events, err := user.Events(ctx, 10)
 			if err != nil {
 				respond(w, err)
 				return
@@ -778,7 +780,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				respond(w, err)
 				return
 			}
-			traits, err := user.Traits()
+			traits, err := user.Traits(ctx)
 			if err != nil {
 				respond(w, err)
 				return
@@ -804,7 +806,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				err = workspace.SetAnonymousIdentifiers(req.AnonymousIdentifiers)
+				err = workspace.SetAnonymousIdentifiers(ctx, req.AnonymousIdentifiers)
 				respond(w, err)
 			})
 		})
@@ -818,7 +820,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				err = workspace.ConnectRedis(req.Settings)
+				err = workspace.ConnectRedis(ctx, req.Settings)
 				respond(w, err)
 			})
 		})
@@ -833,25 +835,25 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				err = workspace.ConnectWarehouse(req.Type, req.Settings)
+				err = workspace.ConnectWarehouse(ctx, req.Type, req.Settings)
 				respond(w, err)
 			})
 		})
 		router.Route("/disconnect-redis", func(router chi.Router) {
 			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-				err = workspace.DisconnectRedis()
+				err = workspace.DisconnectRedis(ctx)
 				respond(w, err)
 			})
 		})
 		router.Route("/disconnect-warehouse", func(router chi.Router) {
 			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-				err = workspace.DisconnectWarehouse()
+				err = workspace.DisconnectWarehouse(ctx)
 				respond(w, err)
 			})
 		})
 		router.Route("/init-warehouse", func(router chi.Router) {
 			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-				err = workspace.InitWarehouse()
+				err = workspace.InitWarehouse(ctx)
 				respond(w, err)
 			})
 		})
@@ -865,7 +867,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				err = workspace.PingRedis(req.Settings)
+				err = workspace.PingRedis(ctx, req.Settings)
 				respond(w, err)
 			})
 		})
@@ -880,13 +882,13 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				err = workspace.PingWarehouse(req.Type, req.Settings)
+				err = workspace.PingWarehouse(ctx, req.Type, req.Settings)
 				respond(w, err)
 			})
 		})
 		router.Route("/reload-schemas", func(router chi.Router) {
 			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-				err = workspace.ReloadSchemas()
+				err = workspace.ReloadSchemas(ctx)
 				respond(w, err)
 			})
 		})
@@ -909,7 +911,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				oauthToken, err := workspace.OAuthToken(req.OAuthCode, req.RedirectURI, req.Connector)
+				oauthToken, err := workspace.OAuthToken(ctx, req.OAuthCode, req.RedirectURI, req.Connector)
 				if err != nil {
 					respond(w, err)
 					return
@@ -941,7 +943,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("unexpected connection role '%s'", req.Role))
 					return
 				}
-				id, err := workspace.AddConnection(role, req.Connector, req.Settings, req.Options)
+				id, err := workspace.AddConnection(ctx, role, req.Connector, req.Settings, req.Options)
 				if err != nil {
 					respond(w, err)
 					return
@@ -964,7 +966,7 @@ func (apis *APIs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					respond(w, errors.BadRequest("invalid JSON"))
 					return
 				}
-				err = workspace.SetPrivacyRegion(req.PrivacyRegion)
+				err = workspace.SetPrivacyRegion(ctx, req.PrivacyRegion)
 				respond(w, err)
 			})
 		})

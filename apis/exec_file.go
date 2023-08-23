@@ -63,7 +63,7 @@ func (err sameColumnNameError) Error() string {
 // exportUsersToFile exports the users to the file.
 func (this *Action) exportUsersToFile(ctx context.Context) error {
 
-	users, err := this.readUsersFromDataWarehouse(nil)
+	users, err := this.readUsersFromDataWarehouse(ctx, nil)
 	if err != nil {
 		return err
 	}

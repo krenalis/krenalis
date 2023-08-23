@@ -71,12 +71,12 @@ func (log *eventsLog) Delivered(id ksuid.KSUID, action int) {
 	now := time.Now().UTC()
 	go func() {
 		log.close.Add(1)
+		defer log.close.Done()
 		_, err := log.db.Exec(log.close.ctx, "INSERT INTO event_processed (id, action, timestamp, state)"+
 			" VALUES ($1, $2, $3, 'Delivered')", id, action, now)
 		if err != nil {
 			_log.Printf("cannot set event as delivered (event = %q, action = %d)", id.String(), action)
 		}
-		log.close.Done()
 	}()
 }
 
@@ -91,9 +91,9 @@ func (log *eventsLog) TransformationFailed(id ksuid.KSUID, action int, err error
 		}
 		_log.Printf("[warning] transformation failed when processing event %s with action %d: %q", id, action, errString)
 		log.close.Add(1)
+		defer log.close.Done()
 		_, err := log.db.Exec(log.close.ctx, "INSERT INTO event_processed (id, action, timestamp, state, error)"+
 			" VALUES ($1, $2, $3, 'TransformationFailed', $4)", id, action, now, errString)
-		log.close.Done()
 		if err != nil {
 			_log.Printf("cannot log transformation failed (event = %q, action = %d)", id.String(), action)
 		}

@@ -36,9 +36,15 @@ type APIs struct {
 	datastore      *datastore.Datastore
 	http           *httpclient.HTTP
 	events         *events.Events
+	mu             sync.Mutex // for scheduler and closed fields
 	scheduler      *scheduler
-	schedulerMu    sync.Mutex
 	eventProcessor *events.Processor
+	close          struct {
+		ctx       context.Context
+		cancelCtx context.CancelFunc
+		sync.WaitGroup
+	}
+	closed bool
 }
 
 var hasBeenCalled bool
@@ -114,6 +120,8 @@ func New(conf *Config) (*APIs, error) {
 		return nil, err
 	}
 
+	apis.close.ctx, apis.close.cancelCtx = context.WithCancel(context.Background())
+
 	return apis, nil
 }
 
@@ -121,6 +129,7 @@ func New(conf *Config) (*APIs, error) {
 //
 // It returns an errors.NoFound error if the account does not exist.
 func (apis *APIs) Account(ctx context.Context, id int) (*Account, error) {
+	apis.mustBeOpen()
 	_, t := telemetry.TraceSpan(ctx, "apis.Account", "account_id", id)
 	defer t.End()
 	if id < 1 || id > maxInt32 {
@@ -131,16 +140,12 @@ func (apis *APIs) Account(ctx context.Context, id int) (*Account, error) {
 		return nil, errors.NotFound("account %d does not exist", id)
 	}
 	account := Account{
-		db:            apis.db,
-		datastore:     apis.datastore,
-		eventObserver: apis.events.Observer(),
-		state:         apis.state,
-		http:          apis.http,
-		account:       acc,
-		ID:            acc.ID,
-		Name:          acc.Name,
-		Email:         acc.Email,
-		InternalIPs:   slices.Clone(acc.InternalIPs),
+		apis:        apis,
+		account:     acc,
+		ID:          acc.ID,
+		Name:        acc.Name,
+		Email:       acc.Email,
+		InternalIPs: slices.Clone(acc.InternalIPs),
 	}
 	return &account, nil
 }
@@ -149,6 +154,7 @@ func (apis *APIs) Account(ctx context.Context, id int) (*Account, error) {
 // accounts but starting from first and up to limit. first must be >= 0 and
 // limit must be > 0.
 func (apis *APIs) Accounts(ctx context.Context, order AccountSort, first, limit int) ([]*Account, error) {
+	apis.mustBeOpen()
 	_, s := telemetry.TraceSpan(ctx, "apis.Connectors")
 	defer s.End()
 	if order != SortByName && order != SortByEmail {
@@ -196,6 +202,7 @@ func (apis *APIs) Accounts(ctx context.Context, order AccountSort, first, limit 
 // It returns an errors.UnprocessableError error with code
 // AuthenticationFailed, if the authentication fails.
 func (apis *APIs) AuthenticateAccount(ctx context.Context, email, password string) (int, error) {
+	apis.mustBeOpen()
 	_, t := telemetry.TraceSpan(ctx, "apis.Connectors")
 	defer t.End()
 	if !emailRegExp.MatchString(email) {
@@ -206,7 +213,7 @@ func (apis *APIs) AuthenticateAccount(ctx context.Context, email, password strin
 	}
 	var id int
 	var hashedPassword []byte
-	err := apis.db.QueryRow(context.Background(), "SELECT id, password FROM accounts WHERE email = $1", email).Scan(&id, &hashedPassword)
+	err := apis.db.QueryRow(ctx, "SELECT id, password FROM accounts WHERE email = $1", email).Scan(&id, &hashedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, errors.Unprocessable(AuthenticationFailed, "authentication has failed")
@@ -222,23 +229,26 @@ func (apis *APIs) AuthenticateAccount(ctx context.Context, email, password strin
 
 // Close closes the APIs.
 func (apis *APIs) Close() {
+	apis.mu.Lock()
+	defer apis.mu.Unlock()
 	// Close scheduler.
-	apis.schedulerMu.Lock()
 	if apis.scheduler != nil {
 		apis.scheduler.Close()
 		apis.scheduler = nil
 	}
-	apis.schedulerMu.Unlock()
 	// Close events, datastore and state.
 	apis.events.Close()
 	apis.datastore.Close()
 	apis.state.Close()
+	apis.close.Wait()
+	apis.closed = true
 }
 
 // Connector returns the connector with identifier id.
 //
 // It returns an errors.NotFoundError error if the connector does not exist.
 func (apis *APIs) Connector(ctx context.Context, id int) (*Connector, error) {
+	apis.mustBeOpen()
 	_, t := telemetry.TraceSpan(ctx, "apis.Connector", "id", id)
 	defer t.End()
 	c, ok := apis.state.Connector(id)
@@ -246,8 +256,8 @@ func (apis *APIs) Connector(ctx context.Context, id int) (*Connector, error) {
 		return nil, errors.NotFound("connector %d does not exist", id)
 	}
 	connector := Connector{
+		apis:                   apis,
 		connector:              c,
-		http:                   apis.http,
 		ID:                     c.ID,
 		Name:                   c.Name,
 		SourceDescription:      c.SourceDescription,
@@ -266,14 +276,15 @@ func (apis *APIs) Connector(ctx context.Context, id int) (*Connector, error) {
 
 // Connectors returns the collectors.
 func (apis *APIs) Connectors(ctx context.Context) []*Connector {
+	apis.mustBeOpen()
 	_, s := telemetry.TraceSpan(ctx, "apis.Connectors")
 	defer s.End()
 	cc := apis.state.Connectors()
 	connectors := make([]*Connector, len(cc))
 	for i, c := range cc {
 		connector := Connector{
+			apis:                   apis,
 			connector:              c,
-			http:                   apis.http,
 			ID:                     c.ID,
 			Name:                   c.Name,
 			SourceDescription:      c.SourceDescription,
@@ -299,6 +310,7 @@ func (apis *APIs) Connectors(ctx context.Context) []*Connector {
 // CreateAccount a new account given its email and password and returns its
 // identifier.
 func (apis *APIs) CreateAccount(ctx context.Context, email, password string) (int, error) {
+	apis.mustBeOpen()
 	_, t := telemetry.TraceSpan(ctx, "apis.CreateAccount")
 	defer t.End()
 	if !emailRegExp.MatchString(email) {
@@ -312,7 +324,7 @@ func (apis *APIs) CreateAccount(ctx context.Context, email, password string) (in
 		return 0, err
 	}
 	var id int
-	err = apis.db.QueryRow(context.Background(), "INSERT INTO accounts (email, password) VALUES ($1, $2)",
+	err = apis.db.QueryRow(ctx, "INSERT INTO accounts (email, password) VALUES ($1, $2)",
 		email, string(hashedPassword)).Scan(&id)
 	if err != nil {
 		return 0, err
@@ -322,6 +334,7 @@ func (apis *APIs) CreateAccount(ctx context.Context, email, password string) (in
 
 // CountAccounts returns the total number of accounts.
 func (apis *APIs) CountAccounts(ctx context.Context) int {
+	apis.mustBeOpen()
 	_, s := telemetry.TraceSpan(ctx, "apis.CountAccounts")
 	defer s.End()
 	return len(apis.state.Accounts())
@@ -330,17 +343,20 @@ func (apis *APIs) CountAccounts(ctx context.Context) int {
 // onElectLeader is called when a leader is elected.
 func (apis *APIs) onElectLeader(n state.ElectLeader) {
 	if apis.state.IsLeader() {
-		apis.schedulerMu.Lock()
-		apis.scheduler = newScheduler(apis.db, apis.state, apis.datastore, apis.http)
-		apis.schedulerMu.Unlock()
+		scheduler := newScheduler(apis)
+		apis.mu.Lock()
+		apis.scheduler = scheduler
+		apis.mu.Unlock()
 		return
 	}
-	apis.schedulerMu.Lock()
-	if apis.scheduler != nil {
-		apis.scheduler.Close()
-		apis.scheduler = nil
+	var scheduler *scheduler
+	apis.mu.Lock()
+	scheduler = apis.scheduler
+	apis.scheduler = nil
+	apis.mu.Unlock()
+	if scheduler != nil {
+		scheduler.Close()
 	}
-	apis.schedulerMu.Unlock()
 }
 
 // onExecuteAction is called when an action is executed.
@@ -351,9 +367,13 @@ func (apis *APIs) onExecuteAction(n state.ExecuteAction) {
 	action, _ := apis.state.Action(n.Action)
 	c := action.Connection()
 	store := apis.datastore.Store(c.Workspace().ID)
-	connection := &Connection{db: apis.db, connection: c, store: store, http: apis.http}
-	a := &Action{db: apis.db, action: action, connection: connection}
-	go a.exec()
+	connection := &Connection{apis: apis, store: store, connection: c}
+	a := &Action{apis: apis, action: action, connection: connection}
+	go func() {
+		apis.close.Add(1)
+		defer apis.close.Done()
+		a.exec(apis.close.ctx)
+	}()
 }
 
 // validateExpression validates an expression.
@@ -389,14 +409,20 @@ func (apis *APIs) expressionsProperties(expressions []ExpressionToBeExtracted, s
 	return uniqueProperties, nil
 }
 
+// mustBeOpen panics if apis has been closed.
+func (apis *APIs) mustBeOpen() {
+	apis.mu.Lock()
+	defer apis.mu.Unlock()
+	if apis.closed {
+		panic("apis is closed")
+	}
+}
+
 // Workspace represents a workspace.
 type Workspace struct {
+	apis                 *APIs
 	account              *Account
-	db                   *postgres.DB
-	state                *state.State
 	store                *datastore.Store
-	http                 *httpclient.HTTP
-	eventObserver        *events.Observer
 	workspace            *state.Workspace
 	ID                   int
 	Name                 string

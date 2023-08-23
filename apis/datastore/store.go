@@ -39,10 +39,9 @@ type Store struct {
 	workspace int
 	redis     *redis.Client
 	warehouse warehouses.Warehouse
-	events    struct {
-		sync.Mutex
-		queue [][]any
-	}
+	mu        sync.Mutex // for events and closed fields
+	events    [][]any
+	closed    bool
 }
 
 // newStore returns a new Store for the workspace ws.
@@ -69,10 +68,10 @@ func newStore(ws *state.Workspace) (*Store, error) {
 		for {
 			select {
 			case <-ticker.C:
-				store.events.Lock()
-				events := store.events.queue
-				store.events.queue = nil
-				store.events.Unlock()
+				store.mu.Lock()
+				events := store.events
+				store.events = nil
+				store.mu.Unlock()
 				if events != nil {
 					go store.flushEvents(events)
 				}
@@ -84,14 +83,16 @@ func newStore(ws *state.Workspace) (*Store, error) {
 
 // AddEvents adds events to the store.
 func (store *Store) AddEvents(events [][]any) {
-	store.events.Lock()
-	store.events.queue = append(store.events.queue, events...)
-	store.events.Unlock()
+	store.mustBeOpen()
+	store.mu.Lock()
+	store.events = append(store.events, events...)
+	store.mu.Unlock()
 }
 
 // CreateUser creates a user with the given properties and returns its
 // identifier.
 func (store *Store) CreateUser(ctx context.Context, user map[string]any) (int, error) {
+	store.mustBeOpen()
 	b := strings.Builder{}
 	b.WriteString("INSERT INTO users (")
 	properties := maps.Keys(user)
@@ -132,6 +133,7 @@ func (store *Store) CreateUser(ctx context.Context, user map[string]any) (int, e
 
 // DeleteUser deletes the user with identifier id.
 func (store *Store) DeleteUser(ctx context.Context, id int) error {
+	store.mustBeOpen()
 	err := store.deleteRedisUserIndex(ctx, id)
 	if err != nil {
 		return err
@@ -144,6 +146,7 @@ func (store *Store) DeleteUser(ctx context.Context, id int) error {
 // action that matches with the corresponding property. If it cannot be
 // found, then the empty string and false are returned.
 func (store *Store) DestinationUser(ctx context.Context, action int, property string) (string, bool, error) {
+	store.mustBeOpen()
 	return store.warehouse.DestinationUser(ctx, action, property)
 }
 
@@ -153,17 +156,21 @@ func (store *Store) DestinationUser(ctx context.Context, action int, property st
 //
 // If a query to the warehouse fails, it returns an Error value.
 func (store *Store) Events(ctx context.Context, columns []types.Property, where Where, order types.Property, first, limit int) ([][]any, error) {
+	store.mustBeOpen()
 	return store.warehouse.Select(ctx, "events", columns, where, order, first, limit)
 }
 
 // InitWarehouse initializes the data warehouse creating the events and the
 // destinations_users tables.
 func (store *Store) InitWarehouse(ctx context.Context) error {
+	store.mustBeOpen()
 	return store.warehouse.Init(ctx)
 }
 
 // MatchingUsers returns the users matching with the given user.
 func (store *Store) MatchingUsers(ctx context.Context, user map[string]any) ([]IRUser, error) {
+
+	store.mustBeOpen()
 
 	// Determine the identifier-value pairs to check on Redis.
 	identifierKeys := []string{}
@@ -230,12 +237,14 @@ func (store *Store) MatchingUsers(ctx context.Context, user map[string]any) ([]I
 // SetDestinationUser sets the destination user relative to the action, with
 // the given external user ID and external property.
 func (store *Store) SetDestinationUser(ctx context.Context, connection int, externalUserID, externalProperty string) error {
+	store.mustBeOpen()
 	return store.warehouse.SetDestinationUser(ctx, connection, externalUserID, externalProperty)
 }
 
 // Schemas returns the schemas of users and groups for the relative tables.
 // If a table does not exist, it returns the invalid schema for that table.
 func (store *Store) Schemas(ctx context.Context) (types.Type, types.Type, error) {
+	store.mustBeOpen()
 	tables, err := store.warehouse.Tables(ctx)
 	if err != nil {
 		return types.Type{}, types.Type{}, err
@@ -261,6 +270,7 @@ func (store *Store) Schemas(ctx context.Context) (types.Type, types.Type, error)
 // UpdateUser updates the properties of the user with identifier id.
 // Only the properties in users will be updated.
 func (store *Store) UpdateUser(ctx context.Context, target IRUser, user map[string]any) error {
+	store.mustBeOpen()
 	// Since the user contains only the properties to update, merge its
 	// identifiers values with the identifiers values of target, then update its
 	// index on Redis.
@@ -318,6 +328,7 @@ func (store *Store) UpdateUser(ctx context.Context, target IRUser, user map[stri
 //
 // If a query fails, it returns an Error value.
 func (store *Store) Users(ctx context.Context, properties []types.Property, where Where, order types.Property, first, limit int) ([]map[string]any, error) {
+	store.mustBeOpen()
 	columns := PropertiesToColumns(properties)
 	rows, err := store.warehouse.Select(ctx, "users", columns, where, order, first, limit)
 	if err != nil {
@@ -332,6 +343,7 @@ func (store *Store) Users(ctx context.Context, properties []types.Property, wher
 
 // UsersSlice is like Users but returns the users as a slice.
 func (store *Store) UsersSlice(ctx context.Context, properties []types.Property, where Where, order types.Property, first, limit int) ([][]any, error) {
+	store.mustBeOpen()
 	columns := PropertiesToColumns(properties)
 	rows, err := store.warehouse.Select(ctx, "users", columns, where, order, first, limit)
 	if err != nil {
@@ -347,10 +359,14 @@ func (store *Store) UsersSlice(ctx context.Context, properties []types.Property,
 // close closes the store.
 // It flushes the events and closes the Redis database and the data warehouse.
 func (store *Store) close() error {
-	store.events.Lock()
-	if len(store.events.queue) > 0 {
-		store.flushEvents(store.events.queue)
-		store.events.queue = nil
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	if store.closed {
+		return nil
+	}
+	if len(store.events) > 0 {
+		store.flushEvents(store.events)
+		store.events = nil
 	}
 	err := store.redis.Close()
 	if err != nil {
@@ -363,7 +379,7 @@ func (store *Store) close() error {
 			err = errors.New(err.Error() + "\n\tand also " + err2.Error())
 		}
 	}
-	store.events.Unlock()
+	store.closed = true
 	return err
 }
 
@@ -394,6 +410,15 @@ func (store *Store) deleteRedisUserIndex(ctx context.Context, id int) error {
 	err = store.redis.Del(ctx, redisUserKey(id)).Err()
 
 	return err
+}
+
+// mustBeOpen panics if store has been closed.
+func (store *Store) mustBeOpen() {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	if store.closed {
+		panic("apis/datastore/store is closed")
+	}
 }
 
 func (store *Store) setRedisUserIndex(ctx context.Context, user IRUser) error {

@@ -9,7 +9,6 @@ package apis
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -95,6 +94,7 @@ var (
 // ServeWebhook serves a webhook request. The request path starts with
 // "/webhook/{connector}/" where {connector} is a connector identifier.
 func (apis *APIs) ServeWebhook(w http.ResponseWriter, r *http.Request) {
+	apis.mustBeOpen()
 	err := apis.receiveWebhook(r)
 	if err != nil {
 		switch err {
@@ -127,7 +127,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	conf := _connector.AppConfig{
 		Role: _connector.SourceRole,
 	}
-	ctx := context.Background()
+	ctx := r.Context()
 	switch m[1] {
 	case "c":
 		id, _ := strconv.Atoi(m[2])

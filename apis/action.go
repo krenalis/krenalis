@@ -19,7 +19,6 @@ import (
 
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
-	"chichi/apis/httpclient"
 	"chichi/apis/mappings/mapexp"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
@@ -35,7 +34,7 @@ var QueryExecutionFailed errors.Code = "QueryExecutionFailed"
 // Action represents an action associated to a destination connection to send
 // events.
 type Action struct {
-	db                 *postgres.DB
+	apis               *APIs
 	action             *state.Action
 	connection         *Connection
 	ID                 int
@@ -78,11 +77,11 @@ const (
 )
 
 // fromState serializes action into this.
-func (this *Action) fromState(db *postgres.DB, store *datastore.Store, http *httpclient.HTTP, action *state.Action) {
+func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.Action) {
 	c := action.Connection()
-	this.db = db
+	this.apis = apis
 	this.action = action
-	this.connection = &Connection{db: db, connection: c, store: store, http: http}
+	this.connection = &Connection{apis: apis, store: store, connection: c}
 	this.ID = action.ID
 	this.Connection = c.ID
 	this.Target = ActionTarget(action.Target)
@@ -214,13 +213,13 @@ type ActionFilterCondition struct {
 // Delete deletes the action.
 // It returns an errors.NotFoundError error if the action does not exist
 // anymore.
-func (this *Action) Delete() error {
+func (this *Action) Delete(ctx context.Context) error {
+	this.apis.mustBeOpen()
 	n := state.DeleteAction{
 		Connection: this.action.Connection().ID,
 		ID:         this.action.ID,
 	}
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "DELETE FROM actions WHERE id = $1", n.ID)
 		if err != nil {
 			return err
@@ -241,6 +240,7 @@ func (this *Action) Delete() error {
 //   - ExecutionInProgress, if the action is already in progress.
 //   - NoStorage, if the connection of the action is a file and has no storage.
 func (this *Action) Execute(ctx context.Context, reimport bool) error {
+	this.apis.mustBeOpen()
 	ctx, span := telemetry.TraceSpan(ctx, "Action.Execute", "id", this.action.ID, "reimport", reimport)
 	defer span.End()
 	if _, ok := this.action.Execution(); ok {
@@ -255,7 +255,7 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 			return errors.Unprocessable(NoStorage, "file connection %d does not have a storage", c.ID)
 		}
 	}
-	return this.addExecution(reimport)
+	return this.addExecution(ctx, reimport)
 }
 
 // Set sets action.
@@ -263,6 +263,7 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
 func (this *Action) Set(ctx context.Context, action ActionToSet) error {
+	this.apis.mustBeOpen()
 	ctx, span := telemetry.TraceSpan(ctx, "Action.Set", "action", this.action.ID)
 	defer span.End()
 	err := this.connection.validateActionToSet(action, this.action.Target, this.action.EventType)
@@ -337,7 +338,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	if n.Transformation != nil {
 		transformation = *n.Transformation
 	}
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
 			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, mapping = $6,\n"+
 			"transformation_func = $7, transformation_in = $8, transformation_out = $9, identifiers = $10,\n"+
@@ -362,11 +363,12 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
 // setUserCursor sets the user cursor of the action.
 func (this *Action) setUserCursor(ctx context.Context, cursor _connector.Cursor) error {
+	this.apis.mustBeOpen()
 	n := state.SetActionUserCursor{
 		ID:         this.action.ID,
 		UserCursor: cursor,
 	}
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions\n"+
 			"SET user_cursor.id = $1, user_cursor.timestamp = $2, user_cursor.next = $3 WHERE id = $4",
 			n.UserCursor.ID, n.UserCursor.Timestamp, n.UserCursor.Next, n.ID)
@@ -384,7 +386,8 @@ func (this *Action) setUserCursor(ctx context.Context, cursor _connector.Cursor)
 // SetSchedulePeriod sets the schedule period, in minutes, of the action. The
 // action must be a Users or Groups action and period can be 5, 15, 30, 60, 120,
 // 180, 360, 480, 720, or 1440.
-func (this *Action) SetSchedulePeriod(period SchedulePeriod) error {
+func (this *Action) SetSchedulePeriod(ctx context.Context, period SchedulePeriod) error {
+	this.apis.mustBeOpen()
 	switch this.action.Target {
 	case state.UsersTarget, state.GroupsTarget:
 	default:
@@ -399,8 +402,7 @@ func (this *Action) SetSchedulePeriod(period SchedulePeriod) error {
 		ID:             this.action.ID,
 		SchedulePeriod: int16(period),
 	}
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET schedule_period = $1 WHERE id = $2 AND schedule_period <> $1", n.SchedulePeriod, n.ID)
 		if err != nil {
 			return err
@@ -414,7 +416,8 @@ func (this *Action) SetSchedulePeriod(period SchedulePeriod) error {
 }
 
 // SetStatus sets the status of the action.
-func (this *Action) SetStatus(enabled bool) error {
+func (this *Action) SetStatus(ctx context.Context, enabled bool) error {
+	this.apis.mustBeOpen()
 	if enabled == this.action.Enabled {
 		return nil
 	}
@@ -422,8 +425,7 @@ func (this *Action) SetStatus(enabled bool) error {
 		ID:      this.action.ID,
 		Enabled: enabled,
 	}
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.ID)
 		if err != nil {
 			return err
@@ -940,7 +942,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 // settings for the action's connection.
 func (this *Action) setSettingsFunc(ctx context.Context) _connector.SetSettingsFunc {
 	return func(settings []byte) error {
-		return setSettings(ctx, this.db, this.action.Connection().ID, settings)
+		return setSettings(ctx, this.apis.db, this.action.Connection().ID, settings)
 	}
 }
 

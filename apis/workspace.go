@@ -96,7 +96,9 @@ type ConnectionOptions struct {
 //   - ConnectorNotExists, if the connector does not exist.
 //   - InvalidSettings, if the settings are not valid.
 //   - StorageNotExists, if the storage does not exist.
-func (this *Workspace) AddConnection(role ConnectionRole, connector int, settings []byte, opts ConnectionOptions) (int, error) {
+func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, connector int, settings []byte, opts ConnectionOptions) (int, error) {
+
+	this.apis.mustBeOpen()
 
 	if role != SourceRole && role != DestinationRole {
 		return 0, errors.BadRequest("role %q is not valid", role)
@@ -119,7 +121,7 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 		return 0, errors.BadRequest("compression requires a storage")
 	}
 
-	c, ok := this.state.Connector(connector)
+	c, ok := this.apis.state.Connector(connector)
 	if !ok {
 		return 0, errors.Unprocessable(ConnectorNotExists, "connector %d does not exist", connector)
 	}
@@ -209,15 +211,13 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 		}
 	}
 
-	ctx := context.Background()
-
 	// Validate the settings.
 	if c.HasSettings {
 		var clientSecret string
 		if c.OAuth != nil {
 			clientSecret = c.OAuth.ClientSecret
 		}
-		connector := &Connector{connector: c, http: this.http}
+		connector := &Connector{apis: this.apis, connector: c}
 		connectionUI, err := connector.openUI(ctx, role, n.Resource.Code, clientSecret, n.Resource.AccessToken)
 		if err != nil {
 			return 0, err
@@ -255,7 +255,7 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 		}
 	}
 
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		if n.Resource.Code != "" {
 			if n.Resource.ID == 0 {
 				// Insert a new resource.
@@ -334,7 +334,9 @@ func (this *Workspace) AddConnection(role ConnectionRole, connector int, setting
 // and StreamNotExists respectively.
 // If there are already too many listeners, it returns an
 // errors.UnprocessableError error with code TooManyListeners.
-func (this *Workspace) AddEventListener(size, source, server, stream int) (string, error) {
+func (this *Workspace) AddEventListener(ctx context.Context, size, source, server, stream int) (string, error) {
+
+	this.apis.mustBeOpen()
 
 	if size < 1 || size > maxEventsListenedTo {
 		return "", errors.BadRequest("size %d is not valid", size)
@@ -352,7 +354,7 @@ func (this *Workspace) AddEventListener(size, source, server, stream int) (strin
 	if source > 0 || server > 0 || stream > 0 {
 
 		var sourceExist, serverExist, streamExist bool
-		err := this.db.QueryScan(context.Background(), "SELECT id, type , role FROM connections\n"+
+		err := this.apis.db.QueryScan(ctx, "SELECT id, type , role FROM connections\n"+
 			"WHERE id IN ($1, $2, $3) AND workspace = $4", source, server, stream, this.workspace.ID,
 			func(rows *postgres.Rows) error {
 				var id int
@@ -400,7 +402,7 @@ func (this *Workspace) AddEventListener(size, source, server, stream int) (strin
 
 	}
 
-	id, err := this.eventObserver.AddListener(size, source, server, stream)
+	id, err := this.apis.events.Observer().AddListener(size, source, server, stream)
 	if err != nil {
 		if err == events.ErrTooManyListeners {
 			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", events.MaxEventListeners)
@@ -417,7 +419,8 @@ func (this *Workspace) AddEventListener(size, source, server, stream int) (strin
 // It returns an errors.UnprocessableError error with code
 //
 //   - FetchSchemaFailed, if an error occurred fetching the schema.
-func (this *Workspace) Connection(id int) (*Connection, error) {
+func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, error) {
+	this.apis.mustBeOpen()
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("connection identifier %d is not valid", id)
 	}
@@ -428,10 +431,9 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 	conn := c.Connector()
 
 	connection := Connection{
-		db:           this.db,
+		apis:         this.apis,
 		store:        this.store,
 		connection:   c,
-		http:         this.http,
 		ID:           c.ID,
 		Name:         c.Name,
 		Type:         ConnectorType(conn.Type),
@@ -447,7 +449,7 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 		connection.Storage = s.ID
 	}
 	// Set the action types.
-	ts, err := connection.actionTypes()
+	ts, err := connection.actionTypes(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -457,22 +459,22 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 	a := make([]Action, len(actions))
 	connection.Actions = &a
 	for i, a := range actions {
-		(*connection.Actions)[i].fromState(this.db, this.store, this.http, a)
+		(*connection.Actions)[i].fromState(this.apis, this.store, a)
 	}
 	return &connection, nil
 }
 
 // Connections returns the connections of the workspace.
 func (this *Workspace) Connections() []*Connection {
+	this.apis.mustBeOpen()
 	connections := this.workspace.Connections()
 	infos := make([]*Connection, len(connections))
 	for i, c := range connections {
 		conn := c.Connector()
 		connection := Connection{
-			db:           this.db,
+			apis:         this.apis,
 			store:        this.store,
 			connection:   c,
-			http:         this.http,
 			ID:           c.ID,
 			Name:         c.Name,
 			Type:         ConnectorType(conn.Type),
@@ -504,13 +506,13 @@ func (this *Workspace) Connections() []*Connection {
 //     database.
 //   - InvalidSettings, if the settings are not valid.
 //   - ConnectionFailed, if the connection fails.
-func (this *Workspace) ConnectRedis(settings []byte) error {
+func (this *Workspace) ConnectRedis(ctx context.Context, settings []byte) error {
+	this.apis.mustBeOpen()
 	ws := this.workspace
 	if ws.Redis != nil {
 		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a Redis database", ws.ID)
 	}
-	ctx := context.Background()
-	settings, err := this.account.datastore.PingRedis(ctx, settings)
+	settings, err := this.account.apis.datastore.PingRedis(ctx, settings)
 	if err != nil {
 		switch err.(type) {
 		case datastore.InvalidSettings:
@@ -526,7 +528,7 @@ func (this *Workspace) ConnectRedis(settings []byte) error {
 			Settings: settings,
 		},
 	}
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET redis_settings = $1 WHERE id = $2 AND redis_settings = ''",
 			string(n.Redis.Settings), n.Workspace)
 		if err != nil {
@@ -556,13 +558,13 @@ func (this *Workspace) ConnectRedis(settings []byte) error {
 //     store.
 //   - InvalidSettings, if the settings are not valid.
 //   - ConnectionFailed, if the connection fails.
-func (this *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) error {
+func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, settings []byte) error {
+	this.apis.mustBeOpen()
 	ws := this.workspace
 	if ws.Warehouse != nil {
 		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data store", ws.ID)
 	}
-	ctx := context.Background()
-	settings, err := this.account.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
+	settings, err := this.account.apis.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
 	if err != nil {
 		switch err.(type) {
 		case datastore.InvalidSettings:
@@ -579,7 +581,7 @@ func (this *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) erro
 			Settings: settings,
 		},
 	}
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = $1, warehouse_settings = $2 WHERE id = $3"+
 			" AND warehouse_type IS NULL",
 			n.Warehouse.Type, string(n.Warehouse.Settings), n.Workspace)
@@ -604,12 +606,12 @@ func (this *Workspace) ConnectWarehouse(typ WarehouseType, settings []byte) erro
 // Delete deletes the workspace with all its connections.
 //
 // It returns an errors.NotFound error if the workspace does not exist anymore.
-func (this *Workspace) Delete() error {
+func (this *Workspace) Delete(ctx context.Context) error {
+	this.apis.mustBeOpen()
 	n := state.DeleteWorkspace{
 		ID: this.workspace.ID,
 	}
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1", n.ID)
 		if err != nil {
 			return err
@@ -627,7 +629,8 @@ func (this *Workspace) Delete() error {
 // If the workspace does not exist anymore, it returns an errors.NotFoundError
 // error. If the workspace is not connected to a Redis database, it returns
 // an errors.UnprocessableError error with code NotConnected.
-func (this *Workspace) DisconnectRedis() error {
+func (this *Workspace) DisconnectRedis(ctx context.Context) error {
+	this.apis.mustBeOpen()
 	ws := this.workspace
 	if ws.Redis == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a Redis database", ws.ID)
@@ -636,8 +639,7 @@ func (this *Workspace) DisconnectRedis() error {
 		Workspace: ws.ID,
 		Redis:     nil,
 	}
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET redis_settings = '' WHERE id = $1 AND redis_settings != ''",
 			n.Workspace)
 		if err != nil {
@@ -663,7 +665,8 @@ func (this *Workspace) DisconnectRedis() error {
 // If the workspace does not exist anymore, it returns an errors.NotFoundError
 // error. If the workspace is not connected to a data store, it returns an
 // errors.UnprocessableError error with code NotConnected.
-func (this *Workspace) DisconnectWarehouse() error {
+func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
+	this.apis.mustBeOpen()
 	ws := this.workspace
 	if ws.Warehouse == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", ws.ID)
@@ -672,8 +675,7 @@ func (this *Workspace) DisconnectWarehouse() error {
 		Workspace: ws.ID,
 		Warehouse: nil,
 	}
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var typ *state.WarehouseType
 		err := tx.QueryRow(ctx, "SELECT warehouse_type FROM workspaces WHERE id = $1", n.Workspace).Scan(&typ)
 		if err != nil {
@@ -700,11 +702,12 @@ func (this *Workspace) DisconnectWarehouse() error {
 // If the workspace does not exist, it returns an errors.NotFoundError error.
 // It returns an errors.UnprocessableError error with code NotConnected, if the
 // workspace is not connected to a data warehouse.
-func (this *Workspace) InitWarehouse() error {
+func (this *Workspace) InitWarehouse(ctx context.Context) error {
+	this.apis.mustBeOpen()
 	if this.store == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
 	}
-	return this.store.InitWarehouse(context.Background())
+	return this.store.InitWarehouse(ctx)
 }
 
 // ListenedEvents returns the events listen to by the specified listener and
@@ -712,7 +715,8 @@ func (this *Workspace) InitWarehouse() error {
 //
 // It returns an errors.NotFoundError error, if the listener does not exist.
 func (this *Workspace) ListenedEvents(listener string) ([]json.RawMessage, int, error) {
-	listenedEvents, discarded, err := this.eventObserver.Events(listener)
+	this.apis.mustBeOpen()
+	listenedEvents, discarded, err := this.apis.events.Observer().Events(listener)
 	if err != nil {
 		if err == events.ErrEventListenerNotFound {
 			return nil, 0, errors.NotFound("event listener %q does not exist", listener)
@@ -740,7 +744,9 @@ type authorizedResource struct {
 // It returns an errors.NotFound error if the workspace does not exist anymore.
 // It returns an errors.UnprocessableError error with code ConnectorNotExists if
 // the connector does not exist.
-func (this *Workspace) OAuthToken(authorizationCode, redirectURI string, connector int) (string, error) {
+func (this *Workspace) OAuthToken(ctx context.Context, authorizationCode, redirectURI string, connector int) (string, error) {
+
+	this.apis.mustBeOpen()
 
 	if authorizationCode == "" {
 		return "", errors.BadRequest("authorization code is empty")
@@ -749,7 +755,7 @@ func (this *Workspace) OAuthToken(authorizationCode, redirectURI string, connect
 		return "", errors.BadRequest("connector identifier %d is not valid", connector)
 	}
 
-	c, ok := this.state.Connector(connector)
+	c, ok := this.apis.state.Connector(connector)
 	if !ok {
 		return "", errors.Unprocessable(ConnectorNotExists, "connector %d does not exist", connector)
 	}
@@ -757,13 +763,13 @@ func (this *Workspace) OAuthToken(authorizationCode, redirectURI string, connect
 		return "", errors.BadRequest("connector %d does not support OAuth", connector)
 	}
 
-	accessToken, refreshToken, expiresIn, err := this.http.GrantAuthorization(context.Background(), c.OAuth, authorizationCode, redirectURI)
+	accessToken, refreshToken, expiresIn, err := this.apis.http.GrantAuthorization(ctx, c.OAuth, authorizationCode, redirectURI)
 	if err != nil {
 		return "", err
 	}
 
-	connection, err := _connector.RegisteredApp(c.Name).Open(context.Background(), &_connector.AppConfig{
-		HTTPClient: this.http.Client(c.OAuth.ClientSecret, accessToken),
+	connection, err := _connector.RegisteredApp(c.Name).Open(ctx, &_connector.AppConfig{
+		HTTPClient: this.apis.http.Client(c.OAuth.ClientSecret, accessToken),
 		Region:     _connector.PrivacyRegion(this.workspace.PrivacyRegion),
 	})
 	if err != nil {
@@ -795,13 +801,15 @@ func (this *Workspace) OAuthToken(authorizationCode, redirectURI string, connect
 //   - NotConnected, if the workspace is not connected to a data store.
 //   - WarehouseFailed, if the connection to the data store failed.
 //   - InvalidSchemaTable, if a table of a schema is not valid.
-func (this *Workspace) ReloadSchemas() error {
+func (this *Workspace) ReloadSchemas(ctx context.Context) error {
+
+	this.apis.mustBeOpen()
 
 	if this.store == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", this.workspace.ID)
 	}
 
-	usersSchema, groupsSchema, err := this.store.Schemas(context.Background())
+	usersSchema, groupsSchema, err := this.store.Schemas(ctx)
 	if err != nil {
 		switch err := err.(type) {
 		case datastore.RepeatedPropertyNameError:
@@ -866,8 +874,7 @@ func (this *Workspace) ReloadSchemas() error {
 		return fmt.Errorf("cannot marshal schemas for workspace %d: %s", this.workspace.ID, err)
 	}
 
-	ctx := context.Background()
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var typ *state.WarehouseType
 		var oldRawSchemas []byte
 		err := tx.QueryRow(ctx, "SELECT warehouse_type, schemas FROM workspaces WHERE id = $1", n.Workspace).Scan(&typ, &oldRawSchemas)
@@ -908,7 +915,8 @@ func (this *Workspace) ReloadSchemas() error {
 // RemoveEventListener removes the given event listener from the workspace. It
 // does nothing if the listener does not exist.
 func (this *Workspace) RemoveEventListener(listener string) {
-	this.eventObserver.RemoveListener(listener)
+	this.apis.mustBeOpen()
+	this.apis.events.Observer().RemoveListener(listener)
 }
 
 // Rename renames the workspace with the given new name.
@@ -916,7 +924,8 @@ func (this *Workspace) RemoveEventListener(listener string) {
 //
 // It returns an errors.NotFoundError error if the workspace does not exist
 // anymore.
-func (this *Workspace) Rename(name string) error {
+func (this *Workspace) Rename(ctx context.Context, name string) error {
+	this.apis.mustBeOpen()
 	if name == "" || utf8.RuneCountInString(name) > 100 {
 		return errors.BadRequest("name %q is not valid", name)
 	}
@@ -927,8 +936,7 @@ func (this *Workspace) Rename(name string) error {
 		Workspace: this.workspace.ID,
 		Name:      name,
 	}
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1 WHERE id = $2", n.Name, n.Workspace)
 		if err != nil {
 			return err
@@ -944,6 +952,7 @@ func (this *Workspace) Rename(name string) error {
 // Schema returns the schema, with the given name, of the workspace. If the
 // schema does not exist, it returns an invalid schema.
 func (this *Workspace) Schema(name string) types.Type {
+	this.apis.mustBeOpen()
 	ws := this.workspace
 	schema, ok := ws.Schemas[name]
 	if !ok {
@@ -953,7 +962,8 @@ func (this *Workspace) Schema(name string) types.Type {
 }
 
 // SetAnonymousIdentifiers sets the anonymous identifiers of the workspace.
-func (this *Workspace) SetAnonymousIdentifiers(ids AnonymousIdentifiers) error {
+func (this *Workspace) SetAnonymousIdentifiers(ctx context.Context, ids AnonymousIdentifiers) error {
+	this.apis.mustBeOpen()
 	for i, id := range ids.Priority {
 		if !types.IsValidPropertyPath(id) {
 			return errors.BadRequest("anonymous identifier %q is not a valid property path", id)
@@ -987,8 +997,7 @@ func (this *Workspace) SetAnonymousIdentifiers(ids AnonymousIdentifiers) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		_, err := tx.Exec(ctx, "UPDATE workspaces\n"+
 			"SET anonymous_identifiers_priority = $1, anonymous_identifiers_mapping = $2\n"+
 			"WHERE id = $3", n.AnonymousIdentifiers.Priority, mapping, n.Workspace)
@@ -1001,7 +1010,8 @@ func (this *Workspace) SetAnonymousIdentifiers(ids AnonymousIdentifiers) error {
 }
 
 // SetPrivacyRegion sets the privacy region of the workspace.
-func (this *Workspace) SetPrivacyRegion(region PrivacyRegion) error {
+func (this *Workspace) SetPrivacyRegion(ctx context.Context, region PrivacyRegion) error {
+	this.apis.mustBeOpen()
 	switch region {
 	case PrivacyRegionNotSpecified,
 		PrivacyRegionEurope:
@@ -1013,8 +1023,7 @@ func (this *Workspace) SetPrivacyRegion(region PrivacyRegion) error {
 		Workspace:     ws.ID,
 		PrivacyRegion: state.PrivacyRegion(region),
 	}
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		_, err := tx.Exec(ctx, "UPDATE workspaces SET privacy_region = $1 WHERE id = $2",
 			n.PrivacyRegion, n.Workspace)
 		if err != nil {
@@ -1032,7 +1041,8 @@ func (this *Workspace) SetPrivacyRegion(region PrivacyRegion) error {
 //   - NotConnected, if the workspace is not connected to a data store.
 //   - InvalidSettings, if the settings are not valid.
 //   - ConnectionFailed, if the connection fails.
-func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) error {
+func (this *Workspace) SetWarehouseSettings(ctx context.Context, typ WarehouseType, settings []byte) error {
+	this.apis.mustBeOpen()
 	ws := this.workspace
 	if ws.Warehouse == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", ws.ID)
@@ -1046,7 +1056,7 @@ func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) 
 	if err != nil {
 		return errors.Unprocessable(InvalidSettings, "settings are not valid: %w", err)
 	}
-	err = warehouse.Ping(context.Background())
+	err = warehouse.Ping(ctx)
 	if err != nil {
 		return errors.Unprocessable(ConnectionFailed, "cannot connect to the data store: %w", err)
 	}
@@ -1057,8 +1067,7 @@ func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) 
 			Settings: warehouse.Settings(),
 		},
 	}
-	ctx := context.Background()
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_settings = $1 WHERE id = $2 AND warehouse_type = $3",
 			string(n.Warehouse.Settings), n.Workspace, n.Warehouse.Type)
 		if err != nil {
@@ -1085,9 +1094,9 @@ func (this *Workspace) SetWarehouseSettings(typ WarehouseType, settings []byte) 
 // It returns an errors.UnprocessableError error with code
 //   - InvalidSettings, if the settings are not valid.
 //   - ConnectionFailed, if the connection fails.
-func (this *Workspace) PingRedis(settings []byte) error {
-	ctx := context.Background()
-	_, err := this.account.datastore.PingRedis(ctx, settings)
+func (this *Workspace) PingRedis(ctx context.Context, settings []byte) error {
+	this.apis.mustBeOpen()
+	_, err := this.account.apis.datastore.PingRedis(ctx, settings)
 	if err != nil {
 		switch err.(type) {
 		case datastore.InvalidSettings:
@@ -1105,9 +1114,9 @@ func (this *Workspace) PingRedis(settings []byte) error {
 // It returns an errors.UnprocessableError error with code
 //   - InvalidSettings, if the settings are not valid.
 //   - ConnectionFailed, if the connection fails.
-func (this *Workspace) PingWarehouse(typ WarehouseType, settings []byte) error {
-	ctx := context.Background()
-	_, err := this.account.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
+func (this *Workspace) PingWarehouse(ctx context.Context, typ WarehouseType, settings []byte) error {
+	this.apis.mustBeOpen()
+	_, err := this.account.apis.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
 	if err != nil {
 		switch err.(type) {
 		case datastore.InvalidSettings:
@@ -1122,10 +1131,12 @@ func (this *Workspace) PingWarehouse(typ WarehouseType, settings []byte) error {
 // User returns the user with identifier id of the workspace. If the user does
 // not exist, the error is deferred until methods of *User are called.
 func (this *Workspace) User(id int) (*User, error) {
+	this.apis.mustBeOpen()
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("user identifier %d is not valid", id)
 	}
 	return &User{
+		apis:      this.apis,
 		workspace: this.workspace,
 		store:     this.store,
 		id:        id,
@@ -1148,7 +1159,9 @@ func (this *Workspace) User(id int) (*User, error) {
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
 //   - PropertyNotExist, if a property does not exist.
 //   - WarehouseFailed, if the data store failed.
-func (this *Workspace) Users(properties []string, order string, first, limit int) (types.Type, [][]any, error) {
+func (this *Workspace) Users(ctx context.Context, properties []string, order string, first, limit int) (types.Type, [][]any, error) {
+
+	this.apis.mustBeOpen()
 
 	ws := this.workspace
 
@@ -1212,7 +1225,7 @@ func (this *Workspace) Users(properties []string, order string, first, limit int
 	schema := types.Object(requestedProperties)
 
 	// Read the users.
-	users, err := this.store.UsersSlice(context.Background(), requestedProperties, nil, orderProperty, first, limit)
+	users, err := this.store.UsersSlice(ctx, requestedProperties, nil, orderProperty, first, limit)
 	if err != nil {
 		if err2, ok := err.(*datastore.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.

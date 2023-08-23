@@ -27,7 +27,6 @@ import (
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/events"
-	"chichi/apis/httpclient"
 	"chichi/apis/normalization"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
@@ -71,10 +70,9 @@ var (
 
 // Connection represents a connection.
 type Connection struct {
-	db           *postgres.DB
+	apis         *APIs
 	connection   *state.Connection
 	store        *datastore.Store
-	http         *httpclient.HTTP
 	ID           int
 	Name         string
 	Type         ConnectorType
@@ -94,6 +92,7 @@ type Connection struct {
 // Action returns the action with identifier id of the connection.
 // It returns an errors.NotFound error if the action does not exist.
 func (this *Connection) Action(ctx context.Context, id int) (*Action, error) {
+	this.apis.mustBeOpen()
 	ctx, span := telemetry.TraceSpan(ctx, "Connection.Action", "id", id)
 	defer span.End()
 	if id < 1 || id > maxInt32 {
@@ -104,7 +103,7 @@ func (this *Connection) Action(ctx context.Context, id int) (*Action, error) {
 		return nil, errors.NotFound("action %d does not exist", id)
 	}
 	var action Action
-	action.fromState(this.db, this.store, this.http, a)
+	action.fromState(this.apis, this.store, a)
 	return &action, nil
 }
 
@@ -115,6 +114,8 @@ type ActionSchemas struct {
 // ActionSchemas returns the input and the output schemas of an action with the
 // given target and event type.
 func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, eventType string) (*ActionSchemas, error) {
+
+	this.apis.mustBeOpen()
 
 	ctx, span := telemetry.TraceSpan(ctx, "Connection.ActionSchemas", "target", target, "eventType", eventType)
 	defer span.End()
@@ -147,7 +148,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 		switch target {
 		case UsersTarget:
 			var err error
-			appSchema, err := this.fetchAppSchema(state.UsersTarget, "")
+			appSchema, err := this.fetchAppSchema(ctx, state.UsersTarget, "")
 			if err != nil {
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
@@ -164,7 +165,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 			}
 		case GroupsTarget:
 			var err error
-			appSchema, err := this.fetchAppSchema(state.GroupsTarget, "")
+			appSchema, err := this.fetchAppSchema(ctx, state.GroupsTarget, "")
 			if err != nil {
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
@@ -182,7 +183,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 			if eventType == "" {
 				return nil, errors.NotFound("an event type is required")
 			}
-			eventTypes, err := this.fetchEventTypes()
+			eventTypes, err := this.fetchEventTypes(ctx)
 			if err != nil {
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
@@ -196,7 +197,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 			if et == nil {
 				return nil, errors.Unprocessable(EventTypeNotExists, "event type %q not found", eventType)
 			}
-			etSchema, err := this.fetchAppSchema(state.EventsTarget, eventType)
+			etSchema, err := this.fetchAppSchema(ctx, state.EventsTarget, eventType)
 			if err != nil {
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
@@ -298,6 +299,8 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore.
 func (this *Connection) AddAction(ctx context.Context, target ActionTarget, eventType string, action ActionToSet) (int, error) {
+
+	this.apis.mustBeOpen()
 
 	ctx, span := telemetry.TraceSpan(ctx, "Connection.AddAction", "target", target, "eventType", eventType)
 	defer span.End()
@@ -412,7 +415,7 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 	}
 
 	// Add the action.
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		switch n.Target {
 		case state.EventsTarget:
 			switch typ := c.Connector().Type; typ {
@@ -470,7 +473,8 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 //
 // If path is not valid for the storage connector, it returns an
 // errors.UnprocessableError with code InvalidPath.
-func (this *Connection) CompletePath(path string) (string, error) {
+func (this *Connection) CompletePath(ctx context.Context, path string) (string, error) {
+	this.apis.mustBeOpen()
 	if path == "" {
 		return "", errors.BadRequest("path is empty")
 	}
@@ -485,7 +489,7 @@ func (this *Connection) CompletePath(path string) (string, error) {
 	if connector.Type != state.StorageType {
 		return "", errors.BadRequest("connection %d is not a storage connection", c.ID)
 	}
-	storage, err := this.openStorage(context.Background())
+	storage, err := this.openStorage(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -500,13 +504,13 @@ func (this *Connection) CompletePath(path string) (string, error) {
 //
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore.
-func (this *Connection) Delete() error {
+func (this *Connection) Delete(ctx context.Context) error {
+	this.apis.mustBeOpen()
 	n := state.DeleteConnection{
 		ID: this.connection.ID,
 	}
 	connector := this.connection.Connector()
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "DELETE FROM connections WHERE id = $1", n.ID)
 		if err != nil {
 			return err
@@ -539,7 +543,9 @@ func (this *Connection) Delete() error {
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If the execution of the query fails, it returns an errors.UnprocessableError
 // with code QueryExecutionFailed.
-func (this *Connection) ExecQuery(query string, limit int) ([][]string, types.Type, error) {
+func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) ([][]string, types.Type, error) {
+
+	this.apis.mustBeOpen()
 
 	if !utf8.ValidString(query) {
 		return nil, types.Type{}, errors.BadRequest("query is not UTF-8 encoded")
@@ -566,7 +572,7 @@ func (this *Connection) ExecQuery(query string, limit int) ([][]string, types.Ty
 	if err != nil {
 		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 	}
-	database, err := this.openDatabase(context.Background())
+	database, err := this.openDatabase(ctx)
 	if err != nil {
 		return nil, types.Type{}, err
 	}
@@ -631,7 +637,8 @@ type Execution struct {
 // Executions returns a list of Execution describing all executions of the
 // actions of the connection.
 // The connection must be an app, database, or file connection.
-func (this *Connection) Executions() ([]*Execution, error) {
+func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
+	this.apis.mustBeOpen()
 	c := this.connection
 	connector := c.Connector()
 	switch connector.Type {
@@ -641,7 +648,7 @@ func (this *Connection) Executions() ([]*Execution, error) {
 			c.ID, strings.ToLower(connector.Type.String()))
 	}
 	executions := []*Execution{}
-	err := this.db.QueryScan(context.Background(),
+	err := this.apis.db.QueryScan(ctx,
 		"SELECT e.id, e.action, e.start_time, e.end_time, e.error\n"+
 			"FROM actions_executions e\n"+
 			"INNER JOIN actions a ON a.id = e.action\n"+
@@ -669,7 +676,8 @@ func (this *Connection) Executions() ([]*Execution, error) {
 // If the server does not exist, it returns an errors.NotFoundError error.
 // If the server has already too many keys, it returns an
 // errors.UnprocessableError error with code TooManyKeys.
-func (this *Connection) GenerateKey() (string, error) {
+func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
+	this.apis.mustBeOpen()
 	c := this.connection
 	connector := c.Connector()
 	if connector.Type != state.ServerType {
@@ -687,8 +695,7 @@ func (this *Connection) GenerateKey() (string, error) {
 		Value:        value,
 		CreationTime: time.Now().UTC(),
 	}
-	ctx := context.Background()
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var count int
 		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
 		if err != nil {
@@ -720,6 +727,7 @@ func (this *Connection) GenerateKey() (string, error) {
 //
 // If the server does not exist, it returns an errors.NotFoundError error.
 func (this *Connection) Keys() ([]string, error) {
+	this.apis.mustBeOpen()
 	c := this.connection
 	if c.Connector().Type != state.ServerType {
 		return nil, errors.NotFound("connection %d is not a server", c.ID)
@@ -741,7 +749,9 @@ func (this *Connection) Keys() ([]string, error) {
 //
 //   - NoStorage, if the connection does not have a storage.
 //   - ReadFileFailed, if an error occurred reading the file.
-func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.Type, error) {
+func (this *Connection) Records(ctx context.Context, path, sheet string, limit int) ([][]any, types.Type, error) {
+
+	this.apis.mustBeOpen()
 
 	c := this.connection
 	connector := c.Connector()
@@ -786,7 +796,6 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 	}
 
 	// Connect to the file connector.
-	ctx := context.Background()
 	file, err := this.openFile(ctx)
 	if err != nil {
 		return nil, types.Type{}, err
@@ -795,7 +804,7 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 	// Open the file.
 	var r io.ReadCloser
 	{
-		storage, err := this.openStorage(context.Background())
+		storage, err := this.openStorage(ctx)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -825,7 +834,8 @@ func (this *Connection) Records(path, sheet string, limit int) ([][]any, types.T
 //
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore.
-func (this *Connection) Rename(name string) error {
+func (this *Connection) Rename(ctx context.Context, name string) error {
+	this.apis.mustBeOpen()
 	if name == "" || utf8.RuneCountInString(name) > 100 {
 		return errors.BadRequest("name %q is not valid", name)
 	}
@@ -836,8 +846,7 @@ func (this *Connection) Rename(name string) error {
 		Connection: this.connection.ID,
 		Name:       name,
 	}
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1 WHERE id = $2", n.Name, n.Connection)
 		if err != nil {
 			return err
@@ -856,7 +865,8 @@ func (this *Connection) Rename(name string) error {
 // If the key does not exist, it returns an errors.NotFoundError error.
 // If the key is the unique key of the server, it returns an
 // errors.UnprocessableError error with code UniqueKey.
-func (this *Connection) RevokeKey(key string) error {
+func (this *Connection) RevokeKey(ctx context.Context, key string) error {
+	this.apis.mustBeOpen()
 	if key == "" {
 		return errors.BadRequest("key is empty")
 	}
@@ -875,8 +885,7 @@ func (this *Connection) RevokeKey(key string) error {
 		Connection: c.ID,
 		Value:      key,
 	}
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		var count int
 		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
 		if err != nil {
@@ -899,7 +908,8 @@ func (this *Connection) RevokeKey(key string) error {
 }
 
 // SetStatus sets the status of the connection.
-func (this *Connection) SetStatus(enabled bool) error {
+func (this *Connection) SetStatus(ctx context.Context, enabled bool) error {
+	this.apis.mustBeOpen()
 	if enabled == this.Enabled {
 		return nil
 	}
@@ -907,8 +917,7 @@ func (this *Connection) SetStatus(enabled bool) error {
 		Connection: this.connection.ID,
 		Enabled:    enabled,
 	}
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE connections SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.Connection)
 		if err != nil {
 			return err
@@ -927,12 +936,12 @@ func (this *Connection) SetStatus(enabled bool) error {
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If the event does not exist, it returns an errors.UnprocessableError error
 // with code EventNotExists.
-func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
+func (this *Connection) ServeUI(ctx context.Context, event string, values []byte) ([]byte, error) {
+
+	this.apis.mustBeOpen()
 
 	c := this.connection
 	connector := c.Connector()
-
-	ctx := context.Background()
 
 	var err error
 	var connection any
@@ -991,7 +1000,9 @@ func (this *Connection) ServeUI(event string, values []byte) ([]byte, error) {
 // error.
 // If the storage does not exist, it returns an errors.UnprocessableError error
 // with code StorageNotExists.
-func (this *Connection) SetStorage(storage int, compression Compression) error {
+func (this *Connection) SetStorage(ctx context.Context, storage int, compression Compression) error {
+
+	this.apis.mustBeOpen()
 
 	if storage < 0 || storage > maxInt32 {
 		return errors.BadRequest("storage identifier %d is not valid", storage)
@@ -1035,9 +1046,7 @@ func (this *Connection) SetStorage(storage int, compression Compression) error {
 		Compression: state.Compression(compression),
 	}
 
-	ctx := context.Background()
-
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE connections SET storage = NULLIF($1, 0), compression = $2\n"+
 			"WHERE id = $3", n.Storage, n.Compression, n.Connection)
 		if err != nil {
@@ -1068,7 +1077,8 @@ func (this *Connection) SetStorage(storage int, compression Compression) error {
 //
 //   - NoStorage, if the file connection does not have a storage.
 //   - ReadFileFailed, if an error occurred reading the file.
-func (this *Connection) Sheets(path string) ([]string, error) {
+func (this *Connection) Sheets(ctx context.Context, path string) ([]string, error) {
+	this.apis.mustBeOpen()
 	c := this.connection
 	connector := c.Connector()
 	if connector.Type != state.FileType {
@@ -1080,7 +1090,6 @@ func (this *Connection) Sheets(path string) ([]string, error) {
 	if !utf8.ValidString(path) {
 		return nil, errors.BadRequest("path is not UTF-8 encoded")
 	}
-	ctx := context.Background()
 	f, err := this.openFile(ctx)
 	if err != nil {
 		return nil, err
@@ -1118,7 +1127,8 @@ type ConnectionsStats struct {
 //
 // It returns an errors.NotFound error if the connection does not exist
 // anymore.
-func (this *Connection) Stats() (*ConnectionsStats, error) {
+func (this *Connection) Stats(ctx context.Context) (*ConnectionsStats, error) {
+	this.apis.mustBeOpen()
 	now := time.Now().UTC()
 	toSlot := statsTimeSlot(now)
 	fromSlot := toSlot - 23
@@ -1126,7 +1136,7 @@ func (this *Connection) Stats() (*ConnectionsStats, error) {
 		Users: [24]int{},
 	}
 	query := "SELECT time_slot, users\nFROM connections_stats\nWHERE connection = $1 AND time_slot BETWEEN $2 AND $3"
-	err := this.db.QueryScan(context.Background(), query, this.connection.ID, fromSlot, toSlot, func(rows *postgres.Rows) error {
+	err := this.apis.db.QueryScan(ctx, query, this.connection.ID, fromSlot, toSlot, func(rows *postgres.Rows) error {
 		var err error
 		var slot, users int
 		for rows.Next() {
@@ -1150,7 +1160,8 @@ func (this *Connection) Stats() (*ConnectionsStats, error) {
 // It returns an error.Unprocessable error with code InvalidTable if the table
 // does not contain an unsigned 32-bit column named "id" or if there are no
 // other columns apart from "id".
-func (this *Connection) TableSchema(table string) (types.Type, error) {
+func (this *Connection) TableSchema(ctx context.Context, table string) (types.Type, error) {
+	this.apis.mustBeOpen()
 	c := this.connection
 	connector := c.Connector()
 	if connector.Type != state.DatabaseType {
@@ -1162,7 +1173,7 @@ func (this *Connection) TableSchema(table string) (types.Type, error) {
 	if table == "" || utf8.RuneCountInString(table) > 1024 {
 		return types.Type{}, errors.BadRequest("table name is not valid")
 	}
-	database, err := this.openDatabase(context.Background())
+	database, err := this.openDatabase(ctx)
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -1216,7 +1227,7 @@ type ActionType struct {
 // It returns an errors.UnprocessableError error with code
 //
 //   - FetchSchemaFailed, if an error occurred fetching the schema.
-func (this *Connection) actionTypes() ([]ActionType, error) {
+func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 	var actionTypes []ActionType
 	c := this.connection
 	connector := c.Connector()
@@ -1331,7 +1342,7 @@ func (this *Connection) actionTypes() ([]ActionType, error) {
 				actionTypes = append(actionTypes, at)
 			}
 		case state.AppType:
-			eventTypes, err := this.fetchEventTypes()
+			eventTypes, err := this.fetchEventTypes(ctx)
 			if err != nil {
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
@@ -1366,7 +1377,7 @@ func (this *Connection) openApp(ctx context.Context) (_connector.AppConnection, 
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(ctx),
 		Resource:    resourceCode,
-		HTTPClient:  this.http.ConnectionClient(c.ID),
+		HTTPClient:  this.apis.http.ConnectionClient(c.ID),
 		Region:      _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
 		WebhookURL:  webhookURL(c, resourceID),
 	})
@@ -1822,9 +1833,8 @@ func (role *ConnectionRole) UnmarshalJSON(data []byte) error {
 
 // fetchAppSchema fetches the schema of an app connection for the given target
 // and eventType.
-func (this *Connection) fetchAppSchema(target state.ActionTarget, eventType string) (types.Type, error) {
+func (this *Connection) fetchAppSchema(ctx context.Context, target state.ActionTarget, eventType string) (types.Type, error) {
 
-	ctx := context.Background()
 	app, err := this.openApp(ctx)
 	if err != nil {
 		return types.Type{}, fmt.Errorf("cannot connect to the connector: %s", err)
@@ -1882,8 +1892,8 @@ func (this *Connection) fetchAppSchema(target state.ActionTarget, eventType stri
 }
 
 // fetchEventTypes fetches the event types for the connection.
-func (this *Connection) fetchEventTypes() ([]*_connector.EventType, error) {
-	app, err := this.openAppEvents(context.Background())
+func (this *Connection) fetchEventTypes(ctx context.Context) ([]*_connector.EventType, error) {
+	app, err := this.openAppEvents(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to the connector: %s", err)
 	}
@@ -1894,14 +1904,14 @@ func (this *Connection) fetchEventTypes() ([]*_connector.EventType, error) {
 // settings for the connection.
 func (this *Connection) setSettingsFunc(ctx context.Context) _connector.SetSettingsFunc {
 	return func(settings []byte) error {
-		return setSettings(ctx, this.db, this.connection.ID, settings)
+		return setSettings(ctx, this.apis.db, this.connection.ID, settings)
 	}
 }
 
 // updateConnectionsStats updates the statistics about the connection.
 func (this *Connection) updateConnectionsStats(ctx context.Context) error {
 	connection := this.connection.ID
-	_, err := this.db.Exec(ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, users)\n"+
+	_, err := this.apis.db.Exec(ctx, "INSERT INTO connections_stats AS cs (connection, time_slot, users)\n"+
 		"VALUES ($1, $2, 1)\n"+
 		"ON CONFLICT (connection, time_slot) DO UPDATE SET users = cs.users + 1",
 		connection, statsTimeSlot(time.Now()))

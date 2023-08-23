@@ -15,7 +15,6 @@ import (
 	"io"
 
 	"chichi/apis/errors"
-	"chichi/apis/httpclient"
 	"chichi/apis/state"
 	_connector "chichi/connector"
 	"chichi/connector/ui"
@@ -25,8 +24,8 @@ import (
 
 // Connector represents a connector.
 type Connector struct {
+	apis                   *APIs
 	connector              *state.Connector
-	http                   *httpclient.HTTP
 	ID                     int
 	Name                   string
 	SourceDescription      string
@@ -148,10 +147,11 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 // provider. This page requests explicit permissions for the required scopes.
 // After that, the provider redirects to the URL specified by redirectURI.
 func (this *Connector) AuthCodeURL(redirectURI string) (string, error) {
+	this.apis.mustBeOpen()
 	if this.connector.OAuth == nil {
 		return "", errors.BadRequest("connector %d does not support OAuth", this.connector.ID)
 	}
-	return this.http.AuthCodeURL(this.connector.OAuth, redirectURI)
+	return this.apis.http.AuthCodeURL(this.connector.OAuth, redirectURI)
 }
 
 // ServeUI serves the user interface for the connector with the given role.
@@ -161,7 +161,9 @@ func (this *Connector) AuthCodeURL(redirectURI string) (string, error) {
 //
 // If the event does not exist, it returns an errors.UnprocessableError error
 // with code EventNotExists.
-func (this *Connector) ServeUI(event string, values []byte, role ConnectionRole, oAuth string) ([]byte, error) {
+func (this *Connector) ServeUI(ctx context.Context, event string, values []byte, role ConnectionRole, oAuth string) ([]byte, error) {
+
+	this.apis.mustBeOpen()
 
 	c := this.connector
 
@@ -189,7 +191,7 @@ func (this *Connector) ServeUI(event string, values []byte, role ConnectionRole,
 	if oAuth != "" {
 		clientSecret = c.OAuth.ClientSecret
 	}
-	connectionUI, err := this.openUI(context.Background(), role, r.Code, clientSecret, r.AccessToken)
+	connectionUI, err := this.openUI(ctx, role, r.Code, clientSecret, r.AccessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -223,10 +225,10 @@ func (this *Connector) openUI(ctx context.Context, role ConnectionRole, resource
 	var connection any
 	switch c := this.connector; c.Type {
 	case state.AppType:
-		connection, err = _connector.RegisteredApp(c.Name).Open(context.Background(), &_connector.AppConfig{
+		connection, err = _connector.RegisteredApp(c.Name).Open(ctx, &_connector.AppConfig{
 			Role:       _connector.Role(role),
 			Resource:   resource,
-			HTTPClient: this.http.Client(clientSecret, accessToken),
+			HTTPClient: this.apis.http.Client(clientSecret, accessToken),
 		})
 	case state.DatabaseType:
 		var database _connector.DatabaseConnection

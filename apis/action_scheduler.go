@@ -8,15 +8,13 @@
 package apis
 
 import (
+	"context"
 	"log"
 	"slices"
 	"sync"
 	"time"
 
-	"chichi/apis/datastore"
 	"chichi/apis/errors"
-	"chichi/apis/httpclient"
-	"chichi/apis/postgres"
 	"chichi/apis/state"
 )
 
@@ -40,32 +38,35 @@ func periodIndex(period int16) int8 {
 
 // scheduler is the action scheduler.
 type scheduler struct {
-	db      *postgres.DB
-	state   *state.State
+	apis    *APIs
 	mu      sync.Mutex // for the actions and indexes fields.
 	actions [numPeriods]map[int16][]*state.Action
 	indexes map[int]scIndex
-	st      chan struct{}
+	close   struct {
+		ctx       context.Context
+		cancelCtx context.CancelFunc
+		sync.WaitGroup
+	}
 }
 
 // newScheduler returns a new scheduler.
 //
 // It is called during an elect leader notification if the current node is
 // elected as leader.
-func newScheduler(db *postgres.DB, st *state.State, ds *datastore.Datastore, http *httpclient.HTTP) *scheduler {
+func newScheduler(apis *APIs) *scheduler {
 
 	sc := &scheduler{
-		db:      db,
-		state:   st,
+		apis:    apis,
 		indexes: map[int]scIndex{},
-		st:      make(chan struct{}, 1),
 	}
+
+	sc.close.ctx, sc.close.cancelCtx = context.WithCancel(context.Background())
 
 	for i := range sc.actions {
 		sc.actions[i] = map[int16][]*state.Action{}
 	}
 
-	for _, action := range st.Actions() {
+	for _, action := range apis.state.Actions() {
 		if sc.toSchedule(action) {
 			i := periodIndex(action.SchedulePeriod)
 			j := action.ScheduleStart % action.SchedulePeriod
@@ -74,11 +75,11 @@ func newScheduler(db *postgres.DB, st *state.State, ds *datastore.Datastore, htt
 		}
 	}
 
-	st.AddListener(sc.onAddAction)
-	st.AddListener(sc.onDeleteAction)
-	st.AddListener(sc.onDeleteConnection)
-	st.AddListener(sc.onDeleteWorkspace)
-	st.AddListener(sc.onSetActionSchedulePeriod)
+	apis.state.AddListener(sc.onAddAction)
+	apis.state.AddListener(sc.onDeleteAction)
+	apis.state.AddListener(sc.onDeleteConnection)
+	apis.state.AddListener(sc.onDeleteWorkspace)
+	apis.state.AddListener(sc.onSetActionSchedulePeriod)
 
 	go func() {
 
@@ -97,11 +98,13 @@ func newScheduler(db *postgres.DB, st *state.State, ds *datastore.Datastore, htt
 					for _, action := range actions {
 						if sc.toExecute(action) {
 							connection := action.Connection()
-							store := ds.Store(connection.Workspace().ID)
-							c := &Connection{db: db, connection: connection, store: store, http: http}
-							a := &Action{db: db, action: action, connection: c}
+							store := apis.datastore.Store(connection.Workspace().ID)
+							c := &Connection{apis: apis, connection: connection, store: store}
+							a := &Action{apis: apis, action: action, connection: c}
 							go func() {
-								err := a.addExecution(false)
+								sc.close.Add(1)
+								defer sc.close.Done()
+								err := a.addExecution(sc.close.ctx, false)
 								if err != nil {
 									if _, ok := err.(*errors.NotFoundError); ok {
 										return
@@ -115,7 +118,7 @@ func newScheduler(db *postgres.DB, st *state.State, ds *datastore.Datastore, htt
 						}
 					}
 				}
-			case <-sc.st:
+			case <-sc.close.ctx.Done():
 				return
 			}
 		}
@@ -127,12 +130,13 @@ func newScheduler(db *postgres.DB, st *state.State, ds *datastore.Datastore, htt
 
 // Close closes the scheduler.
 func (sc *scheduler) Close() {
-	sc.st <- struct{}{}
+	sc.close.cancelCtx()
+	sc.close.Wait()
 }
 
 // onAddAction is called when an action is added to the state.
 func (sc *scheduler) onAddAction(n state.AddAction) {
-	action, _ := sc.state.Action(n.ID)
+	action, _ := sc.apis.state.Action(n.ID)
 	if sc.toSchedule(action) {
 		sc.mu.Lock()
 		sc._addAction(action)
@@ -164,7 +168,7 @@ func (sc *scheduler) onDeleteWorkspace(n state.DeleteWorkspace) {
 // onSetActionSchedulePeriod is called when the schedule period of an action is
 // set.
 func (sc *scheduler) onSetActionSchedulePeriod(n state.SetActionSchedulePeriod) {
-	action, _ := sc.state.Action(n.ID)
+	action, _ := sc.apis.state.Action(n.ID)
 	index, ok := sc.indexes[n.ID]
 	if !ok {
 		return
@@ -246,7 +250,7 @@ func (sc *scheduler) _removeAction(id int) {
 // It must be called holding the sc.mu mutex.
 func (sc *scheduler) _removeActions() {
 	for id := range sc.indexes {
-		if _, ok := sc.state.Action(id); !ok {
+		if _, ok := sc.apis.state.Action(id); !ok {
 			sc._removeAction(id)
 		}
 	}

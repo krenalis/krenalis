@@ -278,6 +278,7 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 // serveHTTP is called by the ServeHTTP method to serve an event request.
 func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 
+	ctx := r.Context()
 	date := time.Now().UTC()
 
 	defer func() {
@@ -459,7 +460,6 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	if importUserTraits {
-		ctx := context.Background()
 		err := c.importUserTraits(ctx, source, events.Batch)
 		if err != nil {
 			return err

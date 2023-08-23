@@ -23,6 +23,7 @@ import (
 
 // User represents a user.
 type User struct {
+	apis      *APIs
 	workspace *state.Workspace
 	store     *datastore.Store
 	id        int
@@ -216,7 +217,9 @@ var eventColumns = []types.Property{
 //
 //   - NoWarehouse, if the workspace does not have a data warehouse.
 //   - WarehouseFailed, if the data warehouse failed.
-func (this *User) Events(limit int) ([]Event, error) {
+func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
+
+	this.apis.mustBeOpen()
 
 	// Verify that the workspace has a data warehouse.
 	if this.store == nil {
@@ -229,7 +232,7 @@ func (this *User) Events(limit int) ([]Event, error) {
 		warehouses.OperatorEqual,
 		this.id,
 	)
-	rows, err := this.store.Events(context.Background(), eventColumns, where, types.Property{}, 0, limit)
+	rows, err := this.store.Events(ctx, eventColumns, where, types.Property{}, 0, limit)
 	if err != nil {
 		if err2, ok := err.(*datastore.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
@@ -406,7 +409,9 @@ func (this *User) Events(limit int) ([]Event, error) {
 //   - NoUsersSchema, if the data warehouse does not have users schema.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
 //   - WarehouseFailed, if the data warehouse failed.
-func (this *User) Traits() (map[string]any, error) {
+func (this *User) Traits(ctx context.Context) (map[string]any, error) {
+
+	this.apis.mustBeOpen()
 
 	ws := this.workspace
 
@@ -428,7 +433,7 @@ func (this *User) Traits() (map[string]any, error) {
 		warehouses.OperatorEqual,
 		this.id,
 	)
-	rows, err := this.store.Users(context.Background(), properties, where, types.Property{}, 0, 1)
+	rows, err := this.store.Users(ctx, properties, where, types.Property{}, 0, 1)
 	if err != nil {
 		if err2, ok := err.(*datastore.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.

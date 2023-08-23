@@ -24,9 +24,8 @@ import (
 
 // downloadUsersForIdentityMatch downloads the users of the external app for
 // resolving the external identity.
-func (this *Action) downloadUsersForIdentityMatch() error {
+func (this *Action) downloadUsersForIdentityMatch(ctx context.Context) error {
 
-	ctx := context.Background()
 	app, err := this.connection.openAppUsers(ctx)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
@@ -100,7 +99,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	// TODO(Gianluca): we should export only the users modified since last
 	// export.
 
-	users, err := this.readUsersFromDataWarehouse(nil)
+	users, err := this.readUsersFromDataWarehouse(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -124,7 +123,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	}
 
 	// Download the users from this connection to match the identities.
-	err = this.downloadUsersForIdentityMatch()
+	err = this.downloadUsersForIdentityMatch(ctx)
 	if err != nil {
 		return err
 	}
@@ -151,7 +150,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	for _, user := range users {
 
 		// Resolve the external identity.
-		id, exists, err := this.resolveExternalIdentity(user)
+		id, exists, err := this.resolveExternalIdentity(ctx, user)
 		if err != nil {
 			return err
 		}
@@ -308,7 +307,7 @@ func (this *Action) importFromApp(ctx context.Context) error {
 // resolveExternalIdentity resolves the external identity of user and returns
 // its external ID and true, if resolved, or the empty string and false if such
 // user does not exist on the remote app.
-func (this *Action) resolveExternalIdentity(user userToExport) (string, bool, error) {
+func (this *Action) resolveExternalIdentity(ctx context.Context, user userToExport) (string, bool, error) {
 	internalPropName := this.action.MatchingProperties.Internal
 	property, ok := user.Properties[internalPropName]
 	if !ok {
@@ -319,7 +318,6 @@ func (this *Action) resolveExternalIdentity(user userToExport) (string, bool, er
 		return "", false, err
 	}
 	c := this.connection
-	ctx := context.Background()
 	externalID, ok, err := c.store.DestinationUser(ctx, this.action.ID, string(p))
 	if err != nil {
 		return "", false, err

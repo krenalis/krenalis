@@ -9,6 +9,7 @@ package events
 
 import (
 	"net/http"
+	"sync"
 
 	"chichi/apis/datastore"
 	"chichi/apis/httpclient"
@@ -23,6 +24,8 @@ type Events struct {
 	collector   *collector
 	processor   *Processor
 	stopSenders chan<- struct{}
+	closed      bool
+	closedMu    sync.Mutex
 }
 
 func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, http *httpclient.HTTP) (*Events, error) {
@@ -46,18 +49,37 @@ func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, http *httpcl
 
 // Close closes the events.
 func (events *Events) Close() {
+	events.closedMu.Lock()
+	defer events.closedMu.Unlock()
+	if events.closed {
+		return
+	}
 	close(events.stopSenders)
 	events.processor.Close()
 	events.log.Close()
 	events.state.Close()
+	events.closed = true
 }
 
 // ServeHTTP serves an event request.
+// It panics if events has been closed.
 func (events *Events) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	events.mustBeOpen()
 	events.collector.ServeHTTP(w, r)
 }
 
 // Observer returns the event observer.
+// It panics if events has been closed.
 func (events *Events) Observer() *Observer {
+	events.mustBeOpen()
 	return events.observer
+}
+
+// mustBeOpen panics if events has been closed.
+func (events *Events) mustBeOpen() {
+	events.closedMu.Lock()
+	defer events.closedMu.Unlock()
+	if events.closed {
+		panic("apis/events is closed")
+	}
 }

@@ -26,7 +26,7 @@ import (
 var ExecutionInProgress errors.Code = "ExecutionInProgress"
 
 // addExecution adds an execution to the action.
-func (this *Action) addExecution(reimport bool) error {
+func (this *Action) addExecution(ctx context.Context, reimport bool) error {
 
 	n := state.ExecuteAction{
 		Action:    this.action.ID,
@@ -38,8 +38,7 @@ func (this *Action) addExecution(reimport bool) error {
 		n.Storage = storage.ID
 	}
 
-	ctx := context.Background()
-	err := this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		err := tx.QueryVoid(ctx, "SELECT FROM actions_executions WHERE action = $1 AND end_time IS NULL", n.Action)
 		if err != sql.ErrNoRows {
 			if err == nil {
@@ -71,13 +70,11 @@ func (this *Action) addExecution(reimport bool) error {
 // It is called in its own goroutine and the action have an execution to
 // execute. In case of error, it writes the error with the execution status in
 // the actions_executions table.
-func (this *Action) exec() {
+func (this *Action) exec(ctx context.Context) {
 
 	connection := this.action.Connection()
 	execution, _ := this.action.Execution()
 	c := connection.Connector()
-
-	ctx := context.Background()
 
 	var err error
 	if this.Target == GroupsTarget {
@@ -128,7 +125,7 @@ func (this *Action) exec() {
 	}
 
 	// TODO(marco) retry if the transaction fails.
-	err = this.db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		_, err := tx.Exec(ctx, "UPDATE actions_executions SET end_time = $1, error = $2 WHERE id = $3",
 			endTime, errorMessage, n.ID)
 		if err != nil {
@@ -164,7 +161,7 @@ type userToExport struct {
 // TODO(Gianluca): this method returns at most 1000 users. This is wrong. We
 // should find an alternative way to implement this; maybe we could read one
 // user at a time.
-func (this *Action) readUsersFromDataWarehouse(ids []int) ([]userToExport, error) {
+func (this *Action) readUsersFromDataWarehouse(ctx context.Context, ids []int) ([]userToExport, error) {
 
 	ws := this.action.Connection().Workspace()
 
@@ -194,7 +191,7 @@ func (this *Action) readUsersFromDataWarehouse(ids []int) ([]userToExport, error
 	}
 
 	store := this.connection.store
-	users, err := store.Users(context.Background(), schema.Properties(), where, idProperty, 0, 1000)
+	users, err := store.Users(ctx, schema.Properties(), where, idProperty, 0, 1000)
 	if err != nil {
 		if err2, ok := err.(*datastore.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
