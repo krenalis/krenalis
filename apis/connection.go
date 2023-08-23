@@ -108,159 +108,6 @@ func (this *Connection) Action(ctx context.Context, id int) (*Action, error) {
 	return &action, nil
 }
 
-// ActionType represents an action type.
-type ActionType struct {
-	Name          string
-	Description   string
-	Target        ActionTarget
-	EventType     *string
-	MissingSchema bool
-}
-
-// actionTypes returns the action types for the connection.
-//
-// Refer to the specifications in the file "connector/Actions support.md" for
-// more details.
-//
-// It returns an errors.UnprocessableError error with code
-//
-//   - FetchSchemaFailed, if an error occurred fetching the schema.
-func (this *Connection) actionTypes() ([]ActionType, error) {
-	var actionTypes []ActionType
-	c := this.connection
-	connector := c.Connector()
-	wsSchemas := c.Workspace().Schemas
-	targets := connector.Targets
-	if targets.Contains(state.UsersTarget) {
-		switch typ := c.Connector().Type; typ {
-		case
-			state.AppType,
-			state.DatabaseType,
-			state.FileType:
-			var name, description string
-			if c.Role == state.SourceRole {
-				name = "Import " + connector.TermForUsers
-				description = "Import the " + connector.TermForUsers
-				if connector.TermForUsers != "users" {
-					description += " as users"
-				}
-				description += " from " + connector.Name
-			} else {
-				name = "Export " + connector.TermForUsers
-				description = "Export the users "
-				if connector.TermForUsers != "users" {
-					description += " as " + connector.TermForUsers
-				}
-				description += " to " + connector.Name
-			}
-			at := ActionType{
-				Name:          name,
-				Description:   description,
-				Target:        UsersTarget,
-				MissingSchema: wsSchemas["users"] == nil,
-			}
-			actionTypes = append(actionTypes, at)
-		case
-			state.MobileType,
-			state.ServerType,
-			state.WebsiteType:
-			if c.Role == state.SourceRole {
-				at := ActionType{
-					Name:          "Import users",
-					Description:   "Import users from the events of the " + connector.Name,
-					Target:        UsersTarget,
-					MissingSchema: wsSchemas["users"] == nil,
-				}
-				actionTypes = append(actionTypes, at)
-			}
-		}
-	}
-	if targets.Contains(state.GroupsTarget) {
-		switch typ := c.Connector().Type; typ {
-		case
-			state.AppType,
-			state.DatabaseType,
-			state.FileType:
-			var name, description string
-			if c.Role == state.SourceRole {
-				name = "Import " + connector.TermForGroups
-				description = "Import the " + connector.TermForGroups
-				if connector.TermForGroups != "groups" {
-					description += " as groups"
-				}
-				description += " from " + connector.Name
-			} else {
-				name = "Export " + connector.TermForGroups
-				description = "Export the groups "
-				if connector.TermForGroups != "groups" {
-					description += " as " + connector.TermForGroups
-				}
-				description += " to " + connector.Name
-			}
-			at := ActionType{
-				Name:          name,
-				Description:   description,
-				Target:        GroupsTarget,
-				MissingSchema: wsSchemas["groups"] == nil,
-			}
-			actionTypes = append(actionTypes, at)
-		case
-			state.MobileType,
-			state.ServerType,
-			state.WebsiteType:
-			if c.Role == state.SourceRole {
-				at := ActionType{
-					Name:          "Import groups",
-					Description:   "Import groups from the events of the " + connector.Name,
-					Target:        GroupsTarget,
-					MissingSchema: wsSchemas["groups"] == nil,
-				}
-				actionTypes = append(actionTypes, at)
-			}
-		}
-	}
-	if targets.Contains(state.EventsTarget) {
-		switch typ := c.Connector().Type; typ {
-		case state.MobileType, state.ServerType, state.WebsiteType:
-			if c.Role == state.SourceRole {
-				description := "Collect events from the "
-				switch typ {
-				case state.MobileType:
-					description += "mobile app"
-				case state.ServerType:
-					description += "server"
-				case state.WebsiteType:
-					description += "website"
-				}
-				at := ActionType{
-					Name:        "Collect events",
-					Description: description,
-					Target:      EventsTarget,
-				}
-				actionTypes = append(actionTypes, at)
-			}
-		case state.AppType:
-			eventTypes, err := this.fetchEventTypes()
-			if err != nil {
-				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
-			}
-			for _, et := range eventTypes {
-				id := et.ID
-				actionTypes = append(actionTypes, ActionType{
-					Name:        et.Name,
-					Description: et.Description,
-					Target:      EventsTarget,
-					EventType:   &id,
-				})
-			}
-		}
-	}
-	if actionTypes == nil {
-		actionTypes = []ActionType{}
-	}
-	return actionTypes, nil
-}
-
 type ActionSchemas struct {
 	In, Out types.Type
 }
@@ -1350,6 +1197,159 @@ func (this *Connection) TableSchema(table string) (types.Type, error) {
 		return types.Type{}, err
 	}
 	return schema, nil
+}
+
+// ActionType represents an action type.
+type ActionType struct {
+	Name          string
+	Description   string
+	Target        ActionTarget
+	EventType     *string
+	MissingSchema bool
+}
+
+// actionTypes returns the action types for the connection.
+//
+// Refer to the specifications in the file "connector/Actions support.md" for
+// more details.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - FetchSchemaFailed, if an error occurred fetching the schema.
+func (this *Connection) actionTypes() ([]ActionType, error) {
+	var actionTypes []ActionType
+	c := this.connection
+	connector := c.Connector()
+	wsSchemas := c.Workspace().Schemas
+	targets := connector.Targets
+	if targets.Contains(state.UsersTarget) {
+		switch typ := c.Connector().Type; typ {
+		case
+			state.AppType,
+			state.DatabaseType,
+			state.FileType:
+			var name, description string
+			if c.Role == state.SourceRole {
+				name = "Import " + connector.TermForUsers
+				description = "Import the " + connector.TermForUsers
+				if connector.TermForUsers != "users" {
+					description += " as users"
+				}
+				description += " from " + connector.Name
+			} else {
+				name = "Export " + connector.TermForUsers
+				description = "Export the users "
+				if connector.TermForUsers != "users" {
+					description += " as " + connector.TermForUsers
+				}
+				description += " to " + connector.Name
+			}
+			at := ActionType{
+				Name:          name,
+				Description:   description,
+				Target:        UsersTarget,
+				MissingSchema: wsSchemas["users"] == nil,
+			}
+			actionTypes = append(actionTypes, at)
+		case
+			state.MobileType,
+			state.ServerType,
+			state.WebsiteType:
+			if c.Role == state.SourceRole {
+				at := ActionType{
+					Name:          "Import users",
+					Description:   "Import users from the events of the " + connector.Name,
+					Target:        UsersTarget,
+					MissingSchema: wsSchemas["users"] == nil,
+				}
+				actionTypes = append(actionTypes, at)
+			}
+		}
+	}
+	if targets.Contains(state.GroupsTarget) {
+		switch typ := c.Connector().Type; typ {
+		case
+			state.AppType,
+			state.DatabaseType,
+			state.FileType:
+			var name, description string
+			if c.Role == state.SourceRole {
+				name = "Import " + connector.TermForGroups
+				description = "Import the " + connector.TermForGroups
+				if connector.TermForGroups != "groups" {
+					description += " as groups"
+				}
+				description += " from " + connector.Name
+			} else {
+				name = "Export " + connector.TermForGroups
+				description = "Export the groups "
+				if connector.TermForGroups != "groups" {
+					description += " as " + connector.TermForGroups
+				}
+				description += " to " + connector.Name
+			}
+			at := ActionType{
+				Name:          name,
+				Description:   description,
+				Target:        GroupsTarget,
+				MissingSchema: wsSchemas["groups"] == nil,
+			}
+			actionTypes = append(actionTypes, at)
+		case
+			state.MobileType,
+			state.ServerType,
+			state.WebsiteType:
+			if c.Role == state.SourceRole {
+				at := ActionType{
+					Name:          "Import groups",
+					Description:   "Import groups from the events of the " + connector.Name,
+					Target:        GroupsTarget,
+					MissingSchema: wsSchemas["groups"] == nil,
+				}
+				actionTypes = append(actionTypes, at)
+			}
+		}
+	}
+	if targets.Contains(state.EventsTarget) {
+		switch typ := c.Connector().Type; typ {
+		case state.MobileType, state.ServerType, state.WebsiteType:
+			if c.Role == state.SourceRole {
+				description := "Collect events from the "
+				switch typ {
+				case state.MobileType:
+					description += "mobile app"
+				case state.ServerType:
+					description += "server"
+				case state.WebsiteType:
+					description += "website"
+				}
+				at := ActionType{
+					Name:        "Collect events",
+					Description: description,
+					Target:      EventsTarget,
+				}
+				actionTypes = append(actionTypes, at)
+			}
+		case state.AppType:
+			eventTypes, err := this.fetchEventTypes()
+			if err != nil {
+				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
+			}
+			for _, et := range eventTypes {
+				id := et.ID
+				actionTypes = append(actionTypes, ActionType{
+					Name:        et.Name,
+					Description: et.Description,
+					Target:      EventsTarget,
+					EventType:   &id,
+				})
+			}
+		}
+	}
+	if actionTypes == nil {
+		actionTypes = []ActionType{}
+	}
+	return actionTypes, nil
 }
 
 // openApp opens an app connection.
