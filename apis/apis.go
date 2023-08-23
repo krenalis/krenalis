@@ -228,9 +228,13 @@ func (apis *APIs) AuthenticateAccount(ctx context.Context, email, password strin
 }
 
 // Close closes the APIs.
+// It panics if it has already been called.
 func (apis *APIs) Close() {
 	apis.mu.Lock()
 	defer apis.mu.Unlock()
+	if apis.closed {
+		panic("apis already closed")
+	}
 	// Cancel the execution of actions initiated via API.
 	apis.close.cancelCtx()
 	// Close scheduler.

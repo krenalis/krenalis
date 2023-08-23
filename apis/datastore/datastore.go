@@ -79,11 +79,12 @@ func New(st *state.State) *Datastore {
 }
 
 // Close closes the datastore.
+// It panics if it has already been called.
 func (ds *Datastore) Close() {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 	if ds.closed {
-		return
+		panic("apis/datastore already closed")
 	}
 	var err error
 	for _, store := range ds.store {

@@ -48,11 +48,12 @@ func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, http *httpcl
 }
 
 // Close closes the events.
+// It panics if it has already been called.
 func (events *Events) Close() {
 	events.closedMu.Lock()
 	defer events.closedMu.Unlock()
 	if events.closed {
-		return
+		panic("apis/events already closed")
 	}
 	close(events.stopSenders)
 	events.processor.Close()

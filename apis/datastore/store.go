@@ -358,11 +358,12 @@ func (store *Store) UsersSlice(ctx context.Context, properties []types.Property,
 
 // close closes the store.
 // It flushes the events and closes the Redis database and the data warehouse.
+// It panics if it has already been called.
 func (store *Store) close() error {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	if store.closed {
-		return nil
+		panic("apis/datastore/store already closed")
 	}
 	if len(store.events) > 0 {
 		store.flushEvents(store.events)
