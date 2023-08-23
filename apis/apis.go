@@ -231,16 +231,19 @@ func (apis *APIs) AuthenticateAccount(ctx context.Context, email, password strin
 func (apis *APIs) Close() {
 	apis.mu.Lock()
 	defer apis.mu.Unlock()
+	// Cancel the execution of actions initiated via API.
+	apis.close.cancelCtx()
 	// Close scheduler.
 	if apis.scheduler != nil {
 		apis.scheduler.Close()
 		apis.scheduler = nil
 	}
+	// Wait for the completion of actions initiated via API.
+	apis.close.Wait()
 	// Close events, datastore and state.
 	apis.events.Close()
 	apis.datastore.Close()
 	apis.state.Close()
-	apis.close.Wait()
 	apis.closed = true
 }
 
