@@ -111,43 +111,6 @@ func newObserver(db *postgres.DB) *Observer {
 	return observer
 }
 
-func (observer *Observer) flushStats(t time.Time) error {
-
-	observer.statsMu.Lock()
-	if len(observer.stats) == 0 {
-		observer.statsMu.Unlock()
-		return nil
-	}
-	stats := make([]statsEntry, len(observer.stats))
-	copy(stats, observer.stats)
-	observer.stats = observer.stats[0:0]
-	observer.statsMu.Unlock()
-
-	ctx := context.Background()
-
-	err := observer.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		query := "INSERT INTO connections_stats_events AS s (hour, source, server, stream, good_events, bad_events)\n" +
-			"VALUES ($1, NULLIF($2, 0), NULLIF($3, 0), NULLIF($4, 0), $5, $6)\n" +
-			"\tON CONFLICT (hour, source, server, stream) DO UPDATE SET good_events = s.good_events + EXCLUDED.good_events," +
-			" bad_events = s.bad_events + EXCLUDED.bad_events"
-		stmt, err := tx.Prepare(ctx, query)
-		if err != nil {
-			return err
-		}
-		hour := hoursFromEpoc(t)
-		for _, s := range stats {
-			_, err = stmt.Exec(ctx, hour, s.key.source, s.key.server, s.key.stream, s.goodEvents, s.badEvents)
-			if err != nil {
-				_ = stmt.Close()
-				return err
-			}
-		}
-		return stmt.Close()
-	})
-
-	return err
-}
-
 // AddEvent adds an event to the observed events. source, if not-zero is the
 // connection, mobile or website, where the event occurred. If the event was
 // sent by a server, server is its connection identifier, otherwise server is
@@ -243,6 +206,27 @@ func (observer *Observer) AddEvent(source, server, stream int, event *collectedE
 
 }
 
+// AddListener adds a processed event listener. It returns the
+// ErrTooManyListeners error if there are already too many listeners.
+func (observer *Observer) AddListener(size, source, server, stream int) (string, error) {
+	id := uuid.New().String()
+	listener := listener{
+		id:     id,
+		source: source,
+		server: server,
+		stream: stream,
+		events: make([]json.RawMessage, 0, size),
+		times:  make([]string, 0, size),
+	}
+	observer.Lock()
+	defer observer.Unlock()
+	if len(observer.listeners) == MaxEventListeners {
+		return "", ErrTooManyListeners
+	}
+	observer.listeners = append(observer.listeners, &listener)
+	return id, nil
+}
+
 // Events returns the events listen to by the specified listener and the number
 // of discarded events. If the listener does not exist, it returns the
 // ErrEventListenerNotFound error.
@@ -271,27 +255,6 @@ func (observer *Observer) Events(listener string) ([]json.RawMessage, int, error
 	return nil, 0, ErrEventListenerNotFound
 }
 
-// AddListener adds a processed event listener. It returns the
-// ErrTooManyListeners error if there are already too many listeners.
-func (observer *Observer) AddListener(size, source, server, stream int) (string, error) {
-	id := uuid.New().String()
-	listener := listener{
-		id:     id,
-		source: source,
-		server: server,
-		stream: stream,
-		events: make([]json.RawMessage, 0, size),
-		times:  make([]string, 0, size),
-	}
-	observer.Lock()
-	defer observer.Unlock()
-	if len(observer.listeners) == MaxEventListeners {
-		return "", ErrTooManyListeners
-	}
-	observer.listeners = append(observer.listeners, &listener)
-	return id, nil
-}
-
 // RemoveListener removes the listener with identifier id.
 func (observer *Observer) RemoveListener(id string) {
 	observer.Lock()
@@ -306,6 +269,43 @@ func (observer *Observer) RemoveListener(id string) {
 	}
 	observer.Unlock()
 	return
+}
+
+func (observer *Observer) flushStats(t time.Time) error {
+
+	observer.statsMu.Lock()
+	if len(observer.stats) == 0 {
+		observer.statsMu.Unlock()
+		return nil
+	}
+	stats := make([]statsEntry, len(observer.stats))
+	copy(stats, observer.stats)
+	observer.stats = observer.stats[0:0]
+	observer.statsMu.Unlock()
+
+	ctx := context.Background()
+
+	err := observer.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		query := "INSERT INTO connections_stats_events AS s (hour, source, server, stream, good_events, bad_events)\n" +
+			"VALUES ($1, NULLIF($2, 0), NULLIF($3, 0), NULLIF($4, 0), $5, $6)\n" +
+			"\tON CONFLICT (hour, source, server, stream) DO UPDATE SET good_events = s.good_events + EXCLUDED.good_events," +
+			" bad_events = s.bad_events + EXCLUDED.bad_events"
+		stmt, err := tx.Prepare(ctx, query)
+		if err != nil {
+			return err
+		}
+		hour := hoursFromEpoc(t)
+		for _, s := range stats {
+			_, err = stmt.Exec(ctx, hour, s.key.source, s.key.server, s.key.stream, s.goodEvents, s.badEvents)
+			if err != nil {
+				_ = stmt.Close()
+				return err
+			}
+		}
+		return stmt.Close()
+	})
+
+	return err
 }
 
 // hoursFromEpoc returns the hours since January 1, 1970 UTC until time t.
