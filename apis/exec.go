@@ -109,9 +109,13 @@ func (this *Action) exec(ctx context.Context) {
 	if err != nil {
 		health = state.RecentError
 		if e, ok := err.(actionExecutionError); ok {
-			errorMessage = abbreviate(e.Error(), 1000)
-			if _, ok := e.err.(*connector.AccessDeniedError); ok {
-				health = state.AccessDenied
+			if e.err == context.Canceled || errors.Unwrap(e.err) == context.Canceled {
+				errorMessage = "process has been shut down"
+			} else {
+				errorMessage = abbreviate(e.Error(), 1000)
+				if _, ok := e.err.(*connector.AccessDeniedError); ok {
+					health = state.AccessDenied
+				}
 			}
 		} else {
 			log.Printf("[error] cannot execute action %d, execution %d failed: %s", this.action.ID, execution.ID, err)
@@ -124,15 +128,17 @@ func (this *Action) exec(ctx context.Context) {
 		Health: health,
 	}
 
+	txCtx := context.Background()
+
 	// TODO(marco) retry if the transaction fails.
-	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		_, err := tx.Exec(ctx, "UPDATE actions_executions SET end_time = $1, error = $2 WHERE id = $3",
+	err = this.apis.db.Transaction(txCtx, func(tx *postgres.Tx) error {
+		_, err := tx.Exec(txCtx, "UPDATE actions_executions SET end_time = $1, error = $2 WHERE id = $3",
 			endTime, errorMessage, n.ID)
 		if err != nil {
 			return err
 		}
 		var exists bool
-		err = tx.QueryRow(ctx, "UPDATE actions SET health = $1 WHERE id = $2 RETURNING true",
+		err = tx.QueryRow(txCtx, "UPDATE actions SET health = $1 WHERE id = $2 RETURNING true",
 			n.Health, this.action.ID).Scan(&exists)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -141,7 +147,7 @@ func (this *Action) exec(ctx context.Context) {
 			}
 			return err
 		}
-		return tx.Notify(ctx, n)
+		return tx.Notify(txCtx, n)
 	})
 	if err != nil {
 		log.Printf("[error] cannot update the status of the execution %d of action %d: %s",
