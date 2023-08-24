@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/datastore/warehouses/clickhouse"
@@ -45,9 +46,9 @@ func (err ConnectionFailed) Error() string {
 
 type Datastore struct {
 	state  *state.State
-	mu     sync.Mutex // for store and closed fields
+	mu     sync.Mutex // for the store field
 	store  map[int]*Store
-	closed bool
+	closed atomic.Bool
 }
 
 // New returns a *Datastore instance.
@@ -81,19 +82,18 @@ func New(st *state.State) *Datastore {
 // Close closes the datastore.
 // It panics if it has already been called.
 func (ds *Datastore) Close() {
-	ds.mu.Lock()
-	defer ds.mu.Unlock()
-	if ds.closed {
+	if ds.closed.Swap(true) {
 		panic("apis/datastore already closed")
 	}
 	var err error
+	ds.mu.Lock()
 	for _, store := range ds.store {
 		err = store.close()
 		if err != nil {
 			log.Printf("[warning] cannot close store: %s", err)
 		}
 	}
-	ds.closed = true
+	ds.mu.Unlock()
 }
 
 // PingRedis validates Redis settings and tries to establish a
@@ -163,9 +163,7 @@ func (ds *Datastore) Store(workspace int) *Store {
 
 // mustBeOpen panics if the datastore has been closed.
 func (ds *Datastore) mustBeOpen() {
-	ds.mu.Lock()
-	defer ds.mu.Unlock()
-	if ds.closed {
+	if ds.closed.Load() {
 		panic("apis/datastore is closed")
 	}
 }

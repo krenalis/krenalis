@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"chichi/apis/datastore/warehouses"
@@ -39,9 +40,9 @@ type Store struct {
 	workspace int
 	redis     *redis.Client
 	warehouse warehouses.Warehouse
-	mu        sync.Mutex // for events and closed fields
+	mu        sync.Mutex // for the events field
 	events    [][]any
-	closed    bool
+	closed    atomic.Bool
 }
 
 // newStore returns a new Store for the workspace ws.
@@ -360,15 +361,15 @@ func (store *Store) UsersSlice(ctx context.Context, properties []types.Property,
 // It flushes the events and closes the Redis database and the data warehouse.
 // It panics if it has already been called.
 func (store *Store) close() error {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-	if store.closed {
+	if store.closed.Swap(true) {
 		panic("apis/datastore/store already closed")
 	}
+	store.mu.Lock()
 	if len(store.events) > 0 {
 		store.flushEvents(store.events)
 		store.events = nil
 	}
+	store.mu.Unlock()
 	err := store.redis.Close()
 	if err != nil {
 		err = fmt.Errorf("error occurred closing Redis database: %s", err)
@@ -380,7 +381,6 @@ func (store *Store) close() error {
 			err = errors.New(err.Error() + "\n\tand also " + err2.Error())
 		}
 	}
-	store.closed = true
 	return err
 }
 
@@ -415,9 +415,7 @@ func (store *Store) deleteRedisUserIndex(ctx context.Context, id int) error {
 
 // mustBeOpen panics if store has been closed.
 func (store *Store) mustBeOpen() {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-	if store.closed {
+	if store.closed.Load() {
 		panic("apis/datastore/store is closed")
 	}
 }

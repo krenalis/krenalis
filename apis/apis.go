@@ -16,6 +16,7 @@ import (
 	"slices"
 	"sort"
 	"sync"
+	"sync/atomic"
 
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
@@ -36,7 +37,7 @@ type APIs struct {
 	datastore      *datastore.Datastore
 	http           *httpclient.HTTP
 	events         *events.Events
-	mu             sync.Mutex // for scheduler and closed fields
+	mu             sync.Mutex // for the scheduler field
 	scheduler      *scheduler
 	eventProcessor *events.Processor
 	close          struct {
@@ -44,7 +45,7 @@ type APIs struct {
 		cancelCtx context.CancelFunc
 		sync.WaitGroup
 	}
-	closed bool
+	closed atomic.Bool
 }
 
 var hasBeenCalled bool
@@ -230,25 +231,24 @@ func (apis *APIs) AuthenticateAccount(ctx context.Context, email, password strin
 // Close closes the APIs.
 // It panics if it has already been called.
 func (apis *APIs) Close() {
-	apis.mu.Lock()
-	defer apis.mu.Unlock()
-	if apis.closed {
+	if apis.closed.Swap(true) {
 		panic("apis already closed")
 	}
 	// Cancel the execution of actions initiated via API.
 	apis.close.cancelCtx()
 	// Close scheduler.
+	apis.mu.Lock()
 	if apis.scheduler != nil {
 		apis.scheduler.Close()
 		apis.scheduler = nil
 	}
+	apis.mu.Unlock()
 	// Wait for the completion of actions initiated via API.
 	apis.close.Wait()
 	// Close events, datastore and state.
 	apis.events.Close()
 	apis.datastore.Close()
 	apis.state.Close()
-	apis.closed = true
 }
 
 // Connector returns the connector with identifier id.
@@ -390,9 +390,7 @@ func (apis *APIs) ValidateExpression(expression string, schema types.Type, dtTyp
 
 // mustBeOpen panics if apis has been closed.
 func (apis *APIs) mustBeOpen() {
-	apis.mu.Lock()
-	defer apis.mu.Unlock()
-	if apis.closed {
+	if apis.closed.Load() {
 		panic("apis is closed")
 	}
 }
