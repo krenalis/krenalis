@@ -45,6 +45,7 @@ type scheduler struct {
 	close   struct {
 		ctx       context.Context
 		cancelCtx context.CancelFunc
+		shutdown  chan struct{}
 		sync.WaitGroup
 	}
 }
@@ -61,6 +62,7 @@ func newScheduler(apis *APIs) *scheduler {
 	}
 
 	sc.close.ctx, sc.close.cancelCtx = context.WithCancel(context.Background())
+	sc.close.shutdown = make(chan struct{})
 
 	for i := range sc.actions {
 		sc.actions[i] = map[int16][]*state.Action{}
@@ -101,8 +103,8 @@ func newScheduler(apis *APIs) *scheduler {
 							store := apis.datastore.Store(connection.Workspace().ID)
 							c := &Connection{apis: apis, connection: connection, store: store}
 							a := &Action{apis: apis, action: action, connection: c}
+							sc.close.Add(1)
 							go func() {
-								sc.close.Add(1)
 								defer sc.close.Done()
 								err := a.addExecution(sc.close.ctx, false)
 								if err != nil {
@@ -118,7 +120,7 @@ func newScheduler(apis *APIs) *scheduler {
 						}
 					}
 				}
-			case <-sc.close.ctx.Done():
+			case <-sc.close.shutdown:
 				return
 			}
 		}
@@ -130,7 +132,18 @@ func newScheduler(apis *APIs) *scheduler {
 
 // Close closes the scheduler.
 func (sc *scheduler) Close() {
+	close(sc.close.shutdown)
 	sc.close.cancelCtx()
+	sc.close.Wait()
+}
+
+// Shutdown gracefully shuts down the scheduler without interrupting any action
+// that is executing. If the provided context expires before the shutdown is
+// complete, Shutdown interrupts any ongoing action and returns.
+func (sc *scheduler) Shutdown(ctx context.Context) {
+	close(sc.close.shutdown)
+	stop := context.AfterFunc(ctx, func() { sc.close.cancelCtx() })
+	defer stop()
 	sc.close.Wait()
 }
 

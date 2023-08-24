@@ -411,7 +411,7 @@ func (apis *APIs) onElectLeader(n state.ElectLeader) {
 	apis.scheduler = nil
 	apis.mu.Unlock()
 	if s != nil {
-		s.Close()
+		go s.Shutdown(apis.close.ctx)
 	}
 }
 
