@@ -397,22 +397,21 @@ func (apis *APIs) mustBeOpen() {
 	}
 }
 
-// onElectLeader is called when a leader is elected.
+// onElectLeader is called when a new leader is elected.
 func (apis *APIs) onElectLeader(n state.ElectLeader) {
 	if apis.state.IsLeader() {
-		scheduler := newScheduler(apis)
+		s := newScheduler(apis)
 		apis.mu.Lock()
-		apis.scheduler = scheduler
+		apis.scheduler = s
 		apis.mu.Unlock()
 		return
 	}
-	var scheduler *scheduler
 	apis.mu.Lock()
-	scheduler = apis.scheduler
+	s := apis.scheduler
 	apis.scheduler = nil
 	apis.mu.Unlock()
-	if scheduler != nil {
-		scheduler.Close()
+	if s != nil {
+		s.Close()
 	}
 }
 

@@ -689,10 +689,13 @@ func (state *State) electLeader(n postgres.Notification) {
 		lastSeen: time.Now(),
 	}
 	state.mu.Lock()
+	previous := state.election.leader
 	state.election = election
 	state.mu.Unlock()
-	for _, listener := range state.listeners.ElectLeader {
-		listener(e)
+	if e.Leader != previous {
+		for _, listener := range state.listeners.ElectLeader {
+			listener(e)
+		}
 	}
 }
 
