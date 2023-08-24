@@ -61,11 +61,12 @@ func init() {
 
 // open opens a Dummy connection.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
-	c := connection{conf: conf}
+	c := connection{ctx: ctx, conf: conf}
 	return &c, nil
 }
 
 type connection struct {
+	ctx  context.Context
 	conf *connector.AppConfig
 }
 
@@ -81,6 +82,12 @@ func newUserID() string {
 
 // CreateUser creates a user with the given properties.
 func (c *connection) CreateUser(properties connector.Properties) error {
+
+	select {
+	case <-c.ctx.Done():
+		return c.ctx.Err()
+	default:
+	}
 
 	// Normalize and validate the properties.
 	properties, err := normalize(properties, userSchema)
@@ -176,6 +183,11 @@ func (c *connection) Resource() (string, error) {
 // SendEvent sends the event, along with the given mapped event.
 // eventType specifies the event type corresponding to the event.
 func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, eventType string) error {
+	select {
+	case <-c.ctx.Done():
+		return c.ctx.Err()
+	default:
+	}
 	log.Printf("dummy: sending event %#v, %#v", event, mappedEvent)
 	time.Sleep(50 * time.Millisecond)
 	return nil
@@ -183,6 +195,12 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 
 // UpdateUser updates the user with identifier id setting the given properties.
 func (c *connection) UpdateUser(id string, properties connector.Properties) error {
+
+	select {
+	case <-c.ctx.Done():
+		return c.ctx.Err()
+	default:
+	}
 
 	// Normalize and validate the properties.
 	properties, err := normalize(properties, userSchema)
@@ -230,6 +248,11 @@ func (c *connection) UserSchema() (types.Type, error) {
 
 // Users returns the users starting from the given cursor.
 func (c *connection) Users(properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
+	select {
+	case <-c.ctx.Done():
+		return nil, "", c.ctx.Err()
+	default:
+	}
 	usersLock.Lock()
 	defer usersLock.Unlock()
 	objects := make([]connector.Object, 0, len(users))
