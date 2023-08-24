@@ -425,8 +425,8 @@ func (apis *APIs) onExecuteAction(n state.ExecuteAction) {
 	store := apis.datastore.Store(c.Workspace().ID)
 	connection := &Connection{apis: apis, store: store, connection: c}
 	a := &Action{apis: apis, action: action, connection: connection}
+	apis.close.Add(1)
 	go func() {
-		apis.close.Add(1)
 		defer apis.close.Done()
 		a.exec(apis.close.ctx)
 	}()

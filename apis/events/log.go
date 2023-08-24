@@ -69,8 +69,8 @@ func (log *eventsLog) Close() {
 // action.
 func (log *eventsLog) Delivered(id ksuid.KSUID, action int) {
 	now := time.Now().UTC()
+	log.close.Add(1)
 	go func() {
-		log.close.Add(1)
 		defer log.close.Done()
 		_, err := log.db.Exec(log.close.ctx, "INSERT INTO event_processed (id, action, timestamp, state)"+
 			" VALUES ($1, $2, $3, 'Delivered')", id, action, now)
