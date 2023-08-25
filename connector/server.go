@@ -8,7 +8,6 @@
 package connector
 
 import (
-	"context"
 	"reflect"
 )
 
@@ -30,8 +29,8 @@ func (server Server) ConnectionReflectType() reflect.Type {
 }
 
 // Open opens a server connection.
-func (server Server) Open(ctx context.Context, conf *ServerConfig) (ServerConnection, error) {
-	out := server.open.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(conf)})
+func (server Server) Open(conf *ServerConfig) (ServerConnection, error) {
+	out := server.open.Call([]reflect.Value{reflect.ValueOf(conf)})
 	c := out[0].Interface().(ServerConnection)
 	err, _ := out[1].Interface().(error)
 	return c, err
@@ -45,7 +44,7 @@ type ServerConfig struct {
 }
 
 // OpenServerFunc represents functions that open server connections.
-type OpenServerFunc[T ServerConnection] func(context.Context, *ServerConfig) (T, error)
+type OpenServerFunc[T ServerConnection] func(*ServerConfig) (T, error)
 
 // ServerConnection is the interface implemented by server connections.
 type ServerConnection interface{}

@@ -53,8 +53,8 @@ func init() {
 }
 
 // open opens a Google Analytics 4 connection and returns it.
-func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
-	c := connection{ctx: ctx, conf: conf}
+func open(conf *connector.AppConfig) (*connection, error) {
+	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -65,7 +65,6 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 }
 
 type connection struct {
-	ctx      context.Context
 	conf     *connector.AppConfig
 	settings *settings
 }
@@ -76,7 +75,7 @@ type settings struct {
 }
 
 // EventTypes returns the connection's event types.
-func (c *connection) EventTypes() ([]*connector.EventType, error) {
+func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, error) {
 	if c.conf.Role == connector.SourceRole {
 		return nil, nil
 	}
@@ -103,13 +102,13 @@ func (c *connection) EventTypes() ([]*connector.EventType, error) {
 }
 
 // Resource returns the resource from a client token.
-func (c *connection) Resource() (string, error) {
+func (c *connection) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
 // SendEvent sends the event, along with the given mapped event.
 // eventType specifies the event type corresponding to the event.
-func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, eventType string) error {
+func (c *connection) SendEvent(ctx context.Context, event connector.Event, mappedEvent map[string]any, eventType string) error {
 	var err error
 	switch eventType {
 	case "event_page_view":
@@ -137,7 +136,7 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
@@ -149,11 +148,11 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		s, err := c.ValidateSettings(values)
+		s, err := c.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.conf.SetSettings(c.ctx, s)
+		return nil, nil, c.conf.SetSettings(ctx, s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}
@@ -175,7 +174,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
+func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {

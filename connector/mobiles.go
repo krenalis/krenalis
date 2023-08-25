@@ -8,7 +8,6 @@
 package connector
 
 import (
-	"context"
 	"reflect"
 )
 
@@ -30,8 +29,8 @@ func (mobile Mobile) ConnectionReflectType() reflect.Type {
 }
 
 // Open opens a mobile connection.
-func (mobile Mobile) Open(ctx context.Context, conf *MobileConfig) (MobileConnection, error) {
-	out := mobile.open.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(conf)})
+func (mobile Mobile) Open(conf *MobileConfig) (MobileConnection, error) {
+	out := mobile.open.Call([]reflect.Value{reflect.ValueOf(conf)})
 	c := out[0].Interface().(MobileConnection)
 	err, _ := out[1].Interface().(error)
 	return c, err
@@ -45,7 +44,7 @@ type MobileConfig struct {
 }
 
 // OpenMobileFunc represents functions that open mobile connections.
-type OpenMobileFunc[T MobileConnection] func(context.Context, *MobileConfig) (T, error)
+type OpenMobileFunc[T MobileConnection] func(*MobileConfig) (T, error)
 
 // MobileConnection is the interface implemented by mobile connections.
 type MobileConnection interface{}

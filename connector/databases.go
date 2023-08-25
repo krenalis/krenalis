@@ -33,8 +33,8 @@ func (database Database) ConnectionReflectType() reflect.Type {
 }
 
 // Open opens a database connection.
-func (database Database) Open(ctx context.Context, conf *DatabaseConfig) (DatabaseConnection, error) {
-	out := database.open.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(conf)})
+func (database Database) Open(conf *DatabaseConfig) (DatabaseConnection, error) {
+	out := database.open.Call([]reflect.Value{reflect.ValueOf(conf)})
 	c := out[0].Interface().(DatabaseConnection)
 	err, _ := out[1].Interface().(error)
 	return c, err
@@ -48,7 +48,7 @@ type DatabaseConfig struct {
 }
 
 // OpenDatabaseFunc represents functions that open database connections.
-type OpenDatabaseFunc[T DatabaseConnection] func(context.Context, *DatabaseConfig) (T, error)
+type OpenDatabaseFunc[T DatabaseConnection] func(*DatabaseConfig) (T, error)
 
 // DatabaseConnection is the interface implemented by database connections.
 type DatabaseConnection interface {
@@ -58,15 +58,15 @@ type DatabaseConnection interface {
 	Close() error
 
 	// Columns returns the columns of the given table.
-	Columns(table string) ([]types.Property, error)
+	Columns(ctx context.Context, table string) ([]types.Property, error)
 
 	// Query executes the given query and returns the resulting rows and columns.
-	Query(query string) (Rows, []types.Property, error)
+	Query(ctx context.Context, query string) (Rows, []types.Property, error)
 
 	// Upsert creates or updates the provided rows in the specified table.
 	// The columns parameter specifies the columns of the rows, including a column
 	// named "id" that serves as the table's key.
-	Upsert(table string, rows [][]any, columns []types.Property) error
+	Upsert(ctx context.Context, table string, rows [][]any, columns []types.Property) error
 }
 
 // Rows is the result of a database query. Its cursor starts before the first

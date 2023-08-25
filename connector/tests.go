@@ -7,7 +7,10 @@
 
 package connector
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 // CompletePathTest is a test for StorageConnection.CompletePath.
 type CompletePathTest struct {
@@ -19,12 +22,13 @@ type CompletePathTest struct {
 // TestCompletePath tests StorageConnection.CompletePath of connection executing
 // the given tests. It returns an error if a test fails.
 func TestCompletePath(connection StorageConnection, tests []CompletePathTest) error {
+	ctx := context.Background()
 	for _, test := range tests {
 		c := connection
 		if test.Connection != nil {
 			c = test.Connection
 		}
-		got, err := c.CompletePath(test.Name)
+		got, err := c.CompletePath(ctx, test.Name)
 		if err != nil {
 			_, ok := err.(InvalidPathError)
 			if !ok {

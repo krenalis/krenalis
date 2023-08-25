@@ -45,8 +45,8 @@ func init() {
 }
 
 // open opens a S3 connection and returns it.
-func open(ctx context.Context, conf *connector.StorageConfig) (*connection, error) {
-	c := connection{ctx: ctx, conf: conf}
+func open(conf *connector.StorageConfig) (*connection, error) {
+	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -57,7 +57,6 @@ func open(ctx context.Context, conf *connector.StorageConfig) (*connection, erro
 }
 
 type connection struct {
-	ctx      context.Context
 	conf     *connector.StorageConfig
 	settings *settings
 }
@@ -71,7 +70,7 @@ type settings struct {
 
 // CompletePath returns the complete representation of the given path name or an
 // InvalidPathError if name is not valid for use in calls to Open and Write.
-func (c *connection) CompletePath(name string) (string, error) {
+func (c *connection) CompletePath(ctx context.Context, name string) (string, error) {
 	if len(name) > 1024 {
 		return "", connector.InvalidPathErrorf("path name cannot be longer than 1024 bytes")
 	}
@@ -84,12 +83,12 @@ func (c *connection) CompletePath(name string) (string, error) {
 // Reader opens the file at the given path name and returns a ReadCloser from
 // which to read the file and its last update time.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Reader(name string) (io.ReadCloser, time.Time, error) {
+func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	if len(name) > 1024 {
 		return nil, time.Time{}, ui.Errorf("object key cannot be longer than 1024 bytes")
 	}
 	client := c.client()
-	res, err := client.GetObject(c.ctx, &s3.GetObjectInput{
+	res, err := client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(c.settings.Bucket),
 		Key:    aws.String(name),
 	})
@@ -108,7 +107,7 @@ func (c *connection) Reader(name string) (io.ReadCloser, time.Time, error) {
 var bucketReg = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]+$`)
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
@@ -120,11 +119,11 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		s, err := c.ValidateSettings(values)
+		s, err := c.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.conf.SetSettings(c.ctx, s)
+		return nil, nil, c.conf.SetSettings(ctx, s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}
@@ -171,7 +170,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
+func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -205,7 +204,7 @@ func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
 
 // Write writes the data read from r into the file with the given path name.
 // contentType is the file's content type.
-func (c *connection) Write(p io.Reader, name, contentType string) error {
+func (c *connection) Write(ctx context.Context, p io.Reader, name, contentType string) error {
 	if len(name) > 1024 {
 		return ui.Errorf("object key cannot be longer than 1024 bytes")
 	}
@@ -213,7 +212,7 @@ func (c *connection) Write(p io.Reader, name, contentType string) error {
 		name = name[1:]
 	}
 	client := c.client()
-	_, err := client.PutObject(c.ctx, &s3.PutObjectInput{
+	_, err := client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(c.settings.Bucket),
 		Key:         aws.String(name),
 		Body:        p,

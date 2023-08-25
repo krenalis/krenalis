@@ -9,7 +9,6 @@
 package server
 
 import (
-	"context"
 	_ "embed"
 
 	"chichi/connector"
@@ -27,7 +26,7 @@ func init() {
 }
 
 // open opens a Server connection and returns it.
-func open(context.Context, *connector.ServerConfig) (*connection, error) {
+func open(*connector.ServerConfig) (*connection, error) {
 	return &connection{}, nil
 }
 

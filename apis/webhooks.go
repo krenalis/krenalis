@@ -128,7 +128,6 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 	conf := _connector.AppConfig{
 		Role: _connector.SourceRole,
 	}
-	ctx := r.Context()
 	switch m[1] {
 	case "c":
 		id, _ := strconv.Atoi(m[2])
@@ -198,7 +197,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		conf.HTTPClient = apis.http.ConnectionClient(connection.ID)
 		conf.Region = _connector.PrivacyRegion(connection.Workspace().PrivacyRegion)
 	}
-	connection, err := _connector.RegisteredApp(connector.Name).Open(ctx, &conf)
+	connection, err := _connector.RegisteredApp(connector.Name).Open(&conf)
 	if err != nil {
 		return err
 	}

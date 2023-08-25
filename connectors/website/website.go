@@ -11,7 +11,6 @@ package website
 // This package is the Website connector.
 
 import (
-	"context"
 	_ "embed"
 
 	"chichi/connector"
@@ -29,7 +28,7 @@ func init() {
 }
 
 // open opens a Website connection and returns it.
-func open(context.Context, *connector.WebsiteConfig) (*connection, error) {
+func open(*connector.WebsiteConfig) (*connection, error) {
 	return &connection{}, nil
 }
 

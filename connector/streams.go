@@ -30,8 +30,8 @@ func (stream Stream) ConnectionReflectType() reflect.Type {
 }
 
 // Open opens a stream connection.
-func (stream Stream) Open(ctx context.Context, conf *StreamConfig) (StreamConnection, error) {
-	out := stream.open.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(conf)})
+func (stream Stream) Open(conf *StreamConfig) (StreamConnection, error) {
+	out := stream.open.Call([]reflect.Value{reflect.ValueOf(conf)})
 	c := out[0].Interface().(StreamConnection)
 	err, _ := out[1].Interface().(error)
 	return c, err
@@ -45,7 +45,7 @@ type StreamConfig struct {
 }
 
 // OpenStreamFunc represents functions that open stream connections.
-type OpenStreamFunc[T StreamConnection] func(context.Context, *StreamConfig) (T, error)
+type OpenStreamFunc[T StreamConnection] func(*StreamConfig) (T, error)
 
 // SendOptions are the send options.
 type SendOptions struct {
@@ -71,7 +71,7 @@ type StreamConnection interface {
 	// retained after the ack function has been called.
 	//
 	// Receive can be used by multiple goroutines at the same time.
-	Receive() (event []byte, ack func(), err error)
+	Receive(ctx context.Context) (event []byte, ack func(), err error)
 
 	// Send sends an event to the stream. If ack is not nil, connector calls ack
 	// when the event has been stored or when an error occurred.
@@ -80,5 +80,5 @@ type StreamConnection interface {
 	// function has been called.
 	//
 	// Send can be used by multiple goroutines at the same time.
-	Send(event []byte, options SendOptions, ack func(err error)) error
+	Send(ctx context.Context, event []byte, options SendOptions, ack func(err error)) error
 }

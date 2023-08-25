@@ -38,8 +38,8 @@ func init() {
 }
 
 // open opens a JSON connection and returns it.
-func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) {
-	c := connection{ctx: ctx, role: conf.Role, setSettings: conf.SetSettings}
+func open(conf *connector.FileConfig) (*connection, error) {
+	c := connection{role: conf.Role, setSettings: conf.SetSettings}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -50,7 +50,6 @@ func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) 
 }
 
 type connection struct {
-	ctx         context.Context
 	role        connector.Role
 	settings    *settings
 	setSettings connector.SetSettingsFunc
@@ -63,12 +62,12 @@ type settings struct {
 }
 
 // ContentType returns the content type of the file.
-func (c *connection) ContentType() string {
+func (c *connection) ContentType(ctx context.Context) string {
 	return "application/json; charset=UTF-8"
 }
 
 // Read reads the records from r and writes them to records.
-func (c *connection) Read(r io.Reader, _ string, records connector.RecordWriter) error {
+func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records connector.RecordWriter) error {
 
 	var err error
 	var tok json.Token
@@ -156,7 +155,7 @@ Records:
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
@@ -168,11 +167,11 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		values, _ = json.Marshal(s)
 	case "save":
 		// Save the settings.
-		s, err := c.ValidateSettings(values)
+		s, err := c.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		err = c.setSettings(c.ctx, s)
+		err = c.setSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -198,7 +197,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
+func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -208,7 +207,7 @@ func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
 }
 
 // Write writes to w the records read from records.
-func (c *connection) Write(w io.Writer, _ string, records connector.RecordReader) error {
+func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records connector.RecordReader) error {
 	s := c.settings
 	enc := newEncoder(s.Indent, s.GenerateASCII, s.AllowSpecialFloats)
 	var err error

@@ -37,22 +37,20 @@ func init() {
 }
 
 // open opens an Excel connection and returns it.
-func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) {
-	return &connection{ctx: ctx}, nil
+func open(conf *connector.FileConfig) (*connection, error) {
+	return &connection{}, nil
 }
 
-type connection struct {
-	ctx context.Context
-}
+type connection struct{}
 
 // ContentType returns the content type of the file.
-func (c *connection) ContentType() string {
+func (c *connection) ContentType(ctx context.Context) string {
 	return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 }
 
 // Read reads the records from r and writes them to records.
 // sheet is the name of the sheet to be read.
-func (c *connection) Read(r io.Reader, sheet string, records connector.RecordWriter) error {
+func (c *connection) Read(ctx context.Context, r io.Reader, sheet string, records connector.RecordWriter) error {
 
 	f, err := excelize.OpenReader(r, excelize.Options{
 		RawCellValue: true,
@@ -100,7 +98,7 @@ func (c *connection) Read(r io.Reader, sheet string, records connector.RecordWri
 }
 
 // Sheets returns the sheets of the file read from r.
-func (c *connection) Sheets(r io.Reader) ([]string, error) {
+func (c *connection) Sheets(ctx context.Context, r io.Reader) ([]string, error) {
 	f, err := excelize.OpenReader(r)
 	if err != nil {
 		return nil, err
@@ -111,7 +109,7 @@ func (c *connection) Sheets(r io.Reader) ([]string, error) {
 
 // Write writes to w the records read from records.
 // sheet is the name of the sheet to be written to.
-func (c *connection) Write(w io.Writer, sheet string, records connector.RecordReader) error {
+func (c *connection) Write(ctx context.Context, w io.Writer, sheet string, records connector.RecordReader) error {
 
 	f := excelize.NewFile()
 	defer f.Close()

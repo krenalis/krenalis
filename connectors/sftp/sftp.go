@@ -46,8 +46,8 @@ func init() {
 }
 
 // open opens a SFTP connection and returns it.
-func open(ctx context.Context, conf *connector.StorageConfig) (*connection, error) {
-	c := connection{ctx: ctx, conf: conf}
+func open(conf *connector.StorageConfig) (*connection, error) {
+	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -58,7 +58,6 @@ func open(ctx context.Context, conf *connector.StorageConfig) (*connection, erro
 }
 
 type connection struct {
-	ctx      context.Context
 	conf     *connector.StorageConfig
 	settings *settings
 }
@@ -72,7 +71,7 @@ type settings struct {
 
 // CompletePath returns the complete representation of the given path name or an
 // InvalidPathError if name is not valid for use in calls to Open and Write.
-func (c *connection) CompletePath(name string) (string, error) {
+func (c *connection) CompletePath(ctx context.Context, name string) (string, error) {
 	u := url.URL{
 		Scheme: "sftp",
 		Host:   net.JoinHostPort(c.settings.Host, strconv.Itoa(c.settings.Port)),
@@ -84,7 +83,7 @@ func (c *connection) CompletePath(name string) (string, error) {
 // Reader opens the file at the given path name and returns a ReadCloser from
 // which to read the file and its last update time.
 // It is the caller's responsibility to close the returned reader.
-func (c *connection) Reader(name string) (io.ReadCloser, time.Time, error) {
+func (c *connection) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	sshClient, sftpClient, err := openConnection(c.settings)
 	if err != nil {
 		return nil, time.Time{}, err
@@ -106,7 +105,7 @@ func (c *connection) Reader(name string) (io.ReadCloser, time.Time, error) {
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
@@ -120,7 +119,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		values, _ = json.Marshal(s)
 	case "test", "save":
 		// Test the connection and save the settings if required.
-		s, err := c.ValidateSettings(values)
+		s, err := c.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
 				return nil, ui.WarningAlert(err.Error()), nil
@@ -130,7 +129,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
 		}
-		err = c.conf.SetSettings(c.ctx, s)
+		err = c.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -158,7 +157,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
+func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -189,7 +188,7 @@ func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
 
 // Write writes the data read from r into the file with the given path name.
 // contentType is the file's content type.
-func (c *connection) Write(r io.Reader, name, _ string) error {
+func (c *connection) Write(ctx context.Context, r io.Reader, name, _ string) error {
 	sshClient, sftpClient, err := openConnection(c.settings)
 	if err != nil {
 		return err

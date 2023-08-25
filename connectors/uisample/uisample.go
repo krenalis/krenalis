@@ -29,8 +29,8 @@ func init() {
 }
 
 // open opens a UISample connection and returns it.
-func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
-	c := connection{ctx: ctx, conf: conf}
+func open(conf *connector.AppConfig) (*connection, error) {
+	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -41,18 +41,17 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 }
 
 type connection struct {
-	ctx      context.Context
 	conf     *connector.AppConfig
 	settings *settings
 }
 
 // Resource returns the resource from a client token.
-func (c *connection) Resource() (string, error) {
+func (c *connection) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
@@ -63,11 +62,11 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		}
 		values, _ = json.Marshal(s)
 	case "save":
-		s, err := c.ValidateSettings(values)
+		s, err := c.ValidateSettings(ctx, values)
 		if err != nil {
 			return nil, nil, err
 		}
-		err = c.conf.SetSettings(c.ctx, s)
+		err = c.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -140,7 +139,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
+func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {

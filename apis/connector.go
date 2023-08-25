@@ -191,7 +191,7 @@ func (this *Connector) ServeUI(ctx context.Context, event string, values []byte,
 	if oAuth != "" {
 		clientSecret = c.OAuth.ClientSecret
 	}
-	connectionUI, err := this.openUI(ctx, role, r.Code, clientSecret, r.AccessToken)
+	connectionUI, err := this.openUI(role, r.Code, clientSecret, r.AccessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func (this *Connector) ServeUI(ctx context.Context, event string, values []byte,
 
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
-	form, alert, err := connectionUI.ServeUI(event, values)
+	form, alert, err := connectionUI.ServeUI(ctx, event, values)
 	if c, ok := connectionUI.(io.Closer); ok {
 		_ = c.Close()
 	}
@@ -220,45 +220,45 @@ func (this *Connector) ServeUI(ctx context.Context, event string, values []byte,
 //
 // If the returned value implements the io.Close interface, it is the caller's
 // responsibility to call the Close method
-func (this *Connector) openUI(ctx context.Context, role ConnectionRole, resource, clientSecret, accessToken string) (_connector.UI, error) {
+func (this *Connector) openUI(role ConnectionRole, resource, clientSecret, accessToken string) (_connector.UI, error) {
 	var err error
 	var connection any
 	switch c := this.connector; c.Type {
 	case state.AppType:
-		connection, err = _connector.RegisteredApp(c.Name).Open(ctx, &_connector.AppConfig{
+		connection, err = _connector.RegisteredApp(c.Name).Open(&_connector.AppConfig{
 			Role:       _connector.Role(role),
 			Resource:   resource,
 			HTTPClient: this.apis.http.Client(clientSecret, accessToken),
 		})
 	case state.DatabaseType:
 		var database _connector.DatabaseConnection
-		database, err = _connector.RegisteredDatabase(c.Name).Open(ctx, &_connector.DatabaseConfig{
+		database, err = _connector.RegisteredDatabase(c.Name).Open(&_connector.DatabaseConfig{
 			Role: _connector.Role(role),
 		})
 		defer database.Close()
 		connection = database
 	case state.FileType:
-		connection, err = _connector.RegisteredFile(c.Name).Open(ctx, &_connector.FileConfig{
+		connection, err = _connector.RegisteredFile(c.Name).Open(&_connector.FileConfig{
 			Role: _connector.Role(role),
 		})
 	case state.MobileType:
-		connection, err = _connector.RegisteredMobile(c.Name).Open(ctx, &_connector.MobileConfig{
+		connection, err = _connector.RegisteredMobile(c.Name).Open(&_connector.MobileConfig{
 			Role: _connector.Role(role),
 		})
 	case state.ServerType:
-		connection, err = _connector.RegisteredServer(c.Name).Open(ctx, &_connector.ServerConfig{
+		connection, err = _connector.RegisteredServer(c.Name).Open(&_connector.ServerConfig{
 			Role: _connector.Role(role),
 		})
 	case state.StorageType:
-		connection, err = _connector.RegisteredStorage(c.Name).Open(ctx, &_connector.StorageConfig{
+		connection, err = _connector.RegisteredStorage(c.Name).Open(&_connector.StorageConfig{
 			Role: _connector.Role(role),
 		})
 	case state.StreamType:
-		connection, err = _connector.RegisteredStream(c.Name).Open(ctx, &_connector.StreamConfig{
+		connection, err = _connector.RegisteredStream(c.Name).Open(&_connector.StreamConfig{
 			Role: _connector.Role(role),
 		})
 	case state.WebsiteType:
-		connection, err = _connector.RegisteredWebsite(c.Name).Open(ctx, &_connector.WebsiteConfig{
+		connection, err = _connector.RegisteredWebsite(c.Name).Open(&_connector.WebsiteConfig{
 			Role: _connector.Role(role),
 		})
 	}

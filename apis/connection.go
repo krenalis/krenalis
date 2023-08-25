@@ -489,11 +489,11 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 	if connector.Type != state.StorageType {
 		return "", errors.BadRequest("connection %d is not a storage connection", c.ID)
 	}
-	storage, err := this.openStorage(ctx)
+	storage, err := this.openStorage()
 	if err != nil {
 		return "", err
 	}
-	path, err = storage.CompletePath(path)
+	path, err = storage.CompletePath(ctx, path)
 	if err != nil {
 		if err, ok := err.(_connector.InvalidPathError); ok {
 			return "", errors.Unprocessable(InvalidPath, "%s", err)
@@ -575,12 +575,12 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	if err != nil {
 		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 	}
-	database, err := this.openDatabase(ctx)
+	database, err := this.openDatabase()
 	if err != nil {
 		return nil, types.Type{}, err
 	}
 	defer database.Close()
-	rawRows, properties, err := database.Query(query)
+	rawRows, properties, err := database.Query(ctx, query)
 	if err != nil {
 		return nil, types.Type{}, errors.Unprocessable(QueryExecutionFailed, "query execution of connection %d failed: %w", c.ID, err)
 	}
@@ -799,7 +799,7 @@ func (this *Connection) Records(ctx context.Context, path, sheet string, limit i
 	}
 
 	// Connect to the file connector.
-	file, err := this.openFile(ctx)
+	file, err := this.openFile()
 	if err != nil {
 		return nil, types.Type{}, err
 	}
@@ -807,11 +807,11 @@ func (this *Connection) Records(ctx context.Context, path, sheet string, limit i
 	// Open the file.
 	var r io.ReadCloser
 	{
-		storage, err := this.openStorage(ctx)
+		storage, err := this.openStorage()
 		if err != nil {
 			return nil, types.Type{}, err
 		}
-		r, _, err = storage.Reader(path)
+		r, _, err = storage.Reader(ctx, path)
 		if err != nil {
 			return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
 		}
@@ -820,7 +820,7 @@ func (this *Connection) Records(ctx context.Context, path, sheet string, limit i
 
 	// Read the records.
 	rw := newRecordWriter(c.ID, limit, nil)
-	err = file.Read(r, sheet, rw)
+	err = file.Read(ctx, r, sheet, rw)
 	if err != nil && err != errRecordStop {
 		return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
@@ -951,21 +951,21 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 
 	switch connector.Type {
 	case state.AppType:
-		connection, err = this.openApp(ctx)
+		connection, err = this.openApp()
 	case state.DatabaseType:
-		connection, err = this.openDatabase(ctx)
+		connection, err = this.openDatabase()
 	case state.FileType:
-		connection, err = this.openFile(ctx)
+		connection, err = this.openFile()
 	case state.MobileType:
-		connection, err = this.openMobile(ctx)
+		connection, err = this.openMobile()
 	case state.ServerType:
-		connection, err = this.openServer(ctx)
+		connection, err = this.openServer()
 	case state.StorageType:
-		connection, err = this.openStorage(ctx)
+		connection, err = this.openStorage()
 	case state.StreamType:
-		connection, err = this.openStream(ctx)
+		connection, err = this.openStream()
 	case state.WebsiteType:
-		connection, err = this.openWebsite(ctx)
+		connection, err = this.openWebsite()
 	}
 
 	if err != nil {
@@ -981,7 +981,7 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
-	form, alert, err := connectionUI.ServeUI(event, values)
+	form, alert, err := connectionUI.ServeUI(ctx, event, values)
 	if err != nil {
 		if err == ui.ErrEventNotExist {
 			err = errors.Unprocessable(EventNotExists, "UI event %q does not exist for %s connector",
@@ -1093,7 +1093,7 @@ func (this *Connection) Sheets(ctx context.Context, path string) ([]string, erro
 	if !utf8.ValidString(path) {
 		return nil, errors.BadRequest("path is not UTF-8 encoded")
 	}
-	f, err := this.openFile(ctx)
+	f, err := this.openFile()
 	if err != nil {
 		return nil, err
 	}
@@ -1104,16 +1104,16 @@ func (this *Connection) Sheets(ctx context.Context, path string) ([]string, erro
 	if _, ok := c.Storage(); !ok {
 		return nil, errors.Unprocessable(NoStorage, "file connection %d does not have a storage", c.ID)
 	}
-	storage, err := this.openStorage(ctx)
+	storage, err := this.openStorage()
 	if err != nil {
 		return nil, err
 	}
-	r, _, err := storage.Reader(path)
+	r, _, err := storage.Reader(ctx, path)
 	if err != nil {
 		return nil, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
 	defer r.Close()
-	sheets, err := file.Sheets(r)
+	sheets, err := file.Sheets(ctx, r)
 	if err != nil {
 		return nil, errors.Unprocessable(ReadFileFailed, "%w", err)
 	}
@@ -1176,11 +1176,11 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	if table == "" || utf8.RuneCountInString(table) > 1024 {
 		return types.Type{}, errors.BadRequest("table name is not valid")
 	}
-	database, err := this.openDatabase(ctx)
+	database, err := this.openDatabase()
 	if err != nil {
 		return types.Type{}, err
 	}
-	columns, err := database.Columns(table)
+	columns, err := database.Columns(ctx, table)
 	_ = database.Close()
 	if err != nil {
 		return types.Type{}, err
@@ -1367,7 +1367,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 }
 
 // openApp opens an app connection.
-func (this *Connection) openApp(ctx context.Context) (_connector.AppConnection, error) {
+func (this *Connection) openApp() (_connector.AppConnection, error) {
 	c := this.connection
 	var resourceID int
 	var resourceCode string
@@ -1375,7 +1375,7 @@ func (this *Connection) openApp(ctx context.Context) (_connector.AppConnection, 
 		resourceID = r.ID
 		resourceCode = r.Code
 	}
-	app, err := _connector.RegisteredApp(c.Connector().Name).Open(ctx, &_connector.AppConfig{
+	app, err := _connector.RegisteredApp(c.Connector().Name).Open(&_connector.AppConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),
@@ -1388,8 +1388,8 @@ func (this *Connection) openApp(ctx context.Context) (_connector.AppConnection, 
 }
 
 // openAppEvents opens an app events connection.
-func (this *Connection) openAppEvents(ctx context.Context) (_connector.AppEventsConnection, error) {
-	app, err := this.openApp(ctx)
+func (this *Connection) openAppEvents() (_connector.AppEventsConnection, error) {
+	app, err := this.openApp()
 	if err != nil {
 		return nil, err
 	}
@@ -1397,8 +1397,8 @@ func (this *Connection) openAppEvents(ctx context.Context) (_connector.AppEvents
 }
 
 // openAppUsers opens an app users connection.
-func (this *Connection) openAppUsers(ctx context.Context) (_connector.AppUsersConnection, error) {
-	app, err := this.openApp(ctx)
+func (this *Connection) openAppUsers() (_connector.AppUsersConnection, error) {
+	app, err := this.openApp()
 	if err != nil {
 		return nil, err
 	}
@@ -1409,9 +1409,9 @@ func (this *Connection) openAppUsers(ctx context.Context) (_connector.AppUsersCo
 //
 // It is the caller's responsibility to call the Close method on the returned
 // value.
-func (this *Connection) openDatabase(ctx context.Context) (_connector.DatabaseConnection, error) {
+func (this *Connection) openDatabase() (_connector.DatabaseConnection, error) {
 	c := this.connection
-	database, err := _connector.RegisteredDatabase(c.Connector().Name).Open(ctx, &_connector.DatabaseConfig{
+	database, err := _connector.RegisteredDatabase(c.Connector().Name).Open(&_connector.DatabaseConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),
@@ -1420,9 +1420,9 @@ func (this *Connection) openDatabase(ctx context.Context) (_connector.DatabaseCo
 }
 
 // openFile opens a file connection.
-func (this *Connection) openFile(ctx context.Context) (_connector.FileConnection, error) {
+func (this *Connection) openFile() (_connector.FileConnection, error) {
 	c := this.connection
-	file, err := _connector.RegisteredFile(c.Connector().Name).Open(ctx, &_connector.FileConfig{
+	file, err := _connector.RegisteredFile(c.Connector().Name).Open(&_connector.FileConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),
@@ -1431,9 +1431,9 @@ func (this *Connection) openFile(ctx context.Context) (_connector.FileConnection
 }
 
 // openMobile opens a mobile connection.
-func (this *Connection) openMobile(ctx context.Context) (_connector.MobileConnection, error) {
+func (this *Connection) openMobile() (_connector.MobileConnection, error) {
 	c := this.connection
-	mobile, err := _connector.RegisteredMobile(c.Connector().Name).Open(ctx, &_connector.MobileConfig{
+	mobile, err := _connector.RegisteredMobile(c.Connector().Name).Open(&_connector.MobileConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),
@@ -1442,9 +1442,9 @@ func (this *Connection) openMobile(ctx context.Context) (_connector.MobileConnec
 }
 
 // openServer opens a server connection.
-func (this *Connection) openServer(ctx context.Context) (_connector.ServerConnection, error) {
+func (this *Connection) openServer() (_connector.ServerConnection, error) {
 	c := this.connection
-	server, err := _connector.RegisteredServer(c.Connector().Name).Open(ctx, &_connector.ServerConfig{
+	server, err := _connector.RegisteredServer(c.Connector().Name).Open(&_connector.ServerConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),
@@ -1453,12 +1453,12 @@ func (this *Connection) openServer(ctx context.Context) (_connector.ServerConnec
 }
 
 // openStorage opens a storage connection.
-func (this *Connection) openStorage(ctx context.Context) (_connector.StorageConnection, error) {
+func (this *Connection) openStorage() (_connector.StorageConnection, error) {
 	c := this.connection
 	if c.Connector().Type == state.FileType {
 		c, _ = c.Storage()
 	}
-	storage, err := _connector.RegisteredStorage(c.Connector().Name).Open(ctx, &_connector.StorageConfig{
+	storage, err := _connector.RegisteredStorage(c.Connector().Name).Open(&_connector.StorageConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),
@@ -1470,9 +1470,9 @@ func (this *Connection) openStorage(ctx context.Context) (_connector.StorageConn
 //
 // It is the caller's responsibility to call the Close method on the returned
 // value.
-func (this *Connection) openStream(ctx context.Context) (_connector.StreamConnection, error) {
+func (this *Connection) openStream() (_connector.StreamConnection, error) {
 	c := this.connection
-	database, err := _connector.RegisteredStream(c.Connector().Name).Open(ctx, &_connector.StreamConfig{
+	database, err := _connector.RegisteredStream(c.Connector().Name).Open(&_connector.StreamConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),
@@ -1481,9 +1481,9 @@ func (this *Connection) openStream(ctx context.Context) (_connector.StreamConnec
 }
 
 // openWebsite opens a website connection.
-func (this *Connection) openWebsite(ctx context.Context) (_connector.WebsiteConnection, error) {
+func (this *Connection) openWebsite() (_connector.WebsiteConnection, error) {
 	c := this.connection
-	website, err := _connector.RegisteredWebsite(c.Connector().Name).Open(ctx, &_connector.WebsiteConfig{
+	website, err := _connector.RegisteredWebsite(c.Connector().Name).Open(&_connector.WebsiteConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
 		SetSettings: this.setSettingsFunc(),
@@ -1838,7 +1838,7 @@ func (role *ConnectionRole) UnmarshalJSON(data []byte) error {
 // and eventType.
 func (this *Connection) fetchAppSchema(ctx context.Context, target state.ActionTarget, eventType string) (types.Type, error) {
 
-	app, err := this.openApp(ctx)
+	app, err := this.openApp()
 	if err != nil {
 		return types.Type{}, fmt.Errorf("cannot connect to the connector: %s", err)
 	}
@@ -1850,7 +1850,7 @@ func (this *Connection) fetchAppSchema(ctx context.Context, target state.ActionT
 	switch target {
 	case state.EventsTarget:
 		if eventType != "" {
-			eventTypes, err := app.(_connector.AppEventsConnection).EventTypes()
+			eventTypes, err := app.(_connector.AppEventsConnection).EventTypes(ctx)
 			if err != nil {
 				return types.Type{}, err
 			}
@@ -1867,7 +1867,7 @@ func (this *Connection) fetchAppSchema(ctx context.Context, target state.ActionT
 			}
 		}
 	case state.UsersTarget:
-		schema, err = app.(_connector.AppUsersConnection).UserSchema()
+		schema, err = app.(_connector.AppUsersConnection).UserSchema(ctx)
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -1879,7 +1879,7 @@ func (this *Connection) fetchAppSchema(ctx context.Context, target state.ActionT
 			return types.Type{}, fmt.Errorf("connection has returned a schema without %s properties", strings.ToLower(c.Role.String()))
 		}
 	case state.GroupsTarget:
-		schema, err = app.(_connector.AppGroupsConnection).GroupSchema()
+		schema, err = app.(_connector.AppGroupsConnection).GroupSchema(ctx)
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -1896,11 +1896,11 @@ func (this *Connection) fetchAppSchema(ctx context.Context, target state.ActionT
 
 // fetchEventTypes fetches the event types for the connection.
 func (this *Connection) fetchEventTypes(ctx context.Context) ([]*_connector.EventType, error) {
-	app, err := this.openAppEvents(ctx)
+	app, err := this.openAppEvents()
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to the connector: %s", err)
 	}
-	return app.EventTypes()
+	return app.EventTypes(ctx)
 }
 
 // setSettingsFunc returns a connector.SetSettingsFunc function that sets the

@@ -28,14 +28,13 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 		return actionExecutionError{err}
 	}
 
-	database, err := this.connection.openDatabase(ctx)
+	database, err := this.connection.openDatabase()
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %w", err)}
 	}
-	defer database.Close()
 
 	// Execute the query and get the results and the properties.
-	rawRows, properties, err := database.Query(query)
+	rawRows, properties, err := database.Query(ctx, query)
 	if err != nil {
 		return actionExecutionError{err}
 	}
@@ -187,11 +186,11 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 	columns := append([]types.Property{{Name: "id", Type: types.Int()}},
 		datastore.PropertiesToColumns(outSchemaProps)...)
 
-	database, err := this.connection.openDatabase(ctx)
+	database, err := this.connection.openDatabase()
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %w", err)}
 	}
-	err = database.Upsert(this.action.TableName, rows, columns)
+	err = database.Upsert(ctx, this.action.TableName, rows, columns)
 	_ = database.Close()
 
 	log.Printf("[info] %d user(s) exported to database on the table %q", len(users), this.action.TableName)

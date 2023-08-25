@@ -55,7 +55,6 @@ func (events *Events) Close() {
 	close(events.stopSenders)
 	events.processor.Close()
 	events.log.Close()
-	events.state.Close()
 }
 
 // ServeHTTP serves an event request.

@@ -26,7 +26,7 @@ import (
 // resolving the external identity.
 func (this *Action) downloadUsersForIdentityMatch(ctx context.Context) error {
 
-	app, err := this.connection.openAppUsers(ctx)
+	app, err := this.connection.openAppUsers()
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %w", err)}
 	}
@@ -47,7 +47,7 @@ func (this *Action) downloadUsersForIdentityMatch(ctx context.Context) error {
 	// Importing users from a destination to match identities for the export.
 	for !eof {
 
-		users, next, err := app.Users(properties, cursor)
+		users, next, err := app.Users(ctx, properties, cursor)
 		if err != nil && err != io.EOF {
 			return actionExecutionError{fmt.Errorf("cannot get users from the connector: %w", err)}
 		}
@@ -139,7 +139,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	}
 
 	// Open a connection to the app.
-	app, err := this.connection.openAppUsers(ctx)
+	app, err := this.connection.openAppUsers()
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %w", err)}
 	}
@@ -183,7 +183,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 
 		// Update the user, if it already exists on the app.
 		if exists {
-			err := app.UpdateUser(id, props)
+			err := app.UpdateUser(ctx, id, props)
 			if err != nil {
 				return actionExecutionError{fmt.Errorf("cannot update user: %w", err)}
 			}
@@ -192,7 +192,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		}
 
 		// Create the user.
-		err = app.CreateUser(props)
+		err = app.CreateUser(ctx, props)
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot create user: %w", err)}
 		}
@@ -206,7 +206,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 // importFromApp imports the users from an app.
 func (this *Action) importFromApp(ctx context.Context) error {
 
-	app, err := this.connection.openAppUsers(ctx)
+	app, err := this.connection.openAppUsers()
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %w", err)}
 	}
@@ -237,7 +237,7 @@ func (this *Action) importFromApp(ctx context.Context) error {
 
 	for !eof {
 
-		users, next, err := app.Users(properties, cursor)
+		users, next, err := app.Users(ctx, properties, cursor)
 		if err != nil && err != io.EOF {
 			return actionExecutionError{fmt.Errorf("cannot get users from the connector: %w", err)}
 		}

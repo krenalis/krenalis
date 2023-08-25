@@ -218,14 +218,14 @@ func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, c
 			clientSecret = c.OAuth.ClientSecret
 		}
 		connector := &Connector{apis: this.apis, connector: c}
-		connectionUI, err := connector.openUI(ctx, role, n.Resource.Code, clientSecret, n.Resource.AccessToken)
+		connectionUI, err := connector.openUI(role, n.Resource.Code, clientSecret, n.Resource.AccessToken)
 		if err != nil {
 			return 0, err
 		}
 		if connectionUI == nil {
 			return 0, errors.BadRequest("connector %d does not have a UI", c.ID)
 		}
-		n.Settings, err = connectionUI.ValidateSettings(settings)
+		n.Settings, err = connectionUI.ValidateSettings(ctx, settings)
 		if c, ok := connectionUI.(io.Closer); ok {
 			_ = c.Close()
 		}
@@ -680,14 +680,14 @@ func (this *Workspace) OAuthToken(ctx context.Context, authorizationCode, redire
 		return "", err
 	}
 
-	connection, err := _connector.RegisteredApp(c.Name).Open(ctx, &_connector.AppConfig{
+	connection, err := _connector.RegisteredApp(c.Name).Open(&_connector.AppConfig{
 		HTTPClient: this.apis.http.Client(c.OAuth.ClientSecret, accessToken),
 		Region:     _connector.PrivacyRegion(this.workspace.PrivacyRegion),
 	})
 	if err != nil {
 		return "", err
 	}
-	code, err := connection.Resource()
+	code, err := connection.Resource(ctx)
 	if err != nil {
 		return "", err
 	}

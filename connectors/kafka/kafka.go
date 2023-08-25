@@ -41,8 +41,8 @@ func init() {
 }
 
 // open opens a Kafka connection and returns it.
-func open(ctx context.Context, conf *connector.StreamConfig) (*connection, error) {
-	c := connection{ctx: ctx, conf: conf}
+func open(conf *connector.StreamConfig) (*connection, error) {
+	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -53,7 +53,6 @@ func open(ctx context.Context, conf *connector.StreamConfig) (*connection, error
 }
 
 type connection struct {
-	ctx      context.Context
 	conf     *connector.StreamConfig
 	settings *settings
 	client   *kgo.Client
@@ -79,7 +78,7 @@ func (c *connection) Close() error {
 // retained after the ack function has been called.
 //
 // Receive can be used by multiple goroutines at the same time.
-func (c *connection) Receive() ([]byte, func(), error) {
+func (c *connection) Receive(ctx context.Context) ([]byte, func(), error) {
 	err := c.connect()
 	if err != nil {
 		return nil, nil, err
@@ -89,14 +88,14 @@ func (c *connection) Receive() ([]byte, func(), error) {
 		c.iter = &fetchesRecordIter{}
 	}
 	if c.iter.Done() {
-		c.iter.fetches = c.client.PollFetches(c.ctx)
+		c.iter.fetches = c.client.PollFetches(ctx)
 	}
 	record, err := c.iter.Next()
 	if err != nil {
 		return nil, nil, err
 	}
 	ack := func() {
-		_ = c.client.CommitRecords(c.ctx, record)
+		_ = c.client.CommitRecords(ctx, record)
 	}
 	return record.Value, ack, nil
 }
@@ -108,7 +107,7 @@ func (c *connection) Receive() ([]byte, func(), error) {
 // function has been called.
 //
 // Send can be used by multiple goroutines at the same time.
-func (c *connection) Send(event []byte, options connector.SendOptions, ack func(err error)) error {
+func (c *connection) Send(ctx context.Context, event []byte, options connector.SendOptions, ack func(err error)) error {
 	err := c.connect()
 	if err != nil {
 		return err
@@ -127,12 +126,12 @@ func (c *connection) Send(event []byte, options connector.SendOptions, ack func(
 	if ack != nil {
 		promise = func(r *kgo.Record, err error) { ack(err) }
 	}
-	c.client.Produce(c.ctx, record, promise)
+	c.client.Produce(ctx, record, promise)
 	return nil
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
@@ -146,7 +145,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		values, _ = json.Marshal(s)
 	case "test", "save":
 		// Test the connection and save the settings if required.
-		s, err := c.ValidateSettings(values)
+		s, err := c.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
 				return nil, ui.WarningAlert(err.Error()), nil
@@ -156,7 +155,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
 		}
-		err = c.conf.SetSettings(c.ctx, s)
+		err = c.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -204,7 +203,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
+func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -244,7 +243,7 @@ func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
 	if !validTopicName(s.Topic) {
 		return nil, ui.Errorf("topic name can contain only [A-Za-z0-9_.-]")
 	}
-	err = testConnection(c.ctx, &s)
+	err = testConnection(ctx, &s)
 	if err != nil {
 		return nil, err
 	}

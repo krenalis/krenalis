@@ -8,6 +8,7 @@
 package events
 
 import (
+	"context"
 	"log"
 )
 
@@ -17,6 +18,14 @@ import (
 func startSenders(events <-chan *processedEvent, done chan<- *processedEvent, st *eventsState) chan<- struct{} {
 
 	stop := make(chan struct{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		select {
+		case <-stop:
+			cancel()
+		}
+	}()
 
 	// Start the workers which send events.
 	for i := 0; i < 10; i++ {
@@ -30,9 +39,11 @@ func startSenders(events <-chan *processedEvent, done chan<- *processedEvent, st
 						continue
 					}
 					// TODO(Gianluca): use correct error handling here.
-					err := destination.SendEvent(event.inEvent, event.mappedEvent, event.eventType)
+					err := destination.SendEvent(ctx, event.inEvent, event.mappedEvent, event.eventType)
 					if err != nil {
-						log.Printf("cannot send event: %s", err)
+						if err != context.Canceled {
+							log.Printf("cannot send event: %s", err)
+						}
 						continue
 					}
 					done <- event

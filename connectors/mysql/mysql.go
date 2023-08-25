@@ -44,8 +44,8 @@ func init() {
 }
 
 // open opens a MySQL connection and returns it.
-func open(ctx context.Context, conf *connector.DatabaseConfig) (*connection, error) {
-	c := connection{ctx: ctx, conf: conf}
+func open(conf *connector.DatabaseConfig) (*connection, error) {
+	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -56,7 +56,6 @@ func open(ctx context.Context, conf *connector.DatabaseConfig) (*connection, err
 }
 
 type connection struct {
-	ctx      context.Context
 	conf     *connector.DatabaseConfig
 	settings *settings
 	db       *sql.DB
@@ -72,13 +71,13 @@ func (c *connection) Close() error {
 }
 
 // Columns returns the columns of the given table.
-func (c *connection) Columns(table string) ([]types.Property, error) {
+func (c *connection) Columns(ctx context.Context, table string) ([]types.Property, error) {
 	var err error
 	table, err = quoteTable(table)
 	if err != nil {
 		return nil, err
 	}
-	rows, columns, err := c.query("SELECT * FROM " + table)
+	rows, columns, err := c.query(ctx, "SELECT * FROM "+table)
 	if err != nil {
 		return nil, err
 	}
@@ -90,12 +89,12 @@ func (c *connection) Columns(table string) ([]types.Property, error) {
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (c *connection) Query(query string) (connector.Rows, []types.Property, error) {
-	return c.query(query)
+func (c *connection) Query(ctx context.Context, query string) (connector.Rows, []types.Property, error) {
+	return c.query(ctx, query)
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
@@ -108,7 +107,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		}
 		values, _ = json.Marshal(s)
 	case "test", "save":
-		s, err := c.ValidateSettings(values)
+		s, err := c.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
 				return nil, ui.WarningAlert(err.Error()), nil
@@ -118,7 +117,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if event == "test" {
 			return nil, nil, nil
 		}
-		err = c.conf.SetSettings(c.ctx, s)
+		err = c.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -148,7 +147,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 // Upsert creates or updates the provided rows in the specified table.
 // The columns parameter specifies the columns of the rows, including a column
 // named "id" that serves as the table's key.
-func (c *connection) Upsert(table string, rows [][]any, columns []types.Property) error {
+func (c *connection) Upsert(ctx context.Context, table string, rows [][]any, columns []types.Property) error {
 
 	var err error
 	table, err = quoteTable(table)
@@ -198,14 +197,14 @@ func (c *connection) Upsert(table string, rows [][]any, columns []types.Property
 	if err = c.openDB(); err != nil {
 		return err
 	}
-	_, err = c.db.ExecContext(c.ctx, query)
+	_, err = c.db.ExecContext(ctx, query)
 
 	return err
 }
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
+func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -231,7 +230,7 @@ func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 64 {
 		return nil, ui.Errorf("database length must be in range [1,64]")
 	}
-	err = testConnection(c.ctx, &s)
+	err = testConnection(ctx, &s)
 	if err != nil {
 		return nil, err
 	}
@@ -254,11 +253,11 @@ func (c *connection) openDB() error {
 }
 
 // query executes the given query and returns the resulting rows and columns.
-func (c *connection) query(query string) (connector.Rows, []types.Property, error) {
+func (c *connection) query(ctx context.Context, query string) (connector.Rows, []types.Property, error) {
 	if err := c.openDB(); err != nil {
 		return nil, nil, err
 	}
-	rows, err := c.db.QueryContext(c.ctx, query)
+	rows, err := c.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, nil, err
 	}

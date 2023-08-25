@@ -42,21 +42,19 @@ func init() {
 }
 
 // open opens a Parquet connection and returns it.
-func open(ctx context.Context, conf *connector.FileConfig) (*connection, error) {
-	return &connection{ctx: ctx}, nil
+func open(conf *connector.FileConfig) (*connection, error) {
+	return &connection{}, nil
 }
 
-type connection struct {
-	ctx context.Context
-}
+type connection struct{}
 
 // ContentType returns the content type of the file.
-func (c *connection) ContentType() string {
+func (c *connection) ContentType(ctx context.Context) string {
 	return "" // TODO: implement file writing for Parquet.
 }
 
 // Read reads the records from r and writes them to records.
-func (c *connection) Read(r io.Reader, _ string, records connector.RecordWriter) error {
+func (c *connection) Read(ctx context.Context, r io.Reader, _ string, records connector.RecordWriter) error {
 
 	// Copy data read from r to a temporary file.
 	dir := os.TempDir()
@@ -77,7 +75,7 @@ func (c *connection) Read(r io.Reader, _ string, records connector.RecordWriter)
 		return err
 	}
 
-	fr, err := goparquet.NewFileReaderWithOptions(fi, goparquet.WithReaderContext(c.ctx))
+	fr, err := goparquet.NewFileReaderWithOptions(fi, goparquet.WithReaderContext(ctx))
 	if err != nil {
 		return err
 	}
@@ -140,7 +138,7 @@ func (c *connection) Read(r io.Reader, _ string, records connector.RecordWriter)
 }
 
 // Write writes to w the records read from records.
-func (c *connection) Write(w io.Writer, _ string, records connector.RecordReader) error {
+func (c *connection) Write(ctx context.Context, w io.Writer, _ string, records connector.RecordReader) error {
 	// TODO(marco)
 	return nil
 }

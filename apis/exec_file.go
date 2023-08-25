@@ -88,14 +88,14 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	// Retrieve the storage associated to the file connection.
 	var storage *compressorStorage
 	{
-		st, err := this.connection.openStorage(ctx)
+		st, err := this.connection.openStorage()
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %w", err)}
 		}
 		storage = newCompressedStorage(st, connection.Compression)
 	}
 
-	file, err := this.connection.openFile(ctx)
+	file, err := this.connection.openFile()
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %w", err)}
 	}
@@ -126,11 +126,11 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	records := newRecordReader(columns, usersSlices)
 
 	// Write the file to the storage.
-	w, err := storage.Writer(this.action.Path, file.ContentType())
+	w, err := storage.Writer(ctx, this.action.Path, file.ContentType(ctx))
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot write file: %w", err)}
 	}
-	err = file.Write(w, this.action.Sheet, records)
+	err = file.Write(ctx, w, this.action.Sheet, records)
 	if err2 := w.CloseWithError(err); err2 != nil && err == nil {
 		err = err2
 	}
@@ -145,7 +145,7 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 func (this *Action) importFromFile(ctx context.Context) error {
 
 	// Connect to the file connector.
-	file, err := this.connection.openFile(ctx)
+	file, err := this.connection.openFile()
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot connect to the file connector: %w", err)}
 	}
@@ -153,11 +153,11 @@ func (this *Action) importFromFile(ctx context.Context) error {
 	// Open the file.
 	var r io.ReadCloser
 	{
-		storage, err := this.connection.openStorage(ctx)
+		storage, err := this.connection.openStorage()
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %w", err)}
 		}
-		r, _, err = storage.Reader(this.action.Path)
+		r, _, err = storage.Reader(ctx, this.action.Path)
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot get ReadCloser from storage: %w", err)}
 		}
@@ -211,7 +211,7 @@ func (this *Action) importFromFile(ctx context.Context) error {
 
 		return nil
 	})
-	err = file.Read(r, this.action.Sheet, rw)
+	err = file.Read(ctx, r, this.action.Sheet, rw)
 	if err != nil {
 		return actionExecutionError{fmt.Errorf("cannot read the file: %w", err)}
 	}
@@ -479,11 +479,11 @@ func newCompressedStorage(s connector.StorageConnection, c state.Compression) *c
 // Reader opens the file at the given path name and returns a ReadCloser from
 // which to read the file and its last update time.
 // It is the caller's responsibility to close the returned reader.
-func (cs compressorStorage) Reader(name string) (io.ReadCloser, time.Time, error) {
+func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	originalName := name
 	ext := cs.compression.Ext()
 	name += ext
-	r, t, err := cs.storage.Reader(name)
+	r, t, err := cs.storage.Reader(ctx, name)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -559,7 +559,7 @@ func (cs compressorStorage) Reader(name string) (io.ReadCloser, time.Time, error
 // with an appended extension, and an appropriate content type.
 //
 // It is the caller's responsibility to call Close on the returned Writer.
-func (cs compressorStorage) Writer(path, contentType string) (*storageWriteCloser, error) {
+func (cs compressorStorage) Writer(ctx context.Context, path, contentType string) (*storageWriteCloser, error) {
 	pr, pw := io.Pipe()
 	var w io.WriteCloser
 	switch cs.compression {
@@ -587,7 +587,7 @@ func (cs compressorStorage) Writer(path, contentType string) (*storageWriteClose
 	}
 	ch := make(chan error)
 	go func() {
-		err := cs.storage.Write(pr, path, contentType)
+		err := cs.storage.Write(ctx, pr, path, contentType)
 		if err != nil {
 			_ = pr.CloseWithError(err)
 		} else {

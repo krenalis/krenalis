@@ -130,11 +130,11 @@ func (role Role) String() string {
 type UI interface {
 
 	// ServeUI serves the connector's user interface.
-	ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error)
+	ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error)
 
 	// ValidateSettings validates the settings received from the UI and returns them
 	// in a format suitable for storage.
-	ValidateSettings(values []byte) ([]byte, error)
+	ValidateSettings(ctx context.Context, values []byte) ([]byte, error)
 }
 
 type WebhookEvent interface {

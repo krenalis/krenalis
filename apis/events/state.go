@@ -32,10 +32,6 @@ type eventsState struct {
 	state        *state.State
 	http         *httpclient.HTTP
 	destinations map[int]connector.AppEventsConnection
-	close        struct {
-		ctx       context.Context
-		cancelCtx context.CancelFunc
-	}
 }
 
 // newEventsState returns a new eventsState based on the st state.
@@ -46,7 +42,6 @@ func newEventsState(db *postgres.DB, st *state.State, http *httpclient.HTTP) *ev
 		http:         http,
 		destinations: map[int]connector.AppEventsConnection{},
 	}
-	eventSt.close.ctx, eventSt.close.cancelCtx = context.WithCancel(context.Background())
 	for _, c := range st.Connections() {
 		if !isDestination(c) {
 			continue
@@ -65,12 +60,6 @@ func newEventsState(db *postgres.DB, st *state.State, http *httpclient.HTTP) *ev
 	st.AddListener(eventSt.onSetWarehouse)
 	st.AddListener(eventSt.onSetWorkspacePrivacyRegion)
 	return eventSt
-}
-
-// Close closes the events state.
-func (st *eventsState) Close() {
-	// TODO(marco): Currently, it is not possible to wait for the termination of the called method on connections.
-	st.close.cancelCtx()
 }
 
 // Source returns the enabled source connection with the identifier id and true,
@@ -247,7 +236,7 @@ func (st *eventsState) openDestination(c *state.Connection) error {
 	}
 
 	app := connector.RegisteredApp(c.Connector().Name)
-	connection, err := app.Open(st.close.ctx, &connector.AppConfig{
+	connection, err := app.Open(&connector.AppConfig{
 		Role:     connector.Role(c.Role),
 		Settings: c.Settings,
 		SetSettings: func(ctx context.Context, settings []byte) error {

@@ -49,8 +49,8 @@ func (storage Storage) ConnectionReflectType() reflect.Type {
 }
 
 // Open opens a storage connection.
-func (storage Storage) Open(ctx context.Context, conf *StorageConfig) (StorageConnection, error) {
-	out := storage.open.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(conf)})
+func (storage Storage) Open(conf *StorageConfig) (StorageConnection, error) {
+	out := storage.open.Call([]reflect.Value{reflect.ValueOf(conf)})
 	c := out[0].Interface().(StorageConnection)
 	err, _ := out[1].Interface().(error)
 	return c, err
@@ -64,7 +64,7 @@ type StorageConfig struct {
 }
 
 // OpenStorageFunc represents functions that open storage connections.
-type OpenStorageFunc[T StorageConnection] func(context.Context, *StorageConfig) (T, error)
+type OpenStorageFunc[T StorageConnection] func(*StorageConfig) (T, error)
 
 // StorageConnection is the interface implemented by storage connections.
 type StorageConnection interface {
@@ -73,14 +73,14 @@ type StorageConnection interface {
 	// InvalidPathError if name is not valid for use in calls to Open and Write.
 	//
 	// name's length in runes will be in range [1, 1024].
-	CompletePath(name string) (string, error)
+	CompletePath(ctx context.Context, name string) (string, error)
 
 	// Reader opens the file at the given path name and returns a ReadCloser from
 	// which to read the file and its last update time.
 	// It is the caller's responsibility to close the returned reader.
-	Reader(name string) (io.ReadCloser, time.Time, error)
+	Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error)
 
 	// Write writes the data read from r into the file with the given path name.
 	// contentType is the file's content type.
-	Write(r io.Reader, name, contentType string) error
+	Write(ctx context.Context, r io.Reader, name, contentType string) error
 }

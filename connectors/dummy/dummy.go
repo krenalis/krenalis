@@ -60,13 +60,12 @@ func init() {
 }
 
 // open opens a Dummy connection.
-func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
-	c := connection{ctx: ctx, conf: conf}
+func open(conf *connector.AppConfig) (*connection, error) {
+	c := connection{conf: conf}
 	return &c, nil
 }
 
 type connection struct {
-	ctx  context.Context
 	conf *connector.AppConfig
 }
 
@@ -81,11 +80,11 @@ func newUserID() string {
 }
 
 // CreateUser creates a user with the given properties.
-func (c *connection) CreateUser(properties connector.Properties) error {
+func (c *connection) CreateUser(ctx context.Context, properties connector.Properties) error {
 
 	select {
-	case <-c.ctx.Done():
-		return c.ctx.Err()
+	case <-ctx.Done():
+		return ctx.Err()
 	default:
 	}
 
@@ -118,7 +117,7 @@ func (c *connection) CreateUser(properties connector.Properties) error {
 }
 
 // EventTypes returns the connection's event types.
-func (c *connection) EventTypes() ([]*connector.EventType, error) {
+func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, error) {
 	if c.conf.Role == connector.SourceRole {
 		return nil, nil
 	}
@@ -176,16 +175,16 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, 
 	panic("not implemented")
 }
 
-func (c *connection) Resource() (string, error) {
+func (c *connection) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
 // SendEvent sends the event, along with the given mapped event.
 // eventType specifies the event type corresponding to the event.
-func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any, eventType string) error {
+func (c *connection) SendEvent(ctx context.Context, event connector.Event, mappedEvent map[string]any, eventType string) error {
 	select {
-	case <-c.ctx.Done():
-		return c.ctx.Err()
+	case <-ctx.Done():
+		return ctx.Err()
 	default:
 	}
 	log.Printf("dummy: sending event %#v, %#v", event, mappedEvent)
@@ -194,11 +193,11 @@ func (c *connection) SendEvent(event connector.Event, mappedEvent map[string]any
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
-func (c *connection) UpdateUser(id string, properties connector.Properties) error {
+func (c *connection) UpdateUser(ctx context.Context, id string, properties connector.Properties) error {
 
 	select {
-	case <-c.ctx.Done():
-		return c.ctx.Err()
+	case <-ctx.Done():
+		return ctx.Err()
 	default:
 	}
 
@@ -242,15 +241,15 @@ var userSchema = types.Object([]types.Property{
 })
 
 // UserSchema returns the user schema.
-func (c *connection) UserSchema() (types.Type, error) {
+func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 	return userSchema, nil
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) Users(ctx context.Context, properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
 	select {
-	case <-c.ctx.Done():
-		return nil, "", c.ctx.Err()
+	case <-ctx.Done():
+		return nil, "", ctx.Err()
 	default:
 	}
 	usersLock.Lock()

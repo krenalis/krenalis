@@ -35,8 +35,8 @@ func (file File) ConnectionReflectType() reflect.Type {
 }
 
 // Open opens a file connection.
-func (file File) Open(ctx context.Context, conf *FileConfig) (FileConnection, error) {
-	out := file.open.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(conf)})
+func (file File) Open(conf *FileConfig) (FileConnection, error) {
+	out := file.open.Call([]reflect.Value{reflect.ValueOf(conf)})
 	c := out[0].Interface().(FileConnection)
 	err, _ := out[1].Interface().(error)
 	return c, err
@@ -50,21 +50,21 @@ type FileConfig struct {
 }
 
 // OpenFileFunc represents functions that open file connections.
-type OpenFileFunc[T FileConnection] func(context.Context, *FileConfig) (T, error)
+type OpenFileFunc[T FileConnection] func(*FileConfig) (T, error)
 
 // FileConnection is the interface implemented by file connections.
 type FileConnection interface {
 
 	// ContentType returns the content type of the file.
-	ContentType() string
+	ContentType(ctx context.Context) string
 
 	// Read reads the records from r and writes them to records. If the connection
 	// has multiple sheets, sheet is the name of the sheet to be read.
-	Read(r io.Reader, sheet string, records RecordWriter) error
+	Read(ctx context.Context, r io.Reader, sheet string, records RecordWriter) error
 
 	// Write writes to w the records read from records. If the connection has
 	// multiple sheets, sheet is the name of the sheet to be written to.
-	Write(w io.Writer, sheet string, records RecordReader) error
+	Write(ctx context.Context, w io.Writer, sheet string, records RecordReader) error
 }
 
 // Sheets is implemented by file connectors that have multiple sheets.
@@ -72,7 +72,7 @@ type Sheets interface {
 	FileConnection
 
 	// Sheets returns the sheets of the file read from r.
-	Sheets(r io.Reader) ([]string, error)
+	Sheets(ctx context.Context, r io.Reader) ([]string, error)
 }
 
 // A RecordReader interface is used by file connections to read the records to

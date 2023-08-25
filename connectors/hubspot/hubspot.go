@@ -57,9 +57,8 @@ func init() {
 }
 
 // open opens a HubSpot connection and returns it.
-func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
+func open(conf *connector.AppConfig) (*connection, error) {
 	c := connection{
-		ctx:         ctx,
 		setSettings: conf.SetSettings,
 		httpClient:  conf.HTTPClient,
 	}
@@ -67,14 +66,13 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 }
 
 type connection struct {
-	ctx         context.Context
 	setSettings connector.SetSettingsFunc
 	httpClient  connector.HTTPClient
 	buf         bytes.Buffer
 }
 
 // CreateUser creates a user with the given properties.
-func (c *connection) CreateUser(properties connector.Properties) error {
+func (c *connection) CreateUser(ctx context.Context, properties connector.Properties) error {
 
 	var body bytes.Buffer
 	body.WriteString(`{"properties":`)
@@ -84,25 +82,25 @@ func (c *connection) CreateUser(properties connector.Properties) error {
 	}
 	body.WriteString("}")
 
-	return c.call("POST", "/crm/v3/objects/contacts", &body, 201, nil)
+	return c.call(ctx, "POST", "/crm/v3/objects/contacts", &body, 201, nil)
 }
 
 // EventTypes returns the connection's event types.
-func (c *connection) EventTypes() ([]*connector.EventType, error) {
+func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, error) {
 	return nil, nil
 }
 
 // GroupSchema returns the group schema.
-func (c *connection) GroupSchema() (types.Type, error) {
+func (c *connection) GroupSchema(ctx context.Context) (types.Type, error) {
 	// TODO(marco): implement
 	return types.Type{}, nil
 }
 
 // Groups returns the groups starting from the given cursor.
-func (c *connection) Groups(properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
-	objects, after, err := c.objects("Company", properties, cursor)
+func (c *connection) Groups(ctx context.Context, properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
+	objects, after, err := c.objects(ctx, "Company", properties, cursor)
 	for _, object := range objects {
-		contacts, err := c.companyContacts(object.ID)
+		contacts, err := c.companyContacts(ctx, object.ID)
 		if err != nil {
 			return nil, "", err
 		}
@@ -197,11 +195,11 @@ func (c *connection) ReceiveWebhook(r *http.Request) ([]connector.WebhookEvent, 
 }
 
 // Resource returns the resource from a client token.
-func (c *connection) Resource() (string, error) {
+func (c *connection) Resource(ctx context.Context) (string, error) {
 	var res struct {
 		PortalId int
 	}
-	err := c.call("GET", "/account-info/v3/details", nil, 200, &res)
+	err := c.call(ctx, "GET", "/account-info/v3/details", nil, 200, &res)
 	if err != nil {
 		return "", err
 	}
@@ -212,14 +210,14 @@ func (c *connection) Resource() (string, error) {
 }
 
 // SetGroup sets the given groups.
-func (c *connection) SetGroup(group connector.Group) error {
+func (c *connection) SetGroup(ctx context.Context, group connector.Group) error {
 	// TODO(marco): implement
 	return nil
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
 // It requires the "crm.objects.contacts.write" scope.
-func (c *connection) UpdateUser(id string, properties connector.Properties) error {
+func (c *connection) UpdateUser(ctx context.Context, id string, properties connector.Properties) error {
 
 	var body bytes.Buffer
 	body.WriteString(`{"inputs":[`)
@@ -233,11 +231,11 @@ func (c *connection) UpdateUser(id string, properties connector.Properties) erro
 	}
 	body.WriteString(`}]}`)
 
-	return c.call("POST", "/crm/v3/objects/contacts/batch/update", &body, 200, nil)
+	return c.call(ctx, "POST", "/crm/v3/objects/contacts/batch/update", &body, 200, nil)
 }
 
 // UserSchema returns the user schema.
-func (c *connection) UserSchema() (types.Type, error) {
+func (c *connection) UserSchema(ctx context.Context) (types.Type, error) {
 
 	var response struct {
 		Results []struct {
@@ -256,7 +254,7 @@ func (c *connection) UserSchema() (types.Type, error) {
 			}
 		}
 	}
-	err := c.call("GET", "/crm/v3/properties/contact", nil, 200, &response)
+	err := c.call(ctx, "GET", "/crm/v3/properties/contact", nil, 200, &response)
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -308,13 +306,13 @@ func (c *connection) UserSchema() (types.Type, error) {
 }
 
 // Users returns the users starting from the given cursor.
-func (c *connection) Users(properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
-	return c.objects("Contact", properties, cursor)
+func (c *connection) Users(ctx context.Context, properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
+	return c.objects(ctx, "Contact", properties, cursor)
 }
 
 // objects returns the contacts, if typ is "Contact", or the companies, if typ
 // is "Company", starting from the given cursor.
-func (c *connection) objects(typ string, properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
+func (c *connection) objects(ctx context.Context, typ string, properties []types.Path, cursor connector.Cursor) ([]connector.Object, string, error) {
 
 	path := "/crm/v3/objects/"
 	var propertyName string
@@ -358,7 +356,7 @@ func (c *connection) objects(typ string, properties []types.Path, cursor connect
 		}
 	}
 
-	err := c.call("POST", path, &c.buf, 200, &response)
+	err := c.call(ctx, "POST", path, &c.buf, 200, &response)
 	if err != nil {
 		return nil, "", err
 	}
@@ -387,7 +385,7 @@ func (c *connection) objects(typ string, properties []types.Path, cursor connect
 }
 
 // companyContacts returns the contacts of the given company.
-func (c *connection) companyContacts(company string) ([]string, error) {
+func (c *connection) companyContacts(ctx context.Context, company string) ([]string, error) {
 	contacts := []string{}
 	path := "/crm/v3/objects/companies/" + url.PathEscape(company) + "/associations/Contact"
 	after := ""
@@ -406,7 +404,7 @@ func (c *connection) companyContacts(company string) ([]string, error) {
 		if after != "" {
 			requestURL += "?after=" + url.QueryEscape(after)
 		}
-		err := c.call("GET", requestURL, nil, 200, &response)
+		err := c.call(ctx, "GET", requestURL, nil, 200, &response)
 		if err != nil {
 			return nil, err
 		}
@@ -422,8 +420,8 @@ func (c *connection) companyContacts(company string) ([]string, error) {
 	return contacts, nil
 }
 
-func (c *connection) call(method, path string, body io.Reader, expectedStatus int, response any) error {
-	req, err := http.NewRequestWithContext(c.ctx, method, "https://api.hubapi.com/"+path[1:], body)
+func (c *connection) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {
+	req, err := http.NewRequestWithContext(ctx, method, "https://api.hubapi.com/"+path[1:], body)
 	if err != nil {
 		return err
 	}

@@ -43,8 +43,8 @@ func (app App) ConnectionReflectType() reflect.Type {
 }
 
 // Open opens an app connection.
-func (app App) Open(ctx context.Context, conf *AppConfig) (AppConnection, error) {
-	out := app.open.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(conf)})
+func (app App) Open(conf *AppConfig) (AppConnection, error) {
+	out := app.open.Call([]reflect.Value{reflect.ValueOf(conf)})
 	c := out[0].Interface().(AppConnection)
 	err, _ := out[1].Interface().(error)
 	return c, err
@@ -69,9 +69,8 @@ const (
 	PrivacyRegionEurope       PrivacyRegion = "Europe"
 )
 
-// OpenAppFunc represents functions that open app connections. Such functions
-// are not blocking functions and the context is used by the app methods.
-type OpenAppFunc[T AppConnection] func(context.Context, *AppConfig) (T, error)
+// OpenAppFunc represents functions that open app connections.
+type OpenAppFunc[T AppConnection] func(*AppConfig) (T, error)
 
 // AppConnection is the interface implemented by app connections.
 //
@@ -80,7 +79,7 @@ type OpenAppFunc[T AppConnection] func(context.Context, *AppConfig) (T, error)
 type AppConnection interface {
 
 	// Resource returns the resource.
-	Resource() (string, error)
+	Resource(ctx context.Context) (string, error)
 }
 
 // AppEventsConnection is the interface implemented by app connections to which
@@ -89,11 +88,11 @@ type AppEventsConnection interface {
 	AppConnection
 
 	// EventTypes returns the connection's event types.
-	EventTypes() ([]*EventType, error)
+	EventTypes(ctx context.Context) ([]*EventType, error)
 
 	// SendEvent sends the event, along with the given mapped event.
 	// Can be used by multiple goroutines at the same time.
-	SendEvent(event Event, mappedEvent map[string]any, eventType string) error
+	SendEvent(ctx context.Context, event Event, mappedEvent map[string]any, eventType string) error
 }
 
 // Object represents either a user or a group.
@@ -120,22 +119,22 @@ type AppUsersConnection interface {
 	AppConnection
 
 	// CreateUser creates a user with the given properties.
-	CreateUser(properties Properties) error
+	CreateUser(ctx context.Context, properties Properties) error
 
 	// ReceiveWebhook receives a webhook request and returns its events.
 	// It returns the ErrWebhookUnauthorized error is the request was not
-	// authorized.
+	// authorized. The context is the request's context.
 	ReceiveWebhook(r *http.Request) ([]WebhookEvent, error)
 
 	// UserSchema returns the user schema.
-	UserSchema() (types.Type, error)
+	UserSchema(ctx context.Context) (types.Type, error)
 
 	// UpdateUser updates the user with identifier id setting the given
 	// properties.
-	UpdateUser(id string, properties Properties) error
+	UpdateUser(ctx context.Context, id string, properties Properties) error
 
 	// Users returns the users starting from the given cursor.
-	Users(properties []types.Path, cursor Cursor) (users []Object, next string, err error)
+	Users(ctx context.Context, properties []types.Path, cursor Cursor) (users []Object, next string, err error)
 }
 
 // AppGroupsConnection is the interface implemented by app connections that
@@ -144,18 +143,18 @@ type AppGroupsConnection interface {
 	AppConnection
 
 	// GroupSchema returns the group schema.
-	GroupSchema() (types.Type, error)
+	GroupSchema(ctx context.Context) (types.Type, error)
 
 	// Groups returns the groups starting from the given cursor.
-	Groups(properties []types.Path, after Cursor) (groups []Object, cursor string, err error)
+	Groups(ctx context.Context, properties []types.Path, after Cursor) (groups []Object, cursor string, err error)
 
 	// ReceiveWebhook receives a webhook request and returns its events.
 	// It returns the ErrWebhookUnauthorized error is the request was not
-	// authorized.
+	// authorized. The context is the request's context.
 	ReceiveWebhook(r *http.Request) ([]WebhookEvent, error)
 
 	// SetGroup sets the given group.
-	SetGroup(group Group) error
+	SetGroup(ctx context.Context, group Group) error
 }
 
 // Event represents an event.

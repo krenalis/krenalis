@@ -38,8 +38,8 @@ func init() {
 }
 
 // open opens a RabbitMQ connection and returns it.
-func open(ctx context.Context, conf *connector.StreamConfig) (*connection, error) {
-	c := connection{ctx: ctx, conf: conf}
+func open(conf *connector.StreamConfig) (*connection, error) {
+	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -50,7 +50,6 @@ func open(ctx context.Context, conf *connector.StreamConfig) (*connection, error
 }
 
 type connection struct {
-	ctx        context.Context
 	conf       *connector.StreamConfig
 	settings   *settings
 	conn       *amqp.Connection
@@ -82,8 +81,8 @@ func (c *connection) Close() error {
 // retained after the ack function has been called.
 //
 // Receive can be used by multiple goroutines at the same time.
-func (c *connection) Receive() ([]byte, func(), error) {
-	err := c.connect(true)
+func (c *connection) Receive(ctx context.Context) ([]byte, func(), error) {
+	err := c.connect(ctx, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -94,8 +93,8 @@ func (c *connection) Receive() ([]byte, func(), error) {
 			_ = c.ch.Ack(tag, false)
 		}
 		return delivery.Body, ack, nil
-	case <-c.ctx.Done():
-		return nil, nil, c.ctx.Err()
+	case <-ctx.Done():
+		return nil, nil, ctx.Err()
 	}
 }
 
@@ -106,13 +105,13 @@ func (c *connection) Receive() ([]byte, func(), error) {
 // function has been called.
 //
 // Send can be used by multiple goroutines at the same time.
-func (c *connection) Send(event []byte, options connector.SendOptions, ack func(err error)) error {
-	err := c.connect(true)
+func (c *connection) Send(ctx context.Context, event []byte, options connector.SendOptions, ack func(err error)) error {
+	err := c.connect(ctx, true)
 	if err != nil {
 		return err
 	}
 	msg := amqp.Publishing{Body: event}
-	dc, err := c.ch.PublishWithDeferredConfirmWithContext(c.ctx, "", c.settings.Queue, false, false, msg)
+	dc, err := c.ch.PublishWithDeferredConfirmWithContext(ctx, "", c.settings.Queue, false, false, msg)
 	if err != nil {
 		return err
 	}
@@ -129,7 +128,7 @@ func (c *connection) Send(event []byte, options connector.SendOptions, ack func(
 }
 
 // ServeUI serves the connector's user interface.
-func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, error) {
+func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
 
 	switch event {
 	case "load":
@@ -141,7 +140,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		values, _ = json.Marshal(s)
 	case "test", "save":
 		// Test the connection and save the settings if required.
-		s, err := c.ValidateSettings(values)
+		s, err := c.ValidateSettings(ctx, values)
 		if err != nil {
 			if event == "test" {
 				return nil, ui.WarningAlert(err.Error()), nil
@@ -151,7 +150,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
 		}
-		err = c.conf.SetSettings(c.ctx, s)
+		err = c.conf.SetSettings(ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -177,7 +176,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 
 // ValidateSettings validates the settings received from the UI and returns them
 // in a format suitable for storage.
-func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
+func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
 	var s settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -197,7 +196,7 @@ func (c *connection) ValidateSettings(values []byte) ([]byte, error) {
 	if strings.HasPrefix(s.Queue, "amq.") {
 		return nil, ui.Errorf("queue names starting with 'amq.' are reserved for internal use by the broker")
 	}
-	err = c.testConnection()
+	err = c.testConnection(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +212,7 @@ const defaultConnectionTimeout = 30 * time.Second
 
 // connect establishes a connection to RabbitMQ. If deliveries is true, it also
 // sets the deliveries channel.
-func (c *connection) connect(deliveries bool) (err error) {
+func (c *connection) connect(ctx context.Context, deliveries bool) (err error) {
 	if c.conn != nil {
 		return nil
 	}
@@ -226,7 +225,7 @@ func (c *connection) connect(deliveries bool) (err error) {
 	config := amqp.Config{
 		Dial: func(network, address string) (net.Conn, error) {
 			d := net.Dialer{Timeout: defaultConnectionTimeout}
-			netConn, err = d.DialContext(c.ctx, network, address)
+			netConn, err = d.DialContext(ctx, network, address)
 			if err != nil {
 				return nil, err
 			}
@@ -258,7 +257,7 @@ func (c *connection) connect(deliveries bool) (err error) {
 	c.ch = ch
 	go func() {
 		select {
-		case <-c.ctx.Done():
+		case <-ctx.Done():
 			_ = c.ch.Close()
 			_ = c.conn.Close()
 			c.ch = nil
@@ -270,9 +269,7 @@ func (c *connection) connect(deliveries bool) (err error) {
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func (c *connection) testConnection() error {
-	ctx, cancel := context.WithCancel(c.ctx)
-	c.ctx = ctx
-	defer cancel()
-	return c.connect(false)
+func (c *connection) testConnection(ctx context.Context) error {
+	return c.connect(ctx, false) // TO FIX
+
 }
