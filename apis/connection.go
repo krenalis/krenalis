@@ -494,10 +494,13 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 		return "", err
 	}
 	path, err = storage.CompletePath(path)
-	if err, ok := err.(_connector.InvalidPathError); ok {
-		return "", errors.Unprocessable(InvalidPath, "%s", err)
+	if err != nil {
+		if err, ok := err.(_connector.InvalidPathError); ok {
+			return "", errors.Unprocessable(InvalidPath, "%s", err)
+		}
+		return "", err
 	}
-	return path + c.Compression.Ext(), err
+	return path + c.Compression.Ext(), nil
 }
 
 // Delete deletes the connection.
