@@ -163,7 +163,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.conf.SetSettings(s)
+		return nil, nil, c.conf.SetSettings(c.ctx, s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}

@@ -165,7 +165,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, c.conf.SetSettings(s)
+		return nil, nil, c.conf.SetSettings(c.ctx, s)
 	default:
 		return nil, nil, ui.ErrEventNotExist
 	}
@@ -840,7 +840,7 @@ func (c *connection) initWebhooks() error {
 	if err != nil {
 		return err
 	}
-	return c.conf.SetSettings(b)
+	return c.conf.SetSettings(c.ctx, b)
 }
 
 var errListNotExist = errors.New("list does not exist")

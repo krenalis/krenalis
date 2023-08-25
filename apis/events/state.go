@@ -250,8 +250,8 @@ func (st *eventsState) openDestination(c *state.Connection) error {
 	connection, err := app.Open(st.close.ctx, &connector.AppConfig{
 		Role:     connector.Role(c.Role),
 		Settings: c.Settings,
-		SetSettings: func(settings []byte) error {
-			return setSettings(st.close.ctx, st.db, c.ID, settings)
+		SetSettings: func(ctx context.Context, settings []byte) error {
+			return setSettings(ctx, st.db, c.ID, settings)
 		},
 		Resource:   resource,
 		HTTPClient: st.http.ConnectionClient(c.ID),

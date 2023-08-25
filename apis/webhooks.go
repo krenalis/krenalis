@@ -9,6 +9,7 @@ package apis
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -190,7 +191,7 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 			return errNotFound
 		}
 		conf.Settings = connection.Settings
-		conf.SetSettings = func(settings []byte) error {
+		conf.SetSettings = func(ctx context.Context, settings []byte) error {
 			return setSettings(ctx, apis.db, id, settings)
 		}
 		conf.Resource = resource.Code

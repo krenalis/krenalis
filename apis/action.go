@@ -940,8 +940,8 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 
 // setSettingsFunc returns a connector.SetSettingsFunc function that sets the
 // settings for the action's connection.
-func (this *Action) setSettingsFunc(ctx context.Context) _connector.SetSettingsFunc {
-	return func(settings []byte) error {
+func (this *Action) setSettingsFunc() _connector.SetSettingsFunc {
+	return func(ctx context.Context, settings []byte) error {
 		return setSettings(ctx, this.apis.db, this.action.Connection().ID, settings)
 	}
 }

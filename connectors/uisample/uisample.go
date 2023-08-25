@@ -30,7 +30,7 @@ func init() {
 
 // open opens a UISample connection and returns it.
 func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
-	c := connection{conf: conf}
+	c := connection{ctx: ctx, conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -41,6 +41,7 @@ func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
 }
 
 type connection struct {
+	ctx      context.Context
 	conf     *connector.AppConfig
 	settings *settings
 }
@@ -66,7 +67,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if err != nil {
 			return nil, nil, err
 		}
-		err = c.conf.SetSettings(s)
+		err = c.conf.SetSettings(c.ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}

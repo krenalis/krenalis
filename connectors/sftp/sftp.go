@@ -130,7 +130,7 @@ func (c *connection) ServeUI(event string, values []byte) (*ui.Form, *ui.Alert, 
 		if event == "test" {
 			return nil, ui.SuccessAlert("Connection established"), nil
 		}
-		err = c.conf.SetSettings(s)
+		err = c.conf.SetSettings(c.ctx, s)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -65,7 +65,7 @@ const (
 )
 
 // A SetSettingsFunc value is a function used by connectors to set settings.
-type SetSettingsFunc func([]byte) error
+type SetSettingsFunc func(context.Context, []byte) error
 
 // HTTPClient is the interface implemented by the HTTP client used by
 // connections.

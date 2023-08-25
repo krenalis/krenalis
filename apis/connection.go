@@ -1378,7 +1378,7 @@ func (this *Connection) openApp(ctx context.Context) (_connector.AppConnection, 
 	app, err := _connector.RegisteredApp(c.Connector().Name).Open(ctx, &_connector.AppConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
+		SetSettings: this.setSettingsFunc(),
 		Resource:    resourceCode,
 		HTTPClient:  this.apis.http.ConnectionClient(c.ID),
 		Region:      _connector.PrivacyRegion(c.Workspace().PrivacyRegion),
@@ -1414,7 +1414,7 @@ func (this *Connection) openDatabase(ctx context.Context) (_connector.DatabaseCo
 	database, err := _connector.RegisteredDatabase(c.Connector().Name).Open(ctx, &_connector.DatabaseConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
+		SetSettings: this.setSettingsFunc(),
 	})
 	return database, err
 }
@@ -1425,7 +1425,7 @@ func (this *Connection) openFile(ctx context.Context) (_connector.FileConnection
 	file, err := _connector.RegisteredFile(c.Connector().Name).Open(ctx, &_connector.FileConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
+		SetSettings: this.setSettingsFunc(),
 	})
 	return file, err
 }
@@ -1436,7 +1436,7 @@ func (this *Connection) openMobile(ctx context.Context) (_connector.MobileConnec
 	mobile, err := _connector.RegisteredMobile(c.Connector().Name).Open(ctx, &_connector.MobileConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
+		SetSettings: this.setSettingsFunc(),
 	})
 	return mobile, err
 }
@@ -1447,7 +1447,7 @@ func (this *Connection) openServer(ctx context.Context) (_connector.ServerConnec
 	server, err := _connector.RegisteredServer(c.Connector().Name).Open(ctx, &_connector.ServerConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
+		SetSettings: this.setSettingsFunc(),
 	})
 	return server, err
 }
@@ -1461,7 +1461,7 @@ func (this *Connection) openStorage(ctx context.Context) (_connector.StorageConn
 	storage, err := _connector.RegisteredStorage(c.Connector().Name).Open(ctx, &_connector.StorageConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
+		SetSettings: this.setSettingsFunc(),
 	})
 	return storage, err
 }
@@ -1475,7 +1475,7 @@ func (this *Connection) openStream(ctx context.Context) (_connector.StreamConnec
 	database, err := _connector.RegisteredStream(c.Connector().Name).Open(ctx, &_connector.StreamConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
+		SetSettings: this.setSettingsFunc(),
 	})
 	return database, err
 }
@@ -1486,7 +1486,7 @@ func (this *Connection) openWebsite(ctx context.Context) (_connector.WebsiteConn
 	website, err := _connector.RegisteredWebsite(c.Connector().Name).Open(ctx, &_connector.WebsiteConfig{
 		Role:        _connector.Role(c.Role),
 		Settings:    c.Settings,
-		SetSettings: this.setSettingsFunc(ctx),
+		SetSettings: this.setSettingsFunc(),
 	})
 	return website, err
 }
@@ -1905,8 +1905,8 @@ func (this *Connection) fetchEventTypes(ctx context.Context) ([]*_connector.Even
 
 // setSettingsFunc returns a connector.SetSettingsFunc function that sets the
 // settings for the connection.
-func (this *Connection) setSettingsFunc(ctx context.Context) _connector.SetSettingsFunc {
-	return func(settings []byte) error {
+func (this *Connection) setSettingsFunc() _connector.SetSettingsFunc {
+	return func(ctx context.Context, settings []byte) error {
 		return setSettings(ctx, this.apis.db, this.connection.ID, settings)
 	}
 }
