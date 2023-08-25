@@ -21,7 +21,7 @@ import (
 var _ connector.UI = (*connection)(nil)
 
 func init() {
-	connector.RegisterStream(connector.Stream{
+	connector.RegisterApp(connector.App{
 		Name:              "UISample",
 		SourceDescription: "test the UI components",
 		Icon:              "",
@@ -29,8 +29,8 @@ func init() {
 }
 
 // open opens a UISample connection and returns it.
-func open(ctx context.Context, conf *connector.StreamConfig) (*connection, error) {
-	c := connection{ctx: ctx, conf: conf}
+func open(ctx context.Context, conf *connector.AppConfig) (*connection, error) {
+	c := connection{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
@@ -41,34 +41,13 @@ func open(ctx context.Context, conf *connector.StreamConfig) (*connection, error
 }
 
 type connection struct {
-	ctx      context.Context
-	conf     *connector.StreamConfig
+	conf     *connector.AppConfig
 	settings *settings
 }
 
-// Close closes the stream. Must be called if at least one Send or Receive call
-// has been made. It cannot be called concurrently with Send and Receive.
-func (c *connection) Close() error {
-	return nil
-}
-
-// Receive receives an event from the stream. Callers call the ack function to
-// notify that the event has been received. The connector resends the event if
-// not acknowledged.
-//
-// Caller do not modify the event data, even temporarily, and event is not
-// retained after the ack function has been called.
-func (c *connection) Receive() ([]byte, func(), error) {
-	return nil, nil, nil
-}
-
-// Send sends an event to the stream. If ack is not nil, connector calls ack
-// when the event has been stored or when an error occurred.
-//
-// Send can modify the event data, but event is not retained after the ack
-// function has been called.
-func (c *connection) Send(event []byte, options connector.SendOptions, ack func(err error)) error {
-	return nil
+// Resource returns the resource from a client token.
+func (c *connection) Resource() (string, error) {
+	return "", nil
 }
 
 // ServeUI serves the connector's user interface.

@@ -38,7 +38,7 @@ INSERT INTO connectors (name, type, oauth_client_id, oauth_client_secret) VALUES
     ('Website', 'Website', '', ''),
     ('Kafka', 'Stream', '', ''),
     ('RabbitMQ', 'Stream', '', ''),
-    ('UISample', 'Stream', '', ''),
+    ('UISample', 'App', '', ''),
     ('Server', 'Server', '', ''),
     ('Klaviyo', 'App', '', ''),
     ('Google Analytics 4', 'App', '', ''),
