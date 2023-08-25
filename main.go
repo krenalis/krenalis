@@ -50,6 +50,9 @@ func main() {
 		}
 		log.Fatalf("cannot open %q: %s", p, err)
 	}
+	if settings.Redis.Addr == "" {
+		log.Fatalf("field Redis > Addr in configuration file is mandatory")
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	sigs := make(chan os.Signal, 1)

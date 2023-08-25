@@ -54,7 +54,6 @@ CREATE TABLE workspaces (
     id integer NOT NULL,
     account integer NOT NULL REFERENCES accounts ON DELETE CASCADE,
     name varchar(100) NOT NULL,
-    redis_settings varchar(65535) NOT NULL DEFAULT '',
     warehouse_type warehouse_type DEFAULT NULL,
     warehouse_settings varchar(65535) NOT NULL DEFAULT '',
     anonymous_identifiers_priority text[] NOT NULL DEFAULT '{}',

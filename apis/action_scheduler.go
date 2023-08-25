@@ -210,7 +210,7 @@ func (sc *scheduler) toExecute(action *state.Action) bool {
 		}
 	}
 	ws := c.Workspace()
-	if ws.Redis == nil || ws.Warehouse == nil {
+	if ws.Warehouse == nil {
 		return false
 	}
 	if _, ok := action.Execution(); ok {

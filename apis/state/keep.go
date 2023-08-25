@@ -52,8 +52,6 @@ func (state *State) AddListener(listener any) {
 		state.listeners.SetConnectionSettings = append(state.listeners.SetConnectionSettings, l)
 	case func(SetConnectionStatus):
 		state.listeners.SetConnectionStatus = append(state.listeners.SetConnectionStatus, l)
-	case func(SetRedis):
-		state.listeners.SetRedis = append(state.listeners.SetRedis, l)
 	case func(SetWarehouse):
 		state.listeners.SetWarehouse = append(state.listeners.SetWarehouse, l)
 	case func(SetWorkspacePrivacyRegion):
@@ -132,8 +130,6 @@ func (state *State) keepState() {
 			state.setConnectionStorage(n)
 		case "SetConnectionStatus":
 			state.setConnectionStatus(n)
-		case "SetRedis":
-			state.setRedis(n)
 		case "SetResource":
 			state.setResource(n)
 		case "SetWarehouse":
@@ -515,7 +511,6 @@ type AddWorkspace struct {
 	ID            int
 	Account       int
 	Name          string
-	Redis         *Redis
 	Warehouse     *Warehouse
 	PrivacyRegion PrivacyRegion
 }
@@ -529,7 +524,6 @@ func (state *State) addWorkspace(n postgres.Notification) {
 	account := state.accounts[e.Account]
 	ws := Workspace{
 		mu:            &sync.Mutex{},
-		Redis:         e.Redis,
 		Warehouse:     e.Warehouse,
 		Schemas:       map[string]*types.Type{},
 		connections:   map[int]*Connection{},
@@ -961,26 +955,6 @@ func (state *State) setConnectionStorage(n postgres.Notification) {
 		c.storage = state.connections[e.Storage]
 		c.Compression = e.Compression
 	})
-}
-
-// SetRedis is the event sent when the Redis database is changed.
-type SetRedis struct {
-	Workspace int
-	Redis     *Redis
-}
-
-// setRedis sets a Redis database.
-func (state *State) setRedis(n postgres.Notification) {
-	e := SetRedis{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.Redis = e.Redis
-	})
-	for _, listener := range state.listeners.SetRedis {
-		listener(e)
-	}
 }
 
 // SetResource is the event sent when a resource is changed.

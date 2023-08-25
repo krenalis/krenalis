@@ -497,58 +497,6 @@ func (this *Workspace) Connections() []*Connection {
 	return infos
 }
 
-// ConnectRedis connects the workspace to a Redis database with the given
-// settings.
-//
-// It returns an errors.NotFoundError error, if the workspace does not exist
-// anymore, and it returns an errors.UnprocessableError error with code
-//   - AlreadyConnected, if the workspace is already connected to a Redis
-//     database.
-//   - InvalidSettings, if the settings are not valid.
-//   - ConnectionFailed, if the connection fails.
-func (this *Workspace) ConnectRedis(ctx context.Context, settings []byte) error {
-	this.apis.mustBeOpen()
-	ws := this.workspace
-	if ws.Redis != nil {
-		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a Redis database", ws.ID)
-	}
-	settings, err := this.account.apis.datastore.PingRedis(ctx, settings)
-	if err != nil {
-		switch err.(type) {
-		case datastore.InvalidSettings:
-			return errors.Unprocessable(InvalidSettings, "Redis database settings are not valid: %w", err)
-		case datastore.ConnectionFailed:
-			return errors.Unprocessable(ConnectionFailed, "cannot connect to the Redis database: %w", err)
-		}
-		return err
-	}
-	n := state.SetRedis{
-		Workspace: ws.ID,
-		Redis: &state.Redis{
-			Settings: settings,
-		},
-	}
-	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET redis_settings = $1 WHERE id = $2 AND redis_settings = ''",
-			string(n.Redis.Settings), n.Workspace)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			err = tx.QueryVoid(ctx, "SELECT FROM workspaces WHERE id = $1", n.Workspace)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					err = errors.NotFound("workspace %d does not exist", n.Workspace)
-				}
-				return err
-			}
-			return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a Redis database", ws.ID)
-		}
-		return tx.Notify(ctx, n)
-	})
-	return err
-}
-
 // ConnectWarehouse connects the workspace to a data store, with the given
 // settings. It also creates the tables in the connected data store.
 //
@@ -618,42 +566,6 @@ func (this *Workspace) Delete(ctx context.Context) error {
 		}
 		if result.RowsAffected() == 0 {
 			return errors.NotFound("workspace %d does not exist", n.ID)
-		}
-		return tx.Notify(ctx, n)
-	})
-	return err
-}
-
-// DisconnectRedis disconnects the workspace from the Redis database.
-//
-// If the workspace does not exist anymore, it returns an errors.NotFoundError
-// error. If the workspace is not connected to a Redis database, it returns
-// an errors.UnprocessableError error with code NotConnected.
-func (this *Workspace) DisconnectRedis(ctx context.Context) error {
-	this.apis.mustBeOpen()
-	ws := this.workspace
-	if ws.Redis == nil {
-		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a Redis database", ws.ID)
-	}
-	n := state.SetRedis{
-		Workspace: ws.ID,
-		Redis:     nil,
-	}
-	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET redis_settings = '' WHERE id = $1 AND redis_settings != ''",
-			n.Workspace)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			err = tx.QueryVoid(ctx, "SELECT FROM workspaces WHERE id = $1", n.Workspace)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					return errors.NotFound("workspace %d does not exist", n.Workspace)
-				}
-				return err
-			}
-			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a Redis database", n.Workspace)
 		}
 		return tx.Notify(ctx, n)
 	})
@@ -1085,26 +997,6 @@ func (this *Workspace) SetWarehouseSettings(ctx context.Context, typ WarehouseTy
 		}
 		return tx.Notify(ctx, n)
 	})
-	return err
-}
-
-// PingRedis pings the Redis database with the given settings, verifying that
-// the settings are valid and a connection can be established.
-//
-// It returns an errors.UnprocessableError error with code
-//   - InvalidSettings, if the settings are not valid.
-//   - ConnectionFailed, if the connection fails.
-func (this *Workspace) PingRedis(ctx context.Context, settings []byte) error {
-	this.apis.mustBeOpen()
-	_, err := this.account.apis.datastore.PingRedis(ctx, settings)
-	if err != nil {
-		switch err.(type) {
-		case datastore.InvalidSettings:
-			return errors.Unprocessable(InvalidSettings, "Redis database settings are not valid: %w", err)
-		case datastore.ConnectionFailed:
-			return errors.Unprocessable(ConnectionFailed, "cannot connect to the Redis database: %w", err)
-		}
-	}
 	return err
 }
 

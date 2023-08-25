@@ -58,7 +58,6 @@ type State struct {
 		SetActionSchedulePeriod   []func(SetActionSchedulePeriod)
 		SetConnectionSettings     []func(SetConnectionSettings)
 		SetConnectionStatus       []func(SetConnectionStatus)
-		SetRedis                  []func(SetRedis)
 		SetWarehouse              []func(SetWarehouse)
 		SetWorkspacePrivacyRegion []func(SetWorkspacePrivacyRegion)
 	}
@@ -253,10 +252,6 @@ func (account *Account) Workspaces() []*Workspace {
 	return workspaces
 }
 
-type Redis struct {
-	Settings json.RawMessage
-}
-
 type Warehouse struct {
 	Type     WarehouseType
 	Settings json.RawMessage
@@ -265,7 +260,6 @@ type Warehouse struct {
 // Workspace represents a workspace.
 type Workspace struct {
 	mu                   *sync.Mutex
-	Redis                *Redis
 	Warehouse            *Warehouse
 	Schemas              map[string]*types.Type
 	connections          map[int]*Connection

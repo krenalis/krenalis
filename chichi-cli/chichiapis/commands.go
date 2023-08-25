@@ -107,18 +107,6 @@ func RemoveEventListener(listener string) {
 	}
 }
 
-func WorkspaceConnectRedis(settings []byte) {
-	req := struct {
-		Settings json.RawMessage
-	}{settings}
-	b := &bytes.Buffer{}
-	_ = json.NewEncoder(b).Encode(req)
-	err := callAPI("POST", "api/workspace/connect-redis", b, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
 func WorkspaceConnectWarehouse(typ string, settings []byte) {
 	req := struct {
 		Type     string
@@ -127,13 +115,6 @@ func WorkspaceConnectWarehouse(typ string, settings []byte) {
 	b := &bytes.Buffer{}
 	_ = json.NewEncoder(b).Encode(req)
 	err := callAPI("POST", "api/workspace/connect-warehouse", b, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func WorkspaceDisconnectRedis() {
-	err := callAPI("POST", "api/workspace/disconnect-redis", nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -148,18 +129,6 @@ func WorkspaceDisconnectWarehouse() {
 
 func WorkspaceInitWarehouse() {
 	err := callAPI("POST", "api/workspace/init-warehouse", nil, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func WorkspacePingRedis(settings []byte) {
-	req := struct {
-		Settings json.RawMessage
-	}{settings}
-	b := &bytes.Buffer{}
-	_ = json.NewEncoder(b).Encode(req)
-	err := callAPI("POST", "api/workspace/ping-redis", b, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

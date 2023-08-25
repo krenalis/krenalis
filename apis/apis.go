@@ -52,6 +52,7 @@ var hasBeenCalled bool
 
 type Config struct {
 	PostgreSQL PostgreSQLConfig
+	Redis      RedisConfig
 }
 
 type PostgreSQLConfig struct {
@@ -61,6 +62,14 @@ type PostgreSQLConfig struct {
 	Password string
 	Database string
 	Schema   string
+}
+
+type RedisConfig struct {
+	Network  string
+	Addr     string
+	Username string
+	Password string
+	DB       int
 }
 
 type ExpressionToBeExtracted struct {
@@ -114,7 +123,15 @@ func New(conf *Config) (*APIs, error) {
 	}
 
 	// Init the datastore.
-	apis.datastore = datastore.New(apis.state)
+	rs := conf.Redis
+	redisConfig := datastore.RedisConfig{
+		Network:  rs.Network,
+		Addr:     rs.Addr,
+		Username: rs.Username,
+		Password: rs.Password,
+		DB:       rs.DB,
+	}
+	apis.datastore = datastore.New(apis.state, redisConfig)
 
 	apis.events, err = events.New(db, apis.state, apis.datastore, apis.http)
 	if err != nil {

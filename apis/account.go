@@ -35,28 +35,20 @@ type Account struct {
 	InternalIPs []string
 }
 
-// Redis represents Redis database settings. It is used with AddWorkspace.
-type Redis struct {
-	Settings []byte
-}
-
 // Warehouse represents data warehouse settings. It is used with AddWorkspace.
 type Warehouse struct {
 	Type     WarehouseType
 	Settings []byte
 }
 
-// AddWorkspace adds a workspace with the given name, redis database, and data
-// warehouse, if not nil, and returns the identifier. name must be between 1 and
-// 100 runes long.
+// AddWorkspace adds a workspace with the given name and data warehouse, if not
+// nil, and returns the identifier. name must be between 1 and 100 runes long.
 //
 // It returns an errors.NotFoundError error if the account does not exist
 // anymore. It returns an errors.UnprocessableError error with code
-//   - ConnectionFailed, if the connection to the Redis database, or to the data
-//     warehouse fails.
-//   - InvalidSettings, if Redis database, or data warehouse settings are not
-//     valid.
-func (this *Account) AddWorkspace(ctx context.Context, name string, redis *Redis, warehouse *Warehouse) (int, error) {
+//   - ConnectionFailed, if the connection to the data warehouse fails.
+//   - InvalidSettings, if the warehouse settings are not valid.
+func (this *Account) AddWorkspace(ctx context.Context, name string, warehouse *Warehouse) (int, error) {
 
 	this.apis.mustBeOpen()
 
@@ -70,19 +62,6 @@ func (this *Account) AddWorkspace(ctx context.Context, name string, redis *Redis
 	}
 
 	var err error
-
-	if redis != nil {
-		n.Redis.Settings, err = this.apis.datastore.PingRedis(ctx, warehouse.Settings)
-		if err != nil {
-			switch err.(type) {
-			case datastore.InvalidSettings:
-				return 0, errors.Unprocessable(InvalidSettings, "Redis database settings are not valid: %w", err)
-			case datastore.ConnectionFailed:
-				return 0, errors.Unprocessable(ConnectionFailed, "cannot connect to the Redis database: %w", err)
-			}
-			return 0, err
-		}
-	}
 
 	if warehouse != nil {
 		n.Warehouse.Type = state.WarehouseType(warehouse.Type)

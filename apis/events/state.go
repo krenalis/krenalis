@@ -206,7 +206,7 @@ func (st *eventsState) onSetWarehouse(n state.SetWarehouse) {
 	ws, _ := st.state.Workspace(n.Workspace)
 	for _, c := range ws.Connections() {
 		if c.Enabled && c.Role == state.DestinationRole {
-			if ws.Redis == nil || ws.Warehouse == nil {
+			if ws.Warehouse == nil {
 				st.deleteDestination(c.ID)
 				continue
 			}
@@ -283,7 +283,7 @@ func isDestination(c *state.Connection) bool {
 	conn := c.Connector()
 	ws := c.Workspace()
 	return c.Enabled && c.Role == state.DestinationRole &&
-		conn.Type == state.AppType && ws.Redis != nil && ws.Warehouse != nil &&
+		conn.Type == state.AppType && ws.Warehouse != nil &&
 		conn.Targets.Contains(state.EventsTarget)
 }
 

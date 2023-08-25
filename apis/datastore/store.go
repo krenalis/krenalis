@@ -37,8 +37,8 @@ type (
 )
 
 type Store struct {
+	ds        *Datastore
 	workspace int
-	redis     *redis.Client
 	warehouse warehouses.Warehouse
 	mu        sync.Mutex // for the events field
 	events    [][]any
@@ -46,22 +46,14 @@ type Store struct {
 }
 
 // newStore returns a new Store for the workspace ws.
-func newStore(ws *state.Workspace) (*Store, error) {
+func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	store := &Store{
+		ds:        ds,
 		workspace: ws.ID,
 	}
 	var err error
-	store.redis, _, err = openRedis(ws.Redis.Settings)
-	if err != nil {
-		return nil, fmt.Errorf("cannot open Redis database: %s", err)
-	}
 	store.warehouse, err = openWarehouse(ws.Warehouse.Type, ws.Warehouse.Settings)
 	if err != nil {
-		err2 := store.redis.Close()
-		if err != nil {
-			// TODO(marco): write the error into a workspace specific log
-			log.Printf("[error] error occurred closing Redis database: %s", err2)
-		}
 		return nil, fmt.Errorf("cannot open data warehouse: %s", err)
 	}
 	go func() {
@@ -125,7 +117,7 @@ func (store *Store) CreateUser(ctx context.Context, user map[string]any) (int, e
 	if err != nil {
 		return 0, err
 	}
-	err = store.redis.Save(ctx).Err()
+	err = store.ds.redis.Save(ctx).Err()
 	if err != nil {
 		return 0, err
 	}
@@ -190,7 +182,7 @@ func (store *Store) MatchingUsers(ctx context.Context, user map[string]any) ([]I
 	}
 
 	// Retrieve identifier-value pairs from Redis and collect the GIDs.
-	vals, err := store.redis.MGet(ctx, identifierKeys...).Result()
+	vals, err := store.ds.redis.MGet(ctx, identifierKeys...).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +211,7 @@ func (store *Store) MatchingUsers(ctx context.Context, user map[string]any) ([]I
 		i++
 	}
 	slices.Sort(userKeys)
-	rawUsers, err := store.redis.MGet(ctx, userKeys...).Result()
+	rawUsers, err := store.ds.redis.MGet(ctx, userKeys...).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +278,7 @@ func (store *Store) UpdateUser(ctx context.Context, target IRUser, user map[stri
 	}
 	// TODO(Gianluca): find a better way to implement persistency.
 	// See https://github.com/open2b/chichi/issues/215.
-	err = store.redis.Save(ctx).Err()
+	err = store.ds.redis.Save(ctx).Err()
 	if err != nil {
 		return err
 	}
@@ -370,7 +362,7 @@ func (store *Store) close() error {
 		store.events = nil
 	}
 	store.mu.Unlock()
-	err := store.redis.Close()
+	err := store.ds.redis.Close()
 	if err != nil {
 		err = fmt.Errorf("error occurred closing Redis database: %s", err)
 	}
@@ -388,7 +380,7 @@ func (store *Store) close() error {
 func (store *Store) deleteRedisUserIndex(ctx context.Context, id int) error {
 
 	// Retrieve the user.
-	rawUser, err := store.redis.Get(ctx, redisUserKey(id)).Result()
+	rawUser, err := store.ds.redis.Get(ctx, redisUserKey(id)).Result()
 	if err != nil {
 		if err == redis.Nil {
 			err = nil
@@ -401,14 +393,14 @@ func (store *Store) deleteRedisUserIndex(ctx context.Context, id int) error {
 	// Remove the user ID from the "property:" keys.
 	for k, v := range user {
 		key := redisPropertyKey(k, redisJSONSerialize(v))
-		err := store.redis.LRem(ctx, key, 1, id).Err()
+		err := store.ds.redis.LRem(ctx, key, 1, id).Err()
 		if err != nil {
 			return err
 		}
 	}
 
 	// Remove the "user:<id>" key.
-	err = store.redis.Del(ctx, redisUserKey(id)).Err()
+	err = store.ds.redis.Del(ctx, redisUserKey(id)).Err()
 
 	return err
 }
@@ -431,7 +423,7 @@ func (store *Store) setRedisUserIndex(ctx context.Context, user IRUser) error {
 			continue
 		}
 		key := redisPropertyKey(p, v)
-		current, err := store.redis.Get(ctx, key).Result()
+		current, err := store.ds.redis.Get(ctx, key).Result()
 		if err != nil && err != redis.Nil {
 			return fmt.Errorf("cannot GET value from Redis: %s", err)
 		}
@@ -443,7 +435,7 @@ func (store *Store) setRedisUserIndex(ctx context.Context, user IRUser) error {
 			ids = append(ids, user.ID)
 		}
 		newVal := serializeIDs(ids)
-		err = store.redis.Set(ctx, key, newVal, 0).Err()
+		err = store.ds.redis.Set(ctx, key, newVal, 0).Err()
 		if err != nil {
 			return fmt.Errorf("cannot SET value on Redis: %s", err)
 		}
@@ -453,7 +445,7 @@ func (store *Store) setRedisUserIndex(ctx context.Context, user IRUser) error {
 	userToSerialize := map[string]any{}
 	maps.Copy(userToSerialize, user.Identifiers)
 	userToSerialize["id"] = user.ID
-	err := store.redis.Set(ctx, redisUserKey(user.ID), redisJSONSerialize(userToSerialize), 0).Err()
+	err := store.ds.redis.Set(ctx, redisUserKey(user.ID), redisJSONSerialize(userToSerialize), 0).Err()
 
 	return err
 }
