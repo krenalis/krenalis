@@ -75,7 +75,6 @@ func (this *Account) AddWorkspace(ctx context.Context, name string, warehouse *W
 			}
 			return 0, err
 		}
-
 	}
 
 	// Generate the identifier.
@@ -98,6 +97,7 @@ func (this *Account) AddWorkspace(ctx context.Context, name string, warehouse *W
 					return errors.NotFound("account %d does not exist", n.Account)
 				}
 			}
+			return err
 		}
 		return tx.Notify(ctx, n)
 	})
