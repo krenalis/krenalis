@@ -102,49 +102,41 @@ func notify(ctx context.Context, conn Connection, payload any) error {
 	return err
 }
 
-type Notifications struct {
-	Channel   chan Notification
-	cancelCtx context.CancelFunc
-	stopped   chan struct{}
-}
-
-func (n *Notifications) Close() {
-	n.stopped = make(chan struct{})
-	n.cancelCtx()
-	<-n.stopped
-	close(n.Channel)
-}
-
 // ListenToNotifications listens to notifications in its goroutine and sends
-// them on the returned channel.
-func (db *DB) ListenToNotifications() *Notifications {
+// them on the returned channel. Call stop to halt the listening and close the
+// channel.
+func (db *DB) ListenToNotifications() (notifications <-chan Notification, stop func()) {
 	ch := make(chan Notification)
 	ctx, cancel := context.WithCancel(context.Background())
-	notifications := &Notifications{
-		Channel:   ch,
-		cancelCtx: cancel,
+	stopped := make(chan struct{})
+	stop = func() {
+		cancel()
+		<-stopped
+		close(ch)
 	}
 	go func() {
 		var err error
 		var b bytes.Buffer
+		var sleep time.Duration
 		for {
-			b.Reset()
 			if err != nil {
-				if err == context.Canceled {
-					select {
-					case <-ctx.Done():
-						close(notifications.stopped)
-						return
-					}
+				select {
+				case <-ctx.Done():
+					close(stopped)
+					return
+				default:
+					log.Printf("[error] %s", err)
 				}
-				log.Printf("[error] %s", err)
 			}
+			if sleep > 0 {
+				time.Sleep(sleep)
+				sleep = 0
+			}
+			b.Reset()
 			var conn *Conn
 			conn, err = db.Conn(ctx)
 			if err != nil {
-				if err != context.Canceled {
-					time.Sleep(10 * time.Millisecond)
-				}
+				sleep = 10 * time.Millisecond
 				continue
 			}
 			_, err = conn.Exec(ctx, "LISTEN chichi")
@@ -202,7 +194,7 @@ func (db *DB) ListenToNotifications() *Notifications {
 			err = conn.Close(ctx)
 		}
 	}()
-	return notifications
+	return ch, stop
 }
 
 // parsePayload parses a notification payload and returns the identifier, name,

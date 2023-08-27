@@ -73,7 +73,7 @@ func (state *State) keepState() {
 		select {
 		case <-done:
 			return
-		case n = <-state.notifications.Channel:
+		case n = <-state.notifications.channel:
 		}
 		if logNotifications {
 			log.Printf("[info] received notification from pid %d and name %q : %s",

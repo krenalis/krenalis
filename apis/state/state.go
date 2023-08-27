@@ -45,8 +45,11 @@ type State struct {
 	connectionsByKey map[string]*Connection
 	actions          map[int]*Action
 	resources        map[int]*Resource
-	notifications    *postgres.Notifications
-	listeners        struct {
+	notifications    struct {
+		channel <-chan postgres.Notification
+		stop    func()
+	}
+	listeners struct {
 		AddAction                 []func(AddAction)
 		AddConnection             []func(AddConnection)
 		DeleteAction              []func(DeleteAction)
@@ -80,7 +83,6 @@ func New(db *postgres.DB) (*State, error) {
 		id:               id,
 		db:               db,
 		mu:               new(sync.Mutex),
-		notifications:    db.ListenToNotifications(),
 		accounts:         map[int]*Account{},
 		connectors:       map[int]*Connector{},
 		workspaces:       map[int]*Workspace{},
@@ -89,6 +91,9 @@ func New(db *postgres.DB) (*State, error) {
 		actions:          map[int]*Action{},
 		resources:        map[int]*Resource{},
 	}
+
+	// Listen to notifications.
+	state.notifications.channel, state.notifications.stop = db.ListenToNotifications()
 
 	state.close.ctx, state.close.CancelCtx = context.WithCancel(context.Background())
 
@@ -149,7 +154,7 @@ func (state *State) Actions() []*Action {
 func (state *State) Close() {
 	state.close.CancelCtx()
 	state.close.Wait()
-	state.notifications.Close()
+	state.notifications.stop()
 }
 
 // ConnectionByKey returns the connection with the given key.
