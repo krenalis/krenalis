@@ -90,14 +90,14 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	{
 		st, err := this.connection.openStorage()
 		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %w", err)}
+			return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %s", err)}
 		}
 		storage = newCompressedStorage(st, connection.Compression)
 	}
 
 	file, err := this.connection.openFile()
 	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %w", err)}
+		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
 
 	// Determine the columns.
@@ -128,14 +128,14 @@ func (this *Action) exportUsersToFile(ctx context.Context) error {
 	// Write the file to the storage.
 	w, err := storage.Writer(ctx, this.action.Path, file.ContentType(ctx))
 	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot write file: %w", err)}
+		return actionExecutionError{fmt.Errorf("cannot write file: %s", err)}
 	}
 	err = file.Write(ctx, w, this.action.Sheet, records)
 	if err2 := w.CloseWithError(err); err2 != nil && err == nil {
 		err = err2
 	}
 	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot write file: %w", err)}
+		return actionExecutionError{fmt.Errorf("cannot write file: %s", err)}
 	}
 
 	return nil
@@ -147,7 +147,7 @@ func (this *Action) importFromFile(ctx context.Context) error {
 	// Connect to the file connector.
 	file, err := this.connection.openFile()
 	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot connect to the file connector: %w", err)}
+		return actionExecutionError{fmt.Errorf("cannot connect to the file connector: %s", err)}
 	}
 
 	// Open the file.
@@ -155,11 +155,11 @@ func (this *Action) importFromFile(ctx context.Context) error {
 	{
 		storage, err := this.connection.openStorage()
 		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %w", err)}
+			return actionExecutionError{fmt.Errorf("cannot connect to the storage connector: %s", err)}
 		}
 		r, _, err = storage.Reader(ctx, this.action.Path)
 		if err != nil {
-			return actionExecutionError{fmt.Errorf("cannot get ReadCloser from storage: %w", err)}
+			return actionExecutionError{fmt.Errorf("cannot get ReadCloser from storage: %s", err)}
 		}
 		defer r.Close()
 	}
@@ -213,11 +213,11 @@ func (this *Action) importFromFile(ctx context.Context) error {
 	})
 	err = file.Read(ctx, r, this.action.Sheet, rw)
 	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot read the file: %w", err)}
+		return actionExecutionError{fmt.Errorf("cannot read the file: %s", err)}
 	}
 	err = r.Close()
 	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot close the storage: %w", err)}
+		return actionExecutionError{fmt.Errorf("cannot close the storage: %s", err)}
 	}
 
 	return nil

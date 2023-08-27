@@ -30,7 +30,7 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 
 	database, err := this.connection.openDatabase()
 	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %w", err)}
+		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
 
 	// Execute the query and get the results and the properties.
@@ -57,7 +57,7 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 			dest[i] = databaseScanValue{property: p, row: row}
 		}
 		if err := rawRows.Scan(dest...); err != nil {
-			return actionExecutionError{fmt.Errorf("query execution failed: %w", err)}
+			return actionExecutionError{fmt.Errorf("query execution failed: %s", err)}
 		}
 
 		// Take only the necessary properties.
@@ -95,7 +95,7 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 
 	}
 	if err = rawRows.Err(); err != nil {
-		return actionExecutionError{fmt.Errorf("an error occurred closing the database: %w", err)}
+		return actionExecutionError{fmt.Errorf("an error occurred closing the database: %s", err)}
 	}
 
 	return nil
@@ -188,7 +188,7 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 
 	database, err := this.connection.openDatabase()
 	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %w", err)}
+		return actionExecutionError{fmt.Errorf("cannot connect to the connector: %s", err)}
 	}
 	err = database.Upsert(ctx, this.action.TableName, rows, columns)
 	_ = database.Close()

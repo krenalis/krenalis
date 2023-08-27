@@ -108,18 +108,19 @@ func (this *Action) exec(ctx context.Context) {
 
 	if err != nil {
 		health = state.RecentError
-		if e, ok := err.(actionExecutionError); ok {
-			if e.err == context.Canceled || errors.Unwrap(e.err) == context.Canceled {
-				errorMessage = "process has been shut down"
-			} else {
+		select {
+		case <-ctx.Done():
+			errorMessage = "execution has been cancelled"
+		default:
+			if e, ok := err.(actionExecutionError); ok {
 				errorMessage = abbreviate(e.Error(), 1000)
 				if _, ok := e.err.(*connector.AccessDeniedError); ok {
 					health = state.AccessDenied
 				}
+			} else {
+				log.Printf("[error] cannot execute action %d, execution %d failed: %s", this.action.ID, execution.ID, err)
+				errorMessage = "an internal error has occurred"
 			}
-		} else {
-			log.Printf("[error] cannot execute action %d, execution %d failed: %s", this.action.ID, execution.ID, err)
-			errorMessage = "an internal error has occurred"
 		}
 	}
 
