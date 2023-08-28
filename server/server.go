@@ -10,7 +10,6 @@ package server
 import (
 	"context"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -48,12 +47,6 @@ func Run(ctx context.Context, settings *Settings) error {
 		Redis:      settings.Redis,
 	})
 	if err != nil {
-		if err == context.Canceled {
-			select {
-			case <-ctx.Done():
-				os.Exit(0)
-			}
-		}
 		return err
 	}
 	defer apis.Close()
