@@ -31,6 +31,9 @@ type Settings struct {
 	}
 }
 
+// Run runs the server.
+// Cancel ctx to terminate the execution. If ctx is cancelled, Run does not
+// return any error.
 func Run(ctx context.Context, settings *Settings) error {
 
 	if settings.Telemetry.Enable {
