@@ -83,7 +83,7 @@ func InitAndLaunch(t *testing.T) *Chichi {
 
 	c := Chichi{
 		t:    t,
-		done: make(chan struct{}, 1),
+		done: make(chan struct{}),
 	}
 
 	setts := server.Settings{}
@@ -122,7 +122,7 @@ func InitAndLaunch(t *testing.T) *Chichi {
 			if err != nil && !isSignalKilledError(err) {
 				log.Printf("[error] %s", err)
 			}
-			c.done <- struct{}{}
+			close(c.done)
 		}()
 	} else {
 		err = validDatabaseNameForTests(setts.PostgreSQL.Database)
@@ -135,7 +135,7 @@ func InitAndLaunch(t *testing.T) *Chichi {
 				log.Printf("[error] %s", err)
 				return
 			}
-			c.done <- struct{}{}
+			close(c.done)
 		}()
 	}
 
