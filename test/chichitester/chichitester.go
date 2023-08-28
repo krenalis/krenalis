@@ -113,7 +113,7 @@ func InitAndLaunch(t *testing.T) *Chichi {
 	}()
 
 	if launchChichiExternally {
-		err := buildChichi(ctxWithCancel, &setts)
+		err := buildChichi(ctx, &setts)
 		if err != nil {
 			t.Fatalf("cannot build Chichi: %s", err)
 		}
