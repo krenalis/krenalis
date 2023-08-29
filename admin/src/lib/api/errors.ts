@@ -1,0 +1,33 @@
+class NotFoundError extends Error {
+	constructor(message: string) {
+		super();
+		this.name = 'NotFoundError';
+		this.message = message;
+	}
+}
+
+class BadRequestError extends Error {
+	cause: string;
+
+	constructor(message: string, cause: string) {
+		super();
+		this.name = 'BadRequestError';
+		this.message = message;
+		this.cause = cause;
+	}
+}
+
+class UnprocessableError extends Error {
+	code: string;
+	cause: string;
+
+	constructor(code: string, message: string, cause: string) {
+		super();
+		this.name = 'UnprocessableError';
+		this.code = code;
+		this.message = message;
+		this.cause = cause;
+	}
+}
+
+export { NotFoundError, BadRequestError, UnprocessableError };

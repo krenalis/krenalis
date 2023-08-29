@@ -1,17 +1,32 @@
 import call from './call';
 import * as http from './http';
-import Type from '../../types/types';
+import Type, { ObjectType } from '../../types/external/types';
 import {
-	ActionTarget,
-	SchedulePeriod,
+	Connection,
 	ConnectionRole,
-	ExpressionToBeExtracted,
 	Compression,
-	ActionToSet,
 	ConnectionOptions,
-	AnonymousIdentifiers,
-} from '../../types/connection';
+	ConnectionStats,
+} from '../../types/external/connection';
+import { AnonymousIdentifiers } from '../../types/external/identifiers';
+import { ActionTarget, SchedulePeriod, ActionToSet, MappingExpression } from '../../types/external/action';
+import { User, UserEvent, UserTraits } from '../../types/external/user';
 import { adminBasePath } from '../../constants/path';
+import { Connector } from '../../types/external/connector';
+import WorkSpaceInterface from '../../types/external/workspace';
+import {
+	UIResponse,
+	UIValues,
+	authCodeURLResponse,
+	Import,
+	EventListenerEventsResponse,
+	AddEventListenerResponse,
+	ActionSchemasResponse,
+	ExecQueryResponse,
+	CompletePathResponse,
+	SheetsResponse,
+	RecordsResponse,
+} from '../../types/external/api';
 
 class API {
 	apiURL: string;
@@ -31,11 +46,11 @@ class API {
 		this.connectors = new Connectors(baseURL, apiURL);
 	}
 
-	login = async (email: string, password: string) => {
+	login = async (email: string, password: string): Promise<[number, string]> => {
 		return await call(`${adminBasePath}`, http.POST, { email, password });
 	};
 
-	eventsSchema = async () => {
+	eventsSchema = async (): Promise<ObjectType> => {
 		return await call(`${this.apiURL}/events-schema`, http.GET);
 	};
 
@@ -44,7 +59,7 @@ class API {
 		schema: Type,
 		destinationPropertyType: Type,
 		destinationPropertyNullable: boolean
-	) => {
+	): Promise<string> => {
 		return await call(`${this.apiURL}/validate-expression`, http.POST, {
 			expression,
 			schema,
@@ -53,7 +68,7 @@ class API {
 		});
 	};
 
-	expressionsProperties = async (expressions: ExpressionToBeExtracted[], schema: Type) => {
+	expressionsProperties = async (expressions: MappingExpression[], schema: Type): Promise<string[]> => {
 		return await call(`${this.apiURL}/expressions-properties`, http.POST, {
 			expressions,
 			schema,
@@ -68,34 +83,41 @@ class Connections {
 		this.apiURL = url;
 	}
 
-	find = async () => {
-		return await call(`${this.apiURL}/connections`, http.GET);
+	find = async (): Promise<Connection[]> => {
+		const connections = await call(`${this.apiURL}/connections`, http.GET);
+		return connections as Connection[];
 	};
 
-	get = async (connection: number) => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}`, http.GET);
+	get = async (connection: number): Promise<Connection> => {
+		const c = await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}`, http.GET);
+		return c as Connection;
 	};
 
-	delete = async (connection: number) => {
+	delete = async (connection: number): Promise<void> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}`, http.DELETE);
 	};
 
-	stats = async (connection: number) => {
+	stats = async (connection: number): Promise<ConnectionStats> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/stats`, http.GET);
 	};
 
-	imports = async (connection: number) => {
+	imports = async (connection: number): Promise<Import[]> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/imports`, http.GET);
 	};
 
-	query = async (connection: number, query: string, limit: number) => {
+	query = async (connection: number, query: string, limit: number): Promise<ExecQueryResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/exec-query`, http.POST, {
 			query: query,
 			limit: limit,
 		});
 	};
 
-	records = async (connection: number, path: string, sheet: string, limit: number) => {
+	records = async (
+		connection: number,
+		path: string,
+		sheet: string | null,
+		limit: number
+	): Promise<RecordsResponse> => {
 		let queryString = `?limit=${limit}`;
 		if (path != null) {
 			queryString += `&path=${encodeURIComponent(path)}`;
@@ -109,52 +131,57 @@ class Connections {
 		);
 	};
 
-	sheets = async (connection: number, path: string) => {
+	sheets = async (connection: number, path: string): Promise<SheetsResponse> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/sheets?path=${encodeURIComponent(path)}`
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/sheets?path=${encodeURIComponent(path)}`,
+			http.GET
 		);
 	};
 
-	setStorage = async (connection: number, storage: number, compression: Compression) => {
+	setStorage = async (connection: number, storage: number, compression: Compression): Promise<void> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/storage`, http.POST, {
 			storage: storage,
 			compression: compression,
 		});
 	};
 
-	setStatus = async (connection: number, enabled: boolean) => {
+	setStatus = async (connection: number, enabled: boolean): Promise<void> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/status`, http.POST, {
 			enabled: enabled,
 		});
 	};
 
-	ui = async (connection: number) => {
+	ui = async (connection: number): Promise<UIResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/ui`, http.GET);
 	};
 
-	uiEvent = async (connection: number, event: string, values: Map<string, any>) => {
+	uiEvent = async (connection: number, event: string, values: UIValues): Promise<UIResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/ui-event`, http.POST, {
 			event: event,
 			values: values,
 		});
 	};
 
-	keys = async (connection: number) => {
+	keys = async (connection: number): Promise<string[]> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/keys`, http.GET);
 	};
 
-	generateKey = async (connection: number) => {
+	generateKey = async (connection: number): Promise<string> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/keys`, http.POST);
 	};
 
-	revokeKey = async (connection: number, key: string) => {
+	revokeKey = async (connection: number, key: string): Promise<void> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/keys/${encodeURIComponent(key)}`,
 			http.DELETE
 		);
 	};
 
-	actionSchemas = async (connection: number, target: ActionTarget, eventType: string) => {
+	actionSchemas = async (
+		connection: number,
+		target: ActionTarget,
+		eventType: string
+	): Promise<ActionSchemasResponse> => {
 		if (eventType != null) {
 			return await call(
 				`${this.apiURL}/connections/${encodeURIComponent(
@@ -172,7 +199,12 @@ class Connections {
 		}
 	};
 
-	addAction = async (connection: number, target: ActionTarget, eventType: string, actionToSet: ActionToSet) => {
+	addAction = async (
+		connection: number,
+		target: ActionTarget,
+		eventType: string,
+		actionToSet: ActionToSet
+	): Promise<number> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions`, http.POST, {
 			target: target,
 			eventType: eventType,
@@ -180,7 +212,7 @@ class Connections {
 		});
 	};
 
-	setAction = async (connection: number, action: number, actionToSet: ActionToSet) => {
+	setAction = async (connection: number, action: number, actionToSet: ActionToSet): Promise<void> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(action)}`,
 			http.PUT,
@@ -188,14 +220,14 @@ class Connections {
 		);
 	};
 
-	deleteAction = async (connection: number, action: number) => {
+	deleteAction = async (connection: number, action: number): Promise<void> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(action)}`,
 			http.DELETE
 		);
 	};
 
-	setActionStatus = async (connection: number, action: number, enabled: boolean) => {
+	setActionStatus = async (connection: number, action: number, enabled: boolean): Promise<void> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(action)}/status`,
 			http.POST,
@@ -203,7 +235,11 @@ class Connections {
 		);
 	};
 
-	setActionSchedulePeriod = async (connection: number, action: number, schedulePeriod: SchedulePeriod) => {
+	setActionSchedulePeriod = async (
+		connection: number,
+		action: number,
+		schedulePeriod: SchedulePeriod
+	): Promise<void> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(
 				action
@@ -213,7 +249,7 @@ class Connections {
 		);
 	};
 
-	executeAction = async (connection: number, action: number, reimport: boolean) => {
+	executeAction = async (connection: number, action: number, reimport: boolean): Promise<void> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(
 				action
@@ -223,7 +259,7 @@ class Connections {
 		);
 	};
 
-	completePath = async (storageConnection: number, path: string) => {
+	completePath = async (storageConnection: number, path: string): Promise<CompletePathResponse> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(storageConnection)}/complete-path/${encodeURIComponent(
 				path
@@ -240,7 +276,7 @@ class Eventlisteners {
 		this.apiURL = url;
 	}
 
-	add = async (size: number, source: number, server: number, stream: number) => {
+	add = async (size: number, source: number, server: number, stream: number): Promise<AddEventListenerResponse> => {
 		return await call(`${this.apiURL}/event-listeners`, http.PUT, {
 			size: size,
 			source: source,
@@ -249,11 +285,11 @@ class Eventlisteners {
 		});
 	};
 
-	remove = async (eventListener: string) => {
+	remove = async (eventListener: string): Promise<void> => {
 		return await call(`${this.apiURL}/event-listeners/${encodeURIComponent(eventListener)}`, http.DELETE);
 	};
 
-	events = async (eventListener: string) => {
+	events = async (eventListener: string): Promise<EventListenerEventsResponse> => {
 		return await call(`${this.apiURL}/event-listeners/${encodeURIComponent(eventListener)}/events`, http.GET);
 	};
 }
@@ -265,7 +301,7 @@ class Users {
 		this.apiURL = url;
 	}
 
-	find = async (properties: string[], start: number, end: number) => {
+	find = async (properties: string[], start: number, end: number): Promise<User[]> => {
 		return await call(`${this.apiURL}/users`, http.POST, {
 			properties: properties,
 			start: start,
@@ -273,11 +309,11 @@ class Users {
 		});
 	};
 
-	events = async (user: number) => {
+	events = async (user: number): Promise<UserEvent[]> => {
 		return await call(`${this.apiURL}/users/${encodeURIComponent(user)}/events`, http.GET);
 	};
 
-	traits = async (user: number) => {
+	traits = async (user: number): Promise<UserTraits> => {
 		return await call(`${this.apiURL}/users/${encodeURIComponent(user)}/traits`, http.GET);
 	};
 }
@@ -291,24 +327,24 @@ class Workspace {
 		this.apiURL = apiURL;
 	}
 
-	get = async () => {
+	get = async (): Promise<WorkSpaceInterface> => {
 		return await call(`${this.apiURL}/workspace`, http.GET);
 	};
 
-	userSchema = async () => {
+	userSchema = async (): Promise<ObjectType> => {
 		return await call(`${this.apiURL}/workspace/user-schema`, http.GET);
 	};
 
-	reloadSchemas = async () => {
+	reloadSchemas = async (): Promise<void> => {
 		return await call(`${this.apiURL}/workspace/reload-schemas`, http.POST);
 	};
 
 	addConnection = async (
 		connector: number,
 		role: ConnectionRole,
-		settings: Map<string, any>,
+		settings: UIValues,
 		options: ConnectionOptions
-	) => {
+	): Promise<number> => {
 		return await call(`${this.apiURL}/workspace/add-connection`, http.POST, {
 			connector: connector,
 			role: role,
@@ -317,7 +353,7 @@ class Workspace {
 		});
 	};
 
-	oauthToken = async (connector: number, oauthCode: string) => {
+	oauthToken = async (connector: number, oauthCode: string): Promise<string> => {
 		const redirectURI = `${this.baseURL}${adminBasePath}oauth/authorize`;
 		return await call(`${this.apiURL}/workspace/oauth-token`, http.POST, {
 			connector: connector,
@@ -326,7 +362,7 @@ class Workspace {
 		});
 	};
 
-	anonymousIdentifiers = async (identifiers: AnonymousIdentifiers) => {
+	anonymousIdentifiers = async (identifiers: AnonymousIdentifiers): Promise<void> => {
 		return await call(`${this.apiURL}/workspace/anonymous-identifiers`, http.POST, {
 			AnonymousIdentifiers: identifiers,
 		});
@@ -342,7 +378,7 @@ class Connectors {
 		this.apiURL = apiURL;
 	}
 
-	authCodeURL = async (connector: number) => {
+	authCodeURL = async (connector: number): Promise<authCodeURLResponse> => {
 		const redirectURI = `${this.baseURL}${adminBasePath}oauth/authorize`;
 		return await call(
 			`${this.apiURL}/connectors/${connector}/auth-code-url?redirecturi=${encodeURIComponent(redirectURI)}`,
@@ -350,15 +386,15 @@ class Connectors {
 		);
 	};
 
-	find = async () => {
+	find = async (): Promise<Connector[]> => {
 		return await call(`${this.apiURL}/connectors`, http.GET);
 	};
 
-	get = async (connector: number) => {
+	get = async (connector: number): Promise<Connector> => {
 		return await call(`${this.apiURL}/connectors/${connector}`, http.GET);
 	};
 
-	ui = async (connector: number, role: ConnectionRole, oauthToken: string) => {
+	ui = async (connector: number, role: ConnectionRole, oauthToken: string): Promise<UIResponse> => {
 		return await call(`${this.apiURL}/connectors/${connector}/ui`, http.POST, {
 			role: role,
 			oauthToken: oauthToken,
@@ -368,10 +404,10 @@ class Connectors {
 	uiEvent = async (
 		connector: number,
 		event: string,
-		values: Map<string, any>,
+		values: UIValues,
 		role: ConnectionRole,
 		oauthToken: string
-	) => {
+	): Promise<UIResponse> => {
 		return await call(`${this.apiURL}/connectors/${connector}/ui-event`, http.POST, {
 			event: event,
 			values: values,

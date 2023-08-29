@@ -1,0 +1,18 @@
+const getChildIndexClassname = (i: number, listLength: number) => {
+	let index = i + 1;
+	let className = '';
+	if (index === 1) {
+		className += ' first';
+	}
+	if (index === listLength) {
+		className += ' last';
+	}
+	if (index % 2 === 0) {
+		className += ' even';
+	} else {
+		className += ' odd';
+	}
+	return className.trim();
+};
+
+export default getChildIndexClassname;

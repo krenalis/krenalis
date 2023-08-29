@@ -1,0 +1,62 @@
+import React, { ReactNode } from 'react';
+import ListTile from '../../shared/ListTile/ListTile';
+import { ActionType } from '../../../types/external/action';
+import { SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
+
+interface ActionTypesDialogProps {
+	isOpen: boolean;
+	setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+	actionTypes: ActionType[];
+	connectionLogo: ReactNode;
+	onSelectActionType: (actionType: ActionType) => void;
+}
+
+const ActionTypesDialog = ({
+	isOpen,
+	setIsOpen,
+	actionTypes,
+	connectionLogo,
+	onSelectActionType,
+}: ActionTypesDialogProps) => {
+	const standardActionTypes: ReactNode[] = [];
+	const eventActionTypes: ReactNode[] = [];
+	for (const type of actionTypes) {
+		const tile = (
+			<ListTile
+				icon={connectionLogo}
+				name={type.Name}
+				description={type.Description}
+				missingSchema={type.MissingSchema}
+				onClick={() => {
+					onSelectActionType(type);
+				}}
+			/>
+		);
+		if (type.Target === 'Users' || type.Target === 'Groups') {
+			standardActionTypes.push(tile);
+		} else {
+			eventActionTypes.push(tile);
+		}
+	}
+	return (
+		<SlDialog
+			label='Add action'
+			className='actionDialog'
+			onSlAfterHide={() => setIsOpen(false)}
+			open={isOpen}
+			style={{ '--width': '600px' } as React.CSSProperties}
+		>
+			<div className='actionTypes'>
+				{standardActionTypes}
+				{eventActionTypes.length > 0 && (
+					<>
+						<div className='eventActionTypesTitle'>Events</div>
+						{eventActionTypes}
+					</>
+				)}
+			</div>
+		</SlDialog>
+	);
+};
+
+export default ActionTypesDialog;
