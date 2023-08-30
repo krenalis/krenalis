@@ -39,7 +39,6 @@ class Storage {
 	}
 
 	reset() {
-		this.store.getItem('chichi_anonymous_id');
 		this.store.removeItem('chichi_group_id');
 		this.store.removeItem('chichi_traits');
 		this.store.removeItem('chichi_user_id');
