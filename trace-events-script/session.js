@@ -1,5 +1,3 @@
-import Storage from './storage';
-
 class Session {
 	#storage;
 	#timeout = 30 * 60000; // 30 minutes.
