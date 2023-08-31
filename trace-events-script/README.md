@@ -37,7 +37,7 @@ Add the content of the `snippet.js` file to the HTML page:
 
 ```html
 <script type="text/javascript">
-  <!-- copy the contents of the snippet.js file here -->
+  // Copy the contents of the snippet.js file here.
 </script>
 ```
 
