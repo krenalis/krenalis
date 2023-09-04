@@ -102,15 +102,15 @@ func New(conf *Config) (*APIs, error) {
 
 	apis := &APIs{db: db}
 
-	// Set the HTTP client.
-	apis.http = httpclient.New(db, apis.state, http.DefaultTransport)
-	apis.http.SetTrace(os.Stdout)
-
 	// Instantiate the state.
 	apis.state, err = state.New(db)
 	if err != nil {
 		return nil, err
 	}
+
+	// Set the HTTP client.
+	apis.http = httpclient.New(db, apis.state, http.DefaultTransport)
+	apis.http.SetTrace(os.Stdout)
 
 	// Listen to state changes.
 	apis.state.AddListener(apis.onElectLeader)
