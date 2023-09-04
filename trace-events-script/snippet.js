@@ -13,7 +13,21 @@
 		var c = document.getElementsByTagName('script')[0];
 		c.parentNode.insertBefore(s, c);
 	};
-	var methods = ['alias', 'group', 'identify', 'page', 'ready', 'reset', 'screen', 'setAnonymousId', 'track'];
+	var methods = [
+		'alias',
+		'endSession',
+		'getSessionId',
+		'group',
+		'identify',
+		'page',
+		'ready',
+		'reset',
+		'screen',
+		'setAnonymousId',
+		'startSession',
+		'track',
+		'user',
+	];
 	for (var i = 0; i < methods.length; i++) {
 		(function (name) {
 			a[name] = function () {
