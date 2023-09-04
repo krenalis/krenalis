@@ -97,7 +97,6 @@ func Open(settings []byte) (warehouses.Warehouse, error) {
 // Close closes the warehouse. It will not allow any new queries to run, and it
 // waits for the current ones to finish.
 func (warehouse *PostgreSQL) Close() error {
-	var err error
 	warehouse.mu.Lock()
 	if warehouse.db != nil {
 		warehouse.db.Close()
@@ -105,7 +104,7 @@ func (warehouse *PostgreSQL) Close() error {
 		warehouse.closed = true
 	}
 	warehouse.mu.Unlock()
-	return err
+	return nil
 }
 
 // DestinationUser returns the external ID of the destination user of the action
