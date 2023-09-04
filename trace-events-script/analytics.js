@@ -59,11 +59,6 @@ class Analytics {
 		this.#session.end();
 	}
 
-	// getAnonymousId returns the default Anonymous ID.
-	getAnonymousId() {
-		return this.#storage.getAnonymousID();
-	}
-
 	// getSessionId returns the current session ID, or null if there is no
 	// session.
 	getSessionId() {

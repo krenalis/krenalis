@@ -8,18 +8,7 @@ function main() {
 	const analytics = window.chichianalytics;
 
 	const a = new Analytics(analytics.key, analytics.url);
-	const methods = [
-		'alias',
-		'getAnonymousId',
-		'group',
-		'identify',
-		'page',
-		'ready',
-		'reset',
-		'screen',
-		'setAnonymousId',
-		'track',
-	];
+	const methods = ['alias', 'group', 'identify', 'page', 'ready', 'reset', 'screen', 'setAnonymousId', 'track'];
 	for (let i = 0; i < methods.length; i++) {
 		const method = methods[i];
 		analytics[method] = a[method].bind(a);
