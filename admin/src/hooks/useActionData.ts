@@ -279,18 +279,20 @@ const useActionData = (
 					showError(`You must fix the errors on the mapping before saving`);
 					return;
 				}
-				const fullKeyProperty = flattenedOutputSchema![k].full;
+				const property = flattenedOutputSchema![k];
+				const fullProperty = property.full;
+				const parentProperty = flattenedOutputSchema![property.root!].full;
 				expressions.push({
 					value: v.value,
-					type: fullKeyProperty.type,
-					nullable: fullKeyProperty.nullable,
+					type: fullProperty!.type,
+					nullable: fullProperty!.nullable,
 				});
 				mappingToSave[k] = v.value;
 				const isKeyPropertyAlreadyInSchema = outputSchema.properties!.find(
-					(p) => p.name === fullKeyProperty.name
+					(p) => p.name === parentProperty!.name
 				);
 				if (!isKeyPropertyAlreadyInSchema) {
-					outputSchema.properties!.push(fullKeyProperty);
+					outputSchema.properties!.push(parentProperty);
 				}
 			}
 			let inputProperties: string[];
