@@ -23,6 +23,7 @@ use (
 	./connectors/s3
 	./connectors/server
 	./connectors/sftp
+	./connectors/snowflake
 	./connectors/uisample
 	./connectors/website
 )

@@ -1,0 +1,307 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2023 Open2b
+//
+
+// Package snowflake implements the Snowflake connector.
+// (https://docs.snowflake.com/)
+package snowflake
+
+import (
+	"context"
+	"database/sql"
+	_ "embed"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"unicode/utf8"
+
+	"chichi/connector"
+	"chichi/connector/types"
+	"chichi/connector/ui"
+
+	"github.com/snowflakedb/gosnowflake"
+)
+
+// Connector icon.
+var icon = "<svg></svg>"
+
+// Make sure it implements the UI interface.
+var _ connector.UI = (*connection)(nil)
+
+func init() {
+	connector.RegisterDatabase(connector.Database{
+		Name:                   "Snowflake",
+		SourceDescription:      "import users and groups from a Snowflake database",
+		DestinationDescription: "export users and groups to a Snowflake database",
+		SampleQuery:            "SELECT * FROM users {{ LIMIT $limit }}",
+		Icon:                   icon,
+	}, open)
+}
+
+// open opens a Snowflake connection and returns it.
+func open(conf *connector.DatabaseConfig) (*connection, error) {
+	c := connection{conf: conf}
+	if len(conf.Settings) > 0 {
+		err := json.Unmarshal(conf.Settings, &c.settings)
+		if err != nil {
+			return nil, errors.New("cannot unmarshal settings of Snowflake connection")
+		}
+	}
+	return &c, nil
+}
+
+type connection struct {
+	conf     *connector.DatabaseConfig
+	settings *settings
+	db       *sql.DB
+}
+
+// Close closes the database. When Close is called, no other calls to connection
+// methods are in progress and no more will be made.
+func (c *connection) Close() error {
+	if c.db == nil {
+		return nil
+	}
+	return c.db.Close()
+}
+
+// Columns returns the columns of the given table.
+func (c *connection) Columns(ctx context.Context, table string) ([]types.Property, error) {
+	rows, columns, err := c.query(ctx, "SELECT * FROM "+quoteTable(table))
+	if err != nil {
+		return nil, err
+	}
+	err = rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	return columns, nil
+}
+
+// Query executes the given query and returns the resulting rows and columns.
+func (c *connection) Query(ctx context.Context, query string) (connector.Rows, []types.Property, error) {
+	return c.query(ctx, query)
+}
+
+// ServeUI serves the connector's user interface.
+func (c *connection) ServeUI(ctx context.Context, event string, values []byte) (*ui.Form, *ui.Alert, error) {
+
+	switch event {
+	case "load":
+		// Load the UI.
+		var s settings
+		if c.settings != nil {
+			s = *c.settings
+		}
+		values, _ = json.Marshal(s)
+	case "test", "save":
+		// Test the connection and save the settings if required.
+		s, err := c.ValidateSettings(ctx, values)
+		if err != nil {
+			if event == "test" {
+				return nil, ui.WarningAlert(err.Error()), nil
+			}
+			return nil, ui.DangerAlert(err.Error()), nil
+		}
+		if event == "test" {
+			return nil, ui.SuccessAlert("Connection established"), nil
+		}
+		err = c.conf.SetSettings(ctx, s)
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, ui.SuccessAlert("Settings saved"), nil
+	default:
+		return nil, nil, ui.ErrEventNotExist
+	}
+
+	form := &ui.Form{
+		Fields: []ui.Component{
+			&ui.Input{Name: "account", Label: "Account", Placeholder: "ABCDEFG-TUVWXYZ", Type: "text", MinLength: 1, MaxLength: 255},
+			&ui.Input{Name: "username", Label: "Username", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&ui.Input{Name: "password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 255},
+			&ui.Input{Name: "database", Label: "Database", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&ui.Input{Name: "schema", Label: "Schema", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&ui.Input{Name: "warehouse", Label: "Warehouse", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&ui.Input{Name: "role", Label: "Role", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+		},
+		Values: values,
+		Actions: []ui.Action{
+			{Event: "test", Text: "Test Connection", Variant: "neutral"},
+			{Event: "save", Text: "Save", Variant: "primary"},
+		},
+	}
+
+	return form, nil, nil
+}
+
+// Upsert creates or updates the provided rows in the specified table.
+// The columns parameter specifies the columns of the rows, including a column
+// named "id" that serves as the table's key.
+func (c *connection) Upsert(ctx context.Context, table string, rows [][]any, columns []types.Property) error {
+	return errors.New("not implemented")
+}
+
+// ValidateSettings validates the settings received from the UI and returns them
+// in a format suitable for storage.
+func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byte, error) {
+	var s settings
+	err := json.Unmarshal(values, &s)
+	if err != nil {
+		return nil, err
+	}
+	// Validate Account.
+	if n := utf8.RuneCountInString(s.Account); n < 1 || n > 255 {
+		return nil, ui.Errorf("account length must be in range [1,255]")
+	}
+	// Validate Username.
+	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
+		return nil, ui.Errorf("username length must be in range [1,255]")
+	}
+	// Validate Password.
+	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
+		return nil, ui.Errorf("password length must be in range [1,255]")
+	}
+	// Validate Warehouse.
+	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
+		return nil, ui.Errorf("warehouse length must be in range [1,255]")
+	}
+	// Validate Database.
+	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
+		return nil, ui.Errorf("database length must be in range [1,255]")
+	}
+	// Validate Schema.
+	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
+		return nil, ui.Errorf("schema length must be in range [1,255]")
+	}
+	// Validate Role.
+	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
+		return nil, ui.Errorf("role length must be in range [1,255]")
+	}
+	err = testConnection(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(&s)
+}
+
+type settings struct {
+	Account   string
+	Username  string
+	Password  string
+	Warehouse string
+	Database  string
+	Schema    string
+	Role      string
+}
+
+// connector returns a driver.Connector from the settings.
+func (s *settings) connector() gosnowflake.Connector {
+	return gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, gosnowflake.Config{
+		Account:   s.Account,
+		User:      s.Username,
+		Password:  s.Password,
+		Database:  s.Database,
+		Schema:    s.Schema,
+		Warehouse: s.Warehouse,
+		Role:      s.Role,
+		Params:    make(map[string]*string),
+	})
+}
+
+// openDB opens the database. If the database is already open it does nothing.
+func (c *connection) openDB() error {
+	if c.db != nil {
+		return nil
+	}
+	db := sql.OpenDB(c.settings.connector())
+	db.SetMaxIdleConns(0)
+	c.db = db
+	return nil
+}
+
+// query executes the given query and returns the resulting rows and columns.
+func (c *connection) query(ctx context.Context, query string) (connector.Rows, []types.Property, error) {
+	if err := c.openDB(); err != nil {
+		return nil, nil, err
+	}
+	rows, err := c.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, nil, err
+	}
+	columnTypes, err := rows.ColumnTypes()
+	if err != nil {
+		_ = rows.Close()
+		return nil, nil, err
+	}
+	columns := make([]types.Property, len(columnTypes))
+	for i, column := range columnTypes {
+		typ, err := propertyType(column)
+		if err != nil {
+			_ = rows.Close()
+			return nil, nil, err
+		}
+		nullable, ok := column.Nullable()
+		columns[i] = types.Property{
+			Name:     column.Name(),
+			Type:     typ,
+			Nullable: nullable || !ok,
+		}
+	}
+	return rows, columns, nil
+}
+
+// testConnection tests a connection with the given settings.
+// Returns an error if the connection cannot be established.
+func testConnection(ctx context.Context, settings *settings) error {
+	db := sql.OpenDB(settings.connector())
+	defer db.Close()
+	db.SetMaxIdleConns(0)
+	return db.PingContext(ctx)
+}
+
+// propertyType returns the property type of the column type t.
+func propertyType(t *sql.ColumnType) (types.Type, error) {
+	switch t.DatabaseTypeName() {
+	case "ARRAY":
+		return types.Array(types.JSON()), nil
+	case "BOOLEAN":
+		return types.Boolean(), nil
+	case "DATE":
+		return types.Date().WithLayout("2006-01-02"), nil
+	case "FIXED":
+		precision, scale, ok := t.DecimalSize()
+		if !ok {
+			return types.Type{}, errors.New("cannot get decimal size")
+		}
+		if precision > types.MaxDecimalPrecision || scale > types.MaxDecimalScale {
+			return types.Type{}, fmt.Errorf("Snowflake type %s(%d,%d) is not supported",
+				t.DatabaseTypeName(), precision, scale)
+		}
+		return types.Decimal(int(precision), int(scale)), nil
+	case "OBJECT":
+		return types.Map(types.JSON()), nil
+	case "REAL":
+		return types.Float(), nil
+	case "TEXT":
+		length, ok := t.Length()
+		if !ok {
+			return types.Type{}, errors.New("cannot get length")
+		}
+		if length < 0 {
+			return types.Type{}, errors.New("invalid TEXT length")
+		}
+		const maxBytesLen = 16_777_216
+		return types.Text().WithByteLen(maxBytesLen).WithCharLen(int(length)), nil
+	case "TIME":
+		return types.Time().WithLayout("15:04:05.999999999"), nil
+	case "TIMESTAMP_NTZ":
+		return types.DateTime().WithLayout("2006-01-02 15:04:05.999999999"), nil
+	case "VARIANT":
+		return types.JSON(), nil
+	}
+	return types.Type{}, connector.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
+}

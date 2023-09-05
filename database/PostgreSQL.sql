@@ -45,7 +45,8 @@ INSERT INTO connectors (name, type, oauth_client_id, oauth_client_secret) VALUES
     ('Filesystem', 'Storage', '', ''),
     ('ClickHouse', 'Database', '', ''),
     ('JSON', 'File', '', ''),
-    ('Mixpanel', 'App', '', '');
+    ('Mixpanel', 'App', '', ''),
+    ('Snowflake', 'Database', '', '');
 
 CREATE TYPE warehouse_type AS ENUM ('BigQuery', 'ClickHouse', 'PostgreSQL', 'Redshift', 'Snowflake');
 CREATE TYPE privacy_region AS ENUM ('', 'Europe');
