@@ -131,7 +131,7 @@ func (store *Store) DeleteUser(ctx context.Context, id int) error {
 	if err != nil {
 		return err
 	}
-	_, err = store.warehouse.Exec(ctx, "DELETE FROM `users` WHERE `id` = ?", id)
+	_, err = store.warehouse.Exec(ctx, `DELETE FROM "users" WHERE "id" = $1`, id)
 	return err
 }
 
