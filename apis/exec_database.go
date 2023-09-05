@@ -40,7 +40,7 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 	}
 	defer rawRows.Close()
 
-	mapping, err := mappings.New(this.action.OutSchema, this.action.InSchema, this.action.Mapping, this.action.Transformation, false)
+	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.Transformation, false)
 	if err != nil {
 		return err
 	}
