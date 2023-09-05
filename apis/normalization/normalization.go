@@ -591,7 +591,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 		}
 	case types.PtArray:
 		rv := reflect.ValueOf(src)
-		if rv.Type().Kind() == reflect.Slice {
+		if rv.Kind() == reflect.Slice {
 			var err error
 			n := rv.Len()
 			if n < typ.MinItems() || n > typ.MaxItems() {
@@ -612,7 +612,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 		}
 	case types.PtMap:
 		rv := reflect.ValueOf(src)
-		if rv.Type().Kind() == reflect.Map {
+		if rv.Kind() == reflect.Map {
 			var err error
 			n := rv.Len()
 			m := make(map[string]any, n)
