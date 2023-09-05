@@ -392,10 +392,28 @@ func (store *Store) deleteRedisUserIndex(ctx context.Context, id int) error {
 
 	// Remove the user ID from the "property:" keys.
 	for k, v := range user {
-		key := redisPropertyKey(k, redisJSONSerialize(v))
-		err := store.ds.redis.LRem(ctx, key, 1, id).Err()
+		key := redisPropertyKey(k, v)
+		rawIDs, err := store.ds.redis.Get(ctx, key).Result()
 		if err != nil {
 			return err
+		}
+		ids, err := deserializeIDs(rawIDs)
+		if err != nil {
+			return err
+		}
+		ids = slices.DeleteFunc(ids, func(id2 int) bool {
+			return id2 == id
+		})
+		if len(ids) > 0 {
+			err = store.ds.redis.Set(ctx, key, serializeIDs(ids), 0).Err()
+			if err != nil {
+				return err
+			}
+		} else {
+			err = store.ds.redis.Del(ctx, key).Err()
+			if err != nil {
+				return err
+			}
 		}
 	}
 
