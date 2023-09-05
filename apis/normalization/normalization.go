@@ -516,6 +516,9 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 		}
 	case types.PtTime:
 		switch src := src.(type) {
+		case time.Time:
+			value = time.Date(1970, 1, 1, src.Hour(), src.Minute(), src.Second(), src.Nanosecond(), time.UTC)
+			valid = true
 		case []byte:
 			value, valid = parseTime(src)
 		case string:
@@ -590,44 +593,64 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			value = v
 		}
 	case types.PtArray:
-		rv := reflect.ValueOf(src)
-		if rv.Kind() == reflect.Slice {
-			var err error
-			n := rv.Len()
-			if n < typ.MinItems() || n > typ.MaxItems() {
-				return nil, fmt.Errorf("database returned an array with %d items for property %s, which is not within the expected range of [%d, %d]",
-					n, name, typ.MinItems(), typ.MaxItems())
+		if src, ok := src.(string); ok {
+			// Snowflake only supports JSON as the item type. The driver returns the value as a JSON array.
+			if src != "" && src[0] == '[' && typ.ItemType().PhysicalType() == types.PtJSON {
+				dec := json.NewDecoder(strings.NewReader(src))
+				dec.UseNumber()
+				err := dec.Decode(&value)
+				valid = err == nil
 			}
-			a := make([]any, n)
-			t := typ.ItemType()
-			for i := 0; i < n; i++ {
-				v := rv.Index(i).Interface()
-				a[i], err = NormalizeDatabaseFileProperty(name, t, v, false)
-				if err != nil {
-					return nil, err
+		} else {
+			rv := reflect.ValueOf(src)
+			if rv.Kind() == reflect.Slice {
+				var err error
+				n := rv.Len()
+				if n < typ.MinItems() || n > typ.MaxItems() {
+					return nil, fmt.Errorf("database returned an array with %d items for property %s, which is not within the expected range of [%d, %d]",
+						n, name, typ.MinItems(), typ.MaxItems())
 				}
+				a := make([]any, n)
+				t := typ.ItemType()
+				for i := 0; i < n; i++ {
+					v := rv.Index(i).Interface()
+					a[i], err = NormalizeDatabaseFileProperty(name, t, v, false)
+					if err != nil {
+						return nil, err
+					}
+				}
+				value = a
+				valid = true
 			}
-			value = a
-			valid = true
 		}
 	case types.PtMap:
-		rv := reflect.ValueOf(src)
-		if rv.Kind() == reflect.Map {
-			var err error
-			n := rv.Len()
-			m := make(map[string]any, n)
-			t := typ.ValueType()
-			iter := rv.MapRange()
-			for iter.Next() {
-				k := iter.Key().String()
-				v := iter.Value().Interface()
-				m[k], err = NormalizeDatabaseFileProperty(name, t, v, false)
-				if err != nil {
-					return nil, err
-				}
+		if src, ok := src.(string); ok {
+			// Snowflake only supports JSON as the value type. The driver returns the value as a JSON object.
+			if src != "" && src[0] == '{' && typ.ValueType().PhysicalType() == types.PtJSON {
+				dec := json.NewDecoder(strings.NewReader(src))
+				dec.UseNumber()
+				err := dec.Decode(&value)
+				valid = err == nil
 			}
-			value = m
-			valid = true
+		} else {
+			rv := reflect.ValueOf(src)
+			if rv.Kind() == reflect.Map {
+				var err error
+				n := rv.Len()
+				m := make(map[string]any, n)
+				t := typ.ValueType()
+				iter := rv.MapRange()
+				for iter.Next() {
+					k := iter.Key().String()
+					v := iter.Value().Interface()
+					m[k], err = NormalizeDatabaseFileProperty(name, t, v, false)
+					if err != nil {
+						return nil, err
+					}
+				}
+				value = m
+				valid = true
+			}
 		}
 	}
 	if !valid {
