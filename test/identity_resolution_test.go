@@ -88,7 +88,7 @@ func TestIdentityResolution(t *testing.T) {
 		},
 	})
 
-	// Define a function "expectUsers" which checks if the expected users matche
+	// Define a function "expectUsers" which checks if the expected users match
 	// with the users on the data warehouse.
 	expectUsers := func(expected []irProps) {
 
