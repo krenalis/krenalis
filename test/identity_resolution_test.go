@@ -8,9 +8,7 @@
 package test
 
 import (
-	"bytes"
-	"fmt"
-	"io"
+	"encoding/json"
 	"log"
 	"os"
 	"path/filepath"
@@ -21,12 +19,14 @@ import (
 	"chichi/test/chichitester"
 )
 
+type irProps map[string]string
+
 // TestIdentityResolution tests the identity resolution by importing users and
 // retrieving the users from the APIs.
 //
-// This works by importing users through a CSV file, which is created (or
+// This works by importing users through a JSON file, which is created (or
 // updated) every time an user is imported, then it's loaded into Chichi by
-// running the import action on the CSV.
+// running the import action on the JSON.
 func TestIdentityResolution(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
@@ -36,7 +36,7 @@ func TestIdentityResolution(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	// Create a storage where the the CSV files (containing the incoming users)
+	// Create a storage where the the JSON files (containing the incoming users)
 	// will be created.
 	storageDir, err := os.MkdirTemp("", "chichi-test-identity-resolution")
 	if err != nil {
@@ -54,33 +54,32 @@ func TestIdentityResolution(t *testing.T) {
 		}
 	}()
 
-	csvFilename := "users.csv"
-	csvAbsPath := filepath.Join(storageDir, csvFilename)
+	jsonFilename := "users.json"
+	jsonAbsPath := filepath.Join(storageDir, jsonFilename)
 
 	// Create the Filesystem connection.
 	fsID := c.AddSourceFilesystem(storageDir)
 
-	// Create the CSV connection.
-	csvID := c.AddSourceCSV(fsID)
+	// Create the JSON connection.
+	jsonID := c.AddSourceJSON(fsID)
 
 	allProps := []string{"dummy_id", "Email"}
 	identifiers := []string{"dummy_id", "Email"}
 
-	// Generate and add an action to the CSV for importing the users.
+	// Generate and add an action to the JSON for importing the users.
 	inSchemaProps := make([]types.Property, len(allProps))
 	outSchemaProps := make([]types.Property, len(allProps))
 	mapping := map[string]string{}
-	for i, out := range allProps {
-		in := fmt.Sprintf("column%d", i+1)
-		inSchemaProps[i] = types.Property{Name: in, Type: types.Text()}
-		outSchemaProps[i] = types.Property{Name: out, Type: types.Text()}
-		mapping[out] = in
+	for i, p := range allProps {
+		inSchemaProps[i] = types.Property{Name: p, Type: types.Text()}
+		outSchemaProps[i] = types.Property{Name: p, Type: types.Text()}
+		mapping[p] = p
 	}
-	importUsersActionID := c.AddAction(csvID, map[string]any{
+	importUsersActionID := c.AddAction(jsonID, map[string]any{
 		"Target": "Users",
 		"Action": map[string]any{
-			"Name":        "Import users from CSV on Filesystem",
-			"Path":        "users.csv",
+			"Name":        "Import users from JSON on Filesystem",
+			"Path":        "users.json",
 			"InSchema":    types.Object(inSchemaProps),
 			"OutSchema":   types.Object(outSchemaProps),
 			"Identifiers": identifiers,
@@ -117,17 +116,20 @@ func TestIdentityResolution(t *testing.T) {
 	// warehouse.
 	importUser := func(props irProps) {
 
-		// Create a CSV file with the user.
+		// Create a JSON file with the user.
 		t.Logf("importing user %v", props)
-		csvContent := createCSVContent(allProps, props)
-		err := os.WriteFile(csvAbsPath, csvContent, 0755)
+		content, err := json.Marshal([]any{props})
 		if err != nil {
-			log.Fatalf("cannot write the incoming user to the CSV file: %s", err)
+			t.Fatal(err)
+		}
+		err = os.WriteFile(jsonAbsPath, content, 0755)
+		if err != nil {
+			log.Fatalf("cannot write the incoming user to the JSON file: %s", err)
 		}
 
-		// Import the users in the CSV.
-		c.ExecuteAction(csvID, importUsersActionID, true)
-		c.WaitActionsToFinish(csvID)
+		// Import the users in the JSON.
+		c.ExecuteAction(jsonID, importUsersActionID, true)
+		c.WaitActionsToFinish(jsonID)
 
 	}
 
@@ -178,33 +180,4 @@ func TestIdentityResolution(t *testing.T) {
 	// storage can be removed.
 	removeTempDirectory = true
 
-}
-
-type irProps map[string]string
-
-// createCSVContent creates the content of a CSV file with all the given
-// properties as headers and the user properties in the first row.
-//
-// If a property specified in allProps is not passed in the userProps, then it
-// is left empty in the CSV.
-func createCSVContent(allProps []string, userProps irProps) []byte {
-	b := &bytes.Buffer{}
-	firstRow := &bytes.Buffer{}
-	for i, p := range allProps {
-		if i > 0 {
-			b.WriteByte(',')
-			firstRow.WriteByte(',')
-		}
-		b.WriteString(p)
-		if v, ok := userProps[p]; ok {
-			firstRow.WriteString(v)
-		}
-	}
-	b.WriteByte('\n')
-	firstRow.WriteByte('\n')
-	_, err := io.Copy(b, firstRow)
-	if err != nil {
-		panic(err)
-	}
-	return b.Bytes()
 }

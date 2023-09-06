@@ -67,6 +67,19 @@ func (c *Chichi) AddSourceFilesystem(storageDir string) int {
 	})
 }
 
+func (c *Chichi) AddSourceJSON(filesystem int) int {
+	return c.AddConnection(map[string]any{
+		"Connector": 21, // JSON.
+		"Role":      "Source",
+		"Options": map[string]any{
+			"Name":    "JSON",
+			"Enabled": true,
+			"Storage": filesystem,
+		},
+		"Settings": map[string]any{},
+	})
+}
+
 func (c *Chichi) ActionSchemas(conn int, target apis.ActionTarget, eventType string) map[string]any {
 	url := "/api/connections/" + strconv.Itoa(conn) + "/action-schemas/" + target.String()
 	if eventType != "" {
