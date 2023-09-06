@@ -185,15 +185,13 @@ func (apis *APIs) receiveWebhook(r *http.Request) error {
 		if connector.WebhooksPer != state.WebhooksPerSource {
 			return errNotFound
 		}
-		resource, ok := connection.Resource()
-		if !ok {
-			return errNotFound
-		}
 		conf.Settings = connection.Settings
 		conf.SetSettings = func(ctx context.Context, settings []byte) error {
 			return setSettings(ctx, apis.db, id, settings)
 		}
-		conf.Resource = resource.Code
+		if r, ok := connection.Resource(); ok {
+			conf.Resource = r.Code
+		}
 		conf.HTTPClient = apis.http.ConnectionClient(connection.ID)
 		conf.Region = _connector.PrivacyRegion(connection.Workspace().PrivacyRegion)
 	}
