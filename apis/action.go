@@ -746,7 +746,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			}
 			switch t.PhysicalType() {
 			case types.PtJSON, types.PtArray, types.PtObject, types.PtMap:
-				return errors.BadRequest("identifier %s has unsupported type %s", identifier, property.Type)
+				return errors.BadRequest("%s cannot be used as identifier because an identifier cannot have type %s", identifier, property.Type)
 			}
 		}
 	}
