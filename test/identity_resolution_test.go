@@ -19,8 +19,6 @@ import (
 	"chichi/test/chichitester"
 )
 
-type irProps map[string]string
-
 // TestIdentityResolution tests the identity resolution by importing users and
 // retrieving the users from the APIs.
 //
@@ -89,11 +87,11 @@ func TestIdentityResolution(t *testing.T) {
 
 	// Define a function "expectUsers" which checks if the expected users match
 	// with the users on the data warehouse.
-	expectUsers := func(expected []irProps) {
+	expectUsers := func(expected []map[string]string) {
 
 		// Retrieve the users from the APIs and convert their format.
 		rawUsers := c.Users(allProps, 0, 1000)["users"].([]any)
-		gotUsers := make([]irProps, len(rawUsers))
+		gotUsers := make([]map[string]string, len(rawUsers))
 		for i := range rawUsers {
 			u := map[string]string{}
 			for j, p := range allProps {
@@ -114,7 +112,7 @@ func TestIdentityResolution(t *testing.T) {
 
 	// Define a function "importUser" which imports the user into the data
 	// warehouse.
-	importUser := func(props irProps) {
+	importUser := func(props map[string]string) {
 
 		// Create a JSON file with the user.
 		t.Logf("importing user %v", props)
@@ -137,28 +135,28 @@ func TestIdentityResolution(t *testing.T) {
 
 	// Add the tests on the identity resolution here.
 
-	expectUsers([]irProps{})
+	expectUsers([]map[string]string{})
 
-	importUser(irProps{"Email": "a@b"})
-	expectUsers([]irProps{
+	importUser(map[string]string{"Email": "a@b"})
+	expectUsers([]map[string]string{
 		{"Email": "a@b"},
 	})
 
-	importUser(irProps{"Email": "c@d"})
-	expectUsers([]irProps{
+	importUser(map[string]string{"Email": "c@d"})
+	expectUsers([]map[string]string{
 		{"Email": "a@b"},
 		{"Email": "c@d"},
 	})
 
-	importUser(irProps{"dummy_id": "AAA", "Email": "a@b"})
-	expectUsers([]irProps{
+	importUser(map[string]string{"dummy_id": "AAA", "Email": "a@b"})
+	expectUsers([]map[string]string{
 		{"Email": "a@b"},
 		{"Email": "c@d"},
 		{"dummy_id": "AAA", "Email": "a@b"},
 	})
 
-	importUser(irProps{"dummy_id": "AAA", "Email": "e@f"})
-	expectUsers([]irProps{
+	importUser(map[string]string{"dummy_id": "AAA", "Email": "e@f"})
+	expectUsers([]map[string]string{
 		{"Email": "a@b"},
 		{"Email": "c@d"},
 		{"dummy_id": "AAA", "Email": "e@f"},
@@ -167,8 +165,8 @@ func TestIdentityResolution(t *testing.T) {
 	// TODO(Gianluca): see the issue
 	// https://github.com/open2b/chichi/issues/254.
 	//
-	// importUser(irProps{"dummy_id": "AAA"})
-	// expectUsers([]irProps{
+	// importUser(map[string]string{"dummy_id": "AAA"})
+	// expectUsers([]map[string]string{
 	// 	{"Email": "a@b"},
 	// 	{"Email": "c@d"},
 	// 	{"dummy_id": "AAA", "Email": "e@f"},
