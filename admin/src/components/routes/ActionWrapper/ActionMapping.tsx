@@ -21,7 +21,7 @@ const defaultTransformationParameterByTarget = {
 const ActionMapping = forwardRef<any>((props, ref) => {
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
 
-	const { api, showError } = useContext(AppContext);
+	const { api, showError, workspace } = useContext(AppContext);
 	const {
 		isMappingSectionDisabled,
 		disabledReason,
@@ -106,6 +106,26 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 	if (mode === 'mappings') {
 		const mappings: ReactNode[] = [];
 		for (const k in action.Mapping) {
+			// hide anonymous identifiers and their parent properties.
+			const identifiers = workspace.AnonymousIdentifiers.Priority;
+			if (identifiers.includes(k)) {
+				continue;
+			}
+			let isIdentifierParent = false;
+			for (const identifier of identifiers) {
+				if (identifier.includes('.')) {
+					const parent = identifier.split('.')[0];
+					if (k === parent) {
+						isIdentifierParent = true;
+						break;
+					}
+				}
+			}
+			if (isIdentifierParent) {
+				continue;
+			}
+
+			// hide properties already mapped in the identifiers section.
 			let isAlreadyMappedInIdentity = false;
 			if (actionType.Fields.includes('Identifiers')) {
 				for (const [, identifier] of action.Identifiers!) {
@@ -116,6 +136,7 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 				}
 			}
 			if (isAlreadyMappedInIdentity) continue;
+
 			mappings.push(
 				<div
 					className='mapping'

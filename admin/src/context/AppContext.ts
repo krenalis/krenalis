@@ -3,6 +3,7 @@ import API from '../lib/api/api';
 import TransformedConnector from '../lib/helpers/transformedConnector';
 import TransformedConnection from '../lib/helpers/transformedConnection';
 import { Status } from '../types/internal/app';
+import Workspace from '../types/external/workspace';
 
 interface AppContext {
 	api: API;
@@ -14,7 +15,9 @@ interface AppContext {
 	account: number | null;
 	connectors: TransformedConnector[];
 	connections: TransformedConnection[];
+	workspace: Workspace;
 	setAreConnectionsStale: React.Dispatch<React.SetStateAction<boolean>>;
+	setIsWorkspaceStale: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const appContext = createContext<AppContext>({} as AppContext);

@@ -12,6 +12,7 @@ import { Status } from '../../types/internal/app';
 import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 import API from '../../lib/api/api';
 import { Connection } from '../../types/external/connection';
+import Workspace from '../../types/external/workspace';
 
 interface AppProviderProps {
 	api: API;
@@ -37,13 +38,33 @@ const AppProvider = ({
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [connectors, setConnectors] = useState<TransformedConnector[] | null>(null);
 	const [connections, setConnections] = useState<TransformedConnection[] | null>(null);
+	const [workspace, setWorkspace] = useState<Workspace | null>(null);
 	const [areConnectionsStale, setAreConnectionsStale] = useState<boolean>(false);
+	const [isWorkspaceStale, setIsWorkspaceStale] = useState<boolean>(true);
 
 	const isLoadingTimeoutID = useRef<number>(0);
 
 	useEffect(() => {
 		isLoadingTimeoutID.current = setTimeout(() => setIsLoading(true), 100);
 	}, []);
+
+	useEffect(() => {
+		const fetchWorkspace = async () => {
+			let workspace: Workspace;
+			try {
+				workspace = await api.workspace.get();
+			} catch (err) {
+				showError(err);
+				clearTimeout(isLoadingTimeoutID.current);
+				return;
+			}
+			setWorkspace(workspace);
+			setIsWorkspaceStale(false);
+		};
+		if (isWorkspaceStale) {
+			fetchWorkspace();
+		}
+	}, [isWorkspaceStale]);
 
 	useEffect(() => {
 		const fetchConnectors = async () => {
@@ -148,7 +169,7 @@ const AppProvider = ({
 		);
 	}
 
-	if (connectors == null || connections == null) {
+	if (connectors == null || connections == null || workspace == null) {
 		return null;
 	}
 
@@ -164,7 +185,9 @@ const AppProvider = ({
 				account,
 				connectors,
 				connections,
+				workspace,
 				setAreConnectionsStale,
+				setIsWorkspaceStale,
 			}}
 		>
 			{children}

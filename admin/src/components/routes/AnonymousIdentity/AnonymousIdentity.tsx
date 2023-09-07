@@ -13,8 +13,7 @@ import {
 	TransformedIdentifiers,
 } from '../../../lib/helpers/transformedIdentifiers';
 import { SlButton, SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
-import Workspace from '../../../types/external/workspace';
-import Type, { ObjectType } from '../../../types/external/types';
+import { ObjectType } from '../../../types/external/types';
 
 const AnonymousIdentity = () => {
 	const [anonymousIdentifiers, setAnonymousIdentifiers] = useState<TransformedIdentifiers>();
@@ -22,7 +21,7 @@ const AnonymousIdentity = () => {
 	const [userSchema, setUserSchema] = useState<ObjectType>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 
-	const { setTitle, api, showError, showStatus } = useContext(AppContext);
+	const { setTitle, api, showError, showStatus, workspace, setIsWorkspaceStale } = useContext(AppContext);
 
 	useLayoutEffect(() => {
 		setTitle('Anonymous IDs');
@@ -30,13 +29,6 @@ const AnonymousIdentity = () => {
 
 	useEffect(() => {
 		const fetchData = async () => {
-			let workspace: Workspace;
-			try {
-				workspace = await api.workspace.get();
-			} catch (err) {
-				showError(err);
-				return;
-			}
 			const transformed = transformAnonymousIdentifiers(workspace.AnonymousIdentifiers);
 			setAnonymousIdentifiers(transformed);
 
@@ -76,6 +68,7 @@ const AnonymousIdentity = () => {
 			return;
 		}
 		showStatus({ variant: variants.SUCCESS, icon: icons.OK, text: 'Anonymous identifiers saved succesfully' });
+		setIsWorkspaceStale(true);
 	};
 
 	return (
