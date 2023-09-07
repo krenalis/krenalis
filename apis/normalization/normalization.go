@@ -593,10 +593,10 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			value = v
 		}
 	case types.PtArray:
-		if src, ok := src.(string); ok {
+		if s, ok := src.(string); ok {
 			// Snowflake only supports JSON as the item type. The driver returns the value as a JSON array.
-			if src != "" && src[0] == '[' && typ.ItemType().PhysicalType() == types.PtJSON {
-				dec := json.NewDecoder(strings.NewReader(src))
+			if s != "" && s[0] == '[' && typ.ItemType().PhysicalType() == types.PtJSON {
+				dec := json.NewDecoder(strings.NewReader(s))
 				dec.UseNumber()
 				err := dec.Decode(&value)
 				valid = err == nil
@@ -624,10 +624,10 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			}
 		}
 	case types.PtMap:
-		if src, ok := src.(string); ok {
+		if s, ok := src.(string); ok {
 			// Snowflake only supports JSON as the value type. The driver returns the value as a JSON object.
-			if src != "" && src[0] == '{' && typ.ValueType().PhysicalType() == types.PtJSON {
-				dec := json.NewDecoder(strings.NewReader(src))
+			if s != "" && s[0] == '{' && typ.ValueType().PhysicalType() == types.PtJSON {
+				dec := json.NewDecoder(strings.NewReader(s))
 				dec.UseNumber()
 				err := dec.Decode(&value)
 				valid = err == nil
