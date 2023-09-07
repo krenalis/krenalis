@@ -24,6 +24,7 @@ use (
 	./connectors/server
 	./connectors/sftp
 	./connectors/snowflake
+	./connectors/stripe
 	./connectors/uisample
 	./connectors/website
 )

@@ -26,6 +26,7 @@ replace (
 	chichi/connectors/server => ./connectors/server
 	chichi/connectors/sftp => ./connectors/sftp
 	chichi/connectors/snowflake => ./connectors/snowflake
+	chichi/connectors/stripe => ./connectors/stripe
 	chichi/connectors/uisample => ./connectors/uisample
 	chichi/connectors/website => ./connectors/website
 )
@@ -52,6 +53,7 @@ require (
 	chichi/connectors/server v0.0.0-00010101000000-000000000000
 	chichi/connectors/sftp v0.0.0-00010101000000-000000000000
 	chichi/connectors/snowflake v0.0.0-00010101000000-000000000000
+	chichi/connectors/stripe v0.0.0-00010101000000-000000000000
 	chichi/connectors/uisample v0.0.0-00010101000000-000000000000
 	chichi/connectors/website v0.0.0-00010101000000-000000000000
 	github.com/ClickHouse/clickhouse-go/v2 v2.9.1

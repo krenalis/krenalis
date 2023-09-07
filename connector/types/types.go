@@ -425,7 +425,7 @@ func ObjectOf(properties []Property) (Type, error) {
 			return Type{}, errors.New("invalid property name")
 		}
 		if _, ok := exists[property.Name]; ok {
-			return Type{}, errors.New("property name is repeated")
+			return Type{}, fmt.Errorf("property %s name is repeated", property.Name)
 		}
 		exists[property.Name] = struct{}{}
 		label, err := normalizedUTF8(property.Label)

@@ -29,6 +29,7 @@ import (
 	_ "chichi/connectors/server"
 	_ "chichi/connectors/sftp"
 	_ "chichi/connectors/snowflake"
+	_ "chichi/connectors/stripe"
 	_ "chichi/connectors/uisample"
 	_ "chichi/connectors/website"
 )
