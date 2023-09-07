@@ -163,78 +163,6 @@ func (store *Store) InitWarehouse(ctx context.Context) error {
 	return store.warehouse.Init(ctx)
 }
 
-// UsersWithCommonValue returns the users with at least one common property
-// value with user.
-//
-// isArray indicates which properties have type array.
-//
-// TODO(Gianluca): move this method in the correct position in this file after
-// merging into the branch 'main'.
-func (store *Store) UsersWithCommonValue(ctx context.Context, user map[string]any, isArray map[string]bool) ([]IRUser, error) {
-
-	store.mustBeOpen()
-
-	// Determine the property-value pairs to check on Redis.
-	propertyKeys := []string{}
-	for p, v := range user {
-		if !zero(v, isArray[p]) {
-			key := redisPropertyKey(p, v)
-			propertyKeys = append(propertyKeys, key)
-		}
-	}
-
-	// TODO(Gianluca): remove this panic and handle the situation properly.
-	// See the issue https://github.com/open2b/chichi/issues/253.
-	if len(propertyKeys) == 0 {
-		panic("BUG: see the issue https://github.com/open2b/chichi/issues/253")
-	}
-
-	// Retrieve property-value pairs from Redis and collect the GIDs.
-	vals, err := store.ds.redis.MGet(ctx, propertyKeys...).Result()
-	if err != nil {
-		return nil, err
-	}
-	gids := map[int]struct{}{}
-	for _, v := range vals {
-		if v == nil { // no matches for this property-value pair.
-			continue
-		}
-		ids, err := deserializeIDs(v.(string))
-		if err != nil {
-			return nil, err
-		}
-		for _, gid := range ids {
-			gids[gid] = struct{}{}
-		}
-	}
-	if len(gids) == 0 {
-		return []IRUser{}, nil
-	}
-
-	// Retrieve the properties for every user.
-	userKeys := make([]string, len(gids))
-	i := 0
-	for gid := range gids {
-		userKeys[i] = redisUserKey(gid)
-		i++
-	}
-	slices.Sort(userKeys)
-	rawUsers, err := store.ds.redis.MGet(ctx, userKeys...).Result()
-	if err != nil {
-		return nil, err
-	}
-	users := make([]IRUser, len(rawUsers))
-	for i, user := range rawUsers {
-		u := IRUser{}
-		u.Properties = redisJSONDeserialize(user.(string)).(map[string]any)
-		u.ID = int(u.Properties["id"].(float64))
-		delete(u.Properties, "id")
-		users[i] = u
-	}
-
-	return users, nil
-}
-
 // SetDestinationUser sets the destination user relative to the action, with
 // the given external user ID and external property.
 func (store *Store) SetDestinationUser(ctx context.Context, connection int, externalUserID, externalProperty string) error {
@@ -354,6 +282,75 @@ func (store *Store) UsersSlice(ctx context.Context, properties []types.Property,
 	for i, row := range rows {
 		users[i] = deserializeRowAsSlice(properties, row)
 	}
+	return users, nil
+}
+
+// UsersWithCommonValue returns the users with at least one common property
+// value with user.
+//
+// isArray indicates which properties have type array.
+func (store *Store) UsersWithCommonValue(ctx context.Context, user map[string]any, isArray map[string]bool) ([]IRUser, error) {
+
+	store.mustBeOpen()
+
+	// Determine the property-value pairs to check on Redis.
+	propertyKeys := []string{}
+	for p, v := range user {
+		if !zero(v, isArray[p]) {
+			key := redisPropertyKey(p, v)
+			propertyKeys = append(propertyKeys, key)
+		}
+	}
+
+	// TODO(Gianluca): remove this panic and handle the situation properly.
+	// See the issue https://github.com/open2b/chichi/issues/253.
+	if len(propertyKeys) == 0 {
+		panic("BUG: see the issue https://github.com/open2b/chichi/issues/253")
+	}
+
+	// Retrieve property-value pairs from Redis and collect the GIDs.
+	vals, err := store.ds.redis.MGet(ctx, propertyKeys...).Result()
+	if err != nil {
+		return nil, err
+	}
+	gids := map[int]struct{}{}
+	for _, v := range vals {
+		if v == nil { // no matches for this property-value pair.
+			continue
+		}
+		ids, err := deserializeIDs(v.(string))
+		if err != nil {
+			return nil, err
+		}
+		for _, gid := range ids {
+			gids[gid] = struct{}{}
+		}
+	}
+	if len(gids) == 0 {
+		return []IRUser{}, nil
+	}
+
+	// Retrieve the properties for every user.
+	userKeys := make([]string, len(gids))
+	i := 0
+	for gid := range gids {
+		userKeys[i] = redisUserKey(gid)
+		i++
+	}
+	slices.Sort(userKeys)
+	rawUsers, err := store.ds.redis.MGet(ctx, userKeys...).Result()
+	if err != nil {
+		return nil, err
+	}
+	users := make([]IRUser, len(rawUsers))
+	for i, user := range rawUsers {
+		u := IRUser{}
+		u.Properties = redisJSONDeserialize(user.(string)).(map[string]any)
+		u.ID = int(u.Properties["id"].(float64))
+		delete(u.Properties, "id")
+		users[i] = u
+	}
+
 	return users, nil
 }
 
