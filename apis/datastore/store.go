@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -84,7 +85,8 @@ func (store *Store) AddEvents(events [][]any) {
 
 // CreateUser creates a user with the given properties and returns its
 // identifier.
-func (store *Store) CreateUser(ctx context.Context, user map[string]any) (int, error) {
+// isArray indicates which properties have type array.
+func (store *Store) CreateUser(ctx context.Context, user map[string]any, isArray map[string]bool) (int, error) {
 	store.mustBeOpen()
 	b := strings.Builder{}
 	b.WriteString("INSERT INTO users (")
@@ -113,7 +115,7 @@ func (store *Store) CreateUser(ctx context.Context, user map[string]any) (int, e
 	if err != nil {
 		return 0, err
 	}
-	err = store.setRedisUserIndex(ctx, IRUser{ID: id, Identifiers: user})
+	err = store.setRedisUserIndex(ctx, IRUser{ID: id, Properties: user}, isArray)
 	if err != nil {
 		return 0, err
 	}
@@ -125,9 +127,10 @@ func (store *Store) CreateUser(ctx context.Context, user map[string]any) (int, e
 }
 
 // DeleteUser deletes the user with identifier id.
-func (store *Store) DeleteUser(ctx context.Context, id int) error {
+// isArray indicates which properties have type array.
+func (store *Store) DeleteUser(ctx context.Context, id int, isArray map[string]bool) error {
 	store.mustBeOpen()
-	err := store.deleteRedisUserIndex(ctx, id)
+	err := store.deleteRedisUserIndex(ctx, id, isArray)
 	if err != nil {
 		return err
 	}
@@ -160,29 +163,34 @@ func (store *Store) InitWarehouse(ctx context.Context) error {
 	return store.warehouse.Init(ctx)
 }
 
-// MatchingUsers returns the users matching with the given user.
-func (store *Store) MatchingUsers(ctx context.Context, user map[string]any) ([]IRUser, error) {
+// UsersWithCommonValue returns the users with at least one common property
+// value with user.
+//
+// isArray indicates which properties have type array.
+//
+// TODO(Gianluca): move this method in the correct position in this file after
+// merging into the branch 'main'.
+func (store *Store) UsersWithCommonValue(ctx context.Context, user map[string]any, isArray map[string]bool) ([]IRUser, error) {
 
 	store.mustBeOpen()
 
-	// Determine the identifier-value pairs to check on Redis.
-	identifierKeys := []string{}
+	// Determine the property-value pairs to check on Redis.
+	propertyKeys := []string{}
 	for p, v := range user {
-		if !zero(v) {
+		if !zero(v, isArray[p]) {
 			key := redisPropertyKey(p, v)
-			identifierKeys = append(identifierKeys, key)
+			propertyKeys = append(propertyKeys, key)
 		}
 	}
 
 	// TODO(Gianluca): remove this panic and handle the situation properly.
 	// See the issue https://github.com/open2b/chichi/issues/253.
-	if len(identifierKeys) == 0 {
-		panic("BUG: the incoming user has no valid identifiers (maybe it has the zero value for every identifier)\n" +
-			"See the issue https://github.com/open2b/chichi/issues/253")
+	if len(propertyKeys) == 0 {
+		panic("BUG: see the issue https://github.com/open2b/chichi/issues/253")
 	}
 
-	// Retrieve identifier-value pairs from Redis and collect the GIDs.
-	vals, err := store.ds.redis.MGet(ctx, identifierKeys...).Result()
+	// Retrieve property-value pairs from Redis and collect the GIDs.
+	vals, err := store.ds.redis.MGet(ctx, propertyKeys...).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +211,7 @@ func (store *Store) MatchingUsers(ctx context.Context, user map[string]any) ([]I
 		return []IRUser{}, nil
 	}
 
-	// Retrieve the identifiers for every user.
+	// Retrieve the properties for every user.
 	userKeys := make([]string, len(gids))
 	i := 0
 	for gid := range gids {
@@ -218,9 +226,9 @@ func (store *Store) MatchingUsers(ctx context.Context, user map[string]any) ([]I
 	users := make([]IRUser, len(rawUsers))
 	for i, user := range rawUsers {
 		u := IRUser{}
-		u.Identifiers = redisJSONDeserialize(user.(string)).(map[string]any)
-		u.ID = int(u.Identifiers["id"].(float64))
-		delete(u.Identifiers, "id")
+		u.Properties = redisJSONDeserialize(user.(string)).(map[string]any)
+		u.ID = int(u.Properties["id"].(float64))
+		delete(u.Properties, "id")
 		users[i] = u
 	}
 
@@ -262,25 +270,25 @@ func (store *Store) Schemas(ctx context.Context) (types.Type, types.Type, error)
 
 // UpdateUser updates the properties of the user with identifier id.
 // Only the properties in users will be updated.
-func (store *Store) UpdateUser(ctx context.Context, target IRUser, user map[string]any) error {
+func (store *Store) UpdateUser(ctx context.Context, target IRUser, user map[string]any, isArray map[string]bool) error {
 	store.mustBeOpen()
-	// Since the user contains only the properties to update, merge its
-	// identifiers values with the identifiers values of target, then update its
-	// index on Redis.
-	maps.Copy(target.Identifiers, user)
-	err := store.deleteRedisUserIndex(ctx, target.ID)
+	// Since the user contains only the properties to update, merge its property
+	// values with the property values of target, then update its index on
+	// Redis.
+	maps.Copy(target.Properties, user)
+	err := store.deleteRedisUserIndex(ctx, target.ID, isArray)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot delete Redis user index: %s", err)
 	}
-	err = store.setRedisUserIndex(ctx, target)
+	err = store.setRedisUserIndex(ctx, target, isArray)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot set Redis user index: %s", err)
 	}
 	// TODO(Gianluca): find a better way to implement persistency.
 	// See https://github.com/open2b/chichi/issues/215.
 	err = store.ds.redis.Save(ctx).Err()
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot save Redis state: %s", err)
 	}
 	// Update only the properties of user.
 	b := &strings.Builder{}
@@ -377,7 +385,8 @@ func (store *Store) close() error {
 }
 
 // deleteRedisUserIndex deletes from the index the user with the given GID.
-func (store *Store) deleteRedisUserIndex(ctx context.Context, id int) error {
+// isArray indicates which properties have type array.
+func (store *Store) deleteRedisUserIndex(ctx context.Context, id int, isArray map[string]bool) error {
 
 	// Retrieve the user.
 	rawUser, err := store.ds.redis.Get(ctx, redisUserKey(id)).Result()
@@ -391,28 +400,48 @@ func (store *Store) deleteRedisUserIndex(ctx context.Context, id int) error {
 	delete(user, "id")
 
 	// Remove the user ID from the "property:" keys.
-	for k, v := range user {
-		key := redisPropertyKey(k, v)
-		rawIDs, err := store.ds.redis.Get(ctx, key).Result()
-		if err != nil {
-			return err
+	for p, v := range user {
+		var values []any
+		if isArray[p] {
+			// v is an array value.
+			rv := reflect.ValueOf(v)
+			if rv.Len() == 0 {
+				continue
+			}
+			values = make([]any, rv.Len())
+			for i := 0; i < rv.Len(); i++ {
+				values[i] = rv.Index(i).Interface()
+			}
+		} else {
+			// v is a scalar value.
+			if zero(v, isArray[p]) {
+				continue
+			}
+			values = []any{v}
 		}
-		ids, err := deserializeIDs(rawIDs)
-		if err != nil {
-			return err
-		}
-		ids = slices.DeleteFunc(ids, func(id2 int) bool {
-			return id2 == id
-		})
-		if len(ids) > 0 {
-			err = store.ds.redis.Set(ctx, key, serializeIDs(ids), 0).Err()
+		for _, v := range values {
+			key := redisPropertyKey(p, v)
+			rawIDs, err := store.ds.redis.Get(ctx, key).Result()
 			if err != nil {
 				return err
 			}
-		} else {
-			err = store.ds.redis.Del(ctx, key).Err()
+			ids, err := deserializeIDs(rawIDs)
 			if err != nil {
 				return err
+			}
+			ids = slices.DeleteFunc(ids, func(id2 int) bool {
+				return id2 == id
+			})
+			if len(ids) > 0 {
+				err = store.ds.redis.Set(ctx, key, serializeIDs(ids), 0).Err()
+				if err != nil {
+					return err
+				}
+			} else {
+				err = store.ds.redis.Del(ctx, key).Err()
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -430,38 +459,55 @@ func (store *Store) mustBeOpen() {
 	}
 }
 
-func (store *Store) setRedisUserIndex(ctx context.Context, user IRUser) error {
+func (store *Store) setRedisUserIndex(ctx context.Context, user IRUser, isArray map[string]bool) error {
 
-	// TODO(Gianluca): only the identifiers should be kept on Redis. See the
+	// TODO(Gianluca): should we keep on Redis only the identifiers? See the
 	// issue: https://github.com/open2b/chichi/issues/243
 
 	// Write the "property:" keys.
-	for p, v := range user.Identifiers {
-		if zero(v) {
-			continue
+	for p, v := range user.Properties {
+		var values []any
+		if isArray[p] {
+			// v is an array value.
+			rv := reflect.ValueOf(v)
+			if rv.Len() == 0 {
+				continue
+			}
+			values = make([]any, rv.Len())
+			for i := 0; i < rv.Len(); i++ {
+				values[i] = rv.Index(i).Interface()
+			}
+		} else {
+			// v is a scalar value.
+			if zero(v, isArray[p]) {
+				continue
+			}
+			values = []any{v}
 		}
-		key := redisPropertyKey(p, v)
-		current, err := store.ds.redis.Get(ctx, key).Result()
-		if err != nil && err != redis.Nil {
-			return fmt.Errorf("cannot GET value from Redis: %s", err)
-		}
-		ids, err := deserializeIDs(current)
-		if err != nil {
-			return err
-		}
-		if !slices.Contains(ids, user.ID) {
-			ids = append(ids, user.ID)
-		}
-		newVal := serializeIDs(ids)
-		err = store.ds.redis.Set(ctx, key, newVal, 0).Err()
-		if err != nil {
-			return fmt.Errorf("cannot SET value on Redis: %s", err)
+		for _, v := range values {
+			key := redisPropertyKey(p, v)
+			current, err := store.ds.redis.Get(ctx, key).Result()
+			if err != nil && err != redis.Nil {
+				return fmt.Errorf("cannot GET value from Redis: %s", err)
+			}
+			ids, err := deserializeIDs(current)
+			if err != nil {
+				return err
+			}
+			if !slices.Contains(ids, user.ID) {
+				ids = append(ids, user.ID)
+			}
+			newVal := serializeIDs(ids)
+			err = store.ds.redis.Set(ctx, key, newVal, 0).Err()
+			if err != nil {
+				return fmt.Errorf("cannot SET value on Redis: %s", err)
+			}
 		}
 	}
 
 	// Write the "user:" key.
 	userToSerialize := map[string]any{}
-	maps.Copy(userToSerialize, user.Identifiers)
+	maps.Copy(userToSerialize, user.Properties)
 	userToSerialize["id"] = user.ID
 	err := store.ds.redis.Set(ctx, redisUserKey(user.ID), redisJSONSerialize(userToSerialize), 0).Err()
 
@@ -471,8 +517,8 @@ func (store *Store) setRedisUserIndex(ctx context.Context, user IRUser) error {
 // IRUser holds the information of a user necessary for the identity resolution
 // process.
 type IRUser struct {
-	ID          int
-	Identifiers map[string]any
+	ID         int
+	Properties map[string]any
 }
 
 func deserializeIDs(s string) ([]int, error) {
@@ -540,6 +586,13 @@ func serializeIDs(ids []int) string {
 	return b.String()
 }
 
-func zero(v any) bool {
-	return v == "" || v == 0 || v == nil
+func zero(v any, isArray bool) bool {
+	// Keep in sync with the function 'zero' in 'apis/userswarehouse'.
+	if v == nil {
+		return true
+	}
+	if isArray {
+		return reflect.ValueOf(v).Len() == 0
+	}
+	return v == "" || v == 0
 }

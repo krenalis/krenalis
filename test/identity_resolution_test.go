@@ -61,22 +61,43 @@ func TestIdentityResolution(t *testing.T) {
 	// Create the JSON connection.
 	jsonID := c.AddSourceJSON(fsID)
 
-	allProps := []string{"dummy_id", "Email"}
-	identifiers := []string{"dummy_id", "Email"}
+	allProps := []string{"dummy_id", "Email", "PhoneNumbers"}
+	identifiers := []string{"dummy_id", "Email", "PhoneNumbers"}
+	inSchemaProps := []types.Property{
+		{Name: "dummy_id", Type: types.JSON()},
+		{Name: "Email", Type: types.JSON()},
+		{Name: "PhoneNumbers", Type: types.JSON()},
+	}
+	outSchemaProps := []types.Property{
+		{Name: "dummy_id", Type: types.Text()},
+		{Name: "Email", Type: types.Text()},
+		{Name: "PhoneNumbers", Type: types.Array(types.Text())},
+	}
 
 	// Generate and add an action to the JSON for importing the users.
-	inSchemaProps := make([]types.Property, len(allProps))
-	outSchemaProps := make([]types.Property, len(allProps))
 	mapping := map[string]string{}
-	for i, p := range allProps {
-		inSchemaProps[i] = types.Property{Name: p, Type: types.Text()}
-		outSchemaProps[i] = types.Property{Name: p, Type: types.Text()}
+	for _, p := range allProps {
 		mapping[p] = p
 	}
-	importUsersActionID := c.AddAction(jsonID, map[string]any{
+
+	// Add the action A.
+	actionA := c.AddAction(jsonID, map[string]any{
 		"Target": "Users",
 		"Action": map[string]any{
-			"Name":        "Import users from JSON on Filesystem",
+			"Name":        "Action A",
+			"Path":        "users.json",
+			"InSchema":    types.Object(inSchemaProps),
+			"OutSchema":   types.Object(outSchemaProps),
+			"Identifiers": identifiers,
+			"Mapping":     mapping,
+		},
+	})
+
+	// Add the action B.
+	actionB := c.AddAction(jsonID, map[string]any{
+		"Target": "Users",
+		"Action": map[string]any{
+			"Name":        "Action B",
 			"Path":        "users.json",
 			"InSchema":    types.Object(inSchemaProps),
 			"OutSchema":   types.Object(outSchemaProps),
@@ -87,32 +108,29 @@ func TestIdentityResolution(t *testing.T) {
 
 	// Define a function "expectUsers" which checks if the expected users match
 	// with the users on the data warehouse.
-	expectUsers := func(expected []map[string]string) {
+	expectUsers := func(expected []map[string]any) {
 
 		// Retrieve the users from the APIs and convert their format.
 		rawUsers := c.Users(allProps, 0, 1000)["users"].([]any)
-		gotUsers := make([]map[string]string, len(rawUsers))
+		gotUsers := make([]map[string]any, len(rawUsers))
 		for i := range rawUsers {
-			u := map[string]string{}
+			u := map[string]any{}
 			for j, p := range allProps {
-				v := rawUsers[i].([]any)[j].(string)
-				if v != "" {
-					u[p] = v
-				}
+				u[p] = rawUsers[i].([]any)[j]
 			}
 			gotUsers[i] = u
 		}
 
 		// Check if the users are equal to the expected or not.
 		if !reflect.DeepEqual(expected, gotUsers) {
-			t.Fatalf("expecting: %v, got: %v", expected, gotUsers)
+			t.Fatalf("\nexpected: %#v\ngot:      %#v", expected, gotUsers)
 		}
 		t.Logf("users: %v", gotUsers)
 	}
 
 	// Define a function "importUser" which imports the user into the data
 	// warehouse.
-	importUser := func(props map[string]string) {
+	importUser := func(action int, props map[string]any) {
 
 		// Create a JSON file with the user.
 		t.Logf("importing user %v", props)
@@ -126,7 +144,7 @@ func TestIdentityResolution(t *testing.T) {
 		}
 
 		// Import the users in the JSON.
-		c.ExecuteAction(jsonID, importUsersActionID, true)
+		c.ExecuteAction(jsonID, action, true)
 		c.WaitActionsToFinish(jsonID)
 
 	}
@@ -135,42 +153,36 @@ func TestIdentityResolution(t *testing.T) {
 
 	// Add the tests on the identity resolution here.
 
-	expectUsers([]map[string]string{})
+	expectUsers([]map[string]any{})
 
-	importUser(map[string]string{"Email": "a@b"})
-	expectUsers([]map[string]string{
-		{"Email": "a@b"},
+	expectUsers([]map[string]any{})
+	importUser(actionA, map[string]any{"dummy_id": "AAA", "Email": "", "PhoneNumbers": []any{}})
+	expectUsers([]map[string]any{
+		{"dummy_id": "AAA", "Email": "", "PhoneNumbers": []any{}},
 	})
 
-	importUser(map[string]string{"Email": "c@d"})
-	expectUsers([]map[string]string{
-		{"Email": "a@b"},
-		{"Email": "c@d"},
+	importUser(actionA, map[string]any{"dummy_id": "AAA", "Email": "", "PhoneNumbers": []any{"333"}})
+	expectUsers([]map[string]any{
+		{"dummy_id": "AAA", "Email": "", "PhoneNumbers": []any{"333"}},
 	})
 
-	importUser(map[string]string{"dummy_id": "AAA", "Email": "a@b"})
-	expectUsers([]map[string]string{
-		{"Email": "a@b"},
-		{"Email": "c@d"},
-		{"dummy_id": "AAA", "Email": "a@b"},
+	importUser(actionA, map[string]any{"dummy_id": "BBB", "Email": "", "PhoneNumbers": []any{"333"}})
+	expectUsers([]map[string]any{
+		{"dummy_id": "AAA", "Email": "", "PhoneNumbers": []any{"333"}},
+		{"dummy_id": "BBB", "Email": "", "PhoneNumbers": []any{"333"}},
 	})
 
-	importUser(map[string]string{"dummy_id": "AAA", "Email": "e@f"})
-	expectUsers([]map[string]string{
-		{"Email": "a@b"},
-		{"Email": "c@d"},
-		{"dummy_id": "AAA", "Email": "e@f"},
+	importUser(actionB, map[string]any{"dummy_id": "BBB", "Email": "a@b", "PhoneNumbers": []any{"333"}})
+	expectUsers([]map[string]any{
+		{"dummy_id": "AAA", "Email": "", "PhoneNumbers": []any{"333"}},
+		{"dummy_id": "BBB", "Email": "a@b", "PhoneNumbers": []any{"333"}},
 	})
 
-	// TODO(Gianluca): see the issue
-	// https://github.com/open2b/chichi/issues/254.
-	//
-	// importUser(map[string]string{"dummy_id": "AAA"})
-	// expectUsers([]map[string]string{
-	// 	{"Email": "a@b"},
-	// 	{"Email": "c@d"},
-	// 	{"dummy_id": "AAA", "Email": "e@f"},
-	// })
+	importUser(actionB, map[string]any{"dummy_id": "BBB", "Email": "a@b", "PhoneNumbers": []any{"444"}})
+	expectUsers([]map[string]any{
+		{"dummy_id": "AAA", "Email": "", "PhoneNumbers": []any{"333"}},
+		{"dummy_id": "BBB", "Email": "a@b", "PhoneNumbers": []any{"444", "333"}},
+	})
 
 	// -------------------------------------------------------------------------
 
