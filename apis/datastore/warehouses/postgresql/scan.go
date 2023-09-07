@@ -74,22 +74,23 @@ func (sv scanValue) scanArray(src any) (any, error) {
 	if !ok {
 		return nil, errors.New("PostgreSQL has returned an unexpected value type for an array")
 	}
-	if len(data) < 12 {
+	p := 12
+	if len(data) < p {
 		return nil, errPostgreSQLInvalidData
 	}
 	dimensions := int(int32(binary.BigEndian.Uint32(data[:4])))
-	if dimensions != 1 {
-		if dimensions == 0 {
-			return nil, errPostgreSQLInvalidData
-		}
+	if dimensions > 1 {
 		return nil, errors.New("type is not supported")
 	}
 	oid := binary.BigEndian.Uint32(data[8 : 8+4])
-	if len(data) < 12+8 {
-		return nil, errPostgreSQLInvalidData
+	size := 0
+	if dimensions > 0 {
+		if len(data) < 12+8 {
+			return nil, errPostgreSQLInvalidData
+		}
+		size = int(int32(binary.BigEndian.Uint32(data[12 : 12+4])))
+		p += 8
 	}
-	size := int(int32(binary.BigEndian.Uint32(data[12 : 12+4])))
-	p := 20
 	switch oid {
 	case 16: // bool
 		if len(data) < p+5*size {
