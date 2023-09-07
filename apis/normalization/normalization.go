@@ -382,6 +382,9 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 	case types.PtInt, types.PtInt8, types.PtInt16, types.PtInt24, types.PtInt64:
 		var v int64
 		switch src := src.(type) {
+		case int:
+			v = int64(src)
+			valid = true
 		case int8:
 			v = int64(src)
 			valid = true
@@ -410,6 +413,9 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 	case types.PtUInt, types.PtUInt8, types.PtUInt16, types.PtUInt24, types.PtUInt64:
 		var v uint64
 		switch src := src.(type) {
+		case uint:
+			v = uint64(src)
+			valid = true
 		case uint8:
 			v = uint64(src)
 			valid = true
@@ -526,6 +532,10 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 		}
 	case types.PtYear:
 		switch y := src.(type) {
+		case int:
+			if valid = types.MinYear <= y && y <= types.MaxYear; valid {
+				value = y
+			}
 		case int64:
 			if valid = types.MinYear <= y && y <= types.MaxYear; valid {
 				value = int(y)
