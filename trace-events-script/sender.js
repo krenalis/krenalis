@@ -48,7 +48,7 @@ class Sender {
 				}
 				if (!res.ok) {
 					console.warn(
-						'sending events, the server responded with status ' + res.status + ' ' + res.statusText
+						'sending events, the server responded with status ' + res.status + ' ' + res.statusText,
 					);
 					return;
 				}
