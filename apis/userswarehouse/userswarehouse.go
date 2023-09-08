@@ -156,7 +156,7 @@ func createGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, 
 	return id, err
 }
 
-// deduplicate deduplicate the elements in s, which must be a slice.
+// deduplicate deduplicates the elements in s, which must be a slice.
 func deduplicate(s any) any {
 	rv := reflect.ValueOf(s)
 	unique := make(map[any]bool, rv.Len())
