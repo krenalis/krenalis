@@ -202,6 +202,13 @@ func TestCompile(t *testing.T) {
 		{expr: "and(1, true)", dt: types.Boolean(), compileErr: errors.New("cannot convert 1 (type Int) to Boolean")},
 		{expr: "and(true, true)", dt: types.Int(), compileErr: errors.New("cannot convert expression (type Boolean) to Int")},
 
+		// array.
+		{expr: "array()", dt: types.Array(types.JSON()), nullable: true, expectedValue: []any{}},
+		{expr: "array(1)", dt: types.Array(types.Int()), nullable: false, expectedValue: []any{1}},
+		{expr: "array(1, \"a\", false)", dt: types.Array(types.JSON()), nullable: true, expectedValue: []any{json.RawMessage(`1`), json.RawMessage(`"a"`), json.RawMessage(`false`)}},
+		{expr: "array(array(1,2,3))", dt: types.Array(types.Array(types.Int())), nullable: true, expectedValue: []any{[]any{1, 2, 3}}},
+		{expr: "array(null)", dt: types.Int(), compileErr: errors.New("cannot convert expression (type Array) to Int")},
+
 		// coalesce.
 		{expr: "coalesce(1, 2)", dt: types.Int(), nullable: true, expectedValue: 1},
 		{expr: "coalesce(1, null)", dt: types.Int(), nullable: true, expectedValue: 1},

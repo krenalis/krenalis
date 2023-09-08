@@ -77,6 +77,8 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool) error {
 		switch p.path[0] {
 		case "and":
 			expr[i].typ, err = checkAnd(p.args, schema, typ, n)
+		case "array":
+			expr[i].typ, err = checkArray(p.args, schema, typ, n)
 		case "coalesce":
 			expr[i].typ, err = checkCoalesce(p.args, schema, typ, n)
 		case "eq":

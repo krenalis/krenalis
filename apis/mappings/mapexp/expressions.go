@@ -334,6 +334,16 @@ func evalCall(p part, values map[string]any) (any, types.Type, error) {
 			}
 		}
 		return true, types.Boolean(), nil
+	case "array":
+		a := make([]any, len(p.args))
+		for i, arg := range p.args {
+			v, _, err := eval(arg, values)
+			if err != nil {
+				return nil, types.Type{}, err
+			}
+			a[i] = v
+		}
+		return a, types.Array(types.JSON()), nil
 	case "coalesce":
 		for _, arg := range p.args {
 			v, vt, err := eval(arg, values)

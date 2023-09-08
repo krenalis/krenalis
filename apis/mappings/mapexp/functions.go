@@ -13,10 +13,13 @@ import (
 	"chichi/connector/types"
 )
 
+var jsonArrayType = types.Array(types.JSON())
+
 // numArguments reports the number of arguments for each expression function.
 // It is used to initialize the slice of arguments before parsing them.
 var numArguments = map[string]int{
 	"and":      2,
+	"array":    2,
 	"coalesce": 2,
 	"eq":       2,
 	"when":     2,
@@ -35,6 +38,17 @@ func checkAnd(args [][]part, schema, dt types.Type, nullable bool) (types.Type, 
 		}
 	}
 	return booleanType, nil
+}
+
+// checkArray type checks a call to 'array' with the given arguments.
+func checkArray(args [][]part, schema, dt types.Type, nullable bool) (types.Type, error) {
+	for _, arg := range args {
+		err := typeCheck(arg, schema, types.JSON(), false)
+		if err != nil {
+			return types.Type{}, err
+		}
+	}
+	return jsonArrayType, nil
 }
 
 // checkCoalesce type checks a call to 'coalesce' with the given arguments.
