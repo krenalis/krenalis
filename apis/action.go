@@ -29,7 +29,10 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-var QueryExecutionFailed errors.Code = "QueryExecutionFailed"
+var (
+	MappingOverAnonymousIdentifier errors.Code = "MappingOverAnonymousIdentifier"
+	QueryExecutionFailed           errors.Code = "QueryExecutionFailed"
+)
 
 // Action represents an action associated to a destination connection to send
 // events.
@@ -259,6 +262,10 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 }
 
 // Set sets action.
+//
+// It returns an errors.UnprocessableError with code
+// MappingOverAnonymousIdentifier if the action maps over an anonymous
+// identifier.
 //
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
@@ -601,6 +608,10 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 // validateActionToSet validates the action to set (when adding or setting an
 // action) for the given target and event type.
 //
+// It returns an errors.UnprocessableError with code
+// MappingOverAnonymousIdentifier if the action maps over an anonymous
+// identifier.
+//
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
 func (this *Connection) validateActionToSet(action ActionToSet, target state.ActionTarget, eventType string) error {
@@ -804,10 +815,21 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 	}
 
-	// Second, do validations based on the connection.
+	// Second, do validations based on the workspace and the connection.
 
 	c := this.connection
 	connector := c.Connector()
+	ws := this.connection.Workspace()
+
+	// When importing users, ensure that there are no mappings over the
+	// anonymous identifiers of the workspace.
+	if importingUsers := c.Role == state.SourceRole && target == state.UsersTarget; importingUsers {
+		for _, p := range ws.AnonymousIdentifiers.Priority {
+			if _, ok := action.Mapping[p]; ok {
+				return errors.Unprocessable(MappingOverAnonymousIdentifier, "cannot map over the property %s because it is an anonymous identifier", p)
+			}
+		}
+	}
 
 	// Check if the query is allowed.
 	if needsQuery := connector.Type == state.DatabaseType && c.Role == state.SourceRole; needsQuery {
