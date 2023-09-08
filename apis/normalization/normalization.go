@@ -254,13 +254,11 @@ func NormalizeAppProperty(name string, typ types.Type, src any, nullable bool) (
 			}
 		}
 	case types.PtJSON:
-		switch src.(type) {
-		case bool, float64, string, map[string]any, []any, json.Number, json.RawMessage:
-			value = src
-			valid = true
-		default:
-			return nil, fmt.Errorf("app returned an invalid type %T for JSON property %s", src, name)
+		if !validJSON(src) {
+			return nil, fmt.Errorf("app returned an invalid JSON for property %s", name)
 		}
+		value = src
+		valid = true
 	case types.PtInet:
 		if s, ok := src.(string); ok {
 			if v, err := netip.ParseAddr(s); err == nil {
@@ -553,19 +551,14 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 			}
 		}
 	case types.PtJSON:
-		switch src := src.(type) {
-		case []byte:
-			if !json.Valid(src) {
-				return nil, fmt.Errorf("database returned an invalid JSON for property %s", name)
-			}
-			value = json.RawMessage(src)
-			valid = true
-		case bool, float64, string, map[string]any, []any, json.Number, json.RawMessage:
-			value = src
-			valid = true
-		default:
-			return nil, fmt.Errorf("database returned an invalid type %T for JSON property %s", src, name)
+		if v, ok := src.([]byte); ok {
+			src = json.RawMessage(v)
 		}
+		if !validJSON(src) {
+			return nil, fmt.Errorf("database returned an invalid JSON for property %s", name)
+		}
+		value = src
+		valid = true
 	case types.PtInet:
 		switch src := src.(type) {
 		case string:
@@ -805,4 +798,36 @@ func abbreviate(s string, n int) string {
 		s = s[:l]
 	}
 	return s + "..."
+}
+
+// validJSON reports whether src is a valid JSON value as returned by a
+// connector.
+func validJSON(src any) bool {
+	switch src := src.(type) {
+	case string:
+		return utf8.ValidString(src)
+	case bool:
+		return true
+	case float64:
+		return !math.IsNaN(src) && !math.IsInf(src, 0)
+	case []any:
+		for _, v := range src {
+			if ok := validJSON(v); !ok {
+				return false
+			}
+		}
+		return true
+	case map[string]any:
+		for _, v := range src {
+			if ok := validJSON(v); !ok {
+				return false
+			}
+		}
+		return true
+	case json.Number:
+		return src != "" && (src[0] == '-' || src[0] >= '0' && src[0] <= '9') && json.Valid([]byte(src))
+	case json.RawMessage:
+		return json.Valid(src)
+	}
+	return false
 }

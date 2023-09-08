@@ -102,7 +102,7 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 		{types.JSON(), json.RawMessage(`{"a":5}`), json.RawMessage(`{"a":5}`)},
 		{types.JSON(), json.Number("302"), json.Number("302")},
 		{types.JSON(), `{"a":5}`, `{"a":5}`},
-		{types.JSON(), map[string]any{"a": 5}, map[string]any{"a": 5}},
+		{types.JSON(), map[string]any{"a": 5.0}, map[string]any{"a": 5.0}},
 		// Inet.
 		{types.Inet(), "127.0.0.1", "127.0.0.1"},
 		{types.Inet(), "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329"},
@@ -135,4 +135,46 @@ func TestNormalizeAppPropertyValue(t *testing.T) {
 			t.Fatalf("expected %#v, got %#v", expected, got)
 		}
 	}
+}
+
+func TestValidJSON(t *testing.T) {
+
+	tests := []struct {
+		src   any
+		valid bool
+	}{
+		{nil, false},
+		{"", true},
+		{"boo", true},
+		{"\xff", false},
+		{true, true},
+		{12, false},
+		{23.985, true},
+		{[]any{1.0, "a", json.RawMessage(`{"foo":[1,2,3]}`)}, true},
+		{map[string]any{"": "", "a": 5.4}, true},
+		{math.NaN(), false},
+		{math.Inf(-1), false},
+		{json.Number(""), false},
+		{json.Number("515"), true},
+		{json.Number("-34.96"), true},
+		{json.Number("+34.96"), false},
+		{json.RawMessage(""), false},
+		{json.RawMessage("+"), false},
+		{json.RawMessage("5"), true},
+		{json.RawMessage(" 5 "), true},
+		{json.RawMessage(`"\xff"`), false},
+		{json.RawMessage(`{"foo":[1,2,3]}`), true},
+		{json.RawMessage("{\n\t\"foo\": [1,2,3]\n}"), true},
+	}
+
+	for _, test := range tests {
+		valid := validJSON(test.src)
+		if valid != test.valid {
+			if test.valid {
+				t.Fatalf("%#v: expected a valid JSON, got an invalid one", test.src)
+			}
+			t.Fatalf("%#v: expected a invalid JSON, got a valid one", test.src)
+		}
+	}
+
 }
