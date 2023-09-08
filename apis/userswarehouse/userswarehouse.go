@@ -107,7 +107,7 @@ matchingUsersLoop:
 		}
 
 		// Merge 'current' into 'u'.
-		err := mergeUsers(ctx, ws, store, current, u, isArray)
+		err := merge(ctx, ws, store, current, u, isArray)
 		if err != nil {
 			return fmt.Errorf("cannot merge users: %s", err)
 		}
@@ -237,44 +237,44 @@ func match(u1, u2 datastore.IRUser, action *state.Action, forImportingAction boo
 	return matchDontKnow
 }
 
-// mergeUsers merges the user 'current' into 'u'.
-// This function deletes the 'current' user.
+// merge merges the user 'a' into 'b'.
+// This function deletes the user 'a' after updating 'b'.
 // isArray indicates which properties have type array.
-func mergeUsers(ctx context.Context, ws *state.Workspace, store *datastore.Store, current, u datastore.IRUser, isArray map[string]bool) error {
+func merge(ctx context.Context, ws *state.Workspace, store *datastore.Store, a, b datastore.IRUser, isArray map[string]bool) error {
 
-	telemetry.IncrementCounter(ctx, "mergeUsers", 1)
+	telemetry.IncrementCounter(ctx, "merge", 1)
 
 	// Serialize the row according to the schema.
 	schema, ok := ws.Schemas["users"]
 	if !ok {
 		return errors.New("users schema not found")
 	}
-	datastore.SerializeRow(current.Properties, *schema)
+	datastore.SerializeRow(a.Properties, *schema)
 
 	// TODO(Gianluca): should the user be normalized before being written on the
 	// data store?
 
-	// Update the user 'u' on the datastore.
-	props := make(map[string]any, len(current.Properties))
-	for p := range current.Properties {
+	// Update the user 'b' on the datastore.
+	props := make(map[string]any, len(a.Properties))
+	for p := range a.Properties {
 		if isArray[p] {
 			// TODO(Gianluca): support for "overwrite" mode: see https://github.com/open2b/chichi/issues/262.
-			array, _ := current.Properties[p].([]any)
-			if props, ok := u.Properties[p].([]any); ok {
+			array, _ := a.Properties[p].([]any)
+			if props, ok := b.Properties[p].([]any); ok {
 				array = append(array, props...)
 			}
 			props[p] = deduplicate(array)
 		} else {
-			props[p] = current.Properties[p]
+			props[p] = a.Properties[p]
 		}
 	}
-	err := store.UpdateUser(ctx, u, props, isArray)
+	err := store.UpdateUser(ctx, b, props, isArray)
 	if err != nil {
 		return fmt.Errorf("cannot update user on the store: %s", err)
 	}
 
-	// Delete the 'current' user on the datastore.
-	err = store.DeleteUser(ctx, current.ID, isArray)
+	// Delete the user 'a' on the datastore.
+	err = store.DeleteUser(ctx, a.ID, isArray)
 	if err != nil {
 		return fmt.Errorf("cannot delete user on the store: %s", err)
 	}
