@@ -9,7 +9,6 @@ package postgresql
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"math"
 	"net/netip"
@@ -92,18 +91,17 @@ func (sv scanValue) scanArray(src any) (any, error) {
 		size = int(int32(binary.BigEndian.Uint32(data[12 : 12+4])))
 		p += 8
 	}
+	values := make([]any, size)
 	switch oid {
 	case 16: // bool
 		if len(data) < p+5*size {
 			return nil, errPostgreSQLInvalidData
 		}
-		values := make([]bool, size)
 		for i := range values {
 			p += 4 // skip the length
 			values[i] = data[p] == 1
 			p += 1
 		}
-		return values, nil
 	case
 		20, // int8
 		21, // in2
@@ -112,7 +110,6 @@ func (sv scanValue) scanArray(src any) (any, error) {
 			return nil, errPostgreSQLInvalidData
 		}
 		var v int
-		values := make([]int, size)
 		for i := range values {
 			if len(data) < p+4 {
 				return nil, errPostgreSQLInvalidData
@@ -135,7 +132,6 @@ func (sv scanValue) scanArray(src any) (any, error) {
 			values[i] = v
 			p += l
 		}
-		return values, nil
 	case
 		700, // float4
 		701: // float8
@@ -143,7 +139,6 @@ func (sv scanValue) scanArray(src any) (any, error) {
 			return nil, errPostgreSQLInvalidData
 		}
 		var v float64
-		values := make([]float64, size)
 		for i := range values {
 			if len(data) < p+4 {
 				return nil, errPostgreSQLInvalidData
@@ -163,13 +158,11 @@ func (sv scanValue) scanArray(src any) (any, error) {
 			}
 			values[i] = v
 			p += l
-			return values, nil
 		}
 	case 869: // inet
 		if len(data) < p+12*size {
 			return nil, errPostgreSQLInvalidData
 		}
-		values := make([]string, size)
 		for i := range values {
 			if len(data) < p+4 {
 				return nil, errPostgreSQLInvalidData
@@ -189,7 +182,6 @@ func (sv scanValue) scanArray(src any) (any, error) {
 			values[i] = addr.String()
 			p += l
 		}
-		return values, nil
 	case
 		25,   // text
 		1042, // bpchar
@@ -197,7 +189,6 @@ func (sv scanValue) scanArray(src any) (any, error) {
 		if len(data) < p+5*size {
 			return nil, errPostgreSQLInvalidData
 		}
-		values := make([]string, size)
 		for i := range values {
 			if len(data) < p+4 {
 				return nil, errPostgreSQLInvalidData
@@ -213,60 +204,50 @@ func (sv scanValue) scanArray(src any) (any, error) {
 			values[i] = string(data[p : p+l])
 			p += l
 		}
-		return values, nil
 	case 1082: // date
 		if len(data) < p+8*size {
 			return nil, errPostgreSQLInvalidData
 		}
-		values := make([]time.Time, size)
 		for i := range values {
 			p += 4 // skip length
 			days := int(int32(binary.BigEndian.Uint32(data[p : p+4])))
 			values[i] = time.Date(2000, 1, 1+days, 0, 0, 0, 0, time.UTC)
 			p += 4
 		}
-		return values, nil
 	case 1083: // time
 		if len(data) < p+12*size {
 			return nil, errPostgreSQLInvalidData
 		}
-		values := make([]time.Time, size)
 		for i := range values {
 			p += 4 // skip length
 			us := time.Duration(int64(binary.BigEndian.Uint64(data[p:p+8]))) * time.Microsecond
 			values[i] = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC).Add(us)
 			p += 8
 		}
-		return values, nil
 	case 1114: // timestamp
 		if len(data) < p+12*size {
 			return nil, errPostgreSQLInvalidData
 		}
 		epoch := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC) // PostgreSQL epoch
-		values := make([]time.Time, size)
 		for i := range values {
 			p += 4 // skip length
 			us := time.Duration(int64(binary.BigEndian.Uint64(data[p:p+8]))) * time.Microsecond
 			values[i] = epoch.Add(us)
 			p += 8
 		}
-		return values, nil
 	case 2950: // uuid
 		if len(data) < p+20*size {
 			return nil, errPostgreSQLInvalidData
 		}
-		values := make([]string, size)
 		for i := range values {
 			p += 4 // skip length
 			values[i] = uuid.Must(uuid.FromBytes(data[p : p+16])).String()
 			p += 16
 		}
-		return values, nil
 	case 114: // json
 		if len(data) < p+4*size {
 			return nil, errPostgreSQLInvalidData
 		}
-		values := make([]json.RawMessage, size)
 		for i := range values {
 			if len(data) < p+4 {
 				return nil, errPostgreSQLInvalidData
@@ -284,12 +265,10 @@ func (sv scanValue) scanArray(src any) (any, error) {
 			values[i] = v
 			p += l
 		}
-		return values, nil
 	case 3802: // jsonb
 		if len(data) < p+5*size {
 			return nil, errPostgreSQLInvalidData
 		}
-		values := make([]json.RawMessage, size)
 		for i := range values {
 			if len(data) < p+4 {
 				return nil, errPostgreSQLInvalidData
@@ -310,7 +289,8 @@ func (sv scanValue) scanArray(src any) (any, error) {
 			values[i] = v
 			p += l
 		}
-		return values, nil
+	default:
+		return nil, errors.New("unsupported type")
 	}
-	return nil, errors.New("unsupported type")
+	return values, nil
 }
