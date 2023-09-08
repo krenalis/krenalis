@@ -183,6 +183,12 @@ func elems(slice any) []any {
 
 // concatSlices returns a concatenation of the slices a and b.
 func concatSlices(a, b any) any {
+	if a == nil {
+		return b
+	}
+	if b == nil {
+		return a
+	}
 	aRv := reflect.ValueOf(a)
 	bRv := reflect.ValueOf(b)
 	l := aRv.Len() + bRv.Len()

@@ -18,9 +18,12 @@ func Test_concatSlices(t *testing.T) {
 		elems    any
 		expected any
 	}{
+		{nil, nil, nil},
 		{[]int{}, []int{}, []int{}},
 		{[]int{}, []int{4, 5, 6}, []int{4, 5, 6}},
 		{[]int{1, 2, 3}, []int{}, []int{1, 2, 3}},
+		{nil, []string{"c", "d"}, []string{"c", "d"}},
+		{[]string{"a", "b"}, nil, []string{"a", "b"}},
 		{[]int{1, 2, 3}, []int{4, 5, 6}, []int{1, 2, 3, 4, 5, 6}},
 		{[]string{"1", "2", "3"}, []string{"4", "5", "6"}, []string{"1", "2", "3", "4", "5", "6"}},
 	}
