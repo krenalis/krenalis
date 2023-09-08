@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-const maxIDLen = len("9223372036854775807")
+const maxIDLen = len("@9223372036854775807")
 
 type Notification struct {
 	PID     uint32
@@ -71,7 +71,7 @@ func notify(ctx context.Context, conn Connection, payload any) error {
 		var z strings.Builder
 		bw := base64.NewEncoder(base64.RawStdEncoding, &z)
 		zw := gzip.NewWriter(bw)
-		if _, err = zw.Write(b.Bytes()); err != nil {
+		if _, err = io.WriteString(zw, s); err != nil {
 			_ = zw.Close()
 			_ = bw.Close()
 			return err
@@ -96,7 +96,7 @@ func notify(ctx context.Context, conn Connection, payload any) error {
 	if tx, ok := conn.(*Tx); ok {
 		id, ack := tx.acks.create()
 		tx.ack = ack
-		s += strconv.Itoa(id)
+		s += "@" + strconv.Itoa(id)
 	}
 	_, err = conn.Exec(ctx, "NOTIFY chichi, '"+s+"'")
 	return err
@@ -156,9 +156,14 @@ func (db *DB) ListenToNotifications() (notifications <-chan Notification, stop f
 						b.WriteString(n.Payload[1:])
 						continue
 					}
+					var identifier string
+					if !strings.Contains(n.Payload, "{") {
+						var p string
+						p, identifier, _ = strings.Cut(n.Payload, "@")
+						b.WriteString(p)
+					}
 					payload := n.Payload
 					if b.Len() > 0 {
-						b.WriteString(n.Payload)
 						br := base64.NewDecoder(base64.RawStdEncoding, &b)
 						zr, err := gzip.NewReader(br)
 						if err != nil {
@@ -173,7 +178,7 @@ func (db *DB) ListenToNotifications() (notifications <-chan Notification, stop f
 						if err = zr.Close(); err != nil {
 							return err
 						}
-						payload = s.String()
+						payload = s.String() + "@" + identifier
 						b.Reset()
 					}
 					id, name, payload, err := parsePayload(payload)
@@ -217,7 +222,10 @@ func parsePayload(s string) (id int, name, payload string, err error) {
 	if s == "" {
 		return
 	}
-	id, _ = strconv.Atoi(s)
+	if s[0] != '@' {
+		return 0, "", "", errors.New("invalid identifier")
+	}
+	id, _ = strconv.Atoi(s[1:])
 	if id < 1 {
 		return 0, "", "", errors.New("invalid identifier")
 	}

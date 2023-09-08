@@ -21,8 +21,8 @@ func TestParsePayload(t *testing.T) {
 		err          bool
 	}{
 		{`foo{}`, 0, `foo`, `{}`, false},
-		{`foo{}5`, 5, `foo`, `{}`, false},
-		{`boo{"a":{"b":5}}6301`, 6301, `boo`, `{"a":{"b":5}}`, false},
+		{`foo{}@5`, 5, `foo`, `{}`, false},
+		{`boo{"a":{"b":5}}@6301`, 6301, `boo`, `{"a":{"b":5}}`, false},
 		{``, 0, ``, ``, true},
 		{`{}`, 0, ``, ``, true},
 		{`boo`, 0, ``, ``, true},
