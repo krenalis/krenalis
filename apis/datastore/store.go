@@ -170,30 +170,26 @@ func (store *Store) SetDestinationUser(ctx context.Context, connection int, exte
 	return store.warehouse.SetDestinationUser(ctx, connection, externalUserID, externalProperty)
 }
 
-// Schemas returns the schemas of users and groups for the relative tables.
-// If a table does not exist, it returns the invalid schema for that table.
-func (store *Store) Schemas(ctx context.Context) (types.Type, types.Type, error) {
+// Schemas returns the schemas of users, groups, and events for the relative
+// tables. If a table doesn't exist, it won't be included in returned schemas.
+func (store *Store) Schemas(ctx context.Context) (map[string]types.Type, error) {
 	store.mustBeOpen()
 	tables, err := store.warehouse.Tables(ctx)
 	if err != nil {
-		return types.Type{}, types.Type{}, err
+		return nil, err
 	}
-	var usersSchema, groupsSchema types.Type
+	schemas := make(map[string]types.Type)
 	for _, table := range tables {
-		if table.Name != "users" && table.Name != "groups" {
-			continue
-		}
-		properties, err := ColumnsToProperties(table.Columns)
-		if err != nil {
-			return types.Type{}, types.Type{}, err
-		}
-		if table.Name == "users" {
-			usersSchema = types.Object(properties)
-		} else {
-			groupsSchema = types.Object(properties)
+		switch table.Name {
+		case "users", "groups", "events":
+			properties, err := ColumnsToProperties(table.Columns)
+			if err != nil {
+				return nil, err
+			}
+			schemas[table.Name] = types.Object(properties)
 		}
 	}
-	return usersSchema, groupsSchema, nil
+	return schemas, nil
 }
 
 // UpdateUser updates the properties of the user with identifier id.

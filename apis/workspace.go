@@ -56,6 +56,7 @@ var (
 	ServerNotExists      errors.Code = "ServerNotExists"
 	SourceNotExists      errors.Code = "SourceNotExists"
 	StreamNotExists      errors.Code = "StreamNotExists"
+	TableNotFound        errors.Code = "TableNotFound"
 	TooManyListeners     errors.Code = "TooManyListeners"
 	WarehouseFailed      errors.Code = "WarehouseFailed"
 )
@@ -706,12 +707,13 @@ func (this *Workspace) OAuthToken(ctx context.Context, authorizationCode, redire
 	return base62.EncodeToString(resource), nil
 }
 
-// ReloadSchemas reloads the users and groups schemas of the workspace.
+// ReloadSchemas reloads the users, groups and events schemas of the workspace.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist,
 // and it returns an errors.UnprocessableError error with code
 //   - NotConnected, if the workspace is not connected to a data warehouse.
 //   - WarehouseFailed, if the connection to the data warehouse failed.
+//   - TableNotFound, if a table does not exist.
 //   - InvalidSchemaTable, if a table of a schema is not valid.
 func (this *Workspace) ReloadSchemas(ctx context.Context) error {
 
@@ -721,7 +723,7 @@ func (this *Workspace) ReloadSchemas(ctx context.Context) error {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", this.workspace.ID)
 	}
 
-	usersSchema, groupsSchema, err := this.store.Schemas(ctx)
+	schemas, err := this.store.Schemas(ctx)
 	if err != nil {
 		switch err := err.(type) {
 		case datastore.RepeatedPropertyNameError:
@@ -768,17 +770,17 @@ func (this *Workspace) ReloadSchemas(ctx context.Context) error {
 		Workspace: this.workspace.ID,
 		Schemas:   map[string]*types.Type{},
 	}
-	if usersSchema.Valid() {
-		if err = validateSchema("users", usersSchema); err != nil {
-			return err
+	for _, table := range []string{"users", "groups", "events"} {
+		schema, ok := schemas[table]
+		if !ok {
+			return errors.Unprocessable(TableNotFound, "table %q does not exist in the data warehouse", table)
 		}
-		n.Schemas["users"] = &usersSchema
-	}
-	if groupsSchema.Valid() {
-		if err = validateSchema("groups", groupsSchema); err != nil {
-			return err
+		if table != "events" {
+			if err = validateSchema(table, schema); err != nil {
+				return err
+			}
 		}
-		n.Schemas["groups"] = &groupsSchema
+		n.Schemas[table] = &schema
 	}
 
 	rawSchemas, err := json.Marshal(n.Schemas)

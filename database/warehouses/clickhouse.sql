@@ -28,3 +28,13 @@ PRIMARY KEY id
 ORDER BY id
 SETTINGS index_granularity = 8192;
 
+CREATE TABLE groups
+(
+    `id` Int32,
+    `creation_time` DateTime DEFAULT now(),
+    `timestamp` DateTime DEFAULT now(),
+)
+ENGINE = MergeTree
+PRIMARY KEY id
+ORDER BY id
+SETTINGS index_granularity = 8192;

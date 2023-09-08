@@ -40,3 +40,10 @@ CREATE TABLE users (
     "FavouriteMovie"        movie,
     PRIMARY KEY (id)
 );
+
+CREATE TABLE groups (
+    id                      SERIAL,
+    "creation_time"         timestamp NOT NULL DEFAULT now(),
+    "timestamp"             timestamp NOT NULL DEFAULT now(),
+    PRIMARY KEY (id)
+);
