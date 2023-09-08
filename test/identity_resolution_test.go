@@ -23,7 +23,7 @@ import (
 // retrieving the users from the APIs.
 //
 // This works by importing users through a JSON file, which is created (or
-// updated) every time an user is imported, then it's loaded into Chichi by
+// updated) every time a user is imported, then it's loaded into Chichi by
 // running the import action on the JSON.
 func TestIdentityResolution(t *testing.T) {
 
@@ -34,7 +34,7 @@ func TestIdentityResolution(t *testing.T) {
 	c := chichitester.InitAndLaunch(t)
 	defer c.Stop()
 
-	// Create a storage where the the JSON files (containing the incoming users)
+	// Create a storage where the JSON files (containing the incoming users)
 	// will be created.
 	storageDir, err := os.MkdirTemp("", "chichi-test-identity-resolution")
 	if err != nil {
