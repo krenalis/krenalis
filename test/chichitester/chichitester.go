@@ -42,6 +42,7 @@ type Chichi struct {
 }
 
 var chichiAlreadyLaunched bool
+var chichiAlreadyBuilt bool
 
 // InitAndLaunch initializes and launches an instance of Chichi in a separate
 // goroutine.
@@ -112,9 +113,12 @@ func InitAndLaunch(t *testing.T) *Chichi {
 	}()
 
 	if launchChichiExternally {
-		err := buildChichi(ctx, &setts)
-		if err != nil {
-			t.Fatalf("cannot build Chichi: %s", err)
+		if !chichiAlreadyBuilt {
+			err := buildChichi(ctx, &setts)
+			if err != nil {
+				t.Fatalf("cannot build Chichi: %s", err)
+			}
+			chichiAlreadyBuilt = true
 		}
 		go func() {
 			err := launchChichi(ctxWithCancel)
