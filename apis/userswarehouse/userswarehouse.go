@@ -156,61 +156,47 @@ func createGR(ctx context.Context, ws *state.Workspace, store *datastore.Store, 
 	return id, err
 }
 
-// deduplicate deduplicates the elements in s, which must be a slice.
-func deduplicate(s any) any {
-	rv := reflect.ValueOf(s)
-	unique := make(map[any]bool, rv.Len())
-	out := reflect.MakeSlice(rv.Type(), 0, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		e := rv.Index(i).Interface()
-		if !unique[e] {
-			out = reflect.Append(out, reflect.ValueOf(e))
-			unique[e] = true
-		}
+// deduplicate deduplicates the elements in s, returning the new slice.
+// If s is nil, s is returned.
+func deduplicate(s []any) []any {
+	if s == nil {
+		return s
 	}
-	return out.Interface()
-}
-
-// elems returns the elements of the given slice as a []any.
-func elems(slice any) []any {
-	rv := reflect.ValueOf(slice)
-	es := make([]any, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		es[i] = rv.Index(i).Interface()
-	}
-	return es
-}
-
-// concatSlices returns a concatenation of the slices a and b.
-func concatSlices(a, b any) any {
-	if a == nil {
-		return b
-	}
-	if b == nil {
-		return a
-	}
-	aRv := reflect.ValueOf(a)
-	bRv := reflect.ValueOf(b)
-	l := aRv.Len() + bRv.Len()
-	s := reflect.MakeSlice(aRv.Type(), l, l)
-	reflect.Copy(s, aRv)
-	reflect.Copy(s.Slice(aRv.Len(), l), bRv)
-	return s.Interface()
-}
-
-// intersection returns the intersection between a and b.
-// The elements in the returned slice are ordered as they appear in a.
-func intersection[T comparable](a, b []T) []T {
-	out := []T{}
-	for _, v := range a {
-		for _, w := range b {
-			if w == v {
-				out = append(out, v)
+	ss := make([]any, 0, len(s))
+	for _, elem := range s {
+		add := true
+		for _, elem2 := range ss {
+			if equal(elem, elem2) {
+				add = false
 				break
 			}
 		}
+		if add {
+			ss = append(ss, elem)
+		}
 	}
-	return out
+	return ss
+}
+
+// equal reports whether a and b are two equal values, in perspective of the
+// identity resolution.
+//
+// TODO(Gianluca): use a more efficient and correct way to check for equality.
+// See the issue https://github.com/open2b/chichi/issues/272.
+func equal(a, b any) bool {
+	return reflect.DeepEqual(a, b)
+}
+
+// haveCommonValue reports whether a and b have at least one common value.
+func haveCommonValue(a, b []any) bool {
+	for _, elem := range a {
+		for _, elem2 := range b {
+			if equal(elem, elem2) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 type matchResult int8
@@ -236,13 +222,13 @@ func match(u1, u2 datastore.IRUser, action *state.Action, forImportingAction boo
 			continue
 		}
 		if isArray[p] {
-			if inters := intersection(elems(v1), elems(v2)); len(inters) > 0 {
+			v1, v2 := v1.([]any), v2.([]any)
+			if haveCommonValue(v1, v2) {
 				return matchSame
-			} else {
-				return matchDifferent
 			}
+			return matchDifferent
 		} else {
-			if v1 == v2 {
+			if equal(v1, v2) {
 				return matchSame
 			}
 			return matchDifferent
@@ -273,7 +259,11 @@ func mergeUsers(ctx context.Context, ws *state.Workspace, store *datastore.Store
 	for p := range current.Properties {
 		if isArray[p] {
 			// TODO(Gianluca): support for "overwrite" mode: see https://github.com/open2b/chichi/issues/262.
-			props[p] = deduplicate(concatSlices(current.Properties[p], u.Properties[p]))
+			array, _ := current.Properties[p].([]any)
+			if props, ok := u.Properties[p].([]any); ok {
+				array = append(array, props...)
+			}
+			props[p] = deduplicate(array)
 		} else {
 			props[p] = current.Properties[p]
 		}
@@ -298,7 +288,7 @@ func zero(v any, isArray bool) bool {
 		return true
 	}
 	if isArray {
-		return reflect.ValueOf(v).Len() == 0
+		return len(v.([]any)) == 0
 	}
 	return v == "" || v == 0
 }

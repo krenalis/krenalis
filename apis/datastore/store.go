@@ -589,7 +589,7 @@ func zero(v any, isArray bool) bool {
 		return true
 	}
 	if isArray {
-		return reflect.ValueOf(v).Len() == 0
+		return len(v.([]any)) == 0
 	}
 	return v == "" || v == 0
 }
