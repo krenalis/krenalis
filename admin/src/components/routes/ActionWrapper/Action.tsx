@@ -11,6 +11,7 @@ import ActionIdentifiers from './ActionIdentifiers';
 import useActionData from '../../../hooks/useActionData';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { FullscreenContext } from '../../../context/FullscreenContext';
+import appContext from '../../../context/AppContext';
 import ActionContext from '../../../context/ActionContext';
 import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
 
@@ -20,6 +21,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	const [isFileChanged, setIsFileChanged] = useState<boolean>(false);
 	const [isQueryChanged, setIsQueryChanged] = useState<boolean>(false);
 
+	const { workspace } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
 	const { closeFullscreen } = useContext(FullscreenContext)!;
 
@@ -39,7 +41,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		setActionType,
 		setAction,
 		saveAction,
-	} = useActionData(onClose, connection, providedActionType, providedAction, setIsSaveButtonLoading);
+	} = useActionData(onClose, connection, providedActionType, providedAction, setIsSaveButtonLoading, workspace);
 
 	if (isLoading) {
 		return (

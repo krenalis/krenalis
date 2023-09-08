@@ -7,6 +7,7 @@ import {
 	TransformedActionType,
 	TransformedAction,
 	TransformedMapping,
+	isIdentifierProperty,
 } from '../lib/helpers/transformedAction';
 import { AppContext } from '../context/providers/AppProvider';
 import * as variants from '../constants/variants';
@@ -22,13 +23,15 @@ import { UnprocessableError, NotFoundError } from '../lib/api/errors';
 import { Action, ActionToSet, ActionType, Mapping, MappingExpression, Transformation } from '../types/external/action';
 import { ActionSchemasResponse, ExecQueryResponse, RecordsResponse } from '../types/external/api';
 import { ObjectType } from '../types/external/types';
+import Workspace from '../types/external/workspace';
 
 const useActionData = (
 	onClose: () => void,
 	connection: TransformedConnection,
 	providedActionType: ActionType,
 	providedAction: Action,
-	setIsSaveButtonLoading: React.Dispatch<React.SetStateAction<boolean>>
+	setIsSaveButtonLoading: React.Dispatch<React.SetStateAction<boolean>>,
+	workspace: Workspace
 ) => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [action, setAction] = useState<TransformedAction>();
@@ -317,10 +320,16 @@ const useActionData = (
 
 		if (action.Transformation != null) {
 			inSchema = actionType.InputSchema;
-			outSchema = actionType.OutputSchema;
+			outSchema = { name: 'Object', properties: [] };
+			for (const property of actionType.OutputSchema.properties!) {
+				const isIdentifier = isIdentifierProperty(property.name, workspace.AnonymousIdentifiers.Priority);
+				if (!isIdentifier) {
+					outSchema.properties!.push(property);
+				}
+			}
 			transformation = {
 				In: actionType.InputSchema.properties!.map((p) => p.name),
-				Out: actionType.OutputSchema.properties!.map((p) => p.name),
+				Out: outSchema.properties!.map((p) => p.name),
 				Func: action.Transformation.Func.trim(),
 			};
 		}

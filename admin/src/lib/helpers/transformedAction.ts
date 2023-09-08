@@ -248,6 +248,26 @@ const computeActionTypeFields = (
 	return fields;
 };
 
+const isIdentifierProperty = (name: string, identifiers: string[]): boolean => {
+	if (identifiers.includes(name)) {
+		return true;
+	}
+	let isIdentifierParent = false;
+	for (const identifier of identifiers) {
+		if (identifier.includes('.')) {
+			const parent = identifier.split('.')[0];
+			if (name === parent) {
+				isIdentifierParent = true;
+				break;
+			}
+		}
+	}
+	if (isIdentifierParent) {
+		return true;
+	}
+	return false;
+};
+
 export {
 	SCHEDULE_PERIODS,
 	EXPORT_MODE_OPTIONS,
@@ -258,4 +278,5 @@ export {
 	TransformedMapping,
 	TransformedActionType,
 	TransformedAction,
+	isIdentifierProperty,
 };

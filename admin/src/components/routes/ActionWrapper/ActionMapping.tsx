@@ -2,7 +2,7 @@ import React, { useState, useRef, useContext, useEffect, forwardRef, ReactNode }
 import { createPortal } from 'react-dom';
 import { updateMappingProperty } from './Action.helpers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
-import { flattenSchema } from '../../../lib/helpers/transformedAction';
+import { flattenSchema, isIdentifierProperty } from '../../../lib/helpers/transformedAction';
 import { rawTransformationFunction } from './Action.constants';
 import AlertDialog from '../../shared/AlertDialog/AlertDialog';
 import { ComboBoxInput, ComboBoxList } from '../../shared/ComboBox/ComboBox';
@@ -107,21 +107,8 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 		const mappings: ReactNode[] = [];
 		for (const k in action.Mapping) {
 			// hide anonymous identifiers and their parent properties.
-			const identifiers = workspace.AnonymousIdentifiers.Priority;
-			if (identifiers.includes(k)) {
-				continue;
-			}
-			let isIdentifierParent = false;
-			for (const identifier of identifiers) {
-				if (identifier.includes('.')) {
-					const parent = identifier.split('.')[0];
-					if (k === parent) {
-						isIdentifierParent = true;
-						break;
-					}
-				}
-			}
-			if (isIdentifierParent) {
+			const isIdentifier = isIdentifierProperty(k, workspace.AnonymousIdentifiers.Priority);
+			if (isIdentifier) {
 				continue;
 			}
 
