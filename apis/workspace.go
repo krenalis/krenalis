@@ -497,20 +497,20 @@ func (this *Workspace) Connections() []*Connection {
 	return infos
 }
 
-// ConnectWarehouse connects the workspace to a data store, with the given
-// settings. It also creates the tables in the connected data store.
+// ConnectWarehouse connects the workspace to a data warehouse, with the given
+// settings. It also creates the tables in the connected data warehouse.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore, and it returns an errors.UnprocessableError error with code
 //   - AlreadyConnected, if the workspace is already connected to a data
-//     store.
+//     warehouse.
 //   - InvalidSettings, if the settings are not valid.
 //   - ConnectionFailed, if the connection fails.
 func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, settings []byte) error {
 	this.apis.mustBeOpen()
 	ws := this.workspace
 	if ws.Warehouse != nil {
-		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data store", ws.ID)
+		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.ID)
 	}
 	settings, err := this.account.apis.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
 	if err != nil {
@@ -544,7 +544,7 @@ func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, 
 				}
 				return err
 			}
-			return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data store", ws.ID)
+			return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.ID)
 		}
 		return tx.Notify(ctx, n)
 	})
@@ -572,16 +572,16 @@ func (this *Workspace) Delete(ctx context.Context) error {
 	return err
 }
 
-// DisconnectWarehouse disconnects the workspace from the data store.
+// DisconnectWarehouse disconnects the workspace from the data warehouse.
 //
 // If the workspace does not exist anymore, it returns an errors.NotFoundError
-// error. If the workspace is not connected to a data store, it returns an
+// error. If the workspace is not connected to a data warehouse, it returns an
 // errors.UnprocessableError error with code NotConnected.
 func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
 	this.apis.mustBeOpen()
 	ws := this.workspace
 	if ws.Warehouse == nil {
-		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", ws.ID)
+		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
 	}
 	n := state.SetWarehouse{
 		Workspace: ws.ID,
@@ -597,7 +597,7 @@ func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
 			return err
 		}
 		if typ == nil {
-			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", n.Workspace)
+			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", n.Workspace)
 		}
 		_, err = tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = NULL, warehouse_settings = '', schemas = '' WHERE id = $1", n.Workspace)
 		if err != nil {
@@ -710,15 +710,15 @@ func (this *Workspace) OAuthToken(ctx context.Context, authorizationCode, redire
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist,
 // and it returns an errors.UnprocessableError error with code
-//   - NotConnected, if the workspace is not connected to a data store.
-//   - WarehouseFailed, if the connection to the data store failed.
+//   - NotConnected, if the workspace is not connected to a data warehouse.
+//   - WarehouseFailed, if the connection to the data warehouse failed.
 //   - InvalidSchemaTable, if a table of a schema is not valid.
 func (this *Workspace) ReloadSchemas(ctx context.Context) error {
 
 	this.apis.mustBeOpen()
 
 	if this.store == nil {
-		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data store", this.workspace.ID)
+		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", this.workspace.ID)
 	}
 
 	usersSchema, groupsSchema, err := this.store.Schemas(ctx)
