@@ -25,7 +25,7 @@ While user properties are stored as:
 
 ### Arrays
 
-Let's suppose that we have an user with GID 12 with a single property "phone_numbers", which holds two different values, `333` and `444`. That user is stored in Redis as:
+Let's suppose that we have a user with GID 12 with a single property "phone_numbers", which holds two different values, `333` and `444`. That user is stored in Redis as:
 
 | Key                        | Value                                     | Type   |
 | -------------------------- | ----------------------------------------- | ------ |
