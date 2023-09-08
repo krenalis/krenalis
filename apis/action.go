@@ -960,14 +960,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	return nil
 }
 
-// setSettingsFunc returns a connector.SetSettingsFunc function that sets the
-// settings for the action's connection.
-func (this *Action) setSettingsFunc() _connector.SetSettingsFunc {
-	return func(ctx context.Context, settings []byte) error {
-		return setSettings(ctx, this.apis.db, this.action.Connection().ID, settings)
-	}
-}
-
 // allowsActionTarget reports whether a connection with the given connector type
 // and role supports an action with the given target.
 //
