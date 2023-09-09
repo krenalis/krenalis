@@ -916,9 +916,10 @@ func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
 
 	for i, e := range events {
 
-		traits.Reset()
-
 		var err error
+
+		// Set traits.
+		traits.Reset()
 		if *e.Type == "identify" || *e.Type == "group" {
 			err = traitsEnc.Encode(e.Traits)
 		} else {
@@ -928,6 +929,9 @@ func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
 			log.Printf("[error] cannot marshal event: %s", err)
 			continue
 		}
+		traits.Truncate(traits.Len() - 1) // remove the new line added by json.Encode
+
+		// Set properties.
 		properties.Reset()
 		if e.Properties == nil {
 			properties.WriteString("{}")
@@ -937,7 +941,10 @@ func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
 				log.Printf("[error] cannot marshal event: %s", err)
 				continue
 			}
+			properties.Truncate(properties.Len() - 1) // remove the new line added by json.Encode
 		}
+
+		// Set groupId.
 		groupId := e.GroupId
 		if *e.Type != "group" {
 			groupId = e.Context.GroupId
