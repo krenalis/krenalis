@@ -20,7 +20,7 @@ import (
 type MergeTable struct {
 	Name        string           // Name of the table
 	Columns     []types.Property // Columns to merge
-	PrimaryKeys []string         // Names of the primary keys
+	PrimaryKeys []types.Property // Primary keys
 }
 
 // Warehouse is the interface implemented by data warehouses.

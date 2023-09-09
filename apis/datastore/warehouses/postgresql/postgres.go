@@ -219,7 +219,9 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	// Copy the rows to delete into the temporary table.
 	if len(deleted) > 0 {
 		columnNames := make([]string, len(table.PrimaryKeys)+1)
-		copy(columnNames, table.PrimaryKeys)
+		for i, c := range table.PrimaryKeys {
+			columnNames[i] = c.Name
+		}
 		columnNames[len(columnNames)-1] = "$deleted"
 		rowSrc := newCopyForDeleteFrom(len(table.PrimaryKeys), deleted)
 		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, rowSrc)
@@ -240,9 +242,9 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 			b.WriteByte(',')
 		}
 		b.WriteString(`d."`)
-		b.WriteString(key)
+		b.WriteString(key.Name)
 		b.WriteString(`" = s."`)
-		b.WriteString(key)
+		b.WriteString(key.Name)
 		b.WriteByte('"')
 	}
 	if len(rows) > 0 {
@@ -251,7 +253,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	Set:
 		for _, c := range table.Columns {
 			for _, key := range table.PrimaryKeys {
-				if c.Name == key {
+				if c.Name == key.Name {
 					continue Set
 				}
 			}

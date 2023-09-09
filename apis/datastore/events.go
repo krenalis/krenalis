@@ -87,7 +87,9 @@ var eventsMergeTable = warehouses.MergeTable{
 		{Name: "type", Type: types.Text().WithEnum([]string{"alias", "identify", "group", "page", "screen", "track"})},
 		{Name: "user_id", Type: types.Text()},
 	},
-	PrimaryKeys: []string{"message_id"},
+	PrimaryKeys: []types.Property{
+		{Name: "message_id", Type: types.Text()},
+	},
 }
 
 // flushEvents flushes a batch of events to the data warehouse.
