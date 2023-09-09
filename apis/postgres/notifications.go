@@ -58,8 +58,8 @@ func notify(ctx context.Context, conn Connection, payload any) error {
 	if err != nil {
 		return err
 	}
+	b.Truncate(b.Len() - 1) // remove new line added by Encode.
 	s := b.String()
-	s = s[:len(s)-1] // remove new line added by Encode.
 	s = escape(s)
 	if len(s) > 8000-maxIDLen-2 {
 		if db, ok := conn.(*DB); ok {
