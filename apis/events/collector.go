@@ -929,10 +929,14 @@ func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
 			continue
 		}
 		properties.Reset()
-		err = propertiesEnc.Encode(e.Properties)
-		if err != nil {
-			log.Printf("[error] cannot marshal event: %s", err)
-			continue
+		if e.Properties == nil {
+			properties.WriteString("{}")
+		} else {
+			err = propertiesEnc.Encode(e.Properties)
+			if err != nil {
+				log.Printf("[error] cannot marshal event: %s", err)
+				continue
+			}
 		}
 		groupId := e.GroupId
 		if *e.Type != "group" {
