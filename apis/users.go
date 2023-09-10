@@ -10,6 +10,7 @@ package apis
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -19,6 +20,8 @@ import (
 	"chichi/apis/errors"
 	"chichi/apis/state"
 	"chichi/connector/types"
+
+	"github.com/open2b/nuts/decimal"
 )
 
 // User represents a user.
@@ -221,22 +224,34 @@ func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
 
 	this.apis.mustBeOpen()
 
+	ws := this.workspace
+
 	// Verify that the workspace has a data warehouse.
 	if this.store == nil {
-		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
+		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
+	}
+
+	// Read the schema.
+	schema, ok := ws.Schemas["events"]
+	if !ok {
+		return nil, errors.Unprocessable(NoUsersSchema, "workspace %d does not have events schema", ws.ID)
+	}
+
+	gid, ok := schema.Property("gid")
+	if !ok {
+		return nil, fmt.Errorf("events schema has no property 'gid'")
+	}
+	where := whereExpr(gid, this.id)
+	if where == nil {
+		return nil, fmt.Errorf("property 'gid' of the events schema has an unexpected type %s", gid.Type.PhysicalType())
 	}
 
 	// Read the events.
-	where := warehouses.NewBaseExpr(
-		warehouses.ExprColumn{Name: "gid", Type: types.PtInt},
-		warehouses.OperatorEqual,
-		this.id,
-	)
 	rows, err := this.store.Events(ctx, eventColumns, where, types.Property{}, 0, limit)
 	if err != nil {
 		if err2, ok := err.(*datastore.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
-			log.Printf("[error] cannot get a user from the data warehouse of the workspace %d: %s", this.workspace.ID, err)
+			log.Printf("[error] cannot get a user from the data warehouse of the workspace %d: %s", ws.ID, err)
 			err = errors.Unprocessable(WarehouseFailed, "warehouse connection is failed: %w", err2.Err)
 		}
 		return nil, err
@@ -421,19 +436,21 @@ func (this *User) Traits(ctx context.Context) (map[string]any, error) {
 	}
 
 	// Read the schema.
-	var properties []types.Property
-	if typ, ok := ws.Schemas["users"]; ok {
-		properties = typ.Properties()
-	} else {
-		return nil, errors.Unprocessable(NoUsersSchema, "workspace %d does not have users schema", this.workspace.ID)
+	schema, ok := ws.Schemas["users"]
+	if !ok {
+		return nil, errors.Unprocessable(NoUsersSchema, "workspace %d does not have users schema", ws.ID)
 	}
 
-	where := warehouses.NewBaseExpr(
-		warehouses.ExprColumn{Name: "id", Type: types.PtInt},
-		warehouses.OperatorEqual,
-		this.id,
-	)
-	rows, err := this.store.Users(ctx, properties, where, types.Property{}, 0, 1)
+	id, ok := schema.Property("id")
+	if !ok {
+		return nil, fmt.Errorf("users schema has no property 'id'")
+	}
+	where := whereExpr(id, this.id)
+	if where == nil {
+		return nil, fmt.Errorf("property 'id' of the users schema has an unexpected type %s", id.Type.PhysicalType())
+	}
+
+	rows, err := this.store.Users(ctx, schema.Properties(), where, types.Property{}, 0, 1)
 	if err != nil {
 		if err2, ok := err.(*datastore.Error); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
@@ -449,4 +466,21 @@ func (this *User) Traits(ctx context.Context) (map[string]any, error) {
 	traits := rows[0]
 
 	return traits, nil
+}
+
+func whereExpr(property types.Property, value int) *warehouses.BaseExpr {
+	where := warehouses.NewBaseExpr(
+		warehouses.ExprColumn{Name: property.Name, Type: property.Type.PhysicalType()},
+		warehouses.OperatorEqual,
+		nil,
+	)
+	switch where.Column.Type {
+	case types.PtInt:
+		where.Value = value
+	case types.PtDecimal:
+		where.Value = decimal.Int(value)
+	default:
+		return nil
+	}
+	return where
 }

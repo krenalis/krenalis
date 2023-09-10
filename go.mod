@@ -72,6 +72,7 @@ require (
 	github.com/relvacode/iso8601 v1.3.0
 	github.com/segmentio/ksuid v1.0.4
 	github.com/shopspring/decimal v1.3.1
+	github.com/snowflakedb/gosnowflake v1.6.24
 	github.com/tetratelabs/wazero v1.0.2
 	go.opentelemetry.io/otel v1.16.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.39.0
@@ -156,7 +157,6 @@ require (
 	github.com/richardlehane/msoleps v1.0.3 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
-	github.com/snowflakedb/gosnowflake v1.6.24 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/twmb/franz-go v1.14.2 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.6.1 // indirect

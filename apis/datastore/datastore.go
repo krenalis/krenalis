@@ -17,6 +17,7 @@ import (
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/datastore/warehouses/clickhouse"
 	"chichi/apis/datastore/warehouses/postgresql"
+	"chichi/apis/datastore/warehouses/snowflake"
 	"chichi/apis/state"
 
 	"github.com/redis/go-redis/v9"
@@ -180,12 +181,14 @@ func (ds *Datastore) setStore(ws *state.Workspace) {
 // It returns an error if typ or settings are not valid.
 func openWarehouse(typ state.WarehouseType, settings []byte) (warehouses.Warehouse, error) {
 	switch typ {
-	case state.BigQuery, state.Redshift, state.Snowflake:
+	case state.BigQuery, state.Redshift:
 		return nil, fmt.Errorf("warehouse type %s is not yet supported", typ)
-	case state.PostgreSQL:
-		return postgresql.Open(settings)
 	case state.ClickHouse:
 		return clickhouse.Open(settings)
+	case state.PostgreSQL:
+		return postgresql.Open(settings)
+	case state.Snowflake:
+		return snowflake.Open(settings)
 	}
 	return nil, fmt.Errorf("warehouse type %d is not valid", typ)
 }

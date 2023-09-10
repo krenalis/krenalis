@@ -26,6 +26,7 @@ import (
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/datastore/warehouses/clickhouse"
 	"chichi/apis/datastore/warehouses/postgresql"
+	"chichi/apis/datastore/warehouses/snowflake"
 	"chichi/apis/errors"
 	"chichi/apis/events"
 	"chichi/apis/mappings/mapexp"
@@ -744,8 +745,8 @@ func (this *Workspace) ReloadSchemas(ctx context.Context) error {
 		if idIndex == -1 {
 			return errors.Unprocessable(InvalidSchemaTable, "'%s' schema has no 'id' property", table)
 		}
-		if p := properties[idIndex]; p.Type.PhysicalType() != types.PtInt {
-			return errors.Unprocessable(InvalidSchemaTable, "property '%s.id' does not have type Int", table)
+		if p := properties[idIndex]; p.Type.PhysicalType() != types.PtInt && p.Type.PhysicalType() != types.PtDecimal {
+			return errors.Unprocessable(InvalidSchemaTable, "property '%s.id' does not have types Int or Decimal", table)
 		} else if p.Nullable {
 			return errors.Unprocessable(InvalidSchemaTable, "property '%s.id' cannot be nullable", table)
 		}
@@ -1136,12 +1137,14 @@ func (this *Workspace) Users(ctx context.Context, properties []string, order str
 // It returns an error if typ or settings are not valid.
 func openWarehouse(typ WarehouseType, settings []byte) (warehouses.Warehouse, error) {
 	switch typ {
-	case BigQuery, Redshift, Snowflake:
+	case BigQuery, Redshift:
 		return nil, fmt.Errorf("store type %s is not yet supported", typ)
-	case PostgreSQL:
-		return postgresql.Open(settings)
 	case ClickHouse:
 		return clickhouse.Open(settings)
+	case PostgreSQL:
+		return postgresql.Open(settings)
+	case Snowflake:
+		return snowflake.Open(settings)
 	}
 	return nil, fmt.Errorf("store type %d is not valid", typ)
 }

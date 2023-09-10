@@ -21,7 +21,7 @@ var workspaceConnectWarehouseCmd = &cobra.Command{
 	Use:   "connect-warehouse <type> <file>",
 	Short: "Connect the workspace to a data warehouse",
 	Long: "Connect the workspace to a data warehouse.\n\n" +
-		"<type> is the data warehouse type and can be ClickHouse or PostgreSQL,\n" +
+		"<type> is the data warehouse type and can be ClickHouse, PostgreSQL or Snowflake,\n" +
 		"<file> is a JSON file containing the data warehouse settings",
 	Args: cobra.MatchAll(cobra.ExactArgs(2), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
