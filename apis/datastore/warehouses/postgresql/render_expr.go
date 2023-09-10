@@ -8,8 +8,9 @@
 package postgresql
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -97,41 +98,32 @@ func renderExpr(expr warehouses.Expr) (string, error) {
 		switch pt := baseExpr.Column.Type; pt {
 		case
 			types.PtBoolean:
-			b, ok := baseExpr.Value.(bool)
+			v, ok := baseExpr.Value.(bool)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type bool, got %T", baseExpr.Value)
 			}
-			quoteValue(&s, b)
+			if v {
+				s.WriteString("TRUE")
+			} else {
+				s.WriteString("FALSE")
+			}
 		case
 			types.PtInt,
-			types.PtInt8,
 			types.PtInt16,
-			types.PtInt24,
 			types.PtInt64:
-			i, ok := baseExpr.Value.(int)
+			v, ok := baseExpr.Value.(int)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type int, got %T", baseExpr.Value)
 			}
-			quoteValue(&s, i)
-		case
-			types.PtUInt,
-			types.PtUInt8,
-			types.PtUInt16,
-			types.PtUInt24,
-			types.PtUInt64:
-			u, ok := baseExpr.Value.(uint)
-			if !ok {
-				return "", fmt.Errorf("expecting value of type uint, got %T", baseExpr.Value)
-			}
-			quoteValue(&s, u)
+			s.WriteString(strconv.Itoa(v))
 		case
 			types.PtFloat,
 			types.PtFloat32:
-			f, ok := baseExpr.Value.(float64)
+			v, ok := baseExpr.Value.(float64)
 			if !ok {
 				return "", fmt.Errorf("expecting value of type float64, got %T", baseExpr.Value)
 			}
-			quoteValue(&s, f)
+			s.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
 		case types.PtDecimal:
 			d, ok := baseExpr.Value.(decimal.Dec)
 			if !ok {
@@ -139,46 +131,46 @@ func renderExpr(expr warehouses.Expr) (string, error) {
 			}
 			s.WriteString(d.String())
 		case types.PtDateTime:
-			t, ok := baseExpr.Value.(time.Time)
+			v, ok := baseExpr.Value.(time.Time)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type connector.DateTime, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expecting value of type time.Time, got %T", baseExpr.Value)
 			}
-			quoteValue(&s, t.Format("2006-01-02 15:04:05.999999"))
+			s.WriteByte('\'')
+			s.WriteString(v.Format("2006-01-02 15:04:05.999999"))
+			s.WriteByte('\'')
 		case types.PtDate:
-			t, ok := baseExpr.Value.(time.Time)
+			v, ok := baseExpr.Value.(time.Time)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type connector.Date, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expecting value of type time.Time, got %T", baseExpr.Value)
 			}
-			quoteValue(&s, t.String())
+			s.WriteByte('\'')
+			s.WriteString(v.Format(time.DateTime))
+			s.WriteByte('\'')
 		case types.PtTime:
-			t, ok := baseExpr.Value.(time.Time)
+			v, ok := baseExpr.Value.(time.Time)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type connector.Time, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expecting value of type time.Time, got %T", baseExpr.Value)
 			}
-			quoteValue(&s, t.Format("15:04:05.999999"))
-		case types.PtYear:
-			year, ok := baseExpr.Value.(int)
-			if !ok {
-				return "", fmt.Errorf("expecting value of type int, got %T", baseExpr.Value)
-			}
-			quoteValue(&s, year)
+			s.WriteByte('\'')
+			s.WriteString(v.Format("15:04:05.999999"))
+			s.WriteByte('\'')
 		case types.PtUUID, types.PtInet, types.PtText:
-			u, ok := baseExpr.Value.(string)
+			v, ok := baseExpr.Value.(string)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type uuid.UUID, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expecting value of type string, got %T", baseExpr.Value)
 			}
-			quoteValue(&s, u)
+			quoteString(&s, v)
 		case types.PtJSON:
-			j, ok := baseExpr.Value.(json.RawMessage)
-			if !ok {
-				return "", fmt.Errorf("expecting value of type json.RawMessage, got %T", baseExpr.Value)
-			}
-			quoteValue(&s, string(j))
+			return "", errors.New("cannot apply operators on JSON type")
+		case types.PtArray:
+			return "", errors.New("cannot apply operators on Array type")
 		default:
 			return "", fmt.Errorf("unexpected column with type %q", pt)
 		}
+
 	case warehouses.OperatorIsNull:
 		s.WriteString("IS NULL")
+
 	case warehouses.OperatorIsNotNull:
 		s.WriteString("IS NOT NULL")
 	default:
@@ -187,4 +179,31 @@ func renderExpr(expr warehouses.Expr) (string, error) {
 
 	return s.String(), nil
 
+}
+
+// quoteString quotes s as a string and writes it into b.
+func quoteString(b *strings.Builder, s string) {
+	if s == "" {
+		b.WriteString("''")
+		return
+	}
+	b.WriteByte('\'')
+	for {
+		p := strings.IndexAny(s, "\x00'")
+		if p == -1 {
+			p = len(s)
+		}
+		b.WriteString(s[:p])
+		if p == len(s) {
+			break
+		}
+		if s[p] == '\'' {
+			b.WriteByte('\'')
+		}
+		s = s[p+1:]
+		if len(s) == 0 {
+			break
+		}
+	}
+	b.WriteByte('\'')
 }

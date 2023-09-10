@@ -17,11 +17,11 @@ import (
 
 func Test_renderExpr(t *testing.T) {
 	var (
-		id          = wh.ExprColumn{Name: "id", Type: types.PtText}
-		count       = wh.ExprColumn{Name: "count", Type: types.PtInt}
-		timestamp   = wh.ExprColumn{Name: "timestamp", Type: types.PtDateTime}
-		ipAddr      = wh.ExprColumn{Name: "ip_addr", Type: types.PtInet}
-		installYear = wh.ExprColumn{Name: "install_year", Type: types.PtYear}
+		id        = wh.ExprColumn{Name: "id", Type: types.PtText}
+		count     = wh.ExprColumn{Name: "count", Type: types.PtInt}
+		timestamp = wh.ExprColumn{Name: "timestamp", Type: types.PtDateTime}
+		ipAddr    = wh.ExprColumn{Name: "ip_addr", Type: types.PtInet}
+		weight    = wh.ExprColumn{Name: "weight", Type: types.PtFloat}
 	)
 	cases := []struct {
 		expr    wh.Expr
@@ -37,8 +37,8 @@ func Test_renderExpr(t *testing.T) {
 			query: `"ip_addr" = '127.0.0.1'`,
 		},
 		{
-			expr:  wh.NewBaseExpr(installYear, wh.OperatorGreaterEqual, 2002),
-			query: `"install_year" >= 2002`,
+			expr:  wh.NewBaseExpr(weight, wh.OperatorGreaterEqual, 6.5),
+			query: `"weight" >= 6.5`,
 		},
 		{
 			expr:  wh.NewBaseExpr(id, wh.OperatorIsNull, nil),

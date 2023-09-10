@@ -8,14 +8,12 @@
 package postgresql
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
-	"net/netip"
 	"strconv"
 	"strings"
 	"sync"
@@ -26,7 +24,6 @@ import (
 	"chichi/apis/postgres"
 	"chichi/connector/types"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -683,108 +680,4 @@ func (c *copyForDeleteFrom) Values() ([]any, error) {
 
 func (c *copyForDeleteFrom) Err() error {
 	return nil
-}
-
-// quoteString quotes s as a string and writes it into b.
-func quoteString(b *strings.Builder, s string) {
-	if s == "" {
-		b.WriteString("''")
-		return
-	}
-	b.WriteByte('\'')
-	for {
-		p := strings.IndexAny(s, "\x00'")
-		if p == -1 {
-			p = len(s)
-		}
-		b.WriteString(s[:p])
-		if p == len(s) {
-			break
-		}
-		if s[p] == '\'' {
-			b.WriteByte('\'')
-		}
-		s = s[p+1:]
-		if len(s) == 0 {
-			break
-		}
-	}
-	b.WriteByte('\'')
-}
-
-// quoteBytes quotes s as a string and writes it into b.
-func quoteBytes(b *strings.Builder, s []byte) {
-	if len(s) == 0 {
-		b.WriteString("''")
-		return
-	}
-	b.WriteByte('\'')
-	for {
-		p := bytes.IndexAny(s, "\x00'")
-		if p == -1 {
-			p = len(s)
-		}
-		b.Write(s[:p])
-		if p == len(s) {
-			break
-		}
-		if s[p] == '\'' {
-			b.WriteByte('\'')
-		}
-		s = s[p+1:]
-		if len(s) == 0 {
-			break
-		}
-	}
-	b.WriteByte('\'')
-}
-
-// quoteValue quotes value and writes it into b.
-func quoteValue(b *strings.Builder, value any) {
-	if value == nil {
-		b.WriteString("NULL")
-		return
-	}
-	switch v := value.(type) {
-	case bool:
-		if v {
-			b.WriteString("TRUE")
-		} else {
-			b.WriteString("FALSE")
-		}
-	case int:
-		b.WriteString(strconv.FormatInt(int64(v), 10))
-	case int16:
-		b.WriteString(strconv.FormatInt(int64(v), 10))
-	case int32:
-		b.WriteString(strconv.FormatInt(int64(v), 10))
-	case int64:
-		b.WriteString(strconv.FormatInt(v, 10))
-	case uint:
-		b.WriteString(strconv.FormatUint(uint64(v), 10))
-	case uint16:
-		b.WriteString(strconv.FormatUint(uint64(v), 10))
-	case uint32:
-		b.WriteString(strconv.FormatUint(uint64(v), 10))
-	case uint64:
-		b.WriteString(strconv.FormatUint(v, 10))
-	case float32:
-		b.WriteString(strconv.FormatFloat(float64(v), 'G', -1, 32))
-	case float64:
-		b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
-	case netip.Addr:
-		quoteString(b, v.String())
-	case string:
-		quoteString(b, v)
-	case []byte:
-		quoteBytes(b, v)
-	case time.Time:
-		b.WriteByte('\'')
-		b.WriteString(v.Format("2006-01-02 15:04:05.999999"))
-		b.WriteByte('\'')
-	case uuid.UUID:
-		b.WriteString(v.String())
-	default:
-		panic(fmt.Errorf("unsupported type '%T'", v))
-	}
 }
