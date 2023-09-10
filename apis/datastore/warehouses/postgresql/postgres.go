@@ -345,7 +345,7 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns [
 			query.WriteString(", ")
 		}
 		if !types.IsValidPropertyName(c.Name) {
-			panic(fmt.Sprintf("invalid property name: %q", c.Name))
+			return nil, fmt.Errorf("column name %q is not a valid property name", c.Name)
 		}
 		switch c.Type.PhysicalType() {
 		default:
@@ -373,7 +373,7 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns [
 
 	if order.Name != "" {
 		if !types.IsValidPropertyName(order.Name) {
-			panic(fmt.Sprintf("invalid property name: %q", order.Name))
+			return nil, fmt.Errorf("column name %q is not a valid property name", order.Name)
 		}
 		query.WriteString(" ORDER BY ")
 		query.WriteString(order.Name)
