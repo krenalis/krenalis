@@ -117,7 +117,7 @@ func (warehouse *PostgreSQL) DestinationUser(ctx context.Context, action int, pr
 	}
 	rows, err := db.Query(ctx, `SELECT "user" FROM destinations_users WHERE action = $1 AND property = $2`, action, property)
 	if err != nil {
-		return "", false, err
+		return "", false, warehouses.WrapError(err)
 	}
 	defer rows.Close()
 	var externalID string
@@ -126,16 +126,16 @@ func (warehouse *PostgreSQL) DestinationUser(ctx context.Context, action int, pr
 			// TODO(Gianluca): improve the handling of this error. This happens
 			// when a property on the external app has the same value for more
 			// than one user.
-			return "", false, fmt.Errorf("too many users matching when using property")
+			return "", false, warehouses.WrapError(fmt.Errorf("too many users matching when using property"))
 		}
 		err := rows.Scan(&externalID)
 		if err != nil {
-			return "", false, err
+			return "", false, warehouses.WrapError(err)
 		}
 	}
 	rows.Close()
 	if rows.Err() != nil {
-		return "", false, err
+		return "", false, warehouses.WrapError(err)
 	}
 	return externalID, externalID != "", nil
 }
@@ -307,7 +307,8 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return db.Ping(ctx)
+	err = db.Ping(ctx)
+	return warehouses.WrapError(err)
 }
 
 // QueryRow executes a query that should return at most one row.
@@ -422,7 +423,7 @@ func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, action int,
 		"VALUES ($1, $2, $3)\n"+
 		"ON CONFLICT (action, \"user\") DO UPDATE SET property = $3",
 		action, externalUserID, externalProperty)
-	return err
+	return warehouses.WrapError(err)
 }
 
 // Settings returns the data warehouse settings.

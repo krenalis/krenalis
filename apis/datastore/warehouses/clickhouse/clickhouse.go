@@ -135,7 +135,8 @@ func (warehouse *ClickHouse) Ping(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return conn.Ping(ctx)
+	err = conn.Ping(ctx)
+	return warehouses.WrapError(err)
 }
 
 // SetDestinationUser sets the destination user relative to the action, with the
