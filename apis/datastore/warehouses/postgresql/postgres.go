@@ -319,6 +319,96 @@ func (warehouse *PostgreSQL) QueryRow(ctx context.Context, query string, args ..
 	return warehouses.Row{Row: row}
 }
 
+// Select returns the rows from the given table that satisfies the where
+// condition with only the given columns, ordered by order if order is not the
+// zero Property, and in range [first,first+limit] with first >= 0 and
+// 0 < limit <= 1000.
+//
+// If a query to the warehouse fails, it returns an Error value.
+// If an argument is not valid, it panics.
+func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns []types.Property, where warehouses.Where, order types.Property, first, limit int) ([][]any, error) {
+
+	if !warehouses.IsValidIdentifier(table) {
+		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
+	}
+
+	db, err := warehouse.connection()
+	if err != nil {
+		return nil, err
+	}
+
+	// Build the query.
+	var query strings.Builder
+	query.WriteString(`SELECT `)
+	for i, c := range columns {
+		if i > 0 {
+			query.WriteString(", ")
+		}
+		if !types.IsValidPropertyName(c.Name) {
+			panic(fmt.Sprintf("invalid property name: %q", c.Name))
+		}
+		switch c.Type.PhysicalType() {
+		default:
+			query.WriteByte('"')
+			query.WriteString(c.Name)
+			query.WriteByte('"')
+		case types.PtInet:
+			query.WriteString(`host("`)
+			query.WriteString(c.Name)
+			query.WriteString(`")`)
+		}
+	}
+	query.WriteString(` FROM "`)
+	query.WriteString(table)
+	query.WriteByte('"')
+
+	if where != nil {
+		query.WriteString(` WHERE `)
+		expr, err := renderExpr(where)
+		if err != nil {
+			return nil, fmt.Errorf("cannot build WHERE expression: %s", err)
+		}
+		query.WriteString(expr)
+	}
+
+	if order.Name != "" {
+		if !types.IsValidPropertyName(order.Name) {
+			panic(fmt.Sprintf("invalid property name: %q", order.Name))
+		}
+		query.WriteString(" ORDER BY ")
+		query.WriteString(order.Name)
+	}
+	query.WriteString(" LIMIT ")
+	query.WriteString(strconv.Itoa(limit))
+	if first > 0 {
+		query.WriteString(" OFFSET ")
+		query.WriteString(strconv.Itoa(first))
+	}
+
+	// Execute the query.
+	rawRows, err := db.Query(ctx, query.String())
+	if err != nil {
+		return nil, warehouses.WrapError(err)
+	}
+	var rows [][]any
+	values := newScanValues(columns, &rows)
+	for rawRows.Next() {
+		if err = rawRows.Scan(values...); err != nil {
+			rawRows.Close()
+			return nil, warehouses.WrapError(err)
+		}
+	}
+	if err = rawRows.Err(); err != nil {
+		return nil, warehouses.WrapError(err)
+	}
+	rawRows.Close()
+	if rows == nil {
+		rows = [][]any{}
+	}
+
+	return rows, nil
+}
+
 // SetDestinationUser sets the destination user relative to the action, with the
 // given external user ID and external property.
 func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
@@ -522,96 +612,6 @@ type pgTypeInfo struct {
 	precision  *string
 	radix      *string
 	scale      *string
-}
-
-// Select returns the rows from the given table that satisfies the where
-// condition with only the given columns, ordered by order if order is not the
-// zero Property, and in range [first,first+limit] with first >= 0 and
-// 0 < limit <= 1000.
-//
-// If a query to the warehouse fails, it returns an Error value.
-// If an argument is not valid, it panics.
-func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns []types.Property, where warehouses.Where, order types.Property, first, limit int) ([][]any, error) {
-
-	if !warehouses.IsValidIdentifier(table) {
-		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
-	}
-
-	db, err := warehouse.connection()
-	if err != nil {
-		return nil, err
-	}
-
-	// Build the query.
-	var query strings.Builder
-	query.WriteString(`SELECT `)
-	for i, c := range columns {
-		if i > 0 {
-			query.WriteString(", ")
-		}
-		if !types.IsValidPropertyName(c.Name) {
-			panic(fmt.Sprintf("invalid property name: %q", c.Name))
-		}
-		switch c.Type.PhysicalType() {
-		default:
-			query.WriteByte('"')
-			query.WriteString(c.Name)
-			query.WriteByte('"')
-		case types.PtInet:
-			query.WriteString(`host("`)
-			query.WriteString(c.Name)
-			query.WriteString(`")`)
-		}
-	}
-	query.WriteString(` FROM "`)
-	query.WriteString(table)
-	query.WriteByte('"')
-
-	if where != nil {
-		query.WriteString(` WHERE `)
-		expr, err := renderExpr(where)
-		if err != nil {
-			return nil, fmt.Errorf("cannot build WHERE expression: %s", err)
-		}
-		query.WriteString(expr)
-	}
-
-	if order.Name != "" {
-		if !types.IsValidPropertyName(order.Name) {
-			panic(fmt.Sprintf("invalid property name: %q", order.Name))
-		}
-		query.WriteString(" ORDER BY ")
-		query.WriteString(order.Name)
-	}
-	query.WriteString(" LIMIT ")
-	query.WriteString(strconv.Itoa(limit))
-	if first > 0 {
-		query.WriteString(" OFFSET ")
-		query.WriteString(strconv.Itoa(first))
-	}
-
-	// Execute the query.
-	rawRows, err := db.Query(ctx, query.String())
-	if err != nil {
-		return nil, warehouses.WrapError(err)
-	}
-	var rows [][]any
-	values := newScanValues(columns, &rows)
-	for rawRows.Next() {
-		if err = rawRows.Scan(values...); err != nil {
-			rawRows.Close()
-			return nil, warehouses.WrapError(err)
-		}
-	}
-	if err = rawRows.Err(); err != nil {
-		return nil, warehouses.WrapError(err)
-	}
-	rawRows.Close()
-	if rows == nil {
-		rows = [][]any{}
-	}
-
-	return rows, nil
 }
 
 // connection returns the database connection.
