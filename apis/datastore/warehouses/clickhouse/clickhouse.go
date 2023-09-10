@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"net/netip"
 	"strconv"
@@ -175,6 +174,10 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 	var tables []*warehouses.Table
 
 	rows, err := conn.Query(ctx, query)
+	if err != nil {
+		return nil, warehouses.WrapError(err)
+	}
+	defer rows.Close()
 	for rows.Next() {
 		var tableName, columnName, typ, comment string
 		if err = rows.Scan(&tableName, &columnName, &typ, &comment); err != nil {
@@ -196,6 +199,9 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 			tables = append(tables, table)
 		}
 		table.Columns = append(table.Columns, column)
+	}
+	if err = rows.Close(); err != nil {
+		return nil, warehouses.WrapError(err)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, warehouses.WrapError(err)
@@ -269,20 +275,19 @@ func (warehouse *ClickHouse) Select(ctx context.Context, table string, columns [
 	if err != nil {
 		return nil, warehouses.WrapError(err)
 	}
+	defer rawRows.Close()
 	var rows [][]any
 	values := newScanValues(columns, &rows)
 	for rawRows.Next() {
 		if err = rawRows.Scan(values...); err != nil {
-			_ = rawRows.Close()
 			return nil, warehouses.WrapError(err)
 		}
 	}
-	if err = rawRows.Err(); err != nil {
+	if err = rawRows.Close(); err != nil {
 		return nil, warehouses.WrapError(err)
 	}
-	err = rawRows.Close()
-	if err != nil {
-		log.Printf("[error] cannot close rows: %s", err)
+	if err = rawRows.Err(); err != nil {
+		return nil, warehouses.WrapError(err)
 	}
 	if rows == nil {
 		rows = [][]any{}

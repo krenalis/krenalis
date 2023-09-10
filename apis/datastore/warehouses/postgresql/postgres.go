@@ -119,6 +119,7 @@ func (warehouse *PostgreSQL) DestinationUser(ctx context.Context, action int, pr
 	if err != nil {
 		return "", false, err
 	}
+	defer rows.Close()
 	var externalID string
 	for rows.Next() {
 		if externalID != "" {
@@ -132,6 +133,7 @@ func (warehouse *PostgreSQL) DestinationUser(ctx context.Context, action int, pr
 			return "", false, err
 		}
 	}
+	rows.Close()
 	if rows.Err() != nil {
 		return "", false, err
 	}
@@ -390,18 +392,18 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns [
 	if err != nil {
 		return nil, warehouses.WrapError(err)
 	}
+	defer rawRows.Close()
 	var rows [][]any
 	values := newScanValues(columns, &rows)
 	for rawRows.Next() {
 		if err = rawRows.Scan(values...); err != nil {
-			rawRows.Close()
 			return nil, warehouses.WrapError(err)
 		}
 	}
+	rawRows.Close()
 	if err = rawRows.Err(); err != nil {
 		return nil, warehouses.WrapError(err)
 	}
-	rawRows.Close()
 	if rows == nil {
 		rows = [][]any{}
 	}
@@ -451,27 +453,25 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 		if err != nil {
 			return err
 		}
+		defer rows.Close()
 		rawEnums := map[string][]string{}
 		for rows.Next() {
 			var typName, enumLabel string
 			if err = rows.Scan(&typName, &enumLabel); err != nil {
-				rows.Close()
 				return err
 			}
 			if typName == "" {
-				rows.Close()
 				return errors.New("invalid empty enum name")
 			}
 			if enumLabel == "" {
-				rows.Close()
 				return fmt.Errorf("empty enum label for type %q", typName)
 			}
 			if !utf8.ValidString(enumLabel) {
-				rows.Close()
 				return fmt.Errorf("not-valid UTF-8 encoded enum label for type %q", typName)
 			}
 			rawEnums[typName] = append(rawEnums[typName], enumLabel)
 		}
+		rows.Close()
 		enums := map[string]types.Type{}
 		for name, values := range rawEnums {
 			enums[name] = types.Text().WithEnum(values)
@@ -490,6 +490,7 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 		if err != nil {
 			return err
 		}
+		defer rows.Close()
 		attTypMods := map[string]map[string]*int{}
 		for rows.Next() {
 			var relname, attname string
@@ -504,6 +505,7 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 				attTypMods[relname][attname] = &atttypmod
 			}
 		}
+		rows.Close()
 		if err := rows.Err(); err != nil {
 			return err
 		}
@@ -529,12 +531,12 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 		if err != nil {
 			return err
 		}
+		defer rows.Close()
 		for rows.Next() {
 			var row pgTypeInfo
 			var tableName, columnName, dataType, udtName, isNullable, isUpdatable, description *string
 			if err = rows.Scan(&tableName, &columnName, &isNullable, &dataType,
 				&udtName, &row.charLength, &row.precision, &row.radix, &row.scale, &isUpdatable, &description); err != nil {
-				rows.Close()
 				return err
 			}
 			if tableName == nil {
@@ -587,6 +589,7 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			}
 			table.Columns = append(table.Columns, column)
 		}
+		rows.Close()
 		if err := rows.Err(); err != nil {
 			return err
 		}
