@@ -218,6 +218,10 @@ func (warehouse *ClickHouse) QueryRow(ctx context.Context, query string, args ..
 // If an argument is not valid, it panics.
 func (warehouse *ClickHouse) Select(ctx context.Context, table string, columns []types.Property, where warehouses.Where, order types.Property, first, limit int) ([][]any, error) {
 
+	if !warehouses.IsValidIdentifier(table) {
+		return nil, fmt.Errorf("table name %q is not a valid identifier", table)
+	}
+
 	conn, err := warehouse.connection()
 	if err != nil {
 		return nil, err
