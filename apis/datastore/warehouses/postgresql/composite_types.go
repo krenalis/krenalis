@@ -90,30 +90,30 @@ func initCompositeTypeResolver(ctx context.Context, tx *postgres.Tx, enums map[s
 		if typ, ok := typeOf[name]; ok {
 			return typ, nil
 		}
-		if rows, ok := pgTypesOf[name]; ok {
-			props := []types.Property{}
-			for _, row := range rows {
-				typ, err := columnType(row, enums, resolve, attTypMods)
-				if err != nil {
-					return types.Type{}, err
-				}
-				prop := types.Property{
-					Name: row.column,
-					Type: typ,
-					// Composite type fields are always nullable.
-					// From the PostgreSQL doc (https://www.postgresql.org/docs/current/rowtypes.html):
-					//
-					//    «[...] no constraints (such as NOT NULL) can presently be included»
-					//
-					Nullable: true,
-				}
-				props = append(props, prop)
-			}
-			t := types.Object(props)
-			typeOf[name] = t
-			return t, nil
+		rows, ok := pgTypesOf[name]
+		if !ok {
+			return types.Type{}, nil
 		}
-		return types.Type{}, nil
+		properties := make([]types.Property, len(rows))
+		for i, row := range rows {
+			typ, err := columnType(row, enums, resolve, attTypMods)
+			if err != nil {
+				return types.Type{}, err
+			}
+			properties[i] = types.Property{
+				Name: row.column,
+				Type: typ,
+				// Composite type fields are always nullable.
+				// From the PostgreSQL doc (https://www.postgresql.org/docs/current/rowtypes.html):
+				//
+				//    «[...] no constraints (such as NOT NULL) can presently be included»
+				//
+				Nullable: true,
+			}
+		}
+		t := types.Object(properties)
+		typeOf[name] = t
+		return t, nil
 	}
 
 	return resolve, nil
