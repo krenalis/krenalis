@@ -12,6 +12,7 @@ const GridCell = ({ cell, className }: GridCellProps) => {
 	let value, date;
 	switch (cell.type) {
 		case 'JSON':
+		case 'Array':
 		case 'Object':
 			value = JSON.stringify(cell.value);
 			break;
