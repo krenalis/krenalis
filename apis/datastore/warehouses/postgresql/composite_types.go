@@ -10,6 +10,7 @@ package postgresql
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"chichi/apis/postgres"
 	"chichi/connector/types"
@@ -99,6 +100,9 @@ func initCompositeTypeResolver(ctx context.Context, tx *postgres.Tx, enums map[s
 			typ, err := columnType(row, enums, resolve, attTypMods)
 			if err != nil {
 				return types.Type{}, err
+			}
+			if !typ.Valid() {
+				return types.Type{}, fmt.Errorf("composite type %q includes field %q with an unsupported type", row.table, row.column)
 			}
 			properties[i] = types.Property{
 				Name: row.column,
