@@ -566,8 +566,11 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 			column.Type = types.Text().WithByteLen(maxByteLen)
 			if charLength != nil {
 				chars, _ := strconv.Atoi(*charLength)
-				if chars < 1 || chars > types.MaxTextLen {
+				if chars < 1 {
 					return nil, warehouses.WrapError(fmt.Errorf("character_maximum_length value %q is not valid", *charLength))
+				}
+				if chars > types.MaxTextLen {
+					return nil, warehouses.WrapError(fmt.Errorf("length of column %s.%s exceeds %d characters", tableName, columnName, types.MaxTextLen))
 				}
 				column.Type = column.Type.WithCharLen(chars)
 			}
