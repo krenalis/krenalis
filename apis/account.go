@@ -15,7 +15,6 @@ import (
 	"regexp"
 	"unicode/utf8"
 
-	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
@@ -41,14 +40,12 @@ type Warehouse struct {
 	Settings []byte
 }
 
-// AddWorkspace adds a workspace with the given name and data warehouse, if not
-// nil, and returns the identifier. name must be between 1 and 100 runes long.
+// AddWorkspace adds a workspace with the given name and returns the identifier.
+// name must be between 1 and 100 runes long.
 //
 // It returns an errors.NotFoundError error if the account does not exist
-// anymore. It returns an errors.UnprocessableError error with code
-//   - ConnectionFailed, if the connection to the data warehouse fails.
-//   - InvalidSettings, if the warehouse settings are not valid.
-func (this *Account) AddWorkspace(ctx context.Context, name string, warehouse *Warehouse) (int, error) {
+// anymore.
+func (this *Account) AddWorkspace(ctx context.Context, name string) (int, error) {
 
 	this.apis.mustBeOpen()
 
@@ -61,36 +58,15 @@ func (this *Account) AddWorkspace(ctx context.Context, name string, warehouse *W
 		Name:    name,
 	}
 
-	var err error
-
-	if warehouse != nil {
-		n.Warehouse.Type = state.WarehouseType(warehouse.Type)
-		n.Warehouse.Settings, err = this.apis.datastore.PingWarehouse(ctx, state.WarehouseType(warehouse.Type), warehouse.Settings)
-		if err != nil {
-			switch err.(type) {
-			case datastore.InvalidSettings:
-				return 0, errors.Unprocessable(InvalidSettings, "data warehouse settings are not valid: %w", err)
-			case datastore.ConnectionFailed:
-				return 0, errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
-			}
-			return 0, err
-		}
-	}
-
 	// Generate the identifier.
+	var err error
 	n.ID, err = generateRandomID()
 	if err != nil {
 		return 0, err
 	}
 
 	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		var err error
-		if n.Warehouse.Settings == nil {
-			_, err = tx.Exec(ctx, "INSERT INTO workspaces (id, account, name) VALUES ($1, $2, $3)", n.ID, n.Account, n.Name)
-		} else {
-			_, err = tx.Exec(ctx, "INSERT INTO workspaces (id, account, name, warehouse_type, warehouse_settings)"+
-				" VALUES ($1, $2, $3, $4, $5)", n.ID, n.Account, n.Name, n.Warehouse.Type, string(n.Warehouse.Settings))
-		}
+		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, account, name) VALUES ($1, $2, $3)", n.ID, n.Account, n.Name)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "workspaces_keys_account_fkey" {

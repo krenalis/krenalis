@@ -511,7 +511,6 @@ type AddWorkspace struct {
 	ID            int
 	Account       int
 	Name          string
-	Warehouse     *Warehouse
 	PrivacyRegion PrivacyRegion
 }
 
@@ -524,7 +523,6 @@ func (state *State) addWorkspace(n postgres.Notification) {
 	account := state.accounts[e.Account]
 	ws := Workspace{
 		mu:            &sync.Mutex{},
-		Warehouse:     e.Warehouse,
 		Schemas:       map[string]*types.Type{},
 		connections:   map[int]*Connection{},
 		ID:            e.ID,
