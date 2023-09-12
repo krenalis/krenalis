@@ -147,13 +147,13 @@ func renderExpr(expr warehouses.Expr) (string, error) {
 			s.WriteString(v.Format("15:04:05.999999999"))
 			s.WriteByte('\'')
 		case types.PtJSON:
+			s.WriteString("PARSE_JSON(")
 			switch v := baseExpr.Value.(type) {
 			case json.RawMessage:
 				quoteBytes(&s, v)
 			case json.Number:
 				quoteString(&s, string(v))
 			case bool, string, float64, map[string]any, []any:
-				s.WriteString("PARSE_JSON(")
 				var b bytes.Buffer
 				enc := json.NewEncoder(&b)
 				enc.SetEscapeHTML(false)
@@ -163,10 +163,10 @@ func renderExpr(expr warehouses.Expr) (string, error) {
 				}
 				b.Truncate(b.Len() - 1) // remove the trailing new line.
 				quoteBytes(&s, b.Bytes())
-				s.WriteByte(')')
 			default:
 				return "", fmt.Errorf("expecting value of type json.RawMessage, json.Number, bool, string, float64, map[string]any, or []any but got %T", baseExpr.Value)
 			}
+			s.WriteByte(')')
 		case types.PtText:
 			v, ok := baseExpr.Value.(string)
 			if !ok {
