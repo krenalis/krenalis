@@ -50,10 +50,10 @@ const statuses: Record<string, Status> = {
 		icon: icons.NOT_FOUND,
 		text: 'The workspace is not connected to any data warehouse',
 	},
-	warehouseConnectionFailed: {
+	dataWarehouseFailed: {
 		variant: variants.DANGER,
 		icon: icons.NOT_FOUND,
-		text: 'The connection to the data warehouse has failed',
+		text: 'An error occurred with the data warehouse',
 	},
 	notEnabled: {
 		variant: variants.DANGER,
@@ -64,11 +64,6 @@ const statuses: Record<string, Status> = {
 		variant: variants.DANGER,
 		icon: icons.FORBIDDEN,
 		text: 'You must enable the storage associated to this connection before starting an import',
-	},
-	invalidSchemaTable: {
-		variant: variants.DANGER,
-		icon: icons.INVALID_INSERTED_VALUE,
-		text: 'The schema table is invalid',
 	},
 	storageNotExist: {
 		variant: variants.DANGER,

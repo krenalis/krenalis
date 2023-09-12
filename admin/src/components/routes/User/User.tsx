@@ -72,8 +72,8 @@ const User = () => {
 					showStatus(statuses.noWarehouse);
 					return;
 				}
-				if (err.code === 'WarehouseFailed') {
-					showStatus(statuses.warehouseConnectionFailed);
+				if (err.code === 'DataWarehouseFailed') {
+					showStatus(statuses.dataWarehouseFailed);
 					return;
 				}
 			}
@@ -111,8 +111,8 @@ const User = () => {
 					showStatus(statuses.noWarehouse);
 					return;
 				}
-				if (err.code === 'WarehouseFailed') {
-					showStatus(statuses.warehouseConnectionFailed);
+				if (err.code === 'DataWarehouseFailed') {
+					showStatus(statuses.dataWarehouseFailed);
 					return;
 				}
 			}

@@ -10,7 +10,6 @@ package warehouses
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"chichi/apis/postgres"
 	"chichi/connector/types"
@@ -24,6 +23,9 @@ type MergeTable struct {
 }
 
 // Warehouse is the interface implemented by data warehouses.
+//
+// Methods return a DataWarehouseError error if an error occurs with the data
+// warehouse.
 type Warehouse interface {
 
 	// Close closes the warehouse. It will not allow any new queries to run, and it
@@ -36,7 +38,6 @@ type Warehouse interface {
 	DestinationUser(ctx context.Context, action int, property string) (string, bool, error)
 
 	// Exec executes a query without returning any rows. args are the placeholders.
-	// If the query fails, it returns an Error value.
 	Exec(ctx context.Context, query string, args ...any) (Result, error)
 
 	// Init initializes the data warehouse by creating the supporting tables.
@@ -72,34 +73,7 @@ type Warehouse interface {
 	// condition with only the given columns, ordered by order if order is not the
 	// zero Property, and in range [first,first+limit] with first >= 0 and
 	// 0 < limit <= 1000.
-	//
-	// If a query to the warehouse fails, it returns an Error value.
-	// If an argument is not valid, it panics.
 	Select(ctx context.Context, table string, columns []types.Property, where Where, order types.Property, first, limit int) ([][]any, error)
-}
-
-// Error represents an error with a data warehouse. It could be for example an
-// authentication error or a network error.
-type Error struct {
-	Err error
-}
-
-func (e *Error) Error() string {
-	return fmt.Sprintf("cannot call the data warehouse: %s", e.Err)
-}
-
-// NewError returns a new Error value with a fmt.Errorf(format, a...) error.
-func NewError(format string, a ...any) error {
-	return &Error{Err: fmt.Errorf(format, a...)}
-}
-
-// WrapError wraps err as an Error error.
-// If err is nil, it returns a nil error.
-func WrapError(err error) error {
-	if err == nil {
-		return nil
-	}
-	return &Error{err}
 }
 
 // Table represents a table.
@@ -119,14 +93,17 @@ func (row Row) Scan(dest ...any) error {
 		return row.Error
 	}
 	err := row.Row.Scan(dest...)
-	if err == sql.ErrNoRows {
-		return err
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return err
+		}
+		return Error(err)
 	}
-	return WrapError(err)
+	return nil
 }
 
-// Rows represents the result of a query. Its methods, on error, return an
-// Error value.
+// Rows represents the result of a query. Its methods, on error, return a
+// DataWarehouseError error.
 type Rows struct {
 	Rows *postgres.Rows
 }
@@ -136,7 +113,11 @@ func (rows Rows) Close() {
 }
 
 func (rows Rows) Err() error {
-	return WrapError(rows.Rows.Err())
+	err := rows.Rows.Err()
+	if err != nil {
+		return Error(err)
+	}
+	return nil
 }
 
 func (rows Rows) Next() bool {
@@ -144,11 +125,15 @@ func (rows Rows) Next() bool {
 }
 
 func (rows Rows) Scan(dest ...any) error {
-	return WrapError(rows.Rows.Scan(dest...))
+	err := rows.Rows.Scan(dest...)
+	if err != nil {
+		return Error(err)
+	}
+	return nil
 }
 
-// Result implements the sql.Result interface but on error it returns an Error
-// value.
+// Result implements the sql.Result interface but on error it returns a
+// DataWarehouseError error.
 type Result struct {
 	Result *postgres.Result
 }

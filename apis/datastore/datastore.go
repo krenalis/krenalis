@@ -23,6 +23,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+type (
+	SettingsError      = warehouses.SettingsError
+	DataWarehouseError = warehouses.DataWarehouseError
+)
+
 // InvalidSettings is the error returned when the Redis database or data
 // warehouse settings are not valid.
 type InvalidSettings struct {
@@ -110,26 +115,26 @@ func (ds *Datastore) Close() {
 	ds.mu.Unlock()
 }
 
-// PingWarehouse validates data warehouse settings and tries to
-// establish a connection to the data warehouse with these settings.
+// PingWarehouse validates data warehouse settings, tries to establish a
+// connection to the data warehouse with these settings, and returns the
+// settings in a canonical form.
 //
-// It returns an InvalidSettings error if the settings are not valid, and a
-// ConnectionFailed error if it cannot connect. If no error occurs, it returns
-// the settings in a canonical form.
+// It returns a SettingsError error if the settings are not valid, and a
+// DataWarehouseError error if an error occurs with the data warehouse.
 func (ds *Datastore) PingWarehouse(ctx context.Context, typ state.WarehouseType, settings []byte) ([]byte, error) {
 	ds.mustBeOpen()
 	dw, err := openWarehouse(typ, settings)
 	if err != nil {
-		return nil, InvalidSettings{err}
+		return nil, err
 	}
 	err = dw.Ping(ctx)
 	if err != nil {
 		_ = dw.Close()
-		return nil, ConnectionFailed{err}
+		return nil, err
 	}
 	err = dw.Close()
 	if err != nil {
-		return nil, ConnectionFailed{err}
+		return nil, err
 	}
 	// Return the settings in a canonical form.
 	return dw.Settings(), nil
@@ -178,7 +183,8 @@ func (ds *Datastore) setStore(ws *state.Workspace) {
 }
 
 // openWarehouse opens a data warehouse with the given type and settings.
-// It returns an error if typ or settings are not valid.
+// It returns a SettingsError error if the settings are not syntactically
+// valid.
 func openWarehouse(typ state.WarehouseType, settings []byte) (warehouses.Warehouse, error) {
 	switch typ {
 	case state.BigQuery, state.Redshift:

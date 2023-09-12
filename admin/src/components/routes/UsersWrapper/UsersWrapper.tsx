@@ -88,8 +88,8 @@ const UsersWrapper = () => {
 						localStorage.removeItem('usersProperties');
 						fetchUsers(page);
 						break;
-					case 'WarehouseFailed':
-						showStatus(statuses.warehouseConnectionFailed);
+					case 'DataWarehouseFailed':
+						showStatus(statuses.dataWarehouseFailed);
 						break;
 					default:
 						break;

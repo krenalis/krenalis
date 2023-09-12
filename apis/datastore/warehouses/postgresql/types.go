@@ -8,11 +8,10 @@
 package postgresql
 
 import (
-	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
+	"chichi/apis/datastore/warehouses"
 	"chichi/connector/types"
 )
 
@@ -46,27 +45,27 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, resolver composi
 	case "numeric":
 		// Parse precision radix.
 		if column.radix == nil {
-			return types.Type{}, errors.New("numeric_precision_radix value is NULL")
+			return types.Type{}, warehouses.Errorf("numeric_precision_radix value is NULL")
 		}
 		rdx, _ := strconv.Atoi(*column.radix)
 		if rdx != 2 && rdx != 10 {
-			return types.Type{}, fmt.Errorf("numeric_precision_radix value %q is not valid", *column.radix)
+			return types.Type{}, warehouses.Errorf("numeric_precision_radix value %q is not valid", *column.radix)
 		}
 		// Parse precision.
 		if column.precision == nil {
-			return types.Type{}, errors.New("numeric_precision value is NULL")
+			return types.Type{}, warehouses.Errorf("numeric_precision value is NULL")
 		}
 		p, err := strconv.ParseInt(*column.precision, rdx, 64)
 		if err != nil || p < 1 {
-			return types.Type{}, fmt.Errorf("numeric_precision value %q is not valid", *column.precision)
+			return types.Type{}, warehouses.Errorf("numeric_precision value %q is not valid", *column.precision)
 		}
 		// Parse scale.
 		if column.scale == nil {
-			return types.Type{}, errors.New("numeric_scale value is NULL")
+			return types.Type{}, warehouses.Errorf("numeric_scale value is NULL")
 		}
 		s, err := strconv.ParseInt(*column.scale, rdx, 64)
 		if err != nil || s < 0 || s > p {
-			return types.Type{}, fmt.Errorf("numeric_scale value %q is not valid", *column.scale)
+			return types.Type{}, warehouses.Errorf("numeric_scale value %q is not valid", *column.scale)
 		}
 		t = types.Decimal(int(p), int(s))
 	case "real":
@@ -77,7 +76,7 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, resolver composi
 		if column.charLength != nil {
 			chars, _ := strconv.Atoi(*column.charLength)
 			if chars < 1 || chars > types.MaxTextLen {
-				return types.Type{}, fmt.Errorf("character_maximum_length value %q is not valid", *column.charLength)
+				return types.Type{}, warehouses.Errorf("character_maximum_length value %q is not valid", *column.charLength)
 			}
 			t = types.Text().WithCharLen(chars)
 		} else {
@@ -140,7 +139,7 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, resolver composi
 			if attTypMod != nil {
 				length := *attTypMod - 4 // See the function "_pg_char_max_length".
 				if length < 1 {
-					return types.Type{}, fmt.Errorf("atttypmod value %d is not valid", *attTypMod)
+					return types.Type{}, warehouses.Errorf("atttypmod value %d is not valid", *attTypMod)
 				}
 				et = types.Text().WithCharLen(length)
 			} else {

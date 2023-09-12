@@ -200,10 +200,10 @@ func (this *Action) readUsersFromDataWarehouse(ctx context.Context, ids []int) (
 	store := this.connection.store
 	users, err := store.Users(ctx, schema.Properties(), where, idProperty, 0, 1000)
 	if err != nil {
-		if err2, ok := err.(*datastore.Error); ok {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
 			log.Printf("[error] cannot get users from the data warehouse of the workspace %d: %s", ws.ID, err)
-			err = errors.Unprocessable(WarehouseFailed, "warehouse connection is failed: %w", err2.Err)
+			return nil, errors.Unprocessable(DataWarehouseFailed, "warehouse connection is failed: %w", err.Err)
 		}
 		return nil, err
 	}

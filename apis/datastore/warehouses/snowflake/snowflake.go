@@ -52,39 +52,40 @@ type sfSettings struct {
 }
 
 // Open opens a Snowflake data warehouse with the given settings.
+// It returns a SettingsError error if the settings are not valid.
 func Open(settings []byte) (warehouses.Warehouse, error) {
 	var s sfSettings
 	err := json.Unmarshal(settings, &s)
 	if err != nil {
-		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
+		return nil, warehouses.SettingsErrorf("cannot unmarshal settings: %s", err)
 	}
 	// Validate Account.
 	if n := utf8.RuneCountInString(s.Account); n < 1 || n > 255 {
-		return nil, fmt.Errorf("account length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("account length must be in range [1,255]")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
-		return nil, fmt.Errorf("username length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("username length must be in range [1,255]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
-		return nil, fmt.Errorf("password length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("password length must be in range [1,255]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
-		return nil, fmt.Errorf("database length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("database length must be in range [1,255]")
 	}
 	// Validate Schema.
 	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
-		return nil, fmt.Errorf("schema length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("schema length must be in range [1,255]")
 	}
 	// Validate Warehouse.
 	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
-		return nil, fmt.Errorf("warehouse length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("warehouse length must be in range [1,255]")
 	}
 	// Validate Role.
 	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
-		return nil, fmt.Errorf("role length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("role length must be in range [1,255]")
 	}
 	return &Snowflake{settings: &s}, nil
 }
@@ -100,7 +101,10 @@ func (warehouse *Snowflake) Close() error {
 		warehouse.closed = true
 	}
 	warehouse.mu.Unlock()
-	return warehouses.WrapError(err)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	return nil
 }
 
 // DestinationUser returns the external ID of the destination user of the action
@@ -111,7 +115,6 @@ func (warehouse *Snowflake) DestinationUser(ctx context.Context, action int, pro
 }
 
 // Exec executes a query without returning any rows. args are the placeholders.
-// If the query fails, it returns an Error value.
 func (warehouse *Snowflake) Exec(ctx context.Context, query string, args ...any) (warehouses.Result, error) {
 	return warehouses.Result{}, errors.New("not implemented")
 }
@@ -123,7 +126,10 @@ func (warehouse *Snowflake) Init(ctx context.Context) error {
 		return err
 	}
 	_, err = conn.ExecContext(ctx, createEventsTable)
-	return warehouses.WrapError(err)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	return nil
 }
 
 // Merge performs a table merge operation, handling row updates, inserts, and
@@ -224,13 +230,13 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return warehouses.WrapError(err)
+		return warehouses.Error(err)
 	}
 	defer conn.Close()
 
 	_, err = conn.ExecContext(ctx, q.String())
 	if err != nil {
-		return warehouses.WrapError(err)
+		return warehouses.Error(err)
 	}
 	defer func() {
 		_, _ = conn.ExecContext(ctx, `DROP TABLE "`+tempTableName+`"`)
@@ -241,7 +247,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 		// Put the rows into the temporary table's stage.
 		_, err = conn.ExecContext(gosnowflake.WithFileStream(ctx, rowsCSV), `PUT file://rows.csv @%"`+tempTableName+`"`)
 		if err != nil {
-			return warehouses.WrapError(err)
+			return warehouses.Error(err)
 		}
 		// Copy the rows from the stage into the temporary table.
 		q.Reset()
@@ -255,7 +261,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 			"ON_ERROR = ABORT_STATEMENT")
 		_, err = conn.ExecContext(ctx, q.String())
 		if err != nil {
-			return warehouses.WrapError(err)
+			return warehouses.Error(err)
 		}
 	}
 
@@ -264,7 +270,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 		// Put the deleted rows into the temporary table's stage.
 		_, err = conn.ExecContext(gosnowflake.WithFileStream(ctx, deletedCSV), `PUT file://rows.csv @%"`+tempTableName+`"`)
 		if err != nil {
-			return warehouses.WrapError(err)
+			return warehouses.Error(err)
 		}
 		// Copy the deleted rows from the stage into the temporary table.
 		q.Reset()
@@ -279,7 +285,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 			"ON_ERROR = ABORT_STATEMENT")
 		_, err = conn.ExecContext(ctx, q.String())
 		if err != nil {
-			return warehouses.WrapError(err)
+			return warehouses.Error(err)
 		}
 	}
 
@@ -345,7 +351,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 	}
 	_, err = conn.ExecContext(ctx, q.String())
 	if err != nil {
-		return warehouses.WrapError(err)
+		return warehouses.Error(err)
 	}
 
 	return nil
@@ -359,11 +365,13 @@ func (warehouse *Snowflake) Ping(ctx context.Context) error {
 		return err
 	}
 	err = db.PingContext(ctx)
-	return warehouses.WrapError(err)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	return nil
 }
 
 // QueryRow executes a query that should return at most one row.
-// If the query fails, it returns an Error value.
 func (warehouse *Snowflake) QueryRow(ctx context.Context, query string, args ...any) warehouses.Row {
 	return warehouses.Row{Error: errors.New("not implemented")}
 }
@@ -372,9 +380,6 @@ func (warehouse *Snowflake) QueryRow(ctx context.Context, query string, args ...
 // condition with only the given columns, ordered by order if order is not the
 // zero Property, and in range [first,first+limit] with first >= 0 and
 // 0 < limit <= 1000.
-//
-// If a query to the warehouse fails, it returns an Error value.
-// If an argument is not valid, it panics.
 func (warehouse *Snowflake) Select(ctx context.Context, table string, columns []types.Property, where warehouses.Where, order types.Property, first, limit int) ([][]any, error) {
 
 	if !warehouses.IsValidIdentifier(table) {
@@ -430,21 +435,21 @@ func (warehouse *Snowflake) Select(ctx context.Context, table string, columns []
 	// Execute the query.
 	rawRows, err := db.QueryContext(ctx, query.String())
 	if err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 	defer rawRows.Close()
 	var rows [][]any
 	values := newScanValues(columns, &rows)
 	for rawRows.Next() {
 		if err = rawRows.Scan(values...); err != nil {
-			return nil, warehouses.WrapError(err)
+			return nil, warehouses.Error(err)
 		}
 	}
 	if err = rawRows.Close(); err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 	if err = rawRows.Err(); err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 	if rows == nil {
 		rows = [][]any{}
@@ -496,29 +501,29 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 
 	rows, err := db.QueryContext(ctx, b.String())
 	if err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 	defer rows.Close()
 
 	var tableName, columnName, dataType, isNullable, charLength, radix, precision, scale, comment *string
 	for rows.Next() {
 		if err = rows.Scan(&tableName, &columnName, &isNullable, &dataType, &charLength, &radix, &precision, &scale, &comment); err != nil {
-			return nil, warehouses.WrapError(err)
+			return nil, warehouses.Error(err)
 		}
 		if tableName == nil {
-			return nil, warehouses.WrapError(errors.New("data warehouse has returned NULL as table name"))
+			return nil, warehouses.Errorf("data warehouse has returned NULL as table name")
 		}
 		if columnName == nil {
-			return nil, warehouses.WrapError(errors.New("data warehouse has returned NULL as column name"))
+			return nil, warehouses.Errorf("data warehouse has returned NULL as column name")
 		}
 		if !types.IsValidPropertyName(*columnName) {
-			return nil, warehouses.WrapError(fmt.Errorf("column name %q is not supported", *columnName))
+			return nil, warehouses.Errorf("column name %q is not supported", *columnName)
 		}
 		if isNullable == nil {
-			return nil, warehouses.WrapError(errors.New("data warehouse has returned NULL as nullability of column"))
+			return nil, warehouses.Errorf("data warehouse has returned NULL as nullability of column")
 		}
 		if dataType == nil {
-			return nil, warehouses.WrapError(errors.New("data warehouse has returned NULL as column data type"))
+			return nil, warehouses.Errorf("data warehouse has returned NULL as column data type")
 		}
 		column := types.Property{
 			Name:     *columnName,
@@ -538,27 +543,27 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 		case "NUMBER":
 			// Parse precision radix.
 			if radix == nil {
-				return nil, warehouses.WrapError(errors.New("numeric_precision_radix value is NULL"))
+				return nil, warehouses.Errorf("numeric_precision_radix value is NULL")
 			}
 			rdx, _ := strconv.Atoi(*radix)
 			if rdx != 2 && rdx != 10 {
-				return nil, warehouses.WrapError(fmt.Errorf("numeric_precision_radix value %q is not valid", *radix))
+				return nil, warehouses.Errorf("numeric_precision_radix value %q is not valid", *radix)
 			}
 			// Parse precision.
 			if precision == nil {
-				return nil, warehouses.WrapError(errors.New("numeric_precision value is NULL"))
+				return nil, warehouses.Errorf("numeric_precision value is NULL")
 			}
 			p, err := strconv.ParseInt(*precision, rdx, 64)
 			if err != nil || p < 1 {
-				return nil, warehouses.WrapError(fmt.Errorf("numeric_precision value %q is not valid", *precision))
+				return nil, warehouses.Errorf("numeric_precision value %q is not valid", *precision)
 			}
 			// Parse scale.
 			if scale == nil {
-				return nil, warehouses.WrapError(errors.New("numeric_scale value is NULL"))
+				return nil, warehouses.Errorf("numeric_scale value is NULL")
 			}
 			s, err := strconv.ParseInt(*scale, rdx, 64)
 			if err != nil || s < 0 || s > p {
-				return nil, warehouses.WrapError(fmt.Errorf("numeric_scale value %q is not valid", *scale))
+				return nil, warehouses.Errorf("numeric_scale value %q is not valid", *scale)
 			}
 			column.Type = types.Decimal(int(p), int(s))
 		case "TEXT":
@@ -567,10 +572,10 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 			if charLength != nil {
 				chars, _ := strconv.Atoi(*charLength)
 				if chars < 1 {
-					return nil, warehouses.WrapError(fmt.Errorf("character_maximum_length value %q is not valid", *charLength))
+					return nil, warehouses.Errorf("character_maximum_length value %q is not valid", *charLength)
 				}
 				if chars > types.MaxTextLen {
-					return nil, warehouses.WrapError(fmt.Errorf("length of column %s.%s exceeds %d characters", tableName, columnName, types.MaxTextLen))
+					return nil, warehouses.Errorf("length of column %s.%s exceeds %d characters", *tableName, *columnName, types.MaxTextLen)
 				}
 				column.Type = column.Type.WithCharLen(chars)
 			}
@@ -591,10 +596,10 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 		table.Columns = append(table.Columns, column)
 	}
 	if err := rows.Close(); err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 
 	return tables, nil

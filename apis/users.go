@@ -219,7 +219,7 @@ var eventColumns = []types.Property{
 // It returns an errors.UnprocessableError error with code
 //
 //   - NoWarehouse, if the workspace does not have a data warehouse.
-//   - WarehouseFailed, if the data warehouse failed.
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
 
 	this.apis.mustBeOpen()
@@ -249,10 +249,10 @@ func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
 	// Read the events.
 	rows, err := this.store.Events(ctx, eventColumns, where, types.Property{}, 0, limit)
 	if err != nil {
-		if err2, ok := err.(*datastore.Error); ok {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
 			log.Printf("[error] cannot get a user from the data warehouse of the workspace %d: %s", ws.ID, err)
-			err = errors.Unprocessable(WarehouseFailed, "warehouse connection is failed: %w", err2.Err)
+			return nil, errors.Unprocessable(DataWarehouseFailed, "warehouse connection is failed: %w", err.Err)
 		}
 		return nil, err
 	}
@@ -423,7 +423,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
 //
 //   - NoUsersSchema, if the data warehouse does not have users schema.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
-//   - WarehouseFailed, if the data warehouse failed.
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *User) Traits(ctx context.Context) (map[string]any, error) {
 
 	this.apis.mustBeOpen()
@@ -452,10 +452,10 @@ func (this *User) Traits(ctx context.Context) (map[string]any, error) {
 
 	rows, err := this.store.Users(ctx, schema.Properties(), where, types.Property{}, 0, 1)
 	if err != nil {
-		if err2, ok := err.(*datastore.Error); ok {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
 			log.Printf("[error] cannot get a user from the data warehouse of the workspace %d: %s", ws.ID, err)
-			err = errors.Unprocessable(WarehouseFailed, "warehouse connection is failed: %w", err2.Err)
+			return nil, errors.Unprocessable(DataWarehouseFailed, "warehouse connection is failed: %w", err.Err)
 		}
 		return nil, err
 	}

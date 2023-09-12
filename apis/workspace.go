@@ -45,21 +45,18 @@ const (
 
 var (
 	AlreadyConnected     errors.Code = "AlreadyConnected"
-	ConnectionFailed     errors.Code = "ConnectionFailed"
-	InvalidSchemaTable   errors.Code = "InvalidSchemaTable"
+	DataWarehouseFailed  errors.Code = "DataWarehouseFailed"
 	InvalidSettings      errors.Code = "InvalidSettings"
 	NoWarehouse          errors.Code = "NoWarehouse"
 	NotConnected         errors.Code = "NotConnected"
 	OrderNotExists       errors.Code = "OrderNotExists"
 	OrderTypeNotSortable errors.Code = "OrderTypeNotSortable"
 	PropertyNotExists    errors.Code = "PropertyNotExists"
-	RepeatedPropertyName errors.Code = "RepeatedPropertyName"
 	ServerNotExists      errors.Code = "ServerNotExists"
 	SourceNotExists      errors.Code = "SourceNotExists"
 	StreamNotExists      errors.Code = "StreamNotExists"
 	TableNotFound        errors.Code = "TableNotFound"
 	TooManyListeners     errors.Code = "TooManyListeners"
-	WarehouseFailed      errors.Code = "WarehouseFailed"
 )
 
 // ConnectionOptions values are passed to the AddConnection method with options
@@ -507,7 +504,7 @@ func (this *Workspace) Connections() []*Connection {
 //   - AlreadyConnected, if the workspace is already connected to a data
 //     warehouse.
 //   - InvalidSettings, if the settings are not valid.
-//   - ConnectionFailed, if the connection fails.
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, settings []byte) error {
 	this.apis.mustBeOpen()
 	ws := this.workspace
@@ -516,11 +513,11 @@ func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, 
 	}
 	settings, err := this.account.apis.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
 	if err != nil {
-		switch err.(type) {
-		case datastore.InvalidSettings:
-			return errors.Unprocessable(InvalidSettings, "data warehouse settings are not valid: %w", err)
-		case datastore.ConnectionFailed:
-			return errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
+		switch err := err.(type) {
+		case *datastore.SettingsError:
+			return errors.Unprocessable(InvalidSettings, "data warehouse settings are not valid: %w", err.Err)
+		case *datastore.DataWarehouseError:
+			return errors.Unprocessable(DataWarehouseFailed, "cannot connect to the data warehouse: %w", err.Err)
 		}
 		return err
 	}
@@ -613,15 +610,20 @@ func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
 // InitWarehouse initializes the data warehouse of the workspace by creating the
 // supporting tables.
 //
-// If the workspace does not exist, it returns an errors.NotFoundError error.
-// It returns an errors.UnprocessableError error with code NotConnected, if the
-// workspace is not connected to a data warehouse.
+// It returns an errors.UnprocessableError error with code:
+//
+//   - NotConnected, if the workspace is not connected to a data warehouse
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *Workspace) InitWarehouse(ctx context.Context) error {
 	this.apis.mustBeOpen()
 	if this.store == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
 	}
-	return this.store.InitWarehouse(ctx)
+	err := this.store.InitWarehouse(ctx)
+	if err, ok := err.(*datastore.DataWarehouseError); ok {
+		return errors.Unprocessable(DataWarehouseFailed, "data warehouse failed: %s", err.Err)
+	}
+	return err
 }
 
 // ListenedEvents returns the events listen to by the specified listener and
@@ -713,9 +715,8 @@ func (this *Workspace) OAuthToken(ctx context.Context, authorizationCode, redire
 // It returns an errors.NotFoundError error, if the workspace does not exist,
 // and it returns an errors.UnprocessableError error with code
 //   - NotConnected, if the workspace is not connected to a data warehouse.
-//   - WarehouseFailed, if the connection to the data warehouse failed.
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - TableNotFound, if a table does not exist.
-//   - InvalidSchemaTable, if a table of a schema is not valid.
 func (this *Workspace) ReloadSchemas(ctx context.Context) error {
 
 	this.apis.mustBeOpen()
@@ -726,12 +727,8 @@ func (this *Workspace) ReloadSchemas(ctx context.Context) error {
 
 	schemas, err := this.store.Schemas(ctx)
 	if err != nil {
-		switch err := err.(type) {
-		case datastore.RepeatedPropertyNameError:
-			return errors.Unprocessable(RepeatedPropertyName,
-				"column %s results in a repeated property named %s", err.Column, err.Property)
-		case *datastore.Error:
-			return errors.Unprocessable(WarehouseFailed, "data store has returned an error: %w", err.Err)
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
 		}
 		return err
 	}
@@ -743,12 +740,12 @@ func (this *Workspace) ReloadSchemas(ctx context.Context) error {
 			return p.Name == "id"
 		})
 		if idIndex == -1 {
-			return errors.Unprocessable(InvalidSchemaTable, "'%s' schema has no 'id' property", table)
+			return errors.Unprocessable(DataWarehouseFailed, "'%s' schema has no 'id' property", table)
 		}
 		if p := properties[idIndex]; p.Type.PhysicalType() != types.PtInt && p.Type.PhysicalType() != types.PtDecimal {
-			return errors.Unprocessable(InvalidSchemaTable, "property '%s.id' does not have types Int or Decimal", table)
+			return errors.Unprocessable(DataWarehouseFailed, "property '%s.id' does not have types Int or Decimal", table)
 		} else if p.Nullable {
-			return errors.Unprocessable(InvalidSchemaTable, "property '%s.id' cannot be nullable", table)
+			return errors.Unprocessable(DataWarehouseFailed, "property '%s.id' cannot be nullable", table)
 		}
 		// Check the 'creation_time' and 'timestamp' properties.
 		for _, property := range []string{"creation_time", "timestamp"} {
@@ -756,12 +753,12 @@ func (this *Workspace) ReloadSchemas(ctx context.Context) error {
 				return p.Name == property
 			})
 			if index == -1 {
-				return errors.Unprocessable(InvalidSchemaTable, "'%s' schema has no '%s' property", table, property)
+				return errors.Unprocessable(DataWarehouseFailed, "'%s' schema has no '%s' property", table, property)
 			}
 			if p := properties[index]; p.Type.PhysicalType() != types.PtDateTime {
-				return errors.Unprocessable(InvalidSchemaTable, "property '%s.%s' does not have type DateTime", table, property)
+				return errors.Unprocessable(DataWarehouseFailed, "property '%s.%s' does not have type DateTime", table, property)
 			} else if p.Nullable {
-				return errors.Unprocessable(InvalidSchemaTable, "property '%s.%s' cannot be nullable", table, property)
+				return errors.Unprocessable(DataWarehouseFailed, "property '%s.%s' cannot be nullable", table, property)
 			}
 		}
 		return nil
@@ -955,7 +952,7 @@ func (this *Workspace) SetPrivacyRegion(ctx context.Context, region PrivacyRegio
 // and it returns an errors.UnprocessableError error with code
 //   - NotConnected, if the workspace is not connected to a data store.
 //   - InvalidSettings, if the settings are not valid.
-//   - ConnectionFailed, if the connection fails.
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *Workspace) SetWarehouseSettings(ctx context.Context, typ WarehouseType, settings []byte) error {
 	this.apis.mustBeOpen()
 	ws := this.workspace
@@ -973,7 +970,10 @@ func (this *Workspace) SetWarehouseSettings(ctx context.Context, typ WarehouseTy
 	}
 	err = warehouse.Ping(ctx)
 	if err != nil {
-		return errors.Unprocessable(ConnectionFailed, "cannot connect to the data store: %w", err)
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return errors.Unprocessable(DataWarehouseFailed, "cannot connect to the data warehouse: %w", err)
+		}
+		return err
 	}
 	n := state.SetWarehouse{
 		Workspace: ws.ID,
@@ -1008,7 +1008,7 @@ func (this *Workspace) SetWarehouseSettings(ctx context.Context, typ WarehouseTy
 //
 // It returns an errors.UnprocessableError error with code
 //   - InvalidSettings, if the settings are not valid.
-//   - ConnectionFailed, if the connection fails.
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *Workspace) PingWarehouse(ctx context.Context, typ WarehouseType, settings []byte) error {
 	this.apis.mustBeOpen()
 	_, err := this.account.apis.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
@@ -1017,10 +1017,11 @@ func (this *Workspace) PingWarehouse(ctx context.Context, typ WarehouseType, set
 		case datastore.InvalidSettings:
 			return errors.Unprocessable(InvalidSettings, "data warehouse settings are not valid: %w", err)
 		case datastore.ConnectionFailed:
-			return errors.Unprocessable(ConnectionFailed, "cannot connect to the data warehouse: %w", err)
+			return errors.Unprocessable(DataWarehouseFailed, "cannot connect to the data warehouse: %w", err)
 		}
+		return err
 	}
-	return err
+	return nil
 }
 
 // User returns the user with identifier id of the workspace. If the user does
@@ -1053,7 +1054,7 @@ func (this *Workspace) User(id int) (*User, error) {
 //   - OrderNotExist, if order does not exist in schema.
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
 //   - PropertyNotExist, if a property does not exist.
-//   - WarehouseFailed, if the data store failed.
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *Workspace) Users(ctx context.Context, properties []string, order string, first, limit int) (types.Type, [][]any, error) {
 
 	this.apis.mustBeOpen()
@@ -1122,10 +1123,10 @@ func (this *Workspace) Users(ctx context.Context, properties []string, order str
 	// Read the users.
 	users, err := this.store.UsersSlice(ctx, requestedProperties, nil, orderProperty, first, limit)
 	if err != nil {
-		if err2, ok := err.(*datastore.Error); ok {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
 			log.Printf("[error] cannot get users from the data store of the workspace %d: %s", ws.ID, err)
-			err = errors.Unprocessable(WarehouseFailed, "store connection is failed: %w", err2.Err)
+			return types.Type{}, nil, errors.Unprocessable(DataWarehouseFailed, "store connection is failed: %w", err.Err)
 		}
 		return types.Type{}, nil, err
 	}

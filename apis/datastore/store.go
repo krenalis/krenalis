@@ -34,7 +34,6 @@ type (
 	Expr  = warehouses.Expr
 	Row   = warehouses.Row
 	Where = warehouses.Where
-	Error = warehouses.Error
 )
 
 type Store struct {
@@ -128,6 +127,9 @@ func (store *Store) CreateUser(ctx context.Context, user map[string]any, isArray
 
 // DeleteUser deletes the user with identifier id.
 // isArray indicates which properties have type array.
+//
+// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// error.
 func (store *Store) DeleteUser(ctx context.Context, id int, isArray map[string]bool) error {
 	store.mustBeOpen()
 	err := store.deleteRedisUserIndex(ctx, id, isArray)
@@ -141,6 +143,9 @@ func (store *Store) DeleteUser(ctx context.Context, id int, isArray map[string]b
 // DestinationUser returns the external ID of the destination user of the
 // action that matches with the corresponding property. If it cannot be
 // found, then the empty string and false are returned.
+//
+// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// error.
 func (store *Store) DestinationUser(ctx context.Context, action int, property string) (string, bool, error) {
 	store.mustBeOpen()
 	return store.warehouse.DestinationUser(ctx, action, property)
@@ -150,7 +155,8 @@ func (store *Store) DestinationUser(ctx context.Context, action int, property st
 // given columns, ordered by order if order is not the zero Property, and in
 // range [first,first+limit] with first >= 0 and 0 < limit <= 1000.
 //
-// If a query to the warehouse fails, it returns an Error value.
+// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// error.
 func (store *Store) Events(ctx context.Context, columns []types.Property, where Where, order types.Property, first, limit int) ([][]any, error) {
 	store.mustBeOpen()
 	return store.warehouse.Select(ctx, "events", columns, where, order, first, limit)
@@ -158,6 +164,9 @@ func (store *Store) Events(ctx context.Context, columns []types.Property, where 
 
 // InitWarehouse initializes the data warehouse creating the events and the
 // destinations_users tables.
+//
+// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// error.
 func (store *Store) InitWarehouse(ctx context.Context) error {
 	store.mustBeOpen()
 	return store.warehouse.Init(ctx)
@@ -165,6 +174,9 @@ func (store *Store) InitWarehouse(ctx context.Context) error {
 
 // SetDestinationUser sets the destination user relative to the action, with
 // the given external user ID and external property.
+//
+// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// error.
 func (store *Store) SetDestinationUser(ctx context.Context, connection int, externalUserID, externalProperty string) error {
 	store.mustBeOpen()
 	return store.warehouse.SetDestinationUser(ctx, connection, externalUserID, externalProperty)
@@ -172,6 +184,9 @@ func (store *Store) SetDestinationUser(ctx context.Context, connection int, exte
 
 // Schemas returns the schemas of users, groups, and events for the relative
 // tables. If a table doesn't exist, it won't be included in returned schemas.
+//
+// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// error.
 func (store *Store) Schemas(ctx context.Context) (map[string]types.Type, error) {
 	store.mustBeOpen()
 	tables, err := store.warehouse.Tables(ctx)
@@ -194,6 +209,9 @@ func (store *Store) Schemas(ctx context.Context) (map[string]types.Type, error) 
 
 // UpdateUser updates the properties of the user with identifier id.
 // Only the properties in users will be updated.
+//
+// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// error.
 func (store *Store) UpdateUser(ctx context.Context, target IRUser, user map[string]any, isArray map[string]bool) error {
 	store.mustBeOpen()
 	// Since the user contains only the properties to update, merge its property
@@ -251,7 +269,8 @@ func (store *Store) UpdateUser(ctx context.Context, target IRUser, user map[stri
 // properties, ordered by order if order is not the zero Property, and in range
 // [first,first+limit] with first >= 0 and 0 < limit <= 1000.
 //
-// If a query fails, it returns an Error value.
+// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// error.
 func (store *Store) Users(ctx context.Context, properties []types.Property, where Where, order types.Property, first, limit int) ([]map[string]any, error) {
 	store.mustBeOpen()
 	columns := PropertiesToColumns(properties)
@@ -267,6 +286,9 @@ func (store *Store) Users(ctx context.Context, properties []types.Property, wher
 }
 
 // UsersSlice is like Users but returns the users as a slice.
+//
+// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// error.
 func (store *Store) UsersSlice(ctx context.Context, properties []types.Property, where Where, order types.Property, first, limit int) ([][]any, error) {
 	store.mustBeOpen()
 	columns := PropertiesToColumns(properties)
@@ -282,9 +304,10 @@ func (store *Store) UsersSlice(ctx context.Context, properties []types.Property,
 }
 
 // UsersWithCommonValue returns the users with at least one common property
-// value with user.
+// value with user. isArray indicates which properties have type array.
 //
-// isArray indicates which properties have type array.
+// If an error occurs with the data warehouse, it returns a DataWarehouseError
+// error.
 func (store *Store) UsersWithCommonValue(ctx context.Context, user map[string]any, isArray map[string]bool) ([]IRUser, error) {
 
 	store.mustBeOpen()

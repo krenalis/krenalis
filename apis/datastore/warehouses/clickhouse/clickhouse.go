@@ -53,27 +53,28 @@ type chSettings struct {
 }
 
 // Open opens a ClickHouse data warehouse with the given settings.
+// It returns a SettingsError error if the settings are not valid.
 func Open(settings []byte) (warehouses.Warehouse, error) {
 	var s chSettings
 	err := json.Unmarshal(settings, &s)
 	if err != nil {
-		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
+		return nil, warehouses.SettingsErrorf("cannot unmarshal settings: %s", err)
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, fmt.Errorf("host length in bytes must be in range [1,253]")
+		return nil, warehouses.SettingsErrorf("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return nil, fmt.Errorf("port must be in range [1,65536]")
+		return nil, warehouses.SettingsErrorf("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if s.Username == "" {
-		return nil, fmt.Errorf("username cannot be empty")
+		return nil, warehouses.SettingsErrorf("username cannot be empty")
 	}
 	// Validate Database.
 	if s.Database == "" {
-		return nil, fmt.Errorf("database cannot be empty")
+		return nil, warehouses.SettingsErrorf("database cannot be empty")
 	}
 	return &ClickHouse{settings: &s}, nil
 }
@@ -100,7 +101,6 @@ func (warehouse *ClickHouse) DestinationUser(ctx context.Context, action int, pr
 }
 
 // Exec executes a query without returning any rows. args are the placeholders.
-// If the query fails, it returns an Error value.
 func (warehouse *ClickHouse) Exec(ctx context.Context, query string, args ...any) (warehouses.Result, error) {
 	return warehouses.Result{}, nil
 }
@@ -113,10 +113,13 @@ func (warehouse *ClickHouse) Init(ctx context.Context) error {
 	}
 	err = conn.Exec(ctx, createDestinationUsersTable)
 	if err != nil {
-		return warehouses.WrapError(err)
+		return warehouses.Error(err)
 	}
 	err = conn.Exec(ctx, createEventsTable)
-	return warehouses.WrapError(err)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	return err
 }
 
 // Merge performs a table merge operation, handling row updates, inserts, and
@@ -136,7 +139,10 @@ func (warehouse *ClickHouse) Ping(ctx context.Context) error {
 		return err
 	}
 	err = conn.Ping(ctx)
-	return warehouses.WrapError(err)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	return nil
 }
 
 // SetDestinationUser sets the destination user relative to the action, with the
@@ -176,16 +182,16 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 
 	rows, err := conn.Query(ctx, query)
 	if err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var tableName, columnName, typ, comment string
 		if err = rows.Scan(&tableName, &columnName, &typ, &comment); err != nil {
-			return nil, warehouses.WrapError(err)
+			return nil, warehouses.Error(err)
 		}
 		if !types.IsValidPropertyName(columnName) {
-			return nil, warehouses.NewError("column name %q is not supported", columnName)
+			return nil, warehouses.Errorf("column name %q is not supported", columnName)
 		}
 		column := types.Property{
 			Name:        columnName,
@@ -193,7 +199,7 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 		}
 		column.Type, column.Nullable = columnType(typ)
 		if !column.Type.Valid() {
-			return nil, warehouses.NewError("type %q of column %s is not supported", typ, column.Name)
+			return nil, warehouses.Errorf("type %q of column %s is not supported", typ, column.Name)
 		}
 		if table == nil || tableName != table.Name {
 			table = &warehouses.Table{Name: tableName}
@@ -202,10 +208,10 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 		table.Columns = append(table.Columns, column)
 	}
 	if err = rows.Close(); err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 
 	return tables, nil
@@ -220,9 +226,6 @@ func (warehouse *ClickHouse) QueryRow(ctx context.Context, query string, args ..
 // condition with only the given columns, ordered by order if order is not the
 // zero Property, and in range [first,first+limit] with first >= 0 and
 // 0 < limit <= 1000.
-//
-// If a query to the warehouse fails, it returns an Error value.
-// If an argument is not valid, it panics.
 func (warehouse *ClickHouse) Select(ctx context.Context, table string, columns []types.Property, where warehouses.Where, order types.Property, first, limit int) ([][]any, error) {
 
 	if !warehouses.IsValidIdentifier(table) {
@@ -274,21 +277,21 @@ func (warehouse *ClickHouse) Select(ctx context.Context, table string, columns [
 	// Execute the query.
 	rawRows, err := conn.Query(ctx, query.String())
 	if err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 	defer rawRows.Close()
 	var rows [][]any
 	values := newScanValues(columns, &rows)
 	for rawRows.Next() {
 		if err = rawRows.Scan(values...); err != nil {
-			return nil, warehouses.WrapError(err)
+			return nil, warehouses.Error(err)
 		}
 	}
 	if err = rawRows.Close(); err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 	if err = rawRows.Err(); err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 	if rows == nil {
 		rows = [][]any{}
@@ -312,7 +315,7 @@ func (warehouse *ClickHouse) connection() (clickhouse.Conn, error) {
 	}
 	conn, err := clickhouse.Open(warehouse.settings.options())
 	if err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 	warehouse.conn = conn
 	return conn, nil

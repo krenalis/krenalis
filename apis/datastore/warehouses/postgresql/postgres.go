@@ -52,41 +52,42 @@ type psSettings struct {
 }
 
 // Open opens a PostgreSQL data warehouse with the given settings.
+// It returns a SettingsError error if the settings are not valid.
 func Open(settings []byte) (warehouses.Warehouse, error) {
 	var s psSettings
 	err := json.Unmarshal(settings, &s)
 	if err != nil {
-		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
+		return nil, warehouses.SettingsErrorf("cannot unmarshal settings: %s", err)
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, fmt.Errorf("host length in bytes must be in range [1,253]")
+		return nil, warehouses.SettingsErrorf("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return nil, fmt.Errorf("port must be in range [1,65536]")
+		return nil, warehouses.SettingsErrorf("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := len(s.Username); n < 1 || n > 63 {
-		return nil, fmt.Errorf("username length in bytes must be in range [1,63]")
+		return nil, warehouses.SettingsErrorf("username length in bytes must be in range [1,63]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return nil, fmt.Errorf("password length must be in range [1,100]")
+		return nil, warehouses.SettingsErrorf("password length must be in range [1,100]")
 	}
 	// Validate Database.
 	if n := len(s.Database); n < 1 || n > 63 {
-		return nil, fmt.Errorf("database length in bytes must be in range [1,63]")
+		return nil, warehouses.SettingsErrorf("database length in bytes must be in range [1,63]")
 	}
 	// Validate Schema.
 	if n := len(s.Schema); n < 1 || n > 63 {
-		return nil, fmt.Errorf("schema length in bytes must be in range [1,63]")
+		return nil, warehouses.SettingsErrorf("schema length in bytes must be in range [1,63]")
 	}
 	if !warehouses.IsValidSchemaName(s.Schema) {
-		return nil, fmt.Errorf("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
+		return nil, warehouses.SettingsErrorf("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
 	}
 	if strings.HasPrefix(s.Schema, "pg_") {
-		return nil, fmt.Errorf("schema cannot start with 'pg_'")
+		return nil, warehouses.SettingsErrorf("schema cannot start with 'pg_'")
 	}
 	return &PostgreSQL{settings: &s}, nil
 }
@@ -114,7 +115,7 @@ func (warehouse *PostgreSQL) DestinationUser(ctx context.Context, action int, pr
 	}
 	rows, err := db.Query(ctx, `SELECT "user" FROM destinations_users WHERE action = $1 AND property = $2`, action, property)
 	if err != nil {
-		return "", false, warehouses.WrapError(err)
+		return "", false, warehouses.Error(err)
 	}
 	defer rows.Close()
 	var externalID string
@@ -123,22 +124,21 @@ func (warehouse *PostgreSQL) DestinationUser(ctx context.Context, action int, pr
 			// TODO(Gianluca): improve the handling of this error. This happens
 			// when a property on the external app has the same value for more
 			// than one user.
-			return "", false, warehouses.WrapError(fmt.Errorf("too many users matching when using property"))
+			return "", false, warehouses.Errorf("too many users matching when using property")
 		}
 		err := rows.Scan(&externalID)
 		if err != nil {
-			return "", false, warehouses.WrapError(err)
+			return "", false, warehouses.Error(err)
 		}
 	}
 	rows.Close()
 	if rows.Err() != nil {
-		return "", false, warehouses.WrapError(err)
+		return "", false, warehouses.Error(err)
 	}
 	return externalID, externalID != "", nil
 }
 
 // Exec executes a query without returning any rows. args are the placeholders.
-// If the query fails, it returns an Error value.
 func (warehouse *PostgreSQL) Exec(ctx context.Context, query string, args ...any) (warehouses.Result, error) {
 	db, err := warehouse.connection()
 	if err != nil {
@@ -146,7 +146,7 @@ func (warehouse *PostgreSQL) Exec(ctx context.Context, query string, args ...any
 	}
 	r, err := db.Exec(ctx, query, args...)
 	if err != nil {
-		return warehouses.Result{}, warehouses.WrapError(err)
+		return warehouses.Result{}, warehouses.Error(err)
 	}
 	return warehouses.Result{Result: r}, nil
 }
@@ -159,10 +159,13 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 	}
 	_, err = conn.Exec(ctx, createDestinationUsersTable)
 	if err != nil {
-		return warehouses.WrapError(err)
+		return warehouses.Error(err)
 	}
 	_, err = conn.Exec(ctx, createEventsTable)
-	return warehouses.WrapError(err)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	return nil
 }
 
 // Merge performs a table merge operation, handling row updates, inserts, and
@@ -194,7 +197,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	b.WriteString("\"\nWITH NO DATA")
 	_, err = db.Exec(ctx, b.String())
 	if err != nil {
-		return warehouses.WrapError(err)
+		return warehouses.Error(err)
 	}
 	defer func() {
 		_, err := warehouse.db.Exec(ctx, `DROP TABLE "`+tempTableName+`"`)
@@ -211,7 +214,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 		}
 		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, postgres.CopyFromRows(rows))
 		if err != nil {
-			return warehouses.WrapError(err)
+			return warehouses.Error(err)
 		}
 	}
 
@@ -225,7 +228,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 		rowSrc := newCopyForDeleteFrom(len(table.PrimaryKeys), deleted)
 		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, rowSrc)
 		if err != nil {
-			return warehouses.WrapError(err)
+			return warehouses.Error(err)
 		}
 	}
 
@@ -291,7 +294,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	}
 	_, err = db.Exec(ctx, b.String())
 	if err != nil {
-		return warehouses.WrapError(err)
+		return warehouses.Error(err)
 	}
 
 	return nil
@@ -305,11 +308,14 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 		return err
 	}
 	err = db.Ping(ctx)
-	return warehouses.WrapError(err)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	return nil
 }
 
 // QueryRow executes a query that should return at most one row.
-// If the query fails, it returns an Error value.
+// If the query fails, it returns a DataWarehouseError error.
 func (warehouse *PostgreSQL) QueryRow(ctx context.Context, query string, args ...any) warehouses.Row {
 	db, err := warehouse.connection()
 	if err != nil {
@@ -323,9 +329,6 @@ func (warehouse *PostgreSQL) QueryRow(ctx context.Context, query string, args ..
 // condition with only the given columns, ordered by order if order is not the
 // zero Property, and in range [first,first+limit] with first >= 0 and
 // 0 < limit <= 1000.
-//
-// If a query to the warehouse fails, it returns an Error value.
-// If an argument is not valid, it panics.
 func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns []types.Property, where warehouses.Where, order types.Property, first, limit int) ([][]any, error) {
 
 	if !warehouses.IsValidIdentifier(table) {
@@ -388,19 +391,19 @@ func (warehouse *PostgreSQL) Select(ctx context.Context, table string, columns [
 	// Execute the query.
 	rawRows, err := db.Query(ctx, query.String())
 	if err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 	defer rawRows.Close()
 	var rows [][]any
 	values := newScanValues(columns, &rows)
 	for rawRows.Next() {
 		if err = rawRows.Scan(values...); err != nil {
-			return nil, warehouses.WrapError(err)
+			return nil, warehouses.Error(err)
 		}
 	}
 	rawRows.Close()
 	if err = rawRows.Err(); err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 	if rows == nil {
 		rows = [][]any{}
@@ -420,7 +423,10 @@ func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, action int,
 		"VALUES ($1, $2, $3)\n"+
 		"ON CONFLICT (action, \"user\") DO UPDATE SET property = $3",
 		action, externalUserID, externalProperty)
-	return warehouses.WrapError(err)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	return nil
 }
 
 // Settings returns the data warehouse settings.
@@ -449,23 +455,23 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 		query := "SELECT pg_type.typname, pg_enum.enumlabel FROM pg_type JOIN pg_enum ON pg_enum.enumtypid = pg_type.oid"
 		rows, err := tx.Query(ctx, query)
 		if err != nil {
-			return err
+			return warehouses.Error(err)
 		}
 		defer rows.Close()
 		rawEnums := map[string][]string{}
 		for rows.Next() {
 			var typName, enumLabel string
 			if err = rows.Scan(&typName, &enumLabel); err != nil {
-				return err
+				return warehouses.Error(err)
 			}
 			if typName == "" {
-				return errors.New("invalid empty enum name")
+				return warehouses.Errorf("invalid empty enum name")
 			}
 			if enumLabel == "" {
-				return fmt.Errorf("empty enum label for type %q", typName)
+				return warehouses.Errorf("empty enum label for type %q", typName)
 			}
 			if !utf8.ValidString(enumLabel) {
-				return fmt.Errorf("not-valid UTF-8 encoded enum label for type %q", typName)
+				return warehouses.Errorf("not-valid UTF-8 encoded enum label for type %q", typName)
 			}
 			rawEnums[typName] = append(rawEnums[typName], enumLabel)
 		}
@@ -475,7 +481,7 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			enums[name] = types.Text().WithEnum(values)
 		}
 		if err := rows.Err(); err != nil {
-			return err
+			return warehouses.Error(err)
 		}
 
 		// Read the 'atttypmod' attribute of column types, where relevant.
@@ -486,7 +492,7 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			"WHERE n.nspname = '" + warehouse.settings.Schema + "' AND a.atttypmod <> -1"
 		rows, err = tx.Query(ctx, query)
 		if err != nil {
-			return err
+			return warehouses.Error(err)
 		}
 		defer rows.Close()
 		attTypMods := map[string]map[string]*int{}
@@ -495,7 +501,7 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			var atttypmod int
 			err := rows.Scan(&relname, &attname, &atttypmod)
 			if err != nil {
-				return err
+				return warehouses.Error(err)
 			}
 			if attTypMods[relname] == nil {
 				attTypMods[relname] = map[string]*int{attname: &atttypmod}
@@ -505,13 +511,13 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 		}
 		rows.Close()
 		if err := rows.Err(); err != nil {
-			return err
+			return warehouses.Error(err)
 		}
 
 		// Instantiate a resolver for the composite types.
 		ctResolver, err := initCompositeTypeResolver(ctx, tx, enums, attTypMods)
 		if err != nil {
-			return err
+			return warehouses.Error(err)
 		}
 
 		// Read columns.
@@ -527,7 +533,7 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 
 		rows, err = tx.Query(ctx, query)
 		if err != nil {
-			return err
+			return warehouses.Error(err)
 		}
 		defer rows.Close()
 		for rows.Next() {
@@ -535,32 +541,32 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			var tableName, columnName, dataType, udtName, isNullable, isUpdatable, description *string
 			if err = rows.Scan(&tableName, &columnName, &isNullable, &dataType,
 				&udtName, &row.charLength, &row.precision, &row.radix, &row.scale, &isUpdatable, &description); err != nil {
-				return err
+				return warehouses.Error(err)
 			}
 			if tableName == nil {
-				return errors.New("data warehouse has returned NULL as table name")
+				return warehouses.Errorf("data warehouse has returned NULL as table name")
 			}
 			row.table = *tableName
 			if columnName == nil {
-				return errors.New("data warehouse has returned NULL as column name")
+				return warehouses.Errorf("data warehouse has returned NULL as column name")
 			}
 			if !types.IsValidPropertyName(*columnName) {
-				return fmt.Errorf("column name %q is not supported", *columnName)
+				return warehouses.Errorf("column name %q is not supported", *columnName)
 			}
 			row.column = *columnName
 			if isNullable == nil {
-				return errors.New("data warehouse has returned NULL as nullability of column")
+				return warehouses.Errorf("data warehouse has returned NULL as nullability of column")
 			}
 			if dataType == nil {
-				return errors.New("data warehouse has returned NULL as column data type")
+				return warehouses.Errorf("data warehouse has returned NULL as column data type")
 			}
 			row.dataType = *dataType
 			if udtName == nil {
-				return errors.New("data warehouse has returned NULL as column udt name")
+				return warehouses.Errorf("data warehouse has returned NULL as column udt name")
 			}
 			row.udtName = *udtName
 			if isUpdatable == nil {
-				return errors.New("data warehouse has returned NULL as updatability of column")
+				return warehouses.Errorf("data warehouse has returned NULL as updatability of column")
 			}
 			var role types.Role
 			if *isUpdatable != "YES" {
@@ -573,10 +579,10 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			}
 			column.Type, err = columnType(row, enums, ctResolver, attTypMods)
 			if err != nil {
-				return fmt.Errorf("data warehouse has returned an invalid type: %s", err)
+				return warehouses.Error(fmt.Errorf("data warehouse has returned an invalid type: %s", err))
 			}
 			if !column.Type.Valid() {
-				return fmt.Errorf("type of column %s.%s is not supported", row.table, column.Name)
+				return warehouses.Errorf("type of column %s.%s is not supported", row.table, column.Name)
 			}
 			if description != nil {
 				column.Description = *description
@@ -589,13 +595,13 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 		}
 		rows.Close()
 		if err := rows.Err(); err != nil {
-			return err
+			return warehouses.Error(err)
 		}
 
 		return nil
 	})
 	if err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, err
 	}
 
 	return tables, nil
@@ -630,7 +636,7 @@ func (warehouse *PostgreSQL) connection() (*postgres.DB, error) {
 	}
 	db, err := postgres.Open(warehouse.settings.options())
 	if err != nil {
-		return nil, warehouses.WrapError(err)
+		return nil, warehouses.Error(err)
 	}
 	warehouse.db = db
 	return db, nil

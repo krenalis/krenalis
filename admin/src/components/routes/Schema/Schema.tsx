@@ -42,11 +42,8 @@ const Schema = () => {
 					case 'NotConnected':
 						showStatus(statuses.warehouseNotConnected);
 						break;
-					case 'WarehouseFailed':
-						showStatus(statuses.warehouseConnectionFailed);
-						break;
-					case 'InvalidSchemaTable':
-						showStatus(statuses.invalidSchemaTable);
+					case 'DataWarehouseFailed':
+						showStatus(statuses.dataWarehouseFailed);
 						break;
 					default:
 						break;

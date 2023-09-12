@@ -9,9 +9,8 @@ package postgresql
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
+	"chichi/apis/datastore/warehouses"
 	"chichi/apis/postgres"
 	"chichi/connector/types"
 )
@@ -51,7 +50,7 @@ func initCompositeTypeResolver(ctx context.Context, tx *postgres.Tx, enums map[s
 		"FROM information_schema.attributes ORDER BY ordinal_position"
 	rows, err := tx.Query(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, warehouses.Error(err)
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -63,25 +62,25 @@ func initCompositeTypeResolver(ctx context.Context, tx *postgres.Tx, enums map[s
 			return nil, err
 		}
 		if udtName == nil {
-			return nil, errors.New("data warehouse has returned NULL as composite type udt name")
+			return nil, warehouses.Errorf("data warehouse has returned NULL as composite type udt name")
 		}
 		pgType.table = *udtName
 		if attributeName == nil {
-			return nil, errors.New("data warehouse has returned NULL as composite type attribute name")
+			return nil, warehouses.Errorf("data warehouse has returned NULL as composite type attribute name")
 		}
 		pgType.column = *attributeName
 		if dataType == nil {
-			return nil, errors.New("data warehouse has returned NULL as composite type data type")
+			return nil, warehouses.Errorf("data warehouse has returned NULL as composite type data type")
 		}
 		pgType.dataType = *dataType
 		if attributeUdtName == nil {
-			return nil, errors.New("data warehouse has returned NULL as composite type attribute udt name")
+			return nil, warehouses.Errorf("data warehouse has returned NULL as composite type attribute udt name")
 		}
 		pgType.udtName = *attributeUdtName
 		pgTypesOf[pgType.table] = append(pgTypesOf[pgType.table], pgType)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, warehouses.Error(err)
 	}
 
 	typeOf := map[string]types.Type{}
@@ -102,7 +101,7 @@ func initCompositeTypeResolver(ctx context.Context, tx *postgres.Tx, enums map[s
 				return types.Type{}, err
 			}
 			if !typ.Valid() {
-				return types.Type{}, fmt.Errorf("composite type %q includes field %q with an unsupported type", row.table, row.column)
+				return types.Type{}, warehouses.Errorf("composite type %q includes field %q with an unsupported type", row.table, row.column)
 			}
 			properties[i] = types.Property{
 				Name: row.column,

@@ -8,21 +8,11 @@
 package datastore
 
 import (
-	"fmt"
 	"strings"
 
+	"chichi/apis/datastore/warehouses"
 	"chichi/connector/types"
 )
-
-// A RepeatedPropertyNameError value is returned from ColumnsToProperties when
-// grouped columns result in a repeated property name.
-type RepeatedPropertyNameError struct {
-	Column, Property string
-}
-
-func (err RepeatedPropertyNameError) Error() string {
-	return fmt.Sprintf("column %s results in a repeated property named %s", err.Column, err.Property)
-}
 
 // ColumnsToProperties returns the type properties of columns.
 // Consecutive columns with a common prefix are grouped into a single object
@@ -74,7 +64,7 @@ func ColumnsToProperties(columns []types.Property) ([]types.Property, error) {
 		}
 		for _, p := range properties {
 			if p.Name == property.Name {
-				return nil, RepeatedPropertyNameError{c.Name, p.Name}
+				return nil, warehouses.Errorf("column %s results in a repeated property named %s", c.Name, p.Name)
 			}
 		}
 		properties = append(properties, property)
