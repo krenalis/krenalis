@@ -836,6 +836,33 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				respond(w, err)
 			})
 		})
+		router.Route("/warehouse-settings", func(router chi.Router) {
+			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				typ, settings, err := workspace.WarehouseSettings()
+				if err != nil {
+					respond(w, err)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"type":     typ,
+					"settings": json.RawMessage(settings),
+				})
+			})
+			router.Put("/", func(w http.ResponseWriter, r *http.Request) {
+				req := struct {
+					Type     apis.WarehouseType
+					Settings json.RawMessage
+				}{}
+				err := json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, errors.BadRequest("invalid JSON"))
+					return
+				}
+				err = workspace.ChangeWarehouseSettings(ctx, req.Type, req.Settings)
+				respond(w, err)
+			})
+		})
 		router.Route("/reload-schemas", func(router chi.Router) {
 			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 				err = workspace.ReloadSchemas(ctx)

@@ -47,6 +47,7 @@ var (
 	AlreadyConnected     errors.Code = "AlreadyConnected"
 	DataWarehouseFailed  errors.Code = "DataWarehouseFailed"
 	InvalidSettings      errors.Code = "InvalidSettings"
+	InvalidWarehouseType errors.Code = "InvalidWarehouseType"
 	NoWarehouse          errors.Code = "NoWarehouse"
 	NotConnected         errors.Code = "NotConnected"
 	OrderNotExists       errors.Code = "OrderNotExists"
@@ -410,6 +411,76 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source, serve
 	}
 
 	return id, nil
+}
+
+// ChangeWarehouseSettings changes the settings of the data warehouse for the
+// workspace.
+//
+// It returns an errors.NotFoundError error, if the workspace does not exist
+// anymore, and it returns an errors.UnprocessableError error with code
+//
+//   - NotConnected, if the workspace is not connected to a data warehouse.
+//   - InvalidWarehouseType, if the workspace is connected to a data warehouse
+//     of a different type,
+//   - InvalidSettings, if the settings are not valid.
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ WarehouseType, settings []byte) error {
+	this.apis.mustBeOpen()
+
+	ws := this.workspace
+	if this.store == nil {
+		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
+	}
+	if ws.Warehouse.Type != state.WarehouseType(typ) {
+		return errors.Unprocessable(InvalidWarehouseType, "workspace %d is connected with a %s data warehouse, not %s", ws.ID, ws.Warehouse.Type, typ)
+	}
+
+	settings, err := this.account.apis.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, settings)
+	if err != nil {
+		if err, ok := err.(*datastore.SettingsError); ok {
+			return errors.Unprocessable(InvalidSettings, "data warehouse settings are not valid: %w", err.Err)
+		}
+		return err
+	}
+
+	err = this.account.apis.datastore.PingWarehouse(ctx, ws.Warehouse.Type, settings)
+	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return errors.Unprocessable(DataWarehouseFailed, "cannot connect to the data warehouse: %w", err.Err)
+		}
+		return err
+	}
+
+	n := state.SetWarehouse{
+		Workspace: ws.ID,
+		Warehouse: &state.Warehouse{
+			Type:     ws.Warehouse.Type,
+			Settings: settings,
+		},
+	}
+
+	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_settings = $1 WHERE id = $2 AND warehouse_type = $3",
+			string(n.Warehouse.Settings), n.Workspace, n.Warehouse.Type)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			var warehouseType *state.WarehouseType
+			err = tx.QueryRow(ctx, "SELECT warehouse_type FROM workspaces WHERE id = $1", n.Workspace).Scan(&warehouseType)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					err = errors.NotFound("workspace %d does not exist", n.Workspace)
+				}
+				return err
+			}
+			return errors.Unprocessable(InvalidWarehouseType, "workspace %d is connected with a %s data warehouse, not %s",
+				ws.ID, *warehouseType, n.Warehouse.Type)
+		}
+		return tx.Notify(ctx, n)
+	})
+
+	return err
 }
 
 // Connection returns the connection with identifier id of the workspace.
@@ -1127,6 +1198,20 @@ func (this *Workspace) Users(ctx context.Context, properties []string, order str
 	}
 
 	return schema.Unflatten(), users, err
+}
+
+// WarehouseSettings returns the type and settings of the data warehouse for the
+// workspace.
+//
+// If the workspace is not connected to a data warehouse, it returns an
+// errors.UnprocessableError error with code NotConnected.
+func (this *Workspace) WarehouseSettings() (WarehouseType, []byte, error) {
+	this.apis.mustBeOpen()
+	ws := this.workspace
+	if ws.Warehouse == nil {
+		return 0, nil, errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
+	}
+	return WarehouseType(ws.Warehouse.Type), slices.Clone(ws.Warehouse.Settings), nil
 }
 
 // openWarehouse opens a data store with the given type and settings.
