@@ -73,6 +73,10 @@ h1 {
 	font-size: 25px;
 }
 
+p {
+	margin: 0;
+}
+
 code {
 	font-family: monospace;
 }
@@ -244,6 +248,14 @@ sl-dialog::part(panel) {
 
 sl-dialog::part(base) {
 	padding-left: 280px;
+}
+
+sl-dialog::part(title) {
+	font-weight: 600;
+}
+
+sl-dialog::part(body) {
+	padding-top: 15px;;
 }
 
 /* || Content */

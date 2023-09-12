@@ -5,21 +5,26 @@ import { SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
 interface ListTileProps {
 	icon: ReactNode;
 	name: string;
-	description: string;
-	missingSchema: boolean;
+	description?: string;
+	disabled?: boolean;
+	disablingReason?: string;
 	onClick: MouseEventHandler;
+	className?: string;
 }
 
-const ListTile = ({ icon, name, description, missingSchema, onClick }: ListTileProps) => {
+const ListTile = ({ icon, name, description, disabled, disablingReason, onClick, className }: ListTileProps) => {
 	return (
-		<div className={`listTile${missingSchema ? ' disabled' : ''}`} onClick={missingSchema ? undefined : onClick}>
+		<div
+			className={`listTile${className ? ' ' + className : ''}${disabled ? ' disabled' : ''}`}
+			onClick={disabled ? undefined : onClick}
+		>
 			<div className='tileIcon'>{icon}</div>
 			<div className='tileName'>{name}</div>
 			<div className='tileDescription'>
 				{description}
-				{missingSchema && <div className='disablingReason'>Missing schema</div>}
+				{disablingReason && <div className='disablingReason'>{disablingReason}</div>}
 			</div>
-			{missingSchema ? null : <SlIcon className='tileChevron' name='chevron-right' />}
+			{!disabled && <SlIcon className='tileChevron' name='chevron-right' />}
 		</div>
 	);
 };

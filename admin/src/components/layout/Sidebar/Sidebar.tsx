@@ -33,9 +33,10 @@ const sidebarItems: sidebarItem[] = [
 			},
 		],
 	},
-	{ name: 'schema', label: 'Schema', link: 'schema', icon: 'database' },
+	{ name: 'schema', label: 'Schema', link: 'schema', icon: 'list-nested' },
 	{ name: 'users', label: 'Users', link: 'users', icon: 'people' },
 	{ name: 'anonymousIdentity', label: 'Anonymous IDs', link: 'anonymous-identity', icon: 'intersect' },
+	{ name: 'dataWarehouse', label: 'Data Warehouse', link: 'data-warehouse', icon: 'database' },
 ];
 
 interface SidebarProps {

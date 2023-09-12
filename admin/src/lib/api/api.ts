@@ -13,6 +13,7 @@ import { ActionTarget, SchedulePeriod, ActionToSet, MappingExpression } from '..
 import { User, UserEvent, UserTraits } from '../../types/external/user';
 import { adminBasePath } from '../../constants/path';
 import { Connector } from '../../types/external/connector';
+import { WarehouseResponse, WarehouseType } from '../../types/external/warehouse';
 import WorkSpaceInterface from '../../types/external/workspace';
 import {
 	UIResponse,
@@ -366,6 +367,35 @@ class Workspace {
 		return await call(`${this.apiURL}/workspace/anonymous-identifiers`, http.POST, {
 			AnonymousIdentifiers: identifiers,
 		});
+	};
+
+	warehouseSettings = async (): Promise<WarehouseResponse> => {
+		return await call(`${this.apiURL}/workspace/warehouse-settings`, http.GET);
+	};
+
+	changeWarehouseSettings = async (type: WarehouseType, settings: any): Promise<void> => {
+		return await call(`${this.apiURL}/workspace/warehouse-settings`, http.PUT, {
+			Type: type,
+			Settings: settings,
+		});
+	};
+
+	pingWarehouse = async (warehouseType: WarehouseType, settings: any): Promise<void> => {
+		return await call(`${this.apiURL}/workspace/ping-warehouse`, http.POST, {
+			Type: warehouseType,
+			Settings: settings,
+		});
+	};
+
+	connectWarehouse = async (warehouseType: WarehouseType, settings: any): Promise<void> => {
+		return await call(`${this.apiURL}/workspace/connect-warehouse`, http.POST, {
+			Type: warehouseType,
+			Settings: settings,
+		});
+	};
+
+	disconnectWarehouse = async (): Promise<void> => {
+		return await call(`${this.apiURL}/workspace/disconnect-warehouse`, http.POST);
 	};
 }
 

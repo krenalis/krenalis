@@ -26,7 +26,8 @@ const ActionTypesDialog = ({
 				icon={connectionLogo}
 				name={type.Name}
 				description={type.Description}
-				missingSchema={type.MissingSchema}
+				disabled={type.MissingSchema}
+				disablingReason={type.MissingSchema ? 'Missing schema' : ''}
 				onClick={() => {
 					onSelectActionType(type);
 				}}

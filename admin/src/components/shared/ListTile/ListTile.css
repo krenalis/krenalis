@@ -37,6 +37,7 @@
 .listTile .tileName {
     grid-area: name;
     font-weight: 600;
+    user-select: none;
 }
 
 .listTile .tileDescription {
