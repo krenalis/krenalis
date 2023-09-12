@@ -29,9 +29,6 @@ import (
 	"github.com/snowflakedb/gosnowflake"
 )
 
-//go:embed events.sql
-var createEventsTable string
-
 var _ warehouses.Warehouse = &Snowflake{}
 
 type Snowflake struct {
@@ -121,14 +118,6 @@ func (warehouse *Snowflake) Exec(ctx context.Context, query string, args ...any)
 
 // Init initializes the data warehouse by creating the supporting tables.
 func (warehouse *Snowflake) Init(ctx context.Context) error {
-	conn, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
-	_, err = conn.ExecContext(ctx, createEventsTable)
-	if err != nil {
-		return warehouses.Error(err)
-	}
 	return nil
 }
 

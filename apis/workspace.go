@@ -505,33 +505,61 @@ func (this *Workspace) Connections() []*Connection {
 //     warehouse.
 //   - InvalidSettings, if the settings are not valid.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - TableNotFound, if a table does not exist.
 func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, settings []byte) error {
 	this.apis.mustBeOpen()
+
 	ws := this.workspace
 	if ws.Warehouse != nil {
 		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.ID)
 	}
-	settings, err := this.account.apis.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
+
+	settings, err := this.account.apis.datastore.NormalizeWarehouseSettings(state.WarehouseType(typ), settings)
 	if err != nil {
-		switch err := err.(type) {
-		case *datastore.SettingsError:
+		if err, ok := err.(*datastore.SettingsError); ok {
 			return errors.Unprocessable(InvalidSettings, "data warehouse settings are not valid: %w", err.Err)
-		case *datastore.DataWarehouseError:
-			return errors.Unprocessable(DataWarehouseFailed, "cannot connect to the data warehouse: %w", err.Err)
 		}
 		return err
 	}
+
+	schemas, err := this.account.apis.datastore.WarehouseSchemas(ctx, state.WarehouseType(typ), settings)
+	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return errors.Unprocessable(DataWarehouseFailed, "an error occurred with the data warehouse: %w", err.Err)
+		}
+		return err
+	}
+
 	n := state.SetWarehouse{
 		Workspace: ws.ID,
 		Warehouse: &state.Warehouse{
 			Type:     state.WarehouseType(typ),
 			Settings: settings,
 		},
+		Schemas: map[string]*types.Type{},
 	}
+	for _, table := range []string{"users", "groups", "events"} {
+		schema, ok := schemas[table]
+		if !ok {
+			return errors.Unprocessable(TableNotFound, "table %q does not exist in the data warehouse", table)
+		}
+		if table != "events" {
+			if err = validateSchema(table, schema); err != nil {
+				return errors.Unprocessable(DataWarehouseFailed, "%s", err)
+			}
+		}
+		n.Schemas[table] = &schema
+	}
+
+	rawSchemas, err := json.Marshal(n.Schemas)
+	if err != nil {
+		return fmt.Errorf("cannot marshal schemas for workspace %d: %s", this.workspace.ID, err)
+	}
+
 	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = $1, warehouse_settings = $2 WHERE id = $3"+
-			" AND warehouse_type IS NULL",
-			n.Warehouse.Type, string(n.Warehouse.Settings), n.Workspace)
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = $1, warehouse_settings = $2, schemas = $3"+
+			"  WHERE id = $4 AND warehouse_type IS NULL",
+			n.Warehouse.Type, string(n.Warehouse.Settings), rawSchemas, n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -547,6 +575,7 @@ func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, 
 		}
 		return tx.Notify(ctx, n)
 	})
+
 	return err
 }
 
@@ -733,37 +762,6 @@ func (this *Workspace) ReloadSchemas(ctx context.Context) error {
 		return err
 	}
 
-	validateSchema := func(table string, schema types.Type) error {
-		properties := schema.Properties()
-		// Check the 'id' property.
-		idIndex := slices.IndexFunc(properties, func(p types.Property) bool {
-			return p.Name == "id"
-		})
-		if idIndex == -1 {
-			return errors.Unprocessable(DataWarehouseFailed, "'%s' schema has no 'id' property", table)
-		}
-		if p := properties[idIndex]; p.Type.PhysicalType() != types.PtInt && p.Type.PhysicalType() != types.PtDecimal {
-			return errors.Unprocessable(DataWarehouseFailed, "property '%s.id' does not have types Int or Decimal", table)
-		} else if p.Nullable {
-			return errors.Unprocessable(DataWarehouseFailed, "property '%s.id' cannot be nullable", table)
-		}
-		// Check the 'creation_time' and 'timestamp' properties.
-		for _, property := range []string{"creation_time", "timestamp"} {
-			index := slices.IndexFunc(properties, func(p types.Property) bool {
-				return p.Name == property
-			})
-			if index == -1 {
-				return errors.Unprocessable(DataWarehouseFailed, "'%s' schema has no '%s' property", table, property)
-			}
-			if p := properties[index]; p.Type.PhysicalType() != types.PtDateTime {
-				return errors.Unprocessable(DataWarehouseFailed, "property '%s.%s' does not have type DateTime", table, property)
-			} else if p.Nullable {
-				return errors.Unprocessable(DataWarehouseFailed, "property '%s.%s' cannot be nullable", table, property)
-			}
-		}
-		return nil
-	}
-
 	n := state.SetWorkspaceSchemas{
 		Workspace: this.workspace.ID,
 		Schemas:   map[string]*types.Type{},
@@ -775,7 +773,7 @@ func (this *Workspace) ReloadSchemas(ctx context.Context) error {
 		}
 		if table != "events" {
 			if err = validateSchema(table, schema); err != nil {
-				return err
+				return errors.Unprocessable(DataWarehouseFailed, "%s", err)
 			}
 		}
 		n.Schemas[table] = &schema
@@ -1011,17 +1009,14 @@ func (this *Workspace) SetWarehouseSettings(ctx context.Context, typ WarehouseTy
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *Workspace) PingWarehouse(ctx context.Context, typ WarehouseType, settings []byte) error {
 	this.apis.mustBeOpen()
-	_, err := this.account.apis.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
-	if err != nil {
-		switch err.(type) {
-		case datastore.InvalidSettings:
-			return errors.Unprocessable(InvalidSettings, "data warehouse settings are not valid: %w", err)
-		case datastore.ConnectionFailed:
-			return errors.Unprocessable(DataWarehouseFailed, "cannot connect to the data warehouse: %w", err)
-		}
-		return err
+	err := this.account.apis.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
+	switch err := err.(type) {
+	case *datastore.SettingsError:
+		return errors.Unprocessable(InvalidSettings, "data warehouse settings are not valid: %w", err.Err)
+	case *datastore.DataWarehouseError:
+		return errors.Unprocessable(DataWarehouseFailed, "cannot connect to the data warehouse: %w", err.Err)
 	}
-	return nil
+	return err
 }
 
 // User returns the user with identifier id of the workspace. If the user does
@@ -1215,5 +1210,37 @@ func (typ *WarehouseType) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("invalid WarehouseType: %s", s)
 	}
 	*typ = t
+	return nil
+}
+
+// validateSchema validates the schema of a data warehouse table.
+func validateSchema(table string, schema types.Type) error {
+	properties := schema.Properties()
+	// Check the 'id' property.
+	idIndex := slices.IndexFunc(properties, func(p types.Property) bool {
+		return p.Name == "id"
+	})
+	if idIndex == -1 {
+		return fmt.Errorf("'%s' schema has no 'id' property", table)
+	}
+	if p := properties[idIndex]; p.Type.PhysicalType() != types.PtInt && p.Type.PhysicalType() != types.PtDecimal {
+		return fmt.Errorf("property '%s.id' does not have types Int or Decimal", table)
+	} else if p.Nullable {
+		return fmt.Errorf("property '%s.id' cannot be nullable", table)
+	}
+	// Check the 'creation_time' and 'timestamp' properties.
+	for _, property := range []string{"creation_time", "timestamp"} {
+		index := slices.IndexFunc(properties, func(p types.Property) bool {
+			return p.Name == property
+		})
+		if index == -1 {
+			return fmt.Errorf("'%s' schema has no '%s' property", table, property)
+		}
+		if p := properties[index]; p.Type.PhysicalType() != types.PtDateTime {
+			return fmt.Errorf("property '%s.%s' does not have type DateTime", table, property)
+		} else if p.Nullable {
+			return fmt.Errorf("property '%s.%s' cannot be nullable", table, property)
+		}
+	}
 	return nil
 }

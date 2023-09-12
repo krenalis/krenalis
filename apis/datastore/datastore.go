@@ -19,6 +19,7 @@ import (
 	"chichi/apis/datastore/warehouses/postgresql"
 	"chichi/apis/datastore/warehouses/snowflake"
 	"chichi/apis/state"
+	"chichi/connector/types"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -115,29 +116,76 @@ func (ds *Datastore) Close() {
 	ds.mu.Unlock()
 }
 
-// PingWarehouse validates data warehouse settings, tries to establish a
-// connection to the data warehouse with these settings, and returns the
-// settings in a canonical form.
+// NormalizeWarehouseSettings returns data warehouse settings in a canonical
+// form.
 //
-// It returns a SettingsError error if the settings are not valid, and a
-// DataWarehouseError error if an error occurs with the data warehouse.
-func (ds *Datastore) PingWarehouse(ctx context.Context, typ state.WarehouseType, settings []byte) ([]byte, error) {
+// It returns a SettingsError error if the settings are not valid.
+func (ds *Datastore) NormalizeWarehouseSettings(typ state.WarehouseType, settings []byte) ([]byte, error) {
 	ds.mustBeOpen()
 	dw, err := openWarehouse(typ, settings)
 	if err != nil {
 		return nil, err
 	}
+	settings = dw.Settings()
+	err = dw.Close()
+	if err != nil {
+		return nil, err
+	}
+	return settings, nil
+}
+
+// PingWarehouse tries to establish a connection to the data warehouse with
+// the given settings.
+//
+// It returns a SettingsError error if the settings are not valid, and a
+// DataWarehouseError error if an error occurs with the data warehouse.
+func (ds *Datastore) PingWarehouse(ctx context.Context, typ state.WarehouseType, settings []byte) error {
+	ds.mustBeOpen()
+	dw, err := openWarehouse(typ, settings)
+	if err != nil {
+		return err
+	}
+	defer dw.Close()
 	err = dw.Ping(ctx)
 	if err != nil {
-		_ = dw.Close()
+		return err
+	}
+	return dw.Close()
+}
+
+// WarehouseSchemas returns the schemas of users, groups, and events for the
+// relative tables of a data warehouse. If a table doesn't exist, it won't be
+// included in returned schemas.
+//
+// It returns a SettingsError error if the settings are not valid, and a
+// DataWarehouseError error if an error occurs with the data warehouse.
+func (ds *Datastore) WarehouseSchemas(ctx context.Context, typ state.WarehouseType, settings []byte) (map[string]types.Type, error) {
+	ds.mustBeOpen()
+	dw, err := openWarehouse(typ, settings)
+	if err != nil {
 		return nil, err
+	}
+	defer dw.Close()
+	tables, err := dw.Tables(ctx)
+	if err != nil {
+		return nil, err
+	}
+	schemas := make(map[string]types.Type)
+	for _, table := range tables {
+		switch table.Name {
+		case "users", "groups", "events":
+			properties, err := ColumnsToProperties(table.Columns)
+			if err != nil {
+				return nil, err
+			}
+			schemas[table.Name] = types.Object(properties)
+		}
 	}
 	err = dw.Close()
 	if err != nil {
 		return nil, err
 	}
-	// Return the settings in a canonical form.
-	return dw.Settings(), nil
+	return schemas, nil
 }
 
 func (ds *Datastore) Store(workspace int) *Store {

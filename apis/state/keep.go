@@ -981,6 +981,7 @@ func (state *State) setResource(n postgres.Notification) {
 type SetWarehouse struct {
 	Workspace int
 	Warehouse *Warehouse
+	Schemas   map[string]*types.Type
 }
 
 // setWarehouse sets the settings of a data warehouse.
@@ -991,6 +992,7 @@ func (state *State) setWarehouse(n postgres.Notification) {
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Warehouse = e.Warehouse
+		w.Schemas = e.Schemas
 	})
 	for _, listener := range state.listeners.SetWarehouse {
 		listener(e)

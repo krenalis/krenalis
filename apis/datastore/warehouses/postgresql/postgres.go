@@ -30,9 +30,6 @@ import (
 //go:embed destinations_users.sql
 var createDestinationUsersTable string
 
-//go:embed events.sql
-var createEventsTable string
-
 var _ warehouses.Warehouse = &PostgreSQL{}
 
 type PostgreSQL struct {
@@ -158,10 +155,6 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 		return err
 	}
 	_, err = conn.Exec(ctx, createDestinationUsersTable)
-	if err != nil {
-		return warehouses.Error(err)
-	}
-	_, err = conn.Exec(ctx, createEventsTable)
 	if err != nil {
 		return warehouses.Error(err)
 	}
