@@ -620,10 +620,10 @@ func (warehouse *PostgreSQL) connection() (*postgres.DB, error) {
 	warehouse.mu.Lock()
 	defer warehouse.mu.Unlock()
 	if warehouse.closed {
-		return nil, warehouses.WrapError(errors.New("warehouse is closed"))
+		return nil, errors.New("warehouse is closed")
 	}
 	if warehouse.settings == nil {
-		return nil, warehouses.WrapError(errors.New("there are no settings"))
+		return nil, errors.New("there are no settings")
 	}
 	if warehouse.db != nil {
 		return warehouse.db, nil

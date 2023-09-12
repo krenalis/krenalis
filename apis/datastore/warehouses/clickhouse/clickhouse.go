@@ -302,10 +302,10 @@ func (warehouse *ClickHouse) connection() (clickhouse.Conn, error) {
 	warehouse.mu.Lock()
 	defer warehouse.mu.Unlock()
 	if warehouse.closed {
-		return nil, warehouses.WrapError(errors.New("warehouse is closed"))
+		return nil, errors.New("warehouse is closed")
 	}
 	if warehouse.settings == nil {
-		return nil, warehouses.WrapError(errors.New("there are no settings"))
+		return nil, errors.New("there are no settings")
 	}
 	if warehouse.conn != nil {
 		return warehouse.conn, nil
