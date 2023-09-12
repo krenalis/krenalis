@@ -244,7 +244,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 		q.WriteString(tempTableName)
 		q.WriteString("\"\nFROM @%\"")
 		q.WriteString(tempTableName)
-		q.WriteString("\"\nFILE_FORMAT = (TYPE=CSV PARSE_HEADER=TRUE FIELD_OPTIONALLY_ENCLOSED_BY='0x27' EMPTY_FIELD_AS_NULL=TRUE NULL_IF=())\n" +
+		q.WriteString("\"\nFILE_FORMAT = (TYPE=CSV PARSE_HEADER=TRUE FIELD_OPTIONALLY_ENCLOSED_BY='0x27' ESCAPE_UNENCLOSED_FIELD=NONE EMPTY_FIELD_AS_NULL=TRUE NULL_IF=())\n" +
 			"FILES = ('rows.csv.gz')\n" +
 			"MATCH_BY_COLUMN_NAME = CASE_SENSITIVE\n" +
 			"ON_ERROR = ABORT_STATEMENT")
@@ -267,7 +267,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 		q.WriteString(tempTableName)
 		q.WriteString("\"\nFROM @%\"")
 		q.WriteString(tempTableName)
-		q.WriteString("\"\nFILE_FORMAT = (TYPE=CSV PARSE_HEADER=TRUE FIELD_OPTIONALLY_ENCLOSED_BY='0x27' EMPTY_FIELD_AS_NULL=TRUE NULL_IF=())\n" +
+		q.WriteString("\"\nFILE_FORMAT = (TYPE=CSV PARSE_HEADER=TRUE FIELD_OPTIONALLY_ENCLOSED_BY='0x27' ESCAPE_UNENCLOSED_FIELD=NONE EMPTY_FIELD_AS_NULL=TRUE NULL_IF=())\n" +
 			"FILES = ('rows.csv.gz')\n" +
 			"MATCH_BY_COLUMN_NAME = CASE_SENSITIVE\n" +
 			"OVERWRITE = TRUE\n" +
@@ -631,6 +631,7 @@ func (s *sfSettings) connector() gosnowflake.Connector {
 // with the value of the 'deleted' argument as value for each row.
 func serializeRowsToCSV(columns []types.Property, rows [][]any, deleted bool) (io.Reader, error) {
 	var b bytes.Buffer
+	var bj bytes.Buffer
 	for i, c := range columns {
 		if i > 0 {
 			b.WriteByte(',')
@@ -666,31 +667,29 @@ func serializeRowsToCSV(columns []types.Property, rows [][]any, deleted bool) (i
 			case decimal.Decimal:
 				b.WriteString(v.String())
 			case string:
-				if v == "" {
-					b.WriteString("''")
-				} else if strings.ContainsAny(v, ",\n") {
-					v = strings.ReplaceAll(v, ",", "\\,")
-					v = strings.ReplaceAll(v, "\n", "\\\n")
-					b.WriteString(v)
+				if v == "" || v[0] == '\'' || strings.ContainsAny(v, ",\n") {
+					quoteCSVString(&b, v)
 				} else {
 					b.WriteString(v)
 				}
 			default:
 				switch pt := columns[j].Type.PhysicalType(); pt {
-				case types.PtJSON:
-					data := bytes.ReplaceAll(v.(json.RawMessage), []byte("'"), []byte("''"))
-					b.WriteByte('\'')
-					b.Write(data)
-					b.WriteByte('\'')
-				case types.PtArray, types.PtMap:
-					data, err := json.Marshal(v)
-					if err != nil {
-						return nil, err
+				case types.PtJSON, types.PtArray, types.PtMap:
+					switch v := v.(type) {
+					case json.RawMessage:
+						quoteCSVBytes(&b, v)
+					case json.Number:
+						b.WriteString(string(v))
+					default:
+						bj.Reset()
+						enc := json.NewEncoder(&bj)
+						enc.SetEscapeHTML(false)
+						err := enc.Encode(v)
+						if err != nil {
+							return nil, err
+						}
+						quoteCSVBytes(&b, bj.Bytes())
 					}
-					data = bytes.ReplaceAll(data, []byte("'"), []byte("''"))
-					b.WriteByte('\'')
-					b.Write(data)
-					b.WriteByte('\'')
 				case types.PtDateTime:
 					b.WriteString(v.(time.Time).Format("2006-01-02 15:04:05.999999999"))
 				case types.PtDate:
@@ -710,4 +709,38 @@ func serializeRowsToCSV(columns []types.Property, rows [][]any, deleted bool) (i
 		}
 	}
 	return &b, nil
+}
+
+// quoteCSVString quotes the string s for use in a CSV file and writes it to b.
+// A string must be quoted if is empty, or starts with the character "'", or
+// contains characters "," or "\n".
+func quoteCSVString(b *bytes.Buffer, s string) {
+	b.WriteByte('\'')
+	for len(s) > 0 {
+		i := strings.IndexByte(s, '\'')
+		if i == -1 {
+			b.WriteString(s)
+			break
+		}
+		b.WriteString(s[:i+1])
+		b.WriteByte('\'')
+		s = s[i+1:]
+	}
+	b.WriteByte('\'')
+}
+
+// quoteCSVBytes is like quoteCSVString but gets a []byte value as argument.
+func quoteCSVBytes(b *bytes.Buffer, s []byte) {
+	b.WriteByte('\'')
+	for len(s) > 0 {
+		i := bytes.IndexByte(s, '\'')
+		if i == -1 {
+			b.Write(s)
+			break
+		}
+		b.Write(s[:i+1])
+		b.WriteByte('\'')
+		s = s[i+1:]
+	}
+	b.WriteByte('\'')
 }
