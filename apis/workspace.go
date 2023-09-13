@@ -56,7 +56,6 @@ var (
 	ServerNotExists      errors.Code = "ServerNotExists"
 	SourceNotExists      errors.Code = "SourceNotExists"
 	StreamNotExists      errors.Code = "StreamNotExists"
-	TableNotFound        errors.Code = "TableNotFound"
 	TooManyListeners     errors.Code = "TooManyListeners"
 )
 
@@ -576,7 +575,6 @@ func (this *Workspace) Connections() []*Connection {
 //     warehouse.
 //   - InvalidSettings, if the settings are not valid.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
-//   - TableNotFound, if a table does not exist.
 func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, settings []byte) error {
 	this.apis.mustBeOpen()
 
@@ -612,7 +610,7 @@ func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, 
 	for _, table := range []string{"users", "groups", "events"} {
 		schema, ok := schemas[table]
 		if !ok {
-			return errors.Unprocessable(TableNotFound, "table %q does not exist in the data warehouse", table)
+			return errors.Unprocessable(DataWarehouseFailed, "table %q does not exist in the data warehouse", table)
 		}
 		if table != "events" {
 			if err = validateSchema(table, schema); err != nil {
@@ -816,7 +814,6 @@ func (this *Workspace) OAuthToken(ctx context.Context, authorizationCode, redire
 // and it returns an errors.UnprocessableError error with code
 //   - NotConnected, if the workspace is not connected to a data warehouse.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
-//   - TableNotFound, if a table does not exist.
 func (this *Workspace) ReloadSchemas(ctx context.Context) error {
 
 	this.apis.mustBeOpen()
@@ -840,7 +837,7 @@ func (this *Workspace) ReloadSchemas(ctx context.Context) error {
 	for _, table := range []string{"users", "groups", "events"} {
 		schema, ok := schemas[table]
 		if !ok {
-			return errors.Unprocessable(TableNotFound, "table %q does not exist in the data warehouse", table)
+			return errors.Unprocessable(DataWarehouseFailed, "table %q does not exist in the data warehouse", table)
 		}
 		if table != "events" {
 			if err = validateSchema(table, schema); err != nil {
