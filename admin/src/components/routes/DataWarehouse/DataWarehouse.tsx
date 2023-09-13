@@ -149,16 +149,16 @@ const WarehouseInfo = ({
 				<Grid rows={rows} columns={warehouseInfoColumns} />
 			</div>
 			<div className='warehouse-info__buttons'>
-				<SlButton onClick={onDisconnect} variant='danger'>
-					Disconnect
-				</SlButton>
 				<SlButton variant='default' onClick={onChange}>
 					Change settings...
+				</SlButton>
+				<SlButton onClick={onDisconnect} variant='danger'>
+					Disconnect
 				</SlButton>
 			</div>
 			<SlDialog open={isConfirmationDialogOpen} label='Are you sure?' onSlAfterHide={onCancelDisconnection}>
 				<p className='warehouse-info__confirmation-text'>
-					If you disconnect the warehouse, you will no longer be able to import users and events
+					If you disconnect the data warehouse, you will no longer be able to import users and events
 				</p>
 				<div className='warehouse-info__confirmation-buttons'>
 					<SlButton onClick={onCancelDisconnection} disabled={isDisconnectButtonLoading}>
@@ -185,9 +185,9 @@ const WarehouseList = ({ setSelectedWarehouse }: WarehouseListProps) => {
 
 	return (
 		<div className='warehouse-list'>
-			<p className='warehouse-list__title'>Select a warehouse</p>
+			<p className='warehouse-list__title'>Select a data warehouse</p>
 			<p className='warehouse-list__description'>
-				You have not connected a warehouse yet. Select one of the following warehouse and configure it to start
+				You have not connected a data warehouse yet. Select one of the following data warehouses and configure it to start
 				storing your users and events.
 			</p>
 			{warehouses.map((warehouse) => {
