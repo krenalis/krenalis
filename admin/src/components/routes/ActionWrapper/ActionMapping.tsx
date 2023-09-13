@@ -1,6 +1,6 @@
 import React, { useState, useRef, useContext, useEffect, forwardRef, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { updateMappingProperty } from './Action.helpers';
+import { updateMappingProperty, autocompleteExpression } from './Action.helpers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import { flattenSchema, isIdentifierProperty } from '../../../lib/helpers/transformedAction';
 import { rawTransformationFunction } from './Action.constants';
@@ -94,8 +94,25 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 	};
 
 	const onUpdateProperty = async (e) => {
-		const { name, value } = e.currentTarget || e.target;
+		const target = e.target;
+		let { name, value } = target;
+		const oldValue = action.Mapping![name].value;
+		const isPasted = Math.abs(oldValue.length - value.length) > 1;
+		const isBackspaced = oldValue.length > value.length;
+		const isEqual = oldValue.length === value.length;
+		let newCursorPosition: number | undefined;
+		if (!isPasted && !isBackspaced && !isEqual) {
+			const currentCursorPosition = target.shadowRoot.querySelector('input').selectionStart;
+			const { autocompleted, cursorPosition } = autocompleteExpression(value, currentCursorPosition);
+			value = autocompleted;
+			newCursorPosition = cursorPosition;
+		}
 		await updateProperty(name, value);
+		if (newCursorPosition) {
+			setTimeout(() => {
+				target.setSelectionRange(newCursorPosition, newCursorPosition);
+			});
+		}
 	};
 
 	const onSelectProperty = async (input, value) => {

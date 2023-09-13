@@ -181,7 +181,7 @@ const ComboBoxInput = ({
 		onInputProp(e);
 	};
 
-	const debouncedOnInput = debounce(onInput, 300);
+	const debouncedOnInput = debounce(onInput, 0);
 
 	useEffect(() => {
 		onKeyUpRef.current = onKeyUp;
