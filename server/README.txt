@@ -40,6 +40,7 @@ POST    /api/users                                               List the Golden
 GET     /api/users/{id}/events                                   List the events of a user.
 GET     /api/users/{id}/traits                                   List the traits of a user.
 GET     /api/workspace                                           Get the workspace.
+POST    /api/workspace                                           Add a new workspace.
 POST    /api/workspace/anonymous-identifiers                     Set the anonymous identifiers of the workspace.
 POST    /api/workspace/connect-warehouse                         Connect the workspace to a data warehouse.
 GET     /api/workspace/warehouse-settings                        Get the settings of the data warehouse for the workspace.
