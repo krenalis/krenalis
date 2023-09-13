@@ -40,22 +40,28 @@ type Warehouse struct {
 	Settings []byte
 }
 
-// AddWorkspace adds a workspace with the given name and returns the identifier.
-// name must be between 1 and 100 runes long.
+// AddWorkspace adds a workspace with the given name and privacy region, and
+// returns its identifier. name must be between 1 and 100 runes long.
 //
 // It returns an errors.NotFoundError error if the account does not exist
 // anymore.
-func (this *Account) AddWorkspace(ctx context.Context, name string) (int, error) {
+func (this *Account) AddWorkspace(ctx context.Context, name string, region PrivacyRegion) (int, error) {
 
 	this.apis.mustBeOpen()
 
 	if name == "" || utf8.RuneCountInString(name) > 100 {
 		return 0, errors.BadRequest("name %q is not valid", name)
 	}
+	switch region {
+	case PrivacyRegionNotSpecified, PrivacyRegionEurope:
+	default:
+		return 0, errors.BadRequest("privacy region is not valid")
+	}
 
 	n := state.AddWorkspace{
-		Account: this.account.ID,
-		Name:    name,
+		Account:       this.account.ID,
+		Name:          name,
+		PrivacyRegion: state.PrivacyRegion(region),
 	}
 
 	// Generate the identifier.
@@ -66,7 +72,8 @@ func (this *Account) AddWorkspace(ctx context.Context, name string) (int, error)
 	}
 
 	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, account, name) VALUES ($1, $2, $3)", n.ID, n.Account, n.Name)
+		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, account, name, privacy_region) VALUES ($1, $2, $3, $4)",
+			n.ID, n.Account, n.Name, n.PrivacyRegion)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "workspaces_keys_account_fkey" {
