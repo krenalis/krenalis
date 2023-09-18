@@ -20,10 +20,12 @@ import (
 
 type Settings struct {
 	Main struct {
-		Host                         string
-		PrintESBuildWarningsOnStderr bool
+		Host string
 	}
-	PostgreSQL apis.PostgreSQLConfig
+	ESBuild struct {
+		PrintWarningsOnStderr bool `yaml:"printWarningsOnStderr"`
+	}
+	PostgreSQL apis.PostgreSQLConfig `yaml:"postgreSQL"`
 	Redis      apis.RedisConfig
 	Telemetry  struct {
 		Enable bool

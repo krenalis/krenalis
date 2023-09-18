@@ -78,7 +78,7 @@ It is recommended to add the `/admin/node_modules/` directory your local `.gitig
 
 ### 2. Configure and add certificates
 
-Add a configuration file `app.ini` (see `app.example.ini`) in the same directory of
+Add a configuration file `config.yaml` (see `config.example.yaml`) in the same directory of
 the `chichi` executable, as well as a `cert.pem` and `key.pem` certificate files.
 
 ### 3. Compile the server
@@ -170,8 +170,8 @@ Launch the server executing `chichi` (or `chichi.exe` on Windows) and visit http
 
 1. see the documentation in the [telemetry directory](./telemetry) to learn how
    to install and run tools needed for telemetry.
-2. update your local configuration file `app.ini` according to the file
-   [app.example.ini](app.example.ini).
+2. update your local configuration file `config.yaml` according to the file
+   [config.example.yaml](config.example.yaml).
 
 ### If you already have configured and enabled telemetry
 

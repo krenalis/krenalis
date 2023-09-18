@@ -8,7 +8,6 @@
 package chichitester
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -17,9 +16,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 
 	"chichi/server"
+
+	"gopkg.in/yaml.v3"
 )
 
 func buildChichi(ctx context.Context, setts *server.Settings) error {
@@ -64,29 +64,17 @@ func buildChichi(ctx context.Context, setts *server.Settings) error {
 		}
 	}
 
-	// Write the configuration.
+	// Write the YAML configuration.
 	err = validDatabaseNameForTests(setts.PostgreSQL.Database)
 	if err != nil {
 		return err
 	}
-	conf := &bytes.Buffer{}
-	conf.WriteString("[Main]\n")
-	conf.WriteString("Host=" + setts.Main.Host + "\n")
-	conf.WriteString("[PostgreSQL]\n")
-	conf.WriteString("Host=" + setts.PostgreSQL.Host + "\n")
-	conf.WriteString("Port=" + strconv.Itoa(setts.PostgreSQL.Port) + "\n")
-	conf.WriteString("Username=" + setts.PostgreSQL.Username + "\n")
-	conf.WriteString("Password=" + setts.PostgreSQL.Password + "\n")
-	conf.WriteString("Database=" + setts.PostgreSQL.Database + "\n")
-	conf.WriteString("Schema=" + setts.PostgreSQL.Schema + "\n")
-	conf.WriteString("[Redis]\n")
-	conf.WriteString("Network=" + setts.Redis.Network + "\n")
-	conf.WriteString("Addr=" + setts.Redis.Addr + "\n")
-	conf.WriteString("Username=" + setts.Redis.Username + "\n")
-	conf.WriteString("Password=" + setts.Redis.Password + "\n")
-	conf.WriteString("DB=" + strconv.Itoa(setts.Redis.DB) + "\n")
-	appIniPath := filepath.Join(chichiDir, "app.ini")
-	err = os.WriteFile(appIniPath, conf.Bytes(), 0644)
+	conf, err := yaml.Marshal(setts)
+	if err != nil {
+		return err
+	}
+	configYamlPath := filepath.Join(chichiDir, "config.yaml")
+	err = os.WriteFile(configYamlPath, conf, 0644)
 	if err != nil {
 		return err
 	}

@@ -18,7 +18,7 @@ import (
 
 	"chichi/server"
 
-	"gopkg.in/gcfg.v1"
+	"gopkg.in/yaml.v2"
 )
 
 func main() {
@@ -37,21 +37,18 @@ func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
 
 	// Read the configuration file.
-	settingsFile := "app.ini"
+	settingsFile := "config.yaml"
 	if len(os.Args) > 1 {
 		settingsFile = os.Args[1]
 	}
-	var settings server.Settings
-	err = gcfg.ReadFileInto(&settings, settingsFile)
+	settingsFileContent, err := os.ReadFile(settingsFile)
 	if err != nil {
-		p, err2 := filepath.Abs(settingsFile)
-		if err2 != nil {
-			p = settingsFile
-		}
-		log.Fatalf("cannot open %q: %s", p, err)
+		log.Fatalf("cannot read configuration file %q: %s", settingsFile, err)
 	}
-	if settings.Redis.Addr == "" {
-		log.Fatalf("field Redis > Addr in configuration file is mandatory")
+	var settings server.Settings
+	err = yaml.UnmarshalStrict(settingsFileContent, &settings)
+	if err != nil {
+		log.Fatalf("cannot parse configuration file %q: %s", settingsFile, err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
