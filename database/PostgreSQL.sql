@@ -123,8 +123,6 @@ CREATE TABLE actions (
     filter text NOT NULL DEFAULT '',
     mapping jsonb DEFAULT NULL,
     transformation_func text NOT NULL DEFAULT '',
-    transformation_in text[] DEFAULT NULL,
-    transformation_out text[] DEFAULT NULL,
     identifiers varchar[] DEFAULT NULL,
     query text NOT NULL DEFAULT '',
     path varchar(1024) NOT NULL DEFAULT '',
