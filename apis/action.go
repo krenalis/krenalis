@@ -65,9 +65,7 @@ type Action struct {
 
 // Transformation represents a transformation.
 type Transformation struct {
-	Func string   // Source code of the Python function.
-	In   []string // Input properties.
-	Out  []string // Output properties.
+	Func string // Source code of the Python function.
 }
 
 // ExportMode represents one of the three export modes.
@@ -348,12 +346,12 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
 			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, mapping = $6,\n"+
-			"transformation_func = $7, transformation_in = $8, transformation_out = $9, identifiers = $10,\n"+
-			"query = $11, path = $12, table_name = $13, sheet = $14, export_mode = $15,\n"+
-			"matching_properties_internal = $16, matching_properties_external = $17 WHERE id = $18",
+			"transformation_func = $7, identifiers = $8, query = $9, path = $10, table_name = $11,\n"+
+			"sheet = $12, export_mode = $13, matching_properties_internal = $14, matching_properties_external = $15\n"+
+			"WHERE id = $16",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping, transformation.Func,
-			transformation.In, transformation.Out, n.Identifiers, n.Query, n.Path, n.TableName, n.Sheet,
-			n.ExportMode, matchPropInternal, matchPropExternal, n.ID,
+			n.Identifiers, n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode, matchPropInternal,
+			matchPropExternal, n.ID,
 		)
 		if err != nil {
 			return err
@@ -704,30 +702,6 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if action.Transformation.Func == "" {
 			return errors.BadRequest("transformation function is empty")
 		}
-		if len(action.Transformation.In) == 0 {
-			return errors.BadRequest("transformation function does not have input properties")
-		}
-		for _, name := range action.Transformation.In {
-			if !types.IsValidPropertyName(name) {
-				return errors.BadRequest("input property %q of transformation function is not valid", name)
-			}
-			if _, ok := action.InSchema.Property(name); !ok {
-				return errors.BadRequest("transformation input property %s not found in schema", name)
-			}
-			inPaths = append(inPaths, types.Path{name})
-		}
-		if len(action.Transformation.Out) == 0 {
-			return errors.BadRequest("transformation function does not have output properties")
-		}
-		for _, name := range action.Transformation.Out {
-			if !types.IsValidPropertyName(name) {
-				return errors.BadRequest("output property %s of transformation function is not valid", name)
-			}
-			if _, ok := action.OutSchema.Property(name); !ok {
-				return errors.BadRequest("transformation output property %s not found in schema", name)
-			}
-			outPaths = append(outPaths, types.Path{name})
-		}
 	}
 	// Validate the identifiers.
 	if action.Identifiers != nil {
@@ -761,8 +735,11 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			}
 		}
 	}
-	if inPaths != nil {
-		// Ensure that every property in the input and output schemas have been mapped.
+	// Ensure that every property in the input and output schemas have been
+	// mapped, unless the action has a transformation function; in that case, we
+	// do not know which properties have been mapped, so this check cannot be
+	// done.
+	if inPaths != nil && action.Transformation == nil {
 		if props := unmappedProperties(action.InSchema, inPaths); props != nil {
 			return errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
 		}
@@ -824,10 +801,13 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	// When importing users, ensure that there are no mappings over the
 	// anonymous identifiers of the workspace.
 	if importingUsers := c.Role == state.SourceRole && target == state.UsersTarget; importingUsers {
-		t := action.Transformation
+		var tOutProps []string
+		if action.Transformation != nil {
+			tOutProps = action.OutSchema.PropertiesNames()
+		}
 		for _, p := range ws.AnonymousIdentifiers.Priority {
 			_, ok := action.Mapping[p]
-			if ok || (t != nil && slices.Contains(t.Out, p)) {
+			if ok || slices.Contains(tOutProps, p) {
 				return errors.Unprocessable(MappingOverAnonymousIdentifier, "cannot map over the property %s because it is an anonymous identifier", p)
 			}
 		}

@@ -12,8 +12,6 @@ type Mapping = Record<string, string>;
 
 interface Transformation {
 	Func: string;
-	In: string[];
-	Out: string[];
 }
 
 interface MappingExpression {

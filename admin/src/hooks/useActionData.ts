@@ -328,8 +328,6 @@ const useActionData = (
 				}
 			}
 			transformation = {
-				In: actionType.InputSchema.properties!.map((p) => p.name),
-				Out: outSchema.properties!.map((p) => p.name),
 				Func: action.Transformation.Func.trim(),
 			};
 		}

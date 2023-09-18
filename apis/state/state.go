@@ -890,9 +890,7 @@ type Action struct {
 
 // Transformation represents a transformation.
 type Transformation struct {
-	Func string   // Source code of the Python function.
-	In   []string // Input properties.
-	Out  []string // Output properties.
+	Func string // Source code of the Python function.
 }
 
 // ExportMode represents one of the three export modes.

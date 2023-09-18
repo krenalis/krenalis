@@ -448,12 +448,13 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, in_schema, out_schema, filter, mapping, transformation_func,\n" +
-			"transformation_in, transformation_out, identifiers, query, path, table_name, sheet, export_mode,\n" +
+			"identifiers, query, path, table_name, sheet, export_mode,\n" +
 			"matching_properties_internal, matching_properties_external)\n" +
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)"
-		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType, n.Name, n.Enabled, n.ScheduleStart,
-			n.SchedulePeriod, rawInSchema, rawOutSchema, string(filter), mapping, transformation.Func, transformation.In,
-			transformation.Out, n.Identifiers, n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode, matchPropInternal,
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"
+		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
+			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema,
+			rawOutSchema, string(filter), mapping, transformation.Func, n.Identifiers,
+			n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode, matchPropInternal,
 			matchPropExternal)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {

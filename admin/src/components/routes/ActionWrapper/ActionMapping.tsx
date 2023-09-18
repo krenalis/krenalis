@@ -56,7 +56,7 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 			a.OutSchema = null;
 			if (mode === 'mappings') {
 				a.Mapping = null;
-				a.Transformation = { Func: defaultTransformationFunction.current, In: [], Out: [] };
+				a.Transformation = { Func: defaultTransformationFunction.current };
 				setAction(a);
 				setMode('transformation');
 			} else {

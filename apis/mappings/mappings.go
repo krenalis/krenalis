@@ -133,40 +133,22 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 
 	// Map using the transformation function.
 
-	// Prepare the properties for the transformation.
-	// TODO(Gianluca): this may be no longer necessary. Review when refactoring
-	// the normalization of properties.
-	inProps := make(map[string]any, len(m.transformation.In))
-	for _, name := range m.transformation.In {
-		value, ok := values[name]
-		if !ok {
-			continue
-		}
-		inProps[name] = value
-	}
-
 	// Run the Python transformation function.
 	pool := transformations.NewPool()
-	transformationOutValues, err := pool.Run(ctx, m.transformation.Func, inProps)
+	transformationOutValues, err := pool.Run(ctx, m.transformation.Func, values)
 	if err != nil {
 		return nil, fmt.Errorf("error while calling the transformation function: %s", err)
 	}
 
-	// Verify that the transformation function hasn't returned property values
+	// Ensure that the transformation function hasn't returned property values
 	// that are not present in the output schema.
-	if len(m.transformation.Out) != len(transformationOutValues) {
+	{
+		outSchemaProps := m.outSchema.PropertiesNames()
 		names := maps.Keys(transformationOutValues)
 		slices.Sort(names)
-		for _, got := range names {
-			found := false
-			for _, expected := range m.transformation.Out {
-				if got == expected {
-					found = true
-					break
-				}
-			}
-			if !found {
-				return nil, fmt.Errorf("transformation function has returned the unexpected property %q", got)
+		for _, p := range names {
+			if !slices.Contains(outSchemaProps, p) {
+				return nil, fmt.Errorf("transformation function has returned an unexpected property %q", p)
 			}
 		}
 	}
