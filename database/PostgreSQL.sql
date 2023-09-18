@@ -95,12 +95,6 @@ CREATE TABLE connections (
     PRIMARY KEY (id)
 );
 
-CREATE TYPE transformation AS (
-    in_types text,
-    out_types text,
-    python_source text
-);
-
 CREATE TYPE cursor AS (
     id text,
     timestamp timestamptz(6),
