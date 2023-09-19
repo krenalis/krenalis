@@ -135,6 +135,8 @@ func New(conf *Config) (*APIs, error) {
 
 	apis.events, err = events.New(db, apis.state, apis.datastore, apis.http)
 	if err != nil {
+		apis.datastore.Close()
+		apis.state.Close()
 		return nil, err
 	}
 
