@@ -8,7 +8,9 @@ import Storage from './Storage';
 import Snippet from './Snippet';
 import { AppContext } from '../../../context/providers/AppProvider';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
-import { SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
+import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
+import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
 
 const ConnectionSettings = () => {
 	const [isDeleted, setIsDeleted] = useState<boolean>(false);

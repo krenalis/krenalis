@@ -5,16 +5,14 @@ import { AppContext } from '../../../context/providers/AppProvider';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { UnprocessableError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
-import {
-	SlButton,
-	SlIcon,
-	SlSwitch,
-	SlSpinner,
-	SlDropdown,
-	SlMenu,
-	SlRadio,
-	SlRadioGroup,
-} from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
+import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
+import SlRadio from '@shoelace-style/shoelace/dist/react/radio/index.js';
+import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
 import { Action, ActionType } from '../../../types/external/action';
 import { ShoelaceEventTarget } from '../../../types/internal/app';
 import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';

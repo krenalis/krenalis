@@ -187,4 +187,4 @@ interface MapType {
 }
 
 export default Type;
-export { Property, ArrayType, TextType, ObjectType };
+export type { Property, ArrayType, TextType, ObjectType };

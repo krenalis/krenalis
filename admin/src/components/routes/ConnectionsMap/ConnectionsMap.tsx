@@ -3,7 +3,8 @@ import './ConnectionsMap.css';
 import Arrow from '../../shared/Arrow/Arrow';
 import { getConnectionsBlocks } from './ConnectionsMap.helpers';
 import { AppContext } from '../../../context/providers/AppProvider';
-import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 
 const ConnectionsMap = () => {

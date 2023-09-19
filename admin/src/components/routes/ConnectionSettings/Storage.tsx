@@ -3,7 +3,9 @@ import Flex from '../../shared/Flex/Flex';
 import { AppContext } from '../../../context/providers/AppProvider';
 import statuses from '../../../constants/statuses';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import { SlButton, SlIcon, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 
 interface StorageProps {

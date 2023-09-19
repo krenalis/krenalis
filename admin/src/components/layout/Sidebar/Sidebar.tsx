@@ -2,7 +2,9 @@ import React, { useContext, ReactNode } from 'react';
 import './Sidebar.css';
 import Flex from '../../shared/Flex/Flex';
 import { AppContext } from '../../../context/providers/AppProvider';
-import { SlIcon, SlSelect, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import { useLocation } from 'react-router-dom';
 import getRouteFromPathname from './getRouteFromPathname';
 

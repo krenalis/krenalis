@@ -7,7 +7,8 @@ import ActionTypesDialog from './ActionTypesDialog';
 import { AppContext } from '../../../context/providers/AppProvider';
 import { ConnectionContext } from '../../../context/providers/ConnectionProvider';
 import { Outlet } from 'react-router-dom';
-import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { Action, ActionType } from '../../../types/external/action';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 
@@ -23,7 +24,7 @@ const ConnectionActions = () => {
 
 	useEffect(() => {
 		if (!isActionOpen) {
-			refreshConnectionIntervalID.current = setInterval(async () => {
+			refreshConnectionIntervalID.current = window.setInterval(async () => {
 				setAreConnectionsStale(true);
 			}, 1500);
 

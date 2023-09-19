@@ -23,4 +23,4 @@ interface GridCell {
 	alignment?: string;
 }
 
-export { GridColumn, GridRow, GridCell, StandardGridRow, NestedGridRows };
+export type { GridColumn, GridRow, GridCell, StandardGridRow, NestedGridRows };

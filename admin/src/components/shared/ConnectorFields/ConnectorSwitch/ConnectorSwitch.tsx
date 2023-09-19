@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './ConnectorSwitch.css';
-import { SlSwitch } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 
 interface ConnectorSwitchProps {
 	name: string;

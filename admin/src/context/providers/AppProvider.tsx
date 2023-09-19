@@ -9,7 +9,7 @@ import TransformedConnection, {
 import TransformedConnector from '../../lib/helpers/transformedConnector';
 import AppContext from '../AppContext';
 import { Status } from '../../types/internal/app';
-import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import API from '../../lib/api/api';
 import { Connection } from '../../types/external/connection';
 import Workspace from '../../types/external/workspace';
@@ -45,7 +45,7 @@ const AppProvider = ({
 	const isLoadingTimeoutID = useRef<number>(0);
 
 	useEffect(() => {
-		isLoadingTimeoutID.current = setTimeout(() => setIsLoading(true), 100);
+		isLoadingTimeoutID.current = window.setTimeout(() => setIsLoading(true), 100);
 	}, []);
 
 	useEffect(() => {
@@ -128,13 +128,12 @@ const AppProvider = ({
 					getConnectionStatus(c),
 					getConnectionDescription(c, connector)
 				);
-				if (transformedConnection.isStorage) {
-					transformedConnection.linkedFiles = getStorageFileConnections(
-						transformedConnection.id,
-						connections
-					);
-				}
 				transformedConnections.push(transformedConnection);
+			}
+			for (const c of transformedConnections) {
+				if (c.isStorage) {
+					c.linkedFiles = getStorageFileConnections(c.id, transformedConnections);
+				}
 			}
 			setConnections(transformedConnections);
 			setAreConnectionsStale(false);

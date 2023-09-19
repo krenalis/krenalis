@@ -85,7 +85,7 @@ interface ActionToSet {
 	matchingProperties?: MatchingProperties | null;
 }
 
-export {
+export type {
 	ActionTarget,
 	ActionFilter,
 	Transformation,

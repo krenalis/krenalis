@@ -13,7 +13,7 @@ import { ConnectionContext } from '../../../context/providers/ConnectionProvider
 import { FullscreenContext } from '../../../context/FullscreenContext';
 import appContext from '../../../context/AppContext';
 import ActionContext from '../../../context/ActionContext';
-import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 
 const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	const [mode, setMode] = useState<string>('');

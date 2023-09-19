@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import './ConnectorAlternativeFieldSets.css';
 import ConnectorFieldSet from '../ConnectorFieldSet/ConnectorFieldSet';
 import ConnectorField from '../../../../types/external/ui';
-import { SlSelect, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 
 interface FieldSet {
 	Name: string;

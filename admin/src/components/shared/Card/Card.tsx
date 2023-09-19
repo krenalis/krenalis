@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, ReactNode } from 'react';
 import './Card.css';
-import { SlBadge } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 
 interface CardProps {
 	icon?: string;

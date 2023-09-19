@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import './AlertDialog.css';
-import { SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 interface AlertDialogProps {
 	variant: string;

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 
-type Variant = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'default';
+type Variant = 'neutral' | 'primary' | 'success' | 'warning' | 'danger';
 
 type Size = 'small' | 'medium' | 'large';
 
@@ -30,4 +30,4 @@ interface ComboboxItem {
 	term: string; // The search term used to find and show the item when filtering after user input.
 }
 
-export { Status, ShoelaceEventTarget, ArrowAnchor, EventListenerEvent, ComboboxItem, Size, Variant };
+export type { Status, ShoelaceEventTarget, ArrowAnchor, EventListenerEvent, ComboboxItem, Size, Variant };

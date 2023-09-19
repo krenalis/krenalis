@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import './Header.css';
 import IconWrapper from '../../shared/IconWrapper/IconWrapper';
-import { SlAvatar } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
 
 interface HeaderProps {
 	title: ReactNode;

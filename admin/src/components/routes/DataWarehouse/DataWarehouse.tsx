@@ -9,7 +9,8 @@ import { WarehouseSettings, WarehouseType } from '../../../types/external/wareho
 import Grid from '../../shared/Grid/Grid';
 import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
 import DataWarehouseSettings from './DataWarehouseSettings';
-import { SlButton, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 
 const DataWarehouse = () => {
 	const [connectedWarehouse, setConnectedWarehouse] = useState<WarehouseType>();
@@ -187,8 +188,8 @@ const WarehouseList = ({ setSelectedWarehouse }: WarehouseListProps) => {
 		<div className='warehouse-list'>
 			<p className='warehouse-list__title'>Select a data warehouse</p>
 			<p className='warehouse-list__description'>
-				You have not connected a data warehouse yet. Select one of the following data warehouses and configure it to start
-				storing your users and events.
+				You have not connected a data warehouse yet. Select one of the following data warehouses and configure
+				it to start storing your users and events.
 			</p>
 			{warehouses.map((warehouse) => {
 				return (

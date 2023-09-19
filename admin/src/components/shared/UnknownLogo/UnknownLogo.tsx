@@ -1,6 +1,6 @@
 import React from 'react';
 import './UnknownLogo.css';
-import { SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 interface UnknownLogoProps {
 	size: number;

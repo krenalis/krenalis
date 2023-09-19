@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './ConnectorCheckbox.css';
-import { SlCheckbox } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 
 interface ConnectorCheckboxProps {
 	name: string;

@@ -7,4 +7,4 @@ interface WarehouseResponse {
 	settings: WarehouseSettings;
 }
 
-export { WarehouseType, WarehouseSettings, WarehouseResponse };
+export type { WarehouseType, WarehouseSettings, WarehouseResponse };

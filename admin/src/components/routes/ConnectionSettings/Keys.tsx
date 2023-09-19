@@ -3,7 +3,7 @@ import Flex from '../../shared/Flex/Flex';
 import { AppContext } from '../../../context/providers/AppProvider';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
-import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 
 interface KeysProps {

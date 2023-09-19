@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './ConnectorSelect.css';
-import { SlSelect, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import { FieldOption } from '../../../../types/external/ui';
 
 interface ConnectorSelectProps {

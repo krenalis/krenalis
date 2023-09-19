@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
 import './OAuth.css';
 import { AppContext } from '../../../context/providers/AppProvider';
-import { SlSpinner, SlIcon, SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 const errorMessageByOauthErrorCode = {
 	invalid_request:

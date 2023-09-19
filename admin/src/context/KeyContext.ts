@@ -7,4 +7,5 @@ interface KeyContextType {
 
 const KeyContext = createContext<KeyContextType | undefined>(undefined);
 
-export { KeyContext, KeyContextType };
+export { KeyContext };
+export type { KeyContextType };

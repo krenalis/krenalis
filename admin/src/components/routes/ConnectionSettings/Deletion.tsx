@@ -2,7 +2,8 @@ import React, { useState, useContext } from 'react';
 import Flex from '../../shared/Flex/Flex';
 import statuses from '../../../constants/statuses';
 import { AppContext } from '../../../context/providers/AppProvider';
-import { SlButton, SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import { NotFoundError } from '../../../lib/api/errors';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 

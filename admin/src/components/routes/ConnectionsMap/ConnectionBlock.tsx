@@ -4,7 +4,7 @@ import Arrow from '../../shared/Arrow/Arrow';
 import StatusDot from '../../shared/StatusDot/StatusDot';
 import { ArrowAnchor } from '../../../types/internal/app';
 import { AppContext } from '../../../context/providers/AppProvider';
-import { SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 

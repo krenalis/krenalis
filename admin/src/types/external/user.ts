@@ -121,4 +121,4 @@ interface User {
 	traits: UserTraits;
 }
 
-export { User, UserEvent, UserTraits };
+export type { User, UserEvent, UserTraits };

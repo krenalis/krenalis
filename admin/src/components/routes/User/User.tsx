@@ -7,7 +7,9 @@ import { AppContext } from '../../../context/providers/AppProvider';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
-import { SlIcon, SlButton, SlSkeleton } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlSkeleton from '@shoelace-style/shoelace/dist/react/skeleton/index.js';
 import LittleLogo from '../../shared/LittleLogo/LittleLogo';
 import { User as UserInterface, UserEvent } from '../../../types/external/user';
 
@@ -50,7 +52,7 @@ const User = () => {
 
 		// Show the skeletons if the response is slow.
 		let isLoading = false;
-		fetchTimeoutID.current = setTimeout(() => {
+		fetchTimeoutID.current = window.setTimeout(() => {
 			clearTimeout(fetchTimeoutID.current);
 			isLoading = true;
 			setUser(null);

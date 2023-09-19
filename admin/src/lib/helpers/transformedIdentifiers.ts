@@ -106,6 +106,6 @@ export {
 	untransformActionIdentifiers,
 	transformAnonymousIdentifiers,
 	untransformAnonymousIdentifiers,
-	TransformedIdentifiers,
-	IdentifierAssociation,
 };
+
+export type { TransformedIdentifiers, IdentifierAssociation };

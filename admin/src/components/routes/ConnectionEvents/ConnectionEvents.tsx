@@ -7,7 +7,8 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { github } from 'react-syntax-highlighter/dist/esm/styles/hljs';
-import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { AddEventListenerResponse, EventListenerEventsResponse } from '../../../types/external/api';
 import { EventListenerEvent } from '../../../types/internal/app';
 
@@ -63,7 +64,7 @@ const ConnectionEvents = () => {
 				return;
 			}
 			listenerID = listener.id;
-			interval = setInterval(async () => {
+			interval = window.setInterval(async () => {
 				let res: EventListenerEventsResponse;
 				try {
 					res = await api.eventlisteners.events(listenerID);

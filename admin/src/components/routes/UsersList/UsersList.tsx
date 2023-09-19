@@ -4,15 +4,13 @@ import Toolbar from '../../layout/Toolbar/Toolbar';
 import Grid from '../../shared/Grid/Grid';
 import { AppContext } from '../../../context/providers/AppProvider';
 import UsersContext from '../../../context/UsersContext';
-import {
-	SlButton,
-	SlDropdown,
-	SlIcon,
-	SlMenu,
-	SlOption,
-	SlSwitch,
-	SlSelect,
-} from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
+import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
+import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import { GridColumn } from '../../../types/componentTypes/Grid.types';
 
 const UsersList = () => {

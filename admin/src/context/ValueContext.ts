@@ -7,4 +7,5 @@ interface ValueContextType {
 
 const ValueContext = createContext<ValueContextType | undefined>(undefined);
 
-export { ValueContext, ValueContextType };
+export { ValueContext };
+export type { ValueContextType };

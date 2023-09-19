@@ -275,8 +275,7 @@ export {
 	transformActionMapping,
 	computeDefaultAction,
 	computeActionTypeFields,
-	TransformedMapping,
-	TransformedActionType,
-	TransformedAction,
 	isIdentifierProperty,
 };
+
+export type { TransformedMapping, TransformedActionType, TransformedAction };

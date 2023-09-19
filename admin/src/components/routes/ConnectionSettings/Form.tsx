@@ -6,7 +6,7 @@ import { AppContext } from '../../../context/providers/AppProvider';
 import statuses from '../../../constants/statuses';
 import * as icons from '../../../constants/icons';
 import SettingsForm from '../../shared/SettingsForm/SettingsForm';
-import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 import { UIResponse, UIValues } from '../../../types/external/api';
 import ConnectorFieldInterface, { ConnectorAction } from '../../../types/external/ui';

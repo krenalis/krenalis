@@ -8,4 +8,5 @@ interface FieldSetContextType {
 
 const FieldSetContext = createContext<FieldSetContextType | undefined>(undefined);
 
-export { FieldSetContext, FieldSetContextType };
+export { FieldSetContext };
+export type { FieldSetContextType };

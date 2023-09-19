@@ -1,7 +1,7 @@
 import './EditorWrapper.css';
 import React, { ReactNode } from 'react';
 import Editor from '@monaco-editor/react';
-import { SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 
 // TODO: serve static assets from the server.
 const SQL_LOGO =
@@ -80,7 +80,7 @@ const EditorWrapper = ({ defaultLanguage, width, height, value, onChange, ...del
 						lineHeight: 25,
 						fontSize: 16,
 						smoothScrolling: true,
-						cursorSmoothCaretAnimation: true,
+						cursorSmoothCaretAnimation: 'on',
 						overviewRulerBorder: false,
 						overviewRulerLanes: 0,
 						renderLineHighlight: 'none',

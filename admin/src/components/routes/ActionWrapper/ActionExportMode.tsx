@@ -2,7 +2,8 @@ import React, { useContext } from 'react';
 import Section from '../../shared/Section/Section';
 import { EXPORT_MODE_OPTIONS } from '../../../lib/helpers/transformedAction';
 import ActionContext from '../../../context/ActionContext';
-import { SlSelect, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 
 const ActionExportMode = () => {
 	const { action, setAction } = useContext(ActionContext);

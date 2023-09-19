@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import './NotFound.css';
 import { AppContext } from '../../../context/providers/AppProvider';
-import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 
 const NotFound = () => {
 	const { redirect } = useContext(AppContext);

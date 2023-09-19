@@ -1,11 +1,12 @@
 import React, { forwardRef } from 'react';
 import './Toast.css';
-import { SlAlert, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
-import { Status } from '../../../types/app';
+import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import { Status } from '../../../types/internal/app';
 
 interface ToastProps {
-	status: Status | null,
-	isFullscreen: boolean,
+	status: Status | null;
+	isFullscreen: boolean;
 }
 
 const Toast = forwardRef<any, ToastProps>(({ status, isFullscreen }, ref) => {

@@ -17,4 +17,4 @@ interface Connector {
 	OAuth: boolean;
 }
 
-export { Connector, ConnectorType, WebhooksPer };
+export type { Connector, ConnectorType, WebhooksPer };

@@ -1,6 +1,6 @@
 import { ConnectionRole } from './connection';
 
-type Variant = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'default';
+type Variant = 'neutral' | 'primary' | 'success' | 'warning' | 'danger';
 
 type InputType =
 	| 'number'
@@ -141,7 +141,7 @@ interface ConnectorAlert {
 }
 
 export default ConnectorField;
-export {
+export type {
 	FieldOption,
 	InputType,
 	InputField,

@@ -21,7 +21,7 @@ class TransformedConnection {
 	storage: number;
 	status: ConnectionStatus;
 	description: string;
-	linkedFiles?: Connection[];
+	linkedFiles?: TransformedConnection[];
 	actionTypes?: ActionType[];
 	actions?: Action[];
 
@@ -38,7 +38,7 @@ class TransformedConnection {
 		storage: number,
 		status: ConnectionStatus,
 		description: string,
-		linkedFiles?: Connection[],
+		linkedFiles?: TransformedConnection[],
 		actionTypes?: ActionType[],
 		actions?: Action[]
 	) {
@@ -166,3 +166,4 @@ export {
 	getConnectionStatus,
 	getStorageFileConnections,
 };
+export type { ConnectionStatus };

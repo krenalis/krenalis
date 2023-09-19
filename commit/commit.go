@@ -127,6 +127,9 @@ func main() {
 	// Run 'npm install' in the admin.
 	cmd("npm", []string{"install"}, repo, "admin", true)
 
+	// Typecheck the Typescript code in the admin.
+	cmd("npm", []string{"run", "typecheck"}, repo, "admin", true)
+
 	fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
 }
 

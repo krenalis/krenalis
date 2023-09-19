@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './PasswordToggle.css';
-import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 
 interface PasswordToggleInterface {
 	password: string;

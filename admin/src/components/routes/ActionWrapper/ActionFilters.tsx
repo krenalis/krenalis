@@ -3,7 +3,10 @@ import Section from '../../shared/Section/Section';
 import { ComboBoxInput, ComboBoxList } from '../../shared/ComboBox/ComboBox';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import ActionContext from '../../../context/ActionContext';
-import { SlButton, SlSelect, SlInput, SlOption } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 
 const operatorOptions = {
 	1: 'is',

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './ConnectorTextarea';
-import { SlTextarea } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
 
 interface ConnectorTextAreaProps {
 	name: string;

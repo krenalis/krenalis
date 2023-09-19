@@ -10,7 +10,8 @@ import {
 	NestedGridRows,
 	GridColumn,
 } from '../../../types/componentTypes/Grid.types';
-import { SlSpinner, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 interface GridProps {
 	columns: GridColumn[];
@@ -22,7 +23,7 @@ interface GridProps {
 const Grid = ({ columns, rows, isLoading, noRowsMessage }: GridProps) => {
 	const [columnsWidths, setColumnsWidths] = useState('');
 
-	const gridRef = useRef<HTMLDivElement | null>(null);
+	const gridRef = useRef<any>(null);
 
 	useLayoutEffect(() => {
 		if (isLoading) {
@@ -64,7 +65,7 @@ const Grid = ({ columns, rows, isLoading, noRowsMessage }: GridProps) => {
 		if (Array.isArray(row)) {
 			const r = row as NestedGridRows;
 			rowComponents.push(
-				<GridNestedRows rows={r} columns={columns} className={`gridNestedRows ${className}`} nesting={1} />
+				<GridNestedRows rows={r} columns={columns} className={`gridNestedRows ${className}`} nesting={1} />,
 			);
 			continue;
 		}

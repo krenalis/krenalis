@@ -4,7 +4,8 @@ import Grid from '../../shared/Grid/Grid';
 import Toolbar from '../../layout/Toolbar/Toolbar';
 import { AppContext } from '../../../context/providers/AppProvider';
 import statuses from '../../../constants/statuses';
-import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { UnprocessableError } from '../../../lib/api/errors';
 import { ArrayType, TextType, Property, ObjectType } from '../../../types/external/types';
 import { GridRow, NestedGridRows } from '../../../types/componentTypes/Grid.types';
@@ -84,7 +85,7 @@ const Schema = () => {
 					nestedRows.push(nr);
 					continue;
 				} else {
-					let name = pr.type.name;
+					let name: string = pr.type.name;
 					if (name === 'Array') {
 						const typ = p.type as ArrayType;
 						name = 'Array(' + typ.itemType?.name + ')';
@@ -106,7 +107,7 @@ const Schema = () => {
 				rows.push(nestedRows);
 				continue;
 			} else {
-				let name = p.type.name;
+				let name: string = p.type.name;
 				if (name === 'Array') {
 					const typ = p.type as ArrayType;
 					name = 'Array(' + typ.itemType?.name + ')';

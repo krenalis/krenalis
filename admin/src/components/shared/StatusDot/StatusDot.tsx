@@ -1,10 +1,11 @@
 import React from 'react';
 import './StatusDot.css';
-import { SlTooltip, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
-import { Status } from '../../../types/app';
+import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import { ConnectionStatus } from '../../../lib/helpers/transformedConnection';
 
 interface StatusDotProps {
-	status: Status;
+	status: ConnectionStatus;
 }
 
 const StatusDot = ({ status }: StatusDotProps) => {

@@ -1,7 +1,10 @@
 import React, { forwardRef, useRef, useEffect, useState, useImperativeHandle, ReactNode } from 'react';
 import './ComboBox.css';
 import { debounce } from '../../../lib/utils/debounce';
-import { SlInput, SlMenu, SlMenuItem, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
+import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { ComboboxItem, Size } from '../../../types/internal/app';
 
 interface ComboBoxListProps {
@@ -139,7 +142,7 @@ const ComboBoxInput = ({
 		}
 		if (e.key === 'ArrowDown') {
 			const comboboxListShadowRoot = comboBoxListRef.current!.renderRoot as ShadowRoot;
-			const menuItems = comboboxListShadowRoot.host.querySelectorAll('sl-menu-item');
+			const menuItems: any = comboboxListShadowRoot.host.querySelectorAll('sl-menu-item');
 			if (menuItems.length > 0) {
 				menuItems[0].focus();
 			}

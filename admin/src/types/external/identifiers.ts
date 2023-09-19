@@ -7,4 +7,4 @@ interface AnonymousIdentifiers {
 	Mapping: Mapping;
 }
 
-export { ActionIdentifiers, AnonymousIdentifiers };
+export type { ActionIdentifiers, AnonymousIdentifiers };

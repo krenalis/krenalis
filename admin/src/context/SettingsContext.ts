@@ -8,4 +8,5 @@ interface SettingsContextType {
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
-export { SettingsContext, SettingsContextType };
+export { SettingsContext };
+export type { SettingsContextType };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './ConnectorColorPicker.css';
-import { SlColorPicker } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlColorPicker from '@shoelace-style/shoelace/dist/react/color-picker/index.js';
 
 interface ConnectorColorPickerProps {
 	name: string;

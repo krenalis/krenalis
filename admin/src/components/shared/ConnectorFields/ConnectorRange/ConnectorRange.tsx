@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SlRange } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlRange from '@shoelace-style/shoelace/dist/react/range/index.js';
 
 interface ConnectorRangeProps {
 	name: string;

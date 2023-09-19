@@ -2,7 +2,9 @@ import React, { useState, useContext } from 'react';
 import './ConnectorsList.css';
 import Card from '../../shared/Card/Card';
 import { AppContext } from '../../../context/providers/AppProvider';
-import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { authCodeURLResponse } from '../../../types/external/api';
 
 const ConnectorsList = () => {

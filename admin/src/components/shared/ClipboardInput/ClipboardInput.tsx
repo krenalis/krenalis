@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import './ClipboardInput.css';
-import { SlInput, SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 interface ClipboardInputProps {
 	value: string;

@@ -9,4 +9,4 @@ interface UserPagination {
 	last: number;
 }
 
-export { UserProperty, UserPagination };
+export type { UserProperty, UserPagination };

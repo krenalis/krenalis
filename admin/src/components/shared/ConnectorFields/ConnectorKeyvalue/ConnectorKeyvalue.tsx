@@ -3,7 +3,7 @@ import './ConnectorKeyvalue.css';
 import ConnectorField from '../ConnectorField';
 import { KeyContext } from '../../../../context/KeyContext';
 import { ValueContext } from '../../../../context/ValueContext';
-import { SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import ConnectorFieldInterface from '../../../../types/external/ui';
 
 interface ConnectorKeyValueProps {

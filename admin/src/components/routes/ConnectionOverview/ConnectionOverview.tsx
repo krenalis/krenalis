@@ -7,7 +7,8 @@ import { ConnectionContext } from '../../../context/providers/ConnectionProvider
 import { NotFoundError } from '../../../lib/api/errors';
 import statuses from '../../../constants/statuses';
 import { BarChart, Bar, XAxis, Tooltip, YAxis, CartesianGrid } from 'recharts';
-import { SlDialog, SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import { ConnectionStats } from '../../../types/external/connection';
 import { GridRow } from '../../../types/componentTypes/Grid.types';
 import { Import } from '../../../types/external/api';

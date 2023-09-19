@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import ListTile from '../../shared/ListTile/ListTile';
 import { ActionType } from '../../../types/external/action';
-import { SlDialog } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 
 interface ActionTypesDialogProps {
 	isOpen: boolean;

@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { AppContext } from '../../../context/providers/AppProvider';
-import { SlSwitch } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import TransformedConnection from '../../../lib/helpers/transformedConnection';
 
 interface EnablingProps {

@@ -58,7 +58,7 @@ interface SheetsResponse {
 	sheets: string[];
 }
 
-export {
+export type {
 	authCodeURLResponse,
 	UIResponse,
 	UIValues,

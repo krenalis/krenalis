@@ -1,7 +1,9 @@
 import React, { useState, useContext } from 'react';
 import ActionContext from '../../../context/ActionContext';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
-import { SlButton, SlInput, SlIconButton } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 
 const ActionHeader = () => {
 	const [isNameEditable, setIsNameEditable] = useState(false);

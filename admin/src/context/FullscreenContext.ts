@@ -6,4 +6,5 @@ interface FullscreenContextType {
 
 const FullscreenContext = createContext<FullscreenContextType | undefined>(undefined);
 
-export { FullscreenContext, FullscreenContextType };
+export { FullscreenContext };
+export type { FullscreenContextType };

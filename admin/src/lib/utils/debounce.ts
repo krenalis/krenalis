@@ -5,7 +5,7 @@ export const debounce = (func: (...args: any) => any, time: number) => {
 		if (timer) {
 			clearTimeout(timer);
 		}
-		timer = setTimeout(
+		timer = window.setTimeout(
 			() => {
 				timer = null;
 				func.apply(context, args);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './ConnectorInput.css';
-import { SlInput } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import { InputType } from '../../../../types/external/ui';
 
 interface ConnectorInputProps {

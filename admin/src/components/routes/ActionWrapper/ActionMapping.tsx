@@ -10,7 +10,10 @@ import Section from '../../shared/Section/Section';
 import EditorWrapper from '../../shared/EditorWrapper/EditorWrapper';
 import { AppContext } from '../../../context/providers/AppProvider';
 import ActionContext from '../../../context/ActionContext';
-import { SlButton, SlIcon, SlInput, SlAlert } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
 
 const defaultTransformationParameterByTarget = {
 	Users: 'user',

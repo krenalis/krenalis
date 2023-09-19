@@ -1,6 +1,6 @@
 import React from 'react';
 import './IconWrapper.css';
-import { SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 interface IconWrapperProps {
 	name: string;

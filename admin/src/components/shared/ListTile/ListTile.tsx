@@ -1,6 +1,6 @@
 import React, { MouseEventHandler, ReactNode } from 'react';
 import './ListTile.css';
-import { SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 interface ListTileProps {
 	icon: ReactNode;

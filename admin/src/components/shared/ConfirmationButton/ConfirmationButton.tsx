@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState, ReactNode } from 'react';
 import './ConfirmationButton.css';
-import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
-import SlButtonType from '@shoelace-style/shoelace/dist/components/button/button';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButtonType from '@shoelace-style/shoelace/dist/components/button/button.js';
 import { Size, Variant } from '../../../types/internal/app';
 
 interface ConfirmationButtonProps {
@@ -20,7 +20,7 @@ interface ConfirmationButtonRef {
 }
 
 const ConfirmationButton = forwardRef<ConfirmationButtonRef, ConfirmationButtonProps>(
-	({ children, className, animationDuration, variant = 'default', onClick, size = 'medium', ...delegated }, ref) => {
+	({ children, className, animationDuration, variant, onClick, size = 'medium', ...delegated }, ref) => {
 		const [isLoading, setIsLoading] = useState(false);
 
 		const buttonRef = useRef<SlButtonType>(null);

@@ -12,7 +12,8 @@ import {
 	untransformAnonymousIdentifiers,
 	TransformedIdentifiers,
 } from '../../../lib/helpers/transformedIdentifiers';
-import { SlButton, SlSpinner } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import { ObjectType } from '../../../types/external/types';
 
 const AnonymousIdentity = () => {

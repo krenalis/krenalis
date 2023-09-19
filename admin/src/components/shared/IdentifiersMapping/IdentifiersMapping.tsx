@@ -3,7 +3,11 @@ import './IdentifiersMapping.css';
 import { ComboBoxInput, ComboBoxList } from '../ComboBox/ComboBox';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import useIdentifiersMapping from '../../../hooks/useIdentifiersMapping';
-import { SlButton, SlDropdown, SlMenu, SlMenuItem, SlIcon } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
+import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
+import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { ObjectType } from '../../../types/external/types';
 import { IdentifierAssociation, TransformedIdentifiers } from '../../../lib/helpers/transformedIdentifiers';
 

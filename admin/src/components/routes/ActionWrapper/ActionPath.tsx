@@ -9,15 +9,14 @@ import statuses from '../../../constants/statuses';
 import * as variants from '../../../constants/variants';
 import * as icons from '../../../constants/icons';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
-import {
-	SlButton,
-	SlInput,
-	SlIcon,
-	SlSpinner,
-	SlSelect,
-	SlOption,
-	SlDrawer,
-} from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
+
 import { CompletePathResponse, RecordsResponse, SheetsResponse } from '../../../types/external/api';
 import { GridColumn, GridRow } from '../../../types/componentTypes/Grid.types';
 
@@ -82,7 +81,7 @@ const ActionPath = () => {
 		if (path === '' || connection.storage === 0) {
 			return;
 		}
-		getCompletePathTimeoutID.current = setTimeout(async () => {
+		getCompletePathTimeoutID.current = window.setTimeout(async () => {
 			let res: CompletePathResponse;
 			try {
 				res = await api.connections.completePath(connection.storage, path);
