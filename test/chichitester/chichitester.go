@@ -11,6 +11,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
+	"net"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -146,8 +148,26 @@ func InitAndLaunch(t *testing.T) *Chichi {
 		}()
 	}
 
-	// Wait some time for Chichi to load.
+	// Wait a second for Chichi to load.
 	time.Sleep(1 * time.Second)
+
+	// Wait until Chichi starts listening.
+	attempts := 0
+	for {
+		conn, err := net.DialTimeout("tcp", testsSettings.ChichiHost, 500*time.Millisecond)
+		if err != nil {
+			// Use an exponential backoff timeout.
+			timeout := time.Duration(math.Exp(float64(attempts))*5) * time.Millisecond
+			time.Sleep(timeout)
+			attempts++
+			if attempts >= 10 {
+				t.Fatalf("cannot connect to Chichi on %q. No response after %d connections attempts, aborting test", testsSettings.ChichiHost, attempts)
+			}
+			continue
+		}
+		_ = conn.Close()
+		break
+	}
 
 	// Connect the data warehouse.
 	err = c.connectWarehouse(testsSettings.WarehouseType, testsSettings.Warehouse)
