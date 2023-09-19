@@ -10,7 +10,7 @@ export const debounce = (func: (...args: any) => any, time: number) => {
 				timer = null;
 				func.apply(context, args);
 			},
-			time == null ? 500 : time
+			time == null ? 500 : time,
 		);
 	};
 };

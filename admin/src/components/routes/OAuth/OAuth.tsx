@@ -32,7 +32,7 @@ const OAuth = () => {
 			if (connector == null) {
 				console.error(`connector with id ${Number(connectorID)} does not exist`);
 				setErrorMessage(
-					'Something went wrong, please try again and contact the administrator if the error persist'
+					'Something went wrong, please try again and contact the administrator if the error persist',
 				);
 				return;
 			}
@@ -66,7 +66,7 @@ const OAuth = () => {
 			} catch (err) {
 				console.error(err);
 				setErrorMessage(
-					'An internal error has occurred. Please try again later and if the issue persists contact our support.'
+					'An internal error has occurred. Please try again later and if the issue persists contact our support.',
 				);
 				return;
 			}

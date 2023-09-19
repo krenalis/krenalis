@@ -160,7 +160,7 @@ const transformActionMapping = (mapping: Mapping, outputSchema: ObjectType): Tra
 const computeDefaultAction = (
 	actionType: ActionType,
 	outputSchema: ObjectType,
-	fields: string[]
+	fields: string[],
 ): TransformedAction => {
 	const action: TransformedAction = {
 		Name: actionType.Name,
@@ -195,7 +195,7 @@ const computeDefaultAction = (
 const computeActionTypeFields = (
 	connection: TransformedConnection,
 	actionType: ActionType,
-	schemas: ActionSchemasResponse
+	schemas: ActionSchemasResponse,
 ) => {
 	const fields: string[] = [];
 	if (connection.type === 'App' && connection.role === 'Destination' && actionType.Target === 'Events') {

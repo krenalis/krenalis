@@ -26,7 +26,7 @@ const Section = forwardRef<any, SectionProps>(
 				<div className={`sectionContent${padded ? ' padded' : ''}`}>{children}</div>
 			</div>
 		);
-	}
+	},
 );
 
 export default Section;

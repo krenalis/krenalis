@@ -113,7 +113,7 @@ const ActionFilters = () => {
 					<SlButton className='removeCondition' size='small' variant='danger' onClick={onRemoveCondition}>
 						Remove
 					</SlButton>
-				</div>
+				</div>,
 			);
 		}
 	}

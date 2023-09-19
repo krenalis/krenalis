@@ -31,7 +31,7 @@ const useActionData = (
 	providedActionType: ActionType,
 	providedAction: Action,
 	setIsSaveButtonLoading: React.Dispatch<React.SetStateAction<boolean>>,
-	workspace: Workspace
+	workspace: Workspace,
 ) => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [action, setAction] = useState<TransformedAction>();
@@ -52,7 +52,7 @@ const useActionData = (
 					console.error(
 						`Action type with target ${providedAction.Target}${
 							providedAction.EventType ? ' and event type ' + providedAction.EventType : ''
-						} does not exists anymore`
+						} does not exists anymore`,
 					);
 					return;
 				}
@@ -191,7 +191,7 @@ const useActionData = (
 					if (providedAction.Identifiers != null) {
 						transformedIdentifiers = transformActionIdentifiers(
 							providedAction.Identifiers,
-							transformedMapping!
+							transformedMapping!,
 						);
 					}
 				}
@@ -229,7 +229,7 @@ const useActionData = (
 
 	const isTransformationAllowed = useMemo(
 		() => connection.type !== 'Website' && connection.type !== 'Mobile' && connection.type !== 'Server',
-		[connection, providedActionType, providedAction]
+		[connection, providedActionType, providedAction],
 	);
 
 	const saveAction = async () => {
@@ -292,7 +292,7 @@ const useActionData = (
 				});
 				mappingToSave[k] = v.value;
 				const isKeyPropertyAlreadyInSchema = outputSchema.properties!.find(
-					(p) => p.name === parentProperty!.name
+					(p) => p.name === parentProperty!.name,
 				);
 				if (!isKeyPropertyAlreadyInSchema) {
 					outputSchema.properties!.push(parentProperty);
@@ -362,7 +362,7 @@ const useActionData = (
 					connection.id,
 					actionType.Target,
 					actionType.EventType,
-					actionToSet
+					actionToSet,
 				);
 			}
 		} catch (err) {

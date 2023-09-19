@@ -90,8 +90,8 @@ const AppProvider = ({
 						c.WebhooksPer,
 						c.OAuth,
 						c.SourceDescription,
-						c.DestinationDescription
-					)
+						c.DestinationDescription,
+					),
 				);
 			}
 			setConnectors(transformedConnectors);
@@ -126,7 +126,7 @@ const AppProvider = ({
 					c.Health,
 					c.Storage,
 					getConnectionStatus(c),
-					getConnectionDescription(c, connector)
+					getConnectionDescription(c, connector),
 				);
 				transformedConnections.push(transformedConnection);
 			}

@@ -24,7 +24,7 @@ const ConnectionsMap = () => {
 				<>
 					<Arrow start='centralLogo' end='usersDatabase' startAnchor='bottom' endAnchor='top' />
 					<Arrow start='centralLogo' end='eventsDatabase' startAnchor='bottom' endAnchor='top' />
-				</>
+				</>,
 			);
 		}, 0);
 	}, []);

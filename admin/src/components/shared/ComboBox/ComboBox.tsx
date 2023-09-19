@@ -47,7 +47,7 @@ const ComboBoxList = forwardRef<ComboBoxListRef, ComboBoxListProps>(({ items, on
 				},
 			};
 		},
-		[]
+		[],
 	);
 
 	const onMouseDown = (e: React.MouseEvent) => {

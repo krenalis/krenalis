@@ -173,7 +173,7 @@ const getContextValueAndCallback = (
 	settingsContext: SettingsContextType | undefined,
 	keyContext: KeyContextType | undefined,
 	valueContext: ValueContextType | undefined,
-	fieldSetContext: FieldSetContextType | undefined
+	fieldSetContext: FieldSetContextType | undefined,
 ) => {
 	if (f.ComponentType === 'Text') return [null, null];
 

@@ -33,7 +33,7 @@ const User = () => {
 					<span className='text'>
 						{user.traits.FirstName} {user.traits.LastName}
 					</span>
-				</div>
+				</div>,
 			);
 		}
 	}, [user]);
@@ -174,7 +174,7 @@ const User = () => {
 			traits.push(
 				<>
 					<span className='label'>{trait}</span> <span className='value'>{value}</span>
-				</>
+				</>,
 			);
 		}
 	}
@@ -194,7 +194,7 @@ const User = () => {
 					<div className='eventLogo'>{logo}</div>
 					<div className='eventType'>{event.type}</div>
 					<div className='eventSentAt'>{event.sentAt}</div>
-				</>
+				</>,
 			);
 		}
 	}

@@ -68,7 +68,7 @@ const ConnectorSettings = () => {
 					<span>
 						Add {connector.name} {connectionRole.toLowerCase()} connection
 					</span>
-				</Flex>
+				</Flex>,
 			);
 			setName(connector.name);
 			const storages: TransformedConnection[] = [];
@@ -91,7 +91,7 @@ const ConnectorSettings = () => {
 				if (err instanceof UnprocessableError) {
 					if (err.code === 'EventNotExists') {
 						console.error(
-							`Unprocessable: connector does not implement the 'load' event in its ServeUI method`
+							`Unprocessable: connector does not implement the 'load' event in its ServeUI method`,
 						);
 						showError('Unexpected error. Contact the administrator for more informations.');
 					}
@@ -177,7 +177,7 @@ const ConnectorSettings = () => {
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'EventNotExists') {
 					console.error(
-						`Unprocessable: connection does not implement the ${eventName} event in its ServeUI method`
+						`Unprocessable: connection does not implement the ${eventName} event in its ServeUI method`,
 					);
 					showError('Unexpected error. Contact the administrator for more informations.');
 				}
@@ -272,7 +272,7 @@ const ConnectorSettings = () => {
 					}}
 				>
 					{a.Text}
-				</ConfirmationButton>
+				</ConfirmationButton>,
 			);
 		} else {
 			actionsToRender.push(
@@ -283,7 +283,7 @@ const ConnectorSettings = () => {
 					}}
 				>
 					{a.Text}
-				</SlButton>
+				</SlButton>,
 			);
 		}
 	}

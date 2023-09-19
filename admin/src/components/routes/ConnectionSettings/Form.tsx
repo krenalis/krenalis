@@ -38,7 +38,7 @@ const Form = ({ connection: c }: FormProps) => {
 				if (err instanceof UnprocessableError) {
 					if (err.code === 'EventNotExists') {
 						console.error(
-							`Unprocessable: connection does not implement the 'load' event in its ServeUI method`
+							`Unprocessable: connection does not implement the 'load' event in its ServeUI method`,
 						);
 						showError('Unexpected error. Contact the administrator for more informations.');
 					}
@@ -87,7 +87,7 @@ const Form = ({ connection: c }: FormProps) => {
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'EventNotExists') {
 					console.error(
-						`Unprocessable: connection does not implement the ${eventName} event in its ServeUI method`
+						`Unprocessable: connection does not implement the ${eventName} event in its ServeUI method`,
 					);
 					showError('Unexpected error. Contact the administrator for more informations.');
 				}
@@ -145,7 +145,7 @@ const Form = ({ connection: c }: FormProps) => {
 					}}
 				>
 					{a.Text}
-				</ConfirmationButton>
+				</ConfirmationButton>,
 			);
 		} else {
 			actionsToRender.push(
@@ -156,7 +156,7 @@ const Form = ({ connection: c }: FormProps) => {
 					}}
 				>
 					{a.Text}
-				</SlButton>
+				</SlButton>,
 			);
 		}
 	}

@@ -88,7 +88,7 @@ const ConfirmationButton = forwardRef<ConfirmationButtonRef, ConfirmationButtonP
 					stopLoading(cb);
 				},
 			}),
-			[]
+			[],
 		);
 
 		return (
@@ -105,7 +105,7 @@ const ConfirmationButton = forwardRef<ConfirmationButtonRef, ConfirmationButtonP
 				{children}
 			</SlButton>
 		);
-	}
+	},
 );
 
 export default ConfirmationButton;

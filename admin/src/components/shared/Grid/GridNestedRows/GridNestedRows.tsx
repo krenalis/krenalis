@@ -19,7 +19,7 @@ const GridNestedRows = ({ rows, columns, className, nesting }: GridNestedRowsPro
 		if (Array.isArray(row)) {
 			const r = row as NestedGridRows;
 			rowComponents.push(
-				<GridNestedRows rows={r} columns={columns} className='gridNestedRows children' nesting={nesting + 1} />
+				<GridNestedRows rows={r} columns={columns} className='gridNestedRows children' nesting={nesting + 1} />,
 			);
 		} else {
 			let rowComponent: ReactNode;

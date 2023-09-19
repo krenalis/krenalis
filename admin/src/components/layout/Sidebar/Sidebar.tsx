@@ -72,7 +72,7 @@ const Sidebar = ({ onLogout }: SidebarProps) => {
 			>
 				<SlIcon name={item.icon} />
 				<div className='text'>{item.label}</div>
-			</div>
+			</div>,
 		);
 		if (hasSubItems && (isSelected || isChildrenSelected)) {
 			for (const subItem of item.subItems!) {
@@ -85,7 +85,7 @@ const Sidebar = ({ onLogout }: SidebarProps) => {
 					>
 						{subItem.icon && <SlIcon name={subItem.icon} />}
 						<div className='text'>{subItem.label}</div>
-					</div>
+					</div>,
 				);
 			}
 		}

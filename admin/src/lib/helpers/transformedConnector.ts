@@ -25,7 +25,7 @@ class TransformedConnector {
 		webhooksPer: WebhooksPer,
 		oAuth: boolean,
 		sourceDescription: string,
-		destinationDescription: string
+		destinationDescription: string,
 	) {
 		this.id = id;
 		this.name = name;

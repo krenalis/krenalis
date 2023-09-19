@@ -76,7 +76,7 @@ interface autocompleteExpressionReturnValue {
 }
 const autocompleteExpression = (
 	expression: string,
-	currentCursorPosition: number
+	currentCursorPosition: number,
 ): autocompleteExpressionReturnValue => {
 	const char = expression[currentCursorPosition - 1];
 	const previousChar = expression[currentCursorPosition - 2];

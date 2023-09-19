@@ -127,7 +127,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 				conditionsCell.push(
 					<div>
 						{c.Property} {c.Operator} {c.Value}
-					</div>
+					</div>,
 				);
 			}
 		} else {
@@ -148,7 +148,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 									size='small'
 									onSlChange={(e) => onSchedulerPeriodChange(e, a.ID)}
 									value={Object.keys(SCHEDULE_PERIODS).find(
-										(k) => SCHEDULE_PERIODS[k] === a.SchedulePeriod
+										(k) => SCHEDULE_PERIODS[k] === a.SchedulePeriod,
 									)}
 								>
 									{Object.entries(SCHEDULE_PERIODS).map(([value, time]) => (

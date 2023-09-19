@@ -14,7 +14,7 @@ const useIdentifiersMapping = (
 		| ((identifiers: TransformedIdentifiers) => void),
 	inputSchema: ObjectType,
 	outputSchema: ObjectType,
-	onRemoveIdentifier?: (identifier: string) => void
+	onRemoveIdentifier?: (identifier: string) => void,
 ) => {
 	const { api, showError } = useContext(AppContext);
 
@@ -45,12 +45,12 @@ const useIdentifiersMapping = (
 					return null;
 				}
 			}),
-		[mapping]
+		[mapping],
 	);
 
 	const nonSelectableProperties = useMemo(
 		() => [...unusableProperties, ...usedProperties] as string[],
-		[unusableProperties, usedProperties]
+		[unusableProperties, usedProperties],
 	);
 
 	const isRemoveButtonDisabled = useMemo(() => {
@@ -70,7 +70,7 @@ const useIdentifiersMapping = (
 					expression,
 					schema,
 					destinationProperty.type,
-					destinationProperty.nullable
+					destinationProperty.nullable,
 				);
 			} catch (err) {
 				showError(err);

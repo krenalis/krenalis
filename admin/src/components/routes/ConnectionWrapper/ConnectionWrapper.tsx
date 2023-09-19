@@ -21,7 +21,7 @@ const ConnectionWrapper = () => {
 				</span>
 				<div className='text'>{connection.name}</div>
 				<StatusDot status={connection.status} />
-			</Flex>
+			</Flex>,
 		);
 	}, [connection]);
 

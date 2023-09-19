@@ -40,7 +40,7 @@ class TransformedConnection {
 		description: string,
 		linkedFiles?: TransformedConnection[],
 		actionTypes?: ActionType[],
-		actions?: Action[]
+		actions?: Action[],
 	) {
 		this.id = id;
 		this.name = name;
@@ -103,7 +103,7 @@ class TransformedConnection {
 const getActionTypeFromConnection = (
 	connection: TransformedConnection,
 	target: ActionTarget,
-	eventType: string | null
+	eventType: string | null,
 ): ActionType | undefined => {
 	let actionType: ActionType | undefined;
 	if (target === 'Events') {
@@ -153,7 +153,7 @@ const getConnectionStatus = (connection: Connection): ConnectionStatus => {
 
 const getStorageFileConnections = (
 	storageID: number,
-	connections: TransformedConnection[]
+	connections: TransformedConnection[],
 ): TransformedConnection[] => {
 	return connections.filter((c) => c.storage === storageID);
 };

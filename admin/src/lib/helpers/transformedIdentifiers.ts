@@ -64,7 +64,7 @@ const validateIdentifiersMapping = (identifiersMapping: TransformedIdentifiers) 
 
 const transformActionIdentifiers = (
 	actionIdentifiers: ActionIdentifiers,
-	mapping: TransformedMapping
+	mapping: TransformedMapping,
 ): TransformedIdentifiers => {
 	return actionIdentifiers.map((identifier) => [
 		{ value: mapping[identifier].value, error: '' },

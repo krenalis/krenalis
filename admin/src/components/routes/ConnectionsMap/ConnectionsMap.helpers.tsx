@@ -17,7 +17,7 @@ const getConnectionsBlocks = (connections: TransformedConnection[], newConnectio
 					primaryColumn={c.isSource ? 'right' : 'left'}
 					secondaryConnections={linkedFiles}
 					newConnection={newConnectionID}
-				></LinkedConnectionBlocks>
+				></LinkedConnectionBlocks>,
 			);
 			continue;
 		}

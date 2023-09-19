@@ -47,7 +47,7 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 		}
 		defaultTransformationFunction.current = rawTransformationFunction.replace(
 			'$parameterName',
-			defaultTransformationParameterByTarget[actionType.Target]
+			defaultTransformationParameterByTarget[actionType.Target],
 		);
 	}, []);
 
@@ -85,7 +85,7 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 					value,
 					actionType.InputSchema,
 					action.Mapping![name].full.type,
-					action.Mapping![name].full.nullable
+					action.Mapping![name].full.nullable,
 				);
 			} catch (err) {
 				showError(err);
@@ -178,7 +178,7 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 						name={k}
 						className={`outputProperty${action.Mapping![k].indentation! > 0 ? ' indented' : ''}`}
 					/>
-				</div>
+				</div>,
 			);
 		}
 		content = (
@@ -263,7 +263,7 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 						)}
 					</div>
 				</AlertDialog>,
-				document.body
+				document.body,
 			)}
 		</>
 	);

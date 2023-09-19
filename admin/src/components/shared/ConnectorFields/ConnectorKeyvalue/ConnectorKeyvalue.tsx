@@ -104,7 +104,7 @@ const ConnectorKeyValue = ({
 					</div>
 				</ValueContext.Provider>
 				{r.id !== 1 && <SlIcon className='removeRow' name='trash3' onClick={() => onRemoveRowClick(r.id)} />}
-			</div>
+			</div>,
 		);
 	}
 
