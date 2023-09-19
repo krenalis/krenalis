@@ -27,6 +27,7 @@ import (
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/events"
+	"chichi/apis/mappings/mapexp"
 	"chichi/apis/normalization"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
@@ -36,6 +37,7 @@ import (
 	"chichi/telemetry"
 
 	"github.com/jxskiss/base62"
+	"golang.org/x/exp/maps"
 )
 
 // maxSettingsLen is the maximum length of settings in runes.
@@ -1926,6 +1928,397 @@ func (this *Connection) updateConnectionsStats(ctx context.Context) error {
 	return err
 }
 
+// validateActionToSet validates the action to set (when adding or setting an
+// action) for the given target and event type.
+//
+// It returns an errors.UnprocessableError with code
+// MappingOverAnonymousIdentifier if the action maps over an anonymous
+// identifier.
+//
+// Refer to the specifications in the file "connector/Actions support.md" for
+// more details.
+func (this *Connection) validateActionToSet(action ActionToSet, target state.ActionTarget, eventType string) error {
+
+	// First, do formal validations.
+
+	// Validate the name.
+	if action.Name == "" {
+		return errors.BadRequest("name is empty")
+	}
+	if !utf8.ValidString(action.Name) {
+		return errors.BadRequest("name is not UTF-8 encoded")
+	}
+	if n := utf8.RuneCountInString(action.Name); n > 60 {
+		return errors.BadRequest("name is longer than 60 runes")
+	}
+	// Validate the schemas.
+	if action.InSchema.Valid() && action.InSchema.PhysicalType() != types.PtObject {
+		return errors.BadRequest("input schema, if provided, must be an object")
+	}
+	if action.OutSchema.Valid() && action.OutSchema.PhysicalType() != types.PtObject {
+		return errors.BadRequest("out schema, if provided, must be an object")
+	}
+	// Validate the filter.
+	var conditionProperties []types.Path
+	if action.Filter != nil {
+		if !action.InSchema.Valid() {
+			return errors.BadRequest("input schema is required by the filter")
+		}
+		if l := action.Filter.Logical; l != "all" && l != "any" {
+			return errors.BadRequest("filter logical operator %q is not valid", action.Filter.Logical)
+		}
+		if len(action.Filter.Conditions) == 0 {
+			return errors.BadRequest("filter does not contain conditions")
+		}
+		conditionProperties = make([]types.Path, len(action.Filter.Conditions))
+		for i, condition := range action.Filter.Conditions {
+			property, ok := parsePropertyPath(condition.Property)
+			if !ok {
+				return errors.BadRequest("filter condition property expression %q is not valid", condition.Property)
+			}
+			conditionProperties[i] = property
+			if op := condition.Operator; op != "is" && op != "is not" {
+				return errors.BadRequest("filter condition operator %q is not valid", op)
+			}
+			if !utf8.ValidString(condition.Value) {
+				return errors.BadRequest("filter condition value is not UTF-8 encoded")
+			}
+			if n := utf8.RuneCountInString(condition.Value); n > 60 {
+				return errors.BadRequest("filter condition value is longer than 60 runes")
+			}
+		}
+	}
+	// Validate the mapping.
+	var inPaths []types.Path
+	var outPaths []types.Path
+	if action.Mapping != nil && len(action.Mapping) > 0 {
+		if !action.InSchema.Valid() {
+			return errors.BadRequest("input schema is required by the mapping")
+		}
+		if !action.OutSchema.Valid() {
+			return errors.BadRequest("output schema is required by the mapping")
+		}
+		for path, expr := range action.Mapping {
+			outPath, ok := parsePropertyPath(path)
+			if !ok {
+				return errors.BadRequest("output mapped property %q is not valid", path)
+			}
+			outPaths = append(outPaths, outPath)
+			p, err := action.OutSchema.PropertyByPath(outPath)
+			if err != nil {
+				err := err.(types.PathNotExistError)
+				return errors.BadRequest("output mapped property %s not found in output schema", err.Path)
+			}
+			expr, err := mapexp.Compile(expr, action.InSchema, p.Type, p.Nullable)
+			if err != nil {
+				return errors.BadRequest("invalid expression mapped to %s: %s", path, err)
+			}
+			inPaths = append(inPaths, expr.Properties()...)
+		}
+	}
+	// Validate the transformation.
+	if action.Transformation != nil {
+		if !action.InSchema.Valid() {
+			return errors.BadRequest("input schema is required by the transformation")
+		}
+		if !action.OutSchema.Valid() {
+			return errors.BadRequest("output schema is required by the transformation")
+		}
+		if action.Transformation.Func == "" {
+			return errors.BadRequest("transformation function is empty")
+		}
+	}
+	// Validate the identifiers.
+	if action.Identifiers != nil {
+		if len(action.Identifiers) == 0 {
+			return errors.BadRequest("identifiers, if provided, cannot be empty")
+		}
+		if action.Mapping == nil {
+			return errors.BadRequest("mapping is required by identifiers")
+		}
+		for i, identifier := range action.Identifiers {
+			if !types.IsValidPropertyPath(identifier) {
+				return errors.BadRequest("identifier %q is not a valid path", identifier)
+			}
+			if slices.Contains(action.Identifiers[i+1:], identifier) {
+				return errors.BadRequest("identifier %s is repeated", identifier)
+			}
+			if _, ok := action.Mapping[identifier]; !ok {
+				return errors.BadRequest("identifier %s does not exist in mapping", identifier)
+			}
+			property, err := action.OutSchema.PropertyByPath(strings.Split(identifier, "."))
+			if err != nil {
+				return fmt.Errorf("unexpected error validating action identifier %s: %s", identifier, err)
+			}
+			t := property.Type
+			if t.PhysicalType() == types.PtArray {
+				t = t.ItemType()
+			}
+			switch t.PhysicalType() {
+			case types.PtJSON, types.PtArray, types.PtObject, types.PtMap:
+				return errors.BadRequest("%s cannot be used as identifier because an identifier cannot have type %s", identifier, property.Type)
+			}
+		}
+	}
+	// Ensure that every property in the input and output schemas have been
+	// mapped, unless the action has a transformation function; in that case, we
+	// do not know which properties have been mapped, so this check cannot be
+	// done.
+	if inPaths != nil && action.Transformation == nil {
+		if props := unmappedProperties(action.InSchema, inPaths); props != nil {
+			return errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
+		}
+		if props := unmappedProperties(action.OutSchema, outPaths); props != nil {
+			return errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
+		}
+	}
+	// Validate the path.
+	if action.Path != "" {
+		if !utf8.ValidString(action.Path) {
+			return errors.BadRequest("path is not UTF-8 encoded")
+		}
+		if n := utf8.RuneCountInString(action.Path); n > 1024 {
+			return errors.BadRequest("path is longer than 1024 runes")
+		}
+	}
+	// Validate the table name.
+	if action.TableName != "" {
+		if !utf8.ValidString(action.TableName) {
+			return errors.BadRequest("table name is not UTF-8 encoded")
+		}
+		if n := utf8.RuneCountInString(action.TableName); n > 1024 {
+			return errors.BadRequest("table name is longer than 1024 runes")
+		}
+	}
+	// Validate the sheet.
+	if action.Sheet != "" {
+		if !utf8.ValidString(action.Sheet) {
+			return errors.BadRequest("sheet is not UTF-8 encoded")
+		}
+		if n := utf8.RuneCountInString(action.Sheet); n > 100 {
+			return errors.BadRequest("sheet is longer than 100 runes")
+		}
+	}
+	// Validate the export options.
+	if action.ExportMode != nil {
+		switch *action.ExportMode {
+		case CreateOnly, UpdateOnly, CreateOrUpdate:
+		default:
+			return errors.BadRequest("export mode %q is not valid", *action.ExportMode)
+		}
+	}
+	if action.MatchingProperties != nil {
+		props := *action.MatchingProperties
+		if !types.IsValidPropertyName(props.Internal) {
+			return errors.BadRequest("internal matching property %q is not a valid property name", props.Internal)
+		}
+		if !types.IsValidPropertyName(props.External) {
+			return errors.BadRequest("external matching property %q is not a valid property name", props.External)
+		}
+	}
+
+	// Second, do validations based on the workspace and the connection.
+
+	c := this.connection
+	connector := c.Connector()
+	ws := this.connection.Workspace()
+
+	// When importing users, ensure that there are no mappings over the
+	// anonymous identifiers of the workspace.
+	if importingUsers := c.Role == state.SourceRole && target == state.UsersTarget; importingUsers {
+		var tOutProps []string
+		if action.Transformation != nil {
+			tOutProps = action.OutSchema.PropertiesNames()
+		}
+		for _, p := range ws.AnonymousIdentifiers.Priority {
+			_, ok := action.Mapping[p]
+			if ok || slices.Contains(tOutProps, p) {
+				return errors.Unprocessable(MappingOverAnonymousIdentifier, "cannot map over the property %s because it is an anonymous identifier", p)
+			}
+		}
+	}
+
+	// Check if the query is allowed.
+	if needsQuery := connector.Type == state.DatabaseType && c.Role == state.SourceRole; needsQuery {
+		if action.Query == "" {
+			return errors.BadRequest("query cannot be empty for database actions")
+		}
+	} else {
+		if action.Query != "" {
+			return errors.BadRequest("%s actions cannot have a query", connector.Type)
+		}
+	}
+
+	// Check if the filters are allowed.
+	targetUsersOrGroups := target == state.UsersTarget || target == state.GroupsTarget
+	var filtersAllowed bool
+	switch connector.Type {
+	case state.AppType:
+		filtersAllowed = c.Role == state.DestinationRole
+	case state.DatabaseType:
+		filtersAllowed = c.Role == state.DestinationRole
+	case state.FileType:
+		filtersAllowed = targetUsersOrGroups && c.Role == state.DestinationRole
+	}
+	if action.Filter != nil && !filtersAllowed {
+		return errors.BadRequest("filters are not allowed")
+	}
+
+	// Check if the path and the sheet are allowed.
+	if connector.Type == state.FileType {
+		if action.Path == "" {
+			return errors.BadRequest("path cannot be empty for file actions")
+		}
+		if connector.HasSheets && action.Sheet == "" {
+			return errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
+		}
+		if !connector.HasSheets && action.Sheet != "" {
+			return errors.BadRequest("connection %d does not have sheets", c.ID)
+		}
+	} else {
+		if action.Path != "" {
+			return errors.BadRequest("%s actions cannot have a path", connector.Type)
+		}
+		if action.Sheet != "" {
+			return errors.BadRequest("%s actions cannot have a sheet", connector.Type)
+		}
+	}
+
+	// Check if the table name is allowed.
+	needsTableName := connector.Type == state.DatabaseType && c.Role == state.DestinationRole
+	if needsTableName && action.TableName == "" {
+		return errors.BadRequest("table name cannot be empty for destination database actions")
+	} else if !needsTableName && action.TableName != "" {
+		return errors.BadRequest("table name is not allowed")
+	}
+
+	// Check if the export options are needed.
+	needsExportOptions := connector.Type == state.AppType &&
+		c.Role == state.DestinationRole &&
+		targetUsersOrGroups
+	if needsExportOptions {
+		if action.ExportMode == nil {
+			return errors.BadRequest("export mode cannot be nil")
+		}
+		if action.MatchingProperties == nil {
+			return errors.BadRequest("matching properties cannot be nil")
+		}
+	} else {
+		if action.ExportMode != nil {
+			return errors.BadRequest("export mode must be nil")
+		}
+		if action.MatchingProperties != nil {
+			return errors.BadRequest("matching properties must be nil")
+		}
+	}
+
+	// Validate empty mappings; they are allowed only when sending events,
+	// because the user may want to leave every property of the output schema
+	// unmapped.
+	if action.Mapping != nil && len(action.Mapping) == 0 && target != state.EventsTarget {
+		return errors.BadRequest("action has a mapping with no mapped properties")
+	}
+
+	// Check if the mapping (or the transformation) is mandatory, and if the transformation is allowed.
+	var mappingIsMandatory bool
+	var transformationIsAllowed bool
+	switch connector.Type {
+	case state.AppType:
+		mappingIsMandatory = targetUsersOrGroups
+		transformationIsAllowed = mappingIsMandatory
+	case state.MobileType, state.ServerType, state.WebsiteType:
+		mappingIsMandatory = targetUsersOrGroups
+		transformationIsAllowed = false
+	case
+		state.DatabaseType,
+		state.FileType:
+		mappingIsMandatory = c.Role == state.SourceRole && targetUsersOrGroups
+		transformationIsAllowed = mappingIsMandatory
+	}
+	if mappingIsMandatory && action.Mapping == nil && action.Transformation == nil {
+		if transformationIsAllowed {
+			return errors.BadRequest("mapping (or transformation) is required")
+		}
+		return errors.BadRequest("mapping is required")
+	}
+	if !transformationIsAllowed && action.Transformation != nil {
+		return errors.BadRequest("transformation is not allowed")
+	}
+
+	// Check if the identifiers for the identity resolution are mandatory.
+	var needsIdentifiers bool
+	switch connector.Type {
+	case
+		state.AppType,
+		state.DatabaseType,
+		state.FileType,
+		state.MobileType,
+		state.ServerType,
+		state.WebsiteType:
+		needsIdentifiers = c.Role == state.SourceRole && targetUsersOrGroups
+	}
+	if needsIdentifiers && action.Identifiers == nil {
+		return errors.BadRequest("identifiers are required")
+	}
+	if !needsIdentifiers && action.Identifiers != nil {
+		return errors.BadRequest("unexpected identifiers")
+	}
+
+	return nil
+}
+
+// allowsActionTarget reports whether a connection with the given connector type
+// and role supports an action with the given target.
+//
+// Refer to the specifications in the file "connector/Actions support.md" for
+// more details.
+func allowsActionTarget(typ state.ConnectorType, role _connector.Role, target state.ActionTarget) bool {
+	isSource := role == _connector.SourceRole
+	usersOrGroups := target == state.UsersTarget || target == state.GroupsTarget
+	switch typ {
+	case state.AppType:
+		return !isSource || (isSource && usersOrGroups)
+	case state.DatabaseType:
+		return usersOrGroups
+	case state.FileType:
+		return usersOrGroups
+	case
+		state.MobileType,
+		state.ServerType,
+		state.StreamType,
+		state.WebsiteType:
+		return isSource
+	default:
+		return false
+	}
+}
+
+const noQueryLimit = -1
+
+// compileActionQuery compiles the given query and returns it. If limit is
+// noQueryLimit removes the $limit variable (along with '{{' and '}}');
+// otherwise, replaces the variable with limit.
+func compileActionQuery(query string, limit int) (string, error) {
+	p := strings.Index(query, "$limit")
+	if p == -1 {
+		return "", errors.BadRequest("query does not contain the $limit variable")
+	}
+	s1 := strings.Index(query[:p], "{{")
+	if s1 == -1 {
+		return "", errors.BadRequest("query does not contain '{{'")
+	}
+	n := len("$limit")
+	s2 := strings.Index(query[p+n:], "}}")
+	if s2 == -1 {
+		return "", errors.BadRequest("query does not contain '}}'")
+	}
+	s2 += p + n + 2
+	if limit == noQueryLimit {
+		return query[:s1] + query[s2:], nil
+	}
+	return query[:s1] + strings.ReplaceAll(query[s1+2:s2-2], "$limit", strconv.Itoa(limit)) + query[s2:], nil
+}
+
 // marshalSchema marshals the given schema.
 // If schema is invalid, returns []byte("null") and no errors.
 func marshalSchema(schema types.Type) ([]byte, error) {
@@ -1956,6 +2349,18 @@ func normalize(values map[string]any, schema types.Type) (map[string]any, error)
 	return out, nil
 }
 
+// parsePropertyPath parses the property path p, returning a property path with
+// a single element, if p is an identifier, or a path with the components of the
+// path, if p is a selector.
+// The boolean return parameter reports whether p is a valid property path or
+// not; when not valid, the returned path is nil.
+func parsePropertyPath(p string) (types.Path, bool) {
+	if !types.IsValidPropertyPath(p) {
+		return nil, false
+	}
+	return strings.Split(p, "."), true
+}
+
 // setSettings sets the given settings of the given connection.
 // It is a copy of the apis.setSettings function, so keep in sync.
 func setSettings(ctx context.Context, db *postgres.DB, connection int, settings []byte) error {
@@ -1979,11 +2384,71 @@ func setSettings(ctx context.Context, db *postgres.DB, connection int, settings 
 	return err
 }
 
+// sourceMappingSchema returns the users schema to use in mappings for source
+// connections.
+func sourceMappingSchema(users types.Type, connTyp state.ConnectorType) types.Type {
+	usersProps := users.Properties()
+	var props []types.Property
+	switch connTyp {
+	case
+		state.AppType, state.MobileType, state.ServerType, state.WebsiteType:
+		props = make([]types.Property, 0, len(usersProps)-2)
+		for _, p := range users.Unflatten().Properties() {
+			// Skip the "id", "creation_time" and "timestamp" properties, which
+			// cannot be mapped explicitly by the user.
+			switch p.Name {
+			case "id", "creation_time", "timestamp":
+				continue
+			}
+			props = append(props, p)
+		}
+	case
+		state.DatabaseType,
+		state.FileType:
+
+		props = make([]types.Property, 0, len(usersProps))
+		for _, p := range users.Unflatten().Properties() {
+			// Skip the "id", which cannot be mapped explicitly by the user.
+			//
+			// Also, the "creation_time" property cannot be set by the user,
+			// while the "timestamp" may be manually set by them.
+			switch p.Name {
+			case "id", "creation_time":
+				continue
+			}
+			props = append(props, p)
+		}
+	default:
+		panic(fmt.Sprintf("unexpected connection type %d", connTyp))
+	}
+	return types.Object(props)
+}
+
 // statsTimeSlot returns the stats time slot for the time t.
 // t must be a UTC time.
 func statsTimeSlot(t time.Time) int {
 	epoc := int(t.Unix())
 	return epoc / (60 * 60)
+}
+
+// unmappedProperties returns the names of the unmapped properties in schema, if
+// there is at least one, otherwise returns nil.
+// schema must be valid.
+func unmappedProperties(schema types.Type, mapped []types.Path) []string {
+	schemaProps := schema.PropertiesNames()
+	notMapped := make(map[string]struct{}, len(schemaProps))
+	for _, p := range schemaProps {
+		notMapped[p] = struct{}{}
+	}
+	for _, path := range mapped {
+		delete(notMapped, path[0])
+	}
+	if len(notMapped) == 0 {
+		return nil
+	}
+	props := maps.Keys(notMapped)
+	slices.Sort(props)
+	return props
 }
 
 // webhookURL returns the URL of the webhook for the given connection and
