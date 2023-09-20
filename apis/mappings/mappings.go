@@ -77,7 +77,7 @@ type Mapping struct {
 func New(inSchema, outSchema types.Type, mappings map[string]string, transformation *state.Transformation, formatTime bool) (*Mapping, error) {
 
 	if !inSchema.Valid() || !outSchema.Valid() {
-		panic("input and output schemas must be valid")
+		return nil, errors.New("input or output schema is not valid")
 	}
 
 	m := Mapping{inSchema: inSchema, outSchema: outSchema,
