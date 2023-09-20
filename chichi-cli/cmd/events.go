@@ -33,6 +33,8 @@ func init() {
 		Short: "Stream live events",
 		Run: func(cmd *cobra.Command, args []string) {
 
+			ws := workspace(cmd)
+
 			rate, err := time.ParseDuration(rateS)
 			if err != nil {
 				log.Fatal(errors.New("invalid rate"))
@@ -44,8 +46,8 @@ func init() {
 
 			ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 			defer cancel()
-			listener := chichiapis.AddEventListener(size, source, server, stream)
-			defer chichiapis.RemoveEventListener(listener)
+			listener := chichiapis.AddEventListener(ws, size, source, server, stream)
+			defer chichiapis.RemoveEventListener(ws, listener)
 
 			i := 1
 
@@ -55,7 +57,7 @@ func init() {
 					return
 				default:
 				}
-				events, discarded := chichiapis.Events(listener)
+				events, discarded := chichiapis.Events(ws, listener)
 				for _, event := range events {
 					fmt.Printf("%d. ", i)
 					if event.Header == nil {

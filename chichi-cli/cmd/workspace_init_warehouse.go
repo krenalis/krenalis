@@ -18,7 +18,7 @@ var workspaceInitWarehouseCmd = &cobra.Command{
 	Short: "Initialize the data warehouse",
 	Long:  "Initialize the connected data warehouse by creating the supporting tables.",
 	Run: func(cmd *cobra.Command, args []string) {
-		chichiapis.WorkspaceInitWarehouse()
+		chichiapis.WorkspaceInitWarehouse(workspace(cmd))
 	},
 }
 

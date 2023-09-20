@@ -14,7 +14,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -43,33 +42,25 @@ type Connection struct {
 	Name string
 }
 
-func getWorkspace() string {
-	workspaceID := os.Getenv("CHICHI_CLI_WORKSPACE")
-	if workspaceID == "" {
-		log.Fatal("workspace id not found. Define the CHICHI_CLI_WORKSPACE environment variable")
-	}
-	return workspaceID
-}
-
-func DisableConnection(connection int) {
-	path := "api/workspaces/" + getWorkspace() + "/connections/" + strconv.Itoa(connection) + "/status"
+func DisableConnection(workspace, connection int) {
+	path := "api/workspaces/" + strconv.Itoa(workspace) + "/connections/" + strconv.Itoa(connection) + "/status"
 	err := callAPI("POST", path, strings.NewReader(`{"enabled":false}`), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func EnableConnection(connection int) {
-	path := "api/workspaces/" + getWorkspace() + "/connections/" + strconv.Itoa(connection) + "/status"
+func EnableConnection(workspace, connection int) {
+	path := "api/workspaces/" + strconv.Itoa(workspace) + "/connections/" + strconv.Itoa(connection) + "/status"
 	err := callAPI("POST", path, strings.NewReader(`{"enabled":true}`), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func ListConnections() {
+func ListConnections(workspace int) {
 	var connections []*Connection
-	err := callAPI("GET", "api/workspaces/"+getWorkspace()+"/connections/", nil, &connections)
+	err := callAPI("GET", "api/workspaces/"+strconv.Itoa(workspace)+"/connections/", nil, &connections)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,7 +69,7 @@ func ListConnections() {
 	}
 }
 
-func AddEventListener(size, source, server, stream int) string {
+func AddEventListener(workspace, size, source, server, stream int) string {
 	req := struct {
 		Size   int `json:"size"`
 		Source int `json:"source"`
@@ -90,81 +81,81 @@ func AddEventListener(size, source, server, stream int) string {
 	}
 	var b bytes.Buffer
 	_ = json.NewEncoder(&b).Encode(req)
-	err := callAPI("PUT", "api/workspaces/"+getWorkspace()+"/event-listeners/", &b, &res)
+	err := callAPI("PUT", "api/workspaces/"+strconv.Itoa(workspace)+"/event-listeners/", &b, &res)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return res.ID
 }
 
-func Events(listener string) ([]ProcessedEvent, int) {
+func Events(workspace int, listener string) ([]ProcessedEvent, int) {
 	var res struct {
 		Events    []ProcessedEvent
 		Discarded int
 	}
-	err := callAPI("GET", "api/workspaces/"+getWorkspace()+"/event-listeners/"+url.PathEscape(listener)+"/events", nil, &res)
+	err := callAPI("GET", "api/workspaces/"+strconv.Itoa(workspace)+"/event-listeners/"+url.PathEscape(listener)+"/events", nil, &res)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return res.Events, res.Discarded
 }
 
-func RemoveEventListener(listener string) {
-	err := callAPI("DELETE", "api/workspaces/"+getWorkspace()+"/event-listeners/"+url.PathEscape(listener), nil, nil)
+func RemoveEventListener(workspace int, listener string) {
+	err := callAPI("DELETE", "api/workspaces/"+strconv.Itoa(workspace)+"/event-listeners/"+url.PathEscape(listener), nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func WorkspaceConnectWarehouse(typ string, settings []byte) {
+func WorkspaceConnectWarehouse(workspace int, typ string, settings []byte) {
 	req := struct {
 		Type     string
 		Settings json.RawMessage
 	}{typ, settings}
 	b := &bytes.Buffer{}
 	_ = json.NewEncoder(b).Encode(req)
-	err := callAPI("POST", "api/workspaces/"+getWorkspace()+"/connect-warehouse", b, nil)
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/connect-warehouse", b, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func WorkspaceDisconnectWarehouse() {
-	err := callAPI("POST", "api/workspaces/"+getWorkspace()+"/disconnect-warehouse", nil, nil)
+func WorkspaceDisconnectWarehouse(workspace int) {
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/disconnect-warehouse", nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func WorkspaceInitWarehouse() {
-	err := callAPI("POST", "api/workspaces/"+getWorkspace()+"/init-warehouse", nil, nil)
+func WorkspaceInitWarehouse(workspace int) {
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/init-warehouse", nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func WorkspacePingWarehouse(typ string, settings []byte) {
+func WorkspacePingWarehouse(workspace int, typ string, settings []byte) {
 	req := struct {
 		Type     string
 		Settings json.RawMessage
 	}{typ, settings}
 	b := &bytes.Buffer{}
 	_ = json.NewEncoder(b).Encode(req)
-	err := callAPI("POST", "api/workspaces/"+getWorkspace()+"/ping-warehouse", b, nil)
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/ping-warehouse", b, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func WorkspaceReloadSchemas() {
-	err := callAPI("POST", "api/workspaces/"+getWorkspace()+"/reload-schemas", nil, nil)
+func WorkspaceReloadSchemas(workspace int) {
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/reload-schemas", nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func Reload(connection int) error {
-	err := callAPI("POST", "api/workspaces/"+getWorkspace()+"/connections/"+strconv.Itoa(connection)+"/reload", nil, nil)
+func Reload(workspace, connection int) error {
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/connections/"+strconv.Itoa(connection)+"/reload", nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

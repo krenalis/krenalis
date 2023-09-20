@@ -17,7 +17,7 @@ var connectionsCmd = &cobra.Command{
 	Use:   "connections",
 	Short: "Interact with connections",
 	Run: func(cmd *cobra.Command, args []string) {
-		chichiapis.ListConnections()
+		chichiapis.ListConnections(workspace(cmd))
 	},
 }
 

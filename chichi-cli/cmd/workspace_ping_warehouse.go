@@ -34,7 +34,7 @@ var workspacePingWarehouseCmd = &cobra.Command{
 		if !json.Valid(settings) {
 			log.Fatalf("content of file %q is not JSON valid", filename)
 		}
-		chichiapis.WorkspacePingWarehouse(typ, settings)
+		chichiapis.WorkspacePingWarehouse(workspace(cmd), typ, settings)
 	},
 }
 

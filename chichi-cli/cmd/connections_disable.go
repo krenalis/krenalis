@@ -26,7 +26,7 @@ var disableCmd = &cobra.Command{
 		if connection <= 0 {
 			log.Fatalf("invalid connection Id %q", args[0])
 		}
-		chichiapis.DisableConnection(connection)
+		chichiapis.DisableConnection(workspace(cmd), connection)
 	},
 }
 

@@ -18,7 +18,7 @@ var workspaceDisconnectWarehouseCmd = &cobra.Command{
 	Short: "Disconnect the data warehouse",
 	Long:  "Disconnect the data warehouse of the workspace",
 	Run: func(cmd *cobra.Command, args []string) {
-		chichiapis.WorkspaceDisconnectWarehouse()
+		chichiapis.WorkspaceDisconnectWarehouse(workspace(cmd))
 	},
 }
 

@@ -18,7 +18,7 @@ var workspaceReloadSchemasCmd = &cobra.Command{
 	Short: "Reload the schemas",
 	Long:  "Reload the schemas of the data warehouse",
 	Run: func(cmd *cobra.Command, args []string) {
-		chichiapis.WorkspaceReloadSchemas()
+		chichiapis.WorkspaceReloadSchemas(workspace(cmd))
 	},
 }
 

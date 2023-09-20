@@ -34,7 +34,7 @@ var workspaceConnectWarehouseCmd = &cobra.Command{
 		if !json.Valid(settings) {
 			log.Fatalf("content of file %q is not JSON valid", filename)
 		}
-		chichiapis.WorkspaceConnectWarehouse(typ, settings)
+		chichiapis.WorkspaceConnectWarehouse(workspace(cmd), typ, settings)
 	},
 }
 

@@ -26,7 +26,7 @@ var reloadCmd = &cobra.Command{
 		if connection <= 0 {
 			log.Fatalf("invalid connection Id %q", args[0])
 		}
-		chichiapis.Reload(connection)
+		chichiapis.Reload(workspace(cmd), connection)
 	},
 }
 
