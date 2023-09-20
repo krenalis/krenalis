@@ -158,5 +158,5 @@ func removeGoSum(repo, module string, verbose bool) {
 }
 
 func logCmd(dir, cmd string) {
-	fmt.Printf("%-30s%s\n", dir, cmd)
+	fmt.Printf("%-39s %s\n", dir, cmd)
 }
