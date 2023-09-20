@@ -69,7 +69,8 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		router.Route("/api/workspaces", func(router chi.Router) {
 			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-				// TODO: implement listWorkspaces
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(account.Workspaces())
 			})
 			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 				req := struct {
