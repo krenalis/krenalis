@@ -64,25 +64,25 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 				// TODO: implement listWorkspaces
 			})
+			router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				req := struct {
+					Name          string
+					PrivacyRegion apis.PrivacyRegion
+				}{}
+				err := json.NewDecoder(r.Body).Decode(&req)
+				if err != nil {
+					respond(w, errors.BadRequest("invalid JSON"))
+					return
+				}
+				id, err := account.AddWorkspace(ctx, req.Name, req.PrivacyRegion)
+				w.Header().Add("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]int{"id": id})
+				respond(w, err)
+			})
 			router.Route("/{workspaceID}", func(router chi.Router) {
 				router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 					w.Header().Set("Content-Type", "application/json")
 					_ = json.NewEncoder(w).Encode(workspace)
-				})
-				router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-					req := struct {
-						Name          string
-						PrivacyRegion apis.PrivacyRegion
-					}{}
-					err := json.NewDecoder(r.Body).Decode(&req)
-					if err != nil {
-						respond(w, errors.BadRequest("invalid JSON"))
-						return
-					}
-					id, err := account.AddWorkspace(ctx, req.Name, req.PrivacyRegion)
-					w.Header().Add("Content-Type", "application/json")
-					_ = json.NewEncoder(w).Encode(map[string]int{"id": id})
-					respond(w, err)
 				})
 				router.Route("/anonymous-identifiers", func(router chi.Router) {
 					router.Post("/", func(w http.ResponseWriter, r *http.Request) {
