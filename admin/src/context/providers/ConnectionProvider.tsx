@@ -24,7 +24,7 @@ const ConnectionProvider = () => {
 		const fetchConnection = async () => {
 			let fetchedConnection: Connection;
 			try {
-				fetchedConnection = await api.connections.get(connectionID);
+				fetchedConnection = await api.workspace.connections.get(connectionID);
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					showNotFound();

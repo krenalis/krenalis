@@ -105,7 +105,7 @@ const ActionQuery = () => {
 		}
 		let res: ExecQueryResponse;
 		try {
-			res = await api.connections.query(connection.id, trimmed, limit);
+			res = await api.workspace.connections.query(connection.id, trimmed, limit);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');

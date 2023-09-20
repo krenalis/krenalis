@@ -31,19 +31,13 @@ import {
 
 class API {
 	apiURL: string;
-	connections: Connections;
-	eventlisteners: Eventlisteners;
-	users: Users;
 	workspace: Workspace;
 	connectors: Connectors;
 
-	constructor(baseURL: string) {
+	constructor(baseURL: string, workspaceID: number) {
 		const apiURL = baseURL + '/api';
 		this.apiURL = apiURL;
-		this.connections = new Connections(apiURL);
-		this.eventlisteners = new Eventlisteners(apiURL);
-		this.users = new Users(apiURL);
-		this.workspace = new Workspace(baseURL, apiURL);
+		this.workspace = new Workspace(baseURL, apiURL, workspaceID);
 		this.connectors = new Connectors(baseURL, apiURL);
 	}
 
@@ -322,22 +316,29 @@ class Users {
 class Workspace {
 	baseURL: string;
 	apiURL: string;
+	connections: Connections;
+	eventlisteners: Eventlisteners;
+	users: Users;
 
-	constructor(baseURL: string, apiURL: string) {
+	constructor(baseURL: string, apiURL: string, workspaceID: number) {
 		this.baseURL = baseURL;
-		this.apiURL = apiURL;
+		const url = apiURL + `/workspaces/${workspaceID}`;
+		this.apiURL = url;
+		this.connections = new Connections(url);
+		this.eventlisteners = new Eventlisteners(url);
+		this.users = new Users(url);
 	}
 
 	get = async (): Promise<WorkSpaceInterface> => {
-		return await call(`${this.apiURL}/workspace`, http.GET);
+		return await call(`${this.apiURL}`, http.GET);
 	};
 
 	userSchema = async (): Promise<ObjectType> => {
-		return await call(`${this.apiURL}/workspace/user-schema`, http.GET);
+		return await call(`${this.apiURL}/user-schema`, http.GET);
 	};
 
 	reloadSchemas = async (): Promise<void> => {
-		return await call(`${this.apiURL}/workspace/reload-schemas`, http.POST);
+		return await call(`${this.apiURL}/reload-schemas`, http.POST);
 	};
 
 	addConnection = async (
@@ -346,7 +347,7 @@ class Workspace {
 		settings: UIValues,
 		options: ConnectionOptions,
 	): Promise<number> => {
-		return await call(`${this.apiURL}/workspace/add-connection`, http.POST, {
+		return await call(`${this.apiURL}/add-connection`, http.POST, {
 			connector: connector,
 			role: role,
 			settings: settings,
@@ -356,7 +357,7 @@ class Workspace {
 
 	oauthToken = async (connector: number, oauthCode: string): Promise<string> => {
 		const redirectURI = `${this.baseURL}${adminBasePath}oauth/authorize`;
-		return await call(`${this.apiURL}/workspace/oauth-token`, http.POST, {
+		return await call(`${this.apiURL}/oauth-token`, http.POST, {
 			connector: connector,
 			oauthCode: oauthCode,
 			redirectURI: redirectURI,
@@ -364,38 +365,38 @@ class Workspace {
 	};
 
 	anonymousIdentifiers = async (identifiers: AnonymousIdentifiers): Promise<void> => {
-		return await call(`${this.apiURL}/workspace/anonymous-identifiers`, http.POST, {
+		return await call(`${this.apiURL}/anonymous-identifiers`, http.POST, {
 			AnonymousIdentifiers: identifiers,
 		});
 	};
 
 	warehouseSettings = async (): Promise<WarehouseResponse> => {
-		return await call(`${this.apiURL}/workspace/warehouse-settings`, http.GET);
+		return await call(`${this.apiURL}/warehouse-settings`, http.GET);
 	};
 
 	changeWarehouseSettings = async (type: WarehouseType, settings: any): Promise<void> => {
-		return await call(`${this.apiURL}/workspace/warehouse-settings`, http.PUT, {
+		return await call(`${this.apiURL}/warehouse-settings`, http.PUT, {
 			Type: type,
 			Settings: settings,
 		});
 	};
 
 	pingWarehouse = async (warehouseType: WarehouseType, settings: any): Promise<void> => {
-		return await call(`${this.apiURL}/workspace/ping-warehouse`, http.POST, {
+		return await call(`${this.apiURL}/ping-warehouse`, http.POST, {
 			Type: warehouseType,
 			Settings: settings,
 		});
 	};
 
 	connectWarehouse = async (warehouseType: WarehouseType, settings: any): Promise<void> => {
-		return await call(`${this.apiURL}/workspace/connect-warehouse`, http.POST, {
+		return await call(`${this.apiURL}/connect-warehouse`, http.POST, {
 			Type: warehouseType,
 			Settings: settings,
 		});
 	};
 
 	disconnectWarehouse = async (): Promise<void> => {
-		return await call(`${this.apiURL}/workspace/disconnect-warehouse`, http.POST);
+		return await call(`${this.apiURL}/disconnect-warehouse`, http.POST);
 	};
 }
 

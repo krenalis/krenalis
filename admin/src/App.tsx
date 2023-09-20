@@ -27,6 +27,7 @@ const App = () => {
 	const [status, setStatus] = useState<Status | null>(null);
 	const [title, setTitle] = useState<ReactNode>('');
 	const [account, setAccount] = useState<number | null>(null);
+	const [workspace, setWorkspace] = useState<number>(1); // TODO: get the workspace id from the local storage or from the UI (must implement the list of workspaces).
 
 	const toastRef = useRef<SlAlert | null>(null);
 	const navigate = useNavigate();
@@ -117,7 +118,7 @@ const App = () => {
 	}
 
 	const baseURL = window.location.origin;
-	const api = new API(baseURL);
+	const api = new API(baseURL, workspace);
 
 	let content: ReactNode;
 	if (isLoggedIn) {
@@ -132,7 +133,7 @@ const App = () => {
 				account={account}
 			>
 				<div className='app'>
-					<Sidebar onLogout={onLogout} />
+					<Sidebar onLogout={onLogout} setWorkspace={setWorkspace} />
 					<Header title={title} />
 					<Outlet />
 				</div>

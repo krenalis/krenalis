@@ -156,7 +156,7 @@ func TestExportUsersToFile(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c.MustCall("POST", "/api/connections/"+strconv.Itoa(csvID)+"/storage", map[string]any{
+		c.MustCall("POST", "/api/workspaces/1/connections/"+strconv.Itoa(csvID)+"/storage", map[string]any{
 			"Storage":     fsID,
 			"Compression": compression,
 		})

@@ -26,7 +26,7 @@ func TestConnections(t *testing.T) {
 	defer c.Stop()
 
 	// Ensure that there are no connections.
-	connections := c.MustCall("GET", "/api/connections", nil).([]any)
+	connections := c.MustCall("GET", "/api/workspaces/1/connections", nil).([]any)
 	if len(connections) != 0 {
 		t.Fatalf("expecting 0 connections, got %d", len(connections))
 	}
@@ -35,7 +35,7 @@ func TestConnections(t *testing.T) {
 	dummyID := c.AddDummy("Dummy (source)", connector.SourceRole)
 
 	// Check if the Dummy connection has been created successfully.
-	connections = c.MustCall("GET", "/api/connections", nil).([]any)
+	connections = c.MustCall("GET", "/api/workspaces/1/connections", nil).([]any)
 	if len(connections) != 1 {
 		t.Fatalf("expecting 1 connections, got %d", len(connections))
 	}

@@ -63,7 +63,11 @@ const useActionData = (
 			// Get the action type schemas.
 			let schemas: ActionSchemasResponse;
 			try {
-				schemas = await api.connections.actionSchemas(connection.id, actionType.Target, actionType.EventType);
+				schemas = await api.workspace.connections.actionSchemas(
+					connection.id,
+					actionType.Target,
+					actionType.EventType,
+				);
 			} catch (err) {
 				onClose();
 				if (err instanceof UnprocessableError) {
@@ -104,7 +108,7 @@ const useActionData = (
 			if (fields.includes('Query') && isEditing) {
 				let res: ExecQueryResponse;
 				try {
-					res = await api.connections.query(connection.id, providedAction.Query!, 0);
+					res = await api.workspace.connections.query(connection.id, providedAction.Query!, 0);
 				} catch (err) {
 					if (err instanceof NotFoundError) {
 						redirect('connections');
@@ -138,7 +142,12 @@ const useActionData = (
 			if (fields.includes('Path') && isEditing && isImport) {
 				let res: RecordsResponse;
 				try {
-					res = await api.connections.records(connection.id, providedAction.Path!, providedAction.Sheet, 0);
+					res = await api.workspace.connections.records(
+						connection.id,
+						providedAction.Path!,
+						providedAction.Sheet,
+						0,
+					);
 				} catch (err) {
 					if (err instanceof UnprocessableError) {
 						switch (err.code) {
@@ -356,9 +365,9 @@ const useActionData = (
 		let id: number = 0;
 		try {
 			if (isEditing) {
-				await api.connections.setAction(connection.id, action.ID!, actionToSet);
+				await api.workspace.connections.setAction(connection.id, action.ID!, actionToSet);
 			} else {
-				id = await api.connections.addAction(
+				id = await api.workspace.connections.addAction(
 					connection.id,
 					actionType.Target,
 					actionType.EventType,

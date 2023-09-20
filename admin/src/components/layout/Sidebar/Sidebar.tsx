@@ -43,9 +43,11 @@ const sidebarItems: sidebarItem[] = [
 
 interface SidebarProps {
 	onLogout: () => void;
+	setWorkspace: React.Dispatch<React.SetStateAction<number>>;
 }
 
-const Sidebar = ({ onLogout }: SidebarProps) => {
+const Sidebar = ({ onLogout, setWorkspace }: SidebarProps) => {
+	// TODO: hook the workspace state to the sidebar workspace select
 	const { redirect, connections } = useContext(AppContext);
 
 	const location = useLocation();

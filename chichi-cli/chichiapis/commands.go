@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -42,8 +43,16 @@ type Connection struct {
 	Name string
 }
 
+func getWorkspace() string {
+	workspaceID := os.Getenv("CHICHI_CLI_WORKSPACE")
+	if workspaceID == "" {
+		log.Fatal("workspace id not found. Define the CHICHI_CLI_WORKSPACE environment variable")
+	}
+	return workspaceID
+}
+
 func DisableConnection(connection int) {
-	path := "api/connections/" + strconv.Itoa(connection) + "/status"
+	path := "api/workspaces/" + getWorkspace() + "/connections/" + strconv.Itoa(connection) + "/status"
 	err := callAPI("POST", path, strings.NewReader(`{"enabled":false}`), nil)
 	if err != nil {
 		log.Fatal(err)
@@ -51,7 +60,7 @@ func DisableConnection(connection int) {
 }
 
 func EnableConnection(connection int) {
-	path := "api/connections/" + strconv.Itoa(connection) + "/status"
+	path := "api/workspaces/" + getWorkspace() + "/connections/" + strconv.Itoa(connection) + "/status"
 	err := callAPI("POST", path, strings.NewReader(`{"enabled":true}`), nil)
 	if err != nil {
 		log.Fatal(err)
@@ -60,7 +69,7 @@ func EnableConnection(connection int) {
 
 func ListConnections() {
 	var connections []*Connection
-	err := callAPI("GET", "api/connections/", nil, &connections)
+	err := callAPI("GET", "api/workspaces/"+getWorkspace()+"/connections/", nil, &connections)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -81,7 +90,7 @@ func AddEventListener(size, source, server, stream int) string {
 	}
 	var b bytes.Buffer
 	_ = json.NewEncoder(&b).Encode(req)
-	err := callAPI("PUT", "api/event-listeners/", &b, &res)
+	err := callAPI("PUT", "api/workspaces/"+getWorkspace()+"/event-listeners/", &b, &res)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -93,7 +102,7 @@ func Events(listener string) ([]ProcessedEvent, int) {
 		Events    []ProcessedEvent
 		Discarded int
 	}
-	err := callAPI("GET", "api/event-listeners/"+url.PathEscape(listener)+"/events", nil, &res)
+	err := callAPI("GET", "api/workspaces/"+getWorkspace()+"/event-listeners/"+url.PathEscape(listener)+"/events", nil, &res)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -101,7 +110,7 @@ func Events(listener string) ([]ProcessedEvent, int) {
 }
 
 func RemoveEventListener(listener string) {
-	err := callAPI("DELETE", "api/event-listeners/"+url.PathEscape(listener), nil, nil)
+	err := callAPI("DELETE", "api/workspaces/"+getWorkspace()+"/event-listeners/"+url.PathEscape(listener), nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -114,21 +123,21 @@ func WorkspaceConnectWarehouse(typ string, settings []byte) {
 	}{typ, settings}
 	b := &bytes.Buffer{}
 	_ = json.NewEncoder(b).Encode(req)
-	err := callAPI("POST", "api/workspace/connect-warehouse", b, nil)
+	err := callAPI("POST", "api/workspaces/"+getWorkspace()+"/connect-warehouse", b, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func WorkspaceDisconnectWarehouse() {
-	err := callAPI("POST", "api/workspace/disconnect-warehouse", nil, nil)
+	err := callAPI("POST", "api/workspaces/"+getWorkspace()+"/disconnect-warehouse", nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func WorkspaceInitWarehouse() {
-	err := callAPI("POST", "api/workspace/init-warehouse", nil, nil)
+	err := callAPI("POST", "api/workspaces/"+getWorkspace()+"/init-warehouse", nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -141,21 +150,21 @@ func WorkspacePingWarehouse(typ string, settings []byte) {
 	}{typ, settings}
 	b := &bytes.Buffer{}
 	_ = json.NewEncoder(b).Encode(req)
-	err := callAPI("POST", "api/workspace/ping-warehouse", b, nil)
+	err := callAPI("POST", "api/workspaces/"+getWorkspace()+"/ping-warehouse", b, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func WorkspaceReloadSchemas() {
-	err := callAPI("POST", "api/workspace/reload-schemas", nil, nil)
+	err := callAPI("POST", "api/workspaces/"+getWorkspace()+"/reload-schemas", nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func Reload(connection int) error {
-	err := callAPI("POST", "api/connections/"+strconv.Itoa(connection)+"/reload", nil, nil)
+	err := callAPI("POST", "api/workspaces/"+getWorkspace()+"/connections/"+strconv.Itoa(connection)+"/reload", nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

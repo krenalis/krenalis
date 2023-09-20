@@ -72,7 +72,7 @@ const UsersWrapper = () => {
 		const start = page * lim - lim;
 		let res;
 		try {
-			res = await api.users.find(propertiesNames, start, start + lim);
+			res = await api.workspace.users.find(propertiesNames, start, start + lim);
 		} catch (err) {
 			setTimeout(() => {
 				setIsLoading(false);

@@ -3,9 +3,6 @@ import { NotFoundError, BadRequestError, UnprocessableError } from './errors';
 const call = async (url: string, method: string, body?: any) => {
 	const request: RequestInit = {
 		method: method,
-		headers: {
-			'X-Workspace': '1',
-		},
 	};
 
 	if (body !== undefined) request.body = JSON.stringify(body);

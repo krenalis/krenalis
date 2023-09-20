@@ -19,7 +19,7 @@ const Deletion = ({ connection: c, onDelete }: DeletionProps) => {
 
 	const onDeletionConfirmation = async () => {
 		try {
-			await api.connections.delete(c.id);
+			await api.workspace.connections.delete(c.id);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');

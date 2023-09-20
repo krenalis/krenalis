@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -38,9 +39,10 @@ const launchChichiExternally = true
 // Chichi represents an instance of Chichi which responds to HTTP requests and
 // exposes methods to make calls to the APIs.
 type Chichi struct {
-	cancel func()
-	t      *testing.T
-	done   chan struct{}
+	cancel    func()
+	t         *testing.T
+	done      chan struct{}
+	workspace int
 }
 
 var chichiAlreadyLaunched bool
@@ -84,8 +86,9 @@ func InitAndLaunch(t *testing.T) *Chichi {
 	}
 
 	c := Chichi{
-		t:    t,
-		done: make(chan struct{}),
+		t:         t,
+		done:      make(chan struct{}),
+		workspace: 1,
 	}
 
 	setts := server.Settings{}
@@ -201,12 +204,19 @@ func (c *Chichi) Stop() {
 	<-c.done
 }
 
+// UseWorkspace uses the given workspace in the next calls perfomed using the
+// support methods exposed by Chichi.
+// The default workspace, used when UseWorkspace is never called, is 1.
+func (c *Chichi) UseWorkspace(workspace int) {
+	c.workspace = workspace
+}
+
 func (c *Chichi) connectWarehouse(whType string, whSettings *DBSettings) error {
 	body := map[string]any{
 		"Type":     whType,
 		"Settings": whSettings,
 	}
-	_, err := c.call("POST", "/api/workspace/connect-warehouse", body)
+	_, err := c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/connect-warehouse", body)
 	if err != nil {
 		return err
 	}
@@ -214,7 +224,7 @@ func (c *Chichi) connectWarehouse(whType string, whSettings *DBSettings) error {
 }
 
 func (c *Chichi) initWarehouse() error {
-	_, err := c.call("POST", "/api/workspace/init-warehouse", nil)
+	_, err := c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/init-warehouse", nil)
 	if err != nil {
 		return err
 	}
@@ -222,7 +232,7 @@ func (c *Chichi) initWarehouse() error {
 }
 
 func (c *Chichi) reloadSchemas() error {
-	_, err := c.call("POST", "/api/workspace/reload-schemas", nil)
+	_, err := c.call("POST", "/api/workspaces/"+strconv.Itoa(c.workspace)+"/reload-schemas", nil)
 	if err != nil {
 		return err
 	}

@@ -45,7 +45,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		const index = connection.actions!.findIndex((a) => a.ID === actionID);
 		const enabledValue = connection.actions![index].Enabled;
 		try {
-			await api.connections.setActionStatus(connection.id, actionID, !enabledValue);
+			await api.workspace.connections.setActionStatus(connection.id, actionID, !enabledValue);
 		} catch (err) {
 			showError(err);
 			return;
@@ -56,7 +56,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	const onRemoveAction = async (actionID: number) => {
 		newActionID.current = 0; // avoid repainting with the animation on the new action's row
 		try {
-			await api.connections.deleteAction(connection.id, actionID);
+			await api.workspace.connections.deleteAction(connection.id, actionID);
 		} catch (err) {
 			showError(err);
 			return;
@@ -67,7 +67,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	const executeAction = async (actionID: number) => {
 		setRunningActions([...runningActions, actionID]);
 		try {
-			await api.connections.executeAction(connection.id, actionID, true); // TODO: handle the reimport bool.
+			await api.workspace.connections.executeAction(connection.id, actionID, true); // TODO: handle the reimport bool.
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				switch (err.code) {
@@ -91,7 +91,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		const target = e.currentTarget as ShoelaceEventTarget;
 		const period = SCHEDULE_PERIODS[target.value];
 		try {
-			await api.connections.setActionSchedulePeriod(connection.id, actionID, period);
+			await api.workspace.connections.setActionSchedulePeriod(connection.id, actionID, period);
 		} catch (err) {
 			showError(err);
 			return;

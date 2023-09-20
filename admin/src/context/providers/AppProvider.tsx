@@ -104,7 +104,7 @@ const AppProvider = ({
 		const fetchConnections = async () => {
 			let connections: Connection[];
 			try {
-				connections = await api.connections.find();
+				connections = await api.workspace.connections.find();
 			} catch (err) {
 				setConnections([]);
 				showError(err);

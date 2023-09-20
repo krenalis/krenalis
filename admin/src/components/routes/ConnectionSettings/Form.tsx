@@ -28,7 +28,7 @@ const Form = ({ connection: c }: FormProps) => {
 		const fetchUI = async () => {
 			let ui: UIResponse;
 			try {
-				ui = await api.connections.ui(c.id);
+				ui = await api.workspace.connections.ui(c.id);
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connections');
@@ -77,7 +77,7 @@ const Form = ({ connection: c }: FormProps) => {
 		}
 		let ui: UIResponse;
 		try {
-			ui = await api.connections.uiEvent(c.id, eventName, values);
+			ui = await api.workspace.connections.uiEvent(c.id, eventName, values);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
