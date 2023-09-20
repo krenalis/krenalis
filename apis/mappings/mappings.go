@@ -9,6 +9,7 @@ package mappings
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"slices"
