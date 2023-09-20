@@ -13,6 +13,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -24,6 +25,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 )
+
+var workspacePathRegExp = regexp.MustCompile(`^/api/workspaces(/.*)?$`)
 
 type apisServer struct {
 	apis *apis.APIs
@@ -46,18 +49,22 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	router := chi.NewRouter()
 
-	if strings.HasPrefix(r.URL.Path, "/api/workspaces/") {
-		var workspaceID int
-		workspaceID, err = strconv.Atoi(strings.Split(r.URL.Path, "/")[3])
-		if err != nil || workspaceID < 1 || workspaceID > math.MaxInt32 {
-			http.Error(w, "Bad Request (invalid workspace id)", http.StatusBadRequest)
-			return
-		}
+	if workspacePathRegExp.MatchString(r.URL.Path) {
 
-		workspace, err := account.Workspace(workspaceID)
-		if err != nil {
-			http.NotFound(w, r)
-			return
+		var workspace *apis.Workspace
+		if r.URL.Path != "/api/workspaces" && r.URL.Path != "/api/workspaces/" {
+			// The path must contain the id of the workspace.
+			var workspaceID int
+			workspaceID, err = strconv.Atoi(strings.Split(r.URL.Path, "/")[3])
+			if err != nil || workspaceID < 1 || workspaceID > math.MaxInt32 {
+				http.Error(w, "Bad Request (invalid workspace id)", http.StatusBadRequest)
+				return
+			}
+			workspace, err = account.Workspace(workspaceID)
+			if err != nil {
+				http.NotFound(w, r)
+				return
+			}
 		}
 
 		router.Route("/api/workspaces", func(router chi.Router) {
