@@ -40,6 +40,7 @@ POST    /api/workspaces/{id}/users                                              
 GET     /api/workspaces/{id}/users/{id}/events                                   List the events of a user.
 GET     /api/workspaces/{id}/users/{id}/traits                                   List the traits of a user.
 GET     /api/workspaces/{id}                                                     Get the workspace.
+GET     /api/workspaces                                                          List the workspaces.
 POST    /api/workspaces                                                          Add a new workspace.
 POST    /api/workspaces/{id}/anonymous-identifiers                               Set the anonymous identifiers of the workspace.
 POST    /api/workspaces/{id}/connect-warehouse                                   Connect the workspace to a data warehouse.
