@@ -133,7 +133,8 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	// behavior, and eventually add an additional normalization step.
 
 	// Instantiate a new mapping.
-	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.Transformation, true)
+	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
+		this.action.Transformation, this.action.ID, this.apis.transformer, true)
 	if err != nil {
 		return err
 	}
@@ -215,7 +216,8 @@ func (this *Action) importFromApp(ctx context.Context) error {
 		cursor = connector.Cursor{}
 	}
 
-	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.Transformation, false)
+	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
+		this.action.Transformation, this.action.ID, this.apis.transformer, false)
 	if err != nil {
 		return actionExecutionError{err}
 	}

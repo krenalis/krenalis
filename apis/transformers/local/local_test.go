@@ -1,0 +1,59 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2023 Open2b
+//
+
+package local
+
+import "testing"
+
+func Test_filenameToVersion(t *testing.T) {
+	const (
+		js = "node"
+		py = "python"
+	)
+	tests := []struct {
+		language string
+		funcName string
+		filename string
+		version  int
+		ok       bool
+	}{
+		{py, "", "", 0, false},
+		{py, "12345", "", 0, false},
+		{py, "", "_v10.py", 10, true},
+		{js, "", "_v10.js", 10, true},
+		{js, "", "_v10.py", 0, false},
+		{py, "", "_v10.js", 0, false},
+		{py, "12345", ".py", 0, false},
+		{py, "789", "12345_v10.py", 0, false},
+		{py, "12345", "12345_v10.py", 10, true},
+		{py, "12345", "12345.v10.py", 0, false},
+		{py, "12345", "12345_z10.py", 0, false},
+		{py, "action", "action-12345_v1.py", 0, false},
+		{py, "action", "action-12345_vA.py", 0, false},
+		{py, "action", "action-12345_v1.txt", 0, false},
+		{py, "action", "action-12345_v10.py", 0, false},
+		{py, "action", "action-12345_v1042.py", 0, false},
+		{py, "action-12345", "action-12345_v1.py", 1, true},
+		{py, "action-12345", "action-12345_vA.py", 0, false},
+		{py, "action-12345", "action-12345_v1.txt", 0, false},
+		{py, "action-12345", "action-12345_v10.py", 10, true},
+		{py, "action-12345", "action-12345_v1042.js", 0, false},
+		{py, "action-12345", "action-12345_v1042.py", 1042, true},
+		{js, "action-12345", "action-12345_v1042.js", 1042, true},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			gotV, gotOk := filenameToVersion(test.funcName, test.filename, test.language)
+			if test.ok != gotOk {
+				t.Fatalf("filenameToVersion(%q, %q, %q): expected ok = %t, got %t", test.funcName, test.filename, test.language, test.ok, gotOk)
+			}
+			if test.version != gotV {
+				t.Fatalf("filenameToVersion(%q, %q, %q): expected version = %d, got %d", test.funcName, test.filename, test.language, test.version, gotV)
+			}
+		})
+	}
+}

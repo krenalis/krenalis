@@ -316,10 +316,9 @@ func (state *State) Load() error {
 
 		// Read all actions.
 		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
-			"schedule_period, in_schema, out_schema, filter, mapping, transformation_func,\n"+
-			"identifiers, query, path, table_name, sheet, (user_cursor).id,\n"+
-			"(user_cursor).timestamp, (user_cursor).next, health, export_mode, matching_properties_internal,\n"+
-			"matching_properties_external\n"+
+			"schedule_period, in_schema, out_schema, filter, mapping, transformation_source, transformation_version,\n"+
+			"identifiers, query, path, table_name, sheet, (user_cursor).id, (user_cursor).timestamp,\n"+
+			"(user_cursor).next, health, export_mode, matching_properties_internal, matching_properties_external\n"+
 			"FROM actions",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
@@ -331,8 +330,8 @@ func (state *State) Load() error {
 					action := Action{}
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &rawInSchema, &rawOutSchema,
-						&filter, &mapping, &transformation.Func, &action.Identifiers, &action.Query,
-						&action.Path, &action.TableName, &action.Sheet, &action.UserCursor.ID,
+						&filter, &mapping, &transformation.Source, &transformation.Version, &action.Identifiers,
+						&action.Query, &action.Path, &action.TableName, &action.Sheet, &action.UserCursor.ID,
 						&action.UserCursor.Timestamp, &action.UserCursor.Next, &action.Health,
 						&action.ExportMode, &matchPropInternal, &matchPropExternal)
 					if err != nil {
@@ -364,7 +363,7 @@ func (state *State) Load() error {
 							return err
 						}
 					}
-					if transformation.Func != "" {
+					if transformation.Source != "" {
 						action.Transformation = &transformation
 					}
 					if matchPropInternal != "" {

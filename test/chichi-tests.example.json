@@ -12,6 +12,7 @@
         "Database": "test_chichi",
         "Schema": "public"
     },
+    "PythonExecutable": "/usr/bin/python",
     "Redis": {
         "Network": "",
         "Addr": "127.0.0.1:6379",

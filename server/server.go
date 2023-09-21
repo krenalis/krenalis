@@ -9,6 +9,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -25,11 +26,31 @@ type Settings struct {
 	ESBuild struct {
 		PrintWarningsOnStderr bool `yaml:"printWarningsOnStderr"`
 	}
-	PostgreSQL apis.PostgreSQLConfig `yaml:"postgreSQL"`
-	Redis      apis.RedisConfig
-	Telemetry  struct {
+	PostgreSQL  apis.PostgreSQLConfig `yaml:"postgreSQL"`
+	Redis       apis.RedisConfig
+	Transformer struct {
+		Lambda LambdaConfig
+		Local  LocalConfig
+	}
+	Telemetry struct {
 		Enable bool
 	}
+}
+
+type LambdaConfig struct {
+	AccessKeyID     string `yaml:"accessKeyID"`
+	SecretAccessKey string `yaml:"secretAccessKey"`
+	Region          string
+	Role            string
+	Runtime         string
+	Layer           string
+}
+
+type LocalConfig struct {
+	NodeExecutable   string `yaml:"nodeExecutable"`
+	PythonExecutable string `yaml:"pythonExecutable"`
+	Language         string
+	FunctionsDir     string `yaml:"functionsDir"`
 }
 
 // Run runs the server.
@@ -44,10 +65,26 @@ func Run(ctx context.Context, settings *Settings) error {
 		}
 	}
 
-	apis, err := apis.New(&apis.Config{
+	config := apis.Config{
 		PostgreSQL: settings.PostgreSQL,
 		Redis:      settings.Redis,
-	})
+	}
+
+	// Choose the transformer setting.
+	if settings.Transformer.Lambda.AccessKeyID != "" {
+		config.Transformer = apis.LambdaConfig(settings.Transformer.Lambda)
+	}
+	if settings.Transformer.Local.PythonExecutable != "" {
+		if config.Transformer != nil {
+			return errors.New("cannot specify both the Lambda and the local transformer in the configuration (hint: check your 'config.yaml' file)")
+		}
+		config.Transformer = apis.LocalConfig(settings.Transformer.Local)
+	}
+	if config.Transformer == nil {
+		return errors.New("the configuration for a transformer must be provided (hint: check your 'config.yaml' file)")
+	}
+
+	apis, err := apis.New(&config)
 	if err != nil {
 		return err
 	}

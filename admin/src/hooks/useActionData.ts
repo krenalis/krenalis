@@ -337,7 +337,7 @@ const useActionData = (
 				}
 			}
 			transformation = {
-				Func: action.Transformation.Func.trim(),
+				Source: action.Transformation.Source.trim(),
 			};
 		}
 

@@ -15,6 +15,7 @@ import (
 	"chichi/apis/httpclient"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
+	"chichi/apis/transformers"
 )
 
 type Events struct {
@@ -27,17 +28,17 @@ type Events struct {
 	closed      atomic.Bool
 }
 
-func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, http *httpclient.HTTP) (*Events, error) {
+func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, transformer transformers.Transformer, http *httpclient.HTTP) (*Events, error) {
 	events := &Events{}
 	events.state = newEventsState(db, st, http)
 	events.log = newEventsLog(db)
 	events.observer = newObserver(db)
 	var err error
-	events.collector, err = newCollector(events.state, ds, events.log, events.observer)
+	events.collector, err = newCollector(events.state, ds, events.log, transformer, events.observer)
 	if err != nil {
 		return nil, err
 	}
-	events.processor, err = newProcessor(events.state, events.log, events.collector.Events())
+	events.processor, err = newProcessor(events.state, events.log, transformer, events.collector.Events())
 	if err != nil {
 		return nil, err
 	}

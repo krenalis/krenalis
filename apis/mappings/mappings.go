@@ -13,12 +13,13 @@ import (
 	"fmt"
 	"log"
 	"slices"
+	"strconv"
 	"strings"
 
 	"chichi/apis/mappings/mapexp"
 	"chichi/apis/normalization"
 	"chichi/apis/state"
-	"chichi/apis/transformations"
+	"chichi/apis/transformers"
 	"chichi/connector/types"
 
 	"golang.org/x/exp/maps"
@@ -69,20 +70,23 @@ type Mapping struct {
 	inSchema, outSchema types.Type
 	properties          []propertyMapping
 	transformation      *state.Transformation
+	transformer         transformers.Transformer
+	action              int
 	formatTime          bool
 }
 
 // New returns a new mapping that maps properties of inSchema to outSchema using
 // the given mapping and, in case a transformation function is provided, also
 // uses such transformation.
-func New(inSchema, outSchema types.Type, mappings map[string]string, transformation *state.Transformation, formatTime bool) (*Mapping, error) {
+func New(inSchema, outSchema types.Type, mappings map[string]string, transformation *state.Transformation, action int, transformer transformers.Transformer, formatTime bool) (*Mapping, error) {
 
 	if !inSchema.Valid() || !outSchema.Valid() {
 		return nil, errors.New("input or output schema is not valid")
 	}
 
 	m := Mapping{inSchema: inSchema, outSchema: outSchema,
-		transformation: transformation, formatTime: formatTime}
+		transformation: transformation, transformer: transformer,
+		action: action, formatTime: formatTime}
 
 	// Mapping.
 	if mappings != nil {
@@ -134,11 +138,14 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 
 	// Map using the transformation function.
 
-	// Run the Python transformation function.
-	pool := transformations.NewPool()
-	transformationOutValues, err := pool.Run(ctx, m.transformation.Func, values)
+	// Run the transformation function.
+	results, err := m.transformer.CallFunction(ctx, "action-"+strconv.Itoa(m.action), m.transformation.Version, []map[string]any{values})
 	if err != nil {
 		return nil, fmt.Errorf("error while calling the transformation function: %s", err)
+	}
+	transformationOutValues := results[0].Value
+	if transformationOutValues == nil {
+		return nil, fmt.Errorf("error while calling the transformation function: %s", results[0].Error)
 	}
 
 	// Ensure that the transformation function hasn't returned property values

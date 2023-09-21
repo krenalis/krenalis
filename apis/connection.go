@@ -350,13 +350,15 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 		InSchema:       action.InSchema,
 		OutSchema:      action.OutSchema,
 		Mapping:        action.Mapping,
-		Transformation: (*state.Transformation)(action.Transformation),
 		Identifiers:    action.Identifiers,
 		Query:          action.Query,
 		Path:           action.Path,
 		TableName:      action.TableName,
 		Sheet:          action.Sheet,
 		ExportMode:     (*state.ExportMode)(action.ExportMode),
+	}
+	if action.Transformation != nil {
+		n.Transformation = &state.Transformation{Source: action.Transformation.Source}
 	}
 
 	// Add the filter to the notification and marshal it.
@@ -417,6 +419,11 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 	}
 	var transformation state.Transformation
 	if n.Transformation != nil {
+		version, err := this.apis.transformer.CreateFunction(ctx, "action-"+strconv.Itoa(n.ID), n.Transformation.Source)
+		if err != nil {
+			return 0, err
+		}
+		n.Transformation.Version = version
 		transformation = *n.Transformation
 	}
 
@@ -449,15 +456,14 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 			matchPropExternal = n.MatchingProperties.External
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
-			"schedule_start, schedule_period, in_schema, out_schema, filter, mapping, transformation_func,\n" +
-			"identifiers, query, path, table_name, sheet, export_mode,\n" +
+			"schedule_start, schedule_period, in_schema, out_schema, filter, mapping, transformation_source,\n" +
+			"transformation_version, identifiers, query, path, table_name, sheet, export_mode,\n" +
 			"matching_properties_internal, matching_properties_external)\n" +
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
-			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema,
-			rawOutSchema, string(filter), mapping, transformation.Func, n.Identifiers,
-			n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode, matchPropInternal,
-			matchPropExternal)
+			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema, string(filter), mapping,
+			transformation.Source, transformation.Version, n.Identifiers, n.Query, n.Path, n.TableName, n.Sheet,
+			n.ExportMode, matchPropInternal, matchPropExternal)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {
 				err = errors.Unprocessable(ConnectorNotExists, "connection %d does not exist", n.Connection)
@@ -2024,7 +2030,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		if !action.OutSchema.Valid() {
 			return errors.BadRequest("output schema is required by the transformation")
 		}
-		if action.Transformation.Func == "" {
+		if action.Transformation.Source == "" {
 			return errors.BadRequest("transformation function is empty")
 		}
 	}

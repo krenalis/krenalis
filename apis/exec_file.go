@@ -165,7 +165,8 @@ func (this *Action) importFromFile(ctx context.Context) error {
 	}
 
 	// Determine the input and the output schema.
-	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.Transformation, false)
+	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
+		this.action.Transformation, this.action.ID, this.apis.transformer, false)
 	if err != nil {
 		return err
 	}

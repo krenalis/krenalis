@@ -59,7 +59,7 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 			a.OutSchema = null;
 			if (mode === 'mappings') {
 				a.Mapping = null;
-				a.Transformation = { Func: defaultTransformationFunction.current };
+				a.Transformation = { Source: defaultTransformationFunction.current };
 				setAction(a);
 				setMode('transformation');
 			} else {
@@ -71,9 +71,9 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 		}, 150);
 	};
 
-	const onChangeTransformationFunction = (value: string) => {
+	const onChangeTransformationFunction = (source: string) => {
 		const a = { ...action };
-		a.Transformation!.Func = value;
+		a.Transformation!.Source = source;
 		setAction(a);
 	};
 
@@ -203,8 +203,8 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 				<EditorWrapper
 					defaultLanguage='python'
 					height={400}
-					value={action.Transformation!.Func}
-					onChange={(value) => onChangeTransformationFunction(value!)}
+					value={action.Transformation!.Source}
+					onChange={(source) => onChangeTransformationFunction(source!)}
 				/>
 			</div>
 		);

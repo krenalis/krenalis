@@ -40,7 +40,8 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 	}
 	defer rawRows.Close()
 
-	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.Transformation, false)
+	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
+		this.action.Transformation, this.action.ID, this.apis.transformer, false)
 	if err != nil {
 		return err
 	}
@@ -142,7 +143,8 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 	}
 
 	// Instantiate a new mapping.
-	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping, this.action.Transformation, true)
+	mapping, err := mappings.New(this.action.InSchema, this.action.OutSchema, this.action.Mapping,
+		this.action.Transformation, this.action.ID, this.apis.transformer, true)
 	if err != nil {
 		return err
 	}

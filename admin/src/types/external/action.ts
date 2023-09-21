@@ -11,7 +11,7 @@ type ActionFilterLogical = 'all' | 'any';
 type Mapping = Record<string, string>;
 
 interface Transformation {
-	Func: string;
+	Source: string;
 }
 
 interface MappingExpression {

@@ -48,7 +48,7 @@ func TestImportWithTransformation(t *testing.T) {
 				"Email": "email",
 			},
 			"Transformation": map[string]any{
-				"Func": `
+				"Source": `
 def transform(user: dict) -> dict:
 	if user["first_name"] == "Jerad":
 		gender = "male"

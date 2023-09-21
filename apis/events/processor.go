@@ -13,6 +13,7 @@ import (
 
 	"chichi/apis/mappings"
 	"chichi/apis/state"
+	"chichi/apis/transformers"
 	"chichi/connector"
 )
 
@@ -54,7 +55,7 @@ type Processor struct {
 }
 
 // newProcessor returns a new processor.
-func newProcessor(st *eventsState, eventLog *eventsLog, events <-chan *collectedEvent) (*Processor, error) {
+func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers.Transformer, events <-chan *collectedEvent) (*Processor, error) {
 
 	processor := Processor{
 		state:    st,
@@ -96,7 +97,7 @@ func newProcessor(st *eventsState, eventLog *eventsLog, events <-chan *collected
 						// that there is a mapping or a transformation defined),
 						// apply the mapping or the transformation.
 						if action.InSchema.Valid() {
-							mapping, err := mappings.New(action.InSchema, action.OutSchema, action.Mapping, action.Transformation, false)
+							mapping, err := mappings.New(action.InSchema, action.OutSchema, action.Mapping, action.Transformation, action.ID, transformer, false)
 							if err != nil {
 								eventLog.TransformationFailed(event.id, action.ID, err)
 								continue

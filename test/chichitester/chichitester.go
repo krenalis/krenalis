@@ -9,6 +9,7 @@ package chichitester
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -39,10 +40,11 @@ const launchChichiExternally = true
 // Chichi represents an instance of Chichi which responds to HTTP requests and
 // exposes methods to make calls to the APIs.
 type Chichi struct {
-	cancel    func()
-	t         *testing.T
-	done      chan struct{}
-	workspace int
+	cancel                 func()
+	t                      *testing.T
+	done                   chan struct{}
+	transformationsTempDir string
+	workspace              int
 }
 
 var chichiAlreadyLaunched bool
@@ -91,6 +93,21 @@ func InitAndLaunch(t *testing.T) *Chichi {
 		workspace: 1,
 	}
 
+	// In case of an error during the test initialization, stop Chichi.
+	var initOk bool
+	defer func() {
+		if !initOk {
+			c.Stop()
+		}
+	}()
+
+	// Create a temporary directory that will hold the transformation files.
+	transformationsTempDir, err := os.MkdirTemp("", "chichi-tests-python-transformation-*")
+	if err != nil {
+		t.Fatalf("cannot create temporary directory for Python transformation files: %s", err)
+	}
+	c.transformationsTempDir = transformationsTempDir
+
 	setts := server.Settings{}
 	setts.Main.Host = testsSettings.ChichiHost
 	setts.PostgreSQL.Host = testsSettings.Database.Host
@@ -104,22 +121,41 @@ func InitAndLaunch(t *testing.T) *Chichi {
 	setts.Redis.Username = testsSettings.Redis.Username
 	setts.Redis.Password = testsSettings.Redis.Password
 	setts.Redis.DB = testsSettings.Redis.DB
+	setts.Transformer.Local.PythonExecutable = testsSettings.PythonExecutable
+	setts.Transformer.Local.Language = "python"
+	setts.Transformer.Local.FunctionsDir = transformationsTempDir
 
 	// Launch Chichi.
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	c.cancel = cancel
 
-	// In case of an error during the test initialization, stop Chichi.
-	var initOk bool
-	defer func() {
-		if !initOk {
-			c.Stop()
-		}
-	}()
-
 	if launchChichiExternally {
+		// Create, if necessary, the directory that will hold the Chichi
+		// executable (as well as the other files, eg. config.yaml, needed for
+		// the execution).
+		repo, err := filepath.Abs("../")
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = os.Stat(filepath.Join(repo, "go.work"))
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				t.Fatal("file 'go.work' not found, cannot determine root directory where to build Chichi")
+			}
+			t.Fatal(err)
+		}
+		chichiDir := filepath.Join(repo, "test", "chichi-executable-for-tests")
+		err = os.Mkdir(chichiDir, 0755)
+		if err != nil && !errors.Is(err, os.ErrExist) {
+			t.Fatal(err)
+		}
+		// Write the config YAML file.
+		err = writeConfigYAMLFile(chichiDir, &setts)
+		if err != nil {
+			t.Fatalf("cannot write the YAML config file: %s", err)
+		}
 		if !chichiAlreadyBuilt {
-			err := buildChichi(ctx, &setts)
+			err := buildChichi(repo, chichiDir, ctx, &setts)
 			if err != nil {
 				t.Fatalf("cannot build Chichi: %s", err)
 			}
@@ -202,6 +238,14 @@ func InitAndLaunch(t *testing.T) *Chichi {
 func (c *Chichi) Stop() {
 	c.cancel()
 	<-c.done
+	if c.transformationsTempDir == "" {
+		panic("BUG: transformationsTempDir not set")
+	}
+	err := os.RemoveAll(c.transformationsTempDir)
+	if err != nil {
+		log.Printf("cannot remove transformations temporary directory: %s", err)
+		return
+	}
 }
 
 // UseWorkspace uses the given workspace in the next calls perfomed using the

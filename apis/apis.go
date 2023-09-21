@@ -11,10 +11,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"slices"
 	"sort"
+	"strconv"
 	"sync"
 	"sync/atomic"
 
@@ -25,6 +27,9 @@ import (
 	"chichi/apis/mappings/mapexp"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
+	"chichi/apis/transformers"
+	"chichi/apis/transformers/lambda"
+	"chichi/apis/transformers/local"
 	"chichi/connector/types"
 	"chichi/telemetry"
 
@@ -37,6 +42,7 @@ type APIs struct {
 	datastore      *datastore.Datastore
 	http           *httpclient.HTTP
 	events         *events.Events
+	transformer    transformers.Transformer
 	mu             sync.Mutex // for the scheduler field
 	scheduler      *scheduler
 	eventProcessor *events.Processor
@@ -51,8 +57,9 @@ type APIs struct {
 var hasBeenCalled bool
 
 type Config struct {
-	PostgreSQL PostgreSQLConfig
-	Redis      RedisConfig
+	PostgreSQL  PostgreSQLConfig
+	Redis       RedisConfig
+	Transformer any // must be a LambdaConfig or LocalConfig value
 }
 
 type PostgreSQLConfig struct {
@@ -70,6 +77,22 @@ type RedisConfig struct {
 	Username string
 	Password string
 	DB       int
+}
+
+type LambdaConfig struct {
+	AccessKeyID     string
+	SecretAccessKey string
+	Region          string
+	Role            string
+	Runtime         string
+	Layer           string
+}
+
+type LocalConfig struct {
+	NodeExecutable   string
+	PythonExecutable string
+	Language         string
+	FunctionsDir     string
 }
 
 type ExpressionToBeExtracted struct {
@@ -102,6 +125,18 @@ func New(conf *Config) (*APIs, error) {
 
 	apis := &APIs{db: db}
 
+	// Create a transformer.
+	switch c := conf.Transformer.(type) {
+	case LambdaConfig:
+		apis.transformer = lambda.New(lambda.Settings(c))
+	case LocalConfig:
+		apis.transformer = local.New(local.Settings(c))
+	case nil:
+		return nil, errors.New("missing transformer")
+	default:
+		return nil, errors.New("invalid transformer")
+	}
+
 	// Instantiate the state.
 	apis.state, err = state.New(db)
 	if err != nil {
@@ -113,6 +148,7 @@ func New(conf *Config) (*APIs, error) {
 	apis.http.SetTrace(os.Stdout)
 
 	// Listen to state changes.
+	apis.state.AddListener(apis.onDeleteAction)
 	apis.state.AddListener(apis.onElectLeader)
 	apis.state.AddListener(apis.onExecuteAction)
 
@@ -133,7 +169,7 @@ func New(conf *Config) (*APIs, error) {
 	}
 	apis.datastore = datastore.New(apis.state, redisConfig)
 
-	apis.events, err = events.New(db, apis.state, apis.datastore, apis.http)
+	apis.events, err = events.New(db, apis.state, apis.datastore, apis.transformer, apis.http)
 	if err != nil {
 		apis.datastore.Close()
 		apis.state.Close()
@@ -429,6 +465,19 @@ func (apis *APIs) onElectLeader(n state.ElectLeader) {
 	apis.mu.Unlock()
 	if s != nil {
 		go s.Shutdown(apis.close.ctx)
+	}
+}
+
+// onDeleteAction is called when an action is deleted.
+func (apis *APIs) onDeleteAction(n state.DeleteAction) {
+	if apis.state.IsLeader() {
+		go func() {
+			name := "action-" + strconv.Itoa(n.ID)
+			err := apis.transformer.DeleteFunction(apis.close.ctx, name)
+			if err != nil {
+				log.Printf("cannot delete transformer function %q: %s", name, err)
+			}
+		}()
 	}
 }
 

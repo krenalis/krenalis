@@ -29,6 +29,7 @@ import (
 	"chichi/apis/datastore"
 	"chichi/apis/mappings"
 	"chichi/apis/state"
+	"chichi/apis/transformers"
 	"chichi/apis/userswarehouse"
 
 	"github.com/google/uuid"
@@ -177,17 +178,18 @@ type collectedEvent struct {
 // A collector collects events, store them in the event log and sends them to
 // the processor.
 type collector struct {
-	state     *eventsState
-	datastore *datastore.Datastore
-	eventLog  *eventsLog
-	events    chan *collectedEvent
-	observer  *Observer
-	geoLiteDB *geoip2.Reader
+	state       *eventsState
+	datastore   *datastore.Datastore
+	eventLog    *eventsLog
+	events      chan *collectedEvent
+	observer    *Observer
+	transformer transformers.Transformer
+	geoLiteDB   *geoip2.Reader
 }
 
 // newCollector returns a new event collector. It receives HTTP requests from
 // mobile, server and website sources and sends them to the eventsLog.
-func newCollector(st *eventsState, ds *datastore.Datastore, eventLog *eventsLog, observer *Observer) (*collector, error) {
+func newCollector(st *eventsState, ds *datastore.Datastore, eventLog *eventsLog, transformer transformers.Transformer, observer *Observer) (*collector, error) {
 	var collector = collector{
 		state:     st,
 		datastore: ds,
@@ -250,7 +252,7 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 			mappingProps := make(map[string]string, len(action.Mapping)+len(anonIdents))
 			maps.Copy(mappingProps, action.Mapping)
 			maps.Copy(mappingProps, anonIdents)
-			mapping, err := mappings.New(Schema, usersSchema, mappingProps, action.Transformation, false)
+			mapping, err := mappings.New(Schema, usersSchema, mappingProps, action.Transformation, action.ID, c.transformer, false)
 			if err != nil {
 				return err
 			}

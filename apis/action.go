@@ -13,11 +13,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strconv"
 
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
+	"chichi/apis/transformers"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 	"chichi/telemetry"
@@ -59,7 +61,7 @@ type Action struct {
 
 // Transformation represents a transformation.
 type Transformation struct {
-	Func string // Source code of the Python function.
+	Source string
 }
 
 // ExportMode represents one of the three export modes.
@@ -110,7 +112,9 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 			this.Mapping[out] = in
 		}
 	}
-	this.Transformation = (*Transformation)(action.Transformation)
+	if action.Transformation != nil {
+		this.Transformation = &Transformation{Source: action.Transformation.Source}
+	}
 	this.Identifiers = slices.Clone(action.Identifiers)
 	if action.Query != "" {
 		query := action.Query
@@ -271,19 +275,21 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	}
 	span.Log("action validated successfully")
 	n := state.SetAction{
-		ID:             this.action.ID,
-		Name:           action.Name,
-		Enabled:        action.Enabled,
-		InSchema:       action.InSchema,
-		OutSchema:      action.OutSchema,
-		Mapping:        action.Mapping,
-		Transformation: (*state.Transformation)(action.Transformation),
-		Identifiers:    action.Identifiers,
-		Query:          action.Query,
-		Path:           action.Path,
-		TableName:      action.TableName,
-		Sheet:          action.Sheet,
-		ExportMode:     (*state.ExportMode)(action.ExportMode),
+		ID:          this.action.ID,
+		Name:        action.Name,
+		Enabled:     action.Enabled,
+		InSchema:    action.InSchema,
+		OutSchema:   action.OutSchema,
+		Mapping:     action.Mapping,
+		Identifiers: action.Identifiers,
+		Query:       action.Query,
+		Path:        action.Path,
+		TableName:   action.TableName,
+		Sheet:       action.Sheet,
+		ExportMode:  (*state.ExportMode)(action.ExportMode),
+	}
+	if action.Transformation != nil {
+		n.Transformation = &state.Transformation{Source: action.Transformation.Source}
 	}
 	// Add the filter to the notification and marshal it.
 	var filter []byte
@@ -333,19 +339,58 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		matchPropInternal = n.MatchingProperties.Internal
 		matchPropExternal = n.MatchingProperties.External
 	}
-	var transformation state.Transformation
+
+	// Transformation.
 	if n.Transformation != nil {
-		transformation = *n.Transformation
+		name := "action-" + strconv.Itoa(this.action.ID)
+		source := n.Transformation.Source
+		if this.action.Transformation == nil {
+			version, err := this.apis.transformer.CreateFunction(ctx, name, source)
+			if err == transformers.ErrExist {
+				version, err = this.apis.transformer.UpdateFunction(ctx, name, source)
+			}
+			n.Transformation.Version = version
+		} else if this.action.Transformation.Source != n.Transformation.Source {
+			version, err := this.apis.transformer.UpdateFunction(ctx, name, source)
+			if err == transformers.ErrNotExist {
+				version, err = this.apis.transformer.CreateFunction(ctx, name, source)
+			}
+			n.Transformation.Version = version
+		} else {
+			// The function's source code should not be changed. It will be verified
+			// during the transaction and assigned the current version.
+		}
+		if err != nil {
+			return err
+		}
 	}
+
 	err = this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
+		var transformation state.Transformation
+		if n.Transformation != nil {
+			var current state.Transformation
+			if n.Transformation.Version == "" {
+				err := tx.QueryRow(ctx, "SELECT transformation_source, transformation_version FROM actions WHERE id = $1",
+					n.ID).Scan(&current.Source, &current.Version)
+				if err != nil {
+					return err
+				}
+				if current.Source != n.Transformation.Source {
+					return fmt.Errorf("abort update action %d: it was optimistically assumed that the transformation"+
+						" source had not changed, but it has indeed changed", n.ID)
+				}
+				n.Transformation.Version = current.Version
+			}
+			transformation = *n.Transformation
+		}
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
 			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, mapping = $6,\n"+
-			"transformation_func = $7, identifiers = $8, query = $9, path = $10, table_name = $11,\n"+
-			"sheet = $12, export_mode = $13, matching_properties_internal = $14, matching_properties_external = $15\n"+
-			"WHERE id = $16",
-			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping, transformation.Func,
-			n.Identifiers, n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode, matchPropInternal,
-			matchPropExternal, n.ID,
+			"transformation_source = $7, transformation_version = $8, identifiers = $9, query = $10, path = $11,\n"+
+			"table_name = $12, sheet = $13, export_mode = $14, matching_properties_internal = $15,\n"+
+			"matching_properties_external = $16\nWHERE id = $17",
+			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping, transformation.Source,
+			transformation.Version, n.Identifiers, n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode,
+			matchPropInternal, matchPropExternal, n.ID,
 		)
 		if err != nil {
 			return err
@@ -476,9 +521,9 @@ type ActionToSet struct {
 	// action, while the values of the map must be valid mapping expressions.
 	Mapping map[string]string
 
-	// Transformation contains the source code of the Python function used to
-	// transform source values into destination values, and the input and output
-	// properties. It is nil if the action does not have a transformation.
+	// Transformation contains the source code of the function used to transform
+	//source values into destination values. It is nil if the action does not
+	// have a transformation.
 	Transformation *Transformation
 
 	// Query is the query of the action, if it has one, otherwise it is the
