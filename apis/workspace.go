@@ -45,6 +45,7 @@ const (
 
 var (
 	AlreadyConnected     errors.Code = "AlreadyConnected"
+	CurrentlyConnected   errors.Code = "CurrentlyConnected"
 	DataWarehouseFailed  errors.Code = "DataWarehouseFailed"
 	InvalidSettings      errors.Code = "InvalidSettings"
 	InvalidWarehouseType errors.Code = "InvalidWarehouseType"
@@ -650,19 +651,33 @@ func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, 
 
 // Delete deletes the workspace with all its connections.
 //
-// It returns an errors.NotFound error if the workspace does not exist anymore.
+// If the workspace does not exist anymore, it returns an errors.NotFound error.
+// If the workspace is currently connected to a data warehouse, it returns a
+// UnprocessableError error with code CurrentlyConnected.
 func (this *Workspace) Delete(ctx context.Context) error {
 	this.apis.mustBeOpen()
+	ws := this.workspace
+	if ws.Warehouse != nil {
+		return errors.Unprocessable(CurrentlyConnected, "workspace %d is currently connected to %s data warehouse", ws.ID, ws.Warehouse.Type)
+	}
 	n := state.DeleteWorkspace{
 		ID: this.workspace.ID,
 	}
 	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1", n.ID)
+		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1 AND warehouse_type IS NULL", n.ID)
 		if err != nil {
 			return err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.NotFound("workspace %d does not exist", n.ID)
+			var warehouseType state.WarehouseType
+			err := tx.QueryRow(ctx, "SELECT warehouse_type FROM workspaces WHERE id = $1", n.ID).Scan(&warehouseType)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					return errors.NotFound("workspace %d does not exist", n.ID)
+				}
+				return err
+			}
+			return errors.Unprocessable(CurrentlyConnected, "workspace %d is currently connected to %s data warehouse", ws.ID, warehouseType)
 		}
 		return tx.Notify(ctx, n)
 	})
