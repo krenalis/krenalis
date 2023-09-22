@@ -227,8 +227,8 @@ func (this *Action) importFromApp(ctx context.Context) error {
 	for _, path := range this.action.Mapping {
 		properties = append(properties, strings.Split(path, "."))
 	}
-	// In case of transformation function, also import every property declared
-	// in the input schema of the action.
+	// In case of transformation, also import every property declared in the
+	// input schema of the action.
 	if this.action.Transformation != nil {
 		for _, name := range this.action.InSchema.PropertiesNames() {
 			if _, ok := this.action.Mapping[name]; !ok {

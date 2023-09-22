@@ -2031,7 +2031,7 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			return errors.BadRequest("output schema is required by the transformation")
 		}
 		if action.Transformation.Source == "" {
-			return errors.BadRequest("transformation function is empty")
+			return errors.BadRequest("transformation source is empty")
 		}
 	}
 	// Validate the identifiers.
@@ -2067,9 +2067,8 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 	}
 	// Ensure that every property in the input and output schemas have been
-	// mapped, unless the action has a transformation function; in that case, we
-	// do not know which properties have been mapped, so this check cannot be
-	// done.
+	// mapped, unless the action has a transformation; in that case, we do not
+	// know which properties have been mapped, so this check cannot be done.
 	if inPaths != nil && action.Transformation == nil {
 		if props := unmappedProperties(action.InSchema, inPaths); props != nil {
 			return errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))

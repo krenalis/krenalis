@@ -76,8 +76,8 @@ type Mapping struct {
 }
 
 // New returns a new mapping that maps properties of inSchema to outSchema using
-// the given mapping and, in case a transformation function is provided, also
-// uses such transformation.
+// the given mapping and, in case a transformation is provided, also uses such
+// transformation.
 func New(inSchema, outSchema types.Type, mappings map[string]string, transformation *state.Transformation, action int, transformer transformers.Transformer, formatTime bool) (*Mapping, error) {
 
 	if !inSchema.Valid() || !outSchema.Valid() {
@@ -136,40 +136,40 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 		return outValues, nil
 	}
 
-	// Map using the transformation function.
+	// Map using the transformation.
 
-	// Run the transformation function.
+	// Run the transformation.
 	results, err := m.transformer.CallFunction(ctx, "action-"+strconv.Itoa(m.action), m.transformation.Version, []map[string]any{values})
 	if err != nil {
-		return nil, fmt.Errorf("error while calling the transformation function: %s", err)
+		return nil, fmt.Errorf("error while execution the transformation: %s", err)
 	}
 	transformationOutValues := results[0].Value
 	if transformationOutValues == nil {
-		return nil, fmt.Errorf("error while calling the transformation function: %s", results[0].Error)
+		return nil, fmt.Errorf("error while executing the transformation: %s", results[0].Error)
 	}
 
-	// Ensure that the transformation function hasn't returned property values
-	// that are not present in the output schema.
+	// Ensure that the transformation's execution hasn't returned property
+	// values that are not present in the output schema.
 	{
 		outSchemaProps := m.outSchema.PropertiesNames()
 		names := maps.Keys(transformationOutValues)
 		slices.Sort(names)
 		for _, p := range names {
 			if !slices.Contains(outSchemaProps, p) {
-				return nil, fmt.Errorf("transformation function has returned an unexpected property %q", p)
+				return nil, fmt.Errorf("transformation execution has returned an unexpected property %q", p)
 			}
 		}
 	}
 
-	// Normalize the Python output according to the mapping's output schema.
-	transformationOutValues, err = normalizePythonOutput(transformationOutValues, m.outSchema, m.formatTime)
+	// Normalize the transformation execution output according to the mapping's output schema.
+	transformationOutValues, err = normalizeTransformationOutput(transformationOutValues, m.outSchema, m.formatTime)
 	if err != nil {
 		return nil, err
 	}
 
-	// Ensure that the Python transformation function does not return any
-	// property value that has already been mapped by the mappings (i.e., it is
-	// an identifier for the action).
+	// Ensure that the transformation's execution does not return any property
+	// value that has already been mapped by the mappings (i.e., it is an
+	// identifier for the action).
 	for p := range transformationOutValues {
 		if _, ok := outValues[p]; ok {
 			return nil, fmt.Errorf("property '%s' already used as identifier", p)
@@ -181,19 +181,19 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 	return outValues, nil
 }
 
-// normalizePythonOutput normalizes the values returned by Python according to
-// the given schema.
+// normalizeTransformationOutput normalizes the values returned by a
+// transformation execution according to the given schema.
 //
 // formatTime reports whether DateTime and Date values should be formatted based
 // on the layout, if any.
-func normalizePythonOutput(values map[string]any, schema types.Type, formatTime bool) (map[string]any, error) {
+func normalizeTransformationOutput(values map[string]any, schema types.Type, formatTime bool) (map[string]any, error) {
 	out := make(map[string]any, len(values))
 	for name, value := range values {
 		prop, ok := schema.Property(name)
 		if !ok {
 			return nil, fmt.Errorf("property %q not found", name)
 		}
-		v, err := normalization.NormalizePythonProperty(name, prop.Type, value, prop.Nullable, formatTime)
+		v, err := normalization.NormalizeTransformationProperty(name, prop.Type, value, prop.Nullable, formatTime)
 		if err != nil {
 			return nil, err
 		}

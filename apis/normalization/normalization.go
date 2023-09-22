@@ -665,7 +665,7 @@ func NormalizeDatabaseFileProperty(name string, typ types.Type, src any, nullabl
 
 // TODO(Gianluca): correctly implement this function; currently it just calls
 // 'NormalizeAppProperty'.
-func NormalizePythonProperty(name string, typ types.Type, src any, nullable, formatTime bool) (any, error) {
+func NormalizeTransformationProperty(name string, typ types.Type, src any, nullable, formatTime bool) (any, error) {
 	return NormalizeAppProperty(name, typ, src, nullable)
 }
 
