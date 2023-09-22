@@ -460,9 +460,6 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			if typName == "" {
 				return warehouses.Errorf("invalid empty enum name")
 			}
-			if enumLabel == "" {
-				return warehouses.Errorf("empty enum label for type %q", typName)
-			}
 			if !utf8.ValidString(enumLabel) {
 				return warehouses.Errorf("not-valid UTF-8 encoded enum label for type %q", typName)
 			}
