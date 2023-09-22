@@ -1,0 +1,18 @@
+.settings {
+    max-width: 900px;
+    margin: 30px auto;
+    padding: 0 30px;
+}
+
+.settings__title {
+    font-size: 23px;
+    font-weight: 600;
+}
+
+.settings__setting:first-of-type {
+    margin-top: 15px;
+}
+
+.settings__setting {
+    margin-bottom: 15px;    
+}

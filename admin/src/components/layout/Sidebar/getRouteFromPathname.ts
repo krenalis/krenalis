@@ -35,10 +35,14 @@ const getRouteFromPathname = (route: string, connections: TransformedConnection[
 		currentRoute = 'users';
 	} else if (fragments.includes('schema')) {
 		currentRoute = 'schema';
-	} else if (fragments.includes('anonymous-identity')) {
-		currentRoute = 'anonymousIdentity';
-	} else if (fragments.includes('data-warehouse')) {
-		currentRoute = 'dataWarehouse';
+	} else if (fragments.includes('settings')) {
+		currentRoute = 'settings';
+		const lastFragment = fragments[fragments.length - 1];
+		if (lastFragment === 'anonymous-identity') {
+			currentRoute = 'settings/anonymousIdentity';
+		} else if (lastFragment === 'data-warehouse') {
+			currentRoute = 'settings/dataWarehouse';
+		}
 	}
 
 	return currentRoute;

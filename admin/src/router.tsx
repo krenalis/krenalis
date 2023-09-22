@@ -22,6 +22,7 @@ import ConnectionSettings from './components/routes/ConnectionSettings/Connectio
 import AnonymousIdentity from './components/routes/AnonymousIdentity/AnonymousIdentity';
 import { createBrowserRouter } from 'react-router-dom';
 import DataWarehouse from './components/routes/DataWarehouse/DataWarehouse';
+import Settings from './components/routes/Settings/Settings';
 
 const router = createBrowserRouter([
 	{
@@ -71,12 +72,18 @@ const router = createBrowserRouter([
 				element: <Schema />,
 			},
 			{
-				path: 'anonymous-identity',
-				element: <AnonymousIdentity />,
-			},
-			{
-				path: 'data-warehouse',
-				element: <DataWarehouse />,
+				path: 'settings',
+				element: <Settings />,
+				children: [
+					{
+						path: 'anonymous-identity',
+						element: <AnonymousIdentity />,
+					},
+					{
+						path: 'data-warehouse',
+						element: <DataWarehouse />,
+					},
+				],
 			},
 			{ path: '*', element: <NotFound /> },
 		],

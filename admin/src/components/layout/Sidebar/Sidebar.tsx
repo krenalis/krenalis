@@ -37,8 +37,20 @@ const sidebarItems: sidebarItem[] = [
 	},
 	{ name: 'schema', label: 'Schema', link: 'schema', icon: 'list-nested' },
 	{ name: 'users', label: 'Users', link: 'users', icon: 'people' },
-	{ name: 'anonymousIdentity', label: 'Anonymous IDs', link: 'anonymous-identity', icon: 'intersect' },
-	{ name: 'dataWarehouse', label: 'Data Warehouse', link: 'data-warehouse', icon: 'database' },
+	{
+		name: 'settings',
+		label: 'Settings',
+		link: 'settings',
+		icon: 'gear',
+		subItems: [
+			{ name: 'settings/dataWarehouse', label: 'Data Warehouse', link: 'settings/data-warehouse' },
+			{
+				name: 'settings/anonymousIdentity',
+				label: 'Anonymous IDs',
+				link: 'settings/anonymous-identity',
+			},
+		],
+	},
 ];
 
 interface SidebarProps {
