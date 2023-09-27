@@ -1,0 +1,18 @@
+import React, { ReactNode } from 'react';
+import './DangerZone.css';
+
+interface DangerZoneProps {
+	className?: string;
+	children: ReactNode;
+}
+
+const DangerZone = ({ className, children }: DangerZoneProps) => {
+	return (
+		<div className={`danger-zone${className ? ' ' + className : ''}`}>
+			<p className='danger-zone__title'>Destructive operations</p>
+			{children}
+		</div>
+	);
+};
+
+export default DangerZone;

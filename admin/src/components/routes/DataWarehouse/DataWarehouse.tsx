@@ -18,19 +18,18 @@ const DataWarehouse = () => {
 	const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings>();
 	const [hasError, setHasError] = useState<boolean>();
 
-	const { setTitle, api, showError } = useContext(appContext);
-
-	setTitle('Data Warehouse');
+	const { api, showError, selectedWorkspace } = useContext(appContext);
 
 	useEffect(() => {
 		const fetchWarehouse = async () => {
 			setHasError(false);
 			try {
-				const response = await api.workspace.warehouseSettings();
+				const response = await api.workspaces.warehouseSettings();
 				setConnectedWarehouse(response.type);
 				setWarehouseSettings(response.settings);
 			} catch (err) {
 				if (err.code === 'NotConnected') {
+					setConnectedWarehouse(undefined);
 					return;
 				}
 				setHasError(true);
@@ -38,7 +37,7 @@ const DataWarehouse = () => {
 			}
 		};
 		fetchWarehouse();
-	}, [selectedWarehouse]);
+	}, [selectedWorkspace, selectedWarehouse]);
 
 	// TODO: handle unexpected errors.
 	if (hasError) {
@@ -95,7 +94,7 @@ const WarehouseInfo = ({
 	const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState<boolean>(false);
 	const [isDisconnectButtonLoading, setIsDisconnectButtonLoading] = useState<boolean>(false);
 
-	const { api, showError } = useContext(appContext);
+	const { api, showError, setIsWorkspaceStale } = useContext(appContext);
 
 	const warehouse = warehouses.find((w) => w.label === warehouseName)!;
 
@@ -122,7 +121,7 @@ const WarehouseInfo = ({
 	const onDisconnectConfirmation = async () => {
 		setIsDisconnectButtonLoading(true);
 		try {
-			await api.workspace.disconnectWarehouse();
+			await api.workspaces.disconnectWarehouse();
 		} catch (err) {
 			setIsDisconnectButtonLoading(false);
 			showError(err);
@@ -132,6 +131,7 @@ const WarehouseInfo = ({
 		setWarehouseSettings(undefined);
 		setIsConfirmationDialogOpen(false);
 		setIsDisconnectButtonLoading(false);
+		setIsWorkspaceStale(true);
 	};
 
 	const onCancelDisconnection = async () => {

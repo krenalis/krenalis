@@ -1,12 +1,13 @@
-import React, { useContext, ReactNode } from 'react';
+import React, { useContext, ReactNode, useState, useEffect } from 'react';
 import './Sidebar.css';
-import Flex from '../../shared/Flex/Flex';
 import { AppContext } from '../../../context/providers/AppProvider';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { useLocation } from 'react-router-dom';
 import getRouteFromPathname from './getRouteFromPathname';
+import Workspace from '../../../types/external/workspace';
+import { Warehouse } from '../../../types/internal/app';
 
 interface sidebarItem {
 	name: string;
@@ -43,6 +44,7 @@ const sidebarItems: sidebarItem[] = [
 		link: 'settings',
 		icon: 'gear',
 		subItems: [
+			{ name: 'settings/general', label: 'General', link: 'settings/general' },
 			{ name: 'settings/dataWarehouse', label: 'Data Warehouse', link: 'settings/data-warehouse' },
 			{
 				name: 'settings/anonymousIdentity',
@@ -55,17 +57,19 @@ const sidebarItems: sidebarItem[] = [
 
 interface SidebarProps {
 	onLogout: () => void;
-	setWorkspace: React.Dispatch<React.SetStateAction<number>>;
+	workspaces: Workspace[];
+	warehouse: Warehouse;
+	selectedWorkspace: number;
+	setSelectedWorkspace: React.Dispatch<React.SetStateAction<number>>;
 }
 
-const Sidebar = ({ onLogout, setWorkspace }: SidebarProps) => {
-	// TODO: hook the workspace state to the sidebar workspace select
-	const { redirect, connections } = useContext(AppContext);
+const Sidebar = ({ onLogout, workspaces, selectedWorkspace, setSelectedWorkspace }: SidebarProps) => {
+	const { redirect, connections, warehouse } = useContext(AppContext);
 
 	const location = useLocation();
 	const currentRoute = getRouteFromPathname(location.pathname, connections);
 
-	const items = [] as ReactNode[];
+	const items: ReactNode[] = [];
 	for (const item of sidebarItems) {
 		const isSelected = item.name === currentRoute;
 		const hasSubItems = item.subItems != null;
@@ -78,14 +82,28 @@ const Sidebar = ({ onLogout, setWorkspace }: SidebarProps) => {
 				}
 			}
 		}
+		const isDisabled = warehouse == null && (item.name === 'schema' || item.name === 'users');
 		items.push(
 			<div
 				key={item.name}
-				className={`item${isSelected ? ' selected' : isChildrenSelected ? ' isChildrenSelected' : ''}`}
-				onClick={() => redirect(`${item.link}`)}
+				className={`item${
+					isDisabled
+						? ' disabled'
+						: isSelected
+						? ' selected'
+						: isChildrenSelected
+						? ' isChildrenSelected'
+						: ''
+				}`}
+				onClick={isDisabled ? null : () => redirect(`${item.link}`)}
 			>
-				<SlIcon name={item.icon} />
+				<SlIcon className='itemIcon' name={item.icon} />
 				<div className='text'>{item.label}</div>
+				{isDisabled && (
+					<SlTooltip content='You must first connect a data warehouse'>
+						<SlIcon className='disabledItemIcon' name='database-exclamation' />
+					</SlTooltip>
+				)}
 			</div>,
 		);
 		if (hasSubItems && (isSelected || isChildrenSelected)) {
@@ -109,20 +127,14 @@ const Sidebar = ({ onLogout, setWorkspace }: SidebarProps) => {
 		<div className='sidebar'>
 			<div className='items'>
 				<div className='top'>
-					<Flex className='logoAndWorkspace' justifyContent='left' alignItems='center' gap={10}>
-						<div className='logo'>
-							<div className='image'>Logo</div>
-						</div>
-						<div className='workspace'>
-							<SlSelect className='workspaceSelector' label='Workspace' value='1'>
-								<SlOption value='1' selected>
-									Mock workspace 1
-								</SlOption>
-								<SlOption value='2'>Mock workspace 2</SlOption>
-							</SlSelect>
-						</div>
-					</Flex>
-					<div className='logo'></div>
+					<div className='logo'>
+						<div className='image'>Logo</div>
+					</div>
+					<WorkspaceSelector
+						setSelectedWorkspace={setSelectedWorkspace}
+						workspaces={workspaces}
+						selectedWorkspace={selectedWorkspace}
+					/>
 					{items}
 				</div>
 				<div className='bottom'>
@@ -130,6 +142,113 @@ const Sidebar = ({ onLogout, setWorkspace }: SidebarProps) => {
 						<SlIcon name='box-arrow-left' />
 						<div className='text'>Logout</div>
 					</div>
+				</div>
+			</div>
+		</div>
+	);
+};
+
+interface WorkspaceSelectorProps {
+	selectedWorkspace: number;
+	workspaces: Workspace[];
+	setSelectedWorkspace: React.Dispatch<React.SetStateAction<number>>;
+}
+
+const WorkspaceSelector = ({ setSelectedWorkspace, selectedWorkspace, workspaces }: WorkspaceSelectorProps) => {
+	const [isOpen, setIsOpen] = useState<boolean>(false);
+	const [searchTerm, setSearchTerm] = useState<string>('');
+
+	useEffect(() => {
+		const handleWorkspaceClick = (e) => {
+			const isInWorkspaceDialog = e.target.closest('.workspaceDialog') != null;
+			if (!isInWorkspaceDialog) {
+				const isInWorkspaceSelector = e.target.closest('.workspaceSelector') != null;
+				if (!isInWorkspaceSelector) {
+					setIsOpen(false);
+				}
+			}
+		};
+		window.addEventListener('click', handleWorkspaceClick);
+		() => {
+			window.removeEventListener('click', handleWorkspaceClick);
+		};
+	}, []);
+
+	const onViewAllWorkspaces = () => {
+		setSelectedWorkspace(0);
+	};
+
+	const onWorkspaceSelectorClick = (e) => {
+		const isInWorkspaceDialog = e.target.closest('.workspaceDialog') != null;
+		if (!isInWorkspaceDialog) {
+			setIsOpen(!isOpen);
+		}
+	};
+
+	const onWorkspaceChange = (id: number) => {
+		setSelectedWorkspace(id);
+		setIsOpen(false);
+	};
+
+	const onSearchTermChange = (e) => {
+		setSearchTerm(e.target.value);
+	};
+
+	const searched: any = [];
+	for (const workspace of workspaces) {
+		const name = workspace.Name;
+		if (
+			name.includes(searchTerm) ||
+			name.includes(searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1)) ||
+			name.includes(searchTerm.toUpperCase()) ||
+			name.includes(searchTerm.toLowerCase())
+		) {
+			searched.push(workspace);
+		}
+	}
+	searched.sort((a: Workspace, b: Workspace) => {
+		if (a.Name < b.Name) {
+			return -1;
+		}
+		if (a.Name > b.Name) {
+			return 1;
+		}
+		return 0;
+	});
+	const options: ReactNode[] = [];
+	for (const s of searched) {
+		options.push(
+			<div
+				className={`workspaceDialogOption${s.ID === selectedWorkspace ? ' selected' : ''}`}
+				onClick={() => onWorkspaceChange(s.ID)}
+			>
+				<SlIcon name='check-lg' />
+				{s.Name}
+			</div>,
+		);
+	}
+
+	return (
+		<div className={`workspaceSelector${isOpen ? ' open' : ''}`} onClick={onWorkspaceSelectorClick}>
+			<div className='workspaceSelectorText'>
+				<div className='workspaceSelectorLabel'>Workspace</div>
+				<div className='workspaceSelectorValue'>{workspaces.find((w) => w.ID === selectedWorkspace).Name}</div>
+			</div>
+			<SlIcon name='chevron-down' className='workspaceSelectorArrow' />
+			<div className='workspaceDialog'>
+				<SlInput
+					className='workspaceDialogSearch'
+					value={searchTerm}
+					size='small'
+					placeholder='Search workspace'
+					onSlInput={onSearchTermChange}
+				>
+					<SlIcon name='search' slot='prefix' />
+				</SlInput>
+				{options}
+				<div className='workspaceDialogViewAll' onClick={onViewAllWorkspaces}>
+					All workspaces
+					<SlIcon name='arrow-right-short' />
 				</div>
 			</div>
 		</div>

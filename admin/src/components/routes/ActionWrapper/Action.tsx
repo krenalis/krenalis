@@ -21,7 +21,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	const [isFileChanged, setIsFileChanged] = useState<boolean>(false);
 	const [isQueryChanged, setIsQueryChanged] = useState<boolean>(false);
 
-	const { workspace } = useContext(appContext);
+	const { workspaces, selectedWorkspace } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
 	const { closeFullscreen } = useContext(FullscreenContext)!;
 
@@ -31,6 +31,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		closeFullscreen();
 	};
 
+	const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 	const {
 		isEditing,
 		isImport,

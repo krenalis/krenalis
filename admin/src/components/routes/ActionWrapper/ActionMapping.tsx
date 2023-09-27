@@ -24,7 +24,7 @@ const defaultTransformationParameterByTarget = {
 const ActionMapping = forwardRef<any>((props, ref) => {
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
 
-	const { api, showError, workspace } = useContext(AppContext);
+	const { api, showError, workspaces, selectedWorkspace } = useContext(AppContext);
 	const {
 		isMappingSectionDisabled,
 		disabledReason,
@@ -124,6 +124,7 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 
 	let content: ReactNode | null = null;
 	if (mode === 'mappings') {
+		const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 		const mappings: ReactNode[] = [];
 		for (const k in action.Mapping) {
 			// hide anonymous identifiers and their parent properties.

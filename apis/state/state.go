@@ -50,19 +50,19 @@ type State struct {
 		stop    func()
 	}
 	listeners struct {
-		AddAction                 []func(AddAction)
-		AddConnection             []func(AddConnection)
-		DeleteAction              []func(DeleteAction)
-		DeleteConnection          []func(DeleteConnection)
-		DeleteWorkspace           []func(DeleteWorkspace)
-		ElectLeader               []func(ElectLeader)
-		ExecuteAction             []func(ExecuteAction)
-		SetAction                 []func(SetAction)
-		SetActionSchedulePeriod   []func(SetActionSchedulePeriod)
-		SetConnectionSettings     []func(SetConnectionSettings)
-		SetConnectionStatus       []func(SetConnectionStatus)
-		SetWarehouse              []func(SetWarehouse)
-		SetWorkspacePrivacyRegion []func(SetWorkspacePrivacyRegion)
+		AddAction               []func(AddAction)
+		AddConnection           []func(AddConnection)
+		DeleteAction            []func(DeleteAction)
+		DeleteConnection        []func(DeleteConnection)
+		DeleteWorkspace         []func(DeleteWorkspace)
+		ElectLeader             []func(ElectLeader)
+		ExecuteAction           []func(ExecuteAction)
+		SetAction               []func(SetAction)
+		SetActionSchedulePeriod []func(SetActionSchedulePeriod)
+		SetConnectionSettings   []func(SetConnectionSettings)
+		SetConnectionStatus     []func(SetConnectionStatus)
+		SetWarehouse            []func(SetWarehouse)
+		SetWorkspace            []func(SetWorkspace)
 	}
 	close struct {
 		ctx       context.Context

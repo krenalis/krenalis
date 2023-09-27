@@ -62,7 +62,7 @@ const OAuth = () => {
 			localStorage.removeItem('addConnectionRole');
 			let oauthToken: string;
 			try {
-				oauthToken = await api.workspace.oauthToken(Number(connectorID), oauthCode);
+				oauthToken = await api.workspaces.oauthToken(Number(connectorID), oauthCode);
 			} catch (err) {
 				console.error(err);
 				setErrorMessage(

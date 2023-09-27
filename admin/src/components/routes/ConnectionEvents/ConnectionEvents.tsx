@@ -44,7 +44,7 @@ const ConnectionEvents = () => {
 			}
 			let listener: AddEventListenerResponse;
 			try {
-				listener = await api.workspace.eventlisteners.add(3, source, server, stream);
+				listener = await api.workspaces.eventlisteners.add(3, source, server, stream);
 			} catch (err) {
 				if (err instanceof UnprocessableError) {
 					if (
@@ -67,7 +67,7 @@ const ConnectionEvents = () => {
 			interval = window.setInterval(async () => {
 				let res: EventListenerEventsResponse;
 				try {
-					res = await api.workspace.eventlisteners.events(listenerID);
+					res = await api.workspaces.eventlisteners.events(listenerID);
 				} catch (err) {
 					if (err instanceof NotFoundError) {
 						setIsListenerNotFound(true);
@@ -100,7 +100,7 @@ const ConnectionEvents = () => {
 			clearInterval(interval);
 			const removeListener = async () => {
 				try {
-					await api.workspace.eventlisteners.remove(listenerID);
+					await api.workspaces.eventlisteners.remove(listenerID);
 				} catch (err) {
 					showError(err);
 					return;

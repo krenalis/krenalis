@@ -19,7 +19,7 @@ const Storage = ({ connection: c }: StorageProps) => {
 
 	const onChangeStorage = async (storage: number) => {
 		try {
-			await api.workspace.connections.setStorage(c.id, storage, '');
+			await api.workspaces.connections.setStorage(c.id, storage, '');
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
@@ -44,7 +44,7 @@ const Storage = ({ connection: c }: StorageProps) => {
 
 	const onRemoveStorage = async () => {
 		try {
-			await api.workspace.connections.setStorage(c.id, 0, '');
+			await api.workspaces.connections.setStorage(c.id, 0, '');
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');

@@ -58,7 +58,7 @@ func newEventsState(db *postgres.DB, st *state.State, http *httpclient.HTTP) *ev
 	st.AddListener(eventSt.onSetConnectionSettings)
 	st.AddListener(eventSt.onSetConnectionStatus)
 	st.AddListener(eventSt.onSetWarehouse)
-	st.AddListener(eventSt.onSetWorkspacePrivacyRegion)
+	st.AddListener(eventSt.onSetWorkspace)
 	return eventSt
 }
 
@@ -210,9 +210,9 @@ func (st *eventsState) onSetWarehouse(n state.SetWarehouse) {
 	}
 }
 
-// onSetWorkspacePrivacyRegion is called when the privacy region of a workspace
-// is changed.
-func (st *eventsState) onSetWorkspacePrivacyRegion(n state.SetWorkspacePrivacyRegion) {
+// onSetWorkspace is called when the name and the privacy region of a workspace
+// are changed.
+func (st *eventsState) onSetWorkspace(n state.SetWorkspace) {
 	ws, _ := st.state.Workspace(n.Workspace)
 	for _, c := range ws.Connections() {
 		if !isDestination(c) {

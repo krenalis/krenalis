@@ -14,7 +14,7 @@ const Enabling = ({ connection: c }: EnablingProps) => {
 		const cn = { ...c };
 		const v = !cn.enabled;
 		try {
-			await api.workspace.connections.setStatus(c.id, v);
+			await api.workspaces.connections.setStatus(c.id, v);
 		} catch (err) {
 			showError(err);
 			return;

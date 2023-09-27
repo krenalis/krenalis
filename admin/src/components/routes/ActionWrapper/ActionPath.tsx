@@ -84,7 +84,7 @@ const ActionPath = () => {
 		getCompletePathTimeoutID.current = window.setTimeout(async () => {
 			let res: CompletePathResponse;
 			try {
-				res = await api.workspace.connections.completePath(connection.storage, path);
+				res = await api.workspaces.connections.completePath(connection.storage, path);
 			} catch (err) {
 				if (err instanceof UnprocessableError && err.code === 'InvalidPath') {
 					setCompletePathError(err.message);
@@ -130,7 +130,7 @@ const ActionPath = () => {
 		pathRef.current.lastSheetFetch = pathRef.current.lastUpdate;
 		let res: SheetsResponse;
 		try {
-			res = await api.workspace.connections.sheets(connection.id, action.Path!);
+			res = await api.workspaces.connections.sheets(connection.id, action.Path!);
 		} catch (err) {
 			setTimeout(() => {
 				if (err instanceof UnprocessableError || err instanceof BadRequestError) {
@@ -231,7 +231,7 @@ const ActionPath = () => {
 	const records = async (path: string, sheet: string | null | undefined, limit: number, isConfirmation?: boolean) => {
 		let res: RecordsResponse;
 		try {
-			res = await api.workspace.connections.records(
+			res = await api.workspaces.connections.records(
 				connection.id,
 				path,
 				sheet === undefined ? null : sheet,

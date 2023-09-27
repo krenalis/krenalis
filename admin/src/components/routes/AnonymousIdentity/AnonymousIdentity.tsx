@@ -13,6 +13,7 @@ import {
 	TransformedIdentifiers,
 } from '../../../lib/helpers/transformedIdentifiers';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import { ObjectType } from '../../../types/external/types';
 
@@ -22,14 +23,12 @@ const AnonymousIdentity = () => {
 	const [userSchema, setUserSchema] = useState<ObjectType>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 
-	const { setTitle, api, showError, showStatus, workspace, setIsWorkspaceStale } = useContext(AppContext);
-
-	useLayoutEffect(() => {
-		setTitle('Anonymous IDs');
-	}, []);
+	const { api, showError, showStatus, workspaces, selectedWorkspace, setIsWorkspaceStale, redirect } =
+		useContext(AppContext);
 
 	useEffect(() => {
 		const fetchData = async () => {
+			const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 			const transformed = transformAnonymousIdentifiers(workspace.AnonymousIdentifiers);
 			setAnonymousIdentifiers(transformed);
 
@@ -44,7 +43,7 @@ const AnonymousIdentity = () => {
 
 			let userSchema: ObjectType;
 			try {
-				userSchema = await api.workspace.userSchema();
+				userSchema = await api.workspaces.userSchema();
 			} catch (err) {
 				showError(err);
 				return;
@@ -53,7 +52,11 @@ const AnonymousIdentity = () => {
 			setIsLoading(false);
 		};
 		fetchData();
-	}, []);
+	}, [selectedWorkspace]);
+
+	const onConnectDataWarehouse = () => {
+		redirect('settings/data-warehouse');
+	};
 
 	const onSave = async () => {
 		const errorMessage = validateIdentifiersMapping(anonymousIdentifiers!);
@@ -63,7 +66,7 @@ const AnonymousIdentity = () => {
 		}
 		const untransformed = untransformAnonymousIdentifiers(anonymousIdentifiers!);
 		try {
-			await api.workspace.anonymousIdentifiers(untransformed);
+			await api.workspaces.anonymousIdentifiers(untransformed);
 		} catch (err) {
 			showError(err);
 			return;
@@ -73,7 +76,7 @@ const AnonymousIdentity = () => {
 	};
 
 	return (
-		<div className='anonymousIdentity'>
+		<div className='anonymous-identity'>
 			{isLoading ? (
 				<SlSpinner
 					style={
@@ -83,6 +86,22 @@ const AnonymousIdentity = () => {
 						} as React.CSSProperties
 					}
 				></SlSpinner>
+			) : userSchema == null ? (
+				<div className='anonymous-identity__no-schema'>
+					<div className='anonymous-identity__no-schema-title'>Connect a data warehouse</div>
+					<div className='anonymous-identity__no-schema-description'>
+						The anonymous identifiers are chosen from among the data warehouse columns. For this reason,
+						before you can set the anonymous identifiers you must connect a data warehouse.
+					</div>
+					<SlButton
+						variant='primary'
+						className='anonymous-identity__connect-warehouse-button'
+						onClick={onConnectDataWarehouse}
+					>
+						<SlIcon name='database' slot='prefix' />
+						Connect a data warehouse...
+					</SlButton>
+				</div>
 			) : (
 				<Section
 					title='Anonymous Identifiers'
@@ -94,7 +113,7 @@ const AnonymousIdentity = () => {
 						inputSchema={eventSchema!}
 						outputSchema={userSchema!}
 					/>
-					<SlButton className='saveButton' onClick={onSave} variant='primary'>
+					<SlButton className='anonymous-identity__save-button' onClick={onSave} variant='primary'>
 						Save
 					</SlButton>
 				</Section>

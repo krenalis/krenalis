@@ -14,7 +14,7 @@ const Schema = () => {
 	const [properties, setProperties] = useState<Property[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 
-	const { api, showError, showStatus, setTitle } = useContext(AppContext);
+	const { api, redirect, showError, showStatus, setTitle, selectedWorkspace, warehouse } = useContext(AppContext);
 
 	setTitle('Schema');
 
@@ -22,7 +22,7 @@ const Schema = () => {
 		const fetchSchema = async () => {
 			let schema;
 			try {
-				schema = await api.workspace.userSchema();
+				schema = await api.workspaces.userSchema();
 			} catch (err) {
 				showError(err);
 				return;
@@ -30,13 +30,18 @@ const Schema = () => {
 			setProperties(schema.properties);
 			setTimeout(() => setIsLoading(false), 500);
 		};
+		if (warehouse == null) {
+			redirect('settings');
+			showError('You must first connect a data warehouse');
+			return;
+		}
 		fetchSchema();
-	}, []);
+	}, [selectedWorkspace]);
 
 	const onReloadSchemas = async () => {
 		setIsLoading(true);
 		try {
-			await api.workspace.reloadSchemas();
+			await api.workspaces.reloadSchemas();
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				switch (err.code) {
@@ -57,7 +62,7 @@ const Schema = () => {
 		}
 		let schema;
 		try {
-			schema = await api.workspace.userSchema();
+			schema = await api.workspaces.userSchema();
 		} catch (err) {
 			setProperties([]);
 			showError(err);

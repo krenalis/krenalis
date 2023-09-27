@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import Flex from '../../shared/Flex/Flex';
 import statuses from '../../../constants/statuses';
 import { AppContext } from '../../../context/providers/AppProvider';
+import DangerZone from '../../shared/DangerZone/DangerZone';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import { NotFoundError } from '../../../lib/api/errors';
@@ -19,7 +20,7 @@ const Deletion = ({ connection: c, onDelete }: DeletionProps) => {
 
 	const onDeletionConfirmation = async () => {
 		try {
-			await api.workspace.connections.delete(c.id);
+			await api.workspaces.connections.delete(c.id);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
@@ -36,8 +37,7 @@ const Deletion = ({ connection: c, onDelete }: DeletionProps) => {
 
 	return (
 		<>
-			<fieldset className='dangerZone'>
-				<div className='heading'>Danger zone</div>
+			<DangerZone className='dangerZone'>
 				<div className='label'>Delete the connection</div>
 				<Flex justifyContent='space-between' alignItems='baseline'>
 					<div className='description'>Delete permanently the connection</div>
@@ -49,7 +49,7 @@ const Deletion = ({ connection: c, onDelete }: DeletionProps) => {
 						Delete
 					</SlButton>
 				</Flex>
-			</fieldset>
+			</DangerZone>
 			<SlDialog
 				className='deletionDialog'
 				open={askDeletionConfirmation}

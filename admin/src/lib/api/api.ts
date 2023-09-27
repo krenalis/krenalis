@@ -14,7 +14,7 @@ import { User, UserEvent, UserTraits } from '../../types/external/user';
 import { adminBasePath } from '../../constants/path';
 import { Connector } from '../../types/external/connector';
 import { WarehouseResponse, WarehouseType } from '../../types/external/warehouse';
-import WorkSpaceInterface from '../../types/external/workspace';
+import Workspace, { AddWorkspaceResponse, PrivacyRegion } from '../../types/external/workspace';
 import {
 	UIResponse,
 	UIValues,
@@ -31,14 +31,14 @@ import {
 
 class API {
 	apiURL: string;
-	workspace: Workspace;
+	workspaces: Workspaces;
 	connectors: Connectors;
 
-	constructor(baseURL: string, workspaceID: number) {
-		const apiURL = baseURL + '/api';
+	constructor(origin: string, workspaceID: number) {
+		const apiURL = origin + '/api';
 		this.apiURL = apiURL;
-		this.workspace = new Workspace(baseURL, apiURL, workspaceID);
-		this.connectors = new Connectors(baseURL, apiURL);
+		this.workspaces = new Workspaces(origin, apiURL, workspaceID);
+		this.connectors = new Connectors(origin, apiURL);
 	}
 
 	login = async (email: string, password: string): Promise<[number, string]> => {
@@ -313,24 +313,48 @@ class Users {
 	};
 }
 
-class Workspace {
-	baseURL: string;
+class Workspaces {
+	origin: string;
+	baseAPIURL: string;
 	apiURL: string;
 	connections: Connections;
 	eventlisteners: Eventlisteners;
 	users: Users;
 
-	constructor(baseURL: string, apiURL: string, workspaceID: number) {
-		this.baseURL = baseURL;
-		const url = apiURL + `/workspaces/${workspaceID}`;
+	constructor(origin: string, apiURL: string, workspaceID: number) {
+		this.origin = origin;
+		this.baseAPIURL = apiURL + '/workspaces';
+		const url = this.baseAPIURL + `/${workspaceID}`;
 		this.apiURL = url;
 		this.connections = new Connections(url);
 		this.eventlisteners = new Eventlisteners(url);
 		this.users = new Users(url);
 	}
 
-	get = async (): Promise<WorkSpaceInterface> => {
+	list = async (): Promise<Workspace[]> => {
+		return await call(`${this.baseAPIURL}`, http.GET);
+	};
+
+	add = async (name: string, privacyRegion: PrivacyRegion): Promise<AddWorkspaceResponse> => {
+		return await call(`${this.baseAPIURL}`, http.POST, {
+			name,
+			privacyRegion,
+		});
+	};
+
+	get = async (): Promise<Workspace> => {
 		return await call(`${this.apiURL}`, http.GET);
+	};
+
+	update = async (name: string, privacyRegion: PrivacyRegion): Promise<void> => {
+		return await call(`${this.apiURL}`, http.PUT, {
+			name,
+			privacyRegion,
+		});
+	};
+
+	delete = async (): Promise<void> => {
+		return await call(`${this.apiURL}`, http.DELETE);
 	};
 
 	userSchema = async (): Promise<ObjectType> => {
@@ -356,7 +380,7 @@ class Workspace {
 	};
 
 	oauthToken = async (connector: number, oauthCode: string): Promise<string> => {
-		const redirectURI = `${this.baseURL}${adminBasePath}oauth/authorize`;
+		const redirectURI = `${this.origin}${adminBasePath}oauth/authorize`;
 		return await call(`${this.apiURL}/oauth-token`, http.POST, {
 			connector: connector,
 			oauthCode: oauthCode,
@@ -401,16 +425,16 @@ class Workspace {
 }
 
 class Connectors {
-	baseURL: string;
+	origin: string;
 	apiURL: string;
 
-	constructor(baseURL: string, apiURL: string) {
-		this.baseURL = baseURL;
+	constructor(origin: string, apiURL: string) {
+		this.origin = origin;
 		this.apiURL = apiURL;
 	}
 
 	authCodeURL = async (connector: number): Promise<authCodeURLResponse> => {
-		const redirectURI = `${this.baseURL}${adminBasePath}oauth/authorize`;
+		const redirectURI = `${this.origin}${adminBasePath}oauth/authorize`;
 		return await call(
 			`${this.apiURL}/connectors/${connector}/auth-code-url?redirecturi=${encodeURIComponent(redirectURI)}`,
 			http.GET,

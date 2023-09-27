@@ -2,7 +2,7 @@ import React, { createContext, ReactNode } from 'react';
 import API from '../lib/api/api';
 import TransformedConnector from '../lib/helpers/transformedConnector';
 import TransformedConnection from '../lib/helpers/transformedConnection';
-import { Status } from '../types/internal/app';
+import { Status, Warehouse } from '../types/internal/app';
 import Workspace from '../types/external/workspace';
 
 interface AppContext {
@@ -15,8 +15,11 @@ interface AppContext {
 	account: number | null;
 	connectors: TransformedConnector[];
 	connections: TransformedConnection[];
-	workspace: Workspace;
 	setAreConnectionsStale: React.Dispatch<React.SetStateAction<boolean>>;
+	workspaces: Workspace[];
+	warehouse: Warehouse;
+	selectedWorkspace: number;
+	setSelectedWorkspace: React.Dispatch<React.SetStateAction<number>>;
 	setIsWorkspaceStale: React.Dispatch<React.SetStateAction<boolean>>;
 }
 

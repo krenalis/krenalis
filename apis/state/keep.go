@@ -54,8 +54,8 @@ func (state *State) AddListener(listener any) {
 		state.listeners.SetConnectionStatus = append(state.listeners.SetConnectionStatus, l)
 	case func(SetWarehouse):
 		state.listeners.SetWarehouse = append(state.listeners.SetWarehouse, l)
-	case func(SetWorkspacePrivacyRegion):
-		state.listeners.SetWorkspacePrivacyRegion = append(state.listeners.SetWorkspacePrivacyRegion, l)
+	case func(SetWorkspace):
+		state.listeners.SetWorkspace = append(state.listeners.SetWorkspace, l)
 	default:
 		panic(fmt.Sprintf("state: unexpected listener type %T", listener))
 	}
@@ -134,12 +134,12 @@ func (state *State) keepState() {
 			state.setResource(n)
 		case "SetWarehouse":
 			state.setWarehouse(n)
+		case "SetWorkspace":
+			state.setWorkspace(n)
 		case "SetWorkspaceAnonymousIdentifiers":
 			state.setWorkspaceAnonymousIdentifiers(n)
 		case "SetWorkspaceSchemas":
 			state.setWorkspaceSchemas(n)
-		case "SetWorkspacePrivacyRegion":
-			state.setWorkspacePrivacyRegion(n)
 		default:
 			log.Printf("[warning] unknown notification %q received from %d: %s", n.Name, n.PID, n.Payload)
 		}
@@ -1001,6 +1001,29 @@ func (state *State) setWarehouse(n postgres.Notification) {
 	}
 }
 
+// SetWorkspace is the event sent when the name and the privacy region of a
+// workspace are changed.
+type SetWorkspace struct {
+	Workspace     int
+	Name          string
+	PrivacyRegion PrivacyRegion
+}
+
+// setWorkspace sets the name and the privacy region of a workspace.
+func (state *State) setWorkspace(n postgres.Notification) {
+	e := SetWorkspace{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.Name = e.Name
+		w.PrivacyRegion = e.PrivacyRegion
+	})
+	for _, listener := range state.listeners.SetWorkspace {
+		listener(e)
+	}
+}
+
 // SetWorkspaceAnonymousIdentifiers is the event sent when the anonymous
 // identifiers of a workspace are changed.
 type SetWorkspaceAnonymousIdentifiers struct {
@@ -1041,27 +1064,6 @@ func (state *State) setWorkspaceSchemas(n postgres.Notification) {
 		}
 		w.Schemas = e.Schemas
 	})
-}
-
-// SetWorkspacePrivacyRegion is the event sent when the privacy region of a
-// workspace is changed.
-type SetWorkspacePrivacyRegion struct {
-	Workspace     int
-	PrivacyRegion PrivacyRegion
-}
-
-// setWorkspacePrivacyRegion sets the privacy region of a workspace.
-func (state *State) setWorkspacePrivacyRegion(n postgres.Notification) {
-	e := SetWorkspacePrivacyRegion{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.PrivacyRegion = e.PrivacyRegion
-	})
-	for _, listener := range state.listeners.SetWorkspacePrivacyRegion {
-		listener(e)
-	}
 }
 
 // WarehouseType represents a data warehouse type.

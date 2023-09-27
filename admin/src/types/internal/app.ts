@@ -1,8 +1,14 @@
 import { ReactNode } from 'react';
+import { WarehouseSettings, WarehouseType } from '../external/warehouse';
 
 type Variant = 'neutral' | 'primary' | 'success' | 'warning' | 'danger';
 
 type Size = 'small' | 'medium' | 'large';
+
+interface StatusAction {
+	name: string;
+	onClick: () => void;
+}
 
 interface Status {
 	variant: Variant;
@@ -30,4 +36,9 @@ interface ComboboxItem {
 	term: string; // The search term used to find and show the item when filtering after user input.
 }
 
-export type { Status, ShoelaceEventTarget, ArrowAnchor, EventListenerEvent, ComboboxItem, Size, Variant };
+interface Warehouse {
+	type: WarehouseType;
+	settings: WarehouseSettings;
+}
+
+export type { Status, ShoelaceEventTarget, ArrowAnchor, EventListenerEvent, ComboboxItem, Size, Variant, Warehouse };

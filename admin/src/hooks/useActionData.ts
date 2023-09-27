@@ -63,7 +63,7 @@ const useActionData = (
 			// Get the action type schemas.
 			let schemas: ActionSchemasResponse;
 			try {
-				schemas = await api.workspace.connections.actionSchemas(
+				schemas = await api.workspaces.connections.actionSchemas(
 					connection.id,
 					actionType.Target,
 					actionType.EventType,
@@ -108,7 +108,7 @@ const useActionData = (
 			if (fields.includes('Query') && isEditing) {
 				let res: ExecQueryResponse;
 				try {
-					res = await api.workspace.connections.query(connection.id, providedAction.Query!, 0);
+					res = await api.workspaces.connections.query(connection.id, providedAction.Query!, 0);
 				} catch (err) {
 					if (err instanceof NotFoundError) {
 						redirect('connections');
@@ -142,7 +142,7 @@ const useActionData = (
 			if (fields.includes('Path') && isEditing && isImport) {
 				let res: RecordsResponse;
 				try {
-					res = await api.workspace.connections.records(
+					res = await api.workspaces.connections.records(
 						connection.id,
 						providedAction.Path!,
 						providedAction.Sheet,
@@ -365,9 +365,9 @@ const useActionData = (
 		let id: number = 0;
 		try {
 			if (isEditing) {
-				await api.workspace.connections.setAction(connection.id, action.ID!, actionToSet);
+				await api.workspaces.connections.setAction(connection.id, action.ID!, actionToSet);
 			} else {
-				id = await api.workspace.connections.addAction(
+				id = await api.workspaces.connections.addAction(
 					connection.id,
 					actionType.Target,
 					actionType.EventType,

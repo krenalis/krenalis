@@ -4,10 +4,12 @@ import Toast from './components/shared/Toast/Toast';
 import Sidebar from './components/layout/Sidebar/Sidebar';
 import Header from './components/layout/Header/Header';
 import Login from './components/routes/Login/Login';
+import Workspaces from './components/routes/Workspaces/Workspaces';
+import Workspace from './types/external/workspace';
 import API from './lib/api/api';
 import * as variants from './constants/variants';
 import * as icons from './constants/icons';
-import { Status } from './types/internal/app';
+import { Status, Warehouse } from './types/internal/app';
 import { FULLSCREEN_PATTERNS } from './lib/helpers/navigation';
 import { checkSessionCookie } from './lib/helpers/auth';
 import { adminBasePath } from './constants/path';
@@ -27,11 +29,69 @@ const App = () => {
 	const [status, setStatus] = useState<Status | null>(null);
 	const [title, setTitle] = useState<ReactNode>('');
 	const [account, setAccount] = useState<number | null>(null);
-	const [workspace, setWorkspace] = useState<number>(1); // TODO: get the workspace id from the local storage or from the UI (must implement the list of workspaces).
+	const [workspaces, setWorkspaces] = useState<Workspace[] | null>(null);
+	const [warehouse, setWarehouse] = useState<Warehouse>();
+	const [isWorkspaceStale, setIsWorkspaceStale] = useState<boolean>(true);
+	const [selectedWorkspace, setSelectedWorkspace] = useState<number>(
+		Number(localStorage.getItem('chichi_workspace_id')),
+	);
 
 	const toastRef = useRef<SlAlert | null>(null);
 	const navigate = useNavigate();
 	const location = useLocation();
+
+	const api = new API(window.location.origin, selectedWorkspace);
+
+	useEffect(() => {
+		const fetchWorkspaceData = async () => {
+			let ws: Workspace[];
+			try {
+				ws = await api.workspaces.list();
+			} catch (err) {
+				showError(err);
+				return;
+			}
+			const isDeleted = workspaces != null && ws.length < workspaces.length;
+			if (ws.length === 1 && !isDeleted) {
+				setSelectedWorkspace(ws[0].ID);
+			}
+			setWorkspaces(ws);
+			setIsWorkspaceStale(false);
+		};
+		if (isWorkspaceStale) {
+			fetchWorkspaceData();
+		}
+	}, [isWorkspaceStale]);
+
+	useEffect(() => {
+		const fetchWarehouse = async () => {
+			try {
+				const response = await api.workspaces.warehouseSettings();
+				setWarehouse({
+					type: response.type,
+					settings: response.settings,
+				});
+			} catch (err) {
+				if (err.code === 'NotConnected') {
+					setWarehouse(undefined);
+					return;
+				}
+				showError(err);
+			}
+		};
+		if (selectedWorkspace === 0) {
+			return;
+		}
+		fetchWarehouse();
+	}, [isWorkspaceStale, selectedWorkspace]);
+
+	useEffect(() => {
+		if (selectedWorkspace === 0) {
+			localStorage.removeItem('chichi_workspace_id');
+		} else {
+			localStorage.setItem('chichi_workspace_id', String(selectedWorkspace));
+		}
+	}, [selectedWorkspace]);
 
 	useEffect(() => {
 		const hasSessionCookie = checkSessionCookie();
@@ -47,7 +107,7 @@ const App = () => {
 		if (isLoading) {
 			return;
 		}
-		if (isLoggedIn) {
+		if (isLoggedIn && selectedWorkspace !== 0) {
 			let isBasePath = location.pathname === adminBasePath;
 			if (isBasePath) {
 				redirect('connections');
@@ -57,7 +117,7 @@ const App = () => {
 				redirect('');
 			}
 		}
-	}, [isLoggedIn]);
+	}, [isLoggedIn, selectedWorkspace]);
 
 	useEffect(() => {
 		for (const pattern of FULLSCREEN_PATTERNS) {
@@ -110,35 +170,57 @@ const App = () => {
 
 	const onLogout = () => {
 		document.cookie = 'session=; Max-Age=-99999999; Path=/';
+		setSelectedWorkspace(0);
 		setIsLoggedIn(false);
 	};
 
-	if (isLoading) {
+	if (isLoading || workspaces == null) {
 		return null;
 	}
 
-	const baseURL = window.location.origin;
-	const api = new API(baseURL, workspace);
-
 	let content: ReactNode;
 	if (isLoggedIn) {
-		content = (
-			<AppProvider
-				api={api}
-				showError={showError}
-				showStatus={showStatus}
-				showNotFound={showNotFound}
-				redirect={redirect}
-				setTitle={setTitle}
-				account={account}
-			>
-				<div className='app'>
-					<Sidebar onLogout={onLogout} setWorkspace={setWorkspace} />
-					<Header title={title} />
-					<Outlet />
-				</div>
-			</AppProvider>
-		);
+		if (selectedWorkspace === 0) {
+			content = (
+				<Workspaces
+					setSelectedWorkspace={setSelectedWorkspace}
+					workspaces={workspaces}
+					api={api}
+					showError={showError}
+					redirect={redirect}
+					setIsWorkspaceStale={setIsWorkspaceStale}
+				/>
+			);
+		} else {
+			content = (
+				<AppProvider
+					api={api}
+					showError={showError}
+					showStatus={showStatus}
+					showNotFound={showNotFound}
+					redirect={redirect}
+					setTitle={setTitle}
+					account={account}
+					workspaces={workspaces}
+					warehouse={warehouse}
+					selectedWorkspace={selectedWorkspace}
+					setSelectedWorkspace={setSelectedWorkspace}
+					setIsWorkspaceStale={setIsWorkspaceStale}
+				>
+					<div className='app'>
+						<Sidebar
+							onLogout={onLogout}
+							workspaces={workspaces}
+							warehouse={warehouse}
+							selectedWorkspace={selectedWorkspace}
+							setSelectedWorkspace={setSelectedWorkspace}
+						/>
+						<Header title={title} />
+						<Outlet />
+					</div>
+				</AppProvider>
+			);
+		}
 	} else {
 		content = (
 			<Login

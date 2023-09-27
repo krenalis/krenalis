@@ -1,7 +1,3 @@
-.data-warehouse {
-    margin-top: 30px;
-}
-
 .data-warehouse > sl-spinner {
         display: block;
         margin: auto;
@@ -9,8 +5,8 @@
 
 .warehouse-list, .warehouse-settings, .warehouse-info {
     max-width: 900px;
-    margin: 30px auto;
-    padding: 0 30px;
+    margin: auto;
+    padding: 30px;
 }
 
 .warehouse-list__title, .warehouse-settings__name, .warehouse-info__name {

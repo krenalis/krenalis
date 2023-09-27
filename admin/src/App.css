@@ -10,7 +10,7 @@
 	--text-onaccent: var(--sl-color-neutral-0);
 	--text-gray: var(--sl-color-neutral-400);
 	--border-primary: var(--sl-color-neutral-200);
-	--radius: 10px;
+	--radius: 5px;
 
 	/* set shoelace primary colors */
 	--sl-color-primary-50: var(--sl-color-indigo-50) !important;
@@ -39,6 +39,13 @@
 	--color-primary-950: var(--sl-color-primary-950);
 
 	background-color: var(--bg-primary);
+}
+
+html,
+body,
+#root,
+.app {
+	height: 100%!important;
 }
 
 *,
@@ -243,7 +250,7 @@ sl-select::part(control) {
 /* || Panels */
 
 sl-dialog::part(panel) {
-	border-radius: 20px;
+	border-radius: 5px;
 }
 
 sl-dialog::part(base) {
@@ -255,7 +262,7 @@ sl-dialog::part(title) {
 }
 
 sl-dialog::part(body) {
-	padding-top: 15px;;
+	padding-top: 0px;
 }
 
 /* || Content */
@@ -287,4 +294,15 @@ sl-tab-group::part(body) {
     left: 50%;
     top: 50%;
     transform: translate(-50%, calc(-50% - 100px));
+}
+
+/* || Animations */
+
+@keyframes fade-in-entrance {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
 }

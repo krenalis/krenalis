@@ -1,0 +1,46 @@
+.general-settings {
+    max-width: 900px;
+    margin: auto;
+    padding: 30px;
+}
+
+.general-settings__title {
+    font-size: 23px;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.general-settings__use-europe-region {
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+.general-settings__use-europe-region > span {
+    font-size: 13px;
+    opacity: .8;
+}
+
+.general-settings__update-workspace-button {
+    display: block;
+    max-width: 200px;
+    margin-left: auto;
+}
+
+.general-settings__deletion-title {
+    font-weight: 600;
+}
+
+.general-settings__deletion-description-and-button {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-flow: wrap;
+}
+
+.general-settings__confirmation-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin: 15px 0;
+}

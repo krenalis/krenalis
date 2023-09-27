@@ -8,7 +8,7 @@ import TransformedConnection, {
 } from '../../lib/helpers/transformedConnection';
 import TransformedConnector from '../../lib/helpers/transformedConnector';
 import AppContext from '../AppContext';
-import { Status } from '../../types/internal/app';
+import { Status, Warehouse } from '../../types/internal/app';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import API from '../../lib/api/api';
 import { Connection } from '../../types/external/connection';
@@ -22,6 +22,11 @@ interface AppProviderProps {
 	setTitle: React.Dispatch<React.SetStateAction<ReactNode>>;
 	redirect: (url: string) => void;
 	account: number | null;
+	workspaces: Workspace[];
+	warehouse: Warehouse;
+	selectedWorkspace: number;
+	setSelectedWorkspace: React.Dispatch<React.SetStateAction<number>>;
+	setIsWorkspaceStale: React.Dispatch<React.SetStateAction<boolean>>;
 	children: ReactNode;
 }
 
@@ -33,38 +38,23 @@ const AppProvider = ({
 	setTitle,
 	redirect,
 	account,
+	workspaces,
+	warehouse,
+	selectedWorkspace,
+	setSelectedWorkspace,
+	setIsWorkspaceStale,
 	children,
 }: AppProviderProps) => {
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [connectors, setConnectors] = useState<TransformedConnector[] | null>(null);
 	const [connections, setConnections] = useState<TransformedConnection[] | null>(null);
-	const [workspace, setWorkspace] = useState<Workspace | null>(null);
 	const [areConnectionsStale, setAreConnectionsStale] = useState<boolean>(false);
-	const [isWorkspaceStale, setIsWorkspaceStale] = useState<boolean>(true);
 
 	const isLoadingTimeoutID = useRef<number>(0);
 
 	useEffect(() => {
 		isLoadingTimeoutID.current = window.setTimeout(() => setIsLoading(true), 100);
 	}, []);
-
-	useEffect(() => {
-		const fetchWorkspace = async () => {
-			let workspace: Workspace;
-			try {
-				workspace = await api.workspace.get();
-			} catch (err) {
-				showError(err);
-				clearTimeout(isLoadingTimeoutID.current);
-				return;
-			}
-			setWorkspace(workspace);
-			setIsWorkspaceStale(false);
-		};
-		if (isWorkspaceStale) {
-			fetchWorkspace();
-		}
-	}, [isWorkspaceStale]);
 
 	useEffect(() => {
 		const fetchConnectors = async () => {
@@ -98,13 +88,13 @@ const AppProvider = ({
 			setAreConnectionsStale(true);
 		};
 		fetchConnectors();
-	}, []);
+	}, [selectedWorkspace]);
 
 	useEffect(() => {
 		const fetchConnections = async () => {
 			let connections: Connection[];
 			try {
-				connections = await api.workspace.connections.find();
+				connections = await api.workspaces.connections.find();
 			} catch (err) {
 				setConnections([]);
 				showError(err);
@@ -168,7 +158,7 @@ const AppProvider = ({
 		);
 	}
 
-	if (connectors == null || connections == null || workspace == null) {
+	if (connectors == null || connections == null) {
 		return null;
 	}
 
@@ -184,8 +174,11 @@ const AppProvider = ({
 				account,
 				connectors,
 				connections,
-				workspace,
 				setAreConnectionsStale,
+				workspaces,
+				warehouse,
+				selectedWorkspace,
+				setSelectedWorkspace,
 				setIsWorkspaceStale,
 			}}
 		>

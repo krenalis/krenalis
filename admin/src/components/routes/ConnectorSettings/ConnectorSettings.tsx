@@ -131,7 +131,7 @@ const ConnectorSettings = () => {
 		if (eventName === 'save') {
 			let id: number;
 			try {
-				id = await api.workspace.addConnection(connectorID, connectionRole, values, {
+				id = await api.workspaces.addConnection(connectorID, connectionRole, values, {
 					name: name,
 					enabled: true,
 					storage: storage,
@@ -219,7 +219,7 @@ const ConnectorSettings = () => {
 	const onSave = async () => {
 		let id: number;
 		try {
-			id = await api.workspace.addConnection(connectorID, connectionRole, values, {
+			id = await api.workspaces.addConnection(connectorID, connectionRole, values, {
 				name: name,
 				enabled: true,
 				storage: storage,

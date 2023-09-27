@@ -28,10 +28,6 @@
 	width: 100%;
 }
 
-.sidebar .logoAndWorkspace {
-	margin-bottom: 50px;
-}
-
 .sidebar .logo .image {
     font-size: 12px;
     background-color: var(--color-primary-600);
@@ -44,49 +40,113 @@
     align-items: center;
     font-weight: 600;
     font-family: monospace;
+    margin: auto;
 }
 
-.sidebar .workspace .workspaceSelector::part(form-control-label) {
+.sidebar .workspaceSelector {
+    user-select: none;
+    position: relative;
+    width: 100%;
+    justify-content: space-between;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    margin-top: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-primary);
+    border-top: 1px solid var(--border-primary);
+}
+
+.sidebar .workspaceSelectorArrow {
     font-size: 14px;
-    padding-bottom: 0;
-    margin-bottom: 0;
-    margin-bottom: -3px;
-    display: block;
+    transition: transform .3s;
 }
 
-.sidebar .workspace .workspaceSelector::part(control) {
-    padding: 0;
-    border: 0;
-    background-color: transparent;
-    min-width: unset;
-    min-height: unset;
+.sidebar .workspaceSelectorText {
+    display: flex;
+    flex-flow: column;
+    height: 100%;
+    justify-content: center;
 }
 
-.sidebar .workspace .workspaceSelector::part(display-label) {
-    margin-left: 0;
-    margin-right: 8px;
-    font-size: 14px;
-}
-
-.sidebar .workspace .workspaceSelector::part(icon) {
-    font-size: 12px;
-    margin: 0;
-}
-
-.sidebar .workspace .workspaceSelector::part(menu) {
-    width: unset;
-    max-width: unset;
-}
-
-.sidebar .workspace .workspaceSelector::part(combobox) {
-    padding: 0;
-    border: 0;
-    font-size: 14px;
-    min-height: unset;
-}
-
-.sidebar .workspace .workspaceSelector sl-option::part(label) {
+.sidebar .workspaceSelectorLabel {
     font-size: 13px;
+}
+
+.sidebar .workspaceSelectorValue {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.sidebar .workspaceDialog {
+    position: absolute;
+    visibility: hidden;
+    opacity: 0;
+    top: 0;
+    width: 250px;
+    right: calc(-250px + -15px);
+    background-color: var(--bg-primary);
+    padding: 15px;
+    border: 1px solid var(--border-primary);
+    box-shadow: var(--sl-shadow-x-large);
+    transition: visibility .3s, opacity .3s;
+    font-size: 14px;
+    cursor: default;
+}
+
+.sidebar .workspaceDialog .workspaceDialogSearch::part(input)::placeholder {
+    color: var(--sl-color-neutral-400);
+}
+
+.sidebar .workspaceDialog .workspaceDialogViewAll {
+    color: var(--sl-color-primary-600);
+    font-weight: 600;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-primary);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+}
+
+.sidebar .workspaceDialog .workspaceDialogViewAll sl-icon {
+    color: var(--sl-color-primary-600);
+}
+
+.sidebar .workspaceDialog .workspaceDialogOption {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 15px;
+    cursor: pointer;
+    transition: opacity .3s;
+}
+
+.sidebar .workspaceDialog .workspaceDialogOption:hover {
+    opacity: 1;
+}
+
+.sidebar .workspaceDialog .workspaceDialogOption sl-icon {
+    visibility: hidden;
+    opacity: 0;
+    transition: visibility .3s, opacity .3s;
+    color: var(--sl-color-primary-600);
+}
+
+.sidebar .workspaceDialog .workspaceDialogOption.selected sl-icon {
+    visibility: visible;
+    opacity: 1;
+}
+
+.sidebar .workspaceSelector.open .workspaceSelectorArrow {
+    transform: rotate(-90deg);
+}
+
+.sidebar .workspaceSelector.open .workspaceDialog {
+    visibility: visible;
+    opacity: 1;
 }
 
 .sidebar .item {
@@ -102,6 +162,24 @@
 	color: var(--sl-color-neutral-700);
     user-select: none;
     border-left: 4px solid transparent;
+}
+
+.sidebar .item.disabled {
+    cursor: default;
+}
+
+.sidebar .item.disabled .itemIcon,
+.sidebar .item.disabled .text {
+    opacity: .5;
+}
+
+.sidebar .item.disabled .disabledItemIcon {
+    color: var(--sl-color-danger-600);
+    font-size: 14px;
+}
+
+.sidebar .item.disabled:hover {
+    background-color: transparent;
 }
 
 .sidebar .item.selected {

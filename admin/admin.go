@@ -44,31 +44,9 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// check the session cookie.
 	var isLoggedIn bool
-	cookie, err := r.Cookie("session")
+	_, err := r.Cookie("session")
 	if err == nil {
 		isLoggedIn = true
-	}
-
-	var accountID int
-	var workspace *apis.Workspace
-	if isLoggedIn {
-		// get the account id
-		accountID, _ = strconv.Atoi(cookie.Value)
-
-		// instantiate the account API
-		account, err := admin.apis.Account(ctx, accountID)
-		if err != nil {
-			http.NotFound(w, r)
-			return
-		}
-
-		// get the workspace
-		workspace, err = account.Workspace(1) // TODO(marco)
-		if err != nil {
-			http.NotFound(w, r)
-			return
-		}
-
 	}
 
 	// handle requests to login page.
@@ -89,9 +67,6 @@ func (admin *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !isLoggedIn {
 		http.Redirect(w, r, "/admin/", http.StatusTemporaryRedirect)
 	}
-
-	// TODO(Gianluca): use the 'workspace' variable or just remove it.
-	_ = workspace
 
 	http.ServeFile(w, r, "./admin/public/index.html")
 

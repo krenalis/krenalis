@@ -62,7 +62,7 @@ const User = () => {
 
 		// Fetch the user's events.
 		try {
-			res = await api.workspace.users.events(userID);
+			res = await api.workspaces.users.events(userID);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				showStatus(statuses.usersNotFound);
@@ -97,7 +97,7 @@ const User = () => {
 
 		// Fetch the user's traits.
 		try {
-			res = await api.workspace.users.traits(userID);
+			res = await api.workspaces.users.traits(userID);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				showStatus(statuses.usersNotFound);

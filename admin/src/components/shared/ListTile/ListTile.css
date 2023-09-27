@@ -8,9 +8,10 @@
     align-items: center;
     border: 1px solid var(--sl-color-neutral-200);
     padding: 18px 25px;
-    border-radius: 10px;
+    border-radius: var(--radius);
     cursor: pointer;
-    transition: background-color;
+    background-color: var(--bg-primary);
+    transition: background-color .3s;
 }
 
 .listTile:hover {
@@ -52,4 +53,3 @@
 .listTile .tileChevron {
     grid-area: chevron;
 }
-

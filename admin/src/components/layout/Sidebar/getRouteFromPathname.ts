@@ -38,7 +38,9 @@ const getRouteFromPathname = (route: string, connections: TransformedConnection[
 	} else if (fragments.includes('settings')) {
 		currentRoute = 'settings';
 		const lastFragment = fragments[fragments.length - 1];
-		if (lastFragment === 'anonymous-identity') {
+		if (lastFragment === 'general') {
+			currentRoute = 'settings/general';
+		} else if (lastFragment === 'anonymous-identity') {
 			currentRoute = 'settings/anonymousIdentity';
 		} else if (lastFragment === 'data-warehouse') {
 			currentRoute = 'settings/dataWarehouse';

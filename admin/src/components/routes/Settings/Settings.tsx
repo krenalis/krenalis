@@ -1,4 +1,4 @@
-import React, { useContext, useLayoutEffect } from 'react';
+import React, { useContext, useLayoutEffect, ReactNode } from 'react';
 import './Settings.css';
 import ListTile from '../../shared/ListTile/ListTile';
 import { Outlet, useLocation } from 'react-router-dom';
@@ -12,18 +12,31 @@ const Settings = () => {
 
 	useLayoutEffect(() => setTitle('Workspace settings'));
 
-	const onAnonymousIdentifiersClick = () => {
-		redirect('settings/anonymous-identity');
+	const onGeneralClick = () => {
+		redirect('settings/general');
 	};
 
 	const onDataWarehouseClick = () => {
 		redirect('settings/data-warehouse');
 	};
 
+	const onAnonymousIdentifiersClick = () => {
+		redirect('settings/anonymous-identity');
+	};
+
+	let content: ReactNode;
+
 	if (location.pathname.endsWith('settings')) {
-		return (
+		content = (
 			<div className='settings'>
 				<p className='settings__title'>Workspace settings</p>
+				<ListTile
+					className='settings__setting'
+					icon={<SlIcon name='person-workspace' />}
+					name={'General'}
+					description='Update your workspace name and privacy region or delete it'
+					onClick={onGeneralClick}
+				/>
 				<ListTile
 					className='settings__setting'
 					icon={<SlIcon name='database' />}
@@ -40,9 +53,11 @@ const Settings = () => {
 				/>
 			</div>
 		);
+	} else {
+		content = <Outlet />;
 	}
 
-	return <Outlet />;
+	return <div className='settings__content'>{content}</div>;
 };
 
 export default Settings;

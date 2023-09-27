@@ -1002,9 +1002,13 @@ func (this *Workspace) SetAnonymousIdentifiers(ctx context.Context, ids Anonymou
 	return err
 }
 
-// SetPrivacyRegion sets the privacy region of the workspace.
-func (this *Workspace) SetPrivacyRegion(ctx context.Context, region PrivacyRegion) error {
+// Set sets the name and the privacy region of the workspace. name must be
+// between 1 and 100 runes long.
+func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegion) error {
 	this.apis.mustBeOpen()
+	if name == "" || utf8.RuneCountInString(name) > 100 {
+		return errors.BadRequest("name %q is not valid", name)
+	}
 	switch region {
 	case PrivacyRegionNotSpecified,
 		PrivacyRegionEurope:
@@ -1012,13 +1016,14 @@ func (this *Workspace) SetPrivacyRegion(ctx context.Context, region PrivacyRegio
 		return errors.BadRequest("invalid privacy region %q", string(region))
 	}
 	ws := this.workspace
-	n := state.SetWorkspacePrivacyRegion{
+	n := state.SetWorkspace{
 		Workspace:     ws.ID,
+		Name:          name,
 		PrivacyRegion: state.PrivacyRegion(region),
 	}
 	err := this.apis.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET privacy_region = $1 WHERE id = $2",
-			n.PrivacyRegion, n.Workspace)
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, privacy_region = $2 WHERE id = $3",
+			n.Name, n.PrivacyRegion, n.Workspace)
 		if err != nil {
 			return err
 		}

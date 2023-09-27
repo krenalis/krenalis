@@ -45,7 +45,7 @@ const ConnectionOverview = () => {
 			// get the stats.
 			let stats: ConnectionStats;
 			try {
-				stats = await api.workspace.connections.stats(c.id);
+				stats = await api.workspaces.connections.stats(c.id);
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connections');
@@ -71,7 +71,7 @@ const ConnectionOverview = () => {
 			// get the imports.
 			let imports: Import[];
 			try {
-				imports = await api.workspace.connections.imports(c.id);
+				imports = await api.workspaces.connections.imports(c.id);
 			} catch (err) {
 				showError(err);
 				stopLoading();

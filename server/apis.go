@@ -92,6 +92,19 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					w.Header().Set("Content-Type", "application/json")
 					_ = json.NewEncoder(w).Encode(workspace)
 				})
+				router.Put("/", func(w http.ResponseWriter, r *http.Request) {
+					var req struct {
+						Name          string
+						PrivacyRegion apis.PrivacyRegion
+					}
+					err := json.NewDecoder(r.Body).Decode(&req)
+					if err != nil {
+						respond(w, errors.BadRequest("invalid JSON"))
+						return
+					}
+					err = workspace.Set(ctx, req.Name, req.PrivacyRegion)
+					respond(w, err)
+				})
 				router.Delete("/", func(w http.ResponseWriter, r *http.Request) {
 					err := workspace.Delete(ctx)
 					respond(w, err)
@@ -249,18 +262,6 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 						w.Header().Add("Content-Type", "application/json")
 						_ = json.NewEncoder(w).Encode(workspace.PrivacyRegion)
-					})
-					router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-						var req struct {
-							PrivacyRegion apis.PrivacyRegion
-						}
-						err := json.NewDecoder(r.Body).Decode(&req)
-						if err != nil {
-							respond(w, errors.BadRequest("invalid JSON"))
-							return
-						}
-						err = workspace.SetPrivacyRegion(ctx, req.PrivacyRegion)
-						respond(w, err)
 					})
 				})
 				router.Route("/connections", func(router chi.Router) {

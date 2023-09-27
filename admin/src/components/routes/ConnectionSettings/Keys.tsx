@@ -19,7 +19,7 @@ const Keys = ({ connection: c }: KeysProps) => {
 		const fetchKeys = async () => {
 			let keys: string[];
 			try {
-				keys = await api.workspace.connections.keys(c.id);
+				keys = await api.workspaces.connections.keys(c.id);
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connections');
@@ -38,7 +38,7 @@ const Keys = ({ connection: c }: KeysProps) => {
 	const onAddKey = async () => {
 		let key: string;
 		try {
-			key = await api.workspace.connections.generateKey(c.id);
+			key = await api.workspaces.connections.generateKey(c.id);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
@@ -60,7 +60,7 @@ const Keys = ({ connection: c }: KeysProps) => {
 
 	const onRevokeKey = async (key: string) => {
 		try {
-			await api.workspace.connections.revokeKey(c.id, key);
+			await api.workspaces.connections.revokeKey(c.id, key);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');

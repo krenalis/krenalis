@@ -248,7 +248,10 @@ const computeActionTypeFields = (
 	return fields;
 };
 
-const isIdentifierProperty = (name: string, identifiers: string[]): boolean => {
+const isIdentifierProperty = (name: string, identifiers: string[] | null): boolean => {
+	if (identifiers == null) {
+		return false;
+	}
 	if (identifiers.includes(name)) {
 		return true;
 	}

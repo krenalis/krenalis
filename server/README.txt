@@ -43,6 +43,7 @@ GET     /api/workspaces/{id}                                                    
 DELETE  /api/workspaces/{id}                                                     Delete the workspace.
 GET     /api/workspaces                                                          List the workspaces.
 POST    /api/workspaces                                                          Add a new workspace.
+PUT     /api/workspaces/{id}                                                     Set the name and the privacy region of the workspace.
 POST    /api/workspaces/{id}/anonymous-identifiers                               Set the anonymous identifiers of the workspace.
 POST    /api/workspaces/{id}/connect-warehouse                                   Connect the workspace to a data warehouse.
 GET     /api/workspaces/{id}/warehouse-settings                                  Get the settings of the data warehouse for the workspace.
@@ -55,7 +56,6 @@ GET     /api/workspaces/{id}/user-schema                                        
 POST    /api/workspaces/{id}/oauth-token                                         Generate an OAuth token not yet associated with a connection.
 POST    /api/workspaces/{id}/add-connection                                      Add a new connection.
 GET     /api/workspaces/{id}/privacy-region                                      Get the workspace privacy region.
-POST    /api/workspaces/{id}/privacy-region                                      Set the workspace privacy region.
 GET     /api/events-schema                                                       Get the events schema.
 POST    /api/validate-expression                                                 Validate an expression.
 POST    /api/expressions-properties                                              Return all the unique properties contained inside a list of expressions.

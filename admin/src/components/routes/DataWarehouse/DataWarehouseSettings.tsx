@@ -24,7 +24,7 @@ const DataWarehouseSettings = ({
 	const [isPingLoading, setIsPingLoading] = useState<boolean>(false);
 	const [isActionButtonLoading, setIsActionButtonLoading] = useState<boolean>(false);
 
-	const { setTitle, api, showError, showStatus } = useContext(appContext);
+	const { setTitle, api, showError, showStatus, setIsWorkspaceStale } = useContext(appContext);
 
 	setTitle(`${selectedWarehouse.label} settings`);
 
@@ -33,7 +33,7 @@ const DataWarehouseSettings = ({
 	const onPing = async () => {
 		const timeout = setTimeout(() => setIsPingLoading(true), 300);
 		try {
-			await api.workspace.pingWarehouse(selectedWarehouse.label, settings);
+			await api.workspaces.pingWarehouse(selectedWarehouse.label, settings);
 		} catch (err) {
 			showError(err);
 			clearTimeout(timeout);
@@ -52,7 +52,7 @@ const DataWarehouseSettings = ({
 	const onConnect = async () => {
 		setIsActionButtonLoading(true);
 		try {
-			await api.workspace.connectWarehouse(selectedWarehouse.label, settings);
+			await api.workspaces.connectWarehouse(selectedWarehouse.label, settings);
 		} catch (err) {
 			showError(err);
 			setIsActionButtonLoading(false);
@@ -61,13 +61,14 @@ const DataWarehouseSettings = ({
 		setTimeout(() => {
 			setIsActionButtonLoading(false);
 			setSelectedWarehouse(undefined);
+			setIsWorkspaceStale(true);
 		}, 500);
 	};
 
 	const onSave = async () => {
 		setIsActionButtonLoading(true);
 		try {
-			await api.workspace.changeWarehouseSettings(selectedWarehouse.label, settings);
+			await api.workspaces.changeWarehouseSettings(selectedWarehouse.label, settings);
 		} catch (err) {
 			showError(err);
 			setIsActionButtonLoading(false);

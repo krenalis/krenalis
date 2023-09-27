@@ -1,7 +1,13 @@
+.settings__content {
+    height: calc(100% - 70px);
+    background-color: var(--bg-gray);
+}
+
 .settings {
     max-width: 900px;
-    margin: 30px auto;
-    padding: 0 30px;
+    margin: 0px auto;
+    padding: 30px;
+    animation: fade-in-entrance .5s;
 }
 
 .settings__title {

@@ -21,11 +21,16 @@ const UsersWrapper = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [limit, setLimit] = useState<number>(0);
 
-	const { api, showError, showStatus, redirect } = useContext(AppContext);
+	const { api, showError, showStatus, redirect, selectedWorkspace, warehouse } = useContext(AppContext);
 
 	useEffect(() => {
+		if (warehouse == null) {
+			redirect('settings');
+			showError('You must first connect a data warehouse');
+			return;
+		}
 		fetchUsers(1);
-	}, []);
+	}, [selectedWorkspace]);
 
 	const fetchUsers = async (page: number) => {
 		setIsLoading(true);
@@ -44,7 +49,7 @@ const UsersWrapper = () => {
 		} else {
 			let schema;
 			try {
-				schema = await api.workspace.userSchema();
+				schema = await api.workspaces.userSchema();
 			} catch (err) {
 				setTimeout(() => {
 					setIsLoading(false);
@@ -72,7 +77,7 @@ const UsersWrapper = () => {
 		const start = page * lim - lim;
 		let res;
 		try {
-			res = await api.workspace.users.find(propertiesNames, start, start + lim);
+			res = await api.workspaces.users.find(propertiesNames, start, start + lim);
 		} catch (err) {
 			setTimeout(() => {
 				setIsLoading(false);

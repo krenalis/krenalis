@@ -88,26 +88,6 @@
     align-items: center;
 }
 
-.connectionSettings .dangerZone {
-    border: 1px solid var(--sl-color-danger-500);
-    border-radius: var(--radius);
-    padding: 30px;
-    position: relative;
-    margin-top: 50px;
-}
-
-.connectionSettings .dangerZone .heading {
-    position: absolute;
-    left: 20px;
-    top: 0;
-    transform: translateY(-60%);
-    background-color: var(--bg-gray);
-    padding: 0 10px;
-    color: var(--sl-color-danger-500);
-    font-size: 16px;
-    font-weight: 600;
-}
-
 .connectionSettings .dangerZone .label {
 	font-weight: 600;
 }
