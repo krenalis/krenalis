@@ -52,6 +52,7 @@ const (
 )
 
 var (
+	ConnectionNotExists errors.Code = "ConnectionNotExists"
 	ConnectorNotExists  errors.Code = "ConnectorNotExists"
 	EventNotExists      errors.Code = "EventNotExists"
 	EventTypeNotExists  errors.Code = "EventTypeNotExists"
@@ -465,8 +466,8 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 			transformation.Source, transformation.Version, n.Identifiers, n.Query, n.Path, n.TableName, n.Sheet,
 			n.ExportMode, matchPropInternal, matchPropExternal)
 		if err != nil {
-			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_connection_fkey" {
-				err = errors.Unprocessable(ConnectorNotExists, "connection %d does not exist", n.Connection)
+			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {
+				err = errors.Unprocessable(ConnectionNotExists, "connection %d does not exist", n.Connection)
 			}
 			return err
 		}
