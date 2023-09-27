@@ -58,8 +58,6 @@ def transform(user: dict) -> dict:
 		"FirstName": user["first_name"],
 		"Gender": gender,
 	}`,
-				"In":  []string{"first_name", "email"},
-				"Out": []string{"FirstName", "Gender"},
 			},
 		},
 	})
