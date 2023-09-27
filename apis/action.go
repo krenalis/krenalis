@@ -259,12 +259,12 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 
 // Set sets action.
 //
-// It returns an errors.UnprocessableError with code
-// MappingOverAnonymousIdentifier if the action maps over an anonymous
-// identifier.
-//
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
+//
+// It returns an errors.UnprocessableError error with code
+// MappingOverAnonymousIdentifier, if the action maps over an anonymous
+// identifier.
 func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	this.apis.mustBeOpen()
 	ctx, span := telemetry.TraceSpan(ctx, "Action.Set", "action", this.action.ID)

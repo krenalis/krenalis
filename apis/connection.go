@@ -300,11 +300,12 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 // more details.
 //
 // It returns an errors.NotFoundError error if the connection does not exist
-// anymore.
-//
-// It returns an errors.UnprocessableError with code
-// MappingOverAnonymousIdentifier if the action maps over an anonymous
-// identifier.
+// anymore, and returns an errors.UnprocessableError error with code
+//   - ConnectionNotExists, if the connection does not exist.
+//   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
+//     identifier.
+//   - TargetAlreadyExists, if an action already exists for a target for the
+//     connection.
 func (this *Connection) AddAction(ctx context.Context, target ActionTarget, eventType string, action ActionToSet) (int, error) {
 
 	this.apis.mustBeOpen()
