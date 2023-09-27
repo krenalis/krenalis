@@ -48,9 +48,10 @@ func New(settings Settings) transformers.Transformer {
 }
 
 // CallFunction calls the function with the given name and version, with the
-// given values to transform, and returns the results. If an error occurred
-// during its execution, it returns an ExecutionError error. If the function
-// does not exist, it returns the ErrNotExist error.
+// given values to transform, and returns the results. If an error occurs during
+// execution, it returns an ExecutionError. If the function does not exist, it
+// returns the ErrNotExist error. If the function is in a pending state, it
+// returns the ErrPendingState error.
 func (tr *transformer) CallFunction(ctx context.Context, name, version string, values []map[string]any) ([]transformers.Result, error) {
 
 	// Create a client.
@@ -77,6 +78,9 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, v
 	if err != nil {
 		if isHTTPErrorCode(err, 404) {
 			return nil, transformers.ErrNotExist
+		}
+		if isHTTPErrorCode(err, 409) {
+			return nil, transformers.ErrPendingState
 		}
 		return nil, err
 	}

@@ -13,8 +13,9 @@ import (
 )
 
 var (
-	ErrNotExist = errors.New("function does not exist")
-	ErrExist    = errors.New("function already exists")
+	ErrExist        = errors.New("function already exists")
+	ErrNotExist     = errors.New("function does not exist")
+	ErrPendingState = errors.New("function is in a pending state")
 )
 
 // An ExecutionError error is returned by the Transformer.CallFunction method
@@ -50,9 +51,10 @@ func (err ValueError) Error() string {
 type Transformer interface {
 
 	// CallFunction calls the function with the given name and version, with the
-	// given values to transform, and returns the results. If an error occurred
-	// during its execution, it returns an ExecutionError error. If the function
-	// does not exist, it returns the ErrNotExist error.
+	// given values to transform, and returns the results. If an error occurs during
+	// execution, it returns an ExecutionError. If the function does not exist, it
+	// returns the ErrNotExist error. If the function is in a pending state, it
+	// returns the ErrPendingState error.
 	CallFunction(ctx context.Context, name, version string, values []map[string]any) ([]Result, error)
 
 	// Close the transformer.
