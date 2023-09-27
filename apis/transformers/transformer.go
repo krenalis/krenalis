@@ -49,9 +49,10 @@ func (err ValueError) Error() string {
 //   - subsequently contain only [A-Za-z0-9_-]
 type Transformer interface {
 
-	// CallFunction calls the function with the given name an version, with the
+	// CallFunction calls the function with the given name and version, with the
 	// given values to transform, and returns the results. If an error occurred
-	// during its execution, it returns an ExecutionError error.
+	// during its execution, it returns an ExecutionError error. If the function
+	// does not exist, it returns the ErrNotExist error.
 	CallFunction(ctx context.Context, name, version string, values []map[string]any) ([]Result, error)
 
 	// Close the transformer.
