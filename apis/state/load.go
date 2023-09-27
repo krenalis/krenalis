@@ -184,15 +184,15 @@ func (state *State) Load() error {
 			"anonymous_identifiers_priority, anonymous_identifiers_mapping, privacy_region, schemas\n"+
 			"FROM workspaces",
 			func(rows *postgres.Rows) error {
-				ws := &Workspace{
-					mu:          new(sync.Mutex),
-					connections: map[int]*Connection{},
-					resources:   map[int]*Resource{},
-				}
 				var accountID int
 				var warehouseType *WarehouseType
 				var warehouseSettings, mapping, schemas []byte
 				for rows.Next() {
+					ws := &Workspace{
+						mu:          new(sync.Mutex),
+						connections: map[int]*Connection{},
+						resources:   map[int]*Resource{},
+					}
 					if err := rows.Scan(&ws.ID, &accountID, &ws.Name, &warehouseType, &warehouseSettings,
 						&ws.AnonymousIdentifiers.Priority, &mapping, &ws.PrivacyRegion, &schemas); err != nil {
 						return err
