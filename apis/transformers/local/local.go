@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -44,13 +45,9 @@ func New(settings Settings) transformers.Transformer {
 // returns the ErrNotExist error. If the function is in a pending state, it
 // returns the ErrPendingState error.
 func (tr *transformer) CallFunction(ctx context.Context, name, version string, values []map[string]any) ([]transformers.Result, error) {
-	// Considering that this transformer is used for local testing and
-	// development, it is recommended to return errors as
-	// transformers.ExecutionError instead of internal errors, so the user of
-	// Chichi can see them in the UI.
 	jsonValues, err := json.Marshal(values)
 	if err != nil {
-		return nil, transformers.NewExecutionError(err.Error())
+		return nil, err
 	}
 	versionInt, err := strconv.Atoi(version)
 	if err != nil {
@@ -83,7 +80,7 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, v
 	var results []transformers.Result
 	err = json.Unmarshal(stdout.Bytes(), &results)
 	if err != nil {
-		return nil, transformers.NewExecutionError(err.Error())
+		return nil, err
 	}
 	return results, nil
 }
@@ -101,17 +98,13 @@ func (tr *transformer) CreateFunction(ctx context.Context, name, source string) 
 	// See https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file?redirectedfrom=MSDN.
 	err := tr.createFunction(name, 1, source)
 	if err != nil {
-		if errors.Is(err, os.ErrExist) {
-			return "", transformers.ErrExist
-		}
 		return "", err
 	}
 	return "1", nil
 }
 
 // createFunction creates the function.
-// If the function already exists, it returns an error matching the os.ErrExist
-// error.
+// If the function already exists, it returns the transformers.ErrExist error.
 func (tr *transformer) createFunction(name string, version int, source string) error {
 	switch tr.settings.Language {
 	case "node":
@@ -149,7 +142,10 @@ if __name__ == "__main__":
 	}
 	filename := tr.absFilename(name, version)
 	err := os.WriteFile(filename, []byte(source), 0644)
-	return err
+	if err != nil && errors.Is(err, os.ErrExist) {
+		err = transformers.ErrExist
+	}
+	return nil
 }
 
 // DeleteFunction deletes the function with the given name.
@@ -199,9 +195,12 @@ fileCreation:
 		if maxVersion == 0 {
 			return "", transformers.ErrNotExist
 		}
+		if maxVersion == math.MaxInt64 {
+			return "", errors.New("too many versions")
+		}
 		err = tr.createFunction(name, maxVersion+1, source)
 		if err != nil {
-			if errors.Is(err, os.ErrExist) {
+			if err == transformers.ErrExist {
 				attempts++
 				if attempts >= 10 {
 					return "", fmt.Errorf("unable to create file after %d attempts in which the file already existed", attempts)
