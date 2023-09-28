@@ -349,19 +349,22 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			if err == transformers.ErrExist {
 				version, err = this.apis.transformer.UpdateFunction(ctx, name, source)
 			}
+			if err != nil {
+				return err
+			}
 			n.Transformation.Version = version
 		} else if this.action.Transformation.Source != n.Transformation.Source {
 			version, err := this.apis.transformer.UpdateFunction(ctx, name, source)
 			if err == transformers.ErrNotExist {
 				version, err = this.apis.transformer.CreateFunction(ctx, name, source)
 			}
+			if err != nil {
+				return err
+			}
 			n.Transformation.Version = version
 		} else {
 			// The function's source code should not be changed. It will be verified
 			// during the transaction and assigned the current version.
-		}
-		if err != nil {
-			return err
 		}
 	}
 
