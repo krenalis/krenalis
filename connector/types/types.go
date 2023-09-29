@@ -970,8 +970,8 @@ func (t Type) Enum() []string {
 }
 
 // WithEnum returns t but with an enum. t must be a Text type.
-// Panics if t is not a Text type, or enum is empty or contains an invalid
-// UTF-8 string, or t already has an enum or a regular expression.
+// Panics if t is not a Text type, or contains an invalid UTF-8 string, or t
+// already has an enum or a regular expression.
 func (t Type) WithEnum(enum []string) Type {
 	if t.pt != PtText {
 		panic("cannot set enum for a non-Text type")

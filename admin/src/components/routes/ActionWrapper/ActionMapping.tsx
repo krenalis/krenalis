@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { updateMappingProperty, autocompleteExpression } from './Action.helpers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import { flattenSchema, isIdentifierProperty } from '../../../lib/helpers/transformedAction';
-import { rawTransformationFunction } from './Action.constants';
+import { rawTransformationFunctions } from './Action.constants';
 import AlertDialog from '../../shared/AlertDialog/AlertDialog';
 import { ComboBoxInput, ComboBoxList } from '../../shared/ComboBox/ComboBox';
 import Section from '../../shared/Section/Section';
@@ -13,7 +13,12 @@ import ActionContext from '../../../context/ActionContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
+import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
+import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
+import { TransformationLanguagesResponse } from '../../../types/external/api';
+import getLanguageLogo from '../../helpers/getLanguageLogo';
 
 const defaultTransformationParameterByTarget = {
 	Users: 'user',
@@ -23,6 +28,8 @@ const defaultTransformationParameterByTarget = {
 
 const ActionMapping = forwardRef<any>((props, ref) => {
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
+	const [transformationLanguages, setTransformationLanguages] = useState<string[]>();
+	const [selectedLanguage, setSelectedLanguage] = useState<string>();
 
 	const { api, showError, workspaces, selectedWorkspace } = useContext(AppContext);
 	const {
@@ -36,8 +43,25 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 		setMode,
 	} = useContext(ActionContext);
 
-	const defaultTransformationFunction = useRef('');
 	const propertiesListRef = useRef(null);
+
+	useEffect(() => {
+		const fetchTransformationLanguages = async () => {
+			let response: TransformationLanguagesResponse;
+			try {
+				response = await api.transformationLanguages();
+			} catch (err) {
+				showError(err);
+				return;
+			}
+			const languages = response.languages;
+			setTransformationLanguages(languages);
+		};
+		if (action.Transformation) {
+			setSelectedLanguage(action.Transformation.Language);
+		}
+		fetchTransformationLanguages();
+	}, []);
 
 	useEffect(() => {
 		if (action.Transformation != null) {
@@ -45,11 +69,22 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 		} else {
 			setMode('mappings');
 		}
-		defaultTransformationFunction.current = rawTransformationFunction.replace(
-			'$parameterName',
-			defaultTransformationParameterByTarget[actionType.Target],
-		);
 	}, []);
+
+	useEffect(() => {
+		if (selectedLanguage == null) {
+			return;
+		}
+		const a = { ...action };
+		a.Transformation = {
+			Source: rawTransformationFunctions[selectedLanguage].replace(
+				'$parameterName',
+				defaultTransformationParameterByTarget[actionType.Target],
+			),
+			Language: selectedLanguage,
+		};
+		setAction(a);
+	}, [selectedLanguage]);
 
 	const onSwitchPropertiesMode = () => {
 		setIsAlertOpen(false);
@@ -59,7 +94,13 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 			a.OutSchema = null;
 			if (mode === 'mappings') {
 				a.Mapping = null;
-				a.Transformation = { Source: defaultTransformationFunction.current };
+				a.Transformation = {
+					Source: rawTransformationFunctions[selectedLanguage].replace(
+						'$parameterName',
+						defaultTransformationParameterByTarget[actionType.Target],
+					),
+					Language: selectedLanguage,
+				};
 				setAction(a);
 				setMode('transformation');
 			} else {
@@ -73,8 +114,21 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 
 	const onChangeTransformationFunction = (source: string) => {
 		const a = { ...action };
-		a.Transformation!.Source = source;
+		a.Transformation = {
+			Source: source,
+			Language: selectedLanguage,
+		};
 		setAction(a);
+	};
+
+	const onTransformationLanguageSelect = (e) => {
+		setSelectedLanguage(e.detail.item.value);
+		setIsAlertOpen(true);
+	};
+
+	const onLanguageChange = (e) => {
+		const language = e.detail.item.value;
+		setSelectedLanguage(language);
 	};
 
 	const updateProperty = async (name, value) => {
@@ -121,6 +175,10 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 	const onSelectProperty = async (input, value) => {
 		await updateProperty(input.name, value);
 	};
+
+	if (transformationLanguages == null) {
+		return null;
+	}
 
 	let content: ReactNode | null = null;
 	if (mode === 'mappings') {
@@ -199,16 +257,55 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 			</div>
 		);
 	} else if (mode === 'transformation') {
+		const isTransformationLanguageDeprecated = !transformationLanguages.includes(selectedLanguage);
 		content = (
 			<div className='transformation'>
 				<EditorWrapper
-					defaultLanguage='python'
+					language={selectedLanguage}
+					languageChoices={transformationLanguages}
+					onLanguageChange={onLanguageChange}
 					height={400}
 					value={action.Transformation!.Source}
 					onChange={(source) => onChangeTransformationFunction(source!)}
 				/>
+				{isTransformationLanguageDeprecated && (
+					<SlAlert variant='danger' className='languageDeprecatedAlert' open>
+						<SlIcon slot='icon' name='exclamation-circle' />
+						{selectedLanguage} is not supported anymore
+					</SlAlert>
+				)}
 			</div>
 		);
+	}
+
+	let actionButton: ReactNode;
+	if (mode === 'transformation') {
+		actionButton = (
+			<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
+				<SlIcon name='shuffle' slot='prefix'></SlIcon>
+				Switch to mappings
+			</SlButton>
+		);
+	} else {
+		const isTransformationSupported = transformationLanguages.length > 0;
+		if (isTransformationAllowed && isTransformationSupported) {
+			actionButton = (
+				<SlDropdown className='switchToTransformationDropdown'>
+					<SlButton slot='trigger' variant='neutral' size='small' caret>
+						<SlIcon name='file-earmark-code' slot='prefix'></SlIcon>
+						Switch to transformation function
+					</SlButton>
+					<SlMenu onSlSelect={onTransformationLanguageSelect}>
+						{transformationLanguages.map((language) => (
+							<SlMenuItem value={language}>
+								{getLanguageLogo(language)}
+								{language}
+							</SlMenuItem>
+						))}
+					</SlMenu>
+				</SlDropdown>
+			);
+		}
 	}
 
 	return (
@@ -217,18 +314,7 @@ const ActionMapping = forwardRef<any>((props, ref) => {
 				ref={ref}
 				title='Properties'
 				description='The relation between the event properties and the action type properties'
-				actions={
-					isTransformationAllowed && (
-						<SlButton variant='neutral' size='small' onClick={() => setIsAlertOpen(true)}>
-							{mode === 'mappings' ? (
-								<SlIcon name='filetype-py' slot='prefix'></SlIcon>
-							) : (
-								<SlIcon name='shuffle' slot='prefix'></SlIcon>
-							)}
-							{mode === 'mappings' ? 'Switch to transformation function' : 'Switch to mappings'}
-						</SlButton>
-					)
-				}
+				actions={actionButton}
 				padded={false}
 			>
 				{content}

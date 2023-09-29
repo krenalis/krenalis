@@ -139,7 +139,8 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 	// Map using the transformation.
 
 	// Run the transformation.
-	results, err := m.transformer.CallFunction(ctx, "action-"+strconv.Itoa(m.action), m.transformation.Version, []map[string]any{values})
+	name := transformationFunctionName(m.action, m.transformation.Language)
+	results, err := m.transformer.CallFunction(ctx, name, m.transformation.Version, []map[string]any{values})
 	if err != nil {
 		return nil, fmt.Errorf("error while execution the transformation: %s", err)
 	}
@@ -239,4 +240,21 @@ func writePropertyTo(m map[string]any, path types.Path, v any) {
 		return
 	}
 	writePropertyTo(obj, path[1:], v)
+}
+
+// transformationFunctionName returns the name the transformation function for
+// an action in the specified language.
+//
+// Keep in sync with the function having the same name in the apis package.
+func transformationFunctionName(action int, language state.Language) string {
+	var ext string
+	switch language {
+	case state.JavaScript:
+		ext = ".js"
+	case state.Python:
+		ext = ".py"
+	default:
+		panic("unexpected language")
+	}
+	return "action-" + strconv.Itoa(action) + ext
 }

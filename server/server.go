@@ -42,14 +42,19 @@ type LambdaConfig struct {
 	SecretAccessKey string `yaml:"secretAccessKey"`
 	Region          string
 	Role            string
-	Runtime         string
-	Layer           string
+	Node            struct {
+		Runtime string
+		Layer   string
+	}
+	Python struct {
+		Runtime string
+		Layer   string
+	}
 }
 
 type LocalConfig struct {
 	NodeExecutable   string `yaml:"nodeExecutable"`
 	PythonExecutable string `yaml:"pythonExecutable"`
-	Language         string
 	FunctionsDir     string `yaml:"functionsDir"`
 }
 
@@ -71,17 +76,14 @@ func Run(ctx context.Context, settings *Settings) error {
 	}
 
 	// Choose the transformer setting.
-	if settings.Transformer.Lambda.AccessKeyID != "" {
+	if settings.Transformer.Lambda.Node.Runtime != "" || settings.Transformer.Lambda.Python.Runtime != "" {
 		config.Transformer = apis.LambdaConfig(settings.Transformer.Lambda)
 	}
-	if settings.Transformer.Local.PythonExecutable != "" {
+	if settings.Transformer.Local.NodeExecutable != "" || settings.Transformer.Local.PythonExecutable != "" {
 		if config.Transformer != nil {
 			return errors.New("cannot specify both the Lambda and the local transformer in the configuration (hint: check your 'config.yaml' file)")
 		}
 		config.Transformer = apis.LocalConfig(settings.Transformer.Local)
-	}
-	if config.Transformer == nil {
-		return errors.New("the configuration for a transformer must be provided (hint: check your 'config.yaml' file)")
 	}
 
 	apis, err := apis.New(&config)

@@ -12,6 +12,7 @@ type Mapping = Record<string, string>;
 
 interface Transformation {
 	Source: string;
+	Language: string;
 }
 
 interface MappingExpression {

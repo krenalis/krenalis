@@ -141,7 +141,7 @@ const ActionQuery = () => {
 		<>
 			<Section title='Query' description='The query used to import the data'>
 				<EditorWrapper
-					defaultLanguage='sql'
+					language='sql'
 					height={400}
 					value={action.Query!}
 					onChange={onUpdateQuery}

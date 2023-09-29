@@ -338,6 +338,7 @@ const useActionData = (
 			}
 			transformation = {
 				Source: action.Transformation.Source.trim(),
+				Language: action.Transformation.Language,
 			};
 		}
 
@@ -375,20 +376,6 @@ const useActionData = (
 				);
 			}
 		} catch (err) {
-			if (err instanceof UnprocessableError) {
-				switch (err.code) {
-					case 'EventTypeNotExists':
-					case 'PropertyNotExists':
-						showStatus({ variant: variants.DANGER, icon: icons.NOT_FOUND, text: err.message });
-						break;
-					case 'TargetAlreadyExists':
-						showStatus({ variant: variants.DANGER, icon: icons.FORBIDDEN, text: err.message });
-						break;
-					default:
-						break;
-				}
-				return;
-			}
 			showError(err);
 			return;
 		}

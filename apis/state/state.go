@@ -888,10 +888,46 @@ type Action struct {
 	MatchingProperties *MatchingProperties
 }
 
+// Language represents a transformation language.
+type Language int
+
+const (
+	JavaScript Language = iota
+	Python
+)
+
+func (lang Language) String() string {
+	switch lang {
+	case JavaScript:
+		return "JavaScript"
+	case Python:
+		return "Python"
+	}
+	panic("invalid language")
+}
+
+// Scan implements the sql.Scanner interface.
+func (lang *Language) Scan(src any) error {
+	s, ok := src.(string)
+	if !ok {
+		return fmt.Errorf("cannot scan a %T value into an state.Language value", src)
+	}
+	switch s {
+	case "JavaScript":
+		*lang = JavaScript
+	case "Python":
+		*lang = Python
+	default:
+		return fmt.Errorf("invalid state.Language: %s", s)
+	}
+	return nil
+}
+
 // Transformation represents a transformation.
 type Transformation struct {
-	Source  string
-	Version string
+	Source   string
+	Language Language
+	Version  string
 }
 
 // ExportMode represents one of the three export modes.

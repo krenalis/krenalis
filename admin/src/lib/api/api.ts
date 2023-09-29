@@ -27,6 +27,7 @@ import {
 	CompletePathResponse,
 	SheetsResponse,
 	RecordsResponse,
+	TransformationLanguagesResponse,
 } from '../../types/external/api';
 
 class API {
@@ -68,6 +69,10 @@ class API {
 			expressions,
 			schema,
 		});
+	};
+
+	transformationLanguages = async (): Promise<TransformationLanguagesResponse> => {
+		return await call(`${this.apiURL}/transformation-languages`, http.GET);
 	};
 }
 

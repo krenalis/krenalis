@@ -16,7 +16,6 @@ import (
 	"os"
 	"slices"
 	"sort"
-	"strconv"
 	"sync"
 	"sync/atomic"
 
@@ -84,14 +83,19 @@ type LambdaConfig struct {
 	SecretAccessKey string
 	Region          string
 	Role            string
-	Runtime         string
-	Layer           string
+	Node            struct {
+		Runtime string
+		Layer   string
+	}
+	Python struct {
+		Runtime string
+		Layer   string
+	}
 }
 
 type LocalConfig struct {
 	NodeExecutable   string
 	PythonExecutable string
-	Language         string
 	FunctionsDir     string
 }
 
@@ -132,7 +136,6 @@ func New(conf *Config) (*APIs, error) {
 	case LocalConfig:
 		apis.transformer = local.New(local.Settings(c))
 	case nil:
-		return nil, errors.New("missing transformer")
 	default:
 		return nil, errors.New("invalid transformer")
 	}
@@ -433,6 +436,22 @@ func (apis *APIs) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	apis.events.ServeHTTP(w, r)
 }
 
+// TransformationLanguages returns the supported transformation languages.
+// Possible returned languages are "JavaScript" and "Python".
+func (apis *APIs) TransformationLanguages() []string {
+	if apis.transformer == nil {
+		return []string{}
+	}
+	languages := make([]string, 0, 2)
+	if apis.transformer.SupportLanguage(state.JavaScript) {
+		languages = append(languages, "JavaScript")
+	}
+	if apis.transformer.SupportLanguage(state.Python) {
+		languages = append(languages, "Python")
+	}
+	return languages
+}
+
 // ValidateExpression validates an expression.
 func (apis *APIs) ValidateExpression(expression string, schema types.Type, dtType types.Type, dtNullable bool) string {
 	apis.mustBeOpen()
@@ -470,12 +489,16 @@ func (apis *APIs) onElectLeader(n state.ElectLeader) {
 
 // onDeleteAction is called when an action is deleted.
 func (apis *APIs) onDeleteAction(n state.DeleteAction) {
-	if apis.state.IsLeader() {
+	if apis.state.IsLeader() && apis.transformer != nil {
 		go func() {
-			name := "action-" + strconv.Itoa(n.ID)
-			err := apis.transformer.DeleteFunction(apis.close.ctx, name)
-			if err != nil {
-				log.Printf("cannot delete transformer function %q: %s", name, err)
+			for _, language := range [...]state.Language{state.JavaScript, state.Python} {
+				if apis.transformer.SupportLanguage(language) {
+					name := transformationFunctionName(n.ID, language)
+					err := apis.transformer.DeleteFunction(apis.close.ctx, name)
+					if err != nil {
+						log.Printf("cannot delete transformer function %q: %s", name, err)
+					}
+				}
 			}
 		}()
 	}

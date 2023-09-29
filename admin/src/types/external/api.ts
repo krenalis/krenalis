@@ -58,6 +58,10 @@ interface SheetsResponse {
 	sheets: string[];
 }
 
+interface TransformationLanguagesResponse {
+	languages: string[];
+}
+
 export type {
 	authCodeURLResponse,
 	UIResponse,
@@ -70,4 +74,5 @@ export type {
 	RecordsResponse,
 	CompletePathResponse,
 	SheetsResponse,
+	TransformationLanguagesResponse,
 };

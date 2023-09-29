@@ -52,23 +52,24 @@ const (
 )
 
 var (
-	ConnectionNotExists errors.Code = "ConnectionNotExists"
-	ConnectorNotExists  errors.Code = "ConnectorNotExists"
-	EventNotExists      errors.Code = "EventNotExists"
-	EventTypeNotExists  errors.Code = "EventTypeNotExists"
-	FetchSchemaFailed   errors.Code = "FetchSchemaFailed"
-	InvalidPath         errors.Code = "InvalidPath"
-	InvalidTable        errors.Code = "InvalidTable"
-	KeyNotExists        errors.Code = "KeyNotExists"
-	NoGroupsSchema      errors.Code = "NoGroupsSchema"
-	NoStorage           errors.Code = "NoStorage"
-	NoUsersSchema       errors.Code = "NoUsersSchema"
-	ReadFileFailed      errors.Code = "ReadFileFailed"
-	StorageNotExists    errors.Code = "StorageNotExists"
-	TargetAlreadyExists errors.Code = "TargetAlreadyExists"
-	TooManyKeys         errors.Code = "TooManyKeys"
-	UniqueKey           errors.Code = "UniqueKey"
-	WorkspaceNotExists  errors.Code = "WorkspaceNotExists"
+	ConnectionNotExists  errors.Code = "ConnectionNotExists"
+	ConnectorNotExists   errors.Code = "ConnectorNotExists"
+	EventNotExists       errors.Code = "EventNotExists"
+	EventTypeNotExists   errors.Code = "EventTypeNotExists"
+	FetchSchemaFailed    errors.Code = "FetchSchemaFailed"
+	InvalidPath          errors.Code = "InvalidPath"
+	InvalidTable         errors.Code = "InvalidTable"
+	KeyNotExists         errors.Code = "KeyNotExists"
+	LanguageNotSupported errors.Code = "LanguageNotSupported"
+	NoGroupsSchema       errors.Code = "NoGroupsSchema"
+	NoStorage            errors.Code = "NoStorage"
+	NoUsersSchema        errors.Code = "NoUsersSchema"
+	ReadFileFailed       errors.Code = "ReadFileFailed"
+	StorageNotExists     errors.Code = "StorageNotExists"
+	TargetAlreadyExists  errors.Code = "TargetAlreadyExists"
+	TooManyKeys          errors.Code = "TooManyKeys"
+	UniqueKey            errors.Code = "UniqueKey"
+	WorkspaceNotExists   errors.Code = "WorkspaceNotExists"
 )
 
 // Connection represents a connection.
@@ -302,6 +303,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore, and returns an errors.UnprocessableError error with code
 //   - ConnectionNotExists, if the connection does not exist.
+//   - LanguageNotSupported, if the transformation language is not supported.
 //   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
 //     identifier.
 //   - TargetAlreadyExists, if an action already exists for a target for the
@@ -361,6 +363,12 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 	}
 	if action.Transformation != nil {
 		n.Transformation = &state.Transformation{Source: action.Transformation.Source}
+		switch action.Transformation.Language {
+		case "JavaScript":
+			n.Transformation.Language = state.JavaScript
+		case "Python":
+			n.Transformation.Language = state.Python
+		}
 	}
 
 	// Add the filter to the notification and marshal it.
@@ -421,7 +429,8 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 	}
 	var transformation state.Transformation
 	if n.Transformation != nil {
-		version, err := this.apis.transformer.CreateFunction(ctx, "action-"+strconv.Itoa(n.ID), n.Transformation.Source)
+		name := transformationFunctionName(n.ID, n.Transformation.Language)
+		version, err := this.apis.transformer.CreateFunction(ctx, name, n.Transformation.Source)
 		if err != nil {
 			return 0, err
 		}
@@ -458,14 +467,14 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 			matchPropExternal = n.MatchingProperties.External
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
-			"schedule_start, schedule_period, in_schema, out_schema, filter, mapping, transformation_source,\n" +
-			"transformation_version, identifiers, query, path, table_name, sheet, export_mode,\n" +
-			"matching_properties_internal, matching_properties_external)\n" +
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)"
+			"schedule_start, schedule_period, in_schema, out_schema, filter, mapping, transformation_source, " +
+			"transformation_language, transformation_version, identifiers, query, path, table_name, sheet, " +
+			"export_mode, matching_properties_internal, matching_properties_external)\n" +
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema, string(filter), mapping,
-			transformation.Source, transformation.Version, n.Identifiers, n.Query, n.Path, n.TableName, n.Sheet,
-			n.ExportMode, matchPropInternal, matchPropExternal)
+			transformation.Source, transformation.Language, transformation.Version, n.Identifiers, n.Query, n.Path,
+			n.TableName, n.Sheet, n.ExportMode, matchPropInternal, matchPropExternal)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExists, "connection %d does not exist", n.Connection)
@@ -1939,12 +1948,13 @@ func (this *Connection) updateConnectionsStats(ctx context.Context) error {
 // validateActionToSet validates the action to set (when adding or setting an
 // action) for the given target and event type.
 //
-// It returns an errors.UnprocessableError with code
-// MappingOverAnonymousIdentifier if the action maps over an anonymous
-// identifier.
-//
 // Refer to the specifications in the file "connector/Actions support.md" for
 // more details.
+//
+// It returns an errors.UnprocessableError error with code
+//   - LanguageNotSupported, if the transformation language is not supported.
+//   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
+//     identifier.
 func (this *Connection) validateActionToSet(action ActionToSet, target state.ActionTarget, eventType string) error {
 
 	// First, do formal validations.
@@ -2034,6 +2044,21 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 		if action.Transformation.Source == "" {
 			return errors.BadRequest("transformation source is empty")
+		}
+		tr := this.apis.transformer
+		switch action.Transformation.Language {
+		case "JavaScript":
+			if tr == nil || !tr.SupportLanguage(state.JavaScript) {
+				return errors.Unprocessable(LanguageNotSupported, "Javascript transformation language  is not supported")
+			}
+		case "Python":
+			if tr == nil || !tr.SupportLanguage(state.Python) {
+				return errors.Unprocessable(LanguageNotSupported, "Python transformation language is not supported")
+			}
+		case "":
+			return errors.BadRequest("transformation language is empty")
+		default:
+			return errors.BadRequest("transformation language %q is not valid", action.Transformation.Language)
 		}
 	}
 	// Validate the identifiers.

@@ -12,10 +12,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
-	"strings"
+	"path"
 
+	"chichi/apis/state"
 	"chichi/apis/transformers"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -37,8 +39,14 @@ type Settings struct {
 	SecretAccessKey string
 	Region          string
 	Role            string
-	Runtime         string
-	Layer           string
+	Node            struct {
+		Runtime string
+		Layer   string
+	}
+	Python struct {
+		Runtime string
+		Layer   string
+	}
 }
 
 // New returns a new Transformer for Lambda with the given settings.
@@ -54,7 +62,13 @@ func New(settings Settings) transformers.Transformer {
 // returns the ErrPendingState error.
 func (tr *transformer) CallFunction(ctx context.Context, name, version string, values []map[string]any) ([]transformers.Result, error) {
 
-	// Create a client.
+	if !transformers.ValidFunctionName(name) {
+		return nil, errors.New("function name is not valid")
+	}
+	if !tr.supportLanguage(path.Ext(name)) {
+		return nil, errors.New("language is not supported")
+	}
+
 	client, err := tr.connect(ctx)
 	if err != nil {
 		return nil, err
@@ -70,6 +84,7 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, v
 	}
 
 	// Invoke the function.
+	name = lambdaFunctionName(name)
 	out, err := client.Invoke(ctx, &lambda.InvokeInput{
 		FunctionName: &name,
 		Payload:      b.Bytes(),
@@ -122,10 +137,19 @@ func (tr *transformer) Close(ctx context.Context) error {
 }
 
 // CreateFunction creates a new function with the given name and source, and
-// returns its version, which has a length in the range [1, 128]. If a function
-// with the same name already exists, it returns the ErrExist error.
+// returns its version, which has a length in the range [1, 128]. name should
+// have an extension of either ".js" or ".py" depending on the source code's
+// language. If a function with the same name already exists, it returns the
+// ErrExist error.
 func (tr *transformer) CreateFunction(ctx context.Context, name, source string) (string, error) {
-	code, err := tr.code(source)
+	if !transformers.ValidFunctionName(name) {
+		return "", errors.New("function name is not valid")
+	}
+	ext := path.Ext(name)
+	if !tr.supportLanguage(ext) {
+		return "", errors.New("language is not supported")
+	}
+	code, err := tr.code(source, ext)
 	if err != nil {
 		return "", err
 	}
@@ -133,16 +157,26 @@ func (tr *transformer) CreateFunction(ctx context.Context, name, source string) 
 	if err != nil {
 		return "", err
 	}
+	var runtime string
 	var layers []string
-	if tr.settings.Layer != "" {
-		layers = []string{tr.settings.Layer}
+	switch ext {
+	case ".js":
+		runtime = tr.settings.Node.Runtime
+		if layer := tr.settings.Node.Layer; layer != "" {
+			layers = []string{layer}
+		}
+	case ".py":
+		runtime = tr.settings.Python.Runtime
+		if layer := tr.settings.Python.Layer; layer != "" {
+			layers = []string{layer}
+		}
 	}
 	out, err := client.CreateFunction(ctx, &lambda.CreateFunctionInput{
-		FunctionName: aws.String(name),
+		FunctionName: aws.String(lambdaFunctionName(name)),
 		Handler:      aws.String("index._handler"),
 		Publish:      true,
 		Role:         aws.String(tr.settings.Role),
-		Runtime:      types.Runtime(tr.settings.Runtime),
+		Runtime:      types.Runtime(runtime),
 		Code:         &types.FunctionCode{ZipFile: code},
 		Layers:       layers,
 	})
@@ -161,10 +195,17 @@ func (tr *transformer) CreateFunction(ctx context.Context, name, source string) 
 // DeleteFunction deletes the function with the given name.
 // If a function with the given name does not exist, it does nothing.
 func (tr *transformer) DeleteFunction(ctx context.Context, name string) error {
+	if !transformers.ValidFunctionName(name) {
+		return errors.New("function name is not valid")
+	}
+	if !tr.supportLanguage(path.Ext(name)) {
+		return errors.New("language is not supported")
+	}
 	client, err := tr.connect(ctx)
 	if err != nil {
 		return err
 	}
+	name = lambdaFunctionName(name)
 	_, err = client.DeleteFunction(ctx, &lambda.DeleteFunctionInput{
 		FunctionName: &name,
 	})
@@ -174,11 +215,30 @@ func (tr *transformer) DeleteFunction(ctx context.Context, name string) error {
 	return err
 }
 
+// SupportLanguage reports whether language is supported as a language.
+// It panics if language is not valid.
+func (tr *transformer) SupportLanguage(language state.Language) bool {
+	switch language {
+	case state.JavaScript:
+		return tr.settings.Node.Runtime != ""
+	case state.Python:
+		return tr.settings.Python.Runtime != ""
+	}
+	panic("invalid language")
+}
+
 // UpdateFunction updates the source of the function with the given name, and
 // returns a new version, which has a length in the range [1, 128]. If the
 // function does not exist, it returns the ErrNotExist error.
 func (tr *transformer) UpdateFunction(ctx context.Context, name, source string) (string, error) {
-	code, err := tr.code(source)
+	if !transformers.ValidFunctionName(name) {
+		return "", errors.New("function name is not valid")
+	}
+	ext := path.Ext(name)
+	if !tr.supportLanguage(ext) {
+		return "", errors.New("language is not supported")
+	}
+	code, err := tr.code(source, ext)
 	if err != nil {
 		return "", err
 	}
@@ -186,6 +246,7 @@ func (tr *transformer) UpdateFunction(ctx context.Context, name, source string) 
 	if err != nil {
 		return "", err
 	}
+	name = lambdaFunctionName(name)
 	out, err := client.UpdateFunctionCode(ctx, &lambda.UpdateFunctionCodeInput{
 		FunctionName: &name,
 		Publish:      true,
@@ -204,10 +265,10 @@ func (tr *transformer) UpdateFunction(ctx context.Context, name, source string) 
 }
 
 // code returns the code of the function with the given source.
-func (tr *transformer) code(source string) ([]byte, error) {
+func (tr *transformer) code(source string, ext string) ([]byte, error) {
 	var filename string
-	switch {
-	case strings.HasPrefix(tr.settings.Runtime, "nodejs"):
+	switch ext {
+	case ".js":
 		filename = "index.mjs"
 		source += `
 export const _handler = async (event) => {
@@ -223,7 +284,7 @@ export const _handler = async (event) => {
 	return results;
 };
 `
-	case strings.HasPrefix(tr.settings.Runtime, "python3."):
+	case ".py":
 		filename = "index.py"
 		source += `
 def _handler(event, context):
@@ -237,8 +298,6 @@ def _handler(event, context):
 			results.append({"value": value})
 	return results
 `
-	default:
-		return nil, fmt.Errorf("invalid runtime %q", tr.settings.Runtime)
 	}
 	// Make a Zip file with the function code.
 	var b bytes.Buffer
@@ -274,6 +333,17 @@ func (tr *transformer) connect(ctx context.Context) (*lambda.Client, error) {
 	return tr.client, nil
 }
 
+// supportLanguage is like SupportLanguage but gets an extension as argument.
+func (tr *transformer) supportLanguage(ext string) bool {
+	switch ext {
+	case ".js":
+		return tr.settings.Node.Runtime != ""
+	case ".py":
+		return tr.settings.Python.Runtime != ""
+	}
+	panic("invalid extension")
+}
+
 // isHTTPErrorCode checks whether an error relates to an HTTP response error and
 // if the HTTP status code matches the specified code.
 func isHTTPErrorCode(err error, code int) bool {
@@ -283,4 +353,9 @@ func isHTTPErrorCode(err error, code int) bool {
 		}
 	}
 	return false
+}
+
+// lambdaFunctionName returns a function name in the format accepted by Lambda.
+func lambdaFunctionName(name string) string {
+	return name[:len(name)-3] + "_" + name[len(name)-2:]
 }

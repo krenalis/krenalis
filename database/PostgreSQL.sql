@@ -102,6 +102,7 @@ CREATE TYPE cursor AS (
 );
 
 CREATE TYPE export_mode AS ENUM ('CreateOnly', 'UpdateOnly', 'CreateOrUpdate');
+CREATE TYPE transformation_language AS ENUM ('JavaScript', 'Python');
 
 CREATE TABLE actions (
     id SERIAL,
@@ -117,6 +118,7 @@ CREATE TABLE actions (
     filter text NOT NULL DEFAULT '',
     mapping jsonb DEFAULT NULL,
     transformation_source text NOT NULL DEFAULT '',
+    transformation_language transformation_language NOT NULL,
     transformation_version varchar(128) NOT NULL DEFAULT '',
     identifiers varchar[] DEFAULT NULL,
     query text NOT NULL DEFAULT '',

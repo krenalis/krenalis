@@ -20,7 +20,7 @@
     font-size: 13px;
     display: flex;
     border-bottom: 1px solid var(--sl-color-neutral-200);
-    align-items: end;
+    align-items: center;
     gap: 10px;
 }
 
@@ -30,6 +30,11 @@
 
 .editorWrapper .heading .language {
     font-weight: 600;
+}
+
+.editorWrapper .switchEditorLanguageDropdown sl-button::part(label),
+.editorWrapper .switchEditorLanguageDropdown sl-button::part(caret) {
+    color: var(--sl-color-neutral-600);
 }
 
 .editorWrapper .editor {

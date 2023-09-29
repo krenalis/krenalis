@@ -231,6 +231,27 @@ inherit the disabled style */
     border-bottom-left-radius: 5px;
 }
 
+.action .switchToTransformationDropdown sl-menu-item::part(label) {
+    font-size: 13px;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.action .switchToTransformationDropdown sl-menu-item img {
+    max-width: 23px;
+    max-height: 23px;
+    pointer-events: none;
+}
+
+.sectionActions, .sectionActions sl-menu {
+    width: 300px;
+}
+  
+.sectionActions sl-dropdown, .sectionActions sl-button, .sectionActions sl-dropdown::part(popup)  {
+    width: 100%;
+}
+
 .action .transformation .inputProperties, .action .transformation .outputProperties {
     display: flex;
     flex-flow: column;
@@ -276,6 +297,29 @@ inherit the disabled style */
 }
 
 .action .transformation .property .removeProperty sl-icon {
+    color: var(--sl-color-danger-600);
+}
+
+.action .transformation .languageDeprecatedAlert {
+    margin-top: 15px;
+}
+
+.action .transformation .languageDeprecatedAlert::part(base) { 
+    background-color: transparent;
+    border: 0;
+    color: var(--sl-color-neutral-600);
+}
+
+.action .transformation .languageDeprecatedAlert::part(icon) { 
+    padding: 0;
+    padding-right: 10px;
+}
+
+.action .transformation .languageDeprecatedAlert::part(message) { 
+    padding: 0;
+}
+
+.action .transformation .languageDeprecatedAlert sl-icon {
     color: var(--sl-color-danger-600);
 }
 

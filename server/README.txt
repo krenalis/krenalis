@@ -57,5 +57,6 @@ POST    /api/workspaces/{id}/oauth-token                                        
 POST    /api/workspaces/{id}/add-connection                                      Add a new connection.
 GET     /api/workspaces/{id}/privacy-region                                      Get the workspace privacy region.
 GET     /api/events-schema                                                       Get the events schema.
+POST    /api/expressions-properties                                              Return the unique properties contained inside a list of expressions.
+GET     /api/transformation-languages                                            Return the supported transformation languages.
 POST    /api/validate-expression                                                 Validate an expression.
-POST    /api/expressions-properties                                              Return all the unique properties contained inside a list of expressions.

@@ -1026,6 +1026,11 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(properties)
 	})
+	router.Get("/api/transformation-languages", func(w http.ResponseWriter, r *http.Request) {
+		languages := s.apis.TransformationLanguages()
+		w.Header().Add("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string][]string{"languages": languages})
+	})
 
 	router.ServeHTTP(w, r)
 

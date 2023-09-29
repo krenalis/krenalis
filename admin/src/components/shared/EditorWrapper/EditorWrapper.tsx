@@ -2,24 +2,34 @@ import './EditorWrapper.css';
 import React, { ReactNode } from 'react';
 import Editor from '@monaco-editor/react';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
+import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 
-// TODO: serve static assets from the server.
-const SQL_LOGO =
-	'';
-const JS_LOGO =
-	'';
-const PYTHON_LOGO =
-	'';
+import getLanguageLogo from '../../helpers/getLanguageLogo';
 
 interface EditorWrapperProps {
-	defaultLanguage: string;
+	language: string;
+	languageChoices?: string[];
+	onLanguageChange?: (language: string) => void;
 	width?: number;
 	height: number;
 	value: string;
 	onChange: (value: string | undefined) => void | Promise<void>;
 }
 
-const EditorWrapper = ({ defaultLanguage, width, height, value, onChange, ...delegated }: EditorWrapperProps) => {
+const EditorWrapper = ({
+	language,
+	languageChoices,
+	onLanguageChange,
+	width,
+	height,
+	value,
+	onChange,
+	...delegated
+}: EditorWrapperProps) => {
 	const onEditorDidMount = (editor) => {
 		let source = value;
 		const div = editor._domElement;
@@ -39,34 +49,33 @@ const EditorWrapper = ({ defaultLanguage, width, height, value, onChange, ...del
 		onChange(source);
 	};
 
-	let languageLogo: ReactNode;
-	switch (defaultLanguage) {
-		case 'sql':
-			languageLogo = <img src={SQL_LOGO} alt='SQL logo' />;
-			break;
-		case 'javascript':
-			languageLogo = <img src={JS_LOGO} alt='Javascript logo' />;
-			break;
-		case 'python':
-			languageLogo = <img src={PYTHON_LOGO} alt='Python logo' />;
-			break;
-		default:
-			languageLogo = 'file-earmark-code';
-			break;
-	}
+	const languageLogo = getLanguageLogo(language);
 
 	return (
 		<div className='editorWrapper'>
 			<div className='heading'>
 				<span className='languageLogo'>{languageLogo}</span>
-				<span className='language'>{defaultLanguage}</span>
+				{languageChoices ? (
+					<SlDropdown className='switchEditorLanguageDropdown'>
+						<SlButton slot='trigger' variant='text' size='small' caret>
+							{language}
+						</SlButton>
+						<SlMenu onSlSelect={onLanguageChange}>
+							{languageChoices.map((language) => (
+								<SlMenuItem value={language}>{language}</SlMenuItem>
+							))}
+						</SlMenu>
+					</SlDropdown>
+				) : (
+					<span className='language'>{language}</span>
+				)}
 			</div>
 			<div className='editor' style={{ width: `${width}px`, height: `${height}px` }}>
 				<Editor
 					value={value}
 					onChange={onChange}
 					onMount={onEditorDidMount}
-					defaultLanguage={defaultLanguage}
+					defaultLanguage={language.toLowerCase()}
 					options={{
 						minimap: { enabled: false },
 						scrollbar: {

@@ -122,7 +122,6 @@ func InitAndLaunch(t *testing.T) *Chichi {
 	setts.Redis.Password = testsSettings.Redis.Password
 	setts.Redis.DB = testsSettings.Redis.DB
 	setts.Transformer.Local.PythonExecutable = testsSettings.PythonExecutable
-	setts.Transformer.Local.Language = "python"
 	setts.Transformer.Local.FunctionsDir = transformationsTempDir
 
 	// Launch Chichi.

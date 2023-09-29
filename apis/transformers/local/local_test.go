@@ -11,12 +11,12 @@ import "testing"
 
 func Test_filenameToVersion(t *testing.T) {
 	const (
-		js = "node"
-		py = "python"
+		js = ".js"
+		py = ".py"
 	)
 	tests := []struct {
-		language string
-		funcName string
+		ext      string
+		name     string
 		filename string
 		version  int
 		ok       bool
@@ -47,12 +47,12 @@ func Test_filenameToVersion(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			gotV, gotOk := filenameToVersion(test.funcName, test.filename, test.language)
+			gotV, gotOk := filenameToVersion(test.name, test.filename, test.ext)
 			if test.ok != gotOk {
-				t.Fatalf("filenameToVersion(%q, %q, %q): expected ok = %t, got %t", test.funcName, test.filename, test.language, test.ok, gotOk)
+				t.Fatalf("filenameToVersion(%q, %q, %q): expected ok = %t, got %t", test.name, test.filename, test.ext, test.ok, gotOk)
 			}
 			if test.version != gotV {
-				t.Fatalf("filenameToVersion(%q, %q, %q): expected version = %d, got %d", test.funcName, test.filename, test.language, test.version, gotV)
+				t.Fatalf("filenameToVersion(%q, %q, %q): expected version = %d, got %d", test.name, test.filename, test.ext, test.version, gotV)
 			}
 		})
 	}

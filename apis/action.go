@@ -59,9 +59,14 @@ type Action struct {
 	MatchingProperties *MatchingProperties
 }
 
+// Language represents a transformation language. Valid values are "JavaScript"
+// and "Python".
+type Language string
+
 // Transformation represents a transformation.
 type Transformation struct {
-	Source string
+	Source   string
+	Language Language
 }
 
 // ExportMode represents one of the three export modes.
@@ -113,7 +118,10 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		}
 	}
 	if action.Transformation != nil {
-		this.Transformation = &Transformation{Source: action.Transformation.Source}
+		this.Transformation = &Transformation{
+			Source:   action.Transformation.Source,
+			Language: Language(action.Transformation.Language.String()),
+		}
 	}
 	this.Identifiers = slices.Clone(action.Identifiers)
 	if action.Query != "" {
@@ -263,8 +271,9 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 // more details.
 //
 // It returns an errors.UnprocessableError error with code
-// MappingOverAnonymousIdentifier, if the action maps over an anonymous
-// identifier.
+//   - LanguageNotSupported, if the transformation language is not supported.
+//   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
+//     identifier.
 func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	this.apis.mustBeOpen()
 	ctx, span := telemetry.TraceSpan(ctx, "Action.Set", "action", this.action.ID)
@@ -290,6 +299,12 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	}
 	if action.Transformation != nil {
 		n.Transformation = &state.Transformation{Source: action.Transformation.Source}
+		switch action.Transformation.Language {
+		case "JavaScript":
+			n.Transformation.Language = state.JavaScript
+		case "Python":
+			n.Transformation.Language = state.Python
+		}
 	}
 	// Add the filter to the notification and marshal it.
 	var filter []byte
@@ -342,9 +357,10 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
 	// Transformation.
 	if n.Transformation != nil {
-		name := "action-" + strconv.Itoa(this.action.ID)
 		source := n.Transformation.Source
+		language := n.Transformation.Language
 		if this.action.Transformation == nil {
+			name := transformationFunctionName(n.ID, language)
 			version, err := this.apis.transformer.CreateFunction(ctx, name, source)
 			if err == transformers.ErrExist {
 				version, err = this.apis.transformer.UpdateFunction(ctx, name, source)
@@ -353,7 +369,8 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 				return err
 			}
 			n.Transformation.Version = version
-		} else if this.action.Transformation.Source != n.Transformation.Source {
+		} else if this.action.Transformation.Source != source || this.action.Transformation.Language != language {
+			name := transformationFunctionName(n.ID, language)
 			version, err := this.apis.transformer.UpdateFunction(ctx, name, source)
 			if err == transformers.ErrNotExist {
 				version, err = this.apis.transformer.CreateFunction(ctx, name, source)
@@ -363,8 +380,8 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			}
 			n.Transformation.Version = version
 		} else {
-			// The function's source code should not be changed. It will be verified
-			// during the transaction and assigned the current version.
+			// The function's source code and language should not be changed.
+			// It will be verified during the transaction and assigned the current version.
 		}
 	}
 
@@ -373,27 +390,27 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		if n.Transformation != nil {
 			var current state.Transformation
 			if n.Transformation.Version == "" {
-				err := tx.QueryRow(ctx, "SELECT transformation_source, transformation_version FROM actions WHERE id = $1",
-					n.ID).Scan(&current.Source, &current.Version)
+				err := tx.QueryRow(ctx, "SELECT transformation_source, transformation_language, transformation_version "+
+					"FROM actions WHERE id = $1", n.ID).Scan(&current.Source, &current.Language, &current.Version)
 				if err != nil {
 					return err
 				}
-				if current.Source != n.Transformation.Source {
+				if current.Source != n.Transformation.Source || current.Language != n.Transformation.Language {
 					return fmt.Errorf("abort update action %d: it was optimistically assumed that the transformation"+
-						" source had not changed, but it has indeed changed", n.ID)
+						" had not changed, but it has indeed changed", n.ID)
 				}
 				n.Transformation.Version = current.Version
 			}
 			transformation = *n.Transformation
 		}
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
-			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, mapping = $6,\n"+
-			"transformation_source = $7, transformation_version = $8, identifiers = $9, query = $10, path = $11,\n"+
-			"table_name = $12, sheet = $13, export_mode = $14, matching_properties_internal = $15,\n"+
-			"matching_properties_external = $16\nWHERE id = $17",
+			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, mapping = $6, "+
+			"transformation_source = $7, transformation_language = $8, transformation_version = $9, identifiers = $10, "+
+			"query = $11, path = $12, table_name = $13, sheet = $14, export_mode = $15, "+
+			"matching_properties_internal = $16, matching_properties_external = $17\nWHERE id = $18",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping, transformation.Source,
-			transformation.Version, n.Identifiers, n.Query, n.Path, n.TableName, n.Sheet, n.ExportMode,
-			matchPropInternal, matchPropExternal, n.ID,
+			transformation.Language, transformation.Version, n.Identifiers, n.Query, n.Path, n.TableName, n.Sheet,
+			n.ExportMode, matchPropInternal, matchPropExternal, n.ID,
 		)
 		if err != nil {
 			return err
@@ -483,6 +500,19 @@ func (this *Action) SetStatus(ctx context.Context, enabled bool) error {
 		return tx.Notify(ctx, n)
 	})
 	return err
+}
+
+// isLanguageSupported reports whether the transformation language of the action
+// is supported. If the action does not have a transformation, it returns true.
+func (a *Action) isLanguageSupported() bool {
+	transformation := a.action.Transformation
+	if transformation == nil {
+		return true
+	}
+	if a.apis.transformer != nil && a.apis.transformer.SupportLanguage(transformation.Language) {
+		return true
+	}
+	return false
 }
 
 // ActionToSet represents an action to set to a connection, by adding a new
@@ -643,4 +673,21 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	}
 	*period = p
 	return nil
+}
+
+// transformationFunctionName returns the name the transformation function for
+// an action in the specified language.
+//
+// Keep in sync with the function having the same name in the mappings package.
+func transformationFunctionName(action int, language state.Language) string {
+	var ext string
+	switch language {
+	case state.JavaScript:
+		ext = ".js"
+	case state.Python:
+		ext = ".py"
+	default:
+		panic("unexpected language")
+	}
+	return "action-" + strconv.Itoa(action) + ext
 }

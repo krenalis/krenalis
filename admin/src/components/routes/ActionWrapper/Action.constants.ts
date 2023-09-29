@@ -1,7 +1,12 @@
-const rawTransformationFunction = `def transform($parameterName: dict) -> dict:
+const rawTransformationFunctions = {
+	JavaScript: `const transform = ($parameterName) => {
+    return {}
+}`,
+	Python: `def transform($parameterName: dict) -> dict:
 	return {}
-`;
+`,
+};
 
 const CONFIRM_ANIMATION_DURATION = 1200;
 
-export { rawTransformationFunction, CONFIRM_ANIMATION_DURATION };
+export { rawTransformationFunctions, CONFIRM_ANIMATION_DURATION };
