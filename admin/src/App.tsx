@@ -20,7 +20,7 @@ import { setBasePath } from '@shoelace-style/shoelace/dist/utilities/base-path.j
 import SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert';
 import '@shoelace-style/shoelace/dist/themes/light.css';
 
-setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.5.2/dist/');
+setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/dist/');
 
 const App = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
