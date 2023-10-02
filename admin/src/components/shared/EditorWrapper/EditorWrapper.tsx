@@ -1,8 +1,7 @@
+import React, { useEffect, useState } from 'react';
 import './EditorWrapper.css';
-import React, { ReactNode } from 'react';
 import Editor from '@monaco-editor/react';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -30,6 +29,12 @@ const EditorWrapper = ({
 	onChange,
 	...delegated
 }: EditorWrapperProps) => {
+	const [key, setKey] = useState('');
+
+	useEffect(() => {
+		setKey(language);
+	}, [language]);
+
 	const onEditorDidMount = (editor) => {
 		let source = value;
 		const div = editor._domElement;
@@ -72,6 +77,7 @@ const EditorWrapper = ({
 			</div>
 			<div className='editor' style={{ width: `${width}px`, height: `${height}px` }}>
 				<Editor
+					key={key}
 					value={value}
 					onChange={onChange}
 					onMount={onEditorDidMount}
