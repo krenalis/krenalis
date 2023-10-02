@@ -82,13 +82,13 @@ func (c *connection) EventTypes(ctx context.Context) ([]*connector.EventType, er
 	eventTypes := []*connector.EventType{
 		// https://developers.google.com/analytics/devguides/collection/ga4/views?client_type=gtag#manually_send_page_view_events
 		{
-			ID:          "event_page_view",
+			ID:          "page_view",
 			Name:        "Page view",
 			Description: "Send a Page view event to Google Analytics 4",
 		},
 		// https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference/events#share
 		{
-			ID:          "event_share",
+			ID:          "share",
 			Name:        "Share",
 			Description: "Send a Share event to Google Analytics 4",
 			Schema: types.Object([]types.Property{
@@ -106,33 +106,16 @@ func (c *connection) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
-// SendEvent sends the event, along with the given mapped event.
+// SendEvent sends the event, along with the given mapped data.
 // eventType specifies the event type corresponding to the event.
-func (c *connection) SendEvent(ctx context.Context, event connector.Event, mappedEvent map[string]any, eventType string) error {
-	var err error
-	switch eventType {
-	case "event_page_view":
-		err = c.collect(event.AnonymousId, event.UserId, "page_view", map[string]any{
-			"page_location": event.Context.Page.URL,
-			"page_referrer": event.Context.Page.Referrer,
-			"page_title":    event.Context.Page.Title,
-		})
-	case "event_share":
-		params := map[string]any{}
-		if method, ok := mappedEvent["method"].(string); ok {
-			params["method"] = method
-		}
-		if contentType, ok := mappedEvent["content_type"].(string); ok {
-			params["content_type"] = contentType
-		}
-		if itemID, ok := mappedEvent["item_id"].(string); ok {
-			params["item_id"] = itemID
-		}
-		err = c.collect(event.AnonymousId, event.UserId, "share", params)
-	default:
-		panic(fmt.Sprintf("unsupported event type %q", eventType))
-	}
-	return err
+func (c *connection) SendEvent(ctx context.Context, event connector.Event, typ string, data map[string]any) error {
+	return c.collect(eventBody(event, typ, data))
+}
+
+// SendEventPreview returns a preview of the event that would be sent when
+// calling SendEvent with the same arguments.
+func (c *connection) SendEventPreview(ctx context.Context, event connector.Event, typ string, data map[string]any) ([]byte, error) {
+	return json.MarshalIndent(eventBody(event, typ, data), "", "\t")
 }
 
 // ServeUI serves the connector's user interface.
@@ -198,7 +181,7 @@ func (c *connection) ValidateSettings(ctx context.Context, values []byte) ([]byt
 	return json.Marshal(&s)
 }
 
-func (c *connection) collect(anonymousID, userID, eventName string, eventParams map[string]any) error {
+func (c *connection) collect(body any) error {
 
 	// Build the URL.
 	url := &_url.URL{
@@ -214,27 +197,14 @@ func (c *connection) collect(anonymousID, userID, eventName string, eventParams 
 	values.Add("measurement_id", c.settings.MeasurementID)
 	url.RawQuery = values.Encode()
 
-	// Build the request's data.
-	data := map[string]any{
-		// TODO(Gianluca): consider sending the user ID as the client_id, if
-		// defined, otherwise the anonymousID.
-		"client_id": anonymousID,
-		"user_id":   userID,
-		"events": []map[string]any{
-			{
-				"name":   eventName,
-				"params": eventParams,
-			},
-		},
-	}
-	body := &bytes.Buffer{}
-	err := json.NewEncoder(body).Encode(data)
+	var b bytes.Buffer
+	err := json.NewEncoder(&b).Encode(body)
 	if err != nil {
 		return err
 	}
 
 	// Issue the POST request to www.google-analytics.com.
-	req, err := http.NewRequest("POST", url.String(), body)
+	req, err := http.NewRequest("POST", url.String(), &b)
 	if err != nil {
 		return err
 	}
@@ -257,4 +227,37 @@ func (c *connection) collect(anonymousID, userID, eventName string, eventParams 
 	}
 
 	return nil
+}
+
+func eventBody(event connector.Event, typ string, data map[string]any) any {
+	var ev map[string]any
+	switch typ {
+	case "page_view":
+		ev = map[string]any{
+			"page_location": event.Context.Page.URL,
+			"page_referrer": event.Context.Page.Referrer,
+			"page_title":    event.Context.Page.Title,
+		}
+	case "share":
+		ev = map[string]any{}
+		if method, ok := data["method"].(string); ok {
+			ev["method"] = method
+		}
+		if contentType, ok := data["content_type"].(string); ok {
+			ev["content_type"] = contentType
+		}
+		if itemID, ok := data["item_id"].(string); ok {
+			ev["item_id"] = itemID
+		}
+	default:
+		panic(fmt.Sprintf("unsupported event type %q", typ))
+	}
+	body := map[string]any{
+		// TODO(Gianluca): consider sending the user ID as the client_id, if
+		// defined, otherwise the anonymousID.
+		"client_id": event.AnonymousId,
+		"user_id":   event.UserId,
+		"events":    []map[string]any{ev},
+	}
+	return body
 }

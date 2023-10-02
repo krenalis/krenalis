@@ -20,6 +20,7 @@ import (
 	"chichi/apis"
 	"chichi/apis/errors"
 	"chichi/apis/events"
+	"chichi/connector"
 	"chichi/connector/types"
 	"chichi/telemetry"
 
@@ -659,6 +660,31 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							}
 							w.Header().Add("Content-Type", "application/json")
 							_, _ = w.Write(form)
+						})
+						router.Post("/event-preview", func(w http.ResponseWriter, r *http.Request) {
+							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+							connection, err := workspace.Connection(ctx, id)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+							var req struct {
+								Event     connector.Event
+								Mapping   map[string]any
+								EventType string
+							}
+							err = json.NewDecoder(r.Body).Decode(&req)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+							preview, err := connection.SendEventPreview(ctx, req.Event, req.EventType, req.Mapping)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+							w.Header().Add("Content-Type", "application/json")
+							_ = json.NewEncoder(w).Encode(map[string]any{"Preview": string(preview)})
 						})
 						router.Post("/exec-query", func(w http.ResponseWriter, r *http.Request) {
 							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))

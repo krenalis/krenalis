@@ -108,92 +108,20 @@ func (c *connection) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
-// SendEvent sends the event, along with the given mapped event.
+// SendEvent sends the event, along with the given mapped data.
 // eventType specifies the event type corresponding to the event.
-func (c *connection) SendEvent(ctx context.Context, event connector.Event, mappedEvent map[string]any, eventType string) error {
-
-	if e := mappedEvent["event"].(string); e == "" {
-		return errors.New("event cannot be empty")
-	}
-
-	p := mappedEvent["properties"].(map[string]any)
-
-	p["$insert_id"] = event.MessageId
-	p["time"] = formatTimestamp(event.Timestamp)
-	distinctID := event.AnonymousId
-	if event.UserId != "" {
-		distinctID = event.UserId
-	}
-	p["distinct_id"] = distinctID
-	p["$device_id"] = event.AnonymousId
-	if event.Context.IP == "" {
-		if event.Context.Location.Country != "" {
-			p["mp_country_code"] = event.Context.Location.Country
-		}
-		if event.Context.Location.City != "" {
-			p["$city"] = event.Context.Location.City
-		}
-	} else {
-		p["ip"] = event.Context.IP
-		// Supplying the 'ip' property, Mixpanel automatically enriches the event with country, region, and city
-		// if they are not supplied. Provide either all or none of these properties to ensure that Mixpanel's
-		// enrichment occurs for all or none of them.
-		if event.Context.Location.Country != "" || event.Context.Location.City != "" {
-			if event.Context.Location.Country != "" {
-				p["mp_country_code"] = event.Context.Location.Country
-			} else {
-				p["mp_country_code"] = nil
-			}
-			if event.Context.Location.City != "" {
-				p["$city"] = event.Context.Location.City
-			} else {
-				p["$city"] = nil
-			}
-		}
-	}
-	if event.Context.OS.Name != "" {
-		p["$os"] = event.Context.OS.Name
-	}
-	if event.Context.Browser.Name != "" {
-		p["$browser"] = event.Context.Browser.Name
-	} else if event.Context.Browser.Other != "" {
-		p["$browser"] = event.Context.Browser.Other
-	}
-	if event.Context.Browser.Version != "" {
-		p["$browser_version"] = event.Context.Browser.Version
-	}
-	if event.Context.Page.Referrer != "" {
-		u, err := url.Parse(event.Context.Page.Referrer)
-		if err == nil {
-			p["$referrer"] = event.Context.Page.Referrer
-			p["$referring_domain"] = u.Hostname()
-		}
-	}
-	if event.Context.Page.URL != "" {
-		p["$current_url"] = event.Context.Page.URL
-		p["current_page_title"] = event.Context.Page.Title
-		u, err := url.Parse(event.Context.Page.URL)
-		if err == nil {
-			p["current_domain"] = u.Hostname()
-			p["current_url_path"] = u.Path
-			p["current_url_protocol"] = u.Scheme + ":"
-		}
-	}
-	if event.Context.Screen.Width != 0 {
-		p["$screen_width"] = event.Context.Screen.Width
-	}
-	if event.Context.Screen.Height != 0 {
-		p["$screen_height"] = event.Context.Screen.Height
-	}
-
-	// Send the event.
-	body, err := json.Marshal(mappedEvent)
+func (c *connection) SendEvent(ctx context.Context, event connector.Event, typ string, data map[string]any) error {
+	b, err := json.Marshal(eventBody(event, typ, data))
 	if err != nil {
 		return err
 	}
-	err = c.call(ctx, "POST", "/import", bytes.NewReader(body), 200, nil)
+	return c.call(ctx, "POST", "/import", bytes.NewReader(b), 200, nil)
+}
 
-	return err
+// SendEventPreview returns a preview of the event that would be sent when
+// calling SendEvent with the same arguments.
+func (c *connection) SendEventPreview(ctx context.Context, event connector.Event, typ string, data map[string]any) ([]byte, error) {
+	return json.MarshalIndent(eventBody(event, typ, data), "", "\t")
 }
 
 // ServeUI serves the connector's user interface.
@@ -297,6 +225,85 @@ func formatTimestamp(t time.Time) string {
 		return "0." + ms
 	}
 	return ms[:l-3] + "." + ms[l-3:]
+}
+
+func eventBody(event connector.Event, typ string, data map[string]any) any {
+
+	if e := data["event"].(string); e == "" {
+		return errors.New("event cannot be empty")
+	}
+
+	p := data["properties"].(map[string]any)
+
+	p["$insert_id"] = event.MessageId
+	p["time"] = formatTimestamp(event.Timestamp)
+	distinctID := event.AnonymousId
+	if event.UserId != "" {
+		distinctID = event.UserId
+	}
+	p["distinct_id"] = distinctID
+	p["$device_id"] = event.AnonymousId
+	if event.Context.IP == "" {
+		if event.Context.Location.Country != "" {
+			p["mp_country_code"] = event.Context.Location.Country
+		}
+		if event.Context.Location.City != "" {
+			p["$city"] = event.Context.Location.City
+		}
+	} else {
+		p["ip"] = event.Context.IP
+		// Supplying the 'ip' property, Mixpanel automatically enriches the event with country, region, and city
+		// if they are not supplied. Provide either all or none of these properties to ensure that Mixpanel's
+		// enrichment occurs for all or none of them.
+		if event.Context.Location.Country != "" || event.Context.Location.City != "" {
+			if event.Context.Location.Country != "" {
+				p["mp_country_code"] = event.Context.Location.Country
+			} else {
+				p["mp_country_code"] = nil
+			}
+			if event.Context.Location.City != "" {
+				p["$city"] = event.Context.Location.City
+			} else {
+				p["$city"] = nil
+			}
+		}
+	}
+	if event.Context.OS.Name != "" {
+		p["$os"] = event.Context.OS.Name
+	}
+	if event.Context.Browser.Name != "" {
+		p["$browser"] = event.Context.Browser.Name
+	} else if event.Context.Browser.Other != "" {
+		p["$browser"] = event.Context.Browser.Other
+	}
+	if event.Context.Browser.Version != "" {
+		p["$browser_version"] = event.Context.Browser.Version
+	}
+	if event.Context.Page.Referrer != "" {
+		u, err := url.Parse(event.Context.Page.Referrer)
+		if err == nil {
+			p["$referrer"] = event.Context.Page.Referrer
+			p["$referring_domain"] = u.Hostname()
+		}
+	}
+	if event.Context.Page.URL != "" {
+		p["$current_url"] = event.Context.Page.URL
+		p["current_page_title"] = event.Context.Page.Title
+		u, err := url.Parse(event.Context.Page.URL)
+		if err == nil {
+			p["current_domain"] = u.Hostname()
+			p["current_url_path"] = u.Path
+			p["current_url_protocol"] = u.Scheme + ":"
+		}
+	}
+	if event.Context.Screen.Width != 0 {
+		p["$screen_width"] = event.Context.Screen.Width
+	}
+	if event.Context.Screen.Height != 0 {
+		p["$screen_height"] = event.Context.Screen.Height
+	}
+
+	return data
 }
 
 type mixpanelError struct {

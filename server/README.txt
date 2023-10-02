@@ -15,6 +15,7 @@ GET     /api/workspaces/{id}/connections/{id}/action-schemas/Groups             
 GET     /api/workspaces/{id}/connections/{id}/action-schemas/Events              Get the input and output schemas of the Events action type with no event type.
 GET     /api/workspaces/{id}/connections/{id}/action-schemas/Events/{eventType}  Get the input and output schemas of the Events action type for the event type.
 GET     /api/workspaces/{id}/connections/{id}/complete-path/{path}               Return the complete representation of a path for a connection storage.
+POST    /api/workspaces/{id}/connections/{id}/event-preview                      Return an event preview.
 POST    /api/workspaces/{id}/connections/{id}/exec-query                         Execute the query of a database connection.
 GET     /api/workspaces/{id}/connections/{id}/imports                            Return the executions of a connection.
 GET     /api/workspaces/{id}/connections/{id}/records                            Return the records and the schema of a file of a multiple sheets file connection.

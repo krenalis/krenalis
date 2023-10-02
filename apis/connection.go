@@ -559,6 +559,17 @@ func (this *Connection) Delete(ctx context.Context) error {
 	return err
 }
 
+// SendEventPreview returns a preview of the event that would be sent when
+// calling SendEvent with the same arguments.
+func (this *Connection) SendEventPreview(ctx context.Context, event _connector.Event, typ string, data map[string]any) ([]byte, error) {
+	app, err := this.openAppEvents()
+	if err != nil {
+		return nil, fmt.Errorf("cannot connect to the connector: %s", err)
+	}
+	// TODO(marco): validate data according to the event type's schema.
+	return app.(_connector.AppEventsConnection).SendEventPreview(ctx, event, typ, data)
+}
+
 // ExecQuery executes the given query on the connection and returns the
 // resulting rows and schema. The connection must be a source database
 // connection.

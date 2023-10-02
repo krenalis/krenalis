@@ -10,6 +10,7 @@
 | ReceiveWebhook   | ✓    | ✓ (connection) | ✓ (connection) | ✓ (connection,resource) | ✓ (connection,resource) | ✓ (connection,resource) |
 | Resource         | -    | -              | -              | -                       | ✓                       | ✓                       |
 | SendEvent        | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
+| SendEventPreview | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | ServeUI          | ✓    | -/✓            | -/✓            | ✓                       | ✓                       | -/✓                     |
 | SetGroup         | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |
 | UpdateUser       | ✓    | ✓              | ✓              | ✓                       | ✓                       | ✓                       |

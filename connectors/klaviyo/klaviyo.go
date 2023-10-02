@@ -103,41 +103,20 @@ func (c *connection) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
-// SendEvent sends the event, along with the given mapped event.
+// SendEvent sends the event, along with the given mapped data.
 // eventType specifies the event type corresponding to the event.
-func (c *connection) SendEvent(ctx context.Context, event connector.Event, mappedEvent map[string]any, eventType string) error {
-	switch eventType {
-	case "create_event":
-		var msg struct {
-			Data struct {
-				Type       string `json:"type"`
-				Attributes struct {
-					Profile struct {
-						Email string `json:"$email"`
-					} `json:"profile"`
-					Metric struct {
-						Name string `json:"name"`
-					} `json:"metric"`
-					Properties map[string]any `json:"properties"`
-					Time       string         `json:"time"`
-					Value      any            `json:"value"`
-				} `json:"attributes"`
-			} `json:"data"`
-		}
-		msg.Data.Type = "event"
-		msg.Data.Attributes.Profile.Email = mappedEvent["email"].(string)
-		msg.Data.Attributes.Metric.Name = mappedEvent["metric_name"].(string)
-		msg.Data.Attributes.Properties = mappedEvent
-		msg.Data.Attributes.Time = event.Timestamp.Format(time.RFC3339)
-		body, err := json.Marshal(msg)
-		if err != nil {
-			return err
-		}
-		err = c.call(ctx, "POST", "https://a.klaviyo.com/api/events/", bytes.NewReader(body), 202, nil)
+func (c *connection) SendEvent(ctx context.Context, event connector.Event, typ string, data map[string]any) error {
+	b, err := json.Marshal(eventBody(event, typ, data))
+	if err != nil {
 		return err
-	default:
-		panic(fmt.Sprintf("unsupported event type %q", eventType))
 	}
+	return c.call(ctx, "POST", "https://a.klaviyo.com/api/events/", bytes.NewReader(b), 202, nil)
+}
+
+// SendEventPreview returns a preview of the event that would be sent when
+// calling SendEvent with the same arguments.
+func (c *connection) SendEventPreview(ctx context.Context, event connector.Event, typ string, data map[string]any) ([]byte, error) {
+	return json.MarshalIndent(eventBody(event, typ, data), "", "\t")
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
@@ -475,4 +454,29 @@ func (c *connection) call(ctx context.Context, method, url string, body io.Reade
 	}
 
 	return nil
+}
+
+func eventBody(event connector.Event, typ string, data map[string]any) any {
+	var msg struct {
+		Data struct {
+			Type       string `json:"type"`
+			Attributes struct {
+				Profile struct {
+					Email string `json:"$email"`
+				} `json:"profile"`
+				Metric struct {
+					Name string `json:"name"`
+				} `json:"metric"`
+				Properties map[string]any `json:"properties"`
+				Time       string         `json:"time"`
+				Value      any            `json:"value"`
+			} `json:"attributes"`
+		} `json:"data"`
+	}
+	msg.Data.Type = "event"
+	msg.Data.Attributes.Profile.Email = data["email"].(string)
+	msg.Data.Attributes.Metric.Name = data["metric_name"].(string)
+	msg.Data.Attributes.Properties = data
+	msg.Data.Attributes.Time = event.Timestamp.Format(time.RFC3339)
+	return &msg
 }

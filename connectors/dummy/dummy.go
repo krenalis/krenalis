@@ -179,17 +179,18 @@ func (c *connection) Resource(ctx context.Context) (string, error) {
 	return "", nil
 }
 
-// SendEvent sends the event, along with the given mapped event.
+// SendEvent sends the event, along with the given mapped data.
 // eventType specifies the event type corresponding to the event.
-func (c *connection) SendEvent(ctx context.Context, event connector.Event, mappedEvent map[string]any, eventType string) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
-	log.Printf("dummy: sending event %#v, %#v", event, mappedEvent)
+func (c *connection) SendEvent(ctx context.Context, event connector.Event, typ string, data map[string]any) error {
+	log.Printf("dummy: sending event %#v, %#v", event, data)
 	time.Sleep(50 * time.Millisecond)
 	return nil
+}
+
+// SendEventPreview returns a preview of the event that would be sent when
+// calling SendEvent with the same arguments.
+func (c *connection) SendEventPreview(ctx context.Context, event connector.Event, typ string, data map[string]any) ([]byte, error) {
+	return json.MarshalIndent(data, "", "\t")
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
