@@ -11,6 +11,7 @@ import (
 	"context"
 	"database/sql"
 
+	"chichi/apis/datastore/expr"
 	"chichi/apis/postgres"
 	"chichi/connector/types"
 )
@@ -73,7 +74,7 @@ type Warehouse interface {
 	// condition with only the given columns, ordered by order if order is not the
 	// zero Property, and in range [first,first+limit] with first >= 0 and
 	// 0 < limit <= 1000.
-	Select(ctx context.Context, table string, columns []types.Property, where Where, order types.Property, first, limit int) ([][]any, error)
+	Select(ctx context.Context, table string, columns []types.Property, where expr.Expr, order types.Property, first, limit int) ([][]any, error)
 }
 
 // Table represents a table.

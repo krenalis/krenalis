@@ -5,13 +5,11 @@
 // Copyright (c) 2023 Open2b
 //
 
-package warehouses
+package expr
 
-import "chichi/connector/types"
-
-// Where represents a Where clause when executing a Select query on a data
-// warehouse.
-type Where Expr
+import (
+	"chichi/connector/types"
+)
 
 // Expr represents a subset of SQL expressions.
 type Expr interface {

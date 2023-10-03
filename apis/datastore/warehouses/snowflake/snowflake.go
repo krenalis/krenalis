@@ -22,6 +22,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"chichi/apis/datastore/expr"
 	"chichi/apis/datastore/warehouses"
 	"chichi/connector/types"
 
@@ -369,7 +370,7 @@ func (warehouse *Snowflake) QueryRow(ctx context.Context, query string, args ...
 // condition with only the given columns, ordered by order if order is not the
 // zero Property, and in range [first,first+limit] with first >= 0 and
 // 0 < limit <= 1000.
-func (warehouse *Snowflake) Select(ctx context.Context, table string, columns []types.Property, where warehouses.Where, order types.Property, first, limit int) ([][]any, error) {
+func (warehouse *Snowflake) Select(ctx context.Context, table string, columns []types.Property, where expr.Expr, order types.Property, first, limit int) ([][]any, error) {
 
 	if !warehouses.IsValidIdentifier(table) {
 		return nil, fmt.Errorf("table name %q is not a valid identifier", table)

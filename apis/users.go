@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"chichi/apis/datastore"
-	"chichi/apis/datastore/warehouses"
+	"chichi/apis/datastore/expr"
 	"chichi/apis/errors"
 	"chichi/apis/state"
 	"chichi/connector/types"
@@ -468,10 +468,10 @@ func (this *User) Traits(ctx context.Context) (map[string]any, error) {
 	return traits, nil
 }
 
-func whereExpr(property types.Property, value int) *warehouses.BaseExpr {
-	where := warehouses.NewBaseExpr(
-		warehouses.ExprColumn{Name: property.Name, Type: property.Type.PhysicalType()},
-		warehouses.OperatorEqual,
+func whereExpr(property types.Property, value int) *expr.BaseExpr {
+	where := expr.NewBaseExpr(
+		expr.ExprColumn{Name: property.Name, Type: property.Type.PhysicalType()},
+		expr.OperatorEqual,
 		nil,
 	)
 	switch where.Column.Type {

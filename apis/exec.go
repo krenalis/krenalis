@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"chichi/apis/datastore"
-	"chichi/apis/datastore/warehouses"
+	"chichi/apis/datastore/expr"
 	"chichi/apis/errors"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
@@ -182,17 +182,17 @@ func (this *Action) readUsersFromDataWarehouse(ctx context.Context, ids []int) (
 
 	// Read the users.
 
-	var where datastore.Expr
+	var where expr.Expr
 	if len(ids) > 0 {
-		operands := make([]datastore.Expr, len(ids))
+		operands := make([]expr.Expr, len(ids))
 		for i := range ids {
-			operands[i] = warehouses.NewBaseExpr(
-				warehouses.ExprColumn{Name: "id", Type: types.PtInt},
-				warehouses.OperatorEqual,
+			operands[i] = expr.NewBaseExpr(
+				expr.ExprColumn{Name: "id", Type: types.PtInt},
+				expr.OperatorEqual,
 				ids[i],
 			)
 		}
-		where = warehouses.NewMultiExpr(warehouses.LogicalOperatorOr, operands)
+		where = expr.NewMultiExpr(expr.LogicalOperatorOr, operands)
 	}
 	idProperty, ok := schema.Property("id")
 	if !ok {

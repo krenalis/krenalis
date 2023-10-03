@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"chichi/apis/datastore/expr"
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/postgres"
 	"chichi/connector/types"
@@ -25,17 +26,17 @@ import (
 
 // renderExpr renders the expression expr returning a fragment of a query
 // representing a boolean expression.
-func renderExpr(expr warehouses.Expr) (string, error) {
+func renderExpr(exp expr.Expr) (string, error) {
 
 	s := strings.Builder{}
 
 	// Handle MultiExpr expression.
-	if multiExpr, ok := expr.(*warehouses.MultiExpr); ok {
+	if multiExpr, ok := exp.(*expr.MultiExpr); ok {
 		var op string
 		switch multiExpr.Operator {
-		case warehouses.LogicalOperatorAnd:
+		case expr.LogicalOperatorAnd:
 			op = " AND "
-		case warehouses.LogicalOperatorOr:
+		case expr.LogicalOperatorOr:
 			op = " OR "
 		default:
 			return "", fmt.Errorf("invalid operator %q", multiExpr.Operator)
@@ -44,7 +45,7 @@ func renderExpr(expr warehouses.Expr) (string, error) {
 			if i > 0 {
 				s.WriteString(op)
 			}
-			_, isMultiExpr := operand.(*warehouses.MultiExpr)
+			_, isMultiExpr := operand.(*expr.MultiExpr)
 			if isMultiExpr {
 				s.WriteByte('(')
 			}
@@ -61,7 +62,7 @@ func renderExpr(expr warehouses.Expr) (string, error) {
 	}
 
 	// Handle BaseExpr expressions.
-	baseExpr := expr.(*warehouses.BaseExpr)
+	baseExpr := exp.(*expr.BaseExpr)
 
 	// Validate the column name.
 	if !warehouses.IsValidIdentifier(baseExpr.Column.Name) {
@@ -75,25 +76,25 @@ func renderExpr(expr warehouses.Expr) (string, error) {
 	// Render the operator and, if necessary, the value.
 	switch baseExpr.Operator {
 	case
-		warehouses.OperatorEqual,
-		warehouses.OperatorNotEqual,
-		warehouses.OperatorGreater,
-		warehouses.OperatorGreaterEqual,
-		warehouses.OperatorLess,
-		warehouses.OperatorLessEqual:
+		expr.OperatorEqual,
+		expr.OperatorNotEqual,
+		expr.OperatorGreater,
+		expr.OperatorGreaterEqual,
+		expr.OperatorLess,
+		expr.OperatorLessEqual:
 
 		switch baseExpr.Operator {
-		case warehouses.OperatorEqual:
+		case expr.OperatorEqual:
 			s.WriteString("= ")
-		case warehouses.OperatorNotEqual:
+		case expr.OperatorNotEqual:
 			s.WriteString("<> ")
-		case warehouses.OperatorGreater:
+		case expr.OperatorGreater:
 			s.WriteString("> ")
-		case warehouses.OperatorGreaterEqual:
+		case expr.OperatorGreaterEqual:
 			s.WriteString(">= ")
-		case warehouses.OperatorLess:
+		case expr.OperatorLess:
 			s.WriteString("< ")
-		case warehouses.OperatorLessEqual:
+		case expr.OperatorLessEqual:
 			s.WriteString("<= ")
 		}
 
@@ -183,10 +184,10 @@ func renderExpr(expr warehouses.Expr) (string, error) {
 			return "", fmt.Errorf("unexpected column with type %q", pt)
 		}
 
-	case warehouses.OperatorIsNull:
+	case expr.OperatorIsNull:
 		s.WriteString("IS NULL")
 
-	case warehouses.OperatorIsNotNull:
+	case expr.OperatorIsNotNull:
 		s.WriteString("IS NOT NULL")
 
 	default:

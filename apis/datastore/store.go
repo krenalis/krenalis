@@ -21,6 +21,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"chichi/apis/datastore/expr"
 	"chichi/apis/datastore/warehouses"
 	"chichi/apis/postgres"
 	"chichi/apis/state"
@@ -28,12 +29,6 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/maps"
-)
-
-type (
-	Expr  = warehouses.Expr
-	Row   = warehouses.Row
-	Where = warehouses.Where
 )
 
 type Store struct {
@@ -157,7 +152,7 @@ func (store *Store) DestinationUser(ctx context.Context, action int, property st
 //
 // If an error occurs with the data warehouse, it returns a DataWarehouseError
 // error.
-func (store *Store) Events(ctx context.Context, columns []types.Property, where Where, order types.Property, first, limit int) ([][]any, error) {
+func (store *Store) Events(ctx context.Context, columns []types.Property, where expr.Expr, order types.Property, first, limit int) ([][]any, error) {
 	store.mustBeOpen()
 	return store.warehouse.Select(ctx, "events", columns, where, order, first, limit)
 }
@@ -271,7 +266,7 @@ func (store *Store) UpdateUser(ctx context.Context, target IRUser, user map[stri
 //
 // If an error occurs with the data warehouse, it returns a DataWarehouseError
 // error.
-func (store *Store) Users(ctx context.Context, properties []types.Property, where Where, order types.Property, first, limit int) ([]map[string]any, error) {
+func (store *Store) Users(ctx context.Context, properties []types.Property, where expr.Expr, order types.Property, first, limit int) ([]map[string]any, error) {
 	store.mustBeOpen()
 	columns := PropertiesToColumns(properties)
 	rows, err := store.warehouse.Select(ctx, "users", columns, where, order, first, limit)
@@ -289,7 +284,7 @@ func (store *Store) Users(ctx context.Context, properties []types.Property, wher
 //
 // If an error occurs with the data warehouse, it returns a DataWarehouseError
 // error.
-func (store *Store) UsersSlice(ctx context.Context, properties []types.Property, where Where, order types.Property, first, limit int) ([][]any, error) {
+func (store *Store) UsersSlice(ctx context.Context, properties []types.Property, where expr.Expr, order types.Property, first, limit int) ([][]any, error) {
 	store.mustBeOpen()
 	columns := PropertiesToColumns(properties)
 	rows, err := store.warehouse.Select(ctx, "users", columns, where, order, first, limit)

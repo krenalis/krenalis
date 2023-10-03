@@ -11,90 +11,90 @@ import (
 	"testing"
 	"time"
 
-	wh "chichi/apis/datastore/warehouses"
+	"chichi/apis/datastore/expr"
 	"chichi/connector/types"
 )
 
 func Test_renderExpr(t *testing.T) {
 	var (
-		id          = wh.ExprColumn{Name: "id", Type: types.PtText}
-		count       = wh.ExprColumn{Name: "count", Type: types.PtInt}
-		timestamp   = wh.ExprColumn{Name: "timestamp", Type: types.PtDateTime}
-		ipAddr      = wh.ExprColumn{Name: "ip_addr", Type: types.PtInet}
-		installYear = wh.ExprColumn{Name: "install_year", Type: types.PtYear}
+		id          = expr.ExprColumn{Name: "id", Type: types.PtText}
+		count       = expr.ExprColumn{Name: "count", Type: types.PtInt}
+		timestamp   = expr.ExprColumn{Name: "timestamp", Type: types.PtDateTime}
+		ipAddr      = expr.ExprColumn{Name: "ip_addr", Type: types.PtInet}
+		installYear = expr.ExprColumn{Name: "install_year", Type: types.PtYear}
 	)
 	cases := []struct {
-		expr    wh.Expr
+		expr    expr.Expr
 		query   string
 		invalid bool
 	}{
 		{
-			expr:  wh.NewBaseExpr(id, wh.OperatorEqual, "qwerty"),
+			expr:  expr.NewBaseExpr(id, expr.OperatorEqual, "qwerty"),
 			query: "`id` = 'qwerty'",
 		},
 		{
-			expr:  wh.NewBaseExpr(ipAddr, wh.OperatorEqual, "127.0.0.1"),
+			expr:  expr.NewBaseExpr(ipAddr, expr.OperatorEqual, "127.0.0.1"),
 			query: "`ip_addr` = '127.0.0.1'",
 		},
 		{
-			expr:  wh.NewBaseExpr(installYear, wh.OperatorGreaterEqual, 2002),
+			expr:  expr.NewBaseExpr(installYear, expr.OperatorGreaterEqual, 2002),
 			query: "`install_year` >= 2002",
 		},
 		{
-			expr:  wh.NewBaseExpr(id, wh.OperatorIsNull, nil),
+			expr:  expr.NewBaseExpr(id, expr.OperatorIsNull, nil),
 			query: "`id` IS NULL",
 		},
 		{
-			expr:  wh.NewBaseExpr(id, wh.OperatorIsNotNull, nil),
+			expr:  expr.NewBaseExpr(id, expr.OperatorIsNotNull, nil),
 			query: "`id` IS NOT NULL",
 		},
 		{
-			expr:  wh.NewBaseExpr(count, wh.OperatorGreaterEqual, 3289),
+			expr:  expr.NewBaseExpr(count, expr.OperatorGreaterEqual, 3289),
 			query: "`count` >= 3289",
 		},
 		{
-			expr:  wh.NewBaseExpr(timestamp, wh.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 168, time.UTC)),
+			expr:  expr.NewBaseExpr(timestamp, expr.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 168, time.UTC)),
 			query: "`timestamp` < '1900-01-02 23:32:11'",
 		},
 		{
-			expr: wh.NewMultiExpr(
-				wh.LogicalOperatorAnd,
-				[]wh.Expr{
-					wh.NewBaseExpr(timestamp, wh.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
+			expr: expr.NewMultiExpr(
+				expr.LogicalOperatorAnd,
+				[]expr.Expr{
+					expr.NewBaseExpr(timestamp, expr.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
 				}),
 			query: "`timestamp` < '1900-01-02 23:32:11'",
 		},
 		{
-			expr: wh.NewMultiExpr(
-				wh.LogicalOperatorAnd,
-				[]wh.Expr{
-					wh.NewBaseExpr(timestamp, wh.OperatorGreater, time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC)),
-					wh.NewBaseExpr(timestamp, wh.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
+			expr: expr.NewMultiExpr(
+				expr.LogicalOperatorAnd,
+				[]expr.Expr{
+					expr.NewBaseExpr(timestamp, expr.OperatorGreater, time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC)),
+					expr.NewBaseExpr(timestamp, expr.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
 				}),
 			query: "`timestamp` > '1700-01-02 23:32:11' AND `timestamp` < '1900-01-02 23:32:11'",
 		},
 		{
-			expr: wh.NewMultiExpr(
-				wh.LogicalOperatorOr,
-				[]wh.Expr{
-					wh.NewBaseExpr(timestamp, wh.OperatorGreater, time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC)),
-					wh.NewBaseExpr(timestamp, wh.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
+			expr: expr.NewMultiExpr(
+				expr.LogicalOperatorOr,
+				[]expr.Expr{
+					expr.NewBaseExpr(timestamp, expr.OperatorGreater, time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC)),
+					expr.NewBaseExpr(timestamp, expr.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
 				}),
 			query: "`timestamp` > '1700-01-02 23:32:11' OR `timestamp` < '1900-01-02 23:32:11'",
 		},
 		{
-			expr: wh.NewMultiExpr(
-				wh.LogicalOperatorAnd,
-				[]wh.Expr{
-					wh.NewMultiExpr(wh.LogicalOperatorOr, []wh.Expr{
-						wh.NewBaseExpr(id, wh.OperatorEqual, "abc_42"),
-						wh.NewBaseExpr(id, wh.OperatorEqual, "abc_50"),
-						wh.NewBaseExpr(id, wh.OperatorEqual, "abc_60"),
+			expr: expr.NewMultiExpr(
+				expr.LogicalOperatorAnd,
+				[]expr.Expr{
+					expr.NewMultiExpr(expr.LogicalOperatorOr, []expr.Expr{
+						expr.NewBaseExpr(id, expr.OperatorEqual, "abc_42"),
+						expr.NewBaseExpr(id, expr.OperatorEqual, "abc_50"),
+						expr.NewBaseExpr(id, expr.OperatorEqual, "abc_60"),
 					}),
-					wh.NewMultiExpr(wh.LogicalOperatorOr, []wh.Expr{
-						wh.NewBaseExpr(count, wh.OperatorEqual, 100),
-						wh.NewBaseExpr(count, wh.OperatorEqual, 200),
-						wh.NewBaseExpr(count, wh.OperatorEqual, 300),
+					expr.NewMultiExpr(expr.LogicalOperatorOr, []expr.Expr{
+						expr.NewBaseExpr(count, expr.OperatorEqual, 100),
+						expr.NewBaseExpr(count, expr.OperatorEqual, 200),
+						expr.NewBaseExpr(count, expr.OperatorEqual, 300),
 					}),
 				}),
 			query: "(`id` = 'abc_42' OR `id` = 'abc_50' OR `id` = 'abc_60') AND (`count` = 100 OR `count` = 200 OR `count` = 300)",
