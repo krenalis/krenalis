@@ -874,7 +874,7 @@ type Action struct {
 	SchedulePeriod     int16
 	InSchema           types.Type
 	OutSchema          types.Type
-	Filter             *ActionFilter
+	Filter             *Filter
 	Mapping            map[string]string
 	Transformation     *Transformation
 	Identifiers        []string
@@ -975,18 +975,18 @@ func (ex *ActionExecution) Storage() (*Connection, bool) {
 	return s, s != nil
 }
 
-// ActionFilter represents a filter of an action.
-type ActionFilter struct {
-	Logical    ActionFilterLogical     // can be "all" or "any".
-	Conditions []ActionFilterCondition // cannot be empty.
+// Filter represents a filter.
+type Filter struct {
+	Logical    FilterLogical     // can be "all" or "any".
+	Conditions []FilterCondition // cannot be empty.
 }
 
-// ActionFilterLogical represents the logical operator of an action filter.
+// FilterLogical represents the logical operator of a filter.
 // It can be "all" or "any".
-type ActionFilterLogical string
+type FilterLogical string
 
-// ActionFilterCondition represents the condition of an action filter.
-type ActionFilterCondition struct {
+// FilterCondition represents the condition of a filter.
+type FilterCondition struct {
 	Property string // A property identifier or selector (e.g. "street1" or "traits.address.street1").
 	Operator string // "is", "is not".
 	Value    string // "Track", "Page", ...

@@ -378,12 +378,12 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 	// Add the filter to the notification and marshal it.
 	var filter []byte
 	if action.Filter != nil {
-		n.Filter = &state.ActionFilter{
-			Logical:    state.ActionFilterLogical(action.Filter.Logical),
-			Conditions: make([]state.ActionFilterCondition, len(action.Filter.Conditions)),
+		n.Filter = &state.Filter{
+			Logical:    state.FilterLogical(action.Filter.Logical),
+			Conditions: make([]state.FilterCondition, len(action.Filter.Conditions)),
 		}
 		for i, condition := range action.Filter.Conditions {
-			n.Filter.Conditions[i] = (state.ActionFilterCondition)(condition)
+			n.Filter.Conditions[i] = (state.FilterCondition)(condition)
 		}
 		filter, err = json.Marshal(action.Filter)
 		if err != nil {

@@ -295,7 +295,7 @@ type AddAction struct {
 	SchedulePeriod     int16
 	InSchema           types.Type
 	OutSchema          types.Type
-	Filter             *ActionFilter
+	Filter             *Filter
 	Mapping            map[string]string
 	Transformation     *Transformation
 	Identifiers        []string
@@ -799,7 +799,7 @@ type SetAction struct {
 	Enabled            bool
 	InSchema           types.Type
 	OutSchema          types.Type
-	Filter             *ActionFilter
+	Filter             *Filter
 	Mapping            map[string]string
 	Transformation     *Transformation
 	Identifiers        []string

@@ -84,7 +84,7 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 							continue
 						}
 						// Check if the filter applies.
-						ok, err := mappings.ActionFilterApplies(action.Filter, mapEvent)
+						ok, err := mappings.FilterApplies(action.Filter, mapEvent)
 						if err != nil {
 							eventLog.TransformationFailed(event.id, action.ID, err)
 							continue

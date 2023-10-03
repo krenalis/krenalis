@@ -47,7 +47,7 @@ type Action struct {
 	SchedulePeriod     *SchedulePeriod
 	InSchema           types.Type
 	OutSchema          types.Type
-	Filter             *ActionFilter
+	Filter             *Filter
 	Mapping            map[string]string
 	Transformation     *Transformation
 	Identifiers        []string
@@ -103,12 +103,12 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 	this.InSchema = action.InSchema
 	this.OutSchema = action.OutSchema
 	if action.Filter != nil {
-		this.Filter = &ActionFilter{
-			Logical:    ActionFilterLogical(action.Filter.Logical),
-			Conditions: make([]ActionFilterCondition, len(action.Filter.Conditions)),
+		this.Filter = &Filter{
+			Logical:    FilterLogical(action.Filter.Logical),
+			Conditions: make([]FilterCondition, len(action.Filter.Conditions)),
 		}
 		for i, condition := range action.Filter.Conditions {
-			this.Filter.Conditions[i] = ActionFilterCondition(condition)
+			this.Filter.Conditions[i] = FilterCondition(condition)
 		}
 	}
 	if action.Mapping != nil {
@@ -200,18 +200,18 @@ func (at *ActionTarget) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ActionFilter represents a filter of an action.
-type ActionFilter struct {
-	Logical    ActionFilterLogical     // can be "all" or "any".
-	Conditions []ActionFilterCondition // cannot be empty.
+// Filter represents a filter.
+type Filter struct {
+	Logical    FilterLogical     // can be "all" or "any".
+	Conditions []FilterCondition // cannot be empty.
 }
 
-// ActionFilterLogical represents the logical operator of an action filter.
+// FilterLogical represents the logical operator of a filter.
 // It can be "all" or "any".
-type ActionFilterLogical string
+type FilterLogical string
 
-// ActionFilterCondition represents the condition of an action filter.
-type ActionFilterCondition struct {
+// FilterCondition represents the condition of a filter.
+type FilterCondition struct {
 	Property string // A property identifier or selector (e.g. "street1" or "traits.address.street1").
 	Operator string // "is", "is not".
 	Value    string // "Track", "Page", ...
@@ -309,12 +309,12 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	// Add the filter to the notification and marshal it.
 	var filter []byte
 	if action.Filter != nil {
-		n.Filter = &state.ActionFilter{
-			Logical:    state.ActionFilterLogical(action.Filter.Logical),
-			Conditions: make([]state.ActionFilterCondition, len(action.Filter.Conditions)),
+		n.Filter = &state.Filter{
+			Logical:    state.FilterLogical(action.Filter.Logical),
+			Conditions: make([]state.FilterCondition, len(action.Filter.Conditions)),
 		}
 		for i, condition := range action.Filter.Conditions {
-			n.Filter.Conditions[i] = (state.ActionFilterCondition)(condition)
+			n.Filter.Conditions[i] = (state.FilterCondition)(condition)
 		}
 		filter, err = json.Marshal(action.Filter)
 		if err != nil {
@@ -531,7 +531,7 @@ type ActionToSet struct {
 	Enabled bool
 
 	// Filter is the filter of the action, if it has one, otherwise is nil.
-	Filter *ActionFilter
+	Filter *Filter
 
 	// InSchema is the input schema of the mappings (of the transformation).
 	InSchema types.Type

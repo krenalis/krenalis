@@ -25,11 +25,10 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-// ActionFilterApplies reports whether the action filter applies to the props,
-// which can be an event or a user.
-// Returns error if one of the properties of the filter are not found within
-// props.
-func ActionFilterApplies(filter *state.ActionFilter, props map[string]any) (bool, error) {
+// FilterApplies reports whether the filter applies to props, which can be an
+// event or a user. Returns error if one of the properties of the filter are not
+// found within props.
+func FilterApplies(filter *state.Filter, props map[string]any) (bool, error) {
 	if filter == nil {
 		return true, nil
 	}

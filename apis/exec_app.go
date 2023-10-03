@@ -108,7 +108,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 	if this.action.Filter != nil {
 		filteredUsers := []userToExport{}
 		for _, user := range users {
-			ok, err := mappings.ActionFilterApplies(this.action.Filter, user.Properties)
+			ok, err := mappings.FilterApplies(this.action.Filter, user.Properties)
 			if err != nil {
 				return err
 			}
