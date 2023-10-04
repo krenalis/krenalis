@@ -1275,8 +1275,8 @@ func (this *Connection) UserImportPreview(ctx context.Context, user map[string]a
 		var inPaths []types.Path
 		var outPaths []types.Path
 		for path, expr := range mapping {
-			outPath, ok := parsePropertyPath(path)
-			if !ok {
+			outPath, err := types.ParsePropertyPath(path)
+			if err != nil {
 				return nil, errors.BadRequest("output mapped property %q is not valid", path)
 			}
 			outPaths = append(outPaths, outPath)
@@ -2109,8 +2109,8 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		}
 		conditionProperties = make([]types.Path, len(action.Filter.Conditions))
 		for i, condition := range action.Filter.Conditions {
-			property, ok := parsePropertyPath(condition.Property)
-			if !ok {
+			property, err := types.ParsePropertyPath(condition.Property)
+			if err != nil {
 				return errors.BadRequest("filter condition property expression %q is not valid", condition.Property)
 			}
 			conditionProperties[i] = property
@@ -2136,8 +2136,8 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 			return errors.BadRequest("output schema is required by the mapping")
 		}
 		for path, expr := range action.Mapping {
-			outPath, ok := parsePropertyPath(path)
-			if !ok {
+			outPath, err := types.ParsePropertyPath(path)
+			if err != nil {
 				return errors.BadRequest("output mapped property %q is not valid", path)
 			}
 			outPaths = append(outPaths, outPath)
@@ -2498,18 +2498,6 @@ func normalize(values map[string]any, schema types.Type) (map[string]any, error)
 		out[name] = v
 	}
 	return out, nil
-}
-
-// parsePropertyPath parses the property path p, returning a property path with
-// a single element, if p is an identifier, or a path with the components of the
-// path, if p is a selector.
-// The boolean return parameter reports whether p is a valid property path or
-// not; when not valid, the returned path is nil.
-func parsePropertyPath(p string) (types.Path, bool) {
-	if !types.IsValidPropertyPath(p) {
-		return nil, false
-	}
-	return strings.Split(p, "."), true
 }
 
 // setSettings sets the given settings of the given connection.
