@@ -470,7 +470,7 @@ func (this *User) Traits(ctx context.Context) (map[string]any, error) {
 
 func whereExpr(property types.Property, value int) *expr.BaseExpr {
 	where := expr.NewBaseExpr(
-		expr.ExprColumn{Name: property.Name, Type: property.Type.PhysicalType()},
+		expr.Column{Name: property.Name, Type: property.Type.PhysicalType()},
 		expr.OperatorEqual,
 		nil,
 	)

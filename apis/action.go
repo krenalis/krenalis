@@ -200,23 +200,6 @@ func (at *ActionTarget) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Filter represents a filter.
-type Filter struct {
-	Logical    FilterLogical     // can be "all" or "any".
-	Conditions []FilterCondition // cannot be empty.
-}
-
-// FilterLogical represents the logical operator of a filter.
-// It can be "all" or "any".
-type FilterLogical string
-
-// FilterCondition represents the condition of a filter.
-type FilterCondition struct {
-	Property string // A property identifier or selector (e.g. "street1" or "traits.address.street1").
-	Operator string // "is", "is not".
-	Value    string // "Track", "Page", ...
-}
-
 // Delete deletes the action.
 // It returns an errors.NotFoundError error if the action does not exist
 // anymore.

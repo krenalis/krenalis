@@ -43,7 +43,7 @@ const (
 // BaseExpr represents an SQL expression that refers to a column, on which an
 // operator is applied, an eventually an operand, if the operator is binary.
 type BaseExpr struct {
-	Column   ExprColumn
+	Column   Column
 	Operator Operator
 	Value    any // may be nil for unary expressions.
 }
@@ -53,7 +53,7 @@ func (*BaseExpr) expr() {}
 // NewBaseExpr returns a new BaseExpr expression that applies to the given
 // column with the given operand and value.
 // If the operator is unary, value should be nil.
-func NewBaseExpr(column ExprColumn, operator Operator, value any) *BaseExpr {
+func NewBaseExpr(column Column, operator Operator, value any) *BaseExpr {
 	return &BaseExpr{Column: column, Operator: operator, Value: value}
 }
 
@@ -71,8 +71,8 @@ const (
 	OperatorIsNotNull    Operator = "IsNotNull"
 )
 
-// ExprColumn represents a column within an expression.
-type ExprColumn struct {
+// Column represents a column within an expression.
+type Column struct {
 	Name string
 	Type types.PhysicalType
 }

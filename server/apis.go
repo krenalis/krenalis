@@ -869,6 +869,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				router.Route("/users", func(router chi.Router) {
 					router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 						var req struct {
+							Filter     *apis.Filter
 							Properties []string
 							Start      int
 							End        int
@@ -878,7 +879,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							respond(w, errors.BadRequest("invalid JSON"))
 							return
 						}
-						schema, users, err := workspace.Users(ctx, req.Properties, "", 0, 1000)
+						schema, users, err := workspace.Users(ctx, req.Properties, req.Filter, "", 0, 1000)
 						if err != nil {
 							respond(w, err)
 							return
