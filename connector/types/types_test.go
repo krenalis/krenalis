@@ -425,6 +425,49 @@ func Test_PropertyByPath(t *testing.T) {
 	}
 }
 
+func Test_ParsePropertyPath(t *testing.T) {
+
+	tests := []struct {
+		Path     string
+		Expected []string
+	}{
+		{"", nil},
+		{".", nil},
+		{"foo", []string{"foo"}},
+		{"foo.boo", []string{"foo", "boo"}},
+		{".boo", nil},
+		{"foo.", nil},
+		{"à.boo", nil},
+		{"a.b.c", []string{"a", "b", "c"}},
+		{"a . b . c", nil},
+	}
+
+	for _, test := range tests {
+		got, err := ParsePropertyPath(test.Path)
+		if err != nil {
+			if test.Expected != nil {
+				t.Errorf("%q: expected value %#v, got error %q", test.Path, test.Expected, err)
+			}
+			if err != ErrPathInvalid {
+				t.Errorf("%q: expected error ErrPathInvalid, got %q", test.Path, err)
+			}
+			continue
+		}
+		if test.Expected == nil {
+			t.Errorf("%q: expected ErrPathInvalid error, got value %#v", test.Path, got)
+		}
+		if len(test.Expected) != len(got) {
+			t.Errorf("%q: expected %#v, got %#v", test.Path, test.Expected, got)
+		}
+		for i, v := range test.Expected {
+			if v != got[i] {
+				t.Errorf("%q: expected %#v, got %#v", test.Path, test.Expected, got)
+			}
+		}
+	}
+
+}
+
 // sameType reports whether t1 and t2 are the same type. It compares t2 against
 // t1.
 func sameType(t1, t2 Type) error {

@@ -501,6 +501,25 @@ func IsValidPropertyPath(path string) bool {
 	return false
 }
 
+// ErrPathInvalid is the error returned by ParsePropertyPath is the path is not
+// valid.
+var ErrPathInvalid = errors.New("property path is not valid")
+
+// ParsePropertyPath parses a property path and returns its representation as
+// a Path. It returns the ErrPathInvalid error if the path is not valid.
+func ParsePropertyPath(path string) (Path, error) {
+	pp := strings.Split(path, ".")
+	if len(pp) == 0 {
+		return nil, ErrPathInvalid
+	}
+	for _, p := range pp {
+		if !IsValidPropertyPath(p) {
+			return nil, ErrPathInvalid
+		}
+	}
+	return pp, nil
+}
+
 // AsRole returns an object type with the properties of typ but that are
 // compatible with role. It returns typ if all properties are compatible and
 // an invalid type if there are no compatible properties.
