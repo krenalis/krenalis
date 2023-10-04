@@ -2096,37 +2096,18 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 		return errors.BadRequest("out schema, if provided, must be an object")
 	}
 	// Validate the filter.
-	var conditionProperties []types.Path
+	var inPaths []types.Path
 	if action.Filter != nil {
 		if !action.InSchema.Valid() {
 			return errors.BadRequest("input schema is required by the filter")
 		}
-		if l := action.Filter.Logical; l != "all" && l != "any" {
-			return errors.BadRequest("filter logical operator %q is not valid", action.Filter.Logical)
-		}
-		if len(action.Filter.Conditions) == 0 {
-			return errors.BadRequest("filter does not contain conditions")
-		}
-		conditionProperties = make([]types.Path, len(action.Filter.Conditions))
-		for i, condition := range action.Filter.Conditions {
-			property, err := types.ParsePropertyPath(condition.Property)
-			if err != nil {
-				return errors.BadRequest("filter condition property expression %q is not valid", condition.Property)
-			}
-			conditionProperties[i] = property
-			if op := condition.Operator; op != "is" && op != "is not" {
-				return errors.BadRequest("filter condition operator %q is not valid", op)
-			}
-			if !utf8.ValidString(condition.Value) {
-				return errors.BadRequest("filter condition value is not UTF-8 encoded")
-			}
-			if n := utf8.RuneCountInString(condition.Value); n > 60 {
-				return errors.BadRequest("filter condition value is longer than 60 runes")
-			}
+		var err error
+		inPaths, err = validateFilter(action.Filter, action.InSchema)
+		if err != nil {
+			return errors.BadRequest("filter is not valid: %w", err)
 		}
 	}
 	// Validate the mapping.
-	var inPaths []types.Path
 	var outPaths []types.Path
 	if action.Mapping != nil && len(action.Mapping) > 0 {
 		if !action.InSchema.Valid() {
