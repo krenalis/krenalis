@@ -16,7 +16,6 @@ GET     /api/workspaces/{id}/connections/{id}/action-schemas/Events             
 GET     /api/workspaces/{id}/connections/{id}/action-schemas/Events/{eventType}  Get the input and output schemas of the Events action type for the event type.
 GET     /api/workspaces/{id}/connections/{id}/complete-path/{path}               Return the complete representation of a path for a connection storage.
 POST    /api/workspaces/{id}/connections/{id}/event-preview                      Return an event preview.
-POST    /api/workspaces/{id}/connections/{id}/user-import-preview                Return a user preview as if it had been imported.
 POST    /api/workspaces/{id}/connections/{id}/exec-query                         Execute the query of a database connection.
 GET     /api/workspaces/{id}/connections/{id}/imports                            Return the executions of a connection.
 GET     /api/workspaces/{id}/connections/{id}/records                            Return the records and the schema of a file of a multiple sheets file connection.
@@ -61,4 +60,5 @@ GET     /api/workspaces/{id}/privacy-region                                     
 GET     /api/events-schema                                                       Get the events schema.
 POST    /api/expressions-properties                                              Return the unique properties contained inside a list of expressions.
 GET     /api/transformation-languages                                            Return the supported transformation languages.
+POST    /api/transformation-preview                                              Transform data, using a mapping or a transformation, and returns it.
 POST    /api/validate-expression                                                 Validate an expression.

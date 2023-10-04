@@ -28,7 +28,6 @@ import (
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/events"
-	"chichi/apis/mappings"
 	"chichi/apis/mappings/mapexp"
 	"chichi/apis/normalization"
 	"chichi/apis/postgres"
@@ -39,7 +38,6 @@ import (
 	"chichi/connector/ui"
 	"chichi/telemetry"
 
-	"github.com/google/uuid"
 	"github.com/jxskiss/base62"
 	"golang.org/x/exp/maps"
 )
@@ -1250,110 +1248,6 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 		return types.Type{}, err
 	}
 	return schema, nil
-}
-
-// UserImportPreview returns the user as it would appear if imported through a
-// mapping or a transformation. inSchema is the schema of the user, and
-// outSchema is the schema of the transformed user. Only one of mapping and
-// transformation must be non-nil.
-func (this *Connection) UserImportPreview(ctx context.Context, user map[string]any, inSchema, outSchema types.Type, mapping map[string]string, transformation *Transformation) (map[string]any, error) {
-
-	this.apis.mustBeOpen()
-
-	// Validate the parameters.
-	if !inSchema.Valid() {
-		return nil, errors.BadRequest("input schema is not valid")
-	}
-	if !outSchema.Valid() {
-		return nil, errors.BadRequest("output schema is not valid")
-	}
-	if mapping != nil && transformation != nil {
-		return nil, errors.BadRequest("mapping and transformation cannot both be present")
-	}
-	switch {
-	case mapping != nil:
-		var inPaths []types.Path
-		var outPaths []types.Path
-		for path, expr := range mapping {
-			outPath, err := types.ParsePropertyPath(path)
-			if err != nil {
-				return nil, errors.BadRequest("output mapped property %q is not valid", path)
-			}
-			outPaths = append(outPaths, outPath)
-			p, err := outSchema.PropertyByPath(outPath)
-			if err != nil {
-				err := err.(types.PathNotExistError)
-				return nil, errors.BadRequest("output mapped property %s not found in output schema", err.Path)
-			}
-			expr, err := mapexp.Compile(expr, inSchema, p.Type, p.Nullable)
-			if err != nil {
-				return nil, errors.BadRequest("invalid expression mapped to %s: %s", path, err)
-			}
-			inPaths = append(inPaths, expr.Properties()...)
-		}
-		if props := unmappedProperties(inSchema, inPaths); props != nil {
-			return nil, errors.BadRequest("input schema contains unmapped properties: %s", strings.Join(props, ", "))
-		}
-		if props := unmappedProperties(outSchema, outPaths); props != nil {
-			return nil, errors.BadRequest("output schema contains unmapped properties: %s", strings.Join(props, ", "))
-		}
-	case transformation != nil:
-		if transformation.Source == "" {
-			return nil, errors.BadRequest("transformation source is empty")
-		}
-		tr := this.apis.transformer
-		switch transformation.Language {
-		case "JavaScript":
-			if tr == nil || !tr.SupportLanguage(state.JavaScript) {
-				return nil, errors.Unprocessable(LanguageNotSupported, "Javascript transformation language  is not supported")
-			}
-		case "Python":
-			if tr == nil || !tr.SupportLanguage(state.Python) {
-				return nil, errors.Unprocessable(LanguageNotSupported, "Python transformation language is not supported")
-			}
-		case "":
-			return nil, errors.BadRequest("transformation language is empty")
-		default:
-			return nil, errors.BadRequest("transformation language %q is not valid", transformation.Language)
-		}
-	default:
-		return nil, errors.BadRequest("mapping (or transformation) is required")
-	}
-	var err error
-	user, err = normalize(user, inSchema)
-	if err != nil {
-		return nil, errors.BadRequest("user does not conform to the input schema: %w", err)
-	}
-
-	// Create a temporary transformer.
-	var tr *state.Transformation
-	var transformer transformers.Transformer
-	if transformation != nil {
-		tr = &state.Transformation{
-			Source:  transformation.Source,
-			Version: "1", // no matter the version, it will be overwritten by the temporary transformation.
-		}
-		name := "action-temp-" + uuid.NewString()
-		switch transformation.Language {
-		case "JavaScript":
-			name += ".js"
-			tr.Language = state.JavaScript
-		case "Python":
-			name += ".py"
-			tr.Language = state.Python
-		}
-		transformer = newTemporaryTransformer(name, transformation.Source, this.apis.transformer)
-	}
-
-	// Transform the user.
-	action := 1 // no matter the action, it will be overwritten by the temporary transformation.
-	m, err := mappings.New(inSchema, outSchema, mapping, tr, action, transformer, false)
-	if err != nil {
-		return nil, err
-	}
-	user, err = m.Apply(ctx, user)
-
-	return user, err
 }
 
 // ActionType represents an action type.
