@@ -2504,7 +2504,7 @@ func (tp *temporaryTransformer) CallFunction(ctx context.Context, _, _ string, v
 	}
 	defer func() {
 		go func() {
-			err := tp.transformer.DeleteFunction(ctx, tp.name)
+			err := tp.transformer.DeleteFunction(context.Background(), tp.name)
 			if err != nil {
 				log.Printf("[warning] cannot delete transformation function %q: %s", tp.name, err)
 			}
