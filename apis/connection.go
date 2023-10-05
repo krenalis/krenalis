@@ -33,6 +33,7 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
+	"chichi/backoff"
 	_connector "chichi/connector"
 	"chichi/connector/types"
 	"chichi/connector/ui"
@@ -2510,14 +2511,16 @@ func (tp *temporaryTransformer) CallFunction(ctx context.Context, _, _ string, v
 			}
 		}()
 	}()
-	for {
+	bo := backoff.New(backoff.NoLimit, 10, 1*time.Second)
+	bo.SetNextWaitTime(3 * time.Second)
+	for bo.Next(ctx) {
 		response, err := tp.transformer.CallFunction(ctx, tp.name, version, values)
 		if err == transformers.ErrPendingState {
-			time.Sleep(2 * time.Second) // TODO(marco): use a backoff algorithm
 			continue
 		}
 		return response, err
 	}
+	return nil, ctx.Err()
 }
 
 func (tp *temporaryTransformer) Close(_ context.Context) error { panic("not supported") }
