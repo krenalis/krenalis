@@ -48,10 +48,13 @@ type Backoff struct {
 
 // New returns a new Backoff with the given attempts, base and cap.
 // If attempts is 0 (NoLimit), the attempts are not limited.
-// It panics if attempts < 0 or base < 0.
+// It panics if attempts < 0 or base < 0 or cap < 1ms.
 func New(attempts, base int, cap time.Duration) *Backoff {
 	if attempts < 0 || base < 0 {
 		panic("backoff: invalid argument")
+	}
+	if cap < time.Millisecond {
+		panic("backoff: cap must be equal or greater than 1ms")
 	}
 	return &Backoff{attempts, float64(base), cap, 0, 0}
 }
