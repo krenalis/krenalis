@@ -5,10 +5,8 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package website implements the Website connector.
+// Package website implements the JavaScript connector.
 package website
-
-// This package is the Website connector.
 
 import (
 	_ "embed"
@@ -17,14 +15,19 @@ import (
 )
 
 // Connector icon.
-var icon = "<svg></svg>"
+var iconJavaScript = "<svg></svg>"
 
 func init() {
-	connector.RegisterWebsite(connector.Website{
-		Name:              "Website",
-		SourceDescription: "collect events, and import users and groups from a website",
-		Icon:              icon,
-	}, open)
+	websites := []connector.Website{
+		{
+			Name:              "JavaScript",
+			SourceDescription: "collect events, and import users and groups from a website using JavaScript",
+			Icon:              iconJavaScript,
+		},
+	}
+	for _, ws := range websites {
+		connector.RegisterWebsite(ws, open)
+	}
 }
 
 // open opens a Website connection and returns it.

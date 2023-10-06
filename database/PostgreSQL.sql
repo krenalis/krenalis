@@ -35,7 +35,7 @@ INSERT INTO connectors (name, type, oauth_client_id, oauth_client_secret) VALUES
     ('S3', 'Storage', '', ''),
     ('PostgreSQL', 'Database', '', ''),
     ('Parquet', 'File', '', ''),
-    ('Website', 'Website', '', ''),
+    ('JavaScript', 'Website', '', ''),
     ('Kafka', 'Stream', '', ''),
     ('RabbitMQ', 'Stream', '', ''),
     ('UISample', 'App', '', ''),
