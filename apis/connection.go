@@ -743,7 +743,7 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 			return err
 		}
 		if count == maxKeysPerServer {
-			return errors.Unprocessable(TooManyKeys, "server %d has already %d types", n.Connection, maxKeysPerServer)
+			return errors.Unprocessable(TooManyKeys, "server %d has already %d keys", n.Connection, maxKeysPerServer)
 		}
 		_, err = tx.Exec(ctx, "INSERT INTO connections_keys (connection, value, creation_time) VALUES ($1, $2, $3)",
 			n.Connection, n.Value, n.CreationTime)
