@@ -14,7 +14,7 @@ import (
 )
 
 func Test_Attempt(t *testing.T) {
-	bo := New(5, 1, 2)
+	bo := New(5, 1, 2*time.Second)
 	i := 0
 	for bo.Next(context.Background()) {
 		i++
@@ -27,9 +27,9 @@ func Test_Attempt(t *testing.T) {
 func Test_Next(t *testing.T) {
 
 	// Test NoLimit attempts.
-	bo := New(NoLimit, 1, 1)
+	bo := New(NoLimit, 1, 10*time.Millisecond)
 	i := 0
-	const attemptsCap = 100
+	const attemptsCap = 10
 	for bo.Next(context.Background()) {
 		i++
 		if i == attemptsCap {
@@ -42,7 +42,7 @@ func Test_Next(t *testing.T) {
 
 	// Tests from 1 to 5 attempts.
 	for attempts := 1; attempts < 5; attempts++ {
-		bo := New(attempts, 1, 1)
+		bo := New(attempts, 1, time.Second)
 		ctx := context.Background()
 		i := 0
 		for bo.Next(ctx) {
@@ -58,7 +58,7 @@ func Test_Next(t *testing.T) {
 func Test_Next_Context(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
-		bo := New(NoLimit, 1, 2)
+		bo := New(NoLimit, 1, 2*time.Second)
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Duration(i)*time.Millisecond)
 		defer cancel()
 		for bo.Next(ctx) {
@@ -84,7 +84,7 @@ func Test_Next_Cap(t *testing.T) {
 }
 
 func Test_SetNextWaitTime(t *testing.T) {
-	bo := New(5, 1, 1)
+	bo := New(5, 1, time.Second)
 	for {
 		wt := time.Duration(bo.Attempt()) * time.Millisecond
 		bo.SetNextWaitTime(wt)
