@@ -18,7 +18,7 @@
 //	for bo.Next(ctx) {
 //		err := doSomething()
 //		if err != nil {
-//			if bo.HasNext() { // log only if there will be another attempt.
+//			if bo.WaitTime() > 0 {
 //				log.Printf("try attempt %d after %s", bo.Attempt(), bo.WaitTime())
 //			}
 //			continue
@@ -63,11 +63,6 @@ func (bo *Backoff) Attempt() int {
 	return bo.attempt
 }
 
-// HasNext reports whether there will be another retry attempt.
-func (bo *Backoff) HasNext() bool {
-	return bo.attempts == 0 || bo.attempt < bo.attempts
-}
-
 // Next waits for bo.WaitTime() and returns true if another attempt can be
 // made, otherwise, it returns false.
 func (bo *Backoff) Next(ctx context.Context) bool {
@@ -101,8 +96,8 @@ func (bo *Backoff) SetNextWaitTime(d time.Duration) {
 	bo.waitTime = d
 }
 
-// WaitTime returns the wait time for the next attempt, or 0 if there are no
-// other retry attempt.
+// WaitTime returns the wait time for the next retry attempt. If there are no
+// other retry attempts, it returns 0.
 func (bo *Backoff) WaitTime() time.Duration {
 	if bo.attempt > 0 {
 		if bo.attempt == bo.attempts {
@@ -118,5 +113,5 @@ func (bo *Backoff) WaitTime() time.Duration {
 // setWaitTime sets the wait time.
 func (bo *Backoff) setWaitTime() {
 	// waitTime = min(random_between(0, base * 2^attempt), cap)
-	bo.waitTime = min(time.Duration(rand.Float64()*bo.base*math.Pow(2, float64(bo.attempt)))*time.Millisecond, bo.cap)
+	bo.waitTime = min(time.Duration(1+rand.Float64()*bo.base*math.Pow(2, float64(bo.attempt)))*time.Millisecond, bo.cap)
 }

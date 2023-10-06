@@ -24,23 +24,6 @@ func Test_Attempt(t *testing.T) {
 	}
 }
 
-func Test_HasNext(t *testing.T) {
-	bo := New(5, 1, 1)
-	i := 0
-	for {
-		if i < 5 && !bo.HasNext() {
-			t.Fatalf("i == %d: expected HasNext true, got false", i)
-		}
-		if i == 5 && bo.HasNext() {
-			t.Fatalf("i == %d: expected HasNext false, got true", i)
-		}
-		if !bo.Next(context.Background()) {
-			break
-		}
-		i++
-	}
-}
-
 func Test_Next(t *testing.T) {
 
 	// Test NoLimit attempts.
@@ -108,7 +91,7 @@ func Test_SetNextWaitTime(t *testing.T) {
 		if got := bo.WaitTime(); wt != got {
 			t.Fatalf("expected waiting time %s, got %s", wt, got)
 		}
-		if !bo.Next(context.Background()) || !bo.HasNext() {
+		if !bo.Next(context.Background()) || bo.WaitTime() == 0 {
 			break
 		}
 	}
