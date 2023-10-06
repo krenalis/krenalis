@@ -41,5 +41,5 @@ Add the content of the `snippet.js` file to the HTML page:
 </script>
 ```
 
-Replace `123456789` with the identifier of the website source connection and replace `'../dist/chichi.js'` with the
+Replace `kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc` with a write key of the JavaScript source connection and replace `'../dist/chichi.js'` with the
 URL of the `dist/chichi.js` script.
