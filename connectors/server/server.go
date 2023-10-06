@@ -5,7 +5,8 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package server implements the Server connector.
+// Package server implements the .Net, Go, Java, Node.js, PHP and Python
+// connectors.
 package server
 
 import (
@@ -15,14 +16,59 @@ import (
 )
 
 // Connector icon.
-var icon = "<svg></svg>"
+var iconDotNet = "<svg></svg>"
+
+// Connector icon.
+var iconGo = "<svg></svg>"
+
+// Connector icon.
+var iconJava = "<svg></svg>"
+
+// Connector icon.
+var iconNode = "<svg></svg>"
+
+// Connector icon.
+var iconPHP = "<svg></svg>"
+
+// Connector icon.
+var iconPython = "<svg></svg>"
 
 func init() {
-	connector.RegisterServer(connector.Server{
-		Name:              "Server",
-		SourceDescription: "collect events, and import users and groups from a server",
-		Icon:              icon,
-	}, open)
+	servers := []connector.Server{
+		{
+			Name:              ".NET",
+			SourceDescription: "collect events, and import users and groups from a server using .NET",
+			Icon:              iconDotNet,
+		},
+		{
+			Name:              "Go",
+			SourceDescription: "collect events, and import users and groups from a server using Go",
+			Icon:              iconGo,
+		},
+		{
+			Name:              "Java",
+			SourceDescription: "collect events, and import users and groups from a server using Java",
+			Icon:              iconJava,
+		},
+		{
+			Name:              "Node.js",
+			SourceDescription: "collect events, and import users and groups from a server using Node.js",
+			Icon:              iconNode,
+		},
+		{
+			Name:              "PHP",
+			SourceDescription: "collect events, and import users and groups from a server using PHP",
+			Icon:              iconPHP,
+		},
+		{
+			Name:              "Python",
+			SourceDescription: "collect events, and import users and groups from a server using Python",
+			Icon:              iconPython,
+		},
+	}
+	for _, srv := range servers {
+		connector.RegisterServer(srv, open)
+	}
 }
 
 // open opens a Server connection and returns it.

@@ -39,7 +39,6 @@ INSERT INTO connectors (name, type, oauth_client_id, oauth_client_secret) VALUES
     ('Kafka', 'Stream', '', ''),
     ('RabbitMQ', 'Stream', '', ''),
     ('UISample', 'App', '', ''),
-    ('Server', 'Server', '', ''),
     ('Klaviyo', 'App', '', ''),
     ('Google Analytics 4', 'App', '', ''),
     ('Filesystem', 'Storage', '', ''),
@@ -47,7 +46,13 @@ INSERT INTO connectors (name, type, oauth_client_id, oauth_client_secret) VALUES
     ('JSON', 'File', '', ''),
     ('Mixpanel', 'App', '', ''),
     ('Snowflake', 'Database', '', ''),
-    ('Stripe', 'App', '', '');
+    ('Stripe', 'App', '', ''),
+    ('.Net', 'Server', '', ''),
+    ('Go', 'Server', '', ''),
+    ('Java', 'Server', '', ''),
+    ('Node.js', 'Server', '', ''),
+    ('PHP', 'Server', '', ''),
+    ('Python', 'Server', '', '');
 
 CREATE TYPE warehouse_type AS ENUM ('BigQuery', 'ClickHouse', 'PostgreSQL', 'Redshift', 'Snowflake');
 CREATE TYPE privacy_region AS ENUM ('', 'Europe');
