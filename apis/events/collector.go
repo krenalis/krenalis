@@ -61,13 +61,12 @@ type collectedHeader struct {
 	URL        string      `json:"url"`
 	Headers    http.Header `json:"headers"`
 	source     int
-	sourceType state.ConnectorType
-	server     int
 }
 
 type batchEvents struct {
-	Batch   []*collectedEvent `json:"batch"`
-	Context *eventContext     `json:"context,omitempty"`
+	Batch    []*collectedEvent `json:"batch"`
+	Context  *eventContext     `json:"context,omitempty"`
+	WriteKey string            `json:"writeKey,omitempty"`
 }
 
 type eventContext struct {
@@ -173,6 +172,8 @@ type collectedEvent struct {
 	PreviousId   string         `json:"previousId,omitempty"`
 	Properties   map[string]any `json:"properties,omitempty"`
 	version      int
+
+	WriteKey string `json:"writeKey,omitempty"`
 }
 
 // A collector collects events, store them in the event log and sends them to
@@ -312,59 +313,6 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	// Authenticate the request.
-	auth, _, ok := r.BasicAuth()
-	if !ok || auth == "" {
-		return errUnauthorized
-	}
-	key, src, ok := strings.Cut(auth, "-")
-	if !ok && len(key) <= 10 {
-		src, key = key, ""
-	}
-
-	// Validate the source connection.
-	var source *state.Connection
-	if src != "" {
-		sourceID, _ := strconv.Atoi(src)
-		if sourceID < 1 || sourceID > math.MaxInt32 {
-			return errBadRequest
-		}
-		source, ok = c.state.Source(sourceID)
-		if !ok {
-			return errNotFound
-		}
-		sourceType := source.Connector().Type
-		if sourceType != state.MobileType && sourceType != state.WebsiteType {
-			return errNotFound
-		}
-		if !c.state.HasEnabledActions(sourceID) {
-			return errNotFound
-		}
-	}
-
-	// Validate the server key.
-	var serverID int
-	var server *state.Connection
-	if key != "" {
-		server, ok = c.state.ServerByKey(key)
-		if !ok {
-			return errUnauthorized
-		}
-		if source != nil && server.Workspace().ID != source.Workspace().ID {
-			return errUnauthorized
-		}
-		serverID = server.ID
-		if !c.state.HasEnabledActions(serverID) {
-			return errNotFound
-		}
-	}
-
-	var sourceID int
-	var sourceType state.ConnectorType
-	if source != nil {
-		sourceID = source.ID
-		sourceType = source.Connector().Type
-	}
 	header := &collectedHeader{
 		ReceivedAt: date,
 		RemoteAddr: r.RemoteAddr,
@@ -372,9 +320,22 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		Proto:      r.Proto,
 		URL:        r.URL.String(),
 		Headers:    r.Header,
-		source:     sourceID,
-		sourceType: sourceType,
-		server:     serverID,
+	}
+
+	var source *state.Connection
+
+	// Validate the write key.
+	writeKey, _, ok := r.BasicAuth()
+	if ok {
+		if writeKey == "" {
+			return errUnauthorized
+		}
+		var ok bool
+		source, ok = c.state.ConnectionByKey(writeKey)
+		if !ok {
+			return errUnauthorized
+		}
+		header.source = source.ID
 	}
 
 	// Read the body and check that is not be longer than maxRequestSize bytes and,
@@ -409,6 +370,23 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		return errBadRequest
 	}
 
+	// Validate the write key.
+	if writeKey == "" {
+		writeKey = events.WriteKey
+		if method != "batch" {
+			writeKey = events.Batch[0].WriteKey
+		}
+		if writeKey == "" {
+			return errUnauthorized
+		}
+		var ok bool
+		source, ok = c.state.ConnectionByKey(writeKey)
+		if !ok {
+			return errUnauthorized
+		}
+		header.source = source.ID
+	}
+
 	for i := 0; i < len(events.Batch); i++ {
 		event := events.Batch[i]
 		if event.Type == nil && method != "batch" {
@@ -417,7 +395,7 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		event.header = header
 		mergeContexts(&event.Context, events.Context)
 		err = validateEvent(method, event)
-		c.observer.AddEvent(sourceID, serverID, 0, event, err)
+		c.observer.AddEvent(header.source, event, err)
 		if err != nil {
 			// Remove the invalid event.
 			copy(events.Batch[:i], events.Batch[i+1:])
@@ -428,6 +406,14 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		event.id = ksuid.New()
 	}
 	if len(events.Batch) == 0 {
+		return nil
+	}
+
+	if !c.state.HasEnabledActions(source) {
+		// Sent a successful response to the client.
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Length", "21")
+		_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
 		return nil
 	}
 
@@ -746,7 +732,7 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 	}
 
 	// Browser and OS.
-	if event.header.sourceType != state.MobileType {
+	if event.Context.UserAgent != "" {
 		ua := useragent.New(event.Context.UserAgent)
 		browserName, browserVersion := ua.Browser()
 		switch browserName {
@@ -831,7 +817,7 @@ func (c *collector) enrichEvent(event *collectedEvent) {
 	}
 
 	// Page.
-	if event.header.sourceType != state.MobileType {
+	if event.Context.Page.URL != "" {
 		u, _ := url.Parse(event.Context.Page.URL)
 		event.Context.Page.URL = u.String()
 		event.Context.Page.Path = u.Path

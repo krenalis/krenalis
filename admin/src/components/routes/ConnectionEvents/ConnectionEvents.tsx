@@ -31,27 +31,12 @@ const ConnectionEvents = () => {
 		let interval: number;
 		let id = eventID;
 		const startListener = async () => {
-			let [source, server, stream] = [0, 0, 0];
-			switch (c.type) {
-				case 'Server':
-					server = c.id;
-					break;
-				case 'Stream':
-					stream = c.id;
-					break;
-				default:
-					source = c.id;
-			}
 			let listener: AddEventListenerResponse;
 			try {
-				listener = await api.workspaces.eventlisteners.add(3, source, server, stream);
+				listener = await api.workspaces.eventlisteners.add(3, c.id);
 			} catch (err) {
 				if (err instanceof UnprocessableError) {
-					if (
-						err.code === 'SourceNotExists' ||
-						err.code === 'ServerNotExists' ||
-						err.code === 'StreamNotExists'
-					) {
+					if ( err.code === 'ConnectionNotExists' ) {
 						redirect('connections');
 						showStatus(statuses.connectionDoesNotExistAnymore);
 					}

@@ -55,9 +55,6 @@ var (
 	OrderNotExists       errors.Code = "OrderNotExists"
 	OrderTypeNotSortable errors.Code = "OrderTypeNotSortable"
 	PropertyNotExists    errors.Code = "PropertyNotExists"
-	ServerNotExists      errors.Code = "ServerNotExists"
-	SourceNotExists      errors.Code = "SourceNotExists"
-	StreamNotExists      errors.Code = "StreamNotExists"
 	TooManyListeners     errors.Code = "TooManyListeners"
 )
 
@@ -248,9 +245,10 @@ func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, c
 		return 0, err
 	}
 
-	// Generate a server key.
-	if c.Type == state.ServerType {
-		n.Key, err = generateServerKey()
+	// Generate a write key.
+	switch c.Type {
+	case state.MobileType, state.ServerType, state.WebsiteType:
+		n.Key, err = generateWriteKey()
 		if err != nil {
 			return 0, err
 		}
@@ -319,23 +317,20 @@ func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, c
 	return n.ID, nil
 }
 
-// AddEventListener adds a listener to the workspace that listen to processed
-// events
+// AddEventListener adds a listener to the workspace that listens to processed
+// events and returns its identifier.
 //
-//   - occurred on the mobile or website connection source, if source is not
-//     zero,
-//   - sent by the server connection server, if server is not zero,
-//   - received from the stream connection stream, if stream is not zero,
+// source, if not zero, represents the source mobile, server, or website
+// connection for which the event was sent.
 //
-// and returns its identifier. size is the maximum number of events to return
-// for each call to the Events method, it must be in [1,1000].
+// size is the maximum number of events to return for each call to the Events
+// method; it must be in the range [1,1000].
 //
-// If the source, server, or stream does not exist, it returns an
-// errors.UnprocessableError error with code SourceNotExists, ServerNotExists,
-// and StreamNotExists respectively.
+// If the source connection does not exist, it returns an
+// errors.UnprocessableError error with code ConnectionNotExists.
 // If there are already too many listeners, it returns an
 // errors.UnprocessableError error with code TooManyListeners.
-func (this *Workspace) AddEventListener(ctx context.Context, size, source, server, stream int) (string, error) {
+func (this *Workspace) AddEventListener(ctx context.Context, size, source int) (string, error) {
 
 	this.apis.mustBeOpen()
 
@@ -345,65 +340,29 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source, serve
 	if source < 0 || source > maxInt32 {
 		return "", errors.BadRequest("source identifier %d is not valid", source)
 	}
-	if server < 0 || server > maxInt32 {
-		return "", errors.BadRequest("server identifier %d is not valid", server)
-	}
-	if stream < 0 || stream > maxInt32 {
-		return "", errors.BadRequest("stream identifier %d is not valid", stream)
-	}
 
-	if source > 0 || server > 0 || stream > 0 {
-
-		var sourceExist, serverExist, streamExist bool
-		err := this.apis.db.QueryScan(ctx, "SELECT id, type , role FROM connections\n"+
-			"WHERE id IN ($1, $2, $3) AND workspace = $4", source, server, stream, this.workspace.ID,
-			func(rows *postgres.Rows) error {
-				var id int
-				var typ state.ConnectorType
-				var role state.ConnectionRole
-				for rows.Next() {
-					if err := rows.Scan(&id, &typ, &role); err != nil {
-						return err
-					}
-					switch id {
-					case source:
-						if typ != state.MobileType && typ != state.WebsiteType {
-							return errors.BadRequest("connection %d is not a mobile or website", source)
-						}
-						sourceExist = true
-					case server:
-						if typ != state.ServerType {
-							return errors.BadRequest("connection %d is not a server", server)
-						}
-						serverExist = true
-					case stream:
-						if typ != state.StreamType {
-							return errors.BadRequest("connection %d is not a stream", stream)
-						}
-						streamExist = true
-					}
-					if role != state.SourceRole {
-						return errors.BadRequest("connection %d is not a source", id)
-					}
-				}
-				return nil
-			})
+	if source > 0 {
+		var typ state.ConnectorType
+		var role state.ConnectionRole
+		err := this.apis.db.QueryRow(ctx, "SELECT type, role FROM connections\n"+
+			"WHERE id = $1 AND workspace = $2", source, this.workspace.ID).Scan(&typ, &role)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return "", errors.Unprocessable(ConnectionNotExists, "connection %d does not exist", source)
+			}
 			return "", err
 		}
-		if source > 0 && !sourceExist {
-			return "", errors.Unprocessable(SourceNotExists, "source %d does not exist", source)
+		switch typ {
+		case state.MobileType, state.ServerType, state.WebsiteType:
+		default:
+			return "", errors.BadRequest("connection %d is not a mobile, server or website", source)
 		}
-		if server > 0 && !serverExist {
-			return "", errors.Unprocessable(ServerNotExists, "server %d does not exist", server)
+		if role != state.SourceRole {
+			return "", errors.BadRequest("connection %d is not a source", source)
 		}
-		if stream > 0 && !streamExist {
-			return "", errors.Unprocessable(StreamNotExists, "stream %d does not exist", stream)
-		}
-
 	}
 
-	id, err := this.apis.events.Observer().AddListener(size, source, server, stream)
+	id, err := this.apis.events.Observer().AddListener(size, source)
 	if err != nil {
 		if err == events.ErrTooManyListeners {
 			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", events.MaxEventListeners)

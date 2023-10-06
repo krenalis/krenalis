@@ -82,13 +82,15 @@ func (st *eventsState) Destination(id int) (connector.AppEventsConnection, bool)
 	return d, ok
 }
 
-// ServerByKey returns an enable destination server connection given its key and
-// true, if exists, otherwise returns nil and false.
-func (st *eventsState) ServerByKey(key string) (*state.Connection, bool) {
-	server, ok := st.state.ConnectionByKey(key)
-	if ok && server.Enabled && server.Role == state.SourceRole &&
-		server.Connector().Type == state.ServerType {
-		return server, true
+// ConnectionByKey returns an enable source mobile, server or website connection
+// given its key and true, if exists, otherwise returns nil and false.
+func (st *eventsState) ConnectionByKey(key string) (*state.Connection, bool) {
+	c, ok := st.state.ConnectionByKey(key)
+	if ok && c.Enabled && c.Role == state.SourceRole {
+		switch c.Connector().Type {
+		case state.MobileType, state.ServerType, state.WebsiteType:
+			return c, true
+		}
 	}
 	return nil, false
 }
@@ -111,12 +113,11 @@ func (st *eventsState) Actions() []*state.Action {
 
 // HasEnabledActions reports whether connection is enabled and has at least one
 // enabled action.
-func (st *eventsState) HasEnabledActions(connection int) bool {
-	c, _ := st.state.Connection(connection)
-	if !c.Enabled {
+func (st *eventsState) HasEnabledActions(connection *state.Connection) bool {
+	if !connection.Enabled {
 		return false
 	}
-	for _, a := range c.Actions() {
+	for _, a := range connection.Actions() {
 		if a.Enabled {
 			return true
 		}

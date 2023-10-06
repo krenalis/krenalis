@@ -23,9 +23,9 @@ GET     /api/workspaces/{id}/connections/{id}/sheets                            
 POST    /api/workspaces/{id}/connections/{id}/status                             Set the status of a connection.
 GET     /api/workspaces/{id}/connections/{id}/stats                              Get the stats of a connection.
 GET     /api/workspaces/{id}/connections/{id}/tables/{table}/schema              Return the schema of the given table of a database connection.
-GET     /api/workspaces/{id}/connections/{id}/keys                               Get the API keys of a connection.
-POST    /api/workspaces/{id}/connections/{id}/keys                               Generate a new API key for a connection.
-DELETE  /api/workspaces/{id}/connections/{id}/keys/{key}                         Delete the API key of a connection.
+GET     /api/workspaces/{id}/connections/{id}/keys                               Get the write keys of a connection.
+POST    /api/workspaces/{id}/connections/{id}/keys                               Generate a new write key for a connection.
+DELETE  /api/workspaces/{id}/connections/{id}/keys/{key}                         Delete a write key of a connection.
 POST    /api/workspaces/{id}/connections/{id}/storage                            Set the storage and the compression of a connection.
 GET     /api/workspaces/{id}/connections/{id}/ui                                 Get the user interface of a connection.
 POST    /api/workspaces/{id}/connections/{id}/ui-event                           Execute the user interface event of a connection.

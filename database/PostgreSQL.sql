@@ -166,15 +166,10 @@ CREATE TABLE connections_stats (
 CREATE TABLE connections_stats_events (
     hour integer NOT NULL,
     source integer DEFAULT NULL REFERENCES connections ON DELETE CASCADE,
-    server integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
-    stream integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
     good_events integer NOT NULL,
     bad_events integer NOT NULL,
-    UNIQUE (hour, source, server, stream)
+    UNIQUE (hour, source)
 );
-
-CREATE INDEX ON connections_stats_events (server);
-CREATE INDEX ON connections_stats_events (stream);
 
 CREATE TABLE election (
     number integer NOT NULL,

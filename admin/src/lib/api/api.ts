@@ -276,12 +276,10 @@ class Eventlisteners {
 		this.apiURL = url;
 	}
 
-	add = async (size: number, source: number, server: number, stream: number): Promise<AddEventListenerResponse> => {
+	add = async (size: number, source: number): Promise<AddEventListenerResponse> => {
 		return await call(`${this.apiURL}/event-listeners`, http.PUT, {
 			size: size,
 			source: source,
-			server: server,
-			stream: stream,
 		});
 	};
 

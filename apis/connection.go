@@ -48,10 +48,10 @@ import (
 const maxSettingsLen = 10_000
 
 const (
-	maxKeysPerServer = 20 // maximum number of keys per server.
-	maxInt32         = math.MaxInt32
-	rawSchemaMaxSize = 16_777_215 // maximum size in runes for schemas stored in PostgreSQL.
-	queryMaxSize     = 16_777_215 // maximum size in runes of a connection query.
+	maxKeysPerConnection = 20 // maximum number of keys per connection.
+	maxInt32             = math.MaxInt32
+	rawSchemaMaxSize     = 16_777_215 // maximum size in runes for schemas stored in PostgreSQL.
+	queryMaxSize         = 16_777_215 // maximum size in runes of a connection query.
 )
 
 var (
@@ -711,23 +711,25 @@ func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 	return executions, nil
 }
 
-// GenerateKey generates a new key for the connection. The connection must be a
-// source server connection.
+// GenerateKey generates a new write key for the connection. The connection must
+// be a source mobile, server or website connection.
 //
-// If the server does not exist, it returns an errors.NotFoundError error.
-// If the server has already too many keys, it returns an
+// If the connection does not exist, it returns an errors.NotFoundError error.
+// If the connection has already too many keys, it returns an
 // errors.UnprocessableError error with code TooManyKeys.
 func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 	this.apis.mustBeOpen()
 	c := this.connection
 	connector := c.Connector()
-	if connector.Type != state.ServerType {
-		return "", errors.NotFound("connection %d is not a server", c.ID)
+	switch connector.Type {
+	case state.MobileType, state.ServerType, state.WebsiteType:
+	default:
+		return "", errors.NotFound("connection %d is not a mobile, server or website", c.ID)
 	}
 	if c.Role != state.SourceRole {
-		return "", errors.NotFound("server %d is not a source", c.ID)
+		return "", errors.NotFound("connection %d is not a source", c.ID)
 	}
-	value, err := generateServerKey()
+	value, err := generateWriteKey()
 	if err != nil {
 		return "", err
 	}
@@ -742,8 +744,8 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 		if err != nil {
 			return err
 		}
-		if count == maxKeysPerServer {
-			return errors.Unprocessable(TooManyKeys, "server %d has already %d keys", n.Connection, maxKeysPerServer)
+		if count == maxKeysPerConnection {
+			return errors.Unprocessable(TooManyKeys, "connection %d has already %d keys", n.Connection, maxKeysPerConnection)
 		}
 		_, err = tx.Exec(ctx, "INSERT INTO connections_keys (connection, value, creation_time) VALUES ($1, $2, $3)",
 			n.Connection, n.Value, n.CreationTime)
@@ -762,21 +764,6 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 	}
 
 	return value, nil
-}
-
-// Keys returns the keys of the source server with identifier id.
-//
-// If the server does not exist, it returns an errors.NotFoundError error.
-func (this *Connection) Keys() ([]string, error) {
-	this.apis.mustBeOpen()
-	c := this.connection
-	if c.Connector().Type != state.ServerType {
-		return nil, errors.NotFound("connection %d is not a server", c.ID)
-	}
-	if c.Role != state.SourceRole {
-		return nil, errors.NotFound("server %d is not a source", c.ID)
-	}
-	return slices.Clone(c.Keys), nil
 }
 
 // Records returns the records and the schema of the file with the given path
@@ -900,8 +887,9 @@ func (this *Connection) Rename(ctx context.Context, name string) error {
 	return err
 }
 
-// RevokeKey revokes the given key of the source server with identifier id. key
-// cannot be empty and cannot be the unique key of the server.
+// RevokeKey revokes the given write key of the connection. key cannot be empty
+// and cannot be the unique key of the connection. The connection must be a
+// source mobile, server or website connection.
 //
 // If the key does not exist, it returns an errors.NotFoundError error.
 // If the key is the unique key of the server, it returns an
@@ -911,16 +899,18 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 	if key == "" {
 		return errors.BadRequest("key is empty")
 	}
-	if !isServerKey(key) {
+	if !isWriteKey(key) {
 		return errors.BadRequest("key %q is malformed", key)
 	}
 	c := this.connection
 	connector := c.Connector()
-	if connector.Type != state.ServerType {
-		return errors.BadRequest("connection %d is not a server", c.ID)
+	switch connector.Type {
+	case state.MobileType, state.ServerType, state.WebsiteType:
+	default:
+		return errors.BadRequest("connection %d is not a mobile, server or website", c.ID)
 	}
 	if c.Role != state.SourceRole {
-		return errors.BadRequest("server %d is not a source", c.ID)
+		return errors.BadRequest("connection %d is not a source", c.ID)
 	}
 	n := state.RevokeConnectionKey{
 		Connection: c.ID,
@@ -933,7 +923,7 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 			return err
 		}
 		if count == 1 {
-			return errors.Unprocessable(UniqueKey, "key cannot be revoked because it's the unique key of the server")
+			return errors.Unprocessable(UniqueKey, "key cannot be revoked because it's the unique key of the connection")
 		}
 		result, err := tx.Exec(ctx, "DELETE FROM connections_keys WHERE connection = $1 AND value = $2", n.Connection, n.Value)
 		if err != nil {
@@ -1260,6 +1250,22 @@ type ActionType struct {
 	MissingSchema bool
 }
 
+// Keys returns the write keys of the connection.
+// The connection must be a source mobile, server or website connection.
+func (this *Connection) Keys() ([]string, error) {
+	this.apis.mustBeOpen()
+	c := this.connection
+	switch c.Connector().Type {
+	case state.MobileType, state.ServerType, state.WebsiteType:
+	default:
+		return nil, errors.BadRequest("connection %d is not a mobile, server or website", c.ID)
+	}
+	if c.Role != state.SourceRole {
+		return nil, errors.BadRequest("connection %d is not a source", c.ID)
+	}
+	return slices.Clone(c.Keys), nil
+}
+
 // actionTypes returns the action types for the connection.
 //
 // Refer to the specifications in the file "connector/Actions support.md" for
@@ -1531,8 +1537,8 @@ func (this *Connection) openWebsite() (_connector.WebsiteConnection, error) {
 
 var errRecordStop = errors.New("stop record")
 
-// isServerKey reports whether key can be a server key.
-func isServerKey(key string) bool {
+// isWriteKey reports whether key can be a write key.
+func isWriteKey(key string) bool {
 	if len(key) != 32 {
 		return false
 	}
@@ -1540,12 +1546,12 @@ func isServerKey(key string) bool {
 	return err == nil
 }
 
-// generateServerKey generates a server key in its base62 form.
-func generateServerKey() (string, error) {
+// generateWriteKey generates a write key in its base62 form.
+func generateWriteKey() (string, error) {
 	key := make([]byte, 24)
 	_, err := rand.Read(key)
 	if err != nil {
-		return "", errors.New("cannot generate a server key")
+		return "", errors.New("cannot generate a write key")
 	}
 	return base62.EncodeToString(key)[0:32], nil
 }

@@ -39,16 +39,9 @@ type Observer struct {
 	stats     []statsEntry
 }
 
-// statsKey is the key in the observer.stats slice.
-type statsKey struct {
-	source int
-	server int
-	stream int
-}
-
-// statsKey is the element type of the observer.stats slice.
+// statsEntry is the element type of the observer.stats slice.
 type statsEntry struct {
-	key        statsKey
+	source     int
 	goodEvents int
 	badEvents  int
 }
@@ -57,8 +50,6 @@ type statsEntry struct {
 type listener struct {
 	id         string
 	source     int
-	server     int
-	stream     int
 	sync.Mutex // for the events and discarded fields
 	events     []json.RawMessage
 	times      []string
@@ -68,15 +59,9 @@ type listener struct {
 // ProcessedEvent represents a processed event.
 type ProcessedEvent struct {
 
-	// Source, if not zero, it is the mobile or website collector on which
-	// the event was generated.
+	// Source, if not zero, it is the source mobile, server or website
+	// connection for which the event was sent.
 	Source int
-
-	// Server, if not zero, is the server collector that sent the message.
-	Server int
-
-	// Stream is the stream from which the event was received.
-	Stream int
 
 	// Header is the message header. It is nil if a validation error occurred
 	// processing the entire message.
@@ -112,20 +97,18 @@ func newObserver(db *postgres.DB) *Observer {
 }
 
 // AddEvent adds an event to the observed events. source, if not-zero is the
-// connection, mobile or website, where the event occurred. If the event was
-// sent by a server, server is its connection identifier, otherwise server is
-// zero. If a message or event is invalid, err contains the error.
-func (observer *Observer) AddEvent(source, server, stream int, event *collectedEvent, err error) {
+// source mobile, server or website connection for which the event was sent. If
+// a message or event is invalid, err contains the error.
+func (observer *Observer) AddEvent(source int, event *collectedEvent, err error) {
 
 	observer.RLock()
 	defer observer.RUnlock()
 
 	// Update statistics.
 	var found bool
-	key := statsKey{source, server, stream}
 	observer.statsMu.Lock()
 	for i, s := range observer.stats {
-		if s.key == key {
+		if s.source == source {
 			if err == nil {
 				observer.stats[i].goodEvents++
 			} else {
@@ -136,7 +119,7 @@ func (observer *Observer) AddEvent(source, server, stream int, event *collectedE
 		}
 	}
 	if !found {
-		entry := statsEntry{key: key}
+		entry := statsEntry{source: source}
 		if err == nil {
 			entry.goodEvents = 1
 		} else {
@@ -154,12 +137,6 @@ func (observer *Observer) AddEvent(source, server, stream int, event *collectedE
 	var receivedAt string
 	for _, listener := range observer.listeners {
 		if listener.source > 0 && listener.source != source {
-			continue
-		}
-		if listener.server > 0 && listener.server != server {
-			continue
-		}
-		if listener.stream > 0 && listener.stream != stream {
 			continue
 		}
 		listener.Lock()
@@ -185,8 +162,6 @@ func (observer *Observer) AddEvent(source, server, stream int, event *collectedE
 			b.Reset()
 			_ = enc.Encode(ProcessedEvent{
 				Source: source,
-				Server: server,
-				Stream: stream,
 				Header: event.header,
 				Data:   data,
 				Err:    errStr,
@@ -208,13 +183,11 @@ func (observer *Observer) AddEvent(source, server, stream int, event *collectedE
 
 // AddListener adds a processed event listener. It returns the
 // ErrTooManyListeners error if there are already too many listeners.
-func (observer *Observer) AddListener(size, source, server, stream int) (string, error) {
+func (observer *Observer) AddListener(size, source int) (string, error) {
 	id := uuid.New().String()
 	listener := listener{
 		id:     id,
 		source: source,
-		server: server,
-		stream: stream,
 		events: make([]json.RawMessage, 0, size),
 		times:  make([]string, 0, size),
 	}
@@ -286,9 +259,9 @@ func (observer *Observer) flushStats(t time.Time) error {
 	ctx := context.Background()
 
 	err := observer.db.Transaction(ctx, func(tx *postgres.Tx) error {
-		query := "INSERT INTO connections_stats_events AS s (hour, source, server, stream, good_events, bad_events)\n" +
-			"VALUES ($1, NULLIF($2, 0), NULLIF($3, 0), NULLIF($4, 0), $5, $6)\n" +
-			"\tON CONFLICT (hour, source, server, stream) DO UPDATE SET good_events = s.good_events + EXCLUDED.good_events," +
+		query := "INSERT INTO connections_stats_events AS s (hour, source, good_events, bad_events)\n" +
+			"VALUES ($1, NULLIF($2, 0), $3, $4)\n" +
+			"\tON CONFLICT (hour, source) DO UPDATE SET good_events = s.good_events + EXCLUDED.good_events," +
 			" bad_events = s.bad_events + EXCLUDED.bad_events"
 		stmt, err := tx.Prepare(ctx, query)
 		if err != nil {
@@ -296,7 +269,7 @@ func (observer *Observer) flushStats(t time.Time) error {
 		}
 		hour := hoursFromEpoc(t)
 		for _, s := range stats {
-			_, err = stmt.Exec(ctx, hour, s.key.source, s.key.server, s.key.stream, s.goodEvents, s.badEvents)
+			_, err = stmt.Exec(ctx, hour, s.source, s.goodEvents, s.badEvents)
 			if err != nil {
 				_ = stmt.Close()
 				return err

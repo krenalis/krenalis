@@ -801,8 +801,6 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						var req struct {
 							Size   *int
 							Source int
-							Server int
-							Stream int
 						}
 						err := json.NewDecoder(r.Body).Decode(&req)
 						if err != nil {
@@ -813,7 +811,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						if req.Size != nil {
 							size = *req.Size
 						}
-						id, err := workspace.AddEventListener(ctx, size, req.Source, req.Server, req.Stream)
+						id, err := workspace.AddEventListener(ctx, size, req.Source)
 						if err != nil {
 							respond(w, err)
 							return

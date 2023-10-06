@@ -36,10 +36,10 @@ class Analytics {
 		},
 	};
 
-	constructor(source, endpoint) {
+	constructor(writeKey, endpoint) {
 		this.#storage = new Storage();
 		this.#session = new Session(this.#storage);
-		this.#sender = new Sender(source, endpoint);
+		this.#sender = new Sender(writeKey, endpoint);
 		const onReady = this.#onReady;
 		if (onReady) {
 			for (let i = 0; i < onReady.length; i++) {

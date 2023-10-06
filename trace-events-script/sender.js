@@ -1,13 +1,13 @@
 class Sender {
-	#source = '';
+	#writeKey = '';
 	#endpoint = '';
 	#timeout = 300;
 	#timeoutID;
 	#flushing = false;
 	#events = [];
 
-	constructor(source, endpoint) {
-		this.#source = source;
+	constructor(writeKey, endpoint) {
+		this.#writeKey = writeKey;
 		this.#endpoint = endpoint;
 		onUnload(() => {
 			this.flush(true);
@@ -39,9 +39,9 @@ class Sender {
 			event.sentAt = sentAt;
 			body += JSON.stringify(event);
 		}
-		body += ']}';
+		body += '],"writeKey":' + JSON.stringify(this.#writeKey) + '}';
 		try {
-			post(this.#endpoint, this.#source, body, keepalive, (res) => {
+			post(this.#endpoint, body, keepalive, (res) => {
 				if (res instanceof Error) {
 					console.warn('cannot send events: ' + res.message);
 					return;
@@ -82,20 +82,19 @@ const onUnload = function () {
 	};
 };
 
-// post issues a POST to the specified endpoint with the given body, source is
-// the source ID. If keepalive is true the request outlives the page.
+// post issues a POST to the specified endpoint with the given body.
+// If keepalive is true the request outlives the page.
 // It returns an object with properties 'ok', 'status' and 'statusText'.
 // Returns an Error value in case of error.
 const post = (function () {
 	// Legacy: ie10 and ie11 do not support fetch.
 	if (window.fetch && typeof window.fetch === 'function') {
-		return function (endpoint, source, body, keepalive, cb) {
+		return function (endpoint, body, keepalive, cb) {
 			const promise = fetch(endpoint, {
 				method: 'POST',
 				cache: 'no-cache',
 				headers: {
 					'Content-Type': 'application/json',
-					Authorization: 'Basic ' + btoa(source + ':'),
 				},
 				redirect: 'error',
 				body: body,
@@ -111,11 +110,10 @@ const post = (function () {
 			}, cb);
 		};
 	}
-	return function (endpoint, source, body, keepalive, cb) {
+	return function (endpoint, body, keepalive, cb) {
 		const xhr = new XMLHttpRequest();
 		xhr.open('POST', endpoint, true);
 		xhr.setRequestHeader('Content-Type', 'application/json');
-		xhr.setRequestHeader('Authorization', 'Basic ' + btoa(source + ':'));
 		xhr.onerror = () => {
 			cb(new Error('an error occurred processing the request'));
 		};
