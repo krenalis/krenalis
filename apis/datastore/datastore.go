@@ -206,7 +206,6 @@ func (ds *Datastore) mustBeOpen() {
 func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) {
 	ws, _ := ds.state.Workspace(n.Workspace)
 	go ds.setStore(ws)
-	return
 }
 
 func (ds *Datastore) setStore(ws *state.Workspace) {
