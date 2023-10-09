@@ -8,7 +8,7 @@
 package events
 
 import (
-	"github.com/cenkalti/backoff/v4"
+	"chichi/backoff"
 )
 
 // dispatcherQueue represents an event dispatcher warehouseQueue.
@@ -18,7 +18,7 @@ type dispatcherQueue struct {
 	head           int               // offset of the head of the warehouseQueue.
 	events         []*processedEvent // events in the warehouseQueue.
 	sendingOffsets map[string]int    // maps the anonymousId of a sending event to its offset in the warehouseQueue.
-	backoff        backoff.BackOff   // backoff policy for retries.
+	backoff        *backoff.Backoff  // backoff policy for retries.
 }
 
 // newDispatcherQueue returns a new empty dispatcher warehouseQueue for the given

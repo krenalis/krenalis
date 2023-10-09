@@ -8,10 +8,11 @@
 package events
 
 import (
+	"context"
 	"log"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
+	"chichi/backoff"
 )
 
 const debug = false
@@ -165,9 +166,10 @@ dispatch:
 			event.err = nil
 			delete(readyQueues, queueKey{destination: q.destination, endpoint: q.endpoint})
 			if q.backoff == nil {
-				q.backoff = backoff.NewExponentialBackOff()
+				q.backoff = backoff.New(backoff.NoLimit, 2, 10*time.Second)
 			}
-			time.AfterFunc(q.backoff.NextBackOff(), func() {
+			ctx := context.Background()
+			q.backoff.AfterFunc(ctx, func(_ context.Context) {
 				ready <- q
 			})
 
