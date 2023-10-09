@@ -13,6 +13,82 @@ import (
 	"time"
 )
 
+func Test_AfterFunc(t *testing.T) {
+
+	c := make(chan struct{})
+	f := func(_ context.Context) { c <- struct{}{} }
+
+	// Test NoLimit attempts.
+	cap := 10 * time.Millisecond
+	bo := New(NoLimit, 1, cap)
+	i := 0
+	const attemptsCap = 10
+	for {
+		ok := bo.AfterFunc(context.Background(), f)
+		if !ok {
+			t.Fatalf("AfterFunc: expecting true, got false")
+		}
+		select {
+		case <-c:
+		case <-time.NewTimer(cap * 2).C:
+			t.Fatalf("function has not been called")
+		}
+		i++
+		if i == attemptsCap {
+			break
+		}
+	}
+
+	// Tests from 1 to 5 attempts.
+	cap = time.Second
+	for attempts := 1; attempts < 5; attempts++ {
+		bo := New(attempts, 1, cap)
+		ctx := context.Background()
+		i := 0
+		for bo.AfterFunc(ctx, f) {
+			select {
+			case <-c:
+			case <-time.NewTimer(cap * 2).C:
+				t.Fatalf("function has not been called")
+			}
+			i++
+		}
+		if i != attempts {
+			t.Fatalf("expected %d attempts, got %d", attempts, i)
+		}
+	}
+
+}
+
+func Test_AfterFunc_Context(t *testing.T) {
+
+	c := make(chan struct{})
+
+	cap := 2 * time.Second
+	for i := 0; i < 10; i++ {
+		bo := New(NoLimit, 1, cap)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Duration(i)*time.Millisecond)
+		defer cancel()
+		var done bool
+		f := func(ctx context.Context) {
+			done = ctx.Err() != nil
+			c <- struct{}{}
+		}
+		for !done && bo.AfterFunc(ctx, f) {
+			select {
+			case <-c:
+			case <-time.NewTimer(cap * 2).C:
+				t.Fatalf("function has not been called")
+			}
+		}
+		err := ctx.Err()
+		if err == nil {
+			t.Fatal("backoff exited but the context has not been canceled")
+		}
+	}
+
+}
+
 func Test_Attempt(t *testing.T) {
 	bo := New(5, 1, 2*time.Second)
 	i := 0

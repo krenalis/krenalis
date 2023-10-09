@@ -25,6 +25,13 @@
 //		}
 //		break
 //	}
+//
+// Use AfterFunc for non-blocking execution. The provided function will run in a
+// separate goroutine after the wait time or upon context cancellation.
+//
+//	bo.AfterFunc(ctx, func(ctx context.Context) {
+//		// do something.
+//	})
 package backoff
 
 import (
@@ -58,6 +65,44 @@ func New(attempts, base int, cap time.Duration) *Backoff {
 		panic("backoff: cap must be equal or greater than 1ms")
 	}
 	return &Backoff{attempts, float64(base), cap, 0, 0, nil}
+}
+
+// AfterFunc calls f in its own goroutine after the bo.WaitTime() duration, if
+// another attempt can be made, and returns true. Otherwise, returns false.
+// If it returns true, it calls function f even if the context is canceled and
+// does so as soon as possible after cancellation.
+func (bo *Backoff) AfterFunc(ctx context.Context, f func(ctx context.Context)) bool {
+	if bo.attempt > 0 {
+		if bo.attempt == bo.attempts {
+			return false
+		}
+		if bo.waitTime == 0 {
+			bo.setWaitTime()
+		}
+	}
+	if bo.attempt < math.MaxInt {
+		bo.attempt++
+	}
+	if bo.waitTime > 0 {
+		if bo.timer == nil {
+			bo.timer = time.NewTimer(bo.waitTime)
+		} else {
+			bo.timer.Reset(bo.waitTime)
+		}
+		go func() {
+			select {
+			case <-ctx.Done():
+				if !bo.timer.Stop() {
+					<-bo.timer.C
+				}
+			case <-bo.timer.C:
+			}
+			f(ctx)
+		}()
+	} else {
+		go f(ctx)
+	}
+	return true
 }
 
 // Attempt returns the current attempt within the range [0, maxInt]. It returns
