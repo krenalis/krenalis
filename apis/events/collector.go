@@ -322,22 +322,6 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		Headers:    r.Header,
 	}
 
-	var source *state.Connection
-
-	// Validate the write key.
-	writeKey, _, ok := r.BasicAuth()
-	if ok {
-		if writeKey == "" {
-			return errUnauthorized
-		}
-		var ok bool
-		source, ok = c.state.ConnectionByKey(writeKey)
-		if !ok {
-			return errUnauthorized
-		}
-		header.source = source.ID
-	}
-
 	// Read the body and check that is not be longer than maxRequestSize bytes and,
 	// it is a streaming of JSON objects, otherwise return the errBadRequest error.
 	lr := &io.LimitedReader{R: r.Body, N: maxRequestSize + 1}
@@ -371,21 +355,29 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Validate the write key.
-	if writeKey == "" {
-		writeKey = events.WriteKey
+	var source *state.Connection
+	{
+		writeKey := events.WriteKey
 		if method != "batch" {
 			writeKey = events.Batch[0].WriteKey
 		}
 		if writeKey == "" {
-			return errUnauthorized
+			if key, _, ok := r.BasicAuth(); ok {
+				writeKey = key
+			}
 		}
-		var ok bool
-		source, ok = c.state.ConnectionByKey(writeKey)
-		if !ok {
-			return errUnauthorized
+		if writeKey != "" {
+			source, _ = c.state.ConnectionByKey(writeKey)
 		}
-		header.source = source.ID
+		if source == nil {
+			// Send a successful response to the client.
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Content-Length", "21")
+			_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
+			return nil
+		}
 	}
+	header.source = source.ID
 
 	for i := 0; i < len(events.Batch); i++ {
 		event := events.Batch[i]
@@ -410,7 +402,7 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if !c.state.HasEnabledActions(source) {
-		// Sent a successful response to the client.
+		// Send a successful response to the client.
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Content-Length", "21")
 		_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
@@ -430,7 +422,7 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	// Sent a successful response to the client.
+	// Send a successful response to the client.
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Length", "21")
 	_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
