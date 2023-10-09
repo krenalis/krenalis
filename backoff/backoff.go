@@ -44,6 +44,7 @@ type Backoff struct {
 	cap      time.Duration
 	attempt  int
 	waitTime time.Duration
+	timer    *time.Timer
 }
 
 // New returns a new Backoff with the given attempts, base and cap.
@@ -56,7 +57,7 @@ func New(attempts, base int, cap time.Duration) *Backoff {
 	if cap < time.Millisecond {
 		panic("backoff: cap must be equal or greater than 1ms")
 	}
-	return &Backoff{attempts, float64(base), cap, 0, 0}
+	return &Backoff{attempts, float64(base), cap, 0, 0, nil}
 }
 
 // Attempt returns the current attempt within the range [0, maxInt]. It returns
@@ -78,14 +79,18 @@ func (bo *Backoff) Next(ctx context.Context) bool {
 		}
 	}
 	if bo.waitTime > 0 {
-		ctx2, cancel := context.WithTimeout(ctx, bo.waitTime)
-		defer cancel()
-		bo.waitTime = 0
-		select {
-		case <-ctx2.Done():
+		if bo.timer == nil {
+			bo.timer = time.NewTimer(bo.waitTime)
+		} else {
+			bo.timer.Reset(bo.waitTime)
 		}
-		if ctx.Err() != nil {
+		select {
+		case <-ctx.Done():
+			if !bo.timer.Stop() {
+				<-bo.timer.C
+			}
 			return false
+		case <-bo.timer.C:
 		}
 	}
 	if bo.attempt < math.MaxInt {
