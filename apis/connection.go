@@ -12,6 +12,7 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -491,6 +492,72 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 	span.Log("action created successfully", "id", n.ID)
 
 	return n.ID, nil
+}
+
+// AppUsers returns the users of an app connection and the cursor to get the
+// next users. The returned cursor is empty if there are no other users.
+func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor string) ([]map[string]any, string, error) {
+
+	this.apis.mustBeOpen()
+
+	if this.connection.Connector().Type != state.AppType {
+		return nil, "", errors.BadRequest("connection %d is not an app connection", this.connection.ID)
+	}
+	if !schema.Valid() {
+		return nil, "", errors.BadRequest("schema is not valid")
+	}
+	var cur _connector.Cursor
+	if cursor != "" {
+		var err error
+		cur, err = deserializeCursor(cursor)
+		if err != nil {
+			return nil, "", errors.BadRequest("cursor is malformed")
+		}
+	}
+
+	app, err := this.openAppUsers()
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Get the users.
+	names := schema.PropertiesNames()
+	properties := make([]types.Path, len(names))
+	for i, name := range names {
+		properties[i] = types.Path{name}
+	}
+	objects, next, err := app.Users(ctx, properties, cur)
+	eof := err == io.EOF
+	if err != nil && !eof {
+		return nil, "", err
+	}
+	if len(objects) == 0 {
+		return []map[string]any{}, "", nil
+	}
+	users := make([]map[string]any, len(objects))
+	for i, object := range objects {
+		user, err := normalize(object.Properties, schema)
+		if err != nil {
+			return nil, "", err
+		}
+		users[i] = user
+	}
+	if eof {
+		return users, "", nil
+	}
+
+	// Build the cursor.
+	last := objects[len(objects)-1]
+	cursor, err = serializeCursor(_connector.Cursor{
+		ID:        last.ID,
+		Timestamp: last.Timestamp,
+		Next:      next,
+	})
+	if err != nil {
+		return nil, "", err
+	}
+
+	return users, cursor, nil
 }
 
 // CompletePath returns the complete representation of the given path, based
@@ -2488,6 +2555,33 @@ func webhookURL(connection *state.Connection, resource int) string {
 		return u + "s/" + strconv.Itoa(connection.ID) + "/"
 	}
 	panic("unexpected webhooksPer value")
+}
+
+// deserializeCursor deserializes a cursor passed to the API.
+func deserializeCursor(cursor string) (_connector.Cursor, error) {
+	data, err := hex.DecodeString(cursor)
+	if err != nil {
+		return _connector.Cursor{}, err
+	}
+	var c _connector.Cursor
+	err = json.Unmarshal(data, &c)
+	if err != nil {
+		return _connector.Cursor{}, err
+	}
+	// TODO(marco): validate the cursor's fields.
+	return c, nil
+}
+
+// serializeCursor serializes a cursor to be returned by the API.
+func serializeCursor(cursor _connector.Cursor) (string, error) {
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	err := enc.Encode(cursor)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b.Bytes()), nil
 }
 
 // temporaryTransformer is a transformers.Transformer that creates a function

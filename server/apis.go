@@ -512,6 +512,30 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								_ = json.NewEncoder(w).Encode(schemas)
 							})
 						})
+						router.Post("/app-users", func(w http.ResponseWriter, r *http.Request) {
+							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
+							connection, err := workspace.Connection(ctx, id)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+							var req struct {
+								Schema types.Type
+								Cursor string
+							}
+							err = json.NewDecoder(r.Body).Decode(&req)
+							if err != nil {
+								respond(w, errors.BadRequest("invalid JSON"))
+								return
+							}
+							users, cursor, err := connection.AppUsers(ctx, req.Schema, req.Cursor)
+							if err != nil {
+								respond(w, err)
+								return
+							}
+							w.Header().Set("Content-Type", "application/json")
+							_ = json.NewEncoder(w).Encode(map[string]any{"users": users, "cursor": cursor})
+						})
 						router.Get("/complete-path/{path}", func(w http.ResponseWriter, r *http.Request) {
 							id, _ := strconv.Atoi(chi.URLParam(r, "connectionID"))
 							connection, err := workspace.Connection(ctx, id)
