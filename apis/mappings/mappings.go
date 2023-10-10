@@ -149,13 +149,13 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 	results, err := m.transformer.CallFunction(ctx, name, m.transformation.Version, []map[string]any{values})
 	if err != nil {
 		if err, ok := err.(*transformers.ExecutionError); ok {
-			return nil, Error(err.Msg)
+			return nil, Error(fmt.Sprintf("%s: %s ", m.transformation.Language.String(), err.Msg))
 		}
 		return nil, fmt.Errorf("error while execution the transformation: %s", err)
 	}
 	transformationOutValues := results[0].Value
 	if transformationOutValues == nil {
-		return nil, fmt.Errorf("error while executing the transformation: %s", results[0].Error)
+		return nil, Error(fmt.Sprintf("%s: %s ", m.transformation.Language.String(), results[0].Error))
 	}
 
 	// Ensure that the transformation's execution hasn't returned property
