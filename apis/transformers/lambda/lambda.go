@@ -16,9 +16,11 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"time"
 
 	"chichi/apis/state"
 	"chichi/apis/transformers"
+	"chichi/backoff"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
@@ -84,12 +86,24 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, v
 	}
 
 	// Invoke the function.
+	var out *lambda.InvokeOutput
 	name = lambdaFunctionName(name)
-	out, err := client.Invoke(ctx, &lambda.InvokeInput{
-		FunctionName: &name,
-		Payload:      b.Bytes(),
-		Qualifier:    &version,
-	})
+	payload := b.Bytes()
+	bo := backoff.New(10, 10, 1*time.Second)
+	for bo.Next(ctx) {
+		out, err = client.Invoke(ctx, &lambda.InvokeInput{
+			FunctionName: &name,
+			Payload:      payload,
+			Qualifier:    &version,
+		})
+		if isHTTPErrorCode(err, 409) {
+			if bo.Attempt() == 1 {
+				bo.SetNextWaitTime(3 * time.Second)
+			}
+			continue
+		}
+		break
+	}
 	if err != nil {
 		if isHTTPErrorCode(err, 404) {
 			return nil, transformers.ErrNotExist
@@ -97,6 +111,9 @@ func (tr *transformer) CallFunction(ctx context.Context, name, version string, v
 		if isHTTPErrorCode(err, 409) {
 			return nil, transformers.ErrPendingState
 		}
+		return nil, err
+	}
+	if err = ctx.Err(); err != nil {
 		return nil, err
 	}
 
