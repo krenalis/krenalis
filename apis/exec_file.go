@@ -192,7 +192,7 @@ func (this *Action) importFromFile(ctx context.Context) error {
 			if err, ok := err.(mappings.Error); ok {
 				return actionExecutionError{err}
 			}
-			return nil
+			return err
 		}
 
 		// Map the properties of the user.

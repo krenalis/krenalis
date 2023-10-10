@@ -182,7 +182,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 			if err, ok := err.(mappings.Error); ok {
 				return actionExecutionError{err}
 			}
-			return nil
+			return err
 		}
 
 		// Update the user, if it already exists on the app.
@@ -280,7 +280,7 @@ func (this *Action) importFromApp(ctx context.Context) error {
 				if err, ok := err.(mappings.Error); ok {
 					return actionExecutionError{err}
 				}
-				return nil
+				return err
 			}
 
 			// Set the user into the data warehouse.
