@@ -189,7 +189,10 @@ func (this *Action) importFromFile(ctx context.Context) error {
 		// mapping input schema.
 		props, err := normalize(props, this.action.InSchema)
 		if err != nil {
-			return actionExecutionError{err}
+			if err, ok := err.(mappings.Error); ok {
+				return actionExecutionError{err}
+			}
+			return nil
 		}
 
 		// Map the properties of the user.

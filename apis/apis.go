@@ -38,6 +38,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const TransformationFailed errors.Code = "TransformationFailed"
+
 type APIs struct {
 	db             *postgres.DB
 	state          *state.State
@@ -459,6 +461,9 @@ func (apis *APIs) TransformationLanguages() []string {
 // returns the transformed data. inSchema is the schema of data, and outSchema
 // is the schema of the transformed data. Only one of mapping and transformation
 // must be non-nil.
+//
+// It returns an errors.UnprocessableError error with code TransformationFailed
+// if the transformation fails due to an error in the executed function.
 func (apis *APIs) TransformPreview(ctx context.Context, data map[string]any, inSchema, outSchema types.Type, mapping map[string]string, transformation *Transformation) (map[string]any, error) {
 
 	apis.mustBeOpen()
@@ -555,8 +560,14 @@ func (apis *APIs) TransformPreview(ctx context.Context, data map[string]any, inS
 		return nil, err
 	}
 	data, err = m.Apply(ctx, data)
+	if err != nil {
+		if err, ok := err.(mappings.Error); ok {
+			return nil, errors.Unprocessable(TransformationFailed, err.Error())
+		}
+		return nil, err
+	}
 
-	return data, err
+	return data, nil
 }
 
 // ValidateExpression validates an expression.

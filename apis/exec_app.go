@@ -179,7 +179,10 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		// Map the properties of the user.
 		props, err = mapping.Apply(ctx, props)
 		if err != nil {
-			return actionExecutionError{err}
+			if err, ok := err.(mappings.Error); ok {
+				return actionExecutionError{err}
+			}
+			return nil
 		}
 
 		// Update the user, if it already exists on the app.
@@ -274,7 +277,10 @@ func (this *Action) importFromApp(ctx context.Context) error {
 			// Map the properties of the user.
 			mappedUser, err := mapping.Apply(ctx, userProps)
 			if err != nil {
-				return actionExecutionError{err}
+				if err, ok := err.(mappings.Error); ok {
+					return actionExecutionError{err}
+				}
+				return nil
 			}
 
 			// Set the user into the data warehouse.

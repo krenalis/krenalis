@@ -107,6 +107,13 @@ func New(inSchema, outSchema types.Type, mappings map[string]string, transformat
 	return &m, nil
 }
 
+// Error represents an error resulting from a mapping or transformation
+// function, such as a syntax error in the function, the use of a non-existent
+// property, or a property being used as an identifier.
+type Error string
+
+func (err Error) Error() string { return string(err) }
+
 // Apply applies the mapping to values and returns the mapped values or an error
 // if values cannot be mapped.
 func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]any, error) {
@@ -141,6 +148,9 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 	name := transformationFunctionName(m.action, m.transformation.Language)
 	results, err := m.transformer.CallFunction(ctx, name, m.transformation.Version, []map[string]any{values})
 	if err != nil {
+		if err, ok := err.(*transformers.ExecutionError); ok {
+			return nil, Error(err.Msg)
+		}
 		return nil, fmt.Errorf("error while execution the transformation: %s", err)
 	}
 	transformationOutValues := results[0].Value
@@ -156,7 +166,7 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 		slices.Sort(names)
 		for _, p := range names {
 			if !slices.Contains(outSchemaProps, p) {
-				return nil, fmt.Errorf("transformation execution has returned an unexpected property %q", p)
+				return nil, Error(fmt.Sprintf("property %q is not present within the output schema", p))
 			}
 		}
 	}
@@ -172,7 +182,7 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 	// identifier for the action).
 	for p := range transformationOutValues {
 		if _, ok := outValues[p]; ok {
-			return nil, fmt.Errorf("property '%s' already used as identifier", p)
+			return nil, Error(fmt.Sprintf("property %q cannot be returned as it is being used as an identifier within the action", p))
 		}
 	}
 

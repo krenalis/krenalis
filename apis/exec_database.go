@@ -79,7 +79,10 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 		// Map the properties of the user.
 		mappedUser, err := mapping.Apply(ctx, props)
 		if err != nil {
-			return err
+			if err, ok := err.(mappings.Error); ok {
+				return actionExecutionError{err}
+			}
+			return nil
 		}
 
 		// Set the user into the data warehouse.
@@ -172,7 +175,10 @@ func (this *Action) exportUsersToDatabase(ctx context.Context) error {
 		// Map the properties of the user.
 		props, err = mapping.Apply(ctx, props)
 		if err != nil {
-			return actionExecutionError{err}
+			if err, ok := err.(mappings.Error); ok {
+				return actionExecutionError{err}
+			}
+			return nil
 		}
 
 		// Serialize the props into column values.
