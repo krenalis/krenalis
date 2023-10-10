@@ -9,7 +9,7 @@ package apis
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"slices"
 	"sync"
 	"time"
@@ -114,7 +114,7 @@ func newScheduler(apis *APIs) *scheduler {
 									if _, ok := err.(*errors.UnprocessableError); ok {
 										return
 									}
-									log.Printf("[error] cannot add execution for action %d: %s", a.ID, err)
+									slog.Debug("cannot add execution for action", "action", a.ID, "err", err)
 								}
 							}()
 						}

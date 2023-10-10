@@ -10,7 +10,7 @@ package main
 import (
 	"context"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -30,11 +30,12 @@ func main() {
 		if err != nil {
 			p = "error.log"
 		}
-		log.Fatalf("cannot open %q: %s", p, err)
+		slog.Error("cannot open log file", "path", p, "err", err)
+		os.Exit(1)
 	}
 	defer logFile.Close()
-	log.SetOutput(io.MultiWriter(logFile, os.Stderr))
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+	logger := slog.New(slog.NewTextHandler(io.MultiWriter(logFile, os.Stderr), nil))
+	slog.SetDefault(logger)
 
 	// Read the configuration file.
 	settingsFile := "config.yaml"
@@ -43,12 +44,14 @@ func main() {
 	}
 	settingsFileContent, err := os.ReadFile(settingsFile)
 	if err != nil {
-		log.Fatalf("cannot read configuration file %q: %s", settingsFile, err)
+		slog.Error("cannot read configuration file", "path", settingsFile, "err", err)
+		os.Exit(1)
 	}
 	var settings server.Settings
 	err = yaml.UnmarshalStrict(settingsFileContent, &settings)
 	if err != nil {
-		log.Fatalf("cannot parse configuration file %q: %s", settingsFile, err)
+		slog.Error("cannot parse configuration file", "path", settingsFile, "err", err)
+		os.Exit(1)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -61,7 +64,7 @@ func main() {
 
 	err = server.Run(ctx, &settings)
 	if err != nil {
-		log.Printf("[error] %s", err)
+		slog.Error("error occurred running server", "err", err)
 	}
 
 }

@@ -14,7 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"slices"
 	"sort"
 	"strconv"
@@ -1181,7 +1181,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
-			log.Printf("[error] cannot get users from the data store of the workspace %d: %s", ws.ID, err)
+			slog.Error("cannot get users from the data store", "workspace", ws.ID, "err", err)
 			return types.Type{}, nil, errors.Unprocessable(DataWarehouseFailed, "store connection is failed: %w", err.Err)
 		}
 		return types.Type{}, nil, err

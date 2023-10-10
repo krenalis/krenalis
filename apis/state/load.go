@@ -9,7 +9,7 @@ package state
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
 	"reflect"
 	"strings"
 	"sync"
@@ -208,7 +208,7 @@ func (state *State) Load() error {
 					if len(schemas) > 0 {
 						err = json.Unmarshal(schemas, &ws.Schemas)
 						if err != nil {
-							log.Fatalf("cannot unmarshal schemas of workspace %d: %s", ws.ID, err)
+							return fmt.Errorf("cannot unmarshal schemas of workspace %d: %s", ws.ID, err)
 						}
 					}
 					err = json.Unmarshal(mapping, &ws.AnonymousIdentifiers.Mapping)

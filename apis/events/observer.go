@@ -11,7 +11,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"math/rand"
 	"sort"
 	"sync"
@@ -88,7 +88,7 @@ func newObserver(db *postgres.DB) *Observer {
 			case t := <-ticker.C:
 				err := observer.flushStats(t.UTC())
 				if err != nil {
-					log.Fatalf("[error] cannot update event stats: %s", err)
+					slog.Error("cannot update event stats", "err", err)
 				}
 			}
 		}

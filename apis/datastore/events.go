@@ -9,7 +9,7 @@ package datastore
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"math/rand"
 	"time"
 
@@ -94,11 +94,11 @@ var eventsMergeTable = warehouses.MergeTable{
 
 // flushEvents flushes a batch of events to the data warehouse.
 func (store *Store) flushEvents(events [][]any) {
-	log.Printf("[info] flush %d events", len(events))
+	slog.Info("flush events", "count", len(events))
 	for {
 		err := store.warehouse.Merge(context.Background(), eventsMergeTable, events, nil)
 		if err != nil {
-			log.Printf("[error] cannot flush the event queue of workspace %d: %s", store.workspace, err)
+			slog.Error("cannot flush the event queue", "workspace", store.workspace, "err", err)
 			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
 			continue
 		}

@@ -11,7 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"slices"
 	"strconv"
 	"strings"
@@ -122,7 +122,7 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 					continue
 				}
 				if err, ok := err.(*mapexp.InvalidConversionError); ok {
-					log.Print(err)
+					slog.Info("cannot convert property", "err", err)
 					continue
 				}
 				return nil, err

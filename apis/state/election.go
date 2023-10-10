@@ -12,7 +12,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"math"
 	"math/rand"
 	"os"
@@ -70,7 +70,7 @@ func (state *State) keepElections() {
 				break
 			}
 			debugf("\t%s\n", err)
-			log.Printf("[warning] cannot send a see leader notification: %s", err)
+			slog.Warn("cannot send a see leader notification", "err", err)
 			if err := state.sleep(100 * time.Millisecond); err != nil {
 				return err
 			}
@@ -135,7 +135,7 @@ func (state *State) keepElections() {
 			}
 		}
 		debugf("\t%s\n", err)
-		log.Printf("[warning] cannot send leader election notification: %s", err)
+		slog.Warn("cannot send leader election notification", "err", err)
 		return nil
 	}
 

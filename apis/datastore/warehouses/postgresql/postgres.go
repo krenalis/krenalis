@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"strconv"
 	"strings"
 	"sync"
@@ -196,7 +196,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	defer func() {
 		_, err := warehouse.db.Exec(ctx, `DROP TABLE "`+tempTableName+`"`)
 		if err != nil {
-			log.Printf("cannot drop temporary table %q from data warehouse: %s", tempTableName, err)
+			slog.Error("cannot drop temporary table from data warehouse", "table", tempTableName, "err", err)
 		}
 	}()
 

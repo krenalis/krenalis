@@ -9,7 +9,7 @@ package server
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"math"
 	"net/http"
 	"net/url"
@@ -1092,6 +1092,6 @@ func respond(w http.ResponseWriter, err error) {
 		_ = err.WriteTo(w)
 		return
 	}
-	log.Printf("[error] %s", err)
+	slog.Error("error occurred serving APIs:", "err", err)
 	http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 }

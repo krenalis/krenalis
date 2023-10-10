@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"strings"
 
 	"chichi/apis/mappings"
@@ -188,7 +188,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 			if err != nil {
 				return actionExecutionError{fmt.Errorf("cannot update user: %s", err)}
 			}
-			log.Printf("[info] user %q updated on %s: %#v", id, connector.Name, props)
+			slog.Info("user updated", "id", id, "connector", connector.Name, "properties", props)
 			continue
 		}
 
@@ -197,7 +197,7 @@ func (this *Action) exportUsersToApp(ctx context.Context) error {
 		if err != nil {
 			return actionExecutionError{fmt.Errorf("cannot create user: %s", err)}
 		}
-		log.Printf("[info] a new user has been created on %s: %#v", connector.Name, user)
+		slog.Info("a new user has been created", "connector", connector.Name, "user", user)
 
 	}
 

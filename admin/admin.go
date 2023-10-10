@@ -11,7 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"path"
 	"path/filepath"
@@ -100,16 +100,16 @@ func (admin *admin) serveWithESBuild(ctx context.Context, w http.ResponseWriter,
 	if result.Errors != nil {
 		errorMessages := &strings.Builder{}
 		for _, msg := range result.Errors {
-			log.Printf("[error] ESBuild error: %v", msg)
+			slog.Error("ESBuild error", "msg", msg)
 			errorMessages.WriteString(fmt.Sprint(msg))
 		}
-		log.Printf("[error] errors while executing ESbuild, cannot serve %q", r.URL.Path)
+		slog.Error("errors while executing ESbuild, cannot serve URL", "url", r.URL.Path)
 		http.Error(w, errorMessages.String(), http.StatusInternalServerError)
 		return
 	}
 	if result.Warnings != nil {
 		for _, msg := range result.Warnings {
-			log.Printf("[warning] ESBuild warning: %v", msg)
+			slog.Warn("ESBuild warning", "msg", msg)
 		}
 	}
 
@@ -160,7 +160,7 @@ func (admin *admin) login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("[error] cannot log account: %s", err)
+		slog.Error("cannot log account", "err", err)
 		return
 	}
 

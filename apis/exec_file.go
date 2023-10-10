@@ -13,7 +13,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"math"
 	"os"
 	pkgPath "path"
@@ -616,7 +616,7 @@ func (cs compressorStorage) Writer(ctx context.Context, path, contentType string
 func closeTempFile(fi *os.File) error {
 	err := fi.Close()
 	if err := os.Remove(fi.Name()); err != nil {
-		log.Printf("[warning] cannot remove temporary file %q: %s", fi.Name(), err)
+		slog.Warn("cannot remove temporary file", "path", fi.Name(), "err", err)
 	}
 	return err
 }

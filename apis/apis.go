@@ -11,7 +11,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"slices"
@@ -603,7 +603,7 @@ func (apis *APIs) onDeleteAction(n state.DeleteAction) {
 					name := transformationFunctionName(n.ID, language)
 					err := apis.transformer.DeleteFunction(apis.close.ctx, name)
 					if err != nil {
-						log.Printf("cannot delete transformer function %q: %s", name, err)
+						slog.Debug("cannot delete transformer function", "name", name, "err", err)
 					}
 				}
 			}

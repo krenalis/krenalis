@@ -11,7 +11,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -76,8 +76,7 @@ func (state *State) keepState() {
 		case n = <-state.notifications.channel:
 		}
 		if logNotifications {
-			log.Printf("[info] received notification from pid %d and name %q : %s",
-				n.PID, n.Name, n.Payload)
+			slog.Info("received notification", "pid", n.PID, "name", n.Name, "payload", n.Payload)
 		}
 		if !state.syncing && n.Name != "LoadState" {
 			if n.Ack != nil {
@@ -141,7 +140,7 @@ func (state *State) keepState() {
 		case "SetWorkspaceSchemas":
 			state.setWorkspaceSchemas(n)
 		default:
-			log.Printf("[warning] unknown notification %q received from %d: %s", n.Name, n.PID, n.Payload)
+			slog.Warn("unknown notification", "name", n.Name, "pid", n.PID, "payload", n.Payload)
 		}
 		if n.Ack != nil {
 			n.Ack <- struct{}{}
@@ -154,7 +153,7 @@ func (state *State) keepState() {
 func decodeNotification(n postgres.Notification, e any) bool {
 	err := json.NewDecoder(strings.NewReader(n.Payload)).Decode(&e)
 	if err != nil {
-		log.Printf("[error] cannot unmarshal notification %s from %d: %s", n.Name, n.PID, err)
+		slog.Error("cannot unmarshal notification", "name", n.Name, "pid", n.PID, "err", err)
 		return false
 	}
 	return true

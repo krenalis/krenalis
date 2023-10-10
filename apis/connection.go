@@ -15,7 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"math"
 	mathrand "math/rand"
 	"reflect"
@@ -2512,7 +2512,7 @@ func (tp *temporaryTransformer) CallFunction(ctx context.Context, _, _ string, v
 		go func() {
 			err := tp.transformer.DeleteFunction(context.Background(), tp.name)
 			if err != nil {
-				log.Printf("[warning] cannot delete transformation function %q: %s", tp.name, err)
+				slog.Warn("cannot delete transformation function", "name", tp.name, "err", err)
 			}
 		}()
 	}()

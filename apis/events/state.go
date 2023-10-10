@@ -11,7 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"unicode/utf8"
 
@@ -48,7 +48,7 @@ func newEventsState(db *postgres.DB, st *state.State, http *httpclient.HTTP) *ev
 		}
 		err := eventSt.openDestination(c)
 		if err != nil {
-			log.Printf("cannot open destination %d: %s", c.ID, err)
+			slog.Error("cannot open destination", "id", c.ID, "err", err)
 			continue
 		}
 	}
@@ -133,7 +133,7 @@ func (st *eventsState) onAddConnection(n state.AddConnection) {
 	}
 	err := st.openDestination(c)
 	if err != nil {
-		log.Printf("cannot open destination %d: %s", c.ID, err)
+		slog.Error("cannot open destination", "id", c.ID, "err", err)
 		return
 	}
 }
@@ -167,7 +167,7 @@ func (st *eventsState) onSetConnectionSettings(n state.SetConnectionSettings) {
 	}
 	err := st.openDestination(c)
 	if err != nil {
-		log.Printf("cannot open destination %d: %s", c.ID, err)
+		slog.Error("cannot open destination", "id", c.ID, "err", err)
 		return
 	}
 }
@@ -181,7 +181,7 @@ func (st *eventsState) onSetConnectionStatus(n state.SetConnectionStatus) {
 		}
 		err := st.openDestination(c)
 		if err != nil {
-			log.Printf("cannot open destination %d: %s", c.ID, err)
+			slog.Error("cannot open destination", "id", c.ID, "err", err)
 			return
 		}
 		return
@@ -203,7 +203,7 @@ func (st *eventsState) onSetWarehouse(n state.SetWarehouse) {
 			if isDestination(c) {
 				err := st.openDestination(c)
 				if err != nil {
-					log.Printf("cannot open destination %d: %s", c.ID, err)
+					slog.Error("cannot open destination", "id", c.ID, "err", err)
 					continue
 				}
 			}
@@ -221,7 +221,7 @@ func (st *eventsState) onSetWorkspace(n state.SetWorkspace) {
 		}
 		err := st.openDestination(c)
 		if err != nil {
-			log.Printf("cannot open destination %d: %s", c.ID, err)
+			slog.Error("cannot open destination", "id", c.ID, "err", err)
 			continue
 		}
 	}

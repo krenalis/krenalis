@@ -9,7 +9,7 @@ package events
 
 import (
 	"context"
-	"log"
+	"log/slog"
 )
 
 // startSenders starts some senders that read from the events channel and write
@@ -42,7 +42,7 @@ func startSenders(events <-chan *processedEvent, done chan<- *processedEvent, st
 					err := destination.SendEvent(ctx, event.inEvent, event.eventType, event.mappedEvent)
 					if err != nil {
 						if err != context.Canceled {
-							log.Printf("cannot send event: %s", err)
+							slog.Error("cannot send event", "err", err)
 						}
 						continue
 					}

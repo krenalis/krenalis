@@ -11,7 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -251,7 +251,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]Event, error) {
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
-			log.Printf("[error] cannot get a user from the data warehouse of the workspace %d: %s", ws.ID, err)
+			slog.Error("cannot get a user from the data warehouse", "workspace", ws.ID, "err", err)
 			return nil, errors.Unprocessable(DataWarehouseFailed, "warehouse connection is failed: %w", err.Err)
 		}
 		return nil, err
@@ -454,7 +454,7 @@ func (this *User) Traits(ctx context.Context) (map[string]any, error) {
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
-			log.Printf("[error] cannot get a user from the data warehouse of the workspace %d: %s", ws.ID, err)
+			slog.Error("cannot get a user from the data warehouse", "workspace", ws.ID, "err", err)
 			return nil, errors.Unprocessable(DataWarehouseFailed, "warehouse connection is failed: %w", err.Err)
 		}
 		return nil, err

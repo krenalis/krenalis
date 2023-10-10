@@ -9,7 +9,7 @@ package events
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 
 	"chichi/backoff"
@@ -88,7 +88,7 @@ dispatch:
 		case event, ok := <-d.events.in:
 			if !ok {
 				if debug {
-					log.Print("dispatcher: events channel closed")
+					slog.Debug("dispatcher: events channel closed")
 				}
 				if numEvents == 0 {
 					break dispatch
@@ -97,7 +97,7 @@ dispatch:
 				continue
 			}
 			if debug {
-				log.Printf("dispatcher: receive event %s", event.id)
+				slog.Debug("dispatcher: receive event", "id", event.id)
 			}
 			// push.
 			key := queueKey{destination: event.destination, endpoint: event.endpoint}
@@ -123,9 +123,9 @@ dispatch:
 			}
 			if debug {
 				if event == nil {
-					log.Print("dispatcher: no event to pop")
+					slog.Debug("dispatcher: no event to pop")
 				} else {
-					log.Printf("dispatcher: pop event %s", event.id)
+					slog.Debug("dispatcher: pop event", "id", event.id)
 				}
 			}
 			if event != nil {
@@ -137,7 +137,7 @@ dispatch:
 		// send is nil if there is no sending event.
 		case send <- sendingEvent:
 			if debug {
-				log.Printf("dispatcher: sent event %s", sendingEvent.id)
+				slog.Debug("dispatcher: sent event", "id", sendingEvent.id)
 			}
 			send = nil // there are no more requests to send
 			sendingEvent = nil
@@ -146,7 +146,7 @@ dispatch:
 		// Receive an event from the senders pool.
 		case event := <-d.done:
 			if debug {
-				log.Printf("dispatcher: receive response for event %s", event.id)
+				slog.Debug("dispatcher: receive response for event", "event", event.id)
 			}
 			// ack.
 			key := queueKey{destination: event.destination, endpoint: event.endpoint}
@@ -176,7 +176,7 @@ dispatch:
 		// Make a dispatcherQueue ready again.
 		case queue := <-ready:
 			if debug {
-				log.Printf("dispatcher: warehouseQueue %d-%d ready again", queue.destination, queue.endpoint)
+				slog.Debug("dispatcher: warehouseQueue ready again", "destination", queue.destination, "endpoint", queue.endpoint)
 			}
 			key := queueKey{destination: queue.destination, endpoint: queue.endpoint}
 			readyQueues[key] = queue
@@ -198,7 +198,13 @@ dispatch:
 				s += " "
 			}
 			s += "]"
-			log.Printf("dispatcher: warehouseQueue (ready: %t, total: %d, sending: %d, head: %d), pop: %t - %s", isReady, len(q.events), len(q.sendingOffsets), q.head, len(pop) > 0, s)
+			slog.Debug("dispatcher: warehouseQueue",
+				"ready", isReady,
+				"total", len(q.events),
+				"sending", len(q.sendingOffsets),
+				"head", q.head,
+				"pop", len(pop) > 0,
+				"content", s)
 		}
 
 	}
@@ -206,7 +212,7 @@ dispatch:
 	close(d.events.out)
 
 	if debug {
-		log.Print("dispatcher: exited")
+		slog.Debug("dispatcher: exited")
 	}
 
 }

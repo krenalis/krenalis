@@ -10,7 +10,7 @@ package userswarehouse
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"reflect"
 	"slices"
 	"sort"
@@ -64,7 +64,7 @@ func SetUser(ctx context.Context, store *datastore.Store, A *state.Action, U map
 	if err != nil {
 		return err
 	}
-	log.Printf("[info] user %d created", gid)
+	slog.Info("user created", "gid", gid)
 
 	// Name 'current' the newly created user.
 	current := datastore.IRUser{
@@ -111,7 +111,7 @@ matchingUsersLoop:
 		if err != nil {
 			return fmt.Errorf("cannot merge users: %s", err)
 		}
-		log.Printf("[info] user %d merged into %d", current.ID, u.ID)
+		slog.Info("user merged", "from", current.ID, "to", u.ID)
 
 		// Assume 'u' as 'current'.
 		current = u

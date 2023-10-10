@@ -15,7 +15,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
+	"log/slog"
 	"math"
 	"mime"
 	"net"
@@ -225,7 +225,7 @@ func (c *collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case errUnauthorized:
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		default:
-			log.Printf("[error] %s", err)
+			slog.Error("error occurred collecting an event", "err", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
 	}
@@ -906,7 +906,7 @@ func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
 			err = traitsEnc.Encode(e.Context.Traits)
 		}
 		if err != nil {
-			log.Printf("[error] cannot marshal event: %s", err)
+			slog.Error("cannot marshal event", "err", err)
 			continue
 		}
 		traits.Truncate(traits.Len() - 1) // remove the new line added by json.Encode
@@ -918,7 +918,7 @@ func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
 		} else {
 			err = propertiesEnc.Encode(e.Properties)
 			if err != nil {
-				log.Printf("[error] cannot marshal event: %s", err)
+				slog.Error("cannot marshal event", "err", err)
 				continue
 			}
 			properties.Truncate(properties.Len() - 1) // remove the new line added by json.Encode

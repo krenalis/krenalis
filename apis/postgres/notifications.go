@@ -15,7 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
+	"log/slog"
 	"math"
 	"math/rand"
 	"reflect"
@@ -125,7 +125,7 @@ func (db *DB) ListenToNotifications() (notifications <-chan Notification, stop f
 					close(stopped)
 					return
 				default:
-					log.Printf("[error] %s", err)
+					slog.Error("error occurred listening notifications", "err", err)
 				}
 			}
 			if sleep > 0 {

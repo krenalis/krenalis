@@ -10,7 +10,7 @@ package datastore
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 
@@ -87,7 +87,7 @@ func New(st *state.State, redisConfig RedisConfig) *Datastore {
 			go func(ws *state.Workspace) {
 				store, err := newStore(ds, ws)
 				if err != nil {
-					log.Printf("[error] %s", err)
+					slog.Error("cannot create a store", "err", err)
 					return
 				}
 				ds.mu.Lock()
@@ -110,7 +110,7 @@ func (ds *Datastore) Close() {
 	for _, store := range ds.store {
 		err = store.close()
 		if err != nil {
-			log.Printf("[warning] cannot close store: %s", err)
+			slog.Warn("cannot close store", "err", err)
 		}
 	}
 	ds.mu.Unlock()
@@ -214,7 +214,7 @@ func (ds *Datastore) setStore(ws *state.Workspace) {
 	if ws.Warehouse != nil {
 		nextStore, err = newStore(ds, ws)
 		if err != nil {
-			log.Printf("[error] cannot create a new store for workspace %d: %s", ws.ID, err)
+			slog.Error("cannot create a new store", "workspace", ws.ID, "err", err)
 		}
 	}
 	ds.mu.Lock()
@@ -224,7 +224,7 @@ func (ds *Datastore) setStore(ws *state.Workspace) {
 	if prevStore != nil {
 		err = prevStore.close()
 		if err != nil {
-			log.Printf("[error] error occurred closing a store for the workspace %d: %s", ws.ID, err)
+			slog.Error("cannot close store", "workspace", ws.ID, "err", err)
 		}
 	}
 }
