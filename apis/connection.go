@@ -2329,10 +2329,10 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 				return err
 			}
 			mappingIsMandatory = schema.Valid()
-			transformationIsAllowed = false
+			transformationIsAllowed = true
 		} else {
 			mappingIsMandatory = targetUsersOrGroups
-			transformationIsAllowed = mappingIsMandatory
+			transformationIsAllowed = true
 		}
 	case state.MobileType, state.ServerType, state.WebsiteType:
 		mappingIsMandatory = targetUsersOrGroups
