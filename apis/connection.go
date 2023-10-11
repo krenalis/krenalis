@@ -636,7 +636,7 @@ func (this *Connection) SendEventPreview(ctx context.Context, event _connector.E
 		return nil, fmt.Errorf("cannot connect to the connector: %s", err)
 	}
 	// TODO(marco): validate data according to the event type's schema.
-	return app.(_connector.AppEventsConnection).SendEventPreview(ctx, event, typ, data)
+	return app.(_connector.AppEventsConnection).SendEventPreview(ctx, typ, event, data)
 }
 
 // ExecQuery executes the given query on the connection and returns the

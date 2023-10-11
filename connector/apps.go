@@ -92,11 +92,11 @@ type AppEventsConnection interface {
 
 	// SendEvent sends the event, along with the given mapped data.
 	// Can be used by multiple goroutines at the same time.
-	SendEvent(ctx context.Context, event Event, typ string, data map[string]any) error
+	SendEvent(ctx context.Context, eventType string, event Event, data map[string]any) error
 
 	// SendEventPreview returns a preview of the event that would be sent when
 	// calling SendEvent with the same arguments.
-	SendEventPreview(ctx context.Context, event Event, typ string, data map[string]any) ([]byte, error)
+	SendEventPreview(ctx context.Context, eventType string, event Event, data map[string]any) ([]byte, error)
 }
 
 // Object represents either a user or a group.

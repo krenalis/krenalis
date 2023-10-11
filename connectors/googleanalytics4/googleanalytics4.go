@@ -108,14 +108,14 @@ func (c *connection) Resource(ctx context.Context) (string, error) {
 
 // SendEvent sends the event, along with the given mapped data.
 // eventType specifies the event type corresponding to the event.
-func (c *connection) SendEvent(ctx context.Context, event connector.Event, typ string, data map[string]any) error {
-	return c.collect(eventBody(event, typ, data))
+func (c *connection) SendEvent(ctx context.Context, eventType string, event connector.Event, data map[string]any) error {
+	return c.collect(eventBody(eventType, event, data))
 }
 
 // SendEventPreview returns a preview of the event that would be sent when
 // calling SendEvent with the same arguments.
-func (c *connection) SendEventPreview(ctx context.Context, event connector.Event, typ string, data map[string]any) ([]byte, error) {
-	return json.MarshalIndent(eventBody(event, typ, data), "", "\t")
+func (c *connection) SendEventPreview(ctx context.Context, eventType string, event connector.Event, data map[string]any) ([]byte, error) {
+	return json.MarshalIndent(eventBody(eventType, event, data), "", "\t")
 }
 
 // ServeUI serves the connector's user interface.
@@ -229,9 +229,9 @@ func (c *connection) collect(body any) error {
 	return nil
 }
 
-func eventBody(event connector.Event, typ string, data map[string]any) any {
+func eventBody(eventType string, event connector.Event, data map[string]any) any {
 	var ev map[string]any
-	switch typ {
+	switch eventType {
 	case "page_view":
 		ev = map[string]any{
 			"page_location": event.Context.Page.URL,
@@ -250,7 +250,7 @@ func eventBody(event connector.Event, typ string, data map[string]any) any {
 			ev["item_id"] = itemID
 		}
 	default:
-		panic(fmt.Sprintf("unsupported event type %q", typ))
+		panic(fmt.Sprintf("unsupported event type %q", eventType))
 	}
 	body := map[string]any{
 		// TODO(Gianluca): consider sending the user ID as the client_id, if

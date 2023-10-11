@@ -105,8 +105,8 @@ func (c *connection) Resource(ctx context.Context) (string, error) {
 
 // SendEvent sends the event, along with the given mapped data.
 // eventType specifies the event type corresponding to the event.
-func (c *connection) SendEvent(ctx context.Context, event connector.Event, typ string, data map[string]any) error {
-	b, err := json.Marshal(eventBody(event, typ, data))
+func (c *connection) SendEvent(ctx context.Context, eventType string, event connector.Event, data map[string]any) error {
+	b, err := json.Marshal(eventBody(eventType, event, data))
 	if err != nil {
 		return err
 	}
@@ -115,8 +115,8 @@ func (c *connection) SendEvent(ctx context.Context, event connector.Event, typ s
 
 // SendEventPreview returns a preview of the event that would be sent when
 // calling SendEvent with the same arguments.
-func (c *connection) SendEventPreview(ctx context.Context, event connector.Event, typ string, data map[string]any) ([]byte, error) {
-	return json.MarshalIndent(eventBody(event, typ, data), "", "\t")
+func (c *connection) SendEventPreview(ctx context.Context, eventType string, event connector.Event, data map[string]any) ([]byte, error) {
+	return json.MarshalIndent(eventBody(eventType, event, data), "", "\t")
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.
@@ -456,7 +456,7 @@ func (c *connection) call(ctx context.Context, method, url string, body io.Reade
 	return nil
 }
 
-func eventBody(event connector.Event, typ string, data map[string]any) any {
+func eventBody(eventType string, event connector.Event, data map[string]any) any {
 	var msg struct {
 		Data struct {
 			Type       string `json:"type"`

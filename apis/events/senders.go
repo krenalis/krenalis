@@ -39,7 +39,7 @@ func startSenders(events <-chan *processedEvent, done chan<- *processedEvent, st
 						continue
 					}
 					// TODO(Gianluca): use correct error handling here.
-					err := destination.SendEvent(ctx, event.inEvent, event.eventType, event.mappedEvent)
+					err := destination.SendEvent(ctx, event.eventType, event.inEvent, event.mappedEvent)
 					if err != nil {
 						if err != context.Canceled {
 							slog.Error("cannot send event", "err", err)
