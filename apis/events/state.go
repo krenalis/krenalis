@@ -95,7 +95,8 @@ func (st *eventsState) ConnectionByKey(key string) (*state.Connection, bool) {
 	return nil, false
 }
 
-// Actions returns the enabled actions for every enabled connection.
+// Actions returns the app destination actions that are enabled, have the Events
+// target, and their connection is enabled.
 func (st *eventsState) Actions() []*state.Action {
 	var actions []*state.Action
 	for _, action := range st.state.Actions() {

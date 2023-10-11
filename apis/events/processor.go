@@ -74,9 +74,6 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 				select {
 				case event := <-events:
 					for _, action := range st.Actions() {
-						if action.Target != state.EventsTarget {
-							continue
-						}
 						// Convert the collectedEvent to a map of properties.
 						mapEvent, err := collectedEventToMap(event)
 						if err != nil {
