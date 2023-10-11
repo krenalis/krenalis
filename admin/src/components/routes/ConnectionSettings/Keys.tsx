@@ -67,17 +67,17 @@ const Keys = ({ connection: c }: KeysProps) => {
 				showStatus(statuses.connectionDoesNotExistAnymore);
 				return;
 			}
-			if (err instanceof UnprocessableError && err.code !== 'KeyNotExists') {
+			if (err instanceof UnprocessableError && err.code !== 'KeyNotExist') {
 				if (err.code === 'UniqueKey') {
 					showStatus(statuses.uniqueKey);
 				}
 				return;
 			}
-			if (err.code !== 'KeyNotExists') {
+			if (err.code !== 'KeyNotExist') {
 				showError(err);
 				return;
 			}
-			// if the error code is 'KeyNotExists', const the key be removed from
+			// if the error code is 'KeyNotExist', const the key be removed from
 			// the UI without showing errors.
 		}
 		const ks: string[] = [];

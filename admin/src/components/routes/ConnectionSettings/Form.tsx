@@ -36,7 +36,7 @@ const Form = ({ connection: c }: FormProps) => {
 					return;
 				}
 				if (err instanceof UnprocessableError) {
-					if (err.code === 'EventNotExists') {
+					if (err.code === 'EventNotExist') {
 						console.error(
 							`Unprocessable: connection does not implement the 'load' event in its ServeUI method`,
 						);
@@ -85,7 +85,7 @@ const Form = ({ connection: c }: FormProps) => {
 				return;
 			}
 			if (err instanceof UnprocessableError) {
-				if (err.code === 'EventNotExists') {
+				if (err.code === 'EventNotExist') {
 					console.error(
 						`Unprocessable: connection does not implement the ${eventName} event in its ServeUI method`,
 					);

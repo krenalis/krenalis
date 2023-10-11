@@ -86,7 +86,7 @@ const useActionData = (
 								text: 'The groups schema is not currently defined',
 							});
 							break;
-						case 'EventTypeNotExists':
+						case 'EventTypeNotExist':
 							showStatus({ variant: variants.DANGER, icon: icons.NOT_FOUND, text: err.message });
 							break;
 						default:

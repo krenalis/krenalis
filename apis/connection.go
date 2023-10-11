@@ -55,24 +55,24 @@ const (
 )
 
 var (
-	ConnectionNotExists  errors.Code = "ConnectionNotExists"
-	ConnectorNotExists   errors.Code = "ConnectorNotExists"
-	EventNotExists       errors.Code = "EventNotExists"
-	EventTypeNotExists   errors.Code = "EventTypeNotExists"
+	ConnectionNotExist   errors.Code = "ConnectionNotExist"
+	ConnectorNotExist    errors.Code = "ConnectorNotExist"
+	EventNotExist        errors.Code = "EventNotExist"
+	EventTypeNotExist    errors.Code = "EventTypeNotExist"
 	FetchSchemaFailed    errors.Code = "FetchSchemaFailed"
 	InvalidPath          errors.Code = "InvalidPath"
 	InvalidTable         errors.Code = "InvalidTable"
-	KeyNotExists         errors.Code = "KeyNotExists"
+	KeyNotExist          errors.Code = "KeyNotExist"
 	LanguageNotSupported errors.Code = "LanguageNotSupported"
 	NoGroupsSchema       errors.Code = "NoGroupsSchema"
 	NoStorage            errors.Code = "NoStorage"
 	NoUsersSchema        errors.Code = "NoUsersSchema"
 	ReadFileFailed       errors.Code = "ReadFileFailed"
-	StorageNotExists     errors.Code = "StorageNotExists"
-	TargetAlreadyExists  errors.Code = "TargetAlreadyExists"
+	StorageNotExist      errors.Code = "StorageNotExist"
+	TargetAlreadyExist   errors.Code = "TargetAlreadyExist"
 	TooManyKeys          errors.Code = "TooManyKeys"
 	UniqueKey            errors.Code = "UniqueKey"
-	WorkspaceNotExists   errors.Code = "WorkspaceNotExists"
+	WorkspaceNotExist    errors.Code = "WorkspaceNotExist"
 )
 
 // Connection represents a connection.
@@ -202,7 +202,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 				}
 			}
 			if et == nil {
-				return nil, errors.Unprocessable(EventTypeNotExists, "event type %q not found", eventType)
+				return nil, errors.Unprocessable(EventTypeNotExist, "event type %q not found", eventType)
 			}
 			etSchema, err := this.fetchAppSchema(ctx, state.EventsTarget, eventType)
 			if err != nil {
@@ -305,11 +305,11 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 //
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore, and returns an errors.UnprocessableError error with code
-//   - ConnectionNotExists, if the connection does not exist.
+//   - ConnectionNotExist, if the connection does not exist.
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - MappingOverAnonymousIdentifier, if the action maps over an anonymous
 //     identifier.
-//   - TargetAlreadyExists, if an action already exists for a target for the
+//   - TargetAlreadyExist, if an action already exists for a target for the
 //     connection.
 func (this *Connection) AddAction(ctx context.Context, target ActionTarget, eventType string, action ActionToSet) (int, error) {
 
@@ -450,7 +450,7 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 				err = tx.QueryVoid(ctx, "SELECT FROM actions WHERE connection = $1 AND target = 'Events'", n.Connection)
 				if err != sql.ErrNoRows {
 					if err == nil {
-						err = errors.Unprocessable(TargetAlreadyExists,
+						err = errors.Unprocessable(TargetAlreadyExist,
 							"action with target %s already exists for %s connection %d", n.Target, typ, n.Connection)
 					}
 					return err
@@ -480,7 +480,7 @@ func (this *Connection) AddAction(ctx context.Context, target ActionTarget, even
 			n.TableName, n.Sheet, n.ExportMode, matchPropInternal, matchPropExternal)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {
-				err = errors.Unprocessable(ConnectionNotExists, "connection %d does not exist", n.Connection)
+				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)
 			}
 			return err
 		}
@@ -996,7 +996,7 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 			return err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.Unprocessable(KeyNotExists, "key %q does not exist", key)
+			return errors.Unprocessable(KeyNotExist, "key %q does not exist", key)
 		}
 		return tx.Notify(ctx, n)
 	})
@@ -1032,7 +1032,7 @@ func (this *Connection) SetStatus(ctx context.Context, enabled bool) error {
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If the event does not exist, it returns an errors.UnprocessableError error
-// with code EventNotExists.
+// with code EventNotExist.
 func (this *Connection) ServeUI(ctx context.Context, event string, values []byte) ([]byte, error) {
 
 	this.apis.mustBeOpen()
@@ -1078,7 +1078,7 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 	form, alert, err := connectionUI.ServeUI(ctx, event, values)
 	if err != nil {
 		if err == ui.ErrEventNotExist {
-			err = errors.Unprocessable(EventNotExists, "UI event %q does not exist for %s connector",
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector",
 				event, connector.Name)
 		}
 		return nil, err
@@ -1096,7 +1096,7 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 // If the connection does not exist anymore, it returns an errors.NotFoundError
 // error.
 // If the storage does not exist, it returns an errors.UnprocessableError error
-// with code StorageNotExists.
+// with code StorageNotExist.
 func (this *Connection) SetStorage(ctx context.Context, storage int, compression Compression) error {
 
 	this.apis.mustBeOpen()
@@ -1122,7 +1122,7 @@ func (this *Connection) SetStorage(ctx context.Context, storage int, compression
 		var ok bool
 		s, ok = c.Workspace().Connection(storage)
 		if !ok {
-			return errors.Unprocessable(StorageNotExists, "storage %d does not exist", storage)
+			return errors.Unprocessable(StorageNotExist, "storage %d does not exist", storage)
 		}
 		if s.Connector().Type != state.StorageType {
 			return errors.BadRequest("connection %d is not a storage", storage)
@@ -1149,7 +1149,7 @@ func (this *Connection) SetStorage(ctx context.Context, storage int, compression
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "connections_storage_fkey" {
-					err = errors.Unprocessable(StorageNotExists, "storage %d does not exist", storage)
+					err = errors.Unprocessable(StorageNotExist, "storage %d does not exist", storage)
 				}
 			}
 			return err
@@ -1973,7 +1973,7 @@ func (this *Connection) fetchAppSchema(ctx context.Context, target state.ActionT
 				}
 			}
 			if !found {
-				return types.Type{}, errors.Unprocessable(EventNotExists, "connection %d does not have event type %q", c.ID, eventType)
+				return types.Type{}, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
 			}
 		}
 	case state.UsersTarget:

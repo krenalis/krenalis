@@ -96,7 +96,7 @@ const statuses: Record<string, Status> = {
 		icon: icons.FORBIDDEN,
 		text: 'This connection already has configured mappings',
 	},
-	eventTypeNotExists: {
+	eventTypeNotExist: {
 		variant: variants.DANGER,
 		icon: icons.NOT_FOUND,
 		text: 'This event type does not exist enymore',

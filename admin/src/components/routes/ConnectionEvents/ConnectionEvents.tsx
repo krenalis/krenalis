@@ -36,7 +36,7 @@ const ConnectionEvents = () => {
 				listener = await api.workspaces.eventlisteners.add(3, c.id);
 			} catch (err) {
 				if (err instanceof UnprocessableError) {
-					if ( err.code === 'ConnectionNotExists' ) {
+					if ( err.code === 'ConnectionNotExist' ) {
 						redirect('connections');
 						showStatus(statuses.connectionDoesNotExistAnymore);
 					}

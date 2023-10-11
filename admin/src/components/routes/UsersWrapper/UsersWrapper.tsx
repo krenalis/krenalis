@@ -89,7 +89,7 @@ const UsersWrapper = () => {
 			}
 			if (err instanceof UnprocessableError) {
 				switch (err.code) {
-					case 'PropertyNotExists':
+					case 'PropertyNotExist':
 						localStorage.removeItem('usersProperties');
 						fetchUsers(page);
 						break;

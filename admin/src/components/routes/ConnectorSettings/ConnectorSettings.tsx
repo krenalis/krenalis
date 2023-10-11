@@ -89,7 +89,7 @@ const ConnectorSettings = () => {
 					return;
 				}
 				if (err instanceof UnprocessableError) {
-					if (err.code === 'EventNotExists') {
+					if (err.code === 'EventNotExist') {
 						console.error(
 							`Unprocessable: connector does not implement the 'load' event in its ServeUI method`,
 						);
@@ -142,14 +142,14 @@ const ConnectorSettings = () => {
 			} catch (err) {
 				if (err instanceof UnprocessableError) {
 					switch (err.code) {
-						case 'ConnectorNotExists':
+						case 'ConnectorNotExist':
 							redirect('connectors');
 							showStatus(statuses.connectorDoesNotExistAnymore);
 							break;
 						case 'InvalidSettings':
 							showStatus(statuses.settingsNotValid);
 							break;
-						case 'StorageNotExists':
+						case 'StorageNotExist':
 							showStatus(statuses.storageNotExist);
 							break;
 						default:
@@ -175,7 +175,7 @@ const ConnectorSettings = () => {
 			ui = await api.connectors.uiEvent(connectorID, eventName, values, connectionRole, OAuthToken);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
-				if (err.code === 'EventNotExists') {
+				if (err.code === 'EventNotExist') {
 					console.error(
 						`Unprocessable: connection does not implement the ${eventName} event in its ServeUI method`,
 					);
@@ -230,14 +230,14 @@ const ConnectorSettings = () => {
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				switch (err.code) {
-					case 'ConnectorNotExists':
+					case 'ConnectorNotExist':
 						redirect('connectors');
 						showStatus(statuses.connectorDoesNotExistAnymore);
 						break;
 					case 'InvalidSettings':
 						showStatus(statuses.settingsNotValid);
 						break;
-					case 'StorageNotExists':
+					case 'StorageNotExist':
 						showStatus(statuses.storageNotExist);
 						break;
 					default:

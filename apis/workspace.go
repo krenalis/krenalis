@@ -52,9 +52,9 @@ var (
 	InvalidWarehouseType errors.Code = "InvalidWarehouseType"
 	NoWarehouse          errors.Code = "NoWarehouse"
 	NotConnected         errors.Code = "NotConnected"
-	OrderNotExists       errors.Code = "OrderNotExists"
+	OrderNotExist        errors.Code = "OrderNotExist"
 	OrderTypeNotSortable errors.Code = "OrderTypeNotSortable"
-	PropertyNotExists    errors.Code = "PropertyNotExists"
+	PropertyNotExist     errors.Code = "PropertyNotExist"
 	TooManyListeners     errors.Code = "TooManyListeners"
 )
 
@@ -91,9 +91,9 @@ type ConnectionOptions struct {
 // options to the workspace, and returns its identifier.
 //
 // It returns an errors.UnprocessableError error with code
-//   - ConnectorNotExists, if the connector does not exist.
+//   - ConnectorNotExist, if the connector does not exist.
 //   - InvalidSettings, if the settings are not valid.
-//   - StorageNotExists, if the storage does not exist.
+//   - StorageNotExist, if the storage does not exist.
 func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, connector int, settings []byte, opts ConnectionOptions) (int, error) {
 
 	this.apis.mustBeOpen()
@@ -121,7 +121,7 @@ func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, c
 
 	c, ok := this.apis.state.Connector(connector)
 	if !ok {
-		return 0, errors.Unprocessable(ConnectorNotExists, "connector %d does not exist", connector)
+		return 0, errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
 	}
 
 	n := state.AddConnection{
@@ -143,7 +143,7 @@ func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, c
 		}
 		s, ok := this.workspace.Connection(opts.Storage)
 		if !ok {
-			return 0, errors.Unprocessable(StorageNotExists, "storage %d does not exist", opts.Storage)
+			return 0, errors.Unprocessable(StorageNotExist, "storage %d does not exist", opts.Storage)
 		}
 		if s.Connector().Type != state.StorageType {
 			return 0, errors.BadRequest("connection %d is not a storage", opts.Storage)
@@ -272,9 +272,9 @@ func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, c
 				if postgres.IsForeignKeyViolation(err) {
 					switch postgres.ErrConstraintName(err) {
 					case "resources_workspace_fkey":
-						err = errors.Unprocessable(WorkspaceNotExists, "workspace %d does not exist", n.Workspace)
+						err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
 					case "resources_connector_fkey":
-						err = errors.Unprocessable(ConnectorNotExists, "connector %d does not exist", n.Connector)
+						err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
 					}
 				}
 				return err
@@ -290,11 +290,11 @@ func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, c
 				if postgres.IsForeignKeyViolation(err) {
 					switch postgres.ErrConstraintName(err) {
 					case "connections_workspace_fkey":
-						err = errors.Unprocessable(WorkspaceNotExists, "workspace %d does not exist", n.Workspace)
+						err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
 					case "connections_connector_fkey":
-						err = errors.Unprocessable(ConnectorNotExists, "connector %d does not exist", n.Connector)
+						err = errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", n.Connector)
 					case "connections_storage_fkey":
-						err = errors.Unprocessable(StorageNotExists, "storage %d does not exist", n.Storage)
+						err = errors.Unprocessable(StorageNotExist, "storage %d does not exist", n.Storage)
 					}
 				}
 			}
@@ -327,7 +327,7 @@ func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, c
 // method; it must be in the range [1,1000].
 //
 // If the source connection does not exist, it returns an
-// errors.UnprocessableError error with code ConnectionNotExists.
+// errors.UnprocessableError error with code ConnectionNotExist.
 // If there are already too many listeners, it returns an
 // errors.UnprocessableError error with code TooManyListeners.
 func (this *Workspace) AddEventListener(ctx context.Context, size, source int) (string, error) {
@@ -348,7 +348,7 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int) (
 			"WHERE id = $1 AND workspace = $2", source, this.workspace.ID).Scan(&typ, &role)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return "", errors.Unprocessable(ConnectionNotExists, "connection %d does not exist", source)
+				return "", errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", source)
 			}
 			return "", err
 		}
@@ -731,7 +731,7 @@ type authorizedResource struct {
 // connection to the workspace for the specified connector.
 //
 // It returns an errors.NotFound error if the workspace does not exist anymore.
-// It returns an errors.UnprocessableError error with code ConnectorNotExists if
+// It returns an errors.UnprocessableError error with code ConnectorNotExist if
 // the connector does not exist.
 func (this *Workspace) OAuthToken(ctx context.Context, authorizationCode, redirectURI string, connector int) (string, error) {
 
@@ -746,7 +746,7 @@ func (this *Workspace) OAuthToken(ctx context.Context, authorizationCode, redire
 
 	c, ok := this.apis.state.Connector(connector)
 	if !ok {
-		return "", errors.Unprocessable(ConnectorNotExists, "connector %d does not exist", connector)
+		return "", errors.Unprocessable(ConnectorNotExist, "connector %d does not exist", connector)
 	}
 	if c.OAuth == nil {
 		return "", errors.BadRequest("connector %d does not support OAuth", connector)
@@ -1133,7 +1133,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 			if !types.IsValidPropertyName(name) {
 				return types.Type{}, nil, errors.BadRequest("property name %q is not valid", name)
 			}
-			return types.Type{}, nil, errors.Unprocessable(PropertyNotExists, "property name %s does not exist", name)
+			return types.Type{}, nil, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
 		}
 	}
 	var where expr.Expr
@@ -1141,7 +1141,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		_, err := validateFilter(filter, *usersSchema)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
-				return types.Type{}, nil, errors.Unprocessable(PropertyNotExists, "filter's property %s does not exist", err.Path)
+				return types.Type{}, nil, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
 			}
 			return types.Type{}, nil, errors.BadRequest("filter is not valid: %w", err)
 		}
@@ -1154,7 +1154,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		}
 		orderProperty, ok := propertyByName[order]
 		if !ok {
-			return types.Type{}, nil, errors.Unprocessable(OrderNotExists, "order %s does not exist in schema", order)
+			return types.Type{}, nil, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
 		}
 		switch orderProperty.Type.PhysicalType() {
 		case types.PtJSON, types.PtArray, types.PtObject, types.PtMap:

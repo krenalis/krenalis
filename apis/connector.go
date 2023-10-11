@@ -160,7 +160,7 @@ func (this *Connector) AuthCodeURL(redirectURI string) (string, error) {
 // required if the connector requires OAuth.
 //
 // If the event does not exist, it returns an errors.UnprocessableError error
-// with code EventNotExists.
+// with code EventNotExist.
 func (this *Connector) ServeUI(ctx context.Context, event string, values []byte, role ConnectionRole, oAuth string) ([]byte, error) {
 
 	this.apis.mustBeOpen()
@@ -207,7 +207,7 @@ func (this *Connector) ServeUI(ctx context.Context, event string, values []byte,
 	}
 	if err != nil {
 		if err == ui.ErrEventNotExist {
-			err = errors.Unprocessable(EventNotExists, "UI event %q does not exist for %s connector", event, c.Name)
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, c.Name)
 		}
 		return nil, err
 	}

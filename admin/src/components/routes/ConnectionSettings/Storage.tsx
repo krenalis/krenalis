@@ -27,7 +27,7 @@ const Storage = ({ connection: c }: StorageProps) => {
 				return;
 			}
 			if (err instanceof UnprocessableError) {
-				if (err.code === 'StorageNotExists') {
+				if (err.code === 'StorageNotExist') {
 					showStatus(statuses.storageNotExist);
 				}
 				return;
