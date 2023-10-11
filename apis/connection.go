@@ -2323,8 +2323,17 @@ func (this *Connection) validateActionToSet(action ActionToSet, target state.Act
 	var transformationIsAllowed bool
 	switch connector.Type {
 	case state.AppType:
-		mappingIsMandatory = targetUsersOrGroups
-		transformationIsAllowed = mappingIsMandatory
+		if c.Role == state.DestinationRole && target == state.EventsTarget {
+			schema, err := this.fetchAppSchema(context.Background(), target, eventType)
+			if err != nil {
+				return err
+			}
+			mappingIsMandatory = schema.Valid()
+			transformationIsAllowed = false
+		} else {
+			mappingIsMandatory = targetUsersOrGroups
+			transformationIsAllowed = mappingIsMandatory
+		}
 	case state.MobileType, state.ServerType, state.WebsiteType:
 		mappingIsMandatory = targetUsersOrGroups
 		transformationIsAllowed = false
