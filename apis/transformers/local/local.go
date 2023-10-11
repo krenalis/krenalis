@@ -130,7 +130,12 @@ for ( let i = 0; i < event.length; i++ ) {
 		let value = transform(event[i]);
 		results[i] = { "value": value };
 	} catch (error) {
-		results[i] = { "error": error };
+		if (error instanceof Error) {
+			error = error.toString();
+		} else {
+			error = "throw error of type " + (typeof error) + ": " + JSON.stringify(error);
+		}
+		results[i] = { error: error };
 	}
 }
 process.stdout.write(JSON.stringify(results))`
