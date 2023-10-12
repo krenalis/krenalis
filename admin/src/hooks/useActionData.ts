@@ -259,7 +259,7 @@ const useActionData = (
 		const flattenedOutputSchema = flattenSchema(actionType.OutputSchema);
 		if (actionType.Fields.includes('Identifiers')) {
 			if (action.Identifiers!.length === 0) {
-				showError(`You must define at least one identifier`);
+				showError(`Please, ensure that at least one identifier is defined`);
 				return;
 			} else {
 				if (action.Mapping == null) {
@@ -288,7 +288,7 @@ const useActionData = (
 					continue;
 				}
 				if (v.error && v.error !== '') {
-					showError(`You must fix the errors on the mapping before saving`);
+					showError(`Please fix the errors in the mapping before saving`);
 					return;
 				}
 				const property = flattenedOutputSchema![k];

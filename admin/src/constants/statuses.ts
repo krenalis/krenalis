@@ -22,23 +22,23 @@ const statuses: Record<string, Status> = {
 	tooManyKeys: {
 		variant: variants.DANGER,
 		icon: icons.FORBIDDEN,
-		text: 'You have reached the maximum number of keys',
+		text: 'The maximum number of keys has been reached',
 	},
-	uniqueKey: { variant: variants.DANGER, icon: icons.FORBIDDEN, text: 'You cannot delete the last key' },
+	uniqueKey: { variant: variants.DANGER, icon: icons.FORBIDDEN, text: 'The last key cannot be deleted' },
 	alreadyInProgress: {
 		variant: variants.DANGER,
 		icon: icons.FORBIDDEN,
-		text: 'You already have an import in progress',
+		text: 'There is already an import in progress',
 	},
 	noStorage: {
 		variant: variants.DANGER,
 		icon: icons.FORBIDDEN,
-		text: 'You must associate a storage connection before starting an import',
+		text: 'Please, ensure that a storage connection is associated before starting an import',
 	},
 	noTransformationNorMappings: {
 		variant: variants.DANGER,
 		icon: icons.FORBIDDEN,
-		text: 'You must associate the mappings or a transformation before starting an import',
+		text: 'Please associate the mappings or a transformation before starting an import',
 	},
 	noWarehouse: {
 		variant: variants.DANGER,
@@ -58,12 +58,12 @@ const statuses: Record<string, Status> = {
 	notEnabled: {
 		variant: variants.DANGER,
 		icon: icons.FORBIDDEN,
-		text: 'You must enable the connection before starting an import',
+		text: 'Please ensure that the connection is enabled before starting an import',
 	},
 	storageNotEnabled: {
 		variant: variants.DANGER,
 		icon: icons.FORBIDDEN,
-		text: 'You must enable the storage associated to this connection before starting an import',
+		text: 'Please enable the storage associated with this connection before starting an import',
 	},
 	storageNotExist: {
 		variant: variants.DANGER,
@@ -84,7 +84,7 @@ const statuses: Record<string, Status> = {
 	tooManyListeners: {
 		variant: variants.DANGER,
 		icon: icons.FORBIDDEN,
-		text: 'You have exceeded the number of event listeners allowed',
+		text: 'Please note that the number of event listeners allowed has been exceeded',
 	},
 	alreadyHasTransformation: {
 		variant: variants.DANGER,
@@ -99,37 +99,37 @@ const statuses: Record<string, Status> = {
 	eventTypeNotExist: {
 		variant: variants.DANGER,
 		icon: icons.NOT_FOUND,
-		text: 'This event type does not exist enymore',
+		text: 'This event type does not exist anymore',
 	},
 	actionExecutionInProgress: {
 		variant: variants.DANGER,
 		icon: icons.FORBIDDEN,
 		text: 'This action is already in progress',
 	},
-	querySet: { variant: variants.PRIMARY, icon: icons.OK, text: 'Your query has been successfully saved' },
-	mappingsSaved: { variant: variants.SUCCESS, icon: icons.OK, text: 'Your mappings have been successfully saved' },
-	schemasReloaded: { variant: variants.SUCCESS, icon: icons.OK, text: 'The schemas have been reloaded successfully' },
-	schemaLoaded: { variant: variants.SUCCESS, icon: icons.OK, text: 'The schema has been loaded successfully' },
+	querySet: { variant: variants.PRIMARY, icon: icons.OK, text: 'The query has been saved' },
+	mappingsSaved: { variant: variants.SUCCESS, icon: icons.OK, text: 'The mappings have been saved' },
+	schemasReloaded: { variant: variants.SUCCESS, icon: icons.OK, text: 'The schemas have been reloaded' },
+	schemaLoaded: { variant: variants.SUCCESS, icon: icons.OK, text: 'The schema has been loaded' },
 	transformationSaved: {
 		variant: variants.SUCCESS,
 		icon: icons.OK,
-		text: 'Your transformation has been successfully saved',
+		text: 'The transformation has been saved',
 	},
 	transformationCleanedUp: {
 		variant: variants.SUCCESS,
 		icon: icons.OK,
-		text: 'Your transformation has been successfully cleaned up',
+		text: 'The transformation has been cleaned up',
 	},
-	actionSaved: { variant: variants.SUCCESS, icon: icons.OK, text: 'Your action has been successfully saved' },
+	actionSaved: { variant: variants.SUCCESS, icon: icons.OK, text: 'The action has been saved' },
 	connectionReloaded: {
 		variant: variants.SUCCESS,
 		icon: icons.OK,
-		text: 'The connection has been reloaded successfully',
+		text: 'The connection has been reloaded',
 	},
 	connectionSaved: {
 		variant: variants.SUCCESS,
 		icon: icons.OK,
-		text: 'The connection settings have been saved successfully',
+		text: 'The connection settings have been saved',
 	},
 	linkedStorageDoesNotExistAnymore: {
 		variant: variants.DANGER,

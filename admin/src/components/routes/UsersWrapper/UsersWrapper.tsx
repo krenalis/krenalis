@@ -26,7 +26,7 @@ const UsersWrapper = () => {
 	useEffect(() => {
 		if (warehouse == null) {
 			redirect('settings');
-			showError('You must first connect a data warehouse');
+			showError('Please connect to a data warehouse before proceeding');
 			return;
 		}
 		fetchUsers(1);

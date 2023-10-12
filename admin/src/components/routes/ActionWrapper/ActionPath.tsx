@@ -168,11 +168,11 @@ const ActionPath = () => {
 
 	const onFilePreview = async () => {
 		if (actionType.Fields.includes('Path') && action.Path === '') {
-			showError('You must first enter a path');
+			showError('Please enter a path');
 			return;
 		}
 		if (actionType.Fields.includes('Sheet') && action.Sheet === '') {
-			showError('You must first enter a sheet');
+			showError('Please enter a sheet');
 			return;
 		}
 		const res = await records(action.Path!, action.Sheet, 20);
@@ -199,11 +199,11 @@ const ActionPath = () => {
 
 	const onConfirmFile = async () => {
 		if (actionType.Fields.includes('Path') && action.Path === '') {
-			showError('You must first enter a path');
+			showError('Please enter a path');
 			return;
 		}
 		if (actionType.Fields.includes('Sheet') && action.Sheet === '') {
-			showError('You must first enter a sheet');
+			showError('Please enter a sheet');
 			return;
 		}
 		fileConfirmButtonRef.current!.load();

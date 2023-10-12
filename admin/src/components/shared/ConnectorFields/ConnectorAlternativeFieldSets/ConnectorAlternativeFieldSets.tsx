@@ -37,7 +37,7 @@ const ConnectorAlternativeFieldSets = ({
 	const [selected, setSelected] = useState(initialSet === '' ? sets[0].Name : initialSet);
 
 	const onSelectChange = (e) => {
-		// TODO: get from the server the informations required to identify any
+		// TODO: get from the server the information required to identify any
 		// inputs shared between different sets, then implement the code that
 		// automatically fill in those inputs when the user changes the set.
 		onChange(selected, null);

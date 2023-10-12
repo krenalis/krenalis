@@ -96,11 +96,11 @@ const ActionQuery = () => {
 		const a = { ...action };
 		const trimmed = a.Query!.trim();
 		if (trimmed.length > queryMaxSize) {
-			showError('You query is too long');
+			showError('The query is too long');
 			return;
 		}
 		if (!trimmed.includes('$limit')) {
-			showError(`Your query does not contain the $limit variable`);
+			showError(`The query does not contain the $limit variable`);
 			return;
 		}
 		let res: ExecQueryResponse;
@@ -128,7 +128,7 @@ const ActionQuery = () => {
 			return;
 		}
 		if (Object.keys(res.Schema.properties!).length === 0) {
-			showError('Your query did not return any columns');
+			showError('The query execution did not yield any columns');
 			return;
 		}
 		if (isConfirmation) {

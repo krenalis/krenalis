@@ -93,7 +93,7 @@ const ConnectorSettings = () => {
 						console.error(
 							`Unprocessable: connector does not implement the 'load' event in its ServeUI method`,
 						);
-						showError('Unexpected error. Contact the administrator for more informations.');
+						showError('An unexpected error has occurred. Please contact the administrator for more information.');
 					}
 					return;
 				}
@@ -179,7 +179,7 @@ const ConnectorSettings = () => {
 					console.error(
 						`Unprocessable: connection does not implement the ${eventName} event in its ServeUI method`,
 					);
-					showError('Unexpected error. Contact the administrator for more informations.');
+					showError('An unexpected error has occurred. Please contact the administrator for more information.');
 				}
 				return;
 			}

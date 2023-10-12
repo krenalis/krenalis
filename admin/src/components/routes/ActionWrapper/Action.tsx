@@ -68,16 +68,16 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	let disabledReason = '';
 	if (hasQueryError) {
 		disabledReason =
-			'Mappings are disabled since the query returned an error. Fix the query before proceding to mappings.';
+			'Mappings are disabled since the query returned an error. Fix the query before proceeding to mappings.';
 	} else if (hasRecordsError) {
 		disabledReason =
-			'Mappings are disabled since the file fetch returned an error. Fix the file informations before proceding to mappings.';
+			'Mappings are disabled due to an error in the file fetch. Please resolve the file information issue before proceeding with the mappings.';
 	} else if (connection.type === 'Database') {
 		disabledReason =
-			'Mappings are disabled since you have modified the query. Confirm the query or undo the changes before proceding to mappings';
+			'Mappings are disabled since the query has been modified. Please confirm the query or revert the changes before proceeding with mappings.';
 	} else {
 		disabledReason =
-			'Mappings are disabled since you have modified the file informations. Confirm the new informations or undo the changes before proceding to mappings';
+			'Mappings are disabled since the file information has been modified . Please confirm the new information or revert the changes before proceeding with mappings.';
 	}
 
 	if (action == null || actionType == null) return;
