@@ -462,8 +462,10 @@ func (apis *APIs) TransformationLanguages() []string {
 // is the schema of the transformed data. Only one of mapping and transformation
 // must be non-nil.
 //
-// It returns an errors.UnprocessableError error with code TransformationFailed
-// if the transformation fails due to an error in the executed function.
+// It returns an errors.UnprocessableError error with code:
+//   - LanguageNotSupported, if the transformation language is not supported.
+//   - TransformationFailed if the transformation fails due to an error in the
+//     executed function.
 func (apis *APIs) TransformPreview(ctx context.Context, data map[string]any, inSchema, outSchema types.Type, mapping map[string]string, transformation *Transformation) (map[string]any, error) {
 
 	apis.mustBeOpen()
@@ -541,7 +543,7 @@ func (apis *APIs) TransformPreview(ctx context.Context, data map[string]any, inS
 			Source:  transformation.Source,
 			Version: "1", // no matter the version, it will be overwritten by the temporary transformation.
 		}
-		name := "action-temp-" + uuid.NewString()
+		name := "temp-" + uuid.NewString()
 		switch transformation.Language {
 		case "JavaScript":
 			name += ".js"
@@ -553,7 +555,7 @@ func (apis *APIs) TransformPreview(ctx context.Context, data map[string]any, inS
 		transformer = newTemporaryTransformer(name, transformation.Source, apis.transformer)
 	}
 
-	// Transform the user.
+	// Transform the data.
 	action := 1 // no matter the action, it will be overwritten by the temporary transformation.
 	m, err := mappings.New(inSchema, outSchema, mapping, tr, action, transformer, false)
 	if err != nil {
