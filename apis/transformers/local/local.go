@@ -128,7 +128,7 @@ const event = JSON.parse(process.argv[2]);
 for ( let i = 0; i < event.length; i++ ) {
 	try {
 		let value = transform(event[i]);
-		results[i] = { "value": value };
+		results[i] = { value: value };
 	} catch (error) {
 		if (error instanceof Error) {
 			error = error.toString();
