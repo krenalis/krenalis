@@ -205,10 +205,10 @@ prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095
 
 ## How test events
 
-1. Add a Website source connection with host `localhost:9090`.
+1. Add a JavaScript source connection with host `localhost:9090`.
 2. Add an action with type "Collect events" (or "Import users") and enable it.
 3. Add the content of the `trace-events-script/snippet.js` file into the `trace-events-script/website-for-testing/index.html`.
-4. In the pasted code, replace `123456789` with the ID of the website connection.
+4. In the pasted code, replace `kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc` with the key in "Settings > API keys" of the connection. 
 5. Visit https://localhost:9090/trace-events-script/website-for-testing/.
 
 ## Interact with Chichi using `chichi-cli`
