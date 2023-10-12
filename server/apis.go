@@ -693,7 +693,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								return
 							}
 							var req struct {
-								Event     connector.Event
+								Event     *connector.Event
 								Mapping   map[string]any
 								EventType string
 							}

@@ -33,7 +33,7 @@ type processedEvent struct {
 	eventType   string
 	endpoint    int
 	mappedEvent map[string]any
-	inEvent     connector.Event
+	inEvent     *connector.Event
 	err         error
 }
 
@@ -143,8 +143,8 @@ func (processor *Processor) Events() <-chan *processedEvent {
 	return processor.events.out
 }
 
-// eventToConnectorEvent returns the connector.Event corresponding to event.
-func eventToConnectorEvent(event *collectedEvent) connector.Event {
+// eventToConnectorEvent returns the *connector.Event corresponding to event.
+func eventToConnectorEvent(event *collectedEvent) *connector.Event {
 	// Keep in sync with the connector.Event type.
 	groupId := event.GroupId
 	if event.GroupId == "" {
@@ -210,7 +210,7 @@ func eventToConnectorEvent(event *collectedEvent) connector.Event {
 	e.Timestamp = event.timestamp
 	e.Type = *event.Type
 	e.UserId = event.UserId
-	return e
+	return &e
 }
 
 // collectedEventToMap returns a map built from the properties of the given

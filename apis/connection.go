@@ -630,7 +630,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 
 // SendEventPreview returns a preview of the event that would be sent when
 // calling SendEvent with the same arguments.
-func (this *Connection) SendEventPreview(ctx context.Context, event _connector.Event, typ string, data map[string]any) ([]byte, error) {
+func (this *Connection) SendEventPreview(ctx context.Context, event *_connector.Event, typ string, data map[string]any) ([]byte, error) {
 	app, err := this.openAppEvents()
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to the connector: %s", err)
