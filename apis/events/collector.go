@@ -259,11 +259,7 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 				return err
 			}
 			// Map the properties of the event.
-			collectedEvent, err := collectedEventToMap(event)
-			if err != nil {
-				return err
-			}
-			mappedUser, err := mapping.Apply(ctx, collectedEvent)
+			mappedUser, err := mapping.Apply(ctx, collectedEventToMap(event))
 			if err != nil {
 				return err
 			}

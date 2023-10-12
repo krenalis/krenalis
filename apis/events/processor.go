@@ -75,11 +75,7 @@ func newProcessor(st *eventsState, eventLog *eventsLog, transformer transformers
 				case event := <-events:
 					for _, action := range st.Actions() {
 						// Convert the collectedEvent to a map of properties.
-						mapEvent, err := collectedEventToMap(event)
-						if err != nil {
-							eventLog.TransformationFailed(event.id, action.ID, err)
-							continue
-						}
+						mapEvent := collectedEventToMap(event)
 						// Check if the filter applies.
 						ok, err := mappings.FilterApplies(action.Filter, mapEvent)
 						if err != nil {
@@ -215,7 +211,7 @@ func eventToConnectorEvent(event *collectedEvent) *connector.Event {
 
 // collectedEventToMap returns a map built from the properties of the given
 // collectedEvent.
-func collectedEventToMap(event *collectedEvent) (map[string]any, error) {
+func collectedEventToMap(event *collectedEvent) map[string]any {
 
 	// Keep in sync with the schema in "apis/events/schema.go".
 
@@ -314,5 +310,5 @@ func collectedEventToMap(event *collectedEvent) (map[string]any, error) {
 		"version":    event.version,
 	}
 
-	return mapEvent, nil
+	return mapEvent
 }
