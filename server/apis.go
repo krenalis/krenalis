@@ -823,8 +823,9 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				router.Route("/event-listeners", func(router chi.Router) {
 					router.Put("/", func(w http.ResponseWriter, r *http.Request) {
 						var req struct {
-							Size   *int
-							Source int
+							Size      *int
+							Source    int
+							OnlyValid bool
 						}
 						err := json.NewDecoder(r.Body).Decode(&req)
 						if err != nil {
@@ -835,7 +836,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						if req.Size != nil {
 							size = *req.Size
 						}
-						id, err := workspace.AddEventListener(ctx, size, req.Source)
+						id, err := workspace.AddEventListener(ctx, size, req.Source, req.OnlyValid)
 						if err != nil {
 							respond(w, err)
 							return

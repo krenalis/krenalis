@@ -317,20 +317,22 @@ func (this *Workspace) AddConnection(ctx context.Context, role ConnectionRole, c
 	return n.ID, nil
 }
 
-// AddEventListener adds a listener to the workspace that listens to processed
-// events and returns its identifier.
+// AddEventListener adds an event listener to the workspace that listens to
+// collected events and returns its identifier.
 //
-// source, if not zero, represents the source mobile, server, or website
-// connection for which the event was sent.
+// size specifies the maximum number of observed events to be returned by a
+// subsequent call to the ListenedEvents method, and must be in range [1, 1000].
 //
-// size is the maximum number of events to return for each call to the Events
-// method; it must be in the range [1,1000].
+// source represents the identifier of a source, whether it's a mobile, server,
+// or website connection. If source is non-zero, only events originating from
+// this source will be observed.
 //
-// If the source connection does not exist, it returns an
-// errors.UnprocessableError error with code ConnectionNotExist.
-// If there are already too many listeners, it returns an
-// errors.UnprocessableError error with code TooManyListeners.
-func (this *Workspace) AddEventListener(ctx context.Context, size, source int) (string, error) {
+// onlyValid determines whether only valid events should be observed.
+//
+// It returns an errors.UnprocessableError error with code:
+//   - ConnectionNotExist, if the source connection does not exist.
+//   - TooManyListeners, if there are already too many listeners.
+func (this *Workspace) AddEventListener(ctx context.Context, size, source int, onlyValid bool) (string, error) {
 
 	this.apis.mustBeOpen()
 
@@ -362,7 +364,7 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int) (
 		}
 	}
 
-	id, err := this.apis.events.Observer().AddListener(size, source)
+	id, err := this.apis.events.Observer().AddListener(size, source, onlyValid)
 	if err != nil {
 		if err == events.ErrTooManyListeners {
 			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", events.MaxEventListeners)

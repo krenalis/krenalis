@@ -11,7 +11,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
+	"math"
 	"math/rand"
 	"sort"
 	"sync"
@@ -50,6 +52,7 @@ type statsEntry struct {
 type listener struct {
 	id         string
 	source     int
+	onlyValid  bool
 	sync.Mutex // for the events and discarded fields
 	events     []json.RawMessage
 	times      []string
@@ -139,6 +142,9 @@ func (observer *Observer) AddEvent(source int, event *collectedEvent, err error)
 		if listener.source > 0 && listener.source != source {
 			continue
 		}
+		if listener.onlyValid && err != nil {
+			continue
+		}
 		listener.Lock()
 		var p int
 		if len(listener.events) == cap(listener.events) {
@@ -181,15 +187,28 @@ func (observer *Observer) AddEvent(source int, event *collectedEvent, err error)
 
 }
 
-// AddListener adds a processed event listener. It returns the
-// ErrTooManyListeners error if there are already too many listeners.
-func (observer *Observer) AddListener(size, source int) (string, error) {
+// AddListener adds an event listener and returns its identifier. size specifies
+// the maximum number of observed events to be returned by a subsequent call to
+// the Events method. If source is non-zero, only events originating from this
+// source will be observed. onlyValid determines whether only valid events
+// should be observed.
+//
+// It returns the ErrTooManyListeners error if there are already too many
+// listeners.
+func (observer *Observer) AddListener(size, source int, onlyValid bool) (string, error) {
+	if size < 1 {
+		return "", fmt.Errorf("size %d is not valid", size)
+	}
+	if source < 0 || source > math.MaxInt32 {
+		return "", fmt.Errorf("source %d is not valid", source)
+	}
 	id := uuid.New().String()
 	listener := listener{
-		id:     id,
-		source: source,
-		events: make([]json.RawMessage, 0, size),
-		times:  make([]string, 0, size),
+		id:        id,
+		source:    source,
+		onlyValid: onlyValid,
+		events:    make([]json.RawMessage, 0, size),
+		times:     make([]string, 0, size),
 	}
 	observer.Lock()
 	defer observer.Unlock()
