@@ -21,6 +21,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -390,8 +391,7 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		c.observer.AddEvent(header.source, event, err)
 		if err != nil {
 			// Remove the invalid event.
-			copy(events.Batch[:i], events.Batch[i+1:])
-			events.Batch = events.Batch[:len(events.Batch)-1]
+			events.Batch = slices.Delete(events.Batch, i, i+1)
 			i--
 			continue
 		}
