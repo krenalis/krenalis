@@ -11,10 +11,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"sync"
 	"time"
 
+	"chichi/apis/mappings"
 	"chichi/apis/postgres"
 
 	"github.com/segmentio/ksuid"
@@ -82,20 +84,22 @@ func (log *eventsLog) Delivered(id ksuid.KSUID, action int) {
 
 // TransformationFailed sets the event, with identifier id, as failed due to an
 // error during the transformation of the given action.
-func (log *eventsLog) TransformationFailed(id ksuid.KSUID, action int, err error) {
+func (log *eventsLog) TransformationFailed(id ksuid.KSUID, action int, terr error) {
+	if terr == nil {
+		panic("terr is nil")
+	}
 	now := time.Now().UTC()
+	if err, ok := terr.(mappings.Error); ok {
+		terr = errors.New("an internal error occurred during the transformation")
+		slog.Error("transformation failed when processing event", "event", id, "action", action, "err", err)
+	}
+	log.close.Add(1)
 	go func() {
-		var errString string
-		if err != nil {
-			errString = err.Error()
-		}
-		slog.Warn("transformation failed when processing event", "event", id, "action", action, "err", err)
-		log.close.Add(1)
 		defer log.close.Done()
 		_, err := log.db.Exec(log.close.ctx, "INSERT INTO event_processed (id, action, timestamp, state, error)"+
-			" VALUES ($1, $2, $3, 'TransformationFailed', $4)", id, action, now, errString)
+			" VALUES ($1, $2, $3, 'TransformationFailed', $4)", id, action, now, terr.Error())
 		if err != nil {
-			slog.Error("cannot log transformation failed", "event", id.String(), "action", action, "err", err)
+			slog.Error("cannot log failed transformation", "event", id.String(), "action", action, "err", err, "terr", terr)
 		}
 	}()
 }
