@@ -116,7 +116,18 @@ func (c *connection) SendEvent(ctx context.Context, eventType string, event *con
 // SendEventPreview returns a preview of the event that would be sent when
 // calling SendEvent with the same arguments.
 func (c *connection) SendEventPreview(ctx context.Context, eventType string, event *connector.Event, data map[string]any) ([]byte, error) {
-	return json.MarshalIndent(eventBody(eventType, event, data), "", "\t")
+	var b bytes.Buffer
+	b.WriteString("POST https://a.klaviyo.com/api/events/\n")
+	b.WriteString("Authorization: Klaviyo-API-Key REDACTED\n")
+	b.WriteString("Accept: application/json\n")
+	b.WriteString("Content-Type: application/json\n")
+	b.WriteString("Revision: 2023-01-24\n\n")
+	body, err := json.MarshalIndent(eventBody(eventType, event, data), "", "\t")
+	if err != nil {
+		return nil, err
+	}
+	b.Write(body)
+	return b.Bytes(), nil
 }
 
 // UpdateUser updates the user with identifier id setting the given properties.

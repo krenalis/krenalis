@@ -121,7 +121,20 @@ func (c *connection) SendEvent(ctx context.Context, eventType string, event *con
 // SendEventPreview returns a preview of the event that would be sent when
 // calling SendEvent with the same arguments.
 func (c *connection) SendEventPreview(ctx context.Context, eventType string, event *connector.Event, data map[string]any) ([]byte, error) {
-	return json.MarshalIndent(eventBody(eventType, event, data), "", "\t")
+	var b bytes.Buffer
+	if c.conf.Region == connector.PrivacyRegionEurope {
+		b.WriteString("POST https://api-eu.mixpanel.com/api/events/?strict=0&project_id=REDACTED\n")
+	} else {
+		b.WriteString("POST https://api.mixpanel.com/api/events/?strict=0&project_id=REDACTED\n")
+	}
+	b.WriteString("Authorization: Basic REDACTED\n")
+	b.WriteString("Content-Type: application/x-ndjson\n\n")
+	body, err := json.MarshalIndent(eventBody(eventType, event, data), "", "\t")
+	if err != nil {
+		return nil, err
+	}
+	b.Write(body)
+	return b.Bytes(), nil
 }
 
 // ServeUI serves the connector's user interface.
