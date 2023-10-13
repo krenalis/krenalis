@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -21,9 +20,18 @@ import (
 	"chichi/apis/state"
 	"chichi/apis/transformers"
 	"chichi/connector/types"
-
-	"golang.org/x/exp/maps"
 )
+
+// Error represents an error resulting from a mapping or transformation
+// function, such as a syntax error in the function, the use of a non-existent
+// property, or a property being used as an identifier.
+type Error string
+
+func (err Error) Error() string { return string(err) }
+
+func errorf(format string, a ...any) error {
+	return Error(fmt.Sprintf(format, a...))
+}
 
 // FilterApplies reports whether the filter applies to props, which can be an
 // event or a user. Returns error if one of the properties of the filter are not
@@ -68,6 +76,7 @@ type propertyMapping struct {
 type Mapping struct {
 	inSchema, outSchema types.Type
 	properties          []propertyMapping
+	required            int
 	transformation      *state.Transformation
 	transformer         transformers.Transformer
 	action              int
@@ -83,9 +92,14 @@ func New(inSchema, outSchema types.Type, mappings map[string]string, transformat
 		return nil, errors.New("input or output schema is not valid")
 	}
 
-	m := Mapping{inSchema: inSchema, outSchema: outSchema,
-		transformation: transformation, transformer: transformer,
-		action: action, formatTime: formatTime}
+	m := Mapping{
+		inSchema:       inSchema,
+		outSchema:      outSchema,
+		transformation: transformation,
+		transformer:    transformer,
+		action:         action,
+		formatTime:     formatTime,
+	}
 
 	// Mapping.
 	if mappings != nil {
@@ -104,21 +118,22 @@ func New(inSchema, outSchema types.Type, mappings map[string]string, transformat
 		}
 	}
 
+	if transformation != nil {
+		for _, p := range m.outSchema.Properties() {
+			if p.Required {
+				m.required++
+			}
+		}
+	}
+
 	return &m, nil
 }
-
-// Error represents an error resulting from a mapping or transformation
-// function, such as a syntax error in the function, the use of a non-existent
-// property, or a property being used as an identifier.
-type Error string
-
-func (err Error) Error() string { return string(err) }
 
 // Apply applies the mapping to values and returns the mapped values or an error
 // if values cannot be mapped.
 func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]any, error) {
 
-	outValues := map[string]any{}
+	out := map[string]any{}
 
 	// Map using properties mapping.
 	if m.properties != nil {
@@ -134,81 +149,60 @@ func (m *Mapping) Apply(ctx context.Context, values map[string]any) (map[string]
 				}
 				return nil, err
 			}
-			writePropertyTo(outValues, property.outPath, v)
+			writePropertyTo(out, property.outPath, v)
 		}
 	}
 
 	if m.transformation == nil {
-		return outValues, nil
+		return out, nil
 	}
 
 	// Map using the transformation.
 
-	// Run the transformation.
-	name := transformationFunctionName(m.action, m.transformation.Language)
-	results, err := m.transformer.CallFunction(ctx, name, m.transformation.Version, []map[string]any{values})
+	// Transform values.
+	funcName := transformationFunctionName(m.action, m.transformation.Language)
+	results, err := m.transformer.CallFunction(ctx, funcName, m.transformation.Version, []map[string]any{values})
 	if err != nil {
 		if err, ok := err.(*transformers.ExecutionError); ok {
-			return nil, Error(fmt.Sprintf("%s: %s ", m.transformation.Language.String(), err.Msg))
+			return nil, errorf("%s: %s ", m.transformation.Language.String(), err.Msg)
 		}
 		return nil, fmt.Errorf("error while execution the transformation: %s", err)
 	}
-	transformationOutValues := results[0].Value
-	if transformationOutValues == nil {
-		return nil, Error(fmt.Sprintf("%s: %s ", m.transformation.Language.String(), results[0].Error))
+	values = results[0].Value
+	if values == nil {
+		return nil, errorf("%s: %s ", m.transformation.Language.String(), results[0].Error)
 	}
 
-	// Ensure that the transformation's execution hasn't returned property
-	// values that are not present in the output schema.
-	{
-		outSchemaProps := m.outSchema.PropertiesNames()
-		names := maps.Keys(transformationOutValues)
-		slices.Sort(names)
-		for _, p := range names {
-			if !slices.Contains(outSchemaProps, p) {
-				return nil, Error(fmt.Sprintf("property %q is not present within the output schema", p))
-			}
-		}
-	}
-
-	// Normalize the transformation execution output according to the mapping's output schema.
-	transformationOutValues, err = normalizeTransformationOutput(transformationOutValues, m.outSchema, m.formatTime)
-	if err != nil {
-		return nil, err
-	}
-
-	// Ensure that the transformation's execution does not return any property
-	// value that has already been mapped by the mappings (i.e., it is an
-	// identifier for the action).
-	for p := range transformationOutValues {
-		if _, ok := outValues[p]; ok {
-			return nil, Error(fmt.Sprintf("property %q cannot be returned as it is being used as an identifier within the action", p))
-		}
-	}
-
-	maps.Copy(outValues, transformationOutValues)
-
-	return outValues, nil
-}
-
-// normalizeTransformationOutput normalizes the values returned by a
-// transformation execution according to the given schema.
-//
-// formatTime reports whether DateTime and Date values should be formatted based
-// on the layout, if any.
-func normalizeTransformationOutput(values map[string]any, schema types.Type, formatTime bool) (map[string]any, error) {
-	out := make(map[string]any, len(values))
+	// Validate and normalize the transformed values.
+	missingRequired := m.required
 	for name, value := range values {
-		prop, ok := schema.Property(name)
-		if !ok {
-			return nil, fmt.Errorf("property %q not found", name)
+		if _, ok := out[name]; ok {
+			return nil, errorf("property %q is already used as identifier", name)
 		}
-		v, err := normalization.NormalizeTransformationProperty(name, prop.Type, value, prop.Nullable, formatTime)
+		prop, ok := m.outSchema.Property(name)
+		if !ok {
+			return nil, errorf("property %q does not exist", name)
+		}
+		if prop.Required {
+			missingRequired--
+		}
+		v, err := normalization.NormalizeTransformationProperty(name, prop.Type, value, prop.Nullable, m.formatTime)
 		if err != nil {
 			return nil, err
 		}
 		out[name] = v
 	}
+	if missingRequired > 0 {
+		for _, p := range m.outSchema.Properties() {
+			if p.Required {
+				if _, ok := out[p.Name]; !ok {
+					return nil, errorf("required property %q is missing", p.Name)
+				}
+			}
+		}
+		panic("unreachable code")
+	}
+
 	return out, nil
 }
 
