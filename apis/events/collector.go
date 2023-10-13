@@ -316,7 +316,7 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		Method:     r.Method,
 		Proto:      r.Proto,
 		URL:        r.URL.String(),
-		Headers:    r.Header,
+		Headers:    collectHeader(r),
 	}
 
 	// Read the body and check that is not be longer than maxRequestSize bytes and,
@@ -1025,4 +1025,21 @@ func (c *collector) storeEvents(workspace int, events []*collectedEvent) {
 	store.AddEvents(rows)
 
 	return
+}
+
+// collectHeader returns selected headers of r.
+func collectHeader(r *http.Request) http.Header {
+	h := make(http.Header)
+	for k, v := range r.Header {
+		switch k {
+		case
+			"Content-Encoding",
+			"Content-Length",
+			"Content-Type",
+			"User-Agent":
+			h[k] = v
+		}
+	}
+	h.Add("Host", r.Host)
+	return h
 }
