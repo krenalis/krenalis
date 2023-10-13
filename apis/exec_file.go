@@ -198,7 +198,10 @@ func (this *Action) importFromFile(ctx context.Context) error {
 		// Map the properties of the user.
 		mappedUser, err := mapping.Apply(ctx, props)
 		if err != nil {
-			return actionExecutionError{err}
+			if err, ok := err.(mappings.Error); ok {
+				return actionExecutionError{err}
+			}
+			return err
 		}
 
 		// Set the user into the data warehouse.
