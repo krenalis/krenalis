@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"slices"
 	"sort"
 	"strconv"
@@ -701,20 +702,71 @@ func (this *Workspace) InitWarehouse(ctx context.Context) error {
 	return err
 }
 
+// ObservedEvent represents an observed event.
+type ObservedEvent struct {
+
+	// Source, if not zero, it is the source mobile, server or website
+	// connection for which the event was sent.
+	Source int
+
+	// Header is the message header. It is nil if a validation error occurred
+	// processing the entire message.
+	Header *ObservedEventHeader
+
+	// Data contains the data, encoded in JSON, of a single event in the message,
+	// if Header is not nil, or the data of the entire message, if Header is nil.
+	Data []byte
+
+	// Err, if not empty, is a validation error occurred processing the message.
+	// It refers to a single event, if Header is not nil, or to the entire message
+	// if Header is nil.
+	Err string
+}
+
+type ObservedEventHeader struct {
+	ReceivedAt time.Time   `json:"receivedAt"`
+	RemoteAddr string      `json:"remoteAddr"`
+	Method     string      `json:"method"`
+	Proto      string      `json:"proto"`
+	URL        string      `json:"url"`
+	Headers    http.Header `json:"headers"`
+}
+
 // ListenedEvents returns the events listen to by the specified listener and
 // the number of discarded events.
 //
 // It returns an errors.NotFoundError error, if the listener does not exist.
-func (this *Workspace) ListenedEvents(listener string) ([]json.RawMessage, int, error) {
+func (this *Workspace) ListenedEvents(listener string) ([]ObservedEvent, int, error) {
 	this.apis.mustBeOpen()
-	listenedEvents, discarded, err := this.apis.events.Observer().Events(listener)
+	observedEvents, discarded, err := this.apis.events.Observer().Events(listener)
 	if err != nil {
 		if err == events.ErrEventListenerNotFound {
 			return nil, 0, errors.NotFound("event listener %q does not exist", listener)
 		}
 		return nil, 0, err
 	}
-	return listenedEvents, discarded, nil
+	evs := make([]ObservedEvent, len(observedEvents))
+	for i := 0; i < len(evs); i++ {
+		ov := observedEvents[i]
+		var header *ObservedEventHeader
+		if ov.Header != nil {
+			header = &ObservedEventHeader{
+				ReceivedAt: ov.Header.ReceivedAt,
+				RemoteAddr: ov.Header.RemoteAddr,
+				Method:     ov.Header.Method,
+				Proto:      ov.Header.Proto,
+				URL:        ov.Header.URL,
+				Headers:    maps.Clone(ov.Header.Headers),
+			}
+		}
+		evs[i] = ObservedEvent{
+			Source: ov.Source,
+			Header: header,
+			Data:   slices.Clone(ov.Data),
+			Err:    ov.Err,
+		}
+	}
+	return evs, discarded, nil
 }
 
 // authorizedResource represents an authorized resource that can be used to

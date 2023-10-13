@@ -54,13 +54,13 @@ type listener struct {
 	source     int
 	onlyValid  bool
 	sync.Mutex // for the events and discarded fields
-	events     []json.RawMessage
+	events     []ObservedEvent
 	times      []string
 	discarded  int
 }
 
-// ProcessedEvent represents a processed event.
-type ProcessedEvent struct {
+// ObservedEvent represents an observed event.
+type ObservedEvent struct {
 
 	// Source, if not zero, it is the source mobile, server or website
 	// connection for which the event was sent.
@@ -68,15 +68,15 @@ type ProcessedEvent struct {
 
 	// Header is the message header. It is nil if a validation error occurred
 	// processing the entire message.
-	Header *collectedHeader
+	Header *EventHeader
 
 	// Data contains the data, encoded in JSON, of a single event in the message,
-	// if header is not nil, or the data of the entire message, if header is nil.
+	// if header is not nil, or the data of the entire message, if Header is nil.
 	Data []byte
 
 	// Err, if not empty, is a validation error occurred processing the message.
 	// It refers to a single event, if header is not nil, or to the entire message
-	// if header is nil.
+	// if Header is nil.
 	Err string
 }
 
@@ -99,10 +99,10 @@ func newObserver(db *postgres.DB) *Observer {
 	return observer
 }
 
-// AddEvent adds an event to the observed events. source, if not-zero is the
+// addEvent adds an event to the observed events. source, if not-zero is the
 // source mobile, server or website connection for which the event was sent. If
 // a message or event is invalid, err contains the error.
-func (observer *Observer) AddEvent(source int, event *collectedEvent, err error) {
+func (observer *Observer) addEvent(source int, event *collectedEvent, err error) {
 
 	observer.RLock()
 	defer observer.RUnlock()
@@ -136,7 +136,7 @@ func (observer *Observer) AddEvent(source int, event *collectedEvent, err error)
 	if len(observer.listeners) == 0 {
 		return
 	}
-	var rawEvent json.RawMessage
+	var ev ObservedEvent
 	var receivedAt string
 	for _, listener := range observer.listeners {
 		if listener.source > 0 && listener.source != source {
@@ -155,7 +155,7 @@ func (observer *Observer) AddEvent(source int, event *collectedEvent, err error)
 				continue
 			}
 		}
-		if rawEvent == nil {
+		if ev.Data == nil {
 			var b bytes.Buffer
 			enc := json.NewEncoder(&b)
 			enc.SetEscapeHTML(false)
@@ -165,21 +165,19 @@ func (observer *Observer) AddEvent(source int, event *collectedEvent, err error)
 			if err != nil {
 				errStr = err.Error()
 			}
-			b.Reset()
-			_ = enc.Encode(ProcessedEvent{
+			ev = ObservedEvent{
 				Source: source,
 				Header: event.header,
 				Data:   data,
 				Err:    errStr,
-			})
-			rawEvent = b.Bytes()
+			}
 		}
 		receivedAt = event.header.ReceivedAt.Format(eventDateLayout)
 		if listener.discarded == 0 {
-			listener.events = append(listener.events, rawEvent)
+			listener.events = append(listener.events, ev)
 			listener.times = append(listener.times, receivedAt)
 		} else {
-			listener.events[p] = rawEvent
+			listener.events[p] = ev
 			listener.times[p] = receivedAt
 		}
 		listener.Unlock()
@@ -207,7 +205,7 @@ func (observer *Observer) AddListener(size, source int, onlyValid bool) (string,
 		id:        id,
 		source:    source,
 		onlyValid: onlyValid,
-		events:    make([]json.RawMessage, 0, size),
+		events:    make([]ObservedEvent, 0, size),
 		times:     make([]string, 0, size),
 	}
 	observer.Lock()
@@ -219,10 +217,10 @@ func (observer *Observer) AddListener(size, source int, onlyValid bool) (string,
 	return id, nil
 }
 
-// Events returns the events listen to by the specified listener and the number
-// of discarded events. If the listener does not exist, it returns the
-// ErrEventListenerNotFound error.
-func (observer *Observer) Events(listener string) ([]json.RawMessage, int, error) {
+// Events returns the observed events listen to by the specified listener and
+// the number of discarded events. If the listener does not exist, it returns
+// the ErrEventListenerNotFound error.
+func (observer *Observer) Events(listener string) ([]ObservedEvent, int, error) {
 	observer.RLock()
 	for _, l := range observer.listeners {
 		if l.id != listener {
@@ -230,7 +228,7 @@ func (observer *Observer) Events(listener string) ([]json.RawMessage, int, error
 		}
 		observer.RUnlock()
 		l.Lock()
-		var events = make([]json.RawMessage, len(l.events))
+		var events = make([]ObservedEvent, len(l.events))
 		var discarded int
 		if len(l.events) > 0 {
 			sort.Slice(l.events, func(i, j int) bool { return l.times[i] < l.times[j] })

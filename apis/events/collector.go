@@ -53,128 +53,10 @@ var (
 	errNotFound     = errors.New("not found")
 )
 
-// collectedHeader represents the header of a batch request.
-type collectedHeader struct {
-	ReceivedAt time.Time   `json:"receivedAt"`
-	RemoteAddr string      `json:"remoteAddr"`
-	Method     string      `json:"method"`
-	Proto      string      `json:"proto"`
-	URL        string      `json:"url"`
-	Headers    http.Header `json:"headers"`
-	source     int
-}
-
 type batchEvents struct {
 	Batch    []*collectedEvent `json:"batch"`
 	Context  *eventContext     `json:"context,omitempty"`
 	WriteKey string            `json:"writeKey,omitempty"`
-}
-
-type eventContext struct {
-	Active bool `json:"active,omitempty"`
-	App    struct {
-		Name      string `json:"name,omitempty"`
-		Version   string `json:"version,omitempty"`
-		Build     string `json:"build,omitempty"`
-		Namespace string `json:"namespace,omitempty"`
-	} `json:"app,omitempty"`
-	browser struct {
-		Name    string `json:"name,omitempty"`
-		Other   string `json:"other,omitempty"`
-		Version string `json:"version,omitempty"`
-	}
-	Campaign struct {
-		Name    string `json:"name,omitempty"`
-		Source  string `json:"source,omitempty"`
-		Medium  string `json:"medium,omitempty"`
-		Term    string `json:"term,omitempty"`
-		Content string `json:"content,omitempty"`
-	} `json:"campaign,omitempty"`
-	Device struct {
-		Id                string `json:"id,omitempty"`
-		AdvertisingId     string `json:"advertisingId,omitempty"`
-		AdTrackingEnabled bool   `json:"adTrackingEnabled,omitempty"`
-		Manufacturer      string `json:"manufacturer,omitempty"`
-		Model             string `json:"model,omitempty"`
-		Name              string `json:"name,omitempty"`
-		Type              string `json:"type,omitempty"`
-		Token             string `json:"token,omitempty"`
-	} `json:"device,omitempty"`
-	Direct  bool   `json:"direct,omitempty"`
-	IP      string `json:"ip,omitempty"`
-	Library struct {
-		Name    string `json:"name,omitempty"`
-		Version string `json:"version,omitempty"`
-	} `json:"library,omitempty"`
-	Locale   string `json:"locale,omitempty"`
-	Location struct {
-		City      string  `json:"city,omitempty"`
-		Country   string  `json:"country,omitempty"`
-		Latitude  float64 `json:"latitude,omitempty"`
-		Longitude float64 `json:"longitude,omitempty"`
-		Speed     float64 `json:"speed,omitempty"`
-	} `json:"location,omitempty"`
-	Network struct {
-		Bluetooth bool   `json:"bluetooth,omitempty"`
-		Carrier   string `json:"carrier,omitempty"`
-		Cellular  bool   `json:"cellular,omitempty"`
-		WiFi      bool   `json:"wifi,omitempty"`
-	} `json:"network,omitempty"`
-	OS struct {
-		Name    string `json:"name,omitempty"`
-		Version string `json:"version,omitempty"`
-	} `json:"os,omitempty"`
-	Page struct {
-		Path     string `json:"path,omitempty"`
-		Referrer string `json:"referrer,omitempty"`
-		Search   string `json:"search,omitempty"`
-		Title    string `json:"title,omitempty"`
-		URL      string `json:"url,omitempty"`
-	} `json:"page,omitempty"`
-	Referrer struct {
-		Id   string `json:"id,omitempty"`
-		Type string `json:"type,omitempty"`
-	} `json:"referrer,omitempty"`
-	Screen struct {
-		Width   int     `json:"width,omitempty"`
-		Height  int     `json:"height,omitempty"`
-		Density float64 `json:"density,omitempty"`
-	} `json:"screen,omitempty"`
-	SessionId    int64          `json:"sessionId,omitempty"`
-	SessionStart bool           `json:"sessionStart,omitempty"`
-	GroupId      string         `json:"groupId,omitempty"`
-	Timezone     string         `json:"timezone,omitempty"`
-	Traits       map[string]any `json:"traits,omitempty"`
-	UserAgent    string         `json:"userAgent,omitempty"`
-}
-
-type collectedEvent struct {
-	header *collectedHeader
-
-	id     ksuid.KSUID
-	source int32
-
-	AnonymousId  string          `json:"anonymousId,omitempty"`
-	Category     string          `json:"category,omitempty"`
-	Context      eventContext    `json:"context,omitempty"`
-	Event        string          `json:"event,omitempty"`
-	GroupId      string          `json:"groupId,omitempty"`
-	Integrations json.RawMessage `json:"integrations,omitempty"`
-	MessageId    string          `json:"messageId,omitempty"`
-	Name         string          `json:"name,omitempty"`
-	receivedAt   time.Time
-	SentAt       string `json:"sentAt,omitempty"`
-	sentAt       time.Time
-	Timestamp    string `json:"timestamp,omitempty"`
-	timestamp    time.Time
-	Traits       map[string]any `json:"traits,omitempty"`
-	Type         *string        `json:"type"`
-	UserId       string         `json:"userId,omitempty"`
-	PreviousId   string         `json:"previousId,omitempty"`
-	Properties   map[string]any `json:"properties,omitempty"`
-	version      int
-
-	WriteKey string `json:"writeKey,omitempty"`
 }
 
 // A collector collects events, store them in the event log and sends them to
@@ -207,7 +89,7 @@ func newCollector(st *eventsState, ds *datastore.Datastore, eventLog *eventsLog,
 	return &collector, nil
 }
 
-// Events returns the collected events channel.
+// Events returns the events channel.
 func (c *collector) Events() <-chan *collectedEvent {
 	return c.events
 }
@@ -259,7 +141,7 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 				return err
 			}
 			// Map the properties of the event.
-			mappedUser, err := mapping.Apply(ctx, collectedEventToMap(event))
+			mappedUser, err := mapping.Apply(ctx, event.MapEvent())
 			if err != nil {
 				return err
 			}
@@ -310,7 +192,7 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	header := &collectedHeader{
+	header := &EventHeader{
 		ReceivedAt: date,
 		RemoteAddr: r.RemoteAddr,
 		Method:     r.Method,
@@ -384,7 +266,7 @@ func (c *collector) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		event.header = header
 		mergeContexts(&event.Context, events.Context)
 		err = validateEvent(method, event)
-		c.observer.AddEvent(header.source, event, err)
+		c.observer.addEvent(header.source, event, err)
 		if err != nil {
 			// Remove the invalid event.
 			events.Batch = slices.Delete(events.Batch, i, i+1)

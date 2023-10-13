@@ -29,6 +29,7 @@ import (
 	"chichi/apis/datastore"
 	"chichi/apis/errors"
 	"chichi/apis/events"
+	"chichi/apis/mappings"
 	"chichi/apis/mappings/mapexp"
 	"chichi/apis/normalization"
 	"chichi/apis/postgres"
@@ -39,6 +40,7 @@ import (
 	"chichi/connector/ui"
 	"chichi/telemetry"
 
+	"github.com/google/uuid"
 	"github.com/jxskiss/base62"
 	"golang.org/x/exp/maps"
 )
@@ -628,17 +630,6 @@ func (this *Connection) Delete(ctx context.Context) error {
 	return err
 }
 
-// SendEventPreview returns a preview of the event that would be sent when
-// calling SendEvent with the same arguments.
-func (this *Connection) SendEventPreview(ctx context.Context, event *_connector.Event, typ string, data map[string]any) ([]byte, error) {
-	app, err := this.openAppEvents()
-	if err != nil {
-		return nil, fmt.Errorf("cannot connect to the connector: %s", err)
-	}
-	// TODO(marco): validate data according to the event type's schema.
-	return app.(_connector.AppEventsConnection).SendEventPreview(ctx, typ, event, data)
-}
-
 // ExecQuery executes the given query on the connection and returns the
 // resulting rows and schema. The connection must be a source database
 // connection.
@@ -1002,6 +993,180 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 	})
 
 	return err
+}
+
+// PreviewSendEvent returns a preview of an event as it would be sent to an app.
+// The connection must be a destination app connection, and it is expected to
+// have an event type named eventType. If the event type has a schema, then
+// either the mapping or the transformation to apply to the event must be
+// present.
+//
+// It returns an errors.UnprocessableError error with code:
+//   - EventTypeNotExist, if the event type does not exist for the connection.
+//   - LanguageNotSupported, if the transformation language is not supported.
+//   - TransformationFailed if the transformation fails due to an error in the
+//     executed function.
+func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, event *ObservedEvent, mapping map[string]string, transformation *Transformation) ([]byte, error) {
+
+	this.apis.mustBeOpen()
+
+	c := this.connection
+
+	if c.Connector().Type != state.AppType {
+		return nil, errors.BadRequest("connection %d is not an app connection", c.ID)
+	}
+	if c.Role != state.DestinationRole {
+		return nil, errors.BadRequest("connection %d is not a destination", c.ID)
+	}
+	if !c.Connector().Targets.Contains(state.EventsTarget) {
+		return nil, errors.BadRequest("connection %d does not support events", c.ID)
+	}
+	if eventType == "" {
+		return nil, errors.BadRequest("eventType is empty")
+	}
+	if event == nil {
+		return nil, errors.BadRequest("event is missing")
+	}
+	if event.Header == nil {
+		return nil, errors.BadRequest("event header is missing")
+	}
+	if mapping != nil && transformation != nil {
+		return nil, errors.BadRequest("mapping and transformation cannot both be present")
+	}
+
+	// Parse the event.
+	ev, err := this.apis.events.ParseObservedEvent(&events.ObservedEvent{
+		Source: event.Source,
+		Header: &events.EventHeader{
+			ReceivedAt: event.Header.ReceivedAt,
+			RemoteAddr: event.Header.RemoteAddr,
+			Method:     event.Header.Method,
+			Proto:      event.Header.Proto,
+			URL:        event.Header.URL,
+		},
+		Data: event.Data,
+	})
+	if err != nil {
+		return nil, errors.BadRequest("event is not valid: %s", err)
+	}
+
+	app, err := this.openAppEvents()
+	if err != nil {
+		return nil, fmt.Errorf("cannot connect to the connector: %s", err)
+	}
+
+	// Get the event type.
+	eventTypes, err := app.EventTypes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var found bool
+	var outSchema types.Type
+	for _, t := range eventTypes {
+		if t.ID == eventType {
+			outSchema = t.Schema
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
+	}
+
+	var data map[string]any
+
+	// If the event type has a schema, apply the mapping or the transformation.
+	if outSchema.Valid() {
+
+		inSchema := events.Schema
+
+		// Validate the mapping and the transformation.
+		switch {
+		case mapping != nil:
+			for path, expr := range mapping {
+				outPath, err := types.ParsePropertyPath(path)
+				if err != nil {
+					return nil, errors.BadRequest("output mapped property %q is not valid", path)
+				}
+				p, err := outSchema.PropertyByPath(outPath)
+				if err != nil {
+					err := err.(types.PathNotExistError)
+					return nil, errors.BadRequest("output mapped property %s not found in output schema", err.Path)
+				}
+				_, err = mapexp.Compile(expr, inSchema, p.Type, p.Nullable)
+				if err != nil {
+					return nil, errors.BadRequest("invalid expression mapped to %s: %s", path, err)
+				}
+			}
+		case transformation != nil:
+			if transformation.Source == "" {
+				return nil, errors.BadRequest("transformation source is empty")
+			}
+			tr := this.apis.transformer
+			switch transformation.Language {
+			case "JavaScript":
+				if tr == nil || !tr.SupportLanguage(state.JavaScript) {
+					return nil, errors.Unprocessable(LanguageNotSupported, "Javascript transformation language  is not supported")
+				}
+			case "Python":
+				if tr == nil || !tr.SupportLanguage(state.Python) {
+					return nil, errors.Unprocessable(LanguageNotSupported, "Python transformation language is not supported")
+				}
+			case "":
+				return nil, errors.BadRequest("transformation language is empty")
+			default:
+				return nil, errors.BadRequest("transformation language %q is not valid", transformation.Language)
+			}
+		default:
+			return nil, errors.BadRequest("mapping (or transformation) is required")
+		}
+
+		// Create a temporary transformer.
+		var tr *state.Transformation
+		var transformer transformers.Transformer
+		if transformation != nil {
+			tr = &state.Transformation{
+				Source:  transformation.Source,
+				Version: "1", // no matter the version, it will be overwritten by the temporary transformation.
+			}
+			name := "temp-" + uuid.NewString()
+			switch transformation.Language {
+			case "JavaScript":
+				name += ".js"
+				tr.Language = state.JavaScript
+			case "Python":
+				name += ".py"
+				tr.Language = state.Python
+			}
+			transformer = newTemporaryTransformer(name, transformation.Source, this.apis.transformer)
+		}
+
+		// Transform the data.
+		action := 1 // no matter the action, it will be overwritten by the temporary transformation.
+		m, err := mappings.New(inSchema, outSchema, mapping, tr, action, transformer, false)
+		if err != nil {
+			return nil, err
+		}
+		data, err = m.Apply(ctx, ev.MapEvent())
+		if err != nil {
+			if err, ok := err.(mappings.Error); ok {
+				return nil, errors.Unprocessable(TransformationFailed, err.Error())
+			}
+			return nil, err
+		}
+
+	} else {
+
+		if mapping != nil {
+			return nil, errors.BadRequest("mapping is not allowed the event type %q does not have a schema", eventType)
+		}
+		if transformation != nil {
+			return nil, errors.BadRequest("transformation is not allowed because the event type %q does not have a schema", eventType)
+		}
+
+	}
+
+	return app.SendEventPreview(ctx, eventType, ev.ConnectorEvent(), data)
 }
 
 // SetStatus sets the status of the connection.
@@ -1946,6 +2111,9 @@ func (role *ConnectionRole) UnmarshalJSON(data []byte) error {
 
 // fetchAppSchema fetches the schema of an app connection for the given target
 // and eventType.
+//
+// It returns an errors.UnprocessableError error with code:
+//   - EventTypeNotExist, if the event type does not exist.
 func (this *Connection) fetchAppSchema(ctx context.Context, target state.ActionTarget, eventType string) (types.Type, error) {
 
 	app, err := this.openApp()

@@ -8,7 +8,13 @@
 package events
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"net"
 	"net/http"
+	"net/netip"
+	"net/url"
 	"sync/atomic"
 
 	"chichi/apis/datastore"
@@ -16,6 +22,9 @@ import (
 	"chichi/apis/postgres"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
+
+	"github.com/segmentio/ksuid"
+	"golang.org/x/text/unicode/norm"
 )
 
 type Events struct {
@@ -56,6 +65,55 @@ func (events *Events) Close() {
 	close(events.stopSenders)
 	events.processor.Close()
 	events.log.Close()
+}
+
+// ParseObservedEvent parses an observed event, enriches and returns it.
+// It returns an error if the event is not valid.
+func (events *Events) ParseObservedEvent(event *ObservedEvent) (Event, error) {
+
+	// Validate the arguments.
+	if event.Header == nil {
+		return nil, errors.New("header is nil")
+	}
+	ip, _, err := net.SplitHostPort(event.Header.RemoteAddr)
+	if err != nil {
+		return nil, errors.New("header.RemoteAddr is not valid")
+	}
+	if _, err := netip.ParseAddr(ip); err != nil {
+		return nil, errors.New("header.RemoteAddr is not valid")
+	}
+	if _, err := url.Parse(event.Header.URL); err != nil {
+		return nil, errors.New("header.URL is not valid")
+	}
+	if len(event.Data) > maxRequestSize {
+		return nil, errors.New("event is too long")
+	}
+
+	// Decode the event.
+	nr := norm.NFC.Reader(bytes.NewReader(event.Data))
+	dec := json.NewDecoder(nr)
+	dec.UseNumber()
+	ev := &collectedEvent{}
+	err = dec.Decode(ev)
+	if err != nil {
+		return nil, errors.New("cannot decode JSON")
+	}
+
+	// Validate the event.
+	if ev.Type == nil {
+		return nil, errors.New("missing event type")
+	}
+	err = validateEvent(*ev.Type, ev)
+	if err != nil {
+		return nil, err
+	}
+	ev.id = ksuid.New()
+	ev.header = event.Header
+
+	// Enrich the event.
+	events.collector.enrichEvent(ev)
+
+	return ev, nil
 }
 
 // ServeHTTP serves an event request.

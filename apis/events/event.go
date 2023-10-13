@@ -1,0 +1,318 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2023 Open2b
+//
+
+package events
+
+import (
+	"encoding/json"
+	"net/http"
+	"time"
+
+	"chichi/connector"
+
+	"github.com/segmentio/ksuid"
+)
+
+// Event represents an event as returned by the ParseObservedEvent method of the
+// *Events type.
+type Event interface {
+	ConnectorEvent() *connector.Event
+	MapEvent() map[string]any
+}
+
+// EventHeader represents the header of an event as collected from a client.
+type EventHeader struct {
+	ReceivedAt time.Time   `json:"receivedAt"`
+	RemoteAddr string      `json:"remoteAddr"`
+	Method     string      `json:"method"`
+	Proto      string      `json:"proto"`
+	URL        string      `json:"url"`
+	Headers    http.Header `json:"headers"`
+	source     int
+}
+
+// collectedEvent represents an event as collected from a client.
+type collectedEvent struct {
+	header *EventHeader
+
+	id     ksuid.KSUID
+	source int32
+
+	AnonymousId  string          `json:"anonymousId,omitempty"`
+	Category     string          `json:"category,omitempty"`
+	Context      eventContext    `json:"context,omitempty"`
+	Event        string          `json:"event,omitempty"`
+	GroupId      string          `json:"groupId,omitempty"`
+	Integrations json.RawMessage `json:"integrations,omitempty"`
+	MessageId    string          `json:"messageId,omitempty"`
+	Name         string          `json:"name,omitempty"`
+	receivedAt   time.Time
+	SentAt       string `json:"sentAt,omitempty"`
+	sentAt       time.Time
+	Timestamp    string `json:"timestamp,omitempty"`
+	timestamp    time.Time
+	Traits       map[string]any `json:"traits,omitempty"`
+	Type         *string        `json:"type"`
+	UserId       string         `json:"userId,omitempty"`
+	PreviousId   string         `json:"previousId,omitempty"`
+	Properties   map[string]any `json:"properties,omitempty"`
+	version      int
+
+	WriteKey string `json:"writeKey,omitempty"`
+}
+
+type eventContext struct {
+	Active bool `json:"active,omitempty"`
+	App    struct {
+		Name      string `json:"name,omitempty"`
+		Version   string `json:"version,omitempty"`
+		Build     string `json:"build,omitempty"`
+		Namespace string `json:"namespace,omitempty"`
+	} `json:"app,omitempty"`
+	browser struct {
+		Name    string `json:"name,omitempty"`
+		Other   string `json:"other,omitempty"`
+		Version string `json:"version,omitempty"`
+	}
+	Campaign struct {
+		Name    string `json:"name,omitempty"`
+		Source  string `json:"source,omitempty"`
+		Medium  string `json:"medium,omitempty"`
+		Term    string `json:"term,omitempty"`
+		Content string `json:"content,omitempty"`
+	} `json:"campaign,omitempty"`
+	Device struct {
+		Id                string `json:"id,omitempty"`
+		AdvertisingId     string `json:"advertisingId,omitempty"`
+		AdTrackingEnabled bool   `json:"adTrackingEnabled,omitempty"`
+		Manufacturer      string `json:"manufacturer,omitempty"`
+		Model             string `json:"model,omitempty"`
+		Name              string `json:"name,omitempty"`
+		Type              string `json:"type,omitempty"`
+		Token             string `json:"token,omitempty"`
+	} `json:"device,omitempty"`
+	Direct  bool   `json:"direct,omitempty"`
+	IP      string `json:"ip,omitempty"`
+	Library struct {
+		Name    string `json:"name,omitempty"`
+		Version string `json:"version,omitempty"`
+	} `json:"library,omitempty"`
+	Locale   string `json:"locale,omitempty"`
+	Location struct {
+		City      string  `json:"city,omitempty"`
+		Country   string  `json:"country,omitempty"`
+		Latitude  float64 `json:"latitude,omitempty"`
+		Longitude float64 `json:"longitude,omitempty"`
+		Speed     float64 `json:"speed,omitempty"`
+	} `json:"location,omitempty"`
+	Network struct {
+		Bluetooth bool   `json:"bluetooth,omitempty"`
+		Carrier   string `json:"carrier,omitempty"`
+		Cellular  bool   `json:"cellular,omitempty"`
+		WiFi      bool   `json:"wifi,omitempty"`
+	} `json:"network,omitempty"`
+	OS struct {
+		Name    string `json:"name,omitempty"`
+		Version string `json:"version,omitempty"`
+	} `json:"os,omitempty"`
+	Page struct {
+		Path     string `json:"path,omitempty"`
+		Referrer string `json:"referrer,omitempty"`
+		Search   string `json:"search,omitempty"`
+		Title    string `json:"title,omitempty"`
+		URL      string `json:"url,omitempty"`
+	} `json:"page,omitempty"`
+	Referrer struct {
+		Id   string `json:"id,omitempty"`
+		Type string `json:"type,omitempty"`
+	} `json:"referrer,omitempty"`
+	Screen struct {
+		Width   int     `json:"width,omitempty"`
+		Height  int     `json:"height,omitempty"`
+		Density float64 `json:"density,omitempty"`
+	} `json:"screen,omitempty"`
+	SessionId    int64          `json:"sessionId,omitempty"`
+	SessionStart bool           `json:"sessionStart,omitempty"`
+	GroupId      string         `json:"groupId,omitempty"`
+	Timezone     string         `json:"timezone,omitempty"`
+	Traits       map[string]any `json:"traits,omitempty"`
+	UserAgent    string         `json:"userAgent,omitempty"`
+}
+
+// ConnectorEvent returns event as a connector event to be passed as an
+// argument to the SendEvent and SendEventPreview methods of an app connector.
+func (event *collectedEvent) ConnectorEvent() *connector.Event {
+	// Keep in sync with the connector.Event type.
+	groupId := event.GroupId
+	if event.GroupId == "" {
+		groupId = event.Context.GroupId
+	}
+	e := connector.Event{}
+	e.AnonymousId = event.AnonymousId
+	e.Category = event.Category
+	e.Context.Active = event.Context.Active
+	e.Context.App.Name = event.Context.App.Name
+	e.Context.App.Version = event.Context.App.Version
+	e.Context.App.Build = event.Context.App.Build
+	e.Context.App.Namespace = event.Context.App.Namespace
+	e.Context.Campaign.Name = event.Context.Campaign.Name
+	e.Context.Campaign.Source = event.Context.Campaign.Source
+	e.Context.Campaign.Medium = event.Context.Campaign.Medium
+	e.Context.Campaign.Term = event.Context.Campaign.Term
+	e.Context.Campaign.Content = event.Context.Campaign.Content
+	e.Context.Device.Id = event.Context.Device.Id
+	e.Context.Device.AdvertisingId = event.Context.Device.AdvertisingId
+	e.Context.Device.AdTrackingEnabled = event.Context.Device.AdTrackingEnabled
+	e.Context.Device.Manufacturer = event.Context.Device.Manufacturer
+	e.Context.Device.Model = event.Context.Device.Model
+	e.Context.Device.Name = event.Context.Device.Name
+	e.Context.Device.Type = event.Context.Device.Type
+	e.Context.Device.Token = event.Context.Device.Token
+	e.Context.Device.Token = event.Context.Device.Token
+	e.Context.IP = event.Context.IP
+	e.Context.Library.Name = event.Context.Library.Name
+	e.Context.Library.Version = event.Context.Library.Version
+	e.Context.Locale = event.Context.Locale
+	e.Context.Location.City = event.Context.Location.City
+	e.Context.Location.Country = event.Context.Location.Country
+	e.Context.Location.Latitude = event.Context.Location.Latitude
+	e.Context.Location.Longitude = event.Context.Location.Longitude
+	e.Context.Location.Speed = event.Context.Location.Speed
+	e.Context.Network.Bluetooth = event.Context.Network.Bluetooth
+	e.Context.Network.Carrier = event.Context.Network.Carrier
+	e.Context.Network.Cellular = event.Context.Network.Cellular
+	e.Context.Network.WiFi = event.Context.Network.WiFi
+	e.Context.OS.Name = event.Context.OS.Name
+	e.Context.OS.Version = event.Context.OS.Version
+	e.Context.Page.Path = event.Context.Page.Path
+	e.Context.Page.Referrer = event.Context.Page.Referrer
+	e.Context.Page.Search = event.Context.Page.Search
+	e.Context.Page.Title = event.Context.Page.Path
+	e.Context.Page.URL = event.Context.Page.URL
+	e.Context.Referrer.Id = event.Context.Referrer.Id
+	e.Context.Referrer.Type = event.Context.Referrer.Type
+	e.Context.Screen.Width = event.Context.Screen.Width
+	e.Context.Screen.Height = event.Context.Screen.Height
+	e.Context.Screen.Density = event.Context.Screen.Density
+	e.Context.SessionId = event.Context.SessionId
+	e.Context.SessionStart = event.Context.SessionStart
+	e.Context.Timezone = event.Context.Timezone
+	e.Context.UserAgent = event.Context.UserAgent
+	e.Event = event.Event
+	e.GroupId = groupId
+	e.MessageId = event.MessageId
+	e.Name = event.Name
+	e.ReceivedAt = event.receivedAt
+	e.SentAt = event.sentAt
+	e.Timestamp = event.timestamp
+	e.Type = *event.Type
+	e.UserId = event.UserId
+	return &e
+}
+
+// MapEvent returns event as a map, enabling its use in transformations.
+func (event *collectedEvent) MapEvent() map[string]any {
+
+	// Keep in sync with the schema in "apis/events/schema.go".
+
+	// TODO(Gianluca): define datetime layout and parse/convert the values.
+	mapEvent := map[string]any{
+		"anonymousId": event.AnonymousId,
+		"category":    event.Category,
+		"context": map[string]any{
+			"active": event.Context.Active,
+			"app": map[string]any{
+				"name":      event.Context.App.Name,
+				"version":   event.Context.App.Version,
+				"build":     event.Context.App.Build,
+				"namespace": event.Context.App.Namespace,
+			},
+			"browser": map[string]any{
+				"name":    event.Context.browser.Name,
+				"other":   event.Context.browser.Other,
+				"version": event.Context.browser.Version,
+			},
+			"campaign": map[string]any{
+				"name":    event.Context.Campaign.Name,
+				"source":  event.Context.Campaign.Source,
+				"medium":  event.Context.Campaign.Medium,
+				"term":    event.Context.Campaign.Term,
+				"content": event.Context.Campaign.Content,
+			},
+			"device": map[string]any{
+				"id":                event.Context.Device.Type,
+				"advertisingId":     event.Context.Device.AdvertisingId,
+				"adTrackingEnabled": event.Context.Device.AdTrackingEnabled,
+				"manufacturer":      event.Context.Device.Manufacturer,
+				"model":             event.Context.Device.Model,
+				"name":              event.Context.Device.Name,
+				"type":              event.Context.Device.Type,
+				"token":             event.Context.Device.Token,
+			},
+			"ip": event.Context.IP,
+			"library": map[string]any{
+				"name":    event.Context.Library.Name,
+				"version": event.Context.Library.Version,
+			},
+			"locale": event.Context.Locale,
+			"location": map[string]any{
+				"city":      event.Context.Location.City,
+				"country":   event.Context.Location.Country,
+				"latitude":  event.Context.Location.Latitude,
+				"longitude": event.Context.Location.Longitude,
+				"speed":     event.Context.Location.Speed,
+			},
+			"network": map[string]any{
+				"bluetooth": event.Context.Network.Bluetooth,
+				"carrier":   event.Context.Network.Carrier,
+				"cellular":  event.Context.Network.Cellular,
+				"wifi":      event.Context.Network.WiFi,
+			},
+			"os": map[string]any{
+				"name":    event.Context.OS.Name,
+				"version": event.Context.OS.Version,
+			},
+			"page": map[string]any{
+				"path":     event.Context.Page.Path,
+				"referrer": event.Context.Page.Referrer,
+				"search":   event.Context.Page.Search,
+				"title":    event.Context.Page.Title,
+				"url":      event.Context.Page.URL,
+			},
+			"referrer": map[string]any{
+				"id":   event.Context.Referrer.Id,
+				"type": event.Context.Referrer.Type,
+			},
+			"screen": map[string]any{
+				"width":   event.Context.Screen.Width,
+				"height":  event.Context.Screen.Height,
+				"density": event.Context.Screen.Density,
+			},
+			"sessionId":    event.Context.SessionId,
+			"sessionStart": event.Context.SessionStart,
+			"groupId":      event.Context.GroupId,
+			"timezone":     event.Context.Timezone,
+			"traits":       event.Context.Traits,
+			"userAgent":    event.Context.UserAgent,
+		},
+		"event":      event.Event,
+		"groupId":    event.GroupId,
+		"messageId":  event.MessageId,
+		"name":       event.Name,
+		"properties": event.Properties,
+		"receivedAt": event.receivedAt,
+		"sendAt":     event.sentAt,
+		"source":     event.source,
+		"timestamp":  event.timestamp,
+		"traits":     event.Traits,
+		"type":       event.Type,
+		"userId":     event.UserId,
+		"version":    event.version,
+	}
+
+	return mapEvent
+}
