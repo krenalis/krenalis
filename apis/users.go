@@ -94,7 +94,7 @@ type EventContextCampaign struct {
 type EventContextDevice struct {
 	Id                string `json:"id"`
 	AdvertisingId     string `json:"advertisingId"`
-	AdTrackingEnabled bool   `json:"AdTrackingEnabled"`
+	AdTrackingEnabled bool   `json:"adTrackingEnabled"`
 	Manufacturer      string `json:"manufacturer"`
 	Model             string `json:"model"`
 	Name              string `json:"name"`
