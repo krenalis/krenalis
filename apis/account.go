@@ -34,12 +34,6 @@ type Account struct {
 	InternalIPs []string
 }
 
-// Warehouse represents data warehouse settings. It is used with AddWorkspace.
-type Warehouse struct {
-	Type     WarehouseType
-	Settings []byte
-}
-
 // AddWorkspace adds a workspace with the given name and privacy region, and
 // returns its identifier. name must be between 1 and 100 runes long.
 //
