@@ -59,6 +59,11 @@ type Warehouse interface {
 	// the given external user ID and external property.
 	SetDestinationUser(ctx context.Context, connection int, externalUserID, externalProperty string) error
 
+	// SetIdentity sets the identity id (which may have an anonymous ID) imported
+	// from the action. fromEvents indicates if the identity has been imported from
+	// an event or not.
+	SetIdentity(ctx context.Context, identity map[string]any, id string, anonID string, action int, fromEvent bool) error
+
 	// Settings returns the data warehouse settings.
 	Settings() []byte
 
@@ -70,11 +75,23 @@ type Warehouse interface {
 	// QueryRow executes a query that should return at most one row.
 	QueryRow(ctx context.Context, query string, args ...any) Row
 
+	// ResolveSyncUsers resolves and sync the users. actionsIdentifiers specifies
+	// the identifiers for every action, ordered by priority, and usersColumns are
+	// the columns of the 'users' table which will be populated during the users
+	// synchronization.
+	ResolveSyncUsers(ctx context.Context, actionsIdentifiers []ActionIdentifiers, usersColumns []types.Property) error
+
 	// Select returns the rows from the given table that satisfies the where
 	// condition with only the given columns, ordered by order if order is not the
 	// zero Property, and in range [first,first+limit] with first >= 0 and
 	// 0 < limit <= 1000.
 	Select(ctx context.Context, table string, columns []types.Property, where expr.Expr, order types.Property, first, limit int) ([][]any, error)
+}
+
+// ActionIdentifiers holds the identifiers for an action, ordered by priority.
+type ActionIdentifiers struct {
+	Action             int
+	IdentifiersColumns []types.Property
 }
 
 // Table represents a table.

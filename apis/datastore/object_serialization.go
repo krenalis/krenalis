@@ -8,6 +8,8 @@
 package datastore
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 
 	"chichi/apis/datastore/warehouses"
@@ -132,6 +134,42 @@ func PropertiesToColumns(properties []types.Property) []types.Property {
 		columns = append(columns, types.Property{Name: p.Name, Type: p.Type, Nullable: p.Nullable})
 	}
 	return columns
+}
+
+// ErrNoFlat is an error returned by PropertyPathToColumn, indicating that a
+// property path refers to a non-flat property.
+var ErrNoFlat = errors.New("property path refers to a non-flat property")
+
+// PropertyPathToColumn returns the column for the property path in schema.
+// If one of the properties in path is not flat (except the last one), the
+// ErrNoFlat error is returned.
+func PropertyPathToColumn(schema types.Type, path string) (column types.Property, err error) {
+	typ := schema
+	var name strings.Builder
+	parts := strings.Split(path, ".")
+	last := len(parts) - 1
+	for i, part := range parts {
+		if i > 0 {
+			name.WriteByte('_')
+		}
+		if typ.PhysicalType() != types.PtObject {
+			return types.Property{}, errors.New("path refers to a non-object type")
+		}
+		prop, ok := typ.Property(part)
+		if !ok {
+			return types.Property{}, fmt.Errorf("property %q does not exist", part)
+		}
+		if i < last && !prop.Flat {
+			return types.Property{}, ErrNoFlat
+		}
+		typ = prop.Type
+		name.WriteString(prop.Name)
+	}
+	property := types.Property{
+		Name: name.String(),
+		Type: typ,
+	}
+	return property, nil
 }
 
 // deserializeRowAsSlice deserializes a row returned by a data warehouse as

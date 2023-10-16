@@ -26,10 +26,15 @@ import (
 	"chichi/connector/types"
 
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/exp/maps"
 )
 
-//go:embed destinations_users.sql
-var createDestinationUsersTable string
+var (
+	//go:embed destinations_users.sql
+	createDestinationUsersTable string
+	//go:embed stored_procedure_queries.sql
+	storeProcedureQueries string
+)
 
 var _ warehouses.Warehouse = &PostgreSQL{}
 
@@ -319,6 +324,143 @@ func (warehouse *PostgreSQL) QueryRow(ctx context.Context, query string, args ..
 	return warehouses.Row{Row: row}
 }
 
+// ResolveSyncUsers resolves and sync the users.
+// actionsIdentifiers specifies the identifiers for every action, ordered by
+// priority, and usersColumns are the columns of the 'users' table which will be
+// populated during the users synchronization.
+func (warehouse *PostgreSQL) ResolveSyncUsers(ctx context.Context, actionsIdentifiers []warehouses.ActionIdentifiers, usersColumns []types.Property) error {
+
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+
+	var b strings.Builder
+
+	// Delete the orphan user identities, which are the identities that belong
+	// to actions that no longer exist.
+	b.WriteString(`DELETE FROM "users_identities" WHERE "__action__" NOT IN (`)
+	for i, action := range actionsIdentifiers {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(strconv.Itoa(action.Action))
+	}
+	b.WriteByte(')')
+	_, err = db.Exec(ctx, b.String())
+	if err != nil {
+		return warehouses.Error(err)
+	}
+
+	// Create - or replace - the generic matching function 'matching_func', that
+	// will be used by 'matches_for_action'.
+	const matchingFuncQuery = `
+		CREATE OR REPLACE FUNCTION matching_func(VARIADIC identifiers text[])
+		RETURNS boolean -- may return "null" to indicate "i don't know"
+		AS $$
+			DECLARE
+				i INT;
+			BEGIN
+				FOR i IN 1..array_length(identifiers, 1) BY 2 LOOP
+					IF identifiers[i] IS NOT NULL AND identifiers[i+1] IS NOT NULL THEN
+						RETURN identifiers[i] = identifiers[i+1];
+					END IF;
+				END loop;
+				RETURN null;
+			END;
+		$$ LANGUAGE plpgsql`
+	_, err = db.Exec(ctx, matchingFuncQuery)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+
+	// Create - or replace - the matching function 'matches_for_action', which
+	// depends on the actual actions identifiers.
+	b.Reset()
+	b.WriteString(`CREATE OR REPLACE FUNCTION matches_for_action(action int, i1 users_identities, i2 users_identities) 
+			RETURNS boolean
+			LANGUAGE SQL
+			RETURN CASE` + "\n")
+	for _, idents := range actionsIdentifiers {
+		b.WriteString("WHEN ACTION = ")
+		b.WriteString(strconv.Itoa(idents.Action))
+		b.WriteString(" THEN matching_func(")
+		for i, ident := range idents.IdentifiersColumns {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteString(`i1."`)
+			b.WriteString(ident.Name)
+			b.WriteString(`"::text,i2."`)
+			b.WriteString(ident.Name)
+			b.WriteString(`"::text`)
+		}
+		b.WriteString(")\n")
+	}
+	b.WriteString(("ELSE FALSE\nEND"))
+	_, err = db.Exec(ctx, b.String())
+	if err != nil {
+		return warehouses.Error(err)
+	}
+
+	// Create - or replace - the functions and the tables necessary for the
+	// stored procedure that performs the identity resolution.
+	b.Reset()
+	b.WriteString(`TRUNCATE users; INSERT INTO users (`)
+	comma := false
+	for _, c := range usersColumns {
+		if c.Name == "id" {
+			continue
+		}
+		if comma {
+			b.WriteByte(',')
+		}
+		b.WriteByte('"')
+		b.WriteString(c.Name)
+		b.WriteByte('"')
+		comma = true
+	}
+	b.WriteString(") SELECT\n")
+	comma = false
+	for _, c := range usersColumns {
+		if c.Name == "id" {
+			continue
+		}
+		if comma {
+			b.WriteByte(',')
+		}
+		if c.Type.PhysicalType() == types.PtObject {
+			b.WriteString(`(ARRAY_AGG(DISTINCT "`)
+			b.WriteString(c.Name)
+			b.WriteString(`"))[1] AS "`)
+			b.WriteString(c.Name)
+			b.WriteByte('"')
+		} else {
+			b.WriteString(`MAX(DISTINCT "`)
+			b.WriteString(c.Name)
+			b.WriteString(`") AS "`)
+			b.WriteString(c.Name)
+			b.WriteByte('"')
+		}
+		comma = true
+	}
+	b.WriteString(" FROM users_identities GROUP BY __cluster__")
+	query := strings.Replace(storeProcedureQueries, "-- {{ user_synchronization_query }}", b.String(), 1)
+	_, err = warehouse.db.Exec(ctx, query)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+
+	// Call the 'resolve_sync_users' stored procedure, which performs the
+	// identity resolution and updates the 'users' table.
+	_, err = db.Exec(ctx, "CALL resolve_sync_users()")
+	if err != nil {
+		return warehouses.Error(err)
+	}
+
+	return nil
+}
+
 // Select returns the rows from the given table that satisfies the where
 // condition with only the given columns, ordered by order if order is not the
 // zero Property, and in range [first,first+limit] with first >= 0 and
@@ -423,6 +565,172 @@ func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, action int,
 	return nil
 }
 
+// SetIdentity sets the identity id (which may have an anonymous ID) imported from
+// the action. fromEvents indicates if the identity has been imported from an
+// event or not.
+func (warehouse *PostgreSQL) SetIdentity(ctx context.Context, identity map[string]any, id string, anonID string, action int, fromEvent bool) error {
+
+	// Retrieve the database connection.
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+
+	// Query the matching user identities, which can be 0 (the identity is a new
+	// identity), 1 (the identity already exists and must be updated) or more
+	// (the new identity requires a merging of already existing identities).
+	var query string
+	var args []any
+	if fromEvent {
+		if isAnon := id == ""; isAnon {
+			query = "SELECT __identity_id__ FROM users_identities WHERE " +
+				"$1 IN __anonymous_ids__ ORDER BY __timestamp__, __identity_id__"
+			args = []any{anonID}
+		} else {
+			query = "SELECT __identity_id__ FROM users_identities WHERE " +
+				"(__external_id__ = $1) OR ($2 = ANY(__anonymous_ids__)) ORDER BY __timestamp__, __identity_id__"
+			args = []any{id, anonID}
+		}
+	} else { // app, file or database.
+		query = "SELECT __identity_id__ FROM users_identities WHERE " +
+			"__external_id__ = $1 ORDER BY __timestamp__, __identity_id__"
+		args = []any{id}
+	}
+	var matchingIdentities []int
+	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var e int
+		if err = rows.Scan(&e); err != nil {
+			return warehouses.Error(err)
+		}
+		matchingIdentities = append(matchingIdentities, e)
+	}
+	rows.Close()
+	if rows.Err() != nil {
+		return warehouses.Error(err)
+	}
+
+	// Create the new identity.
+	var newIdentityID int
+	identity["__action__"] = action
+	identity["__external_id__"] = id
+	if _, ok := identity["__timestamp__"]; !ok { // TODO: review the usage of timestamps.
+		identity["__timestamp__"] = time.Now().Format(time.DateTime)
+	}
+	if anonID != "" {
+		identity["__anonymous_ids__"] = []string{anonID}
+	}
+	b := strings.Builder{}
+	b.WriteString("INSERT INTO users_identities (")
+	properties := maps.Keys(identity)
+	for i, name := range properties {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteByte('"')
+		b.WriteString(name)
+		b.WriteByte('"')
+	}
+	b.WriteString(") VALUES (")
+	values := make([]any, len(properties))
+	for i, name := range properties {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteByte('$')
+		b.WriteString(strconv.Itoa(i + 1))
+		values[i] = identity[name]
+	}
+	b.WriteString(") RETURNING __identity_id__")
+	err = db.QueryRow(ctx, b.String(), values...).Scan(&newIdentityID)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+
+	// There are no matching identities, so the identity has been created and
+	// there's nothing else to do.
+	if len(matchingIdentities) == 0 {
+		return nil
+	}
+
+	// Merge the matching identity (or identities) into the new one.
+
+	var idsStr strings.Builder
+	for _, id := range matchingIdentities {
+		idsStr.WriteString(strconv.Itoa(id))
+		idsStr.WriteByte(',')
+	}
+	idsStr.WriteString(strconv.Itoa(newIdentityID))
+
+	// Merge the anonymous IDS.
+	b.Reset()
+	b.WriteString(`UPDATE users_identities SET __anonymous_ids__ = (
+		SELECT array_agg(anon_ids.ids) as __anonymous_ids__
+		FROM (
+			SELECT unnest("__anonymous_ids__") as ids
+			FROM users_identities
+			WHERE __identity_id__ IN (`)
+	b.WriteString(idsStr.String())
+	b.WriteString(`) AND __anonymous_ids__ IS NOT NULL
+			) AS anon_ids
+		) WHERE __identity_id__ = $1`)
+	_, err = db.Exec(ctx, b.String(), newIdentityID)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+
+	// Merge the other fields.
+	b.Reset()
+	b.WriteString("UPDATE users_identities SET ")
+	comma := false
+	for _, p := range properties {
+		if p == "__action__" || p == "__anonymous_ids__" || p == "__external_id__" || p == "__timestamp__" {
+			continue
+		}
+		if comma {
+			b.WriteByte(',')
+		}
+		b.WriteByte('"')
+		b.WriteString(p)
+		b.WriteString(`" = (SELECT "`)
+		b.WriteString(p)
+		b.WriteString(`" FROM users_identities WHERE "`)
+		b.WriteString(p)
+		b.WriteString(`" IS NOT NULL AND __identity_id__ IN (`)
+		b.WriteString(idsStr.String())
+		b.WriteString(") ORDER BY __timestamp__ DESC, __identity_id__ DESC LIMIT 1)\n")
+		comma = true
+	}
+	b.WriteString(` WHERE __identity_id__ = $1`)
+	_, err = db.Exec(ctx, b.String(), newIdentityID)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+
+	// Delete the merged identities.
+	var idsToDelete strings.Builder
+	for i, id := range matchingIdentities {
+		if i > 0 {
+			idsToDelete.WriteByte(',')
+		}
+		idsToDelete.WriteString(strconv.Itoa(id))
+	}
+	b.Reset()
+	b.WriteString("DELETE FROM users_identities WHERE __identity_id__ IN (")
+	b.WriteString(idsToDelete.String())
+	b.WriteByte(')')
+	_, err = db.Exec(ctx, b.String())
+	if err != nil {
+		return warehouses.Error(err)
+	}
+
+	return nil
+}
+
 // Settings returns the data warehouse settings.
 func (warehouse *PostgreSQL) Settings() []byte {
 	s, _ := json.Marshal(warehouse.settings)
@@ -518,7 +826,7 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			"FROM information_schema.columns c\n" +
 			"INNER JOIN information_schema.tables t ON c.table_name = t.table_name AND c.table_schema = t.table_schema\n" +
 			"WHERE t.table_schema = '" + warehouse.settings.Schema + "' AND t.table_type = 'BASE TABLE' AND" +
-			" ( t.table_name IN ('users', 'groups', 'events') OR t.table_name LIKE 'users\\__%' OR" +
+			" ( t.table_name IN ('users', 'users_identities', 'groups', 'groups_identities', 'events') OR t.table_name LIKE 'users\\__%' OR" +
 			" t.table_name LIKE 'groups\\__%' OR t.table_name LIKE 'events\\__%' )\n" +
 			"ORDER BY c.table_name, c.ordinal_position"
 
@@ -540,6 +848,9 @@ func (warehouse *PostgreSQL) Tables(ctx context.Context) ([]*warehouses.Table, e
 			row.table = *tableName
 			if columnName == nil {
 				return warehouses.Errorf("data warehouse has returned NULL as column name")
+			}
+			if strings.HasPrefix(*columnName, "__") && strings.HasSuffix(*columnName, "__") { // used internally by Chichi.
+				continue
 			}
 			if !types.IsValidPropertyName(*columnName) {
 				return warehouses.Errorf("column name %q is not supported", *columnName)

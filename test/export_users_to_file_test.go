@@ -201,7 +201,7 @@ func TestExportUsersToFile(t *testing.T) {
 		}
 
 		expectedStrings := []string{
-			"id,creation_time,timestamp,dummy_id,anonymous_id,android,ios,FirstName,LastName,Email,Gender,FoodPreferences,PhoneNumbers,FavouriteMovie",
+			"id,dummy_id,anonymous_id,android,ios,FirstName,LastName,Email,Gender,FoodPreferences,PhoneNumbers,FavouriteMovie",
 			`Janifer,Sharpin,jsharpin8@example.com,male,"{""Drink"":null,""Fruit"":null}",,`,
 		}
 		for _, expected := range expectedStrings {

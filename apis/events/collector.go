@@ -31,7 +31,6 @@ import (
 	"chichi/apis/mappings"
 	"chichi/apis/state"
 	"chichi/apis/transformers"
-	"chichi/apis/userswarehouse"
 
 	"github.com/google/uuid"
 	"github.com/mssola/useragent"
@@ -118,7 +117,7 @@ func (c *collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // collected on the source connection.
 func (c *collector) importUserTraits(ctx context.Context, source *state.Connection, eventsBatch []*collectedEvent) error {
 	anonIdents := source.Workspace().AnonymousIdentifiers.Mapping
-	usersSchema := *source.Workspace().Schemas["users"]
+	usersIdentities := *source.Workspace().Schemas["users_identities"]
 	for _, action := range source.Actions() {
 		if !action.Enabled {
 			continue
@@ -126,6 +125,8 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 		if action.Target != state.UsersTarget {
 			continue
 		}
+		ws := action.Connection().Workspace()
+		store := c.datastore.Store(ws.ID)
 		// Import the user traits for this event, if provided.
 		for _, event := range eventsBatch {
 			if len(event.Traits) == 0 && len(event.Context.Traits) == 0 {
@@ -136,7 +137,7 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 			mappingProps := make(map[string]string, len(action.Mapping)+len(anonIdents))
 			maps.Copy(mappingProps, action.Mapping)
 			maps.Copy(mappingProps, anonIdents)
-			mapping, err := mappings.New(Schema, usersSchema, mappingProps, action.Transformation, action.ID, c.transformer, false)
+			mapping, err := mappings.New(Schema, usersIdentities, mappingProps, action.Transformation, action.ID, c.transformer, false)
 			if err != nil {
 				return err
 			}
@@ -146,12 +147,16 @@ func (c *collector) importUserTraits(ctx context.Context, source *state.Connecti
 				return err
 			}
 			// Set the user into the data warehouse.
-			ws := action.Connection().Workspace()
 			store := c.datastore.Store(ws.ID)
-			err = userswarehouse.SetUser(ctx, store, action, mappedUser)
+			err = store.SetIdentity(ctx, mappedUser, event.UserId, event.AnonymousId, action.ID, true)
 			if err != nil {
 				return err
 			}
+		}
+		// Resolve and sync the users.
+		err := store.ResolveSyncUsers(ctx)
+		if err != nil {
+			return fmt.Errorf("cannot resolve and sync users: %s", err)
 		}
 	}
 	return nil

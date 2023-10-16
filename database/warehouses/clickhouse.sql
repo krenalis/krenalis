@@ -2,11 +2,11 @@
 -- queries obtained by running "SHOW CREATE TABLE" on ClickHouse (except for the
 -- database name on the query, which should be omitted in this file).
 
+-- TODO: add the CREATE TABLE for "users_identities".
+
 CREATE TABLE users
 (
     `id` Int32,
-    `creation_time` DateTime DEFAULT now(),
-    `timestamp` DateTime DEFAULT now(),
     `dummy_id` String,
     `anonymous_id` String,
     "android_id" String,
@@ -28,11 +28,11 @@ PRIMARY KEY id
 ORDER BY id
 SETTINGS index_granularity = 8192;
 
+-- TODO: add the CREATE TABLE for "groups_identities".
+
 CREATE TABLE groups
 (
     `id` Int32,
-    `creation_time` DateTime DEFAULT now(),
-    `timestamp` DateTime DEFAULT now(),
 )
 ENGINE = MergeTree
 PRIMARY KEY id

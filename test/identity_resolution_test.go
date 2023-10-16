@@ -181,7 +181,7 @@ func TestIdentityResolution(t *testing.T) {
 	importUser(actionB, map[string]any{"dummy_id": "BBB", "Email": "a@b", "PhoneNumbers": []any{"444"}})
 	expectUsers([]map[string]any{
 		{"dummy_id": "AAA", "Email": "", "PhoneNumbers": []any{"333"}},
-		{"dummy_id": "BBB", "Email": "a@b", "PhoneNumbers": []any{"444", "333"}},
+		{"dummy_id": "BBB", "Email": "a@b", "PhoneNumbers": []any{"444"}},
 	})
 
 	// -------------------------------------------------------------------------

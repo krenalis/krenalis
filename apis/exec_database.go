@@ -13,9 +13,9 @@ import (
 	"log/slog"
 
 	"chichi/apis/datastore"
+	"chichi/apis/errors"
 	"chichi/apis/mappings"
 	"chichi/apis/normalization"
-	"chichi/apis/userswarehouse"
 	"chichi/connector/types"
 )
 
@@ -85,8 +85,14 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 			return err
 		}
 
-		// Set the user into the data warehouse.
-		err = userswarehouse.SetUser(ctx, this.connection.store, this.action, mappedUser)
+		// Retrieve the user identifier.
+		userID, ok := mappedUser[this.action.Identifiers[0]].(string)
+		if !ok {
+			return actionExecutionError{errors.New("invalid identifier")}
+		}
+
+		// Set the identity into the data warehouse.
+		err = this.connection.store.SetIdentity(ctx, mappedUser, userID, "", this.action.ID, false)
 		if err != nil {
 			return err
 		}
@@ -100,6 +106,12 @@ func (this *Action) importFromDatabase(ctx context.Context) error {
 	}
 	if err = rawRows.Err(); err != nil {
 		return actionExecutionError{fmt.Errorf("an error occurred closing the database: %s", err)}
+	}
+
+	// Resolve and sync the users.
+	err = this.connection.store.ResolveSyncUsers(ctx)
+	if err != nil {
+		return actionExecutionError{err}
 	}
 
 	return nil

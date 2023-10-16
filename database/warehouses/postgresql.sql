@@ -18,10 +18,38 @@ CREATE TYPE movie AS (
     "soundtrack" music
 );
 
+CREATE TABLE users_identities (
+
+    "__identity_id__"   serial,
+    "__action__"        int,
+    "__external_id__"   text,
+    "__anonymous_ids__" text[],
+    "__cluster__"       serial,
+    "__timestamp__"     timestamp NOT NULL DEFAULT now(),
+
+    -- User properties.
+    "dummy_id"              text,
+    "anonymous_id"          text,
+    "android_id"            text,
+    "android_idfa"          text,
+    "android_push_token"    text,
+    "ios_id"                text,
+    "ios_idfa"              text,
+    "ios_push_token"        text,
+    "FirstName"             varchar(300),
+    "LastName"              varchar(300),
+    "Email"                 varchar(300),
+    "Gender"                gender,
+    "FoodPreferences_Drink" drink,
+    "FoodPreferences_Fruit" fruit,
+    "PhoneNumbers"          varchar(300)[],
+    "FavouriteMovie"        movie,
+    
+    PRIMARY KEY ("__identity_id__")
+);
+
 CREATE TABLE users (
     id                      SERIAL,
-    "creation_time"         timestamp NOT NULL DEFAULT now(),
-    "timestamp"             timestamp NOT NULL DEFAULT now(),
     "dummy_id"              text,
     "anonymous_id"          text,
     "android_id"            text,
@@ -41,10 +69,15 @@ CREATE TABLE users (
     PRIMARY KEY (id)
 );
 
+CREATE TABLE groups_identities (
+    id              SERIAL,
+    "creation_time" timestamp NOT NULL DEFAULT now(),
+    "timestamp"     timestamp NOT NULL DEFAULT now(),
+    PRIMARY KEY (id)
+);
+
 CREATE TABLE groups (
-    id                      SERIAL,
-    "creation_time"         timestamp NOT NULL DEFAULT now(),
-    "timestamp"             timestamp NOT NULL DEFAULT now(),
+    id SERIAL,
     PRIMARY KEY (id)
 );
 

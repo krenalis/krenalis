@@ -17,7 +17,6 @@ import (
 
 	"chichi/apis/mappings"
 	"chichi/apis/state"
-	"chichi/apis/userswarehouse"
 	"chichi/connector"
 	"chichi/connector/types"
 )
@@ -275,7 +274,7 @@ func (this *Action) importFromApp(ctx context.Context) error {
 			}
 
 			// Map the properties of the user.
-			mappedUser, err := mapping.Apply(ctx, userProps)
+			identity, err := mapping.Apply(ctx, userProps)
 			if err != nil {
 				if err, ok := err.(mappings.Error); ok {
 					return actionExecutionError{err}
@@ -283,8 +282,8 @@ func (this *Action) importFromApp(ctx context.Context) error {
 				return err
 			}
 
-			// Set the user into the data warehouse.
-			err = userswarehouse.SetUser(ctx, this.connection.store, this.action, mappedUser)
+			// Set the identity into the data warehouse.
+			err = this.connection.store.SetIdentity(ctx, identity, user.ID, "", this.action.ID, false)
 			if err != nil {
 				return actionExecutionError{err}
 			}
@@ -309,6 +308,12 @@ func (this *Action) importFromApp(ctx context.Context) error {
 			return actionExecutionError{err}
 		}
 
+	}
+
+	// Resolve and sync the users.
+	err = this.connection.store.ResolveSyncUsers(ctx)
+	if err != nil {
+		return fmt.Errorf("cannot resolve and sync users: %s", err)
 	}
 
 	return nil

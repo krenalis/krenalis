@@ -1,9 +1,8 @@
 
+-- TODO: add the CREATE TABLE for "users_identities".
 
 CREATE TABLE "users" (
     "id"                    NUMBER,
-    "creation_time"         TIMESTAMPNTZ NOT NULL,
-    "timestamp"             TIMESTAMPNTZ NOT NULL,
     "dummy_id"              VARCHAR,
     "anonymous_id"          VARCHAR,
     "android_id"            VARCHAR,
@@ -22,6 +21,8 @@ CREATE TABLE "users" (
     "FavouriteMovie"        OBJECT,
     PRIMARY KEY ("id")
 );
+
+-- TODO: add the CREATE TABLE for "groups_identities".
 
 CREATE TABLE "groups" (
     "id"            NUMBER,

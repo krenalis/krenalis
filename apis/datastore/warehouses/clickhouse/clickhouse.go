@@ -145,6 +145,13 @@ func (warehouse *ClickHouse) SetDestinationUser(ctx context.Context, connection 
 	panic("TODO: not implemented")
 }
 
+// SetIdentity sets the identity id (which may have an anonymous ID) imported
+// from the action. fromEvents indicates if the identity has been imported from
+// an event or not.
+func (warehouse *ClickHouse) SetIdentity(ctx context.Context, identity map[string]any, id string, anonID string, action int, fromEvent bool) error {
+	panic("TODO: not implemented")
+}
+
 // Settings returns the data warehouse settings.
 func (warehouse *ClickHouse) Settings() []byte {
 	s, _ := json.Marshal(warehouse.settings)
@@ -167,7 +174,7 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 		"FROM information_schema.columns c\n" +
 		"INNER JOIN information_schema.tables t ON c.table_name = t.table_name AND c.table_schema = t.table_schema\n" +
 		"WHERE t.table_schema = '" + warehouse.settings.Database + "' AND t.table_type = 'BASE TABLE' AND" +
-		" ( t.table_name IN ('users', 'groups', 'events') OR t.table_name LIKE 'users\\__%' OR" +
+		" ( t.table_name IN ('users', 'users_identities', 'groups', 'groups_identities', 'events') OR t.table_name LIKE 'users\\__%' OR" +
 		" t.table_name LIKE 'groups\\__%' OR t.table_name LIKE 'events\\__%' )\n" +
 		"ORDER BY c.table_name, c.ordinal_position"
 
@@ -183,6 +190,9 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 		var tableName, columnName, typ, comment string
 		if err = rows.Scan(&tableName, &columnName, &typ, &comment); err != nil {
 			return nil, warehouses.Error(err)
+		}
+		if strings.HasPrefix(columnName, "__") && strings.HasSuffix(columnName, "__") { // used internally by Chichi.
+			continue
 		}
 		if !types.IsValidPropertyName(columnName) {
 			return nil, warehouses.Errorf("column name %q is not supported", columnName)
@@ -214,6 +224,14 @@ func (warehouse *ClickHouse) Tables(ctx context.Context) ([]*warehouses.Table, e
 // QueryRow executes a query that should return at most one row.
 func (warehouse *ClickHouse) QueryRow(ctx context.Context, query string, args ...any) warehouses.Row {
 	return warehouses.Row{}
+}
+
+// ResolveSyncUsers resolves and sync the users.
+// actionsIdentifiers specifies the identifiers for every action, ordered by
+// priority, and usersColumns are the columns of the 'users' table which will be
+// populated during the users synchronization.
+func (warehouse *ClickHouse) ResolveSyncUsers(ctx context.Context, actionsIdentifiers []warehouses.ActionIdentifiers, usersColumns []types.Property) error {
+	panic("TODO: not implemented")
 }
 
 // Select returns the rows from the given table that satisfies the where

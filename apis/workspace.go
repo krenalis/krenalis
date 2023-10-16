@@ -571,15 +571,13 @@ func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, 
 		},
 		Schemas: map[string]*types.Type{},
 	}
-	for _, table := range []string{"users", "groups", "events"} {
+	for _, table := range []string{"users", "users_identities", "groups", "groups_identities", "events"} {
 		schema, ok := schemas[table]
 		if !ok {
 			return errors.Unprocessable(DataWarehouseFailed, "table %q does not exist in the data warehouse", table)
 		}
-		if table != "events" {
-			if err = validateSchema(table, schema); err != nil {
-				return errors.Unprocessable(DataWarehouseFailed, "%s", err)
-			}
+		if err = validateSchema(table, schema); err != nil {
+			return errors.Unprocessable(DataWarehouseFailed, "%s", err)
 		}
 		n.Schemas[table] = &schema
 	}
@@ -863,15 +861,13 @@ func (this *Workspace) ReloadSchemas(ctx context.Context) error {
 		Workspace: this.workspace.ID,
 		Schemas:   map[string]*types.Type{},
 	}
-	for _, table := range []string{"users", "groups", "events"} {
+	for _, table := range []string{"users", "users_identities", "groups", "groups_identities", "events"} {
 		schema, ok := schemas[table]
 		if !ok {
 			return errors.Unprocessable(DataWarehouseFailed, "table %q does not exist in the data warehouse", table)
 		}
-		if table != "events" {
-			if err = validateSchema(table, schema); err != nil {
-				return errors.Unprocessable(DataWarehouseFailed, "%s", err)
-			}
+		if err = validateSchema(table, schema); err != nil {
+			return errors.Unprocessable(DataWarehouseFailed, "%s", err)
 		}
 		n.Schemas[table] = &schema
 	}
@@ -1345,30 +1341,17 @@ func (typ *WarehouseType) UnmarshalJSON(data []byte) error {
 // validateSchema validates the schema of a data warehouse table.
 func validateSchema(table string, schema types.Type) error {
 	properties := schema.Properties()
-	// Check the 'id' property.
-	idIndex := slices.IndexFunc(properties, func(p types.Property) bool {
-		return p.Name == "id"
-	})
-	if idIndex == -1 {
-		return fmt.Errorf("'%s' schema has no 'id' property", table)
-	}
-	if p := properties[idIndex]; p.Type.PhysicalType() != types.PtInt && p.Type.PhysicalType() != types.PtDecimal {
-		return fmt.Errorf("property '%s.id' does not have types Int or Decimal", table)
-	} else if p.Nullable {
-		return fmt.Errorf("property '%s.id' cannot be nullable", table)
-	}
-	// Check the 'creation_time' and 'timestamp' properties.
-	for _, property := range []string{"creation_time", "timestamp"} {
-		index := slices.IndexFunc(properties, func(p types.Property) bool {
-			return p.Name == property
+	if table == "users" || table == "groups" {
+		idIndex := slices.IndexFunc(properties, func(p types.Property) bool {
+			return p.Name == "id"
 		})
-		if index == -1 {
-			return fmt.Errorf("'%s' schema has no '%s' property", table, property)
+		if idIndex == -1 {
+			return fmt.Errorf("'%s' schema has no 'id' property", table)
 		}
-		if p := properties[index]; p.Type.PhysicalType() != types.PtDateTime {
-			return fmt.Errorf("property '%s.%s' does not have type DateTime", table, property)
+		if p := properties[idIndex]; p.Type.PhysicalType() != types.PtInt && p.Type.PhysicalType() != types.PtDecimal {
+			return fmt.Errorf("property '%s.id' does not have types Int or Decimal", table)
 		} else if p.Nullable {
-			return fmt.Errorf("property '%s.%s' cannot be nullable", table, property)
+			return fmt.Errorf("property '%s.id' cannot be nullable", table)
 		}
 	}
 	return nil

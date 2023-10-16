@@ -366,6 +366,14 @@ func (warehouse *Snowflake) QueryRow(ctx context.Context, query string, args ...
 	return warehouses.Row{Error: errors.New("not implemented")}
 }
 
+// ResolveSyncUsers resolves and sync the users.
+// actionsIdentifiers specifies the identifiers for every action, ordered by
+// priority, and columns are the columns of the 'users' table which will be
+// populated during the users synchronization.
+func (warehouse *Snowflake) ResolveSyncUsers(ctx context.Context, actionsIdentifiers []warehouses.ActionIdentifiers, usersColumns []types.Property) error {
+	panic("not implemented")
+}
+
 // Select returns the rows from the given table that satisfies the where
 // condition with only the given columns, ordered by order if order is not the
 // zero Property, and in range [first,first+limit] with first >= 0 and
@@ -454,6 +462,13 @@ func (warehouse *Snowflake) SetDestinationUser(ctx context.Context, action int, 
 	return errors.New("not implemented")
 }
 
+// SetIdentity sets the identity id (which may have an anonymous ID) imported
+// from the action. fromEvents indicates if the identity has been imported from
+// an event or not.
+func (warehouse *Snowflake) SetIdentity(ctx context.Context, identity map[string]any, id string, anonID string, action int, fromEvent bool) error {
+	panic("not implemented")
+}
+
 // Settings returns the data warehouse settings.
 func (warehouse *Snowflake) Settings() []byte {
 	s, _ := json.Marshal(warehouse.settings)
@@ -485,7 +500,7 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 	b.WriteString(" AND t.table_schema = ")
 	quoteString(&b, warehouse.settings.Schema)
 	b.WriteString(" AND t.table_type = 'BASE TABLE' AND" +
-		" ( t.table_name IN ('users', 'groups', 'events') OR t.table_name LIKE 'users\\__%' OR" +
+		" ( t.table_name IN ('users', 'users_identities', 'groups', 'groups_identities', 'events') OR t.table_name LIKE 'users\\__%' OR" +
 		" t.table_name LIKE 'groups\\__%' OR t.table_name LIKE 'events\\__%' )\n" +
 		"ORDER BY c.table_name, c.ordinal_position")
 
@@ -505,6 +520,9 @@ func (warehouse *Snowflake) Tables(ctx context.Context) ([]*warehouses.Table, er
 		}
 		if columnName == nil {
 			return nil, warehouses.Errorf("data warehouse has returned NULL as column name")
+		}
+		if strings.HasPrefix(*columnName, "__") && strings.HasSuffix(*columnName, "__") { // used internally by Chichi.
+			continue
 		}
 		if !types.IsValidPropertyName(*columnName) {
 			return nil, warehouses.Errorf("column name %q is not supported", *columnName)

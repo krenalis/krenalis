@@ -148,41 +148,80 @@ func TestColumnsCommonPrefix(t *testing.T) {
 	}
 }
 
-func TestSerializeRow(t *testing.T) {
+func Test_PropertyPathToColumn(t *testing.T) {
+	tests := []struct {
+		path string
+		col  types.Property
+		err  string
+	}{
+		{path: "b.c", err: ErrNoFlat.Error()},
+		{path: "b.i.j", err: ErrNoFlat.Error()},
+		{path: "a", col: types.Property{Name: "a", Type: types.Int()}},
+		{path: "v.z", col: types.Property{Name: "v_z", Type: types.Float32()}},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			col, err := PropertyPathToColumn(testSchema, test.path)
+			// Check the error.
+			if err != nil && test.err == "" {
+				t.Fatalf("unexpected error %q", err)
+			}
+			if err == nil && test.err != "" {
+				t.Fatalf("expected error %q, got no errors", test.err)
+			}
+			var errStr string
+			if err != nil {
+				errStr = err.Error()
+			}
+			if errStr != test.err {
+				t.Fatalf("expected error %q, got error %q", test.err, errStr)
+			}
+			// Check the column.
+			if col.Name != test.col.Name {
+				t.Fatalf("expected column name %q, got %q", test.col.Name, col.Name)
+			}
+			if !col.Type.EqualTo(test.col.Type) {
+				t.Fatalf("expected column type %s, got %s", test.col.Type, col.Type)
+			}
+		})
+	}
+}
 
-	schema := types.Object([]types.Property{
-		{Name: "a", Type: types.Int()},
-		{Name: "b", Type: types.Object([]types.Property{
-			{Name: "c", Type: types.Text()},
-			{Name: "d", Type: types.Object([]types.Property{
-				{Name: "e", Type: types.Boolean()},
-				{Name: "f", Type: types.Text()},
+var testSchema = types.Object([]types.Property{
+	{Name: "a", Type: types.Int()},
+	{Name: "b", Type: types.Object([]types.Property{
+		{Name: "c", Type: types.Text()},
+		{Name: "d", Type: types.Object([]types.Property{
+			{Name: "e", Type: types.Boolean()},
+			{Name: "f", Type: types.Text()},
+		})},
+		{Name: "g", Type: types.Array(types.Float())},
+		{Name: "h", Type: types.Array(types.Array(types.Text()))},
+		{Name: "i", Type: types.Array(types.Object([]types.Property{
+			{Name: "j", Type: types.UInt()},
+			{Name: "k", Flat: true, Type: types.Object([]types.Property{
+				{Name: "l", Type: types.Text()},
+				{Name: "m", Flat: true, Type: types.Object([]types.Property{
+					{Name: "n", Type: types.Text()},
+					{Name: "o", Type: types.Text()},
+				}),
+				}})},
+		}))},
+		{Name: "p", Type: types.Map(types.Text())},
+		{Name: "q", Type: types.Map(types.Object([]types.Property{
+			{Name: "r", Type: types.Text()},
+			{Name: "s", Flat: true, Type: types.Object([]types.Property{
+				{Name: "t", Type: types.Int()},
+				{Name: "u", Type: types.Int()},
 			})},
-			{Name: "g", Type: types.Array(types.Float())},
-			{Name: "h", Type: types.Array(types.Array(types.Text()))},
-			{Name: "i", Type: types.Array(types.Object([]types.Property{
-				{Name: "j", Type: types.UInt()},
-				{Name: "k", Flat: true, Type: types.Object([]types.Property{
-					{Name: "l", Type: types.Text()},
-					{Name: "m", Flat: true, Type: types.Object([]types.Property{
-						{Name: "n", Type: types.Text()},
-						{Name: "o", Type: types.Text()},
-					}),
-					}})},
-			}))},
-			{Name: "p", Type: types.Map(types.Text())},
-			{Name: "q", Type: types.Map(types.Object([]types.Property{
-				{Name: "r", Type: types.Text()},
-				{Name: "s", Flat: true, Type: types.Object([]types.Property{
-					{Name: "t", Type: types.Int()},
-					{Name: "u", Type: types.Int()},
-				})},
-			}))},
-		})},
-		{Name: "v", Flat: true, Type: types.Object([]types.Property{
-			{Name: "z", Type: types.Float32()},
-		})},
-	})
+		}))},
+	})},
+	{Name: "v", Flat: true, Type: types.Object([]types.Property{
+		{Name: "z", Type: types.Float32()},
+	})},
+})
+
+func TestSerializeRow(t *testing.T) {
 
 	row := map[string]any{
 		"a": 56,
@@ -265,7 +304,7 @@ func TestSerializeRow(t *testing.T) {
 		"v_z": 3.14,
 	}
 
-	SerializeRow(row, schema)
+	SerializeRow(row, testSchema)
 	if !cmp.Equal(row, expected) {
 		t.Fatalf("unexpected row")
 	}

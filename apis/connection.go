@@ -162,15 +162,14 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
 			}
 			var ok bool
-			grSchema, ok := this.connection.Workspace().Schemas["users"]
+			usersIdentities, ok := this.connection.Workspace().Schemas["users_identities"]
 			if !ok {
-				return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
+				return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 			}
 			if this.connection.Role == state.SourceRole {
-				outputSchema := sourceMappingSchema(*grSchema, state.AppType)
-				return &ActionSchemas{In: appSchema, Out: outputSchema}, nil
+				return &ActionSchemas{In: appSchema, Out: *usersIdentities}, nil
 			} else {
-				return &ActionSchemas{In: grSchema.Unflatten(), Out: appSchema}, nil
+				return &ActionSchemas{In: usersIdentities.Unflatten(), Out: appSchema}, nil
 			}
 		case GroupsTarget:
 			var err error
@@ -219,23 +218,37 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 	case state.DatabaseType:
 		switch target {
 		case UsersTarget:
-			users, ok := this.connection.Workspace().Schemas["users"]
-			if !ok {
-				return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
-			}
 			if this.connection.Role == state.SourceRole {
-				out := sourceMappingSchema(*users, state.DatabaseType)
+				usersIdentities, ok := this.connection.Workspace().Schemas["users_identities"]
+				if !ok {
+					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
+				}
+				out := usersIdentities.Unflatten()
 				return &ActionSchemas{Out: out}, nil
 			} else {
+				users, ok := this.connection.Workspace().Schemas["users"]
+				if !ok {
+					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
+				}
 				in := users.Unflatten()
 				return &ActionSchemas{In: in}, nil
 			}
 		case GroupsTarget:
-			groups, ok := this.connection.Workspace().Schemas["groups"]
-			if !ok {
-				return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
+			if this.connection.Role == state.SourceRole {
+				groupsIdentities, ok := this.connection.Workspace().Schemas["groups_identities"]
+				if !ok {
+					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
+				}
+				out := groupsIdentities.Unflatten()
+				return &ActionSchemas{Out: out}, nil
+			} else {
+				groups, ok := this.connection.Workspace().Schemas["groups"]
+				if !ok {
+					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
+				}
+				in := groups.Unflatten()
+				return &ActionSchemas{In: in}, nil
 			}
-			return &ActionSchemas{Out: groups.Unflatten()}, nil
 		default:
 			panic("unexpected target")
 		}
@@ -243,29 +256,37 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 	case state.FileType:
 		switch target {
 		case UsersTarget:
-			users, ok := this.connection.Workspace().Schemas["users"]
-			if !ok {
-				return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
-			}
-			schemas := &ActionSchemas{}
 			if this.connection.Role == state.SourceRole {
-				schemas.Out = sourceMappingSchema(*users, state.FileType)
+				usersIdentities, ok := this.connection.Workspace().Schemas["users_identities"]
+				if !ok {
+					return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
+				}
+				out := usersIdentities.Unflatten()
+				return &ActionSchemas{Out: out}, nil
 			} else {
-				schemas.In = users.Unflatten()
+				users, ok := this.connection.Workspace().Schemas["users"]
+				if !ok {
+					return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
+				}
+				in := users.Unflatten()
+				return &ActionSchemas{In: in}, nil
 			}
-			return schemas, nil
 		case GroupsTarget:
-			groups, ok := this.connection.Workspace().Schemas["groups"]
-			if !ok {
-				return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
-			}
-			schemas := &ActionSchemas{}
 			if this.connection.Role == state.SourceRole {
-				schemas.Out = groups.Unflatten()
+				groupsIdentities, ok := this.connection.Workspace().Schemas["groups_identities"]
+				if !ok {
+					return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
+				}
+				out := groupsIdentities.Unflatten()
+				return &ActionSchemas{Out: out}, nil
 			} else {
-				schemas.In = groups.Unflatten()
+				groups, ok := this.connection.Workspace().Schemas["groups"]
+				if !ok {
+					return nil, errors.Unprocessable(NoGroupsSchema, "groups schema not loaded from data warehouse")
+				}
+				in := groups.Unflatten()
+				return &ActionSchemas{In: in}, nil
 			}
-			return schemas, nil
 		default:
 			panic("unexpected target")
 		}
@@ -276,18 +297,19 @@ func (this *Connection) ActionSchemas(ctx context.Context, target ActionTarget, 
 		}
 		switch target {
 		case UsersTarget:
-			grSchema, ok := this.connection.Workspace().Schemas["users"]
+			usersIdentities, ok := this.connection.Workspace().Schemas["users_identities"]
 			if !ok {
-				return nil, errors.Unprocessable(NoUsersSchema, "users schema not loaded from data warehouse")
+				return nil, errors.Unprocessable(NoUsersSchema, "users_identities schema not loaded from data warehouse")
 			}
-			outputSchema := sourceMappingSchema(*grSchema, connector.Type)
-			return &ActionSchemas{In: events.Schema.Unflatten(), Out: outputSchema}, nil
+			out := usersIdentities.Unflatten()
+			return &ActionSchemas{In: events.Schema.Unflatten(), Out: out}, nil
 		case GroupsTarget:
-			grSchema, ok := this.connection.Workspace().Schemas["groups"]
+			groupsIdentities, ok := this.connection.Workspace().Schemas["groups_identities"]
 			if !ok {
-				return nil, errors.Unprocessable(NoUsersSchema, "groups schema not loaded from data warehouse")
+				return nil, errors.Unprocessable(NoGroupsSchema, "groups_identities schema not loaded from data warehouse")
 			}
-			return &ActionSchemas{In: events.Schema.Unflatten(), Out: grSchema.Unflatten()}, nil
+			out := groupsIdentities.Unflatten()
+			return &ActionSchemas{In: events.Schema.Unflatten(), Out: out}, nil
 		}
 		return &ActionSchemas{}, nil
 
@@ -1518,6 +1540,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			state.DatabaseType,
 			state.FileType:
 			var name, description string
+			var missingSchema bool
 			if c.Role == state.SourceRole {
 				name = "Import " + connector.TermForUsers
 				description = "Import the " + connector.TermForUsers
@@ -1525,6 +1548,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 					description += " as users"
 				}
 				description += " from " + connector.Name
+				missingSchema = wsSchemas["users_identities"] == nil
 			} else {
 				name = "Export " + connector.TermForUsers
 				description = "Export the users "
@@ -1532,12 +1556,13 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 					description += " as " + connector.TermForUsers
 				}
 				description += " to " + connector.Name
+				missingSchema = wsSchemas["users"] == nil
 			}
 			at := ActionType{
 				Name:          name,
 				Description:   description,
 				Target:        UsersTarget,
-				MissingSchema: wsSchemas["users"] == nil,
+				MissingSchema: missingSchema,
 			}
 			actionTypes = append(actionTypes, at)
 		case
@@ -1549,7 +1574,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 					Name:          "Import users",
 					Description:   "Import users from the events of the " + connector.Name,
 					Target:        UsersTarget,
-					MissingSchema: wsSchemas["users"] == nil,
+					MissingSchema: wsSchemas["users_identities"] == nil,
 				}
 				actionTypes = append(actionTypes, at)
 			}
@@ -1562,6 +1587,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 			state.DatabaseType,
 			state.FileType:
 			var name, description string
+			var missingSchema bool
 			if c.Role == state.SourceRole {
 				name = "Import " + connector.TermForGroups
 				description = "Import the " + connector.TermForGroups
@@ -1569,6 +1595,7 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 					description += " as groups"
 				}
 				description += " from " + connector.Name
+				missingSchema = wsSchemas["groups_identities"] == nil
 			} else {
 				name = "Export " + connector.TermForGroups
 				description = "Export the groups "
@@ -1576,12 +1603,13 @@ func (this *Connection) actionTypes(ctx context.Context) ([]ActionType, error) {
 					description += " as " + connector.TermForGroups
 				}
 				description += " to " + connector.Name
+				missingSchema = wsSchemas["groups"] == nil
 			}
 			at := ActionType{
 				Name:          name,
 				Description:   description,
 				Target:        GroupsTarget,
-				MissingSchema: wsSchemas["groups"] == nil,
+				MissingSchema: missingSchema,
 			}
 			actionTypes = append(actionTypes, at)
 		case
@@ -2646,46 +2674,6 @@ func setSettings(ctx context.Context, db *postgres.DB, connection int, settings 
 		return tx.Notify(ctx, n)
 	})
 	return err
-}
-
-// sourceMappingSchema returns the users schema to use in mappings for source
-// connections.
-func sourceMappingSchema(users types.Type, connTyp state.ConnectorType) types.Type {
-	usersProps := users.Properties()
-	var props []types.Property
-	switch connTyp {
-	case
-		state.AppType, state.MobileType, state.ServerType, state.WebsiteType:
-		props = make([]types.Property, 0, len(usersProps)-2)
-		for _, p := range users.Unflatten().Properties() {
-			// Skip the "id", "creation_time" and "timestamp" properties, which
-			// cannot be mapped explicitly by the user.
-			switch p.Name {
-			case "id", "creation_time", "timestamp":
-				continue
-			}
-			props = append(props, p)
-		}
-	case
-		state.DatabaseType,
-		state.FileType:
-
-		props = make([]types.Property, 0, len(usersProps))
-		for _, p := range users.Unflatten().Properties() {
-			// Skip the "id", which cannot be mapped explicitly by the user.
-			//
-			// Also, the "creation_time" property cannot be set by the user,
-			// while the "timestamp" may be manually set by them.
-			switch p.Name {
-			case "id", "creation_time":
-				continue
-			}
-			props = append(props, p)
-		}
-	default:
-		panic(fmt.Sprintf("unexpected connection type %d", connTyp))
-	}
-	return types.Object(props)
 }
 
 // statsTimeSlot returns the stats time slot for the time t.

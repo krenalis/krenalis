@@ -173,7 +173,7 @@ func (ds *Datastore) WarehouseSchemas(ctx context.Context, typ state.WarehouseTy
 	schemas := make(map[string]types.Type)
 	for _, table := range tables {
 		switch table.Name {
-		case "users", "groups", "events":
+		case "users", "users_identities", "groups", "groups_identities", "events":
 			properties, err := ColumnsToProperties(table.Columns)
 			if err != nil {
 				return nil, err
