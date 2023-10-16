@@ -618,7 +618,9 @@ func (warehouse *PostgreSQL) SetIdentity(ctx context.Context, identity map[strin
 	var newIdentityID int
 	identity["__action__"] = action
 	identity["__external_id__"] = id
-	if _, ok := identity["__timestamp__"]; !ok { // TODO: review the usage of timestamps.
+	// TODO: review the usage of timestamps.
+	// See the issue https://github.com/open2b/chichi/issues/299.
+	if _, ok := identity["__timestamp__"]; !ok {
 		identity["__timestamp__"] = time.Now().Format(time.DateTime)
 	}
 	if anonID != "" {
